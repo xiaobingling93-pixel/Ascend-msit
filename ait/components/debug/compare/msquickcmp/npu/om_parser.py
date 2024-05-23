@@ -163,7 +163,8 @@ class OmParser(object):
         for attr in self.json_object.get(ATTR_OBJECT):
             if KEY_OBJECT in attr and attr.get(KEY_OBJECT) == ATC_CMDLINE_OBJECT:
                 if VALUE_OBJECT in attr and S_OBJECT in attr.get(VALUE_OBJECT):
-                    return attr.get(VALUE_OBJECT).get(S_OBJECT)
+                    atc_cmd = attr.get(VALUE_OBJECT).get(S_OBJECT)
+                    return self._replace_input_shape_with_input_shape_range_in_atc_cmd_if_dynamic(atc_cmd)
         return ''
 
     def get_expect_net_output_name(self):
@@ -229,6 +230,55 @@ class OmParser(object):
                 if SUBGRAPH_NAME in operator:
                     subgraph_name += operator.get(SUBGRAPH_NAME)
         return subgraph_name
+
+    def _replace_input_shape_with_input_shape_range_in_atc_cmd_if_dynamic(self, atc_cmd):
+        # `--input_shape_range` is deprecated, and replaced with `--input_shape` in atc.
+        # but `--input_shape_range` is currently used in parsing model as dynamic shape one,
+        # It's more convinient for using and doesn't matter in comparing process.
+        # Thus `--input_shape` args is converted to `--input_shape_range` in
+        # this function for further comparing usage.
+        atc_cmd_split = []
+        for cmd_token in atc_cmd.split():
+            atc_cmd_split += cmd_token.split("=")  # Could be in format like "--input_shape=input:1,3,224,224"
+
+        # Return if any dynamic args already involved
+        for dym_arg in DynamicArgumentEnum:
+            if dym_arg.value.atc_arg in atc_cmd_split:
+                return atc_cmd
+
+        # Check if `--input_shape` in atc_cmd line. Return if not
+        input_shape_pos = -1
+        for pos, cmd_token in enumerate(atc_cmd_split):
+            if cmd_token == INPUT_SHAPE:
+                input_shape_pos = pos
+
+        if input_shape_pos == -1 or len(atc_cmd_split) <= input_shape_pos + 1:
+            return atc_cmd
+
+        # Check if dynamic `--input_shape`
+        input_shape_args = atc_cmd_split[input_shape_pos + 1]
+        if "-1" not in input_shape_args and "~" not in input_shape_args:
+            return atc_cmd
+
+        # replace `--input_shape` with `--input_shape_range` if dynamic
+        input_shape_range_args_split = []
+        for inputs in input_shape_args.split(';'):
+            inputs_split = inputs.split(':')
+            input_name, input_shape = ":".join(inputs_split[:-1]), inputs_split[-1]
+            input_shape_range_args_split.append('{}:[{}]'.format(input_name, input_shape))
+        input_shape_range_args = ';'.join(input_shape_range_args_split)
+
+        atc_cmd_with_range_split = atc_cmd_split[:input_shape_pos]
+        atc_cmd_with_range_split += [INPUT_SHAPE_RANGE, input_shape_range_args]
+        atc_cmd_with_range_split += atc_cmd_split[input_shape_pos + 2:]
+        atc_cmd_with_range = " ".join(atc_cmd_with_range_split)
+
+        if not self.shape_range:  # Only print once, just if shape_range is False
+            utils.logger.info(
+                f"Convert atc arg '{INPUT_SHAPE} {input_shape_args}' -> '{INPUT_SHAPE_RANGE} {input_shape_range_args}'"
+            )
+        self.shape_range = True
+        return atc_cmd_with_range
 
     def _gen_operator_list(self):
         _, scenario = self.get_dynamic_scenario_info()

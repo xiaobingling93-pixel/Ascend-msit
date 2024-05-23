@@ -12,21 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-import os
-import json
-import unittest
 import torch
 import torch_npu
 import torch.nn as nn
 
 from ait_llm.opcheck import operation_test
+from ait_llm.common.log import logger
 
 
-class OpcheckSortOperation(operation_test.OperationTest):    
+class OpcheckSortOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
-        values, indices = torch.topk(in_tensors[0], k=self.op_param["num"][0], largest=True)
+        num = self.param.get("num", None)
+        values, indices = torch.topk(in_tensors[0], k=num[0], largest=True)
         return [values, indices.int()]
 
     def test_3d_float(self):
+        num = self.param.get("num", None)
+        if num is None:
+            msg = "Cannot get golden data because num is not correctly set!"
+            logger.error(msg)
+            return
         self.execute()

@@ -16,18 +16,5 @@ import pkg_resources
 from components.utils.parser import BaseCommand
 
 
-class DebugCommand(BaseCommand):
-    def __init__(self, name="", help_info="", children=None, has_handle=False, **kwargs):
-        super().__init__(name, help_info, children, has_handle, **kwargs)
-
-    def add_arguments(self, parser, **kwargs):
-        return super().add_arguments(parser, **kwargs)
-
-    def handle(self, args, **kwargs):
-        return super().handle(args, **kwargs)
-
-help_info = "debug a wide variety of model issues"
-cmd_instances = []
-for entry_point in pkg_resources.iter_entry_points('debug_sub_task'):
-    cmd_instances.append(entry_point.load()())
-debug_cmd = DebugCommand("debug", help_info, cmd_instances) if cmd_instances else None
+def debug_task():
+    return BaseCommand("debug", "debug a wide variety of model issues", "debug_sub_task")

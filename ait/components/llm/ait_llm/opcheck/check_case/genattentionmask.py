@@ -12,22 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-import os
-import unittest
 import torch
 import torch_npu
 
 from ait_llm.opcheck import operation_test
+from ait_llm.common.log import logger
 
 
 class OpcheckElewiseSubOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
         out = []
-        for i, s in enumerate(self.op_param['seqLen']):
-            for _ in range(self.op_param["headNum"]):
+        seq_len = self.op_param.get("seqLen", None)
+        head_num = self.op_param.get("headNum", None)
+        for i, s in enumerate(seq_len):
+            for _ in range(head_num):
                 out.append(in_tensors[0][i, :, :s, :s].flatten())
         return [torch.hstack(out)]
 
     def test_2d_half(self):
+        seq_len = self.op_param.get("seqLen", None)
+        head_num = self.op_param.get("headNum", None)
+        if seq_len is None or head_num is None:
+            msg = "Cannot get golden data because opParam is not correctly set!"
+            logger.error(msg)
+            return
         self.execute()

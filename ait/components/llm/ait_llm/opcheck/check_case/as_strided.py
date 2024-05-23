@@ -12,20 +12,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-import os
-import unittest
 import torch
 import torch_npu
 
 from ait_llm.opcheck import operation_test
+from ait_llm.common.log import logger
 
 
 class OpcheckAsStridedOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
-        golden_result = torch.as_strided(in_tensors[0], self.op_param['size'], 
-                                        self.op_param['stride'], self.op_param['offset'][0])
+        size = self.op_param.get('size', None)
+        stride = self.op_param.get('stride', None)
+        offset = self.op_param.get('offset', None)
+        
+        golden_result = torch.as_strided(in_tensors[0], size, stride, offset[0])
         return [golden_result]
 
     def test(self):
+        size = self.op_param.get('size', None)
+        stride = self.op_param.get('stride', None)
+        offset = self.op_param.get('offset', None)
+
+        if size is None or stride is None or offset is None:
+            msg = "Cannot get golden data because opParam is not correctly set!"
+            logger.error(msg)
+            return
         self.execute()

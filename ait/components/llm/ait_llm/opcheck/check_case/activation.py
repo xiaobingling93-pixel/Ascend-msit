@@ -12,13 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import unittest
 import torch
 import torch_npu
-import numpy as np
+import torch.nn.functional as F
 
 from ait_llm.opcheck import operation_test
+from ait_llm.common.log import logger
 
 
 class ActivationGolden:
@@ -28,38 +27,69 @@ class ActivationGolden:
 
     @staticmethod
     def gelu_golden(in_tensors, _):
-        float_in_tensors = in_tensors.float()
+        in_tensors = in_tensors.float()
         try:
-            float_result = 0.5 * float_in_tensors * (1 + torch.nn.functional.tanh(np.sqrt(2 / np.pi) * 
-                                                    (float_in_tensors + 0.044715 * torch.pow(float_in_tensors, 3))))
+            float_result = 0.5 * in_tensors * (1 + torch.nn.functional.tanh(torch.sqrt(torch.tensor(2 / torch.pi)) * 
+                                                    (in_tensors + 0.044715 * torch.pow(in_tensors, 3))))
         except ZeroDivisionError as e:
             raise e
         return float_result.half() if in_tensors.dtype == torch.float16 else float_result
 
     @staticmethod
     def fast_gelu_golden(in_tensors, _):
-        float_in_tensors = in_tensors.float()
+        in_tensors = in_tensors.float()
         try:
-            float_result = float_in_tensors * torch.exp(0.851 * (float_in_tensors - torch.abs(float_in_tensors))) / (1 + 
-                            torch.exp(-1.702 * torch.abs(float_in_tensors)))
+            float_result = in_tensors * torch.exp(0.851 * (in_tensors - torch.abs(in_tensors))) / (1 + 
+                            torch.exp(-1.702 * torch.abs(in_tensors)))
         except ZeroDivisionError as e:
             raise e
         return float_result.half()
 
     @staticmethod
     def swish_golden(in_tensors, scale):
-        float_in_tensors = in_tensors.float()
+        in_tensors = in_tensors.float()
         try:
-            float_result = float_in_tensors / (1 + torch.exp(-float_in_tensors * scale))
+            float_result = in_tensors / (1 + torch.exp(-in_tensors * scale))
         except ZeroDivisionError as e:
             raise e
         return float_result.half()
 
     @staticmethod
     def log_golden(in_tensors, _):
-        float_in_tensors = in_tensors.float()
-        float_result = torch.log(float_in_tensors)
+        in_tensors = in_tensors.float()
+        float_result = torch.log(in_tensors)
         return float_result.half() if in_tensors.dtype == torch.float16 else float_result
+    
+    @staticmethod
+    def swigluforward_golden(in_tensors, dim):
+        dtype = in_tensors.dtype
+        float_in_tensors = in_tensors.float()
+        a, b = float_in_tensors.chunk(2, dim)
+        a = a.to(torch.float32)
+        b = b.to(torch.float32)
+        float_result = F.silu(a) * b
+        return float_result.to(dtype)
+    
+    @staticmethod
+    def swish(x):
+        return x * torch.sigmoid(x)
+    
+    @staticmethod
+    def swish_grad(x):
+        return torch.sigmoid(x) + x * (1 - torch.sigmoid(x)) * torch.sigmoid(x)
+    
+    @staticmethod
+    def swiglubackward_golden(in_tensors, dim):
+        dtype = in_tensors[1].dtype
+        tensor_y_grad = in_tensors[1].float()
+        x = in_tensors[1].float()
+        a, b = x.chunk(2, dim)
+        a = a.to(torch.float32)
+        b = b.to(torch.float32)
+        y1 = b * tensor_y_grad * ActivationGolden.swish_grad(a)
+        y2 = tensor_y_grad * ActivationGolden.swish(a)
+        y = torch.concat((y1, y2), dim)
+        return y.to(dtype)        
 
 
 class OpcheckActivationOperation(operation_test.OperationTest):
@@ -68,14 +98,27 @@ class OpcheckActivationOperation(operation_test.OperationTest):
         2: ActivationGolden.gelu_golden,
         3: ActivationGolden.fast_gelu_golden,
         4: ActivationGolden.swish_golden,
-        5: ActivationGolden.log_golden
+        5: ActivationGolden.log_golden,
+        6: ActivationGolden.swigluforward_golden,
+        7: ActivationGolden.swiglubackward_golden,
     } 
 
     def golden_calc(self, in_tensors):
-        activation_type = self.op_param["activationType"]
-        scale = self.op_param["scale"]
-        golden_result = OpcheckActivationOperation.golden_func[activation_type](in_tensors[0], scale)
+        activation_type = self.op_param.get("activationType", None)
+        scale = self.op_param.get("scale", None)
+        dim = self.op_param.get("dim", None)
+        if activation_type == 6:
+            golden_result = OpcheckActivationOperation.golden_func[activation_type](in_tensors[0], dim)
+        elif activation_type == 7:
+            golden_result = OpcheckActivationOperation.golden_func[activation_type](in_tensors, dim)
+        else:
+            golden_result = OpcheckActivationOperation.golden_func[activation_type](in_tensors[0], scale)
         return [golden_result]
 
     def test(self):
+        activation_type = self.op_param.get("activationType", None)
+        if activation_type is None:
+            msg = "Cannot get golden data because activationType is not correctly set!"
+            logger.error(msg)
+            return
         self.execute()

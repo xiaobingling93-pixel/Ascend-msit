@@ -20,7 +20,7 @@ from ais_bench.infer.benchmark_process import args_rules
 from ais_bench.infer.args_adapter import BenchMarkArgsAdapter
 from ais_bench.infer.main_cli import BenchmarkCommand
 
-benchmark_command = BenchmarkCommand()
+benchmark_command = BenchmarkCommand("benchmark","hekp")
 data_path = os.getenv("AIT_BENCHMARK_DT_DATA_PATH")
 if not data_path:
     current_dir = os.path.dirname(os.path.abspath(__file__))

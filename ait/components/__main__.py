@@ -14,28 +14,22 @@
 
 import argparse
 
-from components.llm import llm_cmd
-from components.debug import debug_cmd
-from components.profile import profile_cmd
-from components.transplt import transplt_cmd
-from components.benchmark import benchmark_cmd
-from components.analyze import analyze_cmd
-from components.convert import convert_cmd
-from components.utils.parser import register_parser, AIT_FAQ_HOME, MIND_STUDIO_LOGO
+from components.utils.parser import BaseCommand, AIT_FAQ_HOME, MIND_STUDIO_LOGO
 from components.utils.file_open_check import UmaskWrapper
+from components.utils.install import AitInstallCommand, AitBuildExtraCommand, AitCheckCommand, DownloadCommand
 
 
 def main():
-    subcommands = [debug_cmd, profile_cmd, transplt_cmd, benchmark_cmd, \
-                   analyze_cmd, convert_cmd, llm_cmd]
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=f"ait(Ascend Inference Tools), {MIND_STUDIO_LOGO}.\n"
         "Providing one-site debugging and optimization toolkit for inference on Ascend Devices.\n"
         f"For any issue, refer FAQ first: {AIT_FAQ_HOME}",
     )
-    register_parser(parser, subcommands)
-    parser.set_defaults(print_help=parser.print_help)
+
+    cmd = BaseCommand("ait", None, ["ait_sub_task", AitInstallCommand(), AitBuildExtraCommand(), AitCheckCommand(), DownloadCommand()])
+    cmd.register_parser(parser)
+
     args = parser.parse_args()
 
     if hasattr(args, 'handle'):
@@ -43,9 +37,10 @@ def main():
             try:
                 args.handle(args)
             except Exception as err:
-                raise Exception(f"[ERROR] Refer FAQ if a known issue: {AIT_FAQ_HOME}") from err
-    elif hasattr(args, "print_help"):
-        args.print_help()
+                raise Exception(
+                    f"[ERROR] Refer FAQ if a known issue: {AIT_FAQ_HOME}"
+                ) from err
+
 
 if __name__ == "__main__":
     main()

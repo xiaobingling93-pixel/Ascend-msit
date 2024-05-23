@@ -12,19 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-import os
-import unittest
 import torch
 import torch_npu
 
 from ait_llm.opcheck import operation_test
+from ait_llm.common.log import logger
 
 
 class OpcheckCumsumOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
-        golden_result = torch.cumsum(in_tensors[0], dim=self.op_param['axes'][0])
+        axes = self.op_param.get("axes", None)
+        golden_result = torch.cumsum(in_tensors[0], dim=axes[0])
         return [golden_result]
 
     def test(self):
+        axes = self.op_param.get("axes", None)
+        if axes is None:
+            msg = "Cannot get golden data because axes is not correctly set!"
+            logger.error(msg)
+            return
         self.execute()

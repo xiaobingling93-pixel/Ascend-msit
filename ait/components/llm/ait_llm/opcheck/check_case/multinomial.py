@@ -12,26 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-import os
-import unittest
+import ctypes
 import torch
 import torch_npu
 
 from ait_llm.opcheck import operation_test
+from ait_llm.common.log import logger
 
 
 class OpcheckMultinomialOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
-        samples = self.op_param["numSamples"]
-        rand_seed = self.op_param["randSeed"]
-        input0 = in_tensors[0].cpu().numpy()
-        libc = CDLL("libc.so.6")
+        samples = self.op_param.get("numSamples", None)
+        rand_seed = self.op_param.get("randSeed", None)
+        input0 = in_tensors[0]
+        libc = ctypes.CDLL("libc.so.6")
         libc.srand(rand_seed)
         rand_list = [libc.rand() / 0x7fffffff for i in range(64)]
-        ret = np.zeros(shape=(input0.shape[0], samples))
+        ret = torch.zeros(shape=(input0.shape[0], samples))
 
-        sum_list = np.cumsum(input0, axis=-1, dtype=np.float16).astype(np.float16)
+        sum_list = torch.cumsum(input0, axis=-1)
         iter_list = [(j, i) 
                     for j in range(input0.shape[0]) 
                     for i in range(input0.shape[1])]
@@ -40,7 +39,13 @@ class OpcheckMultinomialOperation(operation_test.OperationTest):
                 if (sum_list[j][i] > rand_list[z]):
                     ret[j][z] = i
                     break
-        return [torch.from_numpy(ret.astype(np.int32)).contiguous()]
+        return [ret.contiguous()]
 
     def test(self):
+        samples = self.op_param.get("numSamples", None)
+        rand_seed = self.op_param.get("randSeed", None)
+        if samples is None or rand_seed is None:
+            msg = "Cannot get golden data because opParam is not correctly set!"
+            logger.error(msg)
+            return
         self.execute()

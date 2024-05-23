@@ -12,19 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-import os
-import unittest
 import torch
 import torch_npu
 
 from ait_llm.opcheck import operation_test
+from ait_llm.common.log import logger
 
 
 class OpcheckUnpadRopeOperation(operation_test.OperationTest):
     def rotate_half(self, x):
         x0, x1 = x.chunk(2, -1)
-        return torch.cat((-x1, x0), dim=x0.ndim - 1)
+        return torch.concat((-x1, x0), dim=x0.ndim - 1)
 
     def golden_func1(self, in_tensors):
         ntoken = in_tensors[0].size()[0]
@@ -54,11 +52,11 @@ class OpcheckUnpadRopeOperation(operation_test.OperationTest):
             k = torch.concat([k0, k1], dim=(k0.ndim - 1)).view(cur_seqlen, hidden_size)
             k_list.append(k)
             offset = next_offset
-        q_sum = torch.cat(tuple(q_list), dim=0)
-        k_sum = torch.cat(tuple(k_list), dim=0)
+        q_sum = torch.concat(tuple(q_list), dim=0)
+        k_sum = torch.concat(tuple(k_list), dim=0)
         del self.unpadRetdata
         return [q_sum, k_sum]
-    
+
     def golden_func2(self, in_tensors):
         ntoken = in_tensors[0].size()[0]
         seqlen = int(in_tensors[4][0])
@@ -89,11 +87,11 @@ class OpcheckUnpadRopeOperation(operation_test.OperationTest):
         else:
             ntoken = in_tensors[0].size()[0]
             seqlen = int(in_tensors[4][0])
-            batch = ntoken // seqlen
+            batch = max(ntoken // seqlen, 1)
             hidden_sizeq = in_tensors[0].size()[1]
             head_size = in_tensors[2].size()[1]
             q_head_num = hidden_sizeq // head_size
-            hidden_sizek = in_tensors[0].size()[1]
+            hidden_sizek = in_tensors[1].size()[1]
             k_head_num = hidden_sizek // head_size
         rot_dim = in_tensors[2].size()[1]
 
@@ -129,31 +127,35 @@ class OpcheckUnpadRopeOperation(operation_test.OperationTest):
 
     def golden_func4(self, in_tensors):
         ntoken = in_tensors[0].size()[0]
-        seqlen = int(in_tensors[4][0])
-        batch = ntoken // seqlen
         hidden_size = in_tensors[0].size()[1]
         hidden_size1 = in_tensors[1].size()[1]
         head_size = in_tensors[2].size()[1]
         head_num = hidden_size // head_size
         head_num1 = hidden_size1 // head_size
-        q = in_tensors[0].view(batch, seqlen, head_num, head_size)
-        k = in_tensors[1].view(batch, seqlen, head_num1, head_size)
-        cos = in_tensors[2].view(batch, seqlen, head_size).unsqueeze(2)
-        sin = in_tensors[3].view(batch, seqlen, head_size).unsqueeze(2)
+        q = in_tensors[0].view(ntoken, head_num, head_size)
+        k = in_tensors[1].view(ntoken, head_num1, head_size)
+        cos = in_tensors[2].view(ntoken, 1, head_size)
+        sin = in_tensors[3].view(ntoken, 1, head_size)
         q_embed = ((q * cos) + (self.rotate_half(q) * sin)).view(ntoken, hidden_size)
         k_embed = ((k * cos) + (self.rotate_half(k) * sin)).view(ntoken, hidden_size1)
         return [q_embed, k_embed]
 
     def golden_calc(self, in_tensors):
-        if self.op_param['rotaryCoeff'] == 4:
+        rotary_coeff = self.op_param.get('rotaryCoeff', None)
+        if rotary_coeff == 4:
             if in_tensors[4].size()[0] == 3:
                 return self.golden_func1(in_tensors)
             else:
                 return self.golden_func2(in_tensors)
-        elif self.op_param['rotaryCoeff'] == 64:
+        elif rotary_coeff == 64:
             return self.golden_func3(in_tensors)
         else:
             return self.golden_func4(in_tensors)
 
     def test(self):
+        rotary_coeff = self.op_param.get('rotaryCoeff', None)
+        if rotary_coeff is None:
+            msg = "Cannot get golden data because rotaryCoeff is not correctly set!"
+            logger.error(msg)
+            return
         self.execute()

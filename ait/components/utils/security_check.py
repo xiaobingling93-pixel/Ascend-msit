@@ -8,7 +8,7 @@ STR_WHITE_LIST_REGEX = re.compile(r"[^_A-Za-z0-9\"'><=\[\])(,}{: /.~-]")
 MAX_READ_FILE_SIZE_4G = 4294967296  # 4G, 4 * 1024 * 1024 * 1024
 MAX_READ_FILE_SIZE_32G = 34359738368  # 32G, 32 * 1024 * 1024 * 1024
 READ_FILE_NOT_PERMITTED_STAT = stat.S_IWGRP | stat.S_IWOTH
-WRITE_FILE_NOT_PERMITTED_STAT = stat.S_IWGRP | stat.S_IWOTH | stat.S_IROTH | stat.S_IXOTH
+WRITE_FILE_NOT_PERMITTED_STAT = stat.S_IWGRP | stat.S_IWOTH
 
 
 def is_belong_to_user_or_group(file_stat):
@@ -94,7 +94,7 @@ def get_valid_write_path(path, extensions=None, check_user_stat=True, is_dir=Fal
         if check_user_stat and os.stat(real_path).st_uid != os.getuid():  # Has to be exactly belonging to current user
             raise ValueError("The file {} doesn't belong to the current user.".format(path))
         if check_user_stat and os.stat(real_path).st_mode & WRITE_FILE_NOT_PERMITTED_STAT > 0:
-            raise ValueError("The file {} permission for others is not 0, or is group writable.".format(path))
+            raise ValueError("The file {} permission for others is writable, or is group writable.".format(path))
         if not os.access(real_path, os.W_OK):
             raise ValueError("The file {} exist and not writable.".format(path))
     return real_path

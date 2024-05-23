@@ -12,50 +12,51 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-import os
-import unittest
 from ctypes import CDLL
-import numpy as np
 import torch
 import torch_npu
 import torch.nn as nn
 
 from ait_llm.opcheck import operation_test
+from ait_llm.common.log import logger
 
 
 class OpcheckToppOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
-        rand_seed = self.op_param["randSeed"]
-        topk = self.op_param["topk"]
+        rand_seed = self.op_param.get('rand_seed', None)
+        topk = self.op_param.get('topk', None)
         libc = CDLL("libc.so.6")
         libc.srand(rand_seed)
         rand_list = [libc.rand() / 0x7fffffff for i in range(64)]
- 
-        probs = in_tensors[0].cpu().numpy()
-        topp = in_tensors[1].cpu().numpy()
-        probs_sorted = np.sort(probs, axis=-1)[..., ::-1][..., :topk]
+
+        probs = in_tensors[0]
+        topp = in_tensors[1]
+        probs_sorted = torch.sort(probs, axis=-1)[..., ::-1][..., :topk]
         try:
             probs_div_sorted = probs_sorted / topp
         except ZeroDivisionError as e:
             raise e   
-        indices_sorted = np.argsort(-probs, kind='mergesort', axis=-1)[..., :topk]
-        probs_sorted_sumed = np.cumsum(probs_sorted, axis=-1, dtype=np.float16).astype(np.float16)
-        mask = np.zeros_like(probs_sorted_sumed, dtype=np.int32)
+        indices_sorted = torch.argsort(-probs, kind='mergesort', axis=-1)[..., :topk]
+        probs_sorted_sumed = torch.cumsum(probs_sorted, axis=-1)
+        mask = torch.zeros_like(probs_sorted_sumed, dtype=torch.int32)
         mask[probs_sorted_sumed <= topp] = 1
         probs_div_sorted *= mask
-        probs_div_sorted_sumed = np.cumsum(probs_div_sorted, axis=-1, dtype=np.float16).astype(np.float16)
-        multinomial_probs = probs_div_sorted_sumed.astype(np.float32) < rand_list[0]
-        first_true_indeces = np.argmax(~multinomial_probs, axis=-1)
+        probs_div_sorted_sumed = torch.cumsum(probs_div_sorted, axis=-1)
+        multinomial_probs = probs_div_sorted_sumed < rand_list[0]
+        first_true_indeces = torch.argmax(~multinomial_probs, axis=-1)
         for i in range(probs.shape[0]):
             multinomial_probs[i, first_true_indeces[i]:] = False
-        indices_sorted_sampled = np.sum(multinomial_probs, axis=-1, keepdims=True)
+        indices_sorted_sampled = torch.sum(multinomial_probs, axis=-1, keepdims=True)
         indices_sorted_sampled[indices_sorted_sampled >= topk] = 0
-        indices_sampled = np.take_along_axis(indices_sorted, indices_sorted_sampled, axis=-1)
-        probs_sampled = np.take_along_axis(probs_sorted, indices_sorted_sampled, axis=-1)
-        return [torch.from_numpy(indices_sampled.astype(np.int32)),
-                torch.from_numpy(probs_sampled.astype(np.float16))]
+        indices_sampled = torch.take_along_axis(indices_sorted, indices_sorted_sampled, axis=-1)
+        probs_sampled = torch.take_along_axis(probs_sorted, indices_sorted_sampled, axis=-1)
+        return [indices_sampled, probs_sampled]
 
-    
     def test(self):
+        rand_seed = self.op_param.get('rand_seed', None)
+        topk = self.op_param.get('topk', None)
+        if rand_seed is None or topk is None:
+            msg = "Cannot get golden data because opParam is not correctly set!"
+            logger.error(msg)
+            return
         self.execute()

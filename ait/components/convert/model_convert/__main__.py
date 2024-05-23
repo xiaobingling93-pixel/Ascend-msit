@@ -33,10 +33,6 @@ def parse_input_param(model: str,
     )
 
 
-class ConvertCommand(BaseCommand):
-    pass
-
-
 class ModelConvertCommand(BaseCommand):
     def __init__(self, backend, *args, **kwargs):
         super(ModelConvertCommand, self).__init__(*args, **kwargs)
@@ -96,7 +92,7 @@ def get_cmd_instance():
     aie_cmd = AieCommand("aie", help_info="Convert onnx to om by aie.")
     atc_cmd = ModelConvertCommand(name="atc", help_info="Convert onnx to om by atc.", backend="atc")
     aoe_cmd = ModelConvertCommand(name="aoe", help_info="Convert onnx to om by aoe.", backend="aoe")
-    convert_cmd = ConvertCommand(
+    convert_cmd = BaseCommand(
         name="convert",
         help_info="convert tool converts the model from ONNX, TensorFlow, Caffe and MindSpore to OM. \
                    It supports atc, aoe and aie.",

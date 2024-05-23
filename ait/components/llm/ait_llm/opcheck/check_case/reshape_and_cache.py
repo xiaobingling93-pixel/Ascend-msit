@@ -12,26 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
-import math
-import os
-import random
-import sys
-import unittest
-
-import numpy as np
 import torch
 import torch_npu
 
 from ait_llm.opcheck import operation_test
+from ait_llm.common.log import logger
 
 
 class OpcheckReshapeAndCacheOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
         golden = []
-        for index in self.case_info['inplace_idx']:
+        inplace_idx = self.case_info.get("inplace_idx", None)
+        for index in inplace_idx:
             golden.append(in_tensors[index])
         return golden
 
     def test(self):
+        inplace_idx = self.case_info.get("inplace_idx", None)
+        if inplace_idx is None:
+            msg = "Cannot get golden data because inplace_idx is not correctly set!"
+            logger.error(msg)
+            return
         self.execute_inplace()

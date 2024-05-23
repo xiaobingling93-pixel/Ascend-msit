@@ -12,20 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-import os
-import unittest
 import torch
 import torch_npu
 
 from ait_llm.opcheck import operation_test
+from ait_llm.common.log import logger
 
 
 class OpcheckReduceOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
-        op_type = self.op_param['reduceType']
-        axis = self.op_param['axis']
-        return [in_tensors[0].amax(axis)[0]] if op_type == 1 else [in_tensors[0].amin(axis)[0]]
+        op_type = self.op_param.get('reduceType', None)
+        axis = self.op_param.get('axis', None)
+        if op_type == 1:
+            return [in_tensors[0].amax(axis)[0]]
+        else:
+            return [in_tensors[0].amin(axis)[0]]
 
     def test(self):
+        op_type = self.op_param.get('reduceType', None)
+        axis = self.op_param.get('axis', None)
+        if op_type is None or axis is None:
+            msg = "Cannot get golden data because opParam is not correctly set!"
+            logger.error(msg)
+            return
         self.execute()

@@ -21,17 +21,27 @@ with open('requirements.txt', encoding='utf-8') as f:
 with open('README.md', encoding='utf-8') as f:
     long_description = f.read()
 
+ait_sub_tasks = [{
+    "name": "analyze",
+    "help_info": "Analyze tool to evaluate compatibility of model conversion",
+    "module": "model_evaluation.__main__",
+    "attr": "get_cmd_instance"
+}]
+
+ait_sub_task_entry_points = [
+    f"{t.get('name')}:{t.get('help_info')} = {t.get('module')}:{t.get('attr')}"
+    for t in ait_sub_tasks
+]
+
 setup(
-    name='analyze_tool',
-    version='0.1.0',
+    name='ait-analyze',
+    version='7.0.0c2',
     description='inference analyze tool',
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://gitee.com/ascend/ait',
     packages=find_packages(),
-    package_data={
-        'model_evaluation': ['data/op_map/*.yaml']
-    },
+    package_data={'model_evaluation': ['data/op_map/*.yaml']},
     license='Apache-2.0',
     keywords='analyze tool',
     install_requires=required,
@@ -44,10 +54,11 @@ setup(
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Topic :: Scientific/Engineering',
-        'Topic :: Software Development'
+        'Topic :: Software Development',
     ],
     python_requires='>=3.7',
     entry_points={
-        'analyze_sub_task': ['model=model_evaluation.__main__:get_cmd_instance'],
+        'ait_sub_task': ait_sub_task_entry_points,
+        'ait_sub_task_installer': ['ait-analyze=model_evaluation.__install__:AnalyzeInstall'],
     },
 )

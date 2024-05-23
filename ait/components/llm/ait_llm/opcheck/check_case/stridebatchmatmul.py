@@ -12,9 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-import os
-import unittest
 import torch
 import torch_npu
 
@@ -31,41 +28,47 @@ class OpcheckStridedBatchMatmulOperation(operation_test.OperationTest):
         batch_start_c = 0
         list_a = []
         list_b = []
-        batch = self.op_param["batch"]
-        head_num = self.op_param["headNum"]
-        c = torch.zeros(sum([self.op_param["m"][i] * self.op_param["n"][i] for i in range(batch)]) * head_num, 
-                        dtype=torch.float16, device=a.device)
-        trans_a = self.op_param["transA"]
-        trans_b = self.op_param["transB"]
+
+        batch = self.op_param.get("batch", None)
+        head_num = self.op_param.get("head_num", None)
+        trans_a = self.op_param.get("trans_a", None)
+        trans_b = self.op_param.get("trans_b", None)
+        m, n, k = self.op_param.get("m", None), self.op_param.get("n", None), self.op_param.get("k", None)
+        lda, ldb, ldc = self.op_param.get("lda", None), self.op_param.get("ldb", None), self.op_param.get("ldc", None)
+        stridea = self.op_param.get("strideA", None)
+        strideb = self.op_param.get("strideB", None)
+        stridec = self.op_param.get("strideC", None)
+
+        c = torch.zeros(sum([m[i] * n[i] for i in range(batch)]) * head_num, dtype=torch.float16, device=a.device)
 
         for i in range(batch):
             for j in range(head_num):
                 list_a = []
                 list_b = []
-                row_a = self.op_param["m"][i] if not trans_a else self.op_param["k"][i]
-                col_a = self.op_param["k"][i] if not trans_a else self.op_param["m"][i]
+                row_a = m[i] if not trans_a else k[i]
+                col_a = k[i] if not trans_a else m[i]
                 for t in range(row_a):
-                    start_a = self.op_param["lda"][i] * t + self.op_param["strideA"][i] * j + batch_start_a
+                    start_a = lda[i] * t + stridea[i] * j + batch_start_a
                     end_a = start_a + col_a
                     list_a.append(a[start_a:end_a])
-                row_b = self.op_param["k"][i] if not trans_b else self.op_param["n"][i]
-                col_b = self.op_param["n"][i] if not trans_b else self.op_param["k"][i]
+                row_b = k[i] if not trans_b else n[i]
+                col_b = n[i] if not trans_b else k[i]
                 for t in range(row_b):
-                    start_b = self.op_param["ldb"][i] * t + self.op_param["strideB"][i] * j + batch_start_b
+                    start_b = ldb[i] * t + strideb[i] * j + batch_start_b
                     end_b = start_b + col_b
                     list_b.append(b[start_b:end_b])
                 mat_a = torch.stack(list_a)
                 mat_b = torch.stack(list_b)
                 mat_a = torch.transpose(mat_a, 0, 1) if trans_a else mat_a
                 mat_b = torch.transpose(mat_b, 0, 1) if trans_b else mat_b
-                mat_c = torch.matmul(mat_a.float(), mat_b.float()).half()
+                mat_c = torch.matmul(mat_a, mat_b).half()
                 for t in range(mat_c.shape[0]):
-                    start_c = self.op_param["ldc"][i] * t + self.op_param["strideC"][i] * j + batch_start_c
+                    start_c = ldc[i] * t + stridec[i] * j + batch_start_c
                     end_c = start_c + mat_c.shape[1]
                     c[start_c:end_c] = mat_c[t, :]
-            batch_start_a += self.op_param["m"][i] * self.op_param["k"][i] * head_num
-            batch_start_b += self.op_param["n"][i] * self.op_param["k"][i] * head_num
-            batch_start_c += self.op_param["m"][i] * self.op_param["n"][i] * head_num
+            batch_start_a += m[i] * k[i] * head_num
+            batch_start_b += n[i] * k[i] * head_num
+            batch_start_c += m[i] * n[i] * head_num
         return [c]
 
     def test_add_bmm1(self):

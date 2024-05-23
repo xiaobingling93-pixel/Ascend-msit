@@ -23,7 +23,7 @@ import torch_npu
 
 from ait_llm.common.tool import read_atb_data
 from ait_llm.common.log import logger
-from ait_llm.compare.cmp_algorithm import CMP_ALG_MAP
+from ait_llm.compare.cmp_algorithm import CMP_ALG_MAP, CUSTOM_ALG_MAP
 
 
 FLOAT_EPSILON = torch.finfo(torch.float).eps
@@ -40,6 +40,7 @@ class OperationTest(unittest.TestCase):
         self.op_name = case_info['op_name']
         self.op_param = case_info['op_param']
         self.tensor_path = case_info['tensor_path']
+        self.pid = case_info['pid']
         self.in_tensors = []
         self.out_tensors = []
         self.rerun = self.case_info["rerun"]
@@ -54,7 +55,7 @@ class OperationTest(unittest.TestCase):
         self.precision_standard = {
             'torch.double': [error1, 99.99], 'torch.uint32': [error1, 99.99], 'torch.int64': [error1, 99.99],
             'torch.float': [error1, 99.99], 'torch.int32': [error1, 99.99], 'torch.uint64': [error1, 99.99],
-            'torch.float16': [error3, 99.9], 'torch.bf16': [error4, 99.6], 'torch.int8': [error6, 99.9],
+            'torch.float16': [error3, 99.9], 'torch.bfloat16': [error4, 99.6], 'torch.int8': [error6, 99.9],
             'torch.uint8': [error6, 99], 'torch.int16': [error6, 99.9], 'torch.uint16': [error6, 99.9],
             'torch.bool': [error1, 100]
         }
@@ -77,32 +78,66 @@ class OperationTest(unittest.TestCase):
             suite.addTest(optest_class(name, case_info=case_info, excuted_ids=excuted_ids))
         return suite
 
-    def setUp(self):
-        def get_tensor_path(tensor_type):
-            _tensor_path = [x for x in os.listdir(self.tensor_path) if x.startswith(tensor_type)]
-            _tensor_path.sort(key=lambda x:int(x.split(tensor_type)[1].split('.')[0]))  
-            _tensor_path = [os.path.join(self.tensor_path, x) for x in _tensor_path]
-            return _tensor_path
+    def validate_param(self, *param_names):
+        ret = True
+        for param_name in param_names:
+            param = self.op_param.get(param_name, None)
+            if param is None:
+                ret = False
+                msg = f"Cannot get golden data because opParam {param_name} is not correctly set!"
+                logger.error(msg)
+        return ret
 
-        if self.tensor_path:
-            if os.path.isdir(self.tensor_path):
-                _in_tensor_path = get_tensor_path("intensor")
-                for path in _in_tensor_path:
-                    _in_tensor = read_atb_data(path).npu()
-                    self.in_tensors.append(_in_tensor)
-                _out_tensor_path = get_tensor_path("outtensor")
-                for path in _out_tensor_path:
-                    _out_tensor = read_atb_data(path).npu()
-                    self.out_tensors.append(_out_tensor)
-            else:
-                raise RuntimeError(f"{self.tensor_path} not valid")
-        else:
-            raise RuntimeError(f"{self.tensor_path} not valid")
+    def validate_path(self, path):
+        if not path or not os.path.exists(path):
+            raise RuntimeError(f"{path} not valid")
+
+    def get_tensor_path(self, path, tensor_type):
+        _tensor_path = [x for x in os.listdir(path) if x.startswith(tensor_type)]
+        _tensor_path.sort(key=lambda x:int(x.split(tensor_type)[1].split('.')[0]))  
+        tensor_files = [os.path.join(path, x) for x in _tensor_path]
+        return tensor_files
+
+    def read_tensor_from_file(self, tensor_files):
+        res = []
+        for tensor_file in tensor_files:
+            tensor = read_atb_data(tensor_file).npu()
+            res.append(tensor)
+        return res
+
+    def get_in_tensors_from_single_device(self, i, rank):
+        old_did_pid = f"{rank}_{self.pid}"
+        new_did_pid = f"{i}_{int(self.pid) - rank + i}"
+        new_tensor_path = self.tensor_path[::-1].replace(old_did_pid[::-1], new_did_pid[::-1], 1)[::-1]
+        self.validate_path(new_tensor_path)
+        _in_tensor_files = self.get_tensor_path(new_tensor_path, "intensor")
+        return self.read_tensor_from_file(_in_tensor_files)
+
+    def get_rank_info(self):
+        rank = self.op_param.get("rank", None) 
+        rank_root = self.op_param.get("rankRoot", None)
+        rank_size = self.op_param.get("rankSize", None)
+        return rank, rank_root, rank_size
+
+    def get_new_in_tensors(self):
+        rank, rank_root, rank_size = self.get_rank_info()
+        new_in_tensors = []
+        for i in range(rank_root, rank_size):
+            _in_tensors = self.get_in_tensors_from_single_device(self, i, rank)
+            new_in_tensors.extend(_in_tensors)
+        return new_in_tensors
+
+    def setUp(self):
+        self.validate_path(self.tensor_path)
+        _in_tensor_files = self.get_tensor_path(self.tensor_path, "intensor")
+        self.in_tensors = self.read_tensor_from_file(_in_tensor_files)
+        _out_tensor_files = self.get_tensor_path(self.tensor_path, "outtensor")
+        self.out_tensors = self.read_tensor_from_file(_out_tensor_files)
 
     def tearDown(self):
         self.excuted_ids.put(self.op_id)
-        if self.case_info['excuted_information'] != 'execution successful':
-            self.case_info['excuted_information'] = 'execution failed'
+        if self.case_info['excuted_information'] != 'PASS':
+            self.case_info['excuted_information'] = 'FAILED'
 
     def rerun_op(self, excute_type): 
         operation = torch.classes.OperationTorch.OperationTorch(self.op_name)
@@ -129,6 +164,7 @@ class OperationTest(unittest.TestCase):
             out_tensors = self.rerun_op(excute_type)
         else:
             out_tensors = self.out_tensors
+
         golden_out_tensors = self.golden_calc(self.in_tensors)
         try:
             logger.debug("out_tensor", out_tensors[0].size())
@@ -173,6 +209,7 @@ class OperationTest(unittest.TestCase):
         return abs_pass_rate.item() * 100, max_abs_error.item()
 
     def get_other_precisions(self, out, golden, etol):
+        message = []
         precision_type = self.case_info['precision_type']
         default_str = 'NaN'
         abs_pass_rate, max_abs_error, cos_sim, kl = None, None, None, None
@@ -181,15 +218,19 @@ class OperationTest(unittest.TestCase):
         if 'abs' in precision_type:
             abs_pass_rate, max_abs_error = self.get_abs_pass_rate(out, golden, etol)
         if 'cos_sim' in precision_type:
-            cos_sim, _ = CMP_ALG_MAP["cosine_similarity"](golden, out)
+            cos_sim, cur_message = CMP_ALG_MAP["cosine_similarity"](golden, out)
+            if cur_message:
+                message.append('cos_sim: ' + cur_message)
         if 'kl' in precision_type:
-            kl, _ = CMP_ALG_MAP["kl_divergence"](golden, out)
+            kl, cur_message = CMP_ALG_MAP["kl_divergence"](golden, out)
+            if cur_message:
+                message.append('kl_div: ' + cur_message)
         abs_pass_rate_str = "%.16f" % float(abs_pass_rate) if abs_pass_rate is not None else default_str
         max_abs_error_str = "%.16f" % float(max_abs_error) if max_abs_error is not None else default_str
         cos_sim_str = "%.10f" % cos_sim if cos_sim is not None else default_str
         kl_div_str = "%.16f" % kl if kl is not None else default_str
 
-        return abs_pass_rate_str, max_abs_error_str, cos_sim_str, kl_div_str
+        return (abs_pass_rate_str, max_abs_error_str, cos_sim_str, kl_div_str), ", ".join(message)
 
     def get_npu_device(self):
         npu_device = os.environ.get("NPU_DEVICE")
@@ -214,47 +255,77 @@ class OperationTest(unittest.TestCase):
         logger.debug(logger_text)
         return soc_version
 
-    def __golden_compare_all(self, out_tensors, golden_out_tensors):
-        flag = True
+    def convert_data_format(self, data):
+        dim0, dim1 = data.shape[0], data.shape[1]
+        data = data.reshape([1, dim1 // 16, dim0, 16]).permute(0, 2, 1, 3).reshape([dim0, dim1])
+        return data
 
-        try:
-            self.assertEqual(len(out_tensors), len(golden_out_tensors))
-        except AssertionError as e:
-            flag = False
-            logger.debug(e)
+    def nz_2_nd(self, data):
+        origin_shape = data.shape
+        dims = list(range(len(origin_shape)))
+        last_dims = dims[-4:]
+
+        perm = dims[:-4] + [last_dims[1]] + [last_dims[2]] + [last_dims[0]] + [last_dims[3]]
+        data = data.permute(perm)
+        nd_shape = data.shape[:-4] + (data.shape[-4] * data.shape[-3], data.shape[-2], data.shape[-1])
+        data = data.reshape(nd_shape)
+        return data
+
+    def __golden_compare_all(self, out_tensors, golden_out_tensors):
+        message, pass_flag = [], True
+
+        my_data_len, golden_data_len = len(out_tensors), len(golden_out_tensors)
+        if my_data_len != golden_data_len:
+            pass_flag = False
+            logger.info(f"Data count not equal, {my_data_len} != {golden_data_len}. Will compare only partial")
 
         tensor_count = len(out_tensors)
-        for i in range(tensor_count):
-            out_dtype = str(out_tensors[i].dtype)
+        for out_tensor, golden_out_tensor in zip(out_tensors, golden_out_tensors):
+            out_dtype = str(out_tensor.dtype)
             p_s = self.precision_standard.get(out_dtype, [])
             if len(p_s) != 2:
-                raise RuntimeError(f"{out_dtype} not supported!")
+                cur_message = f"{out_dtype} not supported!"
+                self.case_info['fail_reason'] = cur_message
+                raise RuntimeError(cur_message)
+
             etol = self.erol_dict.get(p_s[0], 0.001)
             err_rate = p_s[1]
             ps_standard = f"{err_rate}%(error<{etol})"
 
-            rel_pass_rate, max_rel = self.get_rel_pass_rate(out_tensors[i], golden_out_tensors[i], etol)
+            rel_pass_rate, max_rel = self.get_rel_pass_rate(out_tensor, golden_out_tensor, etol)
 
-            try:
-                self.assertLess(err_rate, rel_pass_rate)
-            except AssertionError as e:
-                flag = False
-                logger.debug(e)
+            if err_rate >= rel_pass_rate:
+                pass_flag = False
+                cur_message = f"relative pass rate: {rel_pass_rate} not met standart: {err_rate}."
+                message.append(cur_message)
+                logger.debug(cur_message)
 
             rel_pass_rate = "%.16f" % float(rel_pass_rate)
             max_rel = "%.16f" % float(max_rel)
-            abs_pass_rate, max_abs, cos_sim, kl_div = self.get_other_precisions(out_tensors[i], golden_out_tensors[i], 
-                                                                                etol)
+            (abs_pass_rate, max_abs, cos_sim, kl_div), cur_message = self.get_other_precisions(
+                out_tensor, golden_out_tensor, etol
+            )
+            if cur_message:
+                message.append(cur_message)
 
-            self.case_info['res_detail'].append({"precision_standard": ps_standard,
-                                                "rel_pass_rate": rel_pass_rate,
-                                                "max_rel": max_rel,
-                                                "abs_pass_rate": abs_pass_rate,
-                                                "max_abs": max_abs,
-                                                "cos_sim": cos_sim,
-                                                "kl_div": kl_div})
+            cur_result = {
+                "precision_standard": ps_standard,
+                "rel_pass_rate": rel_pass_rate,
+                "max_rel": max_rel,
+                "abs_pass_rate": abs_pass_rate,
+                "max_abs": max_abs,
+                "cos_sim": cos_sim,
+                "kl_div": kl_div,
+            }
+            for name, compare_func in CUSTOM_ALG_MAP.items():
+                cur_result[name], cur_message = compare_func(golden_out_tensor, out_tensor)
+                if cur_message:
+                    message.append(f"{name}: {cur_message}")
+            self.case_info['res_detail'].append(cur_result)
 
-            if flag:
-                self.case_info['excuted_information'] = 'execution successful'
+            if pass_flag:
+                self.case_info['excuted_information'] = 'PASS'
+                
             else:
-                self.case_info['excuted_information'] = 'execution failed'
+                self.case_info['excuted_information'] = 'FAILED'
+            self.case_info['fail_reason'] = ", ".join(message)

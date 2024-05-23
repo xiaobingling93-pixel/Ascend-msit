@@ -17,7 +17,7 @@
 declare -i ret_ok=0
 declare -i ret_failed=1
 CUR_PATH=$("pwd")
-ALL_VALID_TEST_CASES=(/analyze/ /benchmark/ /convert/ /debug/compare/ /debug/surgeon/ /llm/ /profile/ /transplt/ /utils/)
+ALL_VALID_TEST_CASES=(/analyze/ /benchmark/ /convert/ /debug/compare/ /debug/surgeon/ /llm/ /profile/ /transplt/ /tensor_view/ /utils/)
 
 function is_path_in_all_valid_test_cases() {
     for test_case in ${RUN_TESTCASES[@]}; do

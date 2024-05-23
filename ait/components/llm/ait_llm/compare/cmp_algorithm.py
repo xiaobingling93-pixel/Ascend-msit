@@ -79,6 +79,58 @@ def relative_euclidean_distance(golden_data: torch.Tensor, my_data: torch.Tensor
     return result.item(), ''
 
 
+def register_custom_compare_algorithm(custom_compare_algorithm):
+    import os
+    import sys
+    import importlib
+    import inspect
+    from components.utils.file_open_check import FileStat
+
+    custom_compare_algorithm_split = custom_compare_algorithm.split(':')
+    if len(custom_compare_algorithm_split) != 2:
+        raise ValueError("custom_compare_algorithm should be in format '{python_file_path}:{function_name}'")
+    file_path, func_name = custom_compare_algorithm_split
+    file_path = os.path.expanduser(file_path)
+
+    if not os.path.exists(file_path):
+        raise ValueError(f"custom_compare_algorithm specified {file_path} not exists")
+    if not file_path.endswith(".py"):
+        raise ValueError("custom_compare_algorithm specified {file_path} is not a py file")
+    
+    file_stat = FileStat(file_path)
+    if not file_stat.is_basically_legal('read', strict_permission=False):
+        raise ValueError(f"custom_compare_algorithm specified {file_path} permission stat is illegal")
+
+    file_dir, file_name = os.path.dirname(file_path), os.path.basename(file_path)
+    if len(file_dir) > 0 and file_dir not in sys.path:
+        sys.path.append(file_dir)
+
+    custom_module_name = file_name.replace('.py', '')
+    try:
+        custom_module = importlib.import_module(custom_module_name)
+    except Exception as ee:
+        raise ValueError(f"import {custom_module_name} from {file_dir} failed") from ee
+
+    custom_compare_func = getattr(custom_module, func_name, None)
+    if custom_compare_func is None:
+        raise ValueError(f"getting {func_name} from {custom_compare_algorithm} failed")
+    if len(inspect.signature(custom_compare_func).parameters) != 2:
+        raise ValueError(f"function {func_name} signature should have exact two parameters")
+
+    try:
+        ret = custom_compare_func(torch.ones([1]), torch.ones([1]))
+    except Exception as ee:
+        raise ValueError(f"function {func_name} should recieve 2 torch tensor parameters")
+
+    if not isinstance(ret, (list, tuple)) or len(ret) != 2:
+        raise ValueError(f"function {func_name} should return 2 value in type ((float, int, str), str)")
+    if not isinstance(ret[0], (float, int, str)) or not isinstance(ret[1], str):
+        raise ValueError(f"function {func_name} should return 2 value in type ((float, int, str), str)")
+
+    logger.info(f"Added custom comparing algorithm: {func_name}")
+    CUSTOM_ALG_MAP[func_name] = custom_compare_func
+
+
 CMP_ALG_MAP = {
     "cosine_similarity": cosine_similarity,
     "max_relative_error": max_relative_error,
@@ -88,3 +140,5 @@ CMP_ALG_MAP = {
     "kl_divergence": kl_divergence,
     "relative_euclidean_distance": relative_euclidean_distance,
 }
+
+CUSTOM_ALG_MAP = {}

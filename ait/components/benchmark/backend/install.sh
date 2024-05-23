@@ -37,19 +37,19 @@ check_env_valid()
 
 main()
 {
-      while [ -n "$1" ]
+    while [ -n "$1" ]
 do
-  case "$1" in
-    -p|--python_command)
-        PYTHON_COMMAND=$2
-        shift
-        ;;
-    *)
-        echo "$1 is not an option, please use --help"
-        exit 1
-        ;;
-  esac
-  shift
+    case "$1" in
+        -p|--python_command)
+            PYTHON_COMMAND=$2
+            shift
+            ;;
+        *)
+            echo "$1 is not an option, please use --help"
+            exit 1
+            ;;
+    esac
+    shift
 done
 
     [ "$PYTHON_COMMAND" != "" ] || { PYTHON_COMMAND="python3.7";echo "set default pythoncmd:$PYTHON_COMMAND"; }

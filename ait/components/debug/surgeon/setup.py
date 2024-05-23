@@ -19,15 +19,28 @@ with open('requirements.txt', encoding='utf-8') as f:
 with open('README.md', encoding='utf-8') as f:
     long_description = f.read()
 
+debug_sub_tasks = [{
+    "name": "surgeon",
+    "help_info": "surgeon tool for onnx modifying functions.",
+    "module": "auto_optimizer.ait_main",
+    "attr": "get_cmd_instance"
+}]
+
+debug_sub_task_entry_points = [
+    f"{t.get('name')}:{t.get('help_info')} = {t.get('module')}:{t.get('attr')}"
+    for t in debug_sub_tasks
+]
+
 setup(
-    name='auto_optimizer',
-    version='0.1.0',
+    name='ait-surgeon',
+    version='7.0.0c2',
     description='auto optimizer',
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://gitee.com/ascend/ait',
     packages=find_packages(),
-    package_data={'': ['LICENSE', 'model.cfg']},
+    package_data={'': ['LICENSE', 'model.cfg']},    
+
     license='Apache-2.0',
     keywords='auto optimizer',
     install_requires=required,
@@ -40,7 +53,7 @@ setup(
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Topic :: Scientific/Engineering',
-        'Topic :: Software Development'
+        'Topic :: Software Development',
     ],
     extras_require={
         'inference': [
@@ -60,6 +73,7 @@ setup(
     python_requires='>=3.7',
     entry_points={
         'console_scripts': ['auto_optimizer=auto_optimizer.__main__:cli'],
-        'debug_sub_task': ['surgeon=auto_optimizer.ait_main:get_cmd_instance'],
+        'debug_sub_task': debug_sub_task_entry_points,
+        'ait_sub_task_installer': ['ait-surgeon=auto_optimizer.__install__:SurgeonInstall'],
     },
 )

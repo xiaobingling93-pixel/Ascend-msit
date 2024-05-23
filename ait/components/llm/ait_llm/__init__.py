@@ -17,3 +17,4 @@ from ait_llm.compare.cmp_utils import compare_data
 from ait_llm.common.json_fitter import atb_json_to_onnx
 from ait_llm.dump.torch_dump import DumpConfig
 from ait_llm.dump.torch_dump import register_hook
+from ait_llm.metrics.case_filter import CaseFilter

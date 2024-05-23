@@ -19,7 +19,7 @@ import argparse
 from components.utils.parser import BaseCommand
 from msquickcmp.adapter_cli.args_adapter import CmpArgsAdapter
 from msquickcmp.cmp_process import cmp_process
-from msquickcmp.common.utils import logger, check_exec_cmd
+from msquickcmp.common.utils import logger
 from msquickcmp.common.args_check import (
     check_model_path_legality, check_om_path_legality, check_weight_path_legality, check_input_path_legality,
     check_cann_path_legality, check_output_path_legality, check_dict_kind_string, check_device_range_valid,
@@ -42,13 +42,13 @@ class CompareCommand(BaseCommand):
             required=False,
             dest="golden_model",
             type=check_model_path_legality,
-            help='The original model (.onnx or .pb or .prototxt) file path')
+            help='The original model (.onnx or .pb or .prototxt or .om) file path')
         parser.add_argument(
             '-om',
             '--om-model',
             dest="om_model",
             type=check_om_path_legality,
-            help='The offline model (.om) file path')
+            help='The offline model (.om or .mindir) file path')
         parser.add_argument(
             '-w',
             '--weight',

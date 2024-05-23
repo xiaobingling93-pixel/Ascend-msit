@@ -19,7 +19,7 @@ import subprocess
 from components.utils.parser import BaseCommand
 from ait_llm.dump.initial import init_dump_task, clear_dump_task
 from ait_llm.opcheck.opchecker import OpChecker
-from ait_llm.errcheck.initial import init_error_check
+from ait_llm.errcheck.process import process_error_check
 from ait_llm.common.utils import str2bool, check_positive_integer, check_device_integer, safe_string, check_exec_cmd, \
     check_ids_string, check_number_list, check_output_path_legality, check_input_path_legality
 from ait_llm.common.log import logger, set_log_level, LOG_LEVELS
@@ -174,6 +174,15 @@ class CompareCommand(BaseCommand):
             required=True,
             type=check_input_path_legality,
             help='Compared data path. It supports directory or file.')
+        
+        parser.add_argument(
+            '--cmp-level',
+            '-cl',
+            dest="cmp_level",
+            required=False,
+            default="layer",
+            choices=["layer", "token"],
+            help='Compare level. only enabled for atb.')
 
         parser.add_argument(
             '--log-level',
@@ -202,10 +211,28 @@ class CompareCommand(BaseCommand):
             default='',
             help='Operation mapping file directory.E.g:--op-mapping-file /xx/xxxx/xx')
 
+        parser.add_argument(
+            '--custom-algorithms',
+            '-alg',
+            required=False,
+            nargs='+',
+            help='custom comparing algorithms in format "python_file_path.py:function". \
+                  Should better be a standalong file, and function should in format like \
+                  "def foo(golden_tensor, my_tensor): return float_value, string_message"')
+
     def handle(self, args, **kwargs):
         from ait_llm.compare.torchair_acc_cmp import get_torchair_ge_graph_path
 
         set_log_level(args.log_level)
+
+        # Adding custom comparing algorithms
+        if args.custom_algorithms:
+            from ait_llm.compare.cmp_algorithm import register_custom_compare_algorithm
+
+            for custom_compare_algorithm in args.custom_algorithms:
+                register_custom_compare_algorithm(custom_compare_algorithm)
+
+        # accuracy comparing for different scenarios
         torchair_ge_graph_path = get_torchair_ge_graph_path(args.my_path)
         if torchair_ge_graph_path is not None:
             from ait_llm.compare.torchair_acc_cmp import acc_compare
@@ -215,7 +242,7 @@ class CompareCommand(BaseCommand):
             from ait_llm.compare.atb_acc_cmp import acc_compare
 
             acc_compare(os.path.abspath(args.golden_path), os.path.abspath(args.my_path),
-                        args.output, args.mapping_file)
+                        args.output, args.mapping_file, args.cmp_level)
 
 
 class OpcheckCommand(BaseCommand):
@@ -283,7 +310,23 @@ class OpcheckCommand(BaseCommand):
             default=False,
             help='Rerun atb operations if True. Compare outputs in dump data if False')
 
+        parser.add_argument(
+            '--custom-algorithms',
+            '-alg',
+            required=False,
+            nargs='+',
+            help='custom comparing algorithms in format "python_file_path.py:function". \
+                  Should better be a standalong file, and function should in format like \
+                  "def foo(golden_tensor, my_tensor): return float_value, string_message"')
+
     def handle(self, args, **kwargs):
+        # Adding custom comparing algorithms
+        if args.custom_algorithms:
+            from ait_llm.compare.cmp_algorithm import register_custom_compare_algorithm
+
+            for custom_compare_algorithm in args.custom_algorithms:
+                register_custom_compare_algorithm(custom_compare_algorithm)
+
         op = OpChecker()
         logger.info(f"===================Opcheck start====================")
         op.start_test(args)
@@ -334,17 +377,7 @@ class ErrCheck(BaseCommand):
         )
 
     def handle(self, args, **kwargs) -> None:
-        if args.exec:
-            logger.info("Preparing to execute the command: %s", args.exec)
-            logger.warning("Please make sure that the executable command is safe.")
-            init_error_check(args)
-            # 有的大模型推理任务启动后，输入对话时有提示符，使用subprocess拉起子进程无法显示提示符
-            cmds = args.exec.split()
-            subprocess.run(cmds, shell=False)
-
-            # finished inference
-            logger.info("Inference finished.")
-            logger.info("Results are stored under the directory: %s.", os.environ['ATB_OUTPUT_DIR'])
+        process_error_check(args)       
 
 
 class Transform(BaseCommand):
@@ -369,17 +402,6 @@ class Transform(BaseCommand):
         transform_quant.transform_quant(source_path=args.source, enable_sparse=args.enable_sparse)
 
 
-class LlmCommand(BaseCommand):
-    def __init__(self, name="", help_info="", children=None, has_handle=False, **kwargs):
-        super().__init__(name, help_info, children, has_handle, **kwargs)
-
-    def add_arguments(self, parser, **kwargs):
-        return super().add_arguments(parser, **kwargs)
-
-    def handle(self, args, **kwargs):
-        return super().handle(args, **kwargs)
-
-
 def get_cmd_instance():
     llm_help_info = "Large Language Model(llm) Debugger Tools."
     dump_cmd_instance = DumpCommand("dump", "Dump tool for ascend transformer boost", alias_name="dd")
@@ -393,4 +415,4 @@ def get_cmd_instance():
     instances = [
         dump_cmd_instance, compare_cmd_instance, opcheck_cmd_instance, errcheck_cmd_instance, transform_cmd_instance
     ]
-    return LlmCommand("llm", llm_help_info, instances)
+    return BaseCommand("llm", llm_help_info, instances)

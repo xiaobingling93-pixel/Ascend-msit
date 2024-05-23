@@ -21,19 +21,45 @@ abs_path = os.path.dirname(os.path.realpath(__file__))
 with open(os.path.join(abs_path, "requirements.txt")) as f:
     required = f.read().splitlines()
 
+ait_sub_tasks = [
+    {
+        "name": "debug",
+        "help_info": "debug a wide variety of model issues",
+        "module": "components.debug.__init__",
+        "attr": "debug_task",
+    }
+]
+
+ait_sub_task_entry_points = [
+    f"{t.get('name')}:{t.get('help_info')} = {t.get('module')}:{t.get('attr')}"
+    for t in ait_sub_tasks
+]
+
 setup(
-    name='ait',
-    version='0.0.1',
+    name='ms-ait',
+    version='7.0.0c2',
     description='AIT, Ascend Inference Tools',
     long_description_content_type='text/markdown',
     url='https://gitee.com/ascend/ait',
     packages=find_packages(),
-    package_data={'': ['LICENSE']},
+    package_data={
+        '': [
+            'LICENSE',
+            'README.md',
+            '*.txt',
+            '*.bat',
+            '*.sh',
+            '*.cpp',
+            '*.h',
+        ]
+    },
+    data_files=[('', ['requirements.txt'])],
     license='Apache-2.0',
     keywords='ait',
     python_requires='>=3.7',
     install_requires=required,
     entry_points={
         'console_scripts': ['ait=components.__main__:main'],
+        'ait_sub_task': ait_sub_task_entry_points,
     },
 )

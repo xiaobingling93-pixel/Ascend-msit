@@ -391,6 +391,8 @@ def msprof_run_profiling(args, msprof_bin):
 def get_energy_consumption(npu_id):
     cmd = f"npu-smi info -t power -i {npu_id}"
     get_npu_id = subprocess.run(cmd.split(), shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if get_npu_id.returncode != 0:
+        raise RuntimeError(f"Invalid npu id:{npu_id}, exec cmd: 'npu-smi info' to check valid npu_id")
     npu_id = get_npu_id.stdout.decode('gb2312')
     power = []
     npu_id = npu_id.split("\n")
@@ -653,6 +655,9 @@ def args_rules(args):
     if args.profiler and args.dump:
         logger.error("parameter --profiler cannot be true at the same time as parameter --dump, please check them!\n")
         raise RuntimeError('error bad parameters --profiler and --dump')
+
+    if args.output_dirname and args.output_dirname[0] == '/': # abspath is not permitted
+        raise ValueError("--output_dirname do not support abs path!" )
 
     if (args.profiler or args.dump) and (args.output is None):
         logger.error("when dump or profiler, miss output path, please check them!")

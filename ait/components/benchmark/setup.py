@@ -20,6 +20,18 @@ with open('requirements.txt', encoding='utf-8') as f:
 with open('README.md', encoding='utf-8') as f:
     long_description = f.read()
 
+ait_sub_tasks = [{
+    "name": "benchmark",
+    "help_info": "benchmark tool to get performance data including latency and throughput",
+    "module": "ais_bench.infer.main_cli",
+    "attr": "get_cmd_instance"
+}]
+
+ait_sub_task_entry_points = [
+    f"{t.get('name')}:{t.get('help_info')} = {t.get('module')}:{t.get('attr')}"
+    for t in ait_sub_tasks
+]
+
 setup(
     name='ais_bench',
     version='0.0.2',
@@ -27,12 +39,13 @@ setup(
     long_description=long_description,
     url='ais_bench url',
     packages=find_packages(),
+    package_data={'': ['LICENSE', 'README.md', 'requirements.txt', 'install.bat', 'install.sh', '*.cpp', '*.h']},
     include_package_data=True,
     keywords='ais_bench tool',
     install_requires=required,
     python_requires='>=3.7',
     entry_points={
-        'benchmark_sub_task': ['benchmark=ais_bench.infer.main_cli:get_cmd_instance'],
+        'ait_sub_task': ait_sub_task_entry_points,
+        'ait_sub_task_installer': ['ait-benchmark=ais_bench.__install__:BenchmarkInstall'],
     },
-
 )

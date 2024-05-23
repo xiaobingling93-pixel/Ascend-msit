@@ -24,7 +24,7 @@ from torch import nn
 from model_convert.aie.bean import ConvertConfig
 from model_convert.aie.core.convert import Convert
 from model_convert.cmd_utils import add_arguments, gen_convert_cmd, execute_cmd
-from model_convert.__main__ import get_cmd_instance, ConvertCommand, ModelConvertCommand, AieCommand
+from model_convert.__main__ import get_cmd_instance, BaseCommand, ModelConvertCommand, AieCommand
 
 
 class TestModel(nn.Module):
@@ -55,7 +55,7 @@ class TestConvert(unittest.TestCase):
 
     def test_get_cmd_instance_when_valid_case(self):
         convert_cmd = get_cmd_instance()
-        assert isinstance(convert_cmd, ConvertCommand)
+        assert isinstance(convert_cmd, BaseCommand)
         assert len(convert_cmd.children) == 3
         assert isinstance(convert_cmd.children[0], ModelConvertCommand)
         assert isinstance(convert_cmd.children[1], ModelConvertCommand)

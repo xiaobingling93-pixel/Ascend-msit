@@ -11,25 +11,25 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-import sys
-import os
-import time
-import json
-import unittest
 import torch
 import torch_npu
-import numpy as np
 
 from ait_llm.opcheck import operation_test
+from ait_llm.common.log import logger
 
 
 class OpcheckKvCacheOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
         golden = []
-        for index in self.case_info['inplace_idx']:
+        inplace_idx = self.case_info.get("inplace_idx", None)
+        for index in inplace_idx:
             golden.append(in_tensors[index])
         return golden
 
     def test(self):
+        inplace_idx = self.case_info.get("inplace_idx", None)
+        if inplace_idx is None:
+            msg = "Cannot get golden data because inplace_idx is not correctly set!"
+            logger.error(msg)
+            return
         self.execute_inplace()

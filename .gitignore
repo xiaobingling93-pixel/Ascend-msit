@@ -10,3 +10,6 @@
 **/build
 **/*.egg-info
 **/ait_transplt.log
+**/dist
+**/.idea
+**/.gradle

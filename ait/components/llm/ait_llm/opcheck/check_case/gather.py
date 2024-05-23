@@ -12,9 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-import os
-import unittest
 import torch
 import torch_npu
 
@@ -24,7 +21,7 @@ from ait_llm.common.log import logger
 
 class OpcheckGatherOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
-        axis = self.op_param["axis"]
+        axis = self.op_param.get("axis", None)
         if axis == 0:
             if in_tensors[0].ndim == 2 and in_tensors[0].ndim == 2:
                 embedding = torch.nn.Embedding(in_tensors[0].shape[0], in_tensors[0].shape[1])
@@ -60,4 +57,9 @@ class OpcheckGatherOperation(operation_test.OperationTest):
         return [golden_result.npu()]
 
     def test(self):
+        axis = self.op_param.get("axis", None)
+        if axis is None:
+            msg = "Cannot get golden data because axis is not correctly set!"
+            logger.error(msg)
+            return
         self.execute()

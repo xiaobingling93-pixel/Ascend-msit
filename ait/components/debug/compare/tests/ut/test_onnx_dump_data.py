@@ -16,6 +16,7 @@ import shutil
 
 import pytest
 import torch
+import onnx
 import numpy as np
 
 from msquickcmp.onnx_model.onnx_dump_data import OnnxDumpData
@@ -51,6 +52,57 @@ def width_model():
         os.remove(FAKE_ONNX_MODEL_PATH)
     if os.path.exists(OUT_PATH):
         shutil.rmtree(OUT_PATH)
+
+
+@pytest.fixture(scope="module", autouse=True)
+def reshape_model():
+    temp_onnx_name = "reshape" + FAKE_ONNX_MODEL_PATH
+    original_shape = [2, 3, 4]
+    new_shape = [1, 1, 24]
+    node = onnx.helper.make_node(
+        'Reshape', inputs=['data', 'shape'], outputs=['reshaped'], name="Reshape_1"
+    )
+    node2 = onnx.helper.make_node(
+        'Reshape', inputs=['data', 'shape'], outputs=['reshaped2']
+    )
+
+    values = np.array([1, 1, 24]).astype(np.int64)
+    node_const = onnx.helper.make_node(
+        "Constant",
+        inputs=[],
+        outputs=["shape"],
+        value=onnx.helper.make_tensor(
+            name="const_tensor",
+            data_type=onnx.TensorProto.INT64,
+            dims=values.shape,
+            vals=values.flatten().astype(int),
+        ),
+    )
+
+    graph = onnx.helper.make_graph(
+        [node, node2, node_const],
+        'test_graph',
+        [
+            onnx.helper.make_tensor_value_info(
+                'data', onnx.TensorProto.FLOAT, original_shape
+            )
+        ],
+        [
+            onnx.helper.make_tensor_value_info(
+                'reshaped', onnx.TensorProto.FLOAT, new_shape
+            ),
+            onnx.helper.make_tensor_value_info(
+                'reshaped2', onnx.TensorProto.FLOAT, new_shape
+            ),
+        ],
+    )
+    model = onnx.helper.make_model(graph, producer_name='ONNX respace')
+    onnx.save(model, temp_onnx_name)
+
+    yield temp_onnx_name
+
+    if os.path.exists(temp_onnx_name):
+        os.remove(temp_onnx_name)
 
 
 @pytest.fixture(scope="function")
@@ -173,3 +225,9 @@ def test_generate_dump_data_given_valid_when_any_then_pass(fake_arguments):
     assert onnx_dump_data_dir.endswith("onnx") or onnx_dump_data_dir.endswith("onnx/")
     assert os.path.exists(onnx_dump_data_dir)
     assert len(os.listdir(onnx_dump_data_dir)) > 0
+
+def test_load_onnx_given_no_named_node_model_when_any_then_pass(reshape_model):
+    x, _ = OnnxDumpData._load_onnx(None, reshape_model)
+
+    print([y.name for y in x.graph.node])
+    assert len(set((y.name for y in x.graph.node))) == len(x.graph.node)

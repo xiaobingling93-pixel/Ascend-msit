@@ -579,11 +579,12 @@ def execute_command(cmd, info_need=True):
     if info_need:
         logger.info('Execute command:%s' % " ".join(cmd))
     process = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    ais_bench_logs = ""
     while process.poll() is None:
-        line = process.stdout.readline()
-        line = line.strip()
+        ais_bench_logs += process.stdout.readline().decode()
     if process.returncode != 0:
         logger.error('Failed to execute command:%s' % " ".join(cmd))
+        logger.error(f'\nais_bench error log:\n {ais_bench_logs}')
         raise AccuracyCompareException(ACCURACY_COMPARISON_INVALID_DATA_ERROR)
 
 

@@ -25,6 +25,7 @@ import pandas as pd
 import torch
 
 from ait_llm.common.log import logger
+from ait_llm.compare.cmp_algorithm import CUSTOM_ALG_MAP
 
 
 class OpChecker:
@@ -41,6 +42,7 @@ class OpChecker:
         self.completed_op_id_queue = queue.Queue()
         self.special_cases = ['KvCacheOperation', 'ReshapeAndCacheOperation', 'SelfAttentionOperation']
         self.base_path = ''
+        self.pid = None
         self.tensor_path = ''
         self.op_path = ''
         self.output_dir = ''
@@ -56,64 +58,85 @@ class OpChecker:
 
     @staticmethod
     def third_party_init():
-        execution_flag = True
-
         import ait_llm
+        import ctypes
 
-        lib_path = os.environ.get("AIT_OPCHECK_LIB_PATH", "")
-        if not lib_path:
+        # Loading libopchecker.so with ctypes
+        lib_opchecker_path = os.environ.get("AIT_OPCHECK_LIB_PATH", "")
+        if not lib_opchecker_path:
             lib_path_dir = os.path.dirname(os.path.abspath(ait_llm.__file__))
-            lib_path = os.path.join(lib_path_dir, "opcheck", "libopchecker.so")
+            lib_opchecker_path = os.path.join(lib_path_dir, "opcheck", "libopchecker.so")
 
-        if os.path.exists(lib_path):
-            try:
-                logger.info(lib_path)
-                torch.classes.load_library(lib_path)
-            except OSError as e:
-                logger_text = "Failed to load libopchecker.so, please check. Error: {}".format(e)
-                logger.error(logger_text)
-                execution_flag = False
-        else:
-            logger_text = "libopchecker.so not found in {}".format(lib_path)
-            logger.error(logger_text)
-            execution_flag = False
+        logger.info(f"lib_opchecker_path is {lib_opchecker_path}")
+        if not os.path.exists(lib_opchecker_path):
+            logger.error(f"{lib_opchecker_path} not exists, check if ait_llm installed correctly")
+            return False
 
-        return execution_flag
+        try:
+            ctypes.cdll.LoadLibrary(lib_opchecker_path).RegisterAll()
+        except Exception as e:
+            logger.error(f"{lib_opchecker_path} loading failed, check if ait_llm installed correctly")
+            return False
+
+        # Loading libatb_speed_torch.so with torch
+        atb_speed_path = os.getenv('ATB_SPEED_HOME_PATH', "")
+        if not atb_speed_path:
+            logger.error("ATB_SPEED_HOME_PATH is empty, check if mindie_atb_models configured correctly")
+            return False
+
+        libatb_speed_torch_path = os.path.join(atb_speed_path, 'lib', 'libatb_speed_torch.so')
+        logger.info(f"libatb_speed_torch_path is {libatb_speed_torch_path}")
+        if not os.path.exists(libatb_speed_torch_path):
+            logger.error(f"{libatb_speed_torch_path} not exists, check if mindie_atb_models configured correctly")
+            return False
+
+        try:
+            torch.classes.load_library(libatb_speed_torch_path)
+        except Exception as e:
+            logger.error(f"{libatb_speed_torch_path} loading failed, check if mindie_atb_models configured correctly")
+            return False
+
+        return True
 
     def get_base_path(self, cur_path):
         dirseg = cur_path.split(os.path.sep)
         if len(dirseg) >= 4 and dirseg[-3] == 'tensors' and dirseg[-4] == 'ait_dump':
-            return cur_path
+            try:
+                pid = dirseg[-2].split("_")[1]
+            except:
+                pid = None
+            return cur_path, pid
         elif cur_path == os.path.dirname(cur_path):
-            return None
+            return None, None
         else:
             return self.get_base_path(os.path.dirname(cur_path))
 
     def check_input_legality(self, input_path):
         ret = False
         base_path = None
+        pid = None
 
         input_path = os.path.realpath(input_path)
         if not os.path.exists(input_path):
             logger_text = f"Input path not found: {input_path}"
             logger.error(logger_text)
-            return input_path, base_path, ret
+            return input_path, base_path, pid, ret
         
-        base_path = self.get_base_path(input_path)
+        base_path, pid = self.get_base_path(input_path)
         if base_path is None:
             logger_text = f"input path is not in ait_dump tensors directory: {input_path}"
             logger.error(logger_text)
-            return input_path, base_path, ret
+            return input_path, base_path, pid, ret
         
         ret = True
-        return input_path, base_path, ret
+        return input_path, base_path, pid, ret
 
     def args_init(self, args):
         import torch_npu
 
         execution_flag = True
 
-        self.tensor_path, self.base_path, ret = self.check_input_legality(args.input)
+        self.tensor_path, self.base_path, self.pid, ret = self.check_input_legality(args.input)
         if not ret:
             execution_flag = False
         
@@ -189,6 +212,7 @@ class OpChecker:
             if v[result_info] == 'addition failed':
                 v['res_detail'] = []
                 self.write_op_result_to_csv(v)
+        logger.info(f"\nOpcheck results saved to: {self.output_path}")
 
     def parse_op_id_name(self, dirpath):
         basename = os.path.basename(dirpath)
@@ -272,7 +296,7 @@ class OpChecker:
 
         case_info = {
             'op_id': op_id, 'op_name': op_name, 'op_param': op_param, 'tensor_path': tensor_path,
-            'precision_type': self.precision_type, 'rerun': self.rerun
+            'precision_type': self.precision_type, 'rerun': self.rerun, 'pid': self.pid
         }
 
         ret = self.is_exec_node(case_info)
@@ -316,66 +340,62 @@ class OpChecker:
         case_manager.excute_cases()
         watching_thread.join()
 
-    def get_optional_idx(self):
-        optional_idx = []
+    def _update_single_op_result(self, op_info, cur_id, res_detail):
+        default_str = 'NaN'
+        excuted_information = op_info["excuted_information"]
+        required = [
+            op_info["op_id"], op_info["op_name"], op_info["op_param"], op_info["tensor_path"],
+            cur_id, res_detail.get('precision_standard', default_str), excuted_information,
+            res_detail.get('rel_pass_rate', default_str), res_detail.get('max_rel', default_str),
+        ]
         if 'abs' in self.precision_type:
-            optional_idx.append(0)
-            optional_idx.append(1)
+            required.append(res_detail.get('abs_pass_rate', default_str))
+            required.append(res_detail.get('max_abs', default_str))
         if 'cos_sim' in self.precision_type:
-            optional_idx.append(2)
+            required.append(res_detail.get('cos_sim', default_str))
         if 'kl' in self.precision_type:
-            optional_idx.append(3)
-        return optional_idx
+            required.append(res_detail.get('kl_div', default_str))
+
+        custom_ret = [res_detail.get(custom_name, default_str) for custom_name in CUSTOM_ALG_MAP]
+        return required + custom_ret + [op_info.get('fail_reason', default_str)]
 
     def write_op_result_to_csv(self, op_result):
         import openpyxl
 
-        optional_idx = self.get_optional_idx()
         if not os.path.exists(self.output_path):
             wb = openpyxl.Workbook()
             ws = wb.active
             required_head = [
                 'op_id', 'op_name', 'op_param', 'tensor_path', 'out_tensor_id', 'precision_standard',
-                'excuted_information', 'precision_result(%)', 'max_rel_error'
+                'precision_result', 'rel_precision_rate(%)', 'max_rel_error'
             ]
-            optional_head = ['abs_precision_result(%)', 'max_abs_error', 'cosine_similarity', 'kl_divergence']
-            optional_head_cp = [optional_head[i] for i in optional_idx]
-            ws.append(required_head + optional_head_cp)
+            if 'abs' in self.precision_type:
+                required_head.append('abs_precision_rate(%)')
+                required_head.append('max_abs_error')
+            if 'cos_sim' in self.precision_type:
+                required_head.append('cosine_similarity')
+            if 'kl' in self.precision_type:
+                required_head.append('kl_divergence')
+            custom_header = list(CUSTOM_ALG_MAP.keys())
+            ws.append(required_head + custom_header + ["fail_reason"])
             wb.save(self.output_path)
 
         wb = openpyxl.load_workbook(self.output_path)
         ws = wb.active
 
-        op_id = op_result['op_id']
-        op_name = op_result['op_name']
-        op_param = json.dumps(op_result['op_param'])
-        tensor_path = op_result['tensor_path']
-        excuted_information = op_result['excuted_information']
+        op_info = {
+            "op_id": op_result.get('op_id', ""),
+            "op_name": op_result.get('op_name', ""),
+            "op_param": json.dumps(op_result.get('op_param', "")),
+            "tensor_path": op_result.get('tensor_path', ""),
+            "excuted_information": op_result.get('excuted_information', ""),
+            "fail_reason": op_result.get('fail_reason', ""),
+        }
+        
         if len(op_result['res_detail']) > 0:
-            for i, res_detail in enumerate(op_result['res_detail']):
-                precision_standard = res_detail['precision_standard']
-                rel_pass_rate = res_detail['rel_pass_rate']
-                max_rel = res_detail['max_rel']
-                abs_pass_rate = res_detail['abs_pass_rate']
-                max_abs = res_detail['max_abs']
-                cos_sim = res_detail['cos_sim']
-                kl_div = res_detail['kl_div']
-                required = [
-                    op_id, op_name, op_param, tensor_path, i, precision_standard, excuted_information, rel_pass_rate,
-                    max_rel
-                ]
-                optional = [abs_pass_rate, max_abs, cos_sim, kl_div]
-                optional_cp = [optional[idx] for idx in optional_idx]
-                ws.append(required + optional_cp)
+            for cur_id, res_detail in enumerate(op_result['res_detail']):
+                ws.append(self._update_single_op_result(op_info, cur_id, res_detail))
         else:
-            default_str = 'NaN'
-            i, precision_standard, rel_pass_rate, max_rel, abs_pass_rate, max_abs, cos_sim, kl_div = default_str, \
-                default_str, default_str, default_str, default_str, default_str, default_str, default_str
-            required = [
-                op_id, op_name, op_param, tensor_path, i, precision_standard, excuted_information, rel_pass_rate,
-                max_rel
-            ]
-            optional = [abs_pass_rate, max_abs, cos_sim, kl_div]
-            optional_cp = [optional[idx] for idx in optional_idx]
-            ws.append(required + optional_cp)
+            cur_id, res_detail = 'NaN', {}
+            ws.append(self._update_single_op_result(op_info, cur_id, res_detail))
         wb.save(self.output_path)

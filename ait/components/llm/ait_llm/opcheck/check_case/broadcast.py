@@ -12,25 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import json
-import unittest
-import sys
-import socket
-import random
 import torch
 import torch_npu
 import torch.distributed as dist
 import torch.multiprocessing as mp
 
 from ait_llm.opcheck import operation_test
+from ait_llm.common.log import logger
 
 
 class OpcheckBroadcastOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
-        rank_root = self.op_param['rankRoot']
+        rank_root = self.op_param.get('rankRoot', None)
         golden_result = in_tensors[rank_root]
         return [golden_result]
 
     def test_broadcast(self):
+        rank_root = self.op_param.get('rankRoot', None)
+        if rank_root is None:
+            msg = "Cannot get golden data because rankRoot is not correctly set!"
+            logger.error(msg)
+            return
         self.execute()

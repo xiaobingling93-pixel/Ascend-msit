@@ -12,19 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-import os
-import unittest
 import torch
 import torch_npu
 
 from ait_llm.opcheck import operation_test
+from ait_llm.common.log import logger
 
 
 class OpcheckRepeatOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
-        outtensor = in_tensors[0].repeat(self.op_param["multiples"])
+        multiples = self.op_param.get("multiples", None)
+        outtensor = in_tensors[0].repeat(multiples)
         return [outtensor]
 
     def test(self):
+        multiples = self.op_param.get("multiples", None)
+        if multiples is None:
+            msg = "Cannot get golden data because multiples is not correctly set!"
+            logger.error(msg)
+            return
         self.execute()

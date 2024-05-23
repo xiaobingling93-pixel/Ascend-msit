@@ -20,14 +20,27 @@ with open('requirements.txt', encoding='utf-8') as f:
 with open('README.md', encoding='utf-8') as f:
     long_description = f.read()
 
+ait_sub_tasks = [{
+        "name": "transplt",
+        "help_info": "Transplant tool to analyze inference applications",
+        "module": "app_analyze.__main__",
+        "attr": "get_cmd_instance",
+    }]
+
+ait_sub_task_entry_points = [
+    f"{t.get('name')}:{t.get('help_info')} = {t.get('module')}:{t.get('attr')}"
+    for t in ait_sub_tasks
+]
+
 setup(
-    name='transplt',
-    version='0.1.0',
+    name='ait-transplt',
+    version='7.0.0c2',
     description='app analyze for cpu and gpu projects',
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://gitee.com/ascend/ait',
     packages=find_packages(),
+    package_data={'': ['install.sh', 'install.bat']},
     license='Apache-2.0',
     keywords='app_analyze',
     install_requires=required,
@@ -40,10 +53,12 @@ setup(
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Topic :: Scientific/Engineering',
-        'Topic :: Software Development'
+        'Topic :: Software Development',
     ],
     python_requires='>=3.7',
     entry_points={
-        'transplt_sub_task': ['transplt=app_analyze.__main__:get_cmd_instance'],
+        'ait_sub_task': ait_sub_task_entry_points,
+        'ait_sub_task_installer': ['ait-transplt=app_analyze.__install__:TranspltInstall', 
+                                   'ait-transplt-llvm=app_analyze.__install__:LlvmInstall'],
     },
 )

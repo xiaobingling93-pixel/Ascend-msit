@@ -33,10 +33,7 @@ from auto_optimizer.pattern.knowledge_factory import KnowledgeFactory
 
 
 class ListCommand(BaseCommand):
-    def add_arguments(self, parser):
-        pass
-
-    def handle(self, args):
+    def handle(self, _):
         list_knowledges()
 
 
@@ -287,17 +284,6 @@ class ConcatenateCommand(BaseCommand):
         logger.info(f"Combined ONNX model saved in: {combined_graph_path}")
 
 
-class SurgeonCommand(BaseCommand):
-    def __init__(self, name="", help_info="", children=None, has_handle=False, **kwargs):
-        super().__init__(name, help_info, children, has_handle, **kwargs)
-
-    def add_arguments(self, parser, **kwargs):
-        return super().add_arguments(parser, **kwargs)
-
-    def handle(self, args, **kwargs):
-        return super().handle(args, **kwargs)
-
-
 def get_cmd_instance():
     surgeon_help_info = "surgeon tool for onnx modifying functions."
     list_cmd_instance = ListCommand("list", "List available Knowledges")
@@ -307,6 +293,6 @@ def get_cmd_instance():
     concatenate_cmd_instance = ConcatenateCommand("concatenate",
                                                   "Concatenate two onnxgraph into combined one onnxgraph",
                                                   alias_name="concat")
-    return SurgeonCommand("surgeon", surgeon_help_info, [list_cmd_instance, evaluate_cmd_instance,
+    return BaseCommand("surgeon", surgeon_help_info, [list_cmd_instance, evaluate_cmd_instance,
                                                          optimize_cmd_instance, extract_cmd_instance,
                                                          concatenate_cmd_instance])

@@ -12,22 +12,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-import os
-import unittest
 import torch
 import torch_npu
 
 from ait_llm.opcheck import operation_test
+from ait_llm.common.log import logger
 
 
 class OpcheckFillOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
-        if self.op_param["withMask"]:
-            golden_result = in_tensors[0].masked_fill_(in_tensors[1], self.op_param["value"][0])
+        with_mask = self.op_param.get("withMask", None)
+        out_dim = self.op_param.get("out_dim", None)
+        value = self.op_param.get("value", None)
+
+        if with_mask:
+            golden_result = in_tensors[0].masked_fill_(in_tensors[1], value[0])
         else:
-            golden_result = torch.full(self.op_param["outDim"], self.op_param["value"][0], dtype=torch.float16)
+            golden_result = torch.full(out_dim, value[0], dtype=torch.float16)
         return [golden_result]
 
     def test(self):
+        with_mask = self.op_param.get("withMask", None)
+        out_dim = self.op_param.get("out_dim", None)
+        value = self.op_param.get("value", None)
+        if with_mask is None or out_dim is None or value is None:
+            msg = "Cannot get golden data because opParam is not correctly set!"
+            logger.error(msg)
+            return
         self.execute()

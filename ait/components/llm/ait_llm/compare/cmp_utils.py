@@ -12,7 +12,7 @@ from ait_llm.common.constant import TOKEN_ID, DATA_ID, GOLDEN_DATA_PATH, MY_DATA
     GOLDEN_SHAPE, GOLDEN_MAX_VALUE, GOLDEN_MIN_VALUE, GOLDEN_MEAN_VALUE, MY_DTYPE, MY_SHAPE, MY_MAX_VALUE, MY_MIN_VALUE, \
     MY_MEAN_VALUE, CSV_GOLDEN_HEADER
 from ait_llm.common.log import logger
-from ait_llm.compare.cmp_algorithm import CMP_ALG_MAP
+from ait_llm.compare.cmp_algorithm import CMP_ALG_MAP, CUSTOM_ALG_MAP
 
 MIN_LAYER_NUMBER = 10
 
@@ -138,7 +138,7 @@ def compare_tensor(golden_data_fp32, my_data_fp32):
         row_data[CMP_FAIL_REASON] = message
         return row_data
 
-    for name, cmp_func in CMP_ALG_MAP.items():
+    for name, cmp_func in list(CMP_ALG_MAP.items()) + list(CUSTOM_ALG_MAP.items()):
         result, message = cmp_func(golden_data_fp32, my_data_fp32)
         row_data[name] = result
         if len(message) > 0:

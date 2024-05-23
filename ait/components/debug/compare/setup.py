@@ -19,15 +19,27 @@ with open('requirements.txt', encoding='utf-8') as f:
 with open('README.md', encoding='utf-8') as f:
     long_description = f.read()
 
+debug_sub_tasks = [{
+    "name": "compare",
+    "help_info": "one-click network-wide accuracy analysis of golden models.",
+    "module": "msquickcmp.__main__",
+    "attr": "get_cmd_instance"
+}]
+
+debug_sub_task_entry_points = [
+    f"{t.get('name')}:{t.get('help_info')} = {t.get('module')}:{t.get('attr')}"
+    for t in debug_sub_tasks
+]
+
 setup(
-    name='compare',
-    version='0.0.2',
+    name='ait-compare',
+    version='7.0.0c2',
     description='This tool enables one-click network-wide accuracy analysis of gold model.',
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://gitee.com/ascend/ait/tree/master/ait/components/debug/compare',
     packages=find_packages(),
-    package_data={'': ['LICENSE']},
+    package_data={'': ['LICENSE', 'install.sh', 'libsaveom.so', '*.cpp']},
     license='Apache-2.0',
     keywords='compare',
     install_requires=required,
@@ -44,6 +56,7 @@ setup(
     ],
     python_requires='>=3.7',
     entry_points={
-        'debug_sub_task': ['compare=msquickcmp.__main__:get_cmd_instance'],
+        'debug_sub_task': debug_sub_task_entry_points,
+        'ait_sub_task_installer': ['ait-compare=msquickcmp.__install__:CompareInstall'],
     },
 )

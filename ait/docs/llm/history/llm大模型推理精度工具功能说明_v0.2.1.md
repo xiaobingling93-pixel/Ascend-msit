@@ -2,7 +2,7 @@
 
 v0.2.1版本的新特性包括：
 
-- 支持 dump_data 接口，手动设置 tensor 映射关系实现比对：[手动映射比对能力说明](./手动映射比对能力说明.md)
+- 支持 dump_data 接口，手动设置 tensor 映射关系实现比对：[手动映射比对能力说明](/ait/docs/llm/加速库场景-手动映射比对能力说明.md)
 - 支持 torchair GE 图与 FX 图 dump 数据比对
 - 支持 dump model 拓扑信息，使用方法：
 
@@ -16,11 +16,11 @@ ait llm dump --exec "bash run.sh patches/models/modeling_xxx.py" --type model
 ait llm dump --exec "bash run.sh patches/models/modeling_xxx.py" --type layer onnx
 ```
 
-注**：该onnx模型不包括权重信息，无法用onnxruntime运行该onnx模型，可以使用Netron或者ait仓里的[onnx-modifer](../../../onnx-modifier/readme.md)工具打开查看模型结构。
+注**：该onnx模型不包括权重信息，无法用onnxruntime运行该onnx模型，可以使用Netron或者ait仓里的[onnx-modifer](/ait/onnx-modifier/readme.md)工具打开查看模型结构。
 
 - 支持api方式将之前dump出来的model和layer拓扑信息，转成onnx可视化模型，使用方法：[拓扑信息转onnx可视化模型](#api说明)
 - 支持dump torch-npu和torch-gpu模型推理数据，使用方法可参考[接口说明](#api说明)
-- 支持opcheck精度预检功能，检测算子精度，使用方法具体参考[精度预检能力使用说明](./精度预检能力使用说明.md)：
+- 支持opcheck精度预检功能，检测算子精度，使用方法具体参考[精度预检能力使用说明](/ait/docs/llm/工具-精度预检使用说明.md)：
 
 ```
 ait llm opcheck -i {tensor_dir} -c {op_csv_path} -o {output_dir}
@@ -136,7 +136,7 @@ ait llm compare --golden-path golden_data.bin --my-path my-path.bin
 
 ## Opcheck 特性
 
-支持算子精度预检，根据dump出的tensor及算子信息，执行单算子UT，检测算子精度。具体参考[精度预检能力使用说明](./精度预检能力使用说明.md)。
+支持算子精度预检，根据dump出的tensor及算子信息，执行单算子UT，检测算子精度。具体参考[精度预检能力使用说明](/ait/docs/llm/工具-精度预检使用说明.md)。
 
 ### 使用方式
 

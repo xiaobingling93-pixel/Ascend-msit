@@ -41,7 +41,7 @@ STR_UNSAFE_LIST_REGEX = re.compile(r"[^_A-Za-z0-9/.-]")
 PATH_WHITE_LIST_REGEX = re.compile(r"[^_A-Za-z0-9/.-]")
 
 READ_FILE_NOT_PERMITTED_STAT = stat.S_IWGRP | stat.S_IWOTH
-WRITE_FILE_NOT_PERMITTED_STAT = stat.S_IWGRP | stat.S_IWOTH | stat.S_IROTH | stat.S_IXOTH
+WRITE_FILE_NOT_PERMITTED_STAT = stat.S_IWGRP | stat.S_IWOTH
 
 
 def safe_string(value):

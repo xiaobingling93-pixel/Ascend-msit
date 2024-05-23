@@ -107,15 +107,15 @@ IF NOT %errorlevel%==0 (
 :uninstall_func
 
 IF DEFINED select_transplt (
-    pip3 uninstall transplt %all_uninstall%
+    pip3 uninstall ait-transplt %all_uninstall%
 )
 
 IF DEFINED select_surgeon (
-    pip3 uninstall auto-optimizer %all_uninstall%
+    pip3 uninstall ait-surgeon %all_uninstall%
 ) 
 
 IF %all_component%==1 (
-    pip3 uninstall ait transplt auto-optimizer %all_uninstall%
+    pip3 uninstall ms-ait ait-transplt ait-surgeon %all_uninstall%
 )
 
 GOTO:eof

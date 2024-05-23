@@ -20,7 +20,7 @@ from ais_bench.infer.benchmark_process import args_rules
 from ais_bench.infer.args_adapter import BenchMarkArgsAdapter
 from ais_bench.infer.main_cli import BenchmarkCommand
 
-benchmark_command = BenchmarkCommand()
+benchmark_command = BenchmarkCommand("benchmark","hekp")
 current_dir = os.path.dirname(os.path.abspath(__file__))
 base_cmd_dict = {
     "--om-model": os.path.join(current_dir, "../testdata/resnet50/model/pth_resnet50_bs4.om"),

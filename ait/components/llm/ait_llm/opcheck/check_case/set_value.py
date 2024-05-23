@@ -12,22 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-import os
-import json
-import unittest
 import torch
 import torch_npu
 
 from ait_llm.opcheck import operation_test
+from ait_llm.common.log import logger
 
 
 class OpcheckSetValueOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
+        starts = self.op_param.get("starts", None)
+        ends = self.op_param.get("ends", None)
         golden_result = [in_tensors[0].clone(), in_tensors[1].clone()]
-        for i in range(len(self.op_param["starts"])):
-            golden_result[0][self.op_param["starts"][i]:self.op_param["ends"][i]].copy_(in_tensors[1])
+        for i, _ in enumerate(starts):
+            golden_result[0][starts[i]:ends[i]].copy_(in_tensors[1])
         return golden_result
 
     def test(self):
+        starts = self.op_param.get("starts", None)
+        ends = self.op_param.get("ends", None)
+        if starts is None or ends is None:
+            msg = "Cannot get golden data because opParam is not correctly set!"
+            logger.error(msg)
+            return
         self.execute()

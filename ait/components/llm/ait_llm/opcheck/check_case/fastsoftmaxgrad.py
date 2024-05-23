@@ -12,9 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-import os
-import unittest
 import torch
 import torch_npu
 import torch.nn as nn
@@ -47,9 +44,9 @@ class OpcheckFastSoftMaxGradOperation(operation_test.OperationTest):
             y_input_list.append(yi.reshape(-1))
             y_grad_list.append(yg.reshape(-1))
             golden_list.append(gd.reshape(-1))
-        y_input = torch.cat(y_input_list)
-        y_grad = torch.cat(y_grad_list)
-        golden = torch.cat(golden_list)
+        y_input = torch.concat(y_input_list)
+        y_grad = torch.concat(y_grad_list)
+        golden = torch.concat(golden_list)
 
         return [golden]
 

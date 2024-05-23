@@ -23,6 +23,7 @@ only_convert=
 only_transplt=
 only_profile=
 only_llm=
+only_tensor_view=
 arg_help=0
 
 while [[ "$#" -gt 0 ]]; do case $1 in
@@ -37,6 +38,7 @@ while [[ "$#" -gt 0 ]]; do case $1 in
   --transplt) only_transplt=true;;
   --profile) only_profile=true;;
   --llm) only_llm=true;;
+  --tensor-view) only_tensor_view=true;;
   --uninstall) uninstall=true;;
   -y) all_uninstall=-y;;
   -h|--help) arg_help=1;;
@@ -65,6 +67,7 @@ if [ "$arg_help" -eq "1" ]; then
   echo " --transplt : only install transplt component"
   echo " --profile : only install profile component"
   echo " --llm : only install llm component"
+  echo "--tensor-view: only install tensor-view component"
   echo " --full : using with install, install all components and dependencies, may need sudo privileges"
   echo " --uninstall : uninstall"
   echo " -y : using with uninstall, don't ask for confirmation of uninstall deletions"
@@ -111,18 +114,19 @@ download_and_install_aclruntime() {
 
 
 uninstall(){
+  pip3 uninstall ait analyze_tool convert_tool compare auto_optimizer msprof transplt ${all_uninstall}
   if [ -z $only_debug ] && [ -z $only_compare ] && [ -z $only_surgen ] && [ -z $only_benchmark ] && [ -z $only_analyze ] && [ -z $only_convert ] && [ -z $only_transplt ] && [ -z $only_profile ] && [ -z $only_llm ]
   then
-    pip3 uninstall ait analyze_tool aclruntime ais_bench convert_tool compare auto_optimizer msprof transplt ait_llm ${all_uninstall}
+    pip3 uninstall ms-ait ait-analyze aclruntime ais_bench ait-convert ait-compare ait-surgeon ait-profile ait-transplt ait-llm ${all_uninstall}
   else
     if [ ! -z $only_compare ]
     then
-      pip3 uninstall compare ${all_uninstall}
+      pip3 uninstall ait-compare ${all_uninstall}
     fi
 
     if [ ! -z $only_surgeon ]
     then
-      pip3 uninstall auto_optimizer ${all_uninstall}
+      pip3 uninstall ait-surgeon ${all_uninstall}
     fi
 
     if [ ! -z $only_benchmark ]
@@ -132,30 +136,45 @@ uninstall(){
 
     if [ ! -z $only_analyze ]
     then
-      pip3 uninstall analyze_tool ${all_uninstall}
+      pip3 uninstall ait-analyze ${all_uninstall}
     fi
 
     if [ ! -z $only_convert ]
     then
-      pip3 uninstall convert_tool ${all_uninstall}
+      pip3 uninstall ait-convert ${all_uninstall}
     fi
 
     if [ ! -z $only_transplt ]
     then
-      pip3 uninstall transplt ${all_uninstall}
+      pip3 uninstall ait-transplt ${all_uninstall}
     fi
 
     if [ ! -z $only_profile ]
     then
-      pip3 uninstall msprof ${all_uninstall}
+      pip3 uninstall ait-profile ${all_uninstall}
     fi
 
     if [ ! -z $only_llm ]
     then
-      pip3 uninstall ait_llm ${all_uninstall}
+      pip3 uninstall ait-llm ${all_uninstall}
     fi
+
+    if [ ! -z $only_tensor_view ]
+        then
+          pip3 uninstall tensor_view ${all_uninstall}
+        fi
   fi
   exit;
+}
+
+
+build_opchecker_so() {
+    echo ""
+    echo "Try building libatb_speed_torch.so for ait llm. If not using opcheck, ignore errors if any"
+    cd ${CURRENT_DIR}/components/llm/ait_llm/opcheck/atb_operators
+    bash build.sh
+    cd -
+    echo ""
 }
 
 
@@ -208,8 +227,7 @@ install(){
     only_benchmark=true;
     only_surgeon=true;
     pre_check_skl2onnx
-    pip3 install ${CURRENT_DIR}/components/debug/compare \
-    ${arg_force_reinstall}
+    pip3 install ${CURRENT_DIR}/components/debug/compare ${arg_force_reinstall}
 
     build_om_so
 
@@ -217,8 +235,7 @@ install(){
 
   if [ ! -z $only_surgeon	 ]
   then
-    pip3 install ${CURRENT_DIR}/components/debug/surgeon \
-    ${arg_force_reinstall}
+    pip3 install ${CURRENT_DIR}/components/debug/surgeon ${arg_force_reinstall}
 
   fi
 
@@ -230,38 +247,40 @@ install(){
 
   if [ ! -z $only_analyze ]
   then
-    pip3 install ${CURRENT_DIR}/components/analyze \
-    ${arg_force_reinstall}
+    pip3 install ${CURRENT_DIR}/components/analyze ${arg_force_reinstall}
   fi
 
   if [ ! -z $only_convert ]
   then
-    pip3 install ${CURRENT_DIR}/components/convert \
-    ${arg_force_reinstall}
+    pip3 install ${CURRENT_DIR}/components/convert ${arg_force_reinstall}
 
     bash ${CURRENT_DIR}/components/convert/build.sh
   fi
 
   if [ ! -z $only_transplt ]
   then
-    pip3 install ${CURRENT_DIR}/components/transplt \
-    ${arg_force_reinstall}
+    pip3 install ${CURRENT_DIR}/components/transplt ${arg_force_reinstall}
     source ${CURRENT_DIR}/components/transplt/install.sh $full_install
   fi
 
   if [ ! -z $only_profile ]
   then
-    pip3 install ${CURRENT_DIR}/components/profile/msprof \
-    ${arg_force_reinstall}
+    pip3 install ${CURRENT_DIR}/components/profile/msprof ${arg_force_reinstall}
   fi
 
   if [ ! -z $only_llm ]
   then
-      pip3 install ${CURRENT_DIR}/components/llm \
-      ${arg_force_reinstall}
+      pip3 install ${CURRENT_DIR}/components/llm ${arg_force_reinstall}
+      build_opchecker_so
   fi
 
-  if [ -z $only_compare ] && [ -z $only_surgeon ] && [ -z $only_benchmark ] && [ -z $only_analyze ] && [ -z $only_convert ] && [ -z $only_transplt ] && [ -z $only_profile ] && [ -z $only_llm ]
+  if [ ! -z $only_tensor_view ]
+    then
+        pip3 install ${CURRENT_DIR}/components/tensor_view ${arg_force_reinstall}
+        build_opchecker_so
+    fi
+
+  if [ -z $only_compare ] && [ -z $only_surgeon ] && [ -z $only_benchmark ] && [ -z $only_analyze ] && [ -z $only_convert ] && [ -z $only_transplt ] && [ -z $only_profile ] && [ -z $only_llm ] && [ -z $only_tensor_view ]
   then
     pre_check_skl2onnx
     download_and_install_aclruntime
@@ -274,12 +293,14 @@ install(){
     ${CURRENT_DIR}/components/transplt \
     ${CURRENT_DIR}/components/profile/msprof \
     ${CURRENT_DIR}/components/llm \
+    ${CURRENT_DIR}/components/tensor_view \
     ${arg_force_reinstall}
-    
+
     bash ${CURRENT_DIR}/components/convert/build.sh
 
     source ${CURRENT_DIR}/components/transplt/install.sh $full_install
     build_om_so
+    build_opchecker_so
   fi
 
   rm -rf ${CURRENT_DIR}/ait.egg-info
