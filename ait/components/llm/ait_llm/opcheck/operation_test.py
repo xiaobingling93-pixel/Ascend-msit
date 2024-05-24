@@ -67,7 +67,7 @@ class OperationTest(unittest.TestCase):
             error4: 0.004,
             error5: 0.005,
             error6: 1
-        } 
+        }
 
     @staticmethod
     def parametrize(optest_class, case_info=None, excuted_ids=None):
