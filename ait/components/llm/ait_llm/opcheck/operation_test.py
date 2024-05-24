@@ -57,7 +57,7 @@ class OperationTest(unittest.TestCase):
             'torch.float': [error1, 99.99], 'torch.int32': [error1, 99.99], 'torch.uint64': [error1, 99.99],
             'torch.float16': [error3, 99.9], 'torch.bfloat16': [error4, 99.6], 'torch.int8': [error6, 99.9],
             'torch.uint8': [error6, 99], 'torch.int16': [error6, 99.9], 'torch.uint16': [error6, 99.9],
-            'torch.bool': [error1, 100]
+            'torch.bool': [error1, 100], 'torch.float32': [error1, 99.99],
         }
 
         self.erol_dict = {
@@ -132,7 +132,7 @@ class OperationTest(unittest.TestCase):
         if pmode == "force_fp16":
             return [t.to(torch.float16) if t.dtype in float_types else t for t in tensors]
         elif pmode == "force_fp32":
-            return [t.to(torch.float) if t.dtype in float_types else t for t in tensors]
+            return [t.to(torch.float32) if t.dtype in float_types else t for t in tensors]
         else:
             return tensors
 
