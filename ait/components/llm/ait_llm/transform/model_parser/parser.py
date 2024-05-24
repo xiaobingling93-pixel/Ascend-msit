@@ -16,7 +16,7 @@ from json import dump
 
 import torch.nn as nn
 
-from kind import mlp, attention, convert, mname
+from ait_llm.transform.model_parser.kind import mlp, attention, convert, mname
 
 
 def add_child(arr, node):
