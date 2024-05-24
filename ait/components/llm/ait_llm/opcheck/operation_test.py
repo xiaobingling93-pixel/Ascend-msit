@@ -127,19 +127,29 @@ class OperationTest(unittest.TestCase):
             new_in_tensors.extend(_in_tensors)
         return new_in_tensors
 
+    def force_dtype(self, tensors, pmode):
+        if pmode == "force_fp16":
+            return [t.to(torch.float16) for t in tensors]
+        elif pmode == "force_fp32":
+            return [t.to(torch.float32) for t in tensors]
+        else:
+            return tensors
+
     def setUp(self):
         self.validate_path(self.tensor_path)
         _in_tensor_files = self.get_tensor_path(self.tensor_path, "intensor")
         self.in_tensors = self.read_tensor_from_file(_in_tensor_files)
+        self.in_tensors = self.force_dtype(self.in_tensors, self.case_info['precision_mode'])
         _out_tensor_files = self.get_tensor_path(self.tensor_path, "outtensor")
         self.out_tensors = self.read_tensor_from_file(_out_tensor_files)
+        self.out_tensors = self.force_dtype(self.out_tensors, self.case_info['precision_mode'])
 
     def tearDown(self):
         self.excuted_ids.put(self.op_id)
         if self.case_info['excuted_information'] != 'PASS':
             self.case_info['excuted_information'] = 'FAILED'
 
-    def rerun_op(self, excute_type): 
+    def rerun_op(self, excute_type):
         operation = torch.classes.OperationTorch.OperationTorch(self.op_name)
         if isinstance(self.op_param, dict):
             operation.set_param(json.dumps(self.op_param))
@@ -279,7 +289,6 @@ class OperationTest(unittest.TestCase):
             pass_flag = False
             logger.info(f"Data count not equal, {my_data_len} != {golden_data_len}. Will compare only partial")
 
-        tensor_count = len(out_tensors)
         for out_tensor, golden_out_tensor in zip(out_tensors, golden_out_tensors):
             out_dtype = str(out_tensor.dtype)
             p_s = self.precision_standard.get(out_dtype, [])

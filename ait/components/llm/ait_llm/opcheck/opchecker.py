@@ -52,6 +52,7 @@ class OpChecker:
         self.opname = None
         self.check_patterns = []
         self.precision_type = []
+        self.precision_mode = "keep_origin_dtype"
         utc_time = datetime.datetime.now(tz=pytz.utc)
         self.timestamp = utc_time.astimezone(pytz.timezone('Asia/Shanghai')).strftime("%Y%m%d_%H%M%S")
         self.rerun = False
@@ -121,7 +122,7 @@ class OpChecker:
             logger_text = f"Input path not found: {input_path}"
             logger.error(logger_text)
             return input_path, base_path, pid, ret
-        
+
         base_path, pid = self.get_base_path(input_path)
         if base_path is None:
             logger_text = f"input path is not in ait_dump tensors directory: {input_path}"
@@ -159,6 +160,7 @@ class OpChecker:
                 logger.error(logger_text)
                 execution_flag = False
         self.precision_type = args.metric
+        self.precision_mode = args.pmode
 
         # 指定需要使用的npu设备
         try:
@@ -296,7 +298,8 @@ class OpChecker:
 
         case_info = {
             'op_id': op_id, 'op_name': op_name, 'op_param': op_param, 'tensor_path': tensor_path,
-            'precision_type': self.precision_type, 'rerun': self.rerun, 'pid': self.pid
+            'precision_type': self.precision_type, 'rerun': self.rerun, 'pid': self.pid, 
+            'precision_mode': self.precision_mode
         }
 
         ret = self.is_exec_node(case_info)

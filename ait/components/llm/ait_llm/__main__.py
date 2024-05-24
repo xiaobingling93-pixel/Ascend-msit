@@ -174,7 +174,7 @@ class CompareCommand(BaseCommand):
             required=True,
             type=check_input_path_legality,
             help='Compared data path. It supports directory or file.')
-        
+
         parser.add_argument(
             '--cmp-level',
             '-cl',
@@ -290,7 +290,7 @@ class OpcheckCommand(BaseCommand):
             nargs='+',
             default=[],
             choices=['abs', 'kl', 'cos_sim'],
-            help=' Output more results of other precision metrics.E.g:-metric abs kl cos_sim')
+            help='Output more results of other precision metrics.E.g:-metric abs kl cos_sim')
 
         parser.add_argument(
             '--device-id',
@@ -318,6 +318,15 @@ class OpcheckCommand(BaseCommand):
             help='custom comparing algorithms in format "python_file_path.py:function". \
                   Should better be a standalong file, and function should in format like \
                   "def foo(golden_tensor, my_tensor): return float_value, string_message"')
+
+        parser.add_argument(
+            '--precision-mode',
+            '-pmode',
+            dest="pmode",
+            required=False,
+            default="keep_origin_dtype",
+            choices=["keep_origin_dtype", "force_fp16", "force_fp32"],
+            help='Precision mode.E.g.:-pmode force_fp32')
 
     def handle(self, args, **kwargs):
         # Adding custom comparing algorithms
