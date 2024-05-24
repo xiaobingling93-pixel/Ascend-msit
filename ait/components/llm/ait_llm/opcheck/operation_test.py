@@ -128,10 +128,11 @@ class OperationTest(unittest.TestCase):
         return new_in_tensors
 
     def force_dtype(self, tensors, pmode):
+        float_types = ["torch.float", "torch.float16", "torch.bfloat16"]
         if pmode == "force_fp16":
-            return [t.to(torch.float16) for t in tensors]
+            return [t.to(torch.float16) for t in tensors if t.dtype in float_types]
         elif pmode == "force_fp32":
-            return [t.to(torch.float32) for t in tensors]
+            return [t.to(torch.float32) for t in tensors if t.dtype in float_types]
         else:
             return tensors
 
