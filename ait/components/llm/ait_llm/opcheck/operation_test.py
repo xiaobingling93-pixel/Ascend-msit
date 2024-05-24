@@ -67,7 +67,7 @@ class OperationTest(unittest.TestCase):
             error4: 0.004,
             error5: 0.005,
             error6: 1
-        }
+        } 
 
     @staticmethod
     def parametrize(optest_class, case_info=None, excuted_ids=None):
@@ -128,7 +128,7 @@ class OperationTest(unittest.TestCase):
         return new_in_tensors
 
     def force_dtype(self, tensors, pmode):
-        float_types = [torch.float, torch.float16, torch.bfloat16]
+        float_types = [torch.float, torch.float32, torch.float16, torch.half, torch.bfloat16]
         if pmode == "force_fp16":
             return [t.to(torch.float16) if t.dtype in float_types else t for t in tensors]
         elif pmode == "force_fp32":
