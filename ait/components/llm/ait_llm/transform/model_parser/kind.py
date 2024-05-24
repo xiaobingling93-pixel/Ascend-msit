@@ -143,7 +143,7 @@ def activation(module: Module):
     if module_class is GELU:
         return {
             "kind": "GELU",
-            "approximate": module.approximate
+            "approximate": module.approximate == "tanh"
         }
 
     module_name = module_class.__name__
