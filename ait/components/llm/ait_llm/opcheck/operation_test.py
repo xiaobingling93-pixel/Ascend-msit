@@ -132,7 +132,7 @@ class OperationTest(unittest.TestCase):
         if pmode == "force_fp16":
             return [t.to(torch.float16) if t.dtype in float_types else t for t in tensors]
         elif pmode == "force_fp32":
-            return [t.to(torch.float32) if t.dtype in float_types else t for t in tensors]
+            return [t.to(torch.float) if t.dtype in float_types else t for t in tensors]
         else:
             return tensors
 
