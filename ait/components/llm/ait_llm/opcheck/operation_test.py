@@ -128,7 +128,7 @@ class OperationTest(unittest.TestCase):
         return new_in_tensors
 
     def force_dtype(self, tensors, pmode):
-        float_types = ["torch.float", "torch.float16", "torch.bfloat16"]
+        float_types = [torch.float, torch.float16, torch.bfloat16]
         if pmode == "force_fp16":
             return [t.to(torch.float16) if t.dtype in float_types else t for t in tensors]
         elif pmode == "force_fp32":
@@ -206,7 +206,7 @@ class OperationTest(unittest.TestCase):
         rel_pass_rate = torch.sum(rel_errors <= etol) / size if size != 0 else 0
         max_rel_error = torch.max(rel_errors)
         return rel_pass_rate.item() * 100, max_rel_error.item()
-
+ 
     def get_abs_pass_rate(self, out, golden, etol):
         out, golden = out.cpu(), golden.cpu()
         size = out.shape[0]
