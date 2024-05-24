@@ -57,7 +57,7 @@ class OperationTest(unittest.TestCase):
             'torch.float': [error1, 99.99], 'torch.int32': [error1, 99.99], 'torch.uint64': [error1, 99.99],
             'torch.float16': [error3, 99.9], 'torch.bfloat16': [error4, 99.6], 'torch.int8': [error6, 99.9],
             'torch.uint8': [error6, 99], 'torch.int16': [error6, 99.9], 'torch.uint16': [error6, 99.9],
-            'torch.bool': [error1, 100], 'torch.float32': [error1, 99.99],
+            'torch.bool': [error1, 100], 'torch.float32': [error1, 99.99]
         }
 
         self.erol_dict = {
