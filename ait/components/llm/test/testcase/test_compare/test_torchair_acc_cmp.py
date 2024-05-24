@@ -90,6 +90,7 @@ def fake_ge_dump_data():
 
     file_names = [
         "Add.Add_2.44.6.17065969121619", "Cast.Cast_9.19.6.17065969118878", "ConcatV2D.ConcatV2.42.6.17065969121611",
+        "TransData.TransData_1.1.42.6.17005969121581",
         torchair_acc_cmp.FUSION_OP_TYPE + ".Add_2Cast_9ConcatV2.19.6.17065969118878",  # Fused op name
     ]
     for file_name in file_names:
@@ -155,6 +156,7 @@ def test_init_ge_dump_data_from_bin_path_given_path_when_valid_then_pass():
         'Add_2': os.path.join(FAKE_GE_DUMP_DATA_NAME, '0', 'Add.Add_2.44.6.17065969121619'),
         'Cast_9': os.path.join(FAKE_GE_DUMP_DATA_NAME, '0', 'Cast.Cast_9.19.6.17065969118878'),
         'ConcatV2': os.path.join(FAKE_GE_DUMP_DATA_NAME, '0', 'ConcatV2D.ConcatV2.42.6.17065969121611'),
+        'TransData_1.1': os.path.join(FAKE_GE_DUMP_DATA_NAME, '0', 'TransData.TransData_1.1.42.6.17005969121581'),
         'Add_2Cast_9ConcatV2': os.path.join(FAKE_GE_DUMP_DATA_NAME, '0', fused_op_name),
     }}
     assert result == expected_result
