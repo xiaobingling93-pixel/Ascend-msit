@@ -206,7 +206,7 @@ class OperationTest(unittest.TestCase):
         rel_pass_rate = torch.sum(rel_errors <= etol) / size if size != 0 else 0
         max_rel_error = torch.max(rel_errors)
         return rel_pass_rate.item() * 100, max_rel_error.item()
- 
+
     def get_abs_pass_rate(self, out, golden, etol):
         out, golden = out.cpu(), golden.cpu()
         size = out.shape[0]
