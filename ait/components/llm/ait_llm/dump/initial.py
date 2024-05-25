@@ -19,7 +19,6 @@ import subprocess
 import shutil
 import re
 import datetime
-import pytz
 
 from components.utils.file_open_check import FileStat
 from ait_llm.common.log import logger
@@ -67,9 +66,8 @@ def init_dump_task(args):
     else:
         os.environ.pop(ATB_SAVE_TENSOR_RUNNER, None)  # Ensure none is set
 
-    utc_time = datetime.datetime.now(tz=pytz.utc)
-    timestamp = utc_time.astimezone(pytz.timezone('Asia/Shanghai')).strftime("%Y%m%d_%H%M%S")
-    os.environ[ATB_TIMESTAMP] = "_" + timestamp
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    os.environ[ATB_TIMESTAMP] = timestamp
 
     if args.output:
         if args.output.endswith('/'):
