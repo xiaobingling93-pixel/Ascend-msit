@@ -3,7 +3,7 @@ from unittest import TestCase
 from torch.nn import Linear, Embedding, LayerNorm, SiLU, GELU, Module
 from transformers.models.qwen2.modeling_qwen2 import Qwen2RotaryEmbedding, Qwen2RMSNorm, Qwen2Attention, Qwen2MLP
 
-from ait.components.llm.ait_llm.transform.model_parser.kind import convert, attention, mlp, activation
+from ait_llm.transform.model_parser.kind import convert, attention, mlp, activation
 
 
 class Attention(Module):
