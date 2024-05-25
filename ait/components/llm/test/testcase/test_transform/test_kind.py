@@ -1,9 +1,29 @@
 from unittest import TestCase
 
 from torch.nn import Linear, Embedding, LayerNorm, SiLU, GELU, Module
-from transformers.models.qwen2.modeling_qwen2 import Qwen2RotaryEmbedding, Qwen2RMSNorm, Qwen2Attention, Qwen2MLP
 
 from ait_llm.transform.model_parser.kind import convert, attention, mlp, activation
+
+
+class RotaryEmbedding(Module):
+    def __init__(
+            self,
+            dim: int,
+            base: int = 10000,
+            max_position_embeddings: int = 2048,
+            max_seq_len_cached: int = 2048
+    ):
+        super().__init__()
+        self.dim = dim
+        self.base = base
+        self.max_position_embeddings = max_position_embeddings
+        self.max_seq_len_cached = max_seq_len_cached
+
+
+class RMSNorm(Module):
+    def __init__(self, eps: float):
+        super().__init__()
+        self.variance_epsilon = eps
 
 
 class Attention(Module):
@@ -14,10 +34,11 @@ class Attention(Module):
         self.v_proj = Linear(16, 16, bias=True)
         self.o_proj = Linear(16, 16, bias=False)
 
-        self.rotary_emb = Qwen2RotaryEmbedding(
-            16,
-            max_position_embeddings=100,
+        self.rotary_emb = RotaryEmbedding(
+            dim=16,
             base=100,
+            max_position_embeddings=100,
+            max_seq_len_cached=100
         )
 
 
@@ -161,8 +182,8 @@ class TestKind(TestCase):
         )
 
     def test_rope(self):
-        rope1 = Qwen2RotaryEmbedding(12)
-        rope2 = Qwen2RotaryEmbedding(36, 100, 100)
+        rope1 = RotaryEmbedding(dim=12)
+        rope2 = RotaryEmbedding(dim=36, base=100, max_position_embeddings=100)
 
         self.assertEqual(
             {
@@ -180,14 +201,14 @@ class TestKind(TestCase):
                 "base": 100,
                 "dim": 36,
                 "max_position_embeddings": 100,
-                "max_seq_len_cached": 100
+                "max_seq_len_cached": 2048
             },
             convert(rope2)
         )
 
     def test_rms_norm(self):
-        rms_norm1 = Qwen2RMSNorm(hidden_size=16, eps=0.2)
-        rms_norm2 = Qwen2RMSNorm(hidden_size=48, eps=1e-5)
+        rms_norm1 = RMSNorm(eps=0.2)
+        rms_norm2 = RMSNorm(eps=1e-5)
 
         self.assertEqual(
             {
