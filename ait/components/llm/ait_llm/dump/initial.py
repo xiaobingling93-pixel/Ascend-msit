@@ -18,7 +18,6 @@ import site
 import subprocess
 import shutil
 import re
-import datetime
 
 from components.utils.file_open_check import FileStat
 from ait_llm.common.log import logger
@@ -27,10 +26,8 @@ from ait_llm.common.constant import ATB_HOME_PATH, ATB_SAVE_TENSOR_TIME, ATB_SAV
     ATB_SAVE_TENSOR_RUNNER, ATB_SAVE_TENSOR, ATB_SAVE_TENSOR_RANGE, \
     ATB_SAVE_TILING, LD_PRELOAD, ATB_OUTPUT_DIR, ATB_SAVE_CHILD, ATB_SAVE_TENSOR_PART, \
     ASCEND_TOOLKIT_HOME, ATB_PROB_LIB_WITH_ABI, ATB_PROB_LIB_WITHOUT_ABI, ATB_SAVE_CPU_PROFILING, \
-    ATB_CUR_PID, ATB_DUMP_SUB_PROC_INFO_SAVE_PATH, ATB_DEVICE_ID, ATB_AIT_LOG_LEVEL, ATB_DUMP_TYPE, ATB_TIMESTAMP
+    ATB_CUR_PID, ATB_DUMP_SUB_PROC_INFO_SAVE_PATH, ATB_DEVICE_ID, ATB_AIT_LOG_LEVEL, ATB_DUMP_TYPE, get_ait_dump_path
 
-
-GLOBAL_AIT_DUMP_PATH = "ait_dump"
 
 def is_use_cxx11():
     atb_home_path = os.environ.get(ATB_HOME_PATH, "")
@@ -52,8 +49,6 @@ def is_use_cxx11():
 
 
 def init_dump_task(args):
-    global GLOBAL_AIT_DUMP_PATH
-
     if args.save_desc:
         os.environ[ATB_SAVE_TENSOR] = "2"
     else:
@@ -70,9 +65,7 @@ def init_dump_task(args):
     else:
         os.environ.pop(ATB_SAVE_TENSOR_RUNNER, None)  # Ensure none is set
 
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    os.environ[ATB_TIMESTAMP] = timestamp
-    GLOBAL_AIT_DUMP_PATH = "ait_dump_" + timestamp
+    get_ait_dump_path()
 
     if args.output:
         if args.output.endswith('/'):
@@ -198,8 +191,7 @@ def clear_dump_task(args):
     if "onnx" in args.type and ("model" in args.type or "layer" in args.type):
         json_to_onnx(args)
     elif "cpu_profiling" in args.type:
-        cpu_profiling_data_path = os.path.join(os.environ.get(ATB_OUTPUT_DIR, ""), GLOBAL_AIT_DUMP_PATH, 
-                                               "cpu_profiling")
+        cpu_profiling_data_path = os.path.join(os.environ.get(ATB_OUTPUT_DIR, ""), get_ait_dump_path(), "cpu_profiling")
         merge_cpu_profiling_data(cpu_profiling_data_path)
     else:
         return

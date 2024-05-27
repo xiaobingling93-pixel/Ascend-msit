@@ -19,7 +19,7 @@ import torch
 from components.utils.file_open_check import ms_open
 from ait_llm.common.log import logger
 from ait_llm.common.utils import check_input_path_legality, check_output_path_legality
-from ait_llm.dump.initial import GLOBAL_AIT_DUMP_PATH
+from ait_llm.common.constant import get_ait_dump_path
 
 
 def dump_data(token_id=-1, data_id=-1, golden_data=None, my_path='', output_path='./'):
@@ -42,7 +42,7 @@ def dump_data(token_id=-1, data_id=-1, golden_data=None, my_path='', output_path
     if golden_data is not None:
         cur_pid = os.getpid()
         device_id = golden_data.get_device()
-        output_path_prefix = os.path.join(output_path, GLOBAL_AIT_DUMP_PATH, f"{cur_pid}_{device_id}")
+        output_path_prefix = os.path.join(output_path, get_ait_dump_path(), f"{cur_pid}_{device_id}")
         golden_data_dir = os.path.join(output_path_prefix, "golden_tensor", str(token_id))
 
         if not os.path.exists(golden_data_dir):
