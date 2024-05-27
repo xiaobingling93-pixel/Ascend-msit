@@ -30,7 +30,7 @@ def filter_dropout_module(module: nn.Module):
     for c in children:
         sub_children = list(c.children())
         if ((len(sub_children) > 0 and isinstance(sub_children[0], nn.Dropout))
-                or isinstance(module, nn.Dropout)):
+                or isinstance(c, nn.Dropout)):
             continue
         ret.append(c)
 
