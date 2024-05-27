@@ -30,7 +30,7 @@ def test_hook_when_tp_default_then_save_inputs():
     register_hook(model, dump_config)
     x = torch.randn(4, 4)
     model(x)
-    except_output_path = glob(os.pth.join(DUMP_PATH, "*", "torch_tensors"))[0]
+    except_output_path = glob(os.path.join(DUMP_PATH, "*", "torch_tensors"))[0]
     for name in MODEL_NAME_LIST:
         except_input_path = os.path.join(except_output_path, "cpu_" + str(os.getpid()), "0", name, "input_0.pth")
         except_output_path = os.path.join(except_output_path, "cpu_" + str(os.getpid()), "0", name, "output.pth")
