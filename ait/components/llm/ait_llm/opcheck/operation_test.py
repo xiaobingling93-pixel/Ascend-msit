@@ -123,7 +123,7 @@ class OperationTest(unittest.TestCase):
         rank, rank_root, rank_size = self.get_rank_info()
         new_in_tensors = []
         for i in range(rank_root, rank_size):
-            _in_tensors = self.get_in_tensors_from_single_device(self, i, rank)
+            _in_tensors = self.get_in_tensors_from_single_device(i, rank)
             new_in_tensors.extend(_in_tensors)
         return new_in_tensors
 

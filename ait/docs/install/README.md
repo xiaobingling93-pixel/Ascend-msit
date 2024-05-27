@@ -15,7 +15,8 @@ ait推理工具的安装包括**ait包**和**依赖的组件包**的安装，其
 | TensorFlow  | 非必选 | -                                      | 参考 [Centos7.6上TensorFlow1.15.0 环境安装](https://bbs.huaweicloud.com/blogs/181055) 安装 TensorFlow1.15.0 环境。(如不使用TensorFlow模型的精度对比功能则不需要安装)                                                  |
 | Caffe    | 非必选 | -    | 参考 [Caffe Installation](http://caffe.berkeleyvision.org/installation.html) 安装 Caffe 环境。(如不使用 Caffe 模型的精度对比功能则不需要安装)                                                                    |
 | Clang      | 非必选 | -    | 依赖LLVM Clang，需安装[Clang工具](https://releases.llvm.org/)。(如不使用transplt应用迁移分析功能则不需要安装)                                                                                                     |
-
+| ATB | 非必选 | -    | 依赖加速库ATB，需安装[加速库ATB工具](https://gitee.com/ascend/MindIE-LLM/tree/master/examples/atb_models#14-%E5%AE%89%E8%A3%85%E5%8A%A0%E9%80%9F%E5%BA%93)。(如不使用ait llm dump、opcheck、errcheck等功能则不需要安装)                                                                          |
+| MindIE-LLM | 非必选 | -    | 依赖MindIE-LLM组件，需安装[MindIE-LLM组件](https://gitee.com/ascend/MindIE-LLM/tree/master/examples/atb_models#15-%E5%AE%89%E8%A3%85%E6%A8%A1%E5%9E%8B%E4%BB%93)。(如不使用ait llm dump、opcheck、errcheck等功能则不需要安装)                                                                         |
 
 ## AIT安装
 

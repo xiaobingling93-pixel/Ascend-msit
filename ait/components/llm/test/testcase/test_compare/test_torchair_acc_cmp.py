@@ -29,10 +29,10 @@ FAKE_PBTXT_FILE_PATH = os.path.join(FAKE_GE_DUMP_DATA_NAME, FAKE_PBTXT_FILE_NAME
 
 
 @pytest.fixture(scope='module', autouse=True)
-def set_fake_parse_torchair_bin_dump_data():
-    def fake_parse_torchair_bin_dump_data(my_path):
+def set_fake_parse_torchair_dump_data():
+    def fake_parse_torchair_dump_data(my_path):
         return [np.ones([2, 3]).astype(np.float32)], [np.ones([2, 3]).astype(np.float32)]
-    setattr(torchair_acc_cmp, "parse_torchair_bin_dump_data", fake_parse_torchair_bin_dump_data)
+    setattr(torchair_acc_cmp, "parse_torchair_dump_data", fake_parse_torchair_dump_data)
 
 
 @pytest.fixture(scope='module', autouse=True)

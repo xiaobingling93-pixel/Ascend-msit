@@ -37,7 +37,7 @@ ait_sub_task_entry_points = [
 
 setup(
     name='ms-ait',
-    version='7.0.0c2',
+    version='7.0.0b530',
     description='AIT, Ascend Inference Tools',
     long_description_content_type='text/markdown',
     url='https://gitee.com/ascend/ait',
