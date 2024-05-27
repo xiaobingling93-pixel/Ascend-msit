@@ -30,6 +30,8 @@ from ait_llm.common.constant import ATB_HOME_PATH, ATB_SAVE_TENSOR_TIME, ATB_SAV
     ATB_CUR_PID, ATB_DUMP_SUB_PROC_INFO_SAVE_PATH, ATB_DEVICE_ID, ATB_AIT_LOG_LEVEL, ATB_DUMP_TYPE, ATB_TIMESTAMP
 
 
+GLOBAL_AIT_DUMP_PATH = "ait_dump"
+
 def is_use_cxx11():
     atb_home_path = os.environ.get(ATB_HOME_PATH, "")
     if not atb_home_path or not os.path.exists(atb_home_path):
@@ -50,6 +52,8 @@ def is_use_cxx11():
 
 
 def init_dump_task(args):
+    global GLOBAL_AIT_DUMP_PATH
+
     if args.save_desc:
         os.environ[ATB_SAVE_TENSOR] = "2"
     else:
@@ -68,6 +72,7 @@ def init_dump_task(args):
 
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     os.environ[ATB_TIMESTAMP] = timestamp
+    GLOBAL_AIT_DUMP_PATH = "ait_dump_" + timestamp
 
     if args.output:
         if args.output.endswith('/'):
@@ -193,7 +198,8 @@ def clear_dump_task(args):
     if "onnx" in args.type and ("model" in args.type or "layer" in args.type):
         json_to_onnx(args)
     elif "cpu_profiling" in args.type:
-        cpu_profiling_data_path = os.path.join(os.environ.get(ATB_OUTPUT_DIR, ""), "ait_dump", "cpu_profiling")
+        cpu_profiling_data_path = os.path.join(os.environ.get(ATB_OUTPUT_DIR, ""), GLOBAL_AIT_DUMP_PATH, 
+                                               "cpu_profiling")
         merge_cpu_profiling_data(cpu_profiling_data_path)
     else:
         return

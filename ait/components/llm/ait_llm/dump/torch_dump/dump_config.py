@@ -16,6 +16,7 @@ import re
 
 from ait_llm.common import utils
 from ait_llm.common.log import logger
+from ait_llm.dump.initial import GLOBAL_AIT_DUMP_PATH
 
 
 def singleton(cls):
@@ -101,7 +102,7 @@ class DumpConfig:
                 return
 
         cur_dump_path = "{}_{}".format(device, os.getpid())
-        self.dump_dir = os.path.join(self.dump_path, "ait_dump", "torch_tensors", cur_dump_path)
+        self.dump_dir = os.path.join(self.dump_path, GLOBAL_AIT_DUMP_PATH, "torch_tensors", cur_dump_path)
         if not os.path.exists(self.dump_dir):
             os.makedirs(self.dump_dir, mode=0o750)
 
