@@ -100,7 +100,7 @@ class OpChecker:
 
     def get_base_path(self, cur_path):
         dirseg = cur_path.split(os.path.sep)
-        if len(dirseg) >= 4 and dirseg[-3] == 'tensors' and dirseg[-4] == 'ait_dump':
+        if len(dirseg) >= 4 and dirseg[-3] == 'tensors' and dirseg[-4].startswith('ait_dump'):
             try:
                 pid = dirseg[-2].split("_")[1]
             except:

@@ -11,7 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
+import datetime
+
 from ait_llm.compare.cmp_algorithm import CMP_ALG_MAP
+
+GLOBAL_AIT_DUMP_PATH = "ait_dump"
 
 ATB_HOME_PATH = "ATB_HOME_PATH"
 ATB_CUR_PID = "ATB_CUR_PID"
@@ -29,6 +34,7 @@ ATB_DUMP_SUB_PROC_INFO_SAVE_PATH = "ATB_DUMP_SUB_PROC_INFO_SAVE_PATH"
 ATB_DUMP_TYPE = "ATB_DUMP_TYPE"
 ATB_DEVICE_ID = "ATB_DEVICE_ID"
 ATB_AIT_LOG_LEVEL = "ATB_AIT_LOG_LEVEL"
+ATB_TIMESTAMP = "ATB_TIMESTAMP"
 
 # ERRORCHECK
 ATB_CHECK_TYPE = "ATB_CHECK_TYPE"
@@ -71,3 +77,12 @@ CSV_GOLDEN_HEADER = [TOKEN_ID, DATA_ID, GOLDEN_DATA_PATH, GOLDEN_DTYPE, GOLDEN_S
               MY_DATA_PATH, MY_DTYPE, MY_SHAPE, MY_MAX_VALUE, MY_MIN_VALUE, MY_MEAN_VALUE]
 CSV_GOLDEN_HEADER.extend(list(CMP_ALG_MAP.keys()))
 CSV_GOLDEN_HEADER.append(CMP_FAIL_REASON)
+
+def get_ait_dump_path():
+    global GLOBAL_AIT_DUMP_PATH
+
+    if GLOBAL_AIT_DUMP_PATH == "ait_dump":
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        os.environ[ATB_TIMESTAMP] = timestamp
+        GLOBAL_AIT_DUMP_PATH = "ait_dump_" + timestamp
+    return GLOBAL_AIT_DUMP_PATH
