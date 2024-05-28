@@ -18,6 +18,7 @@ import site
 import subprocess
 import shutil
 import re
+import glob
 
 from components.utils.file_open_check import FileStat
 from ait_llm.common.log import logger
@@ -191,7 +192,11 @@ def clear_dump_task(args):
     if "onnx" in args.type and ("model" in args.type or "layer" in args.type):
         json_to_onnx(args)
     elif "cpu_profiling" in args.type:
-        cpu_profiling_data_path = os.path.join(os.environ.get(ATB_OUTPUT_DIR, ""), get_ait_dump_path(), "cpu_profiling")
-        merge_cpu_profiling_data(cpu_profiling_data_path)
+        cpu_profiling_path1 = os.path.join(os.environ.get(ATB_OUTPUT_DIR, ""), get_ait_dump_path(), "cpu_profiling")
+        cpu_profiling_path2 = os.path.join(os.environ.get(ATB_OUTPUT_DIR, ""), "ait_dump", "cpu_profiling")
+        if os.path.exists(cpu_profiling_path1):
+            merge_cpu_profiling_data(cpu_profiling_path1)
+        else:
+            merge_cpu_profiling_data(cpu_profiling_path2)
     else:
         return
