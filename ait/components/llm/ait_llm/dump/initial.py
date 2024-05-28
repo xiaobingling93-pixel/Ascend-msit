@@ -18,7 +18,6 @@ import site
 import subprocess
 import shutil
 import re
-import glob
 
 from components.utils.file_open_check import FileStat
 from ait_llm.common.log import logger
