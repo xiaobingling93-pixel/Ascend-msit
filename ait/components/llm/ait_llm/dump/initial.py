@@ -191,6 +191,7 @@ def clear_dump_task(args):
     if "onnx" in args.type and ("model" in args.type or "layer" in args.type):
         json_to_onnx(args)
     elif "cpu_profiling" in args.type:
+        # 获取当前进程的cpu_profiling数据dump路径，新版CANN包需要加时间戳，否则不加时间戳
         cpu_profiling_path1 = os.path.join(os.environ.get(ATB_OUTPUT_DIR, ""), get_ait_dump_path(), "cpu_profiling")
         cpu_profiling_path2 = os.path.join(os.environ.get(ATB_OUTPUT_DIR, ""), "ait_dump", "cpu_profiling")
         if os.path.exists(cpu_profiling_path1):
