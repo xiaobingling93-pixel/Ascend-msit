@@ -17,6 +17,7 @@ import sys
 import re
 import unittest
 import json
+import glob
 import numpy as np
 import torch
 import torch_npu
@@ -107,8 +108,14 @@ class OperationTest(unittest.TestCase):
 
     def get_in_tensors_from_single_device(self, i, rank):
         old_did_pid = f"{rank}_{self.pid}"
-        new_did_pid = f"{i}_{int(self.pid) - rank + i}"
-        new_tensor_path = self.tensor_path[::-1].replace(old_did_pid[::-1], new_did_pid[::-1], 1)[::-1]
+        new_did_pid = str(i) + "_" + "[0-9]*"
+        new_tensor_path_pattern = self.tensor_path[::-1].replace(old_did_pid[::-1], new_did_pid[::-1], 1)[::-1]
+        try:
+            new_tensor_path = glob.glob(new_tensor_path_pattern)[0]
+        except IndexError as e:
+            logger_msg = f"Cannot find data on rank {i}! {self.op_name} needs tensors on all devices! Exception: {e}"
+            logger.error(logger_msg)
+            raise RuntimeError(f"{new_tensor_path_pattern} not valid")
         self.validate_path(new_tensor_path)
         _in_tensor_files = self.get_tensor_path(new_tensor_path, "intensor")
         return self.read_tensor_from_file(_in_tensor_files)
