@@ -83,11 +83,11 @@ class OnnxDumpData(DumpData):
 
             self.dump_model_with_inputs_path = self._new_model_save_path(modify_model_path)
             self.model_with_inputs = modify_model
-            self.model_with_inputs_session = self._load_session(modify_model_contents)
+            self.model_with_inputs_session = self._load_session(modify_model_path)
         else:
             self.dump_model_with_inputs_path = self._new_model_save_path(self.model_path)
             self.model_with_inputs = self.origin_model
-            self.model_with_inputs_session = self._load_session(origin_model_contents)
+            self.model_with_inputs_session = self._load_session(self.model_path)
 
     @staticmethod
     def _check_input_shape_fix_value(op_name, model_shape, input_shape):
