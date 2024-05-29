@@ -141,7 +141,12 @@ class OpChecker:
         if not ret:
             execution_flag = False
         
-        self.output = os.path.realpath(args.output) 
+        self.output = os.path.realpath(args.output)
+        if not os.path.exists(self.output):
+            logger_text = f"Output path not found: {self.output}"
+            logger.error(logger_text)
+            execution_flag = False
+
         self.output_path = os.path.join(self.output, f"opcheck_result_{self.timestamp}.xlsx")
         self.operation_ids = args.operation_ids
         if self.operation_ids != '':
