@@ -18,10 +18,7 @@ import json
 import queue
 import threading
 import time
-import glob
 import datetime
-import pytz
-import pandas as pd
 import torch
 
 from ait_llm.common.log import logger
@@ -37,25 +34,28 @@ class OpChecker:
             'op_param': dict
             'tensor_path': string
         '''
-        self.csv_data = {}
         self.cases_info = {}
         self.completed_op_id_queue = queue.Queue()
-        self.special_cases = ['KvCacheOperation', 'ReshapeAndCacheOperation', 'SelfAttentionOperation']
+        self.special_cases = ('KvCacheOperation', 'ReshapeAndCacheOperation', 'SelfAttentionOperation')
         self.base_path = ''
         self.pid = None
-        self.tensor_path = ''
-        self.op_path = ''
-        self.output_dir = ''
+        self.input = ''
+        self.output = ''
         self.output_path = ''
-        self.ids = ''
+        self.operation_ids = ''
         self.check_ids_string = []
-        self.opname = None
+        self.operation_name = None
         self.check_patterns = []
-        self.precision_type = []
-        self.precision_mode = "keep_origin_dtype"
-        utc_time = datetime.datetime.now(tz=pytz.utc)
-        self.timestamp = utc_time.astimezone(pytz.timezone('Asia/Shanghai')).strftime("%Y%m%d_%H%M%S")
-        self.rerun = False
+        self.precision_metric = []
+        self.precision_mode = 0
+        self.timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.atb_rerun = False
+
+        self.precision_mode_dict = {
+            0: "keep_origin_dtype",
+            1: "force_fp16",
+            2: "force_fp32"
+        }
 
     @staticmethod
     def third_party_init():
@@ -125,7 +125,7 @@ class OpChecker:
 
         base_path, pid = self.get_base_path(input_path)
         if base_path is None:
-            logger_text = f"input path is not in ait_dump tensors directory: {input_path}"
+            logger_text = f"Input path is not in ait_dump tensors directory: {input_path}"
             logger.error(logger_text)
             return input_path, base_path, pid, ret
         
@@ -137,30 +137,30 @@ class OpChecker:
 
         execution_flag = True
 
-        self.tensor_path, self.base_path, self.pid, ret = self.check_input_legality(args.input)
+        self.input, self.base_path, self.pid, ret = self.check_input_legality(args.input)
         if not ret:
             execution_flag = False
         
-        self.output_dir = os.path.realpath(args.output) 
-        self.output_path = os.path.join(self.output_dir, f"opcheck_result_{self.timestamp}.xlsx")
-        self.ids = args.ids
-        if self.ids != '':
+        self.output = os.path.realpath(args.output) 
+        self.output_path = os.path.join(self.output, f"opcheck_result_{self.timestamp}.xlsx")
+        self.operation_ids = args.operation_ids
+        if self.operation_ids != '':
             try:
-                self.check_ids_string = [x.lower().strip() for x in self.ids.split(',')]
+                self.check_ids_string = [x.lower().strip() for x in self.operation_ids.split(',')]
             except ValueError as e:
-                logger_text = "Failed to parse ids. Error: {}".format(e)
+                logger_text = "Failed to parse operation_ids. Error: {}".format(e)
                 logger.error(logger_text)
                 execution_flag = False
-        self.opname = args.opname
-        if self.opname is not None:
+        self.operation_name = args.operation_name
+        if self.operation_name is not None:
             try:
-                self.check_patterns = [x.lower().strip() for x in self.opname.split(',')]
+                self.check_patterns = [x.lower().strip() for x in self.operation_name.split(',')]
             except ValueError as e:
-                logger_text = "Failed to parse opname. Error: {}".format(e)
+                logger_text = "Failed to parse operation_name. Error: {}".format(e)
                 logger.error(logger_text)
                 execution_flag = False
-        self.precision_type = args.metric
-        self.precision_mode = args.pmode
+        self.precision_metric = args.precision_metric
+        self.precision_mode = args.precision_mode
 
         # 指定需要使用的npu设备
         try:
@@ -170,8 +170,8 @@ class OpChecker:
             logger.error(logger_text)
             execution_flag = False
 
-        self.rerun = args.rerun
-        if self.rerun:
+        self.atb_rerun = args.atb_rerun
+        if self.atb_rerun:
             execution_flag_res = OpChecker.third_party_init()
             if not execution_flag_res:
                 execution_flag = False
@@ -193,8 +193,8 @@ class OpChecker:
         case_manager = CaseManager(self.completed_op_id_queue)
         
         # 1.遍历tensor_path，将算子信息添加到self.cases_info
-        self.walk_tensor_path(self.tensor_path)
-        logger_text = f"Total {len(self.cases_info)} cases found under path: {self.tensor_path}"
+        self.walk_tensor_path(self.input)
+        logger_text = f"Total {len(self.cases_info)} cases found under path: {self.input}"
         logger.info(logger_text)
 
         # 2.将self.cases_info中的用例添加到case_manager
@@ -238,7 +238,7 @@ class OpChecker:
     def check_id_range(self, op_id):
         if op_id is None:
             return False
-        if self.ids == '':
+        if self.operation_ids == '':
             return True
 
         for p in self.check_ids_string:
@@ -250,7 +250,7 @@ class OpChecker:
     def check_name(self, op_name):
         if op_name is None:
             return False
-        if self.opname is None:
+        if self.operation_name is None:
             return True
 
         for p in self.check_patterns:
@@ -259,7 +259,7 @@ class OpChecker:
         return False
 
     def is_exec_node(self, case_info):
-        if self.ids == '' and self.opname is None:
+        if self.operation_ids == '' and self.operation_name is None:
             return True
 
         flag1 = self.check_id_range(case_info.get("op_id", None))
@@ -298,7 +298,7 @@ class OpChecker:
 
         case_info = {
             'op_id': op_id, 'op_name': op_name, 'op_param': op_param, 'tensor_path': tensor_path,
-            'precision_type': self.precision_type, 'rerun': self.rerun, 'pid': self.pid, 
+            'precision_metric': self.precision_metric, 'atb_rerun': self.atb_rerun, 'pid': self.pid, 
             'precision_mode': self.precision_mode
         }
 
@@ -351,12 +351,12 @@ class OpChecker:
             cur_id, res_detail.get('precision_standard', default_str), excuted_information,
             res_detail.get('rel_pass_rate', default_str), res_detail.get('max_rel', default_str),
         ]
-        if 'abs' in self.precision_type:
+        if 'abs' in self.precision_metric:
             required.append(res_detail.get('abs_pass_rate', default_str))
             required.append(res_detail.get('max_abs', default_str))
-        if 'cos_sim' in self.precision_type:
+        if 'cos_sim' in self.precision_metric:
             required.append(res_detail.get('cos_sim', default_str))
-        if 'kl' in self.precision_type:
+        if 'kl' in self.precision_metric:
             required.append(res_detail.get('kl_div', default_str))
 
         custom_ret = [res_detail.get(custom_name, default_str) for custom_name in CUSTOM_ALG_MAP]
@@ -372,12 +372,12 @@ class OpChecker:
                 'op_id', 'op_name', 'op_param', 'tensor_path', 'out_tensor_id', 'precision_standard',
                 'precision_result', 'rel_precision_rate(%)', 'max_rel_error'
             ]
-            if 'abs' in self.precision_type:
+            if 'abs' in self.precision_metric:
                 required_head.append('abs_precision_rate(%)')
                 required_head.append('max_abs_error')
-            if 'cos_sim' in self.precision_type:
+            if 'cos_sim' in self.precision_metric:
                 required_head.append('cosine_similarity')
-            if 'kl' in self.precision_type:
+            if 'kl' in self.precision_metric:
                 required_head.append('kl_divergence')
             custom_header = list(CUSTOM_ALG_MAP.keys())
             ws.append(required_head + custom_header + ["fail_reason"])

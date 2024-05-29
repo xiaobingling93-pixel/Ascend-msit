@@ -13,12 +13,10 @@
 # limitations under the License.
 
 import os
-import sys
 import re
 import unittest
 import json
 import glob
-import numpy as np
 import torch
 import torch_npu
 
@@ -44,7 +42,7 @@ class OperationTest(unittest.TestCase):
         self.pid = case_info['pid']
         self.in_tensors = []
         self.out_tensors = []
-        self.rerun = self.case_info["rerun"]
+        self.atb_rerun = self.case_info["atb_rerun"]
 
         error1 = 'Error0.1‰'
         error2 = 'Error0.5‰'
@@ -113,8 +111,8 @@ class OperationTest(unittest.TestCase):
         try:
             new_tensor_path = glob.glob(new_tensor_path_pattern)[0]
         except IndexError as e:
-            logger_msg = f"Cannot find data on rank {i}! {self.op_name} needs tensors on all devices! Exception: {e}"
-            logger.error(logger_msg)
+            logger_text = f"Cannot find data on rank {i}! {self.op_name} needs tensors on all devices! Exception: {e}"
+            logger.error(logger_text)
             raise RuntimeError(f"{new_tensor_path_pattern} not valid")
         self.validate_path(new_tensor_path)
         _in_tensor_files = self.get_tensor_path(new_tensor_path, "intensor")
@@ -134,11 +132,11 @@ class OperationTest(unittest.TestCase):
             new_in_tensors.extend(_in_tensors)
         return new_in_tensors
 
-    def force_dtype(self, tensors, pmode):
-        float_types = [torch.float, torch.float32, torch.float16, torch.half, torch.bfloat16]
-        if pmode == "force_fp16":
+    def force_dtype(self, tensors, precision_mode):
+        float_types = (torch.float, torch.float32, torch.float16, torch.half, torch.bfloat16)
+        if precision_mode == 1:
             return [t.to(torch.float16) if t.dtype in float_types else t for t in tensors]
-        elif pmode == "force_fp32":
+        elif precision_mode == 2:
             return [t.to(torch.float32) if t.dtype in float_types else t for t in tensors]
         else:
             return tensors
@@ -157,29 +155,29 @@ class OperationTest(unittest.TestCase):
         if self.case_info['excuted_information'] != 'PASS':
             self.case_info['excuted_information'] = 'FAILED'
 
-    def rerun_op(self, excute_type):
+    def rerun_op(self, execute_type):
         operation = torch.classes.OperationTorch.OperationTorch(self.op_name)
         if isinstance(self.op_param, dict):
             operation.set_param(json.dumps(self.op_param))
         elif isinstance(self.op_param, str):
             operation.set_param(self.op_param)
-        if excute_type == "inplace":
+        if execute_type == "inplace":
             operation.execute(self.in_tensors)
             out_tensors = []
             for index in self.case_info['inplace_idx']:
                 out_tensors.append(self.in_tensors[index])
-        elif excute_type == "with_param":
+        elif execute_type == "with_param":
             operation.set_varaintpack_param(self.case_info['run_param'])
             out_tensors = operation.execute(self.in_tensors)
         else:
             out_tensors = operation.execute(self.in_tensors)
         return out_tensors
 
-    def excute_common(self, excute_type):
+    def excute_common(self, execute_type):
         logger_text = f"———————— {self.op_id} {self.op_name} test start ————————"
         logger.info(logger_text)
-        if self.rerun:
-            out_tensors = self.rerun_op(excute_type)
+        if self.atb_rerun:
+            out_tensors = self.rerun_op(execute_type)
         else:
             out_tensors = self.out_tensors
 
@@ -228,18 +226,18 @@ class OperationTest(unittest.TestCase):
 
     def get_other_precisions(self, out, golden, etol):
         message = []
-        precision_type = self.case_info['precision_type']
+        precision_metric = self.case_info['precision_metric']
         default_str = 'NaN'
         abs_pass_rate, max_abs_error, cos_sim, kl = None, None, None, None
 
         out, golden = out.reshape(-1), golden.reshape(-1)
-        if 'abs' in precision_type:
+        if 'abs' in precision_metric:
             abs_pass_rate, max_abs_error = self.get_abs_pass_rate(out, golden, etol)
-        if 'cos_sim' in precision_type:
+        if 'cos_sim' in precision_metric:
             cos_sim, cur_message = CMP_ALG_MAP["cosine_similarity"](golden, out)
             if cur_message:
                 message.append('cos_sim: ' + cur_message)
-        if 'kl' in precision_type:
+        if 'kl' in precision_metric:
             kl, cur_message = CMP_ALG_MAP["kl_divergence"](golden, out)
             if cur_message:
                 message.append('kl_div: ' + cur_message)
@@ -295,7 +293,8 @@ class OperationTest(unittest.TestCase):
         my_data_len, golden_data_len = len(out_tensors), len(golden_out_tensors)
         if my_data_len != golden_data_len:
             pass_flag = False
-            logger.info(f"Data count not equal, {my_data_len} != {golden_data_len}. Will compare only partial")
+            logger_text = f"Data count not equal, {my_data_len} != {golden_data_len}. Will compare only partial"
+            logger.info(logger_text)
 
         for out_tensor, golden_out_tensor in zip(out_tensors, golden_out_tensors):
             out_dtype = str(out_tensor.dtype)
