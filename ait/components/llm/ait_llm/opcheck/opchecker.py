@@ -52,9 +52,9 @@ class OpChecker:
         self.atb_rerun = False
 
         self.precision_mode_dict = {
-            0: "keep_origin_dtype",
-            1: "force_fp16",
-            2: "force_fp32"
+            "keep_origin_dtype": 0,
+            "force_fp16": 1,
+            "force_fp32": 2
         }
 
     @staticmethod
@@ -160,7 +160,7 @@ class OpChecker:
                 logger.error(logger_text)
                 execution_flag = False
         self.precision_metric = args.precision_metric
-        self.precision_mode = args.precision_mode
+        self.precision_mode = self.precision_mode_dict.get(args.precision_mode, 0)
 
         # 指定需要使用的npu设备
         try:
