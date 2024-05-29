@@ -318,12 +318,8 @@ class OpcheckCommand(BaseCommand):
             required=False,
             default="keep_origin_dtype",
             choices=["keep_origin_dtype", "force_fp16", "force_fp32"],
-            help='Specifies the precision mode to calculate golden output. \
-                  Choosing from: \
-                    keep_origin_dtype: keep origin dtype, \
-                    force_fp16: translate all float tensors to torch.float16 before calculating and comparing, \
-                    force_fp32: translate all float tensors to torch.float32 before calculating and comparing, \
-                  E.g.:-pmode force_fp32')
+            help='Specifies the precision mode to calculate golden output. Keep origin dtype or translate all \
+                float tensors to torch.float16/torch.float32 before calculating and comparing.E.g.:-pmode force_fp32')
 
     def handle(self, args, **kwargs):
         # Adding custom comparing algorithms
