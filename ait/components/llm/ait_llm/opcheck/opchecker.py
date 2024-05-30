@@ -19,10 +19,19 @@ import queue
 import threading
 import time
 import datetime
+import collections
 import torch
 
 from ait_llm.common.log import logger
 from ait_llm.compare.cmp_algorithm import CUSTOM_ALG_MAP
+
+
+NAMEDTUPLE_PRECISION_METRIC = collections.namedtuple(
+    'precision_metric', ['abs', 'kl', 'cos_sim']
+)('abs', 'kl', 'cos_sim')
+NAMEDTUPLE_PRECISION_MODE = collections.namedtuple(
+    'precision_mode', ["keep_origin_dtype", "force_fp16", "force_fp32"]
+)("keep_origin_dtype", "force_fp16", "force_fp32")
 
 
 class OpChecker:
@@ -50,12 +59,6 @@ class OpChecker:
         self.precision_mode = 0
         self.timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         self.atb_rerun = False
-
-        self.precision_mode_dict = {
-            "keep_origin_dtype": 0,
-            "force_fp16": 1,
-            "force_fp32": 2
-        }
 
     @staticmethod
     def third_party_init():

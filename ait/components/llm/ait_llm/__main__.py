@@ -18,7 +18,7 @@ import subprocess
 
 from components.utils.parser import BaseCommand
 from ait_llm.dump.initial import init_dump_task, clear_dump_task
-from ait_llm.opcheck.opchecker import OpChecker
+from ait_llm.opcheck.opchecker import OpChecker, NAMEDTUPLE_PRECISION_METRIC, NAMEDTUPLE_PRECISION_MODE
 from ait_llm.errcheck.process import process_error_check
 from ait_llm.common.utils import str2bool, check_positive_integer, check_device_integer, safe_string, check_exec_cmd, \
     check_ids_string, check_number_list, check_output_path_legality, check_input_path_legality
@@ -284,7 +284,7 @@ class OpcheckCommand(BaseCommand):
             required=False,
             nargs='+',
             default=[],
-            choices=['abs', 'kl', 'cos_sim'],
+            choices=NAMEDTUPLE_PRECISION_METRIC._fields,
             help='Output more results of other precision metrics.E.g:-metric abs kl cos_sim')
 
         parser.add_argument(
@@ -317,7 +317,7 @@ class OpcheckCommand(BaseCommand):
             '-pmode',
             required=False,
             default="keep_origin_dtype",
-            choices=["keep_origin_dtype", "force_fp16", "force_fp32"],
+            choices=NAMEDTUPLE_PRECISION_MODE._fields,
             help='Specifies the precision mode to calculate golden output. Keep origin dtype or translate all \
                 float tensors to torch.float16/torch.float32 before calculating and comparing.E.g.:-pmode force_fp32')
 
