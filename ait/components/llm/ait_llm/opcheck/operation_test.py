@@ -13,12 +13,10 @@
 # limitations under the License.
 
 import os
-import sys
 import re
 import unittest
 import json
 import glob
-import numpy as np
 import torch
 import torch_npu
 
@@ -44,7 +42,7 @@ class OperationTest(unittest.TestCase):
         self.pid = case_info['pid']
         self.in_tensors = []
         self.out_tensors = []
-        self.rerun = self.case_info["rerun"]
+        self.atb_rerun = self.case_info["atb_rerun"]
 
         error1 = 'Error0.1‰'
         error2 = 'Error0.5‰'
@@ -55,7 +53,7 @@ class OperationTest(unittest.TestCase):
 
         self.precision_standard = {
             'torch.double': [error1, 99.99], 'torch.uint32': [error1, 99.99], 'torch.int64': [error1, 99.99],
-            'torch.float': [error1, 99.99], 'torch.int32': [error1, 99.99], 'torch.uint64': [error1, 99.99],
+            'torch.float32': [error1, 99.99], 'torch.int32': [error1, 99.99], 'torch.uint64': [error1, 99.99],
             'torch.float16': [error3, 99.9], 'torch.bfloat16': [error4, 99.6], 'torch.int8': [error6, 99.9],
             'torch.uint8': [error6, 99], 'torch.int16': [error6, 99.9], 'torch.uint16': [error6, 99.9],
             'torch.bool': [error1, 100]
@@ -113,8 +111,8 @@ class OperationTest(unittest.TestCase):
         try:
             new_tensor_path = glob.glob(new_tensor_path_pattern)[0]
         except IndexError as e:
-            logger_msg = f"Cannot find data on rank {i}! {self.op_name} needs tensors on all devices! Exception: {e}"
-            logger.error(logger_msg)
+            logger_text = f"Cannot find data on rank {i}! {self.op_name} needs tensors on all devices! Exception: {e}"
+            logger.error(logger_text)
             raise RuntimeError(f"{new_tensor_path_pattern} not valid")
         self.validate_path(new_tensor_path)
         _in_tensor_files = self.get_tensor_path(new_tensor_path, "intensor")
@@ -134,41 +132,52 @@ class OperationTest(unittest.TestCase):
             new_in_tensors.extend(_in_tensors)
         return new_in_tensors
 
+    def force_dtype(self, tensors, precision_mode):
+        float_types = (torch.float, torch.float32, torch.float16, torch.half, torch.bfloat16)
+        if precision_mode == 1:
+            return [t.to(torch.float16) if t.dtype in float_types else t for t in tensors]
+        elif precision_mode == 2:
+            return [t.to(torch.float32) if t.dtype in float_types else t for t in tensors]
+        else:
+            return tensors
+
     def setUp(self):
         self.validate_path(self.tensor_path)
         _in_tensor_files = self.get_tensor_path(self.tensor_path, "intensor")
         self.in_tensors = self.read_tensor_from_file(_in_tensor_files)
+        self.in_tensors = self.force_dtype(self.in_tensors, self.case_info['precision_mode'])
         _out_tensor_files = self.get_tensor_path(self.tensor_path, "outtensor")
         self.out_tensors = self.read_tensor_from_file(_out_tensor_files)
+        self.out_tensors = self.force_dtype(self.out_tensors, self.case_info['precision_mode'])
 
     def tearDown(self):
         self.excuted_ids.put(self.op_id)
         if self.case_info['excuted_information'] != 'PASS':
             self.case_info['excuted_information'] = 'FAILED'
 
-    def rerun_op(self, excute_type): 
+    def rerun_op(self, execute_type):
         operation = torch.classes.OperationTorch.OperationTorch(self.op_name)
         if isinstance(self.op_param, dict):
             operation.set_param(json.dumps(self.op_param))
         elif isinstance(self.op_param, str):
             operation.set_param(self.op_param)
-        if excute_type == "inplace":
+        if execute_type == "inplace":
             operation.execute(self.in_tensors)
             out_tensors = []
             for index in self.case_info['inplace_idx']:
                 out_tensors.append(self.in_tensors[index])
-        elif excute_type == "with_param":
+        elif execute_type == "with_param":
             operation.set_varaintpack_param(self.case_info['run_param'])
             out_tensors = operation.execute(self.in_tensors)
         else:
             out_tensors = operation.execute(self.in_tensors)
         return out_tensors
 
-    def excute_common(self, excute_type):
+    def excute_common(self, execute_type):
         logger_text = f"———————— {self.op_id} {self.op_name} test start ————————"
         logger.info(logger_text)
-        if self.rerun:
-            out_tensors = self.rerun_op(excute_type)
+        if self.atb_rerun:
+            out_tensors = self.rerun_op(execute_type)
         else:
             out_tensors = self.out_tensors
 
@@ -217,18 +226,18 @@ class OperationTest(unittest.TestCase):
 
     def get_other_precisions(self, out, golden, etol):
         message = []
-        precision_type = self.case_info['precision_type']
+        precision_metric = self.case_info['precision_metric']
         default_str = 'NaN'
         abs_pass_rate, max_abs_error, cos_sim, kl = None, None, None, None
 
         out, golden = out.reshape(-1), golden.reshape(-1)
-        if 'abs' in precision_type:
+        if 'abs' in precision_metric:
             abs_pass_rate, max_abs_error = self.get_abs_pass_rate(out, golden, etol)
-        if 'cos_sim' in precision_type:
+        if 'cos_sim' in precision_metric:
             cos_sim, cur_message = CMP_ALG_MAP["cosine_similarity"](golden, out)
             if cur_message:
                 message.append('cos_sim: ' + cur_message)
-        if 'kl' in precision_type:
+        if 'kl' in precision_metric:
             kl, cur_message = CMP_ALG_MAP["kl_divergence"](golden, out)
             if cur_message:
                 message.append('kl_div: ' + cur_message)
@@ -284,9 +293,9 @@ class OperationTest(unittest.TestCase):
         my_data_len, golden_data_len = len(out_tensors), len(golden_out_tensors)
         if my_data_len != golden_data_len:
             pass_flag = False
-            logger.info(f"Data count not equal, {my_data_len} != {golden_data_len}. Will compare only partial")
+            logger_text = f"Data count not equal, {my_data_len} != {golden_data_len}. Will compare only partial"
+            logger.info(logger_text)
 
-        tensor_count = len(out_tensors)
         for out_tensor, golden_out_tensor in zip(out_tensors, golden_out_tensors):
             out_dtype = str(out_tensor.dtype)
             p_s = self.precision_standard.get(out_dtype, [])

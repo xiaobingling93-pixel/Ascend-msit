@@ -174,7 +174,7 @@ class CompareCommand(BaseCommand):
             required=True,
             type=check_input_path_legality,
             help='Compared data path. It supports directory or file.')
-        
+
         parser.add_argument(
             '--cmp-level',
             '-cl',
@@ -250,7 +250,6 @@ class OpcheckCommand(BaseCommand):
         parser.add_argument(
             '--input',
             '-i',
-            dest="input",
             required=True,
             type=check_input_path_legality,
             help='input directory.E.g:--input OUTPUT_DIR/PID_TID/0/')
@@ -258,7 +257,6 @@ class OpcheckCommand(BaseCommand):
         parser.add_argument(
             '--output',
             '-o',
-            dest="output",
             required=False,
             type=check_output_path_legality,
             default='./',
@@ -268,7 +266,6 @@ class OpcheckCommand(BaseCommand):
             '--operation-ids',
             '-ids',
             required=False,
-            dest="ids",
             type=check_ids_string,
             default="",
             help='Save Tensor Ids.E.g:-ids 24_1,2_3_5')
@@ -277,7 +274,6 @@ class OpcheckCommand(BaseCommand):
             '--operation-name',
             '-opname',
             required=False,
-            dest="opname",
             type=safe_string,
             default=None,
             help='Operation names need to dump.E.g:-opname self,linear')
@@ -285,18 +281,16 @@ class OpcheckCommand(BaseCommand):
         parser.add_argument(
             '--precision-metric',
             '-metric',
-            dest="metric",
             required=False,
             nargs='+',
             default=[],
             choices=['abs', 'kl', 'cos_sim'],
-            help=' Output more results of other precision metrics.E.g:-metric abs kl cos_sim')
+            help='Output more results of other precision metrics.E.g:-metric abs kl cos_sim')
 
         parser.add_argument(
             '--device-id',
             '-device',
             required=False,
-            dest="device_id",
             type=check_device_integer,
             default=0,
             help='Spicifies the NPU device to bu used.E.g.:-device 1')
@@ -305,7 +299,6 @@ class OpcheckCommand(BaseCommand):
             '--atb-rerun',
             '-rerun',
             required=False,
-            dest="rerun",
             action='store_true',
             default=False,
             help='Rerun atb operations if True. Compare outputs in dump data if False')
@@ -318,6 +311,15 @@ class OpcheckCommand(BaseCommand):
             help='custom comparing algorithms in format "python_file_path.py:function". \
                   Should better be a standalong file, and function should in format like \
                   "def foo(golden_tensor, my_tensor): return float_value, string_message"')
+
+        parser.add_argument(
+            '--precision-mode',
+            '-pmode',
+            required=False,
+            default="keep_origin_dtype",
+            choices=["keep_origin_dtype", "force_fp16", "force_fp32"],
+            help='Specifies the precision mode to calculate golden output. Keep origin dtype or translate all \
+                float tensors to torch.float16/torch.float32 before calculating and comparing.E.g.:-pmode force_fp32')
 
     def handle(self, args, **kwargs):
         # Adding custom comparing algorithms
