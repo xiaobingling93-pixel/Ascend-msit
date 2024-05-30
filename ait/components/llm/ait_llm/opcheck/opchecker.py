@@ -19,17 +19,15 @@ import queue
 import threading
 import time
 import datetime
-import collections
+from collections import namedtuple
 import torch
 
 from ait_llm.common.log import logger
 from ait_llm.compare.cmp_algorithm import CUSTOM_ALG_MAP
 
 
-NAMEDTUPLE_PRECISION_METRIC = collections.namedtuple(
-    'precision_metric', ['abs', 'kl', 'cos_sim']
-)('abs', 'kl', 'cos_sim')
-NAMEDTUPLE_PRECISION_MODE = collections.namedtuple(
+NAMEDTUPLE_PRECISION_METRIC = namedtuple('precision_metric', ['abs', 'kl', 'cos_sim'])('abs', 'kl', 'cos_sim')
+NAMEDTUPLE_PRECISION_MODE = namedtuple(
     'precision_mode', ["keep_origin_dtype", "force_fp16", "force_fp32"]
 )("keep_origin_dtype", "force_fp16", "force_fp32")
 
