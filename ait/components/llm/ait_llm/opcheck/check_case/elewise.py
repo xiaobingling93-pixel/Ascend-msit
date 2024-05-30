@@ -21,7 +21,7 @@ from ait_llm.common.log import logger
 
 class OpcheckElewiseAddOperation(operation_test.OperationTest):
     def elewise_cast(self, in_tensors):
-        out_type = self.op_params.get('outTensorType', None)
+        out_type = self.op_param.get('outTensorType', None)
         if not out_type:
             msg = "The golden data of elewise cast may be incorrect because outTensorType is not correctly set!"
             logger.error(msg)            
@@ -37,7 +37,7 @@ class OpcheckElewiseAddOperation(operation_test.OperationTest):
         return [golden_result]
 
     def elewise_muls(self, in_tensors):
-        mulsParam = self.op_params.get('mulsParam', {})
+        mulsParam = self.op_param.get('mulsParam', {})
         var_attr = mulsParam.get('varAttr', None)
         if not var_attr:
             msg = "The golden data of elewise muls may be incorrect because varAttr is not correctly set!"
