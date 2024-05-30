@@ -94,22 +94,7 @@ download_and_install_aclruntime() {
         return
     fi
 
-    echo "download and install aclruntime"
-    PYTHON3_MINI_VERSION=`python3 --version | cut -d'.' -f 2`
-    if [ "$PYTHON3_MINI_VERSION" = "7" ]; then
-        SUB_SUFFIX="m"
-    else
-        SUB_SUFFIX=""
-    fi
-    echo "PYTHON3_MINI_VERSION=$PYTHON3_MINI_VERSION, SUB_SUFFIX=$SUB_SUFFIX"
-    WHL_NAME="aclruntime-0.0.2-cp3${PYTHON3_MINI_VERSION}-cp3${PYTHON3_MINI_VERSION}${SUB_SUFFIX}-linux_$(uname -m).whl"
-    BASE_URL="https://aisbench.obs.myhuaweicloud.com/packet/ais_bench_infer/0.0.2/ait/"
-    echo "WHL_NAME=$WHL_NAME, URL=${BASE_URL}${WHL_NAME}"
-    wget --no-check-certificate -c "${BASE_URL}${WHL_NAME}" && pip3 install $WHL_NAME --force-reinstall && rm -f $WHL_NAME
-    if [ $? -ne 0 ]; then
-        echo "Downloading or installing from whl failed, will install from source code"
-        cd ${CURRENT_DIR}/components/benchmark/backend && pip install . --force-reinstall && cd -
-    fi
+    cd ${CURRENT_DIR}/components/benchmark/backend && pip install . --force-reinstall && cd -
 }
 
 
