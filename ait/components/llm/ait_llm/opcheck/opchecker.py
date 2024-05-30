@@ -56,7 +56,7 @@ class OpChecker:
         self.operation_name = None
         self.check_patterns = []
         self.precision_metric = []
-        self.precision_mode = 0
+        self.precision_mode = NAMEDTUPLE_PRECISION_MODE.keep_origin_dtype
         self.timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         self.atb_rerun = False
 
@@ -168,7 +168,7 @@ class OpChecker:
                 logger.error(logger_text)
                 execution_flag = False
         self.precision_metric = args.precision_metric
-        self.precision_mode = self.precision_mode_dict.get(args.precision_mode, 0)
+        self.precision_mode = args.precision_mode
 
         # 指定需要使用的npu设备
         try:
@@ -359,12 +359,12 @@ class OpChecker:
             cur_id, res_detail.get('precision_standard', default_str), excuted_information,
             res_detail.get('rel_pass_rate', default_str), res_detail.get('max_rel', default_str),
         ]
-        if 'abs' in self.precision_metric:
+        if NAMEDTUPLE_PRECISION_METRIC.abs in self.precision_metric:
             required.append(res_detail.get('abs_pass_rate', default_str))
             required.append(res_detail.get('max_abs', default_str))
-        if 'cos_sim' in self.precision_metric:
+        if NAMEDTUPLE_PRECISION_METRIC.cos_sim in self.precision_metric:
             required.append(res_detail.get('cos_sim', default_str))
-        if 'kl' in self.precision_metric:
+        if NAMEDTUPLE_PRECISION_METRIC.kl in self.precision_metric:
             required.append(res_detail.get('kl_div', default_str))
 
         custom_ret = [res_detail.get(custom_name, default_str) for custom_name in CUSTOM_ALG_MAP]
@@ -380,12 +380,12 @@ class OpChecker:
                 'op_id', 'op_name', 'op_param', 'tensor_path', 'out_tensor_id', 'precision_standard',
                 'precision_result', 'rel_precision_rate(%)', 'max_rel_error'
             ]
-            if 'abs' in self.precision_metric:
+            if NAMEDTUPLE_PRECISION_METRIC.abs in self.precision_metric:
                 required_head.append('abs_precision_rate(%)')
                 required_head.append('max_abs_error')
-            if 'cos_sim' in self.precision_metric:
+            if NAMEDTUPLE_PRECISION_METRIC.cos_sim in self.precision_metric:
                 required_head.append('cosine_similarity')
-            if 'kl' in self.precision_metric:
+            if NAMEDTUPLE_PRECISION_METRIC.kl in self.precision_metric:
                 required_head.append('kl_divergence')
             custom_header = list(CUSTOM_ALG_MAP.keys())
             ws.append(required_head + custom_header + ["fail_reason"])

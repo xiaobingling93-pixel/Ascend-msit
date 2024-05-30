@@ -23,6 +23,7 @@ import torch_npu
 from ait_llm.common.tool import read_atb_data
 from ait_llm.common.log import logger
 from ait_llm.compare.cmp_algorithm import CMP_ALG_MAP, CUSTOM_ALG_MAP
+from ait_llm.opcheck.opchecker import NAMEDTUPLE_PRECISION_METRIC, NAMEDTUPLE_PRECISION_MODE
 
 
 FLOAT_EPSILON = torch.finfo(torch.float).eps
@@ -134,9 +135,9 @@ class OperationTest(unittest.TestCase):
 
     def force_dtype(self, tensors, precision_mode):
         float_types = (torch.float, torch.float32, torch.float16, torch.half, torch.bfloat16)
-        if precision_mode == 1:
+        if precision_mode == NAMEDTUPLE_PRECISION_MODE.force_fp16:
             return [t.to(torch.float16) if t.dtype in float_types else t for t in tensors]
-        elif precision_mode == 2:
+        elif precision_mode == NAMEDTUPLE_PRECISION_MODE.force_fp32:
             return [t.to(torch.float32) if t.dtype in float_types else t for t in tensors]
         else:
             return tensors
@@ -231,13 +232,13 @@ class OperationTest(unittest.TestCase):
         abs_pass_rate, max_abs_error, cos_sim, kl = None, None, None, None
 
         out, golden = out.reshape(-1), golden.reshape(-1)
-        if 'abs' in precision_metric:
+        if NAMEDTUPLE_PRECISION_METRIC.abs in precision_metric:
             abs_pass_rate, max_abs_error = self.get_abs_pass_rate(out, golden, etol)
-        if 'cos_sim' in precision_metric:
+        if NAMEDTUPLE_PRECISION_METRIC.cos_sim in precision_metric:
             cos_sim, cur_message = CMP_ALG_MAP["cosine_similarity"](golden, out)
             if cur_message:
                 message.append('cos_sim: ' + cur_message)
-        if 'kl' in precision_metric:
+        if NAMEDTUPLE_PRECISION_METRIC.kl in precision_metric:
             kl, cur_message = CMP_ALG_MAP["kl_divergence"](golden, out)
             if cur_message:
                 message.append('kl_div: ' + cur_message)
