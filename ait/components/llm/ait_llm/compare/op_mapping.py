@@ -26,7 +26,7 @@ ATB_TORCH_CUSTOM_OP_OUTPUT_MAPPING = {
 }
 
 
-QUANT_FLOAT_NODE_MAPPING = {
+ATB_QUANT_FLOAT_NODE_MAPPING = {
     "LinearQuantOperation": "LinearOperation",
     "LinearDequantOnly": "LinearNoQuant",
     "LinearQuant": "LinearNoQuant",
