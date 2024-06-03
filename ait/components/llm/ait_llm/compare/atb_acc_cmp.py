@@ -237,6 +237,18 @@ def search_float_quant_matches(golden_path, my_path, golden_topo_json_path, my_t
                 (len(value) == len(golden_type_map['LinearOperation'])):
                 for my_name, golden_name in zip(my_type_map[key], golden_type_map['LinearOperation']):
                     my_legal_opname[my_name] = golden_name
+            elif (key == 'LinearDequantOnly') and ('LinearNoQuant' in golden_type_map) and \
+                (len(value) == len(golden_type_map['LinearNoQuant'])):
+                for my_name, golden_name in zip(my_type_map[key], golden_type_map['LinearNoQuant']):
+                    my_legal_opname[my_name] = golden_name
+            elif (key == 'LinearQuant') and ('LinearNoQuant' in golden_type_map) and \
+                (len(value) == len(golden_type_map['LinearNoQuant'])):
+                for my_name, golden_name in zip(my_type_map[key], golden_type_map['LinearNoQuant']):
+                    my_legal_opname[my_name] = golden_name
+            elif (key == 'LinearRowParallelNoAdd') and ('LinearRowParallelAndAdd' in golden_type_map) and \
+                (len(value) == len(golden_type_map['LinearRowParallelAndAdd'])):
+                for my_name, golden_name in zip(my_type_map[key], golden_type_map['LinearRowParallelAndAdd']):
+                    my_legal_opname[my_name] = golden_name
         for my_sub in my_node.children:
             if my_sub.node_name in my_legal_opname:
                 my_level = '_*/'.join(my_sub.node_name.split("_", 1)[1].split('_')) + '_*'
