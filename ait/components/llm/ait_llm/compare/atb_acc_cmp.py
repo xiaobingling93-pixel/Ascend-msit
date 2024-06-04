@@ -235,7 +235,7 @@ def search_float_quant_matches(golden_path, my_path, golden_topo_json_path, my_t
                 for my_name, golden_name in zip(my_type_map[key], golden_type_map[key]):
                     my_legal_opname[my_name] = golden_name
             elif key in ATB_QUANT_FLOAT_NODE_MAPPING and (ATB_QUANT_FLOAT_NODE_MAPPING[key] in golden_type_map) and \
-                (len(value[key]) == len(golden_type_map[ATB_QUANT_FLOAT_NODE_MAPPING[key]])):
+                (len(value) == len(golden_type_map[ATB_QUANT_FLOAT_NODE_MAPPING[key]])):
                 for my_name, golden_name in zip(my_type_map[key], golden_type_map[ATB_QUANT_FLOAT_NODE_MAPPING[key]]):
                     my_legal_opname[my_name] = golden_name
         for my_sub in my_node.children:
