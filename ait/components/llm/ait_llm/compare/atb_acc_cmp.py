@@ -66,7 +66,7 @@ def is_model_topo_exist(golden_path, cmp_level="layer"):
     # 搜索/model目录下的所有文件，查找JSON文件
     for root, _, files in os.walk(model_dir_path):
         for file in files:
-            if file.endswith('.json'):
+            if 'Prefill' in file and file.endswith('.json'):
                 json_file_path = os.path.join(root, file)
                 return True, json_file_path
     # 如果没有找到json文件，返回False和空字符串
