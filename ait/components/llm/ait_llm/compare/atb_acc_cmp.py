@@ -20,7 +20,8 @@ import json
 from ait_llm.compare.cmp_utils import compare_data, read_data
 from ait_llm.common.log import logger
 from ait_llm.compare.cmp_utils import BasicDataInfo, fill_row_data, save_compare_reault_to_csv
-from ait_llm.compare.op_mapping import ATB_TORCH_BUILT_IN_OP_OUTPUT_MAPPING, ATB_TORCH_CUSTOM_OP_OUTPUT_MAPPING
+from ait_llm.compare.op_mapping import ATB_TORCH_BUILT_IN_OP_OUTPUT_MAPPING, ATB_TORCH_CUSTOM_OP_OUTPUT_MAPPING, \
+    ATB_QUANT_FLOAT_NODE_MAPPING
 from ait_llm.dump.torch_dump.topo import ModelTree
 
 from tqdm import tqdm
@@ -233,9 +234,9 @@ def search_float_quant_matches(golden_path, my_path, golden_topo_json_path, my_t
             if (key in golden_type_map) and (len(value) == len(golden_type_map[key])):
                 for my_name, golden_name in zip(my_type_map[key], golden_type_map[key]):
                     my_legal_opname[my_name] = golden_name
-            elif (key == 'LinearQuantOperation') and ('LinearOperation' in golden_type_map) and \
-                (len(value) == len(golden_type_map['LinearOperation'])):
-                for my_name, golden_name in zip(my_type_map[key], golden_type_map['LinearOperation']):
+            elif key in ATB_QUANT_FLOAT_NODE_MAPPING and (ATB_QUANT_FLOAT_NODE_MAPPING[key] in golden_type_map) and \
+                (len(value) == len(golden_type_map[ATB_QUANT_FLOAT_NODE_MAPPING[key]])):
+                for my_name, golden_name in zip(my_type_map[key], golden_type_map[ATB_QUANT_FLOAT_NODE_MAPPING[key]]):
                     my_legal_opname[my_name] = golden_name
         for my_sub in my_node.children:
             if my_sub.node_name in my_legal_opname:

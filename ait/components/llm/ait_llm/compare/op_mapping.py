@@ -24,3 +24,10 @@ ATB_TORCH_CUSTOM_OP_OUTPUT_MAPPING = {
     "RmsNormOperation":["RMSNorm"],
     "SelfAttentionOperation":["CoreAttention"],
 }
+
+
+ATB_QUANT_FLOAT_NODE_MAPPING = {
+    "LinearQuantOperation": "LinearOperation",
+    "LinearDequantOnly": "LinearNoQuant",
+    "LinearRowParallelNoAdd": "LinearRowParallelAndAdd",
+}
