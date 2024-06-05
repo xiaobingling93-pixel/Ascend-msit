@@ -97,13 +97,11 @@ def build_model_tree(module: nn.Module):
         else:
             ret.append(convert(cur))
 
-    root = []
-
-    dfs(root, module)
-
-    return root
+    children = []
+    dfs(children, module)
+    return {"name": mname(module), "children": children}
 
 
 def model_to_json(model: nn.Module, name: str):
-    with open(f"{name}.json", "w") as o:
-        dump(build_model_tree(model), o)
+    with open(f"{name}.json", "w") as ff:
+        dump(build_model_tree(model), ff)
