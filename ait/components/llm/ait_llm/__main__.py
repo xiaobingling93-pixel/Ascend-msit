@@ -321,7 +321,11 @@ class OpcheckCommand(BaseCommand):
             help='Specifies the precision mode to calculate golden output. Keep origin dtype or translate all \
                 float tensors to torch.float16/torch.float32 before calculating and comparing.E.g.:-pmode force_fp32')
 
+        parser.add_argument("-l", "--log-level", default="info", choices=LOG_LEVELS_LOWER, help="specify log level")
+
     def handle(self, args, **kwargs):
+        set_log_level(args.log_level)
+
         # Adding custom comparing algorithms
         if args.custom_algorithms:
             from ait_llm.compare.cmp_algorithm import register_custom_compare_algorithm
@@ -378,26 +382,33 @@ class ErrCheck(BaseCommand):
                  "Defaults to False."
         )
 
+        parser.add_argument("-l", "--log-level", default="info", choices=LOG_LEVELS_LOWER, help="specify log level")
+
     def handle(self, args, **kwargs) -> None:
+        set_log_level(args.log_level)
         process_error_check(args)       
 
 
 class Transform(BaseCommand):
     def add_arguments(self, parser, **kwargs) -> None:
+        scenarios_info = [
+            "[float atb to quant atb model] directory containing both cpp and h file; ",
+            "[float atb to quant atb model] a single cpp file, will use the h file with a same name; ",
+            "[torch to float atb model] directory containing config.json and py file for building transformers model",
+        ]
+        scenarios_info_str = "\n".join([f"{id}.{ii}" for id, ii in enumerate(scenarios_info, start=1)])
+        
         parser.add_argument(
             "-s",
             "--source",
             type=check_input_path_legality,
             required=True,
-            help="source path, could be:"
-                 "1. [float atb to quant atb model] directory containing both cpp and h file;"
-                 "2. [float atb to quant atb model] a single cpp file, will use the h file with a same name;"
-                 "3. [torch to float atb model] directory contianing config.json and py file for building transformers model",
+            help="source path, could be:\n" + scenarios_info_str,
         )
         parser.add_argument(
             "--enable-sparse", action='store_true', help="[float atb to quant atb model] Enable trasforming to sparse-quant model"
         )
-        parser.add_argument("--log-level", default="info", choices=LOG_LEVELS_LOWER, help="specify log level")
+        parser.add_argument("-l", "--log-level", default="info", choices=LOG_LEVELS_LOWER, help="specify log level")
 
     def handle(self, args, **kwargs) -> None:
         from ait_llm.transform.utils import get_transform_scenario, SCENARIOS
