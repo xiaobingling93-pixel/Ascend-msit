@@ -6,13 +6,13 @@ from ait_llm.transform.model_parser import parser
 def float_layer_gen(model, save_file=None, save_dir=None):
     """
     >>> from ait_llm.transform.torch_to_float_atb import float_layer_cpp_templates
-    >>> from ait_llm.transform.torch_to_float_atb import float_model_cpp_gen
+    >>> from ait_llm.transform.torch_to_float_atb import float_layer_cpp_gen
     >>> import transformers
 
     >>> cc = transformers.models.llama.LlamaConfig()
     >>> cc.num_hidden_layers = 4
     >>> mm = transformers.AutoModelForCausalLM.from_config(cc)
-    >>> rr = float_model_cpp_gen.float_layer_gen(mm)
+    >>> rr = float_layer_cpp_gen.float_layer_gen(mm)
     """
     parsed_model = parser.build_model_tree(model)
     model_name_lower = parsed_model.get("name", "model").lower()
