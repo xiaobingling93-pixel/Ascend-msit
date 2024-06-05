@@ -84,15 +84,17 @@ CSV_GOLDEN_HEADER.append(CMP_FAIL_REASON)
 
 def maybe_init_dist():
     try:
-        local_rank = torch.distributed.get_rank()
-        world_size = torch.distributed.get_world_size()
+        rank = int(os.environ.get("LOCAL_RANK", "0"))
+        world_size = int(os.environ.get("LOCAL_WORLD_SIZE", "1"))
 
         if world_size < 2:
             return -1
-        return local_rank
     except KeyError:
         return -1
     
+    torch.distributed.init_process_group(backend=GLOBAL_DIST_BACKEND, rank=rank, world_size=world_size)
+    return rank
+
 def set_timestamp():
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     os.environ[ATB_TIMESTAMP] = timestamp
@@ -106,10 +108,10 @@ def get_ait_dump_path():
         if local_rank == -1:
             GLOBAL_AIT_DUMP_PATH = "ait_dump_" + set_timestamp()
         elif local_rank == 0:
+            torch.distributed.barrier()
             GLOBAL_AIT_DUMP_PATH = "ait_dump_" + set_timestamp()
-            torch.distributed.barrier()
         else:
-            GLOBAL_AIT_DUMP_PATH = "ait_dump_" + os.environ[ATB_TIMESTAMP]
             torch.distributed.barrier()
+            GLOBAL_AIT_DUMP_PATH = "ait_dump_" + os.environ.get(ATB_TIMESTAMP, set_timestamp())
 
     return GLOBAL_AIT_DUMP_PATH
