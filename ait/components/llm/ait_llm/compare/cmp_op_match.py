@@ -59,10 +59,10 @@ class OpMatchMap:
             for map_info, score in self.map.items():
                 my_op, my_op_location, golden_op, golden_op_location = map_info
                 logger.debug(
-                    "mapping score: %-80s <- %s ->   %s ",
-                    f"[{my_op.node_name}#{my_op.tensor_path}#{my_op_location}]",
+                    "mapping score: %-60s <- %s ->   %s ",
+                    f"[{my_op.node_name}##{my_op_location}]",
                     str(score),
-                    f"[{golden_op.node_name}#{golden_op.tensor_path}#{golden_op_location}]",
+                    f"[{golden_op.node_name}##{golden_op_location}]",
                 )
 
         return (
@@ -122,8 +122,8 @@ class OpMatchMgr:
 
     def match(self, golden_data, my_data):
         match_map = OpMatchMap(golden_data=golden_data, my_data=my_data)
-        golden_trees = golden_data.getRootNode()
-        my_trees = my_data.getRootNode()
+        golden_trees = golden_data.get_root_nodes()
+        my_trees = my_data.get_root_nodes()
         if len(golden_trees) != len(my_trees):
             # 如果数量不相等，就重复一次。为了处理 atb 有encode+decode两个模型。而 torch只有一个模型的场景
             max_len = max(len(golden_trees), len(my_trees))

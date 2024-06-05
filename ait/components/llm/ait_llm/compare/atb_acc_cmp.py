@@ -39,12 +39,10 @@ def acc_compare(golden_path, my_path, output_path=".", mapping_file_path=".", cm
             compare_metadata(golden_tensor_path, output_path)
         elif os.path.exists(torch_model_topo_file):
             # 存在torch_model_topo_file路径，走torch模型和加速库模型比对逻辑
-            # todo 新架构覆盖, tobe delete
             logger.info("Automatic mapping comparison starts! Comparing torch tensors and ATB tensors...")
             cmp_torch_atb(torch_model_topo_file, (golden_path, my_path, output_path), mapping_file_path, cmp_level)
         elif golden_topo_flag and my_topo_flag:
             # 存在ATB模型的拓扑信息，走加速库模型间的比对逻辑
-            # todo 新架构覆盖, tobe  delete
             compare_atb_metadata_auto(golden_path, my_path, golden_topo_json_path, my_topo_json_path, output_path)
         else:
             logger.warn("Unsupported comparison type, please refer to README")

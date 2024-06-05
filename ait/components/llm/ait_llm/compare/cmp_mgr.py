@@ -44,8 +44,8 @@ class CompareMgr:
 
         op_map = list(self.op_match.match(self.golden_data, self.my_data))
         # 同步校验tokenid
-        golden_tokens = self.golden_data.getCmpToken()
-        my_tokens = self.my_data.getCmpToken()
+        golden_tokens = self.golden_data.get_cmp_tokens()
+        my_tokens = self.my_data.get_cmp_tokens()
         golden_token_set = set(self._flatten_and_enum_tuple(golden_tokens))
         my_token_set = set(self._flatten_and_enum_tuple(my_tokens))
 
@@ -80,8 +80,8 @@ class CompareMgr:
         for my_op, my_op_location, golden_op, golden_op_location in op_map:
             logger.debug("------ compare (%s %s)------", str(my_op.node_name), str(golden_op.node_name))
             # 获取到所有需要比较的 tensor 的路径
-            golden_tensor_paths = self.golden_data.getTensorPath(golden_token_id, golden_op, golden_op_location)
-            my_tensor_paths = self.my_data.getTensorPath(my_token_id, my_op, my_op_location)
+            golden_tensor_paths = self.golden_data.get_tensor_path(golden_token_id, golden_op, golden_op_location)
+            my_tensor_paths = self.my_data.get_tensor_path(my_token_id, my_op, my_op_location)
             # 交叉比对，记录结果
             for golden_tensor_path, my_tensor_path in itertools.product(golden_tensor_paths, my_tensor_paths):
                 logger.debug("golden_path: %s; my_path:%s", str(golden_tensor_path), str(my_tensor_path))
