@@ -64,7 +64,7 @@ class DumpCommand(BaseCommand):
             dest="child",
             type=str2bool,
             default=True,
-            help='Dump all data of child operations if True, do nothing if False.Default True')
+            help='Dump all data of child operations if True, do nothing if False.')
 
         parser.add_argument(
             '--save-time',
@@ -74,7 +74,7 @@ class DumpCommand(BaseCommand):
             type=check_positive_integer,
             default=1,
             help='0 when only need dump data before execution, '
-                 '1 when only need dump data after execution, 2 both.Default 1')
+                 '1 when only need dump data after execution, 2 both.')
 
         parser.add_argument(
             '--operation-name',
@@ -83,7 +83,7 @@ class DumpCommand(BaseCommand):
             dest="opname",
             type=safe_string,
             default=None,
-            help='Operation names need to dump, default none')
+            help='Operation names need to dump.')
 
         parser.add_argument(
             '--save-tiling',
@@ -120,7 +120,7 @@ class DumpCommand(BaseCommand):
             type=check_positive_integer,
             default=2,
             help='0 when only need dump intensor, '
-                 '1 when only need dump outtensor, 2 both.Default 2')
+                 '1 when only need dump outtensor, 2 both.')
 
         parser.add_argument(
             '--type',
@@ -140,9 +140,7 @@ class DumpCommand(BaseCommand):
             default=None,
             help='Specify a single device ID for dumping data, will skip other devices.')
 
-        parser.add_argument(
-            "--log-level", "-l", default="INFO", choices=LOG_LEVELS_LOWER, help="specify log level"
-        )
+        parser.add_argument("--log-level", "-l", default="INFO", choices=LOG_LEVELS_LOWER, help="specify log level.")
 
     def handle(self, args, **kwargs):
         if args.exec:
@@ -185,15 +183,6 @@ class CompareCommand(BaseCommand):
             help='Compare level. only enabled for atb.')
 
         parser.add_argument(
-            '--log-level',
-            '-l',
-            dest="log_level",
-            required=False,
-            default="info",
-            choices=LOG_LEVELS_LOWER,
-            help='specify log level')
-
-        parser.add_argument(
             '--output',
             '-o',
             dest="output",
@@ -219,6 +208,8 @@ class CompareCommand(BaseCommand):
             help='custom comparing algorithms in format "python_file_path.py:function". \
                   Should better be a standalong file, and function should in format like \
                   "def foo(golden_tensor, my_tensor): return float_value, string_message"')
+
+        parser.add_argument("--log-level", "-l", default="INFO", choices=LOG_LEVELS_LOWER, help="specify log level.")
 
     def handle(self, args, **kwargs):
         from ait_llm.compare.torchair_acc_cmp import get_torchair_ge_graph_path
@@ -347,8 +338,8 @@ class ErrCheck(BaseCommand):
             required=True,
             type=safe_string,
             default='',
-            help='Executable command that running acl-transformer model inference.\n'
-                 'User is responsible for the safeness of the input command.\n'
+            help='Executable command that running acl-transformer model inference. '
+                 'User is responsible for the safeness of the input command. '
                  "E.g. --exec 'bash run.sh patches/models/modeling_xxx.py'.")
 
         parser.add_argument(
@@ -357,9 +348,9 @@ class ErrCheck(BaseCommand):
             nargs='+', # one or more
             choices=['overflow'],
             default=['overflow'],
-            help="Types that perform different error detection tasks.\n"
-                 "Multiple arguments will trigger all the providing functionalities.\n"
-                 "Default to overflow check.")
+            help="Types that perform different error detection tasks. "
+                 "Multiple arguments will trigger all the providing functionalities."
+        )
 
         parser.add_argument(
             '--output',
@@ -368,9 +359,8 @@ class ErrCheck(BaseCommand):
             required=False,
             type=check_output_path_legality,
             default='',
-            help="Directory that stores the error information.\n"
-                 "If not provided, a default directory will be used.\n"
-                 "E.g. --output /xx/xxxx/xx")
+            help="Directory that stores the error information. If not provided, a default directory will be used."
+        )
 
         parser.add_argument(
             '--exit',
@@ -378,8 +368,7 @@ class ErrCheck(BaseCommand):
             required=False,
             action='store_true',
             default=False,
-            help="Flag determines whether to exit the program after detecting an error.\n"
-                 "Defaults to False."
+            help="Flag determines whether to exit the program after detecting an error. Defaults to False."
         )
 
         parser.add_argument("-l", "--log-level", default="info", choices=LOG_LEVELS_LOWER, help="specify log level")
@@ -392,18 +381,18 @@ class ErrCheck(BaseCommand):
 class Transform(BaseCommand):
     def add_arguments(self, parser, **kwargs) -> None:
         scenarios_info = [
-            "[float atb to quant atb model] directory containing both cpp and h file; ",
-            "[float atb to quant atb model] a single cpp file, will use the h file with a same name; ",
+            "[float atb to quant atb model] directory containing both cpp and h file",
+            "[float atb to quant atb model] a single cpp file, will use the h file with a same name",
             "[torch to float atb model] directory containing config.json and py file for building transformers model",
         ]
-        scenarios_info_str = "\n".join([f"{id}.{ii}" for id, ii in enumerate(scenarios_info, start=1)])
+        scenarios_info_str = "; ".join([f"{id}.{ii}" for id, ii in enumerate(scenarios_info, start=1)])
         
         parser.add_argument(
             "-s",
             "--source",
             type=check_input_path_legality,
             required=True,
-            help="source path, could be:\n" + scenarios_info_str,
+            help="source path, could be:" + scenarios_info_str,
         )
         parser.add_argument(
             "--enable-sparse", action='store_true', help="[float atb to quant atb model] Enable trasforming to sparse-quant model"
@@ -424,7 +413,7 @@ class Transform(BaseCommand):
 
             transform_float.transform_float(source_path=args.source)
         else:
-            info = f"Neither config.json + py or cpp found in {args.source}, not supported"
+            message = f"Neither config.json + py or cpp found in {args.source}, not supported"
             logger.error(message)
             raise ValueError(message)
 
