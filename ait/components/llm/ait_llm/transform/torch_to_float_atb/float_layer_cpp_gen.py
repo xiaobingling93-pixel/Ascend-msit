@@ -19,8 +19,8 @@ def float_layer_gen(model, save_file=None, save_dir=None):
 
     rr = ""
     rr += float_layer_cpp_templates.cpp_copyright_header.format(year=time.localtime().tm_year) + "\n"
-    rr += "\n".join([f'''#include "{i}"''' for i in float_layer_cpp_templates.all_atb_operation_headers]) + \
-          f"""\n#include "models/{model_name_lower}/layer/decoder_layer.h""""
+    rr += "\n".join([f'''#include "{i}"''' for i in float_layer_cpp_templates.all_atb_operation_headers])
+    rr += f"""\n#include "models/{model_name_lower}/layer/decoder_layer.h""""
 
     layer_core_components = float_layer_cpp_templates.decoder_layer_formatter.format(
         attention_formatter=float_layer_cpp_templates.attention_formatter,
