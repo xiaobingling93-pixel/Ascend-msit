@@ -1,5 +1,5 @@
-from ait_llm.transform.utils import print_spelling, print_update_info
-from ait_llm.transform.transform_quant import IN_BETA, IN_HOLDER, BIAS_SUFFIX, INDEX_SUFFIX
+from ait_llm.transform.float_atb_to_quant_atb.utils import print_spelling, print_update_info
+from ait_llm.transform.float_atb_to_quant_atb.transform_quant import IN_BETA, IN_HOLDER, BIAS_SUFFIX, INDEX_SUFFIX
 
 NORM_PARAM = "NORM"
 LINEAR_PARAM = "LINEAR"

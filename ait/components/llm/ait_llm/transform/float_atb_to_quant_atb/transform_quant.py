@@ -1,6 +1,6 @@
 import os
 import stat
-from ait_llm.transform.utils import (
+from ait_llm.transform.float_atb_to_quant_atb.utils import (
     check_libclang_so,
     filter_chinese_char,
     get_args_and_options,
@@ -198,9 +198,9 @@ class TransformQuant:
             ):
                 insert_contents, insert_start, insert_end = self.update_from_json(cur_cursor, contents)
             elif self.is_layer_function(cur_cursor):
-                from ait_llm.transform.transform_quant_cpp_layer_function import TransformQuantCppLayerFunction
+                from ait_llm.transform.float_atb_to_quant_atb import transform_quant_cpp_layer_function
 
-                cur_updates = TransformQuantCppLayerFunction(
+                cur_updates = transform_quant_cpp_layer_function.TransformQuantCppLayerFunction(
                     contents, cur_cursor, self.in_tensor_added, indent=self.indent, enable_sparse=self.enable_sparse
                 )()
                 updates.extend(cur_updates)
