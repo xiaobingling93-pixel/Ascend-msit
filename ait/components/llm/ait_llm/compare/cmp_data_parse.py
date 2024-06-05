@@ -15,6 +15,8 @@
 from abc import ABC, abstractmethod
 import json
 import os
+from typing import List
+
 
 from ait_llm.common.log import logger
 from ait_llm.compare.atb_acc_cmp import is_model_topo_exist
@@ -33,7 +35,7 @@ class CompareDataParse(ABC):
     def accept(path: str) -> bool:
         return False
 
-    def getRootNode() -> list[TreeNode]:
+    def getRootNode(self) -> List[TreeNode]:
         return None
 
     def getCmpToken(self) -> tuple:
@@ -58,9 +60,19 @@ class CompareDataATB(CompareDataParse):
         super().__init__(path, args)
         self.ait_dump_path = self.parse_ait_dump_path(path)
         self.token_id, self.pid, self.tokens_path = self.get_ids_by_path(self.ait_dump_path, path)
-        self.token_ids = self._get_token_ids(self.tokens_path, self.token_id)
-        self.topo_files = self.get_topo_file_path(self.ait_dump_path, self.pid)
-        self.topo_trees = (self.parse(file) for file in self.topo_files)
+        logger.debug(
+            "atb input path is %s, \nait_dump_path is %s, \natb token_id is %s, \npid is %s, \ntokens_path is %s",
+            str(path),
+            str(self.ait_dump_path),
+            str(self.token_id),
+            str(self.pid),
+            str(self.tokens_path),
+        )
+        self.topo_files = list(self.get_topo_file_path(self.ait_dump_path, self.pid))
+        logger.debug("atb topo file is %s", str(self.topo_files))
+        self.token_ids = list(self._get_token_ids(self.tokens_path, self.token_id))
+        logger.debug("atb token ids is %s", str(self.token_ids))
+        self.encode_root_node, self.decode_root_node = self.parse(self.topo_files)
 
     @classmethod
     def accept(cls, path: str, args) -> bool:
@@ -76,12 +88,12 @@ class CompareDataATB(CompareDataParse):
         ait_dump_path = None
 
         normpath = os.path.normpath(path)
-        path_list = normpath.split(os.sep)
+        path_list = list(normpath.split(os.sep))
         MAX_PARSE_LEVEL = 3
         parse_level = 0
-        for i in reversed(range(len(path_list))):
-            if path_list[i].startsWith("ait_dump"):
-                ait_dump_path = os.sep.join(path_list[0, i])
+        for index in reversed(range(len(path_list))):
+            if path_list[index].startswith("ait_dump"):
+                ait_dump_path = os.sep.join(path_list[0 : index + 1])
                 break
             parse_level += 1
             if parse_level > MAX_PARSE_LEVEL:
@@ -96,7 +108,7 @@ class CompareDataATB(CompareDataParse):
             model
                 {pid}
                     {topo}.json
-            tensor
+            tensors
                 {device_id}_{pid} == tokens_path
                     {token_id}
         """
@@ -105,15 +117,15 @@ class CompareDataATB(CompareDataParse):
         pid = None if len(path_list) < 2 else path_list[1].split("_")[-1]
         token_id = None if len(path_list) < 3 else path_list[2]
         tokens_path = (
-            None if len(path_list) < 2 or path_list[0] != "tensor" else os.path.join(ait_dump_path, *path_list[0, 2])
+            None if len(path_list) < 2 or path_list[0] != "tensors" else os.path.join(ait_dump_path, *path_list[0:2])
         )
         if tokens_path is None:
-            tensor_dir_path = os.path.join(ait_dump_path, "tensor")
+            tensor_dir_path = os.path.join(ait_dump_path, "tensors")
 
             tokens_path_names = os.listdir(tensor_dir_path)
             tokens_path_names.sort()
             if len(tokens_path_names) == 0:
-                return token_id, pid, tokens_path
+                return token_id, pid, os.path.abspath(tokens_path)
             if pid is None:
                 name = tokens_path_names[0]
                 pid = name.split("_")[-1]
@@ -124,7 +136,7 @@ class CompareDataATB(CompareDataParse):
                         tokens_path = os.path.join(tensor_dir_path, name)
                         break
 
-        return token_id, pid, tokens_path
+        return token_id, pid, os.path.abspath(tokens_path)
 
     @staticmethod
     def get_model_path(ait_dump_path):
@@ -141,7 +153,7 @@ class CompareDataATB(CompareDataParse):
         else:
             pid_path = os.path.join(model_path, pid)
 
-        json_file_names = os.listdir()
+        json_file_names = os.listdir(pid_path)
         return (os.path.join(pid_path, name) for name in json_file_names)
 
     @staticmethod
@@ -150,8 +162,11 @@ class CompareDataATB(CompareDataParse):
             topo_info = json.load(file)
         return topo_info
 
-    def getRootNode(self) -> list[TreeNode]:
-        return [x[0] for x in self.topo_trees]
+    def getRootNode(self) -> List[TreeNode]:
+        if self.encode_root_node is None:
+            return [self.decode_root_node]
+        else:
+            return [self.encode_root_node, self.decode_root_node]
 
     def getCmpToken(self) -> tuple:
         return self.token_ids
@@ -163,9 +178,41 @@ class CompareDataATB(CompareDataParse):
                 token_path_id = token_id - 1
             else:
                 token_path_id = 0
+        if token_path_id < 0:
+            token_path_id = 0
+
+        # 控制特定比较token 0 或 1 的时候，只比较 encode 或 decode 一个
+        if token_path_id == 0 and self.encode_root_node is not None and len(self.decode_root_node.children) > 0:
+            logger.debug(
+                "token_path_id: %s, token_id: %s, node.order: %s, self.decode_root_node.order: %s",
+                str(token_path_id),
+                str(token_id),
+                str(node.order),
+                str(self.decode_root_node.children[0].order),
+            )
+            if token_id == 0 and node.order >= self.decode_root_node.children[0].order:
+                return ()
+            elif token_id == 1 and node.order < self.decode_root_node.children[0].order:
+                return ()
+            else:
+                pass
+
+        logger.debug(
+            "atb getTensorPath: token_id: %s, token_path_id： %s, node: %s, localtion: %s",
+            str(token_id),
+            str(token_path_id),
+            str(node),
+            str(location),
+        )
         tensor_dir_path = node.tensor_path.replace("{token_id}", str(token_path_id))
         tensor_after_dir_path = os.path.join(tensor_dir_path, "after")
         tensor_before_dir_path = os.path.join(tensor_dir_path, "before")
+        logger.debug(
+            "atb getTensorPath: tensor_dir_path: %s, tensor_after_dir_path %s, tensor_before_dir_path: %s",
+            str(tensor_dir_path),
+            str(tensor_after_dir_path),
+            str(tensor_before_dir_path),
+        )
         if location == MatchLocation.ALL_OUTPUT:
             if os.path.exists(tensor_after_dir_path):
                 return (
@@ -188,19 +235,49 @@ class CompareDataATB(CompareDataParse):
                 )
         else:
             return os.path.join(tensor_after_dir_path, location)
+        return tuple()
 
-    def parse(self, topo_file: str) -> None:
-        my_root_node = ModelTree.atb_json_to_tree(topo_file, os.path.join(self.tokens_path, "{token_id}"))
-        my_layer_type = my_root_node.get_layer_node_type()
-        logger.info("my_layer_type: %s", my_layer_type)
-        my_layer_nodes = my_root_node.get_layer_node(my_layer_type)
-        return my_root_node, my_layer_type, my_layer_nodes
+    def parse(self, topo_files) -> None:
+        topo_infos = []
+        for topo_file in topo_files:
+            json_start_order = 0
+            with open(topo_file, "r") as file:
+                node_dict = json.loads(file.read(), parse_constant=lambda x: None)
+                nodes = node_dict.get("nodes", [])
+                if len(nodes) != 0:
+                    start_order_str: str = nodes[0].get("opName", "0").split("_")[-1]
+                    if start_order_str.isdigit():
+                        json_start_order = int(start_order_str)
+            topo_infos.append(dict(path=topo_file, json_start_order=json_start_order, node_cnt=len(nodes)))
+
+        topo_infos.sort(key=lambda x: x.get("json_start_order"))
+
+        # 特殊处理，存在transdata，编号往前一步
+        transdata_operation_flag = os.path.exists(
+            os.path.join(self.ait_dump_path, "layer", self.pid, "TransdataOperation_0.json")
+        )
+        transdata_order = 1 if transdata_operation_flag else 0
+        my_root_nodes = []
+        for topo_info in topo_infos:
+            topo_file = topo_info.get("path")
+            start_order = topo_info.get("json_start_order") + transdata_order
+            logger.debug("parseing topo file: %s, and start order is: %d", topo_file, start_order)
+            my_root_node = ModelTree.atb_json_to_tree(
+                topo_file, os.path.join(self.tokens_path, "{token_id}"), start_order
+            )
+            my_root_nodes.append(my_root_node)
+
+        if len(my_root_nodes) == 1:
+            return [None, my_root_nodes[0]]
+        return my_root_nodes
 
     def _get_token_ids(self, tokens_path, token_id):
+        token_ids = DataUtils.get_token_ids(tokens_path, token_id)
+        logger.debug("%s", str(token_ids))
         if len(self.topo_files) > 1:
-            ((0, 1) if t == 0 else t + 1 for t in DataUtils.get_token_ids(tokens_path, token_id))
+            return ((0, 1) if t == '0' else int(t) + 1 if t.isdigit() else t for t in token_ids)
         else:
-            return DataUtils.get_token_ids(tokens_path, token_id)
+            return token_ids
 
 
 class CompareDataTorch(CompareDataParse):
@@ -208,7 +285,9 @@ class CompareDataTorch(CompareDataParse):
         super().__init__(path, args)
         self.ait_dump_path = self.parse_ait_dump_path(path)
         self.token_id, self.pid, self.tokens_path = self.get_ids_by_path(self.ait_dump_path, path)
-        self.token_ids = DataUtils.get_token_ids(self.tokens_path, self.token_id)
+        self.token_ids = [
+            int(t) if t.isdigit() else t for t in DataUtils.get_token_ids(self.tokens_path, self.token_id)
+        ]
         self.topo_file = self.get_topo_file_path(self.tokens_path)
         self.golden_root_node, self.golden_layer_type, self.golden_layer_nodes = self.parse()
 
@@ -251,7 +330,7 @@ class CompareDataTorch(CompareDataParse):
             pid = name.split("_")[-1]
             tokens_path = os.path.join(ait_dump_path, name)
 
-        return token_id, pid, tokens_path
+        return token_id, pid, os.path.abspath(tokens_path)
 
     @staticmethod
     def get_topo_file_path(tokens_path: str):
@@ -263,7 +342,7 @@ class CompareDataTorch(CompareDataParse):
             topo_info = json.load(file)
         return topo_info
 
-    def getRootNode(self) -> list[TreeNode]:
+    def getRootNode(self) -> List[TreeNode]:
         return [self.golden_root_node]
 
     def getCmpToken(self) -> tuple:
@@ -271,6 +350,13 @@ class CompareDataTorch(CompareDataParse):
 
     def getTensorPath(self, token_id, node: TreeNode, location) -> tuple:
         tensor_dir_path = node.tensor_path.replace("{token_id}", str(token_id))
+        logger.debug(
+            "getTensorPath: token_id: %s, node: %s, localtion: %s, tensor_dir_path: %s",
+            str(token_id),
+            str(node),
+            str(location),
+            str(tensor_dir_path),
+        )
         if location == MatchLocation.ALL_OUTPUT:
             if os.path.exists(tensor_dir_path):
                 return (
@@ -287,6 +373,7 @@ class CompareDataTorch(CompareDataParse):
                 )
         else:
             return os.path.join(tensor_dir_path, location)
+        return tuple()
 
     def parse(self) -> None:
         golden_root_node = ModelTree.json_to_tree(self.topo_file, os.path.join(self.tokens_path, "{token_id}"))
@@ -294,8 +381,3 @@ class CompareDataTorch(CompareDataParse):
         logger.info("golden_layer_type: %s", golden_layer_type)
         golden_layer_nodes = golden_root_node.get_layer_node(golden_layer_type)
         return golden_root_node, golden_layer_type, golden_layer_nodes
-
-    def get_tensor_path(
-        self,
-    ):
-        pass

@@ -151,7 +151,7 @@ class ModelTree:
         return _dict_to_tree(node_dict, 0, 0, tensor_path)
 
     @staticmethod
-    def atb_json_to_tree(json_path: str, tensor_path="") -> TreeNode:
+    def atb_json_to_tree(json_path: str, tensor_path="", start_order=0) -> TreeNode:
         with open(json_path, "r") as file:
             node_dict = json.loads(file.read(), parse_constant=lambda x: None)
 
@@ -165,7 +165,10 @@ class ModelTree:
                 node = TreeNode(node_dict["opName"], node_dict["opType"], op_param, level, order, tensor_path)
 
             if "nodes" in node_dict:
-                reorder = 0
+                if level == 0:
+                    reorder = start_order # 特殊处理，后面考虑优化
+                else:
+                    reorder = 0
                 for child_dict in node_dict["nodes"]:
                     child_node = _atb_dict_to_tree(child_dict, level + 1, reorder, tensor_path)
                     reorder = reorder + 1
