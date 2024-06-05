@@ -35,13 +35,13 @@ class CompareDataParse(ABC):
     def accept(path: str) -> bool:
         return False
 
-    def getRootNode(self) -> List[TreeNode]:
+    def get_root_nodes(self) -> List[TreeNode]:
         return None
 
-    def getCmpToken(self) -> tuple:
+    def get_cmp_tokens(self) -> tuple:
         return tuple()
 
-    def getTensorPath(self, token_id, node, location) -> tuple:
+    def get_tensor_path(self, token_id, node, location) -> tuple:
         return tuple()
 
 
@@ -162,16 +162,16 @@ class CompareDataATB(CompareDataParse):
             topo_info = json.load(file)
         return topo_info
 
-    def getRootNode(self) -> List[TreeNode]:
+    def get_root_nodes(self) -> List[TreeNode]:
         if self.encode_root_node is None:
             return [self.decode_root_node]
         else:
             return [self.encode_root_node, self.decode_root_node]
 
-    def getCmpToken(self) -> tuple:
+    def get_cmp_tokens(self) -> tuple:
         return self.token_ids
 
-    def getTensorPath(self, token_id, node: TreeNode, location) -> tuple:
+    def get_tensor_path(self, token_id, node: TreeNode, location) -> tuple:
         token_path_id = token_id
         if len(self.topo_files) > 1:
             if isinstance(token_id, int):
@@ -198,7 +198,7 @@ class CompareDataATB(CompareDataParse):
                 pass
 
         logger.debug(
-            "atb getTensorPath: token_id: %s, token_path_id： %s, node: %s, localtion: %s",
+            "atb get_tensor_path: token_id: %s, token_path_id： %s, node: %s, localtion: %s",
             str(token_id),
             str(token_path_id),
             str(node),
@@ -208,7 +208,7 @@ class CompareDataATB(CompareDataParse):
         tensor_after_dir_path = os.path.join(tensor_dir_path, "after")
         tensor_before_dir_path = os.path.join(tensor_dir_path, "before")
         logger.debug(
-            "atb getTensorPath: tensor_dir_path: %s, tensor_after_dir_path %s, tensor_before_dir_path: %s",
+            "atb get_tensor_path: tensor_dir_path: %s, tensor_after_dir_path %s, tensor_before_dir_path: %s",
             str(tensor_dir_path),
             str(tensor_after_dir_path),
             str(tensor_before_dir_path),
@@ -342,16 +342,16 @@ class CompareDataTorch(CompareDataParse):
             topo_info = json.load(file)
         return topo_info
 
-    def getRootNode(self) -> List[TreeNode]:
+    def get_root_nodes(self) -> List[TreeNode]:
         return [self.golden_root_node]
 
-    def getCmpToken(self) -> tuple:
+    def get_cmp_tokens(self) -> tuple:
         return self.token_ids
 
-    def getTensorPath(self, token_id, node: TreeNode, location) -> tuple:
+    def get_tensor_path(self, token_id, node: TreeNode, location) -> tuple:
         tensor_dir_path = node.tensor_path.replace("{token_id}", str(token_id))
         logger.debug(
-            "getTensorPath: token_id: %s, node: %s, localtion: %s, tensor_dir_path: %s",
+            "get_tensor_path: token_id: %s, node: %s, localtion: %s, tensor_dir_path: %s",
             str(token_id),
             str(node),
             str(location),
