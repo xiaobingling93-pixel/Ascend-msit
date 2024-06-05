@@ -22,7 +22,7 @@ from ait_llm.common.log import logger
 from ait_llm.compare.cmp_utils import BasicDataInfo, fill_row_data, save_compare_reault_to_csv
 from ait_llm.compare.op_mapping import ATB_TORCH_BUILT_IN_OP_OUTPUT_MAPPING, ATB_TORCH_CUSTOM_OP_OUTPUT_MAPPING, \
     ATB_QUANT_FLOAT_NODE_MAPPING
-from ait_llm.dump.torch_dump.topo import ModelTree
+from ait_llm.dump.torch_dump.topo import ModelTree, TreeNode
 
 from tqdm import tqdm
 
@@ -39,10 +39,12 @@ def acc_compare(golden_path, my_path, output_path=".", mapping_file_path=".", cm
             compare_metadata(golden_tensor_path, output_path)
         elif os.path.exists(torch_model_topo_file):
             # 存在torch_model_topo_file路径，走torch模型和加速库模型比对逻辑
+            # todo 新架构覆盖, tobe delete
             logger.info("Automatic mapping comparison starts! Comparing torch tensors and ATB tensors...")
             cmp_torch_atb(torch_model_topo_file, (golden_path, my_path, output_path), mapping_file_path, cmp_level)
         elif golden_topo_flag and my_topo_flag:
             # 存在ATB模型的拓扑信息，走加速库模型间的比对逻辑
+            # todo 新架构覆盖, tobe  delete
             compare_atb_metadata_auto(golden_path, my_path, golden_topo_json_path, my_topo_json_path, output_path)
         else:
             logger.warn("Unsupported comparison type, please refer to README")
@@ -257,7 +259,7 @@ def get_paths(path_dir, split_pattern):
     return out_paths
 
 
-def pair_built_in_op(g_nodes, m_nodes, op_mapping, my_root_node):
+def pair_built_in_op(g_nodes, m_nodes, op_mapping, my_root_node:TreeNode, callback=None):
     compared_result = []
     for atb_op_type, torch_op_type in op_mapping.items():
         atb_nodes = [m_node for m_node in m_nodes if m_node.op_type == atb_op_type]
@@ -274,6 +276,9 @@ def pair_built_in_op(g_nodes, m_nodes, op_mapping, my_root_node):
                 if next_sibling_node and next_sibling_node.op_type == "ElewiseOperation" \
                         and next_sibling_node.op_param.get('elewiseType') == 8:
                     atb_node = next_sibling_node
+            if callback is not None:
+                callback(torch_node, 'output.pth', atb_node, 'outtensor0.bin')
+                continue
             my_tensor_path = os.path.join(atb_node.tensor_path, "after", "outtensor0.bin")
             golden_tensor_path = os.path.join(torch_node.tensor_path, "output.pth")
             if os.path.exists(golden_tensor_path) and os.path.exists(my_tensor_path):
@@ -286,7 +291,7 @@ def pair_built_in_op(g_nodes, m_nodes, op_mapping, my_root_node):
     return compared_result
 
 
-def pair_custom_op(g_nodes, m_nodes, op_mapping):
+def pair_custom_op(g_nodes, m_nodes, op_mapping, callback=None):
     compared_result = []
 
     op_mapping_flat = []
@@ -309,6 +314,9 @@ def pair_custom_op(g_nodes, m_nodes, op_mapping):
             logger.debug(msg)
             continue
         for atb_node, torch_node in zip(atb_nodes, torch_nodes):
+            if callback is not None:
+                callback(torch_node, f"{torch_output}.pth", atb_node, f"{atb_output}.bin")
+                continue
             my_tensor_path = os.path.join(atb_node.tensor_path, "after", f"{atb_output}.bin")
             golden_tensor_path = os.path.join(torch_node.tensor_path, f"{torch_output}.pth")
             if os.path.exists(golden_tensor_path) and os.path.exists(my_tensor_path):

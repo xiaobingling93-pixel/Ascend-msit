@@ -231,7 +231,12 @@ class CompareCommand(BaseCommand):
             acc_compare(args.golden_path, args.my_path, args.output, torchair_ge_graph_path)
         else:
             from ait_llm.compare.atb_acc_cmp import acc_compare
+            from ait_llm.compare.cmp_mgr import CompareMgr
 
+            cmpMgr = CompareMgr(os.path.abspath(args.golden_path), os.path.abspath(args.my_path), args.mapping_file)
+            if cmpMgr.is_parsed_cmp_path():
+                cmpMgr.compare(args.output, args.cmp_level)
+            # 老的也跑一遍。对比一下
             acc_compare(os.path.abspath(args.golden_path), os.path.abspath(args.my_path),
                         args.output, args.mapping_file, args.cmp_level)
 
