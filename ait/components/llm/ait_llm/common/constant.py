@@ -84,16 +84,14 @@ CSV_GOLDEN_HEADER.append(CMP_FAIL_REASON)
 
 def maybe_init_dist():
     try:
-        rank = int(os.environ.get("LOCAL_RANK", "0"))
-        world_size = int(os.environ.get("LOCAL_WORLD_SIZE", "1"))
+        local_rank = torch.distributed.get_rank()
+        world_size = torch.distributed.get_world_size()
 
         if world_size < 2:
             return -1
+        return local_rank
     except KeyError:
         return -1
-    
-    torch.distributed.init_process_group(backend=GLOBAL_DIST_BACKEND, rank=rank, world_size=world_size)
-    return rank
 
 def get_ait_dump_path():
     global GLOBAL_AIT_DUMP_PATH
