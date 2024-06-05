@@ -19,8 +19,10 @@ import torch.nn as nn
 from ait_llm.transform.model_parser.kind import mlp, attention, convert, mname
 
 
-def add_child(arr, node):
-    arr["children"].append(node)
+def has_child(module: nn.Module) -> bool:
+    children = list(module.children())
+
+    return len(children) > 0
 
 
 def filter_dropout_module(module: nn.Module):
@@ -78,23 +80,26 @@ def build_model_tree(module: nn.Module):
     if not isinstance(module, nn.Module):
         raise ValueError("input should be torch.nn.Module")
 
-    root = {"name": mname(module), "children": []}
-    stack = [(root, module)]
+    def dfs(ret: list[dict], cur: nn.Module):
+        if isinstance(cur, nn.ModuleList):
+            repeat_count, layer = find_duplicate(cur)
+            repeat_block = process_layer(layer)
+            ret.append({
+                "kind": "Layers",
+                "repeat_count": repeat_count,
+                "repeat_block": repeat_block
+            })
+        elif has_child(cur):
+            for c in cur.children():
+                dfs(ret, c)
+        elif isinstance(cur, nn.Dropout):
+            pass
+        else:
+            ret.append(convert(cur))
 
-    while stack:
-        parent, current = stack.pop()
+    root = []
 
-        for name, child in current.named_children():
-            if isinstance(child, nn.ModuleList) or isinstance(child, nn.Sequential):
-                repeat_count, layer = find_duplicate(child)
-                repeat_block = process_layer(layer)
-
-                root["repeat_count"] = repeat_count
-                root["repeat_block"] = repeat_block
-            else:
-                child_node = convert(child)
-                add_child(parent, child_node)
-                stack.append((child_node, child))
+    dfs(root, module)
 
     return root
 
