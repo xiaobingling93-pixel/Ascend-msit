@@ -92,24 +92,24 @@ def maybe_init_dist():
         return local_rank
     except KeyError:
         return -1
+    
+def set_timestamp():
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    os.environ[ATB_TIMESTAMP] = timestamp
+    return timestamp
 
 def get_ait_dump_path():
     global GLOBAL_AIT_DUMP_PATH
 
-    local_rank = maybe_init_dist()
-    if local_rank == -1:
-        if GLOBAL_AIT_DUMP_PATH == "ait_dump":
-            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            os.environ[ATB_TIMESTAMP] = timestamp
-            GLOBAL_AIT_DUMP_PATH = "ait_dump_" + timestamp
-    elif local_rank == 0:
-        if GLOBAL_AIT_DUMP_PATH == "ait_dump":
-            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            os.environ[ATB_TIMESTAMP] = timestamp
-            GLOBAL_AIT_DUMP_PATH = "ait_dump_" + timestamp
-        torch.distributed.barrier()
-    else:
-        if GLOBAL_AIT_DUMP_PATH == "ait_dump":
+    if GLOBAL_AIT_DUMP_PATH == "ait_dump":
+        local_rank = maybe_init_dist()
+        if local_rank == -1:
+            GLOBAL_AIT_DUMP_PATH = "ait_dump_" + set_timestamp()
+        elif local_rank == 0:
+            GLOBAL_AIT_DUMP_PATH = "ait_dump_" + set_timestamp()
+            torch.distributed.barrier()
+        else:
             GLOBAL_AIT_DUMP_PATH = "ait_dump_" + os.environ[ATB_TIMESTAMP]
-        torch.distributed.barrier()
+            torch.distributed.barrier()
+
     return GLOBAL_AIT_DUMP_PATH
