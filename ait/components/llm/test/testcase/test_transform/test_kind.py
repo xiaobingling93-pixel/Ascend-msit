@@ -163,7 +163,7 @@ class TestKind(TestCase):
         self.assertEqual(
             {
                 "kind": "LayerNorm",
-                "normalized_shape": "(12,)",
+                "normalized_shape": 12,
                 "eps": 1e-5,
                 "element_affine": True,
                 "bias": True
