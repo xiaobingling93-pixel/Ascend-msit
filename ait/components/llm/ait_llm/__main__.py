@@ -140,7 +140,7 @@ class DumpCommand(BaseCommand):
             default=None,
             help='Specify a single device ID for dumping data, will skip other devices.')
 
-        parser.add_argument("--log-level", "-l", default="INFO", choices=LOG_LEVELS_LOWER, help="specify log level.")
+        parser.add_argument("--log-level", "-l", default="info", choices=LOG_LEVELS_LOWER, help="specify log level.")
 
     def handle(self, args, **kwargs):
         if args.exec:
@@ -209,7 +209,7 @@ class CompareCommand(BaseCommand):
                   Should better be a standalong file, and function should in format like \
                   "def foo(golden_tensor, my_tensor): return float_value, string_message"')
 
-        parser.add_argument("--log-level", "-l", default="INFO", choices=LOG_LEVELS_LOWER, help="specify log level.")
+        parser.add_argument("--log-level", "-l", default="infojiushi", choices=LOG_LEVELS_LOWER, help="specify log level.")
 
     def handle(self, args, **kwargs):
         from ait_llm.compare.torchair_acc_cmp import get_torchair_ge_graph_path
