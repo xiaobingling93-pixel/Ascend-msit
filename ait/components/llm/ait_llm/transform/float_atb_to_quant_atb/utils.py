@@ -29,7 +29,7 @@ def check_libclang_so():
     if os.path.exists(libclang_so_path):
         cindex.Config.set_library_file(libclang_so_path)
     else:
-        loger.warning(f"libclang so: {libclang_so_path} not found, may meet error lately.")
+        logger.warning(f"libclang so: {libclang_so_path} not found, may meet error lately.")
 
 
 def get_args_and_options():
