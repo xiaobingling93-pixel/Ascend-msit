@@ -389,19 +389,33 @@ class Transform(BaseCommand):
             "--source",
             type=check_input_path_legality,
             required=True,
-            help="directory of source folder, should contain both cpp and h file. "
-            "Or specify a single cpp file, will use the h file with a same name",
+            help="source path, could be:"
+                 "1. [float atb to quant atb model] directory containing both cpp and h file;"
+                 "2. [float atb to quant atb model] a single cpp file, will use the h file with a same name;"
+                 "3. [torch to float atb model] directory contianing config.json and py file for building transformers model",
         )
         parser.add_argument(
-            "--enable-sparse", action='store_true', help="Enable trasforming to sparse-quant model"
+            "--enable-sparse", action='store_true', help="[float atb to quant atb model] Enable trasforming to sparse-quant model"
         )
         parser.add_argument("--log-level", default="info", choices=LOG_LEVELS_LOWER, help="specify log level")
 
     def handle(self, args, **kwargs) -> None:
-        from ait_llm.transform import transform_quant
+        from ait_llm.transform.utils import get_transform_scenario, SCENARIOS
 
         set_log_level(args.log_level)
-        transform_quant.transform_quant(source_path=args.source, enable_sparse=args.enable_sparse)
+        scenario = get_transform_scenario(args.source)
+        if scenario == SCENARIOS.float_atb_to_quant_atb:
+            from ait_llm.transform.float_atb_to_quant_atb import transform_quant
+
+            transform_quant.transform_quant(source_path=args.source, enable_sparse=args.enable_sparse)
+        elif scenario == SCENARIOS.torch_to_float_atb:
+            from ait_llm.transform.torch_to_float_atb import transform_float
+
+            transform_float.transform_float(source_path=args.source)
+        else:
+            info = f"Neither config.json + py or cpp found in {args.source}, not supported"
+            logger.error(message)
+            raise ValueError(message)
 
 
 def get_cmd_instance():
@@ -410,9 +424,7 @@ def get_cmd_instance():
     compare_cmd_instance = CompareCommand("compare", "Accuracy compare tool for large language model", alias_name="cc")
     opcheck_cmd_instance = OpcheckCommand("opcheck", "Operation check tool for large language model", alias_name='oo')
     errcheck_cmd_instance = ErrCheck("errcheck", "Error check tool for large language model.", alias_name='ee')
-    transform_cmd_instance = Transform(
-        "transform", "Transform tool for large language model. Curretly only float to quant or sparse-quant model"
-    )
+    transform_cmd_instance = Transform("transform", "Transform tool for large language model.")
 
     instances = [
         dump_cmd_instance, compare_cmd_instance, opcheck_cmd_instance, errcheck_cmd_instance, transform_cmd_instance
