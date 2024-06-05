@@ -13,10 +13,14 @@
 # limitations under the License.
 import os
 import datetime
+import torch
 
 from ait_llm.compare.cmp_algorithm import CMP_ALG_MAP
 
 GLOBAL_AIT_DUMP_PATH = "ait_dump"
+GLOBAL_DEVICE = "cuda" if torch.cuda.is_available() and int(
+    os.environ.get("CUDA_VISIBLE_DEVICES", "0").split(",")[0]) >=0 else "cpu"
+GLOBAL_DIST_BACKEND = "nccl" if GLOBAL_DEVICE == "cuda" else "gloo"
 
 ATB_HOME_PATH = "ATB_HOME_PATH"
 ATB_CUR_PID = "ATB_CUR_PID"
@@ -78,11 +82,36 @@ CSV_GOLDEN_HEADER = [TOKEN_ID, DATA_ID, GOLDEN_DATA_PATH, GOLDEN_DTYPE, GOLDEN_S
 CSV_GOLDEN_HEADER.extend(list(CMP_ALG_MAP.keys()))
 CSV_GOLDEN_HEADER.append(CMP_FAIL_REASON)
 
+def maybe_init_dist():
+    try:
+        rank = int(os.environ.get("LOCAL_RANK", "0"))
+        world_size = int(os.environ.get("LOCAL_WORLD_SIZE", "1"))
+
+        if world_size < 2:
+            return -1
+    except KeyError:
+        return -1
+    
+    torch.distributed.init_process_group(backend=GLOBAL_DIST_BACKEND, rank=rank, world_size=world_size)
+    return rank
+
 def get_ait_dump_path():
     global GLOBAL_AIT_DUMP_PATH
 
-    if GLOBAL_AIT_DUMP_PATH == "ait_dump":
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        os.environ[ATB_TIMESTAMP] = timestamp
-        GLOBAL_AIT_DUMP_PATH = "ait_dump_" + timestamp
+    local_rank = maybe_init_dist()
+    if local_rank == -1:
+        if GLOBAL_AIT_DUMP_PATH == "ait_dump":
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            os.environ[ATB_TIMESTAMP] = timestamp
+            GLOBAL_AIT_DUMP_PATH = "ait_dump_" + timestamp
+    elif local_rank == 0:
+        if GLOBAL_AIT_DUMP_PATH == "ait_dump":
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            os.environ[ATB_TIMESTAMP] = timestamp
+            GLOBAL_AIT_DUMP_PATH = "ait_dump_" + timestamp
+        torch.distributed.barrier()
+    else:
+        if GLOBAL_AIT_DUMP_PATH == "ait_dump":
+            GLOBAL_AIT_DUMP_PATH = "ait_dump_" + os.environ[ATB_TIMESTAMP]
+        torch.distributed.barrier()
     return GLOBAL_AIT_DUMP_PATH
