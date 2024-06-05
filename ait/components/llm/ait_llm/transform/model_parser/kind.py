@@ -108,7 +108,7 @@ def mlp(modules: List[Module]):
 def layernorm(module):
     return {
         "kind": "LayerNorm",
-        "normalized_shape": str(module.normalized_shape),
+        "normalized_shape": module.normalized_shape[0],
         "eps": module.eps,
         "element_affine": module.elementwise_affine,
         "bias": module.bias is not None
