@@ -15,7 +15,6 @@
 from enum import Enum
 from typing import Any
 from ait_llm.common.log import logger
-from ait_llm.compare.cmp_data_parse import CompareDataParse
 from ait_llm.compare.atb_acc_cmp import load_mapping, pair_built_in_op, pair_custom_op, load_mapping
 from ait_llm.dump.torch_dump.topo import ModelTree, TreeNode
 
@@ -47,34 +46,45 @@ class OpMatchMap:
         '''
         key = (my_op, my_op_location, golden_op, golden_op_location)
         if key not in self.map:
-            self.map[key] = score
+            self.map[key] = score.value
         else:
             oriValue = self.map.get(key)
-            self.map[key] = oriValue + score
+            self.map[key] = oriValue + score.value
 
     def get_match_map(self, enable_print: bool = True) -> tuple:
         '''
         返回一个自己数据的算子列表与标杆数据的算子匹配的字典
         '''
         if enable_print:
-            pass
+            for map_info, score in self.map.items():
+                my_op, my_op_location, golden_op, golden_op_location = map_info
+                logger.debug(
+                    "mapping score: %-80s <- %s ->   %s ",
+                    f"[{my_op.node_name}#{my_op.tensor_path}#{my_op_location}]",
+                    str(score),
+                    f"[{golden_op.node_name}#{golden_op.tensor_path}#{golden_op_location}]",
+                )
 
         return (
             map_info
             for map_info in self.map.keys()
-            if self.map.get(map_info, MatchScore.NO_MATCH_INFO) >= MatchScore.FULL_MATCH
+            if self.map.get(map_info, MatchScore.NO_MATCH_INFO) >= MatchScore.FULL_MATCH.value
         )
 
 
 def policy_output(golden_root_node: TreeNode, my_root_node: TreeNode, match_map: OpMatchMap):
     match_map.add_score(
-        golden_root_node.children[-1], MatchLocation.ALL_OUTPUT, my_root_node.children[-1], MatchLocation.ALL_OUTPUT
+        my_root_node.children[-1],
+        MatchLocation.ALL_OUTPUT,
+        golden_root_node.children[-1],
+        MatchLocation.ALL_OUTPUT,
+        MatchScore.FULL_MATCH,
     )
 
 
 def policy_name_full_match(golden_root_node: TreeNode, my_root_node: TreeNode, match_map: OpMatchMap):
-    golden_name2node = {node.name: node for node in golden_root_node.get_all_nodes()}
-    my_name2node = {node.name: node for node in golden_root_node.get_all_nodes()}
+    golden_name2node = {node.node_name: node for node in golden_root_node.get_all_nodes()}
+    my_name2node = {node.node_name: node for node in my_root_node.get_all_nodes()}
 
     golden_name_set = set(golden_name2node.keys())
     my_name_set = set(my_name2node.keys())
@@ -82,18 +92,22 @@ def policy_name_full_match(golden_root_node: TreeNode, my_root_node: TreeNode, m
     full_match_names = my_name_set.intersection(golden_name_set)
 
     for match_name in full_match_names:
+        if match_name == "root":
+            continue
         match_map.add_score(
-            golden_name2node.get(match_name),
-            MatchLocation.ALL_OUTPUT,
             my_name2node.get(match_name),
             MatchLocation.ALL_OUTPUT,
+            golden_name2node.get(match_name),
+            MatchLocation.ALL_OUTPUT,
+            MatchScore.FULL_MATCH,
         )
 
         match_map.add_score(
-            golden_name2node.get(match_name),
-            MatchLocation.ALL_INPUT,
             my_name2node.get(match_name),
             MatchLocation.ALL_INPUT,
+            golden_name2node.get(match_name),
+            MatchLocation.ALL_INPUT,
+            MatchScore.FULL_MATCH,
         )
 
 
@@ -106,15 +120,15 @@ class OpMatchMgr:
             OpMatchPolicyMapCount(args),
         ]
 
-    def match(self, golden_data: CompareDataParse, my_data: CompareDataParse):
+    def match(self, golden_data, my_data):
         match_map = OpMatchMap(golden_data=golden_data, my_data=my_data)
         golden_trees = golden_data.getRootNode()
         my_trees = my_data.getRootNode()
         if len(golden_trees) != len(my_trees):
             # 如果数量不相等，就重复一次。为了处理 atb 有encode+decode两个模型。而 torch只有一个模型的场景
-            max_len = max(len(golden_data), len(my_trees))
-            golden_trees = (golden_trees * max_len)[0, max_len]
-            my_trees = (my_trees * max_len)[0, max_len]
+            max_len = max(len(golden_trees), len(my_trees))
+            golden_trees = (golden_trees * max_len)[0:max_len]
+            my_trees = (my_trees * max_len)[0:max_len]
         for golden_model_tree, my_model_tree in zip(golden_trees, my_trees):
             for policy in self.op_match_policies:
                 policy(golden_model_tree, my_model_tree, match_map)
@@ -140,7 +154,7 @@ class OpMatchPolicyMapCount:
 
         # Layer 层对比
         for golden_layer, my_layer in zip(golden_layer_nodes, my_layer_nodes):
-            add_output_match(golden_layer, my_layer)
+            add_output_match(golden_layer, MatchLocation.ALL_OUTPUT, my_layer, MatchLocation.ALL_OUTPUT)
 
         # 原生算子比对
         for golden_layer, my_layer in zip(golden_layer_nodes, my_layer_nodes):

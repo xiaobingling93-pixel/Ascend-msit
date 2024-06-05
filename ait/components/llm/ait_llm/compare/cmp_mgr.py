@@ -42,34 +42,49 @@ class CompareMgr:
     def compare(self, output_path="."):
         self.compared_result = []
 
-        op_map = self.op_match.match(self.golden_data, self.my_data)
+        op_map = list(self.op_match.match(self.golden_data, self.my_data))
         # 同步校验tokenid
         golden_tokens = self.golden_data.getCmpToken()
         my_tokens = self.my_data.getCmpToken()
         golden_token_set = set(self._flatten_and_enum_tuple(golden_tokens))
-        my_token_set = set(self._flatten_and_enum_tuple(my_token_set))
-        if len(golden_tokens) == 1 and len(my_tokens) == 1:
-            # 指定token，强制比对
-            self.compare_token(golden_tokens, my_tokens, op_map)
-        elif not golden_token_set.isdisjoint(my_token_set):
-            logger.error(f"my tokens is {my_tokens} and golden tokens is {golden_tokens}. The two cannot be matched.")
-            return None
-        else:
+        my_token_set = set(self._flatten_and_enum_tuple(my_tokens))
+
+        logger.debug(
+            "compare tokens info ==> golden_tokens: %s, golden_token_set: %s \n my_tokens: %s, my_token_set: %s ",
+            str(golden_tokens),
+            str(golden_token_set),
+            str(my_tokens),
+            str(my_token_set),
+        )
+        if not golden_token_set.isdisjoint(my_token_set):
             cmp_tokens = golden_token_set.intersection(my_token_set)
+
+            logger.debug("compare tokens is %s ", str(cmp_tokens))
             for token_id in cmp_tokens:
+                logger.debug("comparing tokens is %s ", str(token_id))
                 self.compare_token(token_id, token_id, op_map)
+                logger.debug("compared tokens is %s ", str(token_id))
+        else:
+            if len(golden_tokens) == 1 and len(my_tokens) == 1:
+                # 指定token，强制比对
+                self.compare_token(golden_tokens[0], my_tokens[0], op_map)
+            else:
+                logger.error(
+                    f"my tokens is {my_tokens} and golden tokens is {golden_tokens}. The two cannot be matched."
+                )
+                return None
 
         return save_compare_reault_to_csv(self.compared_result, output_path)
 
     def compare_token(self, golden_token_id, my_token_id, op_map):
-
         for my_op, my_op_location, golden_op, golden_op_location in op_map:
+            logger.debug("------ compare (%s %s)------", str(my_op.node_name), str(golden_op.node_name))
             # 获取到所有需要比较的 tensor 的路径
             golden_tensor_paths = self.golden_data.getTensorPath(golden_token_id, golden_op, golden_op_location)
             my_tensor_paths = self.my_data.getTensorPath(my_token_id, my_op, my_op_location)
-            
             # 交叉比对，记录结果
             for golden_tensor_path, my_tensor_path in itertools.product(golden_tensor_paths, my_tensor_paths):
+                logger.debug("golden_path: %s; my_path:%s", str(golden_tensor_path), str(my_tensor_path))
                 data_info = BasicDataInfo(golden_tensor_path, my_tensor_path, data_id=0, token_id=golden_token_id)
                 row_data = fill_row_data(data_info)
                 self.compared_result.append(row_data)
@@ -78,6 +93,6 @@ class CompareMgr:
     def _flatten_and_enum_tuple(cls, *arr):
         for item in arr:
             if isinstance(item, (list, tuple)):
-                yield from cls._flatten_enum_tuple(*item)
+                yield from cls._flatten_and_enum_tuple(*item)
             else:
                 yield item
