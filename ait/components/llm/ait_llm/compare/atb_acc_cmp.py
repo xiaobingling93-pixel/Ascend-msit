@@ -25,7 +25,7 @@ from ait_llm.compare.op_mapping import ATB_TORCH_BUILT_IN_OP_OUTPUT_MAPPING, ATB
 from ait_llm.dump.torch_dump.topo import ModelTree
 from tqdm import tqdm
 
-from ait.components.llm.ait_llm.compare.multi_block import multi_block_cmp
+from ait_llm.compare.multi_block import multi_block_cmp
 
 
 def acc_compare(golden_path, my_path, output_path=".", mapping_file_path=".", cmp_level="layer"):
