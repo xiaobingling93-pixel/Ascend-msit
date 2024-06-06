@@ -194,7 +194,7 @@ attention_formatter = """
         IN_ATTENTION_OUT_DEQSCALE,                                  // IN_ATTENTION_OUT_DESCALE
         IN_ATTENTION_OUT_BIAS,                                      // IN_ATTENTION_OUT_DEOFFSET（quant场景下为quant_bias，非quant场景下为bias）
         IN_ATTENTION_OUT_COMPRESS_IDX}};
-    attentionNode.outTensorIds = {INTERNAL_ATTENTIONOUT};
+    attentionNode.outTensorIds = {{INTERNAL_ATTENTIONOUT}};
 """
 
 
