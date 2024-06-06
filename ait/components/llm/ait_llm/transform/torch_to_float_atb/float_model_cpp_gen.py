@@ -1,6 +1,6 @@
 import os
 import time
-from ait_llm.transform.torch_to_float_atb import utils, float_model_cpp_templates
+from ait_llm.transform.torch_to_float_atb import utils
 from ait_llm.transform.model_parser import parser
 
 def float_model_cpp_gen(model, save_name=None, save_dir=None):
@@ -14,6 +14,8 @@ def float_model_cpp_gen(model, save_name=None, save_dir=None):
     >>> mm = transformers.AutoModelForCausalLM.from_config(cc)
     >>> rr = float_model_cpp_gen.float_model_cpp_gen(mm)
     """
+    from ait_llm.transform.torch_to_float_atb import float_model_cpp_templates  # avoiding circular import
+
     parsed_model = parser.build_model_tree(model)
     model_name_lower = parsed_model.get("name", "model").lower()
 
