@@ -3,7 +3,7 @@
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-#
+#cd 
 # http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
@@ -15,13 +15,8 @@
 import os
 
 
-DEFAULT_SAVE_NAME = "decoder_model"
-
-
-def init_save_name(save_name=None):
-    if save_name is None:
-        save_name = DEFAULT_SAVE_NAME
-    elif os.path.splitext(save_name)[-1] in [".c", ".cpp", ".h", ".hpp"]:
+def init_save_name(save_name):
+    if os.path.splitext(save_name)[-1] in [".c", ".cpp", ".h", ".hpp"]:
         save_name = os.path.splitext(save_name)[0]
     return os.path.basename(save_name)
 

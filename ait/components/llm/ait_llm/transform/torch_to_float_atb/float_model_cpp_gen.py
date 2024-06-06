@@ -28,49 +28,49 @@ def float_model_cpp_gen(model, save_name=None, save_dir=None):
     >>> mm = transformers.AutoModelForCausalLM.from_config(cc)
     >>> rr = float_model_cpp_gen.float_model_cpp_gen(mm)
     """
-    from ait_llm.transform.torch_to_float_atb import float_model_cpp_templates  # avoiding circular import
+    from ait_llm.transform.torch_to_float_atb import float_model_cpp_templates as templates  # avoiding circular import
 
     parsed_model = parser.build_model_tree(model)
     model_name_lower = parsed_model.get("name", "model").lower()
 
     rr = ""
-    rr += float_model_cpp_templates.copyright_header.format(year=time.localtime().tm_year)
-    rr += float_model_cpp_templates.include_header_formater.format(
+    rr += templates.copyright_header.format(year=time.localtime().tm_year)
+    rr += templates.include_header_formater.format(
         model_name_lower=model_name_lower,
         other_operations="",
     )
 
     pre_properties = "\n".join([
-        float_model_cpp_templates.weight_count_formatter,
-        float_model_cpp_templates.operation_count_formatter,
-        float_model_cpp_templates.in_tensor_id_formatter,
-        float_model_cpp_templates.internal_tensor_id_formatter,
-        float_model_cpp_templates.out_tensor_id_formatter,
-        float_model_cpp_templates.from_string_formatter,
+        templates.weight_count_formatter.format(),
+        templates.operation_count_formatter.format(),
+        templates.in_tensor_id_formatter.format(),
+        templates.internal_tensor_id_formatter.format(),
+        templates.out_tensor_id_formatter.format(),
+        templates.from_string_formatter.format(),
     ])
 
-    build_graph = float_model_cpp_templates.build_graph_formatter.format(
-        build_graph_pre_process_formatter=float_model_cpp_templates.build_graph_pre_process_formatter,
-        build_graph_pre_process_norm_formatter=float_model_cpp_templates.build_graph_pre_process_norm_formatter,
-        build_graph_layers_formatter=float_model_cpp_templates.build_graph_layers_formatter,
-        build_graph_post_process_norm_formatter=float_model_cpp_templates.build_graph_post_process_norm_formatter,
-        build_graph_post_process_lmhead_formatter=float_model_cpp_templates.build_graph_post_process_lmhead_formatter,
+    build_graph = templates.build_graph_formatter.format(
+        build_graph_pre_process_formatter=templates.build_graph_pre_process_formatter.format(),
+        build_graph_pre_process_norm_formatter=templates.build_graph_pre_process_norm_formatter.format(),
+        build_graph_layers_formatter=templates.build_graph_layers_formatter.format(model_name_lower=model_name_lower),
+        build_graph_post_process_norm_formatter=templates.build_graph_post_process_norm_formatter.format(),
+        build_graph_post_process_lmhead_formatter=templates.build_graph_post_process_lmhead_formatter.format(),
     )
 
     post_properties = "\n".join([
-        float_model_cpp_templates.infer_shape_formatter,
+        templates.infer_shape_formatter,
         build_graph,
-        float_model_cpp_templates.parse_param_formatter,
-        float_model_cpp_templates.bind_param_host_tensor_formatter,
+        templates.parse_param_formatter,
+        templates.bind_param_host_tensor_formatter,
     ])
 
-    rr += float_model_cpp_templates.basic_class_formatter.format(
+    rr += templates.basic_class_formatter.format(
         model_name_lower=model_name_lower,
         pre_properties=pre_properties,
         post_properties=post_properties,
     )
 
-    save_name = utils.init_save_name(save_name) + ".cpp"
+    save_name = utils.init_save_name("decoder_model" if save_name is None else save_name) + ".cpp"
     save_dir = utils.init_save_dir(model_name_lower if save_dir is None else save_dir, sub_dir="model")
     save_path = os.path.join(save_dir, save_name)
     with open(save_path, "w") as ff:

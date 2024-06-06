@@ -28,23 +28,23 @@ def float_model_h_gen(model, save_name=None, save_dir=None):
     >>> mm = transformers.AutoModelForCausalLM.from_config(cc)
     >>> rr = float_model_h_gen.float_model_h_gen(mm)
     """
-    from ait_llm.transform.torch_to_float_atb import float_model_h_templates  # avoiding circular import
+    from ait_llm.transform.torch_to_float_atb import float_model_h_templates as templates  # avoiding circular import
 
     parsed_model = parser.build_model_tree(model)
     model_name_lower = parsed_model.get("name", "model").lower()
 
     rr = ""
-    rr += float_model_h_templates.copyright_header.format(year=time.localtime().tm_year)
-    rr += float_model_h_templates.include_header_formater.format(
+    rr += templates.copyright_header.format(year=time.localtime().tm_year)
+    rr += templates.include_header_formater.format(
         model_name_upper=model_name_lower.upper(),
     )
 
-    rr += float_model_h_templates.basic_class_formatter.format(
+    rr += templates.basic_class_formatter.format(
         model_name_lower=model_name_lower,
-        struct_param_formatter=float_model_h_templates.struct_param_formatter,
+        struct_param_formatter=templates.struct_param_formatter.format(),
     )
 
-    save_name = utils.init_save_name(save_name) + ".h"
+    save_name = utils.init_save_name("decoder_model" if save_name is None else save_name) + ".h"
     save_dir = utils.init_save_dir(model_name_lower if save_dir is None else save_dir, sub_dir="model")
     save_path = os.path.join(save_dir, save_name)
     with open(save_path, "w") as ff:

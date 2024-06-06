@@ -121,7 +121,7 @@ enum InTensorId : int {{
     // idx: 9, shape: [1]
     IN_TENSOR_PLACE_HOLDER,
     // idx: 10, shape: FA: [batchSize] PA: [4]
-    IN_TENSOR_SEQ_LEN,
+    IN_TENSOR_SEQ_LENGTHS,
     // idx: 11, shape: FA: [batchSize]  PA: [4]
     IN_TENSOR_LOGTIS_INDICES,
 
@@ -139,19 +139,12 @@ enum InternalTensorId : int {{
     INTERNEL_TENSOR_COS_EMB,
     // idx: 2, shape: [batchSize * seqLen, hiddenSizePerAttentionHead]
     INTERNEL_TENSOR_SIN_EMB,
-
-    [TODO] chatGLM one, qwen is INTERNAL_TENSOR_MAX
-    // idx: [3, 3 + numHiddenLayers), shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
-    int INTERNEL_TENSOR_LAYER_OUT_BASE = internelTensorIdx++;
-    internelTensorIdx = internelTensorIdx + param_.numHiddenLayers - 1;
-    // idx: 3 + numHiddenLayers, shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
-    int INTERNEL_TENSOR_FINAL_NORM_OUT = internelTensorIdx++;
+    INTERNAL_TENSOR_MAX,
 }};
 """
 
 out_tensor_id_formatter = """
 enum OutTensorId : int {{
-    [TODO] maybe not needed
     OUT_TENSOR_HIDDENSTATES = 0,
     OUT_TENSOR_MAX,
 }};
@@ -212,9 +205,6 @@ void DecoderModel::Param::FromString(const std::string &param)
     if (paramJson.contains("backend")) {{
         backend = paramJson["backend"].get<std::string>();
     }}
-    if (paramJson.contains("weightQuantType")) {{
-        weightQuantType = paramJson["weightQuantType"].get<std::string>();
-    }}
     if (paramJson.contains("enableLogN")) {{
         enableLogN = paramJson["enableLogN"].get<bool>();
     }}
@@ -224,12 +214,6 @@ void DecoderModel::Param::FromString(const std::string &param)
     }}
     for (auto item : paramJson["seqLen"]) {{
         seqLen.push_back(item.get<int>());
-    }}
-    for (auto item : paramJson["preScale"]) {{
-        preScale.push_back(item.get<float>());
-    }}
-    for (auto item : paramJson["postScale"]) {{
-        postScale.push_back(item.get<float>());
     }}
     for (auto item : paramJson["packQuantType"]) {{
         packQuantType.push_back(item.get<std::vector<int>>());
@@ -250,8 +234,7 @@ void DecoderModel::Param::FromString(const std::string &param)
                   << ", numHiddenLayers:" << numHiddenLayers
                   << ", numKeyValueHeadsPerRank:" << numKeyValueHeadsPerRank
                   << ", supportLcoc:" << supportLcoc << ", rank:" << rank << ", worldSize:" << worldSize
-                  << ", backend:" << backend << ", weightQuantType:" << weightQuantType
-                  << ", tokenOffset:" << tokenOffset << ", seqLen:" << seqLen;
+                  << ", backend:" << backend << ", tokenOffset:" << tokenOffset << ", seqLen:" << seqLen;
 }}
 """
 
@@ -391,7 +374,7 @@ build_graph_pre_process_formatter = """
         wordEmbeddingNode.operation.reset(op);
         wordEmbeddingNode.inTensors = {{&graph_.weightTensors.at(0),  // shape: [vocabSize + 1, hiddenSize]
             &graph_.inTensors.at(IN_TENSOR_INPUT)}};
-        wordEmbeddingNode.outTensors = {{&graph_.internalTensors.at(INTERNAL_HIDDENSTATES)}};
+        wordEmbeddingNode.outTensors = {{&graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES)}};
         ATB_LOG(INFO) << "[+] wordEmbeddingNode";
     }}
 
@@ -400,17 +383,17 @@ build_graph_pre_process_formatter = """
     atb_speed::common::PositionalEmbeddingGather(&op);
     peGatherNode.operation.reset(op);
     peGatherNode.inTensors = {{
-        &graph_.inTensors.at(IN_TENSOR_POSITIONIDS),
-        &graph_.inTensors.at(IN_TENSOR_COSTABLE),
-        &graph_.inTensors.at(IN_TENSOR_SINTABLE),
+        &graph_.inTensors.at(IN_TENSOR_POSITION_IDS),
+        &graph_.inTensors.at(IN_TENSOR_COS_TABLE),
+        &graph_.inTensors.at(IN_TENSOR_SIN_TABLE),
     }};
     peGatherNode.outTensors = {{
-        &graph_.internalTensors.at(INTERNAL_COSEMBED),
-        &graph_.internalTensors.at(INTERNAL_SINEMBED)
+        &graph_.internalTensors.at(INTERNEL_TENSOR_COS_EMB),
+        &graph_.internalTensors.at(INTERNEL_TENSOR_SIN_EMB)
     }};
     ATB_LOG(INFO) << "[+] peGatherNode";
 
-    atb::Tensor *firstInTensor = param_.withEmbedding ? &graph_.internalTensors.at(INTERNAL_HIDDENSTATES)
+    atb::Tensor *firstInTensor = param_.withEmbedding ? &graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES)
                                                       : &graph_.inTensors.at(IN_TENSOR_INPUT);
 
 """
@@ -450,9 +433,9 @@ build_graph_layers_formatter = """
                 &graph_.weightTensors.at(layerId * WEIGHT_COUNT_PER_LAYER + weightTensorId +
                                          (param_.withEmbedding ? WEIGHT_COUNT_WORD_EMBEDDINGNODE : 0));
         }}
-        layerNode.inTensors.at(inTensorId++) = &graph_.internalTensors.at(INTERNAL_COSEMBED);
-        layerNode.inTensors.at(inTensorId++) = &graph_.internalTensors.at(INTERNAL_SINEMBED);
-        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_ATTENTIONMASK);
+        layerNode.inTensors.at(inTensorId++) = &graph_.internalTensors.at(INTERNEL_TENSOR_COS_EMB);
+        layerNode.inTensors.at(inTensorId++) = &graph_.internalTensors.at(INTERNEL_TENSOR_SIN_EMB);
+        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_ATTENTION_MASK);
         layerNode.inTensors.at(inTensorId++) = &graph_.kCacheTensors.at(layerId);
         layerNode.inTensors.at(inTensorId++) = &graph_.vCacheTensors.at(layerId);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SEQ_LENGTHS);
@@ -462,7 +445,7 @@ build_graph_layers_formatter = """
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_BLOCK_TABLES);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SLOTS);
 
-        layerNode.outTensors = {{&graph_.internalTensors.at(INTERNAL_HIDDENSTATES)}};
+        layerNode.outTensors = {{&graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES)}};
         ATB_LOG(INFO) << "[+] layerNode_" << layerId;
         firstInTensor = layerNode.outTensors.at(0);
     }}
@@ -481,7 +464,7 @@ build_graph_post_process_norm_formatter = """
     finalNormNode.inTensors = {{firstInTensor, &graph_.weightTensors.at(finalLayerNormWeightTensorId)}};
     finalNormNode.outTensors = {{
         // shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
-        &graph_.internalTensors.at(INTERNAL_HIDDENSTATES)
+        &graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES)
     }};
     ATB_LOG(INFO) << "[+] finalNormNode";
 
@@ -506,7 +489,7 @@ build_graph_post_process_lmhead_formatter = """
     lmHeadNode.operation.reset(op);
     const int finalLinearWeightTensorId = graph_.weightTensors.size() - WEIGHT_COUNT_LM_HEAD;
     lmHeadNode.inTensors = {{
-        &graph_.internalTensors.at(INTERNAL_HIDDENSTATES),
+        &graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES),
         // shape: [vocabSizePerRank, hiddenSize]
         &graph_.weightTensors.at(finalLinearWeightTensorId),
         // LmHead not quantized, using placeholder for weights
