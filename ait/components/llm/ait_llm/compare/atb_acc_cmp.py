@@ -12,19 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import re
 import glob
 import json
+import os
+import re
 
-from ait_llm.compare.cmp_utils import compare_data, read_data
+from tqdm import tqdm
 from ait_llm.common.log import logger
-from ait_llm.compare.cmp_utils import BasicDataInfo, fill_row_data, save_compare_reault_to_csv
+from ait_llm.compare.cmp_utils import BasicDataInfo, fill_row_data, save_compare_reault_to_csv, compare_data, read_data
 from ait_llm.compare.op_mapping import ATB_TORCH_BUILT_IN_OP_OUTPUT_MAPPING, ATB_TORCH_CUSTOM_OP_OUTPUT_MAPPING, \
     ATB_QUANT_FLOAT_NODE_MAPPING
 from ait_llm.dump.torch_dump.topo import ModelTree
-
-from tqdm import tqdm
+from ait_llm.compare.multi_block import multi_block_cmp
 
 
 def acc_compare(golden_path, my_path, output_path=".", mapping_file_path=".", cmp_level="layer"):
@@ -205,7 +204,6 @@ def search_mapping_relationships(gathered_golden_data, gathered_my_data):
 
 def search_float_quant_matches(golden_path, my_path, golden_topo_json_path, my_topo_json_path):
     matched_path_pair = []
-    from ait_llm.dump.torch_dump.topo import TreeNode
     golden_tree = ModelTree.atb_json_to_tree(golden_topo_json_path)
     my_tree = ModelTree.atb_json_to_tree(my_topo_json_path)
     
@@ -257,7 +255,7 @@ def get_paths(path_dir, split_pattern):
     return out_paths
 
 
-def pair_built_in_op(g_nodes, m_nodes, op_mapping, my_root_node):
+def pair_built_in_op(g_nodes, m_nodes, op_mapping, my_root_node, atb_tensor_path, torch_tensor_path):
     compared_result = []
     for atb_op_type, torch_op_type in op_mapping.items():
         atb_nodes = [m_node for m_node in m_nodes if m_node.op_type == atb_op_type]
@@ -266,23 +264,9 @@ def pair_built_in_op(g_nodes, m_nodes, op_mapping, my_root_node):
             msg = f"The number of {atb_op_type} node in atb is not equal to {torch_op_type} node in torch"
             logger.debug(msg)
             continue
-        for atb_node, torch_node in zip(atb_nodes, torch_nodes):
-            if atb_node.op_type == "LinearOperation" and not atb_node.op_param.get("hasBias"):
-                next_sibling_node = my_root_node.get_next_sibling_node(atb_node)
-                # 当有些算子如ParallelLinearBaseV2，是将w*x+b的操作拆分成两个算子，linear+add，而torch中使用一个算子Linear实现，
-                # 因此add node的输出映射的是torch中Linear的输出
-                if next_sibling_node and next_sibling_node.op_type == "ElewiseOperation" \
-                        and next_sibling_node.op_param.get('elewiseType') == 8:
-                    atb_node = next_sibling_node
-            my_tensor_path = os.path.join(atb_node.tensor_path, "after", "outtensor0.bin")
-            golden_tensor_path = os.path.join(torch_node.tensor_path, "output.pth")
-            if os.path.exists(golden_tensor_path) and os.path.exists(my_tensor_path):
-                data_info = BasicDataInfo(golden_tensor_path, my_tensor_path, data_id=0)
-                row_data = fill_row_data(data_info)
-                compared_result.append(row_data)
-            else:
-                msg = f"golden tensor path: {golden_tensor_path} or my_tensor_path: {my_tensor_path} is not exist."
-                logger.debug(msg)
+
+        compared_result = multi_block_cmp(atb_nodes, torch_nodes, my_root_node, atb_tensor_path, torch_tensor_path)
+
     return compared_result
 
 
@@ -344,7 +328,8 @@ def cmp_torch_atb_model(data_info, output_path, mapping_dic):
         g_layer_leaf_nodes = golden_layer.get_leaf_nodes()
         m_layer_leaf_nodes = my_layer.get_leaf_nodes()
         compared_result.extend(pair_built_in_op(g_layer_leaf_nodes, m_layer_leaf_nodes,
-                                                mapping_dic.get("ATB_TORCH_BUILT_IN_OP_OUTPUT_MAPPING"), my_root_node))
+                                                mapping_dic.get("ATB_TORCH_BUILT_IN_OP_OUTPUT_MAPPING"), my_root_node,
+                                                atb_tensor_path, torch_tensor_path))
 
     # 自定义算子比对
     for golden_layer, my_layer in zip(golden_layer_nodes, my_layer_nodes):
@@ -364,7 +349,6 @@ def get_only_dir_in_path(p_path):
         return None
     
     return os.path.join(p_path, file_list[0])
-
 
 
 def cmp_torch_atb_token(torch_tensor_path, atb_tensor_path, token_id):
