@@ -44,7 +44,9 @@ def multi_block_cmp(atb_nodes, torch_nodes, my_root_node, atb_tensor_path, torch
         golden_tensor_data = concat_tensor_data(golden_tensor_data, torch_multi_block_tensor_path_name,
                                                 torch_multi_block_tensor_paths, golden_tensor_path, dim_torch)
         # 3. compare tensor
-        compare_row_data(compared_result, golden_tensor_path, my_tensor_path, golden_tensor_data, my_tensor_data)
+        data_info = BasicDataInfo(golden_tensor_path, my_tensor_path, data_id=0)
+        row_data = fill_row_data(data_info, my_tensor_data, golden_tensor_data)
+        compared_result.append(row_data)
 
     return compared_result
 
@@ -70,12 +72,6 @@ def concat_tensor_data(tensor_data, multi_block_tensor_path_name,
             tensor_data = torch.cat((tensor_data, read_data(tensor_path)), dim)
 
     return tensor_data
-
-
-def compare_row_data(compared_result, golden_tensor_path, my_tensor_path, golden_tensor_data, my_tensor_data):
-    data_info = BasicDataInfo(golden_tensor_path, my_tensor_path, data_id=0)
-    row_data = fill_row_data(data_info, my_tensor_data, golden_tensor_data)
-    compared_result.append(row_data)
 
 
 
