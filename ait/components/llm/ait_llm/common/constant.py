@@ -91,13 +91,14 @@ def maybe_init_dist():
     try:
         rank = int(os.environ.get("LOCAL_RANK", "0"))
         world_size = int(os.environ.get("LOCAL_WORLD_SIZE", "1"))
-        
+
         if world_size < 2:
             return max_timestamp
     except KeyError:
         return max_timestamp
     
-    torch.distributed.init_process_group(backend=GLOBAL_DIST_BACKEND, rank=rank, world_size=world_size)
+    if not torch.distributed.is_initialized():
+        torch.distributed.init_process_group(backend=GLOBAL_DIST_BACKEND, rank=rank, world_size=world_size)
     torch.distributed.all_reduce(max_timestamp, op=torch.distributed.ReduceOp.MAX)
 
     return max_timestamp
