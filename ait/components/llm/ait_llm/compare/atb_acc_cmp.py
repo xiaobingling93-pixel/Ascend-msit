@@ -25,7 +25,6 @@ from ait_llm.compare.cmp_op_match import MatchLocation
 from ait_llm.compare.op_mapping import ATB_TORCH_BUILT_IN_OP_OUTPUT_MAPPING, ATB_TORCH_CUSTOM_OP_OUTPUT_MAPPING, \
     ATB_QUANT_FLOAT_NODE_MAPPING
 from ait_llm.dump.torch_dump.topo import ModelTree, TreeNode, TreeNode
-from ait_llm.compare.multi_block import multi_block_cmp
 
 
 def acc_compare(golden_path, my_path, output_path=".", mapping_file_path=".", cmp_level="layer"):
@@ -260,7 +259,7 @@ def get_paths(path_dir, split_pattern):
     return out_paths
 
 
-def pair_built_in_op(g_nodes, m_nodes, op_mapping, my_root_node:TreeNode, callback=None, atb_tensor_path, torch_tensor_path:TreeNode, callback=None):
+def pair_built_in_op(g_nodes, m_nodes, op_mapping, my_root_node:TreeNode, callback=None):
     compared_result = []
     for atb_op_type, torch_op_type in op_mapping.items():
         atb_nodes = [m_node for m_node in m_nodes if m_node.op_type == atb_op_type]

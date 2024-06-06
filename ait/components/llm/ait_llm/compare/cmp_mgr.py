@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import itertools
+import torch
+
 from ait_llm.common.log import logger
 from ait_llm.compare.cmp_op_match import OpMatchMgr
 from ait_llm.compare.cmp_data_parse import CompareDataParse, CompareDataTorch, CompareDataATB
 from ait_llm.compare.cmp_utils import BasicDataInfo, fill_row_data, save_compare_reault_to_csv
-from ait_llm.dump.torch_dump.topo import ModelTree, TreeNode
+from ait_llm.compare.multi_block import get_multi_tensor_paths, get_cat_dim
 
 
 class CompareMgr:
@@ -85,8 +87,24 @@ class CompareMgr:
             # 交叉比对，记录结果
             for golden_tensor_path, my_tensor_path in itertools.product(golden_tensor_paths, my_tensor_paths):
                 logger.debug("golden_path: %s; my_path:%s", str(golden_tensor_path), str(my_tensor_path))
-                data_info = BasicDataInfo(golden_tensor_path, my_tensor_path, data_id=0, token_id=golden_token_id)
-                row_data = fill_row_data(data_info)
+
+                # 1. get tensor_datas
+                _, my_tensor_datas = get_multi_tensor_paths(
+                    self.golden_data.get_token_path(), my_tensor_path, tensor_sub_dir=""
+                )
+                _, golden_tensor_datas = get_multi_tensor_paths(
+                    self.golden_data.get_token_path(), golden_tensor_path, tensor_sub_dir=""
+                )
+                # 2. concat tensor_datas
+                dim_atb = get_cat_dim(my_tensor_datas, golden_tensor_datas)
+                dim_torch = get_cat_dim(golden_tensor_datas, my_tensor_datas)
+                atb_tensor_data = my_tensor_datas[0] if dim_atb == -1 else torch.cat(my_tensor_datas, dim_atb)
+                torch_tensor_data = (
+                    golden_tensor_datas[0] if dim_torch == -1 else torch.cat(golden_tensor_datas, dim_torch)
+                )
+                # 3. compare tensor_datas
+                data_info = BasicDataInfo(golden_tensor_path, my_tensor_path, data_id=0)
+                row_data = fill_row_data(data_info, atb_tensor_data, torch_tensor_data)
                 self.compared_result.append(row_data)
 
     @classmethod

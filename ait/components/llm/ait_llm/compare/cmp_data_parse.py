@@ -44,6 +44,9 @@ class CompareDataParse(ABC):
     def get_tensor_path(self, token_id, node, location) -> tuple:
         return tuple()
 
+    def get_token_path(self) -> str:
+        return ""
+
 
 class DataUtils:
     @staticmethod
@@ -80,6 +83,7 @@ class CompareDataATB(CompareDataParse):
         self.token_ids = list(self._get_token_ids(self.tokens_path, self.token_id))
         logger.debug("atb token ids is %s", str(self.token_ids))
         self.encode_root_node, self.decode_root_node = self.parse(self.topo_files)
+        self.token_path = os.path.join(self.tokens_path, self.token_id)
 
     @classmethod
     def accept(cls, path: str, args) -> bool:
@@ -234,6 +238,9 @@ class CompareDataATB(CompareDataParse):
             else:
                 return tuple()
 
+    def get_token_path(self) -> str:
+        return self.token_path
+
     def parse(self, topo_files) -> None:
         topo_infos = []
         for topo_file in topo_files:
@@ -287,6 +294,7 @@ class CompareDataTorch(CompareDataParse):
         ]
         self.topo_file = self.get_topo_file_path(self.tokens_path)
         self.golden_root_node, self.golden_layer_type, self.golden_layer_nodes = self.parse()
+        self.token_path = os.path.join(self.tokens_path, self.token_id)
 
     @classmethod
     def accept(cls, path: str, args) -> bool:
@@ -363,6 +371,9 @@ class CompareDataTorch(CompareDataParse):
                 return (os.path.join(tensor_dir_path, location),)
             else:
                 return tuple()
+
+    def get_token_path(self) -> str:
+        return self.token_path
 
     def parse(self) -> None:
         golden_root_node = ModelTree.json_to_tree(self.topo_file, os.path.join(self.tokens_path, "{token_id}"))
