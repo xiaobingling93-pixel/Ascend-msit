@@ -145,7 +145,6 @@ enum InternalTensorId : int {{
 
 out_tensor_id_formatter = """
 enum OutTensorId : int {{
-    [TODO] maybe not needed
     OUT_TENSOR_HIDDENSTATES = 0,
     OUT_TENSOR_MAX,
 }};
@@ -376,7 +375,7 @@ build_graph_pre_process_formatter = """
         wordEmbeddingNode.operation.reset(op);
         wordEmbeddingNode.inTensors = {{&graph_.weightTensors.at(0),  // shape: [vocabSize + 1, hiddenSize]
             &graph_.inTensors.at(IN_TENSOR_INPUT)}};
-        wordEmbeddingNode.outTensors = {{&graph_.internalTensors.at(INTERNAL_HIDDENSTATES)}};
+        wordEmbeddingNode.outTensors = {{&graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES)}};
         ATB_LOG(INFO) << "[+] wordEmbeddingNode";
     }}
 
@@ -395,7 +394,7 @@ build_graph_pre_process_formatter = """
     }};
     ATB_LOG(INFO) << "[+] peGatherNode";
 
-    atb::Tensor *firstInTensor = param_.withEmbedding ? &graph_.internalTensors.at(INTERNAL_HIDDENSTATES)
+    atb::Tensor *firstInTensor = param_.withEmbedding ? &graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES)
                                                       : &graph_.inTensors.at(IN_TENSOR_INPUT);
 
 """
@@ -447,7 +446,7 @@ build_graph_layers_formatter = """
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_BLOCK_TABLES);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SLOTS);
 
-        layerNode.outTensors = {{&graph_.internalTensors.at(INTERNAL_HIDDENSTATES)}};
+        layerNode.outTensors = {{&graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES)}};
         ATB_LOG(INFO) << "[+] layerNode_" << layerId;
         firstInTensor = layerNode.outTensors.at(0);
     }}
@@ -466,7 +465,7 @@ build_graph_post_process_norm_formatter = """
     finalNormNode.inTensors = {{firstInTensor, &graph_.weightTensors.at(finalLayerNormWeightTensorId)}};
     finalNormNode.outTensors = {{
         // shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
-        &graph_.internalTensors.at(INTERNAL_HIDDENSTATES)
+        &graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES)
     }};
     ATB_LOG(INFO) << "[+] finalNormNode";
 
@@ -491,7 +490,7 @@ build_graph_post_process_lmhead_formatter = """
     lmHeadNode.operation.reset(op);
     const int finalLinearWeightTensorId = graph_.weightTensors.size() - WEIGHT_COUNT_LM_HEAD;
     lmHeadNode.inTensors = {{
-        &graph_.internalTensors.at(INTERNAL_HIDDENSTATES),
+        &graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES),
         // shape: [vocabSizePerRank, hiddenSize]
         &graph_.weightTensors.at(finalLinearWeightTensorId),
         // LmHead not quantized, using placeholder for weights
