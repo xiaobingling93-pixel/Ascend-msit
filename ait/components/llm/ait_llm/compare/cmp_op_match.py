@@ -56,20 +56,29 @@ class OpMatchMap:
         返回一个自己数据的算子列表与标杆数据的算子匹配的字典
         '''
         if enable_print:
+            max_length = 0
+            for map_info in self.map.keys():
+                my_op, my_op_location, golden_op, golden_op_location = map_info
+                max_length = max(len(f"[{my_op.node_name}##{my_op_location}]"), max_length)
+
+            format_str = f"mapping score: %-{max_length}s   <- %s ->   %s "
             for map_info, score in self.map.items():
                 my_op, my_op_location, golden_op, golden_op_location = map_info
                 logger.debug(
-                    "mapping score: %-60s <- %s ->   %s ",
+                    format_str,
                     f"[{my_op.node_name}##{my_op_location}]",
                     str(score),
                     f"[{golden_op.node_name}##{golden_op_location}]",
                 )
 
-        return (
+        ret_map = [
             map_info
             for map_info in self.map.keys()
             if self.map.get(map_info, MatchScore.NO_MATCH_INFO) >= MatchScore.FULL_MATCH.value
-        )
+        ]
+
+        ret_map.sort(key=lambda item: item[0].tensor_path.split('_'))  # 根据my_op 的 tensor_path 进行排序
+        return ret_map
 
 
 def policy_output(golden_root_node: TreeNode, my_root_node: TreeNode, match_map: OpMatchMap):

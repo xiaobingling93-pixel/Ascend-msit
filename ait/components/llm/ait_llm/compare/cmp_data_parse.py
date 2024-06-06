@@ -153,7 +153,7 @@ class CompareDataATB(CompareDataParse):
     def get_topo_file_path(cls, ait_dump_path, pid=None):
         model_path = cls.get_model_path(ait_dump_path)
         if pid is None:
-            if os.path.exists(model_path):
+            if not os.path.exists(model_path):
                 return None
             pid_path_names = os.listdir(model_path)
             if len(pid_path_names) == 0:
