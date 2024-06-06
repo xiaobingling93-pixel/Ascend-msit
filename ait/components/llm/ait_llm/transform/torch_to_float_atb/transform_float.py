@@ -17,6 +17,8 @@ from ait_llm.common.log import logger
 def transform_float(source_path, save_name=None, save_dir=None):
     from ait_llm.transform import torch_to_float_atb
 
+    logger.info("Building model using transformers...")
+
     try:
         from transformers import AutoConfig, AutoModelForCausalLM
     except ModuleNotFoundError as error:
@@ -28,6 +30,7 @@ def transform_float(source_path, save_name=None, save_dir=None):
     except Exception as error:
         raise ValueError(f"build model from {source_path} failed, make sure it works within transformers") from error
 
+    logger.info("Transforming to atb")
     model_cpp_file, _ = torch_to_float_atb.float_model_cpp_gen(source_model, save_name=save_name, save_dir=save_dir)
     model_h_file, _ = torch_to_float_atb.float_model_h_gen(source_model, save_name=save_name, save_dir=save_dir)
     layer_cpp_file, _ = torch_to_float_atb.float_layer_cpp_gen(source_model, save_name=save_name, save_dir=save_dir)
