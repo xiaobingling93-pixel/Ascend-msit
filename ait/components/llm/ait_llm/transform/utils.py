@@ -24,7 +24,7 @@ def get_transform_scenario(source_path):
         return SCENARIOS.float_atb_to_quant_atb
 
     cur_items = os.listdir(source_path)
-    if "config.json" in cur_items and any([ii.endswith(".py") for ii in cur_items]):
+    if "config.json" in cur_items and "tokenizer_config.json" in cur_items:
         return SCENARIOS.torch_to_float_atb
     elif any([ii.endswith(".cpp") for ii in cur_items]):
         return SCENARIOS.float_atb_to_quant_atb

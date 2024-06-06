@@ -80,7 +80,7 @@ def build_model_tree(module: nn.Module):
     if not isinstance(module, nn.Module):
         raise ValueError("input should be torch.nn.Module")
 
-    def dfs(ret: list[dict], cur: nn.Module):
+    def dfs(ret, cur):
         if isinstance(cur, nn.ModuleList):
             repeat_count, layer = find_duplicate(cur)
             repeat_block = process_layer(layer)
