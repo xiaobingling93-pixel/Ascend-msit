@@ -19,11 +19,11 @@ def multi_block_cmp(atb_nodes, torch_nodes, my_root_node, atb_tensor_path, torch
         atb_node_tensor_path = atb_node.tensor_path
         torch_node_tensor_path = torch_node.tensor_path
         atb_multi_block_tensor_path_name = os.path.basename(os.path.abspath(os.path.join(atb_tensor_path, "../")))
-        atb_multi_block_tensor_path = os.path.abspath(os.path.join(atb_tensor_path, "../", "../"))
+        atb_multi_block_tensor_path = os.path.abspath(os.path.join(atb_tensor_path, "..", ".."))
         atb_multi_block_tensor_paths = os.listdir(atb_multi_block_tensor_path)
         torch_multi_block_tensor_path_name = os.path.basename(
             os.path.abspath(os.path.join(torch_tensor_path, "../")))
-        torch_multi_block_tensor_path = os.path.abspath(os.path.join(torch_node_tensor_path, "../", "../"))
+        torch_multi_block_tensor_path = os.path.abspath(os.path.join(torch_node_tensor_path, "..", ".."))
         torch_multi_block_tensor_paths = os.listdir(torch_multi_block_tensor_path)
         my_tensor_path = os.path.abspath(os.path.join(atb_node_tensor_path, "after", "outtensor0.bin"))
         golden_tensor_path = os.path.abspath(os.path.join(torch_node_tensor_path, "output.pth"))
