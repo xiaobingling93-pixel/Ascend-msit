@@ -22,11 +22,11 @@ def float_model_h_gen(model, save_name=None, save_dir=None):
     rr = ""
     rr += float_model_h_templates.copyright_header.format(year=time.localtime().tm_year)
     rr += float_model_h_templates.include_header_formater.format(
-        model_name_lower=model_name_lower,
         model_name_upper=model_name_lower.upper(),
     )
 
     rr += float_model_h_templates.basic_class_formatter.format(
+        model_name_lower=model_name_lower,
         struct_param_formatter=float_model_h_templates.struct_param_formatter,
     )
 
