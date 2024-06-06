@@ -1,4 +1,4 @@
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -80,7 +80,7 @@ def build_model_tree(module: nn.Module):
     if not isinstance(module, nn.Module):
         raise ValueError("input should be torch.nn.Module")
 
-    def dfs(ret: list[dict], cur: nn.Module):
+    def dfs(ret, cur):
         if isinstance(cur, nn.ModuleList):
             repeat_count, layer = find_duplicate(cur)
             repeat_block = process_layer(layer)
@@ -97,13 +97,11 @@ def build_model_tree(module: nn.Module):
         else:
             ret.append(convert(cur))
 
-    root = []
-
-    dfs(root, module)
-
-    return root
+    children = []
+    dfs(children, module)
+    return {"name": mname(module), "children": children}
 
 
 def model_to_json(model: nn.Module, name: str):
-    with open(f"{name}.json", "w") as o:
-        dump(build_model_tree(model), o)
+    with open(f"{name}.json", "w") as ff:
+        dump(build_model_tree(model), ff)
