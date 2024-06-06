@@ -20,10 +20,11 @@ import re
 from tqdm import tqdm
 from ait_llm.common.log import logger
 from ait_llm.compare.cmp_utils import BasicDataInfo, fill_row_data, save_compare_reault_to_csv, compare_data, read_data
+from ait_llm.compare.cmp_op_match import MatchLocation
+from ait_llm.compare.cmp_op_match import MatchLocation
 from ait_llm.compare.op_mapping import ATB_TORCH_BUILT_IN_OP_OUTPUT_MAPPING, ATB_TORCH_CUSTOM_OP_OUTPUT_MAPPING, \
     ATB_QUANT_FLOAT_NODE_MAPPING
-from ait_llm.dump.torch_dump.topo import ModelTree
-from ait_llm.compare.multi_block import multi_block_cmp
+from ait_llm.dump.torch_dump.topo import ModelTree, TreeNode, TreeNode
 
 
 def acc_compare(golden_path, my_path, output_path=".", mapping_file_path=".", cmp_level="layer"):
@@ -39,18 +40,21 @@ def acc_compare(golden_path, my_path, output_path=".", mapping_file_path=".", cm
         elif os.path.exists(torch_model_topo_file):
             # 存在torch_model_topo_file路径，走torch模型和加速库模型比对逻辑
             logger.info("Automatic mapping comparison starts! Comparing torch tensors and ATB tensors...")
-            cmp_torch_atb(torch_model_topo_file, (golden_path, my_path, output_path), mapping_file_path, cmp_level)
+            # 不再调用： cmp_torch_atb(torch_model_topo_file, (golden_path, my_path, output_path), mapping_file_path, cmp_level)
+            return False
         elif golden_topo_flag and my_topo_flag:
             # 存在ATB模型的拓扑信息，走加速库模型间的比对逻辑
             compare_atb_metadata_auto(golden_path, my_path, golden_topo_json_path, my_topo_json_path, output_path)
         else:
             logger.warn("Unsupported comparison type, please refer to README")
-
+            return False
     elif os.path.isfile(golden_path) and os.path.isfile(my_path):
         res = compare_file(golden_path, my_path)
         logger.info("Compared results: %s", res)
     else:
         logger.error("The golden_path and my_path must both be directory or file.")
+        return False
+    return True
 
 
 def is_model_topo_exist(golden_path, cmp_level="layer"):
@@ -255,7 +259,7 @@ def get_paths(path_dir, split_pattern):
     return out_paths
 
 
-def pair_built_in_op(g_nodes, m_nodes, op_mapping, my_root_node, atb_tensor_path, torch_tensor_path):
+def pair_built_in_op(g_nodes, m_nodes, op_mapping, my_root_node:TreeNode, callback=None):
     compared_result = []
     for atb_op_type, torch_op_type in op_mapping.items():
         atb_nodes = [m_node for m_node in m_nodes if m_node.op_type == atb_op_type]
@@ -264,13 +268,33 @@ def pair_built_in_op(g_nodes, m_nodes, op_mapping, my_root_node, atb_tensor_path
             msg = f"The number of {atb_op_type} node in atb is not equal to {torch_op_type} node in torch"
             logger.debug(msg)
             continue
-
-        compared_result = multi_block_cmp(atb_nodes, torch_nodes, my_root_node, atb_tensor_path, torch_tensor_path)
-
+        for atb_node, torch_node in zip(atb_nodes, torch_nodes):
+            if atb_node.op_type == "LinearOperation" and not atb_node.op_param.get("hasBias"):
+                next_sibling_node = my_root_node.get_next_sibling_node(atb_node)
+                # 当有些算子如ParallelLinearBaseV2，是将w*x+b的操作拆分成两个算子，linear+add，而torch中使用一个算子Linear实现，
+                # 因此add node的输出映射的是torch中Linear的输出
+                if next_sibling_node and next_sibling_node.op_type == "ElewiseOperation" \
+                        and next_sibling_node.op_param.get('elewiseType') == 8:
+                    atb_node = next_sibling_node
+            if callback is not None:
+                callback(torch_node, 'output.pth', atb_node, 'outtensor0.bin')
+                continue
+            if callback is not None:
+                callback(torch_node, 'output.pth', atb_node, 'outtensor0.bin')
+                continue
+            my_tensor_path = os.path.join(atb_node.tensor_path, "after", "outtensor0.bin")
+            golden_tensor_path = os.path.join(torch_node.tensor_path, "output.pth")
+            if os.path.exists(golden_tensor_path) and os.path.exists(my_tensor_path):
+                data_info = BasicDataInfo(golden_tensor_path, my_tensor_path, data_id=0)
+                row_data = fill_row_data(data_info)
+                compared_result.append(row_data)
+            else:
+                msg = f"golden tensor path: {golden_tensor_path} or my_tensor_path: {my_tensor_path} is not exist."
+                logger.debug(msg)
     return compared_result
 
 
-def pair_custom_op(g_nodes, m_nodes, op_mapping):
+def pair_custom_op(g_nodes, m_nodes, op_mapping, callback=None):
     compared_result = []
 
     op_mapping_flat = []
@@ -280,12 +304,16 @@ def pair_custom_op(g_nodes, m_nodes, op_mapping):
     for atb_op_type, torch_op_type in op_mapping_flat:
         if '_' in atb_op_type:
             atb_op_type, atb_output = atb_op_type.split('_', 1)[0], atb_op_type.split('_', 1)[1]
+            collect_atb_output = f"{atb_output}.bin"
         else:
             atb_output = "outtensor0"
+            collect_atb_output = MatchLocation.ALL_OUTPUT
         if '_' in torch_op_type:
             torch_op_type, torch_output = torch_op_type.split('_', 1)[0], torch_op_type.split('_', 1)[1]
+            collect_torch_output = f"{torch_output}.pth"
         else:
             torch_output = "outtensor0"
+            collect_torch_output = MatchLocation.ALL_OUTPUT
         atb_nodes = [m_node for m_node in m_nodes if atb_op_type in m_node.op_type]
         torch_nodes = [g_node for g_node in g_nodes if torch_op_type in g_node.op_type]
         if len(atb_nodes) != len(torch_nodes):
@@ -293,6 +321,9 @@ def pair_custom_op(g_nodes, m_nodes, op_mapping):
             logger.debug(msg)
             continue
         for atb_node, torch_node in zip(atb_nodes, torch_nodes):
+            if callback is not None:
+                callback(torch_node, collect_torch_output, atb_node, collect_atb_output)
+                continue
             my_tensor_path = os.path.join(atb_node.tensor_path, "after", f"{atb_output}.bin")
             golden_tensor_path = os.path.join(torch_node.tensor_path, f"{torch_output}.pth")
             if os.path.exists(golden_tensor_path) and os.path.exists(my_tensor_path):

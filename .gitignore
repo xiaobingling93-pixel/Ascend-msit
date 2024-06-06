@@ -6,6 +6,7 @@
 .idea
 *.onnx
 *.npy
+*.csv
 **/app_analyze/headers
 **/build
 **/*.egg-info

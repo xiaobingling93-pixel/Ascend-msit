@@ -231,9 +231,13 @@ class CompareCommand(BaseCommand):
             acc_compare(args.golden_path, args.my_path, args.output, torchair_ge_graph_path)
         else:
             from ait_llm.compare.atb_acc_cmp import acc_compare
-
-            acc_compare(os.path.abspath(args.golden_path), os.path.abspath(args.my_path),
+            from ait_llm.compare.cmp_mgr import CompareMgr
+            comared = acc_compare(os.path.abspath(args.golden_path), os.path.abspath(args.my_path),
                         args.output, args.mapping_file, args.cmp_level)
+            if not comared:
+                cmpMgr = CompareMgr(os.path.abspath(args.golden_path), os.path.abspath(args.my_path), args)
+                if cmpMgr.is_parsed_cmp_path():
+                    cmpMgr.compare(args.output)
 
 
 class OpcheckCommand(BaseCommand):
