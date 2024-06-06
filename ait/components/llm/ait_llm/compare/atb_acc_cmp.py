@@ -20,6 +20,7 @@ import json
 from ait_llm.compare.cmp_utils import compare_data, read_data
 from ait_llm.common.log import logger
 from ait_llm.compare.cmp_utils import BasicDataInfo, fill_row_data, save_compare_reault_to_csv
+from ait_llm.compare.cmp_op_match import MatchLocation
 from ait_llm.compare.op_mapping import ATB_TORCH_BUILT_IN_OP_OUTPUT_MAPPING, ATB_TORCH_CUSTOM_OP_OUTPUT_MAPPING, \
     ATB_QUANT_FLOAT_NODE_MAPPING
 from ait_llm.dump.torch_dump.topo import ModelTree, TreeNode
@@ -40,18 +41,21 @@ def acc_compare(golden_path, my_path, output_path=".", mapping_file_path=".", cm
         elif os.path.exists(torch_model_topo_file):
             # 存在torch_model_topo_file路径，走torch模型和加速库模型比对逻辑
             logger.info("Automatic mapping comparison starts! Comparing torch tensors and ATB tensors...")
-            cmp_torch_atb(torch_model_topo_file, (golden_path, my_path, output_path), mapping_file_path, cmp_level)
+            # 不再调用： cmp_torch_atb(torch_model_topo_file, (golden_path, my_path, output_path), mapping_file_path, cmp_level)
+            return False
         elif golden_topo_flag and my_topo_flag:
             # 存在ATB模型的拓扑信息，走加速库模型间的比对逻辑
             compare_atb_metadata_auto(golden_path, my_path, golden_topo_json_path, my_topo_json_path, output_path)
         else:
             logger.warn("Unsupported comparison type, please refer to README")
-
+            return False
     elif os.path.isfile(golden_path) and os.path.isfile(my_path):
         res = compare_file(golden_path, my_path)
         logger.info("Compared results: %s", res)
     else:
         logger.error("The golden_path and my_path must both be directory or file.")
+        return False
+    return True
 
 
 def is_model_topo_exist(golden_path, cmp_level="layer"):
@@ -299,12 +303,16 @@ def pair_custom_op(g_nodes, m_nodes, op_mapping, callback=None):
     for atb_op_type, torch_op_type in op_mapping_flat:
         if '_' in atb_op_type:
             atb_op_type, atb_output = atb_op_type.split('_', 1)[0], atb_op_type.split('_', 1)[1]
+            collect_atb_output = f"{atb_output}.bin"
         else:
             atb_output = "outtensor0"
+            collect_atb_output = MatchLocation.ALL_OUTPUT
         if '_' in torch_op_type:
             torch_op_type, torch_output = torch_op_type.split('_', 1)[0], torch_op_type.split('_', 1)[1]
+            collect_torch_output = f"{torch_output}.pth"
         else:
             torch_output = "outtensor0"
+            collect_torch_output = MatchLocation.ALL_OUTPUT
         atb_nodes = [m_node for m_node in m_nodes if atb_op_type in m_node.op_type]
         torch_nodes = [g_node for g_node in g_nodes if torch_op_type in g_node.op_type]
         if len(atb_nodes) != len(torch_nodes):
@@ -313,7 +321,7 @@ def pair_custom_op(g_nodes, m_nodes, op_mapping, callback=None):
             continue
         for atb_node, torch_node in zip(atb_nodes, torch_nodes):
             if callback is not None:
-                callback(torch_node, f"{torch_output}.pth", atb_node, f"{atb_output}.bin")
+                callback(torch_node, collect_torch_output, atb_node, collect_atb_output)
                 continue
             my_tensor_path = os.path.join(atb_node.tensor_path, "after", f"{atb_output}.bin")
             golden_tensor_path = os.path.join(torch_node.tensor_path, f"{torch_output}.pth")

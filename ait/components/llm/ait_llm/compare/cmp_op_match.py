@@ -15,7 +15,6 @@
 from enum import Enum
 from typing import Any
 from ait_llm.common.log import logger
-from ait_llm.compare.atb_acc_cmp import load_mapping, pair_built_in_op, pair_custom_op, load_mapping
 from ait_llm.dump.torch_dump.topo import ModelTree, TreeNode
 
 
@@ -147,9 +146,11 @@ class OpMatchMgr:
 
 class OpMatchPolicyMapCount:
     def __init__(self, args) -> None:
+        from ait_llm.compare.atb_acc_cmp import load_mapping
         self.mapping_dic = load_mapping(args.mapping_file)
 
     def __call__(self, golden_root_node: TreeNode, my_root_node: TreeNode, match_map: OpMatchMap) -> None:
+        from ait_llm.compare.atb_acc_cmp import pair_built_in_op, pair_custom_op
         golden_layer_type = golden_root_node.get_layer_node_type()
         logger.info("golden_layer_type: %s", golden_layer_type)
         golden_layer_nodes = golden_root_node.get_layer_node(golden_layer_type)
