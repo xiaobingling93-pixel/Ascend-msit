@@ -105,13 +105,8 @@ def get_ait_dump_path():
 
     if GLOBAL_AIT_DUMP_PATH == "ait_dump":
         local_rank = maybe_init_dist()
-        if local_rank == -1:
-            GLOBAL_AIT_DUMP_PATH = "ait_dump_" + set_timestamp()
-        elif local_rank == 0:
+        if local_rank != -1:
             torch.distributed.barrier()
-            GLOBAL_AIT_DUMP_PATH = "ait_dump_" + set_timestamp()
-        else:
-            torch.distributed.barrier()
-            GLOBAL_AIT_DUMP_PATH = "ait_dump_" + os.environ.get(ATB_TIMESTAMP, set_timestamp())
+        GLOBAL_AIT_DUMP_PATH = "ait_dump_" + set_timestamp()
 
     return GLOBAL_AIT_DUMP_PATH
