@@ -31,8 +31,8 @@ def float_layer_h_gen(model, save_name=None, save_dir=None):
 
     rr += float_layer_h_templates.basic_class_formatter.format(
         model_name_lower=model_name_lower,
-        struct_param_formatter=float_layer_h_templates.struct_param_formatter,
-        decoder_layer_tensor_id_formatter=float_layer_h_templates.decoder_layer_tensor_id_formatter
+        struct_param_formatter=float_layer_h_templates.struct_param_formatter.format(),
+        decoder_layer_tensor_id_formatter=float_layer_h_templates.decoder_layer_tensor_id_formatter.format()
     )
 
     save_name = utils.init_save_name(save_name) + ".h"

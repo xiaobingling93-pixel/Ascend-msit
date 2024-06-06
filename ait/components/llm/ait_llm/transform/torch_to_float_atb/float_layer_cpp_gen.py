@@ -29,15 +29,15 @@ def float_layer_cpp_gen(model, save_name=None, save_dir=None):
     rr += f'''\n#include "models/{model_name_lower}/layer/decoder_layer.h"'''
 
     layer_core_components = float_layer_cpp_templates.decoder_layer_formatter.format(
-        attention_formatter=float_layer_cpp_templates.attention_formatter,
-        residual_add_formatter=float_layer_cpp_templates.residual_add_formatter,
-        mlp_formatter=float_layer_cpp_templates.mlp_formatter,
-        mlp_residual_add_formatter=float_layer_cpp_templates.mlp_residual_add_formatter
+        attention_formatter=float_layer_cpp_templates.attention_formatter.format(),
+        residual_add_formatter=float_layer_cpp_templates.residual_add_formatter.format(),
+        mlp_formatter=float_layer_cpp_templates.mlp_formatter.format(),
+        mlp_residual_add_formatter=float_layer_cpp_templates.mlp_residual_add_formatter.format()
     )
 
     post_properties = "\n".join([
-        float_layer_cpp_templates.parse_param_formatter,
-        float_layer_cpp_templates.bind_param_host_tensor_formatter,
+        float_layer_cpp_templates.parse_param_formatter.format(),
+        float_layer_cpp_templates.bind_param_host_tensor_formatter.format(),
     ])
 
     rr += float_layer_cpp_templates.basic_class_formatter.format(
