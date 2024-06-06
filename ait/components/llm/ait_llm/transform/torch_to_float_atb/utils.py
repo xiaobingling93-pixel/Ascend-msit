@@ -15,13 +15,8 @@
 import os
 
 
-DEFAULT_SAVE_NAME = "decoder_model"
-
-
-def init_save_name(save_name=None):
-    if save_name is None:
-        save_name = DEFAULT_SAVE_NAME
-    elif os.path.splitext(save_name)[-1] in [".c", ".cpp", ".h", ".hpp"]:
+def init_save_name(save_name):
+    if os.path.splitext(save_name)[-1] in [".c", ".cpp", ".h", ".hpp"]:
         save_name = os.path.splitext(save_name)[0]
     return os.path.basename(save_name)
 

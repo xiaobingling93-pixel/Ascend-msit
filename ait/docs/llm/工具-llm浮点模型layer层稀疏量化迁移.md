@@ -1,12 +1,42 @@
-# llm 浮点模型 layer 层稀疏量化迁移
-- 由 llm 的浮点模型 layer 层代码，迁移生成稀疏量化 layer 层代码，包括 cpp 文件与 h 文件
+# LLM 迁移分析
+## PyTorch transformers LLM 模型迁移生成 atb 浮点模型
+- 由 PyTorch transformers LLM 模型迁移生成 atb 浮点模型，包括 model、layer 层代码，以及相应的 cpp 与 h 文件
+
+### 准备
+- 安装 ait
+- 获取 [Gitee ascend/MindIE-LLM](https://gitee.com/ascend/MindIE-LLM) 源码
+
+### QWEN 13B 迁移示例
+- 迁移生成 atb 模型代码
+  ```sh
+  ait llm transform -s /data/qwen-14b-chat
+  # Generated files: [
+  #     qwenlmheadmodel/model/decoder_model.cpp,
+  #     qwenlmheadmodel/model/decoder_model.h,
+  #     qwenlmheadmodel/layer/decoder_model.cpp,
+  #     qwenlmheadmodel/layer/decoder_model.h,
+  # ]
+  ```
+- 将生成的代码放到 `MindIE-LLM` 模型目录下
+  ```sh
+  mv qwenlmheadmodel ~/MindIE-LLM/examples/atb_models/models
+  ```
+- 重新编译 `MindIE-LLM`
+  ```sh
+  cd ~/MindIE-LLM/examples/atb_models
+  bash scripts/build.sh
+  ```
+  由于迁移的适配性问题，以及 `MindIE-LLM` 迭代更新，编译过程可能存在报错，仍依赖用户手动修复错误
 ***
 
-## 准备
-- 安装 ait
-- 获取 ModelLink 加速库 mindie 源码，找到待迁移模型 layer 定义
+## llm 浮点模型 layer 层稀疏量化迁移
+- 由 llm 的浮点模型 layer 层代码，迁移生成稀疏量化 layer 层代码，包括 cpp 文件与 h 文件
 
-## Baichuan2 7B 迁移示例
+### 准备
+- 安装 ait
+- 获取 [Gitee ascend/MindIE-LLM](https://gitee.com/ascend/MindIE-LLM) 源码，找到待迁移模型 layer 定义
+
+### Baichuan2 7B 迁移示例
 - 模型 layer 定义位置
   ```sh
   cd ModelLink/mindie_ref/mindie_llm/atb_models/models/baichuan2/7b  # layer 定义位置
