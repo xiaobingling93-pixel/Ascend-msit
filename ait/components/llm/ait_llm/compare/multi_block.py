@@ -15,65 +15,54 @@ def multi_block_cmp(atb_nodes, torch_nodes, my_root_node, atb_tensor_path, torch
             if next_sibling_node and next_sibling_node.op_type == "ElewiseOperation" \
                     and next_sibling_node.op_param.get('elewiseType') == 8:
                 atb_node = next_sibling_node
+        # 1. get tensor_datas
         atb_node_tensor_path = atb_node.tensor_path
         torch_node_tensor_path = torch_node.tensor_path
-        atb_multi_block_tensor_path_name = os.path.basename(os.path.abspath(os.path.join(atb_tensor_path, "..")))
-        atb_multi_block_tensor_path = os.path.abspath(os.path.join(atb_tensor_path, "..", ".."))
-        atb_multi_block_tensor_paths = os.listdir(atb_multi_block_tensor_path)
-        torch_multi_block_tensor_path_name = os.path.basename(
-            os.path.abspath(os.path.join(torch_tensor_path, "..")))
-        torch_multi_block_tensor_path = os.path.abspath(os.path.join(torch_node_tensor_path, "..", ".."))
-        torch_multi_block_tensor_paths = os.listdir(torch_multi_block_tensor_path)
-        my_tensor_path = os.path.abspath(os.path.join(atb_node_tensor_path, "after", "outtensor0.bin"))
-        golden_tensor_path = os.path.abspath(os.path.join(torch_node_tensor_path, "output.pth"))
-        if not os.path.exists(my_tensor_path) or not os.path.exists(golden_tensor_path):
-            msg = f"golden tensor path: {golden_tensor_path} or my_tensor_path: {my_tensor_path} is not exist."
-            logger.debug(msg)
-            continue
-        # 1. load torch_data and atb_data
-        my_tensor_data = read_data(my_tensor_path)
-        golden_tensor_data = read_data(golden_tensor_path)
-        # 2. concat multiples block tensor
-        dim_atb = get_cat_dim(torch_multi_block_tensor_paths, atb_multi_block_tensor_paths, my_tensor_data,
-                              golden_tensor_data)
-        my_tensor_data = concat_tensor_data(my_tensor_data, atb_multi_block_tensor_path_name,
-                                            atb_multi_block_tensor_paths, my_tensor_path, dim_atb)
-        dim_torch = get_cat_dim(atb_multi_block_tensor_paths, torch_multi_block_tensor_paths, golden_tensor_data,
-                                my_tensor_data)
-        golden_tensor_data = concat_tensor_data(golden_tensor_data, torch_multi_block_tensor_path_name,
-                                                torch_multi_block_tensor_paths, golden_tensor_path, dim_torch)
-        # 3. compare tensor
-        data_info = BasicDataInfo(golden_tensor_path, my_tensor_path, data_id=0)
-        row_data = fill_row_data(data_info, my_tensor_data, golden_tensor_data)
+        atb_node_tensor_path, atb_tensor_datas = get_multi_tensor_paths(atb_tensor_path, atb_node_tensor_path,
+                                                                        tensor_sub_dir=os.path.join("after",
+                                                                                                    "outtensor0.bin"))
+        torch_node_tensor_path, torch_tensor_datas = get_multi_tensor_paths(torch_tensor_path, torch_node_tensor_path,
+                                                                            tensor_sub_dir=os.path.join("output.pth"))
+        # 2. concat tensor_datas
+        dim_atb = get_cat_dim(atb_tensor_datas, torch_tensor_datas)
+        dim_torch = get_cat_dim(torch_tensor_datas, atb_tensor_datas)
+        atb_tensor_data = atb_tensor_datas[0]
+        torch_tensor_data = torch_tensor_datas[0]
+        if dim_atb != -1:
+            atb_tensor_data = torch.stack(atb_tensor_datas, dim_atb)
+        if dim_torch != -1:
+            torch_tensor_data = torch.stack(torch_tensor_datas, dim_torch)
+        # 3. compare tensor_datas
+        data_info = BasicDataInfo(torch_node_tensor_path, atb_node_tensor_path, data_id=0)
+        row_data = fill_row_data(data_info, atb_tensor_data, torch_tensor_data)
         compared_result.append(row_data)
 
     return compared_result
 
 
-def get_cat_dim(atb_multi_block_tensor_paths, torch_multi_block_tensor_paths, golden_tensor_data, my_tensor_data):
-    for dim, (golden_size, my_size) in enumerate(zip(golden_tensor_data.shape, my_tensor_data.shape)):
-        multi_golden_size = golden_size * len(torch_multi_block_tensor_paths)
-        multi_my_size = my_size * len(atb_multi_block_tensor_paths)
-        if multi_golden_size == multi_my_size and golden_size != my_size:
+def get_multi_tensor_paths(data_path, node_path, tensor_sub_dir):
+    tensor_device_name = os.path.basename(os.path.abspath(os.path.join(data_path, "..")))  # 0_npu_pid, 1_npu_pid
+    device_tensor_paths = os.listdir(os.path.join(data_path, "..", ".."))
+    cur_tensor_path = os.path.abspath(os.path.join(node_path, tensor_sub_dir))
+    if not os.path.exists(cur_tensor_path):
+        msg = f"golden tensor path: {cur_tensor_path} is not exist."
+        logger.debug(msg)
+        return None, None
+    device_tensor_paths = [cur_tensor_path.replace(tensor_device_name, ii) for ii in device_tensor_paths]
+    tensor_datas = []
+    for tensor_path in device_tensor_paths:
+        if os.path.exists(tensor_path):
+            tensor_datas.append(read_data(tensor_path))
+    return cur_tensor_path, tensor_datas
+
+
+def get_cat_dim(atb_tensor_datas, torch_tensor_datas):
+    for dim, (atb_tensor_size, torch_tensor_size) in enumerate(
+            zip(atb_tensor_datas[0].shape, torch_tensor_datas[0].shape)):
+        multi_torch_size = torch_tensor_size * len(torch_tensor_datas)
+        multi_atb_size = atb_tensor_size * len(atb_tensor_datas)
+        if multi_torch_size == multi_atb_size and torch_tensor_size != atb_tensor_size:
             return dim
-        if multi_golden_size == my_size:
+        if multi_torch_size == atb_tensor_size:
             return dim
     return -1
-
-
-def concat_tensor_data(tensor_data, multi_block_tensor_path_name,
-                       multi_block_tensor_paths, tensor_path, dim):
-    for tensor_path_name in multi_block_tensor_paths:
-        if tensor_path_name != multi_block_tensor_path_name:
-            tensor_path = tensor_path.replace(multi_block_tensor_path_name, tensor_path_name)
-            if dim == -1 or not os.path.exists(tensor_path):
-                continue
-            tensor_data = torch.cat((tensor_data, read_data(tensor_path)), dim)
-
-    return tensor_data
-
-
-
-
-
-
