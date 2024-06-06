@@ -20,7 +20,11 @@ from ait_llm.compare.cmp_algorithm import CMP_ALG_MAP
 GLOBAL_AIT_DUMP_PATH = "ait_dump"
 GLOBAL_DEVICE = "cuda" if torch.cuda.is_available() and int(
     os.environ.get("CUDA_VISIBLE_DEVICES", "0").split(",")[0]) >=0 else "cpu"
-GLOBAL_DIST_BACKEND = "nccl" if GLOBAL_DEVICE == "cuda" else "gloo"
+DEVICE_DIST_MAP = {
+    "cuda": "nccl",
+    "npu": "hccl"
+}
+GLOBAL_DIST_BACKEND = DEVICE_DIST_MAP.get(GLOBAL_DEVICE, "gloo")
 
 ATB_HOME_PATH = "ATB_HOME_PATH"
 ATB_CUR_PID = "ATB_CUR_PID"
@@ -83,20 +87,23 @@ CSV_GOLDEN_HEADER.extend(list(CMP_ALG_MAP.keys()))
 CSV_GOLDEN_HEADER.append(CMP_FAIL_REASON)
 
 def maybe_init_dist():
+    max_timestamp = torch.tensor(int(datetime.datetime.now().strftime("%s")))
     try:
         rank = int(os.environ.get("LOCAL_RANK", "0"))
         world_size = int(os.environ.get("LOCAL_WORLD_SIZE", "1"))
-
+        
         if world_size < 2:
-            return -1
+            return max_timestamp
     except KeyError:
-        return -1
+        return max_timestamp
     
     torch.distributed.init_process_group(backend=GLOBAL_DIST_BACKEND, rank=rank, world_size=world_size)
-    return rank
+    torch.distributed.all_reduce(max_timestamp, op=torch.distributed.ReduceOp.MAX)
 
-def set_timestamp():
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    return max_timestamp
+
+def set_timestamp(max_timestamp):
+    timestamp = datetime.datetime.fromtimestamp(int(max_timestamp)).strftime("%Y%m%d_%H%M%S")
     os.environ[ATB_TIMESTAMP] = timestamp
     return timestamp
 
@@ -104,9 +111,7 @@ def get_ait_dump_path():
     global GLOBAL_AIT_DUMP_PATH
 
     if GLOBAL_AIT_DUMP_PATH == "ait_dump":
-        local_rank = maybe_init_dist()
-        if local_rank != -1:
-            torch.distributed.barrier()
-        GLOBAL_AIT_DUMP_PATH = "ait_dump_" + set_timestamp()
+        max_timestamp = maybe_init_dist()
+        GLOBAL_AIT_DUMP_PATH = "ait_dump_" + set_timestamp(max_timestamp)
 
     return GLOBAL_AIT_DUMP_PATH
