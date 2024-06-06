@@ -234,8 +234,7 @@ void DecoderModel::Param::FromString(const std::string &param)
                   << ", numHiddenLayers:" << numHiddenLayers
                   << ", numKeyValueHeadsPerRank:" << numKeyValueHeadsPerRank
                   << ", supportLcoc:" << supportLcoc << ", rank:" << rank << ", worldSize:" << worldSize
-                  << ", backend:" << backend << ", weightQuantType:" << weightQuantType
-                  << ", tokenOffset:" << tokenOffset << ", seqLen:" << seqLen;
+                  << ", backend:" << backend << ", tokenOffset:" << tokenOffset << ", seqLen:" << seqLen;
 }}
 """
 
