@@ -35,7 +35,7 @@ def float_layer_h_gen(model, save_name=None, save_dir=None):
         decoder_layer_tensor_id_formatter=float_layer_h_templates.decoder_layer_tensor_id_formatter.format()
     )
 
-    save_name = utils.init_save_name(save_name) + ".h"
+    save_name = utils.init_save_name(save_name if save_name else "decoder_layer") + ".h"
     save_dir = utils.init_save_dir(model_name_lower if save_dir is None else save_dir, sub_dir="layer")
     save_path = os.path.join(save_dir, save_name)
     with open(save_path, "w") as ff:
