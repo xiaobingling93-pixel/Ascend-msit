@@ -196,12 +196,12 @@ class CompareDataATB(CompareDataParse):
                 "token_path_id: %s, token_id: %s, node.order: %s, self.decode_root_node.order: %s",
                 str(token_path_id),
                 str(token_id),
-                str(node.order),
-                str(self.decode_root_node.children[0].order),
+                str(node.show_order),
+                str(self.decode_root_node.children[0].show_order),
             )
-            if token_id == 0 and node.order >= self.decode_root_node.children[0].order:
+            if token_id == 0 and node.show_order >= self.decode_root_node.children[0].show_order:
                 return ()
-            elif token_id == 1 and node.order < self.decode_root_node.children[0].order:
+            elif token_id == 1 and node.show_order < self.decode_root_node.children[0].show_order:
                 return ()
             else:
                 pass
