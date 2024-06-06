@@ -176,7 +176,7 @@ class ModelTree:
                     level,
                     order,
                     tensor_path,
-                    ModelTree.atb_show_order,
+                    show_order=ModelTree.atb_show_order,
                 )
 
             if "nodes" in node_dict:
