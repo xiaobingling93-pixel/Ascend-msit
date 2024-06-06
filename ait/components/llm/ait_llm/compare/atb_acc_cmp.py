@@ -21,9 +21,10 @@ from tqdm import tqdm
 from ait_llm.common.log import logger
 from ait_llm.compare.cmp_utils import BasicDataInfo, fill_row_data, save_compare_reault_to_csv, compare_data, read_data
 from ait_llm.compare.cmp_op_match import MatchLocation
+from ait_llm.compare.cmp_op_match import MatchLocation
 from ait_llm.compare.op_mapping import ATB_TORCH_BUILT_IN_OP_OUTPUT_MAPPING, ATB_TORCH_CUSTOM_OP_OUTPUT_MAPPING, \
     ATB_QUANT_FLOAT_NODE_MAPPING
-from ait_llm.dump.torch_dump.topo import ModelTree, TreeNode
+from ait_llm.dump.torch_dump.topo import ModelTree, TreeNode, TreeNode
 from ait_llm.compare.multi_block import multi_block_cmp
 
 
@@ -259,7 +260,7 @@ def get_paths(path_dir, split_pattern):
     return out_paths
 
 
-def pair_built_in_op(g_nodes, m_nodes, op_mapping, my_root_node, atb_tensor_path, torch_tensor_path:TreeNode, callback=None):
+def pair_built_in_op(g_nodes, m_nodes, op_mapping, my_root_node:TreeNode, callback=None, atb_tensor_path, torch_tensor_path:TreeNode, callback=None):
     compared_result = []
     for atb_op_type, torch_op_type in op_mapping.items():
         atb_nodes = [m_node for m_node in m_nodes if m_node.op_type == atb_op_type]
@@ -276,6 +277,9 @@ def pair_built_in_op(g_nodes, m_nodes, op_mapping, my_root_node, atb_tensor_path
                 if next_sibling_node and next_sibling_node.op_type == "ElewiseOperation" \
                         and next_sibling_node.op_param.get('elewiseType') == 8:
                     atb_node = next_sibling_node
+            if callback is not None:
+                callback(torch_node, 'output.pth', atb_node, 'outtensor0.bin')
+                continue
             if callback is not None:
                 callback(torch_node, 'output.pth', atb_node, 'outtensor0.bin')
                 continue
