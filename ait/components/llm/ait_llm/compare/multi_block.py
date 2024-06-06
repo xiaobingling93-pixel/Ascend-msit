@@ -26,8 +26,8 @@ def multi_block_cmp(atb_nodes, torch_nodes, my_root_node, atb_tensor_path, torch
             os.path.abspath(os.path.join(torch_tensor_path, "../")))
         torch_multi_block_tensor_path = os.path.abspath(os.path.join(torch_node_tensor_path, "../../"))
         torch_multi_block_tensor_paths = os.listdir(torch_multi_block_tensor_path)
-        my_tensor_path = os.path.join(atb_node_tensor_path, "after", "outtensor0.bin")
-        golden_tensor_path = os.path.join(torch_node_tensor_path, "output.pth")
+        my_tensor_path = os.path.abspath(os.path.join(atb_node_tensor_path, "after", "outtensor0.bin"))
+        golden_tensor_path = os.path.abspath(os.path.join(torch_node_tensor_path, "output.pth"))
         if not os.path.exists(my_tensor_path) or not os.path.exists(golden_tensor_path):
             msg = f"golden tensor path: {golden_tensor_path} or my_tensor_path: {my_tensor_path} is not exist."
             logger.debug(msg)
@@ -81,7 +81,7 @@ def single_torch_to_multi_atb(atb_multi_block_tensor_path_name, atb_multi_block_
         if tensor_path_name != atb_multi_block_tensor_path_name:
             atb_node_tensor_path = atb_node_tensor_path.replace(atb_multi_block_tensor_path_name
                                                                 , tensor_path_name)
-            my_tensor_path = os.path.join(atb_node_tensor_path, "after", "outtensor0.bin")
+            my_tensor_path = os.path.abspath(os.path.join(atb_node_tensor_path, "after", "outtensor0.bin"))
             if not os.path.exists(my_tensor_path):
                 continue
             if dim != -1:
@@ -102,7 +102,7 @@ def single_atb_to_multi_torch(compared_result, golden_tensor_data, golden_tensor
         if tensor_path_name != torch_multi_block_tensor_path_name:
             torch_node_tensor_path = torch_node_tensor_path.replace(torch_multi_block_tensor_path_name
                                                                     , tensor_path_name)
-            golden_tensor_path = os.path.join(torch_node_tensor_path, "output.pth")
+            golden_tensor_path = os.path.abspath(os.path.join(torch_node_tensor_path, "output.pth"))
             if not os.path.exists(golden_tensor_path):
                 continue
             if dim != -1:
@@ -164,7 +164,7 @@ def concat_tensor_data(multi_block_tensor_path_name, multi_block_tensor_paths, n
         if tensor_path_name != multi_block_tensor_path_name:
             node_tensor_path = node_tensor_path.replace(multi_block_tensor_path_name, tensor_path_name)
             for bin_path in bin_path_list:
-                node_tensor_path = os.path.join(node_tensor_path, bin_path)
+                node_tensor_path = os.path.abspath(os.path.join(node_tensor_path, bin_path))
             if dim == -1 or not os.path.exists(node_tensor_path):
                 continue
             tensor_data = torch.cat((tensor_data, read_data(node_tensor_path)), dim)
