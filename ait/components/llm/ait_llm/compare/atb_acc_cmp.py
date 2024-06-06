@@ -17,14 +17,12 @@ import json
 import os
 import re
 
+from tqdm import tqdm
 from ait_llm.common.log import logger
-from ait_llm.compare.cmp_utils import BasicDataInfo, fill_row_data, save_compare_reault_to_csv
-from ait_llm.compare.cmp_utils import compare_data, read_data
+from ait_llm.compare.cmp_utils import BasicDataInfo, fill_row_data, save_compare_reault_to_csv, compare_data, read_data
 from ait_llm.compare.op_mapping import ATB_TORCH_BUILT_IN_OP_OUTPUT_MAPPING, ATB_TORCH_CUSTOM_OP_OUTPUT_MAPPING, \
     ATB_QUANT_FLOAT_NODE_MAPPING
 from ait_llm.dump.torch_dump.topo import ModelTree
-from tqdm import tqdm
-
 from ait_llm.compare.multi_block import multi_block_cmp
 
 
