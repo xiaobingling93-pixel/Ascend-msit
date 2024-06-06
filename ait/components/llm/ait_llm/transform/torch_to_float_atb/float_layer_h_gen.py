@@ -9,7 +9,7 @@ def float_layer_h_gen(model, save_name=None, save_dir=None):
 
     save_name = utils.init_save_name(save_name) + ".h"
     save_dir = utils.init_save_dir(model_name_lower if save_dir is None else save_dir, sub_dir="layer")
-    save_path = os.path.join(save_dir, save_file)
+    save_path = os.path.join(save_dir, save_name)
     with open(save_path, "w") as ff:
         ff.write(rr)
     return save_path, rr

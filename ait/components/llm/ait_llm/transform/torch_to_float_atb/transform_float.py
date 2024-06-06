@@ -14,10 +14,10 @@ def transform_float(source_path, save_name=None, save_dir=None):
     except Exception as error:
         raise ValueError(f"build model from {source_path} failed, make sure it works within transformers") from error
 
-    model_cpp_file, _ = torch_to_float_atb.float_model_cpp_gen(mm, save_name=save_name, save_dir=save_dir)
-    model_h_file, _ = torch_to_float_atb.float_model_h_gen(mm, save_name=save_name, save_dir=save_dir)
-    layer_cpp_file, _ = torch_to_float_atb.float_layer_cpp_gen(mm, save_name=save_name, save_dir=save_dir)
-    layer_h_file, _ = torch_to_float_atb.float_layer_h_gen(mm, save_name=save_name, save_dir=save_dir)
+    model_cpp_file, _ = torch_to_float_atb.float_model_cpp_gen(source_model, save_name=save_name, save_dir=save_dir)
+    model_h_file, _ = torch_to_float_atb.float_model_h_gen(source_model, save_name=save_name, save_dir=save_dir)
+    layer_cpp_file, _ = torch_to_float_atb.float_layer_cpp_gen(source_model, save_name=save_name, save_dir=save_dir)
+    layer_h_file, _ = torch_to_float_atb.float_layer_h_gen(source_model, save_name=save_name, save_dir=save_dir)
     result_files = [model_cpp_file, model_h_file, layer_cpp_file, layer_h_file]
     print("Generated files: [\n    " + ",\n    ".join(result_files) + ",\n]")
-    reurn result_files
+    return result_files
