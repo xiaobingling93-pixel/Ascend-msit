@@ -19,19 +19,14 @@ def multi_block_cmp(atb_nodes, torch_nodes, my_root_node, atb_tensor_path, torch
         atb_node_tensor_path = atb_node.tensor_path
         torch_node_tensor_path = torch_node.tensor_path
         atb_node_tensor_path, atb_tensor_datas = get_multi_tensor_paths(atb_tensor_path, atb_node_tensor_path,
-                                                                        tensor_sub_dir=os.path.join("after",
-                                                                                                    "outtensor0.bin"))
+            tensor_sub_dir=os.path.join("after", "outtensor0.bin"))
         torch_node_tensor_path, torch_tensor_datas = get_multi_tensor_paths(torch_tensor_path, torch_node_tensor_path,
-                                                                            tensor_sub_dir=os.path.join("output.pth"))
+            tensor_sub_dir=os.path.join("output.pth"))
         # 2. concat tensor_datas
         dim_atb = get_cat_dim(atb_tensor_datas, torch_tensor_datas)
         dim_torch = get_cat_dim(torch_tensor_datas, atb_tensor_datas)
-        atb_tensor_data = atb_tensor_datas[0]
-        torch_tensor_data = torch_tensor_datas[0]
-        if dim_atb != -1:
-            atb_tensor_data = torch.cat(atb_tensor_datas, dim_atb)
-        if dim_torch != -1:
-            torch_tensor_data = torch.cat(torch_tensor_datas, dim_torch)
+        atb_tensor_data = atb_tensor_datas[0] if dim_atb != -1 else torch.cat(atb_tensor_datas, dim_atb)
+        torch_tensor_data = torch_tensor_datas[0] if dim_torch != -1 else torch.cat(torch_tensor_datas, dim_torch)
         # 3. compare tensor_datas
         data_info = BasicDataInfo(torch_node_tensor_path, atb_node_tensor_path, data_id=0)
         row_data = fill_row_data(data_info, atb_tensor_data, torch_tensor_data)
