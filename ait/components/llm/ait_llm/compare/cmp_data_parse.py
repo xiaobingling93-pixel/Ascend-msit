@@ -54,6 +54,13 @@ class DataUtils:
             return tuple()
         return filter(lambda name: os.path.isdir(os.path.join(tokens_path, name)), os.listdir(tokens_path))
 
+    @staticmethod
+    def get_dir_sub_files(dir_path, prefix):
+        if os.path.exists(dir_path):
+            return tuple((os.path.join(dir_path, name) for name in os.listdir(dir_path) if name.startswith(prefix)))
+        else:
+            return tuple()
+
 
 class CompareDataATB(CompareDataParse):
     def __init__(self, path, args) -> None:
@@ -146,6 +153,8 @@ class CompareDataATB(CompareDataParse):
     def get_topo_file_path(cls, ait_dump_path, pid=None):
         model_path = cls.get_model_path(ait_dump_path)
         if pid is None:
+            if os.path.exists(model_path):
+                return None
             pid_path_names = os.listdir(model_path)
             if len(pid_path_names) == 0:
                 return None
@@ -154,7 +163,7 @@ class CompareDataATB(CompareDataParse):
             pid_path = os.path.join(model_path, pid)
 
         json_file_names = os.listdir(pid_path)
-        return (os.path.join(pid_path, name) for name in json_file_names)
+        return (os.path.join(pid_path, name) for name in json_file_names if name.endswith(".json"))
 
     @staticmethod
     def load_topo_info(topo_file_path):
@@ -178,7 +187,7 @@ class CompareDataATB(CompareDataParse):
                 token_path_id = token_id - 1
             else:
                 token_path_id = 0
-        if token_path_id < 0:
+        if isinstance(token_id, int) and token_path_id < 0:
             token_path_id = 0
 
         # 控制特定比较token 0 或 1 的时候，只比较 encode 或 decode 一个
@@ -214,28 +223,16 @@ class CompareDataATB(CompareDataParse):
             str(tensor_before_dir_path),
         )
         if location == MatchLocation.ALL_OUTPUT:
-            if os.path.exists(tensor_after_dir_path):
-                return (
-                    os.path.join(tensor_after_dir_path, name)
-                    for name in os.listdir(tensor_after_dir_path)
-                    if name.startswith("outtensor")
-                )
+            return DataUtils.get_dir_sub_files(tensor_after_dir_path, "outtensor")
         elif location == MatchLocation.ALL_INPUT:
-            if os.path.exists(tensor_after_dir_path):
-                return (
-                    os.path.join(tensor_after_dir_path, name)
-                    for name in os.listdir(tensor_after_dir_path)
-                    if name.startswith("intensor")
-                )
-            if os.path.exists(tensor_before_dir_path):
-                return (
-                    os.path.join(tensor_before_dir_path, name)
-                    for name in os.listdir(tensor_before_dir_path)
-                    if name.startswith("intensor")
-                )
+            return DataUtils.get_dir_sub_files(tensor_after_dir_path, "intensor") + DataUtils.get_dir_sub_files(
+                tensor_before_dir_path, "intensor"
+            )
         else:
-            return os.path.join(tensor_after_dir_path, location)
-        return tuple()
+            if os.path.exists(os.path.join(tensor_after_dir_path, location)):
+                return (os.path.join(tensor_after_dir_path, location),)
+            else:
+                return tuple()
 
     def parse(self, topo_files) -> None:
         topo_infos = []
@@ -277,7 +274,7 @@ class CompareDataATB(CompareDataParse):
         if len(self.topo_files) > 1:
             return ((0, 1) if t == '0' else int(t) + 1 if t.isdigit() else t for t in token_ids)
         else:
-            return token_ids
+            return (int(t) if t.isdigit() else t for t in token_ids)
 
 
 class CompareDataTorch(CompareDataParse):
@@ -358,22 +355,14 @@ class CompareDataTorch(CompareDataParse):
             str(tensor_dir_path),
         )
         if location == MatchLocation.ALL_OUTPUT:
-            if os.path.exists(tensor_dir_path):
-                return (
-                    os.path.join(tensor_dir_path, name)
-                    for name in os.listdir(tensor_dir_path)
-                    if name.startswith("output")
-                )
+            return DataUtils.get_dir_sub_files(tensor_dir_path, "output")
         elif location == MatchLocation.ALL_INPUT:
-            if os.path.exists(tensor_dir_path):
-                return (
-                    os.path.join(tensor_dir_path, name)
-                    for name in os.listdir(tensor_dir_path)
-                    if name.startswith("input")
-                )
+            return DataUtils.get_dir_sub_files(tensor_dir_path, "input")
         else:
-            return os.path.join(tensor_dir_path, location)
-        return tuple()
+            if os.path.exists(os.path.join(tensor_dir_path, location)):
+                return (os.path.join(tensor_dir_path, location),)
+            else:
+                return tuple()
 
     def parse(self) -> None:
         golden_root_node = ModelTree.json_to_tree(self.topo_file, os.path.join(self.tokens_path, "{token_id}"))
