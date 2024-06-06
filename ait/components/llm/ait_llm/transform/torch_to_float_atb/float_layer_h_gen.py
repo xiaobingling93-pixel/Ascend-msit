@@ -18,10 +18,24 @@ from ait_llm.transform.torch_to_float_atb import utils
 from ait_llm.transform.model_parser import parser
 
 def float_layer_h_gen(model, save_name=None, save_dir=None):
-    # NotImplemented
-    rr, model_name_lower = "", ""
+    from ait_llm.transform.torch_to_float_atb import float_layer_h_templates
+    
+    parsed_model = parser.build_model_tree(model)
+    model_name_lower = parsed_model.get("name", "model").lower()
 
-    save_name = utils.init_save_name(save_name) + ".h"
+    rr = ""
+    rr += float_layer_h_templates.copyright_header.format(year=time.localtime().tm_year)
+    rr += float_layer_h_templates.include_header_formater.format(
+        model_name_upper=model_name_lower.upper(),
+    )
+
+    rr += float_layer_h_templates.basic_class_formatter.format(
+        model_name_lower=model_name_lower,
+        struct_param_formatter=float_layer_h_templates.struct_param_formatter.format(),
+        decoder_layer_tensor_id_formatter=float_layer_h_templates.decoder_layer_tensor_id_formatter.format()
+    )
+
+    save_name = utils.init_save_name(save_name if save_name else "decoder_layer") + ".h"
     save_dir = utils.init_save_dir(model_name_lower if save_dir is None else save_dir, sub_dir="layer")
     save_path = os.path.join(save_dir, save_name)
     with open(save_path, "w") as ff:
