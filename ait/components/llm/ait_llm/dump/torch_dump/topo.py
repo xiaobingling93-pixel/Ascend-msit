@@ -120,6 +120,8 @@ class TreeNode:
 
 
 class ModelTree:
+    atb_show_order = 0
+
     def __init__(self):
         self.root_node = TreeNode("root", "root")
 
@@ -157,19 +159,24 @@ class ModelTree:
         with open(json_path, "r") as file:
             node_dict = json.loads(file.read(), parse_constant=lambda x: None)
 
-        show_order = 0
-
         def _atb_dict_to_tree(node_dict, level, order, tensor_path):
-            nonlocal show_order
-            show_order = show_order + 1
+            ModelTree.atb_show_order = ModelTree.atb_show_order + 1
             if level == 0:
-                node = TreeNode("root", node_dict["modelName"], tensor_path=tensor_path, show_order=show_order)
+                node = TreeNode(
+                    "root", node_dict["modelName"], tensor_path=tensor_path, show_order=ModelTree.atb_show_order
+                )
             else:
                 rel_path = str(order) + "_" + node_dict["opType"]
                 tensor_path = os.path.join(tensor_path, rel_path)
                 op_param = node_dict.get("param") if "param" in node_dict else None
                 node = TreeNode(
-                    node_dict["opName"], node_dict["opType"], op_param, level, order, tensor_path, show_order
+                    node_dict["opName"],
+                    node_dict["opType"],
+                    op_param,
+                    level,
+                    order,
+                    tensor_path,
+                    ModelTree.atb_show_order,
                 )
 
             if "nodes" in node_dict:
