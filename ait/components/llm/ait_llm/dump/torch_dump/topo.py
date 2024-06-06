@@ -11,7 +11,7 @@ MIN_LAYER_NUMBER = 10
 
 
 class TreeNode:
-    def __init__(self, node_name: str, op_type: str, op_param=None, level=0, order=0, tensor_path=""):
+    def __init__(self, node_name: str, op_type: str, op_param=None, level=0, order=0, tensor_path="", show_order=0):
         self.node_name = node_name
         self.op_type = op_type
         self.op_param = op_param
@@ -19,10 +19,12 @@ class TreeNode:
         self.order = order
         self.children = []
         self.tensor_path = tensor_path
+        self.show_order = show_order
 
     def __repr__(self):
-        return "{} [{}] [{}] ({})".format(self.node_name, self.tensor_path, self.op_type,
-                                          ",".join((x.node_name for x in self.children)))
+        return "{} [{}] [{}] ({})".format(
+            self.node_name, self.tensor_path, self.op_type, ",".join((x.node_name for x in self.children))
+        )
 
     def add_child(self, node):
         self.children.append(node)
@@ -155,18 +157,24 @@ class ModelTree:
         with open(json_path, "r") as file:
             node_dict = json.loads(file.read(), parse_constant=lambda x: None)
 
+        show_order = 0
+
         def _atb_dict_to_tree(node_dict, level, order, tensor_path):
+            nonlocal show_order
+            show_order = show_order + 1
             if level == 0:
-                node = TreeNode("root", node_dict["modelName"], tensor_path=tensor_path)
+                node = TreeNode("root", node_dict["modelName"], tensor_path=tensor_path, show_order=show_order)
             else:
                 rel_path = str(order) + "_" + node_dict["opType"]
                 tensor_path = os.path.join(tensor_path, rel_path)
                 op_param = node_dict.get("param") if "param" in node_dict else None
-                node = TreeNode(node_dict["opName"], node_dict["opType"], op_param, level, order, tensor_path)
+                node = TreeNode(
+                    node_dict["opName"], node_dict["opType"], op_param, level, order, tensor_path, show_order
+                )
 
             if "nodes" in node_dict:
                 if level == 0:
-                    reorder = start_order # 特殊处理，后面考虑优化
+                    reorder = start_order  # 特殊处理，后面考虑优化
                 else:
                     reorder = 0
                 for child_dict in node_dict["nodes"]:

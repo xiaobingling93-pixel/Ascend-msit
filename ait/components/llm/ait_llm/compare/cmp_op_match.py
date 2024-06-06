@@ -76,7 +76,7 @@ class OpMatchMap:
             if self.map.get(map_info, MatchScore.NO_MATCH_INFO) >= MatchScore.FULL_MATCH.value
         ]
 
-        ret_map.sort(key=lambda item: item[0].tensor_path.split('_'))  # 根据my_op 的 tensor_path 进行排序
+        ret_map.sort(key=lambda item: item[0].show_order)  # 根据my_op 的 show_order 进行排序
         return ret_map
 
 
