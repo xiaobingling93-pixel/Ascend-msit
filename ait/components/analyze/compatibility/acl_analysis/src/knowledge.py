@@ -19,9 +19,7 @@ MatchFunc = Callable[[str], bool]
 
 class Knowledge(object):
 
-    def __init__(self, suggestion: str, apis: List[str] = None,
-        match_funcs: List[MatchFunc] = None
-    ) -> None:
+    def __init__(self, suggestion: str, apis: List[str] = None, match_funcs: List[MatchFunc] = None) -> None:
         apis = apis or []
         match_funcs = match_funcs or []
         self._suggestion: str = suggestion
@@ -43,7 +41,7 @@ class Knowledge(object):
         return True
 
 
-class KnowledgeGroup():
+class KnowledgeGroup:
     _knowledges: List[Knowledge] = []
 
     @classmethod
@@ -53,4 +51,3 @@ class KnowledgeGroup():
     @classmethod
     def get_knowledges(cls) -> List[Knowledge]:
         return cls._knowledges
-

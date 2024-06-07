@@ -25,11 +25,10 @@ def get_soc_type() -> str:
     default_soc = SocType.Ascend310.name
     try:
         import acl
+
         return acl.get_soc_name()
     except ImportError:
-        logger.warning(
-            f'Get soc_version failed, use default {default_soc}.'
-        )
+        logger.warning(f'Get soc_version failed, use default {default_soc}.')
     return default_soc
 
 
@@ -38,7 +37,7 @@ def get_framework(model: str) -> Framework:
         # file format and framework map
         '.onnx': Framework.ONNX,
         '.prototxt': Framework.CAFFE,
-        '.pb': Framework.TF
+        '.pb': Framework.TF,
     }
     for suffix, framework in dict_.items():
         if model.endswith(suffix):

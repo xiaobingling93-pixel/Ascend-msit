@@ -46,28 +46,26 @@ def check_profiling_data(datapath):
     datapath = get_valid_read_directory(datapath)
     profiling_nums = 0
     for file in os.listdir(datapath):
-        if (file[0:5] == "PROF_"):
+        if file[0:5] == "PROF_":
             profiling_nums += 1
     if profiling_nums == 0:
         raise Exception(
-            f"profiling data do not in {datapath},or the file name is incorrect." \
-                "Use the original name, such as PROF_xxxxx"
+            f"profiling data do not in {datapath},or the file name is incorrect."
+            "Use the original name, such as PROF_xxxxx"
         )
     elif profiling_nums > 1:
-        raise Exception(
-            "The number of profiling data is greater than 1, " \
-                "Please enter only one profiling data"
-        )
+        raise Exception("The number of profiling data is greater than 1, " "Please enter only one profiling data")
     datapath = os.path.join(datapath, os.listdir(datapath)[0])
     datapath = get_valid_read_directory(datapath)
     filename_not_correct = True
     for file in os.listdir(datapath):
-        if (file[0:7] == 'device_'):
+        if file[0:7] == 'device_':
             filename_not_correct = False
     if filename_not_correct:
         raise ValueError(
             f'{datapath} is not a correct profiling file, \
-                correct profiling file is PROF_xxxxxxxx and it includes device_*')
+                correct profiling file is PROF_xxxxxxxx and it includes device_*'
+        )
     return datapath
 
 

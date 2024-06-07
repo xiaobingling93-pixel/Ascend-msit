@@ -15,15 +15,7 @@
 import click
 
 opt_path = click.argument(
-    'path',
-    nargs=1,
-    type=click.Path(
-        exists=True,
-        file_okay=False,
-        dir_okay=True,
-        readable=True,
-        path_type=pathlib.Path
-    )
+    'path', nargs=1, type=click.Path(exists=True, file_okay=False, dir_okay=True, readable=True, path_type=pathlib.Path)
 )
 
 

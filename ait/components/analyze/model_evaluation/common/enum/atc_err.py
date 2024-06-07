@@ -17,10 +17,10 @@ from enum import Enum, unique
 
 @unique
 class AtcErr(Enum):
-    SUCCESS = 0 # atc execute success
-    UNKNOWN = -1 # unknown error, include other atc errcode
-    EZ0501 = 1 # IR for the operator type is not registered
-    EZ3002 = 2 # The operator type is unsupported in the operator information library due to specification mismatch.
-    EZ3003 = 3 # The operator is not supported
-    EZ9010 = 4 # No parser is registered for Op
-    E19010 = 5 # No parser is registered for Op
+    SUCCESS = 0  # atc execute success
+    UNKNOWN = -1  # unknown error, include other atc errcode
+    EZ0501 = 1  # IR for the operator type is not registered
+    EZ3002 = 2  # The operator type is unsupported in the operator information library due to specification mismatch.
+    EZ3003 = 3  # The operator is not supported
+    EZ9010 = 4  # No parser is registered for Op
+    E19010 = 5  # No parser is registered for Op

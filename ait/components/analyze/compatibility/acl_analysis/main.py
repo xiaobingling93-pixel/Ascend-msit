@@ -38,25 +38,13 @@ def print_result(result: Dict[Knowledge, List[str]]):
             logger.info(f'  {match_info}')
         logger.info()
 
+
 opt_path = click.argument(
-    'path',
-    nargs=1,
-    type=click.Path(
-        exists=True,
-        file_okay=False,
-        dir_okay=True,
-        readable=True,
-        path_type=pathlib.Path
-    )
+    'path', nargs=1, type=click.Path(exists=True, file_okay=False, dir_okay=True, readable=True, path_type=pathlib.Path)
 )
 
 opt_scene = click.option(
-    '-s',
-    '--scene',
-    'scene',
-    default='310->310B',
-    type=str,
-    help='scene you want to analysis, default 310->310B.'
+    '-s', '--scene', 'scene', default='310->310B', type=str, help='scene you want to analysis, default 310->310B.'
 )
 
 
@@ -64,8 +52,7 @@ opt_scene = click.option(
 @opt_path
 @opt_scene
 def analysis_acl_api(path, scene):
-    """analysis application code and print suggestions
-    """
+    """analysis application code and print suggestions"""
     if scene != '310->310B':
         logger.info(f'[error] not support scene: {scene}.')
         return

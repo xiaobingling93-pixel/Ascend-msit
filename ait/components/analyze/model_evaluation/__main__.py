@@ -82,15 +82,11 @@ def check_output_path_legality(value):
     return path_value
 
 
-def parse_input_param(model: str,
-    framework: str, weight: str, soc: str
-) -> ConvertConfig:
+def parse_input_param(model: str, framework: str, weight: str, soc: str) -> ConvertConfig:
     if framework is None:
         framework = utils.get_framework(model)
         if framework == Framework.UNKNOWN:
-            raise ValueError(
-                'parse framework failed, use --framework.'
-            )
+            raise ValueError('parse framework failed, use --framework.')
     else:
         if not framework.isdigit():
             raise ValueError('framework is illegal, use --help.')
@@ -99,39 +95,39 @@ def parse_input_param(model: str,
     if not soc:
         soc = utils.get_soc_type()
 
-    return ConvertConfig(
-        framework=framework,
-        weight=weight,
-        soc_type=soc
-    )
+    return ConvertConfig(framework=framework, weight=weight, soc_type=soc)
 
 
 class AnalyzeCommand(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument(
-            "-gm", "--golden-model", type=check_model_path_legality,
-            required=True, default=None,
-            help="model path, support caffe, onnx, tensorflow."
+            "-gm",
+            "--golden-model",
+            type=check_model_path_legality,
+            required=True,
+            default=None,
+            help="model path, support caffe, onnx, tensorflow.",
         )
         parser.add_argument(
-            "--framework", type=str,
+            "--framework",
+            type=str,
             choices=['0', '3', '5'],
-            default=None, help="Framework type: 0:Caffe; 3:Tensorflow; 5:Onnx."
+            default=None,
+            help="Framework type: 0:Caffe; 3:Tensorflow; 5:Onnx.",
         )
         parser.add_argument(
-            "-w", "--weight", type=check_weight_path_legality,
-            required=False, default='',
-            help="Weight file. Required when framework is Caffe."
+            "-w",
+            "--weight",
+            type=check_weight_path_legality,
+            required=False,
+            default='',
+            help="Weight file. Required when framework is Caffe.",
         )
         parser.add_argument(
-            "-soc", "--soc-version", type=check_soc_string,
-            required=False, default='',
-            help="The soc version."
+            "-soc", "--soc-version", type=check_soc_string, required=False, default='', help="The soc version."
         )
         parser.add_argument(
-            "-o", "--output", type=check_output_path_legality,
-            required=True, default='',
-            help="Output path."
+            "-o", "--output", type=check_output_path_legality, required=True, default='', help="Output path."
         )
 
     def handle(self, args):
@@ -146,9 +142,7 @@ class AnalyzeCommand(BaseCommand):
             return
 
         try:
-            config = parse_input_param(
-                input_model, framework, weight, soc_version
-            )
+            config = parse_input_param(input_model, framework, weight, soc_version)
         except ValueError as e:
             logger.error(f'{e}')
             return

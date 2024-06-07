@@ -19,14 +19,16 @@ from model_evaluation.common.enum import Engine
 
 @dataclass
 class OpInfo:
-    ''' Common operator info '''
+    '''Common operator info'''
+
     op_name: str = ''
     op_type: str = ''
 
 
 @dataclass
 class OpInnerInfo(OpInfo):
-    ''' Inner operator info '''
+    '''Inner operator info'''
+
     op_engine: Engine = Engine.AICORE
     is_fusion: bool = False
     ori_ops = []

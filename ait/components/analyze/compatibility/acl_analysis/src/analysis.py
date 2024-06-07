@@ -25,9 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 def check_filetype(filename: str):
-    return filename.endswith('.cpp') or \
-        filename.endswith('.py') or \
-        filename.endswith('.h')
+    return filename.endswith('.cpp') or filename.endswith('.py') or filename.endswith('.h')
 
 
 def check_api(acl_api: str, line: str):
@@ -37,7 +35,7 @@ def check_api(acl_api: str, line: str):
     if line.startswith('//'):
         return False
     pos = line.find(acl_api)
-    subline: str = line[pos + len(acl_api):]
+    subline: str = line[pos + len(acl_api) :]
     subline = subline.strip()
     return subline.startswith('(')
 
@@ -49,8 +47,7 @@ def match_knowledge(line) -> Dict[str, List[Knowledge]]:
         acl_apis = knowledge.apis
         for acl_api in acl_apis:
             if acl_api in line:
-                if acl_api not in result and \
-                    not check_api(acl_api, line):
+                if acl_api not in result and not check_api(acl_api, line):
                     continue
                 if not knowledge.analysis(line):
                     continue
@@ -86,9 +83,6 @@ def analysis_310_to_310b(path: str):
                         for knowledge in knowledges:
                             if knowledge not in result:
                                 result[knowledge] = []
-                            result.get(knowledge).append(
-                                api + ' ' + str(filepath) + ' Line: ' + str(line_num)
-                            )
+                            result.get(knowledge).append(api + ' ' + str(filepath) + ' Line: ' + str(line_num))
     logger.info("[info] Analysis finished.")
     return result
-

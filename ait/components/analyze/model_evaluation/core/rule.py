@@ -27,13 +27,7 @@ class Rule(Enum):
     def get_rule_with_atc_err(err: AtcErr):
         if err == AtcErr.SUCCESS:
             return Rule.EVAL_ATC_SUCCESS
-        unsupported_op_err = [
-            AtcErr.E19010,
-            AtcErr.EZ0501,
-            AtcErr.EZ3002,
-            AtcErr.EZ3003,
-            AtcErr.EZ9010
-        ]
+        unsupported_op_err = [AtcErr.E19010, AtcErr.EZ0501, AtcErr.EZ3002, AtcErr.EZ3003, AtcErr.EZ9010]
         if err in unsupported_op_err:
             return Rule.EVAL_ATC_UNSUPPORT_OP_ERR
 

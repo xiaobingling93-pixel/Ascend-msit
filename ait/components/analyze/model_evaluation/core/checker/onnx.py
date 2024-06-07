@@ -37,21 +37,14 @@ class OnnxChecker:
             initializers.add(initializer.name)
 
         def is_valid(input_: str) -> bool:
-            return input_ in nodes_outputs or \
-                input_ in initializers or \
-                input_ in model_inputs
+            return input_ in nodes_outputs or input_ in initializers or input_ in model_inputs
 
         for node in graph.node:
-            empty_input = [
-                input_
-                for input_ in node.input
-                if not is_valid(input_)
-            ]
+            empty_input = [input_ for input_ in node.input if not is_valid(input_)]
             if len(empty_input) == 0:
                 continue
             s = ','.join(empty_input)
-            err_map.setdefault(node.name, []) \
-                .append(f'input {s} is empty.')
+            err_map.setdefault(node.name, []).append(f'input {s} is empty.')
 
     def check_ops(self) -> Dict[str, List[str]]:
         if self._graph is None:

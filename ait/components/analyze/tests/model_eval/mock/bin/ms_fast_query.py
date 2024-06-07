@@ -19,29 +19,12 @@ import click
 
 
 opt_type = click.option(
-    '-t',
-    '--type',
-    'query_type',
-    type=click.Choice(['op', 'model']),
-    required=True,
-    help='fast query type.'
+    '-t', '--type', 'query_type', type=click.Choice(['op', 'model']), required=True, help='fast query type.'
 )
 
-opt_opp_path = click.option(
-    '--opp_path',
-    'opp_path',
-    type=str,
-    help='opp path, required when type is op'
-)
+opt_opp_path = click.option('--opp_path', 'opp_path', type=str, help='opp path, required when type is op')
 
-opt_out = click.option(
-    '-o',
-    '--output',
-    'output',
-    type=str,
-    required=True,
-    help='output file path'
-)
+opt_out = click.option('-o', '--output', 'output', type=str, required=True, help='output file path')
 
 
 @click.command()
@@ -49,9 +32,7 @@ opt_out = click.option(
 @opt_opp_path
 @opt_out
 def fast_query(query_type, opp_path, output) -> None:
-    cur_dir = os.path.dirname(
-        os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-    )
+    cur_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     data_path = os.path.join(cur_dir, 'dataset', 'opp', 'opp.json')
 
     out_path = os.path.realpath(output)

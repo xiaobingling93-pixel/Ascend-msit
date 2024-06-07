@@ -28,23 +28,19 @@ from model_evaluation.core.rule import Rule
 
 
 class Analyze:
-    def __init__(self,
-        model_path: str, out_path: str, config: ConvertConfig
-    ) -> None:
+    def __init__(self, model_path: str, out_path: str, config: ConvertConfig) -> None:
         self._model_path = model_path
         self._out_path = out_path
         self._config = config
 
-        self._model_parser = ModelParser(
-            model_path, out_path, config
-        )
+        self._model_parser = ModelParser(model_path, out_path, config)
 
         self._graph = None
         if config.framework == Framework.ONNX:
             from model_evaluation.graph.onnx import OnnxGraph
+
             try:
-                self._graph: OnnxGraph = \
-                    OnnxGraph.load(self._model_path)
+                self._graph: OnnxGraph = OnnxGraph.load(self._model_path)
             except RuntimeError as e:
                 logger.error(f'load onnx failed, err:{e}')
 
@@ -52,14 +48,13 @@ class Analyze:
         self._result = Result()
 
     def analyze_model(self) -> None:
-        op_infos: List[OpInfo] = \
-            self._model_parser.parse_all_ops(convert=True)
+        op_infos: List[OpInfo] = self._model_parser.parse_all_ops(convert=True)
         self._init_result(op_infos)
 
         errcode, errinfo = self._model_parser.parse_model_to_om()
         eval_rule = Rule.get_rule_with_atc_err(errcode)
         if eval_rule == Rule.EVAL_ATC_SUCCESS:
-            self._analyze_op_engine()  
+            self._analyze_op_engine()
         elif eval_rule == Rule.EVAL_ATC_UNSUPPORT_OP_ERR:
             err_ops = AtcErrParser.parse_unsupported_op(errinfo)
             self._update_result_with_err_ops(err_ops)
@@ -74,9 +69,7 @@ class Analyze:
     def _init_result(self, op_infos: List[OpInfo]):
         for op_info in op_infos:
             op_result = OpResult(
-                ori_op_name=op_info.op_name,
-                ori_op_type=op_info.op_type,
-                soc_type=self._config.soc_type
+                ori_op_name=op_info.op_name, ori_op_type=op_info.op_type, soc_type=self._config.soc_type
             )
             self._result.insert(op_result)
 
@@ -94,7 +87,7 @@ class Analyze:
                 ori_op_name=op_info.op_name,
                 ori_op_type=op_info.op_type,
                 is_supported=False,
-                details=Const.ERR_UNSUPPORT
+                details=Const.ERR_UNSUPPORT,
             )
             self._result.insert(op_result)
 
@@ -111,10 +104,7 @@ class Analyze:
                 op_result.set_details(Const.ERR_UNSUPPORT)
                 continue
             op_result = OpResult(
-                ori_op_name=ori_op_name,
-                ori_op_type=ori_op_type,
-                is_supported=False,
-                details=Const.ERR_UNSUPPORT
+                ori_op_name=ori_op_name, ori_op_type=ori_op_type, is_supported=False, details=Const.ERR_UNSUPPORT
             )
             self._result.insert(op_result)
 
@@ -130,14 +120,14 @@ class Analyze:
 
             def map_op(op_type):
                 return op_map.map_onnx_op(op_type, opset_version)
+
         else:
+
             def map_op(op_type):
                 return op_map.map_op(op_type)
 
         try:
-            opp: Opp = Opp.load_opp(
-                self._config.soc_type, self._out_path
-            )
+            opp: Opp = Opp.load_opp(self._config.soc_type, self._out_path)
         except RuntimeError as e:
             logger.error(f'load opp data failed, err:{e}')
             return
@@ -165,9 +155,7 @@ class Analyze:
         om_parser = OmParser(om_path, self._out_path)
         op_infos: List[OpInnerInfo] = om_parser.parse_all_ops(convert=True)
 
-        def update_result(
-            op_result: OpResult, op_info: OpInnerInfo
-        ):
+        def update_result(op_result: OpResult, op_info: OpInnerInfo):
             op_result.op_name = op_info.op_name
             op_result.op_type = op_info.op_type
             op_result.op_engine = op_info.op_engine
