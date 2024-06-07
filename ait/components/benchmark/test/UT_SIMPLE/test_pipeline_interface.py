@@ -22,7 +22,7 @@ import numpy as np
 from ais_bench.infer.interface import InferSession
 from test_common import TestCommonClass
 
-logging.basicConfig(stream = sys.stdout, level = logging.INFO, format = '[%(levelname)s] %(message)s')
+logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='[%(levelname)s] %(message)s')
 logger = logging.getLogger(__name__)
 
 
@@ -39,7 +39,7 @@ class TestClass:
         logger.info('\n ---class level teardown_class')
 
     @classmethod
-    def generate_input(cls, session, number = 500):
+    def generate_input(cls, session, number=500):
         ndatas_list = []
         input_descs = session.get_inputs()
         for _ in range(number):
@@ -68,7 +68,6 @@ class TestClass:
         self.device_id = 0
         self.model_path = TestCommonClass.get_model_static_om_path(1, "resnet50")
 
-
     def test_runable(self):
         session = InferSession(self.device_id, self.model_path)
         ndatas_list = self.generate_input(session)
@@ -94,11 +93,11 @@ class TestClass:
         outputs_single = []
         for ndatas in ndatas_list:
             outputs_single.append(session.infer(ndatas))
-        end_single  = time.time()
+        end_single = time.time()
 
-        start_multi  = time.time()
+        start_multi = time.time()
         outputs_multi = session.infer_pipeline(ndatas_list)
-        end_multi  = time.time()
+        end_multi = time.time()
 
         assert end_multi - start_multi < end_single - start_single
 

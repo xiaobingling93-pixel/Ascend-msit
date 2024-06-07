@@ -22,7 +22,7 @@ import subprocess
 import pytest
 from test_common import TestCommonClass
 
-logging.basicConfig(stream = sys.stdout, level = logging.INFO, format = '[%(levelname)s] %(message)s')
+logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='[%(levelname)s] %(message)s')
 logger = logging.getLogger(__name__)
 
 
@@ -48,8 +48,9 @@ class TestClass:
         output_path = os.path.join(TestCommonClass.get_basepath(), "tmp")
         TestCommonClass.prepare_dir(output_path)
         model_path = TestCommonClass.get_model_static_om_path(2, self.model_name)
-        cmd = "{} --model {} --device {}".format(TestCommonClass.cmd_prefix, model_path,
-                                                 TestCommonClass.default_device_id)
+        cmd = "{} --model {} --device {}".format(
+            TestCommonClass.cmd_prefix, model_path, TestCommonClass.default_device_id
+        )
         cmd = "{} --output {}".format(cmd, output_path)
         logger.info("run cmd:{}".format(cmd))
         ret = os.system(cmd)
@@ -70,15 +71,23 @@ class TestClass:
         batch_size = 1
         static_model_path = TestCommonClass.get_model_static_om_path(batch_size, self.model_name)
         input_size = TestCommonClass.get_model_inputs_size(static_model_path)[0]
-        input_path = TestCommonClass.get_inputs_path(input_size, os.path.join(os.path.join(TestCommonClass.get_basepath(),
-                                                                                           self.model_name), "input"),
-                                                     output_file_num)
+        input_path = TestCommonClass.get_inputs_path(
+            input_size,
+            os.path.join(os.path.join(TestCommonClass.get_basepath(), self.model_name), "input"),
+            output_file_num,
+        )
 
         for _, batch_size in enumerate(batch_list):
             model_path = TestCommonClass.get_model_static_om_path(batch_size, self.model_name)
             cmd = "{} --model {} --device {} --output {} --debug True \
-                --input {} > {}".format(TestCommonClass.cmd_prefix, model_path, TestCommonClass.default_device_id,
-                                        output_path, input_path, log_path)
+                --input {} > {}".format(
+                TestCommonClass.cmd_prefix,
+                model_path,
+                TestCommonClass.default_device_id,
+                output_path,
+                input_path,
+                log_path,
+            )
             logger.info("run cmd:{}".format(cmd))
             ret = os.system(cmd)
             assert ret == 0
@@ -86,7 +95,7 @@ class TestClass:
             # inference times should be  fit to given rule
             real_execute_num = TestCommonClass.get_inference_execute_num(log_path)
             if batch_size != 0:
-                exacute_num = math.ceil(output_file_num/batch_size)
+                exacute_num = math.ceil(output_file_num / batch_size)
                 assert real_execute_num == warmup_num + exacute_num
             else:
                 logger.warning("zero division!")
@@ -124,9 +133,11 @@ class TestClass:
         batch_size = 1
         model_path = TestCommonClass.get_model_static_om_path(batch_size, self.model_name)
         input_size = TestCommonClass.get_model_inputs_size(model_path)[0]
-        input_path = TestCommonClass.get_inputs_path(input_size, os.path.join(os.path.join(TestCommonClass.get_basepath(),
-                                                                                           self.model_name), "input"),
-                                                     output_file_num)
+        input_path = TestCommonClass.get_inputs_path(
+            input_size,
+            os.path.join(os.path.join(TestCommonClass.get_basepath(), self.model_name), "input"),
+            output_file_num,
+        )
 
         cmd = f"{TestCommonClass.cmd_prefix} --model {model_path} --device {TestCommonClass.default_device_id} \
             --output {output_path} --debug True --pipeline {True} --warmup-count {warmup_num}\
@@ -138,7 +149,7 @@ class TestClass:
         # inference times should be  fit to given rule
         real_execute_num = TestCommonClass.get_inference_execute_num(log_path)
         if batch_size != 0:
-            exacute_num = math.ceil(output_file_num/batch_size)
+            exacute_num = math.ceil(output_file_num / batch_size)
             assert real_execute_num == warmup_num + exacute_num
         else:
             logger.error("zero division!")
@@ -171,15 +182,24 @@ class TestClass:
         batch_size = 1
         static_model_path = TestCommonClass.get_model_static_om_path(batch_size, self.model_name)
         input_size = TestCommonClass.get_model_inputs_size(static_model_path)[0]
-        input_path = TestCommonClass.get_inputs_path(input_size, os.path.join(os.path.join(TestCommonClass.get_basepath(),
-                                                                                           self.model_name), "input"),
-                                                     output_file_num)
+        input_path = TestCommonClass.get_inputs_path(
+            input_size,
+            os.path.join(os.path.join(TestCommonClass.get_basepath(), self.model_name), "input"),
+            output_file_num,
+        )
 
         for threads in threads_list:
             model_path = TestCommonClass.get_model_static_om_path(batch_size, self.model_name)
             cmd = "{} --model {} --device {} --output {} --debug True --pipeline True --threads {}\
-                --input {} > {}".format(TestCommonClass.cmd_prefix, model_path, TestCommonClass.default_device_id,
-                                        output_path, threads, input_path, log_path)
+                --input {} > {}".format(
+                TestCommonClass.cmd_prefix,
+                model_path,
+                TestCommonClass.default_device_id,
+                output_path,
+                threads,
+                input_path,
+                log_path,
+            )
             logger.info("run cmd:{}".format(cmd))
             ret = os.system(cmd)
             assert ret == 0
@@ -187,8 +207,8 @@ class TestClass:
             # inference times should be  fit to given rule
             real_execute_num = TestCommonClass.get_inference_execute_num(log_path)
             if batch_size != 0:
-                exacute_num = math.ceil(output_file_num/batch_size)
-                assert real_execute_num == warmup_num*threads + exacute_num
+                exacute_num = math.ceil(output_file_num / batch_size)
+                assert real_execute_num == warmup_num * threads + exacute_num
             else:
                 logger.warning("zero division!")
 
@@ -233,16 +253,25 @@ class TestClass:
         log_path = os.path.join(output_path, "log.txt")
         static_model_path = TestCommonClass.get_model_static_om_path(batch_size, self.model_name)
         input_size = TestCommonClass.get_model_inputs_size(static_model_path)[0]
-        input_path = TestCommonClass.get_inputs_path(input_size, os.path.join(os.path.join(TestCommonClass.get_basepath(),
-                                                                                           self.model_name), "input"),
-                                                     output_file_num)
+        input_path = TestCommonClass.get_inputs_path(
+            input_size,
+            os.path.join(os.path.join(TestCommonClass.get_basepath(), self.model_name), "input"),
+            output_file_num,
+        )
         batch_list = [1, 2, 4, 8]
 
         model_path = self.get_dynamic_batch_om_path()
         for _, dys_batch_size in enumerate(batch_list):
             cmd = "{0} --model {1} --device {2} --debug True --dymBatch {3} --input {4} \
-                --output {5} > {6}".format(TestCommonClass.cmd_prefix, model_path, TestCommonClass.default_device_id,
-                                           dys_batch_size, input_path, output_path, log_path)
+                --output {5} > {6}".format(
+                TestCommonClass.cmd_prefix,
+                model_path,
+                TestCommonClass.default_device_id,
+                dys_batch_size,
+                input_path,
+                output_path,
+                log_path,
+            )
             logger.info("run cmd:{}".format(cmd))
             ret = os.system(cmd)
             assert ret == 0
@@ -250,7 +279,7 @@ class TestClass:
             # inference times should be  fit to given rule
             real_execute_num = TestCommonClass.get_inference_execute_num(log_path)
             if dys_batch_size != 0:
-                exacute_num = math.ceil(output_file_num/dys_batch_size)
+                exacute_num = math.ceil(output_file_num / dys_batch_size)
                 assert real_execute_num == warmup_num + exacute_num
             else:
                 logger.warning("zero division!")
@@ -295,8 +324,9 @@ class TestClass:
             shutil.rmtree(os.path.join(output_path, "dump"))
 
         cmd = "{} --model {} --device {} --output {} --debug True --dump True --dump_npy True\
-            --input {} > {}".format(TestCommonClass.cmd_prefix, model_path, TestCommonClass.default_device_id,
-                                    output_path, input_path, log_path)
+            --input {} > {}".format(
+            TestCommonClass.cmd_prefix, model_path, TestCommonClass.default_device_id, output_path, input_path, log_path
+        )
         logger.info("run cmd:%s", cmd)
         ret = os.system(cmd)
         assert ret == 0
