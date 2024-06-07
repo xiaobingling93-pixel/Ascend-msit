@@ -21,13 +21,13 @@ from ait_llm.compare.cmp_algorithm import CMP_ALG_MAP
 def get_visible_device(device_type):
     return int(os.environ.get(device_type, 0).split(",")[0])
 
+
 def get_global_device():
     if hasattr(torch, "npu") and torch.npu.is_available() and get_visible_device("ASCEND_VISIBLE_DEVICES") >= 0:
         return "npu"
-    elif hasattr(torch, "cuda") and torch.cuda.is_available() and get_visible_device("CUDA_VISIBLE_DEVICES") >= 0:
+    if hasattr(torch, "cuda") and torch.cuda.is_available() and get_visible_device("CUDA_VISIBLE_DEVICES") >= 0:
         return "cuda"
-    else:
-        return "cpu"
+    return "cpu"
 
 
 GLOBAL_AIT_DUMP_PATH = "ait_dump"
