@@ -17,12 +17,25 @@ import torch
 
 from ait_llm.compare.cmp_algorithm import CMP_ALG_MAP
 
+
+def get_visible_device(device_type):
+    return int(os.environ.get(device_type, 0).split(",")[0])
+
+def get_global_device():
+    if hasattr(torch, "npu") and torch.npu.is_available() and get_visible_device("ASCEND_VISIBLE_DEVICES") >= 0:
+        return "npu"
+    elif hasattr(torch, "cuda") and torch.cuda.is_available() and get_visible_device("CUDA_VISIBLE_DEVICES") >= 0:
+        return "cuda"
+    else:
+        return "cpu"
+
+
 GLOBAL_AIT_DUMP_PATH = "ait_dump"
-GLOBAL_DEVICE = "cuda" if torch.cuda.is_available() and int(
-    os.environ.get("CUDA_VISIBLE_DEVICES", "0").split(",")[0]) >=0 else "cpu"
+GLOBAL_DEVICE = get_global_device()
 DEVICE_DIST_MAP = {
     "cuda": "nccl",
-    "npu": "hccl"
+    "npu": "hccl",
+    "cpu": "gloo"
 }
 GLOBAL_DIST_BACKEND = DEVICE_DIST_MAP.get(GLOBAL_DEVICE, "gloo")
 
@@ -87,30 +100,28 @@ CSV_GOLDEN_HEADER.extend(list(CMP_ALG_MAP.keys()))
 CSV_GOLDEN_HEADER.append(CMP_FAIL_REASON)
 
 
-def maybe_init_dist():
-    max_timestamp = torch.tensor(int(datetime.datetime.now().strftime("%s")))
-    try:
-        rank = int(os.environ.get("LOCAL_RANK", "0"))
-        world_size = int(os.environ.get("LOCAL_WORLD_SIZE", "1"))
-
-        if world_size < 2:
-            return max_timestamp
-    except KeyError:
-        return max_timestamp
+def get_timestamp_sync():
+    max_timestamp = int(datetime.datetime.now().strftime("%s"))
     
+    world_size = int(os.environ.get("LOCAL_WORLD_SIZE", "1"))
+    if world_size < 2:
+        return max_timestamp
+
+    rank = int(os.environ.get("LOCAL_RANK", "0"))
+    max_timestamp = torch.tensor(max_timestamp)
     if not torch.distributed.is_initialized():
         torch.distributed.init_process_group(backend=GLOBAL_DIST_BACKEND, rank=rank, world_size=world_size)
     torch.distributed.all_reduce(max_timestamp, op=torch.distributed.ReduceOp.MAX)
 
-    return max_timestamp
+    return max_timestamp.item()
 
 
 def get_ait_dump_path():
     global GLOBAL_AIT_DUMP_PATH
 
     if GLOBAL_AIT_DUMP_PATH == "ait_dump":
-        max_timestamp = maybe_init_dist()
-        timestamp = datetime.datetime.fromtimestamp(int(max_timestamp)).strftime("%Y%m%d_%H%M%S")
+        max_timestamp = get_timestamp_sync()
+        timestamp = datetime.datetime.fromtimestamp(max_timestamp).strftime("%Y%m%d_%H%M%S")
         os.environ[ATB_TIMESTAMP] = timestamp
         GLOBAL_AIT_DUMP_PATH = "ait_dump_" + timestamp
 
