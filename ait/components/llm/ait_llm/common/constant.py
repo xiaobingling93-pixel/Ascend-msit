@@ -86,6 +86,7 @@ CSV_GOLDEN_HEADER = [TOKEN_ID, DATA_ID, GOLDEN_DATA_PATH, GOLDEN_DTYPE, GOLDEN_S
 CSV_GOLDEN_HEADER.extend(list(CMP_ALG_MAP.keys()))
 CSV_GOLDEN_HEADER.append(CMP_FAIL_REASON)
 
+
 def maybe_init_dist():
     max_timestamp = torch.tensor(int(datetime.datetime.now().strftime("%s")))
     try:
@@ -103,16 +104,14 @@ def maybe_init_dist():
 
     return max_timestamp
 
-def set_timestamp(max_timestamp):
-    timestamp = datetime.datetime.fromtimestamp(int(max_timestamp)).strftime("%Y%m%d_%H%M%S")
-    os.environ[ATB_TIMESTAMP] = timestamp
-    return timestamp
 
 def get_ait_dump_path():
     global GLOBAL_AIT_DUMP_PATH
 
     if GLOBAL_AIT_DUMP_PATH == "ait_dump":
         max_timestamp = maybe_init_dist()
-        GLOBAL_AIT_DUMP_PATH = "ait_dump_" + set_timestamp(max_timestamp)
+        timestamp = datetime.datetime.fromtimestamp(int(max_timestamp)).strftime("%Y%m%d_%H%M%S")
+        os.environ[ATB_TIMESTAMP] = timestamp
+        GLOBAL_AIT_DUMP_PATH = "ait_dump_" + timestamp
 
     return GLOBAL_AIT_DUMP_PATH
