@@ -83,7 +83,7 @@ class OpMatchMap:
 
 def policy_output(golden_root_node: TreeNode, my_root_node: TreeNode, match_map: OpMatchMap):
     def get_last_child(node):
-        if len(node.children) > 0:
+        if hasattr(node, "children") and node.children is not None and len(node.children) > 0:
             return node.children[-1]
         else:
             return None
