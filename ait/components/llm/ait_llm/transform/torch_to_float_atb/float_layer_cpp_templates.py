@@ -48,7 +48,7 @@ basic_class_formatter = """
 namespace atb_speed {{
 namespace {model_name_lower} {{
 
-static const uint64_t IN_TENSOR_COUNT = 70;         // 62 + 8 (FusionAttention KVQuant)
+static const uint64_t IN_TENSOR_COUNT = 62;         // 62 + 8 (FusionAttention KVQuant)
 static const uint64_t OUT_TENSOR_COUNT = 1;
 static const uint64_t INTERMEDIATE_TENSOR_COUNT = 3;
 static const uint64_t NODE_COUNT = 4;
