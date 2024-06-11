@@ -24,8 +24,6 @@ from .rtn_layer_policy import LinearLayerPolicy, KVCacheMgrPolicy
 
 
 class RTNNetPolicy(NetPolicy):
-    """
-    """
 
     def __init__(self, config=InnerPTQConfig()):
         super().__init__(config)
@@ -36,7 +34,6 @@ class RTNNetPolicy(NetPolicy):
         self._layer_policy_map: dict = {}
 
     def build(self):
-        """Initialize `RTNNetPolicy`. A `RTNNetPolicy` can only be built once."""
         if self._build:
             return
         if self._config.weight_only:
