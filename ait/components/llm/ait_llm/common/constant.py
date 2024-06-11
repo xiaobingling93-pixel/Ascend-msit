@@ -19,7 +19,7 @@ from ait_llm.compare.cmp_algorithm import CMP_ALG_MAP
 
 
 def get_visible_device(device_type):
-    return int(os.environ.get(device_type, 0).split(",")[0])
+    return int(os.environ.get(device_type, "0").split(",")[0])
 
 
 def get_global_device():
