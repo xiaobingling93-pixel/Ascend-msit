@@ -24,9 +24,7 @@ from model_evaluation.bean import OpInfo, OpInnerInfo, ConvertConfig
 
 
 class ModelParser:
-    def __init__(self,
-        model_path: str, out_path: str, config: ConvertConfig
-    ) -> None:
+    def __init__(self, model_path: str, out_path: str, config: ConvertConfig) -> None:
         self._model_path = model_path
         self._out_path = out_path
         self._config = config
@@ -57,11 +55,7 @@ class ModelParser:
             logger.error(f'load ops json failed, err:{e}')
             return []
 
-        nodes_attr_map = {
-            Framework.ONNX: 'node',
-            Framework.TF: 'node',
-            Framework.CAFFE: 'layer'
-        }
+        nodes_attr_map = {Framework.ONNX: 'node', Framework.TF: 'node', Framework.CAFFE: 'layer'}
 
         framework = self._config.framework
         nodes_attr = nodes_attr_map.get(framework)
@@ -70,24 +64,16 @@ class ModelParser:
             logger.error(f'no attr \'{nodes_attr}\' in ops json.')
             return []
 
-        op_type_attr_map = {
-            Framework.ONNX: 'op_type',
-            Framework.TF: 'op',
-            Framework.CAFFE: 'type'
-        }
+        op_type_attr_map = {Framework.ONNX: 'op_type', Framework.TF: 'op', Framework.CAFFE: 'type'}
 
         op_type_attr = op_type_attr_map.get(framework)
         op_infos: List[OpInfo] = []
         for node in nodes:
             ori_op_name = node.get('name')
             ori_op_type = node.get(op_type_attr)
-            if not isinstance(ori_op_name, str) or \
-                not isinstance(ori_op_type, str):
+            if not isinstance(ori_op_name, str) or not isinstance(ori_op_type, str):
                 continue
-            op_info = OpInfo(
-                op_name=ori_op_name,
-                op_type=ori_op_type
-            )
+            op_info = OpInfo(op_name=ori_op_name, op_type=ori_op_type)
             op_infos.append(op_info)
         return op_infos
 
@@ -106,21 +92,17 @@ class ModelParser:
             '--mode=1',
             '--framework={}'.format(framework.value),
             '--om={}'.format(self._model_path),
-            '--json={}'.format(output)
+            '--json={}'.format(output),
         ]
         logger.info('convert model to json, please wait...')
         out, err = utils.exec_command(convert_cmd)
         if len(err) != 0:
-            logger.error(
-                f'convert model to json failed, err:{err}.'
-            )
+            logger.error(f'convert model to json failed, err:{err}.')
             return False
 
         errcode = AtcErrParser.parse_errcode(out)
         if errcode != AtcErr.SUCCESS:
-            logger.error(
-                f'convert model to json failed, err:{out}.'
-            )
+            logger.error(f'convert model to json failed, err:{out}.')
             return False
         logger.info('convert model to json finished.')
 
@@ -140,23 +122,15 @@ class ModelParser:
         convert_cmd = [
             'atc',
             '--model={}'.format(self._model_path),
-            '--framework={}'.format(
-                self._config.framework.value
-            ),
+            '--framework={}'.format(self._config.framework.value),
             '--soc_version={}'.format(self._config.soc_type),
-            '--output={}'.format(output)
+            '--output={}'.format(output),
         ]
         if self._config.framework == Framework.CAFFE:
-            convert_cmd.append(
-                '--weight={}'.format(self._config.weight)
-            )
-        logger.info(
-            'try to convert model to om, please wait...'
-        )
+            convert_cmd.append('--weight={}'.format(self._config.weight))
+        logger.info('try to convert model to om, please wait...')
         out, err = utils.exec_command(convert_cmd)
-        logger.info(
-            'try to convert model to om finished.'
-        )
+        logger.info('try to convert model to om finished.')
         if len(err) != 0:
             return AtcErr.UNKNOWN, ''
 

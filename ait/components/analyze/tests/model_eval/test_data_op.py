@@ -52,5 +52,6 @@ class TestOpMap(unittest.TestCase):
         inner_op = self.onnx_op_map.map_onnx_op('Add', 0)
         self.assertIsNone(inner_op)
 
+
 if __name__ == "__main__":
     unittest.main()

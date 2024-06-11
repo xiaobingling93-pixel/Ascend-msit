@@ -32,22 +32,14 @@ class OpMap:
         if not os.path.isdir(sub_path):
             raise RuntimeError(f'{sub_path} is not dir.')
 
-        framework_yaml_map = {
-            Framework.CAFFE: 'caffe.yaml',
-            Framework.ONNX: 'onnx.yaml',
-            Framework.TF: 'tf.yaml'
-        }
+        framework_yaml_map = {Framework.CAFFE: 'caffe.yaml', Framework.ONNX: 'onnx.yaml', Framework.TF: 'tf.yaml'}
         if framework not in framework_yaml_map:
             raise RuntimeError('framework is invalid.')
-        yaml_path = os.path.join(sub_path,
-            framework_yaml_map.get(framework)
-        )
+        yaml_path = os.path.join(sub_path, framework_yaml_map.get(framework))
         if not os.path.exists(yaml_path):
             raise RuntimeError(f'{yaml_path} not exist.')
         if not utils.check_file_security(yaml_path):
-            raise RuntimeError(
-                f'check file security error, file:{yaml_path}'
-            )
+            raise RuntimeError(f'check file security error, file:{yaml_path}')
 
         try:
             with open(yaml_path) as f:

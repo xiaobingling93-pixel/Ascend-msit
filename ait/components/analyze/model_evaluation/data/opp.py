@@ -31,19 +31,13 @@ class Opp:
         latest_path = os.getenv('ASCEND_TOOLKIT_HOME')
         opp_path = os.getenv('ASCEND_OPP_PATH')
         if not os.path.isdir(latest_path):
-            raise RuntimeError(
-                f'latest path {latest_path} not exist.'
-            )
+            raise RuntimeError(f'latest path {latest_path} not exist.')
         if not os.path.isdir(opp_path):
-            raise RuntimeError(
-                f'opp path {opp_path} not exist.'
-            )
+            raise RuntimeError(f'opp path {opp_path} not exist.')
 
         opp_json = os.path.join(out_path, 'opp.json')
         if not utils.check_file_security(opp_json):
-            raise RuntimeError(
-                f'check file security error, file:{opp_json}'
-            )
+            raise RuntimeError(f'check file security error, file:{opp_json}')
         if os.path.isfile(opp_json):
             os.remove(opp_json)
 
@@ -53,13 +47,11 @@ class Opp:
             '{}'.format(fast_query_shell),
             '--type=op',
             '--opp_path={}'.format(opp_path),
-            '--output={}'.format(opp_json)
+            '--output={}'.format(opp_json),
         ]
         _, err = utils.exec_command(exec_cmd)
         if len(err) != 0:
-            raise RuntimeError(
-                f'exec fast_query shell failed, err:{err}.'
-            )
+            raise RuntimeError(f'exec fast_query shell failed, err:{err}.')
 
         if not os.path.isfile(opp_json):
             raise RuntimeError(f'{opp_json} not generate.')
@@ -103,10 +95,7 @@ class Opp:
         if op_type not in self._ops_dict:
             return OpInnerInfo()
 
-        return OpInnerInfo(
-            op_type=op_type,
-            op_engine=self.query_op_engine(op_type)
-        )
+        return OpInnerInfo(op_type=op_type, op_engine=self.query_op_engine(op_type))
 
     def query_op_engine(self, op_type: str) -> Engine:
         # get op engine, default AICORE
@@ -115,17 +104,12 @@ class Opp:
             return Engine.UNKNOWN
 
         try:
-            engine = op_info.get('attr').get('attr') \
-                        .get('opInfo').get('engine')
+            engine = op_info.get('attr').get('attr').get('opInfo').get('engine')
         except AttributeError:
             # default Aicore
             return Engine.AICORE
 
-        engine_map = {
-            'DNN_VM_AICPU': Engine.AICPU,
-            'DNN_VM_HOST_CPU': Engine.HOST_CPU,
-            'DNN_VM_DVPP': Engine.DVPP
-        }
+        engine_map = {'DNN_VM_AICPU': Engine.AICPU, 'DNN_VM_HOST_CPU': Engine.HOST_CPU, 'DNN_VM_DVPP': Engine.DVPP}
 
         if engine not in engine_map:
             logger.error(f'engine({engine}) is unknown.')

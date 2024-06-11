@@ -19,7 +19,8 @@ from model_evaluation.common.enum import Framework
 
 @dataclass
 class ConvertConfig:
-    ''' model convert config params '''
+    '''model convert config params'''
+
     framework: Framework = Framework.UNKNOWN
     soc_type: str = ''
     weight: str = ''

@@ -22,7 +22,7 @@ from google.protobuf.message import DecodeError
 from model_evaluation.common.enum import ONNXCheckerError
 
 
-class OnnxGraph():
+class OnnxGraph:
     def __init__(self, graph) -> None:
         super().__init__()
         self._graph = graph
@@ -34,9 +34,7 @@ class OnnxGraph():
     @classmethod
     def load(cls, model_path: str) -> 'OnnxGraph':
         if not os.path.isfile(model_path):
-            raise RuntimeError(
-                f'model {model_path} is not file.'
-            )
+            raise RuntimeError(f'model {model_path} is not file.')
 
         try:
             graph = onnx.load_model(model_path)
@@ -56,10 +54,8 @@ class OnnxGraph():
 
     def check_node(self, node):
         check_ctx = onnx.checker.DEFAULT_CONTEXT
-        ori_opset_imports = \
-            deepcopy(check_ctx.opset_imports)
-        check_ctx.opset_imports = \
-            {'': self.opset_version()}
+        ori_opset_imports = deepcopy(check_ctx.opset_imports)
+        check_ctx.opset_imports = {'': self.opset_version()}
 
         try:
             onnx.checker.check_node(node, check_ctx)

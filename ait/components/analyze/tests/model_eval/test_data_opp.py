@@ -26,7 +26,7 @@ class TestOpp(unittest.TestCase):
     def setUp(self) -> None:
         self.ori_env_map = {
             'ASCEND_TOOLKIT_HOME': os.getenv('ASCEND_TOOLKIT_HOME'),
-            'ASCEND_OPP_PATH': os.getenv('ASCEND_OPP_PATH')
+            'ASCEND_OPP_PATH': os.getenv('ASCEND_OPP_PATH'),
         }
         os.environ['ASCEND_TOOLKIT_HOME'] = ''
         os.environ['ASCEND_OPP_PATH'] = ''

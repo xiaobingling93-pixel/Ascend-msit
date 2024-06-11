@@ -47,7 +47,7 @@ class TestModelParser(unittest.TestCase):
         model_parser = ModelParser(self.model_path, self.cur_dir, self.config)
 
         utils.exec_command = mock.Mock(return_value=('', 'Run error.'))
-        res = model_parser.parse_model_to_json()        
+        res = model_parser.parse_model_to_json()
         self.assertFalse(res)
 
         utils.exec_command = mock.Mock(return_value=('Atc run failed', ''))
@@ -96,15 +96,9 @@ class TestModelParser(unittest.TestCase):
         op_infos = model_parser.parse_all_ops()
         self.assertNotEqual(op_infos, [])
 
-        real_op_map = {
-            'Sub_7': 'Sub',
-            'Div_9': 'Div'
-        }
+        real_op_map = {'Sub_7': 'Sub', 'Div_9': 'Div'}
         for op_info in op_infos:
-            self.assertEqual(
-                op_info.op_type,
-                real_op_map.get(op_info.op_name)
-            )
+            self.assertEqual(op_info.op_type, real_op_map.get(op_info.op_name))
 
 
 if __name__ == "__main__":

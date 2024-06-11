@@ -18,7 +18,7 @@ import stat
 
 class Const:
 
-    ONLY_READ = stat.S_IRUSR | stat.S_IRGRP # 0O440
+    ONLY_READ = stat.S_IRUSR | stat.S_IRGRP  # 0O440
 
     # bin path
     FAST_QUERY_BIN = os.path.join('tools', 'ms_fast_query', 'ms_fast_query.py')

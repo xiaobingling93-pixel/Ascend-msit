@@ -58,7 +58,7 @@ class TestAtcErrParser(unittest.TestCase):
             'Conv_112': 'ai.onnx::11::Convx',
             'Conv_172': 'ai.onnx::11::Convx',
             'Conv_232': 'ai.onnx::11::Convx',
-            'Conv_292': 'ai.onnx::11::Convx'
+            'Conv_292': 'ai.onnx::11::Convx',
         }
         self.assertEqual(err_ops, real_err_ops)
 
@@ -72,7 +72,7 @@ class TestAtcErrParser(unittest.TestCase):
             'Conv_112': 'ai.onnx::11::Convx',
             'Conv_172': 'ai.onnx::11::Convx',
             'Conv_232': 'ai.onnx::11::Convx',
-            'Conv_292': 'ai.onnx::11::Convx'
+            'Conv_292': 'ai.onnx::11::Convx',
         }
         self.assertEqual(err_ops, real_err_ops)
 
@@ -86,7 +86,7 @@ class TestAtcErrParser(unittest.TestCase):
             'Conv_112': 'Conv',
             'Conv_172': 'Conv',
             'Conv_232': 'Conv',
-            'Conv_292': 'Conv'
+            'Conv_292': 'Conv',
         }
         self.assertEqual(err_ops, real_err_ops)
 
@@ -108,7 +108,7 @@ class TestAtcErrParser(unittest.TestCase):
             'Conv_112': 'Conv',
             'Conv_172': 'Conv',
             'Conv_232': 'Conv',
-            'Conv_292': 'Conv'
+            'Conv_292': 'Conv',
         }
         self.assertEqual(err_ops, real_err_ops)
 
