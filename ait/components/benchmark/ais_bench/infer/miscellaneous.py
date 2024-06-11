@@ -59,7 +59,7 @@ def version_check(args):
     try:
         aclruntime_version = get_modules_version('aclruntime')
     except Exception:
-        logger.warning(f"can't find aclruntime, please to install ais_bench(benchmark)")
+        logger.warning(f"can't find aclruntime, please visit gitee ait to install ais_bench(benchmark)")
         args.run_mode = "tensor"
     if aclruntime_version != "0.0.2":
         logger.warning(
