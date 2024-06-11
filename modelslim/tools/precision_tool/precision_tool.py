@@ -55,7 +55,8 @@ class PrecisionTest:
         if not isinstance(self.tokenizer_return_type_id, bool):
             raise TypeError("Tokenizer return type id must be bool")
         self.tokenizer = tokenizer
-        self.__verify_tokenizer()
+        if not self.__verify_tokenizer():
+            raise TypeError("Tokenizer must be matched with model")
         self.batch_size = batch_size
         if not isinstance(self.batch_size, int):
             raise TypeError("Batch size must be an integer.")
@@ -92,7 +93,7 @@ class PrecisionTest:
             return False
         try:
             with torch.no_grad():
-                self.model.generate(**inputs, do_sample=False, max_new_tokens=512)
+                self.model.generate(**inputs, do_sample=False, max_new_tokens=1)
         except Exception as e:
             self.logger.error("Model and tokenizer are not compatible. Cannot simply use generate API.")
             self.logger.error(f"Model type is {type(self.model)}")
