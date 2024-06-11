@@ -5,9 +5,10 @@
 ### 准备
 - 安装 ait
 - 获取 [Gitee ascend/MindIE-LLM](https://gitee.com/ascend/MindIE-LLM) 源码
+- 准备待迁移的 transformers 模型目录
 
 ### QWEN 13B 迁移示例
-- 迁移生成 atb 模型代码
+- **迁移生成 atb 模型代码**，`--source` 指定待迁移的 transformers 模型目录
   ```sh
   ait llm transform -s /data/qwen-14b-chat
   # Generated files: [
