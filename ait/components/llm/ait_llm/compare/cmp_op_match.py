@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import itertools
 from enum import Enum
 from typing import Any
 from ait_llm.common.log import logger
@@ -81,13 +82,34 @@ class OpMatchMap:
 
 
 def policy_output(golden_root_node: TreeNode, my_root_node: TreeNode, match_map: OpMatchMap):
-    match_map.add_score(
-        my_root_node.children[-1],
-        MatchLocation.ALL_OUTPUT,
-        golden_root_node.children[-1],
-        MatchLocation.ALL_OUTPUT,
-        MatchScore.FULL_MATCH,
-    )
+    def get_last_child(node):
+        if hasattr(node, "children") and node.children is not None and len(node.children) > 0:
+            return node.children[-1]
+        else:
+            return None
+
+    def get_all_last_child(node):
+        all_last_nodes = []
+        next_last_node = node
+        while next_last_node is not None:
+            next_last_node = get_last_child(next_last_node)
+            if next_last_node is None:
+                break
+            all_last_nodes.append(next_last_node)
+
+        return all_last_nodes
+
+    my_last_nodes = get_all_last_child(my_root_node)
+    golden_last_nodes = get_all_last_child(golden_root_node)
+
+    for golden_node, my_node in itertools.product(golden_last_nodes, my_last_nodes):
+        match_map.add_score(
+            my_node,
+            MatchLocation.ALL_OUTPUT,
+            golden_node,
+            MatchLocation.ALL_OUTPUT,
+            MatchScore.FULL_MATCH,
+        )
 
 
 def policy_name_full_match(golden_root_node: TreeNode, my_root_node: TreeNode, match_map: OpMatchMap):
@@ -147,10 +169,12 @@ class OpMatchMgr:
 class OpMatchPolicyMapCount:
     def __init__(self, args) -> None:
         from ait_llm.compare.atb_acc_cmp import load_mapping
+
         self.mapping_dic = load_mapping(args.mapping_file)
 
     def __call__(self, golden_root_node: TreeNode, my_root_node: TreeNode, match_map: OpMatchMap) -> None:
         from ait_llm.compare.atb_acc_cmp import pair_built_in_op, pair_custom_op
+
         golden_layer_type = golden_root_node.get_layer_node_type()
         logger.info("golden_layer_type: %s", golden_layer_type)
         golden_layer_nodes = golden_root_node.get_layer_node(golden_layer_type)
