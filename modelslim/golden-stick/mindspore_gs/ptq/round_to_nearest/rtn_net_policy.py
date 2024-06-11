@@ -25,10 +25,6 @@ from .rtn_layer_policy import LinearLayerPolicy, KVCacheMgrPolicy
 
 class RTNNetPolicy(NetPolicy):
     """
-    Derived class of NetworkQConfig. RoundToNearestPTQ config.
-
-    Supported Config:
-        ``quant_delay`` ``quant_dtype`` ``per_channel`` ``symmetric`` ``narrow_range`` .
     """
 
     def __init__(self, config=InnerPTQConfig()):
