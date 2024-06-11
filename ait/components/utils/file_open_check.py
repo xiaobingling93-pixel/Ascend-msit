@@ -39,13 +39,12 @@ logging.addLevelName(SOLUTION_LEVEL_WIN, "SOLUTION_WIN")
 logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='[%(levelname)s] %(message)s')
 logger = logging.getLogger(__name__)
 
-
-SOLUTION_BASE_URL = 'https://gitee.com/ascend/ait/wikis/ait_security_error_log_solution'
-SOFT_LINK_SUB_URL = '/soft_link_error_log_solution'
-PATH_LENGTH_SUB_URL = '/path_length_overflow_error_log_solution'
-OWNER_SUB_URL = '/owner_or_ownergroup_error_log_solution'
-PERMISSION_SUB_URL = '/path_permission_error_log_solution'
-ILLEGAL_CHAR_SUB_URL = '/path_contain_illegal_char_error_log_solution'
+SOLUTION_BASE_LOC = '\"gitee repo: Ascend/ait, wikis: ait_security_error_log_solution, chapter:'
+SOFT_LINK_SUB_CHAPTER = 'soft_link_error_log_solution\"'
+PATH_LENGTH_SUB_CHAPTER = 'path_length_overflow_error_log_solution\"'
+OWNER_SUB_CHAPTER = 'owner_or_ownergroup_error_log_solution\"'
+PERMISSION_SUB_CHAPTER = 'path_permission_error_log_solution\"'
+ILLEGAL_CHAR_SUB_CHAPTER = 'path_contain_illegal_char_error_log_solution\"'
 
 
 def solution_log(content):
@@ -59,19 +58,19 @@ def solution_log_win(content):
 def is_legal_path_length(path):
     if len(path) > 4096 and not sys.platform.startswith("win"):  # linux total path length limit
         logger.error(f"file total path{path} length out of range (4096), please check the file(or directory) path")
-        solution_log(SOLUTION_BASE_URL + PATH_LENGTH_SUB_URL)
+        solution_log(SOLUTION_BASE_LOC + PATH_LENGTH_SUB_CHAPTER)
         return False
 
     if len(path) > 260 and sys.platform.startswith("win"):  # windows total path length limit
         logger.error(f"file total path{path} length out of range (260), please check the file(or directory) path")
-        solution_log_win(SOLUTION_BASE_URL + PATH_LENGTH_SUB_URL)
+        solution_log_win(SOLUTION_BASE_LOC + PATH_LENGTH_SUB_CHAPTER)
         return False
 
     dirnames = path.split("/")
     for dirname in dirnames:
         if len(dirname) > 255:  # linux single file path length limit
             logger.error(f"file name{dirname} length out of range (255), please check the file(or directory) path")
-            solution_log(SOLUTION_BASE_URL + PATH_LENGTH_SUB_URL)
+            solution_log(SOLUTION_BASE_LOC + PATH_LENGTH_SUB_CHAPTER)
             return False
     return True
 
@@ -79,11 +78,11 @@ def is_legal_path_length(path):
 def is_match_path_white_list(path):
     if PATH_WHITE_LIST_REGEX.search(path) and not sys.platform.startswith("win"):
         logger.error(f"path:{path} contains illegal char, legal chars include A-Z a-z 0-9 _ - / .")
-        solution_log(SOLUTION_BASE_URL + ILLEGAL_CHAR_SUB_URL)
+        solution_log(SOLUTION_BASE_LOC + ILLEGAL_CHAR_SUB_CHAPTER)
         return False
     if PATH_WHITE_LIST_REGEX_WIN.search(path) and sys.platform.startswith("win"):
         logger.error(f"path:{path} contains illegal char, legal chars include A-Z a-z 0-9 _ - / . : \\")
-        solution_log_win(SOLUTION_BASE_URL + ILLEGAL_CHAR_SUB_URL)
+        solution_log_win(SOLUTION_BASE_LOC + ILLEGAL_CHAR_SUB_CHAPTER)
         return False
     return True
 
@@ -175,33 +174,33 @@ class FileStat:
             return False
         if self.is_softlink:
             logger.error(f"path :{self.file} is a soft link, not supported, please import file(or directory) directly")
-            solution_log(SOLUTION_BASE_URL + SOFT_LINK_SUB_URL)
+            solution_log(SOLUTION_BASE_LOC + SOFT_LINK_SUB_CHAPTER)
             return False
         if not self.is_user_or_group_owner and self.is_exists:
             logger.error(f"current user isn't path:{self.file}'s owner or ownergroup")
-            solution_log(SOLUTION_BASE_URL + OWNER_SUB_URL)
+            solution_log(SOLUTION_BASE_LOC + OWNER_SUB_CHAPTER)
             return False
         if perm == 'read':
             if strict_permission and self.permission & READ_FILE_NOT_PERMITTED_STAT > 0:
                 logger.error(f"The file {self.file} is group writable, or is others writable, "
                              "as import file(or directory) permission should not be over 0o755(rwxr-xr-x)")
-                solution_log(SOLUTION_BASE_URL + PERMISSION_SUB_URL)
+                solution_log(SOLUTION_BASE_LOC + PERMISSION_SUB_CHAPTER)
                 return False
             if not os.access(self.realpath, os.R_OK) or self.permission & stat.S_IRUSR == 0:
                 logger.error(f"Current user doesn't have read permission to the file {self.file}, "
                              "as import file(or directory) permission should be at least 0o400(r--------) ")
-                solution_log(SOLUTION_BASE_URL + PERMISSION_SUB_URL)
+                solution_log(SOLUTION_BASE_LOC + PERMISSION_SUB_CHAPTER)
                 return False
         elif perm == 'write' and self.is_exists:
             if (strict_permission or self.is_file) and self.permission & WRITE_FILE_NOT_PERMITTED_STAT > 0:
                 logger.error(f"The file {self.file} is group writable, or is others writable, "
                              "as export file(or directory) permission should not be over 0o755(rwxr-xr-x)")
-                solution_log(SOLUTION_BASE_URL + PERMISSION_SUB_URL)
+                solution_log(SOLUTION_BASE_LOC + PERMISSION_SUB_CHAPTER)
                 return False
             if not os.access(self.realpath, os.W_OK):
                 logger.error(f"Current user doesn't have write permission to the file {self.file}, "
                              "as export file(or directory) permission should be at least 0o200(-w-------) ")
-                solution_log(SOLUTION_BASE_URL + PERMISSION_SUB_URL)
+                solution_log(SOLUTION_BASE_LOC + PERMISSION_SUB_CHAPTER)
                 return False
         return True
 
@@ -211,7 +210,7 @@ class FileStat:
             return False
         if self.is_softlink:
             logger.error(f"path :{self.file} is a soft link, not supported, please import file(or directory) directly")
-            solution_log(SOLUTION_BASE_URL + SOFT_LINK_SUB_URL)
+            solution_log(SOLUTION_BASE_LOC + SOFT_LINK_SUB_CHAPTER)
             return False
         return True
 
