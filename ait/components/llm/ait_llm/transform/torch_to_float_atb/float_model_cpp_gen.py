@@ -58,10 +58,10 @@ def float_model_cpp_gen(model, save_name=None, save_dir=None):
     )
 
     post_properties = "\n".join([
-        templates.infer_shape_formatter,
+        templates.infer_shape_formatter.format(),
         build_graph,
-        templates.parse_param_formatter,
-        templates.bind_param_host_tensor_formatter,
+        templates.parse_param_formatter.format(),
+        templates.bind_param_host_tensor_formatter.format(),
     ])
 
     rr += templates.basic_class_formatter.format(
