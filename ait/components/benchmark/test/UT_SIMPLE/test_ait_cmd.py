@@ -20,7 +20,7 @@ from ais_bench.infer.benchmark_process import args_rules
 from ais_bench.infer.args_adapter import BenchMarkArgsAdapter
 from ais_bench.infer.main_cli import BenchmarkCommand
 
-benchmark_command = BenchmarkCommand("benchmark","hekp")
+benchmark_command = BenchmarkCommand("benchmark", "help")
 data_path = os.getenv("AIT_BENCHMARK_DT_DATA_PATH")
 if not data_path:
     current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -62,7 +62,7 @@ base_cmd_dict = {
     "--profiler-rename": "0",
     "--dump-npy": "0",
     "--divide-input": "0",
-    "--threads": "1"
+    "--threads": "1",
 }
 
 simple_cmd_dict = {
@@ -100,7 +100,7 @@ simple_cmd_dict = {
     "--profiler-rename": "0",
     "--dump-npy": "0",
     "--divide-input": "0",
-    "--threads": "1"
+    "--threads": "1",
 }
 
 
@@ -113,42 +113,42 @@ def cmd_dict_to_list(cmd_dict):
 
 
 def create_adapter(args):
-    args_adapter = BenchMarkArgsAdapter (
-            model=args.om_model,
-            input_path=args.input,
-            output=args.output,
-            output_dirname=args.output_dirname,
-            outfmt=args.outfmt,
-            loop=args.loop,
-            debug=args.debug,
-            device=args.device,
-            dym_batch=args.dym_batch,
-            dym_hw=args.dym_hw,
-            dym_dims=args.dym_dims,
-            dym_shape=args.dym_shape,
-            output_size=args.output_size,
-            auto_set_dymshape_mode=args.auto_set_dymshape_mode,
-            auto_set_dymdims_mode=args.auto_set_dymdims_mode,
-            batchsize=args.batch_size,
-            pure_data_type=args.pure_data_type,
-            profiler=args.profiler,
-            dump=args.dump,
-            acl_json_path=args.acl_json_path,
-            output_batchsize_axis=args.output_batchsize_axis,
-            run_mode=args.run_mode,
-            display_all_summary=args.display_all_summary,
-            warmup_count=args.warmup_count,
-            dym_shape_range=args.dym_shape_range,
-            aipp_config=args.aipp_config,
-            energy_consumption=args.energy_consumption,
-            npu_id=args.npu_id,
-            backend=args.backend,
-            perf=args.perf,
-            pipeline=args.pipeline,
-            profiler_rename=args.profiler_rename,
-            dump_npy=args.dump_npy,
-            divide_input = args.divide_input,
-            threads = args.threads
+    args_adapter = BenchMarkArgsAdapter(
+        model=args.om_model,
+        input_path=args.input,
+        output=args.output,
+        output_dirname=args.output_dirname,
+        outfmt=args.outfmt,
+        loop=args.loop,
+        debug=args.debug,
+        device=args.device,
+        dym_batch=args.dym_batch,
+        dym_hw=args.dym_hw,
+        dym_dims=args.dym_dims,
+        dym_shape=args.dym_shape,
+        output_size=args.output_size,
+        auto_set_dymshape_mode=args.auto_set_dymshape_mode,
+        auto_set_dymdims_mode=args.auto_set_dymdims_mode,
+        batchsize=args.batch_size,
+        pure_data_type=args.pure_data_type,
+        profiler=args.profiler,
+        dump=args.dump,
+        acl_json_path=args.acl_json_path,
+        output_batchsize_axis=args.output_batchsize_axis,
+        run_mode=args.run_mode,
+        display_all_summary=args.display_all_summary,
+        warmup_count=args.warmup_count,
+        dym_shape_range=args.dym_shape_range,
+        aipp_config=args.aipp_config,
+        energy_consumption=args.energy_consumption,
+        npu_id=args.npu_id,
+        backend=args.backend,
+        perf=args.perf,
+        pipeline=args.pipeline,
+        profiler_rename=args.profiler_rename,
+        dump_npy=args.dump_npy,
+        divide_input=args.divide_input,
+        threads=args.threads,
     )
     return args_adapter
 
@@ -162,7 +162,7 @@ def cmdline_legal_args_full(monkeypatch):
 
 def test_check_all_full_args_legality(cmdline_legal_args_full):
     """
-        正确的命令，使用可选命令全称
+    正确的命令，使用可选命令全称
     """
     parser = argparse.ArgumentParser()
     benchmark_command.add_arguments(parser)
@@ -181,7 +181,7 @@ def cmdline_legal_args_simple(monkeypatch):
 
 def test_check_all_simple_args_legality(cmdline_legal_args_simple):
     """
-        正确的命令，使用可选命令简称
+    正确的命令，使用可选命令简称
     """
     parser = argparse.ArgumentParser()
     benchmark_command.add_arguments(parser)
@@ -201,7 +201,7 @@ def cmdline_args_full_model_path(monkeypatch):
 
 def test_invalid_model_path(cmdline_args_full_model_path):
     """
-        模型路径不存在
+    模型路径不存在
     """
     parser = argparse.ArgumentParser()
     benchmark_command.add_arguments(parser)
@@ -219,7 +219,7 @@ def cmdline_args_full_loop(monkeypatch):
 
 def test_loop_is_not_positive(cmdline_args_full_loop):
     """
-        --loop为负数
+    --loop为负数
     """
     parser = argparse.ArgumentParser()
     benchmark_command.add_arguments(parser)
@@ -237,7 +237,7 @@ def cmdline_args_full_batchsize(monkeypatch):
 
 def test_batchsize_is_not_positive(cmdline_args_full_batchsize):
     """
-        --batchsize为负数
+    --batchsize为负数
     """
     parser = argparse.ArgumentParser()
     benchmark_command.add_arguments(parser)
@@ -255,7 +255,7 @@ def cmdline_args_full_warmup(monkeypatch):
 
 def test_warmup_count_is_not_positive(cmdline_args_full_warmup):
     """
-        --warmup_count为负数
+    --warmup_count为负数
     """
     parser = argparse.ArgumentParser()
     benchmark_command.add_arguments(parser)
@@ -273,7 +273,7 @@ def cmdline_args_full_bsaxis(monkeypatch):
 
 def test_output_batchsize_axis_is_not_positive(cmdline_args_full_bsaxis):
     """
-        --output_batchsize_axis为负数
+    --output_batchsize_axis为负数
     """
     parser = argparse.ArgumentParser()
     benchmark_command.add_arguments(parser)
@@ -291,7 +291,7 @@ def cmdline_args_full_device(monkeypatch):
 
 def test_device_id_out_of_range(cmdline_args_full_device):
     """
-        --device超出范围
+    --device超出范围
     """
     parser = argparse.ArgumentParser()
     benchmark_command.add_arguments(parser)
@@ -309,7 +309,7 @@ def cmdline_args_full_outfmt(monkeypatch):
 
 def test_illegal_outfmt(cmdline_args_full_outfmt):
     """
-        --outfmt非法
+    --outfmt非法
     """
     parser = argparse.ArgumentParser()
     benchmark_command.add_arguments(parser)

@@ -20,7 +20,7 @@ import numpy as np
 import pytest
 from test_common import TestCommonClass
 
-logging.basicConfig(stream = sys.stdout, level = logging.INFO, format = '[%(levelname)s] %(message)s')
+logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='[%(levelname)s] %(message)s')
 logger = logging.getLogger(__name__)
 
 
@@ -185,7 +185,7 @@ class TestClass:
         session = aclruntime.InferenceSession(model_path, device_id, options)
 
         # create new numpy data according inputs info
-        barray = bytearray(session.get_inputs()[0].realsize+128)
+        barray = bytearray(session.get_inputs()[0].realsize + 128)
         ndata = np.frombuffer(barray)
         # convert numpy to pytensors in device
         tensor = aclruntime.Tensor(ndata)
@@ -247,4 +247,4 @@ class TestClass:
         # convert numpy to pytensors in device
         tensor = aclruntime.Tensor(ndata)
         with pytest.raises(RuntimeError) as e:
-            tensor.to_device(device_id+100)
+            tensor.to_device(device_id + 100)

@@ -45,8 +45,9 @@ class TestClass:
 
     def test_args_invalid_model_path(self):
         model_path = "xxx_invalid.om"
-        cmd = "{} --model {} --device {}".format(TestCommonClass.cmd_prefix, model_path,
-                                                 TestCommonClass.default_device_id)
+        cmd = "{} --model {} --device {}".format(
+            TestCommonClass.cmd_prefix, model_path, TestCommonClass.default_device_id
+        )
         logging.info(f"run cmd:{cmd}")
         ret = os.system(cmd)
         assert ret != 0
@@ -67,8 +68,9 @@ class TestClass:
         model_path = TestCommonClass.get_model_static_om_path(1, self.model_name)
         os.environ['AIT_NO_MSPROF_MODE'] = "1"
         acl_json_path = "xxx_invalid.json"
-        cmd = "{} --model {} --device {} --acl_json_path {} ".format(TestCommonClass.cmd_prefix, model_path,
-                                                                     TestCommonClass.default_device_id, acl_json_path)
+        cmd = "{} --model {} --device {} --acl_json_path {} ".format(
+            TestCommonClass.cmd_prefix, model_path, TestCommonClass.default_device_id, acl_json_path
+        )
         logging.info(f"run cmd:{cmd}")
         ret = os.system(cmd)
         os.environ['AIT_NO_MSPROF_MODE'] = "0"
@@ -84,8 +86,9 @@ class TestClass:
         acl_json_path = os.path.join(TestCommonClass.get_basepath(), "acl.json")
         with os.fdopen(os.open(acl_json_path, OPEN_FLAGS, OPEN_MODES), "w") as f:
             json.dump(json_dict, f, indent=4, separators=(", ", ": "), sort_keys=True)
-        cmd = "{} --model {} --device {} --acl_json_path {} ".format(TestCommonClass.cmd_prefix, model_path,
-                                                                     TestCommonClass.default_device_id, acl_json_path)
+        cmd = "{} --model {} --device {} --acl_json_path {} ".format(
+            TestCommonClass.cmd_prefix, model_path, TestCommonClass.default_device_id, acl_json_path
+        )
         logging.info(f"run cmd:{cmd}")
         ret = os.system(cmd)
         os.environ['AIT_NO_MSPROF_MODE'] = "0"
@@ -93,8 +96,9 @@ class TestClass:
 
     def test_args_ok(self):
         model_path = TestCommonClass.get_model_static_om_path(1, self.model_name)
-        cmd = "{} --model {} --device {}".format(TestCommonClass.cmd_prefix, model_path,
-                                                 TestCommonClass.default_device_id)
+        cmd = "{} --model {} --device {}".format(
+            TestCommonClass.cmd_prefix, model_path, TestCommonClass.default_device_id
+        )
         logging.info(f"run cmd:{cmd}")
         ret = os.system(cmd)
         assert ret == 0
@@ -111,8 +115,9 @@ class TestClass:
         model_path = TestCommonClass.get_model_static_om_path(1, self.model_name)
         loops = [-3, 0]
         for _, loop_num in enumerate(loops):
-            cmd = "{} --model {} --device {} --loop {}".format(TestCommonClass.cmd_prefix, model_path,
-                                                               TestCommonClass.default_device_id, loop_num)
+            cmd = "{} --model {} --device {} --loop {}".format(
+                TestCommonClass.cmd_prefix, model_path, TestCommonClass.default_device_id, loop_num
+            )
             logging.info(f"run cmd:{cmd}")
             ret = os.system(cmd)
             assert ret != 0
@@ -126,9 +131,9 @@ class TestClass:
         warmup_num = 1
         log_path = os.path.join(TestCommonClass.get_basepath(), "log.txt")
         for _, loop_num in enumerate(loops):
-            cmd = "{} --model {} --device {} --loop {} --debug True > {}".format(TestCommonClass.cmd_prefix, model_path,
-                                                                                 TestCommonClass.default_device_id,
-                                                                                 loop_num, log_path)
+            cmd = "{} --model {} --device {} --loop {} --debug True > {}".format(
+                TestCommonClass.cmd_prefix, model_path, TestCommonClass.default_device_id, loop_num, log_path
+            )
             logging.info(f"run cmd:{cmd}")
             ret = os.system(cmd)
             assert ret == 0
@@ -147,8 +152,9 @@ class TestClass:
         """
         model_path = TestCommonClass.get_model_static_om_path(1, self.model_name)
         log_path = os.path.join(TestCommonClass.get_basepath(), "log.txt")
-        cmd = "{} --model {} --device {} --debug True > {}".format(TestCommonClass.cmd_prefix, model_path,
-                                                                   TestCommonClass.default_device_id, log_path)
+        cmd = "{} --model {} --device {} --debug True > {}".format(
+            TestCommonClass.cmd_prefix, model_path, TestCommonClass.default_device_id, log_path
+        )
         logging.info(f"run cmd:{cmd}")
         ret = os.system(cmd)
         assert ret == 0
@@ -168,19 +174,20 @@ class TestClass:
         profiler_path = os.path.join(output_path, "profiler")
         TestCommonClass.prepare_dir(output_path)
 
-        cmd = "{} --model {} --device {} --profiler true --profiler_rename false --output {}".format(TestCommonClass.cmd_prefix, model_path,
-                                                                        TestCommonClass.default_device_id, output_path)
+        cmd = "{} --model {} --device {} --profiler true --profiler_rename false --output {}".format(
+            TestCommonClass.cmd_prefix, model_path, TestCommonClass.default_device_id, output_path
+        )
         logging.info(f"run cmd:{cmd}")
         ret = os.system(cmd)
 
         assert os.path.exists(profiler_path)
 
         paths = os.listdir(profiler_path)
-        sampale_json_path = os.path.join(profiler_path, paths[0],
-                                         "device_{}/sample.json".format(TestCommonClass.default_device_id))
+        sampale_json_path = os.path.join(
+            profiler_path, paths[0], "device_{}/sample.json".format(TestCommonClass.default_device_id)
+        )
 
         assert os.path.isfile(sampale_json_path)
-
 
     def test_args_profiler_rename_ok(self):
         model_path = TestCommonClass.get_model_static_om_path(1, self.model_name)
@@ -189,8 +196,9 @@ class TestClass:
         profiler_path = os.path.join(output_path, "profiler")
         TestCommonClass.prepare_dir(output_path)
 
-        cmd = "{} --model {} --device {} --profiler true --profiler_rename true --output {}".format(TestCommonClass.cmd_prefix, model_path,
-                                                                        TestCommonClass.default_device_id, output_path)
+        cmd = "{} --model {} --device {} --profiler true --profiler_rename true --output {}".format(
+            TestCommonClass.cmd_prefix, model_path, TestCommonClass.default_device_id, output_path
+        )
         logging.info(f"run cmd:{cmd}")
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True, bufsize=0)
         flags = fcntl.fcntl(p.stdout, fcntl.F_GETFL)
@@ -202,10 +210,10 @@ class TestClass:
             if not line:
                 continue
             line = line.decode()
-            if (get_path_flag and line.find("PROF_") != -1):
+            if get_path_flag and line.find("PROF_") != -1:
                 get_path_flag = False
                 start_index = line.find("PROF_")
-                sub_str = line[start_index:(start_index + 46)] # PROF_XXXX的目录长度为46
+                sub_str = line[start_index : (start_index + 46)]  # PROF_XXXX的目录长度为46
             print(f'{line}', flush=True, end="")
         p.stdout.close()
         p.wait()
@@ -216,8 +224,11 @@ class TestClass:
         assert os.path.exists(profiler_path)
 
         paths = os.listdir(profiler_path)
-        sampale_json_path = os.path.join(profiler_path, paths[0],
-                                         "device_{}/sample_{}_{}.json".format(TestCommonClass.default_device_id, model_name, hash_str))
+        sampale_json_path = os.path.join(
+            profiler_path,
+            paths[0],
+            "device_{}/sample_{}_{}.json".format(TestCommonClass.default_device_id, model_name, hash_str),
+        )
         assert os.path.isfile(sampale_json_path)
 
     def test_args_dump_ok(self):
@@ -240,8 +251,9 @@ class TestClass:
         TestCommonClass.prepare_dir(output_path)
         dump_path = os.path.join(output_path, "dump")
 
-        cmd = "{} --model {} --device {} --dump true --output {}".format(TestCommonClass.cmd_prefix, model_path,
-                                                                    TestCommonClass.default_device_id, output_path)
+        cmd = "{} --model {} --device {} --dump true --output {}".format(
+            TestCommonClass.cmd_prefix, model_path, TestCommonClass.default_device_id, output_path
+        )
         logging.info(f"run cmd:{cmd}")
         ret = os.system(cmd)
         assert ret == 0
@@ -249,8 +261,9 @@ class TestClass:
         base = os.path.basename(model_path)
         test_model_name = os.path.splitext(base)[0]
         paths = os.listdir(dump_path)
-        dump_model_path = os.path.join(dump_path, paths[0], "{}".format(TestCommonClass.default_device_id),
-                                       test_model_name)
+        dump_model_path = os.path.join(
+            dump_path, paths[0], "{}".format(TestCommonClass.default_device_id), test_model_name
+        )
         assert os.path.exists(dump_model_path)
 
     def test_args_output_ok(self):
@@ -258,8 +271,9 @@ class TestClass:
         output_path = os.path.join(TestCommonClass.get_basepath(), self.model_name, "output")
         log_path = os.path.join(output_path, "log.txt")
         TestCommonClass.prepare_dir(output_path)
-        cmd = "{} --model {} --device {}  --output {} > {}".format(TestCommonClass.cmd_prefix, model_path,
-                                                               TestCommonClass.default_device_id, output_path, log_path)
+        cmd = "{} --model {} --device {}  --output {} > {}".format(
+            TestCommonClass.cmd_prefix, model_path, TestCommonClass.default_device_id, output_path, log_path
+        )
         logging.info(f"run cmd:{cmd}")
         ret = os.system(cmd)
         assert ret == 0
@@ -287,9 +301,9 @@ class TestClass:
         out_json_file_path = os.path.join(TestCommonClass.get_basepath(), "acl.json")
         with os.fdopen(os.open(out_json_file_path, OPEN_FLAGS, OPEN_MODES), "w") as f:
             json.dump(output_json_dict, f, indent=4, separators=(", ", ": "), sort_keys=True)
-        cmd = "{} --model {} --device {} --acl_json_path {} --output {}".format(TestCommonClass.cmd_prefix, model_path,
-                                                                                TestCommonClass.default_device_id,
-                                                                                out_json_file_path, output_path)
+        cmd = "{} --model {} --device {} --acl_json_path {} --output {}".format(
+            TestCommonClass.cmd_prefix, model_path, TestCommonClass.default_device_id, out_json_file_path, output_path
+        )
         logging.info(f"run cmd:{cmd}")
         ret = os.system(cmd)
         os.environ['AIT_NO_MSPROF_MODE'] = "0"
@@ -297,8 +311,9 @@ class TestClass:
 
         paths = os.listdir(profiler_path)
         assert len(paths) == 1
-        sampale_json_path = os.path.join(profiler_path, paths[0],
-                                         "device_{}/sample.json".format(TestCommonClass.default_device_id))
+        sampale_json_path = os.path.join(
+            profiler_path, paths[0], "device_{}/sample.json".format(TestCommonClass.default_device_id)
+        )
 
         assert os.path.isfile(sampale_json_path)
 
@@ -311,9 +326,9 @@ class TestClass:
         TestCommonClass.prepare_dir(output_path)
         log_path = os.path.join(output_path, "log.txt")
 
-        cmd = "{} --model {} --device {} --output {} > {}".format(TestCommonClass.cmd_prefix, model_path,
-                                                             TestCommonClass.default_device_id,
-                                                             output_path, log_path)
+        cmd = "{} --model {} --device {} --output {} > {}".format(
+            TestCommonClass.cmd_prefix, model_path, TestCommonClass.default_device_id, output_path, log_path
+        )
         logging.info(f"run cmd:{cmd}")
         ret = os.system(cmd)
         assert ret == 0
@@ -345,10 +360,14 @@ class TestClass:
             output_path = os.path.join(TestCommonClass.get_basepath(), self.model_name, "output")
             log_path = os.path.join(output_path, "log.txt")
             TestCommonClass.prepare_dir(output_path)
-            cmd = "{} --model {} --device {} --output {} --outfmt {} > {}".format(TestCommonClass.cmd_prefix,
-                                                                             model_path,
-                                                                             TestCommonClass.default_device_id,
-                                                                             output_path, output_file_suffix, log_path)
+            cmd = "{} --model {} --device {} --output {} --outfmt {} > {}".format(
+                TestCommonClass.cmd_prefix,
+                model_path,
+                TestCommonClass.default_device_id,
+                output_path,
+                output_file_suffix,
+                log_path,
+            )
             logging.info(f"run cmd:{cmd}")
             ret = os.system(cmd)
             assert ret == 0
@@ -370,7 +389,8 @@ class TestClass:
         log_path = os.path.join(TestCommonClass.get_basepath(), "log.txt")
         threads = 2
         cmd = "{} --model {} --device {} --pipeline 1 --threads {} > {}".format(
-            TestCommonClass.cmd_prefix, model_path, TestCommonClass.default_device_id, threads, log_path)
+            TestCommonClass.cmd_prefix, model_path, TestCommonClass.default_device_id, threads, log_path
+        )
         logging.info(f"run cmd:{cmd}")
         ret = os.system(cmd)
         assert ret == 0

@@ -21,7 +21,7 @@ import logging
 import pytest
 from ais_bench.infer.benchmark_process import get_legal_json_content
 
-logging.basicConfig(stream = sys.stdout, level = logging.INFO, format = '[%(levelname)s] %(message)s')
+logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='[%(levelname)s] %(message)s')
 logger = logging.getLogger(__name__)
 
 
@@ -49,15 +49,17 @@ class TestClass:
         pass
 
     def test_acl_json_using_msprof(self):
-        output_json_dict = {"profiler": {
-            "switch": "on",
-            "aicpu": "on",
-            "output": "testdata/profiler",
-            "aic_metrics": "",
-            "sys_hardware_mem_freq": "50",
-            "sys_interconnection_freq": "50",
-            "dvpp_freq": "50"
-        }}
+        output_json_dict = {
+            "profiler": {
+                "switch": "on",
+                "aicpu": "on",
+                "output": "testdata/profiler",
+                "aic_metrics": "",
+                "sys_hardware_mem_freq": "50",
+                "sys_interconnection_freq": "50",
+                "dvpp_freq": "50",
+            }
+        }
         os.environ.pop('AIT_NO_MSPROF_MODE', None)
         json_path = os.path.realpath("acl_test.json")
         self.generate_acl_json(json_path, output_json_dict)
