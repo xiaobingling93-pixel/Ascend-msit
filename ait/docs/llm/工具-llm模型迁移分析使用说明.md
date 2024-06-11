@@ -8,7 +8,7 @@
 - 准备待迁移的 transformers 模型目录
 
 ### QWEN 13B 迁移示例
-- **迁移生成 atb 模型代码**，`--source` 指定待迁移的 transformers 模型目录
+- **迁移生成 atb 模型代码**，`--source` 指定待迁移的 transformers 模型目录，生成迁移后 model 以及 layer 的 cpp 与 h 代码
   ```sh
   ait llm transform -s /data/qwen-14b-chat
   # Generated files: [
