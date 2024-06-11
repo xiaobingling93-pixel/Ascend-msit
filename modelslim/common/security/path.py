@@ -8,7 +8,7 @@ import stat
 import json
 
 from modelslim import logger
-from ascend_utils.common.security.type import check_dict_character
+from modelslim.common.security.type import check_dict_character
 
 
 PATH_WHITE_LIST_REGEX = re.compile(r"[^_A-Za-z0-9/.-]")
