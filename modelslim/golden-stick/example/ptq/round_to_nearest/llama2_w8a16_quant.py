@@ -61,7 +61,7 @@ if __name__ == "__main__":
     ms.load_checkpoint(uargs.fp_ckpt_path, network)
     ms.ms_memory_recycle()
     logger.info(f'Load ckpt cost time is {time.time() - start} s.')
-    print('------------------------- Quantize-ing network...', flush=True)
+    print('------------------------- Quantizing network...', flush=True)
     Calibrator = Calibrator(network, quant_config.PTQcfg)
     Calibrator.run()
     print('------------------------- Saving checkpoint...', flush=True)
