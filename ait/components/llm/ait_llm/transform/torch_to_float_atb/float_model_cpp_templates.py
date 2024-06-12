@@ -118,14 +118,13 @@ enum InTensorId : int {{
     IN_TENSOR_KV_CACHE_IDX,
     // idx: 8, shape: [batchSize]; FA所需入参
     IN_TENSOR_TOKEN_OFFSET,
-    // idx: 9, shape: [1]
-    IN_TENSOR_PLACE_HOLDER,
-    // idx: 10, shape: FA: [batchSize] PA: [4]
+    // idx: 9, shape: FA: [batchSize] PA: [4]
     IN_TENSOR_SEQ_LENGTHS,
-    // idx: 11, shape: FA: [batchSize]  PA: [4]
+    // idx: 10, shape: FA: [batchSize]  PA: [4]
     IN_TENSOR_LOGTIS_INDICES,
 
     IN_PLACEHOLDER,
+    IN_TENSOR_Q_LEN,
     IN_TENSOR_MAX,
 }};
 """
@@ -331,7 +330,7 @@ int64_t DecoderModel::BuildGraph()
     graph_.kCacheTensors.resize(param_.numHiddenLayers);
     graph_.vCacheTensors.resize(param_.numHiddenLayers);
 
-    graph_.inTensors.resize(IN_TENSOR_MAX);
+    graph_.inTensors.resize(IN_TENSOR_MAX - 1);
     graph_.outTensors.resize(OUT_TENSOR_MAX);
     graph_.internalTensors.resize(INTERNAL_TENSOR_MAX);
 
@@ -444,6 +443,8 @@ build_graph_layers_formatter = """
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_KV_CACHE_IDX);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_BLOCK_TABLES);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SLOTS);
+        layerNode.inTensors.at(inTensorId++) = \
+            &graph_.inTensors.at(param_.supportSpeculate ? IN_TENSOR_Q_LEN : IN_PLACEHOLDER);
 
         layerNode.outTensors = {{&graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES)}};
         ATB_LOG(INFO) << "[+] layerNode_" << layerId;

@@ -87,6 +87,7 @@ struct_param_formatter = """
         int lmHeadTransposeType = -1;
         bool supportSwiGLU = false;
         // MLP是否使用SwiGLU，若为true时，则使用；反之，使用swish
+        bool supportSpeculate = false;
         float rmsNormEps = 0;
         int numAttentionHeadsPerRank = 0;
         int hiddenSizePerAttentionHead = 0;

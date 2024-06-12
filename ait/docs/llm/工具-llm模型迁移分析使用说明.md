@@ -18,13 +18,13 @@
   #     qwenlmheadmodel/layer/decoder_model.h,
   # ]
   ```
-- 将生成的代码放到 `MindIE-LLM` 模型目录下
+- 将生成的代码放到 `MindIE-LLM` 模型目录下，**该路径基于不同的 MindIE 版本可能会不同**
   ```sh
-  mv qwenlmheadmodel ~/MindIE-LLM/examples/atb_models/models
+  mv qwenlmheadmodel ~/MindIE-LLM/src/modeling/backend/atb_framework/models
   ```
-- 重新编译 `MindIE-LLM`
+- 重新编译 `MindIE-LLM`，**实际的编译路径与命令需要参照 MindIE 文档**
   ```sh
-  cd ~/MindIE-LLM/examples/atb_models
+  cd ~/src/modeling/backend/atb_framework
   bash scripts/build.sh
   ```
   由于迁移的适配性问题，以及 `MindIE-LLM` 迭代更新，编译过程可能存在报错，仍依赖用户手动修复错误
