@@ -36,8 +36,8 @@ def transform_float(source_path, save_name=None, save_dir=None):
 
     parsed_model = parser.build_model_tree(source_model)
     model_name_lower = parsed_model.get("name", "model").lower()
-    json_save_name = utils.init_save_name(save_name if save_name else model_name_lower) + ".json"
-    json_save_dir = utils.init_save_dir(save_dir if save_dir else model_name_lower, sub_dir="")
+    json_save_name = torch_to_float_atb.utils.init_save_name(save_name if save_name else model_name_lower) + ".json"
+    json_save_dir = torch_to_float_atb.utils.init_save_dir(save_dir if save_dir else model_name_lower, sub_dir="")
     json_save_path = os.path.join(json_save_dir, json_save_name)
     with open(os.path.jion(json_save_path), "w") as ff:
         json.dump(parsed_model, ff)
