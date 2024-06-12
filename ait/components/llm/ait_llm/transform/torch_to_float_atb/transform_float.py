@@ -29,6 +29,7 @@ def transform_float(source_path, save_name=None, save_dir=None):
 
     try:
         config = AutoConfig.from_pretrained(source_path, trust_remote_code=True)
+        config
         source_model = AutoModelForCausalLM.from_config(config, trust_remote_code=True)
     except Exception as error:
         raise ValueError(f"build model from {source_path} failed, make sure it works within transformers") from error
@@ -40,7 +41,7 @@ def transform_float(source_path, save_name=None, save_dir=None):
     json_save_name = torch_to_float_atb.utils.init_save_name(save_name if save_name else model_name_lower) + ".json"
     json_save_dir = torch_to_float_atb.utils.init_save_dir(save_dir if save_dir else model_name_lower, sub_dir="")
     json_save_path = os.path.join(json_save_dir, json_save_name)
-    with open(os.path.jion(json_save_path), "w") as ff:
+    with open(json_save_path, "w") as ff:
         json.dump(parsed_model, ff)
     logger.info(f"model info saved: {json_save_path}")
 
