@@ -15,7 +15,6 @@
 import os
 import time
 from ait_llm.transform.torch_to_float_atb import utils
-from ait_llm.transform.model_parser import parser
 
 def float_model_h_gen(parsed_model, save_name=None, save_dir=None):
     from ait_llm.transform.torch_to_float_atb import float_model_h_templates as templates  # avoiding circular import

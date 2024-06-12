@@ -14,6 +14,7 @@
 
 import json
 from ait_llm.common.log import logger
+from ait_llm.transform.model_parser import parser
 
 def transform_float(source_path, save_name=None, save_dir=None):
     from ait_llm.transform import torch_to_float_atb
