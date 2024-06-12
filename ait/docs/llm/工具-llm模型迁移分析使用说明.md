@@ -5,9 +5,10 @@
 ### 准备
 - 安装 ait
 - 获取 [Gitee ascend/MindIE-LLM](https://gitee.com/ascend/MindIE-LLM) 源码
+- 准备待迁移的 transformers 模型目录
 
 ### QWEN 13B 迁移示例
-- 迁移生成 atb 模型代码
+- **迁移生成 atb 模型代码**，`--source` 指定待迁移的 transformers 模型目录，生成迁移后 model 以及 layer 的 cpp 与 h 代码
   ```sh
   ait llm transform -s /data/qwen-14b-chat
   # Generated files: [
@@ -17,13 +18,13 @@
   #     qwenlmheadmodel/layer/decoder_model.h,
   # ]
   ```
-- 将生成的代码放到 `MindIE-LLM` 模型目录下
+- 将生成的代码放到 `MindIE-LLM` 模型目录下，**该路径基于不同的 MindIE 版本可能会不同**
   ```sh
-  mv qwenlmheadmodel ~/MindIE-LLM/examples/atb_models/models
+  mv qwenlmheadmodel ~/MindIE-LLM/src/modeling/backend/atb_framework/models
   ```
-- 重新编译 `MindIE-LLM`
+- 重新编译 `MindIE-LLM`，**实际的编译路径与命令需要参照 MindIE 文档**
   ```sh
-  cd ~/MindIE-LLM/examples/atb_models
+  cd ~/src/modeling/backend/atb_framework
   bash scripts/build.sh
   ```
   由于迁移的适配性问题，以及 `MindIE-LLM` 迭代更新，编译过程可能存在报错，仍依赖用户手动修复错误

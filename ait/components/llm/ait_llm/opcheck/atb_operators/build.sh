@@ -15,6 +15,7 @@
 set -e
 SCRIPT_DIR=$(cd $(dirname $0); pwd)
 AIT_LLM_INSTALL_PATH="$(python3 -c 'import ait_llm, os; print(os.path.dirname(os.path.abspath(ait_llm.__file__)))')"
+IGNORE_INFO="If not using opcheck, ignore this error."
 
 echo SCRIPT_DIR: $SCRIPT_DIR
 
@@ -57,7 +58,7 @@ function download_nlohmann_json()
 
     JSON_FILE_NAME="json-$JSON_VERSION"
     if [ ! -d $JSON_FILE_NAME ] ; then
-        echo "[ERROR] $JSON_FILE_NAME not exists. Check if anything wrong with downloading"
+        echo "[ERROR] $JSON_FILE_NAME not exists. Check if anything wrong with downloading. $IGNORE_INFO"
         exit 1
     fi
     mv $JSON_FILE_NAME/include/nlohmann ./
@@ -72,27 +73,27 @@ if [ "$AIT_DOWNLOAD_PATH" != "" ]; then
 fi
 
 if [ "$AIT_LLM_INSTALL_PATH" == "" ]; then
-    echo "[ERROR] ait_llm not found in python packages. Make sure ait_llm is installed for pip"
+    echo "[ERROR] ait_llm not found in python packages. Make sure ait_llm is installed for pip. $IGNORE_INFO"
     exit 1
 fi
 
 if [ "$ASCEND_TOOLKIT_HOME" == "" ]; then
-    echo "[ERROR] ASCEND_TOOLKIT_HOME is empty. Make sure CANN toolkit is installed correctly"
+    echo "[ERROR] ASCEND_TOOLKIT_HOME is empty. Make sure CANN toolkit is installed correctly. $IGNORE_INFO"
     exit 1
 fi
 
 if [ "$ATB_HOME_PATH" == "" ]; then
-    echo "[ERROR] ATB_HOME_PATH is empty. Make sure atb is installed correctly"
+    echo "[ERROR] ATB_HOME_PATH is empty. Make sure atb is installed correctly. $IGNORE_INFO"
     exit 1
 fi
 
 if [ "$ATB_SPEED_HOME_PATH" == "" ]; then
-    echo "[ERROR] ATB_SPEED_HOME_PATH is empty. Make sure mindie_atb_models is configured correctly"
+    echo "[ERROR] ATB_SPEED_HOME_PATH is empty. Make sure mindie_atb_models is configured correctly. $IGNORE_INFO"
     exit 1
 fi
 
 if [ ! -e "$ATB_HOME_PATH/lib/libatb.so" ]; then
-    echo "[ERROR] $ATB_HOME_PATH/lib/libatb.so not exists. Make sure atb is installed correctly"
+    echo "[ERROR] $ATB_HOME_PATH/lib/libatb.so not exists. Make sure atb is installed correctly. $IGNORE_INFO"
     exit 1
 fi
 

@@ -15,22 +15,10 @@
 import os
 import time
 from ait_llm.transform.torch_to_float_atb import utils
-from ait_llm.transform.model_parser import parser
 
-def float_model_cpp_gen(model, save_name=None, save_dir=None):
-    """
-    >>> from ait_llm.transform.torch_to_float_atb import float_model_cpp_templates
-    >>> from ait_llm.transform.torch_to_float_atb import float_model_cpp_gen
-    >>> import transformers
-
-    >>> cc = transformers.models.llama.LlamaConfig()
-    >>> cc.num_hidden_layers = 4
-    >>> mm = transformers.AutoModelForCausalLM.from_config(cc)
-    >>> rr = float_model_cpp_gen.float_model_cpp_gen(mm)
-    """
+def float_model_cpp_gen(parsed_model, save_name=None, save_dir=None):
     from ait_llm.transform.torch_to_float_atb import float_model_cpp_templates as templates  # avoiding circular import
 
-    parsed_model = parser.build_model_tree(model)
     model_name_lower = parsed_model.get("name", "model").lower()
 
     rr = ""
@@ -58,10 +46,10 @@ def float_model_cpp_gen(model, save_name=None, save_dir=None):
     )
 
     post_properties = "\n".join([
-        templates.infer_shape_formatter,
+        templates.infer_shape_formatter.format(),
         build_graph,
-        templates.parse_param_formatter,
-        templates.bind_param_host_tensor_formatter,
+        templates.parse_param_formatter.format(),
+        templates.bind_param_host_tensor_formatter.format(),
     ])
 
     rr += templates.basic_class_formatter.format(

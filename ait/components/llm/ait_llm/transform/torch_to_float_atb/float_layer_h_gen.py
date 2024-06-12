@@ -15,12 +15,10 @@
 import os
 import time
 from ait_llm.transform.torch_to_float_atb import utils
-from ait_llm.transform.model_parser import parser
 
-def float_layer_h_gen(model, save_name=None, save_dir=None):
+def float_layer_h_gen(parsed_model, save_name=None, save_dir=None):
     from ait_llm.transform.torch_to_float_atb import float_layer_h_templates
     
-    parsed_model = parser.build_model_tree(model)
     model_name_lower = parsed_model.get("name", "model").lower()
 
     rr = ""
