@@ -5,31 +5,31 @@
 
 ### Dump 数据
 
-- GE: Graph Engine，基于昇腾AI软件栈对不同的机器学习框架提供统一的IR接口，对接上层网络模型框架，例如Tensorflow、Pytorch等，GE的主要功能包括图准备、图拆分、图优化、图编译、图加载、图执行和图管理等。
+- GE: Graph Engine，基于昇腾AI软件栈对不同的机器学习框架提供统一的IR接口，对接上层网络模型框架。
 - FX：功能类似于pytorch框架的FX工具包，用于消除动态图和静态图之间的gap，使我们对于nn.Model的各种操作变得更加简单。
-  - **GE 模式 dump 数据** 添加 `get_ge_dump_config`，获取配置后的 `CompilerConfig` 实例，配置模型 compile，并执行推理
+- **GE 模式 dump 数据** 添加 `get_ge_dump_config`，获取配置后的 `CompilerConfig` 实例，配置模型 compile，并执行推理。
 
-    ```py
-    import torch, torch_npu, torchair
-    from ait_llm.dump import torchair_dump  # 添加导入
-    ...
-    model = ...
-    config = torchair_dump.get_ge_dump_config(dump_path="dump")  # 添加获取 config
-    ...
-    npu_backend = torchair.get_npu_backend(compiler_config=config)
-    model = torch.compile(model, backend=npu_backend, dynamic=True)
-    ...
-    ```
+```py
+import torch, torch_npu, torchair
+from ait_llm.dump import torchair_dump  # 添加导入
+...
+model = ...
+config = torchair_dump.get_ge_dump_config(dump_path="dump")  # 添加获取 config
+...
+npu_backend = torchair.get_npu_backend(compiler_config=config)
+model = torch.compile(model, backend=npu_backend, dynamic=True)
+...
+```
 
-    输出路径为指定的 `{dump_path}/dump_{time_stamp}`
+输出路径为指定的 `{dump_path}/dump_{time_stamp}`
 
-    GE dump_config 参数列表
+GE dump_config 参数列表
 
-    |         参数名         | 参数描述             |  是否必选  |
-    |:-------------------:|:---------------------:|:------:|
-    |      dump_path      | dump数据的存放路径     |   是    |
-    |     dump_model      | data dump模式，用于指定dump算子输入还是输出数据 |   否    |
-    | fusion_switch_file  | 是否关闭融合dump功能 |   否    | 
+|         参数名         | 参数描述             |  是否必选  |
+|:-------------------:|:---------------------:|:------:|
+|      dump_path      | dump数据的存放路径     |   是    |
+|     dump_model      | data dump模式，用于指定dump算子输入还是输出数据 |   否    |
+| fusion_switch_file  | 是否关闭融合dump功能 |   否    | 
 
 - **FX 模式 dump 数据** 添加 `get_fx_dump_config`，获取配置后的 `CompilerConfig` 实例，配置模型 compile，并执行推理
 
@@ -45,16 +45,16 @@
   ...
   ```
 
-  - 输出路径与 torchair 版本相关，新版本中为当前文件夹下的 `data_dump/{token_id}/gm_{time stamp}_dump`，老版本中为 `gm_{time stamp}_dump`
-  - **其中 `{token_id}` 是从 1 开始的，相对于 GE 模式是从 0 开始的，比对时会将 FX 模式的 token_id 减 1**
+- 输出路径与 torchair 版本相关，新版本中为当前文件夹下的 `data_dump/{token_id}/gm_{time stamp}_dump`，老版本中为 `gm_{time stamp}_dump`
+- **其中 `{token_id}` 是从 1 开始的，相对于 GE 模式是从 0 开始的，比对时会将 FX 模式的 token_id 减 1**
 
-### 2）Compare 精度比对
+### Compare 精度比对
 
-  - 执行 `ait llm compare --my-path [GE dump data] --golden-path [FX dump data]`，输出比对结果 csv 文件
+- 执行 `ait llm compare --my-path [GE dump data] --golden-path [FX dump data]`，输出比对结果 csv 文件
 
-    ```sh
-    ait llm compare --my-path {dump_path}/dump_{time_stamp} --golden-path data_dump
-    ```
+  ```sh
+  ait llm compare --my-path {dump_path}/dump_{time_stamp} --golden-path data_dump
+  ```
 
 ***
 
@@ -107,14 +107,14 @@
   }
   ```
 
-  输出路径为指定的 `{dump_path}/dump_{time_stamp}`
+输出路径为指定的 `{dump_path}/dump_{time_stamp}`
 
-  fusion_switch相关参数
+fusion_switch相关参数
 
-  |     参数名     |    参数描述    | 
-  |:-----------:|:----------:|
-  | GraphFusion | 根据融合规则进行改图的过程，该过程主要通过拆分/合并计算图中的算子来提升计算效率，以实现加速运算的目的，与硬件无关
-  | UBFusion | 对图上算子进行硬件UB相关的融合，全称为：UnifiedBuffer。例如两个算子a和b单独运行时，算子a的计算结果在UB上，需要搬移到DDR（双倍速率同步动态随机存储器）。算子b在执行时，需要将算子a的输出由DDR再搬移到UB，进行算子b的计算逻辑，计算之后又从UB搬移回DDR
+|     参数名     |    参数描述    | 
+|:-----------:|:----------:|
+| GraphFusion | 根据融合规则进行改图的过程，该过程主要通过拆分/合并计算图中的算子来提升计算效率，以实现加速运算的目的，与硬件无关
+| UBFusion | 对图上算子进行硬件UB相关的融合，全称为：UnifiedBuffer。例如两个算子a和b单独运行时，算子a的计算结果在UB上，需要搬移到DDR（双倍速率同步动态随机存储器）。算子b在执行时，需要将算子a的输出由DDR再搬移到UB，进行算子b的计算逻辑，计算之后又从UB搬移回DDR
 
 ### Compare 比对
 
