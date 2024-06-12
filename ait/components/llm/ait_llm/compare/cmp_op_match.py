@@ -157,6 +157,7 @@ def policy_layer_type_cnt_match(golden_root_node: TreeNode, my_root_node: TreeNo
                 type_cnt_map[save_in_type].append(child)
             else:
                 type_cnt_map[save_in_type] = [child]
+        return type_cnt_map
 
     matched_node_map = [(golden_root_node, my_root_node)]
     comparing_index = 0
