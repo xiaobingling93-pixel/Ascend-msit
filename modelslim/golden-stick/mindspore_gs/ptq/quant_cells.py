@@ -52,9 +52,8 @@ class PTQCell(QuantCell):
         strategy_len = len(weight_strategy)
         if strategy_len != 2:
             raise RuntimeError(f'strategy length shall be 2, but got {strategy_len}')
-        x_strategy = weight_strategy
 
-        anti_strategy = (x_strategy, (), ())
+        anti_strategy = (weight_strategy, (), ())
         return anti_strategy
 
     @staticmethod
