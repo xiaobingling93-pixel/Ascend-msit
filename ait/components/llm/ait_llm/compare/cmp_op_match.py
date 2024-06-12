@@ -135,14 +135,6 @@ def policy_name_full_match(golden_root_node: TreeNode, my_root_node: TreeNode, m
             MatchScore.FULL_MATCH,
         )
 
-        match_map.add_score(
-            my_name2node.get(match_name),
-            MatchLocation.ALL_INPUT,
-            golden_name2node.get(match_name),
-            MatchLocation.ALL_INPUT,
-            MatchScore.FULL_MATCH,
-        )
-
 
 def policy_layer_type_cnt_match(golden_root_node: TreeNode, my_root_node: TreeNode, match_map: OpMatchMap):
     # 逐层比对，类型和数量一致的算匹配上。主要用于量化和非量化的atb 之间比对
