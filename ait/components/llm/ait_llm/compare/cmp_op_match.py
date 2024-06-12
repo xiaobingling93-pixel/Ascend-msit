@@ -164,9 +164,6 @@ def policy_layer_type_cnt_match(golden_root_node: TreeNode, my_root_node: TreeNo
         golden_node, my_node = matched_node_map[comparing_index]
         comparing_index = comparing_index + 1
 
-        golden_children = golden_node.children if golden_children is not None else []
-        my_children = my_node.children if my_children is not None else []
-
         golden_type_count_map = get_children_type_count_map(golden_node)
         my_type_count_map = get_children_type_count_map(my_node)
 
