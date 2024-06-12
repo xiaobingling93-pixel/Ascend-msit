@@ -17,6 +17,18 @@ import json
 from ait_llm.common.log import logger
 from ait_llm.transform.model_parser import parser
 
+SMALL_NUM_HIDDEN_LAYERS = 4
+
+def try_setting_small_num_hidden_layers(config):
+    if hasattr(config, "num_hidden_layers"):
+        config.num_hidden_layers = SMALL_NUM_HIDDEN_LAYERS
+    elif hasattr(config, "num_layers"):
+        config.num_layers = SMALL_NUM_HIDDEN_LAYERS
+    elif hasattr(config, "n_layers"):
+        config.n_layers = SMALL_NUM_HIDDEN_LAYERS
+    return config
+    
+
 def transform_float(source_path, save_name=None, save_dir=None):
     from ait_llm.transform import torch_to_float_atb
 
@@ -29,7 +41,7 @@ def transform_float(source_path, save_name=None, save_dir=None):
 
     try:
         config = AutoConfig.from_pretrained(source_path, trust_remote_code=True)
-        config
+        config = try_setting_small_num_hidden_layers(config)
         source_model = AutoModelForCausalLM.from_config(config, trust_remote_code=True)
     except Exception as error:
         raise ValueError(f"build model from {source_path} failed, make sure it works within transformers") from error
