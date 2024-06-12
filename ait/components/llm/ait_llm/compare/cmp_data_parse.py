@@ -296,7 +296,10 @@ class CompareDataTorch(CompareDataParse):
         ]
         
         if self.token_id is None:
-            self.token_id = str(self.token_ids[0]) if len(self.token_ids) > 0 else "0"
+            if len(self.token_ids) > 0 and not isinstance(self.token_ids, tuple):
+                self.token_id = str(self.token_ids[0])
+            else:
+                self.token_id = "0"
         self.topo_file = self.get_topo_file_path(self.tokens_path)
         self.golden_root_node, self.golden_layer_type, self.golden_layer_nodes = self.parse()
         self.token_path = os.path.join(self.tokens_path, self.token_id)

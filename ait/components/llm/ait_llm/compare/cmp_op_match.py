@@ -60,16 +60,16 @@ class OpMatchMap:
             max_length = 0
             for map_info in self.map.keys():
                 my_op, my_op_location, golden_op, golden_op_location = map_info
-                max_length = max(len(f"[{my_op.node_name}##{my_op_location}]"), max_length)
+                max_length = max(len(f"[{my_op.node_name}#{my_op.op_type}#{my_op_location}]"), max_length)
 
             format_str = f"mapping score: %-{max_length}s   <- %s ->   %s "
             for map_info, score in self.map.items():
                 my_op, my_op_location, golden_op, golden_op_location = map_info
                 logger.debug(
                     format_str,
-                    f"[{my_op.node_name}##{my_op_location}]",
+                    f"[{my_op.node_name}#{my_op.op_type}#{my_op_location}]",
                     str(score),
-                    f"[{golden_op.node_name}##{golden_op_location}]",
+                    f"[{golden_op.node_name}#{golden_op.op_type}#{golden_op_location}]",
                 )
 
         ret_map = [
