@@ -70,7 +70,7 @@ class ImageNetPreProcess(PreProcessBase, ABC):
         if image_param.dtype == "fp32":
             img = np.array(image, dtype=np.float32)
             img = img.transpose(2, 0, 1)
-            img = img / 255.    # ToTensor: div 255
+            img = img / 255.0  # ToTensor: div 255
             img -= np.array(image_param.mean, dtype=np.float32)[:, None, None]
             img /= np.array(image_param.std, dtype=np.float32)[:, None, None]
         elif image_param.dtype == "int8":
@@ -86,8 +86,8 @@ class ImageNetPreProcess(PreProcessBase, ABC):
             output_size = (int(output_size), int(output_size))
         image_width, image_height = img.size
         crop_height, crop_width = output_size
-        crop_top = int(round((image_height - crop_height) / 2.))
-        crop_left = int(round((image_width - crop_width) / 2.))
+        crop_top = int(round((image_height - crop_height) / 2.0))
+        crop_left = int(round((image_width - crop_width) / 2.0))
         return img.crop((crop_left, crop_top, crop_left + crop_width, crop_top + crop_height))
 
     @staticmethod
@@ -137,4 +137,3 @@ class ImageNetPreProcess(PreProcessBase, ABC):
         except Exception as err:
             raise RuntimeError("get params failed error={}".format(err)) from err
         return image_param
-

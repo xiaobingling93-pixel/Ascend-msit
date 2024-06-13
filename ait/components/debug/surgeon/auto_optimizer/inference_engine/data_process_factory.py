@@ -43,6 +43,7 @@ class DatasetFactory(object):
                 raise RuntimeError(f"register name is the same, please check! {name}")
             cls._dataset_pool[name] = dataset_cls()
             return dataset_cls
+
         return _wrapper
 
 
@@ -63,6 +64,7 @@ class PreProcessFactory(object):
                 raise RuntimeError(f"register name is the same, please check! {name}")
             cls._pre_process_pool[name] = preprocess_cls()
             return preprocess_cls
+
         return _wrapper
 
 
@@ -83,6 +85,7 @@ class InferenceFactory(object):
                 raise RuntimeError(f"register name is the same, please check! {name}")
             cls._inference_pool[name] = inference_cls()
             return inference_cls
+
         return _wrapper
 
 
@@ -103,6 +106,7 @@ class PostProcessFactory(object):
                 raise RuntimeError(f"register name is the same, please check! {name}")
             cls._post_process_pool[name] = post_process_cls()
             return post_process_cls
+
         return _wrapper
 
 
@@ -123,4 +127,5 @@ class EvaluateFactory(object):
                 raise RuntimeError(f"register name is the same, please check! {name}")
             cls._evaluate_pool[name] = evaluate_cls()
             return evaluate_cls
+
         return _wrapper

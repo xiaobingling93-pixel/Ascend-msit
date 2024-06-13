@@ -49,7 +49,7 @@ class ImageNetDataset(DatasetBase, ABC):
                         data.clear()
 
                 while data and len(data) < batch_size:
-                    labels.append(labels[0])     # 数据补齐
+                    labels.append(labels[0])  # 数据补齐
                     data.append(data[0])
                     out_queue.put([labels, data])
 

@@ -40,7 +40,7 @@ class OnnxGraph(BaseGraph):
         outputs: Optional[List[OnnxPlaceHolder]] = None,
         initializers: Optional[List[OnnxInitializer]] = None,
         value_infos: Optional[List[OnnxPlaceHolder]] = None,
-        **kwargs: Dict[str, object]
+        **kwargs: Dict[str, object],
     ):
         super(OnnxGraph, self).__init__(name, nodes, inputs, outputs, initializers, value_infos)
 
@@ -52,8 +52,7 @@ class OnnxGraph(BaseGraph):
         elif isinstance(opsets, Sequence):
             opset_imports = [op for op in opsets if not op.domain or op.domain == '']
             if len(opset_imports) < len(opsets):
-                warnings.warn(
-                    f'Only one domain version is allowed, keep opset with domain "ai.onnx"')
+                warnings.warn(f'Only one domain version is allowed, keep opset with domain "ai.onnx"')
         else:
             opset_imports = opsets
 
@@ -63,13 +62,13 @@ class OnnxGraph(BaseGraph):
             'producer_version': kwargs.get('producer_version', 'alpha'),
             'domain': kwargs.get('domain', ''),
             'model_version': kwargs.get('model_version', 0),
-            'opset_imports': opset_imports
+            'opset_imports': opset_imports,
         }
 
     @property
     def opset_imports(self) -> Optional[Sequence[OperatorSetIdProto]]:
         return self._meta.get('opset_imports')
-    
+
     @opset_imports.setter
     def opset_imports(self, opset: Union[int, None]) -> None:
         if not opset:
@@ -98,7 +97,7 @@ class OnnxGraph(BaseGraph):
                 'domain': onnx_model.domain,
                 'model_version': onnx_model.model_version,
                 'doc_string': onnx_model.doc_string,
-                'opset_imports': onnx_model.opset_import
+                'opset_imports': onnx_model.opset_import,
             }
 
         inputs = [OnnxPlaceHolder.parse(i) for i in onnx_graph.input]
@@ -124,10 +123,7 @@ class OnnxGraph(BaseGraph):
 
     @classmethod
     def check_overlapping_names(
-        cls,
-        graph1: 'OnnxGraph',
-        graph2: 'OnnxGraph',
-        io_map: Optional[List[Tuple[str, str]]]
+        cls, graph1: 'OnnxGraph', graph2: 'OnnxGraph', io_map: Optional[List[Tuple[str, str]]]
     ) -> List[Tuple[str, str]]:
         """Check whether there are name collisions between two graphs
 
@@ -169,10 +165,7 @@ class OnnxGraph(BaseGraph):
         io_map_inputs = {elem[1] for elem in io_map}
 
         # check name collisions for nodes, edges and initializers
-        overlap = _overlapping(
-            [node.name for node in graph1.nodes],
-            [node.name for node in graph2.nodes]
-        )
+        overlap = _overlapping([node.name for node in graph1.nodes], [node.name for node in graph2.nodes])
         if overlap:
             result.append(("nodes", overlap))
 
@@ -180,10 +173,7 @@ class OnnxGraph(BaseGraph):
         if overlap:
             result.append(("edges", overlap))
 
-        overlap = _overlapping(
-            [ini.name for ini in graph1.initializers],
-            [ini.name for ini in graph2.initializers]
-        )
+        overlap = _overlapping([ini.name for ini in graph1.initializers], [ini.name for ini in graph2.initializers])
         if overlap:
             result.append(("initializer", overlap))
 
@@ -191,11 +181,7 @@ class OnnxGraph(BaseGraph):
 
     @classmethod
     def add_prefix_graph(
-        cls,
-        graph: 'OnnxGraph',
-        prefix: str,
-        inplace: Optional[bool] = False,
-        name_map: Optional[Dict[str, str]] = None
+        cls, graph: 'OnnxGraph', prefix: str, inplace: Optional[bool] = False, name_map: Optional[Dict[str, str]] = None
     ) -> 'OnnxGraph':
         """Adds a prefix to names of elements in a graph: nodes, edges, inputs, outputs,
         initializers and value infos.
@@ -258,12 +244,12 @@ class OnnxGraph(BaseGraph):
 
     @classmethod
     def concat_graph(
-            cls,
-            graph1: 'OnnxGraph',
-            graph2: 'OnnxGraph',
-            io_map: List[Tuple[str, str]],
-            prefix: str = "pre_",
-            graph_name: Optional[str] = None
+        cls,
+        graph1: 'OnnxGraph',
+        graph2: 'OnnxGraph',
+        io_map: List[Tuple[str, str]],
+        prefix: str = "pre_",
+        graph_name: Optional[str] = None,
     ) -> 'OnnxGraph':
         """Combine two ONNX graphs into a single one.
 
@@ -296,13 +282,9 @@ class OnnxGraph(BaseGraph):
         if overlapping_names:
             category, names = overlapping_names[0]
             logger.warning(
-                "Cant merge two graphs with overlapping names. "
-                f"Found repeated {category} names："
-                + ",".join(names)
+                "Cant merge two graphs with overlapping names. " f"Found repeated {category} names：" + ",".join(names)
             )
-            logger.info(
-                f"A prefix `{prefix}` will be added to graph1"
-            )
+            logger.info(f"A prefix `{prefix}` will be added to graph1")
 
             graph1 = cls.add_prefix_graph(graph1, prefix=prefix)
 
@@ -324,10 +306,7 @@ class OnnxGraph(BaseGraph):
         return graph
 
     @staticmethod
-    def connect_graph(graph1: 'OnnxGraph',
-                      graph2: 'OnnxGraph',
-                      io_map: List[str],
-                      graph_name: str):
+    def connect_graph(graph1: 'OnnxGraph', graph2: 'OnnxGraph', io_map: List[str], graph_name: str):
         """Implementation of concatenating two graphs based on the io_map.
 
         1. Connect the outputs of the first graph and inputs of the second one.
@@ -374,17 +353,11 @@ class OnnxGraph(BaseGraph):
 
         # add initializers
         graph.initializers.extend(graph1.initializers)
-        graph.initializers.extend(
-            [ini for ini in graph2.initializers if ini.name not in io_map_g2_ins]
-        )
+        graph.initializers.extend([ini for ini in graph2.initializers if ini.name not in io_map_g2_ins])
 
         # add value_infos
         graph.value_infos.extend(graph1.value_infos)
-        graph.value_infos.extend([
-            value_info
-            for value_info in graph2.value_infos
-            if value_info not in io_map_g2_ins
-        ])
+        graph.value_infos.extend([value_info for value_info in graph2.value_infos if value_info not in io_map_g2_ins])
 
         # update g.node_map, g.prev_map and next_map
         graph.update_map()
@@ -412,7 +385,7 @@ class OnnxGraph(BaseGraph):
         inputs: Optional[List[str]] = None,
         outputs: Optional[List[str]] = None,
         attrs: Optional[Dict[str, object]] = None,
-        domain: str = ''
+        domain: str = '',
     ) -> OnnxNode:
         node = OnnxNode(name, op_type, inputs, outputs, attrs=attrs, domain=domain)
         self.update_map()
@@ -420,13 +393,14 @@ class OnnxGraph(BaseGraph):
 
     def proto(self) -> GraphProto:
         self.toposort()
-        return helper.make_graph(nodes=[node.proto() for node in self._nodes],
-                                 name=self.name,
-                                 inputs=[input.proto() for input in self._inputs],
-                                 outputs=[output.proto() for output in self._outputs],
-                                 initializer=[ini.proto() for ini in self._initializers],
-                                 value_info=[val.proto() for val in self._value_infos]
-                                 )
+        return helper.make_graph(
+            nodes=[node.proto() for node in self._nodes],
+            name=self.name,
+            inputs=[input.proto() for input in self._inputs],
+            outputs=[output.proto() for output in self._outputs],
+            initializer=[ini.proto() for ini in self._initializers],
+            value_info=[val.proto() for val in self._value_infos],
+        )
 
     def model(self) -> ModelProto:
         return helper.make_model(self.proto(), **self._meta)
@@ -441,7 +415,7 @@ class OnnxGraph(BaseGraph):
                 path,
                 save_as_external_data=True,
                 all_tensors_to_one_file=True,
-                location=os.path.basename(path) + '.data'
+                location=os.path.basename(path) + '.data',
             )
 
     def infer_shape(self) -> None:
@@ -454,18 +428,13 @@ class OnnxGraph(BaseGraph):
             inferred_model = onnx.shape_inference.infer_shapes(model, strict_mode=True)
         except ValueError:
             with tempfile.TemporaryDirectory() as tmpdirname:
-                onnx.save(
-                    model,
-                    os.path.join(tmpdirname, 'model.onnx'),
-                    save_as_external_data=True
-                    )
+                onnx.save(model, os.path.join(tmpdirname, 'model.onnx'), save_as_external_data=True)
                 onnx.shape_inference.infer_shapes_path(
-                    os.path.join(tmpdirname, 'model.onnx'),
-                    os.path.join(tmpdirname, 'inferred_model.onnx')
-                    )
+                    os.path.join(tmpdirname, 'model.onnx'), os.path.join(tmpdirname, 'inferred_model.onnx')
+                )
                 inferred_model = onnx.load(os.path.join(tmpdirname, 'inferred_model.onnx'))
 
-       # update value_infos
+        # update value_infos
         graph = inferred_model.graph
         self._value_infos = [OnnxPlaceHolder.parse(v) for v in graph.value_info]
         self._value_map = {v.name: v for v in self._value_infos}
@@ -475,11 +444,12 @@ class OnnxGraph(BaseGraph):
         new_model_save_path: str,
         input_name_list: List[str],
         output_name_list: List[str],
-        enable_model_check: bool = True
+        enable_model_check: bool = True,
     ) -> 'OnnxGraph':
 
         def check_model(model):
             pass
+
         if not enable_model_check:
             onnx.checker.check_model = check_model
 
@@ -488,24 +458,22 @@ class OnnxGraph(BaseGraph):
             logger.info('Begin to extract the model.')
             try:
                 onnx.utils.extract_model(
-                    os.path.join(tmpdirname, 'model.onnx'),
-                    new_model_save_path,
-                    input_name_list,
-                    output_name_list
+                    os.path.join(tmpdirname, 'model.onnx'), new_model_save_path, input_name_list, output_name_list
                 )
             except ValueError as e:
                 raise RuntimeError('Function extract() does not support a Large ONNX Model >2GB currently.') from e
-            logger.info('Extract the model completed, model saved in {}.'.format(
-                new_model_save_path))
+            logger.info('Extract the model completed, model saved in {}.'.format(new_model_save_path))
         return OnnxGraph.parse(new_model_save_path)
 
-    def extract_subgraph(self,
-                         start_node_names: List[str] = None,
-                         end_node_names: List[str] = None,
-                         subgraph_path: str = None,
-                         is_check_subgraph: bool = False,
-                         input_shape: str = None,
-                         input_dtype: str = None):
+    def extract_subgraph(
+        self,
+        start_node_names: List[str] = None,
+        end_node_names: List[str] = None,
+        subgraph_path: str = None,
+        is_check_subgraph: bool = False,
+        input_shape: str = None,
+        input_dtype: str = None,
+    ):
 
         # do shape info by default
         try:
@@ -578,11 +546,7 @@ class OnnxGraph(BaseGraph):
                     value_infos.append(self.get_node(inp, PlaceHolder))
 
         # remove isolated inputs
-        valid_inputs = [
-            inp
-            for node in self.nodes
-            for inp in node.inputs
-        ]
+        valid_inputs = [inp for node in self.nodes for inp in node.inputs]
         input_name_list = list(set(valid_inputs) & set(input_name_list))
 
         # check input shape and input dtype
@@ -593,14 +557,14 @@ class OnnxGraph(BaseGraph):
         outputs = self._add_new_io_placeholder(output_name_list)
 
         # save_model
-        subgraph = OnnxGraph('extracted graph', reachable_nodes, inputs, outputs,
-                             initializers, value_infos, **self._meta)
+        subgraph = OnnxGraph(
+            'extracted graph', reachable_nodes, inputs, outputs, initializers, value_infos, **self._meta
+        )
         subgraph.toposort()
 
         if subgraph_path and check_output_model_path(subgraph_path):
             subgraph.save(subgraph_path)
-            logger.info('Extract the model completed, model saved in {}.'.format(
-                subgraph_path))
+            logger.info('Extract the model completed, model saved in {}.'.format(subgraph_path))
 
         if is_check_subgraph:
             try:
@@ -657,16 +621,9 @@ class OnnxGraph(BaseGraph):
                 ph_dtype = np.dtype(input_dtype_dict[name])
 
             if ph_shape:
-                onnx_placeholder = OnnxPlaceHolder(
-                    name,
-                    ph_dtype,
-                    ph_shape
-                )
+                onnx_placeholder = OnnxPlaceHolder(name, ph_dtype, ph_shape)
             else:
-                onnx_placeholder = OnnxPlaceHolder(
-                    name,
-                    ph_dtype
-                )
+                onnx_placeholder = OnnxPlaceHolder(name, ph_dtype)
             ph_list.append(onnx_placeholder)
         return ph_list
 
@@ -684,32 +641,46 @@ class OnnxGraph(BaseGraph):
 
         return input_info_dict
 
-    def _check_input_shape_and_dtype(self,
-                                     input_name_list,
-                                     input_shape_dict,
-                                     input_dtype_dict):
+    def _check_input_shape_and_dtype(self, input_name_list, input_shape_dict, input_dtype_dict):
         dtype_converter = {
-            'bool': 'bool', 'int': 'int32', 'intc': 'int32',
-            'intp': 'int32', 'int8': 'int8', 'int16': 'int16',
-            'int32': 'int32', 'int64': 'int64', 'uint8': 'uint8',
-            'uint16': 'uint16', 'uint32': 'uint32', 'uint64': 'uint64',
-            'float': 'float64', 'float16': 'float16', 'float32': 'float32',
-            'float64': 'float64', 'complex': 'complex128', 'complex64': 'complex64',
-            'complex128': 'complex128', 'fp16': 'float16', 'fp32': 'float32', 'fp64': 'float64'
+            'bool': 'bool',
+            'int': 'int32',
+            'intc': 'int32',
+            'intp': 'int32',
+            'int8': 'int8',
+            'int16': 'int16',
+            'int32': 'int32',
+            'int64': 'int64',
+            'uint8': 'uint8',
+            'uint16': 'uint16',
+            'uint32': 'uint32',
+            'uint64': 'uint64',
+            'float': 'float64',
+            'float16': 'float16',
+            'float32': 'float32',
+            'float64': 'float64',
+            'complex': 'complex128',
+            'complex64': 'complex64',
+            'complex128': 'complex128',
+            'fp16': 'float16',
+            'fp32': 'float32',
+            'fp64': 'float64',
         }
 
         for inp in input_shape_dict.keys():
             if inp not in input_name_list:
-                logger.warning(f'Input : {inp} is not in the inputs of the subgraph'
-                               f'Please check it or the default shape will be applied.')
+                logger.warning(
+                    f'Input : {inp} is not in the inputs of the subgraph'
+                    f'Please check it or the default shape will be applied.'
+                )
 
         for inp, inp_dtype in input_dtype_dict.items():
             if inp not in input_name_list:
-                logger.warning(f'Input : {inp} is not in the inputs of the subgraph'
-                               f'Please check it or the default dtype (float32) will be applied.')
+                logger.warning(
+                    f'Input : {inp} is not in the inputs of the subgraph'
+                    f'Please check it or the default dtype (float32) will be applied.'
+                )
             if inp_dtype[0] not in dtype_converter:
                 raise ValueError(f"The input type {inp_dtype} of {inp} is not valid. Please check it.")
 
             input_dtype_dict[inp] = dtype_converter[inp_dtype[0]]
-
-

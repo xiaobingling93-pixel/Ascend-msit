@@ -53,13 +53,7 @@ def onnx2om(path_onnx: str, converter: str, **kwargs):
     '''convert a onnx file to om using ATC.'''
     if not path_onnx.endswith('.onnx'):
         raise RuntimeError('Not a onnx file.')
-    convert_cfg = {
-        'type': converter,
-        'framework': '5',
-        'model': path_onnx,
-        'output': path_onnx[:-5],
-        **kwargs
-    }
+    convert_cfg = {'type': converter, 'framework': '5', 'model': path_onnx, 'output': path_onnx[:-5], **kwargs}
     compiler = OmCompiler(convert_cfg)
     compiler.build_model()
     return path_onnx[:-4] + 'om'

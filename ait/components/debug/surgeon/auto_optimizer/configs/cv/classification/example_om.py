@@ -48,9 +48,6 @@ model = dict(
         post_process=dict(
             type='classification',
         ),
-        evaluate=dict(
-            type='classification',
-            topk=[1, 5]
-        ),
-    )
+        evaluate=dict(type='classification', topk=[1, 5]),
+    ),
 )
