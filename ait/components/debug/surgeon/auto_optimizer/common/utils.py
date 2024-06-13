@@ -37,11 +37,11 @@ def typeassert(*ty_args, **ty_kwargs):
             for name, value in bound_values.arguments.items():
                 if name in bound_types:
                     if not isinstance(value, bound_types[name]):
-                        raise TypeError(
-                            f'Argument {name} must be {bound_types[name]}'
-                        )
+                        raise TypeError(f'Argument {name} must be {bound_types[name]}')
             return func(*args, **kwargs)
+
         return wrapper
+
     return decorate
 
 
@@ -76,8 +76,7 @@ def dump_op_outputs(graph, input_data, dump_path, outputs=None):
         ret = sess.run(outputs, {name: data for name, data in zip(inputs, input_data)})
         return ret
 
-    from skl2onnx.helpers.onnx_helper import (select_model_inputs_outputs,
-                                                enumerate_model_node_outputs)
+    from skl2onnx.helpers.onnx_helper import select_model_inputs_outputs, enumerate_model_node_outputs
 
     ori_model = graph.model()
     if len(outputs) == 0:
@@ -121,8 +120,7 @@ def meet_precision(lmat: NDArray, rmat: NDArray, cos_th: float, atol: float, rto
     lnorm, rnorm = norm(lmat), norm(rmat)
     # normal cases we check cosine distance and norm closeness
     try:
-        return 1 - cosine_similarity(lmat, rmat) <= cos_th \
-            and bool(np.isclose(rnorm, lnorm, atol=atol, rtol=rtol))
+        return 1 - cosine_similarity(lmat, rmat) <= cos_th and bool(np.isclose(rnorm, lnorm, atol=atol, rtol=rtol))
     except RuntimeError as err:
         raise RuntimeError("Failed to calc meet_precision") from err
 

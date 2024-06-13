@@ -33,7 +33,7 @@ logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='[%(levelname)
 logger = logging.getLogger(__name__)
 
 
-class InferEngine():
+class InferEngine:
     def __init__(self):
         max_queue_num = 100
         self.dataset = Manager().Queue(max_queue_num)
@@ -101,8 +101,7 @@ class InferEngine():
         self.inference_pool = Pool(1)
         self.evaluate_pool = Pool(1)
 
-        self.dataset_pool.apply_async(
-            dataset, args=(batch_size, engine_cfg["dataset"], None, self.dataset))
+        self.dataset_pool.apply_async(dataset, args=(batch_size, engine_cfg["dataset"], None, self.dataset))
 
         for i in range(worker):
             try:
@@ -110,15 +109,17 @@ class InferEngine():
             except ZeroDivisionError as err:
                 raise RuntimeError("divide zero error") from err
             self.pre_process_pool.apply_async(
-                pre_process, args=(int(pre_loop), engine_cfg["pre_process"], self.dataset, self.pre_queue))
+                pre_process, args=(int(pre_loop), engine_cfg["pre_process"], self.dataset, self.pre_queue)
+            )
 
         # 除预处理用多进程，其他任务用单进程
         self.inference_pool.apply_async(
-            inference, args=(loop, engine_cfg["inference"], self.pre_queue, self.infer_queue))
+            inference, args=(loop, engine_cfg["inference"], self.pre_queue, self.infer_queue)
+        )
         self.post_process_pool.apply_async(
-            post_process, args=(loop, engine_cfg["post_process"], self.infer_queue, self.post_queue))
-        self.evaluate_pool.apply_async(
-            evaluate, args=(loop, batch_size, engine_cfg["evaluate"], self.post_queue, None))
+            post_process, args=(loop, engine_cfg["post_process"], self.infer_queue, self.post_queue)
+        )
+        self.evaluate_pool.apply_async(evaluate, args=(loop, batch_size, engine_cfg["evaluate"], self.post_queue, None))
 
         self.dataset_pool.close()
         self.pre_process_pool.close()

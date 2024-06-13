@@ -35,7 +35,7 @@ LOG_LEVEL = {
     "warning": logging.WARNING,
     "error": logging.ERROR,
     "fatal": logging.FATAL,
-    "critical": logging.CRITICAL
+    "critical": logging.CRITICAL,
 }
 
 

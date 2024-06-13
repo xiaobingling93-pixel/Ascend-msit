@@ -44,7 +44,7 @@ class BaseNode(ABC):
     @name.setter
     def name(self, name: str) -> None:
         self._name = name
-    
+
     @classmethod
     @abstractmethod
     def parse(cls, _) -> 'BaseNode':
@@ -59,7 +59,7 @@ class Node(BaseNode):
         inputs: Optional[List[str]] = None,
         outputs: Optional[List[str]] = None,
         attrs: Optional[Dict[str, object]] = None,
-        domain: str = ''
+        domain: str = '',
     ) -> None:
         """
         A node represents a computation operator in a graph.
@@ -80,25 +80,25 @@ class Node(BaseNode):
     def __eq__(self, rhs: 'Node') -> bool:
         if not isinstance(rhs, Node):
             return False
-        return self.inputs == rhs.inputs \
-                and self.outputs == rhs.outputs \
-                and self.attrs == rhs.attrs \
-                and self.domain == rhs.domain \
-                and super().__eq__(rhs)
+        return (
+            self.inputs == rhs.inputs
+            and self.outputs == rhs.outputs
+            and self.attrs == rhs.attrs
+            and self.domain == rhs.domain
+            and super().__eq__(rhs)
+        )
 
     def __hash__(self) -> int:
         return super().__hash__()
 
     def __getitem__(self, key: str) -> object:
         if key not in self._attrs:
-            raise KeyError(
-                f'Node({self.name}) do not have {key} attribute.')
+            raise KeyError(f'Node({self.name}) do not have {key} attribute.')
         return self._attrs.get(key)
 
     def __setitem__(self, key: str, value: object) -> None:
         if key not in self._attrs:
-            warnings.warn(
-                f'Node({self.name}) do not have {key} attribute.')
+            warnings.warn(f'Node({self.name}) do not have {key} attribute.')
         self._attrs[key] = value
 
     def __str__(self) -> str:
@@ -130,11 +130,11 @@ class Node(BaseNode):
     @domain.setter
     def domain(self, domain: str) -> None:
         self._domain = domain
-    
+
     @inputs.setter
     def inputs(self, inputs: List[str]) -> None:
         self._inputs = inputs
-    
+
     @outputs.setter
     def outputs(self, outputs: List[str]) -> None:
         self._outputs = outputs
@@ -145,26 +145,20 @@ class Node(BaseNode):
 
     def get_input_id(self, node_input: str) -> int:
         if node_input not in self._inputs:
-            raise RuntimeError(
-                f'Name of input should be one of {self._inputs}')
+            raise RuntimeError(f'Name of input should be one of {self._inputs}')
         return self._inputs.index(node_input)
-  
+
     def get_input_ids(self, node_input: str) -> List[int]:
         return [idx for idx, name in enumerate(self._inputs) if name == node_input]
 
     def get_output_id(self, output: str) -> int:
         if output not in self._outputs:
-            raise RuntimeError(
-                f'Name of output should be one of {self._outputs}')
+            raise RuntimeError(f'Name of output should be one of {self._outputs}')
         return self._outputs.index(output)
 
 
 class Initializer(BaseNode):
-    def __init__(
-        self,
-        name: str,
-        value: Optional[np.ndarray] = None
-    ) -> None:
+    def __init__(self, name: str, value: Optional[np.ndarray] = None) -> None:
         """
         An initializer represents a tensor which specifies for a graph input or a constant node.
 
@@ -178,9 +172,11 @@ class Initializer(BaseNode):
     def __eq__(self, rhs: 'Initializer') -> bool:
         if not isinstance(rhs, Initializer):
             return False
-        return self.value.dtype == rhs.value.dtype \
-                and np.array_equal(self.value, rhs.value, equal_nan=True) \
-                and super().__eq__(rhs)
+        return (
+            self.value.dtype == rhs.value.dtype
+            and np.array_equal(self.value, rhs.value, equal_nan=True)
+            and super().__eq__(rhs)
+        )
 
     def __hash__(self) -> int:
         return super().__hash__()
@@ -206,10 +202,7 @@ class Initializer(BaseNode):
 
 class PlaceHolder(BaseNode):
     def __init__(
-        self,
-        name: str,
-        dtype: np.dtype = np.dtype('int64'),
-        shape: Optional[Sequence[Union[int, str]]] = None
+        self, name: str, dtype: np.dtype = np.dtype('int64'), shape: Optional[Sequence[Union[int, str]]] = None
     ) -> None:
         """
         A placeholder used to store the type and shape information.
@@ -226,9 +219,7 @@ class PlaceHolder(BaseNode):
     def __eq__(self, rhs: 'PlaceHolder') -> bool:
         if not isinstance(rhs, PlaceHolder):
             return False
-        return self.dtype == rhs.dtype \
-                and self.shape == rhs.shape \
-                and super().__eq__(rhs)
+        return self.dtype == rhs.dtype and self.shape == rhs.shape and super().__eq__(rhs)
 
     def __hash__(self) -> int:
         return super().__hash__()

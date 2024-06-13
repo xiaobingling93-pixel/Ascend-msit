@@ -4,7 +4,7 @@ import subprocess
 from components.utils.file_open_check import FileStat, is_legal_args_path_string
 
 
-MAX_SIZE_LIMITE_NORMAL_MODEL = 32 * 1024 * 1024 * 1024 # 32GB
+MAX_SIZE_LIMITE_NORMAL_MODEL = 32 * 1024 * 1024 * 1024  # 32GB
 
 
 def check_in_path_legality(value):

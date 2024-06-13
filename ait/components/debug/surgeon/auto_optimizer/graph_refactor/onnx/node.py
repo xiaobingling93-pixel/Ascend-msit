@@ -42,7 +42,7 @@ class OnnxNode(Node):
         inputs: Optional[List[str]] = None,
         outputs: Optional[List[str]] = None,
         attrs: Optional[Dict[str, object]] = None,
-        domain: str = ''
+        domain: str = '',
     ) -> None:
         super(OnnxNode, self).__init__(name, op_type, inputs, outputs, attrs, domain)
 
@@ -62,28 +62,18 @@ class OnnxNode(Node):
             op_type=node.op_type,
             inputs=list(node.input),
             outputs=list(node.output),
-            attrs={attr.name: helper.get_attribute_value(attr)
-                   for attr in node.attribute},
-            domain=node.domain
+            attrs={attr.name: helper.get_attribute_value(attr) for attr in node.attribute},
+            domain=node.domain,
         )
 
     def proto(self) -> NodeProto:
         return helper.make_node(
-            self.op_type,
-            self.inputs,
-            self.outputs,
-            name=self.name,
-            domain=self.domain,
-            **self.attrs
+            self.op_type, self.inputs, self.outputs, name=self.name, domain=self.domain, **self.attrs
         )
 
 
 class OnnxInitializer(Initializer):
-    def __init__(
-        self,
-        name: str,
-        value: Optional[np.ndarray] = None
-    ) -> None:
+    def __init__(self, name: str, value: Optional[np.ndarray] = None) -> None:
         super(OnnxInitializer, self).__init__(name, value)
 
     @classmethod
@@ -97,10 +87,7 @@ class OnnxInitializer(Initializer):
         else:
             name = node.name
             value = numpy_helper.to_array(node)
-        return cls(
-            name=name,
-            value=value
-        )
+        return cls(name=name, value=value)
 
     def proto(self) -> TensorProto:
         tensor_proto = numpy_helper.from_array(self.value)
@@ -110,10 +97,7 @@ class OnnxInitializer(Initializer):
 
 class OnnxPlaceHolder(PlaceHolder):
     def __init__(
-        self,
-        name: str,
-        dtype: np.dtype = np.dtype('int64'),
-        shape: Optional[Sequence[Union[int, str]]] = None
+        self, name: str, dtype: np.dtype = np.dtype('int64'), shape: Optional[Sequence[Union[int, str]]] = None
     ) -> None:
         super(OnnxPlaceHolder, self).__init__(name, dtype, shape)
 
@@ -122,29 +106,18 @@ class OnnxPlaceHolder(PlaceHolder):
         cls,
         node: ValueInfoProto,
         dtype: np.dtype = np.dtype('int64'),
-        shape: Optional[Sequence[Union[int, str]]] = None
+        shape: Optional[Sequence[Union[int, str]]] = None,
     ) -> 'OnnxPlaceHolder':
         if node.HasField('type'):
             tensor_type = node.type.tensor_type
             dtype = tensor_dtype_to_np_dtype(tensor_type.elem_type)
             if tensor_type.HasField('shape'):
-                shape = [
-                    dim.dim_value if dim.HasField('dim_value') else dim.dim_param
-                    for dim in tensor_type.shape.dim
-                ]
-        return cls(
-            name=node.name,
-            dtype=dtype,
-            shape=shape
-        )
+                shape = [dim.dim_value if dim.HasField('dim_value') else dim.dim_param for dim in tensor_type.shape.dim]
+        return cls(name=node.name, dtype=dtype, shape=shape)
 
     def proto(self, dtype: int = 1, shape: Optional[Sequence[Union[int, str]]] = None) -> ValueInfoProto:
         if self.shape:
             shape = ['-1' if dim == -1 else dim for dim in self.shape]
         if self.dtype:
             dtype = np_dtype_to_tensor_dtype(self._dtype)
-        return helper.make_tensor_value_info(
-            self._name,
-            dtype,
-            shape
-        )
+        return helper.make_tensor_value_info(self._name, dtype, shape)
