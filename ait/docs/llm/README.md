@@ -8,7 +8,7 @@
 
 大模型精度调试工具（Large Language Model Debug Tool） 用于帮助开发者快速定位推理开发过程中精度问题，发现根因，提升开发效率。
 
-大模型迁移工具用于辅助将 torch 模型迁移到加速库，以及加速库浮点模型迁移稀疏量化模型。当前支持 【大模型 LLM 加速库浮点模型 layer 层稀疏量化迁移】
+大模型迁移分析工具用于辅助将 torch 模型迁移到加速库，以及加速库浮点模型迁移稀疏量化模型
 
 - 大模型推理精度工具（llm）提供对大模型推理的数据落盘（dump）以及精度定位（compare）功能。
 - 使用依赖 CANN-toolkit，以及加速库 ATB和 MindIE-LLM，其中 CANN-toolkit 版本要求参照具体安装方式说明
@@ -31,7 +31,7 @@ ait install llm
 > * [自动比对工具使用说明](/ait/docs/llm/工具-自动比对功能使用说明.md)
 > * [算子预检工具使用说明](/ait/docs/llm/工具-精度预检使用说明.md)
 > * [异常检测工具使用说明](/ait/docs/llm/工具-异常检测使用说明.md)
-> * [llm浮点模型layer层稀疏量化迁移](/ait/docs/llm/工具-llm浮点模型layer层稀疏量化迁移.md)
+> * [llm模型迁移分析使用说明](/ait/docs/llm/工具-llm模型迁移分析使用说明.md)
 
 #### 场景列表
 > * [输出Token的Logits精度比对--加速库场景](/ait/docs/llm/加速库场景-输出Token的logits精度比对.md)

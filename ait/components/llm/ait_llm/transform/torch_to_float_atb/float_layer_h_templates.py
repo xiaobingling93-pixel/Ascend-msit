@@ -172,6 +172,7 @@ decoder_layer_tensor_id_formatter = """
         IN_LAYER_ID,
         IN_BLOCK_TABLES,
         IN_SLOTS,
+        IN_Q_LEN,
 
         OUT_LAYEROUT,
 

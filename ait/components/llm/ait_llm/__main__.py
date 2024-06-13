@@ -408,6 +408,7 @@ class Transform(BaseCommand):
 
         set_log_level(args.log_level)
         scenario = get_transform_scenario(args.source)
+        logger.info(f"Current scenario: {scenario}")
         if scenario == SCENARIOS.float_atb_to_quant_atb:
             from ait_llm.transform.float_atb_to_quant_atb import transform_quant
 
