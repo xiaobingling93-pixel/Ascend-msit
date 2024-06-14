@@ -45,7 +45,7 @@ def infer_simple():
 
     outarray = []
     for out in outputs:
-        # convert acltenor to host memory
+        # convert acltensor to host memory
         out.to_host()
         # convert acltensor to numpy array
         outarray.append(np.array(out))
@@ -106,7 +106,7 @@ def infer_dynamicshape():
 
     outarray = []
     for out in outputs:
-        # convert acltenor to host memory
+        # convert acltensor to host memory
         out.to_host()
         # convert acltensor to numpy array
         outarray.append(np.array(out))
@@ -157,7 +157,7 @@ def infer_run_simultaneous():
 
     outarray = []
     for out in outputs:
-        # convert acltenor to host memory
+        # convert acltensor to host memory
         out.to_host()
         # convert acltensor to numpy array
         outarray.append(np.array(out))
@@ -170,7 +170,7 @@ def infer_run_simultaneous():
 
     outarray1 = []
     for out in outputs1:
-        # convert acltenor to host memory
+        # convert acltensor to host memory
         out.to_host()
         # convert acltensor to numpy array
         outarray1.append(np.array(out))
@@ -201,7 +201,7 @@ def infer_dynamic_dims():
 
     outarray = []
     for out in outputs:
-        # convert acltenor to host memory
+        # convert acltensor to host memory
         out.to_host()
         # convert acltensor to numpy array
         outarray.append(np.array(out))
@@ -232,7 +232,7 @@ def infer_dynamics_hw():
 
     outarray = []
     for out in outputs:
-        # convert acltenor to host memory
+        # convert acltensor to host memory
         out.to_host()
         # convert acltensor to numpy array
         outarray.append(np.array(out))
@@ -264,7 +264,7 @@ def infer_dynamic_batchsize():
 
     outarray = []
     for out in outputs:
-        # convert acltenor to host memory
+        # convert acltensor to host memory
         out.to_host()
         # convert acltensor to numpy array
         outarray.append(np.array(out))

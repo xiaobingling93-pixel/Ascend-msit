@@ -12,7 +12,7 @@
 
 ## 第一步：dump torch 模型 token 的输出 logits
 
-使用[在线图例 DUMP 功能](/ait/docs/llm/工具-DUMP在线推理数据使用说明.md)。将模型最后的输出的 logits dump 下来。
+使用[在线推理 DUMP 功能](/ait/docs/llm/工具-DUMP在线推理数据使用说明.md)。将模型最后的输出的 logits dump 下来。
 
 ```python
 from ait_llm import DumpConfig, register_hook #在模型py文件中文件开头导入DumpConfig和register_hook
