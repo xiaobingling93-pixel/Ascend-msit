@@ -103,7 +103,7 @@ def register_custom_compare_algorithm(custom_compare_algorithm):
 
     file_dir, file_name = os.path.dirname(file_path), os.path.basename(file_path)
     if len(file_dir) > 0 and file_dir not in sys.path:
-        sys.path.append(file_dir)   
+        sys.path.append(file_dir)
 
     custom_module_name = file_name.replace('.py', '')
     try:
