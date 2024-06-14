@@ -145,10 +145,7 @@ def policy_layer_type_cnt_match(golden_root_node: TreeNode, my_root_node: TreeNo
             return type_cnt_map
         for child in node.children:
             save_in_type = ATB_QUANT_FLOAT_NODE_MAPPING.get(child.op_type, child.op_type)
-            if save_in_type in type_cnt_map:
-                type_cnt_map[save_in_type].append(child)
-            else:
-                type_cnt_map[save_in_type] = [child]
+            type_cnt_map.setdefault(save_in_type, []).append(child)
         return type_cnt_map
 
     matched_node_map = [(golden_root_node, my_root_node)]
@@ -161,7 +158,7 @@ def policy_layer_type_cnt_match(golden_root_node: TreeNode, my_root_node: TreeNo
         my_type_count_map = get_children_type_count_map(my_node)
 
         for op_type, my_nodes in my_type_count_map.items():
-            if len(my_nodes) != golden_type_count_map.get(op_type, []):
+            if len(my_nodes) != len(golden_type_count_map.get(op_type, [])):
                 continue
             golden_nodes = golden_type_count_map.get(op_type)
             matched_node_map.extend(zip(golden_nodes, my_nodes))

@@ -296,7 +296,7 @@ class CompareDataTorch(CompareDataParse):
         ]
         
         if self.token_id is None:
-            if len(self.token_ids) > 0 and not isinstance(self.token_ids, tuple):
+            if len(self.token_ids) > 0 and not isinstance(self.token_ids[0], tuple):
                 self.token_id = str(self.token_ids[0])
             else:
                 self.token_id = "0"
