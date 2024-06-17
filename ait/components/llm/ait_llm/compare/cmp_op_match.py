@@ -163,6 +163,14 @@ def policy_layer_type_cnt_match(golden_root_node: TreeNode, my_root_node: TreeNo
             golden_nodes = golden_type_count_map.get(op_type)
             matched_node_map.extend(zip(golden_nodes, my_nodes))
 
+    for golden_node, my_node in matched_node_map:
+        match_map.add_score(
+            my_node,
+            MatchLocation.ALL_OUTPUT,
+            golden_node,
+            MatchLocation.ALL_OUTPUT,
+            MatchScore.FULL_MATCH,
+        )
 
 class OpMatchMgr:
 
