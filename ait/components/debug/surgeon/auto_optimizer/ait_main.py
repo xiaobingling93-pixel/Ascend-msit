@@ -78,8 +78,7 @@ class EvaluateCommand(BaseCommand):
                 if knowledge not in default_off_knowledges
             ),
             type=check_normal_string,
-            help='Knowledges(index/name) you want to apply. Seperate by comma(,), \
-                            Default to all except fix knowledges.',
+            help='Knowledges(index/name) you want to apply. Seperate by comma(,).',
         )
         parser.add_argument(
             '-r',
@@ -87,14 +86,14 @@ class EvaluateCommand(BaseCommand):
             action="store_true",
             default=False,
             help='Process onnx in a folder recursively if any folder provided \
-                            as PATH. Default to false.',
+                            as PATH.',
         )
         parser.add_argument(
             '-v',
             '--verbose',
             action="store_true",
             default=False,
-            help='Show progress in evaluate mode. Default to false.',
+            help='Show progress in evaluate mode.',
         )
         parser.add_argument(
             '-p',
@@ -102,7 +101,7 @@ class EvaluateCommand(BaseCommand):
             default=1,
             type=check_range,
             help='Use multiprocessing in evaluate mode, \
-                            determine how many processes should be spawned. Default to 1',
+                            determine how many processes should be spawned.',
         )
 
     def handle(self, args):
@@ -149,8 +148,7 @@ class OptimizeCommand(BaseCommand):
                 if knowledge not in default_off_knowledges
             ),
             type=check_nodes_string,
-            help='Knowledges(index/name) you want to apply. Seperate by comma(,), \
-                            Default to all except fix knowledges.',
+            help='Knowledges(index/name) you want to apply. Seperate by comma(,).',
         )
         parser.add_argument(
             '-t',
@@ -158,14 +156,14 @@ class OptimizeCommand(BaseCommand):
             action="store_true",
             default=False,
             help='Run inference to determine whether to apply knowledges \
-                            optimization. Default to False.',
+                            optimization.',
         )
         parser.add_argument(
             '-bk',
             '--big-kernel',
             action="store_true",
             default=False,
-            help='Whether to apply big kernel optimize knowledge. Default to False.',
+            help='Whether to apply big kernel optimize knowledge.',
         )
         parser.add_argument(
             '-as',
@@ -191,12 +189,12 @@ class OptimizeCommand(BaseCommand):
             type=check_normal_string,
             help='Soc_version.',
         )
-        parser.add_argument('-d', '--device', default=0, type=check_soc, help='Device_id, default to 0.')
+        parser.add_argument('-d', '--device', default=0, type=check_soc, help='Device_id.')
         parser.add_argument(
             '--loop',
             default=100,
             type=check_min_num_1,
-            help='How many times to run the test inference, default to 100.',
+            help='How many times to run the test inference.',
         )
         parser.add_argument(
             '--threshold',
@@ -205,7 +203,7 @@ class OptimizeCommand(BaseCommand):
             help='Threshold of inference speed improvement,'
             'knowledges with less improvement won\'t be used.'
             'Can be a negative number, which means accept'
-            'negative optimization, default: 0',
+            'negative optimization',
         )
         parser.add_argument(
             '-is',
@@ -312,7 +310,7 @@ class ExtractCommand(BaseCommand):
             '--is-check-subgraph',
             action="store_true",
             default=False,
-            help='Whether to check subgraph. Default to False.',
+            help='Whether to check subgraph.',
         )
         parser.add_argument(
             '-sis', '--subgraph-input-shape', type=check_shapes_string, help='Specify the input shape of subgraph'
