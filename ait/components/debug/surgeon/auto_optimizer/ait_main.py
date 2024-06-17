@@ -189,7 +189,7 @@ class OptimizeCommand(BaseCommand):
             dest='soc',
             default='Ascend310P3',
             type=check_normal_string,
-            help='Soc_version, default to Ascend310P3.',
+            help='Soc_version.',
         )
         parser.add_argument('-d', '--device', default=0, type=check_soc, help='Device_id, default to 0.')
         parser.add_argument(
