@@ -112,7 +112,7 @@ def fill_in_data(golden_meta):
     for data_id, golden_info in tqdm(golden_meta.items(), total=len(golden_meta)):
         for token_id, path_list in golden_info.items():
 
-            # 读取映射关系json文件中的tenor路径
+            # 读取映射关系json文件中的tensor路径
             if not isinstance(path_list, (list, tuple)) or len(path_list) < 2:
                 logger.warning(f"Invalid data in golden metadata.json, data_id: {data_id}, token_id: {token_id}")
                 continue
