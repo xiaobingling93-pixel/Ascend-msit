@@ -17,6 +17,7 @@ from enum import Enum
 from typing import Any
 from ait_llm.common.log import logger
 from ait_llm.dump.torch_dump.topo import ModelTree, TreeNode
+from ait_llm.compare.op_mapping import ATB_QUANT_FLOAT_NODE_MAPPING
 
 
 class MatchScore(Enum):
@@ -59,16 +60,16 @@ class OpMatchMap:
             max_length = 0
             for map_info in self.map.keys():
                 my_op, my_op_location, golden_op, golden_op_location = map_info
-                max_length = max(len(f"[{my_op.node_name}##{my_op_location}]"), max_length)
+                max_length = max(len(f"[{my_op.node_name}#{my_op.op_type}#{my_op_location}]"), max_length)
 
             format_str = f"mapping score: %-{max_length}s   <- %s ->   %s "
             for map_info, score in self.map.items():
                 my_op, my_op_location, golden_op, golden_op_location = map_info
                 logger.debug(
                     format_str,
-                    f"[{my_op.node_name}##{my_op_location}]",
+                    f"[{my_op.node_name}#{my_op.op_type}#{my_op_location}]",
                     str(score),
-                    f"[{golden_op.node_name}##{golden_op_location}]",
+                    f"[{golden_op.node_name}#{golden_op.op_type}#{golden_op_location}]",
                 )
 
         ret_map = [
@@ -82,6 +83,7 @@ class OpMatchMap:
 
 
 def policy_output(golden_root_node: TreeNode, my_root_node: TreeNode, match_map: OpMatchMap):
+    # 最后输出匹配上
     def get_last_child(node):
         if hasattr(node, "children") and node.children is not None and len(node.children) > 0:
             return node.children[-1]
@@ -113,6 +115,7 @@ def policy_output(golden_root_node: TreeNode, my_root_node: TreeNode, match_map:
 
 
 def policy_name_full_match(golden_root_node: TreeNode, my_root_node: TreeNode, match_map: OpMatchMap):
+    # 名字一样就代表匹配上了
     golden_name2node = {node.node_name: node for node in golden_root_node.get_all_nodes()}
     my_name2node = {node.node_name: node for node in my_root_node.get_all_nodes()}
 
@@ -132,14 +135,42 @@ def policy_name_full_match(golden_root_node: TreeNode, my_root_node: TreeNode, m
             MatchScore.FULL_MATCH,
         )
 
+
+def policy_layer_type_cnt_match(golden_root_node: TreeNode, my_root_node: TreeNode, match_map: OpMatchMap):
+    # 逐层比对，类型和数量一致的算匹配上。主要用于量化和非量化的atb 之间比对
+    def get_children_type_count_map(node):
+        # 汇总 children 的每个类型的 node 到一个 map 中
+        type_cnt_map = {}
+        if node is None or node.children is None or len(node.children) == 0:
+            return type_cnt_map
+        for child in node.children:
+            save_in_type = ATB_QUANT_FLOAT_NODE_MAPPING.get(child.op_type, child.op_type)
+            type_cnt_map.setdefault(save_in_type, []).append(child)
+        return type_cnt_map
+
+    matched_node_map = [(golden_root_node, my_root_node)]
+    comparing_index = 0
+    while comparing_index < len(matched_node_map):
+        golden_node, my_node = matched_node_map[comparing_index]
+        comparing_index = comparing_index + 1
+
+        golden_type_count_map = get_children_type_count_map(golden_node)
+        my_type_count_map = get_children_type_count_map(my_node)
+
+        for op_type, my_nodes in my_type_count_map.items():
+            if len(my_nodes) != len(golden_type_count_map.get(op_type, [])):
+                continue
+            golden_nodes = golden_type_count_map.get(op_type)
+            matched_node_map.extend(zip(golden_nodes, my_nodes))
+
+    for golden_node, my_node in matched_node_map:
         match_map.add_score(
-            my_name2node.get(match_name),
-            MatchLocation.ALL_INPUT,
-            golden_name2node.get(match_name),
-            MatchLocation.ALL_INPUT,
+            my_node,
+            MatchLocation.ALL_OUTPUT,
+            golden_node,
+            MatchLocation.ALL_OUTPUT,
             MatchScore.FULL_MATCH,
         )
-
 
 class OpMatchMgr:
 
@@ -147,6 +178,7 @@ class OpMatchMgr:
         self.op_match_policies = [
             policy_output,
             policy_name_full_match,
+            policy_layer_type_cnt_match,
             OpMatchPolicyMapCount(args),
         ]
 
@@ -167,6 +199,7 @@ class OpMatchMgr:
 
 
 class OpMatchPolicyMapCount:
+    # 原始 atb 和 torch 的比对逻辑。先找到 block，再取 block 内部类型和数量一致的算子作为匹配
     def __init__(self, args) -> None:
         from ait_llm.compare.atb_acc_cmp import load_mapping
 
