@@ -5,8 +5,8 @@
 
 ### Dump 数据
 
-- GE: Graph Engine，基于昇腾AI软件栈对不同的机器学习框架提供统一的IR接口，对接上层网络模型框架。
-- FX：功能类似于pytorch框架的FX工具包，用于消除动态图和静态图之间的gap，使我们对于nn.Model的各种操作变得更加简单。
+- **GE**: Graph Engine，基于昇腾AI软件栈对不同的机器学习框架提供统一的IR接口，对接上层网络模型框架。
+- **FX**：功能类似于pytorch框架的FX工具包，用于消除动态图和静态图之间的gap，使我们对于nn.Model的各种操作变得更加简单。
 - **GE 模式 dump 数据** 添加 `get_ge_dump_config`，获取配置后的 `CompilerConfig` 实例，配置模型 compile，并执行推理。
 
   ```py
@@ -45,8 +45,9 @@
   ...
   ```
 
-- 输出路径与 torchair 版本相关，新版本中为当前文件夹下的 `data_dump/{token_id}/gm_{time stamp}_dump`，老版本中为 `gm_{time stamp}_dump`
-- **其中 `{token_id}` 是从 1 开始的，相对于 GE 模式是从 0 开始的，比对时会将 FX 模式的 token_id 减 1**
+  输出路径与 torchair 版本相关，新版本中为当前文件夹下的 `data_dump/{token_id}/gm_{time stamp}_dump`，老版本中为 `gm_{time stamp}_dump`
+  
+  **其中 `{token_id}` 是从 1 开始的，相对于 GE 模式是从 0 开始的，比对时会将 FX 模式的 token_id 减 1**
 
 ### Compare 精度比对
 
