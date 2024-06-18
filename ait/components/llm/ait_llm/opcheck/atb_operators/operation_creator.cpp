@@ -280,31 +280,33 @@ static atb::Operation *LayerNormOperationCreate(const nlohmann::json &paramJson)
         param.layerType = atb::infer::LayerNormParam::LayerNormType(paramJson["layerType"].get<int32_t>());
     }
     if (param.layerType == atb::infer::LayerNormParam::LAYER_NORM_NORM) {
-        if (paramJson.contains("epsilon")) {
-            param.normParam.epsilon = paramJson["epsilon"].get<float>();
+        const nlohmann::json normParam = paramJson["normParam"].get<nlohmann::json>();
+        if (normParam.contains("epsilon")) {
+            param.normParam.epsilon = normParam["epsilon"].get<float>();
         }
-        if (paramJson.contains("quantType")) {
-            param.normParam.quantType = atb::infer::QuantType(paramJson["quantType"].get<int32_t>());
+        if (normParam.contains("quantType")) {
+            param.normParam.quantType = atb::infer::QuantType(normParam["quantType"].get<int32_t>());
         }
-        if (paramJson.contains("beginNormAxis")) {
-            param.normParam.beginNormAxis = paramJson["beginNormAxis"].get<int32_t>();
+        if (normParam.contains("beginNormAxis")) {
+            param.normParam.beginNormAxis = normParam["beginNormAxis"].get<int32_t>();
         }
-        if (paramJson.contains("beginParamsAxis")) {
-            param.normParam.beginParamsAxis = paramJson["beginParamsAxis"].get<int32_t>();
+        if (normParam.contains("beginParamsAxis")) {
+            param.normParam.beginParamsAxis = normParam["beginParamsAxis"].get<int32_t>();
         }
     }
     if (param.layerType == atb::infer::LayerNormParam::LAYER_NORM_POSTNORM) {
-        if (paramJson.contains("epsilon")) {
-            param.postNormParam.epsilon = paramJson["epsilon"].get<float>();
+        const nlohmann::json postNormParam = paramJson["postNormParam"].get<nlohmann::json>();
+        if (postNormParam.contains("epsilon")) {
+            param.postNormParam.epsilon = postNormParam["epsilon"].get<float>();
         }
-        if (paramJson.contains("quantType")) {
-            param.postNormParam.quantType = atb::infer::QuantType(paramJson["quantType"].get<int32_t>());
+        if (postNormParam.contains("quantType")) {
+            param.postNormParam.quantType = atb::infer::QuantType(postNormParam["quantType"].get<int32_t>());
         }
-        if (paramJson.contains("opMode")) {
-            param.postNormParam.opMode = paramJson["opMode"].get<size_t>();
+        if (postNormParam.contains("opMode")) {
+            param.postNormParam.opMode = postNormParam["opMode"].get<size_t>();
         }
-        if (paramJson.contains("zoomScaleValue")) {
-            param.postNormParam.zoomScaleValue = paramJson["zoomScaleValue"].get<float>();
+        if (postNormParam.contains("zoomScaleValue")) {
+            param.postNormParam.zoomScaleValue = postNormParam["zoomScaleValue"].get<float>();
         }
     }
     atb::Operation *op;
