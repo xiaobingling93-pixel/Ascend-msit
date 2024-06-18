@@ -81,7 +81,8 @@ class CompareDataATB(CompareDataParse):
         self.topo_files = list(self.get_topo_file_path(self.ait_dump_path, self.pid))
         logger.debug("atb topo file is %s", str(self.topo_files))
         self.token_ids = list(self._get_token_ids(self.tokens_path, self.token_id))
-        self.token_id = str(self.token_ids[0]) if len(self.token_ids) > 0 else "0"
+        if self.token_id is None:
+            self.token_id = str(self.token_ids[0]) if len(self.token_ids) > 0 else "0"
         logger.debug("atb token ids is %s", str(self.token_ids))
         self.encode_root_node, self.decode_root_node = self.parse(self.topo_files)
         self.token_path = os.path.join(self.tokens_path, self.token_id)
@@ -293,7 +294,12 @@ class CompareDataTorch(CompareDataParse):
         self.token_ids = [
             int(t) if t.isdigit() else t for t in DataUtils.get_token_ids(self.tokens_path, self.token_id)
         ]
-        self.token_id = str(self.token_ids[0]) if len(self.token_ids) > 0 else "0"
+        
+        if self.token_id is None:
+            if len(self.token_ids) > 0 and not isinstance(self.token_ids[0], tuple):
+                self.token_id = str(self.token_ids[0])
+            else:
+                self.token_id = "0"
         self.topo_file = self.get_topo_file_path(self.tokens_path)
         self.golden_root_node, self.golden_layer_type, self.golden_layer_nodes = self.parse()
         self.token_path = os.path.join(self.tokens_path, self.token_id)

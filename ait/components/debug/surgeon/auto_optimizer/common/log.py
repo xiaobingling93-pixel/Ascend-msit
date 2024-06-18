@@ -43,9 +43,7 @@ def setup_logging(level: Union[int, str] = None, log_file: str = None) -> None:
     logger.addHandler(console_handler)
 
     if log_file is not None:
-        file_handler = RotatingFileHandler(
-            filename=log_file, maxBytes=100 * 1024 * 1024, backupCount=5
-        )
+        file_handler = RotatingFileHandler(filename=log_file, maxBytes=100 * 1024 * 1024, backupCount=5)
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
 

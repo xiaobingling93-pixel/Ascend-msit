@@ -46,7 +46,7 @@ class ONNXInference(InferenceBase, ABC):
             raise RuntimeError("inference failed error") from err
         for _ in range(loop):
             data = in_queue.get()
-            if len(data) < 2:   # include file_name and data
+            if len(data) < 2:  # include file_name and data
                 raise RuntimeError("input params error len={}".format(len(data)))
             out_data = self._session_run(session, input_name, [data[1]])
 

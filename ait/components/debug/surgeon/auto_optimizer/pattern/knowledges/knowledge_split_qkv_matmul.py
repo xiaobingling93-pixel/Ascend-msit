@@ -53,16 +53,18 @@ from auto_optimizer.pattern.utils import HasInputValue, NextNodeCount, AllNextno
 #                  Node2
 #
 # 尽量使用简单的pattern，将复杂的判断逻辑放在apply函数内
-pattern0 = Pattern() \
-    .add_node("MatMul_0", ["MatMul"], [NextNodeCount(1), HasInputValue(1)]) \
-    .add_node('ElementWise_0', ['Mul', 'Add', 'Sub', 'Div'], [NextNodeCount(1)]) \
-    .set_node_loop('ElementWise_0', MatchPattern.MATCH_ZERO_OR_MORE) \
-    .add_edge("MatMul_0", "ElementWise_0") \
-    .add_node("Reshape_0", ["Reshape"], [NextNodeCount(1), HasInputValue(1)]) \
-    .add_edge("ElementWise_0", "Reshape_0") \
-    .add_node("Transpose_0", ["Transpose"], [AllNextnodesAreGather()]) \
-    .add_edge("Reshape_0", "Transpose_0") \
+pattern0 = (
+    Pattern()
+    .add_node("MatMul_0", ["MatMul"], [NextNodeCount(1), HasInputValue(1)])
+    .add_node('ElementWise_0', ['Mul', 'Add', 'Sub', 'Div'], [NextNodeCount(1)])
+    .set_node_loop('ElementWise_0', MatchPattern.MATCH_ZERO_OR_MORE)
+    .add_edge("MatMul_0", "ElementWise_0")
+    .add_node("Reshape_0", ["Reshape"], [NextNodeCount(1), HasInputValue(1)])
+    .add_edge("ElementWise_0", "Reshape_0")
+    .add_node("Transpose_0", ["Transpose"], [AllNextnodesAreGather()])
+    .add_edge("Reshape_0", "Transpose_0")
     .set_loop(MatchPattern.MATCH_ONCE)
+)
 
 
 @KnowledgeFactory.register()
@@ -91,8 +93,16 @@ class KnowledgeSplitQKVMatmul(KnowledgeBase):
             first_dim_of_split -= 1
         return first_dim_of_split if size_tmp == size_of_dim_to_split else -1
 
-    def _dup_branch_node(self, node: Node, graph: BaseGraph, weight: np.ndarray,
-                         axis: int, num: int, indices: List[int], placeholder_index: int = 0) -> List[Node]:
+    def _dup_branch_node(
+        self,
+        node: Node,
+        graph: BaseGraph,
+        weight: np.ndarray,
+        axis: int,
+        num: int,
+        indices: List[int],
+        placeholder_index: int = 0,
+    ) -> List[Node]:
         """
         复制逐元素算子和MatMul算子，这些算子的常数参数被切分为若干份，由各个分支平分
         :param node: 要复制的算子
@@ -115,10 +125,7 @@ class KnowledgeSplitQKVMatmul(KnowledgeBase):
             node_name = f"{node.name}_{idx}"
             init_name = f"{node_name}_init"
             node_weight = splitted_weight[indices[idx]].squeeze(axis)
-            added_init = graph.add_initializer(
-                name=init_name,
-                value=node_weight
-            )
+            added_init = graph.add_initializer(name=init_name, value=node_weight)
             added_node = graph.add_node(
                 name=node_name,
                 op_type=op_type,
@@ -145,10 +152,7 @@ class KnowledgeSplitQKVMatmul(KnowledgeBase):
             node_name = f"{node.name}_{idx}"
             init_name = f"{node_name}_init"
             node_weight = np.delete(weight.copy(), axis)
-            added_init = graph.add_initializer(
-                name=init_name,
-                value=node_weight
-            )
+            added_init = graph.add_initializer(name=init_name, value=node_weight)
             added_node = graph.add_node(
                 name=node_name,
                 op_type=op_type,
@@ -170,11 +174,7 @@ class KnowledgeSplitQKVMatmul(KnowledgeBase):
         ret = []
         for idx in range(num):
             node_name = f"{node.name}_{idx}"
-            new_node = graph.add_node(
-                name=node_name,
-                op_type="Transpose",
-                attrs={"perm": perm}
-            )
+            new_node = graph.add_node(name=node_name, op_type="Transpose", attrs={"perm": perm})
             new_node.inputs = ["PlaceHolder"]
             new_node.outputs = [f"{node_name}_output"]
             ret.append(new_node)
@@ -191,8 +191,9 @@ class KnowledgeSplitQKVMatmul(KnowledgeBase):
             if item == old_node.outputs[0]:
                 node_to_reconnect.inputs[idx] = new_node.outputs[0]
 
-    def _connect_splitted_nodes(self, new_nodes: List[Node],
-                                pre_nodes: List[Union[Node, str]], placeholder_index: int = 0):
+    def _connect_splitted_nodes(
+        self, new_nodes: List[Node], pre_nodes: List[Union[Node, str]], placeholder_index: int = 0
+    ):
         """
         连接复制出来的新节点
         :param new_nodes: 本次需要连接的节点列表
@@ -200,7 +201,7 @@ class KnowledgeSplitQKVMatmul(KnowledgeBase):
         :param placeholder_index: 节点的输入placeholder的下标
         """
         for idx, (node, pre_node) in enumerate(zip(new_nodes, pre_nodes)):
-            node.inputs[placeholder_index] = pre_node.outputs[0] if isinstance(pre_node, (Node, )) else pre_node
+            node.inputs[placeholder_index] = pre_node.outputs[0] if isinstance(pre_node, (Node,)) else pre_node
             pre_nodes[idx] = node
 
     def _get_gather_nodes_indices(self, nodes: List[Node], graph: BaseGraph) -> List[int]:
@@ -225,11 +226,7 @@ class KnowledgeSplitQKVMatmul(KnowledgeBase):
         :param matchinfo: 匹配到的子图信息
         :return: 返回是否修改成功
         """
-        if any(
-            graph.get_node(node.name, node_type=Node) is None
-            for nodes in matchinfo.values()
-            for node in nodes
-        ):
+        if any(graph.get_node(node.name, node_type=Node) is None for nodes in matchinfo.values() for node in nodes):
             logging.info("Some matching node have been removed or renamed, failed to optimizd.")
             return False
 
@@ -260,7 +257,7 @@ class KnowledgeSplitQKVMatmul(KnowledgeBase):
         split_num = len(gather_nodes)
 
         perm = transpose_node.attrs.get('perm', [])
-        if not perm or not isinstance(perm, (list, )) or perm[0] != first_dim_of_split:
+        if not perm or not isinstance(perm, (list,)) or perm[0] != first_dim_of_split:
             # reshape后(d,e,...n,k,r,...)中的n这个维度应该被transpose至最前面
             logging.info(f"The transpose operator {transpose_node.name} does not meet specific requirement.")
             return False
@@ -292,30 +289,31 @@ class KnowledgeSplitQKVMatmul(KnowledgeBase):
 
         for gather_node in gather_nodes:
             for next_node in graph.get_next_nodes(gather_node.outputs[0]):
-                if not isinstance(next_node, (Node, )):
+                if not isinstance(next_node, (Node,)):
                     logging.info(f"Successor {next_node.name} of {gather_node.name} is not type Node.")
                     return False
                 if op.eq(next_node.op_type, "Transpose"):
                     perm1 = next_node.attrs.get("perm", [])
-                    if not (isinstance(perm1, (list, )) and len(splitted_perm) == len(perm1)):
+                    if not (isinstance(perm1, (list,)) and len(splitted_perm) == len(perm1)):
                         logging.info(f"The perm attribute of transpose operator {next_node.name} is invalid.")
                         return False
                     for node in graph.get_next_nodes(next_node.outputs[0]):
-                        if not isinstance(node, (Node, )):
+                        if not isinstance(node, (Node,)):
                             logging.info(f"Node {node.name} is not type Node.")
                             return False
 
         # pre_nodes用来存储前置节点，用于重新连接
         pre_node = graph.get_prev_node(matmul_node.inputs[0])
-        if isinstance(pre_node, (Node, )) and pre_node.outputs[0] != matmul_node.inputs[0]:
+        if isinstance(pre_node, (Node,)) and pre_node.outputs[0] != matmul_node.inputs[0]:
             logging.info("The output of previous node of MatMul doesn't match the input of MatMul.")
             return False
         pre_nodes = [matmul_node.inputs[0] if pre_node is None else pre_node] * split_num
 
         # 执行到这里已经完全确认可以做优化，接下来开始改图，防止出现改图到一半发现无法继续修改的情况
         matmul_weight_length = len(matmul_weight.value.shape)
-        new_matmuls = self._dup_branch_node(matmul_node, graph, matmul_weight.value,
-                                            matmul_weight_length - 1, split_num, indices)
+        new_matmuls = self._dup_branch_node(
+            matmul_node, graph, matmul_weight.value, matmul_weight_length - 1, split_num, indices
+        )
         self._connect_splitted_nodes(new_matmuls, pre_nodes)
 
         for node in element_wise_nodes:
@@ -325,8 +323,9 @@ class KnowledgeSplitQKVMatmul(KnowledgeBase):
             node_weight = input0 if input1 is None else input1
             placeholder_index = 1 if input1 is None else 0
             matmul_weight_length = len(node_weight.value.shape)
-            new_nodes = self._dup_branch_node(node, graph, node_weight.value,
-                                              matmul_weight_length - 1, split_num, indices, placeholder_index)
+            new_nodes = self._dup_branch_node(
+                node, graph, node_weight.value, matmul_weight_length - 1, split_num, indices, placeholder_index
+            )
             self._connect_splitted_nodes(new_nodes, pre_nodes, placeholder_index)
 
         new_reshapes = self._dup_reshape_node(reshape_node, graph, resh_weight.value, first_dim_of_split, split_num)
@@ -341,9 +340,7 @@ class KnowledgeSplitQKVMatmul(KnowledgeBase):
                     # 如果gather节点后面不是Transpose节点，只需要删除该gather节点，重新连接其余节点
                     # 删除统一在最后进行
                     self._reconnect_input_to_new_node(
-                        node_to_reconnect=next_node,
-                        old_node=gather_node,
-                        new_node=new_transpose
+                        node_to_reconnect=next_node, old_node=gather_node, new_node=new_transpose
                     )
                     continue
 
@@ -356,9 +353,7 @@ class KnowledgeSplitQKVMatmul(KnowledgeBase):
                 new_transpose.attrs["perm"] = new_perm
                 for node in graph.get_next_nodes(next_node.outputs[0]):
                     self._reconnect_input_to_new_node(
-                        node_to_reconnect=node,
-                        old_node=next_node,
-                        new_node=new_transpose
+                        node_to_reconnect=node, old_node=next_node, new_node=new_transpose
                     )
                 graph.remove(next_node.name, {})
 

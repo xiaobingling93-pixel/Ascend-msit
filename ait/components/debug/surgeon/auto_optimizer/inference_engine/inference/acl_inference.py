@@ -88,10 +88,10 @@ class AclInference(InferenceBase, ABC):
             except Exception as err:
                 logger.error("load model failed! error message: {}".format(err))
                 raise RuntimeError("load model failed! {}".format(err)) from err
-            time = 0.
+            time = 0.0
             for _ in range(loop):
                 data = in_queue.get()
-                if len(data) < 2:   # include file_name and data
+                if len(data) < 2:  # include file_name and data
                     logger.error("data len less than 2! data should include label and data!")
                     raise RuntimeError("input params error len={}".format(len(data)))
                 try:

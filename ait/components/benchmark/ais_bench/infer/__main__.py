@@ -251,7 +251,7 @@ def get_args():
         type=str2bool,
         default=False,
         help="Input datas need to be divided to match multi devices or not, \
-            --device should be list, default False"
+            --device should be list"
     )
     parser.add_argument(
         '--threads',

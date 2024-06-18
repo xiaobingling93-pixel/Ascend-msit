@@ -163,7 +163,7 @@ class BaseGraph(ABC):
         inputs: Optional[List[str]] = None,
         outputs: Optional[List[str]] = None,
         attrs: Optional[Dict[str, object]] = None,
-        domain: str = ''
+        domain: str = '',
     ) -> Node:
         raise NotImplementedError()
 
@@ -177,7 +177,7 @@ class BaseGraph(ABC):
         new_model_save_path: str,
         input_name_list: List[str],
         output_name_list: List[str],
-        enable_model_check: bool = True
+        enable_model_check: bool = True,
     ) -> 'BaseGraph':
         raise NotImplementedError()
 
@@ -207,9 +207,12 @@ class BaseGraph(ABC):
                         self._outputs.remove(_init)
                 # Node and PlaceHolder have same name
                 else:
-                    raise RuntimeError("Duplicate names! {}: '{}' and {}: '{}' have same name,\
-                        please use add_name_suffix=True in graph parse"
-                        .format(type(n).__name__, n.name, type(self._node_map.get(n.name)).__name__, n.name))
+                    raise RuntimeError(
+                        "Duplicate names! {}: '{}' and {}: '{}' have same name,\
+                        please use add_name_suffix=True in graph parse".format(
+                            type(n).__name__, n.name, type(self._node_map.get(n.name)).__name__, n.name
+                        )
+                    )
             self._node_map[n.name] = n
 
         self._value_map = {v.name: v for v in self._value_infos}
@@ -228,13 +231,7 @@ class BaseGraph(ABC):
                 else:
                     self._next_map.get(i).append(n)
 
-    def insert_node(
-        self,
-        refer_name: str,
-        insert_node: Node,
-        refer_index: int = 0,
-        mode: str = 'after'
-    ) -> None:
+    def insert_node(self, refer_name: str, insert_node: Node, refer_index: int = 0, mode: str = 'after') -> None:
         """Insert a node with single input and output
 
         Args:
@@ -249,8 +246,7 @@ class BaseGraph(ABC):
         # the value for mode argument
 
         if refer_name not in self._node_map.keys():
-            raise KeyError(
-                f'The node name"{refer_name}" not exists in graph')
+            raise KeyError(f'The node name"{refer_name}" not exists in graph')
         else:
             refer_node = self._node_map.get(refer_name)
 
@@ -258,8 +254,7 @@ class BaseGraph(ABC):
         input_flag = False
         if isinstance(refer_node, Initializer) or refer_node in self._inputs:
             if mode == 'before':
-                raise RuntimeError(
-                    f'Can not insert node before {refer_node.name}.')
+                raise RuntimeError(f'Can not insert node before {refer_node.name}.')
             name = refer_node.name
             refer_node = self._next_map.get(name)[0]
             refer_index = refer_node.inputs.index(name)
@@ -270,8 +265,7 @@ class BaseGraph(ABC):
         output_flag = False
         if refer_node in self._outputs:
             if mode == 'after':
-                raise RuntimeError(
-                    f'Can not insert node after {refer_node.name}.')
+                raise RuntimeError(f'Can not insert node after {refer_node.name}.')
             name = refer_node.name
             refer_node = self._prev_map.get(name)
             refer_index = refer_node.outputs.index(name)
@@ -320,12 +314,7 @@ class BaseGraph(ABC):
 
         self._node_map[insert_node.name] = insert_node
 
-    def connect_node(
-        self,
-        insert_node: Node,
-        prev_nodes_info: List[str],
-        next_nodes_info: List[str]
-    ) -> None:
+    def connect_node(self, insert_node: Node, prev_nodes_info: List[str], next_nodes_info: List[str]) -> None:
         """Insert a node with multiple inputs and outputs,
         connect the input and output of insert_node automatically.
 
@@ -502,9 +491,11 @@ class BaseGraph(ABC):
                 visited.add(node)
                 for output_name in node.outputs:
                     for next_node in self.get_next_nodes(output_name):
-                        if next_node not in queue \
-                                and next_node not in visited \
-                                and visited_all_prev_nodes(next_node, visited):
+                        if (
+                            next_node not in queue
+                            and next_node not in visited
+                            and visited_all_prev_nodes(next_node, visited)
+                        ):
                             queue.append(next_node)
 
         if len(self._nodes) != len(sorted_nodes):
@@ -576,9 +567,7 @@ class BaseGraph(ABC):
         return node
 
     def _parse_nodes_info(
-        self,
-        prev_nodes_info: List[str],
-        next_nodes_info: List[str]
+        self, prev_nodes_info: List[str], next_nodes_info: List[str]
     ) -> Tuple[List[Dict[str, Union[int, str]]], List[Dict[str, Union[int, str]]]]:
         """Parse information of prev_nodes_info and next_nodes_info
 
@@ -633,8 +622,7 @@ class BaseGraph(ABC):
         return prev_info_list, next_info_list
 
     def _set_input_of_node(self, node, new_input_name, input_index, prev_node=None) -> None:
-        """Change one input edge of the node
-        """
+        """Change one input edge of the node"""
         old_input_name = node.inputs[input_index]
         node.inputs[input_index] = new_input_name
         # update map for old_input
@@ -649,8 +637,7 @@ class BaseGraph(ABC):
             self._prev_map[new_input_name] = prev_node
 
     def _set_output_of_node(self, node, new_output_name, output_index, next_node=None) -> None:
-        """Change one output edge of the node
-        """
+        """Change one output edge of the node"""
         old_output_name = node.outputs[output_index]
         node.outputs[output_index] = new_output_name
         # update map for new_output
