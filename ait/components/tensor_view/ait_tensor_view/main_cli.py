@@ -87,7 +87,7 @@ class TensorViewCommand(BaseCommand):
         parser.add_argument(
             "--output", "-o",
             type=check_output_path_legality,
-            help="where the tensor should be saved (default: current directory)"
+            help="where the tensor should be saved (Default None means current directory)"
         )
 
         parser.add_argument(

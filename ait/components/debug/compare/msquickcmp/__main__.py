@@ -91,7 +91,7 @@ class CompareCommand(BaseCommand):
             type=check_device_range_valid,
             dest="device",
             default='0',
-            help='Input device ID [0, 255], default is 0.')
+            help='Input device ID [0, 255].')
         parser.add_argument(
             '-outsize',
             '--output-size',
@@ -126,7 +126,7 @@ class CompareCommand(BaseCommand):
             dest="dump",
             default=True,
             type=str2bool,
-            help="Whether to dump all the operations' ouput. Default True.")
+            help="Whether to dump all the operations' ouput.")
         parser.add_argument(
             '--convert',
             dest="bin2npy",
@@ -165,14 +165,14 @@ class CompareCommand(BaseCommand):
             default=False,
             dest="single_op",
             type=str2bool,
-            help='Comparision mode:single operator compare, default false.Usage: -single True')
+            help='Comparision mode:single operator compare.Usage: -single True')
         parser.add_argument(
             "-max",
             "--max-cmp-size",
             dest="max_cmp_size",
             default=0,
             type=int,
-            help="Max size of tensor array to compare, default 0. Usage: --max-cmp-size 1024")
+            help="Max size of tensor array to compare. Usage: --max-cmp-size 1024")
         parser.add_argument(
             '-q',
             '--quant-fusion-rule-file',

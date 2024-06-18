@@ -56,7 +56,7 @@ def _accuracy_compare_parser(compare_parser):
                              " E.g: input_name1:1,224,224,3;input_name2:3,300")
     compare_parser.add_argument("-d", "--device", dest="device", default="0",
                         type=check_device_range_valid,
-                        help="<Optional> Input device ID [0, 255], default is 0.")
+                        help="<Optional> Input device ID [0, 255].")
     compare_parser.add_argument("--output-size", dest="output_size", default="",
                         type=check_number_list,
                         help="<Optional> The size of output. Separate multiple sizes with commas(,)."
@@ -72,7 +72,7 @@ def _accuracy_compare_parser(compare_parser):
                         help="<Optional> Dynamic shape range using in dynamic model, "
                              "using this means ignore input_shape")
     compare_parser.add_argument("--dump", dest="dump", default=True, type=str2bool,
-                        help="<Optional> Whether to dump all the operations' ouput. Default True.")
+                        help="<Optional> Whether to dump all the operations' ouput.")
     compare_parser.add_argument("--convert", dest="bin2npy", default=False, type=str2bool,
                         help="<Optional> Enable npu dump data conversion from bin to npy after compare.\
                         For example: --convert True")
