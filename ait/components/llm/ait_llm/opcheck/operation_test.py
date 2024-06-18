@@ -167,9 +167,6 @@ class OperationTest(unittest.TestCase):
             out_tensors = []
             for index in self.case_info['inplace_idx']:
                 out_tensors.append(self.in_tensors[index])
-        elif execute_type == "with_param":
-            operation.set_varaintpack_param(self.case_info['run_param'])
-            out_tensors = operation.execute(self.in_tensors)
         else:
             out_tensors = operation.execute(self.in_tensors)
         return out_tensors
@@ -199,9 +196,6 @@ class OperationTest(unittest.TestCase):
 
     def execute(self):
         self.excute_common("common")
-
-    def execute_with_param(self):
-        self.excute_common("with_param")
 
     def execute_inplace(self):
         self.excute_common("inplace")

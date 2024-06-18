@@ -176,27 +176,4 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         return [out]
 
     def test(self):
-        batch_run_status_enable = self.op_param.get("batchRunStatusEnable", False)
-
-        if len(self.in_tensors) <= 6:
-            if batch_run_status_enable:
-                batch_run_status = self.in_tensors[5].tolist()
-                logger_text = f"Enabling batchRunStatus: {batch_run_status}"
-                logger.debug(logger_text)
-                self.case_info["run_param"] = json.dumps({"seqLen": self.in_tensors[4].tolist(),
-                                                        "batchRunStatus": batch_run_status})
-            else:
-                self.case_info["run_param"] = json.dumps({"seqLen": self.in_tensors[4].tolist()})
-        else:
-            if batch_run_status_enable:
-                batch_run_status = self.in_tensors[9].tolist()
-                logger_text = f"Enabling batchRunStatus: {batch_run_status}"
-                logger.debug(logger_text)
-                self.case_info['run_param'] = json.dumps({"tokenOffset": self.in_tensors[6].tolist(),
-                                                        "seqLen": self.in_tensors[7].tolist(),
-                                                        "batchRunStatus": batch_run_status})
-            else:
-                self.case_info["run_param"] = json.dumps({"tokenOffset": self.in_tensors[6].tolist(),
-                                                        "seqLen": self.in_tensors[7].tolist()})
-
-        self.execute_with_param()
+        self.execute()
