@@ -177,7 +177,7 @@ class OperationTest(unittest.TestCase):
         if self.atb_rerun:
             out_tensors = self.rerun_op(execute_type)
             if self.op_name in ("AllGatherOperation", "AllReduceOperation", "LinearParallelOperation"):
-                logger_text = f"{self.op_name} needs data on all ranks and atb-rerun is unsupported. 
+                logger_text = f"{self.op_name} needs data on all ranks and atb-rerun is unsupported. \
                                 The dump data will be used for comparison."
                 logger.warning(logger_text)
                 out_tensors = self.out_tensors
