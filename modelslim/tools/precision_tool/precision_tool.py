@@ -12,7 +12,6 @@ import torch_npu
 import pandas as pd
 from transformers import PreTrainedModel, AutoTokenizer
 from tqdm import tqdm
-from human_eval.evaluation import evaluate_functional_correctness
 
 from modelslim.common.security import json_safe_load, json_safe_dump, get_valid_write_path
 from modelslim import logger
@@ -22,6 +21,7 @@ supported_dataset = ["boolq", "ceval_0_shot", "ceval_5_shot", "humaneval"]
 supported_hardware = ["npu"]
 
 TENSOR_TYPE_PYTORCH = "pt"
+DATASET_HUMAN_EVAL = "humaneval"
 
 
 def is_running_on_npu(device_name):
@@ -44,22 +44,23 @@ class PrecisionTest:
             tokenizer return token type id
         """
         self.logger = logger
+        self.logger.info("Ready to init precision tool.")
         self.dataset = dataset
-        if self.dataset not in supported_dataset:
-            raise TypeError(f"dataset {self.dataset} is not supported")
+        if not self.__verify_dataset():
+            raise TypeError("Dataset setting failed.")
         self.model = model
         if not self.__verify_model():
             raise TypeError("Invalid model.")
         self.device = model.device
         self.tokenizer_return_type_id = tokenizer_return_type_id
         if not isinstance(self.tokenizer_return_type_id, bool):
-            raise TypeError("Tokenizer return type id must be bool")
+            raise TypeError("Tokenizer return type id must be bool.")
         self.tokenizer = tokenizer
         if not self.__verify_tokenizer():
-            raise TypeError("Tokenizer must be matched with model")
+            raise TypeError("Tokenizer must be matched with model.")
         self.batch_size = batch_size
-        if not isinstance(self.batch_size, int):
-            raise TypeError("Batch size must be an integer.")
+        if not self.__verify_batch_size():
+            raise TypeError("Batch size must be a positive integer.")
         self.hardware_type = hardware_type
         if self.hardware_type not in supported_hardware:
             raise TypeError(f"Hardware type {self.hardware_type} is not supported.")
@@ -68,10 +69,37 @@ class PrecisionTest:
         if not os.path.exists(self.dataset_path):
             raise EnvironmentError(f"Dataset was not found, valid path should be '{self.dataset_path}")
         self.result_file = ""
+        self.logger.info("Precision test was inited.")
 
     def test(self):
+        self.logger.info("Begin to run precision test.")
         torch.manual_seed(1)
         self.__run_test()
+        self.logger.info("Precision test has finished.")
+
+    def __verify_batch_size(self):
+        if not isinstance(self.batch_size, int) or isinstance(self.batch_size, bool):
+            self.logger.error("Batch size must be an integer")
+            return False
+        if not self.batch_size > 0:
+            self.logger.error("Batch size must be positive")
+            return False
+        return True
+
+    def __verify_dataset(self):
+        if not isinstance(self.dataset, str):
+            self.logger.error("Dataset should be a string")
+            return False
+        if self.dataset not in supported_dataset:
+            self.logger.error(f"Dataset {self.dataset} is not supported. Use {supported_dataset} instead.")
+            return False
+        if self.dataset == DATASET_HUMAN_EVAL:
+            try:
+                from human_eval.evaluation import evaluate_functional_correctness
+            except Exception as e:
+                self.logger.error(f"Import human_eval test package failed. Error info is as below. \n {e}")
+                return False
+        return True
 
     def __verify_model(self):
         if not isinstance(self.model, PreTrainedModel):
@@ -87,6 +115,7 @@ class PrecisionTest:
             with torch.no_grad():
                 self.model(**inputs)
         except Exception as e:
+            self.logger.error(f"{e}")
             self.logger.error("Model and tokenizer are not compatible. Cannot simply use model API.")
             self.logger.error(f"Model type is {type(self.model)}")
             self.logger.error(f"Tokenizer type is {type(self.tokenizer)}")
@@ -95,6 +124,7 @@ class PrecisionTest:
             with torch.no_grad():
                 self.model.generate(**inputs, do_sample=False, max_new_tokens=1)
         except Exception as e:
+            self.logger.error(f"{e}")
             self.logger.error("Model and tokenizer are not compatible. Cannot simply use generate API.")
             self.logger.error(f"Model type is {type(self.model)}")
             self.logger.error(f"Tokenizer type is {type(self.tokenizer)}")
