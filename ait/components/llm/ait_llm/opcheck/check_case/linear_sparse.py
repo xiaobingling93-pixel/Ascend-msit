@@ -61,4 +61,4 @@ class OpcheckLinearSparseOperation(operation_test.OperationTest):
             msg = "Cannot get golden data because opParam is not correctly set!"
             logger.error(msg)
             return
-        self.excute()
+        self.execute()
