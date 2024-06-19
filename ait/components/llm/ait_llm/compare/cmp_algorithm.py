@@ -76,7 +76,7 @@ def relative_euclidean_distance(golden_data: torch.Tensor, my_data: torch.Tensor
         return 0.0, ''
 
     result = ((my_data - golden_data) ** 2).sum() / ground_truth_square_num
-    return result.item(), ''
+    return torch.sqrt(result).item(), ''
 
 
 def register_custom_compare_algorithm(custom_compare_algorithm):
