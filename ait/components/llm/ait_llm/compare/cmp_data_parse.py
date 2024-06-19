@@ -60,10 +60,10 @@ class CompareDataParse(ABC):
         返回token的路径
         """
         return ""
-    
+
     def get_token_id(self) -> str:
         """
-        返回指定的token id 
+        返回指定的token id
         """
         return None
 
@@ -108,9 +108,8 @@ class CompareDataATB(CompareDataParse):
         self.topo_files = list(self.get_topo_file_path(self.ait_dump_path, self.pid))
         logger.debug("atb topo file is %s", str(self.topo_files))
         self.token_ids = list(self._get_token_ids(self.tokens_path, self.token_id))
-        logger.debug(
-            "atb token ids is %s", str(self.token_ids)
-        )  # mindie RC1 版本之后，会有两个模型: prefill和 decode，并且一定会有 warmup
+        logger.debug("atb token ids is %s", str(self.token_ids))
+        # mindie RC1 版本之后，会有两个模型: prefill和 decode，并且一定会有 warmup
         self.encode_root_node, self.decode_root_node = self.parse(self.topo_files)
 
     @classmethod
@@ -265,7 +264,7 @@ class CompareDataATB(CompareDataParse):
 
     def get_token_id(self) -> str:
         return self.token_id
-    
+
     def parse(self, topo_files) -> None:
         topo_infos = []
         for topo_file in topo_files:
@@ -419,7 +418,7 @@ class CompareDataTorch(CompareDataParse):
 
     def get_token_id(self) -> str:
         return self.token_id
-    
+
     def parse(self) -> None:
         golden_root_node = ModelTree.json_to_tree(self.topo_file)
         golden_layer_type = golden_root_node.get_layer_node_type()
