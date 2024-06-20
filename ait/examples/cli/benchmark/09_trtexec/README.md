@@ -31,7 +31,7 @@ ait benchmark -om pth_resnet50.onnx --backend trtexec --perf 1
 | 字段                  | 说明                                                         |
 | --------------------- | ------------------------------------------------------------ |
 | Throughput            | 吞吐率。                    |
-| Latency               | H2D 延迟、GPU 计算时间和 D2H 延迟的总和。这是推断单个执行的延迟。。                    |
+| Latency               | H2D 延迟、GPU 计算时间和 D2H 延迟的总和。这是推断单个执行的延迟。                   |
 | min                   | 推理执行时间最小值。                                         |
 | max                   | 推理执行时间最大值。                                         |
 | mean                  | 推理执行时间平均值。                                         |
@@ -44,4 +44,4 @@ ait benchmark -om pth_resnet50.onnx --backend trtexec --perf 1
 | Total GPU Compute Time| 所有执行的 GPU 计算时间的总和。 |
 
 ## FAQ
-使用出现问题时，可参考[FAQ](../../../../docs/benchmark/FAQ.md)
+使用出现问题时，可参考[FAQ](https://gitee.com/ascend/ait/wikis/benchmark_FAQ/ait%20benchmark%20%E5%AE%89%E8%A3%85%E9%97%AE%E9%A2%98FAQ)

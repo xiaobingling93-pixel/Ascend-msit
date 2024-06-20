@@ -40,4 +40,4 @@
     ```
 
 ## FAQ
-使用出现问题时，可参考[FAQ](../../../../docs/benchmark/FAQ.md)
+使用出现问题时，可参考[FAQ](https://gitee.com/ascend/ait/wikis/benchmark_FAQ/ait%20benchmark%20%E5%AE%89%E8%A3%85%E9%97%AE%E9%A2%98FAQ)

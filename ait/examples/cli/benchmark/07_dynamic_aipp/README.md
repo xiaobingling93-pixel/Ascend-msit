@@ -1,6 +1,6 @@
 # Dynamic AIPP
 ## 介绍
-- 动态AIPP的介绍参考[ATC模型转换](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/63RC1alpha002/download)中"6.1 AIPP使能"章节。
+- 动态AIPP的介绍参考[昇腾社区](https://www.hiascend.com/)CANN手册中AIPP相关章节。
 - 目前benchmark工具只支持单个input的带有动态AIPP配置的模型，只支持静态shape、动态batch、动态宽高三种场景，不支持动态shape场景。
 ## 运行示例
 ### --aipp_config 输入的.config文件模板
@@ -30,9 +30,9 @@
 	  var_reci_chn_1 : 0.0175070028011204
 	  var_reci_chn_2 : 0.0174291938997821
 ```
-- .config文件`[aipp_op]`下的各字段名称及其取值范围参考[ATC模型转换](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/63RC1alpha002/download)中"6.1.9 配置文件模板"章节中"静态AIPP需设置，动态AIPP无需设置"部分，其中字段取值为为true、false的字段，在.config文件中取值对应为1、0。
+- .config文件`[aipp_op]`下的各字段名称及其取值范围参考CANN手册中的[静态AIPP配置实例](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/80RC2alpha002/devaids/auxiliarydevtool/atlasatc_16_0019.html)与[动态AIPP配置实例](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/80RC2alpha002/devaids/auxiliarydevtool/atlasatc_16_0020.html)。
 - .config文件`[aipp_op]`下的`input_format`、`src_image_size_w`、`src_image_size_h`字段是必填字段。
-- .config文件中字段的具体取值是否适配对应的模型，benchmark本身不会检测，在推理时acl接口报错不属于benchmark的问题
+- .config文件中字段的具体取值是否适配对应的模型，benchmark本身不会检测，在推理时acl接口报错不属于benchmark的问题。
 ### 1. 静态shape场景示例，以resnet18模型为例
 #### atc命令转换出带动态aipp配置的静态shape模型
 ```
@@ -70,4 +70,4 @@ python3 -m ais_bench --model resnet18_dym_image_aipp.om --aipp_config actual_aip
 ```
 
 ## FAQ
-使用出现问题时，可参考[FAQ](../../../../docs/benchmark/FAQ.md)
+使用出现问题时，可参考[FAQ](https://gitee.com/ascend/ait/wikis/benchmark_FAQ/ait%20benchmark%20%E5%AE%89%E8%A3%85%E9%97%AE%E9%A2%98FAQ)
