@@ -96,6 +96,7 @@ class CompareDataATB(CompareDataParse):
     def __init__(self, path, args) -> None:
         super().__init__(path, args)
         self.token_path_map = dict()
+        self.start_path_id = 0
         self.ait_dump_path = self.parse_ait_dump_path(path)
         self.token_id, self.pid, self.tokens_path = self.get_ids_by_path(self.ait_dump_path, path)
         logger.debug(
@@ -216,7 +217,11 @@ class CompareDataATB(CompareDataParse):
         token_path_id = self._get_token_path_name(token_id)
 
         # 控制特定比较token 0 或 1 的时候，只比较 encode 或 decode 一个
-        if token_path_id == "1" and self.encode_root_node is not None and len(self.decode_root_node.children) > 0:
+        if (
+            token_path_id == str(self.start_path_id)
+            and self.encode_root_node is not None
+            and len(self.decode_root_node.children) > 0
+        ):
             logger.debug(
                 "token_path_id: %s, token_id: %s, node.order: %s, self.decode_root_node.order: %s",
                 str(token_path_id),
@@ -312,20 +317,26 @@ class CompareDataATB(CompareDataParse):
     def _get_token_ids(self, tokens_path, token_id):
         token_path_ids = DataUtils.get_token_ids(tokens_path, token_id)
         logger.debug("%s", str(token_path_ids))
+        self.start_path_id = 1 if self._has_warm_up() else 0
+        warm_up_path_id = 0 if self._has_warm_up() else None
+
         for tokenid in token_path_ids:
-            if tokenid == "0":
-                if self._has_warm_up():
-                    self.token_path_map["warmup"] = "0"
-                elif self._has_prefill():
-                    self.token_path_map[0] = "0"
-                    self.token_path_map[1] = "0"
-            elif tokenid == "1" and self._has_warm_up() and self._has_prefill():
-                self.token_path_map[0] = "1"
-                self.token_path_map[1] = "1"
-            elif tokenid.isdigit():
-                self.token_path_map[int(tokenid)] = token_id
+            if not tokenid.isdigit():
+                self.token_path_map[tokenid] = tokenid
+                continue
+            token_index = int(tokenid)
+            if token_index == warm_up_path_id:
+                self.token_path_map["warmup"] = tokenid
+                continue
+
+            if self._has_prefill():
+                if token_index == self.start_path_id:
+                    self.token_path_map[0] = tokenid
+                    self.token_path_map[1] = tokenid
+                else:
+                    self.token_path_map[token_index - self.start_path_id + 1] = tokenid
             else:
-                self.token_path_map[tokenid] = token_id
+                self.token_path_map[token_index - self.start_path_id] = tokenid
 
         return self.token_path_map.keys()
 
