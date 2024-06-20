@@ -67,9 +67,10 @@ class CompareMgr:
                 self.compare_token(token_id, token_id, op_map)
                 logger.debug("compared tokens is %s ", str(token_id))
         else:
-            if len(golden_tokens) == 1 and len(my_tokens) == 1:
+            if self.golden_data.get_token_id() is not None and self.my_data.get_token_id() is not None:
                 # 指定token，强制比对
-                self.compare_token(golden_tokens[0], my_tokens[0], op_map)
+                for golden_token, my_token in itertools.product(golden_tokens, my_tokens):
+                    self.compare_token(golden_token, my_token, op_map)
             else:
                 logger.error(
                     f"my tokens is {my_tokens} and golden tokens is {golden_tokens}. The two cannot be matched."
@@ -84,24 +85,24 @@ class CompareMgr:
             # 获取到所有需要比较的 tensor 的路径
             golden_tensor_paths = list(self.golden_data.get_tensor_path(golden_token_id, golden_op, golden_op_location))
             my_tensor_paths = list(self.my_data.get_tensor_path(my_token_id, my_op, my_op_location))
-            
+
             if len(golden_tensor_paths) == len(my_tensor_paths):
                 golden_tensor_paths.sort()
                 my_tensor_paths.sort()
                 tensor_pairs = zip(golden_tensor_paths, my_tensor_paths)
             else:
                 tensor_pairs = itertools.product(golden_tensor_paths, my_tensor_paths)
-                
+
             # 交叉比对，记录结果
             for golden_tensor_path, my_tensor_path in tensor_pairs:
                 logger.debug("golden_path: %s; my_path:%s", str(golden_tensor_path), str(my_tensor_path))
 
-                # 1. get tensor_datas
+                # 1. get tensor_datas 多卡数据合并
                 _, my_tensor_datas = get_multi_tensor_paths(
-                    self.golden_data.get_token_path(), my_tensor_path, tensor_sub_dir=""
+                    self.golden_data.get_token_path(golden_token_id), my_tensor_path, tensor_sub_dir=""
                 )
                 _, golden_tensor_datas = get_multi_tensor_paths(
-                    self.golden_data.get_token_path(), golden_tensor_path, tensor_sub_dir=""
+                    self.golden_data.get_token_path(my_token_id), golden_tensor_path, tensor_sub_dir=""
                 )
                 # 2. concat tensor_datas
                 dim_atb = get_cat_dim(my_tensor_datas, golden_tensor_datas)
@@ -111,7 +112,7 @@ class CompareMgr:
                     golden_tensor_datas[0] if dim_torch == -1 else torch.cat(golden_tensor_datas, dim_torch)
                 )
                 # 3. compare tensor_datas
-                data_info = BasicDataInfo(golden_tensor_path, my_tensor_path, data_id=0)
+                data_info = BasicDataInfo(golden_tensor_path, my_tensor_path, token_id=my_token_id, data_id=0)
                 row_data = fill_row_data(data_info, atb_tensor_data, torch_tensor_data)
                 self.compared_result.append(row_data)
 

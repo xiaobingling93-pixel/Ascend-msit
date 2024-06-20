@@ -36,21 +36,45 @@ class CompareDataParse(ABC):
         return False
 
     def get_root_nodes(self) -> List[TreeNode]:
+        """
+        获取网络结构，为了兼容atb存在 prefill 和 decode 两个网络的场景，返回一个list
+        主要用于网络结构匹配
+        """
         return None
 
     def get_cmp_tokens(self) -> tuple:
+        """
+        获取匹配的tokens
+        """
         return tuple()
 
     def get_tensor_path(self, token_id, node, location) -> tuple:
+        """
+        根据指定的token id ,和节点信息，输入输出位置，返回tensor的位置
+        可以指定返回所有输出，所以可能有多个，所以返回值是tuple类型
+        """
         return tuple()
 
-    def get_token_path(self) -> str:
+    def get_token_path(self, token_id) -> str:
+        """
+        返回token的路径
+        """
         return ""
+
+    def get_token_id(self) -> str:
+        """
+        返回指定的token id
+        """
+        return None
 
 
 class DataUtils:
     @staticmethod
     def get_token_ids(tokens_path, token_id):
+        """
+        返回路径下所有 token id, 字符串类型
+        如果指定了token_id，就只返回该token id
+        """
         if token_id is not None:
             return (token_id,)
         if tokens_path is None:
@@ -59,6 +83,9 @@ class DataUtils:
 
     @staticmethod
     def get_dir_sub_files(dir_path, prefix):
+        """
+        返回路径下所有prefix前缀的文件，返回文件路径
+        """
         if os.path.exists(dir_path):
             return tuple((os.path.join(dir_path, name) for name in os.listdir(dir_path) if name.startswith(prefix)))
         else:
@@ -68,6 +95,8 @@ class DataUtils:
 class CompareDataATB(CompareDataParse):
     def __init__(self, path, args) -> None:
         super().__init__(path, args)
+        self.token_path_map = dict()
+        self.start_path_id = 0
         self.ait_dump_path = self.parse_ait_dump_path(path)
         self.token_id, self.pid, self.tokens_path = self.get_ids_by_path(self.ait_dump_path, path)
         logger.debug(
@@ -81,11 +110,9 @@ class CompareDataATB(CompareDataParse):
         self.topo_files = list(self.get_topo_file_path(self.ait_dump_path, self.pid))
         logger.debug("atb topo file is %s", str(self.topo_files))
         self.token_ids = list(self._get_token_ids(self.tokens_path, self.token_id))
-        if self.token_id is None:
-            self.token_id = str(self.token_ids[0]) if len(self.token_ids) > 0 else "0"
         logger.debug("atb token ids is %s", str(self.token_ids))
+        # mindie RC1 版本之后，会有两个模型: prefill和 decode，并且一定会有 warmup
         self.encode_root_node, self.decode_root_node = self.parse(self.topo_files)
-        self.token_path = os.path.join(self.tokens_path, self.token_id)
 
     @classmethod
     def accept(cls, path: str, args) -> bool:
@@ -187,17 +214,14 @@ class CompareDataATB(CompareDataParse):
         return self.token_ids
 
     def get_tensor_path(self, token_id, node: TreeNode, location) -> tuple:
-        token_path_id = token_id
-        if len(self.topo_files) > 1:
-            if isinstance(token_id, int):
-                token_path_id = token_id - 1
-            else:
-                token_path_id = 0
-        if isinstance(token_id, int) and token_path_id < 0:
-            token_path_id = 0
+        token_path_id = self._get_token_path_name(token_id)
 
         # 控制特定比较token 0 或 1 的时候，只比较 encode 或 decode 一个
-        if token_path_id == 0 and self.encode_root_node is not None and len(self.decode_root_node.children) > 0:
+        if (
+            token_path_id == str(self.start_path_id)
+            and self.encode_root_node is not None
+            and len(self.decode_root_node.children) > 0
+        ):
             logger.debug(
                 "token_path_id: %s, token_id: %s, node.order: %s, self.decode_root_node.order: %s",
                 str(token_path_id),
@@ -219,7 +243,8 @@ class CompareDataATB(CompareDataParse):
             str(node),
             str(location),
         )
-        tensor_dir_path = node.tensor_path.replace("{token_id}", str(token_path_id))
+
+        tensor_dir_path = os.path.join(self.tokens_path, str(token_path_id), node.tensor_path)
         tensor_after_dir_path = os.path.join(tensor_dir_path, "after")
         tensor_before_dir_path = os.path.join(tensor_dir_path, "before")
         logger.debug(
@@ -240,8 +265,11 @@ class CompareDataATB(CompareDataParse):
             else:
                 return tuple()
 
-    def get_token_path(self) -> str:
-        return self.token_path
+    def get_token_path(self, token_id) -> str:
+        return os.path.join(self.tokens_path, str(self._get_token_path_name(token_id)))
+
+    def get_token_id(self) -> str:
+        return self.token_id
 
     def parse(self, topo_files) -> None:
         topo_infos = []
@@ -268,22 +296,49 @@ class CompareDataATB(CompareDataParse):
             topo_file = topo_info.get("path")
             start_order = topo_info.get("json_start_order") + transdata_order
             logger.debug("parseing topo file: %s, and start order is: %d", topo_file, start_order)
-            my_root_node = ModelTree.atb_json_to_tree(
-                topo_file, os.path.join(self.tokens_path, "{token_id}"), start_order
-            )
+            my_root_node = ModelTree.atb_json_to_tree(topo_file, "", start_order)
             my_root_nodes.append(my_root_node)
 
         if len(my_root_nodes) == 1:
             return [None, my_root_nodes[0]]
-        return my_root_nodes
+        return my_root_nodes[0:2]
+
+    def _get_token_path_name(self, token_id) -> str:
+        return self.token_path_map.get(token_id)
+
+    def _has_warm_up(self):
+        # 有 warm up 的话，0号文件夹中就是 warm up 的内容了。1号文件夹包含0,1个toekn
+        return len(self.topo_files) > 1
+
+    def _has_prefill(self):
+        # 有 prefill 的话，第一个文件夹包含0,1 两个toekn
+        return len(self.topo_files) > 1
 
     def _get_token_ids(self, tokens_path, token_id):
-        token_ids = DataUtils.get_token_ids(tokens_path, token_id)
-        logger.debug("%s", str(token_ids))
-        if len(self.topo_files) > 1:
-            return ((0, 1) if t == '0' else int(t) + 1 if t.isdigit() else t for t in token_ids)
-        else:
-            return (int(t) if t.isdigit() else t for t in token_ids)
+        token_path_ids = DataUtils.get_token_ids(tokens_path, token_id)
+        logger.debug("%s", str(token_path_ids))
+        self.start_path_id = 1 if self._has_warm_up() else 0
+        warm_up_path_id = 0 if self._has_warm_up() else None
+
+        for tokenid in token_path_ids:
+            if not tokenid.isdigit():
+                self.token_path_map[tokenid] = tokenid
+                continue
+            token_index = int(tokenid)
+            if token_index == warm_up_path_id:
+                self.token_path_map["warmup"] = tokenid
+                continue
+
+            if self._has_prefill():
+                if token_index == self.start_path_id:
+                    self.token_path_map[0] = tokenid
+                    self.token_path_map[1] = tokenid
+                else:
+                    self.token_path_map[token_index - self.start_path_id + 1] = tokenid
+            else:
+                self.token_path_map[token_index - self.start_path_id] = tokenid
+
+        return self.token_path_map.keys()
 
 
 class CompareDataTorch(CompareDataParse):
@@ -294,15 +349,9 @@ class CompareDataTorch(CompareDataParse):
         self.token_ids = [
             int(t) if t.isdigit() else t for t in DataUtils.get_token_ids(self.tokens_path, self.token_id)
         ]
-        
-        if self.token_id is None:
-            if len(self.token_ids) > 0 and not isinstance(self.token_ids[0], tuple):
-                self.token_id = str(self.token_ids[0])
-            else:
-                self.token_id = "0"
+
         self.topo_file = self.get_topo_file_path(self.tokens_path)
         self.golden_root_node, self.golden_layer_type, self.golden_layer_nodes = self.parse()
-        self.token_path = os.path.join(self.tokens_path, self.token_id)
 
     @classmethod
     def accept(cls, path: str, args) -> bool:
@@ -362,7 +411,7 @@ class CompareDataTorch(CompareDataParse):
         return self.token_ids
 
     def get_tensor_path(self, token_id, node: TreeNode, location) -> tuple:
-        tensor_dir_path = node.tensor_path.replace("{token_id}", str(token_id))
+        tensor_dir_path = os.path.join(self.tokens_path, token_id, node.tensor_path)
         logger.debug(
             "get_tensor_path: token_id: %s, node: %s, localtion: %s, tensor_dir_path: %s",
             str(token_id),
@@ -380,11 +429,14 @@ class CompareDataTorch(CompareDataParse):
             else:
                 return tuple()
 
-    def get_token_path(self) -> str:
-        return self.token_path
+    def get_token_path(self, token_id) -> str:
+        return os.path.join(self.tokens_path, str(token_id))
+
+    def get_token_id(self) -> str:
+        return self.token_id
 
     def parse(self) -> None:
-        golden_root_node = ModelTree.json_to_tree(self.topo_file, os.path.join(self.tokens_path, "{token_id}"))
+        golden_root_node = ModelTree.json_to_tree(self.topo_file)
         golden_layer_type = golden_root_node.get_layer_node_type()
         logger.info("golden_layer_type: %s", golden_layer_type)
         golden_layer_nodes = golden_root_node.get_layer_node(golden_layer_type)
