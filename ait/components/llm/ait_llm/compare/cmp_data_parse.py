@@ -95,6 +95,7 @@ class DataUtils:
 class CompareDataATB(CompareDataParse):
     def __init__(self, path, args) -> None:
         super().__init__(path, args)
+        self.token_path_map = dict()
         self.ait_dump_path = self.parse_ait_dump_path(path)
         self.token_id, self.pid, self.tokens_path = self.get_ids_by_path(self.ait_dump_path, path)
         logger.debug(
@@ -111,7 +112,6 @@ class CompareDataATB(CompareDataParse):
         logger.debug("atb token ids is %s", str(self.token_ids))
         # mindie RC1 版本之后，会有两个模型: prefill和 decode，并且一定会有 warmup
         self.encode_root_node, self.decode_root_node = self.parse(self.topo_files)
-        self.token_path_map = dict()
 
     @classmethod
     def accept(cls, path: str, args) -> bool:
