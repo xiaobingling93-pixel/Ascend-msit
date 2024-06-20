@@ -27,9 +27,7 @@ class OpcheckConcatOperation(operation_test.OperationTest):
         return [golden_result]
 
     def test(self):
-        concat_dim = self.op_param.get("concatDim", None)
-        if concat_dim is None:
-            msg = "Cannot get golden data because concatDim is not correctly set!"
-            logger.error(msg)
+        ret = self.validate_param("concatDim")
+        if not ret:
             return
         self.execute()

@@ -29,10 +29,7 @@ class OpcheckReduceOperation(operation_test.OperationTest):
             return [in_tensors[0].amin(axis)[0]]
 
     def test(self):
-        op_type = self.op_param.get('reduceType', None)
-        axis = self.op_param.get('axis', None)
-        if op_type is None or axis is None:
-            msg = "Cannot get golden data because opParam is not correctly set!"
-            logger.error(msg)
+        ret = self.validate_param("reduceType", "axis")
+        if not ret:
             return
         self.execute()

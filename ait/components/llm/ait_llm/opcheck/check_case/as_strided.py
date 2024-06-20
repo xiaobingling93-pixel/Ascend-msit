@@ -29,12 +29,7 @@ class OpcheckAsStridedOperation(operation_test.OperationTest):
         return [golden_result]
 
     def test(self):
-        size = self.op_param.get('size', None)
-        stride = self.op_param.get('stride', None)
-        offset = self.op_param.get('offset', None)
-
-        if size is None or stride is None or offset is None:
-            msg = "Cannot get golden data because opParam is not correctly set!"
-            logger.error(msg)
+        ret = self.validate_param("size", "stride", "offset")
+        if not ret:
             return
         self.execute()

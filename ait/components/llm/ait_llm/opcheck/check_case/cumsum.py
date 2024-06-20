@@ -26,9 +26,7 @@ class OpcheckCumsumOperation(operation_test.OperationTest):
         return [golden_result]
 
     def test(self):
-        axes = self.op_param.get("axes", None)
-        if axes is None:
-            msg = "Cannot get golden data because axes is not correctly set!"
-            logger.error(msg)
+        ret = self.validate_param("axes")
+        if not ret:
             return
         self.execute()

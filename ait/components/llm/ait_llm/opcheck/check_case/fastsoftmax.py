@@ -37,10 +37,7 @@ class OpcheckFastSoftMaxOperation(operation_test.OperationTest):
         return [golden]
 
     def test_fastsoftmax(self):
-        seq_len_list = self.op_param.get('qSeqLen', None)
-        head_num_imm = self.op_param.get('headNum', None)
-        if seq_len_list is None or head_num_imm is None:
-            msg = "Cannot get golden data because opParam is not correctly set!"
-            logger.error(msg)
+        ret = self.validate_param("qSeqLen", "headNum")
+        if not ret:
             return
         self.execute()

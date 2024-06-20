@@ -27,10 +27,7 @@ class OpcheckAddOperation(operation_test.OperationTest):
         return split_output
 
     def test(self):
-        split_num = self.op_param.get('splitNum', None)
-        split_dim = self.op_param.get('splitDim', None)
-        if split_num is None or split_dim is None:
-            msg = "Cannot get golden data because opParam is not correctly set!"
-            logger.error(msg)
+        ret = self.validate_param("splitNum", "splitDim")
+        if not ret:
             return
         self.execute()

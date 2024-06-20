@@ -42,10 +42,7 @@ class OpcheckMultinomialOperation(operation_test.OperationTest):
         return [ret.contiguous()]
 
     def test(self):
-        samples = self.op_param.get("numSamples", None)
-        rand_seed = self.op_param.get("randSeed", None)
-        if samples is None or rand_seed is None:
-            msg = "Cannot get golden data because opParam is not correctly set!"
-            logger.error(msg)
+        ret = self.validate_param("numSamples", "randSeed")
+        if not ret:
             return
         self.execute()
