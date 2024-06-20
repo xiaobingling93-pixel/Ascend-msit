@@ -112,7 +112,7 @@ class CompareMgr:
                     golden_tensor_datas[0] if dim_torch == -1 else torch.cat(golden_tensor_datas, dim_torch)
                 )
                 # 3. compare tensor_datas
-                data_info = BasicDataInfo(golden_tensor_path, my_tensor_path, data_id=0)
+                data_info = BasicDataInfo(golden_tensor_path, my_tensor_path, token_id=my_token_id, data_id=0)
                 row_data = fill_row_data(data_info, atb_tensor_data, torch_tensor_data)
                 self.compared_result.append(row_data)
 

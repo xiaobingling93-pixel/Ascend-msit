@@ -111,6 +111,7 @@ class CompareDataATB(CompareDataParse):
         logger.debug("atb token ids is %s", str(self.token_ids))
         # mindie RC1 版本之后，会有两个模型: prefill和 decode，并且一定会有 warmup
         self.encode_root_node, self.decode_root_node = self.parse(self.topo_files)
+        self.token_path_map = dict()
 
     @classmethod
     def accept(cls, path: str, args) -> bool:
@@ -215,7 +216,7 @@ class CompareDataATB(CompareDataParse):
         token_path_id = self._get_token_path_name(token_id)
 
         # 控制特定比较token 0 或 1 的时候，只比较 encode 或 decode 一个
-        if token_path_id == 1 and self.encode_root_node is not None and len(self.decode_root_node.children) > 0:
+        if token_path_id == "1" and self.encode_root_node is not None and len(self.decode_root_node.children) > 0:
             logger.debug(
                 "token_path_id: %s, token_id: %s, node.order: %s, self.decode_root_node.order: %s",
                 str(token_path_id),
@@ -298,31 +299,35 @@ class CompareDataATB(CompareDataParse):
         return my_root_nodes[0:2]
 
     def _get_token_path_name(self, token_id) -> str:
-        if self._has_warm_up() and str(token_id) == "0":
-            return 1
-        else:
-            return token_id
+        return self.token_path_map.get(token_id)
 
     def _has_warm_up(self):
         # 有 warm up 的话，0号文件夹中就是 warm up 的内容了。1号文件夹包含0,1个toekn
         return len(self.topo_files) > 1
 
+    def _has_prefill(self):
+        # 有 prefill 的话，第一个文件夹包含0,1 两个toekn
+        return len(self.topo_files) > 1
+
     def _get_token_ids(self, tokens_path, token_id):
-        token_ids = DataUtils.get_token_ids(tokens_path, token_id)
-        logger.debug("%s", str(token_ids))
-        if self._has_warm_up():
-            for tokenid in token_ids:
-                if tokenid == "0":
-                    continue
-                elif tokenid == "1":
-                    yield 0
-                    yield 1
-                elif tokenid.isdigit():
-                    yield int(tokenid)
-                else:
-                    yield tokenid
-        else:
-            return (int(t) if t.isdigit() else t for t in token_ids)
+        token_path_ids = DataUtils.get_token_ids(tokens_path, token_id)
+        logger.debug("%s", str(token_path_ids))
+        for tokenid in token_path_ids:
+            if tokenid == "0":
+                if self._has_warm_up():
+                    self.token_path_map["warmup"] = "0"
+                elif self._has_prefill():
+                    self.token_path_map[0] = "0"
+                    self.token_path_map[1] = "0"
+            elif tokenid == "1" and self._has_warm_up() and self._has_prefill():
+                self.token_path_map[0] = "1"
+                self.token_path_map[1] = "1"
+            elif tokenid.isdigit():
+                self.token_path_map[int(tokenid)] = token_id
+            else:
+                self.token_path_map[tokenid] = token_id
+
+        return self.token_path_map.keys()
 
 
 class CompareDataTorch(CompareDataParse):
