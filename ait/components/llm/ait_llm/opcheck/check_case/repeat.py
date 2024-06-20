@@ -26,9 +26,7 @@ class OpcheckRepeatOperation(operation_test.OperationTest):
         return [outtensor]
 
     def test(self):
-        multiples = self.op_param.get("multiples", None)
-        if multiples is None:
-            msg = "Cannot get golden data because multiples is not correctly set!"
-            logger.error(msg)
+        ret = self.validate_param("multiples")
+        if not ret:
             return
         self.execute()

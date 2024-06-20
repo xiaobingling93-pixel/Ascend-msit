@@ -26,9 +26,7 @@ class OpcheckTransposeOperation(operation_test.OperationTest):
         return [golden_result]
 
     def test_2d_float(self):
-        perm = self.op_param.get("perm", None)
-        if perm is None:
-            msg = "Cannot get golden data because perm is not correctly set!"
-            logger.error(msg)
+        ret = self.validate_param("perm")
+        if not ret:
             return
         self.execute()

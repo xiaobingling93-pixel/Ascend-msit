@@ -140,13 +140,12 @@ class OpcheckElewiseAddOperation(operation_test.OperationTest):
         return golden
 
     def test(self):
-        elewise_type = self.op_param.get("elewiseType", None)
-        if elewise_type is None:
-            msg = "Cannot get golden data because elewiseType is not correctly set!"
-            logger.error(msg)
+        ret = self.validate_param("elewiseType")
+        if not ret:
             return
-        else:
-            msg = f"elewiseType: {elewise_type}"
-            logger.debug(msg)
+        
+        elewise_type = self.op_param.get("elewiseType", None)
+        msg = f"elewiseType: {elewise_type}"
+        logger.debug(msg)
 
         self.execute()

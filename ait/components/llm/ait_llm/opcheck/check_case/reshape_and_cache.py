@@ -28,9 +28,7 @@ class OpcheckReshapeAndCacheOperation(operation_test.OperationTest):
         return golden
 
     def test(self):
-        inplace_idx = self.case_info.get("inplace_idx", None)
-        if inplace_idx is None:
-            msg = "Cannot get golden data because inplace_idx is not correctly set!"
-            logger.error(msg)
+        ret = self.validate_param("inplace_idx")
+        if not ret:
             return
         self.execute_inplace()

@@ -153,9 +153,7 @@ class OpcheckUnpadRopeOperation(operation_test.OperationTest):
             return self.golden_func4(in_tensors)
 
     def test(self):
-        rotary_coeff = self.op_param.get('rotaryCoeff', None)
-        if rotary_coeff is None:
-            msg = "Cannot get golden data because rotaryCoeff is not correctly set!"
-            logger.error(msg)
+        ret = self.validate_param("rotaryCoeff")
+        if not ret:
             return
         self.execute()

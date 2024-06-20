@@ -32,11 +32,7 @@ class OpcheckFillOperation(operation_test.OperationTest):
         return [golden_result]
 
     def test(self):
-        with_mask = self.op_param.get("withMask", None)
-        out_dim = self.op_param.get("out_dim", None)
-        value = self.op_param.get("value", None)
-        if with_mask is None or out_dim is None or value is None:
-            msg = "Cannot get golden data because opParam is not correctly set!"
-            logger.error(msg)
+        ret = self.validate_param("withMask", "out_dim", "value")
+        if not ret:
             return
         self.execute()

@@ -57,9 +57,7 @@ class OpcheckGatherOperation(operation_test.OperationTest):
         return [golden_result.npu()]
 
     def test(self):
-        axis = self.op_param.get("axis", None)
-        if axis is None:
-            msg = "Cannot get golden data because axis is not correctly set!"
-            logger.error(msg)
+        ret = self.validate_param("axis")
+        if not ret:
             return
         self.execute()

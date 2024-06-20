@@ -30,10 +30,7 @@ class OpcheckElewiseSubOperation(operation_test.OperationTest):
         return [torch.hstack(out)]
 
     def test_2d_half(self):
-        seq_len = self.op_param.get("seqLen", None)
-        head_num = self.op_param.get("headNum", None)
-        if seq_len is None or head_num is None:
-            msg = "Cannot get golden data because opParam is not correctly set!"
-            logger.error(msg)
+        ret = self.validate_param("seqLen", "headNum")
+        if not ret:
             return
         self.execute()

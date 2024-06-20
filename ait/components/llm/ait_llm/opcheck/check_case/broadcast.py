@@ -28,9 +28,7 @@ class OpcheckBroadcastOperation(operation_test.OperationTest):
         return [golden_result]
 
     def test_broadcast(self):
-        rank_root = self.op_param.get('rankRoot', None)
-        if rank_root is None:
-            msg = "Cannot get golden data because rankRoot is not correctly set!"
-            logger.error(msg)
+        ret = self.validate_param("rankRoot")
+        if not ret:
             return
         self.execute()

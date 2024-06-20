@@ -50,10 +50,7 @@ class OpcheckMatmulOperation(operation_test.OperationTest):
         return [golden_result]
 
     def test(self):
-        transpose_a = self.op_param.get("transposeA", None)
-        transpose_b = self.op_param.get("transposeB", None)
-        if transpose_a is None or transpose_b is None:
-            msg = "Cannot get golden data because opParam is not correctly set!"
-            logger.error(msg)
+        ret = self.validate_param("transposeA", "transposeB")
+        if not ret:
             return
         self.execute()

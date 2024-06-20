@@ -27,9 +27,7 @@ class OpcheckSortOperation(operation_test.OperationTest):
         return [values, indices.int()]
 
     def test_3d_float(self):
-        num = self.param.get("num", None)
-        if num is None:
-            msg = "Cannot get golden data because num is not correctly set!"
-            logger.error(msg)
+        ret = self.validate_param("num")
+        if not ret:
             return
         self.execute()
