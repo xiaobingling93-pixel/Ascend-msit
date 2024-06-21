@@ -59,7 +59,7 @@ ait benchmark --om-model /home/model/resnet50_v1.om --output ./output --dump 1
                 }
     }
     ```
-    更多性能参数配置请依据CANN包种类（商用版或社区版）分别参见《[CANN 商用版：开发工具指南/性能数据采集（acl.json配置文件方式）](https://www.hiascend.com/document/detail/zh/canncommercial/63RC1/devtools/auxiliarydevtool/atlasprofiling_16_0086.html)》和《[CANN 社区版：开发工具指南/性能数据采集（acl.json配置文件方式）](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/63RC1alpha002/developmenttools/devtool/atlasprofiling_16_0086.html)》中的参数配置详细描述
+    更多性能参数配置请依据CANN包种类（商用版或社区版）分别参见《[CANN 商用版：开发工具指南/性能数据采集（acl.json配置文件方式）](https://www.hiascend.com/document/detail/zh/canncommercial/80RC1/devaids/auxiliarydevtool/atlasprofiling_16_0058.html)》和《[CANN 社区版：开发工具指南/性能数据采集（acl.json配置文件方式）](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/80RC2alpha002/devaids/auxiliarydevtool/atlasprofiling_16_0058.html)》中的参数配置详细描述
 
   + 通过dump采集算子的输出
 
@@ -88,7 +88,7 @@ ait benchmark --om-model /home/model/resnet50_v1.om --output ./output --dump 1
   ```bash
   ait benchmark --om-model ./resnet50_v1_bs1_fp32.om --acl-json-path ./acl.json
   ```
-输出文件对应参考1.2与1.3节的文件目录示例。
+输出文件对应参考1.2与1.3节的示例。
 
 ## 2 拓展使用说明
 ### 2.1 --profiler 的自定义使用
@@ -115,4 +115,4 @@ ait benchmark --om-model /home/model/resnet50_v1.om --output ./output --dump 1
   + profiler和dump可以分别使用，但不能同时启用。
 
 ## FAQ
-使用出现问题时，可参考[FAQ](../../../../docs/benchmark/FAQ.md)
+使用出现问题时，可参考[FAQ](https://gitee.com/ascend/ait/wikis/benchmark_FAQ/ait%20benchmark%20%E5%AE%89%E8%A3%85%E9%97%AE%E9%A2%98FAQ)
