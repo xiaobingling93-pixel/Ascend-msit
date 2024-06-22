@@ -8,7 +8,7 @@
 
 ### 准备
 - 安装 ait
-- 获取 [Gitee ascend/MindIE-LLM](https://gitee.com/ascend/MindIE-LLM) 源码，**生成的 cpp 代码需要编译执行，且仅迭代适配最新代码仓**
+- 获取 [Gitee ascend/MindIE-LLM](https://gitee.com/ascend/MindIE-LLM) 最新源码
 - 准备待迁移的 transformers 模型目录
 
 ### QWEN 13B 迁移示例
