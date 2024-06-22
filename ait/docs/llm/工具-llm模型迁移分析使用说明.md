@@ -1,10 +1,14 @@
 # LLM 迁移分析
 ## PyTorch transformers LLM 模型迁移生成 atb 浮点模型
 - 由 PyTorch transformers LLM 模型迁移生成 atb 浮点模型，包括 model、layer 层代码，以及相应的 cpp 与 h 文件
+- 迁移后需要基于加速库 ATB 实现，因此支持的 oprations 限定在 ATB 已有算子
+
+## 限定条件
+- **适用于 transformers 包，支持类似 LLaMA、QWEN 的典型模型结构迁移**，
 
 ### 准备
 - 安装 ait
-- 获取 [Gitee ascend/MindIE-LLM](https://gitee.com/ascend/MindIE-LLM) 源码
+- 获取 [Gitee ascend/MindIE-LLM](https://gitee.com/ascend/MindIE-LLM) 源码，**生成的 cpp 代码需要编译执行，且仅迭代适配最新代码仓**
 - 准备待迁移的 transformers 模型目录
 
 ### QWEN 13B 迁移示例
