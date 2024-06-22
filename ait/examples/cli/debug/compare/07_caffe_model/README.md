@@ -57,7 +57,7 @@ Caffe 一键式精度比对
   # [INFO] Analyser call parameter strategy=FIRST_INVALID_OVERALL, max_column_len=30
   # [INFO] None operator with accuracy issue reported
   ```
-- **输出目录结构** 参考 [01_basic_usage](../01_basic_usage/README.md))，其中 caffe 模型 dump 数据位于 `{output_path}/{timestamp}/dump_data/caffe/`
+- **输出目录结构** 参考 [01_basic_usage](../01_basic_usage/README.md)，其中 caffe 模型 dump 数据位于 `{output_path}/{timestamp}/dump_data/caffe/`
 - **比对结果** 位于 `{output_path}/{timestamp}/result_{timestamp}.csv` 中，比对结果的含义与基础精度比对工具完全相同，其中每个字段的含义可参考 [CANN商用版/比对步骤（推理场景）](https://www.hiascend.com/document/detail/zh/canncommercial/60RC1/devtools/auxiliarydevtool/atlasaccuracy_16_0039.html)
 
 
