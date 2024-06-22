@@ -411,7 +411,7 @@ class CompareDataTorch(CompareDataParse):
         return self.token_ids
 
     def get_tensor_path(self, token_id, node: TreeNode, location) -> tuple:
-        tensor_dir_path = os.path.join(self.tokens_path, token_id, node.tensor_path)
+        tensor_dir_path = os.path.join(self.tokens_path, str(token_id), node.tensor_path)
         logger.debug(
             "get_tensor_path: token_id: %s, node: %s, localtion: %s, tensor_dir_path: %s",
             str(token_id),

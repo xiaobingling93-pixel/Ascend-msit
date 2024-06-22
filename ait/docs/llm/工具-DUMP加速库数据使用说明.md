@@ -1,47 +1,72 @@
+# 加速库模型数据 dump
 
-# 加速库模型数据dump
+提供大模型推理过程中产生的中间数据的 dump 能力，包括：
 
-提供大模型推理过程中产生的中间数据的dump能力，如tensor、model拓扑信息、layer拓扑信息、算子信息、cpu_profiling数据等。
+1. dump tensor ：保存 layer 和 operator 的输入输出，主要精度比对时使用
+2. dump model ：保存 模型的拓扑信息，用于模型结构分析，或自动精度比对，自动比对需要先知道模型拓扑信息
+3. dump onnx: 将模型拓扑信息转换成 onnx，可以使用可视化工具打开查看
+4. dump layer : 保存 atb layer 属性以及内部拓扑，用于 layer 结构分析
+5. dump op: 保存 atb operator 属性
+6. dump kernel: 保存 kernel operator 属性，是比 atb operator 更细粒度，多数是算子开发人员定位使用
+7. dump cpu_profiling: 保存 cpu profiling 信息，主要用于 host 侧性能定位，数据下发慢等问题，主要是算子开发、熟悉 atb 框架的开发人员定位使用
+8. dump tiling：tiling 数据是 host 侧计算生成，用于 device 侧进行数据切分。主要用于算子开发人员定位算子精度异常问题
 
 ## 使用方式
 
 ```bash
 ait llm dump --exec "bash run.sh patches/models/modeling_xxx.py" [可选参数]
+
+# dump 不同类型数据
+ait llm dump --exec "bash run.sh patches/models/modeling_xxx.py" --type model tensor # 常用用于自动比对
+ait llm dump --exec "bash run.sh patches/models/modeling_xxx.py" --type model layer onnx # 常用于导出onnx查看网络结构
+
+# 仅dump layer 层的算子输出，常用于精度比对先找到存在问题的 layer 层。相比全量dump，可以节省磁盘空间和定位时间
+ait llm dump --exec "bash run.sh patches/models/modeling_xxx.py" --type model tensor -child False
+
+# dump 不同轮次数据
+ait llm dump --exec "bash run.sh patches/models/modeling_xxx.py" --type model tensor -er 1,1 # dump输出轮次为 1 的数据，根据实际情况指定。需要考虑是否有warmup，是否有prefill
+
+# dump 指定算子
+ait llm dump --exec "bash run.sh patches/models/modeling_xxx.py" --type model tensor -ids 3 # dump 编号为 3 的layer的输入输出数据
+ait llm dump --exec "bash run.sh patches/models/modeling_xxx.py" --type model tensor -ids 3_1 # dump 编号为 3 的layer数据中第 1 个子算子的输入输出数据
+
 ```
+
 ## 命令行参数
 
-| 参数名                         | 描述                                                         | 必选 |
-| ------------------------------ | ------------------------------------------------------------ | ---- |
-| --exec                         | 指定拉起执行大模型推理脚本的命令，使用示例： --exec "bash run.sh patches/models/modeling_xxx.py"。**注：命令中不支持重定向字符，如果需要重定向输出，建议将执行命令写入shell脚本，然后启动shell脚本。** | 是   |
-| --type                         | dump类型，可选范围：['model', 'layer', 'op', 'kernel', 'tensor', 'cpu_profiling', 'onnx']，分别表示保存model拓扑信息、layer拓扑信息、算子信息、kernel算子信息、tensor数据、cpu_profiling数据、onnx模型。其中'onnx'需要和'model'、'layer'组合使用，用于将model和layer的拓扑信息转换成onnx，可视化模型结构。默认为['tensor']。使用方式：--type layer tensor | 否   |
-| -sd，--only-save-desc          | 只保存tensor描述信息开关，默认为否，开启开关时将dump tensor的描述信息，使用方式：-sd | 否   |
-| -ids，--save-operation-ids     | 设置dump指定id的算子的tensor，默认为空，全量dump。使用方式：-ids 2, 3_1 表示只dump第2个operation和第3个operation的第1个算子的数据，id从0开始。若不确定算子id，可以先执行ait llm dump --exec xx --type model命令，将model信息dump下来，即可获得模型中所有的算子id信息。 | 否   |
-| -er，--execute-range           | 指定dump的token轮次范围，区间左右全闭，可以支持多个区间序列，默认为第0次，使用方式：-er 1,3 或 -er 3,5,7,7（代表区间[3,5],[7,7],也就是第3，4，5，7次token） | 否   |
-| -child，--save-operation-child | 选择是否dump所有子操作的tensor数据，仅使用ids场景下有效，默认为true。使用方式：-child True | 否   |
-| -time，--save-time             | 选择保存的时间节点，取值[0,1,2]，0代表保存执行前(before)，1代表保存执行后(after)，2代表前后都保存。默认保存after。使用方式：-time 0 | 否   |
-| -opname，--operation-name      | 指定需要dump的算子类型，只需要指定算子名称的开头，可以模糊匹配，如selfattention只需要填写self。使用方式：-opname self | 否   |
-| -tiling，--save-tiling         | 选择是否需要保存tiling数据，默认为false。使用方式：-tiling   | 否   |
-| --save-tensor-part, -stp       | 指定保存tensor的部分，0为仅intensor，1为仅outtensor，2为全部保存，默认为2。使用示例：-stp 1 | 否   |
-| -o, --output                   | 指定dump数据的输出目录，默认为'./'，使用示例：-o aasx/sss    | 否   |
-| -device, --device-id           | 指定dump数据的device id，默认为 None 表示不限制。如指定 --device-id 1，将只dump 1卡的数据 | 否   |
-| -l, --log-level                | 指定log level，默认为 info，可选值 debug, info, warning, error, fatal, critical | 否   |
+| 参数名                         | 描述                                                                                                                                                                                                                                                                                                                                                                                            | 必选 |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- |
+| --exec                         | 指定拉起推理执行命令，使用示例： --exec "bash run.sh patches/models/modeling_xxx.py"。**注：命令中不支持重定向字符，如果需要重定向输出，建议将执行命令写入 shell 脚本，然后启动 shell 脚本。**                                                                                                                                                                                                  | 是   |
+| --type                         | dump 类型，默认为['tensor']。使用方式：--type layer tensor。可选项有：<br /> model: model 拓扑信息<br /> layer: layer 拓扑信息<br /> op: atb operator 信息<br /> kernel: kernel 算子信息<br /> tensor: tensor 数据(默认)<br /> cpu_profiling: cpu_profiling 数据<br /> onnx: onnx 模型。其中'onnx'需要和'model'、'layer'组合使用，用于将 model 和 layer 的拓扑信息转换成 onnx，可视化模型结构。 | 否   |
+| -sd，--only-save-desc          | 只保存 tensor 描述信息开关，默认为否，开启开关时将 dump tensor 的描述信息，使用方式：-sd                                                                                                                                                                                                                                                                                                        | 否   |
+| -ids，--save-operation-ids     | 设置 dump 指定 id 的算子的 tensor，默认为空，全量 dump。使用方式：-ids 2, 3_1 表示只 dump 第 2 个 operation 和第 3 个 operation 的第 1 个算子的数据，id 从 0 开始。若不确定算子 id，可以先执行 ait llm dump --exec xx --type model 命令，将 model 信息 dump 下来，即可获得模型中所有的算子 id 信息。                                                                                            | 否   |
+| -er，--execute-range           | 指定 dump 的 token 轮次范围，区间左右全闭，可以支持多个区间序列，默认为第 0 次，使用方式：-er 1,3 或 -er 3,5,7,7（代表区间[3,5],[7,7],也就是第 3，4，5，7 次 token）                                                                                                                                                                                                                            | 否   |
+| -child，--save-operation-child | 选择是否 dump 所有子操作的 tensor 数据，仅使用 ids 场景下有效，默认为 true。使用方式：-child True                                                                                                                                                                                                                                                                                               | 否   |
+| -time，--save-time             | 选择保存的时间节点，取值[0,1,2]，0 代表保存执行前(before)，1 代表保存执行后(after)，2 代表前后都保存。默认保存 after。使用方式：-time 0                                                                                                                                                                                                                                                         | 否   |
+| -opname，--operation-name      | 指定需要 dump 的算子类型，只需要指定算子名称的开头，可以模糊匹配，如 selfattention 只需要填写 self。使用方式：-opname self                                                                                                                                                                                                                                                                      | 否   |
+| -tiling，--save-tiling         | 选择是否需要保存 tiling 数据，默认为 false。使用方式：-tiling                                                                                                                                                                                                                                                                                                                                   | 否   |
+| --save-tensor-part, -stp       | 指定保存 tensor 的部分，0 为仅 intensor，1 为仅 outtensor，2 为全部保存，默认为 2。使用示例：-stp 1                                                                                                                                                                                                                                                                                             | 否   |
+| -o, --output                   | 指定 dump 数据的输出目录，默认为'./'，使用示例：-o aasx/sss                                                                                                                                                                                                                                                                                                                                     | 否   |
+| -device, --device-id           | 指定 dump 数据的 device id，默认为 None 表示不限制。如指定 --device-id 1，将只 dump 1 卡的数据                                                                                                                                                                                                                                                                                                  | 否   |
+| -l, --log-level                | 指定 log level，默认为 info，可选值 debug, info, warning, error, fatal, critical                                                                                                                                                                                                                                                                                                                | 否   |
 
 ## 结果查看
+
 ### Dump 落盘位置
 
-Dump默认落盘路径 `{DUMP_DIR}`在当前目录下，如果指定output目录，落盘路径则为指定的 `{OUTPUT_DIR}`。
+Dump 默认落盘路径 `{DUMP_DIR}`在当前目录下，如果指定 output 目录，落盘路径则为指定的 `{OUTPUT_DIR}`。
 
 注：`{device_id}`为设备号；`{PID}`为进程号；`{TID}`为 `token_id`；`{TIMESTAMP}`为时间戳；`{executeCount}`为 `operation`运行次数。
 
-- tensor信息，具体路径是 `{DUMP_DIR}/ait_dump_{TIMESTAMP}/tensors/{device_id}_{PID}/{TID}`目录下(使用老版本的cann包可能导致tensor落盘路径不同）。
-- layer信息，具体路径是 `{DUMP_DIR}/ait_dump_{TIMESTAMP}/layer/{PID}`目录下。
-- model信息，具体路径是 `{DUMP_DIR}/ait_dump_{TIMESTAMP}/model/{PID}`目录下。注：由于model由layer组合而成，因此使用model时，默认同时会落盘layer信息。
-- onnx需要和layer、model配合使用，落盘位置和model、layer相同的目录。
-- cpu_profiling信息，具体路径是 `{DUMP_DIR}/ait_dump_{TIMESTAMP}/cpu_profiling/{TIMESTAMP}/operation_statistic_{executeCount}.txt`。
+- tensor 信息，具体路径是 `{DUMP_DIR}/ait_dump_{TIMESTAMP}/tensors/{device_id}_{PID}/{TID}`目录下(使用老版本的 cann 包可能导致 tensor 落盘路径不同）。
+- layer 信息，具体路径是 `{DUMP_DIR}/ait_dump_{TIMESTAMP}/layer/{PID}`目录下。
+- model 信息，具体路径是 `{DUMP_DIR}/ait_dump_{TIMESTAMP}/model/{PID}`目录下。注：由于 model 由 layer 组合而成，因此使用 model 时，默认同时会落盘 layer 信息。
+- onnx 需要和 layer、model 配合使用，落盘位置和 model、layer 相同的目录。
+- cpu*profiling 信息，具体路径是 `{DUMP_DIR}/ait_dump*{TIMESTAMP}/cpu*profiling/{TIMESTAMP}/operation_statistic*{executeCount}.txt`。
 - 算子信息，具体路径是 `{DUMP_DIR}/ait_dump_{TIMESTAMP}/operation_io_tensors/{PID}/operation_tensors_{executeCount}.csv`。
-- kernel算子信息，具体路径是 `{DUMP_DIR}/ait_dump_{TIMESTAMP}/kernel_io_tensors/{PID}/kernel_tensors_{executeCount}.csv`。
+- kernel 算子信息，具体路径是 `{DUMP_DIR}/ait_dump_{TIMESTAMP}/kernel_io_tensors/{PID}/kernel_tensors_{executeCount}.csv`。
 
-##### 模型拓扑信息转onnx可视化模型：
+##### 模型拓扑信息转 onnx 可视化模型：
 
 ```python
 from ait_llm.common.json_fitter import atb_json_to_onnx
@@ -50,7 +75,3 @@ model_level = 1   # 可视化模型的节点深度，按需填写，比如填写
 layer_topo_info = "./XXX_layer.json"   # dump出来的layer拓扑信息或者model拓扑信息
 atb_json_to_onnx(layer_topo_info, model_level)
 ```
-
-### 其他结果查看
-
-todo，比如 model信息有什么内容，layer 信息有什么内容， 
