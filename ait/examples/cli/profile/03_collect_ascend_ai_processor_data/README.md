@@ -34,28 +34,28 @@ ait profile --application "ait benchmark -om /home/HwHiAiUser/resnet101_bs1.om" 
 
 | timeline文件名 | 关联参数 | 说明 |
 | ----- | ----- | ----- |
-|msprof*.json| 所有可生成数据的参数均会在此文件写入数据。|timeline数据总表。对采集到的timeline性能数据按照迭代粒度进行性能展示。详情请参见[timeline数据总表](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/63RC1alpha002/developmenttools/devtool/atlasprofiling_16_0114.html)|
-|ddr_*.json|--sys-hardware-mem|DDR内存读写速率。详情请参见DDR[DDR内存读写速率数据](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/63RC1alpha002/developmenttools/devtool/atlasprofiling_16_0130.html)|
-|llc_aicpu_*.json|--sys-hardware-mem|AI CPU的三级缓存使用量，LLC Profiling采集事件设置为capacity时才会导出该文件。文件详情请参见[AI CPU的三级缓存使用量数据](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/63RC1alpha002/developmenttools/devtool/atlasprofiling_16_0125.html)（昇腾310 AI处理器）|
-|llc_ctrlcpu_*.json|--sys-hardware-mem|Control CPU三级缓存使用量，LLC Profiling采集事件设置为capacity时才会导出该文件。文件详情请参见[Control CPU三级缓存使用量数据](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/63RC1alpha002/developmenttools/devtool/atlasprofiling_16_0126.html)（昇腾310 AI处理器）|
-|llc_read_write_*.json|--sys-hardware-mem|三级缓存读写速率数据。文件详情请参见[三级缓存读写速率数据](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/63RC1alpha002/developmenttools/devtool/atlasprofiling_16_0129.html)（昇腾310P AI处理器）|
+|msprof*.json| 所有可生成数据的参数均会在此文件写入数据。|timeline数据总表。对采集到的timeline性能数据按照迭代粒度进行性能展示。详情请参见[timeline数据总表](https://www.hiascend.com/document/detail/zh/canncommercial/80RC1/devaids/auxiliarydevtool/atlasprofiling_16_0064.html)|
+|ddr_*.json|--sys-hardware-mem|DDR内存读写速率。详情请参见DDR[DDR内存读写速率数据](https://www.hiascend.com/document/detail/zh/canncommercial/80RC1/devaids/auxiliarydevtool/atlasprofiling_16_0087.html)|
+|llc_aicpu_*.json|--sys-hardware-mem|AI CPU的三级缓存使用量，LLC Profiling采集事件设置为capacity时才会导出该文件。文件详情请参见[AI CPU的三级缓存使用量数据](https://www.hiascend.com/document/detail/zh/canncommercial/80RC1/devaids/auxiliarydevtool/atlasprofiling_16_0099.html)（昇腾310 AI处理器）|
+|llc_ctrlcpu_*.json|--sys-hardware-mem|Control CPU三级缓存使用量，LLC Profiling采集事件设置为capacity时才会导出该文件。文件详情请参见[Control CPU三级缓存使用量数据](https://www.hiascend.com/document/detail/zh/canncommercial/80RC1/devaids/auxiliarydevtool/atlasprofiling_16_0100.html)（昇腾310 AI处理器）|
+|llc_read_write_*.json|--sys-hardware-mem|三级缓存读写速率数据。文件详情请参见[三级缓存读写速率数据](https://www.hiascend.com/document/detail/zh/canncommercial/80RC1/devaids/auxiliarydevtool/atlasprofiling_16_0097.html)（昇腾310P AI处理器）|
 
 - **采集内容（summary文件夹内）**
 
 | summary文件名 | 关联参数 | 说明 |
 | ----- | ----- | ----- |
-|ddr_*.csv|--sys-hardware-mem|DDR内存读写速率。详情请参见[DDR内存读写速率数据](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/63RC1alpha002/developmenttools/devtool/atlasprofiling_16_0165.html)|
-|llc_aicpu_*.csv|--sys-hardware-mem|AI CPU三级缓存使用量，LLC Profiling采集事件设置为capacity时才会导出该文件。文件详情请参见[AI CPU的三级缓存使用量数据](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/63RC1alpha002/developmenttools/devtool/atlasprofiling_16_0125.html)（昇腾310 AI处理器）|
-|llc_ctrlcpu_*.csv|--sys-hardware-mem|Control CPU三级缓存使用量，LLC Profiling采集事件设置为capacity时才会导出该文件。文件详情请参见[Control CPU三级缓存使用量数据](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/63RC1alpha002/developmenttools/devtool/atlasprofiling_16_0126.html)（昇腾310 AI处理器）|
-|llc_read_write_*.csv|--sys-hardware-mem|三级缓存读写速率数据。文件详情请参见[三级缓存读写速率数据](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/63RC1alpha002/developmenttools/devtool/atlasprofiling_16_0129.html)（昇腾310P AI处理器）|
-|ai_cpu_top_function_*.csv|--sys-cpu-profiling|AI CPU热点函数。文件详情请参见[AI CPU热点函数数据](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/63RC1alpha002/developmenttools/devtool/atlasprofiling_16_0180.html)|
-|ai_cpu_pmu_events_*.csv|--sys-cpu-profiling|AI CPU PMU事件。文件详情请参见[AI CPU PMU事件数据](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/63RC1alpha002/developmenttools/devtool/atlasprofiling_16_0181.html)|
-|ctrl_cpu_top_function_*.csv|--sys-cpu-profiling|Ctrl CPU热点函数。文件详情请参见[Ctrl CPU热点函数数据](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/63RC1alpha002/developmenttools/devtool/atlasprofiling_16_0182.html)|
-|ctrl_cpu_pmu_events_*.csv|--sys-cpu-profiling|Ctrl CPU PMU事件。文件详情请参见[Ctrl CPU PMU事件数据](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/63RC1alpha002/developmenttools/devtool/atlasprofiling_16_0183.html)|
-|ts_cpu_top_function_*.csv|--sys-cpu-profiling|TS CPU热点函数。文件详情请参见[TS CPU热点函数数据](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/63RC1alpha002/developmenttools/devtool/atlasprofiling_16_0184.html)|
-|ts_cpu_pmu_events_*.csv|--sys-cpu-profiling|TS CPU PMU事件。文件详情请参见[TS CPU PMU事件数据](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/63RC1alpha002/developmenttools/devtool/atlasprofiling_16_0185.html)|
-|cpu_usage_*.csv|--sys-profiling|AI CPU、Control CPU利用率。文件详情请参见[AI CPU、Ctrl CPU利用率数据](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/63RC1alpha002/developmenttools/devtool/atlasprofiling_16_0170.html)|
-|sys_mem_*.csv|--sys-profiling|指定device的内存使用情况。详情请参见[系统内存数据](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/63RC1alpha002/developmenttools/devtool/atlasprofiling_16_0173.html)|
-|process_cpu_usage_*.csv|--sys-pid-profiling|进程CPU占用率。生成文件详情请参见[进程CPU占用率数据](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/63RC1alpha002/developmenttools/devtool/atlasprofiling_16_0171.html)|
-|process_mem_*.csv|--sys-pid-profiling|进程内存占用率。文件详情请参见[进程内存占用率数据](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/63RC1alpha002/developmenttools/devtool/atlasprofiling_16_0172.html)|
-|dvpp_*.csv|--dvpp-profiling|DVPP数据。文件详情请参见[DVPP数据](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/63RC1alpha002/developmenttools/devtool/atlasprofiling_16_0175.html)|
+|ddr_*.csv|--sys-hardware-mem|DDR内存读写速率。详情请参见[DDR内存读写速率数据](https://www.hiascend.com/document/detail/zh/canncommercial/80RC1/devaids/auxiliarydevtool/atlasprofiling_16_0087.html)|
+|llc_aicpu_*.csv|--sys-hardware-mem|AI CPU三级缓存使用量，LLC Profiling采集事件设置为capacity时才会导出该文件。文件详情请参见[AI CPU的三级缓存使用量数据](https://www.hiascend.com/document/detail/zh/canncommercial/80RC1/devaids/auxiliarydevtool/atlasprofiling_16_0099.html)（昇腾310 AI处理器）|
+|llc_ctrlcpu_*.csv|--sys-hardware-mem|Control CPU三级缓存使用量，LLC Profiling采集事件设置为capacity时才会导出该文件。文件详情请参见[Control CPU三级缓存使用量数据](https://www.hiascend.com/document/detail/zh/canncommercial/80RC1/devaids/auxiliarydevtool/atlasprofiling_16_0100.html)（昇腾310 AI处理器）|
+|llc_read_write_*.csv|--sys-hardware-mem|三级缓存读写速率数据。文件详情请参见[三级缓存读写速率数据](https://www.hiascend.com/document/detail/zh/canncommercial/80RC1/devaids/auxiliarydevtool/atlasprofiling_16_0097.html)（昇腾310P AI处理器）|
+|ai_cpu_top_function_*.csv|--sys-cpu-profiling|AI CPU热点函数。文件详情请参见[AI CPU热点函数数据](https://www.hiascend.com/document/detail/zh/canncommercial/80RC1/devaids/auxiliarydevtool/atlasprofiling_16_0102.html)|
+|ai_cpu_pmu_events_*.csv|--sys-cpu-profiling|AI CPU PMU事件。文件详情请参见[AI CPU PMU事件数据](https://www.hiascend.com/document/detail/zh/canncommercial/80RC1/devaids/auxiliarydevtool/atlasprofiling_16_0103.html)|
+|ctrl_cpu_top_function_*.csv|--sys-cpu-profiling|Ctrl CPU热点函数。文件详情请参见[Ctrl CPU热点函数数据](https://www.hiascend.com/document/detail/zh/canncommercial/80RC1/devaids/auxiliarydevtool/atlasprofiling_16_0104.html)|
+|ctrl_cpu_pmu_events_*.csv|--sys-cpu-profiling|Ctrl CPU PMU事件。文件详情请参见[Ctrl CPU PMU事件数据](https://www.hiascend.com/document/detail/zh/canncommercial/80RC1/devaids/auxiliarydevtool/atlasprofiling_16_0105.html)|
+|ts_cpu_top_function_*.csv|--sys-cpu-profiling|TS CPU热点函数。文件详情请参见[TS CPU热点函数数据](https://www.hiascend.com/document/detail/zh/canncommercial/80RC1/devaids/auxiliarydevtool/atlasprofiling_16_0106.html)|
+|ts_cpu_pmu_events_*.csv|--sys-cpu-profiling|TS CPU PMU事件。文件详情请参见[TS CPU PMU事件数据](https://www.hiascend.com/document/detail/zh/canncommercial/80RC1/devaids/auxiliarydevtool/atlasprofiling_16_0107.html)|
+|cpu_usage_*.csv|--sys-profiling|AI CPU、Control CPU利用率。文件详情请参见[AI CPU、Ctrl CPU利用率数据](https://www.hiascend.com/document/detail/zh/canncommercial/80RC1/devaids/auxiliarydevtool/atlasprofiling_16_0085.html)|
+|sys_mem_*.csv|--sys-profiling|指定device的内存使用情况。详情请参见[系统内存数据](https://www.hiascend.com/document/detail/zh/canncommercial/80RC1/devaids/auxiliarydevtool/atlasprofiling_16_0083.html)|
+|process_cpu_usage_*.csv|--sys-pid-profiling|进程CPU占用率。生成文件详情请参见[进程CPU占用率数据](https://www.hiascend.com/document/detail/zh/canncommercial/80RC1/devaids/auxiliarydevtool/atlasprofiling_16_0086.html)|
+|process_mem_*.csv|--sys-pid-profiling|进程内存占用率。文件详情请参见[进程内存占用率数据](https://www.hiascend.com/document/detail/zh/canncommercial/80RC1/devaids/auxiliarydevtool/atlasprofiling_16_0084.html)|
+|dvpp_*.csv|--dvpp-profiling|DVPP数据。文件详情请参见[DVPP数据](https://www.hiascend.com/document/detail/zh/canncommercial/80RC1/devaids/auxiliarydevtool/atlasprofiling_16_0101.html)|
