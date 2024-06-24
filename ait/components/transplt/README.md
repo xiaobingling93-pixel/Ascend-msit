@@ -38,7 +38,7 @@ bash install.sh --transplt --full
 在此模式下会安装ait tranplt功能和相应的python库，以及clang工具，安装clang工具时需要提供sudo权限。
 其中，sles系统安装时，需要手动选择'y',然后继续安装。
 
-具体请参见 [ait一体化工具使用指南](../../README.md)
+具体请参见 [ait一体化工具使用指南](../../docs/install/README.md)
 
 #### Windows系统安装
 
