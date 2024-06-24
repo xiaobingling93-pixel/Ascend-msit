@@ -37,6 +37,55 @@ check_env_valid()
     || { echo "ais_bench package not install"; return $ret_run_failed;}
 }
 
+download_and_install_aclruntime() {
+    ACLRUNTIME_VERSION=`pip3 show aclruntime | awk '/Version: /{print $2}'`
+
+    if [ "$arg_force_reinstall" = "--force-reinstall" ]; then
+        echo "Force reinstall aclruntime"
+    elif [ "$ACLRUNTIME_VERSION" = "0.0.2" ]; then
+        echo "aclruntime==0.0.2 already installed, skip"
+        return
+    fi
+
+    echo "download and install aclruntime"
+    PYTHON3_MINI_VERSION=`python3 --version | cut -d'.' -f 2`
+    PYTHON3_MINI_VERSION=`python3 --version | cut -d'.' -f 2`
+    if [ "$PYTHON3_MINI_VERSION" = "7" ]; then
+        SUB_SUFFIX="m"
+    else
+        SUB_SUFFIX=""
+    fi
+    echo "PYTHON3_MINI_VERSION=$PYTHON3_MINI_VERSION, SUB_SUFFIX=$SUB_SUFFIX"
+    WHL_NAME="aclruntime-0.0.2-cp3${PYTHON3_MINI_VERSION}-cp3${PYTHON3_MINI_VERSION}${SUB_SUFFIX}-linux_$(uname -m).whl"
+    BASE_URL="https://aisbench.obs.myhuaweicloud.com/packet/ais_bench_infer/0.0.2/ait/"
+    echo "WHL_NAME=$WHL_NAME, URL=${BASE_URL}${WHL_NAME}"
+    wget --no-check-certificate -c "${BASE_URL}${WHL_NAME}" && pip3 install $WHL_NAME --force-reinstall && rm -f $WHL_NAME
+    if [ $? -ne 0 ]; then
+        echo "Downloading or installing from whl failed, will install from source code"
+        pip3 install -v 'git+https://gitee.com/ascend/tools.git#egg=aclruntime&subdirectory=ais-bench_workload/tool/ais_bench/backend' --force-reinstall
+    fi
+}
+
+download_and_install_ais_bench() {
+    AIS_BENCH_VERSION=`pip3 show ais_bench | awk '/Version: /{print $2}'`
+
+    if [ "$arg_force_reinstall" = "--force-reinstall" ]; then
+        echo "Force reinstall ais_bench"
+    elif [ "$AIS_BENCH_VERSION" = "0.0.2" ]; then
+        echo "ais_bench==0.0.2 already installed, skip"
+        return
+    fi
+
+    WHL_NAME="ais_bench-0.0.2-py3-none-any.whl"
+    BASE_URL="https://aisbench.obs.myhuaweicloud.com/packet/ais_bench_infer/0.0.2/ait/"
+    echo "WHL_NAME=$WHL_NAME, URL=${BASE_URL}${WHL_NAME}"
+    wget --no-check-certificate -c "${BASE_URL}${WHL_NAME}" && pip3 install $WHL_NAME --force-reinstall && rm -f $WHL_NAME
+    if [ $? -ne 0 ]; then
+        echo "Downloading or installing from whl failed, will install from source code"
+        pip3 install -v 'git+https://gitee.com/ascend/tools.git#egg=aclruntime&subdirectory=ais-bench_workload/tool/ais_bench/backend' --force-reinstall
+    fi
+}
+
 main()
 {
       while [ -n "$1" ]
@@ -59,11 +108,8 @@ done
     check_env_valid
     res=`echo $?`
     if [ $res = $ret_run_failed ]; then
-        pip3 wheel ./backend/ -v
-        pip3 install ./aclruntime-*.whl --force-reinstall
-
-        pip3 wheel ./ -v
-        pip3 install ./ais_bench-*.whl --force-reinstall
+        download_and_install_aclruntime
+        download_and_install_ais_bench
     fi
 }
 

@@ -23,7 +23,7 @@ with open('README.md', encoding='utf-8') as f:
 ait_sub_tasks = [{
     "name": "benchmark",
     "help_info": "benchmark tool to get performance data including latency and throughput",
-    "module": "ais_bench.infer.main_cli",
+    "module": "benchmark.__main__",
     "attr": "get_cmd_instance"
 }]
 
@@ -33,19 +33,29 @@ ait_sub_task_entry_points = [
 ]
 
 setup(
-    name='ais_bench',
-    version='0.0.2',
-    description='ais_bench tool',
+    name='ait-benchmark',
+    version='7.0.0c2',
+    description='benchmark tool',
     long_description=long_description,
-    url='ais_bench url',
+    url='https://gitee.com/ascend/ait/',
     packages=find_packages(),
     package_data={'': ['LICENSE', 'README.md', 'requirements.txt', 'install.bat', 'install.sh', '*.cpp', '*.h']},
-    include_package_data=True,
-    keywords='ais_bench tool',
+    keywords='ait benchmark tool',
     install_requires=required,
+    classifiers=[
+        'Development Status :: Alpha',
+        'Intended Audience :: Developers',
+        'License :: Apache-2.0 Software License',
+        'Programming Language :: Python :: 3 :: Only',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Topic :: Scientific/Engineering',
+        'Topic :: Software Development'
+    ],
     python_requires='>=3.7',
     entry_points={
         'ait_sub_task': ait_sub_task_entry_points,
-        'ait_sub_task_installer': ['ait-benchmark=ais_bench.__install__:BenchmarkInstall'],
+        'ait_sub_task_installer': ['ait-benchmark=benchmark.__install__:BenchmarkInstall'],
     },
 )
