@@ -2,12 +2,12 @@
 
 提供大模型推理过程中产生的中间数据的 dump 能力，包括：
 
-1. Dump Tensor 能力：用于保存 单 operation 或 图 operation 的输入输出，主要精度比对时使用
-2. 保存拓扑信息能力：包含两个维度的拓扑信息的保存能力，分别为Operation维度和模型维度，Operation维度的拓扑信息保存能力主要是保存ATB的Operation的拓扑信息，用于图结构分析；模型维度拓扑信息保存能力主要依赖于模型仓，用于保存模型仓内model的拓扑信息，进行模型结构分析，或自动精度比对，自动比对需要先知道模型拓扑信息。模型拓扑信息可以转换成onnx，可以使用可视化工具打开查看
-3. 保存 Operation 信息能力 : 保存 ATB Operation 的多项属性，如参数、输入张量 Shape、输出张量 Shape 等
-4. 保存 kernel 信息能力: 保存 kernel Operation 的多项属性，是比 ATB Operation 更细粒度，是 ATB Operation 的组成部分，多数是算子开发人员定位使用
-5. 保存 cpu_profiling 数据能力: 保存 cpu profiling 信息，主要用于 host 侧性能定位，数据下发慢等问题，主要是算子开发、熟悉 atb 框架的开发人员定位使用
-6. 保存 tiling 数据能力：tiling 数据是 host 侧计算生成，用于 device 侧进行数据切分。主要用于算子开发人员定位算子精度异常问题
+1. **【Dump Tensor 能力】** 用于保存 单 operation 或 图 operation 的输入输出，主要精度比对时使用
+2. **【保存拓扑信息能力】** 包含两个维度的拓扑信息的保存能力，分别为Operation维度和模型维度，Operation维度的拓扑信息保存能力主要是保存ATB的Operation的拓扑信息，用于图结构分析；模型维度拓扑信息保存能力主要依赖于模型仓，用于保存模型仓内model的拓扑信息，进行模型结构分析，或自动精度比对，自动比对需要先知道模型拓扑信息。模型拓扑信息可以转换成onnx，可以使用可视化工具打开查看
+3. **【保存 Operation 信息能力】** 保存 ATB Operation 的多项属性，如参数、输入张量 Shape、输出张量 Shape 等
+4. **【保存 kernel 信息能力】** 保存 kernel Operation 的多项属性，是比 ATB Operation 更细粒度，是 ATB Operation 的组成部分，多数是算子开发人员定位使用
+5. **【保存 cpu_profiling 数据能力】** 保存 cpu profiling 信息，主要用于 host 侧性能定位，数据下发慢等问题，主要是算子开发、熟悉 atb 框架的开发人员定位使用
+6. **【保存 tiling 数据能力】** tiling 数据是 host 侧计算生成，用于 device 侧进行数据切分。主要用于算子开发人员定位算子精度异常问题
 
 ## 使用方式
 
