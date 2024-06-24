@@ -3,10 +3,10 @@
 ## 简介
 - 一键式全流程推理工具ait集成了Profiling性能分析工具，用于分析运行在昇腾AI处理器上的APP工程各个运行阶段的关键性能瓶颈并提出针对性能优化的建议，最终实现产品的极致性能。
 - Profiling数据通过二进制可执行文件”msprof”进行数据采集，使用该方式采集Profiling数据需确保应用工程或算子工程所在运行环境已安装Toolkit组件包。
-- 该工具使用约束场景说明，参考链接：[CANN商用版/约束说明（仅推理场景）](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/63RC2alpha003/developmenttools/devtool/atlasprofiling_16_0004.html)
+- 该工具使用约束场景说明，参考链接：[CANN商用版/约束说明（仅推理场景）](https://www.hiascend.com/document/detail/zh/canncommercial/80RC1/devaids/auxiliarydevtool/atlasprofiling_16_0003.html)
 
 ## 工具安装
-- 工具安装请见 [ait一体化工具使用指南](../../README.md)
+- 工具安装请见 [ait一体化工具使用指南](https://gitee.com/ascend/ait/blob/master/ait/docs/install/README.md)
 
 ## 使用方法
 ### 功能介绍
