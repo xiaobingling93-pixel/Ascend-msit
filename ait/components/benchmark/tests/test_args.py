@@ -121,7 +121,11 @@ def cmd_dict_to_list(cmd_dict, new_args={}):
     cmd_list = []
     for key, value in cmd_dict.items():
         cmd_list.append(key)
-        cmd_list.append(new_args.get(key, value))
+        cmd_list.append(new_args.pop(key, value))
+
+    for key, value in new_args.items():
+        cmd_list.append(key)
+        cmd_list.append(value)
     return cmd_list
 
 def test_benchmark_argparse_given_valid_when_full_then_pass():
