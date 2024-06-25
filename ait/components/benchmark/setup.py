@@ -14,40 +14,39 @@
 from setuptools import setup, find_packages  # type: ignore
 
 
-msit_sub_tasks = [{
-    "name": "benchmark",
-    "help_info": "benchmark tool to get performance data including latency and throughput",
-    "module": "msit_benchmark.__main__",
-    "attr": "get_cmd_instance"
-}]
-
-msit_sub_task_entry_points = [
-    f"{t.get('name')}:{t.get('help_info')} = {t.get('module')}:{t.get('attr')}"
-    for t in msit_sub_tasks
+msit_sub_tasks = [
+    {
+        "name": "benchmark",
+        "help_info": "benchmark tool to get performance data including latency and throughput",
+        "module": "msit_benchmark.__main__",
+        "attr": "get_cmd_instance",
+    }
 ]
 
+msit_sub_task_entry_points = [f"{t.get('name')}:{t.get('help_info')} = {t.get('module')}:{t.get('attr')}" for t in msit_sub_tasks]
+
 setup(
-    name='msit-benchmark',
-    version='7.0.0c2',
-    description='msit benchmark tool',
-    url='https://gitee.com/ascend/msit/',
+    name="msit-benchmark",
+    version="7.0.0c2",
+    description="msit benchmark tool",
+    url="https://gitee.com/ascend/msit/",
     packages=find_packages(),
-    package_data={'': ['LICENSE', 'README.md', 'requirements.txt', 'install.bat', 'install.sh', '*.cpp', '*.h']},
-    keywords='msit benchmark tool',
+    package_data={"": ["LICENSE", "README.md", "requirements.txt", "install.bat", "install.sh", "*.cpp", "*.h"]},
+    keywords="msit benchmark tool",
     classifiers=[
-        'Development Status :: Alpha',
-        'Intended Audience :: Developers',
-        'License :: Apache-2.0 Software License',
-        'Programming Language :: Python :: 3 :: Only',
-        'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.8',
-        'Programming Language :: Python :: 3.9',
-        'Topic :: Scientific/Engineering',
-        'Topic :: Software Development'
+        "Development Status :: Alpha",
+        "Intended Audience :: Developers",
+        "License :: Apache-2.0 Software License",
+        "Programming Language :: Python :: 3 :: Only",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Topic :: Scientific/Engineering",
+        "Topic :: Software Development",
     ],
-    python_requires='>=3.7',
+    python_requires=">=3.7",
     entry_points={
-        'ait_sub_task': msit_sub_task_entry_points,
-        'ait_sub_task_installer': ['msit-benchmark=msit_benchmark.__install__:BenchmarkInstall'],
+        "ait_sub_task": msit_sub_task_entry_points,
+        "ait_sub_task_installer": ["msit-benchmark=msit_benchmark.__install__:BenchmarkInstall"],
     },
 )

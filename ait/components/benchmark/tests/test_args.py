@@ -20,11 +20,11 @@ from msit_benchmark.__main__ import get_cmd_instance
 
 
 CUR_DIR = f"{os.path.dirname(__file__)}/"
-PREFIX="benchmark_test_args_fake_"
-FAKE_OM_PATH=PREFIX + "model.om"
-FAKE_BIN_PATH=PREFIX + "data.bin"
-FAKE_ACL_JSON_PATH=PREFIX + "acl.json"
-FAKE_AIPP_CFG_PATH=PREFIX + "aipp.cfg"
+PREFIX = "benchmark_test_args_fake_"
+FAKE_OM_PATH = PREFIX + "model.om"
+FAKE_BIN_PATH = PREFIX + "data.bin"
+FAKE_ACL_JSON_PATH = PREFIX + "acl.json"
+FAKE_AIPP_CFG_PATH = PREFIX + "aipp.cfg"
 INVALID_ARG = "--invalid_arg"
 
 FULL_CMD_DICT = {
@@ -103,6 +103,7 @@ SHORT_CMD_DICT = {
     "--threads": "1",
 }
 
+
 def benchmark_argparse(argv):
     aa = get_cmd_instance()
     parser = argparse.ArgumentParser()
@@ -128,10 +129,12 @@ def cmd_dict_to_list(cmd_dict, new_args={}):
         cmd_list.append(value)
     return cmd_list
 
+
 def test_benchmark_argparse_given_valid_when_full_then_pass():
     args = benchmark_argparse(cmd_dict_to_list(FULL_CMD_DICT))
     assert args.om_model == FAKE_OM_PATH
     assert args.input == FAKE_BIN_PATH
+
 
 def test_benchmark_argparse_given_valid_when_short_then_pass():
     args = benchmark_argparse(cmd_dict_to_list(SHORT_CMD_DICT))

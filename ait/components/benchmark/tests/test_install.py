@@ -17,11 +17,27 @@ import sys
 import argparse
 from collections import namedtuple
 
+
 import pytest
+
+ACL_RUNTIME = namedtuple("aclruntime", "key")("aclruntime")
+AIS_BENCH_RUNTIME = namedtuple("ais_bench", "key")("ais-bench")
 
 
 def test_install_check_given_all_installed_then_pass():
-    sys.modules['pkg_resources'] = namedtuple('pkg_resources', 'working_set')(['aclruntime', 'ais-bench'])
+    sys.modules["pkg_resources"] = namedtuple("pkg_resources", "working_set")([ACL_RUNTIME, AIS_BENCH_RUNTIME])
     from msit_benchmark.__install__ import BenchmarkInstall
 
-    BenchmarkInstall().check()
+    assert BenchmarkInstall().check() == "OK"
+
+
+def test_install_build_extra_given_valid_then_pass():
+    from msit_benchmark.__install__ import BenchmarkInstall
+
+    BenchmarkInstall().build_extra()
+
+
+def test_install_download_extra_given_valid_then_pass():
+    from msit_benchmark.__install__ import BenchmarkInstall
+
+    BenchmarkInstall().download_extra(dest=".")

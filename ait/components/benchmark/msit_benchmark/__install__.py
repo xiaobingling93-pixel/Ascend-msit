@@ -35,16 +35,16 @@ class BenchmarkInstall(AitInstaller):
             return "\n".join(check_res)
 
     def build_extra(self, find_links=None):
-        if sys.platform == 'win32':
+        if sys.platform == "win32":
             return
-        
+
         if find_links is not None:
-            os.environ['MSIT_INSTALL_FIND_LINKS'] = os.path.realpath(find_links)
+            os.environ["MSIT_INSTALL_FIND_LINKS"] = os.path.realpath(find_links)
         subprocess.run(["/bin/bash", os.path.abspath(os.path.join(os.path.dirname(__file__), "install.sh"))], shell=False)
 
     def download_extra(self, dest):
-        if sys.platform == 'win32':
-            return 
-        
-        os.environ['MSIT_DOWNLOAD_PATH'] = os.path.realpath(dest)
+        if sys.platform == "win32":
+            return
+
+        os.environ["MSIT_DOWNLOAD_PATH"] = os.path.realpath(dest)
         subprocess.run(["/bin/bash", os.path.abspath(os.path.join(os.path.dirname(__file__), "install.sh"))], shell=False)
