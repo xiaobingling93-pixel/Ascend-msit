@@ -14,26 +14,26 @@
 from setuptools import setup, find_packages  # type: ignore
 
 
-ait_sub_tasks = [{
+msit_sub_tasks = [{
     "name": "benchmark",
     "help_info": "benchmark tool to get performance data including latency and throughput",
-    "module": "ait_benchmark.__main__",
+    "module": "msit_benchmark.__main__",
     "attr": "get_cmd_instance"
 }]
 
-ait_sub_task_entry_points = [
+msit_sub_task_entry_points = [
     f"{t.get('name')}:{t.get('help_info')} = {t.get('module')}:{t.get('attr')}"
-    for t in ait_sub_tasks
+    for t in msit_sub_tasks
 ]
 
 setup(
-    name='ait-benchmark',
+    name='msit-benchmark',
     version='7.0.0c2',
-    description='ait benchmark tool',
-    url='https://gitee.com/ascend/ait/',
+    description='msit benchmark tool',
+    url='https://gitee.com/ascend/msit/',
     packages=find_packages(),
     package_data={'': ['LICENSE', 'README.md', 'requirements.txt', 'install.bat', 'install.sh', '*.cpp', '*.h']},
-    keywords='ait benchmark tool',
+    keywords='msit benchmark tool',
     classifiers=[
         'Development Status :: Alpha',
         'Intended Audience :: Developers',
@@ -47,7 +47,7 @@ setup(
     ],
     python_requires='>=3.7',
     entry_points={
-        'ait_sub_task': ait_sub_task_entry_points,
-        'ait_sub_task_installer': ['ait-benchmark=ait_benchmark.__install__:BenchmarkInstall'],
+        'msit_sub_task': msit_sub_task_entry_points,
+        'msit_sub_task_installer': ['msit-benchmark=msit_benchmark.__install__:BenchmarkInstall'],
     },
 )

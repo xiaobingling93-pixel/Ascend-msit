@@ -84,8 +84,6 @@ pre_check_skl2onnx(){
 }
 
 
-
-
 uninstall(){
   pip3 uninstall ait analyze_tool convert_tool compare auto_optimizer msprof transplt ${all_uninstall}
   if [ -z $only_debug ] && [ -z $only_compare ] && [ -z $only_surgen ] && [ -z $only_benchmark ] && [ -z $only_analyze ] && [ -z $only_convert ] && [ -z $only_transplt ] && [ -z $only_profile ] && [ -z $only_llm ]
@@ -214,7 +212,7 @@ install(){
 
   if [ ! -z $only_benchmark ]
   then
-    bash ${CURRENT_DIR}/components/benchmark/install.sh
+    bash ${CURRENT_DIR}/components/benchmark/ait_benchmark/install.sh
     pip3 install ${CURRENT_DIR}/components/benchmark ${arg_force_reinstall}
   fi
 
@@ -268,7 +266,7 @@ install(){
     ${CURRENT_DIR}/components/tensor_view \
     ${arg_force_reinstall}
 
-    bash ${CURRENT_DIR}/components/benchmark/install.sh
+    bash ${CURRENT_DIR}/components/benchmark/ait_benchmark/install.sh
     bash ${CURRENT_DIR}/components/convert/build.sh
 
     source ${CURRENT_DIR}/components/transplt/install.sh $full_install

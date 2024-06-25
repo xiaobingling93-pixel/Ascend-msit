@@ -102,6 +102,6 @@ class TensorViewCommand(BaseCommand):
 
 
 def get_cmd_instance():
-    help_info = "view、slice、permute、save the dumped tensor"
+    help_info = "view / slice / permute / save the dumped tensor"
     cmd_instance = TensorViewCommand("tensor-view", help_info)
     return cmd_instance
