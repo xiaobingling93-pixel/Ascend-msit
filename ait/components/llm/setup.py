@@ -28,7 +28,7 @@ for root, dirs, files in os.walk('components/llm/ait_llm/opcheck/test_framework/
 ait_sub_tasks = [{
     "name": "llm",
     "help_info": "Large Language Model(llm) Debugger Tools.",
-    "module": "msit_llm.__main__",
+    "module": "ait_llm.__main__",
     "attr": "get_cmd_instance"
 }]
 
@@ -64,6 +64,6 @@ setup(
     python_requires='>=3.7',
     entry_points={
         'ait_sub_task': ait_sub_task_entry_points,
-        'ait_sub_task_installer': ['msit-llm=msit_llm.__install__:LlmInstall'],
+        'ait_sub_task_installer': ['ait-llm=ait_llm.__install__:LlmInstall'],
     },
 )
