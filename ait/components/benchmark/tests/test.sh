@@ -45,5 +45,4 @@ else
     RETURN_CODE=1
 fi
 
-unlink $COMPONENTS_PATH
 exit $RETURN_CODE

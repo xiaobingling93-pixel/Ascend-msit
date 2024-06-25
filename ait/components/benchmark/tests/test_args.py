@@ -20,11 +20,12 @@ from msit_benchmark.__main__ import get_cmd_instance
 
 
 CUR_DIR = f"{os.path.dirname(__file__)}/"
-FAKE_OM_PATH="test_args_fake_model.om"
-FAKE_BIN_PATH="test_args_fake_data.bin"
-FAKE_ACL_JSON_PATH="test_args_fake_acl.json"
-FAKE_AIPP_CFG_PATH="test_args_fake_aipp.cfg"
-INVALID_ARG = "invalid_arg"
+PREFIX="benchmark_test_args_fake_"
+FAKE_OM_PATH=PREFIX + "model.om"
+FAKE_BIN_PATH=PREFIX + "data.bin"
+FAKE_ACL_JSON_PATH=PREFIX + "acl.json"
+FAKE_AIPP_CFG_PATH=PREFIX + "aipp.cfg"
+INVALID_ARG = "--invalid_arg"
 
 FULL_CMD_DICT = {
     "--om-model": FAKE_OM_PATH,
@@ -116,15 +117,25 @@ def call_benchmark_cmd(argv):
     return aa.handle(args)
 
 
-def cmd_dict_to_list(cmd_dict):
+def cmd_dict_to_list(cmd_dict, new_args={}):
     cmd_list = []
     for key, value in cmd_dict.items():
         cmd_list.append(key)
-        cmd_list.append(value)
+        cmd_list.append(new_args.get(key, value))
     return cmd_list
 
 def test_benchmark_argparse_given_valid_when_full_then_pass():
-    benchmark_argparse(cmd_dict_to_list(FULL_CMD_DICT))
+    args = benchmark_argparse(cmd_dict_to_list(FULL_CMD_DICT))
+    assert args.om_model == FAKE_OM_PATH
+    assert args.input == FAKE_BIN_PATH
 
-def test_app_analyze_given_opencv_csv_when_short_then_pass():
+def test_benchmark_argparse_given_valid_when_short_then_pass():
     benchmark_argparse(cmd_dict_to_list(SHORT_CMD_DICT))
+    assert args.om_model == FAKE_OM_PATH
+    assert args.input == FAKE_BIN_PATH
+
+
+def test_benchmark_argparse_given_invalid_arg_when_full_then_error():
+    new_args = {INVALID_ARG}
+    with pytest.raises(SystemExit) as e:
+        args = benchmark_argparse(cmd_dict_to_list(FULL_CMD_DICT, new_args=new_args))

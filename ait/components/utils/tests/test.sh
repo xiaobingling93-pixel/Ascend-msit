@@ -26,7 +26,7 @@ if [ -f "$CUR_PATH/resources" ]; then
     chmod -R 750 $CUR_PATH/resources
 fi
 
-PYTHONPATH=$COMPONENTS_PATH:$PYTHONPATH coverage run --source $SOURCE_CODE_PATH coverage run -m pytest -vv $CUR_PATH --disable-warnings
+PYTHONPATH=$COMPONENTS_PATH:$PYTHONPATH coverage run --source $SOURCE_CODE_PATH -m pytest -vv $CUR_PATH --disable-warnings
 
 RETURN_CODE=0
 if [ $? == 0 ]; then
@@ -45,5 +45,4 @@ else
     RETURN_CODE=1
 fi
 
-unlink $COMPONENTS_PATH
 exit $RETURN_CODE
