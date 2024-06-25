@@ -17,14 +17,16 @@ import re
 import argparse
 
 from components.utils.parser import BaseCommand
-from ais_bench.infer.infer_process import infer_process
-from ais_bench.infer.args_adapter import AISBenchInferArgsAdapter
-from ais_bench.infer.args_check import (
-    check_dym_string, check_dym_range_string, check_number_list, str2bool, check_positive_integer,
-    check_batchsize_valid, check_nonnegative_integer, check_npu_id_range_vaild, check_device_range_valid, check_om_path_legality,
-    check_input_path_legality, check_output_path_legality, check_acl_json_path_legality,
-    check_aipp_config_path_legality
-)
+
+def str2bool(value):
+    if isinstance(value, bool):
+        return value
+    if value.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif value.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected true, 1, false, 0 with case insensitive.')
 
 
 class BenchmarkCommand(BaseCommand):
@@ -32,21 +34,18 @@ class BenchmarkCommand(BaseCommand):
         parser.add_argument(
             "-om",
             "--om-model",
-            type=check_om_path_legality,
             required=True,
             help="The path of the om model"
         )
         parser.add_argument(
             '-i',
             '--input',
-            type=check_input_path_legality,
             default=None,
             help="Input file or dir"
         )
         parser.add_argument(
             '-o',
             '--output',
-            type=check_output_path_legality,
             default=None,
             help="Inference data output path. The inference results are output to \
                 the subdirectory named current date under given output path"
@@ -54,7 +53,6 @@ class BenchmarkCommand(BaseCommand):
         parser.add_argument(
             '-od',
             "--output-dirname",
-            type=check_output_path_legality,
             default=None,
             help="Actual output directory name. \
                 Used with parameter output, cannot be used alone. \
@@ -70,7 +68,6 @@ class BenchmarkCommand(BaseCommand):
         )
         parser.add_argument(
             "--loop",
-            type=check_positive_integer,
             default=1,
             help="The round of the PureInfer."
         )
@@ -83,7 +80,6 @@ class BenchmarkCommand(BaseCommand):
         parser.add_argument(
             "-d",
             "--device",
-            type=check_device_range_valid,
             default=0,
             help="The NPU device ID to use.valid value range is [0, 255]"
         )
@@ -91,7 +87,6 @@ class BenchmarkCommand(BaseCommand):
             '-db',
             '--dym-batch',
             dest="dym_batch",
-            type=check_positive_integer,
             default=0,
             help="Dynamic batch size param，such as --dym-batch 2"
         )
@@ -99,7 +94,6 @@ class BenchmarkCommand(BaseCommand):
             '-dhw',
             '--dym-hw',
             dest="dym_hw",
-            type=check_dym_string,
             default=None,
             help="Dynamic image size param, such as --dym-hw \"300,500\""
         )
@@ -107,7 +101,6 @@ class BenchmarkCommand(BaseCommand):
             '-dd',
             '--dym-dims',
             dest="dym_dims",
-            type=check_dym_string,
             default=None,
             help="Dynamic dims param, such as --dym-dims \"data:1,600;img_info:1,600\""
         )
@@ -115,7 +108,6 @@ class BenchmarkCommand(BaseCommand):
             '-ds',
             '--dym-shape',
             dest="dym_shape",
-            type=check_dym_string,
             default=None,
             help="Dynamic shape param, such as --dym-shape \"data:1,600;img_info:1,600\""
         )
@@ -123,7 +115,6 @@ class BenchmarkCommand(BaseCommand):
             '-outsize',
             '--output-size',
             dest="output_size",
-            type=check_number_list,
             default=None,
             help="Output size for dynamic shape mode"
         )
@@ -145,7 +136,6 @@ class BenchmarkCommand(BaseCommand):
         )
         parser.add_argument(
             '--batch-size',
-            type=check_batchsize_valid,
             default=None,
             help="Batch size of input tensor"
         )
@@ -153,7 +143,6 @@ class BenchmarkCommand(BaseCommand):
             '-pdt',
             '--pure-data-type',
             dest='pure_data_type',
-            type=str,
             default="zero",
             choices=["zero", "random"],
             help="Null data type for pure inference(zero or random)"
@@ -175,7 +164,6 @@ class BenchmarkCommand(BaseCommand):
             '-acl',
             '--acl-json-path',
             dest='acl_json_path',
-            type=check_acl_json_path_legality,
             default=None,
             help="Acl json path for profiling or dump"
         )
@@ -183,7 +171,6 @@ class BenchmarkCommand(BaseCommand):
             '-oba',
             '--output-batchsize-axis',
             dest='output_batchsize_axis',
-            type=check_nonnegative_integer,
             default=0,
             help="Splitting axis number when outputing tensor results, such as --output-batchsize-axis 1"
         )
@@ -191,7 +178,6 @@ class BenchmarkCommand(BaseCommand):
             '-rm',
             '--run-mode',
             dest='run_mode',
-            type=str,
             default="array",
             choices=["array", "files", "tensor", "full"],
             help="Run mode"
@@ -208,7 +194,6 @@ class BenchmarkCommand(BaseCommand):
             '-wcount',
             '--warmup-count',
             dest='warmup_count',
-            type=check_nonnegative_integer,
             default=1,
             help="Warmup count before inference"
         )
@@ -216,7 +201,6 @@ class BenchmarkCommand(BaseCommand):
             '-dr',
             '--dym-shape-range',
             dest="dym_shape_range",
-            type=check_dym_range_string,
             default=None,
             help='Dynamic shape range, such as --dym-shape-range "data:1,600~700;img_info:1,600-700"'
         )
@@ -224,7 +208,6 @@ class BenchmarkCommand(BaseCommand):
             '-aipp',
             '--aipp-config',
             dest='aipp_config',
-            type=check_aipp_config_path_legality,
             default=None,
             help="File type: .config, to set actual aipp params before infer"
         )
@@ -239,7 +222,6 @@ class BenchmarkCommand(BaseCommand):
         parser.add_argument(
             '--npu-id',
             dest='npu_id',
-            type=check_npu_id_range_vaild,
             default=0,
             help="The NPU ID to use. using cmd: \'npu-smi info\' to check "
         )
@@ -285,13 +267,15 @@ class BenchmarkCommand(BaseCommand):
         parser.add_argument(
             '--threads',
             dest='threads',
-            type=check_positive_integer,
             default=1,
             help="Number of threads for computing. \
                 need to set --pipeline when setting threads number to be more than one."
         )
 
     def handle(self, args):
+        from ais_bench.infer.infer_process import infer_process
+        from ais_bench.infer.args_adapter import AISBenchInferArgsAdapter
+
         args = AISBenchInferArgsAdapter(args.om_model, args.input, args.output, args.output_dirname, args.outfmt,
                                     args.loop, args.debug, args.device, args.dym_batch, args.dym_hw, args.dym_dims,
                                     args.dym_shape, args.output_size, args.auto_set_dymshape_mode,
