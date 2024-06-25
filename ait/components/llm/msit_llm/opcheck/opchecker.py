@@ -60,7 +60,7 @@ class OpChecker:
 
     @staticmethod
     def third_party_init():
-        import ait_llm
+        import msit_llm
         import ctypes
 
         # Loading libopchecker.so with ctypes

@@ -21,7 +21,7 @@ from unittest import mock
 import torch
 import numpy as np
 
-import ait_llm.compare.cmp_utils
+import msit_llm.compare.cmp_utils
 from msit_llm.compare import atb_acc_cmp
 
 
