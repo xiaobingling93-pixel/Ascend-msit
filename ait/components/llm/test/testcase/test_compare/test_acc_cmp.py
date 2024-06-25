@@ -22,7 +22,7 @@ import torch
 import numpy as np
 
 import ait_llm.compare.cmp_utils
-from ait_llm.compare import atb_acc_cmp
+from msit_llm.compare import atb_acc_cmp
 
 
 FILE_PERMISSION = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP

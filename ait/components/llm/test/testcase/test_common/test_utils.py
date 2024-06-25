@@ -17,7 +17,7 @@ import os
 import stat
 import pytest
 
-from ait_llm.common.utils import (
+from msit_llm.common.utils import (
     check_positive_integer,
     safe_string,
     check_number_list,

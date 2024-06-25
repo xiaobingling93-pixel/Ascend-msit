@@ -1,0 +1,40 @@
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import os
+import time
+from msit_llm.transform.torch_to_float_atb import utils
+
+def float_model_h_gen(parsed_model, save_name=None, save_dir=None):
+    from msit_llm.transform.torch_to_float_atb import float_model_h_templates as templates  # avoiding circular import
+
+    model_name_lower = parsed_model.get("name", "model").lower()
+
+    rr = ""
+    rr += templates.copyright_header.format(year=time.localtime().tm_year)
+    rr += templates.include_header_formater.format(
+        model_name_upper=model_name_lower.upper(),
+    )
+
+    rr += templates.basic_class_formatter.format(
+        model_name_lower=model_name_lower,
+        struct_param_formatter=templates.struct_param_formatter.format(),
+    )
+
+    save_name = utils.init_save_name("decoder_model" if save_name is None else save_name) + ".h"
+    save_dir = utils.init_save_dir(model_name_lower if save_dir is None else save_dir, sub_dir="model")
+    save_path = os.path.join(save_dir, save_name)
+    with open(save_path, "w") as ff:
+        ff.write(rr)
+    return save_path, rr

@@ -18,7 +18,7 @@ import shutil
 import pytest
 import numpy as np
 
-from ait_llm.compare import torchair_acc_cmp
+from msit_llm.compare import torchair_acc_cmp
 
 
 FILE_PERMISSION = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP

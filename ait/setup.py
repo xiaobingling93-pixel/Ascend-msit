@@ -59,7 +59,8 @@ setup(
     python_requires='>=3.7',
     install_requires=required,
     entry_points={
-        'console_scripts': ['ait=components.__main__:main'],
+        'console_scripts': ['ait=components.__main__:main',
+                            'msit=components.__main__:main'],
         'ait_sub_task': ait_sub_task_entry_points,
     },
 )

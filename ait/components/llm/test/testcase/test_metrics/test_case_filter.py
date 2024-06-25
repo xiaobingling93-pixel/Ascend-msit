@@ -19,7 +19,7 @@ import shutil
 from io import StringIO
 from unittest import TestCase
 
-from ait_llm import CaseFilter
+from msit_llm import CaseFilter
 
 
 class TestCaseFilter(TestCase):
