@@ -130,12 +130,12 @@ def test_benchmark_argparse_given_valid_when_full_then_pass():
     assert args.input == FAKE_BIN_PATH
 
 def test_benchmark_argparse_given_valid_when_short_then_pass():
-    benchmark_argparse(cmd_dict_to_list(SHORT_CMD_DICT))
+    args = benchmark_argparse(cmd_dict_to_list(SHORT_CMD_DICT))
     assert args.om_model == FAKE_OM_PATH
     assert args.input == FAKE_BIN_PATH
 
 
 def test_benchmark_argparse_given_invalid_arg_when_full_then_error():
-    new_args = {INVALID_ARG}
+    new_args = {INVALID_ARG: "anything"}
     with pytest.raises(SystemExit) as e:
         args = benchmark_argparse(cmd_dict_to_list(FULL_CMD_DICT, new_args=new_args))
