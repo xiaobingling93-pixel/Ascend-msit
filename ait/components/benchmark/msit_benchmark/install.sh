@@ -16,6 +16,9 @@
 declare -i ret_ok=0
 declare -i ret_run_failed=1
 
+WHL_BASE_URL="https://aisbench.obs.myhuaweicloud.com/packet/ais_bench_infer/0.0.2/ait/"
+TOOLS_BAS_URL="git+https://gitee.com/ascend/tools.git"
+
 check_python_package_is_install()
 {
     local PYTHON_COMMAND=$1
@@ -56,13 +59,13 @@ download_and_install_aclruntime() {
         SUB_SUFFIX=""
     fi
     echo "PYTHON3_MINI_VERSION=$PYTHON3_MINI_VERSION, SUB_SUFFIX=$SUB_SUFFIX"
+
     WHL_NAME="aclruntime-0.0.2-cp3${PYTHON3_MINI_VERSION}-cp3${PYTHON3_MINI_VERSION}${SUB_SUFFIX}-linux_$(uname -m).whl"
-    BASE_URL="https://aisbench.obs.myhuaweicloud.com/packet/ais_bench_infer/0.0.2/ait/"
-    echo "WHL_NAME=$WHL_NAME, URL=${BASE_URL}${WHL_NAME}"
-    wget --no-check-certificate -c "${BASE_URL}${WHL_NAME}" && pip3 install $WHL_NAME --force-reinstall && rm -f $WHL_NAME
+    echo "WHL_NAME=$WHL_NAME, URL=${WHL_BASE_URL}${WHL_NAME}"
+    wget --no-check-certificate -c "${WHL_BASE_URL}${WHL_NAME}" && pip3 install $WHL_NAME $arg_force_reinstall && rm -f $WHL_NAME
     if [ $? -ne 0 ]; then
         echo "Downloading or installing from whl failed, will install from source code"
-        pip3 install -v 'git+https://gitee.com/ascend/tools.git#egg=aclruntime&subdirectory=ais-bench_workload/tool/ais_bench/backend' --force-reinstall
+        pip3 install -v "${TOOLS_BAS_URL}#egg=aclruntime&subdirectory=ais-bench_workload/tool/ais_bench/backend" --force-reinstall
     fi
 }
 
@@ -77,31 +80,29 @@ download_and_install_ais_bench() {
     fi
 
     WHL_NAME="ais_bench-0.0.2-py3-none-any.whl"
-    BASE_URL="https://aisbench.obs.myhuaweicloud.com/packet/ais_bench_infer/0.0.2/ait/"
-    echo "WHL_NAME=$WHL_NAME, URL=${BASE_URL}${WHL_NAME}"
-    wget --no-check-certificate -c "${BASE_URL}${WHL_NAME}" && pip3 install $WHL_NAME --force-reinstall && rm -f $WHL_NAME
+    echo "WHL_NAME=$WHL_NAME, URL=${WHL_BASE_URL}${WHL_NAME}"
+    wget --no-check-certificate -c "${WHL_BASE_URL}${WHL_NAME}" && pip3 install $WHL_NAME $arg_force_reinstall && rm -f $WHL_NAME
     if [ $? -ne 0 ]; then
         echo "Downloading or installing from whl failed, will install from source code"
-        pip3 install -v 'git+https://gitee.com/ascend/tools.git#egg=aclruntime&subdirectory=ais-bench_workload/tool/ais_bench/backend' --force-reinstall
+        pip3 install -v "${TOOLS_BAS_URL}#egg=aclruntime&subdirectory=ais-bench_workload/tool/ais_bench/backend" --force-reinstall
     fi
 }
 
 main()
 {
-      while [ -n "$1" ]
-do
-  case "$1" in
-    -p|--python_command)
-        PYTHON_COMMAND=$2
+    while [ -n "$1" ]; do
+        case "$1" in
+            -p|--python_command)
+                PYTHON_COMMAND=$2
+                shift
+            ;;
+            *)
+                echo "[ERROR] $1 is not an option, Usage: $0 [-p, --python_command PYTHON_COMMAND]"
+                exit 1
+            ;;
+        esac
         shift
-        ;;
-    *)
-        echo "$1 is not an option, please use --help"
-        exit 1
-        ;;
-  esac
-  shift
-done
+    done
 
     [ "$PYTHON_COMMAND" != "" ] || { PYTHON_COMMAND="python3.7";echo "set default pythoncmd:$PYTHON_COMMAND"; }
 
