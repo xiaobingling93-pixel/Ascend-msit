@@ -19,27 +19,6 @@ declare -i ret_run_failed=1
 WHL_BASE_URL="https://aisbench.obs.myhuaweicloud.com/packet/ais_bench_infer/0.0.2/ait/"
 TOOLS_BAS_URL="git+https://gitee.com/ascend/tools.git"
 
-check_python_package_is_install()
-{
-    local PYTHON_COMMAND=$1
-    ${PYTHON_COMMAND} -c "import $2" >> /dev/null 2>&1
-    ret=$?
-    if [ $ret != 0 ]; then
-        echo "python package:$2 not install"
-        return 1
-    fi
-    return 0
-}
-
-check_env_valid()
-{
-    check_python_package_is_install ${PYTHON_COMMAND} "aclruntime" \
-    || { echo "aclruntime package not install"; return $ret_run_failed;}
-
-    check_python_package_is_install ${PYTHON_COMMAND} "ais_bench" \
-    || { echo "ais_bench package not install"; return $ret_run_failed;}
-}
-
 download_and_install_aclruntime() {
     ACLRUNTIME_VERSION=`pip3 show aclruntime | awk '/Version: /{print $2}'`
 
@@ -88,31 +67,11 @@ download_and_install_ais_bench() {
     fi
 }
 
-main()
-{
-    while [ -n "$1" ]; do
-        case "$1" in
-            -p|--python_command)
-                PYTHON_COMMAND=$2
-                shift
-            ;;
-            *)
-                echo "[ERROR] $1 is not an option, Usage: $0 [-p, --python_command PYTHON_COMMAND]"
-                exit 1
-            ;;
-        esac
-        shift
-    done
+ret=0
+download_and_install_aclruntime
+ret=$(( $ret + $? ))
 
-    [ "$PYTHON_COMMAND" != "" ] || { PYTHON_COMMAND="python3.7";echo "set default pythoncmd:$PYTHON_COMMAND"; }
+download_and_install_ais_bench
+ret=$(( $ret + $? ))
 
-    check_env_valid
-    res=`echo $?`
-    if [ $res = $ret_run_failed ]; then
-        download_and_install_aclruntime
-        download_and_install_ais_bench
-    fi
-}
-
-main "$@"
-exit $?
+exit $ret
