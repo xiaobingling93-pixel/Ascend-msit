@@ -10,7 +10,7 @@ from msit_llm import register_hook
 
 
 MODEL_NAME_LIST = ["root", "root.ln"]
-DUMP_PATH = "./ait_dump"
+DUMP_PATH = "./msit_dump"
 
 
 class SampleModel(nn.Module):

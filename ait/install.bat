@@ -107,25 +107,25 @@ IF NOT %errorlevel%==0 (
 :uninstall_func
 
 IF DEFINED select_transplt (
-    pip3 uninstall ait-transplt %all_uninstall%
+    pip3 uninstall msit-transplt %all_uninstall%
 )
 
 IF DEFINED select_surgeon (
-    pip3 uninstall ait-surgeon %all_uninstall%
+    pip3 uninstall msit-surgeon %all_uninstall%
 ) 
 
 IF %all_component%==1 (
-    pip3 uninstall ms-ait ait-transplt ait-surgeon %all_uninstall%
+    pip3 uninstall msit msit-transplt msit-surgeon %all_uninstall%
 )
 
 GOTO:eof
 
 
 :install_func
-:: install ait component
+:: install msit component
 pip3 install "%CURRENT_DIR%/" %arg_force_reinstall%
 IF NOT %errorlevel%==0 (
-    ECHO pip install ait failed, please check the failure reason.
+    ECHO pip install msit failed, please check the failure reason.
     EXIT /B 1
 )
 

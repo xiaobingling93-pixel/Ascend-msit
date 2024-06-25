@@ -93,7 +93,7 @@ class KitConfig:
     VALID_REPORT_TYPE = ['csv', 'json']
     VALID_CONSTRUCT_TOOLS = [BuildToolType.CMAKE.value, BuildToolType.PYTHON.value]
     VALID_SCANNER_MODE = [ScannerMode.ALL.value, ScannerMode.APIONLY.value]
-    PORTING_CONTENT = """ait transplt
+    PORTING_CONTENT = """msit transplt
                 [-h] [-s source] 
                 [-t tools {cmake,python}] 
                 [-l {DEBUG,INFO,WARN,ERR}] 

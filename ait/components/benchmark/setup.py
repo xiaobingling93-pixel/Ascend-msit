@@ -46,6 +46,6 @@ setup(
     python_requires='>=3.7',
     entry_points={
         'ait_sub_task': ait_sub_task_entry_points,
-        'ait_sub_task_installer': ['ait-benchmark=ais_bench.__install__:BenchmarkInstall'],
+        'ait_sub_task_installer': ['msit-benchmark=ais_bench.__install__:BenchmarkInstall'],
     },
 )

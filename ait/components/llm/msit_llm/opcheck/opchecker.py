@@ -66,18 +66,18 @@ class OpChecker:
         # Loading libopchecker.so with ctypes
         lib_opchecker_path = os.environ.get("AIT_OPCHECK_LIB_PATH", "")
         if not lib_opchecker_path:
-            lib_path_dir = os.path.dirname(os.path.abspath(ait_llm.__file__))
+            lib_path_dir = os.path.dirname(os.path.abspath(msit_llm.__file__))
             lib_opchecker_path = os.path.join(lib_path_dir, "opcheck", "libopchecker.so")
 
         logger.info(f"lib_opchecker_path is {lib_opchecker_path}")
         if not os.path.exists(lib_opchecker_path):
-            logger.error(f"{lib_opchecker_path} not exists, check if ait_llm installed correctly")
+            logger.error(f"{lib_opchecker_path} not exists, check if msit_llm installed correctly")
             return False
 
         try:
             ctypes.cdll.LoadLibrary(lib_opchecker_path).RegisterAll()
         except Exception as e:
-            logger.error(f"{lib_opchecker_path} loading failed, check if ait_llm installed correctly")
+            logger.error(f"{lib_opchecker_path} loading failed, check if msit_llm installed correctly")
             return False
 
         # Loading libatb_speed_torch.so with torch
@@ -102,7 +102,7 @@ class OpChecker:
 
     def get_base_path(self, cur_path):
         dirseg = cur_path.split(os.path.sep)
-        if len(dirseg) >= 4 and dirseg[-3] == 'tensors' and dirseg[-4].startswith('ait_dump'):
+        if len(dirseg) >= 4 and dirseg[-3] == 'tensors' and dirseg[-4].startswith('msit_dump'):
             try:
                 pid = dirseg[-2].split("_")[1]
             except:
@@ -126,7 +126,7 @@ class OpChecker:
 
         base_path, pid = self.get_base_path(input_path)
         if base_path is None:
-            logger_text = f"Input path is not in ait_dump tensors directory: {input_path}"
+            logger_text = f"Input path is not in msit_dump tensors directory: {input_path}"
             logger.error(logger_text)
             return input_path, base_path, pid, ret
         

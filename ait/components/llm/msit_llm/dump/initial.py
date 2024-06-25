@@ -110,7 +110,7 @@ def init_dump_task(args):
     cur_is_use_cxx11 = is_use_cxx11()
     logger.info(f"Info detected from ATB so is_use_cxx11: {cur_is_use_cxx11}")
     save_tensor_so_name = ATB_PROB_LIB_WITH_ABI if cur_is_use_cxx11 else ATB_PROB_LIB_WITHOUT_ABI
-    save_tensor_so_path = os.path.join(cann_path, "tools", "ait_backend", "dump", save_tensor_so_name)
+    save_tensor_so_path = os.path.join(cann_path, "tools", "msit_backend", "dump", save_tensor_so_name)
     if not os.path.exists(save_tensor_so_path):
         raise OSError(f"{save_tensor_so_name} is not found in {cann_path}. Try installing the latest cann-toolkit")
     if not FileStat(save_tensor_so_path).is_basically_legal('read', strict_permission=True):
@@ -193,7 +193,7 @@ def clear_dump_task(args):
     elif "cpu_profiling" in args.type:
         # 获取当前进程的cpu_profiling数据dump路径，新版CANN包需要加时间戳，否则不加时间戳
         cpu_profiling_path1 = os.path.join(os.environ.get(ATB_OUTPUT_DIR, ""), get_ait_dump_path(), "cpu_profiling")
-        cpu_profiling_path2 = os.path.join(os.environ.get(ATB_OUTPUT_DIR, ""), "ait_dump", "cpu_profiling")
+        cpu_profiling_path2 = os.path.join(os.environ.get(ATB_OUTPUT_DIR, ""), "msit_dump", "cpu_profiling")
         if os.path.exists(cpu_profiling_path1):
             merge_cpu_profiling_data(cpu_profiling_path1)
         else:

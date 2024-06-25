@@ -32,28 +32,28 @@ class CommandLineInput(IInput):
     @staticmethod
     def _check_path(folder):
         if not os.path.exists(folder):
-            raise ValueError("{} ait transplt: error: {}".
+            raise ValueError("{} msit transplt: error: {}".
                              format(KitConfig.PORTING_CONTENT,
                                     'The path %s does not exist or you do not '
                                     'have the permission to access the path. '
                                     % folder))
         elif not os.path.isdir(folder):
-            raise ValueError("{} ait transplt: error: {}".
+            raise ValueError("{} msit transplt: error: {}".
                              format(KitConfig.PORTING_CONTENT,
                                     'The path %s is '
                                     'not directory. ' % folder))
         elif not os.access(folder, os.R_OK):
-            raise ValueError("{} ait transplt: error: {}".
+            raise ValueError("{} msit transplt: error: {}".
                              format(KitConfig.PORTING_CONTENT,
                                     "Cannot access the file "
                                     "or directory: %s" % folder))
         elif not os.access(folder, os.X_OK):
-            raise ValueError("{} ait transplt: error: {}".
+            raise ValueError("{} msit transplt: error: {}".
                              format(KitConfig.PORTING_CONTENT,
                                     "Cannot access the "
                                     "directory: %s" % folder))
         elif IOUtil.check_path_is_empty(folder):
-            raise ValueError("{} ait transplt: error: {}".
+            raise ValueError("{} msit transplt: error: {}".
                              format(KitConfig.PORTING_CONTENT,
                                     'The directory %s '
                                     'is empty' % folder))
@@ -69,7 +69,7 @@ class CommandLineInput(IInput):
 
     def get_source_directories(self):
         if not self.args.source:
-            raise ValueError('ait transplt: error: the following arguments are required: -s/--source')
+            raise ValueError('msit transplt: error: the following arguments are required: -s/--source')
 
         for folder in self.args.source.split(','):
             folder = folder.strip()
@@ -89,7 +89,7 @@ class CommandLineInput(IInput):
         if not self.args.tools:
             self.args.tools = 'make'
         if self.args.tools not in KitConfig.VALID_CONSTRUCT_TOOLS:
-            raise ValueError('{} ait transplt: error: construct tool {} is not supported. supported input are {}.'
+            raise ValueError('{} msit transplt: error: construct tool {} is not supported. supported input are {}.'
                              .format(KitConfig.PORTING_CONTENT, self.args.tools,
                                      ' or '.join(KitConfig.VALID_CONSTRUCT_TOOLS)))
         self.construct_tool = self.args.tools
@@ -100,7 +100,7 @@ class CommandLineInput(IInput):
             self.args.mode = 'all'
 
         if self.args.mode not in KitConfig.VALID_SCANNER_MODE:
-            raise ValueError('{} ait transplt: error: scanner mode {} is not supported. supported input are {}.'
+            raise ValueError('{} msit transplt: error: scanner mode {} is not supported. supported input are {}.'
                              .format(KitConfig.PORTING_CONTENT, self.args.mode,
                                      ' or '.join(KitConfig.VALID_SCANNER_MODE)))
         self.scanner_mode = self.args.mode
@@ -113,7 +113,7 @@ class CommandLineInput(IInput):
         """获取输出报告格式"""
         out_format = self.args.report_type.lower()
         if out_format not in KitConfig.VALID_REPORT_TYPE:
-            raise ValueError('ait transplt: error: output type {} is not supported. '
+            raise ValueError('msit transplt: error: output type {} is not supported. '
                              'supported input is csv/json.'.format(self.args.report_type))
 
         if out_format == 'csv':

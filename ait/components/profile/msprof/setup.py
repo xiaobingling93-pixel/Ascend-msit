@@ -33,17 +33,17 @@ ait_sub_task_entry_points = [
 ]
 
 setup(
-    name='ait-profile',
+    name='msit-profile',
     version='7.0.0c2',
     description='msprof tool',
     long_description=long_description,
-    url='ait_msprof url',
+    url='msit_msprof url',
     packages=find_packages(),
-    keywords='ait_msprof tool',
+    keywords='msit_msprof tool',
     install_requires=required,
     python_requires='>=3.7',
     entry_points={
         'ait_sub_task': ait_sub_task_entry_points,
-        'ait_sub_task_installer': ['ait-profile=ait_prof.__install__:MsProfInstall'],
+        'ait_sub_task_installer': ['msit-profile=ait_prof.__install__:MsProfInstall'],
     }
 )

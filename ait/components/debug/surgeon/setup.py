@@ -32,7 +32,7 @@ debug_sub_task_entry_points = [
 ]
 
 setup(
-    name='ait-surgeon',
+    name='msit-surgeon',
     version='7.0.0c2',
     description='auto optimizer',
     long_description=long_description,
@@ -74,6 +74,6 @@ setup(
     entry_points={
         'console_scripts': ['auto_optimizer=auto_optimizer.__main__:cli'],
         'debug_sub_task': debug_sub_task_entry_points,
-        'ait_sub_task_installer': ['ait-surgeon=auto_optimizer.__install__:SurgeonInstall'],
+        'ait_sub_task_installer': ['msit-surgeon=auto_optimizer.__install__:SurgeonInstall'],
     },
 )

@@ -23,7 +23,7 @@ class ConvertInstall(AitInstaller):
 
         if not os.path.exists(os.path.join(os.path.dirname(__file__), "aie_convert")):
             check_res.append("[warnning] build aie_convert failed. will make the AIE feature unusable. "
-                             "use `ait build-extra convert` to try again")
+                             "use `msit build-extra convert` to try again")
         
         if not check_res:
             return "OK"

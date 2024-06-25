@@ -136,6 +136,6 @@ class CaseFilter(object):
         df.fillna("PASSED", inplace=True)
 
         time_stamp = datetime.now(tz=timezone.utc).strftime(r"%Y%m%d%H%M%S")
-        output_path = os.path.join(output_dir, f"ait_filter_result_{time_stamp}.csv")
+        output_path = os.path.join(output_dir, f"msit_filter_result_{time_stamp}.csv")
         df.to_csv(output_path, encoding='utf-8', index=False)
         os.chmod(output_path, 0o640)

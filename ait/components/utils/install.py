@@ -62,50 +62,50 @@ class AitInstaller:
 INSTALL_INFO_MAP = [
     {
         "arg-name": "llm",
-        "pkg-name": "ait-llm",
+        "pkg-name": "msit-llm",
         "pkg-path": "llm",
     },
     {
         "arg-name": "surgeon",
-        "pkg-name": "ait-surgeon",
+        "pkg-name": "msit-surgeon",
         "pkg-path": os.path.join("debug", "surgeon"),
         "support_windows": True,
     },
     {
         "arg-name": "analyze",
-        "pkg-name": "ait-analyze",
+        "pkg-name": "msit-analyze",
         "pkg-path": "analyze",
     },
     {
         "arg-name": "transplt",
-        "pkg-name": "ait-transplt", 
+        "pkg-name": "msit-transplt",
         "pkg-path": "transplt", 
         "support_windows": True},
     {
         "arg-name": "convert",
-        "pkg-name": "ait-convert",
+        "pkg-name": "msit-convert",
         "pkg-path": "convert",
     },
     {
         "arg-name": "profile",
-        "pkg-name": "ait-profile",
+        "pkg-name": "msit-profile",
         "pkg-path": os.path.join("profile", "msprof"),
     },
     {
         "arg-name": "tensor-view",
-        "pkg-name": "ait-tensor-view",
+        "pkg-name": "msit-tensor-view",
         "pkg-path": "tensor_view"
     },
     {
         "arg-name": "benchmark",
-        "pkg-name": "ait-benchmark",
+        "pkg-name": "msit-benchmark",
         "pkg-path": "benchmark",
     },
     {
         "arg-name": "compare",
-        "pkg-name": "ait-compare",
+        "pkg-name": "msit-compare",
         "pkg-path": os.path.join("debug", "compare"),
-        "depends": ["ait-benchmark", "ait-surgeon"],
+        "depends": ["msit-benchmark", "msit-surgeon"],
     },
 ]
 
@@ -116,7 +116,7 @@ ALL_SUB_TOOLS_WITH_ALL.extend(ALL_SUB_TOOLS)
 
 class AitInstallCommand(BaseCommand):
     def __init__(self) -> None:
-        super().__init__("install", "install ait tools", group="Install Command")
+        super().__init__("install", "install msit tools", group="Install Command")
 
     def add_arguments(self, parser: argparse.ArgumentParser):
         parser.add_argument(
@@ -140,7 +140,7 @@ class AitInstallCommand(BaseCommand):
 
 class AitCheckCommand(BaseCommand):
     def __init__(self) -> None:
-        super().__init__("check", "check ait tools status.", group="Install Command")
+        super().__init__("check", "check msit tools status.", group="Install Command")
 
     def add_arguments(self, parser: argparse.ArgumentParser):
         parser.add_argument(
@@ -157,7 +157,7 @@ class AitCheckCommand(BaseCommand):
 
 class AitBuildExtraCommand(BaseCommand):
     def __init__(self) -> None:
-        super().__init__("build-extra", "build ait tools extra", group="Install Command")
+        super().__init__("build-extra", "build msit tools extra", group="Install Command")
 
     def add_arguments(self, parser: argparse.ArgumentParser):
         parser.add_argument(

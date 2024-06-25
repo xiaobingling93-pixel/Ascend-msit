@@ -22,12 +22,12 @@ from components.utils.install import AitInstallCommand, AitBuildExtraCommand, Ai
 def main():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        description=f"ait(Ascend Inference Tools), {MIND_STUDIO_LOGO}.\n"
+        description=f"msit(MindStudio Inference Tools), {MIND_STUDIO_LOGO}.\n"
         "Providing one-site debugging and optimization toolkit for inference on Ascend Devices.\n"
         f"For any issue, refer FAQ first: {AIT_FAQ_HOME}",
     )
 
-    cmd = BaseCommand("ait", None, ["ait_sub_task", AitInstallCommand(), AitBuildExtraCommand(), AitCheckCommand(), DownloadCommand()])
+    cmd = BaseCommand("msit", None, ["ait_sub_task", AitInstallCommand(), AitBuildExtraCommand(), AitCheckCommand(), DownloadCommand()])
     cmd.register_parser(parser)
 
     args = parser.parse_args()

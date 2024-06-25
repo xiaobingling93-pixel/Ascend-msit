@@ -22,12 +22,12 @@ class TranspltInstall(AitInstaller):
 
         if not os.path.exists(os.path.join(os.path.dirname(__file__), "headers")):
             check_res.append("[error] download data failed. will make the transplt feature unusable. "
-                             "use `ait build-extra transplt` to try again")
+                             "use `msit build-extra transplt` to try again")
         from app_analyze.utils import clang_finder
         try:
             clang_finder.get_lib_clang_path()
         except RuntimeError as er:
-            check_res.append(f"[error]{er} use `ait build-extra llvm` to try again")
+            check_res.append(f"[error]{er} use `msit build-extra llvm` to try again")
         
         if not check_res:
             return "OK"

@@ -80,7 +80,7 @@ def fake_om_model(width_onnx_model):
 
 
 def test_basic_usage_then_pass(width_onnx_model, fake_om_model):
-    cmd = 'ait debug compare -gm {} -om {} -c {} -o {} --max-cmp-size 1024'.format(width_onnx_model,
+    cmd = 'msit debug compare -gm {} -om {} -c {} -o {} --max-cmp-size 1024'.format(width_onnx_model,
                                                     fake_om_model,
                                                     CANN_PATH,
                                                     OUT_PATH)

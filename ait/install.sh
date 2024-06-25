@@ -99,18 +99,22 @@ download_and_install_aclruntime() {
 
 
 uninstall(){
+  pip3 uninstall msit analyze_tool convert_tool compare auto_optimizer msprof transplt ${all_uninstall}
   pip3 uninstall ait analyze_tool convert_tool compare auto_optimizer msprof transplt ${all_uninstall}
   if [ -z $only_debug ] && [ -z $only_compare ] && [ -z $only_surgen ] && [ -z $only_benchmark ] && [ -z $only_analyze ] && [ -z $only_convert ] && [ -z $only_transplt ] && [ -z $only_profile ] && [ -z $only_llm ]
   then
+    pip3 uninstall msit msit-analyze aclruntime ais_bench msit-convert msit-compare msit-surgeon msit-profile msit-transplt msit-llm ${all_uninstall}
     pip3 uninstall ms-ait ait-analyze aclruntime ais_bench ait-convert ait-compare ait-surgeon ait-profile ait-transplt ait-llm ${all_uninstall}
   else
     if [ ! -z $only_compare ]
     then
+      pip3 uninstall msit-compare ${all_uninstall}
       pip3 uninstall ait-compare ${all_uninstall}
     fi
 
     if [ ! -z $only_surgeon ]
     then
+      pip3 uninstall msit-surgeon ${all_uninstall}
       pip3 uninstall ait-surgeon ${all_uninstall}
     fi
 
@@ -121,26 +125,31 @@ uninstall(){
 
     if [ ! -z $only_analyze ]
     then
+      pip3 uninstall msit-analyze ${all_uninstall}
       pip3 uninstall ait-analyze ${all_uninstall}
     fi
 
     if [ ! -z $only_convert ]
     then
+      pip3 uninstall msit-convert ${all_uninstall}
       pip3 uninstall ait-convert ${all_uninstall}
     fi
 
     if [ ! -z $only_transplt ]
     then
+      pip3 uninstall msit-transplt ${all_uninstall}
       pip3 uninstall ait-transplt ${all_uninstall}
     fi
 
     if [ ! -z $only_profile ]
     then
+      pip3 uninstall msit-profile ${all_uninstall}
       pip3 uninstall ait-profile ${all_uninstall}
     fi
 
     if [ ! -z $only_llm ]
     then
+      pip3 uninstall msit-llm ${all_uninstall}
       pip3 uninstall ait-llm ${all_uninstall}
     fi
 
@@ -155,8 +164,8 @@ uninstall(){
 
 build_opchecker_so() {
     echo ""
-    echo "Try building libatb_speed_torch.so for ait llm."
-    cd ${CURRENT_DIR}/components/llm/ait_llm/opcheck/atb_operators
+    echo "Try building libatb_speed_torch.so for msit llm."
+    cd ${CURRENT_DIR}/components/llm/msit_llm/opcheck/atb_operators
     bash build.sh
     cd -
     echo ""
@@ -288,7 +297,7 @@ install(){
     build_opchecker_so
   fi
 
-  rm -rf ${CURRENT_DIR}/ait.egg-info
+  rm -rf ${CURRENT_DIR}/msit.egg-info
 }
 
 

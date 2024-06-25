@@ -35,7 +35,7 @@ ait_sub_task_entry_points = [
 ]
 
 setup(
-    name='ait-analyze',
+    name='msit-analyze',
     version='7.0.0c2',
     description='inference analyze tool',
     long_description=long_description,
@@ -60,6 +60,6 @@ setup(
     python_requires='>=3.7',
     entry_points={
         'ait_sub_task': ait_sub_task_entry_points,
-        'ait_sub_task_installer': ['ait-analyze=model_evaluation.__install__:AnalyzeInstall'],
+        'ait_sub_task_installer': ['msit-analyze=model_evaluation.__install__:AnalyzeInstall'],
     },
 )

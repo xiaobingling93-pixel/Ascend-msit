@@ -57,12 +57,12 @@ def acc_compare(golden_path, my_path, output_path=".", mapping_file_path=".", cm
 
 
 def is_model_topo_exist(golden_path, cmp_level="layer"):
-    # 判断用户输入路径的ait_dump目录下是否包括/model路径，即是否包括模型拓扑信息
+    # 判断用户输入路径的msit_dump目录下是否包括/model路径，即是否包括模型拓扑信息
     absolute_path = os.path.abspath(golden_path)
     model_dir_path = os.path.join(absolute_path, '../../../' if cmp_level == "layer" else '../../', 'model')
     model_dir_path = os.path.normpath(model_dir_path)
     if not os.path.isdir(model_dir_path):
-        msg = f"Cannot find {model_dir_path}, please check! Use ait llm dump if needed."
+        msg = f"Cannot find {model_dir_path}, please check! Use msit llm dump if needed."
         logger.info(msg)
         return False, ""
     # 搜索/model目录下的所有文件，查找JSON文件
@@ -72,7 +72,7 @@ def is_model_topo_exist(golden_path, cmp_level="layer"):
                 json_file_path = os.path.join(root, file)
                 return True, json_file_path
     # 如果没有找到json文件，返回False和空字符串
-    msg = f"Cannot find model topo json in {model_dir_path}, please check! Use ait llm dump if needed."
+    msg = f"Cannot find model topo json in {model_dir_path}, please check! Use msit llm dump if needed."
     logger.info(msg)
     return False, ""
 

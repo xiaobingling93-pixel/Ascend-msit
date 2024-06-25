@@ -24,13 +24,13 @@ class CompareInstall(AitInstaller):
         installed_pkg = [pkg.key for pkg in pkg_resources.working_set]
 
         if "ais-bench" not in installed_pkg:
-            check_res.append("[error] ait-benchmark not installed. use `ait install benchmark` to try again")
+            check_res.append("[error] msit-benchmark not installed. use `msit install benchmark` to try again")
 
-        if "ait-surgeon" not in installed_pkg:
-            check_res.append("[error] ait-surgeon not installed. use `ait install surgeon` to try again")
+        if "msit-surgeon" not in installed_pkg:
+            check_res.append("[error] msit-surgeon not installed. use `msit install surgeon` to try again")
 
         if not os.path.exists(os.path.join(os.path.dirname(__file__), "libsaveom.so")):
-            check_res.append("[error] build lib saveom.so failed. use `ait build-extra compare` to try again")
+            check_res.append("[error] build lib saveom.so failed. use `msit build-extra compare` to try again")
         
         if not check_res:
             return "OK"

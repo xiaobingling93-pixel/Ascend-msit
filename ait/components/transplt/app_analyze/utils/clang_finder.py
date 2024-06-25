@@ -28,8 +28,8 @@ def _get_lib_clang_path_win():
             logger.debug(f'found libclang.dll at {lib_clang_candidate}.')
             return lib_clang_candidate
 
-    logger.error('Unable to locate libclang.dll file, ait transplt will not working.')
-    raise RuntimeError("Unable to locate libclang.dll file, ait transplt will not working.")
+    logger.error('Unable to locate libclang.dll file, msit transplt will not working.')
+    raise RuntimeError("Unable to locate libclang.dll file, msit transplt will not working.")
 
 
 def _get_lib_clang_path_linux():
@@ -109,8 +109,8 @@ def _get_lib_clang_path_linux():
             logger.debug(f'found libclang so file at {candidate}.')
             return candidate
 
-    logger.error('Unable to locate libclang so file, ait transplt will not working.')
-    raise RuntimeError("Unable to locate libclang so file, ait transplt will not working.")
+    logger.error('Unable to locate libclang so file, msit transplt will not working.')
+    raise RuntimeError("Unable to locate libclang so file, msit transplt will not working.")
 
 
 def get_lib_clang_path():

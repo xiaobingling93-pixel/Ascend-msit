@@ -17,7 +17,7 @@ import logging
 
 
 def get_logger():
-    llm_logger = logging.getLogger("ait_llm_logger")
+    llm_logger = logging.getLogger("msit_llm_logger")
     llm_logger.propagate = False
     llm_logger.setLevel(logging.INFO)
     if not llm_logger.handlers:

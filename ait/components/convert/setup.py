@@ -32,7 +32,7 @@ ait_sub_task_entry_points = [
 ]
 
 setup(
-    name='ait-convert',
+    name='msit-convert',
     version='7.0.0c2',
     description='model convert tool',
     url='https://gitee.com/ascend/ait',
@@ -55,6 +55,6 @@ setup(
     python_requires='>=3.7',
     entry_points={
         'ait_sub_task': ait_sub_task_entry_points,
-        'ait_sub_task_installer': ['ait-convert=model_convert.__install__:ConvertInstall'],
+        'ait_sub_task_installer': ['msit-convert=model_convert.__install__:ConvertInstall'],
     },
 )

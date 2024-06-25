@@ -23,7 +23,7 @@ class LlmInstall(AitInstaller):
 
         if not os.path.exists(os.path.join(os.path.dirname(__file__), "opcheck/libopchecker.so")):
             check_res.append("[warnning] build libopchecker.so failed. will make the opchecker feature unusable. "
-                             "use `ait build-extra llm` to try again")
+                             "use `msit build-extra llm` to try again")
         
         if not check_res:
             return "OK"

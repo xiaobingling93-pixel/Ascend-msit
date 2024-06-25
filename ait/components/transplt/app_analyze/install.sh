@@ -75,7 +75,7 @@ install_clang() {
   elif [[ "$OS_NAME" == "SLES"* ]] && [[ $OS_VERSION == "12"* ]]; then
     install_clang_on_sles
   else
-    echo "WARNING: uncertified os type:version $OS_NAME:$OS_VERSION. Ait transplt installation may be incorrect!!!"
+    echo "WARNING: uncertified os type:version $OS_NAME:$OS_VERSION. MSIT transplt installation may be incorrect!!!"
     # try to install clang
     $SUDO apt-get install wget unzip libclang-14-dev clang-14 -y
   fi

@@ -18,7 +18,7 @@ import logging
 from logging import handlers
 
 IS_PYTHON3 = sys.version_info > (3,)
-LOG_FILE_PATH = "ait_transplt.log"
+LOG_FILE_PATH = "msit_transplt.log"
 LOG_FORMAT = "%(asctime)s - %(levelname)s - %(filename)s[%(lineno)d] - %(message)s"
 LOG_LEVEL = {
     "notest": logging.NOTSET,
@@ -36,7 +36,7 @@ OPEN_MODES = stat.S_IWUSR | stat.S_IRUSR
 
 
 def get_logger():
-    inner_logger = logging.getLogger("ait transplt")
+    inner_logger = logging.getLogger("msit transplt")
     inner_logger.propagate = False
     inner_logger.setLevel(logging.INFO)
     if not inner_logger.handlers:
