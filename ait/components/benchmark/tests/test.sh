@@ -15,7 +15,7 @@
 
 CUR_PATH=$(dirname $(readlink -f $0))
 COMPONENTS_PATH=$CUR_PATH/../../../
-SOURCE_CODE_PATH=$COMPONENTS_PATH/components/utils
+SOURCE_CODE_PATH=$COMPONENTS_PATH/components/benchmark
 echo "CUR_PATH=$CUR_PATH, COMPONENTS_PATH=$COMPONENTS_PATH, SOURCE_CODE_PATH=$SOURCE_CODE_PATH"
 
 if [ -f "../requirements.txt" ]; then
@@ -26,7 +26,7 @@ if [ -f "$CUR_PATH/resources" ]; then
     chmod -R 750 $CUR_PATH/resources
 fi
 
-PYTHONPATH=$COMPONENTS_PATH:$PYTHONPATH coverage run --source $SOURCE_CODE_PATH -m pytest -vv $CUR_PATH --disable-warnings
+PYTHONPATH=$SOURCE_CODE_PATH:$PYTHONPATH coverage run --source $SOURCE_CODE_PATH -m pytest -vv $CUR_PATH --disable-warnings
 
 RETURN_CODE=0
 if [ $? == 0 ]; then

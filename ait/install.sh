@@ -84,20 +84,6 @@ pre_check_skl2onnx(){
 }
 
 
-download_and_install_aclruntime() {
-    ACLRUNTIME_VERSION=`pip3 show aclruntime | awk '/Version: /{print $2}'`
-
-    if [ "$arg_force_reinstall" = "--force-reinstall" ]; then
-        echo "Force reinstall aclruntime"
-    elif [ "$ACLRUNTIME_VERSION" = "0.0.2" ]; then
-        echo "aclruntime==0.0.2 already installed, skip"
-        return
-    fi
-
-    cd ${CURRENT_DIR}/components/benchmark/backend && pip install . --force-reinstall && cd -
-}
-
-
 uninstall(){
   pip3 uninstall msit analyze_tool convert_tool compare auto_optimizer msprof transplt ${all_uninstall}
   pip3 uninstall ait analyze_tool convert_tool compare auto_optimizer msprof transplt ${all_uninstall}
@@ -235,7 +221,7 @@ install(){
 
   if [ ! -z $only_benchmark ]
   then
-    download_and_install_aclruntime
+    bash ${CURRENT_DIR}/components/benchmark/msit_benchmark/install.sh
     pip3 install ${CURRENT_DIR}/components/benchmark ${arg_force_reinstall}
   fi
 
@@ -277,7 +263,6 @@ install(){
   if [ -z $only_compare ] && [ -z $only_surgeon ] && [ -z $only_benchmark ] && [ -z $only_analyze ] && [ -z $only_convert ] && [ -z $only_transplt ] && [ -z $only_profile ] && [ -z $only_llm ] && [ -z $only_tensor_view ]
   then
     pre_check_skl2onnx
-    download_and_install_aclruntime
 
     pip3 install ${CURRENT_DIR}/components/debug/compare \
     ${CURRENT_DIR}/components/debug/surgeon \
@@ -290,6 +275,7 @@ install(){
     ${CURRENT_DIR}/components/tensor_view \
     ${arg_force_reinstall}
 
+    bash ${CURRENT_DIR}/components/benchmark/msit_benchmark/install.sh
     bash ${CURRENT_DIR}/components/convert/build.sh
 
     source ${CURRENT_DIR}/components/transplt/install.sh $full_install

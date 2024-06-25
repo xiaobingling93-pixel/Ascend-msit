@@ -37,7 +37,7 @@ setup(
     description='model convert tool',
     url='https://gitee.com/ascend/ait',
     packages=find_packages(),
-    package_data={'': ['LICENSE', 'README.md', 'requirements.txt', 'install.bat', 'install.sh', '*.cpp', '*.h']},
+    package_data={'': ['LICENSE', 'README.md', '*.txt', 'install.bat', 'install.sh', '*.cpp', '*.h']},
     license='Apache-2.0',
     keywords='convert tool',
     install_requires=required,

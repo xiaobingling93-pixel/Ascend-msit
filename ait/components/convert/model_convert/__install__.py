@@ -21,7 +21,7 @@ class ConvertInstall(AitInstaller):
     def check(self):
         check_res = []
 
-        if not os.path.exists(os.path.join(os.path.dirname(__file__), "aie_convert")):
+        if not os.path.exists(os.path.join(os.path.dirname(__file__), "aie", "aie_convert")):
             check_res.append("[warnning] build aie_convert failed. will make the AIE feature unusable. "
                              "use `msit build-extra convert` to try again")
         
