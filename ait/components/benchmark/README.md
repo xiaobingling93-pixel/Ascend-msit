@@ -1,5 +1,5 @@
-# ais_bench推理工具使用指南
-- ais_bench推理工具，用来针对指定的推理模型运行推理程序，并能够测试推理模型的性能（包括吞吐率、时延）。
+# ais_bench 推理工具使用指南
+- 用来针对指定的推理模型运行推理程序，并能够测试推理模型的性能（包括吞吐率、时延）。
 - **该部分代码已移至 [Gitee Ascend/tools/ais-bench_workload](https://gitee.com/ascend/tools/tree/master/ais-bench_workload/tool/ais_bench)，文档及安装方法可参照对应说明**
 - **安装方式** 可使用 [Gitee Ascend/tools/ais-bench_workload](https://gitee.com/ascend/tools/tree/master/ais-bench_workload/tool/ais_bench) 提供的 whl 包安装
   ```sh

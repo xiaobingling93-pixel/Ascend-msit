@@ -26,8 +26,8 @@ class BenchmarkInstall(AitInstaller):
         if "aclruntime" not in installed_pkg:
             check_res.append("[error] aclruntime not installed. use `msit build-extra benchmark` to try again")
 
-        if "ais_bench" not in installed_pkg:
-            check_res.append("[error] ais_bench not installed. use `msit build-extra benchmark` to try again")
+        if "ais-bench" not in installed_pkg:
+            check_res.append("[error] ais-bench not installed. use `msit build-extra benchmark` to try again")
 
         if not check_res:
             return "OK"
