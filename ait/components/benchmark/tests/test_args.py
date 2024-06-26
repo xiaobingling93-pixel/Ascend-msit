@@ -22,7 +22,6 @@ from msit_benchmark.__main__ import get_cmd_instance
 
 FILE_PERMISSION = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP
 
-CUR_DIR = f"{os.path.dirname(__file__)}/"
 PREFIX = "benchmark_test_args_fake_"
 FAKE_OM_PATH = PREFIX + "model.om"
 FAKE_INVALID_OM_PATH = PREFIX + "invalid_model.om"
