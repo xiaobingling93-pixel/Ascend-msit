@@ -22,6 +22,7 @@ from msit_llm.common.log import logger
 from msit_llm.compare.atb_acc_cmp import is_model_topo_exist
 from msit_llm.compare.cmp_op_match import MatchLocation
 from msit_llm.dump.torch_dump.topo import ModelTree, TreeNode
+from msit_llm.common.constant import GLOBAL_AIT_DUMP_PATH
 
 
 class CompareDataParse(ABC):
@@ -132,7 +133,7 @@ class CompareDataATB(CompareDataParse):
         MAX_PARSE_LEVEL = 3
         parse_level = 0
         for index in reversed(range(len(path_list))):
-            if path_list[index].startswith("GLOBAL_AIT_DUMP_PATH"):
+            if path_list[index].startswith(GLOBAL_AIT_DUMP_PATH):
                 ait_dump_path = os.sep.join(path_list[0 : index + 1])
                 break
             parse_level += 1
