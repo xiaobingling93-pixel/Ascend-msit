@@ -105,7 +105,7 @@ INSTALL_INFO_MAP = [
         "arg-name": "compare",
         "pkg-name": "msit-compare",
         "pkg-path": os.path.join("debug", "compare"),
-        "depends": ["msit-benchmark", "ait-surgeon"]
+        "depends": ["msit-benchmark", "msit-surgeon"],
     },
 ]
 
