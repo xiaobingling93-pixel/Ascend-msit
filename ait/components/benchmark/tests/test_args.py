@@ -30,7 +30,7 @@ FAKE_NOT_EXISTS_OM_PATH = PREFIX + "not_exists_model.om"
 FAKE_BIN_PATH = PREFIX + "data.bin"
 FAKE_ACL_JSON_PATH = PREFIX + "acl.json"
 FAKE_NOT_EXISTS_ACL_JSON_PATH = PREFIX + "not_exists_acl.json"
-FAKE_AIPP_CFG_PATH = PREFIX + "aipp.cfg"
+FAKE_AIPP_CFG_PATH = PREFIX + "aipp.config"
 
 VALID_MODE = int("640", 8)
 INVALID_MODE = int("770", 8)
