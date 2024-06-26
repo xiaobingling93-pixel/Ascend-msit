@@ -57,7 +57,7 @@ def acc_compare(golden_path, my_path, output_path=".", mapping_file_path=".", cm
 
 
 def is_model_topo_exist(golden_path, cmp_level="layer"):
-    # 判断用户输入路径的msit_dump目录下是否包括/model路径，即是否包括模型拓扑信息
+    # 判断用户输入路径的ait_dump目录下是否包括/model路径，即是否包括模型拓扑信息
     absolute_path = os.path.abspath(golden_path)
     model_dir_path = os.path.join(absolute_path, '../../../' if cmp_level == "layer" else '../../', 'model')
     model_dir_path = os.path.normpath(model_dir_path)

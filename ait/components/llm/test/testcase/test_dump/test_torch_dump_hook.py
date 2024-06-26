@@ -8,9 +8,10 @@ from torch import nn
 from msit_llm import DumpConfig
 from msit_llm import register_hook
 
+from components.llm.msit_llm.common.constant import GLOBAL_AIT_DUMP_PATH
 
 MODEL_NAME_LIST = ["root", "root.ln"]
-DUMP_PATH = "./msit_dump"
+DUMP_PATH = f"./{GLOBAL_AIT_DUMP_PATH}"
 
 
 class SampleModel(nn.Module):

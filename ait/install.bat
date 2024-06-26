@@ -108,14 +108,17 @@ IF NOT %errorlevel%==0 (
 
 IF DEFINED select_transplt (
     pip3 uninstall msit-transplt %all_uninstall%
+    pip3 uninstall ait-transplt %all_uninstall%
 )
 
 IF DEFINED select_surgeon (
     pip3 uninstall msit-surgeon %all_uninstall%
+    pip3 uninstall ait-surgeon %all_uninstall%
 ) 
 
 IF %all_component%==1 (
     pip3 uninstall msit msit-transplt msit-surgeon %all_uninstall%
+    pip3 uninstall ait ait-transplt ait-surgeon %all_uninstall%
 )
 
 GOTO:eof

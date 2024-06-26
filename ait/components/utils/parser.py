@@ -18,7 +18,7 @@ import argparse
 from abc import abstractmethod
 from .util import get_entry_points
 
-AIT_FAQ_HOME = "gitee repo: Ascend/ait, wiki"
+AIT_FAQ_HOME = "gitee repo: Ascend/msit, wiki"
 MIND_STUDIO_LOGO = "[Powered by MindStudio]"
 
 logging.basicConfig(

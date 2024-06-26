@@ -87,10 +87,10 @@ pre_check_skl2onnx(){
 uninstall(){
   pip3 uninstall msit analyze_tool convert_tool compare auto_optimizer msprof transplt ${all_uninstall}
   pip3 uninstall ait analyze_tool convert_tool compare auto_optimizer msprof transplt ${all_uninstall}
-  if [ -z $only_debug ] && [ -z $only_compare ] && [ -z $only_surgen ] && [ -z $only_benchmark ] && [ -z $only_analyze ] && [ -z $only_convert ] && [ -z $only_transplt ] && [ -z $only_profile ] && [ -z $only_llm ]
+  if [ -z $only_debug ] && [ -z $only_compare ] && [ -z $only_surgen ] && [ -z $only_benchmark ] && [ -z $only_analyze ] && [ -z $only_convert ] && [ -z $only_transplt ] && [ -z $only_profile ] && [ -z $only_llm ] && [ -z $only_tensor_view ]
   then
-    pip3 uninstall msit msit-analyze aclruntime ais_bench msit-convert msit-compare msit-surgeon msit-profile msit-transplt msit-llm ${all_uninstall}
-    pip3 uninstall ms-ait ait-analyze aclruntime ais_bench ait-convert ait-compare ait-surgeon ait-profile ait-transplt ait-llm ${all_uninstall}
+    pip3 uninstall msit msit-analyze aclruntime ais_bench msit-convert msit-compare msit-surgeon msit-profile msit-transplt msit-llm msit-tensor-view ${all_uninstall}
+    pip3 uninstall ms-ait ait-analyze aclruntime ais_bench ait-convert ait-compare ait-surgeon ait-profile ait-transplt ait-llm ait-tensor-view ${all_uninstall}
   else
     if [ ! -z $only_compare ]
     then
@@ -140,9 +140,10 @@ uninstall(){
     fi
 
     if [ ! -z $only_tensor_view ]
-        then
-          pip3 uninstall tensor_view ${all_uninstall}
-        fi
+    then
+      pip3 uninstall ait-tensor-view ${all_uninstall}
+      pip3 uninstall msit-tensor-view ${all_uninstall}
+    fi
   fi
   exit;
 }

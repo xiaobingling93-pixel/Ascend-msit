@@ -102,7 +102,7 @@ class OpChecker:
 
     def get_base_path(self, cur_path):
         dirseg = cur_path.split(os.path.sep)
-        if len(dirseg) >= 4 and dirseg[-3] == 'tensors' and dirseg[-4].startswith('msit_dump'):
+        if len(dirseg) >= 4 and dirseg[-3] == 'tensors' and dirseg[-4].startswith('GLOBAL_AIT_DUMP_PATH'):
             try:
                 pid = dirseg[-2].split("_")[1]
             except:

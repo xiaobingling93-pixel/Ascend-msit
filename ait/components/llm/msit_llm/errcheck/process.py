@@ -61,7 +61,7 @@ def handles_so_dir() -> None:
     save_tensor_so_name = ATB_PROB_LIB_WITH_ABI if cur_is_use_cxx11 else ATB_PROB_LIB_WITHOUT_ABI
     
     # .so lib should and will be built into errcheck directory in the future
-    save_tensor_so_path = os.path.join(cann_path, "tools", "msit_backend", "dump", save_tensor_so_name)
+    save_tensor_so_path = os.path.join(cann_path, "tools", "ait_backend", "dump", save_tensor_so_name)
     if not os.path.exists(save_tensor_so_path):
         raise OSError(f"{save_tensor_so_name} is not found in {cann_path}. Try installing the latest cann-toolkit")
     

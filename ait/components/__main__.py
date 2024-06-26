@@ -42,5 +42,11 @@ def main():
                 ) from err
 
 
+def ait_main():
+    print("Attention: The 'ait' command will be deprecated in the future version, please use 'msit' instead.")
+
+    main()
+
+
 if __name__ == "__main__":
     main()

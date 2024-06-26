@@ -24,6 +24,7 @@ import numpy as np
 import msit_llm.compare.cmp_utils
 from msit_llm.compare import atb_acc_cmp
 
+from components.llm.msit_llm.common.constant import GLOBAL_AIT_DUMP_PATH
 
 FILE_PERMISSION = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP
 FAKE_GOLDEN_DATA_PATH = "test_acc_cmp_fake_golden_data.npy"
@@ -106,9 +107,9 @@ def test_atb_path():
         atb_topo = json.load(f)
 
     if not os.path.exists(test_atb_path):
-        os.makedirs(os.path.join(test_atb_path, "msit_dump/tensors/1_2222/0/"), mode=0o750)
-        os.makedirs(os.path.join(test_atb_path, "msit_dump/model/2222/"), mode=0o750)
-        _json_path = os.path.join(test_atb_path, "msit_dump/model/2222/BloomModel.json")
+        os.makedirs(os.path.join(test_atb_path, f"{GLOBAL_AIT_DUMP_PATH}/tensors/1_2222/0/"), mode=0o750)
+        os.makedirs(os.path.join(test_atb_path, f"{GLOBAL_AIT_DUMP_PATH}/model/2222/"), mode=0o750)
+        _json_path = os.path.join(test_atb_path, f"{GLOBAL_AIT_DUMP_PATH}/model/2222/BloomModel.json")
         with os.fdopen(os.open(_json_path, os.O_CREAT | os.O_WRONLY, FILE_PERMISSION), 'w') as ff:
             json.dump(atb_topo, ff)
 
@@ -223,7 +224,7 @@ def test_compare_metadata_given_golden_path_when_valid_then_pass(test_metadata_p
 def test_compare_torch_atb_given_data_path_when_valid_then_pass(test_torch_path, test_atb_path):
     torch_model_topo_file = os.path.join(test_torch_path, "1111_npu0/model_tree.json")
     golden_path = os.path.abspath(os.path.join(test_torch_path, "1111_npu0/0/"))
-    my_path = os.path.abspath(os.path.join(test_atb_path, "msit_dump/tensors/1_2222/0/"))
+    my_path = os.path.abspath(os.path.join(test_atb_path, f"{GLOBAL_AIT_DUMP_PATH}/tensors/1_2222/0/"))
     with mock.patch('msit_llm.dump.torch_dump.topo.TreeNode.get_layer_node_type', return_value="BloomLayer"):
         csv_save_path = atb_acc_cmp.cmp_torch_atb(torch_model_topo_file, (golden_path, my_path, "."), 
                                                 mapping_file_path=".")
