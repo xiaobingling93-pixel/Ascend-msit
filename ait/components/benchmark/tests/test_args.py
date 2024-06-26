@@ -13,11 +13,14 @@
 # limitations under the License.
 
 import os
+import stat
 import argparse
 
 import pytest
 from msit_benchmark.__main__ import get_cmd_instance
 
+
+FILE_PERMISSION = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP
 
 CUR_DIR = f"{os.path.dirname(__file__)}/"
 PREFIX = "benchmark_test_args_fake_"
@@ -38,7 +41,7 @@ INVALID_ARG = "--invalid_arg"
 def init_resources():
     file_names = [FAKE_OM_PATH, FAKE_INVALID_OM_PATH, FAKE_BIN_PATH, FAKE_ACL_JSON_PATH, FAKE_AIPP_CFG_PATH]
     for file_name in file_names:
-        with os.fdopen(os.open(file_path, os.O_CREAT | os.O_WRONLY, FILE_PERMISSION), "w") as ff:
+        with os.fdopen(os.open(file_name, os.O_CREAT | os.O_WRONLY, FILE_PERMISSION), "w") as ff:
             pass
         mode = INVALID_MODE if file_name == FAKE_INVALID_OM_PATH else VALID_MODE
         os.chmod(file_name, mode)
