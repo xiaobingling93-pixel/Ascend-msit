@@ -29,10 +29,10 @@ MODEL_CONVERT_PATH=$(dirname $(${PYTHON} -c "import model_convert;print(model_co
 CUR_PATH=$(dirname $(readlink -f $0))
 
 build_aie_convert(){
-  cd ${CUR_PATH}/model_convert/aie/cpp
+  cd ${CUR_PATH}/aie/cpp
   rm -rf build && mkdir build && cd build && cmake .. && make -j
 
-  AIE_CONVERT=${CUR_PATH}/model_convert/aie/cpp/build/aie_convert
+  AIE_CONVERT=${CUR_PATH}/aie/cpp/build/aie_convert
 
   if [ -f ${AIE_CONVERT} ];then
     cp ${AIE_CONVERT} ${MODEL_CONVERT_PATH}/aie

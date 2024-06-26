@@ -7,7 +7,6 @@
 - 工具安装请见 [ait一体化工具使用指南](../install/README.md)
 
 ## 使用方法
-以下介绍的是ait benchmark 命令行工具的使用，如果需要使用benchmark开放的API，请移步[benchmark interface API 使用指南](API_GUIDE.md)
 ### 功能介绍
 #### 使用入口
 benchmark推理功能可以直接通过ait命令行形式启动模型测试。启动方式如下：
