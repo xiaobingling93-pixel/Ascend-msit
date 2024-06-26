@@ -34,11 +34,11 @@ INVALID_MODE = int("770", 8)
 INVALID_ARG = "--invalid_arg"
 
 
-@pytest.fixture(scope='module', autouse=True)
+@pytest.fixture(scope="module", autouse=True)
 def init_resources():
     file_names = [FAKE_OM_PATH, FAKE_INVALID_OM_PATH, FAKE_BIN_PATH, FAKE_ACL_JSON_PATH, FAKE_AIPP_CFG_PATH]
     for file_name in file_names:
-        with os.fdopen(os.open(file_path, os.O_CREAT | os.O_WRONLY, FILE_PERMISSION), 'w') as ff:
+        with os.fdopen(os.open(file_path, os.O_CREAT | os.O_WRONLY, FILE_PERMISSION), "w") as ff:
             pass
         mode = INVALID_MODE if file_name == FAKE_INVALID_OM_PATH else VALID_MODE
         os.chmod(file_name, mode)
