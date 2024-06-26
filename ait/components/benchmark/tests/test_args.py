@@ -13,19 +13,45 @@
 # limitations under the License.
 
 import os
+import stat
 import argparse
 
 import pytest
 from msit_benchmark.__main__ import get_cmd_instance
 
 
-CUR_DIR = f"{os.path.dirname(__file__)}/"
+FILE_PERMISSION = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP
+
 PREFIX = "benchmark_test_args_fake_"
 FAKE_OM_PATH = PREFIX + "model.om"
+FAKE_INVALID_OM_PATH = PREFIX + "invalid_model.om"
+FAKE_NOT_EXISTS_OM_PATH = PREFIX + "not_exists_model.om"
 FAKE_BIN_PATH = PREFIX + "data.bin"
 FAKE_ACL_JSON_PATH = PREFIX + "acl.json"
-FAKE_AIPP_CFG_PATH = PREFIX + "aipp.cfg"
+FAKE_NOT_EXISTS_ACL_JSON_PATH = PREFIX + "not_exists_acl.json"
+FAKE_AIPP_CFG_PATH = PREFIX + "aipp.config"
+
+VALID_MODE = int("640", 8)
+INVALID_MODE = int("770", 8)
 INVALID_ARG = "--invalid_arg"
+
+
+@pytest.fixture(scope="module", autouse=True)
+def init_resources():
+    file_names = [FAKE_OM_PATH, FAKE_INVALID_OM_PATH, FAKE_BIN_PATH, FAKE_ACL_JSON_PATH, FAKE_AIPP_CFG_PATH]
+    for file_name in file_names:
+        with os.fdopen(os.open(file_name, os.O_CREAT | os.O_WRONLY, FILE_PERMISSION), "w") as ff:
+            pass
+        mode = INVALID_MODE if file_name == FAKE_INVALID_OM_PATH else VALID_MODE
+        os.chmod(file_name, mode)
+
+    yield
+
+    for file_name in file_names:
+        if os.path.exists(file_name):
+            os.chmod(file_name, INVALID_MODE)
+            os.remove(file_name)
+
 
 FULL_CMD_DICT = {
     "--om-model": FAKE_OM_PATH,
@@ -144,5 +170,59 @@ def test_benchmark_argparse_given_valid_when_short_then_pass():
 
 def test_benchmark_argparse_given_invalid_arg_when_full_then_error():
     new_args = {INVALID_ARG: "anything"}
+    with pytest.raises(SystemExit) as e:
+        args = benchmark_argparse(cmd_dict_to_list(FULL_CMD_DICT, new_args=new_args))
+
+
+def test_benchmark_argparse_given_invalid_model_when_full_then_error():
+    new_args = {"--om-model": FAKE_INVALID_OM_PATH}
+    with pytest.raises(SystemExit) as e:
+        args = benchmark_argparse(cmd_dict_to_list(FULL_CMD_DICT, new_args=new_args))
+
+
+def test_benchmark_argparse_given_not_exists_model_when_full_then_error():
+    new_args = {"--om-model": FAKE_NOT_EXISTS_OM_PATH}
+    with pytest.raises(SystemExit) as e:
+        args = benchmark_argparse(cmd_dict_to_list(FULL_CMD_DICT, new_args=new_args))
+
+
+def test_benchmark_argparse_given_not_exists_acl_json_when_short_then_error():
+    new_args = {"-acl": FAKE_NOT_EXISTS_ACL_JSON_PATH}
+    with pytest.raises(SystemExit) as e:
+        args = benchmark_argparse(cmd_dict_to_list(FULL_CMD_DICT, new_args=new_args))
+
+
+def test_benchmark_argparse_given_negative_loop_when_full_then_error():
+    new_args = {"--loop": "-3"}
+    with pytest.raises(SystemExit) as e:
+        args = benchmark_argparse(cmd_dict_to_list(FULL_CMD_DICT, new_args=new_args))
+
+
+def test_benchmark_argparse_given_negative_batch_size_when_full_then_error():
+    new_args = {"--batch-size": "-3"}
+    with pytest.raises(SystemExit) as e:
+        args = benchmark_argparse(cmd_dict_to_list(FULL_CMD_DICT, new_args=new_args))
+
+
+def test_benchmark_argparse_given_negative_warmup_count_when_full_then_error():
+    new_args = {"--warmup-count": "-3"}
+    with pytest.raises(SystemExit) as e:
+        args = benchmark_argparse(cmd_dict_to_list(FULL_CMD_DICT, new_args=new_args))
+
+
+def test_benchmark_argparse_given_negative_output_batchsize_axis_when_full_then_error():
+    new_args = {"--output-batchsize-axis": "-3"}
+    with pytest.raises(SystemExit) as e:
+        args = benchmark_argparse(cmd_dict_to_list(FULL_CMD_DICT, new_args=new_args))
+
+
+def test_benchmark_argparse_given_large_device_when_full_then_error():
+    new_args = {"--device": "1,234,257"}
+    with pytest.raises(SystemExit) as e:
+        args = benchmark_argparse(cmd_dict_to_list(FULL_CMD_DICT, new_args=new_args))
+
+
+def test_benchmark_argparse_given_invalid_outfmt_when_full_then_error():
+    new_args = {"--outfmt": "JSON"}
     with pytest.raises(SystemExit) as e:
         args = benchmark_argparse(cmd_dict_to_list(FULL_CMD_DICT, new_args=new_args))
