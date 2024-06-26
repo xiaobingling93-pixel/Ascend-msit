@@ -88,7 +88,7 @@ ait benchmark --om-model /home/model/resnet50_v1.om --output ./output --dump 1
   ```bash
   ait benchmark --om-model ./resnet50_v1_bs1_fp32.om --acl-json-path ./acl.json
   ```
-输出文件对应参考1.2与1.3节的示例。
+输出文件对应参考1.1与1.2节的示例。
 
 ## 2 拓展使用说明
 ### 2.1 --profiler 的自定义使用

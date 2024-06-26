@@ -1,6 +1,6 @@
 # Dynamic AIPP
 ## 介绍
-- 动态AIPP的介绍参考[昇腾社区](https://www.hiascend.com/)CANN手册中AIPP相关章节。
+- 动态AIPP的介绍参考[什么是AIPP](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/80RC2alpha002/devaids/auxiliarydevtool/atlasatc_16_0016.html)。
 - 目前benchmark工具只支持单个input的带有动态AIPP配置的模型，只支持静态shape、动态batch、动态宽高三种场景，不支持动态shape场景。
 ## 运行示例
 ### --aipp_config 输入的.config文件模板
