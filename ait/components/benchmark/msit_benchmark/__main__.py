@@ -21,37 +21,37 @@ from components.utils.parser import BaseCommand
 
 class BenchmarkCommand(BaseCommand):
     from ais_bench.infer.args_check import (
-        check_dym_string, check_dym_range_string, check_number_list, str2bool, check_positive_integer,
-        check_batchsize_valid, check_nonnegative_integer, check_npu_id_range_vaild, check_device_range_valid, check_om_path_legality,
-        check_input_path_legality, check_output_path_legality, check_acl_json_path_legality,
-        check_aipp_config_path_legality
+        check_dym_string,
+        check_dym_range_string,
+        check_number_list,
+        str2bool,
+        check_positive_integer,
+        check_batchsize_valid,
+        check_nonnegative_integer,
+        check_npu_id_range_vaild,
+        check_device_range_valid,
+        check_om_path_legality,
+        check_input_path_legality,
+        check_output_path_legality,
+        check_acl_json_path_legality,
+        check_aipp_config_path_legality,
     )
 
     def add_arguments(self, parser):
         parser.add_argument(
-            "-om",
-            "--om-model",
-            type=check_om_path_legality,
-            required=True,
-            help="The path of the om model"
+            "-om", "--om-model", type=check_om_path_legality, required=True, help="The path of the om model"
         )
+        parser.add_argument("-i", "--input", type=check_input_path_legality, default=None, help="Input file or dir")
         parser.add_argument(
-            '-i',
-            '--input',
-            type=check_input_path_legality,
-            default=None,
-            help="Input file or dir"
-        )
-        parser.add_argument(
-            '-o',
-            '--output',
+            "-o",
+            "--output",
             type=check_output_path_legality,
             default=None,
-            help="Inference data output path. The inference results are output to \
-                the subdirectory named current date under given output path"
+            help="Inference data output path. The inference results are output to the subdirectory \
+                named current date under given output path",
         )
         parser.add_argument(
-            '-od',
+            "-od",
             "--output-dirname",
             type=check_output_path_legality,
             default=None,
@@ -59,235 +59,180 @@ class BenchmarkCommand(BaseCommand):
                 Used with parameter output, cannot be used alone. \
                 The inference result is output to subdirectory named by output dirname \
                 under  output path. such as --output-dirname 'tmp', \
-                the final inference results are output to the folder of  {$output}/tmp"
+                the final inference results are output to the folder of  {$output}/tmp",
         )
         parser.add_argument(
-            "--outfmt",
-            default="BIN",
-            choices=["NPY", "BIN", "TXT"],
-            help="Output file format (NPY or BIN or TXT)"
+            "--outfmt", default="BIN", choices=["NPY", "BIN", "TXT"], help="Output file format (NPY or BIN or TXT)"
         )
-        parser.add_argument(
-            "--loop",
-            type=check_positive_integer,
-            default=1,
-            help="The round of the PureInfer."
-        )
-        parser.add_argument(
-            "--debug",
-            type=str2bool,
-            default=False,
-            help="Debug switch,print model information"
-        )
+        parser.add_argument("--loop", type=check_positive_integer, default=1, help="The round of the PureInfer.")
+        parser.add_argument("--debug", type=str2bool, default=False, help="Debug switch,print model information")
         parser.add_argument(
             "-d",
             "--device",
             type=check_device_range_valid,
             default=0,
-            help="The NPU device ID to use.valid value range is [0, 255]"
+            help="The NPU device ID to use.valid value range is [0, 255]",
         )
         parser.add_argument(
-            '-db',
-            '--dym-batch',
+            "-db",
+            "--dym-batch",
             dest="dym_batch",
             type=check_positive_integer,
             default=0,
-            help="Dynamic batch size param，such as --dym-batch 2"
+            help="Dynamic batch size param，such as --dym-batch 2",
         )
         parser.add_argument(
-            '-dhw',
-            '--dym-hw',
+            "-dhw",
+            "--dym-hw",
             dest="dym_hw",
             type=check_dym_string,
             default=None,
-            help="Dynamic image size param, such as --dym-hw \"300,500\""
+            help='Dynamic image size param, such as --dym-hw "300,500"',
         )
         parser.add_argument(
-            '-dd',
-            '--dym-dims',
+            "-dd",
+            "--dym-dims",
             dest="dym_dims",
             type=check_dym_string,
             default=None,
-            help="Dynamic dims param, such as --dym-dims \"data:1,600;img_info:1,600\""
+            help='Dynamic dims param, such as --dym-dims "data:1,600;img_info:1,600"',
         )
         parser.add_argument(
-            '-ds',
-            '--dym-shape',
+            "-ds",
+            "--dym-shape",
             dest="dym_shape",
             type=check_dym_string,
             default=None,
-            help="Dynamic shape param, such as --dym-shape \"data:1,600;img_info:1,600\""
+            help='Dynamic shape param, such as --dym-shape "data:1,600;img_info:1,600"',
         )
         parser.add_argument(
-            '-outsize',
-            '--output-size',
+            "-outsize",
+            "--output-size",
             dest="output_size",
             type=check_number_list,
             default=None,
-            help="Output size for dynamic shape mode"
+            help="Output size for dynamic shape mode",
         )
         parser.add_argument(
-            '-asdsm',
-            '--auto-set-dymshape-mode',
-            dest='auto_set_dymshape_mode',
+            "-asdsm",
+            "--auto-set-dymshape-mode",
+            dest="auto_set_dymshape_mode",
             type=str2bool,
             default=False,
-            help="Auto_set_dymshape_mode"
+            help="Auto_set_dymshape_mode",
         )
         parser.add_argument(
-            '-asddm',
-            '--auto-set-dymdims-mode',
-            dest='auto_set_dymdims_mode',
+            "-asddm",
+            "--auto-set-dymdims-mode",
+            dest="auto_set_dymdims_mode",
             type=str2bool,
             default=False,
-            help="Auto set dymdims mode"
+            help="Auto set dymdims mode",
         )
+        parser.add_argument("--batch-size", type=check_batchsize_valid, default=None, help="Batch size of input tensor")
         parser.add_argument(
-            '--batch-size',
-            type=check_batchsize_valid,
-            default=None,
-            help="Batch size of input tensor"
-        )
-        parser.add_argument(
-            '-pdt',
-            '--pure-data-type',
-            dest='pure_data_type',
+            "-pdt",
+            "--pure-data-type",
+            dest="pure_data_type",
             type=str,
             default="zero",
             choices=["zero", "random"],
-            help="Null data type for pure inference(zero or random)"
+            help="Null data type for pure inference(zero or random)",
         )
+        parser.add_argument("-pf", "--profiler", type=str2bool, default=False, help="Profiler switch")
+        parser.add_argument("--dump", type=str2bool, default=False, help="Dump switch")
         parser.add_argument(
-            '-pf',
-            '--profiler',
-            type=str2bool,
-            default=False,
-            help="Profiler switch"
-        )
-        parser.add_argument(
-            "--dump",
-            type=str2bool,
-            default=False,
-            help="Dump switch"
-        )
-        parser.add_argument(
-            '-acl',
-            '--acl-json-path',
-            dest='acl_json_path',
+            "-acl",
+            "--acl-json-path",
+            dest="acl_json_path",
             type=check_acl_json_path_legality,
             default=None,
-            help="Acl json path for profiling or dump"
+            help="Acl json path for profiling or dump",
         )
         parser.add_argument(
-            '-oba',
-            '--output-batchsize-axis',
-            dest='output_batchsize_axis',
+            "-oba",
+            "--output-batchsize-axis",
+            dest="output_batchsize_axis",
             type=check_nonnegative_integer,
             default=0,
-            help="Splitting axis number when outputing tensor results, such as --output-batchsize-axis 1"
+            help="Splitting axis number when outputing tensor results, such as --output-batchsize-axis 1",
         )
         parser.add_argument(
-            '-rm',
-            '--run-mode',
-            dest='run_mode',
+            "-rm",
+            "--run-mode",
+            dest="run_mode",
             type=str,
             default="array",
             choices=["array", "files", "tensor", "full"],
-            help="Run mode"
+            help="Run mode",
         )
         parser.add_argument(
-            '-das',
-            '--display-all-summary',
-            dest='display_all_summary',
+            "-das",
+            "--display-all-summary",
+            dest="display_all_summary",
             type=str2bool,
             default=False,
-            help="Display all summary include h2d d2h info"
+            help="Display all summary include h2d d2h info",
         )
         parser.add_argument(
-            '-wcount',
-            '--warmup-count',
-            dest='warmup_count',
+            "-wcount",
+            "--warmup-count",
+            dest="warmup_count",
             type=check_nonnegative_integer,
             default=1,
-            help="Warmup count before inference"
+            help="Warmup count before inference",
         )
         parser.add_argument(
-            '-dr',
-            '--dym-shape-range',
+            "-dr",
+            "--dym-shape-range",
             dest="dym_shape_range",
             type=check_dym_range_string,
             default=None,
-            help='Dynamic shape range, such as --dym-shape-range "data:1,600~700;img_info:1,600-700"'
+            help='Dynamic shape range, such as --dym-shape-range "data:1,600~700;img_info:1,600-700"',
         )
         parser.add_argument(
-            '-aipp',
-            '--aipp-config',
-            dest='aipp_config',
+            "-aipp",
+            "--aipp-config",
+            dest="aipp_config",
             type=check_aipp_config_path_legality,
             default=None,
-            help="File type: .config, to set actual aipp params before infer"
+            help="File type: .config, to set actual aipp params before infer",
         )
         parser.add_argument(
-            '-ec',
-            '--energy-consumption',
-            dest='energy_consumption',
+            "-ec",
+            "--energy-consumption",
+            dest="energy_consumption",
             type=str2bool,
             default=False,
-            help="Obtain power consumption data for model inference"
+            help="Obtain power consumption data for model inference",
         )
         parser.add_argument(
-            '--npu-id',
-            dest='npu_id',
+            "--npu-id",
+            dest="npu_id",
             type=check_npu_id_range_vaild,
             default=0,
-            help="The NPU ID to use. using cmd: \'npu-smi info\' to check "
+            help="The NPU ID to use. using cmd: 'npu-smi info' to check ",
         )
+        parser.add_argument("--backend", type=str, default=None, choices=["trtexec"], help="Backend trtexec")
+        parser.add_argument("--perf", type=str2bool, default=False, help="Perf switch")
+        parser.add_argument("--pipeline", type=str2bool, default=False, help="Pipeline switch")
+        parser.add_argument("--profiler-rename", type=str2bool, default=True, help="Profiler rename switch")
+        parser.add_argument("--dump-npy", type=str2bool, default=False, help="dump data convert to npy")
         parser.add_argument(
-            "--backend",
-            type=str,
-            default=None,
-            choices=["trtexec"],
-            help="Backend trtexec"
-        )
-        parser.add_argument(
-            "--perf",
+            "--divide-input",
+            dest="divide_input",
             type=str2bool,
             default=False,
-            help="Perf switch"
+            help="Input datas need to be divided to match multi devices or not, \
+                --device should be list",
         )
         parser.add_argument(
-            "--pipeline",
-            type=str2bool,
-            default=False,
-            help="Pipeline switch"
-        )
-        parser.add_argument(
-            "--profiler-rename",
-            type=str2bool,
-            default=True,
-            help="Profiler rename switch"
-        )
-        parser.add_argument(
-            "--dump-npy",
-            type=str2bool,
-            default=False,
-            help="dump data convert to npy"
-        )
-        parser.add_argument(
-            '--divide-input',
-            dest='divide_input',
-            type=str2bool,
-            default=False,
-            help='Input datas need to be divided to match multi devices or not, \
-                --device should be list'
-        )
-        parser.add_argument(
-            '--threads',
-            dest='threads',
+            "--threads",
+            dest="threads",
             type=check_positive_integer,
             default=1,
             help="Number of threads for computing. \
-                need to set --pipeline when setting threads number to be more than one."
+                need to set --pipeline when setting threads number to be more than one.",
         )
 
     def handle(self, args):
