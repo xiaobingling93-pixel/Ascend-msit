@@ -20,24 +20,24 @@ from components.utils.parser import BaseCommand
 
 
 class BenchmarkCommand(BaseCommand):
-    from ais_bench.infer.args_check import (
-        check_dym_string,
-        check_dym_range_string,
-        check_number_list,
-        str2bool,
-        check_positive_integer,
-        check_batchsize_valid,
-        check_nonnegative_integer,
-        check_npu_id_range_vaild,
-        check_device_range_valid,
-        check_om_path_legality,
-        check_input_path_legality,
-        check_output_path_legality,
-        check_acl_json_path_legality,
-        check_aipp_config_path_legality,
-    )
-
     def add_arguments(self, parser):
+        from ais_bench.infer.args_check import (
+            check_dym_string,
+            check_dym_range_string,
+            check_number_list,
+            str2bool,
+            check_positive_integer,
+            check_batchsize_valid,
+            check_nonnegative_integer,
+            check_npu_id_range_vaild,
+            check_device_range_valid,
+            check_om_path_legality,
+            check_input_path_legality,
+            check_output_path_legality,
+            check_acl_json_path_legality,
+            check_aipp_config_path_legality,
+        )
+
         parser.add_argument(
             "-om", "--om-model", type=check_om_path_legality, required=True, help="The path of the om model"
         )
