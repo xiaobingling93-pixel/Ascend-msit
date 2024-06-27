@@ -98,14 +98,14 @@ INSTALL_INFO_MAP = [
     },
     {
         "arg-name": "benchmark",
-        "pkg-name": "ait-benchmark",
+        "pkg-name": "msit-benchmark",
         "pkg-path": "benchmark",
     },
     {
         "arg-name": "compare",
         "pkg-name": "ait-compare",
         "pkg-path": os.path.join("debug", "compare"),
-        "depends": ["ait-benchmark", "ait-surgeon"],
+        "depends": ["msit-benchmark", "ait-surgeon"],
     },
 ]
 

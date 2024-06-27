@@ -4,10 +4,9 @@
 本文介绍benchmark功能，用来针对指定的推理模型运行推理程序，并能够测试推理模型的性能（包括吞吐率、时延）。
 
 ## 工具安装
-- 工具安装请见 [ait一体化工具使用指南](../../README.md)
+- 工具安装请见 [ait一体化工具使用指南](../install/README.md)
 
 ## 使用方法
-以下介绍的是ait benchmark 命令行工具的使用，如果需要使用benchmark开放的API，请移步[benchmark interface API 使用指南](API_GUIDE.md)
 ### 功能介绍
 #### 使用入口
 benchmark推理功能可以直接通过ait命令行形式启动模型测试。启动方式如下：

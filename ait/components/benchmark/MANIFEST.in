@@ -1,2 +1,0 @@
-include ais_bench/evaluate/dataset/download.sh
-include ais_bench/evaluate/dataset/*.json

@@ -17,6 +17,7 @@ import os
 import shutil
 
 from unittest import mock
+from unittest.mock import patch
 
 from model_evaluation.bean import OpInnerInfo
 from model_evaluation.common import utils
@@ -32,17 +33,17 @@ class TestOmParser(unittest.TestCase):
 
     def test_parse_om_to_json_success_case(self):
         om_parser = OmParser(self.om_path, self.cur_dir)
-
-        utils.exec_command = mock.Mock(return_value=('ATC run success', ''))
-        res = om_parser.parse_om_to_json()
-        self.assertTrue(res)
+        with patch('model_evaluation.common.utils.exec_command') as mock_exec_command:
+            mock_exec_command.return_value = ('ATC run success', '')
+            res = om_parser.parse_om_to_json()
+            self.assertTrue(res)
 
     def test_parse_om_to_json_fail_case(self):
         om_parser = OmParser(self.om_path, self.cur_dir)
-
-        utils.exec_command = mock.Mock(return_value=('', 'Run error.'))
-        res = om_parser.parse_om_to_json()
-        self.assertFalse(res)
+        with patch('model_evaluation.common.utils.exec_command') as mock_exec_command:
+            mock_exec_command.return_value = ('', 'Run error.')
+            res = om_parser.parse_om_to_json()
+            self.assertFalse(res)
 
     def test_parse_all_ops_fail_case(self):
         om_parser = OmParser(self.om_path, self.cur_dir)

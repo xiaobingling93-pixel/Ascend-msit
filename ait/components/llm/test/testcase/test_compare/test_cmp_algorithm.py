@@ -54,3 +54,10 @@ def test_relative_euclidean_distance(golden_data, test_data):
     res, message = relative_euclidean_distance(golden_data, test_data)
     assert res == 0.0
     assert message == ''
+
+
+def test_relative_euclidean_distance_when_low_acc(golden_data, test_data):
+    test_data = 10 * test_data
+    res, message = relative_euclidean_distance(golden_data, test_data)
+    assert res == 9.0
+    assert message == ''
