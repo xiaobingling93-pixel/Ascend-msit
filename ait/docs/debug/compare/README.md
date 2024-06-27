@@ -9,7 +9,7 @@
 
 
 ## 工具安装
-- 一般工具安装请见 [ait一体化工具使用指南](../../../README.md)
+- 一般工具安装请见 [ait一体化工具使用指南](https://gitee.com/ascend/ait/blob/master/ait/docs/install/README.md)
 - 此外还提供容器安装方式（支持caffe精度比对）
 
 ### 容器方式安装
