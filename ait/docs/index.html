@@ -44,7 +44,7 @@
     var num = 0;
     var path = "docs"
     window.$docsify = {
-      name: 'AIT',
+      name: 'MSIT',
       repo: 'https://gitee.com/ascend/ait',
       mergeNavbar: false,
       topMargin: 90,
@@ -79,7 +79,7 @@
           },
           link: function (href, title, text) {
             const menuPageFlag = "**menu**";
-            const menuPathFlag = "/ait";
+            const menuPathFlag = "/msit";
             if (href && href.startsWith(menuPathFlag) && title && title.includes(menuPageFlag)) {
               return this.origin.link.apply(this, [href.substring(menuPathFlag.length), title.replace(menuPageFlag, ""), text])
             }

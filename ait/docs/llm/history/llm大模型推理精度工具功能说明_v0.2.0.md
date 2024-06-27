@@ -2,9 +2,9 @@
 
 v0.2.0版本的新特性包括：
 
-- 支持保存加速库layer拓扑信息（由ait llm dump --type layer开启）
-- 支持保存模型cpu性能信息（由ait llm dump --type cpu_profiling开启)
-- 支持保存加速库base算子信息（算子信息由ait llm dump --type op开启；kernel算子信息由ait llm dump --type kernel开启）
+- 支持保存加速库layer拓扑信息（由msit llm dump --type layer开启）
+- 支持保存模型cpu性能信息（由msit llm dump --type cpu_profiling开启)
+- 支持保存加速库base算子信息（算子信息由msit llm dump --type op开启；kernel算子信息由msit llm dump --type kernel开启）
 
 ## Dump 特性
 
@@ -13,7 +13,7 @@ v0.2.0版本的新特性包括：
 ### 使用方式
 
 ```
-ait llm dump --exec "bash run.sh patches/models/modeling_xxx.py"
+msit llm dump --exec "bash run.sh patches/models/modeling_xxx.py"
 ```
 
 ### 参数说明
@@ -36,11 +36,11 @@ ait llm dump --exec "bash run.sh patches/models/modeling_xxx.py"
 
 Dump默认落盘路径 `{DUMP_DIR}`在当前目录下，如果指定output目录，落盘路径则为指定的 `{OUTPUT_DIR}`。
 
-- tensor信息会生成在默认落盘路径的ait_dump目录下，具体路径是 `{DUMP_DIR}/ait_dump/tensors/{device_id}_{PID}/{TID}`目录下。
-- layer信息会生成在默认落盘路径的ait_dump目录下，具体路径是 `{DUMP_DIR}/ait_dump/layer/{PID}`目录下。
-- cpu_profiling信息会生成在默认落盘路径的ait_dump目录下，具体路径是 `{DUMP_DIR}/ait_dump/cpu_profiling/{TIMESTAMP}/operation_statistic_{executeCount}.txt`。
-- 算子信息会生成在默认落盘路径的ait_dump目录下，具体路径是 `{DUMP_DIR}/ait_dump/operation_io_tensors/{PID}/operation_tensors_{executeCount}.csv`。
-- kernel算子信息会生成在默认落盘路径的ait_dump目录下，具体路径是 `{DUMP_DIR}/ait_dump/kernel_io_tensors/{PID}/kernel_tensors_{executeCount}.csv`。
+- tensor信息会生成在默认落盘路径的msit_dump目录下，具体路径是 `{DUMP_DIR}/msit_dump/tensors/{device_id}_{PID}/{TID}`目录下。
+- layer信息会生成在默认落盘路径的msit_dump目录下，具体路径是 `{DUMP_DIR}/msit_dump/layer/{PID}`目录下。
+- cpu_profiling信息会生成在默认落盘路径的msit_dump目录下，具体路径是 `{DUMP_DIR}/msit_dump/cpu_profiling/{TIMESTAMP}/operation_statistic_{executeCount}.txt`。
+- 算子信息会生成在默认落盘路径的msit_dump目录下，具体路径是 `{DUMP_DIR}/msit_dump/operation_io_tensors/{PID}/operation_tensors_{executeCount}.csv`。
+- kernel算子信息会生成在默认落盘路径的msit_dump目录下，具体路径是 `{DUMP_DIR}/msit_dump/kernel_io_tensors/{PID}/kernel_tensors_{executeCount}.csv`。
 
 注：`{device_id}`为设备号；`{PID}`为进程号；`{TID}`为 `token_id`；`{TIMESTAMP}`为时间戳；`{executeCount}`为 `operation`运行次数。
 
@@ -53,7 +53,7 @@ Dump默认落盘路径 `{DUMP_DIR}`在当前目录下，如果指定output目录
 ### 使用方式
 
 ```
-ait llm compare --golden-path golden_data.bin --my-path my-path.bin
+msit llm compare --golden-path golden_data.bin --my-path my-path.bin
 ```
 
 #### 参数说明

@@ -1,10 +1,10 @@
-# ait benchmark interface python API使用指南
+# msit benchmark interface python API使用指南
 ## benchmark API简介
   benchmark提供的python API可供使能基于昇腾硬件的离线模型(.om模型)推理。<br>
 
-使用ait benchmark 提供的api需要安装`ais_bench`和`aclruntime`包。安装方法有：
-- 1、参考[一体化安装指导](https://gitee.com/ascend/ait/blob/master/ait/docs/install/README.md)安装ait benchmark工具
-- 2、依据需求，单独安装ais_bench包和aclruntime包([安装包获取地址](https://gitee.com/ascend/ait/blob/master/ait/components/benchmark/README.md#下载whl包安装))：
+使用msit benchmark 提供的api需要安装`ais_bench`和`aclruntime`包。安装方法有：
+- 1、参考[一体化安装指导](https://gitee.com/ascend/msit/blob/master/msit/docs/install/README.md)安装msit benchmark工具
+- 2、依据需求，单独安装ais_bench包和aclruntime包([安装包获取地址](https://gitee.com/ascend/msit/blob/master/msit/components/benchmark/README.md#下载whl包安装))：
 
   ``` cmd
   # 安装aclruntime
@@ -451,7 +451,7 @@ reset()
 - device侧保存tensor的方式，在host侧无法直接访问
 
 ## interface python API 使用样例
-- 如果要执行使用样例，需要在linux环境下载[ait](https://gitee.com/ascend/ait)的源码，进入[使用样例目录](https://gitee.com/ascend/ait/tree/master/ait/components/benchmark/api_samples)下, 执行以下命令生成样例执行所需的模型（仅支持在310系列的推理卡上生成，不支持在910系列的训练卡上生成）。
+- 如果要执行使用样例，需要在linux环境下载[msit](https://gitee.com/ascend/msit)的源码，进入[使用样例目录](https://gitee.com/ascend/msit/tree/master/msit/components/benchmark/api_samples)下, 执行以下命令生成样例执行所需的模型（仅支持在310系列的推理卡上生成，不支持在910系列的训练卡上生成）。
   ```cmd
   chmod 750 get_sample_datas.sh
   ```

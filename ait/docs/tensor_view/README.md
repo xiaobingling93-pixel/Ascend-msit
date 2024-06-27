@@ -1,4 +1,4 @@
-# ait tensor view功能使用指南
+# msit tensor view功能使用指南
 
 ### 简介
 tensor-view工具提供了查看tensor的接口，源数据是dump后生成的bin文件。对其进行链式切片、转置操作。默认每次都会打印统计信息和tensor.shape。可以选择打印tensor本身和保存到文件，文件格式可以选择标准torch格式和ATB格式（与dump生成的相同）
@@ -8,19 +8,19 @@ tensor-view工具提供了查看tensor的接口，源数据是dump后生成的bi
 ### 环境准备
 
 - 安装 `python >= 3.7` 环境
-- **安装ait工具**，安装参考文档：[ait工具安装](https://gitee.com/ascend/ait/blob/master/ait/docs/install/README.md)
+- **安装msit工具**，安装参考文档：[msit工具安装](https://gitee.com/ascend/msit/blob/master/msit/docs/install/README.md)
 
 - **数据准备**
     - tensor参数文件(.bin/.pth)路径，支持ATB格式（.bin）/Torch格式（.pth），
 - 命令示例
   ```sh
   # 输入ATB文件，应用连续的切片、转置、切片、转置，operations仅作演示之用，这个示例必定会失败，因为第一个转置不合规【0，2，1，4】
-  ait tensor-view --bin intensor0.bin --operations "[1:2, ..., 3::2];(0,2,1,4);[1:3];(2,0,1)" --output tmp_view/output_view.bin
+  msit tensor-view --bin intensor0.bin --operations "[1:2, ..., 3::2];(0,2,1,4);[1:3];(2,0,1)" --output tmp_view/output_view.bin
   ```
   
   ```sh
   # 输入PTH，输出ATB格式文件，使用缩略参数名
-  ait tensor-view -b rand.pth -op "[1];(2,0,1)" -o out/processed_rand.bin
+  msit tensor-view -b rand.pth -op "[1];(2,0,1)" -o out/processed_rand.bin
   ```
 
 ### 参数说明

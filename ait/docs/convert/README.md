@@ -1,4 +1,4 @@
-# ait convert功能使用指南
+# msit convert功能使用指南
 
 ## 简介
 
@@ -30,15 +30,15 @@ convert模型转换工具依托ATC（Ascend Tensor Compiler），AOE（Ascend Op
   AscendIE python api Install failed, please install python3.9 firstly!
   ```
 
-- 工具安装请见 [ait一体化工具使用指南](../../README.md)
+- 工具安装请见 [msit一体化工具使用指南](../../README.md)
 
 ## 工具使用
 
-一站式ait工具使用命令格式说明如下：
+一站式msit工具使用命令格式说明如下：
 ```shell
-ait convert [subcommand]
+msit convert [subcommand]
 ```
-ait convert目前支持以下3种子命令：
+msit convert目前支持以下3种子命令：
 
 | subcommand | 说明                      |
 | ---------- | ------------------------- |
@@ -49,29 +49,29 @@ ait convert目前支持以下3种子命令：
 ### atc命令
 使用ATC后端进行模型转换，命令格式如下：
 ```shell
-ait convert atc [args]
+msit convert atc [args]
 ```
 参数定义严格遵从ATC的参数定义，由于参数较多，详情可参考：https://www.hiascend.com/document/detail/zh/canncommercial/63RC2/inferapplicationdev/atctool/atctool_000041.html
 
 使用示例：
 ```shell
-ait convert atc --model resnet50.onnx --framework 5 --soc_version Ascend310P3 --output resnet50
+msit convert atc --model resnet50.onnx --framework 5 --soc_version Ascend310P3 --output resnet50
 ```
 ### aoe命令
 使用AOE后端进行模型转换，命令格式如下：
 ```shell
-ait convert aoe [args]
+msit convert aoe [args]
 ```
 参数定义严格遵从AOE的参数定义，由于参数较多，详情可参考：https://www.hiascend.com/document/detail/zh/canncommercial/63RC2/devtools/auxiliarydevtool/aoepar_16_001.html
 
 使用示例：
 ```shell
-ait convert aoe --model resnet50.onnx --job_type 2 --output resnet50
+msit convert aoe --model resnet50.onnx --job_type 2 --output resnet50
 ```
 ### aie命令
 使用AIE后端进行模型转换，目前仅支持ONNX模型的转换，命令格式如下：
 ```shell
-ait convert aie [args]
+msit convert aie [args]
 ```
 参数说明如下：
 
@@ -84,7 +84,7 @@ ait convert aie [args]
 命令示例如下：
 
 ```shell
-ait convert aie --golden-model resnet50.onnx --output-file resnet50.om --soc-version Ascend310P3 
+msit convert aie --golden-model resnet50.onnx --output-file resnet50.om --soc-version Ascend310P3 
 ```
 
 #### 使用案例

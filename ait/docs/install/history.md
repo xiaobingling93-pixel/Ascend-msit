@@ -1,10 +1,10 @@
-# AIT 工具安装
+# MSIT 工具安装
 
 
 
 ## 环境和依赖
 
-ait推理工具的安装包括**ait包**和**依赖的组件包**的安装，其中依赖包可以根据需求只添加所需要的组件包。
+msit推理工具的安装包括**msit包**和**依赖的组件包**的安装，其中依赖包可以根据需求只添加所需要的组件包。
 
 
 |   依赖软件名称   | 是否必选 | 版本 |                      备注                      |
@@ -17,13 +17,13 @@ ait推理工具的安装包括**ait包**和**依赖的组件包**的安装，其
 | Clang      | 非必选 | -    | 依赖LLVM Clang，需安装[Clang工具](https://releases.llvm.org/)。(如不使用transplt应用迁移分析功能则不需要安装)                                                                                                     |
 
 
-## AIT安装
+## MSIT安装
 
 安装方式包括：**源代码一键式安装**和**按需手动安装不同组件**，用户可以按需选取。
-- [源代码一键式安装](#源代码一键式安装): 一键式安装ait所有组件
-- [按需手动安装不同组件](#按需手动安装不同组件): 可以按需选择所需ait组件，单个安装
+- [源代码一键式安装](#源代码一键式安装): 一键式安装msit所有组件
+- [按需手动安装不同组件](#按需手动安装不同组件): 可以按需选择所需msit组件，单个安装
 
-常见报错可以参照[Ait 安装常见问题](#常见问题-qa)
+常见报错可以参照[MSIT 安装常见问题](#常见问题-qa)
 
 ### 说明：
 - 安装开发运行环境的昇腾 AI 推理相关驱动、固件、CANN 包，参照 [CANN-6.3.RC1](https://www.hiascend.com/document/detail/zh/canncommercial/63RC1/envdeployment/instg/instg_000002.html)。安装后用户可通过 **设置CANN_PATH环境变量** ，指定安装的CANN版本路径，例如：export CANN_PATH=/xxx/Ascend/ascend-toolkit/latest。若不设置，工具默认会从环境变量ASCEND_TOOLKIT_HOME和/usr/local/Ascend/ascend-toolkit/latest路径分别尝试获取CANN版本。
@@ -32,29 +32,29 @@ ait推理工具的安装包括**ait包**和**依赖的组件包**的安装，其
 ### 源代码一键式安装
 
 ```shell
-git clone https://gitee.com/ascend/ait.git
+git clone https://gitee.com/ascend/msit.git
 # 1. git pull origin 更新最新代码 
-cd ait/ait
+cd msit/msit
 
 # 2. 添加执行权限
 chmod u+x install.sh
 
 # 3. 以下install.sh根据情况选一个执行
-# a. 安装ait，包括debug、profile、benchmark、transplt、analyze等组件（不安装clang等系统依赖库，只影响transplt功能）
+# a. 安装msit，包括debug、profile、benchmark、transplt、analyze等组件（不安装clang等系统依赖库，只影响transplt功能）
 ./install.sh
   
-# b. 安装ait，包括debug、profile、benchmark、transplt、analyze等组件（安装clang等系统依赖库，需要提供sudo权限）
+# b. 安装msit，包括debug、profile、benchmark、transplt、analyze等组件（安装clang等系统依赖库，需要提供sudo权限）
 ./install.sh --full
   
-# c. 重新安装ait及其debug、profile、benchmark、transplt、analyze等组件
+# c. 重新安装msit及其debug、profile、benchmark、transplt、analyze等组件
 ./install.sh --force-reinstall
 ```
 
 ### 按需手动安装不同组件
 
 ```shell
-git clone https://gitee.com/ascend/ait.git
-cd ait/ait
+git clone https://gitee.com/ascend/msit.git
+cd msit/msit
 
 # 添加执行权限
 chmod u+x install.sh
@@ -86,9 +86,9 @@ chmod u+x install.sh
 
 
 # 卸载
-注：2023/08/01前下载的ait工具需要重新卸载再安装的ait以及各子工具
+注：2023/08/01前下载的msit工具需要重新卸载再安装的msit以及各子工具
 ```shell
-cd ait/ait
+cd msit/msit
 
 chmod u+x install.sh
 
@@ -112,10 +112,10 @@ windows 下，仅支持安装 transplt 和 surgeon 组件
 ## 安装
 
 ```shell
-git clone https://gitee.com/ascend/ait.git
-cd ait/ait
+git clone https://gitee.com/ascend/msit.git
+cd msit/msit
 
-# 1. 安装ait，包括surgeon、transplt组件（不安装clang等系统依赖库，只影响transplt功能）
+# 1. 安装msit，包括surgeon、transplt组件（不安装clang等系统依赖库，只影响transplt功能）
 install.bat
 
 # 2. 只安装debug下面的surgeon组件
@@ -130,9 +130,9 @@ install.bat --transplt --full
 
 
 ## 卸载
-注：2023/08/01前下载的ait工具需要重新卸载再安装的ait以及各子工具
+注：2023/08/01前下载的msit工具需要重新卸载再安装的msit以及各子工具
 ```shell
-cd ait/ait
+cd msit/msit
 
 # 1. 一个个询问式卸载
 install.bat --uninstall
@@ -149,5 +149,5 @@ install.bat --uninstall --surgeon -y
 
 # 常见问题 Q&A
 
-[参考：Ait 安装常见问题](./FAQ.md ':include')
+[参考：MSIT 安装常见问题](./FAQ.md ':include')
 

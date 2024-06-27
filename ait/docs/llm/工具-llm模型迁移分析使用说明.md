@@ -7,14 +7,14 @@
 - **适用于 transformers 包，支持类似 LLaMA、QWEN 的典型模型结构迁移**，
 
 ### 准备
-- 安装 ait
+- 安装 msit
 - 获取 [Gitee ascend/MindIE-LLM](https://gitee.com/ascend/MindIE-LLM) 最新源码
 - 准备待迁移的 transformers 模型目录
 
 ### QWEN 13B 迁移示例
 - **迁移生成 atb 模型代码**，`--source` 指定待迁移的 transformers 模型目录，生成迁移后 model 以及 layer 的 cpp 与 h 代码
   ```sh
-  ait llm transform -s /data/qwen-14b-chat
+  msit llm transform -s /data/qwen-14b-chat
   # Generated files: [
   #     qwenlmheadmodel/model/decoder_model.cpp,
   #     qwenlmheadmodel/model/decoder_model.h,
@@ -38,7 +38,7 @@
 - 由 llm 的浮点模型 layer 层代码，迁移生成稀疏量化 layer 层代码，包括 cpp 文件与 h 文件
 
 ### 准备
-- 安装 ait
+- 安装 msit
 - 获取 [Gitee ascend/MindIE-LLM](https://gitee.com/ascend/MindIE-LLM) 源码，找到待迁移模型 layer 定义
 
 ### Baichuan2 7B 迁移示例
@@ -50,7 +50,7 @@
   ```
 - 迁移为量化模型
   ```sh
-  ait llm transform -s layer/flash_attention_rope_layer.cpp
+  msit llm transform -s layer/flash_attention_rope_layer.cpp
   # ...
   # Transformed source files: [
   #     layer/flash_attention_rope_layer.cpp
@@ -65,7 +65,7 @@
   - 其中 `FlashAttentionRopeLayerTensorId` 节点中增加了 `_DESCALE` `_BIAS` 相关节点，同时 `RmsNorm` `Linear` `MLP` 等相关节点更新了属性及输入 tensor 节点
 - 指定 `--enable-sparse` 迁移为稀疏量化模型
   ```sh
-  ait llm transform -s layer/flash_attention_rope_layer.cpp --enable-sparse
+  msit llm transform -s layer/flash_attention_rope_layer.cpp --enable-sparse
   # ...
   # Transformed source files: [
   #     layer/flash_attention_rope_layer.cpp
@@ -81,7 +81,7 @@
 
 ### 参数说明
 ```sh
-ait llm transform -s {SOURCE} [--enable-sparse] [--log-level {DEBUG,INFO,WARNING,ERROR}]
+msit llm transform -s {SOURCE} [--enable-sparse] [--log-level {DEBUG,INFO,WARNING,ERROR}]
 ```
 
 | 参数名          | 描述                                                                                                                             | 必选 |

@@ -11,7 +11,7 @@
 
   ```py
   import torch, torch_npu, torchair
-  from ait_llm.dump import torchair_dump  # 添加导入
+  from msit_llm.dump import torchair_dump  # 添加导入
   ...
   model = ...
   config = torchair_dump.get_ge_dump_config(dump_path="dump")  # 添加获取 config
@@ -35,7 +35,7 @@
 
   ```py
   import torch, torch_npu, torchair
-  from ait_llm.dump import torchair_dump  # 添加导入
+  from msit_llm.dump import torchair_dump  # 添加导入
   ...
   model = ...
   config = torchair_dump.get_fx_dump_config()  # 添加获取 config
@@ -51,10 +51,10 @@
 
 ### Compare 精度比对
 
-- 执行 `ait llm compare --my-path [GE dump data] --golden-path [FX dump data]`，输出比对结果 csv 文件
+- 执行 `msit llm compare --my-path [GE dump data] --golden-path [FX dump data]`，输出比对结果 csv 文件
 
   ```sh
-  ait llm compare --my-path {dump_path}/dump_{time_stamp} --golden-path data_dump
+  msit llm compare --my-path {dump_path}/dump_{time_stamp} --golden-path data_dump
   ```
 
 ***
@@ -67,7 +67,7 @@
 
   ```py
   import torch, torch_npu, torchair
-  from ait_llm.dump import torchair_dump  # 添加导入
+  from msit_llm.dump import torchair_dump  # 添加导入
   ...
   model = ...
   config = torchair_dump.get_ge_dump_config(dump_path="dump")  # 添加获取 config
@@ -83,7 +83,7 @@
 
   ```py
   import torch, torch_npu, torchair
-  from ait_llm.dump import torchair_dump  # 添加导入
+  from msit_llm.dump import torchair_dump  # 添加导入
   ...
   model = ...
   config = torchair_dump.get_ge_dump_config(dump_path="dump", fusion_switch_file="fusion_switch.json")  # 添加获取 config
@@ -119,15 +119,15 @@
 
 ### Compare 比对
 
-- 执行 `ait llm compare --my-path [GE dump data] --golden-path [fusion off GE dump data]`，输出比对结果 csv 文件
+- 执行 `msit llm compare --my-path [GE dump data] --golden-path [fusion off GE dump data]`，输出比对结果 csv 文件
 
   ```sh
-  ait llm compare --my-path {dump_path}/dump_{time_stamp} --golden-path {dump_path}/dump_{time_stamp}
+  msit llm compare --my-path {dump_path}/dump_{time_stamp} --golden-path {dump_path}/dump_{time_stamp}
   ```
 
 ## 结果查看
 
-参考[精度比对结果参数说明](/ait/docs/llm/精度比对结果参数说明.md)
+参考[精度比对结果参数说明](/msit/docs/llm/精度比对结果参数说明.md)
 
 ***
 
@@ -147,7 +147,7 @@
 
   def convert(data_path):
       import numpy as np
-      from ait_llm.compare import torchair_acc_cmp
+      from msit_llm.compare import torchair_acc_cmp
 
       npz_surfix, npy_surfix = "{}.npz".format(surfix), "{}.npy".format(surfix)
       for cur_path, dirs, files in os.walk(data_path):
@@ -177,20 +177,20 @@
       while True:
           convert(args.data_path)
           time.sleep(0.5)
-          print("Waiting...")
+          print("Wmsiting...")
   ```
   在 dump 过程中后台执行该脚本，将 dump 数据转化为 info 数据，以减少内存占用
   ```sh
-  # 将 ait_ge_dump 下的 GE dump 数据转化为 info
-  python3 convert.py ait_ge_dump
+  # 将 msit_ge_dump 下的 GE dump 数据转化为 info
+  python3 convert.py msit_ge_dump
   ```
   同时在 FX 或关闭融合的 GE dump 时也执行该脚本，将 dump 数据转化为 info。
   ```sh
-  # 将 ait_ge_dump 下的 FX dump 数据转化为 info
+  # 将 msit_ge_dump 下的 FX dump 数据转化为 info
   python3 convert.py data_dump
   ```
   最后执行比对
   ```sh
-  ait llm compare --my-path {dump_path}/dump_{time_stamp} --golden-path data_dump
+  msit llm compare --my-path {dump_path}/dump_{time_stamp} --golden-path data_dump
   ```
   

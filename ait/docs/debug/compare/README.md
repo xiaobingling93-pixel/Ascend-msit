@@ -1,4 +1,4 @@
-# ait debug compare功能使用指南
+# msit debug compare功能使用指南
 
 ## 简介
 - compare一键式全流程精度比对（推理）功能将推理场景的精度比对做了自动化，适用于 TensorFlow、ONNX、Caffe 模型，用户只需要输入原始模型，对应的离线模型和输入，输出整网比对的结果，离线模型为通过 ATC 工具转换的 om 模型，输入 bin 文件需要符合模型的输入要求（支持模型多输入）。
@@ -9,14 +9,14 @@
 
 
 ## 工具安装
-- 一般工具安装请见 [ait一体化工具使用指南](https://gitee.com/ascend/ait/blob/master/ait/docs/install/README.md)
+- 一般工具安装请见 [msit一体化工具使用指南](https://gitee.com/ascend/msit/blob/master/msit/docs/install/README.md)
 - 此外还提供容器安装方式（支持caffe精度比对）
 
 ### 容器方式安装
-容器方式安装目前提供了Ubuntu 18.04的docker镜像。在`<ait_project_root_path>/ait/components/debug/compare`目录下运行以下命令以构建镜像：
+容器方式安装目前提供了Ubuntu 18.04的docker镜像。在`<msit_project_root_path>/msit/components/debug/compare`目录下运行以下命令以构建镜像：
 ```shell
 docker build --build-arg CANN_TOOLKIT_PATH=Ascend-cann-tookit<version+arch>.run --build-arg CANN_AMCT_PATH=Ascend-cann-amctt<version+arch>.tar.gz \ 
---build-arg CAFFE_SRC=caffe-ascend-amct.zip -f Dockerfile . -t ait-caffe:latest
+--build-arg CAFFE_SRC=caffe-ascend-amct.zip -f Dockerfile . -t msit-caffe:latest
 ```
 注意:
 1. 非root用户请加上sudo
@@ -29,7 +29,7 @@ docker build --build-arg CANN_TOOLKIT_PATH=Ascend-cann-tookit<version+arch>.run 
    运行以下命令以上述镜像启动容器：
 ```shell
 docker run -it -v=`pwd`:/work   -v /usr/local/Ascend/driver:/usr/local/Ascend/driver -v /usr/bin/npu-smi:/usr/bin/npu-smi \
--v /usr/local/Ascend/add-ons:/usr/local/Ascend/add-ons --device /dev/davinci0 --device /dev/davinci_manager --device /dev/hisi_hdc --device /dev/devmm_svm  ait-caffe:latest
+-v /usr/local/Ascend/add-ons:/usr/local/Ascend/add-ons --device /dev/davinci0 --device /dev/davinci_manager --device /dev/hisi_hdc --device /dev/devmm_svm  msit-caffe:latest
 ```
 在启动容器时将driver路径挂载到容器中，指定映射的device设备。
 ` -v=`pwd`:/work `为将当前目录映射到容器work目录下（非必须）。
@@ -38,11 +38,11 @@ docker run -it -v=`pwd`:/work   -v /usr/local/Ascend/driver:/usr/local/Ascend/dr
 ## 使用方法
 ### 功能介绍
 #### 使用入口
-compare功能可以直接通过ait命令行形式启动精度对比。启动方式如下：
+compare功能可以直接通过msit命令行形式启动精度对比。启动方式如下：
 
 **不指定模型输入** 命令示例，**其中路径需使用绝对路径**
   ```sh
-  ait debug compare -gm /home/HwHiAiUser/onnx_prouce_data/resnet_offical.onnx -om /home/HwHiAiUser/onnx_prouce_data/model/resnet50.om \
+  msit debug compare -gm /home/HwHiAiUser/onnx_prouce_data/resnet_offical.onnx -om /home/HwHiAiUser/onnx_prouce_data/model/resnet50.om \
   -c /usr/local/Ascend/ascend-toolkit/latest -o /home/HwHiAiUser/result/test
   ```
 

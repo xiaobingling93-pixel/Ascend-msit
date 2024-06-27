@@ -2,7 +2,7 @@
 提供基本的加速库侧算子数据 dump 功能。
 ### 使用方式
 ```
-ait llm dump --exec "bash run.sh patches/models/modeling_xxx.py"
+msit llm dump --exec "bash run.sh patches/models/modeling_xxx.py"
 ```
 ### 参数说明
 
@@ -28,7 +28,7 @@ ait llm dump --exec "bash run.sh patches/models/modeling_xxx.py"
 提供有精度问题的数据与标杆数据之间的比对能力。
 ### 使用方式
 ```
-ait llm compare --golden-path golden_data.bin --my-path my-path.bin
+msit llm compare --golden-path golden_data.bin --my-path my-path.bin
 ```
 #### 参数说明
 

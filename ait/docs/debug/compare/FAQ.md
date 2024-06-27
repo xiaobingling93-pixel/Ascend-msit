@@ -104,4 +104,4 @@ sudo usermod -aG docker $USER
 
 ![输入图片说明](https://foruda.gitee.com/images/1699360631258718283/6e453470_8277365.png "屏幕截图")
 
-可以通过`ait debug surgeon`或者`onnxsim`对`onnx`模型进行优化，去除`reshape`算子。
+可以通过`msit debug surgeon`或者`onnxsim`对`onnx`模型进行优化，去除`reshape`算子。
