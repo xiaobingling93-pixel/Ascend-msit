@@ -342,7 +342,7 @@ class NpuDumpData(DumpData):
             self.device,
             "--output",
             npu_data_output_dir,
-            "--warmup-count",
+            "--warmup_count",
             "0",
         ]
         if self.dump:
