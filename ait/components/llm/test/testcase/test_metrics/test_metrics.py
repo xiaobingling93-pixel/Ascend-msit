@@ -15,7 +15,7 @@
 
 from unittest import TestCase
 
-from ait_llm.metrics.metrics import Accuracy, EditDistance, BLEU, get_metric
+from msit_llm.metrics.metrics import Accuracy, EditDistance, BLEU, get_metric
 
 
 class TestMetrics(TestCase):

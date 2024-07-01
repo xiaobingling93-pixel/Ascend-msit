@@ -16,7 +16,7 @@ import os
 import stat
 import pytest
 import torch
-from ait_llm.common.tool import TensorBinFile, read_atb_data
+from msit_llm.common.tool import TensorBinFile, read_atb_data
 
 # Mocked binary data for testing purposes
 MOCKED_BINARY_DATA = (

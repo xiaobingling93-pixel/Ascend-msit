@@ -5,8 +5,8 @@ from glob import glob
 import torch
 from torch import nn
 
-from ait_llm import DumpConfig
-from ait_llm import register_hook
+from msit_llm import DumpConfig
+from msit_llm import register_hook
 
 
 MODEL_NAME_LIST = ["root", "root.ln"]

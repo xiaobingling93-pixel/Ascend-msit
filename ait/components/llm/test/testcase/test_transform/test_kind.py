@@ -2,7 +2,7 @@ from unittest import TestCase
 
 from torch.nn import Linear, Embedding, LayerNorm, SiLU, GELU, Module
 
-from ait_llm.transform.model_parser.kind import convert, attention, mlp, activation
+from msit_llm.transform.model_parser.kind import convert, attention, mlp, activation
 
 
 class RotaryEmbedding(Module):

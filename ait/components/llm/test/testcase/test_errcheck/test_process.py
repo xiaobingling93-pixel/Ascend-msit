@@ -3,7 +3,7 @@ import unittest
 from unittest import TestCase
 from unittest.mock import MagicMock
 
-from ait_llm.errcheck.process import handles_so_dir, handles_check_type, \
+from msit_llm.errcheck.process import handles_so_dir, handles_check_type, \
                                  handles_exec, handles_exit_flag, handles_output_dir
 
 
