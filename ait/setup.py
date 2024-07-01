@@ -36,9 +36,9 @@ ait_sub_task_entry_points = [
 ]
 
 setup(
-    name='ms-ait',
-    version='7.0.0b530',
-    description='AIT, Ascend Inference Tools',
+    name='msit',
+    version='7.0.0c630',
+    description='MSIT, MindStudio Inference Tools',
     long_description_content_type='text/markdown',
     url='https://gitee.com/ascend/ait',
     packages=find_packages(),
@@ -55,11 +55,12 @@ setup(
     },
     data_files=[('', ['requirements.txt'])],
     license='Apache-2.0',
-    keywords='ait',
+    keywords='msit',
     python_requires='>=3.7',
     install_requires=required,
     entry_points={
-        'console_scripts': ['ait=components.__main__:main'],
+        'console_scripts': ['ait=components.__main__:ait_main',
+                            'msit=components.__main__:main'],
         'ait_sub_task': ait_sub_task_entry_points,
     },
 )

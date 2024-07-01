@@ -115,7 +115,7 @@ def save_compare_reault_to_csv(gathered_row_data, output_path="."):
         os.makedirs(output_path)
 
     cur_time = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
-    csv_save_path = os.path.join(output_path, f"ait_cmp_report_{cur_time}.csv")
+    csv_save_path = os.path.join(output_path, f"msit_cmp_report_{cur_time}.csv")
 
     # 过滤不宜展示的数据，int8建议只与int8比较
     for row_data in gathered_row_data:

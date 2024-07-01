@@ -1,4 +1,4 @@
-# Copyright (c) 2023-2023 Huawei Technologies Co., Ltd.
+# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ class LlmInstall(AitInstaller):
 
         if not os.path.exists(os.path.join(os.path.dirname(__file__), "opcheck/libopchecker.so")):
             check_res.append("[warnning] build libopchecker.so failed. will make the opchecker feature unusable. "
-                             "use `ait build-extra llm` to try again")
+                             "use `msit build-extra llm` to try again")
         
         if not check_res:
             return "OK"

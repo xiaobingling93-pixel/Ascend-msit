@@ -1,4 +1,4 @@
-# Copyright (c) 2023-2023 Huawei Technologies Co., Ltd.
+# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,13 +22,13 @@ with open('requirements.txt', encoding='utf-8') as f:
     required = f.read().splitlines()
 
 opchecker_lib_src = []
-for root, dirs, files in os.walk('components/llm/ait_llm/opcheck/test_framework/'):
+for root, dirs, files in os.walk('components/llm/msit_llm/opcheck/test_framework/'):
     opchecker_lib_src.append((os.path.join("/", root), [os.path.join(root, f) for f in files]))
 
 ait_sub_tasks = [{
     "name": "llm",
     "help_info": "Large Language Model(llm) Debugger Tools.",
-    "module": "ait_llm.__main__",
+    "module": "msit_llm.__main__",
     "attr": "get_cmd_instance"
 }]
 
@@ -38,14 +38,14 @@ ait_sub_task_entry_points = [
 ]
 
 setup(
-    name='ait-llm',
+    name='msit_llm',
     version='7.0.0c2',
     description='Debug tools for large language model(llm)',
     url='https://gitee.com/ascend/ait/ait/components/llm',
     packages=find_packages(),    
     package_data={'': ['*.sh', '*.cpp', '*.h', '*.txt']},
     license='Apache-2.0',
-    keywords='ait_llm',
+    keywords='msit_llm',
     install_requires=required,
     classifiers=[
         'Development Status :: Alpha',
@@ -64,6 +64,6 @@ setup(
     python_requires='>=3.7',
     entry_points={
         'ait_sub_task': ait_sub_task_entry_points,
-        'ait_sub_task_installer': ['ait-llm=ait_llm.__install__:LlmInstall'],
+        'ait_sub_task_installer': ['msit-llm=msit_llm.__install__:LlmInstall'],
     },
 )

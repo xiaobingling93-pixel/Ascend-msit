@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Copyright (c) 2023-2023 Huawei Technologies Co., Ltd.
+# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -75,7 +75,7 @@ install_clang() {
   elif [[ "$OS_NAME" == "SLES"* ]] && [[ $OS_VERSION == "12"* ]]; then
     install_clang_on_sles
   else
-    echo "WARNING: uncertified os type:version $OS_NAME:$OS_VERSION. Ait transplt installation may be incorrect!!!"
+    echo "WARNING: uncertified os type:version $OS_NAME:$OS_VERSION. MSIT transplt installation may be incorrect!!!"
     # try to install clang
     $SUDO apt-get install wget unzip libclang-14-dev clang-14 -y
   fi

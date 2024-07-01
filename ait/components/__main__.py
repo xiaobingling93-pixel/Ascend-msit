@@ -1,4 +1,4 @@
-# Copyright (c) 2023-2023 Huawei Technologies Co., Ltd.
+# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,12 +22,12 @@ from components.utils.install import AitInstallCommand, AitBuildExtraCommand, Ai
 def main():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        description=f"ait(Ascend Inference Tools), {MIND_STUDIO_LOGO}.\n"
+        description=f"msit(MindStudio Inference Tools), {MIND_STUDIO_LOGO}.\n"
         "Providing one-site debugging and optimization toolkit for inference on Ascend Devices.\n"
         f"For any issue, refer FAQ first: {AIT_FAQ_HOME}",
     )
 
-    cmd = BaseCommand("ait", None, ["ait_sub_task", AitInstallCommand(), AitBuildExtraCommand(), AitCheckCommand(), DownloadCommand()])
+    cmd = BaseCommand("msit", None, ["ait_sub_task", AitInstallCommand(), AitBuildExtraCommand(), AitCheckCommand(), DownloadCommand()])
     cmd.register_parser(parser)
 
     args = parser.parse_args()
@@ -40,6 +40,12 @@ def main():
                 raise Exception(
                     f"[ERROR] Refer FAQ if a known issue: {AIT_FAQ_HOME}"
                 ) from err
+
+
+def ait_main():
+    print("Attention: The 'ait' command will be deprecated in the future version, please use 'msit' instead.")
+
+    main()
 
 
 if __name__ == "__main__":

@@ -30,17 +30,17 @@ ait_sub_task_entry_points = [
 ]
 
 setup(
-    name='ait-tensor-view',
+    name='msit-tensor-view',
     version='7.0.0c2',
     description='tensor view tool',
     long_description="Provides interfaces for viewing, slicing, transposing, and saving tensor",
-    url='ait tensor-view url',
+    url='msit tensor-view url',
     packages=find_packages(),
-    keywords='ait tensor-view tool',
+    keywords='msit tensor-view tool',
     install_requires=required,
     python_requires='>=3.7',
     entry_points={
         'ait_sub_task': ait_sub_task_entry_points,
-        'ait_sub_task_installer': ['ait-tensor-view=ait_tensor_view.__install__:TensorViewInstaller'],
+        'ait_sub_task_installer': ['msit-tensor-view=ait_tensor_view.__install__:TensorViewInstaller'],
     },
 )

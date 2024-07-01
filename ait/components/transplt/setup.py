@@ -1,4 +1,4 @@
-# Copyright (c) 2023-2023 Huawei Technologies Co., Ltd.
+# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ ait_sub_task_entry_points = [
 ]
 
 setup(
-    name='ait-transplt',
+    name='msit-transplt',
     version='7.0.0c2',
     description='app analyze for cpu and gpu projects',
     long_description=long_description,
@@ -58,7 +58,7 @@ setup(
     python_requires='>=3.7',
     entry_points={
         'ait_sub_task': ait_sub_task_entry_points,
-        'ait_sub_task_installer': ['ait-transplt=app_analyze.__install__:TranspltInstall', 
-                                   'ait-transplt-llvm=app_analyze.__install__:LlvmInstall'],
+        'ait_sub_task_installer': ['msit-transplt=app_analyze.__install__:TranspltInstall',
+                                   'msit-transplt-llvm=app_analyze.__install__:LlvmInstall'],
     },
 )

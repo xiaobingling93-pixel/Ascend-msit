@@ -1,4 +1,4 @@
-# Copyright (c) 2023-2023 Huawei Technologies Co., Ltd. All rights reserved.
+# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ set -u
 
 pwd_dir=$(dirname $(readlink -f "$0"))
 
-# copy ait_llm to test file, and test
+# copy msit_llm to test file, and test
 cp ${pwd_dir}/../llm ${pwd_dir}/ -rf
 
 coverage run -m -p pytest testcase/*/test_*.py

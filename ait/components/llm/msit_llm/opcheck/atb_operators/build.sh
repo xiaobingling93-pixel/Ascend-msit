@@ -14,7 +14,7 @@
 # limitations under the License.
 set -e
 SCRIPT_DIR=$(cd $(dirname $0); pwd)
-AIT_LLM_INSTALL_PATH="$(python3 -c 'import ait_llm, os; print(os.path.dirname(os.path.abspath(ait_llm.__file__)))')"
+AIT_LLM_INSTALL_PATH="$(python3 -c 'import msit_llm, os; print(os.path.dirname(os.path.abspath(msit_llm.__file__)))')"
 IGNORE_INFO="If not using opcheck, ignore this error."
 
 echo SCRIPT_DIR: $SCRIPT_DIR
@@ -73,7 +73,7 @@ if [ "$AIT_DOWNLOAD_PATH" != "" ]; then
 fi
 
 if [ "$AIT_LLM_INSTALL_PATH" == "" ]; then
-    echo "[ERROR] ait_llm not found in python packages. Make sure ait_llm is installed for pip. $IGNORE_INFO"
+    echo "[ERROR] msit_llm not found in python packages. Make sure msit_llm is installed for pip. $IGNORE_INFO"
     exit 1
 fi
 

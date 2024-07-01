@@ -1,4 +1,4 @@
-# Copyright (c) 2023-2023 Huawei Technologies Co., Ltd.
+# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,15 +34,15 @@ class TestClass:
             self.model_path = os.path.join(os.getenv("AIT_BENCHMARK_DT_DATA_PATH"),
                 "resnet50/model/pth_resnet50_bs1.om")
         self.output_path = os.path.join(self.get_cur_path(), "output_datas/")
-        self.app_cmd = "'ait benchmark -om {}'".format(self.model_path)
+        self.app_cmd = "'msit benchmark -om {}'".format(self.model_path)
 
     def test_default_cmd(self):
-        cmd = "ait profile --application {} -o {}".format(self.app_cmd, self.output_path)
+        cmd = "msit profile --application {} -o {}".format(self.app_cmd, self.output_path)
         ret = os.system(cmd)
         assert ret == 0
 
     def test_not_default_cmd(self):
-        cmd = "ait profile --application {} -o {} --model-execution {} --sys-hardware-mem {} \
+        cmd = "msit profile --application {} -o {} --model-execution {} --sys-hardware-mem {} \
             --sys-profiling {} --sys-pid-profiling {} --dvpp-profiling {} --runtime-api {} \
             --task-time {} --aicpu {}".format(self.app_cmd, self.output_path,
                                               "on", "on", "off", "off", "on",

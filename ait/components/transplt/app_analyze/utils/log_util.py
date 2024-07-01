@@ -1,4 +1,4 @@
-# Copyright (c) 2023-2023 Huawei Technologies Co., Ltd.
+# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -18,7 +18,7 @@ import logging
 from logging import handlers
 
 IS_PYTHON3 = sys.version_info > (3,)
-LOG_FILE_PATH = "ait_transplt.log"
+LOG_FILE_PATH = "msit_transplt.log"
 LOG_FORMAT = "%(asctime)s - %(levelname)s - %(filename)s[%(lineno)d] - %(message)s"
 LOG_LEVEL = {
     "notest": logging.NOTSET,
@@ -36,7 +36,7 @@ OPEN_MODES = stat.S_IWUSR | stat.S_IRUSR
 
 
 def get_logger():
-    inner_logger = logging.getLogger("ait transplt")
+    inner_logger = logging.getLogger("msit transplt")
     inner_logger.propagate = False
     inner_logger.setLevel(logging.INFO)
     if not inner_logger.handlers:

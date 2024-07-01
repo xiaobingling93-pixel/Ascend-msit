@@ -1,4 +1,4 @@
-# Copyright (c) 2023-2023 Huawei Technologies Co., Ltd.
+# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,7 +26,8 @@ from msit_llm.common.constant import ATB_HOME_PATH, ATB_SAVE_TENSOR_TIME, ATB_SA
     ATB_SAVE_TENSOR_RUNNER, ATB_SAVE_TENSOR, ATB_SAVE_TENSOR_RANGE, \
     ATB_SAVE_TILING, LD_PRELOAD, ATB_OUTPUT_DIR, ATB_SAVE_CHILD, ATB_SAVE_TENSOR_PART, \
     ASCEND_TOOLKIT_HOME, ATB_PROB_LIB_WITH_ABI, ATB_PROB_LIB_WITHOUT_ABI, ATB_SAVE_CPU_PROFILING, \
-    ATB_CUR_PID, ATB_DUMP_SUB_PROC_INFO_SAVE_PATH, ATB_DEVICE_ID, ATB_AIT_LOG_LEVEL, ATB_DUMP_TYPE, get_ait_dump_path
+    ATB_CUR_PID, ATB_DUMP_SUB_PROC_INFO_SAVE_PATH, ATB_DEVICE_ID, ATB_AIT_LOG_LEVEL, ATB_DUMP_TYPE, get_ait_dump_path, \
+    GLOBAL_AIT_DUMP_PATH
 
 
 def is_use_cxx11():
@@ -193,7 +194,7 @@ def clear_dump_task(args):
     elif "cpu_profiling" in args.type:
         # 获取当前进程的cpu_profiling数据dump路径，新版CANN包需要加时间戳，否则不加时间戳
         cpu_profiling_path1 = os.path.join(os.environ.get(ATB_OUTPUT_DIR, ""), get_ait_dump_path(), "cpu_profiling")
-        cpu_profiling_path2 = os.path.join(os.environ.get(ATB_OUTPUT_DIR, ""), "ait_dump", "cpu_profiling")
+        cpu_profiling_path2 = os.path.join(os.environ.get(ATB_OUTPUT_DIR, ""), GLOBAL_AIT_DUMP_PATH, "cpu_profiling")
         if os.path.exists(cpu_profiling_path1):
             merge_cpu_profiling_data(cpu_profiling_path1)
         else:

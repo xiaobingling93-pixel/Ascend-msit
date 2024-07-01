@@ -1,4 +1,4 @@
-# Copyright (c) 2023-2023 Huawei Technologies Co., Ltd.
+# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -62,7 +62,7 @@ def is_model_topo_exist(golden_path, cmp_level="layer"):
     model_dir_path = os.path.join(absolute_path, '../../../' if cmp_level == "layer" else '../../', 'model')
     model_dir_path = os.path.normpath(model_dir_path)
     if not os.path.isdir(model_dir_path):
-        msg = f"Cannot find {model_dir_path}, please check! Use ait llm dump if needed."
+        msg = f"Cannot find {model_dir_path}, please check! Use msit llm dump if needed."
         logger.info(msg)
         return False, ""
     # 搜索/model目录下的所有文件，查找JSON文件
@@ -72,7 +72,7 @@ def is_model_topo_exist(golden_path, cmp_level="layer"):
                 json_file_path = os.path.join(root, file)
                 return True, json_file_path
     # 如果没有找到json文件，返回False和空字符串
-    msg = f"Cannot find model topo json in {model_dir_path}, please check! Use ait llm dump if needed."
+    msg = f"Cannot find model topo json in {model_dir_path}, please check! Use msit llm dump if needed."
     logger.info(msg)
     return False, ""
 

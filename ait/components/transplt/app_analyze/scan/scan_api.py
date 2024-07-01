@@ -1,4 +1,4 @@
-# Copyright (c) 2023-2023 Huawei Technologies Co., Ltd.
+# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -79,19 +79,19 @@ class ScanApi:
         try:
             self._scan_source(inputs, info)
         except AutomakeExecuteFailedException as err:
-            raise ValueError("{} ait transplt: error: {}".
+            raise ValueError("{} msit transplt: error: {}".
                              format(KitConfig.PORTING_CONTENT,
                                     err.get_info())) from err
         except MakefileExecuteFailException as err:
-            raise ValueError("{} ait transplt: error: {}".
+            raise ValueError("{} msit transplt: error: {}".
                              format(KitConfig.PORTING_CONTENT,
                                     err.get_error_info())) from err
         except SourceScanNoResultException as err:
-            raise ValueError("{} ait transplt: info: {}".
+            raise ValueError("{} msit transplt: info: {}".
                              format(KitConfig.PORTING_CONTENT,
                                     err.get_error_info())) from err
         except SourceFileNotFoundError as err:
-            raise ValueError("{} ait transplt: info: {}".
+            raise ValueError("{} msit transplt: info: {}".
                              format(KitConfig.PORTING_CONTENT,
                                     err.get_error_info())) from err
         except Exception as ex:

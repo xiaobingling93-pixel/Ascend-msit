@@ -1,4 +1,4 @@
-::  Copyright (c) 2023-2023 Huawei Technologies Co., Ltd.
+::  Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
 ::
 ::  Licensed under the Apache License, Version 2.0 (the "License");
 ::  you may not use this file except in compliance with the License.
@@ -126,7 +126,7 @@ IF NOT DEFINED app_analyze_pos (
 )
 
 :: download and unzip config.zip & headers.zip
-ECHO ============ downloading ait transplt config and headers ============
+ECHO ============ downloading msit transplt config and headers ============
 %app_analyze_pos:~0,2% && cd "%app_analyze_pos%"
 curl %skip_check_cert% %download_config_zip_link% -o config.zip
 IF NOT %errorlevel%==0 ( %cwd:~0,2% && cd "%cwd%" && EXIT /B 1 )
@@ -300,7 +300,7 @@ SET "Path=%Path%;%mingw_w64_install_path%\mingw64\bin"
 ECHO ============ downloading patch file float.h of mingw-w64 ============
 curl %skip_check_cert% --connect-timeout 30 -LJo "%mingw_w64_install_path%\mingw64\x86_64-w64-mingw32\include\float.h" %download_float_h_link%
 IF NOT %errorlevel%==0 (
-    ECHO WARNING: downloading mingw patch file float.h failed. This may cause ait transplt meets error when scanning projects.
+    ECHO WARNING: downloading mingw patch file float.h failed. This may cause msit transplt meets error when scanning projects.
     ECHO Please manually download it from %download_float_h_link%
     ECHO and then replace the file at "%mingw_w64_install_path%\mingw64\x86_64-w64-mingw32\include\float.h" with it
 )

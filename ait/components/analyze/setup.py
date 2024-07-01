@@ -1,4 +1,4 @@
-# Copyright (c) 2023-2023 Huawei Technologies Co., Ltd.
+# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ ait_sub_task_entry_points = [
 ]
 
 setup(
-    name='ait-analyze',
+    name='msit-analyze',
     version='7.0.0c2',
     description='inference analyze tool',
     long_description=long_description,
@@ -60,6 +60,6 @@ setup(
     python_requires='>=3.7',
     entry_points={
         'ait_sub_task': ait_sub_task_entry_points,
-        'ait_sub_task_installer': ['ait-analyze=model_evaluation.__install__:AnalyzeInstall'],
+        'ait_sub_task_installer': ['msit-analyze=model_evaluation.__install__:AnalyzeInstall'],
     },
 )

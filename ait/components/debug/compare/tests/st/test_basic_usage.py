@@ -1,4 +1,4 @@
-# Copyright (c) 2023-2023 Huawei Technologies Co., Ltd.
+# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -80,7 +80,7 @@ def fake_om_model(width_onnx_model):
 
 
 def test_basic_usage_then_pass(width_onnx_model, fake_om_model):
-    cmd = 'ait debug compare -gm {} -om {} -c {} -o {} --max-cmp-size 1024'.format(width_onnx_model,
+    cmd = 'msit debug compare -gm {} -om {} -c {} -o {} --max-cmp-size 1024'.format(width_onnx_model,
                                                     fake_om_model,
                                                     CANN_PATH,
                                                     OUT_PATH)
