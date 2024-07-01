@@ -1,5 +1,15 @@
 #  msIT
 
+<div style="background-color: #fafad2; padding: 20px; border-radius: 10px;" >
+为了符合MindStudio对工具命名的统一规范，ait仓库改名为msIT。<br>
+对应的工具命令行以及python库名都会做相应变更，如对您业务有影响，请及时适配或向我们反馈。如有需要，请向各位业务组或项目组内的同时进行转达，谢谢。<br>
+以下是具体修改点：<br>
+1.仓库地址变更为：https://gitee.com/ascend/msit ，访问原网址会自动跳转到此新地址；<br>
+2.命令行变更：原ait命令行将变更为msit，为了业务兼容与稳定，我们会保留ait命令行直到2024年9月30日，请有影响的组件及时适配；<br>
+3.python苦命变更：原ait_llm将变更为msit_llm，同样，ait_llm的对外接口也会保留到2024年9月30日。<br>
+
+</div>
+
 ## 目录
 - [msIT](#msit)
   - [目录](#目录)

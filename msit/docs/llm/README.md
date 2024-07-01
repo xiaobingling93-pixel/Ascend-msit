@@ -79,31 +79,31 @@ msit install llm
 ## whl包安装
 
 - 需要下载安装框架 whl 和工具 whl。
-- msit 框架 whl:
+- msit(ait) 框架 whl:
 
-  | 版本  | 发布日期   | 平台 | CANN 版本 | whl 链接                                                                                                                                      | MD5 校验码                       |
-  | ----- | ---------- | ---- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
-  | 0.0.1 | 2023/12/13 | arm  | 7.0.0.RC1 | [msit-0.0.1-py3-none-linux_aarch64.whl](https://ais-bench.obs.cn-north-4.myhuaweicloud.com/compare/20231213/msit-0.0.1-py3-none-linux_aarch64.whl) | 271051e901bb3513c7a0edbd1e096cb2 |
-  | 0.0.1 | 2023/12/13 | x86  | 7.0.0.RC1 | [msit-0.0.1-py3-none-linux_x86_64.whl](https://ais-bench.obs.cn-north-4.myhuaweicloud.com/compare/20231213/msit-0.0.1-py3-none-linux_x86_64.whl)   | 9903fa06b9ff76cba667abf0cbc4da50 |
-- msit-llm 工具 whl：
+  | 版本  | 发布日期   | 平台 | CANN 版本 | whl 链接                                                                                                                                           | MD5 校验码                       |
+  | ----- | ---------- | ---- | --------- |--------------------------------------------------------------------------------------------------------------------------------------------------| -------------------------------- |
+  | 0.0.1 | 2023/12/13 | arm  | 7.0.0.RC1 | [ait-0.0.1-py3-none-linux_aarch64.whl](https://ais-bench.obs.cn-north-4.myhuaweicloud.com/compare/20231213/ait-0.0.1-py3-none-linux_aarch64.whl) | 271051e901bb3513c7a0edbd1e096cb2 |
+  | 0.0.1 | 2023/12/13 | x86  | 7.0.0.RC1 | [ait-0.0.1-py3-none-linux_x86_64.whl](https://ais-bench.obs.cn-north-4.myhuaweicloud.com/compare/20231213/ait-0.0.1-py3-none-linux_x86_64.whl)   | 9903fa06b9ff76cba667abf0cbc4da50 |
+- msit_llm(ait_llm) 工具 whl：
 
-  | 版本  | 发布日期   | 平台       | CANN 版本    | whl链接                                                      | MD5 校验码                       | 使用指导                                                     |
-  | ----- | ---------- | ---------- | ------------ | ------------------------------------------------------------ | -------------------------------- | ------------------------------------------------------------ |
-  | 1.1   | 2024/05/08 | arm        | 8.0.RC2 B010 | [msit_llm-1.1-py3-none-linux_aarch64.whl](https://ais-bench.obs.cn-north-4.myhuaweicloud.com/compare/20240508/msit_llm-1.1-py3-none-linux_aarch64.whl)                    |0133c8fda39ba78c2b02354b4bcf089c                                | [大模型推理精度工具](/msit/docs/llm/README.md) |
-  | 1.1   | 2024/05/08 | x86        | 8.0.RC2 B010 | [msit_llm-1.1-py3-none-linux_x86_64.whl](https://ais-bench.obs.cn-north-4.myhuaweicloud.com/compare/20240508/msit_llm-1.1-py3-none-linux_x86_64.whl)                     |d453b4b608b4400d77bbfb1b5c702bee                                | [大模型推理精度工具](/msit/docs/llm/README.md) |
-  | 1.0   | 2024/03/22 | arm        | 8.0.RC1      | [msit_llm-1.0-py3-none-linux_aarch64.whl](https://ais-bench.obs.cn-north-4.myhuaweicloud.com/compare/20240325/msit_llm-1.0-py3-none-linux_aarch64.whl)                          |9f7f69d49e017f98006b8191f3951868                                  | [大模型推理精度工具说明文档](/msit/docs/llm/v1.0/大模型推理精度工具说明文档.md) |
-  | 1.0   | 2024/03/22 | x86        | 8.0.RC1      |[msit_llm-1.0-py3-none-linux_x86_64.whl](https://ais-bench.obs.cn-north-4.myhuaweicloud.com/compare/20240325/msit_llm-1.0-py3-none-linux_x86_64.whl)                          |5a6735c9f04d3938a6384c460399ff9a                                  | [大模型推理精度工具说明文档](/msit/docs/llm/v1.0/大模型推理精度工具说明文档.md) |
-  |       |            |            |              |                                                              |                                  |                                                              |
-  | 0.2.1 | 2024/02/08 | arm        | 8.0.RC1.B020 | [msit_llm-0.2.1-py3-none-linux_aarch64.whl](https://ais-bench.obs.cn-north-4.myhuaweicloud.com/compare/20240208/msit_llm-0.2.1-py3-none-linux_aarch64.whl) | 1f24783f0815dbca36e8e787a8bfcf09 | [llm大模型推理精度工具功能说明_v0.2.1](/msit/docs/llm/history/llm大模型推理精度工具功能说明_v0.2.1.md) |
-  | 0.2.1 | 2024/02/08 | x86        | 8.0.RC1.B020 | [msit_llm-0.2.1-py3-none-linux_x86_64.whl](https://ais-bench.obs.cn-north-4.myhuaweicloud.com/compare/20240208/msit_llm-0.2.1-py3-none-linux_x86_64.whl) | 679fae6a5b6ea1f4a749b9554f3e5c37 | [llm大模型推理精度工具功能说明_v0.2.1](/msit/docs/llm/history/llm大模型推理精度工具功能说明_v0.2.1.md) |
-  |       |            |            |              |                                                              |                                  |                                                              |
-  | 0.2.0 | 2024/01/17 | arm        | 8.0.RC1      | [msit_llm-0.2.0-py3-none-linux_aarch64.whl](https://ais-bench.obs.cn-north-4.myhuaweicloud.com/compare/20240117/msit_llm-0.2.0-py3-none-linux_aarch64.whl) | 99b94bf7edd57b63a6e23b987d24f364 | [llm大模型推理精度工具功能说明_v0.2.0](/msit/docs/llm/history/llm大模型推理精度工具功能说明_v0.2.0.md) |
-  | 0.2.0 | 2024/01/17 | x86        | 8.0.RC1      | [msit_llm-0.2.0-py3-none-linux_x86_64.whl](https://ais-bench.obs.cn-north-4.myhuaweicloud.com/compare/20240117/msit_llm-0.2.0-py3-none-linux_x86_64.whl) | dec5757afedfea8848c5db1bfad3d76c | [llm大模型推理精度工具功能说明_v0.2.0](/msit/docs/llm/history/llm大模型推理精度工具功能说明_v0.2.0.md) |
-  |       |            |            |              |                                                              |                                  |                                                              |
-  | 0.1.0 | 2023/12/13 | arm, abi=0 | 7.0.0.RC1    | [msit_llm-0.1.0-py3-none-linux_aarch64.whl](https://ais-bench.obs.cn-north-4.myhuaweicloud.com/compare/20231226/ABI0/msit_llm-0.1.0-py3-none-linux_aarch64.whl) | 48215f3ce18881f60beab6fad88ce30a | [llm大模型推理精度工具功能说明_v0.1.0](/msit/docs/llm/history/llm大模型推理精度工具功能说明_v0.1.0.md) |
-  | 0.1.0 | 2023/12/13 | arm, abi=1 | 7.0.0.RC1    | [msit_llm-0.1.0-py3-none-linux_aarch64.whl](https://ais-bench.obs.cn-north-4.myhuaweicloud.com/compare/20231226/ABI1/msit_llm-0.1.0-py3-none-linux_aarch64.whl) | b96e8e7e4786f1abcbec1458ca3ede5d | [llm大模型推理精度工具功能说明_v0.1.0](/msit/docs/llm/history/llm大模型推理精度工具功能说明_v0.1.0.md) |
-  | 0.1.0 | 2023/12/13 | x86, abi=0 | 7.0.0.RC1    | [msit_llm-0.1.0-py3-none-linux_x86_64.whl](https://ais-bench.obs.cn-north-4.myhuaweicloud.com/compare/20231226/ABI0/msit_llm-0.1.0-py3-none-linux_x86_64.whl) | c605e9d50891632a09b21e90403b5b96 | [llm大模型推理精度工具功能说明_v0.1.0](/msit/docs/llm/history/llm大模型推理精度工具功能说明_v0.1.0.md) |
-  | 0.1.0 | 2023/12/13 | x86, abi=1 | 7.0.0.RC1    | [msit_llm-0.1.0-py3-none-linux_x86_64.whl](https://ais-bench.obs.cn-north-4.myhuaweicloud.com/compare/20231226/ABI1/msit_llm-0.1.0-py3-none-linux_x86_64.whl) | ea88611dc4358f51a47f7659a36d5a48 | [llm大模型推理精度工具功能说明_v0.1.0](/msit/docs/llm/history/llm大模型推理精度工具功能说明_v0.1.0.md) |
+  | 版本  | 发布日期   | 平台       | CANN 版本    | whl链接                                                                                                                                                           | MD5 校验码                       | 使用指导                                                     |
+  | ----- | ---------- | ---------- | ------------ |-----------------------------------------------------------------------------------------------------------------------------------------------------------------| -------------------------------- | ------------------------------------------------------------ |
+  | 1.1   | 2024/05/08 | arm        | 8.0.RC2 B010 | [ait_llm-1.1-py3-none-linux_aarch64.whl](https://ais-bench.obs.cn-north-4.myhuaweicloud.com/compare/20240508/ait_llm-1.1-py3-none-linux_aarch64.whl)           |0133c8fda39ba78c2b02354b4bcf089c                                | [大模型推理精度工具](/msit/docs/llm/README.md) |
+  | 1.1   | 2024/05/08 | x86        | 8.0.RC2 B010 | [ait_llm-1.1-py3-none-linux_x86_64.whl](https://ais-bench.obs.cn-north-4.myhuaweicloud.com/compare/20240508/ait_llm-1.1-py3-none-linux_x86_64.whl)            |d453b4b608b4400d77bbfb1b5c702bee                                | [大模型推理精度工具](/msit/docs/llm/README.md) |
+  | 1.0   | 2024/03/22 | arm        | 8.0.RC1      | [ait_llm-1.0-py3-none-linux_aarch64.whl](https://ais-bench.obs.cn-north-4.myhuaweicloud.com/compare/20240325/ait_llm-1.0-py3-none-linux_aarch64.whl)          |9f7f69d49e017f98006b8191f3951868                                  | [大模型推理精度工具说明文档](/msit/docs/llm/v1.0/大模型推理精度工具说明文档.md) |
+  | 1.0   | 2024/03/22 | x86        | 8.0.RC1      | [ait_llm-1.0-py3-none-linux_x86_64.whl](https://ais-bench.obs.cn-north-4.myhuaweicloud.com/compare/20240325/ait_llm-1.0-py3-none-linux_x86_64.whl)            |5a6735c9f04d3938a6384c460399ff9a                                  | [大模型推理精度工具说明文档](/msit/docs/llm/v1.0/大模型推理精度工具说明文档.md) |
+  |       |            |            |              |                                                                                                                                                                 |                                  |                                                              |
+  | 0.2.1 | 2024/02/08 | arm        | 8.0.RC1.B020 | [ait_llm-0.2.1-py3-none-linux_aarch64.whl](https://ais-bench.obs.cn-north-4.myhuaweicloud.com/compare/20240208/ait_llm-0.2.1-py3-none-linux_aarch64.whl)      | 1f24783f0815dbca36e8e787a8bfcf09 | [llm大模型推理精度工具功能说明_v0.2.1](/msit/docs/llm/history/llm大模型推理精度工具功能说明_v0.2.1.md) |
+  | 0.2.1 | 2024/02/08 | x86        | 8.0.RC1.B020 | [ait_llm-0.2.1-py3-none-linux_x86_64.whl](https://ais-bench.obs.cn-north-4.myhuaweicloud.com/compare/20240208/ait_llm-0.2.1-py3-none-linux_x86_64.whl)        | 679fae6a5b6ea1f4a749b9554f3e5c37 | [llm大模型推理精度工具功能说明_v0.2.1](/msit/docs/llm/history/llm大模型推理精度工具功能说明_v0.2.1.md) |
+  |       |            |            |              |                                                                                                                                                                 |                                  |                                                              |
+  | 0.2.0 | 2024/01/17 | arm        | 8.0.RC1      | [ait_llm-0.2.0-py3-none-linux_aarch64.whl](https://ais-bench.obs.cn-north-4.myhuaweicloud.com/compare/20240117/ait_llm-0.2.0-py3-none-linux_aarch64.whl)      | 99b94bf7edd57b63a6e23b987d24f364 | [llm大模型推理精度工具功能说明_v0.2.0](/msit/docs/llm/history/llm大模型推理精度工具功能说明_v0.2.0.md) |
+  | 0.2.0 | 2024/01/17 | x86        | 8.0.RC1      | [ait_llm-0.2.0-py3-none-linux_x86_64.whl](https://ais-bench.obs.cn-north-4.myhuaweicloud.com/compare/20240117/ait_llm-0.2.0-py3-none-linux_x86_64.whl)        | dec5757afedfea8848c5db1bfad3d76c | [llm大模型推理精度工具功能说明_v0.2.0](/msit/docs/llm/history/llm大模型推理精度工具功能说明_v0.2.0.md) |
+  |       |            |            |              |                                                                                                                                                                 |                                  |                                                              |
+  | 0.1.0 | 2023/12/13 | arm, abi=0 | 7.0.0.RC1    | [ait_llm-0.1.0-py3-none-linux_aarch64.whl](https://ais-bench.obs.cn-north-4.myhuaweicloud.com/compare/20231226/ABI0/ait_llm-0.1.0-py3-none-linux_aarch64.whl) | 48215f3ce18881f60beab6fad88ce30a | [llm大模型推理精度工具功能说明_v0.1.0](/msit/docs/llm/history/llm大模型推理精度工具功能说明_v0.1.0.md) |
+  | 0.1.0 | 2023/12/13 | arm, abi=1 | 7.0.0.RC1    | [ait_llm-0.1.0-py3-none-linux_aarch64.whl](https://ais-bench.obs.cn-north-4.myhuaweicloud.com/compare/20231226/ABI1/ait_llm-0.1.0-py3-none-linux_aarch64.whl) | b96e8e7e4786f1abcbec1458ca3ede5d | [llm大模型推理精度工具功能说明_v0.1.0](/msit/docs/llm/history/llm大模型推理精度工具功能说明_v0.1.0.md) |
+  | 0.1.0 | 2023/12/13 | x86, abi=0 | 7.0.0.RC1    | [ait_llm-0.1.0-py3-none-linux_x86_64.whl](https://ais-bench.obs.cn-north-4.myhuaweicloud.com/compare/20231226/ABI0/ait_llm-0.1.0-py3-none-linux_x86_64.whl)   | c605e9d50891632a09b21e90403b5b96 | [llm大模型推理精度工具功能说明_v0.1.0](/msit/docs/llm/history/llm大模型推理精度工具功能说明_v0.1.0.md) |
+  | 0.1.0 | 2023/12/13 | x86, abi=1 | 7.0.0.RC1    | [ait_llm-0.1.0-py3-none-linux_x86_64.whl](https://ais-bench.obs.cn-north-4.myhuaweicloud.com/compare/20231226/ABI1/ait_llm-0.1.0-py3-none-linux_x86_64.whl)   | ea88611dc4358f51a47f7659a36d5a48 | [llm大模型推理精度工具功能说明_v0.1.0](/msit/docs/llm/history/llm大模型推理精度工具功能说明_v0.1.0.md) |
 - 校验whl包是否正确
 
   ```
@@ -116,7 +116,7 @@ msit install llm
 
   ```
   # 安装所需版本的框架 whl
-  pip3 install msit-0.0.1-py3-none-linux_aarch64.whl
+  pip3 install ait-0.0.1-py3-none-linux_aarch64.whl
   # 安装所需版本的工具 whl
-  pip3 install msit_llm-0.2.0-py3-none-linux_aarch64.whl
+  pip3 install ait_llm-0.2.0-py3-none-linux_aarch64.whl
   ```
