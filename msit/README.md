@@ -19,10 +19,10 @@
 msIT(MindStudio Inference Tools)作为昇腾统一推理工具，提供客户一体化开发工具，用于辅助用户进行模型迁移以及性能与精度的调试调优，当前包括benchmark、debug、transplt、analyze、llm等组件。
 
 ### 模型推理迁移全流程
-![模型推理迁移全流程](/ait_flow.png)
+![模型推理迁移全流程](/msit-flow.png)
 
 ### 大模型推理迁移全流程
-![大模型推理迁移全流程](/ait-llm-flow.png)
+![大模型推理迁移全流程](/llm_flow.png)
 
 ### msIT各子功能介绍
 | 任务类型                                  | 子功能                                 | 说明                                       |
