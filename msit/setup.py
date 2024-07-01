@@ -38,7 +38,7 @@ ait_sub_task_entry_points = [
 setup(
     name='msit',
     version='7.0.0c630',
-    description='MSIT, MindStudio Inference Tools',
+    description='msIT, MindStudio Inference Tools',
     long_description_content_type='text/markdown',
     url='https://gitee.com/ascend/msit',
     packages=find_packages(),

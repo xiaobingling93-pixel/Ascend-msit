@@ -1,22 +1,22 @@
-#  MSIT
+#  msIT
 
 ## 目录
-- [MSIT](#msit)
+- [msIT](#msit)
   - [目录](#目录)
   - [介绍](#介绍)
-    - [MSIT各子功能介绍](#msit各子功能介绍)
+    - [msIT各子功能介绍](#msit各子功能介绍)
   - [工具安装](#工具安装)
   - [工具使用](#工具使用)
     - [命令行格式说明](#命令行格式说明)
   - [参考](#参考)
-    - [MSIT资源](#msit资源)
+    - [msIT资源](#msit资源)
     - [常见问题FAQ](#常见问题faq)
   - [许可证](#许可证)
   - [公网URL说明](#公网url说明)
   - [免责声明](#免责声明)
 
 ## 介绍
-MSIT(MindStudio Inference Tools)作为昇腾统一推理工具，提供客户一体化开发工具，用于辅助用户进行模型迁移以及性能与精度的调试调优，当前包括benchmark、debug、transplt、analyze、llm等组件。
+msIT(MindStudio Inference Tools)作为昇腾统一推理工具，提供客户一体化开发工具，用于辅助用户进行模型迁移以及性能与精度的调试调优，当前包括benchmark、debug、transplt、analyze、llm等组件。
 
 ### 模型推理迁移全流程
 ![模型推理迁移全流程](/ait_flow.png)
@@ -24,7 +24,7 @@ MSIT(MindStudio Inference Tools)作为昇腾统一推理工具，提供客户一
 ### 大模型推理迁移全流程
 ![大模型推理迁移全流程](/ait-llm-flow.png)
 
-### MSIT各子功能介绍
+### msIT各子功能介绍
 | 任务类型                                  | 子功能                                 | 说明                                       |
 |---------------------------------------|-------------------------------------|------------------------------------------|
 | [benchmark](/msit/docs/benchmark)     | -                                   | 用来针对指定的推理模型运行推理程序，并能够测试推理模型的性能（包括吞吐率、时延） |
@@ -76,21 +76,21 @@ msit debug compare -h
 
 ## 参考
 
-### MSIT资源
+### msIT资源
 
-* [MSIT benchmark 快速入门指南](/msit/docs/benchmark/README.md)
-* [MSIT debug surgeon 快速入门指南](/msit/docs/debug/surgeon/README.md)
-* [MSIT debug compare 快速入门指南](/msit/docs/debug/compare/README.md)
-* [MSIT analyze 快速入门指南](/msit/components/analyze/README.md)
-* [MSIT transplt 快速入门指南](/msit/components/transplt/README.md)
-* [MSIT convert 快速入门指南](/msit/components/convert/README.md)
-* [MSIT profile 快速入门指南](/msit/docs/profile/README.md)
-* [MSIT llm 快速入门指南](/msit/components/llm/)
+* [msIT benchmark 快速入门指南](/msit/docs/benchmark/README.md)
+* [msIT debug surgeon 快速入门指南](/msit/docs/debug/surgeon/README.md)
+* [msIT debug compare 快速入门指南](/msit/docs/debug/compare/README.md)
+* [msIT analyze 快速入门指南](/msit/components/analyze/README.md)
+* [msIT transplt 快速入门指南](/msit/components/transplt/README.md)
+* [msIT convert 快速入门指南](/msit/components/convert/README.md)
+* [msIT profile 快速入门指南](/msit/docs/profile/README.md)
+* [msIT llm 快速入门指南](/msit/components/llm/)
 
 ### 常见问题FAQ
 
-* [MSIT使用以及安装常见问题](https://gitee.com/ascend/msit/wikis/Home)
-* [MSIT安全拦截报错解决](https://gitee.com/ascend/msit/wikis/ait_security_error_log_solution)
+* [msIT使用以及安装常见问题](https://gitee.com/ascend/msit/wikis/Home)
+* [msIT安全拦截报错解决](https://gitee.com/ascend/msit/wikis/ait_security_error_log_solution)
 
 ## 许可证
 
