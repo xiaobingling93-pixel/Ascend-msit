@@ -76,9 +76,9 @@ register_hook(model, dump_config)
 
 Dump默认落盘路径 `{DUMP_DIR}`在当前目录下，如果在DumpConfig中指定dump_path，落盘路径则为指定的 `{DUMP_PATH}`。
 
-- tensor信息会生成在默认落盘路径的msit_dump目录下，具体路径是 `{DUMP_DIR}/msit_dump_{TIMESTAMP}/torch_tensors/{device_id}_{PID}/{TID}`目录下
-- model信息会生成在默认落盘路径的msit_dump目录下，具体路径是 `{DUMP_DIR}/msit_dump_{TIMESTAMP}/torch_tensors/{device_id}_{PID}/model_tree.json`
-- weights 权重信息回生成在默认落盘路径的msit_dump目录下，具体路径是`{DUMP_DIR}/msit_dump_{TIMESTAMP}/torch_tensors/{device_id}_{PID}/weights` 目录下
+- tensor信息会生成在默认落盘路径的ait_dump目录下，具体路径是 `{DUMP_DIR}/ait_dump_{TIMESTAMP}/torch_tensors/{device_id}_{PID}/{TID}`目录下
+- model信息会生成在默认落盘路径的ait_dump目录下，具体路径是 `{DUMP_DIR}/ait_dump_{TIMESTAMP}/torch_tensors/{device_id}_{PID}/model_tree.json`
+- weights 权重信息回生成在默认落盘路径的ait_dump目录下，具体路径是`{DUMP_DIR}/ait_dump_{TIMESTAMP}/torch_tensors/{device_id}_{PID}/weights` 目录下
 
 > 注：`{device_id}`为设备号；`{PID}`为进程号；`{TID}`为 `token_id`
 

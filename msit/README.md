@@ -7,8 +7,9 @@
 1.命令行变更：原ait命令行将变更为msit。为了业务兼容与稳定，我们会保留ait命令行直到2024年9月30日；
 2.python库命变更：原ait_llm将变更为msit_llm，同样地，ait_llm的对外接口也会保留到2024年9月30日。
 
-请知悉以上修改内容，如有任何疑问或需要进一步协助，请随时与我们联系。谢谢！
+请知悉以上修改内容，如有任何疑问或需要进一步协助，请通过以下方式随时与我们联系。谢谢！
 ```
+[Issue](https://gitee.com/ascend/msit/issues) | [昇腾社区MindStudio问题求助](https://www.hiascend.com/forum/forum-0106101385921175006-1.html?filterCondition=1&topicClassId=0606101390016536003) | [昇腾社区工单系统](https://www.hiascend.com/feedback/add)
 
 #  msIT
 

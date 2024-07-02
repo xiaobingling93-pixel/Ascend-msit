@@ -56,13 +56,13 @@ Dump 默认落盘路径 `{DUMP_DIR}`在当前目录下，如果指定 output 目
 
 注：`{device_id}`为设备号；`{PID}`为进程号；`{TID}`为 `token_id`；`{TIMESTAMP}`为时间戳；`{executeCount}`为 `operation`运行次数。
 
-- tensor 信息，具体路径是 `{DUMP_DIR}/msit_dump_{TIMESTAMP}/tensors/{device_id}_{PID}/{TID}`目录下(使用老版本的 cann 包可能导致 tensor 落盘路径不同）。
-- layer 信息，具体路径是 `{DUMP_DIR}/msit_dump_{TIMESTAMP}/layer/{PID}`目录下。
-- model 信息，具体路径是 `{DUMP_DIR}/msit_dump_{TIMESTAMP}/model/{PID}`目录下。注：由于 model 由 layer 组合而成，因此使用 model 时，默认同时会落盘 layer 信息。
+- tensor 信息，具体路径是 `{DUMP_DIR}/ait_dump_{TIMESTAMP}/tensors/{device_id}_{PID}/{TID}`目录下(使用老版本的 cann 包可能导致 tensor 落盘路径不同）。
+- layer 信息，具体路径是 `{DUMP_DIR}/ait_dump_{TIMESTAMP}/layer/{PID}`目录下。
+- model 信息，具体路径是 `{DUMP_DIR}/ait_dump_{TIMESTAMP}/model/{PID}`目录下。注：由于 model 由 layer 组合而成，因此使用 model 时，默认同时会落盘 layer 信息。
 - onnx 需要和 layer、model 配合使用，落盘位置和 model、layer 相同的目录。
-- cpu*profiling 信息，具体路径是 `{DUMP_DIR}/msit_dump*{TIMESTAMP}/cpu*profiling/{TIMESTAMP}/operation_statistic*{executeCount}.txt`。
-- 算子信息，具体路径是 `{DUMP_DIR}/msit_dump_{TIMESTAMP}/operation_io_tensors/{PID}/operation_tensors_{executeCount}.csv`。
-- kernel 算子信息，具体路径是 `{DUMP_DIR}/msit_dump_{TIMESTAMP}/kernel_io_tensors/{PID}/kernel_tensors_{executeCount}.csv`。
+- cpu*profiling 信息，具体路径是 `{DUMP_DIR}/ait_dump*{TIMESTAMP}/cpu*profiling/{TIMESTAMP}/operation_statistic*{executeCount}.txt`。
+- 算子信息，具体路径是 `{DUMP_DIR}/ait_dump_{TIMESTAMP}/operation_io_tensors/{PID}/operation_tensors_{executeCount}.csv`。
+- kernel 算子信息，具体路径是 `{DUMP_DIR}/ait_dump_{TIMESTAMP}/kernel_io_tensors/{PID}/kernel_tensors_{executeCount}.csv`。
 
 ##### 模型拓扑信息转 onnx 可视化模型：
 

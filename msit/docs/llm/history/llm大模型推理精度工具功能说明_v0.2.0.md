@@ -36,11 +36,11 @@ msit llm dump --exec "bash run.sh patches/models/modeling_xxx.py"
 
 Dump默认落盘路径 `{DUMP_DIR}`在当前目录下，如果指定output目录，落盘路径则为指定的 `{OUTPUT_DIR}`。
 
-- tensor信息会生成在默认落盘路径的msit_dump目录下，具体路径是 `{DUMP_DIR}/msit_dump/tensors/{device_id}_{PID}/{TID}`目录下。
-- layer信息会生成在默认落盘路径的msit_dump目录下，具体路径是 `{DUMP_DIR}/msit_dump/layer/{PID}`目录下。
-- cpu_profiling信息会生成在默认落盘路径的msit_dump目录下，具体路径是 `{DUMP_DIR}/msit_dump/cpu_profiling/{TIMESTAMP}/operation_statistic_{executeCount}.txt`。
-- 算子信息会生成在默认落盘路径的msit_dump目录下，具体路径是 `{DUMP_DIR}/msit_dump/operation_io_tensors/{PID}/operation_tensors_{executeCount}.csv`。
-- kernel算子信息会生成在默认落盘路径的msit_dump目录下，具体路径是 `{DUMP_DIR}/msit_dump/kernel_io_tensors/{PID}/kernel_tensors_{executeCount}.csv`。
+- tensor信息会生成在默认落盘路径的ait_dump目录下，具体路径是 `{DUMP_DIR}/ait_dump/tensors/{device_id}_{PID}/{TID}`目录下。
+- layer信息会生成在默认落盘路径的ait_dump目录下，具体路径是 `{DUMP_DIR}/ait_dump/layer/{PID}`目录下。
+- cpu_profiling信息会生成在默认落盘路径的ait_dump目录下，具体路径是 `{DUMP_DIR}/ait_dump/cpu_profiling/{TIMESTAMP}/operation_statistic_{executeCount}.txt`。
+- 算子信息会生成在默认落盘路径的ait_dump目录下，具体路径是 `{DUMP_DIR}/ait_dump/operation_io_tensors/{PID}/operation_tensors_{executeCount}.csv`。
+- kernel算子信息会生成在默认落盘路径的ait_dump目录下，具体路径是 `{DUMP_DIR}/ait_dump/kernel_io_tensors/{PID}/kernel_tensors_{executeCount}.csv`。
 
 注：`{device_id}`为设备号；`{PID}`为进程号；`{TID}`为 `token_id`；`{TIMESTAMP}`为时间戳；`{executeCount}`为 `operation`运行次数。
 

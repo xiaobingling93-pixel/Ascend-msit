@@ -56,13 +56,13 @@ msit llm dump --exec "bash run.sh patches/models/modeling_xxx.py"
 
 Dump默认落盘路径 `{DUMP_DIR}`在当前目录下，如果指定output目录，落盘路径则为指定的 `{OUTPUT_DIR}`。
 
-- tensor 信息会生成在默认落盘路径的 msit_dump 目录下，具体路径是 `{DUMP_DIR}/msit_dump/tensors/{device_id}_{PID}/{TID}`目录下。
-- layer 信息会生成在默认落盘路径的 msit_dump 目录下，具体路径是 `{DUMP_DIR}/msit_dump/layer/{PID}`目录下。
-- model 信息会生成在默认落盘路径的 msit_dump 目录下，具体路径是 `{DUMP_DIR}/msit_dump/model/{PID}`目录下。注：由于 model 由 layer 组合而成，因此使用 model 时，默认同时会落盘 layer 信息。
+- tensor 信息会生成在默认落盘路径的 ait_dump 目录下，具体路径是 `{DUMP_DIR}/ait_dump/tensors/{device_id}_{PID}/{TID}`目录下。
+- layer 信息会生成在默认落盘路径的 ait_dump 目录下，具体路径是 `{DUMP_DIR}/ait_dump/layer/{PID}`目录下。
+- model 信息会生成在默认落盘路径的 ait_dump 目录下，具体路径是 `{DUMP_DIR}/ait_dump/model/{PID}`目录下。注：由于 model 由 layer 组合而成，因此使用 model 时，默认同时会落盘 layer 信息。
 - onnx 需要和 layer、model 配合使用，落盘位置和 model、layer 相同的目录。
-- cpu_profiling 信息会生成在默认落盘路径的 msit_dump 目录下，具体路径是 `{DUMP_DIR}/msit_dump/cpu_profiling/{TIMESTAMP}/operation_statistic_{executeCount}.txt`。
-- 算子信息会生成在默认落盘路径的 msit_dump 目录下，具体路径是 `{DUMP_DIR}/msit_dump/operation_io_tensors/{PID}/operation_tensors_{executeCount}.csv`。
-- kernel 算子信息会生成在默认落盘路径的 msit_dump 目录下，具体路径是 `{DUMP_DIR}/msit_dump/kernel_io_tensors/{PID}/kernel_tensors_{executeCount}.csv`。
+- cpu_profiling 信息会生成在默认落盘路径的 ait_dump 目录下，具体路径是 `{DUMP_DIR}/ait_dump/cpu_profiling/{TIMESTAMP}/operation_statistic_{executeCount}.txt`。
+- 算子信息会生成在默认落盘路径的 ait_dump 目录下，具体路径是 `{DUMP_DIR}/ait_dump/operation_io_tensors/{PID}/operation_tensors_{executeCount}.csv`。
+- kernel 算子信息会生成在默认落盘路径的 ait_dump 目录下，具体路径是 `{DUMP_DIR}/ait_dump/kernel_io_tensors/{PID}/kernel_tensors_{executeCount}.csv`。
 
 注：`{device_id}`为设备号；`{PID}`为进程号；`{TID}`为 `token_id`；`{TIMESTAMP}`为时间戳；`{executeCount}`为 `operation`运行次数。
 
@@ -111,7 +111,7 @@ atb_json_to_onnx(layer_topo_info, model_level)
 
 ```
 from llm import DumpConfig, register_hook
-dump_config = DumpConfig(dump_path="./msit_dump")
+dump_config = DumpConfig(dump_path="./ait_dump")
 register_hook(model, dump_config)  # model是要dump中间tensor的模型实例，在模型初始化后添加代码
 ```
 
@@ -149,7 +149,7 @@ msit llm opcheck -i {tensor_dir} -c {op_csv_path} -o {output_dir}
 | 参数名                      | 描述                                                                                                                                                                    | 是否必选 |
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
 | --input, -i                 | tensor数据路径，为文件夹，由msit llm dump --type tensor落盘，示例：OUTPUT_DIR/{device_id}_{PID}/{TID}/                                                                                 | 是       |
-| --csv-path, -c              | 算子信息csv文件路径，为单个数据文件路径，由msit llm dump --type op落盘，示例：OUTPUT_DIR/msit_dump/operation_io_tensors/PID/operation_tensors_0.csv                       | 是       |
+| --csv-path, -c              | 算子信息csv文件路径，为单个数据文件路径，由msit llm dump --type op落盘，示例：OUTPUT_DIR/ait_dump/operation_io_tensors/PID/operation_tensors_0.csv                       | 是       |
 | --output, -o                | 输出文件的保存路径，为文件夹，示例：xx/xxx/xx                                                                                                                           | 否       |
 | --operation-ids, -ids       | 选择预检指定索引的tensor，默认为空，全量算子预检。使用方式：-ids 24_1,2_3_5                                                                                             | 否       |
 | --operation-name, -opname   | 指定需要预检的算子类型，支持模糊指定，如selfattention只需要填写self。使用方式：-opname self，linear                                                                     | 否       |
