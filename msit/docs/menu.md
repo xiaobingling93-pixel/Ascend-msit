@@ -12,7 +12,7 @@
       - [异常检测功能使用说明](/msit/docs/llm/工具-异常检测使用说明.md '**menu**')
       - [精度预检功能使用说明](/msit/docs/llm/工具-精度预检使用说明.md '**menu**')
     - 加速库推理场景
-      - [atb整网算子精度比对](/msit/docs/llm/TorchAir场景-整网算子精度比对.md '**menu**')
+      - [atb整网算子精度比对](/msit/docs/llm/加速库场景-整网精度比对.md '**menu**')
       - [精度预检](/msit/docs/llm/工具-精度预检使用说明.md '**menu**')
       - [异常检测](/msit/docs/llm/工具-异常检测使用说明.md '**menu**')
     - torchair推理场景
