@@ -30,14 +30,14 @@
 # 安装与运行
 onnx 当前版本要求 `onnx<=1.14.1`
 
-您可以使用我们已经打包好的程序: [已打包程序](https://gitee.com/ascend/ait/wikis/OnnxModifier/%E6%89%93%E5%8C%85%20OnnxModifier%20)
+您可以使用我们已经打包好的程序: [已打包程序](https://gitee.com/ascend/msit/wikis/OnnxModifier/%E6%89%93%E5%8C%85%20OnnxModifier%20)
 
 
 目前支持三种方法运行`onnx-modifier`, Linux与windows安装流程一致，以下为安装运行说明：
 
 ## 源码拉取及第三方库安装
 
-安装所需要的Python, NodeJS。拉取`ait`，并切换到 onnx-modifier 目录
+安装所需要的Python, NodeJS。拉取`msit`，并切换到 onnx-modifier 目录
 
 1. 安装python
     * 建议安装[miniconda3](https://docs.conda.io/en/latest/miniconda.html)
@@ -51,11 +51,11 @@ onnx 当前版本要求 `onnx<=1.14.1`
         - 验证是否安装成功：命令行输入 `node -v`。能正常输出 node 版本即表示成功
 3. 拉取源码：
   ```bash
-  git clone https://gitee.com/ascend/ait.git
+  git clone https://gitee.com/ascend/msit.git
   ```
-4. 安装 ait 中的 surgeon 包, 提供 AutoOptimizer （基于知识库的整网优化） 和 Extract （子网导出） 功能, 请参考 ait 的安装流程，以下为参考步骤：
+4. 安装 msit 中的 surgeon 包, 提供 AutoOptimizer （基于知识库的整网优化） 和 Extract （子网导出） 功能, 请参考 msit 的安装流程，以下为参考步骤：
   ```bash
-  cd ait/ait
+  cd msit/msit
   # windows 场景请直接执行：install.bat --surgeon
   # 添加执行权限
   chmod u+x install.sh
@@ -65,25 +65,25 @@ onnx 当前版本要求 `onnx<=1.14.1`
   ```
 5. 安装 python 需要库
   ```bash
-  cd ait/onnx-modifier
+  cd msit/onnx-modifier
   pip install -r requirements.txt
   ```
 
 ## 启动方式一：编译成可执行程序启动
-您可以使用我们已经打包好的程序: [已打包程序](https://gitee.com/ascend/ait/wikis/OnnxModifier/%E6%89%93%E5%8C%85%20OnnxModifier%20)
+您可以使用我们已经打包好的程序: [已打包程序](https://gitee.com/ascend/msit/wikis/OnnxModifier/%E6%89%93%E5%8C%85%20OnnxModifier%20)
 
 
-也可以选择自行编译，编译对环境网络要求较高, 如果遇到electron 无法安装失败问题，可以参考wiki: [electron 安装](https://gitee.com/ascend/ait/wikis/OnnxModifier/electron%20%E5%AE%89%E8%A3%85)
+也可以选择自行编译，编译对环境网络要求较高, 如果遇到electron 无法安装失败问题，可以参考wiki: [electron 安装](https://gitee.com/ascend/msit/wikis/OnnxModifier/electron%20%E5%AE%89%E8%A3%85)
 
 - 安装
 
   ```bash
-  # 切到目录 ait/onnx-modifier 运行以下命令
+  # 切到目录 msit/onnx-modifier 运行以下命令
   npm install  # npm是NodeJS的包管理器；
   ```
 - 编译
   ```bash
-  # 切到目录 ait/onnx-modifier 运行以下命令
+  # 切到目录 msit/onnx-modifier 运行以下命令
   npm run make
   ```
 - 安装运行
@@ -95,7 +95,7 @@ onnx 当前版本要求 `onnx<=1.14.1`
     2. 如果运行报错，建议升级flask。建议版本2.2.2
 - 运行，默认端口为5000（常用于调试开发）
   ```bash
-  # 切到目录 ait/onnx-modifier 运行以下命令
+  # 切到目录 msit/onnx-modifier 运行以下命令
   python flaskserver.py
   # 然后打开浏览器，打开 localhost:5000 即可访问到 onnx-modifier。
   # 因为安全考虑。仅支持运行命令的主机访问该端口，如果需要其他机器访问，建议使用ssh端口转发功能
@@ -128,10 +128,10 @@ onnx 当前版本要求 `onnx<=1.14.1`
             * windows 下载 electron-v24.1.3-win32-x64.zip 或 electron-v24.1.3-win32-arm64.zip
         2. zip解压之后，将解压路径配置到环境变量的PATH中
     2. 方式2：
-        直接 `npm install` , npm是NodeJS的包管理器。如果遇到electron 无法安装，可以参考wiki: [electron 安装](https://gitee.com/ascend/ait/wikis/OnnxModifier/electron%20%E5%AE%89%E8%A3%85)
+        直接 `npm install` , npm是NodeJS的包管理器。如果遇到electron 无法安装，可以参考wiki: [electron 安装](https://gitee.com/ascend/msit/wikis/OnnxModifier/electron%20%E5%AE%89%E8%A3%85)
 - 运行（该方式启动常用于调试开发）
   ```bash
-  # 切到目录 ait/onnx-modifier 运行以下命令
+  # 切到目录 msit/onnx-modifier 运行以下命令
   electron .
   ```
   - 命令行参数
@@ -296,7 +296,7 @@ onnx 当前版本要求 `onnx<=1.14.1`
 
 # 常见问题 Q&A
 
-参考：[OnnxModify 常见问题](https://gitee.com/ascend/ait/wikis/OnnxModifier/OnnxModify%20%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98)
+参考：[OnnxModify 常见问题](https://gitee.com/ascend/msit/wikis/OnnxModifier/OnnxModify%20%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98)
 
 # 参考资料
 
