@@ -15,7 +15,7 @@ Analyze分析工具提供从Caffe、TensorFlow以及ONNX模型迁移至昇腾硬
 ## 使用示例
 
 ```shell
-ait analyze [OPTIONS]
+msit analyze [OPTIONS]
 ```
 
 OPTIONS参数说明如下：
@@ -33,7 +33,7 @@ OPTIONS参数说明如下：
 ## 运行示例
 
 ```shell
-ait analyze -gm /tmp/test.onnx -o /tmp/out
+msit analyze -gm /tmp/test.onnx -o /tmp/out
 ```
 
 ```shell

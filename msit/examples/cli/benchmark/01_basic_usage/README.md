@@ -2,7 +2,7 @@
 
 
 ## 介绍
-benchmark推理工具可以通过ait命令行方式启动模型测试。
+benchmark推理工具可以通过msit命令行方式启动模型测试。
 
 
 ## 运行示例
@@ -11,7 +11,7 @@ benchmark推理工具可以通过ait命令行方式启动模型测试。
 - 输入命令
 
     ```bash
-    ait benchmark --om-model *.om
+    msit benchmark --om-model *.om
     ```
 
   其中，*为OM离线模型文件名。
@@ -50,7 +50,7 @@ benchmark推理工具可以通过ait命令行方式启动模型测试。
   **开启debug调试模式。**
 
   ```bash
-    ait benchmark --om-model /home/model/resnet50_v1.om --output ./ --debug 1
+    msit benchmark --om-model /home/model/resnet50_v1.om --output ./ --debug 1
     ```
 
     调试模式开启后会增加更多的打印信息，包括：
@@ -78,4 +78,4 @@ benchmark推理工具可以通过ait命令行方式启动模型测试。
    ```
 
 ## FAQ
-使用出现问题时，可参考[FAQ](https://gitee.com/ascend/ait/wikis/benchmark_FAQ/ait%20benchmark%20%E5%AE%89%E8%A3%85%E9%97%AE%E9%A2%98FAQ)
+使用出现问题时，可参考[FAQ](https://gitee.com/ascend/msit/wikis/benchmark_FAQ/msit%20benchmark%20%E5%AE%89%E8%A3%85%E9%97%AE%E9%A2%98FAQ)

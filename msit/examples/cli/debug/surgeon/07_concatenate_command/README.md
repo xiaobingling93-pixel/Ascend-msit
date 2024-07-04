@@ -7,7 +7,7 @@
 注意：若检测到待拼接的两幅ONNX图中存在命名冲突情况，将自动为第一幅ONNX图所有组件名称添加"pre_"前缀。
 
 ```bash
-ait debug surgeon concat [OPTIONS]
+msit debug surgeon concat [OPTIONS]
 ```
 
 concatenate 可简写为concat
@@ -23,7 +23,7 @@ concatenate 可简写为concat
 ## 运行示例
 
 ```bash
-ait debug surgeon concat -g1 sub1.onnx -g2 sub2.onnx -io "g1_out1,g2_in1;g1_out2,g2_in2" 
+msit debug surgeon concat -g1 sub1.onnx -g2 sub2.onnx -io "g1_out1,g2_in1;g1_out2,g2_in2" 
 ```
 
 输出示例如下：

@@ -20,7 +20,7 @@ atc --framework=5 --output={your_model_name} --soc_version=Ascend310P3 --model={
 ```
 * 执行精度比对命令,示例:
 ```
-ait debug compare -gm {onnx_model_path} -om {om_model_path} -i {input_data_path} -o {output_file_path} --locat True
+msit debug compare -gm {onnx_model_path} -om {om_model_path} -i {input_data_path} -o {output_file_path} --locat True
 ```
 * > onnx_model_path为onnx文件路径
 * > om_model_path为atc转换后om文件路径

@@ -25,7 +25,7 @@
 ```
 将[fusion_switch.cfg]放在当前目录下，执行命令如下：
 ```
-ait debug compare -gm {onnx_model_path} -om {om_model_path} -o {output_file_path} --fusion-switch-file ./fusion_switch.cfg
+msit debug compare -gm {onnx_model_path} -om {om_model_path} -o {output_file_path} --fusion-switch-file ./fusion_switch.cfg
 ```
 
 ## 结果

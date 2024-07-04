@@ -105,7 +105,7 @@
 
   使用方法，添加--advisor参数：
   ```sh
-  ait debug compare -gm /home/HwHiAiUser/onnx_prouce_data/resnet_offical.onnx -om /home/HwHiAiUser/onnx_prouce_data/model/resnet50.om \
+  msit debug compare -gm /home/HwHiAiUser/onnx_prouce_data/resnet_offical.onnx -om /home/HwHiAiUser/onnx_prouce_data/model/resnet50.om \
   -c /usr/local/Ascend/ascend-toolkit/latest -o /home/HwHiAiUser/result/test --advisor
   ```
 

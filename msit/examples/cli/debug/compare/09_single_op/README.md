@@ -13,7 +13,7 @@
 - 不要开启`--locat`
 执行命令如下：
 ```
-ait debug compare -gm {onnx_model_path} -om {om_model_path} -i {input_data_path} -o {output_file_path} -single True
+msit debug compare -gm {onnx_model_path} -om {om_model_path} -i {input_data_path} -o {output_file_path} -single True
 ```
 
 ## 结果

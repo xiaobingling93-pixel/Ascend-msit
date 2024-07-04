@@ -1,9 +1,9 @@
 # Collect Ascend AI Processor Data
 ## 简介
-介绍ait profile和采集昇腾AI处理器系统AI数据相关的可选命令
+介绍msit profile和采集昇腾AI处理器系统AI数据相关的可选命令
 - **命令示例**
 ```
-ait profile --application "ait benchmark -om /home/HwHiAiUser/resnet101_bs1.om" --output=output_data/ --sys-hardware-mem=on --sys-cpu-profiling=on --sys-profiling=on --sys-pid-profiling=on --dvpp-profiling=on
+msit profile --application "msit benchmark -om /home/HwHiAiUser/resnet101_bs1.om" --output=output_data/ --sys-hardware-mem=on --sys-cpu-profiling=on --sys-profiling=on --sys-pid-profiling=on --dvpp-profiling=on
 ```
 
 ## 涉及可选命令

@@ -5,7 +5,7 @@
 对模型进行子图切分。
 
 ```bash
-ait debug surgeon extract [OPTIONS] [REQUIRED]
+msit debug surgeon extract [OPTIONS] [REQUIRED]
 ```
 
 extract 可简写为ext
@@ -21,7 +21,7 @@ extract 可简写为ext
 ## 运行示例
 
 ```bash
-ait debug surgeon extract --input=origin_model.onnx --output-file=sub_model.onnx --start-node-names="s_node1,s_node2" --end-node-names="e_node1,e_node2" --subgraph_input_shape="input1:1,3,224,224" --subgraph_input_dtype="input1:float16"
+msit debug surgeon extract --input=origin_model.onnx --output-file=sub_model.onnx --start-node-names="s_node1,s_node2" --end-node-names="e_node1,e_node2" --subgraph_input_shape="input1:1,3,224,224" --subgraph_input_dtype="input1:float16"
 ```
 
 输出示例如下：

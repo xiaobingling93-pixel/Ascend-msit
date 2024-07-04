@@ -43,7 +43,7 @@ ffmpeg -i dvpp_vdec_h264_1frame_bp_51_1920x1080.h264 test_video.mp4
 
 ### 编译并运行FFmpeg应用工程
 
-在`<ait工程目录>/ait/examples/cli/transplt/04_ffmpeg_vdec/ffmpeg`下使用如下命令编译cpp源码文件：
+在`<msit工程目录>/msit/examples/cli/transplt/04_ffmpeg_vdec/ffmpeg`下使用如下命令编译cpp源码文件：
 
 ```shell
 g++ -std=c++11 ffmpeg_decode.cpp -lavcodec -lavdevice -lavfilter -lavformat -lavutil -lswresample -lswscale -o ffmpeg_decode
@@ -57,11 +57,11 @@ g++ -std=c++11 ffmpeg_decode.cpp -lavcodec -lavdevice -lavfilter -lavformat -lav
 
 如果运行成功，会在当前目录下生成一个文件名为`dvpp_vdec_h264_1frame_bp_51_1920x1080_decoded-1.pgm`的文件，该文件为解码后的灰度pgm格式图片。
 
-## AIT Transplt 迁移分析
+## msIT Transplt 迁移分析
 
-  - 安装 ait 工具后，针对待迁移项目执行 transplt 迁移分析
+  - 安装 msit 工具后，针对待迁移项目执行 transplt 迁移分析
   ```sh
-  ait transplt -s <ait工程目录>/ait/examples/cli/transplt/04_ffmpeg_vdec/ffmpeg
+  msit transplt -s <msit工程目录>/msit/examples/cli/transplt/04_ffmpeg_vdec/ffmpeg
   ```
   输出示例如下
   ```sh
@@ -71,7 +71,7 @@ g++ -std=c++11 ffmpeg_decode.cpp -lavcodec -lavdevice -lavfilter -lavformat -lav
   INFO - scan_api.py[113] - **** Project analysis finished <<<
   ```
 
-  最终分析结果文件位于`<ait工程目录>/ait/examples/cli/transplt/04_ffmpeg_vdec/ffmpeg`路径下 `./output.xlsx`，该结果中重点关注有对应关系的接口，并参照 `AscendAPILink` 中相关接口说明辅助完成迁移。
+  最终分析结果文件位于`<msit工程目录>/msit/examples/cli/transplt/04_ffmpeg_vdec/ffmpeg`路径下 `./output.xlsx`，该结果中重点关注有对应关系的接口，并参照 `AscendAPILink` 中相关接口说明辅助完成迁移。
 
 ## 迁移到昇腾ACL DVPP 图像处理
 - **完成该部分迁移，可使用`ACL DVPP` 图像处理在昇腾 NPU 上执行视频解码**
@@ -182,8 +182,8 @@ DVPP在解码完成后，资源释放相关API如下：
   
 - **编译执行**
 
-迁移后的代码实现可以参考[acl_decode.cpp](https://gitee.com/ascend/ait/tree/master/ait/examples/cli/transplt/04_ffmpeg_vdec/acl/acl_decode.cpp)。另外还有一个简化版本的实现[acl_decode_simplified.cpp](https://gitee.com/ascend/ait/tree/master/ait/examples/cli/transplt/04_ffmpeg_vdec/acl/acl_decode_simplified.cpp)，简化版本阉割了多线程解码能力，并且删除了许多错误检查代码，简化版代码只是为了让用户更方便的理解ACL视频解码的流程，实际运行过程中可能会存在未知问题。
-迁移完成后在`<ait工程目录>/ait/examples/cli/transplt/04_ffmpeg_vdec/acl`下使用 `g++` 编译源码文件，也可自行编写 `cmake` 文件，修改调整至可编译通过并正确执行。
+迁移后的代码实现可以参考[acl_decode.cpp](https://gitee.com/ascend/msit/tree/master/msit/examples/cli/transplt/04_ffmpeg_vdec/acl/acl_decode.cpp)。另外还有一个简化版本的实现[acl_decode_simplified.cpp](https://gitee.com/ascend/msit/tree/master/msit/examples/cli/transplt/04_ffmpeg_vdec/acl/acl_decode_simplified.cpp)，简化版本阉割了多线程解码能力，并且删除了许多错误检查代码，简化版代码只是为了让用户更方便的理解ACL视频解码的流程，实际运行过程中可能会存在未知问题。
+迁移完成后在`<msit工程目录>/msit/examples/cli/transplt/04_ffmpeg_vdec/acl`下使用 `g++` 编译源码文件，也可自行编写 `cmake` 文件，修改调整至可编译通过并正确执行。
 
 > **注意**： 迁移后的代码使用了ACL数据媒体处理V2版本的接口，该接口目前只支持昇腾310P AI处理器，请在310P的机器上编译运行迁移后的代码。
   

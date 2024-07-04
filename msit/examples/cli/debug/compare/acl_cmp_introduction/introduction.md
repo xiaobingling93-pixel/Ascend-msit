@@ -32,7 +32,7 @@
 
 
 
-工具提供dump_data接口，在模型脚本中插入代码dump数据，然后使用ait debug compare aclcmp命令进行数据比对。
+工具提供dump_data接口，在模型脚本中插入代码dump数据，然后使用msit debug compare aclcmp命令进行数据比对。
 具体使用指导请参考：[dump_data代码插入使用说明](../13_dump_and_compare/README.md)
 
 ### 2.3 特别说明

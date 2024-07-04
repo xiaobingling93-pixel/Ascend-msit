@@ -458,39 +458,3 @@ reset()
   ```cmd
   ./get_sample_datas.sh
   ```
-
-### 样例列表
-#### 单进程使用`InferSession.infer`接口推理
-|样例|说明|
-| ---- | ---- |
-|[infer_api_static.py](../../components/benchmark/api_samples/interface_api_usage/api_infer/infer_api_static.py)|调用InferSession的infer接口推理静态模型|
-|[infer_api_dymbatch.py](../../components/benchmark/api_samples/interface_api_usage/api_infer/infer_api_dymbatch.py)|调用InferSession的infer接口推理动态batch模型|
-|[infer_api_dymhw.py](../../components/benchmark/api_samples/interface_api_usage/api_infer/infer_api_dymhw.py)|调用InferSession的infer接口推理动态分辨率模型|
-|[infer_api_dymdims.py](../../components/benchmark/api_samples/interface_api_usage/api_infer/infer_api_dymdims.py)|调用InferSession的infer接口推理动态dims模型|
-|[infer_api_dymshape.py](../../components/benchmark/api_samples/interface_api_usage/api_infer/infer_api_dymshape.py)|调用InferSession的infer接口推理动态shape模型|
-
-#### 单进程使用`InferSession.infer_pipeline`接口推理
-|样例|说明|
-| ---- | ---- |
-|[infer_pipeline_api_static.py](../../components/benchmark/api_samples/interface_api_usage/api_infer_pipeline/infer_pipeline_api_static.py)|调用InferSession的infer_pipeline接口推理静态模型|
-|[infer_pipeline_api_dymbatch.py](../../components/benchmark/api_samples/interface_api_usage/api_infer_pipeline/infer_pipeline_api_dymbatch.py)|调用InferSession的infer_pipeline接口推理动态batch模型|
-|[infer_pipeline_api_dymhw.py](../../components/benchmark/api_samples/interface_api_usage/api_infer_pipeline/infer_pipeline_api_dymhw.py)|调用InferSession的infer_pipeline接口推理动态分辨率模型|
-|[infer_pipeline_api_dymdims.py](../../components/benchmark/api_samples/interface_api_usage/api_infer_pipeline/infer_pipeline_api_dymdims.py)|调用InferSession的infer_pipeline接口推理动态dims模型|
-|[infer_pipeline_api_dymshape.py](../../components/benchmark/api_samples/interface_api_usage/api_infer_pipeline/infer_pipeline_api_dymshape.py)|调用InferSession的infer_pipeline接口推理动态shape模型|
-
-#### 单进程使用`InferSession.infer_iteration`接口推理
-|样例|说明|
-| ---- | ---- |
-|[infer_iteration_api_static.py](../../components/benchmark/api_samples/interface_api_usage/api_infer_iteration/infer_iteration_api_static.py)|调用InferSession的infer_iteration接口推理静态模型|
-|[infer_iteration_api_dymbatch.py](../../components/benchmark/api_samples/interface_api_usage/api_infer_iteration/infer_iteration_api_dymbatch.py)|调用InferSession的infer_iteration接口推理动态batch模型|
-|[infer_iteration_api_dymhw.py](../../components/benchmark/api_samples/interface_api_usage/api_infer_iteration/infer_iteration_api_dymhw.py)|调用InferSession的infer_iteration接口推理动态分辨率模型|
-|[infer_iteration_api_dymdims.py](../../components/benchmark/api_samples/interface_api_usage/api_infer_iteration/infer_iteration_api_dymdims.py)|调用InferSession的infer_iteration接口推理动态dims模型|
-|[infer_iteration_api_dymshape.py](../../components/benchmark/api_samples/interface_api_usage/api_infer_iteration/infer_iteration_api_dymshape.py)|调用InferSession的infer_iteration接口推理动态shape模型|
-
-#### 多进程使用推理接口推理
-|样例|说明|
-| ---- | ---- |
-|[multidevice_infer_api.py](../../components/benchmark/api_samples/interface_api_usage/multidevice_api/multidevice_infer_api.py)|调用MultiDeviceSession的infer接口推理静态模型|
-|[multidevice_infer_pipeline_api.py](../../components/benchmark/api_samples/interface_api_usage/multidevice_api/multidevice_infer_pipeline_api.py)|调用MultiDeviceSession的infer_pipeline接口推理静态模型|
-|[multidevice_infer_iteration_api.py](../../components/benchmark/api_samples/interface_api_usage/multidevice_api/multidevice_infer_iteration_api.py)|调用MultiDeviceSession的infer_iteration接口推理静态模型|
-

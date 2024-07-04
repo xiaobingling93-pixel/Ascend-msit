@@ -32,10 +32,10 @@
   ./nvjpeg_encode sample_480_640_planar.yuv 480 640
   # Writing JPEG file: sample_nvjpeg.jpg, length: 164466
   ```
-## AIT transplt 迁移分析
-- 安装 ait 工具后，针对待迁移项目执行 transplt 迁移分析，当前输出结果中对应的 `AscendAPI` 为 ACL V2 接口
+## msIT transplt 迁移分析
+- 安装 msit 工具后，针对待迁移项目执行 transplt 迁移分析，当前输出结果中对应的 `AscendAPI` 为 ACL V2 接口
   ```sh
-  ait transplt -s .
+  msit transplt -s .
   # INFO - scan_api.py[123] - Scan source files...
   # ...
   # INFO - csv_report.py[46] - Report generated at: ./output.xlsx
