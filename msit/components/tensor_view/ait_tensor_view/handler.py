@@ -37,7 +37,7 @@ def handle_tensor_view(args):
     if in_ext == ".bin":
         tensor = read_atb_data(args.bin)
     else:
-        tensor = torch.load(args.bin)
+        tensor = torch.load(args.bin, map_location="cpu")
 
     logger.info(f"source tensor shape: {tensor.shape}")
 
