@@ -10,7 +10,7 @@
 ### 1.1 --profiler 采集推理中的性能数据
 - 示例命令：
 ```bash
-ait benchmark --om-model /home/model/resnet50_v1.om --output ./output --profiler 1
+msit benchmark --om-model /home/model/resnet50_v1.om --output ./output --profiler 1
 
 ```
 - 输出的文件目录示例：
@@ -28,7 +28,7 @@ ait benchmark --om-model /home/model/resnet50_v1.om --output ./output --profiler
 ### 1.2 --dump 采集推理中的每层算子的输出数据
 - 示例命令：
 ```bash
-ait benchmark --om-model /home/model/resnet50_v1.om --output ./output --dump 1
+msit benchmark --om-model /home/model/resnet50_v1.om --output ./output --dump 1
 ```
 - 输出的文件目录示例：
 ```bash
@@ -86,7 +86,7 @@ ait benchmark --om-model /home/model/resnet50_v1.om --output ./output --dump 1
 
 示例命令：
   ```bash
-  ait benchmark --om-model ./resnet50_v1_bs1_fp32.om --acl-json-path ./acl.json
+  msit benchmark --om-model ./resnet50_v1_bs1_fp32.om --acl-json-path ./acl.json
   ```
 输出文件对应参考1.1与1.2节的示例。
 
@@ -94,7 +94,7 @@ ait benchmark --om-model /home/model/resnet50_v1.om --output ./output --dump 1
 ### 2.1 --profiler 的自定义使用
 + profiler为固化到程序中的一组性能数据采集配置，生成的性能数据保存在--output参数指定的目录下的profiler文件夹内。
 
-    该参数是通过调用ait/profiler/benchmark/infer/benchmark_process.py中的msprof_run_profiling函数来拉起msprof命令进行性能数据采集的。若需要修改性能数据采集参数，可根据实际情况修改msprof_run_profiling函数中的msprof_cmd参数。示例如下：
+    该参数是通过调用msit/profiler/benchmark/infer/benchmark_process.py中的msprof_run_profiling函数来拉起msprof命令进行性能数据采集的。若需要修改性能数据采集参数，可根据实际情况修改msprof_run_profiling函数中的msprof_cmd参数。示例如下：
 
     ```bash
     msprof_cmd="{} --output={}/profiler --application=\"{}\" --model-execution=on --sys-hardware-mem=on --sys-cpu-profiling=off --sys-profiling=off --sys-pid-profiling=off --dvpp-profiling=on --runtime-api=on --task-time=on --aicpu=on".format(
@@ -115,4 +115,4 @@ ait benchmark --om-model /home/model/resnet50_v1.om --output ./output --dump 1
   + profiler和dump可以分别使用，但不能同时启用。
 
 ## FAQ
-使用出现问题时，可参考[FAQ](https://gitee.com/ascend/ait/wikis/benchmark_FAQ/ait%20benchmark%20%E5%AE%89%E8%A3%85%E9%97%AE%E9%A2%98FAQ)
+使用出现问题时，可参考[FAQ](https://gitee.com/ascend/msit/wikis/benchmark_FAQ/msit%20benchmark%20%E5%AE%89%E8%A3%85%E9%97%AE%E9%A2%98FAQ)

@@ -5,28 +5,28 @@
 benchmark推理工具目前提供多线程推理功能
 
 ## 准备
-根据[README.md](https://gitee.com/ascend/ait/blob/master/ait/components/benchmark/backend/concur/README.md)
+根据[README.md](https://gitee.com/ascend/msit/blob/master/msit/components/benchmark/backend/concur/README.md)
 完成多线程推理工具的编译
 
 ## 运行示例
 1. 纯推理场景。默认情况下，输出信息仅打屏显示。
 
     ```bash
-    ait benchmark -om ./pth_resnet50_bs1.om --pipeline 1
+    msit benchmark -om ./pth_resnet50_bs1.om --pipeline 1
     ```
     其中，-om为OM离线模型文件路径。
 
 2. 带数据推理场景。默认情况下，输出信息仅打屏显示。
 
     ```bash
-    ait benchmark -om ./pth_resnet50_bs1.om --input=./data --pipeline 1
+    msit benchmark -om ./pth_resnet50_bs1.om --input=./data --pipeline 1
     ```
     其中，--input为输入路径,以","分割。
 
 3. 调试模式。开启debug调试模式。
 
     ```bash
-    ait benchmark -om ./pth_resnet50_bs1.om --input=./data --debug=1 --pipeline 1
+    msit benchmark -om ./pth_resnet50_bs1.om --input=./data --debug=1 --pipeline 1
     ```
 
     调试模式开启后会增加更多的打印信息，包括：
@@ -51,7 +51,7 @@ benchmark推理工具目前提供多线程推理功能
 4. 保存结果场景。
 
     ```bash
-    ait benchmark -om ./pth_resnet50_bs1.om --input=./data --output=./result/ --pipeline 1
+    msit benchmark -om ./pth_resnet50_bs1.om --input=./data --output=./result/ --pipeline 1
     ```
 
     其中--output为保存文件夹路径。
@@ -87,7 +87,7 @@ benchmark推理工具目前提供多线程推理功能
     动态Shape的输出大小通常为0，建议通过outputSize参数设置对应输出的内存大小。
 
     ```bash
-    ait benchmark -om ./pth_resnet50_dymshape.om --input ./data/ --dym-shape actual_input_1:1,3,224,224 --output-size 10000 --pipeline 1
+    msit benchmark -om ./pth_resnet50_dymshape.om --input ./data/ --dym-shape actual_input_1:1,3,224,224 --output-size 10000 --pipeline 1
     ```
 
 6. 自动设置Shape模式（动态Shape模型）。
@@ -95,7 +95,7 @@ benchmark推理工具目前提供多线程推理功能
     动态Shape模型输入数据的Shape可能是不固定的，比如一个输入文件Shape为1,3,224,224 另一个输入文件Shape为 1,3,300,300。若两个文件同时推理，则需要设置两次动态Shape参数，当前不支持该操作。针对该场景，增加auto_set_dymshape_mode模式，可以根据输入文件的Shape信息，自动设置模型的Shape参数。
 
     ```bash
-    ait benchmark -om ./pth_resnet50_dymshape.om --input ./data --output-size 10000 --auto-set-dymshape-mode 1 --pipeline 1
+    msit benchmark -om ./pth_resnet50_dymshape.om --input ./data --output-size 10000 --auto-set-dymshape-mode 1 --pipeline 1
     ```
 
 7. 多计算线程推理场景。
@@ -103,5 +103,5 @@ benchmark推理工具目前提供多线程推理功能
     可以通过额外设置--threads参数以设置多线程推理时计算线程的数量，实现计算-计算的并行，提高推理吞吐量。
 
     ```bash
-    ait benchmark -om ./pth_resnet50_bs1.om --input ./data --pipeline 1 --threads 2
+    msit benchmark -om ./pth_resnet50_bs1.om --input ./data --pipeline 1 --threads 2
     ```

@@ -53,6 +53,6 @@ aipp_op{
 
 ### 命令行操作
 ```sh
-ait debug compare -gm ./resnet18.onnx -om ./resnet18_bs8.om -is "image:8,3,224,224"
+msit debug compare -gm ./resnet18.onnx -om ./resnet18_bs8.om -is "image:8,3,224,224"
 ```
 -gm为标杆onnx模型(必选)；-om参数请输入上述生成的算子不融合的om模型(必选)；-is为onnx模型输入的shape信息(**必选**)；如果需要指定输入(可选)，请使用-i参数指定om模型的输入(npy或者bin文件)。

@@ -2,12 +2,12 @@
 
 ## 介绍
 
-surgeon 工具可通过 ait 命令行形式启动。
+surgeon 工具可通过 msit 命令行形式启动。
 
 ## 运行示例
 
 ```bash
-ait debug surgeon COMMAND [OPTIONS] [REQUIRED]
+msit debug surgeon COMMAND [OPTIONS] [REQUIRED]
 ```
 
 其中*COMMAND*为 surgeon 执行模式参数，取值为 list、evaluate、optimize 和 extract；[OPTIONS]和[REQUIRED]为可选项和必选项参数，每个子任务下面的可选项和必选项不同。

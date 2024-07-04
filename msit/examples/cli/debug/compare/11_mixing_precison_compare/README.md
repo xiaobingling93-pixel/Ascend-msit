@@ -16,7 +16,7 @@ atc --framework=5 --soc_version=<soc_version> --model=./resnet50.onnx --output=.
 ```
 将生成的.om模型放在当前目录下，执行命令如下（注意：要求-gm后使用的.om模型为融合程度较低的场景一策略作为标杆数据，即force_fp32；-om后使用的.om模型为使用融合程度较高的场景二策略，即force_fp16)：
 ```
-ait debug compare -gm {fp32_om_model_path} -om {fp16_om_model_path} -o {output_file_path} 
+msit debug compare -gm {fp32_om_model_path} -om {fp16_om_model_path} -o {output_file_path} 
 ```
 
 ## 结果

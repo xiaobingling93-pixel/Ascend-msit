@@ -62,7 +62,7 @@ set_task_id()
 使用格式：
 
 ```shell
-ait debug compare aclcmp xx_args
+msit debug compare aclcmp xx_args
 ```
 
 可选参数如下：
@@ -72,7 +72,7 @@ ait debug compare aclcmp xx_args
 | --exec | 执行命令，用于拉起大模型推理脚本。建议使用bash xx.sh args或者python3 xx.py的方式拉起。 |
 
 # 3. 使用示例
-使用前请安装ait工具，安装指导参考：https://gitee.com/ascend/ait/blob/master/ait/docs/install/README.md 以 chatglm-6b为例，介绍下如何使用加速库精度比对工具。
+使用前请安装msit工具，安装指导参考：https://gitee.com/ascend/msit/blob/master/msit/docs/install/README.md 以 chatglm-6b为例，介绍下如何使用加速库精度比对工具。
 
 1.  设置task_id
 
@@ -117,7 +117,7 @@ ait debug compare aclcmp xx_args
    安装加速库的指导文档下载编译好加速库代码，进入example/chatglm6b目录，执行比对命令：
 
    ```shell
-   ait debug compare aclcmp --exec "bash run_performance.sh patches/models/modeling_chatglm_model.py"
+   msit debug compare aclcmp --exec "bash run_performance.sh patches/models/modeling_chatglm_model.py"
    ```
 - **注意事项**：
 - [ ] 在进行low-level比对时，需要先执行PTA model的推理，再执行加速库的推理，即`set_label("acl", data_id, tensor_path)`需要在加速库侧推理前执行。

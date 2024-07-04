@@ -4,7 +4,7 @@
 搜索可以被指定知识库优化的ONNX模型。
 
 ```bash
-ait debug surgeon evaluate [OPTIONS] PATH
+msit debug surgeon evaluate [OPTIONS] PATH
 ```
 
 evaluate可简写为eva。
@@ -20,7 +20,7 @@ evaluate可简写为eva。
 ## 运行示例
 
 ```bash
-ait debug surgeon evaluate --path=aasist_bs1_ori.onnx
+msit debug surgeon evaluate --path=aasist_bs1_ori.onnx
 ```
 
 输出示例如下：

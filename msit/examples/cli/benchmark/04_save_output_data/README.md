@@ -15,7 +15,7 @@
 1. 仅设置--output参数。示例命令及结果如下：
 
   ```bash
-  ait benchmark --om-model ./pth_resnet50_bs1.om --output ./result
+  msit benchmark --om-model ./pth_resnet50_bs1.om --output ./result
   ```
 
   ```bash
@@ -34,7 +34,7 @@
   ```
 
   ```bash
-  ait benchmark --om-model ./pth_resnet50_bs1.om --input ./data --output ./result
+  msit benchmark --om-model ./pth_resnet50_bs1.om --input ./data --output ./result
   ```
 
   ```bash
@@ -56,7 +56,7 @@
 3. 设置--output_dirname参数。示例命令及结果如下：
 
   ```bash
-  ait benchmark --om-model ./pth_resnet50_bs1.om --output ./result --output-dirname subdir
+  msit benchmark --om-model ./pth_resnet50_bs1.om --output ./result --output-dirname subdir
   ```
 
   ```bash
@@ -69,7 +69,7 @@
 4. 设置--dump参数。示例命令及结果如下：
 
   ```bash
-  ait benchmark --om-model ./pth_resnet50_bs1.om --output ./result --dump 1
+  msit benchmark --om-model ./pth_resnet50_bs1.om --output ./result --dump 1
   ```
 
   ```bash
@@ -83,7 +83,7 @@
 5. 设置--profiler参数。示例命令及结果如下：
 
   ```bash
-  ait benchmark --om-model ./pth_resnet50_bs1.om --output ./result --profiler 1
+  msit benchmark --om-model ./pth_resnet50_bs1.om --output ./result --profiler 1
   ```
 
   ```bash
@@ -136,4 +136,4 @@ benchmark推理工具执行后，打屏输出结果示例如下：
 | batchsize             | 批大小。本工具不一定能准确识别当前样本的batchsize，建议通过--batchsize参数进行设置。 |
 
 ## FAQ
-使用出现问题时，可参考[FAQ](https://gitee.com/ascend/ait/wikis/benchmark_FAQ/ait%20benchmark%20%E5%AE%89%E8%A3%85%E9%97%AE%E9%A2%98FAQ)
+使用出现问题时，可参考[FAQ](https://gitee.com/ascend/msit/wikis/benchmark_FAQ/msit%20benchmark%20%E5%AE%89%E8%A3%85%E9%97%AE%E9%A2%98FAQ)

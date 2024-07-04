@@ -1,9 +1,9 @@
 # Collect AI Task Data
 ## 简介
-介绍ait profile和采集AI任务运行性能数据相关的可选命令
+介绍msit profile和采集AI任务运行性能数据相关的可选命令
 - **命令示例**
 ```
-ait profile --application "ait benchmark -om /home/HwHiAiUser/resnet101_bs1.om" --output=output_data/ --model-execution=on --task-time=on --aicpu=on
+msit profile --application "msit benchmark -om /home/HwHiAiUser/resnet101_bs1.om" --output=output_data/ --model-execution=on --task-time=on --aicpu=on
 ```
 
 ## 涉及可选命令

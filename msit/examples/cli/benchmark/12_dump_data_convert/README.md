@@ -7,7 +7,7 @@
 ## 运行示例
 
 ```bash
-ait benchmark --om-model ./pth_resnet50_bs1.om --outpu ./output --dump 1 --dump-npy 1
+msit benchmark --om-model ./pth_resnet50_bs1.om --outpu ./output --dump 1 --dump-npy 1
 ```
 
 输出结果示例如下：

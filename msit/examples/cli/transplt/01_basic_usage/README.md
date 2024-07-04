@@ -7,7 +7,7 @@ Transplt迁移分析工具，提供NV C++推理应用工程迁移分析以及昇
 ## 使用方法
 
 ```shell
-ait transplt [OPTIONS]
+msit transplt [OPTIONS]
 ```
 
 OPTIONS参数说明如下
@@ -24,7 +24,7 @@ OPTIONS参数说明如下
 ## 运行示例
 
 ```shell
-ait transplt -s /workspace/sample
+msit transplt -s /workspace/sample
 ```
 
 ```shell
@@ -38,7 +38,7 @@ ait transplt -s /workspace/sample
 如果仅需要扫描C++应用工程的api，开启调用序列模板匹配功能，则需要使用如下命令：
 
 ``` shell
-ait transplt -s /data/examples/simple --mode api-only
+msit transplt -s /data/examples/simple --mode api-only
 ```
 
 all和api-only两种源码扫描模式下,输出结果都保存在output.xlsx文件中。

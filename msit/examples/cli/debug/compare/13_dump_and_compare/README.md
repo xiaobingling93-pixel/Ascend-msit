@@ -6,7 +6,7 @@
 
 工具命令如下：
 
-```ait debug compare aclcmp --golden-path path_to_golden_data.json --my-path path_to_acl_data.json --output output_dir```
+```msit debug compare aclcmp --golden-path path_to_golden_data.json --my-path path_to_acl_data.json --output output_dir```
 
 ### dump数据
 #### 函数原型
@@ -161,7 +161,7 @@ bash run.sh patches/model/modeling_chatglm_model.py
 ##### 3.数据比对
 执行完成后数据会落盘，同时生成一个metadata.json（路径为```当前目录/{PID}_cmp_dump_data/{data_src}_tensor/metadata.json```)，将两侧对应的metadata.json路径传入工具入参并指定结果输出路径```output_dir```完成比对。
 命令如下：
-```ait debug compare aclcmp --golden-path path_to_golden_data.json --my-path path_to_acl_data.json --output output_dir```
+```msit debug compare aclcmp --golden-path path_to_golden_data.json --my-path path_to_acl_data.json --output output_dir```
 
 完成比对后在```output_dir```下会生成一个```cmp_report.csv```,保存比对的最终结果。
 - 比对结果：

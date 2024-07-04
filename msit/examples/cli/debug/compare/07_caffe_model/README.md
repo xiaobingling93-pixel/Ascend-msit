@@ -4,7 +4,7 @@
 Caffe 一键式精度比对
 
 ## 使用示例一
-- 环境中已安装 CANN 包以及 ait 工具
+- 环境中已安装 CANN 包以及 msit 工具
 - 环境中安装 caffe，其中 `Ubuntu 18.04` 可通过 `apt install caffe-cpu` 安装
 - 对于 Caffe 模型，目前不支持动态 shape 的模型比对。对于 `yolov2` / `yolov3` / `ssd` 等需要自定义实现层的模型，需要自行编译安装特定版本的 caffe
 - 准备 Caffe 模型结构文件与权重文件，示例模型结构文件参照 [Caffe 模型结构文件示例](#caffe-模型结构文件示例)，以下使用该文件定义模型，并保存随机初始化的权重，实际使用中应使用已有的模型结构文件 `.prototxt` 与权重文件 `.caffemodel`
@@ -46,7 +46,7 @@ Caffe 一键式精度比对
   ```sh
   mkdir -p test  # dump 数据以及比对结果输出路径
   ASCEND_TOOLKIT=$HOME/Ascend/ascend-toolkit/latest  # 必须为可写的 CANN 包路径
-  ait debug compare -gm caffe_demo.prototxt -w caffe_demo.caffemodel -om caffe_demo.om -c $ASCEND_TOOLKIT -o ./test
+  msit debug compare -gm caffe_demo.prototxt -w caffe_demo.caffemodel -om caffe_demo.om -c $ASCEND_TOOLKIT -o ./test
   # ...
   # [INFO] Caffe input info:
   # [{'name': 'data', 'shape': (1, 3, 32, 32), 'type': 'float32'}]
@@ -75,7 +75,7 @@ Caffe 一键式精度比对
   ```sh
   mkdir -p test  # dump 数据以及比对结果输出路径
   ASCEND_TOOLKIT=$HOME/Ascend/ascend-toolkit/latest  # 必须为可写的 CANN 包路径
-  ait debug compare -gm ResNet-50-deploy.prototxt -w ResNet-50-model.caffemodel -om caffe_demo.om -c $ASCEND_TOOLKIT -o ./test -q caffe_demo.json
+  msit debug compare -gm ResNet-50-deploy.prototxt -w ResNet-50-model.caffemodel -om caffe_demo.om -c $ASCEND_TOOLKIT -o ./test -q caffe_demo.json
   ```
 
 ## Caffe 模型结构文件示例

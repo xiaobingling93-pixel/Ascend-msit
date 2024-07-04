@@ -4,7 +4,7 @@
 使用指定的知识库来优化指定的ONNX模型。
 
 ```bash
-ait debug surgeon optimize [OPTIONS] [REQUIRED]
+msit debug surgeon optimize [OPTIONS] [REQUIRED]
 ```
 
 optimize可简写为opt。
@@ -20,7 +20,7 @@ optimize可简写为opt。
 ## 运行示例
 
 ```bash
-ait debug surgeon optimize --input=aasist_bs1_ori.onnx --output-file=aasist_bs1_ori_out.onnx
+msit debug surgeon optimize --input=aasist_bs1_ori.onnx --output-file=aasist_bs1_ori_out.onnx
 ```
 
 输出示例如下：

@@ -36,10 +36,10 @@
   # index: 285
   # score: 17.6409
   ```
-## AIT Tranplt 迁移分析
-  - 安装 ait 工具后，针对待迁移项目执行 transplt 迁移分析
+## msIT Tranplt 迁移分析
+  - 安装 msit 工具后，针对待迁移项目执行 transplt 迁移分析
   ```sh
-  ait transplt -s .
+  msit transplt -s .
   # INFO - scan_api.py[123] - Scan source files...
   # ...
   # INFO - csv_report.py[46] - Report generated at: ./output.xlsx
@@ -157,7 +157,7 @@
   stream.DestroyAscendStream();
   ```  
 
-- **编译执行** 迁移完成后可使用 `g++` 编译，也可自行编写 `cmake` 文件，修改调整至可编译通过并正确执行，参考迁移后实现 [resnet50_mxbase_async.cpp](https://gitee.com/ascend/ait/tree/master/ait/examples/cli/transplt/02_resnet50_inference/resnet50_mxbase.cpp)
+- **编译执行** 迁移完成后可使用 `g++` 编译，也可自行编写 `cmake` 文件，修改调整至可编译通过并正确执行，参考迁移后实现 [resnet50_mxbase_async.cpp](https://gitee.com/ascend/msit/tree/master/msit/examples/cli/transplt/02_resnet50_inference/resnet50_mxbase.cpp)
   ```sh
   g++ -O3 resnet50_mxbase_aipp_async.cpp -o resnet50_mxbase_aipp_async -lmxbase -lopencv_world \
   -L ${MX_SDK_HOME}/lib -L ${MX_SDK_HOME}/opensource/lib -D_GLIBCXX_USE_CXX11_ABI=0 \
