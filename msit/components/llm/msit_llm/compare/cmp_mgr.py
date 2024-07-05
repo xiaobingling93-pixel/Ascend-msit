@@ -99,10 +99,10 @@ class CompareMgr:
 
                 # 1. get tensor_datas 多卡数据合并
                 _, my_tensor_datas = get_multi_tensor_paths(
-                    self.golden_data.get_token_path(golden_token_id), my_tensor_path, tensor_sub_dir=""
+                    self.my_data.get_token_path(my_token_id), my_tensor_path, tensor_sub_dir=""
                 )
                 _, golden_tensor_datas = get_multi_tensor_paths(
-                    self.golden_data.get_token_path(my_token_id), golden_tensor_path, tensor_sub_dir=""
+                    self.golden_data.get_token_path(golden_token_id), golden_tensor_path, tensor_sub_dir=""
                 )
                 # 2. concat tensor_datas
                 dim_atb = get_cat_dim(my_tensor_datas, golden_tensor_datas)
