@@ -19,6 +19,7 @@ import pytest
 import numpy as np
 
 from msit_llm.compare import torchair_acc_cmp
+from collections import OrderedDict
 
 
 FILE_PERMISSION = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP
@@ -187,3 +188,20 @@ def test_acc_compare_given_ge_with_fused_op_when_valid_then_pass():
     csv_path = torchair_acc_cmp.acc_compare(FAKE_GE_DUMP_DATA_NAME, FAKE_GE_DUMP_DATA_NAME)
     assert os.path.exists(csv_path)
     assert os.path.getsize(csv_path) > 1900  # result with mostly matched comparing data, 284 if empty
+
+
+def test_sort_ge_dump_data():
+    graph_map = [{'op': {'name': 'Add_1'}}, {'op': {'name': 'Add_2'}}, {'op': {'name': 'Add_7'}},
+                 {'op': {'name': 'Add_9'}}, {'op': {'name': 'Add_8'}}]
+    dump_data = {'Add_9': 'Add_9.354.20.1818268541338513',
+                 'Add_2': 'Add_2.355.21.1018268541338513',
+                 'Add_1': 'Add_1.356.22.918268541338513',
+                 'Add_8': 'Add_8.357.23.8718268541338513',
+                 'Add_7': 'Add_7.358.24.7718268541338513'}
+    sort_ge_dump_data = torchair_acc_cmp.sort_ge_dump_data(dump_data, graph_map)
+    expected_sort_ge_dump_data = {'Add_1': 'Add_1.356.22.918268541338513',
+                                  'Add_2': 'Add_2.355.21.1018268541338513',
+                                  'Add_7': 'Add_7.358.24.7718268541338513',
+                                  'Add_9': 'Add_9.354.20.1818268541338513',
+                                  'Add_8': 'Add_8.357.23.8718268541338513'}
+    assert sort_ge_dump_data == OrderedDict(expected_sort_ge_dump_data)
