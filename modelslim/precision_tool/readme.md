@@ -1,4 +1,4 @@
-# Precision Tool 说用方法说明
+# Precision Tool 使用方法说明
 ### 简单的例子
 ```python
 from transformers import AutoModel, AutoTokenizer, AutoModelForCausalLM
