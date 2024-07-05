@@ -17,10 +17,11 @@ import sys
 import re
 
 import numpy as np
+from collections import OrderedDict
 from msit_llm.common.log import logger
 from msit_llm.common.utils import safe_string
 from msit_llm.compare.cmp_utils import BasicDataInfo, fill_row_data, save_compare_reault_to_csv
-from collections import OrderedDict
+
 
 GE_GRAPH_FILE_PREFIX = "dynamo_original_graph_"
 FUSION_OP_TYPE = "AutomaticBufferFusionOp"
@@ -477,18 +478,18 @@ def compare_ge_with_ge(graph_map, fused_ge_dump_data, ge_dump_data, token_id=0):
 
         for cur_id, (golden_input, my_input, golden_input_path) in enumerate(
                 zip(golden_inputs, my_inputs, golden_input_pathes)):
-            cur_ge_data  = "{},{},{}".format(my_path, "inputs", cur_id)
+            cur_ge_data = "{},{},{}".format(my_path, "inputs", cur_id)
             if ",inputs," not in golden_output_path:
                 golden_output_path = "{},{},{}".format(golden_output_path, "inputs", cur_id)
             row_data = compare_single_data(
-                golden_input_path, cur_ge_data , token_id, golden_data=golden_input, my_data=my_input
+                golden_input_path, cur_ge_data, token_id, golden_data=golden_input, my_data=my_input
             )
             gathered_row_data.append(row_data)
         for cur_id, (golden_output, my_output) in enumerate(zip(golden_outputs, my_outputs)):
-            cur_ge_data  = "{},{},{}".format(my_path, "outputs", cur_id)
+            cur_ge_data = "{},{},{}".format(my_path, "outputs", cur_id)
             golden_output_path = "{},{},{}".format(golden_output_path, "outputs", cur_id)
             row_data = compare_single_data(
-                golden_output_path, cur_ge_data , token_id, golden_data=golden_output, my_data=my_output
+                golden_output_path, cur_ge_data, token_id, golden_data=golden_output, my_data=my_output
             )
             gathered_row_data.append(row_data)
     return gathered_row_data
