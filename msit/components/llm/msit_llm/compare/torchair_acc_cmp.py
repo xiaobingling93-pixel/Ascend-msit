@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import OrderedDict
 import os
 import sys
 import re
 
 import numpy as np
-from collections import OrderedDict
 from msit_llm.common.log import logger
 from msit_llm.common.utils import safe_string
 from msit_llm.compare.cmp_utils import BasicDataInfo, fill_row_data, save_compare_reault_to_csv

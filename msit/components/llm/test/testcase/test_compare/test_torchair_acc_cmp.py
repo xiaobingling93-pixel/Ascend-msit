@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from collections import OrderedDict
 import os
 import stat
 import shutil
@@ -18,9 +19,8 @@ import shutil
 import pytest
 import numpy as np
 
-from collections import OrderedDict
-from msit_llm.compare import torchair_acc_cmp
 
+from msit_llm.compare import torchair_acc_cmp
 
 
 FILE_PERMISSION = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP
