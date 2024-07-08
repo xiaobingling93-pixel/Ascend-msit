@@ -344,6 +344,12 @@ class PrecisionTest:
                 result = evaluate_functional_correctness(self.result_file, [1], 4, 3.0, entry)
                 self.logger.info(result)
 
+        try:
+            from human_eval.evaluation import evaluate_functional_correctness
+        except ImportException as e:
+            self.logger.error(f"Import human_eval test package failed. Error info is as below. \n {e}")
+            return
+
         with torch.no_grad():
             try:
                 run_test()
