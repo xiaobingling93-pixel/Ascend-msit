@@ -13,7 +13,7 @@ import pandas as pd
 from transformers import PreTrainedModel, AutoTokenizer
 from tqdm import tqdm
 
-from precision_tool.security import json_safe_load, json_safe_dump, get_valid_write_path
+from precision_tool.security import json_safe_load, json_safe_dump, get_valid_path
 from precision_tool import logger
 
 supported_dataset = ["boolq", "ceval_0_shot", "ceval_5_shot", "humaneval"]
@@ -215,9 +215,9 @@ class PrecisionTest:
             return subject_mapping
 
         def load_csv_by_task_name(task_name, dataset_path):
-            dev_file_path = get_valid_write_path(os.path.join(dataset_path, "dev", task_name + "_dev.csv"))
+            dev_file_path = get_valid_path(os.path.join(dataset_path, "dev", task_name + "_dev.csv"))
             dev_df = pd.read_csv(dev_file_path, header=None)[:shot + 1]
-            val_file_path = get_valid_write_path(os.path.join(dataset_path, "val", task_name + "_val.csv"))
+            val_file_path = get_valid_path(os.path.join(dataset_path, "val", task_name + "_val.csv"))
             val_df = pd.read_csv(val_file_path, header=None)
 
             dev_df = dev_df.iloc[1:, 1:]
