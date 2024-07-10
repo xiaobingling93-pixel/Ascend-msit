@@ -353,7 +353,7 @@ class NpuDumpData(DumpData):
             benchmark_cmd.extend(["--acl_json_path", acl_json_path])
 
         self.dynamic_input.add_dynamic_arg_for_benchmark(benchmark_cmd)
-        if self.dynamic_input.is_dynamic_shape_scenario():
+        if self.output_size or self.dynamic_input.is_dynamic_shape_scenario():
             self._make_benchmark_cmd_for_shape_range(benchmark_cmd)
 
         # do benchmark command
