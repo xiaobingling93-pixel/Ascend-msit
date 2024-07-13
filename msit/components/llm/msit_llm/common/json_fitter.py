@@ -11,11 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import sys
 import json
 import base64
-
-from msit_llm.common.log import logger
 
 
 def atb_node_to_plain_node(atb_node_dict, level, target_level):
@@ -52,10 +50,7 @@ def atb_param_to_onnx_attribute(atb_param_name, atb_param_value):
 
     if isinstance(atb_param_value, str):
         onnx_attr_dict["type"] = "STRINGS"
-        try:
-            onnx_attr_dict["strings"] = [str(base64.b64decode(atb_param_value.encode("utf-8")), "utf-8")]
-        except Exception:
-            logger.debug("Unable to decode the Base64 value of atb_param_value: %s", atb_param_value)
+        onnx_attr_dict["strings"] = [str(base64.b64decode(atb_param_value.encode("utf-8")), "utf-8")]
         return onnx_attr_dict
 
     onnx_attr_dict["type"] = "FLOATS"
@@ -74,9 +69,7 @@ def parse_onnx_attr_from_atb_node_dict(atb_node_dict):
 
     if "param" not in atb_node_dict:
         return onnx_attrs
-
-    if atb_node_dict["param"] is None:
-        return onnx_attrs
+    
     for param_name in atb_node_dict["param"]:
         if isinstance(atb_node_dict["param"][param_name], dict):
             for sub_param_name in atb_node_dict["param"][param_name]:
