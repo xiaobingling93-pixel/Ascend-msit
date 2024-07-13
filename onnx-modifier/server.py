@@ -289,11 +289,11 @@ def realpath_ex(path):
 def call_auto_optimizer(modifier, modify_info, output_suffix, make_cmd):
     import subprocess
     try:
-        out_res = subprocess.run(["ait", "debug", "surgeon", "-h"], shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        out_res = subprocess.run(["msit", "debug", "surgeon", "-h"], shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         if out_res.returncode != 0:
-            raise ServerError("请安装 ait/debug/surgeon", 599)
+            raise ServerError("请安装 msit/debug/surgeon", 599)
     except Exception as ex:
-        raise ServerError("请安装 ait/debug/surgeon", 599) from ex
+        raise ServerError("请安装 msit/debug/surgeon", 599) from ex
 
     with FileAutoClear(tempfile.NamedTemporaryFile(mode="wb", delete=False, suffix=".onnx")) as (_, modified_file):
         opt_file_path = realpath_ex(modified_file.name) + output_suffix
@@ -312,7 +312,7 @@ def call_auto_optimizer(modifier, modify_info, output_suffix, make_cmd):
 
 def optimizer_model(modifier, modify_info, opt_tmp_file):
     def make_cmd(in_path, out_path):
-        return ["ait", "debug", "surgeon", "optimize", "-in", in_path, "-of", out_path]
+        return ["msit", "debug", "surgeon", "optimize", "-in", in_path, "-of", out_path]
 
     opt_file_path, msg = call_auto_optimizer(modifier, modify_info, ".opti.onnx", make_cmd)
 
@@ -331,7 +331,7 @@ def optimizer_model(modifier, modify_info, opt_tmp_file):
 
 def extract_model(modifier, modify_info, start_node_name, end_node_name, tmp_file):
     def make_cmd(in_path, out_path):
-        return ["ait", "debug", "surgeon", "extract", "-in", in_path, "-of", out_path,
+        return ["msit", "debug", "surgeon", "extract", "-in", in_path, "-of", out_path,
                 "-snn", start_node_name, "-enn", end_node_name]
     
     extract_file_path, msg = call_auto_optimizer(modifier, modify_info, ".extract.onnx", make_cmd)
