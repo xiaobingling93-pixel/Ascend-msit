@@ -72,10 +72,9 @@ def atb_param_to_onnx_attribute(atb_param_name, atb_param_value):
 def parse_onnx_attr_from_atb_node_dict(atb_node_dict):
     onnx_attrs = []
 
-    if "param" not in atb_node_dict:
+    if "param" not in atb_node_dict or atb_node_dict["param"] is None:
         return onnx_attrs
-    if atb_node_dict["param"] is None:
-        return onnx_attrs
+
     for param_name in atb_node_dict["param"]:
         if isinstance(atb_node_dict["param"][param_name], dict):
             for sub_param_name in atb_node_dict["param"][param_name]:
