@@ -1,8 +1,10 @@
 import json
 import os
-import stat
+
 import torch
 from safetensors.torch import save_file
+
+from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import deqscale_process
 
 
 def int4_to_int8_forGLM(i4w):
@@ -46,8 +48,8 @@ class MSModelSlimWeightProcessor:
             self.modelslim_description_json[key] = 'FLOAT'
     
     # 处理示量化权重中Linear层的权重量化参数，对应msmodelslim支持的量化类型w8a16和w4a16
-    def weight_quant_process(self):
-        # 获取示例量化权重中Linear层的名称，请根据实际修my
+    def weight_process(self):
+        # 获取示例量化权重中Linear层的名称，请根据实际修改
         linear_list = []
         for i in range(self.num_layers):
             linear_list.append(f"transformer.encoder.layers.{i}.self_attention.query_key_value")
@@ -55,7 +57,7 @@ class MSModelSlimWeightProcessor:
             linear_list.append(f"transformer.encoder.layers.{i}.mlp.dense_h_to_4h")
             linear_list.append(f"transformer.encoder.layers.{i}.mlp_dense_4h_to_h")
 
-        # 获取示例量化权重的名称，处理后增加到权重dict中，请根据实际修改
+        # 获取示例量化权重的名称，处理后增加到权重字典中，请根据实际修改
         for key in linear_list:
             weight_key = '.'.join([key, 'weight'])
             weight_scale_key = '.'.join([key, 'weight_scale'])
@@ -75,9 +77,55 @@ class MSModelSlimWeightProcessor:
             self.modelslim_weight_dict[weight_offset_key] = torch.zeros(self.modelslim_weight_dict[weight_scale_key].shape).to(torch.float16)
             self.modelslim_description_json[weight_offset_key] = self.QuantType
 
+    # 处理示量化权重中Linear层的权重量化参数，对应msmodelslim支持的量化类型W8A8和W4A8S
+    def weight_activation_process(self):
+        # 获取开源量化权重中Linear层的名称，请根据实际修改
+        linear_list = []
+        for i in range(self.num_layers):
+            linear_list.append(f"transformer.encoder.layers.{i}.self_attention.query_key_value")
+            linear_list.append(f"transformer.encoder.layers.{i}.self_attention.dense")
+            linear_list.append(f"transformer.encoder.layers.{i}.mlp.dense_h_to_4h")
+            linear_list.append(f"transformer.encoder.layers.{i}.mlp_dense_4h_to_h")
+
+        # 获取示例量化权重的名称，处理后增加到权重字典中，请根据实际修改
+        for key in linear_list:
+            # 获取开源量化权重中，量化参数的名称，请根据实际修改
+            ori_weight_key = '.'.join([key, 'weight'])
+            ori_input_scale_key = '.'.join([key, 'input_scale'])
+            ori_input_offset_key = '.'.join([key, 'input_offset'])
+            ori_deq_scale_key = '.'.join([key, '.deq_scale'])
+            ori_quant_bias_key = '.'.join([key, 'quant_bias'])
+
+            # msmodelslim生成的量化权重中kv caceh对应的scale和offset的权重名称
+            msmodelslim_weight_key = '.'.join([key, 'weight'])
+            msmodelslim_input_scale_key = '.'.join([key, 'input_scale'])
+            msmodelslim_input_offset_key = '.'.join([key, 'input_offset'])
+            msmodelslim_deq_scale_key = '.'.join([key, '.deq_scale'])
+            msmodelslim_quant_bias_key = '.'.join([key, 'quant_bias'])
+
+            self.modelslim_weight_dict[msmodelslim_weight_key] = self.modelslim_weight_dict[ori_weight_key]
+            self.modelslim_weight_dict[msmodelslim_input_scale_key] = self.modelslim_weight_dict[ori_input_scale_key]
+            self.modelslim_weight_dict[msmodelslim_input_offset_key] = self.modelslim_weight_dict[ori_input_offset_key]
+            self.modelslim_weight_dict[msmodelslim_deq_scale_key] = deqscale_process(self.modelslim_weight_dict[ori_deq_scale_key])
+            self.modelslim_weight_dict[msmodelslim_quant_bias_key] = self.modelslim_weight_dict[ori_quant_bias_key]
+        
+            # 删除modelslim_weight_dict中已被改名的重复权重，请根据实际修改
+            del self.modelslim_weight_dict[ori_weight_key], self.modelslim_weight_dict[ori_input_scale_key], \
+                self.modelslim_weight_dict[ori_input_offset_key], self.modelslim_weight_dict[ori_deq_scale_key], \
+                self.modelslim_weight_dict[ori_quant_bias_key]
+            del self.modelslim_description_json[ori_weight_key], self.modelslim_description_json[ori_input_scale_key], \
+                self.modelslim_description_json[ori_input_offset_key], self.modelslim_description_json[ori_deq_scale_key], \
+                self.modelslim_description_json[ori_quant_bias_key]
+            self.modelslim_description_json[msmodelslim_weight_key] = self.QuantType
+            self.modelslim_description_json[msmodelslim_input_scale_key] = self.QuantType
+            self.modelslim_description_json[msmodelslim_input_offset_key] = self.QuantType
+            self.modelslim_description_json[msmodelslim_deq_scale_key] = self.QuantType
+            self.modelslim_description_json[msmodelslim_quant_bias_key] = self.QuantType
+
+
     # 对于smooth quant算法，norm层权重更换示例
     def anti_outlier_process(self):
-        # 获取开源量化权重中，norm层的名称
+        # 获取开源量化权重中，norm层的名称，请根据实际修改
         norm_list = []
         for i in range(self.num_layers):
             norm_list.append(f"transformer.encoder.layers.{i}.input_layernorm")
@@ -95,6 +143,7 @@ class MSModelSlimWeightProcessor:
             self.modelslim_weight_dict[msmodelslim_norm_module_weight_key] = self.modelslim_weight_dict[ori_norm_weight_key]
             self.modelslim_weight_dict[msmodelslim_norm_module_bias_key] = self.modelslim_weight_dict[ori_norm_bias_key]
             
+            # 删除modelslim_weight_dict中已被改名的重复权重，并修改描述文件，请根据实际修改
             del self.modelslim_weight_dict[ori_norm_weight_key], self.modelslim_weight_dict[ori_norm_bias_key]
             del self.modelslim_description_json[ori_norm_weight_key], self.modelslim_description_json[ori_norm_bias_key]
             self.modelslim_description_json[msmodelslim_norm_module_weight_key] = self.QuantType
@@ -147,7 +196,7 @@ if __name__ == '__main__':
     # 处理开源权重
     ms = MSModelSlimWeightProcessor(ori_weight_dict)
     # 示例权重只涉及linear层量化权重的处理，如果涉及kvcahe量化或smooth quant，请修改Processor中对应的函数并调用
-    ms.weight_quant_process()
+    ms.weight_process()
     # 保存safetensors权重和json描述文件
     ms.save(out_path)
 
