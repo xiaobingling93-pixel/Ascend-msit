@@ -190,7 +190,7 @@ class MSModelSlimWeightProcessor:
     # 储存量化权重和描述文件
     def save(self, path):
         if not os.path.exists(path):
-            os.mkdirs(path)
+            os.mkdir(path)
         safetensors_name = f"quant_model_weight_{self.QuantType.lower()}.safetensors"
         json_name = f"quant_model_description_{self.QuantType.lower()}.json"
         safetensors_path = os.path.join(path, safetensors_name)
