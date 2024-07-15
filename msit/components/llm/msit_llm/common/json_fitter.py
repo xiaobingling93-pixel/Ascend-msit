@@ -55,6 +55,7 @@ def atb_param_to_onnx_attribute(atb_param_name, atb_param_value):
         try:
             onnx_attr_dict["strings"] = [str(base64.b64decode(atb_param_value.encode("utf-8")), "utf-8")]
         except Exception:
+            onnx_attr_dict["strings"] = [atb_param_value]
             logger.debug("Unable to decode the base64 value of atb_param_values: %s", atb_param_value)
         return onnx_attr_dict
 
@@ -72,7 +73,7 @@ def atb_param_to_onnx_attribute(atb_param_name, atb_param_value):
 def parse_onnx_attr_from_atb_node_dict(atb_node_dict):
     onnx_attrs = []
 
-    if "param" not in atb_node_dict or atb_node_dict["param"] is None:
+    if "param" not in atb_node_dict or atb_node_dict.get("param") is None:
         return onnx_attrs
 
     for param_name in atb_node_dict["param"]:
