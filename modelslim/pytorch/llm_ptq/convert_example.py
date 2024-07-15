@@ -8,10 +8,10 @@ from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import deqscale_process
 
 
 def int4_to_int8_forGLM(i4w):
-    '''
+    """
     ChatGLM2-6B开源int4量化权重的保存方式，会将两个int4合并成一个int8进行保存，具体实现逻辑见开源代码中quantization.py文件
     此处通过python实现了对应逻辑
-    '''
+    """
     n, k = i4w.shape
     weight = i4w.reshape(-1, 2)
     weight0 = weight[:, :1] << 4
@@ -22,9 +22,9 @@ def int4_to_int8_forGLM(i4w):
 
 
 def int8_to_int4_forGLM(i8w):
-    '''
+    """
     仿照开源将一个int8tensor分离解码成两个int4
-    '''
+    """
     n, k = i8w.shape
     weight = i8w.reshape(-1, 1)
     weight1 = weight & 0b11110000
@@ -70,11 +70,13 @@ class MSModelSlimWeightProcessor:
 
             # 示例量化权重的weight_scale名称和msmodelslim的一致，名称不需要修改
             # 示例量化权重的weight_scale的shape是[n]，msmodelslim的weight_scale的shape是[n,1]
-            self.modelslim_weight_dict[weight_scale_key] = self.modelslim_weight_dict[weight_scale_key].unsqueeze(dim=1).to(torch.float16)
+            self.modelslim_weight_dict[weight_scale_key] = \
+                self.modelslim_weight_dict[weight_scale_key].unsqueeze(dim=1).to(torch.float16)
             self.modelslim_description_json[weight_scale_key] = self.QuantType
 
             # 示例量化权重为对称量化，不存在weight_offset，msmodelslim工具对称量化会生成全0的tensor
-            self.modelslim_weight_dict[weight_offset_key] = torch.zeros(self.modelslim_weight_dict[weight_scale_key].shape).to(torch.float16)
+            self.modelslim_weight_dict[weight_offset_key] = \
+                torch.zeros(self.modelslim_weight_dict[weight_scale_key].shape).to(torch.float16)
             self.modelslim_description_json[weight_offset_key] = self.QuantType
 
     # 处理示量化权重中Linear层的权重量化参数，对应msmodelslim支持的量化类型W8A8和W4A8S
@@ -106,22 +108,26 @@ class MSModelSlimWeightProcessor:
             self.modelslim_weight_dict[msmodelslim_weight_key] = self.modelslim_weight_dict[ori_weight_key]
             self.modelslim_weight_dict[msmodelslim_input_scale_key] = self.modelslim_weight_dict[ori_input_scale_key]
             self.modelslim_weight_dict[msmodelslim_input_offset_key] = self.modelslim_weight_dict[ori_input_offset_key]
-            self.modelslim_weight_dict[msmodelslim_deq_scale_key] = deqscale_process(self.modelslim_weight_dict[ori_deq_scale_key])
+            self.modelslim_weight_dict[msmodelslim_deq_scale_key] = \
+                deqscale_process(self.modelslim_weight_dict[ori_deq_scale_key])
             self.modelslim_weight_dict[msmodelslim_quant_bias_key] = self.modelslim_weight_dict[ori_quant_bias_key]
         
             # 删除modelslim_weight_dict中已被改名的重复权重，请根据实际修改
-            del self.modelslim_weight_dict[ori_weight_key], self.modelslim_weight_dict[ori_input_scale_key], \
-                self.modelslim_weight_dict[ori_input_offset_key], self.modelslim_weight_dict[ori_deq_scale_key], \
-                self.modelslim_weight_dict[ori_quant_bias_key]
-            del self.modelslim_description_json[ori_weight_key], self.modelslim_description_json[ori_input_scale_key], \
-                self.modelslim_description_json[ori_input_offset_key], self.modelslim_description_json[ori_deq_scale_key], \
-                self.modelslim_description_json[ori_quant_bias_key]
+            del (self.modelslim_weight_dict[ori_weight_key],
+                 self.modelslim_weight_dict[ori_input_scale_key],
+                 self.modelslim_weight_dict[ori_input_offset_key],
+                 self.modelslim_weight_dict[ori_deq_scale_key],
+                 self.modelslim_weight_dict[ori_quant_bias_key])
+            del (self.modelslim_description_json[ori_weight_key],
+                 self.modelslim_description_json[ori_input_scale_key],
+                 self.modelslim_description_json[ori_input_offset_key],
+                 self.modelslim_description_json[ori_deq_scale_key],
+                 self.modelslim_description_json[ori_quant_bias_key])
             self.modelslim_description_json[msmodelslim_weight_key] = self.QuantType
             self.modelslim_description_json[msmodelslim_input_scale_key] = self.QuantType
             self.modelslim_description_json[msmodelslim_input_offset_key] = self.QuantType
             self.modelslim_description_json[msmodelslim_deq_scale_key] = self.QuantType
             self.modelslim_description_json[msmodelslim_quant_bias_key] = self.QuantType
-
 
     # 对于smooth quant算法，norm层权重更换示例
     def anti_outlier_process(self):
@@ -140,8 +146,10 @@ class MSModelSlimWeightProcessor:
             msmodelslim_norm_module_bias_key = '.'.join([key, 'module.bias'])
             # msmodelslim生成的量化权重中norm.weight指的是scale前的norm weight
             msmodelslim_norm_weight_key = '.'.join([key, 'weight'])
-            self.modelslim_weight_dict[msmodelslim_norm_module_weight_key] = self.modelslim_weight_dict[ori_norm_weight_key]
-            self.modelslim_weight_dict[msmodelslim_norm_module_bias_key] = self.modelslim_weight_dict[ori_norm_bias_key]
+            self.modelslim_weight_dict[msmodelslim_norm_module_weight_key] = \
+                self.modelslim_weight_dict[ori_norm_weight_key]
+            self.modelslim_weight_dict[msmodelslim_norm_module_bias_key] = \
+                self.modelslim_weight_dict[ori_norm_bias_key]
             
             # 删除modelslim_weight_dict中已被改名的重复权重，并修改描述文件，请根据实际修改
             del self.modelslim_weight_dict[ori_norm_weight_key], self.modelslim_weight_dict[ori_norm_bias_key]
@@ -167,10 +175,14 @@ class MSModelSlimWeightProcessor:
             msmodelslim_kvcaceh_scale_key = '.'.join([key, 'kv_cacahe_scale'])
             msmodelslim_kvcaceh_offset_key = '.'.join([key, 'kv_cache_offset'])
 
-            self.modelslim_weight_dict[msmodelslim_kvcaceh_scale_key] = self.modelslim_weight_dict[ori_kvcache_scale_key]
-            self.modelslim_weight_dict[msmodelslim_kvcaceh_offset_key] = self.modelslim_weight_dict[ori_kvcache_offset_key]
-            del self.modelslim_weight_dict[ori_kvcache_scale_key], self.modelslim_weight_dict[ori_kvcache_offset_key]
-            del self.modelslim_description_json[ori_kvcache_scale_key], self.modelslim_description_json[ori_kvcache_offset_key]
+            self.modelslim_weight_dict[msmodelslim_kvcaceh_scale_key] = \
+                self.modelslim_weight_dict[ori_kvcache_scale_key]
+            self.modelslim_weight_dict[msmodelslim_kvcaceh_offset_key] = \
+                self.modelslim_weight_dict[ori_kvcache_offset_key]
+            del (self.modelslim_weight_dict[ori_kvcache_scale_key], 
+                 self.modelslim_weight_dict[ori_kvcache_offset_key])
+            del (self.modelslim_description_json[ori_kvcache_scale_key], 
+                 self.modelslim_description_json[ori_kvcache_offset_key])
 
             self.modelslim_description_json[msmodelslim_kvcaceh_scale_key] = self.QuantType
             self.modelslim_description_json[msmodelslim_kvcaceh_offset_key] = self.QuantType
