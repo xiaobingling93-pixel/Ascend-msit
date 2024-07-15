@@ -53,9 +53,10 @@ def atb_param_to_onnx_attribute(atb_param_name, atb_param_value):
     if isinstance(atb_param_value, str):
         onnx_attr_dict["type"] = "STRINGS"
         try:
-            onnx_attr_dict["strings"] = [str(base64.b64decode(atb_param_value.encode("utf-8")), "utf-8")]
-        except Exception:
-            onnx_attr_dict["strings"] = [atb_param_value]
+            onnx_attr_dict["strings"] = [base64.b64encode(atb_param_value.encode("utf-8")).decode("utf-8")]
+        except UnicodeEncodeError:
+            logger.debug("Unable to encode the base64 value of atb_param_values: %s", atb_param_value)
+        except UnicodeDecodeError:
             logger.debug("Unable to decode the base64 value of atb_param_values: %s", atb_param_value)
         return onnx_attr_dict
 
