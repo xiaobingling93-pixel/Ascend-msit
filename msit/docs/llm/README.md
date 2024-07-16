@@ -4,24 +4,25 @@
 
 ## 简介
 
-目前昇腾大模型推理框架主要有 [**加速库(atb)**](/msit/docs/glossary/README.md#at-Ascend-Transformer-Boost) 和 [**torchair**](/msit/docs/glossary/README.md#torchairtorch-图模式)。在推理开发过程中可能会遇到精度问题。
+目前昇腾大模型推理框架主要有 [**加速库(atb)**](/msit/docs/glossary/README.md#at-Ascend-Transformer-Boost) 和 [**torchair**](/msit/docs/glossary/README.md#torchairtorch-图模式)。
 
-大模型精度调试工具（Large Language Model Debug Tool） 用于帮助开发者快速定位推理开发过程中精度问题，发现根因，提升开发效率。
+开发者在推理开发过程中可能会遇到精度问题，可以使用大模型精度调试工具（Large Language Model Debug Tool）提供的大模型推理数据落盘（dump）和精度定位（compare）功能，帮助开发者快速定位推理开发过程中精度问题，发现根因，提升开发效率。
 
-大模型迁移分析工具用于辅助将 torch 模型迁移到加速库，以及加速库浮点模型迁移稀疏量化模型
+大模型迁移分析工具用于辅助将 torch 模型迁移到加速库，以及加速库浮点模型迁移稀疏量化模型。
 
-- 大模型推理精度工具（llm）提供对大模型推理的数据落盘（dump）以及精度定位（compare）功能。
-- 使用依赖 CANN-toolkit，以及加速库 ATB和 MindIE-LLM，其中 CANN-toolkit 版本要求参照具体[安装说明文档](/msit/docs/install/README.md)
-- 【注意】：加速库数据dump仅支持2023/12/05之后的加速库版本。
 
 #### 安装
+
+- msit llm 使用依赖 CANN-toolkit、加速库 ATB和 MindIE-LLM，各依赖库版本要求参照具体[安装说明文档](/msit/docs/install/README.md)。
+- **注意**：加速库数据dump仅支持2023/12/05之后的加速库版本。
+
 ```bash
 # 源码安装：先下载源码，进到源码目录
 pip install ./msit
 msit install llm
 ```
-* 更多安装可以参考： [安装说明文档](/msit/docs/install/README.md)
-* 历史版本提供whl包进行安装，可以参考：[历史版本安装](#历史版本安装)
+
+* msit历史版本提供whl包进行安装，可以参考：[历史版本安装](#历史版本安装)
 
 
 #### 工具列表
@@ -61,7 +62,7 @@ msit install llm
         * [**dump在线推理数据使用说明**](/msit/docs/llm/工具-DUMP在线推理数据使用说明.md)：提供了通过pytorch框架 使用 GPU/CPU/NPU 在线推理场景的网络结构、算子信息、推理输入输出等信息，支撑后续手动和自动比对、分析工作。
         * [**自动比对功能使用说明**](/msit/docs/llm/工具-自动比对功能使用说明.md)：提供了自动比对功能，比对标杆数据和推理数据之间的误差。
         * [**手动映射比对能力说明**](/msit/docs/llm/工具-手动映射比对能力说明.md)：提供手动指定算子比对功能，比对标杆数据和推理数据之间的误差。
-   2. **异常检测**: 定位推理过程中是否存在算子预算溢出、内存踩踏。可以参考 [**异常检测使用说明**](/msit/docs/llm/工具-异常检测使用说明.md)
+   2. **异常检测**: 定位推理过程中是否存在算子预算溢出、内存踩踏。可以参考 [**异常检测使用说明**](/msit/docs/llm/工具-异常检测使用说明.md)。
    3. **单算子精度预检**: 工具提供加速库内置算子的精度预检能力，根据模型推理时 dump 的 tensor 及算子信息，计算标杆 output，再比较 dump 算子的 output 与标杆 output 的误差，以检测算子精度是否达标。可以参考 [**算子预检工具使用说明**](/msit/docs/llm/工具-精度预检使用说明.md)。
 
 详情可以参考 [大模型精度问题定位全流程](/msit/docs/llm/大模型精度问题定位全流程.md)。
