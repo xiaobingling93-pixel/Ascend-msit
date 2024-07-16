@@ -24,6 +24,7 @@ from msit_llm.common.tool import read_atb_data
 from msit_llm.common.log import logger
 from msit_llm.compare.cmp_algorithm import CMP_ALG_MAP, CUSTOM_ALG_MAP
 from msit_llm.opcheck.opchecker import NAMEDTUPLE_PRECISION_METRIC, NAMEDTUPLE_PRECISION_MODE
+from msit_llm.common.constant import ATB_SAVE_TENSOR_TIME
 
 
 FLOAT_EPSILON = torch.finfo(torch.float).eps
@@ -93,6 +94,10 @@ class OperationTest(unittest.TestCase):
             raise RuntimeError(f"{path} not valid")
 
     def get_tensor_path(self, path, tensor_type):
+        if os.path.exists(os.path.join(path, 'before')) and tensor_type == 'intensor':
+            path = os.path.join(path, 'before')
+        else:
+            path = os.path.join(path, 'after')
         _tensor_path = [x for x in os.listdir(path) if x.startswith(tensor_type)]
         _tensor_path.sort(key=lambda x:int(x.split(tensor_type)[1].split('.')[0]))  
         tensor_files = [os.path.join(path, x) for x in _tensor_path]
@@ -147,9 +152,13 @@ class OperationTest(unittest.TestCase):
         _in_tensor_files = self.get_tensor_path(self.tensor_path, "intensor")
         self.in_tensors = self.read_tensor_from_file(_in_tensor_files)
         self.in_tensors = self.force_dtype(self.in_tensors, self.case_info['precision_mode'])
-        _out_tensor_files = self.get_tensor_path(self.tensor_path, "outtensor")
-        self.out_tensors = self.read_tensor_from_file(_out_tensor_files)
-        self.out_tensors = self.force_dtype(self.out_tensors, self.case_info['precision_mode'])
+        if self.atb_rerun is True and ATB_SAVE_TENSOR_TIME == 0:
+            logger_text = "Only the data that is dumped after execution can be used to rerun operations."
+            logger.error(logger_text)
+        else:
+            _out_tensor_files = self.get_tensor_path(self.tensor_path, "outtensor")
+            self.out_tensors = self.read_tensor_from_file(_out_tensor_files)
+            self.out_tensors = self.force_dtype(self.out_tensors, self.case_info['precision_mode'])
 
     def tearDown(self):
         self.excuted_ids.put(self.op_id)

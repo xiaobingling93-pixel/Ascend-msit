@@ -24,7 +24,8 @@ import torch
 
 from msit_llm.common.log import logger
 from msit_llm.compare.cmp_algorithm import CUSTOM_ALG_MAP
-from msit_llm.common.constant import GLOBAL_AIT_DUMP_PATH
+from msit_llm.common.constant import GLOBAL_AIT_DUMP_PATH, ATB_SAVE_TENSOR_TIME
+from msit_llm.opcheck.check_case import OP_NAME_DICT
 
 NAMEDTUPLE_PRECISION_METRIC = namedtuple('precision_metric', ['abs', 'kl', 'cos_sim'])('abs', 'kl', 'cos_sim')
 NAMEDTUPLE_PRECISION_MODE = namedtuple(
@@ -177,6 +178,7 @@ class OpChecker:
             execution_flag = False
 
         self.atb_rerun = args.atb_rerun
+        atb_save_tensor_time = os.getenv('ATB_SAVE_TENSOR_TIME', "")
         if self.atb_rerun:
             execution_flag_res = OpChecker.third_party_init()
             if not execution_flag_res:
@@ -185,8 +187,13 @@ class OpChecker:
                 logger_text = "Rerunning operations in atb to calculate outputs..."
                 logger.info(logger_text)
         else:
-            logger_text = "Comparing outputs in dump data without rerunning operations in atb..."
-            logger.info(logger_text)
+            if atb_save_tensor_time == 0:
+                logger_text = "Only the rerun mode supports checking the data dumped before executing the operations."
+                logger.error(logger_text)
+                execution_flag = False
+            else:
+                logger_text = "Comparing outputs in dump data without rerunning operations in atb..."
+                logger.info(logger_text)
         return execution_flag
 
     def start_test(self, args):
@@ -287,7 +294,7 @@ class OpChecker:
             self.cases_info[op_id] = case_info
 
     def add_op_info_to_cases_info(self, dirpath):
-        tensor_path = os.path.join(dirpath, 'after')
+        tensor_path = dirpath
 
         json_path = os.path.join(dirpath, 'op_param.json')
         try:
@@ -315,17 +322,23 @@ class OpChecker:
 
     def walk_tensor_path(self, cur_path):
         files_and_dirs = os.listdir(cur_path)
-        dirnames, filenames = [], []
+        # 取出所有文件夹的名字
+        dirnames = []
         for item in files_and_dirs:
             item_path = os.path.join(cur_path, item)
             if os.path.isdir(item_path):
                 dirnames.append(item)
-            else:
-                filenames.append(item)
-        if 'after' in dirnames and 'op_param.json' in filenames:
-            self.add_op_info_to_cases_info(cur_path)
-        for dirname in dirnames:
-            if dirname != 'after':
+        # 判断当前文件夹是否时算子文件夹
+        if 'after' in dirnames or 'before' in dirnames:
+            # 匹配算子
+            for dirname in dirnames:
+                if dirname != 'after' or dirname != 'before':
+                    op_name = dirname.split('_')[-1]
+                    if op_name in OP_NAME_DICT.keys():
+                        self.add_op_info_to_cases_info(cur_path)
+        # 如果不是算子文件夹则遍历下一级文件夹
+        else:
+            for dirname in dirnames:
                 self.walk_tensor_path(os.path.join(cur_path, dirname))
 
     def excute_cases(self, case_manager):
