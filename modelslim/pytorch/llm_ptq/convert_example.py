@@ -1,6 +1,7 @@
 import json
 import os
 
+import numpy as np
 import torch
 from safetensors.torch import save_file
 
@@ -34,6 +35,13 @@ def int8_to_int4_forGLM(i8w):
     weight2 = weight2 - (weight2 > 7).to(torch.int8) * 16
     i4w = torch.concat((weight1, weight2), dim=1).reshape(n, k * 2).to(torch.int8)
     return i4w
+
+
+def deqscale_process(deqscale):
+    deqscale = deqscale.numpy()
+    deqscale = np.frombuffer(deqscale.tobytes(), dtype=np.int32).astype(np.int64)
+    deqscale = torch.tensor(deqscale)
+    return deqscale
 
 
 class MSModelSlimWeightProcessor:
@@ -108,6 +116,7 @@ class MSModelSlimWeightProcessor:
             self.modelslim_weight_dict[msmodelslim_weight_key] = self.modelslim_weight_dict[ori_weight_key]
             self.modelslim_weight_dict[msmodelslim_input_scale_key] = self.modelslim_weight_dict[ori_input_scale_key]
             self.modelslim_weight_dict[msmodelslim_input_offset_key] = self.modelslim_weight_dict[ori_input_offset_key]
+            # 若开源量化基于fp16量化，则deqscale需要使用deqscale_process进行数据类型转换，若为bf16则不需要
             self.modelslim_weight_dict[msmodelslim_deq_scale_key] = \
                 deqscale_process(self.modelslim_weight_dict[ori_deq_scale_key])
             self.modelslim_weight_dict[msmodelslim_quant_bias_key] = self.modelslim_weight_dict[ori_quant_bias_key]
