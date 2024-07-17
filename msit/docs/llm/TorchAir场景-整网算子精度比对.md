@@ -1,5 +1,13 @@
 
 # 基于torch图模式（torchair）推理场景
+- 注：在跑推理之前需要确认torchvision版本与torch版本是否匹配，torch2.1.0版本对应torchvision的版本为0.16.0
+
+  | torch版本 | torchvision版本 | 
+  |---------|---------------|
+  | 2.3.0   | 0.18.0        |
+  | 2.2.0   | 0.17.0        |
+  | 2.1.0   | 0.16.0        | 
+  | 2.0.0   | 0.15.1        | 
 
 ## 1. GE dump 数据与 FX dump 数据精度比对
 
@@ -7,7 +15,7 @@
 
 - **GE**: Graph Engine，基于昇腾AI软件栈对不同的机器学习框架提供统一的IR接口，对接上层网络模型框架。
 - **FX**：功能类似于pytorch框架的FX工具包，用于消除动态图和静态图之间的gap，使我们对于nn.Model的各种操作变得更加简单。
-- **GE 模式 dump 数据** 添加 `get_ge_dump_config`，获取配置后的 `CompilerConfig` 实例，配置模型 compile，并执行推理。
+- **GE 模式 dump 数据** 添加 `get_ge_dump_config`，获取配置后的 `config` 实例，配置模型 compile，并执行推理。
 
   ```py
   import torch, torch_npu, torchair
@@ -23,15 +31,15 @@
 
   输出路径为指定的 `{dump_path}/dump_{time_stamp}`
 
-- GE dump_config 参数列表
+- get_ge_dump_config 参数列表
 
-  | 参数名                 | 参数描述                            | 是否必选   |
-  |---------------------|---------------------------------|--------|
-  | dump_path           | dump数据的存放路径                     | 是      |
-  | dump_model          | data dump模式，用于指定dump算子输入还是输出数据  | 否      |
-  | fusion_switch_file  | 是否关闭融合dump功能                    | 否      | 
-
-- **FX 模式 dump 数据** 添加 `get_fx_dump_config`，获取配置后的 `CompilerConfig` 实例，配置模型 compile，并执行推理
+  | 参数名                 | 参数描述                            | 是否必选             |
+  |---------------------|---------------------------------|------------------|
+  | dump_path           | dump数据的存放路径                     | 是                |
+  | dump_model          | data dump模式，用于指定dump算子输入还是输出数据  | 否                |
+  | fusion_switch_file  | 是否关闭融合dump功能                    | 否(默认为false，开启融合) | 
+GE [开启融合（默认） Dump 案例](TorchAir场景Dump案例.md)
+- **FX 模式 dump 数据** 添加 `get_fx_dump_config`，该配置与get_ge_dump_config的不同处在于，不能提供参数，如dump_path等。接下来配置 `config` 实例，配置模型 compile，并执行推理
 
   ```py
   import torch, torch_npu, torchair
@@ -49,6 +57,7 @@
   
   **其中 `{token_id}` 是从 1 开始的，相对于 GE 模式是从 0 开始的，比对时会将 FX 模式的 token_id 减 1**
 
+FX [Dump 案例](TorchAir场景Dump案例.md)
 ### Compare 精度比对
 
 - 执行 `msit llm compare --my-path [GE dump data] --golden-path [FX dump data]`，输出比对结果 csv 文件
@@ -59,11 +68,11 @@
 
 ***
 
-## 2. 融合的 GE dump 数据与关闭融合的 GE dump 数据精度比对
+## 2. GE模式（默认）开启融合 dump 数据与GE模式关闭融合 dump 数据精度比对
 
 ### Dump 数据
 
-- **GE 模式 dump 数据** 添加 `get_ge_dump_config`，获取配置后的 `CompilerConfig` 实例，配置模型 compile，并执行推理
+- **GE 模式（默认）开启融合 dump 数据** 添加 `get_ge_dump_config`，获取配置后的 `CompilerConfig` 实例，配置模型 compile，并执行推理
 
   ```py
   import torch, torch_npu, torchair
@@ -117,21 +126,24 @@
   | GraphFusion  | 根据融合规则进行改图的过程，该过程主要通过拆分/合并计算图中的算子来提升计算效率，以实现加速运算的目的，与硬件无关                                                                                    
   | UBFusion     | 对图上算子进行硬件UB相关的融合，全称为：UnifiedBuffer。例如两个算子a和b单独运行时，算子a的计算结果在UB上，需要搬移到DDR（双倍速率同步动态随机存储器）。算子b在执行时，需要将算子a的输出由DDR再搬移到UB，进行算子b的计算逻辑，计算之后又从UB搬移回DDR 
 
-### Compare 比对
+GE [关闭融合Dump 案例](TorchAir场景Dump案例.md)
+
+### Compare 精度比对
 
 - 执行 `msit llm compare --my-path [GE dump data] --golden-path [fusion off GE dump data]`，输出比对结果 csv 文件
 
   ```sh
   msit llm compare --my-path {dump_path}/dump_{time_stamp} --golden-path {dump_path}/dump_{time_stamp}
   ```
+***
 
-## 结果查看
+## 3. 结果查看
 
 参考[精度比对结果参数说明](/msit/docs/llm/精度比对结果参数说明.md)
 
 ***
 
-## 3. 将 dump 数据转化为指定信息以压缩数据量
+## (客户临时需要) 将 dump 数据转化为指定信息以压缩数据量
 - dump 过程中生成的数据量可能占用大量磁盘空间，可以在 dump 过程中启用后台进程，将完整的数据提取为指定的信息。以下参考脚本将数据转化为最大最小值，并删除原数据
   ```py
   #!/bin/env python3
