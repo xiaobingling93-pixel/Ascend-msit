@@ -370,7 +370,9 @@ class PrecisionTest:
             prompt = f"{title} -- {passage}\nQuestion: {text}?\nAnswer:"
             return prompt
 
-        def run_test(choice_tokens, correct_total, sum_total):
+        def run_test(choice_tokens):
+            correct_total = 0
+            sum_total = 0
             for entry in tqdm(glob.glob((Path(self.dataset_path) / "*.jsonl").as_posix(), recursive=True),
                               desc='global'):
                 dataset = []
@@ -403,10 +405,8 @@ class PrecisionTest:
                 sum_total += dataset_num
             return correct_total, sum_total
 
-        correct_total = 0
-        sum_total = 0
         with torch.no_grad():
-            correct_total, sum_total = run_test(choice_tokens, correct_total, sum_total)
+            correct_total, sum_total = run_test(choice_tokens)
         if sum_total == 0:
             self.logger.error("Did not ran any test, maybe wrong humaneval dataset folder.")
         else:
