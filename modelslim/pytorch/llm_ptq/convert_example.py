@@ -37,6 +37,7 @@ def int8_to_int4_forGLM(i8w):
     return i4w
 
 
+# deqscale处理，亲和昇腾量化算子
 def deqscale_process(deqscale):
     deqscale = deqscale.numpy()
     deqscale = np.frombuffer(deqscale.tobytes(), dtype=np.int32).astype(np.int64)
