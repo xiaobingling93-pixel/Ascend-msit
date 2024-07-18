@@ -1,7 +1,7 @@
 
 # 基于torch图模式（torchair）推理场景
 - 注：在跑推理之前需要确认torchvision版本与torch版本是否匹配，torch2.1.0版本对应torchvision的版本为0.16.0
-  torch版本与torchvision版本匹配表格：
+  - torch版本与torchvision版本匹配表格：
 
   | torch版本 | torchvision版本 | 
   |---------|---------------|
@@ -90,7 +90,7 @@
 
   输出路径为指定的 `{dump_path}/dump_{time_stamp}`
 
-- **GE 模式关闭融合 dump 数据** 添加 `get_ge_dump_config`，指定 `fusion_switch_file` 文件，获取配置后的 `CompilerConfig` 实例，配置模型 compile，并执行推理
+- **GE 模式关闭融合 dump 数据** 添加 `get_ge_dump_config`，指定 `fusion_switch_file` 文件，获取配置后的 `config` 实例，配置模型 compile，并执行推理
 
   ```py
   import torch, torch_npu, torchair
