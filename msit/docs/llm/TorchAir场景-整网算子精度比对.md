@@ -38,7 +38,8 @@
   | dump_path           | dump数据的存放路径                     | 是                |
   | dump_model          | data dump模式，用于指定dump算子输入还是输出数据  | 否                |
   | fusion_switch_file  | 是否关闭融合dump功能                    | 否(默认为false，开启融合) | 
-  GE [开启融合（默认） Dump 案例](TorchAir场景Dump案例.md)
+
+  GE模式 [开启融合（默认） Dump 案例](TorchAir场景Dump案例.md)
 - **FX 模式 dump 数据** 添加 `get_fx_dump_config`，该配置与get_ge_dump_config的不同处在于，不能提供参数，如dump_path等。接下来配置 `config` 实例，配置模型 compile，并执行推理
 
   ```py
@@ -57,7 +58,7 @@
   
   **其中 `{token_id}` 是从 1 开始的，相对于 GE 模式是从 0 开始的，比对时会将 FX 模式的 token_id 减 1**
 
-  FX [Dump 案例](TorchAir场景Dump案例.md)
+  FX模式 [Dump 案例](TorchAir场景Dump案例.md)
 ### Compare 精度比对
 
 - 执行 `msit llm compare --my-path [GE dump data] --golden-path [FX dump data]`，输出比对结果 csv 文件
@@ -126,7 +127,7 @@
   | GraphFusion  | 根据融合规则进行改图的过程，该过程主要通过拆分/合并计算图中的算子来提升计算效率，以实现加速运算的目的，与硬件无关                                                                                    
   | UBFusion     | 对图上算子进行硬件UB相关的融合，全称为：UnifiedBuffer。例如两个算子a和b单独运行时，算子a的计算结果在UB上，需要搬移到DDR（双倍速率同步动态随机存储器）。算子b在执行时，需要将算子a的输出由DDR再搬移到UB，进行算子b的计算逻辑，计算之后又从UB搬移回DDR 
 
-GE [关闭融合Dump 案例](TorchAir场景Dump案例.md)
+  GE模式 [关闭融合Dump 案例](TorchAir场景Dump案例.md)
 
 ### Compare 精度比对
 
