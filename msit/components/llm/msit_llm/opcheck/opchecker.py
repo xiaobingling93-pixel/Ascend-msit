@@ -57,6 +57,7 @@ class OpChecker:
         self.precision_mode = NAMEDTUPLE_PRECISION_MODE.keep_origin_dtype
         self.timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         self.atb_rerun = False
+        self.jobs = 1
 
     @staticmethod
     def third_party_init():
@@ -167,6 +168,7 @@ class OpChecker:
                 execution_flag = False
         self.precision_metric = args.precision_metric
         self.precision_mode = args.precision_mode
+        self.jobs = args.jobs
 
         # 指定需要使用的npu设备
         try:
@@ -213,7 +215,7 @@ class OpChecker:
                 case_info[result_info] = 'addition failed'
 
         # 3.执行测试用例并提供专家建议
-        case_manager.excute_cases()
+        case_manager.excute_cases(self.jobs)
 
         # 4.写入未添加成功的算子
         for v in self.cases_info.values():
