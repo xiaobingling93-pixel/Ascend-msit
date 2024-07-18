@@ -20,7 +20,7 @@
           pass
   ```
 ### 2. FX Dump 案例
- ```py
+  ```py
   import os, numpy as np
   import torch, torch_npu, torchair as tng, torchvision
   from ait_llm.dump import torchair_dump
@@ -41,7 +41,7 @@
   ```
 
 ### 3. GE关闭融合 Dump 案例
- ```py
+  ```py
   import os, numpy as np
   import torch, torch_npu, torchair as tng, torchvision
   from ait_llm.dump import torchair_dump

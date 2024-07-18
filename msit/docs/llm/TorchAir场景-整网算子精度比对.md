@@ -38,7 +38,7 @@
   | dump_path           | dump数据的存放路径                     | 是                |
   | dump_model          | data dump模式，用于指定dump算子输入还是输出数据  | 否                |
   | fusion_switch_file  | 是否关闭融合dump功能                    | 否(默认为false，开启融合) | 
-GE [开启融合（默认） Dump 案例](TorchAir场景Dump案例.md)
+  GE [开启融合（默认） Dump 案例](TorchAir场景Dump案例.md)
 - **FX 模式 dump 数据** 添加 `get_fx_dump_config`，该配置与get_ge_dump_config的不同处在于，不能提供参数，如dump_path等。接下来配置 `config` 实例，配置模型 compile，并执行推理
 
   ```py
@@ -57,7 +57,7 @@ GE [开启融合（默认） Dump 案例](TorchAir场景Dump案例.md)
   
   **其中 `{token_id}` 是从 1 开始的，相对于 GE 模式是从 0 开始的，比对时会将 FX 模式的 token_id 减 1**
 
-FX [Dump 案例](TorchAir场景Dump案例.md)
+  FX [Dump 案例](TorchAir场景Dump案例.md)
 ### Compare 精度比对
 
 - 执行 `msit llm compare --my-path [GE dump data] --golden-path [FX dump data]`，输出比对结果 csv 文件
@@ -143,7 +143,7 @@ GE [关闭融合Dump 案例](TorchAir场景Dump案例.md)
 
 ***
 
-## (客户临时需要) 将 dump 数据转化为指定信息以压缩数据量
+## (定向客户提供) 将 dump 数据转化为指定信息以压缩数据量
 - dump 过程中生成的数据量可能占用大量磁盘空间，可以在 dump 过程中启用后台进程，将完整的数据提取为指定的信息。以下参考脚本将数据转化为最大最小值，并删除原数据
   ```py
   #!/bin/env python3
