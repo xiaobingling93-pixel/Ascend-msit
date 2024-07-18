@@ -354,4 +354,3 @@ class OperationTest(unittest.TestCase):
             else:
                 self.case_info['excuted_information'] = 'FAILED'
             self.case_info['fail_reason'] = ", ".join(message)
-            return self.case_info
