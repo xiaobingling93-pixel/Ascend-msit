@@ -37,9 +37,9 @@ class CaseManager:
                 #该算子用例未添加
                 return False
 
-    def add_cases_to_suite(self):
+    def add_cases_to_suite(self, chunk_cases):
         suite = unittest.TestSuite()
-        for case_info in self.cases:
+        for case_info in chunk_cases:
             op = OP_NAME_DICT[case_info['op_name']]
             testloader = unittest.TestLoader()
             testnames = testloader.getTestCaseNames(op)
