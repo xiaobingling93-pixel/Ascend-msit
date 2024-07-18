@@ -30,12 +30,11 @@ FLOAT_EPSILON = torch.finfo(torch.float).eps
 
 
 class OperationTest(unittest.TestCase):
-    def __init__(self, methodName='opTest', case_info=None, excuted_ids=None):
+    def __init__(self, methodName='opTest', case_info=None):
         super(OperationTest, self).__init__(methodName)
 
         self.case_info = case_info
         self.case_info['res_detail'] = []
-        self.excuted_ids = excuted_ids
         self.op_id = case_info['op_id']
         self.op_name = case_info['op_name']
         self.op_param = case_info['op_param']
@@ -152,7 +151,6 @@ class OperationTest(unittest.TestCase):
         self.out_tensors = self.force_dtype(self.out_tensors, self.case_info['precision_mode'])
 
     def tearDown(self):
-        self.excuted_ids.put(self.op_id)
         if self.case_info['excuted_information'] != 'PASS':
             self.case_info['excuted_information'] = 'FAILED'
 

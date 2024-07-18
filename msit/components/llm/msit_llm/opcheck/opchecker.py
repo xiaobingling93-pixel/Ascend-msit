@@ -15,9 +15,9 @@
 import os
 import re
 import json
-import queue
-import threading
-import time
+# import queue
+# import threading
+# import time
 import datetime
 from collections import namedtuple
 import torch
@@ -42,7 +42,7 @@ class OpChecker:
             'tensor_path': string
         '''
         self.cases_info = {}
-        self.completed_op_id_queue = queue.Queue()
+        # self.completed_op_id_queue = queue.Queue()
         self.special_cases = ('KvCacheOperation', 'ReshapeAndCacheOperation', 'SelfAttentionOperation')
         self.base_path = ''
         self.pid = None
@@ -196,7 +196,7 @@ class OpChecker:
             return
 
         from msit_llm.opcheck.case_manager import CaseManager
-        case_manager = CaseManager(self.completed_op_id_queue)
+        case_manager = CaseManager()
         
         # 1.遍历tensor_path，将算子信息添加到self.cases_info
         self.walk_tensor_path(self.input)

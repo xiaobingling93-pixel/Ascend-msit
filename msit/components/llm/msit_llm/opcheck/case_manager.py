@@ -18,9 +18,8 @@ from msit_llm.opcheck.check_case import OP_NAME_DICT
 
 
 class CaseManager:
-    def __init__(self, excuted_ids=None):
+    def __init__(self):
         self.suite = unittest.TestSuite()
-        self.excuted_ids = excuted_ids
         self.cases = []
         self.ops = []
 
@@ -44,7 +43,7 @@ class CaseManager:
             testloader = unittest.TestLoader()
             testnames = testloader.getTestCaseNames(op)
             for name in testnames:
-                op_cur = op(name, case_info=case_info, excuted_ids=self.excuted_ids)
+                op_cur = op(name, case_info=case_info)
                 self.ops.append(op_cur)
                 suite.addTest(op_cur)
         return suite
