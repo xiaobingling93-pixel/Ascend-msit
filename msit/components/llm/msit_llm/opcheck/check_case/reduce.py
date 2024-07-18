@@ -21,12 +21,15 @@ from msit_llm.common.log import logger
 
 class OpcheckReduceOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
-        op_type = self.op_param.get('reduceType', None)
+        op_type = self.op_param.get('reduceType', 0)
+        self.validate_enum_range(op_type, [1, 2, 3])
         axis = self.op_param.get('axis', None)
         if op_type == 1:
             return [in_tensors[0].amax(axis)[0]]
-        else:
+        elif op_type == 2:
             return [in_tensors[0].amin(axis)[0]]
+        else:
+            return [torch.sum(in_tensors[0], axis)]
 
     def test(self):
         ret = self.validate_param("reduceType", "axis")

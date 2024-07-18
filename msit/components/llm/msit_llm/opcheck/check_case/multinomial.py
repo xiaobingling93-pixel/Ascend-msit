@@ -22,8 +22,8 @@ from msit_llm.common.log import logger
 
 class OpcheckMultinomialOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
-        samples = self.op_param.get("numSamples", None)
-        rand_seed = self.op_param.get("randSeed", None)
+        samples = self.op_param.get("numSamples", 1)
+        rand_seed = self.op_param.get("randSeed", 0)
         input0 = in_tensors[0]
         libc = ctypes.CDLL("libc.so.6")
         libc.srand(rand_seed)
@@ -31,14 +31,12 @@ class OpcheckMultinomialOperation(operation_test.OperationTest):
         ret = torch.zeros(shape=(input0.shape[0], samples))
 
         sum_list = torch.cumsum(input0, axis=-1)
-        iter_list = [(j, i) 
-                    for j in range(input0.shape[0]) 
-                    for i in range(input0.shape[1])]
         for z in range(samples):
-            for j, i in iter_list:
-                if (sum_list[j][i] > rand_list[z]):
-                    ret[j][z] = i
-                    break
+            for j in range(input0.shape[0]):
+                for i in range(input0.shape[1]):
+                    if (sum_list[j][i] > rand_list[z]):
+                        ret[j][z] = i
+                        break
         return [ret.contiguous()]
 
     def test(self):

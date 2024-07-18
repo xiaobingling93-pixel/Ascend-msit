@@ -52,7 +52,7 @@ class OpcheckRmsNormOperation(operation_test.OperationTest):
             norm = torch.sum(x / gamma_size * x, dim=-1, keepdim=True) + eps
             golden_output = x * gamma / torch.sqrt(norm)
         except ZeroDivisionError as e:
-            raise e
+            raise RuntimeError("get ZeroDivisionError when calc RmsNormOperation golden") from e
         
         def rms_norm_quant_with_tensor(golden_output, beta, scale, offset):
             golden_output = golden_output.float()
@@ -62,7 +62,7 @@ class OpcheckRmsNormOperation(operation_test.OperationTest):
             try:
                 golden_output = golden_output / scale + offset
             except ZeroDivisionError as e:
-                raise e
+                raise RuntimeError("get ZeroDivisionError when calc RmsNormOperation golden") from e
             golden_output = torch.clamp(golden_output, -128, 127)
             golden_result_quant = torch.round(golden_output)
             return golden_result_quant.type(torch.int8)

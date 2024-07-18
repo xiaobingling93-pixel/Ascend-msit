@@ -35,7 +35,7 @@ class OpcheckToppOperation(operation_test.OperationTest):
         try:
             probs_div_sorted = probs_sorted / topp
         except ZeroDivisionError as e:
-            raise e   
+            raise RuntimeError("get ZeroDivisionError when calc TopkToppSamplingOperation golden") from e
         indices_sorted = torch.argsort(-probs, kind='mergesort', axis=-1)[..., :topk]
         probs_sorted_sumed = torch.cumsum(probs_sorted, axis=-1)
         mask = torch.zeros_like(probs_sorted_sumed, dtype=torch.int32)

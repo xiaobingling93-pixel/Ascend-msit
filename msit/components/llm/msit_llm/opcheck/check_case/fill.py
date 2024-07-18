@@ -21,18 +21,18 @@ from msit_llm.common.log import logger
 
 class OpcheckFillOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
-        with_mask = self.op_param.get("withMask", None)
-        out_dim = self.op_param.get("out_dim", None)
-        value = self.op_param.get("value", None)
+        with_mask = self.op_param.get("withMask", True)
+        out_dim = self.op_param.get("outDim", None)
+        value = self.op_param.get("value", None) 
 
         if with_mask:
-            golden_result = in_tensors[0].masked_fill_(in_tensors[1], value[0])
+            golden_result = in_tensors[0].masked_fill_(in_tensors[1].bool( ), value[0])
         else:
             golden_result = torch.full(out_dim, value[0], dtype=torch.float16)
         return [golden_result]
 
     def test(self):
-        ret = self.validate_param("withMask", "out_dim", "value")
+        ret = self.validate_param("withMask", "outDim", "value")
         if not ret:
             return
         self.execute()

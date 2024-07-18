@@ -21,7 +21,7 @@ from msit_llm.common.log import logger
 
 class OpcheckConcatOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
-        concat_dim = self.op_param.get("concatDim", None)
+        concat_dim = self.op_param.get("concatDim", 0)
         axis_num = concat_dim if concat_dim >= 0 else concat_dim + len(in_tensors[0].size())
         golden_result = torch.cat(in_tensors, axis=axis_num)
         return [golden_result]
