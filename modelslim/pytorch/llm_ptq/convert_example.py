@@ -1,11 +1,10 @@
+# Copyright Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
 import json
 import os
 
 import numpy as np
-import torch
 from safetensors.torch import save_file
-
-from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import deqscale_process
+import torch
 
 
 def int4_to_int8_forGLM(i4w):
@@ -91,6 +90,7 @@ class MSModelSlimWeightProcessor:
     # 处理示量化权重中Linear层的权重量化参数，对应msmodelslim支持的量化类型W8A8和W8A8S
     def weight_activation_process(self):
         # 获取开源量化权重中Linear层的名称，请根据实际修改
+        
         linear_list = []
         for i in range(self.num_layers):
             linear_list.append(f"transformer.encoder.layers.{i}.self_attention.query_key_value")
