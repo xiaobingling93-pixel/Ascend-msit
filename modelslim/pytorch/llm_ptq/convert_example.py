@@ -88,7 +88,7 @@ class MSModelSlimWeightProcessor:
                 torch.zeros(self.modelslim_weight_dict[weight_scale_key].shape).to(torch.float16)
             self.modelslim_description_json[weight_offset_key] = self.QuantType
 
-    # 处理示量化权重中Linear层的权重量化参数，对应msmodelslim支持的量化类型W8A8和W4A8S
+    # 处理示量化权重中Linear层的权重量化参数，对应msmodelslim支持的量化类型W8A8和W8A8S
     def weight_activation_process(self):
         # 获取开源量化权重中Linear层的名称，请根据实际修改
         linear_list = []
@@ -173,6 +173,8 @@ class MSModelSlimWeightProcessor:
 
     # kv cache量化
     def kv_cache_process(self):
+        # 在描述文件中添加kv_cache量化的说明
+        self.modelslim_description_json["kv_cache_type": "C8"]
         # 获取开源量化权重中，k_proj和v_proj层的名称
         kv_linear_list = []
         for i in range(self.num_layers):
