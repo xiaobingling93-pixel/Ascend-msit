@@ -22,8 +22,9 @@ from msit_llm.opcheck.opchecker import NAMEDTUPLE_PRECISION_METRIC
 
 
 class CaseManager:
-    def __init__(self, output_path='./'):
+    def __init__(self, output_path='./', precision_metric=[]):
         self.output_path = output_path
+        self.precision_metric = precision_metric
         self.cases = []
         self.ops = []
 
