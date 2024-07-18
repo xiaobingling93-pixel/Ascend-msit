@@ -1,7 +1,7 @@
 
 # 基于torch图模式（torchair）推理场景
 - 注：在跑推理之前需要确认torchvision版本与torch版本是否匹配，torch2.1.0版本对应torchvision的版本为0.16.0
-  - torch版本与torchvision版本匹配表格：
+- torch版本与torchvision版本匹配表格：
 
   | torch版本 | torchvision版本 | 
   |---------|---------------|
