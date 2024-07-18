@@ -13,14 +13,16 @@
 # limitations under the License.
 
 import unittest
+import multiprocessing
 from msit_llm.opcheck.check_case import OP_NAME_DICT
 
 
 class CaseManager:
     def __init__(self, excuted_ids=None):
         self.suite = unittest.TestSuite()
-        self.cases = []
         self.excuted_ids = excuted_ids
+        self.cases = []
+        self.ops = []
 
     def add_case(self, case_info):
         op_name = case_info['op_name']
@@ -34,15 +36,38 @@ class CaseManager:
             else:
                 #该算子用例未添加
                 return False
-      
+
     def add_cases_to_suite(self):
+        suite = unittest.TestSuite()
         for case_info in self.cases:
             op = OP_NAME_DICT[case_info['op_name']]
-            self.suite.addTest(op.parametrize(optest_class=op, case_info=case_info, excuted_ids=self.excuted_ids))
+            testloader = unittest.TestLoader()
+            testnames = testloader.getTestCaseNames(op)
+            for name in testnames:
+                op_cur = op(name, case_info=case_info, excuted_ids=self.excuted_ids)
+                self.ops.append(op_cur)
+                suite.addTest(op_cur)
+        return suite
 
-    def excute_cases(self):
-        self.add_cases_to_suite()
-
+    def run_test(self, suite):
         #拉起测试套
         runner = unittest.TextTestRunner(verbosity=2)
-        runner.run(self.suite)
+        runner.run(suite)
+
+    def excute_cases(self, num_processes=1):
+        # 多进程执行测试用例
+        chunk_size = len(self.cases) // num_processes
+        pool = multiprocessing.get_context('spawn')
+        processes = []
+
+        for i in range(num_processes):
+            start_index = i * chunk_size
+            end_index = start_index + chunk_size if i != num_processes - 1 else len(self.cases)
+            chunk_cases = self.cases[start_index:end_index]
+            suite = self.add_cases_to_suite(chunk_cases)
+            process = pool.Process(target=self.run_test, args=(suite,))
+            processes.append(process)
+            process.start()
+
+        for process in processes:
+            process.join() # 等待所有子进程完成

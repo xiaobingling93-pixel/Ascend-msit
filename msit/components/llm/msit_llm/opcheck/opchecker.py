@@ -213,7 +213,7 @@ class OpChecker:
                 case_info[result_info] = 'addition failed'
 
         # 3.执行测试用例并提供专家建议
-        self.excute_cases(case_manager)
+        case_manager.excute_cases()
 
         # 4.写入未添加成功的算子
         for v in self.cases_info.values():
@@ -328,83 +328,83 @@ class OpChecker:
             if dirname != 'after':
                 self.walk_tensor_path(os.path.join(cur_path, dirname))
 
-    def excute_cases(self, case_manager):
-        # 定义监控队列函数
-        def watching_queue():
-            cases_num = len([1 for v in self.cases_info.values() if v["excuted_information"] == 'addition successed'])
-            cases_index = 0
-            while cases_index < cases_num:
-                time.sleep(0.1)
-                if not self.completed_op_id_queue.empty():
-                    completed_op_id = self.completed_op_id_queue.get()
-                    case_info = self.cases_info.get(completed_op_id, '')
-                    if case_info != '':
-                        self.write_op_result_to_csv(case_info)
-                    cases_index += 1
-                    logger_text = f"===============excuted cases:{cases_index}, total cases:{cases_num}================"
-                    logger.info(logger_text)
+    # def excute_cases(self, case_manager):
+    #     # 定义监控队列函数
+    #     def watching_queue():
+    #         cases_num = len([1 for v in self.cases_info.values() if v["excuted_information"] == 'addition successed'])
+    #         cases_index = 0
+    #         while cases_index < cases_num:
+    #             time.sleep(0.1)
+    #             if not self.completed_op_id_queue.empty():
+    #                 completed_op_id = self.completed_op_id_queue.get()
+    #                 case_info = self.cases_info.get(completed_op_id, '')
+    #                 if case_info != '':
+    #                     self.write_op_result_to_csv(case_info)
+    #                 cases_index += 1
+    #                 logger_text = f"===============excuted cases:{cases_index}, total cases:{cases_num}================"
+    #                 logger.info(logger_text)
 
-        watching_thread = threading.Thread(target=watching_queue)
-        watching_thread.start()
-        case_manager.excute_cases()
-        watching_thread.join()
+    #     watching_thread = threading.Thread(target=watching_queue)
+    #     watching_thread.start()
+    #     case_manager.excute_cases()
+    #     watching_thread.join()
 
-    def _update_single_op_result(self, op_info, cur_id, res_detail):
-        default_str = 'NaN'
-        excuted_information = op_info["excuted_information"]
-        required = [
-            op_info["op_id"], op_info["op_name"], op_info["op_param"], op_info["tensor_path"],
-            cur_id, res_detail.get('precision_standard', default_str), excuted_information,
-            res_detail.get('rel_pass_rate', default_str), res_detail.get('max_rel', default_str),
-        ]
-        if NAMEDTUPLE_PRECISION_METRIC.abs in self.precision_metric:
-            required.append(res_detail.get('abs_pass_rate', default_str))
-            required.append(res_detail.get('max_abs', default_str))
-        if NAMEDTUPLE_PRECISION_METRIC.cos_sim in self.precision_metric:
-            required.append(res_detail.get('cos_sim', default_str))
-        if NAMEDTUPLE_PRECISION_METRIC.kl in self.precision_metric:
-            required.append(res_detail.get('kl_div', default_str))
+    # def _update_single_op_result(self, op_info, cur_id, res_detail):
+    #     default_str = 'NaN'
+    #     excuted_information = op_info["excuted_information"]
+    #     required = [
+    #         op_info["op_id"], op_info["op_name"], op_info["op_param"], op_info["tensor_path"],
+    #         cur_id, res_detail.get('precision_standard', default_str), excuted_information,
+    #         res_detail.get('rel_pass_rate', default_str), res_detail.get('max_rel', default_str),
+    #     ]
+    #     if NAMEDTUPLE_PRECISION_METRIC.abs in self.precision_metric:
+    #         required.append(res_detail.get('abs_pass_rate', default_str))
+    #         required.append(res_detail.get('max_abs', default_str))
+    #     if NAMEDTUPLE_PRECISION_METRIC.cos_sim in self.precision_metric:
+    #         required.append(res_detail.get('cos_sim', default_str))
+    #     if NAMEDTUPLE_PRECISION_METRIC.kl in self.precision_metric:
+    #         required.append(res_detail.get('kl_div', default_str))
 
-        custom_ret = [res_detail.get(custom_name, default_str) for custom_name in CUSTOM_ALG_MAP]
-        return required + custom_ret + [op_info.get('fail_reason', default_str)]
+    #     custom_ret = [res_detail.get(custom_name, default_str) for custom_name in CUSTOM_ALG_MAP]
+    #     return required + custom_ret + [op_info.get('fail_reason', default_str)]
 
-    def write_op_result_to_csv(self, op_result):
-        import openpyxl
+    # def write_op_result_to_csv(self, op_result):
+    #     import openpyxl
 
-        if not os.path.exists(self.output_path):
-            wb = openpyxl.Workbook()
-            ws = wb.active
-            required_head = [
-                'op_id', 'op_name', 'op_param', 'tensor_path', 'out_tensor_id', 'precision_standard',
-                'precision_result', 'rel_precision_rate(%)', 'max_rel_error'
-            ]
-            if NAMEDTUPLE_PRECISION_METRIC.abs in self.precision_metric:
-                required_head.append('abs_precision_rate(%)')
-                required_head.append('max_abs_error')
-            if NAMEDTUPLE_PRECISION_METRIC.cos_sim in self.precision_metric:
-                required_head.append('cosine_similarity')
-            if NAMEDTUPLE_PRECISION_METRIC.kl in self.precision_metric:
-                required_head.append('kl_divergence')
-            custom_header = list(CUSTOM_ALG_MAP.keys())
-            ws.append(required_head + custom_header + ["fail_reason"])
-            wb.save(self.output_path)
+    #     if not os.path.exists(self.output_path):
+    #         wb = openpyxl.Workbook()
+    #         ws = wb.active
+    #         required_head = [
+    #             'op_id', 'op_name', 'op_param', 'tensor_path', 'out_tensor_id', 'precision_standard',
+    #             'precision_result', 'rel_precision_rate(%)', 'max_rel_error'
+    #         ]
+    #         if NAMEDTUPLE_PRECISION_METRIC.abs in self.precision_metric:
+    #             required_head.append('abs_precision_rate(%)')
+    #             required_head.append('max_abs_error')
+    #         if NAMEDTUPLE_PRECISION_METRIC.cos_sim in self.precision_metric:
+    #             required_head.append('cosine_similarity')
+    #         if NAMEDTUPLE_PRECISION_METRIC.kl in self.precision_metric:
+    #             required_head.append('kl_divergence')
+    #         custom_header = list(CUSTOM_ALG_MAP.keys())
+    #         ws.append(required_head + custom_header + ["fail_reason"])
+    #         wb.save(self.output_path)
 
-        wb = openpyxl.load_workbook(self.output_path)
-        ws = wb.active
+    #     wb = openpyxl.load_workbook(self.output_path)
+    #     ws = wb.active
 
-        op_info = {
-            "op_id": op_result.get('op_id', ""),
-            "op_name": op_result.get('op_name', ""),
-            "op_param": json.dumps(op_result.get('op_param', "")),
-            "tensor_path": op_result.get('tensor_path', ""),
-            "excuted_information": op_result.get('excuted_information', ""),
-            "fail_reason": op_result.get('fail_reason', ""),
-        }
+    #     op_info = {
+    #         "op_id": op_result.get('op_id', ""),
+    #         "op_name": op_result.get('op_name', ""),
+    #         "op_param": json.dumps(op_result.get('op_param', "")),
+    #         "tensor_path": op_result.get('tensor_path', ""),
+    #         "excuted_information": op_result.get('excuted_information', ""),
+    #         "fail_reason": op_result.get('fail_reason', ""),
+    #     }
         
-        if len(op_result['res_detail']) > 0:
-            for cur_id, res_detail in enumerate(op_result['res_detail']):
-                ws.append(self._update_single_op_result(op_info, cur_id, res_detail))
-        else:
-            cur_id, res_detail = 'NaN', {}
-            ws.append(self._update_single_op_result(op_info, cur_id, res_detail))
-        wb.save(self.output_path)
+    #     if len(op_result['res_detail']) > 0:
+    #         for cur_id, res_detail in enumerate(op_result['res_detail']):
+    #             ws.append(self._update_single_op_result(op_info, cur_id, res_detail))
+    #     else:
+    #         cur_id, res_detail = 'NaN', {}
+    #         ws.append(self._update_single_op_result(op_info, cur_id, res_detail))
+    #     wb.save(self.output_path)

@@ -69,14 +69,14 @@ class OperationTest(unittest.TestCase):
             error6: 1
         }
 
-    @staticmethod
-    def parametrize(optest_class, case_info=None, excuted_ids=None):
-        testloader = unittest.TestLoader()
-        testnames = testloader.getTestCaseNames(optest_class)
-        suite = unittest.TestSuite()
-        for name in testnames:
-            suite.addTest(optest_class(name, case_info=case_info, excuted_ids=excuted_ids))
-        return suite
+    # @staticmethod
+    # def parametrize(optest_class, case_info=None, excuted_ids=None):
+    #     testloader = unittest.TestLoader()
+    #     testnames = testloader.getTestCaseNames(optest_class)
+    #     suite = unittest.TestSuite()
+    #     for name in testnames:
+    #         suite.addTest(optest_class(name, case_info=case_info, excuted_ids=excuted_ids))
+    #     return suite
 
     def validate_param(self, *param_names):
         ret = True
