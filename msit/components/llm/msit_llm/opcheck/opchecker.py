@@ -24,7 +24,7 @@ import torch
 
 from msit_llm.common.log import logger
 from msit_llm.compare.cmp_algorithm import CUSTOM_ALG_MAP
-from msit_llm.common.constant import GLOBAL_AIT_DUMP_PATH, ATB_SAVE_TENSOR_TIME
+from msit_llm.common.constant import GLOBAL_AIT_DUMP_PATH
 
 NAMEDTUPLE_PRECISION_METRIC = namedtuple('precision_metric', ['abs', 'kl', 'cos_sim'])('abs', 'kl', 'cos_sim')
 NAMEDTUPLE_PRECISION_MODE = namedtuple(
@@ -133,6 +133,17 @@ class OpChecker:
         ret = True
         return input_path, base_path, pid, ret
 
+    def is_atb_only_save_before(self, input_path):
+        only_save_before = False
+        filename = os.listdir(input_path)[0]
+        filepath = os.path.join(input_path, filename)
+        if os.path.isdir(filepath):
+            if 'after' not in filepath and 'before' in filepath:
+                only_save_before = True
+            else:
+                only_save_before = False
+        return only_save_before
+
     def args_init(self, args):
         import torch_npu
 
@@ -177,7 +188,6 @@ class OpChecker:
             execution_flag = False
 
         self.atb_rerun = args.atb_rerun
-        atb_save_tensor_time = os.getenv('ATB_SAVE_TENSOR_TIME', "")
         if self.atb_rerun:
             execution_flag_res = OpChecker.third_party_init()
             if not execution_flag_res:
@@ -186,7 +196,7 @@ class OpChecker:
                 logger_text = "Rerunning operations in atb to calculate outputs..."
                 logger.info(logger_text)
         else:
-            if atb_save_tensor_time == 0:
+            if self.is_atb_only_save_before(self.input):
                 logger_text = "Only the rerun mode supports checking the data dumped before executing the operations."
                 logger.error(logger_text)
                 execution_flag = False

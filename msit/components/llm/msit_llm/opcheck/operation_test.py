@@ -24,7 +24,6 @@ from msit_llm.common.tool import read_atb_data
 from msit_llm.common.log import logger
 from msit_llm.compare.cmp_algorithm import CMP_ALG_MAP, CUSTOM_ALG_MAP
 from msit_llm.opcheck.opchecker import NAMEDTUPLE_PRECISION_METRIC, NAMEDTUPLE_PRECISION_MODE
-from msit_llm.common.constant import ATB_SAVE_TENSOR_TIME
 
 
 FLOAT_EPSILON = torch.finfo(torch.float).eps
@@ -152,7 +151,7 @@ class OperationTest(unittest.TestCase):
         _in_tensor_files = self.get_tensor_path(self.tensor_path, "intensor")
         self.in_tensors = self.read_tensor_from_file(_in_tensor_files)
         self.in_tensors = self.force_dtype(self.in_tensors, self.case_info['precision_mode'])
-        if self.atb_rerun is True and ATB_SAVE_TENSOR_TIME == 0:
+        if self.atb_rerun is True and 'after' not in os.listdir(self.tensor_path):
             logger_text = "Only the data that is dumped after execution can be used to rerun operations."
             logger.error(logger_text)
         else:
