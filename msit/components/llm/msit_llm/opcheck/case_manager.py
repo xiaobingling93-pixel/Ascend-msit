@@ -42,25 +42,25 @@ class CaseManager:
 
     def add_cases_to_suite(self, chunk_cases):
         suite = unittest.TestSuite()
-        cases = []
+        testloader = unittest.TestLoader()
+        ops = []
         for case_info in chunk_cases:
             op = OP_NAME_DICT[case_info['op_name']]
-            testloader = unittest.TestLoader()
             testnames = testloader.getTestCaseNames(op)
             for name in testnames:
                 op_cur = op(name, case_info=case_info)
-                self.cases.append(op_cur)
+                ops.append(op_cur)
                 suite.addTest(op_cur)
-        return suite, cases
+        return suite, ops
 
-    def run_test(self, suite, cases):
+    def run_test(self, suite, ops):
         # 拉起测试套
         runner = unittest.TextTestRunner(verbosity=2)
         runner.run(suite)
 
         # 写入文件
-        for case in cases:
-            self.write_op_result_to_csv(case.case_info)
+        for op in ops:
+            self.write_op_result_to_csv(op.case_info)
 
     def excute_cases(self, num_processes=1):
         # 多进程执行测试用例
@@ -72,8 +72,8 @@ class CaseManager:
             start_index = i * chunk_size
             end_index = start_index + chunk_size if i != num_processes - 1 else len(self.cases)
             chunk_cases = self.cases[start_index:end_index]
-            suite, cases = self.add_cases_to_suite(chunk_cases)
-            process = pool.Process(target=self.run_test, args=(suite, cases))
+            suite, ops = self.add_cases_to_suite(chunk_cases)
+            process = pool.Process(target=self.run_test, args=(suite, ops))
             processes.append(process)
             process.start()
 
