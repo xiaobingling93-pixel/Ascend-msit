@@ -46,17 +46,18 @@ class CaseManager:
                 case_queue.put(case)
 
     def excute_case(self, case_queue, lock, result_queue):
-         runner = unittest.TextTestRunner(verbosity=2)
-         testloader = unittest.TestLoader()
-         with lock:
-             while not case_queue.empty():
-                 case_info = case_queue.get()
-                 op = OP_NAME_DICT[case_info['op_name']]
-                 testnames = testloader.getTestCaseNames(op)
-                 for name in testnames:
-                     op_cur = op(name, case_info=case_info)
-                     runner.run(op_cur)
-                     result_queue.put(op_cur.case_info)
+        runner = unittest.TextTestRunner(verbosity=2)
+        testloader = unittest.TestLoader()
+        
+        while not case_queue.empty():
+            with lock:
+                case_info = case_queue.get()
+            op = OP_NAME_DICT[case_info['op_name']]
+            testnames = testloader.getTestCaseNames(op)
+            for name in testnames:
+                op_cur = op(name, case_info=case_info)
+                runner.run(op_cur)
+                result_queue.put(op_cur.case_info)
 
     def excute_cases(self, num_processes=1):
         # 多进程执行测试用例
