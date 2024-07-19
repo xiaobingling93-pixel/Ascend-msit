@@ -100,7 +100,7 @@ class CaseManager:
                 "op_name": op_result.get('op_name', ""),
                 "op_param": json.dumps(op_result.get('op_param', "")),
                 "tensor_path": op_result.get('tensor_path', ""),
-                "excuted_information": op_result.get('excuted_information', ""),
+                "precision_result": op_result.get('excuted_information', ""),
                 "fail_reason": op_result.get('fail_reason', ""),
             }
             
@@ -113,7 +113,18 @@ class CaseManager:
         
         import pandas as pd
         op_infos = pd.DataFrame(op_infos)
-        op_infos.to_csv('op_result.csv', index=False)
+        columns = ["op_id", "op_name", "op_param", "tensor_path", "out_tensor_id", "precision_standard", 
+                   "precision_result", "rel_precision_rate(%)", "max_rel_error"]
+        if NAMEDTUPLE_PRECISION_METRIC.abs in self.precision_metric:
+            columns.append('abs_precision_rate(%)')
+            columns.append('max_abs_error')
+        if NAMEDTUPLE_PRECISION_METRIC.cos_sim in self.precision_metric:
+            columns.append('cosine_similarity')
+        if NAMEDTUPLE_PRECISION_METRIC.kl in self.precision_metric:
+            columns.append('kl_divergence')
+        columns.append("fail_reason")
+        op_infos = op_infos[columns]
+        op_infos.to_excel(self.output_path, index=False)
 
     def _update_single_op_result(self, op_info, cur_id, res_detail):
         default_str = 'NaN'
