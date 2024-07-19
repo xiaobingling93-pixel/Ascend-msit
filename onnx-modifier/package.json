@@ -1,6 +1,6 @@
 {
   "name": "ms-onnx-modifier",
-  "version": "1.0.0",
+  "version": "1.0.5",
   "description": "<img src=\"./docs/onnx_modifier_logo.png\" style=\"zoom: 60%;\" />",
   "main": "electron/electron.js",
   "directories": {

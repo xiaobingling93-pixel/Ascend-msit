@@ -14,3 +14,4 @@
 **/dist
 **/.idea
 **/.gradle
+onnx-modifier/python
