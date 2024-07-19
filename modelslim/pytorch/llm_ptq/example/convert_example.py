@@ -63,7 +63,7 @@ class MSModelSlimWeightProcessor:
             linear_list.append(f"transformer.encoder.layers.{i}.self_attention.query_key_value")
             linear_list.append(f"transformer.encoder.layers.{i}.self_attention.dense")
             linear_list.append(f"transformer.encoder.layers.{i}.mlp.dense_h_to_4h")
-            linear_list.append(f"transformer.encoder.layers.{i}.mlp_dense_4h_to_h")
+            linear_list.append(f"transformer.encoder.layers.{i}.mlp.dense_4h_to_h")
 
         # 获取示例量化权重的名称，处理后增加到权重字典中，请根据实际修改
         for key in linear_list:
@@ -96,7 +96,7 @@ class MSModelSlimWeightProcessor:
             linear_list.append(f"transformer.encoder.layers.{i}.self_attention.query_key_value")
             linear_list.append(f"transformer.encoder.layers.{i}.self_attention.dense")
             linear_list.append(f"transformer.encoder.layers.{i}.mlp.dense_h_to_4h")
-            linear_list.append(f"transformer.encoder.layers.{i}.mlp_dense_4h_to_h")
+            linear_list.append(f"transformer.encoder.layers.{i}.mlp.dense_4h_to_h")
 
         # 获取示例量化权重的名称，处理后增加到权重字典中，请根据实际修改
         for key in linear_list:
