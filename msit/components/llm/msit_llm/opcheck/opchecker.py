@@ -15,6 +15,7 @@
 import os
 import re
 import json
+import time
 import datetime
 from collections import namedtuple
 import torch
@@ -187,6 +188,8 @@ class OpChecker:
         return execution_flag
 
     def start_test(self, args):
+        start_time = time.time()
+
         # 0.初始化
         execution_flag_res = self.args_init(args)
         if not execution_flag_res:
@@ -218,6 +221,11 @@ class OpChecker:
                 v['res_detail'] = []
                 case_manager.write_op_result_to_csv(v)
         logger.info(f"\nOpcheck results saved to: {self.output_path}")
+        
+        end_time = time.time()
+        total_time = round(end_time - start_time, 2)
+        logger_text = f"Opcheck finished. Total time: {total_time} seconds"
+        logger.info(logger_text)
 
     def parse_op_id_name(self, dirpath):
         basename = os.path.basename(dirpath)
