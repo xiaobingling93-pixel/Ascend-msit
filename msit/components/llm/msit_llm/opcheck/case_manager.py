@@ -53,32 +53,40 @@ class CaseManager:
                 suite.addTest(op_cur)
         return suite, ops
 
-    def run_test(self, suite, ops):
+    def run_test(self, suite, ops, result_queue):
         # 拉起测试套
         runner = unittest.TextTestRunner(verbosity=2)
         runner.run(suite)
 
-        # 写入文件
+        # 将结果写入result_queue队列
         for op in ops:
-            self.write_op_result_to_csv(op.case_info)
+            result_queue.put(op.case_info)
 
     def excute_cases(self, num_processes=1):
         # 多进程执行测试用例
         chunk_size = len(self.cases) // num_processes
         pool = multiprocessing.get_context('spawn')
         processes = []
+        result_queue = multiprocessing.Manager().Queue()
 
         for i in range(num_processes):
             start_index = i * chunk_size
             end_index = start_index + chunk_size if i != num_processes - 1 else len(self.cases)
             chunk_cases = self.cases[start_index:end_index]
             suite, ops = self.add_cases_to_suite(chunk_cases)
-            process = pool.Process(target=self.run_test, args=(suite, ops))
+            process = pool.Process(target=self.run_test, args=(suite, ops, result_queue))
             processes.append(process)
             process.start()
 
         for process in processes:
             process.join() # 等待所有子进程完成
+
+        results = []
+        for process in processes:
+            while not result_queue.empty():
+                results.append(result_queue.get())
+        for result in results:
+            self.write_op_result_to_csv(result)
 
     def _update_single_op_result(self, op_info, cur_id, res_detail):
         default_str = 'NaN'
