@@ -124,6 +124,7 @@ class CaseManager:
             columns.append('kl_divergence')
         columns.append("fail_reason")
         op_infos = op_infos[columns]
+        op_infos = op_infos.sort(values=['op_id', 'out_tensor_id'])
         op_infos.to_excel(self.output_path, index=False)
 
     def _update_single_op_result(self, op_info, cur_id, res_detail):
