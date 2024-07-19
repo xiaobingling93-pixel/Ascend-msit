@@ -90,65 +90,47 @@ class CaseManager:
         for process in processes:
             while not result_queue.empty():
                 results.append(result_queue.get())
-        for result in results:
-            self.write_op_result_to_csv(result)
+        self.write_op_result_to_csv(results)
+
+    def write_op_result_to_csv(self, results):
+        op_infos = []
+        for op_result in results:
+            op_info = {
+                "op_id": op_result.get('op_id', ""),
+                "op_name": op_result.get('op_name', ""),
+                "op_param": json.dumps(op_result.get('op_param', "")),
+                "tensor_path": op_result.get('tensor_path', ""),
+                "excuted_information": op_result.get('excuted_information', ""),
+                "fail_reason": op_result.get('fail_reason', ""),
+            }
+            
+            if len(op_result['res_detail']) > 0:
+                for cur_id, res_detail in enumerate(op_result['res_detail']):
+                    op_infos.append(self._update_single_op_result(op_info, cur_id, res_detail))
+            else:
+                cur_id, res_detail = 'NaN', {}
+                op_infos.append(self._update_single_op_result(op_info, cur_id, res_detail))
+        
+        import pandas as pd
+        op_infos = pd.DataFrame(op_infos)
+        op_infos.to_csv('op_result.csv', index=False)
 
     def _update_single_op_result(self, op_info, cur_id, res_detail):
         default_str = 'NaN'
-        excuted_information = op_info["excuted_information"]
-        required = [
-            op_info["op_id"], op_info["op_name"], op_info["op_param"], op_info["tensor_path"],
-            cur_id, res_detail.get('precision_standard', default_str), excuted_information,
-            res_detail.get('rel_pass_rate', default_str), res_detail.get('max_rel', default_str),
-        ]
+        op_info["out_tensor_id"] = cur_id
+        op_info["precision_standard"] = res_detail.get('precision_standard', default_str)
+        op_info["rel_precision_rate(%)"] = res_detail.get('rel_pass_rate', default_str)
+        op_info["max_rel_error"] = res_detail.get('max_rel', default_str)
+
         if NAMEDTUPLE_PRECISION_METRIC.abs in self.precision_metric:
-            required.append(res_detail.get('abs_pass_rate', default_str))
-            required.append(res_detail.get('max_abs', default_str))
+            op_info['abs_precision_rate(%)'] = res_detail.get('abs_pass_rate', default_str)
+            op_info['max_abs_error'] = res_detail.get('max_abs', default_str)
         if NAMEDTUPLE_PRECISION_METRIC.cos_sim in self.precision_metric:
-            required.append(res_detail.get('cos_sim', default_str))
+            op_info['cosine_similarity'] = res_detail.get('cos_sim', default_str)
         if NAMEDTUPLE_PRECISION_METRIC.kl in self.precision_metric:
-            required.append(res_detail.get('kl_div', default_str))
-
-        custom_ret = [res_detail.get(custom_name, default_str) for custom_name in CUSTOM_ALG_MAP]
-        return required + custom_ret + [op_info.get('fail_reason', default_str)]
-
-    def write_op_result_to_csv(self, op_result):
-        import openpyxl
-
-        if not os.path.exists(self.output_path):
-            wb = openpyxl.Workbook()
-            ws = wb.active
-            required_head = [
-                'op_id', 'op_name', 'op_param', 'tensor_path', 'out_tensor_id', 'precision_standard',
-                'precision_result', 'rel_precision_rate(%)', 'max_rel_error'
-            ]
-            if NAMEDTUPLE_PRECISION_METRIC.abs in self.precision_metric:
-                required_head.append('abs_precision_rate(%)')
-                required_head.append('max_abs_error')
-            if NAMEDTUPLE_PRECISION_METRIC.cos_sim in self.precision_metric:
-                required_head.append('cosine_similarity')
-            if NAMEDTUPLE_PRECISION_METRIC.kl in self.precision_metric:
-                required_head.append('kl_divergence')
-            custom_header = list(CUSTOM_ALG_MAP.keys())
-            ws.append(required_head + custom_header + ["fail_reason"])
-            wb.save(self.output_path)
-
-        wb = openpyxl.load_workbook(self.output_path)
-        ws = wb.active
-
-        op_info = {
-            "op_id": op_result.get('op_id', ""),
-            "op_name": op_result.get('op_name', ""),
-            "op_param": json.dumps(op_result.get('op_param', "")),
-            "tensor_path": op_result.get('tensor_path', ""),
-            "excuted_information": op_result.get('excuted_information', ""),
-            "fail_reason": op_result.get('fail_reason', ""),
-        }
+            op_info['kl_divergence'] = res_detail.get('kl_div', default_str)
         
-        if len(op_result['res_detail']) > 0:
-            for cur_id, res_detail in enumerate(op_result['res_detail']):
-                ws.append(self._update_single_op_result(op_info, cur_id, res_detail))
-        else:
-            cur_id, res_detail = 'NaN', {}
-            ws.append(self._update_single_op_result(op_info, cur_id, res_detail))
-        wb.save(self.output_path)
+        for custom_name in CUSTOM_ALG_MAP:
+            op_info[custom_name] = res_detail.get(custom_name, default_str)
+
+        return op_info
