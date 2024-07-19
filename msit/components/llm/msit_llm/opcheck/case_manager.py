@@ -14,6 +14,7 @@
 
 import os
 import json
+import time
 import unittest
 import multiprocessing
 from msit_llm.opcheck.check_case import OP_NAME_DICT
@@ -72,8 +73,9 @@ class CaseManager:
         process_put_case.start()
 
         # 创建多个进程执行测试用例
+        time.sleep(0.1)
         processes = []
-        for i in range(num_processes):
+        for _ in range(num_processes):
             process = pool.Process(target=self.excute_case, args=(case_queue, lock, result_queue))
             processes.append(process)
             process.start()
