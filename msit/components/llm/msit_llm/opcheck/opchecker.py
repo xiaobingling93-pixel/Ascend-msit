@@ -25,7 +25,6 @@ import torch
 from msit_llm.common.log import logger
 from msit_llm.compare.cmp_algorithm import CUSTOM_ALG_MAP
 from msit_llm.common.constant import GLOBAL_AIT_DUMP_PATH, ATB_SAVE_TENSOR_TIME
-from msit_llm.opcheck.check_case import OP_NAME_DICT
 
 NAMEDTUPLE_PRECISION_METRIC = namedtuple('precision_metric', ['abs', 'kl', 'cos_sim'])('abs', 'kl', 'cos_sim')
 NAMEDTUPLE_PRECISION_MODE = namedtuple(
@@ -321,6 +320,7 @@ class OpChecker:
         return
 
     def walk_tensor_path(self, cur_path):
+        from msit_llm.opcheck.check_case import OP_NAME_DICT
         files_and_dirs = os.listdir(cur_path)
         # 取出所有文件夹的名字
         dirnames = []
@@ -335,10 +335,10 @@ class OpChecker:
                 if dirname != 'after' or dirname != 'before':
                     op_name = dirname.split('_')[-1]
                     if op_name in OP_NAME_DICT.keys():
-                        self.add_op_info_to_cases_info(cur_path)
-        # 如果不是算子文件夹则遍历下一级文件夹
-        else:
-            for dirname in dirnames:
+                        self.add_op_info_to_cases_info(os.path.join(cur_path, dirname))
+        # 遍历下一级文件夹
+        for dirname in dirnames:
+            if dirname != 'after' or dirname != 'before':
                 self.walk_tensor_path(os.path.join(cur_path, dirname))
 
     def excute_cases(self, case_manager):
