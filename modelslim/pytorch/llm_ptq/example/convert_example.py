@@ -209,8 +209,8 @@ class MSModelSlimWeightProcessor:
         safetensors_path = os.path.join(path, safetensors_name)
         json_path = os.path.join(path, json_name)
         save_file(self.modelslim_weight_dict, safetensors_path)
-        default_save_mode = stat.S_IWUSR | stat.IRUSR # 600
-        with os.fdopen(os.open(json_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC), 'w') as json_file:
+        save_mode = stat.S_IWUSR | stat.IRUSR # 600
+        with os.fdopen(os.open(json_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, mode=save_mode), 'w') as json_file:
             json.dump(self.modelslim_description_json, json_file, indent=2)
 
 
