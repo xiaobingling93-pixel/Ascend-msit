@@ -74,7 +74,7 @@ class MSModelSlimWeightProcessor:
 
             # 示例量化权重的weight的名称和msmodelslim的一致，名称不需要修改
             # 示例量化权重，会将两个int4权重保存成一个int8，此处需要将一个权重解码成两个int4的权重
-            self.modelslim_weight_dict[weight_key] = int8_to_int4_forGLM(self.modelslim_weight_dict[weight_key])
+            self.modelslim_weight_dict[weight_key] = int8_to_int4_forchatglm(self.modelslim_weight_dict[weight_key])
             self.modelslim_description_json[weight_key] = self.quant_type
 
             # 示例量化权重的weight_scale名称和msmodelslim的一致，名称不需要修改
