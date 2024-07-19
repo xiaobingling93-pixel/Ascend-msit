@@ -11,6 +11,7 @@ msmodelslim量化类型说明：
 
 **注意** msmodelslim工具生成的量化权重均为signed场景，即对应int8数据分布范围为-128~127，对于int4数据分布范围为-8~7。开源权重若为unsigned场景，对于int8可以考虑将weight和offset权重减去128，对于int4则减去8
 
+脚本convert_example.py提供了将开源ChatGLM2-6B转换成msmodelslim量化权重的示例，使用前请修改216行和217行的输入输出路径。使用方式`python convert_example.py`
 
 ## 量化权重、描述文件格式
 ### safetensors权重格式
