@@ -673,8 +673,10 @@ host.BrowserHost = class {
 
     // 函数：从服务器获取最新的算子列表
     function updateOperatorDropdown() {
-      fetch('/get-operators')
-        .then((response) => response.json())
+      fetch('/get-operators', {
+        method: 'POST',
+        body: "{}",
+      }).then((response) => response.json())
         .then((data) => {
           var addNodeDropdown = document.getElementById('add-node-dropdown');
           addNodeDropdown.innerHTML = ''; // 清空现有选项
@@ -1499,8 +1501,10 @@ host.BrowserHost = class {
       });
   }
   updateCustomOperatorLists() {
-    fetch('/get-operators')
-      .then((response) => response.json())
+    fetch('/get-operators', {
+      method: 'POST',
+      body: "{}",
+    }).then((response) => response.json())
       .then((data) => {
         const nameList = document.getElementById('customNameList');
         const moduleList = document.getElementById('customModuleList');
