@@ -41,11 +41,6 @@ class CaseManager:
                 #该算子用例未添加
                 return False
 
-    def put_case(self, case_queue, lock):
-        with lock:
-            for case in self.cases:
-                case_queue.put(case)
-
     def excute_case(self, case_queue, lock, result_queue):
         runner = unittest.TextTestRunner(verbosity=2)
         testloader = unittest.TestLoader()
@@ -67,10 +62,10 @@ class CaseManager:
         lock = manager.Lock()
         case_queue = manager.Queue()
         result_queue = manager.Queue()
-
-        # 创建一个进程执行测试用例的放入
-        process_put_case = pool.Process(target=self.put_case, args=(case_queue, lock))
-        process_put_case.start()
+        
+        # 将所有case放入队列
+        for case in self.cases:
+            case_queue.put(case)
 
         # 创建多个进程执行测试用例
         time.sleep(0.1)
@@ -82,8 +77,7 @@ class CaseManager:
 
         # 等待所有子进程完成
         for process in processes:
-            process.join() 
-        process_put_case.join()
+            process.join()
 
         # 将结果写入csv文件
         results = []
