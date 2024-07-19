@@ -40,47 +40,49 @@ class CaseManager:
                 #该算子用例未添加
                 return False
 
-    def add_cases_to_suite(self, chunk_cases):
-        suite = unittest.TestSuite()
-        testloader = unittest.TestLoader()
-        ops = []
-        for case_info in chunk_cases:
-            op = OP_NAME_DICT[case_info['op_name']]
-            testnames = testloader.getTestCaseNames(op)
-            for name in testnames:
-                op_cur = op(name, case_info=case_info)
-                ops.append(op_cur)
-                suite.addTest(op_cur)
-        return suite, ops
+    def put_case(self, case_queue, lock):
+        with lock:
+            for case in self.cases:
+                case_queue.put(case)
 
-    def run_test(self, suite, ops, result_queue):
-        # 拉起测试套
-        runner = unittest.TextTestRunner(verbosity=2)
-        runner.run(suite)
-
-        # 将结果写入result_queue队列
-        for op in ops:
-            result_queue.put(op.case_info)
+    def excute_case(self, case_queue, lock, result_queue):
+         runner = unittest.TextTestRunner(verbosity=2)
+         testloader = unittest.TestLoader()
+         with lock:
+             while not case_queue.empty():
+                 case_info = case_queue.get()
+                 op = OP_NAME_DICT[case_info['op_name']]
+                 testnames = testloader.getTestCaseNames(op)
+                 for name in testnames:
+                     op_cur = op(name, case_info=case_info)
+                     runner.run(op_cur)
+                     result_queue.put(op_cur.case_info)
 
     def excute_cases(self, num_processes=1):
         # 多进程执行测试用例
-        chunk_size = len(self.cases) // num_processes
         pool = multiprocessing.get_context('spawn')
-        processes = []
-        result_queue = multiprocessing.Manager().Queue()
+        manager = multiprocessing.Manager()
+        lock = manager.Lock()
+        case_queue = manager.Queue()
+        result_queue = manager.Queue()
 
+        # 创建一个进程执行测试用例的放入
+        process_put_case = pool.Process(target=self.put_case, args=(case_queue, lock))
+        process_put_case.start()
+
+        # 创建多个进程执行测试用例
+        processes = []
         for i in range(num_processes):
-            start_index = i * chunk_size
-            end_index = start_index + chunk_size if i != num_processes - 1 else len(self.cases)
-            chunk_cases = self.cases[start_index:end_index]
-            suite, ops = self.add_cases_to_suite(chunk_cases)
-            process = pool.Process(target=self.run_test, args=(suite, ops, result_queue))
+            process = pool.Process(target=self.excute_case, args=(case_queue, lock, result_queue))
             processes.append(process)
             process.start()
 
+        # 等待所有子进程完成
         for process in processes:
-            process.join() # 等待所有子进程完成
+            process.join() 
+        process_put_case.join()
 
+        # 将结果写入csv文件
         results = []
         for process in processes:
             while not result_queue.empty():
