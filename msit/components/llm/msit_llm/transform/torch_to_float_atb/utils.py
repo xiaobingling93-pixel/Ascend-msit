@@ -68,3 +68,36 @@ def get_repeat_box_layer(model):
             repeat_index += 1
 
     return res
+
+
+def dag_to_model(dag_node, is_repeat, model_layers):
+    from msit.transform.model_parser import parser
+    parsed_model_layers = []
+    for node in dag_node.dag_node_list:
+        if "forward" in node.name:
+            continue
+        tmp_node = {}
+        if isinstance(node.node, nn.Module):
+            tmp_node = parser.build_model_tree(node.node)
+        else:
+            tmp_node['input_param'] = str(node.input_param)
+        tmp_node["input_node"] = ",".join((x.name for x in node.input_nodes))
+        tmp_node['name'] = node.name
+        if not is_repeat:
+            parsed_model_layers.append(tmp_node)
+            continue
+        if len(parsed_model_layers) > 0 and "repeat_block" in parsed_model_layers[-1]:
+            parsed_model_layers[-1]["repeat_block"].append(tmp_node)
+        else:
+            parsed_model_layers.append(tmp_node)
+
+        if node.node in model_layers:
+            if model_layers[node.node]["repeat_type"] == "start":
+                parsed_model_layers.append({"kind": "Layers",
+                                            "repeat_count": model_layers[node.node]["repeat_count"],
+                                            "repeat_block": []})
+            else:
+                parsed_model_layers[-1]["repeat_block"].pop()
+                parsed_model_layers.append(tmp_node)
+
+    return parsed_model_layers
