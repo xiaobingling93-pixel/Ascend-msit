@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import json
 import unittest
 import multiprocessing
@@ -120,7 +121,11 @@ class CaseManager:
         columns.append("fail_reason")
         op_infos = op_infos[columns]
         op_infos = op_infos.sort_values(by=['op_id', 'out_tensor_id'])
-        op_infos.to_excel(self.output_path, index=False)
+        if not os.path.exists(self.output_path):
+            op_infos.to_excel(self.output_path, index=False)
+        else:
+            with pd.ExcelWriter(self.output_path, engine='openpyxl', mode='a') as writer:
+                op_infos.to_excel(writer, index=False)
 
     def _update_single_op_result(self, op_info, cur_id, res_detail):
         default_str = 'NaN'
