@@ -66,7 +66,8 @@ class OpChecker:
             lib_path_dir = os.path.dirname(os.path.abspath(msit_llm.__file__))
             lib_opchecker_path = os.path.join(lib_path_dir, "opcheck", "libopchecker.so")
 
-        logger.info(f"lib_opchecker_path is {lib_opchecker_path}")
+        logger_text = f"lib_opchecker_path is {lib_opchecker_path}"
+        logger.info(logger_text)
         if not os.path.exists(lib_opchecker_path):
             logger_text = f"{lib_opchecker_path} not exists, check if msit_llm installed correctly"
             logger.error(logger_text)
