@@ -104,7 +104,7 @@ class OperationTest(unittest.TestCase):
         except IndexError as e:
             logger_text = f"Cannot find data on rank {i}! {self.op_name} needs tensors on all devices! Exception: {e}"
             logger.error(logger_text)
-            raise RuntimeError(f"{new_tensor_path_pattern} not valid")
+            raise RuntimeError(f"{new_tensor_path_pattern} not valid") from e
         self.validate_path(new_tensor_path)
         _in_tensor_files = self.get_tensor_path(new_tensor_path, "intensor")
         return self.read_tensor_from_file(_in_tensor_files)

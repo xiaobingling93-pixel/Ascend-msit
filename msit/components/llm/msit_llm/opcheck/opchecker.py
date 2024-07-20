@@ -68,13 +68,15 @@ class OpChecker:
 
         logger.info(f"lib_opchecker_path is {lib_opchecker_path}")
         if not os.path.exists(lib_opchecker_path):
-            logger.error(f"{lib_opchecker_path} not exists, check if msit_llm installed correctly")
+            logger_text = f"{lib_opchecker_path} not exists, check if msit_llm installed correctly"
+            logger.error(logger_text)
             return False
 
         try:
             ctypes.cdll.LoadLibrary(lib_opchecker_path).RegisterAll()
         except Exception as e:
-            logger.error(f"{lib_opchecker_path} loading failed, check if msit_llm installed correctly")
+            logger_text = f"{lib_opchecker_path} loading failed, check if msit_llm installed correctly"
+            logger.error(logger_text)
             return False
 
         # Loading libatb_speed_torch.so with torch
@@ -84,15 +86,18 @@ class OpChecker:
             return False
 
         libatb_speed_torch_path = os.path.join(atb_speed_path, 'lib', 'libatb_speed_torch.so')
-        logger.info(f"libatb_speed_torch_path is {libatb_speed_torch_path}")
+        logger_text = f"libatb_speed_torch_path is {libatb_speed_torch_path}"
+        logger.info(logger_text)
         if not os.path.exists(libatb_speed_torch_path):
-            logger.error(f"{libatb_speed_torch_path} not exists, check if mindie_atb_models configured correctly")
+            logger_text = f"{libatb_speed_torch_path} not exists, check if mindie_atb_models configured correctly"
+            logger.error(logger_text)
             return False
 
         try:
             torch.classes.load_library(libatb_speed_torch_path)
         except Exception as e:
-            logger.error(f"{libatb_speed_torch_path} loading failed, check if mindie_atb_models configured correctly")
+            logger_text = f"{libatb_speed_torch_path} loading failed, check if mindie_atb_models configured correctly"
+            logger.error(logger_text)
             return False
 
         return True
@@ -102,13 +107,13 @@ class OpChecker:
         if len(dirseg) >= 4 and dirseg[-3] == 'tensors' and dirseg[-4].startswith(GLOBAL_AIT_DUMP_PATH):
             try:
                 pid = dirseg[-2].split("_")[1]
-            except:
+            except (IndexError, AttributeError, TypeError, ValueError) as e:
                 pid = None
-            return cur_path, pid
         elif cur_path == os.path.dirname(cur_path):
-            return None, None
+            cur_path, pid = None, None
         else:
-            return self.get_base_path(os.path.dirname(cur_path))
+            cur_path, pid = self.get_base_path(os.path.dirname(cur_path))
+        return cur_path, pid
 
     def check_input_legality(self, input_path):
         ret = False
@@ -196,7 +201,7 @@ class OpChecker:
             return
 
         from msit_llm.opcheck.case_manager import CaseManager
-        case_manager = CaseManager(self.output_path, self.precision_metric)
+        case_manager = CaseManager(self.precision_metric, self.output_path)
         
         # 1.遍历tensor_path，将算子信息添加到self.cases_info
         self.walk_tensor_path(self.input)

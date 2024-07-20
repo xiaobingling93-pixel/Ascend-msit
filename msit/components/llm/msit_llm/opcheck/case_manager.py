@@ -21,25 +21,13 @@ from msit_llm.opcheck.opchecker import NAMEDTUPLE_PRECISION_METRIC
 
 
 class CaseManager:
-    def __init__(self, output_path='./', precision_metric=[]):
-        self.output_path = output_path
+    def __init__(self, precision_metric, output_path='./'):
         self.precision_metric = precision_metric
+        self.output_path = output_path
         self.cases = []
 
-    def add_case(self, case_info):
-        op_name = case_info['op_name']
-        if op_name not in OP_NAME_DICT.keys():
-            #没有该op_name
-            return False 
-        else:
-            if OP_NAME_DICT[op_name]:
-                self.cases.append(case_info)
-                return True
-            else:
-                #该算子用例未添加
-                return False
-
-    def excute_case(self, lock, case_queue, result_queue):
+    @staticmethod
+    def excute_case(lock, case_queue, result_queue):
         runner = unittest.TextTestRunner(verbosity=2)
         testloader = unittest.TestLoader()
         
@@ -53,6 +41,19 @@ class CaseManager:
                 runner.run(op_cur)
                 with lock:
                     result_queue.put(op_cur.case_info)
+
+    def add_case(self, case_info):
+        op_name = case_info['op_name']
+        if op_name not in OP_NAME_DICT.keys():
+            #没有该op_name
+            return False 
+        else:
+            if OP_NAME_DICT[op_name]:
+                self.cases.append(case_info)
+                return True
+            else:
+                #该算子用例未添加
+                return False
 
     def excute_cases(self, num_processes=1):
         # 多进程执行测试用例
@@ -69,7 +70,7 @@ class CaseManager:
         # 创建多个进程执行测试用例
         processes = []
         for _ in range(num_processes):
-            process = pool.Process(target=self.excute_case, args=(lock, case_queue, result_queue))
+            process = pool.Process(target=CaseManager.excute_case, args=(lock, case_queue, result_queue))
             processes.append(process)
             process.start()
 
@@ -79,7 +80,7 @@ class CaseManager:
 
         # 将结果写入csv文件
         results = []
-        for process in processes:
+        for _ in processes:
             while not result_queue.empty():
                 results.append(result_queue.get())
         self.write_op_result_to_csv(results)
@@ -105,8 +106,10 @@ class CaseManager:
         
         import pandas as pd
         op_infos = pd.DataFrame(op_infos)
-        columns = ["op_id", "op_name", "op_param", "tensor_path", "out_tensor_id", "precision_standard", 
-                   "precision_result", "rel_precision_rate(%)", "max_rel_error"]
+        columns = [
+            "op_id", "op_name", "op_param", "tensor_path", "out_tensor_id", "precision_standard", "precision_result", 
+            "rel_precision_rate(%)", "max_rel_error"
+        ]
         if NAMEDTUPLE_PRECISION_METRIC.abs in self.precision_metric:
             columns.append('abs_precision_rate(%)')
             columns.append('max_abs_error')
