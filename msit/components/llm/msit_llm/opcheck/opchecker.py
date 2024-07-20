@@ -201,7 +201,7 @@ class OpChecker:
                 logger.info(logger_text)
         else:
             if self.is_atb_only_save_before(self.input):
-                logger_text = "Only the rerun mode supports checking the data dumped before executing the operations."
+                logger_text = "Only the rerun mode allows checking dumped data before executing operators."
                 logger.error(logger_text)
                 execution_flag = False
             else:
