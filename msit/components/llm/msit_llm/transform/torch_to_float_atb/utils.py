@@ -40,7 +40,7 @@ def save_module_layers(model, module_layers):
     ：param model：nn.Module，要遍历的模型
     ：param module_layers。用于存储模型层
     """
-    for name,module in model.named_children:
+    for name,module in model.named_children():
         if isinstance(module, nn.ModuleList):
             module_layers.append({"type": "ModuleList", "count": len(module)})
             continue
@@ -71,7 +71,7 @@ def get_repeat_box_layer(model):
 
 
 def dag_to_model(dag_node, is_repeat, model_layers):
-    from msit.transform.model_parser import parser
+    from msit_llm.transform.model_parser import parser
     parsed_model_layers = []
     for node in dag_node.dag_node_list:
         if "forward" in node.name:
