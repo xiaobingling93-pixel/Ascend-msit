@@ -219,12 +219,12 @@ class OpChecker:
         for v in self.cases_info.values():
             if v[result_info] == 'addition failed':
                 v['res_detail'] = []
-                case_manager.write_op_result_to_csv(v)
-        logger.info(f"\nOpcheck results saved to: {self.output_path}")
-        
+                case_manager.write_op_result_to_csv([v])
+
+        # 5.计算总执行时间
         end_time = time.time()
         total_time = round(end_time - start_time, 2)
-        logger_text = f"Opcheck finished. Total time: {total_time} seconds"
+        logger_text = f"\nOpcheck results saved to: {self.output_path} \nTotal time: {total_time} seconds"
         logger.info(logger_text)
 
     def parse_op_id_name(self, dirpath):

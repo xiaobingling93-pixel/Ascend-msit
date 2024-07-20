@@ -39,7 +39,7 @@ class CaseManager:
                 #该算子用例未添加
                 return False
 
-    def excute_case(self, case_queue, lock, result_queue):
+    def excute_case(self, lock, case_queue, result_queue):
         runner = unittest.TextTestRunner(verbosity=2)
         testloader = unittest.TestLoader()
         
@@ -51,7 +51,8 @@ class CaseManager:
             for name in testnames:
                 op_cur = op(name, case_info=case_info)
                 runner.run(op_cur)
-                result_queue.put(op_cur.case_info)
+                with lock:
+                    result_queue.put(op_cur.case_info)
 
     def excute_cases(self, num_processes=1):
         # 多进程执行测试用例
@@ -68,7 +69,7 @@ class CaseManager:
         # 创建多个进程执行测试用例
         processes = []
         for _ in range(num_processes):
-            process = pool.Process(target=self.excute_case, args=(case_queue, lock, result_queue))
+            process = pool.Process(target=self.excute_case, args=(lock, case_queue, result_queue))
             processes.append(process)
             process.start()
 
