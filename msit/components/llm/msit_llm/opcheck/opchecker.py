@@ -137,11 +137,15 @@ class OpChecker:
         only_save_before = False
         filename = os.listdir(input_path)[0]
         filepath = os.path.join(input_path, filename)
+        subfile = os.listdir(filepath)
         if os.path.isdir(filepath):
-            if 'after' not in filepath and 'before' in filepath:
+            if 'after' not in subfile and 'before' in subfile:
                 only_save_before = True
             else:
                 only_save_before = False
+        else:
+            logger_text = "Input path does not contain operator folders."
+            logger.error(logger_text)
         return only_save_before
 
     def args_init(self, args):
