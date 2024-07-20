@@ -8,7 +8,7 @@ import stat
 import json
 
 from precision_tool import logger
-from precision_tool.security.type import check_dict_character
+from security.type import check_dict_character
 
 
 PATH_WHITE_LIST_REGEX = re.compile(r"[^_A-Za-z0-9/.-]")
@@ -73,6 +73,23 @@ def check_write_directory(dir_name, check_user_stat=True):
         raise ValueError("The file writen directory {} doesn't belong to the current user or group.".format(dir_name))
     if not os.access(real_dir_name, os.W_OK):
         raise ValueError("Current user doesn't have writen permission to file writen directory {}.".format(dir_name))
+
+
+def get_valid_read_path(path, extensions=None, size_max=MAX_READ_FILE_SIZE_4G, check_user_stat=True, is_dir=False):
+    real_path = get_valid_path(path, extensions)
+    if not is_dir and not os.path.isfile(real_path):
+        raise ValueError("The path {} doesn't exists or not a file.".format(path))
+    if is_dir and not os.path.isdir(real_path):
+        raise ValueError("The path {} doesn't exists or not a directory.".format(path))
+
+    file_stat = os.stat(real_path)
+    if check_user_stat and not sys.platform.startswith("win") and not is_belong_to_user_or_group(file_stat):
+        raise ValueError("The file {} doesn't belong to the current user or group.".format(path))
+    if not os.access(real_path, os.R_OK) or file_stat.st_mode & stat.S_IRUSR == 0:  # At least been 400
+        raise ValueError("Current user doesn't have read permission to the file {}.".format(path))
+    if not is_dir and size_max > 0 and file_stat.st_size > size_max:
+        raise ValueError("The file {} exceeds size limitation of {}.".format(path, size_max))
+    return real_path
 
 
 def get_valid_write_path(path, extensions=None, check_user_stat=True, is_dir=False, warn_exists=True):
