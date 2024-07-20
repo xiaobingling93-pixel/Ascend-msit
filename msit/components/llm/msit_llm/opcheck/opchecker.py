@@ -227,7 +227,8 @@ class OpChecker:
             if v[result_info] == 'addition failed':
                 v['res_detail'] = []
                 addition_failed_cases.append(v)
-        case_manager.write_op_result_to_csv(addition_failed_cases)
+        if len(addition_failed_cases) > 0:
+            case_manager.write_op_result_to_csv(addition_failed_cases)
 
         # 5.计算总执行时间
         end_time = time.time()
