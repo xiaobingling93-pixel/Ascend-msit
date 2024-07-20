@@ -222,10 +222,12 @@ class OpChecker:
         case_manager.excute_cases(self.jobs)
 
         # 4.写入未添加成功的算子
+        addition_failed_cases = []
         for v in self.cases_info.values():
             if v[result_info] == 'addition failed':
                 v['res_detail'] = []
-                case_manager.write_op_result_to_csv([v])
+                addition_failed_cases.append(v)
+        case_manager.write_op_result_to_csv(addition_failed_cases)
 
         # 5.计算总执行时间
         end_time = time.time()

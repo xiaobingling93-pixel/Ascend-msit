@@ -122,10 +122,10 @@ class CaseManager:
         op_infos = op_infos[columns]
         op_infos = op_infos.sort_values(by=['op_id', 'out_tensor_id'])
         if not os.path.exists(self.output_path):
-            op_infos.to_excel(self.output_path, index=False)
+            op_infos.to_excel(self.output_path, sheet_name='opcheck_result', index=False)
         else:
             with pd.ExcelWriter(self.output_path, engine='openpyxl', mode='a') as writer:
-                op_infos.to_excel(writer, index=False)
+                op_infos.to_excel(writer, sheet_name='addition_failed_cases', index=False)
 
     def _update_single_op_result(self, op_info, cur_id, res_detail):
         default_str = 'NaN'
