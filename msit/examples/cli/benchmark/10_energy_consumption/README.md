@@ -26,7 +26,7 @@ NPU ID                         Chip ID                        Chip Logic ID     
 
 其中device 0所对应的NPU ID为4。
 ```bash
-msit benchmark --om-model ./pth_resnet50_bs1.om --device 0 --energy_consumption 1 --npu_id 4
+msit benchmark --om-model ./pth_resnet50_bs1.om --device 0 --energy-consumption 1 --npu-id 4
 ```
 
 输出结果示例如下：

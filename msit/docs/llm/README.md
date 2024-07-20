@@ -4,7 +4,7 @@
 
 ## 简介
 
-目前昇腾大模型推理框架主要有 [**加速库(atb)**](/msit/docs/glossary/README.md#at-Ascend-Transformer-Boost) 和 [**torchair**](/msit/docs/glossary/README.md#torchairtorch-图模式)。
+目前昇腾大模型推理框架主要有 [**加速库(atb)**](msit/docs/glossary/README.md#atbascend-transformer-boost) 和 [**torchair**](/msit/docs/glossary/README.md#torchairtorch-图模式)。
 
 开发者在推理开发过程中可能会遇到精度问题，可以使用大模型精度调试工具（Large Language Model Debug Tool）提供的大模型推理数据落盘（dump）和精度定位（compare）功能，帮助开发者快速定位推理开发过程中精度问题，发现根因，提升开发效率。
 
@@ -14,7 +14,9 @@
 #### 安装
 
 - msit llm 使用依赖 CANN-toolkit、加速库 ATB和 MindIE-LLM，各依赖库版本要求参照具体[安装说明文档](/msit/docs/install/README.md)。
-- **注意**：加速库数据dump仅支持2023/12/05之后的加速库版本。
+- **注意**：
+- 1. 加速库数据dump仅支持2023/12/05之后的加速库版本；
+- 2. 当前Torch的版本为2.1.0，Python的版本至少为3.8.0以上
 
 ```bash
 # 源码安装：先下载源码，进到源码目录

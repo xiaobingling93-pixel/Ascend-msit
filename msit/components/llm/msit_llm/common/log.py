@@ -35,10 +35,8 @@ LOG_LEVELS = {
     "debug": logging.DEBUG,
     "info": logging.INFO,
     "warning": logging.WARNING,
-    "warn": logging.WARN,
     "error": logging.ERROR,
     "fatal": logging.FATAL,
-    "notset": logging.NOTSET,
     "critical": logging.CRITICAL
 }
 
