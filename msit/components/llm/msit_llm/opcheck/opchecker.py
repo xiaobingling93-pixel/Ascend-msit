@@ -135,14 +135,15 @@ class OpChecker:
 
     def is_atb_only_save_before(self, input_path):
         only_save_before = False
-        filename = os.listdir(input_path)[0]
-        filepath = os.path.join(input_path, filename)
-        subfile = os.listdir(filepath)
-        if os.path.isdir(filepath):
-            if 'after' not in subfile and 'before' in subfile:
-                only_save_before = True
-            else:
-                only_save_before = False
+        if os.listdir(input_path):
+            filename = os.listdir(input_path)[0]
+            filepath = os.path.join(input_path, filename)
+            subfile = os.listdir(filepath)
+            if os.path.isdir(filepath):
+                if 'after' not in subfile and 'before' in subfile:
+                    only_save_before = True
+                else:
+                    only_save_before = False
         else:
             logger_text = "Input path does not contain operator folders."
             logger.error(logger_text)
@@ -342,7 +343,7 @@ class OpChecker:
             item_path = os.path.join(cur_path, item)
             if os.path.isdir(item_path):
                 dirnames.append(item)
-        # 判断当前文件夹是否时算子文件夹
+        # 判断当前文件夹是否是算子文件夹
         if 'after' in dirnames or 'before' in dirnames:
             # 匹配算子
             for dirname in dirnames:
