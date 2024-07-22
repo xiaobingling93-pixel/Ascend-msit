@@ -127,7 +127,7 @@ class CaseManager:
             else:
                 cur_id, res_detail = 'NaN', {}
                 op_infos.append(self._update_single_op_result(op_info, cur_id, res_detail))
-        
+
         import pandas as pd
         op_infos = pd.DataFrame(op_infos)
         columns = [
@@ -164,7 +164,7 @@ class CaseManager:
             op_info['cosine_similarity'] = res_detail.get('cos_sim', default_str)
         if NAMEDTUPLE_PRECISION_METRIC.kl in self.precision_metric:
             op_info['kl_divergence'] = res_detail.get('kl_div', default_str)
-        
+
         for custom_name in CUSTOM_ALG_MAP:
             op_info[custom_name] = res_detail.get(custom_name, default_str)
 
