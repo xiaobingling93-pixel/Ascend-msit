@@ -47,6 +47,7 @@ from msquickcmp.adapter_cli.args_adapter import CmpArgsAdapter
 from msquickcmp.npu.om_parser import OmParser
 from msquickcmp.accuracy_locat import accuracy_locat as al
 from msquickcmp.single_op import single_op as sp
+from msquickcmp.tf.tf_dump_data import TfSaveModelDumpData
 from components.utils.security_check import check_write_directory
 
 WRITE_MODES = stat.S_IWUSR | stat.S_IRUSR
@@ -66,6 +67,9 @@ def _generate_golden_data_model(args, npu_dump_npy_path):
         from msquickcmp.tf.tf_dump_data import TfDumpData
 
         return TfDumpData(args)
+    elif "" == extension:
+
+        return TfSaveModelDumpData(args)
     elif ".onnx" == extension:
         from msquickcmp.onnx_model.onnx_dump_data import OnnxDumpData
 
