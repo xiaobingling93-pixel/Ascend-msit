@@ -44,7 +44,6 @@ class TfSaveModelDumpData(DumpData):
         self.inputs_data = None
         self.model_path = self.args.model_path
         self.input_path = self.args.input_path
-        self.net_output_name = []
         self.net_output = {}
         self._load_graph()
         self._create_dir()
