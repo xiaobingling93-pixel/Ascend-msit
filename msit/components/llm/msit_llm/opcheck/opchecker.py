@@ -129,26 +129,9 @@ class OpChecker:
             logger_text = f"Input path is not in msit_dump tensors directory: {input_path}"
             logger.error(logger_text)
             return input_path, base_path, pid, ret
-        
+
         ret = True
         return input_path, base_path, pid, ret
-
-    @staticmethod
-    def is_atb_only_save_before(input_path):
-        only_save_before = False
-        if os.listdir(input_path):
-            filename = os.listdir(input_path)[0]
-            filepath = os.path.join(input_path, filename)
-            subfile = os.listdir(filepath)
-            if os.path.isdir(filepath):
-                if 'after' not in subfile and 'before' in subfile:
-                    only_save_before = True
-                else:
-                    only_save_before = False
-        else:
-            logger_text = "Input path does not contain operator folders."
-            logger.error(logger_text)
-        return only_save_before
 
     def args_init(self, args):
         import torch_npu
@@ -158,7 +141,7 @@ class OpChecker:
         self.input, self.base_path, self.pid, ret = self.check_input_legality(args.input)
         if not ret:
             execution_flag = False
-        
+
         self.output = os.path.realpath(args.output)
         if not os.path.exists(self.output):
             logger_text = f"Output path not found: {self.output}"
@@ -202,7 +185,7 @@ class OpChecker:
                 logger_text = "Rerunning operations in atb to calculate outputs..."
                 logger.info(logger_text)
         else:
-            if self.is_atb_only_save_before(self.input):
+            if _is_atb_only_saved_before(self.input):
                 logger_text = "Only the rerun mode allows checking dumped data before executing operators."
                 logger.error(logger_text)
                 execution_flag = False
@@ -219,7 +202,7 @@ class OpChecker:
 
         from msit_llm.opcheck.case_manager import CaseManager
         case_manager = CaseManager(self.completed_op_id_queue)
-        
+
         # 1.遍历tensor_path，将算子信息添加到self.cases_info
         self.walk_tensor_path(self.input)
         logger_text = f"Total {len(self.cases_info)} cases found under path: {self.input}"
@@ -326,7 +309,7 @@ class OpChecker:
 
         case_info = {
             'op_id': op_id, 'op_name': op_name, 'op_param': op_param, 'tensor_path': tensor_path,
-            'precision_metric': self.precision_metric, 'atb_rerun': self.atb_rerun, 'pid': self.pid, 
+            'precision_metric': self.precision_metric, 'atb_rerun': self.atb_rerun, 'pid': self.pid,
             'precision_mode': self.precision_mode
         }
 
@@ -338,23 +321,17 @@ class OpChecker:
     def walk_tensor_path(self, cur_path):
         from msit_llm.opcheck.check_case import OP_NAME_DICT
         files_and_dirs = os.listdir(cur_path)
-        # 取出所有文件夹的名字
-        dirnames = []
-        for item in files_and_dirs:
-            item_path = os.path.join(cur_path, item)
-            if os.path.isdir(item_path):
-                dirnames.append(item)
-        # 判断当前文件夹是否是算子文件夹
-        if 'after' in dirnames or 'before' in dirnames:
-            # 匹配算子
+        dirnames = [item for item in files_and_dirs if os.path.isdir(os.path.join(cur_path, item))]
+
+        if any(dirname in ['after', 'before'] for dirname in dirnames):
             for dirname in dirnames:
-                if dirname != 'after' or dirname != 'before':
+                if dirname not in ['after', 'before']:
                     op_name = dirname.split('_')[-1]
                     if op_name in OP_NAME_DICT.keys():
                         self.add_op_info_to_cases_info(os.path.join(cur_path, dirname))
         # 遍历下一级文件夹
         for dirname in dirnames:
-            if dirname != 'after' or dirname != 'before':
+            if dirname not in ['after', 'before']:
                 self.walk_tensor_path(os.path.join(cur_path, dirname))
 
     def excute_cases(self, case_manager):
@@ -429,7 +406,7 @@ class OpChecker:
             "excuted_information": op_result.get('excuted_information', ""),
             "fail_reason": op_result.get('fail_reason', ""),
         }
-        
+
         if len(op_result['res_detail']) > 0:
             for cur_id, res_detail in enumerate(op_result['res_detail']):
                 ws.append(self._update_single_op_result(op_info, cur_id, res_detail))
@@ -437,3 +414,19 @@ class OpChecker:
             cur_id, res_detail = 'NaN', {}
             ws.append(self._update_single_op_result(op_info, cur_id, res_detail))
         wb.save(self.output_path)
+
+
+def _is_atb_only_saved_before(input_path):
+    if not os.listdir(input_path):
+        logger_text = "Input path does not contain operator folders."
+        logger.error(logger_text)
+        return False
+
+    filename = os.listdir(input_path)[0]
+    filepath = os.path.join(input_path, filename)
+
+    if os.path.isdir(filepath):
+        subfiles = os.listdir(filepath)
+        return 'after' not in subfiles and 'before' in subfiles
+    else:
+        return False
