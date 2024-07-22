@@ -90,9 +90,11 @@ class PythonIPC {
     let pythonScriptPathWin = path.resolve(__dirname, '..', 'python', 'Scripts');
     let pythonScriptPathLinux = path.resolve(__dirname, '..', 'python', 'bin');
     let env = Object.assign({}, process.env);
-    env['Path'] = `${pythonScriptPathWin};${pythonScriptPathLinux};${env['Path'] || ""}`;
-    env['PATH'] = `${pythonScriptPathWin};${pythonScriptPathLinux};${env['PATH'] || ""}`;
-    env['path'] = `${pythonScriptPathWin};${pythonScriptPathLinux};${env['path'] || ""}`;
+    if (process.platform == 'win32') {
+      env['Path'] = `${pythonScriptPathWin};${pythonScriptPathLinux};${env['Path']}`;
+    } else {
+      env['PATH'] = `${pythonScriptPathWin}:${pythonScriptPathLinux}:${env['PATH']}`;
+    }
 
     let python_path = path.join(__dirname, '..', 'python', process.platform == 'win32' ? 'python.exe' : 'bin/python');
     python_path = fs.existsSync(python_path) ? python_path : 'python';
