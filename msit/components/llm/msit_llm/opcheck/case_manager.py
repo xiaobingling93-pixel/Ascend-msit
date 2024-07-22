@@ -22,8 +22,9 @@ from msit_llm.opcheck.opchecker import NAMEDTUPLE_PRECISION_METRIC
 
 
 class CaseManager:
-    def __init__(self, precision_metric, output_path='./'):
+    def __init__(self, precision_metric, rerun=False, output_path='./'):
         self.precision_metric = precision_metric
+        self.rerun = rerun
         self.output_path = output_path
         self.cases = []
 
@@ -56,7 +57,7 @@ class CaseManager:
                 #该算子用例未添加
                 return False
 
-    def excute_cases(self, num_processes=1):
+    def multi_process(self, num_processes=4):
         # 多进程执行测试用例
         pool = multiprocessing.get_context('spawn')
         manager = multiprocessing.Manager()
@@ -85,6 +86,28 @@ class CaseManager:
             while not result_queue.empty():
                 results.append(result_queue.get())
         self.write_op_result_to_csv(results)
+
+    def single_process(self):
+        # 单进程执行测试用例
+        runner = unittest.TextTestRunner(verbosity=2)
+        testloader = unittest.TestLoader()
+        suite = unittest.TestSuite()
+        
+        for case_info in self.cases:
+            op = OP_NAME_DICT[case_info['op_name']]
+            testnames = testloader.getTestCaseNames(op)
+            for name in testnames:
+                op_cur = op(name, case_info=case_info)
+                suite.addTest(op_cur)
+        
+        runner.run(suite)
+        self.write_op_result_to_csv(self.cases)
+
+    def excute_cases(self, num_processes=1):
+        if num_processes == 1 or self.rerun:
+            self.single_process()
+        else:
+            self.multi_process(num_processes)
 
     def write_op_result_to_csv(self, results):
         op_infos = []
