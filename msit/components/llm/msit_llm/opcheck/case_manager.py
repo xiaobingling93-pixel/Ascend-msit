@@ -29,20 +29,18 @@ class CaseManager:
         self.cases = []
 
     @staticmethod
-    def excute_case(lock, case_queue, result_queue):
+    def excute_case(case_queue, result_queue):
         runner = unittest.TextTestRunner(verbosity=2)
         testloader = unittest.TestLoader()
         
         while not case_queue.empty():
-            with lock:
-                case_info = case_queue.get()
+            case_info = case_queue.get()
             op = OP_NAME_DICT[case_info['op_name']]
             testnames = testloader.getTestCaseNames(op)
             for name in testnames:
                 op_cur = op(name, case_info=case_info)
                 runner.run(op_cur)
-                with lock:
-                    result_queue.put(op_cur.case_info)
+                result_queue.put(op_cur.case_info)
 
     def add_case(self, case_info):
         op_name = case_info['op_name']
@@ -61,7 +59,6 @@ class CaseManager:
         # 多进程执行测试用例
         pool = multiprocessing.get_context('spawn')
         manager = multiprocessing.Manager()
-        lock = manager.Lock()
         case_queue = manager.Queue()
         result_queue = manager.Queue()
         
@@ -72,7 +69,7 @@ class CaseManager:
         # 创建多个进程执行测试用例
         processes = []
         for _ in range(num_processes):
-            process = pool.Process(target=CaseManager.excute_case, args=(lock, case_queue, result_queue))
+            process = pool.Process(target=CaseManager.excute_case, args=(case_queue, result_queue))
             processes.append(process)
             process.start()
 
@@ -142,13 +139,12 @@ class CaseManager:
         if NAMEDTUPLE_PRECISION_METRIC.kl in self.precision_metric:
             columns.append('kl_divergence')
         columns.append("fail_reason")
-        op_infos = op_infos[columns]
         op_infos = op_infos.sort_values(by=['op_id', 'out_tensor_id'])
         if not os.path.exists(self.output_path):
-            op_infos.to_excel(self.output_path, sheet_name='opcheck_result', index=False)
+            op_infos.to_excel(self.output_path, sheet_name='opcheck_result', index=False, columns=columns)
         else:
             with pd.ExcelWriter(self.output_path, engine='openpyxl', mode='a') as writer:
-                op_infos.to_excel(writer, sheet_name='addition_failed_cases', index=False)
+                op_infos.to_excel(writer, sheet_name='addition_failed_cases', index=False, columns=columns)
 
     def _update_single_op_result(self, op_info, cur_id, res_detail):
         default_str = 'NaN'
