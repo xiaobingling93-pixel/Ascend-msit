@@ -177,8 +177,10 @@ class OperationTest(unittest.TestCase):
             out_tensors = self.out_tensors
 
         try:
-            logger.debug("out_tensor", out_tensors[0].size())
-            logger.debug("golden_out_tensor", golden_out_tensors[0].size())
+            logger_text1 = f"out_tensor: {out_tensors[0].size()}"
+            logger_text2 = f"golden_out_tensor: {golden_out_tensors[0].size()}"
+            logger.debug(logger_text1)
+            logger.debug(logger_text2)
         except TypeError as e:
             logger_text = "The output is abnormal. Please check! Exception: {}".format(e)
             logger.debug(logger_text)
