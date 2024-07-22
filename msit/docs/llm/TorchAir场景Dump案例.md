@@ -8,7 +8,7 @@
   target_dtype = torch.float16
   model = torchvision.models.resnet50(pretrained=True).eval().to(target_dtype).npu
   if not os.path.exists('aa_224_224.npy'):
-      np.save('aa_224_224.npy'， np.random.uniform(size=[1,3,224,224]))
+      np.save('aa_224_224.npy', np.random.uniform(size=[1,3,224,224]))
   aa = torch.from_numpy(np.load('aa_224_224.npy')).to(target_dtype).npu()
   config = torchair_dump.get_ge_dump_config()
   npu_backend = tng.get_npu_backend(compiler_config=config)
@@ -28,7 +28,7 @@
   target_dtype = torch.float16
   model = torchvision.models.resnet50(pretrained=True).eval().to(target_dtype).npu
   if not os.path.exists('aa_224_224.npy'):
-      np.save('aa_224_224.npy'， np.random.uniform(size=[1,3,224,224]))
+      np.save('aa_224_224.npy', np.random.uniform(size=[1,3,224,224]))
   aa = torch.from_numpy(np.load('aa_224_224.npy')).to(target_dtype).npu()
   config = torchair_dump.get_fx_dump_config()
   npu_backend = tng.get_npu_backend(compiler_config=config)
@@ -49,7 +49,7 @@
   target_dtype = torch.float16
   model = torchvision.models.resnet50(pretrained=True).eval().to(target_dtype).npu
   if not os.path.exists('aa_224_224.npy'):
-      np.save('aa_224_224.npy'， np.random.uniform(size=[1,3,224,224]))
+      np.save('aa_224_224.npy', np.random.uniform(size=[1,3,224,224]))
   aa = torch.from_numpy(np.load('aa_224_224.npy')).to(target_dtype).npu()
   config = torchair_dump.get_ge_dump_config(fusion_switch_file='./fusion_switch.json')
   npu_backend = tng.get_npu_backend(compiler_config=config)
