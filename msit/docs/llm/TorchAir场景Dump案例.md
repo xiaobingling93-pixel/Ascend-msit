@@ -12,7 +12,7 @@
   aa = torch.from_numpy(np.load('aa_224_224.npy')).to(target_dtype).npu()
   config = torchair_dump.get_ge_dump_config(dump_path="dump")
   npu_backend = tng.get_npu_backend(compiler_config=config)
-  model = torch.compile(model, backend=npu_backend)
+  model = torch.compile(model, backend=npu_backend, dynamic=True)
   with torch.no_grad():
       try:
           print(model(aa).shape)
@@ -32,7 +32,7 @@
   aa = torch.from_numpy(np.load('aa_224_224.npy')).to(target_dtype).npu()
   config = torchair_dump.get_fx_dump_config()
   npu_backend = tng.get_npu_backend(compiler_config=config)
-  model = torch.compile(model, backend=npu_backend)
+  model = torch.compile(model, backend=npu_backend, dynamic=True)
   with torch.no_grad():
       try:
           print(model(aa).shape)
@@ -53,7 +53,7 @@
   aa = torch.from_numpy(np.load('aa_224_224.npy')).to(target_dtype).npu()
   config = torchair_dump.get_ge_dump_config(dump_path="dump", fusion_switch_file='./fusion_switch.json')
   npu_backend = tng.get_npu_backend(compiler_config=config)
-  model = torch.compile(model, backend=npu_backend)
+  model = torch.compile(model, backend=npu_backend, dynamic=True)
   with torch.no_grad():
       try:
           print(model(aa).shape)
