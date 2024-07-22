@@ -4,7 +4,7 @@ import logging
 
 
 def get_logger():
-    amc_logger = logging.getLogger("modelslim-logger")
+    amc_logger = logging.getLogger("msmodelslim-logger")
     amc_logger.propagate = False
     amc_logger.setLevel(logging.INFO)
     if not amc_logger.handlers:
