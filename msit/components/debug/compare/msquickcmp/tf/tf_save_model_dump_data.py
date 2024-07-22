@@ -24,7 +24,7 @@ import tensorflow as tf
 import tfdbg_ascend as tfdbg
 from msquickcmp.common import utils, tf_common
 from msquickcmp.common.dump_data import DumpData
-
+from msquickcmp.common.utils import AccuracyCompareException
 
 class TfSaveModelDumpData(DumpData):
     """
@@ -35,10 +35,12 @@ class TfSaveModelDumpData(DumpData):
         super().__init__()
         self.args = arguments
         output_path = os.path.realpath(self.args.out_path)
-        self.important_dirs = {
-            "input": os.path.join(output_path, "input"),
-            "dump_data_tf": os.path.join(output_path, "dump_data/tf")
-        }
+        self.input = os.path.join(output_path, "input")
+        self.dump_data_tf = os.path.join(output_path, "dump_data/tf")
+        # self.important_dirs = {
+        #     "input": os.path.join(output_path, "input"),
+        #     "dump_data_tf": os.path.join(output_path, "dump_data/tf")
+        # }
         self.model_name = None
         self.global_graph = None
         self.inputs_data = None
@@ -72,14 +74,14 @@ class TfSaveModelDumpData(DumpData):
         model = compile(optimize='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
         # enable the dump function
         tfdbg.enable()
-        tfdbg.set_dump_path(self.important_dirs.get("dump_data_tf"))
+        tfdbg.set_dump_path(self.dump_data_tf)
         model.predict(self.inputs_data)
 
         self._rename_ops_name()
-        return self.important_dirs.get("dump_data_tf")
+        return self.dump_data_tf
 
     def _rename_ops_name(self):
-        ops_dump_data_dir = self.important_dirs.get("dump_data_tf")
+        ops_dump_data_dir = self.dump_data_tf
         remove_field = self.model_name
         for filename in os.listdir(ops_dump_data_dir):
             if remove_field in filename:
@@ -90,8 +92,8 @@ class TfSaveModelDumpData(DumpData):
 
     def _make_inputs_data(self, inputs_tensor):
         if self.args.input_path == "":
-            if os.listdir(self.important_dirs.get("input")):
-                input_path = self.important_dirs.get("input")
+            if os.listdir(self.input):
+                input_path = self.input
                 self.input_path = ','.join([os.path.join(input_path, ii) for ii in os.listdir(input_path)])
                 return
 
@@ -103,7 +105,7 @@ class TfSaveModelDumpData(DumpData):
                     raise AccuracyCompareException(utils.ACCURACY_COMPARISON_BIN_FILE_ERROR)
                 input_data = np.random.random(tf_common.convert_tensor_shape(tensor.shape)) \
                     .astype(tf_common.convert_to_numpy_type(tensor.dtype))
-                input_path = os.path.join(self.important_dirs.get("input"), "input_" + str(index) + ".bin")
+                input_path = os.path.join(self.input, "input_" + str(index) + ".bin")
                 input_path_list.append(input_path)
                 try:
                     input_data.tofile(input_path)
@@ -126,7 +128,7 @@ class TfSaveModelDumpData(DumpData):
 
     def _create_dir(self):
         # create input directory
-        utils.create_directory(self.important_dirs.get("input"))
+        utils.create_directory(self.input)
 
         # create dump_data/tf directory
-        utils.create_directory(self.important_dirs.get("dump_data_tf"))
+        utils.create_directory(self.input)
