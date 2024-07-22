@@ -133,7 +133,8 @@ class OpChecker:
         ret = True
         return input_path, base_path, pid, ret
 
-    def is_atb_only_save_before(self, input_path):
+    @staticmethod
+    def is_atb_only_save_before(input_path):
         only_save_before = False
         if os.listdir(input_path):
             filename = os.listdir(input_path)[0]

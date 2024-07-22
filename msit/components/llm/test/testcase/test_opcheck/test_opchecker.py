@@ -1,5 +1,6 @@
-import pytest
 from unittest.mock import patch
+import pytest
+
 from msit_llm.opcheck.opchecker import OpChecker
 from msit_llm.common.log import logger
 
