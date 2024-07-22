@@ -110,17 +110,19 @@ class PythonIPC {
       }
       data_array = data_array.slice(-6);
 
-      if (
-        data_array[0] == '' &&
-        data_array[1] == '' &&
-        data_array[2] == '>>' &&
-        data_array[4] == '' &&
-        data_array[5] == ''
-      ) {
-        let data = decodeURIComponent(data_array[3]);
-        console.debug('recv', `${data}`);
-        let { msg, status, file, req_ind } = JSON.parse(data);
-        this.msg_event_emit(req_ind, msg, status, file);
+      let runStatus = "not start"
+      for (const line_value of data_array) {
+        if (runStatus == "not start") {
+          if (line_value == ">>") {
+            runStatus = "start"
+          }
+        } else if (runStatus == "start") {
+          runStatus = "not start"
+          let data = decodeURIComponent(line_value);
+          console.debug('recv', `${data}`);
+          let { msg, status, file, req_ind } = JSON.parse(data);
+          this.msg_event_emit(req_ind, msg, status, file);
+        }
       }
     });
 
