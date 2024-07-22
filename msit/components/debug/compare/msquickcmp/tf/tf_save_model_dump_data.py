@@ -80,7 +80,7 @@ class TfSaveModelDumpData(DumpData):
         self._rename_ops_name()
         return self.dump_data_tf
 
-    def _rename_ops_name(self):
+    def _rename_ops(self):
         ops_dump_data_dir = self.dump_data_tf
         remove_field = self.model_name
         for filename in os.listdir(ops_dump_data_dir):
