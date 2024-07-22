@@ -37,10 +37,6 @@ class TfSaveModelDumpData(DumpData):
         output_path = os.path.realpath(self.args.out_path)
         self.input = os.path.join(output_path, "input")
         self.dump_data_tf = os.path.join(output_path, "dump_data/tf")
-        # self.important_dirs = {
-        #     "input": os.path.join(output_path, "input"),
-        #     "dump_data_tf": os.path.join(output_path, "dump_data/tf")
-        # }
         self.model_name = None
         self.global_graph = None
         self.inputs_data = None
