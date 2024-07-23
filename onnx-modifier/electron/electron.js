@@ -90,7 +90,11 @@ class PythonIPC {
     let pythonScriptPathWin = path.resolve(__dirname, '..', 'python', 'Scripts');
     let pythonScriptPathLinux = path.resolve(__dirname, '..', 'python', 'bin');
     let env = Object.assign({}, process.env);
-    env['Path'] = `${pythonScriptPathWin};${pythonScriptPathLinux};${env['Path']}`;
+    if (process.platform == 'win32') {
+      env['Path'] = `${pythonScriptPathWin};${pythonScriptPathLinux};${env['Path']}`;
+    } else {
+      env['PATH'] = `${pythonScriptPathWin}:${pythonScriptPathLinux}:${env['PATH']}`;
+    }
 
     let python_path = path.join(__dirname, '..', 'python', process.platform == 'win32' ? 'python.exe' : 'bin/python');
     python_path = fs.existsSync(python_path) ? python_path : 'python';
@@ -110,17 +114,19 @@ class PythonIPC {
       }
       data_array = data_array.slice(-6);
 
-      if (
-        data_array[0] == '' &&
-        data_array[1] == '' &&
-        data_array[2] == '>>' &&
-        data_array[4] == '' &&
-        data_array[5] == ''
-      ) {
-        let data = decodeURIComponent(data_array[3]);
-        console.debug('recv', `${data}`);
-        let { msg, status, file, req_ind } = JSON.parse(data);
-        this.msg_event_emit(req_ind, msg, status, file);
+      let runStatus = "pending"
+      for (const line_value of data_array) {
+        if (runStatus == "pending") {
+          if (line_value == ">>") {
+            runStatus = "starting"
+          }
+        } else if (runStatus == "starting") {
+          runStatus = "pending"
+          let data = decodeURIComponent(line_value);
+          console.debug('recv', `${data}`);
+          let { msg, status, file, req_ind } = JSON.parse(data);
+          this.msg_event_emit(req_ind, msg, status, file);
+        }
       }
     });
 
