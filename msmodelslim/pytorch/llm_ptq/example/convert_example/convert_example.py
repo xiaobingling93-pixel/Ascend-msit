@@ -4,7 +4,7 @@ import os
 import stat
 
 import numpy as np
-from safetensors.torch import save_file
+from safetensors.torch import save_file, _remove_duplicate_names
 import torch
 
 
@@ -208,6 +208,12 @@ class MSModelSlimWeightProcessor:
         json_name = f"quant_model_description_{self.quant_type.lower()}.json"
         safetensors_path = os.path.join(path, safetensors_name)
         json_path = os.path.join(path, json_name)
+
+        '''
+        # 如果原始权重中存在内存复用，即safetensors中的tensor share memory场景，此处提供了一种简单的处理方法
+        for key, value in self.modelslim_weight_dict.items():
+            self.modelslim_weight_dict[key] = value.cpu().contiguous().clone()
+        '''
         save_file(self.modelslim_weight_dict, safetensors_path)
         save_mode = stat.S_IWUSR | stat.S_IRUSR # 600
         with os.fdopen(os.open(json_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, mode=save_mode), 'w') as json_file:
