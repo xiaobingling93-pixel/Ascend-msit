@@ -14,6 +14,7 @@
 
 import os
 import json
+import queue
 import unittest
 import multiprocessing
 from msit_llm.opcheck.check_case import OP_NAME_DICT
@@ -35,19 +36,20 @@ class CaseManager:
         testloader = unittest.TestLoader()
         
         while not case_queue.empty():
-            case_info = case_queue.get()
-            op = OP_NAME_DICT[case_info['op_name']]
             try:
+                case_info = case_queue.get_nowait()
+                op = OP_NAME_DICT[case_info['op_name']]
                 testnames = testloader.getTestCaseNames(op)
                 for name in testnames:
                     op_cur = op(name, case_info=case_info)
                     runner.run(op_cur)
                     result_queue.put(op_cur.case_info)
+            except queue.Empty as e:
+                logger_text = f"The process exits because case_queue is empty. \nException: {e}"
+                logger.debug(logger_text)
             except Exception as e:
-                logger_text = f"An exception occurred during multiprocessing!\ncase_info: {case_info} \nError: {e}"
+                logger_text = f"An exception occurred during multiprocessing! \ncase_info: {case_info} \nException: {e}"
                 logger.error(logger_text)
-                if not case_queue.empty():
-                    continue
 
     def add_case(self, case_info):
         op_name = case_info['op_name']
