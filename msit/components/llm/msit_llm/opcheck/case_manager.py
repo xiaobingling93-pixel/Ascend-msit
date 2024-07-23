@@ -46,6 +46,7 @@ class CaseManager:
                     result_queue.put(op_cur.case_info)
             except queue.Empty as e:
                 logger_text = f"The process exits because case_queue is empty. \nException: {e}"
+                logger.debug(logger_text)
             except Exception as e:
                 logger_text = f"An exception occurred during multiprocessing! \ncase_info: {case_info} \nException: {e}"
                 logger.error(logger_text)
