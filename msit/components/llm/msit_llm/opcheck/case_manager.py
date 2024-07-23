@@ -35,9 +35,9 @@ class CaseManager:
         testloader = unittest.TestLoader()
         
         while not case_queue.empty():
-            case_info = case_queue.get()
-            op = OP_NAME_DICT[case_info['op_name']]
             try:
+                case_info = case_queue.get_nowait()
+                op = OP_NAME_DICT[case_info['op_name']]
                 testnames = testloader.getTestCaseNames(op)
                 for name in testnames:
                     op_cur = op(name, case_info=case_info)
@@ -46,8 +46,6 @@ class CaseManager:
             except Exception as e:
                 logger_text = f"An exception occurred during multiprocessing!\ncase_info: {case_info} \nError: {e}"
                 logger.error(logger_text)
-                if not case_queue.empty():
-                    continue
 
     def add_case(self, case_info):
         op_name = case_info['op_name']
