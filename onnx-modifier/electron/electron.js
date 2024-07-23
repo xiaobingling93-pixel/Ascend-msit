@@ -114,14 +114,14 @@ class PythonIPC {
       }
       data_array = data_array.slice(-6);
 
-      let runStatus = "not start"
+      let runStatus = "pending"
       for (const line_value of data_array) {
-        if (runStatus == "not start") {
+        if (runStatus == "pending") {
           if (line_value == ">>") {
-            runStatus = "start"
+            runStatus = "starting"
           }
-        } else if (runStatus == "start") {
-          runStatus = "not start"
+        } else if (runStatus == "starting") {
+          runStatus = "pending"
           let data = decodeURIComponent(line_value);
           console.debug('recv', `${data}`);
           let { msg, status, file, req_ind } = JSON.parse(data);

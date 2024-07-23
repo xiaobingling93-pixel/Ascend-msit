@@ -90,7 +90,7 @@ class RpcServer:
             msg_str = self._get_std_in()
             if not msg_str:
                 continue
-            
+
             logging.debug(os.getpid())
             logging.debug(msg_str.replace("\n", " "))
 
@@ -106,7 +106,7 @@ class RpcServer:
                 self.send_message("byebye", 200, None, 0)
                 is_exit = True
                 break
-            
+
             try:
                 return_str = self._deal_msg(msg_dict, req_ind)
             except Exception as ex:
@@ -177,14 +177,14 @@ class FileAutoClear:
         self._file = file
         self._clear_func = self.close if clear_func is None else clear_func
         self._is_auto_clear = True
-    
+
     def __enter__(self):
         return self, self._file
-    
+
     def __exit__(self, type, value, trace):
         if self._is_auto_clear:
             self._clear_func(self._file)
-    
+
     def set_not_close(self):
         self._is_auto_clear = False
 
@@ -213,7 +213,7 @@ class SessionInfo:
     def get_session_index(cls):
         cls.SESSION_INDEX += 1
         return cls.SESSION_INDEX
-    
+
     @classmethod
     def get_session(cls, session_id):
         if session_id in cls.SESSION_INSTENCES:
@@ -221,7 +221,7 @@ class SessionInfo:
         session = SessionInfo(session_id)
         cls.SESSION_INSTENCES[session_id] = session
         return session
-    
+
     def get_session_id(self):
         return self._session_id
 
@@ -229,7 +229,7 @@ class SessionInfo:
         if self.modifier is None:
             raise ServerError("server error, cannot find modifier, you can refresh the page", 598)
         return self.modifier
-    
+
     def init_modifier_by_path(self, name, model_path):
         model_name = os.path.basename(model_path) if name is None else name
         model_proto = onnx.load(model_path)
@@ -239,7 +239,7 @@ class SessionInfo:
         stream.seek(0)
         model_proto = onnx.load_model(stream, load_external_data=False)
         self.init_modifier(name, model_proto)
-    
+
     def init_modifier(self, model_name, model_proto):
         self.modifier = OnnxModifier(model_name, model_proto)
 
@@ -280,6 +280,7 @@ def realpath_ex(path):
     if sys.platform == 'win32':
         if sys.version_info.major <= 3 and sys.version_info.minor <= 7:
             from ctypes import windll, create_unicode_buffer
+
             buf = create_unicode_buffer(65536)
             windll.kernel32.GetLongPathNameW(path, buf, 65536)
             return buf.value
@@ -288,8 +289,11 @@ def realpath_ex(path):
 
 def call_auto_optimizer(modifier, modify_info, output_suffix, make_cmd):
     import subprocess
+
     try:
-        out_res = subprocess.run(["msit", "debug", "surgeon", "-h"], shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        out_res = subprocess.run(
+            ["msit", "debug", "surgeon", "-h"], shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+        )
         if out_res.returncode != 0:
             raise ServerError("请安装 msit/debug/surgeon", 599)
     except Exception as ex:
@@ -304,8 +308,9 @@ def call_auto_optimizer(modifier, modify_info, output_suffix, make_cmd):
 
         out_res = subprocess.run(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         if out_res.returncode != 0:
-            raise RuntimeError("auto_optimizer run error: " + str(out_res.returncode) + str(out_res) +
-                               " cmd: " + " ".join(cmd))
+            raise RuntimeError(
+                "auto_optimizer run error: " + str(out_res.returncode) + str(out_res) + " cmd: " + " ".join(cmd)
+            )
 
         return opt_file_path, out_res.stdout.decode()
 
@@ -331,9 +336,21 @@ def optimizer_model(modifier, modify_info, opt_tmp_file):
 
 def extract_model(modifier, modify_info, start_node_name, end_node_name, tmp_file):
     def make_cmd(in_path, out_path):
-        return ["msit", "debug", "surgeon", "extract", "-in", in_path, "-of", out_path,
-                "-snn", start_node_name, "-enn", end_node_name]
-    
+        return [
+            "msit",
+            "debug",
+            "surgeon",
+            "extract",
+            "-in",
+            in_path,
+            "-of",
+            out_path,
+            "-snn",
+            start_node_name,
+            "-enn",
+            end_node_name,
+        ]
+
     extract_file_path, msg = call_auto_optimizer(modifier, modify_info, ".extract.onnx", make_cmd)
 
     if os.path.exists(extract_file_path):
@@ -366,8 +383,6 @@ def register_interface(app, request, send_file, temp_dir_path, init_file_path=No
     def get_session_index():
         return str(SessionInfo.get_session_index()), 200
 
-
-
     @app.route('/get-operators', methods=['GET'])
     def get_operators():
         with open('./static/onnx-metadata.json', 'r', encoding='utf-8') as file:
@@ -387,8 +402,11 @@ def register_interface(app, request, send_file, temp_dir_path, init_file_path=No
             # 找到并删除匹配的算子
             found = False
             for op in operators:
-                if op['name'] == operator_name and op['module'] == operator_module \
-                        and op.get('version') == operator_version:
+                if (
+                    op['name'] == operator_name
+                    and op['module'] == operator_module
+                    and op.get('version') == operator_version
+                ):
                     operators.remove(op)
                     found = True
                     break
@@ -402,7 +420,6 @@ def register_interface(app, request, send_file, temp_dir_path, init_file_path=No
             json.dump(operators, file, indent=4, ensure_ascii=False)
 
         return jsonify({"message": "Operator deleted successfully"})
-
 
     @app.route('/add-custom-operator', methods=['POST'])
     def add_custom_operator():
@@ -429,7 +446,6 @@ def register_interface(app, request, send_file, temp_dir_path, init_file_path=No
 
         return jsonify({"message": "Custom operator added successfully"})
 
-
     @app.route('/init', methods=['POST'])
     def init():
         modify_info = request.get_json()
@@ -439,9 +455,9 @@ def register_interface(app, request, send_file, temp_dir_path, init_file_path=No
                 return send_file(init_file_path, session.get_session_id())
             else:
                 logging.error(f"file path {init_file_path} is not exists")
-        
+
         return "", 200
-            
+
     @app.route('/open_model', methods=['POST'])
     def open_model():
         onnx_file = request.files.get("file")
@@ -462,7 +478,7 @@ def register_interface(app, request, send_file, temp_dir_path, init_file_path=No
             modifier = session.get_modifier()
         except ServerError as error:
             return error.msg, error.status
-        modifier.reload()   # allow downloading for multiple times
+        modifier.reload()  # allow downloading for multiple times
         with FileAutoClear(tempfile.NamedTemporaryFile(mode="w+b")) as (auto_close, tmp_file):
             try:
                 modify_model(modifier, modify_info, tmp_file)
@@ -470,8 +486,8 @@ def register_interface(app, request, send_file, temp_dir_path, init_file_path=No
                 return error.msg, error.status
             except Exception as ex:
                 return str(ex), 500
-            
-            auto_close.set_not_close()  # file will auto close in send_file 
+
+            auto_close.set_not_close()  # file will auto close in send_file
             return send_file(tmp_file, session.get_session_id(), download_name="modified.onnx")
 
     @app.route('/onnxsim', methods=['POST'])
@@ -484,7 +500,7 @@ def register_interface(app, request, send_file, temp_dir_path, init_file_path=No
                 modifier = session.get_modifier()
             except ServerError as error:
                 return error.msg, error.status
-            modifier.reload()   # allow downloading for multiple times
+            modifier.reload()  # allow downloading for multiple times
             try:
                 onnxsim_model(modifier, modify_info, tmp_file)
             except ServerError as error:
@@ -492,7 +508,7 @@ def register_interface(app, request, send_file, temp_dir_path, init_file_path=No
             except Exception as ex:
                 return str(ex), 500
 
-            auto_close.set_not_close()  # file will auto close in send_file 
+            auto_close.set_not_close()  # file will auto close in send_file
             return send_file(tmp_file, session.get_session_id(), download_name="modified_simed.onnx")
 
     @app.route('/auto-optimizer', methods=['POST'])
@@ -505,22 +521,22 @@ def register_interface(app, request, send_file, temp_dir_path, init_file_path=No
                 modifier = session.get_modifier()
             except ServerError as error:
                 return error.msg, error.status
-            modifier.reload()   # allow downloading for multiple times
+            modifier.reload()  # allow downloading for multiple times
             try:
                 out_message = optimizer_model(modifier, modify_info, opt_tmp_file)
             except ServerError as error:
                 return error.msg, error.status
             except Exception as ex:
                 return str(ex), 500
-            
+
             session.cache_message(out_message)
 
             if opt_tmp_file.tell() == 0:
                 return "autoOptimizer 没有匹配到的知识库", 299
 
-            auto_close.set_not_close()  # file will auto close in send_file 
+            auto_close.set_not_close()  # file will auto close in send_file
             return send_file(opt_tmp_file, session.get_session_id(), download_name="modified_opt.onnx")
-    
+
     @app.route('/extract', methods=['POST'])
     def modify_and_extract_model():
         modify_info = request.get_json()
@@ -531,22 +547,26 @@ def register_interface(app, request, send_file, temp_dir_path, init_file_path=No
                 modifier = session.get_modifier()
             except ServerError as error:
                 return error.status, error.msg
-            modifier.reload()   # allow downloading for multiple times
+            modifier.reload()  # allow downloading for multiple times
             try:
-                out_message = extract_model(modifier, modify_info, 
-                              modify_info.get("extract_start"), modify_info.get("extract_end"),
-                              extract_tmp_file)
+                out_message = extract_model(
+                    modifier,
+                    modify_info,
+                    modify_info.get("extract_start"),
+                    modify_info.get("extract_end"),
+                    extract_tmp_file,
+                )
             except ServerError as error:
                 return error.msg, error.status
             except Exception as ex:
                 return str(ex), 500
-            
+
             session.cache_message(out_message)
 
             if extract_tmp_file.tell() == 0:
                 return "未正常生成子网", 299
 
-            auto_close.set_not_close()  # file will auto close in send_file 
+            auto_close.set_not_close()  # file will auto close in send_file
             return send_file(extract_tmp_file, session.get_session_id(), download_name="extracted.onnx")
 
     @app.route('/load-json', methods=['POST'])
@@ -560,7 +580,7 @@ def register_interface(app, request, send_file, temp_dir_path, init_file_path=No
                 modifier = session.get_modifier()
             except ServerError as error:
                 return error.msg, error.status
-            modifier.reload()   # allow downloading for multiple times
+            modifier.reload()  # allow downloading for multiple times
             tmp_modifier = OnnxModifier(modifier.model_name, modifier.model_proto)
             try:
                 json_modify_model(tmp_modifier, modify_infos)
@@ -572,7 +592,7 @@ def register_interface(app, request, send_file, temp_dir_path, init_file_path=No
             tmp_modifier.check_and_save_model(tmp_file)
             session.init_modifier(modifier.model_name, tmp_modifier.model_proto)
 
-            auto_close.set_not_close()  # file will auto close in send_file 
+            auto_close.set_not_close()  # file will auto close in send_file
             return send_file(tmp_file, session.get_session_id(), download_name="extracted.onnx")
 
     @app.route('/get_output_message', methods=['POST'])
@@ -586,11 +606,12 @@ if __name__ == '__main__':
     logger = logging.getLogger()
     logger.addHandler(logging.StreamHandler(sys.stdout))
     logging.getLogger().setLevel(logging.INFO)
-    
+
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--onnx', type=str, help='onnx file path')
-    
+
     args, _ = parser.parse_known_args()
 
     with tempfile.TemporaryDirectory() as server_temp_dir_path:
