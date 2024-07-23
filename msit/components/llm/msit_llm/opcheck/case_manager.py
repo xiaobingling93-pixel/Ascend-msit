@@ -19,6 +19,7 @@ import multiprocessing
 from msit_llm.opcheck.check_case import OP_NAME_DICT
 from msit_llm.compare.cmp_algorithm import CUSTOM_ALG_MAP
 from msit_llm.opcheck.opchecker import NAMEDTUPLE_PRECISION_METRIC
+from msit_llm.common.log import logger
 
 
 class CaseManager:
@@ -36,11 +37,16 @@ class CaseManager:
         while not case_queue.empty():
             case_info = case_queue.get()
             op = OP_NAME_DICT[case_info['op_name']]
-            testnames = testloader.getTestCaseNames(op)
-            for name in testnames:
-                op_cur = op(name, case_info=case_info)
-                runner.run(op_cur)
-                result_queue.put(op_cur.case_info)
+            try:
+                testnames = testloader.getTestCaseNames(op)
+                for name in testnames:
+                    op_cur = op(name, case_info=case_info)
+                    runner.run(op_cur)
+                    result_queue.put(op_cur.case_info)
+            except Exception as e:
+                logger_text = f"An exception occurred during multiprocessing!\ncase_info: {case_info} \nError: {e}"
+                logger.error(logger_text)
+                continue
 
     def add_case(self, case_info):
         op_name = case_info['op_name']
