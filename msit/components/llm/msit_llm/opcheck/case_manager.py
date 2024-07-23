@@ -132,7 +132,7 @@ class CaseManager:
             "rel_precision_rate(%)", "max_rel_error"
         ]
         if NAMEDTUPLE_PRECISION_METRIC.abs in self.precision_metric:
-            columns.append(['abs_precision_rate(%)', 'max_abs_error'])
+            columns.extend(['abs_precision_rate(%)', 'max_abs_error'])
         if NAMEDTUPLE_PRECISION_METRIC.cos_sim in self.precision_metric:
             columns.append('cosine_similarity')
         if NAMEDTUPLE_PRECISION_METRIC.kl in self.precision_metric:
