@@ -46,7 +46,8 @@ class CaseManager:
             except Exception as e:
                 logger_text = f"An exception occurred during multiprocessing!\ncase_info: {case_info} \nError: {e}"
                 logger.error(logger_text)
-                continue
+                if not case_queue.empty():
+                    continue
 
     def add_case(self, case_info):
         op_name = case_info['op_name']
