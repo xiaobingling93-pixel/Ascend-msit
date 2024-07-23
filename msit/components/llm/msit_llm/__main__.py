@@ -21,7 +21,8 @@ from msit_llm.dump.initial import init_dump_task, clear_dump_task
 from msit_llm.opcheck.opchecker import OpChecker, NAMEDTUPLE_PRECISION_METRIC, NAMEDTUPLE_PRECISION_MODE
 from msit_llm.errcheck.process import process_error_check
 from msit_llm.common.utils import str2bool, check_positive_integer, check_device_integer, safe_string, check_exec_cmd, \
-    check_ids_string, check_number_list, check_output_path_legality, check_input_path_legality, check_dump_time_integer
+    check_ids_string, check_number_list, check_output_path_legality, check_input_path_legality, check_dump_time_integer, \
+    check_process_integer
 from msit_llm.common.log import logger, set_log_level, LOG_LEVELS
 
 
@@ -319,6 +320,16 @@ class OpcheckCommand(BaseCommand):
                 float tensors to torch.float16/torch.float32 before calculating and comparing.E.g.:-pmode force_fp32')
 
         parser.add_argument("-l", "--log-level", default="info", choices=LOG_LEVELS_LOWER, help="specify log level")
+
+        parser.add_argument(
+            '--jobs',
+            '-j',
+            required=False,
+            dest="jobs",
+            type=check_process_integer,
+            default=1,
+            help='Set the number of processes. The maximum number is 8. E.g.: -j 2'
+        )
 
     def handle(self, args, **kwargs):
         set_log_level(args.log_level)

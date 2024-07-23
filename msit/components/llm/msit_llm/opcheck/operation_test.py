@@ -29,12 +29,11 @@ FLOAT_EPSILON = torch.finfo(torch.float).eps
 
 
 class OperationTest(unittest.TestCase):
-    def __init__(self, methodName='opTest', case_info=None, excuted_ids=None):
+    def __init__(self, methodName='opTest', case_info=None):
         super(OperationTest, self).__init__(methodName)
 
         self.case_info = case_info
         self.case_info['res_detail'] = []
-        self.excuted_ids = excuted_ids
         self.op_id = case_info['op_id']
         self.op_name = case_info['op_name']
         self.op_param = case_info['op_param']
@@ -67,15 +66,6 @@ class OperationTest(unittest.TestCase):
             error5: 0.005,
             error6: 1
         }
-
-    @staticmethod
-    def parametrize(optest_class, case_info=None, excuted_ids=None):
-        testloader = unittest.TestLoader()
-        testnames = testloader.getTestCaseNames(optest_class)
-        suite = unittest.TestSuite()
-        for name in testnames:
-            suite.addTest(optest_class(name, case_info=case_info, excuted_ids=excuted_ids))
-        return suite
 
     def validate_param(self, *param_names):
         ret = True
@@ -117,7 +107,7 @@ class OperationTest(unittest.TestCase):
         except IndexError as e:
             logger_text = f"Cannot find data on rank {i}! {self.op_name} needs tensors on all devices! Exception: {e}"
             logger.error(logger_text)
-            raise RuntimeError(f"{new_tensor_path_pattern} not valid")
+            raise RuntimeError(f"{new_tensor_path_pattern} not valid") from e
         self.validate_path(new_tensor_path)
         _in_tensor_files = self.get_tensor_path(new_tensor_path, "intensor")
         return self.read_tensor_from_file(_in_tensor_files)
@@ -156,7 +146,6 @@ class OperationTest(unittest.TestCase):
             self.out_tensors = self.force_dtype(self.out_tensors, self.case_info['precision_mode'])
 
     def tearDown(self):
-        self.excuted_ids.put(self.op_id)
         if self.case_info['excuted_information'] != 'PASS':
             self.case_info['excuted_information'] = 'FAILED'
 
@@ -192,8 +181,10 @@ class OperationTest(unittest.TestCase):
             out_tensors = self.out_tensors
 
         try:
-            logger.debug("out_tensor", out_tensors[0].size())
-            logger.debug("golden_out_tensor", golden_out_tensors[0].size())
+            logger_text1 = f"out_tensor: {out_tensors[0].size()}"
+            logger_text2 = f"golden_out_tensor: {golden_out_tensors[0].size()}"
+            logger.debug(logger_text1)
+            logger.debug(logger_text2)
         except TypeError as e:
             logger_text = "The output is abnormal. Please check! Exception: {}".format(e)
             logger.debug(logger_text)
