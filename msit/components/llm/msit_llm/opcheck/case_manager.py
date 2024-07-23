@@ -20,7 +20,7 @@ import multiprocessing
 from msit_llm.opcheck.check_case import OP_NAME_DICT
 from msit_llm.compare.cmp_algorithm import CUSTOM_ALG_MAP
 from msit_llm.opcheck.opchecker import NAMEDTUPLE_PRECISION_METRIC
-from msit_llm.common.log import logger
+from msit_llm.common.log import logger, set_log_level
 
 
 class CaseManager:
@@ -31,9 +31,10 @@ class CaseManager:
         self.cases = []
 
     @staticmethod
-    def excute_case(case_queue, result_queue):
+    def excute_case(case_queue, result_queue, log_level):
         runner = unittest.TextTestRunner(verbosity=2)
         testloader = unittest.TestLoader()
+        set_log_level(log_level)
         
         while not case_queue.empty():
             try:
@@ -64,7 +65,7 @@ class CaseManager:
                 #该算子用例未添加
                 return False
 
-    def multi_process(self, num_processes=4):
+    def multi_process(self, num_processes=4, log_level="info"):
         # 多进程执行测试用例
         pool = multiprocessing.get_context('spawn')
         manager = multiprocessing.Manager()
@@ -78,7 +79,7 @@ class CaseManager:
         # 创建多个进程执行测试用例
         processes = []
         for _ in range(num_processes):
-            process = pool.Process(target=CaseManager.excute_case, args=(case_queue, result_queue))
+            process = pool.Process(target=CaseManager.excute_case, args=(case_queue, result_queue, log_level))
             processes.append(process)
             process.start()
 
@@ -109,11 +110,11 @@ class CaseManager:
         runner.run(suite)
         self.write_op_result_to_csv(self.cases)
 
-    def excute_cases(self, num_processes=1):
+    def excute_cases(self, num_processes=1, log_level="info"):
         if num_processes == 1 or self.rerun:
             self.single_process()
         else:
-            self.multi_process(num_processes)
+            self.multi_process(num_processes, log_level)
 
     def write_op_result_to_csv(self, results):
         op_infos = []
