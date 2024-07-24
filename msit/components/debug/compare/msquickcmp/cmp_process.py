@@ -37,6 +37,7 @@ from auto_optimizer import OnnxGraph
 from msquickcmp.atc import atc_utils
 from auto_optimizer.graph_refactor import Node
 from msquickcmp.common import utils
+from msquickcmp.common import args_check
 from msquickcmp.common.utils import AccuracyCompareException, get_shape_to_directory_name, safe_delete_path_if_exists
 from msquickcmp.common.convert import convert_bin_dump_data_to_npy
 from msquickcmp.common.convert import convert_npy_to_bin
@@ -47,7 +48,7 @@ from msquickcmp.adapter_cli.args_adapter import CmpArgsAdapter
 from msquickcmp.npu.om_parser import OmParser
 from msquickcmp.accuracy_locat import accuracy_locat as al
 from msquickcmp.single_op import single_op as sp
-from msquickcmp.tf.tf_dump_data import TfSaveModelDumpData
+from msquickcmp.tf.tf_save_model_dump_data import TfSaveModelDumpData
 from components.utils.security_check import check_write_directory
 
 WRITE_MODES = stat.S_IWUSR | stat.S_IRUSR
@@ -58,6 +59,8 @@ MAX_MEMORY_USE = 6 * 1024 * 1024 * 1024
 
 
 def _generate_golden_data_model(args, npu_dump_npy_path):
+    if args_check.check_save_model_path_legality(args.model_path):
+        return TfSaveModelDumpData(args)
     model_name, extension = utils.get_model_name_and_extension(args.model_path)
     if args.weight_path and ".prototxt" == extension:
         from msquickcmp.caffe_model.caffe_dump_data import CaffeDumpData
@@ -67,9 +70,6 @@ def _generate_golden_data_model(args, npu_dump_npy_path):
         from msquickcmp.tf.tf_dump_data import TfDumpData
 
         return TfDumpData(args)
-    elif "" == extension:
-
-        return TfSaveModelDumpData(args)
     elif ".onnx" == extension:
         from msquickcmp.onnx_model.onnx_dump_data import OnnxDumpData
 
@@ -301,7 +301,10 @@ def fusion_close_model_convert(args:CmpArgsAdapter):
 
 
 def check_and_run(args: CmpArgsAdapter, use_cli: bool):
-    utils.check_file_or_directory_path(args.model_path)
+    if args_check.check_save_model_path_legality(args.model_path):
+        utils.check_file_or_directory_path(args.model_path, True)
+    else:
+        utils.check_file_or_directory_path(args.model_path)
     utils.check_file_or_directory_path(args.offline_model_path)
     if args.weight_path:
         utils.check_file_or_directory_path(args.weight_path)

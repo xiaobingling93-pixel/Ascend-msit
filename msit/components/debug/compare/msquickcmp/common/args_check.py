@@ -23,20 +23,23 @@ MAX_SIZE_LIMITE_FUSION_FILE = 1 * 1024 * 1024 * 1024  # 1GB
 
 def check_model_path_legality(value):
     path_value = value
-    if check_save_model_path_legality(path_value):
+    if os.path.isdir(path_value):
+        if not check_save_model_path_legality(path_value):
+            raise argparse.ArgumentTypeError(f"model path:{path_value} is not qualified saved_model file. "
+                                             f"Please check.")
         return path_value
-
-    try:
-        file_stat = FileStat(path_value)
-    except Exception as err:
-        raise argparse.ArgumentTypeError(f"model path:{path_value} is illegal. Please check.") from err
-    if not file_stat.is_basically_legal('read'):
-        raise argparse.ArgumentTypeError(f"model path:{path_value} is illegal. Please check.")
-    if not file_stat.is_legal_file_type(["onnx", "om", "prototxt", "pb"]):
-        raise argparse.ArgumentTypeError(f"model path:{path_value} is illegal. Please check.")
-    if not file_stat.is_legal_file_size(MAX_SIZE_LIMITE_NORMAL_MODEL):
-        raise argparse.ArgumentTypeError(f"model path:{path_value} is illegal. Please check.")
-    return path_value
+    else:
+        try:
+            file_stat = FileStat(path_value)
+        except Exception as err:
+            raise argparse.ArgumentTypeError(f"model path:{path_value} is illegal. Please check.") from err
+        if not file_stat.is_basically_legal('read'):
+            raise argparse.ArgumentTypeError(f"model path:{path_value} is illegal. Please check.")
+        if not file_stat.is_legal_file_type(["onnx", "om", "prototxt", "pb"]):
+            raise argparse.ArgumentTypeError(f"model path:{path_value} is illegal. Please check.")
+        if not file_stat.is_legal_file_size(MAX_SIZE_LIMITE_NORMAL_MODEL):
+            raise argparse.ArgumentTypeError(f"model path:{path_value} is illegal. Please check.")
+        return path_value
 
 
 def check_save_model_path_legality(directory):

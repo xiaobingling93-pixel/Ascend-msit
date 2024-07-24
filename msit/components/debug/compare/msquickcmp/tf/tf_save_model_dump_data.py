@@ -24,7 +24,7 @@ import tensorflow as tf
 import tfdbg_ascend as tfdbg
 from msquickcmp.common import utils, tf_common
 from msquickcmp.common.dump_data import DumpData
-from msquickcmp.common.utils import AccuracyCompareException
+
 
 class TfSaveModelDumpData(DumpData):
     """
@@ -38,12 +38,10 @@ class TfSaveModelDumpData(DumpData):
         self.input = os.path.join(output_path, "input")
         self.dump_data_tf = os.path.join(output_path, "dump_data/tf")
         self.model_name = None
-        self.global_graph = None
-        self.inputs_data = None
+        self.inputs_data = []
         self.model_path = self.args.model_path
-        self.input_path = self.args.input_path
+        self.input_shape = self.args.input_shape.split(":")[1]
         self.net_output = {}
-        self._load_graph()
         self._create_dir()
 
     def generate_inputs_data(self, npu_dump_path, om_parser=None):
@@ -51,8 +49,10 @@ class TfSaveModelDumpData(DumpData):
         Generate tf2.6 save_model inputs data
         :return tf2.6 save_model inputs data directory
         """
-        inputs_tensor = tf_common.get_inputs_tensor(self.global_graph, self.args.input_shape)
-        self._make_inputs_data(inputs_tensor)
+        input_bin_data = [np.fromfile(os.path.join(self.input, input_bin_file), dtype=np.float32)
+                          for input_bin_file in os.listdir(self.input)]
+        for bin_data in input_bin_data:
+            self.inputs_data.append(np.array(bin_data, dtype=np.float32).reshape(self.input_shape))
         self.model_name = os.path.basename(os.path.abspath(os.path.join(npu_dump_path, "..", "..")))
 
     def get_net_output_info(self):
@@ -85,42 +85,6 @@ class TfSaveModelDumpData(DumpData):
                 old_file = os.path.join(ops_dump_data_dir, filename)
                 new_file = os.path.join(ops_dump_data_dir, new_filename)
                 os.rename(old_file, new_file)
-
-    def _make_inputs_data(self, inputs_tensor):
-        if self.args.input_path == "":
-            if os.listdir(self.input):
-                input_path = self.input
-                self.input_path = ','.join([os.path.join(input_path, ii) for ii in os.listdir(input_path)])
-                return
-
-            input_path_list = []
-            for index, tensor in enumerate(inputs_tensor):
-                if not tensor.shape:
-                    utils.logger.error(
-                        "The shape of %s is unknown. Please usr -i to assign the input path." % tensor.name)
-                    raise AccuracyCompareException(utils.ACCURACY_COMPARISON_BIN_FILE_ERROR)
-                input_data = np.random.random(tf_common.convert_tensor_shape(tensor.shape)) \
-                    .astype(tf_common.convert_to_numpy_type(tensor.dtype))
-                input_path = os.path.join(self.input, "input_" + str(index) + ".bin")
-                input_path_list.append(input_path)
-                try:
-                    input_data.tofile(input_path)
-                except Exception as err:
-                    utils.logger.error("Failed to generate data %s. %s" % (input_path, err))
-                    raise AccuracyCompareException(utils.ACCURACY_COMPARISON_BIN_FILE_ERROR) from err
-                utils.logger.info("file name: {}, shape: {}, dtype: {}".format(
-                    input_path, input_data.shape, input_data.dtype))
-                self.input_path = ','.join(input_path_list)
-        else:
-            input_path = self.args.input_path.split(",")
-            if len(inputs_tensor) != len(input_path):
-                utils.logger.error("the number of model inputs tensor is not equal the number of "
-                                   "inputs data, inputs tensor is: {}, inputs data is: {}".format(
-                    len(inputs_tensor), len(input_path)))
-                raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_DATA_ERROR)
-
-    def _load_graph(self):
-        self.global_graph = tf.compat.v1.get_default_graph()
 
     def _create_dir(self):
         # create input directory
