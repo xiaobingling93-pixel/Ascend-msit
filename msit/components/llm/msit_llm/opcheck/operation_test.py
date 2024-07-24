@@ -150,7 +150,7 @@ class OperationTest(unittest.TestCase):
         _in_tensor_files = self.get_tensor_path(self.tensor_path, "intensor")
         self.in_tensors = self.read_tensor_from_file(_in_tensor_files)
         self.in_tensors = self.force_dtype(self.in_tensors, self.case_info['precision_mode'])
-        if not (self.atb_rerun is True and 'after' not in os.listdir(self.tensor_path)):
+        if not (self.atb_rerun and 'after' not in os.listdir(self.tensor_path)):
             _out_tensor_files = self.get_tensor_path(self.tensor_path, "outtensor")
             self.out_tensors = self.read_tensor_from_file(_out_tensor_files)
             self.out_tensors = self.force_dtype(self.out_tensors, self.case_info['precision_mode'])
