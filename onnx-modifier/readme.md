@@ -9,7 +9,7 @@
 
 目前常用的方法是，先可视化模型图结构，然后基于`ONNX`的Python API编写脚本，对模型图结构进行编辑。但这可能需要我们在可视化-脚本-可视化-...之间反复横跳。而且在一张庞大的图上搜集想要修改的节点，也比较繁琐耗时。👋
 
-能不能有一个工具，可以**实时预览编辑后的可视化效果，从而更方便，快捷，直观地实现`ONNX`模型的编辑**呢？:rocket: 这便是`onnx-modifier` ([github]())开发的动机。所有的编辑信息将最终汇总，统一送由ONNX Python API处理，得到编辑后的ONNX模型文件。
+能不能有一个工具，可以**实时预览编辑后的可视化效果，从而更方便，快捷，直观地实现`ONNX`模型的编辑**呢？:rocket: 这便是`ms-onnx-modifier` ([github]())开发的动机。所有的编辑信息将最终汇总，统一送由ONNX Python API处理，得到编辑后的ONNX模型文件。
 
 目前已支持下列操作：
 
@@ -25,7 +25,7 @@
 :white_check_mark: 修改模型输入shape<br>
 :white_check_mark: 修改模型initializers<br>
 
-`onnx-modifier`基于流行的模型可视化工具 [Netron](https://github.com/lutzroeder/netron) 和[Electron](https://www.electronjs.org/)。希望它能给社区带来一些贡献~
+`ms-onnx-modifier`基于流行的模型可视化工具 [Netron](https://github.com/lutzroeder/netron) 和[Electron](https://www.electronjs.org/)。希望它能给社区带来一些贡献~
 
 # 安装与运行
 onnx 当前版本要求 `onnx<=1.14.1`
@@ -33,7 +33,7 @@ onnx 当前版本要求 `onnx<=1.14.1`
 您可以使用我们已经打包好的程序: [已打包程序](https://gitee.com/ascend/msit/wikis/OnnxModifier/%E6%89%93%E5%8C%85%20OnnxModifier%20)
 
 
-目前支持三种方法运行`onnx-modifier`, Linux与windows安装流程一致，以下为安装运行说明：
+目前支持三种方法运行`ms-onnx-modifier`, Linux与windows安装流程一致，以下为安装运行说明：
 
 ## 源码拉取及第三方库安装
 
@@ -118,7 +118,7 @@ onnx 当前版本要求 `onnx<=1.14.1`
     # ssh -L [本地绑定端口8080]:localhost:[服务器端口5000] [用户名username]@[服务器地址serverhost]
     ssh -L 8080:localhost:5000 username@serverhost
     ```
-    * 本地windows浏览器打开 localhost:8080 端口即可访问到linux服务器上的 onnx-modifier 服务
+    * 本地windows浏览器打开 localhost:8080 端口即可访问到linux服务器上的 ms-onnx-modifier 服务
 
 ## 启动方式三：electron 命令行启动
 - 安装
@@ -185,7 +185,7 @@ onnx 当前版本要求 `onnx<=1.14.1`
 
 有时候我们需要增加/抽取某个特定节点的输出作为整个模型的输出。比如之前的模型输出节点在编辑过程中被删除了，需要增加新的，或者有时候我们需要抽取一些中间层特征输出做更细致的分析。
 
-通过`onnx-modifier`，我们只需要在对应节点的侧边栏中，点击`Add Output`按钮即可在该节点后部增加一个模型输出节点，其名称与原节点的输出名相同。
+通过`ms-onnx-modifier`，我们只需要在对应节点的侧边栏中，点击`Add Output`按钮即可在该节点后部增加一个模型输出节点，其名称与原节点的输出名相同。
 
 如下图，我们增加了两个模型输出节点，分别为首个卷积层的输出和第二个卷积层的输出。
 
@@ -199,7 +199,7 @@ onnx 当前版本要求 `onnx<=1.14.1`
 
 ## 增加新节点
 
-有时候我们希望向模型中添加新节点。`onnx-modifier`已开始支持该功能。
+有时候我们希望向模型中添加新节点。`ms-onnx-modifier`已开始支持该功能。
 
 在主页面的左方工具栏，有一个`Add node`按钮，点击之后弹出对话框，包含一个selector选择器，我们可以通过这二者的配合，完成节点的添加，只需3步：
 
@@ -226,7 +226,7 @@ onnx 当前版本要求 `onnx<=1.14.1`
 
 ## 构造自定义算子
 
-有时候我们希望向模型中增加自定义算子。`onnx-modifier`已开始支持该功能。
+有时候我们希望向模型中增加自定义算子。`ms-onnx-modifier`已开始支持该功能。
 
 在主页面的左方工具栏，有一个`Add node`按钮，点击之后弹出对话框，通过按钮Edit Custom Operator按钮打开自定义文本框，按自己所需添加自定义算子，点击Add Operator按钮构造算子，成功后会重新加载json文件并自动添加自定义算子，后续添加节点过程如上：[增加新节点](#增加新节点)
 注：需要添加正确的json格式（已经有默认输入），在后续如果不需要该自定义算子，可以依据输入的name，moudle与version并点击Delete Operator来删除构造的算子。
@@ -245,7 +245,7 @@ onnx 当前版本要求 `onnx<=1.14.1`
 <img src="./docs/rebatch.gif" style="zoom:75%;" />
 
 ## 修改模型initializers
-有时候我们要修改一些保存在模型initializer中的数值，比如卷积层的权重/偏置参数，`Reshape`节点的`shape`参数等。使用`onnx-modifier`，这一操作将非常简单：在对应节点侧边栏的initializer中键入新的数值，点击`Download`即可。
+有时候我们要修改一些保存在模型initializer中的数值，比如卷积层的权重/偏置参数，`Reshape`节点的`shape`参数等。使用`ms-onnx-modifier`，这一操作将非常简单：在对应节点侧边栏的initializer中键入新的数值，点击`Download`即可。
 
 <img src="./docs/edit_initializer.gif" style="zoom:75%;" />
 

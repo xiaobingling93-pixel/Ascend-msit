@@ -12,29 +12,20 @@
 # limitations under the License.
 
 import argparse
-import logging
-import subprocess
-import sys
 import os
+import subprocess
+
 
 from model_convert.aoe.aoe_args_map import aoe_args
 from model_convert.atc.atc_args_map import atc_args
 from components.utils.security_check import get_valid_read_path, get_valid_write_path, MAX_READ_FILE_SIZE_32G
-
+from components.convert.common.log import logger
 
 input_file_args = ['model', 'weight', 'singleop', 'insert_op_conf', 'op_name_map', 'fusion_switch_file',
                    'compression_optimize_conf', 'op_debug_config']
 input_dir_args = ['mdl_bank_path', 'op_bank_path', 'debug_dir', 'op_compiler_cache_dir', 'model_path']
 output_file_args = ['output', 'json', ]
 
-
-def get_logger(name=__name__):
-    logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='[%(levelname)s] %(message)s')
-    logger_in = logging.getLogger(name)
-    return logger_in    
-
-
-logger = get_logger()
 
 CUR_PATH = os.path.dirname(os.path.relpath(__file__))
 
@@ -87,11 +78,12 @@ def gen_convert_cmd(conf_args: list, parse_args: argparse.Namespace, backend: st
 
 
 def execute_cmd(cmd: list):
+    logger.info("%s start converting now", cmd[0].upper())
     result = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     while result.poll() is None:
         line = result.stdout.readline()
         if line:
             line = line.strip()
             print(line.decode('utf-8'))
-
+    logger.info("%s convert success", cmd[0].upper())
     return result.returncode

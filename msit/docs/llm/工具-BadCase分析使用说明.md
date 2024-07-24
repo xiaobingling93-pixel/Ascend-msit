@@ -58,9 +58,9 @@ case_filter.apply(
 
 <center>
 
-| model input      | model output | gold standard      | Accuracy |
-| :---------:      | :----------: | :-----------:      | :------: |
-| How is your day? | Good.        | I am 23 years old. | 0        |
+| model input      | model output       | gold standard | Accuracy |
+| :---------:      | :----------:       | :-----------: | :------: |
+| How is your day? | I am 23 years old. | Good.         | 0        |
 
 </center>
 
@@ -79,8 +79,8 @@ case_filter.apply(
 | edit_distance          | 编辑距离 | [0, +∞)     | IWSLT                   | 0 表示完全 match，score 越大表示越不相似 |
 | bleu-(1, 2, 3, 4)                | 机器翻译质量评估 | [0, 1]      | IWSLT                   | 1 表示完全match，0 表示完全不 match      |
 | rouge-(1, 2, l)                 | 文本摘要评估 | [0, 1]      | SQuAD, gsm8K            | 1 表示完全match，0 表示完全不 match      |
-| relative_distinct-(1, 2, 3, 4)  | 输出多样性评估 | (0, +∞) | SQuAD, gsm8K              | $\begin{cases} \text{模型输出多样性\textbf{弱于}标杆} & \text{if } x \in (0, 1) \\ \text{模型输出多样性\textbf{等于}标杆} & \text{if } x = 1 \\ \text{模型输出多样性\textbf{强于}标杆} & \text{if } x \in (1, \infty) \end{cases}$ |
-| relative_abnormal      | 字符异常率评估 | (0, +∞) | SQuAD, gsm8K              | $\begin{cases} \text{模型输出多样性\textbf{弱于}标杆} & \text{if } x \in (0, 1) \\ \text{模型输出多样性\textbf{等于}标杆} & \text{if } x = 1 \\ \text{模型输出多样性\textbf{强于}标杆} & \text{if } x \in (1, \infty) \end{cases}$ |
+| relative_distinct-(1, 2, 3, 4)  | 输出多样性评估 | (0, +∞) | SQuAD, gsm8K              | $\begin{cases} \text{模型输出多样性{弱于}标杆} & \text{if } x \in (0, 1) \\ \text{模型输出多样性{等于}标杆} & \text{if } x = 1 \\ \text{模型输出多样性{强于}标杆} & \text{if } x \in (1, \infty) \end{cases}$ |
+| relative_abnormal      | 字符异常率评估 | (0, +∞) | SQuAD, gsm8K              | $\begin{cases} \text{模型输出多样性{弱于}标杆} & \text{if } x \in (0, 1) \\ \text{模型输出多样性{等于}标杆} & \text{if } x = 1 \\ \text{模型输出多样性{强于}标杆} & \text{if } x \in (1, \infty) \end{cases}$ |
 
 
 </center>

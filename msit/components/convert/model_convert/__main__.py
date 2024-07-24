@@ -15,12 +15,11 @@ import logging
 import os
 
 from components.utils.parser import BaseCommand
+from components.convert.common.log import logger
 from model_convert.aie.bean import ConvertConfig
 from model_convert.aie.core.convert import Convert
-from model_convert.cmd_utils import add_arguments, gen_convert_cmd, execute_cmd, get_logger
+from model_convert.cmd_utils import add_arguments, gen_convert_cmd, execute_cmd
 from components.utils.security_check import get_valid_read_path, get_valid_write_path, MAX_READ_FILE_SIZE_32G
-
-logger = get_logger(__name__)
 
 
 def parse_input_param(model: str,
@@ -69,6 +68,7 @@ class AieCommand(BaseCommand):
                             help="The soc version.")
 
     def handle(self, args, **kwargs):
+        logger.info("AIE start converting now")
         model_path = get_valid_read_path(args.model, size_max=MAX_READ_FILE_SIZE_32G)
         output_path = get_valid_write_path(args.output)
         try:
@@ -85,7 +85,7 @@ class AieCommand(BaseCommand):
             return
 
         converter.convert_model()
-        logger.info('convert model finished.')
+        logger.info("AIE convert success")
 
 
 def get_cmd_instance():

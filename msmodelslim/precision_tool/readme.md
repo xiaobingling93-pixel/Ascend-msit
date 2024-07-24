@@ -36,14 +36,17 @@ def __init__(self, model, tokenizer, dataset, batch_size, hardware_type,
         currently only npu is supported
     @param tokenizer_return_type_id:
         tokenizer return token type id
+    @param shot
+        shot to test precision
     """
 ```
 其中
   + model: 待测试模型，当前需要为可采用 Transformers 库加载的模型
   + tokenizer: 与 model 配套的 tokenizer
-  + dataset: 待测试数据集，当前支持 ceval_0_shot/ceval_5_shot/boolq/humaneval
+  + dataset: 待测试数据集，当前支持 ceval_0_shot/ceval_5_shot/boolq/humaneval/mmlu/truthfulqa
   + hardware_type: 当前**仅**支持传入"npu"
   + tokenizer_return_type_id: 当输入 Bert 类型接口时需要传入 True，具体可以根据接口运行的反馈来确定
+  + shot: 精度测试时使用的shot值，当前只对mmlu数据集生效
 #### 测试结果接口
 ```python
 def test(self):
@@ -69,6 +72,13 @@ def test(self):
     |       |-- accountant_val.csv
     |       |-- ...
     |       `-- veterinary_medicine_val.csv
+    |-- mmlu
+    |   |-- subject_mapping.json
+    |   |-- dev
+    |   |-- test
+    |   `-- val
+    |-- truthfulqa
+    |   `-- TruthfulQA.csv
     `-- humaneval
     `-- human-eval.jsonl
 请保持文件夹名称与结构一致

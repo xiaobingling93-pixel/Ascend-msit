@@ -17,12 +17,12 @@ import logging
 
 
 def get_logger():
-    llm_logger = logging.getLogger("msit_llm_logger")
+    llm_logger = logging.getLogger("msit_convert_logger")
     llm_logger.propagate = False
     llm_logger.setLevel(logging.INFO)
     if not llm_logger.handlers:
         stream_handler = logging.StreamHandler()
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        formatter = logging.Formatter('%(asctime)s-pid: %(process)d-[%(levelname)s]-%(name)s-%(message)s')
         stream_handler.setFormatter(formatter)
         llm_logger.addHandler(stream_handler)
     return llm_logger
@@ -35,8 +35,10 @@ LOG_LEVELS = {
     "debug": logging.DEBUG,
     "info": logging.INFO,
     "warning": logging.WARNING,
+    "warn": logging.WARN,
     "error": logging.ERROR,
     "fatal": logging.FATAL,
+    "notset": logging.NOTSET,
     "critical": logging.CRITICAL
 }
 
