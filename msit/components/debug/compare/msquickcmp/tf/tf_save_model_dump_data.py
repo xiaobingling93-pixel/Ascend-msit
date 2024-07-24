@@ -25,6 +25,7 @@ import tfdbg_ascend as tfdbg
 from msquickcmp.common import utils, tf_common
 from msquickcmp.common.dump_data import DumpData
 
+
 class TfSaveModelDumpData(DumpData):
     """
     This class is used to generate GUP dump data of the tf2.6 save_model.
@@ -67,21 +68,23 @@ class TfSaveModelDumpData(DumpData):
         Generate tf2.6 save_model dump data
         :return tf2.6 save_model dump data directory
         """
-        try:
-            model = tf.saved_model.load(self.model_path)
-        except Exception as e:
-            raise RuntimeError(f"{self.model_path} saved_model load error, please check that the saved_model is the "
-                               f"correct file ") from e
-        # enable the dump function
-        tfdbg.enable()
-        # change the current directory to the specified directory
-        current_dir = os.getcwd()
-        os.chdir(self.dump_data_tf)
-        model(self.inputs_data)
-        # model.predict(self.inputs_data)
-        os.chdir(current_dir)
-        self._rename_ops()
-        return self.dump_data_tf
+        with UmaskWrapper():
+            try:
+                model = tf.saved_model.load(self.model_path)
+            except Exception as e:
+                raise RuntimeError(
+                    f"{self.model_path} saved_model load error, please check that the saved_model is the "
+                    f"correct file ") from e
+            # enable the dump function
+            tfdbg.enable()
+            # change the current directory to the specified directory
+            current_dir = os.getcwd()
+            os.chdir(self.dump_data_tf)
+            model(self.inputs_data)
+            # model.predict(self.inputs_data)
+            os.chdir(current_dir)
+            self._rename_ops()
+            return self.dump_data_tf
 
     def _rename_ops(self):
         ops_dump_data_dir = self.dump_data_tf
@@ -109,3 +112,14 @@ class TfSaveModelDumpData(DumpData):
                 f"but found version {current_version}. Please install the correct "
                 "version of TensorFlow."
             )
+
+
+class UmaskWrapper:
+    def __init__(self, umask=0o027):
+        self.umask, self.ori_umask = umask, None
+
+    def __enter__(self):
+        self.ori_umask = os.umask(self.umask)
+
+    def __exit__(self, exc_type=None, exc_value=None, exc_tb=None):
+        os.umask(self.ori_umask)
