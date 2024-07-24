@@ -33,15 +33,15 @@ class TfSaveModelDumpData(DumpData):
 
     def __init__(self, arguments):
         super().__init__()
-        self.args = arguments
-        output_path = os.path.realpath(self.args.out_path)
+        output_path = os.path.realpath(arguments.out_path)
         self.input = os.path.join(output_path, "input")
-        self.dump_data_tf = os.path.join(output_path, "dump_data/tf")
+        self.dump_data_tf = os.path.join(output_path, "dump_data", "tf")
         self.model_name = None
         self.inputs_data = []
-        self.model_path = self.args.model_path
-        self.input_shape = self.args.input_shape.split(":")[1]
+        self.model_path = arguments.model_path
+        self.input_shape = arguments.input_shape.split(":")[-1]
         self.net_output = {}
+        self._check_tf_version()
         self._create_dir()
 
     def generate_inputs_data(self, npu_dump_path, om_parser=None):
@@ -68,14 +68,15 @@ class TfSaveModelDumpData(DumpData):
         Generate tf2.6 save_model dump data
         :return tf2.6 save_model dump data directory
         """
-        model = tf.keras.models.load_model(self.model_path)
-        model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+
+        model = tf.saved_model.load(self.model_path)
         # enable the dump function
         tfdbg.enable()
         # change the current directory to the specified directory
         current_dir = os.getcwd()
         os.chdir(self.dump_data_tf)
-        model.predict(self.inputs_data)
+        model(self.inputs_data)
+        # model.predict(self.inputs_data)
         os.chdir(current_dir)
         self._rename_ops()
         return self.dump_data_tf
@@ -96,3 +97,13 @@ class TfSaveModelDumpData(DumpData):
 
         # create dump_data/tf directory
         utils.create_directory(self.dump_data_tf)
+
+    def _check_tf_version(self):
+        EXPECTED_VERSION = "2.6.5"
+        current_version = tf.__version__
+        if current_version != EXPECTED_VERSION:
+            raise ImportError(
+                f"TensorFlow version mismatch: expected version {EXPECTED_VERSION}, "
+                f"but found version {current_version}. Please install the correct "
+                "version of TensorFlow."
+            )

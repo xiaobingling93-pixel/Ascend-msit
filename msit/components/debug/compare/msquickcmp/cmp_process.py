@@ -48,7 +48,6 @@ from msquickcmp.adapter_cli.args_adapter import CmpArgsAdapter
 from msquickcmp.npu.om_parser import OmParser
 from msquickcmp.accuracy_locat import accuracy_locat as al
 from msquickcmp.single_op import single_op as sp
-from msquickcmp.tf.tf_save_model_dump_data import TfSaveModelDumpData
 from components.utils.security_check import check_write_directory
 
 WRITE_MODES = stat.S_IWUSR | stat.S_IRUSR
@@ -60,6 +59,8 @@ MAX_MEMORY_USE = 6 * 1024 * 1024 * 1024
 
 def _generate_golden_data_model(args, npu_dump_npy_path):
     if args_check.check_save_model_path_legality(args.model_path):
+        from msquickcmp.tf.tf_save_model_dump_data import TfSaveModelDumpData
+
         return TfSaveModelDumpData(args)
     model_name, extension = utils.get_model_name_and_extension(args.model_path)
     if args.weight_path and ".prototxt" == extension:
