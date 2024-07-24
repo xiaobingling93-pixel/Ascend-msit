@@ -52,7 +52,9 @@ class TfSaveModelDumpData(DumpData):
         input_bin_data = [np.fromfile(os.path.join(self.input, input_bin_file), dtype=np.float32)
                           for input_bin_file in os.listdir(self.input)]
         for bin_data in input_bin_data:
-            self.inputs_data.append(np.array(bin_data, dtype=np.float32).reshape(self.input_shape))
+            str_shape_list = self.input_shape.split(",")
+            int_shape_list = [int(num) for num in str_shape_list]
+            self.inputs_data.append(np.array(bin_data, dtype=np.float32).reshape(int_shape_list))
         self.model_name = os.path.basename(os.path.abspath(os.path.join(npu_dump_path, "..", "..")))
 
     def get_net_output_info(self):
@@ -67,13 +69,13 @@ class TfSaveModelDumpData(DumpData):
         :return tf2.6 save_model dump data directory
         """
         model = tf.keras.models.load_model(self.model_path)
-        model = compile(optimize='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+        model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
         # enable the dump function
         tfdbg.enable()
         tfdbg.set_dump_path(self.dump_data_tf)
         model.predict(self.inputs_data)
 
-        self._rename_ops_name()
+        self._rename_ops()
         return self.dump_data_tf
 
     def _rename_ops(self):
