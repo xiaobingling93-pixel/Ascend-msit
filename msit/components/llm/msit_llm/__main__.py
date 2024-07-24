@@ -321,6 +321,16 @@ class OpcheckCommand(BaseCommand):
 
         parser.add_argument("-l", "--log-level", default="info", choices=LOG_LEVELS_LOWER, help="specify log level")
 
+        parser.add_argument(
+            '--jobs',
+            '-j',
+            required=False,
+            dest="jobs",
+            type=check_process_integer,
+            default=1,
+            help='Set the number of processes. The maximum number is 8. E.g.: -j 2'
+        )
+
     def handle(self, args, **kwargs):
         set_log_level(args.log_level)
 

@@ -55,6 +55,13 @@ def check_device_integer(value):
     return ivalue
 
 
+def check_process_integer(value):
+    ivalue = int(value)
+    if ivalue < 1 or ivalue > 8:
+        raise argparse.ArgumentTypeError("%s is an invalid int value. The number of processes should be 1~8." % value)
+    return ivalue
+
+
 def safe_string(value):
     if not value:
         return value
