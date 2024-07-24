@@ -25,7 +25,6 @@ import tfdbg_ascend as tfdbg
 from msquickcmp.common import utils, tf_common
 from msquickcmp.common.dump_data import DumpData
 
-
 class TfSaveModelDumpData(DumpData):
     """
     This class is used to generate GUP dump data of the tf2.6 save_model.
@@ -68,8 +67,11 @@ class TfSaveModelDumpData(DumpData):
         Generate tf2.6 save_model dump data
         :return tf2.6 save_model dump data directory
         """
-
-        model = tf.saved_model.load(self.model_path)
+        try:
+            model = tf.saved_model.load(self.model_path)
+        except Exception as e:
+            raise RuntimeError(f"{self.model_path} saved_model load error, please check that the saved_model is the "
+                               f"correct file ") from e
         # enable the dump function
         tfdbg.enable()
         # change the current directory to the specified directory
