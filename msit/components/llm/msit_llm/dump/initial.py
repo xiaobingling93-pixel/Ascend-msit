@@ -57,9 +57,10 @@ def init_dump_task(args):
 
     if args.time == 3:
         os.environ[ATB_SAVE_TENSOR_IN_BEFORE_OUT_AFTER] = "1"
+        os.environ[ATB_SAVE_TENSOR_TIME] = "1"
     else:
         os.environ[ATB_SAVE_TENSOR_IN_BEFORE_OUT_AFTER] = "0"
-    os.environ[ATB_SAVE_TENSOR_TIME] = str(args.time)
+        os.environ[ATB_SAVE_TENSOR_TIME] = str(args.time)
     if args.ids:
         os.environ[ATB_SAVE_TENSOR_IDS] = str(args.ids)
     else:
