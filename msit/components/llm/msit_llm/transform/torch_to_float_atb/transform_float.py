@@ -16,7 +16,7 @@ import os
 import json
 from msit_llm.common.log import logger
 from msit_llm.transform.model_parser import kind, parser
-from utils import get_repeat_box_layer, dag_to_model
+from msit_llm.transform.torch_to_float_atb.utils import get_repeat_box_layer, dag_to_model
 import torch
 import torch.nn as nn
 
