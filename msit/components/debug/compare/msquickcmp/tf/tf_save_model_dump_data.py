@@ -85,7 +85,7 @@ class TfSaveModelDumpData(DumpData):
         remove_field = self.model_name
         for filename in os.listdir(ops_dump_data_dir):
             if remove_field in filename:
-                new_filename = filename.replace(remove_field, '')
+                new_filename = filename.replace(remove_field + "_", '')
                 old_file = os.path.join(ops_dump_data_dir, filename)
                 new_file = os.path.join(ops_dump_data_dir, new_filename)
                 os.rename(old_file, new_file)
@@ -95,4 +95,4 @@ class TfSaveModelDumpData(DumpData):
         utils.create_directory(self.input)
 
         # create dump_data/tf directory
-        utils.create_directory(self.input)
+        utils.create_directory(self.dump_data_tf)
