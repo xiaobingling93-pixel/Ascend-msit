@@ -4,7 +4,7 @@ import os
 import stat
 
 import numpy as np
-from safetensors.torch import save_file, _remove_duplicate_names
+from safetensors.torch import save_file
 import torch
 
 
