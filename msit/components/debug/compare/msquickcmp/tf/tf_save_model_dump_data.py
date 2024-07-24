@@ -25,6 +25,7 @@ import tfdbg_ascend as tfdbg
 from msquickcmp.common import utils, tf_common
 from msquickcmp.common.dump_data import DumpData
 
+
 class TfSaveModelDumpData(DumpData):
     """
     This class is used to generate GUP dump data of the tf2.6 save_model.
