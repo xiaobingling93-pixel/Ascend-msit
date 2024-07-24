@@ -72,9 +72,9 @@ class TfSaveModelDumpData(DumpData):
         model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
         # enable the dump function
         tfdbg.enable()
+        # change the current directory to the specified directory
         current_dir = os.getcwd()
         os.chdir(self.dump_data_tf)
-        # tfdbg.set_dump_path(self.dump_data_tf)
         model.predict(self.inputs_data)
         os.chdir(current_dir)
         self._rename_ops()
