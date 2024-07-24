@@ -210,7 +210,7 @@ class OpChecker:
 
         from msit_llm.opcheck.case_manager import CaseManager
         case_manager = CaseManager(self.precision_metric, self.atb_rerun, self.output_path)
-        
+
         # 1.遍历tensor_path，将算子信息添加到self.cases_info
         self.walk_tensor_path(self.input)
         logger_text = f"Total {len(self.cases_info)} cases found under path: {self.input}"
@@ -349,6 +349,7 @@ class OpChecker:
         for dirname in dirnames:
             if dirname not in ['after', 'before']:
                 self.walk_tensor_path(os.path.join(cur_path, dirname))
+
 
 def _is_atb_only_saved_before(input_path):
     if not os.listdir(input_path):
