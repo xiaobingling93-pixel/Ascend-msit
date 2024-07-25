@@ -14,13 +14,18 @@
 
 import os
 import json
+import torch
+import torch.nn as nn 
+import csv
 from msit_llm.common.log import logger
 from msit_llm.transform.model_parser import kind, parser
-from msit_llm.transform.torch_to_float_atb.utils import get_repeat_box_layer, dag_to_model
-import torch
-import torch.nn as nn
+from msit_llm.transform import torch_to_float_atb
+from msit_llm.transform.torch_to_float_atb.utils import (get_repeat_box_layer, 
+    dag_to_model, init_save_name, init_save_dir)
+
 
 SMALL_NUM_HIDDEN_LAYERS = 4
+
 
 def try_setting_small_num_hidden_layers(config):
     if hasattr(config, "num_hidden_layers"):
@@ -48,12 +53,7 @@ def build_model(source_path):
 
 
 def transform_report(source_path, save_name=None, save_dir=None, is_repeat=True):
-
-    import csv
-    from msit_llm.transform import torch_to_float_atb
-    
     model = build_model(source_path)
-
     model_layers = get_repeat_box_layer(model)
     from ascend_utils.pytorch.dag.dag_torch_hook import DagTorchHook
     dag_node = DagTorchHook(model, torch.ones([1, 32]).long(), collapse_repeat_block=is_repeat)
@@ -61,33 +61,49 @@ def transform_report(source_path, save_name=None, save_dir=None, is_repeat=True)
     parsed_model_layers = {"name": kind.mname(model), "children": parsed_model_layers}
 
     model_name_lower = parsed_model_layers.get("name", "model").lower()
-    json_save_name = torch_to_float_atb.utils.init_save_name(save_name if save_name else model_name_lower) + ".json"
-    json_save_dir = torch_to_float_atb.utils.init_save_dir(save_dir if save_dir else model_name_lower, sub_dir="")
+    json_save_name = init_save_name(save_name if save_name else model_name_lower) + ".json"
+    json_save_dir = init_save_dir(save_dir if save_dir else model_name_lower, sub_dir="")
     json_save_path = os.path.join(json_save_dir, json_save_name)
     with open(json_save_path, "w") as ff:
         json.dump(parsed_model_layers, ff)
     logger.info(f"model info saved: {json_save_path}")
 
-    
-
     headers = ["ori_op_name", "ori_op_type", "op_name", "op_type", "soc_type", "engine", "is_supported"]
-    csv_save_name = torch_to_float_atb.utils.init_save_name(
-        save_name if save_name else model_name_lower) + "_operators.csv"
-    csv_save_dir = torch_to_float_atb.utils.init_save_dir(save_dir if save_dir else model_name_lower, sub_dir="")
+    csv_save_name = init_save_name(save_name if save_name else model_name_lower) + "_operators.csv"
+    csv_save_dir = init_save_dir(save_dir if save_dir else model_name_lower, sub_dir="")
     csv_file_path = os.path.join(csv_save_dir, csv_save_name)
     data = []
     ops_dict = {
-        'relu': 'ActivationOperation', 'gelu': 'ActivationOperation', 'hardswish': 'ActivationOperation', 
-        'LogSigmoid': 'ActivationOperation', 'as_strided': 'AsStridedOperation', 
-        'all_gather': 'AllGatherOperation', 'all_reduce': 'AllReduceOperation', 'full': 'FillOperation', 
-        'masked_fill': 'FillOperation', 'masked_fill_': 'FillOperation', 'transpose': 'TransposeOperation', 
-        'cat': 'ConcatOperation', 'cumsum': 'CumsumOperation', 'matmul': 'MatmulOperation', 
-        'gather': 'GatherOperation', 'LayerNorm': 'LayerNormOperation', 'RMSNorm': 'RmsNormOperation', 
-        'Linear': 'LinearOperation', 'DistributedDataParallel': 'LinearParallelOperation', 
-        'multinomial': 'MultinomialOperation', 'index_select': 'SliceOperation', 'split': 'SplitOperation', 
-        'chunk': 'SplitOperation', 'softmax': 'SoftmaxOperation', 'repeat': 'RepeatOperation', 
-        'where': 'WhereOperation', 'broadcast': 'BroadcastOperation', 'topk': 'TopkToppSamplingOperation',  
-        'Embedding': 'WordEmbedding', 'LlamaRMSNorm': 'RmsNormOperation'
+        'relu': 'ActivationOperation', 
+        'gelu': 'ActivationOperation', 
+        'hardswish': 'ActivationOperation', 
+        'LogSigmoid': 'ActivationOperation', 
+        'as_strided': 'AsStridedOperation', 
+        'all_gather': 'AllGatherOperation', 
+        'all_reduce': 'AllReduceOperation', 
+        'full': 'FillOperation', 
+        'masked_fill': 'FillOperation', 
+        'masked_fill_': 'FillOperation', 
+        'transpose': 'TransposeOperation', 
+        'cat': 'ConcatOperation', 
+        'cumsum': 'CumsumOperation', 
+        'matmul': 'MatmulOperation', 
+        'gather': 'GatherOperation', 
+        'LayerNorm': 'LayerNormOperation', 
+        'RMSNorm': 'RmsNormOperation', 
+        'Linear': 'LinearOperation', 
+        'DistributedDataParallel': 'LinearParallelOperation', 
+        'multinomial': 'MultinomialOperation', 
+        'index_select': 'SliceOperation', 
+        'split': 'SplitOperation', 
+        'chunk': 'SplitOperation', 
+        'softmax': 'SoftmaxOperation', 
+        'repeat': 'RepeatOperation', 
+        'where': 'WhereOperation', 
+        'broadcast': 'BroadcastOperation', 
+        'topk': 'TopkToppSamplingOperation',  
+        'Embedding': 'WordEmbedding', 
+        'LlamaRMSNorm': 'RmsNormOperation'
     }
 
     for node in dag_node.dag_node_list:
@@ -113,7 +129,6 @@ def transform_report(source_path, save_name=None, save_dir=None, is_repeat=True)
 
 
 def transform_float(source_path, save_name=None, save_dir=None):
-    from msit_llm.transform import torch_to_float_atb
     logger.info("Building model using transformers...")
 
     model = build_model(source_path)
@@ -122,8 +137,8 @@ def transform_float(source_path, save_name=None, save_dir=None):
 
     parsed_model = parser.build_model_tree(model)
     model_name_lower = parsed_model.get("name", "model").lower()
-    json_save_name = torch_to_float_atb.utils.init_save_name(save_name if save_name else model_name_lower) + ".json"
-    json_save_dir = torch_to_float_atb.utils.init_save_dir(save_dir if save_dir else model_name_lower, sub_dir="")
+    json_save_name = init_save_name(save_name if save_name else model_name_lower) + ".json"
+    json_save_dir = init_save_dir(save_dir if save_dir else model_name_lower, sub_dir="")
     json_save_path = os.path.join(json_save_dir, json_save_name)
     with open(json_save_path, "w") as ff:
         json.dump(parsed_model, ff)
