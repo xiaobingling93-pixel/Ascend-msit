@@ -25,7 +25,7 @@ class OpcheckNonzeroOperation(operation_test.OperationTest):
         paddingNum = in_tensors[0].numel() - num_non_negative
         padding = torch.zeros(len(in_tensors[0].shape), paddingNum)
         result = torch.stack(list(torch.nonzero(in_tensors[0], as_tuple=True)))
-        result = torch.cat((result, padding), dim=1).long()
+        result = torch.concat((result, padding), dim=1).long()
         
         return [result, torch.tensor(num_non_negative).long()]
 

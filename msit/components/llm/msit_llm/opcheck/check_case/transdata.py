@@ -12,11 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from enum import Enum
 import torch
 import torch_npu
 
 from msit_llm.opcheck import operation_test
 from msit_llm.common.log import logger
+
+
+class TransdataType(Enum):
+    UNDEFINED = 0 # 默认
+    FRACTAL_NZ_TO_ND = 1 # FRACTAL_NZ转ND
+    ND_TO_FRACTAL_NZ = 2 # ND转FRACTAL_NZ 
 
 
 class OpcheckTransdataOperation(operation_test.OperationTest):
@@ -38,83 +45,98 @@ class OpcheckTransdataOperation(operation_test.OperationTest):
     def custom_transpose(x, dim1, dim2):
         return x.transpose(dim1, dim2)
 
-    def golden_nd_to_nz_3d(self, in_tensors):
+    @staticmethod
+    def golden_nd_to_nz_3d(in_tensors):
         align_int8 = 32
         default_align = 16
 
+        size0 = in_tensors[0].size(0)
+        size1 = in_tensors[0].size(1)
+        size2 = in_tensors[0].size(2)
+
         aux_dims = [0, 0, 0, 0]
-        aux_dims[0] = in_tensors[0].size(0)
-        aux_dims[1] = self.round_up(in_tensors[0].size(1), default_align)
+        aux_dims[0] = size0
+        aux_dims[1] = OpcheckTransdataOperation.round_up(size1, default_align)
 
         pad_dims = [0, 0, 0, 0]  
-        pad_dims[3] = self.round_up(in_tensors[0].size(1), default_align) - in_tensors[0].size(1)
+        pad_dims[3] = OpcheckTransdataOperation.round_up(size1, default_align) - size1
 
         if in_tensors[0].dtype == torch.int8:
-            aux_dims[2] = self.round_up(in_tensors[0].size(2), align_int8) // align_int8
+            aux_dims[2] = OpcheckTransdataOperation.round_up(size2, align_int8) // align_int8
             aux_dims[3] = align_int8
-            pad_dims[1] = self.round_up(in_tensors[0].size(2), align_int8) - in_tensors[0].size(2)
+            pad_dims[1] = OpcheckTransdataOperation.round_up(size2, align_int8) - size2
         else:
-            aux_dims[2] = self.round_up(in_tensors[0].size(2), default_align) // default_align
+            aux_dims[2] = OpcheckTransdataOperation.round_up(size2, default_align) // default_align
             aux_dims[3] = default_align
-            pad_dims[1] = self.round_up(in_tensors[0].size(2), default_align) - in_tensors[0].size(2)
+            pad_dims[1] = OpcheckTransdataOperation.round_up(size2, default_align) - size2
         
-        return self.custom_transpose(
-                    self.custom_reshape(
-                        self.custom_pad(in_tensors[0], pad_dims),
+        return OpcheckTransdataOperation.custom_transpose(
+                    OpcheckTransdataOperation.custom_reshape(
+                        OpcheckTransdataOperation.custom_pad(in_tensors[0], pad_dims),
                         aux_dims
                     ),
                     1, 2
                 ).contiguous()
 
-    def golden_nd_to_nz_2d(self, in_tensors):
+    @staticmethod
+    def golden_nd_to_nz_2d(in_tensors):
         align_int8 = 32
         default_align = 16
+
+        size0 = in_tensors[0].size(0)
+        size1 = in_tensors[0].size(1)
         
         aux_dims = [0, 0, 0, 0]
         aux_dims[0] = 1
-        aux_dims[1] = self.round_up(in_tensors[0].size(0), default_align)
+        aux_dims[1] = OpcheckTransdataOperation.round_up(size0, default_align)
  
         pad_dims = [0, 0, 0, 0]  
-        pad_dims[3] = self.round_up(in_tensors[0].size(0), default_align) - in_tensors[0].size(0)
+        pad_dims[3] = OpcheckTransdataOperation.round_up(size0, default_align) - size0
  
         if in_tensors[0].dtype == torch.int8:
-            aux_dims[2] = self.round_up(in_tensors[0].size(1), align_int8) // align_int8
+            aux_dims[2] = OpcheckTransdataOperation.round_up(size1, align_int8) // align_int8
             aux_dims[3] = align_int8
-            pad_dims[1] = self.round_up(in_tensors[0].size(1), align_int8) - in_tensors[0].size(1)
+            pad_dims[1] = OpcheckTransdataOperation.round_up(size1, align_int8) - size1
         else:
-            aux_dims[2] = self.round_up(in_tensors[0].size(1), default_align) // default_align
+            aux_dims[2] = OpcheckTransdataOperation.round_up(size1, default_align) // default_align
             aux_dims[3] = default_align
-            pad_dims[1] = self.round_up(in_tensors[0].size(1), default_align) - in_tensors[0].size(1)
+            pad_dims[1] = OpcheckTransdataOperation.round_up(size1, default_align) - size1
         
-        return self.custom_transpose(
-                    self.custom_reshape(
-                        self.custom_pad(in_tensors[0], pad_dims),
+        return OpcheckTransdataOperation.custom_transpose(
+                    OpcheckTransdataOperation.custom_reshape(
+                        OpcheckTransdataOperation.custom_pad(in_tensors[0], pad_dims),
                         aux_dims
                     ),
                     1, 2
                 ).contiguous()
 
-    def golden_nz_to_nd(self, in_tensors, out_crops):
+    @staticmethod
+    def golden_nz_to_nd(in_tensors, out_crops):
+        size0 = in_tensors[0].size(0)
+        size1 = in_tensors[0].size(1)
+        size2 = in_tensors[0].size(2)
+        size3 = in_tensors[0].size(3)
+
         aux_dims = [0, 0, 0]
-        aux_dims[0] = in_tensors[0].size(0)
-        aux_dims[1] = in_tensors[0].size(2)
-        aux_dims[2] = in_tensors[0].size(1) * in_tensors[0].size(3)
+        aux_dims[0] = size0
+        aux_dims[1] = size2
+        aux_dims[2] = size1 * size3
         
-        return self.custom_reshape(
-                    self.custom_transpose(in_tensors[0], 1, 2),
+        return OpcheckTransdataOperation.custom_reshape(
+                    OpcheckTransdataOperation.custom_transpose(in_tensors[0], 1, 2),
                     aux_dims
                 )[:, :out_crops[0], :out_crops[1]]
 
     def golden_calc(self, in_tensors):
-        transdata_type = self.op_param.get("transdataType", None)
-        if transdata_type == 2:
+        transdata_type = self.op_param.get("transdataType", TransdataType.UNDEFINED)
+        if transdata_type == TransdataType.ND_TO_FRACTAL_NZ:
             if len(in_tensors[0].size()) == 3:
-                golden_result = self.golden_nd_to_nz_3d(in_tensors)
+                golden_result = OpcheckTransdataOperation.golden_nd_to_nz_3d(in_tensors)
             else:
-                golden_result = self.golden_nd_to_nz_2d(in_tensors)
+                golden_result = OpcheckTransdataOperation.golden_nd_to_nz_2d(in_tensors)
         else:
             out_crops = self.op_param.get("outCrops", None)
-            golden_result = self.golden_nz_to_nd(in_tensors, out_crops)
+            golden_result = OpcheckTransdataOperation.golden_nz_to_nd(in_tensors, out_crops)
 
         return [golden_result]
 

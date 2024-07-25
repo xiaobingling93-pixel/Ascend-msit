@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from enum import Enum
 from msit_llm.opcheck.check_case.gating import OpcheckGatingOperation
 from msit_llm.opcheck.check_case.index_add import OpcheckIndexAddOperation
 from msit_llm.opcheck.check_case.nonzero import OpcheckNonzeroOperation
@@ -108,3 +109,26 @@ OP_NAME_DICT = dict({
     "RopeGradOperation":OpcheckRopeGradOperation,
     "StridedBatchMatmulOperation":OpcheckStridedBatchMatmulOperation,
 })
+
+
+class outTensorType(Enum):
+    ACL_DT_UNDEFINED = -1 # 未知数据类型，默认值
+    ACL_FLOAT = 0
+    ACL_FLOAT16 = 1
+    ACL_INT8 = 2
+    ACL_INT32 = 3
+    ACL_UINT8 = 4
+    ACL_INT16 = 6
+    ACL_UINT16 = 7
+    ACL_UINT32 = 8
+    ACL_INT64 = 9
+    ACL_UINT64 = 10
+    ACL_DOUBLE = 11
+    ACL_BOOL = 12
+    ACL_STRING = 13
+    ACL_COMPLEX64 = 16
+    ACL_COMPLEX128 = 17
+    ACL_BF16 = 27
+    ACL_INT4 = 29
+    ACL_UINT1 = 30
+    ACL_COMPLEX32 = 33

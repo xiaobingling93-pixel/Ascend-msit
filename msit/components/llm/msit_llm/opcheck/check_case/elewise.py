@@ -18,6 +18,7 @@ import torch_npu
 
 from msit_llm.opcheck import operation_test
 from msit_llm.common.log import logger
+from msit_llm.opcheck.check_case import outTensorType
 
 
 class ElewiseType(Enum):
@@ -42,29 +43,6 @@ class ElewiseType(Enum):
     ELEWISE_DEQUANT_PER_CHANNEL = 18 # 每个通道反量化
     ELEWISE_DYNAMIC_QUANT = 19 # 逐行动态量化
     ELEWISE_TANH = 20 # 逐元素计算双曲正切值
-
-
-class outTensorType(Enum):
-    ACL_DT_UNDEFINED = -1 # 未知数据类型，默认值
-    ACL_FLOAT = 0
-    ACL_FLOAT16 = 1
-    ACL_INT8 = 2
-    ACL_INT32 = 3
-    ACL_UINT8 = 4
-    ACL_INT16 = 6
-    ACL_UINT16 = 7
-    ACL_UINT32 = 8
-    ACL_INT64 = 9
-    ACL_UINT64 = 10
-    ACL_DOUBLE = 11
-    ACL_BOOL = 12
-    ACL_STRING = 13
-    ACL_COMPLEX64 = 16
-    ACL_COMPLEX128 = 17
-    ACL_BF16 = 27
-    ACL_INT4 = 29
-    ACL_UINT1 = 30
-    ACL_COMPLEX32 = 33
 
 
 class OpcheckElewiseAddOperation(operation_test.OperationTest):
