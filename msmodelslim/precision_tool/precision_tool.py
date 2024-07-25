@@ -594,7 +594,10 @@ class PrecisionTest:
         correct_total = 0
         sum_total = 0
         result_total = []
-        self.tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+        try:
+            self.tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+        except AttributeError:
+            self.logger.info("this model can't set attribute 'pad_token'")
 
         subject_mapping = get_subject_mapping()
         subject_mapping = subject_mapping["mmlu_all_sets"]
@@ -693,7 +696,10 @@ class PrecisionTest:
         sum_total = 0
         result_total = []
         is_result = False
-        self.tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+        try:
+            self.tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+        except AttributeError:
+            self.logger.info("this model can't set attribute 'pad_token'")
 
         subject_mapping = get_subject_mapping()
         index = 1
