@@ -14,9 +14,9 @@
 
 import os
 import json
+import csv
 import torch
 import torch.nn as nn 
-import csv
 from msit_llm.common.log import logger
 from msit_llm.transform.model_parser import kind, parser
 from msit_llm.transform import torch_to_float_atb

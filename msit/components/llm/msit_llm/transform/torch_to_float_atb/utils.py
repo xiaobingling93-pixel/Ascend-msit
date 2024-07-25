@@ -33,7 +33,7 @@ def init_save_dir(save_dir, sub_dir):
     return save_dir
 
 
-def save_module_layers(model, module_layers):
+def collect_module_layers(model, module_layers):
     """
     递归地将模型所有子模块及其名称存储在列表中
     如果遇到nn.ModuleList，则将其作为一个整体存储
@@ -49,13 +49,13 @@ def save_module_layers(model, module_layers):
             module_layers.append({"module": module, "type": type(module)})
 
         if hasattr(module, 'named_children') and callable(module.named_children):
-            save_module_layers(module, module_layers)
+            collect_module_layers(module, module_layers)
 
 
 def get_repeat_box_layer(model):
     module_layers = []
 
-    save_module_layers(model, module_layers)
+    collect_module_layers(model, module_layers)
 
     res = {}
     repeat_index = 1
