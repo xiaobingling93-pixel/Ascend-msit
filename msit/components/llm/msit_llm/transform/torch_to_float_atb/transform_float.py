@@ -87,8 +87,7 @@ def transform_report(source_path, save_name=None, save_dir=None, is_repeat=True)
         'multinomial': 'MultinomialOperation', 'index_select': 'SliceOperation', 'split': 'SplitOperation', 
         'chunk': 'SplitOperation', 'softmax': 'SoftmaxOperation', 'repeat': 'RepeatOperation', 
         'where': 'WhereOperation', 'broadcast': 'BroadcastOperation', 'topk': 'TopkToppSamplingOperation',  
-        'multinomial': 'TopkToppSamplingOperation', 'Embedding': 'WordEmbedding', 
-        'LlamaRMSNorm': 'RmsNormOperation'
+        'Embedding': 'WordEmbedding', 'LlamaRMSNorm': 'RmsNormOperation'
     }
 
     for node in dag_node.dag_node_list:
