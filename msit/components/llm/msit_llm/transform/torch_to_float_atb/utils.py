@@ -15,6 +15,7 @@
 import os
 import torch.nn as nn
 
+
 def init_save_name(save_name):
     if os.path.splitext(save_name)[-1] in [".c", ".cpp", ".h", ".hpp"]:
         save_name = os.path.splitext(save_name)[0]
@@ -40,7 +41,7 @@ def save_module_layers(model, module_layers):
     ：param model：nn.Module，要遍历的模型
     ：param module_layers。用于存储模型层
     """
-    for name,module in model.named_children():
+    for name, module in model.named_children():
         if isinstance(module, nn.ModuleList):
             module_layers.append({"type": "ModuleList", "count": len(module)})
             continue
@@ -53,18 +54,25 @@ def save_module_layers(model, module_layers):
 
 def get_repeat_box_layer(model):
     module_layers = []
+
     save_module_layers(model, module_layers)
+
     res = {}
     repeat_index = 1
+    
     for i in range(len(module_layers) - 1):
         if module_layers[i]["type"] != "ModuleList" and module_layers[i + 1]["type"] == "ModuleList":
-            res[module_layers[i]["module"]] = {"repeat_type": "start",
-                                               "repeat_count": module_layers[i + 1]["count"],
-                                               "repeat_index": repeat_index}
+            res[module_layers[i]["module"]] = {
+                "repeat_type": "start",
+                "repeat_count": module_layers[i + 1]["count"],
+                "repeat_index": repeat_index
+            }
         if module_layers[i]["type"] == "ModuleList" and module_layers[i + 1]["type"] != "ModuleList":
-            res[module_layers[i + 1]["module"]] = {"repeat_type": "end",
-                                               "repeat_count": module_layers[i]["count"],
-                                               "repeat_index": repeat_index}
+            res[module_layers[i + 1]["module"]] = {
+                "repeat_type": "end",
+                "repeat_count": module_layers[i]["count"],
+                "repeat_index": repeat_index
+            }
             repeat_index += 1
 
     return res
@@ -93,9 +101,11 @@ def dag_to_model(dag_node, is_repeat, model_layers):
 
         if node.node in model_layers:
             if model_layers[node.node]["repeat_type"] == "start":
-                parsed_model_layers.append({"kind": "Layers",
-                                            "repeat_count": model_layers[node.node]["repeat_count"],
-                                            "repeat_block": []})
+                parsed_model_layers.append({
+                    "kind": "Layers",
+                    "repeat_count": model_layers[node.node]["repeat_count"],
+                    "repeat_block": []
+                })
             else:
                 parsed_model_layers[-1]["repeat_block"].pop()
                 parsed_model_layers.append(tmp_node)

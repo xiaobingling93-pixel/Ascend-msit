@@ -31,6 +31,7 @@ def try_setting_small_num_hidden_layers(config):
         config.n_layers = SMALL_NUM_HIDDEN_LAYERS
     return config
     
+
 def build_model(source_path):
     try:
         from transformers import AutoConfig, AutoModelForCausalLM
@@ -47,8 +48,10 @@ def build_model(source_path):
 
 
 def transform_report(source_path, save_name=None, save_dir=None, is_repeat=True):
-    from msit_llm.transform import torch_to_float_atb
 
+    import csv
+    from msit_llm.transform import torch_to_float_atb
+    
     model = build_model(source_path)
 
     model_layers = get_repeat_box_layer(model)
@@ -65,20 +68,27 @@ def transform_report(source_path, save_name=None, save_dir=None, is_repeat=True)
         json.dump(parsed_model_layers, ff)
     logger.info(f"model info saved: {json_save_path}")
 
-    import csv
+    
 
-    headers = ["ori_op_name", "ori_op_type", "op_name", "op_type", "soc_type", "engine","is_supported" ]
-    csv_save_name = torch_to_float_atb.utils.init_save_name(save_name if save_name else model_name_lower) + "_operators.csv"
+    headers = ["ori_op_name", "ori_op_type", "op_name", "op_type", "soc_type", "engine", "is_supported"]
+    csv_save_name = torch_to_float_atb.utils.init_save_name(
+        save_name if save_name else model_name_lower) + "_operators.csv"
     csv_save_dir = torch_to_float_atb.utils.init_save_dir(save_dir if save_dir else model_name_lower, sub_dir="")
     csv_file_path = os.path.join(csv_save_dir, csv_save_name)
     data = []
     ops_dict = {
-        'relu': 'ActivationOperation', 'gelu': 'ActivationOperation', 'hardswish': 'ActivationOperation', 'LogSigmoid': 'ActivationOperation', 'as_strided': 'AsStridedOperation', 
-        'all_gather': 'AllGatherOperation', 'all_reduce': 'AllReduceOperation', 'full': 'FillOperation', 'masked_fill': 'FillOperation', 'masked_fill_': 'FillOperation', 'transpose': 'TransposeOperation', 
-        'cat': 'ConcatOperation', 'cumsum': 'CumsumOperation', 'matmul': 'MatmulOperation', 'gather': 'GatherOperation', 'LayerNorm': 'LayerNormOperation', 'RMSNorm': 'RmsNormOperation', 
-        'Linear': 'LinearOperation', 'DistributedDataParallel': 'LinearParallelOperation', 'multinomial': 'MultinomialOperation', 'index_select': 'SliceOperation', 'split': 'SplitOperation', 
-        'chunk': 'SplitOperation', 'softmax': 'SoftmaxOperation', 'repeat': 'RepeatOperation', 'where': 'WhereOperation', 'broadcast': 'BroadcastOperation', 'topk': 'TopkToppSamplingOperation',  
-        'multinomial': 'TopkToppSamplingOperation', 'Embedding': 'WordEmbedding', 'LlamaRMSNorm': 'RmsNormOperation'
+        'relu': 'ActivationOperation', 'gelu': 'ActivationOperation', 'hardswish': 'ActivationOperation', 
+        'LogSigmoid': 'ActivationOperation', 'as_strided': 'AsStridedOperation', 
+        'all_gather': 'AllGatherOperation', 'all_reduce': 'AllReduceOperation', 'full': 'FillOperation', 
+        'masked_fill': 'FillOperation', 'masked_fill_': 'FillOperation', 'transpose': 'TransposeOperation', 
+        'cat': 'ConcatOperation', 'cumsum': 'CumsumOperation', 'matmul': 'MatmulOperation', 
+        'gather': 'GatherOperation', 'LayerNorm': 'LayerNormOperation', 'RMSNorm': 'RmsNormOperation', 
+        'Linear': 'LinearOperation', 'DistributedDataParallel': 'LinearParallelOperation', 
+        'multinomial': 'MultinomialOperation', 'index_select': 'SliceOperation', 'split': 'SplitOperation', 
+        'chunk': 'SplitOperation', 'softmax': 'SoftmaxOperation', 'repeat': 'RepeatOperation', 
+        'where': 'WhereOperation', 'broadcast': 'BroadcastOperation', 'topk': 'TopkToppSamplingOperation',  
+        'multinomial': 'TopkToppSamplingOperation', 'Embedding': 'WordEmbedding', 
+        'LlamaRMSNorm': 'RmsNormOperation'
     }
 
     for node in dag_node.dag_node_list:
