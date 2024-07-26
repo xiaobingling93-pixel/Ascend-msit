@@ -92,7 +92,10 @@ class CaseManager:
         for _ in processes:
             while not result_queue.empty():
                 results.append(result_queue.get())
-        self.write_op_result_to_csv(results)
+        if len(results) > 0:
+            self.write_op_result_to_csv(results)
+            logger_text = f"\nOpcheck results saved to: {self.output_path}"
+            logger.info(logger_text)
 
     def single_process(self):
         # 单进程执行测试用例
@@ -108,7 +111,10 @@ class CaseManager:
                 suite.addTest(op_cur)
         
         runner.run(suite)
-        self.write_op_result_to_csv(self.cases)
+        if len(self.cases) > 0:
+            self.write_op_result_to_csv(self.cases)
+            logger_text = f"\nOpcheck results saved to: {self.output_path}"
+            logger.info(logger_text)
 
     def excute_cases(self, num_processes=1, log_level="info"):
         if num_processes == 1 or self.rerun:
