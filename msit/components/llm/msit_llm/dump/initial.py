@@ -80,6 +80,7 @@ def init_dump_task(args):
             os.environ[ATB_OUTPUT_DIR] = str(args.output) + '/'
     else:
         os.environ.pop(ATB_OUTPUT_DIR, None)  # Ensure none is set
+    os.makedirs('ait_dump_{}'.format(os.environ['ATB_TIMESTAMP']))
 
     if args.type:
         os.environ[ATB_DUMP_TYPE] = "|".join(args.type)
