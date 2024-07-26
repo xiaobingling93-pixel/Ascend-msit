@@ -414,6 +414,15 @@ class Transform(BaseCommand):
         parser.add_argument(
             "--enable-sparse", action='store_true', help="[float atb to quant atb model] Enable trasforming to sparse-quant model"
         )
+
+        parser.add_argument(
+            "-a",
+            "--analyze",
+            dest="analyze",
+            action="store_true",
+            help="[float atb to atb model] Analysis tool to analyze the compatibility of model operator migration"
+        )
+
         parser.add_argument("-l", "--log-level", default="info", choices=LOG_LEVELS_LOWER, help="specify log level")
 
     def handle(self, args, **kwargs) -> None:
@@ -428,8 +437,12 @@ class Transform(BaseCommand):
             transform_quant.transform_quant(source_path=args.source, enable_sparse=args.enable_sparse)
         elif scenario == SCENARIOS.torch_to_float_atb:
             from msit_llm.transform.torch_to_float_atb import transform_float
-
-            transform_float.transform_float(source_path=args.source)
+            
+            if args.analyze:
+                transform_float.transform_report(source_path=args.source)
+            else:
+                transform_float.transform_float(source_path=args.source)
+                
         else:
             message = f"Neither config.json + py or cpp found in {args.source}, not supported"
             logger.error(message)

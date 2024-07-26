@@ -462,14 +462,16 @@ class PrecisionTest:
 
             seq_start = np.array(tokenizer('A:')['input_ids'])
             seq_end = np.array(tokenizer('Q:')['input_ids'])
-            
+            try:
+                self.tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+            except AttributeError:
+                self.logger.info("this model can't set attribute 'pad_token'")
             with torch.no_grad():
                 for batch in tqdm(range(num_batches)):
                     q_num = self.batch_size if (batch + 1) * self.batch_size <= num_rows \
                         else num_rows - self.batch_size * batch
                     idx_list = [i for i in range(batch * self.batch_size, batch * self.batch_size + q_num)]
                     prompt = [truthfulqa_eval.format_prompt(frame.loc[idx]) for idx in idx_list]
-                    self.tokenizer.add_special_tokens({'pad_token': '[PAD]'})
                     input_ids = tokenizer(prompt, padding=True, return_tensors=TENSOR_TYPE_PYTORCH,
                                             truncation=True).input_ids
                     max_len = input_ids.shape[-1] + 50
@@ -592,7 +594,10 @@ class PrecisionTest:
         correct_total = 0
         sum_total = 0
         result_total = []
-        self.tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+        try:
+            self.tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+        except AttributeError:
+            self.logger.info("this model can't set attribute 'pad_token'")
 
         subject_mapping = get_subject_mapping()
         subject_mapping = subject_mapping["mmlu_all_sets"]
@@ -691,7 +696,10 @@ class PrecisionTest:
         sum_total = 0
         result_total = []
         is_result = False
-        self.tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+        try:
+            self.tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+        except AttributeError:
+            self.logger.info("this model can't set attribute 'pad_token'")
 
         subject_mapping = get_subject_mapping()
         index = 1
