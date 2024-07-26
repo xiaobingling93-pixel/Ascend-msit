@@ -54,6 +54,7 @@ class OpChecker:
         self.timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         self.atb_rerun = False
         self.jobs = 1
+        self.log_level = "info"
 
     @staticmethod
     def third_party_init():
@@ -132,7 +133,7 @@ class OpChecker:
             logger_text = f"Input path is not in msit_dump tensors directory: {input_path}"
             logger.error(logger_text)
             return input_path, base_path, pid, ret
-        
+
         ret = True
         return input_path, base_path, pid, ret
 
@@ -144,7 +145,7 @@ class OpChecker:
         self.input, self.base_path, self.pid, ret = self.check_input_legality(args.input)
         if not ret:
             execution_flag = False
-        
+
         self.output = os.path.realpath(args.output)
         if not os.path.exists(self.output):
             logger_text = f"Output path not found: {self.output}"
@@ -171,6 +172,7 @@ class OpChecker:
         self.precision_metric = args.precision_metric
         self.precision_mode = args.precision_mode
         self.jobs = args.jobs
+        self.log_level = args.log_level
 
         # 指定需要使用的npu设备
         try:
@@ -189,8 +191,13 @@ class OpChecker:
                 logger_text = "Rerunning operations in atb to calculate outputs..."
                 logger.info(logger_text)
         else:
-            logger_text = "Comparing outputs in dump data without rerunning operations in atb..."
-            logger.info(logger_text)
+            if _is_atb_only_saved_before(self.input):
+                logger_text = "Only the rerun mode allows checking dumped data before executing operators."
+                logger.error(logger_text)
+                execution_flag = False
+            else:
+                logger_text = "Comparing outputs in dump data without rerunning operations in atb..."
+                logger.info(logger_text)
         return execution_flag
 
     def start_test(self, args):
@@ -204,6 +211,8 @@ class OpChecker:
         from msit_llm.opcheck.case_manager import CaseManager
         case_manager = CaseManager(self.precision_metric, self.atb_rerun, self.output_path)
         
+        case_manager = CaseManager(self.precision_metric, self.atb_rerun, self.output_path)
+
         # 1.遍历tensor_path，将算子信息添加到self.cases_info
         self.walk_tensor_path(self.input)
         logger_text = f"Total {len(self.cases_info)} cases found under path: {self.input}"
@@ -219,7 +228,7 @@ class OpChecker:
                 case_info[result_info] = 'addition failed'
 
         # 3.执行测试用例并提供专家建议
-        case_manager.excute_cases(self.jobs)
+        case_manager.excute_cases(self.jobs, self.log_level)
 
         # 4.写入未添加成功的算子
         addition_failed_cases = []
@@ -301,7 +310,7 @@ class OpChecker:
             self.cases_info[op_id] = case_info
 
     def add_op_info_to_cases_info(self, dirpath):
-        tensor_path = os.path.join(dirpath, 'after')
+        tensor_path = dirpath
 
         json_path = os.path.join(dirpath, 'op_param.json')
         try:
@@ -318,7 +327,7 @@ class OpChecker:
 
         case_info = {
             'op_id': op_id, 'op_name': op_name, 'op_param': op_param, 'tensor_path': tensor_path,
-            'precision_metric': self.precision_metric, 'atb_rerun': self.atb_rerun, 'pid': self.pid, 
+            'precision_metric': self.precision_metric, 'atb_rerun': self.atb_rerun, 'pid': self.pid,
             'precision_mode': self.precision_mode
         }
 
@@ -328,16 +337,33 @@ class OpChecker:
         return
 
     def walk_tensor_path(self, cur_path):
+        from msit_llm.opcheck.check_case import OP_NAME_DICT
         files_and_dirs = os.listdir(cur_path)
-        dirnames, filenames = [], []
-        for item in files_and_dirs:
-            item_path = os.path.join(cur_path, item)
-            if os.path.isdir(item_path):
-                dirnames.append(item)
-            else:
-                filenames.append(item)
-        if 'after' in dirnames and 'op_param.json' in filenames:
-            self.add_op_info_to_cases_info(cur_path)
+        dirnames = [item for item in files_and_dirs if os.path.isdir(os.path.join(cur_path, item))]
+
+        if any(dirname in ['after', 'before'] for dirname in dirnames):
+            for dirname in dirnames:
+                if dirname not in ['after', 'before']:
+                    op_name = dirname.split('_')[-1]
+                    if op_name in OP_NAME_DICT.keys():
+                        self.add_op_info_to_cases_info(os.path.join(cur_path, dirname))
+        # 遍历下一级文件夹
         for dirname in dirnames:
-            if dirname != 'after':
+            if dirname not in ['after', 'before']:
                 self.walk_tensor_path(os.path.join(cur_path, dirname))
+
+
+def _is_atb_only_saved_before(input_path):
+    if not os.listdir(input_path):
+        logger_text = "Input path does not contain operator folders."
+        logger.error(logger_text)
+        return False
+
+    filename = os.listdir(input_path)[0]
+    filepath = os.path.join(input_path, filename)
+
+    if os.path.isdir(filepath):
+        subfiles = os.listdir(filepath)
+        return 'after' not in subfiles and 'before' in subfiles
+    else:
+        return False

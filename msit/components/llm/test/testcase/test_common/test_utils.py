@@ -19,6 +19,7 @@ import pytest
 
 from msit_llm.common.utils import (
     check_positive_integer,
+    check_dump_time_integer,
     safe_string,
     check_number_list,
     check_ids_string,
@@ -58,6 +59,18 @@ def test_check_positive_integer_valid(value, expected):
 def test_check_positive_integer_invalid(value):
     with pytest.raises(ArgumentTypeError):
         check_positive_integer(value)
+
+
+# Test cases for check_dump_time_integer function
+@pytest.mark.parametrize("value, expected", [(1, 1), (0, 0), (2, 2), (3, 3)])
+def test_check_dump_time_integer_valid(value, expected):
+    assert check_dump_time_integer(value) == expected
+
+
+@pytest.mark.parametrize("value", [-1, 4])
+def test_check_dump_time_integer_invalid(value):
+    with pytest.raises(ArgumentTypeError):
+        check_dump_time_integer(value)
 
 
 # Test cases for safe_string function

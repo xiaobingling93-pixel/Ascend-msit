@@ -21,7 +21,8 @@ from msit_llm.dump.initial import init_dump_task, clear_dump_task
 from msit_llm.opcheck.opchecker import OpChecker, NAMEDTUPLE_PRECISION_METRIC, NAMEDTUPLE_PRECISION_MODE
 from msit_llm.errcheck.process import process_error_check
 from msit_llm.common.utils import str2bool, check_positive_integer, check_device_integer, safe_string, check_exec_cmd, \
-    check_ids_string, check_number_list, check_output_path_legality, check_input_path_legality, check_process_integer
+    check_ids_string, check_number_list, check_output_path_legality, check_input_path_legality, check_process_integer, check_process_integer, \
+    check_dump_time_integer
 from msit_llm.common.log import logger, set_log_level, LOG_LEVELS
 
 
@@ -71,10 +72,12 @@ class DumpCommand(BaseCommand):
             '-time',
             required=False,
             dest="time",
-            type=check_positive_integer,
-            default=1,
+            type=check_dump_time_integer,
+            default=3,
             help='0 when only need dump data before execution, '
-                 '1 when only need dump data after execution, 2 both.')
+                 '1 when only need dump data after execution, '
+                 '2 dump both before and after data,'
+                 '3 dump input tensors before execution and output tensors after execution.')
 
         parser.add_argument(
             '--operation-name',
@@ -136,7 +139,7 @@ class DumpCommand(BaseCommand):
             '-device',
             required=False,
             dest="device_id",
-            type=check_positive_integer,
+            type=check_device_integer,
             default=None,
             help='Specify a single device ID for dumping data, will skip other devices.')
 
@@ -411,6 +414,15 @@ class Transform(BaseCommand):
         parser.add_argument(
             "--enable-sparse", action='store_true', help="[float atb to quant atb model] Enable trasforming to sparse-quant model"
         )
+
+        parser.add_argument(
+            "-a",
+            "--analyze",
+            dest="analyze",
+            action="store_true",
+            help="[float atb to atb model] Analysis tool to analyze the compatibility of model operator migration"
+        )
+
         parser.add_argument("-l", "--log-level", default="info", choices=LOG_LEVELS_LOWER, help="specify log level")
 
     def handle(self, args, **kwargs) -> None:
@@ -425,8 +437,12 @@ class Transform(BaseCommand):
             transform_quant.transform_quant(source_path=args.source, enable_sparse=args.enable_sparse)
         elif scenario == SCENARIOS.torch_to_float_atb:
             from msit_llm.transform.torch_to_float_atb import transform_float
-
-            transform_float.transform_float(source_path=args.source)
+            
+            if args.analyze:
+                transform_float.transform_report(source_path=args.source)
+            else:
+                transform_float.transform_float(source_path=args.source)
+                
         else:
             message = f"Neither config.json + py or cpp found in {args.source}, not supported"
             logger.error(message)

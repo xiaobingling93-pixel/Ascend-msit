@@ -14,11 +14,13 @@
 
 import os
 import json
+import queue
 import unittest
 import multiprocessing
 from msit_llm.opcheck.check_case import OP_NAME_DICT
 from msit_llm.compare.cmp_algorithm import CUSTOM_ALG_MAP
 from msit_llm.opcheck.opchecker import NAMEDTUPLE_PRECISION_METRIC
+from msit_llm.common.log import logger, set_log_level
 
 
 class CaseManager:
@@ -29,20 +31,26 @@ class CaseManager:
         self.cases = []
 
     @staticmethod
-    def excute_case(lock, case_queue, result_queue):
+    def excute_case(case_queue, result_queue, log_level):
         runner = unittest.TextTestRunner(verbosity=2)
         testloader = unittest.TestLoader()
+        set_log_level(log_level)
         
         while not case_queue.empty():
-            with lock:
-                case_info = case_queue.get()
-            op = OP_NAME_DICT[case_info['op_name']]
-            testnames = testloader.getTestCaseNames(op)
-            for name in testnames:
-                op_cur = op(name, case_info=case_info)
-                runner.run(op_cur)
-                with lock:
+            try:
+                case_info = case_queue.get_nowait()
+                op = OP_NAME_DICT[case_info['op_name']]
+                testnames = testloader.getTestCaseNames(op)
+                for name in testnames:
+                    op_cur = op(name, case_info=case_info)
+                    runner.run(op_cur)
                     result_queue.put(op_cur.case_info)
+            except queue.Empty as e:
+                logger_text = f"The process exits because case_queue is empty. \nException: {e}"
+                logger.debug(logger_text)
+            except Exception as e:
+                logger_text = f"An exception occurred during multiprocessing! \ncase_info: {case_info} \nException: {e}"
+                logger.error(logger_text)
 
     def add_case(self, case_info):
         op_name = case_info['op_name']
@@ -57,11 +65,10 @@ class CaseManager:
                 #该算子用例未添加
                 return False
 
-    def multi_process(self, num_processes=4):
+    def multi_process(self, num_processes=4, log_level="info"):
         # 多进程执行测试用例
         pool = multiprocessing.get_context('spawn')
         manager = multiprocessing.Manager()
-        lock = manager.Lock()
         case_queue = manager.Queue()
         result_queue = manager.Queue()
         
@@ -72,7 +79,7 @@ class CaseManager:
         # 创建多个进程执行测试用例
         processes = []
         for _ in range(num_processes):
-            process = pool.Process(target=CaseManager.excute_case, args=(lock, case_queue, result_queue))
+            process = pool.Process(target=CaseManager.excute_case, args=(case_queue, result_queue, log_level))
             processes.append(process)
             process.start()
 
@@ -103,11 +110,11 @@ class CaseManager:
         runner.run(suite)
         self.write_op_result_to_csv(self.cases)
 
-    def excute_cases(self, num_processes=1):
+    def excute_cases(self, num_processes=1, log_level="info"):
         if num_processes == 1 or self.rerun:
             self.single_process()
         else:
-            self.multi_process(num_processes)
+            self.multi_process(num_processes, log_level)
 
     def write_op_result_to_csv(self, results):
         op_infos = []
@@ -135,20 +142,18 @@ class CaseManager:
             "rel_precision_rate(%)", "max_rel_error"
         ]
         if NAMEDTUPLE_PRECISION_METRIC.abs in self.precision_metric:
-            columns.append('abs_precision_rate(%)')
-            columns.append('max_abs_error')
+            columns.extend(['abs_precision_rate(%)', 'max_abs_error'])
         if NAMEDTUPLE_PRECISION_METRIC.cos_sim in self.precision_metric:
             columns.append('cosine_similarity')
         if NAMEDTUPLE_PRECISION_METRIC.kl in self.precision_metric:
             columns.append('kl_divergence')
         columns.append("fail_reason")
-        op_infos = op_infos[columns]
         op_infos = op_infos.sort_values(by=['op_id', 'out_tensor_id'])
         if not os.path.exists(self.output_path):
-            op_infos.to_excel(self.output_path, sheet_name='opcheck_result', index=False)
+            op_infos.to_excel(self.output_path, sheet_name='opcheck_result', index=False, columns=columns)
         else:
             with pd.ExcelWriter(self.output_path, engine='openpyxl', mode='a') as writer:
-                op_infos.to_excel(writer, sheet_name='addition_failed_cases', index=False)
+                op_infos.to_excel(writer, sheet_name='addition_failed_cases', index=False, columns=columns)
 
     def _update_single_op_result(self, op_info, cur_id, res_detail):
         default_str = 'NaN'

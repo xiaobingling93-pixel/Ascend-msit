@@ -4,10 +4,6 @@
 ## 介绍
 benchmark推理工具目前提供多线程推理功能
 
-## 准备
-根据[README.md](https://gitee.com/ascend/msit/blob/master/msit/components/benchmark/backend/concur/README.md)
-完成多线程推理工具的编译
-
 ## 运行示例
 1. 纯推理场景。默认情况下，输出信息仅打屏显示。
 
