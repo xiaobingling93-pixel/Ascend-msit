@@ -210,8 +210,6 @@ class OpChecker:
 
         from msit_llm.opcheck.case_manager import CaseManager
         case_manager = CaseManager(self.precision_metric, self.atb_rerun, self.output_path)
-        
-        case_manager = CaseManager(self.precision_metric, self.atb_rerun, self.output_path)
 
         # 1.遍历tensor_path，将算子信息添加到self.cases_info
         self.walk_tensor_path(self.input)
