@@ -240,7 +240,7 @@ class OpChecker:
         # 5.计算总执行时间
         end_time = time.time()
         total_time = round(end_time - start_time, 2)
-        logger_text = f"Total time: {total_time} seconds"
+        logger_text = f"Total cases: {len(self.cases_info)} \nTotal time: {total_time} seconds"
         logger.info(logger_text)
 
     def parse_op_id_name(self, dirpath):
@@ -341,7 +341,7 @@ class OpChecker:
 
         if any(dirname in ['after', 'before'] for dirname in dirnames):
             op_name = os.path.basename(cur_path).split('_')[-1]
-            if op_name in OP_NAME_DICT.keys():
+            if op_name in OP_NAME_DICT:
                 self.add_op_info_to_cases_info(cur_path)
         # 遍历下一级文件夹
         for dirname in dirnames:
