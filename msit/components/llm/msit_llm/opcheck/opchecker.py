@@ -342,7 +342,7 @@ class OpChecker:
         if any(dirname in ['after', 'before'] for dirname in dirnames):
             op_name = os.path.basename(cur_path).split('_')[-1]
             if op_name in OP_NAME_DICT.keys():
-                self.add_op_info_to_cases_info(os.path.join(cur_path, dirname))
+                self.add_op_info_to_cases_info(cur_path)
         # 遍历下一级文件夹
         for dirname in dirnames:
             if dirname not in ['after', 'before']:
