@@ -15,8 +15,17 @@
 import torch
 import torch_npu
 
+from enum import Enum
 from msit_llm.opcheck import operation_test
 from msit_llm.common.log import logger
+
+
+class LayerNormType(Enum):
+    LAYER_NORM_UNDEFINED = 0 # 默认值，未定义
+    LAYER_NORM_NROM = 1 # norm
+    LAYER_NORM_PRENORM = 2 # prenorm
+    LAYER_NORM_POSTNORM = 3 # postnorm
+    LAYER_NORM_MAX = 4
 
 
 class OpcheckLayerNormOperation(operation_test.OperationTest):
@@ -27,8 +36,8 @@ class OpcheckLayerNormOperation(operation_test.OperationTest):
         return golden_result_quant
 
     def golden_calc(self, in_tensors):
-        layer_type = self.op_param.get('layerType', None)
-        if layer_type == 1:
+        layer_type = self.op_param.get('layerType', LayerNormType.LAYER_NORM_UNDEFINED)
+        if layer_type == LayerNormType.LAYER_NORM_NROM:
             cur_param = self.op_param.get('normParam', None)
         elif layer_type == 3:
             cur_param = self.op_param.get('postNormParam', None)
