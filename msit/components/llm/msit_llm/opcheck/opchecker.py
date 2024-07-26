@@ -240,7 +240,7 @@ class OpChecker:
         # 5.计算总执行时间
         end_time = time.time()
         total_time = round(end_time - start_time, 2)
-        logger_text = f"Total cases: {len(self.cases_info)} \nTotal time: {total_time} seconds"
+        logger_text = f"Total cases: {len(self.cases_info)}; Total time: {total_time} seconds"
         logger.info(logger_text)
 
     def parse_op_id_name(self, dirpath):
