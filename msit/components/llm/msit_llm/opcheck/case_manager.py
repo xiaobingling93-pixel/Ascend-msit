@@ -117,6 +117,9 @@ class CaseManager:
             self.multi_process(num_processes, log_level)
 
     def write_op_result_to_csv(self, results):
+        if len(results) == 0:
+            return
+
         op_infos = []
         for op_result in results:
             op_info = {
@@ -151,6 +154,8 @@ class CaseManager:
         op_infos = op_infos.sort_values(by=['op_id', 'out_tensor_id'])
         if not os.path.exists(self.output_path):
             op_infos.to_excel(self.output_path, sheet_name='opcheck_result', index=False, columns=columns)
+            logger_text = f"Opcheck results saved to: {self.output_path}"
+            logger.info(logger_text)
         else:
             with pd.ExcelWriter(self.output_path, engine='openpyxl', mode='a') as writer:
                 op_infos.to_excel(writer, sheet_name='addition_failed_cases', index=False, columns=columns)
