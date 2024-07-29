@@ -16,7 +16,7 @@
 - msit llm 使用依赖 CANN-toolkit、加速库 ATB和 MindIE-LLM，各依赖库版本要求参照具体[安装说明文档](/msit/docs/install/README.md)。
 - **注意**：
 - 1. 加速库数据dump仅支持2023/12/05之后的加速库版本；
-- 2. 当前Torch的版本为2.1.0，Python的版本至少为3.8.0以上
+- 2. 当前Torch的版本为2.1.0，Python的版本至少为3.8.0及以上
 
 ```bash
 # 源码安装：先下载源码，进到源码目录
