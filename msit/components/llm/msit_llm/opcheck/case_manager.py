@@ -150,6 +150,8 @@ class CaseManager:
             columns.append('cosine_similarity')
         if NAMEDTUPLE_PRECISION_METRIC.kl in self.precision_metric:
             columns.append('kl_divergence')
+        for custom_name in CUSTOM_ALG_MAP:
+            columns.append(custom_name)
         columns.append("fail_reason")
         op_infos = op_infos.sort_values(by=['op_id', 'out_tensor_id'])
         if not os.path.exists(self.output_path):
