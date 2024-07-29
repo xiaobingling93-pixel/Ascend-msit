@@ -33,7 +33,7 @@
   196608-0.bin  196608-1.bin  196608-2.bin  196608-3.bin  196608-4.bin  196608-5.bin  196608-6.bin  196608-7.bin  196608-8.bin  196608-9.bin
   ```
   - 说明：
-    .bin文件存储tensor数据，可通过torch.save(tensor_data, 'xxx.bin')方式保存。--input参数是为了用户指定输入数据而设计。
+    .bin文件存储tensor数据，可通过torch.save(tensor_data, 'xxx.bin')方式保存，--input参数是为了用户指定输入数据而设计。
   ```bash
   msit benchmark --om-model ./pth_resnet50_bs1.om --input ./data --output ./result
   ```
