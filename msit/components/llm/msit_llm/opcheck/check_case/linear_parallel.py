@@ -28,7 +28,7 @@ class ParallelType(Enum):
     LINEAR_REDUCE_SCATTER = 1 # linear+reduce_scatter
     ALL_GATHER_LINEAR = 2 # AllGather+linear
     PURE_LINEAR = 3 # linear
-    MAX = 4 # 枚举类型最大值
+    MAX = 4 # 枚举类型最大值，暂不支持
 
 
 class QuantType(Enum):
@@ -36,7 +36,7 @@ class QuantType(Enum):
     QUANT_TYPE_PER_TENSOR = 0 # 对整个张量进行量化
     QUANT_TYPE_PER_CHANNEL = 1 # 对张量中每个channel分别进行量化
     QUANT_TYPE_PER_GROUP = 2 # 将张量按quantGroupSize划分后，分别进行量化
-    QUANT_TYPE_MAX = 3 # 枚举类型最大值
+    QUANT_TYPE_MAX = 3 # 枚举类型最大值，暂不支持
 
 
 class OpcheckLinearParallelOperation(operation_test.OperationTest):
