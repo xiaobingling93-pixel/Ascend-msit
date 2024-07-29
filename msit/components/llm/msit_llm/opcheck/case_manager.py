@@ -31,10 +31,17 @@ class CaseManager:
         self.cases = []
 
     @staticmethod
-    def excute_case(case_queue, result_queue, log_level):
+    def excute_case(case_queue, result_queue, log_level, custom_algorithms):
         runner = unittest.TextTestRunner(verbosity=2)
         testloader = unittest.TestLoader()
         set_log_level(log_level)
+
+        # Adding custom comparing algorithms
+        if custom_algorithms:
+            from msit_llm.compare.cmp_algorithm import register_custom_compare_algorithm
+
+            for custom_compare_algorithm in custom_algorithms:
+                register_custom_compare_algorithm(custom_compare_algorithm)
         
         while not case_queue.empty():
             try:
@@ -65,7 +72,7 @@ class CaseManager:
                 #该算子用例未添加
                 return False
 
-    def multi_process(self, num_processes=4, log_level="info"):
+    def multi_process(self, num_processes=4, log_level="info", custom_algorithms=False):
         # 多进程执行测试用例
         pool = multiprocessing.get_context('spawn')
         manager = multiprocessing.Manager()
@@ -79,7 +86,8 @@ class CaseManager:
         # 创建多个进程执行测试用例
         processes = []
         for _ in range(num_processes):
-            process = pool.Process(target=CaseManager.excute_case, args=(case_queue, result_queue, log_level))
+            process = pool.Process(target=CaseManager.excute_case, 
+                                   args=(case_queue, result_queue, log_level, custom_algorithms))
             processes.append(process)
             process.start()
 
@@ -110,11 +118,11 @@ class CaseManager:
         runner.run(suite)
         self.write_op_result_to_csv(self.cases)
 
-    def excute_cases(self, num_processes=1, log_level="info"):
+    def excute_cases(self, num_processes=1, log_level="info", custom_algorithms=False):
         if num_processes == 1 or self.rerun:
             self.single_process()
         else:
-            self.multi_process(num_processes, log_level)
+            self.multi_process(num_processes, log_level, custom_algorithms)
 
     def write_op_result_to_csv(self, results):
         if len(results) == 0:

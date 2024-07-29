@@ -55,6 +55,7 @@ class OpChecker:
         self.atb_rerun = False
         self.jobs = 1
         self.log_level = "info"
+        self.custom_algorithms = False
 
     @staticmethod
     def third_party_init():
@@ -173,6 +174,7 @@ class OpChecker:
         self.precision_mode = args.precision_mode
         self.jobs = args.jobs
         self.log_level = args.log_level
+        self.custom_algorithms = args.custom_algorithms
 
         # 指定需要使用的npu设备
         try:
@@ -226,7 +228,7 @@ class OpChecker:
                 case_info[result_info] = 'addition failed'
 
         # 3.执行测试用例并提供专家建议
-        case_manager.excute_cases(self.jobs, self.log_level)
+        case_manager.excute_cases(self.jobs, self.log_level, self.custom_algorithms)
 
         # 4.写入未添加成功的算子
         addition_failed_cases = []
