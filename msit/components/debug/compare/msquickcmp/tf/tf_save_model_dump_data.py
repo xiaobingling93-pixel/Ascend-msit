@@ -100,13 +100,13 @@ class TfSaveModelDumpData(DumpData):
         for graph in graph_list:
             ops = graph.get('op')
             for op in ops:
-                attrs = op.get('attr')
-                for attr in attrs:
-                    if attr.get('key') == '_datadump_original_op_names':
-                        op_names_list = attr.get('value').get('list')
-                        if 's' in op_names_list:
-                            s = op_names_list.get('s')
-                            ops_name.extend(s)
+                if op.get('output_desc') is not None:
+                    output_desc = op.get('output_desc')
+                    for od in output_desc:
+                        attrs = od.get('attr')
+                        for attr in attrs:
+                            if attr.get('key') == "_datadump_origin_name":
+                                ops_name.append(attr.get('value').get('s'))
 
         return ops_name
 
