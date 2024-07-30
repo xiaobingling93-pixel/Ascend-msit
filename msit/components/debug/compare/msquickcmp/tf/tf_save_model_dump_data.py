@@ -17,11 +17,12 @@
 Function:
 This class is used to generate GUP dump data of the tf2.6 save_model.
 """
+import json
 import os
+import time
 
 import numpy as np
 import tensorflow as tf
-import tfdbg_ascend as tfdbg
 from msquickcmp.common import utils, tf_common
 from msquickcmp.common.dump_data import DumpData
 
@@ -54,7 +55,7 @@ class TfSaveModelDumpData(DumpData):
         for bin_data in input_bin_data:
             str_shape_list = self.input_shape.split(",")
             int_shape_list = [int(num) for num in str_shape_list]
-            self.inputs_data.append(np.array(bin_data, dtype=np.float32).reshape(int_shape_list))
+            self.inputs_data.append(bin_data.reshape(int_shape_list))
         self.model_name = os.path.basename(os.path.abspath(os.path.join(npu_dump_path, "..", "..")))
 
     def get_net_output_info(self):
@@ -63,45 +64,70 @@ class TfSaveModelDumpData(DumpData):
         """
         return self.net_output
 
-    def generate_dump_data(self, npu_dump_path, om_parser=None):
+    def generate_dump_data(self, output_json_path, npu_dump_path=None, om_parser=None):
         """
         Generate tf2.6 save_model dump data
         :return tf2.6 save_model dump data directory
         """
-        try:
-            model = tf.saved_model.load(self.model_path)
-        except Exception as e:
-            raise RuntimeError(f"{self.model_path} saved_model load error, please check that the saved_model is the "
-                               f"correct file ") from e
-        # enable the dump function
-        tfdbg.enable()
-        # change the current directory to the specified directory
-        current_dir = os.getcwd()
-        os.chdir(self.dump_data_tf)
-        model(self.inputs_data)
-        # model.predict(self.inputs_data)
-        os.chdir(current_dir)
-        self._rename_ops()
+        ops_name = self._parse_ops_name_from_om_json(output_json_path)
+        sess = tf.compat.v1.keras.backend.get_session()
+        _ = tf.compat.v1.saved_model.load(sess, {'serve'}, self.model_path)
+        feed_dict = {sess.graph.get_tensor_by_name('input_1:0'): self.inputs_data[0]}
+        output_tensors = []
+        operations = sess.graph.get_operations()
+        for op_name in ops_name:
+            if self._is_exists(op_name, operations):
+                output_tensors.append(sess.graph.get_tensor_by_name(op_name + ':0'))
+
+        out = sess.run(output_tensors, feed_dict)
+        self._save_dump_data(out, output_tensors)
+        utils.logger.info("Dump tf data success, data saved in: %s", self.dump_data_tf)
+
         return self.dump_data_tf
 
-    def _rename_ops(self):
-        ops_dump_data_dir = self.dump_data_tf
-        remove_field = self.model_name
-        for filename in os.listdir(ops_dump_data_dir):
-            if remove_field in filename:
-                new_filename = filename.replace(remove_field + "_", '')
-                old_file = os.path.join(ops_dump_data_dir, filename)
-                new_file = os.path.join(ops_dump_data_dir, new_filename)
-                os.rename(old_file, new_file)
+    @staticmethod
+    def _is_exists(operation_name_to_check, operations):
+        return any(op.name == operation_name_to_check for op in operations)
+
+    def _save_dump_data(self, out, output_tensors):
+        for data, tensor in zip(out, output_tensors):
+            tensor_name = tensor.name.replace("/", "_").replace(":", ".") + "." + str(int(time.time()))
+            npy_file_path = os.path.join(self.dump_data_tf, tensor_name)
+            np.save(npy_file_path, data)
+
+    def _parse_ops_name_from_om_json(self, output_json_path):
+        ops_name = []
+        om_json = self._parse_json_file(output_json_path)
+        graph_list = om_json.get('graph')
+        for graph in graph_list:
+            ops = graph.get('op')
+            for op in ops:
+                attrs = op.get('attr')
+                for attr in attrs:
+                    if attr.get('key') == '_datadump_original_op_names':
+                        op_names_list = attr.get('value').get('list')
+                        if 's' in op_names_list:
+                            s = op_names_list.get('s')
+                            ops_name.extend(s)
+
+        return ops_name
 
     def _create_dir(self):
-        # create input directory
         utils.create_directory(self.input)
-
-        # create dump_data/tf directory
         utils.create_directory(self.dump_data_tf)
 
-    def _check_tf_version(self):
+    @staticmethod
+    def _parse_json_file(output_json_path):
+        try:
+            with open(output_json_path, 'r', encoding='utf-8') as file:
+                return json.load(file)
+        except FileNotFoundError:
+            raise RuntimeError(f"File {output_json_path} not found, Please check whether the json file path is valid")
+        except json.JSONDecodeError:
+            raise json.JSONDecodeError(f"File {output_json_path} is not Valid JSON format")
+
+    @staticmethod
+    def _check_tf_version():
         EXPECTED_VERSION = "2.6.5"
         current_version = tf.__version__
         if current_version != EXPECTED_VERSION:

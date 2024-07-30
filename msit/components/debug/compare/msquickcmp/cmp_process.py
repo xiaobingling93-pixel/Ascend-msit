@@ -239,7 +239,7 @@ def run(args:CmpArgsAdapter, input_shape, original_out_path, use_cli: bool):
     expect_net_output_node = npu_dump.get_expect_output_name()
 
     # generate dump data by golden model
-    golden_dump_data_path = golden_dump.generate_dump_data(npu_dump_npy_path, npu_dump.om_parser)
+    golden_dump_data_path = golden_dump.generate_dump_data(output_json_path, npu_dump_npy_path, npu_dump.om_parser)
     golden_net_output_info = golden_dump.get_net_output_info()
 
     # if it's dynamic batch scenario, golden data files should be renamed

@@ -54,10 +54,6 @@ def check_save_model_path_legality(directory):
     if not os.path.isdir(variables_dir):
         return False
 
-    assets_dir = os.path.join(directory, "assets")
-    if not os.path.isdir(assets_dir):
-        return False
-
     return True
 
 
