@@ -31,10 +31,17 @@ class CaseManager:
         self.cases = []
 
     @staticmethod
-    def excute_case(case_queue, result_queue, log_level):
+    def excute_case(case_queue, result_queue, log_level, custom_algorithms):
         runner = unittest.TextTestRunner(verbosity=2)
         testloader = unittest.TestLoader()
         set_log_level(log_level)
+
+        # Adding custom comparing algorithms
+        if custom_algorithms:
+            from msit_llm.compare.cmp_algorithm import register_custom_compare_algorithm
+
+            for custom_compare_algorithm in custom_algorithms:
+                register_custom_compare_algorithm(custom_compare_algorithm)
         
         while not case_queue.empty():
             try:
@@ -65,7 +72,7 @@ class CaseManager:
                 #该算子用例未添加
                 return False
 
-    def multi_process(self, num_processes=4, log_level="info"):
+    def multi_process(self, num_processes=4, log_level="info", custom_algorithms=False):
         # 多进程执行测试用例
         pool = multiprocessing.get_context('spawn')
         manager = multiprocessing.Manager()
@@ -79,7 +86,8 @@ class CaseManager:
         # 创建多个进程执行测试用例
         processes = []
         for _ in range(num_processes):
-            process = pool.Process(target=CaseManager.excute_case, args=(case_queue, result_queue, log_level))
+            process = pool.Process(target=CaseManager.excute_case, 
+                                   args=(case_queue, result_queue, log_level, custom_algorithms))
             processes.append(process)
             process.start()
 
@@ -116,13 +124,16 @@ class CaseManager:
             logger_text = f"\nOpcheck results saved to: {self.output_path}"
             logger.info(logger_text)
 
-    def excute_cases(self, num_processes=1, log_level="info"):
+    def excute_cases(self, num_processes=1, log_level="info", custom_algorithms=False):
         if num_processes == 1 or self.rerun:
             self.single_process()
         else:
-            self.multi_process(num_processes, log_level)
+            self.multi_process(num_processes, log_level, custom_algorithms)
 
     def write_op_result_to_csv(self, results):
+        if len(results) == 0:
+            return
+
         op_infos = []
         for op_result in results:
             op_info = {
@@ -153,10 +164,13 @@ class CaseManager:
             columns.append('cosine_similarity')
         if NAMEDTUPLE_PRECISION_METRIC.kl in self.precision_metric:
             columns.append('kl_divergence')
+        columns.extend(list(CUSTOM_ALG_MAP.keys()))
         columns.append("fail_reason")
         op_infos = op_infos.sort_values(by=['op_id', 'out_tensor_id'])
         if not os.path.exists(self.output_path):
             op_infos.to_excel(self.output_path, sheet_name='opcheck_result', index=False, columns=columns)
+            logger_text = f"Opcheck results saved to: {self.output_path}"
+            logger.info(logger_text)
         else:
             with pd.ExcelWriter(self.output_path, engine='openpyxl', mode='a') as writer:
                 op_infos.to_excel(writer, sheet_name='addition_failed_cases', index=False, columns=columns)

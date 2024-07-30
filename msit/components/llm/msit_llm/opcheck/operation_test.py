@@ -169,7 +169,7 @@ class OperationTest(unittest.TestCase):
                 out_tensors.append(self.in_tensors[index])
         else:
             out_tensors = operation.execute(self.in_tensors)
-        return out_tensors
+        return [tensor.cpu() for tensor in out_tensors]
 
     def excute_common(self, execute_type):
         logger_text = f"———————— {self.op_id} {self.op_name} test start ————————"

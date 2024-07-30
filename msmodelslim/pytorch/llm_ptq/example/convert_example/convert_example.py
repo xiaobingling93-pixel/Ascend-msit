@@ -56,7 +56,7 @@ class MSModelSlimWeightProcessor:
         for key in self.modelslim_weight_dict.keys():
             self.modelslim_description_json[key] = 'FLOAT'
     
-    # 处理示量化权重中Linear层的权重量化参数，对应msmodelslim支持的量化类型w8a16和w4a16
+    # 处理示量化权重中Linear层的权重量化参数，对应msmodelslim支持的量化类型w8a16
     def weight_process(self):
         # 获取示例量化权重中Linear层的名称，请根据实际修改
         linear_list = []

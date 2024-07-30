@@ -55,6 +55,7 @@ class OpChecker:
         self.atb_rerun = False
         self.jobs = 1
         self.log_level = "info"
+        self.custom_algorithms = False
 
     @staticmethod
     def third_party_init():
@@ -173,6 +174,7 @@ class OpChecker:
         self.precision_mode = args.precision_mode
         self.jobs = args.jobs
         self.log_level = args.log_level
+        self.custom_algorithms = args.custom_algorithms
 
         # 指定需要使用的npu设备
         try:
@@ -226,7 +228,7 @@ class OpChecker:
                 case_info[result_info] = 'addition failed'
 
         # 3.执行测试用例并提供专家建议
-        case_manager.excute_cases(self.jobs, self.log_level)
+        case_manager.excute_cases(self.jobs, self.log_level, self.custom_algorithms)
 
         # 4.写入未添加成功的算子
         addition_failed_cases = []
@@ -240,7 +242,7 @@ class OpChecker:
         # 5.计算总执行时间
         end_time = time.time()
         total_time = round(end_time - start_time, 2)
-        logger_text = f"Total time: {total_time} seconds"
+        logger_text = f"Total cases: {len(self.cases_info)}; Total time: {total_time} seconds"
         logger.info(logger_text)
 
     def parse_op_id_name(self, dirpath):
@@ -341,8 +343,8 @@ class OpChecker:
 
         if any(dirname in ['after', 'before'] for dirname in dirnames):
             op_name = os.path.basename(cur_path).split('_')[-1]
-            if op_name in OP_NAME_DICT.keys():
-                self.add_op_info_to_cases_info(os.path.join(cur_path, dirname))
+            if op_name in OP_NAME_DICT:
+                self.add_op_info_to_cases_info(cur_path)
         # 遍历下一级文件夹
         for dirname in dirnames:
             if dirname not in ['after', 'before']:
