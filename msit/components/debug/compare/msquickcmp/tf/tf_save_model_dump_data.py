@@ -37,7 +37,6 @@ class TfSaveModelDumpData(DumpData):
         output_path = os.path.realpath(arguments.out_path)
         self.input = os.path.join(output_path, "input")
         self.dump_data_tf = os.path.join(output_path, "dump_data", "tf")
-        self.model_name = None
         self.inputs_data = []
         self.model_path = arguments.model_path
         self.input_shape = arguments.input_shape.split(":")[-1]
@@ -56,7 +55,6 @@ class TfSaveModelDumpData(DumpData):
             str_shape_list = self.input_shape.split(",")
             int_shape_list = [int(num) for num in str_shape_list]
             self.inputs_data.append(bin_data.reshape(int_shape_list))
-        self.model_name = os.path.basename(os.path.abspath(os.path.join(npu_dump_path, "..", "..")))
 
     def get_net_output_info(self):
         """
