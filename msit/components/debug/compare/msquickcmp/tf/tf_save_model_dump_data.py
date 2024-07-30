@@ -44,7 +44,7 @@ class TfSaveModelDumpData(DumpData):
         self._check_tf_version()
         self._create_dir()
 
-    def generate_inputs_data(self, npu_dump_path, om_parser=None):
+    def generate_inputs_data(self, npu_dump_path=None, om_parser=None):
         """
         Generate tf2.6 save_model inputs data
         :return tf2.6 save_model inputs data directory
