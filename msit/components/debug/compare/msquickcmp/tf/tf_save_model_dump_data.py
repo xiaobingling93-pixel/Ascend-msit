@@ -75,7 +75,7 @@ class TfSaveModelDumpData(DumpData):
         operations = sess.graph.get_operations()
         for op_name in ops_name:
             if self._is_exists(op_name, operations):
-                output_tensors.append(sess.graph.get_tensor_by_name(op_name + ':0'))
+                output_tensors.extend(sess.graph.get_operation_by_name(op_name).outputs)
 
         out = sess.run(output_tensors, feed_dict)
         self._save_dump_data(out, output_tensors)
