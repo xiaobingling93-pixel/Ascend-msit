@@ -94,19 +94,18 @@ class TfSaveModelDumpData(DumpData):
             np.save(npy_file_path, data)
 
     def _parse_ops_name_from_om_json(self, output_json_path):
-        ops_name = []
         om_json = self._parse_json_file(output_json_path)
-        graph_list = om_json.get('graph')
-        for graph in graph_list:
-            ops = graph.get('op')
-            for op in ops:
-                attrs = op.get('attr')
-                for attr in attrs:
-                    if attr.get('key') == '_datadump_original_op_names':
-                        op_names_list = attr.get('value').get('list')
-                        if 's' in op_names_list:
-                            s = op_names_list.get('s')
-                            ops_name.extend(s)
+        graph_list = om_json.get('graph', [])
+
+        ops_name = [
+            s for graph in graph_list
+            for op in graph.get('op', [])
+            if op.get('attr', {})
+            for attr in op['attr'].values()
+            if attr.get('key') == '_datadump_original_op_names'
+            if attr.get('value') and 's' in attr['value']
+            for s in attr['value'].get('s', [])
+        ]
 
         return ops_name
 
