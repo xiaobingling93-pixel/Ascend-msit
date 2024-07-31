@@ -74,7 +74,7 @@ class TfSaveModelDumpData(DumpData):
         tag_set = {tf.compat.v1.saved_model.tag_constants.SERVING}
         _ = tf.compat.v1.saved_model.load(sess, tag_set, self.model_path)
         if not self.inputs_data:
-            raise ValueError("input_data is empty")
+            raise ValueError("inputs_data is empty")
         feed_dict = {
             sess.graph.get_tensor_by_name(input_name + ":0"): input_data
             for input_name, input_data in self.inputs_data.items()
