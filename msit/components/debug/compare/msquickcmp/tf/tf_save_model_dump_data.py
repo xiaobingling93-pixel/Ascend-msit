@@ -41,9 +41,9 @@ class TfSaveModelDumpData(DumpData):
         output_path = os.path.realpath(arguments.out_path)
         self.input = os.path.join(output_path, "input")
         self.dump_data_tf = os.path.join(output_path, "dump_data", "tf")
-        self.inputs_data = []
+        self.inputs_data = {}
         self.model_path = arguments.model_path
-        self.input_shape = arguments.input_shape.split(":")[-1]
+        self.input_shape = self._split_input_shape(arguments.input_shape)
         self.net_output = {}
         self._create_dir()
 
@@ -54,10 +54,9 @@ class TfSaveModelDumpData(DumpData):
         """
         input_bin_data = [np.fromfile(os.path.join(self.input, input_bin_file), dtype=np.float32)
                           for input_bin_file in os.listdir(self.input)]
-        for bin_data in input_bin_data:
-            str_shape_list = self.input_shape.split(",")
-            int_shape_list = [int(num) for num in str_shape_list]
-            self.inputs_data.append(bin_data.reshape(int_shape_list))
+        for index, bin_data in enumerate(input_bin_data):
+            bin_data = bin_data.reshape(self.input_shape[index][1])
+            self.inputs_data[self.input_shape[index][0]] = bin_data
 
     def get_net_output_info(self):
         """
@@ -72,10 +71,14 @@ class TfSaveModelDumpData(DumpData):
         """
         ops_name = self._parse_ops_name_from_om_json(output_json_path)
         sess = tf.compat.v1.keras.backend.get_session()
-        _ = tf.compat.v1.saved_model.load(sess, {'serve'}, self.model_path)
+        tag_set = {tf.compat.v1.saved_model.tag_constants.SERVING}
+        _ = tf.compat.v1.saved_model.load(sess, tag_set, self.model_path)
         if not self.inputs_data:
             raise ValueError("input_data is empty")
-        feed_dict = {sess.graph.get_tensor_by_name('input_1:0'): self.inputs_data[0]}
+        feed_dict = {
+            sess.graph.get_tensor_by_name(input_name + ":0"): input_data
+            for input_name, input_data in self.inputs_data.items()
+        }
         output_tensors = []
         operations = sess.graph.get_operations()
         for op_name in ops_name:
@@ -136,3 +139,13 @@ class TfSaveModelDumpData(DumpData):
                 f"but found version {current_version}. Please install the correct "
                 "version of TensorFlow."
             )
+
+    @staticmethod
+    def _split_input_shape(input_shapes):
+        input_list = input_shapes.split(";")
+        input_shape_list = [
+            (name, [int(num) for num in shape_data_str_list])
+            for name, shape_data_str in (shape.split(":") for shape in input_list)
+            for shape_data_str_list in [shape_data_str.split(",")]
+        ]
+        return input_shape_list
