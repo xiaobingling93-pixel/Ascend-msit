@@ -148,4 +148,5 @@ class TfSaveModelDumpData(DumpData):
             for name, shape_data_str in (shape.split(":") for shape in input_list)
             for shape_data_str_list in [shape_data_str.split(",")]
         ]
+
         return input_shape_list
