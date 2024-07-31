@@ -119,18 +119,18 @@ class TfSaveModelDumpData(DumpData):
         try:
             with open(output_json_path, 'r', encoding='utf-8') as file:
                 return json.load(file)
-        except FileNotFoundError:
-            raise RuntimeError(f"File {output_json_path} not found, Please check whether the json file path is valid")
+        except FileNotFoundError as e:
+            raise RuntimeError(f"File {output_json_path} not found, Please check whether the json file path is valid. {e}")
         except json.JSONDecodeError as e:
             raise RuntimeError(f"File '{output_json_path}' is not a valid JSON format. {e}")
 
     @staticmethod
     def _check_tf_version():
-        EXPECTED_VERSION = "2.6.5"
+        expected_version = "2.6.5"
         current_version = tf.__version__
-        if current_version != EXPECTED_VERSION:
+        if current_version != expected_version:
             raise ImportError(
-                f"TensorFlow version mismatch: expected version {EXPECTED_VERSION}, "
+                f"TensorFlow version mismatch: expected version {expected_version}, "
                 f"but found version {current_version}. Please install the correct "
                 "version of TensorFlow."
             )
