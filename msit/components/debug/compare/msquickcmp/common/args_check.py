@@ -24,7 +24,7 @@ MAX_SIZE_LIMITE_FUSION_FILE = 1 * 1024 * 1024 * 1024  # 1GB
 def check_model_path_legality(value):
     path_value = value
     if os.path.isdir(path_value):
-        if not check_save_model_path_legality(path_value):
+        if not is_saved_model_valid(path_value):
             raise argparse.ArgumentTypeError(f"model path:{path_value} is not qualified saved_model file. "
                                              f"Please check.")
         return path_value
@@ -42,7 +42,7 @@ def check_model_path_legality(value):
         return path_value
 
 
-def check_save_model_path_legality(directory):
+def is_saved_model_valid(directory):
     if not os.path.isdir(directory):
         return False
 
@@ -51,10 +51,7 @@ def check_save_model_path_legality(directory):
         return False
 
     variables_dir = os.path.join(directory, "variables")
-    if not os.path.isdir(variables_dir):
-        return False
-
-    return True
+    return os.path.isdir(variables_dir)
 
 
 def check_om_path_legality(value):

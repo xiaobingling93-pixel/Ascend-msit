@@ -13,10 +13,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """
 Function:
-This class is used to generate GUP dump data of the tf2.6 save_model.
+This class is used to generate GPU dump data of the tf2.6 save_model.
 """
+
 import json
 import os
 import time
@@ -34,6 +36,8 @@ class TfSaveModelDumpData(DumpData):
 
     def __init__(self, arguments):
         super().__init__()
+        self.expected_version = "2.6.5"
+        self._check_tf_version(self.expected_version)
         output_path = os.path.realpath(arguments.out_path)
         self.input = os.path.join(output_path, "input")
         self.dump_data_tf = os.path.join(output_path, "dump_data", "tf")
@@ -41,7 +45,6 @@ class TfSaveModelDumpData(DumpData):
         self.model_path = arguments.model_path
         self.input_shape = arguments.input_shape.split(":")[-1]
         self.net_output = {}
-        self._check_tf_version()
         self._create_dir()
 
     def generate_inputs_data(self, npu_dump_path=None, om_parser=None):
@@ -76,7 +79,7 @@ class TfSaveModelDumpData(DumpData):
         output_tensors = []
         operations = sess.graph.get_operations()
         for op_name in ops_name:
-            if self._is_exists(op_name, operations):
+            if self._is_op_exists(op_name, operations):
                 output_tensors.extend(sess.graph.get_operation_by_name(op_name).outputs)
 
         out = sess.run(output_tensors, feed_dict)
@@ -86,7 +89,7 @@ class TfSaveModelDumpData(DumpData):
         return self.dump_data_tf
 
     @staticmethod
-    def _is_exists(operation_name_to_check, operations):
+    def _is_op_exists(operation_name_to_check, operations):
         return any(op.name == operation_name_to_check for op in operations)
 
     def _save_dump_data(self, out, output_tensors):
@@ -96,21 +99,18 @@ class TfSaveModelDumpData(DumpData):
             np.save(npy_file_path, data)
 
     def _parse_ops_name_from_om_json(self, output_json_path):
-        ops_name = []
-        om_json = self._parse_json_file(output_json_path)
-        graph_list = om_json.get('graph')
+        op_names = []
+        om = self._parse_json_file(output_json_path)
+        graph_list = om.get('graph')
         for graph in graph_list:
-            ops = graph.get('op')
-            for op in ops:
-                if op.get('output_desc') is not None:
-                    output_desc = op.get('output_desc')
-                    for od in output_desc:
-                        attrs = od.get('attr')
-                        for attr in attrs:
-                            if attr.get('key') == "_datadump_origin_name":
-                                ops_name.append(attr.get('value').get('s'))
+            ops = graph.get('op', [])
+            output_desc_list = [op.get('output_desc', []) for op in ops]
+            attrs_list = [od.get('attr', []) for od in sum(output_desc_list, [])]
+            for attr in sum(attrs_list, []):
+                if attr.get('key') == "_datadump_origin_name":
+                    op_names.append(attr.get('value').get('s'))
 
-        return ops_name
+        return op_names
 
     def _create_dir(self):
         utils.create_directory(self.input)
@@ -128,8 +128,7 @@ class TfSaveModelDumpData(DumpData):
             raise RuntimeError(f"File '{output_json_path}' is not a valid JSON format. {e}") from e
 
     @staticmethod
-    def _check_tf_version():
-        expected_version = "2.6.5"
+    def _check_tf_version(expected_version):
         current_version = tf.__version__
         if current_version != expected_version:
             raise ImportError(

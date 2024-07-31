@@ -37,7 +37,7 @@ from auto_optimizer import OnnxGraph
 from msquickcmp.atc import atc_utils
 from auto_optimizer.graph_refactor import Node
 from msquickcmp.common import utils
-from msquickcmp.common import args_check
+from msquickcmp.common.args_check import is_saved_model_valid
 from msquickcmp.common.utils import AccuracyCompareException, get_shape_to_directory_name, safe_delete_path_if_exists
 from msquickcmp.common.convert import convert_bin_dump_data_to_npy
 from msquickcmp.common.convert import convert_npy_to_bin
@@ -58,7 +58,7 @@ MAX_MEMORY_USE = 6 * 1024 * 1024 * 1024
 
 
 def _generate_golden_data_model(args, npu_dump_npy_path):
-    if args_check.check_save_model_path_legality(args.model_path):
+    if is_saved_model_valid(args.model_path):
         from msquickcmp.tf.tf_save_model_dump_data import TfSaveModelDumpData
 
         return TfSaveModelDumpData(args)
@@ -302,7 +302,7 @@ def fusion_close_model_convert(args:CmpArgsAdapter):
 
 
 def check_and_run(args: CmpArgsAdapter, use_cli: bool):
-    if args_check.check_save_model_path_legality(args.model_path):
+    if is_saved_model_valid(args.model_path):
         utils.check_file_or_directory_path(args.model_path, True)
     else:
         utils.check_file_or_directory_path(args.model_path)
