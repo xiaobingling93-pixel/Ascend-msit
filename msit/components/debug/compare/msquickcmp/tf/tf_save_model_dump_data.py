@@ -123,7 +123,7 @@ class TfSaveModelDumpData(DumpData):
                 return json.load(file)
         except FileNotFoundError as e:
             raise FileNotFoundError(f"File '{output_json_path}' not found, Please check whether the json file path is "
-                                    f"valid. {e}")
+                                    f"valid. {e}") from e
         except json.JSONDecodeError as e:
             raise RuntimeError(f"File '{output_json_path}' is not a valid JSON format. {e}") from e
 
