@@ -70,6 +70,8 @@ class TfSaveModelDumpData(DumpData):
         ops_name = self._parse_ops_name_from_om_json(output_json_path)
         sess = tf.compat.v1.keras.backend.get_session()
         _ = tf.compat.v1.saved_model.load(sess, {'serve'}, self.model_path)
+        if not self.inputs_data:
+            raise ValueError("input_data is empty")
         feed_dict = {sess.graph.get_tensor_by_name('input_1:0'): self.inputs_data[0]}
         output_tensors = []
         operations = sess.graph.get_operations()
