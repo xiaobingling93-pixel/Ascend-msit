@@ -122,10 +122,10 @@ class TfSaveModelDumpData(DumpData):
             with open(output_json_path, 'r', encoding='utf-8') as file:
                 return json.load(file)
         except FileNotFoundError as e:
-            raise FileNotFoundError(f"File {output_json_path} not found, Please check whether the json file path is "
+            raise FileNotFoundError(f"File '{output_json_path}' not found, Please check whether the json file path is "
                                     f"valid. {e}")
         except json.JSONDecodeError as e:
-            raise json.JSONDecodeError(f"File '{output_json_path}' is not a valid JSON format. {e}")
+            raise RuntimeError(f"File '{output_json_path}' is not a valid JSON format. {e}") from e
 
     @staticmethod
     def _check_tf_version():
