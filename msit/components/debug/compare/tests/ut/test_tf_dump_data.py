@@ -19,7 +19,7 @@ from msquickcmp.tf.tf_save_model_dump_data import TfSaveModelDumpData
 
 @pytest.fixture(scope='module', autouse=True)
 def test_parse_ops_name_from_om_json():
-    om_json = "msit/components/debug/compare/tests/ut/test_resource/om/model.json"
+    om_json = "./om/model.json"
     expect_ops_name = ['boxes_all', 'scores_all', 'Slice_1218', 'Slice_1218', 'Gather_1221']
     ops_name = TfSaveModelDumpData.parse_ops_name_from_om_json(om_json)
     assert expect_ops_name == ops_name
