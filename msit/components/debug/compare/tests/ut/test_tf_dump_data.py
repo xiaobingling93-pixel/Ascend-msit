@@ -27,9 +27,9 @@ def test_parse_ops_name_from_om_json():
 
 @pytest.fixture(scope='module', autouse=True)
 def test_split_input_shape():
-    input_shapes = "input_1:16,32,32,3;input_2:16,16,32"
+    input_shapes = "input_1:16,32,32,3;input_2:1,16,16,32"
     input_shape_list = TfSaveModelDumpData._split_input_shape(input_shapes)
-    expect_input_shape_list = [('input_1', [16, 32, 32, 3]), ('input_2', [16, 16, 32])]
+    expect_input_shape_list = [('input_1', [16, 32, 32, 3]), ('input_2', [1, 16, 16, 32])]
     assert expect_input_shape_list == input_shape_list
 
 
