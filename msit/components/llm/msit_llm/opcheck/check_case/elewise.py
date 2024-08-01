@@ -231,45 +231,45 @@ class OpcheckElewiseAddOperation(operation_test.OperationTest):
         ]
         self.validate_int_range(elewise_type, elewise_type_support_list, "elewiseType")
 
-        if elewise_type == ElewiseType.ELEWISE_CAST:
+        if elewise_type == ElewiseType.ELEWISE_CAST.value:
             golden = self.elewise_cast(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_MULS:
+        elif elewise_type == ElewiseType.ELEWISE_MULS.value:
             golden = self.elewise_muls(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_COS:
+        elif elewise_type == ElewiseType.ELEWISE_COS.value:
             golden = self.elewise_cos(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_SIN:
+        elif elewise_type == ElewiseType.ELEWISE_SIN.value:
             golden = self.elewise_sin(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_NEG:
+        elif elewise_type == ElewiseType.ELEWISE_NEG.value:
             golden = self.elewise_neg(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_QUANT:
+        elif elewise_type == ElewiseType.ELEWISE_QUANT.value:
             golden = self.elewise_quant(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_LOGICAL_NOT:
+        elif elewise_type == ElewiseType.ELEWISE_LOGICAL_NOT.value:
             golden = self.elewise_logical_not(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_ADD:
+        elif elewise_type == ElewiseType.ELEWISE_ADD.value:
             golden = self.elewise_add(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_MUL:
+        elif elewise_type == ElewiseType.ELEWISE_MUL.value:
             golden = self.elewise_mul(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_REALDIV:
+        elif elewise_type == ElewiseType.ELEWISE_REALDIV.value:
             golden = self.elewise_realdiv(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_LOGICAL_AND:
+        elif elewise_type == ElewiseType.ELEWISE_LOGICAL_AND.value:
             golden = self.elewise_logical_and(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_LOGICAL_OR:
+        elif elewise_type == ElewiseType.ELEWISE_LOGICAL_OR.value:
             golden = self.elewise_logical_or(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_LESS:
+        elif elewise_type == ElewiseType.ELEWISE_LESS.value:
             golden = self.elewise_less(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_GREATER:
+        elif elewise_type == ElewiseType.ELEWISE_GREATER.value:
             golden = self.elewise_greater(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_SUB:
+        elif elewise_type == ElewiseType.ELEWISE_SUB.value:
             golden = self.elewise_sub(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_EQUAL:
+        elif elewise_type == ElewiseType.ELEWISE_EQUAL.value:
             golden = self.elewise_equal(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_QUANT_PER_CHANNEL:
+        elif elewise_type == ElewiseType.ELEWISE_QUANT_PER_CHANNEL.value:
             golden = self.elewise_quant_per_channel(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_DEQUANT_PER_CHANNEL:
+        elif elewise_type == ElewiseType.ELEWISE_DEQUANT_PER_CHANNEL.value:
             golden = self.elewise_dequant_per_channel(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_DYNAMIC_QUANT:
+        elif elewise_type == ElewiseType.ELEWISE_DYNAMIC_QUANT.value:
             golden = self.elewise_dynamic_quant(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_TANH:
+        elif elewise_type == ElewiseType.ELEWISE_TANH.value:
             golden = self.elewise_tanh(in_tensors)
 
         return golden
