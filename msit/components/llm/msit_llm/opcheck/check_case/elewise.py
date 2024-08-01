@@ -215,7 +215,7 @@ class OpcheckElewiseAddOperation(operation_test.OperationTest):
             ElewiseType.ELEWISE_NEG.value,
             ElewiseType.ELEWISE_QUANT.value,
             ElewiseType.ELEWISE_LOGICAL_NOT.value,
-            ElewiseType.ELEWISE_LOGICAL_AND.value,
+            ElewiseType.ELEWISE_ADD.value,
             ElewiseType.ELEWISE_MUL.value,
             ElewiseType.ELEWISE_REALDIV.value,
             ElewiseType.ELEWISE_LOGICAL_AND.value,
