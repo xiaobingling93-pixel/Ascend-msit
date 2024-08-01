@@ -21,14 +21,14 @@ from msquickcmp.tf.tf_save_model_dump_data import TfSaveModelDumpData
 def test_parse_ops_name_from_om_json():
     om_json = "msit/components/debug/compare/tests/ut/test_resource/om/model.json"
     expect_ops_name = ['boxes_all', 'scores_all', 'Slice_1218', 'Slice_1218', 'Gather_1221']
-    ops_name = TfSaveModelDumpData._parse_ops_name_from_om_json(om_json)
+    ops_name = TfSaveModelDumpData.parse_ops_name_from_om_json(om_json)
     assert expect_ops_name == ops_name
 
 
 @pytest.fixture(scope='module', autouse=True)
 def test_split_input_shape():
     input_shapes = "input_1:16,32,32,3;input_2:1,16,16,32"
-    input_shape_list = TfSaveModelDumpData._split_input_shape(input_shapes)
+    input_shape_list = TfSaveModelDumpData.split_input_shape(input_shapes)
     expect_input_shape_list = [('input_1', [16, 32, 32, 3]), ('input_2', [1, 16, 16, 32])]
     assert expect_input_shape_list == input_shape_list
 

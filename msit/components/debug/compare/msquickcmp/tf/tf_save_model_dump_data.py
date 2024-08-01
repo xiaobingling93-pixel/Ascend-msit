@@ -43,7 +43,7 @@ class TfSaveModelDumpData(DumpData):
         self.dump_data_tf = os.path.join(output_path, "dump_data", "tf")
         self.inputs_data = {}
         self.model_path = arguments.model_path
-        self.input_shape = self._split_input_shape(arguments.input_shape)
+        self.input_shape = self.split_input_shape(arguments.input_shape)
         self.net_output = {}
         self._create_dir()
 
@@ -70,7 +70,7 @@ class TfSaveModelDumpData(DumpData):
         Generate tf2.6 save_model dump data
         :return tf2.6 save_model dump data directory
         """
-        ops_name = self._parse_ops_name_from_om_json(output_json_path)
+        ops_name = self.parse_ops_name_from_om_json(output_json_path)
         sess = tf.compat.v1.keras.backend.get_session()
         tag_set = {tf.compat.v1.saved_model.tag_constants.SERVING}
         _ = tf.compat.v1.saved_model.load(sess, tag_set, self.model_path)
@@ -102,7 +102,7 @@ class TfSaveModelDumpData(DumpData):
             npy_file_path = os.path.join(self.dump_data_tf, tensor_name)
             np.save(npy_file_path, data)
 
-    def _parse_ops_name_from_om_json(self, output_json_path):
+    def parse_ops_name_from_om_json(self, output_json_path):
         op_names = []
         om = self._parse_json_file(output_json_path)
         graph_list = om.get('graph')
@@ -142,7 +142,7 @@ class TfSaveModelDumpData(DumpData):
             )
 
     @staticmethod
-    def _split_input_shape(input_shapes):
+    def split_input_shape(input_shapes):
         input_list = input_shapes.split(";")
         input_shape_list = [
             (name, [int(num) for num in shape_data_str_list])
