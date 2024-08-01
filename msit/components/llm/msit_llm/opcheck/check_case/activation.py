@@ -117,13 +117,13 @@ class OpcheckActivationOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
         activation_type = self.op_param.get("activationType", ActivationType.ACTIVATION_UNDEFINED)
         activation_type_support_list = [
-            ActivationType.ACTIVATION_RELU,
-            ActivationType.ACTIVATION_GELU,
-            ActivationType.ACTIVATION_FAST_GELU,
-            ActivationType.ACTIVATION_SWISH,
-            ActivationType.ACTIVATION_LOG,
-            ActivationType.ACTIVATION_SWIGLU_FORWARD,
-            ActivationType.ACTIVATION_SWIGLU_BACKWARD
+            ActivationType.ACTIVATION_RELU.value,
+            ActivationType.ACTIVATION_GELU.value,
+            ActivationType.ACTIVATION_FAST_GELU.value,
+            ActivationType.ACTIVATION_SWISH.value,
+            ActivationType.ACTIVATION_LOG.value,
+            ActivationType.ACTIVATION_SWIGLU_FORWARD.value,
+            ActivationType.ACTIVATION_SWIGLU_BACKWARD.value
         ]
         self.validate_int_range(activation_type, activation_type_support_list, "activationType")
         scale = self.op_param.get("scale", 1.0)
@@ -134,7 +134,7 @@ class OpcheckActivationOperation(operation_test.OperationTest):
             golden_result = OpcheckActivationOperation.golden_func[activation_type](in_tensors, dim)
         elif activation_type == ActivationType.ACTIVATION_GELU:
             gelu_mode = self.op_param.get("geluMode", GeLUMode.TANH_MODE)
-            self.validate_int_range(gelu_mode, [GeLUMode.TANH_MODE, GeLUMode.NONE_MODE], "geluMode")
+            self.validate_int_range(gelu_mode, [GeLUMode.TANH_MODE.value, GeLUMode.NONE_MODE.value], "geluMode")
             golden_result = OpcheckActivationOperation.golden_func[activation_type](in_tensors[0], gelu_mode)
         else:
             golden_result = OpcheckActivationOperation.golden_func[activation_type](in_tensors[0], scale)

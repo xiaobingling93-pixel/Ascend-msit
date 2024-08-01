@@ -50,10 +50,10 @@ class OpcheckElewiseAddOperation(operation_test.OperationTest):
         out_tensor_type = self.op_param.get('outTensorType', outTensorType.ACL_DT_UNDEFINED)
         # ELEWISE_CAST输入输出仅支持float/float16/int32/int64数据类型
         out_tensor_type_support_list = [
-            outTensorType.ACL_FLOAT,
-            outTensorType.ACL_FLOAT16,
-            outTensorType.ACL_INT32,
-            outTensorType.ACL_INT64
+            outTensorType.ACL_FLOAT.value,
+            outTensorType.ACL_FLOAT16.value,
+            outTensorType.ACL_INT32.value,
+            outTensorType.ACL_INT64.value
         ]
         self.validate_int_range(out_tensor_type, out_tensor_type_support_list, "outTensorType")       
         golden_result = in_tensors[0]
@@ -208,26 +208,26 @@ class OpcheckElewiseAddOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
         elewise_type = self.op_param.get("elewiseType", ElewiseType.ELEWISE_UNDEFINED)
         elewise_type_support_list = [
-            ElewiseType.ELEWISE_CAST,
-            ElewiseType.ELEWISE_MULS,
-            ElewiseType.ELEWISE_COS,
-            ElewiseType.ELEWISE_SIN,
-            ElewiseType.ELEWISE_NEG,
-            ElewiseType.ELEWISE_QUANT,
-            ElewiseType.ELEWISE_LOGICAL_NOT,
-            ElewiseType.ELEWISE_LOGICAL_AND,
-            ElewiseType.ELEWISE_MUL,
-            ElewiseType.ELEWISE_REALDIV,
-            ElewiseType.ELEWISE_LOGICAL_AND,
-            ElewiseType.ELEWISE_LOGICAL_OR,
-            ElewiseType.ELEWISE_LESS,
-            ElewiseType.ELEWISE_GREATER,
-            ElewiseType.ELEWISE_SUB,
-            ElewiseType.ELEWISE_EQUAL,
-            ElewiseType.ELEWISE_QUANT_PER_CHANNEL,
-            ElewiseType.ELEWISE_DEQUANT_PER_CHANNEL,
-            ElewiseType.ELEWISE_DYNAMIC_QUANT,
-            ElewiseType.ELEWISE_TANH
+            ElewiseType.ELEWISE_CAST.value,
+            ElewiseType.ELEWISE_MULS.value,
+            ElewiseType.ELEWISE_COS.value,
+            ElewiseType.ELEWISE_SIN.value,
+            ElewiseType.ELEWISE_NEG.value,
+            ElewiseType.ELEWISE_QUANT.value,
+            ElewiseType.ELEWISE_LOGICAL_NOT.value,
+            ElewiseType.ELEWISE_LOGICAL_AND.value,
+            ElewiseType.ELEWISE_MUL.value,
+            ElewiseType.ELEWISE_REALDIV.value,
+            ElewiseType.ELEWISE_LOGICAL_AND.value,
+            ElewiseType.ELEWISE_LOGICAL_OR.value,
+            ElewiseType.ELEWISE_LESS.value,
+            ElewiseType.ELEWISE_GREATER.value,
+            ElewiseType.ELEWISE_SUB.value,
+            ElewiseType.ELEWISE_EQUAL.value,
+            ElewiseType.ELEWISE_QUANT_PER_CHANNEL.value,
+            ElewiseType.ELEWISE_DEQUANT_PER_CHANNEL.value,
+            ElewiseType.ELEWISE_DYNAMIC_QUANT.value,
+            ElewiseType.ELEWISE_TANH.value
         ]
         self.validate_int_range(elewise_type, elewise_type_support_list, "elewiseType")
 

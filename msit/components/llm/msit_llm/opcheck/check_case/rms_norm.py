@@ -56,9 +56,9 @@ class OpcheckRmsNormOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
         layer_type = self.op_param.get('layerType', RmsNormType.RMS_NORM_UNDEFINED)
         layer_type_support_list = [
-            RmsNormType.RMS_NORM_NORM,
-            RmsNormType.RMS_NORM_PRE_NORM,
-            RmsNormType.RMS_NORM_POST_NORM,
+            RmsNormType.RMS_NORM_NORM.value,
+            RmsNormType.RMS_NORM_PRE_NORM.value,
+            RmsNormType.RMS_NORM_POST_NORM.value,
         ]
         self.validate_int_range(layer_type, layer_type_support_list, "layerType")
 
@@ -70,7 +70,7 @@ class OpcheckRmsNormOperation(operation_test.OperationTest):
             cur_param = self.op_param.get('postNormParam', None)
         
         quant_type = cur_param.get('quantType', QuantType.QUANT_UNDEFINED)
-        quant_type_support_list = [QuantType.QUANT_UNDEFINED, QuantType.QUANT_INT8]
+        quant_type_support_list = [QuantType.QUANT_UNDEFINED.value, QuantType.QUANT_INT8.value]
         self.validate_int_range(quant_type, quant_type_support_list, "quantType")
 
         eps = cur_param.get('epsilon', 1e-5)

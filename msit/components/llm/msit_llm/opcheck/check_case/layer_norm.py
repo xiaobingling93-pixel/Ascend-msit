@@ -52,9 +52,9 @@ class OpcheckLayerNormOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
         layer_type = self.op_param.get('layerType', LayerNormType.LAYER_NORM_UNDEFINED)
         layer_type_support_list = [
-            LayerNormType.LAYER_NORM_NROM,
-            LayerNormType.LAYER_NORM_PRENORM,
-            LayerNormType.LAYER_NORM_POSTNORM,
+            LayerNormType.LAYER_NORM_NROM.value,
+            LayerNormType.LAYER_NORM_PRENORM.value,
+            LayerNormType.LAYER_NORM_POSTNORM.value,
         ]
         self.validate_int_range(layer_type, layer_type_support_list, "layerType")        
         if layer_type == LayerNormType.LAYER_NORM_NROM:
