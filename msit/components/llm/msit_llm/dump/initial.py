@@ -71,7 +71,7 @@ def init_dump_task(args):
     else:
         os.environ.pop(ATB_SAVE_TENSOR_RUNNER, None)  # Ensure none is set
 
-    os.makedirs(get_ait_dump_path(), exist_ok=True)
+    get_ait_dump_path()
 
     if args.output:
         if args.output.endswith('/'):
