@@ -53,7 +53,7 @@ class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
             asdops_param['compressHead'] = False
         context_lens = in_tensors[4]
         asdops_param['max_context_len'] = max(context_lens)
-        if op_param['maskType'] != MaskType.value:
+        if op_param['maskType'] != MaskType.UNDEFINED.value:
             asdops_param['mask_dim'] = len(in_tensors[5].shape) # mask shape
             asdops_param['mask_data_type'] = in_tensors[5].dtype
             if op_param['maskType'] == MaskType.MASK_TYPE_NONE.value:
