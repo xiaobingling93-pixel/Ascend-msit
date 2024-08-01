@@ -47,6 +47,8 @@ class PrecisionTest:
             currently only npu is supported
         @param tokenizer_return_type_id:
             tokenizer return token type id
+        @param shot
+            shot to test precision
         """
         self.logger = logger
         self.logger.info("Ready to init precision tool.")

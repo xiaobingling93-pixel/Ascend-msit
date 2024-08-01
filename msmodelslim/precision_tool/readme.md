@@ -4,6 +4,11 @@
 ```bash
 export PYTHONPATH={work_dir}/msit/msmodelslim:$PYTHONPATH
 ```
+（可选）如果需要使用NPU多卡并行进行精度测试，需要关闭NPU虚拟内存，设置使用的卡：
+```bash
+export PYTORCH_NPU_ALLOC_CONF=expandable_segments:False #关闭NPU虚拟内存
+export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3 #指定使用的NPU卡
+```
 3. 编写测试脚本，示例：
 ```python
 from transformers import AutoModel, AutoTokenizer, AutoModelForCausalLM
@@ -23,7 +28,7 @@ if __name__ == '__main__':
 #### 实例创建接口
 ```python
 def __init__(self, model, tokenizer, dataset, batch_size, hardware_type,
-             tokenizer_return_type_id=False):
+             tokenizer_return_type_id=False, shot=5):
     """
     @param model:
         llm to run the test, should be an instance of transformers.PreTrainedModel
@@ -53,6 +58,7 @@ def test(self):
 
 ### 使用方法
 1. 下载数据集，并修改成如下的样式
+```
 |-- dataset
     |-- boolq
     |   `-- dev.jsonl
@@ -81,15 +87,16 @@ def test(self):
     |   `-- TruthfulQA.csv
     `-- humaneval
     `-- human-eval.jsonl
-请保持文件夹名称与结构一致
+```
+请保持文件夹名称与结构一致  
 数据集下载链接：
+```
 https://huggingface.co/datasets/ceval/ceval-exam
 https://huggingface.co/datasets/google/boolq
 https://huggingface.co/datasets/openai/openai_humaneval
 https://huggingface.co/datasets/cais/mmlu
 https://huggingface.co/datasets/truthfulqa/truthful_qa
-2. 将数据集放到与 precision_tool.py 同一个路径下，如图所示：
-![精度测试数据集目录示意图](../images/精度测试数据集目录示意图.png)
-3. 如果测试 human-eval，则需要安装 https://github.com/openai/human-eval
-注：
-以当前时间 2024/05/21 为标杆时间，需要修改 https://github.com/openai/human-eval/blob/master/human_eval/execution.py#L58
+```
+2. 将数据集放到与 precision_tool.py 同一个路径下，如图所示：  
+![精度测试数据集目录示意图](../images/精度测试数据集目录示意图.png)  
+3. 如果测试 human-eval，则需要安装 https://github.com/openai/human-eval 注：以当前时间 2024/05/21 为标杆时间，需要修改 https://github.com/openai/human-eval/blob/master/human_eval/execution.py#L58
