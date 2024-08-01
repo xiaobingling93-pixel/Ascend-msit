@@ -54,7 +54,7 @@ class DynamicQuantType(Enum):
 
 class OpcheckRmsNormOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
-        layer_type = self.op_param.get('layerType', RmsNormType.RMS_NORM_UNDEFINED)
+        layer_type = self.op_param.get('layerType', RmsNormType.RMS_NORM_UNDEFINED.value)
         layer_type_support_list = [
             RmsNormType.RMS_NORM_NORM.value,
             RmsNormType.RMS_NORM_PRE_NORM.value,
@@ -62,24 +62,24 @@ class OpcheckRmsNormOperation(operation_test.OperationTest):
         ]
         self.validate_int_range(layer_type, layer_type_support_list, "layerType")
 
-        if layer_type == RmsNormType.RMS_NORM_NORM:
+        if layer_type == RmsNormType.RMS_NORM_NORM.value:
             cur_param = self.op_param.get('normParam', None)
-        elif layer_type == RmsNormType.RMS_NORM_PRE_NORM:
+        elif layer_type == RmsNormType.RMS_NORM_PRE_NORM.value:
             cur_param = self.op_param.get('preNormParam', None)
-        elif layer_type == RmsNormType.RMS_NORM_POST_NORM:
+        elif layer_type == RmsNormType.RMS_NORM_POST_NORM.value:
             cur_param = self.op_param.get('postNormParam', None)
         
-        quant_type = cur_param.get('quantType', QuantType.QUANT_UNDEFINED)
+        quant_type = cur_param.get('quantType', QuantType.QUANT_UNDEFINED.value)
         quant_type_support_list = [QuantType.QUANT_UNDEFINED.value, QuantType.QUANT_INT8.value]
         self.validate_int_range(quant_type, quant_type_support_list, "quantType")
 
         eps = cur_param.get('epsilon', 1e-5)
         x = in_tensors[0]
         gamma = in_tensors[1].view(1, -1)
-        if layer_type == RmsNormType.RMS_NORM_PRE_NORM and quant_type == QuantType.QUANT_INT8:
+        if layer_type == RmsNormType.RMS_NORM_PRE_NORM.value and quant_type == QuantType.QUANT_INT8.value:
             x = x + in_tensors[1]
             gamma = in_tensors[2]
-        if layer_type == RmsNormType.RMS_NORM_POST_NORM or (layer_type == RmsNormType.RMS_NORM_PRE_NORM and quant_type == QuantType.QUANT_UNDEFINED):
+        if layer_type == RmsNormType.RMS_NORM_POST_NORM.value or (layer_type == RmsNormType.RMS_NORM_PRE_NORM.value and quant_type == QuantType.QUANT_UNDEFINED.value):
             idx = 1
             has_bias = cur_param.get('hasBias', False)
             if has_bias:
@@ -88,8 +88,8 @@ class OpcheckRmsNormOperation(operation_test.OperationTest):
             x = x + in_tensors[idx]
             idx += 1
             gamma = in_tensors[idx]
-        model_type = cur_param.get('modelType', ModelType.LLAMA_MODEL)
-        if model_type == ModelType.GEMMA_MODEL:
+        model_type = cur_param.get('modelType', ModelType.LLAMA_MODEL.value)
+        if model_type == ModelType.GEMMA_MODEL.value:
             gamma = 1 + gamma
         gamma_size = float(gamma.size(-1))
         try:
@@ -98,14 +98,14 @@ class OpcheckRmsNormOperation(operation_test.OperationTest):
             raise RuntimeError("get ZeroDivisionError when calc RmsNormOperation golden") from e
         
         golden_output = x * gamma / torch.sqrt(norm)
-        precision_mode = cur_param.get('precisionMode', PrecisionMode.HIGH_PRECISION_MODE)
+        precision_mode = cur_param.get('precisionMode', PrecisionMode.HIGH_PRECISION_MODE.value)
         is_rstd = cur_param.get("rstd", False)
-        if precision_mode == PrecisionMode.HIGH_PERFORMANCE_MODE:
+        if precision_mode == PrecisionMode.HIGH_PERFORMANCE_MODE.value:
             try:
                 golden_output = (x / torch.sqrt(norm)).half() * gamma.half()
             except ZeroDivisionError as e:
                 raise RuntimeError("get ZeroDivisionError when calc RmsNormOperation golden") from e
-        elif layer_type == RmsNormType.RMS_NORM_NORM and is_rstd:
+        elif layer_type == RmsNormType.RMS_NORM_NORM.value and is_rstd:
             gamma = in_tensors[1].float()
             reduce_dims = []
             edim = x.dim() - gamma.dim()
@@ -146,23 +146,23 @@ class OpcheckRmsNormOperation(operation_test.OperationTest):
             golden_result_quant = torch.round(golden_output)
             return golden_result_quant.type(torch.int8)
 
-        if layer_type == RmsNormType.RMS_NORM_PRE_NORM and quant_type == QuantType.QUANT_INT8:
+        if layer_type == RmsNormType.RMS_NORM_PRE_NORM.value and quant_type == QuantType.QUANT_INT8.value:
             golden_result = [rms_norm_quant_with_tensor(golden_output, in_tensors[3], in_tensors[4], in_tensors[5]), x]
-        elif layer_type == RmsNormType.RMS_NORM_NORM and quant_type == QuantType.QUANT_INT8:
-            dynamic_quant_type = cur_param.get('dynamicQuantType', DynamicQuantType.DYNAMIC_QUANT_UNDEFINED)
-            if dynamic_quant_type == DynamicQuantType.DYNAMIC_QUANT_UNDEFINED:
+        elif layer_type == RmsNormType.RMS_NORM_NORM.value and quant_type == QuantType.QUANT_INT8.value:
+            dynamic_quant_type = cur_param.get('dynamicQuantType', DynamicQuantType.DYNAMIC_QUANT_UNDEFINED.value)
+            if dynamic_quant_type == DynamicQuantType.DYNAMIC_QUANT_UNDEFINED.value:
                 golden_result = [rms_norm_quant_with_tensor(golden_output, in_tensors[2], in_tensors[3], in_tensors[4])]
             else:
                 golden_output = golden_output + in_tensors[2]
                 dynamic_quant_x = golden_output.cpu()
-                if dynamic_quant_type == DynamicQuantType.DYNAMIC_QUANT_SYMMETRIC:
+                if dynamic_quant_type == DynamicQuantType.DYNAMIC_QUANT_SYMMETRIC.value:
                     input_abs = torch.abs(dynamic_quant_x)
                     scale = torch.max(input_abs, axis=-1, keepdim=True)
                     dynamic_quant_scale = scale / 127
                     dynamic_quant_x = dynamic_quant_x * 127 / scale
                     dynamic_quant_y = torch.round(dynamic_quant_x)
                     return [dynamic_quant_y.type(torch.int8), dynamic_quant_scale.squeeze(-1).type(torch.float32)]
-                if dynamic_quant_type == DynamicQuantType.DYNAMIC_QUANT_ASYMMETRIC:
+                if dynamic_quant_type == DynamicQuantType.DYNAMIC_QUANT_ASYMMETRIC.value:
                     row_max = torch.max(dynamic_quant_x, axis=-1, keepdim=True)
                     row_min = torch.min(dynamic_quant_x, axis=-1, keepdim=True)
                     dynamic_quant_scale = (row_max - row_min) / 255
@@ -173,7 +173,7 @@ class OpcheckRmsNormOperation(operation_test.OperationTest):
                     dynamic_quant_y = torch.round(dynamic_quant_x)
                     return [dynamic_quant_y.type(torch.int8), dynamic_quant_scale.squeeze(-1).type(torch.float32), 
                             dynamic_quant_offset.squeeze(-1).type(torch.float32)]
-        elif layer_type == RmsNormType.RMS_NORM_PRE_NORM and quant_type == QuantType.QUANT_UNDEFINED:
+        elif layer_type == RmsNormType.RMS_NORM_PRE_NORM.value and quant_type == QuantType.QUANT_UNDEFINED.value:
             golden_result = [golden_result.half(), x.half()]
         else:
             golden_result = [golden_output.half()]

@@ -50,36 +50,37 @@ class OpcheckLayerNormOperation(operation_test.OperationTest):
         return golden_result_quant.type(torch.int8)
 
     def golden_calc(self, in_tensors):
-        layer_type = self.op_param.get('layerType', LayerNormType.LAYER_NORM_UNDEFINED)
+        layer_type = self.op_param.get('layerType', LayerNormType.LAYER_NORM_UNDEFINED.value)
         layer_type_support_list = [
             LayerNormType.LAYER_NORM_NROM.value,
             LayerNormType.LAYER_NORM_PRENORM.value,
             LayerNormType.LAYER_NORM_POSTNORM.value,
         ]
         self.validate_int_range(layer_type, layer_type_support_list, "layerType")        
-        if layer_type == LayerNormType.LAYER_NORM_NROM:
+        if layer_type == LayerNormType.LAYER_NORM_NROM.value:
             cur_param = self.op_param.get('normParam', None)
-        elif layer_type == LayerNormType.LAYER_NORM_PRENORM:
+        elif layer_type == LayerNormType.LAYER_NORM_PRENORM.value:
             cur_param = self.op_param.get('preNormParam', None)
-        elif layer_type == LayerNormType.LAYER_NORM_POSTNORM:
+        elif layer_type == LayerNormType.LAYER_NORM_POSTNORM.value:
             cur_param = self.op_param.get('postNormParam', None)
 
         eps = cur_param.get('epsilon', 1e-5)
-        is_quant = cur_param.get('quantType', QuantType.QUANT_TYPE_UNDEFINED) != QuantType.QUANT_TYPE_UNDEFINED
+        quant_type = cur_param.get('quantType', QuantType.QUANT_TYPE_UNDEFINED.value)
+        is_quant = quant_type != QuantType.QUANT_TYPE_UNDEFINED.value
         quant_scale = cur_param.get('quantInputScale', 1)
         quant_offset = cur_param.get('quantInputOffset', 0)
         quant_alpha = cur_param.get('quantInputAlpha', 1)
 
-        dynamic_quant_type = cur_param.get('dynamicQuantType', DynamicQuantType.DYNAMIC_QUANT_UNDEFINED)
-        if is_quant and dynamic_quant_type == DynamicQuantType.DYNAMIC_QUANT_UNDEFINED:
-            if layer_type == LayerNormType.LAYER_NORM_NROM:
+        dynamic_quant_type = cur_param.get('dynamicQuantType', DynamicQuantType.DYNAMIC_QUANT_UNDEFINED.value)
+        if is_quant and dynamic_quant_type == DynamicQuantType.DYNAMIC_QUANT_UNDEFINED.value:
+            if layer_type == LayerNormType.LAYER_NORM_NROM.value:
                 quant_scale = in_tensors[3]
                 quant_offset = in_tensors[4]
             else:
                 quant_scale = in_tensors[4]
                 quant_offset = in_tensors[5]
 
-        if layer_type == LayerNormType.LAYER_NORM_NROM:
+        if layer_type == LayerNormType.LAYER_NORM_NROM.value:
             input = in_tensors[0]
             weight = in_tensors[1]
             bias = in_tensors[2]
@@ -90,10 +91,10 @@ class OpcheckLayerNormOperation(operation_test.OperationTest):
                 golden_result = torch.nn.functional.layer_norm(input, normalized_shape, weight, bias, eps)
                 return [golden_result]
             else:
-                if dynamic_quant_type != DynamicQuantType.DYNAMIC_QUANT_UNDEFINED:
+                if dynamic_quant_type != DynamicQuantType.DYNAMIC_QUANT_UNDEFINED.value:
                     layer_norm_result = torch.nn.functional.layer_norm(input, weight.shape, weight, bias, eps)
                     dynamic_quant_x = layer_norm_result.cpu()
-                    if dynamic_quant_type == DynamicQuantType.DYNAMIC_QUANT_SYMMETRIC:
+                    if dynamic_quant_type == DynamicQuantType.DYNAMIC_QUANT_SYMMETRIC.value:
                         input_abs = torch.abs(dynamic_quant_x)
                         scale = torch.max(input_abs, axis=-1, keepdims=True).type(torch.float32)
                         dynamic_quant_scale = scale / 127
@@ -101,7 +102,7 @@ class OpcheckLayerNormOperation(operation_test.OperationTest):
                         dynamic_quant_y = torch.round(dynamic_quant_x)
                         return [dynamic_quant_y.type(torch.int8), 
                                 dynamic_quant_scale.squeeze(axis=-1).type(torch.float32)]
-                    if dynamic_quant_type == DynamicQuantType.DYNAMIC_QUANT_ASYMMETRIC:
+                    if dynamic_quant_type == DynamicQuantType.DYNAMIC_QUANT_ASYMMETRIC.value:
                         row_max = torch.max(dynamic_quant_x, axis=-1, keepdims=True).type(torch.float32)
                         row_min = torch.min(dynamic_quant_x, axis=-1, keepdims=True).type(torch.float32)
                         dynamic_quant_scale = (row_max - row_min) / 255
@@ -119,7 +120,7 @@ class OpcheckLayerNormOperation(operation_test.OperationTest):
                 layer_norm_res = torch.nn.functional.layer_norm(input, normalized_shape, weight, bias, eps)
                 golden_result_quant = self.layer_norm_quant(layer_norm_res, quant_offset, quant_offset)
                 return [golden_result_quant]
-        elif layer_type == LayerNormType.LAYER_NORM_PRENORM:
+        elif layer_type == LayerNormType.LAYER_NORM_PRENORM.value:
             weight = in_tensors[2]
             bias = in_tensors[3]
             normalized_shape = (1, in_tensors[0].shape[-1])
@@ -127,7 +128,7 @@ class OpcheckLayerNormOperation(operation_test.OperationTest):
             input = torch.add(in_tensors[0], zoom_scale_value * in_tensors[1])
             golden_result = torch.nn.functional.layer_norm(input, normalized_shape, weight, bias, eps)
             return [golden_result, input]
-        elif layer_type == LayerNormType.LAYER_NORM_POSTNORM:
+        elif layer_type == LayerNormType.LAYER_NORM_POSTNORM.value:
             weight = in_tensors[2]
             bias = in_tensors[3]
             normalized_shape = (1, in_tensors[0].shape[-1])

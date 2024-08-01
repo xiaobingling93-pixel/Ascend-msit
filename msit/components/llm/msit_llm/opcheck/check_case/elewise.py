@@ -47,7 +47,7 @@ class ElewiseType(Enum):
 class OpcheckElewiseAddOperation(operation_test.OperationTest):
     def elewise_cast(self, in_tensors):
         from msit_llm.opcheck.check_case import outTensorType
-        out_tensor_type = self.op_param.get('outTensorType', outTensorType.ACL_DT_UNDEFINED)
+        out_tensor_type = self.op_param.get('outTensorType', outTensorType.ACL_DT_UNDEFINED.value)
         # ELEWISE_CAST输入输出仅支持float/float16/int32/int64数据类型
         out_tensor_type_support_list = [
             outTensorType.ACL_FLOAT.value,
@@ -57,13 +57,13 @@ class OpcheckElewiseAddOperation(operation_test.OperationTest):
         ]
         self.validate_int_range(out_tensor_type, out_tensor_type_support_list, "outTensorType")       
         golden_result = in_tensors[0]
-        if out_tensor_type == outTensorType.FLOAT:
+        if out_tensor_type == outTensorType.FLOAT.value:
             golden_result = in_tensors[0].float()
-        elif out_tensor_type == outTensorType.HALF:
+        elif out_tensor_type == outTensorType.HALF.value:
             golden_result = in_tensors[0].half()
-        elif out_tensor_type == outTensorType.INT:
+        elif out_tensor_type == outTensorType.INT.value:
             golden_result = in_tensors[0].int()
-        elif out_tensor_type == outTensorType.LONG:
+        elif out_tensor_type == outTensorType.LONG.value:
             golden_result = in_tensors[0].long()
         return [golden_result]
 
@@ -206,7 +206,7 @@ class OpcheckElewiseAddOperation(operation_test.OperationTest):
         return [golden_result]
         
     def golden_calc(self, in_tensors):
-        elewise_type = self.op_param.get("elewiseType", ElewiseType.ELEWISE_UNDEFINED)
+        elewise_type = self.op_param.get("elewiseType", ElewiseType.ELEWISE_UNDEFINED.value)
         elewise_type_support_list = [
             ElewiseType.ELEWISE_CAST.value,
             ElewiseType.ELEWISE_MULS.value,

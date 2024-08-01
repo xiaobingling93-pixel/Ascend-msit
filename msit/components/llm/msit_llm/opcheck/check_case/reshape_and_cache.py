@@ -35,8 +35,8 @@ class OpcheckReshapeAndCacheOperation(operation_test.OperationTest):
             num_blocks, block_size, _, _ = in_tensors[2].shape
             key_expect = in_tensors[2]
             value_expect = in_tensors[3]
-            compress_type = self.op_param.get("compressType", CompressType.COMPRESS_TYPE_UNDEFINED)
-            if compress_type == CompressType.COMPRESS_TYPE_KVHEAD:
+            compress_type = self.op_param.get("compressType", CompressType.COMPRESS_TYPE_UNDEFINED.value)
+            if compress_type == CompressType.COMPRESS_TYPE_KVHEAD.value:
                 wins = in_tensors[5]
                 seq_len = in_tensors[6]
                 new_seq = seq_len

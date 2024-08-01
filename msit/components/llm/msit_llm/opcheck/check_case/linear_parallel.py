@@ -66,7 +66,7 @@ class OpcheckLinearParallelOperation(operation_test.OperationTest):
             quant_tensor = quant_tensor.to(torch.float) + bias.to(torch.float)
 
         if deq_scale is not None:
-            if quant_type == QuantType.QUANT_TYPE_PER_GROUP:
+            if quant_type == QuantType.QUANT_TYPE_PER_GROUP.value:
                 dequantized_groups = [group * deq_scale[i] for i, group in enumerate(quant_tensor.split(group_size, dim=0))]
                 quant_tensor = torch.concat(dequantized_groups, dim=0)
             else:
@@ -74,7 +74,7 @@ class OpcheckLinearParallelOperation(operation_test.OperationTest):
 
         if is_quant_after:
              from msit_llm.opcheck.check_case import outTensorType
-             result_dtype = torch.float16 if out_data_type == outTensorType.ACL_FLOAT16 else torch.bfloat16
+             result_dtype = torch.float16 if out_data_type == outTensorType.ACL_FLOAT16.value else torch.bfloat16
              result = quant_tensor.to(result_dtype)
         else:
             in_tensors[1] = quant_tensor.to(in_tensors[0].dtype)
@@ -139,19 +139,19 @@ class OpcheckLinearParallelOperation(operation_test.OperationTest):
         if backend != "lcoc":
             golden_result = self.all_reduce(in_tensors, rank_size)
         else:
-            cal_type = self.op_param.get("type", ParallelType.UNDEFINED)
-            quant_type = self.op_param.get("quantType", QuantType.QUANT_TYPE_UNDEFINED)
+            cal_type = self.op_param.get("type", ParallelType.UNDEFINED.value)
+            quant_type = self.op_param.get("quantType", QuantType.QUANT_TYPE_UNDEFINED.value)
             group_size = self.op_param.get("quantGroupSize", 0)
             from msit_llm.opcheck.check_case import outTensorType
-            out_data_type = self.op_param.get("outDataType", outTensorType.ACL_DT_UNDEFINED)
+            out_data_type = self.op_param.get("outDataType", outTensorType.ACL_DT_UNDEFINED.value)
 
-            if cal_type == ParallelType.LINEAR_ALL_REDUCE:
+            if cal_type == ParallelType.LINEAR_ALL_REDUCE.value:
                 golden_result = self.all_reduce(in_tensors, rank_size, quant_type, group_size, out_data_type)
-            elif cal_type == ParallelType.LINEAR_REDUCE_SCATTER:
+            elif cal_type == ParallelType.LINEAR_REDUCE_SCATTER.value:
                 golden_result = self.reduce_scatter(in_tensors, rank, rank_size)
-            elif cal_type == ParallelType.ALL_GATHER_LINEAR:
+            elif cal_type == ParallelType.ALL_GATHER_LINEAR.value:
                 golden_result = self.all_gather_linear(in_tensors, rank_size)
-            elif cal_type == ParallelType.PURE_LINEAR:
+            elif cal_type == ParallelType.PURE_LINEAR.value:
                 golden_result = self.pure_linear(in_tensors, quant_type, group_size, out_data_type)
 
         return golden_result

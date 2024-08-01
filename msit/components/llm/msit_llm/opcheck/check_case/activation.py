@@ -45,7 +45,7 @@ class ActivationGolden:
 
     @staticmethod
     def gelu_golden(in_tensors, gelu_mode):
-        approx = "tanh" if gelu_mode == GeLUMode.TANH_MODE else "none"
+        approx = "tanh" if gelu_mode == GeLUMode.TANH_MODE.value else "none"
         return torch.nn.functional.gelu(in_tensors, approximate=approx)
 
     @staticmethod
@@ -115,7 +115,7 @@ class OpcheckActivationOperation(operation_test.OperationTest):
     } 
 
     def golden_calc(self, in_tensors):
-        activation_type = self.op_param.get("activationType", ActivationType.ACTIVATION_UNDEFINED)
+        activation_type = self.op_param.get("activationType", ActivationType.ACTIVATION_UNDEFINED.value)
         activation_type_support_list = [
             ActivationType.ACTIVATION_RELU.value,
             ActivationType.ACTIVATION_GELU.value,
@@ -128,12 +128,12 @@ class OpcheckActivationOperation(operation_test.OperationTest):
         self.validate_int_range(activation_type, activation_type_support_list, "activationType")
         scale = self.op_param.get("scale", 1.0)
         dim = self.op_param.get("dim", -1)
-        if activation_type == ActivationType.ACTIVATION_SWIGLU_FORWARD:
+        if activation_type == ActivationType.ACTIVATION_SWIGLU_FORWARD.value:
             golden_result = OpcheckActivationOperation.golden_func[activation_type](in_tensors[0], dim)
-        elif activation_type == ActivationType.ACTIVATION_SWIGLU_BACKWARD:
+        elif activation_type == ActivationType.ACTIVATION_SWIGLU_BACKWARD.value:
             golden_result = OpcheckActivationOperation.golden_func[activation_type](in_tensors, dim)
-        elif activation_type == ActivationType.ACTIVATION_GELU:
-            gelu_mode = self.op_param.get("geluMode", GeLUMode.TANH_MODE)
+        elif activation_type == ActivationType.ACTIVATION_GELU.value:
+            gelu_mode = self.op_param.get("geluMode", GeLUMode.TANH_MODE.value)
             self.validate_int_range(gelu_mode, [GeLUMode.TANH_MODE.value, GeLUMode.NONE_MODE.value], "geluMode")
             golden_result = OpcheckActivationOperation.golden_func[activation_type](in_tensors[0], gelu_mode)
         else:

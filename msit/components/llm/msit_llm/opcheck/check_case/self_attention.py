@@ -88,9 +88,9 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         q, k, v = in_tensors[:3]
         mask = None
         seq_len = None
-        mask_type = self.op_param.get("maskType", MaskType.MASK_TYPE_UNDEFINED)
+        mask_type = self.op_param.get("maskType", MaskType.MASK_TYPE_UNDEFINED.value)
         is_triu_mask = self.op_param.get("isTriuMask", 0)
-        is_mask = mask_type != MaskType.MASK_TYPE_UNDEFINED
+        is_mask = mask_type != MaskType.MASK_TYPE_UNDEFINED.value
         if is_mask:
             mask = in_tensors[3]
             soc_version = self.get_soc_version()
@@ -113,10 +113,10 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         else:
             batch_status = range(len(seq_len))
 
-        clamp_type = self.op_param("clampType", ClampType.CLAMP_TYPE_UNDEFINED)
-        kernel_type = self.op_param("kernelType", KernelType.KERNELTYPE_DEFAULT)
+        clamp_type = self.op_param("clampType", ClampType.CLAMP_TYPE_UNDEFINED.value)
+        kernel_type = self.op_param("kernelType", KernelType.KERNELTYPE_DEFAULT.value)
         post_mask_coff = -3e38
-        if kernel_type == KernelType.KERNELTYPE_HIGH_PRECISION:
+        if kernel_type == KernelType.KERNELTYPE_HIGH_PRECISION.value:
             post_mask_coff = 1
 
         q_scale = self.op_param.get("qScale", 1.0)
@@ -143,7 +143,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
             tor = 1.0 / math.sqrt(1.0 * head_size)
             score = score * tor
 
-            if clamp_type == ClampType.CLAMP_TYPE_MIN_MAX:
+            if clamp_type == ClampType.CLAMP_TYPE_MIN_MAX.value:
                 clamp_min = self.op_param("clampMin", 0.0)
                 clamp_max = self.op_param("clampMax", 0.0)
                 clamp_min_brc = torch.ones(score.shape) * clamp_min
@@ -180,9 +180,9 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
 
         mask = None
         seq_len = None
-        mask_type = self.op_param.get("maskType", MaskType.MASK_TYPE_UNDEFINED)
+        mask_type = self.op_param.get("maskType", MaskType.MASK_TYPE_UNDEFINED.value)
         is_triu_mask = self.op_param.get("isTriuMask", 0)
-        is_mask = mask_type != MaskType.MASK_TYPE_UNDEFINED
+        is_mask = mask_type != MaskType.MASK_TYPE_UNDEFINED.value
         if is_mask:
             mask = in_tensors[3]
             soc_version = self.get_soc_version()
@@ -201,10 +201,10 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         else:
             batch_status = range(len(seq_len))
 
-        clamp_type = self.op_param("clampType", ClampType.CLAMP_TYPE_UNDEFINED)
-        kernel_type = self.op_param("kernelType", KernelType.KERNELTYPE_DEFAULT)
+        clamp_type = self.op_param("clampType", ClampType.CLAMP_TYPE_UNDEFINED.value)
+        kernel_type = self.op_param("kernelType", KernelType.KERNELTYPE_DEFAULT.value)
         post_mask_coff = -3e38
-        if kernel_type == KernelType.KERNELTYPE_HIGH_PRECISION:
+        if kernel_type == KernelType.KERNELTYPE_HIGH_PRECISION.value:
             post_mask_coff = 1
 
         q_scale = self.op_param.get("qScale", 1.0)
@@ -232,7 +232,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
             tor = qk_scale
             score = score * tor
 
-            if clamp_type == ClampType.CLAMP_TYPE_MIN_MAX:
+            if clamp_type == ClampType.CLAMP_TYPE_MIN_MAX.value:
                 clamp_min = self.op_param("clampMin", 0.0)
                 clamp_max = self.op_param("clampMax", 0.0)
                 clamp_min_brc = torch.ones(score.shape) * clamp_min
@@ -241,7 +241,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
                 score = torch.min(score, clamp_max_brc)
 
             if is_mask:
-                if (mask_type == MaskType.MASK_TYPE_NROM or mask_type == MaskType.MASK_TYPE_NORM_COMPRESS) and q_s > mask.shape[1]:
+                if (mask_type == MaskType.MASK_TYPE_NROM.value or mask_type == MaskType.MASK_TYPE_NORM_COMPRESS.value) and q_s > mask.shape[1]:
                     # 压缩norm mask
                     no_compress_mask = torch.ones(shape=(1, max_seq_len, max_seq_len)) # 使用当前最大seqlen生成mask
                     no_compress_mask = torch.triu(no_compress_mask, 1)
@@ -315,7 +315,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
             cur_q = (cur_q * q_scale).view(cur_seqlen, head_num, head_size).transpose(0, 1)
             cur_k = cur_k.view(cur_token_offset, head_num, head_size).transpose(1, 2, 0)
             cur_qk = torch.bmm(cur_q, cur_k) # [head_num, seqlen, token_offset]
-            if self.op_param.get("clampType", ClampType.CLAMP_TYPE_UNDEFINED) == ClampType.CLAMP_TYPE_MIN_MAX:
+            if self.op_param.get("clampType", ClampType.CLAMP_TYPE_UNDEFINED.value) == ClampType.CLAMP_TYPE_MIN_MAX.value:
                 clamp_min = self.op_param.get("clampMin", 0.0)
                 clamp_max = self.op_param.get("clampMax", 0.0)
                 cur_qk = torch.clamp(cur_qk, clamp_min, clamp_max)
@@ -338,20 +338,20 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
 
     def golden_calc(self, in_tensors):
         # KvCache配置，不支持calType为PA_ENCODER
-        kvcache_cfg = self.op_param.get("kvcacheCfg", KvCacheCfg.K_CACHE_V_CACHE)
+        kvcache_cfg = self.op_param.get("kvcacheCfg", KvCacheCfg.K_CACHE_V_CACHE.value)
         logger_text = f"kvcacheCfg: {kvcache_cfg}"
         logger.debug(logger_text)
 
         # 直接传入kvcache
-        if kvcache_cfg == KvCacheCfg.K_BYPASS_V_BYPASS:
+        if kvcache_cfg == KvCacheCfg.K_BYPASS_V_BYPASS.value:
             golden = self.kv_bypass_golden_func(in_tensors)
             return [golden]
 
-        calc_type = self.op_param.get("calcType", CalcType.UNDEFINED)
+        calc_type = self.op_param.get("calcType", CalcType.UNDEFINED.value)
         logger_text = f"CalcType: {calc_type}"
         logger.debug(logger_text)
 
-        if calc_type == CalcType.PA_ENCODER:
+        if calc_type == CalcType.PA_ENCODER.value:
             golden = self.pa_encoder_golden_func(in_tensors)
         else:
             golden = self.undefined_golden_func(in_tensors)

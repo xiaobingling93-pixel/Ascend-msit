@@ -32,9 +32,9 @@ class TopkToppSamplingType(Enum):
 
 class OpcheckToppOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
-        topktopp_sampling_type = self.op_param.get('topktopp_sampling_type', TopkToppSamplingType.SAMPLING_UNDEFINED)
+        topktopp_sampling_type = self.op_param.get('topktopp_sampling_type', TopkToppSamplingType.SAMPLING_UNDEFINED.value)
         libc = CDLL("libc.so.6")
-        if topktopp_sampling_type == TopkToppSamplingType.SINGLE_TOPK_SAMPLING:
+        if topktopp_sampling_type == TopkToppSamplingType.SINGLE_TOPK_SAMPLING.value:
             topk = self.op_param.get('topk', 100)
             rand_seed = self.op_param.get('randSeed', 0)
             logger_text = f"topk: {topk}, rand_seed: {rand_seed}"
@@ -68,7 +68,7 @@ class OpcheckToppOperation(operation_test.OperationTest):
             topk_mask = torch.lt(probs_sorted, gather_topk).to(torch.bool)
             probs_masked_topk = probs_sorted.masked_fill(topk_mask, 0)
             probs_cumsumed = torch.cumsum(probs_masked_topk, axis=-1)
-            if topktopp_sampling_type == TopkToppSamplingType.BATCH_TOPK_EXPONENTIAL_SAMPLING:
+            if topktopp_sampling_type == TopkToppSamplingType.BATCH_TOPK_EXPONENTIAL_SAMPLING.value:
                 exp = in_tensors[3]
                 topp_mask = torch.gt(probs_cumsumed, topp).to(torch.bool)
                 probs_masked_topp = probs_cumsumed.masked_fill(topp_mask, 0)
@@ -79,7 +79,7 @@ class OpcheckToppOperation(operation_test.OperationTest):
                 outtensor_probs = torch.gather(probs_sorted, dim=1, index=argmax_idx)
                 outtensor_idx = torch.gather(idx_sorted, dim=1, index=argmax_idx)
                 return [outtensor_idx.type(torch.int32), outtensor_probs.type(torch.float16)]
-            if topktopp_sampling_type == TopkToppSamplingType.BATCH_TOPK_MULTINOMIAL_SAMPLING: 
+            if topktopp_sampling_type == TopkToppSamplingType.BATCH_TOPK_MULTINOMIAL_SAMPLING.value: 
                 rand_seeds = self.op_param.get('randSeeds', None)
                 bool_judge = (probs_cumsumed < topp)
                 sum_val = torch.sum(bool_judge, axis=-1, keepdims=True) - 1

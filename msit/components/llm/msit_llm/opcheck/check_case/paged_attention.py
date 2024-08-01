@@ -47,22 +47,22 @@ class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
         asdops_param['kv_heads'] = op_param.get('kvHeadNum', 0)
         if op_param['kvHeadNum'] == 0:
             asdops_param['kv_heads'] = asdops_param['num_heads']
-        if op_param['compressType'] == CompressType.COMPRESS_TYPE_KVHEAD:
+        if op_param['compressType'] == CompressType.COMPRESS_TYPE_KVHEAD.value:
             asdops_param['compressHead'] = True
         else:
             asdops_param['compressHead'] = False
         context_lens = in_tensors[4]
         asdops_param['max_context_len'] = max(context_lens)
-        if op_param['maskType'] != MaskType.UNDEFINED:
+        if op_param['maskType'] != MaskType.value:
             asdops_param['mask_dim'] = len(in_tensors[5].shape) # mask shape
             asdops_param['mask_data_type'] = in_tensors[5].dtype
-            if op_param['maskType'] == MaskType.MASK_TYPE_NONE:
+            if op_param['maskType'] == MaskType.MASK_TYPE_NONE.value:
                 asdops_param['mask_dim'] = 3
         else:
             asdops_param['mask_dim'] = 0
             asdops_param['mask_data_type'] = torch.bfloat16
 
-        if op_param['quantType'] != QuantType.TYPE_QUANT_UNDEFINED:
+        if op_param['quantType'] != QuantType.TYPE_QUANT_UNDEFINED.value:
             asdops_param['is_int8_flag'] = True
             if op_param['hasQuantOffset'] == True:
                 asdops_param['has_bias'] = True
@@ -239,8 +239,8 @@ class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
         query, key_cache, value_cache, block_tables, context_lens = in_tensors[:5]
         mask = None
 
-        mask_type = self.op_param.get('maskType', MaskType.UNDEFINED)
-        if mask_type != MaskType.UNDEFINED:
+        mask_type = self.op_param.get('maskType', MaskType.UNDEFINED.value)
+        if mask_type != MaskType.UNDEFINED.value:
             mask = in_tensors[5]
 
         soc_version = self.get_soc_version()
@@ -251,12 +251,12 @@ class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
             key_cache = OpcheckPagedAttentionAttentionOperation.cache_nz_2_nd(key_cache, kv_heads, embedding_size)
             value_cache = OpcheckPagedAttentionAttentionOperation.cache_nz_2_nd(value_cache, kv_heads, embedding_size)
 
-            if mask_type != MaskType.UNDEFINED:
+            if mask_type != MaskType.UNDEFINED.value:
                 # mask nz to nd
                 mask = mask.permute(0, 2, 1, 3)
                 dim0, dim1, dim2, dim3 = mask.shape
                 mask = mask.contiguous().view(dim0, dim1, dim2 * dim3)
-                if mask_type == MaskType.MASK_TYPE_ALIBI:
+                if mask_type == MaskType.MASK_TYPE_ALIBI.value:
                     batch = len(context_lens)
                     head_num = self.op_param.get('headNum', 0)
                     if dim0 != head_num:

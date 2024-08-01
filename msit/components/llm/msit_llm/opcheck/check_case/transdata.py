@@ -128,8 +128,8 @@ class OpcheckTransdataOperation(operation_test.OperationTest):
                 )[:, :out_crops[0], :out_crops[1]]
 
     def golden_calc(self, in_tensors):
-        transdata_type = self.op_param.get("transdataType", TransdataType.UNDEFINED)
-        if transdata_type == TransdataType.ND_TO_FRACTAL_NZ:
+        transdata_type = self.op_param.get("transdataType", TransdataType.UNDEFINED.value)
+        if transdata_type == TransdataType.ND_TO_FRACTAL_NZ.value:
             if len(in_tensors[0].size()) == 3:
                 golden_result = OpcheckTransdataOperation.golden_nd_to_nz_3d(in_tensors)
             else:
