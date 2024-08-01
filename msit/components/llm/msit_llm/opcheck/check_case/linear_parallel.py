@@ -19,7 +19,6 @@ import torch.distributed as dist
 
 from msit_llm.opcheck import operation_test
 from msit_llm.common.log import logger
-from msit_llm.opcheck.check_case import outTensorType
 
 
 class ParallelType(Enum):
@@ -74,6 +73,7 @@ class OpcheckLinearParallelOperation(operation_test.OperationTest):
                 quant_tensor *= deq_scale
 
         if is_quant_after:
+             from msit_llm.opcheck.check_case import outTensorType
              result_dtype = torch.float16 if out_data_type == outTensorType.ACL_FLOAT16 else torch.bfloat16
              result = quant_tensor.to(result_dtype)
         else:
@@ -142,6 +142,7 @@ class OpcheckLinearParallelOperation(operation_test.OperationTest):
             cal_type = self.op_param.get("type", ParallelType.UNDEFINED)
             quant_type = self.op_param.get("quantType", QuantType.QUANT_TYPE_UNDEFINED)
             group_size = self.op_param.get("quantGroupSize", 0)
+            from msit_llm.opcheck.check_case import outTensorType
             out_data_type = self.op_param.get("outDataType", outTensorType.ACL_DT_UNDEFINED)
 
             if cal_type == ParallelType.LINEAR_ALL_REDUCE:

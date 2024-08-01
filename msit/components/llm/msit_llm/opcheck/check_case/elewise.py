@@ -18,7 +18,6 @@ import torch_npu
 
 from msit_llm.opcheck import operation_test
 from msit_llm.common.log import logger
-from msit_llm.opcheck.check_case import outTensorType
 
 
 class ElewiseType(Enum):
@@ -47,6 +46,7 @@ class ElewiseType(Enum):
 
 class OpcheckElewiseAddOperation(operation_test.OperationTest):
     def elewise_cast(self, in_tensors):
+        from msit_llm.opcheck.check_case import outTensorType
         out_tensor_type = self.op_param.get('outTensorType', outTensorType.ACL_DT_UNDEFINED)
         # ELEWISE_CAST输入输出仅支持float/float16/int32/int64数据类型
         out_tensor_type_support_list = [
