@@ -52,8 +52,9 @@ class TfSaveModelDumpData(DumpData):
         Generate tf2.6 save_model inputs data
         :return tf2.6 save_model inputs data directory
         """
+        input_files = sorted(os.listdir(self.input), key=lambda x: int(x[-5]))
         input_bin_data = [np.fromfile(os.path.join(self.input, input_bin_file), dtype=np.float32)
-                          for input_bin_file in os.listdir(self.input)]
+                          for input_bin_file in input_files]
         for index, bin_data in enumerate(input_bin_data):
             bin_data = bin_data.reshape(self.input_shape[index][1])
             self.inputs_data[self.input_shape[index][0]] = bin_data
