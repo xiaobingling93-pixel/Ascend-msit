@@ -245,7 +245,7 @@ class OpcheckElewiseAddOperation(operation_test.OperationTest):
             golden = self.elewise_quant(in_tensors)
         elif elewise_type == ElewiseType.ELEWISE_LOGICAL_NOT:
             golden = self.elewise_logical_not(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_LOGICAL_AND:
+        elif elewise_type == ElewiseType.ELEWISE_ADD:
             golden = self.elewise_add(in_tensors)
         elif elewise_type == ElewiseType.ELEWISE_MUL:
             golden = self.elewise_mul(in_tensors)
