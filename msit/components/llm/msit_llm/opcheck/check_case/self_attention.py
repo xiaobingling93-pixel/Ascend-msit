@@ -243,7 +243,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
             if is_mask:
                 if (mask_type == MaskType.MASK_TYPE_NROM.value or mask_type == MaskType.MASK_TYPE_NORM_COMPRESS.value) and q_s > mask.shape[1]:
                     # 压缩norm mask
-                    no_compress_mask = torch.ones(shape=(1, max_seq_len, max_seq_len)) # 使用当前最大seqlen生成mask
+                    no_compress_mask = torch.ones(size=(1, max_seq_len, max_seq_len)) # 使用当前最大seqlen生成mask
                     no_compress_mask = torch.triu(no_compress_mask, 1)
                     no_compress_mask *= -10000.0
                     score = score + no_compress_mask[:, :q_s, :kv_s]
