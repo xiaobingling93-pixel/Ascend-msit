@@ -43,19 +43,11 @@ class OpcheckGatherOperation(operation_test.OperationTest):
             for i in range(axis + 1, in_tensors[0].ndim):
                 output_size.append(in_tensors[0].shape[i])
                 dim2 *= in_tensors[0].shape[i]
-            input_flatten = in_tensors[0].clone().reshape(-1)
-            indices_flatten = in_tensors[1].clone().reshape(-1)
             logger_text = f"output_size: {output_size}"
             logger.debug(logger_text)
-            golden_result = torch.zeros(output_size, dtype=in_tensors[0].dtype).reshape(-1)
-            idx = 0
-            for i in range(0, dim0):
-                input_idx = i * dim1 * dim2
-                for indice in indices_flatten:
-                    for k in range(0, dim2):
-                        golden_result[idx] = input_flatten[input_idx + indice * dim2 + k]
-                        idx += 1
-            golden_result = golden_result.reshape(output_size)
+            input_flatten = in_tensors[0].clone().reshape(-1)
+            indices_flatten = in_tensors[1].clone().reshape(-1)
+            golden_result = input_flatten.reshape([dim0, dim1, dim2])[:, indices_flatten]
         elif batch_dims > 0:
             golden_result = torch.gather(in_tensors[0], axis, in_tensors[1])
         else:
