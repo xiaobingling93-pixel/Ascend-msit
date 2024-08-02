@@ -18,7 +18,9 @@ import site
 import subprocess
 import shutil
 import re
+import csv
 
+from collections import defaultdict
 from components.utils.file_open_check import FileStat
 from msit_llm.common.log import logger
 from msit_llm.common.utils import safe_string
@@ -175,6 +177,14 @@ def split_cpu_profiling_data(data, opname):
     return execute_data, setup_data
 
 
+def read_data_to_csv(data: str, csv_data: list, tag: str):
+    match_words = re.findall(r'[a-zA-Z]+:[0-9]+', data)
+    header_vals = [_.split(':') for _ in match_words]
+    for header_val in header_vals:
+        header = tag + header_vals[0]
+        csv_data.append((header, header_vals[1]))
+
+
 def merge_cpu_profiling_data(path):
     # 遍历目录下所有文件
     for root, dirs, files in os.walk(path):
@@ -182,15 +192,38 @@ def merge_cpu_profiling_data(path):
             if not re.match(r'operation_statistic_\d+\.txt', file):
                 continue
             data = {}
-            with open(os.path.join(root, file), 'r+') as f:
+            headers = set()
+            csv_data = defaultdict(list)
+            with open(os.path.join(root, file), 'r') as f:
                 lines = f.readlines()
                 read_cpu_profiling_data(lines, data)
-                f.truncate(0)
-                f.seek(0, os.SEEK_SET)
                 for opname in data.keys():
                     execute_data, setup_data = split_cpu_profiling_data(data, opname)
-                    merged_data = f"{opname}:\n[execute] {execute_data}\n[setup] {setup_data}\n\n"
-                    f.write(merged_data)
+                    # 按照header类型添加tag标识
+                    read_data_to_csv(execute_data, csv_data[opname], 'execute_')
+                    read_data_to_csv(setup_data, csv_data[opname], 'setup_')
+                    headers.update([_[0] for _ in csv_data[opname]])
+            
+            headers = list(headers)
+            headers.sort()
+            rows = list()
+            for opname in data.keys():
+                row = [opname]
+                cur_col = [_[0] for _ in csv_data[opname]]
+                for col in headers:
+                    if col in cur_col:
+                        row.append(csv_data[opname][cur_col.index(col)][1])
+                    else:
+                        row.append('')
+                rows.append(tuple(row))
+            headers.insert(0, 'opname')
+            
+            with open(os.path.join(root, file.split('.')[0])+'csv', 'w+') as f:
+                f_csv = csv.writer(f)
+                f_csv.writerow(headers)
+                f_csv.writerows(rows)
+            # 删除原始文件
+            os.remove(os.path.join(root, file))
 
 
 def clear_dump_task(args):
