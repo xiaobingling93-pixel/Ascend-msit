@@ -170,7 +170,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
             v_offset += max_seq_len
 
         out = out.view(q_ntokens, head_num * head_size)
-        return [out.type(data_type)]
+        return out.type(data_type)
 
     def pa_encoder_golden_func(self, in_tensors):
         q, k, v = in_tensors[:3]
@@ -243,7 +243,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
             if is_mask:
                 if (mask_type == MaskType.MASK_TYPE_NROM.value or mask_type == MaskType.MASK_TYPE_NORM_COMPRESS.value) and q_s > mask.shape[1]:
                     # 压缩norm mask
-                    no_compress_mask = torch.ones(size=(1, max_seq_len, max_seq_len)) # 使用当前最大seqlen生成mask
+                    no_compress_mask = torch.ones(size=(1, max_seq_len, max_seq_len)).to(score.device) # 使用当前最大seqlen生成mask
                     no_compress_mask = torch.triu(no_compress_mask, 1)
                     no_compress_mask *= -10000.0
                     score = score + no_compress_mask[:, :q_s, :kv_s]
@@ -268,7 +268,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
 
         # golden data
         out = out.view(q_ntokens, head_num, head_size)
-        return [out.type(data_type)]
+        return out.type(data_type)
 
     def undefined_golden_func(self, in_tensors):
         mixed_q, mixed_k, mixed_v = in_tensors[:3]
