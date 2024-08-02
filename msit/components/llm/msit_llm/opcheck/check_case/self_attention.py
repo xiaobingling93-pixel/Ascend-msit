@@ -201,8 +201,8 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         else:
             batch_status = range(len(seq_len))
 
-        clamp_type = self.op_param("clampType", ClampType.CLAMP_TYPE_UNDEFINED.value)
-        kernel_type = self.op_param("kernelType", KernelType.KERNELTYPE_DEFAULT.value)
+        clamp_type = self.op_param.get("clampType", ClampType.CLAMP_TYPE_UNDEFINED.value)
+        kernel_type = self.op_param.get("kernelType", KernelType.KERNELTYPE_DEFAULT.value)
         post_mask_coff = -3e38
         if kernel_type == KernelType.KERNELTYPE_HIGH_PRECISION.value:
             post_mask_coff = 1
