@@ -74,20 +74,20 @@ class OpcheckRmsNormOperation(operation_test.OperationTest):
         self.validate_int_range(quant_type, quant_type_support_list, "quantType")
 
         eps = cur_param.get('epsilon', 1e-5)
-        x = in_tensors[0]
-        gamma = in_tensors[1].view(1, -1)
+        x = in_tensors[0].float()
+        gamma = in_tensors[1].float().view(1, -1)
         if layer_type == RmsNormType.RMS_NORM_PRE_NORM.value and quant_type == QuantType.QUANT_INT8.value:
-            x = x + in_tensors[1]
-            gamma = in_tensors[2]
+            x = x + in_tensors[1].float()
+            gamma = in_tensors[2].float()
         if layer_type == RmsNormType.RMS_NORM_POST_NORM.value or (layer_type == RmsNormType.RMS_NORM_PRE_NORM.value and quant_type == QuantType.QUANT_UNDEFINED.value):
             idx = 1
             has_bias = cur_param.get('hasBias', False)
             if has_bias:
-                x = x + in_tensors[idx]
+                x = x + in_tensors[idx].float()
                 idx += 1
-            x = x + in_tensors[idx]
+            x = x + in_tensors[idx].float()
             idx += 1
-            gamma = in_tensors[idx]
+            gamma = in_tensors[idx].float()
         model_type = cur_param.get('modelType', ModelType.LLAMA_MODEL.value)
         if model_type == ModelType.GEMMA_MODEL.value:
             gamma = 1 + gamma
@@ -96,13 +96,12 @@ class OpcheckRmsNormOperation(operation_test.OperationTest):
             norm = torch.sum(x / gamma_size * x, dim=-1, keepdim=True) + eps
         except ZeroDivisionError as e:
             raise RuntimeError("get ZeroDivisionError when calc RmsNormOperation golden") from e
-        
-        golden_output = x * gamma / torch.sqrt(norm)
+
         precision_mode = cur_param.get('precisionMode', PrecisionMode.HIGH_PRECISION_MODE.value)
         is_rstd = cur_param.get("rstd", False)
         if precision_mode == PrecisionMode.HIGH_PERFORMANCE_MODE.value:
             try:
-                golden_output = (x / torch.sqrt(norm)).half() * gamma.half()
+                golden_output = (x / torch.sqrt(norm)).half() * in_tensors[1].view(-1, 1)
             except ZeroDivisionError as e:
                 raise RuntimeError("get ZeroDivisionError when calc RmsNormOperation golden") from e
         elif layer_type == RmsNormType.RMS_NORM_NORM.value and is_rstd:
@@ -118,25 +117,11 @@ class OpcheckRmsNormOperation(operation_test.OperationTest):
                 golden_output = x * gamma / torch.sqrt(norm)
             except ZeroDivisionError as e:
                 raise RuntimeError("get ZeroDivisionError when calc RmsNormOperation golden") from e
-    
-        def rms_norm_quant(golden_output, beta):
-            golden_output = golden_output
-            beta = beta
-            quant_scale = cur_param.get('quantInputScale', 1.0)
-            quant_offset = cur_param.get('quantInputOffset', 0.0)
-            golden_output = golden_output + beta
-            try:
-                golden_output = golden_output / quant_scale + quant_offset
-            except ZeroDivisionError as e:
-                raise RuntimeError("get ZeroDivisionError when calc RmsNormOperation golden") from e
-            golden_output = torch.clamp(golden_output, -128, 127)
-            golden_result_quant = torch.round(golden_output)
-            return golden_result_quant.type(torch.int8)
 
         def rms_norm_quant_with_tensor(golden_output, beta, scale, offset):
-            golden_output = golden_output
-            beta = beta
-            scale = scale
+            golden_output = golden_output.float()
+            beta = beta.float()
+            scale = scale.half()
             golden_output = golden_output + beta
             try:
                 golden_output = golden_output / scale + offset
