@@ -81,8 +81,8 @@ class RuleRunner:
         self.instence = None
         self.recorder = Recorder()
 
-    def add_rule(self, rule):
-        self.waiting_rules.append(rule)
+    def add_rule(self, waiting_rule):
+        self.waiting_rules.append(waiting_rule)
 
     def set_recorder(self, recorder: Recorder):
         self.recorder = recorder
@@ -90,24 +90,24 @@ class RuleRunner:
     def get_recorder(self) -> Recorder:
         return self.recorder
 
-    def run_rule(self, rule: WaitingRule):
-        if self.running_default and self.recorder.in_records(rule.name):
+    def run_rule(self, waiting_rule: WaitingRule):
+        if self.running_default and self.recorder.in_records(waiting_rule.name):
             return CheckResult()
-        self.recorder.add_record(rule.name)
-        return rule.check(self.instence)
+        self.recorder.add_record(waiting_rule.name)
+        return waiting_rule.check(self.instence)
 
     def implement_check(self, instence: "CheckerInstence"):
         self.instence = instence
         self.running_default = False
 
-        for rule in self.waiting_rules:
-            passed = self.run_rule(rule)
+        for waiting_rule in self.waiting_rules:
+            passed = self.run_rule(waiting_rule)
             if not passed:
                 return passed
 
         self.running_default = True
-        for rule in self.default_rules:
-            passed = self.run_rule(rule)
+        for waiting_rule in self.default_rules:
+            passed = self.run_rule(waiting_rule)
             if not passed:
                 return passed
         return CheckResult()
@@ -205,20 +205,20 @@ class Checker(RuleRunner, CheckerInstence):
     @rule()
     def any(self, *rules: "Checker") -> Union["Checker", CheckResult]:
         passed = CheckResult()
-        for rule in rules:
+        for running_rule in rules:
             if self.running_default:
-                rule.set_recorder(self.recorder)
-            passed = rule.check(self.instance)
+                running_rule.set_recorder(self.recorder)
+            passed = running_rule.check(self.instance)
             if passed:
                 if not self.running_default:
-                    self.recorder.union(rule.get_recorder())
+                    self.recorder.union(running_rule.get_recorder())
                 return passed
 
         return passed
 
     @rule()
-    def anti(self, rule: "Checker") -> Union["Checker", CheckResult]:
-        rule.set_recorder(self.recorder)
-        passed = rule.check(self.instance)
+    def anti(self, anti_rule: "Checker") -> Union["Checker", CheckResult]:
+        anti_rule.set_recorder(self.recorder)
+        passed = anti_rule.check(self.instance)
 
         return not passed, f"not {str(passed)}"
