@@ -41,12 +41,12 @@ class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
     @staticmethod
     def get_asdops_param(in_tensors, op_param):
         asdops_param = {}
-        asdops_param['num_heads'] = op_param.get('headNum', 0)
+        asdops_param['head_num'] = op_param.get('headNum', 0)
         asdops_param['qkScale'] = op_param.get('qkScale', 1.0)
         asdops_param['num_tokens'], _, asdops_param['head_size'] = in_tensors[0].shape # q shape
         asdops_param['kv_heads'] = op_param.get('kvHeadNum', 0)
         if op_param['kvHeadNum'] == 0:
-            asdops_param['kv_heads'] = asdops_param['num_heads']
+            asdops_param['kv_heads'] = asdops_param['head_num']
         if op_param['compressType'] == CompressType.COMPRESS_TYPE_KVHEAD.value:
             asdops_param['compressHead'] = True
         else:
@@ -87,7 +87,7 @@ class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
         return asdops_param
 
     @staticmethod
-    def group_matmul(asdops_param, head, group_num, A, B, is_k):
+    def group_matmul(asdops_param, head_num, group_num, A, B, is_k):
         is_int8_flag = asdops_param['is_int8_flag']
         has_bias = asdops_param['has_bias']
         offset1 = asdops_param['offset1']
@@ -95,7 +95,7 @@ class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
         offset2 = asdops_param['offset2']
         de_scale2_fp32 = asdops_param['de_scale2_fp32']
 
-        group_head = head // group_num
+        group_head = head_num // group_num
         score = None
         for i in range(group_head):
             if is_int8_flag:
@@ -111,9 +111,9 @@ class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
                     if has_bias:
                         int32_B = int32_B + offset2[i * head_dim : (i + 1) * head_dim]
                     fp32_B = int32_B.type(torch.float32) * de_scale2_fp32[i * head_dim : (i + 1) * head_dim]
-                group_score = torch.matmul(A[i * group_num : (i + 1) * group_num, :, :].type(torch.float32), fp32_B).type(torch.float16)
+                group_score = torch.matmul(A[i * group_head : (i + 1) * group_head, :, :].type(torch.float32), fp32_B).type(torch.float16)
             else:
-                group_score = torch.matmul(A[i * group_num : (i + 1) * group_num, :, :].type(torch.float32), B[i: (i + 1), :, :].type(torch.float32))
+                group_score = torch.matmul(A[i * group_head : (i + 1) * group_head, :, :].type(torch.float32), B[i: (i + 1), :, :].type(torch.float32))
 
             if score is None:
                 score = group_score
@@ -125,7 +125,7 @@ class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
 
     @staticmethod
     def ref_masked_attention(asdops_param, masked_attention_input, alibi_bias=None):
-        query = masked_attention_input[0] # (1, num_heads, head_size)
+        query = masked_attention_input[0] # (1, head_num, head_size)
         key = masked_attention_input[1] # (context_len, kv_heads, head_size)
         value = masked_attention_input[2]
         scale = masked_attention_input[3] # float
@@ -168,7 +168,7 @@ class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
 
         num_tokens = asdops_param["num_tokens"]
         kv_heads = asdops_param["kv_heads"]
-        num_heads = asdops_param["num_heads"]
+        head_num = asdops_param["head_num"]
         head_size = asdops_param["head_size"]
         compress_head = asdops_param["compressHead"]
         max_context_len = asdops_param["max_context_len"]
@@ -176,27 +176,25 @@ class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
         mask_data_dim = asdops_param["mask_data_type"]
         mask_index_coff = 1
         if compress_head:
-            query = query.view(num_tokens * kv_heads, num_heads // kv_heads, head_size)
-            output = output.view(num_tokens * kv_heads, num_heads // kv_heads, head_size)
+            query = query.view(num_tokens * kv_heads, head_num // kv_heads, head_size)
+            output = output.view(num_tokens * kv_heads, head_num // kv_heads, head_size)
             if mask_dim == 4:
                 mask_shape = mask.shape
-                mask = mask.view(mask_shape[0] * kv_heads, num_heads // kv_heads, 1, max_context_len)
+                mask = mask.view(mask_shape[0] * kv_heads, head_num // kv_heads, 1, max_context_len)
             else:
                 mask_index_coff = kv_heads
-        num_heads = query.shape[1]
+        head_num = query.shape[1]
         kv_heads = value_cache.shape[2]
         head_size = value_cache.shape[3]
         block_size = value_cache.shape[1]
-
         num_input_tokens = query.shape[0]
-        index = 0
         for i in range(len(context_lens)):
             block_table = block_tables[i]
             context_len = int(context_lens[i])
             if context_len == 0:
                 continue
 
-            q = query[index].view(1, num_heads, head_size)
+            q = query[i].view(1, head_num, head_size)
             keys = []
             values = []
             for j in range(context_len):
@@ -214,16 +212,15 @@ class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
             masked_attention_input = [q, keys, values, scale]
             if mask_dim == 4:
                 out = OpcheckPagedAttentionAttentionOperation.ref_masked_attention(asdops_param, masked_attention_input, mask[i, :, :1, :context_len])
-                out = out.reshape(num_heads, head_size)
+                out = out.reshape(head_num, head_size)
             elif mask_dim == 3:
                 out = OpcheckPagedAttentionAttentionOperation.ref_masked_attention(asdops_param, masked_attention_input, mask[i // mask_index_coff, :1, :context_len])
-                out = out.reshape(num_heads, head_size)
+                out = out.reshape(head_num, head_size)
             else:
                 out = OpcheckPagedAttentionAttentionOperation.ref_masked_attention(asdops_param, masked_attention_input, mask)
-                out = out.reshape(num_heads, head_size)
+                out = out.reshape(head_num, head_size)
 
-            output[index] = out
-            index += 1
+            output[i] = out
 
     @staticmethod
     def cache_nz_2_nd(cache, kv_heads, embedding_size):
