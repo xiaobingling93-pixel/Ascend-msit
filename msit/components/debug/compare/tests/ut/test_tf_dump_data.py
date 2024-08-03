@@ -12,14 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
 import os
 
-from msquickcmp.tf.tf_save_model_dump_data import TfSaveModelDumpData
 from msquickcmp.adapter_cli.args_adapter import CmpArgsAdapter
+from msquickcmp.tf.tf_save_model_dump_data import TfSaveModelDumpData
 
 
-@pytest.fixture(scope='module', autouse=True)
 def test_parse_ops_name_from_om_json():
     om_json = "./test_resource/om/model.json"
     output_json_path = os.path.abspath(om_json)
@@ -33,7 +31,6 @@ def test_parse_ops_name_from_om_json():
     assert expect_ops_name == ops_name
 
 
-@pytest.fixture(scope='module', autouse=True)
 def test_split_input_shape():
     input_shapes = "input_1:16,32,32,3;input_2:1,16,16,32"
     input_shape_list = TfSaveModelDumpData.split_input_shape(input_shapes)
