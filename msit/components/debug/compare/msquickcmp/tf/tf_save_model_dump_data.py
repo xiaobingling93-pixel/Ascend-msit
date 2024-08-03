@@ -102,6 +102,7 @@ class TfSaveModelDumpData(DumpData):
             npy_file_path = os.path.join(self.dump_data_tf, tensor_name)
             np.save(npy_file_path, data)
 
+    @staticmethod
     def parse_ops_name_from_om_json(self, output_json_path):
         op_names = []
         om = self._parse_json_file(output_json_path)
