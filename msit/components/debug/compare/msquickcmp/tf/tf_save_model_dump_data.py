@@ -47,6 +47,42 @@ class TfSaveModelDumpData(DumpData):
         self.net_output = {}
         self._create_dir()
 
+    @staticmethod
+    def _is_op_exists(operation_name_to_check, operations):
+        return any(op.name == operation_name_to_check for op in operations)
+
+    @staticmethod
+    def _parse_json_file(output_json_path):
+        try:
+            with open(output_json_path, 'r', encoding='utf-8') as file:
+                return json.load(file)
+        except FileNotFoundError as e:
+            raise FileNotFoundError(f"File '{output_json_path}' not found, Please check whether the json file path is "
+                                    f"valid. {e}") from e
+        except json.JSONDecodeError as e:
+            raise RuntimeError(f"File '{output_json_path}' is not a valid JSON format. {e}") from e
+
+    @staticmethod
+    def _check_tf_version(expected_version):
+        current_version = tf.__version__
+        if current_version != expected_version:
+            raise ImportError(
+                f"TensorFlow version mismatch: expected version {expected_version}, "
+                f"but found version {current_version}. Please install the correct "
+                "version of TensorFlow."
+            )
+
+    @staticmethod
+    def split_input_shape(input_shapes):
+        input_list = input_shapes.split(";")
+        input_shape_list = [
+            (name, [int(num) for num in shape_data_str_list])
+            for name, shape_data_str in (shape.split(":") for shape in input_list)
+            for shape_data_str_list in [shape_data_str.split(",")]
+        ]
+
+        return input_shape_list
+
     def generate_inputs_data(self, npu_dump_path=None, om_parser=None):
         """
         Generate tf2.6 save_model inputs data
@@ -92,10 +128,6 @@ class TfSaveModelDumpData(DumpData):
 
         return self.dump_data_tf
 
-    @staticmethod
-    def _is_op_exists(operation_name_to_check, operations):
-        return any(op.name == operation_name_to_check for op in operations)
-
     def _save_dump_data(self, out, output_tensors):
         for data, tensor in zip(out, output_tensors):
             tensor_name = tensor.name.replace("/", "_").replace(":", ".") + "." + str(int(time.time()))
@@ -119,35 +151,3 @@ class TfSaveModelDumpData(DumpData):
     def _create_dir(self):
         utils.create_directory(self.input)
         utils.create_directory(self.dump_data_tf)
-
-    @staticmethod
-    def _parse_json_file(output_json_path):
-        try:
-            with open(output_json_path, 'r', encoding='utf-8') as file:
-                return json.load(file)
-        except FileNotFoundError as e:
-            raise FileNotFoundError(f"File '{output_json_path}' not found, Please check whether the json file path is "
-                                    f"valid. {e}") from e
-        except json.JSONDecodeError as e:
-            raise RuntimeError(f"File '{output_json_path}' is not a valid JSON format. {e}") from e
-
-    @staticmethod
-    def _check_tf_version(expected_version):
-        current_version = tf.__version__
-        if current_version != expected_version:
-            raise ImportError(
-                f"TensorFlow version mismatch: expected version {expected_version}, "
-                f"but found version {current_version}. Please install the correct "
-                "version of TensorFlow."
-            )
-
-    @staticmethod
-    def split_input_shape(input_shapes):
-        input_list = input_shapes.split(";")
-        input_shape_list = [
-            (name, [int(num) for num in shape_data_str_list])
-            for name, shape_data_str in (shape.split(":") for shape in input_list)
-            for shape_data_str_list in [shape_data_str.split(",")]
-        ]
-
-        return input_shape_list
