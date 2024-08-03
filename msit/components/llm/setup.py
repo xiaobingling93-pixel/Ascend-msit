@@ -39,7 +39,7 @@ ait_sub_task_entry_points = [
 
 setup(
     name='msit_llm',
-    version='7.0.0c2',
+    version='7.0.0c730',
     description='Debug tools for large language model(llm)',
     url='https://gitee.com/ascend/msit/msit/components/llm',
     packages=find_packages(),    
