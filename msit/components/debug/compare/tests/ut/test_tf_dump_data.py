@@ -26,8 +26,8 @@ def test_parse_ops_name_from_om_json():
     arguments.out_path = ''
     arguments.model_path = ''
     arguments.input_shape = 'input_1:1,224,224,3'
-    tfSaveModelDumpData = TfSaveModelDumpData(arguments)
-    ops_name = tfSaveModelDumpData.parse_ops_name_from_om_json(output_json_path)
+    tf_save_model_dump_data = TfSaveModelDumpData(arguments)
+    ops_name = tf_save_model_dump_data.parse_ops_name_from_om_json(output_json_path)
     assert expect_ops_name == ops_name
 
 
