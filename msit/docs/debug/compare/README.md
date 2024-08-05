@@ -4,7 +4,6 @@
 - compare一键式全流程精度比对（推理）功能将推理场景的精度比对做了自动化，适用于 TensorFlow、ONNX、Caffe 模型，用户只需要输入原始模型，对应的离线模型和输入，输出整网比对的结果，离线模型为通过 ATC 工具转换的 om 模型，输入 bin 文件需要符合模型的输入要求（支持模型多输入）。
 - 该功能使用约束场景说明，参考链接：[CANN商用版/场景约束](https://www.hiascend.com/document/detail/zh/canncommercial/80RC1/devaids/auxiliarydevtool/atlasaccuracy_16_0037.html)
 - 对于 Caffe 模型，目前不支持动态 shape 的模型比对。对于 `yolov2` / `yolov3` / `ssd` 等需要自定义实现层的模型，需要自行编译安装特定版本的 caffe。
-- 大模型加速库在线推理精度比对，参考链接：[加速库精度比对介绍](../../../examples/cli/debug/compare/acl_cmp_introduction/introduction.md)
 - **注意**：请确保ATC工具转换的om与当前运行环境使用的芯片型号一致。
 
 
@@ -111,8 +110,7 @@ compare功能可以直接通过msit命令行形式启动精度对比。启动方
 | -single, --single-op| 单算子比对模式，默认关闭，开启时在输出路径下会生成single op目录，存放单算子比对结果文件使用方式：-single True                                                                                                                                                                                                                             | 否  |
 | --fusion-switch-file| 昇腾模型融合规则配置文件，传入该文件后，compare工具会根据传入的融合规则配置文件，重新生成一个om文件，和--om-model传入的模型进行精度比较，例如：--fusion-switch-file ./fusion_switch.cfg，其中fusion_switch.cfg文件配置方法参见：[如何关闭/开启融合规则](https://www.hiascend.com/document/detail/zh/canncommercial/63RC1/reference/graphubfusionref/graphubfusionref_000003.html) | 否  |
 | -max, --max-cmp-size| 表示每个dump数据比较的最大字节数，用于精度比对过程提速，默认0(0表示全量比较)，当模型中算子的输出存在较大shape的、比较过于耗时情况，可以尝试打开。注意：需要使用最新cann版本(>=6.3.RC3)。使用方式：--max-cmp-size 1024                                                                                                                                                            | 否  |
-| -q,--quant_fusion_rule_file| 量化算子映射关系文件（昇腾模型压缩输出的json文件）。仅推理场景支持本参数。使用方式：--quant_fusion_rule_file                                                                                                                                                                                                                          | 否  |
-| aclcmp | 加速库精度比对子命令，大模型加速库在线推理场景下使用，使用指导请移步：[使用指导](../../../examples/cli/debug/compare/11_pta_acl_cmp/basic_usage.md)                                                                                                                                                                                  |  |
+| -q,--quant_fusion_rule_file| 量化算子映射关系文件（昇腾模型压缩输出的json文件）。仅推理场景支持本参数。使用方式：--quant_fusion_rule_file                                                                                                                                                                                                                          | 否  | |  |
 
 ### 使用场景
 
@@ -131,7 +129,6 @@ compare功能可以直接通过msit命令行形式启动精度对比。启动方
 | [09_single_op](../../../examples/cli/debug/compare/09_single_op)                                 | 单算子比对模式                              |
 | [10_fusion_switch_file](../../../examples/cli/debug/compare/10_fusion_switch_file)               | 关闭融合规则.om模型和原始.om模型精度比对              |
 | [11_mixing_precison_compare](../../../examples/cli/debug/compare/11_mixing_precison_compare)      | 混合精度策略的.om模型和.om模型的精度比对              |
-| [12_acl_cmp_introduction](../../../examples/cli/debug/compare/acl_cmp_introduction/introduction.md) | 大模型加速库在线推理精度比对介绍                     |
 
 ### 常见问题FAQ
 

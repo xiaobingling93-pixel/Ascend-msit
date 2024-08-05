@@ -31,6 +31,15 @@ class TestSliceOperation(unittest.TestCase):
         assert torch.equal(op3.process(tensor), tensor[1:2:])
         assert torch.equal(op4.process(tensor), tensor[::2])
 
+    def test_negative(self):
+        tensor = torch.rand(1, 2, 3)
+        op1 = SliceOperation("[-1]")
+        op2 = SliceOperation("[..., -1:-3]")
+        op3 = SliceOperation("[0, -1:-2, -2:-3]")
+        assert torch.equal(op1.process(tensor), tensor[-1])
+        assert torch.equal(op2.process(tensor), tensor[..., -1:-3])
+        assert torch.equal(op3.process(tensor), tensor[0, -1:-2, -2:-3])
+
     def test_ellipsis(self):
         tensor = torch.rand(3, 4, 5)
         op = SliceOperation("[..., 1]")

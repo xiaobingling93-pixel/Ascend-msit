@@ -33,7 +33,7 @@ ait_sub_task_entry_points = [
 
 setup(
     name='msit-convert',
-    version='7.0.0c2',
+    version='7.0.0c730',
     description='model convert tool',
     url='https://gitee.com/ascend/msit',
     packages=find_packages(),

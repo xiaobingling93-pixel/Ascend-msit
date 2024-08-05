@@ -25,17 +25,15 @@ from msit_llm.common.log import logger
 from msit_llm.compare.cmp_algorithm import CMP_ALG_MAP, CUSTOM_ALG_MAP
 from msit_llm.opcheck.opchecker import NAMEDTUPLE_PRECISION_METRIC, NAMEDTUPLE_PRECISION_MODE
 
-
 FLOAT_EPSILON = torch.finfo(torch.float).eps
 
 
 class OperationTest(unittest.TestCase):
-    def __init__(self, methodName='opTest', case_info=None, excuted_ids=None):
+    def __init__(self, methodName='opTest', case_info=None):
         super(OperationTest, self).__init__(methodName)
 
         self.case_info = case_info
         self.case_info['res_detail'] = []
-        self.excuted_ids = excuted_ids
         self.op_id = case_info['op_id']
         self.op_name = case_info['op_name']
         self.op_param = case_info['op_param']
@@ -69,15 +67,6 @@ class OperationTest(unittest.TestCase):
             error6: 1
         }
 
-    @staticmethod
-    def parametrize(optest_class, case_info=None, excuted_ids=None):
-        testloader = unittest.TestLoader()
-        testnames = testloader.getTestCaseNames(optest_class)
-        suite = unittest.TestSuite()
-        for name in testnames:
-            suite.addTest(optest_class(name, case_info=case_info, excuted_ids=excuted_ids))
-        return suite
-
     def validate_param(self, *param_names):
         ret = True
         for param_name in param_names:
@@ -93,8 +82,12 @@ class OperationTest(unittest.TestCase):
             raise RuntimeError(f"{path} not valid")
 
     def get_tensor_path(self, path, tensor_type):
+        if os.path.exists(os.path.join(path, 'before')) and tensor_type == 'intensor':
+            path = os.path.join(path, 'before')
+        else:
+            path = os.path.join(path, 'after')
         _tensor_path = [x for x in os.listdir(path) if x.startswith(tensor_type)]
-        _tensor_path.sort(key=lambda x:int(x.split(tensor_type)[1].split('.')[0]))  
+        _tensor_path.sort(key=lambda x: int(x.split(tensor_type)[1].split('.')[0]))
         tensor_files = [os.path.join(path, x) for x in _tensor_path]
         return tensor_files
 
@@ -114,13 +107,13 @@ class OperationTest(unittest.TestCase):
         except IndexError as e:
             logger_text = f"Cannot find data on rank {i}! {self.op_name} needs tensors on all devices! Exception: {e}"
             logger.error(logger_text)
-            raise RuntimeError(f"{new_tensor_path_pattern} not valid")
+            raise RuntimeError(f"{new_tensor_path_pattern} not valid") from e
         self.validate_path(new_tensor_path)
         _in_tensor_files = self.get_tensor_path(new_tensor_path, "intensor")
         return self.read_tensor_from_file(_in_tensor_files)
 
     def get_rank_info(self):
-        rank = self.op_param.get("rank", None) 
+        rank = self.op_param.get("rank", None)
         rank_root = self.op_param.get("rankRoot", None)
         rank_size = self.op_param.get("rankSize", None)
         return rank, rank_root, rank_size
@@ -147,12 +140,12 @@ class OperationTest(unittest.TestCase):
         _in_tensor_files = self.get_tensor_path(self.tensor_path, "intensor")
         self.in_tensors = self.read_tensor_from_file(_in_tensor_files)
         self.in_tensors = self.force_dtype(self.in_tensors, self.case_info['precision_mode'])
-        _out_tensor_files = self.get_tensor_path(self.tensor_path, "outtensor")
-        self.out_tensors = self.read_tensor_from_file(_out_tensor_files)
-        self.out_tensors = self.force_dtype(self.out_tensors, self.case_info['precision_mode'])
+        if not (self.atb_rerun and 'after' not in os.listdir(self.tensor_path)):
+            _out_tensor_files = self.get_tensor_path(self.tensor_path, "outtensor")
+            self.out_tensors = self.read_tensor_from_file(_out_tensor_files)
+            self.out_tensors = self.force_dtype(self.out_tensors, self.case_info['precision_mode'])
 
     def tearDown(self):
-        self.excuted_ids.put(self.op_id)
         if self.case_info['excuted_information'] != 'PASS':
             self.case_info['excuted_information'] = 'FAILED'
 
@@ -169,7 +162,7 @@ class OperationTest(unittest.TestCase):
                 out_tensors.append(self.in_tensors[index])
         else:
             out_tensors = operation.execute(self.in_tensors)
-        return out_tensors
+        return [tensor.cpu() for tensor in out_tensors]
 
     def excute_common(self, execute_type):
         logger_text = f"———————— {self.op_id} {self.op_name} test start ————————"
@@ -179,7 +172,7 @@ class OperationTest(unittest.TestCase):
         if self.atb_rerun:
             if self.op_name in ("AllGatherOperation", "AllReduceOperation", "LinearParallelOperation"):
                 logger_text = f"{self.op_name} needs data on all ranks and atb-rerun is unsupported. " \
-                    "The dump data will be used for comparison."
+                              "The dump data will be used for comparison."
                 logger.warning(logger_text)
                 out_tensors = self.out_tensors
             else:
@@ -188,8 +181,10 @@ class OperationTest(unittest.TestCase):
             out_tensors = self.out_tensors
 
         try:
-            logger.debug("out_tensor", out_tensors[0].size())
-            logger.debug("golden_out_tensor", golden_out_tensors[0].size())
+            logger_text1 = f"out_tensor: {out_tensors[0].size()}"
+            logger_text2 = f"golden_out_tensor: {golden_out_tensors[0].size()}"
+            logger.debug(logger_text1)
+            logger.debug(logger_text2)
         except TypeError as e:
             logger_text = "The output is abnormal. Please check! Exception: {}".format(e)
             logger.debug(logger_text)
@@ -269,7 +264,7 @@ class OperationTest(unittest.TestCase):
         device_count = torch.npu.device_count()
         current_device = torch.npu.current_device()
         logger_text = "Device Properties: device_name: {}, soc_version: {}, device_count: {}, current_device: {}" \
-                    .format(device_name, soc_version, device_count, current_device)
+            .format(device_name, soc_version, device_count, current_device)
         logger.debug(logger_text)
         return soc_version
 
@@ -343,7 +338,7 @@ class OperationTest(unittest.TestCase):
 
             if pass_flag:
                 self.case_info['excuted_information'] = 'PASS'
-                
+
             else:
                 self.case_info['excuted_information'] = 'FAILED'
             self.case_info['fail_reason'] = ", ".join(message)

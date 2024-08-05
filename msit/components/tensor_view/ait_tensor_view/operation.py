@@ -16,7 +16,7 @@ import re
 
 import torch
 
-SLICE_PATTERN = re.compile(r"\.\.\.|\d+|(\d+)?:(\d+)?(:?\d+)?")
+SLICE_PATTERN = re.compile(r"\.\.\.|-?\d+|(-?\d+)?:(-?\d+)?(:?-?\d+)?")
 
 
 def convert_slice(s: str) -> slice:
