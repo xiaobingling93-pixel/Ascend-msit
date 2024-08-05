@@ -192,7 +192,7 @@ class OpcheckElewiseAddOperation(operation_test.OperationTest):
                     out_offset.squeeze(axis=-1).type(torch.float32)]
         else:
             input_abs = torch.abs(input_x)
-            scale = torch.max(input_abs, axis = -1, keepdims = True).type(torch.float32)
+            scale = torch.max(input_abs, axis=-1, keepdims=True).type(torch.float32)
             out_scale = scale / 127
 
             input_x = input_x.type(torch.float32)

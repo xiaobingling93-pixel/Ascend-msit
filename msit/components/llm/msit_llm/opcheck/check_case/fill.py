@@ -26,7 +26,7 @@ class OpcheckFillOperation(operation_test.OperationTest):
         value = self.op_param.get("value", None) 
 
         if with_mask:
-            golden_result = in_tensors[0].masked_fill_(in_tensors[1].bool( ), value[0])
+            golden_result = in_tensors[0].masked_fill_(in_tensors[1].bool(), value[0])
         else:
             golden_result = torch.full(out_dim, value[0], dtype=torch.float16)
         return [golden_result]
