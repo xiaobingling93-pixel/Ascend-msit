@@ -40,7 +40,7 @@ class DictChecker(Checker):
 
     @rule()
     def is_key_type_valid(self, exp_type) -> Union["DictChecker", CheckResult]:
-        is_pass = self.is_dict()
+        is_pass = self.is_dict().passed
         if not is_pass:
             return is_pass
         err_msg = []
