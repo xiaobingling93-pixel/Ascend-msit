@@ -1,0 +1,81 @@
+from components.utils.check.checker import Checker, CheckResult, rule
+from components.utils.check.dict_checker import DictChecker
+from components.utils.check.number_checker import NumberChecker
+import inspect
+from typing import Callable, Dict
+from functools import wraps
+
+
+class FuncWrapper:
+    def __init__(self, check_rules: Dict[str, Checker]) -> None:
+        self.check_rules: Dict[str, Checker] = check_rules
+        self.args_names = []
+        self.args_name_set = set()
+        self.var_keyword_rule = None
+
+    def is_function_param_valid(self, to_raise, *args, **kwargs) -> bool:
+        if kwargs is not None:
+            for args_name, arg_value in kwargs.items():
+                rule = self.check_rules.get(args_name)
+                if rule is None and args_name not in self.args_name_set and self.var_keyword_rule is not None:
+                    rule = self.var_keyword_rule
+                if rule is None:
+                    continue
+
+                is_pass = rule.check(arg_value, will_raise=to_raise)
+                if not is_pass:
+                    return bool(is_pass), f"{args_name} is invalid. {str(is_pass)}"
+
+        if args is not None and len(self.args_names) > 0:
+            for index, arg_value in enumerate(args):
+
+                if len(self.args_names) > index:
+                    args_name = self.args_names[index]
+                else:
+                    args_name = self.args_names[-1]
+
+                rule = self.check_rules.get(args_name)
+                if rule is None:
+                    continue
+
+                is_pass = rule.check(arg_value, will_raise=to_raise)
+                if not is_pass:
+                    return bool(is_pass), f"{args_name} is invalid. {str(is_pass)}"
+        return True
+
+    def parse_function(self, func):
+        parameters = inspect.signature(func).parameters
+
+        for param in parameters.values():
+            if param.kind == inspect._ParameterKind.VAR_KEYWORD:
+                self.var_keyword_rule = self.check_rules.get(param.name)
+            else:
+                self.args_names.append(param.name)
+                if param.kind in [inspect._ParameterKind.POSITIONAL_OR_KEYWORD, inspect._ParameterKind.KEYWORD_ONLY]:
+                    self.args_name_set.add(param.name)
+
+    def create_wrapper(self, ret_value, to_raise) -> Callable:
+        def decorator(func) -> Callable:
+            self.parse_function(func)
+
+            @wraps(func)
+            def wrapper(*args, **kwargs):
+                is_pass = self.is_function_param_valid(to_raise, *args, **kwargs)
+                if isinstance(is_pass, bool) and is_pass:
+                    return func(*args, **kwargs)
+                else:
+                    return ret_value
+
+            return wrapper
+
+        return decorator
+
+    def to_return(self, ret_value) -> Callable:
+        return self.create_wrapper(ret_value, False)
+
+    def to_raise(self) -> Callable:
+        return self.create_wrapper(None, True)
+
+
+def validate_params(check_rules) -> FuncWrapper:
+    return FuncWrapper(check_rules)
