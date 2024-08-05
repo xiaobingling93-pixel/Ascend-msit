@@ -46,24 +46,24 @@ class ElewiseType(Enum):
 
 class OpcheckElewiseAddOperation(operation_test.OperationTest):
     def elewise_cast(self, in_tensors):
-        from msit_llm.opcheck.check_case import outTensorType
-        out_tensor_type = self.op_param.get('outTensorType', outTensorType.ACL_DT_UNDEFINED.value)
+        from msit_llm.opcheck.check_case import OutTensorType
+        out_tensor_type = self.op_param.get('OutTensorType', OutTensorType.ACL_DT_UNDEFINED.value)
         # ELEWISE_CAST输入输出仅支持float/float16/int32/int64数据类型
         out_tensor_type_support_list = [
-            outTensorType.ACL_FLOAT.value,
-            outTensorType.ACL_FLOAT16.value,
-            outTensorType.ACL_INT32.value,
-            outTensorType.ACL_INT64.value
+            OutTensorType.ACL_FLOAT.value,
+            OutTensorType.ACL_FLOAT16.value,
+            OutTensorType.ACL_INT32.value,
+            OutTensorType.ACL_INT64.value
         ]
-        self.validate_int_range(out_tensor_type, out_tensor_type_support_list, "outTensorType")       
+        self.validate_int_range(out_tensor_type, out_tensor_type_support_list, "OutTensorType")       
         golden_result = in_tensors[0]
-        if out_tensor_type == outTensorType.FLOAT.value:
+        if out_tensor_type == OutTensorType.FLOAT.value:
             golden_result = in_tensors[0].float()
-        elif out_tensor_type == outTensorType.HALF.value:
+        elif out_tensor_type == OutTensorType.HALF.value:
             golden_result = in_tensors[0].half()
-        elif out_tensor_type == outTensorType.INT.value:
+        elif out_tensor_type == OutTensorType.INT.value:
             golden_result = in_tensors[0].int()
-        elif out_tensor_type == outTensorType.LONG.value:
+        elif out_tensor_type == OutTensorType.LONG.value:
             golden_result = in_tensors[0].long()
         return [golden_result]
 
@@ -136,7 +136,7 @@ class OpcheckElewiseAddOperation(operation_test.OperationTest):
         # ELEWISE_EQUAL输出仅支持int8数据类型
         golden_result = torch.eq(in_tensors[0], in_tensors[1]).type(torch.int8)
         return [golden_result]
-    
+
     def elewise_quant_per_channel(self, in_tensors):
         # ELEWISE_QUANT_PER_CHANNEL输出仅支持int8数据类型
         input_x = in_tensors[0]
@@ -148,14 +148,14 @@ class OpcheckElewiseAddOperation(operation_test.OperationTest):
             scaled_input = torch.round(input_x / input_scale)
         except ZeroDivisionError as e:
             raise RuntimeError("get ZeroDivisionError when calc ELEWISE_QUANT_PER_CHANNEL golden") from e
-    
+
         if len(input_offset) == 0:
             out = torch.clamp(scaled_input, -128, 127)
         else:
             out = torch.clamp(scaled_input + input_offset, -128, 127)
 
         return [out.type(torch.int8)]
-    
+
     def elewise_dequant_per_channel(self, in_tensors):
         # ELEWISE_DEQUANT_PER_CHANNEL输出仅支持float16数据类型
         input_y = in_tensors[0].type(torch.float16) # 支持int8/float16数据类型，计算时需要转换为float16
@@ -168,21 +168,21 @@ class OpcheckElewiseAddOperation(operation_test.OperationTest):
             out = torch.clamp(input_y - input_offset * input_scale, -65504, 65504)
 
         return [out.type(torch.float16)]
-    
+
     def elewise_dynamic_quant(self, in_tensors):
         input_x = in_tensors[0]
         shape_input = input_x.shape
-        
+
         quant_param = self.op_param.get("quantParam", {})
         asymmetric = quant_param.get("asymmetric", False)
         input_scale = quant_param.get("inputScale", 1.0)
         input_offset = quant_param.get("inputOffset", 0)
 
         if asymmetric:
-            row_max = torch.max(input_x, axis = -1, keepdims = True).type(torch.float32)
-            row_min = torch.min(input_x, axis = -1, keepdims = True).type(torch.float32)
+            row_max = torch.max(input_x, axis=-1, keepdims=True).type(torch.float32)
+            row_min = torch.min(input_x, axis=-1, keepdims=True).type(torch.float32)
             out_scale = (row_max - row_min) / 255
-            out_offset = - (row_max + row_min ) / 2 * out_scale
+            out_offset = - (row_max + row_min) / 2 * out_scale
 
             input_x = input_x.type(torch.float32)
             input_x = input_x / out_scale + out_offset
@@ -199,12 +199,12 @@ class OpcheckElewiseAddOperation(operation_test.OperationTest):
             input_x = (input_x * 127) / scale
             out_x = torch.round(input_x)
             return [out_x.type(torch.int8), out_scale.squeeze(axis=-1).type(torch.float32)]
-    
+
     def elewise_tanh(self, in_tensors):
         # ELEWISE_TANH输入输出仅支持float16数据类型 
         golden_result = torch.tanh(in_tensors[0])
         return [golden_result]
-        
+
     def golden_calc(self, in_tensors):
         elewise_type = self.op_param.get("elewiseType", ElewiseType.ELEWISE_UNDEFINED.value)
         elewise_type_support_list = [

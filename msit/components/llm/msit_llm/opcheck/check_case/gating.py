@@ -49,7 +49,7 @@ class OpcheckGatingOperation(operation_test.OperationTest):
             used_expert_index[expert_index] += 1
             original_index_arr[int(tmp_sorted_token_index)] = original_index
             token_index_arr[int(tmp_sorted_token_index)] = token_index
-        
+
         return [token_index_arr, cum_sum_num, original_index_arr]
 
     def test(self):

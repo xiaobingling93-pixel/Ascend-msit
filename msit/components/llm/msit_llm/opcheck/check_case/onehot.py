@@ -17,7 +17,7 @@ import torch_npu
 
 from msit_llm.opcheck import operation_test
 from msit_llm.common.log import logger
- 
+
 
 class OpcheckOnehotOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):

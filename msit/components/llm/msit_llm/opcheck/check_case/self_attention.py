@@ -115,9 +115,10 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
 
         clamp_type = self.op_param("clampType", ClampType.CLAMP_TYPE_UNDEFINED.value)
         kernel_type = self.op_param("kernelType", KernelType.KERNELTYPE_DEFAULT.value)
-        post_mask_coff = -3e38
         if kernel_type == KernelType.KERNELTYPE_HIGH_PRECISION.value:
-            post_mask_coff = 1
+            post_mask_coff = 1.0
+        else:
+            post_mask_coff = -3e38
 
         q_scale = self.op_param.get("qScale", 1.0)
         qk_scale = self.op_param.get("qkScale", 1.0)
@@ -203,9 +204,10 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
 
         clamp_type = self.op_param.get("clampType", ClampType.CLAMP_TYPE_UNDEFINED.value)
         kernel_type = self.op_param.get("kernelType", KernelType.KERNELTYPE_DEFAULT.value)
-        post_mask_coff = -3e38
         if kernel_type == KernelType.KERNELTYPE_HIGH_PRECISION.value:
-            post_mask_coff = 1
+            post_mask_coff = 1.0
+        else:
+            post_mask_coff = -3e38
 
         q_scale = self.op_param.get("qScale", 1.0)
         qk_scale = self.op_param.get("qkScale", 1.0)
@@ -222,8 +224,10 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
 
         for idx in batch_status:
             q_s, kv_s = q_seqlen[idx], kv_seqlen[idx]
-            q_slice = q[q_offset:q_offset + q_s][:].view(q_s, head_num, head_size).permute(1, 0, 2) # (head_num, q_seq, head_size)
-            k_slice_t = k[k_offset:k_offset + kv_s][:].view(kv_s, kv_head_num, head_size).permute(1, 2, 0) # get K^T (kv_head_num, head_size, k_seq)
+            # (head_num, q_seq, head_size)
+            q_slice = q[q_offset:q_offset + q_s][:].view(q_s, head_num, head_size).permute(1, 0, 2)
+            # get K^T (kv_head_num, head_size, k_seq)
+            k_slice_t = k[k_offset:k_offset + kv_s][:].view(kv_s, kv_head_num, head_size).permute(1, 2, 0)
             v_slice = v[v_offset:v_offset + kv_s][:].view(kv_s, kv_head_num, head_size).permute(1, 0, 2)
 
             score = OpcheckUnpadSelfAttentionOperation.group_matmul(head_num, kv_head_num, q_slice, k_slice_t)
@@ -241,9 +245,11 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
                 score = torch.min(score, clamp_max_brc)
 
             if is_mask:
-                if (mask_type == MaskType.MASK_TYPE_NROM.value or mask_type == MaskType.MASK_TYPE_NORM_COMPRESS.value) and q_s > mask.shape[1]:
+                if (mask_type == MaskType.MASK_TYPE_NROM.value or mask_type == MaskType.MASK_TYPE_NORM_COMPRESS.value) \
+                    and q_s > mask.shape[1]:
                     # 压缩norm mask
-                    no_compress_mask = torch.ones(size=(1, max_seq_len, max_seq_len)).to(score.device) # 使用当前最大seqlen生成mask
+                    # 使用当前最大seqlen生成mask
+                    no_compress_mask = torch.ones(size=(1, max_seq_len, max_seq_len)).to(score.device)
                     no_compress_mask = torch.triu(no_compress_mask, 1)
                     no_compress_mask *= -10000.0
                     score = score + no_compress_mask[:, :q_s, :kv_s]
@@ -315,7 +321,8 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
             cur_q = (cur_q * q_scale).view(cur_seqlen, head_num, head_size).transpose(0, 1)
             cur_k = cur_k.view(cur_token_offset, head_num, head_size).transpose(1, 2, 0)
             cur_qk = torch.bmm(cur_q, cur_k) # [head_num, seqlen, token_offset]
-            if self.op_param.get("clampType", ClampType.CLAMP_TYPE_UNDEFINED.value) == ClampType.CLAMP_TYPE_MIN_MAX.value:
+            clamp_type = self.op_param.get("clampType", ClampType.CLAMP_TYPE_UNDEFINED.value)
+            if clamp_type == ClampType.CLAMP_TYPE_MIN_MAX.value:
                 clamp_min = self.op_param.get("clampMin", 0.0)
                 clamp_max = self.op_param.get("clampMax", 0.0)
                 cur_qk = torch.clamp(cur_qk, clamp_min, clamp_max)

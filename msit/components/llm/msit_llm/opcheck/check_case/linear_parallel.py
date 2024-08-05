@@ -42,7 +42,7 @@ class OpcheckLinearParallelOperation(operation_test.OperationTest):
     def add_residual(self, data, in_tensors):
         has_residual = self.op_param.get("hasResidual", False)
         residual = in_tensors[4] if len(in_tensors) >= 5 else None
-        if has_residual and not residual is None:
+        if has_residual and residual is not None:
             data += residual
         return data
 
@@ -67,15 +67,19 @@ class OpcheckLinearParallelOperation(operation_test.OperationTest):
 
         if deq_scale is not None:
             if quant_type == QuantType.QUANT_TYPE_PER_GROUP.value:
-                dequantized_groups = [group * deq_scale[i] for i, group in enumerate(quant_tensor.split(group_size, dim=0))]
+                dequantized_groups = [
+                    group * deq_scale[i] 
+                    for i, group 
+                    in enumerate(quant_tensor.split(group_size, dim=0))
+                ]
                 quant_tensor = torch.concat(dequantized_groups, dim=0)
             else:
                 quant_tensor *= deq_scale
 
         if is_quant_after:
-             from msit_llm.opcheck.check_case import outTensorType
-             result_dtype = torch.float16 if out_data_type == outTensorType.ACL_FLOAT16.value else torch.bfloat16
-             result = quant_tensor.to(result_dtype)
+            from msit_llm.opcheck.check_case import OutTensorType
+            result_dtype = torch.float16 if out_data_type == OutTensorType.ACL_FLOAT16.value else torch.bfloat16
+            result = quant_tensor.to(result_dtype)
         else:
             in_tensors[1] = quant_tensor.to(in_tensors[0].dtype)
             result = self.get_matmul_result(in_tensors)
@@ -142,8 +146,8 @@ class OpcheckLinearParallelOperation(operation_test.OperationTest):
             cal_type = self.op_param.get("type", ParallelType.UNDEFINED.value)
             quant_type = self.op_param.get("quantType", QuantType.QUANT_TYPE_UNDEFINED.value)
             group_size = self.op_param.get("quantGroupSize", 0)
-            from msit_llm.opcheck.check_case import outTensorType
-            out_data_type = self.op_param.get("outDataType", outTensorType.ACL_DT_UNDEFINED.value)
+            from msit_llm.opcheck.check_case import OutTensorType
+            out_data_type = self.op_param.get("outDataType", OutTensorType.ACL_DT_UNDEFINED.value)
 
             if cal_type == ParallelType.LINEAR_ALL_REDUCE.value:
                 golden_result = self.all_reduce(in_tensors, rank_size, quant_type, group_size, out_data_type)

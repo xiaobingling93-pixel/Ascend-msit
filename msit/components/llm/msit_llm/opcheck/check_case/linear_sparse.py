@@ -44,14 +44,14 @@ class OpcheckLinearSparseOperation(operation_test.OperationTest):
                 weight = weight.reshape(weight.shape[1], weight.shape[2] * weight.shape[3])
             else:
                 weight = weight.reshape(weight.shape[0], weight.shape[1], weight.shape[2] * weight.shape[3])
-        
+
         if transpose_b:
             weight = torch.transpose(weight, 0, 1) if len(weight.shape) == 2 else torch.transpose(weight, 1, 2)
 
         golden_result = torch.matmul(x, weight)
-        if not bias is None:
+        if bias is not None:
             golden_result += bias
-        if not deq_scale is None:
+        if deq_scale is not None:
             golden_result *= deq_scale
 
         return [golden_result.type(torch.float16)]

@@ -56,7 +56,7 @@ class OpcheckReshapeAndCacheOperation(operation_test.OperationTest):
                         bs_id = new_seq[cur_batch] - win + j
                         head_id = i % num_heads
                         token_key = in_tensors[0][bs_id][head_id]
-                        toekn_v =  in_tensors[1][bs_id][head_id]
+                        toekn_v = in_tensors[1][bs_id][head_id]
                         key_expect[block_index][block_offset] = token_key
                         value_expect[block_index][block_offset] = toekn_v
                         cur_slot += 1
@@ -81,7 +81,7 @@ class OpcheckReshapeAndCacheOperation(operation_test.OperationTest):
             for i, slot in enumerate(slot_mapping):
                 block_index = slot // block_size
                 block_offset = slot % block_size
-                
+
                 token_key = in_tensors[0][i]
                 token_v = in_tensors[1][i]
                 token_key = token_key.reshape(num_heads * head_size)

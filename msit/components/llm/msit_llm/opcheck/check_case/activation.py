@@ -70,7 +70,7 @@ class ActivationGolden:
     @staticmethod
     def log_golden(in_tensors, _):
         return torch.log(in_tensors)
-    
+
     @staticmethod
     def swigluforward_golden(in_tensors, dim):
         dtype = in_tensors.dtype
@@ -80,15 +80,15 @@ class ActivationGolden:
         b = b.to(torch.float32)
         float_result = F.silu(a) * b
         return float_result.to(dtype)
-    
+
     @staticmethod
     def swish(x):
         return x * torch.sigmoid(x)
-    
+
     @staticmethod
     def swish_grad(x):
         return torch.sigmoid(x) + x * (1 - torch.sigmoid(x)) * torch.sigmoid(x)
-    
+
     @staticmethod
     def swiglubackward_golden(in_tensors, dim):
         dtype = in_tensors[1].dtype

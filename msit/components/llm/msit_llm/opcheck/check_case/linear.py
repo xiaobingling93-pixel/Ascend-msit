@@ -21,7 +21,7 @@ from msit_llm.common.log import logger
 
 class OpcheckLinearOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
-        from msit_llm.opcheck.check_case import outTensorType
+        from msit_llm.opcheck.check_case import OutTensorType
         soc_version = self.get_soc_version()
         if soc_version == 'Ascend310P':
             in_tensors[1] = self.convert_data_format(in_tensors[1])
@@ -31,7 +31,7 @@ class OpcheckLinearOperation(operation_test.OperationTest):
         transpose_a = self.op_param.get("transposeA", False)
         transpose_b = self.op_param.get("transposeB", True)
         has_bias = self.op_param.get("hasBias", False)
-        out_data_type = self.op_param.get("outDataType", outTensorType.ACL_DT_UNDEFINED.value)
+        out_data_type = self.op_param.get("outDataType", OutTensorType.ACL_DT_UNDEFINED.value)
 
         x = in_tensors[0]
         weight = in_tensors[1]
@@ -47,19 +47,19 @@ class OpcheckLinearOperation(operation_test.OperationTest):
                 weight = weight.reshape(weight.shape[1], weight.shape[2] * weight.shape[3])
             else:
                 weight = weight.reshape(weight.shape[0], weight.shape[1], weight.shape[2] * weight.shape[3])
-        
+
         if transpose_b:
             weight = torch.transpose(weight, 0, 1) if len(weight.shape) == 2 else torch.transpose(weight, 1, 2)
 
         golden_result = torch.matmul(x, weight)
-        if not bias is None:
+        if bias is not None:
             golden_result += bias
-        if not deq_scale is None:
+        if deq_scale is not None:
             golden_result *= deq_scale
-        
-        if out_data_type == outTensorType.ACL_FLOAT16.value:
+
+        if out_data_type == OutTensorType.ACL_FLOAT16.value:
             golden_result = golden_result.type(torch.float16)
-        elif out_data_type == outTensorType.ACL_BF16.value:
+        elif out_data_type == OutTensorType.ACL_BF16.value:
             golden_result = golden_result.type(torch.bfloat16)
 
         return [golden_result]

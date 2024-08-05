@@ -32,7 +32,8 @@ class TopkToppSamplingType(Enum):
 
 class OpcheckToppOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
-        topktopp_sampling_type = self.op_param.get('topktopp_sampling_type', TopkToppSamplingType.SAMPLING_UNDEFINED.value)
+        topktopp_sampling_type = self.op_param.get('topktopp_sampling_type', 
+                                                   TopkToppSamplingType.SAMPLING_UNDEFINED.value)
         libc = CDLL("libc.so.6")
         if topktopp_sampling_type == TopkToppSamplingType.SINGLE_TOPK_SAMPLING.value:
             topk = self.op_param.get('topk', 100)
@@ -58,7 +59,7 @@ class OpcheckToppOperation(operation_test.OperationTest):
             res[res < 0] = 0
             indices_sampled = torch.take_along_axis(indices_sorted, res, axis=-1)
             probs_sampled = torch.take_along_axis(probs_sorted, res, axis=-1)
-            return [indices_sampled.type(torch.int32), probs_sampled.type(torch.float16)]
+            golden_out = [indices_sampled.type(torch.int32), probs_sampled.type(torch.float16)]
         else:
             probs = in_tensors[0]
             topk = in_tensors[1]
@@ -78,7 +79,7 @@ class OpcheckToppOperation(operation_test.OperationTest):
                 argmax_idx = argmax_idx[..., :1]
                 outtensor_probs = torch.gather(probs_sorted, dim=1, index=argmax_idx)
                 outtensor_idx = torch.gather(idx_sorted, dim=1, index=argmax_idx)
-                return [outtensor_idx.type(torch.int32), outtensor_probs.type(torch.float16)]
+                golden_out = [outtensor_idx.type(torch.int32), outtensor_probs.type(torch.float16)]
             if topktopp_sampling_type == TopkToppSamplingType.BATCH_TOPK_MULTINOMIAL_SAMPLING.value: 
                 rand_seeds = self.op_param.get('randSeeds', None)
                 bool_judge = (probs_cumsumed < topp)
@@ -100,7 +101,8 @@ class OpcheckToppOperation(operation_test.OperationTest):
 
                 rand_list = torch.rand(probs.shape[0], device=probs.device)
                 probs_sorted_sumed = torch.cumsum(probs_sorted, axis=-1)
-                return [outtensor_idx.type(torch.int32), outtensor_probs.type(torch.float16)]
+                golden_out = [outtensor_idx.type(torch.int32), outtensor_probs.type(torch.float16)]
+        return golden_out
 
     def test(self):
         ret = self.validate_param("tokkToppSamplingType")

@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from enum import Enum
 import torch
 import torch_npu
 
-from enum import Enum
 from msit_llm.opcheck import operation_test
 from msit_llm.common.log import logger
 
@@ -79,7 +79,8 @@ class OpcheckRmsNormOperation(operation_test.OperationTest):
         if layer_type == RmsNormType.RMS_NORM_PRE_NORM.value and quant_type == QuantType.QUANT_INT8.value:
             x = x + in_tensors[1].float()
             gamma = in_tensors[2].float()
-        if layer_type == RmsNormType.RMS_NORM_POST_NORM.value or (layer_type == RmsNormType.RMS_NORM_PRE_NORM.value and quant_type == QuantType.QUANT_UNDEFINED.value):
+        if layer_type == RmsNormType.RMS_NORM_POST_NORM.value or \
+            (layer_type == RmsNormType.RMS_NORM_PRE_NORM.value and quant_type == QuantType.QUANT_UNDEFINED.value):
             idx = 1
             has_bias = cur_param.get('hasBias', False)
             if has_bias:

@@ -111,7 +111,7 @@ OP_NAME_DICT = dict({
 })
 
 
-class outTensorType(Enum):
+class OutTensorType(Enum):
     ACL_DT_UNDEFINED = -1 # 未知数据类型，默认值
     ACL_FLOAT = 0
     ACL_FLOAT16 = 1

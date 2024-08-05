@@ -34,7 +34,7 @@ class OpcheckKvCacheOperation(operation_test.OperationTest):
             for j in range(seqlen[i]):
                 cache_out[layer_id[0]][i][token_offset[i] - seqlen[i] + j][:] = newkv[prefix_ntokens + j][:]
             prefix_ntokens += seqlen[i]
-        
+
         return [newkv, layer_id, cache_out, token_offset, seqlen]
 
     def test(self):

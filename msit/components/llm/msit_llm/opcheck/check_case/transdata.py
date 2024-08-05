@@ -32,7 +32,7 @@ class OpcheckTransdataOperation(operation_test.OperationTest):
         if align == 0:
             return -1
         return (x + align - 1) // align * align
-    
+
     @staticmethod
     def custom_pad(x, pad_dims):
         return torch.nn.functional.pad(x, pad_dims)
@@ -40,7 +40,7 @@ class OpcheckTransdataOperation(operation_test.OperationTest):
     @staticmethod
     def custom_reshape(x, target_shape):
         return x.reshape(target_shape)
-    
+
     @staticmethod
     def custom_transpose(x, dim1, dim2):
         return x.transpose(dim1, dim2)
@@ -69,7 +69,7 @@ class OpcheckTransdataOperation(operation_test.OperationTest):
             aux_dims[2] = OpcheckTransdataOperation.round_up(size2, default_align) // default_align
             aux_dims[3] = default_align
             pad_dims[1] = OpcheckTransdataOperation.round_up(size2, default_align) - size2
-        
+
         return OpcheckTransdataOperation.custom_transpose(
                     OpcheckTransdataOperation.custom_reshape(
                         OpcheckTransdataOperation.custom_pad(in_tensors[0], pad_dims),
@@ -85,14 +85,14 @@ class OpcheckTransdataOperation(operation_test.OperationTest):
 
         size0 = in_tensors[0].size(0)
         size1 = in_tensors[0].size(1)
-        
+
         aux_dims = [0, 0, 0, 0]
         aux_dims[0] = 1
         aux_dims[1] = OpcheckTransdataOperation.round_up(size0, default_align)
- 
+
         pad_dims = [0, 0, 0, 0]  
         pad_dims[3] = OpcheckTransdataOperation.round_up(size0, default_align) - size0
- 
+
         if in_tensors[0].dtype == torch.int8:
             aux_dims[2] = OpcheckTransdataOperation.round_up(size1, align_int8) // align_int8
             aux_dims[3] = align_int8
@@ -101,7 +101,7 @@ class OpcheckTransdataOperation(operation_test.OperationTest):
             aux_dims[2] = OpcheckTransdataOperation.round_up(size1, default_align) // default_align
             aux_dims[3] = default_align
             pad_dims[1] = OpcheckTransdataOperation.round_up(size1, default_align) - size1
-        
+
         return OpcheckTransdataOperation.custom_transpose(
                     OpcheckTransdataOperation.custom_reshape(
                         OpcheckTransdataOperation.custom_pad(in_tensors[0], pad_dims),
@@ -121,7 +121,7 @@ class OpcheckTransdataOperation(operation_test.OperationTest):
         aux_dims[0] = size0
         aux_dims[1] = size2
         aux_dims[2] = size1 * size3
-        
+
         return OpcheckTransdataOperation.custom_reshape(
                     OpcheckTransdataOperation.custom_transpose(in_tensors[0], 1, 2),
                     aux_dims

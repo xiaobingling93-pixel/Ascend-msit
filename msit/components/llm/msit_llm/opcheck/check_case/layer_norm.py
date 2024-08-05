@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from enum import Enum
 import torch
 import torch_npu
 
-from enum import Enum
 from msit_llm.opcheck import operation_test
 from msit_llm.common.log import logger
 
@@ -81,18 +81,18 @@ class OpcheckLayerNormOperation(operation_test.OperationTest):
                 quant_offset = in_tensors[5]
 
         if layer_type == LayerNormType.LAYER_NORM_NROM.value:
-            input = in_tensors[0]
+            layer_input = in_tensors[0]
             weight = in_tensors[1]
             bias = in_tensors[2]
 
             if not is_quant:
                 axis = cur_param.get('beginNormAxis', 0)
-                normalized_shape = input.shape[axis:]
-                golden_result = torch.nn.functional.layer_norm(input, normalized_shape, weight, bias, eps)
+                normalized_shape = layer_input.shape[axis:]
+                golden_result = torch.nn.functional.layer_norm(layer_input, normalized_shape, weight, bias, eps)
                 return [golden_result]
             else:
                 if dynamic_quant_type != DynamicQuantType.DYNAMIC_QUANT_UNDEFINED.value:
-                    layer_norm_result = torch.nn.functional.layer_norm(input, weight.shape, weight, bias, eps)
+                    layer_norm_result = torch.nn.functional.layer_norm(layer_input, weight.shape, weight, bias, eps)
                     dynamic_quant_x = layer_norm_result.cpu()
                     if dynamic_quant_type == DynamicQuantType.DYNAMIC_QUANT_SYMMETRIC.value:
                         input_abs = torch.abs(dynamic_quant_x)
@@ -116,8 +116,8 @@ class OpcheckLayerNormOperation(operation_test.OperationTest):
                         return [dynamic_quant_y.type(torch.int8), 
                                 dynamic_quant_scale.squeeze(axis=-1).type(torch.float32), 
                                 dynamic_quant_offset.squeeze(axis=-1).type(torch.float32)]
-                normalized_shape = (1, input.shape[-1])
-                layer_norm_res = torch.nn.functional.layer_norm(input, normalized_shape, weight, bias, eps)
+                normalized_shape = (1, layer_input.shape[-1])
+                layer_norm_res = torch.nn.functional.layer_norm(layer_input, normalized_shape, weight, bias, eps)
                 golden_result_quant = self.layer_norm_quant(layer_norm_res, quant_offset, quant_offset)
                 return [golden_result_quant]
         elif layer_type == LayerNormType.LAYER_NORM_PRENORM.value:
@@ -125,25 +125,25 @@ class OpcheckLayerNormOperation(operation_test.OperationTest):
             bias = in_tensors[3]
             normalized_shape = (1, in_tensors[0].shape[-1])
             zoom_scale_value = cur_param.get('zoomScaleValue', 1.0)
-            input = torch.add(in_tensors[0], zoom_scale_value * in_tensors[1])
-            golden_result = torch.nn.functional.layer_norm(input, normalized_shape, weight, bias, eps)
-            return [golden_result, input]
+            layer_input = torch.add(in_tensors[0], zoom_scale_value * in_tensors[1])
+            golden_result = torch.nn.functional.layer_norm(layer_input, normalized_shape, weight, bias, eps)
+            return [golden_result, layer_input]
         elif layer_type == LayerNormType.LAYER_NORM_POSTNORM.value:
             weight = in_tensors[2]
             bias = in_tensors[3]
             normalized_shape = (1, in_tensors[0].shape[-1])
             if not is_quant:
                 zoom_scale_value = cur_param.get('zoomScale', 1.0)
-                input = torch.add(in_tensors[0], zoom_scale_value * in_tensors[1])
-                golden_result = torch.nn.functional.layer_norm(input, normalized_shape, weight, bias, eps)
+                layer_input = torch.add(in_tensors[0], zoom_scale_value * in_tensors[1])
+                golden_result = torch.nn.functional.layer_norm(layer_input, normalized_shape, weight, bias, eps)
                 return [golden_result]
             else:
-                input = torch.add(in_tensors[0], in_tensors[1])
+                layer_input = torch.add(in_tensors[0], in_tensors[1])
                 if len(weight.shape) == 1:
                     weight = weight.unsqueeze(0)
                 if len(bias.shape) == 1:
                     bias = bias.unsqueeze(0)
-                layer_norm_res = torch.nn.functional.layer_norm(input, normalized_shape, weight, bias, eps)
+                layer_norm_res = torch.nn.functional.layer_norm(layer_input, normalized_shape, weight, bias, eps)
                 golden_result = layer_norm_res * quant_alpha
                 golden_result_quant = self.layer_norm_quant(layer_norm_res, quant_offset, quant_offset)
                 return [golden_result, golden_result_quant]

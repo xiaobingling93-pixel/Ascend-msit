@@ -17,7 +17,7 @@ import torch_npu
 
 from msit_llm.opcheck import operation_test
 from msit_llm.common.log import logger
- 
+
 
 class OpcheckIndexAddOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
@@ -27,7 +27,7 @@ class OpcheckIndexAddOperation(operation_test.OperationTest):
         if index_type == 1:
             in_tensors[0] = in_tensors[0].index_add_(axis, in_tensors[1], in_tensors[2], alpha=in_tensors[3].item())
             return [in_tensors[0]]
-        
+
         return []
 
     def test(self):

@@ -38,10 +38,10 @@ class QuantType(Enum):
 
 
 class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
-    def group_matmul(self, head_num, kv_head_num, A, B, is_k):
+    def group_matmul(self, head_num, kv_head_num, a, b, is_k):
         quant_type = self.op_param.get('quantType', QuantType.TYPE_QUANT_UNDEFINED.value)
         has_quant_offset = self.op_param.get('hasQuantOffset', False)
-        if quant_type!= QuantType.TYPE_QUANT_UNDEFINED.value:
+        if quant_type != QuantType.TYPE_QUANT_UNDEFINED.value:
             is_int8_flag = True
             if has_quant_offset:
                 has_bias = True
@@ -67,21 +67,21 @@ class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
         score = None
         for i in range(kv_head_num):
             if is_int8_flag:
-                int8_B = B[i:, (i+1), :, :, ]
-                head_dim = int8_B.shape[2]
-                int32_B = torch.matmul(torch.eye(int8_B.shape[1].type(torch.int32)), int8_B.type(torch.int32)).type(torch.int32)
+                int8_b = b[i:, (i + 1), :, :, ]
+                head_dim = int8_b.shape[2]
+                int32_b = torch.matmul(torch.eye(int8_b.shape[1].type(torch.int32)), int8_b.type(torch.int32)).type(torch.int32)
                 if is_k:
                     if has_bias:
-                        int32_B = int32_B + offset1[i * head_dim : (i + 1) * head_dim]
-                    fp32_B = int32_B.type(torch.float32) * de_scale1_fp32[i * head_dim : (i + 1) * head_dim]
-                    fp32_B = torch.permute(fp32_B, (0, 2, 1))
+                        int32_b = int32_b + offset1[i * head_dim : (i + 1) * head_dim]
+                    fp32_b = int32_b.type(torch.float32) * de_scale1_fp32[i * head_dim : (i + 1) * head_dim]
+                    fp32_b = torch.permute(fp32_b, (0, 2, 1))
                 else:
                     if has_bias:
-                        int32_B = int32_B + offset2[i * head_dim : (i + 1) * head_dim]
-                    fp32_B = int32_B.type(torch.float32) * de_scale2_fp32[i * head_dim : (i + 1) * head_dim]
-                group_score = torch.matmul(A[i * group_head : (i + 1) * group_head, :, :].type(torch.float32), fp32_B).type(torch.float16)
+                        int32_b = int32_b + offset2[i * head_dim : (i + 1) * head_dim]
+                    fp32_b = int32_b.type(torch.float32) * de_scale2_fp32[i * head_dim : (i + 1) * head_dim]
+                group_score = torch.matmul(a[i * group_head : (i + 1) * group_head, :, :].type(torch.float32), fp32_b).type(torch.float16)
             else:
-                group_score = torch.matmul(A[i * group_head : (i + 1) * group_head, :, :].type(torch.float32), B[i: (i + 1), :, :].type(torch.float32))
+                group_score = torch.matmul(a[i * group_head : (i + 1) * group_head, :, :].type(torch.float32), b[i: (i + 1), :, :].type(torch.float32))
 
             if score is None:
                 score = group_score
