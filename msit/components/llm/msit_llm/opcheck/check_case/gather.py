@@ -21,6 +21,7 @@ from msit_llm.common.log import logger
 
 class OpcheckGatherOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
+        in_tensors = [tensor.cpu() for tensor in in_tensors]
         axis = self.op_param.get("axis", 0)
         batch_dims = self.op_param.get("batchDims", 0)
         if batch_dims == 0:
