@@ -63,12 +63,14 @@ class OpcheckLinearOperation(operation_test.OperationTest):
         golden_result = torch.matmul(x, weight)
         
         if bias is not None:
-            golden_result += bias
+            golden_result = golden_result + bias
         if deq_scale is not None:
             deq_scale = OpcheckLinearOperation.deqscale2int32(deq_scale)
-            golden_result *= deq_scale
+            golden_result = golden_result * deq_scale
 
-        if out_data_type == OutTensorType.ACL_BF16.value:
+        if out_data_type == OutTensorType.ACL_FLOAT16.value:
+            golden_result = golden_result.type(torch.float16)
+        elif out_data_type == OutTensorType.ACL_BF16.value:
             golden_result = golden_result.type(torch.bfloat16)
 
         return [golden_result]
