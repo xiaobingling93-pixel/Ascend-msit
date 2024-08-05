@@ -304,6 +304,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         head_num = self.op_param.get("headNum", 0)
         head_size = int(mixed_q.shape[1] / head_num)
 
+        offset = 0
         context_list = []
         for i in batch_status:
             cur_seqlen = seq_len[i]
