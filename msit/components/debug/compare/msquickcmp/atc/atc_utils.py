@@ -19,6 +19,7 @@ This class mainly involves convert model to json function.
 """
 import os
 import stat
+import acl
 
 from msquickcmp.common import utils
 from msquickcmp.common.utils import AccuracyCompareException
@@ -63,13 +64,34 @@ def convert_model_to_json(cann_path, offline_model_path, out_path):
     return output_json_path
 
 
+def convert_pb_model_to_om(cann_path, pb_model_path, out_path, input_shapes, framework):
+    """
+    Function Description:
+        convert pb model to om
+    Return Value:
+        output om path
+    """
+    model_name = os.path.basename(pb_model_path).split(".")[0]
+    om_file = os.path.join(out_path, model_name)
+    atc_command_file_path = get_atc_path(cann_path)
+    atc_cmd = [atc_command_file_path, "--framework=" + framework,
+               "--soc_version=" + acl.get_soc_name(),
+               "--model=" + pb_model_path,
+               "--output=" + om_file,
+               "--input_shape=" + input_shapes]
+
+    utils.execute_command(atc_cmd)
+    om_file_path = om_file + ".om"
+    return om_file_path
+
+
 def get_atc_path(cann_path):
     atc_command_file_path = os.path.join(cann_path, ATC_FILE_PATH)
     if not os.path.exists(atc_command_file_path):
         atc_command_file_path = os.path.join(cann_path, OLD_ATC_FILE_PATH)
     if not os.path.exists(atc_command_file_path):
         raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PATH_ERROR)
-    
+
     atc_command_file_path = os.path.realpath(atc_command_file_path)
     if not os.access(atc_command_file_path, os.X_OK):
         utils.logger.error('ATC path is not permitted for executing.')
