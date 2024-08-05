@@ -289,7 +289,16 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         if soc_version != "Ascend910B":
             cache_k = self.nz_2_nd(cache_k)
             cache_v = self.nz_2_nd(cache_v)
-            attention_mask = self.nz_2_nd(attention_mask)
+
+            attention_mask = attention_mask.contiguous().permute(0, 2, 1, 3)
+            dim0, dim1, dim2, dim3 = attention_mask.shape
+            attention_mask = attention_mask.contiguous().view(dim0 * dim1, dim2, dim3)
+            attention_mask = attention_mask[:, :, :, dim1]
+            batch = len(seq_len)
+            if dim0 == 1:
+                attention_mask = attention_mask.contiguous().view(dim1, dim1)
+            elif dim0 != batch:
+                attention_mask = attention_mask.contiguous().view(batch, dim0 // batch, dim1, dim1)
 
         batch_run_status_enable = self.op_param.get("batchRunStatusEnable", False)
         if batch_run_status_enable:
@@ -320,7 +329,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
                 cur_k = torch.concat([past_k, cur_k], dim=0)
                 cur_v = torch.concat([past_v, cur_v], dim=0)
             cur_q = (cur_q * q_scale).view(cur_seqlen, head_num, head_size).transpose(0, 1)
-            cur_k = cur_k.view(cur_token_offset, head_num, head_size).transpose(1, 2, 0)
+            cur_k = cur_k.view(cur_token_offset, head_num, head_size).permute(1, 2, 0)
             cur_qk = torch.bmm(cur_q, cur_k) # [head_num, seqlen, token_offset]
             clamp_type = self.op_param.get("clampType", ClampType.CLAMP_TYPE_UNDEFINED.value)
             if clamp_type == ClampType.CLAMP_TYPE_MIN_MAX.value:
