@@ -60,7 +60,7 @@ class TfDumpData(DumpData):
         inputs_tensor = tf_common.get_inputs_tensor(self.global_graph, self.args.input_shape)
         self._make_inputs_data(inputs_tensor)
 
-    def generate_dump_data(self, npu_dump_path, om_parser=None):
+    def generate_dump_data(self, output_json_path=None, npu_dump_path=None, om_parser=None):
         """
         Generate tf model dump data
         :return tf model dump data directory
