@@ -98,7 +98,6 @@ class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
         scale = masked_attention_input[3] # float
 
         # Q * K.T
-        query = query * scale
         query = torch.permute(query, (1, 0, 2))
         quant_type = self.op_param.get('quantType', QuantType.TYPE_QUANT_UNDEFINED.value)
         if quant_type == QuantType.TYPE_QUANT_UNDEFINED.value:
