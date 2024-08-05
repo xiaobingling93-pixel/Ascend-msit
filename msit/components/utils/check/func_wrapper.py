@@ -1,9 +1,8 @@
-from components.utils.check.checker import Checker, CheckResult, rule
-from components.utils.check.dict_checker import DictChecker
-from components.utils.check.number_checker import NumberChecker
 import inspect
 from typing import Callable, Dict
 from functools import wraps
+
+from components.utils.check.checker import Checker, CheckResult, rule
 
 
 class FuncWrapper:
@@ -16,13 +15,13 @@ class FuncWrapper:
     def is_function_param_valid(self, to_raise, *args, **kwargs) -> bool:
         if kwargs is not None:
             for args_name, arg_value in kwargs.items():
-                rule = self.check_rules.get(args_name)
-                if rule is None and args_name not in self.args_name_set and self.var_keyword_rule is not None:
-                    rule = self.var_keyword_rule
-                if rule is None:
+                check_rule = self.check_rules.get(args_name)
+                if check_rule is None and args_name not in self.args_name_set and self.var_keyword_rule is not None:
+                    check_rule = self.var_keyword_rule
+                if check_rule is None:
                     continue
 
-                is_pass = rule.check(arg_value, will_raise=to_raise)
+                is_pass = check_rule.check(arg_value, will_raise=to_raise)
                 if not is_pass:
                     return bool(is_pass), f"{args_name} is invalid. {str(is_pass)}"
 
@@ -34,11 +33,11 @@ class FuncWrapper:
                 else:
                     args_name = self.args_names[-1]
 
-                rule = self.check_rules.get(args_name)
-                if rule is None:
+                check_rule = self.check_rules.get(args_name)
+                if check_rule is None:
                     continue
 
-                is_pass = rule.check(arg_value, will_raise=to_raise)
+                is_pass = check_rule.check(arg_value, will_raise=to_raise)
                 if not is_pass:
                     return bool(is_pass), f"{args_name} is invalid. {str(is_pass)}"
         return True
@@ -47,11 +46,11 @@ class FuncWrapper:
         parameters = inspect.signature(func).parameters
 
         for param in parameters.values():
-            if param.kind == inspect._ParameterKind.VAR_KEYWORD:
+            if param.kind == inspect.Parameter.VAR_KEYWORD:
                 self.var_keyword_rule = self.check_rules.get(param.name)
             else:
                 self.args_names.append(param.name)
-                if param.kind in [inspect._ParameterKind.POSITIONAL_OR_KEYWORD, inspect._ParameterKind.KEYWORD_ONLY]:
+                if param.kind in [inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY]:
                     self.args_name_set.add(param.name)
 
     def create_wrapper(self, ret_value, to_raise) -> Callable:

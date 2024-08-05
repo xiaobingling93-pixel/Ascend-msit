@@ -16,7 +16,9 @@ class ListChecker(Checker):
 
     @rule()
     def is_element_valid(self, check_rule) -> Union["ListChecker", CheckResult]:
-        is_pass = self.is_list()
+        is_pass = self.is_list().passed
+        if not is_pass:
+            return is_pass, "Input object is not a list."
         err_msgs = []
         for element in self.instance:
             rule_is_pass = check_rule.check(element)

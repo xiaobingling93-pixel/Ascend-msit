@@ -25,10 +25,9 @@ class DictChecker(Checker):
 
     @rule()
     def is_values_valid(self, default_value=None, **value_rules: Checker) -> Union["DictChecker", CheckResult]:
-        is_pass = self.is_dict()
+        is_pass = self.is_dict().passed
         if not is_pass:
-            return is_pass
-        self.instance: dict
+            return is_pass, "Input object is not a dict."
         err_msgs = []
         for key, value_rule in value_rules.items():
             value = self.instance.get(key, default_value)
@@ -52,12 +51,12 @@ class DictChecker(Checker):
         return is_pass, "\n".join(err_msg)
 
     def _find_key_in_dict(self, my_dict, my_key):
-        if isinstance(my_dict, dict):
-            if my_key in my_dict.keys():
-                return True
-            else:
-                for dict_val in my_dict.values():
-                    if isinstance(dict_val, dict):
-                        if self._find_key_in_dict(dict_val, my_key):
-                            return True
+        if not isinstance(my_dict, dict):
             return False
+        if my_key in my_dict:
+            return True
+        for dict_val in my_dict.values():
+            if isinstance(dict_val, dict):
+                if self._find_key_in_dict(dict_val, my_key):
+                    return True
+        return False
