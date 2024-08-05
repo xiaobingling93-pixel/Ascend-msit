@@ -95,7 +95,8 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
             mask = in_tensors[3]
             soc_version = self.get_soc_version()
             if soc_version != "Ascend910B":
-                self.nz_2_nd(mask)
+                mask = self.nz_2_nd(mask)
+                self.in_tensors[3] = mask
             if len(mask.shape) == 2:
                 dim0, dim1 = mask.shape
                 mask = mask.view(1, dim0, dim1)
@@ -188,7 +189,8 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
             mask = in_tensors[3]
             soc_version = self.get_soc_version()
             if soc_version != "Ascend910B":
-                self.nz_2_nd(mask)
+                mask = self.nz_2_nd(mask)
+                self.in_tensors[3] = mask
             if len(mask.shape) == 2:
                 dim0, dim1 = mask.shape
                 mask = mask.view(1, dim0, dim1)
@@ -299,6 +301,8 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
                 attention_mask = attention_mask.contiguous().view(dim1, dim1)
             elif dim0 != batch:
                 attention_mask = attention_mask.contiguous().view(batch, dim0 // batch, dim1, dim1)
+
+            self.in_tensors[3], self.in_tensors[4], self.in_tensors[5] = cache_k, cache_v, attention_mask
 
         batch_run_status_enable = self.op_param.get("batchRunStatusEnable", False)
         if batch_run_status_enable:
