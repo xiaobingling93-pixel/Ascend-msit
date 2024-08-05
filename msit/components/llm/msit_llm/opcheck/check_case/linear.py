@@ -20,13 +20,19 @@ from msit_llm.common.log import logger
 
 
 class OpcheckLinearOperation(operation_test.OperationTest):
+    @staticmethod
+    def deqscale2int32(scale):
+        import numpy as np
+        scale = scale.cpu().numpy()
+        scale = np.frombuffer(scale.astype(np.int32).tobytes(), dtype=np.float32)
+        scale = torch.tensor(scale)
+        return scale.npu()
+
     def golden_calc(self, in_tensors):
         from msit_llm.opcheck.check_case import OutTensorType
         soc_version = self.get_soc_version()
         if soc_version == 'Ascend310P':
             in_tensors[1] = self.convert_data_format(in_tensors[1])
-            logger_text = "The result of this case is unreliable on Ascend310P!"
-            logger.info(logger_text)
 
         transpose_a = self.op_param.get("transposeA", False)
         transpose_b = self.op_param.get("transposeB", True)
@@ -51,15 +57,18 @@ class OpcheckLinearOperation(operation_test.OperationTest):
         if transpose_b:
             weight = torch.transpose(weight, 0, 1) if len(weight.shape) == 2 else torch.transpose(weight, 1, 2)
 
+        if x.dtype == torch.int8:
+            x = x.type(torch.int32)
+            weight = weight.type(torch.int32)
         golden_result = torch.matmul(x, weight)
+        
         if bias is not None:
             golden_result += bias
         if deq_scale is not None:
+            deq_scale = OpcheckLinearOperation.deqscale2int32(deq_scale)
             golden_result *= deq_scale
 
-        if out_data_type == OutTensorType.ACL_FLOAT16.value:
-            golden_result = golden_result.type(torch.float16)
-        elif out_data_type == OutTensorType.ACL_BF16.value:
+        if out_data_type == OutTensorType.ACL_BF16.value:
             golden_result = golden_result.type(torch.bfloat16)
 
         return [golden_result]
