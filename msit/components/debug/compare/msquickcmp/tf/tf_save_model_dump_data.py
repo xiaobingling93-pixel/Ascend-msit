@@ -106,7 +106,7 @@ class TfSaveModelDumpData(DumpData):
         Generate tf2.6 save_model dump data
         :return tf2.6 save_model dump data directory
         """
-        ops_name = self.parse_ops_name_from_om_json(output_json_path)
+        op_names = self.parse_ops_name_from_om_json(output_json_path)
         sess = tf.compat.v1.keras.backend.get_session()
         tag_set = {tf.compat.v1.saved_model.tag_constants.SERVING}
         _ = tf.compat.v1.saved_model.load(sess, tag_set, self.model_path)
@@ -118,7 +118,7 @@ class TfSaveModelDumpData(DumpData):
         }
         output_tensors = []
         operations = sess.graph.get_operations()
-        for op_name in ops_name:
+        for op_name in op_names:
             if self._is_op_exists(op_name, operations):
                 output_tensors.extend(sess.graph.get_operation_by_name(op_name).outputs)
 
