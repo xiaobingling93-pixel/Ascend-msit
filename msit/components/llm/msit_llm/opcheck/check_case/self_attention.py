@@ -293,7 +293,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
             attention_mask = attention_mask.contiguous().permute(0, 2, 1, 3)
             dim0, dim1, dim2, dim3 = attention_mask.shape
             attention_mask = attention_mask.contiguous().view(dim0 * dim1, dim2, dim3)
-            attention_mask = attention_mask[:, :, :, dim1]
+            attention_mask = attention_mask[:, :, :dim1]
             batch = len(seq_len)
             if dim0 == 1:
                 attention_mask = attention_mask.contiguous().view(dim1, dim1)
