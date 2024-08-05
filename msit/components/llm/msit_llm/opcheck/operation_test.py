@@ -78,9 +78,9 @@ class OperationTest(unittest.TestCase):
                 logger.error(msg)
         return ret
 
-    def validate_int_range(self, param_value, int_range=[0, 1], param_name=''):
+    def validate_int_range(self, param_value, int_range, param_name=''):
         ivalue = int(param_value)
-        if not ivalue in int_range:
+        if ivalue not in int_range:
             error_msg = f"【{param_name}】{param_value} is not in range {int_range}!"
             raise argparse.ArgumentTypeError(error_msg)
 
