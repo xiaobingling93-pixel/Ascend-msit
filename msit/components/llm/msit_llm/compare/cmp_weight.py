@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import datetime
 import os
 
 import torch
@@ -30,14 +29,14 @@ def find_safetensors_files(golden_path):
     # 搜索给定目录下的所有文件，查找并存储safetensors文件路径
     # 如果没有找到safetensors文件就报错
     safetensors_file_list = []
-    for dirpath, _, fileweight_ft_keys in os.walk(model_dir_path):
-        for file in fileweight_ft_keys:
-            if file.endswith('.safetensors'):
-                safetensors_file_path = os.path.join(dirpath, file)
-                safetensors_file_list.append(safetensors_file_path) 
+    for file in os.listdir(model_dir_path):
+        if file.endswith('.safetensors'):
+            safetensors_file_path = os.path.join(model_dir_path, file)
+            safetensors_file_list.append(safetensors_file_path) 
 
     if not safetensors_file_list:
-        raise FileNotFoundError("No .safetensors files found in the directory.")
+        logger.error(f'No .safetensors files found in the directory.')
+        raise FileNotFoundError("Invalid path")
     return safetensors_file_list
     
 
@@ -50,7 +49,7 @@ def compare_weight(gp_path, mp_path, output_path):
         gp_path_list = find_safetensors_files(gp_path)
         mp_path_list = find_safetensors_files(mp_path)
     except FileNotFoundError as e:
-        print(e)
+        print(f"Caught an exception: {e}")
 
     gathered_row_data = []
     sorted_gp_path_list = sorted(gp_path_list)
@@ -63,7 +62,7 @@ def compare_weight(gp_path, mp_path, output_path):
             if ft_weight_key.endswith('weight'):
                 int_weight_value = mp_dict.get(ft_weight_key, None)
                 # 比较张量类型
-                if ft_weight_value.dtype != int_weight_value.dtype:
+                if int_weight_value.dtype == torch.int8:
                     weight_offset_key = ft_weight_key.replace("weight", "weight_offset")
                     weight_scale_key = ft_weight_key.replace("weight", "weight_scale")
                     weight_offset_value = mp_dict.get(weight_offset_key, None)
@@ -72,7 +71,7 @@ def compare_weight(gp_path, mp_path, output_path):
                     row_data_basic = set_tensor_basic_info_in_row_data(ft_weight_value, dequant_weight_value)
                     row_data = compare_data(ft_weight_value, dequant_weight_value) 
                     row_data.update(row_data_basic)
-                    row_data.update({"weight_ft_key":ft_weight_key})
+                    row_data.update({"weight_name":ft_weight_key})
                     gathered_row_data.append(row_data)
 
     return save_compare_reault_to_csv(gathered_row_data, output_path, columns=CSV_CMP_WEIGTH_HEADER)
