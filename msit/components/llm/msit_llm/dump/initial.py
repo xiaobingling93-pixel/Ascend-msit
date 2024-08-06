@@ -21,6 +21,7 @@ import re
 import csv
 
 from collections import defaultdict
+
 from components.utils.file_open_check import FileStat
 from msit_llm.common.log import logger
 from msit_llm.common.utils import safe_string
@@ -204,8 +205,7 @@ def merge_cpu_profiling_data(path):
                     read_data_to_csv(setup_data, csv_data[opname], 'setup_')
                     headers.update([_[0] for _ in csv_data[opname]])
             
-            headers = list(headers)
-            headers.sort()
+            headers = sorted(list(headers))
             rows = list()
             for opname in data.keys():
                 row = [opname]
