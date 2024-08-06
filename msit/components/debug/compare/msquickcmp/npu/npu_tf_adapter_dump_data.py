@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # coding=utf-8
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,12 +20,12 @@ This class mainly involves generate tf adapter npu dump data function.
 """
 import os
 
-import RewriterConfig
 import npu_device
 import numpy as np
 import tensorflow as tf
 import json
 
+from tensorflow.core.protobuf.rewriter_config_pb2 import RewriterConfig
 from msquickcmp.common import utils
 from npu_device.compat.v1.npu_init import *
 

@@ -215,12 +215,15 @@ def saved_model_to_pb(args):
     sess = tf.compat.v1.keras.backend.get_session()
     tag_set = {tf.compat.v1.saved_model.tag_constants.SERVING}
     model_graph_def = tf.compat.v1.saved_model.load(sess, tag_set, args.model_path)
-    serving_signature = model_graph_def.signature_def(["serving_default"])
-    output_names = [output_name.split(':')[0] for output_name in serving_signature.ouuputs.keys()]
+    serving_signature = model_graph_def.signature_def["serving_default"]
+    output_names = [output_name.split(':')[0] for output_name in serving_signature.outputs.keys()]
     frozen_graph = tf.compat.v1.graph_util.convert_variables_to_constants(sess, sess.graph.as_graph_def(), output_names)
     frozen_graph = tf.compat.v1.graph_util.remove_training_nodes(frozen_graph)
     model_name = os.path.basename(args.model_path)
-    output_pb_path = os.path.join(args.out_path, "model", model_name + ".pb")
+    pb_model_dir_path = os.path.join(args.out_path, "model")
+    if not os.path.exists(pb_model_dir_path):
+        os.makedirs(pb_model_dir_path)
+    output_pb_path = os.path.join(pb_model_dir_path, model_name + ".pb")
     with open(output_pb_path, 'wb') as pb_file:
         pb_file.write(frozen_graph.SerializeToString())
     return output_pb_path
@@ -243,9 +246,13 @@ def run(args: CmpArgsAdapter, input_shape, original_out_path, use_cli: bool):
         # gpu dump
         from msquickcmp.tf.tf_save_model_dump_data import TfSaveModelDumpData
         golden_dump = TfSaveModelDumpData(args)
-        golden_dump.generate_inputs_data(npu_dump_data_path=None, om_parser=None)
-        output_json_path = ""
-        golden_dump_data_path = golden_dump.generate_dump_data(output_json_path, npu_dump_npy_path=None, om_parser=None)
+        golden_dump.generate_inputs_data(npu_dump_data_path, om_parser=None)
+        if args.bin2npy or args.custom_op != "":
+            npu_dump_npy_path = convert_bin_dump_data_to_npy(npu_dump_data_path, npu_net_output_data_path,
+                                                             args.cann_path)
+        else:
+            npu_dump_npy_path = ""
+        golden_dump_data_path = golden_dump.generate_dump_data(output_json_path, npu_dump_npy_path, om_parser=None)
         # compare the entire network
         net_compare = NetCompare(npu_dump_data_path, golden_dump_data_path,
                                  output_json_path, args, golden_json_path=None)

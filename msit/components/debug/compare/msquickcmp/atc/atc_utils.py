@@ -72,7 +72,7 @@ def convert_pb_model_to_om(cann_path, pb_model_path, out_path, input_shapes, fra
         output om path
     """
     model_name = os.path.basename(pb_model_path).split(".")[0]
-    om_file = os.path.join(out_path, model_name)
+    om_file = os.path.join(out_path, "model", model_name)
     atc_command_file_path = get_atc_path(cann_path)
     atc_cmd = [atc_command_file_path, "--framework=" + framework,
                "--soc_version=" + acl.get_soc_name(),
