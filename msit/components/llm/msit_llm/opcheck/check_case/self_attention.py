@@ -92,6 +92,21 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         v = OpcheckUnpadSelfAttentionOperation.reshape_qkv(v, True)
         return q, k, v
     
+    @staticmethod
+    def get_out_sub(param_input, q_s, score, v_slice):
+        head_num, kv_head_num, head_size = param_input
+        score_max = torch.max(score, axis=-1).values
+        score = score - score_max.view((head_num, q_s, 1))
+        score_exp = torch.exp(score)
+        score_sum = torch.sum(score_exp, axis=-1)
+
+        _p = score_exp.view([-1, ]) if _p is None else torch.concat((_p, score_exp.view([-1, ])), 0)
+        p = score_exp / score_sum.view((head_num, q_s, 1))
+
+        out_sub = OpcheckUnpadSelfAttentionOperation.group_matmul(head_num, kv_head_num, p, v_slice)
+        out_sub = out_sub.view([head_num, q_s, head_size]).permute(1, 0, 2).contiguous()
+        return out_sub
+    
     def get_batch_status(self, in_tensors, seq_len):
         batch_run_status_enable = self.op_param.get("batchRunStatusEnable", False)
         if batch_run_status_enable:
@@ -175,17 +190,9 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
             score = self.get_clamped_score(score)
             if is_mask:
                 score = score + mask[idx, :q_s, :kv_s] * post_mask_coff
-
-            score_max = torch.max(score, axis=-1).values
-            score = score - score_max.view((head_num, q_s, 1))
-            score_exp = torch.exp(score)
-            score_sum = torch.sum(score_exp, axis=-1)
-
-            _p = score_exp.view([-1, ]) if _p is None else torch.concat((_p, score_exp.view([-1, ])), 0)
-            p = score_exp / score_sum.view((head_num, q_s, 1))
-
-            out_sub = OpcheckUnpadSelfAttentionOperation.group_matmul(head_num, kv_head_num, p, v_slice)
-            out_sub = out_sub.view([head_num, q_s, head_size]).permute(1, 0, 2).contiguous()
+            
+            param_input = [head_num, kv_head_num, head_size]
+            out_sub = OpcheckUnpadSelfAttentionOperation.get_out_sub(param_input, q_s, score, v_slice)
             out = out_sub if out is None else torch.concat((out, out_sub), 0)
 
             q_offset += q_s
@@ -248,17 +255,9 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
                     score = score + no_compress_mask[:, :q_s, :kv_s]
                 else:
                     score = score + mask[:, :q_s, :kv_s] * post_mask_coff
-
-            score_max = torch.max(score, axis=-1).values
-            score = score - score_max.view((head_num, q_s, 1))
-            score_exp = torch.exp(score)
-            score_sum = torch.sum(score_exp, axis=-1)
-
-            _p = score_exp.view([-1, ]) if _p is None else torch.concat((_p, score_exp.view([-1, ])), 0)
-            p = score_exp / score_sum.view((head_num, q_s, 1))
-
-            out_sub = OpcheckUnpadSelfAttentionOperation.group_matmul(head_num, kv_head_num, p, v_slice)
-            out_sub = out_sub.view([head_num, q_s, head_size]).permute(1, 0, 2).contiguous()
+            
+            param_input = [head_num, kv_head_num, head_size]
+            out_sub = OpcheckUnpadSelfAttentionOperation.get_out_sub(param_input, q_s, score, v_slice)
             out = out_sub if out is None else torch.concat((out, out_sub), 0)
 
             q_offset += q_s
