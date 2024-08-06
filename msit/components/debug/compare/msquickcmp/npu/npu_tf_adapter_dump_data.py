@@ -24,6 +24,7 @@ import npu_device
 import numpy as np
 import tensorflow as tf
 import json
+import time
 
 from tensorflow.core.protobuf.rewriter_config_pb2 import RewriterConfig
 from msquickcmp.common import utils
