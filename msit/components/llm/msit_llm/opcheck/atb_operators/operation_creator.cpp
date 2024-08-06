@@ -38,7 +38,7 @@ static atb::Operation *ActivationOperationCreate(const nlohmann::json &paramJson
         param.dim = paramJson["dim"].get<int32_t>();
     }
     if (paramJson.contains("geluMode")) {
-        param.geluMode = atb::infer::GeluMode(paramJson["geluMode"].get<int>());
+        param.geluMode = atb::infer::ActivationParam::GeluMode(paramJson["geluMode"].get<int>());
     }
     atb::Operation *op;
     CreateOperation(param, &op);
@@ -275,7 +275,7 @@ static atb::Operation *GenAttentionMaskOperationCreate(const nlohmann::json &par
 
 static atb::Operation *GatingOperationCreate(const nlohmann::json &paramJson)
 {
-    atb::infer::IndexAddParam param;
+    atb::infer::GatingParam param;
     if (paramJson.contains("topkExpertNum")) {
         param.topkExpertNum = paramJson["topkExpertNum"].get<int32_t>();
     }
@@ -331,17 +331,17 @@ static atb::Operation *LayerNormOperationCreate(const nlohmann::json &paramJson)
     }
     if (param.layerType == atb::infer::LayerNormParam::LAYER_NORM_PRENORM) {
         const nlohmann::json preNormParam = paramJson["preNormParam"].get<nlohmann::json>();
-        if (postNormParam.contains("epsilon")) {
-            param.postNormParam.epsilon = postNormParam["epsilon"].get<float>();
+        if (preNormParam.contains("epsilon")) {
+            param.preNormParam.epsilon = preNormParam["epsilon"].get<float>();
         }
-        if (postNormParam.contains("quantType")) {
-            param.postNormParam.quantType = atb::infer::QuantType(postNormParam["quantType"].get<int32_t>());
+        if (preNormParam.contains("quantType")) {
+            param.preNormParam.quantType = atb::infer::QuantType(preNormParam["quantType"].get<int32_t>());
         }
-        if (postNormParam.contains("opMode")) {
-            param.postNormParam.opMode = postNormParam["opMode"].get<size_t>();
+        if (preNormParam.contains("opMode")) {
+            param.preNormParam.opMode = preNormParam["opMode"].get<size_t>();
         }
-        if (postNormParam.contains("zoomScaleValue")) {
-            param.postNormParam.zoomScaleValue = postNormParam["zoomScaleValue"].get<float>();
+        if (preNormParam.contains("zoomScaleValue")) {
+            param.preNormParam.zoomScaleValue = preNormParam["zoomScaleValue"].get<float>();
         }
     }
     if (param.layerType == atb::infer::LayerNormParam::LAYER_NORM_POSTNORM) {
@@ -539,8 +539,8 @@ static atb::Operation *PagedAttentionOperationCreate(const nlohmann::json &param
     if (paramJson.contains("compressType")) {
         param.compressType = atb::infer::PagedAttentionParam::CompressType(paramJson["compressType"].get<int>());
     }
-    if (paramJson.contains("calType")) {
-        param.calType = atb::infer::PagedAttentionParam::CalType(paramJson["calType"].get<int>());
+    if (paramJson.contains("calcType")) {
+        param.calcType = atb::infer::PagedAttentionParam::CalType(paramJson["calcType"].get<int>());
     }
     atb::Operation *op;
     CreateOperation(param, &op);
