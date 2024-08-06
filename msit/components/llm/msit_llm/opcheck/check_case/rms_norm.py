@@ -97,7 +97,7 @@ class OpcheckRmsNormOperation(operation_test.OperationTest):
                     dynamic_quant_offset.squeeze(-1).type(torch.float32)
                 ]
         return golden_result
-    
+
     def get_golden_result(self, in_tensors, cur_param, layer_type, golden_output, x):
         quant_type = cur_param.get('quantType', QuantType.QUANT_UNDEFINED.value)
         if layer_type == RmsNormType.RMS_NORM_PRE_NORM.value and quant_type == QuantType.QUANT_INT8.value:
@@ -171,7 +171,7 @@ class OpcheckRmsNormOperation(operation_test.OperationTest):
                 golden_output = x * gamma / torch.sqrt(norm)
         except ZeroDivisionError as e:
             raise RuntimeError("get ZeroDivisionError when calc RmsNormOperation golden") from e
-        
+
         golden_result = self.get_output_tensors(in_tensors, cur_param, layer_type, golden_output, x)
         return golden_result
 
