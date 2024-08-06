@@ -182,8 +182,8 @@ def read_data_to_csv(data: str, csv_data: list, tag: str):
     match_words = re.findall(r'[a-zA-Z]+:[0-9]+', data)
     header_vals = [_.split(':') for _ in match_words]
     for header_val in header_vals:
-        header = tag + header_vals[0]
-        csv_data.append((header, header_vals[1]))
+        header = tag + header_val[0]
+        csv_data.append((header, header_val[1]))
 
 
 def merge_cpu_profiling_data(path):
@@ -218,10 +218,10 @@ def merge_cpu_profiling_data(path):
                 rows.append(tuple(row))
             headers.insert(0, 'opname')
             
-            with open(os.path.join(root, file.split('.')[0])+'csv', 'w+') as f:
-                f_csv = csv.writer(f)
-                f_csv.writerow(headers)
-                f_csv.writerows(rows)
+            with open(os.path.join(root, file.split('.')[0])+'.csv', 'w+') as f:
+                writer = csv.writer(f)
+                writer.writerow(headers)
+                writer.writerows(rows)
             # 删除原始文件
             os.remove(os.path.join(root, file))
 
