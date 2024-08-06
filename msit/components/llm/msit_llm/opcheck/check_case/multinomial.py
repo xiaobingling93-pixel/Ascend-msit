@@ -28,15 +28,17 @@ class OpcheckMultinomialOperation(operation_test.OperationTest):
         libc = ctypes.CDLL("libc.so.6")
         libc.srand(rand_seed)
         rand_list = [libc.rand() / 0x7fffffff for i in range(64)]
-        ret = torch.zeros(shape=(input0.shape[0], samples))
+        ret = torch.zeros(size=(input0.shape[0], samples))
 
         sum_list = torch.cumsum(input0, axis=-1)
+        iter_list = [(j, i) 
+                    for j in range(input0.shape[0]) 
+                    for i in range(input0.shape[1])]
         for z in range(samples):
-            for j in range(input0.shape[0]):
-                for i in range(input0.shape[1]):
-                    if (sum_list[j][i] > rand_list[z]):
-                        ret[j][z] = i
-                        break
+            for j, i in iter_list:
+                if (sum_list[j][i] > rand_list[z]):
+                    ret[j][z] = i
+                    break
         return [ret.contiguous()]
 
     def test(self):
