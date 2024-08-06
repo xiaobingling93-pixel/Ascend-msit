@@ -58,8 +58,8 @@ class OpcheckLinearOperation(operation_test.OperationTest):
             weight = torch.transpose(weight, 0, 1) if len(weight.shape) == 2 else torch.transpose(weight, 1, 2)
 
         if x.dtype == torch.int8:
-            x = x.type(torch.int32)
-            weight = weight.type(torch.int32)
+            x = x.type(torch.float16)
+            weight = weight.type(torch.float16)
         golden_result = torch.matmul(x, weight)
         
         if bias is not None:
