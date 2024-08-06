@@ -97,6 +97,19 @@ class OpcheckRmsNormOperation(operation_test.OperationTest):
                     dynamic_quant_offset.squeeze(-1).type(torch.float32)
                 ]
         return golden_result
+    
+    def get_golden_result(self, in_tensors, cur_param, layer_type, golden_output, x):
+        quant_type = cur_param.get('quantType', QuantType.QUANT_UNDEFINED.value)
+        if layer_type == RmsNormType.RMS_NORM_PRE_NORM.value and quant_type == QuantType.QUANT_INT8.value:
+            beta, scale, offset = in_tensors[3], in_tensors[4], in_tensors[5]
+            golden_result = [OpcheckRmsNormOperation.rms_norm_quant_with_tensor(golden_output, beta, scale, offset), x]
+        elif layer_type == RmsNormType.RMS_NORM_NORM.value and quant_type == QuantType.QUANT_INT8.value:
+            golden_result = self.rms_norm_quant_with_tensor(golden_output, in_tensors, cur_param)
+        elif layer_type == RmsNormType.RMS_NORM_PRE_NORM.value and quant_type == QuantType.QUANT_UNDEFINED.value:
+            golden_result = [golden_result.half(), x.half()]
+        else:
+            golden_result = [golden_output.half()]
+        return golden_result
 
     def validate_rmsnorm_param(self, layer_type):
         layer_type_support_list = [
@@ -158,17 +171,8 @@ class OpcheckRmsNormOperation(operation_test.OperationTest):
                 golden_output = x * gamma / torch.sqrt(norm)
         except ZeroDivisionError as e:
             raise RuntimeError("get ZeroDivisionError when calc RmsNormOperation golden") from e
-
-        if layer_type == RmsNormType.RMS_NORM_PRE_NORM.value and quant_type == QuantType.QUANT_INT8.value:
-            beta, scale, offset = in_tensors[3], in_tensors[4], in_tensors[5]
-            golden_result = [OpcheckRmsNormOperation.rms_norm_quant_with_tensor(golden_output, beta, scale, offset), x]
-        elif layer_type == RmsNormType.RMS_NORM_NORM.value and quant_type == QuantType.QUANT_INT8.value:
-            golden_result = self.rms_norm_quant_with_tensor(golden_output, in_tensors, cur_param)
-        elif layer_type == RmsNormType.RMS_NORM_PRE_NORM.value and quant_type == QuantType.QUANT_UNDEFINED.value:
-            golden_result = [golden_result.half(), x.half()]
-        else:
-            golden_result = [golden_output.half()]
-
+        
+        golden_result = self.get_output_tensors(in_tensors, cur_param, layer_type, golden_output, x)
         return golden_result
 
     def test(self):
