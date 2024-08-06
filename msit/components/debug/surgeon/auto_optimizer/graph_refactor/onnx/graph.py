@@ -404,7 +404,7 @@ class OnnxGraph(BaseGraph):
 
     def model(self) -> ModelProto:
         return helper.make_model(self.proto(), **self._meta)
-
+        
     def save(self, path: str,
             save_as_external_data: bool = False,
             all_tensors_to_one_file: bool = True) -> None:
