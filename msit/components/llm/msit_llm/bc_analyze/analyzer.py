@@ -82,11 +82,11 @@ class Analyzer(object):
         if not_both_count != 0:
             unmatched_queries = merged_df['queries'][not_both_mask].head()
             logger.warning(
-                "There are %s queries not matched, below is a partial display of these unmatched queries:\n %s", 
+                "There are '%s' quer(ies) not matched, below is a partial display of these unmatched queries:\n\t '%s'", 
                 not_both_count,
                 unmatched_queries.to_string(header=False)
             )
-    
+        
     @classmethod
     def _save_result(cls, df_to_save: pd.DataFrame, suffix='.csv') -> None:
         os.makedirs(cls.BAD_CASE_FOLDER_NAME, mode=0o700, exist_ok=True)
@@ -96,6 +96,8 @@ class Analyzer(object):
         modes = os.st.S_IRUSR | os.st.S_IRGRP
         with os.fdopen(os.open(path, flags, modes), 'w') as file: 
             df_to_save.to_csv(file, encoding='utf-8', index=False)
+
+        logger.info("Analyzer has successfully finished the analysis, the result is stored under '%s'", path)
 
     @classmethod
     def _get_candidate_path(cls, suffix):

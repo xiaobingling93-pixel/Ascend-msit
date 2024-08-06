@@ -461,7 +461,9 @@ class BCAnalyze(BaseCommand):
         else:
             test_csv_path = args.test       
         
-        Analyzer.from_csv(golden_csv_path=golden_csv_path, test_csv_path=test_csv_path)
+        logger.info("Analyzer received two csv paths, the golden one is:\n\t%s, and the test one is:\n\t", golden_csv_path, test_csv_path)
+        logger.info("Analyzing...")
+        Analyzer.from_csv(golden_csv_path=golden_csv_path, test_csv_path=test_csv_path) 
         
 
 def get_cmd_instance():

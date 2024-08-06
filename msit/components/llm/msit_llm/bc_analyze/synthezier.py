@@ -144,6 +144,8 @@ class Synthesizer(object):
         modes = os.st.S_IRUSR | os.st.S_IRGRP
         with os.fdopen(os.open(path, flags, modes), 'w') as file:
             df_to_save.to_csv(file, encoding='utf-8', index=False)
+        
+        logger.info("Sythesizer has finished his work, the result is stored at '%s'", path)
 
     def _get_candidate_path(self, suffix):
         prefix = 'msit_synthesizer_result_'

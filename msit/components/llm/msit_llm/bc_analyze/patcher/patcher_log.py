@@ -13,7 +13,6 @@ file_name = os.path.join(logger_dir, 'msit_patcher.log')
 
 file_handler = logging.FileHandler(
     filename=file_name,
-    mode='a',
     encoding='utf-8',
 )
 file_handler.setLevel(logging.DEBUG)
