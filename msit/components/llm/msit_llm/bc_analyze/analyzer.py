@@ -2,7 +2,7 @@ import os
 
 import pandas as pd
 
-from . import get_timestamp
+from .utils import get_timestamp
 from ..common.log import logger
 
 

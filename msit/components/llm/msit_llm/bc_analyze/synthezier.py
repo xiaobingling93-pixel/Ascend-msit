@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 
-from . import RandomNameSequence, get_timestamp
+from .utils import RandomNameSequence, get_timestamp
 from ..common.log import logger
 
 
