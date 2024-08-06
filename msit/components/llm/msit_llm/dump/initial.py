@@ -178,12 +178,12 @@ def split_cpu_profiling_data(data, opname):
     return execute_data, setup_data
 
 
-def read_data_to_csv(data: str, csv_data: list, tag: str):
-    match_words = re.findall(r'[a-zA-Z]+:[0-9]+', data)
-    header_vals = [_.split(':') for _ in match_words]
-    for header_val in header_vals:
-        header = tag + header_val[0]
-        csv_data.append((header, header_val[1]))
+def add_extracted_headers_to_csv(split_data: str, csv_buffer: list, prefix: str):
+    matched_pairs = re.findall(r'[a-zA-Z]+:[0-9]+', split_data)
+    header_value_pairs = [_.split(':') for _ in matched_pairs]
+    for header_value_pair in header_value_pairs:
+        header = prefix + header_value_pair[0]
+        csv_buffer.append((header, header_value_pair[1]))
 
 
 def merge_cpu_profiling_data(path):
@@ -194,25 +194,25 @@ def merge_cpu_profiling_data(path):
                 continue
             data = {}
             headers = set()
-            csv_data = defaultdict(list)
+            csv_buffer_data = defaultdict(list)
             with open(os.path.join(root, file), 'r') as f:
                 lines = f.readlines()
                 read_cpu_profiling_data(lines, data)
                 for opname in data.keys():
                     execute_data, setup_data = split_cpu_profiling_data(data, opname)
-                    # 按照header类型添加tag标识
-                    read_data_to_csv(execute_data, csv_data[opname], 'execute_')
-                    read_data_to_csv(setup_data, csv_data[opname], 'setup_')
-                    headers.update([_[0] for _ in csv_data[opname]])
+                    # 按照header类型添加prefix标识
+                    add_extracted_headers_to_csv(execute_data, csv_buffer_data[opname], 'execute_')
+                    add_extracted_headers_to_csv(setup_data, csv_buffer_data[opname], 'setup_')
+                    headers.update([_[0] for _ in csv_buffer_data[opname]])
             
             headers = sorted(list(headers))
             rows = list()
             for opname in data.keys():
                 row = [opname]
-                cur_col = [_[0] for _ in csv_data[opname]]
+                cur_col = {_[0]:idx for idx, _ in enumerate(csv_buffer_data[opname])}
                 for col in headers:
                     if col in cur_col:
-                        row.append(csv_data[opname][cur_col.index(col)][1])
+                        row.append(csv_buffer_data[opname][cur_col[col]][1])
                     else:
                         row.append('')
                 rows.append(tuple(row))
