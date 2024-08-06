@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from enum import Enum
 import torch
 import torch_npu
 import torch.distributed as dist
@@ -20,11 +21,29 @@ from msit_llm.opcheck import operation_test
 from msit_llm.common.log import logger
 
 
+class ParallelType(Enum):
+    UNDEFINED = -1 # 默认值 
+    LINEAR_ALL_REDUCE = 0 # linear+AllReduce
+    LINEAR_REDUCE_SCATTER = 1 # linear+reduce_scatter
+    ALL_GATHER_LINEAR = 2 # AllGather+linear
+    PURE_LINEAR = 3 # linear
+    MAX = 4 # 枚举类型最大值，暂不支持
+
+
+class QuantType(Enum):
+    QUANT_TYPE_UNDEFINED = -1 # 默认值
+    QUANT_TYPE_PER_TENSOR = 0 # 对整个张量进行量化
+    QUANT_TYPE_PER_CHANNEL = 1 # 对张量中每个channel分别进行量化
+    QUANT_TYPE_PER_GROUP = 2 # 将张量按quantGroupSize划分后，分别进行量化
+    QUANT_TYPE_MAX = 3 # 枚举类型最大值，暂不支持
+
+
 class OpcheckLinearParallelOperation(operation_test.OperationTest):
     def add_residual(self, data, in_tensors):
-        has_residual = self.op_param.get("has_residual", False)
-        if has_residual:
-            data += in_tensors[2]
+        has_residual = self.op_param.get("hasResidual", False)
+        residual = in_tensors[4] if len(in_tensors) >= 5 else None
+        if has_residual and residual is not None:
+            data += residual
         return data
 
     def get_matmul_result(self, in_tensors):
@@ -32,52 +51,49 @@ class OpcheckLinearParallelOperation(operation_test.OperationTest):
         weight = in_tensors[1]
         trans_weight = self.op_param.get("transWeight", True)
         if trans_weight:
-            if len(weight.shape) == 2:
-                weight = torch.permute(weight, (1, 0))
-            if len(weight.shape) == 3:
-                weight = torch.permute(weight, (0, 2, 1))
+            weight = torch.transpose(weight, 0, 1) if len(weight.shape) == 2 else torch.transpose(weight, 1, 2)
         matmul_result = torch.matmul(x, weight)
         return matmul_result
 
-    def get_quant_result(self, in_tensors, quant_type=-1, group_size=0, out_data_type=-1):
+    def get_quant_result(self, in_tensors, quant_type, group_size, out_data_type):
         is_quant_after = in_tensors[0].dtype == torch.int8 and in_tensors[1].dtype == torch.int8
         quant_tensor = self.get_matmul_result(in_tensors) if is_quant_after else in_tensors[1].to(torch.float32)
 
-        try:
-            bias = in_tensors[2]
-        except:
-            bias = None
+        bias = in_tensors[2] if len(in_tensors) >= 3 else None 
+        deq_scale = in_tensors[3] if len(in_tensors) >= 4 else None
+
         if bias is not None and bias.nelement() != 0:
             quant_tensor = quant_tensor.to(torch.float) + bias.to(torch.float)
 
-        try:
-            scale = in_tensors[3]
-        except:
-            scale = None
-        if scale is not None:
-            if quant_type == 2:
-                dequantized_groups = [group * scale[i] for i, group in enumerate(quant_tensor.split(group_size, dim=0))]
-                quant_tensor = torch.cat(dequantized_groups, dim=0)
+        if deq_scale is not None:
+            if quant_type == QuantType.QUANT_TYPE_PER_GROUP.value:
+                dequantized_groups = [
+                    group * deq_scale[i] 
+                    for i, group 
+                    in enumerate(quant_tensor.split(group_size, dim=0))
+                ]
+                quant_tensor = torch.concat(dequantized_groups, dim=0)
             else:
-                quant_tensor *= scale
+                quant_tensor *= deq_scale
 
-        if is_quant_after: 
-             result_dtype = torch.float16 if out_data_type == 1 else torch.bfloat16
-             result = quant_tensor.to(result_dtype)
+        if is_quant_after:
+            from msit_llm.opcheck.check_case import OutTensorType
+            result_dtype = torch.float16 if out_data_type == OutTensorType.ACL_FLOAT16.value else torch.bfloat16
+            result = quant_tensor.to(result_dtype)
         else:
             in_tensors[1] = quant_tensor.to(in_tensors[0].dtype)
             result = self.get_matmul_result(in_tensors)
 
         return result
 
-    def pure_linear(self, in_tensors, quant_type=-1, group_size=0, out_data_type=-1):
+    def pure_linear(self, in_tensors, quant_type, group_size, out_data_type):
         if quant_type >= 0:
             result = self.get_quant_result(in_tensors, quant_type, group_size, out_data_type)
         else:
             result = self.get_matmul_result(in_tensors)
         return [result]
 
-    def all_reduce(self, in_tensors, rank_size, quant_type=-1, group_size=0, out_data_type=-1):
+    def all_reduce(self, in_tensors, rank_size, quant_type, group_size, out_data_type):
         rank, rank_root, rank_size = self.get_rank_info()
         golden_result = torch.zeros_like(self.pure_linear(in_tensors, quant_type, group_size, out_data_type)[0])
         for i in range(rank_root, rank_size):
@@ -107,7 +123,7 @@ class OpcheckLinearParallelOperation(operation_test.OperationTest):
             if golden_mid_tensor is None:
                 golden_mid_tensor = new_in_tensors[0].clone()
             else:
-                golden_mid_tensor = torch.cat((golden_mid_tensor, new_in_tensors[0]), dim=0)
+                golden_mid_tensor = torch.concat((golden_mid_tensor, new_in_tensors[0]), dim=0)
         golden_result = self.get_matmul_result([golden_mid_tensor, in_tensors[1]])
         golden_result = self.add_residual(golden_result, in_tensors)
 
@@ -120,25 +136,26 @@ class OpcheckLinearParallelOperation(operation_test.OperationTest):
         return res
 
     def golden_calc(self, in_tensors):
-        backend = self.op_param.get('backend', None)
-        rank = self.op_param.get('rank', None)
-        rank_size = self.op_param.get("rankSize", None)
+        backend = self.op_param.get('backend', "hccl")
+        rank = self.op_param.get('rank', 0)
+        rank_size = self.op_param.get("rankSize", 0)
 
         if backend != "lcoc":
             golden_result = self.all_reduce(in_tensors, rank_size)
         else:
-            cal_type = self.op_param.get("type", 0)
-            quant_type = self.op_param.get("quantType", -1)
+            cal_type = self.op_param.get("type", ParallelType.UNDEFINED.value)
+            quant_type = self.op_param.get("quantType", QuantType.QUANT_TYPE_UNDEFINED.value)
             group_size = self.op_param.get("quantGroupSize", 0)
-            out_data_type = self.op_param.get("outDataType", -1)
+            from msit_llm.opcheck.check_case import OutTensorType
+            out_data_type = self.op_param.get("outDataType", OutTensorType.ACL_DT_UNDEFINED.value)
 
-            if cal_type == 0:
+            if cal_type == ParallelType.LINEAR_ALL_REDUCE.value:
                 golden_result = self.all_reduce(in_tensors, rank_size, quant_type, group_size, out_data_type)
-            elif cal_type == 1:
+            elif cal_type == ParallelType.LINEAR_REDUCE_SCATTER.value:
                 golden_result = self.reduce_scatter(in_tensors, rank, rank_size)
-            elif cal_type == 2:
+            elif cal_type == ParallelType.ALL_GATHER_LINEAR.value:
                 golden_result = self.all_gather_linear(in_tensors, rank_size)
-            elif cal_type == 3:
+            elif cal_type == ParallelType.PURE_LINEAR.value:
                 golden_result = self.pure_linear(in_tensors, quant_type, group_size, out_data_type)
 
         return golden_result
