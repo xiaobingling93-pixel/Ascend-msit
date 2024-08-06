@@ -405,18 +405,31 @@ class OnnxGraph(BaseGraph):
     def model(self) -> ModelProto:
         return helper.make_model(self.proto(), **self._meta)
 
-    def save(self, path: str) -> None:
-        try:
-            onnx.save(self.model(), path)
-        except ValueError:
-            # large models
-            onnx.save(
-                self.model(),
-                path,
-                save_as_external_data=True,
-                all_tensors_to_one_file=True,
-                location=os.path.basename(path) + '.data',
-            )
+    def save(self, path: str,
+            save_as_external_data: bool = False,
+            all_tensors_to_one_file: bool = True) -> None:
+            threshold = 1.9 * 1024 * 1024 * 1024
+            serialized_model = self.model().SerializeToString()
+            model_size = len(serialized_model)
+            if save_as_external_data or model_size > threshold:
+                if all_tensors_to_one_file:
+                    onnx.save(
+                    self.model(),
+                    path,
+                    save_as_external_data=True,
+                    all_tensors_to_one_file=True,
+                    location=os.path.basename(path) + '.data',
+                )
+                else:
+                    onnx.save(
+                    self.model(),
+                    path,
+                    save_as_external_data=True,
+                    all_tensors_to_one_file=False,
+                    location=os.path.basename(path) + '.data',
+                )
+            else:
+                onnx.save(self.model(), path)
 
     def infer_shape(self) -> None:
         # clear value_infos
