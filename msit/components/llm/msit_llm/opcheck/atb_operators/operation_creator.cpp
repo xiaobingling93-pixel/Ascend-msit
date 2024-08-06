@@ -34,6 +34,12 @@ static atb::Operation *ActivationOperationCreate(const nlohmann::json &paramJson
     if (paramJson.contains("scale")) {
         param.scale = paramJson["scale"].get<float>();
     }
+    if (paramJson.contains("dim")) {
+        param.dim = paramJson["dim"].get<int32_t>();
+    }
+    if (paramJson.contains("geluMode")) {
+        param.geluMode = atb::infer::GeluMode(paramJson["geluMode"].get<int>());
+    }
     atb::Operation *op;
     CreateOperation(param, &op);
     return op;
@@ -55,6 +61,9 @@ static atb::Operation *AllGatherOperationCreate(const nlohmann::json &paramJson)
     }
     if (paramJson.find("rankTableFile") != paramJson.end()) {
         param.rankTableFile = paramJson["rankTableFile"].get<std::string>();
+    }
+    if (paramJson.find("commDomain") != paramJson.end()) {
+        param.commDomain = paramJson["commDomain"].get<std::string>();
     }
     atb::Operation *op;
     CreateOperation(param, &op);
@@ -80,6 +89,9 @@ static atb::Operation *AllReduceOperationCreate(const nlohmann::json &paramJson)
     }
     if (paramJson.find("rankTableFile") != paramJson.end()) {
         param.rankTableFile = paramJson["rankTableFile"].get<std::string>();
+    }
+    if (paramJson.find("commDomain") != paramJson.end()) {
+        param.commDomain = paramJson["commDomain"].get<std::string>();
     }
     atb::Operation *op;
     CreateOperation(param, &op);
@@ -119,6 +131,9 @@ static atb::Operation *BroadcastOperationCreate(const nlohmann::json &paramJson)
     }
     if (paramJson.find("rankTableFile") != paramJson.end()) {
         param.rankTableFile = paramJson["rankTableFile"].get<std::string>();
+    }
+    if (paramJson.find("commDomain") != paramJson.end()) {
+        param.commDomain = paramJson["commDomain"].get<std::string>();
     }
     atb::Operation *op;
     CreateOperation(param, &op);
@@ -168,6 +183,9 @@ static atb::Operation *ElewiseOperationCreate(const nlohmann::json &paramJson)
     }
     if (paramJson.contains("inputOffset")) {
         param.quantParam.inputOffset = paramJson["inputOffset"].get<int>();
+    }
+    if (paramJson.contains("asymmetric")) {
+        param.quantParam.asymmetric = paramJson["asymmetric"].get<bool>();
     }
     atb::Operation *op;
     CreateOperation(param, &op);
@@ -255,6 +273,20 @@ static atb::Operation *GenAttentionMaskOperationCreate(const nlohmann::json &par
     return op;
 }
 
+static atb::Operation *GatingOperationCreate(const nlohmann::json &paramJson)
+{
+    atb::infer::IndexAddParam param;
+    if (paramJson.contains("topkExpertNum")) {
+        param.topkExpertNum = paramJson["topkExpertNum"].get<int32_t>();
+    }
+    if (paramJson.contains("cumSumNum")) {
+        param.cumSumNum = paramJson["cumSumNum"].get<int32_t>();
+    }
+    atb::Operation *op;
+    CreateOperation(param, &op);
+    return op;
+}
+
 static atb::Operation *IndexAddOperationCreate(const nlohmann::json &paramJson)
 {
     atb::infer::IndexAddParam param;
@@ -292,6 +324,24 @@ static atb::Operation *LayerNormOperationCreate(const nlohmann::json &paramJson)
         }
         if (normParam.contains("beginParamsAxis")) {
             param.normParam.beginParamsAxis = normParam["beginParamsAxis"].get<int32_t>();
+        }
+        if (normParam.contains("dynamicQuantType")) {
+            param.normParam.dynamicQuantType = atb::infer::DynamicQuantType(normParam["dynamicQuantType"].get<int>());
+        }
+    }
+    if (param.layerType == atb::infer::LayerNormParam::LAYER_NORM_PRENORM) {
+        const nlohmann::json preNormParam = paramJson["preNormParam"].get<nlohmann::json>();
+        if (postNormParam.contains("epsilon")) {
+            param.postNormParam.epsilon = postNormParam["epsilon"].get<float>();
+        }
+        if (postNormParam.contains("quantType")) {
+            param.postNormParam.quantType = atb::infer::QuantType(postNormParam["quantType"].get<int32_t>());
+        }
+        if (postNormParam.contains("opMode")) {
+            param.postNormParam.opMode = postNormParam["opMode"].get<size_t>();
+        }
+        if (postNormParam.contains("zoomScaleValue")) {
+            param.postNormParam.zoomScaleValue = postNormParam["zoomScaleValue"].get<float>();
         }
     }
     if (param.layerType == atb::infer::LayerNormParam::LAYER_NORM_POSTNORM) {
@@ -352,11 +402,26 @@ static atb::Operation *LinearParallelOperationCreate(const nlohmann::json &param
     if (paramJson.find("rankTableFile") != paramJson.end()) {
         param.rankTableFile = paramJson["rankTableFile"].get<std::string>();
     }
+    if (paramJson.find("commDomain") != paramJson.end()) {
+        param.commDomain = paramJson["commDomain"].get<std::string>();
+    }
     if (paramJson.contains("type")) {
         param.type = atb::infer::LinearParallelParam::ParallelType(paramJson["type"].get<int>());
     }
+    if (paramJson.contains("hasResidual")) {
+        param.hasResidual = paramJson["hasResidual"].get<bool>();   
+    }
     if (paramJson.contains("keepIntermediate")) {
         param.keepIntermediate = paramJson["keepIntermediate"].get<bool>();
+    }
+    if (paramJson.contains("quantType")) {
+        param.quantType = atb::infer::LinearParallelParam::QuantType(paramJson["quantType"].get<int>());
+    }
+    if (paramJson.contains("quantGroupSize")) {
+        param.quantGroupSize = paramJson["quantGroupSize"].get<int32_t>();
+    }
+    if (paramJson.contains("outDataType")) {
+        param.outDataType = paramJson["outDataType"].get<aclDataType>();
     }
     param.rank = paramJson["rank"].get<int>();
     param.rankSize = paramJson["rankSize"].get<int>();
@@ -459,17 +524,23 @@ static atb::Operation *PagedAttentionOperationCreate(const nlohmann::json &param
     param.headNum = paramJson["headNum"].get<int>();
     param.qkScale = paramJson["qkScale"].get<float>();
     param.kvHeadNum = paramJson["kvHeadNum"].get<int>();
-
     if (paramJson.contains("maskType")) {
-        param.maskType = atb::infer::PagedAttentionParam::MaskType(paramJson["maskType"].get<int32_t>());
+        param.maskType = atb::infer::PagedAttentionParam::MaskType(paramJson["maskType"].get<int>());
     }
-
+    if (paramJson.contains("batchRunStatusEnable")) {
+        param.batchRunStatusEnable = paramJson["batchRunStatusEnable"].get<bool>();
+    }
     if (paramJson.contains("quantType")) {
-        param.quantType = atb::infer::PagedAttentionParam::QuantType(paramJson["quantType"].get<int32_t>());
+        param.quantType = atb::infer::PagedAttentionParam::QuantType(paramJson["quantType"].get<int>());
     }
-
     if (paramJson.contains("hasQuantOffset")) {
         param.hasQuantOffset = paramJson["hasQuantOffset"].get<bool>();
+    }
+    if (paramJson.contains("compressType")) {
+        param.compressType = atb::infer::PagedAttentionParam::CompressType(paramJson["compressType"].get<int>());
+    }
+    if (paramJson.contains("calType")) {
+        param.calType = atb::infer::PagedAttentionParam::CalType(paramJson["calType"].get<int>());
     }
     atb::Operation *op;
     CreateOperation(param, &op);
@@ -490,6 +561,9 @@ static atb::Operation *RepeatOperationCreate(const nlohmann::json &paramJson)
 static atb::Operation *ReshapeAndCacheOperationCreate(const nlohmann::json &paramJson)
 {
     atb::infer::ReshapeAndCacheParam param;
+    if (paramJson.contains("compressType")) {
+        param.compressType = atb::infer::ReshapeAndCacheParam::CompressType(paramJson["compressType"].get<int>());
+    }
     atb::Operation *op;
     CreateOperation(param, &op);
     return op;
@@ -509,34 +583,54 @@ static atb::Operation *RmsNormOperationCreate(const nlohmann::json &paramJson)
     if (paramJson.contains("layerType")) {
         param.layerType = atb::infer::RmsNormParam::RmsNormType(paramJson["layerType"].get<int32_t>());
     }
-    if (paramJson.contains("rstd")) {
-        param.normParam.rstd = paramJson["rstd"].get<bool>();
-    }
     if (param.layerType == atb::infer::RmsNormParam::RMS_NORM_NORM) {
-        if (paramJson.contains("epsilon")) {
-            param.normParam.epsilon = paramJson["epsilon"].get<float>();
+        const nlohmann::json normParam = paramJson["normParam"].get<nlohmann::json>();
+        if (normParam.contains("epsilon")) {
+            param.normParam.epsilon = normParam["epsilon"].get<float>();
         }
-        if (paramJson.contains("quantType")) {
-            param.normParam.quantType = atb::infer::QuantType(paramJson["quantType"].get<int32_t>());
+        if (normParam.contains("quantType")) {
+            param.normParam.quantType = atb::infer::QuantType(normParam["quantType"].get<int32_t>());
         }
-        if (paramJson.contains("layerNormEps")) {
-            param.normParam.layerNormEps = paramJson["layerNormEps"].get<double>();
+        if (normParam.contains("layerNormEps")) {
+            param.normParam.layerNormEps = normParam["layerNormEps"].get<double>();
+        }
+        if (normParam.contains("rstd")) {
+            param.normParam.rstd = normParam["rstd"].get<bool>();
+        }
+        if (normParam.contains("precisionMode")) {
+            param.normParam.precisionMode = atb::infer::RmsNormParam::PrecisionMode(
+                normParam["precisionMode"].get<int>()
+            );
+        }
+        if (normParam.contains("modelType")) {
+            param.normParam.modelType = atb::infer::RmsNormParam::ModelType(normParam["modelType"].get<int>());
+        }
+        if (normParam.contains("dynamicQuantType")) {
+            param.normParam.dynamicQuantType = atb::infer::DynamicQuantType(normParam["dynamicQuantType"].get<int>());
         }
     }
     if (param.layerType == atb::infer::RmsNormParam::RMS_NORM_PRENORM) {
-        if (paramJson.contains("epsilon")) {
-            param.preNormParam.epsilon = paramJson["epsilon"].get<float>();
+        const nlohmann::json preNormParam = paramJson["preNormParam"].get<nlohmann::json>();
+        if (preNormParam.contains("epsilon")) {
+            param.preNormParam.epsilon = preNormParam["epsilon"].get<float>();
         }
-        if (paramJson.contains("quantType")) {
-            param.preNormParam.quantType = atb::infer::QuantType(paramJson["quantType"].get<int32_t>());
+        if (preNormParam.contains("quantType")) {
+            param.preNormParam.quantType = atb::infer::QuantType(preNormParam["quantType"].get<int32_t>());
         }
-        if (paramJson.contains("hasBias")) {
-            param.preNormParam.hasBias = paramJson["hasBias"].get<bool>();
+        if (preNormParam.contains("hasBias")) {
+            param.preNormParam.hasBias = preNormParam["hasBias"].get<bool>();
         }
     }
     if (param.layerType == atb::infer::RmsNormParam::RMS_NORM_POSTNORM) {
-        if (paramJson.contains("hasBias")) {
-            param.postNormParam.hasBias = paramJson["hasBias"].get<bool>();
+        const nlohmann::json postNormParam = paramJson["postNormParam"].get<nlohmann::json>();
+        if (postNormParam.contains("epsilon")) {
+            param.postNormParam.epsilon = postNormParam["epsilon"].get<float>();
+        }
+        if (postNormParam.contains("quantType")) {
+            param.postNormParam.quantType = atb::infer::QuantType(postNormParam["quantType"].get<int32_t>());
+        }
+        if (postNormParam.contains("hasBias")) {
+            param.postNormParam.hasBias = postNormParam["hasBias"].get<bool>();
         }
     }
     atb::Operation *op;
@@ -583,6 +677,18 @@ static atb::Operation *SelfAttentionOperationCreate(const nlohmann::json &paramJ
     }
     if (paramJson.contains("kvHeadNum")) {
         param.kvHeadNum = paramJson["kvHeadNum"].get<int>();
+    }
+    if (paramJson.contains("batchRunStatusEnable")) {
+        param.batchRunStatusEnable = paramJson["batchRunStatusEnable"].get<bool>();
+    }
+    if (paramJson.contains("isTriuMask")) {
+        param.isTriuMask = paramJson["isTriuMask"].get<uint32_t>();
+    }
+    if (paramJson.contains("kernelType")) {
+        param.kernelType = atb::infer::SelfAttentionParam::KernelType(paramJson["kernelType"].get<int>());
+    }
+    if (paramJson.contains("kvcacheCfg")) {
+        param.kvcacheCfg = atb::infer::SelfAttentionParam::KvCacheCfg(paramJson["kvcacheCfg"].get<int>());
     }
     if (paramJson.contains("maskType")) {
         param.maskType = atb::infer::SelfAttentionParam::MaskType(paramJson["maskType"].get<int32_t>());
@@ -721,6 +827,15 @@ static atb::Operation *StridedBatchMatmulOperationCreate(const nlohmann::json &p
 static atb::Operation *TopkToppSamplingOperationCreate(const nlohmann::json &paramJson)
 {
     atb::infer::TopkToppSamplingParam param;
+    param.topkToppSamplingType = atb::infer::TopkToppSamplingParam::TopkToppSamplingType(
+        paramJson["topkToppSamplingType"].get<int>()
+    );
+    if (paramJson.contains("randSeeds")) {
+        param.randSeeds.clear();
+        for (auto item : paramJson["randSeeds"]) {
+            param.randSeeds.push_back(item.get<uint32_t>());
+        }
+    }
     param.randSeed = paramJson["randSeed"].get<uint32_t>();
     param.topk = paramJson["topk"].get<uint32_t>();
     atb::Operation *op;
@@ -800,6 +915,7 @@ static std::map<std::string, CreateOperationFuncPtr> g_funcMap = {
     { "FastSoftMaxGradOperation", &FastSoftMaxGradOperationCreate },
     { "FastSoftMaxOperation", &FastSoftMaxOperationCreate },
     { "FillOperation", &FillOperationCreate },
+    { "GatingOperation", &GatingOperationCreate },
     { "GatherOperation", &GatherOperationCreate },
     { "GenAttentionMaskOperation", &GenAttentionMaskOperationCreate },
     { "IndexAddOperation", &IndexAddOperationCreate },
