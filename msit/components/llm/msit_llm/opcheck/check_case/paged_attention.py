@@ -37,10 +37,26 @@ class QuantType(Enum):
     TYPE_DEQUANT_FUSION = 1
 
 
+class CalcType(Enum):
+    CALC_TYPE_UNDEFINED = 0 # 默认值，不开启并行解码
+    CALC_TYPE_SPEC = 1 # 并行解码功能
+
+
 class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
-    def group_matmul(self, head_num, kv_head_num, a, b, is_k):
-        quant_type = self.op_param.get('quantType', QuantType.TYPE_QUANT_UNDEFINED.value)
-        has_quant_offset = self.op_param.get('hasQuantOffset', False)
+    @staticmethod
+    def mask_nz_2_nd(mask_type, context_lens, head_num):
+        mask = mask.permute(0, 2, 1, 3)
+        dim0, dim1, dim2, dim3 = mask.shape
+        mask = mask.contiguous().view(dim0, dim1, dim2 * dim3)
+        if mask_type == MaskType.MASK_TYPE_ALIBI.value:
+            batch = len(context_lens)
+            if dim0 != head_num:
+                mask = mask.contiguous().view(batch, head_num, dim1, dim2 * dim3)
+            else:
+                mask = mask.contiguous().view(1, head_num, dim1, dim2 * dim3)
+        return mask
+    
+    def get_quant_param(self, quant_type, has_quant_offset):
         if quant_type != QuantType.TYPE_QUANT_UNDEFINED.value:
             is_int8_flag = True
             if has_quant_offset:
@@ -62,26 +78,38 @@ class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
             de_scale2_fp32 = None
             offset1 = None
             offset2 = None
+        return is_int8_flag, has_bias, [de_scale1_fp32, de_scale2_fp32, offset1, offset2]
+    
+    def get_fp32_b(self, i, b, fp32_input, is_k, has_bias):
+        int8_b = b[i:, (i + 1), :, :, ]
+        head_dim = int8_b.shape[2]
+        int32_b = torch.matmul(torch.eye(int8_b.shape[1].type(torch.int32)), int8_b.type(torch.int32)).type(torch.int32)
+        de_scale1_fp32, de_scale2_fp32, offset1, offset2 = fp32_input
+        if is_k:
+            if has_bias:
+                int32_b = int32_b + offset1[i * head_dim : (i + 1) * head_dim]
+            fp32_b = int32_b.type(torch.float32) * de_scale1_fp32[i * head_dim : (i + 1) * head_dim]
+            fp32_b = torch.permute(fp32_b, (0, 2, 1))
+        else:
+            if has_bias:
+                int32_b = int32_b + offset2[i * head_dim : (i + 1) * head_dim]
+            fp32_b = int32_b.type(torch.float32) * de_scale2_fp32[i * head_dim : (i + 1) * head_dim]
+        return fp32_b
+
+    def group_matmul(self, head_num, kv_head_num, a, b, is_k):
+        quant_type = self.op_param.get('quantType', QuantType.TYPE_QUANT_UNDEFINED.value)
+        has_quant_offset = self.op_param.get('hasQuantOffset', False)
+        is_int8_flag, has_bias, fp32_input = self.get_quant_param(quant_type, has_quant_offset)
 
         group_head = head_num // kv_head_num
         score = None
         for i in range(kv_head_num):
+            fp32_a = a[i * group_head : (i + 1) * group_head, :, :].type(torch.float32)
             if is_int8_flag:
-                int8_b = b[i:, (i + 1), :, :, ]
-                head_dim = int8_b.shape[2]
-                int32_b = torch.matmul(torch.eye(int8_b.shape[1].type(torch.int32)), int8_b.type(torch.int32)).type(torch.int32)
-                if is_k:
-                    if has_bias:
-                        int32_b = int32_b + offset1[i * head_dim : (i + 1) * head_dim]
-                    fp32_b = int32_b.type(torch.float32) * de_scale1_fp32[i * head_dim : (i + 1) * head_dim]
-                    fp32_b = torch.permute(fp32_b, (0, 2, 1))
-                else:
-                    if has_bias:
-                        int32_b = int32_b + offset2[i * head_dim : (i + 1) * head_dim]
-                    fp32_b = int32_b.type(torch.float32) * de_scale2_fp32[i * head_dim : (i + 1) * head_dim]
-                group_score = torch.matmul(a[i * group_head : (i + 1) * group_head, :, :].type(torch.float32), fp32_b).type(torch.float16)
+                fp32_b = self.get_fp32_b(i, b, fp32_input, is_k, has_bias)
+                group_score = torch.matmul(fp32_a, fp32_b).type(torch.float16)
             else:
-                group_score = torch.matmul(a[i * group_head : (i + 1) * group_head, :, :].type(torch.float32), b[i: (i + 1), :, :].type(torch.float32))
+                group_score = torch.matmul(fp32_a, b[i: (i + 1), :, :].type(torch.float32))
 
             if score is None:
                 score = group_score
@@ -95,7 +123,7 @@ class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
         query = masked_attention_input[0] # (1, head_num, head_size)
         key = masked_attention_input[1] # (context_len, kv_head_num, head_size)
         value = masked_attention_input[2]
-        scale = masked_attention_input[3] # float
+        qk_scale = masked_attention_input[3] # float
 
         # Q * K.T
         query = torch.permute(query, (1, 0, 2))
@@ -106,9 +134,9 @@ class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
             key = torch.permute(key, (1, 0, 2))
         sim = self.group_matmul(query.shape[0], key.shape[0], query, key, 1) # (head_num, q_seqlen, k_seqlen)
         if alibi_bias is None:
-            sim = sim * scale
+            sim = sim * qk_scale
         else:
-            sim = sim * scale
+            sim = sim * qk_scale
             sim = sim + alibi_bias
         # softmax
         row_max = torch.max(sim, axis=-1, keepdims=True).values
@@ -137,9 +165,7 @@ class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
 
         mask_type = self.op_param.get('maskType', MaskType.UNDEFINED.value)
         if mask_type != MaskType.UNDEFINED.value:
-            mask_dim = len(mask) # mask shape
-            if mask_type == MaskType.MASK_TYPE_NORM.value:
-                mask_dim = 3
+            mask_dim = 3 if mask_type == MaskType.MASK_TYPE_NORM.value else len(mask) # mask shape
         else:
             mask_dim = 0
         mask_index_coff = 1
@@ -174,8 +200,8 @@ class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
                 values.append(v)
             keys = torch.stack(keys, axis=0)
             values = torch.stack(values, axis=0)
-            scale = self.op_param.get('qkScale', 1.0)
-            masked_attention_input = [q, keys, values, scale]
+            qk_scale = self.op_param.get('qkScale', 1.0)
+            masked_attention_input = [q, keys, values, qk_scale]
             if mask_dim == 4:
                 out = self.ref_masked_attention(masked_attention_input, mask[i, :, :1, :context_len])
                 out = out.reshape(head_num, head_size)
@@ -196,9 +222,14 @@ class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
         kv_head_num = self.op_param.get('kvHeadNum', 0)
         num_tokens, _, head_size = query.shape
 
+        calc_type = self.op_param.get('calcType', CalcType.CALC_TYPE_UNDEFINED.value) # 暂时不使用
         mask_type = self.op_param.get('maskType', MaskType.UNDEFINED.value)
         if mask_type != MaskType.UNDEFINED.value:
             mask = in_tensors[5]
+
+        batch_run_status_enable = self.op_param.get("batchRunStatusEnable", False)
+        if batch_run_status_enable:
+            batch_status = in_tensors[6]
 
         soc_version = self.get_soc_version()
         if soc_version == 'Ascend310P':
@@ -207,16 +238,7 @@ class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
             value_cache = value_cache.permute(0, 2, 1, 3).reshape(num_blocks, block_size, kv_head_num, head_size)
 
             if mask_type != MaskType.UNDEFINED.value:
-                # mask nz to nd
-                mask = mask.permute(0, 2, 1, 3)
-                dim0, dim1, dim2, dim3 = mask.shape
-                mask = mask.contiguous().view(dim0, dim1, dim2 * dim3)
-                if mask_type == MaskType.MASK_TYPE_ALIBI.value:
-                    batch = len(context_lens)
-                    if dim0 != head_num:
-                        mask = mask.contiguous().view(batch, head_num, dim1, dim2 * dim3)
-                    else:
-                        mask = mask.contiguous().view(1, head_num, dim1, dim2 * dim3)
+                mask = OpcheckPagedAttentionAttentionOperation.mask_nz_2_nd(mask_type, context_lens, head_num)
 
         ref_output = torch.zeros_like(query)
         paged_input = [query, key_cache, value_cache, block_tables, context_lens]
