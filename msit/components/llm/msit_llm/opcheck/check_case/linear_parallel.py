@@ -67,11 +67,8 @@ class OpcheckLinearParallelOperation(operation_test.OperationTest):
 
         if deq_scale is not None:
             if quant_type == QuantType.QUANT_TYPE_PER_GROUP.value:
-                dequantized_groups = [
-                    group * deq_scale[i] 
-                    for i, group 
-                    in enumerate(quant_tensor.split(group_size, dim=0))
-                ]
+                quant_tensor_split = quant_tensor.split(group_size, dim=0)
+                dequantized_groups = [group * deq_scale[i] for i, group in enumerate(quant_tensor_split)]
                 quant_tensor = torch.concat(dequantized_groups, dim=0)
             else:
                 quant_tensor *= deq_scale
