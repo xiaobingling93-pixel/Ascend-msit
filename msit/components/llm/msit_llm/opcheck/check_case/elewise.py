@@ -254,6 +254,7 @@ class OpcheckElewiseAddOperation(operation_test.OperationTest):
             ElewiseType.ELEWISE_TANH.value: self.elewise_tanh
         } 
         golden = golden_func.get(elewise_type, self.elewise_cast)(in_tensors)
+
         return golden
 
     def test(self):
