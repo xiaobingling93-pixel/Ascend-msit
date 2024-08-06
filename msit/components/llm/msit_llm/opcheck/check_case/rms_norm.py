@@ -91,8 +91,11 @@ class OpcheckRmsNormOperation(operation_test.OperationTest):
                 dynamic_quant_x = dynamic_quant_x / dynamic_quant_scale + dynamic_quant_offset
                 dynamic_quant_x = torch.clamp(dynamic_quant_x, -128, 127)
                 dynamic_quant_y = torch.round(dynamic_quant_x)
-                golden_result = [dynamic_quant_y.type(torch.int8), dynamic_quant_scale.squeeze(-1).type(torch.float32), 
-                        dynamic_quant_offset.squeeze(-1).type(torch.float32)]
+                golden_result = [
+                    dynamic_quant_y.type(torch.int8), 
+                    dynamic_quant_scale.squeeze(-1).type(torch.float32), 
+                    dynamic_quant_offset.squeeze(-1).type(torch.float32)
+                ]
         return golden_result
 
     def validate_rmsnorm_param(self, layer_type):
@@ -142,22 +145,19 @@ class OpcheckRmsNormOperation(operation_test.OperationTest):
 
         precision_mode = cur_param.get('precisionMode', PrecisionMode.HIGH_PRECISION_MODE.value)
         is_rstd = cur_param.get("rstd", False)
-        if precision_mode == PrecisionMode.HIGH_PERFORMANCE_MODE.value:
-            try:
-                golden_output = (x / torch.sqrt(norm)).half() * in_tensors[1].view(-1, 1)
-            except ZeroDivisionError as e:
-                raise RuntimeError("get ZeroDivisionError when calc RmsNormOperation golden") from e
-        elif layer_type == RmsNormType.RMS_NORM_NORM.value and is_rstd:
+        if layer_type == RmsNormType.RMS_NORM_NORM.value and is_rstd:
             gamma, reduce_dims, edim = in_tensors[1].float(), [], x.dim() - gamma.dim()
             for i in range(gamma.dim()):
                 reduce_dims.append(edim + i)
             rstd = torch.sqrt(x.pow(2).mean(reduce_dims, keepdim=True) + eps)
             return [(x * rstd) * gamma, rstd]
-        else:
-            try:
+        try:
+            if precision_mode == PrecisionMode.HIGH_PERFORMANCE_MODE.value:
+                golden_output = (x / torch.sqrt(norm)).half() * in_tensors[1].view(-1, 1)
+            else:
                 golden_output = x * gamma / torch.sqrt(norm)
-            except ZeroDivisionError as e:
-                raise RuntimeError("get ZeroDivisionError when calc RmsNormOperation golden") from e
+        except ZeroDivisionError as e:
+            raise RuntimeError("get ZeroDivisionError when calc RmsNormOperation golden") from e
 
         if layer_type == RmsNormType.RMS_NORM_PRE_NORM.value and quant_type == QuantType.QUANT_INT8.value:
             beta, scale, offset = in_tensors[3], in_tensors[4], in_tensors[5]
