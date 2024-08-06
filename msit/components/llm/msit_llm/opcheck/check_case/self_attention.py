@@ -73,17 +73,28 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         return score
 
     @staticmethod
+    def attention_mask_nz_2_nd(attention_mask, seq_len):
+        attention_mask = attention_mask.contiguous().permute(0, 2, 1, 3)
+        dim0, dim1, dim2, dim3 = attention_mask.shape
+        attention_mask = attention_mask.contiguous().view(dim0 * dim1, dim2, dim3)
+        attention_mask = attention_mask[:, :, :dim1]
+        batch = len(seq_len)
+        if dim0 == 1:
+            attention_mask = attention_mask.contiguous().view(dim1, dim1)
+        elif dim0 != batch:
+            attention_mask = attention_mask.contiguous().view(batch, dim0 // batch, dim1, dim1)
+        return attention_mask
+
+    @staticmethod
     def reshape_qkv(qkv, is_pa=False):
         if len(qkv.shape) == 4:
             dim0, dim1, dim2, dim3 = qkv.shape
             qkv = qkv.contiguous().view(dim0 * dim1, dim2 * dim3)
-
         if is_pa and len(qkv.shape) == 3:
             dim0, dim1, dim2 = qkv.shape
             qkv = qkv.contiguous().view(dim0, dim1 * dim2)
-
         return qkv
-    
+
     @staticmethod
     def get_qkv(in_tensors):
         q, k, v = in_tensors[:3]
@@ -91,7 +102,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         k = OpcheckUnpadSelfAttentionOperation.reshape_qkv(k, True)
         v = OpcheckUnpadSelfAttentionOperation.reshape_qkv(v, True)
         return q, k, v
-    
+
     @staticmethod
     def get_out_sub(param_input, q_s, score, v_slice):
         head_num, kv_head_num, head_size = param_input
@@ -106,7 +117,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         out_sub = OpcheckUnpadSelfAttentionOperation.group_matmul(head_num, kv_head_num, p, v_slice)
         out_sub = out_sub.view([head_num, q_s, head_size]).permute(1, 0, 2).contiguous()
         return out_sub
-    
+
     def get_batch_status(self, in_tensors, seq_len):
         batch_run_status_enable = self.op_param.get("batchRunStatusEnable", False)
         if batch_run_status_enable:
@@ -114,7 +125,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         else:
             batch_status = range(len(seq_len))
         return batch_status
-    
+
     def get_post_mask_coff(self):
         kernel_type = self.op_param.get("kernelType", KernelType.KERNELTYPE_DEFAULT.value)
         if kernel_type == KernelType.KERNELTYPE_HIGH_PRECISION.value:
@@ -122,7 +133,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         else:
             post_mask_coff = -3e38
         return post_mask_coff
-    
+
     def get_attention_params(self, q):
         q_scale = self.op_param.get("qScale", 1.0)
         qk_scale = self.op_param.get("qkScale", 1.0)
@@ -132,12 +143,11 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         data_type = q.dtype
         q_ntokens = q.shape[0]
         return q_scale, qk_scale, head_num, head_size, kv_head_num, data_type, q_ntokens
-    
+
     def get_clamped_score(self, score):
         clamp_type = self.op_param("clampType", ClampType.CLAMP_TYPE_UNDEFINED.value)
         if clamp_type == ClampType.CLAMP_TYPE_MIN_MAX.value:
-            clamp_min = self.op_param("clampMin", 0.0)
-            clamp_max = self.op_param("clampMax", 0.0)
+            clamp_min, clamp_max = self.op_param.get("clampMin", 0.0), self.op_param.get("clampMax", 0.0)
             clamp_min_brc = torch.ones(score.shape) * clamp_min
             clamp_max_brc = torch.ones(score.shape) * clamp_max
             score = torch.max(score, clamp_min_brc)
@@ -247,15 +257,14 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
             if is_mask:
                 if (mask_type == MaskType.MASK_TYPE_NROM.value or mask_type == MaskType.MASK_TYPE_NORM_COMPRESS.value) \
                     and q_s > mask.shape[1]:
-                    # 压缩norm mask
-                    # 使用当前最大seqlen生成mask
+                    # 压缩norm mask, 使用当前最大seqlen生成mask
                     no_compress_mask = torch.ones(size=(1, max_seq_len, max_seq_len)).to(score.device)
                     no_compress_mask = torch.triu(no_compress_mask, 1)
                     no_compress_mask *= -10000.0
                     score = score + no_compress_mask[:, :q_s, :kv_s]
                 else:
                     score = score + mask[:, :q_s, :kv_s] * post_mask_coff
-            
+
             param_input = [head_num, kv_head_num, head_size]
             out_sub = OpcheckUnpadSelfAttentionOperation.get_out_sub(param_input, q_s, score, v_slice)
             out = out_sub if out is None else torch.concat((out, out_sub), 0)
@@ -275,19 +284,8 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
 
         soc_version = self.get_soc_version()
         if soc_version != "Ascend910B":
-            cache_k = self.nz_2_nd(cache_k)
-            cache_v = self.nz_2_nd(cache_v)
-
-            attention_mask = attention_mask.contiguous().permute(0, 2, 1, 3)
-            dim0, dim1, dim2, dim3 = attention_mask.shape
-            attention_mask = attention_mask.contiguous().view(dim0 * dim1, dim2, dim3)
-            attention_mask = attention_mask[:, :, :dim1]
-            batch = len(seq_len)
-            if dim0 == 1:
-                attention_mask = attention_mask.contiguous().view(dim1, dim1)
-            elif dim0 != batch:
-                attention_mask = attention_mask.contiguous().view(batch, dim0 // batch, dim1, dim1)
-
+            cache_k, cache_v = self.nz_2_nd(cache_k), self.nz_2_nd(cache_v)
+            attention_mask = OpcheckUnpadSelfAttentionOperation.attention_mask_nz_2_nd(attention_mask, seq_len)
             self.in_tensors[3], self.in_tensors[4], self.in_tensors[5] = cache_k, cache_v, attention_mask
 
         batch_status = self.get_batch_status(in_tensors, seq_len)
@@ -301,9 +299,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
             cur_token_offset = token_offset[i]
             cur_token_offset_start = cur_token_offset - cur_seqlen
             next_offset = offset + cur_seqlen
-            cur_q = mixed_q[offset:next_offset]
-            cur_k = mixed_k[offset:next_offset]
-            cur_v = mixed_v[offset:next_offset]
+            cur_q, cur_k, cur_v = mixed_q[offset:next_offset], mixed_k[offset:next_offset], mixed_v[offset:next_offset]
             if cur_token_offset_start > 0:
                 past_k = cache_k[layerid, i, :cur_token_offset_start, :]
                 past_v = cache_v[layerid, i, :cur_token_offset_start, :]
@@ -314,8 +310,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
             cur_qk = torch.bmm(cur_q, cur_k) # [head_num, seqlen, token_offset]
             clamp_type = self.op_param.get("clampType", ClampType.CLAMP_TYPE_UNDEFINED.value)
             if clamp_type == ClampType.CLAMP_TYPE_MIN_MAX.value:
-                clamp_min = self.op_param.get("clampMin", 0.0)
-                clamp_max = self.op_param.get("clampMax", 0.0)
+                clamp_min, clamp_max = self.op_param.get("clampMin", 0.0), self.op_param.get("clampMax", 0.0)
                 cur_qk = torch.clamp(cur_qk, clamp_min, clamp_max)
             if attention_mask.ndim == 3: # masked_fill
                 cur_qk = cur_qk + attention_mask[i, :cur_seqlen, :cur_token_offset]
