@@ -21,8 +21,8 @@
   ```bash
   result
   |-- 2022_12_17-07_37_18
-  │   `-- pure_infer_data_0.bin
-  `-- 2022_12_17-07_37_18_summary.json
+  │   |-- pure_infer_data_0.bin
+  |-- 2022_12_17-07_37_18_summary.json
   ```
 
 2. 设置--input和--output参数。示例命令及结果如下：
