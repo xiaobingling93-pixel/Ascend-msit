@@ -1,12 +1,12 @@
 from unittest import TestCase
 
-from msit_llm import _RandomNameSequence
+from msit_llm.bc_analyze.utils import RandomNameSequence
 
 
 class TestUtils(TestCase):
 
     def test_random_name_with_timestamp(self):
-        self.namer = _RandomNameSequence()
+        self.namer = RandomNameSequence()
         
         for i, namer in zip(range(8), self.namer):
             with self.subTest(round=f'{i}th'):
@@ -14,7 +14,7 @@ class TestUtils(TestCase):
         
 
     def test_random_name_with_no_timestamp(self):
-        self.namer = _RandomNameSequence(False)
+        self.namer = RandomNameSequence(False)
         
         for i, namer in zip(range(8), self.namer):
             with self.subTest(round=f'{i}th'):
