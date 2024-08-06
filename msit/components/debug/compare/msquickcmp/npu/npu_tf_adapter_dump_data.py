@@ -18,6 +18,7 @@
 Function:
 This class mainly involves generate tf adapter npu dump data function.
 """
+import glob
 import os
 
 import npu_device
@@ -25,9 +26,11 @@ import numpy as np
 import tensorflow as tf
 import json
 import time
+import shutil
 
 from tensorflow.core.protobuf.rewriter_config_pb2 import RewriterConfig
 from msquickcmp.common import utils
+from msquickcmp.atc import atc_utils
 from npu_device.compat.v1.npu_init import *
 
 
@@ -37,12 +40,14 @@ class NpuTfAdapterDumpData(object):
     """
 
     def __init__(self, arguments):
-        output_path = os.path.realpath(arguments.out_path)
-        self.input = os.path.join(output_path, "input")
-        self.dump_data_npu = os.path.join(output_path, "dump_data", "npu")
+        self.output_path = os.path.realpath(arguments.out_path)
+        self.input = os.path.join(self.output_path, "input")
+        self.dump_data_npu = os.path.join(self.output_path, "dump_data", "npu")
+        self.model_json_path = os.path.join(self.output_path, "model")
         self.inputs_data = {}
         self.model_path = arguments.offline_model_path
         self.input_shape = self.split_input_shape(arguments.input_shape)
+        self.cann_path = arguments.cann_path
         self.net_output = {}
         self._create_dir()
 
@@ -75,6 +80,7 @@ class NpuTfAdapterDumpData(object):
     def _create_dir(self):
         utils.create_directory(self.input)
         utils.create_directory(self.dump_data_npu)
+        utils.create_directory(self.model_json_path)
 
     def generate_inputs_data(self):
         for shape in self.input_shape:
@@ -82,34 +88,36 @@ class NpuTfAdapterDumpData(object):
             self.inputs_data[shape[0]] = input_data
             input_data.tofile(os.path.join(self.input, shape[0] + ".bin"))
 
-    def generate_dump_data(self, output_json_path):
+    def generate_dump_data(self):
         graph = self._load_graph()
         # adapt NPU
         npu_device.compat.enable_v1()
+        os.environ['DUMP_GE_GRAPH'] = '2'
         config_proto = tf.compat.v1.ConfigProto()
         custom_op = config_proto.graph_options.rewrite_options.custom_optimizers.add()
         custom_op.name = "NpuOptimizer"
-        custom_op.parameter_map["precision_mode"].s = tf.compat.as_bytes("allow_mix_precision")
+        custom_op.parameter_map["enable_dump"].b = True
+        custom_op.parameter_map["dump_path"].s = tf.compat.as_bytes(self.dump_data_npu)
+        custom_op.parameter_map["dump_step"].s = tf.compat.as_bytes("0|5|10")
+        custom_op.parameter_map["dump_mode"].s = tf.compat.as_bytes("output")
         config_proto.graph_options.rewrite_options.remapping = RewriterConfig.OFF
         tf_config = npu_config_proto(config_proto=config_proto)
-
         # sess run predict
         with tf.compat.v1.Session(config=tf_config, graph=graph) as sess:
             feed_dict = {
                 sess.graph.get_tensor_by_name(input_name + ":0"): input_data
                 for input_name, input_data in self.inputs_data.items()
             }
-            op_names = self.parse_ops_name_from_om_json(output_json_path)
-            output_tensors = []
-            operations = sess.graph.get_operations()
-            for op_name in op_names:
-                if self._is_op_exists(op_name, operations):
-                    output_tensors.extend(sess.graph.get_operation_by_name(op_name).outputs)
-            out = sess.run(output_tensors, feed_dict)
-            self._save_dump_data(out, output_tensors)
+            current_path = os.getcwd()
+            os.chdir(self.model_json_path)
+            sess.run(tf.no_op, feed_dict)
+            # self._save_dump_data(out, output_tensors)
             utils.logger.info("Dump tf adapter data success, data saved in: %s", self.dump_data_npu)
-
-        return self.dump_data_npu
+        os.chdir(current_path)
+        self._move_dump_data_files()
+        graph_txt = self.get_graph_txt()
+        output_json_path = atc_utils.convert_model_to_json(self.cann_path, graph_txt, self.output_path)
+        return self.dump_data_npu, output_json_path
 
     def _load_graph(self):
         sess = tf.compat.v1.keras.backend.get_session()
@@ -133,6 +141,28 @@ class NpuTfAdapterDumpData(object):
 
     def _save_dump_data(self, out, output_tensors):
         for data, tensor in zip(out, output_tensors):
-            tensor_name = tensor.name.replace("/", "_").replace(":", ".") + "." + str(int(time.time()))
+            tensor_name = tensor.name.replace("/", "_").replace(":", ".") + "." + tensor.type + "." + str(int(time.time()))
             npy_file_path = os.path.join(self.dump_data_npu, tensor_name)
             np.save(npy_file_path, data)
+
+    def _move_dump_data_files(self):
+        # 遍历dump_data_npu目录下的所有项
+        for item in os.listdir(self.dump_data_npu):
+            # 获取项的完整路径
+            item_path = os.path.join(self.dump_data_npu, item)
+            # 检查这个项是否是一个目录
+            if os.path.isdir(item_path):
+                # 遍历子目录中的所有文件
+                for file in os.listdir(item_path):
+                    file_path = os.path.join(item_path, file)
+                    # 检查是否是文件
+                    if os.path.isfile(file_path):
+                        # 移动文件到dump_data_npu目录下
+                        shutil.move(file_path, os.path.join(self.dump_data_npu, file))
+                # 删除空的子目录
+                shutil.rmtree(item_path)
+
+    def get_graph_txt(self):
+        search_pattern = 'ge_proto*Build.txt'
+        matching_files = glob.glob(os.path.join(self.model_json_path, search_pattern))
+        return os.path.join(self.model_json_path, matching_files[0])

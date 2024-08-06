@@ -236,13 +236,13 @@ def run(args: CmpArgsAdapter, input_shape, original_out_path, use_cli: bool):
 
     if is_saved_model_valid(args.offline_model_path):
         # generate om.json
-        om_model = saved_model_convert_om(args)
-        output_json_path = atc_utils.convert_model_to_json(args.cann_path, om_model, args.out_path)
+        # om_model = saved_model_convert_om(args)
+        # output_json_path = atc_utils.convert_model_to_json(args.cann_path, om_model, args.out_path)
         # npu dump
         from msquickcmp.npu.npu_tf_adapter_dump_data import NpuTfAdapterDumpData
         npu_dump = NpuTfAdapterDumpData(args)
         npu_dump.generate_inputs_data()
-        npu_dump_data_path = npu_dump.generate_dump_data(output_json_path)
+        npu_dump_data_path, output_json_path = npu_dump.generate_dump_data()
         # gpu dump
         from msquickcmp.tf.tf_save_model_dump_data import TfSaveModelDumpData
         golden_dump = TfSaveModelDumpData(args)
