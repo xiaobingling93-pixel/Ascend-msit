@@ -55,8 +55,8 @@
   |   |-- 196608-6_0.bin
   |   |-- 196608-7_0.bin
   |   |-- 196608-8_0.bin
-  |   `-- 196608-9_0.bin
-  `-- 2023_01_03-06_35_53_summary.json
+  |   |-- 196608-9_0.bin
+  |-- 2023_01_03-06_35_53_summary.json
   ```
 
 3. 设置--output_dirname参数。示例命令及结果如下：
@@ -68,8 +68,8 @@
   ```bash
   result
   |-- subdir
-  │   `-- pure_infer_data_0.bin
-  `-- subdir_summary.json
+  │   |-- pure_infer_data_0.bin
+  |-- subdir_summary.json
   ```
 
 4. 设置--dump参数。示例命令及结果如下：
@@ -81,9 +81,9 @@
   ```bash
   result
   |-- 2022_12_17-07_37_18
-  │   `-- pure_infer_data_0.bin
+  │   |-- pure_infer_data_0.bin
   |-- dump
-  `-- 2022_12_17-07_37_18_summary.json
+  |-- 2022_12_17-07_37_18_summary.json
   ```
 
 5. 设置--profiler参数。示例命令及结果如下：
@@ -95,10 +95,10 @@
   ```bash
   result
   |-- 2022_12_17-07_56_10
-  │   `-- pure_infer_data_0.bin
+  │   |-- pure_infer_data_0.bin
   |-- profiler
-  │   `-- PROF_000001_20221217075609326_GLKQJOGROQGOLIIB
-  `-- 2022_12_17-07_56_10_summary.json
+  │   |-- PROF_000001_20221217075609326_GLKQJOGROQGOLIIB
+  |-- 2022_12_17-07_56_10_summary.json
   ```
 
 6. 输出结果解释。
