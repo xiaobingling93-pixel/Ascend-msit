@@ -105,7 +105,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
 
     @staticmethod
     def get_out_sub(head_info, q_s, score, v_slice, _p):
-        head_num, kv_head_num, head_size = head_info
+        head_num, head_size, kv_head_num = head_info
         score_max = torch.max(score, axis=-1).values
         score = score - score_max.view((head_num, q_s, 1))
         score_exp = torch.exp(score)
@@ -154,7 +154,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         data_type = q.dtype
         q_ntokens = q.shape[0]
 
-        head_info = [head_num, kv_head_num, head_size]
+        head_info = [head_num, head_size, kv_head_num]
         params = [q_scale, qk_scale, head_info, data_type, q_ntokens]
         return params
 
