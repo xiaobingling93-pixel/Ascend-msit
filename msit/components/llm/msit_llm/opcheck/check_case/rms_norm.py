@@ -67,7 +67,7 @@ class OpcheckRmsNormOperation(operation_test.OperationTest):
         golden_result_quant = torch.round(golden_output)
         return golden_result_quant.type(torch.int8)
 
-    def rms_norm_quant_with_tensor(self, golden_output, in_tensors, cur_param):
+    def rms_norm_quant(self, golden_output, in_tensors, cur_param):
         dynamic_quant_type = cur_param.get('dynamicQuantType', DynamicQuantType.DYNAMIC_QUANT_UNDEFINED.value)
         if dynamic_quant_type == DynamicQuantType.DYNAMIC_QUANT_UNDEFINED.value:
             beta, scale, offset = in_tensors[2], in_tensors[3], in_tensors[4]
@@ -104,7 +104,7 @@ class OpcheckRmsNormOperation(operation_test.OperationTest):
             beta, scale, offset = in_tensors[3], in_tensors[4], in_tensors[5]
             golden_result = [OpcheckRmsNormOperation.rms_norm_quant_with_tensor(golden_output, beta, scale, offset), x]
         elif layer_type == RmsNormType.RMS_NORM_NORM.value and quant_type == QuantType.QUANT_INT8.value:
-            golden_result = self.rms_norm_quant_with_tensor(golden_output, in_tensors, cur_param)
+            golden_result = self.rms_norm_quant(golden_output, in_tensors, cur_param)
         elif layer_type == RmsNormType.RMS_NORM_PRE_NORM.value and quant_type == QuantType.QUANT_UNDEFINED.value:
             golden_result = [golden_result.half(), x.half()]
         else:
