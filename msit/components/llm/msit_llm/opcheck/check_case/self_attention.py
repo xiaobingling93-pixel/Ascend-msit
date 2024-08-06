@@ -83,6 +83,51 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
             qkv = qkv.contiguous().view(dim0, dim1 * dim2)
 
         return qkv
+    
+    @staticmethod
+    def get_qkv(in_tensors):
+        q, k, v = in_tensors[:3]
+        q = OpcheckUnpadSelfAttentionOperation.reshape_qkv(q, True)
+        k = OpcheckUnpadSelfAttentionOperation.reshape_qkv(k, True)
+        v = OpcheckUnpadSelfAttentionOperation.reshape_qkv(v, True)
+        return q, k, v
+    
+    def get_batch_status(self, in_tensors, seq_len):
+        batch_run_status_enable = self.op_param.get("batchRunStatusEnable", False)
+        if batch_run_status_enable:
+            batch_status = in_tensors[-1]
+        else:
+            batch_status = range(len(seq_len))
+        return batch_status
+    
+    def get_post_mask_coff(self):
+        kernel_type = self.op_param.get("kernelType", KernelType.KERNELTYPE_DEFAULT.value)
+        if kernel_type == KernelType.KERNELTYPE_HIGH_PRECISION.value:
+            post_mask_coff = 1.0
+        else:
+            post_mask_coff = -3e38
+        return post_mask_coff
+    
+    def get_attention_params(self, q):
+        q_scale = self.op_param.get("qScale", 1.0)
+        qk_scale = self.op_param.get("qkScale", 1.0)
+        head_num = self.op_param.get("headNum", 0)
+        head_size = int(q.shape[1] / head_num)
+        kv_head_num = self.op_param.get("kvHeadNum", 0)
+        data_type = q.dtype
+        q_ntokens = q.shape[0]
+        return q_scale, qk_scale, head_num, head_size, kv_head_num, data_type, q_ntokens
+    
+    def get_clamped_score(self, score):
+        clamp_type = self.op_param("clampType", ClampType.CLAMP_TYPE_UNDEFINED.value)
+        if clamp_type == ClampType.CLAMP_TYPE_MIN_MAX.value:
+            clamp_min = self.op_param("clampMin", 0.0)
+            clamp_max = self.op_param("clampMax", 0.0)
+            clamp_min_brc = torch.ones(score.shape) * clamp_min
+            clamp_max_brc = torch.ones(score.shape) * clamp_max
+            score = torch.max(score, clamp_min_brc)
+            score = torch.min(score, clamp_max_brc)
+        return score
 
     def kv_bypass_golden_func(self, in_tensors):
         q, k, v = in_tensors[:3]
@@ -108,26 +153,9 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
             seq_len = in_tensors[4]
             layer_id = int(in_tensors[5][0])
 
-        batch_run_status_enable = self.op_param.get("batchRunStatusEnable", False)
-        if batch_run_status_enable:
-            batch_status = in_tensors[-1]
-        else:
-            batch_status = range(len(seq_len))
-
-        clamp_type = self.op_param("clampType", ClampType.CLAMP_TYPE_UNDEFINED.value)
-        kernel_type = self.op_param("kernelType", KernelType.KERNELTYPE_DEFAULT.value)
-        if kernel_type == KernelType.KERNELTYPE_HIGH_PRECISION.value:
-            post_mask_coff = 1.0
-        else:
-            post_mask_coff = -3e38
-
-        q_scale = self.op_param.get("qScale", 1.0)
-        qk_scale = self.op_param.get("qkScale", 1.0)
-        head_num = self.op_param.get("headNum", 0)
-        head_size = int(q.shape[1] / head_num)
-        kv_head_num = self.op_param.get("kvHeadNum", 0)
-        data_type = q.dtype
-        q_ntokens = q.shape[0]
+        batch_status = self.get_batch_status(in_tensors, seq_len)
+        post_mask_coff = self.get_post_mask_coff()
+        _, _, head_num, head_size, kv_head_num, data_type, q_ntokens = self.get_attention_params(q, seq_len)
         max_seq_len = max(seq_len)
 
         q_offset, k_offset, v_offset = 0, 0, 0
@@ -144,14 +172,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
 
             tor = 1.0 / math.sqrt(1.0 * head_size)
             score = score * tor
-
-            if clamp_type == ClampType.CLAMP_TYPE_MIN_MAX.value:
-                clamp_min = self.op_param("clampMin", 0.0)
-                clamp_max = self.op_param("clampMax", 0.0)
-                clamp_min_brc = torch.ones(score.shape) * clamp_min
-                clamp_max_brc = torch.ones(score.shape) * clamp_max
-                score = torch.max(score, clamp_min_brc)
-                score = torch.min(score, clamp_max_brc)
+            score = self.get_clamped_score(score)
             if is_mask:
                 score = score + mask[idx, :q_s, :kv_s] * post_mask_coff
 
@@ -175,16 +196,11 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         return out.type(data_type)
 
     def pa_encoder_golden_func(self, in_tensors):
-        q, k, v = in_tensors[:3]
-        q = OpcheckUnpadSelfAttentionOperation.reshape_qkv(q, True)
-        k = OpcheckUnpadSelfAttentionOperation.reshape_qkv(k, True)
-        v = OpcheckUnpadSelfAttentionOperation.reshape_qkv(v, True)
-
-        mask = None
-        seq_len = None
+        q, k, v = OpcheckUnpadSelfAttentionOperation.get_qkv(in_tensors)
+        mask, seq_len = None, None
         mask_type = self.op_param.get("maskType", MaskType.MASK_TYPE_UNDEFINED.value)
-        is_triu_mask = self.op_param.get("isTriuMask", 0)
         is_mask = mask_type != MaskType.MASK_TYPE_UNDEFINED.value
+        is_triu_mask = self.op_param.get("isTriuMask", 0)
         if is_mask:
             mask = in_tensors[3]
             soc_version = self.get_soc_version()
@@ -198,26 +214,9 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         else:
             seq_len = in_tensors[3]
 
-        batch_run_status_enable = self.op_param.get("batchRunStatusEnable", False)
-        if batch_run_status_enable:
-            batch_status = in_tensors[-1]
-        else:
-            batch_status = range(len(seq_len))
-
-        clamp_type = self.op_param.get("clampType", ClampType.CLAMP_TYPE_UNDEFINED.value)
-        kernel_type = self.op_param.get("kernelType", KernelType.KERNELTYPE_DEFAULT.value)
-        if kernel_type == KernelType.KERNELTYPE_HIGH_PRECISION.value:
-            post_mask_coff = 1.0
-        else:
-            post_mask_coff = -3e38
-
-        q_scale = self.op_param.get("qScale", 1.0)
-        qk_scale = self.op_param.get("qkScale", 1.0)
-        head_num = self.op_param.get("headNum", 0)
-        head_size = int(q.shape[1] / head_num)
-        kv_head_num = self.op_param.get("kvHeadNum", 0)
-        data_type = q.dtype
-        q_ntokens = q.shape[0]
+        batch_status = self.get_batch_status(in_tensors, seq_len)
+        post_mask_coff = self.get_post_mask_coff()
+        _, qk_scale, head_num, head_size, kv_head_num, data_type, q_ntokens = self.get_attention_params(q)
         max_seq_len = max(seq_len)
 
         q_seqlen = kv_seqlen = seq_len # crossattention时，q_seqlen != k_seqlen
@@ -237,15 +236,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
 
             tor = qk_scale
             score = score * tor
-
-            if clamp_type == ClampType.CLAMP_TYPE_MIN_MAX.value:
-                clamp_min = self.op_param("clampMin", 0.0)
-                clamp_max = self.op_param("clampMax", 0.0)
-                clamp_min_brc = torch.ones(score.shape) * clamp_min
-                clamp_max_brc = torch.ones(score.shape) * clamp_max
-                score = torch.max(score, clamp_min_brc)
-                score = torch.min(score, clamp_max_brc)
-
+            score = self.get_clamped_score(score)
             if is_mask:
                 if (mask_type == MaskType.MASK_TYPE_NROM.value or mask_type == MaskType.MASK_TYPE_NORM_COMPRESS.value) \
                     and q_s > mask.shape[1]:
@@ -279,11 +270,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         return out.type(data_type)
 
     def undefined_golden_func(self, in_tensors):
-        mixed_q, mixed_k, mixed_v = in_tensors[:3]
-        mixed_q = OpcheckUnpadSelfAttentionOperation.reshape_qkv(mixed_q)
-        mixed_k = OpcheckUnpadSelfAttentionOperation.reshape_qkv(mixed_k)
-        mixed_v = OpcheckUnpadSelfAttentionOperation.reshape_qkv(mixed_v)
-
+        mixed_q, mixed_k, mixed_v = OpcheckUnpadSelfAttentionOperation.get_qkv(in_tensors)
         cache_k, cache_v, attention_mask, token_offset, seq_len, layerid = in_tensors[3], in_tensors[4], \
             in_tensors[5], in_tensors[6], in_tensors[7], int(in_tensors[8][0])
 
@@ -304,18 +291,9 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
 
             self.in_tensors[3], self.in_tensors[4], self.in_tensors[5] = cache_k, cache_v, attention_mask
 
-        batch_run_status_enable = self.op_param.get("batchRunStatusEnable", False)
-        if batch_run_status_enable:
-            batch_status = in_tensors[-1]
-        else:
-            batch_status = range(len(seq_len))
-
+        batch_status = self.get_batch_status(in_tensors, seq_len)
         is_triu_mask = self.op_param.get("isTriuMask", 0)
-
-        q_scale = self.op_param.get("qScale", 1.0)
-        qk_scale = self.op_param.get("qkScale", 1.0)
-        head_num = self.op_param.get("headNum", 0)
-        head_size = int(mixed_q.shape[1] / head_num)
+        q_scale, qk_scale, head_num, head_size, _, _, _ = self.get_attention_params(mixed_q)
 
         offset = 0
         context_list = []
