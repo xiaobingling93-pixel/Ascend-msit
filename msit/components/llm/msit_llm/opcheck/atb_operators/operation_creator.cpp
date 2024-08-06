@@ -38,7 +38,7 @@ static atb::Operation *ActivationOperationCreate(const nlohmann::json &paramJson
         param.dim = paramJson["dim"].get<int32_t>();
     }
     if (paramJson.contains("geluMode")) {
-        param.geluMode = atb::infer::ActivationParam::GeluMode(paramJson["geluMode"].get<int>());
+        param.geluMode = atb::infer::ActivationParam::GeLUMode(paramJson["geluMode"].get<int>());
     }
     atb::Operation *op;
     CreateOperation(param, &op);
@@ -540,7 +540,7 @@ static atb::Operation *PagedAttentionOperationCreate(const nlohmann::json &param
         param.compressType = atb::infer::PagedAttentionParam::CompressType(paramJson["compressType"].get<int>());
     }
     if (paramJson.contains("calcType")) {
-        param.calcType = atb::infer::PagedAttentionParam::CalType(paramJson["calcType"].get<int>());
+        param.calcType = atb::infer::PagedAttentionParam::CalcType(paramJson["calcType"].get<int>());
     }
     atb::Operation *op;
     CreateOperation(param, &op);
