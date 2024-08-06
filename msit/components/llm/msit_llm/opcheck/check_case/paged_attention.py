@@ -151,11 +151,7 @@ class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
         return out
 
     def ref_single_query_cached_kv_attention(self, output, paged_input, mask) -> None:
-        query = paged_input[0]
-        key_cache = paged_input[1] # (num_blocks, block_size, kv_head_num, head_size)
-        value_cache = paged_input[2] # (num_blocks, block_size, kv_head_num, head_size)
-        block_tables = paged_input[3]
-        context_lens = paged_input[4]
+        query, key_cache, value_cache, block_tables, context_lens = paged_input[:5]
 
         head_num = self.op_param.get('headNum', 0)
         kv_head_num = self.op_param.get('kvHeadNum', 0)
@@ -181,25 +177,19 @@ class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
                 mask_index_coff = kv_head_num
 
         for i in range(num_tokens):
-            block_table = block_tables[i]
-            context_len = int(context_lens[i])
+            block_table, context_len = block_tables[i], int(context_lens[i])
             if context_len == 0:
                 continue
 
-            q = query[i].view(1, head_num, head_size)
-            keys = []
-            values = []
+            q, keys, values = query[i].view(1, head_num, head_size), [], []
             for j in range(context_len):
                 block_number = int(block_table[j // block_size])
                 block_offset = j % block_size
-                k = key_cache[block_number, block_offset, :, :]
-                k = k.reshape(kv_head_num, head_size)
+                k = key_cache[block_number, block_offset, :, :].reshape(kv_head_num, head_size)
                 keys.append(k)
-                v = value_cache[block_number, block_offset, :, :]
-                v = v.reshape(kv_head_num, head_size)
+                v = value_cache[block_number, block_offset, :, :].reshape(kv_head_num, head_size)
                 values.append(v)
-            keys = torch.stack(keys, axis=0)
-            values = torch.stack(values, axis=0)
+            keys, values = torch.stack(keys, axis=0), torch.stack(values, axis=0)
             qk_scale = self.op_param.get('qkScale', 1.0)
             masked_attention_input = [q, keys, values, qk_scale]
             if mask_dim == 4:
@@ -211,7 +201,6 @@ class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
             else:
                 out = self.ref_masked_attention(masked_attention_input, mask)
                 out = out.reshape(head_num, head_size)
-
             output[i] = out
 
     def golden_calc(self, in_tensors):
