@@ -155,7 +155,8 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         q_ntokens = q.shape[0]
 
         head_info = [head_num, kv_head_num, head_size]
-        return q_scale, qk_scale, head_info, data_type, q_ntokens
+        params = [q_scale, qk_scale, head_info, data_type, q_ntokens]
+        return params
 
     def get_clamped_score(self, score):
         clamp_type = self.op_param.get("clampType", ClampType.CLAMP_TYPE_UNDEFINED.value)
