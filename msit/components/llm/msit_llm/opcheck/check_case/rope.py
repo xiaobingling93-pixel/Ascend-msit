@@ -54,7 +54,6 @@ class OpcheckUnpadRopeOperation(operation_test.OperationTest):
             offset = next_offset
         q_sum = torch.concat(tuple(q_list), dim=0)
         k_sum = torch.concat(tuple(k_list), dim=0)
-        del self.unpadRetdata
         return [q_sum, k_sum]
 
     def golden_func2(self, in_tensors):
@@ -87,7 +86,7 @@ class OpcheckUnpadRopeOperation(operation_test.OperationTest):
         else:
             ntoken = in_tensors[0].size()[0]
             seqlen = int(in_tensors[4][0])
-            batch = max(ntoken // seqlen, 1)
+            batch = ntoken // seqlen
             hidden_sizeq = in_tensors[0].size()[1]
             head_size = in_tensors[2].size()[1]
             q_head_num = hidden_sizeq // head_size
@@ -95,6 +94,9 @@ class OpcheckUnpadRopeOperation(operation_test.OperationTest):
             k_head_num = hidden_sizek // head_size
         rot_dim = in_tensors[2].size()[1]
 
+        if batch == 0:
+            batch = 1
+            seqlen = ntoken
         q = in_tensors[0]
         k = in_tensors[1]
         qshaped = q.reshape(batch, -1, q_head_num, rot_dim // 2, 2)
@@ -127,15 +129,20 @@ class OpcheckUnpadRopeOperation(operation_test.OperationTest):
 
     def golden_func4(self, in_tensors):
         ntoken = in_tensors[0].size()[0]
+        seqlen = int(in_tensors[4][0])
+        batch = ntoken // seqlen
+        if batch == 0:
+            batch = 1
+            seqlen = ntoken
         hidden_size = in_tensors[0].size()[1]
         hidden_size1 = in_tensors[1].size()[1]
         head_size = in_tensors[2].size()[1]
         head_num = hidden_size // head_size
         head_num1 = hidden_size1 // head_size
-        q = in_tensors[0].view(ntoken, head_num, head_size)
-        k = in_tensors[1].view(ntoken, head_num1, head_size)
-        cos = in_tensors[2].view(ntoken, 1, head_size)
-        sin = in_tensors[3].view(ntoken, 1, head_size)
+        q = in_tensors[0].view(batch, seqlen, head_num, head_size)
+        k = in_tensors[1].view(batch, seqlen, head_num1, head_size)
+        cos = in_tensors[2].view(batch, seqlen, head_size).unsqueeze(2)
+        sin = in_tensors[3].view(batch, seqlen, head_size).unsqueeze(2)
         q_embed = ((q * cos) + (self.rotate_half(q) * sin)).view(ntoken, hidden_size)
         k_embed = ((k * cos) + (self.rotate_half(k) * sin)).view(ntoken, hidden_size1)
         return [q_embed, k_embed]

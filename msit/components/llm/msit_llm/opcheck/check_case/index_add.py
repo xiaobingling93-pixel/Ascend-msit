@@ -19,16 +19,19 @@ from msit_llm.opcheck import operation_test
 from msit_llm.common.log import logger
 
 
-class OpcheckAddOperation(operation_test.OperationTest):
+class OpcheckIndexAddOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
-        split_dim = self.op_param.get('splitDim', 0)
-        split_num = self.op_param.get('splitNum', 2) # 等分次数，当前支持2或3
-        self.validate_int_range(split_num, [2, 3], "splitNum")
-        split_output = torch.chunk(in_tensors[0], chunks=split_num, dim=split_dim)
-        return split_output
+        index_type = self.op_param.get("indexType", 0)
+        axis = self.op_param.get("axis", 0)
+
+        if index_type == 1:
+            in_tensors[0] = in_tensors[0].index_add_(axis, in_tensors[1], in_tensors[2], alpha=in_tensors[3].item())
+            return [in_tensors[0]]
+
+        return []
 
     def test(self):
-        ret = self.validate_param("splitNum", "splitDim")
+        ret = self.validate_param("indexType", "axis")
         if not ret:
             return
         self.execute()

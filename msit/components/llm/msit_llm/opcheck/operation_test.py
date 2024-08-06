@@ -17,6 +17,7 @@ import re
 import unittest
 import json
 import glob
+import argparse
 import torch
 import torch_npu
 
@@ -76,6 +77,12 @@ class OperationTest(unittest.TestCase):
                 msg = f"Cannot get golden data because opParam {param_name} is not correctly set!"
                 logger.error(msg)
         return ret
+
+    def validate_int_range(self, param_value, int_range, param_name=''):
+        ivalue = int(param_value)
+        if ivalue not in int_range:
+            error_msg = f"【{param_name}】{param_value} is not in range {int_range}!"
+            raise argparse.ArgumentTypeError(error_msg)
 
     def validate_path(self, path):
         if not path or not os.path.exists(path):

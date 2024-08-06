@@ -19,16 +19,15 @@ from msit_llm.opcheck import operation_test
 from msit_llm.common.log import logger
 
 
-class OpcheckAddOperation(operation_test.OperationTest):
+class OpcheckNonzeroOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
-        split_dim = self.op_param.get('splitDim', 0)
-        split_num = self.op_param.get('splitNum', 2) # 等分次数，当前支持2或3
-        self.validate_int_range(split_num, [2, 3], "splitNum")
-        split_output = torch.chunk(in_tensors[0], chunks=split_num, dim=split_dim)
-        return split_output
+        num_non_negative = torch.count_nonzero(in_tensors[0])
+        padding_num = in_tensors[0].numel() - num_non_negative
+        padding = torch.zeros(len(in_tensors[0].shape), padding_num)
+        result = torch.stack(list(torch.nonzero(in_tensors[0], as_tuple=True)))
+        result = torch.concat((result, padding), dim=1).long()
+
+        return [result, torch.tensor(num_non_negative).long()]
 
     def test(self):
-        ret = self.validate_param("splitNum", "splitDim")
-        if not ret:
-            return
         self.execute()
