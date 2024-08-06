@@ -6,7 +6,7 @@
 
 ## 1. 如何写改图知识库
 
-KnowledgeBase是改图知识库基类[代码链接](https://gitee.com/ascend/msit/blob/master/msit/components/debug/surgeon/auto_optimizer/pattern/knowledges/knowledge_base.py)，它依赖Matcher实现子图匹配，依赖Pattern实现子图定义。
+KnowledgeBase是[改图知识库基类](https://gitee.com/ascend/msit/blob/master/msit/components/debug/surgeon/auto_optimizer/pattern/knowledges/knowledge_base.py)，它依赖Matcher实现子图匹配，依赖Pattern实现子图定义。
 
 ```mermaid
 classDiagram
@@ -25,7 +25,7 @@ classDiagram
 | ------------------------ | ------------------------------------------------------------ |
 | __register_apply_funcs() | 注册pattern的apply方法，pattern是定义的子图，apply_funcs是子图对应的修改方法 |
 
-KnowledgeBase基类还有一些其它的公共方法，参考[第二章节](https://gitee.com/ascend/msit/blob/master/msit/components/debug/surgeon/docs/knowledge_optimizer/knowledge_optimizer_framework.md#2-%E5%A6%82%E4%BD%95%E6%B5%8B%E8%AF%95%E6%94%B9%E5%9B%BE%E7%9F%A5%E8%AF%86%E5%BA%93)，这里不再重复描述。
+KnowledgeBase基类还有一些其它的公共方法，参考[第2章节](https://gitee.com/ascend/msit/blob/master/msit/components/debug/surgeon/docs/knowledge_optimizer/knowledge_optimizer_framework.md#2-%E5%A6%82%E4%BD%95%E6%B5%8B%E8%AF%95%E6%94%B9%E5%9B%BE%E7%9F%A5%E8%AF%86%E5%BA%93)，这里不再重复描述。
 
 基于KnowledgeBase创建一个知识库子类，然后按以下步骤完成知识库：[知识库代码路径](https://gitee.com/ascend/msit/tree/master/msit/components/debug/surgeon/auto_optimizer/pattern/knowledges)
 
