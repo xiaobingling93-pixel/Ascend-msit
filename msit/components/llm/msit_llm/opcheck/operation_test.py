@@ -277,7 +277,10 @@ class OperationTest(unittest.TestCase):
 
     def convert_data_format(self, data):
         dim0, dim1 = data.shape[0], data.shape[1]
-        data = data.reshape([1, dim1 // 16, dim0, 16]).permute(0, 2, 1, 3).reshape([dim0, dim1])
+        if data.dtype == torch.int8:
+            data = data.reshape([1, dim1 // 32, dim0, 32]).permute(0, 2, 1, 3).reshape([dim0, dim1])
+        else:
+            data = data.reshape([1, dim1 // 16, dim0, 16]).permute(0, 2, 1, 3).reshape([dim0, dim1])
         return data
 
     def nz_2_nd(self, data):
