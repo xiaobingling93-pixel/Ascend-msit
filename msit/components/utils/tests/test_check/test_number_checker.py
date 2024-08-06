@@ -49,30 +49,30 @@ def test_is_divisible_by(param1, param2, value):
 
 
 @pytest.mark.parametrize("param1,param2,param3,value", [
-    (3, 2, 4, "pass"),
-    (4, 1, 2, "more than 2")
+    (3, 2, 4, True),
+    (4, 1, 2, False)
 ])
 def test_in_range(param1, param2, param3, value):
     within_range_checker = NumberChecker(param1)
-    assert str(within_range_checker.in_range(param2, param3)) == value
+    assert within_range_checker.in_range(param2, param3).passed is value
 
 
 @pytest.mark.parametrize("test_num, min_value, value", [
     (3, 2, True),
     (3, 4, False)
 ])
-def test_min(test_num, min_value, value):
+def test_greater_equal(test_num, min_value, value):
     min_checker = NumberChecker(test_num)
-    assert min_checker.min(min_value).passed is value
+    assert min_checker.greater_equal(min_value).passed is value
 
 
 @pytest.mark.parametrize("test_num, max_value, value", [
     (3, 4, True),
     (3, 2, False)
 ])
-def test_max(test_num, max_value, value):
+def test_less_equal(test_num, max_value, value):
     max_checker = NumberChecker(test_num)
-    assert max_checker.max(max_value).passed is value
+    assert max_checker.less_equal(max_value).passed is value
 
 
 @pytest.mark.parametrize("test_num, max_value, value", [
@@ -88,6 +88,6 @@ def test_less_than(test_num, max_value, value):
     (3, 2, True),
     (3, 4, False)
 ])
-def test_more_than(test_num, min_value, value):
+def test_greater_than(test_num, min_value, value):
     more_than_checker = NumberChecker(test_num)
-    assert more_than_checker.more_than(min_value).passed is value
+    assert more_than_checker.greater_than(min_value).passed is value
