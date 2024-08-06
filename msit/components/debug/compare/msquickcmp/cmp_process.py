@@ -49,7 +49,6 @@ from msquickcmp.npu.om_parser import OmParser
 from msquickcmp.accuracy_locat import accuracy_locat as al
 from msquickcmp.single_op import single_op as sp
 from components.utils.security_check import check_write_directory
-from msquickcmp.tf.tf_save_model_dump_data import TfSaveModelDumpData
 
 WRITE_MODES = stat.S_IWUSR | stat.S_IRUSR
 READ_WRITE_FLAGS = os.O_RDWR | os.O_CREAT
@@ -60,6 +59,8 @@ MAX_MEMORY_USE = 6 * 1024 * 1024 * 1024
 
 def _generate_golden_data_model(args, npu_dump_npy_path):
     if is_saved_model_valid(args.model_path):
+        from msquickcmp.tf.tf_save_model_dump_data import TfSaveModelDumpData
+
         return TfSaveModelDumpData(args)
     model_name, extension = utils.get_model_name_and_extension(args.model_path)
     if args.weight_path and ".prototxt" == extension:
@@ -238,7 +239,7 @@ def run(args:CmpArgsAdapter, input_shape, original_out_path, use_cli: bool):
     expect_net_output_node = npu_dump.get_expect_output_name()
 
     # generate dump data by golden model
-    if isinstance(golden_dump, TfSaveModelDumpData):
+    if is_saved_model_valid(args.model_path):
         golden_dump_data_path = golden_dump.generate_dump_data(output_json_path, npu_dump_npy_path, npu_dump.om_parser)
         golden_net_output_info = golden_dump.get_net_output_info()
     else:
