@@ -430,7 +430,8 @@ class BCAnalyze(BaseCommand):
             dest="golden",
             required=True,
             type=safe_string,
-            help="")
+            help="Golden result to compare with. If it is path like, then it will be considered as a"
+                 "csv path. If not, analyzer will treat it as a command and invoke synthesizer to collect the result.")
 
         parser.add_argument(
             '--test',
@@ -438,16 +439,8 @@ class BCAnalyze(BaseCommand):
             dest="test",
             required=True,
             type=safe_string,
-            help="")
-
-        parser.add_argument(
-            '--logits',
-            dest='logits_flag',
-            required=False,
-            action='store_true',
-            default=False,
-            help=""
-        )
+            help="Test result to compare with the golden. If it is path like, then it will be considered as a"
+                 "csv path. If not, analyzer will treat it as a command and invoke synthesizer to collect the result.")
 
         parser.add_argument("-l", "--log-level", default="info", choices=LOG_LEVELS_LOWER, help="specify log level")
 

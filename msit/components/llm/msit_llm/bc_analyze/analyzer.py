@@ -2,14 +2,13 @@ import os
 
 import pandas as pd
 
-from .utils import _RandomNameSequence
+from . import get_timestamp
 from ..common.log import logger
 
 
 class Analyzer(object):
     BAD_CASE_FOLDER_NAME = 'msit_bad_case_analyze'
     BAD_CASE_CSV_PREFIX = 'msit_bad_case_result_'
-    _namer = _RandomNameSequence()
 
     @classmethod
     def from_csv(cls, *, golden_csv_path: str, test_csv_path: str) -> None:
@@ -95,12 +94,12 @@ class Analyzer(object):
 
         flags = os.O_WRONLY | os.O_CREAT
         modes = os.st.S_IRUSR | os.st.S_IRGRP
-        with os.fdopen(os.open(path, flags, modes), 'w') as file:
+        with os.fdopen(os.open(path, flags, modes), 'w') as file: 
             df_to_save.to_csv(file, encoding='utf-8', index=False)
 
     @classmethod
     def _get_candidate_path(cls, suffix):
-        return cls.BAD_CASE_CSV_PREFIX + next(cls._namer) + suffix
+        return cls.BAD_CASE_CSV_PREFIX + get_timestamp() + suffix
 
     @classmethod
     def from_mixed(cls, *, golden, test) -> None:

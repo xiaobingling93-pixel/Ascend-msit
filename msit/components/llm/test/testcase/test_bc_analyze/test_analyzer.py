@@ -1,12 +1,9 @@
-import sys
 import os
 from unittest import TestCase
 from unittest.mock import patch
 
 import pandas as pd
 
-sys.path.append('/root/workspace/msit/msit/')
-sys.path.append('/root/workspace/msit/msit/components/llm')
 from msit_llm import Analyzer, Synthesizer
 
 

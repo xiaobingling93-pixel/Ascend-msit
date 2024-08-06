@@ -3,11 +3,8 @@ from random import Random
 from datetime import datetime, timedelta, timezone
 
 
-class _RandomNameSequence(object):
+class RandomNameSequence(object):
     characters = "abcdefghijklmnopqrstuvwxyz0123456789_"
-
-    def __init__(self, timestamp=True):
-        self.timestamp = timestamp
 
     @property
     def rng(self):
@@ -16,19 +13,15 @@ class _RandomNameSequence(object):
             self._rng = Random()
             self._rng_pid = cur_pid
         return self._rng
-
-    def _get_timestamp(self):
-        cst_timezone = timezone(timedelta(hours=8))
-        current_time = datetime.now(cst_timezone)
-        return current_time.strftime("%Y%m%d%H%M%S")
     
     def __iter__(self):
         return self
     
     def __next__(self):
-        random_name_seq = ''.join(self.rng.choices(self.characters, k=8))
+        return ''.join(self.rng.choices(self.characters, k=8))
 
-        if self.timestamp:
-            return random_name_seq + '_' + self._get_timestamp()
-        
-        return random_name_seq
+
+def get_timestamp():
+    cst_timezone = timezone(timedelta(hours=8))
+    current_time = datetime.now(cst_timezone)
+    return current_time.strftime("%Y%m%d%H%M%S")

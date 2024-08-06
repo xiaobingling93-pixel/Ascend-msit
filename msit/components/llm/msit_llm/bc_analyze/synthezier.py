@@ -3,19 +3,19 @@ import os
 import numpy as np
 import pandas as pd
 
-from .utils import _RandomNameSequence
+from . import RandomNameSequence, get_timestamp
 from ..common.log import logger
 
 
 class Synthesizer(object):
+    """"""
     HEADER = ['queries', 'input_token_ids', 'output_token_ids', 'passed']
     
-    def __init__(self, *, queries=None, input_token_ids=None, output_token_ids=None, passed=None) -> None: 
+    def __init__(self, *, queries=None, input_token_ids=None, output_token_ids=None, passed=None) -> None:
+        """"""
         self._info = dict(
             zip(self.HEADER, (np.array([], dtype=object), ) * len(self.HEADER))
         )
-
-        self._namer = _RandomNameSequence()
 
         self.from_args(
             queries=queries,
@@ -38,6 +38,7 @@ class Synthesizer(object):
         return np.fromiter((str(item) for item in value), dtype=object)
     
     def from_args(self, *, queries=None, input_token_ids=None, output_token_ids=None, passed=None):
+        """"""
         self._update_attributes(
             queries=queries,
             input_token_ids=input_token_ids,
@@ -46,7 +47,8 @@ class Synthesizer(object):
         )
 
     @staticmethod
-    def from_cmd(command):
+    def from_cmd(command) -> str:
+        """"""
         import subprocess
         import shlex
 
@@ -58,7 +60,7 @@ class Synthesizer(object):
 
         env['PYTHONPATH'] = patcher_folder + ':' + env.get('PYTHONPATH', '')
 
-        temp_dir_name = next(_RandomNameSequence(False))
+        temp_dir_name = next(RandomNameSequence())
         env['MSIT_TEMP_DIR_NAME'] = temp_dir_name
 
         split_command = shlex.split(command)
@@ -81,7 +83,7 @@ class Synthesizer(object):
                 split_command,
                 env=env,
                 stdout=subprocess.DEVNULL,
-                # stderr=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
             )
         except OSError:
             logger.error("'%s': command not found, please run it separately first before using 'from_cmd'", command)
@@ -95,7 +97,8 @@ class Synthesizer(object):
         
         return temp_dir_name
 
-    def to_csv(self, *, errors='trunc'): 
+    def to_csv(self, *, errors='trunc'):
+        """"""
         result_df = self._to_df(errors=errors)
         self._save_result(result_df)
 
@@ -105,16 +108,16 @@ class Synthesizer(object):
             logger.error("No result will be saved")
             raise RuntimeError
         
-        match errors:
-            case 'pad':
-                self._padding()
-            case 'trunc':
-                self._truncating()
-            case 'strict':
-                pass
-            case _:
-                logger.error("Wrong value 'errors'. Expected to be either '%s', '%s' or '%s', got '%s'", 'pad', 'trunc', 'strict', errors)
-                raise ValueError
+        # Does not support match expression until Python >= 3.10 
+        if errors == 'pad':
+            self._padding()
+        elif errors == 'trunc':
+            self._truncating()
+        elif errors == 'strict':
+            pass
+        else:
+            logger.error("Wrong value 'errors'. Expected to be either '%s', '%s' or '%s', got '%s'", 'pad', 'trunc', 'strict', errors)
+            raise ValueError
         
         return pd.DataFrame(self._info)
     
@@ -144,4 +147,4 @@ class Synthesizer(object):
 
     def _get_candidate_path(self, suffix):
         prefix = 'msit_synthesizer_result_'
-        return prefix + next(self._namer) + suffix
+        return prefix + get_timestamp() + suffix

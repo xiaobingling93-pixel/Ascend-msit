@@ -1,8 +1,6 @@
-import sys
 from unittest import TestCase
 
-sys.path.append('/root/workspace/msit/msit')
-from components.llm.msit_llm.bc_analyze.utils import _RandomNameSequence
+from msit_llm import _RandomNameSequence
 
 
 class TestUtils(TestCase):

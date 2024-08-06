@@ -19,7 +19,7 @@ set -u
 pwd_dir=$(dirname $(readlink -f "$0"))
 
 # copy msit_llm to test file, and test
-cp ${pwd_dir}/../llm ${pwd_dir}/ -rf
+cp ${pwd_dir}/../msit_llm ${pwd_dir}/ -rf
 
 coverage run -m -p pytest testcase/*/test_*.py
 
