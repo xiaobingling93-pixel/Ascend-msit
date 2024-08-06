@@ -21,7 +21,7 @@ auto-optimizer主要通过graph_optimizer、graph_refactor接口提供ONNX模型
 
 ```shell
 git clone https://gitee.com/ascend/msit.git
-cd msit/msit/
+cd msit/msit/components/debug/surgeon
 
 # it's recommended to upgrade pip and install wheel
 
