@@ -17,6 +17,8 @@ class Synthesizer(object):
             zip(self.HEADER, (np.array([], dtype=object), ) * len(self.HEADER))
         )
 
+        self._namer = RandomNameSequence()
+        
         self.from_args(
             queries=queries,
             input_token_ids=input_token_ids,
@@ -149,4 +151,4 @@ class Synthesizer(object):
 
     def _get_candidate_path(self, suffix):
         prefix = 'msit_synthesizer_result_'
-        return prefix + get_timestamp() + suffix
+        return prefix + next(self._namer) + get_timestamp() + suffix
