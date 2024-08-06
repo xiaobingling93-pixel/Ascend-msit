@@ -97,6 +97,7 @@ class Synthesizer(object):
             logger.error("Failed to run command '%s', please run it separately first before using 'from_cmd'", command)
             raise RuntimeError
         
+        logger.info("Command '%s' returns successfully", command)
         return temp_dir_name
 
     def to_csv(self, *, errors='trunc'):
@@ -147,7 +148,7 @@ class Synthesizer(object):
         with os.fdopen(os.open(path, flags, modes), 'w') as file:
             df_to_save.to_csv(file, encoding='utf-8', index=False)
         
-        logger.info("Sythesizer has finished his work, the result is stored at '%s'", path)
+        logger.info("'Sythesizer' has successfully finished the synthesis, the result is stored at '%s'", path)
 
     def _get_candidate_path(self, suffix):
         prefix = 'msit_synthesizer_result_'

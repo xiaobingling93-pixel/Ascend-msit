@@ -451,13 +451,15 @@ class BCAnalyze(BaseCommand):
         
         if not os.path.exists(args.golden):
             golden_temp_dir =  Synthesizer.from_cmd(args.golden)
-            golden_csv_path = os.listdir(golden_temp_dir)[0]
+            csv_path = next(file_name for file_name in os.listdir(golden_temp_dir) if file_name.startswith('msit_synthesizer_result') and file_name.endswith('.csv'))
+            golden_csv_path = os.path.join(golden_temp_dir, csv_path)
         else:
             golden_csv_path = args.golden
 
         if not os.path.exists(args.test):
             test_temp_dir =  Synthesizer.from_cmd(args.test)
-            test_csv_path = os.listdir(test_temp_dir)[0]
+            csv_path = next(file_name for file_name in os.listdir(test_temp_dir) if file_name.startswith('msit_synthesizer_result') and file_name.endswith('.csv'))
+            test_csv_path = os.path.join(test_temp_dir, csv_path)
         else:
             test_csv_path = args.test       
         

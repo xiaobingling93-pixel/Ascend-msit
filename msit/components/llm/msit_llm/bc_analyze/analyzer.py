@@ -97,7 +97,7 @@ class Analyzer(object):
         with os.fdopen(os.open(path, flags, modes), 'w') as file: 
             df_to_save.to_csv(file, encoding='utf-8', index=False)
 
-        logger.info("Analyzer has successfully finished the analysis, the result is stored at '%s'", path)
+        logger.info("'Analyzer' has successfully finished the analysis, the result is stored at '%s'", path)
 
     @classmethod
     def _get_candidate_path(cls, suffix):
