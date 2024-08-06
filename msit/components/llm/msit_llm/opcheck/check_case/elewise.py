@@ -231,46 +231,29 @@ class OpcheckElewiseAddOperation(operation_test.OperationTest):
         ]
         self.validate_int_range(elewise_type, elewise_type_support_list, "elewiseType")
 
-        if elewise_type == ElewiseType.ELEWISE_CAST.value:
-            golden = self.elewise_cast(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_MULS.value:
-            golden = self.elewise_muls(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_COS.value:
-            golden = self.elewise_cos(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_SIN.value:
-            golden = self.elewise_sin(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_NEG.value:
-            golden = self.elewise_neg(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_QUANT.value:
-            golden = self.elewise_quant(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_LOGICAL_NOT.value:
-            golden = self.elewise_logical_not(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_ADD.value:
-            golden = self.elewise_add(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_MUL.value:
-            golden = self.elewise_mul(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_REALDIV.value:
-            golden = self.elewise_realdiv(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_LOGICAL_AND.value:
-            golden = self.elewise_logical_and(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_LOGICAL_OR.value:
-            golden = self.elewise_logical_or(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_LESS.value:
-            golden = self.elewise_less(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_GREATER.value:
-            golden = self.elewise_greater(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_SUB.value:
-            golden = self.elewise_sub(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_EQUAL.value:
-            golden = self.elewise_equal(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_QUANT_PER_CHANNEL.value:
-            golden = self.elewise_quant_per_channel(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_DEQUANT_PER_CHANNEL.value:
-            golden = self.elewise_dequant_per_channel(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_DYNAMIC_QUANT.value:
-            golden = self.elewise_dynamic_quant(in_tensors)
-        elif elewise_type == ElewiseType.ELEWISE_TANH.value:
-            golden = self.elewise_tanh(in_tensors)
+        golden_func = {
+            ElewiseType.ELEWISE_CAST.value: self.elewise_cast,
+            ElewiseType.ELEWISE_MULS.value: self.elewise_muls,
+            ElewiseType.ELEWISE_COS.value: self.elewise_cos,
+            ElewiseType.ELEWISE_SIN.value: self.elewise_sin,
+            ElewiseType.ELEWISE_NEG.value: self.elewise_neg,
+            ElewiseType.ELEWISE_QUANT.value: self.elewise_quant,
+            ElewiseType.ELEWISE_LOGICAL_NOT.value: self.elewise_logical_not,
+            ElewiseType.ELEWISE_ADD.value: self.elewise_add,
+            ElewiseType.ELEWISE_MUL.value: self.elewise_mul,
+            ElewiseType.ELEWISE_REALDIV.value: self.elewise_realdiv,
+            ElewiseType.ELEWISE_LOGICAL_AND.value: self.elewise_logical_and,
+            ElewiseType.ELEWISE_LOGICAL_OR.value: self.elewise_logical_or,
+            ElewiseType.ELEWISE_LESS.value: self.elewise_less,
+            ElewiseType.ELEWISE_GREATER.value: self.elewise_greater,
+            ElewiseType.ELEWISE_SUB.value: self.elewise_sub,
+            ElewiseType.ELEWISE_EQUAL.value: self.elewise_equal,
+            ElewiseType.ELEWISE_QUANT_PER_CHANNEL.value: self.elewise_quant_per_channel,
+            ElewiseType.ELEWISE_DEQUANT_PER_CHANNEL.value: self.elewise_dequant_per_channel,
+            ElewiseType.ELEWISE_DYNAMIC_QUANT.value: self.elewise_dynamic_quant,
+            ElewiseType.ELEWISE_TANH.value: self.elewise_tanh
+        } 
+        golden = golden_func.get(elewise_type, self.elewise_cast)(in_tensors)
 
         return golden
 
