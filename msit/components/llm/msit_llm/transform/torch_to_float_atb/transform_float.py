@@ -128,6 +128,40 @@ def transform_report(source_path, save_name=None, save_dir=None, is_repeat=True)
     logger.info(f"csv info saved: {csv_file_path}")
 
 
+def transform_float_cpp(parsed_model, save_name=None, save_dir=None):
+    model_cpp_file, _ = torch_to_float_atb.float_model_cpp_gen(parsed_model, save_name=save_name, save_dir=save_dir)
+    model_h_file, _ = torch_to_float_atb.float_model_h_gen(parsed_model, save_name=save_name, save_dir=save_dir)
+    layer_cpp_file, _ = torch_to_float_atb.float_layer_cpp_gen(parsed_model, save_name=save_name, save_dir=save_dir)
+    layer_h_file, _ = torch_to_float_atb.float_layer_h_gen(parsed_model, save_name=save_name, save_dir=save_dir)
+    result_files = [model_cpp_file, model_h_file, layer_cpp_file, layer_h_file]
+
+    logger.info("Generated files: [\n    " + ",\n    ".join(result_files) + ",\n]")
+    return result_files
+
+def transform_float_py(parsed_model, save_name=None, save_dir=None):
+    result_files = []
+    routing_py_file, _ = torch_to_float_atb.router_py_gen(parsed_model, save_dir=save_dir)
+    result_files.append(routing_py_file)
+
+    modeling_py_file, _ = torch_to_float_atb.modeling_py_gen(parsed_model, save_dir=save_dir)
+    result_files.append(modeling_py_file)
+    
+    flash_causal_py, _ = torch_to_float_atb.flash_causal_py_gen(parsed_model, save_dir=save_dir)
+    result_files.append(flash_causal_py)
+
+    logger.info("Generated files: [\n    " + ",\n    ".join(result_files) + ",\n]")
+    return result_files
+
+
+def save_json(dic, name, save_name=None, save_dir=None):
+    json_save_name = init_save_name(save_name if save_name else name) + ".json"
+    json_save_dir = init_save_dir(save_dir if save_dir else name, sub_dir="")
+    json_save_path = os.path.join(json_save_dir, json_save_name)
+    with open(json_save_path, "w") as ff:
+        json.dump(dic, ff, indent=4)
+    logger.info(f"model info saved: {json_save_path}")
+    
+
 def transform_float(source_path, save_name=None, save_dir=None):
     logger.info("Building model using transformers...")
 
@@ -135,19 +169,13 @@ def transform_float(source_path, save_name=None, save_dir=None):
 
     logger.info("Transforming to atb")
 
-    parsed_model = parser.build_model_tree(model)
-    model_name_lower = parsed_model.get("name", "model").lower()
-    json_save_name = init_save_name(save_name if save_name else model_name_lower) + ".json"
-    json_save_dir = init_save_dir(save_dir if save_dir else model_name_lower, sub_dir="")
-    json_save_path = os.path.join(json_save_dir, json_save_name)
-    with open(json_save_path, "w") as ff:
-        json.dump(parsed_model, ff)
-    logger.info(f"model info saved: {json_save_path}")
+    parsed_model = parser.get_weight_names(model)
+    result_files = transform_float_cpp(parsed_model, save_name, save_dir)
 
-    model_cpp_file, _ = torch_to_float_atb.float_model_cpp_gen(parsed_model, save_name=save_name, save_dir=save_dir)
-    model_h_file, _ = torch_to_float_atb.float_model_h_gen(parsed_model, save_name=save_name, save_dir=save_dir)
-    layer_cpp_file, _ = torch_to_float_atb.float_layer_cpp_gen(parsed_model, save_name=save_name, save_dir=save_dir)
-    layer_h_file, _ = torch_to_float_atb.float_layer_h_gen(parsed_model, save_name=save_name, save_dir=save_dir)
-    result_files = [model_cpp_file, model_h_file, layer_cpp_file, layer_h_file]
-    logger.info("Generated files: [\n    " + ",\n    ".join(result_files) + ",\n]")
+    parsed_model['acl_inputs_name'] = parser.get_input_names(result_files[:2])
+    result_files += transform_float_py(parsed_model, save_name, save_dir)
+
+    fp_name = parsed_model.get("weight_names", {}).get("model_name", "").lower()
+    save_json(parsed_model, fp_name, save_name=None, save_dir=None)
     return result_files
+
