@@ -326,6 +326,9 @@ static atb::Operation *LinearOperationCreate(const nlohmann::json &paramJson)
     if (paramJson.contains("hasBias")) {
         param.hasBias = paramJson["hasBias"].get<bool>();
     }
+    if (paramJson.contains("outDataType")) {
+        param.outDataType = paramJson["outDataType"].get<aclDataType>();
+    }
     atb::Operation *op;
     CreateOperation(param, &op);
     return op;
