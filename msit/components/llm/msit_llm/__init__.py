@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from msit_llm.common.tool import read_atb_data
-from msit_llm.compare.cmp_utils import compare_data
-from msit_llm.common.json_fitter import atb_json_to_onnx
-from msit_llm.dump.torch_dump import DumpConfig
-from msit_llm.dump.torch_dump import register_hook
-from msit_llm.metrics.case_filter import CaseFilter
+from .common.tool import read_atb_data
+from .compare.cmp_utils import compare_data
+from .common.json_fitter import atb_json_to_onnx
+from .dump.torch_dump import DumpConfig
+from .dump.torch_dump import register_hook
+from .metrics.case_filter import CaseFilter
+from .bc_analyze import Analyzer, Synthesizer

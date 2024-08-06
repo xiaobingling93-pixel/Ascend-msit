@@ -15,7 +15,7 @@ import os
 import datetime
 import torch
 
-from msit_llm.compare.cmp_algorithm import CMP_ALG_MAP
+from ..compare.cmp_algorithm import CMP_ALG_MAP
 
 
 def get_visible_device(device_type):
@@ -114,7 +114,6 @@ def get_timestamp_sync():
     torch.distributed.all_reduce(max_timestamp, op=torch.distributed.ReduceOp.MAX)
 
     return max_timestamp.item()
-
 
 def get_ait_dump_path():
     global GLOBAL_AIT_DUMP_PATH

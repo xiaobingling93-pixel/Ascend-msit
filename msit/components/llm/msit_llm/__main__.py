@@ -379,7 +379,7 @@ class ErrCheck(BaseCommand):
 
     def handle(self, args, **kwargs) -> None:
         set_log_level(args.log_level)
-        process_error_check(args)       
+        process_error_check(args)
 
 
 class Transform(BaseCommand):
@@ -421,7 +421,55 @@ class Transform(BaseCommand):
             message = f"Neither config.json + py or cpp found in {args.source}, not supported"
             logger.error(message)
             raise ValueError(message)
+        
+class BCAnalyze(BaseCommand):
+    def add_arguments(self, parser, **kwargs) -> None:
+        parser.add_argument(
+            '--golden',
+            '-g',
+            dest="golden",
+            required=True,
+            type=safe_string,
+            help="")
 
+        parser.add_argument(
+            '--test',
+            '-t',
+            dest="test",
+            required=True,
+            type=safe_string,
+            help="")
+
+        parser.add_argument(
+            '--logits',
+            dest='logits_flag',
+            required=False,
+            action='store_true',
+            default=False,
+            help=""
+        )
+
+        parser.add_argument("-l", "--log-level", default="info", choices=LOG_LEVELS_LOWER, help="specify log level")
+
+    def handle(self, args, **kwargs) -> None:
+        set_log_level(args.log_level)
+
+        from . import Synthesizer, Analyzer
+        
+        if not os.path.exists(args.golden):
+            golden_temp_dir =  Synthesizer.from_cmd(args.golden)
+            golden_csv_path = os.listdir(golden_temp_dir)[0]
+        else:
+            golden_csv_path = args.golden
+
+        if not os.path.exists(args.test):
+            test_temp_dir =  Synthesizer.from_cmd(args.test)
+            test_csv_path = os.listdir(test_temp_dir)[0]
+        else:
+            test_csv_path = args.test       
+        
+        Analyzer.from_csv(golden_csv_path=golden_csv_path, test_csv_path=test_csv_path)
+        
 
 def get_cmd_instance():
     llm_help_info = "Large Language Model(llm) Debugger Tools."
@@ -430,8 +478,10 @@ def get_cmd_instance():
     opcheck_cmd_instance = OpcheckCommand("opcheck", "Operation check tool for large language model", alias_name='oo')
     errcheck_cmd_instance = ErrCheck("errcheck", "Error check tool for large language model.", alias_name='ee')
     transform_cmd_instance = Transform("transform", "Transform tool for large language model.")
+    bc_analyze_cmd_instance = BCAnalyze("analyze", "Bad Case analyze tool for large language model.")
 
     instances = [
-        dump_cmd_instance, compare_cmd_instance, opcheck_cmd_instance, errcheck_cmd_instance, transform_cmd_instance
+        dump_cmd_instance, compare_cmd_instance, opcheck_cmd_instance, errcheck_cmd_instance, transform_cmd_instance,
+        bc_analyze_cmd_instance
     ]
     return BaseCommand("llm", llm_help_info, instances)

@@ -21,12 +21,12 @@ import numpy as np
 import pandas as pd
 import torch
 
-from msit_llm.common.tool import read_atb_data
-from msit_llm.common.constant import TOKEN_ID, DATA_ID, GOLDEN_DATA_PATH, MY_DATA_PATH, CMP_FAIL_REASON, GOLDEN_DTYPE, \
+from ..common.tool import read_atb_data
+from ..common.constant import TOKEN_ID, DATA_ID, GOLDEN_DATA_PATH, MY_DATA_PATH, CMP_FAIL_REASON, GOLDEN_DTYPE, \
     GOLDEN_SHAPE, GOLDEN_MAX_VALUE, GOLDEN_MIN_VALUE, GOLDEN_MEAN_VALUE, MY_DTYPE, MY_SHAPE, MY_MAX_VALUE, MY_MIN_VALUE, \
     MY_MEAN_VALUE, CSV_GOLDEN_HEADER
-from msit_llm.common.log import logger
-from msit_llm.compare.cmp_algorithm import CMP_ALG_MAP, CUSTOM_ALG_MAP
+from ..common.log import logger
+from .cmp_algorithm import CMP_ALG_MAP, CUSTOM_ALG_MAP
 
 MIN_LAYER_NUMBER = 10
 

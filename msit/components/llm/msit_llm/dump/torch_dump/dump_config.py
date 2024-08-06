@@ -14,9 +14,9 @@
 import os
 import re
 
-from msit_llm.common import utils
-from msit_llm.common.log import logger
-from msit_llm.common.constant import get_ait_dump_path
+from ...common import utils
+from ...common.log import logger
+from ...common.constant import get_ait_dump_path
 
 def singleton(cls):
     ins = {}

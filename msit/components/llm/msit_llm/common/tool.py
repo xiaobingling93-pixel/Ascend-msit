@@ -15,9 +15,9 @@ import array
 
 import torch
 
-from msit_llm.common.constant import ATTR_END, ATTR_OBJECT_LENGTH
-from msit_llm.common.log import logger
-from msit_llm.common.utils import check_input_path_legality, check_data_file_size
+from .constant import ATTR_END, ATTR_OBJECT_LENGTH
+from .log import logger
+from .utils import check_input_path_legality, check_data_file_size
 
 
 class TensorBinFile:
