@@ -172,7 +172,7 @@ class OpcheckRmsNormOperation(operation_test.OperationTest):
         except ZeroDivisionError as e:
             raise RuntimeError("get ZeroDivisionError when calc RmsNormOperation golden") from e
 
-        golden_result = self.get_output_tensors(in_tensors, cur_param, layer_type, golden_output, x)
+        golden_result = self.get_golden_result(in_tensors, cur_param, layer_type, golden_output, x)
         return golden_result
 
     def test(self):

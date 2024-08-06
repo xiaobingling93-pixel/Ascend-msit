@@ -156,7 +156,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         return q_scale, qk_scale, head_num, head_size, kv_head_num, data_type, q_ntokens
 
     def get_clamped_score(self, score):
-        clamp_type = self.op_param("clampType", ClampType.CLAMP_TYPE_UNDEFINED.value)
+        clamp_type = self.op_param.get("clampType", ClampType.CLAMP_TYPE_UNDEFINED.value)
         if clamp_type == ClampType.CLAMP_TYPE_MIN_MAX.value:
             clamp_min, clamp_max = self.op_param.get("clampMin", 0.0), self.op_param.get("clampMax", 0.0)
             clamp_min_brc = torch.ones(score.shape) * clamp_min
