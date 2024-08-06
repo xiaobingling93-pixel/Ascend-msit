@@ -1,21 +1,14 @@
 
-# msmodelslim量化权重格式
 
-msmodelslim llm-ptq工具生成的safetensors量化权重文件包含两个文件，quant_model_weight.safetensors权重文件和quant_model_description.json权重描述文件
 
-msmodelslim量化类型说明：  
-[W8A16](#w8a16量化): Linear权重int8量化，激活值不量化  
-[W8A8](#w8a8-w8a8s量化): Linear权重int8量化，激活值int8量化  
-[W8A8S](#w8a8-w8a8s量化): Linear权重int8稀疏量化，激活值int8量化  
-
-**注意** msmodelslim工具生成的量化权重均为signed场景，即int8数据分布范围为-128到127。开源权重若为unsigned场景，对于int8可以考虑将weight和offset权重减去128
-
-脚本convert_example.py提供了将开源ChatGLM2-6B转换成msmodelslim量化权重的示例，权重获取链接见[开源模型README](https://github.com/thudm/chatglm2-6b) 低成本部署章节，使用前请修改224行和225行的输入输出路径。使用方式`python convert_example.py`
+(https://github.com/thudm/chatglm2-6b) 低成本部署章节，使用前请修改224行和225行的输入输出路径。使用方式`python convert_example.py`
 
 ## 量化权重、描述文件格式
 ### safetensors权重格式
-权重保存为safetensors格式，内部格式为python的字典 dict，字典的key值为权重名称，value为具体权重的数值。
-例如ChatGLM2-6B W8A16量化权重：
+权重保存为safetensors格式，内部格式为python的字典 dict，包含量化权重和量化不修改的浮点权重，字典的key值为权重名称，value为具体权重的数值  
+以ChatGLM2-6B为例：'transformer.embedding.word_embeddings.weight'为浮点模型中word_embedding层的权重，名称和权重均未修改，对应描述文件量化类型为'FLOAT'；'transformer.encoder.layers.0.self_attention.dense.weight'为原始模型第0层layer的dense层linear的权重，经过量化修改，数据类型为int8，对应描述文件量化类型为'W8A16'；'transformer.encoder.layers.0.self_attention.dense.weight_scale'为原始模型第0层layer的dense层linear量化后新增的量化参数weight_scale，对应描述文件量化类型为'W8A16'
+
+示例 ChatGLM2-6B W8A16量化权重：
 ```
 {
     'transformer.embedding.word_embeddings.weight': tensor([...]),
@@ -42,14 +35,14 @@ msmodelslim量化类型说明：
 }
 ```
 ### json描述文件格式
-json描述文件内部储存格式为python的字典 dict，字典的key值为权重名称，value为权重对应的量化类型。
-例如ChatGLM2-6B W8A16量化权重的描述文件。  
-描述文件字典内容排序不影响实际使用。
+json描述文件内部储存格式为python的字典 dict，字典的key值为权重名称，value为权重对应的量化类型。"model_quant_type"描述整体的量化类型，"kv_cache_type"表示kv_cache是否量化，其余为各个权重的类型，"FLOAT"表示来自与那是浮点权重，"W8A8"表示来自W8A8量化，"W8A16"表示来自W8A16量化，"W8A8S"表示来自稀疏量化  
+示例 ChatGLM2-6B W8A16量化权重的描述文件：  
+描述文件字典内容排序不影响实际使用
 ```
 {
     "model_quant_type": "W8A16",  
     "kv_cache_type": "C8", # 使用kv cache量化后会生成该行  
-    "transformer.embedding.word_embeddings.weight": "W8A16",  
+    "transformer.embedding.word_embeddings.weight": "FLOAT",  
     "transformer.rotary_pos_emb.inv_freq": "FLOAT",
     "transformer.encoder.layers.0.input_layernorm.weight": "W8A16",  
     "transformer.encoder.layers.0.self_attention.query_key_value.weight": "W8A16",  
