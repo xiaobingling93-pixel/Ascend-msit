@@ -110,7 +110,7 @@ def set_tensor_basic_info_in_row_data(golden_data, my_data):
     return row_data
 
 
-def save_compare_reault_to_csv(gathered_row_data, output_path="."):
+def save_compare_reault_to_csv(gathered_row_data, output_path=".", columns=CSV_GOLDEN_HEADER):
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 

@@ -213,6 +213,13 @@ class CompareCommand(BaseCommand):
                   "def foo(golden_tensor, my_tensor): return float_value, string_message"')
 
         parser.add_argument("--log-level", "-l", default="info", choices=LOG_LEVELS_LOWER, help="specify log level.")
+        
+        parser.add_argument(
+            '--weight',
+            '-w',
+            action='store_true',
+            help='Compare quant weights if True, do nothing if False')
+
 
     def handle(self, args, **kwargs):
         from msit_llm.compare.torchair_acc_cmp import get_torchair_ge_graph_path
@@ -241,6 +248,10 @@ class CompareCommand(BaseCommand):
                 cmpMgr = CompareMgr(os.path.abspath(args.golden_path), os.path.abspath(args.my_path), args)
                 if cmpMgr.is_parsed_cmp_path():
                     cmpMgr.compare(args.output)
+        if args.weight:
+            from msit_llm.compare.cmp_weight import compare_weight
+
+            compare_weight(args.golden_path, args.my_path, args.output)
 
 
 class OpcheckCommand(BaseCommand):

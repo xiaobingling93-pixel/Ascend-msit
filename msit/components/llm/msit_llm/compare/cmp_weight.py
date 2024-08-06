@@ -20,10 +20,9 @@ import pandas as pd
 
 from safetensors.torch import load_file
 from msit_llm.common.log import logger
-from msit_llm.common.constant import *
+from msit_llm.common.constant import CSV_CMP_WEIGTH_HEADER
 from msit_llm.compare.cmp_utils import save_compare_reault_to_csv, compare_data, set_tensor_basic_info_in_row_data
 
-CSV_CMP_WEIGTH_HEADER = [ ]
 
 # 在调用接口那里已经有外部输入路径检查了
 def find_safetensors_files(golden_path):
