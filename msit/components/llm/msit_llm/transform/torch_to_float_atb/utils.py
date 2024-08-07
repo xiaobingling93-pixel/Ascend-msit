@@ -115,7 +115,7 @@ def dag_to_model(dag_node, is_repeat, model_layers):
 
 
 def write_file(save_path, string):
-    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
     modes = stat.S_IWUSR | stat.S_IRUSR
     with os.fdopen(os.open(save_path, flags, modes), 'w') as ff:
         ff.write(string)
