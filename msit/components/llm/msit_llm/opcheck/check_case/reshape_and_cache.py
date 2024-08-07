@@ -108,7 +108,4 @@ class OpcheckReshapeAndCacheOperation(operation_test.OperationTest):
         return golden_out
 
     def test(self):
-        ret = self.validate_param("inplace_idx")
-        if not ret:
-            return
         self.execute_inplace()
