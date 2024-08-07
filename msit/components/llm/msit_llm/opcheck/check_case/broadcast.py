@@ -23,7 +23,7 @@ from msit_llm.common.log import logger
 
 class OpcheckBroadcastOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
-        rank_root = self.op_param.get('rankRoot', None)
+        rank_root = self.op_param.get('rankRoot', 0)
         golden_result = in_tensors[rank_root]
         return [golden_result]
 

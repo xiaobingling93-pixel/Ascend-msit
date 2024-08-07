@@ -20,14 +20,22 @@ from msit_llm.common.log import logger
 
 class OpcheckKvCacheOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
-        golden = []
-        inplace_idx = self.case_info.get("inplace_idx", None)
-        for index in inplace_idx:
-            golden.append(in_tensors[index])
-        return golden
+        # cache_in与cache_out只支持float16/int8数据类型
+        newkv = in_tensors[0]
+        layer_id = in_tensors[1]
+        cache_in = in_tensors[2]
+        token_offset = in_tensors[3]
+        seqlen = in_tensors[4]
+        cache_out = torch.zeros(shape=cache_in.shape).type(cache_in.dtype)
+        batch = len(seqlen)
+
+        prefix_ntokens = 0
+        for i in range(batch):
+            for j in range(seqlen[i]):
+                cache_out[layer_id[0]][i][token_offset[i] - seqlen[i] + j][:] = newkv[prefix_ntokens + j][:]
+            prefix_ntokens += seqlen[i]
+
+        return [newkv, layer_id, cache_out, token_offset, seqlen]
 
     def test(self):
-        ret = self.validate_param("inplace_idx")
-        if not ret:
-            return
         self.execute_inplace()

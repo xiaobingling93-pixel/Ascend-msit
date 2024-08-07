@@ -42,8 +42,8 @@ class OpcheckUnpadOperation(operation_test.OperationTest):
         padding_offset = torch.append(padding_offset, zero_offset)
         x_remove_padding = x_remove_padding.reshape(1, batch * total_length_imm).long()
         cum_offsets_out = cum_offsets_out.reshape(batch, 1).int()
-        padding_offset = padding_offset.reshape(1, batch * total_length_imm)
-        return [x_remove_padding, cum_offsets_out, padding_offset]
+        padding_offset = padding_offset.reshape(1, batch * total_length_imm).int()
+        return [x_remove_padding, cum_offsets_out, padding_offset] # 输出 int64, int32, int32
 
     def test(self): 
         self.execute()

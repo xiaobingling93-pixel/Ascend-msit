@@ -22,13 +22,13 @@ from msit_llm.common.log import logger
 
 class OpcheckMultinomialOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
-        samples = self.op_param.get("numSamples", None)
-        rand_seed = self.op_param.get("randSeed", None)
+        samples = self.op_param.get("numSamples", 1)
+        rand_seed = self.op_param.get("randSeed", 0)
         input0 = in_tensors[0]
         libc = ctypes.CDLL("libc.so.6")
         libc.srand(rand_seed)
         rand_list = [libc.rand() / 0x7fffffff for i in range(64)]
-        ret = torch.zeros(shape=(input0.shape[0], samples))
+        ret = torch.zeros(size=(input0.shape[0], samples))
 
         sum_list = torch.cumsum(input0, axis=-1)
         iter_list = [(j, i) 
