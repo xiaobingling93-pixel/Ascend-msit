@@ -16,6 +16,7 @@ import os
 
 import torch
 import pandas as pd
+from tqdm import tqdm
 
 from safetensors.torch import load_file
 from msit_llm.common.log import logger
@@ -33,10 +34,6 @@ def find_safetensors_files(golden_path):
         if file.endswith('.safetensors'):
             safetensors_file_path = os.path.join(model_dir_path, file)
             safetensors_file_list.append(safetensors_file_path) 
-
-    if not safetensors_file_list:
-        logger.error(f'No .safetensors files found in the directory.')
-        raise FileNotFoundError("Invalid path")
     return safetensors_file_list
     
 
@@ -45,33 +42,42 @@ def dequant(weight, weight_offset, weight_scale):
      
 
 def compare_weight(gp_path, mp_path, output_path):
-    try:
-        gp_path_list = find_safetensors_files(gp_path)
-        mp_path_list = find_safetensors_files(mp_path)
-    except FileNotFoundError as e:
-        print(f"Caught an exception: {e}")
+    gp_path_list = find_safetensors_files(gp_path)
+    mp_path_list = find_safetensors_files(mp_path)
+    if not gp_path_list or not mp_path_list:
+        logger.error(f'No .safetensors files found in the directory.')
+        raise FileNotFoundError(f'Invalid path') 
 
     gathered_row_data = []
     sorted_gp_path_list = sorted(gp_path_list)
     mp_dict = load_file(mp_path_list[0])
 
-    for g_path in sorted_gp_path_list:
+    for g_path in tqdm(sorted_gp_path_list, desc="Comparing"):
         gp_dict = load_file(g_path)
         
         for ft_weight_key, ft_weight_value in gp_dict.items():
-            if ft_weight_key.endswith('weight'):
-                int_weight_value = mp_dict.get(ft_weight_key, None)
-                # 比较张量类型
-                if int_weight_value.dtype == torch.int8:
-                    weight_offset_key = ft_weight_key.replace("weight", "weight_offset")
-                    weight_scale_key = ft_weight_key.replace("weight", "weight_scale")
-                    weight_offset_value = mp_dict.get(weight_offset_key, None)
-                    weight_scale_value = mp_dict.get(weight_scale_key, None)
-                    dequant_weight_value = dequant(int_weight_value, weight_offset_value, weight_scale_value)
-                    row_data_basic = set_tensor_basic_info_in_row_data(ft_weight_value, dequant_weight_value)
-                    row_data = compare_data(ft_weight_value, dequant_weight_value) 
-                    row_data.update(row_data_basic)
-                    row_data.update({"weight_name":ft_weight_key})
-                    gathered_row_data.append(row_data)
+
+            if not ft_weight_key.endswith('weight'):
+                continue
+            int_weight_value = mp_dict.get(ft_weight_key, None)
+           
+            if int_weight_value is None or int_weight_value.dtype != torch.int8:
+                continue
+
+            weight_offset_key = ft_weight_key.replace("weight", "weight_offset")
+            weight_scale_key = ft_weight_key.replace("weight", "weight_scale")
+            weight_offset_value = mp_dict.get(weight_offset_key, None)
+            weight_scale_value = mp_dict.get(weight_scale_key, None)
+
+            if weight_offset_value is None or weight_scale_value is None:
+                continue
+
+            dequant_weight_value = dequant(int_weight_value, weight_offset_value, weight_scale_value)
+            row_data_basic = set_tensor_basic_info_in_row_data(ft_weight_value, dequant_weight_value)
+            row_data = compare_data(ft_weight_value, dequant_weight_value) 
+            row_data.update(row_data_basic)
+            row_data.update({"weight_name": ft_weight_key})
+            gathered_row_data.append(row_data)
+
 
     return save_compare_reault_to_csv(gathered_row_data, output_path, columns=CSV_CMP_WEIGTH_HEADER)
