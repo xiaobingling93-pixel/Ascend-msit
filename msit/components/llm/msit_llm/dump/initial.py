@@ -23,6 +23,7 @@ import csv
 from collections import defaultdict
 
 from components.utils.file_open_check import FileStat
+from components.utils import ms_open
 from msit_llm.common.log import logger
 from msit_llm.common.utils import safe_string
 from msit_llm.common.constant import ATB_HOME_PATH, ATB_SAVE_TENSOR_TIME, ATB_SAVE_TENSOR_IDS, \
@@ -218,7 +219,7 @@ def merge_cpu_profiling_data(path):
                 rows.append(tuple(row))
             headers.insert(0, 'opname')
             
-            with open(os.path.join(root, file.split('.')[0])+'.csv', 'w+') as f:
+            with ms_open(os.path.join(root, file.split('.')[0]) + '.csv', 'w+') as f:
                 writer = csv.writer(f)
                 writer.writerow(headers)
                 writer.writerows(rows)
