@@ -180,12 +180,12 @@ def dump_module_data():
             obj = ModelTree()
             obj.create_tree(module, dump_config.module_ids, model_tree_path)
 
-        if not dump_config.dump_module or not dump_config.dump_flag:
-            return
-
         if dump_config.dump_last_logits:
             if has_tensor(outputs):
                 dump_config.last_logits = (module_name, outputs)
+            return
+
+        if not dump_config.dump_module or not dump_config.dump_flag:
             return
 
         if not dump_config.is_dump_layer(module_name, module=module):

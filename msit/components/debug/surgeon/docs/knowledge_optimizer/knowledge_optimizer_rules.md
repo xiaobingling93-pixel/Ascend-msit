@@ -257,7 +257,7 @@ graph TD
 
 ### 原理
 
-部分推理模型中使用了双线性插值法做resize，经分析导致精度回归异常，使得各别图片存在误差。此类优化可扩展至linear->nearest、cubic->nearest、area->nearest等自定义转换场景。
+部分推理模型中使用了双线性插值法做resize，经分析导致精度回归异常，使得个别图片存在误差。此类优化可扩展至linear->nearest、cubic->nearest、area->nearest等自定义转换场景。
 ### 可支持场景
 Resize算子mode类型为linear、cubic、area的场景。 
 ### 示意图
@@ -602,7 +602,7 @@ graph TD
 
 ## BatchNormalization折叠 (KnowledgeBNFolding)
 
-### 原理及示意图
+### 原理
 
 BatchNormalization的数学表示如下：
 
@@ -631,7 +631,11 @@ $$
 $$ \mathbf{W} = \left[\frac{\gamma}{\sqrt{\textrm{Var}[\mathbf{X}] + \epsilon}} \right]^\mathsf{T} $$
 $$ \mathbf{B} = \left[\beta - \frac{\gamma \times \textrm{E}[\mathbf{X}]}{\sqrt{\textrm{Var}[\mathbf{X}] + \epsilon}} \right]^\mathsf{T} $$
 
-因此当这里的输入 $\textrm{E}[\mathbf{X}], \textrm{Var}[\mathbf{X}], \gamma, \beta$ 都为常量时，可以进行常量折叠，将这里的TR/BN/TR组合替换为Mul/Add组合, $\mathbf{W}$ 和 $\mathbf{B}$ 分别为Mul和Add算子的输入。如图所示
+因此当这里的输入 $\textrm{E}[\mathbf{X}], \textrm{Var}[\mathbf{X}], \gamma, \beta$ 都为常量时，可以进行常量折叠，将这里的TR/BN/TR组合替换为Mul/Add组合, $\mathbf{W}$ 和 $\mathbf{B}$ 分别为Mul和Add算子的输入。
+
+### 示意图
+
+如图所示
 
 ```mermaid
 graph TD

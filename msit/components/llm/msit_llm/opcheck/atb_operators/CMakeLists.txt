@@ -9,6 +9,7 @@ include_directories(
     ${CMAKE_CURRENT_LIST_DIR}/dependency
     $ENV{ATB_HOME_PATH}/include
     $ENV{ASCEND_TOOLKIT_HOME}/aarch64-linux/include
+    $ENV{ASCEND_TOOLKIT_HOME}/x86_64-linux/include
 )
 
 link_directories(

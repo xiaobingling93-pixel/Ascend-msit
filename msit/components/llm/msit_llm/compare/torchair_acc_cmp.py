@@ -266,7 +266,7 @@ def get_all_ops_from_fusion_op(op_name, graph_map_dict, ge_dump_data):
     while len(op_name) > 0:
         cur_op_name = find_longest_name(op_name, graph_map_dict, ge_dump_data, ge_dump_data)
         if cur_op_name is None or cur_op_name not in graph_map_dict:
-            logger.warning(f"Failed parsing ge op name: {cur_op_name}.Compare manually if required.")
+            logger.debug(f"Failed parsing ge op name: {cur_op_name}.Compare manually if required.")
             break
         all_ops.append(cur_op_name)
         op_name = op_name[len(cur_op_name):]

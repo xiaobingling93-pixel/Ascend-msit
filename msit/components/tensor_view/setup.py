@@ -31,7 +31,7 @@ ait_sub_task_entry_points = [
 
 setup(
     name='msit-tensor-view',
-    version='7.0.0c2',
+    version='7.0.0c730',
     description='tensor view tool',
     long_description="Provides interfaces for viewing, slicing, transposing, and saving tensor",
     url='msit tensor-view url',

@@ -38,6 +38,6 @@
     ```bash
     msit benchmark --om-model resnet50_v1_dynamicshape_fp32.om --input=./data/ --auto-set-dymdims-mode 1
     ```
-
+- 说明：示例中的./data/文件夹存放用户的输入数据，为.bin格式，若不指定输入数据，会自动生成随机的输入数据。
 ## FAQ
 使用出现问题时，可参考[FAQ](https://gitee.com/ascend/msit/wikis/benchmark_FAQ/msit%20benchmark%20%E5%AE%89%E8%A3%85%E9%97%AE%E9%A2%98FAQ)
