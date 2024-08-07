@@ -19,7 +19,7 @@ from tqdm import tqdm
 
 from safetensors.torch import load_file
 from msit_llm.common.log import logger
-from msit_llm.common.constant import CSV_CMP_WEIGTH_HEADER
+from msit_llm.common.constant import CSV_CMP_WEIGHT_HEADER
 from msit_llm.compare.cmp_utils import (
     save_compare_reault_to_csv,
     compare_data,
@@ -86,5 +86,5 @@ def compare_weight(gp_path, mp_path, output_path):
             gathered_row_data.append(row_data)
 
     return save_compare_reault_to_csv(
-        gathered_row_data, output_path, columns=CSV_CMP_WEIGTH_HEADER
+        gathered_row_data, output_path, columns=CSV_CMP_WEIGHT_HEADER
     )
