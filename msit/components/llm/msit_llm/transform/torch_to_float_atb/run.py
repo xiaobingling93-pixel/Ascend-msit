@@ -9,6 +9,7 @@ from typing import Dict, List
 from typing import Optional
 import importlib
 import sys
+from dataclasses import dataclass
 
 import torch
 import torch_npu
@@ -28,31 +29,36 @@ from examples.server.generate import decode_token, generate_req
 from examples.server.request import request_from_token
 
 
-def get_model(model_name_or_path: str,
-              max_position_embeddings: Optional[int] = None,
-              is_flash_causal_lm: bool = True,
-              revision: Optional[str] = None,
-              trust_remote_code: bool = True,
-              transformed_model_path: str = '.'):
-    if file_utils.path_exists(model_name_or_path):
-        model_name_or_path = file_utils.path_check(model_name_or_path)
-    file_utils.check_owner(model_name_or_path)
+@dataclass
+class RouterParam:
+    model_name_or_path: str
+    max_position_embeddings: Optional[int] = None
+    is_flash_causal_lm: bool = True
+    revision: Optional[str] = None
+    trust_remote_code: bool = True
+    transformed_model_path: str = '.'
+    
 
-    config_dict, _ = PretrainedConfig.get_config_dict(model_name_or_path)
+def get_model(param):
+    if file_utils.path_exists(param.model_name_or_path):
+        param.model_name_or_path = file_utils.path_check(param.model_name_or_path)
+    file_utils.check_owner(param.model_name_or_path)
+
+    config_dict, _ = PretrainedConfig.get_config_dict(param.model_name_or_path)
     model_type = config_dict['model_type'].lower()
     if model_type == "kclgpt":
         model_type = "codeshell"
 
-    sys.path.insert(0, transformed_model_path)
+    sys.path.append(param.transformed_model_path)
     router_path = f"router_{model_type}"
     router = importlib.import_module(router_path)
     router_cls = getattr(router, f"{model_type.capitalize()}Router")
     router_ins = router_cls(
-        model_name_or_path,
-        max_position_embeddings,
-        is_flash_causal_lm,
-        revision,
-        trust_remote_code,
+        param.model_name_or_path,
+        param.max_position_embeddings,
+        param.is_flash_causal_lm,
+        param.revision,
+        param.trust_remote_code,
         config_dict)
     return router_ins
 
@@ -88,8 +94,9 @@ class ModelRunner:
                 print_log(rank, logger.info, e)
             except Exception as _:
                 print_log(rank, logger.info, 'Skip binding cpu.')
-        router_ins = get_model(model_name_or_path, max_position_embeddings, is_flash_causal_lm,
+        param = RouterParam(model_name_or_path, max_position_embeddings, is_flash_causal_lm,
                                revision=None, trust_remote_code=True, transformed_model_path=transformed_model_path)
+        router_ins = get_model(param)
         self.model_cls = router_ins.model_cls
         self.config = router_ins.config
         self.tokenizer = router_ins.tokenizer
@@ -354,12 +361,6 @@ class PARunner:
             actual_profiler_level = getattr(profiler_level, target_level)
             torch.npu.synchronize()
             e2e_start = time.time()
-            experimental_config = torch_npu.profiler._ExperimentalConfig(
-                aic_metrics=torch_npu.profiler.AiCMetrics.PipeUtilization,
-                profiler_level=actual_profiler_level,
-                l2_cache=False,
-                data_simplification=False
-            )
             with torch_npu.profiler.profile(
                     activities=[
                         torch_npu.profiler.ProfilerActivity.CPU,
@@ -371,7 +372,7 @@ class PARunner:
                     with_stack=False,
                     with_flops=False,
                     with_modules=False,
-                    experimental_config=experimental_config):
+                    ):
                 generate_req(req_list, self.model, self.max_batch_size, self.max_prefill_tokens, self.cache_manager)
             torch.npu.synchronize()
             e2e_end = time.time()
