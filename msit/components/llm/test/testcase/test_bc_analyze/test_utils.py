@@ -12,3 +12,5 @@ class TestUtils(TestCase):
         for i, namer in zip(range(8), self.namer):
             with self.subTest(round=f'{i}th'):
                 self.assertRegex(namer, r'[a-z0-9_]+')
+
+# 100%

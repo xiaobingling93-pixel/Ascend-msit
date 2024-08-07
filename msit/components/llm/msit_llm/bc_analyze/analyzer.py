@@ -109,7 +109,9 @@ class Analyzer(object):
 
         main_columns = ['queries', 'input_token_ids', 'output_token_ids', 'passed']
         if any(column not in df.columns for column in main_columns):
-            logger.error("Unmatched csv columns, expected to have 'queries', 'input_token_ids', 'output_token_ids', and 'passed'")
+            logger.error(
+                "Unmatched csv columns, expected to have 'queries', 'input_token_ids', 'output_token_ids', and 'passed'"
+            )
             raise KeyError
     
     @classmethod
@@ -141,7 +143,9 @@ class Analyzer(object):
     @classmethod
     def _save_result(cls, df_to_save: pd.DataFrame, suffix='.csv') -> None:
         if df_to_save.empty:
-            logger.info("'Analyzer' detected that there is no difference between the given golden result and test result. Hence no result is saved")
+            logger.info(
+                "'Analyzer' detected that there is no difference between the given golden result and test result. "
+                "Hence no result is saved")
             return
         
         os.makedirs(cls.BAD_CASE_FOLDER_NAME, mode=0o700, exist_ok=True)
@@ -175,13 +179,18 @@ class Analyzer(object):
         Examples
         --------
         >>> from msit_llm import Synthezier, Analyzer
-        >>> golden_synthesizer = Synthesizer(queries='Question 1', input_token_ids=[1, 2, 3], output_token_ids=[4, 5, 6], passed='Correct')
+        >>> golden_synthesizer = Synthesizer(
+        ...     queries='Question 1', 
+        ...     input_token_ids=[1, 2, 3], 
+        ...     output_token_ids=[4, 5, 6], 
+        ...     passed='Correct')
         >>> Analyzer.from_mixed(golden_synthesizer, test_csv_path)
         2024-08-07 04:45:13,123 - msit_llm_logger - INFO - Checking if the header of csv is valid...
         2024-08-07 04:45:14,546 - msit_llm_logger - INFO - Checking if path 'test_csv_path' is valid...
         2024-08-07 04:45:15,523 - msit_llm_logger - INFO - Checking if the header of csv is valid...
         2024-08-07 04:45:16,166 - msit_llm_logger - INFO - Analyzing...
-        2024-08-07 04:45:13,651 - msit_llm_logger - INFO - 'Analyzer' has successfully finished the analysis, the result is stored at 'msit_bad_case_analyze/msit_bad_case_result_ieqwe2q5_20240720042235.csv'
+        2024-08-07 04:45:13,651 - msit_llm_logger - INFO - 'Analyzer' has successfully finished the analysis, 
+        the result is stored at 'msit_bad_case_analyze/msit_bad_case_result_ieqwe2q5_20240720042235.csv'
         """
         from msit_llm.bc_analyze.synthezier import Synthesizer
         

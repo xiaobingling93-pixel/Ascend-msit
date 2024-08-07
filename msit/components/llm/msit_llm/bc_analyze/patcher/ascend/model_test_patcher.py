@@ -7,7 +7,10 @@ from msit_llm.common.log import logger
 
 atb_speed_home_path = os.environ.get('ATB_SPEED_HOME_PATH')
 if atb_speed_home_path is None:
-    logger.error("The environment which 'ATB Speed' requires is not properly set, try to source the related script first")
+    logger.error(
+        "The environment which 'ATB Speed' requires is not properly set, "
+        "try to source the related script first"
+    )
     raise RuntimeError
 
 model_test_base_path = os.path.join(atb_speed_home_path, 'tests', 'modeltest')
@@ -19,7 +22,10 @@ sys.path.append(model_test_base_path)
 try:
     from base.model_test import ModelTest
 except ModuleNotFoundError:
-    logger.error("There seems no 'ModelTest' class in 'model_test.py', please try to reinstall 'ATB Speed'")
+    logger.error(
+        "There seems no 'ModelTest' class in 'model_test.py', "
+        "please try to reinstall 'ATB Speed'"
+    )
     raise
 
 
