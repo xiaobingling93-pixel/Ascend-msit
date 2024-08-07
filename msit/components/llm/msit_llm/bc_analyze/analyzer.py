@@ -2,7 +2,7 @@ import os
 
 import pandas as pd
 
-from utils import get_timestamp
+from msit_llm.bc_analyze.utils import get_timestamp
 from msit_llm.common.log import logger
 
 
@@ -29,8 +29,7 @@ class Analyzer(object):
         Notes
         -----
         The analysis csv file will be stored under the directory `msit_bad_case_analyze`, the csv file name will be 
-        `msit_bad_case_result_` plus a random eight characters string plus time stamp. For example, 
-        `msit_bad_case_result_ieqwe2q5_20240720042235.csv`.
+        `msit_bad_case_result_` plus the time stamp. For example, `msit_bad_case_result_20240720042235.csv`.
 
         Exceptions
         ----------
