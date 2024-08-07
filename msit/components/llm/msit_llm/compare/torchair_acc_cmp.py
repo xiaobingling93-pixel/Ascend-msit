@@ -20,7 +20,7 @@ import re
 import numpy as np
 from msit_llm.common.log import logger
 from msit_llm.common.utils import safe_string
-from cmp_utils import BasicDataInfo, fill_row_data, save_compare_reault_to_csv
+from msit_llm.compare.cmp_utils import BasicDataInfo, fill_row_data, save_compare_reault_to_csv
 
 
 GE_GRAPH_FILE_PREFIX = "dynamo_original_graph_"

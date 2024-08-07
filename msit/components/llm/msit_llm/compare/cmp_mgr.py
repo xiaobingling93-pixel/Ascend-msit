@@ -15,10 +15,10 @@ import itertools
 import torch
 
 from msit_llm.common.log import logger
-from cmp_op_match import OpMatchMgr
-from cmp_data_parse import CompareDataParse, CompareDataTorch, CompareDataATB
-from cmp_utils import BasicDataInfo, fill_row_data, save_compare_reault_to_csv
-from multi_block import get_multi_tensor_paths, get_cat_dim
+from msit_llm.compare.cmp_op_match import OpMatchMgr
+from msit_llm.compare.cmp_data_parse import CompareDataParse, CompareDataTorch, CompareDataATB
+from msit_llm.compare.cmp_utils import BasicDataInfo, fill_row_data, save_compare_reault_to_csv
+from msit_llm.compare.multi_block import get_multi_tensor_paths, get_cat_dim
 
 
 class CompareMgr:

@@ -16,8 +16,8 @@ class Analyzer(object):
 
     @classmethod
     def from_csv(cls, golden_csv_path: str, test_csv_path: str) -> None:
-        """Analyze the bad case by comparing `golden_csv_path` with `test_csv_path`, the analysis will be stored as
-        a csv file. If there is no difference between these two, then no report will be saved.
+        """Analyze the bad case by comparing `golden_csv_path` with `test_csv_path`, the analysis will be stored 
+        as a csv file. If there is no difference between these two, then no report will be saved.
         
         Paramters
         ---------
@@ -35,10 +35,10 @@ class Analyzer(object):
         Exceptions
         ----------
         `ValueError` : raises if any path does not end with `.csv`
-        `OSError` : raises if any path does not exist, no permission to access, or file name
-        too long
+        `OSError` : raises if any path does not exist, no permission to access, or file name too long
         `PermssionError` : raises if the file owner is not the current user, or it is other writeable
-        `KeyError` : raises if the header of csv does not include any of 'queries', 'input_token_ids', 'output_token_ids', or 'passed'
+        `KeyError` : raises if the header of csv does not include any of 'queries', 'input_token_ids', 
+                    'output_token_ids', or 'passed'
 
         Other errors may be occured by `pandas`
 
@@ -55,7 +55,7 @@ class Analyzer(object):
         2024-08-07 04:45:14,546 - msit_llm_logger - INFO - Checking if path 'csv2' is valid...
         2024-08-07 04:45:15,523 - msit_llm_logger - INFO - Checking if the header of csv is valid...
         2024-08-07 04:45:16,166 - msit_llm_logger - INFO - Analyzing...
-        2024-08-07 04:45:17,125 - msit_llm_logger - INFO - 'Analyzer' has successfully finished the analysis, the result is stored at 'msit_bad_case_analyze/msit_bad_case_result_ieqwe2q5_20240720042235.csv'
+        2024-08-07 04:45:17,125 - msit_llm_logger - INFO - 'Analyzer' has successfully finished the analysis ...
         """
         logger.info(
             "'Analyzer' received two csv paths, the golden one is:\n\t'%s'\nand the test one is:\n\t'%s'", 
@@ -108,8 +108,8 @@ class Analyzer(object):
         df.rename(columns={'pass': 'passed'}, inplace=True)
         df.dropna(inplace=True)
 
-        MAIN_COLUMNS = ['queries', 'input_token_ids', 'output_token_ids', 'passed']
-        if any(column not in df.columns for column in MAIN_COLUMNS):
+        main_columns = ['queries', 'input_token_ids', 'output_token_ids', 'passed']
+        if any(column not in df.columns for column in main_columns):
             logger.error("Unmatched csv columns, expected to have 'queries', 'input_token_ids', 'output_token_ids', and 'passed'")
             raise KeyError
     
@@ -122,12 +122,12 @@ class Analyzer(object):
         bad_case_mask = not_equal_mask & (merged_df['_merge'] == 'both')
         filtered_df = merged_df[bad_case_mask]
 
-        DESIRED_COLUMNS = ['queries']
+        desired_columns = ['queries']
         for column in ['input_token_ids', 'output_token_ids', 'passed']:
-            DESIRED_COLUMNS.append(f'{column}_golden')
-            DESIRED_COLUMNS.append(f'{column}_test')
+            desired_columns.append(f'{column}_golden')
+            desired_columns.append(f'{column}_test')
 
-        cls._save_result(filtered_df[DESIRED_COLUMNS])
+        cls._save_result(filtered_df[desired_columns])
 
         not_both_mask = merged_df['_merge'] != 'both'
         not_both_count = not_both_mask.sum()

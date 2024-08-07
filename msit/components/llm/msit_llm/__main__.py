@@ -448,7 +448,8 @@ class Transform(BaseCommand):
             message = f"Neither config.json + py or cpp found in {args.source}, not supported"
             logger.error(message)
             raise ValueError(message)
-        
+
+
 class BCAnalyze(BaseCommand):
     def add_arguments(self, parser, **kwargs) -> None:
         parser.add_argument(
@@ -487,10 +488,18 @@ class BCAnalyze(BaseCommand):
                         if file_name.startswith('msit_synthesizer_result') and file_name.endswith('.csv')
                     )
                 except FileNotFoundError:
-                    logger.error("Directory '%s' is not found due to the internal errors, please set log level to 'debug' to see more information", temp_dir)
+                    logger.error(
+                        "Directory '%s' is not found due to the internal errors, "
+                        "please set log level to 'debug' to see more information", 
+                        temp_dir
+                    )
                     raise
                 except StopIteration:
-                    logger.error("There is no csv file under directory '%s', please set log level to 'debug' to see more information", temp_dir)
+                    logger.error(
+                        "There is no csv file under directory '%s', "
+                        "please set log level to 'debug' to see more information", 
+                        temp_dir
+                    )
                     raise
 
                 full_csv_path = os.path.join(temp_dir, csv_path)

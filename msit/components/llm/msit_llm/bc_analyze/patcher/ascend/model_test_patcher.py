@@ -25,6 +25,7 @@ except ModuleNotFoundError:
 
 MODEL_TEST_INSTANCE = None
 
+
 def patch_model_test():
     """"""
     original_init = ModelTest.__init__

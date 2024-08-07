@@ -26,7 +26,7 @@ from msit_llm.common.constant import TOKEN_ID, DATA_ID, GOLDEN_DATA_PATH, MY_DAT
     GOLDEN_SHAPE, GOLDEN_MAX_VALUE, GOLDEN_MIN_VALUE, GOLDEN_MEAN_VALUE, MY_DTYPE, MY_SHAPE, MY_MAX_VALUE, MY_MIN_VALUE, \
     MY_MEAN_VALUE, CSV_GOLDEN_HEADER
 from msit_llm.common.log import logger
-from cmp_algorithm import CMP_ALG_MAP, CUSTOM_ALG_MAP
+from msit_llm.compare.cmp_algorithm import CMP_ALG_MAP, CUSTOM_ALG_MAP
 
 MIN_LAYER_NUMBER = 10
 

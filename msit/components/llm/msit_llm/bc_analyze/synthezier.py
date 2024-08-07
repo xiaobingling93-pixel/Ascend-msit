@@ -21,7 +21,11 @@ class Synthesizer(object):
         Examples
         --------
         >>> from msit_llm import Synthesizer
-        >>> synthesizer = Synthesizer(queries='Question 1', input_token_ids=[1, 2, 3], output_token_ids=[4, 5, 6], passed='Correct')
+        >>> synthesizer = Synthesizer(
+        ...     queries='Question 1', 
+        ...     input_token_ids=[1, 2, 3], 
+        ...     output_token_ids=[4, 5, 6], 
+        ...     passed='Correct')
         """
         self._info = dict(
             zip(self.HEADER, (np.array([], dtype=object), ) * len(self.HEADER))
@@ -72,7 +76,11 @@ class Synthesizer(object):
         --------
         >>> from msit_llm import Synthesizer
         >>> synthesizer = Synthesizer()
-        >>> synthesizer.from_args(queries='Question 1', input_token_ids=[1, 2, 3], output_token_ids=[4, 5, 6], passed='Correct')
+        >>> synthesizer.from_args(
+        ...     queries='Question 1', 
+        ...     input_token_ids=[1, 2, 3], 
+        ...     output_token_ids=[4, 5, 6], 
+        ...     passed='Correct')
         """
         self._update_attributes(
             queries=queries,
@@ -83,22 +91,23 @@ class Synthesizer(object):
 
     @staticmethod
     def from_cmd(command) -> str:
-        """Collecting dataset evaluation result from `command`. This method is a static method that will run the `command` in the subprocess 
-        and collect the desired results during running, the collecting result will be a csv file that stored at a temporary directory which will
-        be returned by this method.
+        """Collecting dataset evaluation result from `command`. This method is a static method that will run the 
+        `command` in the subprocess and collect the desired results during running, the collecting result will be 
+        a csv file that stored at a temporary directory which will be returned by this method.
 
         Currently only supports `Model Test` from `ATB Speed`.
 
         Parameters
         ----------
         `command` : str
-            The model inference command should be run. It must somehow invoke python interpreter, otherwise nothing will be collected.
-            Currently only supports `Model Test` from `ATB Speed`
+            The model inference command should be run. It must somehow invoke python interpreter, otherwise 
+            nothing will be collected. Currently only supports `Model Test` from `ATB Speed`
 
         Returns
         -------
         `temp_dir_name` : str
-            A temporary directory path name that points to the place where the collecting result csv file is stored.
+            A temporary directory path name that points to the place where the collecting result csv file is 
+            stored.
 
         Exceptions
         ----------
@@ -107,22 +116,22 @@ class Synthesizer(object):
 
         Examples
         --------
-        The stdouts and stderrs are omitted in the following example:
+        The logger prefixes, stdouts and stderrs are omitted in the following examples:
         >>> from msit_llm import Synthesizer
         >>> Synthesizer.from_cmd('bash run.sh pa_fp16 full_CEval 1 1 chatglm2_6b /data/chatglm2_6b 1')
-        2024-08-07 04:44:08,278 - msit_llm_logger - INFO - Command 'bash run.sh pa_fp16 full_CEval 1 1 chatglm2_6b /data/chatglm2_6b 1' is running...
+        INFO - Command 'bash run.sh pa_fp16 full_CEval 1 1 chatglm2_6b /data/chatglm2_6b 1' is running...
         ......
-        2024-08-07 04:44:08,278 - msit_llm_logger - INFO - Command 'bash run.sh pa_fp16 full_CEval 1 1 chatglm2_6b /data/chatglm2_6b 1' returns successfully
+        INFO - Command 'bash run.sh pa_fp16 full_CEval 1 1 chatglm2_6b /data/chatglm2_6b 1' returns successfully
         
         An inccorect command:
         >>> Synthesizer.from_cmd('b run.sh')
-        2024-08-07 04:44:08,278 - msit_llm_logger - ERROR - 'b run.sh': command not found, please run it separately first before using 'from_cmd'
+        ERROR - 'b run.sh': command not found, please run it separately first before using 'from_cmd'
 
         An error occured in the subprocess:
         >>> Synthesizer.from_cmd('bash run.sh')
-        2024-08-07 04:44:08,278 - msit_llm_logger - INFO - Command 'bash run.sh' is running...
+        INFO - Command 'bash run.sh' is running...
         ......
-        2024-08-07 04:44:08,278 - msit_llm_logger - ERROR - Failed to run command 'bash run.sh', please run it separately first before using 'from_cmd'
+        ERROR - Failed to run command 'bash run.sh', please run it separately first before using 'from_cmd'
         """
         import subprocess
         import shlex
@@ -140,14 +149,14 @@ class Synthesizer(object):
 
         split_command = shlex.split(command)
 
-        KNOWN_INVALID_COMMAND = {
+        known_invalid_command = {
             "rm", "mv", "mkfs", "dd",
             "chown", "chmod",
             "shutdown", "reboot",
             "curl", "wget",
         }
 
-        if split_command[0] in KNOWN_INVALID_COMMAND:
+        if split_command[0] in known_invalid_command:
             logger.error("Invalid command '%s'", split_command)
             raise ValueError
 
@@ -159,13 +168,17 @@ class Synthesizer(object):
                 env=env,
             )
         except OSError:
-            logger.error("'%s': command not found, please run it separately first before using 'from_cmd'", command)
+            logger.error(
+                "'%s': command not found, please run it separately first before using 'from_cmd'", command
+            )
             raise
 
         logger.info("Command '%s' is running...", command)
 
         if child_process.wait() != 0:
-            logger.error("Failed to run command '%s', please run it separately first before using 'from_cmd'", command)
+            logger.error(
+                "Failed to run command '%s', please run it separately first before using 'from_cmd'", command
+            )
             raise RuntimeError
         
         logger.info("Command '%s' returns successfully", command)
@@ -174,7 +187,8 @@ class Synthesizer(object):
     def to_csv(self, *, errors='trunc'):
         """Archive the collected result to csv file. 
         
-        Users should call `from_args` or implicitly call `from_args` through constructor before invoking this method.
+        Users should call `from_args` or implicitly call `from_args` through constructor before invoking this 
+        method.
 
         Parameters
         ----------
@@ -182,31 +196,26 @@ class Synthesizer(object):
             Consistent strategies to the data frame. Since each item can be added to `Synthesizer` asynchronously,
             it is possible to have item with differnt sizes or lengths. If `trunc` is chosen, then the data frame 
             will be truncated to the shortest length among those items. If `pad` is chosen, `Synthesizer` will pad
-            missing rows with `np.nan` to be consistent with the largest length. If `strict` is chosen, `Synthesizer`
-            will do nothing and let `pandas` to figure out all the items are consistent or not.
-
-        Returns
-        -------
-        out : DataFrame
-            A csv file containing all the collected result.
+            missing rows with `np.nan` to be consistent with the largest length. If `strict` is chosen, 
+            `Synthesizer` will do nothing and let `pandas` to figure out all the items are consistent or not.
 
         Notes
         -----
-        The resulting csv file name will be `msit_synthesizer_result_` plus a random eight characters string plus time stamp. 
-        For example, `msit_synthesizer_result_iew92iq5_20240720042235.csv`.
+        The resulting csv file name will be `msit_synthesizer_result_` plus a random eight characters string plus 
+        time stamp. For example, `msit_synthesizer_result_iew92iq5_20240720042235.csv`.
             
         Exceptions
         ----------
         `RuntimeError` : raises if user did not initalize (or implicitly) `Synthesizer` through `from_args`.
-        `ValueError` : raises if unexpected value passed in `errors`, or if the `strict` is chosen, but the `pandas` complains 
-        that the data frame is not consistent.
+        `ValueError` : raises if unexpected value passed in `errors`, or if the `strict` is chosen, but the 
+        `pandas` complains that the data frame is not consistent.
 
         Examples
         --------
         >>> from msit_llm import Synthesizer
         >>> synthesizer = Synthesizer()
         >>> synthesizer.to_csv()
-        2024-08-07 04:44:08,278 - msit_llm_logger - ERROR - 'from_args' should be called first before invoking this method
+        ERROR - 'from_args' should be called first before invoking this method
         """
         result_df = self._to_df(errors=errors)
         self._save_result(result_df)
@@ -224,7 +233,9 @@ class Synthesizer(object):
         elif errors == 'strict':
             pass
         else:
-            logger.error("Wrong value 'errors'. Expected to be either '%s', '%s' or '%s', got '%s'", 'pad', 'trunc', 'strict', errors)
+            logger.error(
+                "Wrong value 'errors'. "
+                "Expected to be either '%s', '%s' or '%s', got '%s'", 'pad', 'trunc', 'strict', errors)
             raise ValueError
         
         return pd.DataFrame(self._info)

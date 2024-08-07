@@ -116,6 +116,7 @@ def get_timestamp_sync():
 
     return max_timestamp.item()
 
+
 def get_ait_dump_path():
     global GLOBAL_AIT_DUMP_PATH
 

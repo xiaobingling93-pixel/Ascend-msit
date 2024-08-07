@@ -30,7 +30,7 @@ class TestSynthezier(TestCase):
         self.synthezier = Synthesizer(
             queries='Here',
             input_token_ids=2.5,
-            output_token_ids=2+3j,
+            output_token_ids=2 + 3j,
             passed=True
         )
 

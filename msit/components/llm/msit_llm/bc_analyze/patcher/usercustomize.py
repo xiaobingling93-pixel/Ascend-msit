@@ -16,6 +16,7 @@ except ModuleNotFoundError:
 patch_model_test()
 logger.debug("'Model Test' has successfully been patched.")
 
+
 def save_before_exit():
 
     def _save():
@@ -47,7 +48,10 @@ def save_before_exit():
         logger.info("Creating temporary directory '%s': Success", temp_dir_name)
 
         os.chdir(temp_dir_name)
-        logger.info("The result collected by 'Synthesizer' from the running command will be saved under", os.getcwd())
+        logger.info(
+            "The result collected by 'Synthesizer' from the running command will be saved under", 
+            os.getcwd()
+        )
 
         synthezier.to_csv()
 

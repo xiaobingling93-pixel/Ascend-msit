@@ -18,8 +18,8 @@ import os.path
 import numpy as np
 import torch
 
-from dump_config import DumpConfig
-import hook_ops
+from msit_llm.dump.torch_dump.dump_config import DumpConfig
+from msit_llm.dump.torch_dump import hook_ops
 from msit_llm.common.log import logger
 
 
