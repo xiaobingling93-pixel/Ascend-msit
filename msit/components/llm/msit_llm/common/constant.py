@@ -23,17 +23,9 @@ def get_visible_device(device_type):
 
 
 def get_global_device():
-    if (
-        hasattr(torch, "npu")
-        and torch.npu.is_available()
-        and get_visible_device("ASCEND_VISIBLE_DEVICES") >= 0
-    ):
+    if hasattr(torch, "npu") and torch.npu.is_available() and get_visible_device("ASCEND_VISIBLE_DEVICES") >= 0:
         return "npu"
-    if (
-        hasattr(torch, "cuda")
-        and torch.cuda.is_available()
-        and get_visible_device("CUDA_VISIBLE_DEVICES") >= 0
-    ):
+    if hasattr(torch, "cuda") and torch.cuda.is_available() and get_visible_device("CUDA_VISIBLE_DEVICES") >= 0:
         return "cuda"
     return "cpu"
 
@@ -145,9 +137,7 @@ def get_timestamp_sync():
     rank = int(os.environ.get("LOCAL_RANK", "0"))
     max_timestamp = torch.tensor(max_timestamp)
     if not torch.distributed.is_initialized():
-        torch.distributed.init_process_group(
-            backend=GLOBAL_DIST_BACKEND, rank=rank, world_size=world_size
-        )
+        torch.distributed.init_process_group(backend=GLOBAL_DIST_BACKEND, rank=rank, world_size=world_size)
     torch.distributed.all_reduce(max_timestamp, op=torch.distributed.ReduceOp.MAX)
 
     return max_timestamp.item()
@@ -158,9 +148,7 @@ def get_ait_dump_path():
 
     if GLOBAL_AIT_DUMP_PATH == "ait_dump":
         max_timestamp = get_timestamp_sync()
-        timestamp = datetime.datetime.fromtimestamp(max_timestamp).strftime(
-            "%Y%m%d_%H%M%S"
-        )
+        timestamp = datetime.datetime.fromtimestamp(max_timestamp).strftime("%Y%m%d_%H%M%S")
         os.environ[ATB_TIMESTAMP] = timestamp
         GLOBAL_AIT_DUMP_PATH = "ait_dump_" + timestamp
 

@@ -74,17 +74,11 @@ def compare_weight(gp_path, mp_path, output_path):
             if weight_offset_value is None or weight_scale_value is None:
                 continue
 
-            dequant_weight_value = dequant(
-                int_weight_value, weight_offset_value, weight_scale_value
-            )
-            row_data_basic = set_tensor_basic_info_in_row_data(
-                ft_weight_value, dequant_weight_value
-            )
+            dequant_weight_value = dequant(int_weight_value, weight_offset_value, weight_scale_value)
+            row_data_basic = set_tensor_basic_info_in_row_data(ft_weight_value, dequant_weight_value)
             row_data = compare_data(ft_weight_value, dequant_weight_value)
             row_data.update(row_data_basic)
             row_data.update({"weight_name": ft_weight_key})
             gathered_row_data.append(row_data)
 
-    return save_compare_reault_to_csv(
-        gathered_row_data, output_path, columns=CSV_CMP_WEIGHT_HEADER
-    )
+    return save_compare_reault_to_csv(gathered_row_data, output_path, columns=CSV_CMP_WEIGHT_HEADER)
