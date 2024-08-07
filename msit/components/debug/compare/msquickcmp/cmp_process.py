@@ -200,44 +200,12 @@ def cmp_process(args: CmpArgsAdapter, use_cli: bool):
         raise error
 
 
-def saved_model_convert_om(args: CmpArgsAdapter):
-    # saved_model convert pb
-    output_pb_path = saved_model_to_pb(args)
-    # pb convert om
-    om_model_path = atc_utils.convert_pb_model_to_om(args.cann_path, output_pb_path, args.out_path,
-                                                     args.input_shape, "3")
-
-    return om_model_path
-
-
-def saved_model_to_pb(args):
-    import tensorflow as tf
-    sess = tf.compat.v1.keras.backend.get_session()
-    tag_set = {tf.compat.v1.saved_model.tag_constants.SERVING}
-    model_graph_def = tf.compat.v1.saved_model.load(sess, tag_set, args.model_path)
-    serving_signature = model_graph_def.signature_def["serving_default"]
-    output_names = [output_name.split(':')[0] for output_name in serving_signature.outputs.keys()]
-    frozen_graph = tf.compat.v1.graph_util.convert_variables_to_constants(sess, sess.graph.as_graph_def(), output_names)
-    frozen_graph = tf.compat.v1.graph_util.remove_training_nodes(frozen_graph)
-    model_name = os.path.basename(args.model_path)
-    pb_model_dir_path = os.path.join(args.out_path, "model")
-    if not os.path.exists(pb_model_dir_path):
-        os.makedirs(pb_model_dir_path)
-    output_pb_path = os.path.join(pb_model_dir_path, model_name + ".pb")
-    with open(output_pb_path, 'wb') as pb_file:
-        pb_file.write(frozen_graph.SerializeToString())
-    return output_pb_path
-
-
 def run(args: CmpArgsAdapter, input_shape, original_out_path, use_cli: bool):
     if input_shape:
         args.input_shape = input_shape
         args.out_path = os.path.join(original_out_path, get_shape_to_directory_name(args.input_shape))
 
     if is_saved_model_valid(args.offline_model_path):
-        # generate om.json
-        # om_model = saved_model_convert_om(args)
-        # output_json_path = atc_utils.convert_model_to_json(args.cann_path, om_model, args.out_path)
         # npu dump
         from msquickcmp.npu.npu_tf_adapter_dump_data import NpuTfAdapterDumpData
         npu_dump = NpuTfAdapterDumpData(args)

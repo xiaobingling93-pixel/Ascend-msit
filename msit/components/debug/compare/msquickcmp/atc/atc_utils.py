@@ -38,8 +38,9 @@ def convert_model_to_json(cann_path, offline_model_path, out_path):
         when the model type is wrong throw exception
     """
     model_name, extension = utils.get_model_name_and_extension(offline_model_path)
-    if ".om" != extension:
-        utils.logger.error('The offline model file not ends with .om, Please check {}.'.format(offline_model_path))
+    if extension not in [".om", ".txt"]:
+        utils.logger.error(
+            'The offline model file not ends with .om or .txt, Please check {}.'.format(offline_model_path))
         raise AccuracyCompareException(utils.ACCURACY_COMPARISON_MODEL_TYPE_ERROR)
     
     cann_path = os.path.realpath(cann_path)
@@ -55,7 +56,11 @@ def convert_model_to_json(cann_path, offline_model_path, out_path):
     else:
         # do the atc command to convert om to json
         utils.logger.info('Start to converting the model to json')
-        atc_cmd = [atc_command_file_path, "--mode=1", "--om=" + offline_model_path, "--json=" + output_json_path]
+        if extension == ".om":
+            mode_type = "1"
+        else:
+            mode_type = "5"
+        atc_cmd = [atc_command_file_path, "--mode=" + mode_type, "--om=" + offline_model_path, "--json=" + output_json_path]
         utils.logger.info("ATC command line %s" % " ".join(atc_cmd))
         utils.execute_command(atc_cmd)
         utils.logger.info("Complete model conversion to json %s." % output_json_path)
