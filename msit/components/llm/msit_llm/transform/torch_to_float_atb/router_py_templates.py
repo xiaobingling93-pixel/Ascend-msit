@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-copyright = """# Copyright 2022 EleutherAI and the HuggingFace Inc. team. All rights reserved.
+COPYRIGHT_FORMATER = """# Copyright 2022 EleutherAI and the HuggingFace Inc. team. All rights reserved.
 #
 # This code is based on EleutherAI's GPT-NeoX library and the GPT-NeoX
 # and OPT implementations in this library. It has been modified from its
@@ -32,14 +32,14 @@ copyright = """# Copyright 2022 EleutherAI and the HuggingFace Inc. team. All ri
 # limitations under the License.
 """
 
-import_formater = """
+IMPORT_FORMATER = """
 import importlib
 from dataclasses import dataclass
 from transformers import AutoTokenizer, AutoConfig
 from atb_llm.models.base.router import BaseRouter
 """
 
-class_router_formater = """
+CLASS_ROUTER_FORMATER = """
 @dataclass
 class {model_name_capital}Router(BaseRouter):
     def get_config(self):

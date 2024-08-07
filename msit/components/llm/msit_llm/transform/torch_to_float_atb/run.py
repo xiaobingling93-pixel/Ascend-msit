@@ -468,7 +468,7 @@ def parse_arguments():
     return parser.parse_args()
 
 
-if __name__ == '__main__':
+def main():
     args = parse_arguments()
 
     rank = int(os.getenv("RANK", "0"))
@@ -486,12 +486,11 @@ if __name__ == '__main__':
     else:
         infer_inputs = args.input_texts
     if args.is_chat_model and args.input_file:
-        conversations = []
+        infer_inputs = []
         with open(args.input_file, 'r', encoding='utf-8') as file:
             for line in file:
                 data_line = json.loads(line)
-                conversations.append(data_line)
-        infer_inputs = conversations
+                infer_inputs.append(data_line)
 
     pa_runner = PARunner(**input_dict)
     print_log(rank, logger.info, f'pa_runner: {pa_runner}')
@@ -512,3 +511,7 @@ if __name__ == '__main__':
             print_log(rank, logger.info, f'Question[{i}]: {infer_inputs[i]}')
         print_log(rank, logger.info, f'Answer[{i}]: {generate_text}')
         print_log(rank, logger.info, f'Generate[{i}] token num: {token_nums[i]}')
+
+
+if __name__ == '__main__':
+    main()

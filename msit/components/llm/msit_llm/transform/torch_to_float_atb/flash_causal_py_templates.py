@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-copyright = """# Copyright 2022 EleutherAI and the HuggingFace Inc. team. All rights reserved.
+COPYRIGHT_FORMATER = """# Copyright 2022 EleutherAI and the HuggingFace Inc. team. All rights reserved.
 #
 # This code is based on EleutherAI's GPT-NeoX library and the GPT-NeoX
 # and OPT implementations in this library. It has been modified from its
@@ -32,7 +32,7 @@ copyright = """# Copyright 2022 EleutherAI and the HuggingFace Inc. team. All ri
 # limitations under the License.
 """
 
-import_formater = """
+IMPORT_FORMATER = """
 import json
 import math
 import os
@@ -50,7 +50,7 @@ from atb_llm.utils.dist import get_rank_table_file, get_backend
 """
 
 
-acl_inputs_code_block = """
+ACL_INPUTS_CODE_BLOCK = """
         acl_inputs = {{
             "{input_ids}": self.placeholder if self.skip_word_embedding else input_ids,
             "{input_embedding}": input_ids if self.skip_word_embedding else self.placeholder,
@@ -88,7 +88,7 @@ acl_inputs_code_block = """
         acl_inputs_list = [acl_inputs.get(k, self.placeholder) for k in {acl_inputs_name}] 
 """
 
-class_flash_causal_lm_formater = """
+CLASS_FLASH_CAUSAL_LM_FORMATER = """
 
 class Flash{model_name_capital}ForCausalLM(FlashForCausalLM):
     def __init__(self, config, weights):

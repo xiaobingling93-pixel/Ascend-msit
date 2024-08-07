@@ -120,20 +120,21 @@ def get_weight_names(model):
     parsed_model = build_model_tree(model)
 
     # Add model names
+    is_rope = any([kw in str(parsed_model) for kw in 'rotary Rotary rope Rope ROPE'.split()])
     dic = {
         'model_name': model.config.model_type,
         'model_name_in_atb_framework': parsed_model.get("name", "model").lower(),
         'model_prefix': get_transformer_name(model),
-        'pe_type': 'ROPE' if any([kw in str(parsed_model) for kw in 'rotary Rotary rope Rope ROPE'.split()]) else 'ALIBI',
+        'pe_type': 'ROPE' if is_rope else 'ALIBI',
     }
     
     # Add layer names
-    for node in parsed_model['children']:
-        if node['kind'] == 'Embedding':
+    for node in parsed_model.get('children', {}):
+        if node.get('kind') == 'Embedding':
             # word_embedings
             dic['word_embeddings'] = node.get('name', 'word_embeddings')
-        elif 'Norm' in node['kind']:
-            if 'embedding' in node['name']:
+        elif 'Norm' in node.get('kind'):
+            if 'embedding' in node.get('name', ''):
                 # word_embedding_layernorm
                 dic['word_embeddings_layernorm'] = node.get('name', '')
                 dic['word_embeddings_layernorm_bias'] = node.get('bias', False)
@@ -141,27 +142,34 @@ def get_weight_names(model):
                 # layernorm
                 dic['layernorm'] = node.get('name', 'layernorm')
                 dic['layernorm_bias'] = node.get('bias', False)
-        elif node['kind'] == 'Layers':
+        elif node.get('kind') == 'Layers':
             # layers
             dic['layers_prefix'] = node.get('name', 'layers')
-            dic['input_layernorm'] = node.get('repeat_block', {}).get('input_layernorm', {}).get('name', 'input_layernorm')
-            dic['post_attention_layernorm'] = node.get('repeat_block', {}).get('post_attention_layernorm', {}).get('name', 'post_attention_layernorm')
+            block = node.get('repeat_block', {})
+            dic['input_layernorm'] = block.get('input_layernorm', {}).get('name', 'input_layernorm')
+            dic['post_attention_layernorm'] = block.get(
+                'post_attention_layernorm', {}).get('name', 'post_attention_layernorm')
 
             # attention
-            attention = node.get('repeat_block', {}).get('attention', {})
-            if len(attention):
-                dic['self_attention'] = attention.get('name', 'self_attention')
-                dic['query_key_value'] = attention.get('w', {}).get('name', 'query_key_value')
-                dic['query_key_value_bias'] = attention.get('w', {}).get('bias', False) or attention.get('q', {}).get('bias', False)
-                dic['qkv_sep'] = [node.get('name', 'qkv') for node_name, node in attention.items() if node_name in 'q k v kv'.split()]
-                dic['o_proj'] = attention.get('o', {}).get('name', 'o_proj')
-                dic['o_proj_bias'] =  attention.get('o', {}).get('bias', False)
+            attention_dic = block.get('attention', {})
+            if len(attention_dic):
+                dic['self_attention'] = attention_dic.get('name', 'self_attention')
+                dic['query_key_value'] = attention_dic.get('w', {}).get('name', 'query_key_value')
+                dic['query_key_value_bias'] = attention_dic.get('w', {}).get('bias', False) or \
+                    attention_dic.get('q', {}).get('bias', False)
+                dic['qkv_sep'] = [
+                    node.get('name', 'qkv') 
+                    for node_name, node in attention_dic.items() 
+                    if node_name in 'q k v kv'.split()
+                    ]
+                dic['o_proj'] = attention_dic.get('o', {}).get('name', 'o_proj')
+                dic['o_proj_bias'] = attention_dic.get('o', {}).get('bias', False)
 
             # mlp
-            mlp = node.get('repeat_block', {}).get('mlp', {})  
-            if len(mlp):
+            mlp_dic = block.get('mlp', {})  
+            if len(mlp_dic):
                 dic['mlp'] = 'mlp'
-                ff = mlp.get('ff', {})
+                ff = mlp_dic.get('ff', {})
                 if len(ff) == 3:
                     dic['gate_up_proj'] = 'gate_up_proj'
                     dic['mlp_sep'] = [ff[0].get('name', ''), ff[2].get('name', '')]
@@ -172,7 +180,7 @@ def get_weight_names(model):
                     dic['mlp_sep'] = []
                     dic['down_proj'] = ff[1].get('name', '')
                     dic['mlp_bias'] = ff[1].get('bias', '')
-        elif node['kind'] == 'Linear':
+        elif node.get('kind') == 'Linear':
             dic['lmhead'] = node.get('name', 'lmhead')
 
     parsed_model['weight_names'] = dic
@@ -201,10 +209,11 @@ def get_input_max_count(files):
     ]
     res = regex_search(pattern_list, files)
     try:
-        res = int(res)
+        max_count = int(res)
     except Exception as ex:
-        res = -1
-    return res
+        max_count = -1
+    return max_count
+
 
 def get_input_names(files):
     pattern_list = [
@@ -218,12 +227,12 @@ def get_input_names(files):
     res = []
     for line in input_str.split('\n')[1:-1]:
         # line example IN_TENSOR_INPUT = 0, // input
-        l = line.split('//')[0]
-        l = l.split('=')[0]
-        l = l.split(',')[0]
-        l = l.strip()
-        if l != '':
-            res.append(l)
+        ll = line.split('//')[0]
+        ll = ll.split('=')[0]
+        ll = ll.split(',')[0]
+        ll = ll.strip()
+        if ll != '':
+            res.append(ll)
 
     max_count = get_input_max_count(files)
     if max_count == -1:

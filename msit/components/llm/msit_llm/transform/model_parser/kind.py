@@ -110,7 +110,7 @@ def mlp(name, modules: List[Module]):
     return ret
 
 
-def layernorm(name,module):
+def layernorm(name, module):
     return {
         "name": name, 
         "kind": "LayerNorm",
