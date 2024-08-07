@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-copyright = """# Copyright 2022 EleutherAI and the HuggingFace Inc. team. All rights reserved.
+COPYRIGHT_FORMATER = """# Copyright 2022 EleutherAI and the HuggingFace Inc. team. All rights reserved.
 #
 # This code is based on EleutherAI's GPT-NeoX library and the GPT-NeoX
 # and OPT implementations in this library. It has been modified from its
@@ -32,7 +32,7 @@ copyright = """# Copyright 2022 EleutherAI and the HuggingFace Inc. team. All ri
 # limitations under the License.
 """
 
-import_formater = """
+IMPORT_FORMATER = """
 import os
 import math
 from typing import Optional, List, Tuple
@@ -57,11 +57,10 @@ from atb_llm.utils.layers import (
 )
 from atb_llm.utils.quantize.pack_type import PackType, calc_linear_pack_type, QuantType
 
-EMBEDDING_PARALLEL_THRESHOLD = 128256 # vocab size of {model_name_capital}3
+EMBEDDING_PARALLEL_THRESHOLD = 128256 # vocab size of {model_name_capital}
 """
 
-
-mlp_pack_formater = """        
+MLP_PACK_FORMATER = """        
         linear_names = [f'{{prefix}}.{gate_up_proj}']
         layer_prefix = '.'.join(prefix.split('.')[:-1])
         norm_name = f'{{layer_prefix}}.{post_attention_layernorm}'
@@ -89,8 +88,7 @@ mlp_pack_formater = """
         )
 """
 
-
-mlp_sep_formater = """
+MLP_SEP_FORMATER = """
         linear_names = [f'{{prefix}}.{up_proj}', f'{{prefix}}.{gate_proj}']
         pack_name = f'{{prefix}}.{gate_up_proj}'
         layer_prefix = '.'.join(prefix.split('.')[:-1])
@@ -135,7 +133,7 @@ mlp_sep_formater = """
         )
 """
 
-qkv_pack_formater = """ 
+QKV_PACK_FORMATER = """ 
         linear_names = [f'{{prefix}}.{query_key_value}']
         layer_prefix = '.'.join(prefix.split('.')[:-1])
         norm_name = f'{{layer_prefix}}.{input_layernorm}'
@@ -159,7 +157,7 @@ qkv_pack_formater = """
             )
 """
 
-qkv_sep_formater = """
+QKV_SEP_FORMATER = """
         if config.kv_quant is not None:
             self.k_cache_quant = KvCache.load(prefix=f"{{prefix}}.{k_proj}", weights=weights)
             self.v_cache_quant = KvCache.load(prefix=f"{{prefix}}.{v_proj}", weights=weights)
@@ -210,13 +208,13 @@ qkv_sep_formater = """
             )
 """
 
-word_embeddings_layernorm_formater = """     
+WORD_EMBEDDINGS_LATERNORM_FORMATER = """
         self.word_embeddings_layernorm = {model_name_capital}{RMSNormClass}(
             prefix=f"{{model_prefix}}{word_embeddings_layernorm}", weights=weights
         )
 """
 
-class_flash_model_formater = """
+CLASS_FLASH_MODEL_FORMATER = """
 class {model_name_capital}RMSNorm(nn.Module):
     def __init__(self, prefix, weights, eps=1e-6):
         super().__init__()

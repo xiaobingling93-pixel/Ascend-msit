@@ -1,6 +1,7 @@
 import os
 import time
 from msit_llm.transform.torch_to_float_atb import utils
+  
         
 def match(keyword_lists, acl_inputs_name):
     for keyword_list in keyword_lists:
@@ -18,15 +19,15 @@ def flash_causal_py_gen(parsed_model, save_name=None, save_dir=None):
     model_name_capital = model_name_lower.capitalize()
 
     rr = ""
-    rr += templates.copyright.format(year=time.localtime().tm_year)
-    rr += templates.import_formater.format(
+    rr += templates.COPYRIGHT_FORMATER.format(year=time.localtime().tm_year)
+    rr += templates.IMPORT_FORMATER.format(
         model_name_lower=model_name_lower,
         model_name_capital=model_name_capital,
     )
 
     acl_inputs_name = parsed_model.get('acl_inputs_name', [])
 
-    acl_inputs_code_block = templates.acl_inputs_code_block.format(
+    acl_inputs_code_block = templates.ACL_INPUTS_CODE_BLOCK.format(
         acl_inputs_name=str(acl_inputs_name),
         input_ids=match(["INPUT ID".split(), "INPUT"], acl_inputs_name),
         input_embedding=match(["INPUT EMBEDDING".split()], acl_inputs_name),
@@ -42,7 +43,7 @@ def flash_causal_py_gen(parsed_model, save_name=None, save_dir=None):
     )
 
 
-    rr += templates.class_flash_causal_lm_formater.format(
+    rr += templates.CLASS_FLASH_CAUSAL_LM_FORMATER.format(
         model_name_capital=model_name_capital, 
         model_prefix=weight_names.get('model_prefix'),   
         lmhead=weight_names.get('lmhead'),
@@ -55,6 +56,5 @@ def flash_causal_py_gen(parsed_model, save_name=None, save_dir=None):
     save_name = utils.init_save_name(f"flash_causal_{model_name_lower}" if save_name is None else save_name) + ".py"
     save_dir = utils.init_save_dir(model_name_lower if save_dir is None else save_dir, sub_dir=".")
     save_path = os.path.join(save_dir, save_name)
-    with open(save_path, "w") as ff:
-        ff.write(rr)
+    utils.write_file(save_path, rr)
     return save_path, rr
