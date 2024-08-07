@@ -218,7 +218,7 @@ class CompareCommand(BaseCommand):
             '--weight',
             '-w',
             action='store_true',
-            help='Compare quant weights if True, do nothing if False')
+            help='Compare float weights and dequant weights, if True, do nothing if False')
 
 
     def handle(self, args, **kwargs):
@@ -235,7 +235,12 @@ class CompareCommand(BaseCommand):
 
         # accuracy comparing for different scenarios
         torchair_ge_graph_path = get_torchair_ge_graph_path(args.my_path)
-        if torchair_ge_graph_path is not None:
+        if args.weight:
+            from msit_llm.compare.cmp_weight import compare_weight
+
+            compare_weight(args.golden_path, args.my_path, args.output)
+
+        elif torchair_ge_graph_path is not None:
             from msit_llm.compare.torchair_acc_cmp import acc_compare
 
             acc_compare(args.golden_path, args.my_path, args.output, torchair_ge_graph_path)
@@ -248,10 +253,6 @@ class CompareCommand(BaseCommand):
                 cmpMgr = CompareMgr(os.path.abspath(args.golden_path), os.path.abspath(args.my_path), args)
                 if cmpMgr.is_parsed_cmp_path():
                     cmpMgr.compare(args.output)
-        if args.weight:
-            from msit_llm.compare.cmp_weight import compare_weight
-
-            compare_weight(args.golden_path, args.my_path, args.output)
 
 
 class OpcheckCommand(BaseCommand):
