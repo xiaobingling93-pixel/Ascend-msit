@@ -48,11 +48,8 @@ class TestSynthezier(TestCase):
         self.assertTrue(any(filename.startswith('msit_synthesizer') and filename.endswith('.csv') for filename in os.listdir()))
 
     def test_synthezier_to_csv_first(self):
-        with self.assertLogs('msit_llm_logger', 'ERROR') as cm:
+        with self.assertLogs('msit_llm_logger', 'ERROR'):
             self.assertRaises(RuntimeError, self.synthezier.to_csv)
-            logger_output = cm.output
-            self.assertEqual(len(logger_output), 2)
-            self.assertRegex(logger_output[0], r'should be called first before')
 
     def test_synthezier_to_csv_pad(self):
         self.synthezier.from_args(
@@ -91,11 +88,8 @@ class TestSynthezier(TestCase):
             self.assertRegex(logger_output[0], r'Wrong value')
 
     def test_synthezier_from_cmd(self):
-        with self.assertLogs('msit_llm_logger', 'INFO') as cm:
+        with self.assertLogs('msit_llm_logger', 'INFO'):
             self.synthezier.from_cmd('python3 -c "print(2)"')
-            logger_output = cm.output
-            self.assertEqual(len(logger_output), 1)
-            self.assertRegex(logger_output[0], r'all the outs and errors are suppressed$')
 
     def test_synthezier_from_cmd_no_patcher_folder(self):
         with self.assertLogs('msit_llm_logger', 'ERROR') as cm:

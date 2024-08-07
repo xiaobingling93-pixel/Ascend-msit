@@ -66,14 +66,18 @@ class TestSynthezier(TestCase):
                 self.assertRaises(PermissionError, self.analyzer.from_csv, golden_csv_path=self.golden_csv_path, test_csv_path=self.test_csv_path)
                 logger_output = cm.output
                 self.assertEqual(len(logger_output), 1)
-                self.assertRegex(logger_output[0], r'should not be other writeable')
+                self.assertRegex(logger_output[0], r'should be used only its owner or superuser')
     
     def test_analyzer_from_mixed(self):
+        import time
+        time.sleep(0.2) # The analyze is so fast that the time stamp does not change, leads to permssion error
         self.analyzer.from_mixed(golden=Synthesizer(**self.golden_dict), test=self.test_csv_path)
+        time.sleep(0.2)
         self.analyzer.from_mixed(golden=self.golden_csv_path, test=Synthesizer(**self.test_dict))
 
         self.assertTrue(os.path.exists('msit_bad_case_analyze'))
         self.assertTrue(any(file_name.startswith('msit_bad_case_') and file_name.endswith('.csv') for file_name in os.listdir('msit_bad_case_analyze')))
+        time.sleep(0.2)
 
     def test_analyzer_unmatched_df(self):
         test_dict = {

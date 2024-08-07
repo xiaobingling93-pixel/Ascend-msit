@@ -183,7 +183,7 @@ class Analyzer(object):
         2024-08-07 04:45:16,166 - msit_llm_logger - INFO - Analyzing...
         2024-08-07 04:45:13,651 - msit_llm_logger - INFO - 'Analyzer' has successfully finished the analysis, the result is stored at 'msit_bad_case_analyze/msit_bad_case_result_ieqwe2q5_20240720042235.csv'
         """
-        from synthezier import Synthesizer
+        from msit_llm.bc_analyze.synthezier import Synthesizer
         
         if isinstance(golden, Synthesizer):
             golden = golden._to_df(errors='trunc')
