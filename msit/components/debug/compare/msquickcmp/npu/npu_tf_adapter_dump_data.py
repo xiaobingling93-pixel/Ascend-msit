@@ -18,13 +18,14 @@
 Function:
 This class mainly involves generate tf adapter npu dump data function.
 """
+
 import glob
 import os
-import shutil
 
 import npu_device
 import numpy as np
 import tensorflow as tf
+
 from msquickcmp.atc import atc_utils
 from msquickcmp.common import utils
 from npu_device.compat.v1.npu_init import *
@@ -60,15 +61,9 @@ class NpuTfAdapterDumpData(object):
 
     @staticmethod
     def get_graph_txt(model_json_path):
-        search_pattern = 'ge_proto*Build.txt'
-        matching_files = glob.glob(os.path.join(model_json_path, search_pattern))
+        txt_files = glob.glob(os.path.join(model_json_path, '**/*.txt'), recursive=True)
 
-        return os.path.join(model_json_path, matching_files[0])
-
-    def _create_dir(self):
-        utils.create_directory(self.input)
-        utils.create_directory(self.dump_data_npu)
-        utils.create_directory(self.model_json_path)
+        return txt_files[0]
 
     def generate_inputs_data(self):
         for shape in self.input_shape:
@@ -82,27 +77,27 @@ class NpuTfAdapterDumpData(object):
         npu_device.compat.enable_v1()
         # switch ge graph dump
         os.environ['DUMP_GE_GRAPH'] = '2'
+        os.environ['DUMP_GRAPH_LEVEL'] = '3'
+        os.environ['DUMP_GRAPH_PATH'] = self.model_json_path
         config_proto = tf.compat.v1.ConfigProto()
         custom_op = config_proto.graph_options.rewrite_options.custom_optimizers.add()
         custom_op.name = "NpuOptimizer"
         custom_op.parameter_map["enable_dump"].b = True
         custom_op.parameter_map["dump_path"].s = tf.compat.as_bytes(self.dump_data_npu)
-        custom_op.parameter_map["dump_step"].s = tf.compat.as_bytes("0|5|10")
+        custom_op.parameter_map["dump_step"].s = tf.compat.as_bytes("0")
         custom_op.parameter_map["dump_mode"].s = tf.compat.as_bytes("all")
         config_proto.graph_options.rewrite_options.remapping = RewriterConfig.OFF
-        tf_config = npu_config_proto(config_proto=config_proto)
         # sess run predict
-        with tf.compat.v1.Session(config=tf_config, graph=graph) as sess:
+        with tf.compat.v1.Session(config=config_proto, graph=graph) as sess:
             feed_dict = {
                 sess.graph.get_tensor_by_name(input_name + ":0"): input_data
                 for input_name, input_data in self.inputs_data.items()
             }
-            current_path = os.getcwd()
-            os.chdir(self.model_json_path)
-            sess.run(tf.no_op(), feed_dict=feed_dict)
-            utils.logger.info("Dump tf adapter data success, data saved in: %s", self.dump_data_npu)
-        os.chdir(current_path)
-        self._move_dump_data_files()
+            output_tensors = []
+            output_tensors.extend(sess.graph.get_operations()[-1].outputs)
+            sess.run(output_tensors, feed_dict=feed_dict)
+        utils.logger.info("Dump tf adapter data success, data saved in: %s", self.dump_data_npu)
+        self.dump_data_npu = self._change_dump_data_path()
         graph_txt = self.get_graph_txt(self.model_json_path)
         output_json_path = atc_utils.convert_model_to_json(self.cann_path, graph_txt, self.output_path)
 
@@ -115,12 +110,15 @@ class NpuTfAdapterDumpData(object):
 
         return sess.graph
 
-    def _move_dump_data_files(self):
-        for item in os.listdir(self.dump_data_npu):
-            item_path = os.path.join(self.dump_data_npu, item)
-            if os.path.isdir(item_path):
-                for file in os.listdir(item_path):
-                    file_path = os.path.join(item_path, file)
-                    if os.path.isfile(file_path):
-                        shutil.move(file_path, os.path.join(self.dump_data_npu, file))
-                shutil.rmtree(item_path)
+    def _change_dump_data_path(self):
+        sub_dirs_with_files = []
+        for sub_dir, dirs, files in os.walk(self.dump_data_npu):
+            if files:
+                sub_dirs_with_files.append(sub_dir)
+
+        return sub_dirs_with_files[0]
+
+    def _create_dir(self):
+        utils.create_directory(self.input)
+        utils.create_directory(self.dump_data_npu)
+        utils.create_directory(self.model_json_path)
