@@ -49,7 +49,7 @@ def get_model(param):
     if model_type == "kclgpt":
         model_type = "codeshell"
 
-    sys.path.insert(0, param.transformed_model_path)
+    sys.path.append(param.transformed_model_path)
     router_path = f"router_{model_type}"
     router = importlib.import_module(router_path)
     router_cls = getattr(router, f"{model_type.capitalize()}Router")
