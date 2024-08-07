@@ -6,8 +6,8 @@ from components.utils.check.checker import Checker, CheckResult, rule
 
 
 class FuncWrapper:
-    def __init__(self, check_rules: Dict[str, Checker]) -> None:
-        self.check_rules: Dict[str, Checker] = check_rules
+    def __init__(self, check_rules: dict) -> None:
+        self.check_rules = check_rules
         self.args_names = []
         self.args_name_set = set()
         self.var_keyword_rule = None
@@ -76,5 +76,5 @@ class FuncWrapper:
         return self.create_wrapper(None, True)
 
 
-def validate_params(check_rules) -> FuncWrapper:
+def validate_params(**check_rules) -> FuncWrapper:
     return FuncWrapper(check_rules)
