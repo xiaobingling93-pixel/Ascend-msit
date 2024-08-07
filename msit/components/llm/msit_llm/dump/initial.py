@@ -18,12 +18,9 @@ import site
 import subprocess
 import shutil
 import re
-import csv
-
-from collections import defaultdict
+import pandas as pd
 
 from components.utils.file_open_check import FileStat
-from components.utils import ms_open
 from msit_llm.common.log import logger
 from msit_llm.common.utils import safe_string
 from msit_llm.common.constant import ATB_HOME_PATH, ATB_SAVE_TENSOR_TIME, ATB_SAVE_TENSOR_IDS, \
@@ -179,12 +176,12 @@ def split_cpu_profiling_data(data, opname):
     return execute_data, setup_data
 
 
-def add_extracted_headers_to_csv(split_data: str, csv_buffer: list, prefix: str):
+def add_extracted_headers_to_csv(split_data: str, csv_buffer: dict, prefix: str, headers: set):
     matched_pairs = re.findall(r'[a-zA-Z]+:[0-9]+', split_data)
-    header_value_pairs = [_.split(':') for _ in matched_pairs]
-    for header_value_pair in header_value_pairs:
-        header = prefix + header_value_pair[0]
-        csv_buffer.append((header, header_value_pair[1]))
+    for header_value_pair in matched_pairs:
+        header, value = header_value_pair.split(':')
+        headers.add(prefix + header)
+        csv_buffer[prefix + header] = value
 
 
 def merge_cpu_profiling_data(path):
@@ -195,34 +192,23 @@ def merge_cpu_profiling_data(path):
                 continue
             data = {}
             headers = set()
-            csv_buffer_data = defaultdict(list)
+            csv_buffer_data = list()
             with open(os.path.join(root, file), 'r') as f:
                 lines = f.readlines()
                 read_cpu_profiling_data(lines, data)
                 for opname in data.keys():
                     execute_data, setup_data = split_cpu_profiling_data(data, opname)
                     # 按照header类型添加prefix标识
-                    add_extracted_headers_to_csv(execute_data, csv_buffer_data[opname], 'execute_')
-                    add_extracted_headers_to_csv(setup_data, csv_buffer_data[opname], 'setup_')
-                    headers.update([_[0] for _ in csv_buffer_data[opname]])
-            
+                    csv_buffer_data.append({'opname': opname})
+                    add_extracted_headers_to_csv(execute_data, csv_buffer_data[-1], 'execute_', headers)
+                    add_extracted_headers_to_csv(setup_data, csv_buffer_data[-1], 'setup_', headers)
+
             headers = sorted(list(headers))
-            rows = list()
-            for opname in data.keys():
-                row = [opname]
-                cur_col = {_[0]:idx for idx, _ in enumerate(csv_buffer_data[opname])}
-                for col in headers:
-                    if col in cur_col:
-                        row.append(csv_buffer_data[opname][cur_col[col]][1])
-                    else:
-                        row.append('')
-                rows.append(tuple(row))
             headers.insert(0, 'opname')
+            csv_dump_path = os.path.join(root, os.path.splitext(file)[0]) + '.csv'
+            pd.DataFrame(csv_buffer_data).fillna('').to_csv(csv_dump_path, columns=headers, index=False)
+            os.chmod(csv_dump_path, 0o640)
             
-            with ms_open(os.path.join(root, file.split('.')[0]) + '.csv', 'w+') as f:
-                writer = csv.writer(f)
-                writer.writerow(headers)
-                writer.writerows(rows)
             # 删除原始文件
             os.remove(os.path.join(root, file))
 
