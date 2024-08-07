@@ -6,6 +6,10 @@ from datetime import datetime, timedelta, timezone
 class RandomNameSequence(object):
     characters = "abcdefghijklmnopqrstuvwxyz0123456789_"
 
+    def __init__(self):
+        self._rng = None
+        self._rng_pid = None
+
     @property
     def rng(self):
         cur_pid = os.getpid()

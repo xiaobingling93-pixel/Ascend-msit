@@ -13,9 +13,9 @@
 # limitations under the License.
 import torch
 
-from ...common.log import logger
-from .dump_config import DumpConfig
-from .dump_hook import DumpHookModule
+from msit_llm.common.log import logger
+from dump_config import DumpConfig
+from dump_hook import DumpHookModule
 
 
 HOOK_TYPE = ""

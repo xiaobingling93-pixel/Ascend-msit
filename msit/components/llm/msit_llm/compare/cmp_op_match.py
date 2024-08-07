@@ -15,9 +15,9 @@
 import itertools
 from enum import Enum
 from typing import Any
-from ..common.log import logger
-from ..dump.torch_dump.topo import ModelTree, TreeNode
-from .op_mapping import ATB_QUANT_FLOAT_NODE_MAPPING
+from msit_llm.common.log import logger
+from msit_llm.dump.torch_dump.topo import ModelTree, TreeNode
+from op_mapping import ATB_QUANT_FLOAT_NODE_MAPPING
 
 
 class MatchScore(Enum):

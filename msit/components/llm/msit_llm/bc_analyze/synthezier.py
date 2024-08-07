@@ -3,16 +3,26 @@ import os
 import numpy as np
 import pandas as pd
 
-from .utils import RandomNameSequence, get_timestamp
-from ..common.log import logger
+from utils import RandomNameSequence, get_timestamp
+from msit_llm.common.log import logger
 
 
 class Synthesizer(object):
-    """"""
+    """This class is used for collecting llm evluation results under several datasets"""
     HEADER = ['queries', 'input_token_ids', 'output_token_ids', 'passed']
+    SYNTHESIZER_PREFIX = 'msit_synthesizer_result_'
     
     def __init__(self, *, queries=None, input_token_ids=None, output_token_ids=None, passed=None) -> None:
-        """"""
+        """Create a synthesizer collecting information from Large Language Model under dataset evluation
+        
+        It will internally call `Synthesizer.from_args` for you, for the introduction to the parameters,
+        please refer to `Synthesizer.from_args`
+
+        Examples
+        --------
+        >>> from msit_llm import Synthesizer
+        >>> synthesizer = Synthesizer(queries='Question 1', input_token_ids=[1, 2, 3], output_token_ids=[4, 5, 6], passed='Correct')
+        """
         self._info = dict(
             zip(self.HEADER, (np.array([], dtype=object), ) * len(self.HEADER))
         )
@@ -39,8 +49,31 @@ class Synthesizer(object):
 
         return np.fromiter((str(item) for item in value), dtype=object)
     
-    def from_args(self, *, queries=None, input_token_ids=None, output_token_ids=None, passed=None):
-        """"""
+    def from_args(self, *, queries=None, input_token_ids=None, output_token_ids=None, passed=None) -> None:
+        """Collecting dataset evaluation result from memory. User should take care of the evaluation details.
+        
+        If any parameter is `None`, it will not be added to the `Sythesizer`. This allows the user to add each
+        item iteratively whenever it is ready, without extra effort on collecting each item as a whole.
+
+        Parameters:
+        -----------
+        queries: str or iterable of str, optional
+            The queries or questions from the dataset that the model is evaluated on. Default to `None`.
+        input_token_ids: Any, optional
+            The input ids of the queries or questions after encoding. Default to `None`.
+        output_token_ids: Any, optional
+            The output ids of the model outputs, the generated texts before decoding. Default to `None`.
+        passed: {'Correct', 'Wrong'}, optional
+            Indicate whether the generated texts from the model is expected with respect to the dataset label.
+            `Correct` or `Wrong` depends on different evluation strategies under corresponding dataset.
+            Default to `None`
+
+        Examples
+        --------
+        >>> from msit_llm import Synthesizer
+        >>> synthesizer = Synthesizer()
+        >>> synthesizer.from_args(queries='Question 1', input_token_ids=[1, 2, 3], output_token_ids=[4, 5, 6], passed='Correct')
+        """
         self._update_attributes(
             queries=queries,
             input_token_ids=input_token_ids,
@@ -50,7 +83,47 @@ class Synthesizer(object):
 
     @staticmethod
     def from_cmd(command) -> str:
-        """"""
+        """Collecting dataset evaluation result from `command`. This method is a static method that will run the `command` in the subprocess 
+        and collect the desired results during running, the collecting result will be a csv file that stored at a temporary directory which will
+        be returned by this method.
+
+        Currently only supports `Model Test` from `ATB Speed`.
+
+        Parameters
+        ----------
+        `command` : str
+            The model inference command should be run. It must somehow invoke python interpreter, otherwise nothing will be collected.
+            Currently only supports `Model Test` from `ATB Speed`
+
+        Returns
+        -------
+        `temp_dir_name` : str
+            A temporary directory path name that points to the place where the collecting result csv file is stored.
+
+        Exceptions
+        ----------
+        `FileNotFoundError` : raise if `patcher` directory is not found in the msit site-packages directory
+        `RuntimeError` : raise if an error occured during `command` execution in the subprocess
+
+        Examples
+        --------
+        The stdouts and stderrs are omitted in the following example:
+        >>> from msit_llm import Synthesizer
+        >>> Synthesizer.from_cmd('bash run.sh pa_fp16 full_CEval 1 1 chatglm2_6b /data/chatglm2_6b 1')
+        2024-08-07 04:44:08,278 - msit_llm_logger - INFO - Command 'bash run.sh pa_fp16 full_CEval 1 1 chatglm2_6b /data/chatglm2_6b 1' is running...
+        ......
+        2024-08-07 04:44:08,278 - msit_llm_logger - INFO - Command 'bash run.sh pa_fp16 full_CEval 1 1 chatglm2_6b /data/chatglm2_6b 1' returns successfully
+        
+        An inccorect command:
+        >>> Synthesizer.from_cmd('b run.sh')
+        2024-08-07 04:44:08,278 - msit_llm_logger - ERROR - 'b run.sh': command not found, please run it separately first before using 'from_cmd'
+
+        An error occured in the subprocess:
+        >>> Synthesizer.from_cmd('bash run.sh')
+        2024-08-07 04:44:08,278 - msit_llm_logger - INFO - Command 'bash run.sh' is running...
+        ......
+        2024-08-07 04:44:08,278 - msit_llm_logger - ERROR - Failed to run command 'bash run.sh', please run it separately first before using 'from_cmd'
+        """
         import subprocess
         import shlex
 
@@ -84,14 +157,12 @@ class Synthesizer(object):
             child_process = subprocess.Popen(
                 split_command,
                 env=env,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
             )
         except OSError:
             logger.error("'%s': command not found, please run it separately first before using 'from_cmd'", command)
             raise
 
-        logger.info("Command '%s' is running, all the outs and errors are suppressed", command)
+        logger.info("Command '%s' is running...", command)
 
         if child_process.wait() != 0:
             logger.error("Failed to run command '%s', please run it separately first before using 'from_cmd'", command)
@@ -101,14 +172,48 @@ class Synthesizer(object):
         return temp_dir_name
 
     def to_csv(self, *, errors='trunc'):
-        """"""
+        """Archive the collected result to csv file. 
+        
+        Users should call `from_args` or implicitly call `from_args` through constructor before invoking this method.
+
+        Parameters
+        ----------
+        `errors` : {'trunc', 'pad', 'strict'}, optional
+            Consistent strategies to the data frame. Since each item can be added to `Synthesizer` asynchronously,
+            it is possible to have item with differnt sizes or lengths. If `trunc` is chosen, then the data frame 
+            will be truncated to the shortest length among those items. If `pad` is chosen, `Synthesizer` will pad
+            missing rows with `np.nan` to be consistent with the largest length. If `strict` is chosen, `Synthesizer`
+            will do nothing and let `pandas` to figure out all the items are consistent or not.
+
+        Returns
+        -------
+        out : DataFrame
+            A csv file containing all the collected result.
+
+        Notes
+        -----
+        The resulting csv file name will be `msit_synthesizer_result_` plus a random eight characters string plus time stamp. 
+        For example, `msit_synthesizer_result_iew92iq5_20240720042235.csv`.
+            
+        Exceptions
+        ----------
+        `RuntimeError` : raises if user did not initalize (or implicitly) `Synthesizer` through `from_args`.
+        `ValueError` : raises if unexpected value passed in `errors`, or if the `strict` is chosen, but the `pandas` complains 
+        that the data frame is not consistent.
+
+        Examples
+        --------
+        >>> from msit_llm import Synthesizer
+        >>> synthesizer = Synthesizer()
+        >>> synthesizer.to_csv()
+        2024-08-07 04:44:08,278 - msit_llm_logger - ERROR - 'from_args' should be called first before invoking this method
+        """
         result_df = self._to_df(errors=errors)
         self._save_result(result_df)
 
     def _to_df(self, *, errors):
         if not any(value.size for value in self._info.values()):
-            logger.error("'from_args' or 'from_cmd' should be called first before invoking this method")
-            logger.error("No result will be saved")
+            logger.error("'from_args' should be called first before invoking this method")
             raise RuntimeError
         
         # Does not support match expression until Python >= 3.10 
@@ -141,6 +246,10 @@ class Synthesizer(object):
             self._info[key] = array[:min_len]
     
     def _save_result(self, df_to_save: pd.DataFrame, suffix='.csv'):
+        if df_to_save.empty:
+            logger.info("'Synthesizer' detected that there is no data to save. Hence no result is saved")
+            return
+        
         path = self._get_candidate_path(suffix=suffix)
 
         flags = os.O_WRONLY | os.O_CREAT
@@ -151,5 +260,4 @@ class Synthesizer(object):
         logger.info("'Sythesizer' has successfully finished the synthesis, the result is stored at '%s'", path)
 
     def _get_candidate_path(self, suffix):
-        prefix = 'msit_synthesizer_result_'
-        return prefix + next(self._namer) + get_timestamp() + suffix
+        return self.SYNTHESIZER_PREFIX + next(self._namer) + get_timestamp() + suffix

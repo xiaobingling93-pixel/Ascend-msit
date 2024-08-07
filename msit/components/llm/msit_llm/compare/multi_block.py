@@ -1,8 +1,8 @@
 import os
 
 import torch
-from ..common.log import logger
-from .cmp_utils import BasicDataInfo, fill_row_data, read_data
+from msit_llm.common.log import logger
+from cmp_utils import BasicDataInfo, fill_row_data, read_data
 
 
 def multi_block_cmp(atb_nodes, torch_nodes, my_root_node, atb_tensor_path, torch_tensor_path):

@@ -18,9 +18,9 @@ import os.path
 import numpy as np
 import torch
 
-from .dump_config import DumpConfig
-from . import hook_ops
-from ...common.log import logger
+from dump_config import DumpConfig
+import hook_ops
+from msit_llm.common.log import logger
 
 
 class DumpHookModule:

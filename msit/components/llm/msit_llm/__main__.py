@@ -22,6 +22,7 @@ from msit_llm.opcheck.opchecker import OpChecker, NAMEDTUPLE_PRECISION_METRIC, N
 from msit_llm.errcheck.process import process_error_check
 from msit_llm.common.utils import str2bool, check_positive_integer, check_device_integer, safe_string, check_exec_cmd, \
     check_ids_string, check_number_list, check_output_path_legality, check_input_path_legality
+from msit_llm.bc_analyze import Synthesizer, Analyzer
 from msit_llm.common.log import logger, set_log_level, LOG_LEVELS
 
 
@@ -447,24 +448,33 @@ class BCAnalyze(BaseCommand):
     def handle(self, args, **kwargs) -> None:
         set_log_level(args.log_level)
 
-        from . import Synthesizer, Analyzer
-        
-        if not os.path.exists(args.golden):
-            golden_temp_dir =  Synthesizer.from_cmd(args.golden)
-            csv_path = next(file_name for file_name in os.listdir(golden_temp_dir) if file_name.startswith('msit_synthesizer_result') and file_name.endswith('.csv'))
-            golden_csv_path = os.path.join(golden_temp_dir, csv_path)
-        else:
-            golden_csv_path = args.golden
+        items = ['golden', 'test']
+        for item in items:
+            component = getattr(args, item)
+            if not os.path.exists(component):
+                temp_dir = Synthesizer.from_cmd(component)
 
-        if not os.path.exists(args.test):
-            test_temp_dir =  Synthesizer.from_cmd(args.test)
-            csv_path = next(file_name for file_name in os.listdir(test_temp_dir) if file_name.startswith('msit_synthesizer_result') and file_name.endswith('.csv'))
-            test_csv_path = os.path.join(test_temp_dir, csv_path)
-        else:
-            test_csv_path = args.test       
+                try:
+                    csv_path = next(
+                        file_name 
+                        for file_name in os.listdir(temp_dir) 
+                        if file_name.startswith('msit_synthesizer_result') and file_name.endswith('.csv')
+                    )
+                except FileNotFoundError:
+                    logger.error("Directory '%s' is not found due to the internal errors, please set log level to 'debug' to see more information", temp_dir)
+                    raise
+                except StopIteration:
+                    logger.error("There is no csv file under directory '%s', please set log level to 'debug' to see more information", temp_dir)
+                    raise
+
+                full_csv_path = os.path.join(temp_dir, csv_path)
+            else:
+                full_csv_path = component
+            
+            items.append(full_csv_path)
         
-        logger.info("Analyzer received two csv paths, the golden one is:\n\t%s, \nand the test one is:\n\t'%s'", golden_csv_path, test_csv_path)
-        logger.info("Analyzing...")
+        golden_csv_path = items[2]
+        test_csv_path = items[3]
         Analyzer.from_csv(golden_csv_path=golden_csv_path, test_csv_path=test_csv_path) 
         
 

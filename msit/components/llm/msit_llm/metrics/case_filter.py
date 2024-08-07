@@ -19,8 +19,8 @@ from datetime import datetime, timezone
 
 import pandas as pd
 
-from ..common.log import logger
-from ..common.validate import validate_parameters_by_type, validate_parameters_by_func
+from msit_llm.common.log import logger
+from msit_llm.common.validate import validate_parameters_by_type, validate_parameters_by_func
 
 
 class PermissionWarning(UserWarning):
