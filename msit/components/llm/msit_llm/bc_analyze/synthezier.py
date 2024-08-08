@@ -147,7 +147,8 @@ class Synthesizer(object):
         env['PYTHONPATH'] = patcher_folder + ':' + env.get('PYTHONPATH', '')
 
         temp_dir_name = os.path.join(cls.SYNTHESIZER_FOLDER_NAME, 'runtime_res_') + next(cls._namer)
-        env['MSIT_TEMP_DIR_NAME'] = temp_dir_name
+        abs_temp_dir = os.path.abspath(temp_dir_name)
+        env['MSIT_TEMP_DIR_NAME'] = abs_temp_dir
 
         split_command = shlex.split(command)
 
@@ -184,7 +185,7 @@ class Synthesizer(object):
             raise RuntimeError
         
         logger.info("Command '%s' returns successfully", command)
-        return temp_dir_name
+        return abs_temp_dir
 
     def to_csv(self, *, errors='trunc'):
         """Archive the collected result to csv file. 
@@ -265,10 +266,11 @@ class Synthesizer(object):
         
         os.makedirs(self.SYNTHESIZER_FOLDER_NAME, mode=0o700, exist_ok=True)
         path = os.path.join(self.SYNTHESIZER_FOLDER_NAME, self._get_candidate_path(suffix=suffix))
+        abs_path = os.path.abspath(path)
 
         flags = os.O_WRONLY | os.O_CREAT
         modes = os.st.S_IRUSR | os.st.S_IWUSR | os.st.S_IRGRP
-        with os.fdopen(os.open(path, flags, modes), 'w') as file:
+        with os.fdopen(os.open(abs_path, flags, modes), 'w') as file:
             df_to_save.to_csv(file, encoding='utf-8', index=False)
         
         logger.info("'Sythesizer' has successfully finished the synthesis, the result is stored at '%s'", path)

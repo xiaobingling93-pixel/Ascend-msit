@@ -22,13 +22,13 @@ def save_before_exit():
     from ascend.model_test_patcher import MODEL_TEST_INSTANCE
 
     if MODEL_TEST_INSTANCE is None:
-        return None
+        return
 
     elif not hasattr(MODEL_TEST_INSTANCE, 'csv_debug'):
         logger.warning(
             "No 'csv_debug' is found, may result from latest updates in 'Model Test'"
         )
-        return None
+        return
 
     csv_dict = getattr(MODEL_TEST_INSTANCE, 'csv_debug')
     if not csv_dict:
@@ -36,7 +36,7 @@ def save_before_exit():
             "It seems that internally errors occured inside the 'Model Test', please "
             "try to run the command without 'msit' to see if it works independently"
         )
-
+    
     from msit_llm.bc_analyze import Synthesizer
 
     synthezier = Synthesizer(
@@ -59,6 +59,8 @@ def save_before_exit():
     )
 
     synthezier.to_csv()
+
+    return
 
 
 atexit.register(save_before_exit)
