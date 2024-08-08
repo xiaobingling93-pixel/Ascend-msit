@@ -90,7 +90,9 @@ class NpuTfAdapterDumpData(object):
         custom_op.parameter_map["dump_mode"].s = tf.compat.as_bytes("all")
         config_proto.graph_options.rewrite_options.remapping = RewriterConfig.OFF
         # sess run predict
-        with tf.compat.v1.Session(config=config_proto, graph=graph) as sess:
+        with tf.compat.v1.Session(config=config_proto) as sess:
+            tag_set = {tf.compat.v1.saved_model.tag_constants.SERVING}
+            _ = tf.compat.v1.saved_model.load(sess, tag_set, self.model_path)
             feed_dict = {
                 sess.graph.get_tensor_by_name(input_name + ":0"): input_data
                 for input_name, input_data in self.inputs_data.items()
@@ -98,9 +100,8 @@ class NpuTfAdapterDumpData(object):
             output_tensors = []
             outputs_tensors_info = model.signature_def['serving_default']
             output_op_names = [output_tensor_info.name.split(':')[0] for output_tensor_info
-                               in outputs_tensors_info.values()]
+                                 in outputs_tensors_info.values()]
             output_tensors.extend(sess.graph.get_operation_by_name(output_op_names[-1]))
-            sess.run(tf.compat.v1.global_variables_initializer())
             sess.run(output_tensors, feed_dict=feed_dict)
         utils.logger.info("Dump tf adapter data success, data saved in: %s", self.dump_data_npu)
         self.dump_data_npu = self._change_dump_data_path()
