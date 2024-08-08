@@ -263,10 +263,11 @@ class Synthesizer(object):
             logger.warning("'Synthesizer' detected that there is no data to save. Hence no result is saved")
             return
         
-        path = self._get_candidate_path(suffix=suffix)
+        os.makedirs(self.SYNTHESIZER_FOLDER_NAME, mode=0o700, exist_ok=True)
+        path = os.path.join(self.SYNTHESIZER_FOLDER_NAME, self._get_candidate_path(suffix=suffix))
 
         flags = os.O_WRONLY | os.O_CREAT
-        modes = os.st.S_IRUSR | os.st.S_IWRUSR | os.st.S_IRGRP
+        modes = os.st.S_IRUSR | os.st.S_IWUSR | os.st.S_IRGRP
         with os.fdopen(os.open(path, flags, modes), 'w') as file:
             df_to_save.to_csv(file, encoding='utf-8', index=False)
         

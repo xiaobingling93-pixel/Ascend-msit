@@ -147,7 +147,7 @@ class Analyzer(object):
         path = os.path.join(cls.ANALYZER_FOLDER_NAME, cls._get_candidate_path(suffix=suffix))
 
         flags = os.O_WRONLY | os.O_CREAT
-        modes = os.st.S_IRUSR | os.st.S_IWRUSR | os.st.S_IRGRP
+        modes = os.st.S_IRUSR | os.st.S_IWUSR | os.st.S_IRGRP
         with os.fdopen(os.open(path, flags, modes), 'w') as file: 
             df_to_save.to_csv(file, encoding='utf-8', index=False)
 
