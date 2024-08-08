@@ -424,6 +424,14 @@ class Transform(BaseCommand):
             required=True,
             help="source path, could be:" + scenarios_info_str,
         )
+
+        parser.add_argument(
+            "-atb",
+            "--atb_model_path",
+            type=check_input_path_legality,
+            help="[torch to float atb model] ATB model directory containing .cpp and .h files."
+        )
+
         parser.add_argument(
             "--enable-sparse", action='store_true', help="[float atb to quant atb model] Enable trasforming to sparse-quant model"
         )
@@ -454,7 +462,7 @@ class Transform(BaseCommand):
             if args.analyze:
                 transform_float.transform_report(source_path=args.source)
             else:
-                transform_float.transform_float(source_path=args.source)
+                transform_float.transform_float(source_path=args.source, atb_model_path=args.atb_model_path)
                 
         else:
             message = f"Neither config.json + py or cpp found in {args.source}, not supported"

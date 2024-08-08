@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
 import os
 import json
 import csv
@@ -163,7 +164,7 @@ def save_json(dic, name, save_name=None, save_dir=None):
     logger.info(f"model info saved: {json_save_path}")
     
 
-def transform_float(source_path, save_name=None, save_dir=None):
+def transform_float(source_path, save_name=None, save_dir=None, atb_model_path=''):
     logger.info("Building model using transformers...")
 
     model = build_model(source_path)
@@ -173,7 +174,11 @@ def transform_float(source_path, save_name=None, save_dir=None):
     parsed_model = parser.get_weight_names(model)
     result_files = transform_float_cpp(parsed_model, save_name, save_dir)
 
-    parsed_model['acl_inputs_name'] = parser.get_input_names(result_files[:2])
+    if atb_model_path == '':
+        cpp_model_files = list(Path(atb_model_path).glob('*.cpp')) + list(Path(atb_model_path).glob('*.h'))
+    else:
+        cpp_model_files = result_files[:2]
+    parsed_model['acl_inputs_name'] = parser.get_input_names(cpp_model_files)
     result_files += transform_float_py(parsed_model, save_name, save_dir)
 
     fp_name = parsed_model.get("weight_names", {}).get("model_name", "").lower()
