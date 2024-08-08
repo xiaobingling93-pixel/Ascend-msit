@@ -75,7 +75,7 @@ class NpuTfAdapterDumpData(object):
             input_data.tofile(os.path.join(self.input, shape[0] + ".bin"))
 
     def generate_dump_data(self):
-        graph = self._load_graph()
+        graph, model = self._load_graph()
         # adapt NPU
         npu_device.compat.enable_v1()
         # switch ge graph dump
@@ -97,7 +97,10 @@ class NpuTfAdapterDumpData(object):
                 for input_name, input_data in self.inputs_data.items()
             }
             output_tensors = []
-            output_tensors.extend(op.outputs for op in sess.graph.get_operations() if op.type == 'Softmax')
+            outputs_tensors_info = model.signature_def['serving_default']
+            output_op_names = [output_tensor_info.name.split(':')[0] for output_tensor_info
+                               in outputs_tensors_info.values()]
+            output_tensors.extend(sess.graph.get_operation_by_name(output_op_names[-1]))
             sess.run(tf.compat.v1.global_variables_initializer())
             sess.run(output_tensors, feed_dict=feed_dict)
         utils.logger.info("Dump tf adapter data success, data saved in: %s", self.dump_data_npu)
@@ -110,9 +113,9 @@ class NpuTfAdapterDumpData(object):
     def _load_graph(self):
         sess = tf.compat.v1.keras.backend.get_session()
         tag_set = {tf.compat.v1.saved_model.tag_constants.SERVING}
-        _ = tf.compat.v1.saved_model.load(sess, tag_set, self.model_path)
+        model = tf.compat.v1.saved_model.load(sess, tag_set, self.model_path)
 
-        return sess.graph
+        return sess.graph, model
 
     def _change_dump_data_path(self):
         sub_dirs_with_files = []
