@@ -123,7 +123,6 @@ def get_weight_names(model):
     is_rope = any([kw in str(parsed_model) for kw in 'rotary Rotary rope Rope ROPE'.split()])
     dic = {
         'model_name': model.config.model_type,
-        'model_name_in_atb_framework': parsed_model.get("name", "model").lower(),
         'model_prefix': get_transformer_name(model),
         'pe_type': 'ROPE' if is_rope else 'ALIBI',
     }

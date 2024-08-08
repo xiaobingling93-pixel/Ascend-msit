@@ -205,8 +205,8 @@ class Flash{model_name_capital}ForCausalLM(FlashForCausalLM):
 
     def init_ascend_operations(self, config):
         # 初始化模型
-        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("{model_name_in_atb_framework}_DecoderModel")
-        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("{model_name_in_atb_framework}_DecoderModel")
+        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("{model_name_in_atb_framework}")
+        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("{model_name_in_atb_framework}")
 
     def get_weights(self):
         attn_wrapper = AttnWrapper(
