@@ -93,13 +93,7 @@ class Analyzer(object):
             logger.error("Unsafe csv path, '%s' should not be other writeable", csv_path)
             raise PermissionError
 
-        try:
-            df = pd.read_csv(csv_path, encoding='utf-8')
-        except Exception as e:
-            logger.debug("Exception Info:", e, stack_info=True)
-            raise
-
-        return df
+        return pd.read_csv(csv_path, encoding='utf-8')
 
     @classmethod
     def _validate_df(cls, df: pd.DataFrame) -> None:
