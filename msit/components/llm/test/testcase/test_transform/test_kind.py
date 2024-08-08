@@ -54,16 +54,15 @@ class MLP(Module):
 class TestKind(TestCase):
     def test_linear(self):
         linear = Linear(16, 48, False)
-        print(convert(linear))
         self.assertEqual(
             {   
-                "name": "",
+                "name": "linear",
                 "kind": "Linear",
                 "in_features": 16,
                 "out_features": 48,
                 "bias": False
             },
-            convert(linear)
+            convert("linear", linear)
         )
 
 
