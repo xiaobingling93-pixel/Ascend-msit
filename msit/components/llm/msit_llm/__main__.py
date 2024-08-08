@@ -493,29 +493,30 @@ class BCAnalyze(BaseCommand):
             component = getattr(args, item)
             if not os.path.exists(component):
                 temp_dir = Synthesizer.from_cmd(component)
+                csv_dir = os.path.join(temp_dir, Synthesizer.SYNTHESIZER_FOLDER_NAME)
 
                 try:
                     csv_path = next(
                         file_name
-                        for file_name in os.listdir(temp_dir)
+                        for file_name in os.listdir(csv_dir)
                         if file_name.startswith('msit_synthesizer_result') and file_name.endswith('.csv')
                     )
                 except FileNotFoundError:
                     logger.error(
                         "Directory '%s' is not found due to the internal errors, "
                         "please check the log result",
-                        temp_dir
+                        csv_dir
                     )
                     raise
                 except StopIteration:
                     logger.error(
                         "There is no csv file under directory '%s', "
                         "please check the log result", 
-                        temp_dir
+                        csv_dir
                     )
                     raise
 
-                full_csv_path = os.path.join(temp_dir, csv_path)
+                full_csv_path = os.path.join(csv_dir, csv_path)
             else:
                 full_csv_path = component
             
