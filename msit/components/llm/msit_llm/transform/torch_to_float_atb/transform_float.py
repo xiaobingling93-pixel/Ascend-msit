@@ -162,10 +162,9 @@ def save_json(dic, name, save_name=None, save_dir=None):
     with open(json_save_path, "w") as ff:
         json.dump(dic, ff, indent=4)
     logger.info(f"model info saved: {json_save_path}")
+
     
 def check_atb_model_path(atb_model_path):
-    # if atb_model_path != '' and not Path(atb_model_path).exists():
-    #     raise ValueError(f"{atb_model_path} not exists, please check.")
     if atb_model_path == '':
         return []
     if Path(atb_model_path).is_dir():
@@ -177,10 +176,11 @@ def check_atb_model_path(atb_model_path):
             if fp.is_file() and fp.suffix in ['.cpp', '.h']:
                 atb_files.append(str(fp))        
     if len(atb_files) != 2:
-        raise FileNotFoundError(f"Couldn't parse files in {atb_model_path} automatically 
-                            because there should be only one .cpp file and one .h files. 
+        raise FileNotFoundError(f"Couldn't parse files in {atb_model_path} automatically \
+                            because there should be only one .cpp file and one .h files. \
                             Found {len(atb_files)} files.")
     return atb_files
+
                 
 def transform_float(source_path, save_name=None, save_dir=None, atb_model_path=''):
     atb_files = check_atb_model_path(atb_model_path)
