@@ -3,6 +3,7 @@ import os
 import pandas as pd
 
 from msit_llm.bc_analyze.utils import get_timestamp
+from msit_llm.common.constant import MSIT_BAD_CASE_FOLDER_NAME
 from msit_llm.common.log import logger
 
 
@@ -11,7 +12,7 @@ class Analyzer(object):
     can be a csv path or a command. If it is a command, `Analyzer` will internally call `Synthesizer.from_cmd` to 
     collect the result for you, and analyze it immediately.
     """
-    BAD_CASE_FOLDER_NAME = 'msit_bad_case_analyze'
+    ANALYZER_FOLDER_NAME = os.path.join(MSIT_BAD_CASE_FOLDER_NAME, 'analyzer')
     BAD_CASE_CSV_PREFIX = 'msit_bad_case_result_'
 
     @classmethod
@@ -137,13 +138,13 @@ class Analyzer(object):
     @classmethod
     def _save_result(cls, df_to_save: pd.DataFrame, suffix='.csv') -> None:
         if df_to_save.empty:
-            logger.info(
+            logger.warning(
                 "'Analyzer' detected that there is no difference between the given golden result and test result. "
                 "Hence no result is saved")
             return
         
-        os.makedirs(cls.BAD_CASE_FOLDER_NAME, mode=0o700, exist_ok=True)
-        path = os.path.join(cls.BAD_CASE_FOLDER_NAME, cls._get_candidate_path(suffix=suffix))
+        os.makedirs(cls.ANALYZER_FOLDER_NAME, mode=0o700, exist_ok=True)
+        path = os.path.join(cls.ANALYZER_FOLDER_NAME, cls._get_candidate_path(suffix=suffix))
 
         flags = os.O_WRONLY | os.O_CREAT
         modes = os.st.S_IRUSR | os.st.S_IRGRP

@@ -5,11 +5,13 @@ import pandas as pd
 
 from msit_llm.bc_analyze.utils import get_timestamp, RandomNameSequence
 from msit_llm.common.log import logger
+from msit_llm.common.constant import MSIT_BAD_CASE_FOLDER_NAME
 
 
 class Synthesizer(object):
     """This class is used for collecting llm evluation results under several datasets"""
     HEADER = ['queries', 'input_token_ids', 'output_token_ids', 'passed']
+    SYNTHESIZER_FOLDER_NAME = os.path.join(MSIT_BAD_CASE_FOLDER_NAME, 'synthesizer')
     SYNTHESIZER_PREFIX = 'msit_synthesizer_result_'
     
     def __init__(self, *, queries=None, input_token_ids=None, output_token_ids=None, passed=None) -> None:
@@ -89,8 +91,8 @@ class Synthesizer(object):
             passed=passed
         )
 
-    @staticmethod
-    def from_cmd(command) -> str:
+    @classmethod
+    def from_cmd(cls, command) -> str:
         """Collecting dataset evaluation result from `command`. This method is a static method that will run the 
         `command` in the subprocess and collect the desired results during running, the collecting result will be 
         a csv file that stored at a temporary directory which will be returned by this method.
@@ -144,7 +146,7 @@ class Synthesizer(object):
 
         env['PYTHONPATH'] = patcher_folder + ':' + env.get('PYTHONPATH', '')
 
-        temp_dir_name = next(RandomNameSequence())
+        temp_dir_name = os.path.join(cls.SYNTHESIZER_FOLDER_NAME, 'runtime_res_') + next(cls._namer)
         env['MSIT_TEMP_DIR_NAME'] = temp_dir_name
 
         split_command = shlex.split(command)
@@ -258,7 +260,7 @@ class Synthesizer(object):
     
     def _save_result(self, df_to_save: pd.DataFrame, suffix='.csv'):
         if df_to_save.empty:
-            logger.info("'Synthesizer' detected that there is no data to save. Hence no result is saved")
+            logger.warning("'Synthesizer' detected that there is no data to save. Hence no result is saved")
             return
         
         path = self._get_candidate_path(suffix=suffix)

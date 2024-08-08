@@ -496,21 +496,21 @@ class BCAnalyze(BaseCommand):
 
                 try:
                     csv_path = next(
-                        file_name 
-                        for file_name in os.listdir(temp_dir) 
+                        file_name
+                        for file_name in os.listdir(temp_dir)
                         if file_name.startswith('msit_synthesizer_result') and file_name.endswith('.csv')
                     )
                 except FileNotFoundError:
                     logger.error(
                         "Directory '%s' is not found due to the internal errors, "
-                        "please set log level to 'debug' to see more information", 
+                        "please check the log result",
                         temp_dir
                     )
                     raise
                 except StopIteration:
                     logger.error(
                         "There is no csv file under directory '%s', "
-                        "please set log level to 'debug' to see more information", 
+                        "please check the log result", 
                         temp_dir
                     )
                     raise
