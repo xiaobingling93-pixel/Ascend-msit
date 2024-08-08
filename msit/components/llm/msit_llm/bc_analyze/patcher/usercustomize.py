@@ -11,7 +11,7 @@ except ModuleNotFoundError:
     logger.error(
         "'Model Test' patcher is not found. Please make sure 'model_test_patcher.py' exists"
     )
-    os._exit(1) # raise in usercustomize will not stop the child process
+    exit(1) # raise in usercustomize will not stop the child process
 
 patch_model_test()
 logger.debug("'Model Test' has successfully been patched.")
