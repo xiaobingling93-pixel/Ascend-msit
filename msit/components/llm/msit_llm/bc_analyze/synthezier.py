@@ -13,6 +13,8 @@ class Synthesizer(object):
     HEADER = ['queries', 'input_token_ids', 'output_token_ids', 'passed']
     SYNTHESIZER_FOLDER_NAME = os.path.join(MSIT_BAD_CASE_FOLDER_NAME, 'synthesizer')
     SYNTHESIZER_PREFIX = 'msit_synthesizer_result_'
+
+    namer = RandomNameSequence()
     
     def __init__(self, *, queries=None, input_token_ids=None, output_token_ids=None, passed=None) -> None:
         """Create a synthesizer collecting information from Large Language Model under dataset evluation
