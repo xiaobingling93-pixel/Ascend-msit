@@ -476,6 +476,7 @@ class BCAnalyze(BaseCommand):
         set_log_level(args.log_level)
 
         items = ['golden', 'test']
+        csv_path_lists = []
         for item in items:
             component = getattr(args, item)
             if not os.path.exists(component):
@@ -506,11 +507,9 @@ class BCAnalyze(BaseCommand):
             else:
                 full_csv_path = component
             
-            items.append(full_csv_path)
-        
-        golden_csv_path = items[2]
-        test_csv_path = items[3]
-        Analyzer.from_csv(golden_csv_path=golden_csv_path, test_csv_path=test_csv_path) 
+            csv_path_lists.append(full_csv_path)
+
+        Analyzer.from_csv(golden_csv_path=csv_path_lists[0], test_csv_path=csv_path_lists[1]) 
         
 
 def get_cmd_instance():
