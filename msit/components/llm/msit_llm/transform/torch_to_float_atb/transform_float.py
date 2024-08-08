@@ -176,9 +176,9 @@ def check_atb_model_path(atb_model_path):
             if fp.is_file() and fp.suffix in ['.cpp', '.h']:
                 atb_files.append(str(fp))        
     if len(atb_files) != 2:
-        raise FileNotFoundError(f"Couldn't parse files in {atb_model_path} automatically \
-                            because there should be only one .cpp file and one .h files. \
-                            Found {len(atb_files)} files.")
+        raise FileNotFoundError(f"Couldn't parse files in {atb_model_path} automatically"
+                                "because there should be only one .cpp file and one .h files."
+                                f"Found {len(atb_files)} files.")
     return atb_files
 
                 
