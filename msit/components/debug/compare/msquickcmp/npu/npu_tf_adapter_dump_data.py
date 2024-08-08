@@ -62,6 +62,9 @@ class NpuTfAdapterDumpData(object):
     @staticmethod
     def get_graph_txt(model_json_path):
         txt_files = glob.glob(os.path.join(model_json_path, '**/*.txt'), recursive=True)
+        if len(txt_files) > 1:
+            sorted_files = sorted(txt_files, key=lambda x: int(x.split('_')[-2]))
+            return sorted_files[-1]
 
         return txt_files[0]
 
@@ -94,7 +97,8 @@ class NpuTfAdapterDumpData(object):
                 for input_name, input_data in self.inputs_data.items()
             }
             output_tensors = []
-            output_tensors.extend(sess.graph.get_operations()[-1].outputs)
+            output_tensors.extend(op.outputs for op in sess.graph.get_operations() if op.type == 'Softmax')
+            sess.run(tf.compat.v1.global_variables_initializer())
             sess.run(output_tensors, feed_dict=feed_dict)
         utils.logger.info("Dump tf adapter data success, data saved in: %s", self.dump_data_npu)
         self.dump_data_npu = self._change_dump_data_path()
@@ -115,8 +119,9 @@ class NpuTfAdapterDumpData(object):
         for sub_dir, dirs, files in os.walk(self.dump_data_npu):
             if files:
                 sub_dirs_with_files.append(sub_dir)
+        sorted_paths = sorted(sub_dirs_with_files, key=lambda x: int(x.split('/')[-3].split('_')[-1]))
 
-        return sub_dirs_with_files[0]
+        return sorted_paths[-1]
 
     def _create_dir(self):
         utils.create_directory(self.input)
