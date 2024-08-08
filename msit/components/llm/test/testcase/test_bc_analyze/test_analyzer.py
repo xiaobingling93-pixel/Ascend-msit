@@ -35,8 +35,13 @@ class TestSynthezier(TestCase):
     def test_analyzer_from_csv(self):
         self.analyzer.from_csv(golden_csv_path=self.golden_csv_path, test_csv_path=self.test_csv_path)
 
-        self.assertTrue(os.path.exists('msit_bad_case_analyze'))
-        self.assertTrue(any(file_name.startswith('msit_bad_case_') and file_name.endswith('.csv') for file_name in os.listdir('msit_bad_case_analyze')))
+        self.assertTrue(os.path.exists('msit_bad_case/analyzer'))
+        self.assertTrue(
+            any(
+                file_name.startswith('msit_bad_case_') and file_name.endswith('.csv') 
+                for file_name in os.listdir('msit_bad_case/analyzer')
+            )
+        )
     
     def test_analyzer_from_csv_arg_not_str(self):
         with self.assertLogs('msit_llm_logger', 'ERROR') as cm:
@@ -75,8 +80,13 @@ class TestSynthezier(TestCase):
         time.sleep(1)
         self.analyzer.from_mixed(golden=self.golden_csv_path, test=Synthesizer(**self.test_dict))
 
-        self.assertTrue(os.path.exists('msit_bad_case_analyze'))
-        self.assertTrue(any(file_name.startswith('msit_bad_case_') and file_name.endswith('.csv') for file_name in os.listdir('msit_bad_case_analyze')))
+        self.assertTrue(os.path.exists('msit_bad_case/analyzer'))
+        self.assertTrue(
+            any(
+                file_name.startswith('msit_bad_case_') and file_name.endswith('.csv') 
+                for file_name in os.listdir('msit_bad_case/analyzer')
+            )
+        )
         time.sleep(1)
 
     def test_analyzer_unmatched_df(self):
@@ -99,8 +109,8 @@ class TestSynthezier(TestCase):
         os.remove(cls.golden_csv_path)
         os.remove(cls.test_csv_path)
 
-        if os.path.exists('msit_bad_case_analyze'):
+        if os.path.exists('msit_bad_case'):
             import shutil
-            shutil.rmtree('msit_bad_case_analyze')
+            shutil.rmtree('msit_bad_case')
 
 # 90%

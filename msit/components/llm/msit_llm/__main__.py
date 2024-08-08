@@ -488,41 +488,41 @@ class BCAnalyze(BaseCommand):
         set_log_level(args.log_level)
 
         items = ['golden', 'test']
+        csv_path_lists = []
         for item in items:
             component = getattr(args, item)
             if not os.path.exists(component):
                 temp_dir = Synthesizer.from_cmd(component)
+                csv_dir = os.path.join(temp_dir, Synthesizer.SYNTHESIZER_FOLDER_NAME)
 
                 try:
                     csv_path = next(
-                        file_name 
-                        for file_name in os.listdir(temp_dir) 
+                        file_name
+                        for file_name in os.listdir(csv_dir)
                         if file_name.startswith('msit_synthesizer_result') and file_name.endswith('.csv')
                     )
                 except FileNotFoundError:
                     logger.error(
                         "Directory '%s' is not found due to the internal errors, "
-                        "please set log level to 'debug' to see more information", 
-                        temp_dir
+                        "please check the log result",
+                        csv_dir
                     )
                     raise
                 except StopIteration:
                     logger.error(
                         "There is no csv file under directory '%s', "
-                        "please set log level to 'debug' to see more information", 
-                        temp_dir
+                        "please check the log result", 
+                        csv_dir
                     )
                     raise
 
-                full_csv_path = os.path.join(temp_dir, csv_path)
+                full_csv_path = os.path.join(csv_dir, csv_path)
             else:
                 full_csv_path = component
             
-            items.append(full_csv_path)
-        
-        golden_csv_path = items[2]
-        test_csv_path = items[3]
-        Analyzer.from_csv(golden_csv_path=golden_csv_path, test_csv_path=test_csv_path) 
+            csv_path_lists.append(full_csv_path)
+
+        Analyzer.from_csv(golden_csv_path=csv_path_lists[0], test_csv_path=csv_path_lists[1]) 
         
 
 def get_cmd_instance():

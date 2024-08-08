@@ -45,7 +45,13 @@ class TestSynthezier(TestCase):
         )
 
         self.synthezier.to_csv()
-        self.assertTrue(any(filename.startswith('msit_synthesizer') and filename.endswith('.csv') for filename in os.listdir()))
+        self.assertTrue(os.path.exists('msit_bad_case/synthesizer'))
+        self.assertTrue(
+            any(
+                filename.startswith('msit_synthesizer') and filename.endswith('.csv') 
+                for filename in os.listdir('msit_bad_case/synthesizer')
+            )
+        )
 
     def test_synthezier_to_csv_first(self):
         with self.assertLogs('msit_llm_logger', 'ERROR'):
@@ -122,8 +128,8 @@ class TestSynthezier(TestCase):
     
     @classmethod
     def tearDownClass(cls) -> None:
-        for filename in os.listdir():
-            if filename.startswith('msit_') and filename.endswith('.csv'):
-                os.remove(filename)
+        if os.path.exists('msit_bad_case'):
+            import shutil
+            shutil.rmtree('msit_bad_case')
 
 # 100%

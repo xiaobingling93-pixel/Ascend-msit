@@ -5,12 +5,16 @@ import pandas as pd
 
 from msit_llm.bc_analyze.utils import get_timestamp, RandomNameSequence
 from msit_llm.common.log import logger
+from msit_llm.common.constant import MSIT_BAD_CASE_FOLDER_NAME
 
 
 class Synthesizer(object):
     """This class is used for collecting llm evluation results under several datasets"""
     HEADER = ['queries', 'input_token_ids', 'output_token_ids', 'passed']
+    SYNTHESIZER_FOLDER_NAME = os.path.join(MSIT_BAD_CASE_FOLDER_NAME, 'synthesizer')
     SYNTHESIZER_PREFIX = 'msit_synthesizer_result_'
+
+    _namer = RandomNameSequence()
     
     def __init__(self, *, queries=None, input_token_ids=None, output_token_ids=None, passed=None) -> None:
         """Create a synthesizer collecting information from Large Language Model under dataset evluation
@@ -30,8 +34,6 @@ class Synthesizer(object):
         self._info = dict(
             zip(self.HEADER, (np.array([], dtype=object), ) * len(self.HEADER))
         )
-
-        self._namer = RandomNameSequence()
         
         self.from_args(
             queries=queries,
@@ -89,8 +91,8 @@ class Synthesizer(object):
             passed=passed
         )
 
-    @staticmethod
-    def from_cmd(command) -> str:
+    @classmethod
+    def from_cmd(cls, command) -> str:
         """Collecting dataset evaluation result from `command`. This method is a static method that will run the 
         `command` in the subprocess and collect the desired results during running, the collecting result will be 
         a csv file that stored at a temporary directory which will be returned by this method.
@@ -144,7 +146,7 @@ class Synthesizer(object):
 
         env['PYTHONPATH'] = patcher_folder + ':' + env.get('PYTHONPATH', '')
 
-        temp_dir_name = next(RandomNameSequence())
+        temp_dir_name = 'msit_bad_case_rt' + next(cls._namer)
         env['MSIT_TEMP_DIR_NAME'] = temp_dir_name
 
         split_command = shlex.split(command)
@@ -258,13 +260,14 @@ class Synthesizer(object):
     
     def _save_result(self, df_to_save: pd.DataFrame, suffix='.csv'):
         if df_to_save.empty:
-            logger.info("'Synthesizer' detected that there is no data to save. Hence no result is saved")
+            logger.warning("'Synthesizer' detected that there is no data to save. Hence no result is saved")
             return
         
-        path = self._get_candidate_path(suffix=suffix)
+        os.makedirs(self.SYNTHESIZER_FOLDER_NAME, mode=0o700, exist_ok=True)
+        path = os.path.join(self.SYNTHESIZER_FOLDER_NAME, self._get_candidate_path(suffix=suffix))
 
         flags = os.O_WRONLY | os.O_CREAT
-        modes = os.st.S_IRUSR | os.st.S_IRGRP
+        modes = os.st.S_IRUSR | os.st.S_IWUSR | os.st.S_IRGRP
         with os.fdopen(os.open(path, flags, modes), 'w') as file:
             df_to_save.to_csv(file, encoding='utf-8', index=False)
         

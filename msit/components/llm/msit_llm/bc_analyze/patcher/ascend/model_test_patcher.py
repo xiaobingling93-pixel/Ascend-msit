@@ -40,14 +40,13 @@ def patch_model_test():
         """"""
         try:
             original_init(self, *args, **kwargs)
-        except Exception as e:
-            logger.debug("Exception info: '%s'", e, stack_info=True)
-            logger.debug("ModelTest.__init__ args: '%s'", args)
-            logger.debug("ModelTest.__init__ kwargs: '%s'", kwargs)
+        except Exception:
+            logger.error("ModelTest.__init__ args: '%s'", args)
+            logger.error("ModelTest.__init__ kwargs: '%s'", kwargs)
             raise
     
         global MODEL_TEST_INSTANCE
         MODEL_TEST_INSTANCE = self
-        logger.debug("ModelTest instance attributes: '%s'", vars(MODEL_TEST_INSTANCE))
+        logger.info("ModelTest instance attributes: '%s'", vars(MODEL_TEST_INSTANCE))
     
     patch.object(ModelTest, '__init__', new=init_patched).start()
