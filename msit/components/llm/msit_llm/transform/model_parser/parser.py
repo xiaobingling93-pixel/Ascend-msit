@@ -242,4 +242,14 @@ def get_input_names(files):
         res = res[:max_count]
     return res
 
+
+def get_atb_model_names(files):
+    pattern_list = [
+        r'REGISTER_MODEL\((.*)\);',
+    ]
+    res_str = regex_search(pattern_list, files)
+    if res_str == '':
+        raise ValueError(f'get input name failed, please check {files}')
+    
+    return '_'.join([ss.strip() for ss in res_str.split(',')])
     
