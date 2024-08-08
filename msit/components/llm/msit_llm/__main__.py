@@ -428,7 +428,7 @@ class Transform(BaseCommand):
         parser.add_argument(
             "-atb",
             "--atb_model_path",
-            type=check_input_path_legality,
+            type=str,
             help="[torch to float atb model] ATB model directory containing .cpp and .h files."
         )
 
