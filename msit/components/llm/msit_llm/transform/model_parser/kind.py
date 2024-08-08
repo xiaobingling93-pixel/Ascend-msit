@@ -159,8 +159,9 @@ def activation(name, module: Module):
 
     if "tanh" in lowered and "gelu" in lowered:
         return {
+            "name": name,
             "kind": "GELU",
             "approximate": True
         }
 
-    return {"kind": module_name}
+    return {"name": name, "kind": module_name}
