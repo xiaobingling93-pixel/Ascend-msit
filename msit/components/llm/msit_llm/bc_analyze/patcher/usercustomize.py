@@ -49,7 +49,7 @@ def save_before_exit():
 
         os.chdir(temp_dir_name)
         logger.info(
-            "The result collected by 'Synthesizer' from the running command will be saved under", 
+            "The result collected by 'Synthesizer' from the running command will be saved under '%s'", 
             os.getcwd()
         )
 
