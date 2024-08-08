@@ -28,7 +28,6 @@ import tensorflow as tf
 
 from msquickcmp.atc import atc_utils
 from msquickcmp.common import utils
-from npu_device.compat.v1.npu_init import *
 from tensorflow.core.protobuf.rewriter_config_pb2 import RewriterConfig
 
 
