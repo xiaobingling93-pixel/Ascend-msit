@@ -184,7 +184,7 @@ class Synthesizer(object):
             raise RuntimeError
         
         logger.info("Command '%s' returns successfully", command)
-        return abs_temp_dir
+        return temp_dir_name
 
     def to_csv(self, *, errors='trunc'):
         """Archive the collected result to csv file. 
