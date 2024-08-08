@@ -100,7 +100,7 @@ class NpuTfAdapterDumpData(object):
             outputs_tensors_info = model.signature_def['serving_default'].outputs
             output_op_names = [output_tensor_info.name.split(':')[0] for output_tensor_info
                                in outputs_tensors_info.values()]
-            output_tensors.extend(sess.graph.get_operation_by_name(output_op_names[-1]))
+            output_tensors.extend(sess.graph.get_operation_by_name(output_op_names[-1]).outputs)
             sess.run(output_tensors, feed_dict=feed_dict)
         utils.logger.info("Dump tf adapter data success, data saved in: %s", self.dump_data_npu)
         self.dump_data_npu = self._change_dump_data_path()
