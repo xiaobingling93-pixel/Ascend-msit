@@ -217,10 +217,10 @@ class Synthesizer(object):
         >>> synthesizer.to_csv()
         ERROR - 'from_args' should be called first before invoking this method
         """
-        result_df = self._to_df(errors=errors)
+        result_df = self.to_df(errors=errors)
         self._save_result(result_df)
 
-    def _to_df(self, *, errors):
+    def to_df(self, *, errors):
         if not any(value.size for value in self._info.values()):
             logger.error("'from_args' should be called first before invoking this method")
             raise RuntimeError

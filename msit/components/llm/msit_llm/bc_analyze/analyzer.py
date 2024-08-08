@@ -189,12 +189,12 @@ class Analyzer(object):
         from msit_llm.bc_analyze.synthezier import Synthesizer
         
         if isinstance(golden, Synthesizer):
-            golden = golden._to_df(errors='trunc')
+            golden = golden.to_df(errors='trunc')
         else:
             golden = cls._validate_csv_path(golden)
         
         if isinstance(test, Synthesizer):
-            test = test._to_df(errors='trunc')
+            test = test.to_df(errors='trunc')
         else:
             test = cls._validate_csv_path(test)
 
