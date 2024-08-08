@@ -215,12 +215,7 @@ def run(args: CmpArgsAdapter, input_shape, original_out_path, use_cli: bool):
         from msquickcmp.tf.tf_save_model_dump_data import TfSaveModelDumpData
         golden_dump = TfSaveModelDumpData(args)
         golden_dump.generate_inputs_data(npu_dump_data_path, om_parser=None)
-        if args.bin2npy or args.custom_op != "":
-            npu_dump_npy_path = convert_bin_dump_data_to_npy(npu_dump_data_path, npu_net_output_data_path,
-                                                             args.cann_path)
-        else:
-            npu_dump_npy_path = ""
-        golden_dump_data_path = golden_dump.generate_dump_data(output_json_path, npu_dump_npy_path, om_parser=None)
+        golden_dump_data_path = golden_dump.generate_dump_data(output_json_path, npu_dump_npy_path=None, om_parser=None)
         # compare the entire network
         net_compare = NetCompare(npu_dump_data_path, golden_dump_data_path,
                                  output_json_path, args, golden_json_path=None)
@@ -338,14 +333,8 @@ def fusion_close_model_convert(args:CmpArgsAdapter):
 
 
 def check_and_run(args: CmpArgsAdapter, use_cli: bool):
-    if is_saved_model_valid(args.model_path):
-        utils.check_file_or_directory_path(args.model_path, True)
-    else:
-        utils.check_file_or_directory_path(args.model_path)
-    if is_saved_model_valid(args.offline_model_path):
-        utils.check_file_or_directory_path(args.offline_model_path, True)
-    else:
-        utils.check_file_or_directory_path(args.offline_model_path)
+    utils.check_file_or_directory_path(args.model_path, is_saved_model_valid(args.model_path))
+    utils.check_file_or_directory_path(args.offline_model_path, is_saved_model_valid(args.offline_model_path))
     if args.weight_path:
         utils.check_file_or_directory_path(args.weight_path)
     utils.check_device_param_valid(args.device)

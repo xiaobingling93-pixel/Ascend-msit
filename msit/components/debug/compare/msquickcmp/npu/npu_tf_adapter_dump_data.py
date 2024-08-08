@@ -33,7 +33,7 @@ from tensorflow.core.protobuf.rewriter_config_pb2 import RewriterConfig
 
 class NpuTfAdapterDumpData(object):
     """
-    This class is used to generate GUP dump data of the tf2.6 save_model.
+    This class is used to generate NUP dump data of the tf2.6 save_model.
     """
 
     def __init__(self, arguments):
