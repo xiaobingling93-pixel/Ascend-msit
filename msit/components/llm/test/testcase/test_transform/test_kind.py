@@ -145,23 +145,26 @@ class TestKind(TestCase):
             {
                 "ff": [
                     {
+                        "name": "gate_proj",
                         "kind": "Linear",
                         "in_features": 16,
                         "out_features": 16,
                         "bias": False
                     }, {
+                        "name": "up_proj",
                         "kind": "Linear",
                         "in_features": 16,
                         "out_features": 16,
                         "bias": False
                     }, {
+                        "name": "down_proj",
                         "kind": "Linear",
                         "in_features": 16,
                         "out_features": 16,
                         "bias": True
                     }
                 ],
-                "act": {"kind": "SiLU"}
+                "act": {"name": "act_fn", "kind": "SiLU"}
             },
             mlp("mlp", sub),
         )
