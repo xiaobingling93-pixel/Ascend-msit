@@ -169,17 +169,26 @@ def check_atb_model_path(atb_model_path):
         return []
     if Path(atb_model_path).is_dir():
         atb_files = list(Path(atb_model_path).glob('*.h')) + list(Path(atb_model_path).glob('*.cpp'))
-    else: 
+        if len(atb_files) != 2:
+            raise FileNotFoundError(f"Couldn't parse files in {atb_model_path} automatically "
+                                    "because there should be one .cpp file and one .h files."
+                                    f"Found {len(atb_files)} files.")
+        return atb_files
+    elif Path(atb_model_path).is_file(): 
         atb_files = []
-        for ff in atb_model_path.split(','):
-            fp = Path(ff)
-            if fp.is_file() and fp.suffix in ['.cpp', '.h']:
-                atb_files.append(str(fp))        
-    if len(atb_files) != 2:
+        fp = Path(atb_model_path)
+        if fp.suffix in ['.cpp', '.h']:
+            atb_files = [str(fp.with_suffix('.cpp')), str(fp.with_suffix('.h'))]
+        for ff in atb_files:
+            if not Path(ff).exists():
+                raise FileNotFoundError(f"Couldn't parse files in {atb_model_path} automatically "
+                                    "because there should be one .cpp file and one .h files."
+                                    f"File {ff} not found.")
+        return atb_files
+    else:
         raise FileNotFoundError(f"Couldn't parse files in {atb_model_path} automatically "
-                                "because there should be only one .cpp file and one .h files."
-                                f"Found {len(atb_files)} files.")
-    return atb_files
+                                    "because there should be one .cpp file and one .h files."
+                                    "Please check.")
 
                 
 def transform_float(source_path, save_name=None, save_dir=None, atb_model_path=''):
