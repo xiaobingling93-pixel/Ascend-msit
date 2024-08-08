@@ -23,6 +23,7 @@ from msit_llm.errcheck.process import process_error_check
 from msit_llm.common.utils import str2bool, check_positive_integer, check_device_integer, safe_string, check_exec_cmd, \
     check_ids_string, check_number_list, check_output_path_legality, check_input_path_legality, check_process_integer, \
     check_dump_time_integer
+from msit_llm.bc_analyze import Synthesizer, Analyzer
 from msit_llm.common.log import logger, set_log_level, LOG_LEVELS
 
 
@@ -404,7 +405,7 @@ class ErrCheck(BaseCommand):
 
     def handle(self, args, **kwargs) -> None:
         set_log_level(args.log_level)
-        process_error_check(args)       
+        process_error_check(args)
 
 
 class Transform(BaseCommand):
@@ -461,6 +462,69 @@ class Transform(BaseCommand):
             raise ValueError(message)
 
 
+class BCAnalyze(BaseCommand):
+    def add_arguments(self, parser, **kwargs) -> None:
+        parser.add_argument(
+            '--golden',
+            '-g',
+            dest="golden",
+            required=True,
+            type=safe_string,
+            help="Golden result to compare with. If it is path like, then it will be considered as a "
+                 "csv path. If not, analyzer will treat it as a command and invoke synthesizer to collect the result.")
+
+        parser.add_argument(
+            '--test',
+            '-t',
+            dest="test",
+            required=True,
+            type=safe_string,
+            help="Test result to compare with the golden. If it is path like, then it will be considered as a "
+                 "csv path. If not, analyzer will treat it as a command and invoke synthesizer to collect the result.")
+
+        parser.add_argument("-l", "--log-level", default="info", choices=LOG_LEVELS_LOWER, help="specify log level")
+
+    def handle(self, args, **kwargs) -> None:
+        set_log_level(args.log_level)
+
+        items = ['golden', 'test']
+        for item in items:
+            component = getattr(args, item)
+            if not os.path.exists(component):
+                temp_dir = Synthesizer.from_cmd(component)
+
+                try:
+                    csv_path = next(
+                        file_name 
+                        for file_name in os.listdir(temp_dir) 
+                        if file_name.startswith('msit_synthesizer_result') and file_name.endswith('.csv')
+                    )
+                except FileNotFoundError:
+                    logger.error(
+                        "Directory '%s' is not found due to the internal errors, "
+                        "please set log level to 'debug' to see more information", 
+                        temp_dir
+                    )
+                    raise
+                except StopIteration:
+                    logger.error(
+                        "There is no csv file under directory '%s', "
+                        "please set log level to 'debug' to see more information", 
+                        temp_dir
+                    )
+                    raise
+
+                full_csv_path = os.path.join(temp_dir, csv_path)
+            else:
+                full_csv_path = component
+            
+            items.append(full_csv_path)
+        
+        golden_csv_path = items[2]
+        test_csv_path = items[3]
+        Analyzer.from_csv(golden_csv_path=golden_csv_path, test_csv_path=test_csv_path) 
+        
+
 def get_cmd_instance():
     llm_help_info = "Large Language Model(llm) Debugger Tools."
     dump_cmd_instance = DumpCommand("dump", "Dump tool for ascend transformer boost", alias_name="dd")
@@ -468,8 +532,10 @@ def get_cmd_instance():
     opcheck_cmd_instance = OpcheckCommand("opcheck", "Operation check tool for large language model", alias_name='oo')
     errcheck_cmd_instance = ErrCheck("errcheck", "Error check tool for large language model.", alias_name='ee')
     transform_cmd_instance = Transform("transform", "Transform tool for large language model.")
+    bc_analyze_cmd_instance = BCAnalyze("analyze", "Bad Case analyze tool for large language model.")
 
     instances = [
-        dump_cmd_instance, compare_cmd_instance, opcheck_cmd_instance, errcheck_cmd_instance, transform_cmd_instance
+        dump_cmd_instance, compare_cmd_instance, opcheck_cmd_instance, errcheck_cmd_instance, transform_cmd_instance,
+        bc_analyze_cmd_instance
     ]
     return BaseCommand("llm", llm_help_info, instances)

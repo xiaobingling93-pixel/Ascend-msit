@@ -18,3 +18,4 @@ from msit_llm.common.json_fitter import atb_json_to_onnx
 from msit_llm.dump.torch_dump import DumpConfig
 from msit_llm.dump.torch_dump import register_hook
 from msit_llm.metrics.case_filter import CaseFilter
+from msit_llm.bc_analyze import Analyzer, Synthesizer
