@@ -74,7 +74,6 @@ class NpuTfAdapterDumpData(object):
             input_data.tofile(os.path.join(self.input, shape[0] + ".bin"))
 
     def generate_dump_data(self):
-        graph, model = self._load_graph()
         # adapt NPU
         npu_device.compat.enable_v1()
         # switch ge graph dump
@@ -92,15 +91,15 @@ class NpuTfAdapterDumpData(object):
         # sess run predict
         with tf.compat.v1.Session(config=config_proto) as sess:
             tag_set = {tf.compat.v1.saved_model.tag_constants.SERVING}
-            _ = tf.compat.v1.saved_model.load(sess, tag_set, self.model_path)
+            model = tf.compat.v1.saved_model.load(sess, tag_set, self.model_path)
             feed_dict = {
                 sess.graph.get_tensor_by_name(input_name + ":0"): input_data
                 for input_name, input_data in self.inputs_data.items()
             }
             output_tensors = []
-            outputs_tensors_info = model.signature_def['serving_default']
+            outputs_tensors_info = model.signature_def['serving_default'].outputs
             output_op_names = [output_tensor_info.name.split(':')[0] for output_tensor_info
-                                 in outputs_tensors_info.values()]
+                               in outputs_tensors_info.values()]
             output_tensors.extend(sess.graph.get_operation_by_name(output_op_names[-1]))
             sess.run(output_tensors, feed_dict=feed_dict)
         utils.logger.info("Dump tf adapter data success, data saved in: %s", self.dump_data_npu)
@@ -109,13 +108,6 @@ class NpuTfAdapterDumpData(object):
         output_json_path = atc_utils.convert_model_to_json(self.cann_path, graph_txt, self.output_path)
 
         return self.dump_data_npu, output_json_path
-
-    def _load_graph(self):
-        sess = tf.compat.v1.keras.backend.get_session()
-        tag_set = {tf.compat.v1.saved_model.tag_constants.SERVING}
-        model = tf.compat.v1.saved_model.load(sess, tag_set, self.model_path)
-
-        return sess.graph, model
 
     def _change_dump_data_path(self):
         sub_dirs_with_files = []
