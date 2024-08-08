@@ -53,7 +53,7 @@ benchmark推理工具可以通过msit命令行方式启动模型测试。
    msit benchmark --om-model /home/model/resnet50_v1.om --output ./ --debug 1
   ```
 
-调试模式开启后会增加更多的打印信息，包括：
+  调试模式开启后会增加更多的打印信息，包括：
    - 模型的输入输出参数信息
 
      ```bash
