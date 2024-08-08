@@ -187,7 +187,7 @@ def check_atb_model_path(atb_model_path):
         return atb_files
     else:
         raise FileNotFoundError(f"Couldn't parse files in {atb_model_path} automatically "
-                                    "because there should be one .cpp file and one .h files."
+                                    "because there should be one .cpp file and one .h files. "
                                     "Please check.")
 
                 
