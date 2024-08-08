@@ -213,6 +213,13 @@ class CompareCommand(BaseCommand):
                   "def foo(golden_tensor, my_tensor): return float_value, string_message"')
 
         parser.add_argument("--log-level", "-l", default="info", choices=LOG_LEVELS_LOWER, help="specify log level.")
+        
+        parser.add_argument(
+            '--weight',
+            '-w',
+            action='store_true',
+            help='Compare float weights and dequant weights, if True, do nothing if False')
+
 
     def handle(self, args, **kwargs):
         from msit_llm.compare.torchair_acc_cmp import get_torchair_ge_graph_path
@@ -228,7 +235,12 @@ class CompareCommand(BaseCommand):
 
         # accuracy comparing for different scenarios
         torchair_ge_graph_path = get_torchair_ge_graph_path(args.my_path)
-        if torchair_ge_graph_path is not None:
+        if args.weight:
+            from msit_llm.compare.cmp_weight import compare_weight
+
+            compare_weight(args.golden_path, args.my_path, args.output)
+
+        elif torchair_ge_graph_path is not None:
             from msit_llm.compare.torchair_acc_cmp import acc_compare
 
             acc_compare(args.golden_path, args.my_path, args.output, torchair_ge_graph_path)

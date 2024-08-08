@@ -110,7 +110,7 @@ def set_tensor_basic_info_in_row_data(golden_data, my_data):
     return row_data
 
 
-def save_compare_reault_to_csv(gathered_row_data, output_path="."):
+def save_compare_reault_to_csv(gathered_row_data, output_path=".", columns=CSV_GOLDEN_HEADER):
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
@@ -123,7 +123,7 @@ def save_compare_reault_to_csv(gathered_row_data, output_path="."):
             if (row_data[GOLDEN_DTYPE] == 'torch.int8') ^ (row_data[MY_DTYPE] == 'torch.int8'):
                 gathered_row_data.remove(row_data)
 
-    data_frame = pd.DataFrame(gathered_row_data, columns=CSV_GOLDEN_HEADER)
+    data_frame = pd.DataFrame(gathered_row_data, columns=columns)
     data_frame.fillna(value="", inplace=True)
     data_frame.dropna(axis=0, how="all", inplace=True)
     data_frame.to_csv(csv_save_path, index=False)
