@@ -175,9 +175,9 @@ def transform_float(source_path, save_name=None, save_dir=None, atb_model_path='
     result_files = transform_float_cpp(parsed_model, save_name, save_dir)
 
     if atb_model_path == '':
-        cpp_model_files = list(Path(atb_model_path).glob('*.cpp')) + list(Path(atb_model_path).glob('*.h'))
-    else:
         cpp_model_files = result_files[:2]
+    else:
+        cpp_model_files = list(Path(atb_model_path).glob('*.cpp')) + list(Path(atb_model_path).glob('*.h'))
     parsed_model.get('weight_names', {})['model_name_in_atb_framework'] = parser.get_atb_model_names(cpp_model_files)
     parsed_model['acl_inputs_name'] = parser.get_input_names(cpp_model_files)
     result_files += transform_float_py(parsed_model, save_name, save_dir)
