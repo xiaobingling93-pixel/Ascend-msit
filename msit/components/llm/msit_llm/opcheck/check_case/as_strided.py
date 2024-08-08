@@ -24,7 +24,7 @@ class OpcheckAsStridedOperation(operation_test.OperationTest):
         size = self.op_param.get('size', None)
         stride = self.op_param.get('stride', None)
         offset = self.op_param.get('offset', None)
-        
+
         golden_result = torch.as_strided(in_tensors[0], size, stride, offset[0])
         return [golden_result]
 
