@@ -14,7 +14,7 @@ class Synthesizer(object):
     SYNTHESIZER_FOLDER_NAME = os.path.join(MSIT_BAD_CASE_FOLDER_NAME, 'synthesizer')
     SYNTHESIZER_PREFIX = 'msit_synthesizer_result_'
 
-    namer = RandomNameSequence()
+    _namer = RandomNameSequence()
     
     def __init__(self, *, queries=None, input_token_ids=None, output_token_ids=None, passed=None) -> None:
         """Create a synthesizer collecting information from Large Language Model under dataset evluation
@@ -34,8 +34,6 @@ class Synthesizer(object):
         self._info = dict(
             zip(self.HEADER, (np.array([], dtype=object), ) * len(self.HEADER))
         )
-
-        self._namer = RandomNameSequence()
         
         self.from_args(
             queries=queries,
@@ -268,7 +266,7 @@ class Synthesizer(object):
         path = self._get_candidate_path(suffix=suffix)
 
         flags = os.O_WRONLY | os.O_CREAT
-        modes = os.st.S_IRUSR | os.st.S_IRGRP
+        modes = os.st.S_IRUSR | os.st.S_IWRUSR | os.st.S_IRGRP
         with os.fdopen(os.open(path, flags, modes), 'w') as file:
             df_to_save.to_csv(file, encoding='utf-8', index=False)
         

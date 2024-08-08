@@ -18,6 +18,9 @@ logger.info("'Model Test' has successfully been patched.")
 
 
 def save_before_exit():
+    # should be imported after exit, because first import it will be 'None' and not gonna updated
+    from ascend.model_test_patcher import MODEL_TEST_INSTANCE
+
     if MODEL_TEST_INSTANCE is None:
         return None
 
@@ -26,9 +29,6 @@ def save_before_exit():
             "No 'csv_debug' is found, may result from latest updates in 'Model Test'"
         )
         return None
-
-    # should be imported after exit, because first import it will be 'None' and not gonna updated
-    from ascend.model_test_patcher import MODEL_TEST_INSTANCE
 
     csv_dict = getattr(MODEL_TEST_INSTANCE, 'csv_debug')
     if not csv_dict:
