@@ -27,6 +27,7 @@ class OpcheckSliceOperation(operation_test.OperationTest):
             offset_list[index] = offset if offset >= 0 else offset + in_tensors[0].shape[index]
         for index, size in enumerate(size_list):
             size_list[index] = size if size != -1 else in_tensors[0].shape[index] - offset_list[index]
+        self.validate_int_range(len(offset_list), [2, 3, 4], "len(offsets)")
         if len(offset_list) == 2:
             return [in_tensors[0][offset_list[0] : offset_list[0] + size_list[0], 
                     offset_list[1] : offset_list[1] + size_list[1]]]

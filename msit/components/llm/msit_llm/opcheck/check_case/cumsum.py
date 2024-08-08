@@ -22,6 +22,8 @@ from msit_llm.common.log import logger
 class OpcheckCumsumOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
         axes = self.op_param.get("axes", None)
+        exclusive = self.op_param.get("exclusive", False) # 暂不支持true
+        reverse = self.op_param.get("reverse", False) # 暂不支持true
         golden_result = torch.cumsum(in_tensors[0], dim=axes[0])
         return [golden_result]
 

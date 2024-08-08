@@ -16,7 +16,7 @@ msit benchmark --om-model ./pth_resnet50_bs1.om --output ./output --dump 1 --dum
     output/
     |-- 2023_01_03-06_35_53
     |-- 2023_01_03-06_35_53_summary.json
-    `-- dump/
+    |-- dump/
         |--20230103063551/
         |--20230103063551_npy/
 ```

@@ -23,13 +23,15 @@ class OpcheckSetValueOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
         starts = self.op_param.get("starts", None)
         ends = self.op_param.get("ends", None)
+        strides = self.op_param.get("strides", None)
         golden_result = [in_tensors[0].clone(), in_tensors[1].clone()]
         for i, _ in enumerate(starts):
-            golden_result[0][starts[i]:ends[i]].copy_(in_tensors[1])
+            self.validate_int_range(strides[i], [1], "strides") # 当前仅支持strides为全1
+            golden_result[0][starts[i]:ends[i]:strides[i]].copy_(in_tensors[1])
         return golden_result
 
     def test(self):
-        ret = self.validate_param("starts", "ends")
+        ret = self.validate_param("starts", "ends", "strides")
         if not ret:
             return
         self.execute()
