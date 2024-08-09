@@ -100,8 +100,8 @@ class TestStringChecker(unittest.TestCase):
                 self.assertRegex(res_msg, err_msg)
 
     def test_str_valid_ids(self):
-        VALID_STR = ['1_2', '2_3,4_5', '4_5,6_7,796_12321', '123']
-        for path in VALID_STR:
+        valid_str = ['1_2', '2_3,4_5', '4_5,6_7,796_12321', '123']
+        for path in valid_str:
             with self.subTest(path=path):
                 res_msg = str(StringChecker().is_str_valid_ids().check(path))
                 self.assertRegex(res_msg, self.pass_msg)
