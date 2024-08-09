@@ -112,6 +112,26 @@ echo "CMAKE_CXX_FLAGS=$CMAKE_CXX_FLAGS"
 
 download_nlohmann_json
 
+ATB_VERSION=`python -c '
+import os
+VERSIONS = {
+  "8.0.RC2": (8, 0, 2),
+  "8.0.RC3": (8, 0, 3),
+}
+version, matched_version = "8.0.RC3.B020", "8.0.RC3"  # Default value
+with open(os.path.join(os.getenv("ATB_HOME_PATH"), "..", "..", "version.info")) as ff:
+    for ii in ff.readlines():
+        if "version" in ii.lower():
+            version = ii.split(":")[-1]
+cur_version = tuple([int("".join([ii for ii in tok if str.isdigit(ii)])) for tok in version.split(".")])
+
+for kk, vv in VERSIONS.items():
+    if vv > cur_version:
+        break
+    matched_version = kk
+print(matched_version)
+'`
+
 if [ -d "$SCRIPT_DIR/build" ]; then
     rm -rf $SCRIPT_DIR/build
 fi
@@ -119,7 +139,7 @@ fi
 mkdir -p $SCRIPT_DIR/build
 
 cd $SCRIPT_DIR/build
-cmake .. -DCMAKE_INSTALL_PREFIX=$AIT_LLM_INSTALL_PATH/opcheck -DCMAKE_CXX_FLAGS=$CMAKE_CXX_FLAGS
+cmake .. -DCMAKE_INSTALL_PREFIX=$AIT_LLM_INSTALL_PATH/opcheck -DCMAKE_CXX_FLAGS=$CMAKE_CXX_FLAGS -DATB_VERSION=$ATB_VERSION
 make -j4 && make install
 echo "[INFO] Copied $PWD/build/libopchecker.so -> $AIT_LLM_INSTALL_PATH/opcheck/libopchecker.so"
 cd -
