@@ -687,7 +687,7 @@ static atb::Operation *SelfAttentionOperationCreate(const nlohmann::json &paramJ
     if (paramJson.contains("kernelType")) {
         param.kernelType = atb::infer::SelfAttentionParam::KernelType(paramJson["kernelType"].get<int>());
     }
-#if ATB_VERSION == "8.0.RC3"
+#if ATB_VERSION >= 80003
     if (paramJson.contains("kvcacheCfg")) {
         param.kvcacheCfg = atb::infer::SelfAttentionParam::KvCacheCfg(paramJson["kvcacheCfg"].get<int>());
     }
