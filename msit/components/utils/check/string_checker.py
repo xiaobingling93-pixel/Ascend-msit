@@ -5,6 +5,12 @@ from typing import Union
 from components.utils.check.checker import Checker, CheckResult, rule
 
 
+WHITE_LIST_PATTERN = r"[_A-Za-z0-9\"'><=\[\])(,}{: /.~-]"
+BLACK_LIST_PATTERN = r"[^_A-Za-z0-9/.-]"
+IDS_PATTERN = r'^(\d+(?:_\d+)*)(,\d+(?:_\d+)*)*$'
+INVALID_CHAR = "[\n\f\r\b\t\v\u000D\u000A\u000C\u000B\u0009\u0008\u007F&%$*^#@;]"
+
+
 class StringChecker(Checker):
 
     @rule()
@@ -20,34 +26,25 @@ class StringChecker(Checker):
 
     @rule()
     def is_str_safe(self) -> Union["StringChecker", CheckResult]:
-
-        WHITE_LIST_PATTERN = r"[_A-Za-z0-9\"'><=\[\])(,}{: /.~-]"
         err_msg = "String parameter contains invalid characters"
         return re.search(WHITE_LIST_PATTERN, self.instance), err_msg
     
     @rule()
     def is_str_valid_bool(self) -> Union["StringChecker", CheckResult]:
-
         err_msg = "Boolean value expected 'yes', 'y', 'Y', 'YES', 'true', 't', 'TRUE', 'True', '1' for true"
         return self.instance.lower() in ('yes', 'y', 'Y', 'YES', 'true', 't', 'TRUE', 'True', '1'), err_msg
     
     @rule()
     def is_str_valid_path(self) -> Union["StringChecker", CheckResult]:
-
-        BLACK_LIST_PATTERN = r"[^_A-Za-z0-9/.-]"
         err_msg = "Input path contains invalid characters"
         return not re.search(BLACK_LIST_PATTERN, self.instance), err_msg
     
     @rule()
     def is_str_valid_ids(self):
-
-        IDS_PATTERN = r'^(\d+(?:_\d+)*)(,\d+(?:_\d+)*)*$'
         err_msg = f"dym range string \"{self.instance}\" is not a legal string"
         return re.match(IDS_PATTERN, self.instance), err_msg
 
     @rule()
     def str_has_no_invalid_char(self):
-
-        INVALID_CHAR = "[\n\f\r\b\t\v\u000D\u000A\u000C\u000B\u0009\u0008\u007F&%$*^#@;]"
         err_msg = "Input string contains invalid chars" 
         return not re.search(INVALID_CHAR, self.instance), err_msg
