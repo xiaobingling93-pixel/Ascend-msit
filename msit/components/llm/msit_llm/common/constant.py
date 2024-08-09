@@ -30,7 +30,8 @@ def get_global_device():
     return "cpu"
 
 
-GLOBAL_AIT_DUMP_PATH = "ait_dump"
+GLOBAL_AIT_DUMP_PATH = "msit_dump"
+GLOBAL_HISTORY_AIT_DUMP_PATH_LIST = ["msit_dump", "ait_dump"]
 GLOBAL_DEVICE = get_global_device()
 DEVICE_DIST_MAP = {"cuda": "nccl", "npu": "hccl", "cpu": "gloo"}
 GLOBAL_DIST_BACKEND = DEVICE_DIST_MAP.get(GLOBAL_DEVICE, "gloo")
@@ -146,10 +147,10 @@ def get_timestamp_sync():
 def get_ait_dump_path():
     global GLOBAL_AIT_DUMP_PATH
 
-    if GLOBAL_AIT_DUMP_PATH == "ait_dump":
+    if GLOBAL_AIT_DUMP_PATH == "msit_dump":
         max_timestamp = get_timestamp_sync()
         timestamp = datetime.datetime.fromtimestamp(max_timestamp).strftime("%Y%m%d_%H%M%S")
         os.environ[ATB_TIMESTAMP] = timestamp
-        GLOBAL_AIT_DUMP_PATH = "ait_dump_" + timestamp
+        GLOBAL_AIT_DUMP_PATH = "msit_dump_" + timestamp
 
     return GLOBAL_AIT_DUMP_PATH
