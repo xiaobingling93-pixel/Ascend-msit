@@ -22,7 +22,7 @@ from msit_llm.common.log import logger
 from msit_llm.transform.model_parser import kind, parser
 from msit_llm.transform import torch_to_float_atb
 from msit_llm.transform.torch_to_float_atb.utils import (get_repeat_box_layer, 
-    dag_to_model, init_save_name, init_save_dir)
+    dag_to_model, init_save_name, init_save_dir, write_file)
 
 
 SMALL_NUM_HIDDEN_LAYERS = 4
@@ -140,6 +140,16 @@ def transform_float_cpp(parsed_model, save_name=None, save_dir=None):
     return result_files
 
 
+def save_run_py(parsed_model, save_dir=None):
+    rr = Path(__file__).with_name("run.py").read_text()
+    weight_names = parsed_model.get('weight_names', {})
+    model_name_lower = weight_names.get('model_name', 'model')
+    save_dir = init_save_dir(model_name_lower if save_dir is None else save_dir, sub_dir=".")
+    save_path = os.path.join(save_dir, "run.py")
+    write_file(save_path, rr)
+    return save_path, rr
+
+
 def transform_float_py(parsed_model, save_name=None, save_dir=None):
     result_files = []
     routing_py_file, _ = torch_to_float_atb.router_py_gen(parsed_model, save_dir=save_dir)
@@ -150,6 +160,9 @@ def transform_float_py(parsed_model, save_name=None, save_dir=None):
     
     flash_causal_py, _ = torch_to_float_atb.flash_causal_py_gen(parsed_model, save_dir=save_dir)
     result_files.append(flash_causal_py)
+
+    run_py, _ = save_run_py(parsed_model, save_dir=None)
+    result_files.append(run_py)
 
     logger.info("Generated files: [\n    " + ",\n    ".join(result_files) + ",\n]")
     return result_files
