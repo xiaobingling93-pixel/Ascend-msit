@@ -214,9 +214,11 @@ def transform_float(source_path, save_name=None, save_dir=None, atb_model_path='
     logger.info("Transforming to atb")
 
     parsed_model = parser.get_weight_names(model)
-    result_files = transform_float_cpp(parsed_model, save_name, save_dir)
+
+    result_files = []
 
     if atb_files == []:
+        result_files += transform_float_cpp(parsed_model, save_name, save_dir)
         atb_files = result_files[:2]
 
     parsed_model.get('weight_names', {})['model_name_in_atb_framework'] = parser.get_atb_model_names(atb_files)
