@@ -115,10 +115,10 @@ download_nlohmann_json
 ATB_VERSION=`python -c '
 import os
 VERSIONS = {
-  80002: (8, 0, 2),
-  80003: (8, 0, 3),
+  80002000: (8, 0, 2),  # 8 + 00 + 02 + 000
+  80003000: (8, 0, 3),  # 8 + 00 + 03 + 000
 }
-version, matched_version = "8.0.RC3.B020", 80003  # Default value
+version, matched_version = "8.0.RC3.B020", 80003000  # Default value
 with open(os.path.join(os.getenv("ATB_HOME_PATH"), "..", "..", "version.info")) as ff:
     for ii in ff.readlines():
         if "version" in ii.lower():
