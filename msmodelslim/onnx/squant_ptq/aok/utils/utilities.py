@@ -125,7 +125,7 @@ def onnx2om(
 
     om_folder = model_folder
     om_name = model_name
-    input_onnx = os.path.join(model_folder, model_name+'.onnx')
+    input_onnx = os.path.join(model_folder, model_name + '.onnx')
     input_onnx = get_valid_read_path(input_onnx)
     output = os.path.join(om_folder, om_name)
 
