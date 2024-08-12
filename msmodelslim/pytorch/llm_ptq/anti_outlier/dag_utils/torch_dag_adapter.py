@@ -107,11 +107,11 @@ class TorchDAGAdapter(object):
             start = norm_positions[i]
             end = norm_positions[i + 1]
             if i % 2 == 0:
-                mhsa_linear.extend([node.name_in_network for node in self._node_list[start+1:end-1]])
-                mhsa_o.append(self._node_list[end-1].name_in_network)
+                mhsa_linear.extend([node.name_in_network for node in self._node_list[start + 1 : end - 1]])
+                mhsa_o.append(self._node_list[end - 1].name_in_network)
                 mhsa_ln.append(self._node_list[start].name_in_network)
             else:
-                ffn_linear.extend([node.name_in_network for node in self._node_list[start+1:end]])
+                ffn_linear.extend([node.name_in_network for node in self._node_list[start + 1: end]])
                 ffn_ln.append(self._node_list[start].name_in_network)
 
         nlayer_mhsa_linear, nlayer_ffn_linear, nlayer = len(mhsa_linear), len(ffn_linear), len(mhsa_ln)
@@ -123,7 +123,7 @@ class TorchDAGAdapter(object):
         else:
             attn_list = []
             for i in range(0, len(mhsa_linear), mhsa_r):
-                tmp = [mhsa_linear[i+k] for k in range(mhsa_r)]
+                tmp = [mhsa_linear[i + k] for k in range(mhsa_r)]
                 attn_list.append(tmp)
 
         if ffn_r == 1:
@@ -131,7 +131,7 @@ class TorchDAGAdapter(object):
         else:
             ffn_list = []
             for i in range(0, len(ffn_linear), ffn_r):
-                tmp = [ffn_linear[i+k] for k in range(ffn_r)]
+                tmp = [ffn_linear[i + k] for k in range(ffn_r)]
                 ffn_list.append(tmp)
 
         ret = attn_list, mhsa_o, mhsa_ln, ffn_list, ffn_ln
@@ -266,7 +266,7 @@ class TorchDAGAdapter(object):
         for i in range(num_norm - 1):
             start = norm_positions[i]
             end = norm_positions[i + 1]
-            interval_linears = [node.name_in_network for node in self._node_list[start+1:end-1]]
+            interval_linears = [node.name_in_network for node in self._node_list[start + 1 : end - 1]]
             
             if interval_linears:
                 norm_node = self._node_list[start].name_in_network
@@ -287,7 +287,7 @@ class TorchDAGAdapter(object):
         for i in range(num_norm - 1):
             start = norm_positions[i]
             end = norm_positions[i + 1]
-            interval_linears = [node.name_in_network for node in self._node_list[start+1:end-1]]
+            interval_linears = [node.name_in_network for node in self._node_list[start + 1 : end - 1]]
             # 选取attention block的两个norm class偶数区间（区间0,2...）内的qkv linear，并去除q linear
             if i % 2 == 0:
                 if len(interval_linears) == 1:

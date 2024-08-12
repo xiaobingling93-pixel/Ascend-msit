@@ -70,18 +70,21 @@ class DagTorchHook(DagHook, ABC):
                 input_args.append(cls._input_item_to_cpu(input_item))
             for input_key, input_item in inputs.kwargs.items():
                 input_kwargs[input_key] = cls._input_item_to_cpu(input_item)
-            input_data = CallParams(*input_args, **input_kwargs)
+            input_data_call_params = CallParams(*input_args, **input_kwargs)
+            return input_data_call_params
         elif isinstance(inputs, tuple) or isinstance(inputs, list):
-            input_data = []
+            input_data_list = []
             for input_item in inputs:
-                input_data.append(cls._input_item_to_cpu(input_item))
+                input_data_list.append(cls._input_item_to_cpu(input_item))
+            return input_data_list
         elif isinstance(inputs, dict):
-            input_data = {}
+            input_data_dict = {}
             for key, input_item in inputs.items():
-                input_data[key] = cls._input_item_to_cpu(input_item)
+                input_data_dict[key] = cls._input_item_to_cpu(input_item)
+            return input_data_dict
         else:
-            input_data = cls._input_item_to_cpu(inputs)
-        return input_data
+            input_data_to_cpu = cls._input_item_to_cpu(inputs)
+            return input_data_to_cpu
 
     def get_params(self) -> int:
         return sum([param.nelement() for param in self.network.parameters()])
