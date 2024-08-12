@@ -54,7 +54,8 @@ def build_model(source_path):
 
 
 def transform_report(source_path, save_name=None, save_dir=None, is_repeat=True):
-    model = build_model(source_path)
+    # 大模型在cpu上，float32
+    model = build_model(source_path).float().cpu()
     model_layers = get_repeat_box_layer(model)
     from ascend_utils.pytorch.dag.dag_torch_hook import DagTorchHook
     dag_node = DagTorchHook(model, torch.ones([1, 32]).long(), collapse_repeat_block=is_repeat)
