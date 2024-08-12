@@ -114,22 +114,20 @@ download_nlohmann_json
 
 ATB_VERSION=`python -c '
 import os
-VERSIONS = {
-  80002000: (8, 0, 2),  # 8 + 00 + 02 + 000
-  80003000: (8, 0, 3),  # 8 + 00 + 03 + 000
-}
-version, matched_version = "8.0.RC3.B020", 80003000  # Default value
+version = "8.0.RC3.B020"  # Default value
 with open(os.path.join(os.getenv("ATB_HOME_PATH"), "..", "..", "version.info")) as ff:
     for ii in ff.readlines():
         if "version" in ii.lower():
             version = ii.split(":")[-1]
-cur_version = tuple([int("".join([ii for ii in tok if str.isdigit(ii)])) for tok in version.split(".")])
+            break
 
-for kk, vv in VERSIONS.items():
-    if vv > cur_version:
-        break
-    matched_version = kk
-print(matched_version)
+# "8.0.RC3.B020" -> [8, 0, 3, 020] -> 8 * 1e9 + 0 * 1e6 + 3 * 1e3 + 020 -> 8000003020
+index_exps = [1e9, 1e6, 1e3, 1e0]
+cur_version_num = 0
+for tok, index_exp in zip(version.split("."), index_exps):
+    digit_tok = int("".join([ii for ii in tok if str.isdigit(ii)]) or 0)
+    cur_version_num += int(digit_tok * index_exp)
+print(cur_version_num)
 '`
 
 if [ -d "$SCRIPT_DIR/build" ]; then
