@@ -129,6 +129,7 @@ for tok, index_exp in zip(version.split("."), index_exps):
     cur_version_num += int(digit_tok * index_exp)
 print(cur_version_num)
 '`
+echo "ATB_VERSION=$ATB_VERSION"
 
 if [ -d "$SCRIPT_DIR/build" ]; then
     rm -rf $SCRIPT_DIR/build
