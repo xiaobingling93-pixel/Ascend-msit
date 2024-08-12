@@ -112,12 +112,21 @@
 
 ### 参数说明
 ```sh
-msit llm transform -s {SOURCE} -atb {ATB_MODEL_PATH} [--enable-sparse] [--log-level {DEBUG,INFO,WARNING,ERROR}]
+msit llm transform -s {SOURCE} -a -atb {ATB_MODEL_PATH} [--enable-sparse] [--log-level {DEBUG,INFO,WARNING,ERROR}]
 ```
 
 | 参数名          | 描述                                                                                                                             | 必选 |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------- | ---- |
 | -s, --source    | 指定待迁移的代码路径，支持指定文件夹，将迁移文件夹下所有不包含 `quant` 的文件；或指定单独的 cpp 文件，将迁移该 cpp 文件，以及同名的 h 文件 | 是   |
+| -a, --analyze    | 指定是否需要输出大模型迁移分析报告，不指定则不输出   | 否   |
 | -atb, --atb_model_path    | 指定待调用的 cpp 代码路径。支持指定文件夹，参数指定为目录时目录下必须只存在一个cpp文件和一个h文件；或指定为文件，文件同级目录下必须存在同文件名的 cpp 文件和 h 文件| 否   |
 | --enable-sparse | 指定是否迁移为系数量化模型，不指定则迁移为量化模型                                                                                   | 否   |
 | -l, --log-level | 指定log level，默认为 info，可选值 debug, info, warning, error, fatal, critical                                 | 否   |
+
+### 输出大模型迁移分析报告
+#### 使用场景：
+在大模型迁移时，工具支持输出大模型使用DAG获取的更加细粒度的模型结构json文件，及DAG模型算子是否能获取对应的加速库算子以支持大模型迁移的算子支持度csv文件。
+#### 指令：
+```shell
+msit llm transform -s {SOURCE} -a
+```
