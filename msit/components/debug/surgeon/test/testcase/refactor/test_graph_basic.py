@@ -244,7 +244,7 @@ class TestGraphBasic(unittest.TestCase):
         self.assertTrue(os.path.exists('test.onnx'))
         os.remove('test.onnx')
 
-        self.graph_2.save('test_external.onnx', save_as_external_data=True,all_tensors_to_one_file=True)
+        self.graph_2.save('test_external.onnx', save_as_external_data=True, all_tensors_to_one_file=True)
         self.assertTrue(os.path.exists('test_external.onnx'))
         self.assertTrue(os.path.exists('test_external.onnx.data'))
         os.remove('test_external.onnx')
@@ -253,7 +253,7 @@ class TestGraphBasic(unittest.TestCase):
         folder_path = 'test_onnx_folder'
         os.makedirs(folder_path, exist_ok=True)
         model_filename = os.path.join(folder_path, 'test_external_multi.onnx')
-        self.graph_2.save(model_filename, save_as_external_data=True,all_tensors_to_one_file=False)
+        self.graph_2.save(model_filename, save_as_external_data=True, all_tensors_to_one_file=False)
         self.assertTrue(os.path.exists(model_filename))
         files_in_folder = set(os.listdir(folder_path))
         self.assertGreaterEqual(
