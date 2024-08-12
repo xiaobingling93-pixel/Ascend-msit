@@ -1,7 +1,16 @@
+# msmodelslim量化权重格式
 
+msmodelslim llm-ptq工具生成的safetensors量化权重文件包含两个文件，quant_model_weight.safetensors权重文件和quant_model_description.json权重描述文件
 
+msmodelslim量化类型说明：  
+[W8A16](#w8a16量化): Linear权重int8量化，激活值不量化  
+[W8A8](#w8a8-w8a8s量化): Linear权重int8量化，激活值int8量化  
+[W8A8S](#w8a8-w8a8s量化): Linear权重int8稀疏量化，激活值int8量化  
 
-(https://github.com/thudm/chatglm2-6b) 低成本部署章节，使用前请修改224行和225行的输入输出路径。使用方式`python convert_example.py`
+**注意** msmodelslim工具生成的量化权重均为signed场景，即int8数据分布范围为-128到127。开源权重若为unsigned场景，对于int8可以考虑将weight和offset权重减去128
+
+脚本convert_example.py提供了将开源ChatGLM2-6B转换成msmodelslim量化权重的示例，权重获取链接见[开源模型README](https://github.com/thudm/chatglm2-6b) 低成本部署章节，使用前请修改224行和225行的输入输出路径。使用方式`python convert_example.py`
+
 
 ## 量化权重、描述文件格式
 ### safetensors权重格式
