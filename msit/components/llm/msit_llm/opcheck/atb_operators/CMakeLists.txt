@@ -31,7 +31,10 @@ target_link_options(${LIB_NAME} PRIVATE
     -Wl,-z,relro,-z,now,-z,noexecstack
     -s
 )
+
 message("CMAKE_CXX_FLAGS is ${CMAKE_CXX_FLAGS}")
+message("ATB_VERSION is ${ATB_VERSION}")
+add_compile_options(-DATB_VERSION=${ATB_VERSION})
 
 install(
     TARGETS ${LIB_NAME}
