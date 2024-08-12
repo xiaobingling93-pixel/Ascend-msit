@@ -703,12 +703,10 @@ static atb::Operation *SelfAttentionOperationCreate(const nlohmann::json &paramJ
         param.clampMax = paramJson["clampMax"].get<float>();
     }
 
-#ifdef ATB_VERSION
-#if ATB_VERSION >= 8000003000  // equal or above 8.0.RC3
+#if defined(ATB_VERSION) && (ATB_VERSION >= 8000003000)  // equal or above 8.0.RC3
     if (paramJson.contains("kvcacheCfg")) {
         param.kvcacheCfg = atb::infer::SelfAttentionParam::KvCacheCfg(paramJson["kvcacheCfg"].get<int>());
     }
-#endif
 #endif
 
     atb::Operation *op;
