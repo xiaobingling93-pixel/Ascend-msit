@@ -408,14 +408,17 @@ class OnnxGraph(BaseGraph):
     def save(self, path: str,
             save_as_external_data: bool = False,
             all_tensors_to_one_file: bool = True) -> None:
+        # 大于2G模型保存为外部数据，模型大小计算过程有误差，阈值设置为1.9G
         threshold = 1.9 * 1024 * 1024 * 1024
 
         try:
             serialized_model = self.model().SerializeToString()
             model_size = len(serialized_model)
+            # 当model_size大于阈值时，保存为外部数据
             if model_size > threshold:
                 save_as_external_data = True 
         except ValueError:
+            # 当model_size过大引发ValueError时，保存为外部数据
             save_as_external_data = True 
 
         onnx.save(
