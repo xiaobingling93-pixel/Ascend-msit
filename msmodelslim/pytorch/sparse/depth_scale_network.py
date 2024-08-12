@@ -6,9 +6,10 @@ from typing import List, Union, Tuple
 import torch
 from torch import Tensor
 from torch.nn import Module
-from msmodelslim import logger
+
 from ascend_utils.common.utils import CallParams
 from ascend_utils.pytorch.dag.dag_torch_hook import DagTorchHook
+from msmodelslim import logger
 
 
 class DepthScaleNetwork:
@@ -88,7 +89,7 @@ class DepthScaleNetwork:
     def _is_repeat_opts_with_weight(last_module: Module, this_module: Module):
         if this_module is None:
             return False
-        if type(this_module) != type(last_module):
+        if isinstance(this_module) != isinstance(last_module):
             return False
 
         last_param_info = [(name, parameter.shape) for name, parameter in last_module.named_parameters()]
