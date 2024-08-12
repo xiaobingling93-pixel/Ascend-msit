@@ -14,6 +14,7 @@
 
 import os
 import random
+import shutil
 import unittest
 from typing import List, cast
 
@@ -135,11 +136,37 @@ def create_graph_1():
     )
 
 
+def create_graph_2():
+    input_0 = OnnxPlaceHolder('input_0', np.dtype('float32'), [3, 2])
+    output_0 = OnnxPlaceHolder('output_0', np.dtype('float32'), [3, 4])
+    ini_0 = OnnxInitializer('ini_0', np.random.rand(100, 100).astype('float32'))
+    ini_1 = OnnxInitializer('ini_1', np.random.rand(100, 100).astype('float32'))
+    ini_2 = OnnxInitializer('const_0', np.random.rand(100, 100).astype('float32'))
+    nodes = []
+    for i in range(10):
+        node = OnnxNode(
+            f'Node_{i}',
+            'Add',
+            inputs=[f'ini_{i % 3}', f'ini_{(i + 1) % 3}'],
+            outputs=[f'output_{i}'],
+            attrs={}
+        )
+        nodes.append(node)
+    return OnnxGraph(
+        name='graph_2',
+        nodes=nodes,
+        inputs=[input_0],
+        outputs=[output_0],
+        initializers=[ini_0, ini_1, ini_2]
+    )
+
+
 class TestGraphBasic(unittest.TestCase):
 
     def setUp(self):
         self.graph = create_graph()
         self.graph_1 = create_graph_1()
+        self.graph_2 = create_graph_2()
 
     def test_graph_init(self):
         input_0 = OnnxPlaceHolder('input_0', np.dtype('float32'), [3, 2])
@@ -208,12 +235,34 @@ class TestGraphBasic(unittest.TestCase):
         self.assertIsInstance(self.graph.model(), ModelProto)
 
     def test_save_after_add_node(self):
-        self.graph.add_input('test_input', 'float32', [1, 2, 3])
-        self.graph.add_output('test_output', 'float32', [1, 2, 3])
-        self.graph.add_initializer('test_initializer', np.array([1, 2, 3]))
-        self.graph.add_node('test_node', 'Add')
-        self.graph.save('test.onnx')
+        self.graph_2.add_input('test_input', 'float32', [1, 2, 3])
+        self.graph_2.add_output('test_output', 'float32', [1, 2, 3])
+        self.graph_2.add_initializer('test_initializer', np.array([1, 2, 3]))
+        self.graph_2.add_node('test_node', 'Add')
+
+        self.graph_2.save('test.onnx')
+        self.assertTrue(os.path.exists('test.onnx'))
         os.remove('test.onnx')
+
+        self.graph_2.save('test_external.onnx', save_as_external_data=True, all_tensors_to_one_file=True)
+        self.assertTrue(os.path.exists('test_external.onnx'))
+        self.assertTrue(os.path.exists('test_external.onnx.data'))
+        os.remove('test_external.onnx')
+        os.remove('test_external.onnx.data')
+
+        folder_path = 'test_onnx_folder'
+        os.makedirs(folder_path, exist_ok=True)
+        model_filename = os.path.join(folder_path, 'test_external_multi.onnx')
+        self.graph_2.save(model_filename, save_as_external_data=True, all_tensors_to_one_file=False)
+        self.assertTrue(os.path.exists(model_filename))
+        files_in_folder = set(os.listdir(folder_path))
+        self.assertGreaterEqual(
+            len(files_in_folder), 2,
+            "There should be at least two additional files in the folder, plus the .onnx file"
+        )
+
+        shutil.rmtree(folder_path)
+
 
     def test_toposort(self):
         random.shuffle(self.graph_1.nodes)
