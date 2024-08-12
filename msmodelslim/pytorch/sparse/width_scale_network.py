@@ -6,10 +6,10 @@ import torch
 from torch import Tensor
 from torch.functional import F
 
-from msmodelslim import logger
 from ascend_utils.common.utils import CallParams
 from ascend_utils.core.dag.dag_node import DagNode
 from ascend_utils.pytorch.dag.dag_torch_hook import DagTorchHook
+from msmodelslim import logger
 
 
 class WidthScaleNetwork:
