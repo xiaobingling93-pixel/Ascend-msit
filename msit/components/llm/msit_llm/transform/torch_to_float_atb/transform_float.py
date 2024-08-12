@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
 import os
 import json
 import csv
@@ -161,9 +162,38 @@ def save_json(dic, name, save_name=None, save_dir=None):
     with open(json_save_path, "w") as ff:
         json.dump(dic, ff, indent=4)
     logger.info(f"model info saved: {json_save_path}")
-    
 
-def transform_float(source_path, save_name=None, save_dir=None):
+    
+def check_atb_model_path(atb_model_path):
+    if atb_model_path == '':
+        return []
+    if Path(atb_model_path).is_dir():
+        atb_files = list(Path(atb_model_path).glob('*.h')) + list(Path(atb_model_path).glob('*.cpp'))
+        if len(atb_files) != 2:
+            raise FileNotFoundError(f"Couldn't parse files in {atb_model_path} automatically "
+                                    "because there should be one .cpp file and one .h files."
+                                    f"Found {len(atb_files)} files.")
+        return atb_files
+    elif Path(atb_model_path).is_file(): 
+        atb_files = []
+        fp = Path(atb_model_path)
+        if fp.suffix in ['.cpp', '.h']:
+            atb_files = [str(fp.with_suffix('.cpp')), str(fp.with_suffix('.h'))]
+        for ff in atb_files:
+            if not Path(ff).exists():
+                raise FileNotFoundError(f"Couldn't parse files in {atb_model_path} automatically "
+                                    "because there should be one .cpp file and one .h files."
+                                    f"File {ff} not found.")
+        return atb_files
+    else:
+        raise FileNotFoundError(f"Couldn't parse files in {atb_model_path} automatically "
+                                    "because there should be one .cpp file and one .h files. "
+                                    "Please check.")
+
+                
+def transform_float(source_path, save_name=None, save_dir=None, atb_model_path=''):
+    atb_files = check_atb_model_path(atb_model_path)
+
     logger.info("Building model using transformers...")
 
     model = build_model(source_path)
@@ -173,7 +203,11 @@ def transform_float(source_path, save_name=None, save_dir=None):
     parsed_model = parser.get_weight_names(model)
     result_files = transform_float_cpp(parsed_model, save_name, save_dir)
 
-    parsed_model['acl_inputs_name'] = parser.get_input_names(result_files[:2])
+    if atb_files == []:
+        atb_files = result_files[:2]
+
+    parsed_model.get('weight_names', {})['model_name_in_atb_framework'] = parser.get_atb_model_names(atb_files)
+    parsed_model['acl_inputs_name'] = parser.get_input_names(atb_files)
     result_files += transform_float_py(parsed_model, save_name, save_dir)
 
     fp_name = parsed_model.get("weight_names", {}).get("model_name", "").lower()

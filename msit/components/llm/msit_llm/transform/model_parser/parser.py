@@ -123,7 +123,6 @@ def get_weight_names(model):
     is_rope = any([kw in str(parsed_model) for kw in 'rotary Rotary rope Rope ROPE'.split()])
     dic = {
         'model_name': model.config.model_type,
-        'model_name_in_atb_framework': parsed_model.get("name", "model").lower(),
         'model_prefix': get_transformer_name(model),
         'pe_type': 'ROPE' if is_rope else 'ALIBI',
     }
@@ -242,4 +241,14 @@ def get_input_names(files):
         res = res[:max_count]
     return res
 
+
+def get_atb_model_names(files):
+    pattern_list = [
+        r'REGISTER_MODEL\((.*)\);',
+    ]
+    res_str = regex_search(pattern_list, files)
+    if res_str == '':
+        raise ValueError(f'get input name failed, please check {files}')
+    
+    return '_'.join([ss.strip() for ss in res_str.split(',')])
     

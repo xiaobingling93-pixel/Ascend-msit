@@ -126,6 +126,8 @@ CSV_CMP_WEIGHT_HEADER = [
 ]
 CSV_CMP_WEIGHT_HEADER.extend(list(CMP_ALG_MAP.keys()))
 
+MSIT_BAD_CASE_FOLDER_NAME = 'msit_bad_case'
+
 
 def get_timestamp_sync():
     max_timestamp = int(datetime.datetime.now().strftime("%s"))

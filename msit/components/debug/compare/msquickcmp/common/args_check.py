@@ -56,17 +56,23 @@ def is_saved_model_valid(directory):
 
 def check_om_path_legality(value):
     path_value = value
-    try:
-        file_stat = FileStat(path_value)
-    except Exception as err:
-        raise argparse.ArgumentTypeError(f"om path:{path_value} is illegal. Please check.") from err
-    if not file_stat.is_basically_legal('read'):
-        raise argparse.ArgumentTypeError(f"om path:{path_value} is illegal. Please check.")
-    if not file_stat.is_legal_file_type(["om", "mindir"]):
-        raise argparse.ArgumentTypeError(f"om path:{path_value} is illegal. Please check.")
-    if not file_stat.is_legal_file_size(MAX_SIZE_LIMITE_NORMAL_MODEL):
-        raise argparse.ArgumentTypeError(f"om path:{path_value} is illegal. Please check.")
-    return path_value
+    if os.path.isdir(path_value):
+        if not is_saved_model_valid(path_value):
+            raise argparse.ArgumentTypeError(f"model path:{path_value} is not qualified saved_model file. "
+                                             f"Please check.")
+        return path_value
+    else:
+        try:
+            file_stat = FileStat(path_value)
+        except Exception as err:
+            raise argparse.ArgumentTypeError(f"om path:{path_value} is illegal. Please check.") from err
+        if not file_stat.is_basically_legal('read'):
+            raise argparse.ArgumentTypeError(f"om path:{path_value} is illegal. Please check.")
+        if not file_stat.is_legal_file_type(["om", "mindir"]):
+            raise argparse.ArgumentTypeError(f"om path:{path_value} is illegal. Please check.")
+        if not file_stat.is_legal_file_size(MAX_SIZE_LIMITE_NORMAL_MODEL):
+            raise argparse.ArgumentTypeError(f"om path:{path_value} is illegal. Please check.")
+        return path_value
 
 
 def check_weight_path_legality(value):
