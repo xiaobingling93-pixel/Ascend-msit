@@ -21,8 +21,8 @@
 #include "ge_api.h"
 #include "all_ops.h"
 
-#define FAILED (-1)
-#define SUCCESS 0
+const int FAILED = -1;
+const int SUCCESS = 0;
 
 using namespace ge;
 using std::vector;
@@ -32,7 +32,7 @@ int CheckShape(vector<int64_t> &shape);
 
 void GetDataSizeFromShape(vector<int64_t> shape, int64_t &size);
 
-bool GetDataFromBin(string input_path, vector<int64_t> shapes, uint8_t** data, int data_type_size);
+bool GetDataFromBin(string input_path, vector<int64_t> shapes, uint8_t** data, int dataTypeSize);
 
 int32_t BuildCompressFcGraph(Graph &graph, uint8_t* data, vector<int64_t> &shape, vector<int64_t> &compressParameters);
 
