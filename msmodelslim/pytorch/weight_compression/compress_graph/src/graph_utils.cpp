@@ -11,7 +11,7 @@ using namespace std;
 
 int CheckShape(vector<int64_t> &shape)
 {
-    MAXVAL = 50000
+    MAXVAL = 5e4
     for (auto const& val:shape) {
         if (val > MAXVAL) {
             return FAILED;
