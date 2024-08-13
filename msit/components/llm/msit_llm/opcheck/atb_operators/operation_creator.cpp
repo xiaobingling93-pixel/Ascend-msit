@@ -687,9 +687,6 @@ static atb::Operation *SelfAttentionOperationCreate(const nlohmann::json &paramJ
     if (paramJson.contains("kernelType")) {
         param.kernelType = atb::infer::SelfAttentionParam::KernelType(paramJson["kernelType"].get<int>());
     }
-    if (paramJson.contains("kvcacheCfg")) {
-        param.kvcacheCfg = atb::infer::SelfAttentionParam::KvCacheCfg(paramJson["kvcacheCfg"].get<int>());
-    }
     if (paramJson.contains("maskType")) {
         param.maskType = atb::infer::SelfAttentionParam::MaskType(paramJson["maskType"].get<int32_t>());
     }
@@ -705,6 +702,13 @@ static atb::Operation *SelfAttentionOperationCreate(const nlohmann::json &paramJ
     if (paramJson.contains("clampMax")) {
         param.clampMax = paramJson["clampMax"].get<float>();
     }
+
+#if defined(ATB_VERSION) && (ATB_VERSION >= 8000003000)  // equal or above 8.0.RC3
+    if (paramJson.contains("kvcacheCfg")) {
+        param.kvcacheCfg = atb::infer::SelfAttentionParam::KvCacheCfg(paramJson["kvcacheCfg"].get<int>());
+    }
+#endif
+
     atb::Operation *op;
     CreateOperation(param, &op);
     return op;
