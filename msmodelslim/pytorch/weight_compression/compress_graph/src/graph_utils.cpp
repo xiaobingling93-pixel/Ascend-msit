@@ -11,17 +11,18 @@ using namespace std;
 
 int CheckShape(vector<int64_t> &shape)
 {
+    MAXVAL = 50000
     for (auto const& val:shape) {
-        if (val > 5e4) {
+        if (val > MAXVAL) {
             return FAILED;
-	    }
+        }
     }
     return SUCCESS;
 }
 
 void GetDataSizeFromShape(vector<int64_t> shape, int64_t &size)
 {
-    for(const auto& val:shape) {
+    for (const auto& val:shape) {
         size *= val;
     }
 }

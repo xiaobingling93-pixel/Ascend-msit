@@ -9,7 +9,7 @@
 #include "ge_ir_build.h"
 
 
-int RunCompressGraph(ge::Session *session, uint8_t* data, vector<int64_t> &shape, vector<int64_t> &compressParameters, 
+int RunCompressGraph(ge::Session *session, uint8_t* data, vector<int64_t> &shape, vector<int64_t> &compressParameters,
                      vector<string> paths)
 {
     uint32_t compressFc_graph_id = 1;
@@ -121,19 +121,19 @@ int main(int argc, char* argv[])
     int64_t indexBaseSize = isTight ? 8 : 2;
     int64_t index_size = indexBaseSize * tileNumK * tileNumN;
     /*
-       (0)compressed_size, 
-       (1)index_size, 
-       2)isTight: 1 
+       (0)compressed_size,
+       (1)index_size,
+       2)isTight: 1
        (3)enginnum: 4
        (4)channel: 2
        (5)ratios: 64
-       6)k_value: 1 
-       7)n_value: 1 
-       8)block_dim: 1 
-       9)CompressType: 0 
+       6)k_value: 1
+       7)n_value: 1
+       8)block_dim: 1
+       9)CompressType: 0
        10)isTiling: 0
     */
-    vector<int64_t> compressParameters = {compress_size, index_size, isTight, 4, 2, 64, 
+    vector<int64_t> compressParameters = {compress_size, index_size, isTight, 4, 2, 64,
                                           k_value, n_value, 1, compressType, isTiling};
     if (!GetDataFromBin(inputWeightPath, inputWeightShape, &data, sizeof(int8_t))) {
         std::cout<<"read file failed.\n";
