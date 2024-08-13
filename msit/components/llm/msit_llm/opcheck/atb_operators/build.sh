@@ -115,7 +115,7 @@ download_nlohmann_json
 ATB_VERSION=`python3 -c '
 import os
 version = "8.0.RC3.B020" # Default value
-atb_version_file = os.path.join(os.getenv("ATB_HOME_PATH", ""), "..", "..", "version.info")
+atb_version_file = os.path.abspath(os.path.join(os.getenv("ATB_HOME_PATH", ""), "..", "..", "version.info"))
 if os.path.exists(atb_version_file):
     with open(atb_version_file) as ff:
         for ii in ff.readlines():
