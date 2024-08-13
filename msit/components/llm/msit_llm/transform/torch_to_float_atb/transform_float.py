@@ -25,16 +25,24 @@ from msit_llm.transform.torch_to_float_atb.utils import (get_repeat_box_layer,
     dag_to_model, init_save_name, init_save_dir, write_file)
 
 
-SMALL_NUM_HIDDEN_LAYERS = 4
+SMALL_NUM_CONFIG = 4
 
 
-def try_setting_small_num_hidden_layers(config):
-    if hasattr(config, "num_hidden_layers"):
-        config.num_hidden_layers = SMALL_NUM_HIDDEN_LAYERS
-    elif hasattr(config, "num_layers"):
-        config.num_layers = SMALL_NUM_HIDDEN_LAYERS
-    elif hasattr(config, "n_layers"):
-        config.n_layers = SMALL_NUM_HIDDEN_LAYERS
+def try_setting_small_model(config):
+    attr_list = [
+        'num_hidden_layers',
+        'num_layers',
+        'n_layers',
+        'kv_channels',
+        'hidden_size',
+        'intermediate_size',
+        'num_attenion_heads',
+        'rotary_emb_base',
+        'seq_length',
+        'vocab_size',
+        ]
+    for attr in attr_list:
+        config.__setattr__(attr, SMALL_NUM_CONFIG)
     return config
     
 
