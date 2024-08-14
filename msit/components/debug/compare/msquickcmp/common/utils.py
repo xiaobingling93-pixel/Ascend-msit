@@ -58,7 +58,7 @@ ACCRACY_COMPARISON_EXTRACT_ERROR = 19
 ACCRACY_COMPARISON_FETCH_DATA_ERROR = 20
 ACCURACY_COMPARISON_ATC_RUN_ERROR = 21
 ACCURACY_COMPARISON_INVALID_RIGHT_ERROR = 22
-MODEL_TYPE = ['.onnx', '.pb', '.om', '.prototxt', 'txt']
+MODEL_TYPE = ['.onnx', '.pb', '.om', '.prototxt', '.txt']
 DIM_PATTERN = r"^(-?[0-9]{1,100})(,-?[0-9]{1,100}){0,100}"
 DYNAMIC_DIM_PATTERN = r"^([0-9-~]+)(,-?[0-9-~]+){0,3}"
 MAX_DEVICE_ID = 255
@@ -299,10 +299,11 @@ def get_model_name_and_extension(offline_model_path):
     model_name, extension = os.path.splitext(file_name)
     if extension not in MODEL_TYPE:
         logger.error(
-            'Only model files whose names end with .pb or .onnx are supported.Please check {}'.format(
-                offline_model_path
+            'Only model files whose names end with {} are supported.Please check {}'.format(
+                MODEL_TYPE, offline_model_path
             )
         )
+
         raise AccuracyCompareException(ACCURACY_COMPARISON_INVALID_PATH_ERROR)
     return model_name, extension
 
