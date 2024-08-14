@@ -13,7 +13,7 @@
 
 ### 迁移示例
 #### QWEN 13B 迁移示例
-- **迁移生成 atb 模型代码**，`--source` 指定待迁移的 transformers 模型目录，生成迁移后 model 以及 layer 的 cpp 与 h 代码，同时生成 python 代码，用于推理时调用。
+- **Step 1. 迁移生成 atb 模型代码**，`--source` 指定待迁移的 transformers 模型目录，生成迁移后 model 以及 layer 的 cpp 与 h 代码，同时生成 python 代码，用于推理时调用。
   ```sh
   msit llm transform -s /data/qwen-14b-chat
   # Generated files: [
@@ -28,19 +28,19 @@
   #     qwen/flash_causal_qwen.py,
   # ]
   ```
-- 将生成的 cpp 和 h 代码放到 `MindIE-LLM` 模型目录下（python 代码无需复制），**该路径基于不同的 MindIE 版本可能会不同**
+- **Step 2.** 将生成的 cpp 和 h 代码放到 `MindIE-LLM` 模型目录下（python 代码无需复制），**该路径基于不同的 MindIE 版本可能会不同**
   ```sh
   mv qwenlmheadmodel ~/MindIE-LLM/examples/atb_models/atb_framework/models
   ```
-- 重新编译 `MindIE-LLM`，**实际的编译路径与命令需要参照 MindIE 文档**
+- **Step 3.** 重新编译 `MindIE-LLM`，**实际的编译路径与命令需要参照 MindIE 文档**
   ```sh
   cd ~/MindIE-LLM/examples/atb_models
   bash scripts/build.sh
   ```
   由于迁移的适配性问题，以及 `MindIE-LLM` 迭代更新，编译过程可能存在报错，仍依赖用户手动修复错误。
-- 运行 run.py，执行推理，--model_path 指定 transformers 模型目录，--transformed_model_path 指定生成的 python 代码目录。
+- **Step 4.** 运行 run.py，执行推理，--model_path 指定 transformers 模型目录
   ```sh
-  python qwen/run.py --model_path=/data/qwen-14b-chat --transformed_model_path='./qwen'
+  python qwen/run.py --model_path=/data/qwen-14b-chat 
   ```
   由于迁移的适配性问题，以及 `MindIE-LLM` 迭代更新，推理过程可能存在报错，仍依赖用户手动修复 python 文件中错误。
 #### 仅生成 python 调用代码
