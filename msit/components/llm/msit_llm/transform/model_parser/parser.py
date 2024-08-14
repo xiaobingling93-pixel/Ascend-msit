@@ -280,3 +280,14 @@ def update_weight_prefix(parsed_model, source_path):
                 dic[key] = new_prefix
                 break
     parsed_model['weight_names'] = dic
+
+
+def fix_parsed_model(parsed_model):
+    dic = parsed_model.get('weight_names', {})
+    model_type = dic.get('model_name', '')
+    if model_type == 'bloom':
+        dic['lmhead'] = dic.get('word_embeddings')
+    elif model_type == 'qwen':
+        dic['mlp_sep'] = ['w2', 'w1']
+        dic['down_proj'] = 'c_proj'
+    parsed_model['weight_names'] = dic
