@@ -34,9 +34,7 @@ def try_setting_small_model(config):
         'num_layers',
         'n_layers',
         'kv_channels',
-        'hidden_size',
         'intermediate_size',
-        'num_attenion_heads',
         'rotary_emb_base',
         'seq_length',
         'vocab_size',
@@ -54,7 +52,7 @@ def build_model(source_path):
 
     try:
         config = AutoConfig.from_pretrained(source_path, trust_remote_code=True)
-        config = try_setting_small_num_hidden_layers(config)
+        config = try_setting_small_model(config)
         model = AutoModelForCausalLM.from_config(config, trust_remote_code=True)
     except Exception as error:
         raise ValueError(f"build model from {source_path} failed, make sure it works within transformers") from error
