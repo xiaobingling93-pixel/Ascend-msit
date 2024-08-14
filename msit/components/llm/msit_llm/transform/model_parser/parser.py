@@ -258,12 +258,14 @@ def update_weight_prefix(parsed_model, source_path):
     # Read index.json
     weight_name_list = []
     for fp in Path(source_path).glob('*.index.json'):
+        if weight_name_list:
+            break
         try:
             with open(fp) as ff:
                 dd = json.load(ff)            
             weight_name_list = list(dd['weight_map'].keys())
         except Exception:
-            continue
+            weight_name_list = []
     if not weight_name_list:
         return
     
