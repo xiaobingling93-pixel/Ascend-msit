@@ -11,9 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
 import itertools
 import torch
-import os
 
 from msit_llm.common.log import logger
 from msit_llm.compare.cmp_op_match import OpMatchMgr

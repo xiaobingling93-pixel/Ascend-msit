@@ -175,15 +175,15 @@ class FileStat:
             logger.error(f"path: {self.file} not exist, please check if file or dir is exist")
             return False
         if self.is_softlink:
-            while_path = os.environ.get(RAW_INPUT_PATH, "")
-            if while_path == "":
+            whitelist_path = os.environ.get(RAW_INPUT_PATH, "")
+            if whitelist_path == "":
                 logger.error(f"path :{self.file} is a soft link, not supported, please import file(or directory) "
                              f"directly")
                 solution_log(SOLUTION_BASE_LOC + SOFT_LINK_SUB_CHAPTER)
                 return False
             target = os.readlink(self.file)
             target_path = os.path.abspath(target)
-            if not target_path.startswith(os.path.abspath(while_path)):
+            if not target_path.startswith(os.path.abspath(whitelist_path)):
                 logger.error(f"path :{self.file} is a soft link, not supported, please import file(or directory) "
                              f"directly")
                 solution_log(SOLUTION_BASE_LOC + SOFT_LINK_SUB_CHAPTER)
