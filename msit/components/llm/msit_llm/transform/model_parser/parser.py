@@ -13,6 +13,9 @@
 # limitations under the License.
 
 from json import dump
+import json
+from pathlib import Path
+import re
 
 import torch.nn as nn
 
@@ -187,8 +190,6 @@ def get_weight_names(model):
 
 
 def regex_search(pattern_list, files):
-    from pathlib import Path
-    import re
     content = '\n'.join([Path(fp).read_text() for fp in files])
     g = None
     for pattern in pattern_list:
@@ -251,4 +252,31 @@ def get_atb_model_names(files):
         raise ValueError(f'get input name failed, please check {files}')
     
     return '_'.join([ss.strip() for ss in res_str.split(',')])
+
+
+def update_weight_prefix(parsed_model, source_path):
+    # Read index.json
+    weight_name_list = []
+    for fp in Path(source_path).glob('*.index.json'):
+        try:
+            with open(fp) as ff:
+                dd = json.load(ff)            
+            weight_name_list = list(dd['weight_map'].keys())
+        except Exception:
+            continue
+    if not weight_name_list:
+        return
     
+    dic = parsed_model.get('weight_names', {})
+    for key in ["layers_prefix", "model_prefix", "word_embeddings", "word_embeddings_layernorm", "layernorm", "lmhead"]:
+        if key not in dic:
+            continue
+        cur_prefix = dic.get(key, "")
+        if cur_prefix == "":
+            continue
+        for weight_name in weight_name_list:
+            if (cur_prefix + '.') in weight_name:
+                new_prefix = weight_name[:weight_name.index(cur_prefix + '.')] + cur_prefix
+                dic[key] = new_prefix
+                break
+    parsed_model['weight_names'] = dic

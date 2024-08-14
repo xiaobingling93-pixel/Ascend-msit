@@ -229,6 +229,7 @@ def transform_float(source_path, save_name=None, save_dir=None, atb_model_path='
 
     parsed_model.get('weight_names', {})['model_name_in_atb_framework'] = parser.get_atb_model_names(atb_files)
     parsed_model['acl_inputs_name'] = parser.get_input_names(atb_files)
+    parser.update_weight_prefix(parsed_model, source_path)
     result_files += transform_float_py(parsed_model, save_name, save_dir)
 
     fp_name = parsed_model.get("weight_names", {}).get("model_name", "").lower()
