@@ -298,11 +298,7 @@ def get_model_name_and_extension(offline_model_path):
     file_name = os.path.basename(offline_model_path)
     model_name, extension = os.path.splitext(file_name)
     if extension not in MODEL_TYPE:
-        logger.error(
-            'Only model files whose names end with {} are supported.Please check {}'.format(
-                MODEL_TYPE, offline_model_path
-            )
-        )
+        logger.error("Model file {} suffix not valid, supported ones are {}".format(offline_model_path, MODEL_TYPE))
 
         raise AccuracyCompareException(ACCURACY_COMPARISON_INVALID_PATH_ERROR)
     return model_name, extension
