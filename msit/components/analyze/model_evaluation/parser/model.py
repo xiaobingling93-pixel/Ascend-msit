@@ -52,7 +52,10 @@ class ModelParser:
             with open(self._json_path) as f:
                 data = json.load(f)
         except Exception as e:
-            logger.error(f'load ops json failed, err:{e}')
+            logger.error(f'load ops json failed err:{e}')
+            logger.error('It may be that your model is too large,'
+                         'and the converted JSON is truncated '
+                         'when you get content from ATC to JSON')
             return []
 
         nodes_attr_map = {Framework.ONNX: 'node', Framework.TF: 'node', Framework.CAFFE: 'layer'}
