@@ -273,7 +273,6 @@ class Flash{model_name_capital}ForCausalLM(FlashForCausalLM):
             "positionEmbeddingType": self.position_embedding_type,
             "hiddenSize": self.hidden_size,
             "gemma": False,
-            "enableAddNorm": self.add_norm_enable,
             "supportCompressHead": self.compress_head_enable,
 
             "layerNormEps": self.config.rms_norm_eps,

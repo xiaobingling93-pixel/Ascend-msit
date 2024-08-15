@@ -210,7 +210,7 @@ QKV_SEP_FORMATER = """
 
 WORD_EMBEDDINGS_LATERNORM_FORMATER = """
         self.word_embeddings_layernorm = {model_name_capital}{RMSNormClass}(
-            prefix=f"{{model_prefix}}{word_embeddings_layernorm}", weights=weights
+            prefix=f"{word_embeddings_layernorm}", weights=weights
         )
 """
 
@@ -332,7 +332,7 @@ class Flash{model_name_capital}Attention(torch.nn.Module):
 class Flash{model_name_capital}Layer(nn.Module):
     def __init__(self, layer_id, config, weights, model_prefix="model"):
         super().__init__()
-        prefix = f"{{model_prefix}}{layers_prefix}.{{layer_id}}"
+        prefix = f"{layers_prefix}.{{layer_id}}"
         self.self_attention = Flash{model_name_capital}Attention(
             prefix=f"{{prefix}}.{self_attention}", config=config, weights=weights
         )
@@ -400,7 +400,7 @@ class Flash{model_name_capital}Model(torch.nn.Module):
         self.tp_world_size = process_group.size()
         self.parallel_embedding = config.vocab_size >= EMBEDDING_PARALLEL_THRESHOLD
         self.word_embeddings = (TensorParallelEmbedding if self.parallel_embedding else TensorEmbedding)(
-            prefix=f"{model_prefix}{word_embeddings}", weights=weights
+            prefix=f"{word_embeddings}", weights=weights
         )
         {word_embeddings_layernorm_code_block}
         self.layers = nn.ModuleList(
@@ -409,13 +409,12 @@ class Flash{model_name_capital}Model(torch.nn.Module):
                     layer_id,
                     config,
                     weights,
-                    "{model_prefix}"
                 )
                 for layer_id in range(config.num_hidden_layers)
             ]
         )
         self.layernorm = {model_name_capital}{RMSNormClass}(
-            prefix=f"{model_prefix}{layernorm}", weights=weights, eps=config.rms_norm_eps
+            prefix=f"{layernorm}", weights=weights, eps=config.rms_norm_eps
         )
 
         self.gradient_checkpointing = False

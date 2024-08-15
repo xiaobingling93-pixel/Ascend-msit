@@ -9,14 +9,14 @@ import torch
 import torch.nn as nn
 import onnx
 import numpy as np
-from ascend_utils.common.security.pytorch import check_torch_module
-from ascend_utils.common.security import check_type, get_valid_write_path, SafeWriteUmask
-from ascend_utils.common import security
 from msmodelslim.pytorch.quant.ptq_tools.quant_modules import Quantizer, Conv2dQuantizer, LinearQuantizer
 from msmodelslim.pytorch.quant.ptq_tools.quant_deploy import quantize_model_deploy, convert_linear_params
 from msmodelslim.pytorch.quant.ptq_tools.ptq_kia.quant_funcs import amp_decision  # squant algorithm api
+from ascend_utils.common.security.pytorch import check_torch_module
+from ascend_utils.common.security import check_type, get_valid_write_path, SafeWriteUmask
 from msmodelslim import logger
 from msmodelslim.pytorch.quant.ptq_tools import QuantConfig
+from ascend_utils.common import security
 
 
 class Calibrator(object):
