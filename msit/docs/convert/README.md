@@ -1,1 +1,0 @@
-请移步至[此文档](../../components/convert/README.md)
