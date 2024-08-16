@@ -1,1 +1,1 @@
-请移步至[此文档](https://gitee.com/ascend/msit/tree/dev/msit/components/convert)
+请移步至[此文档](../../components/convert/README.md)
