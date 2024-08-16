@@ -80,7 +80,11 @@ INSTALL_INFO_MAP = [
         "arg-name": "transplt",
         "pkg-name": "msit-transplt",
         "pkg-path": "transplt", 
-        "support_windows": True
+        "support_windows": True},
+    {
+        "arg-name": "convert",
+        "pkg-name": "msit-convert",
+        "pkg-path": "convert",
     },
     {
         "arg-name": "profile",

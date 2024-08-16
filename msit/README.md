@@ -45,6 +45,7 @@ msIT(MindStudio Inference Tools)作为昇腾统一推理工具，提供客户一
 | debug(一站式调试)                          | [compare](/msit/docs/debug/compare) | 提供自动化的推理场景精度比对，用来定位问题算子                  |
 | [analyze](/msit/components/analyze)   | -                                   | 提供其他平台模型迁移至昇腾平台的支持度分析功能                  |
 | [transplt](/msit/components/transplt) | -                                   | 提供NV C++推理应用迁移分析以及昇腾API推荐功能              |
+| [convert](/msit/components/convert)   | -                                   | 提供推理模型转换功能                               |
 | [profile](/msit/docs/profile)         | -                                   | 提供profiling，提供整网详细的性能数据及相关信息             |
 | [llm](/msit/docs/llm/README.md)       | -                                   | 提供加速库（atb）大模型推理调试工具，包括数据dump功能和数据比对功能    |
 | [tensor-view](/msit/docs/tensor_view) | -                                   | 提供查看、切片、转置、保存tensor的接口                   |
@@ -65,14 +66,14 @@ msit <TASK> <SUB_TASK> [OPT] [ARGS]
 ```
 
 
-其中，```<TASK>```为任务类型，当前支持debug、benchmark、transplt、analyze、profile，后续可能会新增其他任务类型，可以通过如下方式```查看当前支持的任务列表```：
+其中，```<TASK>```为任务类型，当前支持debug、benchmark、transplt、analyze、convert、profile，后续可能会新增其他任务类型，可以通过如下方式```查看当前支持的任务列表```：
 
 ```bash
 msit -h
 ```
 
 ```<SUB_TASK>```为子任务类型，当前在debug任务下面，有surgeon、compare，当前在profile任务下面，有msprof;
-当前benchmark、analyze、transplt任务没有子任务类型。后续其他任务会涉及扩展子任务类型，可以通过如下方式查看每个任务支持的```子功能列表```：
+当前benchmark、analyze、convert、transplt任务没有子任务类型。后续其他任务会涉及扩展子任务类型，可以通过如下方式查看每个任务支持的```子功能列表```：
 
 ```bash
 msit debug -h
@@ -95,6 +96,7 @@ msit debug compare -h
 * [msIT debug compare 快速入门指南](/msit/docs/debug/compare/README.md)
 * [msIT analyze 快速入门指南](/msit/components/analyze/README.md)
 * [msIT transplt 快速入门指南](/msit/components/transplt/README.md)
+* [msIT convert 快速入门指南](/msit/components/convert/README.md)
 * [msIT profile 快速入门指南](/msit/docs/profile/README.md)
 * [msIT llm 快速入门指南](/msit/components/llm/)
 
