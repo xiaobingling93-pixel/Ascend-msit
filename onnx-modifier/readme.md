@@ -229,6 +229,7 @@ onnx 当前版本要求 `onnx<=1.14.1`
 有时候我们希望向模型中增加自定义算子。`ms-onnx-modifier`已开始支持该功能。
 
 在主页面的左方工具栏，有一个`Add node`按钮，点击之后弹出对话框，通过按钮Edit Custom Operator按钮（仅ms-onnx-modifier-win32-x64-1.0.5.zip版本有此按钮）打开自定义文本框，按自己所需添加自定义算子，点击Add Operator按钮构造算子，成功后会重新加载json文件并自动添加自定义算子，后续添加节点过程如上：[增加新节点](#增加新节点)
+
 注：需要添加正确的json格式（已经有默认输入），在后续如果不需要该自定义算子，可以依据输入的name，moudle与version并点击Delete Operator来删除构造的算子。
 
 
