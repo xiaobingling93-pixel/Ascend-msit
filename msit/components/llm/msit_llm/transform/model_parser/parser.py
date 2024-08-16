@@ -215,15 +215,14 @@ def get_input_max_count(files):
     return max_count
 
 
-def get_input_names(files):
+def parse_by_idx(files):
     pattern_list = [
         r'(InTensorId : int \{(\n\s{4}.*)+\n\};)',
         r'(DecoderModelTensorIdx : uint32_t \{(\n\s{4}.*)+\n\};)',
     ]
     input_str = regex_search(pattern_list, files)
     if input_str == '':
-        raise ValueError(f'get input name failed, please check {files}')
-    
+        return []
     res = []
     for line in input_str.split('\n')[1:-1]:
         # line example IN_TENSOR_INPUT = 0, // input
@@ -233,6 +232,27 @@ def get_input_names(files):
         ll = ll.strip()
         if ll != '':
             res.append(ll)
+    return res
+
+
+def parse_by_cand(files):
+    pattern_list = [
+        r'InTensorCandiadates = \{\n\s{8}\{"default", \{((\n\s{12}.*)+)\}\n\s{8}\},',
+        r'InTensorCandidates = \{\n\s{8}\{"default", \{((\n\s{12}.*)+)\}\n\s{8}\},',
+        r'TensorCandidates = \{\n\s{8}\{"default", \{((\n\s{12}.*)+)\}\n\s{8}\},',
+    ]
+    input_str = regex_search(pattern_list, files)
+    if input_str == '':
+        return []
+    res = input_str.replace('"', '').split(',')
+    res = [ll.strip() for ll in res]
+    return res
+
+
+def get_input_names(files):
+    res = parse_by_idx(files)
+    if not res:
+        res = parse_by_cand(files)
 
     max_count = get_input_max_count(files)
     if max_count == -1:
@@ -249,7 +269,7 @@ def get_atb_model_names(files):
     ]
     res_str = regex_search(pattern_list, files)
     if res_str == '':
-        raise ValueError(f'get input name failed, please check {files}')
+        return 'DecoderModel'
     
     return '_'.join([ss.strip() for ss in res_str.split(',')])
 
