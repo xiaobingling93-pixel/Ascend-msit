@@ -21,7 +21,7 @@ from collections import namedtuple
 import torch
 
 from msit_llm.common.log import logger
-from msit_llm.common.constant import GLOBAL_AIT_DUMP_PATH
+from msit_llm.common.constant import GLOBAL_AIT_DUMP_PATH, RAW_INPUT_PATH
 
 NAMEDTUPLE_PRECISION_METRIC = namedtuple('precision_metric', ['abs', 'kl', 'cos_sim'])('abs', 'kl', 'cos_sim')
 NAMEDTUPLE_PRECISION_MODE = namedtuple(
@@ -130,6 +130,8 @@ class OpChecker:
             return input_path, base_path, pid, ret
 
         base_path, pid = self.get_base_path(input_path)
+        os.environ[RAW_INPUT_PATH] = base_path
+
         if base_path is None:
             logger_text = f"Input path is not in msit_dump tensors directory: {input_path}"
             logger.error(logger_text)
