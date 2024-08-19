@@ -125,9 +125,10 @@ class CompareMgr:
                 self.compared_result.append(row_data)
 
     def _handle_rope_operation_paths(self, my_tensor_paths):
+        seq_len = None
         if any("ropeoperation" in path.lower() for path in my_tensor_paths):
             valid_paths = self._filter_rope_my_tensor_paths(my_tensor_paths)
-            if valid_paths:
+            if len(valid_paths) == 2:
                 seqlen_path, my_tensor_paths = valid_paths
                 seq_len = read_data(seqlen_path)
                 if seq_len.shape == torch.Size([1]):
@@ -137,7 +138,7 @@ class CompareMgr:
                 logger.error("Failed to get input tensors of RopeOperation to compare.")
         else:
             logger.debug("RopeOperation not found in %s.", my_tensor_paths)
-        return None, my_tensor_paths
+        return seq_len, my_tensor_paths
 
     @classmethod
     def _flatten_and_enum_tuple(cls, *arr):
@@ -151,7 +152,7 @@ class CompareMgr:
     def _filter_rope_my_tensor_paths(cls, my_tensor_paths):
         if len(my_tensor_paths) != 5:
             logger.error(f"Expected 5 tensors for RopeOperation but found {len(my_tensor_paths)}.")
-            return None
+            return my_tensor_paths
 
         seqlen_path = None
         valid_my_tensor_paths = []
@@ -166,7 +167,7 @@ class CompareMgr:
             logger.error(
                 f"Expected intensor2.bin and intensor3.bin for RopeOperaton but found {valid_my_tensor_paths}."
             )
-            return None
+            return my_tensor_paths
 
         valid_my_tensor_paths.sort(key=lambda path: (("intensor2" in path.lower(), "intensor3" in path.lower())))
         return seqlen_path, valid_my_tensor_paths
@@ -207,7 +208,12 @@ class CompareMgr:
     @classmethod
     def _remove_adjacent_repeated_columns(cls, my_tensor_datas):
         tensor = my_tensor_datas[0]
-        if tensor.ndimension() != 2 or tensor.shape[0] != 1 or tensor.shape[1] < 2 or tensor.shape[1] % 2 != 0:
+        if tensor.ndimension() != 2 or tensor.shape[0] != 1:
+            logger.debug(
+                f"Unexpected tensor with dimensions {tensor.ndimension()}. Expected 2 dimensions with one row.")
+            return my_tensor_datas
+
+        if tensor.shape[1] < 2 or tensor.shape[1] % 2 != 0:
             logger.debug(f"Unexpected tensor shape {tensor.shape} to check whether has adjacent repeated columns.")
             return my_tensor_datas
 
