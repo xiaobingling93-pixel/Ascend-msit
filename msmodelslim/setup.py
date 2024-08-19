@@ -24,11 +24,11 @@ with open(os.path.join(abs_path, "requirements.txt")) as f:
 
 setup(
     name='msmodelslim',
-    version='7.0.0c930',
+    version='7.0.0c630',
     description='msModelSlim, MindStudio ModelSlim Tools',
     long_description_content_type='text/markdown',
     url='https://gitee.com/ascend/msit',
-    packages=find_packages(),
+    packages=find_packages(exclude=['*.precision_tool',]),
     package_data={
         '': [
             'LICENSE',
@@ -38,6 +38,8 @@ setup(
             '*.sh',
             '*.cpp',
             '*.h',
+            '*.py',
+            '*.so',
         ]
     },
     data_files=[('', ['requirements.txt'])],
