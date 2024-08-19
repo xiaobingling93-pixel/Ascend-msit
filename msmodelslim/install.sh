@@ -1,3 +1,4 @@
+# Copyright Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
 #!/bin/bash
 if [ ! -d "$ASCED_HOME_PATH" ]; then
     echo "ASCEND_HOME_PATH not exist.\
