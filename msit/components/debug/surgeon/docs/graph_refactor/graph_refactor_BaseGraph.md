@@ -56,4 +56,4 @@ BaseGraph 类提供了基本的接口用于增删改查节点：
 - save_as_external_data 参数控制是否将模型数据保存为外部文件，默认为 False，表示不使用外部数据存储方式。
 - all_tensors_to_one_file 参数决定是否将所有张量保存在单一文件中，默认为 True。当设置为 False 时，每个张量将被保存在独立的文件中。
 - 当模型的大小超过2GB时，将自动强制使用外部数据存储方式。
-- 如果选择将模型保存为外部数据（save_as_external_data=True），并且选择不将所有张量保存在单一文件中（all_tensors_to_one_file=False），则必须确保在相同的路径下不存在同名的 data 文件。否则，这可能导致数据冗余，从而使得存储空间需求翻倍。
+- 如果选择将模型保存为外部数据（save_as_external_data=True 或者模型的大小超过2GB），并且选择不将所有张量保存在单一文件中（all_tensors_to_one_file=False），则必须确保在相同的路径下不存在同名的 data 文件。否则，这可能导致数据冗余，从而使得存储空间需求翻倍。
