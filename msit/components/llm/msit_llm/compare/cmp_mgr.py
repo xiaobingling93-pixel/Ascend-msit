@@ -86,19 +86,7 @@ class CompareMgr:
             golden_tensor_paths = list(self.golden_data.get_tensor_path(golden_token_id, golden_op, golden_op_location))
             my_tensor_paths = list(self.my_data.get_tensor_path(my_token_id, my_op, my_op_location))
 
-            seq_len = None
-
-            if any("ropeoperation" in path.lower() for path in my_tensor_paths):
-                my_tensor_path_result = self._filter_rope_my_tensor_paths(my_tensor_paths)
-                if my_tensor_path_result:
-                    seqlen_path, my_tensor_paths = my_tensor_path_result
-                    seq_len = read_data(seqlen_path)
-                    if seq_len.shape == torch.Size([1]):
-                        seq_len = seq_len.item()
-                    else:
-                        logger.error(f"Expected shape of seqLen is torch.Size([1]) but found {seq_len.shape}.")
-                else:
-                    logger.error("Failed to get input tensors of RopeOperation to compare.")
+            seq_len, my_tensor_paths = self._handle_rope_operation_paths(my_tensor_paths)
 
             if len(golden_tensor_paths) == len(my_tensor_paths):
                 golden_tensor_paths.sort()
@@ -136,6 +124,21 @@ class CompareMgr:
                 row_data = fill_row_data(data_info, atb_tensor_data, torch_tensor_data)
                 self.compared_result.append(row_data)
 
+    def _handle_rope_operation_paths(self, my_tensor_paths):
+        if any("ropeoperation" in path.lower() for path in my_tensor_paths):
+            valid_paths = self._filter_rope_my_tensor_paths(my_tensor_paths)
+            if valid_paths:
+                seqlen_path, my_tensor_paths = valid_paths
+                seq_len = read_data(seqlen_path)
+                if seq_len.shape == torch.Size([1]):
+                    return seq_len.item(), my_tensor_paths
+                logger.error(f"Expected shape of seqLen is torch.Size([1]) but found {seq_len.shape}.")
+            else:
+                logger.error("Failed to get input tensors of RopeOperation to compare.")
+        else:
+            logger.debug("RopeOperation not found in %s.", my_tensor_paths)
+        return None, my_tensor_paths
+
     @classmethod
     def _flatten_and_enum_tuple(cls, *arr):
         for item in arr:
@@ -164,6 +167,8 @@ class CompareMgr:
                 f"Expected intensor2.bin and intensor3.bin for RopeOperaton but found {valid_my_tensor_paths}."
             )
             return None
+
+        valid_my_tensor_paths.sort(key=lambda path: (("intensor2" in path.lower(), "intensor3" in path.lower())))
         return seqlen_path, valid_my_tensor_paths
 
     @classmethod
@@ -182,41 +187,30 @@ class CompareMgr:
 
     @classmethod
     def _slice_tensor_by_seq_len(cls, golden_tensor_datas, seq_len, rope_type):
-        tensor = golden_tensor_datas[0]
-        tensor_shape = tensor.shape
-        tensor_dtype = tensor.dtype
+        if seq_len is None:
+            logger.debug("seq_len is None, skipping slicing.")
+            return golden_tensor_datas
 
+        tensor = golden_tensor_datas[0]
         if tensor.ndimension() == 4:
-            if seq_len < tensor_shape[2] and (seq_len - 1) >= 0:
-                sliced_tensor = tensor[:, :, :seq_len - 1, :].to(dtype=tensor_dtype).unsqueeze(0)
-            else:
-                logger.error(f"seqLen is out of bounds for tensor with shape {tensor_shape}")
+            if 1 <= seq_len < tensor.shape[2]:
+                return [tensor[:, :, :seq_len - 1, :].to(dtype=tensor.dtype).unsqueeze(0)]
+            logger.error(f"seqLen is out of bounds for tensor with shape {tensor.shape}")
         elif tensor.ndimension() == 3:
-            if seq_len < tensor_shape[0] and (seq_len - 1) >= 0:
-                sliced_tensor = tensor[seq_len - 1, : rope_type].to(dtype=tensor_dtype).unsqueeze(0)
-            else:
-                logger.error(f"seqLen is out of bounds for tensor with shape {tensor_shape}")
+            if 1 <= seq_len < tensor.shape[0]:
+                return [tensor[seq_len - 1, : rope_type].to(dtype=tensor.dtype).unsqueeze(0)]
+            logger.error(f"seqLen is out of bounds for tensor with shape {tensor.shape}")
         else:
             logger.error(f"Unsupported tensor with dimensions {tensor.ndimension()}. Expected 3 or 4 dimensions.")
-        return [sliced_tensor]
+        return golden_tensor_datas
 
     @classmethod
     def _remove_adjacent_repeated_columns(cls, my_tensor_datas):
         tensor = my_tensor_datas[0]
-        tensor_dtype = tensor.dtype
-        tensor_shape = tensor.shape
-
-        if tensor.ndimension() != 2 or tensor_shape[0] != 1:
-            logger.debug(f"Unexpected tensor with dimensions {tensor.ndimension()}. Expected 2 dimensions with one row.")
+        if tensor.ndimension() != 2 or tensor.shape[0] != 1 or tensor.shape[1] < 2 or tensor.shape[1] % 2 != 0:
+            logger.debug(f"Unexpected tensor shape {tensor.shape} to check whether has adjacent repeated columns.")
             return my_tensor_datas
 
-        if tensor_shape[1] < 2 or tensor_shape[1] % 2 != 0:
-            logger.debug(f"Unexpected tensor shape {tensor_shape} to check whether has adjacent repeated columns.")
-            return my_tensor_datas
-
-        col_pairs_repeated = tensor[:, ::2] == tensor[:, 1::2]
-        if col_pairs_repeated.all():
-            unique_tensor = tensor[:, ::2].to(dtype=tensor_dtype)
-            return [unique_tensor]
-
+        if (tensor[:, ::2] == tensor[:, 1::2]).all():
+            return [tensor[:, ::2].to(dtype=tensor.dtype)]
         return my_tensor_datas
