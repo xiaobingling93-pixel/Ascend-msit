@@ -165,11 +165,11 @@ class CompareMgr:
 
         if len(valid_my_tensor_paths) != 2:
             logger.error(
-                f"Expected intensor2.bin and intensor3.bin for RopeOperaton but found {valid_my_tensor_paths}."
+                f"Expected intensor2.bin and intensor3.bin for RopeOperaton but only found {valid_my_tensor_paths}."
             )
             return my_tensor_paths
 
-        valid_my_tensor_paths.sort(key=lambda path: (("intensor2" in path.lower(), "intensor3" in path.lower())))
+        valid_my_tensor_paths.sort(key=lambda path: ("intensor3" in path.lower()))
         return seqlen_path, valid_my_tensor_paths
 
     @classmethod
@@ -199,7 +199,7 @@ class CompareMgr:
             logger.error(f"seqLen is out of bounds for tensor with shape {tensor.shape}")
         elif tensor.ndimension() == 3:
             if 1 <= seq_len < tensor.shape[0]:
-                return [tensor[seq_len - 1, : rope_type].to(dtype=tensor.dtype).unsqueeze(0)]
+                return [tensor[seq_len - 1, :, rope_type].to(dtype=tensor.dtype).unsqueeze(0)]
             logger.error(f"seqLen is out of bounds for tensor with shape {tensor.shape}")
         else:
             logger.error(f"Unsupported tensor with dimensions {tensor.ndimension()}. Expected 3 or 4 dimensions.")
@@ -219,4 +219,5 @@ class CompareMgr:
 
         if (tensor[:, ::2] == tensor[:, 1::2]).all():
             return [tensor[:, ::2].to(dtype=tensor.dtype)]
+        logger.debug(f"There are no adjacent repeated columns in the tensor {my_tensor_datas}.")
         return my_tensor_datas
