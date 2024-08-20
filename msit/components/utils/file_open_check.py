@@ -175,23 +175,24 @@ class FileStat:
             logger.error(f"path: {self.file} not exist, please check if file or dir is exist")
             return False
         if self.is_softlink:
-            whitelist_path01 = os.environ.get(RAW_INPUT_PATH, "")
-            whitelist_path02 = ""
-            if whitelist_path01 == "":
+            whitelist_path = os.environ.get(RAW_INPUT_PATH, "")
+            if whitelist_path == "":
                 logger.error(f"path :{self.file} is a soft link, not supported, please import file(or directory) "
                              f"directly")
                 solution_log(SOLUTION_BASE_LOC + SOFT_LINK_SUB_CHAPTER)
                 return False
-            if "|" in whitelist_path01:
-                whitelist_path01, whitelist_path02 = whitelist_path01.split("|", 1)
             target = os.readlink(self.file)
             target_path = os.path.abspath(target)
-            if not target_path.startswith(os.path.abspath(whitelist_path01)):
-                if whitelist_path02 == "" or not target_path.startswith(os.path.abspath(whitelist_path02)):
-                    logger.error(f"path :{self.file} is a soft link, not supported, please import file(or directory) "
-                                f"directly")
-                    solution_log(SOLUTION_BASE_LOC + SOFT_LINK_SUB_CHAPTER)
-                    return False
+            sub_paths = whitelist_path.split("|")
+            illegal_softlink = True
+            for sub_path in sub_paths:
+                if target_path.startswith(os.path.abspath(sub_path)):
+                    illegal_softlink = False
+            if illegal_softlink:
+                logger.error(f"path :{self.file} is a soft link, not supported, please import file(or directory) "
+                            f"directly")
+                solution_log(SOLUTION_BASE_LOC + SOFT_LINK_SUB_CHAPTER)
+                return False
         return True
 
     def check_linux_permission(self, perm='none', strict_permission=True):
