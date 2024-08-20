@@ -262,6 +262,8 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
                     no_compress_mask = torch.ones(size=(1, max_seq_len, max_seq_len)).to(score.device)
                     no_compress_mask = torch.triu(no_compress_mask, 1)
                     no_compress_mask *= -10000.0
+                    if is_mask:
+                        self.in_tensors[3] = no_compress_mask
                     score = score + no_compress_mask[:, :q_s, :kv_s]
                 else:
                     score = score + mask[:, :q_s, :kv_s] * post_mask_coff

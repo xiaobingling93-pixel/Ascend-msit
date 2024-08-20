@@ -159,7 +159,7 @@ class OperationTest(unittest.TestCase):
 
     def rerun_op(self, execute_type):
         if self.op_name == "SelfAttentionOperation":
-            path = os.path.join("ATB_SPEED_HOME_PATH")
+            path = os.getenv("ATB_SPEED_HOME_PATH")
             sys.path.append(os.path.join(path, "lib"))
             import _libatb_torch as atb
 
@@ -167,11 +167,11 @@ class OperationTest(unittest.TestCase):
 
             graph_op = atb._GraphOperation('rerun_op')
             params = json.dumps(self.op_param)
-            params = params.replace("CalcType", CalcType(self.op_param['calc_type']).name)
-            params = params.replace("KvCacheCfg", KvCacheCfg(self.op_param['kv_cache_cfg']).name)
-            params = params.replace("MaskType", MaskType(self.op_param['mask_type']).name)
-            params = params.replace("KernelType", KernelType(self.op_param['kernel_type']).name)
-            params = params.replace("ClampType", ClampType(self.op_param['clamp_type']).name)
+            params = params.replace("CalcType", CalcType(self.op_param['calcType']).name)
+            params = params.replace("KvCacheCfg", KvCacheCfg(self.op_param['kvcacheCfg']).name)
+            params = params.replace("MaskType", MaskType(self.op_param['maskType']).name)
+            params = params.replace("KernelType", KernelType(self.op_param['kernelType']).name)
+            params = params.replace("ClampType", ClampType(self.op_param['clampType']).name)
 
             op = atb._BaseOperation(op_type="SelfAttention", op_param=params, op_name="SelfAttentionOperation")
             input_name = ['in'+str(i) for i in range(len(self.in_tensors))]
@@ -191,10 +191,11 @@ class OperationTest(unittest.TestCase):
             _ = graph_op.forward(inputs, outputs, bind)
             out_tensors = outputs.values()
         elif self.op_name == "PagedAttentionOperation":
-            path = os.path.join("ATB_SPEED_HOME_PATH")
+            path = os.getenv("ATB_SPEED_HOME_PATH")
             sys.path.append(os.path.join(path, "lib"))
             import _libatb_torch as atb
 
+            params = json.dumps(self.op_param)
             op = atb._BaseOperation(op_type="PagedAttention", op_param=params, op_name="PagedAttentionOperation")
             input_name = ['in'+str(i) for i in range(len(self.in_tensors))]
             output_name = ['out'+str(i) for i in range(len(self.out_tensors))]
