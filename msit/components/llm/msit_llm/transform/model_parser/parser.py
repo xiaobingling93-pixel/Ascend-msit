@@ -13,6 +13,9 @@
 # limitations under the License.
 
 from json import dump
+import json
+from pathlib import Path
+import re
 
 import torch.nn as nn
 
@@ -123,7 +126,6 @@ def get_weight_names(model):
     is_rope = any([kw in str(parsed_model) for kw in 'rotary Rotary rope Rope ROPE'.split()])
     dic = {
         'model_name': model.config.model_type,
-        'model_name_in_atb_framework': parsed_model.get("name", "model").lower(),
         'model_prefix': get_transformer_name(model),
         'pe_type': 'ROPE' if is_rope else 'ALIBI',
     }
@@ -188,8 +190,6 @@ def get_weight_names(model):
 
 
 def regex_search(pattern_list, files):
-    from pathlib import Path
-    import re
     content = '\n'.join([Path(fp).read_text() for fp in files])
     g = None
     for pattern in pattern_list:
@@ -215,15 +215,14 @@ def get_input_max_count(files):
     return max_count
 
 
-def get_input_names(files):
+def parse_by_idx(files):
     pattern_list = [
         r'(InTensorId : int \{(\n\s{4}.*)+\n\};)',
         r'(DecoderModelTensorIdx : uint32_t \{(\n\s{4}.*)+\n\};)',
     ]
     input_str = regex_search(pattern_list, files)
     if input_str == '':
-        raise ValueError(f'get input name failed, please check {files}')
-    
+        return []
     res = []
     for line in input_str.split('\n')[1:-1]:
         # line example IN_TENSOR_INPUT = 0, // input
@@ -233,6 +232,27 @@ def get_input_names(files):
         ll = ll.strip()
         if ll != '':
             res.append(ll)
+    return res
+
+
+def parse_by_cand(files):
+    pattern_list = [
+        r'InTensorCandiadates = \{\n\s{8}\{"default", \{((\n\s{12}.*)+)\}\n\s{8}\},',
+        r'InTensorCandidates = \{\n\s{8}\{"default", \{((\n\s{12}.*)+)\}\n\s{8}\},',
+        r'TensorCandidates = \{\n\s{8}\{"default", \{((\n\s{12}.*)+)\}\n\s{8}\},',
+    ]
+    input_str = regex_search(pattern_list, files)
+    if input_str == '':
+        return []
+    res = input_str.replace('"', '').split(',')
+    res = [ll.strip() for ll in res]
+    return res
+
+
+def get_input_names(files):
+    res = parse_by_idx(files)
+    if not res:
+        res = parse_by_cand(files)
 
     max_count = get_input_max_count(files)
     if max_count == -1:
@@ -242,4 +262,54 @@ def get_input_names(files):
         res = res[:max_count]
     return res
 
+
+def get_atb_model_names(files):
+    pattern_list = [
+        r'REGISTER_MODEL\((.*)\);',
+    ]
+    res_str = regex_search(pattern_list, files)
+    if res_str == '':
+        return 'DecoderModel'
     
+    return '_'.join([ss.strip() for ss in res_str.split(',')])
+
+
+def update_weight_prefix(parsed_model, source_path):
+    # Read index.json
+    weight_name_list = []
+    for fp in Path(source_path).glob('*.index.json'):
+        if weight_name_list:
+            break
+        try:
+            with open(fp) as ff:
+                dd = json.load(ff)            
+            weight_name_list = list(dd['weight_map'].keys())
+        except Exception:
+            weight_name_list = []
+    if not weight_name_list:
+        return
+    
+    dic = parsed_model.get('weight_names', {})
+    for key in ["layers_prefix", "model_prefix", "word_embeddings", "word_embeddings_layernorm", "layernorm", "lmhead"]:
+        if key not in dic:
+            continue
+        cur_prefix = dic.get(key, "")
+        if cur_prefix == "":
+            continue
+        for weight_name in weight_name_list:
+            if (cur_prefix + '.') in weight_name:
+                new_prefix = weight_name[:weight_name.index(cur_prefix + '.')] + cur_prefix
+                dic[key] = new_prefix
+                break
+    parsed_model['weight_names'] = dic
+
+
+def fix_parsed_model(parsed_model):
+    dic = parsed_model.get('weight_names', {})
+    model_type = dic.get('model_name', '')
+    if model_type == 'bloom':
+        dic['lmhead'] = dic.get('word_embeddings')
+    elif model_type == 'qwen':
+        dic['mlp_sep'] = ['w2', 'w1']
+        dic['down_proj'] = 'c_proj'
+    parsed_model['weight_names'] = dic

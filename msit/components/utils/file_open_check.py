@@ -46,6 +46,8 @@ OWNER_SUB_CHAPTER = 'owner_or_ownergroup_error_log_solution\"'
 PERMISSION_SUB_CHAPTER = 'path_permission_error_log_solution\"'
 ILLEGAL_CHAR_SUB_CHAPTER = 'path_contain_illegal_char_error_log_solution\"'
 
+RAW_INPUT_PATH = "RAW_INPUT_PATH"
+
 
 def solution_log(content):
     logger.log(SOLUTION_LEVEL, f"visit \033[1;32m {content} \033[0m for detailed solution")  # green content
@@ -167,14 +169,29 @@ class FileStat:
             return self.check_windows_permission(perm)
         else:
             return self.check_linux_permission(perm, strict_permission=strict_permission)
-
-    def check_linux_permission(self, perm='none', strict_permission=True):
+        
+    def check_basic_permission(self, perm='none'):
         if not self.is_exists and perm != 'write':
             logger.error(f"path: {self.file} not exist, please check if file or dir is exist")
             return False
         if self.is_softlink:
-            logger.error(f"path :{self.file} is a soft link, not supported, please import file(or directory) directly")
-            solution_log(SOLUTION_BASE_LOC + SOFT_LINK_SUB_CHAPTER)
+            whitelist_path = os.environ.get(RAW_INPUT_PATH, "")
+            if whitelist_path == "":
+                logger.error(f"path :{self.file} is a soft link, not supported, please import file(or directory) "
+                             f"directly")
+                solution_log(SOLUTION_BASE_LOC + SOFT_LINK_SUB_CHAPTER)
+                return False
+            target = os.readlink(self.file)
+            target_path = os.path.abspath(target)
+            if not target_path.startswith(os.path.abspath(whitelist_path)):
+                logger.error(f"path :{self.file} is a soft link, not supported, please import file(or directory) "
+                             f"directly")
+                solution_log(SOLUTION_BASE_LOC + SOFT_LINK_SUB_CHAPTER)
+                return False
+        return True
+
+    def check_linux_permission(self, perm='none', strict_permission=True):
+        if not self.check_basic_permission(perm=perm):
             return False
         if not self.is_user_or_group_owner and self.is_exists:
             logger.error(f"current user isn't path:{self.file}'s owner or ownergroup")
@@ -205,12 +222,7 @@ class FileStat:
         return True
 
     def check_windows_permission(self, perm='none'):
-        if not self.is_exists and perm != 'write':
-            logger.error(f"path: {self.file} not exist, please check if file or dir is exist")
-            return False
-        if self.is_softlink:
-            logger.error(f"path :{self.file} is a soft link, not supported, please import file(or directory) directly")
-            solution_log(SOLUTION_BASE_LOC + SOFT_LINK_SUB_CHAPTER)
+        if not self.check_basic_permission(perm=perm):
             return False
         return True
 

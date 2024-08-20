@@ -60,7 +60,7 @@ Dump 默认落盘路径 `{DUMP_DIR}`在当前目录下，如果指定 output 目
 - layer 信息，具体路径是 `{DUMP_DIR}/ait_dump_{TIMESTAMP}/layer/{PID}`目录下。
 - model 信息，具体路径是 `{DUMP_DIR}/ait_dump_{TIMESTAMP}/model/{PID}`目录下。注：由于 model 由 layer 组合而成，因此使用 model 时，默认同时会落盘 layer 信息。
 - onnx 需要和 layer、model 配合使用，落盘位置和 model、layer 相同的目录。
-- cpu*profiling 信息，具体路径是 `{DUMP_DIR}/ait_dump*{TIMESTAMP}/cpu*profiling/{TIMESTAMP}/operation_statistic*{executeCount}.txt`。
+- cpu profiling 信息，具体路径是 `{DUMP_DIR}/ait_dump_{TIMESTAMP}/cpu_profiling/{PID}/operation_statistic_{executeCount}.csv`。
 - 算子信息，具体路径是 `{DUMP_DIR}/ait_dump_{TIMESTAMP}/operation_io_tensors/{PID}/operation_tensors_{executeCount}.csv`。
 - kernel 算子信息，具体路径是 `{DUMP_DIR}/ait_dump_{TIMESTAMP}/kernel_io_tensors/{PID}/kernel_tensors_{executeCount}.csv`。
 

@@ -21,8 +21,8 @@
   ```bash
   result
   |-- 2022_12_17-07_37_18
-  │   `-- pure_infer_data_0.bin
-  `-- 2022_12_17-07_37_18_summary.json
+  │   |-- pure_infer_data_0.bin
+  |-- 2022_12_17-07_37_18_summary.json
   ```
 
 2. 设置--input和--output参数。示例命令及结果如下：
@@ -33,10 +33,10 @@
   196608-0.bin  196608-1.bin  196608-2.bin  196608-3.bin  196608-4.bin  196608-5.bin  196608-6.bin  196608-7.bin  196608-8.bin  196608-9.bin
   ```
   - 说明：
-    .bin文件存储用户输入的tensor数据，可通过以下方式生成，--input参数是为了用户指定输入数据而设计。
+    .bin文件存储用户输入的tensor数据，可通过以下方式生成，例子中的size和astype可以通过debug调试模式工具获取。--input参数是为了用户指定输入数据而设计。
     ```python
     import numpy as np
-    np.random.uniform(size[32,32]).astype('float32').tofile('foo.bin')
+    np.random.uniform(size=[32,32]).astype('float32').tofile('foo.bin')
     ```
       
   ```bash
@@ -55,8 +55,8 @@
   |   |-- 196608-6_0.bin
   |   |-- 196608-7_0.bin
   |   |-- 196608-8_0.bin
-  |   `-- 196608-9_0.bin
-  `-- 2023_01_03-06_35_53_summary.json
+  |   |-- 196608-9_0.bin
+  |-- 2023_01_03-06_35_53_summary.json
   ```
 
 3. 设置--output_dirname参数。示例命令及结果如下：
@@ -68,8 +68,8 @@
   ```bash
   result
   |-- subdir
-  │   `-- pure_infer_data_0.bin
-  `-- subdir_summary.json
+  │   |-- pure_infer_data_0.bin
+  |-- subdir_summary.json
   ```
 
 4. 设置--dump参数。示例命令及结果如下：
@@ -81,9 +81,9 @@
   ```bash
   result
   |-- 2022_12_17-07_37_18
-  │   `-- pure_infer_data_0.bin
+  │   |-- pure_infer_data_0.bin
   |-- dump
-  `-- 2022_12_17-07_37_18_summary.json
+  |-- 2022_12_17-07_37_18_summary.json
   ```
 
 5. 设置--profiler参数。示例命令及结果如下：
@@ -95,10 +95,10 @@
   ```bash
   result
   |-- 2022_12_17-07_56_10
-  │   `-- pure_infer_data_0.bin
+  │   |-- pure_infer_data_0.bin
   |-- profiler
-  │   `-- PROF_000001_20221217075609326_GLKQJOGROQGOLIIB
-  `-- 2022_12_17-07_56_10_summary.json
+  │   |-- PROF_000001_20221217075609326_GLKQJOGROQGOLIIB
+  |-- 2022_12_17-07_56_10_summary.json
   ```
 
 6. 输出结果解释。

@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
 import os
 import json
 import csv
@@ -21,19 +22,25 @@ from msit_llm.common.log import logger
 from msit_llm.transform.model_parser import kind, parser
 from msit_llm.transform import torch_to_float_atb
 from msit_llm.transform.torch_to_float_atb.utils import (get_repeat_box_layer, 
-    dag_to_model, init_save_name, init_save_dir)
+    dag_to_model, init_save_name, init_save_dir, write_file)
 
 
-SMALL_NUM_HIDDEN_LAYERS = 4
+SMALL_NUM_CONFIG = 4
 
 
-def try_setting_small_num_hidden_layers(config):
-    if hasattr(config, "num_hidden_layers"):
-        config.num_hidden_layers = SMALL_NUM_HIDDEN_LAYERS
-    elif hasattr(config, "num_layers"):
-        config.num_layers = SMALL_NUM_HIDDEN_LAYERS
-    elif hasattr(config, "n_layers"):
-        config.n_layers = SMALL_NUM_HIDDEN_LAYERS
+def try_setting_small_model(config):
+    attr_list = [
+        'num_hidden_layers',
+        'num_layers',
+        'n_layers',
+        'kv_channels',
+        'intermediate_size',
+        'rotary_emb_base',
+        'seq_length',
+        'vocab_size',
+        ]
+    for attr in attr_list:
+        config.__setattr__(attr, SMALL_NUM_CONFIG)
     return config
     
 
@@ -45,7 +52,7 @@ def build_model(source_path):
 
     try:
         config = AutoConfig.from_pretrained(source_path, trust_remote_code=True)
-        config = try_setting_small_num_hidden_layers(config)
+        config = try_setting_small_model(config)
         model = AutoModelForCausalLM.from_config(config, trust_remote_code=True)
     except Exception as error:
         raise ValueError(f"build model from {source_path} failed, make sure it works within transformers") from error
@@ -53,7 +60,8 @@ def build_model(source_path):
 
 
 def transform_report(source_path, save_name=None, save_dir=None, is_repeat=True):
-    model = build_model(source_path)
+    # 大模型在cpu上，float32
+    model = build_model(source_path).float().cpu()
     model_layers = get_repeat_box_layer(model)
     from ascend_utils.pytorch.dag.dag_torch_hook import DagTorchHook
     dag_node = DagTorchHook(model, torch.ones([1, 32]).long(), collapse_repeat_block=is_repeat)
@@ -139,6 +147,16 @@ def transform_float_cpp(parsed_model, save_name=None, save_dir=None):
     return result_files
 
 
+def save_run_py(parsed_model, save_dir=None):
+    rr = Path(__file__).with_name("run.py").read_text()
+    weight_names = parsed_model.get('weight_names', {})
+    model_name_lower = weight_names.get('model_name', 'model')
+    save_dir = init_save_dir(model_name_lower if save_dir is None else save_dir, sub_dir=".")
+    save_path = os.path.join(save_dir, "run.py")
+    write_file(save_path, rr)
+    return save_path, rr
+
+
 def transform_float_py(parsed_model, save_name=None, save_dir=None):
     result_files = []
     routing_py_file, _ = torch_to_float_atb.router_py_gen(parsed_model, save_dir=save_dir)
@@ -149,6 +167,9 @@ def transform_float_py(parsed_model, save_name=None, save_dir=None):
     
     flash_causal_py, _ = torch_to_float_atb.flash_causal_py_gen(parsed_model, save_dir=save_dir)
     result_files.append(flash_causal_py)
+
+    run_py, _ = save_run_py(parsed_model, save_dir=None)
+    result_files.append(run_py)
 
     logger.info("Generated files: [\n    " + ",\n    ".join(result_files) + ",\n]")
     return result_files
@@ -161,9 +182,38 @@ def save_json(dic, name, save_name=None, save_dir=None):
     with open(json_save_path, "w") as ff:
         json.dump(dic, ff, indent=4)
     logger.info(f"model info saved: {json_save_path}")
-    
 
-def transform_float(source_path, save_name=None, save_dir=None):
+    
+def check_atb_model_path(atb_model_path):
+    if atb_model_path == '':
+        return []
+    if Path(atb_model_path).is_dir():
+        atb_files = list(Path(atb_model_path).glob('*.h')) + list(Path(atb_model_path).glob('*.cpp'))
+        if len(atb_files) != 2:
+            raise FileNotFoundError(f"Couldn't parse files in {atb_model_path} automatically "
+                                    "because there should be one .cpp file and one .h files."
+                                    f"Found {len(atb_files)} files.")
+        return atb_files
+    elif Path(atb_model_path).is_file(): 
+        atb_files = []
+        fp = Path(atb_model_path)
+        if fp.suffix in ['.cpp', '.h']:
+            atb_files = [str(fp.with_suffix('.cpp')), str(fp.with_suffix('.h'))]
+        for ff in atb_files:
+            if not Path(ff).exists():
+                raise FileNotFoundError(f"Couldn't parse files in {atb_model_path} automatically "
+                                    "because there should be one .cpp file and one .h files."
+                                    f"File {ff} not found.")
+        return atb_files
+    else:
+        raise FileNotFoundError(f"Couldn't parse files in {atb_model_path} automatically "
+                                    "because there should be one .cpp file and one .h files. "
+                                    "Please check.")
+
+                
+def transform_float(source_path, save_name=None, save_dir=None, atb_model_path=''):
+    atb_files = check_atb_model_path(atb_model_path)
+
     logger.info("Building model using transformers...")
 
     model = build_model(source_path)
@@ -171,9 +221,16 @@ def transform_float(source_path, save_name=None, save_dir=None):
     logger.info("Transforming to atb")
 
     parsed_model = parser.get_weight_names(model)
-    result_files = transform_float_cpp(parsed_model, save_name, save_dir)
 
-    parsed_model['acl_inputs_name'] = parser.get_input_names(result_files[:2])
+    result_files = []
+
+    if atb_files == []:
+        result_files += transform_float_cpp(parsed_model, save_name, save_dir)
+        atb_files = result_files[:2]
+
+    parsed_model.get('weight_names', {})['model_name_in_atb_framework'] = parser.get_atb_model_names(atb_files)
+    parsed_model['acl_inputs_name'] = parser.get_input_names(atb_files)
+    parser.update_weight_prefix(parsed_model, source_path)
     result_files += transform_float_py(parsed_model, save_name, save_dir)
 
     fp_name = parsed_model.get("weight_names", {}).get("model_name", "").lower()
