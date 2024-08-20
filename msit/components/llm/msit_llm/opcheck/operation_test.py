@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
 import os
 import re
 import unittest
@@ -157,18 +158,73 @@ class OperationTest(unittest.TestCase):
             self.case_info['excuted_information'] = 'FAILED'
 
     def rerun_op(self, execute_type):
-        operation = torch.classes.OperationTorch.OperationTorch(self.op_name)
-        if isinstance(self.op_param, dict):
-            operation.set_param(json.dumps(self.op_param))
-        elif isinstance(self.op_param, str):
-            operation.set_param(self.op_param)
-        if execute_type == "inplace":
-            operation.execute(self.in_tensors)
-            out_tensors = []
-            for index in self.case_info['inplace_idx']:
-                out_tensors.append(self.in_tensors[index])
+        if self.op_name == "SelfAttentionOperation":
+            path = os.path.join("ATB_SPEED_HOME_PATH")
+            sys.path.append(os.path.join(path, "lib"))
+            import _libatb_torch as atb
+
+            from msit_llm.opcheck.check_case.self_attention import CalcType, KvCacheCfg, MaskType, KernelType, ClampType
+
+            graph_op = atb._GraphOperation('rerun_op')
+            params = json.dumps(self.op_param)
+            params = params.replace("CalcType", CalcType(self.op_param['calc_type']).name)
+            params = params.replace("KvCacheCfg", KvCacheCfg(self.op_param['kv_cache_cfg']).name)
+            params = params.replace("MaskType", MaskType(self.op_param['mask_type']).name)
+            params = params.replace("KernelType", KernelType(self.op_param['kernel_type']).name)
+            params = params.replace("ClampType", ClampType(self.op_param['clamp_type']).name)
+
+            op = atb._BaseOperation(op_type="SelfAttention", op_param=params, op_name="SelfAttentionOperation")
+            input_name = ['in'+str(i) for i in range(len(self.in_tensors))]
+            output_name = ['out'+str(i) for i in range(len(self.out_tensors))]
+            graph_op.add_input_output(input=input_name, output=output_name)
+            graph_op.add_operation(op, input_name, output_name)
+            graph_op.build()
+
+            inputs, outputs, bind = {}, {}, {}
+            for idx, intensor in zip(input_name, self.in_tensors):
+                inputs[idx] = intensor
+            for idx, outtensor in zip(output_name, self.out_tensors):
+                outputs[idx] = outtensor
+            seq_len_idx = 4
+            bind_name = "in" + str(seq_len_idx)
+            bind[bind_name] = self.in_tensors[seq_len_idx].cpu()
+            _ = graph_op.forward(inputs, outputs, bind)
+            out_tensors = outputs.values()
+        elif self.op_name == "PagedAttentionOperation":
+            path = os.path.join("ATB_SPEED_HOME_PATH")
+            sys.path.append(os.path.join(path, "lib"))
+            import _libatb_torch as atb
+
+            op = atb._BaseOperation(op_type="PagedAttention", op_param=params, op_name="PagedAttentionOperation")
+            input_name = ['in'+str(i) for i in range(len(self.in_tensors))]
+            output_name = ['out'+str(i) for i in range(len(self.out_tensors))]
+            graph_op.add_input_output(input=input_name, output=output_name)
+            graph_op.add_operation(op, input_name, output_name)
+            graph_op.build()
+
+            inputs, outputs, bind = {}, {}, {}
+            for idx, intensor in zip(input_name, self.in_tensors):
+                inputs[idx] = intensor
+            for idx, outtensor in zip(output_name, self.out_tensors):
+                outputs[idx] = outtensor
+            seq_len_idx = 4
+            bind_name = "in" + str(seq_len_idx)
+            bind[bind_name] = self.in_tensors[seq_len_idx].cpu()
+            _ = graph_op.forward(inputs, outputs, bind)
+            out_tensors = outputs.values()
         else:
-            out_tensors = operation.execute(self.in_tensors)
+            operation = torch.classes.OperationTorch.OperationTorch(self.op_name)
+            if isinstance(self.op_param, dict):
+                operation.set_param(json.dumps(self.op_param))
+            elif isinstance(self.op_param, str):
+                operation.set_param(self.op_param)
+            if execute_type == "inplace":
+                operation.execute(self.in_tensors)
+                out_tensors = []
+                for index in self.case_info['inplace_idx']:
+                    out_tensors.append(self.in_tensors[index])
+            else:
+                out_tensors = operation.execute(self.in_tensors)
         return [tensor.cpu() for tensor in out_tensors]
 
     def excute_common(self, execute_type):
