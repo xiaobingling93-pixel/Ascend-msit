@@ -38,7 +38,7 @@ class NpuTfAdapterDumpData(object):
     """
 
     def __init__(self, arguments):
-        self.serving = arguments.serving if arguments.serving else "serving_default"
+        self.serving = arguments.saved_model_signature
         self.output_path = os.path.realpath(arguments.out_path)
         self.input = os.path.join(self.output_path, "input")
         self.dump_data_npu = os.path.join(self.output_path, "dump_data", "npu")
