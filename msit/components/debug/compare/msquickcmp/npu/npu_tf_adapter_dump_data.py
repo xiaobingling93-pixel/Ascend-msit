@@ -67,8 +67,10 @@ class NpuTfAdapterDumpData(object):
         with tf.compat.v1.Session() as sess:
             tag_set = {tf.compat.v1.saved_model.tag_constants.SERVING}
             model = tf.compat.v1.saved_model.load(sess, tag_set, model_path)
-            for input_tensor in model.inputs:
-                inputs_dtype[input_tensor.name] = input_tensor.dtype
+            inputs = model.signature_def['serving_default'].inputs
+            for input_tensor in sorted(inputs.values):
+                np_dtype = tf.dtypes.as_dtype(input_tensor.dtype).as_numpy_dtype
+                inputs_dtype[input_tensor.name.split(':')[0]] = np_dtype
         return inputs_dtype
 
     @staticmethod
@@ -94,8 +96,8 @@ class NpuTfAdapterDumpData(object):
                 os.chmod(input_file, 0o640)
                 os.chmod(dest_file, 0o640)
                 # convert .bin to numpy
-                data_type = file_name.split("_")[-1].split(".")[0]
-                input_name = file_name.split("_")[0]
+                data_type = file_name.rsplit("_", 1)[-1].split(".")[0]
+                input_name = file_name.rsplit("_", 1)[0]
                 input_data = np.fromfile(input_file, dtype=data_type).reshape(self.input_shape.get(input_name))
                 self.inputs_data[input_name] = input_data
         else:
@@ -103,7 +105,7 @@ class NpuTfAdapterDumpData(object):
                 data_type = self.inputs_dtype.get(input_name)
                 input_data = np.random.random(size=shape_str).astype(data_type)
                 self.inputs_data[input_name] = input_data
-                input_data.tofile(os.path.join(self.input, input_name + "_" + data_type + ".bin"))
+                input_data.tofile(os.path.join(self.input, input_name + "_" + data_type.__name__ + ".bin"))
 
     def generate_dump_data(self):
         # adapt NPU

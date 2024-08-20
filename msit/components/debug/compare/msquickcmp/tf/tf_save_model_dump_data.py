@@ -99,14 +99,15 @@ class TfSaveModelDumpData(DumpData):
             input_files = os.listdir(self.input)
             for input_file in input_files:
                 file_name = os.path.basename(input_file)
-                data_type = file_name.split("_")[-1].split(".")[0]
-                input_name = file_name.split("_")[0]
+                data_type = file_name.rsplit("_", 1)[-1].split(".")[0]
+                input_name = file_name.rsplit("_", 1)[0]
                 input_shape_dim = None
                 for input_shape in self.input_shape:
                     if input_shape[0] == input_name:
                         input_shape_dim = input_shape[1]
                 if input_shape_dim is not None:
-                    input_data = np.fromfile(input_file, dtype=data_type).reshape(input_shape_dim)
+                    input_data = (np.fromfile(os.path.join(self.input, input_file), dtype=np.dtype(data_type))
+                                  .reshape(input_shape_dim))
                     self.inputs_data[input_name] = input_data
 
     def get_net_output_info(self):
