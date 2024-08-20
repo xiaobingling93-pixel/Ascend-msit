@@ -38,6 +38,7 @@ class NpuTfAdapterDumpData(object):
     """
 
     def __init__(self, arguments):
+        self.serving = arguments.serving
         self.output_path = os.path.realpath(arguments.out_path)
         self.input = os.path.join(self.output_path, "input")
         self.dump_data_npu = os.path.join(self.output_path, "dump_data", "npu")
@@ -46,7 +47,7 @@ class NpuTfAdapterDumpData(object):
         self.model_path = arguments.offline_model_path
         self.input_path = arguments.input_path
         self.input_shape = self.split_input_shape(arguments.input_shape)
-        self.inputs_dtype = self.get_model_inputs_dtype(arguments.offline_model_path)
+        self.inputs_dtype = self.get_model_inputs_dtype(arguments.offline_model_path, arguments.serving)
         self.cann_path = arguments.cann_path
         self._create_dir()
 
@@ -62,13 +63,13 @@ class NpuTfAdapterDumpData(object):
         return input_shape_dict
 
     @staticmethod
-    def get_model_inputs_dtype(model_path):
+    def get_model_inputs_dtype(model_path, serving):
         inputs_dtype = {}
         with tf.compat.v1.Session() as sess:
             tag_set = {tf.compat.v1.saved_model.tag_constants.SERVING}
             model = tf.compat.v1.saved_model.load(sess, tag_set, model_path)
-            inputs = model.signature_def['serving_default'].inputs
-            for input_tensor in sorted(inputs.values):
+            inputs = model.signature_def[serving].inputs
+            for key, input_tensor in inputs.items():
                 np_dtype = tf.dtypes.as_dtype(input_tensor.dtype).as_numpy_dtype
                 inputs_dtype[input_tensor.name.split(':')[0]] = np_dtype
         return inputs_dtype
@@ -131,7 +132,7 @@ class NpuTfAdapterDumpData(object):
                 for input_name, input_data in self.inputs_data.items()
             }
             output_tensors = []
-            outputs_tensors_info = model.signature_def['serving_default'].outputs
+            outputs_tensors_info = model.signature_def[self.serving].outputs
             output_op_names = []
             for output_tensor_info in outputs_tensors_info.values():
                 output_op_names.append(output_tensor_info.name.split(':')[0])
