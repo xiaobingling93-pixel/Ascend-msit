@@ -221,7 +221,7 @@ def clear_dump_task(args):
         for x in GLOBAL_HISTORY_AIT_DUMP_PATH_LIST:
             atb_output_dir = os.environ.get(ATB_OUTPUT_DIR, "")
             timestamp = os.environ.get(ATB_TIMESTAMP, "")
-            cpu_profiling_path1 = os.path.join(atb_output_dir, "_".join(x, timestamp), "cpu_profiling")
+            cpu_profiling_path1 = os.path.join(atb_output_dir, "_".join([x, timestamp]), "cpu_profiling")
             cpu_profiling_path2 = os.path.join(atb_output_dir, x, "cpu_profiling")
             if os.path.exists(cpu_profiling_path1):
                 merge_cpu_profiling_data(cpu_profiling_path1)
