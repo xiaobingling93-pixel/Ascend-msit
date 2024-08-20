@@ -195,7 +195,7 @@ class CompareMgr:
         tensor = golden_tensor_datas[0]
         if tensor.ndimension() == 4:
             if 1 <= seq_len < tensor.shape[2]:
-                return [tensor[:, :, :seq_len - 1, :].to(dtype=tensor.dtype).unsqueeze(0)]
+                return [tensor[:, :, seq_len - 1, :].to(dtype=tensor.dtype).squeeze(0)]
             logger.error(f"seqLen is out of bounds for tensor with shape {tensor.shape}")
         elif tensor.ndimension() == 3:
             if 1 <= seq_len < tensor.shape[0]:
