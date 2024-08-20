@@ -22,6 +22,8 @@ import torch
 
 from msit_llm.common.log import logger
 from msit_llm.common.constant import GLOBAL_HISTORY_AIT_DUMP_PATH_LIST, RAW_INPUT_PATH
+
+
 NAMEDTUPLE_PRECISION_METRIC = namedtuple('precision_metric', ['abs', 'kl', 'cos_sim'])('abs', 'kl', 'cos_sim')
 NAMEDTUPLE_PRECISION_MODE = namedtuple(
     'precision_mode', ["keep_origin_dtype", "force_fp16", "force_fp32"]
