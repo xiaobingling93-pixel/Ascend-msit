@@ -21,27 +21,28 @@ def mname(module: Module):
     return module.__class__.__name__
 
 
-def convert(module: Module):
+def convert(name, module: Module):
     module_class = module.__class__
     module_name = module_class.__name__
     lowered = module_name.lower()
 
     if "rms" in lowered:
-        return rms_norm(module)
+        return rms_norm(name, module)
     elif module_class is Linear:
-        return linear(module)
+        return linear(name, module)
     elif module_class is Embedding:
-        return embedding(module)
+        return embedding(name, module)
     elif module_class is LayerNorm:
-        return layernorm(module)
+        return layernorm(name, module)
     elif "rotary" in lowered and "embedding" in lowered:
-        return rope(module)
+        return rope(name, module)
     else:
         return {"name": mname(module), "children": []}
 
 
-def linear(module):
+def linear(name, module):
     return {
+        "name": name, 
         "kind": "Linear",
         "in_features": module.in_features,
         "out_features": module.out_features,
@@ -49,8 +50,9 @@ def linear(module):
     }
 
 
-def embedding(module):
+def embedding(name, module):
     return {
+        "name": name, 
         "kind": "Embedding",
         "num_embeddings": module.num_embeddings,
         "embedding_dim": module.embedding_dim,
@@ -58,55 +60,59 @@ def embedding(module):
     }
 
 
-def attention(modules: List[Module], size: int):
-    ret = {}
-
+def attention(name, modules: List[Module], size: int):
+    ret = {"name": name, }
+    
+    names = [n for n, m in modules]
+    modules = [m for n, m in modules]
+    names_iter = iter(names)
     if size == 5:
         [q, k, v, o, r] = modules
         ret["structure"] = "q-k-v-o-r"
-        ret["q"] = linear(q)
-        ret["k"] = linear(k)
-        ret["v"] = linear(v)
-        ret["o"] = linear(o)
-        ret["rope"] = rope(r)
+        ret["q"] = linear(next(names_iter), q)
+        ret["k"] = linear(next(names_iter), k)
+        ret["v"] = linear(next(names_iter), v)
+        ret["o"] = linear(next(names_iter), o)
+        ret["rope"] = rope(next(names_iter), r)
     elif size == 4:
         [q, kv, o, r] = modules
         ret["structure"] = "q-kv-o-r"
-        ret["q"] = linear(q)
-        ret["kv"] = linear(kv)
-        ret["o"] = linear(o)
-        ret["rope"] = rope(r)
+        ret["q"] = linear(next(names_iter), q)
+        ret["kv"] = linear(next(names_iter), kv)
+        ret["o"] = linear(next(names_iter), o)
+        ret["rope"] = rope(next(names_iter), r)
     elif size == 3:
         [w, o, r] = modules
         ret["structure"] = "w-o-r"
-        ret["w"] = linear(w)
-        ret["o"] = linear(o)
-        ret["rope"] = rope(r)
+        ret["w"] = linear(next(names_iter), w)
+        ret["o"] = linear(next(names_iter), o)
+        ret["rope"] = rope(next(names_iter), r)
     elif size == 2:
         [w, o] = modules
         ret["structure"] = "w-o"
-        ret["w"] = linear(w)
-        ret["o"] = linear(o)
+        ret["w"] = linear(next(names_iter), w)
+        ret["o"] = linear(next(names_iter), o)
     else:
         print("error linear size")
 
     return ret
 
 
-def mlp(modules: List[Module]):
+def mlp(name, modules: List[Module]):
     ret = {"ff": []}
 
-    for m in modules:
+    for n, m in modules:
         if isinstance(m, Linear):
-            ret["ff"].append(linear(m))
+            ret["ff"].append(linear(n, m))
         else:
-            ret["act"] = activation(m)
+            ret["act"] = activation(n, m)
 
     return ret
 
 
-def layernorm(module):
+def layernorm(name, module):
     return {
+        "name": name, 
         "kind": "LayerNorm",
         "normalized_shape": module.normalized_shape[0],
         "eps": module.eps,
@@ -115,8 +121,9 @@ def layernorm(module):
     }
 
 
-def rope(module: Module):
+def rope(name, module: Module):
     return {
+        "name": name, 
         "kind": "RotaryEmbedding",
         "base": module.base if hasattr(module, "base") else -1,
         "dim": module.dim if hasattr(module, "dim") else -1,
@@ -125,8 +132,8 @@ def rope(module: Module):
     }
 
 
-def rms_norm(module: Module):
-    ret = {"kind": "RMSNorm"}
+def rms_norm(name, module: Module):
+    ret = {"name": name, "kind": "RMSNorm"}
     eps_like = ["epsilon", "variance_epsilon", "eps"]
 
     for name in eps_like:
@@ -137,11 +144,12 @@ def rms_norm(module: Module):
     return ret
 
 
-def activation(module: Module):
+def activation(name, module: Module):
     module_class = module.__class__
 
     if module_class is GELU:
         return {
+            "name": name,
             "kind": "GELU",
             "approximate": module.approximate == "tanh"
         }
@@ -151,8 +159,9 @@ def activation(module: Module):
 
     if "tanh" in lowered and "gelu" in lowered:
         return {
+            "name": name,
             "kind": "GELU",
             "approximate": True
         }
 
-    return {"kind": module_name}
+    return {"name": name, "kind": module_name}

@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
 import itertools
 import torch
 
@@ -19,6 +20,7 @@ from msit_llm.compare.cmp_op_match import OpMatchMgr
 from msit_llm.compare.cmp_data_parse import CompareDataParse, CompareDataTorch, CompareDataATB
 from msit_llm.compare.cmp_utils import BasicDataInfo, fill_row_data, save_compare_reault_to_csv
 from msit_llm.compare.multi_block import get_multi_tensor_paths, get_cat_dim
+from msit_llm.common.constant import RAW_INPUT_PATH
 
 
 class CompareMgr:
@@ -34,6 +36,7 @@ class CompareMgr:
     def init_compare_data(self, data_path: str, args) -> CompareDataParse:
         for cls_data in self.data_parsers:
             if cls_data.accept(data_path, args):
+                os.environ[RAW_INPUT_PATH] = data_path
                 return cls_data(data_path, self.args)
         logger.error(f"cannot parse data path({data_path}). it is not a atb dump path or a torch dump path.")
         return None

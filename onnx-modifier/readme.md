@@ -53,7 +53,7 @@ onnx 当前版本要求 `onnx<=1.14.1`
   ```bash
   git clone https://gitee.com/ascend/msit.git
   ```
-4. 安装 msit 中的 surgeon 包, 提供 AutoOptimizer （基于知识库的整网优化） 和 Extract （子网导出） 功能, 请参考 msit 的安装流程，以下为参考步骤：
+4. 安装 msit 中的 surgeon 包, 提供 AutoOptimizer （基于知识库的整网优化） 和 Extract （子网导出） 功能, 请参考 msit 的安装流程[msit工具安装](https://gitee.com/ascend/msit/blob/master/msit/docs/install/README.md)，以下为参考步骤：
   ```bash
   cd msit/msit
   # windows 场景请直接执行：install.bat --surgeon
@@ -153,7 +153,7 @@ onnx 当前版本要求 `onnx<=1.14.1`
 
 节点层级的操作都在节点侧边栏里，点击某一节点后即可弹出。
 
-一起来详细康康。
+一起来详细看。
 
 ## 删除/恢复节点
 
@@ -228,7 +228,8 @@ onnx 当前版本要求 `onnx<=1.14.1`
 
 有时候我们希望向模型中增加自定义算子。`ms-onnx-modifier`已开始支持该功能。
 
-在主页面的左方工具栏，有一个`Add node`按钮，点击之后弹出对话框，通过按钮Edit Custom Operator按钮打开自定义文本框，按自己所需添加自定义算子，点击Add Operator按钮构造算子，成功后会重新加载json文件并自动添加自定义算子，后续添加节点过程如上：[增加新节点](#增加新节点)
+在主页面的左方工具栏，有一个`Add node`按钮，点击之后弹出对话框，通过按钮Edit Custom Operator按钮（仅ms-onnx-modifier-win32-x64-1.0.5.zip版本有此按钮）打开自定义文本框，按自己所需添加自定义算子，点击Add Operator按钮构造算子，成功后会重新加载json文件并自动添加自定义算子，后续添加节点过程如上：[增加新节点](#增加新节点)
+
 注：需要添加正确的json格式（已经有默认输入），在后续如果不需要该自定义算子，可以依据输入的name，moudle与version并点击Delete Operator来删除构造的算子。
 
 

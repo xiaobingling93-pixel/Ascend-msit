@@ -23,6 +23,7 @@ from msit_llm.errcheck.process import process_error_check
 from msit_llm.common.utils import str2bool, check_positive_integer, check_device_integer, safe_string, check_exec_cmd, \
     check_ids_string, check_number_list, check_output_path_legality, check_input_path_legality, check_process_integer, \
     check_dump_time_integer
+from msit_llm.bc_analyze import Synthesizer, Analyzer
 from msit_llm.common.log import logger, set_log_level, LOG_LEVELS
 
 
@@ -213,6 +214,13 @@ class CompareCommand(BaseCommand):
                   "def foo(golden_tensor, my_tensor): return float_value, string_message"')
 
         parser.add_argument("--log-level", "-l", default="info", choices=LOG_LEVELS_LOWER, help="specify log level.")
+        
+        parser.add_argument(
+            '--weight',
+            '-w',
+            action='store_true',
+            help='Compare float weights and dequant weights, if True, do nothing if False')
+
 
     def handle(self, args, **kwargs):
         from msit_llm.compare.torchair_acc_cmp import get_torchair_ge_graph_path
@@ -228,7 +236,12 @@ class CompareCommand(BaseCommand):
 
         # accuracy comparing for different scenarios
         torchair_ge_graph_path = get_torchair_ge_graph_path(args.my_path)
-        if torchair_ge_graph_path is not None:
+        if args.weight:
+            from msit_llm.compare.cmp_weight import compare_weight
+
+            compare_weight(args.golden_path, args.my_path, args.output)
+
+        elif torchair_ge_graph_path is not None:
             from msit_llm.compare.torchair_acc_cmp import acc_compare
 
             acc_compare(args.golden_path, args.my_path, args.output, torchair_ge_graph_path)
@@ -392,7 +405,7 @@ class ErrCheck(BaseCommand):
 
     def handle(self, args, **kwargs) -> None:
         set_log_level(args.log_level)
-        process_error_check(args)       
+        process_error_check(args)
 
 
 class Transform(BaseCommand):
@@ -411,6 +424,15 @@ class Transform(BaseCommand):
             required=True,
             help="source path, could be:" + scenarios_info_str,
         )
+
+        parser.add_argument(
+            "-atb",
+            "--atb_model_path",
+            default="",
+            type=check_input_path_legality,
+            help="[torch to float atb model] ATB model directory containing .cpp and .h files."
+        )
+
         parser.add_argument(
             "--enable-sparse", action='store_true', help="[float atb to quant atb model] Enable trasforming to sparse-quant model"
         )
@@ -441,13 +463,76 @@ class Transform(BaseCommand):
             if args.analyze:
                 transform_float.transform_report(source_path=args.source)
             else:
-                transform_float.transform_float(source_path=args.source)
+                transform_float.transform_float(source_path=args.source, atb_model_path=args.atb_model_path)
                 
         else:
             message = f"Neither config.json + py or cpp found in {args.source}, not supported"
             logger.error(message)
             raise ValueError(message)
 
+
+class BCAnalyze(BaseCommand):
+    def add_arguments(self, parser, **kwargs) -> None:
+        parser.add_argument(
+            '--golden',
+            '-g',
+            dest="golden",
+            required=True,
+            type=safe_string,
+            help="Golden result to compare with. If it is path like, then it will be considered as a "
+                 "csv path. If not, analyzer will treat it as a command and invoke synthesizer to collect the result.")
+
+        parser.add_argument(
+            '--test',
+            '-t',
+            dest="test",
+            required=True,
+            type=safe_string,
+            help="Test result to compare with the golden. If it is path like, then it will be considered as a "
+                 "csv path. If not, analyzer will treat it as a command and invoke synthesizer to collect the result.")
+
+        parser.add_argument("-l", "--log-level", default="info", choices=LOG_LEVELS_LOWER, help="specify log level")
+
+    def handle(self, args, **kwargs) -> None:
+        set_log_level(args.log_level)
+
+        items = ['golden', 'test']
+        csv_path_lists = []
+        for item in items:
+            component = getattr(args, item)
+            if not os.path.exists(component):
+                temp_dir = Synthesizer.from_cmd(component)
+                csv_dir = os.path.join(temp_dir, Synthesizer.SYNTHESIZER_FOLDER_NAME)
+
+                try:
+                    csv_path = next(
+                        file_name
+                        for file_name in os.listdir(csv_dir)
+                        if file_name.startswith('msit_synthesizer_result') and file_name.endswith('.csv')
+                    )
+                except FileNotFoundError:
+                    logger.error(
+                        "Directory '%s' is not found due to the internal errors, "
+                        "please check the log result",
+                        csv_dir
+                    )
+                    raise
+                except StopIteration:
+                    logger.error(
+                        "There is no csv file under directory '%s', "
+                        "please check the log result", 
+                        csv_dir
+                    )
+                    raise
+
+                full_csv_path = os.path.join(csv_dir, csv_path)
+            else:
+                full_csv_path = component
+            
+            csv_path_lists.append(full_csv_path)
+
+        Analyzer.from_csv(golden_csv_path=csv_path_lists[0], test_csv_path=csv_path_lists[1]) 
+        
 
 def get_cmd_instance():
     llm_help_info = "Large Language Model(llm) Debugger Tools."
@@ -456,8 +541,10 @@ def get_cmd_instance():
     opcheck_cmd_instance = OpcheckCommand("opcheck", "Operation check tool for large language model", alias_name='oo')
     errcheck_cmd_instance = ErrCheck("errcheck", "Error check tool for large language model.", alias_name='ee')
     transform_cmd_instance = Transform("transform", "Transform tool for large language model.")
+    bc_analyze_cmd_instance = BCAnalyze("analyze", "Bad Case analyze tool for large language model.")
 
     instances = [
-        dump_cmd_instance, compare_cmd_instance, opcheck_cmd_instance, errcheck_cmd_instance, transform_cmd_instance
+        dump_cmd_instance, compare_cmd_instance, opcheck_cmd_instance, errcheck_cmd_instance, transform_cmd_instance,
+        bc_analyze_cmd_instance
     ]
     return BaseCommand("llm", llm_help_info, instances)

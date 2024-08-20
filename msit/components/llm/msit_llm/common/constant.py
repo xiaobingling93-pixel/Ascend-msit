@@ -32,11 +32,7 @@ def get_global_device():
 
 GLOBAL_AIT_DUMP_PATH = "ait_dump"
 GLOBAL_DEVICE = get_global_device()
-DEVICE_DIST_MAP = {
-    "cuda": "nccl",
-    "npu": "hccl",
-    "cpu": "gloo"
-}
+DEVICE_DIST_MAP = {"cuda": "nccl", "npu": "hccl", "cpu": "gloo"}
 GLOBAL_DIST_BACKEND = DEVICE_DIST_MAP.get(GLOBAL_DEVICE, "gloo")
 
 ATB_HOME_PATH = "ATB_HOME_PATH"
@@ -57,11 +53,12 @@ ATB_DUMP_TYPE = "ATB_DUMP_TYPE"
 ATB_DEVICE_ID = "ATB_DEVICE_ID"
 ATB_AIT_LOG_LEVEL = "ATB_AIT_LOG_LEVEL"
 ATB_TIMESTAMP = "ATB_TIMESTAMP"
+RAW_INPUT_PATH = "RAW_INPUT_PATH"
 
 # ERRORCHECK
 ATB_CHECK_TYPE = "ATB_CHECK_TYPE"
 CHECK_TYPE_MAPPING = {
-    'overflow': '1',
+    "overflow": "1",
 }
 ATB_EXIT = "ATB_EXIT"
 
@@ -80,30 +77,62 @@ ASCEND_TOOLKIT_HOME = "ASCEND_TOOLKIT_HOME"
 ATB_PROB_LIB_WITH_ABI = "libatb_probe_abi1.so"
 ATB_PROB_LIB_WITHOUT_ABI = "libatb_probe_abi0.so"
 
-DATA_ID = 'data_id'
+DATA_ID = "data_id"
 TOKEN_ID = "token_id"
-MY_DATA_PATH = 'my_data_path'
+MY_DATA_PATH = "my_data_path"
 MY_DTYPE = "my_dtype"
 MY_SHAPE = "my_shape"
 MY_MAX_VALUE = "my_max_value"
 MY_MIN_VALUE = "my_min_value"
 MY_MEAN_VALUE = "my_mean_value"
-GOLDEN_DATA_PATH = 'golden_data_path'
-GOLDEN_DTYPE = 'golden_dtype'
-GOLDEN_SHAPE = 'golden_shape'
+GOLDEN_DATA_PATH = "golden_data_path"
+GOLDEN_DTYPE = "golden_dtype"
+GOLDEN_SHAPE = "golden_shape"
 GOLDEN_MAX_VALUE = "golden_max_value"
 GOLDEN_MIN_VALUE = "golden_min_value"
 GOLDEN_MEAN_VALUE = "golden_mean_value"
 CMP_FAIL_REASON = "cmp_fail_reason"
-CSV_GOLDEN_HEADER = [TOKEN_ID, DATA_ID, GOLDEN_DATA_PATH, GOLDEN_DTYPE, GOLDEN_SHAPE, GOLDEN_MAX_VALUE, GOLDEN_MIN_VALUE, GOLDEN_MEAN_VALUE,
-              MY_DATA_PATH, MY_DTYPE, MY_SHAPE, MY_MAX_VALUE, MY_MIN_VALUE, MY_MEAN_VALUE]
+WEIGHT_NAME = "weight_name"
+
+CSV_GOLDEN_HEADER = [
+    TOKEN_ID,
+    DATA_ID,
+    GOLDEN_DATA_PATH,
+    GOLDEN_DTYPE,
+    GOLDEN_SHAPE,
+    GOLDEN_MAX_VALUE,
+    GOLDEN_MIN_VALUE,
+    GOLDEN_MEAN_VALUE,
+    MY_DATA_PATH,
+    MY_DTYPE,
+    MY_SHAPE,
+    MY_MAX_VALUE,
+    MY_MIN_VALUE,
+    MY_MEAN_VALUE,
+]
 CSV_GOLDEN_HEADER.extend(list(CMP_ALG_MAP.keys()))
 CSV_GOLDEN_HEADER.append(CMP_FAIL_REASON)
+CSV_CMP_WEIGHT_HEADER = [
+    WEIGHT_NAME,
+    GOLDEN_DTYPE,
+    GOLDEN_SHAPE,
+    GOLDEN_MAX_VALUE,
+    GOLDEN_MIN_VALUE,
+    GOLDEN_MEAN_VALUE,
+    MY_DTYPE,
+    MY_SHAPE,
+    MY_MAX_VALUE,
+    MY_MIN_VALUE,
+    MY_MEAN_VALUE,
+]
+CSV_CMP_WEIGHT_HEADER.extend(list(CMP_ALG_MAP.keys()))
+
+MSIT_BAD_CASE_FOLDER_NAME = 'msit_bad_case'
 
 
 def get_timestamp_sync():
     max_timestamp = int(datetime.datetime.now().strftime("%s"))
-    
+
     world_size = int(os.environ.get("LOCAL_WORLD_SIZE", "1"))
     if world_size < 2:
         return max_timestamp

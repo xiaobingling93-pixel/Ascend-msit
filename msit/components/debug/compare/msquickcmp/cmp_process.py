@@ -37,6 +37,7 @@ from auto_optimizer import OnnxGraph
 from msquickcmp.atc import atc_utils
 from auto_optimizer.graph_refactor import Node
 from msquickcmp.common import utils
+from msquickcmp.common.args_check import is_saved_model_valid
 from msquickcmp.common.utils import AccuracyCompareException, get_shape_to_directory_name, safe_delete_path_if_exists
 from msquickcmp.common.convert import convert_bin_dump_data_to_npy
 from msquickcmp.common.convert import convert_npy_to_bin
@@ -57,6 +58,10 @@ MAX_MEMORY_USE = 6 * 1024 * 1024 * 1024
 
 
 def _generate_golden_data_model(args, npu_dump_npy_path):
+    if is_saved_model_valid(args.model_path):
+        from msquickcmp.tf.tf_save_model_dump_data import TfSaveModelDumpData
+
+        return TfSaveModelDumpData(args)
     model_name, extension = utils.get_model_name_and_extension(args.model_path)
     if args.weight_path and ".prototxt" == extension:
         from msquickcmp.caffe_model.caffe_dump_data import CaffeDumpData
@@ -195,11 +200,39 @@ def cmp_process(args: CmpArgsAdapter, use_cli: bool):
         raise error
 
 
-def run(args:CmpArgsAdapter, input_shape, original_out_path, use_cli: bool):
+def run(args: CmpArgsAdapter, input_shape, original_out_path, use_cli: bool):
     if input_shape:
         args.input_shape = input_shape
         args.out_path = os.path.join(original_out_path, get_shape_to_directory_name(args.input_shape))
 
+    if is_saved_model_valid(args.offline_model_path):
+        # npu dump
+        from msquickcmp.npu.npu_tf_adapter_dump_data import NpuTfAdapterDumpData
+        npu_dump = NpuTfAdapterDumpData(args)
+        npu_dump.generate_inputs_data()
+        npu_dump_data_path, output_json_path = npu_dump.generate_dump_data()
+        # gpu dump
+        from msquickcmp.tf.tf_save_model_dump_data import TfSaveModelDumpData
+        golden_dump = TfSaveModelDumpData(args)
+        golden_dump.generate_inputs_data(npu_dump_data_path, om_parser=None)
+        golden_dump_data_path = golden_dump.generate_dump_data(output_json_path, npu_dump_path=None, om_parser=None)
+        # compare the entire network
+        net_compare = NetCompare(npu_dump_data_path, golden_dump_data_path,
+                                 output_json_path, args, golden_json_path=None)
+        net_compare.accuracy_network_compare()
+        if not args.locat:
+            invalid_rows, _ = analyser.Analyser(args.out_path)()
+        else:
+            invalid_rows, _ = analyser.Analyser(args.out_path)('ALL_INVALID')
+        print_advisor_info(args.out_path)
+        _append_is_npu_ops_to_csv(args.out_path)
+    else:
+        invalid_rows = run_om_model_compare(args, use_cli)
+
+    return invalid_rows
+
+
+def run_om_model_compare(args, use_cli):
     # whether use aipp
     output_json_path = atc_utils.convert_model_to_json(args.cann_path, args.offline_model_path, args.out_path)
     golden_json_path = None
@@ -234,7 +267,10 @@ def run(args:CmpArgsAdapter, input_shape, original_out_path, use_cli: bool):
     expect_net_output_node = npu_dump.get_expect_output_name()
 
     # generate dump data by golden model
-    golden_dump_data_path = golden_dump.generate_dump_data(npu_dump_npy_path, npu_dump.om_parser)
+    if is_saved_model_valid(args.model_path):
+        golden_dump_data_path = golden_dump.generate_dump_data(output_json_path, npu_dump_npy_path, npu_dump.om_parser)
+    else:
+        golden_dump_data_path = golden_dump.generate_dump_data(npu_dump_npy_path, npu_dump.om_parser)
     golden_net_output_info = golden_dump.get_net_output_info()
 
     # if it's dynamic batch scenario, golden data files should be renamed
@@ -297,8 +333,8 @@ def fusion_close_model_convert(args:CmpArgsAdapter):
 
 
 def check_and_run(args: CmpArgsAdapter, use_cli: bool):
-    utils.check_file_or_directory_path(args.model_path)
-    utils.check_file_or_directory_path(args.offline_model_path)
+    utils.check_file_or_directory_path(args.model_path, is_saved_model_valid(args.model_path))
+    utils.check_file_or_directory_path(args.offline_model_path, is_saved_model_valid(args.offline_model_path))
     if args.weight_path:
         utils.check_file_or_directory_path(args.weight_path)
     utils.check_device_param_valid(args.device)

@@ -18,6 +18,7 @@ import site
 import subprocess
 import shutil
 import re
+import pandas as pd
 
 from components.utils.file_open_check import FileStat
 from msit_llm.common.log import logger
@@ -71,7 +72,7 @@ def init_dump_task(args):
     else:
         os.environ.pop(ATB_SAVE_TENSOR_RUNNER, None)  # Ensure none is set
 
-    os.makedirs(get_ait_dump_path(), exist_ok=True)
+    get_ait_dump_path()
 
     if args.output:
         if args.output.endswith('/'):
@@ -175,6 +176,14 @@ def split_cpu_profiling_data(data, opname):
     return execute_data, setup_data
 
 
+def add_extracted_headers_to_csv(split_data: str, csv_buffer: dict, prefix: str, headers: set):
+    matched_pairs = re.findall(r'[a-zA-Z]+:[0-9]+', split_data)
+    for header_value_pair in matched_pairs:
+        header, value = header_value_pair.split(':')
+        headers.add(prefix + header)
+        csv_buffer[prefix + header] = value
+
+
 def merge_cpu_profiling_data(path):
     # 遍历目录下所有文件
     for root, dirs, files in os.walk(path):
@@ -182,15 +191,26 @@ def merge_cpu_profiling_data(path):
             if not re.match(r'operation_statistic_\d+\.txt', file):
                 continue
             data = {}
-            with open(os.path.join(root, file), 'r+') as f:
+            headers = set()
+            csv_buffer_data = list()
+            with open(os.path.join(root, file), 'r') as f:
                 lines = f.readlines()
                 read_cpu_profiling_data(lines, data)
-                f.truncate(0)
-                f.seek(0, os.SEEK_SET)
                 for opname in data.keys():
                     execute_data, setup_data = split_cpu_profiling_data(data, opname)
-                    merged_data = f"{opname}:\n[execute] {execute_data}\n[setup] {setup_data}\n\n"
-                    f.write(merged_data)
+                    # 按照header类型添加prefix标识
+                    csv_buffer_data.append({'opname': opname})
+                    add_extracted_headers_to_csv(execute_data, csv_buffer_data[-1], 'execute_', headers)
+                    add_extracted_headers_to_csv(setup_data, csv_buffer_data[-1], 'setup_', headers)
+
+            headers = sorted(list(headers))
+            headers.insert(0, 'opname')
+            csv_dump_path = os.path.join(root, os.path.splitext(file)[0]) + '.csv'
+            pd.DataFrame(csv_buffer_data).fillna('').to_csv(csv_dump_path, columns=headers, index=False)
+            os.chmod(csv_dump_path, 0o640)
+            
+            # 删除原始文件
+            os.remove(os.path.join(root, file))
 
 
 def clear_dump_task(args):

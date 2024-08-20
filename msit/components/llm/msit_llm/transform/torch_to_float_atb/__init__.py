@@ -16,3 +16,6 @@ from msit_llm.transform.torch_to_float_atb.float_model_cpp_gen import float_mode
 from msit_llm.transform.torch_to_float_atb.float_model_h_gen import float_model_h_gen
 from msit_llm.transform.torch_to_float_atb.float_layer_cpp_gen import float_layer_cpp_gen
 from msit_llm.transform.torch_to_float_atb.float_layer_h_gen import float_layer_h_gen
+from msit_llm.transform.torch_to_float_atb.router_py_gen import router_py_gen
+from msit_llm.transform.torch_to_float_atb.modeling_py_gen import modeling_py_gen
+from msit_llm.transform.torch_to_float_atb.flash_causal_py_gen import flash_causal_py_gen
