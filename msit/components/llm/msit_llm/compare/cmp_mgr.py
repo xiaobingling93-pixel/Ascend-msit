@@ -30,13 +30,13 @@ class CompareMgr:
         self.args = args
         self.golden_data: CompareDataParse = self.init_compare_data(golden_path, args)
         self.my_data: CompareDataParse = self.init_compare_data(my_path, args)
+        os.environ[RAW_INPUT_PATH] = golden_path + "|" + my_path
         self.op_match: OpMatchMgr = OpMatchMgr(args)
         self.compared_result = []  # 收集结果
 
     def init_compare_data(self, data_path: str, args) -> CompareDataParse:
         for cls_data in self.data_parsers:
             if cls_data.accept(data_path, args):
-                os.environ[RAW_INPUT_PATH] = data_path
                 return cls_data(data_path, self.args)
         logger.error(f"cannot parse data path({data_path}). it is not a atb dump path or a torch dump path.")
         return None
