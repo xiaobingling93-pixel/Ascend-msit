@@ -38,7 +38,7 @@ class NpuTfAdapterDumpData(object):
     """
 
     def __init__(self, arguments):
-        self.serving = arguments.serving
+        self.serving = arguments.serving if arguments.serving else "serving_default"
         self.output_path = os.path.realpath(arguments.out_path)
         self.input = os.path.join(self.output_path, "input")
         self.dump_data_npu = os.path.join(self.output_path, "dump_data", "npu")
@@ -47,7 +47,7 @@ class NpuTfAdapterDumpData(object):
         self.model_path = arguments.offline_model_path
         self.input_path = arguments.input_path
         self.input_shape = self.split_input_shape(arguments.input_shape)
-        self.inputs_dtype = self.get_model_inputs_dtype(arguments.offline_model_path, arguments.serving)
+        self.inputs_dtype = self.get_model_inputs_dtype(arguments.offline_model_path, self.serving)
         self.cann_path = arguments.cann_path
         self._create_dir()
 

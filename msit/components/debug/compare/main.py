@@ -77,7 +77,7 @@ def _accuracy_compare_parser(compare_parser):
     compare_parser.add_argument("--convert", dest="bin2npy", default=False, type=str2bool,
                                 help="<Optional> Enable npu dump data conversion from bin to npy after compare.\
                         For example: --convert True")
-    compare_parser.add_argument("--serve", dest="serving", default="serving_default",
+    compare_parser.add_argument("--serve", dest="serving", default="",
                                 help="<Optional> Enter the signature of the model")
 
 
