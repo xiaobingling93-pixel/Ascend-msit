@@ -93,7 +93,7 @@ def test_slice_tensor_by_seq_len_4d_valid(mock_logger):
     rope_type = 0
 
     sliced_tensor = CompareMgr._slice_tensor_by_seq_len(golden_tensor_datas, seq_len, rope_type)
-    expected_sliced_tensor = tensor[:, :, :seq_len - 1, :].unsqueeze(0)
+    expected_sliced_tensor = tensor[:, :, seq_len - 1, :].squeeze(0)
     assert torch.equal(sliced_tensor[0], expected_sliced_tensor)
     mock_error.assert_not_called()
     mock_debug.assert_not_called()
