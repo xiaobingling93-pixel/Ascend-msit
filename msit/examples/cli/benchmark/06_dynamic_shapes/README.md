@@ -44,7 +44,7 @@
     以一个双输入模型为例，第一个输入为1,3,224,224 1,3,224,225 1,3,224,226，第二个输入为1,3,224,224 2,3,224,224 3,3,224,224，进行分别推理为例，命令如下：
 
     ```bash
-    msit benchmark --om-model ./pth_resnet50_dymshape_dual_input.om  --output-size 100000 --dym-shape-range "actual_input_1:1,3,224,224~226;actual_input_2:1~3,3,224,224;"
+    msit benchmark --om-model ./pth_resnet50_dymshape_dual_input.om  --output-size 100000 --dym-shape-range "actual_input_1:1,3,224,224~226;actual_input_2:1~3,3,224,224"
     ```
 
 5. 多输入动态Shape模型range测试模式（*.info）。
