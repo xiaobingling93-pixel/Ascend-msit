@@ -8,7 +8,7 @@ if [ ! -d "$ASCED_HOME_PATH" ]; then
 fi
 
 src_dir="$ASCEND_HOME_PATH/python/site-packages/msmodelslim/"
-scrpit_dir=$(cd $(dirname $0);pwd)$"msmodelslim"
+script_dir=$(cd $(dirname $0);pwd)$"/msmodelslim"
 echo "collect packages from CANN installation path: $src_dir, copy to $script_dir"
 
 for file in $(find $src_dir -type f -name "*.so"); do
