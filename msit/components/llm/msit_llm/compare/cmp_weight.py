@@ -33,7 +33,7 @@ def find_safetensors_files(golden_path):
     # 如果没有找到safetensors文件就报错
     safetensors_file_list = []
     for file in os.listdir(model_dir_path):
-        if file.endswith(".safetensors"):
+        if file.endswith(".safetensors") or file.endswith(".bin"):
             safetensors_file_path = os.path.join(model_dir_path, file)
             safetensors_file_list.append(safetensors_file_path)
     return safetensors_file_list
@@ -47,7 +47,7 @@ def compare_weight(gp_path, mp_path, output_path):
     gp_path_list = find_safetensors_files(gp_path)
     mp_path_list = find_safetensors_files(mp_path)
     if not gp_path_list or not mp_path_list:
-        logger.error(f"No .safetensors files found in the directory.")
+        logger.error(f"No .safetensors or bin files found in the directory.")
         raise FileNotFoundError(f"Invalid path")
 
     gathered_row_data = []
@@ -55,7 +55,11 @@ def compare_weight(gp_path, mp_path, output_path):
     mp_dict = load_file(mp_path_list[0])
 
     for g_path in tqdm(sorted_gp_path_list, desc="Comparing"):
-        gp_dict = load_file(g_path)
+        
+        if g_path.endswith(".safetensors"):
+            gp_dict = load_file(g_path)
+        elif g_path.endswith(".bin"):
+            gp_dict = torch.load(g_path, map_location="cpu")
 
         for ft_weight_key, ft_weight_value in gp_dict.items():
 
