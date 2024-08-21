@@ -110,7 +110,7 @@ class CompareMgr:
                     self.golden_data.get_token_path(golden_token_id), golden_tensor_path, tensor_sub_dir=""
                 )
                 # 2. concat tensor_datas
-                if "rotary" in golden_tensor_path.lower():
+                if "rotary" in golden_tensor_path:
                     rope_type = self._get_rope_type(my_tensor_path)
                     if rope_type != -1:
                         golden_tensor_datas = self._slice_tensor_by_seq_len(golden_tensor_datas, seq_len, rope_type)
@@ -130,17 +130,17 @@ class CompareMgr:
     def _handle_rope_operation_paths(self, my_tensor_paths):
         seq_len = None
         if any("ropeoperation" in path.lower() for path in my_tensor_paths):
-            valid_paths = self._filter_rope_my_tensor_paths(my_tensor_paths)
-            if len(valid_paths) == 2:
-                seqlen_path, my_tensor_paths = valid_paths
+            seqlen_path, valid_my_tensor_paths = self._filter_rope_my_tensor_paths(my_tensor_paths)
+            if seqlen_path is not None:
                 seq_len = read_data(seqlen_path)
+                my_tensor_paths = valid_my_tensor_paths
                 if seq_len.shape == torch.Size([1]):
                     return seq_len.item(), my_tensor_paths
                 logger_text = f"Expected shape of seqLen is torch.Size([1]) but found {seq_len.shape}."
-                logger.error(logger_text)
+                logger.debug(logger_text)
             else:
                 logger_text = "Failed to get input tensors of RopeOperation to compare."
-                logger.error(logger_text)
+                logger.debug(logger_text)
         else:
             logger_text = f"RopeOperation not found in {my_tensor_paths}."
             logger.debug(logger_text)
@@ -156,13 +156,13 @@ class CompareMgr:
 
     @classmethod
     def _filter_rope_my_tensor_paths(cls, my_tensor_paths):
-        if len(my_tensor_paths) != 5:
-            logger_text = f"Expected 5 tensors for RopeOperation but found {len(my_tensor_paths)}."
-            logger.error(logger_text)
-            return my_tensor_paths
-
         seqlen_path = None
         valid_my_tensor_paths = []
+
+        if len(my_tensor_paths) != 5:
+            logger_text = f"Expected 5 tensors for RopeOperation but found {len(my_tensor_paths)}."
+            logger.debug(logger_text)
+            return seqlen_path, my_tensor_paths
 
         for path in my_tensor_paths:
             if "intensor4" in path.lower():
@@ -173,8 +173,8 @@ class CompareMgr:
         if len(valid_my_tensor_paths) != 2:
             logger_text = (f"Expected intensor2.bin and intensor3.bin for RopeOperaton "
                            f"but only found {valid_my_tensor_paths}.")
-            logger.error(logger_text)
-            return my_tensor_paths
+            logger.debug(logger_text)
+            return seqlen_path, my_tensor_paths
 
         valid_my_tensor_paths.sort(key=lambda path: ("intensor3" in path.lower()))
         return seqlen_path, valid_my_tensor_paths
@@ -190,7 +190,7 @@ class CompareMgr:
             rope_type = 1
         else:
             logger_text = f"Failed to get rope_type from {my_tensor_path}."
-            logger.error(logger_text)
+            logger.debug(logger_text)
 
         return rope_type
 
@@ -216,7 +216,7 @@ class CompareMgr:
             logger.error(logger_text)
         else:
             logger_text = f"Unsupported tensor with dimensions {tensor.ndimension()}. Expected 3 or 4 dimensions."
-            logger.error(logger_text)
+            logger.debug(logger_text)
         return golden_tensor_datas
 
     @classmethod
