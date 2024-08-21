@@ -37,7 +37,7 @@ class KvCacheCfg(Enum):
 
 class MaskType(Enum):
     MASK_TYPE_UNDEFINED = 0 # 默认值，全0mask
-    MASK_TYPE_NROM = 1 # 倒三角mask
+    MASK_TYPE_NORM = 1 # 倒三角mask
     MASK_TYPE_ALIBI = 2 # alibi mask
     MASK_TYPE_NORM_COMPRESS = 3 # 倒三角压缩mask
     MASK_TYPE_ALIBI_COMPRESS = 4 # alibi压缩mask
