@@ -256,7 +256,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
             score = score * tor
             score = self.get_clamped_score(score)
             if is_mask:
-                if (mask_type == MaskType.MASK_TYPE_NROM.value or mask_type == MaskType.MASK_TYPE_NORM_COMPRESS.value) \
+                if (mask_type == MaskType.MASK_TYPE_NORM.value or mask_type == MaskType.MASK_TYPE_NORM_COMPRESS.value) \
                     and q_s > mask.shape[1]:
                     # 压缩norm mask, 使用当前最大seqlen生成mask
                     no_compress_mask = torch.ones(size=(1, max_seq_len, max_seq_len)).to(score.device)
