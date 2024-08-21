@@ -35,7 +35,7 @@ def find_safetensors_files(golden_path):
     for file in os.listdir(model_dir_path):
         safetensors_file_path = os.path.join(model_dir_path, file)
         if file.endswith(".safetensors"):
-            safetensors_file_list.append(safetensors_file_path )
+            safetensors_file_list.append(safetensors_file_path)
         if file.endswith(".bin"):
             bin_file_list.append(safetensors_file_path)
     return safetensors_file_path if safetensors_file_path else bin_file_list
