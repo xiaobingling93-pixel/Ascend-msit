@@ -172,6 +172,27 @@ def policy_layer_type_cnt_match(golden_root_node: TreeNode, my_root_node: TreeNo
             MatchScore.FULL_MATCH,
         )
 
+
+def policy_rope_operator_match(golden_root_node: TreeNode, my_root_node: TreeNode, match_map: OpMatchMap):
+    golden_name2node = {node.node_name: node for node in golden_root_node.get_all_nodes()}
+    my_name2node = {node.node_name: node for node in my_root_node.get_all_nodes()}
+
+    golden_name_set = set(golden_name2node.keys())
+    my_name_set = set(my_name2node.keys())
+
+    golden_rotary_name_set = [item for item in golden_name_set if "rotary" in item.lower()]
+    my_rope_name_set = [item for item in my_name_set if "ropeoperation" in item.lower()]
+
+    for golden_node, my_node in zip(golden_rotary_name_set, my_rope_name_set):
+        match_map.add_score(
+            my_name2node.get(my_node),
+            MatchLocation.ALL_INPUT,
+            golden_name2node.get(golden_node),
+            MatchLocation.ALL_OUTPUT,
+            MatchScore.FULL_MATCH,
+        )
+
+
 class OpMatchMgr:
 
     def __init__(self, args) -> None:
@@ -180,6 +201,7 @@ class OpMatchMgr:
             policy_name_full_match,
             policy_layer_type_cnt_match,
             OpMatchPolicyMapCount(args),
+            policy_rope_operator_match,
         ]
 
     def match(self, golden_data, my_data):

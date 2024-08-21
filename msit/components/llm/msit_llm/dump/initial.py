@@ -75,10 +75,10 @@ def init_dump_task(args):
     get_ait_dump_path()
 
     if args.output:
-        if args.output.endswith('/'):
-            os.environ[ATB_OUTPUT_DIR] = str(args.output)
+        if os.path.abspath(str(args.output)).endswith('/'):
+            os.environ[ATB_OUTPUT_DIR] = os.path.abspath(str(args.output))
         else:
-            os.environ[ATB_OUTPUT_DIR] = str(args.output) + '/'
+            os.environ[ATB_OUTPUT_DIR] = os.path.abspath(str(args.output)) + '/'
     else:
         os.environ.pop(ATB_OUTPUT_DIR, None)  # Ensure none is set
 

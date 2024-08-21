@@ -132,13 +132,13 @@ class OpChecker:
             return input_path, base_path, pid, ret
 
         base_path, pid = self.get_base_path(input_path)
-        os.environ[RAW_INPUT_PATH] = base_path
 
         if base_path is None:
             logger_text = f"Input path is not in msit_dump tensors directory: {input_path}"
             logger.error(logger_text)
             return input_path, base_path, pid, ret
 
+        os.environ[RAW_INPUT_PATH] = os.path.dirname(os.path.dirname(os.path.abspath(base_path)))
         ret = True
         return input_path, base_path, pid, ret
 
