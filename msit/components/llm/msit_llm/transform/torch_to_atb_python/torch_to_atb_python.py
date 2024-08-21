@@ -321,6 +321,7 @@ if __name__ == "__main__":
     print(f">>>> {model_outputs = }")
     print(">>>> weights:", json.dumps(weight_names, indent=2))
     # print(">>>> operations:", json.dumps(operations, indent=2))
+    model_inputs, model_outputs, weight_names, operations = convert_to_quant(model_inputs, model_outputs, weight_names, operations)
 
     aa = build_atb_model_wo_repeat_str(model_name, model_inputs, model_outputs, weight_names, operations)
 
