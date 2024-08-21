@@ -37,10 +37,10 @@ def test_filter_rope_my_tensor_paths_when_invalid_file_numbers(mock_logger):
         'path/intensor4.bin',
         'path/intensor5.bin'
     ]
-    valid_paths = CompareMgr._filter_rope_my_tensor_paths(my_tensor_paths)
+    seqlen_path, valid_paths = CompareMgr._filter_rope_my_tensor_paths(my_tensor_paths)
     assert valid_paths == my_tensor_paths
-    mock_error.assert_called_once_with(f"Expected 5 tensors for RopeOperation but found {len(my_tensor_paths)}.")
-    mock_debug.assert_not_called()
+    mock_debug.assert_called_once_with(f"Expected 5 tensors for RopeOperation but found {len(my_tensor_paths)}.")
+    mock_error.assert_not_called()
 
 
 def test_filter_rope_my_tensor_paths_when_invalid_file(mock_logger):
@@ -52,10 +52,10 @@ def test_filter_rope_my_tensor_paths_when_invalid_file(mock_logger):
         'path/intensor2.bin',
         'path/intensor1.bin'
     ]
-    valid_paths = CompareMgr._filter_rope_my_tensor_paths(my_tensor_paths)
+    seqlen_path, valid_paths = CompareMgr._filter_rope_my_tensor_paths(my_tensor_paths)
     assert valid_paths == my_tensor_paths
-    mock_error.assert_called_once()
-    mock_debug.assert_not_called()
+    mock_debug.assert_called_once()
+    mock_error.assert_not_called()
 
 
 def test_get_rope_type_when_given_intensor2(mock_logger):
@@ -81,8 +81,8 @@ def test_get_rope_type_when_invalid(mock_logger):
     tensor_path = 'path/intensor1.bin'
     rope_type = CompareMgr._get_rope_type(tensor_path)
     assert rope_type == -1
-    mock_error.assert_called_once_with(f"Failed to get rope_type from {tensor_path}.")
-    mock_debug.assert_not_called()
+    mock_debug.assert_called_once_with(f"Failed to get rope_type from {tensor_path}.")
+    mock_error.assert_not_called()
 
 
 def test_slice_tensor_by_seq_len_4d_valid(mock_logger):
@@ -148,9 +148,9 @@ def test_slice_tensor_by_seq_len_with_invalid_dim(mock_logger):
 
     sliced_tensor = CompareMgr._slice_tensor_by_seq_len(golden_tensor_datas, seq_len, rope_type)
     assert sliced_tensor == golden_tensor_datas
-    mock_error.assert_called_once_with(f"Unsupported tensor with dimensions {tensor.ndimension()}. Expected 3 or 4 "
+    mock_debug.assert_called_once_with(f"Unsupported tensor with dimensions {tensor.ndimension()}. Expected 3 or 4 "
                                        f"dimensions.")
-    mock_debug.assert_not_called()
+    mock_error.assert_not_called()
 
 
 def test_remove_adjacent_repeated_columns_valid(mock_logger):
