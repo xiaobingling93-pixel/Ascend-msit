@@ -68,7 +68,7 @@ class NpuTfAdapterDumpData(object):
         tag_sets = saved_model_tag_set.split(',')
         if len(tag_sets) > 1:
             return tag_sets
-        return {tag_sets}
+        return {tag_sets[0]}
 
     @staticmethod
     def get_model_inputs_dtype(model_path, serving, tag_set):
