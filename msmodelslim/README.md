@@ -18,7 +18,7 @@ msModelSlim当前处于逐步开源过程中，计划通过630,930,1230三个版
 
 版本交替期间提供两种方式使用msModelSlim工具：  
 1、下载安装CANN并配置环境变量  
-2、下载安装CANN并配置环境变量，下载安装开源版本msModelSlim
+2、下载安装CANN并配置环境变量，下载安装开源版本msModelSlim  
     操作步骤：
     1、通过git clone下载本仓代码
     2、设置CANN环境变量
