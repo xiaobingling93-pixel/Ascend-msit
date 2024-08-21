@@ -183,9 +183,14 @@ class FileStat:
                 return False
             target = os.readlink(self.file)
             target_path = os.path.abspath(target)
-            if not target_path.startswith(os.path.abspath(whitelist_path)):
+            sub_paths = whitelist_path.split("|")
+            illegal_softlink = True
+            for sub_path in sub_paths:
+                if target_path.startswith(os.path.abspath(sub_path)):
+                    illegal_softlink = False
+            if illegal_softlink:
                 logger.error(f"path :{self.file} is a soft link, not supported, please import file(or directory) "
-                             f"directly")
+                            f"directly")
                 solution_log(SOLUTION_BASE_LOC + SOFT_LINK_SUB_CHAPTER)
                 return False
         return True
