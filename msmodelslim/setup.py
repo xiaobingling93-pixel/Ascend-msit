@@ -28,7 +28,7 @@ setup(
     description='msModelSlim, MindStudio ModelSlim Tools',
     long_description_content_type='text/markdown',
     url='https://gitee.com/ascend/msit',
-    packages=find_packages(exclude=['*.precision_tool',]),
+    packages=find_packages(exclude=['*.precision_tool', ]),
     package_data={
         '': [
             'LICENSE',
