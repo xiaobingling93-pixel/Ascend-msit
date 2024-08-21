@@ -180,7 +180,7 @@ def policy_rope_operator_match(golden_root_node: TreeNode, my_root_node: TreeNod
     golden_name_set = set(golden_name2node.keys())
     my_name_set = set(my_name2node.keys())
 
-    golden_rotary_name_set = [item for item in golden_name_set if "rotary" in item.lower()]
+    golden_rotary_name_set = [item for item in golden_name_set if "rotary" in item]
     my_rope_name_set = [item for item in my_name_set if "ropeoperation" in item.lower()]
 
     for golden_node, my_node in zip(golden_rotary_name_set, my_rope_name_set):
