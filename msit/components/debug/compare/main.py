@@ -78,6 +78,8 @@ def _accuracy_compare_parser(compare_parser):
                         For example: --convert True")
     compare_parser.add_argument("--saved_model_signature", default="serving_default",
                                 help="<Optional> Enter the signature of the model")
+    compare_parser.add_argument("--saved_model_tag_set", default="",
+                                help="<Optional> Enter the tagSet of the model")
 
 
 if __name__ == '__main__':
@@ -89,7 +91,8 @@ if __name__ == '__main__':
     cmp_args = CmpArgsAdapter(args.model_path, args.offline_model_path, args.weight_path, args.input_path,
                               args.cann_path, args.out_path, args.input_shape,
                               args.device, args.output_size, args.output_nodes, args.advisor,
-                              args.dym_shape_range, args.dump, args.bin2npy, args.saved_model_signature)
+                              args.dym_shape_range, args.dump, args.bin2npy, args.saved_model_signature,
+                              args.saved_model_tag_set)
     try:
         cmp_process(cmp_args, False)
     except utils.AccuracyCompareException as error:
