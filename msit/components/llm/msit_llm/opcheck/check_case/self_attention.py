@@ -133,6 +133,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         batch_run_status_enable = self.op_param.get("batchRunStatusEnable", False)
         if batch_run_status_enable:
             batch_status = in_tensors[-1]
+            self.bind_idx.append(len(in_tensors) - 1)
         else:
             batch_status = range(len(seq_len))
         return batch_status
@@ -178,16 +179,16 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         if is_mask:
             mask = self.get_mask(in_tensors)
             kv_seqlen = in_tensors[4]
-            q_seqlen = in_tensors[5]
+            seq_len = q_seqlen = in_tensors[5]
             layer_id = int(in_tensors[6][0])
         else:
             kv_seqlen = in_tensors[3]
-            seq_len = in_tensors[4]
+            seq_len = q_seqlen = in_tensors[4]
             layer_id = int(in_tensors[5][0])
 
         batch_status = self.get_batch_status(in_tensors, seq_len)
         post_mask_coff = self.get_post_mask_coff()
-        _, _, head_info, data_type, q_ntokens = self.get_attention_params(q, seq_len)
+        _, _, head_info, data_type, q_ntokens = self.get_attention_params(q)
         head_num, head_size, kv_head_num = head_info
         max_seq_len = max(seq_len)
 
@@ -228,8 +229,10 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         if is_mask:
             mask = self.get_mask(in_tensors)
             seq_len = in_tensors[4]
+            self.bind_idx.append(4)
         else:
             seq_len = in_tensors[3]
+            self.bind_idx.append(3)
 
         batch_status = self.get_batch_status(in_tensors, seq_len)
         post_mask_coff = self.get_post_mask_coff()
@@ -262,8 +265,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
                     no_compress_mask = torch.ones(size=(1, max_seq_len, max_seq_len)).to(score.device)
                     no_compress_mask = torch.triu(no_compress_mask, 1)
                     no_compress_mask *= -10000.0
-                    if is_mask:
-                        self.in_tensors[3] = no_compress_mask.to(self.in_tensors[3].dtype)
+                    self.in_tensors[3] = no_compress_mask.to(self.in_tensors[3].dtype)
                     score = score + no_compress_mask[:, :q_s, :kv_s]
                 else:
                     score = score + mask[:, :q_s, :kv_s] * post_mask_coff
@@ -283,6 +285,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         mixed_q, mixed_k, mixed_v = OpcheckUnpadSelfAttentionOperation.get_qkv(in_tensors)
         cache_k, cache_v, attention_mask, token_offset, seq_len, layerid = in_tensors[3], in_tensors[4], \
             in_tensors[5], in_tensors[6], in_tensors[7], int(in_tensors[8][0])
+        self.bind_idx = [3, 4, 6, 7]
 
         soc_version = self.get_soc_version()
         if soc_version != "Ascend910B":

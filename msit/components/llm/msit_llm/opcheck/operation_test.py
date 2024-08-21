@@ -43,6 +43,7 @@ class OperationTest(unittest.TestCase):
         self.pid = case_info['pid']
         self.in_tensors = []
         self.out_tensors = []
+        self.bind_idx = []
         self.atb_rerun = self.case_info["atb_rerun"]
 
         error1 = 'Error0.1‰'
@@ -165,7 +166,6 @@ class OperationTest(unittest.TestCase):
 
             from msit_llm.opcheck.check_case.self_attention import CalcType, KvCacheCfg, MaskType, KernelType, ClampType
 
-            graph_op = atb._GraphOperation('rerun_op')
             params = self.op_param
             if "calcType" in params:
                 params["calcType"] = CalcType(self.op_param['calcType']).name
@@ -178,6 +178,8 @@ class OperationTest(unittest.TestCase):
             if "clampType" in params:
                 params["clampType"] = ClampType(self.op_param['clampType']).name
             params = json.dumps(params)
+
+            graph_op = atb._GraphOperation('rerun_op')
             op = atb._BaseOperation(op_type="SelfAttention", op_param=params, op_name="SelfAttentionOperation")
             input_name = ['in'+str(i) for i in range(len(self.in_tensors))]
             output_name = ['out'+str( i) for i in range(len(self.out_tensors))]
@@ -190,9 +192,9 @@ class OperationTest(unittest.TestCase):
                 inputs[idx] = intensor
             for idx, outtensor in zip(output_name, self.out_tensors):
                 outputs[idx] = outtensor
-            seq_len_idx = 4
-            bind_name = "in" + str(seq_len_idx)
-            bind[bind_name] = self.in_tensors[seq_len_idx].cpu()
+            for idx in self.bind_idx:
+                bind_name = "in" + str(idx)
+                bind[bind_name] = self.in_tensors[idx].cpu()
             _ = graph_op.forward(inputs, outputs, bind)
             out_tensors = outputs.values()
         elif self.op_name == "PagedAttentionOperation":
@@ -200,8 +202,20 @@ class OperationTest(unittest.TestCase):
             sys.path.append(os.path.join(path, "lib"))
             import _libatb_torch as atb
 
+            from msit_llm.opcheck.check_case.paged_attention import CompressType, MaskType, QuantType, CalcType
+
+            params = self.op_param
+            if "compressType" in params:
+                params["compressType"] = CompressType(self.op_param['compressType']).name
+            if "maskType" in params:
+                params["maskType"] = MaskType(self.op_param['maskType']).name
+            if "quantType" in params:
+                params["quantType"] = QuantType(self.op_param['quantType']).name
+            if "calcType" in params:
+                params["calcType"] = CalcType(self.op_param['calcType']).name
+            params = json.dumps(params)
+
             graph_op = atb._GraphOperation('rerun_op')
-            params = json.dumps(self.op_param)
             op = atb._BaseOperation(op_type="PagedAttention", op_param=params, op_name="PagedAttentionOperation")
             input_name = ['in'+str(i) for i in range(len(self.in_tensors))]
             output_name = ['out'+str(i) for i in range(len(self.out_tensors))]
@@ -214,9 +228,9 @@ class OperationTest(unittest.TestCase):
                 inputs[idx] = intensor
             for idx, outtensor in zip(output_name, self.out_tensors):
                 outputs[idx] = outtensor
-            seq_len_idx = 4
-            bind_name = "in" + str(seq_len_idx)
-            bind[bind_name] = self.in_tensors[seq_len_idx].cpu()
+            for idx in self.bind_idx:
+                bind_name = "in" + str(idx)
+                bind[bind_name] = self.in_tensors[idx].cpu()
             _ = graph_op.forward(inputs, outputs, bind)
             out_tensors = outputs.values()
         else:
