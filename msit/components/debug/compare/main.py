@@ -79,7 +79,8 @@ def _accuracy_compare_parser(compare_parser):
     compare_parser.add_argument("--saved_model_signature", default="serving_default",
                                 help="<Optional> Enter the signature of the model")
     compare_parser.add_argument("--saved_model_tag_set", default="",
-                                help="<Optional> Enter the tagSet of the model")
+                                help="<Optional> Enter the tagSet of the model.\
+                                For example: --saved_model_tag_set ['serve', 'general_parser']")
 
 
 if __name__ == '__main__':

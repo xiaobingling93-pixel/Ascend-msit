@@ -189,7 +189,7 @@ class CompareCommand(BaseCommand):
             '--saved_model_tag_set',
             dest="saved_model_tag_set",
             default='',
-            help="Enter the tagSet of the model")
+            help="Enter the tagSet of the model. For example: --saved_model_tag_set ['serve', 'general_parser']")
         self.parser = parser
 
     def handle(self, args):
