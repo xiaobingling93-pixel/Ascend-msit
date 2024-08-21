@@ -64,7 +64,8 @@ def _accuracy_compare_parser(compare_parser):
                                      " E.g: 10200,34000")
     compare_parser.add_argument("--output-nodes", dest="output_nodes", default="",
                                 type=check_dict_kind_string,
-                                help="<Optional> Output nodes designated by user. Separate multiple nodes with semicolons(;)."
+                                help="<Optional> Output nodes designated by user. Separate multiple nodes with "
+                                     "semicolons(;)."
                                      " E.g: node_name1:0;node_name2:1;node_name3:0")
     compare_parser.add_argument("--advisor", dest="advisor", action="store_true",
                                 help="<Optional> Enable advisor after compare.")
