@@ -30,9 +30,20 @@ class CompareMgr:
         self.args = args
         self.golden_data: CompareDataParse = self.init_compare_data(golden_path, args)
         self.my_data: CompareDataParse = self.init_compare_data(my_path, args)
-        os.environ[RAW_INPUT_PATH] = golden_path + "|" + my_path
+        self.golden_raw_path = self.get_raw_path(golden_path)
+        self.my_raw_path = self.get_raw_path(my_path)
+        os.environ[RAW_INPUT_PATH] = self.golden_raw_path + "|" + self.my_raw_path
         self.op_match: OpMatchMgr = OpMatchMgr(args)
         self.compared_result = []  # 收集结果
+
+    def get_raw_path(self, path: str):
+        raw_dirctory = path.split('/')
+        raw_path = raw_dirctory[-1] if raw_dirctory else ""
+        if raw_path.startswith("ait_dump") or raw_path.startswith("msit_dump"):
+            raw_path = path
+        else:
+            raw_path = os.path.dirname(os.path.dirname(path))
+        return raw_path
 
     def init_compare_data(self, data_path: str, args) -> CompareDataParse:
         for cls_data in self.data_parsers:
