@@ -57,7 +57,7 @@ class TfSaveModelDumpData(DumpData):
         tag_sets = saved_model_tag_set.split(',')
         if len(tag_sets) > 1:
             return tag_sets
-        return {tag_sets}
+        return {tag_sets[0]}
 
     @staticmethod
     def _parse_json_file(output_json_path):
