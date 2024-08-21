@@ -21,6 +21,7 @@ This class mainly involves generate tf adapter npu dump data function.
 
 import glob
 import os
+import shutil
 
 import npu_device
 import numpy as np
@@ -37,26 +38,49 @@ class NpuTfAdapterDumpData(object):
     """
 
     def __init__(self, arguments):
+        self.serving = arguments.saved_model_signature
+        self.tag_set = self.split_tag_set(arguments.saved_model_tag_set)
         self.output_path = os.path.realpath(arguments.out_path)
         self.input = os.path.join(self.output_path, "input")
         self.dump_data_npu = os.path.join(self.output_path, "dump_data", "npu")
         self.model_json_path = os.path.join(self.output_path, "model")
         self.inputs_data = {}
         self.model_path = arguments.offline_model_path
+        self.input_path = arguments.input_path
         self.input_shape = self.split_input_shape(arguments.input_shape)
+        self.inputs_dtype = self.get_model_inputs_dtype(arguments.offline_model_path, self.serving, self.tag_set)
         self.cann_path = arguments.cann_path
         self._create_dir()
 
     @staticmethod
     def split_input_shape(input_shapes):
         input_list = input_shapes.split(";")
-        input_shape_list = [
-            (name, [int(num) for num in shape_data_str_list])
-            for name, shape_data_str in (shape.split(":") for shape in input_list)
-            for shape_data_str_list in [shape_data_str.split(",")]
-        ]
+        input_shape_dict = {}
+        for shape in input_list:
+            input_name, shape_str = shape.split(":")
+            shape_dims = list(map(int, shape_str.split(",")))
+            input_shape_dict[input_name] = shape_dims
 
-        return input_shape_list
+        return input_shape_dict
+
+    @staticmethod
+    def split_tag_set(saved_model_tag_set):
+        tag_sets = saved_model_tag_set.split(',')
+        if len(tag_sets) > 1:
+            return tag_sets
+        return {tag_sets}
+
+    @staticmethod
+    def get_model_inputs_dtype(model_path, serving, tag_set):
+        inputs_dtype = {}
+        with tf.compat.v1.Session() as sess:
+            tag_set = {tf.compat.v1.saved_model.tag_constants.SERVING} if tag_set == "" else tag_set
+            model = tf.compat.v1.saved_model.load(sess, tag_set, model_path)
+            inputs = model.signature_def[serving].inputs
+            for key, input_tensor in inputs.items():
+                np_dtype = tf.dtypes.as_dtype(input_tensor.dtype).as_numpy_dtype
+                inputs_dtype[input_tensor.name.split(':')[0]] = np_dtype
+        return inputs_dtype
 
     @staticmethod
     def get_graph_txt(model_json_path):
@@ -68,10 +92,29 @@ class NpuTfAdapterDumpData(object):
         return txt_files[0]
 
     def generate_inputs_data(self):
-        for shape in self.input_shape:
-            input_data = np.random.random(size=shape[1]).astype(np.float32)
-            self.inputs_data[shape[0]] = input_data
-            input_data.tofile(os.path.join(self.input, shape[0] + ".bin"))
+        # copy input_data into destination path
+        if self.input_path:
+            input_path = self.input_path.split(",")
+            for i, input_file in enumerate(input_path):
+                if not os.path.isfile(input_file):
+                    utils.logger.error("no such file exists: {}".format(input_file))
+                    raise utils.AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PARAM_ERROR)
+                file_name = os.path.basename(input_file)
+                dest_file = os.path.join(self.input, file_name)
+                shutil.copy(input_file, dest_file)
+                os.chmod(input_file, 0o640)
+                os.chmod(dest_file, 0o640)
+                # convert .bin to numpy
+                data_type = file_name.rsplit("_", 1)[-1].split(".")[0]
+                input_name = file_name.rsplit("_", 1)[0]
+                input_data = np.fromfile(input_file, dtype=data_type).reshape(self.input_shape.get(input_name))
+                self.inputs_data[input_name] = input_data
+        else:
+            for input_name, shape_str in self.input_shape.items():
+                data_type = self.inputs_dtype.get(input_name)
+                input_data = np.random.random(size=shape_str).astype(data_type)
+                self.inputs_data[input_name] = input_data
+                input_data.tofile(os.path.join(self.input, input_name + "_" + data_type.__name__ + ".bin"))
 
     def generate_dump_data(self):
         # adapt NPU
@@ -90,14 +133,14 @@ class NpuTfAdapterDumpData(object):
         config_proto.graph_options.rewrite_options.remapping = RewriterConfig.OFF
         # sess run predict
         with tf.compat.v1.Session(config=config_proto) as sess:
-            tag_set = {tf.compat.v1.saved_model.tag_constants.SERVING}
+            tag_set = {tf.compat.v1.saved_model.tag_constants.SERVING} if self.tag_set == "" else self.tag_set
             model = tf.compat.v1.saved_model.load(sess, tag_set, self.model_path)
             feed_dict = {
                 sess.graph.get_tensor_by_name(input_name + ":0"): input_data
                 for input_name, input_data in self.inputs_data.items()
             }
             output_tensors = []
-            outputs_tensors_info = model.signature_def['serving_default'].outputs
+            outputs_tensors_info = model.signature_def[self.serving].outputs
             output_op_names = []
             for output_tensor_info in outputs_tensors_info.values():
                 output_op_names.append(output_tensor_info.name.split(':')[0])

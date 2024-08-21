@@ -83,17 +83,32 @@ class TfSaveModelDumpData(DumpData):
 
         return input_shape_list
 
-    def generate_inputs_data(self, npu_dump_path=None, om_parser=None):
+    def generate_inputs_data(self, is_om_compare, npu_dump_path=None, om_parser=None):
         """
         Generate tf2.6 save_model inputs data
-        :return tf2.6 save_model inputs data directory
+        return tf2.6 save_model inputs data directory
         """
-        input_files = sorted(os.listdir(self.input), key=lambda x: int(x[-5]))
-        input_bin_data = [np.fromfile(os.path.join(self.input, input_bin_file), dtype=np.float32)
-                          for input_bin_file in input_files]
-        for index, bin_data in enumerate(input_bin_data):
-            bin_data = bin_data.reshape(self.input_shape[index][1])
-            self.inputs_data[self.input_shape[index][0]] = bin_data
+        if is_om_compare:
+            input_files = sorted(os.listdir(self.input), key=lambda x: int(x[-5]))
+            input_bin_data = [np.fromfile(os.path.join(self.input, input_bin_file), dtype=np.float32)
+                              for input_bin_file in input_files]
+            for index, bin_data in enumerate(input_bin_data):
+                bin_data = bin_data.reshape(self.input_shape[index][1])
+                self.inputs_data[self.input_shape[index][0]] = bin_data
+        else:
+            input_files = os.listdir(self.input)
+            for input_file in input_files:
+                file_name = os.path.basename(input_file)
+                data_type = file_name.rsplit("_", 1)[-1].split(".")[0]
+                input_name = file_name.rsplit("_", 1)[0]
+                input_shape_dim = None
+                for input_shape in self.input_shape:
+                    if input_shape[0] == input_name:
+                        input_shape_dim = input_shape[1]
+                if input_shape_dim is not None:
+                    input_data = (np.fromfile(os.path.join(self.input, input_file), dtype=np.dtype(data_type))
+                                  .reshape(input_shape_dim))
+                    self.inputs_data[input_name] = input_data
 
     def get_net_output_info(self):
         """
