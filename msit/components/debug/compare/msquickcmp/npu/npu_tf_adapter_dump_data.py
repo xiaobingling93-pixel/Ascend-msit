@@ -39,7 +39,7 @@ class NpuTfAdapterDumpData(object):
 
     def __init__(self, arguments):
         self.serving = arguments.saved_model_signature
-        self.tag_set = arguments.saved_model_tag_set
+        self.tag_set = self.split_tag_set(arguments.saved_model_tag_set)
         self.output_path = os.path.realpath(arguments.out_path)
         self.input = os.path.join(self.output_path, "input")
         self.dump_data_npu = os.path.join(self.output_path, "dump_data", "npu")
@@ -62,6 +62,13 @@ class NpuTfAdapterDumpData(object):
             input_shape_dict[input_name] = shape_dims
 
         return input_shape_dict
+
+    @staticmethod
+    def split_tag_set(saved_model_tag_set):
+        tag_sets = saved_model_tag_set.split(',')
+        if len(tag_sets) > 1:
+            return tag_sets
+        return {tag_sets}
 
     @staticmethod
     def get_model_inputs_dtype(model_path, serving, tag_set):
