@@ -166,7 +166,7 @@ class OperationTest(unittest.TestCase):
             from msit_llm.opcheck.check_case.self_attention import CalcType, KvCacheCfg, MaskType, KernelType, ClampType
 
             graph_op = atb._GraphOperation('rerun_op')
-            params = json.dumps(self.op_param)
+            params = self.op_param
             if "calcType" in params:
                 params["calcType"] = CalcType(self.op_param['calcType']).name
             if "kvcacheCfg" in params:
@@ -177,10 +177,10 @@ class OperationTest(unittest.TestCase):
                 params["kernelType"] = KernelType(self.op_param['kernelType']).name
             if "clampType" in params:
                 params["clampType"] = ClampType(self.op_param['clampType']).name
-
+            params = json.dumps(params)
             op = atb._BaseOperation(op_type="SelfAttention", op_param=params, op_name="SelfAttentionOperation")
             input_name = ['in'+str(i) for i in range(len(self.in_tensors))]
-            output_name = ['out'+str(i) for i in range(len(self.out_tensors))]
+            output_name = ['out'+str( i) for i in range(len(self.out_tensors))]
             graph_op.add_input_output(input=input_name, output=output_name)
             graph_op.add_operation(op, input_name, output_name)
             graph_op.build()
