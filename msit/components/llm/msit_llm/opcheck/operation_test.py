@@ -158,14 +158,10 @@ class OperationTest(unittest.TestCase):
         if self.case_info['excuted_information'] != 'PASS':
             self.case_info['excuted_information'] = 'FAILED'
 
-    def rerun_op(self, execute_type):
-        if self.op_name == "SelfAttentionOperation":
-            path = os.getenv("ATB_SPEED_HOME_PATH")
-            sys.path.append(os.path.join(path, "lib"))
-            import _libatb_torch as atb
-
+    def get_torch_atb_params(self, op_name):
+        params = self.op_param
+        if op_name == "SelfAttentionOperation":
             from msit_llm.opcheck.check_case.self_attention import CalcType, KvCacheCfg, MaskType, KernelType, ClampType
-
             params = self.op_param
             if "calcType" in params:
                 params["calcType"] = CalcType(self.op_param['calcType']).name
@@ -178,32 +174,8 @@ class OperationTest(unittest.TestCase):
             if "clampType" in params:
                 params["clampType"] = ClampType(self.op_param['clampType']).name
             params = json.dumps(params)
-
-            graph_op = atb._GraphOperation('rerun_op')
-            op = atb._BaseOperation(op_type="SelfAttention", op_param=params, op_name="SelfAttentionOperation")
-            input_name = ['in'+str(i) for i in range(len(self.in_tensors))]
-            output_name = ['out'+str( i) for i in range(len(self.out_tensors))]
-            graph_op.add_input_output(input=input_name, output=output_name)
-            graph_op.add_operation(op, input_name, output_name)
-            graph_op.build()
-
-            inputs, outputs, bind = {}, {}, {}
-            for idx, intensor in zip(input_name, self.in_tensors):
-                inputs[idx] = intensor
-            for idx, outtensor in zip(output_name, self.out_tensors):
-                outputs[idx] = outtensor
-            for idx in self.bind_idx:
-                bind_name = "in" + str(idx)
-                bind[bind_name] = self.in_tensors[idx].cpu()
-            _ = graph_op.forward(inputs, outputs, bind)
-            out_tensors = outputs.values()
-        elif self.op_name == "PagedAttentionOperation":
-            path = os.getenv("ATB_SPEED_HOME_PATH")
-            sys.path.append(os.path.join(path, "lib"))
-            import _libatb_torch as atb
-
+        else:
             from msit_llm.opcheck.check_case.paged_attention import CompressType, MaskType, QuantType, CalcType
-
             params = self.op_param
             if "compressType" in params:
                 params["compressType"] = CompressType(self.op_param['compressType']).name
@@ -214,25 +186,36 @@ class OperationTest(unittest.TestCase):
             if "calcType" in params:
                 params["calcType"] = CalcType(self.op_param['calcType']).name
             params = json.dumps(params)
+        return params
 
-            graph_op = atb._GraphOperation('rerun_op')
-            op = atb._BaseOperation(op_type="PagedAttention", op_param=params, op_name="PagedAttentionOperation")
-            input_name = ['in'+str(i) for i in range(len(self.in_tensors))]
-            output_name = ['out'+str(i) for i in range(len(self.out_tensors))]
-            graph_op.add_input_output(input=input_name, output=output_name)
-            graph_op.add_operation(op, input_name, output_name)
-            graph_op.build()
+    def run_op_torch_atb(self, op_name):
+        path = os.getenv("ATB_SPEED_HOME_PATH")
+        sys.path.append(os.path.join(path, "lib"))
+        import _libatb_torch as atb
 
-            inputs, outputs, bind = {}, {}, {}
-            for idx, intensor in zip(input_name, self.in_tensors):
-                inputs[idx] = intensor
-            for idx, outtensor in zip(output_name, self.out_tensors):
-                outputs[idx] = outtensor
-            for idx in self.bind_idx:
-                bind_name = "in" + str(idx)
-                bind[bind_name] = self.in_tensors[idx].cpu()
-            _ = graph_op.forward(inputs, outputs, bind)
-            out_tensors = outputs.values()
+        params = self.get_torch_atb_params(op_name)
+        graph_op = atb._GraphOperation('rerun_op')
+        op = atb._BaseOperation(op_type=op_name.replace("Operation", ""), op_param=params, op_name=op_name)
+        input_name = ['in'+str(i) for i in range(len(self.in_tensors))]
+        output_name = ['out'+str( i) for i in range(len(self.out_tensors))]
+        graph_op.add_input_output(input=input_name, output=output_name)
+        graph_op.add_operation(op, input_name, output_name)
+        graph_op.build()
+
+        inputs, outputs, bind = {}, {}, {}
+        for idx, intensor in zip(input_name, self.in_tensors):
+            inputs[idx] = intensor
+        for idx, outtensor in zip(output_name, self.out_tensors):
+            outputs[idx] = outtensor
+        for idx in self.bind_idx:
+            bind_name = "in" + str(idx)
+            bind[bind_name] = self.in_tensors[idx].cpu()
+        _ = graph_op.forward(inputs, outputs, bind)
+        return outputs.values()
+
+    def rerun_op(self, execute_type):
+        if self.op_name == "SelfAttentionOperation" or self.op_name == "PagedAttentionOperation":
+            out_tensors = self.run_op_torch_atb(self.op_name)
         else:
             operation = torch.classes.OperationTorch.OperationTorch(self.op_name)
             if isinstance(self.op_param, dict):
