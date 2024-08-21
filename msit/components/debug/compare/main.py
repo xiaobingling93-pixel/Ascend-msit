@@ -35,47 +35,52 @@ from msquickcmp.common.args_check import (
 
 def _accuracy_compare_parser(compare_parser):
     compare_parser.add_argument("-m", "--model-path", dest="model_path", default="",
-                        type=check_model_path_legality,
-                        help="<Required> The original model (.onnx or .pb or .prototxt) file path", required=True)
+                                type=check_model_path_legality,
+                                help="<Required> The original model (.onnx or .pb or .prototxt) file path",
+                                required=True)
     compare_parser.add_argument("-om", "--offline-model-path", dest="offline_model_path", default="",
-                        type=check_om_path_legality,
-                        help="<Required> The offline model (.om) file path", required=True)
+                                type=check_om_path_legality,
+                                help="<Required> The offline model (.om) file path", required=True)
     compare_parser.add_argument("-i", "--input-path", dest="input_path", default="",
-                        type=check_input_path_legality,
-                        help="<Optional> The input data path of the model."
-                             " Separate multiple inputs with commas(,). E.g: input_0.bin,input_1.bin")
+                                type=check_input_path_legality,
+                                help="<Optional> The input data path of the model."
+                                     " Separate multiple inputs with commas(,). E.g: input_0.bin,input_1.bin")
     compare_parser.add_argument("-c", "--cann-path", dest="cann_path",
-                        type=check_cann_path_legality,
-                        default="/usr/local/Ascend/ascend-toolkit/latest/",
-                        help="<Optional> The CANN installation path")
+                                type=check_cann_path_legality,
+                                default="/usr/local/Ascend/ascend-toolkit/latest/",
+                                help="<Optional> The CANN installation path")
     compare_parser.add_argument("-o", "--out-path", dest="out_path", default="",
-                        type=check_output_path_legality, help="<Optional> The output path")
+                                type=check_output_path_legality, help="<Optional> The output path")
     compare_parser.add_argument("-s", "--input-shape", dest="input_shape", default="",
-                        type=check_dict_kind_string,
-                        help="<Optional> Shape of input shape. Separate multiple nodes with semicolons(;)."
-                             " E.g: input_name1:1,224,224,3;input_name2:3,300")
+                                type=check_dict_kind_string,
+                                help="<Optional> Shape of input shape. Separate multiple nodes with semicolons(;)."
+                                     " E.g: input_name1:1,224,224,3;input_name2:3,300")
     compare_parser.add_argument("-d", "--device", dest="device", default="0",
-                        type=check_device_range_valid,
-                        help="<Optional> Input device ID [0, 255].")
+                                type=check_device_range_valid,
+                                help="<Optional> Input device ID [0, 255].")
     compare_parser.add_argument("--output-size", dest="output_size", default="",
-                        type=check_number_list,
-                        help="<Optional> The size of output. Separate multiple sizes with commas(,)."
-                             " E.g: 10200,34000")
+                                type=check_number_list,
+                                help="<Optional> The size of output. Separate multiple sizes with commas(,)."
+                                     " E.g: 10200,34000")
     compare_parser.add_argument("--output-nodes", dest="output_nodes", default="",
-                        type=check_dict_kind_string,
-                        help="<Optional> Output nodes designated by user. Separate multiple nodes with semicolons(;)."
-                             " E.g: node_name1:0;node_name2:1;node_name3:0")
+                                type=check_dict_kind_string,
+                                help="<Optional> Output nodes designated by user. Separate multiple nodes with "
+                                     "semicolons(;)."
+                                     " E.g: node_name1:0;node_name2:1;node_name3:0")
     compare_parser.add_argument("--advisor", dest="advisor", action="store_true",
-                        help="<Optional> Enable advisor after compare.")
+                                help="<Optional> Enable advisor after compare.")
     compare_parser.add_argument("-dr", "--dymShape-range", dest="dym_shape_range", default="",
-                        type=check_dym_range_string,
-                        help="<Optional> Dynamic shape range using in dynamic model, "
-                             "using this means ignore input_shape")
+                                type=check_dym_range_string,
+                                help="<Optional> Dynamic shape range using in dynamic model, "
+                                     "using this means ignore input_shape")
     compare_parser.add_argument("--dump", dest="dump", default=True, type=str2bool,
-                        help="<Optional> Whether to dump all the operations' ouput.")
+                                help="<Optional> Whether to dump all the operations' ouput.")
     compare_parser.add_argument("--convert", dest="bin2npy", default=False, type=str2bool,
-                        help="<Optional> Enable npu dump data conversion from bin to npy after compare.\
+                                help="<Optional> Enable npu dump data conversion from bin to npy after compare.\
                         For example: --convert True")
+    compare_parser.add_argument("--saved_model_signature", default="serving_default",
+                                help="<Optional> Enter the signature of the model")
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -86,7 +91,7 @@ if __name__ == '__main__':
     cmp_args = CmpArgsAdapter(args.model_path, args.offline_model_path, args.weight_path, args.input_path,
                               args.cann_path, args.out_path, args.input_shape,
                               args.device, args.output_size, args.output_nodes, args.advisor,
-                              args.dym_shape_range, args.dump, args.bin2npy)
+                              args.dym_shape_range, args.dump, args.bin2npy, args.saved_model_signature)
     try:
         cmp_process(cmp_args, False)
     except utils.AccuracyCompareException as error:

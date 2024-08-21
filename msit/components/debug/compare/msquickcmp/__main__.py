@@ -180,6 +180,11 @@ class CompareCommand(BaseCommand):
             dest="quant_fusion_rule_file",
             default='',
             help="the quant fusion rule file path")
+        parser.add_argument(
+            '--saved_model_signature',
+            dest="saved_model_signature",
+            default='serving_default',
+            help="Enter the signature of the model")
         self.parser = parser
 
     def handle(self, args):
@@ -194,7 +199,7 @@ class CompareCommand(BaseCommand):
                                   args.dym_shape_range,
                                   args.dump, args.bin2npy, args.custom_op, args.locat,
                                   args.onnx_fusion_switch, args.single_op, args.fusion_switch_file,
-                                  args.max_cmp_size, args.quant_fusion_rule_file)
+                                  args.max_cmp_size, args.quant_fusion_rule_file, args.saved_model_signature)
         cmp_process(cmp_args, True)
 
 
