@@ -242,7 +242,7 @@ class CompareMgr:
         return my_tensor_datas
     
     @classmethod
-    def get_raw_path(path: str):
+    def get_raw_path(cls, path: str):
         raw_dirctory = path.split('/')
         raw_path = raw_dirctory[-1] if raw_dirctory else ""
         if raw_path.startswith("ait_dump") or raw_path.startswith("msit_dump"):
