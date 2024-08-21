@@ -413,7 +413,8 @@ class Transform(BaseCommand):
         scenarios_info = [
             "[float atb to quant atb model] directory containing both cpp and h file",
             "[float atb to quant atb model] a single cpp file, will use the h file with a same name",
-            "[torch to float atb model] directory containing config.json and py file for building transformers model",
+            "[torch to float cpp atb model] directory containing config.json and py for building transformers model",
+            "[torch to float python atb model] directory containing config.json and py for building transformers model",
         ]
         scenarios_info_str = "; ".join([f"{id}.{ii}" for id, ii in enumerate(scenarios_info, start=1)])
         
@@ -434,13 +435,19 @@ class Transform(BaseCommand):
         )
 
         parser.add_argument(
-            "--enable-sparse", action='store_true', help="[float atb to quant atb model] Enable trasforming to sparse-quant model"
+            "--enable-sparse",
+            action='store_true',
+            help="[float atb to quant atb model] Enable trasforming to sparse-quant model"
         )
-
+        parser.add_argument(
+            "--to-python",
+            "-py",
+            action='store_true',
+            help="[torch to float python atb model] Enable trasforming to python atb model",
+        )
         parser.add_argument(
             "-a",
             "--analyze",
-            dest="analyze",
             action="store_true",
             help="[float atb to atb model] Analysis tool to analyze the compatibility of model operator migration"
         )
@@ -451,9 +458,13 @@ class Transform(BaseCommand):
         from msit_llm.transform.utils import get_transform_scenario, SCENARIOS
 
         set_log_level(args.log_level)
-        scenario = get_transform_scenario(args.source)
+        scenario = get_transform_scenario(args.source, to_python=args.to_python)
         logger.info(f"Current scenario: {scenario}")
-        if scenario == SCENARIOS.float_atb_to_quant_atb:
+        if scenario == SCENARIOS.torch_to_float_python_atb:
+            from msit_llm.transform.torch_to_float_python_atb import transform
+
+            transform(source_path=args.source):
+        elif scenario == SCENARIOS.float_atb_to_quant_atb:
             from msit_llm.transform.float_atb_to_quant_atb import transform_quant
 
             transform_quant.transform_quant(source_path=args.source, enable_sparse=args.enable_sparse)
