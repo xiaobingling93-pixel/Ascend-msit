@@ -23,6 +23,7 @@ from collections import namedtuple
 
 from msit_llm.common.log import logger, set_log_level
 
+
 CONFIG_ATTR_CANDIDATES = {
     "num_hidden_layers": ['num_hidden_layers', 'num_layers', 'n_layers'],
     "num_attention_heads": ['num_attention_heads'],
@@ -45,10 +46,10 @@ TORCH_MODULE_TO_ATB_MAP = {
 }
 
 _FX_OP_TYPES = ['call_method', 'call_module', 'call_function', 'placeholder', 'output', 'get_attr']
-FX_OP_TYPES = namedtuple('fx_op_types', _FX_OP_TYPES)(*_FX_OP_TYPES)
+FX_OP_TYPES = namedtuple('FX_OP_TYPES', _FX_OP_TYPES)(*_FX_OP_TYPES)
 
 _FIXED_INPUTS = {"input_ids", "position_ids", "cos_table", "sin_table", "k_cache", "v_cache", "slots_mapping", "seq_len"}
-FIXED_INPUTS = namedtuple('fixed_inputs', _FIXED_INPUTS)(*_FIXED_INPUTS)
+FIXED_INPUTS = namedtuple('FIXED_INPUTS', _FIXED_INPUTS)(*_FIXED_INPUTS)
 
 
 def get_config_attr(config, attr):
@@ -59,6 +60,7 @@ def get_config_attr(config, attr):
         if hasattr(config, sub_attr):
             return getattr(config, sub_attr)
     return None
+
 
 def build_model(source_path):
     try:
@@ -73,13 +75,16 @@ def build_model(source_path):
         raise ValueError(f"build model from {source_path} failed, make sure it works within transformers") from error
     return model, config
 
+
 def to_transformers_traced_module(model, input_names=(FIXED_INPUTS.input_ids, FIXED_INPUTS.position_ids)):
     from transformers.utils.fx import symbolic_trace
 
     return symbolic_trace(mm, input_names=input_names)
 
+
 def get_lambda_source_code(function):
     return inspect.getsource(function).split('function=')[-1].split(', inputs=')[0].strip()
+
 
 class Operation:
     def __init__(self, op_type, op_param="{}", inputs=[], outputs=[], op_name="", function=None, is_weights_first=False):
@@ -111,10 +116,12 @@ class Operation:
     def copy(self):
         return Operation(**deepcopy(self.to_dict()))
 
+
 class ATBModelConfig:
     def __init__(self, vocab_size, num_attention_heads, head_dim, max_batch_size=1, max_seq_len=1024):
         self.vocab_size, self.num_attention_heads, self.head_dim = vocab_size, num_attention_heads, head_dim
         self.max_batch_size, self.max_seq_len = max_batch_size, max_seq_len
+
 
 class ATBModel:
     def __init__(self, atb_model, atb_model_config):
@@ -264,7 +271,6 @@ class ATBModelFromTorch(ATBModel):
         if node.op == FX_OP_TYPES.call_function and node.meta.get("is_wrapped", False):
             return True
         return False
-
 
     def _find_in_torch_module_to_atb_map(self, node_type):
         for kk, vv in self.torch_module_to_atb_map.items():
@@ -479,9 +485,12 @@ class ATBModelFromTorch(ATBModel):
 
         atb_speed_path = os.getenv('ATB_SPEED_HOME_PATH', None)
         if not atb_speed_path:
-            raise OSError("ATB_SPEED_HOME_PATH environment variable not valid")
+            raise OSError("ATB_SPEED_HOME_PATH environment variable not valid, try install mindie")
         sys.path.append(os.path.join(atb_speed_path, 'lib'))
-        import _libatb_torch as atb  # May error
+        try:
+            import _libatb_torch as atb  # May error
+        except (ImportError, ModuleNotFoundError) as err:
+            raise OSError("import _libatb_torch failed, try install mindie") from err
 
         atb_model = atb._GraphOperation(self.model_name)
         in_tensors = self.model_inputs + self.weight_names
