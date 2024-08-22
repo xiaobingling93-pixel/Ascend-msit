@@ -25,16 +25,22 @@ from msit_llm.transform.torch_to_float_atb.utils import (get_repeat_box_layer,
     dag_to_model, init_save_name, init_save_dir, write_file)
 
 
-SMALL_NUM_HIDDEN_LAYERS = 4
+SMALL_NUM_CONFIG = 4
 
 
-def try_setting_small_num_hidden_layers(config):
-    if hasattr(config, "num_hidden_layers"):
-        config.num_hidden_layers = SMALL_NUM_HIDDEN_LAYERS
-    elif hasattr(config, "num_layers"):
-        config.num_layers = SMALL_NUM_HIDDEN_LAYERS
-    elif hasattr(config, "n_layers"):
-        config.n_layers = SMALL_NUM_HIDDEN_LAYERS
+def try_setting_small_model(config):
+    attr_list = [
+        'num_hidden_layers',
+        'num_layers',
+        'n_layers',
+        'kv_channels',
+        'intermediate_size',
+        'rotary_emb_base',
+        'seq_length',
+        'vocab_size',
+        ]
+    for attr in attr_list:
+        config.__setattr__(attr, SMALL_NUM_CONFIG)
     return config
     
 
@@ -46,7 +52,7 @@ def build_model(source_path):
 
     try:
         config = AutoConfig.from_pretrained(source_path, trust_remote_code=True)
-        config = try_setting_small_num_hidden_layers(config)
+        config = try_setting_small_model(config)
         model = AutoModelForCausalLM.from_config(config, trust_remote_code=True)
     except Exception as error:
         raise ValueError(f"build model from {source_path} failed, make sure it works within transformers") from error
@@ -224,6 +230,7 @@ def transform_float(source_path, save_name=None, save_dir=None, atb_model_path='
 
     parsed_model.get('weight_names', {})['model_name_in_atb_framework'] = parser.get_atb_model_names(atb_files)
     parsed_model['acl_inputs_name'] = parser.get_input_names(atb_files)
+    parser.update_weight_prefix(parsed_model, source_path)
     result_files += transform_float_py(parsed_model, save_name, save_dir)
 
     fp_name = parsed_model.get("weight_names", {}).get("model_name", "").lower()

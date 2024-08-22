@@ -52,43 +52,77 @@ from atb_llm.utils.dist import get_rank_table_file, get_backend
 
 ACL_INPUTS_CODE_BLOCK = """
         acl_inputs = {{
-            "{input_ids}": self.placeholder if self.skip_word_embedding else input_ids,
-            "{input_embedding}": input_ids if self.skip_word_embedding else self.placeholder,
-            "{position_ids}": position_ids.to(torch.int64),
-            "{cos_embed}": self.cos_embed,
-            "{sin_embed}": self.sin_embed,
-            "{atten_mask}": atten_mask,
-            "{block_tables}": block_tables.to(torch.int32),
-            "{slots}": slots.to(torch.int32),
-            "{input_lengths}": input_lengths.to(torch.int32),
+            "input_ids": self.placeholder if self.skip_word_embedding else input_ids,
+            "input_embedding": input_ids if self.skip_word_embedding else self.placeholder,
+            "position_ids": position_ids.to(torch.int64),
+            "cos_embed": self.cos_embed,
+            "sin_embed": self.sin_embed,
+            "atten_mask": atten_mask,
+            "block_tables": block_tables.to(torch.int32),
+            "slots": slots.to(torch.int32),
+            "input_lengths": input_lengths.to(torch.int32),
         }}
 
         if is_prefill:
             if lm_head_indices is None:
                 lm_head_indices = torch.tensor(range(input_ids.shape[0]),
                                                dtype=torch.int64, device=input_ids.device)
-            acl_inputs["{lm_head_indices}"] = lm_head_indices.to(torch.int64)
+            acl_inputs["lm_head_indices"] = lm_head_indices.to(torch.int64)
             acl_param = json.dumps({{
                 "seqLen": input_lengths.tolist()
             }})
         else:
-            acl_inputs["{input_ids}"] = input_ids
-            acl_inputs["{input_embedding}"] = self.placeholder
-            acl_inputs["{lm_head_indices}"] = self.lm_head_indices_fake
+            acl_inputs["input_ids"] = input_ids
+            acl_inputs["input_embedding"] = self.placeholder
+            acl_inputs["lm_head_indices"] = self.lm_head_indices_fake
             
             q_lens = kwargs.get('q_lens', [])
             if self.speculate_enable:
-                acl_inputs["{q_lens}"] = torch.tensor(q_lens).to(self.device).to(torch.int32)
+                acl_inputs["q_lens"] = torch.tensor(q_lens).to(self.device).to(torch.int32)
 
             acl_param = json.dumps({{
                 "seqLen": input_lengths.tolist(),
                 "qLen": q_lens
             }})
         
-        acl_inputs_list = [acl_inputs.get(k, self.placeholder) for k in {acl_inputs_name}] 
+        # Please check if acl_inputs_name is correct.
+        acl_inputs_name = {acl_inputs_name}
+
+        acl_inputs_name_list = match_table(acl_inputs_name)
+        acl_inputs_list = [acl_inputs.get(name, self.placeholder) for name in acl_inputs_name_list]
 """
 
 CLASS_FLASH_CAUSAL_LM_FORMATER = """
+def match(dic, name):
+    for cand, keyword_lists in dic.items():
+        for keyword_list in keyword_lists:
+            if all(kw in name for kw in keyword_list):
+                return cand
+    return ''
+
+    
+def match_table(acl_inputs_name):
+    name_table = {{
+        'input_embedding':["INPUT EMBEDDING".split()],
+        'input_ids':["INPUT ID".split(), "INPUT"],
+        'position_ids':["POSITION ID".split()],
+        'cos_embed':["COS".split()],
+        'sin_embed':["SIN".split()],
+        'atten_mask':["ATTENTION MASK".split()],
+        'block_tables':["BLOCK".split()],
+        'slots':["SLOTS".split()],
+        'input_lengths':["INPUT LENGTH".split(), "SEQ LEN".split()],
+        'lm_head_indices':["LOGTIS INDICE".split(), "LOGITS INDICE".split()],
+        'q_lens':["Q LEN".split()],
+    }}
+    res = []
+    
+    for name in acl_inputs_name:
+        name = name.upper()
+        match_result = match(name_table, name)
+        res.append(match_result)
+    return res
+
 
 class Flash{model_name_capital}ForCausalLM(FlashForCausalLM):
     def __init__(self, config, weights):
@@ -273,7 +307,6 @@ class Flash{model_name_capital}ForCausalLM(FlashForCausalLM):
             "positionEmbeddingType": self.position_embedding_type,
             "hiddenSize": self.hidden_size,
             "gemma": False,
-            "enableAddNorm": self.add_norm_enable,
             "supportCompressHead": self.compress_head_enable,
 
             "layerNormEps": self.config.rms_norm_eps,

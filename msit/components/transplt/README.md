@@ -259,7 +259,7 @@ sudo usermod -aG docker $USER
 
 ### 如何下载/更新加速库头文件和API映射表
 
-msit transplt功能依赖[加速库头文件](https://msit-resources.obs.cn-south-1.myhuaweicloud.com/headers.zip)和[API映射表](https://msit-resources.obs.cn-south-1.myhuaweicloud.com/config.zip)，这两者会不定时更新。如果用户需要手动下载或者更新这些文件，可以从对应链接下载后解压至msit transplt工具安装目录。这个安装目录根据您的python3安装位置不同会有不同的值，例如您的python3.7在`/usr/local/bin/python3.7`，那么可以下载后解压至```/usr/local/lib/python3.7/dist-packages/app_analyze```目录。
+msit transplt功能依赖[加速库头文件](https://ait-resources.obs.cn-south-1.myhuaweicloud.com/headers.zip)和[API映射表](https://ait-resources.obs.cn-south-1.myhuaweicloud.com/config.zip)，这两者会不定时更新。如果用户需要手动下载或者更新这些文件，可以从对应链接下载后解压至msit transplt工具安装目录。这个安装目录根据您的python3安装位置不同会有不同的值，例如您的python3.7在`/usr/local/bin/python3.7`，那么可以下载后解压至```/usr/local/lib/python3.7/dist-packages/app_analyze```目录。
 
 您可以使用`python3 -c "import app_analyze; print(app_analyze.__path__[0])"`命令来确定具体的安装目录。
 
