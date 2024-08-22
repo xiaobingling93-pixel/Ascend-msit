@@ -243,8 +243,7 @@ class CompareMgr:
     
     @classmethod
     def get_raw_path(cls, path: str):
-        raw_dirctory = path.split('/')
-        raw_path = raw_dirctory[-1] if raw_dirctory else ""
+        raw_path = os.path.basename(path)
         if raw_path.startswith("ait_dump") or raw_path.startswith("msit_dump"):
             raw_path = path
         else:
