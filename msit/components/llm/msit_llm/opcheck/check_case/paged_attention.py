@@ -44,7 +44,7 @@ class CalcType(Enum):
 
 class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
     @staticmethod
-    def mask_nz_2_nd(mask_type, context_lens, head_num):
+    def mask_nz_2_nd(mask, mask_type, context_lens, head_num):
         mask = mask.permute(0, 2, 1, 3)
         dim0, dim1, dim2, dim3 = mask.shape
         mask = mask.contiguous().view(dim0, dim1, dim2 * dim3)
@@ -228,7 +228,7 @@ class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
             value_cache = value_cache.permute(0, 2, 1, 3).reshape(num_blocks, block_size, kv_head_num, head_size)
 
             if mask_type != MaskType.UNDEFINED.value:
-                mask = OpcheckPagedAttentionAttentionOperation.mask_nz_2_nd(mask_type, context_lens, head_num)
+                mask = OpcheckPagedAttentionAttentionOperation.mask_nz_2_nd(mask, mask_type, context_lens, head_num)
 
         ref_output = torch.zeros_like(query)
         paged_input = [query, key_cache, value_cache, block_tables, context_lens]
