@@ -378,8 +378,6 @@ class ATBModelFromTorch(ATBModel):
         if FIXED_INPUTS.position_ids not in self.model_inputs:
             self.model_inputs += [FIXED_INPUTS.position_ids]
 
-        # for name, buffer in tt.named_buffers()
-
     def _op_process_attention(self, atb_operation=None, module_name=""):
         atb_operation.inputs = [
             module_name + ".q_embed_",
@@ -575,7 +573,7 @@ class ATBModelFromTorch(ATBModel):
             self.extra_inputs += [input_scale, input_offset]
 
             op_param = json.loads(op.op_param)
-            op_param.update({"hasBias": True, "outDataType": "ACL_FLOAT16"})
+            op_param.update({"transposeA": False, "transposeB": True, "hasBias": True, "outDataType": "ACL_FLOAT16"})
             op.op_param = json.dumps(op_param)
             op.inputs = elewise_quant_node.outputs + op.inputs[1:] + linear_quant_weights
 
@@ -721,29 +719,5 @@ def transform(
             vocab_size=atb_model.atb_model_config.vocab_size,
             num_attention_heads=atb_model.atb_model_config.num_attention_heads,
             head_dim=atb_model.atb_model_config.head_dim,
-        )
-    )
-
-
-if __name__ == "__main__":
-    import torch
-    from transformers import AutoConfig, AutoModelForCausalLM
-
-    transform("test_transformers/")
-
-    cc = AutoConfig.from_pretrained("test_transformers/")
-    cc.num_hidden_layers = 2
-    mm = AutoModelForCausalLM.from_config(cc)
-
-    aa = ATBModelFromTorch(mm, cc)
-
-    """ Forward """
-    weights = mm.state_dict()
-    weights.update(dict(mm.named_buffers()))
-    aa.set_weights(weights)
-    print(
-        aa.forward(
-            input_ids=torch.arange(32),
-            position_ids=torch.arange(32),
         )
     )
