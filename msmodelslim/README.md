@@ -21,5 +21,11 @@ export LD_LIBRARY_PATH=/usr/local/python3.7.5/lib:$LD_LIBRARY_PATH
 #如果用户环境存在多个python3版本，则指定使用python3.7.5版本
 export PATH=/usr/local/python3.7.5/bin:$PATH
 ```
-
-
+- 用户根据实际需要自行安装以下AI框架包（请注意CANN与MindSpore、PyTorch的版本配套关系）：
+  - MindSpore：
+    请参考[MindSpore官网](https://www.mindspore.cn/install)安装MindSpore框架。
+  - PyTorch：
+        - 请参考《Ascend Extension for PyTorch 配置与安装》，安装PyTorch框架、torch_npu插件、Torchvision依赖和Apex混合精度模块。
+        - 若PyTorch下需要统计模型的参数量信息，则执行如下命令安装依赖thop。
+          如下命令如果使用非root用户安装，需要在安装命令后加上--user，例如：pip3 install thop --user。
+          `pip3 install --user thop`
