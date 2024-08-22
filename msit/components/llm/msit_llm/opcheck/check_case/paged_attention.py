@@ -162,7 +162,7 @@ class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
 
         mask_type = self.op_param.get('maskType', MaskType.UNDEFINED.value)
         if mask_type != MaskType.UNDEFINED.value:
-            mask_dim = 3 if mask_type == MaskType.MASK_TYPE_NORM.value else len(mask) # mask shape
+            mask_dim = 3 if mask_type == MaskType.MASK_TYPE_NORM.value else len(mask.shape) # mask shape
         else:
             mask_dim = 0
         mask_index_coff = 1
