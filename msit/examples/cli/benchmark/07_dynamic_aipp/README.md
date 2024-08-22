@@ -48,7 +48,7 @@ aipp_op{
 ```
 #### benchmark命令
 ```
-msit benchmark --model resnet18_bs4_dym_aipp.om --aipp-config actual_aipp_conf.config
+msit benchmark --om--model resnet18_bs4_dym_aipp.om --aipp-config actual_aipp_conf.config
 ```
 ### 2. 动态batch场景示例，以resnet18模型为例
 #### atc命令转换出带动态aipp配置的动态batch模型
