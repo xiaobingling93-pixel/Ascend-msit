@@ -264,7 +264,11 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
                     no_compress_mask *= -10000.0
                     score = score + no_compress_mask[:, :q_s, :kv_s]
                 else:
-                    score = score + mask[:, :q_s, :kv_s] * post_mask_coff
+                    if len(mask.shape) == 4:
+                        mask_cur = mask[idx]
+                    else:
+                        mask_cur = mask
+                    score = score + mask_cur[:, :q_s, :kv_s] * post_mask_coff
 
             out_sub, _p = OpcheckUnpadSelfAttentionOperation.get_out_sub(head_info, q_s, score, v_slice, _p)
             out = out_sub if out is None else torch.concat((out, out_sub), 0)
