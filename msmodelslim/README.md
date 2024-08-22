@@ -1,7 +1,32 @@
 # msModelSlim
-### 简介
 
-msModelSlim，即昇腾压缩加速工具，一个以加速为目标、压缩为技术、昇腾为根本的亲和压缩工具。支持训练加速和推理加速，包括模型低秩分解、稀疏训练、训练后量化、量化感知训练等功能，昇腾AI模型开发用户可以灵活调用Python API接口，对模型进行性能调优，并支持导出不同格式模型，在昇腾AI处理器上运行。
+## 介绍
+
+MindStudio ModelSlim，昇腾模型压缩工具。 【Powered by MindStudio】
+
+昇腾压缩加速工具，一个以加速为目标、压缩为技术、昇腾为根本的亲和压缩工具。支持训练加速和推理加速，包括模型低秩分解、稀疏训练、训练后量化、量化感知训练等功能，昇腾AI模型开发用户可以灵活调用Python API接口，对模型进行性能调优，并支持导出不同格式模型，在昇腾AI处理器上运行。
+
+## 使用说明
+
+msModelSlim当前处于逐步开源过程中，计划通过630,930,1230三个版本进行过渡。  
+
+630、930版本支持通过CANN或开源方式使用，两边版本将保持一致，后续功能优化、新增将更新在开源版本中。  
+630版本CANN，下载链接  
+[arm 版本](https://ascend-repo.obs.cn-east-2.myhuaweicloud.com/CANN/CANN%208.0.RC2/Ascend-cann-toolkit_8.0.RC2_linux-aarch64.run?response-content-type=application/octet-stream)  
+[x86 版本](https://ascend-repo.obs.cn-east-2.myhuaweicloud.com/CANN/CANN%208.0.RC2/Ascend-cann-toolkit_8.0.RC2_linux-x86_64.run?response-content-type=application/octet-stream) 
+**注意** 该版本存在已知问题，使用modelslim调用接口时，部分功能存在异常。请使用msmodelslim调用。 
+
+版本交替期间提供两种方式使用msModelSlim工具：  
+1、下载安装CANN并配置环境变量  
+2、下载安装CANN并配置环境变量，下载安装开源版本msModelSlim  
+    操作步骤：
+    git clone下载本仓代码；
+    设置CANN环境变量；
+    进入msmodelslim目录，运行脚本install.sh。
+
+930版本尚未发布。  
+
+1230版本尚未发布，只支持通过开源方式使用。
 
 ### 环境准备
 
@@ -42,3 +67,6 @@ export PATH=/usr/local/python3.7.5/bin:$PATH
 | [量化感知训练](msmodelslim/pytorch/quant/qat_tools)                        | 量化感知训练是一种在模型训练过程中模拟量化效果的训练方法。通过在训练过程中加入量化操作，模型可以适应量化带来的精度损失，从而在量化后的模型上保持较高的性能。                                                                        |
 | [Transformer类模型权重剪枝调优](msmodelslim/pytorch/prune/transformer_prune)          | 模型权重剪枝是一种通过移除模型中不重要的权重（即那些对模型性能影响较小的权重）来减少模型复杂度的技术。剪枝后的模型权重更少，从而可以减少模型的存储需求，并可能加快模型的推理速度。                                                             |
 | [基于重要性评估的剪枝调优](msmodelslim/pytorch/prune)                  | 基于重要性评估进行剪枝调优是一种常用的方法，它涉及到评估模型中每个权重的重要性，并据此决定哪些权重应该被剪枝。  基于重要性评估的剪枝调优可以显著减少模型的大小，提高模型的推理效率，同时尽量保持模型的性能。这种方法在深度学习模型压缩和加速中非常有用，特别是在需要部署模型到资源受限的环境中的情况下。 |
+
+#### 许可证
+[Apache License 2.0](LICENSE)
