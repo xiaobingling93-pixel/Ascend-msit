@@ -62,6 +62,9 @@ _FIXED_INPUTS = {
 }
 FIXED_INPUTS = namedtuple("FIXED_INPUTS", _FIXED_INPUTS)(*_FIXED_INPUTS)
 
+_RESHPAE_KIND = ["reshape_qkv", "reshape_0_12"]
+RESHPAE_KIND = namedtuple("RESHPAE_KIND", _RESHPAE_KIND)(*_RESHPAE_KIND)
+
 
 def get_config_attr(config, attr, default=None):
     if attr not in CONFIG_ATTR_CANDIDATES:
@@ -287,7 +290,7 @@ class ATBModelFromTorch(ATBModel):
             self.torch_module_to_atb_map[re_key] = Operation(**vv)
 
         self.pre_query_name, self.pre_key_name, self.pre_value_name, self.is_apply_rope = "", "", "", False
-        self.model_inputs, self.model_outputs, self.operations = [], [], []
+        self.model_inputs, self.model_outputs, self.operations, self.extra_inputs = [], [], [], []
 
         self.convert_fx_traced_module()
         if to_quant:
@@ -384,7 +387,6 @@ class ATBModelFromTorch(ATBModel):
             module_name + ".v_embed_",
             FIXED_INPUTS.seq_len,
         ]
-        final_outputs = [ii + "_" for ii in atb_operation.outputs]
 
         if self.is_apply_rope:
             inputs = [self.pre_query_name, self.pre_key_name, "gather_cos.out", "gather_sin.out", FIXED_INPUTS.seq_len]
@@ -413,21 +415,21 @@ class ATBModelFromTorch(ATBModel):
                 function=lambda org_shape: [org_shape[0], num_attention_heads, head_dim],
                 inputs=[module_name + ".q_embed"],
                 outputs=[module_name + ".q_embed_"],
-                op_name="",
+                op_name=module_name + ".q." + RESHPAE_KIND.reshape_qkv,
             ),
             Operation(
                 op_type="add_reshape",
                 function=lambda org_shape: [org_shape[0], num_attention_heads, head_dim],
                 inputs=[module_name + ".k_embed"],
                 outputs=[module_name + ".k_embed_"],
-                op_name="",
+                op_name=module_name + ".k." + RESHPAE_KIND.reshape_qkv,
             ),
             Operation(
                 op_type="add_reshape",
                 function=lambda org_shape: [org_shape[0], num_attention_heads, head_dim],
                 inputs=[self.pre_value_name],
                 outputs=[module_name + ".v_embed_"],
-                op_name="",
+                op_name=module_name + ".v." + RESHPAE_KIND.reshape_qkv,
             ),
             Operation(
                 op_type="ReshapeAndCache",
@@ -437,14 +439,18 @@ class ATBModelFromTorch(ATBModel):
                 op_name=module_name + ".reshape_and_cache",
             ),
             atb_operation,
-            Operation(
-                op_type="add_reshape",
-                function=lambda org_shape: [org_shape[0], org_shape[1] * org_shape[2]],
-                inputs=atb_operation.outputs,
-                outputs=final_outputs,
-                op_name="",
-            ),
         ]
+        if not self.to_quant:
+            # exclude reshape for o_proj if quant enabled
+            self.operations.append(
+                Operation(
+                    op_type="add_reshape",
+                    function=lambda org_shape: [org_shape[0], org_shape[1] * org_shape[2]],
+                    inputs=atb_operation.outputs,
+                    outputs=[ii + "_" for ii in atb_operation.outputs],
+                    op_name=module_name + "." + RESHPAE_KIND.reshape_0_12,
+                ),
+            )
 
         if FIXED_INPUTS.k_cache not in self.model_inputs:
             self.model_inputs += [
@@ -539,7 +545,9 @@ class ATBModelFromTorch(ATBModel):
 
     def convert_to_quant(self, disable_names=("lm_head")):
         operations_with_quant = []
+        logger.debug(f"disable_names = {disable_names}")
         for op_id, op in enumerate(self.operations):
+            logger.debug(f"op.op_name = {op.op_name}")
             if op.op_type not in ["Linear", "LinearParallel"]:
                 operations_with_quant.append(op)
                 continue
@@ -559,16 +567,15 @@ class ATBModelFromTorch(ATBModel):
 
             elewise_quant_node = Operation(
                 op_type="Elewise",
-                op_param=json.dumps({
-                    "elewiseType": "ELEWISE_QUANT", "quantParam.inputScale": input_scale, "quantParam.inputOffset": input_offset
-                }),
+                op_param=json.dumps({"elewiseType": "ELEWISE_QUANT_PER_CHANNEL"}),
                 op_name=f"{op.op_name}.elewise_quant",
-                inputs=[f"{op.inputs[0]}"],
+                inputs=[f"{op.inputs[0]}", input_scale, input_offset],
                 outputs=[f"{op.op_name}.elewise_quant.out"],
             )
+            self.extra_inputs += [input_scale, input_offset]
 
             op_param = json.loads(op.op_param)
-            op_param.update({"transposeA": False, "transposeB": True, "hasBias": True, "outDataType": "ACL_FLOAT16"})
+            op_param.update({"hasBias": True, "outDataType": "ACL_FLOAT16"})
             op.op_param = json.dumps(op_param)
             op.inputs = elewise_quant_node.outputs + op.inputs[1:] + linear_quant_weights
 
@@ -590,7 +597,7 @@ class ATBModelFromTorch(ATBModel):
 
         atb_model = atb._GraphOperation(self.model_name)
         in_tensors = self.model_inputs + self.weight_names
-        operation_inputs = [jj for ii in self.operations for jj in ii.inputs]
+        operation_inputs = [jj for ii in self.operations for jj in ii.inputs] + self.extra_inputs
         valid_inputs = [ii for ii in in_tensors if ii in operation_inputs]
         atb_model.add_input_output(input=valid_inputs, output=self.operations[-1].outputs)
         for id, op in enumerate(self.operations):
@@ -603,12 +610,13 @@ class ATBModelFromTorch(ATBModel):
                     output=op.outputs,
                 )
         atb_model.build()
+        atb_model.execute_as_single = False
         return atb_model
 
     def to_file(self, output_file=None):
         indent = "    "
         in_tensors = self.model_inputs + self.weight_names
-        operation_inputs = [jj for op in self.operations for jj in op.inputs]
+        operation_inputs = [jj for op in self.operations for jj in op.inputs] + self.extra_inputs
         valid_inputs = [ii for ii in in_tensors if ii in operation_inputs]
         intensors_str = "[\n" + "".join([f"{indent}{indent}'{ii}',\n" for ii in valid_inputs]) + f"{indent}]"
 
@@ -649,6 +657,7 @@ class ATBModelFromTorch(ATBModel):
                 )
                 contents += f",\n{indent})\n"
         contents += f"{indent}atb_model.build()\n"
+        contents += f"{indent}atb_model.execute_as_single = False\n"
         contents += f"{indent}return atb_model"
 
         output_file = output_file or (self.model_name.lower() + ".py")
@@ -670,7 +679,13 @@ def transform(
     model, config = build_model(source_path)
 
     logger.info("Transforming to atb")
-    atb_model = ATBModelFromTorch(torch_model=model, config=config, input_names=input_names)
+    atb_model = ATBModelFromTorch(
+        torch_model=model,
+        config=config,
+        input_names=input_names,
+        to_quant=to_quant,
+        quant_disable_names=quant_disable_names,
+    )
     output_file = atb_model.to_file(output_file=output_file)
 
     logger.info("=" * 30)
@@ -706,5 +721,29 @@ def transform(
             vocab_size=atb_model.atb_model_config.vocab_size,
             num_attention_heads=atb_model.atb_model_config.num_attention_heads,
             head_dim=atb_model.atb_model_config.head_dim,
+        )
+    )
+
+
+if __name__ == "__main__":
+    import torch
+    from transformers import AutoConfig, AutoModelForCausalLM
+
+    transform("test_transformers/")
+
+    cc = AutoConfig.from_pretrained("test_transformers/")
+    cc.num_hidden_layers = 2
+    mm = AutoModelForCausalLM.from_config(cc)
+
+    aa = ATBModelFromTorch(mm, cc)
+
+    """ Forward """
+    weights = mm.state_dict()
+    weights.update(dict(mm.named_buffers()))
+    aa.set_weights(weights)
+    print(
+        aa.forward(
+            input_ids=torch.arange(32),
+            position_ids=torch.arange(32),
         )
     )
