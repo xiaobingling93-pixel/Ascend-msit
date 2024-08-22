@@ -36,7 +36,7 @@
 ### 1. 静态shape场景示例，以resnet18模型为例
 #### atc命令转换出带动态aipp配置的静态shape模型
 ```
-atc --framework=5 --model=./resnet18.onnx --output=resnet18_bs4_dym_aipp --input_format=NCHW --input_shape="image:4,3,224,224" --soc_version=Ascend310 --insert_op_conf=dym_aipp_conf.aippconfig --enable_small_channel=1
+atc --framework=5 --om-model=./resnet18.onnx --output=resnet18_bs4_dym_aipp --input_format=NCHW --input_shape="image:4,3,224,224" --soc_version=Ascend310 --insert_op_conf=dym_aipp_conf.aippconfig --enable_small_channel=1
 ```
 - dym_aipp_conf.aippconfig的内容(下同)为：
 ```
