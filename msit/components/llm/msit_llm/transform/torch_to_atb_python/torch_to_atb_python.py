@@ -247,7 +247,7 @@ class ATBModelFromTorch(ATBModel):
         self.atb_model = self.build_atb_model()
 
         self.atb_model_config = ATBModelConfig(
-            self.vocab_size, self.num_attention_heads, self.head_dim, max_batch_size=1, max_seq_len
+            self.vocab_size, self.num_attention_heads, self.head_dim, max_batch_size, max_seq_len
         )
         super().__init__(atb_model=self.atb_model, atb_model_config=self.atb_model_config)
 
