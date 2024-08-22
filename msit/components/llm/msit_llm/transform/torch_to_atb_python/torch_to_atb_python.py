@@ -248,8 +248,11 @@ class ATBModelFromTorch(ATBModel):
         input_names=(FIXED_INPUTS.input_ids, FIXED_INPUTS.position_ids),
         max_batch_size=1,
         max_seq_len=1024,
+        to_quant=False,
+        quant_disable_names=None,
     ):
         self.torch_model, self.config = torch_model, config
+        self.to_quant, self.quant_disable_names = to_quant, quant_disable_names
         self.config = getattr(torch_model, "config", None) if config is None else config
         if self.config is None:
             raise ValueError("Either config or torch_model.config shold be not empty one")
@@ -287,7 +290,8 @@ class ATBModelFromTorch(ATBModel):
         self.model_inputs, self.model_outputs, self.operations = [], [], []
 
         self.convert_fx_traced_module()
-        self.convert_to_quant()
+        if to_quant:
+            self.convert_to_quant(disable_names=quant_disable_names or ())
         self.to_file()
         self.atb_model = self.build_atb_model()
 
@@ -655,7 +659,13 @@ class ATBModelFromTorch(ATBModel):
         return output_file
 
 
-def transform(source_path, input_names=(FIXED_INPUTS.input_ids, FIXED_INPUTS.position_ids), output_file=None):
+def transform(
+    source_path,
+    input_names=(FIXED_INPUTS.input_ids, FIXED_INPUTS.position_ids),
+    output_file=None,
+    to_quant=False,
+    quant_disable_names=None,
+):
     logger.info("Building model using transformers...")
     model, config = build_model(source_path)
 

@@ -452,6 +452,12 @@ class Transform(BaseCommand):
             help="[torch to float python atb model] Enable transforming to python quant atb model",
         )
         parser.add_argument(
+            "--quant-disable-names",
+            type=check_input_path_legality,
+            default=None,
+            help="[torch to float python atb model] file for layer names skip quant",
+        )
+        parser.add_argument(
             "-a",
             "--analyze",
             action="store_true",
@@ -469,7 +475,11 @@ class Transform(BaseCommand):
         if scenario == SCENARIOS.torch_to_float_python_atb:
             from msit_llm.transform.torch_to_atb_python import transform
 
-            transform(source_path=args.source)
+            if args.quant_disable_names is not None:
+                with open(args.quant_disable_names) as ff:
+                    quant_disable_names = [ii.strip() for ii in ff.readlines()]
+
+            transform(source_path=args.source, to_quant=args.to_quant, quant_disable_names=quant_disable_names)
         elif scenario == SCENARIOS.float_atb_to_quant_atb:
             from msit_llm.transform.float_atb_to_quant_atb import transform_quant
 
