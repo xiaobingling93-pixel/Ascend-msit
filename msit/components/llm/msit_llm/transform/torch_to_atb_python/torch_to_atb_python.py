@@ -190,7 +190,6 @@ class ATBModel:
         model_inputs.update(self.weights)
         missing_inputs = self.inputs - set(model_inputs.keys())
         if len(missing_inputs) != 0:
-            logger.error(f"Missing inputs: {missing_inputs}")
             raise ValueError(f"Missing inputs: {missing_inputs}")
 
         model_outputs = {ii: torch.ones([batch_size * cur_pos, self.vocab_size]).half().npu() for ii in self.outputs}
