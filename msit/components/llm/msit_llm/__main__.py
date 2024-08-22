@@ -461,9 +461,9 @@ class Transform(BaseCommand):
         scenario = get_transform_scenario(args.source, to_python=args.to_python)
         logger.info(f"Current scenario: {scenario}")
         if scenario == SCENARIOS.torch_to_float_python_atb:
-            from msit_llm.transform.torch_to_float_python_atb import transform
+            from msit_llm.transform.torch_to_atb_python import transform
 
-            transform(source_path=args.source):
+            transform(source_path=args.source)
         elif scenario == SCENARIOS.float_atb_to_quant_atb:
             from msit_llm.transform.float_atb_to_quant_atb import transform_quant
 

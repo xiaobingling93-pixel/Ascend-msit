@@ -25,10 +25,10 @@ from msit_llm.common.log import logger, set_log_level
 
 
 CONFIG_ATTR_CANDIDATES = {
-    "num_hidden_layers": ['num_hidden_layers', 'num_layers', 'n_layers'],
-    "num_attention_heads": ['num_attention_heads'],
-    "hidden_size": ['hidden_size'],
-    "vocab_size": ['vocab_size'],
+    "num_hidden_layers": ["num_hidden_layers", "num_layers", "n_layers"],
+    "num_attention_heads": ["num_attention_heads"],
+    "hidden_size": ["hidden_size"],
+    "vocab_size": ["vocab_size"],
 }
 
 NN_MODULE_STACK = "nn_module_stack"
@@ -38,28 +38,39 @@ TORCH_MODULE_TO_ATB_MAP = {
     "Gather": dict(op_type="Gather", op_param=json.dumps({})),
     ".*RMSNorm$": dict(op_type="RmsNorm", op_param=json.dumps({"layerType": "RMS_NORM_NORM"})),
     "Linear": dict(op_type="Linear", op_param=json.dumps({"hasBias": False})),
-    ".*Rotary.*": dict(op_type="Rope", op_param=json.dumps({'rotaryCoeff':2})),
-    ".*Attention$": dict(op_type="SelfAttention", op_param=json.dumps({'headNum': 32, 'kvHeadNum': 32, 'calcType':'PA_ENCODER'})),
-    "SiLU": dict(op_type="Activation", op_param=json.dumps({'activationType':'ACTIVATION_SWISH'})),
-    "add": dict(op_type="Elewise", op_param=json.dumps({'elewiseType':'ELEWISE_ADD'})),
-    "mul": dict(op_type="Elewise", op_param=json.dumps({'elewiseType':'ELEWISE_MUL'})),
+    ".*Rotary.*": dict(op_type="Rope", op_param=json.dumps({"rotaryCoeff": 2})),
+    ".*Attention$": dict(
+        op_type="SelfAttention", op_param=json.dumps({"headNum": 32, "kvHeadNum": 32, "calcType": "PA_ENCODER"})
+    ),
+    "SiLU": dict(op_type="Activation", op_param=json.dumps({"activationType": "ACTIVATION_SWISH"})),
+    "add": dict(op_type="Elewise", op_param=json.dumps({"elewiseType": "ELEWISE_ADD"})),
+    "mul": dict(op_type="Elewise", op_param=json.dumps({"elewiseType": "ELEWISE_MUL"})),
 }
 
-_FX_OP_TYPES = ['call_method', 'call_module', 'call_function', 'placeholder', 'output', 'get_attr']
-FX_OP_TYPES = namedtuple('FX_OP_TYPES', _FX_OP_TYPES)(*_FX_OP_TYPES)
+_FX_OP_TYPES = ["call_method", "call_module", "call_function", "placeholder", "output", "get_attr"]
+FX_OP_TYPES = namedtuple("FX_OP_TYPES", _FX_OP_TYPES)(*_FX_OP_TYPES)
 
-_FIXED_INPUTS = {"input_ids", "position_ids", "cos_table", "sin_table", "k_cache", "v_cache", "slots_mapping", "seq_len"}
-FIXED_INPUTS = namedtuple('FIXED_INPUTS', _FIXED_INPUTS)(*_FIXED_INPUTS)
+_FIXED_INPUTS = {
+    "input_ids",
+    "position_ids",
+    "cos_table",
+    "sin_table",
+    "k_cache",
+    "v_cache",
+    "slots_mapping",
+    "seq_len",
+}
+FIXED_INPUTS = namedtuple("FIXED_INPUTS", _FIXED_INPUTS)(*_FIXED_INPUTS)
 
 
-def get_config_attr(config, attr):
+def get_config_attr(config, attr, default=None):
     if attr not in CONFIG_ATTR_CANDIDATES:
-        return getattr(config, attr, None)
+        return getattr(config, attr, default)
 
     for sub_attr in CONFIG_ATTR_CANDIDATES[attr]:
         if hasattr(config, sub_attr):
             return getattr(config, sub_attr)
-    return None
+    return default
 
 
 def build_model(source_path):
@@ -79,15 +90,17 @@ def build_model(source_path):
 def to_transformers_traced_module(model, input_names=(FIXED_INPUTS.input_ids, FIXED_INPUTS.position_ids)):
     from transformers.utils.fx import symbolic_trace
 
-    return symbolic_trace(mm, input_names=input_names)
+    return symbolic_trace(model, input_names=input_names)
 
 
 def get_lambda_source_code(function):
-    return inspect.getsource(function).split('function=')[-1].split(', inputs=')[0].strip()
+    return inspect.getsource(function).split("function=")[-1].split(", inputs=")[0].strip()
 
 
 class Operation:
-    def __init__(self, op_type, op_param="{}", inputs=[], outputs=[], op_name="", function=None, is_weights_first=False):
+    def __init__(
+        self, op_type, op_param="{}", inputs=[], outputs=[], op_name="", function=None, is_weights_first=False
+    ):
         self.op_type, self.op_param, self.inputs, self.outputs = op_type, op_param, inputs, outputs
         self.op_name, self.function, self.is_weights_first = op_name, function, is_weights_first
 
@@ -122,6 +135,15 @@ class ATBModelConfig:
         self.vocab_size, self.num_attention_heads, self.head_dim = vocab_size, num_attention_heads, head_dim
         self.max_batch_size, self.max_seq_len = max_batch_size, max_seq_len
 
+    def to_dict(self):
+        return dict(
+            vocab_size=self.vocab_size,
+            num_attention_heads=self.num_attention_heads,
+            head_dim=self.head_dim,
+            max_batch_size=self.max_batch_size,
+            max_seq_len=self.max_seq_len,
+        )
+
 
 class ATBModel:
     def __init__(self, atb_model, atb_model_config):
@@ -132,7 +154,8 @@ class ATBModel:
             raise ValueError("atb_model_config is not an instance of ATBModelConfig")
 
         self.atb_model, self.atb_model_config = atb_model, atb_model_config
-        self.inputs, self.outputs = set(atb_model.input_names), atb_model.output_names
+        self.inputs = self.input_names = set(atb_model.input_names)
+        self.outputs = self.output_names = atb_model.output_names
         self.weights, self.inv_freq_weight = {}, None
         self.torch = torch
 
@@ -152,26 +175,33 @@ class ATBModel:
 
         self.weights = {}
         for kk in valid_weights:
-            cur_weight = weights[vv]
-            cur_weight = cur_weight.half() if str(cur_weight.dtype).split('.')[-1] == "float32" else cur_weight
+            cur_weight = weights[kk]
+            cur_weight = cur_weight.half() if str(cur_weight.dtype).split(".")[-1] == "float32" else cur_weight
             self.weights[kk] = cur_weight.npu()
 
         self.inv_freq_weight = None
         for weight_name in unused_weights:
             if "invfreq" in weight_name.split(".")[-1].replace("_", "").lower():
-                self.inv_freq_weight = source_weights[weight_name].squeeze().half().npu()
+                self.inv_freq_weight = weights[weight_name].squeeze().half().npu()
                 unused_weights.remove(weight_name)
                 break
 
-        logger.warning(f"unused weights: {unused_weights}")
-        logger.warning(f"missing weights: {missing_weights}")
+        if len(unused_weights) > 0:
+            logger.warning(f"unused weights: {unused_weights}")
+        if len(missing_weights) > 0:
+            logger.warning(f"missing weights: {missing_weights}")
 
     def forward(self, input_ids, position_ids, k_cache=None, v_cache=None, slots_mapping=None, **kwargs):
-        batch_size, cur_pos = input_ids.shape[0], position_ids[-1] + 1
-        seq_len = self.torch.ones([batch_size], dtype=torch.int) * cur_pos
-        slots_mapping = slots_mapping or self.torch.zeros([batch_size * cur_pos], dtype=torch.int)
-        k_cache = k_cache or self.torch.zeros(self.cache_shape).half()
-        v_cache = v_cache or self.torch.zeros(self.cache_shape).half()
+        batch_size = input_ids.shape[0] if input_ids.dim() == 2 else 1
+        cur_pos = position_ids[-1] + 1
+        logger.debug(f"batch_size = {batch_size}, cur_pos = {cur_pos}")
+        seq_len = self.torch.ones([batch_size], dtype=self.torch.int).to(position_ids.device) * cur_pos
+        if slots_mapping is None:
+            slots_mapping = self.torch.zeros([batch_size * cur_pos], dtype=self.torch.int)
+        if k_cache is None:
+            k_cache = self.torch.zeros(self.cache_shape).half()
+        if v_cache is None:
+            v_cache = self.torch.zeros(self.cache_shape).half()
 
         model_inputs = {
             FIXED_INPUTS.input_ids: input_ids.npu(),
@@ -183,17 +213,30 @@ class ATBModel:
         }
         model_inputs.update({kk: vv.npu() for kk, vv in kwargs.items()})
 
-        if self.inv_freq_weight is not None:
-            freq = (self.inv_freq_weight[None, :, None] @ position_ids[:, None, :]).transpose(1, 2)
+        if self.inv_freq_weight is not None and FIXED_INPUTS.cos_table not in model_inputs:
+            logger.debug(f"self.inv_freq_weight.shape = {self.inv_freq_weight.shape}")
+            logger.debug(f"position_ids.shape = {position_ids.shape}")
+            left = self.inv_freq_weight[None, :, None]
+            right = position_ids[:, None, :] if position_ids.dim() == 2 else position_ids[None, None, :]
+            freq = (left.to(right.device).float() @ right.float()).transpose(1, 2)
+            freq = self.torch.cat([freq, freq], dim=-1)[0].npu()  # has to be float npu values, and dim == 2
+            logger.debug(f"freq.shape = {freq.shape}")
+
             model_inputs[FIXED_INPUTS.cos_table], model_inputs[FIXED_INPUTS.sin_table] = freq.cos(), freq.sin()
+        if FIXED_INPUTS.cos_table not in model_inputs:
+            raise ValueError("Missing cos_table and sin_table")
 
         model_inputs.update(self.weights)
         missing_inputs = self.inputs - set(model_inputs.keys())
         if len(missing_inputs) != 0:
-            raise ValueError(f"Missing inputs: {missing_inputs}")
+            raise ValueError(
+                f"Missing inputs: {missing_inputs}, provided: {model_inputs.keys()}, required: {self.inputs}"
+            )
 
-        model_outputs = {ii: torch.ones([batch_size * cur_pos, self.vocab_size]).half().npu() for ii in self.outputs}
-        bind_map = {FIXED_INPUTS.seq_len: seqlen}
+        model_outputs = {
+            ii: self.torch.ones([batch_size * cur_pos, self.vocab_size]).half().npu() for ii in self.outputs
+        }
+        bind_map = {FIXED_INPUTS.seq_len: seq_len.cpu()}
         return self.atb_model.forward(model_inputs, model_outputs, bind_map)
 
 
@@ -229,7 +272,7 @@ class ATBModelFromTorch(ATBModel):
 
         self.weight_names, self.weight_stack_map = list(self.traced_module.state_dict().keys()), {}
         for ii in self.weight_names:
-            self.weight_stack_map.setdefault('.'.join(ii.split('.')[:-1]), []).append(ii)
+            self.weight_stack_map.setdefault(".".join(ii.split(".")[:-1]), []).append(ii)
 
         self.torch_module_to_atb_map = {}
         for kk, vv in TORCH_MODULE_TO_ATB_MAP.items():
@@ -244,6 +287,7 @@ class ATBModelFromTorch(ATBModel):
         self.model_inputs, self.model_outputs, self.operations = [], [], []
 
         self.convert_fx_traced_module()
+        self.to_file()
         self.atb_model = self.build_atb_model()
 
         self.atb_model_config = ATBModelConfig(
@@ -326,26 +370,33 @@ class ATBModelFromTorch(ATBModel):
         if FIXED_INPUTS.position_ids not in self.model_inputs:
             self.model_inputs += [FIXED_INPUTS.position_ids]
 
+        # for name, buffer in tt.named_buffers()
+
     def _op_process_attention(self, atb_operation=None, module_name=""):
         atb_operation.inputs = [
-            module_name + '.q_embed_', module_name + '.k_embed_', module_name + '.v_embed_', FIXED_INPUTS.seq_len
+            module_name + ".q_embed_",
+            module_name + ".k_embed_",
+            module_name + ".v_embed_",
+            FIXED_INPUTS.seq_len,
         ]
-        outputs = [ii + "_" for ii in atb_operation.outputs]
+        final_outputs = [ii + "_" for ii in atb_operation.outputs]
 
         if self.is_apply_rope:
             inputs = [self.pre_query_name, self.pre_key_name, "gather_cos.out", "gather_sin.out", FIXED_INPUTS.seq_len]
-            outputs = [module_name + '.q_embed', module_name + '.k_embed']
-            self.operations.append(Operation(
-                op_type="Rope",
-                op_param=json.dumps({'rotaryCoeff':2}),
-                inputs=inputs,
-                outputs=outputs,
-                op_name=module_name + ".rope",
-            ))
+            outputs = [module_name + ".q_embed", module_name + ".k_embed"]
+            self.operations.append(
+                Operation(
+                    op_type="Rope",
+                    op_param=json.dumps({"rotaryCoeff": 2}),
+                    inputs=inputs,
+                    outputs=outputs,
+                    op_name=module_name + ".rope",
+                )
+            )
 
         reshape_and_cache_inputs = [
-            module_name + '.k_embed_',
-            module_name + '.v_embed_',
+            module_name + ".k_embed_",
+            module_name + ".v_embed_",
             FIXED_INPUTS.k_cache,
             FIXED_INPUTS.v_cache,
             FIXED_INPUTS.slots_mapping,
@@ -356,21 +407,21 @@ class ATBModelFromTorch(ATBModel):
                 op_type="add_reshape",
                 function=lambda org_shape: [org_shape[0], num_attention_heads, head_dim],
                 inputs=[module_name + ".q_embed"],
-                outputs=[module_name + '.q_embed_'],
+                outputs=[module_name + ".q_embed_"],
                 op_name="",
             ),
             Operation(
                 op_type="add_reshape",
                 function=lambda org_shape: [org_shape[0], num_attention_heads, head_dim],
                 inputs=[module_name + ".k_embed"],
-                outputs=[module_name + '.k_embed_'],
+                outputs=[module_name + ".k_embed_"],
                 op_name="",
             ),
             Operation(
                 op_type="add_reshape",
                 function=lambda org_shape: [org_shape[0], num_attention_heads, head_dim],
                 inputs=[self.pre_value_name],
-                outputs=[module_name + '.v_embed_'],
+                outputs=[module_name + ".v_embed_"],
                 op_name="",
             ),
             Operation(
@@ -385,14 +436,17 @@ class ATBModelFromTorch(ATBModel):
                 op_type="add_reshape",
                 function=lambda org_shape: [org_shape[0], org_shape[1] * org_shape[2]],
                 inputs=atb_operation.outputs,
-                outputs=outputs,
-                op_name=""
+                outputs=final_outputs,
+                op_name="",
             ),
         ]
 
         if FIXED_INPUTS.k_cache not in self.model_inputs:
             self.model_inputs += [
-                FIXED_INPUTS.k_cache, FIXED_INPUTS.v_cache, FIXED_INPUTS.slots_mapping, FIXED_INPUTS.seq_len
+                FIXED_INPUTS.k_cache,
+                FIXED_INPUTS.v_cache,
+                FIXED_INPUTS.slots_mapping,
+                FIXED_INPUTS.seq_len,
             ]
 
     def _refine_inputs_outputs(self, input_node_map, output_node_map, operation_outputs):
@@ -482,10 +536,10 @@ class ATBModelFromTorch(ATBModel):
         import torch
         import torch_npu
 
-        atb_speed_path = os.getenv('ATB_SPEED_HOME_PATH', None)
+        atb_speed_path = os.getenv("ATB_SPEED_HOME_PATH", None)
         if not atb_speed_path:
             raise OSError("ATB_SPEED_HOME_PATH environment variable not valid, try install mindie")
-        sys.path.append(os.path.join(atb_speed_path, 'lib'))
+        sys.path.append(os.path.join(atb_speed_path, "lib"))
         try:
             import _libatb_torch as atb  # May error
         except (ImportError, ModuleNotFoundError) as err:
@@ -513,56 +567,95 @@ class ATBModelFromTorch(ATBModel):
         in_tensors = self.model_inputs + self.weight_names
         operation_inputs = [jj for op in self.operations for jj in op.inputs]
         valid_inputs = [ii for ii in in_tensors if ii in operation_inputs]
-        intensors_str = '[\n' + ''.join([f"{indent}{indent}'{ii}',\n" for ii in valid_inputs]) + f'{indent}]'
+        intensors_str = "[\n" + "".join([f"{indent}{indent}'{ii}',\n" for ii in valid_inputs]) + f"{indent}]"
 
-        contents = "\n".join([
-            "import os",
-            "import sys",
-            "import json",
-            "import torch",
-            "import torch_npu",
-            "torch_npu.npu.set_device(0)",
-            "",
-            "path = os.getenv('ATB_SPEED_HOME_PATH')",
-            "sys.path.append(os.path.join(path, 'lib'))",
-            "import _libatb_torch as atb",
-            "",
-            "def atb_model():"
-            f'{indent}num_attention_heads, head_dim = {self.num_attention_heads}, {self.head_dim}',
-            f"{indent}atb_model = atb._GraphOperation('{self.model_name}')",
-            f"{indent}in_tensors = {intensors_str}",
-            f"{indent}atb_model.add_input_output(input=in_tensors, output={self.operations[-1].outputs})",
-            "",
-        ]) + "\n"
+        contents = "\n".join(
+            [
+                "import os",
+                "import sys",
+                "import json",
+                "import torch",
+                "import torch_npu",
+                "",
+                "path = os.getenv('ATB_SPEED_HOME_PATH')",
+                "sys.path.append(os.path.join(path, 'lib'))",
+                "import _libatb_torch as atb",
+                "",
+                "def atb_model():" "",
+                f"{indent}num_attention_heads, head_dim = {self.num_attention_heads}, {self.head_dim}",
+                f"{indent}atb_model = atb._GraphOperation('{self.model_name}')",
+                f"{indent}in_tensors = {intensors_str}",
+                f"{indent}atb_model.add_input_output(input=in_tensors, output={self.operations[-1].outputs})",
+                "",
+                "",
+            ]
+        )
 
         for op in self.operations:
             if op.op_type == "add_reshape":
                 function = get_lambda_source_code(op.function)
                 contents += f"{indent}atb_model.add_reshape('{op.inputs[0]}', '{op.outputs[0]}', {function})\n"
             else:
-                contents += f"{indent}atb_model.add_operation(\n    "
-                contents += f",\n{indent}{indent}".join([
-                    f"operation=atb._BaseOperation(op_type='{op.op_type}', op_param='{op.op_param}', op_name='{op.op_name}')",
-                    f"input={op.inputs}",
-                    f"output={op.outputs}",
-                ])
-                contents += f"{indent},\n)\n"
-        contents += f"{indent}atb_model.build()"
+                contents += f"{indent}atb_model.add_operation(\n{indent}{indent}"
+                contents += f",\n{indent}{indent}".join(
+                    [
+                        f"operation=atb._BaseOperation(op_type='{op.op_type}', op_param='{op.op_param}', op_name='{op.op_name}')",
+                        f"input={op.inputs}",
+                        f"output={op.outputs}",
+                    ]
+                )
+                contents += f",\n{indent})\n"
+        contents += f"{indent}atb_model.build()\n"
         contents += f"{indent}return atb_model"
 
         output_file = output_file or (self.model_name.lower() + ".py")
         if not output_file.endswith(".py"):
             output_file += ".py"
-        with open(output_file, 'w') as ff:
-            ff.write(output_file)
-        logger.info(f"Saved to: {output_file}")
-        return contents
+        with open(output_file, "w") as ff:
+            ff.write(contents)
+        return output_file
 
-            
+
 def transform(source_path, input_names=(FIXED_INPUTS.input_ids, FIXED_INPUTS.position_ids), output_file=None):
     logger.info("Building model using transformers...")
     model, config = build_model(source_path)
 
     logger.info("Transforming to atb")
     atb_model = ATBModelFromTorch(torch_model=model, config=config, input_names=input_names)
-    atb_model.to_file(output_file=output_file)
+    output_file = atb_model.to_file(output_file=output_file)
+
+    logger.info("=" * 30)
+    logger.info(f"Saved to: {output_file}\n")
+
+    logger.info("=" * 30)
+    logger.info(f"atb_model config:\n{atb_model.atb_model_config.to_dict()}\n")
+
+    model_name = os.path.splitext(os.path.basename(output_file))[0]
+    logger.info("=" * 30)
+    logger.info(
+        """Run like:
+
+    import torch, torch_npu
+    import {model_name}
+    from msit_llm.transform.torch_to_atb_python import ATBModel, ATBModelConfig
+
+    atb_model = {model_name}.atb_model()
+    weights = torch.load(WEIGHT_PATH)  # Use actual WEIGHT_PATH
+
+    cc = ATBModelConfig(vocab_size={vocab_size}, num_attention_heads={num_attention_heads}, head_dim={head_dim})
+    aa = ATBModel(atb_model, cc)
+    aa.set_weights(weights)
+    out = aa.forward(
+        input_ids=torch.arange(32),
+        position_ids=torch.arange(32),
+        cos_table=torch.rand(1024, {head_dim}),
+        sin_table=torch.rand(1024, {head_dim}),
+    )
+    print(out)
+    """.format(
+            model_name=model_name,
+            vocab_size=atb_model.atb_model_config.vocab_size,
+            num_attention_heads=atb_model.atb_model_config.num_attention_heads,
+            head_dim=atb_model.atb_model_config.head_dim,
+        )
+    )
