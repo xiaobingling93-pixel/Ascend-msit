@@ -48,25 +48,25 @@ aipp_op{
 ```
 #### benchmark命令
 ```
-msit benchmark --om--model resnet18_bs4_dym_aipp.om --aipp-config actual_aipp_conf.config
+msit benchmark --om-model resnet18_bs4_dym_aipp.om --aipp-config actual_aipp_conf.config
 ```
 ### 2. 动态batch场景示例，以resnet18模型为例
 #### atc命令转换出带动态aipp配置的动态batch模型
 ```
-atc --framework=5 --model=./resnet18.onnx --output=resnet18_dym_batch_aipp --input_format=NCHW --input_shape="image:-1,3,224,224" --dynamic_batch_size "1,2" --soc_version=Ascend310 --insert_op_conf=dym_aipp_conf.aippconfig --enable_small_channel=1
+atc --framework=5 --om-model=./resnet18.onnx --output=resnet18_dym_batch_aipp --input_format=NCHW --input_shape="image:-1,3,224,224" --dynamic_batch_size "1,2" --soc_version=Ascend310 --insert_op_conf=dym_aipp_conf.aippconfig --enable_small_channel=1
 ```
 #### benchmark命令
 ```
-msit benchmark --model resnet18_dym_batch_aipp.om --aipp-config actual_aipp_conf.config --dym-batch 1
+msit benchmark --om-model resnet18_dym_batch_aipp.om --aipp-config actual_aipp_conf.config --dym-batch 1
 ```
 ### 3. 动态宽高场景示例，以resnet18模型为例
 #### atc命令转换出带动态aipp配置的动态宽高模型
 ```
-atc --framework=5 --model=./resnet18.onnx --output=resnet18_dym_image_aipp --input_format=NCHW --input_shape="image:4,3,-1,-1" --dynamic_image_size "112,112;224,224" --soc_version=Ascend310 --insert_op_conf=dym_aipp_conf.aippconfig --enable_small_channel=1
+atc --framework=5 --om-model=./resnet18.onnx --output=resnet18_dym_image_aipp --input_format=NCHW --input_shape="image:4,3,-1,-1" --dynamic_image_size "112,112;224,224" --soc_version=Ascend310 --insert_op_conf=dym_aipp_conf.aippconfig --enable_small_channel=1
 ```
 #### benchmark命令
 ```
-msit benchmark --model resnet18_dym_image_aipp.om --aipp-config actual_aipp_conf.config --dym-hw 112,112
+msit benchmark --om-model resnet18_dym_image_aipp.om --aipp-config actual_aipp_conf.config --dym-hw 112,112
 ```
 
 ## FAQ
