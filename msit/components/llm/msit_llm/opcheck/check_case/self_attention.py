@@ -118,11 +118,11 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         out_sub = out_sub.view([head_num, q_s, head_size]).permute(1, 0, 2).contiguous()
         return out_sub, _p
 
-    def get_mask(self, in_tensors):
+    def get_mask(self, in_tensors, seq_len):
         mask = in_tensors[3]
         soc_version = self.get_soc_version()
         if soc_version != "Ascend910B":
-            mask = self.nz_2_nd(mask)
+            mask = OpcheckUnpadSelfAttentionOperation.attention_mask_nz_2_nd(mask, seq_len)
             self.in_tensors[3] = mask
         if len(mask.shape) == 2:
             dim0, dim1 = mask.shape
@@ -177,10 +177,10 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         is_triu_mask = self.op_param.get("isTriuMask", 0)
         is_mask = mask_type != MaskType.MASK_TYPE_UNDEFINED.value
         if is_mask:
-            mask = self.get_mask(in_tensors)
             kv_seqlen = in_tensors[4]
             seq_len = q_seqlen = in_tensors[5]
             layer_id = int(in_tensors[6][0])
+            mask = self.get_mask(in_tensors, seq_len)
         else:
             kv_seqlen = in_tensors[3]
             seq_len = q_seqlen = in_tensors[4]
@@ -227,9 +227,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         is_mask = mask_type != MaskType.MASK_TYPE_UNDEFINED.value
         is_triu_mask = self.op_param.get("isTriuMask", 0)
         if is_mask:
-            mask = self.get_mask(in_tensors)
             seq_len = in_tensors[4]
-            self.bind_idx.append(4)
         else:
             seq_len = in_tensors[3]
             self.bind_idx.append(3)
@@ -268,7 +266,11 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
                     self.in_tensors[3] = no_compress_mask.to(self.in_tensors[3].dtype)
                     score = score + no_compress_mask[:, :q_s, :kv_s]
                 else:
-                    score = score + mask[:, :q_s, :kv_s] * post_mask_coff
+                    if len(mask.shape) == 4:
+                        mask_cur = mask[idx]
+                    else:
+                        mask_cur = mask
+                    score = score + mask_cur[:, :q_s, :kv_s] * post_mask_coff
 
             out_sub, _p = OpcheckUnpadSelfAttentionOperation.get_out_sub(head_info, q_s, score, v_slice, _p)
             out = out_sub if out is None else torch.concat((out, out_sub), 0)

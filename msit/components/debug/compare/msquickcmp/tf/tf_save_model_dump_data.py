@@ -39,6 +39,7 @@ class TfSaveModelDumpData(DumpData):
         self.expected_version = "2.6.5"
         self._check_tf_version(self.expected_version)
         output_path = os.path.realpath(arguments.out_path)
+        self.tag_set = self.split_tag_set(arguments.saved_model_tag_set)
         self.input = os.path.join(output_path, "input")
         self.dump_data_tf = os.path.join(output_path, "dump_data", "tf")
         self.inputs_data = {}
@@ -50,6 +51,13 @@ class TfSaveModelDumpData(DumpData):
     @staticmethod
     def _is_op_exists(operation_name_to_check, operations):
         return any(op.name == operation_name_to_check for op in operations)
+
+    @staticmethod
+    def split_tag_set(saved_model_tag_set):
+        tag_sets = saved_model_tag_set.split(',')
+        if len(tag_sets) > 1:
+            return tag_sets
+        return {tag_sets[0]}
 
     @staticmethod
     def _parse_json_file(output_json_path):
@@ -83,17 +91,32 @@ class TfSaveModelDumpData(DumpData):
 
         return input_shape_list
 
-    def generate_inputs_data(self, npu_dump_path=None, om_parser=None):
+    def generate_inputs_data(self, is_om_compare, npu_dump_path=None, om_parser=None):
         """
         Generate tf2.6 save_model inputs data
-        :return tf2.6 save_model inputs data directory
+        return tf2.6 save_model inputs data directory
         """
-        input_files = sorted(os.listdir(self.input), key=lambda x: int(x[-5]))
-        input_bin_data = [np.fromfile(os.path.join(self.input, input_bin_file), dtype=np.float32)
-                          for input_bin_file in input_files]
-        for index, bin_data in enumerate(input_bin_data):
-            bin_data = bin_data.reshape(self.input_shape[index][1])
-            self.inputs_data[self.input_shape[index][0]] = bin_data
+        if is_om_compare:
+            input_files = sorted(os.listdir(self.input), key=lambda x: int(x[-5]))
+            input_bin_data = [np.fromfile(os.path.join(self.input, input_bin_file), dtype=np.float32)
+                              for input_bin_file in input_files]
+            for index, bin_data in enumerate(input_bin_data):
+                bin_data = bin_data.reshape(self.input_shape[index][1])
+                self.inputs_data[self.input_shape[index][0]] = bin_data
+        else:
+            input_files = os.listdir(self.input)
+            for input_file in input_files:
+                file_name = os.path.basename(input_file)
+                data_type = file_name.rsplit("_", 1)[-1].split(".")[0]
+                input_name = file_name.rsplit("_", 1)[0]
+                input_shape_dim = None
+                for input_shape in self.input_shape:
+                    if input_shape[0] == input_name:
+                        input_shape_dim = input_shape[1]
+                if input_shape_dim is not None:
+                    input_data = (np.fromfile(os.path.join(self.input, input_file), dtype=np.dtype(data_type))
+                                  .reshape(input_shape_dim))
+                    self.inputs_data[input_name] = input_data
 
     def get_net_output_info(self):
         """
@@ -108,7 +131,7 @@ class TfSaveModelDumpData(DumpData):
         """
         op_names = self.parse_ops_name_from_om_json(output_json_path)
         sess = tf.compat.v1.keras.backend.get_session()
-        tag_set = {tf.compat.v1.saved_model.tag_constants.SERVING}
+        tag_set = {tf.compat.v1.saved_model.tag_constants.SERVING} if self.tag_set == "" else self.tag_set
         _ = tf.compat.v1.saved_model.load(sess, tag_set, self.model_path)
         if not self.inputs_data:
             raise ValueError("inputs_data is empty")

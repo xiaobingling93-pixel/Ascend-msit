@@ -214,7 +214,7 @@ def run(args: CmpArgsAdapter, input_shape, original_out_path, use_cli: bool):
         # gpu dump
         from msquickcmp.tf.tf_save_model_dump_data import TfSaveModelDumpData
         golden_dump = TfSaveModelDumpData(args)
-        golden_dump.generate_inputs_data(npu_dump_data_path, om_parser=None)
+        golden_dump.generate_inputs_data(False, npu_dump_data_path, om_parser=None)
         golden_dump_data_path = golden_dump.generate_dump_data(output_json_path, npu_dump_path=None, om_parser=None)
         # compare the entire network
         net_compare = NetCompare(npu_dump_data_path, golden_dump_data_path,
@@ -262,14 +262,14 @@ def run_om_model_compare(args, use_cli):
 
     # generate onnx inputs data
     golden_dump = _generate_golden_data_model(args, npu_dump_npy_path)
-    golden_dump.generate_inputs_data(npu_dump_data_path, use_aipp)
-
     expect_net_output_node = npu_dump.get_expect_output_name()
 
     # generate dump data by golden model
     if is_saved_model_valid(args.model_path):
+        golden_dump.generate_inputs_data(True, npu_dump_data_path, use_aipp)
         golden_dump_data_path = golden_dump.generate_dump_data(output_json_path, npu_dump_npy_path, npu_dump.om_parser)
     else:
+        golden_dump.generate_inputs_data(npu_dump_data_path, use_aipp)
         golden_dump_data_path = golden_dump.generate_dump_data(npu_dump_npy_path, npu_dump.om_parser)
     golden_net_output_info = golden_dump.get_net_output_info()
 
