@@ -29,8 +29,10 @@ TORCH_MODULE_TO_ATB_MAP = {
     "add": dict(op_type="Elewise", op_param=json.dumps({'elewiseType':'ELEWISE_ADD'})),
     "mul": dict(op_type="Elewise", op_param=json.dumps({'elewiseType':'ELEWISE_MUL'})),
 }
+
 _FX_OP_TYPES = ['call_method', 'call_module', 'call_function', 'placeholder', 'output', 'get_attr']
 FX_OP_TYPES = namedtuple('fx_op_types', _FX_OP_TYPES)(*_FX_OP_TYPES)
+
 _FIXED_INPUTS = {"input_ids", "position_ids", "cos_table", "sin_table", "k_cache", "v_cache", "slots_mapping", "seq_len"}
 FIXED_INPUTS = namedtuple('fixed_inputs', _FIXED_INPUTS)(*_FIXED_INPUTS)
 
@@ -52,7 +54,6 @@ def build_model(source_path):
 
     try:
         config = AutoConfig.from_pretrained(source_path, trust_remote_code=True)
-        config = try_setting_small_model(config)
         model = AutoModelForCausalLM.from_config(config, trust_remote_code=True)
     except Exception as error:
         raise ValueError(f"build model from {source_path} failed, make sure it works within transformers") from error
@@ -295,19 +296,25 @@ class ATBModelFromTorch(ATBModel):
 
     def _op_process_rope(self, atb_operation=None, module_name=""):
         self.is_apply_rope = True
-        self.model_inputs += ['cos_table', 'sin_table']
-        self.operations.append(self._convert_module("Gather", "gather_cos", [FIXED_INPUTS.cos_table, FIXED_INPUTS.position_ids]))
-        self.operations.append(self._convert_module("Gather", "gather_sin", [FIXED_INPUTS.sin_table, FIXED_INPUTS.position_ids]))
+        self.model_inputs += [FIXED_INPUTS.cos_table, FIXED_INPUTS.sin_table]
+        self.operations.append(
+            self._convert_module("Gather", "gather_cos", [FIXED_INPUTS.cos_table, FIXED_INPUTS.position_ids])
+        )
+        self.operations.append(
+            self._convert_module("Gather", "gather_sin", [FIXED_INPUTS.sin_table, FIXED_INPUTS.position_ids])
+        )
 
         if FIXED_INPUTS.position_ids not in self.model_inputs:
             self.model_inputs += [FIXED_INPUTS.position_ids]
 
     def _op_process_attention(self, atb_operation=None, module_name=""):
-        atb_operation.inputs = [module_name + '.q_embed_', module_name + '.k_embed_', module_name + '.v_embed_', "seq_len"]
+        atb_operation.inputs = [
+            module_name + '.q_embed_', module_name + '.k_embed_', module_name + '.v_embed_', FIXED_INPUTS.seq_len
+        ]
         outputs = [ii + "_" for ii in atb_operation.outputs]
 
         if self.is_apply_rope:
-            inputs = [self.pre_query_name, self.pre_key_name, "gather_cos.out", "gather_sin.out", "seq_len"]
+            inputs = [self.pre_query_name, self.pre_key_name, "gather_cos.out", "gather_sin.out", FIXED_INPUTS.seq_len]
             outputs = [module_name + '.q_embed', module_name + '.k_embed']
             self.operations.append(Operation(
                 op_type="Rope",
@@ -374,12 +381,14 @@ class ATBModelFromTorch(ATBModel):
         for kk, vv in input_node_map.items():
             gathered_inputs = []
             for ii in vv:
-                if ii in output_node_map: # and output_node_map[ii] != kk and output_node_map[ii] != kk + ".out":
+                if ii in output_node_map:
                     gathered_inputs += output_node_map[ii]
             for ii in set(gathered_inputs):
                 if ii == kk or ii == kk + ".out":
                     continue
-                gathered_module_inputs.setdefault(kk, []).extend(operation_outputs.get(ii, ii if isinstance(ii, list) else [ii]))
+                gathered_module_inputs.setdefault(kk, []).extend(
+                    operation_outputs.get(ii, ii if isinstance(ii, list) else [ii])
+                )
 
         for op in self.operations:
             if not isinstance(op, list) and (len(op.inputs) == 0 or op.inputs[-1] is not None):
@@ -454,9 +463,11 @@ class ATBModelFromTorch(ATBModel):
         import torch
         import torch_npu
 
-        path = os.getenv('ATB_SPEED_HOME_PATH')
-        sys.path.append(os.path.join(path, 'lib'))
-        import _libatb_torch as atb
+        atb_speed_path = os.getenv('ATB_SPEED_HOME_PATH', None)
+        if not atb_speed_path:
+            raise OSError("ATB_SPEED_HOME_PATH environment variable not valid")
+        sys.path.append(os.path.join(atb_speed_path, 'lib'))
+        import _libatb_torch as atb  # May error
 
         atb_model = atb._GraphOperation(self.model_name)
         in_tensors = self.model_inputs + self.weight_names
@@ -476,12 +487,12 @@ class ATBModelFromTorch(ATBModel):
         return atb_model
 
     def to_file(self, output_file=None):
+        indent = "    "
         in_tensors = self.model_inputs + self.weight_names
         operation_inputs = [jj for op in self.operations for jj in op.inputs]
         valid_inputs = [ii for ii in in_tensors if ii in operation_inputs]
-        intensors_str = '[\n' + ''.join(["    '{}',\n".format(ii) for ii in valid_inputs]) + ']'
+        intensors_str = '[\n' + ''.join([f"{indent}{indent}'{ii}',\n" for ii in valid_inputs]) + f'{indent}]'
 
-        indent = "    "
         contents = "\n".join([
             "import os",
             "import sys",
