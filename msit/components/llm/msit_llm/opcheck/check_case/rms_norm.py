@@ -166,7 +166,7 @@ class OpcheckRmsNormOperation(operation_test.OperationTest):
             return [(x * rstd) * gamma, rstd]
         try:
             if precision_mode == PrecisionMode.HIGH_PERFORMANCE_MODE.value:
-                golden_output = (x / torch.sqrt(norm)).half() * gamma.to(torch.float16).view(-1, 1)
+                golden_output = (x / torch.sqrt(norm)).half() * gamma.to(torch.float16).view(1, -1)
             else:
                 golden_output = x * gamma / torch.sqrt(norm)
         except ZeroDivisionError as e:
