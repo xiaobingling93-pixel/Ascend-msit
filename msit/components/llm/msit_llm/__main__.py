@@ -214,7 +214,7 @@ class CompareCommand(BaseCommand):
                   "def foo(golden_tensor, my_tensor): return float_value, string_message"')
 
         parser.add_argument("--log-level", "-l", default="info", choices=LOG_LEVELS_LOWER, help="specify log level.")
-        
+
         parser.add_argument(
             '--weight',
             '-w',
@@ -417,7 +417,7 @@ class Transform(BaseCommand):
             "[torch to float python atb model] directory containing config.json and py for building transformers model",
         ]
         scenarios_info_str = "; ".join([f"{id}.{ii}" for id, ii in enumerate(scenarios_info, start=1)])
-        
+
         parser.add_argument(
             "-s",
             "--source",
@@ -437,13 +437,19 @@ class Transform(BaseCommand):
         parser.add_argument(
             "--enable-sparse",
             action='store_true',
-            help="[float atb to quant atb model] Enable trasforming to sparse-quant model"
+            help="[float atb to quant atb model] Enable transforming to sparse-quant model"
         )
         parser.add_argument(
             "--to-python",
             "-py",
             action='store_true',
-            help="[torch to float python atb model] Enable trasforming to python atb model",
+            help="[torch to float python atb model] Enable transforming to python atb model",
+        )
+        parser.add_argument(
+            "--to-quant",
+            "-quant",
+            action='store_true',
+            help="[torch to float python atb model] Enable transforming to python quant atb model",
         )
         parser.add_argument(
             "-a",
@@ -470,12 +476,12 @@ class Transform(BaseCommand):
             transform_quant.transform_quant(source_path=args.source, enable_sparse=args.enable_sparse)
         elif scenario == SCENARIOS.torch_to_float_atb:
             from msit_llm.transform.torch_to_float_atb import transform_float
-            
+
             if args.analyze:
                 transform_float.transform_report(source_path=args.source)
             else:
                 transform_float.transform_float(source_path=args.source, atb_model_path=args.atb_model_path)
-                
+
         else:
             message = f"Neither config.json + py or cpp found in {args.source}, not supported"
             logger.error(message)
@@ -531,7 +537,7 @@ class BCAnalyze(BaseCommand):
                 except StopIteration:
                     logger.error(
                         "There is no csv file under directory '%s', "
-                        "please check the log result", 
+                        "please check the log result",
                         csv_dir
                     )
                     raise
@@ -539,11 +545,11 @@ class BCAnalyze(BaseCommand):
                 full_csv_path = os.path.join(csv_dir, csv_path)
             else:
                 full_csv_path = component
-            
+
             csv_path_lists.append(full_csv_path)
 
-        Analyzer.from_csv(golden_csv_path=csv_path_lists[0], test_csv_path=csv_path_lists[1]) 
-        
+        Analyzer.from_csv(golden_csv_path=csv_path_lists[0], test_csv_path=csv_path_lists[1])
+
 
 def get_cmd_instance():
     llm_help_info = "Large Language Model(llm) Debugger Tools."

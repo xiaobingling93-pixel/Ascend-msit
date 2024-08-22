@@ -287,6 +287,7 @@ class ATBModelFromTorch(ATBModel):
         self.model_inputs, self.model_outputs, self.operations = [], [], []
 
         self.convert_fx_traced_module()
+        self.convert_to_quant()
         self.to_file()
         self.atb_model = self.build_atb_model()
 
@@ -531,6 +532,44 @@ class ATBModelFromTorch(ATBModel):
         self._refine_inputs_outputs(input_node_map, output_node_map, operation_outputs)
         self.operations[-1].outputs = self.model_outputs
         return self.model_inputs, self.model_outputs, self.weight_names, self.operations
+
+    def convert_to_quant(self, disable_names=("lm_head")):
+        operations_with_quant = []
+        for op_id, op in enumerate(self.operations):
+            if op.op_type not in ["Linear", "LinearParallel"]:
+                operations_with_quant.append(op)
+                continue
+            if op.op_name in disable_names:
+                operations_with_quant.append(op)
+                continue
+
+            linear_quant_weights = []
+            bias, deq_scale = f"{op.op_name}.bias", f"{op.op_name}.deq_scale"
+            input_scale, input_offset = f"{op.op_name}.input_scale", f"{op.op_name}.input_offset"
+            self.weight_names += [input_scale, input_offset, deq_scale]
+
+            if bias not in op.inputs:
+                linear_quant_weights.append(bias)
+                self.weight_names.append(bias)
+            linear_quant_weights.append(deq_scale)
+
+            elewise_quant_node = Operation(
+                op_type="Elewise",
+                op_param=json.dumps({
+                    "elewiseType": "ELEWISE_QUANT", "quantParam.inputScale": input_scale, "quantParam.inputOffset": input_offset
+                }),
+                op_name=f"{op.op_name}.elewise_quant",
+                inputs=[f"{op.inputs[0]}"],
+                outputs=[f"{op.op_name}.elewise_quant.out"],
+            )
+
+            op_param = json.loads(op.op_param)
+            op_param.update({"transposeA": False, "transposeB": True, "hasBias": True, "outDataType": "ACL_FLOAT16"})
+            op.op_param = json.dumps(op_param)
+            op.inputs = elewise_quant_node.outputs + op.inputs[1:] + linear_quant_weights
+
+            operations_with_quant += [elewise_quant_node, op]
+        self.operations = operations_with_quant
 
     def build_atb_model(self):
         import torch
