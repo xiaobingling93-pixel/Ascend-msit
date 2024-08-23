@@ -149,7 +149,7 @@ class ATBModelConfig:
         )
     
     def __repr__(self):
-        return self.to_dict()
+        return json.dumps(self.to_dict())
 
 
 class ATBModel:
@@ -243,7 +243,7 @@ class ATBModel:
         missing_inputs = self.inputs - set(model_inputs.keys())
         if len(missing_inputs) != 0:
             raise ValueError(
-                f"Missing inputs: {missing_inputs}, provided: {model_inputs.keys()}, required: {self.inputs}"
+                f"Missing inputs: {missing_inputs}\n\npPovided: {model_inputs.keys()}\n\nCall `set_weights` if not
             )
 
         model_outputs = {
@@ -274,12 +274,6 @@ class ATBModelFromTorch(ATBModel):
     >>> print({kk: vv.shape for kk, vv in out.items()})
     # {'output': torch.Size([32, 32000])}
     >>> atb_model.to_file()  # Save atb model to py file
-    # 'llamaforcausallm_atb_float.py'
-    import llamaforcausallm_atb_float
-    bb = llamaforcausallm_atb_float.atb_model()
-    atb_model_config=dict(vocab_size=cc.vocab_size, num_attention_heads=cc.num_attention_heads, head_dim=cc.hidden_size // cc.num_attention_heads)
-    dd = ATBModel(bb, )
-
     """
     def __init__(
         self,
