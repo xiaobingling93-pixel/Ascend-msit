@@ -22,16 +22,20 @@ class ConvertInstall(AitInstaller):
         check_res = []
 
         if not os.path.exists(os.path.join(os.path.dirname(__file__), "aie", "aie_convert")):
-            check_res.append("[warnning] build aie_convert failed. will make the AIE feature unusable. "
-                             "use `msit build-extra convert` to try again")
-        
+            check_res.append(
+                "[warnning] build aie_convert failed. will make the AIE feature unusable. "
+                "use `msit build-extra convert` to try again"
+            )
+
         if not check_res:
             return "OK"
         else:
             return "\n".join(check_res)
-        
+
     def build_extra(self, find_links=None):
         if sys.platform == 'win32':
             return
 
-        subprocess.run(["/bin/bash", os.path.abspath(os.path.join(os.path.dirname(__file__), "install.sh"))], shell=False)
+        subprocess.run(
+            ["/bin/bash", os.path.abspath(os.path.join(os.path.dirname(__file__), "install.sh"))], shell=False
+        )
