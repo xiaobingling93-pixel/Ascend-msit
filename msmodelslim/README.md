@@ -38,7 +38,6 @@ msModelSlim当前处于逐步开源过程中，计划通过630,930,1230三个版
 source {CANN包安装路径}/ascend-toolkit/set_env.sh
 ```
 - 使用非root用户运行调优任务时，需要管理员用户将运行用户加入驱动运行用户组（例如：HwHiAiUser）中，保证普通用户对run包的lib库有读权限。
-在线提单
 - msModelSlim工具依赖Python，以Python3.7.5为例，请以运行用户执行如下命令设置Python3.7.5的相关环境变量。
 
 ```
