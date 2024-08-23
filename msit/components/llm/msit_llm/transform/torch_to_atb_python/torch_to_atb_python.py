@@ -367,41 +367,12 @@ class ATBModelFromTorch(ATBModel):
 
     def _op_process_linear(self, atb_operation=None, module_name=""):
         bias_name = f"{atb_operation.op_name}.bias"
-        op_param = json.loads(atb_operation.op_param)
         if bias_name in self.weight_names:
+            op_param = json.loads(atb_operation.op_param)
             op_param.update({"hasBias": True})
             atb_operation.inputs.insert(1, bias_name)
-        if not self.to_quant:
             atb_operation.op_param = json.dumps(op_param)
-            self.operations.append(atb_operation)
-            return
-
-        logger.debug("Quant node: atb_operation.op_name = {atb_operation.op_name}")
-        linear_quant_weights = []
-        deq_scale_name = f"{atb_operation.op_name}.deq_scale"
-        input_scale_name = f"{atb_operation.op_name}.input_scale"
-        input_offset_name = f"{atb_operation.op_name}.input_offset"
-        self.weight_names += [input_scale_name, input_offset_name, deq_scale_name]
-
-        if bias_name not in atb_operation.inputs:
-            linear_quant_weights.append(bias_name)
-            self.weight_names.append(bias_name)
-        linear_quant_weights.append(deq_scale_name)
-
-        elewise_quant_node = Operation(
-            op_type="Elewise",
-            op_param=json.dumps({"elewiseType": "ELEWISE_QUANT_PER_CHANNEL"}),
-            op_name=f"{atb_operation.op_name}.elewise_quant",
-            inputs=[f"{atb_operation.inputs[0]}", input_scale_name, input_offset_name],
-            outputs=[f"{atb_operation.op_name}.elewise_quant.out"],
-        )
-
-        op_param = json.loads(atb_operation.op_param)
-        op_param.update({"transposeA": False, "transposeB": True, "hasBias": True, "outDataType": "ACL_FLOAT16"})
-        atb_operation.op_param = json.dumps(op_param)
-        atb_operation.inputs = elewise_quant_node.outputs + atb_operation.inputs[1:] + linear_quant_weights
-
-        self.operations += [elewise_quant_node, atb_operation]
+        self.operations.append(atb_operation)
 
     def _op_process_rope(self, atb_operation=None, module_name=""):
         self.is_apply_rope = True
@@ -565,14 +536,15 @@ class ATBModelFromTorch(ATBModel):
                 output_node_map[node.name] = previous_operation_out = operation_outputs[cur_module_name] = cur_outputs
             else:
                 self.operations.append(atb_operation)
-                operation_outputs[cur_module_name] = atb_operation.outputs
-                output_node_map[node.name] = previous_operation_out = atb_operation.outputs
+                cur_outputs = atb_operation.outputs
+                output_node_map[node.name] = previous_operation_out = operation_outputs[cur_module_name] = cur_outputs
 
         self._refine_inputs_outputs(input_node_map, output_node_map, operation_outputs)
         self.operations[-1].outputs = self.model_outputs
         return self.model_inputs, self.model_outputs, self.weight_names, self.operations
 
     def convert_to_quant(self, disable_names=("lm_head")):
+        # Has to split out from convert_fx_traced_module, needs actual Linear input names
         operations_with_quant = []
         logger.debug(f"disable_names = {disable_names}")
         for op_id, op in enumerate(self.operations):
@@ -601,7 +573,6 @@ class ATBModelFromTorch(ATBModel):
                 inputs=[f"{op.inputs[0]}", input_scale, input_offset],
                 outputs=[f"{op.op_name}.elewise_quant.out"],
             )
-            self.extra_inputs += [input_scale, input_offset]
 
             op_param = json.loads(op.op_param)
             op_param.update({"transposeA": False, "transposeB": True, "hasBias": True, "outDataType": "ACL_FLOAT16"})
@@ -734,7 +705,7 @@ def transform(
     from msit_llm.transform.torch_to_atb_python import ATBModel, ATBModelConfig
 
     atb_model = {model_name}.atb_model()
-    weights = torch.load(\"$WEIGHT_PATH\")  # Use actual WEIGHT_PATH
+    weights = torch.load(\'$WEIGHT_PATH\')  # Use actual WEIGHT_PATH
 
     cc = ATBModelConfig(vocab_size={vocab_size}, num_attention_heads={num_attention_heads}, head_dim={head_dim})
     aa = ATBModel(atb_model, cc)

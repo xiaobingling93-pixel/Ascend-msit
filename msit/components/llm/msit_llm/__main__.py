@@ -455,7 +455,7 @@ class Transform(BaseCommand):
             "--quant-disable-names",
             type=check_input_path_legality,
             default=None,
-            help="[torch to float python atb model] file for layer names skip quant",
+            help="[torch to float python atb model] file for layer names skip quant, default None for 'lm_head'",
         )
         parser.add_argument(
             "-a",
@@ -475,7 +475,7 @@ class Transform(BaseCommand):
         if scenario == SCENARIOS.torch_to_float_python_atb:
             from msit_llm.transform.torch_to_atb_python import transform
 
-            quant_disable_names = None
+            quant_disable_names = ["lm_head"]
             if args.quant_disable_names is not None:
                 with open(args.quant_disable_names) as ff:
                     quant_disable_names = [ii.strip() for ii in ff.readlines()]
