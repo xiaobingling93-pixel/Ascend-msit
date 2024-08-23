@@ -21,6 +21,9 @@ import inspect
 from copy import deepcopy
 from collections import namedtuple
 
+import torch
+import torch_npu
+
 from msit_llm.common.log import logger, set_log_level
 
 
@@ -151,9 +154,6 @@ class ATBModelConfig:
 
 class ATBModel:
     def __init__(self, atb_model, atb_model_config):
-        import torch
-        import torch_npu
-
         if isinstance(atb_model_config, dict):
             required_keys = ["vocab_size", "num_attention_heads", "head_dim"]
             if any([kk not in atb_model_config for kk in required_keys]):
@@ -588,9 +588,6 @@ class ATBModelFromTorch(ATBModel):
         self.operations = operations_with_quant
 
     def build_atb_model(self):
-        import torch
-        import torch_npu
-
         atb_speed_path = os.getenv("ATB_SPEED_HOME_PATH", None)
         if not atb_speed_path:
             raise OSError("ATB_SPEED_HOME_PATH environment variable not valid, try install mindie")
