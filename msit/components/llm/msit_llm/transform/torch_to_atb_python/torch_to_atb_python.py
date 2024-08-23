@@ -254,6 +254,23 @@ class ATBModel:
 
 
 class ATBModelFromTorch(ATBModel):
+    """Create ATB model from raw transformers torch model
+    >>> import torch
+    >>> from transformers.models.llama import LlamaConfig, LlamaForCausalLM
+    >>> from msit_llm.transform.torch_to_atb_python import ATBModel, ATBModelConfig, ATBModelFromTorch
+    >>>
+    >>> cc = LlamaConfig()
+    >>> cc.num_hidden_layers, cc.hidden_size, cc.intermediate_size = 2, 1024, 4096  # smaller
+    >>> mm = LlamaForCausalLM(cc)
+    >>>
+    >>> atb_model = ATBModelFromTorch(mm)
+    >>> atb_model.set_weights(mm.state_dict())
+    >>> # Also set buffers in, which includes inv_freq. Ignore WARNINGs of missing weights
+    >>> atb_model.set_weights(dict(mm.named_buffers()))
+    >>> out = atb_model(input_ids=torch.arange(32), position_ids=torch.arange(32))
+    >>> print({kk: vv.shape for kk, vv in out.items()})
+    # {'output': torch.Size([32, 32000])}
+    """
     def __init__(
         self,
         torch_model,
@@ -667,8 +684,9 @@ class ATBModelFromTorch(ATBModel):
         contents += f"{indent}atb_model.execute_as_single = False\n"
         contents += f"{indent}return atb_model"
 
-        output_file = output_file or (self.model_name.lower() + ".py")
-        if not output_file.endswith(".py"):
+        if output_file is None:
+            output_file = "_".join([self.model_name.lower(), "atb", "quant.py" if self.to_quant else "float.py"])
+        elif not output_file.endswith(".py"):
             output_file += ".py"
         with open(output_file, "w") as ff:
             ff.write(contents)
