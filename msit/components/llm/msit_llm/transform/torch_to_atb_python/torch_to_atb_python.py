@@ -290,7 +290,7 @@ class ATBModelFromTorch(ATBModel):
             self.torch_module_to_atb_map[re_key] = Operation(**vv)
 
         self.pre_query_name, self.pre_key_name, self.pre_value_name, self.is_apply_rope = "", "", "", False
-        self.model_inputs, self.model_outputs, self.operations, self.extra_inputs = [], [], [], []
+        self.model_inputs, self.model_outputs, self.operations = [], [], []
 
         self.convert_fx_traced_module()
         if to_quant:
@@ -365,6 +365,44 @@ class ATBModelFromTorch(ATBModel):
             elif "v" in sub_name:
                 self.pre_value_name = atb_operation.outputs[0]
 
+    def _op_process_linear(self, atb_operation=None, module_name=""):
+        bias_name = f"{atb_operation.op_name}.bias"
+        op_param = json.loads(atb_operation.op_param)
+        if bias_name in self.weight_names:
+            op_param.update({"hasBias": True})
+            atb_operation.inputs.insert(1, bias_name)
+        if not self.to_quant:
+            atb_operation.op_param = json.dumps(op_param)
+            self.operations.append(atb_operation)
+            return
+
+        logger.debug("Quant node: atb_operation.op_name = {atb_operation.op_name}")
+        linear_quant_weights = []
+        deq_scale_name = f"{atb_operation.op_name}.deq_scale"
+        input_scale_name = f"{atb_operation.op_name}.input_scale"
+        input_offset_name = f"{atb_operation.op_name}.input_offset"
+        self.weight_names += [input_scale_name, input_offset_name, deq_scale_name]
+
+        if bias_name not in atb_operation.inputs:
+            linear_quant_weights.append(bias_name)
+            self.weight_names.append(bias_name)
+        linear_quant_weights.append(deq_scale_name)
+
+        elewise_quant_node = Operation(
+            op_type="Elewise",
+            op_param=json.dumps({"elewiseType": "ELEWISE_QUANT_PER_CHANNEL"}),
+            op_name=f"{atb_operation.op_name}.elewise_quant",
+            inputs=[f"{atb_operation.inputs[0]}", input_scale_name, input_offset_name],
+            outputs=[f"{atb_operation.op_name}.elewise_quant.out"],
+        )
+
+        op_param = json.loads(atb_operation.op_param)
+        op_param.update({"transposeA": False, "transposeB": True, "hasBias": True, "outDataType": "ACL_FLOAT16"})
+        atb_operation.op_param = json.dumps(op_param)
+        atb_operation.inputs = elewise_quant_node.outputs + atb_operation.inputs[1:] + linear_quant_weights
+
+        self.operations += [elewise_quant_node, atb_operation]
+
     def _op_process_rope(self, atb_operation=None, module_name=""):
         self.is_apply_rope = True
         self.model_inputs += [FIXED_INPUTS.cos_table, FIXED_INPUTS.sin_table]
@@ -438,17 +476,6 @@ class ATBModelFromTorch(ATBModel):
             ),
             atb_operation,
         ]
-        if not self.to_quant:
-            # exclude reshape for o_proj if quant enabled
-            self.operations.append(
-                Operation(
-                    op_type="add_reshape",
-                    function=lambda org_shape: [org_shape[0], org_shape[1] * org_shape[2]],
-                    inputs=atb_operation.outputs,
-                    outputs=[ii + "_" for ii in atb_operation.outputs],
-                    op_name=module_name + "." + RESHPAE_KIND.reshape_0_12,
-                ),
-            )
 
         if FIXED_INPUTS.k_cache not in self.model_inputs:
             self.model_inputs += [
@@ -532,6 +559,10 @@ class ATBModelFromTorch(ATBModel):
                 self._op_process_attention(atb_operation=atb_operation, module_name=module_name)
                 cur_outputs = self.operations[-1].outputs
                 output_node_map[node.name] = previous_operation_out = operation_outputs[cur_module_name] = cur_outputs
+            elif atb_operation.op_type in ["Linear", "LinearParallel"]:
+                self._op_process_linear(atb_operation=atb_operation, module_name=module_name)
+                cur_outputs = self.operations[-1].outputs
+                output_node_map[node.name] = previous_operation_out = operation_outputs[cur_module_name] = cur_outputs
             else:
                 self.operations.append(atb_operation)
                 operation_outputs[cur_module_name] = atb_operation.outputs
@@ -595,7 +626,7 @@ class ATBModelFromTorch(ATBModel):
 
         atb_model = atb._GraphOperation(self.model_name)
         in_tensors = self.model_inputs + self.weight_names
-        operation_inputs = [jj for ii in self.operations for jj in ii.inputs] + self.extra_inputs
+        operation_inputs = [jj for ii in self.operations for jj in ii.inputs]
         valid_inputs = [ii for ii in in_tensors if ii in operation_inputs]
         atb_model.add_input_output(input=valid_inputs, output=self.operations[-1].outputs)
         for id, op in enumerate(self.operations):
@@ -614,7 +645,7 @@ class ATBModelFromTorch(ATBModel):
     def to_file(self, output_file=None):
         indent = "    "
         in_tensors = self.model_inputs + self.weight_names
-        operation_inputs = [jj for op in self.operations for jj in op.inputs] + self.extra_inputs
+        operation_inputs = [jj for op in self.operations for jj in op.inputs]
         valid_inputs = [ii for ii in in_tensors if ii in operation_inputs]
         intensors_str = "[\n" + "".join([f"{indent}{indent}'{ii}',\n" for ii in valid_inputs]) + f"{indent}]"
 
@@ -697,27 +728,30 @@ def transform(
     logger.info(
         """Run like:
 
+    python3 -c "
     import torch, torch_npu
     import {model_name}
     from msit_llm.transform.torch_to_atb_python import ATBModel, ATBModelConfig
 
     atb_model = {model_name}.atb_model()
-    weights = torch.load(WEIGHT_PATH)  # Use actual WEIGHT_PATH
+    weights = torch.load(\"$WEIGHT_PATH\")  # Use actual WEIGHT_PATH
 
     cc = ATBModelConfig(vocab_size={vocab_size}, num_attention_heads={num_attention_heads}, head_dim={head_dim})
     aa = ATBModel(atb_model, cc)
     aa.set_weights(weights)
+    input_len = 32
     out = aa.forward(
-        input_ids=torch.arange(32),
-        position_ids=torch.arange(32),
-        cos_table=torch.rand(1024, {head_dim}),
-        sin_table=torch.rand(1024, {head_dim}),
+        input_ids=torch.arange(input_len),
+        position_ids=torch.arange(input_len),
+        cos_table=torch.rand(input_len, {head_dim}),
+        sin_table=torch.rand(input_len, {head_dim}),
     )
     print(out)
+    "
     """.format(
             model_name=model_name,
             vocab_size=atb_model.atb_model_config.vocab_size,
             num_attention_heads=atb_model.atb_model_config.num_attention_heads,
             head_dim=atb_model.atb_model_config.head_dim,
-        )
+        ).replace('        ', '##').replace('    ', '').replace('##', '    ')  # remove the start '    '
     )
