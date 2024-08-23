@@ -252,7 +252,7 @@ class ATBModelFromTorch(ATBModel):
         quant_disable_names=None,
     ):
         self.torch_model, self.config = torch_model, config
-        self.to_quant, self.quant_disable_names = to_quant, quant_disable_names
+        self.to_quant, self.quant_disable_names = to_quant, quant_disable_names or ()
         self.config = getattr(torch_model, "config", None) if config is None else config
         if self.config is None:
             raise ValueError("Either config or torch_model.config shold be not empty one")
@@ -289,8 +289,8 @@ class ATBModelFromTorch(ATBModel):
 
         self.convert_fx_traced_module()
         if to_quant:
-            logger.info(f"calling convert_to_quant, disable_names = {disable_names}")
-            self.convert_to_quant(disable_names=quant_disable_names or ())
+            logger.info(f"calling convert_to_quant, quant_disable_names = {self.quant_disable_names}")
+            self.convert_to_quant()
         self.to_file()
         self.atb_model = self.build_atb_model()
 
@@ -499,7 +499,7 @@ class ATBModelFromTorch(ATBModel):
 
             logger.debug(f"cur_module_name = {cur_module_name}, previous_module_name = {previous_module_name}")
             if cur_module_name != base_module_name:
-                output_node_map[node.name] = previous_operation_out  # will be overwrited later
+                output_node_map[node.name] = previous_operation_out  # will be overwriten later
             if cur_module_name == previous_module_name:
                 continue
             if self._should_skip_node(node):
@@ -537,16 +537,15 @@ class ATBModelFromTorch(ATBModel):
         self.operations[-1].outputs = self.model_outputs
         return self.model_inputs, self.model_outputs, self.weight_names, self.operations
 
-    def convert_to_quant(self, disable_names=("lm_head")):
+    def convert_to_quant(self):
         # Has to split out from convert_fx_traced_module, needs actual Linear input names
         operations_with_quant = []
-        logger.debug(f"disable_names = {disable_names}")
         for op_id, op in enumerate(self.operations):
             logger.debug(f"op.op_name = {op.op_name}")
             if op.op_type not in ["Linear", "LinearParallel"]:
                 operations_with_quant.append(op)
                 continue
-            if op.op_name in disable_names:
+            if op.op_name in self.quant_disable_names:
                 operations_with_quant.append(op)
                 continue
 
