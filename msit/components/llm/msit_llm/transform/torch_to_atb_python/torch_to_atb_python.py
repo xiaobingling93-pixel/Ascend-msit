@@ -34,17 +34,15 @@ CONFIG_ATTR_CANDIDATES = {
 NN_MODULE_STACK = "nn_module_stack"
 SKIP_NODES = ["size", "getitem", "to", "float", "finfo"]
 TORCH_MODULE_TO_ATB_MAP = {
-    "Embedding": dict(op_type="Gather", op_param=json.dumps({}), is_weights_first=True),
-    "Gather": dict(op_type="Gather", op_param=json.dumps({})),
-    ".*RMSNorm$": dict(op_type="RmsNorm", op_param=json.dumps({"layerType": "RMS_NORM_NORM"})),
-    "Linear": dict(op_type="Linear", op_param=json.dumps({"hasBias": False})),
-    ".*Rotary.*": dict(op_type="Rope", op_param=json.dumps({"rotaryCoeff": 2})),
-    ".*Attention$": dict(
-        op_type="SelfAttention", op_param=json.dumps({"headNum": 32, "kvHeadNum": 32, "calcType": "PA_ENCODER"})
-    ),
-    "SiLU": dict(op_type="Activation", op_param=json.dumps({"activationType": "ACTIVATION_SWISH"})),
-    "add": dict(op_type="Elewise", op_param=json.dumps({"elewiseType": "ELEWISE_ADD"})),
-    "mul": dict(op_type="Elewise", op_param=json.dumps({"elewiseType": "ELEWISE_MUL"})),
+    "Embedding": dict(op_type="Gather", op_param={}, is_weights_first=True),
+    "Gather": dict(op_type="Gather", op_param={}),
+    ".*RMSNorm$": dict(op_type="RmsNorm", op_param={"layerType": "RMS_NORM_NORM"}),
+    "Linear": dict(op_type="Linear", op_param={"hasBias": False}),
+    ".*Rotary.*": dict(op_type="Rope", op_param={"rotaryCoeff": 2}),
+    ".*Attention$": dict(op_type="SelfAttention", op_param={"headNum": 32, "kvHeadNum": 32, "calcType": "PA_ENCODER"}),
+    "SiLU": dict(op_type="Activation", op_param={"activationType": "ACTIVATION_SWISH"}),
+    "add": dict(op_type="Elewise", op_param={"elewiseType": "ELEWISE_ADD"}),
+    "mul": dict(op_type="Elewise", op_param={"elewiseType": "ELEWISE_MUL"}),
 }
 
 _FX_OP_TYPES = ["call_method", "call_module", "call_function", "placeholder", "output", "get_attr"]
@@ -97,13 +95,12 @@ def to_transformers_traced_module(model, input_names=(FIXED_INPUTS.input_ids, FI
 
 
 def get_lambda_source_code(function):
-    return inspect.getsource(function).split("function=")[-1].split(", inputs=")[0].strip()
+    source_code = inspect.getsource(function).split("function=")[-1].split(", inputs=")[0].strip()
+    return source_code[:-1] if source_code.endswith(",") else source_code
 
 
 class Operation:
-    def __init__(
-        self, op_type, op_param="{}", inputs=[], outputs=[], op_name="", function=None, is_weights_first=False
-    ):
+    def __init__(self, op_type, op_param={}, inputs=[], outputs=[], op_name="", function=None, is_weights_first=False):
         self.op_type, self.op_param, self.inputs, self.outputs = op_type, op_param, inputs, outputs
         self.op_name, self.function, self.is_weights_first = op_name, function, is_weights_first
 
@@ -121,7 +118,7 @@ class Operation:
     def to_json(self):
         return dict(
             op_type=self.op_type,
-            op_param=self.op_param,
+            op_param=json.dumps(self.op_param),
             inputs=self.inputs,
             outputs=self.op_name,
             op_name=self.outputs,
@@ -284,9 +281,7 @@ class ATBModelFromTorch(ATBModel):
         for kk, vv in TORCH_MODULE_TO_ATB_MAP.items():
             re_key = re.compile(kk)
             if vv["op_type"] == "SelfAttention":
-                op_param = json.loads(vv["op_param"])
-                op_param["headNum"] = op_param["kvHeadNum"] = self.num_attention_heads
-                vv["op_param"] = json.dumps(op_param)
+                vv["op_param"].update({"headNum": self.num_attention_heads, "kvHeadNum": self.num_attention_heads})
             self.torch_module_to_atb_map[re_key] = Operation(**vv)
 
         self.pre_query_name, self.pre_key_name, self.pre_value_name, self.is_apply_rope = "", "", "", False
@@ -294,6 +289,7 @@ class ATBModelFromTorch(ATBModel):
 
         self.convert_fx_traced_module()
         if to_quant:
+            logger.info(f"calling convert_to_quant, disable_names = {disable_names}")
             self.convert_to_quant(disable_names=quant_disable_names or ())
         self.to_file()
         self.atb_model = self.build_atb_model()
@@ -368,10 +364,8 @@ class ATBModelFromTorch(ATBModel):
     def _op_process_linear(self, atb_operation=None, module_name=""):
         bias_name = f"{atb_operation.op_name}.bias"
         if bias_name in self.weight_names:
-            op_param = json.loads(atb_operation.op_param)
-            op_param.update({"hasBias": True})
             atb_operation.inputs.insert(1, bias_name)
-            atb_operation.op_param = json.dumps(op_param)
+            atb_operation.op_param.update({"hasBias": True})
         self.operations.append(atb_operation)
 
     def _op_process_rope(self, atb_operation=None, module_name=""):
@@ -401,7 +395,7 @@ class ATBModelFromTorch(ATBModel):
             self.operations.append(
                 Operation(
                     op_type="Rope",
-                    op_param=json.dumps({"rotaryCoeff": 2}),
+                    op_param={"rotaryCoeff": 2},
                     inputs=inputs,
                     outputs=outputs,
                     op_name=module_name + ".rope",
@@ -440,7 +434,7 @@ class ATBModelFromTorch(ATBModel):
             ),
             Operation(
                 op_type="ReshapeAndCache",
-                op_param=json.dumps({}),
+                op_param={},
                 inputs=reshape_and_cache_inputs,
                 outputs=[FIXED_INPUTS.k_cache, FIXED_INPUTS.v_cache],
                 op_name=module_name + ".reshape_and_cache",
@@ -568,15 +562,13 @@ class ATBModelFromTorch(ATBModel):
 
             elewise_quant_node = Operation(
                 op_type="Elewise",
-                op_param=json.dumps({"elewiseType": "ELEWISE_QUANT_PER_CHANNEL"}),
+                op_param={"elewiseType": "ELEWISE_QUANT_PER_CHANNEL"},
                 op_name=f"{op.op_name}.elewise_quant",
                 inputs=[f"{op.inputs[0]}", input_scale, input_offset],
                 outputs=[f"{op.op_name}.elewise_quant.out"],
             )
 
-            op_param = json.loads(op.op_param)
-            op_param.update({"transposeA": False, "transposeB": True, "hasBias": True, "outDataType": "ACL_FLOAT16"})
-            op.op_param = json.dumps(op_param)
+            op.op_param.update({"transposeA": False, "transposeB": True, "hasBias": True, "outDataType": "ACL_FLOAT16"})
             op.inputs = elewise_quant_node.outputs + op.inputs[1:] + linear_quant_weights
 
             operations_with_quant += [elewise_quant_node, op]
@@ -605,7 +597,9 @@ class ATBModelFromTorch(ATBModel):
                 atb_model.add_reshape(op.inputs[0], op.outputs[0], op.function)
             else:
                 atb_model.add_operation(
-                    operation=atb._BaseOperation(op_type=op.op_type, op_param=op.op_param, op_name=op.op_name),
+                    operation=atb._BaseOperation(
+                        op_type=op.op_type, op_param=json.dumps(op.op_param), op_name=op.op_name
+                    ),
                     input=op.inputs,
                     output=op.outputs,
                 )
@@ -647,10 +641,11 @@ class ATBModelFromTorch(ATBModel):
                 function = get_lambda_source_code(op.function)
                 contents += f"{indent}atb_model.add_reshape('{op.inputs[0]}', '{op.outputs[0]}', {function})\n"
             else:
+                op_kwargs = f"op_type='{op.op_type}', op_param='{json.dumps(op.op_param)}', op_name='{op.op_name}'"
                 contents += f"{indent}atb_model.add_operation(\n{indent}{indent}"
                 contents += f",\n{indent}{indent}".join(
                     [
-                        f"operation=atb._BaseOperation(op_type='{op.op_type}', op_param='{op.op_param}', op_name='{op.op_name}')",
+                        f"operation=atb._BaseOperation({op_kwargs})",
                         f"input={op.inputs}",
                         f"output={op.outputs}",
                     ]
@@ -724,5 +719,8 @@ def transform(
             vocab_size=atb_model.atb_model_config.vocab_size,
             num_attention_heads=atb_model.atb_model_config.num_attention_heads,
             head_dim=atb_model.atb_model_config.head_dim,
-        ).replace('        ', '##').replace('    ', '').replace('##', '    ')  # remove the start '    '
+        )
+        .replace("        ", "##")  # Replace the inner 8 ' ' to '##' as a mark
+        .replace("    ", "")  # Remove all 4 ' '
+        .replace("##", "    ")  # Replace the marked '##' back to 4 ' '
     )
