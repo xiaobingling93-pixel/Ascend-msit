@@ -31,7 +31,7 @@ msModelSlim当前处于逐步开源过程中，计划通过630,930,1230三个版
 
 ### 环境准备
 
-- 使用msModelSlim工具前，需参考《CANN软件安装指南》搭建开发环境。
+- 使用msModelSlim工具前，需参考《[CANN软件安装指南](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/80RC2alpha003/devaids/auxiliarydevtool/nottoctopics/zh-cn_topic_0000001800373652.html)》搭建开发环境。
 - 安装CANN软件后，需要以CANN运行用户登录环境，执行如下示例命令配置环境变量。
 
 ```
