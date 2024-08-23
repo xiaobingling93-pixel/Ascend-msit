@@ -59,6 +59,7 @@ _FIXED_INPUTS = {
     "seq_len",
 }
 FIXED_INPUTS = namedtuple("FIXED_INPUTS", _FIXED_INPUTS)(*_FIXED_INPUTS)
+BASIC_INPUT_NAMES = (FIXED_INPUTS.input_ids, FIXED_INPUTS.position_ids)
 
 _RESHPAE_KIND = ["reshape_qkv", "reshape_0_12"]
 RESHPAE_KIND = namedtuple("RESHPAE_KIND", _RESHPAE_KIND)(*_RESHPAE_KIND)
@@ -88,7 +89,7 @@ def build_model(source_path):
     return model, config
 
 
-def to_transformers_traced_module(model, input_names=(FIXED_INPUTS.input_ids, FIXED_INPUTS.position_ids)):
+def to_transformers_traced_module(model, input_names=BASIC_INPUT_NAMES):
     from transformers.utils.fx import symbolic_trace
 
     return symbolic_trace(model, input_names=input_names)
@@ -239,13 +240,16 @@ class ATBModel:
         bind_map = {FIXED_INPUTS.seq_len: seq_len.cpu()}
         return self.atb_model.forward(model_inputs, model_outputs, bind_map)
 
+    def __call__(self, input_ids, position_ids, k_cache=None, v_cache=None, slots_mapping=None, **kwargs):
+        return self.forward(input_ids, position_ids, k_cache, v_cache, slots_mapping, **kwargs)
+
 
 class ATBModelFromTorch(ATBModel):
     def __init__(
         self,
         torch_model,
         config=None,
-        input_names=(FIXED_INPUTS.input_ids, FIXED_INPUTS.position_ids),
+        input_names=BASIC_INPUT_NAMES,
         max_batch_size=1,
         max_seq_len=1024,
         to_quant=False,
@@ -664,7 +668,7 @@ class ATBModelFromTorch(ATBModel):
 
 def transform(
     source_path,
-    input_names=(FIXED_INPUTS.input_ids, FIXED_INPUTS.position_ids),
+    input_names=BASIC_INPUT_NAMES,
     output_file=None,
     to_quant=False,
     quant_disable_names=None,
@@ -701,15 +705,17 @@ def transform(
     atb_model = {model_name}.atb_model()
     weights = torch.load(\'$WEIGHT_PATH\')  # Use actual WEIGHT_PATH
 
-    cc = ATBModelConfig(vocab_size={vocab_size}, num_attention_heads={num_attention_heads}, head_dim={head_dim})
+    vocab_size, num_attention_heads, head_dim = {vocab_size}, {num_attention_heads}, {head_dim}
+    cc = ATBModelConfig(vocab_size=vocab_size, num_attention_heads=num_attention_heads, head_dim=head_dim)
     aa = ATBModel(atb_model, cc)
     aa.set_weights(weights)
+    
     input_len = 32
     out = aa.forward(
         input_ids=torch.arange(input_len),
         position_ids=torch.arange(input_len),
-        cos_table=torch.rand(input_len, {head_dim}),
-        sin_table=torch.rand(input_len, {head_dim}),
+        cos_table=torch.rand(input_len, head_dim),
+        sin_table=torch.rand(input_len, head_dim),
     )
     print(out)
     "
@@ -719,7 +725,7 @@ def transform(
             num_attention_heads=atb_model.atb_model_config.num_attention_heads,
             head_dim=atb_model.atb_model_config.head_dim,
         )
-        .replace("        ", "##")  # Replace the inner 8 ' ' to '##' as a mark
-        .replace("    ", "")  # Remove all 4 ' '
-        .replace("##", "    ")  # Replace the marked '##' back to 4 ' '
+        .replace(" " * 8, "##")  # Replace the inner 8 ' ' to '##' as a mark
+        .replace(" " * 4, "")  # Remove all 4 ' '
+        .replace("##", " " * 4)  # Replace the marked '##' back to 4 ' '
     )
