@@ -132,9 +132,11 @@ class Operation:
 
 
 class ATBModelConfig:
-    def __init__(self, vocab_size, num_attention_heads, head_dim, max_batch_size=1, max_seq_len=1024):
+    def __init__(self, vocab_size, num_attention_heads, head_dim, max_batch_size=1, max_seq_len=1024, **kwargs):
         self.vocab_size, self.num_attention_heads, self.head_dim = vocab_size, num_attention_heads, head_dim
-        self.max_batch_size, self.max_seq_len = max_batch_size, max_seq_len
+        self.max_batch_size, self.max_seq_len, self.kwargs = max_batch_size, max_seq_len, kwargs
+        for kk, vv in kwargs.items():
+            setattr(self, kk, vv)
 
     def to_dict(self):
         return dict(
@@ -143,6 +145,7 @@ class ATBModelConfig:
             head_dim=self.head_dim,
             max_batch_size=self.max_batch_size,
             max_seq_len=self.max_seq_len,
+            **self.kwargs
         )
 
 
@@ -151,10 +154,17 @@ class ATBModel:
         import torch
         import torch_npu
 
-        if not isinstance(atb_model_config, ATBModelConfig):
+        if isinstance(atb_model_config, dict):
+            required_keys = ["vocab_size", "num_attention_heads", "head_dim"]
+            if any([kk not in atb_model_config for kk in required_keys]):
+                raise ValueError(f"atb_model_config is a dict but not containing all keys in {required_keys}")
+            self.atb_model_config = ATBModelConfig(**atb_model_config)
+        elif not isinstance(atb_model_config, ATBModelConfig):
             raise ValueError("atb_model_config is not an instance of ATBModelConfig")
+        else:
+            self.atb_model_config = atb_model_config
 
-        self.atb_model, self.atb_model_config = atb_model, atb_model_config
+        self.atb_model = atb_model
         self.inputs = self.input_names = set(atb_model.input_names)
         self.outputs = self.output_names = atb_model.output_names
         self.weights, self.inv_freq_weight = {}, None
