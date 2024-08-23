@@ -271,15 +271,15 @@ class ATBModelFromTorch(ATBModel):
         if self.config is None:
             raise ValueError("Either config or torch_model.config shold be not empty one")
 
-        self.num_attention_heads = get_config_attr(config, "num_attention_heads")
+        self.num_attention_heads = get_config_attr(self.config, "num_attention_heads")
         if self.num_attention_heads is None or self.num_attention_heads <= 0:
             raise ValueError("Invalid config, num_attention_heads not exists or < 0")
 
-        self.hidden_size = get_config_attr(config, "hidden_size")
+        self.hidden_size = get_config_attr(self.config, "hidden_size")
         if self.hidden_size is None or self.hidden_size <= 0:
             raise ValueError("Invalid config, hidden_size not exists or < 0")
 
-        self.vocab_size = get_config_attr(config, "vocab_size", -1)
+        self.vocab_size = get_config_attr(self.config, "vocab_size", -1)
         if self.vocab_size is None or self.vocab_size <= 0:
             raise ValueError("Invalid config, vocab_size not exists or < 0")
 
