@@ -147,6 +147,9 @@ class ATBModelConfig:
             max_seq_len=self.max_seq_len,
             **self.kwargs
         )
+    
+    def __repr__(self):
+        return self.to_dict()
 
 
 class ATBModel:
@@ -171,12 +174,12 @@ class ATBModel:
         self.torch = torch
 
         self.cache_shape = [
-            atb_model_config.max_batch_size,
-            atb_model_config.max_seq_len,
-            atb_model_config.num_attention_heads,
-            atb_model_config.head_dim,
+            self.atb_model_config.max_batch_size,
+            self.atb_model_config.max_seq_len,
+            self.atb_model_config.num_attention_heads,
+            self.atb_model_config.head_dim,
         ]
-        self.vocab_size = atb_model_config.vocab_size
+        self.vocab_size = self.atb_model_config.vocab_size
 
     def set_weights(self, weights):
         source_weights = set(weights.keys())
@@ -270,6 +273,13 @@ class ATBModelFromTorch(ATBModel):
     >>> out = atb_model(input_ids=torch.arange(32), position_ids=torch.arange(32))
     >>> print({kk: vv.shape for kk, vv in out.items()})
     # {'output': torch.Size([32, 32000])}
+    >>> atb_model.to_file()  # Save atb model to py file
+    # 'llamaforcausallm_atb_float.py'
+    import llamaforcausallm_atb_float
+    bb = llamaforcausallm_atb_float.atb_model()
+    atb_model_config=dict(vocab_size=cc.vocab_size, num_attention_heads=cc.num_attention_heads, head_dim=cc.hidden_size // cc.num_attention_heads)
+    dd = ATBModel(bb, )
+
     """
     def __init__(
         self,
