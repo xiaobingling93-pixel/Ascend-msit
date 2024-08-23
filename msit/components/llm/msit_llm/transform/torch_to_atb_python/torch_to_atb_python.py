@@ -163,7 +163,7 @@ class ATBModel:
                 raise ValueError(f"atb_model_config is a dict but not containing all keys in {required_keys}")
             self.atb_model_config = ATBModelConfig(**atb_model_config)
         elif not isinstance(atb_model_config, ATBModelConfig):
-            raise ValueError("atb_model_config is not an instance of ATBModelConfig")
+            raise ValueError("atb_model_config is neither a dict or an instance of ATBModelConfig")
         else:
             self.atb_model_config = atb_model_config
 
@@ -273,7 +273,7 @@ class ATBModelFromTorch(ATBModel):
     >>> out = atb_model(input_ids=torch.arange(32), position_ids=torch.arange(32))
     >>> print({kk: vv.shape for kk, vv in out.items()})
     # {'output': torch.Size([32, 32000])}
-    >>> atb_model.to_file()  # Save atb model to py file
+    >>> atb_model.to_file()  # Save atb model to a py file
     """
     def __init__(
         self,
@@ -697,13 +697,7 @@ class ATBModelFromTorch(ATBModel):
         return output_file
 
 
-def transform(
-    source_path,
-    input_names=BASIC_INPUT_NAMES,
-    output_file=None,
-    to_quant=False,
-    quant_disable_names=None,
-):
+def transform(source_path, input_names=BASIC_INPUT_NAMES, output_file=None, to_quant=False, quant_disable_names=None):
     logger.info("Building model using transformers...")
     model, config = build_model(source_path)
 
