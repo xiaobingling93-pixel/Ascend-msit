@@ -24,7 +24,8 @@ from collections import namedtuple
 from msit_llm.common.log import logger, set_log_level
 
 # Force setting ASD print error log to stdout
-os.environ['ASDOPS_LOG_LEVEL'] = 'ERROR'
+if os.environ.get('ASDOPS_LOG_LEVEL') == 'FATAL':
+    os.environ['ASDOPS_LOG_LEVEL'] = 'ERROR'
 os.environ['ASDOPS_LOG_TO_STDOUT'] = '1'
 
 CONFIG_ATTR_CANDIDATES = {
@@ -156,7 +157,7 @@ class ATBModelConfig:
 
 
 class ATBModel:
-    def __init__(self, atb_model, atb_model_config):
+    def __init__(self, atb_model, atb_model_config, output_shape=None):
         import torch
         import torch_npu
 
@@ -176,6 +177,18 @@ class ATBModel:
         self.weights, self.inv_freq_weight = {}, None
         self.torch = torch
 
+        if output_shape is not None or not isinstance(output_shape, (dict, list, tuple)):
+            raise ValueError("output_shape should be None or type in one of (dict, list, tuple)")
+        elif isinstance(output_shape, dict):
+            required, provided = set(self.output_names), set(output_shape.keys())
+            if required != provided:
+                raise ValueError(f"output_shape is a dict with keys {provided}, while required are {required}")
+        elif isinstance(output_shape, (list, tuple)):
+            required, provided = len(self.output_names), len(output_shape)
+            if required != provided:
+                raise ValueError(f"output_shape len {provided} not equal to required len {required}")
+        self.output_shape = output_shape
+
         self.cache_shape = [
             self.atb_model_config.max_batch_size,
             self.atb_model_config.max_seq_len,
@@ -183,6 +196,8 @@ class ATBModel:
             self.atb_model_config.head_dim,
         ]
         self.vocab_size = self.atb_model_config.vocab_size
+
+        self.output_shape = self.output_shape
 
     def _calc_cos_sin_table_from_inv_freq(self, position_ids):
         logger.debug(f"self.inv_freq_weight.shape = {self.inv_freq_weight.shape}")
@@ -219,7 +234,7 @@ class ATBModel:
 
     def forward(self, input_ids, position_ids, k_cache=None, v_cache=None, slots_mapping=None, bind_map={}, **kwargs):
         batch_size = input_ids.shape[0] if input_ids.dim() == 2 else 1
-        cur_pos = (position_ids[0, -1] if input_ids.dim() == 2 else position_ids[-1]) + 1
+        cur_pos = (position_ids[0, -1] if position_ids.dim() == 2 else position_ids[-1]) + 1
         logger.debug(f"batch_size = {batch_size}, cur_pos = {cur_pos}")
         if FIXED_INPUTS.seq_len in self.inputs:
             seq_len = self.torch.ones([batch_size], dtype=self.torch.int).to(position_ids.device) * cur_pos
@@ -252,13 +267,18 @@ class ATBModel:
         model_inputs.update(self.weights)
         missing_inputs = self.inputs - set(model_inputs.keys())
         if len(missing_inputs) != 0:
-            raise ValueError(
+            logger.warning(
                 f"Missing inputs: {missing_inputs}\npPovided: {model_inputs.keys()}\nCall `set_weights` if not already"
-            )
+            )  # Not raise error, model may still can be executed
 
-        model_outputs = {
-            ii: self.torch.ones([batch_size * cur_pos, self.vocab_size]).half().npu() for ii in self.outputs
-        }
+        if self.output_shape is None:
+            model_outputs = {
+                ii: self.torch.ones([batch_size * cur_pos, self.vocab_size]).half().npu() for ii in self.outputs
+            }
+        elif isinstance(self.output_shape, dict):
+            model_outputs = {kk: self.torch.ones(vv).half().npu() for kk, vv in self.output_shape.items()}
+        else:
+            model_outputs = {kk: self.torch.ones(vv).half().npu() for kk, vv in zip(self.outputs, self.output_shape)}
         if FIXED_INPUTS.seq_len in self.inputs and FIXED_INPUTS.seq_len not in bind_map:
             bind_map[FIXED_INPUTS.seq_len] = seq_len.cpu()
         return self.atb_model.forward(model_inputs, model_outputs, bind_map)
@@ -676,8 +696,9 @@ class ATBModelFromTorch(ATBModel):
                 "sys.path.append(os.path.join(path, 'lib'))",
                 "import _libatb_torch as atb",
                 "",
-                "os.environ['ASDOPS_LOG_LEVEL'] = 'ERROR'  # Force setting ASD printing error log to stdout",
-                "os.environ['ASDOPS_LOG_TO_STDOUT'] = '1'",
+                "if os.environ.get('ASDOPS_LOG_LEVEL') == 'FATAL':"
+                f"{indent}os.environ['ASDOPS_LOG_LEVEL'] = 'ERROR'",
+                "os.environ['ASDOPS_LOG_TO_STDOUT'] = '1'  # Force setting ASD printing error log to stdout",
                 "",
                 "def atb_model():" "",
                 f"{indent}num_attention_heads, head_dim = {self.num_attention_heads}, {self.head_dim}",
