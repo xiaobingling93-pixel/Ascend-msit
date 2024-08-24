@@ -309,6 +309,7 @@ class ATBModelFromTorch(ATBModel):
     >>> print({kk: vv.shape for kk, vv in out.items()})
     # {'output': torch.Size([32, 32000])}
     >>> atb_model.to_file()  # Save atb model to a py file
+    # 'llamaforcausallm_atb_float.py'
     """
 
     def __init__(
