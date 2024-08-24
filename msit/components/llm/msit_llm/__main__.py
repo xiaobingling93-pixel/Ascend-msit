@@ -455,7 +455,8 @@ class Transform(BaseCommand):
             "--quant-disable-names",
             type=safe_string,
             default=None,
-            help="[torch to float python atb model] file or ',' separated string list for layer names skip quant, default None for 'lm_head'",
+            help="[torch to float python atb model] file or ',' separated string for layer names skipping quant."
+                 "Default None for 'lm_head'",
         )
         parser.add_argument(
             "-a",

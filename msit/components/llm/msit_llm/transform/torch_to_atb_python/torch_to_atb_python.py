@@ -106,8 +106,8 @@ def get_lambda_source_code(function):
 
 class Operation:
     def __init__(self, op_type, op_param={}, inputs=[], outputs=[], op_name="", function=None, is_weights_first=False):
-        self.op_type, self.op_param, self.inputs, self.outputs = op_type, op_param, inputs, outputs
-        self.op_name, self.function, self.is_weights_first = op_name, function, is_weights_first
+        self.op_type, self.op_name, self.function, self.is_weights_first = op_type, op_name, function, is_weights_first
+        self.op_param, self.inputs, self.outputs = op_param or {}, inputs or [], outputs or []
 
     def to_dict(self):
         return dict(
@@ -232,7 +232,9 @@ class ATBModel:
         if len(missing_weights) > 0:
             logger.warning(f"missing weights: {missing_weights}")
 
-    def forward(self, input_ids, position_ids, k_cache=None, v_cache=None, slots_mapping=None, bind_map={}, **kwargs):
+    def forward(
+        self, input_ids, position_ids, k_cache=None, v_cache=None, slots_mapping=None, bind_map=None, **kwargs
+    ):
         batch_size = input_ids.shape[0] if input_ids.dim() == 2 else 1
         cur_pos = (position_ids[0, -1] if position_ids.dim() == 2 else position_ids[-1]) + 1
         logger.debug(f"batch_size = {batch_size}, cur_pos = {cur_pos}")
@@ -279,6 +281,8 @@ class ATBModel:
             model_outputs = {kk: self.torch.ones(vv).half().npu() for kk, vv in self.output_shape.items()}
         else:
             model_outputs = {kk: self.torch.ones(vv).half().npu() for kk, vv in zip(self.outputs, self.output_shape)}
+
+        bind_map = bind_map or {}
         if FIXED_INPUTS.seq_len in self.inputs and FIXED_INPUTS.seq_len not in bind_map:
             bind_map[FIXED_INPUTS.seq_len] = seq_len.cpu()
         return self.atb_model.forward(model_inputs, model_outputs, bind_map)
