@@ -573,16 +573,19 @@ class ATBModelFromTorch(ATBModel):
 
     def convert_to_quant(self):
         # Has to split out from convert_fx_traced_module, needs actual Linear input names
+        quant_disable_names = set([ii for ii in self.quant_disable_names if ii is not None and len(ii) > 0])
         operations_with_quant = []
         for op_id, op in enumerate(self.operations):
             logger.debug(f"op.op_name = {op.op_name}")
             if op.op_type not in ["Linear", "LinearParallel"]:
                 operations_with_quant.append(op)
                 continue
-            if op.op_name in self.quant_disable_names:
+            if op.op_name in quant_disable_names:
                 operations_with_quant.append(op)
+                quant_disable_names.remove(op.op_name)
                 continue
 
+            logger.debug(f"Convert {op.op_name} to quant node")
             linear_quant_weights = []
             bias, deq_scale = f"{op.op_name}.bias", f"{op.op_name}.deq_scale"
             input_scale, input_offset = f"{op.op_name}.input_scale", f"{op.op_name}.input_offset"
@@ -606,6 +609,9 @@ class ATBModelFromTorch(ATBModel):
 
             operations_with_quant += [elewise_quant_node, op]
         self.operations = operations_with_quant
+
+        if len(quant_disable_names) > 0:
+            logger.warning(f"Some layers in quant_disable_names not found in model: {quant_disable_names}")
 
     def build_atb_model(self):
         import torch
