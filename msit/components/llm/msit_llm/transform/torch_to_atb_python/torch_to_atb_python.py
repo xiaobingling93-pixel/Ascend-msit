@@ -177,7 +177,7 @@ class ATBModel:
         self.weights, self.inv_freq_weight = {}, None
         self.torch = torch
 
-        if output_shape is not None or not isinstance(output_shape, (dict, list, tuple)):
+        if output_shape is not None and not isinstance(output_shape, (dict, list, tuple)):
             raise ValueError("output_shape should be None or type in one of (dict, list, tuple)")
         elif isinstance(output_shape, dict):
             required, provided = set(self.output_names), set(output_shape.keys())
