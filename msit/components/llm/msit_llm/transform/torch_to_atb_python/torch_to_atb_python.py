@@ -105,7 +105,9 @@ def get_lambda_source_code(function):
 
 
 class Operation:
-    def __init__(self, op_type, op_param={}, inputs=[], outputs=[], op_name="", function=None, is_weights_first=False):
+    def __init__(
+        self, op_type, op_param=None, inputs=None, outputs=None, op_name="", function=None, is_weights_first=False
+    ):
         self.op_type, self.op_name, self.function, self.is_weights_first = op_type, op_name, function, is_weights_first
         self.op_param, self.inputs, self.outputs = op_param or {}, inputs or [], outputs or []
 
