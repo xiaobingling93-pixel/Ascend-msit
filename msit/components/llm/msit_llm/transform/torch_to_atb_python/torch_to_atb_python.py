@@ -350,7 +350,7 @@ class ATBModelFromTorch(ATBModel):
         self.torch_module_to_atb_map = {}
         for kk, vv in TORCH_MODULE_TO_ATB_MAP.items():
             re_key = re.compile(kk)
-            if vv["op_type"] == "SelfAttention" and "op_param" in vv:
+            if vv.get("op_type", None) == "SelfAttention" and "op_param" in vv:
                 vv["op_param"].update({"headNum": self.num_attention_heads, "kvHeadNum": self.num_attention_heads})
             self.torch_module_to_atb_map[re_key] = Operation(**vv)
 
@@ -658,21 +658,23 @@ class ATBModelFromTorch(ATBModel):
             raise OSError("ATB_SPEED_HOME_PATH environment variable not valid, try install mindie")
         sys.path.append(os.path.join(atb_speed_path, "lib"))
         try:
-            import _libatb_torch as atb  # May error
+            from _libatb_torch import _GraphOperation as GraphOperation  # May error
+            from _libatb_torch import _BaseOperation as BaseOperation  # May error
         except (ImportError, ModuleNotFoundError) as err:
             raise OSError("import _libatb_torch failed, try install mindie") from err
 
-        atb_model = atb._GraphOperation(self.model_name)
+        atb_model = GraphOperation(self.model_name)
         in_tensors = self.model_inputs + self.weight_names
         operation_inputs = [jj for ii in self.operations for jj in ii.inputs]
         valid_inputs = [ii for ii in in_tensors if ii in operation_inputs]
         atb_model.add_input_output(input=valid_inputs, output=self.operations[-1].outputs)
+
         for id, op in enumerate(self.operations):
             if op.op_type == "add_reshape":
                 atb_model.add_reshape(op.inputs[0], op.outputs[0], op.function)
             else:
                 atb_model.add_operation(
-                    operation=atb._BaseOperation(
+                    operation=BaseOperation(
                         op_type=op.op_type, op_param=json.dumps(op.op_param), op_name=op.op_name
                     ),
                     input=op.inputs,
