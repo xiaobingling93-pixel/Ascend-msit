@@ -23,6 +23,10 @@ from collections import namedtuple
 
 from msit_llm.common.log import logger, set_log_level
 
+# Force setting ASD print error log to stdout
+if os.environ.get("ASDOPS_LOG_LEVEL") == "FATAL":
+    os.environ["ASDOPS_LOG_LEVEL"] = "ERROR"
+os.environ["ASDOPS_LOG_TO_STDOUT"] = "1"
 
 CONFIG_ATTR_CANDIDATES = {
     "num_hidden_layers": ["num_hidden_layers", "num_layers", "n_layers"],
@@ -34,17 +38,15 @@ CONFIG_ATTR_CANDIDATES = {
 NN_MODULE_STACK = "nn_module_stack"
 SKIP_NODES = ["size", "getitem", "to", "float", "finfo"]
 TORCH_MODULE_TO_ATB_MAP = {
-    "Embedding": dict(op_type="Gather", op_param=json.dumps({}), is_weights_first=True),
-    "Gather": dict(op_type="Gather", op_param=json.dumps({})),
-    ".*RMSNorm$": dict(op_type="RmsNorm", op_param=json.dumps({"layerType": "RMS_NORM_NORM"})),
-    "Linear": dict(op_type="Linear", op_param=json.dumps({"hasBias": False})),
-    ".*Rotary.*": dict(op_type="Rope", op_param=json.dumps({"rotaryCoeff": 2})),
-    ".*Attention$": dict(
-        op_type="SelfAttention", op_param=json.dumps({"headNum": 32, "kvHeadNum": 32, "calcType": "PA_ENCODER"})
-    ),
-    "SiLU": dict(op_type="Activation", op_param=json.dumps({"activationType": "ACTIVATION_SWISH"})),
-    "add": dict(op_type="Elewise", op_param=json.dumps({"elewiseType": "ELEWISE_ADD"})),
-    "mul": dict(op_type="Elewise", op_param=json.dumps({"elewiseType": "ELEWISE_MUL"})),
+    "Embedding": dict(op_type="Gather", op_param={}, is_weights_first=True),
+    "Gather": dict(op_type="Gather", op_param={}),
+    ".*RMSNorm$": dict(op_type="RmsNorm", op_param={"layerType": "RMS_NORM_NORM"}),
+    "Linear": dict(op_type="Linear", op_param={"hasBias": False}),
+    ".*Rotary.*": dict(op_type="Rope", op_param={"rotaryCoeff": 2}),
+    ".*Attention$": dict(op_type="SelfAttention", op_param={"headNum": 32, "kvHeadNum": 32, "calcType": "PA_ENCODER"}),
+    "SiLU": dict(op_type="Activation", op_param={"activationType": "ACTIVATION_SWISH"}),
+    "add": dict(op_type="Elewise", op_param={"elewiseType": "ELEWISE_ADD"}),
+    "mul": dict(op_type="Elewise", op_param={"elewiseType": "ELEWISE_MUL"}),
 }
 
 _FX_OP_TYPES = ["call_method", "call_module", "call_function", "placeholder", "output", "get_attr"]
@@ -61,6 +63,7 @@ _FIXED_INPUTS = {
     "seq_len",
 }
 FIXED_INPUTS = namedtuple("FIXED_INPUTS", _FIXED_INPUTS)(*_FIXED_INPUTS)
+BASIC_INPUT_NAMES = (FIXED_INPUTS.input_ids, FIXED_INPUTS.position_ids)
 
 _RESHPAE_KIND = ["reshape_qkv", "reshape_0_12"]
 RESHPAE_KIND = namedtuple("RESHPAE_KIND", _RESHPAE_KIND)(*_RESHPAE_KIND)
@@ -90,22 +93,23 @@ def build_model(source_path):
     return model, config
 
 
-def to_transformers_traced_module(model, input_names=(FIXED_INPUTS.input_ids, FIXED_INPUTS.position_ids)):
+def to_transformers_traced_module(model, input_names=BASIC_INPUT_NAMES):
     from transformers.utils.fx import symbolic_trace
 
     return symbolic_trace(model, input_names=input_names)
 
 
 def get_lambda_source_code(function):
-    return inspect.getsource(function).split("function=")[-1].split(", inputs=")[0].strip()
+    source_code = inspect.getsource(function).split("function=")[-1].split(", inputs=")[0].strip()
+    return source_code[:-1] if source_code.endswith(",") else source_code
 
 
 class Operation:
     def __init__(
-        self, op_type, op_param="{}", inputs=[], outputs=[], op_name="", function=None, is_weights_first=False
+        self, op_type, op_param=None, inputs=None, outputs=None, op_name="", function=None, is_weights_first=False
     ):
-        self.op_type, self.op_param, self.inputs, self.outputs = op_type, op_param, inputs, outputs
-        self.op_name, self.function, self.is_weights_first = op_name, function, is_weights_first
+        self.op_type, self.op_name, self.function, self.is_weights_first = op_type, op_name, function, is_weights_first
+        self.op_param, self.inputs, self.outputs = op_param or {}, inputs or [], outputs or []
 
     def to_dict(self):
         return dict(
@@ -121,7 +125,7 @@ class Operation:
     def to_json(self):
         return dict(
             op_type=self.op_type,
-            op_param=self.op_param,
+            op_param=json.dumps(self.op_param),
             inputs=self.inputs,
             outputs=self.op_name,
             op_name=self.outputs,
@@ -134,9 +138,11 @@ class Operation:
 
 
 class ATBModelConfig:
-    def __init__(self, vocab_size, num_attention_heads, head_dim, max_batch_size=1, max_seq_len=1024):
+    def __init__(self, vocab_size, num_attention_heads, head_dim, max_batch_size=1, max_seq_len=1024, **kwargs):
         self.vocab_size, self.num_attention_heads, self.head_dim = vocab_size, num_attention_heads, head_dim
-        self.max_batch_size, self.max_seq_len = max_batch_size, max_seq_len
+        self.max_batch_size, self.max_seq_len, self.kwargs = max_batch_size, max_seq_len, kwargs
+        for kk, vv in kwargs.items():
+            setattr(self, kk, vv)
 
     def to_dict(self):
         return dict(
@@ -145,30 +151,65 @@ class ATBModelConfig:
             head_dim=self.head_dim,
             max_batch_size=self.max_batch_size,
             max_seq_len=self.max_seq_len,
+            **self.kwargs,
         )
+
+    def __repr__(self):
+        return json.dumps(self.to_dict())
 
 
 class ATBModel:
-    def __init__(self, atb_model, atb_model_config):
+    def __init__(self, atb_model, atb_model_config, output_shape=None):
         import torch
         import torch_npu
 
-        if not isinstance(atb_model_config, ATBModelConfig):
-            raise ValueError("atb_model_config is not an instance of ATBModelConfig")
+        if isinstance(atb_model_config, dict):
+            required_keys = ["vocab_size", "num_attention_heads", "head_dim"]
+            if any([kk not in atb_model_config for kk in required_keys]):
+                raise ValueError(f"atb_model_config is a dict but not containing all keys in {required_keys}")
+            self.atb_model_config = ATBModelConfig(**atb_model_config)
+        elif not isinstance(atb_model_config, ATBModelConfig):
+            raise ValueError("atb_model_config is neither a dict or an instance of ATBModelConfig")
+        else:
+            self.atb_model_config = atb_model_config
 
-        self.atb_model, self.atb_model_config = atb_model, atb_model_config
+        self.atb_model = atb_model
         self.inputs = self.input_names = set(atb_model.input_names)
         self.outputs = self.output_names = atb_model.output_names
         self.weights, self.inv_freq_weight = {}, None
         self.torch = torch
 
+        if output_shape is not None and not isinstance(output_shape, (dict, list, tuple)):
+            raise ValueError("output_shape should be None or type in one of (dict, list, tuple)")
+        elif isinstance(output_shape, dict):
+            required, provided = set(self.output_names), set(output_shape.keys())
+            if required != provided:
+                raise ValueError(f"output_shape is a dict with keys {provided}, while required are {required}")
+        elif isinstance(output_shape, (list, tuple)):
+            required, provided = len(self.output_names), len(output_shape)
+            if required != provided:
+                raise ValueError(f"output_shape len {provided} not equal to required len {required}")
+        self.output_shape = output_shape
+
         self.cache_shape = [
-            atb_model_config.max_batch_size,
-            atb_model_config.max_seq_len,
-            atb_model_config.num_attention_heads,
-            atb_model_config.head_dim,
+            self.atb_model_config.max_batch_size,
+            self.atb_model_config.max_seq_len,
+            self.atb_model_config.num_attention_heads,
+            self.atb_model_config.head_dim,
         ]
-        self.vocab_size = atb_model_config.vocab_size
+        self.vocab_size = self.atb_model_config.vocab_size
+
+        self.output_shape = self.output_shape
+
+    def _calc_cos_sin_table_from_inv_freq(self, position_ids):
+        logger.debug(f"self.inv_freq_weight.shape = {self.inv_freq_weight.shape}")
+        logger.debug(f"position_ids.shape = {position_ids.shape}")
+        left = self.inv_freq_weight[None, :, None]
+        right = position_ids[:, None, :] if position_ids.dim() == 2 else position_ids[None, None, :]
+        freq = (left.to(right.device).float() @ right.float()).transpose(1, 2)
+        freq = self.torch.cat([freq, freq], dim=-1)[0].npu()  # has to be float npu values, and dim == 2
+        logger.debug(f"freq.shape = {freq.shape}")
+        return freq.cos(), freq.sin()
 
     def set_weights(self, weights):
         source_weights = set(weights.keys())
@@ -176,7 +217,6 @@ class ATBModel:
         missing_weights = self.inputs - source_weights - set(FIXED_INPUTS)
         unused_weights = source_weights - self.inputs
 
-        self.weights = {}
         for kk in valid_weights:
             cur_weight = weights[kk]
             cur_weight = cur_weight.half() if str(cur_weight.dtype).split(".")[-1] == "float32" else cur_weight
@@ -185,7 +225,7 @@ class ATBModel:
         self.inv_freq_weight = None
         for weight_name in unused_weights:
             if "invfreq" in weight_name.split(".")[-1].replace("_", "").lower():
-                self.inv_freq_weight = weights[weight_name].squeeze().half().npu()
+                self.inv_freq_weight = weights[weight_name].squeeze().float().npu()
                 unused_weights.remove(weight_name)
                 break
 
@@ -196,14 +236,15 @@ class ATBModel:
 
     def forward(self, input_ids, position_ids, k_cache=None, v_cache=None, slots_mapping=None, **kwargs):
         batch_size = input_ids.shape[0] if input_ids.dim() == 2 else 1
-        cur_pos = position_ids[-1] + 1
+        cur_pos = (position_ids[0, -1] if position_ids.dim() == 2 else position_ids[-1]) + 1
         logger.debug(f"batch_size = {batch_size}, cur_pos = {cur_pos}")
-        seq_len = self.torch.ones([batch_size], dtype=self.torch.int).to(position_ids.device) * cur_pos
-        if slots_mapping is None:
+        if FIXED_INPUTS.seq_len in self.inputs:
+            seq_len = self.torch.ones([batch_size], dtype=self.torch.int).to(position_ids.device) * cur_pos
+        if FIXED_INPUTS.slots_mapping in self.inputs and slots_mapping is None:
             slots_mapping = self.torch.zeros([batch_size * cur_pos], dtype=self.torch.int)
-        if k_cache is None:
+        if FIXED_INPUTS.k_cache in self.inputs and k_cache is None:
             k_cache = self.torch.zeros(self.cache_shape).half()
-        if v_cache is None:
+        if FIXED_INPUTS.v_cache in self.inputs and v_cache is None:
             v_cache = self.torch.zeros(self.cache_shape).half()
 
         model_inputs = {
@@ -216,59 +257,86 @@ class ATBModel:
         }
         model_inputs.update({kk: vv.npu() for kk, vv in kwargs.items()})
 
-        if self.inv_freq_weight is not None and FIXED_INPUTS.cos_table not in model_inputs:
-            logger.debug(f"self.inv_freq_weight.shape = {self.inv_freq_weight.shape}")
-            logger.debug(f"position_ids.shape = {position_ids.shape}")
-            left = self.inv_freq_weight[None, :, None]
-            right = position_ids[:, None, :] if position_ids.dim() == 2 else position_ids[None, None, :]
-            freq = (left.to(right.device).float() @ right.float()).transpose(1, 2)
-            freq = self.torch.cat([freq, freq], dim=-1)[0].npu()  # has to be float npu values, and dim == 2
-            logger.debug(f"freq.shape = {freq.shape}")
-
-            model_inputs[FIXED_INPUTS.cos_table], model_inputs[FIXED_INPUTS.sin_table] = freq.cos(), freq.sin()
-        if FIXED_INPUTS.cos_table not in model_inputs:
+        needs_cos_sin_table = FIXED_INPUTS.cos_table in self.inputs or FIXED_INPUTS.sin_table in self.inputs
+        is_cos_sin_table_in_inputs = FIXED_INPUTS.cos_table in model_inputs and FIXED_INPUTS.sin_table in model_inputs
+        if needs_cos_sin_table and not is_cos_sin_table_in_inputs and self.inv_freq_weight is not None:
+            cos_table, sin_table = self._calc_cos_sin_table_from_inv_freq(position_ids)
+            model_inputs[FIXED_INPUTS.cos_table], model_inputs[FIXED_INPUTS.sin_table] = cos_table, sin_table
+            is_cos_sin_table_in_inputs = True
+        if needs_cos_sin_table and not is_cos_sin_table_in_inputs:
             raise ValueError("Missing cos_table and sin_table")
 
         model_inputs.update(self.weights)
         missing_inputs = self.inputs - set(model_inputs.keys())
         if len(missing_inputs) != 0:
-            raise ValueError(
-                f"Missing inputs: {missing_inputs}, provided: {model_inputs.keys()}, required: {self.inputs}"
-            )
+            logger.warning(
+                f"Missing inputs: {missing_inputs}\npPovided: {model_inputs.keys()}\nCall `set_weights` if not already"
+            )  # Not raise error, model may still can be executed
 
-        model_outputs = {
-            ii: self.torch.ones([batch_size * cur_pos, self.vocab_size]).half().npu() for ii in self.outputs
-        }
-        bind_map = {FIXED_INPUTS.seq_len: seq_len.cpu()}
+        if self.output_shape is None:
+            model_outputs = {
+                ii: self.torch.ones([batch_size * cur_pos, self.vocab_size]).half().npu() for ii in self.outputs
+            }
+        elif isinstance(self.output_shape, dict):
+            model_outputs = {kk: self.torch.ones(vv).half().npu() for kk, vv in self.output_shape.items()}
+        else:
+            model_outputs = {kk: self.torch.ones(vv).half().npu() for kk, vv in zip(self.outputs, self.output_shape)}
+
+        bind_map = {}
+        if FIXED_INPUTS.seq_len in self.inputs:
+            bind_map[FIXED_INPUTS.seq_len] = seq_len.cpu()
         return self.atb_model.forward(model_inputs, model_outputs, bind_map)
+
+    def __call__(self, input_ids, position_ids, k_cache=None, v_cache=None, slots_mapping=None, **kwargs):
+        return self.forward(input_ids, position_ids, k_cache, v_cache, slots_mapping, **kwargs)
 
 
 class ATBModelFromTorch(ATBModel):
+    """Create ATB model from raw transformers torch model
+    >>> import torch
+    >>> from transformers.models.llama import LlamaConfig, LlamaForCausalLM
+    >>> from msit_llm.transform.torch_to_atb_python import ATBModel, ATBModelConfig, ATBModelFromTorch
+    >>>
+    >>> cc = LlamaConfig()
+    >>> cc.num_hidden_layers, cc.hidden_size, cc.intermediate_size = 2, 1024, 4096  # smaller
+    >>> mm = LlamaForCausalLM(cc)
+    >>>
+    >>> atb_model = ATBModelFromTorch(mm)
+    >>> atb_model.set_weights(mm.state_dict())
+    >>> # Also set buffers in, which includes inv_freq. Ignore WARNINGs of missing weights
+    >>> atb_model.set_weights(dict(mm.named_buffers()))
+    >>> out = atb_model(input_ids=torch.arange(32), position_ids=torch.arange(32))
+    >>> print({kk: vv.shape for kk, vv in out.items()})
+    # {'output': torch.Size([32, 32000])}
+    >>> atb_model.to_file()  # Save atb model to a py file
+    # 'llamaforcausallm_atb_float.py'
+    """
+
     def __init__(
         self,
         torch_model,
         config=None,
-        input_names=(FIXED_INPUTS.input_ids, FIXED_INPUTS.position_ids),
+        input_names=BASIC_INPUT_NAMES,
         max_batch_size=1,
         max_seq_len=1024,
         to_quant=False,
         quant_disable_names=None,
     ):
         self.torch_model, self.config = torch_model, config
-        self.to_quant, self.quant_disable_names = to_quant, quant_disable_names
+        self.to_quant, self.quant_disable_names = to_quant, quant_disable_names or ()
         self.config = getattr(torch_model, "config", None) if config is None else config
         if self.config is None:
             raise ValueError("Either config or torch_model.config shold be not empty one")
 
-        self.num_attention_heads = get_config_attr(config, "num_attention_heads")
+        self.num_attention_heads = get_config_attr(self.config, "num_attention_heads")
         if self.num_attention_heads is None or self.num_attention_heads <= 0:
             raise ValueError("Invalid config, num_attention_heads not exists or < 0")
 
-        self.hidden_size = get_config_attr(config, "hidden_size")
+        self.hidden_size = get_config_attr(self.config, "hidden_size")
         if self.hidden_size is None or self.hidden_size <= 0:
             raise ValueError("Invalid config, hidden_size not exists or < 0")
 
-        self.vocab_size = get_config_attr(config, "vocab_size", -1)
+        self.vocab_size = get_config_attr(self.config, "vocab_size", -1)
         if self.vocab_size is None or self.vocab_size <= 0:
             raise ValueError("Invalid config, vocab_size not exists or < 0")
 
@@ -283,18 +351,17 @@ class ATBModelFromTorch(ATBModel):
         self.torch_module_to_atb_map = {}
         for kk, vv in TORCH_MODULE_TO_ATB_MAP.items():
             re_key = re.compile(kk)
-            if vv["op_type"] == "SelfAttention":
-                op_param = json.loads(vv["op_param"])
-                op_param["headNum"] = op_param["kvHeadNum"] = self.num_attention_heads
-                vv["op_param"] = json.dumps(op_param)
+            if vv.get("op_type", None) == "SelfAttention" and "op_param" in vv:
+                vv["op_param"].update({"headNum": self.num_attention_heads, "kvHeadNum": self.num_attention_heads})
             self.torch_module_to_atb_map[re_key] = Operation(**vv)
 
         self.pre_query_name, self.pre_key_name, self.pre_value_name, self.is_apply_rope = "", "", "", False
-        self.model_inputs, self.model_outputs, self.operations, self.extra_inputs = [], [], [], []
+        self.model_inputs, self.model_outputs, self.operations = [], [], []
 
         self.convert_fx_traced_module()
         if to_quant:
-            self.convert_to_quant(disable_names=quant_disable_names or ())
+            logger.info(f"calling convert_to_quant, quant_disable_names = {self.quant_disable_names}")
+            self.convert_to_quant()
         self.to_file()
         self.atb_model = self.build_atb_model()
 
@@ -365,6 +432,13 @@ class ATBModelFromTorch(ATBModel):
             elif "v" in sub_name:
                 self.pre_value_name = atb_operation.outputs[0]
 
+    def _op_process_linear(self, atb_operation=None, module_name=""):
+        bias_name = f"{atb_operation.op_name}.bias"
+        if bias_name in self.weight_names:
+            atb_operation.inputs.insert(1, bias_name)
+            atb_operation.op_param.update({"hasBias": True})
+        self.operations.append(atb_operation)
+
     def _op_process_rope(self, atb_operation=None, module_name=""):
         self.is_apply_rope = True
         self.model_inputs += [FIXED_INPUTS.cos_table, FIXED_INPUTS.sin_table]
@@ -392,7 +466,7 @@ class ATBModelFromTorch(ATBModel):
             self.operations.append(
                 Operation(
                     op_type="Rope",
-                    op_param=json.dumps({"rotaryCoeff": 2}),
+                    op_param={"rotaryCoeff": 2},
                     inputs=inputs,
                     outputs=outputs,
                     op_name=module_name + ".rope",
@@ -431,24 +505,13 @@ class ATBModelFromTorch(ATBModel):
             ),
             Operation(
                 op_type="ReshapeAndCache",
-                op_param=json.dumps({}),
+                op_param={},
                 inputs=reshape_and_cache_inputs,
                 outputs=[FIXED_INPUTS.k_cache, FIXED_INPUTS.v_cache],
                 op_name=module_name + ".reshape_and_cache",
             ),
             atb_operation,
         ]
-        if not self.to_quant:
-            # exclude reshape for o_proj if quant enabled
-            self.operations.append(
-                Operation(
-                    op_type="add_reshape",
-                    function=lambda org_shape: [org_shape[0], org_shape[1] * org_shape[2]],
-                    inputs=atb_operation.outputs,
-                    outputs=[ii + "_" for ii in atb_operation.outputs],
-                    op_name=module_name + "." + RESHPAE_KIND.reshape_0_12,
-                ),
-            )
 
         if FIXED_INPUTS.k_cache not in self.model_inputs:
             self.model_inputs += [
@@ -507,7 +570,7 @@ class ATBModelFromTorch(ATBModel):
 
             logger.debug(f"cur_module_name = {cur_module_name}, previous_module_name = {previous_module_name}")
             if cur_module_name != base_module_name:
-                output_node_map[node.name] = previous_operation_out  # will be overwrited later
+                output_node_map[node.name] = previous_operation_out  # will be overwriten later
             if cur_module_name == previous_module_name:
                 continue
             if self._should_skip_node(node):
@@ -532,27 +595,34 @@ class ATBModelFromTorch(ATBModel):
                 self._op_process_attention(atb_operation=atb_operation, module_name=module_name)
                 cur_outputs = self.operations[-1].outputs
                 output_node_map[node.name] = previous_operation_out = operation_outputs[cur_module_name] = cur_outputs
+            elif atb_operation.op_type in ["Linear", "LinearParallel"]:
+                self._op_process_linear(atb_operation=atb_operation, module_name=module_name)
+                cur_outputs = self.operations[-1].outputs
+                output_node_map[node.name] = previous_operation_out = operation_outputs[cur_module_name] = cur_outputs
             else:
                 self.operations.append(atb_operation)
-                operation_outputs[cur_module_name] = atb_operation.outputs
-                output_node_map[node.name] = previous_operation_out = atb_operation.outputs
+                cur_outputs = atb_operation.outputs
+                output_node_map[node.name] = previous_operation_out = operation_outputs[cur_module_name] = cur_outputs
 
         self._refine_inputs_outputs(input_node_map, output_node_map, operation_outputs)
         self.operations[-1].outputs = self.model_outputs
         return self.model_inputs, self.model_outputs, self.weight_names, self.operations
 
-    def convert_to_quant(self, disable_names=("lm_head")):
+    def convert_to_quant(self):
+        # Has to split out from convert_fx_traced_module, needs actual Linear input names
+        quant_disable_names = set([ii for ii in self.quant_disable_names if ii is not None and len(ii) > 0])
         operations_with_quant = []
-        logger.debug(f"disable_names = {disable_names}")
         for op_id, op in enumerate(self.operations):
             logger.debug(f"op.op_name = {op.op_name}")
             if op.op_type not in ["Linear", "LinearParallel"]:
                 operations_with_quant.append(op)
                 continue
-            if op.op_name in disable_names:
+            if op.op_name in quant_disable_names:
                 operations_with_quant.append(op)
+                quant_disable_names.remove(op.op_name)
                 continue
 
+            logger.debug(f"Convert {op.op_name} to quant node")
             linear_quant_weights = []
             bias, deq_scale = f"{op.op_name}.bias", f"{op.op_name}.deq_scale"
             input_scale, input_offset = f"{op.op_name}.input_scale", f"{op.op_name}.input_offset"
@@ -565,20 +635,20 @@ class ATBModelFromTorch(ATBModel):
 
             elewise_quant_node = Operation(
                 op_type="Elewise",
-                op_param=json.dumps({"elewiseType": "ELEWISE_QUANT_PER_CHANNEL"}),
+                op_param={"elewiseType": "ELEWISE_QUANT_PER_CHANNEL"},
                 op_name=f"{op.op_name}.elewise_quant",
                 inputs=[f"{op.inputs[0]}", input_scale, input_offset],
                 outputs=[f"{op.op_name}.elewise_quant.out"],
             )
-            self.extra_inputs += [input_scale, input_offset]
 
-            op_param = json.loads(op.op_param)
-            op_param.update({"transposeA": False, "transposeB": True, "hasBias": True, "outDataType": "ACL_FLOAT16"})
-            op.op_param = json.dumps(op_param)
+            op.op_param.update({"transposeA": False, "transposeB": True, "hasBias": True, "outDataType": "ACL_FLOAT16"})
             op.inputs = elewise_quant_node.outputs + op.inputs[1:] + linear_quant_weights
 
             operations_with_quant += [elewise_quant_node, op]
         self.operations = operations_with_quant
+
+        if len(quant_disable_names) > 0:
+            logger.warning(f"Some layers in quant_disable_names not found in model: {quant_disable_names}")
 
     def build_atb_model(self):
         import torch
@@ -589,21 +659,25 @@ class ATBModelFromTorch(ATBModel):
             raise OSError("ATB_SPEED_HOME_PATH environment variable not valid, try install mindie")
         sys.path.append(os.path.join(atb_speed_path, "lib"))
         try:
-            import _libatb_torch as atb  # May error
+            from _libatb_torch import _GraphOperation as GraphOperation  # May error
+            from _libatb_torch import _BaseOperation as BaseOperation  # May error
         except (ImportError, ModuleNotFoundError) as err:
             raise OSError("import _libatb_torch failed, try install mindie") from err
 
-        atb_model = atb._GraphOperation(self.model_name)
+        atb_model = GraphOperation(self.model_name)
         in_tensors = self.model_inputs + self.weight_names
-        operation_inputs = [jj for ii in self.operations for jj in ii.inputs] + self.extra_inputs
+        operation_inputs = [jj for ii in self.operations for jj in ii.inputs]
         valid_inputs = [ii for ii in in_tensors if ii in operation_inputs]
         atb_model.add_input_output(input=valid_inputs, output=self.operations[-1].outputs)
+
         for id, op in enumerate(self.operations):
             if op.op_type == "add_reshape":
                 atb_model.add_reshape(op.inputs[0], op.outputs[0], op.function)
             else:
                 atb_model.add_operation(
-                    operation=atb._BaseOperation(op_type=op.op_type, op_param=op.op_param, op_name=op.op_name),
+                    operation=BaseOperation(
+                        op_type=op.op_type, op_param=json.dumps(op.op_param), op_name=op.op_name
+                    ),
                     input=op.inputs,
                     output=op.outputs,
                 )
@@ -614,7 +688,7 @@ class ATBModelFromTorch(ATBModel):
     def to_file(self, output_file=None):
         indent = "    "
         in_tensors = self.model_inputs + self.weight_names
-        operation_inputs = [jj for op in self.operations for jj in op.inputs] + self.extra_inputs
+        operation_inputs = [jj for op in self.operations for jj in op.inputs]
         valid_inputs = [ii for ii in in_tensors if ii in operation_inputs]
         intensors_str = "[\n" + "".join([f"{indent}{indent}'{ii}',\n" for ii in valid_inputs]) + f"{indent}]"
 
@@ -629,6 +703,10 @@ class ATBModelFromTorch(ATBModel):
                 "path = os.getenv('ATB_SPEED_HOME_PATH')",
                 "sys.path.append(os.path.join(path, 'lib'))",
                 "import _libatb_torch as atb",
+                "",
+                "if os.environ.get('ASDOPS_LOG_LEVEL') == 'FATAL':",
+                f"{indent}os.environ['ASDOPS_LOG_LEVEL'] = 'ERROR'",
+                "os.environ['ASDOPS_LOG_TO_STDOUT'] = '1'  # Force setting ASD printing error log to stdout",
                 "",
                 "def atb_model():" "",
                 f"{indent}num_attention_heads, head_dim = {self.num_attention_heads}, {self.head_dim}",
@@ -645,10 +723,11 @@ class ATBModelFromTorch(ATBModel):
                 function = get_lambda_source_code(op.function)
                 contents += f"{indent}atb_model.add_reshape('{op.inputs[0]}', '{op.outputs[0]}', {function})\n"
             else:
+                op_kwargs = f"op_type='{op.op_type}', op_param='{json.dumps(op.op_param)}', op_name='{op.op_name}'"
                 contents += f"{indent}atb_model.add_operation(\n{indent}{indent}"
                 contents += f",\n{indent}{indent}".join(
                     [
-                        f"operation=atb._BaseOperation(op_type='{op.op_type}', op_param='{op.op_param}', op_name='{op.op_name}')",
+                        f"operation=atb._BaseOperation({op_kwargs})",
                         f"input={op.inputs}",
                         f"output={op.outputs}",
                     ]
@@ -658,21 +737,16 @@ class ATBModelFromTorch(ATBModel):
         contents += f"{indent}atb_model.execute_as_single = False\n"
         contents += f"{indent}return atb_model"
 
-        output_file = output_file or (self.model_name.lower() + ".py")
-        if not output_file.endswith(".py"):
+        if output_file is None:
+            output_file = "_".join([self.model_name.lower(), "atb", "quant.py" if self.to_quant else "float.py"])
+        elif not output_file.endswith(".py"):
             output_file += ".py"
         with open(output_file, "w") as ff:
             ff.write(contents)
         return output_file
 
 
-def transform(
-    source_path,
-    input_names=(FIXED_INPUTS.input_ids, FIXED_INPUTS.position_ids),
-    output_file=None,
-    to_quant=False,
-    quant_disable_names=None,
-):
+def transform(source_path, input_names=BASIC_INPUT_NAMES, output_file=None, to_quant=False, quant_disable_names=None):
     logger.info("Building model using transformers...")
     model, config = build_model(source_path)
 
@@ -697,27 +771,35 @@ def transform(
     logger.info(
         """Run like:
 
+    python3 -c "
     import torch, torch_npu
     import {model_name}
     from msit_llm.transform.torch_to_atb_python import ATBModel, ATBModelConfig
 
     atb_model = {model_name}.atb_model()
-    weights = torch.load(WEIGHT_PATH)  # Use actual WEIGHT_PATH
+    weights = torch.load(\'$WEIGHT_PATH\')  # Use actual WEIGHT_PATH
 
-    cc = ATBModelConfig(vocab_size={vocab_size}, num_attention_heads={num_attention_heads}, head_dim={head_dim})
+    vocab_size, num_attention_heads, head_dim = {vocab_size}, {num_attention_heads}, {head_dim}
+    cc = ATBModelConfig(vocab_size=vocab_size, num_attention_heads=num_attention_heads, head_dim=head_dim)
     aa = ATBModel(atb_model, cc)
     aa.set_weights(weights)
+
+    input_len = 32
     out = aa.forward(
-        input_ids=torch.arange(32),
-        position_ids=torch.arange(32),
-        cos_table=torch.rand(1024, {head_dim}),
-        sin_table=torch.rand(1024, {head_dim}),
+        input_ids=torch.arange(input_len),
+        position_ids=torch.arange(input_len),
+        cos_table=torch.rand(input_len, head_dim),
+        sin_table=torch.rand(input_len, head_dim),
     )
     print(out)
+    "
     """.format(
             model_name=model_name,
             vocab_size=atb_model.atb_model_config.vocab_size,
             num_attention_heads=atb_model.atb_model_config.num_attention_heads,
             head_dim=atb_model.atb_model_config.head_dim,
         )
+        .replace(" " * 8, "##")  # Replace the inner 8 ' ' to '##' as a mark
+        .replace(" " * 4, "")  # Remove all 4 ' '
+        .replace("##", " " * 4)  # Replace the marked '##' back to 4 ' '
     )
