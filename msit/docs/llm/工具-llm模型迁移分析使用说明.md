@@ -1,11 +1,12 @@
 # LLM 迁移分析
 - [PyTorch transformers LLM 模型迁移生成 atb 浮点模型](#pytorch-transformers-llm-模型迁移生成-atb-浮点模型)
-- [限定条件](#限定条件)
-- [准备](#准备)
-- [参数说明](#参数说明)
-- [迁移示例](#迁移示例)
+  - [限定条件](#限定条件)
+  - [环境说明](#环境说明)
+  - [参数说明](#参数说明)
+- [ATB python 迁移示例](#atb-python-迁移示例)
   - [Transformers LLaMA 迁移到 ATB python 模型](#transformers-llama-迁移到-atb-python-模型)
   - [Transformers LLaMA 迁移到 ATB python 量化模型](#transformers-llama-迁移到-atb-python-量化模型)
+- [ATB cpp 迁移示例](#atb-cpp-迁移示例)
   - [Transformers QWEN 13B 迁移到 ATB cpp 示例](#transformers-qwen-13b-迁移到-atb-cpp-示例)
   - [ATB cpp 仅生成 python 调用代码](#atb-cpp-仅生成-python-调用代码)
 - [llm 浮点模型 layer 层 cpp 稀疏量化迁移](#llm-浮点模型-layer-层-cpp-稀疏量化迁移)
@@ -23,7 +24,7 @@
 - **当前 MindIE python 接口发布包基于 python 3.10，迁移功能也限定 python3.10；且 transformers 版本需要支持对应模型的 FX 构图，即 `transformers.utils.fx.symbolic_trace` 接口**
 - **ATB Python 模型当前硬件限定 atlas d802**
 
-### 准备
+### 环境说明
 - 安装 msit
 - ATB cpp 模型迁移需要获取 [Gitee ascend/MindIE-LLM](https://gitee.com/ascend/MindIE-LLM) 最新源码
 - ATB Python 模型迁移需要安装 MindIE
@@ -48,8 +49,8 @@ msit llm transform [-h] -s SOURCE [-atb ATB_MODEL_PATH] [--enable-sparse] [--to-
 | -l, --log-level        | 指定log level，默认为 info，可选值 debug, info, warning, error, fatal, critical                                                                                     | 否   |
 ***
 
-## 迁移示例
-#### Transformers LLaMA 迁移到 ATB python 模型
+## ATB python 迁移示例
+### Transformers LLaMA 迁移到 ATB python 模型
 - 从 huggingface 获取相应 LLaMA 模型
 - **迁移生成 ATB python 浮点模型**，将生成迁移完成的 ATB python 模型代码 py 文件，以及模型配置参数，并给出调用示例
   ```sh
@@ -92,7 +93,7 @@ msit llm transform [-h] -s SOURCE [-atb ATB_MODEL_PATH] [--enable-sparse] [--to-
   print(out)
   # {'output': torch.Size([32, 32000])}
   ```
-#### Transformers LLaMA 迁移到 ATB python 量化模型
+### Transformers LLaMA 迁移到 ATB python 量化模型
 - 从 huggingface 获取相应 LLaMA 模型
 - **需要相应量化权重**
 - **迁移生成 ATB python 量化模型**，将生成迁移完成的 ATB python 量化模型代码 py 文件，以及模型配置参数，并给出调用示例
@@ -137,7 +138,10 @@ msit llm transform [-h] -s SOURCE [-atb ATB_MODEL_PATH] [--enable-sparse] [--to-
   print({kk: vv.shape for kk, vv in out.items()})
   # {'output': torch.Size([32, 32000])}
   ```
-#### Transformers QWEN 13B 迁移到 ATB cpp 示例
+***
+
+## ATB cpp 迁移示例
+### Transformers QWEN 13B 迁移到 ATB cpp 示例
 - **Step 1. 迁移生成 atb 模型代码**，`--source` 指定待迁移的 transformers 模型目录，生成迁移后 model 以及 layer 的 cpp 与 h 代码，同时生成 python 代码，用于推理时调用。
   ```sh
   msit llm transform -s /data/qwen-14b-chat
@@ -168,7 +172,7 @@ msit llm transform [-h] -s SOURCE [-atb ATB_MODEL_PATH] [--enable-sparse] [--to-
   python qwen/run.py --model_path=/data/qwen-14b-chat
   ```
   由于迁移的适配性问题，以及 `MindIE-LLM` 迭代更新，推理过程可能存在报错，仍依赖用户手动修复 python 文件中错误。
-#### ATB cpp 仅生成 python 调用代码
+### ATB cpp 仅生成 python 调用代码
 - 若已存在 model 的 cpp 和 h 代码，可通过指定 -atb 或 --atb_model_path 来生成 python 调用代码
 
   ```sh
@@ -190,14 +194,14 @@ msit llm transform [-h] -s SOURCE [-atb ATB_MODEL_PATH] [--enable-sparse] [--to-
   ```
 ***
 
-### llm 浮点模型 layer 层 cpp 稀疏量化迁移
+## llm 浮点模型 layer 层 cpp 稀疏量化迁移
 - 由 llm 的浮点模型 layer 层代码，迁移生成稀疏量化 layer 层代码，包括 cpp 文件与 h 文件
 
-#### 准备
+### 准备
 - 安装 msit
 - 获取 [Gitee ascend/MindIE-LLM](https://gitee.com/ascend/MindIE-LLM) 源码，找到待迁移模型 layer 定义
 
-#### Baichuan2 7B 迁移示例
+### Baichuan2 7B 迁移示例
 - 模型 layer 定义位置
   ```sh
   cd ModelLink/mindie_ref/mindie_llm/atb_models/models/baichuan2/7b  # layer 定义位置
@@ -236,7 +240,7 @@ msit llm transform [-h] -s SOURCE [-atb ATB_MODEL_PATH] [--enable-sparse] [--to-
   - 其中 `LinearParam` 更新为 `LinearSparseParam`，并在 `FlashAttentionRopeLayerTensorId` 增加了 `_INDEX` 相关节点
 ***
 
-### 输出大模型迁移分析报告
+## 输出大模型迁移分析报告
 - 在大模型迁移时，工具支持输出大模型使用DAG获取的更加细粒度的模型结构json文件，及DAG模型算子是否能获取对应的加速库算子以支持大模型迁移的算子支持度csv文件。
 - 执行示例
   ```shell
