@@ -243,7 +243,7 @@ class ATBModel:
         missing_inputs = self.inputs - set(model_inputs.keys())
         if len(missing_inputs) != 0:
             raise ValueError(
-                f"Missing inputs: {missing_inputs}\n\npPovided: {model_inputs.keys()}\n\nCall `set_weights` if not
+                f"Missing inputs: {missing_inputs}\npPovided: {model_inputs.keys()}\nCall `set_weights` if not already"
             )
 
         model_outputs = {
