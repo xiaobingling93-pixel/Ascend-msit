@@ -23,6 +23,9 @@ from collections import namedtuple
 
 from msit_llm.common.log import logger, set_log_level
 
+# Force setting ASD print error log to stdout
+os.environ['ASDOPS_LOG_LEVEL'] = 'ERROR'
+os.environ['ASDOPS_LOG_TO_STDOUT'] = '1'
 
 CONFIG_ATTR_CANDIDATES = {
     "num_hidden_layers": ["num_hidden_layers", "num_layers", "n_layers"],
@@ -181,7 +184,7 @@ class ATBModel:
         ]
         self.vocab_size = self.atb_model_config.vocab_size
 
-    def _calc_cos_sin_table_fomr_inv_freq(self, position_ids):
+    def _calc_cos_sin_table_from_inv_freq(self, position_ids):
         logger.debug(f"self.inv_freq_weight.shape = {self.inv_freq_weight.shape}")
         logger.debug(f"position_ids.shape = {position_ids.shape}")
         left = self.inv_freq_weight[None, :, None]
@@ -205,7 +208,7 @@ class ATBModel:
         self.inv_freq_weight = None
         for weight_name in unused_weights:
             if "invfreq" in weight_name.split(".")[-1].replace("_", "").lower():
-                self.inv_freq_weight = self.weights[weight_name] = weights[weight_name].squeeze().float().npu()
+                self.inv_freq_weight = weights[weight_name].squeeze().float().npu()
                 unused_weights.remove(weight_name)
                 break
 
@@ -214,16 +217,17 @@ class ATBModel:
         if len(missing_weights) > 0:
             logger.warning(f"missing weights: {missing_weights}")
 
-    def forward(self, input_ids, position_ids, k_cache=None, v_cache=None, slots_mapping=None, **kwargs):
+    def forward(self, input_ids, position_ids, k_cache=None, v_cache=None, slots_mapping=None, bind_map={}, **kwargs):
         batch_size = input_ids.shape[0] if input_ids.dim() == 2 else 1
-        cur_pos = position_ids[-1] + 1
+        cur_pos = (position_ids[0, -1] if input_ids.dim() == 2 else position_ids[-1]) + 1
         logger.debug(f"batch_size = {batch_size}, cur_pos = {cur_pos}")
-        seq_len = self.torch.ones([batch_size], dtype=self.torch.int).to(position_ids.device) * cur_pos
-        if slots_mapping is None:
+        if FIXED_INPUTS.seq_len in self.inputs:
+            seq_len = self.torch.ones([batch_size], dtype=self.torch.int).to(position_ids.device) * cur_pos
+        if FIXED_INPUTS.slots_mapping in self.inputs and slots_mapping is None:
             slots_mapping = self.torch.zeros([batch_size * cur_pos], dtype=self.torch.int)
-        if k_cache is None:
+        if FIXED_INPUTS.k_cache in self.inputs and k_cache is None:
             k_cache = self.torch.zeros(self.cache_shape).half()
-        if v_cache is None:
+        if FIXED_INPUTS.v_cache in self.inputs and v_cache is None:
             v_cache = self.torch.zeros(self.cache_shape).half()
 
         model_inputs = {
@@ -239,7 +243,7 @@ class ATBModel:
         needs_cos_sin_table = FIXED_INPUTS.cos_table in self.inputs or FIXED_INPUTS.sin_table in self.inputs
         is_cos_sin_table_in_inputs = FIXED_INPUTS.cos_table in model_inputs and FIXED_INPUTS.sin_table in model_inputs
         if needs_cos_sin_table and not is_cos_sin_table_in_inputs and self.inv_freq_weight is not None:
-            cos_table, sin_table = _calc_cos_sin_table_fomr_inv_freq(position_ids)
+            cos_table, sin_table = self._calc_cos_sin_table_from_inv_freq(position_ids)
             model_inputs[FIXED_INPUTS.cos_table], model_inputs[FIXED_INPUTS.sin_table] = cos_table, sin_table
             is_cos_sin_table_in_inputs = True
         if needs_cos_sin_table and not is_cos_sin_table_in_inputs:
@@ -255,7 +259,8 @@ class ATBModel:
         model_outputs = {
             ii: self.torch.ones([batch_size * cur_pos, self.vocab_size]).half().npu() for ii in self.outputs
         }
-        bind_map = {FIXED_INPUTS.seq_len: seq_len.cpu()}
+        if FIXED_INPUTS.seq_len in self.inputs and FIXED_INPUTS.seq_len not in bind_map:
+            bind_map[FIXED_INPUTS.seq_len] = seq_len.cpu()
         return self.atb_model.forward(model_inputs, model_outputs, bind_map)
 
     def __call__(self, input_ids, position_ids, k_cache=None, v_cache=None, slots_mapping=None, **kwargs):
@@ -670,6 +675,9 @@ class ATBModelFromTorch(ATBModel):
                 "path = os.getenv('ATB_SPEED_HOME_PATH')",
                 "sys.path.append(os.path.join(path, 'lib'))",
                 "import _libatb_torch as atb",
+                "",
+                "os.environ['ASDOPS_LOG_LEVEL'] = 'ERROR'  # Force setting ASD printing error log to stdout",
+                "os.environ['ASDOPS_LOG_TO_STDOUT'] = '1'",
                 "",
                 "def atb_model():" "",
                 f"{indent}num_attention_heads, head_dim = {self.num_attention_heads}, {self.head_dim}",
