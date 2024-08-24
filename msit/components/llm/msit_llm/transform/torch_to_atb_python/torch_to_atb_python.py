@@ -24,9 +24,9 @@ from collections import namedtuple
 from msit_llm.common.log import logger, set_log_level
 
 # Force setting ASD print error log to stdout
-if os.environ.get('ASDOPS_LOG_LEVEL') == 'FATAL':
-    os.environ['ASDOPS_LOG_LEVEL'] = 'ERROR'
-os.environ['ASDOPS_LOG_TO_STDOUT'] = '1'
+if os.environ.get("ASDOPS_LOG_LEVEL") == "FATAL":
+    os.environ["ASDOPS_LOG_LEVEL"] = "ERROR"
+os.environ["ASDOPS_LOG_TO_STDOUT"] = "1"
 
 CONFIG_ATTR_CANDIDATES = {
     "num_hidden_layers": ["num_hidden_layers", "num_layers", "n_layers"],
@@ -149,7 +149,7 @@ class ATBModelConfig:
             head_dim=self.head_dim,
             max_batch_size=self.max_batch_size,
             max_seq_len=self.max_seq_len,
-            **self.kwargs
+            **self.kwargs,
         )
 
     def __repr__(self):
@@ -306,6 +306,7 @@ class ATBModelFromTorch(ATBModel):
     # {'output': torch.Size([32, 32000])}
     >>> atb_model.to_file()  # Save atb model to a py file
     """
+
     def __init__(
         self,
         torch_model,
@@ -696,7 +697,7 @@ class ATBModelFromTorch(ATBModel):
                 "sys.path.append(os.path.join(path, 'lib'))",
                 "import _libatb_torch as atb",
                 "",
-                "if os.environ.get('ASDOPS_LOG_LEVEL') == 'FATAL':"
+                "if os.environ.get('ASDOPS_LOG_LEVEL') == 'FATAL':",
                 f"{indent}os.environ['ASDOPS_LOG_LEVEL'] = 'ERROR'",
                 "os.environ['ASDOPS_LOG_TO_STDOUT'] = '1'  # Force setting ASD printing error log to stdout",
                 "",
