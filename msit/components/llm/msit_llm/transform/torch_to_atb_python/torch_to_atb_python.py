@@ -147,7 +147,7 @@ class ATBModelConfig:
             max_seq_len=self.max_seq_len,
             **self.kwargs
         )
-    
+
     def __repr__(self):
         return json.dumps(self.to_dict())
 
@@ -181,6 +181,16 @@ class ATBModel:
         ]
         self.vocab_size = self.atb_model_config.vocab_size
 
+    def _calc_cos_sin_table_fomr_inv_freq(self, position_ids):
+        logger.debug(f"self.inv_freq_weight.shape = {self.inv_freq_weight.shape}")
+        logger.debug(f"position_ids.shape = {position_ids.shape}")
+        left = self.inv_freq_weight[None, :, None]
+        right = position_ids[:, None, :] if position_ids.dim() == 2 else position_ids[None, None, :]
+        freq = (left.to(right.device).float() @ right.float()).transpose(1, 2)
+        freq = self.torch.cat([freq, freq], dim=-1)[0].npu()  # has to be float npu values, and dim == 2
+        logger.debug(f"freq.shape = {freq.shape}")
+        return freq.cos(), freq.sin()
+
     def set_weights(self, weights):
         source_weights = set(weights.keys())
         valid_weights = source_weights & self.inputs
@@ -195,7 +205,7 @@ class ATBModel:
         self.inv_freq_weight = None
         for weight_name in unused_weights:
             if "invfreq" in weight_name.split(".")[-1].replace("_", "").lower():
-                self.inv_freq_weight = weights[weight_name].squeeze().half().npu()
+                self.inv_freq_weight = self.weights[weight_name] = weights[weight_name].squeeze().float().npu()
                 unused_weights.remove(weight_name)
                 break
 
@@ -226,17 +236,13 @@ class ATBModel:
         }
         model_inputs.update({kk: vv.npu() for kk, vv in kwargs.items()})
 
-        if self.inv_freq_weight is not None and FIXED_INPUTS.cos_table not in model_inputs:
-            logger.debug(f"self.inv_freq_weight.shape = {self.inv_freq_weight.shape}")
-            logger.debug(f"position_ids.shape = {position_ids.shape}")
-            left = self.inv_freq_weight[None, :, None]
-            right = position_ids[:, None, :] if position_ids.dim() == 2 else position_ids[None, None, :]
-            freq = (left.to(right.device).float() @ right.float()).transpose(1, 2)
-            freq = self.torch.cat([freq, freq], dim=-1)[0].npu()  # has to be float npu values, and dim == 2
-            logger.debug(f"freq.shape = {freq.shape}")
-
-            model_inputs[FIXED_INPUTS.cos_table], model_inputs[FIXED_INPUTS.sin_table] = freq.cos(), freq.sin()
-        if FIXED_INPUTS.cos_table not in model_inputs:
+        needs_cos_sin_table = FIXED_INPUTS.cos_table in self.inputs or FIXED_INPUTS.sin_table in self.inputs
+        is_cos_sin_table_in_inputs = FIXED_INPUTS.cos_table in model_inputs and FIXED_INPUTS.sin_table in model_inputs
+        if needs_cos_sin_table and not is_cos_sin_table_in_inputs and self.inv_freq_weight is not None:
+            cos_table, sin_table = _calc_cos_sin_table_fomr_inv_freq(position_ids)
+            model_inputs[FIXED_INPUTS.cos_table], model_inputs[FIXED_INPUTS.sin_table] = cos_table, sin_table
+            is_cos_sin_table_in_inputs = True
+        if needs_cos_sin_table and not is_cos_sin_table_in_inputs:
             raise ValueError("Missing cos_table and sin_table")
 
         model_inputs.update(self.weights)
@@ -740,7 +746,7 @@ def transform(source_path, input_names=BASIC_INPUT_NAMES, output_file=None, to_q
     cc = ATBModelConfig(vocab_size=vocab_size, num_attention_heads=num_attention_heads, head_dim=head_dim)
     aa = ATBModel(atb_model, cc)
     aa.set_weights(weights)
-    
+
     input_len = 32
     out = aa.forward(
         input_ids=torch.arange(input_len),
