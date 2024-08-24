@@ -232,9 +232,7 @@ class ATBModel:
         if len(missing_weights) > 0:
             logger.warning(f"missing weights: {missing_weights}")
 
-    def forward(
-        self, input_ids, position_ids, k_cache=None, v_cache=None, slots_mapping=None, bind_map=None, **kwargs
-    ):
+    def forward(self, input_ids, position_ids, k_cache=None, v_cache=None, slots_mapping=None, **kwargs):
         batch_size = input_ids.shape[0] if input_ids.dim() == 2 else 1
         cur_pos = (position_ids[0, -1] if position_ids.dim() == 2 else position_ids[-1]) + 1
         logger.debug(f"batch_size = {batch_size}, cur_pos = {cur_pos}")
@@ -282,8 +280,8 @@ class ATBModel:
         else:
             model_outputs = {kk: self.torch.ones(vv).half().npu() for kk, vv in zip(self.outputs, self.output_shape)}
 
-        bind_map = bind_map or {}
-        if FIXED_INPUTS.seq_len in self.inputs and FIXED_INPUTS.seq_len not in bind_map:
+        bind_map = {}
+        if FIXED_INPUTS.seq_len in self.inputs:
             bind_map[FIXED_INPUTS.seq_len] = seq_len.cpu()
         return self.atb_model.forward(model_inputs, model_outputs, bind_map)
 
@@ -350,7 +348,7 @@ class ATBModelFromTorch(ATBModel):
         self.torch_module_to_atb_map = {}
         for kk, vv in TORCH_MODULE_TO_ATB_MAP.items():
             re_key = re.compile(kk)
-            if vv["op_type"] == "SelfAttention":
+            if vv["op_type"] == "SelfAttention" and "op_param" in vv:
                 vv["op_param"].update({"headNum": self.num_attention_heads, "kvHeadNum": self.num_attention_heads})
             self.torch_module_to_atb_map[re_key] = Operation(**vv)
 
