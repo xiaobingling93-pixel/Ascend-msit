@@ -28,7 +28,7 @@ from msit_llm.common.constant import ATB_HOME_PATH, ATB_SAVE_TENSOR_TIME, ATB_SA
     ATB_SAVE_TILING, LD_PRELOAD, ATB_OUTPUT_DIR, ATB_SAVE_CHILD, ATB_SAVE_TENSOR_PART, \
     ASCEND_TOOLKIT_HOME, ATB_PROB_LIB_WITH_ABI, ATB_PROB_LIB_WITHOUT_ABI, ATB_SAVE_CPU_PROFILING, \
     ATB_CUR_PID, ATB_DUMP_SUB_PROC_INFO_SAVE_PATH, ATB_DEVICE_ID, ATB_AIT_LOG_LEVEL, ATB_DUMP_TYPE, get_ait_dump_path, \
-    GLOBAL_AIT_DUMP_PATH, ATB_SAVE_TENSOR_IN_BEFORE_OUT_AFTER
+    ATB_TIMESTAMP, GLOBAL_HISTORY_AIT_DUMP_PATH_LIST, ATB_SAVE_TENSOR_IN_BEFORE_OUT_AFTER
 
 
 def is_use_cxx11():
@@ -216,13 +216,17 @@ def merge_cpu_profiling_data(path):
 def clear_dump_task(args):
     if "onnx" in args.type and ("model" in args.type or "layer" in args.type):
         json_to_onnx(args)
-    elif "cpu_profiling" in args.type:
+    if "cpu_profiling" in args.type:
         # 获取当前进程的cpu_profiling数据dump路径，新版CANN包需要加时间戳，否则不加时间戳
-        cpu_profiling_path1 = os.path.join(os.environ.get(ATB_OUTPUT_DIR, ""), get_ait_dump_path(), "cpu_profiling")
-        cpu_profiling_path2 = os.path.join(os.environ.get(ATB_OUTPUT_DIR, ""), GLOBAL_AIT_DUMP_PATH, "cpu_profiling")
-        if os.path.exists(cpu_profiling_path1):
-            merge_cpu_profiling_data(cpu_profiling_path1)
-        else:
-            merge_cpu_profiling_data(cpu_profiling_path2)
-    else:
-        return
+        for x in GLOBAL_HISTORY_AIT_DUMP_PATH_LIST:
+            atb_output_dir = os.environ.get(ATB_OUTPUT_DIR, "")
+            timestamp = os.environ.get(ATB_TIMESTAMP, "")
+            cpu_profiling_path1 = os.path.join(atb_output_dir, "_".join([x, timestamp]), "cpu_profiling")
+            cpu_profiling_path2 = os.path.join(atb_output_dir, x, "cpu_profiling")
+            if os.path.exists(cpu_profiling_path1):
+                merge_cpu_profiling_data(cpu_profiling_path1)
+                return
+            elif os.path.exists(cpu_profiling_path2):
+                merge_cpu_profiling_data(cpu_profiling_path2)
+                return
+    return
