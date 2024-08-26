@@ -30,7 +30,9 @@ class CompareMgr:
         self.args = args
         self.golden_data: CompareDataParse = self.init_compare_data(golden_path, args)
         self.my_data: CompareDataParse = self.init_compare_data(my_path, args)
-        os.environ[RAW_INPUT_PATH] = golden_path + "|" + my_path
+        self.golden_raw_path = self.get_raw_path(golden_path)
+        self.my_raw_path = self.get_raw_path(my_path)
+        os.environ[RAW_INPUT_PATH] = self.golden_raw_path + "|" + self.my_raw_path
         self.op_match: OpMatchMgr = OpMatchMgr(args)
         self.compared_result = []  # 收集结果
 
@@ -238,3 +240,12 @@ class CompareMgr:
         logger_text = f"There are no adjacent repeated columns in the tensor {my_tensor_datas}."
         logger.debug(logger_text)
         return my_tensor_datas
+    
+    @classmethod
+    def get_raw_path(cls, path: str):
+        raw_path = os.path.basename(path)
+        if raw_path.startswith("ait_dump") or raw_path.startswith("msit_dump"):
+            raw_path = path
+        else:
+            raw_path = os.path.dirname(os.path.dirname(path))
+        return raw_path
