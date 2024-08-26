@@ -53,6 +53,7 @@ class OpChecker:
         self.precision_mode = NAMEDTUPLE_PRECISION_MODE.keep_origin_dtype
         self.timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         self.atb_rerun = False
+        self.optimization_identify = False
         self.jobs = 1
         self.log_level = "info"
         self.custom_algorithms = False
@@ -187,6 +188,7 @@ class OpChecker:
             execution_flag = False
 
         self.atb_rerun = args.atb_rerun
+        self.optimization_identify = args.optimization_identify
         if self.atb_rerun:
             execution_flag_res = OpChecker.third_party_init()
             if not execution_flag_res:
@@ -308,12 +310,56 @@ class OpChecker:
             self.cases_info[op_id] = case_info
         elif op_name == 'SelfAttentionOperation':
             self.cases_info[op_id] = case_info
+            op_param = case_info.get("op_param", None)
+
+            from msit_llm.opcheck.check_case.self_attention import CalcType, KvCacheCfg, MaskType, KernelType, ClampType
+            optimization = {
+                "maskType": MaskType.MASK_TYPE_UNDEFINED,
+                "batchRunStatusEnable": False,
+                "isTruiMask": 0,
+                "kernelType": KernelType.KERNELTYPE_DEFAULT,
+                "clampType": ClampType.CLAMP_TYPE_UNDEFINED
+            }
+
+            idx = 0
+            for key, value in optimization.items():
+                if op_param.get(key, value) != value:
+                    new_op_id = op_id + "_" + str(idx)
+                    new_case_info = case_info.deepcopy()
+                    new_case_info["op_id"] = new_op_id
+                    new_case_info["op_param"][key] = value
+                    self.cases_info[new_op_id] = new_case_info
+                    idx += 1
+        elif op_name == 'PagedAttentionOperation':
+            self.cases_info[op_id] = case_info
+            op_param = case_info.get("op_param", None)
+
+            from msit_llm.opcheck.check_case.paged_attention import CompressType, MaskType, QuantType, CalcType
+            optimization = {
+                "maskType": MaskType.UNDEFINED,
+                "batchRunStatusEnable": False,
+                "quantType": QuantType.TYPE_QUANT_UNDEFINED,
+                "hasQuantOffset": False,
+                "compressType": CompressType.COMPRESS_TYPE_UNDEFINED,
+                "calcType": CalcType.CALC_TYPE_UNDEFINED
+            }
+
+            idx = 0
+            for key, value in optimization.items():
+                if op_param.get(key, value) != value:
+                    new_op_id = op_id + "_" + str(idx)
+                    new_case_info = case_info.deepcopy()
+                    new_case_info["op_id"] = new_op_id
+                    new_case_info["op_param"][key] = value
+                    self.cases_info[new_op_id] = new_case_info
+                    idx += 1
         else:
             self.cases_info[op_id] = case_info
 
     def add_op_info_to_cases_info(self, dirpath):
         tensor_path = dirpath
 
+        op_param = {}
         json_path = os.path.join(dirpath, 'op_param.json')
         try:
             with open(json_path, 'r') as f:
@@ -321,7 +367,6 @@ class OpChecker:
         except Exception as e:
             logger_text = f"Cannot loads json file to json! Json file: {json_path} \n Exception: {e}"
             logger.debug(logger_text)
-            return
 
         op_id, op_name = self.parse_op_id_name(dirpath)
         if op_id is None or op_name is None:
