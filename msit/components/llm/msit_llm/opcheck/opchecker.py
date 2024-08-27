@@ -316,6 +316,7 @@ class OpChecker:
 
             if self.optimization_identify:
                 from msit_llm.opcheck.check_case.self_attention import CalcType, KvCacheCfg, MaskType, KernelType, ClampType
+                import copy
                 optimization = {
                     "maskType": MaskType.MASK_TYPE_UNDEFINED.value,
                     "batchRunStatusEnable": False,
@@ -328,7 +329,7 @@ class OpChecker:
                 for key, value in optimization.items():
                     if op_param.get(key, value) != value:
                         new_op_id = op_id + "_" + str(idx)
-                        new_case_info = case_info.copy()
+                        new_case_info = copy.deepcopy(case_info)
                         new_case_info["op_id"] = new_op_id
                         new_case_info["op_param"][key] = value
                         self.cases_info[new_op_id] = new_case_info
@@ -352,7 +353,7 @@ class OpChecker:
                 for key, value in optimization.items():
                     if op_param.get(key, value) != value:
                         new_op_id = op_id + "_" + str(idx)
-                        new_case_info = case_info.copy()
+                        new_case_info = copy.deepcopy(case_info)
                         new_case_info["op_id"] = new_op_id
                         new_case_info["op_param"][key] = value
                         self.cases_info[new_op_id] = new_case_info
