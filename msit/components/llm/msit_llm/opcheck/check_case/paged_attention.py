@@ -215,12 +215,12 @@ class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
 
         mask_type = self.op_param.get('maskType', MaskType.UNDEFINED.value)
         is_masked = mask_type != MaskType.UNDEFINED.value
-        if is_masked:
+        if is_masked or self.optimization_closed == "maskType":
             mask = in_tensors[5]
 
         batch_run_status_enable = self.op_param.get("batchRunStatusEnable", False)
         if batch_run_status_enable:
-            if is_masked:
+            if is_masked or self.optimization_closed == "maskType":
                 batch_status = in_tensors[6]
                 self.bind_idx.append[6]
             else:

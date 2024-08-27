@@ -45,6 +45,7 @@ class OperationTest(unittest.TestCase):
         self.out_tensors = []
         self.bind_idx = []
         self.atb_rerun = self.case_info["atb_rerun"]
+        self.optimization_closed = self.case_info["optimization_closed"]
 
         error1 = 'Error0.1‰'
         error2 = 'Error0.5‰'

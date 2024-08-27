@@ -176,7 +176,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         mask_type = self.op_param.get("maskType", MaskType.MASK_TYPE_UNDEFINED.value)
         is_triu_mask = self.op_param.get("isTriuMask", 0)
         is_mask = mask_type != MaskType.MASK_TYPE_UNDEFINED.value
-        if is_mask:
+        if is_mask or self.optimization_closed == "maskType":
             kv_seqlen = in_tensors[4]
             seq_len = q_seqlen = in_tensors[5]
             layer_id = int(in_tensors[6][0])
@@ -226,7 +226,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         mask_type = self.op_param.get("maskType", MaskType.MASK_TYPE_UNDEFINED.value)
         is_mask = mask_type != MaskType.MASK_TYPE_UNDEFINED.value
         is_triu_mask = self.op_param.get("isTriuMask", 0)
-        if is_mask:
+        if is_mask or self.optimization_closed == "maskType":
             seq_len = in_tensors[4]
             mask = self.get_mask(in_tensors, seq_len)
             self.bind_idx.append(4)

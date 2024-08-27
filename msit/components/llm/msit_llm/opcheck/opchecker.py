@@ -332,6 +332,7 @@ class OpChecker:
                         new_case_info = copy.deepcopy(case_info)
                         new_case_info["op_id"] = new_op_id
                         new_case_info["op_param"][key] = value
+                        new_case_info["optimization_closed"] = key
                         self.cases_info[new_op_id] = new_case_info
                         idx += 1
         elif op_name == 'PagedAttentionOperation':
@@ -356,6 +357,7 @@ class OpChecker:
                         new_case_info = copy.deepcopy(case_info)
                         new_case_info["op_id"] = new_op_id
                         new_case_info["op_param"][key] = value
+                        new_case_info["optimization_closed"] = key
                         self.cases_info[new_op_id] = new_case_info
                         idx += 1
         else:
@@ -380,7 +382,7 @@ class OpChecker:
         case_info = {
             'op_id': op_id, 'op_name': op_name, 'op_param': op_param, 'tensor_path': tensor_path,
             'precision_metric': self.precision_metric, 'atb_rerun': self.atb_rerun, 'pid': self.pid,
-            'precision_mode': self.precision_mode
+            'precision_mode': self.precision_mode, 'optimization_closed': ''
         }
 
         ret = self.is_exec_node(case_info)
