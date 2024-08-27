@@ -314,47 +314,49 @@ class OpChecker:
             self.cases_info[op_id] = case_info
             op_param = case_info.get("op_param", None)
 
-            from msit_llm.opcheck.check_case.self_attention import CalcType, KvCacheCfg, MaskType, KernelType, ClampType
-            optimization = {
-                "maskType": MaskType.MASK_TYPE_UNDEFINED,
-                "batchRunStatusEnable": False,
-                "isTruiMask": 0,
-                "kernelType": KernelType.KERNELTYPE_DEFAULT,
-                "clampType": ClampType.CLAMP_TYPE_UNDEFINED
-            }
+            if self.optimization_identify:
+                from msit_llm.opcheck.check_case.self_attention import CalcType, KvCacheCfg, MaskType, KernelType, ClampType
+                optimization = {
+                    "maskType": MaskType.MASK_TYPE_UNDEFINED,
+                    "batchRunStatusEnable": False,
+                    "isTruiMask": 0,
+                    "kernelType": KernelType.KERNELTYPE_DEFAULT,
+                    "clampType": ClampType.CLAMP_TYPE_UNDEFINED
+                }
 
-            idx = 0
-            for key, value in optimization.items():
-                if op_param.get(key, value) != value:
-                    new_op_id = op_id + "_" + str(idx)
-                    new_case_info = case_info.copy()
-                    new_case_info["op_id"] = new_op_id
-                    new_case_info["op_param"][key] = value
-                    self.cases_info[new_op_id] = new_case_info
-                    idx += 1
+                idx = 0
+                for key, value in optimization.items():
+                    if op_param.get(key, value) != value:
+                        new_op_id = op_id + "_" + str(idx)
+                        new_case_info = case_info.copy()
+                        new_case_info["op_id"] = new_op_id
+                        new_case_info["op_param"][key] = value
+                        self.cases_info[new_op_id] = new_case_info
+                        idx += 1
         elif op_name == 'PagedAttentionOperation':
             self.cases_info[op_id] = case_info
             op_param = case_info.get("op_param", None)
 
-            from msit_llm.opcheck.check_case.paged_attention import CompressType, MaskType, QuantType, CalcType
-            optimization = {
-                "maskType": MaskType.UNDEFINED,
-                "batchRunStatusEnable": False,
-                "quantType": QuantType.TYPE_QUANT_UNDEFINED,
-                "hasQuantOffset": False,
-                "compressType": CompressType.COMPRESS_TYPE_UNDEFINED,
-                "calcType": CalcType.CALC_TYPE_UNDEFINED
-            }
+            if self.optimization_identify:
+                from msit_llm.opcheck.check_case.paged_attention import CompressType, MaskType, QuantType, CalcType
+                optimization = {
+                    "maskType": MaskType.UNDEFINED,
+                    "batchRunStatusEnable": False,
+                    "quantType": QuantType.TYPE_QUANT_UNDEFINED,
+                    "hasQuantOffset": False,
+                    "compressType": CompressType.COMPRESS_TYPE_UNDEFINED,
+                    "calcType": CalcType.CALC_TYPE_UNDEFINED
+                }
 
-            idx = 0
-            for key, value in optimization.items():
-                if op_param.get(key, value) != value:
-                    new_op_id = op_id + "_" + str(idx)
-                    new_case_info = case_info.copy()
-                    new_case_info["op_id"] = new_op_id
-                    new_case_info["op_param"][key] = value
-                    self.cases_info[new_op_id] = new_case_info
-                    idx += 1
+                idx = 0
+                for key, value in optimization.items():
+                    if op_param.get(key, value) != value:
+                        new_op_id = op_id + "_" + str(idx)
+                        new_case_info = case_info.copy()
+                        new_case_info["op_id"] = new_op_id
+                        new_case_info["op_param"][key] = value
+                        self.cases_info[new_op_id] = new_case_info
+                        idx += 1
         else:
             self.cases_info[op_id] = case_info
 
