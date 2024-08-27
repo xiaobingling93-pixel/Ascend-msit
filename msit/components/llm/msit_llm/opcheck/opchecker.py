@@ -350,7 +350,7 @@ class OpChecker:
             for key, value in optimization.items():
                 if op_param.get(key, value) != value:
                     new_op_id = op_id + "_" + str(idx)
-                    new_case_info = case_info.deepcopy()
+                    new_case_info = case_info.copy()
                     new_case_info["op_id"] = new_op_id
                     new_case_info["op_param"][key] = value
                     self.cases_info[new_op_id] = new_case_info
