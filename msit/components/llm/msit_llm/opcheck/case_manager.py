@@ -138,6 +138,7 @@ class CaseManager:
                 "tensor_path": op_result.get('tensor_path', ""),
                 "precision_result": op_result.get('excuted_information', ""),
                 "fail_reason": op_result.get('fail_reason', ""),
+                "optimization_closed": op_result.get('optimization_closed', "")
             }
             
             if len(op_result['res_detail']) > 0:
@@ -162,7 +163,6 @@ class CaseManager:
         columns.extend(list(CUSTOM_ALG_MAP.keys()))
         columns.append("fail_reason")
         if self.optimization_identify:
-            op_info["optimization_closed"] = op_result.get('optimization_closed', "")
             columns.append("optimization_closed")
         op_infos = op_infos.sort_values(by=['op_id', 'out_tensor_id'])
         if not os.path.exists(self.output_path):
