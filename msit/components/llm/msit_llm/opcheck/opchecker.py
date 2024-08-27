@@ -21,7 +21,8 @@ from collections import namedtuple
 import torch
 
 from msit_llm.common.log import logger
-from msit_llm.common.constant import GLOBAL_AIT_DUMP_PATH, RAW_INPUT_PATH
+from msit_llm.common.constant import GLOBAL_HISTORY_AIT_DUMP_PATH_LIST, RAW_INPUT_PATH
+
 
 NAMEDTUPLE_PRECISION_METRIC = namedtuple('precision_metric', ['abs', 'kl', 'cos_sim'])('abs', 'kl', 'cos_sim')
 NAMEDTUPLE_PRECISION_MODE = namedtuple(
@@ -107,7 +108,8 @@ class OpChecker:
 
     def get_base_path(self, cur_path):
         dirseg = cur_path.split(os.path.sep)
-        if len(dirseg) >= 4 and dirseg[-3] == 'tensors' and dirseg[-4].startswith(GLOBAL_AIT_DUMP_PATH):
+        if len(dirseg) >= 4 and dirseg[-3] == 'tensors' and \
+            any([dirseg[-4].startswith(x) for x in GLOBAL_HISTORY_AIT_DUMP_PATH_LIST]):
             try:
                 pid = dirseg[-2].split("_")[1]
             except (IndexError, AttributeError, TypeError, ValueError) as e:

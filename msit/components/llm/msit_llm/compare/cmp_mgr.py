@@ -20,7 +20,7 @@ from msit_llm.compare.cmp_op_match import OpMatchMgr
 from msit_llm.compare.cmp_data_parse import CompareDataParse, CompareDataTorch, CompareDataATB
 from msit_llm.compare.cmp_utils import BasicDataInfo, fill_row_data, save_compare_reault_to_csv, read_data
 from msit_llm.compare.multi_block import get_multi_tensor_paths, get_cat_dim
-from msit_llm.common.constant import RAW_INPUT_PATH
+from msit_llm.common.constant import RAW_INPUT_PATH, GLOBAL_HISTORY_AIT_DUMP_PATH_LIST
 
 
 class CompareMgr:
@@ -244,7 +244,7 @@ class CompareMgr:
     @classmethod
     def get_raw_path(cls, path: str):
         raw_path = os.path.basename(path)
-        if raw_path.startswith("ait_dump") or raw_path.startswith("msit_dump"):
+        if any([raw_path.startswith(x) for x in GLOBAL_HISTORY_AIT_DUMP_PATH_LIST]):
             raw_path = path
         else:
             raw_path = os.path.dirname(os.path.dirname(path))
