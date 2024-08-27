@@ -320,7 +320,7 @@ class OpChecker:
                 optimization = {
                     "maskType": MaskType.MASK_TYPE_UNDEFINED.value,
                     "batchRunStatusEnable": False,
-                    "isTruiMask": 0,
+                    "isTriuMask": 0,
                     "kernelType": KernelType.KERNELTYPE_DEFAULT.value,
                     "clampType": ClampType.CLAMP_TYPE_UNDEFINED.value
                 }
