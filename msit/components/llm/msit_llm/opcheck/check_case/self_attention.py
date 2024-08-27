@@ -181,6 +181,8 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
             seq_len = q_seqlen = in_tensors[5]
             layer_id = int(in_tensors[6][0])
             mask = self.get_mask(in_tensors, seq_len)
+            if self.optimization_closed == "maskType":
+                del self.in_tensors[3] 
         else:
             kv_seqlen = in_tensors[3]
             seq_len = q_seqlen = in_tensors[4]
@@ -229,6 +231,8 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         if is_mask or self.optimization_closed == "maskType":
             seq_len = in_tensors[4]
             mask = self.get_mask(in_tensors, seq_len)
+            if self.optimization_closed == "maskType":
+                del self.in_tensors[3]
             self.bind_idx.append(4)
         else:
             seq_len = in_tensors[3]
