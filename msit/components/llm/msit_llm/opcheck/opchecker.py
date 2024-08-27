@@ -317,11 +317,11 @@ class OpChecker:
             if self.optimization_identify:
                 from msit_llm.opcheck.check_case.self_attention import CalcType, KvCacheCfg, MaskType, KernelType, ClampType
                 optimization = {
-                    "maskType": MaskType.MASK_TYPE_UNDEFINED,
+                    "maskType": MaskType.MASK_TYPE_UNDEFINED.value,
                     "batchRunStatusEnable": False,
                     "isTruiMask": 0,
-                    "kernelType": KernelType.KERNELTYPE_DEFAULT,
-                    "clampType": ClampType.CLAMP_TYPE_UNDEFINED
+                    "kernelType": KernelType.KERNELTYPE_DEFAULT.value,
+                    "clampType": ClampType.CLAMP_TYPE_UNDEFINED.value
                 }
 
                 idx = 0
@@ -340,12 +340,12 @@ class OpChecker:
             if self.optimization_identify:
                 from msit_llm.opcheck.check_case.paged_attention import CompressType, MaskType, QuantType, CalcType
                 optimization = {
-                    "maskType": MaskType.UNDEFINED,
+                    "maskType": MaskType.UNDEFINED.value,
                     "batchRunStatusEnable": False,
-                    "quantType": QuantType.TYPE_QUANT_UNDEFINED,
+                    "quantType": QuantType.TYPE_QUANT_UNDEFINED.value,
                     "hasQuantOffset": False,
-                    "compressType": CompressType.COMPRESS_TYPE_UNDEFINED,
-                    "calcType": CalcType.CALC_TYPE_UNDEFINED
+                    "compressType": CompressType.COMPRESS_TYPE_UNDEFINED.value,
+                    "calcType": CalcType.CALC_TYPE_UNDEFINED.value
                 }
 
                 idx = 0
