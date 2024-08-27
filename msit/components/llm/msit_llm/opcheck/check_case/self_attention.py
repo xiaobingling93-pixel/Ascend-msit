@@ -228,6 +228,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         is_triu_mask = self.op_param.get("isTriuMask", 0)
         if is_mask:
             seq_len = in_tensors[4]
+            mask = self.get_mask(in_tensors, seq_len)
         else:
             seq_len = in_tensors[3]
             self.bind_idx.append(3)
