@@ -236,7 +236,12 @@ class OperationTest(unittest.TestCase):
         logger_text = f"———————— {self.op_id} {self.op_name} test start ————————"
         logger.info(logger_text)
 
-        golden_out_tensors = self.golden_calc(self.in_tensors)
+        try:
+            golden_out_tensors = self.golden_calc(self.in_tensors)
+        except ZeroDivisionError as e:
+            error_text = f"get ZeroDivisionError when calc {self.op_name} golden"
+            raise RuntimeError(error_text) from e
+
         if self.atb_rerun:
             if self.op_name in ("AllGatherOperation", "AllReduceOperation", "LinearParallelOperation"):
                 logger_text = f"{self.op_name} needs data on all ranks and atb-rerun is unsupported. " \
