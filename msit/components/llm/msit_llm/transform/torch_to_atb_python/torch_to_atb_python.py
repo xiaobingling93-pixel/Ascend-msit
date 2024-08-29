@@ -29,6 +29,7 @@ from msit_llm.common.log import logger, set_log_level
 atb_speed_path = os.getenv("ATB_SPEED_HOME_PATH", None)
 if not atb_speed_path:
     logger.warning("ATB_SPEED_HOME_PATH environment variable not valid, will skip build. Try install mindie")
+else:
     sys.path.append(os.path.join(atb_speed_path, "lib"))
 
 try:
@@ -379,14 +380,14 @@ class ATBModelFromTorch(ATBModel):
             self.convert_to_quant()
         self.to_file()
 
+        self.atb_model_config = ATBModelConfig(
+            self.vocab_size, self.num_attention_heads, self.head_dim, max_batch_size, max_seq_len
+        )
+
         if GraphOperation is None or BaseOperation is None:
             logger.warning("Will skip build")
         else:
-            self.atb_model = self.build_atb_model()
-
-            self.atb_model_config = ATBModelConfig(
-                self.vocab_size, self.num_attention_heads, self.head_dim, max_batch_size, max_seq_len
-            )
+            self.atb_model = self.build_atb_model()    
             super().__init__(atb_model=self.atb_model, atb_model_config=self.atb_model_config)
 
     @staticmethod
