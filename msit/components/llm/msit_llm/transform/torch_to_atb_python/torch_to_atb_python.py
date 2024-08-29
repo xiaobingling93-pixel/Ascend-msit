@@ -461,7 +461,6 @@ class ATBModelFromTorch(ATBModel):
     def _op_process_linear(self, atb_operation=None, module_name=""):
         bias_name = f"{atb_operation.op_name}.bias"
         if bias_name in self.weight_names:
-            atb_operation.inputs.insert(1, bias_name)
             atb_operation.op_param.update({"hasBias": True})
         self.operations.append(atb_operation)
 
@@ -722,7 +721,7 @@ class ATBModelFromTorch(ATBModel):
             logger.warning(f"Some layers in quant_disable_names not found in model: {quant_disable_names}")
 
     def build_atb_model(self):
-        stacked_operations, stacked_inputs, stacked_outputs = self.stack_operations()
+        stacked_operations, stacked_inputs, stacked_outputs = self._stack_operations()
 
         def _build_atb_model(graph_name, operations, depth=0):
             atb_model = GraphOperation(graph_name)
@@ -750,7 +749,7 @@ class ATBModelFromTorch(ATBModel):
                         input=op.inputs,
                         output=op.outputs,
                     )
-            atb_model.execute_as_single = False if depth == 0 else True
+            atb_model.execute_as_single = False
             atb_model.build()
             return atb_model
 
@@ -759,7 +758,7 @@ class ATBModelFromTorch(ATBModel):
 
     def to_file(self, output_file=None):
         indent = " " * 4
-        stacked_operations, stacked_inputs, stacked_outputs = self.stack_operations()
+        stacked_operations, stacked_inputs, stacked_outputs = self._stack_operations()
 
         contents = [
             "import os",
@@ -824,7 +823,7 @@ class ATBModelFromTorch(ATBModel):
                     contents.append(f"{indent})")
 
             contents.append("")
-            contents.append(f"{indent}{graph_name}.execute_as_single = {False if depth == 0 else True}")
+            contents.append(f"{indent}{graph_name}.execute_as_single = False")
             contents.append(f"{indent}{graph_name}.build()")
 
         _to_file(base_model_name, stacked_operations)
