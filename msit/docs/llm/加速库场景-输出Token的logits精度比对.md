@@ -21,13 +21,15 @@ from msit_llm import DumpConfig, register_hook #在模型py文件中文件开头
 
 # dump_last_logits=True 参数表示要 dump 输出 logits
 # dump_path="./torch_dump" 参数指定 dump 保存路径
-dump_config = DumpConfig(dump_last_logits=True, dump_path="./torch_dump")
+dump_config = DumpConfig(dump_last_logits=True, token_range=list(range(1000)) dump_path="./torch_dump")
 register_hook(model, dump_config)  # model是要dump中间tensor的模型实例，在模型初始化后添加代码
 
 ```
 
 > dump 数据路径：
->
+> - 参数`dump_last_logits=True`表示要 dump 输出 logits
+> - 参数`token_range`指定要 dump 的 token 范围。数据类型为list，默认为`[0]`，即只dump第0个token的数据。`token_range=list(range(1000))`表示要 dump 0-999 个 token 的数据，可以根据实际情况自行调整
+> - 参数`dump_path`指定 dump 保存路径，默认为当前路径。可以根据实际情况自行决定
 > - logits 信息落盘位置：在`{DUMP_DIR}/msit_dump_{TIMESTAMP}/torch_tensors/{cuda|cpu|npu}{device_id}_{PID}/{TID}`目录下，会输出所有 token 的 logits
 >   注：`device_id`为设备号；`PID`为进程号；`TID`为`token_id`
 
