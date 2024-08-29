@@ -21,7 +21,22 @@ import inspect
 from copy import deepcopy
 from collections import namedtuple
 
+import torch
+import torch_npu
+
 from msit_llm.common.log import logger, set_log_level
+
+atb_speed_path = os.getenv("ATB_SPEED_HOME_PATH", None)
+if not atb_speed_path:
+    logger.warning("ATB_SPEED_HOME_PATH environment variable not valid, will skip build. Try install mindie")
+sys.path.append(os.path.join(atb_speed_path, "lib"))
+
+try:
+    from _libatb_torch import _GraphOperation as GraphOperation  # May error
+    from _libatb_torch import _BaseOperation as BaseOperation  # May error
+except:
+    logger.warning("import _libatb_torch failed, will skip build. Try install compatible mindie")
+    GraphOperation, BaseOperation = None, None
 
 # Force setting ASD print error log to stdout
 if os.environ.get("ASDOPS_LOG_LEVEL") == "FATAL":
@@ -362,9 +377,9 @@ class ATBModelFromTorch(ATBModel):
         if to_quant:
             logger.info(f"calling convert_to_quant, quant_disable_names = {self.quant_disable_names}")
             self.convert_to_quant()
-        self.to_file()
+        # self.to_file()
         self.atb_model = self.build_atb_model()
-
+        #
         self.atb_model_config = ATBModelConfig(
             self.vocab_size, self.num_attention_heads, self.head_dim, max_batch_size, max_seq_len
         )
@@ -389,6 +404,13 @@ class ATBModelFromTorch(ATBModel):
         if node.op == FX_OP_TYPES.call_function and node.meta.get("is_wrapped", False):
             return True
         return False
+
+    @staticmethod
+    def get_cur_repeat_block_idx(module_name):
+        for tok in module_name.split("."):
+            if str.isdigit(tok):
+                return int(tok)
+        return -1
 
     def _find_in_torch_module_to_atb_map(self, node_type):
         for kk, vv in self.torch_module_to_atb_map.items():
@@ -511,6 +533,13 @@ class ATBModelFromTorch(ATBModel):
                 op_name=module_name + ".reshape_and_cache",
             ),
             atb_operation,
+            Operation(
+                op_type="add_reshape",
+                function=lambda org_shape: [org_shape[0], org_shape[1] * org_shape[2]],
+                inputs=atb_operation.outputs,
+                outputs=[ii + "_" for ii in atb_operation.outputs],
+                op_name=module_name + "." + RESHPAE_KIND.reshape_0_12,
+            ),
         ]
 
         if FIXED_INPUTS.k_cache not in self.model_inputs:
@@ -544,6 +573,44 @@ class ATBModelFromTorch(ATBModel):
                 op.inputs = op.inputs + gathered_module_inputs.get(op.op_name, [])
             else:
                 op.inputs = gathered_module_inputs.get(op.op_name, []) + op.inputs
+
+    def _stack_operations(self):
+        stacked_operations, cur_stack, pre_stack_id = [], [], -1
+        for ii in self.operations:
+            cur_stack_id = self.get_cur_repeat_block_idx(ii.op_name)
+            if cur_stack_id == -1:  # Not a repeated block, could be in or out block
+                if len(cur_stack) > 0:
+                    stacked_operations.append(cur_stack)
+                stacked_operations.append(ii)
+                cur_stack = []
+                continue
+            if pre_stack_id != cur_stack_id:  # Changed to another block
+                if len(cur_stack) > 0:
+                    stacked_operations.append(cur_stack)
+                cur_stack = [ii]
+                pre_stack_id = cur_stack_id
+            else:  # Repeat block
+                cur_stack.append(ii)
+
+        all_inputs = set([ii for op in self.operations for ii in op.inputs])
+        base_graph_in_tensors = self.model_inputs + self.weight_names
+        valid_base_graph_inputs = [ii for ii in base_graph_in_tensors if ii in all_inputs]
+
+        all_outputs = set([ii for op in self.operations for ii in op.outputs])
+        base_graph_out_tensors = [ii for ii in all_outputs if ii not in all_inputs]
+
+        # record inputs and outputs for stacked GraphOperations
+        stacked_inputs, stacked_outputs = [valid_base_graph_inputs], [base_graph_out_tensors]
+        for ops in stacked_operations:
+            if not isinstance(ops, list):
+                continue
+            cur_inputs = set([ii for op in ops for ii in op.inputs])
+            cur_outputs = set([ii for op in ops for ii in op.outputs])
+            inplace_outputs = set([ii for op in ops for ii in op.outputs if ii in op.inputs])
+
+            stacked_inputs.append(list(cur_inputs - (cur_outputs - inplace_outputs)))
+            stacked_outputs.append(list(cur_outputs & (all_inputs - cur_inputs)))
+        return stacked_operations, stacked_inputs, stacked_outputs
 
     def convert_fx_traced_module(self):
         previous_module_name, cur_module_name, previous_operation_out, base_module_name = None, None, None, None
@@ -651,98 +718,122 @@ class ATBModelFromTorch(ATBModel):
             logger.warning(f"Some layers in quant_disable_names not found in model: {quant_disable_names}")
 
     def build_atb_model(self):
-        import torch
-        import torch_npu
+        stacked_operations, stacked_inputs, stacked_outputs = self.stack_operations()
 
-        atb_speed_path = os.getenv("ATB_SPEED_HOME_PATH", None)
-        if not atb_speed_path:
-            raise OSError("ATB_SPEED_HOME_PATH environment variable not valid, try install mindie")
-        sys.path.append(os.path.join(atb_speed_path, "lib"))
-        try:
-            from _libatb_torch import _GraphOperation as GraphOperation  # May error
-            from _libatb_torch import _BaseOperation as BaseOperation  # May error
-        except (ImportError, ModuleNotFoundError) as err:
-            raise OSError("import _libatb_torch failed, try install mindie") from err
+        def _build_atb_model(graph_name, operations, depth=0):
+            atb_model = GraphOperation(graph_name)
+            graph_inputs, graph_outputs = stacked_inputs.pop(0), stacked_outputs.pop(0)
+            logger.debug(f"graph_name = {graph_name}")
+            logger.debug(f"len(graph_inputs) = {len(graph_inputs)}, graph_inputs = {graph_inputs}")
+            logger.debug(f"len(graph_outputs) = {len(graph_outputs)}, graph_outputs = {graph_outputs}")
+            logger.debug(f"operations: {[ii.op_name for ii in operations if not isinstance(ii, list)]}")
 
-        atb_model = GraphOperation(self.model_name)
-        in_tensors = self.model_inputs + self.weight_names
-        operation_inputs = [jj for ii in self.operations for jj in ii.inputs]
-        valid_inputs = [ii for ii in in_tensors if ii in operation_inputs]
-        atb_model.add_input_output(input=valid_inputs, output=self.operations[-1].outputs)
+            atb_model.add_input_output(input=graph_inputs, output=graph_outputs)
+            sub_graph_id = 0
+            for id, op in enumerate(operations):
+                if isinstance(op, list):
+                    sub_graph_name = f"sub_graph_{sub_graph_id}"
+                    sub_graph = _build_atb_model(sub_graph_name, op, depth=depth + 1)
+                    atb_model.add_operation(sub_graph, sub_graph.input_names, sub_graph.output_names)
+                    sub_graph_id += 1
+                elif op.op_type == "add_reshape":
+                    atb_model.add_reshape(op.inputs[0], op.outputs[0], op.function)
+                else:
+                    atb_model.add_operation(
+                        operation=BaseOperation(
+                            op_type=op.op_type, op_param=json.dumps(op.op_param), op_name=op.op_name
+                        ),
+                        input=op.inputs,
+                        output=op.outputs,
+                    )
+            atb_model.execute_as_single = False if depth == 0 else True
+            atb_model.build()
+            return atb_model
 
-        for id, op in enumerate(self.operations):
-            if op.op_type == "add_reshape":
-                atb_model.add_reshape(op.inputs[0], op.outputs[0], op.function)
-            else:
-                atb_model.add_operation(
-                    operation=BaseOperation(
-                        op_type=op.op_type, op_param=json.dumps(op.op_param), op_name=op.op_name
-                    ),
-                    input=op.inputs,
-                    output=op.outputs,
-                )
-        atb_model.build()
-        atb_model.execute_as_single = False
+        atb_model = _build_atb_model(self.model_name, stacked_operations)
         return atb_model
 
     def to_file(self, output_file=None):
-        indent = "    "
-        in_tensors = self.model_inputs + self.weight_names
-        operation_inputs = [jj for op in self.operations for jj in op.inputs]
-        valid_inputs = [ii for ii in in_tensors if ii in operation_inputs]
-        intensors_str = "[\n" + "".join([f"{indent}{indent}'{ii}',\n" for ii in valid_inputs]) + f"{indent}]"
+        indent = " " * 4
+        stacked_operations, stacked_inputs, stacked_outputs = self.stack_operations()
 
-        contents = "\n".join(
-            [
-                "import os",
-                "import sys",
-                "import json",
-                "import torch",
-                "import torch_npu",
-                "",
-                "path = os.getenv('ATB_SPEED_HOME_PATH')",
-                "sys.path.append(os.path.join(path, 'lib'))",
-                "import _libatb_torch as atb",
-                "",
-                "if os.environ.get('ASDOPS_LOG_LEVEL') == 'FATAL':",
-                f"{indent}os.environ['ASDOPS_LOG_LEVEL'] = 'ERROR'",
-                "os.environ['ASDOPS_LOG_TO_STDOUT'] = '1'  # Force setting ASD printing error log to stdout",
-                "",
-                "def atb_model():" "",
-                f"{indent}num_attention_heads, head_dim = {self.num_attention_heads}, {self.head_dim}",
-                f"{indent}atb_model = atb._GraphOperation('{self.model_name}')",
-                f"{indent}in_tensors = {intensors_str}",
-                f"{indent}atb_model.add_input_output(input=in_tensors, output={self.operations[-1].outputs})",
-                "",
-                "",
-            ]
-        )
+        contents = [
+            "import os",
+            "import sys",
+            "import json",
+            "import torch",
+            "import torch_npu",
+            "",
+            "path = os.getenv('ATB_SPEED_HOME_PATH')",
+            "sys.path.append(os.path.join(path, 'lib'))",
+            "from _libatb_torch import _GraphOperation as GraphOperation",
+            "from _libatb_torch import _BaseOperation as BaseOperation",
+            "",
+            "if os.environ.get('ASDOPS_LOG_LEVEL') == 'FATAL':",
+            f"{indent}os.environ['ASDOPS_LOG_LEVEL'] = 'ERROR'",
+            "os.environ['ASDOPS_LOG_TO_STDOUT'] = '1'  # Force setting ASD printing error log to stdout",
+            "",
+            "def atb_model():" "",
+            f"{indent}num_attention_heads, head_dim = {self.num_attention_heads}, {self.head_dim}",
+        ]
 
-        for op in self.operations:
-            if op.op_type == "add_reshape":
-                function = get_lambda_source_code(op.function)
-                contents += f"{indent}atb_model.add_reshape('{op.inputs[0]}', '{op.outputs[0]}', {function})\n"
-            else:
-                op_kwargs = f"op_type='{op.op_type}', op_param='{json.dumps(op.op_param)}', op_name='{op.op_name}'"
-                contents += f"{indent}atb_model.add_operation(\n{indent}{indent}"
-                contents += f",\n{indent}{indent}".join(
-                    [
-                        f"operation=atb._BaseOperation({op_kwargs})",
-                        f"input={op.inputs}",
-                        f"output={op.outputs}",
-                    ]
-                )
-                contents += f",\n{indent})\n"
-        contents += f"{indent}atb_model.build()\n"
-        contents += f"{indent}atb_model.execute_as_single = False\n"
-        contents += f"{indent}return atb_model"
+        base_model_name = self.model_name
+
+        def _to_file(graph_name, operations, depth=0):
+            contents.append("")
+            contents.append(f"{indent}{graph_name} = GraphOperation('{graph_name}')")
+
+            graph_inputs, graph_outputs = stacked_inputs.pop(0), stacked_outputs.pop(0)
+            contents.append(f"{indent}{graph_name}_inputs = [")
+            for ii in graph_inputs:
+                contents.append(f"{indent}{indent}'{ii}',")
+            contents.append(f"{indent}]")
+
+            contents.append(f"{indent}{graph_name}_outputs = {graph_outputs}")
+            contents.append(
+                f"{indent}{graph_name}.add_input_output(input={graph_name}_inputs, output={graph_name}_outputs)"
+            )
+            contents.append("")
+
+            sub_graph_id = 0
+            for id, op in enumerate(operations):
+                if isinstance(op, list):
+                    sub_graph_name = f"sub_graph_{sub_graph_id}"
+                    sub_graph_inputs, sub_graph_outputs = stacked_inputs[0], stacked_outputs[0]
+                    _to_file(sub_graph_name, op, depth=depth + 1)
+                    contents.append(
+                        f"{indent}{base_model_name}.add_operation({sub_graph_name}, {sub_graph_name}_inputs, {sub_graph_name}_outputs)"
+                    )
+                    contents.append("")
+                    sub_graph_id += 1
+                elif op.op_type == "add_reshape":
+                    function = get_lambda_source_code(op.function)
+                    contents.append(
+                        f"{indent}{graph_name}.add_reshape('{op.inputs[0]}', '{op.outputs[0]}', {function})"
+                    )
+                else:
+                    op_kwargs = f"op_type='{op.op_type}', op_param='{json.dumps(op.op_param)}', op_name='{op.op_name}'"
+                    contents.append(f"{indent}{graph_name}.add_operation(")
+                    contents.append(f"{indent}{indent}operation=BaseOperation({op_kwargs}),")
+                    contents.append(f"{indent}{indent}input={op.inputs},")
+                    contents.append(f"{indent}{indent}output={op.outputs},")
+                    contents.append(f"{indent})")
+
+            contents.append("")
+            contents.append(f"{indent}{graph_name}.execute_as_single = {False if depth == 0 else True}")
+            contents.append(f"{indent}{graph_name}.build()")
+
+        _to_file(base_model_name, stacked_operations)
+        contents.append(f"{indent}return {base_model_name}")
+        contents.append("")
+        contents_str = "\n".join(contents)
 
         if output_file is None:
-            output_file = "_".join([self.model_name.lower(), "atb", "quant.py" if self.to_quant else "float.py"])
+            output_file = "_".join([base_model_name.lower(), "atb", "quant.py" if self.to_quant else "float.py"])
         elif not output_file.endswith(".py"):
             output_file += ".py"
         with open(output_file, "w") as ff:
-            ff.write(contents)
+            ff.write(contents_str)
         return output_file
 
 
