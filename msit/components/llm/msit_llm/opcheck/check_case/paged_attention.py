@@ -224,10 +224,8 @@ class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
         if batch_run_status_enable:
             if is_masked:
                 batch_status = in_tensors[6]
-                self.bind_idx.append[6]
             else:
                 batch_status = in_tensors[5]
-                self.bind_idx.append[5]
 
         calc_type = self.op_param.get('calcType', CalcType.CALC_TYPE_UNDEFINED.value) # 暂时不使用
         if calc_type == CalcType.CALC_TYPE_SPEC.value:
