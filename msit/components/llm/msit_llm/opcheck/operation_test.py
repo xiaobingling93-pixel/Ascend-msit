@@ -164,7 +164,6 @@ class OperationTest(unittest.TestCase):
         params = copy.deepcopy(self.op_param)
         if op_name == "SelfAttentionOperation":
             from msit_llm.opcheck.check_case.self_attention import CalcType, KvCacheCfg, MaskType, KernelType, ClampType
-            params = self.op_param
             if "calcType" in params:
                 params["calcType"] = CalcType(self.op_param['calcType']).name
             if "kvcacheCfg" in params:
@@ -175,10 +174,8 @@ class OperationTest(unittest.TestCase):
                 params["kernelType"] = KernelType(self.op_param['kernelType']).name
             if "clampType" in params:
                 params["clampType"] = ClampType(self.op_param['clampType']).name
-            params = json.dumps(params)
         else:
             from msit_llm.opcheck.check_case.paged_attention import CompressType, MaskType, QuantType, CalcType
-            params = self.op_param
             if "compressType" in params:
                 params["compressType"] = CompressType(self.op_param['compressType']).name
             if "maskType" in params:
@@ -187,7 +184,7 @@ class OperationTest(unittest.TestCase):
                 params["quantType"] = QuantType(self.op_param['quantType']).name
             if "calcType" in params:
                 params["calcType"] = CalcType(self.op_param['calcType']).name
-            params = json.dumps(params)
+        params = json.dumps(params)
         return params
 
     def run_op_torch_atb(self, op_name):
