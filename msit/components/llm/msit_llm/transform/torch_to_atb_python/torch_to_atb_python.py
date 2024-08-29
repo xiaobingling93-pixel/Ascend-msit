@@ -461,7 +461,7 @@ class ATBModelFromTorch(ATBModel):
     def _op_process_linear(self, atb_operation=None, module_name=""):
         bias_name = f"{atb_operation.op_name}.bias"
         if bias_name in self.weight_names:
-            atb_operation.op_param.update({"hasBias": True})
+            atb_operation.op_param.update({"hasBias": False})
         self.operations.append(atb_operation)
 
     def _op_process_rope(self, atb_operation=None, module_name=""):
