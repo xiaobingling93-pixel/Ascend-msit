@@ -377,13 +377,17 @@ class ATBModelFromTorch(ATBModel):
         if to_quant:
             logger.info(f"calling convert_to_quant, quant_disable_names = {self.quant_disable_names}")
             self.convert_to_quant()
-        # self.to_file()
-        self.atb_model = self.build_atb_model()
-        #
-        self.atb_model_config = ATBModelConfig(
-            self.vocab_size, self.num_attention_heads, self.head_dim, max_batch_size, max_seq_len
-        )
-        super().__init__(atb_model=self.atb_model, atb_model_config=self.atb_model_config)
+        self.to_file()
+
+        if GraphOperation is None or BaseOperation is None:
+            logger.warning("Will skip build")
+        else:
+            self.atb_model = self.build_atb_model()
+
+            self.atb_model_config = ATBModelConfig(
+                self.vocab_size, self.num_attention_heads, self.head_dim, max_batch_size, max_seq_len
+            )
+            super().__init__(atb_model=self.atb_model, atb_model_config=self.atb_model_config)
 
     @staticmethod
     def _get_module_type_by_nn_module_stack(node):
