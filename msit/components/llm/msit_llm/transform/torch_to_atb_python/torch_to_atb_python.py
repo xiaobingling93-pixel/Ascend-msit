@@ -56,7 +56,7 @@ TORCH_MODULE_TO_ATB_MAP = {
     "Embedding": dict(op_type="Gather", op_param={}, is_weights_first=True),
     "Gather": dict(op_type="Gather", op_param={}),
     ".*RMSNorm$": dict(op_type="RmsNorm", op_param={"layerType": "RMS_NORM_NORM"}),
-    "Linear": dict(op_type="Linear", op_param={"hasBias": False}),
+    "Linear": dict(op_type="Linear", op_param={"hasBias": False, "enAccum": False}),
     ".*Rotary.*": dict(op_type="Rope", op_param={"rotaryCoeff": 2}),
     ".*Attention$": dict(op_type="SelfAttention", op_param={"headNum": 32, "kvHeadNum": 32, "calcType": "PA_ENCODER"}),
     "SiLU": dict(op_type="Activation", op_param={"activationType": "ACTIVATION_SWISH"}),
@@ -749,7 +749,7 @@ class ATBModelFromTorch(ATBModel):
                         input=op.inputs,
                         output=op.outputs,
                     )
-            atb_model.execute_as_single = False
+            atb_model.execute_as_single = False if depth == 0 else True
             atb_model.build()
             return atb_model
 
@@ -823,7 +823,7 @@ class ATBModelFromTorch(ATBModel):
                     contents.append(f"{indent})")
 
             contents.append("")
-            contents.append(f"{indent}{graph_name}.execute_as_single = False")
+            contents.append(f"{indent}{graph_name}.execute_as_single = {False if depth == 0 else True}")
             contents.append(f"{indent}{graph_name}.build()")
 
         _to_file(base_model_name, stacked_operations)
