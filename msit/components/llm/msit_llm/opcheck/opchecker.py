@@ -301,6 +301,41 @@ class OpChecker:
         flag2 = self.check_name(case_info.get("op_name", None))
         return flag1 and flag2
 
+    def traverse_optimization(self, case_info, op_name, op_id):
+        import copy
+        optimization = {}
+        if op_name == 'SelfAttentionOperation':
+            from msit_llm.opcheck.check_case.self_attention import MaskType, KernelType, ClampType
+            optimization = {
+                "maskType": MaskType.MASK_TYPE_UNDEFINED.value,
+                "batchRunStatusEnable": False,
+                "isTriuMask": 0,
+                "kernelType": KernelType.KERNELTYPE_DEFAULT.value,
+                "clampType": ClampType.CLAMP_TYPE_UNDEFINED.value
+            }
+        elif op_name == 'PagedAttentionOperation':
+            from msit_llm.opcheck.check_case.paged_attention import CompressType, MaskType, QuantType, CalcType
+            optimization = {
+                "maskType": MaskType.UNDEFINED.value,
+                "batchRunStatusEnable": False,
+                "quantType": QuantType.TYPE_QUANT_UNDEFINED.value,
+                "hasQuantOffset": False,
+                "compressType": CompressType.COMPRESS_TYPE_UNDEFINED.value,
+                "calcType": CalcType.CALC_TYPE_UNDEFINED.value
+            }
+
+        op_param = case_info.get("op_param", None)
+        idx = 0
+        for key, value in optimization.items():
+            if op_param.get(key, value) != value:
+                idx += 1
+                new_op_id = op_id + '_' + str(idx)
+                new_case_info = copy.deepcopy(case_info)
+                new_case_info['op_id'] = new_op_id
+                new_case_info['op_param'][key] = value
+                new_case_info['optimization_closed'] = key
+                self.cases_info[new_op_id] = new_case_info
+
     def add_case_to_cases(self, case_info):
         op_name = case_info.get("op_name", None)
         op_id = case_info.get("op_id", None)
@@ -310,56 +345,10 @@ class OpChecker:
         elif op_name == 'ReshapeAndCacheOperation':
             case_info['inplace_idx'] = [2, 3]
             self.cases_info[op_id] = case_info
-        elif op_name == 'SelfAttentionOperation':
+        elif op_name in ['SelfAttentionOperation', 'PagedAttentionOperation']:
             self.cases_info[op_id] = case_info
-            op_param = case_info.get("op_param", None)
-
             if self.optimization_identify:
-                from msit_llm.opcheck.check_case.self_attention import CalcType, KvCacheCfg, MaskType, KernelType, ClampType
-                import copy
-                optimization = {
-                    "maskType": MaskType.MASK_TYPE_UNDEFINED.value,
-                    "batchRunStatusEnable": False,
-                    "isTriuMask": 0,
-                    "kernelType": KernelType.KERNELTYPE_DEFAULT.value,
-                    "clampType": ClampType.CLAMP_TYPE_UNDEFINED.value
-                }
-
-                idx = 0
-                for key, value in optimization.items():
-                    if op_param.get(key, value) != value:
-                        new_op_id = op_id + "_" + str(idx)
-                        new_case_info = copy.deepcopy(case_info)
-                        new_case_info["op_id"] = new_op_id
-                        new_case_info["op_param"][key] = value
-                        new_case_info["optimization_closed"] = key
-                        self.cases_info[new_op_id] = new_case_info
-                        idx += 1
-        elif op_name == 'PagedAttentionOperation':
-            self.cases_info[op_id] = case_info
-            op_param = case_info.get("op_param", None)
-
-            if self.optimization_identify:
-                from msit_llm.opcheck.check_case.paged_attention import CompressType, MaskType, QuantType, CalcType
-                optimization = {
-                    "maskType": MaskType.UNDEFINED.value,
-                    "batchRunStatusEnable": False,
-                    "quantType": QuantType.TYPE_QUANT_UNDEFINED.value,
-                    "hasQuantOffset": False,
-                    "compressType": CompressType.COMPRESS_TYPE_UNDEFINED.value,
-                    "calcType": CalcType.CALC_TYPE_UNDEFINED.value
-                }
-
-                idx = 0
-                for key, value in optimization.items():
-                    if op_param.get(key, value) != value:
-                        new_op_id = op_id + "_" + str(idx)
-                        new_case_info = copy.deepcopy(case_info)
-                        new_case_info["op_id"] = new_op_id
-                        new_case_info["op_param"][key] = value
-                        new_case_info["optimization_closed"] = key
-                        self.cases_info[new_op_id] = new_case_info
-                        idx += 1
+                self.traverse_optimization(case_info, op_name, op_id)
         else:
             self.cases_info[op_id] = case_info
 

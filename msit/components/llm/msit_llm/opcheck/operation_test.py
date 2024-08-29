@@ -160,7 +160,8 @@ class OperationTest(unittest.TestCase):
             self.case_info['excuted_information'] = 'FAILED'
 
     def get_torch_atb_params(self, op_name):
-        params = self.op_param
+        import copy
+        params = copy.deepcopy(self.op_param)
         if op_name == "SelfAttentionOperation":
             from msit_llm.opcheck.check_case.self_attention import CalcType, KvCacheCfg, MaskType, KernelType, ClampType
             params = self.op_param
