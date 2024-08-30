@@ -180,27 +180,33 @@ enum DecoderModelInternalTensorIdx : uint32_t {
 };
 """
 
+
 class TestParserReg(TestCase):
     def test_llama(self):
         self.assertEqual(
-            ['input_ids', 'input_embedding', 'positional_ids', 'cosine_table', 'sine_table', 'attention_mask', 'block_tables', 'slots', 'kv_cache_idx', 'token_offset', 'place_holder', 'seq_len', 'logits_indices'],
+            ['input_ids', 'input_embedding', 'positional_ids', 'cosine_table', 'sine_table', 'attention_mask', 'block_tables', 'slots',
+              'kv_cache_idx', 'token_offset', 'place_holder', 'seq_len', 'logits_indices'],
             parse_input_names(LLAMA_CASE_01),
         )
     
     def test_bloom(self):
         self.assertEqual(
-            ['IN_TENSOR_INPUT_IDS', 'IN_TENSOR_POSITION_IDS', 'IN_TENSOR_COS_TABLE', 'IN_TENSOR_SIN_TABLE', 'IN_TENSOR_ATTENTION_MASK', 'IN_TENSOR_BLOCK_TABLES', 'IN_TENSOR_SLOTS', 'IN_TENSOR_LAYER_IDX', 'IN_TENSOR_TOKEN_OFFSET', 'IN_TENSOR_PLACE_HOLDER', 'IN_TENSOR_SEQ_LEN', 'IN_TENSOR_LOGTIS_INDICES'],
+            ['IN_TENSOR_INPUT_IDS', 'IN_TENSOR_POSITION_IDS', 'IN_TENSOR_COS_TABLE', 'IN_TENSOR_SIN_TABLE', 'IN_TENSOR_ATTENTION_MASK',
+              'IN_TENSOR_BLOCK_TABLES', 'IN_TENSOR_SLOTS', 'IN_TENSOR_LAYER_IDX', 'IN_TENSOR_TOKEN_OFFSET', 'IN_TENSOR_PLACE_HOLDER', 'IN_TENSOR_SEQ_LEN', 'IN_TENSOR_LOGTIS_INDICES'],
             parse_input_names(BLOOM_CASE_01),
         )
 
     def test_chatglm(self):
         self.assertEqual(
-            ['IN_TENSOR_INPUT_IDS', 'IN_TENSOR_POSITION_IDS', 'IN_TENSOR_COS_TABLE', 'IN_TENSOR_SIN_TABLE', 'IN_TENSOR_ATTENTION_MASK', 'IN_TENSOR_BLOCK_TABLES', 'IN_TENSOR_SLOTS', 'IN_TENSOR_KV_CACHE_IDX', 'IN_TENSOR_TOKEN_OFFSET', 'IN_TENSOR_PLACE_HOLDER', 'IN_TENSOR_SEQ_LEN', 'IN_TENSOR_LOGTIS_INDICES', 'IN_TENSOR_Q_LEN'],
+            ['IN_TENSOR_INPUT_IDS', 'IN_TENSOR_POSITION_IDS', 'IN_TENSOR_COS_TABLE', 'IN_TENSOR_SIN_TABLE', 'IN_TENSOR_ATTENTION_MASK', 
+             'IN_TENSOR_BLOCK_TABLES', 'IN_TENSOR_SLOTS', 'IN_TENSOR_KV_CACHE_IDX', 'IN_TENSOR_TOKEN_OFFSET', 'IN_TENSOR_PLACE_HOLDER',
+               'IN_TENSOR_SEQ_LEN', 'IN_TENSOR_LOGTIS_INDICES', 'IN_TENSOR_Q_LEN'],
             parse_input_names(CHATGLM_CASE_01),
         )
     
     def test_qwen(self):
         self.assertEqual(
-            ['IN_TENSOR_INPUT', 'IN_TENSOR_POSITIONIDS', 'IN_TENSOR_COS', 'IN_TENSOR_SIN', 'IN_TENSOR_ATTENTIONMASK', 'IN_TENSOR_BLOCK_TABLES', 'IN_TENSOR_SLOTS', 'IN_TENSOR_KV_CACHE_IDX', 'IN_TENSOR_TOKEN_OFFSET', 'IN_TENSOR_SEQ_LENGTHS', 'IN_TENSOR_LOGTIS_INDICES', 'IN_PLACEHOLDER'],
+            ['IN_TENSOR_INPUT', 'IN_TENSOR_POSITIONIDS', 'IN_TENSOR_COS', 'IN_TENSOR_SIN', 'IN_TENSOR_ATTENTIONMASK', 'IN_TENSOR_BLOCK_TABLES', 
+             'IN_TENSOR_SLOTS', 'IN_TENSOR_KV_CACHE_IDX', 'IN_TENSOR_TOKEN_OFFSET', 'IN_TENSOR_SEQ_LENGTHS', 'IN_TENSOR_LOGTIS_INDICES', 'IN_PLACEHOLDER'],
             parse_input_names(QWEN_CASE_01),
         )
