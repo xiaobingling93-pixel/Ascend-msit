@@ -111,7 +111,8 @@ compare功能可以直接通过msit命令行形式启动精度对比。启动方
 | --fusion-switch-file| 昇腾模型融合规则配置文件，传入该文件后，compare工具会根据传入的融合规则配置文件，重新生成一个om文件，和--om-model传入的模型进行精度比较，例如：--fusion-switch-file ./fusion_switch.cfg，其中fusion_switch.cfg文件配置方法参见：[如何关闭/开启融合规则](https://www.hiascend.com/document/detail/zh/canncommercial/63RC1/reference/graphubfusionref/graphubfusionref_000003.html) | 否  |
 | -max, --max-cmp-size| 表示每个dump数据比较的最大字节数，用于精度比对过程提速，默认0(0表示全量比较)，当模型中算子的输出存在较大shape的、比较过于耗时情况，可以尝试打开。注意：需要使用最新cann版本(>=6.3.RC3)。使用方式：--max-cmp-size 1024                                                                                                                                                            | 否  |
 | -q,--quant_fusion_rule_file| 量化算子映射关系文件（昇腾模型压缩输出的json文件）。仅推理场景支持本参数。使用方式：--quant_fusion_rule_file                                                                                                                                                                                                                          | 否  | |  |
-
+| --saved_model_signature     | tensorflow2.6框架下saved_model模型加载时需要的签名。包括了模型的输入、输出信息；使用方式：--saved_model_signature serving，默认为serving_default                                                                                                                                                                                   | 否  | |  |
+| --saved_model_tag_set       | tensorflow2.6框架下saved_model模型加载为session时的标签，可根据标签加载模型的不同部分；使用方式：--saved_model_tag_set serve                                                                                                                                                                                                   | 否  | |  |
 ### 使用场景
 
 请移步[compare使用示例](../../../examples/cli/debug/compare/)
