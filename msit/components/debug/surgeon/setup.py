@@ -61,11 +61,11 @@ setup(
     extras_require={
         'inference': [
             (
-                f'aclruntime @ git+{config.get('URL', 'msit_url')}'
+                f"aclruntime @ git+{config.get('URL', 'msit_url')}"
                 '#egg=aclruntime&subdirectory=msit/components/benchmark/backend'
             ),
             (
-                f'ais_bench @ git+{config.get('URL', 'msit_url')}'
+                f"ais_bench @ git+{config.get('URL', 'msit_url')}"
                 '#egg=ais_bench&subdirectory=msit/components/benchmark/'
             ),
             'pillow >= 9.0.0',
