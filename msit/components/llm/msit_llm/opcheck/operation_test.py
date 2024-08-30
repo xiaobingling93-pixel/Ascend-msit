@@ -281,7 +281,6 @@ class OperationTest(unittest.TestCase):
         return rel_pass_rate.item() * 100, max_rel_error.item()
 
     def get_abs_pass_rate(self, out, golden, etol):
-        out, golden = out.cpu(), golden.cpu()
         size = out.shape[0]
         abs_errors = torch.where(
             torch.abs(golden) > FLOAT_EPSILON,
@@ -298,7 +297,7 @@ class OperationTest(unittest.TestCase):
         default_str = 'NaN'
         abs_pass_rate, max_abs_error, cos_sim, kl = None, None, None, None
 
-        out, golden = out.reshape(-1), golden.reshape(-1)
+        out, golden = out.reshape(-1).cpu().double(), golden.reshape(-1).cpu().double()
         if NAMEDTUPLE_PRECISION_METRIC.abs in precision_metric:
             abs_pass_rate, max_abs_error = self.get_abs_pass_rate(out, golden, etol)
         if NAMEDTUPLE_PRECISION_METRIC.cos_sim in precision_metric:
