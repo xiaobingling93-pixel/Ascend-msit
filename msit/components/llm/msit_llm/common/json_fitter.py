@@ -118,21 +118,26 @@ TYPESTR2ONNXTYPE = dict(
 )
 
 
+def build_onnx_shape_info(name, input_shape_info=None):
+    if input_shape_info is None:
+        return dict(name=name)
+    else:
+        input_type = input_shape_info.get("type")
+        dims = input_shape_info.get("shape")
+        return dict(
+            name=name,
+            type=dict(
+                tensorType=dict(elemType=TYPESTR2ONNXTYPE.get(input_type), shape=dict(dim=[dict(dimValue=d) for d in dims]))
+            ),
+        )
+
+
 def atb_shape_to_onnx_shape(value_info, input_names, input_shapes):
     for input_index, input_shape_info in enumerate(input_shapes):
         if input_index >= len(input_names):
             break
-        input_type = input_shape_info.get("type")
-        dims = input_shape_info.get("shape")
         value_info.append(
-            dict(
-                name=input_names[input_index],
-                type=dict(
-                    tensorType=dict(
-                        elemType=TYPESTR2ONNXTYPE(input_type), shape=dict(dim=[dict(dimValue=d) for d in dims])
-                    )
-                ),
-            )
+            build_onnx_shape_info(input_names[input_index], input_shape_info)
         )
 
 
@@ -145,19 +150,7 @@ def atb_json_to_onnx_json(atb_json_dict, target_level, shape_contents):
 
     onnx_json_dict["graph"] = {}
     onnx_json_dict["graph"]["node"] = plain_nodes
-
-    onnx_json_dict["graph"]["input"] = []
-    for in_tensor_name in atb_json_dict["inTensors"]:
-        onnx_input_tensor_dict = {}
-        onnx_input_tensor_dict["name"] = in_tensor_name
-        onnx_json_dict["graph"]["input"].append(onnx_input_tensor_dict)
-
-    onnx_json_dict["graph"]["output"] = []
-    for out_tensor_name in atb_json_dict["outTensors"]:
-        onnx_output_tensor_dict = {}
-        onnx_output_tensor_dict["name"] = out_tensor_name
-        onnx_json_dict["graph"]["output"].append(onnx_output_tensor_dict)
-
+    
     if shape_contents is not None:
         onnx_json_dict["graph"]["valueInfo"] = []
         # csv_content like {nodename:inputs[{type, shape:[]}]}
@@ -172,6 +165,18 @@ def atb_json_to_onnx_json(atb_json_dict, target_level, shape_contents):
 
             atb_shape_to_onnx_shape(onnx_json_dict["graph"]["valueInfo"], input_names, shape_info.get("inputs", []))
             atb_shape_to_onnx_shape(onnx_json_dict["graph"]["valueInfo"], output_names, shape_info.get("outputs", []))
+            
+    value_info = {shape_info.get("name"):shape_info for shape_info in onnx_json_dict["graph"].get("valueInfo", [])}
+
+    onnx_json_dict["graph"]["input"] = []
+    for in_tensor_name in atb_json_dict["inTensors"]:
+        onnx_input_tensor_dict = value_info.get(in_tensor_name, dict(name=in_tensor_name))
+        onnx_json_dict["graph"]["input"].append(onnx_input_tensor_dict)
+
+    onnx_json_dict["graph"]["output"] = []
+    for out_tensor_name in atb_json_dict["outTensors"]:
+        onnx_output_tensor_dict = value_info.get(out_tensor_name, dict(name=out_tensor_name))
+        onnx_json_dict["graph"]["output"].append(onnx_output_tensor_dict)
 
     return onnx_json_dict
 
@@ -179,7 +184,7 @@ def atb_json_to_onnx_json(atb_json_dict, target_level, shape_contents):
 def csv_to_content(op_info_file):
     pd_csv = pd.read_csv(op_info_file, sep="|")
     csv_content = {}  # csv_content like {nodename:inputs[{type, shape:[]}]}
-    for index in len(pd_csv):
+    for index in range(len(pd_csv)):
         yy = pd_csv.iloc[index]
         node_name = yy.get("OpName")
         in_types = yy.get("InDType").split(";")
@@ -194,6 +199,7 @@ def csv_to_content(op_info_file):
                 outputs=[dict(type=t, shape=s) for t, s in zip(out_types, out_shapes)],
             ),
         )
+    return csv_content
 
 
 def atb_json_to_onnx(atb_json_path, target_level=-1, cache_csv_file: typing.Union[typing.Dict, None] = None):
@@ -204,13 +210,14 @@ def atb_json_to_onnx(atb_json_path, target_level=-1, cache_csv_file: typing.Unio
         json_content = json.loads(file.read(), parse_constant=lambda x: None)
 
     if cache_csv_file is not None:
-        sub_pid = os.path.splitext(os.path.abspath(os.path.dirname(atb_json_path)))[-1]
-        op_info_dir = os.path.join(atb_json_path, "..", "..", sub_pid)
+        sub_pid = os.path.split(os.path.abspath(os.path.dirname(atb_json_path)))[-1]
+        op_info_dir = os.path.join(os.path.dirname(atb_json_path), "..", "..", "operation_io_tensors", sub_pid)
         op_info_file = None
         if os.path.exists(op_info_dir):
             for file_name in os.listdir(op_info_dir):
                 if file_name.startswith("operation") and file_name.endswith(".csv"):
-                    op_info_file = os.path.join(op_info_dir, op_info_file)
+                    op_info_file = os.path.join(op_info_dir, file_name)
+                    break
 
         if op_info_file in cache_csv_file:
             csv_content = cache_csv_file.get(op_info_file)
