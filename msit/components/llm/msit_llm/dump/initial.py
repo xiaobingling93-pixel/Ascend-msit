@@ -82,6 +82,10 @@ def init_dump_task(args):
     else:
         os.environ.pop(ATB_OUTPUT_DIR, None)  # Ensure none is set
 
+    if "onnx" in args.type:
+        args.type.append("model")
+        args.type.append("op")
+        
     if args.type:
         os.environ[ATB_DUMP_TYPE] = "|".join(args.type)
     else:
@@ -135,11 +139,12 @@ def json_to_onnx(args):
 
     with open(subprocess_info_file) as f:
         from msit_llm.common.json_fitter import atb_json_to_onnx
+        cache_csv_file = {}
         for line in f.readlines():
             path = line.strip()
             if not os.path.exists(path):
                 continue
-            atb_json_to_onnx(path)
+            atb_json_to_onnx(path, cache_csv_file=cache_csv_file)
 
     # clean tmp file
     subprocess_info_dir = os.path.join(args.output, str(os.getpid()))

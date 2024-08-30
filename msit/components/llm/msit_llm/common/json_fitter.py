@@ -11,8 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
+import typing
+import pandas as pd
 import json
 import base64
+import onnx
 
 from msit_llm.common.log import logger
 
@@ -98,7 +102,41 @@ def atb_node_to_onnx_node(atb_node_dict):
     return onnx_node_dict
 
 
-def atb_json_to_onnx_json(atb_json_dict, target_level):
+TYPESTR2ONNXTYPE = dict(
+    float16=onnx.helper.TensorProto.FLOAT16,
+    float32=onnx.helper.TensorProto.FLOAT,
+    uint8=onnx.helper.TensorProto.UINT8,
+    int8=onnx.helper.TensorProto.INT8,
+    uint16=onnx.helper.TensorProto.UINT16,
+    int16=onnx.helper.TensorProto.INT16,
+    int32=onnx.helper.TensorProto.INT32,
+    int64=onnx.helper.TensorProto.INT64,
+    double=onnx.helper.TensorProto.DOUBLE,
+    uint32=onnx.helper.TensorProto.UINT32,
+    uint64=onnx.helper.TensorProto.UINT64,
+    bfloat16=onnx.helper.TensorProto.BFLOAT16,
+)
+
+
+def atb_shape_to_onnx_shape(value_info, input_names, input_shapes):
+    for input_index, input_shape_info in enumerate(input_shapes):
+        if input_index >= len(input_names):
+            break
+        input_type = input_shape_info.get("type")
+        dims = input_shape_info.get("shape")
+        value_info.append(
+            dict(
+                name=input_names[input_index],
+                type=dict(
+                    tensorType=dict(
+                        elemType=TYPESTR2ONNXTYPE(input_type), shape=dict(dim=[dict(dimValue=d) for d in dims])
+                    )
+                ),
+            )
+        )
+
+
+def atb_json_to_onnx_json(atb_json_dict, target_level, shape_contents):
     onnx_json_dict = {}
     plain_nodes = atb_json_dict_node_parse(atb_json_dict, target_level)
 
@@ -119,19 +157,73 @@ def atb_json_to_onnx_json(atb_json_dict, target_level):
         onnx_output_tensor_dict = {}
         onnx_output_tensor_dict["name"] = out_tensor_name
         onnx_json_dict["graph"]["output"].append(onnx_output_tensor_dict)
+
+    if shape_contents is not None:
+        onnx_json_dict["graph"]["valueInfo"] = []
+        # csv_content like {nodename:inputs[{type, shape:[]}]}
+        for node in plain_nodes:
+            node_name = node.get("name")
+            input_names = node.get("input")
+            output_names = node.get("output")
+
+            shape_info = shape_contents.get(node_name)
+            if shape_info is None:
+                continue
+
+            atb_shape_to_onnx_shape(onnx_json_dict["graph"]["valueInfo"], input_names, shape_info.get("inputs", []))
+            atb_shape_to_onnx_shape(onnx_json_dict["graph"]["valueInfo"], output_names, shape_info.get("outputs", []))
+
     return onnx_json_dict
 
 
-def atb_json_to_onnx(atb_json_path, target_level=-1):
+def csv_to_content(op_info_file):
+    pd_csv = pd.read_csv(op_info_file, sep="|")
+    csv_content = {}  # csv_content like {nodename:inputs[{type, shape:[]}]}
+    for index in len(pd_csv):
+        yy = pd_csv.iloc[index]
+        node_name = yy.get("OpName")
+        in_types = yy.get("InDType").split(";")
+        in_shapes = [shape.split(",") for shape in yy.get("InShape").split(";")]
+        out_types = yy.get("OutDType").split(";")
+        out_shapes = [shape.split(",") for shape in yy.get("OutShape").split(";")]
+
+        csv_content.setdefault(
+            node_name,
+            dict(
+                inputs=[dict(type=t, shape=s) for t, s in zip(in_types, in_shapes)],
+                outputs=[dict(type=t, shape=s) for t, s in zip(out_types, out_shapes)],
+            ),
+        )
+
+
+def atb_json_to_onnx(atb_json_path, target_level=-1, cache_csv_file: typing.Union[typing.Dict, None] = None):
     import onnx
     from google.protobuf.json_format import Parse
 
     with open(atb_json_path, "r") as file:
         json_content = json.loads(file.read(), parse_constant=lambda x: None)
-    
-    onnx_json = atb_json_to_onnx_json(json_content, target_level)
+
+    if cache_csv_file is not None:
+        sub_pid = os.path.splitext(os.path.abspath(os.path.dirname(atb_json_path)))[-1]
+        op_info_dir = os.path.join(atb_json_path, "..", "..", sub_pid)
+        op_info_file = None
+        if os.path.exists(op_info_dir):
+            for file_name in os.listdir(op_info_dir):
+                if file_name.startswith("operation") and file_name.endswith(".csv"):
+                    op_info_file = os.path.join(op_info_dir, op_info_file)
+
+        if op_info_file in cache_csv_file:
+            csv_content = cache_csv_file.get(op_info_file)
+        elif op_info_file is not None and os.path.exists(op_info_file):
+            csv_content = csv_to_content(op_info_file)
+            cache_csv_file.setdefault(op_info_file, csv_content)
+        else:
+            csv_content = None
+    else:
+        csv_content = None
+
+    onnx_json = atb_json_to_onnx_json(json_content, target_level, csv_content)
     onnx_str = json.dumps(onnx_json)
     convert_model = Parse(onnx_str, onnx.ModelProto())
     onnx_dir = atb_json_path[0:-5] + ".onnx"
     onnx.save(convert_model, onnx_dir)
-
