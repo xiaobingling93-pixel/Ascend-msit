@@ -138,6 +138,9 @@ def compare_data(golden_data, my_data):
 
 
 def read_data(data_path):
+    from msit_llm.common.utils import check_input_path_legality, check_data_file_size
+    data_path = check_input_path_legality(data_path)
+    data_path = check_data_file_size(data_path)
     if data_path.endswith(".npy"):
         data = torch.as_tensor(np.load(data_path))
     elif data_path.endswith(".bin"):

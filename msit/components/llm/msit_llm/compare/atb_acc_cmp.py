@@ -424,6 +424,9 @@ def load_mapping(mapping_file_path):
     }
     mapping_file = os.path.join(mapping_file_path, "op_mapping_file.json")
     if os.path.exists(mapping_file):
+        from msit_llm.common.utils import check_input_path_legality, check_data_file_size
+        mapping_file = check_input_path_legality(mapping_file)
+        mapping_file = check_data_file_size(mapping_file)
         with open(mapping_file, "r") as file:
             file_content = json.load(file)
         if validate_json(file_content):
