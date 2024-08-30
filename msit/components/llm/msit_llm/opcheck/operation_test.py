@@ -298,16 +298,29 @@ class OperationTest(unittest.TestCase):
         abs_pass_rate, max_abs_error, cos_sim, kl = None, None, None, None
 
         out, golden = out.reshape(-1).cpu().double(), golden.reshape(-1).cpu().double()
-        if NAMEDTUPLE_PRECISION_METRIC.abs in precision_metric:
-            abs_pass_rate, max_abs_error = self.get_abs_pass_rate(out, golden, etol)
-        if NAMEDTUPLE_PRECISION_METRIC.cos_sim in precision_metric:
-            cos_sim, cur_message = CMP_ALG_MAP["cosine_similarity"](golden, out)
-            if cur_message:
-                message.append('cos_sim: ' + cur_message)
-        if NAMEDTUPLE_PRECISION_METRIC.kl in precision_metric:
-            kl, cur_message = CMP_ALG_MAP["kl_divergence"](golden, out)
-            if cur_message:
-                message.append('kl_div: ' + cur_message)
+        try:
+            if NAMEDTUPLE_PRECISION_METRIC.abs in precision_metric:
+                abs_pass_rate, max_abs_error = self.get_abs_pass_rate(out, golden, etol)
+        except Exception as e:
+            logger_text = f"get_abs_pass_rate error: {e}"
+            logger.error(logger_text)
+        try:
+            if NAMEDTUPLE_PRECISION_METRIC.cos_sim in precision_metric:
+                cos_sim, cur_message = CMP_ALG_MAP["cosine_similarity"](golden, out)
+                if cur_message:
+                    message.append('cos_sim: ' + cur_message)
+        except Exception as e:
+            logger_text = f"get_cosine_similarity error: {e}"
+            logger.error(logger_text)
+        try:
+            if NAMEDTUPLE_PRECISION_METRIC.kl in precision_metric:
+                kl, cur_message = CMP_ALG_MAP["kl_divergence"](golden, out)
+                if cur_message:
+                    message.append('kl_div: ' + cur_message)
+        except Exception as e:
+            logger_text = f"get_kl_divergence error: {e}"
+            logger.error(logger_text)
+
         abs_pass_rate_str = "%.16f" % float(abs_pass_rate) if abs_pass_rate is not None else default_str
         max_abs_error_str = "%.16f" % float(max_abs_error) if max_abs_error is not None else default_str
         cos_sim_str = "%.10f" % cos_sim if cos_sim is not None else default_str
