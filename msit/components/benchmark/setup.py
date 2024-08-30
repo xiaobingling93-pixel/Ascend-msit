@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from setuptools import setup, find_packages  # type: ignore
+from configparser import ConfigParser
 
+config = ConfigParser()
+config.read('../config/config.ini')
 
 msit_sub_tasks = [
     {
@@ -29,7 +32,7 @@ setup(
     name="msit-benchmark",
     version="7.0.0c2",
     description="msit benchmark tool",
-    url="https://gitee.com/ascend/msit/",
+    url=config.get('URL', 'msit_url'),
     packages=find_packages(),
     package_data={"": ["LICENSE", "README.md", "requirements.txt", "install.bat", "install.sh", "*.cpp", "*.h"]},
     keywords="msit benchmark tool",

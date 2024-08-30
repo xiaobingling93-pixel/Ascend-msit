@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from setuptools import setup, find_packages  # type: ignore
+from configparser import ConfigParser
+
+config = ConfigParser()
+config.read('../../config/config.ini')
 
 with open('requirements.txt', encoding='utf-8') as f:
     required = f.read().splitlines()
@@ -37,7 +41,7 @@ setup(
     description='This tool enables one-click network-wide accuracy analysis of gold model.',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://gitee.com/ascend/msit/tree/master/msit/components/debug/compare',
+    url=config.get('URL', 'msit_debug_compare_url'),
     packages=find_packages(),
     package_data={'': ['LICENSE', 'install.sh', 'libsaveom.so', '*.cpp']},
     license='Apache-2.0',

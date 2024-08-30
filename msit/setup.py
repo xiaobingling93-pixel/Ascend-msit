@@ -15,7 +15,10 @@
 import os
 
 from setuptools import setup, find_packages
+from configparser import ConfigParser
 
+config = ConfigParser()
+config.read('./config/config.ini')
 
 abs_path = os.path.dirname(os.path.realpath(__file__))
 with open(os.path.join(abs_path, "requirements.txt")) as f:
@@ -40,7 +43,7 @@ setup(
     version='7.0.0c730',
     description='msIT, MindStudio Inference Tools',
     long_description_content_type='text/markdown',
-    url='https://gitee.com/ascend/msit',
+    url=config.get('URL', 'msit_url'),
     packages=find_packages(),
     package_data={
         '': [

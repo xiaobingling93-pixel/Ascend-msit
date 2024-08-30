@@ -17,6 +17,8 @@ SCRIPT_DIR=$(cd $(dirname $0); pwd)
 AIT_LLM_INSTALL_PATH="$(python3 -c 'import msit_llm, os; print(os.path.dirname(os.path.abspath(msit_llm.__file__)))')"
 IGNORE_INFO="If not using opcheck, ignore this error."
 
+CONFIG_FILE = "$SCRIPT_DIR/../../../../config/config.ini"
+
 echo SCRIPT_DIR: $SCRIPT_DIR
 
 function download_nlohmann_json()
@@ -26,7 +28,7 @@ function download_nlohmann_json()
         return
     fi
 
-    JSON_BASE_URL="https://github.com/nlohmann/json/archive/refs/tags"
+    JSON_BASE_URL=$(grep '^json_base_url=' "$CONFIG_FILE" | sed 's/^json_base_url=//')
     if [[ "$NLOHMAN_JSON_LINE" =~ "v3_11_1" ]]; then
         JSON_VERSION="3.11.1"
     elif [[ "$NLOHMAN_JSON_LINE" =~ "v3_11_2" ]]; then

@@ -13,6 +13,10 @@
 # limitations under the License.
 
 from setuptools import setup, find_packages  # type: ignore
+from configparser import ConfigParser
+
+config = ConfigParser()
+config.read('../config/config.ini')
 
 
 with open('requirements.txt', encoding='utf-8') as f:
@@ -40,7 +44,7 @@ setup(
     description='inference analyze tool',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://gitee.com/ascend/msit',
+    url=config.get('URL', 'msit_url'),
     packages=find_packages(),
     package_data={'model_evaluation': ['data/op_map/*.yaml']},
     license='Apache-2.0',
