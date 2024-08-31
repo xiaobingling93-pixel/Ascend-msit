@@ -17,7 +17,7 @@ SCRIPT_DIR=$(cd $(dirname $0); pwd)
 AIT_LLM_INSTALL_PATH="$(python3 -c 'import msit_llm, os; print(os.path.dirname(os.path.abspath(msit_llm.__file__)))')"
 IGNORE_INFO="If not using opcheck, ignore this error."
 
-CONFIG_FILE = "$SCRIPT_DIR/../../../../config/config.ini"
+CONFIG_FILE="$SCRIPT_DIR/../../../components/config/config.ini"
 
 echo SCRIPT_DIR: $SCRIPT_DIR
 
