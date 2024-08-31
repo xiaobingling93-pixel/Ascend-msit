@@ -266,11 +266,15 @@ class ATBModel:
             seq_len = self.torch.ones([batch_size], dtype=self.torch.int).to(position_ids.device) * cur_pos
             model_inputs[FIXED_INPUTS.seq_len] = seq_len.npu()
         if FIXED_INPUTS.slots_mapping in self.inputs and slots_mapping is None:
-            model_inputs[FIXED_INPUTS.slots_mapping] = self.torch.zeros([batch_size * cur_pos], dtype=self.torch.int)
-        if FIXED_INPUTS.k_cache in self.inputs and k_cache is None:
-            model_inputs[FIXED_INPUTS.k_cache] = self.torch.zeros(self.cache_shape).half()
-        if FIXED_INPUTS.v_cache in self.inputs and v_cache is None:
-            model_inputs[FIXED_INPUTS.v_cache] = self.torch.zeros(self.cache_shape).half()
+            if slots_mapping is None:
+                slots_mapping = self.torch.zeros([batch_size * cur_pos], dtype=self.torch.int)
+            model_inputs[FIXED_INPUTS.slots_mapping] = slots_mapping.npu()
+        if FIXED_INPUTS.k_cache in self.inputs:
+            k_cache = self.torch.zeros(self.cache_shape).half() if k_cache is None else k_cache
+            model_inputs[FIXED_INPUTS.k_cache] = k_cache.npu()
+        if FIXED_INPUTS.v_cache in self.inputs:
+            v_cache = self.torch.zeros(self.cache_shape).half() if v_cache is None else v_cache
+            model_inputs[FIXED_INPUTS.v_cache] = v_cache.npu()
         model_inputs.update({kk: vv.half().npu() for kk, vv in kwargs.items()})
 
         needs_cos_sin_table = FIXED_INPUTS.cos_table in self.inputs or FIXED_INPUTS.sin_table in self.inputs
