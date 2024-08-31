@@ -54,6 +54,7 @@ setup(
             '*.sh',
             '*.cpp',
             '*.h',
+            '*.ini',
         ]
     },
     data_files=[('', ['requirements.txt'])],
