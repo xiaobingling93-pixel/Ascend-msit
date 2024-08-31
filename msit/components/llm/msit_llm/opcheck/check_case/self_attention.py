@@ -144,7 +144,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
 
     def get_post_mask_coff(self):
         kernel_type = self.op_param.get("kernelType", KernelType.KERNELTYPE_DEFAULT.value)
-        if kernel_type == KernelType.KERNELTYPE_HIGH_PRECISION.value:
+        if kernel_type == KernelType.KERNELTYPE_HIGH_PRECISION.value or self.optimization_closed == "kernelType":
             post_mask_coff = 1.0
         else:
             post_mask_coff = -3e38
