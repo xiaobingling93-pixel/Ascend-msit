@@ -13,9 +13,9 @@
 # limitations under the License.
 import os
 import typing
-import pandas as pd
 import json
 import base64
+import pandas as pd
 import onnx
 
 from msit_llm.common.log import logger
@@ -127,7 +127,9 @@ def build_onnx_shape_info(name, input_shape_info=None):
         return dict(
             name=name,
             type=dict(
-                tensorType=dict(elemType=TYPESTR2ONNXTYPE.get(input_type), shape=dict(dim=[dict(dimValue=d) for d in dims]))
+                tensorType=dict(
+                    elemType=TYPESTR2ONNXTYPE.get(input_type), shape=dict(dim=[dict(dimValue=d) for d in dims])
+                )
             ),
         )
 
@@ -203,7 +205,6 @@ def csv_to_content(op_info_file):
 
 
 def atb_json_to_onnx(atb_json_path, target_level=-1, cache_csv_file: typing.Union[typing.Dict, None] = None):
-    import onnx
     from google.protobuf.json_format import Parse
 
     with open(atb_json_path, "r") as file:
