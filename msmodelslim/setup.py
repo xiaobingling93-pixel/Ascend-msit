@@ -32,7 +32,7 @@ setup(
     description='msModelSlim, MindStudio ModelSlim Tools',
     long_description_content_type='text/markdown',
     url=config.get('URL', 'repository_url'),
-    packages=find_packages(exclude=['*.precision_tool', '*.security', ]),
+    packages=find_packages(exclude=['precision_tool', 'security', ]),
     package_data={
         '': [
             'LICENSE',
