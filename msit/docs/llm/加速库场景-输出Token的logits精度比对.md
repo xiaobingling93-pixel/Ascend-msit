@@ -21,7 +21,7 @@ from msit_llm import DumpConfig, register_hook #在模型py文件中文件开头
 
 # dump_last_logits=True 参数表示要 dump 输出 logits
 # dump_path="./torch_dump" 参数指定 dump 保存路径
-dump_config = DumpConfig(dump_last_logits=True, token_range=list(range(1000)) dump_path="./torch_dump")
+dump_config = DumpConfig(dump_last_logits=True, token_range=list(range(1000)), dump_path="./torch_dump")
 register_hook(model, dump_config)  # model是要dump中间tensor的模型实例，在模型初始化后添加代码
 
 ```
