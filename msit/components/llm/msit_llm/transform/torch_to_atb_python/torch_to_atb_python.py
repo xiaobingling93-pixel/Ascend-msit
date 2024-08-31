@@ -18,6 +18,7 @@ import json
 import re
 import json
 import inspect
+import string
 from copy import deepcopy
 from collections import namedtuple
 
@@ -84,6 +85,8 @@ BASIC_INPUT_NAMES = (FIXED_INPUTS.input_ids, FIXED_INPUTS.position_ids)
 _RESHPAE_KIND = ["reshape_qkv", "reshape_0_12"]
 RESHPAE_KIND = namedtuple("RESHPAE_KIND", _RESHPAE_KIND)(*_RESHPAE_KIND)
 
+VALID_NAME_CHARS = string.ascii_letters + string.digits + "_."
+
 
 def get_config_attr(config, attr, default=None):
     if attr not in CONFIG_ATTR_CANDIDATES:
@@ -120,6 +123,10 @@ def get_lambda_source_code(function):
     return source_code[:-1] if source_code.endswith(",") else source_code
 
 
+def get_valid_name(name):
+    return ''.join([ii for ii in name if ii in VALID_NAME_CHARS])
+
+
 class Operation:
     def __init__(
         self, op_type, op_param=None, inputs=None, outputs=None, op_name="", function=None, is_weights_first=False
@@ -139,15 +146,13 @@ class Operation:
         )
 
     def to_json(self):
-        return dict(
-            op_type=self.op_type,
-            op_param=json.dumps(self.op_param),
-            inputs=self.inputs,
-            outputs=self.op_name,
-            op_name=self.outputs,
-            function=self.function and get_lambda_source_code(self.function),
-            is_weights_first=self.is_weights_first,
-        )
+        # Keep only valid attributes
+        dd = dict(op_type=self.op_type, inputs=self.inputs, outputs=self.outputs, op_name=self.op_name)
+        if self.function is not None:
+            dd["function"] = get_lambda_source_code(self.function)
+        else:
+            dd["op_param"] = json.dumps(self.op_param)
+        return dd
 
     def copy(self):
         return Operation(**deepcopy(self.to_dict()))
@@ -462,7 +467,7 @@ class ATBModelFromTorch(ATBModel):
     def _op_process_linear(self, atb_operation=None, module_name=""):
         bias_name = f"{atb_operation.op_name}.bias"
         if bias_name in self.weight_names:
-            atb_operation.op_param.update({"hasBias": False})
+            atb_operation.op_param.update({"hasBias": True})
         self.operations.append(atb_operation)
 
     def _op_process_rope(self, atb_operation=None, module_name=""):
