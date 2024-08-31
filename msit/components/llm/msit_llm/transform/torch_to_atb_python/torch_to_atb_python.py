@@ -364,7 +364,7 @@ class ATBModelFromTorch(ATBModel):
 
         self.head_dim = self.hidden_size // self.num_attention_heads
         self.traced_module = to_transformers_traced_module(torch_model, input_names=input_names)
-        self.model_name = torch_model.__class__.__name__
+        self.model_name = get_valid_name(torch_model.__class__.__name__)
 
         self.weight_names, self.weight_stack_map = list(self.traced_module.state_dict().keys()), {}
         for ii in self.weight_names:
@@ -773,9 +773,12 @@ class ATBModelFromTorch(ATBModel):
             "import json",
             "import torch",
             "import torch_npu",
+            "from functools import reduce",
             "",
-            "path = os.getenv('ATB_SPEED_HOME_PATH')",
-            "sys.path.append(os.path.join(path, 'lib'))",
+            "atb_speed_path = os.getenv('ATB_SPEED_HOME_PATH')",
+            "if not atb_speed_path:"
+            f"{indent}raise OSError('ATB_SPEED_HOME_PATH environment variable not valid. Try install mindie')"
+            "sys.path.append(os.path.join(atb_speed_path, 'lib'))",
             "from _libatb_torch import _GraphOperation as GraphOperation",
             "from _libatb_torch import _BaseOperation as BaseOperation",
             "",
