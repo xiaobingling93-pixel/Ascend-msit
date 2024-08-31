@@ -16,8 +16,8 @@ import subprocess
 import site
 import os
 
-from setuptools import setup, find_packages
 from configparser import ConfigParser
+from setuptools import setup, find_packages
 
 config = ConfigParser()
 config.read('../config/config.ini')

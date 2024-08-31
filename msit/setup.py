@@ -14,8 +14,8 @@
 
 import os
 
-from setuptools import setup, find_packages
 from configparser import ConfigParser
+from setuptools import setup, find_packages
 
 config = ConfigParser()
 config.read('./components/config/config.ini')

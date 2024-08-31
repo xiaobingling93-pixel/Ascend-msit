@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from setuptools import setup, find_packages  # type: ignore
 from configparser import ConfigParser
+from setuptools import setup, find_packages  # type: ignore
 
 config = ConfigParser()
 config.read('../config/config.ini')
