@@ -27,8 +27,10 @@ OPTIONS参数说明如下：
 | --framework    | 模型类型，和[atc](https://www.hiascend.com/document/detail/zh/canncommercial/63RC1/inferapplicationdev/atctool/atctool_000041.html)参数一致，0：caffe，3：tensorflow，5：onnx | 否       |
 | -w, --weight   | 权重文件，输入模型是caffe时，需要传入该文件                  | 否       |
 | -soc, --soc-version | 芯片类型，不指定则会通过[acl](https://www.hiascend.com/document/detail/zh/canncommercial/63RC1/inferapplicationdev/aclpythondevg/aclpythondevg_01_0008.html)接口获取 | 否       |
+| -h, --help | 命令行参数帮助信息 | 否       |
 
-**特别说明**：当在Ascend310B系列平台上使用analyze工具进行模型支持度分析时，请手动指定-soc参数为Ascend310B。
+
+**特别说明**：当在Ascend310B系列平台上使用analyze工具进行模型支持度分析时，请手动指定-soc参数为Ascend310B。     
 
 命令示例及输出如下：
 
