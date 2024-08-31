@@ -21,6 +21,7 @@ import inspect
 import string
 from copy import deepcopy
 from collections import namedtuple
+from functools import reduce
 
 import torch
 import torch_npu
@@ -124,7 +125,7 @@ def get_lambda_source_code(function):
 
 
 def get_valid_name(name):
-    return ''.join([ii for ii in name if ii in VALID_NAME_CHARS])
+    return "".join([ii for ii in name if ii in VALID_NAME_CHARS])
 
 
 class Operation:
@@ -197,7 +198,7 @@ class ATBModel:
         self.atb_model = atb_model
         self.inputs = self.input_names = set(atb_model.input_names)
         self.outputs = self.output_names = atb_model.output_names
-        self.weights, self.inv_freq_weight = {}, None
+        self.model_outputs, self.weights, self.inv_freq_weight = {}, {}, None
         self.torch = torch
 
         if output_shape is not None and not isinstance(output_shape, (dict, list, tuple)):
@@ -230,7 +231,7 @@ class ATBModel:
         freq = (left.to(right.device).float() @ right.float()).transpose(1, 2)
         freq = self.torch.cat([freq, freq], dim=-1)[0].npu()  # has to be float npu values, and dim == 2
         logger.debug(f"freq.shape = {freq.shape}")
-        return freq.cos(), freq.sin()
+        return freq.cos().half(), freq.sin().half()
 
     def set_weights(self, weights):
         source_weights = set(weights.keys())
@@ -259,24 +260,18 @@ class ATBModel:
         batch_size = input_ids.shape[0] if input_ids.dim() == 2 else 1
         cur_pos = (position_ids[0, -1] if position_ids.dim() == 2 else position_ids[-1]) + 1
         logger.debug(f"batch_size = {batch_size}, cur_pos = {cur_pos}")
+
+        model_inputs = {FIXED_INPUTS.input_ids: input_ids.npu(), FIXED_INPUTS.position_ids: position_ids.npu()}
         if FIXED_INPUTS.seq_len in self.inputs:
             seq_len = self.torch.ones([batch_size], dtype=self.torch.int).to(position_ids.device) * cur_pos
+            model_inputs[FIXED_INPUTS.seq_len] = seq_len.npu()
         if FIXED_INPUTS.slots_mapping in self.inputs and slots_mapping is None:
-            slots_mapping = self.torch.zeros([batch_size * cur_pos], dtype=self.torch.int)
+            model_inputs[FIXED_INPUTS.slots_mapping] = self.torch.zeros([batch_size * cur_pos], dtype=self.torch.int)
         if FIXED_INPUTS.k_cache in self.inputs and k_cache is None:
-            k_cache = self.torch.zeros(self.cache_shape).half()
+            model_inputs[FIXED_INPUTS.k_cache] = self.torch.zeros(self.cache_shape).half()
         if FIXED_INPUTS.v_cache in self.inputs and v_cache is None:
-            v_cache = self.torch.zeros(self.cache_shape).half()
-
-        model_inputs = {
-            FIXED_INPUTS.input_ids: input_ids.npu(),
-            FIXED_INPUTS.position_ids: position_ids.npu(),
-            FIXED_INPUTS.seq_len: seq_len.npu(),
-            FIXED_INPUTS.k_cache: k_cache.npu(),
-            FIXED_INPUTS.v_cache: v_cache.npu(),
-            FIXED_INPUTS.slots_mapping: slots_mapping.npu(),
-        }
-        model_inputs.update({kk: vv.npu() for kk, vv in kwargs.items()})
+            model_inputs[FIXED_INPUTS.v_cache] = self.torch.zeros(self.cache_shape).half()
+        model_inputs.update({kk: vv.half().npu() for kk, vv in kwargs.items()})
 
         needs_cos_sin_table = FIXED_INPUTS.cos_table in self.inputs or FIXED_INPUTS.sin_table in self.inputs
         is_cos_sin_table_in_inputs = FIXED_INPUTS.cos_table in model_inputs and FIXED_INPUTS.sin_table in model_inputs
@@ -295,18 +290,20 @@ class ATBModel:
             )  # Not raise error, model may still can be executed
 
         if self.output_shape is None:
-            model_outputs = {
+            self.model_outputs = {
                 ii: self.torch.ones([batch_size * cur_pos, self.vocab_size]).half().npu() for ii in self.outputs
             }
         elif isinstance(self.output_shape, dict):
-            model_outputs = {kk: self.torch.ones(vv).half().npu() for kk, vv in self.output_shape.items()}
+            self.model_outputs = {kk: self.torch.ones(vv).half().npu() for kk, vv in self.output_shape.items()}
         else:
-            model_outputs = {kk: self.torch.ones(vv).half().npu() for kk, vv in zip(self.outputs, self.output_shape)}
+            self.model_outputs = {
+                kk: self.torch.ones(vv).half().npu() for kk, vv in zip(self.outputs, self.output_shape)
+            }
 
         bind_map = {}
         if FIXED_INPUTS.seq_len in self.inputs:
             bind_map[FIXED_INPUTS.seq_len] = seq_len.cpu()
-        return self.atb_model.forward(model_inputs, model_outputs, bind_map)
+        return self.atb_model.forward(model_inputs, self.model_outputs, bind_map)
 
     def __call__(self, input_ids, position_ids, k_cache=None, v_cache=None, slots_mapping=None, **kwargs):
         return self.forward(input_ids, position_ids, k_cache, v_cache, slots_mapping, **kwargs)
@@ -314,21 +311,25 @@ class ATBModel:
 
 class ATBModelFromTorch(ATBModel):
     """Create ATB model from raw transformers torch model
-    >>> import torch
+    >>> import torch, torch_npu
     >>> from transformers.models.llama import LlamaConfig, LlamaForCausalLM
     >>> from msit_llm.transform.torch_to_atb_python import ATBModel, ATBModelConfig, ATBModelFromTorch
     >>>
     >>> cc = LlamaConfig()
     >>> cc.num_hidden_layers, cc.hidden_size, cc.intermediate_size = 2, 1024, 4096  # smaller
-    >>> mm = LlamaForCausalLM(cc)
+    >>> mm = LlamaForCausalLM(cc).eval()
+    >>> with torch.no_grad():
+    >>>     torch_out = mm(input_ids=torch.arange(1)[None], position_ids=torch.arange(1)[None]).logits
     >>>
     >>> atb_model = ATBModelFromTorch(mm)
     >>> atb_model.set_weights(mm.state_dict())
     >>> # Also set buffers in, which includes inv_freq. Ignore WARNINGs of missing weights
     >>> atb_model.set_weights(dict(mm.named_buffers()))
-    >>> out = atb_model(input_ids=torch.arange(32), position_ids=torch.arange(32))
+    >>> out = atb_model(input_ids=torch.arange(1), position_ids=torch.arange(1))
     >>> print({kk: vv.shape for kk, vv in out.items()})
-    # {'output': torch.Size([32, 32000])}
+    # {'output': torch.Size([1, 32000])}
+    >>> print(torch.allclose(torch_out, out['output'].cpu().float(), atol=5e-2))
+    # True
     >>> atb_model.to_file()  # Save atb model to a py file
     # 'llamaforcausallm_atb_float.py'
     """
@@ -392,7 +393,7 @@ class ATBModelFromTorch(ATBModel):
         if GraphOperation is None or BaseOperation is None:
             logger.warning("Will skip build")
         else:
-            self.atb_model = self.build_atb_model()    
+            self.atb_model = self.build_atb_model()
             super().__init__(atb_model=self.atb_model, atb_model_config=self.atb_model_config)
 
     @staticmethod
@@ -544,7 +545,7 @@ class ATBModelFromTorch(ATBModel):
             atb_operation,
             Operation(
                 op_type="add_reshape",
-                function=lambda org_shape: [org_shape[0], org_shape[1] * org_shape[2]],
+                function=lambda org_shape: [org_shape[0], reduce(lambda xx, yy: xx * yy, org_shape[1:])],
                 inputs=atb_operation.outputs,
                 outputs=[ii + "_" for ii in atb_operation.outputs],
                 op_name=module_name + "." + RESHPAE_KIND.reshape_0_12,
@@ -884,7 +885,7 @@ def transform(source_path, input_names=BASIC_INPUT_NAMES, output_file=None, to_q
     aa = ATBModel(atb_model, cc)
     aa.set_weights(weights)
 
-    input_len = 32
+    input_len = 1
     out = aa.forward(
         input_ids=torch.arange(input_len),
         position_ids=torch.arange(input_len),
