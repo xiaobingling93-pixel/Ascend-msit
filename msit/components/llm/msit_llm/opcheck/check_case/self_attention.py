@@ -119,10 +119,15 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         return out_sub, _p
 
     def get_mask(self, in_tensors, seq_len):
-        mask = in_tensors[3].clone()
+        mask = in_tensors[3]
         soc_version = self.get_soc_version()
         if soc_version != "Ascend910B":
             mask = OpcheckUnpadSelfAttentionOperation.attention_mask_nz_2_nd(mask, seq_len)
+            mask_type = self.op_param.get("maskType", MaskType.MASK_TYPE_UNDEFINED.value)
+            if mask_type == MaskType.MASK_TYPE_ALIBI.value and len(mask.shape) == 4:
+                self.in_tensors[3] = mask.squeeze(dim=0)
+            else:
+                self.in_tensors[3] = mask
         if len(mask.shape) == 2:
             dim0, dim1 = mask.shape
             mask = mask.view(1, dim0, dim1)
@@ -292,14 +297,15 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
 
     def undefined_golden_func(self, in_tensors):
         mixed_q, mixed_k, mixed_v = OpcheckUnpadSelfAttentionOperation.get_qkv(in_tensors)
-        cache_k, cache_v, attention_mask, token_offset, seq_len, layerid = in_tensors[3].clone(), \
-            in_tensors[4].clone(), in_tensors[5].clone(), in_tensors[6], in_tensors[7], int(in_tensors[8][0])
+        cache_k, cache_v, attention_mask, token_offset, seq_len, layerid = in_tensors[3], in_tensors[4], \
+            in_tensors[5], in_tensors[6], in_tensors[7], int(in_tensors[8][0])
         self.bind_idx = [3, 4, 6, 7]
 
         soc_version = self.get_soc_version()
         if soc_version != "Ascend910B":
             cache_k, cache_v = self.nz_2_nd(cache_k), self.nz_2_nd(cache_v)
             attention_mask = OpcheckUnpadSelfAttentionOperation.attention_mask_nz_2_nd(attention_mask, seq_len)
+            self.in_tensors[3], self.in_tensors[4], self.in_tensors[5] = cache_k, cache_v, attention_mask
 
         batch_status = self.get_batch_status(in_tensors, seq_len)
         is_triu_mask = self.op_param.get("isTriuMask", 0)
