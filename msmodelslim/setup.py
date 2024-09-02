@@ -14,8 +14,12 @@
 
 import os
 
+from configparser import ConfigParser
+
 from setuptools import setup, find_packages
 
+config = ConfigParser()
+config.read('./config/config.ini')
 
 abs_path = os.path.dirname(os.path.realpath(__file__))
 with open(os.path.join(abs_path, "requirements.txt")) as f:
@@ -27,8 +31,8 @@ setup(
     version='7.0.0c630',
     description='msModelSlim, MindStudio ModelSlim Tools',
     long_description_content_type='text/markdown',
-    url='https://gitee.com/ascend/msit',
-    packages=find_packages(exclude=['*.precision_tool', 'security', ]),
+    url=config.get('URL', 'repository_url'),
+    packages=find_packages(exclude=['precision_tool', 'security', ]),
     package_data={
         '': [
             'LICENSE',
