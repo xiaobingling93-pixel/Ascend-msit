@@ -47,6 +47,7 @@ msit llm transform [-h] -s SOURCE [-atb ATB_MODEL_PATH] [--enable-sparse] [--to-
 | --to-quant, -quant     | 指定在 Torch 模型迁移到 ATB python 接口模型场景下，迁移为量化模型，需要配合 `--to-python` 使用                                                                      | 否   |
 | --quant-disable-names  | 文件或 ',' 分割的字符串，指定在 Torch 模型迁移到 ATB python 接口量化模型场景下，量化回退层的名称；默认值 None 表示回退 `lm_head` 层                                 | 否   |
 | -l, --log-level        | 指定log level，默认为 info，可选值 debug, info, warning, error, fatal, critical                                                                                     | 否   |
+| -h, --help             | 命令行参数帮助信息|  否 |
 ***
 
 ## ATB python 迁移示例
