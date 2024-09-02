@@ -196,7 +196,7 @@ class OperationTest(unittest.TestCase):
         graph_op = atb._GraphOperation('rerun_op')
         op = atb._BaseOperation(op_type=op_name.replace("Operation", ""), op_param=params, op_name=op_name)
         input_name = ['in' + str(i) for i in range(len(self.in_tensors))]
-        output_name = ['out' + str( i) for i in range(len(self.out_tensors))]
+        output_name = ['out' + str(i) for i in range(len(self.out_tensors))]
         graph_op.add_input_output(input=input_name, output=output_name)
         graph_op.add_operation(op, input_name, output_name)
         graph_op.build()
