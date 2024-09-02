@@ -23,7 +23,7 @@ from msquickcmp.common.args_check import (
 from msquickcmp.common.utils import logger
 
 from components.utils.parser import BaseCommand
-from msquickcmp.cmp_process import cmp_process
+from msquickcmp.dump_process import cmp_process
 
 CANN_PATH = os.environ.get('ASCEND_TOOLKIT_HOME', "/usr/local/Ascend/ascend-toolkit/latest")
 
