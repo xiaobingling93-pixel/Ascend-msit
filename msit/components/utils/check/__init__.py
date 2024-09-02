@@ -18,7 +18,18 @@ from .args_checker import ArgsChecker
 from .dict_checker import DictChecker
 from .obj_checker import ObjectChecker
 from .list_checker import ListChecker
+from .func_wrapper import FuncWrapper
 from .rule import Rule
 
 
-__all__ = [Rule, NumberChecker, PathChecker, StringChecker, ArgsChecker, DictChecker, ObjectChecker, ListChecker]
+__all__ = [
+    Rule,
+    NumberChecker,
+    PathChecker,
+    StringChecker,
+    ArgsChecker,
+    DictChecker,
+    ObjectChecker,
+    ListChecker,
+    FuncWrapper,
+]
