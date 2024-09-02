@@ -299,7 +299,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         mixed_q, mixed_k, mixed_v = OpcheckUnpadSelfAttentionOperation.get_qkv(in_tensors)
         cache_k, cache_v, attention_mask, token_offset, seq_len, layerid = in_tensors[3], in_tensors[4], \
             in_tensors[5], in_tensors[6], in_tensors[7], int(in_tensors[8][0])
-        self.bind_idx = [3, 4, 6, 7]
+        self.bind_idx.extend([3, 4, 6, 7]) # cache_k, cache_v, token_offset, seq_len
 
         soc_version = self.get_soc_version()
         if soc_version != "Ascend910B":
