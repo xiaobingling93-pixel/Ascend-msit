@@ -616,9 +616,9 @@ class ATBModelFromTorch(ATBModel):
                 continue
             cur_inputs = set([ii for op in ops for ii in op.inputs])
             cur_outputs = set([ii for op in ops for ii in op.outputs])
+            inplace_outputs = set([ii for op in ops for ii in op.outputs if ii in op.inputs])
 
-            # The last `cur_outputs - cur_inputs` for getting rid of inplace op names
-            stacked_inputs.append(list(cur_inputs - (cur_outputs - cur_inputs)))
+            stacked_inputs.append(list(cur_inputs - (cur_outputs - inplace_outputs)))
             stacked_outputs.append(list(cur_outputs & (all_inputs - cur_inputs)))
         return stacked_operations, stacked_inputs, stacked_outputs
 
@@ -776,8 +776,8 @@ class ATBModelFromTorch(ATBModel):
             "from functools import reduce",
             "",
             "atb_speed_path = os.getenv('ATB_SPEED_HOME_PATH')",
-            "if not atb_speed_path:"
-            f"{indent}raise OSError('ATB_SPEED_HOME_PATH environment variable not valid. Try install mindie')"
+            "if not atb_speed_path:",
+            f"{indent}raise OSError('ATB_SPEED_HOME_PATH environment variable not valid. Try install mindie')",
             "sys.path.append(os.path.join(atb_speed_path, 'lib'))",
             "from _libatb_torch import _GraphOperation as GraphOperation",
             "from _libatb_torch import _BaseOperation as BaseOperation",
