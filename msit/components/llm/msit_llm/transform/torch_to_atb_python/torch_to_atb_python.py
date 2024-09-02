@@ -37,7 +37,7 @@ else:
 try:
     from _libatb_torch import _GraphOperation as GraphOperation  # May error
     from _libatb_torch import _BaseOperation as BaseOperation  # May error
-except:
+except Exception:  # Could be import error or mindie errors, just catch all Exceptions
     logger.warning("import _libatb_torch failed, will skip build. Try install compatible mindie")
     GraphOperation, BaseOperation = None, None
 
@@ -182,9 +182,6 @@ class ATBModelConfig:
 
 class ATBModel:
     def __init__(self, atb_model, atb_model_config, output_shape=None):
-        import torch
-        import torch_npu
-
         if isinstance(atb_model_config, dict):
             required_keys = ["vocab_size", "num_attention_heads", "head_dim"]
             if any([kk not in atb_model_config for kk in required_keys]):
@@ -199,7 +196,6 @@ class ATBModel:
         self.inputs = self.input_names = set(atb_model.input_names)
         self.outputs = self.output_names = atb_model.output_names
         self.model_outputs, self.weights, self.inv_freq_weight = {}, {}, None
-        self.torch = torch
 
         if output_shape is not None and not isinstance(output_shape, (dict, list, tuple)):
             raise ValueError("output_shape should be None or type in one of (dict, list, tuple)")
@@ -229,7 +225,7 @@ class ATBModel:
         left = self.inv_freq_weight[None, :, None]
         right = position_ids[:, None, :] if position_ids.dim() == 2 else position_ids[None, None, :]
         freq = (left.to(right.device).float() @ right.float()).transpose(1, 2)
-        freq = self.torch.cat([freq, freq], dim=-1)[0].npu()  # has to be float npu values, and dim == 2
+        freq = torch.cat([freq, freq], dim=-1)[0].npu()  # has to be float npu values, and dim == 2
         logger.debug(f"freq.shape = {freq.shape}")
         return freq.cos().half(), freq.sin().half()
 
@@ -263,17 +259,17 @@ class ATBModel:
 
         model_inputs = {FIXED_INPUTS.input_ids: input_ids.npu(), FIXED_INPUTS.position_ids: position_ids.npu()}
         if FIXED_INPUTS.seq_len in self.inputs:
-            seq_len = self.torch.ones([batch_size], dtype=self.torch.int).to(position_ids.device) * cur_pos
+            seq_len = torch.ones([batch_size], dtype=torch.int).to(position_ids.device) * cur_pos
             model_inputs[FIXED_INPUTS.seq_len] = seq_len.npu()
         if FIXED_INPUTS.slots_mapping in self.inputs and slots_mapping is None:
             if slots_mapping is None:
-                slots_mapping = self.torch.zeros([batch_size * cur_pos], dtype=self.torch.int)
+                slots_mapping = torch.zeros([batch_size * cur_pos], dtype=torch.int)
             model_inputs[FIXED_INPUTS.slots_mapping] = slots_mapping.npu()
         if FIXED_INPUTS.k_cache in self.inputs:
-            k_cache = self.torch.zeros(self.cache_shape).half() if k_cache is None else k_cache
+            k_cache = torch.zeros(self.cache_shape).half() if k_cache is None else k_cache
             model_inputs[FIXED_INPUTS.k_cache] = k_cache.npu()
         if FIXED_INPUTS.v_cache in self.inputs:
-            v_cache = self.torch.zeros(self.cache_shape).half() if v_cache is None else v_cache
+            v_cache = torch.zeros(self.cache_shape).half() if v_cache is None else v_cache
             model_inputs[FIXED_INPUTS.v_cache] = v_cache.npu()
         model_inputs.update({kk: vv.half().npu() for kk, vv in kwargs.items()})
 
@@ -295,13 +291,13 @@ class ATBModel:
 
         if self.output_shape is None:
             self.model_outputs = {
-                ii: self.torch.ones([batch_size * cur_pos, self.vocab_size]).half().npu() for ii in self.outputs
+                ii: torch.ones([batch_size * cur_pos, self.vocab_size]).half().npu() for ii in self.outputs
             }
         elif isinstance(self.output_shape, dict):
-            self.model_outputs = {kk: self.torch.ones(vv).half().npu() for kk, vv in self.output_shape.items()}
+            self.model_outputs = {kk: torch.ones(vv).half().npu() for kk, vv in self.output_shape.items()}
         else:
             self.model_outputs = {
-                kk: self.torch.ones(vv).half().npu() for kk, vv in zip(self.outputs, self.output_shape)
+                kk: torch.ones(vv).half().npu() for kk, vv in zip(self.outputs, self.output_shape)
             }
 
         bind_map = {}
@@ -620,9 +616,9 @@ class ATBModelFromTorch(ATBModel):
                 continue
             cur_inputs = set([ii for op in ops for ii in op.inputs])
             cur_outputs = set([ii for op in ops for ii in op.outputs])
-            inplace_outputs = set([ii for op in ops for ii in op.outputs if ii in op.inputs])
 
-            stacked_inputs.append(list(cur_inputs - (cur_outputs - inplace_outputs)))
+            # The last `cur_outputs - cur_inputs` for getting rid of inplace op names
+            stacked_inputs.append(list(cur_inputs - (cur_outputs - cur_inputs)))
             stacked_outputs.append(list(cur_outputs & (all_inputs - cur_inputs)))
         return stacked_operations, stacked_inputs, stacked_outputs
 
@@ -744,7 +740,7 @@ class ATBModelFromTorch(ATBModel):
 
             atb_model.add_input_output(input=graph_inputs, output=graph_outputs)
             sub_graph_id = 0
-            for id, op in enumerate(operations):
+            for op in operations:
                 if isinstance(op, list):
                     sub_graph_name = f"sub_graph_{sub_graph_id}"
                     sub_graph = _build_atb_model(sub_graph_name, op, depth=depth + 1)
@@ -796,6 +792,9 @@ class ATBModelFromTorch(ATBModel):
 
         base_model_name = self.model_name
 
+        def _get_input_output_name(graph_name):
+            return f"{graph_name}_inputs", f"{graph_name}_outputs"
+
         def _to_file(graph_name, operations, depth=0):
             contents.append("")
             contents.append(f"{indent}{graph_name} = GraphOperation('{graph_name}')")
@@ -807,19 +806,19 @@ class ATBModelFromTorch(ATBModel):
             contents.append(f"{indent}]")
 
             contents.append(f"{indent}{graph_name}_outputs = {graph_outputs}")
-            contents.append(
-                f"{indent}{graph_name}.add_input_output(input={graph_name}_inputs, output={graph_name}_outputs)"
-            )
+            cur_inputs, cur_outputs = _get_input_output_name(graph_name)
+            contents.append(f"{indent}{graph_name}.add_input_output(input={cur_inputs}, output={cur_outputs})")
             contents.append("")
 
             sub_graph_id = 0
-            for id, op in enumerate(operations):
+            for op in operations:
                 if isinstance(op, list):
                     sub_graph_name = f"sub_graph_{sub_graph_id}"
                     sub_graph_inputs, sub_graph_outputs = stacked_inputs[0], stacked_outputs[0]
                     _to_file(sub_graph_name, op, depth=depth + 1)
+                    cur_inputs, cur_outputs = _get_input_output_name(sub_graph_name)
                     contents.append(
-                        f"{indent}{base_model_name}.add_operation({sub_graph_name}, {sub_graph_name}_inputs, {sub_graph_name}_outputs)"
+                        f"{indent}{base_model_name}.add_operation({sub_graph_name}, {cur_inputs}, {cur_outputs})"
                     )
                     contents.append("")
                     sub_graph_id += 1
