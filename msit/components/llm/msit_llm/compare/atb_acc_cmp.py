@@ -426,9 +426,9 @@ def load_mapping(mapping_file_path):
     if os.path.exists(mapping_file):
         from msit_llm.common.utils import check_input_path_legality, check_data_file_size
         mapping_file = check_input_path_legality(mapping_file)
-        mapping_file = check_data_file_size(mapping_file)
-        with open(mapping_file, "r") as file:
-            file_content = json.load(file)
+        if check_data_file_size(mapping_file):
+            with open(mapping_file, "r") as file:
+                file_content = json.load(file)
         if validate_json(file_content):
             for k, v in file_content.items():
                 mapping_dic["ATB_TORCH_CUSTOM_OP_OUTPUT_MAPPING"][k] = v
