@@ -18,7 +18,7 @@ from .args_checker import ArgsChecker
 from .dict_checker import DictChecker
 from .obj_checker import ObjectChecker
 from .list_checker import ListChecker
-from .func_wrapper import FuncWrapper
+from .func_wrapper import validate_params
 from .rule import Rule
 
 
@@ -31,5 +31,5 @@ __all__ = [
     DictChecker,
     ObjectChecker,
     ListChecker,
-    FuncWrapper,
+    validate_params,
 ]
