@@ -24,9 +24,10 @@ from msit_llm.common.log import logger, set_log_level
 
 
 class CaseManager:
-    def __init__(self, precision_metric, rerun=False, output_path='./'):
+    def __init__(self, precision_metric, rerun=False, optimization_identify=False, output_path='./'):
         self.precision_metric = precision_metric
         self.rerun = rerun
+        self.optimization_identify = optimization_identify
         self.output_path = output_path
         self.cases = []
 
@@ -137,6 +138,7 @@ class CaseManager:
                 "tensor_path": op_result.get('tensor_path', ""),
                 "precision_result": op_result.get('excuted_information', ""),
                 "fail_reason": op_result.get('fail_reason', ""),
+                "optimization_closed": op_result.get('optimization_closed', "")
             }
             
             if len(op_result['res_detail']) > 0:
@@ -160,6 +162,8 @@ class CaseManager:
             columns.append('kl_divergence')
         columns.extend(list(CUSTOM_ALG_MAP.keys()))
         columns.append("fail_reason")
+        if self.optimization_identify:
+            columns.append("optimization_closed")
         op_infos = op_infos.sort_values(by=['op_id', 'out_tensor_id'])
         if not os.path.exists(self.output_path):
             op_infos.to_excel(self.output_path, sheet_name='opcheck_result', index=False, columns=columns)
