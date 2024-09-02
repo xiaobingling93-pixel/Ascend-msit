@@ -155,3 +155,11 @@ def check_data_file_size(data_path, max_size=MAX_DATA_SIZE):
         raise Exception(f"the size of file: {data_path} is out of max limit {MAX_DATA_SIZE} byte.")
 
     return True
+
+
+def check_data_can_convert_to_int(value):
+    try:
+        int(value)
+    except Exception as err:
+        raise argparse.ArgumentTypeError("%s can not convert to int." % value) from err
+    return True
