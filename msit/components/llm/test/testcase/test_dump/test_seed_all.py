@@ -1,6 +1,6 @@
+import argparse
 import pytest
 import torch
-import argparse
 from transformers import LlamaConfig, LlamaForCausalLM
 from msit_llm import seed_all
 

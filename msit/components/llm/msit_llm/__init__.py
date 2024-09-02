@@ -13,10 +13,10 @@
 # limitations under the License.
 
 import os
+import random
 import argparse
 import torch
 import numpy as np
-import random
 
 try:
     import torch_npu
