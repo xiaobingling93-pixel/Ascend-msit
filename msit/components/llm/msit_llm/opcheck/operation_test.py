@@ -188,9 +188,14 @@ class OperationTest(unittest.TestCase):
         return params
 
     def run_op_torch_atb(self, op_name):
-        path = os.getenv("ATB_SPEED_HOME_PATH")
-        sys.path.append(os.path.join(path, "lib"))
-        from _libatb_torch import _GraphOperation as GraphOp, _BaseOperation as BaseOp
+        atb_speed_path = os.getenv("ATB_SPEED_HOME_PATH", None)
+        if not atb_speed_path:
+            raise RuntimeError("ATB_SPEED_HOME_PATH environment variable not valid. Try install mindie")
+        sys.path.append(os.path.join(atb_speed_path, "lib"))
+        try:
+            from _libatb_torch import _GraphOperation as GraphOp, _BaseOperation as BaseOp
+        except Exception as e:
+            raise RuntimeError("import _libatb_torch failed. Try install compatible mindie") from e 
 
         params = self.get_torch_atb_params(op_name)
         graph_op = GraphOp('rerun_op')
