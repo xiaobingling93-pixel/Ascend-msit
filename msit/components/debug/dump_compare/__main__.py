@@ -13,17 +13,23 @@
 # limitations under the License.
 import os
 
-from msquickcmp.adapter_cli.args_adapter import CmpArgsAdapter
-from msquickcmp.common.args_check import (
-    check_model_path_legality, check_weight_path_legality, check_input_path_legality,
-    check_cann_path_legality, check_output_path_legality, check_dict_kind_string, check_device_range_valid,
-    check_number_list, check_dym_range_string, check_fusion_cfg_path_legality, check_quant_json_path_legality,
-    safe_string, str2bool
-)
-from msquickcmp.common.utils import logger
+from msquickcmp.adapter_cli.args_adapter import DumpArgsAdapter, CompareArgsAdapter
+from components.debug.compare.msquickcmp.common.args_check import (check_path_exit,
+                                                                   check_model_path_legality,
+                                                                   check_weight_path_legality,
+                                                                   check_input_path_legality,
+                                                                   check_cann_path_legality, check_output_path_legality,
+                                                                   check_dict_kind_string, check_device_range_valid,
+                                                                   check_number_list, check_dym_range_string,
+                                                                   check_fusion_cfg_path_legality,
+                                                                   check_quant_json_path_legality,
+                                                                   safe_string, str2bool
+                                                                   )
+from components.debug.compare.msquickcmp.common.utils import logger
 
 from components.utils.parser import BaseCommand
-from msquickcmp.dump_process import cmp_process
+from msquickcmp.dump_process import dump_process
+from msquickcmp.compare_process import compare_process
 
 CANN_PATH = os.environ.get('ASCEND_TOOLKIT_HOME', "/usr/local/Ascend/ascend-toolkit/latest")
 
@@ -185,18 +191,104 @@ class DumpCommand(BaseCommand):
             self.parser.print_help()
             return
 
-        cmp_args = CmpArgsAdapter(args.model, args.weight_path, args.input_data_path,
-                                  args.cann_path, args.out_path,
-                                  args.input_shape, args.device, args.output_size, args.output_nodes,
-                                  args.dym_shape_range,
-                                  args.dump, args.bin2npy, args.custom_op, args.locat,
-                                  args.onnx_fusion_switch, args.single_op, args.fusion_switch_file,
-                                  args.max_cmp_size, args.quant_fusion_rule_file, args.saved_model_signature,
-                                  args.saved_model_tag_set)
-        cmp_process(cmp_args, True)
+        cmp_args = DumpArgsAdapter(args.model, args.weight_path, args.input_data_path,
+                                   args.cann_path, args.out_path,
+                                   args.input_shape, args.device, args.output_size, args.output_nodes,
+                                   args.dym_shape_range,
+                                   args.dump, args.bin2npy, args.custom_op, args.locat,
+                                   args.onnx_fusion_switch, args.single_op, args.fusion_switch_file,
+                                   args.max_cmp_size, args.quant_fusion_rule_file, args.saved_model_signature,
+                                   args.saved_model_tag_set)
+        dump_process(cmp_args, True)
+
+
+class CompareCommand(BaseCommand):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.parser = None
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '-mp',
+            '--my-path',
+            required=True,
+            dest="my_path",
+            type=check_path_exit,
+            help='The npu dump data path')
+        parser.add_argument(
+            '-mnp',
+            '--my-net-output-path',
+            required=False,
+            dest="my_net_output_path",
+            type=check_path_exit,
+            help='The npu net output dump data path')
+        parser.add_argument(
+            '-gnp',
+            '--golden-net-output-path',
+            required=False,
+            dest="golden_net_output_path",
+            type=check_path_exit,
+            help='The cpu net output dump data path')
+        parser.add_argument(
+            '-mon',
+            '--expect-net-output-node',
+            required=False,
+            dest="expect_net_output_node",
+            type=check_path_exit,
+            help='The npu expect net output nodes path')
+        parser.add_argument(
+            '-mp',
+            '--golden-path',
+            required=True,
+            dest="golden_path",
+            type=check_path_exit,
+            help='The cpu(golden) dump data path')
+        parser.add_argument(
+            '--ops-json',
+            required=True,
+            dest="ops_json",
+            type=check_path_exit,
+            help='The npu and cpu ops matching rule json')
+        parser.add_argument(
+            '-o',
+            '--output',
+            dest="out_path",
+            default='',
+            type=check_output_path_legality,
+            help='The output path')
+        parser.add_argument(
+            '--locat',
+            default=False,
+            dest="locat",
+            type=str2bool,
+            help='Enable accuracy interval location when needed.E.g: --locat True')
+        parser.add_argument(
+            '--dump',
+            dest="dump",
+            default=True,
+            type=str2bool,
+            help="Whether to dump all the operations' ouput.")
+        self.parser = parser
+
+    def handle(self, args):
+        if not args.my_path or not args.golden_path:
+            logger.error("The following arguments are required: -gm/--golden-model and -my/--my-path")
+            self.parser.print_help()
+            return
+
+        cmp_args = CompareArgsAdapter(args.my_path, args.golden_path, args.out_path, args.ops_json
+                                      , args.locat, args.dump, args.my_net_output_path, args.golden_net_output_path
+                                      , args.expect_net_output_node)
+        compare_process(cmp_args)
 
 
 def get_cmd_instance():
-    help_info = "dump assign the operator input and output data for the model."
-    cmd_instance = DumpCommand("dump", help_info)
-    return cmd_instance
+    cmd_name = ""
+    if cmd_name == "dump":
+        help_info = "dump assign the operator input and output data for the model."
+        cmd_instance = DumpCommand(cmd_name, help_info)
+        return cmd_instance
+    elif cmd_name == "compare":
+        help_info = "assign the precision comparison of input and output operators"
+        cmd_instance = CompareCommand(cmd_name, help_info)
+        return cmd_instance

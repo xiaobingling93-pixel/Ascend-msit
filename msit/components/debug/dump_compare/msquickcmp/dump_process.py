@@ -18,13 +18,12 @@ Function:
 This class mainly involves the main function.
 """
 
-import csv
 import os
-import stat
 import time
 
 import acl
-from components.debug.compare.msquickcmp.adapter_cli.args_adapter import CmpArgsAdapter
+
+from msquickcmp.adapter_cli.args_adapter import DumpArgsAdapter
 from components.debug.compare.msquickcmp.atc import atc_utils
 from components.debug.compare.msquickcmp.common import utils
 from components.debug.compare.msquickcmp.common.args_check import is_saved_model_valid
@@ -34,12 +33,6 @@ from components.debug.compare.msquickcmp.common.utils import AccuracyCompareExce
 from components.debug.compare.msquickcmp.npu.npu_dump_data import NpuDumpData, DynamicInput
 from components.debug.compare.msquickcmp.npu.om_parser import OmParser
 from components.debug.compare.msquickcmp.single_op import single_op as sp
-
-WRITE_MODES = stat.S_IWUSR | stat.S_IRUSR
-READ_WRITE_FLAGS = os.O_RDWR | os.O_CREAT
-WRITE_FLAGS = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
-ERROR_INTERVAL_INFO_FILE = "error_interval_info.txt"
-MAX_MEMORY_USE = 6 * 1024 * 1024 * 1024
 
 
 def _generate_golden_data_model(args, npu_dump_npy_path):
@@ -68,7 +61,7 @@ def _generate_golden_data_model(args, npu_dump_npy_path):
         raise AccuracyCompareException(utils.ACCURACY_COMPARISON_MODEL_TYPE_ERROR)
 
 
-def cmp_process(args: CmpArgsAdapter, use_cli: bool):
+def dump_process(args: DumpArgsAdapter, use_cli: bool):
     """
     Function Description:
         main process function
@@ -85,7 +78,7 @@ def cmp_process(args: CmpArgsAdapter, use_cli: bool):
         raise error
 
 
-def dump_data(args: CmpArgsAdapter, input_shape, original_out_path, use_cli: bool):
+def dump_data(args: DumpArgsAdapter, input_shape, original_out_path, use_cli: bool):
     if input_shape:
         args.input_shape = input_shape
         args.out_path = os.path.join(original_out_path, get_shape_to_directory_name(args.input_shape))
@@ -136,7 +129,7 @@ def run_om_model_dump(args, use_cli):
         golden_dump.generate_dump_data(npu_dump_npy_path, npu_dump.om_parser)
 
 
-def fusion_close_model_convert(args: CmpArgsAdapter):
+def fusion_close_model_convert(args: DumpArgsAdapter):
     if args.fusion_switch_file:
         args.fusion_switch_file = os.path.realpath(args.fusion_switch_file)
         utils.check_file_or_directory_path(args.fusion_switch_file)
@@ -159,7 +152,7 @@ def fusion_close_model_convert(args: CmpArgsAdapter):
         args.model_path = close_fusion_om_file + ".om"
 
 
-def check_and_dump(args: CmpArgsAdapter, use_cli: bool):
+def check_and_dump(args: DumpArgsAdapter, use_cli: bool):
     utils.check_file_or_directory_path(args.model_path)
     if args.weight_path:
         utils.check_file_or_directory_path(args.weight_path)
