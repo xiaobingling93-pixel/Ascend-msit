@@ -190,7 +190,7 @@ class OperationTest(unittest.TestCase):
     def run_op_torch_atb(self, op_name):
         path = os.getenv("ATB_SPEED_HOME_PATH")
         sys.path.append(os.path.join(path, "lib"))
-        from libatb_torch.atb import _GraphOperation as GraphOp, _BaseOperation as BaseOp
+        from _libatb_torch import _GraphOperation as GraphOp, _BaseOperation as BaseOp
 
         params = self.get_torch_atb_params(op_name)
         graph_op = GraphOp('rerun_op')
