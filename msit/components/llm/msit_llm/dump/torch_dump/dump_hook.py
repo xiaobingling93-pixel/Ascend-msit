@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Huawei Technologies Co., Ltd.
+ # Copyright (c) 2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -143,7 +143,7 @@ def dump_tensor(feat, feat_path):
             feat_path += ".pth"
         torch.save(feat, feat_path)
     else:
-        logger.warning("Unrecognized data type %s, cannot be saved in path %s.", type(feat), feat_path)
+        logger.debug("Unrecognized data type %s, cannot be saved in path %s.", type(feat), feat_path)
 
 
 def dump_data(inputs, outputs, dump_path, tensor_part):
