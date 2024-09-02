@@ -47,7 +47,7 @@ msit llm dump --exec "<任意包含ATB的程序执行命令>" --type model tenso
 | -o, --output                  | 指定 dump 数据的输出目录，默认为'./'，使用示例：-o aasx/sss                                                                                                                                                                                                                                                                                          | 否   |
 | -device, --device-id          | 指定 dump 数据的 device id，默认为 None 表示不限制。如指定 --device-id 1，将只 dump 1 卡的数据                                                                                                                                                                                                                                                             | 否   |
 | -l, --log-level               | 指定 log level，默认为 info，可选值 debug, info, warning, error, fatal, critical                                                                                                                                                                                                                                                            | 否   |
-| -h, --help                    | 命令行参数帮助信息|  
+| -h, --help                    | 命令行参数帮助信息| 否 | 
 ## 结果查看
 
 ### Dump 落盘位置
