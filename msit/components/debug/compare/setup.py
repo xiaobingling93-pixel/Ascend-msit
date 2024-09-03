@@ -36,7 +36,7 @@ setup(
     name='msit-compare',
     version='7.0.0c730',
     description='This tool enables one-click network-wide accuracy analysis of gold model.',
-    long_description={},
+    long_description="",
     long_description_content_type='text/markdown',
     url=config.get('URL', 'msit_debug_compare_url'),
     packages=find_packages(),
