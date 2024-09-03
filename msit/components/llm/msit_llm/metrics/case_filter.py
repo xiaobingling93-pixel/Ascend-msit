@@ -29,7 +29,7 @@ class PermissionWarning(UserWarning):
 
 def check_dir(output_dir):
     if not output_dir:
-        raise OSError("Output directory should be empty,")
+        raise OSError("Output directory should not be empty,")
 
     if len(output_dir) > 4095 or any(len(item) > 255 for item in output_dir.split(r"/")):
         raise OSError("Output directory should not be too long.")
