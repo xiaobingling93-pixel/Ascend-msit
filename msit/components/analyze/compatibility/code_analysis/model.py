@@ -15,7 +15,6 @@
 import logging
 import sys
 import os
-import re
 import math
 import pandas as pd
 import utils
@@ -57,28 +56,37 @@ def evaluate(path):
 
 
 def analyze_dvpp_vpc(profiling_path, api):
-    acl_statistic_data = utils.get_statistic_profile_data_path(profiling_path)
-    data = pd.read_csv(acl_statistic_data)
-    count_crop = 0
-    count_resize = 0
-    count_crop_resize = 0
-    count_crop_paste = 0
-    count_crop_resize_paste = 0
-    count_make_border = 0
-    has_suggestion = 0
-    for line in data.itertuples():
-        if line[1] == api["Crop"]:
-            count_crop = line[5]
-        if line[1] == api["Resize"]:
-            count_resize = line[5]
-        if line[1] == api["CropResize"]:
-            count_crop_resize = line[5]
-        if line[1] == api["CropPaste"]:
-            count_crop_paste = line[5]
-        if line[1] == api["CropResizePaste"]:
-            count_crop_resize_paste = line[5]
-        if line[1] == api["MakeBorder"]:
-            count_make_border = line[5]
+    try:
+        acl_statistic_data = utils.get_statistic_profile_data_path(profiling_path)
+        data = pd.read_csv(acl_statistic_data)
+
+        count_crop = 0
+        count_resize = 0
+        count_crop_resize = 0
+        count_crop_paste = 0
+        count_crop_resize_paste = 0
+        count_make_border = 0
+        has_suggestion = 0
+
+        for line in data.itertuples():
+            if len(line) > 5:
+                if line[1] == api["Crop"]:
+                    count_crop = line[5]
+                elif line[1] == api["Resize"]:
+                    count_resize = line[5]
+                elif line[1] == api["CropResize"]:
+                    count_crop_resize = line[5]
+                elif line[1] == api["CropPaste"]:
+                    count_crop_paste = line[5]
+                elif line[1] == api["CropResizePaste"]:
+                    count_crop_resize_paste = line[5]
+                elif line[1] == api["MakeBorder"]:
+                    count_make_border = line[5]
+            else:
+                raise IndexError("Index out of range: The data row does not have enough columns.")
+    except IndexError as e:
+        print(f"索引错误：{e}")
+        
     if count_crop != 0 or count_resize != 0:
         has_suggestion = 1
     elif count_crop_resize != 0 or count_crop_paste != 0:
