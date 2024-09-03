@@ -57,9 +57,9 @@ def get_ge_dump_config(dump_path="ait_ge_dump", dump_mode="all", fusion_switch_f
     config.dump_config.dump_path = dump_path
 
     if dump_token is not None:
-        config.dump_config.dump_step = dump_token
+        config.dump_config.dump_step = dump_token.replace(",", "|")
     if dump_layer is not None:
-        config.dump_config.dump_layer = dump_layer
+        config.dump_config.dump_layer = dump_layer.replace(",", " ")
 
     return config
 
