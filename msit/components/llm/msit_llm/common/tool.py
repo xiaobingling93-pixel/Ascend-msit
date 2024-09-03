@@ -111,11 +111,11 @@ def seed_all(seed=1, mode=False):
     try:
         import torch_npu
     except ImportError:
-        IS_GPU = True
+        is_gpu = True
     else:
-        IS_GPU = False
+        is_gpu = False
 
-    if IS_GPU and torch.cuda.is_available():
+    if is_gpu and torch.cuda.is_available():
         torch.cuda.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
         torch.backends.cudnn.deterministic = True
