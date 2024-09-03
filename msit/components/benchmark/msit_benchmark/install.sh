@@ -16,8 +16,8 @@
 declare -i ret_ok=0
 declare -i ret_run_failed=1
 
-SCRIPT_DIR=$(dirname "$0")
-CONFIG_FILE="$SCRIPT_DIR/../components/config/config.ini"
+SITE_PACKAGES="$(python3 -c 'import site; print(site.getsitepackages()[0])')"
+CONFIG_FILE="$SITE_PACKAGES/components/config/config.ini"
 
 WHL_BASE_URL=$(grep '^whl_base_url=' "$CONFIG_FILE" | sed 's/^whl_base_url=//')
 TOOLS_BAS_URL_SUFFIX=$(grep '^tools_bas_url=' "$CONFIG_FILE" | sed 's/^tools_bas_url=//')
