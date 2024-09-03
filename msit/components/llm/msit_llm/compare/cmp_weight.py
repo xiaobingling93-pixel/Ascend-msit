@@ -38,7 +38,7 @@ def find_safetensors_files(golden_path):
             safetensors_file_list.append(safetensors_file_path)
         if file.endswith(".bin"):
             bin_file_list.append(safetensors_file_path)
-    return safetensors_file_path if safetensors_file_path else bin_file_list
+    return safetensors_file_list if safetensors_file_list else bin_file_list
 
 
 def dequant(weight, weight_offset, weight_scale):
