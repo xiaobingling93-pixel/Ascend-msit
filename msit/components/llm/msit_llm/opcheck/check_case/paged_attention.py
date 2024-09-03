@@ -206,20 +206,31 @@ class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
 
     def golden_calc(self, in_tensors):
         query, key_cache, value_cache, block_tables, context_lens = in_tensors[:5]
+        self.bind_idx.append(4)
         mask = None
 
         head_num = self.op_param.get('headNum', 0)
         kv_head_num = self.op_param.get('kvHeadNum', 0)
         num_tokens, _, head_size = query.shape
 
-        calc_type = self.op_param.get('calcType', CalcType.CALC_TYPE_UNDEFINED.value) # 暂时不使用
         mask_type = self.op_param.get('maskType', MaskType.UNDEFINED.value)
-        if mask_type != MaskType.UNDEFINED.value:
+        is_masked = mask_type != MaskType.UNDEFINED.value
+        if is_masked:
             mask = in_tensors[5]
+        if self.optimization_closed == "maskType":
+            del self.in_tensors[5]
 
         batch_run_status_enable = self.op_param.get("batchRunStatusEnable", False)
         if batch_run_status_enable:
-            batch_status = in_tensors[6]
+            if is_masked:
+                batch_status = in_tensors[6]
+            else:
+                batch_status = in_tensors[5]
+
+        calc_type = self.op_param.get('calcType', CalcType.CALC_TYPE_UNDEFINED.value) # 暂时不使用
+        if calc_type == CalcType.CALC_TYPE_SPEC.value:
+            q_seq_lens = in_tensors[-1]
+            self.bind_idx.append(len(in_tensors) - 1)
 
         soc_version = self.get_soc_version()
         if soc_version == 'Ascend310P':

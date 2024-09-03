@@ -360,6 +360,15 @@ class OpcheckCommand(BaseCommand):
             help='Set the number of processes. The maximum number is 8. E.g.: -j 2'
         )
 
+        parser.add_argument(
+            '--optimization-identify',
+            '-opt',
+            required=False,
+            action='store_true',
+            default=False,
+            help='Identify the impact of FA/PA operator optimization on the precision of the operator. \
+                This parameter is used in combination with the --atb-rerun/-rerun parameter.')
+
     def handle(self, args, **kwargs):
         set_log_level(args.log_level)
 

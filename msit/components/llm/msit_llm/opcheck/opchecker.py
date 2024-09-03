@@ -54,6 +54,7 @@ class OpChecker:
         self.precision_mode = NAMEDTUPLE_PRECISION_MODE.keep_origin_dtype
         self.timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         self.atb_rerun = False
+        self.optimization_identify = False
         self.jobs = 1
         self.log_level = "info"
         self.custom_algorithms = False
@@ -189,6 +190,7 @@ class OpChecker:
             execution_flag = False
 
         self.atb_rerun = args.atb_rerun
+        self.optimization_identify = args.optimization_identify
         if self.atb_rerun:
             execution_flag_res = OpChecker.third_party_init()
             if not execution_flag_res:
@@ -215,7 +217,7 @@ class OpChecker:
             return
 
         from msit_llm.opcheck.case_manager import CaseManager
-        case_manager = CaseManager(self.precision_metric, self.atb_rerun, self.output_path)
+        case_manager = CaseManager(self.precision_metric, self.atb_rerun, self.optimization_identify, self.output_path)
 
         # 1.遍历tensor_path，将算子信息添加到self.cases_info
         self.walk_tensor_path(self.input)
@@ -299,6 +301,41 @@ class OpChecker:
         flag2 = self.check_name(case_info.get("op_name", None))
         return flag1 and flag2
 
+    def traverse_optimization(self, case_info, op_name, op_id):
+        import copy
+        optimization = {}
+        if op_name == 'SelfAttentionOperation':
+            from msit_llm.opcheck.check_case.self_attention import MaskType, KernelType, ClampType
+            optimization = {
+                "maskType": MaskType.MASK_TYPE_UNDEFINED.value,
+                "batchRunStatusEnable": False,
+                "isTriuMask": 0,
+                "kernelType": KernelType.KERNELTYPE_DEFAULT.value,
+                "clampType": ClampType.CLAMP_TYPE_UNDEFINED.value
+            }
+        elif op_name == 'PagedAttentionOperation':
+            from msit_llm.opcheck.check_case.paged_attention import CompressType, MaskType, QuantType, CalcType
+            optimization = {
+                "maskType": MaskType.UNDEFINED.value,
+                "batchRunStatusEnable": False,
+                "quantType": QuantType.TYPE_QUANT_UNDEFINED.value,
+                "hasQuantOffset": False,
+                "compressType": CompressType.COMPRESS_TYPE_UNDEFINED.value,
+                "calcType": CalcType.CALC_TYPE_UNDEFINED.value
+            }
+
+        op_param = case_info.get("op_param", None)
+        idx = 0
+        for key, value in optimization.items():
+            if op_param.get(key, value) != value:
+                idx += 1
+                new_op_id = op_id + '_' + str(idx)
+                new_case_info = copy.deepcopy(case_info)
+                new_case_info['op_id'] = new_op_id
+                new_case_info['op_param'][key] = value
+                new_case_info['optimization_closed'] = key
+                self.cases_info[new_op_id] = new_case_info
+
     def add_case_to_cases(self, case_info):
         op_name = case_info.get("op_name", None)
         op_id = case_info.get("op_id", None)
@@ -308,14 +345,17 @@ class OpChecker:
         elif op_name == 'ReshapeAndCacheOperation':
             case_info['inplace_idx'] = [2, 3]
             self.cases_info[op_id] = case_info
-        elif op_name == 'SelfAttentionOperation':
+        elif op_name in ['SelfAttentionOperation', 'PagedAttentionOperation']:
             self.cases_info[op_id] = case_info
+            if self.optimization_identify:
+                self.traverse_optimization(case_info, op_name, op_id)
         else:
             self.cases_info[op_id] = case_info
 
     def add_op_info_to_cases_info(self, dirpath):
         tensor_path = dirpath
 
+        op_param = {}
         json_path = os.path.join(dirpath, 'op_param.json')
         try:
             with open(json_path, 'r') as f:
@@ -323,7 +363,6 @@ class OpChecker:
         except Exception as e:
             logger_text = f"Cannot loads json file to json! Json file: {json_path} \n Exception: {e}"
             logger.debug(logger_text)
-            return
 
         op_id, op_name = self.parse_op_id_name(dirpath)
         if op_id is None or op_name is None:
@@ -332,7 +371,7 @@ class OpChecker:
         case_info = {
             'op_id': op_id, 'op_name': op_name, 'op_param': op_param, 'tensor_path': tensor_path,
             'precision_metric': self.precision_metric, 'atb_rerun': self.atb_rerun, 'pid': self.pid,
-            'precision_mode': self.precision_mode
+            'precision_mode': self.precision_mode, 'optimization_closed': ''
         }
 
         ret = self.is_exec_node(case_info)
