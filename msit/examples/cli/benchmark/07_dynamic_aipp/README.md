@@ -41,14 +41,14 @@ atc --framework=5 --model=./resnet18.onnx --output=resnet18_bs4_dym_aipp --input
 - dym_aipp_conf.aippconfig的内容(下同)为：
 ```
 aipp_op{
-    related_input_rank ： 0
+    related_input_rank : 0
     aipp_mode : dynamic
     max_src_image_size : 4000000
 }
 ```
 #### benchmark命令
 ```
-python3 -m ais_bench --model resnet18_bs4_dym_aipp.om --aipp_config actual_aipp_conf.config
+msit benchmark --om-model resnet18_bs4_dym_aipp.om --aipp-config actual_aipp_conf.config
 ```
 ### 2. 动态batch场景示例，以resnet18模型为例
 #### atc命令转换出带动态aipp配置的动态batch模型
@@ -57,7 +57,7 @@ atc --framework=5 --model=./resnet18.onnx --output=resnet18_dym_batch_aipp --inp
 ```
 #### benchmark命令
 ```
-python3 -m ais_bench --model resnet18_dym_batch_aipp.om --aipp_config actual_aipp_conf.config --dymBatch 1
+msit benchmark --om-model resnet18_dym_batch_aipp.om --aipp-config actual_aipp_conf.config --dym-batch 1
 ```
 ### 3. 动态宽高场景示例，以resnet18模型为例
 #### atc命令转换出带动态aipp配置的动态宽高模型
@@ -66,7 +66,7 @@ atc --framework=5 --model=./resnet18.onnx --output=resnet18_dym_image_aipp --inp
 ```
 #### benchmark命令
 ```
-python3 -m ais_bench --model resnet18_dym_image_aipp.om --aipp_config actual_aipp_conf.config --dymHW 112,112
+msit benchmark --om-model resnet18_dym_image_aipp.om --aipp-config actual_aipp_conf.config --dym-hw 112,112
 ```
 
 ## FAQ

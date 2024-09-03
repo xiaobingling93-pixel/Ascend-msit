@@ -53,7 +53,7 @@ class FuncWrapper:
                 if param.kind in [inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY]:
                     self.args_name_set.add(param.name)
 
-    def create_wrapper(self, ret_value, to_raise) -> Callable:
+    def create_wrapper(self, ret_value, to_raise, logger=None) -> Callable:
         def decorator(func) -> Callable:
             self.parse_function(func)
 
@@ -63,17 +63,19 @@ class FuncWrapper:
                 if isinstance(is_pass, bool) and is_pass:
                     return func(*args, **kwargs)
                 else:
+                    if logger is not None and hasattr(logger, "error"):
+                        logger.error(str(is_pass))
                     return ret_value
 
             return wrapper
 
         return decorator
 
-    def to_return(self, ret_value) -> Callable:
-        return self.create_wrapper(ret_value, False)
+    def to_return(self, ret_value, logger=None) -> Callable:
+        return self.create_wrapper(ret_value, False, logger)
 
     def to_raise(self) -> Callable:
-        return self.create_wrapper(None, True)
+        return self.create_wrapper(None, True, None)
 
 
 def validate_params(**check_rules) -> FuncWrapper:

@@ -85,6 +85,8 @@ def build_model_tree(module: nn.Module):
 
     def dfs(ret, name, cur):
         if isinstance(cur, nn.ModuleList):
+            if len(cur) == 0:
+                return
             repeat_count, layer = find_duplicate(cur)
             repeat_block = process_layer(name, layer)
             ret.append({
@@ -189,8 +191,7 @@ def get_weight_names(model):
     return parsed_model
 
 
-def regex_search(pattern_list, files):
-    content = '\n'.join([Path(fp).read_text() for fp in files])
+def regex_search(pattern_list, content):
     g = None
     for pattern in pattern_list:
         g = re.search(pattern, content)
@@ -202,12 +203,12 @@ def regex_search(pattern_list, files):
         return g.group(1)
 
 
-def get_input_max_count(files):
+def parse_input_max_count(content):
     pattern_list = [
         r'IN_TENSOR_Q_LEN_INDEX = ([0-9]+);',
         r'IN_TENSOR_COUNT = ([0-9]+);',
     ]
-    res = regex_search(pattern_list, files)
+    res = regex_search(pattern_list, content)
     try:
         max_count = int(res)
     except Exception as ex:
@@ -215,15 +216,14 @@ def get_input_max_count(files):
     return max_count
 
 
-def get_input_names(files):
+def parse_by_idx(content):
     pattern_list = [
-        r'(InTensorId : int \{(\n\s{4}.*)+\n\};)',
-        r'(DecoderModelTensorIdx : uint32_t \{(\n\s{4}.*)+\n\};)',
+        r'(InTensorId : int \{\n(\s{4}.{,512}\n)+\};)',
+        r'(DecoderModelTensorIdx : uint32_t \{\n(\s{4}.{,512}\n)+\};)',
     ]
-    input_str = regex_search(pattern_list, files)
+    input_str = regex_search(pattern_list, content)
     if input_str == '':
-        raise ValueError(f'get input name failed, please check {files}')
-    
+        return []
     res = []
     for line in input_str.split('\n')[1:-1]:
         # line example IN_TENSOR_INPUT = 0, // input
@@ -233,8 +233,29 @@ def get_input_names(files):
         ll = ll.strip()
         if ll != '':
             res.append(ll)
+    return res
 
-    max_count = get_input_max_count(files)
+
+def parse_by_cand(content):
+    pattern_list = [
+        r'InTensorCandiadates = \{\n\s{8}\{"default", \{((\n\s{12}.{,512})+)\}\n\s{8}\},',
+        r'InTensorCandidates = \{\n\s{8}\{"default", \{((\n\s{12}.{,512})+)\}\n\s{8}\},',
+        r'TensorCandidates = \{\n\s{8}\{"default", \{((\n\s{12}.{,512})+)\}\n\s{8}\},',
+    ]
+    input_str = regex_search(pattern_list, content)
+    if input_str == '':
+        return []
+    res = input_str.replace('"', '').split(',')
+    res = [ll.strip() for ll in res]
+    return res
+
+
+def parse_input_names(content):
+    res = parse_by_idx(content)
+    if not res:
+        res = parse_by_cand(content)
+
+    max_count = parse_input_max_count(content)
     if max_count == -1:
         if 'IN_TENSOR_MAX' in res:
             max_count = res.index('IN_TENSOR_MAX') - 1
@@ -243,13 +264,19 @@ def get_input_names(files):
     return res
 
 
+def get_input_names(files):
+    content = '\n'.join([Path(fp).read_text() for fp in files])
+    return parse_input_names(content)   
+
+
 def get_atb_model_names(files):
+    content = '\n'.join([Path(fp).read_text() for fp in files])
     pattern_list = [
         r'REGISTER_MODEL\((.*)\);',
     ]
-    res_str = regex_search(pattern_list, files)
+    res_str = regex_search(pattern_list, content)
     if res_str == '':
-        raise ValueError(f'get input name failed, please check {files}')
+        return 'DecoderModel'
     
     return '_'.join([ss.strip() for ss in res_str.split(',')])
 
