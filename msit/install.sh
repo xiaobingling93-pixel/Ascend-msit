@@ -74,8 +74,8 @@ if [ "$arg_help" -eq "1" ]; then
   exit;
 fi
 
-SCRIPT_DIR=$(dirname "$0")
-CONFIG_FILE="$SCRIPT_DIR/components/config/config.ini"
+SITE_PACKAGES="$(python3 -c 'import site; print(site.getsitepackages()[0])')"
+CONFIG_FILE="$SITE_PACKAGES/components/config/config.ini"
 
 # 若pip源为华为云，则优先安装skl2onnx(当前mirrors.huaweicloud.com中skl2onnx已停止更新，不包含1.14.1及以上版本)
 pre_check_skl2onnx(){
