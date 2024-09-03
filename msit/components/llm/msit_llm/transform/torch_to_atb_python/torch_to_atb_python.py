@@ -795,6 +795,8 @@ class ATBModelFromTorch(ATBModel):
             f"{indent}def __init__(self):",
             f"{indent * 2}super().__init__({base_model_name})",
             f"{indent * 2}num_attention_heads, head_dim = {self.num_attention_heads}, {self.head_dim}",
+            f"{indent * 2}self.base_graph_operations = []",
+            ""
         ]
 
         def _get_input_output_name(graph_name):
@@ -802,8 +804,8 @@ class ATBModelFromTorch(ATBModel):
 
         def _to_file(graph_name, operations, depth=0):
             contents.append("")
-            contents.append(f"{indent * 2}{graph_name} = GraphOperation('{graph_name}')")
 
+            this_name = "self" if depth == 0 else graph_name
             graph_inputs, graph_outputs = stacked_inputs.pop(0), stacked_outputs.pop(0)
             contents.append(f"{indent * 2}{graph_name}_inputs = [")
             for ii in graph_inputs:
@@ -812,7 +814,7 @@ class ATBModelFromTorch(ATBModel):
 
             contents.append(f"{indent * 2}{graph_name}_outputs = {graph_outputs}")
             cur_inputs, cur_outputs = _get_input_output_name(graph_name)
-            contents.append(f"{indent * 2}{graph_name}.add_input_output(input={cur_inputs}, output={cur_outputs})")
+            contents.append(f"{indent * 2}{this_name}.add_input_output(input={cur_inputs}, output={cur_outputs})")
             contents.append("")
 
             sub_graph_id = 0
@@ -823,33 +825,31 @@ class ATBModelFromTorch(ATBModel):
                     _to_file(sub_graph_name, op, depth=depth + 1)
                     cur_inputs, cur_outputs = _get_input_output_name(sub_graph_name)
                     contents.append(
-                        f"{indent * 2}{base_model_name}.add_operation({sub_graph_name}, {cur_inputs}, {cur_outputs})"
+                        f"{indent * 2}{this_name}.add_operation({sub_graph_name}, {cur_inputs}, {cur_outputs})"
                     )
-                    contents.append(f"{indent * 2}{base_model_name}.{sub_graph_name} = {sub_graph_name}")
+                    contents.append(f"{indent * 2}{this_name}.{sub_graph_name} = {sub_graph_name}")
                     contents.append("")
                     sub_graph_id += 1
                 elif op.op_type == "add_reshape":
                     function = get_lambda_source_code(op.function)
                     contents.append(
-                        f"{indent * 2}{graph_name}.add_reshape('{op.inputs[0]}', '{op.outputs[0]}', {function})"
+                        f"{indent * 2}{this_name}.add_reshape('{op.inputs[0]}', '{op.outputs[0]}', {function})"
                     )
                 else:
+                    op_name = op.op_name.replace(".", "_")
                     op_kwargs = f"op_type='{op.op_type}', op_param='{json.dumps(op.op_param)}', op_name='{op.op_name}'"
-                    contents.append(f"{indent * 2}{graph_name}.add_operation(")
-                    contents.append(f"{indent * 3}operation=BaseOperation({op_kwargs}),")
-                    contents.append(f"{indent * 3}input={op.inputs},")
-                    contents.append(f"{indent * 3}output={op.outputs},")
+                    contents.append(f"{indent * 2}{op_name} = BaseOperation({op_kwargs})")
+                    contents.append(f"{indent * 2}{this_name}.add_operation(")
+                    contents.append(f"{indent * 3}operation={op_name}, input={op.inputs}, output={op.outputs}")
                     contents.append(f"{indent * 2})")
                     if depth == 0:
-                        pass
-                        # contents.append(f"{indent * 2}{base_model_name}.{sub_graph_name} = {sub_graph_name}")
+                        contents.append(f"{indent * 2}{this_name}.{op_name} = op_name")
 
             contents.append("")
-            contents.append(f"{indent * 2}{graph_name}.execute_as_single = {False if depth == 0 else True}")
-            contents.append(f"{indent * 2}{graph_name}.build()")
+            contents.append(f"{indent * 2}{this_name}.execute_as_single = {False if depth == 0 else True}")
+            contents.append(f"{indent * 2}{this_name}.build()")
 
         _to_file(base_model_name, stacked_operations)
-        contents.append(f"{indent}return {base_model_name}")
         contents.append("")
         contents_str = "\n".join(contents)
 
