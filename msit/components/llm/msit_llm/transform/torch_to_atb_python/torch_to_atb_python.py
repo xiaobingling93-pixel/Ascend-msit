@@ -13,9 +13,9 @@
 # limitations under the License.
 
 import os
-import sys
-import json
 import re
+import sys
+import stat
 import json
 import inspect
 import string
@@ -27,6 +27,7 @@ import torch
 import torch_npu
 
 from msit_llm.common.log import logger, set_log_level
+
 
 atb_speed_path = os.getenv("ATB_SPEED_HOME_PATH", None)
 if not atb_speed_path:
@@ -126,6 +127,12 @@ def get_lambda_source_code(function):
 
 def get_valid_name(name):
     return "".join([ii for ii in name if ii in VALID_NAME_CHARS])
+
+
+def write_file(file_path, contents):
+    file_permission = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP
+    with os.fdopen(os.open(file_path, os.O_CREAT | os.O_WRONLY | os.O_TRUNC, file_permission), "w") as ff:
+        ff.write(contents)
 
 
 class Operation:
@@ -437,7 +444,8 @@ class ATBModelFromTorch(ATBModel):
         atb_operation.outputs = getattr(atb_operation, "outputs", []) + outputs
         return atb_operation
 
-    def _get_node_type_and_inputs_and_name(self, node, output_node_map={}):
+    def _get_node_type_and_inputs_and_name(self, node, output_node_map=None):
+        output_node_map = output_node_map or {}
         cur_module_name = self._get_module_name_by_nn_module_stack(node)
         if node.op == FX_OP_TYPES.call_function and self._find_in_torch_module_to_atb_map(node.target.__name__):
             node_module_type = node.target.__name__
@@ -848,8 +856,7 @@ class ATBModelFromTorch(ATBModel):
             output_file = "_".join([base_model_name.lower(), "atb", "quant.py" if self.to_quant else "float.py"])
         elif not output_file.endswith(".py"):
             output_file += ".py"
-        with open(output_file, "w") as ff:
-            ff.write(contents_str)
+        write_file(output_file, contents_str)
         return output_file
 
 
