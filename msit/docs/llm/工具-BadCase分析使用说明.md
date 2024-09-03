@@ -49,8 +49,8 @@ case_filter.add_metrics(accuracy=None)
 # 执行
 case_filter.apply(
     ["How is your day?"],
-    ["Good."],
-    ["I am 23 years old."]
+    ["I am 23 years old."],
+    ["Good."]
 )
 ```
 
