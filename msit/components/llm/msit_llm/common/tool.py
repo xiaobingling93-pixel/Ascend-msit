@@ -11,11 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
+import random
 import array
-
+import argparse
 import torch
+import numpy as np
 
-from msit_llm.common.constant import ATTR_END, ATTR_OBJECT_LENGTH
+from msit_llm.common.constant import ATTR_END, ATTR_OBJECT_LENGTH, LCCL_DETERMINISTIC, HCCL_DETERMINISTIC, \
+    ATB_MATMUL_SHUFFLE_K_ENABLE, ATB_LLM_LCOC_ENABLE, PYTHON_HASH_SEED
 from msit_llm.common.log import logger
 from msit_llm.common.utils import check_input_path_legality, check_data_file_size
 
@@ -84,3 +88,42 @@ def read_atb_data(file_path):
             return data
 
     raise ValueError("Tensor file path must be end with .bin.")
+
+
+
+def seed_all(seed=1, mode=False):
+    if not isinstance(seed, int):
+        raise argparse.ArgumentTypeError("%s is not an int." % seed)
+    if not isinstance(mode, bool):
+        raise argparse.ArgumentTypeError("%s is not a bool." % mode)
+    
+    os.environ[LCCL_DETERMINISTIC] = "1"
+    os.environ[HCCL_DETERMINISTIC] = "1"
+    os.environ[ATB_MATMUL_SHUFFLE_K_ENABLE] = "0"
+    os.environ[ATB_LLM_LCOC_ENABLE] = "0"
+
+    os.environ[PYTHON_HASH_SEED] = str(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.manual_seed(seed)
+    torch.use_deterministic_algorithms(mode=mode)
+
+    try:
+        import torch_npu
+    except ImportError:
+        IS_GPU = True
+    else:
+        IS_GPU = False
+
+    if IS_GPU and torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.enable = False
+        torch.bachekds.cudnn.benchmark = False
+    else:
+        torch.npu.manual_seed(seed)
+        torch.npu.manual_seed_all(seed)
+
+    logger.info(f"Enable deterministic computation sucess! current seed is {seed},"
+                f"torch deterministic algorithms mode is {mode}.")

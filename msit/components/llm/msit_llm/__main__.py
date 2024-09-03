@@ -146,7 +146,6 @@ class DumpCommand(BaseCommand):
         
         parser.add_argument(
             '--set-random-seed',
-            '-srs',
             required=False,
             dest="set_random_seed",
             type=check_data_can_convert_to_int,
@@ -155,7 +154,6 @@ class DumpCommand(BaseCommand):
                 
         parser.add_argument(
             '--enable-deterministic-algorithm',
-            '-eda',
             required=False,
             dest="enable_deterministic_algorithm",
             type=str2bool,
