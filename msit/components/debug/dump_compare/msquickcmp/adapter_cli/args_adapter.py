@@ -39,7 +39,11 @@ class DumpArgsAdapter:
                  quant_fusion_rule_file="",
                  saved_model_signature="",
                  saved_model_tag_set="",
-                 device_pattern=""
+                 device_pattern="",
+                 om_dump_data_path="",
+                 om_net_output_data_path="",
+                 tf_ops_json_path="",
+                 om_json_path=""
                  ):
         self.model = model
         self.weight_path = weight_path
@@ -63,6 +67,10 @@ class DumpArgsAdapter:
         self.saved_model_signature = saved_model_signature
         self.saved_model_tag_set = saved_model_tag_set
         self.device_pattern = device_pattern
+        self.om_dump_data_path = om_dump_data_path
+        self.om_net_output_data_path = om_net_output_data_path
+        self.tf_ops_json_path = tf_ops_json_path
+        self.om_json_path = om_json_path
 
 
 class CompareArgsAdapter:

@@ -29,7 +29,7 @@ from components.debug.compare.msquickcmp.common.utils import logger
 
 from components.utils.parser import BaseCommand
 from msquickcmp.dump_process import dump_process
-from msquickcmp.compare_process import compare_process
+from msquickcmp.compare_process import compare_run
 
 CANN_PATH = os.environ.get('ASCEND_TOOLKIT_HOME', "/usr/local/Ascend/ascend-toolkit/latest")
 
@@ -189,6 +189,30 @@ class DumpCommand(BaseCommand):
             required=True,
             dest="device_pattern",
             help="Enter inference in npu or cpu device. For example: -dp cpu")
+        parser.add_argument(
+            '--om-dump-data',
+            required=False,
+            dest="om_dump_data_path",
+            default='',
+            help="When use bin2npy or custom-op dump onnx data, you need provide om-dump-data file path.")
+        parser.add_argument(
+            '--om-net-output-data',
+            required=False,
+            dest="om_net_output_data_path",
+            default='',
+            help="When use bin2npy or custom-op dump onnx data, you need provide om-net-output-data file path.")
+        parser.add_argument(
+            '--tf-ops-json',
+            required=False,
+            dest="tf_ops_json_path",
+            default='',
+            help="When dump saved_model, you need provide tf-ops-json file path.")
+        parser.add_argument(
+            '--om-json-path',
+            required=False,
+            dest="om_json_path",
+            default='',
+            help="When dump onnx model and use aipp, you need provide om_json_path file path.")
         self.parser = parser
 
     def handle(self, args):
@@ -204,7 +228,8 @@ class DumpCommand(BaseCommand):
                                    args.dump, args.bin2npy, args.custom_op, args.locat,
                                    args.onnx_fusion_switch, args.single_op, args.fusion_switch_file,
                                    args.max_cmp_size, args.quant_fusion_rule_file, args.saved_model_signature,
-                                   args.saved_model_tag_set, args.device_pattern)
+                                   args.saved_model_tag_set, args.device_pattern, args.om_dump_data_path,
+                                   args.om_net_output_data_path, args.tf_ops_json_path, args.om_json_path)
         dump_process(cmp_args, True)
 
 
@@ -287,7 +312,7 @@ class CompareCommand(BaseCommand):
         cmp_args = CompareArgsAdapter(args.my_path, args.golden_path, args.out_path, args.ops_json
                                       , args.locat, args.dump, args.my_net_output_path, args.golden_net_output_path
                                       , args.expect_net_output_node, args.compare_pattern)
-        compare_process(cmp_args)
+        compare_run(cmp_args)
 
 
 def get_cmd_instance():
