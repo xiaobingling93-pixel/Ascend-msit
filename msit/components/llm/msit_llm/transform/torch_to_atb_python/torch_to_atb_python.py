@@ -27,7 +27,7 @@ import torch
 import torch_npu
 
 from msit_llm.common.log import logger, set_log_level
-
+from msit_llm.transform.utils import write_file
 
 atb_speed_path = os.getenv("ATB_SPEED_HOME_PATH", None)
 if not atb_speed_path:
@@ -100,7 +100,7 @@ def get_config_attr(config, attr, default=None):
     return default
 
 
-def build_model(source_path):
+def build_transformers_model(source_path):
     try:
         from transformers import AutoConfig, AutoModelForCausalLM
     except ModuleNotFoundError as error:
@@ -127,12 +127,6 @@ def get_lambda_source_code(function):
 
 def get_valid_name(name):
     return "".join([ii for ii in name if ii in VALID_NAME_CHARS])
-
-
-def write_file(file_path, contents):
-    file_permission = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP
-    with os.fdopen(os.open(file_path, os.O_CREAT | os.O_WRONLY | os.O_TRUNC, file_permission), "w") as ff:
-        ff.write(contents)
 
 
 class Operation:
@@ -862,7 +856,7 @@ class ATBModelFromTorch(ATBModel):
 
 def transform(source_path, input_names=BASIC_INPUT_NAMES, output_file=None, to_quant=False, quant_disable_names=None):
     logger.info("Building model using transformers...")
-    model, config = build_model(source_path)
+    model, config = build_transformers_model(source_path)
 
     logger.info("Transforming to atb")
     atb_model = ATBModelFromTorch(

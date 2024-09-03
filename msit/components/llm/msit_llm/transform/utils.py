@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import os
+import stat
 from msit_llm.common.log import logger
 from collections import namedtuple
 
@@ -36,3 +37,10 @@ def get_transform_scenario(source_path, to_python=False):
         return SCENARIOS.float_atb_to_quant_atb
     else:
         return None
+
+
+def write_file(save_path, string):
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+    modes = stat.S_IWUSR | stat.S_IRUSR
+    with os.fdopen(os.open(save_path, flags, modes), 'w') as ff:
+        ff.write(string)
