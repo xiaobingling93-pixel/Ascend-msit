@@ -117,6 +117,7 @@ OPTIONS参数说明如下：
 | --log_level       | 日志级别，支持INFO（默认），DEBUG，WARNING，ERROR | 否       |
 | --mode            | 源码扫描模式，支持all（默认），api-only; 目前仅c++源码支持api-only | 否       |
 | -h, --help        |  命令行参数帮助信息 | 否|
+
 扫描C++应用工程的命令示例如下：
 
 ```shell
