@@ -848,12 +848,13 @@ class ATBModelFromTorch(ATBModel):
             contents.append(f"{indent * 2}{this_name}.execute_as_single = {False if depth == 0 else True}")
             contents.append(f"{indent * 2}{this_name}.build()")
 
+        _to_file(base_model_name, stacked_operations)
+
+        contents.append("")
         contents.append(f"{indent * 2}self.base_graph_operations = [")
         for ii in base_graph_operations:
             contents.append(f"{indent * 3}{ii},")
         contents.append(f"{indent * 2}]")
-
-        _to_file(base_model_name, stacked_operations)
         contents.append("")
         contents_str = "\n".join(contents)
 
