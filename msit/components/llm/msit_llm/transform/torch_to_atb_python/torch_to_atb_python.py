@@ -837,21 +837,21 @@ class ATBModelFromTorch(ATBModel):
                 else:
                     cur_name = op.op_name.replace(".", "_")
                     op_kwargs = f"op_type='{op.op_type}', op_param='{json.dumps(op.op_param)}', op_name='{op.op_name}'"
-
                     contents.append(f"{indent * 2}{cur_name} = BaseOperation({op_kwargs})")
-                    contents.append(f"{indent * 2}{this_name}.add_operation(")
-                    contents.append(f"{indent * 3}operation={cur_name}, input={op.inputs}, output={op.outputs}")
-                    contents.append(f"{indent * 2})")
+
+                    add_op_kwargs = f"operation={cur_name}, input={op.inputs}, output={op.outputs}"
+                    contents.append(f"{indent * 2}{this_name}.add_operation({add_op_kwargs})")
                 if depth == 0:
                     base_graph_operations.append(cur_name)
 
             contents.append("")
-            contents.append(f"{indent * 2}self.base_graph_operations = [")
-            for ii in base_graph_operations:
-                contents.append(f"{indent * 3}'{ii}',")
-            contents.append(f"{indent * 2}]")
             contents.append(f"{indent * 2}{this_name}.execute_as_single = {False if depth == 0 else True}")
             contents.append(f"{indent * 2}{this_name}.build()")
+
+        contents.append(f"{indent * 2}self.base_graph_operations = [")
+        for ii in base_graph_operations:
+            contents.append(f"{indent * 3}{ii},")
+        contents.append(f"{indent * 2}]")
 
         _to_file(base_model_name, stacked_operations)
         contents.append("")
