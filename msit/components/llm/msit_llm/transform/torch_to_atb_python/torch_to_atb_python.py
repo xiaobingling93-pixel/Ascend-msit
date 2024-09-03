@@ -770,7 +770,7 @@ class ATBModelFromTorch(ATBModel):
     def to_file(self, output_file=None):
         indent = " " * 4
         stacked_operations, stacked_inputs, stacked_outputs = self._stack_operations()
-        base_model_name = self.model_name
+        base_model_name, base_graph_operations = self.model_name, []
 
         contents = [
             "import os",
@@ -818,14 +818,14 @@ class ATBModelFromTorch(ATBModel):
             sub_graph_id = 0
             for op in operations:
                 if isinstance(op, list):
-                    sub_graph_name = f"sub_graph_{sub_graph_id}"
+                    cur_name = f"sub_graph_{sub_graph_id}"
                     sub_graph_inputs, sub_graph_outputs = stacked_inputs[0], stacked_outputs[0]
-                    _to_file(sub_graph_name, op, depth=depth + 1)
-                    cur_inputs, cur_outputs = _get_input_output_name(sub_graph_name)
+                    _to_file(cur_name, op, depth=depth + 1)
+                    cur_inputs, cur_outputs = _get_input_output_name(cur_name)
                     contents.append(
-                        f"{indent * 2}{this_name}.add_operation({sub_graph_name}, {cur_inputs}, {cur_outputs})"
+                        f"{indent * 2}{this_name}.add_operation({cur_name}, {cur_inputs}, {cur_outputs})"
                     )
-                    contents.append(f"{indent * 2}{this_name}.{sub_graph_name} = {sub_graph_name}")
+                    contents.append(f"{indent * 2}{this_name}.{cur_name} = {cur_name}")
                     contents.append("")
                     sub_graph_id += 1
                 elif op.op_type == "add_reshape":
@@ -833,17 +833,23 @@ class ATBModelFromTorch(ATBModel):
                     contents.append(
                         f"{indent * 2}{this_name}.add_reshape('{op.inputs[0]}', '{op.outputs[0]}', {function})"
                     )
+                    continue
                 else:
-                    op_name = op.op_name.replace(".", "_")
-                    op_name = f"self.{op_name}" if depth == 0 else op_name
+                    cur_name = op.op_name.replace(".", "_")
                     op_kwargs = f"op_type='{op.op_type}', op_param='{json.dumps(op.op_param)}', op_name='{op.op_name}'"
 
-                    contents.append(f"{indent * 2}{op_name} = BaseOperation({op_kwargs})")
+                    contents.append(f"{indent * 2}{cur_name} = BaseOperation({op_kwargs})")
                     contents.append(f"{indent * 2}{this_name}.add_operation(")
-                    contents.append(f"{indent * 3}operation={op_name}, input={op.inputs}, output={op.outputs}")
+                    contents.append(f"{indent * 3}operation={cur_name}, input={op.inputs}, output={op.outputs}")
                     contents.append(f"{indent * 2})")
+                if depth == 0:
+                    base_graph_operations.append(cur_name)
 
             contents.append("")
+            contents.append(f"{indent * 2}self.base_graph_operations = [")
+            for ii in base_graph_operations:
+                contents.append(f"{indent * 3}'{ii}',")
+            contents.append(f"{indent * 2}]")
             contents.append(f"{indent * 2}{this_name}.execute_as_single = {False if depth == 0 else True}")
             contents.append(f"{indent * 2}{this_name}.build()")
 
