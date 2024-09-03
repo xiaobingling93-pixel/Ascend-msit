@@ -15,19 +15,18 @@
 
 """
 Function:
-This class mainly involves the main function.
+This class mainly dump model ops inputs and outputs.
 """
 
 import os
 import time
 
 import acl
-
 from msquickcmp.adapter_cli.args_adapter import DumpArgsAdapter
+
 from components.debug.compare.msquickcmp.atc import atc_utils
 from components.debug.compare.msquickcmp.common import utils
 from components.debug.compare.msquickcmp.common.args_check import is_saved_model_valid
-from components.debug.compare.msquickcmp.common.convert import convert_bin_dump_data_to_npy
 from components.debug.compare.msquickcmp.common.convert import convert_npy_to_bin
 from components.debug.compare.msquickcmp.common.utils import AccuracyCompareException, get_shape_to_directory_name
 from components.debug.compare.msquickcmp.npu.npu_dump_data import NpuDumpData, DynamicInput
@@ -35,30 +34,40 @@ from components.debug.compare.msquickcmp.npu.om_parser import OmParser
 from components.debug.compare.msquickcmp.single_op import single_op as sp
 
 
-def _generate_golden_data_model(args, npu_dump_npy_path):
+def _generate_golden_data_model(args: DumpArgsAdapter, npu_dump_npy_path):
     if is_saved_model_valid(args.model_path):
         from components.debug.compare.msquickcmp.tf.tf_save_model_dump_data import TfSaveModelDumpData
 
-        return TfSaveModelDumpData(args)
+        return TfSaveModelDumpData(args, args.model_path)
     model_name, extension = utils.get_model_name_and_extension(args.model_path)
-    if args.weight_path and ".prototxt" == extension:
+    if args.weight_path and extension == ".prototxt":
         from components.debug.compare.msquickcmp.caffe_model.caffe_dump_data import CaffeDumpData
 
         return CaffeDumpData(args)
-    elif ".pb" == extension:
+    elif extension == ".pb":
         from components.debug.compare.msquickcmp.tf.tf_dump_data import TfDumpData
 
         return TfDumpData(args)
-    elif ".onnx" == extension:
+    elif extension == ".onnx":
         from components.debug.compare.msquickcmp.onnx_model.onnx_dump_data import OnnxDumpData
 
         return OnnxDumpData(args, npu_dump_npy_path)
-    elif ".om" == extension:
+    elif extension == ".om":
         return NpuDumpData(arguments=args, is_golden=True)
 
     else:
         utils.logger.error("Only model files whose names end with .pb or .onnx or .prototxt are supported")
         raise AccuracyCompareException(utils.ACCURACY_COMPARISON_MODEL_TYPE_ERROR)
+
+
+def _generate_my_data_model(args: DumpArgsAdapter):
+    if is_saved_model_valid(args.model_path):
+        from components.debug.compare.msquickcmp.npu.npu_tf_adapter_dump_data import NpuTfAdapterDumpData
+        return NpuTfAdapterDumpData(args, args.model_path)
+    # get model name suffix
+    model_name, extension = utils.get_model_name_and_extension(args.model_path)
+    if extension == ".om":
+        return NpuDumpData(arguments=args, is_golden=True)
 
 
 def dump_process(args: DumpArgsAdapter, use_cli: bool):
@@ -83,50 +92,60 @@ def dump_data(args: DumpArgsAdapter, input_shape, original_out_path, use_cli: bo
         args.input_shape = input_shape
         args.out_path = os.path.join(original_out_path, get_shape_to_directory_name(args.input_shape))
 
-    if is_saved_model_valid(args.offline_model_path):
-        # npu dump
-        from components.debug.compare.msquickcmp.npu.npu_tf_adapter_dump_data import NpuTfAdapterDumpData
-        npu_dump = NpuTfAdapterDumpData(args)
-        npu_dump.generate_inputs_data()
-        npu_dump_data_path, output_json_path = npu_dump.generate_dump_data()
-        # gpu dump
-        from components.debug.compare.msquickcmp.tf.tf_save_model_dump_data import TfSaveModelDumpData
-        golden_dump = TfSaveModelDumpData(args)
-        golden_dump.generate_inputs_data(False, npu_dump_data_path, om_parser=None)
-        golden_dump.generate_dump_data(output_json_path, npu_dump_path=None, om_parser=None)
+    if args.device_pattern == "npu":
+        """
+        npu dump
+        """
+        npu_dump_process(args, use_cli)
     else:
-        run_om_model_dump(args, use_cli)
+        """
+        cpu dump
+        """
+        cpu_dump_process(args)
 
 
-def run_om_model_dump(args, use_cli):
-    # whether use aipp
-    output_json_path = atc_utils.convert_model_to_json(args.cann_path, args.offline_model_path, args.out_path)
-    temp_om_parser = OmParser(output_json_path)
-    use_aipp = True if temp_om_parser.get_aipp_config_content() else False
+def npu_dump_process(args, use_cli):
+    # 1. get dumper
+    npu_dumper = _generate_my_data_model(args)
+    use_aipp = False
+    if os.path.splitext(os.path.basename(args.model_path)) == ".om":
+        # whether use aipp
+        output_json_path = atc_utils.convert_model_to_json(args.cann_path, args.model_path, args.out_path)
+        temp_om_parser = OmParser(output_json_path)
+        use_aipp = True if temp_om_parser.get_aipp_config_content() else False
+        if use_aipp and args.fusion_switch_file is not None:
+            utils.logger.error("if .om model is using aipp config, --fusion-switch-file arg is not support.")
+            raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PARAM_ERROR)
+    # 2. generate input
+    npu_dumper.generate_inputs_data(use_aipp=use_aipp)
+    # 3. dump data
+    npu_dumper.generate_dump_data(use_cli=use_cli)
 
-    if use_aipp and args.fusion_switch_file is not None:
-        utils.logger.error("if .om model is using aipp config, --fusion-switch-file arg is not support.")
-        raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PARAM_ERROR)
 
-    npu_dump = NpuDumpData(args, is_golden=False)
-    # generate npu inputs data
-    npu_dump.generate_inputs_data(use_aipp=use_aipp)
-    # generate npu dump data
-    npu_dump_data_path, npu_net_output_data_path = npu_dump.generate_dump_data(use_cli=use_cli)
-    # convert data from bin to npy if --convert is used, or if custom_op is not empty
-    if args.bin2npy or args.custom_op != "":
-        npu_dump_npy_path = convert_bin_dump_data_to_npy(npu_dump_data_path, npu_net_output_data_path, args.cann_path)
-    else:
-        npu_dump_npy_path = ""
-    # generate onnx inputs data
-    golden_dump = _generate_golden_data_model(args, npu_dump_npy_path)
-    # generate dump data by golden model
+def cpu_dump_process(args):
+    # 1. get dumper
+    npu_dump_npy_path = ""
+    golden_dumper = _generate_golden_data_model(args, npu_dump_npy_path)
     if is_saved_model_valid(args.model_path):
-        golden_dump.generate_inputs_data(True, npu_dump_data_path, use_aipp)
-        golden_dump.generate_dump_data(output_json_path, npu_dump_npy_path, npu_dump.om_parser)
+        # 2. generate input
+        golden_dumper.generate_inputs_data_for_dump()
+        # 3. dump data
+        golden_dumper.generate_dump_data(get_om_json(args.model_path), npu_dump_path=None, om_parser=None)
     else:
-        golden_dump.generate_inputs_data(npu_dump_data_path, use_aipp)
-        golden_dump.generate_dump_data(npu_dump_npy_path, npu_dump.om_parser)
+        _, extension = utils.get_model_name_and_extension(args.model_path)
+        npu_dump_data_path = None
+        use_aipp = None
+        # when onnx cpu inference and add use_aipp, onnx need npu_dump_data_path
+        if extension == ".onnx":
+            npu_dump_data_path = "111"
+        golden_dumper.generate_inputs_data(npu_dump_data_path, use_aipp)
+        golden_dumper.generate_dump_data()
+
+
+def get_om_json(saved_model):
+    output_json_path = ""
+
+    return output_json_path
 
 
 def fusion_close_model_convert(args: DumpArgsAdapter):
@@ -174,4 +193,3 @@ def check_and_dump(args: DumpArgsAdapter, use_cli: bool):
         input_shapes.append("")
     for input_shape in input_shapes:
         dump_data(args, input_shape, original_out_path, use_cli)
-

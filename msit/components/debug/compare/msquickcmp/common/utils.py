@@ -16,22 +16,22 @@
 Function:
 This class mainly involves common function.
 """
-import os
+import argparse
+import enum
+import itertools
 import logging
+import os
 import re
 import shutil
 import subprocess
 import sys
-import time
-import enum
-import itertools
-import argparse
+import json
 
 import numpy as np
 import pandas as pd
+from msquickcmp.common.dynamic_argument_bean import DynamicArgumentEnum
 
 from components.utils.security_check import get_valid_write_path
-from msquickcmp.common.dynamic_argument_bean import DynamicArgumentEnum
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='[%(levelname)s] %(message)s')
 logger = logging.getLogger(__name__)
@@ -661,3 +661,14 @@ def safe_delete_path_if_exists(path, is_log=False):
             if is_log:
                 utils.logger.info("Folder %s exist and will be deleted.", path)
             shutil.rmtree(path)
+
+
+def parse_json_file(json_path):
+    try:
+        with open(json_path, 'r', encoding='utf-8') as file:
+            return json.load(file)
+    except FileNotFoundError as e:
+        raise FileNotFoundError(f"File '{json_path}' not found, Please check whether the json file path is "
+                                f"valid. {e}") from e
+    except json.JSONDecodeError as e:
+        raise RuntimeError(f"File '{json_path}' is not a valid JSON format. {e}") from e

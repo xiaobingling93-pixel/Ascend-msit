@@ -61,7 +61,7 @@ def _generate_golden_data_model(args, npu_dump_npy_path):
     if is_saved_model_valid(args.model_path):
         from msquickcmp.tf.tf_save_model_dump_data import TfSaveModelDumpData
 
-        return TfSaveModelDumpData(args)
+        return TfSaveModelDumpData(args, args.model_path)
     model_name, extension = utils.get_model_name_and_extension(args.model_path)
     if args.weight_path and ".prototxt" == extension:
         from msquickcmp.caffe_model.caffe_dump_data import CaffeDumpData
@@ -208,12 +208,12 @@ def run(args: CmpArgsAdapter, input_shape, original_out_path, use_cli: bool):
     if is_saved_model_valid(args.offline_model_path):
         # npu dump
         from msquickcmp.npu.npu_tf_adapter_dump_data import NpuTfAdapterDumpData
-        npu_dump = NpuTfAdapterDumpData(args)
+        npu_dump = NpuTfAdapterDumpData(args, args.offline_model_path)
         npu_dump.generate_inputs_data()
         npu_dump_data_path, output_json_path = npu_dump.generate_dump_data()
         # gpu dump
         from msquickcmp.tf.tf_save_model_dump_data import TfSaveModelDumpData
-        golden_dump = TfSaveModelDumpData(args)
+        golden_dump = TfSaveModelDumpData(args, args.model_path)
         golden_dump.generate_inputs_data(False, npu_dump_data_path, om_parser=None)
         golden_dump_data_path = golden_dump.generate_dump_data(output_json_path, npu_dump_path=None, om_parser=None)
         # compare the entire network
@@ -266,7 +266,7 @@ def run_om_model_compare(args, use_cli):
 
     # generate dump data by golden model
     if is_saved_model_valid(args.model_path):
-        golden_dump.generate_inputs_data(True, npu_dump_data_path, use_aipp)
+        golden_dump.generate_inputs_data(True, npu_dump_data_path=None, use_aipp=None)
         golden_dump_data_path = golden_dump.generate_dump_data(output_json_path, npu_dump_npy_path, npu_dump.om_parser)
     else:
         golden_dump.generate_inputs_data(npu_dump_data_path, use_aipp)

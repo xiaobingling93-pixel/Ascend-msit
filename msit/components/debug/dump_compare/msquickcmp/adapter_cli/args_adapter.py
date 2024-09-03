@@ -38,7 +38,8 @@ class DumpArgsAdapter:
                  max_cmp_size=0,
                  quant_fusion_rule_file="",
                  saved_model_signature="",
-                 saved_model_tag_set=""
+                 saved_model_tag_set="",
+                 device_pattern=""
                  ):
         self.model = model
         self.weight_path = weight_path
@@ -61,6 +62,7 @@ class DumpArgsAdapter:
         self.quant_fusion_rule_file = quant_fusion_rule_file
         self.saved_model_signature = saved_model_signature
         self.saved_model_tag_set = saved_model_tag_set
+        self.device_pattern = device_pattern
 
 
 class CompareArgsAdapter:
@@ -73,14 +75,16 @@ class CompareArgsAdapter:
                  dump=True,
                  my_net_output_path="",
                  golden_net_output_path="",
-                 expect_net_output_node=""
+                 expect_net_output_node="",
+                 compare_pattern=""
                  ):
         self.my_path = my_path
         self.golden_path = golden_path
         self.out_path = out_path
         self.ops_json = ops_json
         self.locat = locat
-        self.dump=dump
+        self.dump = dump
         self.my_net_output_path = my_net_output_path
         self.golden_net_output_path = golden_net_output_path
         self.expect_net_output_node = expect_net_output_node
+        self.compare_pattern = compare_pattern

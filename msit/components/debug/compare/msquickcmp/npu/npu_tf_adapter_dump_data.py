@@ -28,7 +28,7 @@ import numpy as np
 import tensorflow as tf
 
 from msquickcmp.atc import atc_utils
-from msquickcmp.common import utils
+from msquickcmp.common import utils, tf_common
 from tensorflow.core.protobuf.rewriter_config_pb2 import RewriterConfig
 
 
@@ -37,18 +37,18 @@ class NpuTfAdapterDumpData(object):
     This class is used to generate NUP dump data of the tf2.6 save_model.
     """
 
-    def __init__(self, arguments):
+    def __init__(self, arguments, model_path):
         self.serving = arguments.saved_model_signature
-        self.tag_set = self.split_tag_set(arguments.saved_model_tag_set)
+        self.tag_set = tf_common.split_tag_set(arguments.saved_model_tag_set)
         self.output_path = os.path.realpath(arguments.out_path)
         self.input = os.path.join(self.output_path, "input")
         self.dump_data_npu = os.path.join(self.output_path, "dump_data", "npu")
         self.model_json_path = os.path.join(self.output_path, "model")
         self.inputs_data = {}
-        self.model_path = arguments.offline_model_path
+        self.model_path = model_path
         self.input_path = arguments.input_path
         self.input_shape = self.split_input_shape(arguments.input_shape)
-        self.inputs_dtype = self.get_model_inputs_dtype(arguments.offline_model_path, self.serving, self.tag_set)
+        self.inputs_dtype = tf_common.get_model_inputs_dtype(model_path, self.serving, self.tag_set)
         self.cann_path = arguments.cann_path
         self._create_dir()
 
@@ -64,25 +64,6 @@ class NpuTfAdapterDumpData(object):
         return input_shape_dict
 
     @staticmethod
-    def split_tag_set(saved_model_tag_set):
-        tag_sets = saved_model_tag_set.split(',')
-        if len(tag_sets) > 1:
-            return tag_sets
-        return {tag_sets[0]}
-
-    @staticmethod
-    def get_model_inputs_dtype(model_path, serving, tag_set):
-        inputs_dtype = {}
-        with tf.compat.v1.Session() as sess:
-            tag_set = {tf.compat.v1.saved_model.tag_constants.SERVING} if tag_set == "" else tag_set
-            model = tf.compat.v1.saved_model.load(sess, tag_set, model_path)
-            inputs = model.signature_def[serving].inputs
-            for key, input_tensor in inputs.items():
-                np_dtype = tf.dtypes.as_dtype(input_tensor.dtype).as_numpy_dtype
-                inputs_dtype[input_tensor.name.split(':')[0]] = np_dtype
-        return inputs_dtype
-
-    @staticmethod
     def get_graph_txt(model_json_path):
         txt_files = glob.glob(os.path.join(model_json_path, '**/*.txt'), recursive=True)
         if len(txt_files) > 1:
@@ -91,7 +72,7 @@ class NpuTfAdapterDumpData(object):
 
         return txt_files[0]
 
-    def generate_inputs_data(self):
+    def generate_inputs_data(self, use_aipp=False):
         # copy input_data into destination path
         if self.input_path:
             input_path = self.input_path.split(",")
@@ -116,7 +97,7 @@ class NpuTfAdapterDumpData(object):
                 self.inputs_data[input_name] = input_data
                 input_data.tofile(os.path.join(self.input, input_name + "_" + data_type.__name__ + ".bin"))
 
-    def generate_dump_data(self):
+    def generate_dump_data(self, use_aipp=False):
         # adapt NPU
         npu_device.compat.enable_v1()
         # switch ge graph dump

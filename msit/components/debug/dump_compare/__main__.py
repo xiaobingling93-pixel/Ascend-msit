@@ -43,7 +43,7 @@ class DumpCommand(BaseCommand):
         parser.add_argument(
             '-m',
             '--model',
-            required=False,
+            required=True,
             dest="model",
             type=check_model_path_legality,
             help='The original model (.onnx or .pb or saved_model) file path')
@@ -183,6 +183,12 @@ class DumpCommand(BaseCommand):
             dest="saved_model_tag_set",
             default='',
             help="Enter the tagSet of the model. For example: --saved_model_tag_set ['serve', 'general_parser']")
+        parser.add_argument(
+            '-dp',
+            '--device-pattern',
+            required=True,
+            dest="device_pattern",
+            help="Enter inference in npu or cpu device. For example: -dp cpu")
         self.parser = parser
 
     def handle(self, args):
@@ -198,7 +204,7 @@ class DumpCommand(BaseCommand):
                                    args.dump, args.bin2npy, args.custom_op, args.locat,
                                    args.onnx_fusion_switch, args.single_op, args.fusion_switch_file,
                                    args.max_cmp_size, args.quant_fusion_rule_file, args.saved_model_signature,
-                                   args.saved_model_tag_set)
+                                   args.saved_model_tag_set, args.device_pattern)
         dump_process(cmp_args, True)
 
 
@@ -237,7 +243,7 @@ class CompareCommand(BaseCommand):
             type=check_path_exit,
             help='The npu expect net output nodes path')
         parser.add_argument(
-            '-mp',
+            '-gp',
             '--golden-path',
             required=True,
             dest="golden_path",
@@ -263,11 +269,13 @@ class CompareCommand(BaseCommand):
             type=str2bool,
             help='Enable accuracy interval location when needed.E.g: --locat True')
         parser.add_argument(
-            '--dump',
-            dest="dump",
-            default=True,
-            type=str2bool,
-            help="Whether to dump all the operations' ouput.")
+            '-cp'
+            '--compare-pattern',
+            dest="compare_pattern",
+            required=True,
+            help="Enter compare pattern, There are two modes, 1 or 2"
+                 ", 1 indicates net output compare, 2 indicates accuracy net compare."
+                 "For example: -cp 2")
         self.parser = parser
 
     def handle(self, args):
@@ -278,7 +286,7 @@ class CompareCommand(BaseCommand):
 
         cmp_args = CompareArgsAdapter(args.my_path, args.golden_path, args.out_path, args.ops_json
                                       , args.locat, args.dump, args.my_net_output_path, args.golden_net_output_path
-                                      , args.expect_net_output_node)
+                                      , args.expect_net_output_node, args.compare_pattern)
         compare_process(cmp_args)
 
 

@@ -13,6 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Function:
+This class mainly compare cpu and npu ops inputs and outputs.
+"""
+
 import os
 import csv
 
@@ -23,12 +28,12 @@ from msquickcmp.adapter_cli.args_adapter import CompareArgsAdapter
 
 
 def compare_process(args: CompareArgsAdapter):
-    if not args.dump:
+    if args.compare_pattern == "1":
         # only compare the final output
         net_compare = NetCompare(args.my_net_output_path, args.golden_path,
                                  args.ops_json, args, golden_json_path=None)
         net_compare.net_output_compare(args.my_net_output_path, args.golden_net_output_path)
-    else:
+    elif args.compare_pattern == "2":
         # compare the entire network
         net_compare = NetCompare(args.my_path, args.golden_path,
                                  args.ops_json, args, golden_json_path=None)
