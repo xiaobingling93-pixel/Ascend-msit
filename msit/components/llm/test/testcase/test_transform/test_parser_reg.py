@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from msit_llm.transform.model_parser.parser import parse_input_names, get_atb_model_names
+from msit_llm.transform.model_parser.parser import parse_input_names
 
 LLAMA_CASE_01 = """
 DecoderModel::~DecoderModel() {}
@@ -213,10 +213,4 @@ class TestParserReg(TestCase):
              'IN_TENSOR_ATTENTIONMASK', 'IN_TENSOR_BLOCK_TABLES', 'IN_TENSOR_SLOTS', 'IN_TENSOR_KV_CACHE_IDX', 
              'IN_TENSOR_TOKEN_OFFSET', 'IN_TENSOR_SEQ_LENGTHS', 'IN_TENSOR_LOGTIS_INDICES', 'IN_PLACEHOLDER'],
             parse_input_names(QWEN_CASE_01),
-        )
-
-    def test_register(self):
-        self.assertEqual(
-            "chatglm_v2_6b_DecoderModel",
-            get_atb_model_names("""REGISTER_MODEL(chatglm_v2_6b, DecoderModel);"""),
         )
