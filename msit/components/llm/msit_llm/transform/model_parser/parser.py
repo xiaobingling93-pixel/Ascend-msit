@@ -16,7 +16,7 @@ from json import dump
 import json
 from pathlib import Path
 import re
-
+import os
 import torch.nn as nn
 
 from msit_llm.transform.model_parser.kind import mlp, attention, convert, mname
@@ -109,7 +109,9 @@ def build_model_tree(module: nn.Module):
 
 
 def model_to_json(model: nn.Module, name: str):
-    with open(f"{name}.json", "w") as ff:
+    flags=os.O_WRONLY|os.O_CREAT|os.O_TRUNC
+    modes = os.st.S_IWUSR|os.st.S_IRUSR
+    with os.fdopen(os.open(f"{name}.json",flags,modes),'w') as ff:
         dump(build_model_tree(model), ff)
 
 

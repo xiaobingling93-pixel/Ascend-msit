@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from array import array
-
+import os
 import torch
 from torch import float16, float32, int8, int32, int64, bfloat16
 
@@ -75,7 +75,9 @@ def write_atb_data(tensor: torch.Tensor, path: str):
 
     meta = f"dtype={dtype}\ndims={dims}\n$End=1\n".encode("utf-8")
 
-    with open(path, "wb") as fo:
+    flags=os.O_WRONLY|os.O_CREAT|os.O_TRUNC
+    modes = os.st.S_IWUSR|os.st.S_IRUSR
+    with os.fdopen(os.open(path,flags,modes),'wb') as fo:
         fo.write(meta + data)
 
     del _dtype_map

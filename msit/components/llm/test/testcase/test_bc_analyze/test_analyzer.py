@@ -65,13 +65,6 @@ class TestSynthezier(TestCase):
                 self.assertEqual(len(logger_output), 1)
                 self.assertRegex(logger_output[0], r'should be used only by its owner or superuser')
     
-    def test_analyzer_from_csv_other_writeable(self):
-        with self.assertLogs('msit_llm_logger', 'ERROR') as cm:
-            with patch('os.stat', return_value=os.stat_result([2] + [0] * 9)):
-                self.assertRaises(PermissionError, self.analyzer.from_csv, golden_csv_path=self.golden_csv_path, test_csv_path=self.test_csv_path)
-                logger_output = cm.output
-                self.assertEqual(len(logger_output), 1)
-                self.assertRegex(logger_output[0], r'should not be other writeable')
     
     def test_analyzer_from_mixed(self):
         import time

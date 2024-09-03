@@ -335,7 +335,9 @@ class OnnxDumpData(DumpData):
 
         if len(file_name_map) > 0:
             mapping_file_path = os.path.join(self.onnx_dump_data_dir, "mapping.csv")
-            with open(mapping_file_path, "w") as map_file:
+            flags=os.O_WRONLY|os.O_CREAT|os.O_TRUNC
+            modes = os.st.S_IWUSR|os.st.S_IRUSR
+            with os.fdopen(os.open(mapping_file_path,flags,modes),'w') as map_file:
                 map_file.writelines(file_name_map)
 
         if not self.single_op:
