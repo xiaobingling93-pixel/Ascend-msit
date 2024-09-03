@@ -13,13 +13,15 @@
 # limitations under the License.
 
 import os
+import stat
 from msit_llm.common.log import logger
 from collections import namedtuple
 
-SCENARIOS = namedtuple("SCENARIOS", ["torch_to_float_atb", "float_atb_to_quant_atb"])("torch_to_float_atb", "float_atb_to_quant_atb")
+_SCENARIOS = ["torch_to_float_atb", "float_atb_to_quant_atb", "torch_to_float_python_atb"]
+SCENARIOS = namedtuple("SCENARIOS", _SCENARIOS)(*_SCENARIOS)
 
 
-def get_transform_scenario(source_path):
+def get_transform_scenario(source_path, to_python=False):
     if os.path.isfile(source_path) and source_path.endswith(".cpp"):  # Single cpp input
         return SCENARIOS.float_atb_to_quant_atb
 
@@ -27,7 +29,7 @@ def get_transform_scenario(source_path):
         from transformers.configuration_utils import PretrainedConfig
 
         _ = PretrainedConfig.get_config_dict(source_path)
-        return SCENARIOS.torch_to_float_atb
+        return SCENARIOS.torch_to_float_python_atb if to_python else SCENARIOS.torch_to_float_atb
     except Exception:
         pass  # Not an error
 
@@ -35,3 +37,10 @@ def get_transform_scenario(source_path):
         return SCENARIOS.float_atb_to_quant_atb
     else:
         return None
+
+
+def write_file(save_path, string):
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+    modes = stat.S_IWUSR | stat.S_IRUSR
+    with os.fdopen(os.open(save_path, flags, modes), 'w') as ff:
+        ff.write(string)

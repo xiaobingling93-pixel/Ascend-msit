@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
 import os
 import re
 import unittest
@@ -42,7 +43,9 @@ class OperationTest(unittest.TestCase):
         self.pid = case_info['pid']
         self.in_tensors = []
         self.out_tensors = []
+        self.bind_idx = []
         self.atb_rerun = self.case_info["atb_rerun"]
+        self.optimization_closed = self.case_info["optimization_closed"]
 
         error1 = 'Error0.1‰'
         error2 = 'Error0.5‰'
@@ -156,26 +159,92 @@ class OperationTest(unittest.TestCase):
         if self.case_info['excuted_information'] != 'PASS':
             self.case_info['excuted_information'] = 'FAILED'
 
-    def rerun_op(self, execute_type):
-        operation = torch.classes.OperationTorch.OperationTorch(self.op_name)
-        if isinstance(self.op_param, dict):
-            operation.set_param(json.dumps(self.op_param))
-        elif isinstance(self.op_param, str):
-            operation.set_param(self.op_param)
-        if execute_type == "inplace":
-            operation.execute(self.in_tensors)
-            out_tensors = []
-            for index in self.case_info['inplace_idx']:
-                out_tensors.append(self.in_tensors[index])
+    def get_torch_atb_params(self, op_name):
+        import copy
+        params = copy.deepcopy(self.op_param)
+        if op_name == "SelfAttentionOperation":
+            from msit_llm.opcheck.check_case.self_attention import CalcType, KvCacheCfg, MaskType, KernelType, ClampType
+            if "calcType" in params:
+                params["calcType"] = CalcType(self.op_param['calcType']).name
+            if "kvcacheCfg" in params:
+                params["kvcacheCfg"] = KvCacheCfg(self.op_param['kvcacheCfg']).name
+            if "maskType" in params:
+                params["maskType"] = MaskType(self.op_param['maskType']).name
+            if "kernelType" in params:
+                params["kernelType"] = KernelType(self.op_param['kernelType']).name
+            if "clampType" in params:
+                params["clampType"] = ClampType(self.op_param['clampType']).name
         else:
-            out_tensors = operation.execute(self.in_tensors)
+            from msit_llm.opcheck.check_case.paged_attention import CompressType, MaskType, QuantType, CalcType
+            if "compressType" in params:
+                params["compressType"] = CompressType(self.op_param['compressType']).name
+            if "maskType" in params:
+                params["maskType"] = MaskType(self.op_param['maskType']).name
+            if "quantType" in params:
+                params["quantType"] = QuantType(self.op_param['quantType']).name
+            if "calcType" in params:
+                params["calcType"] = CalcType(self.op_param['calcType']).name
+        params = json.dumps(params)
+        return params
+
+    def run_op_torch_atb(self, op_name):
+        atb_speed_path = os.getenv("ATB_SPEED_HOME_PATH", None)
+        if not atb_speed_path:
+            raise RuntimeError("ATB_SPEED_HOME_PATH environment variable not valid. Try install mindie")
+        sys.path.append(os.path.join(atb_speed_path, "lib"))
+        try:
+            from _libatb_torch import _GraphOperation as GraphOp, _BaseOperation as BaseOp
+        except Exception as e:
+            raise RuntimeError("import _libatb_torch failed. Try install compatible mindie") from e 
+
+        params = self.get_torch_atb_params(op_name)
+        graph_op = GraphOp('rerun_op')
+        op = BaseOp(op_type=op_name.replace("Operation", ""), op_param=params, op_name=op_name)
+        input_name = ['in' + str(i) for i in range(len(self.in_tensors))]
+        output_name = ['out' + str(i) for i in range(len(self.out_tensors))]
+        graph_op.add_input_output(input=input_name, output=output_name)
+        graph_op.add_operation(op, input_name, output_name)
+        graph_op.build()
+
+        inputs, outputs, bind = {}, {}, {}
+        for idx, intensor in zip(input_name, self.in_tensors):
+            inputs[idx] = intensor
+        for idx, outtensor in zip(output_name, self.out_tensors):
+            outputs[idx] = outtensor
+        for idx in self.bind_idx:
+            bind_name = "in" + str(idx)
+            bind[bind_name] = self.in_tensors[idx].cpu()
+        _ = graph_op.forward(inputs, outputs, bind)
+        return outputs.values()
+
+    def rerun_op(self, execute_type):
+        if self.op_name == "SelfAttentionOperation" or self.op_name == "PagedAttentionOperation":
+            out_tensors = self.run_op_torch_atb(self.op_name)
+        else:
+            operation = torch.classes.OperationTorch.OperationTorch(self.op_name)
+            if isinstance(self.op_param, dict):
+                operation.set_param(json.dumps(self.op_param))
+            elif isinstance(self.op_param, str):
+                operation.set_param(self.op_param)
+            if execute_type == "inplace":
+                operation.execute(self.in_tensors)
+                out_tensors = []
+                for index in self.case_info['inplace_idx']:
+                    out_tensors.append(self.in_tensors[index])
+            else:
+                out_tensors = operation.execute(self.in_tensors)
         return [tensor.cpu() for tensor in out_tensors]
 
     def excute_common(self, execute_type):
         logger_text = f"———————— {self.op_id} {self.op_name} test start ————————"
         logger.info(logger_text)
 
-        golden_out_tensors = self.golden_calc(self.in_tensors)
+        try:
+            golden_out_tensors = self.golden_calc(self.in_tensors)
+        except ZeroDivisionError as e:
+            error_text = f"get ZeroDivisionError when calc {self.op_name} golden"
+            raise RuntimeError(error_text) from e
+
         if self.atb_rerun:
             if self.op_name in ("AllGatherOperation", "AllReduceOperation", "LinearParallelOperation"):
                 logger_text = f"{self.op_name} needs data on all ranks and atb-rerun is unsupported. " \
@@ -217,7 +286,6 @@ class OperationTest(unittest.TestCase):
         return rel_pass_rate.item() * 100, max_rel_error.item()
 
     def get_abs_pass_rate(self, out, golden, etol):
-        out, golden = out.cpu(), golden.cpu()
         size = out.shape[0]
         abs_errors = torch.where(
             torch.abs(golden) > FLOAT_EPSILON,
@@ -234,17 +302,30 @@ class OperationTest(unittest.TestCase):
         default_str = 'NaN'
         abs_pass_rate, max_abs_error, cos_sim, kl = None, None, None, None
 
-        out, golden = out.reshape(-1), golden.reshape(-1)
-        if NAMEDTUPLE_PRECISION_METRIC.abs in precision_metric:
-            abs_pass_rate, max_abs_error = self.get_abs_pass_rate(out, golden, etol)
-        if NAMEDTUPLE_PRECISION_METRIC.cos_sim in precision_metric:
-            cos_sim, cur_message = CMP_ALG_MAP["cosine_similarity"](golden, out)
-            if cur_message:
-                message.append('cos_sim: ' + cur_message)
-        if NAMEDTUPLE_PRECISION_METRIC.kl in precision_metric:
-            kl, cur_message = CMP_ALG_MAP["kl_divergence"](golden, out)
-            if cur_message:
-                message.append('kl_div: ' + cur_message)
+        out, golden = out.reshape(-1).cpu().double(), golden.reshape(-1).cpu().double()
+        try:
+            if NAMEDTUPLE_PRECISION_METRIC.abs in precision_metric:
+                abs_pass_rate, max_abs_error = self.get_abs_pass_rate(out, golden, etol)
+        except Exception as e:
+            logger_text = f"get_abs_pass_rate error: {e}"
+            logger.error(logger_text)
+        try:
+            if NAMEDTUPLE_PRECISION_METRIC.cos_sim in precision_metric:
+                cos_sim, cur_message = CMP_ALG_MAP["cosine_similarity"](golden, out)
+                if cur_message:
+                    message.append('cos_sim: ' + cur_message)
+        except Exception as e:
+            logger_text = f"get_cosine_similarity error: {e}"
+            logger.error(logger_text)
+        try:
+            if NAMEDTUPLE_PRECISION_METRIC.kl in precision_metric:
+                kl, cur_message = CMP_ALG_MAP["kl_divergence"](golden, out)
+                if cur_message:
+                    message.append('kl_div: ' + cur_message)
+        except Exception as e:
+            logger_text = f"get_kl_divergence error: {e}"
+            logger.error(logger_text)
+
         abs_pass_rate_str = "%.16f" % float(abs_pass_rate) if abs_pass_rate is not None else default_str
         max_abs_error_str = "%.16f" % float(max_abs_error) if max_abs_error is not None else default_str
         cos_sim_str = "%.10f" % cos_sim if cos_sim is not None else default_str

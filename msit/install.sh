@@ -74,12 +74,18 @@ if [ "$arg_help" -eq "1" ]; then
   exit;
 fi
 
+SITE_PACKAGES="$(python3 -c 'import site; print(site.getsitepackages()[0])')"
+CONFIG_FILE="$SITE_PACKAGES/components/config/config.ini"
+
 # 若pip源为华为云，则优先安装skl2onnx(当前mirrors.huaweicloud.com中skl2onnx已停止更新，不包含1.14.1及以上版本)
 pre_check_skl2onnx(){
+  http_mirror_url=$(grep '^http_mirror_url=' "$CONFIG_FILE" | sed 's/^http_mirror_url=//')
+  https_mirror_url=$(grep '^https_mirror_url=' "$CONFIG_FILE" | sed 's/^https_mirror_url=//')
   pip_source_index_url=$(pip3 config list | grep index-url | awk -F'=' '{print $2}' | tr -d "'")
-  if [ "${pip_source_index_url}" == "http://mirrors.huaweicloud.com/repository/pypi/simple" ] || [ "${pip_source_index_url}" == "https://mirrors.huaweicloud.com/repository/pypi/simple" ]
+  if [ "${pip_source_index_url}" == "${http_mirror_url}" ] || [ "${pip_source_index_url}" == "${https_mirror_url}" ]
   then
-    pip3 install skl2onnx==1.14.1 -i https://mirrors.tools.huawei.com/pypi/simple --trusted-host mirrors.tools.huawei.com
+    mirror_tools_url=$(grep '^mirror_tools_url=' "$CONFIG_FILE" | sed 's/^mirror_tools_url=//')
+    pip3 install skl2onnx==1.14.1 -i $mirror_tools_url --trusted-host mirrors.tools.huawei.com
   fi
 }
 
@@ -89,8 +95,8 @@ uninstall(){
   pip3 uninstall ait analyze_tool convert_tool compare auto_optimizer msprof transplt ${all_uninstall}
   if [ -z $only_debug ] && [ -z $only_compare ] && [ -z $only_surgen ] && [ -z $only_benchmark ] && [ -z $only_analyze ] && [ -z $only_convert ] && [ -z $only_transplt ] && [ -z $only_profile ] && [ -z $only_llm ] && [ -z $only_tensor_view ]
   then
-    pip3 uninstall msit msit-analyze aclruntime ais_bench msit-convert msit-compare msit-surgeon msit-profile msit-transplt msit-llm msit-tensor-view ${all_uninstall}
-    pip3 uninstall ms-ait ait-analyze aclruntime ais_bench ait-convert ait-compare ait-surgeon ait-profile ait-transplt ait-llm ait-tensor-view ${all_uninstall}
+    pip3 uninstall msit msit-analyze aclruntime ais_bench msit-benchmark msit-convert msit-compare msit-surgeon msit-profile msit-transplt msit-llm msit-tensor-view ${all_uninstall}
+    pip3 uninstall ms-ait ait-analyze aclruntime ais_bench ait-benchmark ait-convert ait-compare ait-surgeon ait-profile ait-transplt ait-llm ait-tensor-view ${all_uninstall}
   else
     if [ ! -z $only_compare ]
     then
@@ -107,6 +113,8 @@ uninstall(){
     if [ ! -z $only_benchmark ]
     then
       pip3 uninstall aclruntime ais_bench ${all_uninstall}
+      pip3 uninstall msit-benchmark ${all_uninstall}
+      pip3 uninstall ait-benchmark ${all_uninstall}
     fi
 
     if [ ! -z $only_analyze ]

@@ -18,6 +18,7 @@ msit llm dump --exec "bash run.sh patches/models/modeling_xxx.py"
 | -tiling，--save-tiling           | 选择是否需要保存tiling数据，默认为false。使用方式：-tiling                | 否    |
 | --save-tensor-part, -stp | 指定保存tensor的部分，0为仅intensor，1为仅outtensor，2为全部保存，默认为2。使用示例：-stp 1 |否    |
 | -o, --output            | 指定dump数据的输出目录，默认为'./'，使用示例：-o aasx/sss | 否    |
+| -h, --help            | 命令行参数帮助信息 | 否    |
 
 ### Dump 落盘位置
 - Dump默认落盘路径在当前目录下的atb_temp目录下，具体路径是`./atb_temp/tensors/{PID}_{TID}`目录下。

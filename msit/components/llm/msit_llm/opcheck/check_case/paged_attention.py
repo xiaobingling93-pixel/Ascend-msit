@@ -44,7 +44,7 @@ class CalcType(Enum):
 
 class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
     @staticmethod
-    def mask_nz_2_nd(mask_type, context_lens, head_num):
+    def mask_nz_2_nd(mask, mask_type, context_lens, head_num):
         mask = mask.permute(0, 2, 1, 3)
         dim0, dim1, dim2, dim3 = mask.shape
         mask = mask.contiguous().view(dim0, dim1, dim2 * dim3)
@@ -162,7 +162,7 @@ class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
 
         mask_type = self.op_param.get('maskType', MaskType.UNDEFINED.value)
         if mask_type != MaskType.UNDEFINED.value:
-            mask_dim = 3 if mask_type == MaskType.MASK_TYPE_NORM.value else len(mask) # mask shape
+            mask_dim = 3 if mask_type == MaskType.MASK_TYPE_NORM.value else len(mask.shape) # mask shape
         else:
             mask_dim = 0
         mask_index_coff = 1
@@ -206,20 +206,31 @@ class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
 
     def golden_calc(self, in_tensors):
         query, key_cache, value_cache, block_tables, context_lens = in_tensors[:5]
+        self.bind_idx.append(4)
         mask = None
 
         head_num = self.op_param.get('headNum', 0)
         kv_head_num = self.op_param.get('kvHeadNum', 0)
         num_tokens, _, head_size = query.shape
 
-        calc_type = self.op_param.get('calcType', CalcType.CALC_TYPE_UNDEFINED.value) # 暂时不使用
         mask_type = self.op_param.get('maskType', MaskType.UNDEFINED.value)
-        if mask_type != MaskType.UNDEFINED.value:
+        is_masked = mask_type != MaskType.UNDEFINED.value
+        if is_masked:
             mask = in_tensors[5]
+        if self.optimization_closed == "maskType":
+            del self.in_tensors[5]
 
         batch_run_status_enable = self.op_param.get("batchRunStatusEnable", False)
         if batch_run_status_enable:
-            batch_status = in_tensors[6]
+            if is_masked:
+                batch_status = in_tensors[6]
+            else:
+                batch_status = in_tensors[5]
+
+        calc_type = self.op_param.get('calcType', CalcType.CALC_TYPE_UNDEFINED.value) # 暂时不使用
+        if calc_type == CalcType.CALC_TYPE_SPEC.value:
+            q_seq_lens = in_tensors[-1]
+            self.bind_idx.append(len(in_tensors) - 1)
 
         soc_version = self.get_soc_version()
         if soc_version == 'Ascend310P':
@@ -228,7 +239,7 @@ class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
             value_cache = value_cache.permute(0, 2, 1, 3).reshape(num_blocks, block_size, kv_head_num, head_size)
 
             if mask_type != MaskType.UNDEFINED.value:
-                mask = OpcheckPagedAttentionAttentionOperation.mask_nz_2_nd(mask_type, context_lens, head_num)
+                mask = OpcheckPagedAttentionAttentionOperation.mask_nz_2_nd(mask, mask_type, context_lens, head_num)
 
         ref_output = torch.zeros_like(query)
         paged_input = [query, key_cache, value_cache, block_tables, context_lens]

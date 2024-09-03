@@ -238,7 +238,9 @@ class BenchmarkCommand(BaseCommand):
     def handle(self, args):
         from ais_bench.infer.infer_process import infer_process
         from ais_bench.infer.args_adapter import AISBenchInferArgsAdapter
-
+        # abspath is not permitted
+        if args.output_dirname and args.output_dirname[0] == '/':
+            raise ValueError("--output-dirname do not support abs path!")
         args = AISBenchInferArgsAdapter(
             args.om_model,
             args.input,

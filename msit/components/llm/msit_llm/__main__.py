@@ -214,7 +214,7 @@ class CompareCommand(BaseCommand):
                   "def foo(golden_tensor, my_tensor): return float_value, string_message"')
 
         parser.add_argument("--log-level", "-l", default="info", choices=LOG_LEVELS_LOWER, help="specify log level.")
-        
+
         parser.add_argument(
             '--weight',
             '-w',
@@ -344,6 +344,15 @@ class OpcheckCommand(BaseCommand):
             help='Set the number of processes. The maximum number is 8. E.g.: -j 2'
         )
 
+        parser.add_argument(
+            '--optimization-identify',
+            '-opt',
+            required=False,
+            action='store_true',
+            default=False,
+            help='Identify the impact of FA/PA operator optimization on the precision of the operator. \
+                This parameter is used in combination with the --atb-rerun/-rerun parameter.')
+
     def handle(self, args, **kwargs):
         set_log_level(args.log_level)
 
@@ -413,10 +422,11 @@ class Transform(BaseCommand):
         scenarios_info = [
             "[float atb to quant atb model] directory containing both cpp and h file",
             "[float atb to quant atb model] a single cpp file, will use the h file with a same name",
-            "[torch to float atb model] directory containing config.json and py file for building transformers model",
+            "[torch to float cpp atb model] directory containing config.json and py for building transformers model",
+            "[torch to float python atb model] directory containing config.json and py for building transformers model",
         ]
         scenarios_info_str = "; ".join([f"{id}.{ii}" for id, ii in enumerate(scenarios_info, start=1)])
-        
+
         parser.add_argument(
             "-s",
             "--source",
@@ -434,13 +444,32 @@ class Transform(BaseCommand):
         )
 
         parser.add_argument(
-            "--enable-sparse", action='store_true', help="[float atb to quant atb model] Enable trasforming to sparse-quant model"
+            "--enable-sparse",
+            action='store_true',
+            help="[float atb to quant atb model] Enable transforming to sparse-quant model"
         )
-
+        parser.add_argument(
+            "--to-python",
+            "-py",
+            action='store_true',
+            help="[torch to float python atb model] Enable transforming to python atb model",
+        )
+        parser.add_argument(
+            "--to-quant",
+            "-quant",
+            action='store_true',
+            help="[torch to float python atb model] Enable transforming to python quant atb model",
+        )
+        parser.add_argument(
+            "--quant-disable-names",
+            type=safe_string,
+            default=None,
+            help="[torch to float python atb model] file or ',' separated string for layer names skipping quant. "
+                 "Default None for 'lm_head'",
+        )
         parser.add_argument(
             "-a",
             "--analyze",
-            dest="analyze",
             action="store_true",
             help="[float atb to atb model] Analysis tool to analyze the compatibility of model operator migration"
         )
@@ -451,20 +480,32 @@ class Transform(BaseCommand):
         from msit_llm.transform.utils import get_transform_scenario, SCENARIOS
 
         set_log_level(args.log_level)
-        scenario = get_transform_scenario(args.source)
+        scenario = get_transform_scenario(args.source, to_python=args.to_python)
         logger.info(f"Current scenario: {scenario}")
-        if scenario == SCENARIOS.float_atb_to_quant_atb:
+        if scenario == SCENARIOS.torch_to_float_python_atb:
+            from msit_llm.transform.torch_to_atb_python import transform
+
+            quant_disable_names = ["lm_head"]
+            if args.quant_disable_names is not None and os.path.isfile(args.quant_disable_names):
+                check_input_path_legality(args.quant_disable_names)
+                with open(args.quant_disable_names) as ff:
+                    quant_disable_names = [ii.strip() for ii in ff.readlines()]
+            elif args.quant_disable_names is not None:
+                quant_disable_names = args.quant_disable_names.split(',')
+
+            transform(source_path=args.source, to_quant=args.to_quant, quant_disable_names=quant_disable_names)
+        elif scenario == SCENARIOS.float_atb_to_quant_atb:
             from msit_llm.transform.float_atb_to_quant_atb import transform_quant
 
             transform_quant.transform_quant(source_path=args.source, enable_sparse=args.enable_sparse)
         elif scenario == SCENARIOS.torch_to_float_atb:
             from msit_llm.transform.torch_to_float_atb import transform_float
-            
+
             if args.analyze:
                 transform_float.transform_report(source_path=args.source)
             else:
                 transform_float.transform_float(source_path=args.source, atb_model_path=args.atb_model_path)
-                
+
         else:
             message = f"Neither config.json + py or cpp found in {args.source}, not supported"
             logger.error(message)
@@ -520,7 +561,7 @@ class BCAnalyze(BaseCommand):
                 except StopIteration:
                     logger.error(
                         "There is no csv file under directory '%s', "
-                        "please check the log result", 
+                        "please check the log result",
                         csv_dir
                     )
                     raise
@@ -528,11 +569,11 @@ class BCAnalyze(BaseCommand):
                 full_csv_path = os.path.join(csv_dir, csv_path)
             else:
                 full_csv_path = component
-            
+
             csv_path_lists.append(full_csv_path)
 
-        Analyzer.from_csv(golden_csv_path=csv_path_lists[0], test_csv_path=csv_path_lists[1]) 
-        
+        Analyzer.from_csv(golden_csv_path=csv_path_lists[0], test_csv_path=csv_path_lists[1])
+
 
 def get_cmd_instance():
     llm_help_info = "Large Language Model(llm) Debugger Tools."

@@ -37,7 +37,7 @@ class KvCacheCfg(Enum):
 
 class MaskType(Enum):
     MASK_TYPE_UNDEFINED = 0 # 默认值，全0mask
-    MASK_TYPE_NROM = 1 # 倒三角mask
+    MASK_TYPE_NORM = 1 # 倒三角mask
     MASK_TYPE_ALIBI = 2 # alibi mask
     MASK_TYPE_NORM_COMPRESS = 3 # 倒三角压缩mask
     MASK_TYPE_ALIBI_COMPRESS = 4 # alibi压缩mask
@@ -118,12 +118,16 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         out_sub = out_sub.view([head_num, q_s, head_size]).permute(1, 0, 2).contiguous()
         return out_sub, _p
 
-    def get_mask(self, in_tensors):
+    def get_mask(self, in_tensors, seq_len):
         mask = in_tensors[3]
         soc_version = self.get_soc_version()
         if soc_version != "Ascend910B":
-            mask = self.nz_2_nd(mask)
-            self.in_tensors[3] = mask
+            mask = OpcheckUnpadSelfAttentionOperation.attention_mask_nz_2_nd(mask, seq_len)
+            mask_type = self.op_param.get("maskType", MaskType.MASK_TYPE_UNDEFINED.value)
+            if mask_type == MaskType.MASK_TYPE_ALIBI.value and len(mask.shape) == 4:
+                self.in_tensors[3] = mask.squeeze(dim=0)
+            else:
+                self.in_tensors[3] = mask
         if len(mask.shape) == 2:
             dim0, dim1 = mask.shape
             mask = mask.view(1, dim0, dim1)
@@ -133,13 +137,14 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         batch_run_status_enable = self.op_param.get("batchRunStatusEnable", False)
         if batch_run_status_enable:
             batch_status = in_tensors[-1]
+            self.bind_idx.append(len(in_tensors) - 1)
         else:
             batch_status = range(len(seq_len))
         return batch_status
 
     def get_post_mask_coff(self):
         kernel_type = self.op_param.get("kernelType", KernelType.KERNELTYPE_DEFAULT.value)
-        if kernel_type == KernelType.KERNELTYPE_HIGH_PRECISION.value:
+        if kernel_type == KernelType.KERNELTYPE_HIGH_PRECISION.value or self.optimization_closed == "kernelType":
             post_mask_coff = 1.0
         else:
             post_mask_coff = -3e38
@@ -175,19 +180,21 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         mask_type = self.op_param.get("maskType", MaskType.MASK_TYPE_UNDEFINED.value)
         is_triu_mask = self.op_param.get("isTriuMask", 0)
         is_mask = mask_type != MaskType.MASK_TYPE_UNDEFINED.value
-        if is_mask:
-            mask = self.get_mask(in_tensors)
+        if is_mask or self.optimization_closed == "maskType":
             kv_seqlen = in_tensors[4]
-            q_seqlen = in_tensors[5]
+            seq_len = q_seqlen = in_tensors[5]
             layer_id = int(in_tensors[6][0])
+            mask = self.get_mask(in_tensors, seq_len)
+            if self.optimization_closed == "maskType":
+                del self.in_tensors[3] 
         else:
             kv_seqlen = in_tensors[3]
-            seq_len = in_tensors[4]
+            seq_len = q_seqlen = in_tensors[4]
             layer_id = int(in_tensors[5][0])
 
         batch_status = self.get_batch_status(in_tensors, seq_len)
         post_mask_coff = self.get_post_mask_coff()
-        _, _, head_info, data_type, q_ntokens = self.get_attention_params(q, seq_len)
+        _, _, head_info, data_type, q_ntokens = self.get_attention_params(q)
         head_num, head_size, kv_head_num = head_info
         max_seq_len = max(seq_len)
 
@@ -225,11 +232,17 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         mask_type = self.op_param.get("maskType", MaskType.MASK_TYPE_UNDEFINED.value)
         is_mask = mask_type != MaskType.MASK_TYPE_UNDEFINED.value
         is_triu_mask = self.op_param.get("isTriuMask", 0)
-        if is_mask:
-            mask = self.get_mask(in_tensors)
+        if is_mask or self.optimization_closed == "maskType":
             seq_len = in_tensors[4]
+            mask = self.get_mask(in_tensors, seq_len)
+            if self.optimization_closed == "maskType":
+                del self.in_tensors[3]
+                self.bind_idx.append(3)
+            else:
+                self.bind_idx.append(4)
         else:
             seq_len = in_tensors[3]
+            self.bind_idx.append(3)
 
         batch_status = self.get_batch_status(in_tensors, seq_len)
         post_mask_coff = self.get_post_mask_coff()
@@ -256,15 +269,20 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
             score = score * tor
             score = self.get_clamped_score(score)
             if is_mask:
-                if (mask_type == MaskType.MASK_TYPE_NROM.value or mask_type == MaskType.MASK_TYPE_NORM_COMPRESS.value) \
+                if (mask_type == MaskType.MASK_TYPE_NORM.value or mask_type == MaskType.MASK_TYPE_NORM_COMPRESS.value) \
                     and q_s > mask.shape[1]:
                     # 压缩norm mask, 使用当前最大seqlen生成mask
                     no_compress_mask = torch.ones(size=(1, max_seq_len, max_seq_len)).to(score.device)
                     no_compress_mask = torch.triu(no_compress_mask, 1)
                     no_compress_mask *= -10000.0
+                    self.in_tensors[3] = no_compress_mask.to(self.in_tensors[3].dtype)
                     score = score + no_compress_mask[:, :q_s, :kv_s]
                 else:
-                    score = score + mask[:, :q_s, :kv_s] * post_mask_coff
+                    if len(mask.shape) == 4:
+                        mask_cur = mask[idx]
+                    else:
+                        mask_cur = mask
+                    score = score + mask_cur[:, :q_s, :kv_s] * post_mask_coff
 
             out_sub, _p = OpcheckUnpadSelfAttentionOperation.get_out_sub(head_info, q_s, score, v_slice, _p)
             out = out_sub if out is None else torch.concat((out, out_sub), 0)
@@ -281,6 +299,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
         mixed_q, mixed_k, mixed_v = OpcheckUnpadSelfAttentionOperation.get_qkv(in_tensors)
         cache_k, cache_v, attention_mask, token_offset, seq_len, layerid = in_tensors[3], in_tensors[4], \
             in_tensors[5], in_tensors[6], in_tensors[7], int(in_tensors[8][0])
+        self.bind_idx.extend([3, 4, 6, 7]) # cache_k, cache_v, token_offset, seq_len
 
         soc_version = self.get_soc_version()
         if soc_version != "Ascend910B":

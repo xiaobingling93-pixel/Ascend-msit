@@ -32,10 +32,10 @@ msit llm dump --exec "<任意包含ATB的程序执行命令>" --type model tenso
 
 ## 命令行参数
 
-| 参数名                         | 描述                                                                                                                                                                                                                                                                                                                                | 必选 |
-| ------------------------------ |-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| ---- |
-| --exec                         | 指定包含 ATB 的程序执行命令，使用示例： --exec "bash run.sh patches/models/modeling_xxx.py"。**注：命令中不支持重定向字符，如果需要重定向输出，建议将执行命令写入 shell 脚本，然后启动 shell 脚本。**                                                                                                                                                                                          | 是   |
-| --type                         | dump 类型，默认为['tensor']。使用方式：--type layer tensor。可选项有：<br /> model: 模型拓扑信息<br /> layer: Operation 维度拓扑信息<br /> op: ATB Operation 信息<br /> kernel: kernel Operation 信息<br /> tensor: tensor 数据(默认)<br /> cpu_profiling: cpu profiling 数据<br /> onnx: onnx 模型。其中'onnx'需要和'model'、'layer'组合使用，用于将 model 和 layer 的拓扑信息转换成 onnx，可视化模型结构。 | 否   |
+| 参数名                           | 描述                                                                                                                                                                                                                                                                                                                                | 必选 |
+|-------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| ---- |
+| --exec                        | 指定包含 ATB 的程序执行命令，使用示例： --exec "bash run.sh patches/models/modeling_xxx.py"。**注：命令中不支持重定向字符，如果需要重定向输出，建议将执行命令写入 shell 脚本，然后启动 shell 脚本。**                                                                                                                                                                                          | 是   |
+| --type                        | dump 类型，默认为['tensor']。使用方式：--type layer tensor。可选项有：<br /> model: 模型拓扑信息<br /> layer: Operation 维度拓扑信息<br /> op: ATB Operation 信息<br /> kernel: kernel Operation 信息<br /> tensor: tensor 数据(默认)<br /> cpu_profiling: cpu profiling 数据<br /> onnx: onnx 模型。仅用于模型结构可视化 | 否   |
 | -sd，--only-save-desc          | 只保存 tensor 描述信息开关，默认为否，开启开关时将 dump tensor 的描述信息，使用方式：-sd                                                                                                                                                                                                                                                                          | 否   |
 | -ids，--save-operation-ids     | 设置 dump 指定 id 的算子的 tensor，默认为空，全量 dump。使用方式：-ids 2, 3_1 表示只 dump 第 2 个 operation 和第 3 个 operation 的第 1 个算子的数据，id 从 0 开始。若不确定算子 id，可以先执行 msit llm dump --exec xx --type model 命令，将 model 信息 dump 下来，即可获得模型中所有的算子 id 信息。                                                                                                            | 否   |
 | -er，--execute-range           | 指定 dump 的 token 轮次范围，区间左右全闭，可以支持多个区间序列，默认为第 0 次，使用方式：-er 1,3 或 -er 3,5,7,7（代表区间[3,5],[7,7],也就是第 3，4，5，7 次 token）                                                                                                                                                                                                                  | 否   |
@@ -43,11 +43,11 @@ msit llm dump --exec "<任意包含ATB的程序执行命令>" --type model tenso
 | -time，--save-time             | 选择保存的时间节点，取值[0,1,2,3]，0 代表保存执行前(before)，1 代表保存执行后(after)，2 代表前后都保存(both), 3 代表保存执行前的intensor和执行后的outtensor。默认值为 3。使用方式：-time 0                                                                                                                                                                                                    | 否   |
 | -opname，--operation-name      | 指定需要 dump 的算子类型，只需要指定算子名称的开头，可以模糊匹配，如 selfattention 只需要填写 self。使用方式：-opname self                                                                                                                                                                                                                                                  | 否   |
 | -tiling，--save-tiling         | 选择是否需要保存 tiling 数据，默认为 false。使用方式：-tiling                                                                                                                                                                                                                                                                                         | 否   |
-| --save-tensor-part, -stp       | 指定保存 tensor 的部分，0 为仅 intensor，1 为仅 outtensor，2 为全部保存，默认为 2。使用示例：-stp 1                                                                                                                                                                                                                                                            | 否   |
-| -o, --output                   | 指定 dump 数据的输出目录，默认为'./'，使用示例：-o aasx/sss                                                                                                                                                                                                                                                                                          | 否   |
-| -device, --device-id           | 指定 dump 数据的 device id，默认为 None 表示不限制。如指定 --device-id 1，将只 dump 1 卡的数据                                                                                                                                                                                                                                                             | 否   |
-| -l, --log-level                | 指定 log level，默认为 info，可选值 debug, info, warning, error, fatal, critical                                                                                                                                                                                                                                                            | 否   |
-
+| --save-tensor-part, -stp      | 指定保存 tensor 的部分，0 为仅 intensor，1 为仅 outtensor，2 为全部保存，默认为 2。使用示例：-stp 1                                                                                                                                                                                                                                                            | 否   |
+| -o, --output                  | 指定 dump 数据的输出目录，默认为'./'，使用示例：-o aasx/sss                                                                                                                                                                                                                                                                                          | 否   |
+| -device, --device-id          | 指定 dump 数据的 device id，默认为 None 表示不限制。如指定 --device-id 1，将只 dump 1 卡的数据                                                                                                                                                                                                                                                             | 否   |
+| -l, --log-level               | 指定 log level，默认为 info，可选值 debug, info, warning, error, fatal, critical                                                                                                                                                                                                                                                            | 否   |
+| -h, --help                    | 命令行参数帮助信息| 否 | 
 ## 结果查看
 
 ### Dump 落盘位置
@@ -56,13 +56,13 @@ Dump 默认落盘路径 `{DUMP_DIR}`在当前目录下，如果指定 output 目
 
 注：`{device_id}`为设备号；`{PID}`为进程号；`{TID}`为 `token_id`；`{TIMESTAMP}`为时间戳；`{executeCount}`为 `operation`运行次数。
 
-- tensor 信息，具体路径是 `{DUMP_DIR}/ait_dump_{TIMESTAMP}/tensors/{device_id}_{PID}/{TID}`目录下(使用老版本的 cann 包可能导致 tensor 落盘路径不同）。
-- layer 信息，具体路径是 `{DUMP_DIR}/ait_dump_{TIMESTAMP}/layer/{PID}`目录下。
-- model 信息，具体路径是 `{DUMP_DIR}/ait_dump_{TIMESTAMP}/model/{PID}`目录下。注：由于 model 由 layer 组合而成，因此使用 model 时，默认同时会落盘 layer 信息。
-- onnx 需要和 layer、model 配合使用，落盘位置和 model、layer 相同的目录。
-- cpu profiling 信息，具体路径是 `{DUMP_DIR}/ait_dump_{TIMESTAMP}/cpu_profiling/{PID}/operation_statistic_{executeCount}.csv`。
-- 算子信息，具体路径是 `{DUMP_DIR}/ait_dump_{TIMESTAMP}/operation_io_tensors/{PID}/operation_tensors_{executeCount}.csv`。
-- kernel 算子信息，具体路径是 `{DUMP_DIR}/ait_dump_{TIMESTAMP}/kernel_io_tensors/{PID}/kernel_tensors_{executeCount}.csv`。
+- tensor 信息，具体路径是 `{DUMP_DIR}/msit_dump_{TIMESTAMP}/tensors/{device_id}_{PID}/{TID}`目录下(使用老版本的 cann 包可能导致 tensor 落盘路径不同）。
+- layer 信息，具体路径是 `{DUMP_DIR}/msit_dump_{TIMESTAMP}/layer/{PID}`目录下。
+- model 信息，具体路径是 `{DUMP_DIR}/msit_dump_{TIMESTAMP}/model/{PID}`目录下。注：由于 model 由 layer 组合而成，因此使用 model 时，默认同时会落盘 layer 信息。
+- onnx 落盘位置和 model、layer 相同的目录。
+- cpu profiling 信息，具体路径是 `{DUMP_DIR}/msit_dump_{TIMESTAMP}/cpu_profiling/{PID}/operation_statistic_{executeCount}.csv`。
+- 算子信息，具体路径是 `{DUMP_DIR}/msit_dump_{TIMESTAMP}/operation_io_tensors/{PID}/operation_tensors_{executeCount}.csv`。
+- kernel 算子信息，具体路径是 `{DUMP_DIR}/msit_dump_{TIMESTAMP}/kernel_io_tensors/{PID}/kernel_tensors_{executeCount}.csv`。
 
 ##### 模型拓扑信息转 onnx 可视化模型：
 
@@ -71,5 +71,10 @@ from msit_llm.common.json_fitter import atb_json_to_onnx
 
 model_level = 1   # 可视化模型的节点深度，按需填写，比如填写为1，则表示生成深度为1的可视化模型，不填默认生成最大深度可视化模型
 layer_topo_info = "./XXX_layer.json"   # dump出来的layer拓扑信息或者model拓扑信息
-atb_json_to_onnx(layer_topo_info, model_level)
+atb_json_to_onnx(layer_topo_info, model_level, {})
 ```
+
+* 参数说明
+atb_json_path：dump出来的layer拓扑信息或者model拓扑信息，json格式的文件
+target_level：可视化模型的节点深度，按需填写，比如填写为1，则表示生成深度为1的可视化模型，不填默认生成最大深度可视化模型
+cache_csv_file：读取op信息的缓存，多次调用可以复用缓存信息。外部调用可以不用关注，直接传入空的dict即可

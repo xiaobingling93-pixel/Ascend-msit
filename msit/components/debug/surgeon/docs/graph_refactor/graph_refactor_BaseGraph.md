@@ -40,7 +40,7 @@ BaseGraph 类提供了基本的接口用于增删改查节点：
 |                                              | 获取opset_imports  | g.opset_imports                                         |
 |                                              | 修改opset_imports  | g.opset_imports = int                                   |
 | [基础功能](./graph_refactor_API.md#基础功能) | 解析模型文件       | OnnxGraph.parse(path_or_bytes)                          |
-|                                              | 将图保存成模型文件 | g.save(path)                                            |
+|                                              | 将图保存成模型文件 | g.save(path, save_as_external_data, all_tensors_to_one_file)                                            |
 |                                              | 图转为GraphProto   | g.proto()                                               |
 |                                              | 图转为ModelProto   | g.model()                                               |
 |                                              | 更新前后节点关系   | g.update_map()                                          |
@@ -49,3 +49,11 @@ BaseGraph 类提供了基本的接口用于增删改查节点：
 |                                              | 维度推断           | g.infer_shape()                                         |
 |                                              | 模型简化           | g.simplify(**kwargs)                                    |
  |                                              | 模型拼接          | OnnxGraph.concat_graph(g1, g2, io_map)               |
+
+## 补充
+
+- g.save(path, save_as_external_data, all_tensors_to_one_file) 函数用于将模型保存至指定路径。
+- save_as_external_data 参数控制是否将模型数据保存为外部文件，默认为 False，表示不使用外部数据存储方式。
+- all_tensors_to_one_file 参数决定是否将所有张量保存在单一文件中，默认为 True。当设置为 False 时，每个张量将被保存在独立的文件中。
+- 当模型的大小超过2GB时，将自动强制使用外部数据存储方式。
+- 如果选择将模型保存为外部数据（save_as_external_data=True 或者模型的大小超过2GB），并且选择不将所有张量保存在单一文件中（all_tensors_to_one_file=False），则必须确保在相同的路径下不存在同名的 data 文件。否则，这可能导致数据冗余，从而使得存储空间需求翻倍。

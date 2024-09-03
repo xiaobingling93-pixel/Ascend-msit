@@ -16,8 +16,12 @@
 declare -i ret_ok=0
 declare -i ret_run_failed=1
 
-WHL_BASE_URL="https://aisbench.obs.myhuaweicloud.com/packet/ais_bench_infer/0.0.2/ait/"
-TOOLS_BAS_URL="git+https://gitee.com/ascend/tools.git"
+SITE_PACKAGES="$(python3 -c 'import site; print(site.getsitepackages()[0])')"
+CONFIG_FILE="$SITE_PACKAGES/components/config/config.ini"
+
+WHL_BASE_URL=$(grep '^whl_base_url=' "$CONFIG_FILE" | sed 's/^whl_base_url=//')
+TOOLS_BAS_URL_SUFFIX=$(grep '^tools_bas_url=' "$CONFIG_FILE" | sed 's/^tools_bas_url=//')
+TOOLS_BAS_URL="git+$TOOLS_BAS_URL_SUFFIX"
 
 download_and_install_aclruntime() {
     ACLRUNTIME_VERSION=`pip3 show aclruntime | awk '/Version: /{print $2}'`

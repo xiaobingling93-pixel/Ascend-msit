@@ -16,7 +16,11 @@ import subprocess
 import site
 import os
 
+from configparser import ConfigParser
 from setuptools import setup, find_packages
+
+config = ConfigParser()
+config.read('../config/config.ini')
 
 with open('requirements.txt', encoding='utf-8') as f:
     required = f.read().splitlines()
@@ -41,7 +45,7 @@ setup(
     name='msit_llm',
     version='7.0.0c730',
     description='Debug tools for large language model(llm)',
-    url='https://gitee.com/ascend/msit/msit/components/llm',
+    url=config.get('URL', 'msit_llm_url'),
     packages=find_packages(),    
     package_data={'': ['*.sh', '*.cpp', '*.h', '*.txt']},
     license='Apache-2.0',

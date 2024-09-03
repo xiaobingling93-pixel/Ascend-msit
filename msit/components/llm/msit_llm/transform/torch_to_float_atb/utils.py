@@ -16,6 +16,8 @@ import os
 import stat
 import torch.nn as nn
 
+from msit_llm.transform.utils import write_file
+
 
 def init_save_name(save_name):
     if os.path.splitext(save_name)[-1] in [".c", ".cpp", ".h", ".hpp"]:
@@ -112,10 +114,3 @@ def dag_to_model(dag_node, is_repeat, model_layers):
                 parsed_model_layers.append(tmp_node)
 
     return parsed_model_layers
-
-
-def write_file(save_path, string):
-    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
-    modes = stat.S_IWUSR | stat.S_IRUSR
-    with os.fdopen(os.open(save_path, flags, modes), 'w') as ff:
-        ff.write(string)
