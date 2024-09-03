@@ -61,6 +61,5 @@ def float_model_cpp_gen(parsed_model, save_name=None, save_dir=None):
     save_name = utils.init_save_name("decoder_model" if save_name is None else save_name) + ".cpp"
     save_dir = utils.init_save_dir(model_name_lower if save_dir is None else save_dir, sub_dir="model")
     save_path = os.path.join(save_dir, save_name)
-    with open(save_path, "w") as ff:
-        ff.write(rr)
+    utils.write_file(save_path, rr)
     return save_path, rr

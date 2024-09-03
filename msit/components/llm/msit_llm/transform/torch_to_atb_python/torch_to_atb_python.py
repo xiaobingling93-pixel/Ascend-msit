@@ -13,9 +13,9 @@
 # limitations under the License.
 
 import os
-import sys
-import json
 import re
+import sys
+import stat
 import json
 import inspect
 import string
@@ -27,6 +27,7 @@ import torch
 import torch_npu
 
 from msit_llm.common.log import logger, set_log_level
+from msit_llm.transform.utils import write_file
 
 atb_speed_path = os.getenv("ATB_SPEED_HOME_PATH", None)
 if not atb_speed_path:
@@ -99,7 +100,7 @@ def get_config_attr(config, attr, default=None):
     return default
 
 
-def build_model(source_path):
+def build_transformers_model(source_path):
     try:
         from transformers import AutoConfig, AutoModelForCausalLM
     except ModuleNotFoundError as error:
@@ -437,7 +438,8 @@ class ATBModelFromTorch(ATBModel):
         atb_operation.outputs = getattr(atb_operation, "outputs", []) + outputs
         return atb_operation
 
-    def _get_node_type_and_inputs_and_name(self, node, output_node_map={}):
+    def _get_node_type_and_inputs_and_name(self, node, output_node_map=None):
+        output_node_map = output_node_map or {}
         cur_module_name = self._get_module_name_by_nn_module_stack(node)
         if node.op == FX_OP_TYPES.call_function and self._find_in_torch_module_to_atb_map(node.target.__name__):
             node_module_type = node.target.__name__
@@ -848,14 +850,13 @@ class ATBModelFromTorch(ATBModel):
             output_file = "_".join([base_model_name.lower(), "atb", "quant.py" if self.to_quant else "float.py"])
         elif not output_file.endswith(".py"):
             output_file += ".py"
-        with open(output_file, "w") as ff:
-            ff.write(contents_str)
+        write_file(output_file, contents_str)
         return output_file
 
 
 def transform(source_path, input_names=BASIC_INPUT_NAMES, output_file=None, to_quant=False, quant_disable_names=None):
     logger.info("Building model using transformers...")
-    model, config = build_model(source_path)
+    model, config = build_transformers_model(source_path)
 
     logger.info("Transforming to atb")
     atb_model = ATBModelFromTorch(

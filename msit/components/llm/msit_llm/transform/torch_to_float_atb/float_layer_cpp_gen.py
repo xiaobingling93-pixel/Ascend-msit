@@ -47,6 +47,5 @@ def float_layer_cpp_gen(parsed_model, save_name=None, save_dir=None):
     save_name = utils.init_save_name(save_name if save_name else "decoder_layer") + ".cpp"
     save_dir = utils.init_save_dir(model_name_lower if save_dir is None else save_dir, sub_dir="layer")
     save_path = os.path.join(save_dir, save_name)
-    with open(save_path, "w") as ff:
-        ff.write(rr)
+    utils.write_file(save_path, rr)
     return save_path, rr
