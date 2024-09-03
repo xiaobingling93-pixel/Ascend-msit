@@ -10,8 +10,6 @@
   if not os.path.exists('aa_224_224.npy'):
       np.save('aa_224_224.npy', np.random.uniform(size=[1,3,224,224]))
   aa = torch.from_numpy(np.load('aa_224_224.npy')).to(target_dtype).npu()
-  dump_token = "1,2-4,3-6"  # dump指定token数据：1、2、3、4、5、6，默认为None
-  dump_layer = "Add,Conv_1"  # dump指定layer数据：Add、Conv_1，默认为None
   config = torchair_dump.get_ge_dump_config(dump_path="dump")
   npu_backend = tng.get_npu_backend(compiler_config=config)
   model = torch.compile(model, backend=npu_backend, dynamic=True)
