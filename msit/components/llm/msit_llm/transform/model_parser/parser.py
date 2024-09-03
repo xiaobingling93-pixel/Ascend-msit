@@ -272,7 +272,7 @@ def get_input_names(files):
 def get_atb_model_names(files):
     content = '\n'.join([Path(fp).read_text() for fp in files])
     pattern_list = [
-        r'REGISTER_MODEL\((.*)\);',
+        r'REGISTER_MODEL\((.{128})\);',
     ]
     res_str = regex_search(pattern_list, content)
     if res_str == '':
