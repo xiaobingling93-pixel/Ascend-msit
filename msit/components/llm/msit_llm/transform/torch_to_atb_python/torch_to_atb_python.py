@@ -795,8 +795,6 @@ class ATBModelFromTorch(ATBModel):
             f"{indent}def __init__(self):",
             f"{indent * 2}super().__init__({base_model_name})",
             f"{indent * 2}num_attention_heads, head_dim = {self.num_attention_heads}, {self.head_dim}",
-            f"{indent * 2}self.base_graph_operations = []",
-            ""
         ]
 
         def _get_input_output_name(graph_name):
@@ -809,7 +807,7 @@ class ATBModelFromTorch(ATBModel):
             graph_inputs, graph_outputs = stacked_inputs.pop(0), stacked_outputs.pop(0)
             contents.append(f"{indent * 2}{graph_name}_inputs = [")
             for ii in graph_inputs:
-                contents.append(f"{indent * 2}'{ii}',")
+                contents.append(f"{indent * 3}'{ii}',")
             contents.append(f"{indent * 2}]")
 
             contents.append(f"{indent * 2}{graph_name}_outputs = {graph_outputs}")
@@ -837,13 +835,13 @@ class ATBModelFromTorch(ATBModel):
                     )
                 else:
                     op_name = op.op_name.replace(".", "_")
+                    op_name = f"self.{op_name}" if depth == 0 else op_name
                     op_kwargs = f"op_type='{op.op_type}', op_param='{json.dumps(op.op_param)}', op_name='{op.op_name}'"
+
                     contents.append(f"{indent * 2}{op_name} = BaseOperation({op_kwargs})")
                     contents.append(f"{indent * 2}{this_name}.add_operation(")
                     contents.append(f"{indent * 3}operation={op_name}, input={op.inputs}, output={op.outputs}")
                     contents.append(f"{indent * 2})")
-                    if depth == 0:
-                        contents.append(f"{indent * 2}{this_name}.{op_name} = op_name")
 
             contents.append("")
             contents.append(f"{indent * 2}{this_name}.execute_as_single = {False if depth == 0 else True}")
