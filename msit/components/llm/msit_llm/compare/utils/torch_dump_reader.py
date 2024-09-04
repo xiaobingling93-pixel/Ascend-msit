@@ -55,7 +55,7 @@ class TorchDumpFileReader(DumpFileReader):
             key = match.group(1)
             return key 
         else:
-            return None 
+            return "" 
         
     def _get_keys(self) -> set:
         return set(self.key_to_folder.keys())
@@ -69,8 +69,7 @@ class TorchDumpFileReader(DumpFileReader):
                 key_path = os.path.join(folder_path, file_name)
                 cpu_tensor = torch.load(key_path)
                 return cpu_tensor
-
             else:
                 continue 
-            
+
         return None
