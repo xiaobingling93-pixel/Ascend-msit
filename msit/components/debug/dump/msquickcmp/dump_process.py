@@ -76,10 +76,7 @@ def dump_process(args: DumpArgsAdapter, use_cli: bool):
     args.weight_path = os.path.realpath(args.weight_path) if args.weight_path else None
     args.cann_path = os.path.realpath(args.cann_path)
     args.input_path = convert_npy_to_bin(args.input_path)
-    try:
-        check_and_dump(args, use_cli)
-    except utils.AccuracyCompareException as error:
-        raise error
+    check_and_dump(args, use_cli)
 
 
 def dump_data(args: DumpArgsAdapter, input_shape, original_out_path, use_cli: bool):

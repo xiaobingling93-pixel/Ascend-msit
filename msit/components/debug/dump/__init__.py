@@ -13,40 +13,37 @@
 # limitations under the License.
 import os
 
+from components.debug.common import logger
 from components.utils.parser import BaseCommand
-from components.debug.compare.msquickcmp.adapter_cli.args_adapter import CmpArgsAdapter
-from components.debug.compare.msquickcmp.cmp_process import cmp_process
-from components.debug.compare.msquickcmp.common.args_check import (
-    check_model_path_legality, check_om_path_legality, check_weight_path_legality, check_input_path_legality,
-    check_cann_path_legality, check_output_path_legality, check_dict_kind_string, check_device_range_valid,
-    check_number_list, check_dym_range_string, check_fusion_cfg_path_legality, check_quant_json_path_legality,
-    safe_string, str2bool, check_path_exit
-)
-from msquickcmp.common.utils import logger
+from components.debug.dump.msquickcmp.adapter_cli.args_adapter import DumpArgsAdapter
+from components.debug.compare.msquickcmp.common.args_check import (check_model_path_legality,
+                                                                   check_weight_path_legality,
+                                                                   check_input_path_legality,
+                                                                   check_cann_path_legality, check_output_path_legality,
+                                                                   check_dict_kind_string, check_device_range_valid,
+                                                                   check_number_list, check_dym_range_string,
+                                                                   check_fusion_cfg_path_legality,
+                                                                   check_quant_json_path_legality,
+                                                                   safe_string, str2bool
+                                                                   )
+from components.debug.dump.msquickcmp.dump_process import dump_process
 
 CANN_PATH = os.environ.get('ASCEND_TOOLKIT_HOME', "/usr/local/Ascend/ascend-toolkit/latest")
 
 
-class CompareCommand(BaseCommand):
+class DumpCommand(BaseCommand):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.parser = None
 
     def add_arguments(self, parser):
         parser.add_argument(
-            '-gm',
-            '--golden-model',
-            required=False,
-            dest="golden_model",
+            '-m',
+            '--model',
+            required=True,
+            dest="model",
             type=check_model_path_legality,
-            help='The original model (.onnx or .pb or .prototxt or .om) file path')
-        parser.add_argument(
-            '-om',
-            '--om-model',
-            required=False,
-            dest="om_model",
-            type=check_om_path_legality,
-            help='The offline model (.om or .mindir) file path')
+            help='The original model (.onnx or .pb or saved_model) file path')
         parser.add_argument(
             '-w',
             '--weight',
@@ -105,11 +102,6 @@ class CompareCommand(BaseCommand):
             default='',
             help="Output nodes designated by user. Separate multiple nodes with semicolons(;)."
                  " E.g: \"node_name1:0;node_name2:1;node_name3:0\"")
-        parser.add_argument(
-            '--advisor',
-            action='store_true',
-            dest="advisor",
-            help='Enable advisor after compare.')
         parser.add_argument(
             '-dr',
             '--dym-shape-range',
@@ -188,40 +180,64 @@ class CompareCommand(BaseCommand):
             dest="saved_model_tag_set",
             default='',
             help="Enter the tagSet of the model. For example: --saved_model_tag_set ['serve', 'general_parser']")
-        # alone compare parameters
         parser.add_argument(
-            '-mp',
-            '--my-path',
-            required=False,
-            dest="my_path",
-            type=check_path_exit,
-            help='The npu dump data path')
+            '-dp',
+            '--device-pattern',
+            required=True,
+            dest="device_pattern",
+            help="Enter inference in npu or cpu device. For example: -dp cpu")
         parser.add_argument(
-            '-gp',
-            '--golden-path',
+            '--om-dump-data',
             required=False,
-            dest="golden_path",
-            type=check_path_exit,
-            help='The cpu(golden) dump data path')
+            dest="om_dump_data_path",
+            default='',
+            help="When use bin2npy or custom-op dump onnx data, you need provide om-dump-data file path.")
         parser.add_argument(
-            '--ops-json',
+            '--om-net-output-data',
             required=False,
-            dest="ops_json",
-            type=check_path_exit,
-            help='The npu and cpu ops matching rule json')
+            dest="om_net_output_data_path",
+            default='',
+            help="When use bin2npy or custom-op dump onnx data, you need provide om-net-output-data file path.")
+        parser.add_argument(
+            '--tf-ops-json',
+            required=False,
+            dest="tf_ops_json_path",
+            default='',
+            help="When dump saved_model, you need provide tf-ops-json file path.")
+        parser.add_argument(
+            '--om-json-path',
+            required=False,
+            dest="om_json_path",
+            default='',
+            help="When dump onnx model and use aipp, you need provide om-json file path.")
+        parser.add_argument(
+            '--use-aipp-npu-dump-data',
+            required=False,
+            dest="use_aipp_npu_dump_data_path",
+            default='',
+            help="When dump onnx model and use aipp, you need provide use-aipp-npu-dump-data file path.")
+        parser.add_argument(
+            '--use-aipp-npu-net-output-data',
+            required=False,
+            dest="use_aipp_npu_net_output_data_path",
+            default='',
+            help="When dump onnx model and use aipp, you need provide use-aipp-npu-net-output-data file path.")
         self.parser = parser
 
     def handle(self, args):
-        if not args.golden_model and not args.golden_path:
-            logger.error("The following args are required: -gm/--golden-model or -gp/--golden-path")
+        if not args.golden_model:
+            logger.error("The following arguments are required: -gm/--golden-model")
             self.parser.print_help()
             return
-        cmp_args = CmpArgsAdapter(args.golden_model, args.om_model, args.weight_path, args.input_data_path,
-                                  args.cann_path, args.out_path,
-                                  args.input_shape, args.device, args.output_size, args.output_nodes, args.advisor,
-                                  args.dym_shape_range,
-                                  args.dump, args.bin2npy, args.custom_op, args.locat,
-                                  args.onnx_fusion_switch, args.single_op, args.fusion_switch_file,
-                                  args.max_cmp_size, args.quant_fusion_rule_file, args.saved_model_signature,
-                                  args.saved_model_tag_set, args.my_path, args.golden_path, args.ops_json)
-        cmp_process(cmp_args, True)
+
+        cmp_args = DumpArgsAdapter(args.model, args.weight_path, args.input_data_path,
+                                   args.cann_path, args.out_path,
+                                   args.input_shape, args.device, args.output_size, args.output_nodes,
+                                   args.dym_shape_range,
+                                   args.dump, args.bin2npy, args.custom_op, args.locat,
+                                   args.onnx_fusion_switch, args.single_op, args.fusion_switch_file,
+                                   args.max_cmp_size, args.quant_fusion_rule_file, args.saved_model_signature,
+                                   args.saved_model_tag_set, args.device_pattern, args.om_dump_data_path,
+                                   args.om_net_output_data_path, args.tf_ops_json_path, args.om_json_path,
+                                   args.use_aipp_npu_dump_data_path, args.use_aipp_npu_net_output_data_path)
+        dump_process(cmp_args, True)

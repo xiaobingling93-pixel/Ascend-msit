@@ -1,0 +1,1 @@
+MSACCUCMP_FILE_PATH = 'toolkit/tools/operator_cmp/compare/msaccucmp.py'

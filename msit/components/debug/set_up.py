@@ -1,4 +1,4 @@
-# Copyright (c) 2023-2023 Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,40 +12,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-
 from setuptools import setup, find_packages
 
 
-abs_path = os.path.dirname(os.path.realpath(__file__))
-with open(os.path.join(abs_path, "requirements.txt")) as f:
+with open("requirements.txt") as f:
     required = f.read().splitlines()
 
+ait_sub_tasks = [
+    {
+        "name": "debug",
+        "help_info": "debug a wide variety of model issues",
+        "module": "components.debug.__main__",
+        "attr": "get_cmd_instance",
+    }
+]
+
+ait_sub_task_entry_points = [
+    f"{t.get('name')}:{t.get('help_info')} = {t.get('module')}:{t.get('attr')}"
+    for t in ait_sub_tasks
+]
+
 setup(
-    name='msit',
+    name='msit-debug',
     version='7.0.0c730',
-    description='msIT, MindStudio Inference Tools',
-    long_description_content_type='text/markdown',
-    url='https://gitee.com/ascend/msit',
+    description='msIT debug tool',
     packages=find_packages(),
-    package_data={
-        '': [
-            'LICENSE',
-            'README.md',
-            '*.txt',
-            '*.bat',
-            '*.sh',
-            '*.cpp',
-            '*.h',
-        ]
-    },
-    data_files=[('', ['requirements.txt'])],
     license='Apache-2.0',
-    keywords='msit',
+    keywords='msit debug',
     python_requires='>=3.7',
     install_requires=required,
     entry_points={
-        'console_scripts': ['ait=components.__main__:ait_main',
-                            'msit=components.__main__:main']
+        'ait_sub_task': ait_sub_task_entry_points,
     },
 )
