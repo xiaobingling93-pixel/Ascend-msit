@@ -24,12 +24,14 @@ import shutil
 import stat
 import subprocess
 import onnxruntime
+import time
+import acl
 
 from auto_optimizer.graph_refactor import Node
 from components.debug.compare.msquickcmp.net_compare.net_compare import NetCompare
 from components.debug.compare.msquickcmp.net_compare import analyser
 from components.debug.compare.msquickcmp.common import utils
-from msquickcmp.adapter_cli.args_adapter import CompareArgsAdapter
+from components.debug.compare.msquickcmp.adapter_cli.args_adapter import CmpArgsAdapter
 from components.debug.compare.msquickcmp.common.utils import get_shape_to_directory_name
 from auto_optimizer import OnnxGraph
 from components.debug.compare.msquickcmp.accuracy_locat import accuracy_locat as al
@@ -40,7 +42,7 @@ WRITE_MODES = stat.S_IWUSR | stat.S_IRUSR
 READ_WRITE_FLAGS = os.O_RDWR | os.O_CREAT
 
 
-def compare_process(args: CompareArgsAdapter):
+def compare_process(args: CmpArgsAdapter):
     # compare the entire network
     net_compare = NetCompare(args.my_path, args.golden_path,
                              args.ops_json, args, golden_json_path=None)
@@ -56,7 +58,7 @@ def compare_process(args: CompareArgsAdapter):
     return invalid_rows
 
 
-def compare_run(args: CompareArgsAdapter):
+def compare_run(args: CmpArgsAdapter):
     res = compare_process(args)
     if res and args.locat:
         endnode_names_list = res[0]["GroundTruth"].split(",")
