@@ -109,9 +109,9 @@ def build_model_tree(module: nn.Module):
 
 
 def model_to_json(model: nn.Module, name: str):
-    flags=os.O_WRONLY|os.O_CREAT|os.O_TRUNC
-    modes = os.st.S_IWUSR|os.st.S_IRUSR
-    with os.fdopen(os.open(f"{name}.json",flags,modes),'w') as ff:
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+    modes = os.st.S_IWUSR | os.st.S_IRUSR
+    with os.fdopen(os.open(f"{name}.json", flags,modes), 'w') as ff:
         dump(build_model_tree(model), ff)
 
 
