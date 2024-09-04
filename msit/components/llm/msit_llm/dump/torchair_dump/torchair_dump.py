@@ -28,7 +28,8 @@ def try_import_torchair():
         raise ee
 
 
-def get_ge_dump_config(dump_path="ait_ge_dump", dump_mode="all", fusion_switch_file=None):
+def get_ge_dump_config(dump_path="ait_ge_dump", dump_mode="all", fusion_switch_file=None,
+                       dump_token=None, dump_layer=None):
     try_import_torchair()
 
     from torchair.configs.compiler_config import CompilerConfig
@@ -55,6 +56,13 @@ def get_ge_dump_config(dump_path="ait_ge_dump", dump_mode="all", fusion_switch_f
     config.dump_config.enable_dump = True
     config.dump_config.dump_mode = dump_mode
     config.dump_config.dump_path = dump_path
+
+    if dump_token is not None:
+        new_token = [str(x) for x in dump_token]
+        config.dump_config.dump_step = "|".join(new_token)
+    if dump_layer is not None:
+        dump_layer = ",".join(dump_layer)
+        config.dump_config.dump_layer = dump_layer
 
     return config
 
