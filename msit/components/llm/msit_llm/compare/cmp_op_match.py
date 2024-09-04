@@ -160,25 +160,27 @@ my_op_data_mapping = {
 
 
 def policy_enhanced_name_match(golden_root_node: TreeNode, my_root_node: TreeNode, match_map: OpMatchMap):
-    def match_ops(golden_path_lower, my_path_lower, golden_path, my_path, golden_path2node, my_path2node, match_map):
-        for atb_op, torch_op in op_mapping_dict.items():
-            atb_op_lower = atb_op.lower() if isinstance(atb_op, str) else [op.lower() for op in atb_op]
-            torch_op_lower = torch_op.lower()
+    def match_ops(golden_path_dict, my_path_dict, golden_path2node, my_path2node, match_map):
+        for golden_path_lower, golden_path in golden_path_dict.items():
+            for my_path_lower, my_path in my_path_dict.items():
+                for atb_op, torch_op in op_mapping_dict.items():
+                    atb_op_lower = atb_op.lower() if isinstance(atb_op, str) else [op.lower() for op in atb_op]
+                    torch_op_lower = torch_op.lower()
 
-            if all(op in my_path_lower for op in atb_op_lower) and torch_op_lower in golden_path_lower:
-                if torch_op_lower == 'self_attn.o_proj' and 'qkv' in my_path_lower:
-                    continue
+                    if all(op in my_path_lower for op in atb_op_lower) and torch_op_lower in golden_path_lower:
+                        if torch_op_lower == 'self_attn.o_proj' and 'qkv' in my_path_lower:
+                            continue
 
-                g_match_location = golden_op_data_mapping.get(tuple(atb_op_lower), MatchLocation.ALL_OUTPUT)
-                m_match_location = my_op_data_mapping.get(tuple(atb_op_lower), MatchLocation.ALL_OUTPUT)
+                        g_match_location = golden_op_data_mapping.get(tuple(atb_op_lower), MatchLocation.ALL_OUTPUT)
+                        m_match_location = my_op_data_mapping.get(tuple(atb_op_lower), MatchLocation.ALL_OUTPUT)
 
-                match_map.add_score(
-                    my_path2node.get(my_path),
-                    m_match_location,
-                    golden_path2node.get(golden_path),
-                    g_match_location,
-                    MatchScore.FULL_MATCH,
-                )
+                        match_map.add_score(
+                            my_path2node.get(my_path),
+                            m_match_location,
+                            golden_path2node.get(golden_path),
+                            g_match_location,
+                            MatchScore.FULL_MATCH,
+                        )
 
     golden_path2node = {node.tensor_path: node for node in golden_root_node.get_all_nodes()}
     my_path2node = {node.tensor_path: node for node in my_root_node.get_all_nodes()}
@@ -192,10 +194,7 @@ def policy_enhanced_name_match(golden_root_node: TreeNode, my_root_node: TreeNod
     for golden_layer, my_layer in zip(golden_layer_nodes, my_layer_nodes):
         golden_path_dict = {node.tensor_path.lower(): node.tensor_path for node in golden_layer.get_leaf_nodes()}
         my_path_dict = {node.tensor_path.lower(): node.tensor_path for node in my_layer.get_leaf_nodes()}
-        for golden_path_lower, golden_path in golden_path_dict.items():
-            for my_path_lower, my_path in my_path_dict.items():
-                match_ops(golden_path_lower, my_path_lower, golden_path, my_path,
-                          golden_path2node, my_path2node, match_map)
+        match_ops(golden_path_dict, my_path_dict, golden_path2node, my_path2node, match_map)
 
 
 outside_layer_op_mapping_dict = {
