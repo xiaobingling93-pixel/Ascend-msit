@@ -86,7 +86,7 @@ class MIETorchCompare:
         
         csv_file_path = os.path.join(self.output_path, 'comparison_results.csv')
 
-        with open(csv_file_path, 'w', newline ='') as csvfile:
+        with open(csv_file_path, 'w', newline='') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=sorted_rows[0].keys())
             writer.writeheader()
             writer.writerows(sorted_rows)
