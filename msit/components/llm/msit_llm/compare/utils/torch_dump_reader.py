@@ -54,9 +54,7 @@ class TorchDumpFileReader(DumpFileReader):
         if match:
             key = match.group(1)
             return key 
-        else:
-            return "" 
-        
+
     def _get_keys(self) -> set:
         return set(self.key_to_folder.keys())
     
