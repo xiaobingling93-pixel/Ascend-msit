@@ -31,7 +31,7 @@ class DumpConfig:
             dump=dict(
                 dump_path=dump_path,
                 dump_mode=mode,
-                dumo_op_switch=op_switch,
+                dump_op_switch=op_switch,
                 dump_list=[dump_list_config]
             )
         )
