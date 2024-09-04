@@ -57,6 +57,7 @@ class TfSaveModelDumpData(DumpData):
         self.tag_set = tf_common.split_tag_set(arguments.saved_model_tag_set)
         self.input = os.path.join(output_path, "input")
         self.dump_data_tf = os.path.join(output_path, "dump_data", "tf")
+        self.input_path = arguments.input_path
         self.inputs_data = {}
         self.model_path = model_path
         self.input_shape_list = self.split_input_shape(arguments.input_shape)
