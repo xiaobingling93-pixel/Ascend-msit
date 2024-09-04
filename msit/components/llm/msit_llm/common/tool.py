@@ -109,19 +109,18 @@ def seed_all(seed=2024):
     try:
         import torch_npu
     except ImportError:
-        is_gpu = True 
+        is_npu = False 
     else:
-        is_gpu = False
+        is_npu = Ture
 
-    if is_gpu and torch.cuda.is_available():
+    if torch.cuda.is_available():
         torch.cuda.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.enable = False
         torch.bachekds.cudnn.benchmark = False
-    else:
+    if is_npu and torch.npu_is_available():
         torch.npu.manual_seed(seed)
         torch.npu.manual_seed_all(seed)
 
     logger.info(f"Enable deterministic computation sucess! current seed is {seed}.")
-    
