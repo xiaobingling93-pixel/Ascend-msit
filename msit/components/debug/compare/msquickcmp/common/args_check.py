@@ -129,6 +129,8 @@ def check_path_exit(value):
     if not os.path.exists(path_value):
         raise argparse.ArgumentTypeError(f"path:{path_value} is not exists. Please check.")
 
+    return path_value
+
 
 def valid_json_file_or_dir(value):
     if not value:
