@@ -6,7 +6,7 @@ from msit_llm.compare.utils.base_dump_reader import DumpFileReader
 from typing import Optional
 
 class TorchDumpFileReader(DumpFileReader):
-    def __int__(self, cpu_path: str, json_path: str):
+    def __init__(self, cpu_path: str, json_path: str):
         self.path = cpu_path
         self.json_path = json_path 
         self.key_to_folder = self._map_keys_to_folders()
