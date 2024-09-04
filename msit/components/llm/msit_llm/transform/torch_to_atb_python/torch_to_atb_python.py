@@ -834,15 +834,18 @@ class ATBModelFromTorch(ATBModel):
                         f"{indent * 2}{this_name}.add_reshape('{op.inputs[0]}', '{op.outputs[0]}', {function})"
                     )
                 else:
-                    op_name = op.op_name.replace(".", "_")
-                    op_name = f"self.{op_name}" if depth == 0 else op_name
                     op_kwargs = f"op_type='{op.op_type}', op_param='{json.dumps(op.op_param)}', op_name='{op.op_name}'"
-                    contents.append(f"{indent * 2}{op_name} = BaseOperation({op_kwargs})")
-                    contents.append(f"{indent * 2}{this_name}.add_operation(")
-                    contents.append(f"{indent * 3}operation={op_name}, input={op.inputs}, output={op.outputs}")
-                    contents.append(f"{indent * 2})")
+
                     if depth == 0:
-                        contents.append(f"{indent * 2}{this_name}.{op_name} = op_name")
+                        cur_op = f"{this_name}." + op.op_name.replace(".", "_")
+                        contents.append(f"{indent * 2}{cur_op} = BaseOperation({op_kwargs})")
+                    else:
+                        cur_op = f"BaseOperation({op_kwargs})"
+                    contents.append(f"{indent * 2}{this_name}.add_operation(")
+                    contents.append(f"{indent * 3}operation=cur_op,")
+                    contents.append(f"{indent * 3}input={op.inputs},")
+                    contents.append(f"{indent * 3}output={op.output},")
+                    contents.append(f"{indent * 2})")
 
             contents.append("")
             contents.append(f"{indent * 2}{this_name}.execute_as_single = {False if depth == 0 else True}")
