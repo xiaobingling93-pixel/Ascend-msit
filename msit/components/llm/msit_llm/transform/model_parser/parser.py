@@ -20,6 +20,7 @@ import os
 import torch.nn as nn
 
 from msit_llm.transform.model_parser.kind import mlp, attention, convert, mname
+from components.utils.file_open_check import ms_open
 
 
 def has_child(module: nn.Module) -> bool:
@@ -109,9 +110,7 @@ def build_model_tree(module: nn.Module):
 
 
 def model_to_json(model: nn.Module, name: str):
-    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
-    modes = os.st.S_IWUSR | os.st.S_IRUSR
-    with os.fdopen(os.open(f"{name}.json", flags, modes), 'w') as ff:
+    with ms_open(f"{name}.json", mode="w") as ff:
         dump(build_model_tree(model), ff)
 
 
