@@ -195,7 +195,8 @@ aoe_args = [
     },
     {
         NAME: '--precision_mode',
-        DESC: 'Precision mode, support force_fp16(default), allow_mix_precision, allow_fp32_to_fp16, must_keep_origin_dtype.'
+        DESC: 'Precision mode, support force_fp16(default), allow_mix_precision, allow_fp32_to_fp16, '
+        'must_keep_origin_dtype.'
     },
     {
         NAME: '--op_select_implmode',

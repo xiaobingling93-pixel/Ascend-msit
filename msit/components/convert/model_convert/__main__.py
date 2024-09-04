@@ -76,7 +76,7 @@ class AieCommand(BaseCommand):
                 model_path, output_path, args.soc_version
             )
         except ValueError as e:
-            logger.error(f'{e}')
+            logger.error(str(e))
             return
 
         converter = Convert(config)
