@@ -182,12 +182,13 @@ def split_cpu_profiling_data(data, opname):
 
 
 def add_extracted_headers_to_csv(split_data: str, csv_buffer: dict, prefix: str, headers: set):
-    if split_data:
-        matched_pairs = split_data.split(", ")
-        for header_value_pair in matched_pairs:
-            header, value = header_value_pair.split(':')
-            headers.add(prefix + header)
-            csv_buffer[prefix + header] = value
+    if not split_data:
+        return
+    matched_pairs = split_data.split(", ")
+    for header_value_pair in matched_pairs:
+        header, value = header_value_pair.split(':')
+        headers.add(prefix + header)
+        csv_buffer[prefix + header] = value
 
 
 def merge_cpu_profiling_data(path):
