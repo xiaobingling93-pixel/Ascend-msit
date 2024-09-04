@@ -66,7 +66,7 @@ msit <TASK> <SUB_TASK> [OPT] [ARGS]
 ```
 
 
-其中，```<TASK>```为任务类型，当前支持debug、benchmark、transplt、analyze、convert、profile，后续可能会新增其他任务类型，可以通过如下方式```查看当前支持的任务列表```：
+其中，```<TASK>```为任务类型，当前支持debug、benchmark、transplt、analyze、convert、profile、llm、tensor-view，后续可能会新增其他任务类型，可以通过如下方式```查看当前支持的任务列表```：
 
 ```bash
 msit -h
@@ -86,7 +86,7 @@ msit debug -h
 ```bash
 msit debug compare -h
 ```
-
+msit的其他参数可参考 [一体化安装指导](/msit/docs/install/README.md)
 ## 参考
 
 ### msIT资源
