@@ -150,16 +150,41 @@ op_mapping_dict = {
 
 golden_op_data_mapping = {
     # 算子名：文件名 (因为pytorch算子mlp.down_proj匹配了两次无法区分，使用匹配到的ATB算子做键值)
-    ('mlp', 'elewiseoperation'): 'input_0.pth',
+    ('mlp', 'elewiseoperation'): 'input_0.pth'
 }
 
 my_op_data_mapping = {
     # 算子名：文件名
-    ('mlp', 'splitoperation'): 'outtensor0.bin',
+    ('mlp', 'splitoperation'): 'outtensor0.bin'
 }
 
 
 def policy_enhanced_name_match(golden_root_node: TreeNode, my_root_node: TreeNode, match_map: OpMatchMap):
+    def match_paths(golden_path_dict, my_path_dict, golden_path2node, my_path2node):
+        for golden_path_lower, golden_path in golden_path_dict.items():
+            for my_path_lower, my_path in my_path_dict.items():
+                match_ops(golden_path_lower, my_path_lower, golden_path, my_path, golden_path2node, my_path2node)
+
+    def match_ops(golden_path_lower, my_path_lower, golden_path, my_path, golden_path2node, my_path2node):
+        for atb_op, torch_op in op_mapping_dict.items():
+            atb_op_lower = atb_op.lower() if isinstance(atb_op, str) else [op.lower() for op in atb_op]
+            torch_op_lower = torch_op.lower()
+
+            if all(op in my_path_lower for op in atb_op_lower) and torch_op_lower in golden_path_lower:
+                if torch_op_lower == 'self_attn.o_proj' and any(op in my_path_lower for op in ['qkv']):
+                    continue
+
+                g_match_location = golden_op_data_mapping.get(tuple(atb_op_lower), MatchLocation.ALL_OUTPUT)
+                m_match_location = my_op_data_mapping.get(tuple(atb_op_lower), MatchLocation.ALL_OUTPUT)
+
+                match_map.add_score(
+                    my_path2node.get(my_path),
+                    m_match_location,
+                    golden_path2node.get(golden_path),
+                    g_match_location,
+                    MatchScore.FULL_MATCH,
+                )
+
     golden_path2node = {node.tensor_path: node for node in golden_root_node.get_all_nodes()}
     my_path2node = {node.tensor_path: node for node in my_root_node.get_all_nodes()}
 
@@ -170,33 +195,12 @@ def policy_enhanced_name_match(golden_root_node: TreeNode, my_root_node: TreeNod
     my_layer_nodes = my_root_node.get_layer_node(my_layer_type)
 
     for golden_layer, my_layer in zip(golden_layer_nodes, my_layer_nodes):
-        g_layer_leaf_nodes = golden_layer.get_leaf_nodes()
-        m_layer_leaf_nodes = my_layer.get_leaf_nodes()
+        golden_path_dict = {node.tensor_path.lower(): node.tensor_path for node in golden_layer.get_leaf_nodes()}
+        my_path_dict = {node.tensor_path.lower(): node.tensor_path for node in my_layer.get_leaf_nodes()}
+        match_paths(golden_path_dict, my_path_dict, golden_path2node, my_path2node)
 
-        golden_path_set = {node.tensor_path.lower(): node.tensor_path for node in g_layer_leaf_nodes}
-        my_path_set = {node.tensor_path.lower(): node.tensor_path for node in m_layer_leaf_nodes}
 
-        for golden_path_lower, golden_path in golden_path_set.items():
-            for my_path_lower, my_path in my_path_set.items():
 
-                for atb_op, torch_op in op_mapping_dict.items():
-                    atb_op = atb_op.lower() if isinstance(atb_op, str) else [op.lower() for op in atb_op]
-                    torch_op = torch_op.lower()
-
-                    if all(op in my_path_lower for op in atb_op) and torch_op in golden_path_lower:
-                        if torch_op == 'self_attn.oproj' and any(op in my_path_lower for op in ['qkv']):
-                            continue
-
-                        g_match_location = golden_op_data_mapping.get(tuple(atb_op), None)
-                        m_match_location = my_op_data_mapping.get(tuple(atb_op), None)
-
-                        match_map.add_score(
-                            my_path2node.get(my_path),
-                            m_match_location if m_match_location else MatchLocation.ALL_OUTPUT,
-                            golden_path2node.get(golden_path),
-                            g_match_location if g_match_location else MatchLocation.ALL_OUTPUT,
-                            MatchScore.FULL_MATCH,
-                        )
 
 
 outside_layer_op_mapping_dict = {
