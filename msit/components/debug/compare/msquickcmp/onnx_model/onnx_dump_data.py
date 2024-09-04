@@ -32,6 +32,7 @@ from msquickcmp.common.utils import InputShapeError
 from msquickcmp.adapter_cli.args_adapter import CmpArgsAdapter
 from msquickcmp.common.convert import convert_bin_file_to_npy
 from msquickcmp.onnx_model.custom_op import CustomOp
+from components.utils.file_open_check import ms_open
 
 
 NODE_TYPE_TO_DTYPE_MAP = {
@@ -335,9 +336,7 @@ class OnnxDumpData(DumpData):
 
         if len(file_name_map) > 0:
             mapping_file_path = os.path.join(self.onnx_dump_data_dir, "mapping.csv")
-            flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
-            modes = os.st.S_IWUSR | os.st.S_IRUSR
-            with os.fdopen(os.open(mapping_file_path, flags, modes), 'w') as map_file:
+            with ms_open(mapping_file_path, mode="w") as map_file:
                 map_file.writelines(file_name_map)
 
         if not self.single_op:
