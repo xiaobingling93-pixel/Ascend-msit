@@ -12,20 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-import re
-import shutil
-import argparse
 
-from components.utils.parser import BaseCommand
 from msquickcmp.adapter_cli.args_adapter import CmpArgsAdapter
 from msquickcmp.cmp_process import cmp_process
-from msquickcmp.common.utils import logger
 from msquickcmp.common.args_check import (
     check_model_path_legality, check_om_path_legality, check_weight_path_legality, check_input_path_legality,
     check_cann_path_legality, check_output_path_legality, check_dict_kind_string, check_device_range_valid,
     check_number_list, check_dym_range_string, check_fusion_cfg_path_legality, check_quant_json_path_legality,
-    valid_json_file_or_dir, safe_string, str2bool
+    safe_string, str2bool, check_path_exit
 )
+from msquickcmp.common.utils import logger
+
+from components.utils.parser import BaseCommand
 
 CANN_PATH = os.environ.get('ASCEND_TOOLKIT_HOME', "/usr/local/Ascend/ascend-toolkit/latest")
 
@@ -190,6 +188,27 @@ class CompareCommand(BaseCommand):
             dest="saved_model_tag_set",
             default='',
             help="Enter the tagSet of the model. For example: --saved_model_tag_set ['serve', 'general_parser']")
+        # alone compare parameters
+        parser.add_argument(
+            '-mp',
+            '--my-path',
+            required=False,
+            dest="my_path",
+            type=check_path_exit,
+            help='The npu dump data path')
+        parser.add_argument(
+            '-gp',
+            '--golden-path',
+            required=False,
+            dest="golden_path",
+            type=check_path_exit,
+            help='The cpu(golden) dump data path')
+        parser.add_argument(
+            '--ops-json',
+            required=False,
+            dest="ops_json",
+            type=check_path_exit,
+            help='The npu and cpu ops matching rule json')
         self.parser = parser
 
     def handle(self, args):
@@ -205,7 +224,7 @@ class CompareCommand(BaseCommand):
                                   args.dump, args.bin2npy, args.custom_op, args.locat,
                                   args.onnx_fusion_switch, args.single_op, args.fusion_switch_file,
                                   args.max_cmp_size, args.quant_fusion_rule_file, args.saved_model_signature,
-                                  args.saved_model_tag_set)
+                                  args.saved_model_tag_set, args.my_path, args.golden_path, args.ops_json)
         cmp_process(cmp_args, True)
 
 

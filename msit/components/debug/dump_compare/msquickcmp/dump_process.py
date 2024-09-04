@@ -38,35 +38,29 @@ from components.debug.compare.msquickcmp.common.convert import convert_bin_dump_
 def _generate_golden_data_model(args: DumpArgsAdapter, npu_dump_npy_path):
     if is_saved_model_valid(args.model_path):
         from components.debug.compare.msquickcmp.tf.tf_save_model_dump_data import TfSaveModelDumpData
-
         return TfSaveModelDumpData(args, args.model_path)
     model_name, extension = utils.get_model_name_and_extension(args.model_path)
     if args.weight_path and extension == ".prototxt":
         from components.debug.compare.msquickcmp.caffe_model.caffe_dump_data import CaffeDumpData
-
         return CaffeDumpData(args)
     elif extension == ".pb":
         from components.debug.compare.msquickcmp.tf.tf_dump_data import TfDumpData
-
         return TfDumpData(args)
     elif extension == ".onnx":
         from components.debug.compare.msquickcmp.onnx_model.onnx_dump_data import OnnxDumpData
-
         return OnnxDumpData(args, npu_dump_npy_path)
-    elif extension == ".om":
-        return NpuDumpData(arguments=args, is_golden=True)
-
     else:
-        utils.logger.error("Only model files whose names end with .pb or .onnx or .prototxt are supported")
+        utils.logger.error("Only model files whose names end with .pb or .onnx or .prototxt or saved_model are "
+                           "supported")
         raise AccuracyCompareException(utils.ACCURACY_COMPARISON_MODEL_TYPE_ERROR)
 
 
-def _generate_my_data_model(args: DumpArgsAdapter):
+def _generate_model_adapter(args: DumpArgsAdapter):
     if is_saved_model_valid(args.model_path):
         from components.debug.compare.msquickcmp.npu.npu_tf_adapter_dump_data import NpuTfAdapterDumpData
         return NpuTfAdapterDumpData(args, args.model_path)
     # get model name suffix
-    model_name, extension = utils.get_model_name_and_extension(args.model_path)
+    _, extension = utils.get_model_name_and_extension(args.model_path)
     if extension == ".om":
         return NpuDumpData(arguments=args, is_golden=True)
 
@@ -92,7 +86,6 @@ def dump_data(args: DumpArgsAdapter, input_shape, original_out_path, use_cli: bo
     if input_shape:
         args.input_shape = input_shape
         args.out_path = os.path.join(original_out_path, get_shape_to_directory_name(args.input_shape))
-
     if args.device_pattern == "npu":
         """
         npu dump
@@ -107,7 +100,7 @@ def dump_data(args: DumpArgsAdapter, input_shape, original_out_path, use_cli: bo
 
 def npu_dump_process(args, use_cli):
     # 1. get dumper
-    npu_dumper = _generate_my_data_model(args)
+    npu_dumper = _generate_model_adapter(args)
     use_aipp = False
     if os.path.splitext(os.path.basename(args.model_path)) == ".om":
         # whether use aipp

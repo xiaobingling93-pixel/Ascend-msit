@@ -41,7 +41,10 @@ class CmpArgsAdapter:
                  max_cmp_size=0,
                  quant_fusion_rule_file="",
                  saved_model_signature="",
-                 saved_model_tag_set=""
+                 saved_model_tag_set="",
+                 my_path="",
+                 golden_path="",
+                 ops_json=""
                  ):
         self.model_path = gold_model
         self.offline_model_path = om_model
@@ -66,3 +69,6 @@ class CmpArgsAdapter:
         self.quant_fusion_rule_file = quant_fusion_rule_file
         self.saved_model_signature = saved_model_signature
         self.saved_model_tag_set = saved_model_tag_set
+        self.my_path = my_path
+        self.golden_path = golden_path
+        self.ops_json = ops_json

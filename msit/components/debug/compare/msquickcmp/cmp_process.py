@@ -18,36 +18,35 @@ Function:
 This class mainly involves the main function.
 """
 
-import argparse
-import os
-import stat
-import shutil
-import time
-import subprocess
 import csv
 import logging
+import os
+import shutil
 import site
-import pandas as pd
+import stat
+import subprocess
+import time
 
-import sklearn as _ # import first, bypassing error libgomp-xxx.so.xxx: cannot allocate memory in static TLS block
-import onnxruntime
 import acl
-
+import onnxruntime
+import pandas as pd
 from auto_optimizer import OnnxGraph
-from msquickcmp.atc import atc_utils
 from auto_optimizer.graph_refactor import Node
+from msquickcmp.accuracy_locat import accuracy_locat as al
+from msquickcmp.adapter_cli.args_adapter import CmpArgsAdapter
+from msquickcmp.atc import atc_utils
 from msquickcmp.common import utils
 from msquickcmp.common.args_check import is_saved_model_valid
-from msquickcmp.common.utils import AccuracyCompareException, get_shape_to_directory_name, safe_delete_path_if_exists
 from msquickcmp.common.convert import convert_bin_dump_data_to_npy
 from msquickcmp.common.convert import convert_npy_to_bin
+from msquickcmp.common.utils import AccuracyCompareException, get_shape_to_directory_name, safe_delete_path_if_exists
 from msquickcmp.net_compare import analyser
 from msquickcmp.net_compare.net_compare import NetCompare
 from msquickcmp.npu.npu_dump_data import NpuDumpData, DynamicInput
-from msquickcmp.adapter_cli.args_adapter import CmpArgsAdapter
 from msquickcmp.npu.om_parser import OmParser
-from msquickcmp.accuracy_locat import accuracy_locat as al
 from msquickcmp.single_op import single_op as sp
+
+from components.debug.dump_compare.msquickcmp.compare_process import compare_run
 from components.utils.security_check import check_write_directory
 
 WRITE_MODES = stat.S_IWUSR | stat.S_IRUSR
@@ -175,6 +174,16 @@ def mindir_to_om_process(args: CmpArgsAdapter):
     return is_mindir_compare_accuracy
 
 
+def check_dump_and_compare(args: CmpArgsAdapter):
+    if not args.my_path and not args.golden_path and not args.ops_json:
+        return True
+    else:
+        if args.my_path and args.golden_path and args.ops_json:
+            return False
+        else:
+            raise
+
+
 def cmp_process(args: CmpArgsAdapter, use_cli: bool):
     """
     Function Description:
@@ -182,14 +191,20 @@ def cmp_process(args: CmpArgsAdapter, use_cli: bool):
     Exception Description:
         exit the program when an AccuracyCompare Exception  occurs
     """
+    if check_dump_and_compare(args):
+        dump_and_compare(args, use_cli)
+    else:
+        args.cann_path = os.path.realpath(args.cann_path)
+        compare_run(args)
+
+
+def dump_and_compare(args, use_cli):
     args.model_path = os.path.realpath(args.model_path)
     args.weight_path = os.path.realpath(args.weight_path) if args.weight_path else None
     args.offline_model_path = os.path.realpath(args.offline_model_path)
     args.cann_path = os.path.realpath(args.cann_path)
     args.input_path = convert_npy_to_bin(args.input_path)
-
     is_mindir_compare_accuracy = mindir_to_om_process(args)
-
     try:
         check_and_run(args, use_cli)
         if is_mindir_compare_accuracy:

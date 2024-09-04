@@ -41,20 +41,11 @@ READ_WRITE_FLAGS = os.O_RDWR | os.O_CREAT
 
 
 def compare_process(args: CompareArgsAdapter):
-    if args.compare_pattern == "1":
-        # only compare the final output
-        net_compare = NetCompare(args.my_net_output_path, args.golden_path,
-                                 args.ops_json, args, golden_json_path=None)
-        net_compare.net_output_compare(args.my_net_output_path, args.golden_net_output_path)
-    elif args.compare_pattern == "2":
-        # compare the entire network
-        net_compare = NetCompare(args.my_path, args.golden_path,
-                                 args.ops_json, args, golden_json_path=None)
-        net_compare.accuracy_network_compare()
+    # compare the entire network
+    net_compare = NetCompare(args.my_path, args.golden_path,
+                             args.ops_json, args, golden_json_path=None)
+    net_compare.accuracy_network_compare()
 
-    # Check and correct the mapping of net output node name.
-    if len(args.expect_net_output_node) == 1:
-        _check_output_node_name_mapping(args.expect_net_output_node, args.golden_net_output_path)
     if not args.locat:
         invalid_rows, _ = analyser.Analyser(args.out_path)()
     else:
