@@ -212,7 +212,7 @@ class CompareCommand(BaseCommand):
         self.parser = parser
 
     def handle(self, args):
-        if not args.golden_model and not args.golden_path:
+        if not args.golden_model or not args.golden_path:
             logger.error("The following args are required: -gm/--golden-model or -gp/--golden-path")
             self.parser.print_help()
             return
