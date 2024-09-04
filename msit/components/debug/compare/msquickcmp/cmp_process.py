@@ -128,9 +128,9 @@ def _append_is_npu_ops_to_csv(csv_path):
         for row in rows[1:]:
             is_npu_ops = "YES" if row[ground_truth_col] == "*" else "NO"
             row.append(is_npu_ops)
-        flags=os.O_WRONLY|os.O_CREAT|os.O_TRUNC
-        modes = stat.S_IWUSR|stat.S_IRUSR
-        with os.fdopen(os.open(csv_path,flags,modes),'w') as file:
+        flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+        modes = stat.S_IWUSR | stat.S_IRUSR
+        with os.fdopen(os.open(csv_path, flags, modes), 'w') as file:
             writer = csv.writer(file)
             writer.writerows(rows)
 
