@@ -22,19 +22,21 @@ class DumpConfig:
         mode='all',
         op_switch="off",
         api_list=None,
-        layer:list[str]=None
+        layer=None
     ):
-        dump_list = dict(model_name="Graph")
+        dump_list_config = dict(model_name="Graph")
         if api_list:
-            dump_list["layer"] = layer
+            dump_list_config["layer"] = layer
         self.config = dict(
-            dump_path=dump_path,
-            dump_mode=mode,
-            dumo_op_switch=op_switch,
-            dump_list=dump_list
+            dump=dict(
+                dump_path=dump_path,
+                dump_mode=mode,
+                dumo_op_switch=op_switch,
+                dump_list=[dump_list_config]
+            )
         )
         cur_dir = os.path.dirname(os.path.abspath(__file__))
         config_path = os.path.join(cur_dir, "acl.json")
         with open(config_path, "w") as f:
-            json.dump(self.config, f)
+            json.dump(self.config, f, indent=4)
 
