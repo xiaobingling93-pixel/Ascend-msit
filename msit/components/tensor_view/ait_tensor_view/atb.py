@@ -75,9 +75,9 @@ def write_atb_data(tensor: torch.Tensor, path: str):
 
     meta = f"dtype={dtype}\ndims={dims}\n$End=1\n".encode("utf-8")
 
-    flags=os.O_WRONLY|os.O_CREAT|os.O_TRUNC
-    modes = os.st.S_IWUSR|os.st.S_IRUSR
-    with os.fdopen(os.open(path,flags,modes),'wb') as fo:
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+    modes = os.st.S_IWUSR | os.st.S_IRUSR
+    with os.fdopen(os.open(path, flags, modes), 'wb') as fo:
         fo.write(meta + data)
 
     del _dtype_map
