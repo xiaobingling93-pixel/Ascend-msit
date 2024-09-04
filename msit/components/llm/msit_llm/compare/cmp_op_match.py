@@ -311,6 +311,8 @@ class OpMatchMgr:
             policy_layer_type_cnt_match,
             OpMatchPolicyMapCount(args),
             policy_rope_operator_match,
+            policy_enhanced_name_match,
+            policy_outside_layer_name_match,
         ]
 
     def match(self, golden_data, my_data):
