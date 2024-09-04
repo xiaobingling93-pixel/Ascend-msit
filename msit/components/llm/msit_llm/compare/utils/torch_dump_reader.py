@@ -50,10 +50,12 @@ class TorchDumpFileReader(DumpFileReader):
     
     def _extract_key_from_jit_node(self, jit_node: str) -> Optional[str]:
         match = re.search(r'scope:.*__module\.([^#\s]+)(?=\s*#)', jit_node)
-
+        key_none = None
         if match:
             key = match.group(1)
             return key 
+        else:
+            return key_none
 
     def _get_keys(self) -> set:
         return set(self.key_to_folder.keys())

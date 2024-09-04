@@ -10,6 +10,7 @@ from msit_llm.compare.utils.torch_dump_reader import TorchDumpFileReader
 from msit_llm.compare.cmp_algorithm import CMP_ALG_MAP, CUSTOM_ALG_MAP
 from components.utils.file_open_check import ms_open
 
+
 class MIETorchCompare:
     def __init__(self, cpu_path: str, npu_path: str, json_path: str, output_path: str = "."):
         self.cpu_path = cpu_path
