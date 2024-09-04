@@ -1,7 +1,8 @@
 import logging 
-import torch 
 import os 
 import csv 
+
+import torch 
 
 from msit_llm.common.log import logger 
 from msit_llm.compare.utils.ge_dump_reader import GEDumpFileReader
@@ -80,7 +81,7 @@ class MIETorchCompare:
         
         sorted_rows = sorted(
             all_rows_data,
-            key = lambda x: self.cpu_reader.key_to_id.get(x["Key"], float('inf'))
+            key=lambda x: self.cpu_reader.key_to_id.get(x["Key"], float('inf'))
             )
         
         csv_file_path = os.path.join(self.output_path, 'comparison_results.csv')

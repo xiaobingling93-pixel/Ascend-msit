@@ -1,7 +1,9 @@
 import os 
 import re 
 import json 
+
 import torch 
+
 from msit_llm.compare.utils.base_dump_reader import DumpFileReader
 from msit_llm.compare.torchair_acc_cmp import parse_torchair_dump_data, set_msaccucmp_path_from_cann
 
@@ -55,12 +57,11 @@ class GEDumpFileReader(DumpFileReader):
 
             cur_fuseop = fusion_op
 
-        if cur_fuseop:
+        if cur_fuseop in new_op_map:
             new_op_map[cur_fuseop]["fuse_path"] = fuse_path
 
         with open(os.path.join(self.json_path, 'op_map_updated.json'), 'w') as f:
             json.dump(new_op_map, f, indent=4)
-            print('op_map_updated.json generated successfully.')
         
     def _map_keys_to_folders(self) -> dict:
         key_to_folder = {}
