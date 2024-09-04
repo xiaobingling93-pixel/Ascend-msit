@@ -33,6 +33,12 @@ LOG_LEVELS_LOWER = [ii.lower() for ii in LOG_LEVELS.keys()]
 class DumpCommand(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument(
+            '--mindie_torch',
+            required=False,
+            action='store_true',
+            default=False,
+            help='Use this argument to enable dump when inference with MindIE-Torch.')
+        parser.add_argument(
             '--only-save-desc',
             '-sd',
             required=False,
