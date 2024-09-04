@@ -793,7 +793,8 @@ class ATBModelFromTorch(ATBModel):
             "",
             "class Model(GraphOperation):",
             f"{indent}def __init__(self):",
-            f"{indent * 2}super().__init__({base_model_name})",
+            f"{indent * 2}self.model_name = '{base_model_name}'",
+            f"{indent * 2}super().__init__(self.model_name)",
             f"{indent * 2}num_attention_heads, head_dim = {self.num_attention_heads}, {self.head_dim}",
         ]
 
@@ -842,7 +843,7 @@ class ATBModelFromTorch(ATBModel):
                     else:
                         cur_op = f"BaseOperation({op_kwargs})"
                     contents.append(f"{indent * 2}{this_name}.add_operation(")
-                    contents.append(f"{indent * 3}operation=cur_op,")
+                    contents.append(f"{indent * 3}operation={cur_op},")
                     contents.append(f"{indent * 3}input={op.inputs},")
                     contents.append(f"{indent * 3}output={op.outputs},")
                     contents.append(f"{indent * 2})")
