@@ -29,9 +29,9 @@ from msquickcmp.common import utils, tf_common
 from msquickcmp.common.dump_data import DumpData
 
 
-def parse_ops_name_from_om_json(output_json_path):
+def parse_ops_name_from_om_json(tf_json_path):
     op_names = []
-    om = utils.parse_json_file(output_json_path)
+    om = utils.parse_json_file(tf_json_path)
     graph_list = om.get('graph')
     for graph in graph_list:
         ops = graph.get('op', [])
@@ -155,12 +155,12 @@ class TfSaveModelDumpData(DumpData):
         """
         return self.net_output
 
-    def generate_dump_data(self, output_json_path):
+    def generate_dump_data(self, tf_json_path):
         """
         Generate tf2.6 save_model dump data
         :return tf2.6 save_model dump data directory
         """
-        op_names = parse_ops_name_from_om_json(output_json_path)
+        op_names = parse_ops_name_from_om_json(tf_json_path)
         sess = tf.compat.v1.keras.backend.get_session()
         tag_set = {tf.compat.v1.saved_model.tag_constants.SERVING} if self.tag_set == "" else self.tag_set
         _ = tf.compat.v1.saved_model.load(sess, tag_set, self.model_path)

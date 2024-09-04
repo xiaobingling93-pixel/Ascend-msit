@@ -187,9 +187,9 @@ class DumpCommand(BaseCommand):
             dest="device_pattern",
             help="Enter inference in npu or cpu device. For example: -dp cpu")
         parser.add_argument(
-            '--tf-ops-json',
+            '--tf-json',
             required=False,
-            dest="tf_ops_json_path",
+            dest="tf_json_path",
             default='',
             help="When dump saved_model, you need provide tf-ops-json file path.")
         parser.add_argument(
@@ -220,7 +220,7 @@ class DumpCommand(BaseCommand):
                                    args.dump, args.bin2npy, args.custom_op, args.locat,
                                    args.onnx_fusion_switch, args.single_op, args.fusion_switch_file,
                                    args.max_cmp_size, args.quant_fusion_rule_file, args.saved_model_signature,
-                                   args.saved_model_tag_set, args.device_pattern, args.tf_ops_json_path,
+                                   args.saved_model_tag_set, args.device_pattern, args.tf_json_path,
                                    args.om_json_path, args.use_aipp_npu_dump_data_path,
                                    args.use_aipp_npu_net_output_data_path)
         dump_process(cmp_args, True)

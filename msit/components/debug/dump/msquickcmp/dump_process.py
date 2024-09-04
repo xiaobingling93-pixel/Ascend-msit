@@ -120,7 +120,7 @@ def cpu_dump_process(args):
         # 2. generate input
         golden_dumper.generate_inputs_data_for_dump()
         # 3. dump data
-        golden_dumper.generate_dump_data(args.tf_ops_json_path)
+        golden_dumper.generate_dump_data(args.tf_json_path)
     else:
         _, extension = utils.get_model_name_and_extension(args.model_path)
         use_aipp = get_use_aipp(args)

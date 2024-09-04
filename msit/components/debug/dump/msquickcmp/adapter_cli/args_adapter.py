@@ -40,7 +40,7 @@ class DumpArgsAdapter:
                  saved_model_signature="",
                  saved_model_tag_set="",
                  device_pattern="",
-                 tf_ops_json_path="",
+                 tf_json_path="",
                  om_json_path="",
                  use_aipp_npu_dump_data_path="",
                  use_aipp_npu_net_output_data_path=""
@@ -67,7 +67,7 @@ class DumpArgsAdapter:
         self.saved_model_signature = saved_model_signature
         self.saved_model_tag_set = saved_model_tag_set
         self.device_pattern = device_pattern
-        self.tf_ops_json_path = tf_ops_json_path
+        self.tf_json_path = tf_json_path
         self.om_json_path = om_json_path
         self.use_aipp_npu_dump_data_path = use_aipp_npu_dump_data_path
         self.use_aipp_npu_net_output_data_path = use_aipp_npu_net_output_data_path
