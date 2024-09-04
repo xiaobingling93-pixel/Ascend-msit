@@ -5,7 +5,7 @@ import torch
 from msit_llm.compare.utils.base_dump_reader import DumpFileReader
 from typing import Optional
 
-class TorchDumpReader(DumpFileReader):
+class TorchDumpFileReader(DumpFileReader):
     def __int__(self, cpu_path: str, json_path: str):
         self.path = cpu_path
         self.json_path = json_path 
