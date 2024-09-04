@@ -14,6 +14,8 @@
 import json
 import os.path
 
+from msit.components.utils.file_open_check import ms_open
+
 
 class DumpConfig:
     def __init__(
@@ -37,6 +39,6 @@ class DumpConfig:
         )
         cur_dir = os.path.dirname(os.path.abspath(__file__))
         config_path = os.path.join(cur_dir, "acl.json")
-        with open(config_path, "w") as f:
+        with ms_open(config_path, "w") as f:
             json.dump(self.config, f, indent=4)
 
