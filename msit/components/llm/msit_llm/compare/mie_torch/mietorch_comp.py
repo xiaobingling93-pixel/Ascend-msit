@@ -8,7 +8,7 @@ from msit_llm.common.log import logger
 from msit_llm.compare.utils.ge_dump_reader import GEDumpFileReader
 from msit_llm.compare.utils.torch_dump_reader import TorchDumpFileReader
 from msit_llm.compare.cmp_algorithm import CMP_ALG_MAP, CUSTOM_ALG_MAP
-
+from components.utils.file_open_check import ms_open
 
 class MIETorchCompare:
     def __init__(self, cpu_path: str, npu_path: str, json_path: str, output_path: str = "."):
@@ -86,7 +86,7 @@ class MIETorchCompare:
         
         csv_file_path = os.path.join(self.output_path, 'comparison_results.csv')
 
-        with open(csv_file_path, 'w', newline='') as csvfile:
+        with ms_open(csv_file_path, mode="w") as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=sorted_rows[0].keys())
             writer.writeheader()
             writer.writerows(sorted_rows)

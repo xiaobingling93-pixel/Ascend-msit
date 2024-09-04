@@ -6,7 +6,7 @@ import torch
 
 from msit_llm.compare.utils.base_dump_reader import DumpFileReader
 from msit_llm.compare.torchair_acc_cmp import parse_torchair_dump_data, set_msaccucmp_path_from_cann
-
+from components.utils.file_open_check import ms_open
 
 IS_MSACCUCMP_PATH_SET = False
 GLOBAL_TENSOR_CONVERTER = None
@@ -60,7 +60,7 @@ class GEDumpFileReader(DumpFileReader):
         if cur_fuseop in new_op_map:
             new_op_map[cur_fuseop]["fuse_path"] = fuse_path
 
-        with open(os.path.join(self.json_path, 'op_map_updated.json'), 'w') as f:
+        with ms_open(os.path.join(self.json_path, 'op_map_updated.json'), mode="w") as f:
             json.dump(new_op_map, f, indent=4)
         
     def _map_keys_to_folders(self) -> dict:
@@ -83,8 +83,7 @@ class GEDumpFileReader(DumpFileReader):
         folder_name = key
         folder_path = self.path 
         files = os.listdir(folder_path)
-        folder_name_pattern = re.escape(folder_name) + r'\b'
-        pattern = re.compile(rf'{folder_name_pattern}\.')
+        pattern = re.compile(re.escape(folder_name))
         matching_files = [file for file in files if pattern.search(file)]
         tensor_file_path = os.path.join(folder_path, matching_files[0])
         bin_dump_data = parse_torchair_dump_data(tensor_file_path)

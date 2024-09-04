@@ -61,6 +61,7 @@ class TorchDumpFileReader(DumpFileReader):
         return set(self.key_to_folder.keys())
     
     def get_tensor(self, key: str) -> torch.Tensor:
+        cpu_tensor = None 
         folder_name = self.key_to_folder[key]
         key_with_root = f'root.{folder_name}'
         folder_path = os.path.join(self.path, key_with_root)
@@ -72,4 +73,5 @@ class TorchDumpFileReader(DumpFileReader):
             else:
                 continue 
 
-        return None
+        return cpu_tensor
+    
