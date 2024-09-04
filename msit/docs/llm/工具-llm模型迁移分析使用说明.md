@@ -112,7 +112,12 @@ msit llm transform [-h] -s SOURCE [-atb ATB_MODEL_PATH] [--enable-sparse] [--to-
   # ==============================
   # Run like:
   #
+  # import torch, torch_npu
+  # import llamaforcausallm_atb_quant
   # ...
+  # atb_model = llamaforcausallm_atb_quant.Model()
+  # ...
+  # print({kk: vv.shape for kk, vv in out.items()})
   # "
   ```
   参照输出的 `Run like:` 部分，导入生成的 py 文件，并调用推理
@@ -121,7 +126,7 @@ msit llm transform [-h] -s SOURCE [-atb ATB_MODEL_PATH] [--enable-sparse] [--to-
   import llamaforcausallm_atb_quant
   from msit_llm.transform.torch_to_atb_python import ATBModel, ATBModelConfig
 
-  atb_model = llamaforcausallm_atb_quant.atb_model()
+  atb_model = llamaforcausallm_atb_quant.Model()
   weights = torch.load('$WEIGHT_PATH')  # Use actual WEIGHT_PATH
 
   vocab_size, num_attention_heads, head_dim = 32000, 32, 32
