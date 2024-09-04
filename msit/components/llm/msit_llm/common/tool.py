@@ -124,3 +124,4 @@ def seed_all(seed=2024):
         torch.npu.manual_seed_all(seed)
 
     logger.info(f"Enable deterministic computation sucess! current seed is {seed}.")
+    

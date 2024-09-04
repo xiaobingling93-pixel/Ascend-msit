@@ -145,7 +145,7 @@ class DumpCommand(BaseCommand):
             help='Specify a single device ID for dumping data, will skip other devices.')
         
         parser.add_argument(
-            '--set-random-seed',
+            '-seed',
             required=False,
             dest="set_random_seed",
             type=check_data_can_convert_to_int,
