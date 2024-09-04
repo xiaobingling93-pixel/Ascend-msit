@@ -39,10 +39,10 @@ class TorchDumpFileReader(DumpFileReader):
                 jit_node = details.get('jit_node', '')
                 if jit_node:
                     key = self._extract_key_from_jit_node(jit_node)
-                    if key:
+                    if key is not None:
                         key_to_folder[fusion_op] = key
                         key_to_id[key] = id_
-        
+
         key_to_folder = self._filter_keys(key_to_folder)
         self.key_to_id = key_to_id
 
