@@ -16,7 +16,7 @@ class TorchDumpFileReader(DumpFileReader):
         keys.sort(key=len, reverse = True)
         filtered_keys = set()
         for key in keys:
-            is_contained = any(other_key.startwith(key + '.') for other_key in keys if other_key != key)
+            is_contained = any(other_key.startswith(key + '.') for other_key in keys if other_key != key)
             if not is_contained:
                 filtered_keys.add(key)
             
