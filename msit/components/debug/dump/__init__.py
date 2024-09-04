@@ -41,7 +41,7 @@ class DumpCommand(BaseCommand):
             '-m',
             '--model',
             required=True,
-            dest="model",
+            dest="model_path",
             type=check_model_path_legality,
             help='The original model (.onnx or .pb or saved_model) file path')
         parser.add_argument(
@@ -187,18 +187,6 @@ class DumpCommand(BaseCommand):
             dest="device_pattern",
             help="Enter inference in npu or cpu device. For example: -dp cpu")
         parser.add_argument(
-            '--om-dump-data',
-            required=False,
-            dest="om_dump_data_path",
-            default='',
-            help="When use bin2npy or custom-op dump onnx data, you need provide om-dump-data file path.")
-        parser.add_argument(
-            '--om-net-output-data',
-            required=False,
-            dest="om_net_output_data_path",
-            default='',
-            help="When use bin2npy or custom-op dump onnx data, you need provide om-net-output-data file path.")
-        parser.add_argument(
             '--tf-ops-json',
             required=False,
             dest="tf_ops_json_path",
@@ -225,19 +213,14 @@ class DumpCommand(BaseCommand):
         self.parser = parser
 
     def handle(self, args):
-        if not args.golden_model:
-            logger.error("The following arguments are required: -gm/--golden-model")
-            self.parser.print_help()
-            return
-
-        cmp_args = DumpArgsAdapter(args.model, args.weight_path, args.input_data_path,
+        cmp_args = DumpArgsAdapter(args.model_path, args.weight_path, args.input_data_path,
                                    args.cann_path, args.out_path,
                                    args.input_shape, args.device, args.output_size, args.output_nodes,
                                    args.dym_shape_range,
                                    args.dump, args.bin2npy, args.custom_op, args.locat,
                                    args.onnx_fusion_switch, args.single_op, args.fusion_switch_file,
                                    args.max_cmp_size, args.quant_fusion_rule_file, args.saved_model_signature,
-                                   args.saved_model_tag_set, args.device_pattern, args.om_dump_data_path,
-                                   args.om_net_output_data_path, args.tf_ops_json_path, args.om_json_path,
-                                   args.use_aipp_npu_dump_data_path, args.use_aipp_npu_net_output_data_path)
+                                   args.saved_model_tag_set, args.device_pattern, args.tf_ops_json_path,
+                                   args.om_json_path, args.use_aipp_npu_dump_data_path,
+                                   args.use_aipp_npu_net_output_data_path)
         dump_process(cmp_args, True)

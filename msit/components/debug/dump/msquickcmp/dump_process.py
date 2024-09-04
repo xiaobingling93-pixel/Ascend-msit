@@ -72,14 +72,14 @@ def dump_process(args: DumpArgsAdapter, use_cli: bool):
     Exception Description:
         exit the program when an AccuracyCompare Exception  occurs
     """
-    args.model_path = os.path.realpath(args.model)
+    args.model_path = os.path.realpath(args.model_path)
     args.weight_path = os.path.realpath(args.weight_path) if args.weight_path else None
     args.cann_path = os.path.realpath(args.cann_path)
     args.input_path = convert_npy_to_bin(args.input_path)
     check_and_dump(args, use_cli)
 
 
-def dump_data(args: DumpArgsAdapter, input_shape, original_out_path, use_cli: bool):
+def dump_data(args, input_shape, original_out_path, use_cli: bool):
     if input_shape:
         args.input_shape = input_shape
         args.out_path = os.path.join(original_out_path, get_shape_to_directory_name(args.input_shape))
@@ -113,7 +113,7 @@ def npu_dump_process(args, use_cli):
     npu_dumper.generate_dump_data(use_cli=use_cli)
 
 
-def cpu_dump_process(args: DumpArgsAdapter):
+def cpu_dump_process(args):
     # 1. get dumper
     golden_dumper = _generate_golden_data_model(args, npu_dump_npy_path="")
     if is_saved_model_valid(args.model_path):
@@ -134,11 +134,11 @@ def cpu_dump_process(args: DumpArgsAdapter):
                 npu_dump_npy_path = ""
             golden_dumper = _generate_golden_data_model(args, npu_dump_npy_path)
 
-        golden_dumper.generate_inputs_data(args.onnx_npu_dump_data_path, use_aipp)
+        golden_dumper.generate_inputs_data(args.use_aipp_npu_dump_data_path, use_aipp)
         golden_dumper.generate_dump_data()
 
 
-def get_use_aipp(args: DumpArgsAdapter):
+def get_use_aipp(args):
     temp_om_parser = OmParser(args.om_json_path)
     use_aipp = True if temp_om_parser.get_aipp_config_content() else False
     if use_aipp and args.fusion_switch_file is not None:
@@ -152,7 +152,7 @@ def fusion_close_model_convert(args: DumpArgsAdapter):
         args.fusion_switch_file = os.path.realpath(args.fusion_switch_file)
         utils.check_file_or_directory_path(args.fusion_switch_file)
 
-        om_json_path = atc_utils.convert_model_to_json(args.cann_path, args.offline_model_path, args.out_path)
+        om_json_path = atc_utils.convert_model_to_json(args.cann_path, args.model_path, args.out_path)
         om_parser = OmParser(om_json_path)
         atc_input_shape_in_offline_model = DynamicInput.get_input_shape_from_om(om_parser)
 
@@ -170,7 +170,7 @@ def fusion_close_model_convert(args: DumpArgsAdapter):
         args.model_path = close_fusion_om_file + ".om"
 
 
-def check_and_dump(args: DumpArgsAdapter, use_cli: bool):
+def check_and_dump(args, use_cli: bool):
     utils.check_file_or_directory_path(args.model_path)
     if args.weight_path:
         utils.check_file_or_directory_path(args.weight_path)

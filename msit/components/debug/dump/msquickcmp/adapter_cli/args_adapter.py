@@ -18,7 +18,7 @@ CANN_PATH = os.environ.get('ASCEND_TOOLKIT_HOME', "/usr/local/Ascend/ascend-tool
 
 class DumpArgsAdapter:
     def __init__(self,
-                 model,
+                 model_path,
                  weight_path="",
                  input_data_path="",
                  cann_path=CANN_PATH,
@@ -40,14 +40,12 @@ class DumpArgsAdapter:
                  saved_model_signature="",
                  saved_model_tag_set="",
                  device_pattern="",
-                 om_dump_data_path="",
-                 om_net_output_data_path="",
                  tf_ops_json_path="",
                  om_json_path="",
                  use_aipp_npu_dump_data_path="",
                  use_aipp_npu_net_output_data_path=""
                  ):
-        self.model = model
+        self.model_path = model_path
         self.weight_path = weight_path
         self.input_path = input_data_path
         self.cann_path = cann_path
@@ -69,8 +67,6 @@ class DumpArgsAdapter:
         self.saved_model_signature = saved_model_signature
         self.saved_model_tag_set = saved_model_tag_set
         self.device_pattern = device_pattern
-        self.om_dump_data_path = om_dump_data_path
-        self.om_net_output_data_path = om_net_output_data_path
         self.tf_ops_json_path = tf_ops_json_path
         self.om_json_path = om_json_path
         self.use_aipp_npu_dump_data_path = use_aipp_npu_dump_data_path
