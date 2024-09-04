@@ -69,5 +69,3 @@ class TorchDumpFileReader(DumpFileReader):
                 key_path = os.path.join(folder_path, file_name)
                 cpu_tensor = torch.load(key_path)
                 return cpu_tensor
-            else:
-                continue
