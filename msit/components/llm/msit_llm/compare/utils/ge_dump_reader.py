@@ -26,10 +26,10 @@ class GEDumpFileReader(DumpFileReader):
         with open(os.path.join(self.json_path, 'mindie_rt_op_mapping.json')) as f:
             op_map = json.load(f)
         
-        op_map = sorted(op_map, key = lambda x: x["id"])
+        op_map = sorted(op_map, key=lambda x: x["id"])
 
         cur_fuseop = ""
-        id = 1
+        id_ = 1
         new_op_map = {}
 
         for item in op_map:
@@ -39,15 +39,15 @@ class GEDumpFileReader(DumpFileReader):
             fusion_op = item.get("fusion_op", ge_op)
 
             if cur_fuseop != fusion_op:
-                if cur_fuseop:
+                if cur_fuseop in new_op_map:
                     new_op_map[cur_fuseop]["fuse_path"] = fuse_path 
                 
                 new_op_map[fusion_op] = {
-                    "id": id,
+                    "id": id_,
                     "jit_node": jit_node,
                     "fuse_path": [{"ge_op": ge_op, "jit_node": jit_node}]
                 }
-                id +=1 
+                id_ += 1 
                 fuse_path = [{"ge_op": ge_op, "jit_node": jit_node}]
             else:
                 new_op_map[fusion_op]["jit_node"] = jit_node 

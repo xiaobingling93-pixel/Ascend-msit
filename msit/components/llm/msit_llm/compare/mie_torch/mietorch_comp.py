@@ -1,12 +1,12 @@
-from msit_llm.common.log import logger 
-from msit_llm.compare.utils.ge_dump_reader import GEDumpFileReader
-from msit_llm.compare.utils.torch_dump_reader import TorchDumpFileReader
-from msit_llm.compare.cmp_algorithm import CMP_ALG_MAP, CUSTOM_ALG_MAP
-
 import logging 
 import torch 
 import os 
 import csv 
+
+from msit_llm.common.log import logger 
+from msit_llm.compare.utils.ge_dump_reader import GEDumpFileReader
+from msit_llm.compare.utils.torch_dump_reader import TorchDumpFileReader
+from msit_llm.compare.cmp_algorithm import CMP_ALG_MAP, CUSTOM_ALG_MAP
 
 
 class MIETorchCompare:
@@ -21,8 +21,9 @@ class MIETorchCompare:
         self.cpu_keys = self.cpu_reader._get_keys()
         self.npu_keys = self.npu_reader._get_keys()
         self.output_path = output_path
-
-    def check_tensor(self, golden_data_fp32, my_data_fp32):
+    
+    @staticmethod
+    def check_tensor(golden_data_fp32, my_data_fp32):
         tensor_pass = True
         fail_reasons = []
 
@@ -38,10 +39,7 @@ class MIETorchCompare:
         
         return tensor_pass, " ".join(fail_reasons)
 
-
     def compare(self):
-        logger = logging.getLogger(__name__)
-        logger.info(f"[compare_mietorch], CPU path: {self.cpu_path}, NPU path: {self.npu_path}, json path: {self.json_path} out path: {self.output_path}")
         tensors = {}
         for cpu_key in self.cpu_keys:
             if cpu_key in self.npu_keys:
@@ -60,7 +58,7 @@ class MIETorchCompare:
             tensor_pass, message = self.check_tensor(cpu_tensor, npu_tensor)
 
             if not tensor_pass:
-                logger.debug(f"check_tensor failed: {message}")
+                logger.debug(f"check_tensor failed: %s", message)
                 row_data["cmp_fail_reason"] = message 
             else:
                 fail_messages = []
@@ -80,15 +78,19 @@ class MIETorchCompare:
             logger.info("No data to save.")
             return "No data to save."
         
-        sorted_rows = sorted(all_rows_data, key = lambda x: self.cpu_reader.key_to_id.get(x["Key"], float('inf')))
+        sorted_rows = sorted(
+            all_rows_data,
+            key = lambda x: self.cpu_reader.key_to_id.get(x["Key"], float('inf'))
+            )
+        
         csv_file_path = os.path.join(self.output_path, 'comparison_results.csv')
 
-        with open(csv_file_path, 'w', newline = '') as csvfile:
+        with open(csv_file_path, 'w', newline ='') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=sorted_rows[0].keys())
             writer.writeheader()
             writer.writerows(sorted_rows)
         
-        logger.info(f"Comparison results saved to {csv_file_path}")
+        logger.info(f"Comparison results saved to %s", csv_file_path)
 
         return csv_file_path
         

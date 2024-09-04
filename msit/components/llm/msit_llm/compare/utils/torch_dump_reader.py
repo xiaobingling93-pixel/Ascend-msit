@@ -2,8 +2,9 @@ import os
 import re 
 import json 
 import torch 
-from msit_llm.compare.utils.base_dump_reader import DumpFileReader
 from typing import Optional
+from msit_llm.compare.utils.base_dump_reader import DumpFileReader
+
 
 class TorchDumpFileReader(DumpFileReader):
     def __init__(self, cpu_path: str, json_path: str):
@@ -13,7 +14,7 @@ class TorchDumpFileReader(DumpFileReader):
 
     def _filter_keys(self, key_to_fold: dict) -> dict:
         keys = list(key_to_fold.values())
-        keys.sort(key=len, reverse = True)
+        keys.sort(key=len, reverse=True)
         filtered_keys = set()
         for key in keys:
             is_contained = any(other_key.startswith(key + '.') for other_key in keys if other_key != key)
