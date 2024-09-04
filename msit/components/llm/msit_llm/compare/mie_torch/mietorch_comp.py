@@ -41,7 +41,7 @@ class MIETorchCompare:
 
     def compare(self):
         logger = logging.getLogger(__name__)
-        logger.info(f"[compare_mietorch], CPU path: {self.cpu_path}, NPU path: {self.npu_path}")
+        logger.info(f"[compare_mietorch], CPU path: {self.cpu_path}, NPU path: {self.npu_path}, json path: {self.json_path} out path: {self.output_path}")
         tensors = {}
         for cpu_key in self.cpu_keys:
             if cpu_key in self.npu_keys:
@@ -80,7 +80,7 @@ class MIETorchCompare:
             logger.info("No data to save.")
             return "No data to save."
         
-        sorted_rows = sorted(all_rows_data, key = lambda x: self.cpu_reader.key_to_id.get(x["key"], float('inf')))
+        sorted_rows = sorted(all_rows_data, key = lambda x: self.cpu_reader.key_to_id.get(x["Key"], float('inf')))
         csv_file_path = os.path.join(self.output_path, 'comparison_results.csv')
 
         with open(csv_file_path, 'w', newline = '') as csvfile:
