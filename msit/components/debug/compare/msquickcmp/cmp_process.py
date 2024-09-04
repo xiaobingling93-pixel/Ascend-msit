@@ -49,6 +49,7 @@ from msquickcmp.npu.om_parser import OmParser
 from msquickcmp.accuracy_locat import accuracy_locat as al
 from msquickcmp.single_op import single_op as sp
 from components.utils.security_check import check_write_directory
+from components.utils.file_open_check import ms_open
 
 WRITE_MODES = stat.S_IWUSR | stat.S_IRUSR
 READ_WRITE_FLAGS = os.O_RDWR | os.O_CREAT
@@ -128,8 +129,8 @@ def _append_is_npu_ops_to_csv(csv_path):
         for row in rows[1:]:
             is_npu_ops = "YES" if row[ground_truth_col] == "*" else "NO"
             row.append(is_npu_ops)
-        with open(csv_path, 'w', newline='') as f:
-            writer = csv.writer(f)
+        with ms_open(csv_path, mode="w") as file:
+            writer = csv.writer(file)
             writer.writerows(rows)
 
 

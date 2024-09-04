@@ -13,9 +13,10 @@
 # limitations under the License.
 
 from array import array
-
+import os
 import torch
 from torch import float16, float32, int8, int32, int64, bfloat16
+from components.utils.file_open_check import ms_open
 
 ATTR_END = "$End"
 ATTR_OBJECT_LENGTH = "$Object.Length"
@@ -75,7 +76,7 @@ def write_atb_data(tensor: torch.Tensor, path: str):
 
     meta = f"dtype={dtype}\ndims={dims}\n$End=1\n".encode("utf-8")
 
-    with open(path, "wb") as fo:
+    with ms_open(path, mode="wb") as fo:
         fo.write(meta + data)
 
     del _dtype_map
