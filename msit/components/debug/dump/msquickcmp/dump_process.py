@@ -22,7 +22,7 @@ import os
 import time
 
 import acl
-from msquickcmp.adapter_cli.args_adapter import DumpArgsAdapter
+from components.debug.dump.msquickcmp.adapter_cli.args_adapter import DumpArgsAdapter
 
 from components.debug.compare.msquickcmp.atc import atc_utils
 from components.debug.compare.msquickcmp.common import utils
