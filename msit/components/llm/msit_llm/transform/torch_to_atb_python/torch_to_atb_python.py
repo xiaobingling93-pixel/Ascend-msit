@@ -803,8 +803,12 @@ class ATBModelFromTorch(ATBModel):
 
         def _to_file(graph_name, operations, depth=0):
             contents.append("")
+            if depth > 0:
+                contents.append(f"{indent * 2}{graph_name} = GraphOperation('{graph_name}')")
+                this_name = graph_name
+            else:
+                this_name = "self"
 
-            this_name = "self" if depth == 0 else graph_name
             graph_inputs, graph_outputs = stacked_inputs.pop(0), stacked_outputs.pop(0)
             contents.append(f"{indent * 2}{graph_name}_inputs = [")
             for ii in graph_inputs:
@@ -894,7 +898,7 @@ def transform(source_path, input_names=BASIC_INPUT_NAMES, output_file=None, to_q
     import {model_name}
     from msit_llm.transform.torch_to_atb_python import ATBModel, ATBModelConfig
 
-    atb_model = {model_name}.atb_model()
+    atb_model = {model_name}.Model()
     weights = torch.load(\'$WEIGHT_PATH\')  # Use actual WEIGHT_PATH
 
     vocab_size, num_attention_heads, head_dim = {vocab_size}, {num_attention_heads}, {head_dim}
