@@ -43,7 +43,9 @@ class DumpArgsAdapter:
                  om_dump_data_path="",
                  om_net_output_data_path="",
                  tf_ops_json_path="",
-                 om_json_path=""
+                 om_json_path="",
+                 use_aipp_npu_dump_data_path="",
+                 use_aipp_npu_net_output_data_path=""
                  ):
         self.model = model
         self.weight_path = weight_path
@@ -71,28 +73,5 @@ class DumpArgsAdapter:
         self.om_net_output_data_path = om_net_output_data_path
         self.tf_ops_json_path = tf_ops_json_path
         self.om_json_path = om_json_path
-
-
-class CompareArgsAdapter:
-    def __init__(self,
-                 my_path,
-                 golden_path="",
-                 out_path="",
-                 ops_json="",
-                 locat=False,
-                 dump=True,
-                 my_net_output_path="",
-                 golden_net_output_path="",
-                 expect_net_output_node="",
-                 compare_pattern=""
-                 ):
-        self.my_path = my_path
-        self.golden_path = golden_path
-        self.out_path = out_path
-        self.ops_json = ops_json
-        self.locat = locat
-        self.dump = dump
-        self.my_net_output_path = my_net_output_path
-        self.golden_net_output_path = golden_net_output_path
-        self.expect_net_output_node = expect_net_output_node
-        self.compare_pattern = compare_pattern
+        self.use_aipp_npu_dump_data_path = use_aipp_npu_dump_data_path
+        self.use_aipp_npu_net_output_data_path = use_aipp_npu_net_output_data_path

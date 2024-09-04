@@ -50,7 +50,7 @@ def _generate_golden_data_model(args: DumpArgsAdapter, npu_dump_npy_path):
         from components.debug.compare.msquickcmp.onnx_model.onnx_dump_data import OnnxDumpData
         return OnnxDumpData(args, npu_dump_npy_path)
     else:
-        utils.logger.error("Only model files whose names end with .pb or .onnx or .prototxt or saved_model are "
+        utils.logger.error("cpu dump model files whose names end with .pb or .onnx or .prototxt or saved_model are "
                            "supported")
         raise AccuracyCompareException(utils.ACCURACY_COMPARISON_MODEL_TYPE_ERROR)
 
@@ -123,20 +123,21 @@ def cpu_dump_process(args: DumpArgsAdapter):
         # 2. generate input
         golden_dumper.generate_inputs_data_for_dump()
         # 3. dump data
-        golden_dumper.generate_dump_data(args.tf_ops_json, npu_dump_path=None, om_parser=None)
+        golden_dumper.generate_dump_data(args.tf_ops_json_path, npu_dump_path=None, om_parser=None)
     else:
         _, extension = utils.get_model_name_and_extension(args.model_path)
         use_aipp = get_use_aipp(args)
         # when onnx cpu inference and add use_aipp, onnx need npu_dump_data_path and npu_net_output_data_path
         if extension == ".onnx" and use_aipp is True:
             if args.bin2npy or args.custom_op != "":
-                npu_dump_npy_path = convert_bin_dump_data_to_npy(args.npu_dump_data_path, args.npu_net_output_data_path,
+                npu_dump_npy_path = convert_bin_dump_data_to_npy(args.use_aipp_npu_dump_data_path,
+                                                                 args.use_aipp_npu_net_output_data_path,
                                                                  args.cann_path)
             else:
                 npu_dump_npy_path = ""
             golden_dumper = _generate_golden_data_model(args, npu_dump_npy_path)
 
-        golden_dumper.generate_inputs_data(args.npu_dump_data_path, use_aipp)
+        golden_dumper.generate_inputs_data(args.onnx_npu_dump_data_path, use_aipp)
         golden_dumper.generate_dump_data()
 
 

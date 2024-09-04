@@ -13,9 +13,7 @@
 # limitations under the License.
 import os
 
-from msquickcmp.adapter_cli.args_adapter import DumpArgsAdapter, CompareArgsAdapter
-from components.debug.compare.msquickcmp.common.args_check import (check_path_exit,
-                                                                   check_model_path_legality,
+from components.debug.compare.msquickcmp.common.args_check import (check_model_path_legality,
                                                                    check_weight_path_legality,
                                                                    check_input_path_legality,
                                                                    check_cann_path_legality, check_output_path_legality,
@@ -26,10 +24,9 @@ from components.debug.compare.msquickcmp.common.args_check import (check_path_ex
                                                                    safe_string, str2bool
                                                                    )
 from components.debug.compare.msquickcmp.common.utils import logger
-
 from components.utils.parser import BaseCommand
+from msquickcmp.adapter_cli.args_adapter import DumpArgsAdapter
 from msquickcmp.dump_process import dump_process
-from msquickcmp.compare_process import compare_run
 
 CANN_PATH = os.environ.get('ASCEND_TOOLKIT_HOME', "/usr/local/Ascend/ascend-toolkit/latest")
 
@@ -212,7 +209,19 @@ class DumpCommand(BaseCommand):
             required=False,
             dest="om_json_path",
             default='',
-            help="When dump onnx model and use aipp, you need provide om_json_path file path.")
+            help="When dump onnx model and use aipp, you need provide om-json file path.")
+        parser.add_argument(
+            '--use-aipp-npu-dump-data',
+            required=False,
+            dest="use_aipp_npu_dump_data_path",
+            default='',
+            help="When dump onnx model and use aipp, you need provide use-aipp-npu-dump-data file path.")
+        parser.add_argument(
+            '--use-aipp-npu-net-output-data',
+            required=False,
+            dest="use_aipp_npu_net_output_data_path",
+            default='',
+            help="When dump onnx model and use aipp, you need provide use-aipp-npu-net-output-data file path.")
         self.parser = parser
 
     def handle(self, args):
@@ -229,7 +238,8 @@ class DumpCommand(BaseCommand):
                                    args.onnx_fusion_switch, args.single_op, args.fusion_switch_file,
                                    args.max_cmp_size, args.quant_fusion_rule_file, args.saved_model_signature,
                                    args.saved_model_tag_set, args.device_pattern, args.om_dump_data_path,
-                                   args.om_net_output_data_path, args.tf_ops_json_path, args.om_json_path)
+                                   args.om_net_output_data_path, args.tf_ops_json_path, args.om_json_path,
+                                   args.use_aipp_npu_dump_data_path, args.use_aipp_npu_net_output_data_path)
         dump_process(cmp_args, True)
 
 
