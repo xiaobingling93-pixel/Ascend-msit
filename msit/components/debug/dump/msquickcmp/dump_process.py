@@ -171,7 +171,7 @@ def fusion_close_model_convert(args: DumpArgsAdapter):
 
 
 def check_and_dump(args, use_cli: bool):
-    utils.check_file_or_directory_path(args.model_path)
+    utils.check_file_or_directory_path(args.model_path, True)
     if args.weight_path:
         utils.check_file_or_directory_path(args.weight_path)
     utils.check_device_param_valid(args.device)
