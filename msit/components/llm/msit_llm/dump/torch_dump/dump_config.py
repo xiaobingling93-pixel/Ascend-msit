@@ -64,8 +64,7 @@ class DumpConfig:
         mode=None,
         dump_weight=False,
         layer_name=None,
-        enable_torch_deterministic=False,
-        random_seed=None,
+        seed=None,
     ):
         self.dump_path = dump_path or "./"
         self.mode = mode or ["module"]
@@ -93,9 +92,9 @@ class DumpConfig:
         if not self._check_args():
             raise ValueError("Invalid args of DumpConfig.")
         
-        if random_seed is not None:
+        if seed is not None:
             from msit_llm import seed_all
-            seed_all(seed=random_seed, mode=enable_torch_deterministic)
+            seed_all(seed=seed)
 
     def set_dump_device_and_dump_dir(self, device):
         if self.device_id is not None and device != "cpu":

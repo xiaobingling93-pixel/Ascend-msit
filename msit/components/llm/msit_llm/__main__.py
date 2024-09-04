@@ -149,16 +149,10 @@ class DumpCommand(BaseCommand):
             required=False,
             dest="set_random_seed",
             type=check_data_can_convert_to_int,
+            nargs='?',
+            const=2024,
             default=None,
             help='set random seed, will ensure that the random results are consistent with each run.')
-                
-        parser.add_argument(
-            '--enable-deterministic-algorithm',
-            required=False,
-            dest="enable_deterministic_algorithm",
-            type=str2bool,
-            default=False,
-            help='enable torch deterministic algorithm, only works when random seed has been set.')
 
         parser.add_argument("--log-level", "-l", default="info", choices=LOG_LEVELS_LOWER, help="specify log level.")
 

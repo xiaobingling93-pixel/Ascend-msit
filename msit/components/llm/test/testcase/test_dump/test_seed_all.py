@@ -50,8 +50,3 @@ def test_invalid_seed():
     # Test non-integer seed
     with pytest.raises(argparse.ArgumentTypeError):
         seed_all(seed='invalid_seed')
-
-    # Test non-boolean mode
-    with pytest.raises(argparse.ArgumentTypeError):
-        seed_all(seed=1, mode='invalid_mode')
-        

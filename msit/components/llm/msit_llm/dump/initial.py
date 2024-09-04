@@ -101,7 +101,7 @@ def init_dump_task(args):
     if args.set_random_seed is not None:
         from msit_llm import seed_all
         seed = int(args.set_random_seed)
-        seed_all(seed=seed, mode=args.enable_deterministic_algorithm)
+        seed_all(seed=seed)
 
     os.environ[ATB_SAVE_CHILD] = "1" if args.child else "0"
     os.environ[ATB_SAVE_TENSOR_RANGE] = str(args.range)

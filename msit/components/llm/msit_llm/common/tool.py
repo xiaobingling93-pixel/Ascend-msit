@@ -91,11 +91,9 @@ def read_atb_data(file_path):
 
 
 
-def seed_all(seed=1, mode=False):
+def seed_all(seed=2024):
     if not isinstance(seed, int):
         raise argparse.ArgumentTypeError("%s is not an int." % seed)
-    if not isinstance(mode, bool):
-        raise argparse.ArgumentTypeError("%s is not a bool." % mode)
     
     os.environ[LCCL_DETERMINISTIC] = "1"
     os.environ[HCCL_DETERMINISTIC] = "1"
@@ -106,12 +104,12 @@ def seed_all(seed=1, mode=False):
     np.random.seed(seed)
     random.seed(seed)
     torch.manual_seed(seed)
-    torch.use_deterministic_algorithms(mode=mode)
+    torch.use_deterministic_algorithms(mode=True)
 
     try:
         import torch_npu
     except ImportError:
-        is_gpu = True
+        is_gpu = True 
     else:
         is_gpu = False
 
@@ -125,5 +123,4 @@ def seed_all(seed=1, mode=False):
         torch.npu.manual_seed(seed)
         torch.npu.manual_seed_all(seed)
 
-    logger.info(f"Enable deterministic computation sucess! current seed is {seed},"
-                f"torch deterministic algorithms mode is {mode}.")
+    logger.info(f"Enable deterministic computation sucess! current seed is {seed}.")
