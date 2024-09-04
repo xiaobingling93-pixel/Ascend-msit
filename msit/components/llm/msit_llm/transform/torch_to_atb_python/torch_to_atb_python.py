@@ -844,7 +844,7 @@ class ATBModelFromTorch(ATBModel):
                     contents.append(f"{indent * 2}{this_name}.add_operation(")
                     contents.append(f"{indent * 3}operation=cur_op,")
                     contents.append(f"{indent * 3}input={op.inputs},")
-                    contents.append(f"{indent * 3}output={op.output},")
+                    contents.append(f"{indent * 3}output={op.outputs},")
                     contents.append(f"{indent * 2})")
 
             contents.append("")
