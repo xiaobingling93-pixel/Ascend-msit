@@ -1,6 +1,6 @@
 from msit_llm.common.log import logger 
 from msit_llm.compare.utils.ge_dump_reader import GEDumpFileReader
-from msit_llm.compare.utils.torch_dump_reader import TorchDumpReader
+from msit_llm.compare.utils.torch_dump_reader import TorchDumpFileReader
 from msit_llm.compare.cmp_algorithm import CMP_ALG_MAP, CUSTOM_ALG_MAP
 
 import logging 
@@ -17,7 +17,7 @@ class MIETorchCompare:
         self.output_path = output_path
 
         self.npu_reader = GEDumpFileReader(npu_path, json_path)
-        self.cpu_reader = TorchDumpReader(cpu_path, json_path)
+        self.cpu_reader = TorchDumpFileReader(cpu_path, json_path)
         self.cpu_keys = self.cpu_reader._get_keys()
         self.npu_keys = self.npu_reader._get_keys()
         self.output_path = output_path
