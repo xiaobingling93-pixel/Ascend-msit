@@ -214,7 +214,7 @@ def run(args: CmpArgsAdapter, input_shape, original_out_path, use_cli: bool):
         # gpu dump
         from msquickcmp.tf.tf_save_model_dump_data import TfSaveModelDumpData
         golden_dump = TfSaveModelDumpData(args, args.model_path)
-        golden_dump.generate_inputs_data(False, npu_dump_data_path, om_parser=None)
+        golden_dump.generate_inputs_data(False, npu_dump_data_path, use_aipp=None)
         golden_dump_data_path = golden_dump.generate_dump_data(output_json_path, npu_dump_path=None, om_parser=None)
         # compare the entire network
         net_compare = NetCompare(npu_dump_data_path, golden_dump_data_path,
