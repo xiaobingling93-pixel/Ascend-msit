@@ -102,13 +102,20 @@ def get_config_attr(config, attr, default=None):
 
 def build_transformers_model(source_path):
     try:
-        from transformers import AutoConfig, AutoModelForCausalLM
+        from transformers import AutoConfig, AutoModel
     except ModuleNotFoundError as error:
         raise ModuleNotFoundError("transformers package not found, try pip install transformers") from error
 
     try:
         config = AutoConfig.from_pretrained(source_path, trust_remote_code=True)
-        model = AutoModelForCausalLM.from_config(config, trust_remote_code=True)
+        try:
+            if hasattr(config, 'text_config') and config.text_config is not None:
+                model = AutoModel.from_config(config.text_config, trust_remote_code=True)
+                return model, config.text_config
+            else:
+                model = AutoModel.from_config(config, trust_remote_code=True)
+        except AttributeError:
+            model = AutoModel.from_config(config, trust_remote_code=True)
     except Exception as error:
         raise ValueError(f"build model from {source_path} failed, make sure it works within transformers") from error
     return model, config
