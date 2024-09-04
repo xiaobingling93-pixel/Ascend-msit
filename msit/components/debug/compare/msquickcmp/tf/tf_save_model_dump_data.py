@@ -121,7 +121,7 @@ class TfSaveModelDumpData(DumpData):
                 input_data = np.random.random(size=input_shape).astype(data_type)
                 self.inputs_data[input_name] = input_data
 
-    def generate_inputs_data(self, is_om_compare, npu_dump_path=None, use_aipp=None):
+    def generate_inputs_data(self, is_om_compare):
         """
         Generate tf2.6 save_model inputs data
         return tf2.6 save_model inputs data directory
@@ -154,7 +154,7 @@ class TfSaveModelDumpData(DumpData):
         """
         return self.net_output
 
-    def generate_dump_data(self, output_json_path, npu_dump_path=None, om_parser=None):
+    def generate_dump_data(self, output_json_path):
         """
         Generate tf2.6 save_model dump data
         :return tf2.6 save_model dump data directory

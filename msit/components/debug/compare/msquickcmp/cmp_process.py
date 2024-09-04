@@ -281,8 +281,8 @@ def run_om_model_compare(args, use_cli):
 
     # generate dump data by golden model
     if is_saved_model_valid(args.model_path):
-        golden_dump.generate_inputs_data(True, npu_dump_data_path=None, use_aipp=None)
-        golden_dump_data_path = golden_dump.generate_dump_data(output_json_path, npu_dump_path=None, om_parser=None)
+        golden_dump.generate_inputs_data(True)
+        golden_dump_data_path = golden_dump.generate_dump_data(output_json_path)
     else:
         golden_dump.generate_inputs_data(npu_dump_data_path, use_aipp)
         golden_dump_data_path = golden_dump.generate_dump_data(npu_dump_npy_path, npu_dump.om_parser)
