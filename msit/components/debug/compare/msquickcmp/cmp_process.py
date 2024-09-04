@@ -146,7 +146,7 @@ def mindir_to_om_process(args: CmpArgsAdapter):
             raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PARAM_ERROR)
         if not os.getenv(LD_PRELOAD):
             os.environ[LD_PRELOAD] = save_om_so_path
-        elif (save_om_so_path not in os.getenv(LD_PRELOAD).split(":")):
+        elif save_om_so_path not in os.getenv(LD_PRELOAD).split(":"):
             if len(ld_preload):
                 os.environ[LD_PRELOAD] = save_om_so_path + ":" + ld_preload
             else:
@@ -181,7 +181,7 @@ def check_dump_and_compare(args: CmpArgsAdapter):
         if args.my_path and args.golden_path and args.ops_json:
             return False
         else:
-            raise
+            raise Exception(f"If you want to alone compare, you need to provide parameters like: -mp -gp and -ops-json")
 
 
 def cmp_process(args: CmpArgsAdapter, use_cli: bool):
