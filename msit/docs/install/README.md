@@ -142,11 +142,11 @@ msit check all
 
 ## 安装命令： msit install 
 
-| 参数名                         | 描述                                                         | 必选 |
-| ------------------------------ | ------------------------------------------------------------ | ---- |
-| comp_names                  | 是一个位置参数，指定需要安装的组件，当前可以选择的有：`llm`/`compare`/`surgeon`/`analyze`/`transplt`/`convert`/`msprof`/`benchmark`/`all`，具体选项可以使用`msit install --help` 查看。但指定为`all` 时，表明是需要安装所有组件 | 是   |
-| --find-links/-f             | 查找包的路径，一般用于离线安装时 | 否  |
-| --help                  | 帮助信息 | 否  |
+| 参数名              | 描述                                                         | 必选 |
+|------------------| ------------------------------------------------------------ | ---- |
+| comp_names       | 是一个位置参数，指定需要安装的组件，当前可以选择的有：`llm`/`compare`/`surgeon`/`analyze`/`transplt`/`convert`/`msprof`/`benchmark`/`all`，具体选项可以使用`msit install --help` 查看。但指定为`all` 时，表明是需要安装所有组件 | 是   |
+| --find-links, -f | 查找包的路径，一般用于离线安装时 | 否  |
+| --help, -h       | 帮助信息 | 否  |
 
 ```bash 
 msit install llm
@@ -154,10 +154,10 @@ msit install llm
 
 ## 安装检查命令：msit check
 
-| 参数名                         | 描述                                                         | 必选 |
-| ------------------------------ | ------------------------------------------------------------ | ---- |
-| comp_names                  | 是一个位置参数，指定需要检查的组件，当前可以选择的有：`llm`/`compare`/`surgeon`/`analyze`/`transplt`/`convert`/`msprof`/`benchmark`/`all`，具体选项可以使用`msit check --help` 查看。但指定为`all` 时，表明是需要检查所有组件 | 是   |
-| --help                  | 帮助信息 | 否  |
+| 参数名        | 描述                                                         | 必选 |
+|------------| ------------------------------------------------------------ | ---- |
+| comp_names | 是一个位置参数，指定需要检查的组件，当前可以选择的有：`llm`/`compare`/`surgeon`/`analyze`/`transplt`/`convert`/`msprof`/`benchmark`/`all`，具体选项可以使用`msit check --help` 查看。但指定为`all` 时，表明是需要检查所有组件 | 是   |
+| --help, -h | 帮助信息 | 否  |
 
 ```bash 
 msit check all
@@ -167,11 +167,11 @@ msit check all
 
 部分组件在安装之后，会需要一些额外的构建动作，该步骤在 msit install 会自动执行。但是因为部分原因，比如前置包没有安装等，有可能构建失败。安装后可以使用 msit check 命令检查，会给出提示。用户可以使用 msit build-extra 重新构建。
 
-| 参数名                         | 描述                                                         | 必选 |
-| ------------------------------ | ------------------------------------------------------------ | ---- |
-| comp_names                  | 是一个位置参数，指定需要构建的组件，当前可以选择的有：`llm`/`compare`/`surgeon`/`analyze`/`transplt`/`convert`/`msprof`/`benchmark`，具体选项可以使用`msit build-extra --help` 查看 | 是   |
-| --find-links/-f             | 查找包的路径，一般用于离线安装时 | 否  |
-| --help                  | 帮助信息 | 否  |
+| 参数名              | 描述                                                         | 必选 |
+|------------------| ------------------------------------------------------------ | ---- |
+| comp_names       | 是一个位置参数，指定需要构建的组件，当前可以选择的有：`llm`/`compare`/`surgeon`/`analyze`/`transplt`/`convert`/`msprof`/`benchmark`，具体选项可以使用`msit build-extra --help` 查看 | 是   |
+| --find-links, -f | 查找包的路径，一般用于离线安装时 | 否  |
+| --help, -h       | 帮助信息 | 否  |
 
 ```bash 
 msit build-extra llm
@@ -181,11 +181,11 @@ msit build-extra llm
 
 下载安装包，用于离线安装场景
 
-| 参数名                         | 描述                                                         | 必选 |
-| ------------------------------ | ------------------------------------------------------------ | ---- |
-| comp_names                  | 是一个位置参数，指定需要下载的组件，当前可以选择的有：`llm`/`compare`/`surgeon`/`analyze`/`transplt`/`convert`/`msprof`/`benchmark`/`all`，具体选项可以使用`msit download --help` 查看 | 是   |
-| --dest                  | 目标路径 | 是   |
-| --help                  | 帮助信息 | 否  |
+| 参数名        | 描述                                                         | 必选 |
+|------------| ------------------------------------------------------------ | ---- |
+| comp_names | 是一个位置参数，指定需要下载的组件，当前可以选择的有：`llm`/`compare`/`surgeon`/`analyze`/`transplt`/`convert`/`msprof`/`benchmark`/`all`，具体选项可以使用`msit download --help` 查看 | 是   |
+| --dest     | 目标路径 | 是   |
+| --help, -h | 帮助信息 | 否  |
 
 ```bash 
 msit download llm
