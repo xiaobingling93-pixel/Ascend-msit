@@ -72,9 +72,9 @@ def transform_report(source_path, save_name=None, save_dir=None, is_repeat=True)
     json_save_name = init_save_name(save_name if save_name else model_name_lower) + ".json"
     json_save_dir = init_save_dir(save_dir if save_dir else model_name_lower, sub_dir="")
     json_save_path = os.path.join(json_save_dir, json_save_name)
-    flags=os.O_WRONLY|os.O_CREAT|os.O_TRUNC
-    modes = os.st.S_IWUSR|os.st.S_IRUSR
-    with os.fdopen(os.open(json_save_path,flags,modes),'w') as ff:
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+    modes = os.st.S_IWUSR | os.st.S_IRUSR
+    with os.fdopen(os.open(json_save_path, flags, modes), 'w') as ff:
         json.dump(parsed_model_layers, ff)
     logger.info(f"model info saved: {json_save_path}")
 
@@ -181,9 +181,9 @@ def save_json(dic, name, save_name=None, save_dir=None):
     json_save_name = init_save_name(save_name if save_name else name) + ".json"
     json_save_dir = init_save_dir(save_dir if save_dir else name, sub_dir="")
     json_save_path = os.path.join(json_save_dir, json_save_name)
-    flags=os.O_WRONLY|os.O_CREAT|os.O_TRUNC
-    modes = os.st.S_IWUSR|os.st.S_IRUSR
-    with os.fdopen(os.open(json_save_path,flags,modes),'w') as ff:
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+    modes = os.st.S_IWUSR | os.st.S_IRUSR
+    with os.fdopen(os.open(json_save_path, flags, modes), 'w') as ff:
         json.dump(dic, ff, indent=4)
     logger.info(f"model info saved: {json_save_path}")
 
