@@ -15,6 +15,7 @@ import os
 import re
 import argparse
 from components.utils.file_open_check import FileStat, is_legal_args_path_string
+from components.utils.check.path_checker import PathChecker
 
 STR_WHITE_LIST_REGEX = re.compile(r"[^_A-Za-z0-9\"'><=\[\])(,}{: /.~-]")
 MAX_SIZE_LIMITE_NORMAL_MODEL = 32 * 1024 * 1024 * 1024  # 32GB
@@ -126,8 +127,8 @@ def check_output_path_legality(value):
 
 def check_path_exit(value):
     path_value = value
-    if not os.path.exists(path_value):
-        raise argparse.ArgumentTypeError(f"path:{path_value} is not exists. Please check.")
+    path_checker = PathChecker()
+    path_checker.exists().is_dir().check(path_value, True)
 
     return path_value
 

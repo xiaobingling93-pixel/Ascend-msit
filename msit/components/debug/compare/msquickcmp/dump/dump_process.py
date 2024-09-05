@@ -132,29 +132,6 @@ def cpu_dump_process(args):
         golden_dumper.generate_dump_data()
 
 
-def fusion_close_model_convert(args: DumpArgsAdapter):
-    if args.fusion_switch_file:
-        args.fusion_switch_file = os.path.realpath(args.fusion_switch_file)
-        utils.check_file_or_directory_path(args.fusion_switch_file)
-
-        om_json_path = atc_utils.convert_model_to_json(args.cann_path, args.model_path, args.out_path)
-        om_parser = OmParser(om_json_path)
-        atc_input_shape_in_offline_model = DynamicInput.get_input_shape_from_om(om_parser)
-
-        close_fusion_om_file = os.path.join(args.out_path, 'close_fusion_om_model')
-        atc_command_file_path = atc_utils.get_atc_path(args.cann_path)
-        atc_cmd = [atc_command_file_path, "--framework=5",
-                   "--soc_version=" + acl.get_soc_name(),
-                   "--model=" + args.model_path,
-                   "--output=" + close_fusion_om_file,
-                   "--fusion_switch_file=" + args.fusion_switch_file]
-        if atc_input_shape_in_offline_model:
-            atc_cmd.append("--input_shape=" + atc_input_shape_in_offline_model)
-
-        utils.execute_command(atc_cmd)
-        args.model_path = close_fusion_om_file + ".om"
-
-
 def check_and_dump(args, use_cli: bool):
     utils.check_file_or_directory_path(args.model_path, is_saved_model_valid(args.model_path))
     if args.weight_path:
@@ -164,7 +141,6 @@ def check_and_dump(args, use_cli: bool):
     time_dir = time.strftime("%Y%m%d%H%M%S", time.localtime())
     original_out_path = os.path.realpath(os.path.join(args.out_path, time_dir))
     args.out_path = original_out_path
-    fusion_close_model_convert(args)
     # deal with the dymShape_range param if exists
     input_shapes = []
     if args.dym_shape_range:
