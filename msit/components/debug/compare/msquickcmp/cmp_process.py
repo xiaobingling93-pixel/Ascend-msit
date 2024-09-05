@@ -18,36 +18,34 @@ Function:
 This class mainly involves the main function.
 """
 
-import argparse
-import os
-import stat
-import shutil
-import time
-import subprocess
 import csv
 import logging
+import os
+import shutil
 import site
-import pandas as pd
+import stat
+import subprocess
+import time
 
-import sklearn as _ # import first, bypassing error libgomp-xxx.so.xxx: cannot allocate memory in static TLS block
-import onnxruntime
 import acl
-
+import onnxruntime
+import pandas as pd
 from auto_optimizer import OnnxGraph
-from msquickcmp.atc import atc_utils
 from auto_optimizer.graph_refactor import Node
+from msquickcmp.accuracy_locat import accuracy_locat as al
+from msquickcmp.adapter_cli.args_adapter import CmpArgsAdapter
+from msquickcmp.atc import atc_utils
 from msquickcmp.common import utils
 from msquickcmp.common.args_check import is_saved_model_valid
-from msquickcmp.common.utils import AccuracyCompareException, get_shape_to_directory_name, safe_delete_path_if_exists
 from msquickcmp.common.convert import convert_bin_dump_data_to_npy
 from msquickcmp.common.convert import convert_npy_to_bin
+from msquickcmp.common.utils import AccuracyCompareException, get_shape_to_directory_name, safe_delete_path_if_exists
 from msquickcmp.net_compare import analyser
 from msquickcmp.net_compare.net_compare import NetCompare
 from msquickcmp.npu.npu_dump_data import NpuDumpData, DynamicInput
-from msquickcmp.adapter_cli.args_adapter import CmpArgsAdapter
 from msquickcmp.npu.om_parser import OmParser
-from msquickcmp.accuracy_locat import accuracy_locat as al
 from msquickcmp.single_op import single_op as sp
+
 from components.utils.security_check import check_write_directory
 from components.utils.file_open_check import ms_open
 
@@ -62,7 +60,7 @@ def _generate_golden_data_model(args, npu_dump_npy_path):
     if is_saved_model_valid(args.model_path):
         from msquickcmp.tf.tf_save_model_dump_data import TfSaveModelDumpData
 
-        return TfSaveModelDumpData(args)
+        return TfSaveModelDumpData(args, args.model_path)
     model_name, extension = utils.get_model_name_and_extension(args.model_path)
     if args.weight_path and ".prototxt" == extension:
         from msquickcmp.caffe_model.caffe_dump_data import CaffeDumpData
@@ -148,7 +146,7 @@ def mindir_to_om_process(args: CmpArgsAdapter):
             raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PARAM_ERROR)
         if not os.getenv(LD_PRELOAD):
             os.environ[LD_PRELOAD] = save_om_so_path
-        elif (save_om_so_path not in os.getenv(LD_PRELOAD).split(":")):
+        elif save_om_so_path not in os.getenv(LD_PRELOAD).split(":"):
             if len(ld_preload):
                 os.environ[LD_PRELOAD] = save_om_so_path + ":" + ld_preload
             else:
@@ -176,6 +174,16 @@ def mindir_to_om_process(args: CmpArgsAdapter):
     return is_mindir_compare_accuracy
 
 
+def check_dump_and_compare(args: CmpArgsAdapter):
+    if not args.my_path and not args.golden_path and not args.ops_json:
+        return True
+    else:
+        if args.my_path and args.golden_path and args.ops_json:
+            return False
+        else:
+            raise Exception(f"If you want to alone compare, you need to provide parameters like: -mp -gp and -ops-json")
+
+
 def cmp_process(args: CmpArgsAdapter, use_cli: bool):
     """
     Function Description:
@@ -183,14 +191,20 @@ def cmp_process(args: CmpArgsAdapter, use_cli: bool):
     Exception Description:
         exit the program when an AccuracyCompare Exception  occurs
     """
+    if check_dump_and_compare(args):
+        dump_and_compare(args, use_cli)
+    else:
+        args.cann_path = os.path.realpath(args.cann_path)
+        compare_run(args)
+
+
+def dump_and_compare(args, use_cli):
     args.model_path = os.path.realpath(args.model_path)
     args.weight_path = os.path.realpath(args.weight_path) if args.weight_path else None
     args.offline_model_path = os.path.realpath(args.offline_model_path)
     args.cann_path = os.path.realpath(args.cann_path)
     args.input_path = convert_npy_to_bin(args.input_path)
-
     is_mindir_compare_accuracy = mindir_to_om_process(args)
-
     try:
         check_and_run(args, use_cli)
         if is_mindir_compare_accuracy:
@@ -201,6 +215,36 @@ def cmp_process(args: CmpArgsAdapter, use_cli: bool):
         raise error
 
 
+def compare_run(args: CmpArgsAdapter):
+    res = compare_process(args)
+    if res and args.locat:
+        endnode_names_list = res[0]["GroundTruth"].split(",")
+        endnode_name = endnode_names_list[0]
+        error_node_list = find_accuracy_interval(args, endnode_name, input_shape="")
+        error_interval_info_file = os.path.join(args.out_path, ERROR_INTERVAL_INFO_FILE)
+        with os.fdopen(os.open(error_interval_info_file, READ_WRITE_FLAGS, WRITE_MODES), "a+") as fp_writer:
+            output_error_interval_info(fp_writer, error_node_list)
+
+
+def compare_process(args: CmpArgsAdapter):
+    # compare the entire network
+    if args.my_path is None or args.golden_path is None or args.ops_json is None:
+        raise ValueError("when compare alone. Please ensure that both --my-path and --golden-path and --ops-json are "
+                         "provided.")
+    net_compare = NetCompare(args.my_path, args.golden_path,
+                             args.ops_json, args, golden_json_path=None)
+    net_compare.accuracy_network_compare()
+
+    if not args.locat:
+        invalid_rows, _ = analyser.Analyser(args.out_path)()
+    else:
+        invalid_rows, _ = analyser.Analyser(args.out_path)('ALL_INVALID')
+    print_advisor_info(args.out_path)
+    _append_is_npu_ops_to_csv(args.out_path)
+
+    return invalid_rows
+
+
 def run(args: CmpArgsAdapter, input_shape, original_out_path, use_cli: bool):
     if input_shape:
         args.input_shape = input_shape
@@ -209,14 +253,14 @@ def run(args: CmpArgsAdapter, input_shape, original_out_path, use_cli: bool):
     if is_saved_model_valid(args.offline_model_path):
         # npu dump
         from msquickcmp.npu.npu_tf_adapter_dump_data import NpuTfAdapterDumpData
-        npu_dump = NpuTfAdapterDumpData(args)
+        npu_dump = NpuTfAdapterDumpData(args, args.offline_model_path)
         npu_dump.generate_inputs_data()
         npu_dump_data_path, output_json_path = npu_dump.generate_dump_data()
         # gpu dump
         from msquickcmp.tf.tf_save_model_dump_data import TfSaveModelDumpData
-        golden_dump = TfSaveModelDumpData(args)
-        golden_dump.generate_inputs_data(False, npu_dump_data_path, om_parser=None)
-        golden_dump_data_path = golden_dump.generate_dump_data(output_json_path, npu_dump_path=None, om_parser=None)
+        golden_dump = TfSaveModelDumpData(args, args.model_path)
+        golden_dump.generate_inputs_data(False)
+        golden_dump_data_path = golden_dump.generate_dump_data(output_json_path)
         # compare the entire network
         net_compare = NetCompare(npu_dump_data_path, golden_dump_data_path,
                                  output_json_path, args, golden_json_path=None)
@@ -267,8 +311,8 @@ def run_om_model_compare(args, use_cli):
 
     # generate dump data by golden model
     if is_saved_model_valid(args.model_path):
-        golden_dump.generate_inputs_data(True, npu_dump_data_path, use_aipp)
-        golden_dump_data_path = golden_dump.generate_dump_data(output_json_path, npu_dump_npy_path, npu_dump.om_parser)
+        golden_dump.generate_inputs_data(True)
+        golden_dump_data_path = golden_dump.generate_dump_data(output_json_path)
     else:
         golden_dump.generate_inputs_data(npu_dump_data_path, use_aipp)
         golden_dump_data_path = golden_dump.generate_dump_data(npu_dump_npy_path, npu_dump.om_parser)
@@ -276,18 +320,18 @@ def run_om_model_compare(args, use_cli):
 
     # if it's dynamic batch scenario, golden data files should be renamed
     utils.handle_ground_truth_files(npu_dump.om_parser, npu_dump_data_path, golden_dump_data_path)
-    
+
     if not args.dump:
         # only compare the final output
-        net_compare = NetCompare(npu_net_output_data_path, golden_dump_data_path, 
+        net_compare = NetCompare(npu_net_output_data_path, golden_dump_data_path,
                                  output_json_path, args, golden_json_path)
         net_compare.net_output_compare(npu_net_output_data_path, golden_net_output_info)
     else:
         # compare the entire network
-        net_compare = NetCompare(npu_dump_data_path, golden_dump_data_path, 
+        net_compare = NetCompare(npu_dump_data_path, golden_dump_data_path,
                                  output_json_path, args, golden_json_path)
         net_compare.accuracy_network_compare()
-    
+
     # Check and correct the mapping of net output node name.
     if len(expect_net_output_node) == 1:
         _check_output_node_name_mapping(expect_net_output_node, golden_net_output_info)
@@ -310,21 +354,21 @@ def print_advisor_info(out_path):
                 utils.logger.info(line.strip())
 
 
-def fusion_close_model_convert(args:CmpArgsAdapter):
+def fusion_close_model_convert(args: CmpArgsAdapter):
     if args.fusion_switch_file:
         args.fusion_switch_file = os.path.realpath(args.fusion_switch_file)
         utils.check_file_or_directory_path(args.fusion_switch_file)
-        
+
         om_json_path = atc_utils.convert_model_to_json(args.cann_path, args.offline_model_path, args.out_path)
         om_parser = OmParser(om_json_path)
         atc_input_shape_in_offline_model = DynamicInput.get_input_shape_from_om(om_parser)
 
         close_fusion_om_file = os.path.join(args.out_path, 'close_fusion_om_model')
         atc_command_file_path = atc_utils.get_atc_path(args.cann_path)
-        atc_cmd = [atc_command_file_path, "--framework=5", 
-                   "--soc_version=" + acl.get_soc_name(), 
-                   "--model=" + args.model_path, 
-                   "--output=" + close_fusion_om_file, 
+        atc_cmd = [atc_command_file_path, "--framework=5",
+                   "--soc_version=" + acl.get_soc_name(),
+                   "--model=" + args.model_path,
+                   "--output=" + close_fusion_om_file,
                    "--fusion_switch_file=" + args.fusion_switch_file]
         if atc_input_shape_in_offline_model:
             atc_cmd.append("--input_shape=" + atc_input_shape_in_offline_model)
@@ -389,13 +433,13 @@ def single_op_compare(args, input_shape):
 
     # devide onnx into fixed size onnxs
     subonnx_list = sp.dynamic_divide_onnx(args.out_path, subog, memory_size)
-    
+
     # set csv list
     csv_list = []
 
     # set golden dump data source file
     onnx_data_path = os.path.join(args.out_path, 'dump_data/onnx')
-    
+
     # for each onnx run compare
     for idx, subonnx in enumerate(subonnx_list):
         # run atc to get om file
@@ -406,7 +450,7 @@ def single_op_compare(args, input_shape):
         # load single operator onnx
         utils.logger.info("Start to loading input data")
         subog = OnnxGraph.parse(subonnx)
-        
+
         # load onnx input description
         inputs_list = [(ii.name, ii.shape) for ii in onnxruntime.InferenceSession(subonnx).get_inputs()]
 
@@ -436,8 +480,8 @@ def single_op_compare(args, input_shape):
 
         # set compare run args
         cmg_args = CmpArgsAdapter(subonnx, os.path.join(args.out_path, "broken.om"),
-                                "", bin_files_path, args.cann_path, tmp_out_path, "", args.device,
-                                "", "", False, "", True, False, custom_op="", locat=False, single_op=True)
+                                  "", bin_files_path, args.cann_path, tmp_out_path, "", args.device,
+                                  "", "", False, "", True, False, custom_op="", locat=False, single_op=True)
 
         utils.logger.info("Start to run comparision")
 
@@ -449,7 +493,7 @@ def single_op_compare(args, input_shape):
         utils.logger.info("Comparision finished")
         # remove temp bin files
         shutil.rmtree(tmp_bin_path)
-    
+
     # merge csv
     summary_csv_path = utils.merge_csv(csv_list, single_op_dir, 'single_op_summary.csv')
     # analyze csv and print

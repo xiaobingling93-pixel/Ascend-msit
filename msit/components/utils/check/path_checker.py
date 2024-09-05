@@ -1,5 +1,6 @@
 from enum import Enum, auto, unique
 import os
+import stat
 from typing import Union
 
 from components.utils.check.checker import Checker, CheckResult, rule, EnumInstance
@@ -52,23 +53,18 @@ class FileStatus(object):
 
     @property
     def ftype(self):
-        match os.st.S_IFMT(self._status_mode):
-            case os.st.S_IFDIR:
-                return FileType.DIRECTORY
-            case os.st.S_IFCHR:
-                return FileType.CHARACTER
-            case os.st.S_IFBLK:
-                return FileType.BLOCK
-            case os.st.S_IFREG:
-                return FileType.FILE
-            case os.st.S_IFIFO:
-                return FileType.FIFO
-            case os.st.S_IFLNK:
-                return FileType.SYMLINK
-            case os.st.S_IFSOCK:
-                return FileType.SOCKET
-            case _:
-                return NotImplemented
+        file_type_map = {
+            stat.S_IFDIR: FileType.DIRECTORY,
+            stat.S_IFCHR: FileType.CHARACTER,
+            stat.S_IFBLK: FileType.BLOCK,
+            stat.S_IFREG: FileType.FILE,
+            stat.S_IFIFO: FileType.FIFO,
+            stat.S_IFLNK: FileType.SYMLINK,
+            stat.S_IFSOCK: FileType.SOCKET
+        }
+
+        file_mode = os.st.S_IFMT(self._status_mode)
+        return file_type_map.get(file_mode, None)
 
 
 class PathChecker(Checker):
