@@ -80,11 +80,13 @@ def dump_data(args, input_shape, original_out_path, use_cli: bool):
         npu dump
         """
         npu_dump_process(args, use_cli)
-    else:
+    elif args.device_pattern == "cpu":
         """
         cpu dump
         """
         cpu_dump_process(args)
+    else:
+        raise ValueError("-dp only contain cpu and npu, please ensure that -dp id correct.")
 
 
 def npu_dump_process(args, use_cli):
