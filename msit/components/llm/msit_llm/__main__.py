@@ -137,7 +137,7 @@ class DumpCommand(BaseCommand):
             dest="type",
             required=False,
             nargs='+',
-            default=['tensor'],
+            default=['tensor', 'model'],
             choices=['model', 'layer', 'op', 'kernel', 'tensor', 'cpu_profiling', 'onnx'],
             help='dump type.')
 
