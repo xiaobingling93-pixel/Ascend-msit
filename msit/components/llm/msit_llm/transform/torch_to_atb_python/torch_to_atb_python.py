@@ -52,6 +52,7 @@ CONFIG_ATTR_CANDIDATES = {
     "num_attention_heads": ["num_attention_heads"],
     "hidden_size": ["hidden_size"],
     "vocab_size": ["vocab_size"],
+    "text_config": ["text_config", "llm_config"],
 }
 
 NN_MODULE_STACK = "nn_module_stack"
@@ -102,13 +103,14 @@ def get_config_attr(config, attr, default=None):
 
 def build_transformers_model(source_path):
     try:
-        from transformers import AutoConfig, AutoModelForCausalLM
+        from transformers import AutoConfig, AutoModel
     except ModuleNotFoundError as error:
         raise ModuleNotFoundError("transformers package not found, try pip install transformers") from error
 
     try:
         config = AutoConfig.from_pretrained(source_path, trust_remote_code=True)
-        model = AutoModelForCausalLM.from_config(config, trust_remote_code=True)
+        config = get_config_attr(config, "text_config", default=config)
+        model = AutoModel.from_config(config, trust_remote_code=True)
     except Exception as error:
         raise ValueError(f"build model from {source_path} failed, make sure it works within transformers") from error
     return model, config
