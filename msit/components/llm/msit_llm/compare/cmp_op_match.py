@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import itertools
+import re
 from enum import Enum
 from typing import Any
 from msit_llm.common.log import logger
@@ -136,6 +137,102 @@ def policy_name_full_match(golden_root_node: TreeNode, my_root_node: TreeNode, m
         )
 
 
+op_mapping_dict = {
+    # ATB算子: Pytorch算子
+    ('qkv', 'linearoperation'): 'self_attn.w_pack',
+    ('attention', 'linearoperation'): 'self_attn.o_proj',
+    ('mlp', 'rmsnormoperation'): 'mlp.post_attention_layernorm',
+    ('mlp', 'splitoperation'): 'mlp.gate_proj',
+    ('mlp', 'activationoperation'): 'mlp.act_fn',
+    ('mlp', 'elewiseoperation'): 'mlp.down_proj',
+    ('mlp', 'linearoperation'): 'mlp.down_proj'
+}
+
+golden_op_data_mapping = {
+    # 算子名：文件名 (因为pytorch算子mlp.down_proj匹配了两次无法区分，使用匹配到的ATB算子做键值)
+    ('mlp', 'elewiseoperation'): 'input_0.pth'
+}
+
+my_op_data_mapping = {
+    # 算子名：文件名
+    ('mlp', 'splitoperation'): 'outtensor0.bin'
+}
+
+
+def policy_enhanced_name_match(golden_root_node: TreeNode, my_root_node: TreeNode, match_map: OpMatchMap):
+    def match_ops(golden_path_dict, my_path_dict, golden_path2node, my_path2node, match_map):
+        for golden_path_lower, golden_path in golden_path_dict.items():
+            for my_path_lower, my_path in my_path_dict.items():
+                for atb_op, torch_op in op_mapping_dict.items():
+                    atb_op_lower = atb_op.lower() if isinstance(atb_op, str) else [op.lower() for op in atb_op]
+                    torch_op_lower = torch_op.lower()
+
+                    if all(op in my_path_lower for op in atb_op_lower) and torch_op_lower in golden_path_lower:
+                        if torch_op_lower == 'self_attn.o_proj' and 'qkv' in my_path_lower:
+                            continue
+
+                        g_match_location = golden_op_data_mapping.get(tuple(atb_op_lower), MatchLocation.ALL_OUTPUT)
+                        m_match_location = my_op_data_mapping.get(tuple(atb_op_lower), MatchLocation.ALL_OUTPUT)
+
+                        match_map.add_score(
+                            my_path2node.get(my_path),
+                            m_match_location,
+                            golden_path2node.get(golden_path),
+                            g_match_location,
+                            MatchScore.FULL_MATCH,
+                        )
+
+    golden_path2node = {node.tensor_path: node for node in golden_root_node.get_all_nodes()}
+    my_path2node = {node.tensor_path: node for node in my_root_node.get_all_nodes()}
+
+    golden_layer_type = golden_root_node.get_layer_node_type()
+    golden_layer_nodes = golden_root_node.get_layer_node(golden_layer_type)
+
+    my_layer_type = my_root_node.get_layer_node_type()
+    my_layer_nodes = my_root_node.get_layer_node(my_layer_type)
+
+    for golden_layer, my_layer in zip(golden_layer_nodes, my_layer_nodes):
+        golden_path_dict = {node.tensor_path.lower(): node.tensor_path for node in golden_layer.get_leaf_nodes()}
+        my_path_dict = {node.tensor_path.lower(): node.tensor_path for node in my_layer.get_leaf_nodes()}
+        match_ops(golden_path_dict, my_path_dict, golden_path2node, my_path2node, match_map)
+
+
+outside_layer_op_mapping_dict = {
+    # ATB算子: Pytorch算子
+    'wordembed': 'embed_tokens',
+    re.compile(r"^RmsNormOperation_\d+$"): 'root.model.norm',
+    'lmhead': 'lm_head'
+}
+
+
+def policy_outside_layer_name_match(golden_root_node: TreeNode, my_root_node: TreeNode, match_map: OpMatchMap):
+    golden_name2node = {node.node_name: node for node in golden_root_node.get_all_nodes()}
+    my_name2node = {node.node_name: node for node in my_root_node.get_all_nodes()}
+
+    golden_name_set = set(golden_name2node.keys())
+    my_name_set = set(my_name2node.keys())
+
+    def match_names(name_set, pattern):
+        if isinstance(pattern, re.Pattern):
+            return [name for name in name_set if pattern.match(name)]
+        else:
+            return [name for name in name_set if pattern in name.lower()]
+
+    for atb_op, torch_op in outside_layer_op_mapping_dict.items():
+        my_matches = match_names(my_name_set, atb_op)
+        golden_matches = match_names(golden_name_set, torch_op)
+
+        if golden_matches and my_matches:
+            for golden_name, my_name in zip(golden_matches, my_matches):
+                match_map.add_score(
+                    my_name2node.get(my_name),
+                    MatchLocation.ALL_OUTPUT,
+                    golden_name2node.get(golden_name),
+                    MatchLocation.ALL_OUTPUT,
+                    MatchScore.FULL_MATCH,
+                )
+
+
 def policy_layer_type_cnt_match(golden_root_node: TreeNode, my_root_node: TreeNode, match_map: OpMatchMap):
     # 逐层比对，类型和数量一致的算匹配上。主要用于量化和非量化的atb 之间比对
     def get_children_type_count_map(node):
@@ -179,9 +276,13 @@ def policy_rope_operator_match(golden_root_node: TreeNode, my_root_node: TreeNod
 
     golden_name_set = set(golden_name2node.keys())
     my_name_set = set(my_name2node.keys())
+    golden_layer_type = golden_root_node.get_layer_node_type()
+    golden_layer_nodes = golden_root_node.get_layer_node(golden_layer_type)
 
     golden_rotary_name_set = [item for item in golden_name_set if "rotary" in item]
     my_rope_name_set = [item for item in my_name_set if "ropeoperation" in item.lower()]
+    my_layer_type = my_root_node.get_layer_node_type()
+    my_layer_nodes = my_root_node.get_layer_node(my_layer_type)
 
     for golden_node, my_node in zip(golden_rotary_name_set, my_rope_name_set):
         match_map.add_score(
@@ -191,6 +292,24 @@ def policy_rope_operator_match(golden_root_node: TreeNode, my_root_node: TreeNod
             MatchLocation.ALL_OUTPUT,
             MatchScore.FULL_MATCH,
         )
+    for golden_layer, my_layer in zip(golden_layer_nodes, my_layer_nodes):
+        g_layer_leaf_nodes = golden_layer.get_leaf_nodes()
+        m_layer_leaf_nodes = my_layer.get_leaf_nodes()
+
+        golden_name_set = [node.node_name for node in g_layer_leaf_nodes]
+        my_name_set = [node.node_name for node in m_layer_leaf_nodes]
+
+        golden_rotary_name_set = [item for item in golden_name_set if "rotary" in item]
+        my_rope_name_set = [item for item in my_name_set if "ropeoperation" in item.lower()]
+
+        for golden_node, my_node in zip(golden_rotary_name_set, my_rope_name_set):
+            match_map.add_score(
+                my_name2node.get(my_node),
+                MatchLocation.ALL_INPUT,
+                golden_name2node.get(golden_node),
+                MatchLocation.ALL_OUTPUT,
+                MatchScore.FULL_MATCH,
+            )
 
 
 class OpMatchMgr:
@@ -202,6 +321,8 @@ class OpMatchMgr:
             policy_layer_type_cnt_match,
             OpMatchPolicyMapCount(args),
             policy_rope_operator_match,
+            policy_enhanced_name_match,
+            policy_outside_layer_name_match,
         ]
 
     def match(self, golden_data, my_data):
