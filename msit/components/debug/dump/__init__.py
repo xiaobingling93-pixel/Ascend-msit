@@ -193,7 +193,7 @@ class DumpCommand(BaseCommand):
             default='',
             help="When dump saved_model, you need provide tf-ops-json file path.")
         parser.add_argument(
-            '--om-json-path',
+            '--om-json',
             required=False,
             dest="om_json_path",
             default='',

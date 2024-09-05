@@ -120,30 +120,42 @@ def cpu_dump_process(args):
         # 2. generate input
         golden_dumper.generate_inputs_data_for_dump()
         # 3. dump data
+        if args.tf_json_path is None:
+            raise ValueError("when dump saved_model in cpu, please ensure that --tf-json is provided.")
         golden_dumper.generate_dump_data(args.tf_json_path)
     else:
         _, extension = utils.get_model_name_and_extension(args.model_path)
-        use_aipp = get_use_aipp(args)
+        use_aipp = False
+        use_aipp_npu_dump_data_path = None
         # when onnx cpu inference and add use_aipp, onnx need npu_dump_data_path and npu_net_output_data_path
-        if extension == ".onnx" and use_aipp is True:
-            if args.bin2npy or args.custom_op != "":
-                npu_dump_npy_path = convert_bin_dump_data_to_npy(args.use_aipp_npu_dump_data_path,
-                                                                 args.use_aipp_npu_net_output_data_path,
-                                                                 args.cann_path)
-            else:
-                npu_dump_npy_path = ""
-            golden_dumper = _generate_golden_data_model(args, npu_dump_npy_path)
-
-        golden_dumper.generate_inputs_data(args.use_aipp_npu_dump_data_path, use_aipp)
+        if extension == ".onnx":
+            use_aipp = get_use_aipp(args)
+            if use_aipp is True:
+                if args.bin2npy or args.custom_op != "":
+                    if args.use_aipp_npu_dump_data_path is None or args.use_aipp_npu_net_output_data_path is None:
+                        raise ValueError("when dump onnx, use aipp pattern. Please ensure that both"
+                                         "--use-aipp-npu-dump-data and --use-aipp-npu-net-output-data are "
+                                         "provided.")
+                    npu_dump_npy_path = convert_bin_dump_data_to_npy(args.use_aipp_npu_dump_data_path,
+                                                                     args.use_aipp_npu_net_output_data_path,
+                                                                     args.cann_path)
+                else:
+                    npu_dump_npy_path = ""
+                golden_dumper = _generate_golden_data_model(args, npu_dump_npy_path)
+                use_aipp_npu_dump_data_path = args.use_aipp_npu_dump_data_path
+        golden_dumper.generate_inputs_data(use_aipp_npu_dump_data_path, use_aipp)
         golden_dumper.generate_dump_data()
 
 
 def get_use_aipp(args):
-    temp_om_parser = OmParser(args.om_json_path)
-    use_aipp = True if temp_om_parser.get_aipp_config_content() else False
-    if use_aipp and args.fusion_switch_file is not None:
-        utils.logger.error("if .om model is using aipp config, --fusion-switch-file arg is not support.")
-        raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PARAM_ERROR)
+    use_aipp = False
+    if args.om_json_path:
+        temp_om_parser = OmParser(args.om_json_path)
+        use_aipp = True if temp_om_parser.get_aipp_config_content() else False
+        if use_aipp and args.fusion_switch_file is not None:
+            utils.logger.error("if .om model is using aipp config, --fusion-switch-file arg is not support.")
+            raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PARAM_ERROR)
+
     return use_aipp
 
 
