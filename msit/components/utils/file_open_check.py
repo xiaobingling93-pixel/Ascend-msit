@@ -268,7 +268,7 @@ def ms_open(file, mode="r", max_size=None, softlink=False, write_permission=PERM
         if max_size != MAX_SIZE_UNLIMITE and max_size < file_stat.file_size:
             raise OpenException(f"The file size has exceeded the specifications and cannot be read. {file}")
 
-    if "w" and file_stat.is_exists in mode:
+    if "w" in mode and file_stat.is_exists:
         if not file_stat.is_owner:
             raise OpenException(
                 f"The file owner is inconsistent with the current process user and is not allowed to write. {file}"
@@ -278,7 +278,7 @@ def ms_open(file, mode="r", max_size=None, softlink=False, write_permission=PERM
     if not softlink and file_stat.is_softlink:
         raise OpenException(f"Softlink is not allowed to be opened. {file}")
 
-    if "a" and file_stat.is_exists in mode:
+    if "a" in mode and file_stat.is_exists:
         if not file_stat.is_owner:
             raise OpenException(
                 f"The file owner is inconsistent with the current process user and is not allowed to write. {file}"
