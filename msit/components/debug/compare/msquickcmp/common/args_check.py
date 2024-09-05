@@ -11,11 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import argparse
 import os
 import re
-import argparse
+
 from components.utils.file_open_check import FileStat, is_legal_args_path_string
-from components.utils.check.path_checker import PathChecker
 
 STR_WHITE_LIST_REGEX = re.compile(r"[^_A-Za-z0-9\"'><=\[\])(,}{: /.~-]")
 MAX_SIZE_LIMITE_NORMAL_MODEL = 32 * 1024 * 1024 * 1024  # 32GB
@@ -126,11 +126,10 @@ def check_output_path_legality(value):
 
 
 def check_path_exit(value):
-    path_value = value
-    path_checker = PathChecker()
-    path_checker.exists().check(path_value, True)
+    if not os.path.exists(value):
+        raise ValueError
 
-    return path_value
+    return value
 
 
 def valid_json_file_or_dir(value):
