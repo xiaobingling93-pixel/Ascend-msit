@@ -24,7 +24,12 @@ debug_sub_tasks = [{
     "name": "compare",
     "help_info": "one-click network-wide accuracy analysis of golden models.",
     "module": "msquickcmp.__main__",
-    "attr": "get_cmd_instance"
+    "attr": "get_compare_cmd_ins"
+}, {
+    "name": "dump",
+    "help_info": "one-click dump model ops inputs and outputs.",
+    "module": "msquickcmp.__main__",
+    "attr": "get_dump_cmd_ins"
 }]
 
 debug_sub_task_entry_points = [

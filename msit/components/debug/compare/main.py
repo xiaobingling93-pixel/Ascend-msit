@@ -17,19 +17,16 @@
 Function:
 This class mainly involves the main function.
 """
-import re
 import argparse
 import sys
-import os
 
-from msquickcmp.cmp_process import cmp_process
 from msquickcmp.adapter_cli.args_adapter import CmpArgsAdapter
+from msquickcmp.cmp_process import cmp_process
 from msquickcmp.common import utils
 from msquickcmp.common.args_check import (
-    check_model_path_legality, check_om_path_legality, check_weight_path_legality, check_input_path_legality,
+    check_model_path_legality, check_om_path_legality, check_input_path_legality,
     check_cann_path_legality, check_output_path_legality, check_dict_kind_string, check_device_range_valid,
-    check_number_list, check_dym_range_string, check_fusion_cfg_path_legality, check_quant_json_path_legality,
-    safe_string, str2bool
+    check_number_list, check_dym_range_string, str2bool
 )
 
 

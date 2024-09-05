@@ -12,20 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-import re
-import shutil
-import argparse
 
 from components.utils.parser import BaseCommand
-from msquickcmp.adapter_cli.args_adapter import CmpArgsAdapter
-from msquickcmp.cmp_process import cmp_process
-from msquickcmp.common.utils import logger
-from msquickcmp.common.args_check import (
+from components.debug.compare.msquickcmp.adapter_cli.args_adapter import CmpArgsAdapter
+from components.debug.compare.msquickcmp.cmp_process import cmp_process
+from components.debug.compare.msquickcmp.common.args_check import (
     check_model_path_legality, check_om_path_legality, check_weight_path_legality, check_input_path_legality,
     check_cann_path_legality, check_output_path_legality, check_dict_kind_string, check_device_range_valid,
     check_number_list, check_dym_range_string, check_fusion_cfg_path_legality, check_quant_json_path_legality,
-    valid_json_file_or_dir, safe_string, str2bool
+    safe_string, str2bool, check_path_exit
 )
+from msquickcmp.common.utils import logger
+from components.debug.compare.msquickcmp.dump.dump_process import dump_process
+from msquickcmp.dump.args_adapter import DumpArgsAdapter
 
 CANN_PATH = os.environ.get('ASCEND_TOOLKIT_HOME', "/usr/local/Ascend/ascend-toolkit/latest")
 
@@ -46,6 +45,7 @@ class CompareCommand(BaseCommand):
         parser.add_argument(
             '-om',
             '--om-model',
+            required=False,
             dest="om_model",
             type=check_om_path_legality,
             help='The offline model (.om or .mindir) file path')
@@ -190,14 +190,34 @@ class CompareCommand(BaseCommand):
             dest="saved_model_tag_set",
             default='',
             help="Enter the tagSet of the model. For example: --saved_model_tag_set ['serve', 'general_parser']")
+        # alone compare parameters
+        parser.add_argument(
+            '-mp',
+            '--my-path',
+            required=False,
+            dest="my_path",
+            type=check_path_exit,
+            help='The npu dump data path')
+        parser.add_argument(
+            '-gp',
+            '--golden-path',
+            required=False,
+            dest="golden_path",
+            type=check_path_exit,
+            help='The cpu(golden) dump data path')
+        parser.add_argument(
+            '--ops-json',
+            required=False,
+            dest="ops_json",
+            type=check_path_exit,
+            help='The npu and cpu ops matching rule json')
         self.parser = parser
 
     def handle(self, args):
-        if not args.golden_model:
-            logger.error("The following arguments are required: -gm/--golden-model")
+        if not args.golden_model and not args.golden_path:
+            logger.error("The following args are required: -gm/--golden-model or -gp/--golden-path")
             self.parser.print_help()
             return
-
         cmp_args = CmpArgsAdapter(args.golden_model, args.om_model, args.weight_path, args.input_data_path,
                                   args.cann_path, args.out_path,
                                   args.input_shape, args.device, args.output_size, args.output_nodes, args.advisor,
@@ -205,11 +225,122 @@ class CompareCommand(BaseCommand):
                                   args.dump, args.bin2npy, args.custom_op, args.locat,
                                   args.onnx_fusion_switch, args.single_op, args.fusion_switch_file,
                                   args.max_cmp_size, args.quant_fusion_rule_file, args.saved_model_signature,
-                                  args.saved_model_tag_set)
+                                  args.saved_model_tag_set, args.my_path, args.golden_path, args.ops_json)
         cmp_process(cmp_args, True)
 
 
-def get_cmd_instance():
+class DumpCommand(BaseCommand):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.parser = None
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '-m',
+            '--model',
+            required=True,
+            dest="model_path",
+            type=check_model_path_legality,
+            help='The original model (.onnx or .pb or saved_model) file path')
+        parser.add_argument(
+            '-w',
+            '--weight',
+            dest="weight_path",
+            type=check_weight_path_legality,
+            help='Required when framework is Caffe (.cafemodel)')
+        parser.add_argument(
+            '-i',
+            '--input',
+            default='',
+            dest="input_data_path",
+            type=check_input_path_legality,
+            help='The input data path of the model. Separate multiple inputs with commas(,).'
+                 ' E.g: input_0.bin,input_1.bin')
+        parser.add_argument(
+            '-c',
+            '--cann-path',
+            default=CANN_PATH,
+            dest="cann_path",
+            type=check_cann_path_legality,
+            help='The CANN installation path')
+        parser.add_argument(
+            '-o',
+            '--output',
+            dest="out_path",
+            default='',
+            type=check_output_path_legality,
+            help='The output path')
+        parser.add_argument(
+            '-is',
+            '--input-shape',
+            type=check_dict_kind_string,
+            dest="input_shape",
+            default='',
+            help="Shape of input shape. Separate multiple nodes with semicolons(;)."
+                 " E.g: \"input_name1:1,224,224,3;input_name2:3,300\"")
+        parser.add_argument(
+            '-d',
+            '--device',
+            type=check_device_range_valid,
+            dest="device",
+            default='0',
+            help='Input device ID [0, 255].')
+        parser.add_argument(
+            '-dr',
+            '--dym-shape-range',
+            type=check_dym_range_string,
+            dest="dym_shape_range",
+            default='',
+            help="Dynamic shape range using in dynamic model, "
+                 "using this means ignore input_shape"
+                 " E.g: \"input_name1:1,3,200\~224,224-230;input_name2:1,300\"")
+        parser.add_argument(
+            '-ofs',
+            '--onnx-fusion-switch',
+            dest="onnx_fusion_switch",
+            default=True,
+            type=str2bool,
+            help='Onnxruntime fusion switch, set False for dump complete onnx data when '
+                 'necessary.Usage: -ofs False')
+        parser.add_argument(
+            '--saved_model_signature',
+            dest="saved_model_signature",
+            default='serving_default',
+            help="Enter the signature of the model")
+        parser.add_argument(
+            '--saved_model_tag_set',
+            dest="saved_model_tag_set",
+            default='',
+            help="Enter the tagSet of the model. For example: --saved_model_tag_set ['serve', 'general_parser']")
+        parser.add_argument(
+            '-dp',
+            '--device-pattern',
+            required=True,
+            dest="device_pattern",
+            help="Enter inference in npu or cpu device. For example: -dp cpu")
+        parser.add_argument(
+            '--tf-json',
+            required=False,
+            dest="tf_json_path",
+            help="When dump saved_model, you need provide tf-ops-json file path.")
+        self.parser = parser
+
+    def handle(self, args):
+        cmp_args = DumpArgsAdapter(args.model_path, args.weight_path, args.input_data_path,
+                                   args.cann_path, args.out_path, args.input_shape, args.device,
+                                   args.dym_shape_range, args.onnx_fusion_switch,
+                                   args.saved_model_signature, args.saved_model_tag_set,
+                                   args.device_pattern, args.tf_json_path)
+        dump_process(cmp_args, True)
+
+
+def get_compare_cmd_ins():
     help_info = "one-click network-wide accuracy analysis of golden models."
-    cmd_instance = CompareCommand("compare", help_info)
-    return cmd_instance
+    compare_instance = CompareCommand("compare", help_info)
+    return compare_instance
+
+
+def get_dump_cmd_ins():
+    help_info = "one-click dump model ops inputs and outputs."
+    dump_instance = DumpCommand("dump", help_info)
+    return dump_instance

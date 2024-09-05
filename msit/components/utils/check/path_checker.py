@@ -1,5 +1,6 @@
 from enum import Enum, auto, unique
 import os
+import stat
 from typing import Union
 
 from components.utils.check.checker import Checker, CheckResult, rule, EnumInstance

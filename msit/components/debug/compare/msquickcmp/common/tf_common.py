@@ -171,3 +171,22 @@ def get_inputs_data(inputs_tensor, input_paths):
         utils.logger.info("load file name: {}, shape: {}, dtype: {}".format(
             os.path.basename(input_path[index]), input_data.shape, input_data.dtype))
     return inputs_map
+
+
+def get_model_inputs_dtype(model_path, serving, tag_set):
+    inputs_dtype = {}
+    with tf.compat.v1.Session() as sess:
+        tag_set = {tf.compat.v1.saved_model.tag_constants.SERVING} if tag_set == "" else tag_set
+        model = tf.compat.v1.saved_model.load(sess, tag_set, model_path)
+        inputs = model.signature_def[serving].inputs
+        for key, input_tensor in inputs.items():
+            np_dtype = tf.dtypes.as_dtype(input_tensor.dtype).as_numpy_dtype
+            inputs_dtype[input_tensor.name.split(':')[0]] = np_dtype
+    return inputs_dtype
+
+
+def split_tag_set(saved_model_tag_set):
+    tag_sets = saved_model_tag_set.split(',')
+    if len(tag_sets) > 1:
+        return tag_sets
+    return {tag_sets[0]}
