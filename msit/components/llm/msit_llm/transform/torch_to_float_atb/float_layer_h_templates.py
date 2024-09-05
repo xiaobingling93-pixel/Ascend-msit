@@ -17,7 +17,7 @@ import sys
 from configparser import ConfigParser
 
 script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
-config_path = os.path.join(script_dir,'../../../../config/config.ini')
+config_path = os.path.join(script_dir, '../../../../config/config.ini')
 
 config = ConfigParser()
 config.read(config_path)
