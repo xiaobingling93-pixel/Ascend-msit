@@ -14,6 +14,7 @@
 
 import os
 import json
+import stat
 
 
 def get_realpath_with_soft_link_check(file_path):
@@ -22,8 +23,24 @@ def get_realpath_with_soft_link_check(file_path):
     return os.path.realpath(file_path)
 
 
-def get_valid_read_file(file_path):
+def check_file_owner_and_permissions(file_path):
+    if not os.path.exists(file_path):
+        raise FileNotFoundError("File does not exist")
     real_file_path = get_realpath_with_soft_link_check(file_path)
+
+    file_stat = os.stat(real_file_path)
+    file_uid = file_stat.st_uid
+    current_uid = os.getuid()
+
+    if file_uid != current_uid:
+        raise PermissionError("The file does not belong to the current user")
+    if file_stat.st_mode & stat.S_IWOTH:
+        raise PermissionError("Other users have write access")
+    return real_file_path
+
+
+def get_valid_read_file(file_path):
+    real_file_path = check_file_owner_and_permissions(file_path)
     if not os.path.isfile(real_file_path):
         raise ValueError(f'Provided file_path={file_path} not exists or not a file.')
     if not os.access(real_file_path, os.R_OK):
