@@ -53,3 +53,7 @@
 | --my-path, -mp         | NPU Dump数据根路径                         | 是       |
 | --op-mapping-file, -mf | 运行 `msit llm dump --mindie_torch` 时产生的算子映射关系文件路径，通常在当前文件夹下 | 是       |
 | --output, -o           | 比对结果csv的输出路径                                        | 是       |
+
+## 注意
+
+- MindIE场景算子精度对比目前仅支持TorchScript路线
