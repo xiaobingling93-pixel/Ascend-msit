@@ -23,7 +23,10 @@ class NumberChecker(Checker):
 
     @rule()
     def is_divisible_by(self, target) -> Union["NumberChecker", CheckResult]:
-        return CheckResult(target % self.instance == 0, f"not divisible by {target}")
+        if self.instance != 0:
+            return CheckResult(target % self.instance == 0, f"not divisible by {target}")
+        else:
+            raise ValueError(f"Failed to check division, since {self.instance} is 0.")
 
     @rule()
     def in_range(self, min_value, max_value) -> Union["NumberChecker", CheckResult]:
