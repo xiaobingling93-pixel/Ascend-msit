@@ -13,9 +13,8 @@
 # limitations under the License.
 import os
 
-from components.debug.common import logger
 from components.utils.parser import BaseCommand
-from components.debug.dump.msquickcmp.adapter_cli.args_adapter import DumpArgsAdapter
+from components.debug.compare.msquickcmp.dump.args_adapter import DumpArgsAdapter
 from components.debug.compare.msquickcmp.common.args_check import (check_model_path_legality,
                                                                    check_weight_path_legality,
                                                                    check_input_path_legality,
@@ -26,7 +25,7 @@ from components.debug.compare.msquickcmp.common.args_check import (check_model_p
                                                                    check_quant_json_path_legality,
                                                                    safe_string, str2bool
                                                                    )
-from components.debug.dump.msquickcmp.dump_process import dump_process
+from components.debug.compare.msquickcmp.dump.dump_process import dump_process
 
 CANN_PATH = os.environ.get('ASCEND_TOOLKIT_HOME', "/usr/local/Ascend/ascend-toolkit/latest")
 

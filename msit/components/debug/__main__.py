@@ -14,7 +14,7 @@
 def get_cmd_instance():
     from components.debug.compare import CompareCommand, BaseCommand
     from components.debug.surgeon import SurgeonCommand
-    from components.debug.dump import DumpCommand
+    from components.debug.compare.msquickcmp.dump import DumpCommand
 
     compare_instance = CompareCommand("compare", "one-click network-wide accuracy analysis of golden models.")
     surgeon_instance = SurgeonCommand("surgeon", "surgeon tool for onnx modifying functions.")

@@ -46,7 +46,7 @@ from msquickcmp.npu.npu_dump_data import NpuDumpData, DynamicInput
 from msquickcmp.npu.om_parser import OmParser
 from msquickcmp.single_op import single_op as sp
 
-from components.debug.dump.msquickcmp.compare_process import compare_run
+from components.debug.compare.msquickcmp.dump import compare_run
 from components.utils.security_check import check_write_directory
 
 WRITE_MODES = stat.S_IWUSR | stat.S_IRUSR
