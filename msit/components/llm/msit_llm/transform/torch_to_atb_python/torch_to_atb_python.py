@@ -52,6 +52,7 @@ CONFIG_ATTR_CANDIDATES = {
     "num_attention_heads": ["num_attention_heads"],
     "hidden_size": ["hidden_size"],
     "vocab_size": ["vocab_size"],
+    "text_config": ["text_config", "llm_config"],
 }
 
 NN_MODULE_STACK = "nn_module_stack"
@@ -108,14 +109,8 @@ def build_transformers_model(source_path):
 
     try:
         config = AutoConfig.from_pretrained(source_path, trust_remote_code=True)
-        try:
-            if hasattr(config, 'text_config') and config.text_config is not None:
-                model = AutoModel.from_config(config.text_config, trust_remote_code=True)
-                return model, config.text_config
-            else:
-                model = AutoModel.from_config(config, trust_remote_code=True)
-        except AttributeError:
-            model = AutoModel.from_config(config, trust_remote_code=True)
+        config = get_config_attr(config, "text_config", default=config)
+        model = AutoModel.from_config(config, trust_remote_code=True)
     except Exception as error:
         raise ValueError(f"build model from {source_path} failed, make sure it works within transformers") from error
     return model, config
