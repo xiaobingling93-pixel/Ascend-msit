@@ -14,19 +14,36 @@
 
 import os
 
+from configparser import ConfigParser
 from setuptools import setup, find_packages
 
+config = ConfigParser()
+config.read('./components/config/config.ini')
 
 abs_path = os.path.dirname(os.path.realpath(__file__))
 with open(os.path.join(abs_path, "requirements.txt")) as f:
     required = f.read().splitlines()
+
+ait_sub_tasks = [
+    {
+        "name": "debug",
+        "help_info": "debug a wide variety of model issues",
+        "module": "components.debug.__init__",
+        "attr": "debug_task",
+    }
+]
+
+ait_sub_task_entry_points = [
+    f"{t.get('name')}:{t.get('help_info')} = {t.get('module')}:{t.get('attr')}"
+    for t in ait_sub_tasks
+]
 
 setup(
     name='msit',
     version='7.0.0c730',
     description='msIT, MindStudio Inference Tools',
     long_description_content_type='text/markdown',
-    url='https://gitee.com/ascend/msit',
+    url=config.get('URL', 'msit_url'),
     packages=find_packages(),
     package_data={
         '': [
@@ -37,6 +54,7 @@ setup(
             '*.sh',
             '*.cpp',
             '*.h',
+            '*.ini',
         ]
     },
     data_files=[('', ['requirements.txt'])],
@@ -46,6 +64,7 @@ setup(
     install_requires=required,
     entry_points={
         'console_scripts': ['ait=components.__main__:ait_main',
-                            'msit=components.__main__:main']
+                            'msit=components.__main__:main'],
+        'ait_sub_task': ait_sub_task_entry_points,
     },
 )
