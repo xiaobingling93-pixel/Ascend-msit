@@ -150,6 +150,10 @@ class Synthesizer(object):
         env['MSIT_TEMP_DIR_NAME'] = temp_dir_name
 
         split_command = shlex.split(command)
+        if not split_command:
+            logger.error("Command is empty,please try to run it first")
+            raise ValueError()
+
 
         known_invalid_command = {
             "rm", "mv", "mkfs", "dd",
