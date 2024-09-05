@@ -283,8 +283,6 @@ class ATBModel:
                 cos_table, sin_table = self._calc_cos_sin_table_from_inv_freq(position_ids)
                 model_inputs[FIXED_INPUTS.cos_table], model_inputs[FIXED_INPUTS.sin_table] = cos_table, sin_table
                 meets_cos_sin_table = True
-                logger.warning(
-                    f"Missing 'cos_table' or 'sin_table', then calculate both with 'inv_freq_weight'")
             if not meets_cos_sin_table:
                 raise ValueError("Missing 'cos_table' or 'sin_table' in model inputs")
 
