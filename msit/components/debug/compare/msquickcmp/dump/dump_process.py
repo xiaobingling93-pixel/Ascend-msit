@@ -51,7 +51,7 @@ def _generate_golden_data_model(args: DumpArgsAdapter, npu_dump_npy_path):
         return OnnxDumpData(args, npu_dump_npy_path)
     else:
         utils.logger.error("cpu dump model files whose names end with .pb or .onnx or .prototxt or saved_model are "
-                           "supported")
+                           "supported, Please check your model type")
         raise AccuracyCompareException(utils.ACCURACY_COMPARISON_MODEL_TYPE_ERROR)
 
 
@@ -63,6 +63,10 @@ def _generate_model_adapter(args: DumpArgsAdapter):
     _, extension = utils.get_model_name_and_extension(args.model_path)
     if extension == ".om":
         return NpuDumpData(arguments=args, is_golden=True)
+    else:
+        utils.logger.error("npu dump model files whose names end with .om or saved_model are supported, "
+                           "Please check your model type")
+        raise AccuracyCompareException(utils.ACCURACY_COMPARISON_MODEL_TYPE_ERROR)
 
 
 def dump_process(args: DumpArgsAdapter, use_cli: bool):
