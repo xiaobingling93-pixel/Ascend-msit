@@ -12,6 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+import sys
+from configparser import ConfigParser
+
+script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
+config_path = os.path.join(script_dir,'../../../../config/config.ini')
+
+config = ConfigParser()
+config.read(config_path)
+
+licenses_url = config.get('URL', 'msit_licenses_url')
+
 COPYRIGHT_FORMATER = """# Copyright 2022 EleutherAI and the HuggingFace Inc. team. All rights reserved.
 #
 # This code is based on EleutherAI's GPT-NeoX library and the GPT-NeoX
@@ -23,7 +35,7 @@ COPYRIGHT_FORMATER = """# Copyright 2022 EleutherAI and the HuggingFace Inc. tea
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     {licenses_url}
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
