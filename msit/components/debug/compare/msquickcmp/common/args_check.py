@@ -128,7 +128,7 @@ def check_output_path_legality(value):
 def check_path_exit(value):
     path_value = value
     path_checker = PathChecker()
-    path_checker.exists().is_dir().check(path_value, True)
+    path_checker.exists().check(path_value, True)
 
     return path_value
 
