@@ -126,11 +126,10 @@ def check_output_path_legality(value):
 
 
 def check_path_exit(value):
-    path_value = value
-    path_checker = PathChecker()
-    path_checker.exists().check(path_value, True)
+    if not os.path.exists(value):
+        raise ValueError
 
-    return path_value
+    return value
 
 
 def valid_json_file_or_dir(value):
