@@ -64,6 +64,7 @@ class DumpConfig:
         mode=None,
         dump_weight=False,
         layer_name=None,
+        seed = None,
     ):
         self.dump_path = dump_path or "./"
         self.mode = mode or ["module"]
@@ -90,6 +91,10 @@ class DumpConfig:
 
         if not self._check_args():
             raise ValueError("Invalid args of DumpConfig.")
+          
+        if seed is not None:
+            from msit_llm import seed_all
+            seed_all(seed=seed)
 
     def set_dump_device_and_dump_dir(self, device):
         if self.device_id is not None and device != "cpu":

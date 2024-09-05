@@ -11,8 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from msit_llm.common.tool import read_atb_data
+from msit_llm.common.tool import read_atb_data, seed_all
 from msit_llm.compare.cmp_utils import compare_data
 from msit_llm.common.json_fitter import atb_json_to_onnx
 from msit_llm.dump.torch_dump import DumpConfig
