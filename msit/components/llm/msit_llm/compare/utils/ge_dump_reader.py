@@ -83,7 +83,7 @@ class GEDumpFileReader(DumpFileReader):
         folder_name = key
         folder_path = self.path 
         files = os.listdir(folder_path)
-        pattern = re.compile(re.escape(folder_name))
+        pattern = re.compile(rf'{re.escape(folder_name)}\.\d')
         matching_files = [file for file in files if pattern.search(file)]
         tensor_file_path = os.path.join(folder_path, matching_files[0])
         bin_dump_data = parse_torchair_dump_data(tensor_file_path)
