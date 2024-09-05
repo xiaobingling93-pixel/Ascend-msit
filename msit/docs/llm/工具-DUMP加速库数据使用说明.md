@@ -48,6 +48,9 @@ msit llm dump --exec "<任意包含ATB的程序执行命令>" --type model tenso
 | -device, --device-id          | 指定 dump 数据的 device id，默认为 None 表示不限制。如指定 --device-id 1，将只 dump 1 卡的数据                                                                                                                                                                                                                                                             | 否   |
 | -l, --log-level               | 指定 log level，默认为 info，可选值 debug, info, warning, error, fatal, critical                                                                                                                                                                                                                                                            | 否   |
 | -h, --help                    | 命令行参数帮助信息| 否 | 
+| -seed                | 设定确定性计算的种子，默认为None表示不开启确定性计算。如果设置种子，可以不输入。如果不输入那么为2024，如果输入那么需要输入一个能转换为int的值。使用示例：-seed 1                                                                                                                                                            | 否   |
+
+
 ## 结果查看
 
 ### Dump 落盘位置

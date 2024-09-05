@@ -22,7 +22,7 @@ from msit_llm.opcheck.opchecker import OpChecker, NAMEDTUPLE_PRECISION_METRIC, N
 from msit_llm.errcheck.process import process_error_check
 from msit_llm.common.utils import str2bool, check_positive_integer, check_device_integer, safe_string, check_exec_cmd, \
     check_ids_string, check_number_list, check_output_path_legality, check_input_path_legality, check_process_integer, \
-    check_dump_time_integer
+    check_dump_time_integer, check_data_can_convert_to_int
 from msit_llm.bc_analyze import Synthesizer, Analyzer
 from msit_llm.common.log import logger, set_log_level, LOG_LEVELS
 
@@ -149,6 +149,16 @@ class DumpCommand(BaseCommand):
             type=check_device_integer,
             default=None,
             help='Specify a single device ID for dumping data, will skip other devices.')
+        
+        parser.add_argument(
+            '-seed',
+            required=False,
+            dest="set_random_seed",
+            type=check_data_can_convert_to_int,
+            nargs='?',
+            const=2024,
+            default=None,
+            help='set random seed, will ensure that the random results are consistent with each run.')
 
         parser.add_argument("--log-level", "-l", default="info", choices=LOG_LEVELS_LOWER, help="specify log level.")
 
