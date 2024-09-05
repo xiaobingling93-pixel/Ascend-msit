@@ -274,24 +274,12 @@ def policy_rope_operator_match(golden_root_node: TreeNode, my_root_node: TreeNod
     golden_name2node = {node.node_name: node for node in golden_root_node.get_all_nodes()}
     my_name2node = {node.node_name: node for node in my_root_node.get_all_nodes()}
 
-    golden_name_set = set(golden_name2node.keys())
-    my_name_set = set(my_name2node.keys())
     golden_layer_type = golden_root_node.get_layer_node_type()
     golden_layer_nodes = golden_root_node.get_layer_node(golden_layer_type)
 
-    golden_rotary_name_set = [item for item in golden_name_set if "rotary" in item]
-    my_rope_name_set = [item for item in my_name_set if "ropeoperation" in item.lower()]
     my_layer_type = my_root_node.get_layer_node_type()
     my_layer_nodes = my_root_node.get_layer_node(my_layer_type)
 
-    for golden_node, my_node in zip(golden_rotary_name_set, my_rope_name_set):
-        match_map.add_score(
-            my_name2node.get(my_node),
-            MatchLocation.ALL_INPUT,
-            golden_name2node.get(golden_node),
-            MatchLocation.ALL_OUTPUT,
-            MatchScore.FULL_MATCH,
-        )
     for golden_layer, my_layer in zip(golden_layer_nodes, my_layer_nodes):
         g_layer_leaf_nodes = golden_layer.get_leaf_nodes()
         m_layer_leaf_nodes = my_layer.get_leaf_nodes()
