@@ -22,17 +22,15 @@ import os
 import time
 
 import acl
-from components.debug.compare.msquickcmp.dump.args_adapter import DumpArgsAdapter
 
 from components.debug.compare.msquickcmp.atc import atc_utils
 from components.debug.compare.msquickcmp.common import utils
 from components.debug.compare.msquickcmp.common.args_check import is_saved_model_valid
 from components.debug.compare.msquickcmp.common.convert import convert_npy_to_bin
 from components.debug.compare.msquickcmp.common.utils import AccuracyCompareException, get_shape_to_directory_name
+from components.debug.compare.msquickcmp.dump.args_adapter import DumpArgsAdapter
 from components.debug.compare.msquickcmp.npu.npu_dump_data import NpuDumpData, DynamicInput
 from components.debug.compare.msquickcmp.npu.om_parser import OmParser
-from components.debug.compare.msquickcmp.single_op import single_op as sp
-from components.debug.compare.msquickcmp.common.convert import convert_bin_dump_data_to_npy
 
 
 def _generate_golden_data_model(args: DumpArgsAdapter, npu_dump_npy_path):
@@ -129,38 +127,9 @@ def cpu_dump_process(args):
         golden_dumper.generate_dump_data(args.tf_json_path)
     else:
         _, extension = utils.get_model_name_and_extension(args.model_path)
-        use_aipp = False
-        use_aipp_npu_dump_data_path = None
-        # when onnx cpu inference and add use_aipp, onnx need npu_dump_data_path and npu_net_output_data_path
-        if extension == ".onnx":
-            use_aipp = get_use_aipp(args)
-            if use_aipp is True:
-                if args.bin2npy or args.custom_op != "":
-                    if args.use_aipp_npu_dump_data_path is None or args.use_aipp_npu_net_output_data_path is None:
-                        raise ValueError("when dump onnx, use aipp pattern. Please ensure that both"
-                                         "--use-aipp-npu-dump-data and --use-aipp-npu-net-output-data are "
-                                         "provided.")
-                    npu_dump_npy_path = convert_bin_dump_data_to_npy(args.use_aipp_npu_dump_data_path,
-                                                                     args.use_aipp_npu_net_output_data_path,
-                                                                     args.cann_path)
-                else:
-                    npu_dump_npy_path = ""
-                golden_dumper = _generate_golden_data_model(args, npu_dump_npy_path)
-                use_aipp_npu_dump_data_path = args.use_aipp_npu_dump_data_path
-        golden_dumper.generate_inputs_data(use_aipp_npu_dump_data_path, use_aipp)
+        golden_dumper = _generate_golden_data_model(args, npu_dump_npy_path=None)
+        golden_dumper.generate_inputs_data(npu_dump_data_path=None, use_aipp=False)
         golden_dumper.generate_dump_data()
-
-
-def get_use_aipp(args):
-    use_aipp = False
-    if args.om_json_path:
-        temp_om_parser = OmParser(args.om_json_path)
-        use_aipp = True if temp_om_parser.get_aipp_config_content() else False
-        if use_aipp and args.fusion_switch_file is not None:
-            utils.logger.error("if .om model is using aipp config, --fusion-switch-file arg is not support.")
-            raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PARAM_ERROR)
-
-    return use_aipp
 
 
 def fusion_close_model_convert(args: DumpArgsAdapter):
@@ -192,10 +161,6 @@ def check_and_dump(args, use_cli: bool):
         utils.check_file_or_directory_path(args.weight_path)
     utils.check_device_param_valid(args.device)
     utils.check_file_or_directory_path(os.path.realpath(args.out_path), True)
-    utils.check_convert_is_valid_used(args.dump, args.bin2npy, args.custom_op)
-    utils.check_locat_is_valid(args.dump, args.locat)
-    sp.check_single_op_is_valid(args.single_op, args.dump, args.custom_op, args.locat)
-    utils.check_max_size_param_valid(args.max_cmp_size)
     time_dir = time.strftime("%Y%m%d%H%M%S", time.localtime())
     original_out_path = os.path.realpath(os.path.join(args.out_path, time_dir))
     args.out_path = original_out_path

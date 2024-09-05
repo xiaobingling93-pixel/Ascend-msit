@@ -286,21 +286,6 @@ class DumpCommand(BaseCommand):
             default='0',
             help='Input device ID [0, 255].')
         parser.add_argument(
-            '-outsize',
-            '--output-size',
-            type=check_number_list,
-            dest="output_size",
-            default='',
-            help='The size of output. Separate multiple sizes with commas(,). E.g: 10200,34000')
-        parser.add_argument(
-            '-n',
-            '--output-nodes',
-            type=check_dict_kind_string,
-            dest="output_nodes",
-            default='',
-            help="Output nodes designated by user. Separate multiple nodes with semicolons(;)."
-                 " E.g: \"node_name1:0;node_name2:1;node_name3:0\"")
-        parser.add_argument(
             '-dr',
             '--dym-shape-range',
             type=check_dym_range_string,
@@ -310,31 +295,6 @@ class DumpCommand(BaseCommand):
                  "using this means ignore input_shape"
                  " E.g: \"input_name1:1,3,200\~224,224-230;input_name2:1,300\"")
         parser.add_argument(
-            '--dump',
-            dest="dump",
-            default=True,
-            type=str2bool,
-            help="Whether to dump all the operations' ouput.")
-        parser.add_argument(
-            '--convert',
-            dest="bin2npy",
-            default=False,
-            type=str2bool,
-            help='Enable npu dump data conversion from bin to npy after compare.Usage: --convert True')
-        parser.add_argument(
-            '--locat',
-            default=False,
-            dest="locat",
-            type=str2bool,
-            help='Enable accuracy interval location when needed.E.g: --locat True')
-        parser.add_argument(
-            '-cp',
-            '--custom-op',
-            type=safe_string,
-            dest="custom_op",
-            default='',
-            help='Op name witch is not registered in onnxruntime, only supported by Ascend')
-        parser.add_argument(
             '-ofs',
             '--onnx-fusion-switch',
             dest="onnx_fusion_switch",
@@ -342,32 +302,6 @@ class DumpCommand(BaseCommand):
             type=str2bool,
             help='Onnxruntime fusion switch, set False for dump complete onnx data when '
                  'necessary.Usage: -ofs False')
-        parser.add_argument(
-            '--fusion-switch-file',
-            dest="fusion_switch_file",
-            type=check_fusion_cfg_path_legality,
-            help='You can disable selected fusion patterns in the configuration file')
-        parser.add_argument(
-            "-single",
-            "--single-op",
-            default=False,
-            dest="single_op",
-            type=str2bool,
-            help='Comparision mode:single operator compare.Usage: -single True')
-        parser.add_argument(
-            "-max",
-            "--max-cmp-size",
-            dest="max_cmp_size",
-            default=0,
-            type=int,
-            help="Max size of tensor array to compare. Usage: --max-cmp-size 1024")
-        parser.add_argument(
-            '-q',
-            '--quant-fusion-rule-file',
-            type=check_quant_json_path_legality,
-            dest="quant_fusion_rule_file",
-            default='',
-            help="the quant fusion rule file path")
         parser.add_argument(
             '--saved_model_signature',
             dest="saved_model_signature",
@@ -389,36 +323,14 @@ class DumpCommand(BaseCommand):
             required=False,
             dest="tf_json_path",
             help="When dump saved_model, you need provide tf-ops-json file path.")
-        parser.add_argument(
-            '--om-json',
-            required=False,
-            dest="om_json_path",
-            help="When dump onnx model and use aipp, you need provide om-json file path.")
-        parser.add_argument(
-            '--use-aipp-npu-dump-data',
-            required=False,
-            dest="use_aipp_npu_dump_data_path",
-            default='',
-            help="When dump onnx model and use aipp, you need provide use-aipp-npu-dump-data file path.")
-        parser.add_argument(
-            '--use-aipp-npu-net-output-data',
-            required=False,
-            dest="use_aipp_npu_net_output_data_path",
-            default='',
-            help="When dump onnx model and use aipp, you need provide use-aipp-npu-net-output-data file path.")
         self.parser = parser
 
     def handle(self, args):
         cmp_args = DumpArgsAdapter(args.model_path, args.weight_path, args.input_data_path,
-                                   args.cann_path, args.out_path,
-                                   args.input_shape, args.device, args.output_size, args.output_nodes,
-                                   args.dym_shape_range,
-                                   args.dump, args.bin2npy, args.custom_op, args.locat,
-                                   args.onnx_fusion_switch, args.single_op, args.fusion_switch_file,
-                                   args.max_cmp_size, args.quant_fusion_rule_file, args.saved_model_signature,
-                                   args.saved_model_tag_set, args.device_pattern, args.tf_json_path,
-                                   args.om_json_path, args.use_aipp_npu_dump_data_path,
-                                   args.use_aipp_npu_net_output_data_path)
+                                   args.cann_path, args.out_path, args.input_shape, args.device,
+                                   args.dym_shape_range, args.onnx_fusion_switch,
+                                   args.saved_model_signature, args.saved_model_tag_set,
+                                   args.device_pattern, args.tf_json_path)
         dump_process(cmp_args, True)
 
 
