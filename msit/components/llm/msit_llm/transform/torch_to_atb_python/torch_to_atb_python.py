@@ -83,7 +83,7 @@ _FIXED_INPUTS = {
     "seq_len",
 }
 FIXED_INPUTS = namedtuple("FIXED_INPUTS", _FIXED_INPUTS)(*_FIXED_INPUTS)
-BASIC_INPUT_NAMES = [FIXED_INPUTS.input_ids]
+BASIC_INPUT_NAMES = (FIXED_INPUTS.input_ids,)
 
 _RESHPAE_KIND = ["reshape_qkv", "reshape_0_12"]
 RESHPAE_KIND = namedtuple("RESHPAE_KIND", _RESHPAE_KIND)(*_RESHPAE_KIND)
@@ -284,7 +284,7 @@ class ATBModel:
                 model_inputs[FIXED_INPUTS.cos_table], model_inputs[FIXED_INPUTS.sin_table] = cos_table, sin_table
                 meets_cos_sin_table = True
                 logger.warning(
-                    f"Missing 'cos_table' or 'sin_table' in model inputs, then calculate both of them form 'inv_freq_weight'")
+                    f"Missing 'cos_table' or 'sin_table', then calculate both with 'inv_freq_weight'")
             if not meets_cos_sin_table:
                 raise ValueError("Missing 'cos_table' or 'sin_table' in model inputs")
 
