@@ -33,7 +33,8 @@ class DumpArgsAdapter:
                  tf_json_path="",
                  custom_op="",
                  dump=True,
-                 single_op=""
+                 single_op="",
+                 output_nodes=""
                  ):
         self.model_path = model_path
         self.weight_path = weight_path
@@ -51,3 +52,4 @@ class DumpArgsAdapter:
         self.custom_op = custom_op
         self.dump = dump
         self.single_op = single_op
+        self.output_nodes = output_nodes
