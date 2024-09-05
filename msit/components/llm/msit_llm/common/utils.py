@@ -18,6 +18,7 @@ import argparse
 import re
 from components.utils.file_open_check import FileStat
 from msit_llm.common.constant import MAX_DATA_SIZE
+from components.utils.check.rule import Rule
 
 STR_WHITE_LIST_REGEX = re.compile(r"[^_A-Za-z0-9\"'><=\[\])(,}{: /.~-]")
 INVALID_CHARS = ['|', ';', '&', '&&', '||', '>', '>>', '<', '`', '\\', '!', '\n']
@@ -159,7 +160,9 @@ def check_data_file_size(data_path, max_size=MAX_DATA_SIZE):
 
 def check_data_can_convert_to_int(value):
     try:
-        int(value)
+        result = Rule.to_int().check(value)
     except Exception as err:
         raise argparse.ArgumentTypeError("%s can not convert to int." % value) from err
-    return True
+    if not result:
+        raise argparse.ArgumentTypeError("%s can not convert to int." % value)
+    return int(value)
