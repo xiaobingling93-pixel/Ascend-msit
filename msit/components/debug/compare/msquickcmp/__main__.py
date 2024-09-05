@@ -388,13 +388,11 @@ class DumpCommand(BaseCommand):
             '--tf-json',
             required=False,
             dest="tf_json_path",
-            default='',
             help="When dump saved_model, you need provide tf-ops-json file path.")
         parser.add_argument(
             '--om-json',
             required=False,
             dest="om_json_path",
-            default='',
             help="When dump onnx model and use aipp, you need provide om-json file path.")
         parser.add_argument(
             '--use-aipp-npu-dump-data',
