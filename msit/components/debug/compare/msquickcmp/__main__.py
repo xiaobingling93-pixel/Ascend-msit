@@ -26,7 +26,6 @@ from msquickcmp.common.utils import logger
 from components.debug.compare.msquickcmp.dump.dump_process import dump_process
 from msquickcmp.dump.args_adapter import DumpArgsAdapter
 
-
 CANN_PATH = os.environ.get('ASCEND_TOOLKIT_HOME', "/usr/local/Ascend/ascend-toolkit/latest")
 
 
@@ -425,9 +424,13 @@ class DumpCommand(BaseCommand):
         dump_process(cmp_args, True)
 
 
-def get_cmd_instance():
+def get_compare_cmd_ins():
     help_info = "one-click network-wide accuracy analysis of golden models."
     compare_instance = CompareCommand("compare", help_info)
-    dump_instance = DumpCommand("dump", "xxx")
+    return compare_instance
 
-    return BaseCommand('msmsamasm', children=[compare_instance, dump_instance])
+
+def get_dump_cmd_ins():
+    help_info = "one-click dump model ops inputs and outputs."
+    dump_instance = DumpCommand("dump", help_info)
+    return dump_instance

@@ -97,7 +97,7 @@ class NpuTfAdapterDumpData(object):
                 self.inputs_data[input_name] = input_data
                 input_data.tofile(os.path.join(self.input, input_name + "_" + data_type.__name__ + ".bin"))
 
-    def generate_dump_data(self, use_aipp=False):
+    def generate_dump_data(self, use_cli=False):
         # adapt NPU
         npu_device.compat.enable_v1()
         # switch ge graph dump
