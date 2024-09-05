@@ -14,7 +14,7 @@
 
 ### NPU数据Dump
 
-- 准备 `python_bert_inference.py`，为模型的前向推理脚本。 
+- 准备 `python_bert_inference.py`，为模型的前向推理脚本
 
 - 执行 `msit llm dump --mindie_torch --exec "python_bert_inference.py" [--option]` Dump NPU数据 
 
@@ -31,13 +31,13 @@
 | --output | 指定Dump数据输出路径，默认为当前路径                                 | 否   | 
 | --op_list | 需要Dump的算子，默认为 all，表示会对模型中所有 op 进行 Dump，其中元素为MindIE-Torch算子类型，若设置 op_list，只会 Dump 指定的 op                                | 否   | 
 
-### CPU数据Dump
+### CPU/GPU数据Dump
 
-- CPU数据Dump请参考[CPU数据Dump](/msit/docs/llm/工具-DUMP在线推理数据使用说明.md)
+- CPU/GPU数据Dump请参考[CPU/GPU数据Dump](/msit/docs/llm/工具-DUMP在线推理数据使用说明.md)
 
 #### 注意
 
-- NPU数据Dump时请在线进行推理，若save模型后load再进行推理会使得json文件缺少必要信息，无法进行compare。
+- NPU数据Dump时请在线进行推理，若save模型后load再进行推理会使得json文件缺少必要信息，无法进行compare
 
 - NPU数据Dump后会在当前路径下生成两个算子类型映射关系文件，名称为：`mindie_torch_op_mapping.json` 和 `mindie_rt_op_mapping.json` 
 
@@ -49,7 +49,7 @@
 
 | 参数名                 | 描述                                                         | 必选 |
 | ---------------------- | ------------------------------------------------------------ | -------- |
-| --golden-path, -gp     | CPU Dump数据根路径                   | 是       |
+| --golden-path, -gp     | CPU/GPU Dump数据根路径                   | 是       |
 | --my-path, -mp         | NPU Dump数据根路径                         | 是       |
 | --op-mapping-file, -mf | 运行 `msit llm dump --mindie_torch` 时产生的算子映射关系文件路径，通常在当前文件夹下 | 是       |
 | --output, -o           | 比对结果csv的输出路径                                        | 是       |
