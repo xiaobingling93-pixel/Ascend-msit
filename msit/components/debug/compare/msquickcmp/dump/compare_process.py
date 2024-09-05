@@ -44,6 +44,9 @@ READ_WRITE_FLAGS = os.O_RDWR | os.O_CREAT
 
 def compare_process(args: CmpArgsAdapter):
     # compare the entire network
+    if args.my_path is None or args.golden_path is None or args.ops_json is None:
+        raise ValueError("when compare alone. Please ensure that both --my-path and --golden-path and --ops-json are "
+                         "provided.")
     net_compare = NetCompare(args.my_path, args.golden_path,
                              args.ops_json, args, golden_json_path=None)
     net_compare.accuracy_network_compare()
