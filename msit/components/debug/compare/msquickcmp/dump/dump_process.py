@@ -21,16 +21,11 @@ This class mainly dump model ops inputs and outputs.
 import os
 import time
 
-import acl
-
-from components.debug.compare.msquickcmp.atc import atc_utils
 from components.debug.compare.msquickcmp.common import utils
 from components.debug.compare.msquickcmp.common.args_check import is_saved_model_valid
 from components.debug.compare.msquickcmp.common.convert import convert_npy_to_bin
 from components.debug.compare.msquickcmp.common.utils import AccuracyCompareException, get_shape_to_directory_name
 from components.debug.compare.msquickcmp.dump.args_adapter import DumpArgsAdapter
-from components.debug.compare.msquickcmp.npu.npu_dump_data import NpuDumpData, DynamicInput
-from components.debug.compare.msquickcmp.npu.om_parser import OmParser
 
 
 def _generate_golden_data_model(args: DumpArgsAdapter, npu_dump_npy_path):
@@ -57,13 +52,8 @@ def _generate_model_adapter(args: DumpArgsAdapter):
     if is_saved_model_valid(args.model_path):
         from components.debug.compare.msquickcmp.npu.npu_tf_adapter_dump_data import NpuTfAdapterDumpData
         return NpuTfAdapterDumpData(args, args.model_path)
-    # get model name suffix
-    _, extension = utils.get_model_name_and_extension(args.model_path)
-    if extension == ".om":
-        return NpuDumpData(arguments=args, is_golden=True)
     else:
-        utils.logger.error("npu dump model files whose names end with .om or saved_model are supported, "
-                           "Please check your model type")
+        utils.logger.error("Currently, npu dump supports only saved_model, Please check your model type")
         raise AccuracyCompareException(utils.ACCURACY_COMPARISON_MODEL_TYPE_ERROR)
 
 
@@ -100,17 +90,8 @@ def dump_data(args, input_shape, original_out_path, use_cli: bool):
 def npu_dump_process(args, use_cli):
     # 1. get dumper
     npu_dumper = _generate_model_adapter(args)
-    use_aipp = False
-    if os.path.splitext(os.path.basename(args.model_path)) == ".om":
-        # whether use aipp
-        output_json_path = atc_utils.convert_model_to_json(args.cann_path, args.model_path, args.out_path)
-        temp_om_parser = OmParser(output_json_path)
-        use_aipp = True if temp_om_parser.get_aipp_config_content() else False
-        if use_aipp and args.fusion_switch_file is not None:
-            utils.logger.error("if .om model is using aipp config, --fusion-switch-file arg is not support.")
-            raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PARAM_ERROR)
     # 2. generate input
-    npu_dumper.generate_inputs_data(use_aipp=use_aipp)
+    npu_dumper.generate_inputs_data(use_aipp=False)
     # 3. dump data
     npu_dumper.generate_dump_data(use_cli=use_cli)
 
