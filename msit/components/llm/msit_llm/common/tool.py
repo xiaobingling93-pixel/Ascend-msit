@@ -18,7 +18,7 @@ import argparse
 import torch
 import numpy as np
 
-from msit_llm.common.constant import  ATTR_END, ATTR_OBJECT_LENGTH, LCCL_DETERMINISTIC, HCCL_DETERMINISTIC, \
+from msit_llm.common.constant import ATTR_END, ATTR_OBJECT_LENGTH, LCCL_DETERMINISTIC, HCCL_DETERMINISTIC, \
     ATB_MATMUL_SHUFFLE_K_ENABLE, ATB_LLM_LCOC_ENABLE, PYTHON_HASH_SEED
 from msit_llm.common.log import logger
 from msit_llm.common.utils import check_input_path_legality, check_data_file_size

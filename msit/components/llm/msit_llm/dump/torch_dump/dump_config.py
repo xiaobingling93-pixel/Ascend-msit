@@ -64,7 +64,7 @@ class DumpConfig:
         mode=None,
         dump_weight=False,
         layer_name=None,
-        seed = None,
+        seed=None,
     ):
         self.dump_path = dump_path or "./"
         self.mode = mode or ["module"]
