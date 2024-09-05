@@ -46,7 +46,6 @@ from msquickcmp.npu.npu_dump_data import NpuDumpData, DynamicInput
 from msquickcmp.npu.om_parser import OmParser
 from msquickcmp.single_op import single_op as sp
 
-from msquickcmp.dump.compare_process import compare_run
 from components.utils.security_check import check_write_directory
 
 WRITE_MODES = stat.S_IWUSR | stat.S_IRUSR
@@ -215,6 +214,36 @@ def dump_and_compare(args, use_cli):
         raise error
 
 
+def compare_run(args: CmpArgsAdapter):
+    res = compare_process(args)
+    if res and args.locat:
+        endnode_names_list = res[0]["GroundTruth"].split(",")
+        endnode_name = endnode_names_list[0]
+        error_node_list = find_accuracy_interval(args, endnode_name, input_shape="")
+        error_interval_info_file = os.path.join(args.out_path, ERROR_INTERVAL_INFO_FILE)
+        with os.fdopen(os.open(error_interval_info_file, READ_WRITE_FLAGS, WRITE_MODES), "a+") as fp_writer:
+            output_error_interval_info(fp_writer, error_node_list)
+
+
+def compare_process(args: CmpArgsAdapter):
+    # compare the entire network
+    if args.my_path is None or args.golden_path is None or args.ops_json is None:
+        raise ValueError("when compare alone. Please ensure that both --my-path and --golden-path and --ops-json are "
+                         "provided.")
+    net_compare = NetCompare(args.my_path, args.golden_path,
+                             args.ops_json, args, golden_json_path=None)
+    net_compare.accuracy_network_compare()
+
+    if not args.locat:
+        invalid_rows, _ = analyser.Analyser(args.out_path)()
+    else:
+        invalid_rows, _ = analyser.Analyser(args.out_path)('ALL_INVALID')
+    print_advisor_info(args.out_path)
+    _append_is_npu_ops_to_csv(args.out_path)
+
+    return invalid_rows
+
+
 def run(args: CmpArgsAdapter, input_shape, original_out_path, use_cli: bool):
     if input_shape:
         args.input_shape = input_shape
@@ -290,18 +319,18 @@ def run_om_model_compare(args, use_cli):
 
     # if it's dynamic batch scenario, golden data files should be renamed
     utils.handle_ground_truth_files(npu_dump.om_parser, npu_dump_data_path, golden_dump_data_path)
-    
+
     if not args.dump:
         # only compare the final output
-        net_compare = NetCompare(npu_net_output_data_path, golden_dump_data_path, 
+        net_compare = NetCompare(npu_net_output_data_path, golden_dump_data_path,
                                  output_json_path, args, golden_json_path)
         net_compare.net_output_compare(npu_net_output_data_path, golden_net_output_info)
     else:
         # compare the entire network
-        net_compare = NetCompare(npu_dump_data_path, golden_dump_data_path, 
+        net_compare = NetCompare(npu_dump_data_path, golden_dump_data_path,
                                  output_json_path, args, golden_json_path)
         net_compare.accuracy_network_compare()
-    
+
     # Check and correct the mapping of net output node name.
     if len(expect_net_output_node) == 1:
         _check_output_node_name_mapping(expect_net_output_node, golden_net_output_info)
@@ -324,21 +353,21 @@ def print_advisor_info(out_path):
                 utils.logger.info(line.strip())
 
 
-def fusion_close_model_convert(args:CmpArgsAdapter):
+def fusion_close_model_convert(args: CmpArgsAdapter):
     if args.fusion_switch_file:
         args.fusion_switch_file = os.path.realpath(args.fusion_switch_file)
         utils.check_file_or_directory_path(args.fusion_switch_file)
-        
+
         om_json_path = atc_utils.convert_model_to_json(args.cann_path, args.offline_model_path, args.out_path)
         om_parser = OmParser(om_json_path)
         atc_input_shape_in_offline_model = DynamicInput.get_input_shape_from_om(om_parser)
 
         close_fusion_om_file = os.path.join(args.out_path, 'close_fusion_om_model')
         atc_command_file_path = atc_utils.get_atc_path(args.cann_path)
-        atc_cmd = [atc_command_file_path, "--framework=5", 
-                   "--soc_version=" + acl.get_soc_name(), 
-                   "--model=" + args.model_path, 
-                   "--output=" + close_fusion_om_file, 
+        atc_cmd = [atc_command_file_path, "--framework=5",
+                   "--soc_version=" + acl.get_soc_name(),
+                   "--model=" + args.model_path,
+                   "--output=" + close_fusion_om_file,
                    "--fusion_switch_file=" + args.fusion_switch_file]
         if atc_input_shape_in_offline_model:
             atc_cmd.append("--input_shape=" + atc_input_shape_in_offline_model)
@@ -403,13 +432,13 @@ def single_op_compare(args, input_shape):
 
     # devide onnx into fixed size onnxs
     subonnx_list = sp.dynamic_divide_onnx(args.out_path, subog, memory_size)
-    
+
     # set csv list
     csv_list = []
 
     # set golden dump data source file
     onnx_data_path = os.path.join(args.out_path, 'dump_data/onnx')
-    
+
     # for each onnx run compare
     for idx, subonnx in enumerate(subonnx_list):
         # run atc to get om file
@@ -420,7 +449,7 @@ def single_op_compare(args, input_shape):
         # load single operator onnx
         utils.logger.info("Start to loading input data")
         subog = OnnxGraph.parse(subonnx)
-        
+
         # load onnx input description
         inputs_list = [(ii.name, ii.shape) for ii in onnxruntime.InferenceSession(subonnx).get_inputs()]
 
@@ -450,8 +479,8 @@ def single_op_compare(args, input_shape):
 
         # set compare run args
         cmg_args = CmpArgsAdapter(subonnx, os.path.join(args.out_path, "broken.om"),
-                                "", bin_files_path, args.cann_path, tmp_out_path, "", args.device,
-                                "", "", False, "", True, False, custom_op="", locat=False, single_op=True)
+                                  "", bin_files_path, args.cann_path, tmp_out_path, "", args.device,
+                                  "", "", False, "", True, False, custom_op="", locat=False, single_op=True)
 
         utils.logger.info("Start to run comparision")
 
@@ -463,7 +492,7 @@ def single_op_compare(args, input_shape):
         utils.logger.info("Comparision finished")
         # remove temp bin files
         shutil.rmtree(tmp_bin_path)
-    
+
     # merge csv
     summary_csv_path = utils.merge_csv(csv_list, single_op_dir, 'single_op_summary.csv')
     # analyze csv and print
