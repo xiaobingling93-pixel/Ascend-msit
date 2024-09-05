@@ -52,23 +52,22 @@ class FileStatus(object):
 
     @property
     def ftype(self):
-        match os.st.S_IFMT(self._status_mode):
-            case os.st.S_IFDIR:
-                return FileType.DIRECTORY
-            case os.st.S_IFCHR:
-                return FileType.CHARACTER
-            case os.st.S_IFBLK:
-                return FileType.BLOCK
-            case os.st.S_IFREG:
-                return FileType.FILE
-            case os.st.S_IFIFO:
-                return FileType.FIFO
-            case os.st.S_IFLNK:
-                return FileType.SYMLINK
-            case os.st.S_IFSOCK:
-                return FileType.SOCKET
-            case _:
-                return NotImplemented
+        if os.st.S_IFMT(self._status_mode) == os.st.S_IFDIR:
+            return FileType.DIRECTORY
+        if os.st.S_IFMT(self._status_mode) == os.st.S_IFCHR:
+            return FileType.CHARACTER
+        if os.st.S_IFMT(self._status_mode) == os.st.S_IFBLK:
+            return FileType.BLOCK
+        if os.st.S_IFMT(self._status_mode) == os.st.S_IFREG:
+            return FileType.FILE
+        if os.st.S_IFMT(self._status_mode) == os.st.S_IFIFO:
+            return FileType.FIFO
+        if os.st.S_IFMT(self._status_mode) == os.st.S_IFLNK:
+            return FileType.SYMLINK
+        if os.st.S_IFMT(self._status_mode) == os.st.S_IFSOCK:
+            return FileType.SOCKET
+
+        return NotImplemented
 
 
 class PathChecker(Checker):
