@@ -27,7 +27,7 @@ class DumpConfig:
     ):
         dump_list_config = dict(model_name="Graph")
         if api_list:
-            dump_list_config["layer"] = api_list
+            dump_list_config["layer"] = [api for api in api_list.split(",") if api]
         self.config = dict(
             dump=dict(
                 dump_path=dump_path,
