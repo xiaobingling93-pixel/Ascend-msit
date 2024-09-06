@@ -11,9 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import argparse
 import os
 import re
-import argparse
+
 from components.utils.file_open_check import FileStat, is_legal_args_path_string
 
 STR_WHITE_LIST_REGEX = re.compile(r"[^_A-Za-z0-9\"'><=\[\])(,}{: /.~-]")
@@ -122,6 +123,13 @@ def check_output_path_legality(value):
     if not file_stat.is_basically_legal("write", strict_permission=False):
         raise argparse.ArgumentTypeError(f"output path:{path_value} is illegal. Please check.")
     return path_value
+
+
+def check_path_exit(value):
+    if not os.path.exists(value):
+        raise ValueError
+
+    return value
 
 
 def valid_json_file_or_dir(value):

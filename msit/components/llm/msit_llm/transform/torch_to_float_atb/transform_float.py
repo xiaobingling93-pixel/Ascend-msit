@@ -23,6 +23,7 @@ from msit_llm.transform.model_parser import kind, parser
 from msit_llm.transform import torch_to_float_atb
 from msit_llm.transform.torch_to_float_atb.utils import (get_repeat_box_layer, 
     dag_to_model, init_save_name, init_save_dir, write_file)
+from components.utils.file_open_check import ms_open
 
 
 SMALL_NUM_CONFIG = 4
@@ -72,7 +73,7 @@ def transform_report(source_path, save_name=None, save_dir=None, is_repeat=True)
     json_save_name = init_save_name(save_name if save_name else model_name_lower) + ".json"
     json_save_dir = init_save_dir(save_dir if save_dir else model_name_lower, sub_dir="")
     json_save_path = os.path.join(json_save_dir, json_save_name)
-    with open(json_save_path, "w") as ff:
+    with ms_open(json_save_path, mode="w") as ff:
         json.dump(parsed_model_layers, ff)
     logger.info(f"model info saved: {json_save_path}")
 
@@ -179,7 +180,7 @@ def save_json(dic, name, save_name=None, save_dir=None):
     json_save_name = init_save_name(save_name if save_name else name) + ".json"
     json_save_dir = init_save_dir(save_dir if save_dir else name, sub_dir="")
     json_save_path = os.path.join(json_save_dir, json_save_name)
-    with open(json_save_path, "w") as ff:
+    with ms_open(json_save_path, mode="w") as ff:
         json.dump(dic, ff, indent=4)
     logger.info(f"model info saved: {json_save_path}")
 

@@ -29,22 +29,39 @@ from msquickcmp.common import utils, tf_common
 from msquickcmp.common.dump_data import DumpData
 
 
+def parse_ops_name_from_om_json(tf_json_path):
+    op_names = []
+    om = utils.parse_json_file(tf_json_path)
+    graph_list = om.get('graph')
+    for graph in graph_list:
+        ops = graph.get('op', [])
+        output_desc_list = [op.get('output_desc', []) for op in ops]
+        attrs_list = [od.get('attr', []) for od in sum(output_desc_list, [])]
+        for attr in sum(attrs_list, []):
+            if attr.get('key') == "_datadump_origin_name":
+                op_names.append(attr.get('value').get('s'))
+
+    return op_names
+
+
 class TfSaveModelDumpData(DumpData):
     """
     This class is used to generate GUP dump data of the tf2.6 save_model.
     """
 
-    def __init__(self, arguments):
+    def __init__(self, arguments, model_path):
         super().__init__()
-        self.expected_version = "2.6.5"
-        self._check_tf_version(self.expected_version)
+        self._check_tf_version("2.6.5")
         output_path = os.path.realpath(arguments.out_path)
-        self.tag_set = self.split_tag_set(arguments.saved_model_tag_set)
+        self.serving = arguments.saved_model_signature
+        self.tag_set = tf_common.split_tag_set(arguments.saved_model_tag_set)
         self.input = os.path.join(output_path, "input")
         self.dump_data_tf = os.path.join(output_path, "dump_data", "tf")
+        self.input_path = arguments.input_path
         self.inputs_data = {}
-        self.model_path = arguments.model_path
-        self.input_shape = self.split_input_shape(arguments.input_shape)
+        self.model_path = model_path
+        self.input_shape_list = self.split_input_shape(arguments.input_shape)
+        self.inputs_dtype = tf_common.get_model_inputs_dtype(model_path, self.serving, self.tag_set)
         self.net_output = {}
         self._create_dir()
 
@@ -53,14 +70,7 @@ class TfSaveModelDumpData(DumpData):
         return any(op.name == operation_name_to_check for op in operations)
 
     @staticmethod
-    def split_tag_set(saved_model_tag_set):
-        tag_sets = saved_model_tag_set.split(',')
-        if len(tag_sets) > 1:
-            return tag_sets
-        return {tag_sets[0]}
-
-    @staticmethod
-    def _parse_json_file(output_json_path):
+    def parse_json_file(output_json_path):
         try:
             with open(output_json_path, 'r', encoding='utf-8') as file:
                 return json.load(file)
@@ -91,7 +101,28 @@ class TfSaveModelDumpData(DumpData):
 
         return input_shape_list
 
-    def generate_inputs_data(self, is_om_compare, npu_dump_path=None, om_parser=None):
+    def generate_inputs_data_for_dump(self):
+        if self.input_path:
+            input_path = self.input_path.split(",")
+            for i, input_file in enumerate(input_path):
+                if not os.path.isfile(input_file):
+                    utils.logger.error("no such file exists: {}".format(input_file))
+                    raise utils.AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PARAM_ERROR)
+                input_name = self.input_shape_list[i][0]
+                input_shape = self.input_shape_list[i][1]
+                data_type = self.inputs_dtype.get(input_name)
+                input_data = np.fromfile(input_file, dtype=data_type).reshape(input_shape)
+                self.inputs_data[input_name] = input_data
+        else:
+            # generate random input data
+            for input_shape_t in self.input_shape_list:
+                input_name = input_shape_t[0]
+                input_shape = input_shape_t[1]
+                data_type = self.inputs_dtype.get(input_name)
+                input_data = np.random.random(size=input_shape).astype(data_type)
+                self.inputs_data[input_name] = input_data
+
+    def generate_inputs_data(self, is_om_compare):
         """
         Generate tf2.6 save_model inputs data
         return tf2.6 save_model inputs data directory
@@ -101,8 +132,8 @@ class TfSaveModelDumpData(DumpData):
             input_bin_data = [np.fromfile(os.path.join(self.input, input_bin_file), dtype=np.float32)
                               for input_bin_file in input_files]
             for index, bin_data in enumerate(input_bin_data):
-                bin_data = bin_data.reshape(self.input_shape[index][1])
-                self.inputs_data[self.input_shape[index][0]] = bin_data
+                bin_data = bin_data.reshape(self.input_shape_list[index][1])
+                self.inputs_data[self.input_shape_list[index][0]] = bin_data
         else:
             input_files = os.listdir(self.input)
             for input_file in input_files:
@@ -110,7 +141,7 @@ class TfSaveModelDumpData(DumpData):
                 data_type = file_name.rsplit("_", 1)[-1].split(".")[0]
                 input_name = file_name.rsplit("_", 1)[0]
                 input_shape_dim = None
-                for input_shape in self.input_shape:
+                for input_shape in self.input_shape_list:
                     if input_shape[0] == input_name:
                         input_shape_dim = input_shape[1]
                 if input_shape_dim is not None:
@@ -124,12 +155,12 @@ class TfSaveModelDumpData(DumpData):
         """
         return self.net_output
 
-    def generate_dump_data(self, output_json_path, npu_dump_path=None, om_parser=None):
+    def generate_dump_data(self, tf_json_path):
         """
         Generate tf2.6 save_model dump data
         :return tf2.6 save_model dump data directory
         """
-        op_names = self.parse_ops_name_from_om_json(output_json_path)
+        op_names = parse_ops_name_from_om_json(tf_json_path)
         sess = tf.compat.v1.keras.backend.get_session()
         tag_set = {tf.compat.v1.saved_model.tag_constants.SERVING} if self.tag_set == "" else self.tag_set
         _ = tf.compat.v1.saved_model.load(sess, tag_set, self.model_path)
@@ -156,20 +187,6 @@ class TfSaveModelDumpData(DumpData):
             tensor_name = tensor.name.replace("/", "_").replace(":", ".") + "." + str(int(time.time()))
             npy_file_path = os.path.join(self.dump_data_tf, tensor_name)
             np.save(npy_file_path, data)
-
-    def parse_ops_name_from_om_json(self, output_json_path):
-        op_names = []
-        om = self._parse_json_file(output_json_path)
-        graph_list = om.get('graph')
-        for graph in graph_list:
-            ops = graph.get('op', [])
-            output_desc_list = [op.get('output_desc', []) for op in ops]
-            attrs_list = [od.get('attr', []) for od in sum(output_desc_list, [])]
-            for attr in sum(attrs_list, []):
-                if attr.get('key') == "_datadump_origin_name":
-                    op_names.append(attr.get('value').get('s'))
-
-        return op_names
 
     def _create_dir(self):
         utils.create_directory(self.input)
