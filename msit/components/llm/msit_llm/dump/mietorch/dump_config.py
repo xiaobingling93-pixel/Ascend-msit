@@ -14,7 +14,7 @@
 import json
 import os.path
 
-from msit.components.utils.file_open_check import ms_open
+from components.utils.file_open_check import ms_open
 
 
 class DumpConfig:
