@@ -19,7 +19,7 @@
 - 执行 `msit llm dump --mindie_torch --exec "python_bert_inference.py" [--option]` Dump NPU数据 
 
   ```sh
-  msit llm dump --mindie_torch --output [/path/to/dump] --exec "python_bert_inference.py" --operation-name MatMulv2_1,trans_Cast_0
+  msit llm dump --mindie_torch --output [/path/to/dump] --exec "python3 bert_inference.py" --operation-name MatMulv2_1,trans_Cast_0
   ```
 
 - 参数说明 
