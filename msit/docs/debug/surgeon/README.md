@@ -210,7 +210,7 @@ argmax = g.add_node('dummy_ArgMax',
 g.insert_node('dummy_add', argmax, mode='before') # 由于 argmax 为单输入单输出节点，可以不手动连边而是使用 insert 函数
 
 # 保存修改好的 onnx 模型
-g.save('layernorm_modify.onnx')
+g.save('layernorm_modify.onnx', save_as_external_data=False, all_tensors_to_one_file=True)
 
 # 切分子图
 g.extract_subgraph(

@@ -212,12 +212,12 @@ g.remove_unused_nodes()
 - `path_or_bytes(Union[str, ModelProto, GraphProto])` - 输入可以是 onnx 模型文件路径，也可以是 onnx 框架中的 `ModelProto` 或 `GraphProto`。
 - `add_name_suffix(bool)` - 可选参数，默认为 `False`，多数情况下可忽略。当设置为 `True` 时，能够自动检测算子节点和输入输出节点重名的情况并修改算子节点名称。
 
-**save(path, save_as_external_data, all_tensors_to_one_file)**
+**save(path, save_as_external_data=False, all_tensors_to_one_file=True)**
 
 - 保存模型，保存前自动对节点进行拓扑排序。
-- `save_as_external_data` 和 `all_tensors_to_one_file` 为可选参数。
-- `save_as_external_data` 参数控制是否将模型数据保存为外部文件，默认为 False，表示不使用外部数据存储方式。
-- `all_tensors_to_one_file` 参数决定是否将所有张量保存在单一文件中，默认为 True。当设置为 False 时，每个张量将被保存在独立的文件中。
+- `save_as_external_data(bool)` 和 `all_tensors_to_one_file(bool)` 为可选参数。
+- `save_as_external_data` 参数控制是否将模型数据保存为外部文件，默认为 `False`，表示不使用外部数据存储方式。
+- `all_tensors_to_one_file` 参数决定是否将所有张量保存在单一文件中，默认为 `True`。当设置为 `False` 时，每个张量将被保存在独立的文件中。
 - 当模型的大小超过2GB时，将自动强制使用外部数据存储方式。
 - 如果选择将模型保存为外部数据（`save_as_external_data=True` 或者模型的大小超过2GB），并且选择不将所有张量保存在单一文件中（`all_tensors_to_one_file=False`），则必须确保在相同的路径下不存在同名的 data 文件。否则，这可能导致数据冗余，从而使得存储空间需求翻倍。
 
@@ -250,7 +250,7 @@ next_node.inputs[0] = 'add_out'
 g.update_map() # 手动连边后需更新连边关系
 
 # 保存模型
-g.save('model_fix.onnx')
+g.save('model_fix.onnx', save_as_external_data=False, all_tensors_to_one_file=True)
 ```
 
 </details>
