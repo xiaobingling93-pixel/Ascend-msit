@@ -69,6 +69,7 @@ class FileStatus(object):
 class PathChecker(Checker):
     def __init__(self, instance=EnumInstance.NO_INSTANCE, converter=None):
         super().__init__(instance, converter)
+        self.f_status = None
         self.f_state = False
         self.converter = converter or self.path_converter
         self.status_err_msg = None
@@ -84,8 +85,8 @@ class PathChecker(Checker):
             self.status_err_msg = str(e)
         else:
             self.f_state = True
-        finally:
-            return ori_path, self.f_state, self.status_err_msg
+            
+        return ori_path, self.f_state, self.status_err_msg
 
     @rule()
     def exists(self) -> Union["PathChecker", CheckResult]:
