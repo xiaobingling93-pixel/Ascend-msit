@@ -163,7 +163,3 @@ class TestPathChecker(unittest.TestCase):
         os.unlink(self.sl)
         self.fp.close()
         self.dp.cleanup()
-
-
-if __name__ == "__main__":
-    unittest.main(verbosity=2)
