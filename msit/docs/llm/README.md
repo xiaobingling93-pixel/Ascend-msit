@@ -41,7 +41,7 @@ msit install llm
 > * [加速库场景-输出Token的logits精度比对](/msit/docs/llm/加速库场景-输出Token的logits精度比对.md)
 > * [加速库场景-整网精度比对](/msit/docs/llm/加速库场景-整网精度比对.md)
 > * [TorchAir场景-整网算子精度比对](/msit/docs/llm/TorchAir场景-整网算子精度比对.md)
-
+> * [MindIE-Torch场景-整网算子精度对比](/msit/docs/llm/MindIE-Torch场景-整网算子精度对比.md)
 ## 大模型精度调试步骤
 
 
