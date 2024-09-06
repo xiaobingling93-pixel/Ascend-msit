@@ -56,11 +56,12 @@ CONFIG_ATTR_CANDIDATES = {
 }
 
 NN_MODULE_STACK = "nn_module_stack"
-SKIP_NODES = ["size", "getitem", "to", "float", "finfo"]
+SKIP_NODES = ["size", "getitem", "to", "float", "finfo", "dropout"]
 TORCH_MODULE_TO_ATB_MAP = {
     "Embedding": dict(op_type="Gather", op_param={}, is_weights_first=True),
     "Gather": dict(op_type="Gather", op_param={}),
     ".*RMSNorm$": dict(op_type="RmsNorm", op_param={"layerType": "RMS_NORM_NORM"}),
+    ".*LayerNorm$": dict(op_type="LayerNorm", op_param={"layerType": "LAYER_NORM_UNDEFINED"}),
     "Linear": dict(op_type="Linear", op_param={"hasBias": False, "enAccum": False}),
     ".*Rotary.*": dict(op_type="Rope", op_param={"rotaryCoeff": 2}),
     ".*Attention$": dict(op_type="SelfAttention", op_param={"headNum": 32, "kvHeadNum": 32, "calcType": "PA_ENCODER"}),
@@ -83,7 +84,7 @@ _FIXED_INPUTS = {
     "seq_len",
 }
 FIXED_INPUTS = namedtuple("FIXED_INPUTS", _FIXED_INPUTS)(*_FIXED_INPUTS)
-BASIC_INPUT_NAMES = (FIXED_INPUTS.input_ids, FIXED_INPUTS.position_ids)
+BASIC_INPUT_NAMES = (FIXED_INPUTS.input_ids,)
 
 _RESHPAE_KIND = ["reshape_qkv", "reshape_0_12"]
 RESHPAE_KIND = namedtuple("RESHPAE_KIND", _RESHPAE_KIND)(*_RESHPAE_KIND)
@@ -277,19 +278,21 @@ class ATBModel:
         model_inputs.update({kk: vv.half().npu() for kk, vv in kwargs.items()})
 
         needs_cos_sin_table = FIXED_INPUTS.cos_table in self.inputs or FIXED_INPUTS.sin_table in self.inputs
-        is_cos_sin_table_in_inputs = FIXED_INPUTS.cos_table in model_inputs and FIXED_INPUTS.sin_table in model_inputs
-        if needs_cos_sin_table and not is_cos_sin_table_in_inputs and self.inv_freq_weight is not None:
-            cos_table, sin_table = self._calc_cos_sin_table_from_inv_freq(position_ids)
-            model_inputs[FIXED_INPUTS.cos_table], model_inputs[FIXED_INPUTS.sin_table] = cos_table, sin_table
-            is_cos_sin_table_in_inputs = True
-        if needs_cos_sin_table and not is_cos_sin_table_in_inputs:
-            raise ValueError("Missing cos_table and sin_table")
+       if needs_cos_sin_table:
+            meets_cos_sin_table = FIXED_INPUTS.cos_table in model_inputs and FIXED_INPUTS.sin_table in model_inputs
+            if not meets_cos_sin_table and self.inv_freq_weight is not None:
+                # if either cos_table or sin_table is missing, the values of both will be calculated
+                cos_table, sin_table = self._calc_cos_sin_table_from_inv_freq(position_ids)
+                model_inputs[FIXED_INPUTS.cos_table], model_inputs[FIXED_INPUTS.sin_table] = cos_table, sin_table
+                meets_cos_sin_table = True
+            if not meets_cos_sin_table:
+                raise ValueError("Missing 'cos_table' or 'sin_table' in model inputs")
 
         model_inputs.update(self.weights)
         missing_inputs = self.inputs - set(model_inputs.keys())
         if len(missing_inputs) != 0:
             logger.warning(
-                f"Missing inputs: {missing_inputs}\npPovided: {model_inputs.keys()}\nCall `set_weights` if not already"
+                f"Missing inputs: {missing_inputs}\nProvided: {model_inputs.keys()}\nCall `set_weights` if not already"
             )  # Not raise error, model may still can be executed
 
         if self.output_shape is None:
