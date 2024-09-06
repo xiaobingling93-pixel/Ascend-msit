@@ -40,7 +40,7 @@ BaseGraph 类提供了基本的接口用于增删改查节点：
 |                                              | 获取opset_imports  | g.opset_imports                                         |
 |                                              | 修改opset_imports  | g.opset_imports = int                                   |
 | [基础功能](./graph_refactor_API.md#基础功能) | 解析模型文件       | OnnxGraph.parse(path_or_bytes)                          |
-|                                              | 将图保存成模型文件 | save(path, save_as_external_data, all_tensors_to_one_file)                                            |
+|                                              | 将图保存成模型文件 | g.save(path, save_as_external_data, all_tensors_to_one_file)                                            |
 |                                              | 图转为GraphProto   | g.proto()                                               |
 |                                              | 图转为ModelProto   | g.model()                                               |
 |                                              | 更新前后节点关系   | g.update_map()                                          |

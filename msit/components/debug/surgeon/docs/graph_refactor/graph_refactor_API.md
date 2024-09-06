@@ -215,7 +215,7 @@ g.remove_unused_nodes()
 **save(path, save_as_external_data=False, all_tensors_to_one_file=True)**
 
 - 保存模型，保存前自动对节点进行拓扑排序。
-- `save_as_external_data(bool)` 和 `all_tensors_to_one_file(bool)` 为可选参数。
+- `save_as_external_data(bool)` 和 `all_tensors_to_one_file(bool)` 为可选参数。若不指定，则传入默认参数。
 - `save_as_external_data` 参数控制是否将模型数据保存为外部文件，默认为 `False`，表示不使用外部数据存储方式。
 - `all_tensors_to_one_file` 参数决定是否将所有张量保存在单一文件中，默认为 `True`。当设置为 `False` 时，每个张量将被保存在独立的文件中。
 - 当模型的大小超过2GB时，将自动强制使用外部数据存储方式。
