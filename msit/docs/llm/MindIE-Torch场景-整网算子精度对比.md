@@ -19,7 +19,7 @@
 - 执行 `msit llm dump --mindie_torch --exec "python_bert_inference.py" [--option]` Dump NPU数据 
 
   ```sh
-  msit llm dump --mindie_torch --output [/path/to/dump] --exec "python_bert_inference.py" --op_list ["MatMulv2_1","trans_Cast_0"] 
+  msit llm dump --mindie_torch --output [/path/to/dump] --exec "python_bert_inference.py" --operation-name MatMulv2_1,trans_Cast_0
   ```
 
 - 参数说明 
@@ -29,7 +29,7 @@
 | --mindie_torch    | 是否是MindIE-Torch场景下的比对 | 是   |
 | --exec | MindIE-Torch推理脚本的执行命令                                                                                   | 是   |
 | --output | 指定Dump数据输出路径，默认为当前路径                                 | 否   | 
-| --op_list | 需要Dump的算子，默认为 all，表示会对模型中所有 op 进行 Dump，其中元素为MindIE-Torch算子类型，若设置 op_list，只会 Dump 指定的 op                                | 否   | 
+| -opname, --operation-name | 需要Dump的算子，默认为 all，表示会对模型中所有 op 进行 Dump，其中元素为MindIE-Torch算子类型，若设置 operation-name，只会 Dump 指定的 op                                | 否   | 
 
 ### CPU/GPU数据Dump
 
