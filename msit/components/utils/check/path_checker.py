@@ -21,7 +21,7 @@ class FileStatus(object):
     def __init__(self, file_name: str) -> None:
         file_status = os.lstat(file_name)
         self._file_name = file_name
-        self._status_mode = file_status.st_mode
+        self.status_mode = file_status.st_mode
         self._file_uid = file_status.st_uid
         self._file_gid = file_status.st_gid
         self._file_size = file_status.st_size
@@ -37,7 +37,7 @@ class FileStatus(object):
 
     @property
     def perm_bits(self) -> int:
-        return os.st.S_IMODE(self._status_mode)
+        return os.st.S_IMODE(self.status_mode)
 
     @property
     def uid(self) -> int:
@@ -53,28 +53,24 @@ class FileStatus(object):
 
     @property
     def ftype(self):
-        match os.st.S_IFMT(self._status_mode):
-            case os.st.S_IFDIR:
-                return FileType.DIRECTORY
-            case os.st.S_IFCHR:
-                return FileType.CHARACTER
-            case os.st.S_IFBLK:
-                return FileType.BLOCK
-            case os.st.S_IFREG:
-                return FileType.FILE
-            case os.st.S_IFIFO:
-                return FileType.FIFO
-            case os.st.S_IFLNK:
-                return FileType.SYMLINK
-            case os.st.S_IFSOCK:
-                return FileType.SOCKET
-            case _:
-                return NotImplemented
+        file_type_map = {
+            os.st.S_IFDIR: FileType.DIRECTORY,
+            os.st.S_IFCHR: FileType.CHARACTER,
+            os.st.S_IFBLK: FileType.BLOCK,
+            os.st.S_IFREG: FileType.FILE,
+            os.st.S_IFIFO: FileType.FIFO,
+            os.st.S_IFLNK: FileType.SYMLINK,
+            os.st.S_IFSOCK: FileType.SOCKET
+        }
+
+        file_mode = os.st.S_IFMT(self.status_mode)
+        return file_type_map.get(file_mode, None)
 
 
 class PathChecker(Checker):
     def __init__(self, instance=EnumInstance.NO_INSTANCE, converter=None):
         super().__init__(instance, converter)
+        self.f_status = None
         self.f_state = False
         self.converter = converter or self.path_converter
         self.status_err_msg = None
@@ -90,8 +86,8 @@ class PathChecker(Checker):
             self.status_err_msg = str(e)
         else:
             self.f_state = True
-        finally:
-            return ori_path, self.f_state, self.status_err_msg
+            
+        return ori_path, self.f_state, self.status_err_msg
 
     @rule()
     def exists(self) -> Union["PathChecker", CheckResult]:
@@ -164,21 +160,21 @@ class PathChecker(Checker):
     @rule()
     def is_not_readable_to_others(self) -> Union["PathChecker", CheckResult]:
         return CheckResult(
-            not bool(self.f_status._status_mode & os.st.S_IROTH), 
+            not bool(self.f_status.status_mode & os.st.S_IROTH), 
             "File is readable to others"
         )
 
     @rule()
     def is_not_writable_to_others(self) -> Union["PathChecker", CheckResult]:
         return CheckResult(
-            not bool(self.f_status._status_mode & os.st.S_IWOTH), 
+            not bool(self.f_status.status_mode & os.st.S_IWOTH), 
             "File is writable to others"
         )
 
     @rule()
     def is_not_executable_to_others(self) -> Union["PathChecker", CheckResult]:
         return CheckResult(
-            not bool(self.f_status._status_mode & os.st.S_IXOTH), 
+            not bool(self.f_status.status_mode & os.st.S_IXOTH), 
             "File is executable to others"
         )
 
