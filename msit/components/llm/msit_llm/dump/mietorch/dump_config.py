@@ -24,11 +24,10 @@ class DumpConfig:
         mode='all',
         op_switch="off",
         api_list=None,
-        layer=None
     ):
         dump_list_config = dict(model_name="Graph")
         if api_list:
-            dump_list_config["layer"] = layer
+            dump_list_config["layer"] = api_list
         self.config = dict(
             dump=dict(
                 dump_path=dump_path,
