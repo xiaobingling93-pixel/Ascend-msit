@@ -70,7 +70,7 @@ msit llm transform [-h] -s SOURCE [-atb ATB_MODEL_PATH] [--enable-sparse] [--to-
   # import torch, torch_npu
   # import llamaforcausallm_atb_float
   # ...
-  # atb_model = llamaforcausallm_atb_float.Model()
+  # atb_model = ATBModel(llamaforcausallm_atb_float.Model())
   # ...
   # print({kk: vv.shape for kk, vv in out.items()})
   # "
@@ -81,22 +81,18 @@ msit llm transform [-h] -s SOURCE [-atb ATB_MODEL_PATH] [--enable-sparse] [--to-
   import llamaforcausallm_atb_float
   from msit_llm.transform.torch_to_atb_python import ATBModel, ATBModelConfig
 
-  atb_model = llamaforcausallm_atb_float.atb_model()
+  atb_model = ATBModel(llamaforcausallm_atb_float.Model())
   weights = torch.load('test_llama/state_dict.pt')  # Use actual WEIGHT_PATH
-
-  vocab_size, num_attention_heads, head_dim = 32000, 32, 32
-  cc = ATBModelConfig(vocab_size=vocab_size, num_attention_heads=num_attention_heads, head_dim=head_dim)
-  aa = ATBModel(atb_model, cc)
-  aa.set_weights(weights)
+  atb_model.set_weights(weights)
 
   input_len = 32
-  out = aa.forward(
+  out = atb_model.forward(
       input_ids=torch.arange(input_len),
       position_ids=torch.arange(input_len),
-      cos_table=torch.rand(input_len, head_dim),
-      sin_table=torch.rand(input_len, head_dim),
+      cos_table=torch.rand(input_len, atb_model.head_dim),
+      sin_table=torch.rand(input_len, atb_model.head_dim),
   )
-  print(out)
+  print({kk: vv.shape for kk, vv in out.items()})
   # {'output': torch.Size([32, 32000])}
   ```
 ### Transformers LLaMA 迁移到 ATB python 量化模型
@@ -120,7 +116,7 @@ msit llm transform [-h] -s SOURCE [-atb ATB_MODEL_PATH] [--enable-sparse] [--to-
   # import torch, torch_npu
   # import llamaforcausallm_atb_quant
   # ...
-  # atb_model = llamaforcausallm_atb_quant.Model()
+  # atb_model = ATBModel(llamaforcausallm_atb_quant.Model())
   # ...
   # print({kk: vv.shape for kk, vv in out.items()})
   # "
@@ -131,20 +127,16 @@ msit llm transform [-h] -s SOURCE [-atb ATB_MODEL_PATH] [--enable-sparse] [--to-
   import llamaforcausallm_atb_quant
   from msit_llm.transform.torch_to_atb_python import ATBModel, ATBModelConfig
 
-  atb_model = llamaforcausallm_atb_quant.Model()
-  weights = torch.load('$WEIGHT_PATH')  # Use actual WEIGHT_PATH
-
-  vocab_size, num_attention_heads, head_dim = 32000, 32, 32
-  cc = ATBModelConfig(vocab_size=vocab_size, num_attention_heads=num_attention_heads, head_dim=head_dim)
-  aa = ATBModel(atb_model, cc)
-  aa.set_weights(weights)
+  atb_model = ATBModel(llamaforcausallm_atb_quant.Model())
+  weights = torch.load('test_llama/quant_state_dict.pt')  # Use actual WEIGHT_PATH
+  atb_model.set_weights(weights)
 
   input_len = 32
-  out = aa.forward(
+  out = atb_model.forward(
       input_ids=torch.arange(input_len),
       position_ids=torch.arange(input_len),
-      cos_table=torch.rand(input_len, head_dim),
-      sin_table=torch.rand(input_len, head_dim),
+      cos_table=torch.rand(input_len, atb_model.head_dim),
+      sin_table=torch.rand(input_len, atb_model.head_dim),
   )
   print({kk: vv.shape for kk, vv in out.items()})
   # {'output': torch.Size([32, 32000])}
