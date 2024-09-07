@@ -22,7 +22,7 @@
 ### 限定条件
 - **适用于 transformers 包，支持类似 LLaMA、QWEN 的典型模型结构迁移**
 - **当前 MindIE python 接口发布包基于 python 3.10，迁移功能也限定 python3.10；且 transformers 版本需要支持对应模型的 FX 构图，即 `transformers.utils.fx.symbolic_trace` 接口**
-- **ATB Python 模型当前硬件限定 atlas d802**
+- **ATB Python 模型当前硬件限定 Atlas 900 A2**
 
 ### 环境说明
 - 安装 msit
@@ -44,8 +44,8 @@ msit llm transform [-h] -s SOURCE [-atb ATB_MODEL_PATH] [--enable-sparse] [--to-
 | -atb, --atb_model_path | 指定待调用的 cpp 代码路径。支持指定文件夹，参数指定为目录时目录下必须只存在一个cpp文件和一个h文件；或指定为文件，文件同级目录下必须存在同文件名的 cpp 文件和 h 文件 | 否   |
 | --enable-sparse        | 指定迁移为稀疏量化模型，不指定则迁移为量化模型                                                                                                                      | 否   |
 | --to-python, -py       | 指定在 Torch 模型迁移到 ATB 模型场景下，迁移为 ATB python 接口模型                                                                                                  | 否   |
-| --to-quant, -quant     | 指定在 Torch 模型迁移到 ATB python 接口模型场景下，迁移为量化模型，需要配合 `--to-python` 使用                                                                      | 否   |
-| --quant-disable-names  | 文件或 ',' 分割的字符串，指定在 Torch 模型迁移到 ATB python 接口量化模型场景下，量化回退层的名称；默认值 None 表示回退 `lm_head` 层                                 | 否   |
+| --to-quant, -quant     | 指定在 Torch 模型迁移到 ATB python 接口模型场景下，迁移为量化模型，**需要配合 `--to-python` 使用**                                                                      | 否   |
+| --quant-disable-names  | 文件或 ',' 分割的字符串，指定在 Torch 模型迁移到 ATB python 接口量化模型场景下，量化回退层的名称；**需要配合 `--to-python` 与 `--to-quant` 使用**；默认值 None 表示回退 `lm_head` 层 | 否   |
 | -l, --log-level        | 指定log level，默认为 info，可选值 debug, info, warning, error, fatal, critical                                                                                     | 否   |
 | -h, --help             | 命令行参数帮助信息|  否 |
 ***
@@ -67,7 +67,12 @@ msit llm transform [-h] -s SOURCE [-atb ATB_MODEL_PATH] [--enable-sparse] [--to-
   # ==============================
   # Run like:
   #
+  # import torch, torch_npu
+  # import llamaforcausallm_atb_float
   # ...
+  # atb_model = llamaforcausallm_atb_float.Model()
+  # ...
+  # print({kk: vv.shape for kk, vv in out.items()})
   # "
   ```
   参照输出的 `Run like:` 部分，导入生成的 py 文件，并调用推理
