@@ -14,11 +14,9 @@
 
 import os
 
-from configparser import ConfigParser
 from setuptools import setup, find_packages
+from components.utils.install import get_public_url
 
-config = ConfigParser()
-config.read('./components/config/config.ini')
 
 abs_path = os.path.dirname(os.path.realpath(__file__))
 with open(os.path.join(abs_path, "requirements.txt")) as f:
@@ -43,7 +41,7 @@ setup(
     version='7.0.0c730',
     description='msIT, MindStudio Inference Tools',
     long_description_content_type='text/markdown',
-    url=config.get('URL', 'msit_url'),
+    url=get_public_url('msit_url'),
     packages=find_packages(),
     package_data={
         '': [

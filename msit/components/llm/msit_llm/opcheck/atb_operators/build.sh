@@ -17,9 +17,6 @@ SCRIPT_DIR=$(cd $(dirname $0); pwd)
 AIT_LLM_INSTALL_PATH="$(python3 -c 'import msit_llm, os; print(os.path.dirname(os.path.abspath(msit_llm.__file__)))')"
 IGNORE_INFO="If not using opcheck, ignore this error."
 
-SITE_PACKAGES="$(python3 -c 'import site; print(site.getsitepackages()[0])')"
-CONFIG_FILE="$SITE_PACKAGES/components/config/config.ini"
-
 echo SCRIPT_DIR: $SCRIPT_DIR
 
 function download_nlohmann_json()
@@ -29,7 +26,7 @@ function download_nlohmann_json()
         return
     fi
 
-    JSON_BASE_URL=$(grep '^json_base_url=' "$CONFIG_FILE" | sed 's/^json_base_url=//')
+    JSON_BASE_URL=$(python3 -c 'from components.utils.install import get_public_url; print(get_public_url('json_base_url'))')
     if [[ "$NLOHMAN_JSON_LINE" =~ "v3_11_1" ]]; then
         JSON_VERSION="3.11.1"
     elif [[ "$NLOHMAN_JSON_LINE" =~ "v3_11_2" ]]; then

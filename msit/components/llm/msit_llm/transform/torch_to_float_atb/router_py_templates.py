@@ -12,18 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import sys
-from configparser import ConfigParser
-
-script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
-config_path = os.path.join(script_dir, '../../../../config/config.ini')
-
-config = ConfigParser()
-config.read(config_path)
-
-licenses_url = config.get('URL', 'msit_licenses_url')
-
 COPYRIGHT_FORMATER = """# Copyright 2022 EleutherAI and the HuggingFace Inc. team. All rights reserved.
 #
 # This code is based on EleutherAI's GPT-NeoX library and the GPT-NeoX

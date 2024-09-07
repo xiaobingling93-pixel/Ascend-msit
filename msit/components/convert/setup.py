@@ -12,11 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from configparser import ConfigParser
 from setuptools import setup, find_packages  # type: ignore
-
-config = ConfigParser()
-config.read('../config/config.ini')
+from components.utils.install import get_public_url
 
 with open('requirements.txt', encoding='utf-8') as f:
     required = f.read().splitlines()
@@ -38,7 +35,7 @@ setup(
     name='msit-convert',
     version='7.0.0c730',
     description='model convert tool',
-    url=config.get('URL', 'msit_url'),
+    url=get_public_url('msit_url'),
     packages=find_packages(),
     package_data={'': ['LICENSE', 'README.md', '*.txt', 'install.bat', 'install.sh', '*.cpp', '*.h']},
     license='Apache-2.0',

@@ -16,11 +16,8 @@
 declare -i ret_ok=0
 declare -i ret_run_failed=1
 
-SITE_PACKAGES="$(python3 -c 'import site; print(site.getsitepackages()[0])')"
-CONFIG_FILE="$SITE_PACKAGES/components/config/config.ini"
-
-WHL_BASE_URL=$(grep '^whl_base_url=' "$CONFIG_FILE" | sed 's/^whl_base_url=//')
-TOOLS_BAS_URL_SUFFIX=$(grep '^tools_bas_url=' "$CONFIG_FILE" | sed 's/^tools_bas_url=//')
+WHL_BASE_URL=$(python3 -c 'from components.utils.install import get_public_url; print(get_public_url('whl_base_url'))')
+TOOLS_BAS_URL_SUFFIX=$(python3 -c 'from components.utils.install import get_public_url; print(get_public_url('tools_bas_url'))')
 TOOLS_BAS_URL="git+$TOOLS_BAS_URL_SUFFIX"
 
 download_and_install_aclruntime() {
