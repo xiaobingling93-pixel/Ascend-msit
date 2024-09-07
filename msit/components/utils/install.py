@@ -355,4 +355,4 @@ def get_public_url(url_name):
             else:
                 raise ValueError(f"url name '{url_name}' not found in config.ini")
     except Exception as err:
-        raise ValueError(f"An error occurred: {err}")
+        raise Exception(f"An error occurred.") from err

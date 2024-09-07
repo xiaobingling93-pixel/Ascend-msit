@@ -10,8 +10,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from configparser import ConfigParser
 from setuptools import setup, find_packages  # type: ignore
-from components.utils.install import get_public_url
+
+config = ConfigParser()
+config.read('../../config/config.ini')
 
 with open('requirements.txt', encoding='utf-8') as f:
     required = f.read().splitlines()
@@ -37,7 +40,7 @@ setup(
     description='auto optimizer',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url=get_public_url('msit_url'),
+    url=config.get('URL', 'msit_url'),
     packages=find_packages(),
     package_data={'': ['LICENSE', 'model.cfg']},    
 
@@ -58,11 +61,11 @@ setup(
     extras_require={
         'inference': [
             (
-                f"aclruntime @ git+{get_public_url('msit_url')}"
+                f"aclruntime @ git+{config.get('URL', 'msit_url')}"
                 '#egg=aclruntime&subdirectory=msit/components/benchmark/backend'
             ),
             (
-                f"ais_bench @ git+{get_public_url('msit_url')}"
+                f"ais_bench @ git+{config.get('URL', 'msit_url')}"
                 '#egg=ais_bench&subdirectory=msit/components/benchmark/'
             ),
             'pillow >= 9.0.0',
