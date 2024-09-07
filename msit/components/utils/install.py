@@ -349,7 +349,7 @@ def get_public_url(url_name):
     if not config_path:
         raise FileNotFoundError("Config file not found.")
 
-    config = ConfigParser
+    config = ConfigParser()
     config.read(config_path)
 
     if config.has_section('URL') and config.has_option('URL', url_name):
