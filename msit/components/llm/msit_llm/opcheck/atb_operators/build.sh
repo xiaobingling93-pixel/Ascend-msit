@@ -26,7 +26,7 @@ function download_nlohmann_json()
         return
     fi
 
-    JSON_BASE_URL=$(python3 -c 'from components.utils.install import get_public_url; print(get_public_url('json_base_url'))')
+    JSON_BASE_URL=$(python3 -c "from components.utils.install import get_public_url; print(get_public_url('json_base_url'))")
     if [[ "$NLOHMAN_JSON_LINE" =~ "v3_11_1" ]]; then
         JSON_VERSION="3.11.1"
     elif [[ "$NLOHMAN_JSON_LINE" =~ "v3_11_2" ]]; then

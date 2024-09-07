@@ -16,8 +16,8 @@
 declare -i ret_ok=0
 declare -i ret_run_failed=1
 
-WHL_BASE_URL=$(python3 -c 'from components.utils.install import get_public_url; print(get_public_url('whl_base_url'))')
-TOOLS_BAS_URL_SUFFIX=$(python3 -c 'from components.utils.install import get_public_url; print(get_public_url('tools_bas_url'))')
+WHL_BASE_URL=$(python3 -c "from components.utils.install import get_public_url; print(get_public_url('whl_base_url'))")
+TOOLS_BAS_URL_SUFFIX=$(python3 -c "from components.utils.install import get_public_url; print(get_public_url('tools_base_url'))")
 TOOLS_BAS_URL="git+$TOOLS_BAS_URL_SUFFIX"
 
 download_and_install_aclruntime() {
