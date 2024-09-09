@@ -336,3 +336,24 @@ def download_comp(tool_info, dest):
     if not pkg_installer:
         pkg_installer = AitInstaller()
     pkg_installer.download_extra(dest)
+
+
+def get_public_url(url_name):
+    if not isinstance(url_name, str):
+        raise ValueError("%s is not a str." % url_name)
+    
+    from pkg_resources import resource_filename
+    from configparser import ConfigParser
+
+    config_path = resource_filename('components.config', 'config.ini')
+    if not config_path:
+        raise FileNotFoundError("Config file not found.")
+
+    config = ConfigParser()
+    config.read(config_path)
+
+    if config.has_section('URL') and config.has_option('URL', url_name):
+        result_url = config.get('URL', url_name)
+        return result_url
+    else:
+        raise ValueError(f"url name '{url_name}' not found in config.ini")

@@ -111,7 +111,7 @@ def seed_all(seed=2024):
     except ImportError:
         is_npu = False 
     else:
-        is_npu = Ture
+        is_npu = True
 
     if torch.cuda.is_available():
         torch.cuda.manual_seed(seed)
