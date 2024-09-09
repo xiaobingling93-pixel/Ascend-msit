@@ -25,7 +25,7 @@ def float_layer_h_gen(parsed_model, save_name=None, save_dir=None):
 
     rr = ""
     rr += float_layer_h_templates.copyright_header.format(
-        year=time.localtime().tm_yearm,
+        year=time.localtime().tm_year,
         licenses_url=get_public_url('msit_licenses_url')
     )
     rr += float_layer_h_templates.include_header_formater.format(
