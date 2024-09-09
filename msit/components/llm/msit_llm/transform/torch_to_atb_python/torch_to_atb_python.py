@@ -50,7 +50,9 @@ os.environ["ASDOPS_LOG_TO_STDOUT"] = "1"
 CONFIG_ATTR_CANDIDATES = {
     "num_hidden_layers": ["num_hidden_layers", "num_layers", "n_layers"],
     "num_attention_heads": ["num_attention_heads"],
+    "num_key_value_heads": ["num_key_value_heads"],
     "hidden_size": ["hidden_size"],
+    "rms_norm_eps": ["rms_norm_eps"],
     "vocab_size": ["vocab_size"],
     "text_config": ["text_config", "llm_config"],
 }
@@ -60,7 +62,7 @@ SKIP_NODES = ["size", "getitem", "to", "float", "finfo", "dropout"]
 TORCH_MODULE_TO_ATB_MAP = {
     "Embedding": dict(op_type="Gather", op_param={}, is_weights_first=True),
     "Gather": dict(op_type="Gather", op_param={}),
-    ".*RMSNorm$": dict(op_type="RmsNorm", op_param={"layerType": "RMS_NORM_NORM"}),
+    ".*RMSNorm$": dict(op_type="RmsNorm", op_param={"layerType": "RMS_NORM_NORM", "epsilon": 1e-5}),
     ".*LayerNorm$": dict(op_type="LayerNorm", op_param={"layerType": "LAYER_NORM_UNDEFINED"}),
     "Linear": dict(op_type="Linear", op_param={"hasBias": False, "enAccum": False}),
     ".*Rotary.*": dict(op_type="Rope", op_param={"rotaryCoeff": 2}),
@@ -168,9 +170,19 @@ class Operation:
 
 
 class ATBModelConfig:
-    def __init__(self, vocab_size=1, num_attention_heads=1, head_dim=1, max_batch_size=1, max_seq_len=1024, **kwargs):
+    def __init__(
+        self,
+        vocab_size=1,
+        num_attention_heads=1,
+        num_key_value_heads=-1,
+        head_dim=1,
+        max_batch_size=1,
+        max_seq_len=1024,
+        **kwargs,
+    ):
         self.vocab_size, self.num_attention_heads, self.head_dim = vocab_size, num_attention_heads, head_dim
         self.max_batch_size, self.max_seq_len, self.kwargs = max_batch_size, max_seq_len, kwargs
+        self.num_key_value_heads = num_key_value_heads if num_key_value_heads > 0 else num_attention_heads
         for kk, vv in kwargs.items():
             setattr(self, kk, vv)
 
@@ -178,6 +190,7 @@ class ATBModelConfig:
         return dict(
             vocab_size=self.vocab_size,
             num_attention_heads=self.num_attention_heads,
+            num_key_value_heads=self.num_key_value_heads,
             head_dim=self.head_dim,
             max_batch_size=self.max_batch_size,
             max_seq_len=self.max_seq_len,
@@ -217,15 +230,15 @@ class ATBModel:
 
         self.head_dim = getattr(atb_model, "head_dim", self.atb_model_config.head_dim)
         self.num_attention_heads = getattr(atb_model, "num_attention_heads", self.atb_model_config.num_attention_heads)
+        self.num_key_value_heads = getattr(atb_model, "num_key_value_heads", self.atb_model_config.num_key_value_heads)
         self.vocab_size = getattr(atb_model, "vocab_size", self.atb_model_config.vocab_size)
         self.cache_shape = [
             self.atb_model_config.max_batch_size,
             self.atb_model_config.max_seq_len,
-            self.num_attention_heads,
+            self.num_key_value_heads,
             self.head_dim,
         ]
         self.k_cache, self.v_cache = None, None  # Used for encoder - decoder LLM
-        
 
     def _calc_cos_sin_table_from_inv_freq(self, position_ids):
         logger.debug(f"self.inv_freq_weight.shape = {self.inv_freq_weight.shape}")
@@ -405,11 +418,15 @@ class ATBModelFromTorch(ATBModel):
             self.weight_stack_map.setdefault(".".join(ii.split(".")[:-1]), []).append(ii)
 
         self.torch_module_to_atb_map = {}
+        self.num_key_value_heads = get_config_attr(self.config, "num_key_value_heads", default=self.num_attention_heads)
+        rms_norm_eps = get_config_attr(self.config, "rms_norm_eps", default=1e-5)
         for kk, vv in TORCH_MODULE_TO_ATB_MAP.items():
             re_key = re.compile(kk)
             if vv.get("op_type", None) == "SelfAttention" and "op_param" in vv:
-                vv["op_param"].update({"headNum": self.num_attention_heads, "kvHeadNum": self.num_attention_heads})
-                vv["op_param"].update({"qkScale": 1 / (float(self.num_attention_heads) ** 0.5)})
+                vv["op_param"].update({"headNum": self.num_attention_heads, "kvHeadNum": self.num_key_value_heads})
+                vv["op_param"].update({"qkScale": 1 / (float(self.head_dim) ** 0.5)})
+            elif vv.get("op_type", None) == "RmsNorm" and "op_param" in vv:
+                vv["op_param"].update({"epsilon": rms_norm_eps})
             self.torch_module_to_atb_map[re_key] = Operation(**vv)
 
         self.pre_query_name, self.pre_key_name, self.pre_value_name, self.is_apply_rope = "", "", "", False
@@ -424,7 +441,12 @@ class ATBModelFromTorch(ATBModel):
         self.to_file()
 
         self.atb_model_config = ATBModelConfig(
-            self.vocab_size, self.num_attention_heads, self.head_dim, max_batch_size, max_seq_len
+            vocab_size=self.vocab_size,
+            num_attention_heads=self.num_attention_heads,
+            num_key_value_heads=self.num_key_value_heads,
+            head_dim=self.head_dim,
+            max_batch_size=max_batch_size,
+            max_seq_len=max_seq_len,
         )
 
         if GraphOperation is None or BaseOperation is None:
@@ -561,14 +583,14 @@ class ATBModelFromTorch(ATBModel):
             ),
             Operation(
                 op_type="add_reshape",
-                function=lambda org_shape: [org_shape[0], self.num_attention_heads, self.head_dim],
+                function=lambda org_shape: [org_shape[0], self.num_key_value_heads, self.head_dim],
                 inputs=[module_name + ".k_embed"],
                 outputs=[module_name + ".k_embed_"],
                 op_name=module_name + ".k." + RESHPAE_KIND.reshape_qkv,
             ),
             Operation(
                 op_type="add_reshape",
-                function=lambda org_shape: [org_shape[0], self.num_attention_heads, self.head_dim],
+                function=lambda org_shape: [org_shape[0], self.num_key_value_heads, self.head_dim],
                 inputs=[self.pre_value_name],
                 outputs=[module_name + ".v_embed_"],
                 op_name=module_name + ".v." + RESHPAE_KIND.reshape_qkv,
@@ -832,6 +854,7 @@ class ATBModelFromTorch(ATBModel):
             f"{indent * 2}super().__init__(self.model_name)",
             "",
             f"{indent * 2}self.num_attention_heads, self.head_dim = {self.num_attention_heads}, {self.head_dim}",
+            f"{indent * 2}self.num_key_value_heads = {self.num_key_value_heads}",
             f"{indent * 2}self.vocab_size = {self.vocab_size}",
         ]
 
@@ -952,10 +975,7 @@ def transform(source_path, input_names=BASIC_INPUT_NAMES, output_file=None, to_q
     print(out)
     "
     """.format(
-            model_name=model_name,
-            vocab_size=atb_model.atb_model_config.vocab_size,
-            num_attention_heads=atb_model.atb_model_config.num_attention_heads,
-            head_dim=atb_model.atb_model_config.head_dim,
+            model_name=model_name
         )
         .replace(" " * 8, "##")  # Replace the inner 8 ' ' to '##' as a mark
         .replace(" " * 4, "")  # Remove all 4 ' '
