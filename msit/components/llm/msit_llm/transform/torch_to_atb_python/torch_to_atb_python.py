@@ -202,7 +202,7 @@ class ATBModelConfig:
 
 
 class ATBModel:
-    def __init__(self, atb_model, atb_model_config=None, output_shape=None):
+    def __init__(self, atb_model, atb_model_config=None, output_shape=None, dtype="float16"):
         atb_model_config = atb_model_config or {}
         if isinstance(atb_model_config, dict):
             self.atb_model_config = ATBModelConfig(**atb_model_config)
@@ -228,6 +228,11 @@ class ATBModel:
                 raise ValueError(f"output_shape len {provided} not equal to required len {required}")
         self.output_shape = output_shape
 
+        supported_dtype = {"float32": torch.float32, "float16": torch.float16, "bfloat16": torch.bfloat16}
+        if not dtype in supported_dtype:
+            raise ValueError(f"dtype={dtype} not supported, valid ones are {list(supported_dtype.keys())}")
+        self.dtype = supported_dtype.get(dtype)
+
         self.head_dim = getattr(atb_model, "head_dim", self.atb_model_config.head_dim)
         self.num_attention_heads = getattr(atb_model, "num_attention_heads", self.atb_model_config.num_attention_heads)
         self.num_key_value_heads = getattr(atb_model, "num_key_value_heads", self.atb_model_config.num_key_value_heads)
@@ -248,7 +253,7 @@ class ATBModel:
         freq = (left.to(right.device).float() @ right.float()).transpose(1, 2)
         freq = torch.cat([freq, freq], dim=-1)[0].npu()  # has to be float npu values, and dim == 2
         logger.debug(f"freq.shape = {freq.shape}")
-        return freq.cos().half(), freq.sin().half()
+        return freq.cos().to(self.dtype), freq.sin().to(self.dtype)
 
     def set_weights(self, weights):
         source_weights = set(weights.keys())
@@ -258,7 +263,7 @@ class ATBModel:
 
         for kk in valid_weights:
             cur_weight = weights[kk]
-            cur_weight = cur_weight.half() if str(cur_weight.dtype).split(".")[-1] == "float32" else cur_weight
+            cur_weight = cur_weight.to(self.dtype) if str(cur_weight.dtype).split(".")[-1] == "float32" else cur_weight
             self.weights[kk] = cur_weight.npu()
 
         self.inv_freq_weight = None
@@ -271,7 +276,7 @@ class ATBModel:
         if FIXED_INPUTS.attention_mask in self.inputs:
             mask_tensor = torch.ones([self.atb_model_config.max_seq_len, self.atb_model_config.max_seq_len])
             attention_mask = torch.where((1 - torch.tril(mask_tensor)).to(torch.bool), -torch.inf, 0)
-            self.weights[FIXED_INPUTS.attention_mask] = attention_mask.half().npu()
+            self.weights[FIXED_INPUTS.attention_mask] = attention_mask.to(self.dtype).npu()
 
         if len(unused_weights) > 0:
             logger.warning(f"unused weights: {unused_weights}")
@@ -301,10 +306,10 @@ class ATBModel:
                 slots_mapping = torch.zeros([batch_size * cur_pos], dtype=torch.int)
             model_inputs[FIXED_INPUTS.slots_mapping] = slots_mapping.npu()
         if FIXED_INPUTS.k_cache in self.inputs:
-            self.k_cache = torch.zeros(self.cache_shape).half() if k_cache is None else k_cache
+            self.k_cache = torch.zeros(self.cache_shape).to(self.dtype) if k_cache is None else k_cache
             model_inputs[FIXED_INPUTS.k_cache] = self.k_cache.npu()
         if FIXED_INPUTS.v_cache in self.inputs:
-            self.v_cache = torch.zeros(self.cache_shape).half() if v_cache is None else v_cache
+            self.v_cache = torch.zeros(self.cache_shape).to(self.dtype) if v_cache is None else v_cache
             model_inputs[FIXED_INPUTS.v_cache] = self.v_cache.npu()
         if FIXED_INPUTS.cos_table in self.inputs or FIXED_INPUTS.sin_table in self.inputs:
             meets_cos_sin_table = FIXED_INPUTS.cos_table in model_inputs and FIXED_INPUTS.sin_table in model_inputs
@@ -324,12 +329,12 @@ class ATBModel:
         # Creats output. Here output_shape maybe None or a dict or list
         if self.output_shape is None:
             self.model_outputs = {
-                ii: torch.ones([batch_size * cur_pos, self.vocab_size]).half().npu() for ii in self.outputs
+                ii: torch.ones([batch_size * cur_pos, self.vocab_size]).to(self.dtype).npu() for ii in self.outputs
             }
         elif isinstance(self.output_shape, dict):
-            self.model_outputs = {kk: torch.ones(vv).half().npu() for kk, vv in self.output_shape.items()}
+            self.model_outputs = {kk: torch.ones(vv).to(self.dtype).npu() for kk, vv in self.output_shape.items()}
         else:
-            self.model_outputs = {kk: torch.ones(vv).half().npu() for kk, vv in zip(self.outputs, self.output_shape)}
+            self.model_outputs = {kk: torch.ones(vv).to(self.dtype).npu() for kk, vv in zip(self.outputs, self.output_shape)}
 
         # Run forward
         bind_map = {}
@@ -390,6 +395,7 @@ class ATBModelFromTorch(ATBModel):
         max_seq_len=1024,
         to_quant=False,
         quant_disable_names=None,
+        dtype="float16",
     ):
         self.torch_model, self.config = torch_model, config
         self.to_quant, self.quant_disable_names = to_quant, quant_disable_names or ()
@@ -453,7 +459,7 @@ class ATBModelFromTorch(ATBModel):
             logger.warning("Will skip build")
         else:
             self.atb_model = self.build_atb_model()
-            super().__init__(atb_model=self.atb_model, atb_model_config=self.atb_model_config)
+            super().__init__(atb_model=self.atb_model, atb_model_config=self.atb_model_config, dtype=dtype)
 
     @staticmethod
     def _get_module_type_by_nn_module_stack(node):

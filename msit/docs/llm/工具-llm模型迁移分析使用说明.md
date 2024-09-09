@@ -79,7 +79,7 @@ msit llm transform [-h] -s SOURCE [-atb ATB_MODEL_PATH] [--enable-sparse] [--to-
   ```py
   import torch, torch_npu
   import llamaforcausallm_atb_float
-  from msit_llm.transform.torch_to_atb_python import ATBModel, ATBModelConfig
+  from msit_llm.transform.torch_to_atb_python import ATBModel
 
   atb_model = ATBModel(llamaforcausallm_atb_float.Model())
   weights = torch.load('test_llama/state_dict.pt')  # Use actual WEIGHT_PATH
@@ -125,7 +125,7 @@ msit llm transform [-h] -s SOURCE [-atb ATB_MODEL_PATH] [--enable-sparse] [--to-
   ```py
   import torch, torch_npu
   import llamaforcausallm_atb_quant
-  from msit_llm.transform.torch_to_atb_python import ATBModel, ATBModelConfig
+  from msit_llm.transform.torch_to_atb_python import ATBModel
 
   atb_model = ATBModel(llamaforcausallm_atb_quant.Model())
   weights = torch.load('test_llama/quant_state_dict.pt')  # Use actual WEIGHT_PATH
