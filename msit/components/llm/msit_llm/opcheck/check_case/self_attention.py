@@ -142,9 +142,15 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
             batch_status = range(len(seq_len))
         return batch_status
 
-    def get_post_mask_coff(self):
+    def get_post_mask_coff(self, data_type):
         kernel_type = self.op_param.get("kernelType", KernelType.KERNELTYPE_DEFAULT.value)
+        mask_type = self.op_param.get("maskType", MaskType.MASK_TYPE_UNDEFINED.value)
+        is_alibi = mask_type == MaskType.MASK_TYPE_ALIBI.value or mask_type == MaskType.MASK_TYPE_ALIBI_COMPRESS.value \
+            or mask_type == MaskType.MASK_TYPE_ALIBI_COMPRESS_LEFT_ALIGN.value \
+            or mask_type == MaskType.MASK_TYPE_ALIBI_COMPRESS_SQRT.value
         if kernel_type == KernelType.KERNELTYPE_HIGH_PRECISION.value or self.optimization_closed == "kernelType":
+            post_mask_coff = 1.0
+        elif data_type == torch.float16 or ((data_type == torch.bfloat16 or data_type == torch.float32) and is_alibi):
             post_mask_coff = 1.0
         else:
             post_mask_coff = -3e38
@@ -193,7 +199,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
             layer_id = int(in_tensors[5][0])
 
         batch_status = self.get_batch_status(in_tensors, seq_len)
-        post_mask_coff = self.get_post_mask_coff()
+        post_mask_coff = self.get_post_mask_coff(q.dtype)
         _, _, head_info, data_type, q_ntokens = self.get_attention_params(q)
         head_num, head_size, kv_head_num = head_info
         max_seq_len = max(seq_len)
