@@ -251,7 +251,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
             self.bind_idx.append(3)
 
         batch_status = self.get_batch_status(in_tensors, seq_len)
-        post_mask_coff = self.get_post_mask_coff()
+        post_mask_coff = self.get_post_mask_coff(q.dtype)
         _, qk_scale, head_info, data_type, q_ntokens = self.get_attention_params(q)
         head_num, head_size, kv_head_num = head_info
         max_seq_len = max(seq_len)
