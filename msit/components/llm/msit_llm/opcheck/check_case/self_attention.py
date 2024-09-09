@@ -150,7 +150,9 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
             or mask_type == MaskType.MASK_TYPE_ALIBI_COMPRESS_SQRT.value
         if kernel_type == KernelType.KERNELTYPE_HIGH_PRECISION.value or self.optimization_closed == "kernelType":
             post_mask_coff = 1.0
-        elif data_type == torch.float16 or ((data_type == torch.bfloat16 or data_type == torch.float32) and is_alibi):
+        elif data_type == torch.float16:
+            post_mask_coff = 1.0
+        elif (data_type == torch.bfloat16 or data_type == torch.float32) and is_alibi:
             post_mask_coff = 1.0
         else:
             post_mask_coff = -3e38
