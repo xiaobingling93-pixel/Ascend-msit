@@ -232,7 +232,7 @@ class ATBModel:
                 raise ValueError(f"output_shape len {provided} not equal to required len {required}")
         self.output_shape = output_shape
 
-        if not dtype in FLOAT_DTYPES:
+        if dtype not in FLOAT_DTYPES:
             raise ValueError(f"dtype={dtype} not supported, valid ones are {list(FLOAT_DTYPES.keys())}")
         self.dtype = FLOAT_DTYPES.get(dtype)
 
@@ -360,7 +360,9 @@ class ATBModel:
         elif isinstance(self.output_shape, dict):
             self.model_outputs = {kk: torch.ones(vv).to(self.dtype).npu() for kk, vv in self.output_shape.items()}
         else:
-            self.model_outputs = {kk: torch.ones(vv).to(self.dtype).npu() for kk, vv in zip(self.outputs, self.output_shape)}
+            self.model_outputs = {
+                kk: torch.ones(vv).to(self.dtype).npu() for kk, vv in zip(self.outputs, self.output_shape)
+            }
 
         # Run forward
         bind_map = {}
