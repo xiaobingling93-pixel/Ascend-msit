@@ -17,7 +17,8 @@ import subprocess
 
 from components.utils.file_open_check import FileStat
 from msit_llm.common.constant import LD_PRELOAD, ATB_PROB_LIB_WITH_ABI, ATB_PROB_LIB_WITHOUT_ABI, \
-                                ASCEND_TOOLKIT_HOME, ATB_OUTPUT_DIR, ATB_CHECK_TYPE, CHECK_TYPE_MAPPING, ATB_EXIT
+                                ASCEND_TOOLKIT_HOME, ATB_OUTPUT_DIR, ATB_CHECK_TYPE, CHECK_TYPE_MAPPING, \
+                                ATB_EXIT, ATB_AIT_LOG_LEVEL
 from msit_llm.common.log import logger
 from msit_llm.dump.initial import is_use_cxx11
             
@@ -79,7 +80,13 @@ def handles_exec(args) -> None:
     subprocess.run(cmds, shell=False)
 
 
-def process_error_check(args) -> None:    
+def process_error_check(args) -> None:
+    atb_log_level_map = {
+        "debug": '0', "info": '1', "warning": '2', "warn": '2', "error": '3', "fatal": '4', "critical": '5'
+    }
+
+    os.environ[ATB_AIT_LOG_LEVEL] = atb_log_level_map[args.log_level]
+
     logger.info("Environment configuring...")
 
     logger.info("User inputs verifying...")
