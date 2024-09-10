@@ -53,6 +53,7 @@ CONFIG_ATTR_CANDIDATES = {
     "num_key_value_heads": ["num_key_value_heads"],
     "hidden_size": ["hidden_size"],
     "rms_norm_eps": ["rms_norm_eps"],
+    "rope_theta": ["rope_theta"],
     "vocab_size": ["vocab_size"],
     "text_config": ["text_config", "llm_config"],
 }
@@ -96,6 +97,7 @@ _RESHPAE_KIND = ["reshape_qkv", "reshape_0_12"]
 RESHPAE_KIND = namedtuple("RESHPAE_KIND", _RESHPAE_KIND)(*_RESHPAE_KIND)
 
 VALID_NAME_CHARS = string.ascii_letters + string.digits + "_."
+FLOAT_DTYPES = {"float32": torch.float32, "float16": torch.float16, "bfloat16": torch.bfloat16}
 
 
 def get_config_attr(config, attr, default=None):
@@ -178,11 +180,13 @@ class ATBModelConfig:
         head_dim=1,
         max_batch_size=1,
         max_seq_len=1024,
+        rope_theta=1e4,
         **kwargs,
     ):
         self.vocab_size, self.num_attention_heads, self.head_dim = vocab_size, num_attention_heads, head_dim
         self.max_batch_size, self.max_seq_len, self.kwargs = max_batch_size, max_seq_len, kwargs
         self.num_key_value_heads = num_key_value_heads if num_key_value_heads > 0 else num_attention_heads
+        self.rope_theta = rope_theta
         for kk, vv in kwargs.items():
             setattr(self, kk, vv)
 
@@ -192,6 +196,7 @@ class ATBModelConfig:
             num_attention_heads=self.num_attention_heads,
             num_key_value_heads=self.num_key_value_heads,
             head_dim=self.head_dim,
+            rope_theta=self.rope_theta,
             max_batch_size=self.max_batch_size,
             max_seq_len=self.max_seq_len,
             **self.kwargs,
@@ -228,22 +233,26 @@ class ATBModel:
                 raise ValueError(f"output_shape len {provided} not equal to required len {required}")
         self.output_shape = output_shape
 
-        supported_dtype = {"float32": torch.float32, "float16": torch.float16, "bfloat16": torch.bfloat16}
-        if not dtype in supported_dtype:
-            raise ValueError(f"dtype={dtype} not supported, valid ones are {list(supported_dtype.keys())}")
-        self.dtype = supported_dtype.get(dtype)
+        if not dtype in FLOAT_DTYPES:
+            raise ValueError(f"dtype={dtype} not supported, valid ones are {list(FLOAT_DTYPES.keys())}")
+        self.dtype = FLOAT_DTYPES.get(dtype)
 
         self.head_dim = getattr(atb_model, "head_dim", self.atb_model_config.head_dim)
         self.num_attention_heads = getattr(atb_model, "num_attention_heads", self.atb_model_config.num_attention_heads)
         self.num_key_value_heads = getattr(atb_model, "num_key_value_heads", self.atb_model_config.num_key_value_heads)
         self.vocab_size = getattr(atb_model, "vocab_size", self.atb_model_config.vocab_size)
+        self.rope_theta = getattr(atb_model, "rope_theta", self.atb_model_config.rope_theta)
         self.cache_shape = [
             self.atb_model_config.max_batch_size,
             self.atb_model_config.max_seq_len,
             self.num_key_value_heads,
             self.head_dim,
         ]
-        self.k_cache, self.v_cache = None, None  # Used for encoder - decoder LLM
+        self.k_cache, self.v_cache, self.inv_freq_weight = None, None, None  # Used for encoder - decoder LLM
+
+    def _calc_inv_freq_by_rope_theta(self):
+        inv_freq_weight = 1.0 / (self.rope_theta ** (torch.arange(0, self.head_dim, 2) / self.head_dim))
+        return inv_freq_weight.float().npu()
 
     def _calc_cos_sin_table_from_inv_freq(self, position_ids):
         logger.debug(f"self.inv_freq_weight.shape = {self.inv_freq_weight.shape}")
@@ -263,15 +272,21 @@ class ATBModel:
 
         for kk in valid_weights:
             cur_weight = weights[kk]
-            cur_weight = cur_weight.to(self.dtype) if str(cur_weight.dtype).split(".")[-1] == "float32" else cur_weight
+            dtype_str = str(cur_weight.dtype).split(".")[-1]
+            if dtype_str in FLOAT_DTYPES and cur_weight.dtype != self.dtype:
+                cur_weight = cur_weight.to(self.dtype)
             self.weights[kk] = cur_weight.npu()
 
-        self.inv_freq_weight = None
         for weight_name in unused_weights:
             if "invfreq" in weight_name.split(".")[-1].replace("_", "").lower():
                 self.inv_freq_weight = weights[weight_name].squeeze().float().npu()
                 unused_weights.remove(weight_name)
                 break
+
+        need_cos_sin_table = FIXED_INPUTS.cos_table in self.inputs or FIXED_INPUTS.sin_table in self.inputs
+        if need_cos_sin_table and self.inv_freq_weight is None:
+            logger.info(f"Set inv_freq_weight be rope_theta={rope_theta}")
+            self.inv_freq_weight = self._calc_inv_freq_by_rope_theta()
 
         if FIXED_INPUTS.attention_mask in self.inputs:
             mask_tensor = torch.ones([self.atb_model_config.max_seq_len, self.atb_model_config.max_seq_len])
@@ -425,14 +440,15 @@ class ATBModelFromTorch(ATBModel):
 
         self.torch_module_to_atb_map = {}
         self.num_key_value_heads = get_config_attr(self.config, "num_key_value_heads", default=self.num_attention_heads)
-        rms_norm_eps = get_config_attr(self.config, "rms_norm_eps", default=1e-5)
+        self.rope_theta = get_config_attr(self.config, "rope_theta", default=1e4)
+        self.rms_norm_eps = get_config_attr(self.config, "rms_norm_eps", default=1e-5)
         for kk, vv in TORCH_MODULE_TO_ATB_MAP.items():
             re_key = re.compile(kk)
             if vv.get("op_type", None) == "SelfAttention" and "op_param" in vv:
                 vv["op_param"].update({"headNum": self.num_attention_heads, "kvHeadNum": self.num_key_value_heads})
                 vv["op_param"].update({"qkScale": 1 / (float(self.head_dim) ** 0.5)})
             elif vv.get("op_type", None) == "RmsNorm" and "op_param" in vv:
-                vv["op_param"].update({"epsilon": rms_norm_eps})
+                vv["op_param"].update({"epsilon": self.rms_norm_eps})
             self.torch_module_to_atb_map[re_key] = Operation(**vv)
 
         self.pre_query_name, self.pre_key_name, self.pre_value_name, self.is_apply_rope = "", "", "", False
@@ -860,8 +876,8 @@ class ATBModelFromTorch(ATBModel):
             f"{indent * 2}super().__init__(self.model_name)",
             "",
             f"{indent * 2}self.num_attention_heads, self.head_dim = {self.num_attention_heads}, {self.head_dim}",
-            f"{indent * 2}self.num_key_value_heads = {self.num_key_value_heads}",
-            f"{indent * 2}self.vocab_size = {self.vocab_size}",
+            f"{indent * 2}self.num_key_value_heads, self.vocab_size = {self.num_key_value_heads}, {self.vocab_size}",
+            f"{indent * 2}self.rope_theta = {self.rope_theta}",
         ]
 
         def _get_input_output_name(graph_name):
