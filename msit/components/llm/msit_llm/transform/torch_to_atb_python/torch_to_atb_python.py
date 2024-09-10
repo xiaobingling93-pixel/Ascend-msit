@@ -255,6 +255,7 @@ class ATBModel:
     def init_kv_cache(self):
         self.past_key_values = {ii: torch.zeros(self.cache_shape).to(self.dtype).npu() for ii in self.kv_cache_names}
         self.weights.update(self.past_key_values)
+        self.atb_model.set_weights(self.past_key_values)
 
     def _calc_inv_freq_by_rope_theta(self):
         inv_freq_weight = 1.0 / (self.rope_theta ** (torch.arange(0, self.head_dim, 2) / self.head_dim))
@@ -299,6 +300,8 @@ class ATBModel:
             attention_mask = torch.where((1 - torch.tril(mask_tensor)).to(torch.bool), -torch.inf, 0)
             self.weights[FIXED_INPUTS.attention_mask] = attention_mask.to(self.dtype).npu()
 
+        self.atb_model.set_weights(self.weights)  # ATB provided function, no need to pass weights again
+
         if len(self.kv_cache_names) > 0:
             self.init_kv_cache()
             missing_weights -= set(self.kv_cache_names)
@@ -307,8 +310,7 @@ class ATBModel:
             logger.warning(f"unused weights: {unused_weights}")
         if len(missing_weights) > 0:
             logger.warning(f"missing weights: {missing_weights}")
-        self.atb_model.set_weights(self.weights)  # ATB provided function, no need to pass weights again
-
+        
     def forward(
         self, input_ids=None, position_ids=None, slots_mapping=None, seq_len=None, **kwargs
     ):
