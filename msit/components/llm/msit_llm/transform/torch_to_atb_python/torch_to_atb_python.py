@@ -392,7 +392,7 @@ class ATBModelFromTorch(ATBModel):
     >>> atb_model.set_weights(dict(mm.named_buffers()))
     >>> out = atb_model(input_ids=input_ids, position_ids=position_ids)
     >>> print({kk: vv.shape for kk, vv in out.items()})
-    # {'output': torch.Size([1, 32000])}
+    # {'output': torch.Size([32, 32000])}
     >>> print(torch.allclose(torch_out, out['output'].cpu().float(), atol=5e-2))
     # True
     >>> atb_model.to_file()  # Save atb model to a py file
