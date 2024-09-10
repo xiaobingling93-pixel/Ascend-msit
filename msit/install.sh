@@ -74,17 +74,14 @@ if [ "$arg_help" -eq "1" ]; then
   exit;
 fi
 
-SITE_PACKAGES="$(python3 -c 'import site; print(site.getsitepackages()[0])')"
-CONFIG_FILE="$SITE_PACKAGES/components/config/config.ini"
-
 # 若pip源为华为云，则优先安装skl2onnx(当前mirrors.huaweicloud.com中skl2onnx已停止更新，不包含1.14.1及以上版本)
 pre_check_skl2onnx(){
-  http_mirror_url=$(grep '^http_mirror_url=' "$CONFIG_FILE" | sed 's/^http_mirror_url=//')
-  https_mirror_url=$(grep '^https_mirror_url=' "$CONFIG_FILE" | sed 's/^https_mirror_url=//')
+  http_mirror_url=$(python3 -c "from components.utils.install import get_public_url; print(get_public_url('http_mirror_url'))")
+  https_mirror_url=$(python3 -c "from components.utils.install import get_public_url; print(get_public_url('https_mirror_url'))")
   pip_source_index_url=$(pip3 config list | grep index-url | awk -F'=' '{print $2}' | tr -d "'")
   if [ "${pip_source_index_url}" == "${http_mirror_url}" ] || [ "${pip_source_index_url}" == "${https_mirror_url}" ]
   then
-    mirror_tools_url=$(grep '^mirror_tools_url=' "$CONFIG_FILE" | sed 's/^mirror_tools_url=//')
+    mirror_tools_url=$(python3 -c "from components.utils.install import get_public_url; print(get_public_url('mirror_tools_url'))")
     pip3 install skl2onnx==1.14.1 -i $mirror_tools_url --trusted-host mirrors.tools.huawei.com
   fi
 }

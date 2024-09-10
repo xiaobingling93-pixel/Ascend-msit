@@ -15,6 +15,8 @@
 import os
 import time
 from msit_llm.transform.torch_to_float_atb import utils
+from components.utils.install import get_public_url
+
 
 def float_model_cpp_gen(parsed_model, save_name=None, save_dir=None):
     from msit_llm.transform.torch_to_float_atb import float_model_cpp_templates as templates  # avoiding circular import
@@ -22,7 +24,10 @@ def float_model_cpp_gen(parsed_model, save_name=None, save_dir=None):
     model_name_lower = parsed_model.get("name", "model").lower()
 
     rr = ""
-    rr += templates.copyright_header.format(year=time.localtime().tm_year)
+    rr += templates.copyright_header.format(
+        year=time.localtime().tm_year,
+        licenses_url=get_public_url('msit_licenses_url')
+    )
     rr += templates.include_header_formater.format(
         model_name_lower=model_name_lower,
         other_operations="",

@@ -137,7 +137,7 @@ class DumpCommand(BaseCommand):
             dest="type",
             required=False,
             nargs='+',
-            default=['tensor'],
+            default=['tensor', 'model'],
             choices=['model', 'layer', 'op', 'kernel', 'tensor', 'cpu_profiling', 'onnx'],
             help='dump type.')
 
@@ -149,6 +149,16 @@ class DumpCommand(BaseCommand):
             type=check_device_integer,
             default=None,
             help='Specify a single device ID for dumping data, will skip other devices.')
+        
+        parser.add_argument(
+            '-seed',
+            required=False,
+            dest="set_random_seed",
+            type=check_data_can_convert_to_int,
+            nargs='?',
+            const=2024,
+            default=None,
+            help='set random seed, will ensure that the random results are consistent with each run.')
 
         parser.add_argument(
             '-seed',

@@ -155,6 +155,10 @@ class Synthesizer(object):
             raise ValueError()
 
 
+        if not split_command:
+            logger.error("Command is empty,please try to run it first")
+            raise ValueError()
+
         known_invalid_command = {
             "rm", "mv", "mkfs", "dd",
             "chown", "chmod",

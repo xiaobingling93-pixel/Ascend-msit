@@ -90,6 +90,7 @@ def read_atb_data(file_path):
     raise ValueError("Tensor file path must be end with .bin.")
 
 
+
 def seed_all(seed=2024):
     if not isinstance(seed, int):
         raise argparse.ArgumentTypeError("%s is not an int." % seed)

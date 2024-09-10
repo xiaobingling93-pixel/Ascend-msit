@@ -65,6 +65,7 @@ class TestSynthezier(TestCase):
                 self.assertEqual(len(logger_output), 1)
                 self.assertRegex(logger_output[0], r'should be used only by its owner or superuser')
     
+    
     def test_analyzer_from_mixed(self):
         import time
         time.sleep(1) # The analyze is so fast that the time stamp does not change, leads to permssion error
