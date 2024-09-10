@@ -84,13 +84,12 @@ _FIXED_INPUTS = {
     "position_ids",
     "cos_table",
     "sin_table",
-    "k_cache",
-    "v_cache",
     "slots_mapping",
     "attention_mask",
     "seq_len",
 }
 FIXED_INPUTS = namedtuple("FIXED_INPUTS", _FIXED_INPUTS)(*_FIXED_INPUTS)
+KV_CACHE_SURFFIX = namedtuple("FIXED_INPUTS", ["k_cache", "v_cache"])("k_cache", "v_cache")
 BASIC_INPUT_NAMES = (FIXED_INPUTS.input_ids,)
 
 _RESHPAE_KIND = ["reshape_qkv", "reshape_0_12"]
@@ -248,7 +247,14 @@ class ATBModel:
             self.num_key_value_heads,
             self.head_dim,
         ]
-        self.k_cache, self.v_cache, self.inv_freq_weight = None, None, None  # Used for encoder - decoder LLM
+        self.inv_freq_weight = None
+
+        self.kv_cache_names = [ii for ii in self.input_names if ii.split('.')[-1] in KV_CACHE_SURFFIX]
+        self.past_key_values = {}
+
+    def init_kv_cache(self):
+        self.past_key_values = {ii: torch.zeros(self.cache_shape).to(self.dtype).npu() for ii in self.kv_cache_names}
+        self.weights.update(self.past_key_values)
 
     def _calc_inv_freq_by_rope_theta(self):
         inv_freq_weight = 1.0 / (self.rope_theta ** (torch.arange(0, self.head_dim, 2) / self.head_dim))
@@ -285,7 +291,7 @@ class ATBModel:
 
         need_cos_sin_table = FIXED_INPUTS.cos_table in self.inputs or FIXED_INPUTS.sin_table in self.inputs
         if need_cos_sin_table and self.inv_freq_weight is None:
-            logger.info(f"Set inv_freq_weight be rope_theta={rope_theta}")
+            logger.info(f"Set inv_freq_weight be rope_theta={self.rope_theta}")
             self.inv_freq_weight = self._calc_inv_freq_by_rope_theta()
 
         if FIXED_INPUTS.attention_mask in self.inputs:
@@ -293,13 +299,19 @@ class ATBModel:
             attention_mask = torch.where((1 - torch.tril(mask_tensor)).to(torch.bool), -torch.inf, 0)
             self.weights[FIXED_INPUTS.attention_mask] = attention_mask.to(self.dtype).npu()
 
+        if len(self.kv_cache_names) > 0:
+            self.init_kv_cache()
+            missing_weights -= set(self.kv_cache_names)
+
         if len(unused_weights) > 0:
             logger.warning(f"unused weights: {unused_weights}")
         if len(missing_weights) > 0:
             logger.warning(f"missing weights: {missing_weights}")
         self.atb_model.set_weights(self.weights)  # ATB provided function, no need to pass weights again
 
-    def forward(self, input_ids=None, position_ids=None, k_cache=None, v_cache=None, slots_mapping=None, **kwargs):
+    def forward(
+        self, input_ids=None, position_ids=None, slots_mapping=None, seq_len=None, **kwargs
+    ):
         # Basic inputs
         model_inputs, batch_size, cur_pos = {}, 1, 1
         if input_ids is not None:
@@ -313,26 +325,23 @@ class ATBModel:
             logger.debug(f"cur_pos = {cur_pos}")
 
         # inputs interpreted from others, or with default values
-        if FIXED_INPUTS.seq_len in self.inputs and FIXED_INPUTS.seq_len not in kwargs:
-            seq_len = torch.ones([batch_size], dtype=torch.int).to(position_ids.device) * cur_pos
+        if FIXED_INPUTS.seq_len in self.inputs:
+            if seq_len is None:
+                seq_len = torch.ones([batch_size], dtype=torch.int).to(position_ids.device) * cur_pos
             model_inputs[FIXED_INPUTS.seq_len] = seq_len.npu()
         if FIXED_INPUTS.slots_mapping in self.inputs:
             if slots_mapping is None:
                 slots_mapping = torch.zeros([batch_size * cur_pos], dtype=torch.int)
             model_inputs[FIXED_INPUTS.slots_mapping] = slots_mapping.npu()
-        if FIXED_INPUTS.k_cache in self.inputs:
-            self.k_cache = torch.zeros(self.cache_shape).to(self.dtype) if k_cache is None else k_cache
-            model_inputs[FIXED_INPUTS.k_cache] = self.k_cache.npu()
-        if FIXED_INPUTS.v_cache in self.inputs:
-            self.v_cache = torch.zeros(self.cache_shape).to(self.dtype) if v_cache is None else v_cache
-            model_inputs[FIXED_INPUTS.v_cache] = self.v_cache.npu()
+
+        # Check kwargs
+        model_inputs.update({kk: vv.npu() for kk, vv in kwargs.items()})
         if FIXED_INPUTS.cos_table in self.inputs or FIXED_INPUTS.sin_table in self.inputs:
             meets_cos_sin_table = FIXED_INPUTS.cos_table in model_inputs and FIXED_INPUTS.sin_table in model_inputs
-            if not meets_cos_sin_table and self.inv_freq_weight is not None:
+            if not meets_cos_sin_table and self.inv_freq_weight is not None and position_ids is not None:
                 # if either cos_table or sin_table is missing, the values of both will be calculated
                 cos_table, sin_table = self._calc_cos_sin_table_from_inv_freq(position_ids)
                 model_inputs[FIXED_INPUTS.cos_table], model_inputs[FIXED_INPUTS.sin_table] = cos_table, sin_table
-        model_inputs.update({kk: vv.npu() for kk, vv in kwargs.items()})
 
         # Show missing inputs, in some cases like testing scenario, this may not an error
         missing_inputs = self.inputs - set(model_inputs.keys()) - set(self.weights.keys())
@@ -357,8 +366,8 @@ class ATBModel:
             bind_map[FIXED_INPUTS.seq_len] = model_inputs[FIXED_INPUTS.seq_len].cpu()
         return self.atb_model.forward(model_inputs, self.model_outputs, bind_map)
 
-    def __call__(self, input_ids=None, position_ids=None, k_cache=None, v_cache=None, slots_mapping=None, **kwargs):
-        return self.forward(input_ids, position_ids, k_cache, v_cache, slots_mapping, **kwargs)
+    def __call__(self, input_ids=None, position_ids=None, slots_mapping=None, **kwargs):
+        return self.forward(input_ids, position_ids, slots_mapping, **kwargs)
 
 
 class ATBModelFromTorch(ATBModel):
@@ -454,7 +463,7 @@ class ATBModelFromTorch(ATBModel):
         self.pre_query_name, self.pre_key_name, self.pre_value_name, self.is_apply_rope = "", "", "", False
         self.model_inputs, self.model_outputs, self.operations = [], [], []
         # base graph is set execute_as_single=False, has to keep all operaions as property
-        self.base_graph_operations = []
+        self.base_graph_operations, self.k_cache_names, self.v_cache_names = [], [], []
 
         self.convert_fx_traced_module()
         if to_quant:
@@ -575,38 +584,39 @@ class ATBModelFromTorch(ATBModel):
             FIXED_INPUTS.seq_len,
         ]
 
+        query_name, key_name = self.pre_query_name, self.pre_key_name
         if self.is_apply_rope:
-            inputs = [self.pre_query_name, self.pre_key_name, "gather_cos.out", "gather_sin.out", FIXED_INPUTS.seq_len]
-            outputs = [module_name + ".q_embed", module_name + ".k_embed"]
+            inputs = [query_name, key_name, "gather_cos.out", "gather_sin.out", FIXED_INPUTS.seq_len]
+            query_name, key_name = module_name + ".q_embed", module_name + ".k_embed"
             self.operations.append(
                 Operation(
                     op_type="Rope",
                     op_param={"rotaryCoeff": 2},
                     inputs=inputs,
-                    outputs=outputs,
+                    outputs=[query_name, key_name],
                     op_name=module_name + ".rope",
                 )
             )
 
+        k_cache_name = module_name + "." + KV_CACHE_SURFFIX.k_cache
+        v_cache_name = module_name + "." + KV_CACHE_SURFFIX.v_cache
         reshape_and_cache_inputs = [
-            module_name + ".k_embed_",
-            module_name + ".v_embed_",
-            FIXED_INPUTS.k_cache,
-            FIXED_INPUTS.v_cache,
-            FIXED_INPUTS.slots_mapping,
+            module_name + ".k_embed_", module_name + ".v_embed_", k_cache_name, v_cache_name, FIXED_INPUTS.slots_mapping
         ]
+        self.k_cache_names.append(k_cache_name)
+        self.v_cache_names.append(v_cache_name)
         self.operations += [
             Operation(
                 op_type="add_reshape",
                 function=lambda org_shape: [org_shape[0], self.num_attention_heads, self.head_dim],
-                inputs=[module_name + ".q_embed"],
+                inputs=[query_name],
                 outputs=[module_name + ".q_embed_"],
                 op_name=module_name + ".q." + RESHPAE_KIND.reshape_qkv,
             ),
             Operation(
                 op_type="add_reshape",
                 function=lambda org_shape: [org_shape[0], self.num_key_value_heads, self.head_dim],
-                inputs=[module_name + ".k_embed"],
+                inputs=[key_name],
                 outputs=[module_name + ".k_embed_"],
                 op_name=module_name + ".k." + RESHPAE_KIND.reshape_qkv,
             ),
@@ -621,7 +631,7 @@ class ATBModelFromTorch(ATBModel):
                 op_type="ReshapeAndCache",
                 op_param={},
                 inputs=reshape_and_cache_inputs,
-                outputs=[FIXED_INPUTS.k_cache, FIXED_INPUTS.v_cache],
+                outputs=[k_cache_name, v_cache_name],
                 op_name=module_name + ".reshape_and_cache",
             ),
             atb_operation,
@@ -634,14 +644,13 @@ class ATBModelFromTorch(ATBModel):
             ),
         ]
 
-        if FIXED_INPUTS.k_cache not in self.model_inputs:
+        if FIXED_INPUTS.slots_mapping not in self.model_inputs:
             self.model_inputs += [
-                FIXED_INPUTS.k_cache,
-                FIXED_INPUTS.v_cache,
                 FIXED_INPUTS.slots_mapping,
                 FIXED_INPUTS.attention_mask,
                 FIXED_INPUTS.seq_len,
             ]
+        self.model_inputs += [k_cache_name, v_cache_name]
 
     def _refine_inputs_outputs(self, input_node_map, output_node_map, operation_outputs):
         gathered_module_inputs = {}
@@ -893,7 +902,7 @@ class ATBModelFromTorch(ATBModel):
 
             graph_inputs, graph_outputs = stacked_inputs.pop(0), stacked_outputs.pop(0)
             contents.append(f"{indent * 2}{graph_name}_inputs = [")
-            for ii in graph_inputs:
+            for ii in sorted(graph_inputs, key=lambda xx: "0" if xx in FIXED_INPUTS else xx):
                 contents.append(f"{indent * 3}'{ii}',")
             contents.append(f"{indent * 2}]")
 
@@ -988,18 +997,8 @@ def transform(source_path, input_names=BASIC_INPUT_NAMES, output_file=None, to_q
     atb_model.set_weights(weights)
 
     input_len = 32
-    out = atb_model.forward(
-        input_ids=torch.arange(input_len),
-        position_ids=torch.arange(input_len),
-        cos_table=torch.rand(input_len, atb_model.head_dim),
-        sin_table=torch.rand(input_len, atb_model.head_dim),
-    )
+    out = atb_model.forward(input_ids=torch.arange(input_len), position_ids=torch.arange(input_len))
     print(out)
     "
-    """.format(
-            model_name=model_name
-        )
-        .replace(" " * 8, "##")  # Replace the inner 8 ' ' to '##' as a mark
-        .replace(" " * 4, "")  # Remove all 4 ' '
-        .replace("##", " " * 4)  # Replace the marked '##' back to 4 ' '
+    """.format(model_name=model_name).replace(" " * 4, "")  # Remove the prefix "    "
     )
