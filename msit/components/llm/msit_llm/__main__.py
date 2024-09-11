@@ -22,7 +22,7 @@ from msit_llm.opcheck.opchecker import OpChecker, NAMEDTUPLE_PRECISION_METRIC, N
 from msit_llm.errcheck.process import process_error_check
 from msit_llm.common.utils import str2bool, check_positive_integer, check_device_integer, safe_string, \
     check_ids_string, check_number_list, check_output_path_legality, check_input_path_legality, check_process_integer, \
-    check_dump_time_integer, check_data_can_convert_to_int
+    check_dump_time_integer, check_data_can_convert_to_int, FileStat
 from msit_llm.bc_analyze import Synthesizer, Analyzer
 from msit_llm.common.log import logger, set_log_level, LOG_LEVELS
 
@@ -425,7 +425,7 @@ class ErrCheck(BaseCommand):
             '-o',
             dest="output",
             required=False,
-            type=safe_string,
+            type=FileStat,
             default='',
             help="Directory that stores the error information. If not provided, current directory will be used."
         )
