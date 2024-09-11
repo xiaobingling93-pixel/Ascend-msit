@@ -14,48 +14,60 @@
 import os
 import shutil
 import stat
-import safetensor
-from safetensors.torch import save_file
 
 import pytest
+import pandas as pd
 from unittest import mock
 import torch
-import numpy as np
+from glob import glob
+from safetensors.torch import save_file  
 
-import msit_llm.compare
-
+torch.manual_seed(0)
 
 
 FILE_PERMISSION = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP
-FAKE_GOLDEN_DATA_PATH = "test_acc_cmp_fake_golden_data"
-FAKE_MY_DATA_PATH = "test_acc_cmp_fake_test_data"
+FAKE_GOLDEN_DATA_PATH = "./test_acc_cmp_fake_golden_data"
+FAKE_MY_DATA_PATH = "./test_acc_cmp_fake_test_data"
+OUTPUT_CSV_PATH = "./output_csv_path"
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope='module', autouse=True)
 def test_fake_golden_data_path():
 
     if not os.path.exists(FAKE_GOLDEN_DATA_PATH):
-        os.makedirs(os.path.join(FAKE_GOLDEN_DATA_PATH), mode=0o750)
-        tensors = {"weight":torch.random((2, 2))}
+        os.makedirs(FAKE_GOLDEN_DATA_PATH, mode=0o750)
+        tensors = {"weight":torch.randint(0, 1, (2, 2), dtype=torch.int8).to(dtype=torch.float32)}
         save_file(tensors, os.path.join(FAKE_GOLDEN_DATA_PATH, "model.safetensors"))
     yield FAKE_GOLDEN_DATA_PATH
 
     if os.path.exists(FAKE_GOLDEN_DATA_PATH):
-        shutil.rmtree(FAKE_GOLDEN_DATA_PATH)  
+        shutil.rmtree(FAKE_GOLDEN_DATA_PATH)
 
-@pytest.fixture(scope='module')
-def test_fake_golden_data_path():
 
-    if not os.path.exists(FAKE_GOLDEN_DATA_PATH):
-        os.makedirs(os.path.join(FAKE_GOLDEN_DATA_PATH), mode=0o750)
-        tensors = {"weight":torch.random((2, 2)),"weight_offset":torch(0),"weight_scale":torch(1)}
-        save_file(tensors, os.path.join(FAKE_GOLDEN_DATA_PATH, "model.safetensors"))
-    yield FAKE_GOLDEN_DATA_PATH
+@pytest.fixture(scope='module', autouse=True)
+def test_fake_quant_data_path():
 
-    if os.path.exists(FAKE_GOLDEN_DATA_PATH):
-        shutil.rmtree(FAKE_GOLDEN_DATA_PATH)  
+    if not os.path.exists(FAKE_MY_DATA_PATH):
+        os.makedirs(FAKE_MY_DATA_PATH, mode=0o750)
+        tensors = {"weight":torch.randint(0, 1, (2, 2), dtype=torch.int8),
+                   "weight_offset":torch.zeros(1),
+                   "weight_scale":torch.ones(1)
+                   }
+        save_file(tensors, os.path.join(FAKE_MY_DATA_PATH, "model.safetensors"))
+    yield FAKE_MY_DATA_PATH
+
+    if os.path.exists(FAKE_MY_DATA_PATH):
+        shutil.rmtree(FAKE_MY_DATA_PATH)
+
 
 def test_compare_weight_given_loaded_data_when_valid_then_pass():
-    msit_llm.compare.cmp_weight.compare_weight(FAKE_GOLDEN_DATA_PATH, FAKE_MY_DATA_PATH, "./")
-    row_data = msit_llm.compare.read_data("./")
-    assert row_data["cosine_similarity"] == 1.0
+    from msit_llm.compare.cmp_weight import compare_weight
+    if not os.path.exists(OUTPUT_CSV_PATH):
+        os.makedirs(OUTPUT_CSV_PATH, mode=0o750)
+    compare_weight(FAKE_GOLDEN_DATA_PATH, FAKE_MY_DATA_PATH, OUTPUT_CSV_PATH)
+    csv_file_path = glob(f'{OUTPUT_CSV_PATH}/*.csv')[0]
+    row_data = pd.read_csv(csv_file_path)
+    assert row_data["cosine_similarity"][0] == 1.0
+
+    if os.path.exists(OUTPUT_CSV_PATH):
+        shutil.rmtree(OUTPUT_CSV_PATH)
