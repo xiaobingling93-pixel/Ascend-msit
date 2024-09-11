@@ -64,6 +64,7 @@ class BasicDataInfo:
             token_id = self.get_token_id(os.path.dirname(cur_path))
         return token_id
 
+
 def fill_row_data(data_info: BasicDataInfo, loaded_my_data=None, loaded_golden_data=None, is_broadcast_tensor=False):
     # 第三个参数“is_broadcast_tensor”用于两个模型batch size不一致时将低维的tensor广播到高维进行比较
     # 创建一条比较数据
