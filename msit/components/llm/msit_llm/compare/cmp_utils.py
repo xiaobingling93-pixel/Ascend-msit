@@ -38,8 +38,9 @@ class BasicDataInfo:
     def _count(cls):
         cls.count_data_id += 1
 
-    def __init__(self, golden_data_path, my_data_path, token_id=0, data_id=None):
-        self.token_id, self.my_data_path, self.golden_data_path = token_id, my_data_path, golden_data_path
+    def __init__(self, golden_data_path, my_data_path, token_id=None, data_id=None):
+        self.my_data_path, self.golden_data_path = my_data_path, golden_data_path
+        self.token_id = self.get_token_id(my_data_path) if token_id is None else token_id
         self.data_id = self.count_data_id if data_id is None else data_id
         self._count()
 
@@ -51,6 +52,17 @@ class BasicDataInfo:
             MY_DATA_PATH: self.my_data_path,
         }
 
+    def get_token_id(self, cur_path):
+        from msit_llm.common.constant import GLOBAL_HISTORY_AIT_DUMP_PATH_LIST
+        dirseg = cur_path.split(os.path.sep)
+        if len(dirseg) >= 4 and (dirseg[-3] == 'tensors' or dirseg[-3] == "torch_tensors") and \
+            any([dirseg[-4].startswith(x) for x in GLOBAL_HISTORY_AIT_DUMP_PATH_LIST]):
+            token_id = dirseg[-1]
+        elif cur_path == os.path.dirname(cur_path):
+            token_id = 0
+        else:
+            token_id = self.get_token_id(os.path.dirname(cur_path))
+        return token_id
 
 def fill_row_data(data_info: BasicDataInfo, loaded_my_data=None, loaded_golden_data=None, is_broadcast_tensor=False):
     # 第三个参数“is_broadcast_tensor”用于两个模型batch size不一致时将低维的tensor广播到高维进行比较
