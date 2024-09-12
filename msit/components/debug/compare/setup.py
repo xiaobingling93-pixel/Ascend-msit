@@ -39,7 +39,7 @@ debug_sub_task_entry_points = [
 
 setup(
     name='msit-compare',
-    version='7.0.0c730',
+    version='7.0.0c912',
     description='This tool enables one-click network-wide accuracy analysis of gold model.',
     long_description="",
     long_description_content_type='text/markdown',
