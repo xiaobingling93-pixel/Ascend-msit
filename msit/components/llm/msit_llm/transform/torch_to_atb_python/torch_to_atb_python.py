@@ -907,6 +907,14 @@ class ATBModelFromTorch(ATBModel):
         write_file(output_file, contents_str)
         return output_file
 
+def generate_infer_file(output_file, source_path):
+    from pathlib import Path
+    infer_file = Path(output_file).with_name('run.py')
+    contents_str = Path(__file__).with_name('run.py').read_text()
+    contents_str = contents_str.replace("atb_model_symbol", Path(output_file).stem)
+    contents_str = contents_str.replace("model_path_symbol", source_path)    
+    write_file(infer_file, contents_str)
+    return infer_file
 
 def transform(source_path, input_names=BASIC_INPUT_NAMES, output_file=None, to_quant=False, quant_disable_names=None):
     logger.info("Building model using transformers...")
@@ -961,3 +969,10 @@ def transform(source_path, input_names=BASIC_INPUT_NAMES, output_file=None, to_q
         .replace(" " * 4, "")  # Remove all 4 ' '
         .replace("##", " " * 4)  # Replace the marked '##' back to 4 ' '
     )
+
+    infer_file = generate_infer_file(output_file, source_path)
+    logger.info("=" * 30)
+    logger.info(f"Inference example saved to: {infer_file}\n")
+    logger.info(f"\n"
+                "You can run the model using the command below:\n"
+                "    python run.py")
