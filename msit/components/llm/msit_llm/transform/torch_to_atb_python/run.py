@@ -1,4 +1,3 @@
-import argparse
 from pathlib import Path
 import torch
 import torch_npu
@@ -35,16 +34,16 @@ def load_model_dict(model_path):
 
 class CausalLM(PreTrainedModel):
     def __init__(self, model_path):
-            config = AutoConfig.from_pretrained(model_path)
-            super().__init__(config)
+        config = AutoConfig.from_pretrained(model_path)
+        super().__init__(config)
 
-            device = torch.device(f'npu')
-            torch.npu.set_device(device)        
-            self.placeholder = torch.zeros(1, device=device)
+        device = torch.device(f'npu')
+        torch.npu.set_device(device)        
+        self.placeholder = torch.zeros(1, device=device)
 
-            self.atb_model = ATBModel(Model())
-            weights = load_model_dict(model_path)
-            self.atb_model.set_weights(weights)
+        self.atb_model = ATBModel(Model())
+        weights = load_model_dict(model_path)
+        self.atb_model.set_weights(weights)
 
     def init_kv_cache(self):
         self.atb_model.init_kv_cache()
@@ -157,13 +156,15 @@ class Runner:
 if __name__ == '__main__':
     runner = Runner("model_path_symbol")
 
-    input_text = '好雨知时节，当春'
+    inputs = '好雨知时节，当春'
 
     runner.warm_up()
-    output_text = runner.infer(input_text, use_cache=False)
+    outputs = runner.infer(inputs, use_cache=False)
 
-    print('-' * 40)
-    print('Input:', input_text)
-    print('Output:', output_text)
+    import logging
+    logger = logging.getLogger()
+    logger.info('-' * 40)
+    logger.info('Input:%s', inputs)
+    logger.info('Output:%s', outputs)
 
 
