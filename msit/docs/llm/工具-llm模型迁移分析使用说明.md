@@ -67,31 +67,32 @@ msit llm transform [-h] -s SOURCE [-atb ATB_MODEL_PATH] [--enable-sparse] [--to-
   # ==============================
   # Run like:
   #
+  # python3 -c "
   # import torch, torch_npu
   # import llamaforcausallm_atb_float
-  # ...
+  # from msit_llm.transform.torch_to_atb_python import ATBModel
+  # 
   # atb_model = ATBModel(llamaforcausallm_atb_float.Model())
-  # ...
-  # print({kk: vv.shape for kk, vv in out.items()})
+  # weights = torch.load('$WEIGHT_PATH')  # Use actual WEIGHT_PATH
+  # atb_model.set_weights(weights)
+  # 
+  # input_len = 32
+  # out = atb_model.forward(input_ids=torch.arange(input_len),position_ids=torch.arange(input_len))
+  # print(out)
   # "
   ```
   参照输出的 `Run like:` 部分，导入生成的 py 文件，并调用推理
   ```py
   import torch, torch_npu
   import llamaforcausallm_atb_float
-  from msit_llm.transform.torch_to_atb_python import ATBModel, ATBModelConfig
+  from msit_llm.transform.torch_to_atb_python import ATBModel
 
   atb_model = ATBModel(llamaforcausallm_atb_float.Model())
   weights = torch.load('test_llama/state_dict.pt')  # Use actual WEIGHT_PATH
   atb_model.set_weights(weights)
 
   input_len = 32
-  out = atb_model.forward(
-      input_ids=torch.arange(input_len),
-      position_ids=torch.arange(input_len),
-      cos_table=torch.rand(input_len, atb_model.head_dim),
-      sin_table=torch.rand(input_len, atb_model.head_dim),
-  )
+  out = atb_model.forward(input_ids=torch.arange(input_len),position_ids=torch.arange(input_len))
   print({kk: vv.shape for kk, vv in out.items()})
   # {'output': torch.Size([32, 32000])}
   ```
@@ -113,31 +114,32 @@ msit llm transform [-h] -s SOURCE [-atb ATB_MODEL_PATH] [--enable-sparse] [--to-
   # ==============================
   # Run like:
   #
+  # python3 -c "
   # import torch, torch_npu
   # import llamaforcausallm_atb_quant
-  # ...
+  # from msit_llm.transform.torch_to_atb_python import ATBModel
+  # 
   # atb_model = ATBModel(llamaforcausallm_atb_quant.Model())
-  # ...
-  # print({kk: vv.shape for kk, vv in out.items()})
+  # weights = torch.load('$WEIGHT_PATH')  # Use actual WEIGHT_PATH
+  # atb_model.set_weights(weights)
+  # 
+  # input_len = 32
+  # out = atb_model.forward(input_ids=torch.arange(input_len),position_ids=torch.arange(input_len))
+  # print(out)
   # "
   ```
   参照输出的 `Run like:` 部分，导入生成的 py 文件，并调用推理
   ```py
   import torch, torch_npu
   import llamaforcausallm_atb_quant
-  from msit_llm.transform.torch_to_atb_python import ATBModel, ATBModelConfig
+  from msit_llm.transform.torch_to_atb_python import ATBModel
 
   atb_model = ATBModel(llamaforcausallm_atb_quant.Model())
   weights = torch.load('test_llama/quant_state_dict.pt')  # Use actual WEIGHT_PATH
   atb_model.set_weights(weights)
 
   input_len = 32
-  out = atb_model.forward(
-      input_ids=torch.arange(input_len),
-      position_ids=torch.arange(input_len),
-      cos_table=torch.rand(input_len, atb_model.head_dim),
-      sin_table=torch.rand(input_len, atb_model.head_dim),
-  )
+  out = atb_model.forward(input_ids=torch.arange(input_len),position_ids=torch.arange(input_len))
   print({kk: vv.shape for kk, vv in out.items()})
   # {'output': torch.Size([32, 32000])}
   ```

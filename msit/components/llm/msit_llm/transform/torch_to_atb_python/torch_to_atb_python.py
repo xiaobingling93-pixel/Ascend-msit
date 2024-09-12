@@ -50,7 +50,10 @@ os.environ["ASDOPS_LOG_TO_STDOUT"] = "1"
 CONFIG_ATTR_CANDIDATES = {
     "num_hidden_layers": ["num_hidden_layers", "num_layers", "n_layers"],
     "num_attention_heads": ["num_attention_heads"],
+    "num_key_value_heads": ["num_key_value_heads"],
     "hidden_size": ["hidden_size"],
+    "rms_norm_eps": ["rms_norm_eps"],
+    "rope_theta": ["rope_theta"],
     "vocab_size": ["vocab_size"],
     "text_config": ["text_config", "llm_config"],
 }
@@ -60,7 +63,7 @@ SKIP_NODES = ["size", "getitem", "to", "float", "finfo", "dropout"]
 TORCH_MODULE_TO_ATB_MAP = {
     "Embedding": dict(op_type="Gather", op_param={}, is_weights_first=True),
     "Gather": dict(op_type="Gather", op_param={}),
-    ".*RMSNorm$": dict(op_type="RmsNorm", op_param={"layerType": "RMS_NORM_NORM"}),
+    ".*RMSNorm$": dict(op_type="RmsNorm", op_param={"layerType": "RMS_NORM_NORM", "epsilon": 1e-5}),
     ".*LayerNorm$": dict(op_type="LayerNorm", op_param={"layerType": "LAYER_NORM_UNDEFINED"}),
     "Linear": dict(op_type="Linear", op_param={"hasBias": False, "enAccum": False}),
     ".*Rotary.*": dict(op_type="Rope", op_param={"rotaryCoeff": 2}),
@@ -81,19 +84,19 @@ _FIXED_INPUTS = {
     "position_ids",
     "cos_table",
     "sin_table",
-    "k_cache",
-    "v_cache",
     "slots_mapping",
     "attention_mask",
     "seq_len",
 }
 FIXED_INPUTS = namedtuple("FIXED_INPUTS", _FIXED_INPUTS)(*_FIXED_INPUTS)
+KV_CACHE_SURFFIX = namedtuple("FIXED_INPUTS", ["k_cache", "v_cache"])("k_cache", "v_cache")
 BASIC_INPUT_NAMES = (FIXED_INPUTS.input_ids,)
 
 _RESHPAE_KIND = ["reshape_qkv", "reshape_0_12"]
 RESHPAE_KIND = namedtuple("RESHPAE_KIND", _RESHPAE_KIND)(*_RESHPAE_KIND)
 
 VALID_NAME_CHARS = string.ascii_letters + string.digits + "_."
+FLOAT_DTYPES = {"float32": torch.float32, "float16": torch.float16, "bfloat16": torch.bfloat16}
 
 
 def get_config_attr(config, attr, default=None):
@@ -121,10 +124,10 @@ def build_transformers_model(source_path):
     return model, config
 
 
-def to_transformers_traced_module(model, input_names=BASIC_INPUT_NAMES):
+def to_transformers_traced_module(model, input_names=BASIC_INPUT_NAMES, disable_check=True):
     from transformers.utils.fx import symbolic_trace
 
-    return symbolic_trace(model, input_names=input_names)
+    return symbolic_trace(model, input_names=input_names, disable_check=disable_check)
 
 
 def get_lambda_source_code(function):
@@ -166,11 +169,30 @@ class Operation:
     def copy(self):
         return Operation(**deepcopy(self.to_dict()))
 
+    def __repr__(self):
+        dd = self.to_json()
+        basic_info_keys = ["op_name", "op_type"]
+        info = f"op_name={self.op_name}, op_type={self.op_type}\n  "
+        info += "\n  ".join([f"{kk}={vv}" for kk, vv in dd.items() if kk not in basic_info_keys])
+        return info
+
 
 class ATBModelConfig:
-    def __init__(self, vocab_size=1, num_attention_heads=1, head_dim=1, max_batch_size=1, max_seq_len=1024, **kwargs):
+    def __init__(
+        self,
+        vocab_size=1,
+        num_attention_heads=1,
+        num_key_value_heads=-1,
+        head_dim=1,
+        max_batch_size=1,
+        max_seq_len=1024,
+        rope_theta=1e4,
+        **kwargs,
+    ):
         self.vocab_size, self.num_attention_heads, self.head_dim = vocab_size, num_attention_heads, head_dim
         self.max_batch_size, self.max_seq_len, self.kwargs = max_batch_size, max_seq_len, kwargs
+        self.num_key_value_heads = num_key_value_heads if num_key_value_heads > 0 else num_attention_heads
+        self.rope_theta = rope_theta
         for kk, vv in kwargs.items():
             setattr(self, kk, vv)
 
@@ -178,7 +200,9 @@ class ATBModelConfig:
         return dict(
             vocab_size=self.vocab_size,
             num_attention_heads=self.num_attention_heads,
+            num_key_value_heads=self.num_key_value_heads,
             head_dim=self.head_dim,
+            rope_theta=self.rope_theta,
             max_batch_size=self.max_batch_size,
             max_seq_len=self.max_seq_len,
             **self.kwargs,
@@ -189,7 +213,7 @@ class ATBModelConfig:
 
 
 class ATBModel:
-    def __init__(self, atb_model, atb_model_config=None, output_shape=None):
+    def __init__(self, atb_model, atb_model_config=None, output_shape=None, dtype="float16"):
         atb_model_config = atb_model_config or {}
         if isinstance(atb_model_config, dict):
             self.atb_model_config = ATBModelConfig(**atb_model_config)
@@ -215,17 +239,34 @@ class ATBModel:
                 raise ValueError(f"output_shape len {provided} not equal to required len {required}")
         self.output_shape = output_shape
 
+        if not dtype in FLOAT_DTYPES:
+            raise ValueError(f"dtype={dtype} not supported, valid ones are {list(FLOAT_DTYPES.keys())}")
+        self.dtype = FLOAT_DTYPES.get(dtype)
+
         self.head_dim = getattr(atb_model, "head_dim", self.atb_model_config.head_dim)
         self.num_attention_heads = getattr(atb_model, "num_attention_heads", self.atb_model_config.num_attention_heads)
+        self.num_key_value_heads = getattr(atb_model, "num_key_value_heads", self.atb_model_config.num_key_value_heads)
         self.vocab_size = getattr(atb_model, "vocab_size", self.atb_model_config.vocab_size)
+        self.rope_theta = getattr(atb_model, "rope_theta", self.atb_model_config.rope_theta)
         self.cache_shape = [
             self.atb_model_config.max_batch_size,
             self.atb_model_config.max_seq_len,
-            self.num_attention_heads,
+            self.num_key_value_heads,
             self.head_dim,
         ]
-        self.k_cache, self.v_cache = None, None  # Used for encoder - decoder LLM
-        
+        self.inv_freq_weight = None
+
+        self.kv_cache_names = [ii for ii in self.input_names if ii.split('.')[-1] in KV_CACHE_SURFFIX]
+        self.past_key_values = {}
+
+    def init_kv_cache(self):
+        self.past_key_values = {ii: torch.zeros(self.cache_shape).to(self.dtype).npu() for ii in self.kv_cache_names}
+        self.weights.update(self.past_key_values)
+        self.atb_model.set_weights(self.past_key_values)
+
+    def _calc_inv_freq_by_rope_theta(self):
+        inv_freq_weight = 1.0 / (self.rope_theta ** (torch.arange(0, self.head_dim, 2) / self.head_dim))
+        return inv_freq_weight.float().npu()
 
     def _calc_cos_sin_table_from_inv_freq(self, position_ids):
         logger.debug(f"self.inv_freq_weight.shape = {self.inv_freq_weight.shape}")
@@ -235,7 +276,7 @@ class ATBModel:
         freq = (left.to(right.device).float() @ right.float()).transpose(1, 2)
         freq = torch.cat([freq, freq], dim=-1)[0].npu()  # has to be float npu values, and dim == 2
         logger.debug(f"freq.shape = {freq.shape}")
-        return freq.cos().half(), freq.sin().half()
+        return freq.cos().to(self.dtype), freq.sin().to(self.dtype)
 
     def set_weights(self, weights):
         source_weights = set(weights.keys())
@@ -245,33 +286,44 @@ class ATBModel:
 
         for kk in valid_weights:
             cur_weight = weights[kk]
-            cur_weight = cur_weight.half() if str(cur_weight.dtype).split(".")[-1] == "float32" else cur_weight
+            dtype_str = str(cur_weight.dtype).split(".")[-1]
+            if dtype_str in FLOAT_DTYPES and cur_weight.dtype != self.dtype:
+                cur_weight = cur_weight.to(self.dtype)
             self.weights[kk] = cur_weight.npu()
 
-        self.inv_freq_weight = None
         for weight_name in unused_weights:
             if "invfreq" in weight_name.split(".")[-1].replace("_", "").lower():
                 self.inv_freq_weight = weights[weight_name].squeeze().float().npu()
                 unused_weights.remove(weight_name)
                 break
 
+        need_cos_sin_table = FIXED_INPUTS.cos_table in self.inputs or FIXED_INPUTS.sin_table in self.inputs
+        if need_cos_sin_table and self.inv_freq_weight is None:
+            logger.info(f"Set inv_freq_weight be rope_theta={self.rope_theta}")
+            self.inv_freq_weight = self._calc_inv_freq_by_rope_theta()
+
         if FIXED_INPUTS.attention_mask in self.inputs:
             mask_tensor = torch.ones([self.atb_model_config.max_seq_len, self.atb_model_config.max_seq_len])
             attention_mask = torch.where((1 - torch.tril(mask_tensor)).to(torch.bool), -torch.inf, 0)
-            self.weights[FIXED_INPUTS.attention_mask] = attention_mask.half().npu()
+            self.weights[FIXED_INPUTS.attention_mask] = attention_mask.to(self.dtype).npu()
+
+        self.atb_model.set_weights(self.weights)  # ATB provided function, no need to pass weights again
+
+        if len(self.kv_cache_names) > 0:
+            self.init_kv_cache()
+            missing_weights -= set(self.kv_cache_names)
 
         if len(unused_weights) > 0:
             logger.warning(f"unused weights: {unused_weights}")
         if len(missing_weights) > 0:
             logger.warning(f"missing weights: {missing_weights}")
-        self.atb_model.set_weights(self.weights)  # ATB provided function, no need to pass weights again
 
-    def forward(self, input_ids=None, position_ids=None, k_cache=None, v_cache=None, slots_mapping=None, **kwargs):
+    def forward(self, input_ids=None, position_ids=None, slots_mapping=None, seq_len=None, **kwargs):
         # Basic inputs
-        model_inputs, batch_size, cur_pos = {}, 1, 1
+        model_inputs, batch_size, cur_pos, input_len = {}, 1, 1, 1
         if input_ids is not None:
             batch_size = input_ids.shape[0] if input_ids.dim() == 2 else 1
-            cur_pos = input_ids.shape[-1]  # temp set, may overwrite by `position_ids`
+            input_len = cur_pos = input_ids.shape[-1]  # temp set, may overwrite by `position_ids`
             model_inputs[FIXED_INPUTS.input_ids] = input_ids.npu()
             logger.debug(f"batch_size = {batch_size}")
         if position_ids is not None:
@@ -280,26 +332,23 @@ class ATBModel:
             logger.debug(f"cur_pos = {cur_pos}")
 
         # inputs interpreted from others, or with default values
-        if FIXED_INPUTS.seq_len in self.inputs and FIXED_INPUTS.seq_len not in kwargs:
-            seq_len = torch.ones([batch_size], dtype=torch.int).to(position_ids.device) * cur_pos
+        if FIXED_INPUTS.seq_len in self.inputs:
+            if seq_len is None:
+                seq_len = torch.ones([batch_size], dtype=torch.int).to(position_ids.device) * cur_pos
             model_inputs[FIXED_INPUTS.seq_len] = seq_len.npu()
         if FIXED_INPUTS.slots_mapping in self.inputs:
             if slots_mapping is None:
-                slots_mapping = torch.zeros([batch_size * cur_pos], dtype=torch.int)
+                slots_mapping = torch.zeros([batch_size * input_len], dtype=torch.int)
             model_inputs[FIXED_INPUTS.slots_mapping] = slots_mapping.npu()
-        if FIXED_INPUTS.k_cache in self.inputs:
-            self.k_cache = torch.zeros(self.cache_shape).half() if k_cache is None else k_cache
-            model_inputs[FIXED_INPUTS.k_cache] = self.k_cache.npu()
-        if FIXED_INPUTS.v_cache in self.inputs:
-            self.v_cache = torch.zeros(self.cache_shape).half() if v_cache is None else v_cache
-            model_inputs[FIXED_INPUTS.v_cache] = self.v_cache.npu()
+
+        # Check kwargs
+        model_inputs.update({kk: vv.npu() for kk, vv in kwargs.items()})
         if FIXED_INPUTS.cos_table in self.inputs or FIXED_INPUTS.sin_table in self.inputs:
             meets_cos_sin_table = FIXED_INPUTS.cos_table in model_inputs and FIXED_INPUTS.sin_table in model_inputs
-            if not meets_cos_sin_table and self.inv_freq_weight is not None:
+            if not meets_cos_sin_table and self.inv_freq_weight is not None and position_ids is not None:
                 # if either cos_table or sin_table is missing, the values of both will be calculated
                 cos_table, sin_table = self._calc_cos_sin_table_from_inv_freq(position_ids)
                 model_inputs[FIXED_INPUTS.cos_table], model_inputs[FIXED_INPUTS.sin_table] = cos_table, sin_table
-        model_inputs.update({kk: vv.npu() for kk, vv in kwargs.items()})
 
         # Show missing inputs, in some cases like testing scenario, this may not an error
         missing_inputs = self.inputs - set(model_inputs.keys()) - set(self.weights.keys())
@@ -311,12 +360,12 @@ class ATBModel:
         # Creats output. Here output_shape maybe None or a dict or list
         if self.output_shape is None:
             self.model_outputs = {
-                ii: torch.ones([batch_size * cur_pos, self.vocab_size]).half().npu() for ii in self.outputs
+                ii: torch.ones([batch_size * input_len, self.vocab_size]).to(self.dtype).npu() for ii in self.outputs
             }
         elif isinstance(self.output_shape, dict):
-            self.model_outputs = {kk: torch.ones(vv).half().npu() for kk, vv in self.output_shape.items()}
+            self.model_outputs = {kk: torch.ones(vv).to(self.dtype).npu() for kk, vv in self.output_shape.items()}
         else:
-            self.model_outputs = {kk: torch.ones(vv).half().npu() for kk, vv in zip(self.outputs, self.output_shape)}
+            self.model_outputs = {kk: torch.ones(vv).to(self.dtype).npu() for kk, vv in zip(self.outputs, self.output_shape)}
 
         # Run forward
         bind_map = {}
@@ -324,8 +373,8 @@ class ATBModel:
             bind_map[FIXED_INPUTS.seq_len] = model_inputs[FIXED_INPUTS.seq_len].cpu()
         return self.atb_model.forward(model_inputs, self.model_outputs, bind_map)
 
-    def __call__(self, input_ids=None, position_ids=None, k_cache=None, v_cache=None, slots_mapping=None, **kwargs):
-        return self.forward(input_ids, position_ids, k_cache, v_cache, slots_mapping, **kwargs)
+    def __call__(self, input_ids=None, position_ids=None, slots_mapping=None, **kwargs):
+        return self.forward(input_ids, position_ids, slots_mapping, **kwargs)
 
 
 class ATBModelFromTorch(ATBModel):
@@ -348,7 +397,7 @@ class ATBModelFromTorch(ATBModel):
     >>> atb_model.set_weights(dict(mm.named_buffers()))
     >>> out = atb_model(input_ids=input_ids, position_ids=position_ids)
     >>> print({kk: vv.shape for kk, vv in out.items()})
-    # {'output': torch.Size([1, 32000])}
+    # {'output': torch.Size([32, 32000])}
     >>> print(torch.allclose(torch_out, out['output'].cpu().float(), atol=5e-2))
     # True
     >>> atb_model.to_file()  # Save atb model to a py file
@@ -377,6 +426,7 @@ class ATBModelFromTorch(ATBModel):
         max_seq_len=1024,
         to_quant=False,
         quant_disable_names=None,
+        dtype="float16",
     ):
         self.torch_model, self.config = torch_model, config
         self.to_quant, self.quant_disable_names = to_quant, quant_disable_names or ()
@@ -405,17 +455,22 @@ class ATBModelFromTorch(ATBModel):
             self.weight_stack_map.setdefault(".".join(ii.split(".")[:-1]), []).append(ii)
 
         self.torch_module_to_atb_map = {}
+        self.num_key_value_heads = get_config_attr(self.config, "num_key_value_heads", default=self.num_attention_heads)
+        self.rope_theta = get_config_attr(self.config, "rope_theta", default=1e4)
+        self.rms_norm_eps = get_config_attr(self.config, "rms_norm_eps", default=1e-5)
         for kk, vv in TORCH_MODULE_TO_ATB_MAP.items():
             re_key = re.compile(kk)
             if vv.get("op_type", None) == "SelfAttention" and "op_param" in vv:
-                vv["op_param"].update({"headNum": self.num_attention_heads, "kvHeadNum": self.num_attention_heads})
-                vv["op_param"].update({"qkScale": 1 / (float(self.num_attention_heads) ** 0.5)})
+                vv["op_param"].update({"headNum": self.num_attention_heads, "kvHeadNum": self.num_key_value_heads})
+                vv["op_param"].update({"qkScale": 1 / (float(self.head_dim) ** 0.5)})
+            elif vv.get("op_type", None) == "RmsNorm" and "op_param" in vv:
+                vv["op_param"].update({"epsilon": self.rms_norm_eps})
             self.torch_module_to_atb_map[re_key] = Operation(**vv)
 
         self.pre_query_name, self.pre_key_name, self.pre_value_name, self.is_apply_rope = "", "", "", False
         self.model_inputs, self.model_outputs, self.operations = [], [], []
         # base graph is set execute_as_single=False, has to keep all operaions as property
-        self.base_graph_operations = []
+        self.base_graph_operations, self.k_cache_names, self.v_cache_names = [], [], []
 
         self.convert_fx_traced_module()
         if to_quant:
@@ -424,14 +479,19 @@ class ATBModelFromTorch(ATBModel):
         self.to_file()
 
         self.atb_model_config = ATBModelConfig(
-            self.vocab_size, self.num_attention_heads, self.head_dim, max_batch_size, max_seq_len
+            vocab_size=self.vocab_size,
+            num_attention_heads=self.num_attention_heads,
+            num_key_value_heads=self.num_key_value_heads,
+            head_dim=self.head_dim,
+            max_batch_size=max_batch_size,
+            max_seq_len=max_seq_len,
         )
 
         if GraphOperation is None or BaseOperation is None:
             logger.warning("Will skip build")
         else:
             self.atb_model = self.build_atb_model()
-            super().__init__(atb_model=self.atb_model, atb_model_config=self.atb_model_config)
+            super().__init__(atb_model=self.atb_model, atb_model_config=self.atb_model_config, dtype=dtype)
 
     @staticmethod
     def _get_module_type_by_nn_module_stack(node):
@@ -531,44 +591,45 @@ class ATBModelFromTorch(ATBModel):
             FIXED_INPUTS.seq_len,
         ]
 
+        query_name, key_name = self.pre_query_name, self.pre_key_name
         if self.is_apply_rope:
-            inputs = [self.pre_query_name, self.pre_key_name, "gather_cos.out", "gather_sin.out", FIXED_INPUTS.seq_len]
-            outputs = [module_name + ".q_embed", module_name + ".k_embed"]
+            inputs = [query_name, key_name, "gather_cos.out", "gather_sin.out", FIXED_INPUTS.seq_len]
+            query_name, key_name = module_name + ".q_embed", module_name + ".k_embed"
             self.operations.append(
                 Operation(
                     op_type="Rope",
                     op_param={"rotaryCoeff": 2},
                     inputs=inputs,
-                    outputs=outputs,
+                    outputs=[query_name, key_name],
                     op_name=module_name + ".rope",
                 )
             )
 
+        k_cache_name = module_name + "." + KV_CACHE_SURFFIX.k_cache
+        v_cache_name = module_name + "." + KV_CACHE_SURFFIX.v_cache
         reshape_and_cache_inputs = [
-            module_name + ".k_embed_",
-            module_name + ".v_embed_",
-            FIXED_INPUTS.k_cache,
-            FIXED_INPUTS.v_cache,
-            FIXED_INPUTS.slots_mapping,
+            module_name + ".k_embed_", module_name + ".v_embed_", k_cache_name, v_cache_name, FIXED_INPUTS.slots_mapping
         ]
+        self.k_cache_names.append(k_cache_name)
+        self.v_cache_names.append(v_cache_name)
         self.operations += [
             Operation(
                 op_type="add_reshape",
                 function=lambda org_shape: [org_shape[0], self.num_attention_heads, self.head_dim],
-                inputs=[module_name + ".q_embed"],
+                inputs=[query_name],
                 outputs=[module_name + ".q_embed_"],
                 op_name=module_name + ".q." + RESHPAE_KIND.reshape_qkv,
             ),
             Operation(
                 op_type="add_reshape",
-                function=lambda org_shape: [org_shape[0], self.num_attention_heads, self.head_dim],
-                inputs=[module_name + ".k_embed"],
+                function=lambda org_shape: [org_shape[0], self.num_key_value_heads, self.head_dim],
+                inputs=[key_name],
                 outputs=[module_name + ".k_embed_"],
                 op_name=module_name + ".k." + RESHPAE_KIND.reshape_qkv,
             ),
             Operation(
                 op_type="add_reshape",
-                function=lambda org_shape: [org_shape[0], self.num_attention_heads, self.head_dim],
+                function=lambda org_shape: [org_shape[0], self.num_key_value_heads, self.head_dim],
                 inputs=[self.pre_value_name],
                 outputs=[module_name + ".v_embed_"],
                 op_name=module_name + ".v." + RESHPAE_KIND.reshape_qkv,
@@ -577,7 +638,7 @@ class ATBModelFromTorch(ATBModel):
                 op_type="ReshapeAndCache",
                 op_param={},
                 inputs=reshape_and_cache_inputs,
-                outputs=[FIXED_INPUTS.k_cache, FIXED_INPUTS.v_cache],
+                outputs=[k_cache_name, v_cache_name],
                 op_name=module_name + ".reshape_and_cache",
             ),
             atb_operation,
@@ -590,14 +651,13 @@ class ATBModelFromTorch(ATBModel):
             ),
         ]
 
-        if FIXED_INPUTS.k_cache not in self.model_inputs:
+        if FIXED_INPUTS.slots_mapping not in self.model_inputs:
             self.model_inputs += [
-                FIXED_INPUTS.k_cache,
-                FIXED_INPUTS.v_cache,
                 FIXED_INPUTS.slots_mapping,
                 FIXED_INPUTS.attention_mask,
                 FIXED_INPUTS.seq_len,
             ]
+        self.model_inputs += [k_cache_name, v_cache_name]
 
     def _refine_inputs_outputs(self, input_node_map, output_node_map, operation_outputs):
         gathered_module_inputs = {}
@@ -832,7 +892,8 @@ class ATBModelFromTorch(ATBModel):
             f"{indent * 2}super().__init__(self.model_name)",
             "",
             f"{indent * 2}self.num_attention_heads, self.head_dim = {self.num_attention_heads}, {self.head_dim}",
-            f"{indent * 2}self.vocab_size = {self.vocab_size}",
+            f"{indent * 2}self.num_key_value_heads, self.vocab_size = {self.num_key_value_heads}, {self.vocab_size}",
+            f"{indent * 2}self.rope_theta = {self.rope_theta}",
         ]
 
         def _get_input_output_name(graph_name):
@@ -848,7 +909,7 @@ class ATBModelFromTorch(ATBModel):
 
             graph_inputs, graph_outputs = stacked_inputs.pop(0), stacked_outputs.pop(0)
             contents.append(f"{indent * 2}{graph_name}_inputs = [")
-            for ii in graph_inputs:
+            for ii in sorted(graph_inputs, key=lambda xx: "0" if xx in FIXED_INPUTS else xx):
                 contents.append(f"{indent * 3}'{ii}',")
             contents.append(f"{indent * 2}]")
 
@@ -943,21 +1004,8 @@ def transform(source_path, input_names=BASIC_INPUT_NAMES, output_file=None, to_q
     atb_model.set_weights(weights)
 
     input_len = 32
-    out = atb_model.forward(
-        input_ids=torch.arange(input_len),
-        position_ids=torch.arange(input_len),
-        cos_table=torch.rand(input_len, atb_model.head_dim),
-        sin_table=torch.rand(input_len, atb_model.head_dim),
-    )
+    out = atb_model.forward(input_ids=torch.arange(input_len), position_ids=torch.arange(input_len))
     print(out)
     "
-    """.format(
-            model_name=model_name,
-            vocab_size=atb_model.atb_model_config.vocab_size,
-            num_attention_heads=atb_model.atb_model_config.num_attention_heads,
-            head_dim=atb_model.atb_model_config.head_dim,
-        )
-        .replace(" " * 8, "##")  # Replace the inner 8 ' ' to '##' as a mark
-        .replace(" " * 4, "")  # Remove all 4 ' '
-        .replace("##", " " * 4)  # Replace the marked '##' back to 4 ' '
+    """.format(model_name=model_name).replace(" " * 4, "")  # Remove the prefix "    "
     )

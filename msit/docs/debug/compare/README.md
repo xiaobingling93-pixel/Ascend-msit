@@ -8,7 +8,7 @@
 
 
 ## 工具安装
-- 一般工具安装请见 [msit一体化工具使用指南](https://gitee.com/ascend/msit/blob/master/msit/docs/install/README.md)
+- 一般工具安装请见 [msit一体化工具使用指南](/msit/docs/install/README.md)
 - 此外还提供容器安装方式（支持caffe精度比对）
 
 ### 容器方式安装
@@ -83,7 +83,7 @@ compare功能可以直接通过msit命令行形式启动精度对比。启动方
 ```
 #### 输出结果说明和分析步骤参考
 
-请移步[对比结果分析步骤](../../../examples/cli/debug/compare/result_analyse/README.md)
+请移步[对比结果分析步骤](/msit/examples/cli/debug/compare/result_analyse/README.md)
 
 
 #### 命令行入参说明
@@ -116,22 +116,22 @@ compare功能可以直接通过msit命令行形式启动精度对比。启动方
 | -h    --help       | tensorflow2.6框架下saved_model模型加载为session时的标签，可根据标签加载模型的不同部分；使用方式：--saved_model_tag_set serve                                                                                                                                                                                                   | 否  | |  |
 ### 使用场景
 
-请移步[compare使用示例](../../../examples/cli/debug/compare/)
+请移步[compare使用示例](/msit/examples/cli/debug/compare/)
 
 | 使用示例                                                                                             | 使用场景                                 |
 |--------------------------------------------------------------------------------------------------|--------------------------------------|
-| [01_basic_usage](../../../examples/cli/debug/compare/01_basic_usage)                             | 基础示例，运行onnx和om模型精度比对                 |
-| [02_specify_input_data](../../../examples/cli/debug/compare/02_specify_input_data)               | 指定模型输入数据                             |
-| [03_save_output_data](../../../examples/cli/debug/compare/03_save_output_data)                   | 指定结果输出目录                             |
-| [04_specify_input_shape_info](../../../examples/cli/debug/compare/04_specify_input_shape_info)   | 指定模型输入的shape信息(动态场景必须进行指定)。          |
-| [05_aipp_model_compare](../../../examples/cli/debug/compare/05_aipp_model_compare)               | 提供模型转换开启aipp参数的om模型与onnx模型进行精度比对的功能。 |
-| [06_npu_custom_op](../../../examples/cli/debug/compare/06_npu_custom_op)                         | onnx模型中存在NPU自定义算子场景                  |
-| [07_caffe_model](../../../examples/cli/debug/compare/07_caffe_model)                             | 标杆模型为Caffe框架的一键式精度比对                 |
-| [08_accuracy_error_location](../../../examples/cli/debug/compare/08_accuracy_error_location)     | 误差及累计误差一键式自动定位                       |
-| [09_single_op](../../../examples/cli/debug/compare/09_single_op)                                 | 单算子比对模式                              |
-| [10_fusion_switch_file](../../../examples/cli/debug/compare/10_fusion_switch_file)               | 关闭融合规则.om模型和原始.om模型精度比对              |
-| [11_mixing_precison_compare](../../../examples/cli/debug/compare/11_mixing_precison_compare)      | 混合精度策略的.om模型和.om模型的精度比对              |
+| [01_basic_usage](/msit/examples/cli/debug/compare/01_basic_usage)                             | 基础示例，运行onnx和om模型精度比对                 |
+| [02_specify_input_data](/msit/examples/cli/debug/compare/02_specify_input_data)               | 指定模型输入数据                             |
+| [03_save_output_data](/msit/examples/cli/debug/compare/03_save_output_data)                   | 指定结果输出目录                             |
+| [04_specify_input_shape_info](/msit/examples/cli/debug/compare/04_specify_input_shape_info)   | 指定模型输入的shape信息(动态场景必须进行指定)。          |
+| [05_aipp_model_compare](/msit/examples/cli/debug/compare/05_aipp_model_compare)               | 提供模型转换开启aipp参数的om模型与onnx模型进行精度比对的功能。 |
+| [06_npu_custom_op](/msit/examples/cli/debug/compare/06_npu_custom_op)                         | onnx模型中存在NPU自定义算子场景                  |
+| [07_caffe_model](/msit/examples/cli/debug/compare/07_caffe_model)                             | 标杆模型为Caffe框架的一键式精度比对                 |
+| [08_accuracy_error_location](/msit/examples/cli/debug/compare/08_accuracy_error_location)     | 误差及累计误差一键式自动定位                       |
+| [09_single_op](/msit/examples/cli/debug/compare/09_single_op)                                 | 单算子比对模式                              |
+| [10_fusion_switch_file](/msit/examples/cli/debug/compare/10_fusion_switch_file)               | 关闭融合规则.om模型和原始.om模型精度比对              |
+| [11_mixing_precison_compare](/msit/examples/cli/debug/compare/11_mixing_precison_compare)      | 混合精度策略的.om模型和.om模型的精度比对              |
 
 ### 常见问题FAQ
 
-* [compare常见问题](./FAQ.md)
+* [compare常见问题](/msit/docs/debug/compare/FAQ.md)
