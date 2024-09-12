@@ -106,7 +106,7 @@ msit llm transform [-h] -s SOURCE [-atb ATB_MODEL_PATH] [--enable-sparse] [--to-
 
   # ==============================
   # Input: 好雨知时节，当春
-  # Outout: 好雨知时节，当春乃发生。
+  # Output: 好雨知时节，当春乃发生。
   ```
 ### Transformers LLaMA 迁移到 ATB python 量化模型
 - 从 huggingface 获取相应 LLaMA 模型
