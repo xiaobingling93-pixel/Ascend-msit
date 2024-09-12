@@ -46,7 +46,8 @@ compare功能可以直接通过msit命令行形式启动精度对比。启动方
   ```
 
 ### 输出结果说明
-- 如果使用单独compare功能，则只会生成result_{timestamp}.csv文件
+**注意**：
+- 单独compare功能：指定cpu侧以及npu侧的dump数据进行精度比对时，只生成result_{timestamp}.csv文件
 ```sh
 {output_path}/{timestamp}/{input_name-input_shape}  # {input_name-input_shape} 用来区分动态shape时不同的模型实际输入，静态shape时没有该层
 ├-- dump_data
