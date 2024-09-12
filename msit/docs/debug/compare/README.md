@@ -46,7 +46,8 @@ compare功能可以直接通过msit命令行形式启动精度对比。启动方
   ```
 
 ### 输出结果说明
-
+**注意**：
+- 单独compare功能：指定cpu侧以及npu侧的dump数据进行精度比对时，只生成result_{timestamp}.csv文件
 ```sh
 {output_path}/{timestamp}/{input_name-input_shape}  # {input_name-input_shape} 用来区分动态shape时不同的模型实际输入，静态shape时没有该层
 ├-- dump_data
@@ -81,6 +82,7 @@ compare功能可以直接通过msit命令行形式启动精度对比。启动方
 ├-- result_{timestamp}.csv                   # 比对结果文件
 └-- tmp                                      # 如果 -m 模型为 Tensorflow pb 文件, tfdbg 相关的临时目录
 ```
+
 #### 输出结果说明和分析步骤参考
 
 请移步[对比结果分析步骤](/msit/examples/cli/debug/compare/result_analyse/README.md)
@@ -90,8 +92,8 @@ compare功能可以直接通过msit命令行形式启动精度对比。启动方
 
 | 参数名          | 描述                                                                                                                                                                                                                                                                                            | 必选 |
 |--------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----|
-| -gm，--golden-model | 模型文件 [.pb与saved_model, .onnx, .prototxt, .om] 路径，分别对应 TF, ONNX, Caffe, OM 模型。<br/>其中.pb为TF1.15版本模型格式，saved_model为TF2.6.5版本模型格式                                                                                                                                                                | 是  |
-| -om，--om-model | 昇腾AI处理器的离线模型 [.om, .mindir, saved_model]。<br/>TF2.6.5版本可以输入saved_model模型                                                                                                                                                                                                            | 是  |
+| -gm，--golden-model | 模型文件 [.pb与saved_model, .onnx, .prototxt, .om] 路径，分别对应 TF, ONNX, Caffe, OM 模型。<br/>其中.pb为TF1.15版本模型文件，saved_model为TF2.6.5版本模型文件                                                                                                                                                                | 是  |
+| -om，--om-model | 昇腾AI处理器的离线模型 [.om, .mindir, saved_model]。<br/>TF2.6.5版本可以输入saved_model模型                                                                                                                                                                                                                      | 是  |
 | -w，--weight  | -gm 为 Caffe 模型时对应的权重文件（.caffemodel）                                                                                                                                                                                                                                                           | 否  |
 | -i，--input   | 模型的输入数据路径，默认根据模型的input随机生成，多个输入以逗号分隔，例如：/home/input\_0.bin,/home/input\_1.bin,/home/input\_2.npy。注意：使用aipp模型时该输入为om模型的输入,且支持自动将npy文件转为bin文件                                                                                                                                                   | 否  |
 | -c，--cann-path | CANN包安装完后路径，默认会从从系统环境变量`ASCEND_TOOLKIT_HOME`中获取`CANN` 包路径，如果不存在则默认为 `/usr/local/Ascend/ascend-toolkit/latest`                                                                                                                                                                                 | 否  |
@@ -113,7 +115,12 @@ compare功能可以直接通过msit命令行形式启动精度对比。启动方
 | -q,--quant_fusion_rule_file| 量化算子映射关系文件（昇腾模型压缩输出的json文件）。仅推理场景支持本参数。使用方式：--quant_fusion_rule_file                                                                                                                                                                                                                          | 否  | |  |
 | --saved_model_signature     | tensorflow2.6框架下saved_model模型加载时需要的签名。使用方式：--saved_model_signature serving，默认为serving_default                                                                                                                                                                                                 | 否  | |  |
 | --saved_model_tag_set       | tensorflow2.6框架下saved_model模型加载为session时的标签，可根据标签加载模型的不同部分；使用方式：--saved_model_tag_set serve                                                                                                                                                                                                   | 否  | |  |
-| -h    --help       | tensorflow2.6框架下saved_model模型加载为session时的标签，可根据标签加载模型的不同部分；使用方式：--saved_model_tag_set serve                                                                                                                                                                                                   | 否  | |  |
+| -mp, --my-path      | 用于单独进行精度比对的npu侧dump数据                                                                                                                                                                                                                                                                         | 否  | |  |
+| -gp, --golden-path  | 用于单独进行精度比对的cpu侧dump数据                                                                                                                                                                                                                                                                         | 否  | |  |
+| --ops-json          | 用于单独进行精度比对时，cpu侧与npu侧算子的匹配规则                                                                                                                                                                                                                                                                  | 否  | |  |
+| -h    --help        | 用于查看全部的参数具体信息                                                                                                                                                                                                                                                                                 | 否  | |  |
+
+
 ### 使用场景
 
 请移步[compare使用示例](/msit/examples/cli/debug/compare/)
