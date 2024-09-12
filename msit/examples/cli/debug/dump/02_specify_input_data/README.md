@@ -14,7 +14,7 @@
   ```
   - `-i，–-input` 模型的输入数据路径，默认根据模型的 input 随机生成，多个输入以逗号分隔，例如：`/home/input_0.bin,/home/input_1.bin`，本场景会根据文件输入 size 和模型实际输入 size 自动进行组 Batch，但需保证数据除 batch size 以外的 shape 与模型输入一致
   ```sh
-  msit debug compare -gm /home/HwHiAiUser/onnx_prouce_data/resnet_offical.onnx -om /home/HwHiAiUser/onnx_prouce_data/model/resnet50.om \
+  msit debug dump -gm /home/HwHiAiUser/onnx_prouce_data/resnet_offical.onnx -dp cpu
   -i /home/HwHiAiUser/result/test/input_0.npy -c /usr/local/Ascend/ascend-toolkit/latest -o /home/HwHiAiUser/result/test
   ```
 - `-i，–-input` 如果存在npy文件，支持自动将npy文件转化为bin文件，而不需要手动转化为bin文件，例如：`/home/input_0.npy,/home/input_1.npy`

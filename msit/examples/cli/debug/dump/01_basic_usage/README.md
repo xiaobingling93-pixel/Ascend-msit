@@ -8,7 +8,7 @@ dump功能可以通过msit命令行方式启动。
 ## 运行示例
 - **不指定模型输入** 命令示例，**其中路径需使用绝对路径**
   ```sh
-  msit debug compare -m /home/HwHiAiUser/onnx_prouce_data/resnet_offical.onnx -dp cpu
+  msit debug dump -m /home/HwHiAiUser/onnx_prouce_data/resnet_offical.onnx -dp cpu
   -c /usr/local/Ascend/ascend-toolkit/latest -o /home/HwHiAiUser/result/test
   ```
   - `-m, –-model` 指定原始离线模型（.onnx）路径
