@@ -57,7 +57,13 @@ class BasicDataInfo:
         dirseg = cur_path.split(os.path.sep)
         if len(dirseg) >= 4 and (dirseg[-3] == 'tensors' or dirseg[-3] == "torch_tensors") and \
             any([dirseg[-4].startswith(x) for x in GLOBAL_HISTORY_AIT_DUMP_PATH_LIST]):
-            token_id = dirseg[-1]
+            try:
+                token_id = int(dirseg[-1])
+            except (IndexError, AttributeError, TypeError, ValueError) as e:
+                msg = f"get_token_id error, dirseg: {dirseg}, error: {e}"
+                logger.error(msg)
+            finally:
+                token_id = 0
         elif cur_path == os.path.dirname(cur_path):
             token_id = 0
         else:
