@@ -169,6 +169,13 @@ class Operation:
     def copy(self):
         return Operation(**deepcopy(self.to_dict()))
 
+    def __repr__(self):
+        dd = self.to_json()
+        basic_info_keys = ["op_name", "op_type"]
+        info = f"op_name={self.op_name}, op_type={self.op_type}\n  "
+        info += "\n  ".join([f"{kk}={vv}" for kk, vv in dd.items() if kk not in basic_info_keys])
+        return info
+
 
 class ATBModelConfig:
     def __init__(
