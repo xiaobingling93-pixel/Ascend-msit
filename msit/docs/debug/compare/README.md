@@ -45,8 +45,8 @@ compare功能可以直接通过msit命令行形式启动精度对比。启动方
   -c /usr/local/Ascend/ascend-toolkit/latest -o /home/HwHiAiUser/result/test
   ```
 
-### compare输出结果说明
-
+### 输出结果说明
+- 如果使用单独compare功能，则只会生成result_{timestamp}.csv文件
 ```sh
 {output_path}/{timestamp}/{input_name-input_shape}  # {input_name-input_shape} 用来区分动态shape时不同的模型实际输入，静态shape时没有该层
 ├-- dump_data
@@ -80,47 +80,6 @@ compare功能可以直接通过msit命令行形式启动精度对比。启动方
 │   └-- new_custom_op_{onnx_model_name}.onnx    # 若指定了--custom-op，删除自定义算子后的onnx子图模型，并把每个算子作为输出节点后新生成的 onnx 模型
 ├-- result_{timestamp}.csv                   # 比对结果文件
 └-- tmp                                      # 如果 -m 模型为 Tensorflow pb 文件, tfdbg 相关的临时目录
-```
-
-### 单独dump输出结果说明
-
-```sh
-{output_path}/{timestamp}/{input_name-input_shape}  # {input_name-input_shape} 用来区分动态shape时不同的模型实际输入，静态shape时没有该层
-├-- dump_data
-│   ├-- npu                          # npu dump 数据目录
-│   │   ├-- {timestamp}              # 模型所有npu dump的算子输出
-│   │   │   └-- 0                    # Device 设备 ID 号
-│   │   │       └-- {om_model_name}  # 模型名称
-│   │   │           └-- 1            # 模型 ID 号
-│   │   │               ├-- 0        # 针对每个Task ID执行的次数维护一个序号，从0开始计数，该Task每dump一次数据，序号递增1
-│   │   │               │   ├-- Add.8.5.1682067845380164
-│   │   │               │   ├-- ...
-│   │   │               │   └-- Transpose.4.1682148295048447
-│   │   │               └-- 1
-│   │   │                   ├-- Add.11.4.1682148323212422
-│   │   │                   ├-- ...
-│   │   │                   └-- Transpose.4.1682148327390978
-│   │   ├-- {time_stamp}
-│   │   │   ├-- input_0_0.bin
-│   │   │   └-- input_0_0.npy
-│   │   └-- {time_stamp}_summary.json
-│   └-- {onnx or tf or caffe} # 原模型 dump 数据存放路径，onnx / tf / caffe 分别对应 ONNX / Tensorflow / Caffe 模型
-│       ├-- Add_100.0.1682148256368588.npy
-│       ├-- ...
-│       └-- Where_22.0.1682148253575249.npy
-├-- input
-│   └-- input_0.bin                          # 随机输入数据，若指定了输入数据，则该文件不存在
-├-- model
-│   ├-- {om_model_name}.json                    # 离线模型om模型(.om)通过atc工具转换后的json文件
-│   └-- new_{onnx_model_name}.onnx              # 把每个算子作为输出节点后新生成的 onnx 模型
-└-- tmp                                      # 如果 -m 模型为 Tensorflow pb 文件, tfdbg 相关的临时目录
-```
-
-### 单独compare输出结果说明
-
-```sh
-{output_path}/
-├-- result_{timestamp}.csv                   # 比对结果文件
 ```
 
 #### 输出结果说明和分析步骤参考
@@ -160,24 +119,7 @@ compare功能可以直接通过msit命令行形式启动精度对比。启动方
 | --ops-json          | 用于单独进行精度比对时，cpu侧与npu侧算子的匹配规则                                                                                                                                                                                                                                                                  | 否  | |  |
 | -h    --help        | 用于查看全部的参数具体信息                                                                                                                                                                                                                                                                                 | 否  | |  |
 
-#### 单独dump的命令行入参说明
 
-| 参数名                       | 描述                                                                                                                                                                                                | 必选 |
-|---------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----|
-| -m，--model-path           | 模型文件 [.pb与saved_model，.onnx，.prototxt] 路径，分别对应 TF, ONNX, Caffe。<br/>其中.pb为TF1.15.5版本模型文件，saved_model为TF2.6.5版本模型文件                                                                                | 是  |
-| -w，--weight               | -m 为 Caffe 模型时对应的权重文件（.caffemodel）                                                                                                                                                                | 否  |
-| -i，--input                | 模型的输入数据路径，默认根据模型的input随机生成，多个输入以逗号分隔，例如：/home/input\_0.bin,/home/input\_1.bin,/home/input\_2.npy。注意：使用aipp模型时该输入为om模型的输入,且支持自动将npy文件转为bin文件                                                       | 否  |
-| -c，--cann-path            | CANN包安装完后路径，默认会从从系统环境变量`ASCEND_TOOLKIT_HOME`中获取`CANN` 包路径，如果不存在则默认为 `/usr/local/Ascend/ascend-toolkit/latest`                                                                                     | 否  |
-| -o，--output               | 输出文件路径，默认为当前路径                                                                                                                                                                                    | 否  |
-| -is，--input-shape         | 模型输入的shape信息，默认为空，例如"input_name1:1,224,224,3;input_name2:3,300",节点中间使用英文分号隔开。input_name必须是转换前的网络模型中的节点名称                                                                                          | 否  |
-| -d，--device               | 指定运行设备 [0,255]，可选参数，默认0                                                                                                                                                                           | 否  |
-| -dr，--dym-shape-range     | 动态Shape的阈值范围。如果设置该参数，那么将根据参数中所有的Shape列表进行依次推理和精度比对。(仅支持onnx模型)<br/>配置格式为："input_name1:1,3,200\~224,224-230;input_name2:1,300"。<br/>其中，input_name必须是转换前的网络模型中的节点名称；"\~"表示范围，a\~b\~c含义为[a: b :c]；"-"表示某一位的取值。 <br/> | 否  |
-| -ofs, --onnx-fusion-switch | onnxruntime算子融合开关，默认**开启**算子融合，如存在onnx dump数据中因算子融合导致缺失的，建议关闭此开关。使用方式：--onnx-fusion-switch False                                                                                                  | 否  |
-| --saved_model_signature   | tensorflow2.6框架下saved_model模型加载时需要的签名。使用方式：--saved_model_signature serving，默认为serving_default                                                                                                     | 否  | |  |
-| --saved_model_tag_set     | tensorflow2.6框架下saved_model模型加载为session时的标签，可根据标签加载模型的不同部分；使用方式：--saved_model_tag_set serve                                                                                                       | 否  | |  |
-| -dp, --device-pattern     | 设备模式，目前支持cpu和npu。使用方式：-dp cpu                                                                                                                                                                     | 否  | |  |
-| --tf-json                 | 用于dump saved_model模型在cpu侧的算子集合json，当dump saved_model 模型在cpu的数据时，为必选参数                                                                                                                             | 否  | |  |
-| -h    --help              | 用于查看全部的参数                                                                                                                                                                                         | 否  | |  |
 ### 使用场景
 
 请移步[compare使用示例](../../../examples/cli/debug/compare/)
