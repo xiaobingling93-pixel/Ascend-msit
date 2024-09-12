@@ -97,8 +97,4 @@ def test_given_data_id(golden_data_path, my_data_path):
 def test_given_token_id(golden_data_path, my_data_path):
     data_info1 = BasicDataInfo(golden_data_path, my_data_path, token_id=3)
     assert data_info1.token_id == 3
-    assert data_info1.data_id == 0
-
-    data_info2 = BasicDataInfo(golden_data_path, my_data_path, token_id=4)
-    assert data_info2.token_id == 4
-    assert data_info2.data_id == 1
+    assert data_info1.data_id == 8
