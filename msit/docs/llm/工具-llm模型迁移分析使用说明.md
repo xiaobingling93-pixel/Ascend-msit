@@ -80,6 +80,11 @@ msit llm transform [-h] -s SOURCE [-atb ATB_MODEL_PATH] [--enable-sparse] [--to-
   # out = atb_model.forward(input_ids=torch.arange(input_len),position_ids=torch.arange(input_len))
   # print(out)
   # "
+  #
+  # ==============================
+  # End-to-end inference example saved to: run.py
+  # You can run the model using the command below:
+  #     python run.py
   ```
   参照输出的 `Run like:` 部分，导入生成的 py 文件，并调用推理
   ```py
@@ -95,6 +100,14 @@ msit llm transform [-h] -s SOURCE [-atb ATB_MODEL_PATH] [--enable-sparse] [--to-
   out = atb_model.forward(input_ids=torch.arange(input_len),position_ids=torch.arange(input_len))
   print({kk: vv.shape for kk, vv in out.items()})
   # {'output': torch.Size([32, 32000])}
+  ```
+  也可直接运行 python run.py 调用推理
+  ```sh
+  python run.py
+
+  # ==============================
+  # Input: 好雨知时节，当春
+  # Output: 好雨知时节，当春乃发生。
   ```
 ### Transformers LLaMA 迁移到 ATB python 量化模型
 - 从 huggingface 获取相应 LLaMA 模型
