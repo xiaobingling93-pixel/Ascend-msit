@@ -31,7 +31,7 @@ def my_data_path():
 
 
 @pytest.fixture(scope='module', autouse=True)
-def my_data_path():
+def sub_path():
     sub_path = "3_Prefill_layer/0_Attention/3_SelfAttention"
     yield sub_path
 
