@@ -153,18 +153,23 @@ class Runner:
         return output_text
     
 
-if __name__ == '__main__':
+def main():
     runner = Runner("model_path_symbol")
 
-    inputs = '好雨知时节，当春'
+    input_text = '好雨知时节，当春'
 
     runner.warm_up()
-    outputs = runner.infer(inputs, use_cache=False)
+    output_text = runner.infer(input_text, use_cache=False)
 
     import logging
     logger = logging.getLogger()
     logger.info('-' * 40)
-    logger.info('Input:%s', inputs)
-    logger.info('Output:%s', outputs)
+    logger.info('Input:%s', input_text)
+    logger.info('Output:%s', output_text)
+
+
+if __name__ == '__main__':
+    main()
+
 
 
