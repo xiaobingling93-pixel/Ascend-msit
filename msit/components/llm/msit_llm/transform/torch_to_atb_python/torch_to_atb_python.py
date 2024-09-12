@@ -232,7 +232,7 @@ class ATBModel:
                 raise ValueError(f"output_shape len {provided} not equal to required len {required}")
         self.output_shape = output_shape
 
-        if dtype not in FLOAT_DTYPES:
+        if not dtype in FLOAT_DTYPES:
             raise ValueError(f"dtype={dtype} not supported, valid ones are {list(FLOAT_DTYPES.keys())}")
         self.dtype = FLOAT_DTYPES.get(dtype)
 
@@ -310,15 +310,13 @@ class ATBModel:
             logger.warning(f"unused weights: {unused_weights}")
         if len(missing_weights) > 0:
             logger.warning(f"missing weights: {missing_weights}")
-        
-    def forward(
-        self, input_ids=None, position_ids=None, slots_mapping=None, seq_len=None, **kwargs
-    ):
+
+    def forward(self, input_ids=None, position_ids=None, slots_mapping=None, seq_len=None, **kwargs):
         # Basic inputs
-        model_inputs, batch_size, cur_pos = {}, 1, 1
+        model_inputs, batch_size, cur_pos, input_len = {}, 1, 1, 1
         if input_ids is not None:
             batch_size = input_ids.shape[0] if input_ids.dim() == 2 else 1
-            cur_pos = input_ids.shape[-1]  # temp set, may overwrite by `position_ids`
+            input_len = cur_pos = input_ids.shape[-1]  # temp set, may overwrite by `position_ids`
             model_inputs[FIXED_INPUTS.input_ids] = input_ids.npu()
             logger.debug(f"batch_size = {batch_size}")
         if position_ids is not None:
@@ -333,7 +331,7 @@ class ATBModel:
             model_inputs[FIXED_INPUTS.seq_len] = seq_len.npu()
         if FIXED_INPUTS.slots_mapping in self.inputs:
             if slots_mapping is None:
-                slots_mapping = torch.zeros([batch_size * cur_pos], dtype=torch.int)
+                slots_mapping = torch.zeros([batch_size * input_len], dtype=torch.int)
             model_inputs[FIXED_INPUTS.slots_mapping] = slots_mapping.npu()
 
         # Check kwargs
@@ -355,14 +353,12 @@ class ATBModel:
         # Creats output. Here output_shape maybe None or a dict or list
         if self.output_shape is None:
             self.model_outputs = {
-                ii: torch.ones([batch_size * cur_pos, self.vocab_size]).to(self.dtype).npu() for ii in self.outputs
+                ii: torch.ones([batch_size * input_len, self.vocab_size]).to(self.dtype).npu() for ii in self.outputs
             }
         elif isinstance(self.output_shape, dict):
             self.model_outputs = {kk: torch.ones(vv).to(self.dtype).npu() for kk, vv in self.output_shape.items()}
         else:
-            self.model_outputs = {
-                kk: torch.ones(vv).to(self.dtype).npu() for kk, vv in zip(self.outputs, self.output_shape)
-            }
+            self.model_outputs = {kk: torch.ones(vv).to(self.dtype).npu() for kk, vv in zip(self.outputs, self.output_shape)}
 
         # Run forward
         bind_map = {}
