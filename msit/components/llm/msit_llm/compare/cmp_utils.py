@@ -65,7 +65,6 @@ class BasicDataInfo:
             except (IndexError, AttributeError, TypeError, ValueError) as e:
                 msg = f"get_token_id error, dirseg: {dirseg}, error: {e}"
                 logger.error(msg)
-            finally:
                 token_id = 0
         else:
             token_id = self.get_token_id(os.path.dirname(cur_path))
