@@ -45,7 +45,7 @@ compare功能可以直接通过msit命令行形式启动精度对比。启动方
   -c /usr/local/Ascend/ascend-toolkit/latest -o /home/HwHiAiUser/result/test
   ```
 
-### 输出结果说明
+### compare输出结果说明
 
 ```sh
 {output_path}/{timestamp}/{input_name-input_shape}  # {input_name-input_shape} 用来区分动态shape时不同的模型实际输入，静态shape时没有该层
@@ -81,6 +81,48 @@ compare功能可以直接通过msit命令行形式启动精度对比。启动方
 ├-- result_{timestamp}.csv                   # 比对结果文件
 └-- tmp                                      # 如果 -m 模型为 Tensorflow pb 文件, tfdbg 相关的临时目录
 ```
+
+### 单独dump输出结果说明
+
+```sh
+{output_path}/{timestamp}/{input_name-input_shape}  # {input_name-input_shape} 用来区分动态shape时不同的模型实际输入，静态shape时没有该层
+├-- dump_data
+│   ├-- npu                          # npu dump 数据目录
+│   │   ├-- {timestamp}              # 模型所有npu dump的算子输出
+│   │   │   └-- 0                    # Device 设备 ID 号
+│   │   │       └-- {om_model_name}  # 模型名称
+│   │   │           └-- 1            # 模型 ID 号
+│   │   │               ├-- 0        # 针对每个Task ID执行的次数维护一个序号，从0开始计数，该Task每dump一次数据，序号递增1
+│   │   │               │   ├-- Add.8.5.1682067845380164
+│   │   │               │   ├-- ...
+│   │   │               │   └-- Transpose.4.1682148295048447
+│   │   │               └-- 1
+│   │   │                   ├-- Add.11.4.1682148323212422
+│   │   │                   ├-- ...
+│   │   │                   └-- Transpose.4.1682148327390978
+│   │   ├-- {time_stamp}
+│   │   │   ├-- input_0_0.bin
+│   │   │   └-- input_0_0.npy
+│   │   └-- {time_stamp}_summary.json
+│   └-- {onnx or tf or caffe} # 原模型 dump 数据存放路径，onnx / tf / caffe 分别对应 ONNX / Tensorflow / Caffe 模型
+│       ├-- Add_100.0.1682148256368588.npy
+│       ├-- ...
+│       └-- Where_22.0.1682148253575249.npy
+├-- input
+│   └-- input_0.bin                          # 随机输入数据，若指定了输入数据，则该文件不存在
+├-- model
+│   ├-- {om_model_name}.json                    # 离线模型om模型(.om)通过atc工具转换后的json文件
+│   └-- new_{onnx_model_name}.onnx              # 把每个算子作为输出节点后新生成的 onnx 模型
+└-- tmp                                      # 如果 -m 模型为 Tensorflow pb 文件, tfdbg 相关的临时目录
+```
+
+### 单独compare输出结果说明
+
+```sh
+{output_path}/
+├-- result_{timestamp}.csv                   # 比对结果文件
+```
+
 #### 输出结果说明和分析步骤参考
 
 请移步[对比结果分析步骤](../../../examples/cli/debug/compare/result_analyse/README.md)
