@@ -124,10 +124,10 @@ def build_transformers_model(source_path):
     return model, config
 
 
-def to_transformers_traced_module(model, input_names=BASIC_INPUT_NAMES):
+def to_transformers_traced_module(model, input_names=BASIC_INPUT_NAMES, disable_check=True):
     from transformers.utils.fx import symbolic_trace
 
-    return symbolic_trace(model, input_names=input_names)
+    return symbolic_trace(model, input_names=input_names, disable_check=disable_check)
 
 
 def get_lambda_source_code(function):
