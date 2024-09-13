@@ -15,6 +15,8 @@
 import os
 import time
 from msit_llm.transform.torch_to_float_atb import utils
+from components.utils.install import get_public_url
+
 
 def float_layer_cpp_gen(parsed_model, save_name=None, save_dir=None):
     from msit_llm.transform.torch_to_float_atb import float_layer_cpp_templates
@@ -22,7 +24,10 @@ def float_layer_cpp_gen(parsed_model, save_name=None, save_dir=None):
     model_name_lower = parsed_model.get("name", "model").lower()
 
     rr = ""
-    rr += float_layer_cpp_templates.cpp_copyright_header.format(year=time.localtime().tm_year) + "\n"
+    rr += float_layer_cpp_templates.cpp_copyright_header.format(
+        year=time.localtime().tm_year,
+        licenses_url=get_public_url('msit_licenses_url')
+    ) + "\n"
     rr += "\n".join([f'''#include "{i}"''' for i in float_layer_cpp_templates.all_atb_operation_headers])
     rr += f'''\n#include "models/{model_name_lower}/layer/decoder_layer.h"'''
 

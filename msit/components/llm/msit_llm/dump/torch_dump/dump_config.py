@@ -91,7 +91,7 @@ class DumpConfig:
 
         if not self._check_args():
             raise ValueError("Invalid args of DumpConfig.")
-          
+        
         if seed is not None:
             from msit_llm import seed_all
             seed_all(seed=seed)

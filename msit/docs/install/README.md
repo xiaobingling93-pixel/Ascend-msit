@@ -98,6 +98,9 @@ pip uninstall msit-surgeon msit
 ```
 > 如果您仅仅卸载某几个组件，请不要将 msit 卸载，会影响其他组件使用
 
+> 注意：安装benchmark的时候，也会一并安装ais-bench和aclruntime。因此卸载时除了卸载msit benchmark，
+> 还需要手动卸载ais-bench和aclruntime。
+
 # 离线安装(仅支持linux)
 因为部分用户可能需要在非联网机器中安装 msit， 下面提供离线安装指导：
 
