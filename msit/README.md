@@ -43,6 +43,7 @@ msIT(MindStudio Inference Tools)作为昇腾统一推理工具，提供客户一
 | [benchmark](/msit/docs/benchmark)     | -                                   | 用来针对指定的推理模型运行推理程序，并能够测试推理模型的性能（包括吞吐率、时延） |
 | debug(一站式调试)                          | [surgeon](/msit/docs/debug/surgeon) | 使能ONNX模型在昇腾芯片的优化，并提供基于ONNX的改图功能          |
 | debug(一站式调试)                          | [compare](/msit/docs/debug/compare) | 提供自动化的推理场景精度比对，用来定位问题算子                  |
+| debug(一站式调试)                          | [dump](/msit/docs/debug/dump)       | 提供传统模型的数据dump功能                          |
 | [analyze](/msit/components/analyze)   | -                                   | 提供其他平台模型迁移至昇腾平台的支持度分析功能                  |
 | [transplt](/msit/components/transplt) | -                                   | 提供NV C++推理应用迁移分析以及昇腾API推荐功能              |
 | [convert](/msit/components/convert)   | -                                   | 提供推理模型转换功能                               |
