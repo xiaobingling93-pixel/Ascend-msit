@@ -64,7 +64,11 @@ def handles_so_dir() -> None:
     if not FileStat(so_real_path).is_basically_legal('read', strict_permission=True):
         raise OSError(f"{save_tensor_so_name} is illegal, group or others writable file stat is not permitted")
 
-    os.environ[LD_PRELOAD] = so_real_path + ":" + os.environ.get(LD_PRELOAD, "")
+    ld_preload = os.getenv(LD_PRELOAD)
+    if ld_preload:
+        os.environ[LD_PRELOAD] = so_real_path + ":" + ld_preload
+    else:
+        os.environ[LD_PRELOAD] = so_real_path
 
 
 def handles_exec(args) -> None:
