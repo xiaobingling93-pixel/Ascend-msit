@@ -43,7 +43,7 @@ ait_sub_task_entry_points = [
 
 setup(
     name='msit_llm',
-    version='7.0.0c730',
+    version='7.0.0c912',
     description='Debug tools for large language model(llm)',
     url=config.get('URL', 'msit_llm_url'),
     packages=find_packages(),    
