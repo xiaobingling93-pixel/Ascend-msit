@@ -120,7 +120,7 @@ def seed_all(seed=2024):
         torch.backends.cudnn.enable = False
         torch.bachekds.cudnn.benchmark = False
     if is_npu and torch_npu.npu.is_available():
-        torch_npu.manual_seed(seed)
-        torch_npu.manual_seed_all(seed)
+        torch_npu.npu.manual_seed(seed)
+        torch_npu.npu.manual_seed_all(seed)
 
     logger.info(f"Enable deterministic computation sucess! current seed is {seed}.")
