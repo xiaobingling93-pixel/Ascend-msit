@@ -57,7 +57,7 @@ class BasicDataInfo:
         dirseg = cur_path.split(os.path.sep)
         if len(dirseg) < 4:
             return 0
-        flag1 = dirseg[-3] == 'tensors' or dirseg[-3] == "torch_tensors"
+        flag1 = dirseg[-3] == "tensors" or dirseg[-3] == "torch_tensors"
         flag2 = any([dirseg[-4].startswith(x) for x in GLOBAL_HISTORY_AIT_DUMP_PATH_LIST])
         if flag1 and flag2:
             try:
