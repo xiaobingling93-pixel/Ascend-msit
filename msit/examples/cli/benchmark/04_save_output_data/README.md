@@ -4,12 +4,12 @@
 
 默认情况下，benchmark推理工具执行后不保存输出结果数据文件，配置相关参数后，可生成的结果数据如下：
 
-| 文件/目录                                | 说明                                                         |
-| ---------------------------------------- | ------------------------------------------------------------ |
-| {文件名}.bin、{文件名}.npy或{文件名}.txt | 模型推理输出结果文件。<br/>文件命名格式：名称_输出序号.后缀。不指定input时（纯推理），名称固定为“pure_infer_data”；指定input时，名称以第一个输入的第一个名称命名；输出的序号从0开始按输出先后顺序排列；文件名后缀由--outfmt参数控制。<br/>默认情况下，会在--output参数指定的目录下创建“日期+时间”的目录，并将结果文件保存在该目录下；当指定了--output_dirname时，结果文件将直接保存在--output_dirname参数指定的目录下。<br/>指定--output_dirname参数时，多次执行工具推理会导致结果文件因同名而覆盖。 |
-| xx_summary.json                          | 工具输出模型性能结果数据。默认情况下，“xx”以“日期+时间”命名；当指定了--output_dirname时，“xx”以--output_dirname指定的目录名称命名。<br/>指定--output_dirname参数时，多次执行工具推理会导致结果文件因同名而覆盖。 |
-| dump                                     | dump数据文件目录。使用--dump开启dump时，在--output参数指定的目录下创建dump目录，保存dump数据文件。 |
-| profiler                                 | Profiler采集性能数据文件目录。使用--profiler开启性能数据采集时，在--output参数指定的目录下创建profiler目录，保存性能数据文件。 |
+| 文件/目录                                | 说明                                                                                                                                                                                                                                                                                                         |
+| ---------------------------------------- |------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| {文件名}.bin、{文件名}.npy或{文件名}.txt | 模型推理输出结果文件。<br/>文件命名格式：名称_输出序号.后缀。不指定input时（纯推理），名称固定为“pure_infer_data”；指定input时，名称以第一个输入的第一个名称命名；输出的序号从0开始按输出先后顺序排列；文件名后缀由--outfmt参数控制。<br/>默认情况下，会在--output参数指定的目录下创建“日期+时间”的目录，并将结果文件保存在该目录下；当指定了--output-dirname时，结果文件将直接保存在--output-dirname参数指定的目录下。<br/>指定--output-dirname参数时，多次执行工具推理会导致结果文件因同名而覆盖。 |
+| xx_summary.json                          | 工具输出模型性能结果数据。默认情况下，“xx”以“日期+时间”命名；当指定了--output-dirname时，“xx”以--output-dirname指定的目录名称命名。<br/>指定--output-dirname参数时，多次执行工具推理会导致结果文件因同名而覆盖。                                                                                                                                                                   |
+| dump                                     | dump数据文件目录。使用--dump开启dump时，在--output参数指定的目录下创建dump目录，保存dump数据文件。                                                                                                                                                                                                                                           |
+| profiler                                 | Profiler采集性能数据文件目录。使用--profiler开启性能数据采集时，在--output参数指定的目录下创建profiler目录，保存性能数据文件。                                                                                                                                                                                                                           |
 
 ## 运行示例
 1. 仅设置--output参数。示例命令及结果如下：
@@ -59,7 +59,7 @@
   |-- 2023_01_03-06_35_53_summary.json
   ```
 
-3. 设置--output_dirname参数。示例命令及结果如下：
+3. 设置--output-dirname参数。示例命令及结果如下：
 
   ```bash
   msit benchmark --om-model ./pth_resnet50_bs1.om --output ./result --output-dirname subdir
@@ -105,7 +105,7 @@
 
 benchmark推理工具执行后，打屏输出结果示例如下：
 
-- display_all_summary=False时，打印如下：
+- --display-all-summary参数设置为False时，打印如下：
 
   ```bash
   [INFO] -----------------Performance Summary------------------
@@ -114,7 +114,7 @@ benchmark推理工具执行后，打屏输出结果示例如下：
   [INFO] ------------------------------------------------------
   ```
 
-- display_all_summary=True时，打印如下：
+- --display-all-summary参数设置为True时，打印如下：
 
   ```bash
   [INFO] -----------------Performance Summary------------------
@@ -128,18 +128,18 @@ benchmark推理工具执行后，打屏输出结果示例如下：
 
 **字段说明**
 
-| 字段                  | 说明                                                         |
-| --------------------- | ------------------------------------------------------------ |
-| H2D_latency (ms)      | Host to Device的内存拷贝耗时。单位为ms。                     |
-| min                   | 推理执行时间最小值。                                         |
-| max                   | 推理执行时间最大值。                                         |
-| mean                  | 推理执行时间平均值。                                         |
-| median                | 推理执行时间取中位数。                                       |
-| percentile(99%)       | 推理执行时间中的百分位数。                                   |
-| NPU_compute_time (ms) | NPU推理计算的时间。单位为ms。                                |
-| D2H_latency (ms)      | Device to Host的内存拷贝耗时。单位为ms。                     |
-| throughput            | 吞吐率。吞吐率计算公式：1000 *batchsize/npu_compute_time.mean |
-| batchsize             | 批大小。本工具不一定能准确识别当前样本的batchsize，建议通过--batchsize参数进行设置。 |
+| 字段                  | 说明                                                    |
+| --------------------- |-------------------------------------------------------|
+| H2D_latency (ms)      | Host to Device的内存拷贝耗时。单位为ms。                          |
+| min                   | 推理执行时间最小值。                                            |
+| max                   | 推理执行时间最大值。                                            |
+| mean                  | 推理执行时间平均值。                                            |
+| median                | 推理执行时间取中位数。                                           |
+| percentile(99%)       | 推理执行时间中的百分位数。                                         |
+| NPU_compute_time (ms) | NPU推理计算的时间。单位为ms。                                     |
+| D2H_latency (ms)      | Device to Host的内存拷贝耗时。单位为ms。                          |
+| throughput            | 吞吐率。吞吐率计算公式：1000 *batchsize/npu_compute_time.mean     |
+| batchsize             | 批大小。本工具不一定能准确识别当前样本的batchsize，建议通过--batch-size参数进行设置。 |
 
 ## FAQ
 使用出现问题时，可参考[FAQ](https://gitee.com/ascend/msit/wikis/benchmark_FAQ/msit%20benchmark%20%E5%AE%89%E8%A3%85%E9%97%AE%E9%A2%98FAQ)

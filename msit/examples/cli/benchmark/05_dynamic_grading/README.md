@@ -3,7 +3,7 @@
 
 ## 介绍
 
-动态分档场景。主要包含动态Batch、动态HW（宽高）、动态Dims三种场景，需要分别传入dym-batch、dym-hw、dym-dims指定实际档位信息。
+动态分档场景。主要包含动态Batch、动态HW（宽高）、动态Dims三种场景，需要分别传入--dym-batch、--dym-hw、--dym-dims指定实际档位信息。
 
 ## 运行示例
 
@@ -33,7 +33,7 @@
 
 4. 自动设置Dims模式（动态Dims模型）。
 
-    动态Dims模型输入数据的Shape可能是不固定的，比如一个输入文件Shape为1,3,224,224，另一个输入文件Shape为 1,3,300,300。若两个文件同时推理，则需要设置两次动态Shape参数，当前不支持该操作。针对该场景，增加auto-set-dymdims-mode模式，可以根据输入文件的Shape信息，自动设置模型的Shape参数。
+    动态Dims模型输入数据的Shape可能是不固定的，比如一个输入文件Shape为1,3,224,224，另一个输入文件Shape为 1,3,300,300。若两个文件同时推理，则需要设置两次动态Shape参数，当前不支持该操作。针对该场景，增加--auto-set-dymdims-mode模式，可以根据输入文件的Shape信息，自动设置模型的Shape参数。
 
     ```bash
     msit benchmark --om-model resnet50_v1_dynamicshape_fp32.om --input=./data/ --auto-set-dymdims-mode 1
