@@ -71,14 +71,25 @@ def get_torchair_ge_graph_path(my_path):
     if not os.path.isdir(my_path):
         return None
 
+    ge_graph_files = []
     my_path_depth = len(my_path.split(os.sep))
+    timestamp_pattern = re.compile(r'(\d+)')
     for cur_path, dirs, file_names in os.walk(my_path):
         for file_name in file_names:
             if file_name.startswith(GE_GRAPH_FILE_PREFIX) and file_name.endswith(".txt"):
-                return os.path.join(cur_path, file_name)
+                match = timestamp_pattern.search(file_name)
+                if match:
+                    full_path = os.path.join(cur_path, file_name)
+                    timestamp = int(match.group(1))
+                    ge_graph_files.append((full_path, timestamp))
+
             cur_depth = len(cur_path.split(os.sep)) - my_path_depth
             if cur_depth > 5:  # Avoid going too deep
                 break
+
+    if ge_graph_files:
+        sorted_ge_graph_files = [file for file, timestamp in sorted(ge_graph_files, key=lambda x: x[1])]
+        return sorted_ge_graph_files
     return None
 
 
@@ -141,25 +152,38 @@ def parse_pbtxt_to_dict(pbtxt_path):
     return result
 
 
-def gather_data_with_token_id(data_path):
-    token_dirs, gathered_files, cur_token_id = [], {}, 0
+def gather_data_with_token_id(data_path, fx=False):
+    token_dirs, cur_token_id = [], 0
     # Detect the deepest dir level where sub dirs are all digits, and regard as tokens level.
-    for cur_path, dirs, file_names in os.walk(data_path):
-        if len(dirs) == 0:
-            continue
-        if all([len(ii) < MAX_TOKEN_LEN and str.isdigit(ii) for ii in dirs]):
-            dirs = sorted(dirs, key=lambda xx: int(xx))
-            token_dirs = [os.path.join(cur_path, dir_name) for dir_name in dirs]  # Search till deepest level
+    if fx:
+        for cur_path, dirs, file_names in os.walk(data_path):
+            if len(dirs) == 0:
+                continue
+            if all([len(ii) < MAX_TOKEN_LEN and str.isdigit(ii) for ii in dirs]):
+                dirs = sorted(dirs, key=lambda xx: int(xx))
+                token_dirs = [os.path.join(cur_path, dir_name) for dir_name in dirs]  # Search till deepest level
+    else:
+        token_dirs = []
+        for cur_path, dirs, _ in sorted(os.walk(data_path), key=lambda x: x[0]):
+            if not dirs:
+                token_dirs.append(cur_path)
+
     if len(token_dirs) == 0:
         token_dirs.append(data_path)  # Just use data_path if found no token like dirs
 
+    gathered_files_list = []
     for token_dir in token_dirs:
+        gathered_files = {}
         cur_basename = os.path.basename(token_dir)
         cur_token_id = int(cur_basename) if str.isdigit(cur_basename) else 0
         for cur_path, dirs, file_names in os.walk(token_dir):
+            if gathered_files:
+                gathered_files = {}
             file_names = [os.path.join(cur_path, file_name) for file_name in file_names]
             gathered_files.setdefault(cur_token_id, []).extend(file_names)
-    return gathered_files
+            if gathered_files[cur_token_id]:
+                gathered_files_list.append(gathered_files)
+    return gathered_files_list
 
 
 def init_ge_dump_data_from_bin_path(ge_dump_path):
@@ -176,34 +200,37 @@ def init_ge_dump_data_from_bin_path(ge_dump_path):
             'ConcatV2': '1/ConcatV2D.ConcatV2.42.6.1706596912161117',
       }}
     """
-    gathered_files = gather_data_with_token_id(ge_dump_path)
+    gathered_files_list = gather_data_with_token_id(ge_dump_path)
 
-    dump_data_with_token_id = {}
-    for token_id, file_list in gathered_files.items():
-        cur_dump_data = {}
-        for file_name in sorted(file_list):
-            if os.path.splitext(file_name)[-1] in DUMP_FILE_FILTER_SUFIX:
-                continue
-            split_name = os.path.basename(file_name).split(".")
-            if len(split_name) < 5:
-                logger.warning(f"invalid file name: {file_name}, should contain at least 4 '.'")
-                continue
+    dump_data_with_token_id_list = []
+    for gathered_files in gathered_files_list:
+        dump_data_with_token_id = {}
+        for token_id, file_list in gathered_files.items():
+            cur_dump_data = {}
+            for file_name in sorted(file_list):
+                if os.path.splitext(file_name)[-1] in DUMP_FILE_FILTER_SUFIX:
+                    continue
+                split_name = os.path.basename(file_name).split(".")
+                if len(split_name) < 5:
+                    logger.warning(f"invalid file name: {file_name}, should contain at least 4 '.'")
+                    continue
 
-            cur_op_name = ".".join(split_name[1:-3])
-            if cur_op_name in cur_dump_data:
-                exists_file = cur_dump_data[cur_op_name]
-                exists_file_size = os.path.getsize(exists_file)
-                cur_file_size = os.path.getsize(file_name)
-                keep_one = file_name if cur_file_size > exists_file_size else exists_file
-                cur_dump_data[cur_op_name] = keep_one
-                logger.warning(f"duplicated op name: {cur_op_name}."
-                               f" [{os.path.basename(file_name)}, {os.path.basename(exists_file)}]."
-                               f" Will keep the larger one {os.path.basename(keep_one)}."
-                               )
-            else:
-                cur_dump_data[cur_op_name] = file_name
-        dump_data_with_token_id[token_id] = cur_dump_data
-    return dump_data_with_token_id
+                cur_op_name = ".".join(split_name[1:-3])
+                if cur_op_name in cur_dump_data:
+                    exists_file = cur_dump_data[cur_op_name]
+                    exists_file_size = os.path.getsize(exists_file)
+                    cur_file_size = os.path.getsize(file_name)
+                    keep_one = file_name if cur_file_size > exists_file_size else exists_file
+                    cur_dump_data[cur_op_name] = keep_one
+                    logger.warning(f"duplicated op name: {cur_op_name}."
+                                   f" [{os.path.basename(file_name)}, {os.path.basename(exists_file)}]."
+                                   f" Will keep the larger one {os.path.basename(keep_one)}."
+                                   )
+                else:
+                    cur_dump_data[cur_op_name] = file_name
+            dump_data_with_token_id[token_id] = cur_dump_data
+            dump_data_with_token_id_list.append(dump_data_with_token_id)
+    return dump_data_with_token_id_list
 
 
 def init_fx_dump_data_from_path(fx_dump_path):
@@ -222,24 +249,27 @@ def init_fx_dump_data_from_path(fx_dump_path):
         'output': ['1/mm-aten.mm.default.OUTPUT.0.20240125031118787351.npy']
       }}}
     """
-    gathered_files = gather_data_with_token_id(fx_dump_path)
+    gathered_files_list = gather_data_with_token_id(fx_dump_path, fx=True)
 
-    dump_data_with_token_id = {}
-    for token_id, file_list in gathered_files.items():
-        cur_dump_data = {}
-        for file_path in sorted(file_list):
-            if not file_path.endswith("npy"):
-                continue
-            file_name = os.path.basename(file_path)
-            split_name = file_name.split(".")
-            is_input = ".INPUT." in file_name
-            cur_op_name = file_name.split('.INPUT.' if is_input else ".OUTPUT.")[0]
-            cur_op_map = cur_dump_data.get(cur_op_name, {})
-            cur_op_map.setdefault("input" if is_input else "output", []).append(file_path)
-            cur_dump_data[cur_op_name] = cur_op_map
-        if len(cur_dump_data) > 0:
-            dump_data_with_token_id[token_id - 1] = cur_dump_data  # For FX data, token starts from 1, while GE is 0
-    return dump_data_with_token_id
+    dump_data_with_token_id_list = []
+    for gathered_files in gathered_files_list:
+        dump_data_with_token_id = {}
+        for token_id, file_list in gathered_files.items():
+            cur_dump_data = {}
+            for file_path in sorted(file_list):
+                if not file_path.endswith("npy"):
+                    continue
+                file_name = os.path.basename(file_path)
+                split_name = file_name.split(".")
+                is_input = ".INPUT." in file_name
+                cur_op_name = file_name.split('.INPUT.' if is_input else ".OUTPUT.")[0]
+                cur_op_map = cur_dump_data.get(cur_op_name, {})
+                cur_op_map.setdefault("input" if is_input else "output", []).append(file_path)
+                cur_dump_data[cur_op_name] = cur_op_map
+            if len(cur_dump_data) > 0:
+                dump_data_with_token_id[token_id - 1] = cur_dump_data  # For FX data, token starts from 1, while GE is 0
+        dump_data_with_token_id_list.append(dump_data_with_token_id)
+    return dump_data_with_token_id_list
 
 
 def compare_single_data(golden_path, my_path, token_id=0, golden_data=None, my_data=None):
@@ -508,31 +538,41 @@ def sort_ge_dump_data(dump_data, graph_map):
 def acc_compare(golden_path, my_path, output_path=".", ge_graph_path=None):
     logger.info(f"[compare_torchair], golden_path: {golden_path}, my_path: {my_path}, ge_graph_path: {ge_graph_path}")
     set_msaccucmp_path_from_cann()
+
     if ge_graph_path is None:
         ge_graph_path = get_torchair_ge_graph_path(my_path)
+    graph_map_list = []
+    for path in ge_graph_path:
+        graph_map_list.append(parse_pbtxt_to_dict(path))
 
-    graph_map = parse_pbtxt_to_dict(ge_graph_path)
-    my_dump_data = init_ge_dump_data_from_bin_path(my_path)
+    my_dump_data_list = init_ge_dump_data_from_bin_path(my_path)
+
     is_golden_fx = get_torchair_ge_graph_path(golden_path) is None
     if is_golden_fx:
         logger.info("Comparing GE with FX")
-        golden_dump_data = init_fx_dump_data_from_path(golden_path)
+        golden_dump_data_list = init_fx_dump_data_from_path(golden_path)
     else:
         logger.info("Comparing GE with GE")
-        golden_dump_data = init_ge_dump_data_from_bin_path(golden_path)
+        golden_dump_data_list = init_ge_dump_data_from_bin_path(golden_path)
 
-    logger.info(f"All token ids in my_dump_data: {my_dump_data.keys()}")
-    logger.info(f"All token ids in golden_dump_data: {golden_dump_data.keys()}")
+    logger.info(f"All token ids in my_dump_data: {my_dump_data_list[0].keys()}")
+    logger.info(f"All token ids in golden_dump_data: {my_dump_data_list[0].keys()}")
 
-    gathered_row_data = []
-    for token_id in my_dump_data:
-        if token_id not in golden_dump_data:
-            logger.warning(f"My token_id {token_id} not found in golden dump data")
-            continue
-        logger.info(f"Comparing token_id: {token_id}")
-        if is_golden_fx:
-            row_data = compare_ge_with_fx(graph_map, my_dump_data[token_id], golden_dump_data[token_id], token_id)
-        else:
-            row_data = compare_ge_with_ge(graph_map, my_dump_data[token_id], golden_dump_data[token_id], token_id)
-        gathered_row_data.extend(row_data)
-    return save_compare_reault_to_csv(gathered_row_data, output_path)
+    for i in range(len(graph_map_list)):
+        graph_map = graph_map_list[i]
+        my_dump_data = my_dump_data_list[i]
+        golden_dump_data = golden_dump_data_list[i]
+
+        gathered_row_data = []
+        for token_id in my_dump_data:
+            if token_id not in golden_dump_data:
+                logger.warning(f"My token_id {token_id} not found in golden dump data")
+                continue
+            logger.info(f"Comparing token_id: {token_id}")
+            if is_golden_fx:
+                row_data = compare_ge_with_fx(graph_map, my_dump_data[token_id], golden_dump_data[token_id], token_id)
+            else:
+                row_data = compare_ge_with_ge(graph_map, my_dump_data[token_id], golden_dump_data[token_id], token_id)
+            gathered_row_data.extend(row_data)
+        save_compare_reault_to_csv(gathered_row_data, output_path)
+
