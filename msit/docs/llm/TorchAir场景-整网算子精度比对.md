@@ -164,7 +164,7 @@
 
   def convert(data_path):
       import numpy as np
-      from msit_llm.compare import torchair_acc_cmp
+      from components.utils.acc_cmp import parse_torchair_dump_data
 
       npz_surfix, npy_surfix = "{}.npz".format(surfix), "{}.npy".format(surfix)
       for cur_path, dirs, files in os.walk(data_path):
@@ -179,7 +179,7 @@
                   os.remove(cur)
                   print("Converted: {} -> {}{}".format(cur, file_name, npy_surfix))
               elif not file.endswith(npz_surfix) and not file.endswith(".txt") and not file.endswith(".swp"):
-                  inputs, outputs = torchair_acc_cmp.parse_torchair_dump_data(cur)
+                  inputs, outputs = acc_cmp.parse_torchair_dump_data(cur)
                   inputs = [convert_data_to_info(ii) for ii in inputs]
                   outputs = [convert_data_to_info(ii) for ii in outputs]
 

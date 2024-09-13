@@ -21,6 +21,7 @@ import numpy as np
 from msit_llm.common.log import logger
 from msit_llm.common.utils import safe_string
 from msit_llm.compare.cmp_utils import BasicDataInfo, fill_row_data, save_compare_reault_to_csv
+from components.utils.acc_cmp import parse_torchair_dump_data, set_msaccucmp_path_from_cann
 
 
 GE_GRAPH_FILE_PREFIX = "dynamo_original_graph_"
@@ -33,38 +34,6 @@ MAX_TOKEN_LEN = 12
 
 def default_tensor_converter(tensor):
     return tensor.data.reshape(tensor.shape)
-
-
-def set_msaccucmp_path_from_cann():
-    global IS_MSACCUCMP_PATH_SET
-    global GLOBAL_TENSOR_CONVERTER
-
-    # env TOOLCHAIN_HOME works for both development and product packages.
-    cann_path = os.environ.get("TOOLCHAIN_HOME", os.environ.get("ASCEND_TOOLKIT_HOME", ""))
-    if not cann_path:
-        raise OSError("CANN toolkit in not installed or not set, try installing the latest CANN toolkit.")
-    cann_path = safe_string(cann_path)
-    cann_path = cann_path.split(":")[0]  # Could be multiple split by :, should use the first one
-
-    msaccucmp_path = os.path.join(cann_path, "tools", "operator_cmp", "compare")
-    if not os.path.exists(msaccucmp_path):
-        raise OSError(f"{msaccucmp_path} not exists, try installing the latest CANN toolkit.")
-
-    if msaccucmp_path not in sys.path:
-        sys.path.append(msaccucmp_path)
-    IS_MSACCUCMP_PATH_SET = True
-    logger.info(f"Set msaccucmp_path={msaccucmp_path}")
-
-    if GLOBAL_TENSOR_CONVERTER is None:
-        from conversion import tensor_conversion
-
-        if hasattr(tensor_conversion, "ConvertSingleTensorFormat"):
-            GLOBAL_TENSOR_CONVERTER = tensor_conversion.ConvertSingleTensorFormat()
-        else:
-            GLOBAL_TENSOR_CONVERTER = default_tensor_converter
-            logger.warning("ConvertSingleTensorFormat not found in msaccucmp, connot convert tensor format."
-                           " Try installing the latest CANN toolkit."
-                           )
 
 
 def get_torchair_ge_graph_path(my_path):
@@ -80,22 +49,6 @@ def get_torchair_ge_graph_path(my_path):
             if cur_depth > 5:  # Avoid going too deep
                 break
     return None
-
-
-def parse_torchair_dump_data(dump_file):
-    if dump_file.endswith(".npz"):  # Custom converted data info
-        loaded = np.load(dump_file)
-        return loaded.get("inputs", []), loaded.get("outputs", [])
-
-    if not IS_MSACCUCMP_PATH_SET:
-        set_msaccucmp_path_from_cann()
-    from dump_parse.dump_utils import parse_dump_file  # Parser tool from CANN msaccucmp
-    from cmp_utils.constant.const_manager import ConstManager
-
-    bin_dump_data = parse_dump_file(dump_file, dump_version=ConstManager.OLD_DUMP_TYPE)
-    inputs = [GLOBAL_TENSOR_CONVERTER(input_data) for input_data in bin_dump_data.input_data]
-    outputs = [GLOBAL_TENSOR_CONVERTER(output_data) for output_data in bin_dump_data.output_data]
-    return inputs, outputs
 
 
 def get_unique_key(cur_dict, cur_key):
