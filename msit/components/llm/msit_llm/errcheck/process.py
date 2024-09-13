@@ -85,7 +85,7 @@ def process_error_check(args) -> None:
         "debug": '0', "info": '1', "warning": '2', "warn": '2', "error": '3', "fatal": '4', "critical": '5'
     }
 
-    os.environ[ATB_AIT_LOG_LEVEL] = atb_log_level_map[args.log_level]
+    os.environ[ATB_AIT_LOG_LEVEL] = atb_log_level_map, get(args.log_level, 1)
 
     logger.info("Environment configuring...")
 
