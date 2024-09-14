@@ -408,7 +408,8 @@ class ErrCheck(BaseCommand):
             default='',
             help='Executable command that running acl-transformer model inference. '
                  'User is responsible for the safeness of the input command. '
-                 "E.g. --exec 'bash run.sh patches/models/modeling_xxx.py'.")
+                 "E.g. --exec 'bash run.sh patches/models/modeling_xxx.py'."
+        )
 
         parser.add_argument(
             '--type',
@@ -425,7 +426,7 @@ class ErrCheck(BaseCommand):
             '-o',
             dest="output",
             required=False,
-            type=FileStat,
+            type=check_output_path_legality,
             default='',
             help="Directory that stores the error information. If not provided, current directory will be used."
         )

@@ -126,9 +126,9 @@ def check_output_path_legality(value):
     try:
         file_stat = FileStat(path_value)
     except Exception as err:
-        raise argparse.ArgumentTypeError(f"output path:{path_value} is illegal. Please check.") from err
+        raise argparse.ArgumentTypeError(f"output path is illegal. Please check.") from err
     if not file_stat.is_basically_legal("write", strict_permission=False):
-        raise argparse.ArgumentTypeError(f"output path:{path_value} can not write. Please check.")
+        raise argparse.ArgumentTypeError(f"output path can not be written. Please check.")
     return path_value
 
 
