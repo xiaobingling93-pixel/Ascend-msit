@@ -201,6 +201,9 @@ def init_ge_dump_data_from_bin_path(ge_dump_path):
       }}
     """
     gathered_files_list = gather_data_with_token_id(ge_dump_path)
+    if not gathered_files_list:
+        logger.error("can not get ge dump data")
+        raise Exception
 
     dump_data_with_token_id_list = []
     for gathered_files in gathered_files_list:
@@ -250,6 +253,9 @@ def init_fx_dump_data_from_path(fx_dump_path):
       }}}
     """
     gathered_files_list = gather_data_with_token_id(fx_dump_path, fx=True)
+    if not gathered_files_list:
+        logger.error("can not get fx dump data")
+        raise Exception
 
     dump_data_with_token_id_list = []
     for gathered_files in gathered_files_list:
