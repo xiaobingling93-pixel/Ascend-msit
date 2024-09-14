@@ -128,6 +128,7 @@ def save_compare_reault_to_csv(gathered_row_data, output_path=".", columns=CSV_G
     data_frame.dropna(axis=0, how="all", inplace=True)
     data_frame.to_csv(csv_save_path, index=False)
     logger.info(f"Saved comparing results: {csv_save_path}")
+    return csv_save_path
 
 
 def compare_data(golden_data, my_data):
