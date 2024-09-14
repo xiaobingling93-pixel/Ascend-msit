@@ -248,7 +248,7 @@ class CompareCommand(BaseCommand):
 
         # Adding custom comparing algorithms
         if args.custom_algorithms:
-            from msit_llm.compare.cmp_algorithm import register_custom_compare_algorithm
+            from components.utils.cmp_algorithm import register_custom_compare_algorithm
 
             for custom_compare_algorithm in args.custom_algorithms:
                 register_custom_compare_algorithm(custom_compare_algorithm)
@@ -377,7 +377,7 @@ class OpcheckCommand(BaseCommand):
 
         # Adding custom comparing algorithms
         if args.custom_algorithms:
-            from msit_llm.compare.cmp_algorithm import register_custom_compare_algorithm
+            from components.utils.cmp_algorithm import register_custom_compare_algorithm
 
             for custom_compare_algorithm in args.custom_algorithms:
                 register_custom_compare_algorithm(custom_compare_algorithm)
