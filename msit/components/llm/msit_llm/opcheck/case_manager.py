@@ -39,7 +39,7 @@ class CaseManager:
 
         # Adding custom comparing algorithms
         if custom_algorithms:
-            from msit_llm.compare.cmp_algorithm import register_custom_compare_algorithm
+            from components.utils.cmp_algorithm import register_custom_compare_algorithm
 
             for custom_compare_algorithm in custom_algorithms:
                 register_custom_compare_algorithm(custom_compare_algorithm)
