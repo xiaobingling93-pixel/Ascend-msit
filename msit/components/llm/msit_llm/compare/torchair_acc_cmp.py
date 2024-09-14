@@ -181,7 +181,7 @@ def gather_data_with_token_id(data_path, fx=False):
                 gathered_files = {}
             file_names = [os.path.join(cur_path, file_name) for file_name in file_names]
             gathered_files.setdefault(cur_token_id, []).extend(file_names)
-            if gathered_files[cur_token_id]:
+            if gathered_files.get(cur_token_id, None):
                 gathered_files_list.append(gathered_files)
     return gathered_files_list
 
