@@ -32,12 +32,6 @@ LOG_LEVELS_LOWER = [ii.lower() for ii in LOG_LEVELS.keys()]
 
 class DumpCommand(BaseCommand):
     def add_arguments(self, parser):
-        # parser.add_argument(
-        #     '--mindie_torch',
-        #     required=False,
-        #     action='store_true',
-        #     default=False,
-        #     help='Use this argument to enable dump when inference with MindIE-Torch.')
         parser.add_argument(
             '--only-save-desc',
             '-sd',
@@ -167,10 +161,6 @@ class DumpCommand(BaseCommand):
             set_log_level(args.log_level)
             logger.info(f"About to execute command : {args.exec}")
             logger.warning("Please ensure that your execution command is secure.")
-            # if args.mindie_torch:
-            #     from msit_llm.dump.mietorch.dump_config import DumpConfig
-            #     DumpConfig(dump_path=args.output, api_list=args.opname)
-            # else:
             init_dump_task(args)
             # 有的大模型推理任务启动后，输入对话时有提示符，使用subprocess拉起子进程无法显示提示符
             cmds = args.exec.split()

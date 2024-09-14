@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import subprocess
 
 from components.utils.parser import BaseCommand
 from components.debug.compare.msquickcmp.adapter_cli.args_adapter import CmpArgsAdapter
@@ -22,7 +23,7 @@ from components.debug.compare.msquickcmp.common.args_check import (
     check_number_list, check_dym_range_string, check_fusion_cfg_path_legality, check_quant_json_path_legality,
     safe_string, str2bool, check_path_exit
 )
-from msquickcmp.common.utils import logger
+from msquickcmp.common.utils import logger, check_exec_cmd
 from components.debug.compare.msquickcmp.dump.dump_process import dump_process
 from msquickcmp.dump.args_adapter import DumpArgsAdapter
 
@@ -245,7 +246,7 @@ class DumpCommand(BaseCommand):
         parser.add_argument(
             '-m',
             '--model',
-            required=True,
+            required=False,
             dest="model_path",
             type=check_model_path_legality,
             help='The original model (.onnx or .pb or saved_model) file path')
@@ -322,7 +323,7 @@ class DumpCommand(BaseCommand):
         parser.add_argument(
             '-dp',
             '--device-pattern',
-            required=True,
+            required=False,
             dest="device_pattern",
             help="Enter inference in npu or cpu device. For example: -dp cpu")
         parser.add_argument(
@@ -330,15 +331,46 @@ class DumpCommand(BaseCommand):
             required=False,
             dest="tf_json_path",
             help="When dump saved_model, you need provide tf-ops-json file path.")
+        parser.add_argument(
+            "--mindie_torch",
+            action="store_true",
+            required=False,
+            dest="mindie_torch",
+            help="Use this argument to enable dump when inference with MindIE-Torch.")
+        parser.add_argument(
+            "--exec",
+            dest="exec",
+            required=False,
+            type=check_exec_cmd,
+            help="Exec command to run acltransformer model inference"
+                 "For example: --exec \'bash run.sh patches/models/modeling_xxx.py\' ")
+        parser.add_argument(
+            '-opname',
+            '--operation-name',
+            required=False,
+            dest="opname",
+            type=safe_string,
+            default=None,
+            help='Operation names need to dump.')
         self.parser = parser
 
     def handle(self, args):
-        cmp_args = DumpArgsAdapter(args.model_path, args.weight_path, args.input_data_path,
-                                   args.cann_path, args.out_path, args.input_shape, args.device,
-                                   args.dym_shape_range, args.onnx_fusion_switch,
-                                   args.saved_model_signature, args.saved_model_tag_set,
-                                   args.device_pattern, args.tf_json_path)
-        dump_process(cmp_args, True)
+        if args.mindie_torch:
+            if not args.exec:
+                raise NotImplementedError("You must add '-exec' argument to enable MindIE-Torch inference.")
+            from components.debug.compare.msquickcmp.dump.mietorch.dump_config import DumpConfig
+            DumpConfig(dump_path=args.out_path, api_list=args.opname)
+            cmds = args.exec.split()
+            subprocess.run(cmds, shell=False)
+        else:
+            if (not args.model_path) or (not args.device_pattern):
+                raise NotImplementedError("If you do not inference with MindIE-Torch, must use arguments '-m' and '-dp' to do next.")
+            cmp_args = DumpArgsAdapter(args.model_path, args.weight_path, args.input_data_path,
+                                    args.cann_path, args.out_path, args.input_shape, args.device,
+                                    args.dym_shape_range, args.onnx_fusion_switch,
+                                    args.saved_model_signature, args.saved_model_tag_set,
+                                    args.device_pattern, args.tf_json_path)
+            dump_process(cmp_args, True)
 
 
 def get_compare_cmd_ins():
