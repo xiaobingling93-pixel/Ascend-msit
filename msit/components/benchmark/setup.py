@@ -30,7 +30,7 @@ msit_sub_task_entry_points = [f"{t.get('name')}:{t.get('help_info')} = {t.get('m
 
 setup(
     name="msit-benchmark",
-    version="7.0.0c2",
+    version='7.0.0c912',
     description="msit benchmark tool",
     url=config.get('URL', 'msit_url'),
     packages=find_packages(),
