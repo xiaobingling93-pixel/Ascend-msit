@@ -547,6 +547,9 @@ def acc_compare(golden_path, my_path, output_path=".", ge_graph_path=None):
 
     if ge_graph_path is None:
         ge_graph_path = get_torchair_ge_graph_path(my_path)
+    if not ge_graph_path:
+        logger.error("get ge graph failed")
+        raise Exception
     graph_map_list = []
     for path in ge_graph_path:
         graph_map_list.append(parse_pbtxt_to_dict(path))
