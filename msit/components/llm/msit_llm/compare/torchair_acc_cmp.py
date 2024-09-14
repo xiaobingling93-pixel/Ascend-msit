@@ -202,8 +202,7 @@ def init_ge_dump_data_from_bin_path(ge_dump_path):
     """
     gathered_files_list = gather_data_with_token_id(ge_dump_path)
     if not gathered_files_list:
-        logger.error("can not get ge dump data")
-        raise Exception
+        raise Exception("Cannot get ge dump data, because the gathered_files_list is empty.")
 
     dump_data_with_token_id_list = []
     for gathered_files in gathered_files_list:
@@ -254,8 +253,7 @@ def init_fx_dump_data_from_path(fx_dump_path):
     """
     gathered_files_list = gather_data_with_token_id(fx_dump_path, fx=True)
     if not gathered_files_list:
-        logger.error("can not get fx dump data")
-        raise Exception
+        raise Exception("Cannot get fx dump data, because the gathered_files_list is empty.")
 
     dump_data_with_token_id_list = []
     for gathered_files in gathered_files_list:
@@ -548,8 +546,7 @@ def acc_compare(golden_path, my_path, output_path=".", ge_graph_path=None):
     if ge_graph_path is None:
         ge_graph_path = get_torchair_ge_graph_path(my_path)
     if not ge_graph_path:
-        logger.error("get ge graph failed")
-        raise Exception
+        raise Exception("Can not get ge graph, Please check whether the input path contains graph.")
     graph_map_list = []
     for path in ge_graph_path:
         graph_map_list.append(parse_pbtxt_to_dict(path))
@@ -567,7 +564,8 @@ def acc_compare(golden_path, my_path, output_path=".", ge_graph_path=None):
     logger.info(f"All token ids in my_dump_data: {my_dump_data_list[0].keys()}")
     logger.info(f"All token ids in golden_dump_data: {my_dump_data_list[0].keys()}")
 
-    for i in range(len(graph_map_list)):
+    graph_map_list_len = len(graph_map_list)
+    for i in range(graph_map_list_len):
         graph_map = graph_map_list[i]
         my_dump_data = my_dump_data_list[i]
         golden_dump_data = golden_dump_data_list[i]
