@@ -133,8 +133,11 @@ def init_dump_task(args):
         raise OSError(f"{save_tensor_so_name} is illegal, group or others writable file stat is not permitted")
 
     logger.info(f"Append save_tensor_so_path: {save_tensor_so_path} to LD_PRELOAD")
-    ld_preload = os.getenv(LD_PRELOAD) or ""
-    os.environ[LD_PRELOAD] = save_tensor_so_path + ":" + ld_preload
+    ld_preload = os.getenv(LD_PRELOAD)
+    if ld_preload:
+        os.environ[LD_PRELOAD] = save_tensor_so_path + ":" + ld_preload
+    else:
+        os.environ[LD_PRELOAD] = save_tensor_so_path
 
 
 def json_to_onnx(args):

@@ -20,9 +20,9 @@ from components.utils.parser import BaseCommand
 from msit_llm.dump.initial import init_dump_task, clear_dump_task
 from msit_llm.opcheck.opchecker import OpChecker, NAMEDTUPLE_PRECISION_METRIC, NAMEDTUPLE_PRECISION_MODE
 from msit_llm.errcheck.process import process_error_check
-from msit_llm.common.utils import str2bool, check_positive_integer, check_device_integer, safe_string, check_exec_cmd, \
+from msit_llm.common.utils import str2bool, check_positive_integer, check_device_integer, safe_string, \
     check_ids_string, check_number_list, check_output_path_legality, check_input_path_legality, check_process_integer, \
-    check_dump_time_integer, check_data_can_convert_to_int
+    check_dump_time_integer, check_data_can_convert_to_int, FileStat
 from msit_llm.bc_analyze import Synthesizer, Analyzer
 from msit_llm.common.log import logger, set_log_level, LOG_LEVELS
 
@@ -408,7 +408,8 @@ class ErrCheck(BaseCommand):
             default='',
             help='Executable command that running acl-transformer model inference. '
                  'User is responsible for the safeness of the input command. '
-                 "E.g. --exec 'bash run.sh patches/models/modeling_xxx.py'.")
+                 "E.g. --exec 'bash run.sh patches/models/modeling_xxx.py'."
+        )
 
         parser.add_argument(
             '--type',
@@ -427,7 +428,7 @@ class ErrCheck(BaseCommand):
             required=False,
             type=check_output_path_legality,
             default='',
-            help="Directory that stores the error information. If not provided, a default directory will be used."
+            help="Directory that stores the error information. If not provided, current directory will be used."
         )
 
         parser.add_argument(
