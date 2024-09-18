@@ -17,6 +17,7 @@ import sys
 import stat
 import re
 import logging
+from components.utils.log import logger
 
 
 MAX_SIZE_UNLIMITE = -1  # 不限制，必须显式表示不限制，读取必须传入
@@ -36,8 +37,6 @@ SOLUTION_LEVEL = 35
 SOLUTION_LEVEL_WIN = 45
 logging.addLevelName(SOLUTION_LEVEL, "\033[1;32m" + "SOLUTION" + "\033[0m")  # green [SOLUTION]
 logging.addLevelName(SOLUTION_LEVEL_WIN, "SOLUTION_WIN")
-logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='[%(levelname)s] %(message)s')
-logger = logging.getLogger(__name__)
 
 SOLUTION_BASE_LOC = '\"gitee repo: Ascend/msit, wikis: ait_security_error_log_solution, chapter:'
 SOFT_LINK_SUB_CHAPTER = 'soft_link_error_log_solution\"'

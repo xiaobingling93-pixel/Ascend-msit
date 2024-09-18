@@ -12,19 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-import logging
 import argparse
 from abc import abstractmethod
 from .util import get_entry_points
 
 AIT_FAQ_HOME = "gitee repo: Ascend/msit, wiki"
 MIND_STUDIO_LOGO = "[Powered by MindStudio]"
-
-logging.basicConfig(
-    stream=sys.stdout, level=logging.INFO, format='[%(levelname)s] %(message)s'
-)
-logger = logging.getLogger(__name__)
 
 
 class AitCommand:
