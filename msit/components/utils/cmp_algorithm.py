@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import torch
-from torch.nn import functional as F
 
+from torch.nn import functional as F
 from components.utils.log import logger
 
 
@@ -120,7 +120,7 @@ def register_custom_compare_algorithm(custom_compare_algorithm):
     try:
         ret = custom_compare_func(torch.ones([1]), torch.ones([1]))
     except Exception as ee:
-        raise ValueError(f"function {func_name} should recieve 2 torch tensor parameters")
+        raise ValueError(f"function {func_name} should recieve 2 torch tensor parameters") from ee
 
     if not isinstance(ret, (list, tuple)) or len(ret) != 2:
         raise ValueError(f"function {func_name} should return 2 value in type ((float, int, str), str)")

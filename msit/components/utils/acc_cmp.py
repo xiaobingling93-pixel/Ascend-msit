@@ -1,17 +1,16 @@
-from collections import OrderedDict
 import os
 import sys
 import re
+from collections import OrderedDict
 
 import numpy as np
+
 from components.utils.log import logger
 from components.utils.check.string_checker import StringChecker
 
 
-
 IS_MSACCUCMP_PATH_SET = False
 GLOBAL_TENSOR_CONVERTER = None
-
 
 
 def default_tensor_converter(tensor):
@@ -26,7 +25,7 @@ def set_msaccucmp_path_from_cann():
     cann_path = os.environ.get("TOOLCHAIN_HOME", os.environ.get("ASCEND_TOOLKIT_HOME", ""))
     if not cann_path:
         raise OSError("CANN toolkit in not installed or not set, try installing the latest CANN toolkit.")
-    if StringChecker().is_str_safe().check(cann_path,True):
+    if StringChecker().is_str_safe().check(cann_path, True):
         cann_path = cann_path.split(":")[0]  # Could be multiple split by :, should use the first one
 
     msaccucmp_path = os.path.join(cann_path, "tools", "operator_cmp", "compare")
@@ -48,7 +47,6 @@ def set_msaccucmp_path_from_cann():
             logger.warning("ConvertSingleTensorFormat not found in msaccucmp, connot convert tensor format."
                            " Try installing the latest CANN toolkit."
                            )
-
 
 
 def parse_torchair_dump_data(dump_file):

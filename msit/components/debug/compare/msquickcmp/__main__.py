@@ -364,7 +364,8 @@ class DumpCommand(BaseCommand):
             subprocess.run(cmds, shell=False)
         else:
             if (not args.model_path) or (not args.device_pattern):
-                raise NotImplementedError("If you do not inference with MindIE-Torch, must use arguments '-m' and '-dp' to do next.")
+                raise NotImplementedError("If you do not inference with MindIE-Torch, "
+                                          "must use arguments '-m' and '-dp' to do next.")
             cmp_args = DumpArgsAdapter(args.model_path, args.weight_path, args.input_data_path,
                                     args.cann_path, args.out_path, args.input_shape, args.device,
                                     args.dym_shape_range, args.onnx_fusion_switch,

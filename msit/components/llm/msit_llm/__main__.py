@@ -234,14 +234,6 @@ class CompareCommand(BaseCommand):
 
     def handle(self, args, **kwargs):
 
-        mindie_rt_op_mapping = os.path.join(args.mapping_file, "mindie_rt_op_mapping.json")
-        mindie_torch_op_mapping = os.path.join(args.mapping_file, "mindie_torch_op_mapping.json")
-        if os.path.exists(mindie_rt_op_mapping) and os.path.exists(mindie_torch_op_mapping):
-            from msit_llm.compare.mie_torch.mietorch_comp import MIETorchCompare
-            comparer = MIETorchCompare(args.golden_path, args.my_path, args.mapping_file, args.output)
-            comparer.compare()
-            return 
-            
         from msit_llm.compare.torchair_acc_cmp import get_torchair_ge_graph_path
 
         set_log_level(args.log_level)
