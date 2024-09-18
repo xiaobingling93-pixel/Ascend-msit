@@ -181,7 +181,8 @@ def check_dump_and_compare(args: CmpArgsAdapter):
         if args.my_path and args.golden_path and args.ops_json:
             return False
         else:
-            raise Exception(f"If you want to alone compare, you need to provide parameters like: -mp -gp and -ops-json")
+            raise Exception(f"If you want to alone compare, you need to provide parameters like: "
+                            f"-mp -gp and --ops-json")
 
 
 def cmp_process(args: CmpArgsAdapter, use_cli: bool):
