@@ -85,8 +85,14 @@ class GEDumpFileReader(DumpFileReader):
         files = os.listdir(folder_path)
         pattern = re.compile(rf'{re.escape(folder_name)}\.\d')
         matching_files = [file for file in files if pattern.search(file)]
-        tensor_file_path = os.path.join(folder_path, matching_files[0])
-        bin_dump_data = parse_torchair_dump_data(tensor_file_path)
-        npu_tensor = bin_dump_data[1][0]
+        try:
+            tensor_file_path = os.path.join(folder_path, matching_files[0])
+        except IndexError:
+            npu_tensor = torch.empty(0)
+        else:
+            bin_dump_data = parse_torchair_dump_data(tensor_file_path)
+            npu_tensor = bin_dump_data[1][0]
+        finally:
+            pass
         
         return npu_tensor
