@@ -68,6 +68,7 @@ class PrecisionTest:
         self.dataset_path = os.path.join(self.script_path, "dataset", self.dataset)
         if not os.path.exists(self.dataset_path):
             raise EnvironmentError(f"Dataset was not found, valid path should be '{self.dataset_path}")
+        self.dataset_path = get_valid_read_path(self.dataset_path)
         self.result_file = ""
         self.logger.info("Precision Test is inited.")
 
@@ -145,7 +146,6 @@ class PrecisionTest:
 
         def run_test():
             correct_total, sum_total = 0, 0
-            self.dataset_path = get_valid_read_path(self.dataset_path)
             for entry in glob.glob((Path(self.dataset_path) / "val/**/*.jsonl").as_posix(), recursive=True):
                 correct, dataset = 0, []
 
@@ -303,7 +303,6 @@ class PrecisionTest:
             return code
 
         def run_test():
-            self.dataset_path = get_valid_read_path(self.dataset_path)
             for entry in tqdm(glob.glob((Path(self.dataset_path) / "*.jsonl").as_posix(), recursive=True),
                               desc='global'):
                 dataset = []
@@ -357,7 +356,6 @@ class PrecisionTest:
             return prompt
 
         def run_test(choice_tokens, correct_total, sum_total):
-            self.dataset_path = get_valid_read_path(self.dataset_path)
             for entry in tqdm(glob.glob((Path(self.dataset_path) / "*.jsonl").as_posix(), recursive=True),
                               desc='global'):
                 dataset = []
