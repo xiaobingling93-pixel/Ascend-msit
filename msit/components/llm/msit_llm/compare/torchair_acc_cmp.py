@@ -161,7 +161,8 @@ def gather_data_with_token_id(data_path, fx=False):
                 continue
             if all([len(ii) < MAX_TOKEN_LEN and str.isdigit(ii) for ii in dirs]):
                 dirs = sorted(dirs, key=lambda xx: int(xx))
-                token_dirs = [os.path.join(cur_path, dir_name) for dir_name in dirs]  # Search till deepest level
+                token_dirs = [os.path.join(cur_path, dir_name) for dir_name in dirs]
+                break
     else:
         token_dirs = []
         for cur_path, dirs, _ in sorted(os.walk(data_path), key=lambda x: x[0]):
@@ -173,37 +174,37 @@ def gather_data_with_token_id(data_path, fx=False):
 
     gathered_files_list = []
     if fx:
+        dump_dirs = {}
         for token_dir in token_dirs:
+            cur_token_id = os.path.basename(token_dir)
+            cur_token_id = int(cur_token_id) if cur_token_id.isdigit() else 0
+            dump_dirs[cur_token_id] = sorted(
+                [os.path.join(token_dir, d) for d in os.listdir(token_dir) if
+                 os.path.isdir(os.path.join(token_dir, d))],
+                key=lambda x: os.path.basename(x)
+            )
+        num_dumps = len(dump_dirs[min(dump_dirs.keys())])
+        for i in range(num_dumps):
             gathered_files = {}
-            cur_basename = os.path.basename(token_dir)
-            cur_token_id = int(cur_basename) if str.isdigit(cur_basename) else 0
-            for cur_path, dirs, file_names in os.walk(token_dir):
-                if gathered_files:
-                    gathered_files = {}
-                file_names = [os.path.join(cur_path, file_name) for file_name in file_names]
-                gathered_files.setdefault(cur_token_id, []).extend(file_names)
-                if gathered_files.get(cur_token_id, None):
-                    gathered_files_list.append(gathered_files)
+            for cur_token_id, dumps in dump_dirs.items():
+                dump_path = dumps[i]
+                file_names = [os.path.join(dump_path, f) for f in os.listdir(dump_path) if f.endswith('.npy')]
+                gathered_files[cur_token_id] = file_names
+            gathered_files_list.append(gathered_files)
     else:
         parent_dir_dict = {}
         for token_dir in token_dirs:
-            # 获取父目录和子目录的名称
             parent_dir = os.path.basename(os.path.dirname(token_dir))
             subdir = os.path.basename(token_dir)
-            # 确保 parent_dir 是数字形式
             parent_token_id = int(parent_dir) if parent_dir.isdigit() else 0
             subdir_id = int(subdir) if subdir.isdigit() else 0
-            # 初始化当前父目录对应的字典
             if parent_token_id not in parent_dir_dict:
                 parent_dir_dict[parent_token_id] = {}
-            # 初始化当前子目录的文件列表
             if subdir_id not in parent_dir_dict[parent_token_id]:
                 parent_dir_dict[parent_token_id][subdir_id] = []
-            # 遍历文件并收集路径
             for cur_path, dirs, file_names in os.walk(token_dir):
                 file_names = [os.path.join(cur_path, file_name) for file_name in file_names]
                 parent_dir_dict[parent_token_id][subdir_id].extend(file_names)
-        # 将每个父目录的字典转换为列表形式并存入 gathered_files
         for parent_token_id, subdirs in parent_dir_dict.items():
             gathered_files_list.append(subdirs)
     return gathered_files_list
