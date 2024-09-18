@@ -235,7 +235,7 @@ class NpuDumpData(DumpData):
                     try:
                         json.dump(load_dict, write_json)
                     except ValueError as exc:
-                        utils.logger.info(str(exc))
+                        utils.logger.error(str(exc))
                         raise AccuracyCompareException(utils.ACCURACY_COMPARISON_WRITE_JSON_FILE_ERROR) from exc
             except IOError as acl_json_file_except:
                 utils.logger.error('Failed to open"' + acl_json_path + '", ' + str(acl_json_file_except))
