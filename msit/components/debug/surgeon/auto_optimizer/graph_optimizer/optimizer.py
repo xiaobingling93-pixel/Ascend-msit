@@ -20,7 +20,7 @@ import pathlib
 import logging
 import tempfile
 from copy import deepcopy
-from typing import Callable, Dict, List, Tuple
+from typing import Callable, List, Tuple
 import multiprocessing
 
 import numpy as np

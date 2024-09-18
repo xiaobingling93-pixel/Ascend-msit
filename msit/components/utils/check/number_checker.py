@@ -1,5 +1,4 @@
 from typing import Union
-import components
 from components.utils.check.checker import Checker, CheckResult, rule
 
 

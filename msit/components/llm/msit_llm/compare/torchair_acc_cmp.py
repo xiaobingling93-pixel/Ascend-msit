@@ -15,7 +15,6 @@
 from collections import OrderedDict
 import os
 import sys
-import re
 
 import numpy as np
 from msit_llm.common.log import logger
@@ -231,7 +230,6 @@ def init_fx_dump_data_from_path(fx_dump_path):
             if not file_path.endswith("npy"):
                 continue
             file_name = os.path.basename(file_path)
-            split_name = file_name.split(".")
             is_input = ".INPUT." in file_name
             cur_op_name = file_name.split('.INPUT.' if is_input else ".OUTPUT.")[0]
             cur_op_map = cur_dump_data.get(cur_op_name, {})

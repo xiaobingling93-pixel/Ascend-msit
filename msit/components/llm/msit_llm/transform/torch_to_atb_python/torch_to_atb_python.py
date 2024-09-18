@@ -15,7 +15,6 @@
 import os
 import re
 import sys
-import stat
 import json
 import inspect
 import string
@@ -24,9 +23,8 @@ from collections import namedtuple
 from functools import reduce
 
 import torch
-import torch_npu
 
-from msit_llm.common.log import logger, set_log_level
+from msit_llm.common.log import logger
 from msit_llm.transform.utils import write_file
 
 atb_speed_path = os.getenv("ATB_SPEED_HOME_PATH", None)
@@ -927,7 +925,6 @@ class ATBModelFromTorch(ATBModel):
             for op in operations:
                 if isinstance(op, list):
                     sub_graph_name = f"sub_graph_{sub_graph_id}"
-                    sub_graph_inputs, sub_graph_outputs = stacked_inputs[0], stacked_outputs[0]
                     _to_file(sub_graph_name, op, depth=depth + 1)
                     cur_inputs, cur_outputs = _get_input_output_name(sub_graph_name)
                     contents.append(

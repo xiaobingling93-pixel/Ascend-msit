@@ -14,12 +14,11 @@
 
 import os
 
-from dataclasses import dataclass
-from typing import Dict, List, Set
+from typing import Dict, List
 
 from model_evaluation.common import logger
 from model_evaluation.common import Const
-from model_evaluation.common.enum import Framework, AtcErr
+from model_evaluation.common.enum import Framework
 from model_evaluation.parser import AtcErrParser, OmParser, ModelParser
 from model_evaluation.bean import OpInfo, OpInnerInfo, ConvertConfig
 from model_evaluation.data import Opp, OpMap

@@ -21,7 +21,6 @@ from multiprocessing import Pool, Manager
 
 from auto_optimizer.common.config import Config
 from auto_optimizer.common import Register
-from auto_optimizer.common.log import LogLevel, setup_logging
 
 from auto_optimizer.inference_engine.data_process_factory import EvaluateFactory
 from auto_optimizer.inference_engine.data_process_factory import PreProcessFactory

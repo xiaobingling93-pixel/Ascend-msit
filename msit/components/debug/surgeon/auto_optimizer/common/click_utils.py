@@ -20,7 +20,6 @@ from multiprocessing import Pool
 from typing import List, Optional, Union
 
 import re
-import argparse
 import click
 
 from auto_optimizer import KnowledgeFactory

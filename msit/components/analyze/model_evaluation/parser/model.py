@@ -20,7 +20,7 @@ from typing import List
 from model_evaluation.common import utils, logger
 from model_evaluation.common.enum import AtcErr, Framework
 from model_evaluation.parser.atc import AtcErrParser
-from model_evaluation.bean import OpInfo, OpInnerInfo, ConvertConfig
+from model_evaluation.bean import OpInfo, ConvertConfig
 
 
 class ModelParser:
@@ -45,7 +45,7 @@ class ModelParser:
     def parse_all_ops(self, convert=False) -> List[OpInfo]:
         if self._json_path == '' and convert:
             if not self.parse_model_to_json():
-                logger.error(f'parse model ops failed.')
+                logger.error('parse model ops failed.')
                 return []
 
         try:
