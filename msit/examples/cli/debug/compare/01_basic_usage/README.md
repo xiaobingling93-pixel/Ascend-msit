@@ -13,7 +13,7 @@ compare精度对比功能可以通过msit命令行方式启动。
   -c /usr/local/Ascend/ascend-toolkit/latest -o /home/HwHiAiUser/result/test
   ```
   - `-om, –-om-model` 指定昇腾AI处理器的离线模型（.om）路径
-  - `-gm, --golden-model` 指定模型文件（.pb或.onnx）路径
+  - `-gm, --golden-model` 指定模型文件（pb模型、onnx模型或caffe模型）路径
   - `-c，–-cann-path` (可选) 指定 `CANN` 包安装完后路径，不指定路径默认会从系统环境变量`ASCEND_TOOLKIT_HOME`中获取`CANN` 包路径，如果不存在则默认为 `/usr/local/Ascend/ascend-toolkit/latest`
   - `-o, –-output` (可选) 输出文件路径，默认为当前路径
 
