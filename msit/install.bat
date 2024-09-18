@@ -23,7 +23,6 @@ SET mingw_w64_path=
 SET skip_check_cert=
 
 SET all_component=1
-SET select_transplt=
 SET select_surgeon=
 SET uninstall=
 SET all_uninstall=
@@ -124,7 +123,6 @@ IF NOT %errorlevel%==0 (
 )
 
 IF %all_component%==1 (
-    SET select_transplt=1
     SET select_surgeon=1
 )
 
