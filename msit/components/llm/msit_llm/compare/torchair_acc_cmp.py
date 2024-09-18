@@ -561,11 +561,10 @@ def acc_compare(golden_path, my_path, output_path=".", ge_graph_path=None):
         logger.info("Comparing GE with GE")
         golden_dump_data_list = init_ge_dump_data_from_bin_path(golden_path)
 
-    logger.info(f"All token ids in my_dump_data: {my_dump_data_list[0].keys()}")
-    logger.info(f"All token ids in golden_dump_data: {my_dump_data_list[0].keys()}")
-
     graph_map_list_len = len(graph_map_list)
     for i in range(graph_map_list_len):
+        logger.info(f"All token ids in my_dump_data: {my_dump_data_list[i].keys()}")
+        logger.info(f"All token ids in golden_dump_data: {golden_dump_data_list[i].keys()}")
         graph_map = graph_map_list[i]
         my_dump_data = my_dump_data_list[i]
         golden_dump_data = golden_dump_data_list[i]
