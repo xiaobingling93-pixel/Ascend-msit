@@ -300,7 +300,7 @@ class PrecisionTest:
                     response = self.tokenizer.decode(output)
                     answers.append(response)
 
-                answer_results = [answer.lstrip()[0] if answer else "-1" for answer in answers]
+                answer_results = [answer.lstrip()[0] if answer.lstrip() else "-1" for answer in answers]
                 is_correct = []
                 for answer_result, label in zip(answer_results, labels):
                     is_correct.append("Correct" if answer_result == label else "Wrong")
@@ -732,7 +732,7 @@ class PrecisionTest:
                     response = self.tokenizer.decode(output)
                     answers.append(response)
 
-                answer_results = [answer.lstrip()[0] if answer else "-1" for answer in answers]
+                answer_results = [answer.lstrip()[0] if answer.lstrip() else "-1" for answer in answers]
                 is_correct = []
                 for answer_result, label in zip(answer_results, labels):
                     is_correct.append("Correct" if answer_result == label else "Wrong")
