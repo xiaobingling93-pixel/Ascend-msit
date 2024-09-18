@@ -254,7 +254,7 @@ def init_ge_dump_data_from_bin_path(ge_dump_path):
                 else:
                     cur_dump_data[cur_op_name] = file_name
             dump_data_with_token_id[token_id] = cur_dump_data
-            dump_data_with_token_id_list.append(dump_data_with_token_id)
+        dump_data_with_token_id_list.append(dump_data_with_token_id)
     return dump_data_with_token_id_list
 
 
