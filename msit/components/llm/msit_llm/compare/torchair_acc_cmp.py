@@ -172,17 +172,40 @@ def gather_data_with_token_id(data_path, fx=False):
         token_dirs.append(data_path)  # Just use data_path if found no token like dirs
 
     gathered_files_list = []
-    for token_dir in token_dirs:
-        gathered_files = {}
-        cur_basename = os.path.basename(token_dir)
-        cur_token_id = int(cur_basename) if str.isdigit(cur_basename) else 0
-        for cur_path, dirs, file_names in os.walk(token_dir):
-            if gathered_files:
-                gathered_files = {}
-            file_names = [os.path.join(cur_path, file_name) for file_name in file_names]
-            gathered_files.setdefault(cur_token_id, []).extend(file_names)
-            if gathered_files.get(cur_token_id, None):
-                gathered_files_list.append(gathered_files)
+    if fx:
+        for token_dir in token_dirs:
+            gathered_files = {}
+            cur_basename = os.path.basename(token_dir)
+            cur_token_id = int(cur_basename) if str.isdigit(cur_basename) else 0
+            for cur_path, dirs, file_names in os.walk(token_dir):
+                if gathered_files:
+                    gathered_files = {}
+                file_names = [os.path.join(cur_path, file_name) for file_name in file_names]
+                gathered_files.setdefault(cur_token_id, []).extend(file_names)
+                if gathered_files.get(cur_token_id, None):
+                    gathered_files_list.append(gathered_files)
+    else:
+        parent_dir_dict = {}
+        for token_dir in token_dirs:
+            # 获取父目录和子目录的名称
+            parent_dir = os.path.basename(os.path.dirname(token_dir))
+            subdir = os.path.basename(token_dir)
+            # 确保 parent_dir 是数字形式
+            parent_token_id = int(parent_dir) if parent_dir.isdigit() else 0
+            subdir_id = int(subdir) if subdir.isdigit() else 0
+            # 初始化当前父目录对应的字典
+            if parent_token_id not in parent_dir_dict:
+                parent_dir_dict[parent_token_id] = {}
+            # 初始化当前子目录的文件列表
+            if subdir_id not in parent_dir_dict[parent_token_id]:
+                parent_dir_dict[parent_token_id][subdir_id] = []
+            # 遍历文件并收集路径
+            for cur_path, dirs, file_names in os.walk(token_dir):
+                file_names = [os.path.join(cur_path, file_name) for file_name in file_names]
+                parent_dir_dict[parent_token_id][subdir_id].extend(file_names)
+        # 将每个父目录的字典转换为列表形式并存入 gathered_files
+        for parent_token_id, subdirs in parent_dir_dict.items():
+            gathered_files_list.append(subdirs)
     return gathered_files_list
 
 
