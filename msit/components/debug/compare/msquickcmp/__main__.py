@@ -30,6 +30,14 @@ from msquickcmp.dump.args_adapter import DumpArgsAdapter
 CANN_PATH = os.environ.get('ASCEND_TOOLKIT_HOME', "/usr/local/Ascend/ascend-toolkit/latest")
 
 
+def check_normal_dump_param(args):
+    if args.opname:
+        raise NotImplementedError("\'--operation-name\' or \'-opname\' only support "
+                                  "MindIE-Torch dump scenario.")
+    if args.exec:
+        raise NotImplementedError("\'--exec\' only support MindIE-Torch dump scenario.")
+
+
 class CompareCommand(BaseCommand):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -332,32 +340,25 @@ class DumpCommand(BaseCommand):
             dest="tf_json_path",
             help="When dump saved_model, you need provide tf-ops-json file path.")
         parser.add_argument(
-            "--mindie_torch",
-            action="store_true",
-            required=False,
-            dest="mindie_torch",
-            help="Use this argument to enable dump when inference with MindIE-Torch.")
-        parser.add_argument(
             "--exec",
             dest="exec",
             required=False,
             type=check_exec_cmd,
-            help="Exec command to run acltransformer model inference"
+            help="Exec command to run acltransformer model inference, "
+                 "only support MindIE-Torch dump scenario. "
                  "For example: --exec \'bash run.sh patches/models/modeling_xxx.py\' ")
         parser.add_argument(
-            '-opname',
-            '--operation-name',
+            "-opname",
+            "--operation-name",
             required=False,
             dest="opname",
             type=safe_string,
             default=None,
-            help='Operation names need to dump.')
+            help="Operation names need to dump, only support MindIE-Torch dump scenario.")
         self.parser = parser
 
     def handle(self, args):
-        if args.mindie_torch:
-            if not args.exec:
-                raise NotImplementedError("You must add '-exec' argument to enable MindIE-Torch inference.")
+        if args.exec:
             from components.debug.compare.msquickcmp.dump.mietorch.dump_config import DumpConfig
             DumpConfig(dump_path=args.out_path, api_list=args.opname)
             cmds = args.exec.split()
@@ -366,6 +367,7 @@ class DumpCommand(BaseCommand):
             if (not args.model_path) or (not args.device_pattern):
                 raise NotImplementedError("If you do not inference with MindIE-Torch, "
                                           "must use arguments '-m' and '-dp' to do next.")
+            check_normal_dump_param(args)
             cmp_args = DumpArgsAdapter(args.model_path, args.weight_path, args.input_data_path,
                                     args.cann_path, args.out_path, args.input_shape, args.device,
                                     args.dym_shape_range, args.onnx_fusion_switch,
