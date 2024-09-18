@@ -3,7 +3,7 @@
 
 ## 介绍
 
-动态shape场景。主要包含动态Shape、自动设置Shape模式（动态Shape模型）、动态Shape模型range测试模式三种场景，需要分别传入dym-shape、auto-set-dymshape-mode、dym-shape-range指定动态shape信息。
+动态shape场景。主要包含动态Shape、自动设置Shape模式（动态Shape模型）、动态Shape模型range测试模式三种场景，需要分别传入--dym-shape、--auto-set-dymshape-mode、--dym-shape-range指定动态shape信息。
 
 ## 运行示例
 
@@ -19,7 +19,7 @@
 
 2. 自动设置Shape模式（动态Shape模型）。
 
-    动态Shape模型输入数据的Shape可能是不固定的，比如一个输入文件Shape为1,3,224,224 另一个输入文件Shape为 1,3,300,300。若两个文件同时推理，则需要设置两次动态Shape参数，当前不支持该操作。针对该场景，增加auto-set-dymshape-mode模式，可以根据输入文件的Shape信息，自动设置模型的Shape参数。
+    动态Shape模型输入数据的Shape可能是不固定的，比如一个输入文件Shape为1,3,224,224 另一个输入文件Shape为 1,3,300,300。若两个文件同时推理，则需要设置两次动态Shape参数，当前不支持该操作。针对该场景，增加--auto-set-dymshape-mode模式，可以根据输入文件的Shape信息，自动设置模型的Shape参数。
 
     ```bash
     msit benchmark --om-model ./pth_resnet50_dymshape.om  --output-size 100000 --auto-set-dymshape-mode 1  --input ./dymdata
@@ -65,6 +65,6 @@
     ```bash
     msit benchmark --om-model ./pth_resnet50_dymshape_dual_input.om  --output-size 100000 --dym-shape-range dual_input.info
     ```
-### 注：actual_input为模型实际的输入名称
+    >注：actual_input为模型实际的输入名称
 ## FAQ
 使用出现问题时，可参考[FAQ](https://gitee.com/ascend/msit/wikis/benchmark_FAQ/msit%20benchmark%20%E5%AE%89%E8%A3%85%E9%97%AE%E9%A2%98FAQ)
