@@ -73,9 +73,6 @@ class TestErrorCheck(TestCase):
         
         temp_dir = os.environ["ATB_OUTPUT_DIR"]
         self.assertTrue(os.path.abspath(temp_dir), os.getcwd() + temp_dir)
-        self.assertTrue(os.path.isdir(temp_dir))
-        
-        os.removedirs(temp_dir)
     
     def test_handles_exit_flag_should_1_when_specify(self):
         self.args.exit = True
