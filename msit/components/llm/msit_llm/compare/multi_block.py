@@ -37,7 +37,7 @@ def multi_block_cmp(atb_nodes, torch_nodes, my_root_node, atb_tensor_path, torch
 
 def get_multi_tensor_paths(data_path, node_path, tensor_sub_dir):
     tensor_device_name = os.path.basename(os.path.abspath(os.path.join(data_path, "..")))  # 0_npu_pid, 1_npu_pid
-    device_tensor_paths = os.listdir(os.path.join(data_path, "..", ".."))
+    device_tensor_paths = sorted(os.listdir(os.path.join(data_path, "..", "..")))
     cur_tensor_path = os.path.abspath(os.path.join(node_path, tensor_sub_dir))
     if not os.path.exists(cur_tensor_path):
         msg = f"golden tensor path: {cur_tensor_path} is not exist."
