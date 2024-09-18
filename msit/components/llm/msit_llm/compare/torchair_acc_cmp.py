@@ -164,7 +164,6 @@ def gather_data_with_token_id(data_path, fx=False):
                 token_dirs = [os.path.join(cur_path, dir_name) for dir_name in dirs]
                 break
     else:
-        token_dirs = []
         for cur_path, dirs, _ in sorted(os.walk(data_path), key=lambda x: x[0]):
             if not dirs:
                 token_dirs.append(cur_path)
