@@ -183,7 +183,7 @@ def gather_data_with_token_id(data_path, fx=False):
                  os.path.isdir(os.path.join(token_dir, d))],
                 key=lambda x: os.path.basename(x)
             )
-        num_dumps = len(dump_dirs[min(dump_dirs.keys())])
+        num_dumps = len(dump_dirs.get(1, None))
         for i in range(num_dumps):
             gathered_files = {}
             for cur_token_id, dumps in dump_dirs.items():
