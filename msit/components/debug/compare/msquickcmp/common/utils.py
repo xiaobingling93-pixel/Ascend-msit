@@ -32,6 +32,7 @@ from msquickcmp.common.dynamic_argument_bean import DynamicArgumentEnum
 from components.utils.security_check import get_valid_write_path
 from components.debug.common import logger
 
+
 ACCURACY_COMPARISON_INVALID_PARAM_ERROR = 1
 ACCURACY_COMPARISON_INVALID_DATA_ERROR = 2
 ACCURACY_COMPARISON_INVALID_PATH_ERROR = 3
