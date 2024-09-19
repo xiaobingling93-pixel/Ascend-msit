@@ -29,5 +29,5 @@ msit debug surgeon extract --input=origin_model.onnx --output-file=sub_model.onn
 输出示例如下：
 
 ```bash
-2023-04-27 14:32:33,378 - auto-optimizer-logger - INFO - Extract the model completed, model was saved in sub_model.onnx
+2023-04-27 14:32:33,378 - 984068 - msit_debug_logger - INFO - Extract the model completed, model was saved in sub_model.onnx
 ```

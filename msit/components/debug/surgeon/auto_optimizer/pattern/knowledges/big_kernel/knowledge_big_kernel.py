@@ -19,7 +19,7 @@ from auto_optimizer.pattern.knowledges.big_kernel.attention_parser import Attent
 from auto_optimizer.pattern.knowledges.big_kernel.transform_refactor import TransformRefactor
 from auto_optimizer.pattern.matcher import MatchResult
 from auto_optimizer.pattern.pattern import MatchPattern
-from auto_optimizer.tools.log import logger
+from components.debug.common import logger
 from auto_optimizer.pattern.knowledges.big_kernel.util import gen_normal_subgraph
 
 

@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import operator
-import logging
 
 import onnx
 import numpy as np
@@ -26,6 +25,7 @@ from auto_optimizer.graph_refactor.interface.base_node import (
 from auto_optimizer.pattern.pattern import MatchPattern, Pattern
 from auto_optimizer.pattern.matcher import MatchResult
 from auto_optimizer.pattern.knowledges.knowledge_base import KnowledgeBase
+from components.debug.common import logger
 
 
 # topk in NPU implemented input k & output indices as int32[],
@@ -127,7 +127,7 @@ class KnowledgeTopkFix(KnowledgeBase):
             name = matchinfo['TopK_0'][0].name
             topk = graph.get_node(name, node_type=Node)
             if topk is None:
-                logging.warning(f'The matching node {name} no longer exists.')
+                logger.warning(f'The matching node {name} no longer exists.')
                 continue
             k_fixed = self._topk_fix_k(topk, graph)
             indices_fixed = self._topk_fix_indices(topk, graph)

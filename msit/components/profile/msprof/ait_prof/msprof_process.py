@@ -17,7 +17,7 @@ import sys
 import shutil
 import re
 
-from ait_prof.utils import logger
+from components.utils.log import logger
 from ait_prof.args_adapter import MsProfArgsAdapter
 
 PATH_MAX_LENGTH = 255

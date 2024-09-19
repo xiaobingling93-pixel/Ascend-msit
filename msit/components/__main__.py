@@ -17,6 +17,7 @@ import argparse
 from components.utils.parser import BaseCommand, AIT_FAQ_HOME, MIND_STUDIO_LOGO
 from components.utils.file_open_check import UmaskWrapper
 from components.utils.install import AitInstallCommand, AitBuildExtraCommand, AitCheckCommand, DownloadCommand
+from components.utils.log import logger
 
 
 def main():
@@ -43,7 +44,7 @@ def main():
 
 
 def ait_main():
-    print("Attention: The 'ait' command will be deprecated in the future version, please use 'msit' instead.")
+    logger.warning("Attention: The 'ait' command will be deprecated in the future version, please use 'msit' instead.")
 
     main()
 

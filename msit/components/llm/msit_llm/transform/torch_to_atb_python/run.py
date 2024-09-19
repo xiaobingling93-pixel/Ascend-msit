@@ -161,8 +161,7 @@ def main():
     runner.warm_up()
     output_text = runner.infer(input_text, use_cache=False)
 
-    import logging
-    logger = logging.getLogger()
+    from msit_llm.common.log import logger
     logger.info('-' * 40)
     logger.info('Input:%s', input_text)
     logger.info('Output:%s', output_text)

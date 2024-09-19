@@ -22,7 +22,7 @@ from auto_optimizer.graph_optimizer.optimizer import (
     ARGS_REQUIRED_KNOWLEDGES,
 )
 from auto_optimizer.graph_refactor.onnx.graph import OnnxGraph
-from auto_optimizer.tools.log import logger
+from components.debug.common import logger
 from auto_optimizer.common.click_utils import (
     optimize_onnx,
     list_knowledges,

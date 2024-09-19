@@ -13,11 +13,9 @@
 # limitations under the License.
 
 import subprocess
-import logging
 
 from auto_optimizer.inference_engine.model_convert.compiler import Compiler
-
-logger = logging.getLogger("auto-optimizer")
+from components.debug.common import logger
 
 
 class OmCompiler(Compiler):

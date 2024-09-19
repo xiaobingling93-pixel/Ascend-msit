@@ -14,7 +14,6 @@
 
 from itertools import accumulate
 from typing import List, Dict, Optional, Tuple
-import logging
 import operator as op
 
 import numpy as np
@@ -26,6 +25,7 @@ from auto_optimizer.graph_refactor.interface.base_node import BaseNode, Node, In
 from auto_optimizer.pattern.pattern import MatchPattern, Pattern, MatchBase
 from auto_optimizer.pattern.matcher import MatchResult
 from auto_optimizer.pattern.knowledges.knowledge_base import KnowledgeBase
+from components.debug.common import logger
 
 
 class LargeKernelConv(MatchBase):
@@ -208,12 +208,12 @@ class KnowledgeSplitLargeKernelConv(KnowledgeBase):
     def _split_large_kernel(self, graph: BaseGraph, matchinfo: Dict[str, List[Node]]) -> bool:
         conv0: Optional[Node] = graph.get_node(matchinfo['LargeKernelConv'][0].name, node_type=Node)
         if conv0 is None:
-            logging.warning('Conv operator is no longer exists.')
+            logger.warning('Conv operator is no longer exists.')
             return False
 
         kweight: Optional[Initializer] = graph.get_node(conv0.inputs[1], node_type=Initializer)
         if kweight is None:
-            logging.warning('Failed to get conv kernel weight.')
+            logger.warning('Failed to get conv kernel weight.')
             return False
 
         # modification start from here

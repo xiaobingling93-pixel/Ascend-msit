@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-import sys
 from abc import ABC
 
 import onnxruntime as rt
@@ -21,9 +19,7 @@ import numpy as np
 
 from auto_optimizer.inference_engine.inference.inference_base import InferenceBase
 from auto_optimizer.inference_engine.data_process_factory import InferenceFactory
-
-logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='[%(levelname)s] %(message)s')
-logger = logging.getLogger("auto-optimizer")
+from components.debug.common import logger
 
 
 @InferenceFactory.register("onnx")
@@ -52,7 +48,7 @@ class ONNXInference(InferenceBase, ABC):
 
             out_queue.put([data[0], out_data])
 
-        logging.debug("inference end")
+        logger.debug("inference end")
 
     def _session_init(self, model):
         session = rt.InferenceSession(model)

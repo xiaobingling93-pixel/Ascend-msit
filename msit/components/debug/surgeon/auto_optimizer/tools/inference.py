@@ -14,9 +14,6 @@
 
 import os
 import argparse
-import logging
-import sys
-
 from multiprocessing import Pool, Manager
 
 from auto_optimizer.common.config import Config
@@ -27,9 +24,7 @@ from auto_optimizer.inference_engine.data_process_factory import PreProcessFacto
 from auto_optimizer.inference_engine.data_process_factory import PostProcessFactory
 from auto_optimizer.inference_engine.data_process_factory import InferenceFactory
 from auto_optimizer.inference_engine.data_process_factory import DatasetFactory
-
-logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='[%(levelname)s] %(message)s')
-logger = logging.getLogger(__name__)
+from components.debug.common import logger
 
 
 class InferEngine:

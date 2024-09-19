@@ -18,7 +18,8 @@ import csv
 from copy import deepcopy
 from typing import Dict
 
-from model_evaluation.common import logger, utils
+from model_evaluation.common import utils
+from components.utils.log import logger
 from model_evaluation.common import Const
 from model_evaluation.common.enum import Engine
 

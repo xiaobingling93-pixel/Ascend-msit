@@ -21,7 +21,7 @@ from numpy.typing import NDArray
 from numpy.linalg import norm
 import onnxruntime as rt
 
-from auto_optimizer.tools.log import logger
+from components.debug.common import logger
 
 
 def typeassert(*ty_args, **ty_kwargs):
