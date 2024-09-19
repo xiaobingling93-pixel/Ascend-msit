@@ -14,7 +14,6 @@
 
 import re
 import sys
-import logging
 from abc import ABC
 import subprocess
 
@@ -22,12 +21,13 @@ import numpy as np
 
 from auto_optimizer.inference_engine.inference.inference_base import InferenceBase
 from auto_optimizer.inference_engine.data_process_factory import InferenceFactory
+from components.debug.common import logger
 
 try:
     from ais_bench.infer.interface import InferSession
     import aclruntime
 except ImportError:
-    logging.warning('Failed to import benchmark module, please install extra [inference] feature.')
+    logger.warning('Failed to import benchmark module, please install extra [inference] feature.')
 
 if 'aclruntime' in sys.modules:
     tensor_type_to_numpy_type = {
@@ -45,8 +45,6 @@ if 'aclruntime' in sys.modules:
         aclruntime.dtype.bool: np.bool_,
     }
 
-logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='[%(levelname)s] %(message)s')
-logger = logging.getLogger("auto-optimizer")
 
 
 @InferenceFactory.register("acl")

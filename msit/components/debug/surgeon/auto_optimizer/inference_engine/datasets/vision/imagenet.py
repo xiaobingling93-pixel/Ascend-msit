@@ -19,8 +19,7 @@ from abc import ABC
 
 from auto_optimizer.inference_engine.datasets.dataset_base import DatasetBase
 from auto_optimizer.inference_engine.data_process_factory import DatasetFactory
-
-logger = logging.getLogger("auto-optimizer")
+from components.debug.common import logger
 
 
 @DatasetFactory.register("imagenet")

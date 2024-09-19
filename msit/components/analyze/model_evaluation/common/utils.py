@@ -17,7 +17,7 @@ import subprocess
 
 from typing import List
 
-from model_evaluation.common import logger
+from components.utils.log import logger
 from model_evaluation.common.enum import Framework, SocType
 
 

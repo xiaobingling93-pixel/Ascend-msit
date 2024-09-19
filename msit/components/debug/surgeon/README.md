@@ -161,14 +161,14 @@ python3 -m auto_optimizer optimize aasist_bs1_ori.onnx aasist_bs1_ori_out.onnx
 ```
 
 ```bash
-2023-04-27 14:31:33,378 - auto-optimizer-logger - INFO - Optimization success
-2023-04-27 14:31:33,378 - auto-optimizer-logger - INFO - Applied knowledges:
-2023-04-27 14:31:33,378 - auto-optimizer-logger - INFO -   KnowledgeConv1d2Conv2d
-2023-04-27 14:31:33,378 - auto-optimizer-logger - INFO -   KnowledgeMergeConsecutiveSlice
-2023-04-27 14:31:33,378 - auto-optimizer-logger - INFO -   KnowledgeTransposeLargeInputConv
-2023-04-27 14:31:33,378 - auto-optimizer-logger - INFO -   KnowledgeTypeCast
-2023-04-27 14:31:33,378 - auto-optimizer-logger - INFO -   KnowledgeMergeCasts
-2023-04-27 14:31:33,378 - auto-optimizer-logger - INFO - Path: aasist_bs1_ori.onnx -> aasist_bs1_ori_out.onnx
+2023-04-27 14:31:33,378 - 984068 - msit_debug_logger - INFO - Optimization success
+2023-04-27 14:31:33,378 - 984068 - msit_debug_logger - INFO - Applied knowledges:
+2023-04-27 14:31:33,378 - 984068 - msit_debug_logger - INFO -   KnowledgeConv1d2Conv2d
+2023-04-27 14:31:33,378 - 984068 - msit_debug_logger - INFO -   KnowledgeMergeConsecutiveSlice
+2023-04-27 14:31:33,378 - 984068 - msit_debug_logger - INFO -   KnowledgeTransposeLargeInputConv
+2023-04-27 14:31:33,378 - 984068 - msit_debug_logger - INFO -   KnowledgeTypeCast
+2023-04-27 14:31:33,378 - 984068 - msit_debug_logger - INFO -   KnowledgeMergeCasts
+2023-04-27 14:31:33,378 - 984068 - msit_debug_logger - INFO - Path: aasist_bs1_ori.onnx -> aasist_bs1_ori_out.onnx
 ```
 
 ### extract命令
@@ -199,7 +199,7 @@ python3 -m auto_optimizer extract origin_model.onnx sub_model.onnx "s_node1,s_no
 ```
 
 ```bash
-2023-04-27 14:32:33,378 - auto-optimizer-logger - INFO - Extract the model completed, model was saved in sub_model.onnx
+2023-04-27 14:32:33,378 - 984068 - msit_debug_logger - INFO - Extract the model completed, model was saved in sub_model.onnx
 ```
 ## 许可证
 

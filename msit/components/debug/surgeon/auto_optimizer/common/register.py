@@ -15,11 +15,9 @@
 
 import os
 import importlib
-import logging
 
 from auto_optimizer.common.utils import format_to_module
-
-logger = logging.getLogger("auto-optimizer")
+from components.debug.common import logger
 
 
 class Register:

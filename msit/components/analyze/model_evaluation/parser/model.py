@@ -17,8 +17,9 @@ import json
 
 from typing import List
 
-from model_evaluation.common import utils, logger
+from model_evaluation.common import utils
 from model_evaluation.common.enum import AtcErr, Framework
+from components.utils.log import logger
 from model_evaluation.parser.atc import AtcErrParser
 from model_evaluation.bean import OpInfo, ConvertConfig
 

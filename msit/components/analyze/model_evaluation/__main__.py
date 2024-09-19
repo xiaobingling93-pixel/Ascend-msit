@@ -16,11 +16,13 @@ import os
 import re
 import argparse
 from components.utils.parser import BaseCommand
-from model_evaluation.common import utils, logger
+from model_evaluation.common import utils
 from model_evaluation.common.enum import Framework
 from model_evaluation.bean import ConvertConfig
 from model_evaluation.core import Analyze
 from components.utils.file_open_check import FileStat
+from components.utils.log import logger
+
 
 MAX_SIZE_LIMITE_NORMAL_MODEL = 32 * 1024 * 1024 * 1024  # 10G 普通模型文件
 

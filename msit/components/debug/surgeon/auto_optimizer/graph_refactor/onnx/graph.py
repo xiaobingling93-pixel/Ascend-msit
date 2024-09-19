@@ -26,7 +26,7 @@ from onnx import helper, GraphProto, ModelProto, OperatorSetIdProto, version_con
 
 from auto_optimizer.graph_refactor import BaseGraph, Initializer, PlaceHolder, Node
 from auto_optimizer.graph_refactor.onnx.node import OnnxPlaceHolder, OnnxInitializer, OnnxNode
-from auto_optimizer.tools.log import logger
+from components.debug.common import logger
 from auto_optimizer.common.utils import check_output_model_path
 
 

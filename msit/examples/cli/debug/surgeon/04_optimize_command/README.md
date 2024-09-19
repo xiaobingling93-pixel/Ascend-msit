@@ -26,12 +26,12 @@ msit debug surgeon optimize --input=aasist_bs1_ori.onnx --output-file=aasist_bs1
 输出示例如下：
 
 ```bash
-2023-04-27 14:31:33,378 - auto-optimizer-logger - INFO - Optimization success
-2023-04-27 14:31:33,378 - auto-optimizer-logger - INFO - Applied knowledges:
-2023-04-27 14:31:33,378 - auto-optimizer-logger - INFO -   KnowledgeConv1d2Conv2d
-2023-04-27 14:31:33,378 - auto-optimizer-logger - INFO -   KnowledgeMergeConsecutiveSlice
-2023-04-27 14:31:33,378 - auto-optimizer-logger - INFO -   KnowledgeTransposeLargeInputConv
-2023-04-27 14:31:33,378 - auto-optimizer-logger - INFO -   KnowledgeTypeCast
-2023-04-27 14:31:33,378 - auto-optimizer-logger - INFO -   KnowledgeMergeCasts
-2023-04-27 14:31:33,378 - auto-optimizer-logger - INFO - Path: aasist_bs1_ori.onnx -> aasist_bs1_ori_out.onnx
+2023-04-27 14:31:33,378 - 984068 - msit_debug_logger - INFO - Optimization success
+2023-04-27 14:31:33,378 - 984068 - msit_debug_logger - INFO - Applied knowledges:
+2023-04-27 14:31:33,378 - 984068 - msit_debug_logger - INFO -   KnowledgeConv1d2Conv2d
+2023-04-27 14:31:33,378 - 984068 - msit_debug_logger - INFO -   KnowledgeMergeConsecutiveSlice
+2023-04-27 14:31:33,378 - 984068 - msit_debug_logger - INFO -   KnowledgeTransposeLargeInputConv
+2023-04-27 14:31:33,378 - 984068 - msit_debug_logger - INFO -   KnowledgeTypeCast
+2023-04-27 14:31:33,378 - 984068 - msit_debug_logger - INFO -   KnowledgeMergeCasts
+2023-04-27 14:31:33,378 - 984068 - msit_debug_logger - INFO - Path: aasist_bs1_ori.onnx -> aasist_bs1_ori_out.onnx
 ```

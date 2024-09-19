@@ -16,7 +16,7 @@ import os
 
 from typing import Dict, List
 
-from model_evaluation.common import logger
+from components.utils.log import logger
 from model_evaluation.common import Const
 from model_evaluation.common.enum import Framework
 from model_evaluation.parser import AtcErrParser, OmParser, ModelParser

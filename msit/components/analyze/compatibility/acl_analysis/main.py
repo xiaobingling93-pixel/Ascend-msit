@@ -12,17 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-import sys
 import pathlib
 from typing import Dict, List
 import click
 
 from src import analysis
 from src.knowledge import Knowledge
-
-logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='[%(levelname)s] %(message)s')
-logger = logging.getLogger(__name__)
+from components.utils.log import logger
 
 
 def print_result(result: Dict[Knowledge, List[str]]):

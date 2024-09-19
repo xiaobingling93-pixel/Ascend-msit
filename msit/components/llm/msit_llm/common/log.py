@@ -16,14 +16,22 @@
 import logging
 
 
+class SanitizeFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        if record.msg:
+            record.msg = repr(record.msg)
+        return super().filter(record)
+
+
 def get_logger():
     llm_logger = logging.getLogger("msit_llm_logger")
     llm_logger.propagate = False
     llm_logger.setLevel(logging.INFO)
     if not llm_logger.handlers:
         stream_handler = logging.StreamHandler()
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        formatter = logging.Formatter('%(asctime)s - %(process)s - %(name)s - %(levelname)s - %(message)s')
         stream_handler.setFormatter(formatter)
+        stream_handler.addFilter(SanitizeFilter())
         llm_logger.addHandler(stream_handler)
     return llm_logger
 

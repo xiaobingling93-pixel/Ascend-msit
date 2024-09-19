@@ -19,7 +19,7 @@ import numpy as np
 
 from auto_optimizer.graph_refactor import Node
 from auto_optimizer.pattern.knowledges.big_kernel.attention_parser import AttentionParser
-from auto_optimizer.tools.log import logger
+from components.debug.common import logger
 from auto_optimizer.graph_refactor.onnx import OnnxNode, OnnxInitializer, OnnxGraph
 from auto_optimizer.pattern.knowledges.big_kernel.util import QK_MASK_ADD, CONVERT_3DIMS_TO_4DIMS, START_ADD, END_ADD
 
