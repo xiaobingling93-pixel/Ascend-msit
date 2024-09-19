@@ -107,7 +107,7 @@ class OpenException(Exception):
 class FileStat:
     def __init__(self, file) -> None:
         if not is_legal_path_length(file) or not is_match_path_white_list(file):
-            raise OpenException(f"create FileStat failed")
+            raise OpenException("Path name is too long or contains invalid characters.")
         self.file = file
         self.is_file_exist = os.path.exists(file)
         if self.is_file_exist:

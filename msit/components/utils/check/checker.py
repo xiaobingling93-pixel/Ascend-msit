@@ -13,7 +13,7 @@
 
 from functools import wraps
 from typing import Callable, Union, List
-from enum import Enum, unique
+from enum import Enum
 
 
 class EnumInstance(Enum):

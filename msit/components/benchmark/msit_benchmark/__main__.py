@@ -12,10 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import re
-import argparse
-
 from components.utils.parser import BaseCommand
 
 

@@ -23,7 +23,6 @@ import os
 import stat
 import re
 import shutil
-import subprocess
 
 import numpy as np
 

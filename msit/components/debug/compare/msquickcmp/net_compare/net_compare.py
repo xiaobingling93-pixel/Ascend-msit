@@ -29,7 +29,7 @@ from collections import namedtuple
 import numpy as np
 
 from msquickcmp.common import utils
-from msquickcmp.common.utils import AccuracyCompareException, get_shape_to_directory_name
+from msquickcmp.common.utils import AccuracyCompareException
 
 MSACCUCMP_DIR_PATH = "toolkit/tools/operator_cmp/compare"
 MSACCUCMP_FILE_NAME = ["msaccucmp.py", "msaccucmp.pyc"]

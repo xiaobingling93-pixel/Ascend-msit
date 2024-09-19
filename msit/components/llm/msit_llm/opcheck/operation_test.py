@@ -20,7 +20,6 @@ import json
 import glob
 import argparse
 import torch
-import torch_npu
 
 from msit_llm.common.tool import read_atb_data
 from msit_llm.common.log import logger

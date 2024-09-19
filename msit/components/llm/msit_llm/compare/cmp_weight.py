@@ -47,8 +47,8 @@ def compare_weight(gp_path, mp_path, output_path):
     gp_path_list = find_safetensors_files(gp_path)
     mp_path_list = find_safetensors_files(mp_path)
     if not gp_path_list or not mp_path_list:
-        logger.error(f"No .safetensors files found in the directory.")
-        raise FileNotFoundError(f"Invalid path")
+        logger.error("No .safetensors files found in the directory.")
+        raise FileNotFoundError("Invalid path")
 
     gathered_row_data = []
     sorted_gp_path_list = sorted(gp_path_list)

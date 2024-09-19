@@ -70,7 +70,7 @@ class OmParser:
         '''parse all op info from om json'''
         if len(self._om_json) == 0 and convert:
             if not self.parse_om_to_json():
-                logger.error(f'parse model ops failed.')
+                logger.error('parse model ops failed.')
                 return []
 
         try:
@@ -87,7 +87,7 @@ class OmParser:
             return []
 
         if not isinstance(ops, list):
-            logger.error(f'ops data is invalid.')
+            logger.error('ops data is invalid.')
             return []
 
         op_infos: List[OpInnerInfo] = []

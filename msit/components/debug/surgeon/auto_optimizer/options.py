@@ -21,7 +21,6 @@ from auto_optimizer.common.click_utils import (
     convert_to_graph_optimizer,
     default_off_knowledges,
     validate_opt_converter,
-    check_args,
 )
 
 

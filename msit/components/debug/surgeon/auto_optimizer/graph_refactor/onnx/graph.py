@@ -18,7 +18,7 @@ import os
 import itertools
 
 from typing import List, Dict, Union, Sequence, Optional, Tuple, Set
-from collections import deque, defaultdict
+from collections import deque
 
 import onnx
 import numpy as np
@@ -52,7 +52,7 @@ class OnnxGraph(BaseGraph):
         elif isinstance(opsets, Sequence):
             opset_imports = [op for op in opsets if not op.domain or op.domain == '']
             if len(opset_imports) < len(opsets):
-                warnings.warn(f'Only one domain version is allowed, keep opset with domain "ai.onnx"')
+                warnings.warn('Only one domain version is allowed, keep opset with domain "ai.onnx"')
         else:
             opset_imports = opsets
 

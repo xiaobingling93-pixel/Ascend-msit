@@ -26,7 +26,7 @@ from auto_optimizer.inference_engine.data_process_factory import InferenceFactor
 try:
     from ais_bench.infer.interface import InferSession
     import aclruntime
-except ImportError as exc:
+except ImportError:
     logging.warning('Failed to import benchmark module, please install extra [inference] feature.')
 
 if 'aclruntime' in sys.modules:
@@ -75,7 +75,7 @@ class AclInference(InferenceBase, ABC):
                 raise RuntimeError("msame inference failed!\n{}".format(log))
             time = float(match.group(1))
         elif self.tool == 'pyacl':
-            from pyacl.acl_infer import AclNet, init_acl, release_acl
+            from pyacl.acl_infer import AclNet, init_acl
 
             device_id = cfg.get('device_id', None) or 0
             try:

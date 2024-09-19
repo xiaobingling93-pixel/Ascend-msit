@@ -14,7 +14,6 @@
 
 import os
 import stat
-from msit_llm.common.log import logger
 from collections import namedtuple
 
 _SCENARIOS = ["torch_to_float_atb", "float_atb_to_quant_atb", "torch_to_float_python_atb"]

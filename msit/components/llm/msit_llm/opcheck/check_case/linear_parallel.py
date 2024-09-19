@@ -14,8 +14,6 @@
 
 from enum import Enum
 import torch
-import torch_npu
-import torch.distributed as dist
 
 from msit_llm.opcheck import operation_test
 from msit_llm.common.log import logger
