@@ -35,7 +35,7 @@ WRITE_FILE_NOT_PERMITTED_STAT = stat.S_IWGRP | stat.S_IWOTH
 
 SOLUTION_LEVEL = 35
 SOLUTION_LEVEL_WIN = 45
-logging.addLevelName(SOLUTION_LEVEL, "\033[1;32m" + "SOLUTION" + "\033[0m")  # green [SOLUTION]
+logging.addLevelName(SOLUTION_LEVEL, "SOLUTION")
 logging.addLevelName(SOLUTION_LEVEL_WIN, "SOLUTION_WIN")
 
 SOLUTION_BASE_LOC = '\"gitee repo: Ascend/msit, wikis: ait_security_error_log_solution, chapter:'
@@ -49,7 +49,7 @@ RAW_INPUT_PATH = "RAW_INPUT_PATH"
 
 
 def solution_log(content):
-    logger.log(SOLUTION_LEVEL, f"visit \033[1;32m {content} \033[0m for detailed solution")  # green content
+    logger.log(SOLUTION_LEVEL, f"visit {content} for detailed solution")
 
 
 def solution_log_win(content):
