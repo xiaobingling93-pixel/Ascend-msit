@@ -16,10 +16,10 @@
 
 - 准备 `python_bert_inference.py`，为模型的前向推理脚本
 
-- 执行 `msit llm dump --mindie_torch --exec "python_bert_inference.py" [--option]` Dump NPU数据 
+- 执行 `msit debug dump --mindie_torch --exec "python_bert_inference.py" [--option]` Dump NPU数据 
 
   ```sh
-  msit llm dump --mindie_torch --output [/path/to/dump] --exec "python bert_inference.py" --operation-name MatMulv2_1,trans_Cast_0
+  msit debug dump --mindie_torch --output [/path/to/dump] --exec "python bert_inference.py" --operation-name MatMulv2_1,trans_Cast_0
   ```
 
 - 参数说明 
@@ -43,7 +43,7 @@
 
 ## 4. Compare 精度对比 
 
- - 执行 `msit llm compare --golden-path [/path/to/cpu/dumpdata] --my-path [/path/to/npu/dumpdata] --output [path/to/csv] --op-mapping-file [path/to/json]`，输出比对结果 csv 文件
+ - 执行 `msit debug compare --golden-path [/path/to/cpu/dumpdata] --my-path [/path/to/npu/dumpdata] --output [path/to/csv] --op-mapping-file [path/to/json]`，输出比对结果 csv 文件
 
 ### 参数说明
 
@@ -51,7 +51,7 @@
 | ---------------------- | ------------------------------------------------------------ | -------- |
 | --golden-path, -gp     | CPU/GPU Dump数据根路径                   | 是       |
 | --my-path, -mp         | NPU Dump数据根路径                         | 是       |
-| --op-mapping-file, -mf | 运行 `msit llm dump --mindie_torch` 时产生的算子映射关系文件路径，通常在当前文件夹下 | 是       |
+| --op-mapping-file, -mf | 运行 `msit debug dump --mindie_torch` 时产生的算子映射关系文件路径，通常在当前文件夹下 | 是       |
 | --output, -o           | 比对结果csv的输出路径                                        | 是       |
 
 ## 注意

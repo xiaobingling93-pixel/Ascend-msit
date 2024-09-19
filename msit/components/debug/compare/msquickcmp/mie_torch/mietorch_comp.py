@@ -3,10 +3,10 @@ import csv
 
 import torch 
 
-from msit_llm.common.log import logger 
-from msit_llm.compare.utils.ge_dump_reader import GEDumpFileReader
-from msit_llm.compare.utils.torch_dump_reader import TorchDumpFileReader
-from msit_llm.compare.cmp_algorithm import CMP_ALG_MAP, CUSTOM_ALG_MAP
+from components.utils.log import logger 
+from components.debug.compare.utils.ge_dump_reader import GEDumpFileReader
+from components.debug.compare.utils.torch_dump_reader import TorchDumpFileReader
+from components.utils.cmp_algorithm import CMP_ALG_MAP, CUSTOM_ALG_MAP
 from components.utils.file_open_check import ms_open
 
 

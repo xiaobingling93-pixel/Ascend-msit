@@ -18,7 +18,7 @@ import queue
 import unittest
 import multiprocessing
 from msit_llm.opcheck.check_case import OP_NAME_DICT
-from msit_llm.compare.cmp_algorithm import CUSTOM_ALG_MAP
+from components.utils.cmp_algorithm import CUSTOM_ALG_MAP
 from msit_llm.opcheck.opchecker import NAMEDTUPLE_PRECISION_METRIC
 from msit_llm.common.log import logger, set_log_level
 
@@ -39,7 +39,7 @@ class CaseManager:
 
         # Adding custom comparing algorithms
         if custom_algorithms:
-            from msit_llm.compare.cmp_algorithm import register_custom_compare_algorithm
+            from components.utils.cmp_algorithm import register_custom_compare_algorithm
 
             for custom_compare_algorithm in custom_algorithms:
                 register_custom_compare_algorithm(custom_compare_algorithm)

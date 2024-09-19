@@ -5,7 +5,7 @@ import json
 from typing import Optional
 import torch 
 
-from msit_llm.compare.utils.base_dump_reader import DumpFileReader
+from components.debug.compare.utils.base_dump_reader import DumpFileReader
 
 
 class TorchDumpFileReader(DumpFileReader):

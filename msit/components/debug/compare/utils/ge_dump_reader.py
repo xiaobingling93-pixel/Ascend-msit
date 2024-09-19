@@ -4,8 +4,8 @@ import json
 
 import torch 
 
-from msit_llm.compare.utils.base_dump_reader import DumpFileReader
-from msit_llm.compare.torchair_acc_cmp import parse_torchair_dump_data
+from components.debug.compare.utils.base_dump_reader import DumpFileReader
+from components.utils.acc_cmp import parse_torchair_dump_data
 from components.utils.file_open_check import ms_open
 
 IS_MSACCUCMP_PATH_SET = False

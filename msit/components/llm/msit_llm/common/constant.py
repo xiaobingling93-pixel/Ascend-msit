@@ -15,7 +15,7 @@ import os
 import datetime
 import torch
 
-from msit_llm.compare.cmp_algorithm import CMP_ALG_MAP
+from components.utils.cmp_algorithm import CMP_ALG_MAP
 
 
 def get_visible_device(device_type):

@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import torch
-from torch.nn import functional as F
 
-from msit_llm.common.log import logger
+from torch.nn import functional as F
+from components.utils.log import logger
 
 
 FLOAT_EPSILON = torch.finfo(torch.float).eps

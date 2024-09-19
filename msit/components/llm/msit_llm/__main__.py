@@ -33,12 +33,6 @@ LOG_LEVELS_LOWER = [ii.lower() for ii in LOG_LEVELS.keys()]
 class DumpCommand(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument(
-            '--mindie_torch',
-            required=False,
-            action='store_true',
-            default=False,
-            help='Use this argument to enable dump when inference with MindIE-Torch.')
-        parser.add_argument(
             '--only-save-desc',
             '-sd',
             required=False,
@@ -167,11 +161,7 @@ class DumpCommand(BaseCommand):
             set_log_level(args.log_level)
             logger.info(f"About to execute command : {args.exec}")
             logger.warning("Please ensure that your execution command is secure.")
-            if args.mindie_torch:
-                from msit_llm.dump.mietorch.dump_config import DumpConfig
-                DumpConfig(dump_path=args.output, api_list=args.opname)
-            else:
-                init_dump_task(args)
+            init_dump_task(args)
             # 有的大模型推理任务启动后，输入对话时有提示符，使用subprocess拉起子进程无法显示提示符
             cmds = args.exec.split()
             subprocess.run(cmds, shell=False)
@@ -244,21 +234,13 @@ class CompareCommand(BaseCommand):
 
     def handle(self, args, **kwargs):
 
-        mindie_rt_op_mapping = os.path.join(args.mapping_file, "mindie_rt_op_mapping.json")
-        mindie_torch_op_mapping = os.path.join(args.mapping_file, "mindie_torch_op_mapping.json")
-        if os.path.exists(mindie_rt_op_mapping) and os.path.exists(mindie_torch_op_mapping):
-            from msit_llm.compare.mie_torch.mietorch_comp import MIETorchCompare
-            comparer = MIETorchCompare(args.golden_path, args.my_path, args.mapping_file, args.output)
-            comparer.compare()
-            return 
-            
         from msit_llm.compare.torchair_acc_cmp import get_torchair_ge_graph_path
 
         set_log_level(args.log_level)
 
         # Adding custom comparing algorithms
         if args.custom_algorithms:
-            from msit_llm.compare.cmp_algorithm import register_custom_compare_algorithm
+            from components.utils.cmp_algorithm import register_custom_compare_algorithm
 
             for custom_compare_algorithm in args.custom_algorithms:
                 register_custom_compare_algorithm(custom_compare_algorithm)
@@ -387,7 +369,7 @@ class OpcheckCommand(BaseCommand):
 
         # Adding custom comparing algorithms
         if args.custom_algorithms:
-            from msit_llm.compare.cmp_algorithm import register_custom_compare_algorithm
+            from components.utils.cmp_algorithm import register_custom_compare_algorithm
 
             for custom_compare_algorithm in args.custom_algorithms:
                 register_custom_compare_algorithm(custom_compare_algorithm)
