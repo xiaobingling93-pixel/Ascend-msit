@@ -12,14 +12,14 @@
 
 1. 指定-is或--input-shape进行精度对比。
   ```sh
-  msit debug dump -gm /home/HwHiAiUser/onnx_prouce_data/resnet_offical.onnx -dp cpu
+  msit debug dump -m /home/HwHiAiUser/onnx_prouce_data/resnet_offical.onnx -dp cpu
   -is "image:1,3,224,224"
   ```
 如果模型为动态shape模型，则会以该-is输入的shape信息进行模型推理和精度对比。
 
 2. 指定-dr或--dym-shape-range进行动态模型多个shape情况的精度对比。(优先级比-is,--input-shape更高)
   ```sh
-  msit debug dump -gm /home/HwHiAiUser/onnx_prouce_data/resnet_offical.onnx -dp cpu
+  msit debug dump -m /home/HwHiAiUser/onnx_prouce_data/resnet_offical.onnx -dp cpu
   -dr "image:1,3,224-256,224~226"
   ```
 - 其中，input_name必须是网络模型中的节点名称；"\~"表示范围，a\~b\~c含义为[a: b :c]；"-"表示某一位的取值。
