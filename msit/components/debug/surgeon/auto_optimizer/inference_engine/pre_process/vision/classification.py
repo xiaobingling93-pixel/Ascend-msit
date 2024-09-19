@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
 from abc import ABC
 from dataclasses import dataclass
 
@@ -20,8 +19,7 @@ import numpy as np
 from PIL import Image
 from auto_optimizer.inference_engine.pre_process.pre_process_base import PreProcessBase
 from auto_optimizer.inference_engine.data_process_factory import PreProcessFactory
-
-logger = logging.getLogger("auto-optimizer")
+from components.debug.common import logger
 
 
 @dataclass

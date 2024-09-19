@@ -15,11 +15,9 @@
 
 import os
 import importlib
-import logging
 
 from auto_optimizer.common.utils import format_to_module
-
-logger = logging.getLogger("auto-optimizer")
+from components.debug.common import logger
 
 
 class Register:
@@ -58,7 +56,7 @@ class Register:
             self._add_modules(modules)
         except Exception as error:
             logger.error("add_modules failed, {}".format(error))
-            raise RuntimeError("add_modules {} import failed: {}".format(error)) from error
+            raise RuntimeError("add_modules failed: {}".format(error)) from error
 
         for module in modules:
             if not module:

@@ -18,14 +18,13 @@ Function:
 This class mainly involves the main function.
 """
 
-import logging
 import argparse
 import os
 import stat
 import sys
 
-logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='[%(levelname)s] %(message)s')
-logger = logging.getLogger(__name__)
+from components.debug.common import logger
+
 
 OPEN_FLAGS = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
 OPEN_MODES = stat.S_IWUSR | stat.S_IRUSR

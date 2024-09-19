@@ -16,7 +16,6 @@
 Function:
 This class is used to generate GUP dump data of the ONNX model.
 """
-import sys
 import os
 import re
 import time

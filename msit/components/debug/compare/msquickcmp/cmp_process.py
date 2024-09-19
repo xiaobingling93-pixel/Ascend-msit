@@ -181,7 +181,8 @@ def check_dump_and_compare(args: CmpArgsAdapter):
         if args.my_path and args.golden_path and args.ops_json:
             return False
         else:
-            raise Exception(f"If you want to alone compare, you need to provide parameters like: -mp -gp and -ops-json")
+            raise Exception("If you want to alone compare, you need to provide parameters like: "
+                            "-mp -gp and --ops-json")
 
 
 def cmp_process(args: CmpArgsAdapter, use_cli: bool):
@@ -646,7 +647,7 @@ def csv_sum(original_out_path):
     xlsx_file_summary = os.path.join(original_out_path, "result_summary.xlsx")
 
     if os.path.exists(xlsx_file_summary):
-        logging.error("Error, file already exists!")
+        utils.logger.error("Error, file already exists!")
         os.remove(xlsx_file_summary)
 
     with os.fdopen(os.open(xlsx_file_summary, WRITE_FLAGS, WRITE_MODES), 'wb') as fp_write:

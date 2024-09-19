@@ -12,15 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-import sys
 import os
-import math
 import pandas as pd
 import utils
+from components.utils.log import logger
 
-logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='[%(levelname)s] %(message)s')
-logger = logging.getLogger(__name__)
 
 analysis_apis = {
     "Crop": "acldvppVpcCropAsync",

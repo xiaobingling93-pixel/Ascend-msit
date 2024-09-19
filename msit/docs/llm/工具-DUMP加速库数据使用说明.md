@@ -16,7 +16,7 @@ msit llm dump --exec "<任意包含ATB的程序执行命令>" [可选参数]
 
 # dump 不同类型数据
 msit llm dump --exec "<任意包含ATB的程序执行命令>" --type model tensor # 常用用于自动比对
-msit llm dump --exec "<任意包含ATB的程序执行命令>" --type model layer onnx # 常用于导出onnx查看网络结构
+msit llm dump --exec "<任意包含ATB的程序执行命令>" --type onnx # 常用于导出onnx查看网络结构
 
 # 仅dump layer 层的算子输出，常用于精度比对先找到存在问题的 layer 层。相比全量dump，可以节省磁盘空间和定位时间
 msit llm dump --exec "<任意包含ATB的程序执行命令>" --type model tensor -child False

@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import argparse
-import os
 
 from ait_tensor_view.operation import SliceOperation, PermuteOperation
 from ait_tensor_view.handler import handle_tensor_view

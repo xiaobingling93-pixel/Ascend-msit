@@ -1,7 +1,6 @@
 from typing import Union
 
 from components.utils.check.checker import Checker, CheckResult, rule
-from components.utils.check.number_checker import NumberChecker
 
 
 class ListChecker(Checker):

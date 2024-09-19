@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from typing import List, Dict
-import logging
 import operator as op
 
 import numpy as np
@@ -26,6 +25,8 @@ from auto_optimizer.pattern.pattern import MatchPattern, Pattern, MatchBase
 from auto_optimizer.pattern.matcher import MatchResult
 from auto_optimizer.pattern.knowledges.knowledge_base import KnowledgeBase
 from auto_optimizer.pattern.utils import NextNodeCount
+from components.debug.common import logger
+
 
 SHAPE_THRESHOLD = 20000
 
@@ -151,7 +152,7 @@ class KnowledgeTransposeLargeInputConv(KnowledgeBase):
     def _aasist_match_apply(self, graph: BaseGraph, matchinfo: Dict[str, List[Node]]) -> bool:
         # make sure nodes of matching subgraph still exist in case some previous apply functions modified graph
         if any(graph.get_node(node.name, node_type=Node) is None for nodes in matchinfo.values() for node in nodes):
-            logging.info("Some matching node have been removed or renamed, failed to optimizd.")
+            logger.info("Some matching node have been removed or renamed, failed to optimizd.")
             return False
 
         selu_0 = graph.get_node(matchinfo['Selu_0'][0].name, node_type=Node)
@@ -159,7 +160,7 @@ class KnowledgeTransposeLargeInputConv(KnowledgeBase):
         convs = [graph.get_node(matchinfo[name][0].name, node_type=Node) for name in ('Conv_0', 'Conv_1', 'Conv_2')]
         ph = graph.get_node(selu_0.inputs[0], node_type=PlaceHolder)
         if ph is None or not ph.shape:
-            logging.info("Failed to get input shape of subgraph.")
+            logger.info("Failed to get input shape of subgraph.")
             return False
         perm = [i for i in range(len(ph.shape))]
         perm[-1], perm[-2] = perm[-2], perm[-1]

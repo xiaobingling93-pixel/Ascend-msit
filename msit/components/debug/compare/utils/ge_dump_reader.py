@@ -5,7 +5,7 @@ import json
 import torch 
 
 from components.debug.compare.utils.base_dump_reader import DumpFileReader
-from components.utils.acc_cmp import parse_torchair_dump_data, set_msaccucmp_path_from_cann
+from components.utils.acc_cmp import parse_torchair_dump_data
 from components.utils.file_open_check import ms_open
 
 IS_MSACCUCMP_PATH_SET = False
@@ -41,9 +41,6 @@ class GEDumpFileReader(DumpFileReader):
             fusion_op = item.get("fusion_op", ge_op)
 
             if cur_fuseop != fusion_op:
-                if cur_fuseop in new_op_map:
-                    new_op_map[cur_fuseop]["fuse_path"] = fuse_path 
-                
                 new_op_map[fusion_op] = {
                     "id": id_,
                     "jit_node": jit_node,
@@ -51,6 +48,9 @@ class GEDumpFileReader(DumpFileReader):
                 }
                 id_ += 1 
                 fuse_path = [{"ge_op": ge_op, "jit_node": jit_node}]
+
+                if cur_fuseop in new_op_map:
+                    new_op_map[cur_fuseop]["fuse_path"] = fuse_path
             else:
                 new_op_map[fusion_op]["jit_node"] = jit_node 
                 fuse_path.append({"ge_op": ge_op, "jit_node":jit_node})

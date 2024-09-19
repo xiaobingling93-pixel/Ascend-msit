@@ -14,13 +14,11 @@
 
 import os
 import re
-import logging
 from abc import ABC
 
 from auto_optimizer.inference_engine.datasets.dataset_base import DatasetBase
 from auto_optimizer.inference_engine.data_process_factory import DatasetFactory
-
-logger = logging.getLogger("auto-optimizer")
+from components.debug.common import logger
 
 
 @DatasetFactory.register("imagenet")
@@ -29,7 +27,7 @@ class ImageNetDataset(DatasetBase, ABC):
         """
         和基类的参数顺序和个数需要一致
         """
-        logging.debug("dataset start")
+        logger.debug("dataset start")
         dataset_path, label_path = super()._get_params(cfg)
 
         data = []

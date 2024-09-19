@@ -390,7 +390,6 @@ class OmParser(object):
             if not data_type:
                 utils.logger.error("The dtype attribute does not support {} value.".format(input_object[DTYPE_OBJECT]))
                 raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_KEY_ERROR)
-            data_type_size = np.dtype(data_type).itemsize
             if self.shape_range:
                 utils.logger.error("Please specify the input shape of om model through -is param")
                 raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PARAM_ERROR)

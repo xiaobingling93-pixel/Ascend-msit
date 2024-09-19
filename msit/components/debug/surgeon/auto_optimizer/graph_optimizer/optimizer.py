@@ -15,12 +15,10 @@
 from dataclasses import dataclass
 from functools import partial
 import os
-import sys
 import pathlib
-import logging
 import tempfile
 from copy import deepcopy
-from typing import Callable, Dict, List, Tuple
+from typing import Callable, List, Tuple
 import multiprocessing
 
 import numpy as np
@@ -30,9 +28,8 @@ from auto_optimizer.pattern.knowledges.big_kernel.knowledge_big_kernel import Kn
 from auto_optimizer.graph_refactor.interface.base_graph import BaseGraph
 from auto_optimizer.pattern.knowledges.knowledge_base import KnowledgeBase
 from auto_optimizer import KnowledgeFactory
+from components.debug.common import logger
 
-logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='[%(levelname)s] %(message)s')
-logger = logging.getLogger('GraphOptimizer')
 
 # This should be implemented in KnowledgeFactory or KnowledgeManager
 NONEQUIVALENT_KNOWLEDGES = [

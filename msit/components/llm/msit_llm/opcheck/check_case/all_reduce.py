@@ -14,7 +14,6 @@
 
 import os
 import torch
-import torch_npu
 
 from msit_llm.opcheck import operation_test
 from msit_llm.common.log import logger
@@ -66,7 +65,7 @@ class OpcheckAllReduceOperation(operation_test.OperationTest):
 
     def test_all_reduce(self):
         if self.pid is None:
-            logger_text = f"Cannot get a valid pid, AllReduceOperation is not supported!"
+            logger_text = "Cannot get a valid pid, AllReduceOperation is not supported!"
             logger.error(logger_text)
             return
 

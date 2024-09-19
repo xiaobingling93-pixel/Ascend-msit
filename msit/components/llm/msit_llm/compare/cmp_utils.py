@@ -14,8 +14,6 @@
 
 import datetime
 import os
-from collections import Counter
-from typing import List
 
 import numpy as np
 import pandas as pd
@@ -24,7 +22,7 @@ import torch
 from msit_llm.common.tool import read_atb_data
 from msit_llm.common.constant import TOKEN_ID, DATA_ID, GOLDEN_DATA_PATH, MY_DATA_PATH, CMP_FAIL_REASON, GOLDEN_DTYPE, \
     GOLDEN_SHAPE, GOLDEN_MAX_VALUE, GOLDEN_MIN_VALUE, GOLDEN_MEAN_VALUE, MY_DTYPE, MY_SHAPE, MY_MAX_VALUE, MY_MIN_VALUE, \
-    MY_MEAN_VALUE, CSV_GOLDEN_HEADER
+    MY_MEAN_VALUE, CSV_GOLDEN_HEADER, GLOBAL_HISTORY_AIT_DUMP_PATH_LIST
 from msit_llm.common.log import logger
 from components.utils.cmp_algorithm import CMP_ALG_MAP, CUSTOM_ALG_MAP
 
@@ -38,8 +36,9 @@ class BasicDataInfo:
     def _count(cls):
         cls.count_data_id += 1
 
-    def __init__(self, golden_data_path, my_data_path, token_id=0, data_id=None):
-        self.token_id, self.my_data_path, self.golden_data_path = token_id, my_data_path, golden_data_path
+    def __init__(self, golden_data_path, my_data_path, token_id=None, data_id=None):
+        self.my_data_path, self.golden_data_path = my_data_path, golden_data_path
+        self.token_id = self.get_token_id(my_data_path) if token_id is None else token_id
         self.data_id = self.count_data_id if data_id is None else data_id
         self._count()
 
@@ -50,6 +49,25 @@ class BasicDataInfo:
             GOLDEN_DATA_PATH: self.golden_data_path,
             MY_DATA_PATH: self.my_data_path,
         }
+
+    def get_token_id(self, cur_path):
+        dump_filename_idx = 4
+        dump_tensor_idx = 3
+        dirseg = cur_path.split(os.path.sep)
+        if len(dirseg) < dump_filename_idx:
+            return 0
+        flag1 = dirseg[-dump_tensor_idx] == "tensors" or dirseg[-dump_tensor_idx] == "torch_tensors"
+        flag2 = any([dirseg[-dump_filename_idx].startswith(x) for x in GLOBAL_HISTORY_AIT_DUMP_PATH_LIST])
+        if flag1 and flag2:
+            try:
+                token_id = int(dirseg[-1])
+            except (IndexError, AttributeError, TypeError, ValueError) as e:
+                msg = f"get_token_id error, dirseg: {dirseg}, error: {e}"
+                logger.debug(msg)
+                token_id = 0
+        else:
+            token_id = self.get_token_id(os.path.dirname(cur_path))
+        return token_id
 
 
 def fill_row_data(data_info: BasicDataInfo, loaded_my_data=None, loaded_golden_data=None, is_broadcast_tensor=False):

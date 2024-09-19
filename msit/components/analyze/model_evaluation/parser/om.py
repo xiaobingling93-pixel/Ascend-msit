@@ -17,7 +17,8 @@ import json
 
 from typing import List, Dict
 
-from model_evaluation.common import utils, logger
+from model_evaluation.common import utils
+from components.utils.log import logger
 from model_evaluation.common.enum import Engine, AtcErr
 from model_evaluation.parser.atc import AtcErrParser
 from model_evaluation.bean import OpInnerInfo
@@ -70,7 +71,7 @@ class OmParser:
         '''parse all op info from om json'''
         if len(self._om_json) == 0 and convert:
             if not self.parse_om_to_json():
-                logger.error(f'parse model ops failed.')
+                logger.error('parse model ops failed.')
                 return []
 
         try:
@@ -87,7 +88,7 @@ class OmParser:
             return []
 
         if not isinstance(ops, list):
-            logger.error(f'ops data is invalid.')
+            logger.error('ops data is invalid.')
             return []
 
         op_infos: List[OpInnerInfo] = []

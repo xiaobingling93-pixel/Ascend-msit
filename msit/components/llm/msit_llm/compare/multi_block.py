@@ -28,7 +28,7 @@ def multi_block_cmp(atb_nodes, torch_nodes, my_root_node, atb_tensor_path, torch
         atb_tensor_data = atb_tensor_datas[0] if dim_atb == -1 else torch.cat(atb_tensor_datas, dim_atb)
         torch_tensor_data = torch_tensor_datas[0] if dim_torch == -1 else torch.cat(torch_tensor_datas, dim_torch)
         # 3. compare tensor_datas
-        data_info = BasicDataInfo(torch_node_tensor_path, atb_node_tensor_path, data_id=0)
+        data_info = BasicDataInfo(torch_node_tensor_path, atb_node_tensor_path)
         row_data = fill_row_data(data_info, atb_tensor_data, torch_tensor_data)
         compared_result.append(row_data)
 
@@ -37,7 +37,7 @@ def multi_block_cmp(atb_nodes, torch_nodes, my_root_node, atb_tensor_path, torch
 
 def get_multi_tensor_paths(data_path, node_path, tensor_sub_dir):
     tensor_device_name = os.path.basename(os.path.abspath(os.path.join(data_path, "..")))  # 0_npu_pid, 1_npu_pid
-    device_tensor_paths = os.listdir(os.path.join(data_path, "..", ".."))
+    device_tensor_paths = sorted(os.listdir(os.path.join(data_path, "..", "..")))
     cur_tensor_path = os.path.abspath(os.path.join(node_path, tensor_sub_dir))
     if not os.path.exists(cur_tensor_path):
         msg = f"golden tensor path: {cur_tensor_path} is not exist."
