@@ -1,7 +1,7 @@
 
 # trtexec场景
 
-ais_bench支持onnx模型推理（集成trtexec）,trtexec为NVIDIA TensorRT自带工具。用户使用ais_bench拉起trtexec工具进行推理性能测试，测试过程中实时输出trtexec日志，打印在控制台，推理性能测试完成后，将性能数据输出在控制台。
+benchmark支持onnx模型推理（集成trtexec）,trtexec为NVIDIA TensorRT自带工具。用户使用benchmark拉起trtexec工具进行推理性能测试，测试过程中实时输出trtexec日志，打印在控制台，推理性能测试完成后，将性能数据输出在控制台。
 ## 前置条件
 推理性能测试环境需要配置有GPU，安装CANN、CUDA及TensorRT，并且trtexec可以通过命令行调用到，安装方式可参考[TensorRT](https://github.com/NVIDIA/TensorRT)。
 
