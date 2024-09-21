@@ -8,7 +8,7 @@ from msit_llm.transform.torch_to_atb_python import ATBModel
 from msit_llm.transform.utils import load_model_dict
 from atb_model_placeholder import Model
 
-MODEL_PATH = model_path_placeholder
+MODEL_PATH = "model_path_placeholder"
 
 class CausalLM(PreTrainedModel):
     def __init__(self, model_path):
