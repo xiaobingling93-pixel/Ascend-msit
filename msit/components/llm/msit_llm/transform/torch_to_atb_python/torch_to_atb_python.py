@@ -1016,11 +1016,12 @@ class ATBModelFromTorch(ATBModel):
         return output_file
 
 
-def generate_infer_file(output_file, source_path):
+def generate_infer_file(output_file, source_path, is_vl_model=False):
     from pathlib import Path
 
-    infer_file = Path(output_file).with_name("run.py")
-    contents_str = Path(__file__).with_name("run.py").read_text()
+    file_name = "run_vl.py" if is_vl_model else "run.py"
+    infer_file = Path(output_file).with_name(file_name)
+    contents_str = Path(__file__).with_name(file_name).read_text()
     contents_str = contents_str.replace("atb_model_placeholder", Path(output_file).stem)
     contents_str = contents_str.replace("model_path_placeholder", source_path)
     write_file(infer_file, contents_str)
@@ -1076,7 +1077,7 @@ def transform(source_path, input_names=BASIC_INPUT_NAMES, output_file=None, to_q
         )
     )
 
-    infer_file = generate_infer_file(output_file, source_path)
+    infer_file = generate_infer_file(output_file, source_path, is_vl_model=is_vl_model)
     logger.info("=" * 30)
     logger.info(f"End-to-end inference example saved to: {infer_file}")
-    logger.info(f"Execute by: python run.py\n")
+    logger.info(f"Execute by: python {infer_file}\n")
