@@ -711,7 +711,7 @@ class ATBModelFromTorch(ATBModel):
             ]
 
         embed_op_id, embed_outputs = -1, None
-        for op_id, op in enumerate(self.operations[:4]):
+        for op_id, op in enumerate(self.operations):
             if len(op.inputs) == 2 and len(op.outputs) == 1 and FIXED_INPUTS.input_ids in op.inputs:  # Embedding
                 op.inputs = [FIXED_INPUTS.inputs_embeds]
                 embed_outputs = op.outputs[0]
@@ -1023,7 +1023,7 @@ def generate_infer_file(output_file, source_path, is_vl_model=False):
     infer_file = Path(output_file).with_name(file_name)
     contents_str = Path(__file__).with_name(file_name).read_text()
     contents_str = contents_str.replace("atb_model_placeholder", Path(output_file).stem)
-    contents_str = contents_str.replace("model_path_placeholder", source_path)
+    contents_str = contents_str.replace("model_path_placeholder", os.path.abspath(source_path))
     write_file(infer_file, contents_str)
     return infer_file
 

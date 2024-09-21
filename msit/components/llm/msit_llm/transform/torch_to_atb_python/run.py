@@ -1,12 +1,12 @@
-from pathlib import Path
 import torch
 import torch_npu
-from msit_llm.transform.torch_to_atb_python import ATBModel
-from safetensors.torch import safe_open
+from pathlib import Path
 from transformers import AutoTokenizer, AutoConfig
 from transformers.modeling_utils import PreTrainedModel
 from transformers.modeling_outputs import CausalLMOutputWithPast
 
+from msit_llm.transform.torch_to_atb_python import ATBModel
+from msit_llm.transform.utils import load_model_dict
 from atb_model_placeholder import Model
 
 
