@@ -242,7 +242,7 @@ def dump_logits():
     # 将缓存的输出dump到文件中
     def hook_func(*args):
         config = DumpConfig()
-        if config.dump_last_logits and config.last_logits is not None:
+        if config.dump_last_logits and config.last_logits is not None and config.dump_flag:
             module_name, outputs = config.last_logits
 
             dump_path = os.path.join(config.dump_dir, str(config.token_id), module_name)
