@@ -1,6 +1,5 @@
 import torch
 import torch_npu
-from pathlib import Path
 from transformers import AutoTokenizer, AutoConfig
 from transformers.modeling_utils import PreTrainedModel
 from transformers.modeling_outputs import CausalLMOutputWithPast
@@ -9,6 +8,7 @@ from msit_llm.transform.torch_to_atb_python import ATBModel
 from msit_llm.transform.utils import load_model_dict
 from atb_model_placeholder import Model
 
+MODEL_PATH = model_path_placeholder
 
 class CausalLM(PreTrainedModel):
     def __init__(self, model_path):
@@ -128,7 +128,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("-w", "--weight", type=str, default="model_path_placeholder", help="Model weight path")
+    parser.add_argument("-w", "--weight", type=str, default=MODEL_PATH, help="Model weight path")
     parser.add_argument("-i", "--inputs", type=str, default="Who's there?", help="input for model")
     args = parser.parse_known_args()[0]
 
