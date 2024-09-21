@@ -257,7 +257,7 @@ class ATBModel:
             self.head_dim,
         ]
 
-        self.kv_cache_names = [ii for ii in self.input_names if ii.split('.')[-1] in KV_CACHE_SURFFIX]
+        self.kv_cache_names = [ii for ii in self.input_names if ii.split(".")[-1] in KV_CACHE_SURFFIX]
         self.past_key_values = {}
 
     def init_kv_cache(self):
@@ -319,7 +319,9 @@ class ATBModel:
         if len(missing_weights) > 0:
             logger.warning(f"missing weights: {missing_weights}")
 
-    def forward(self, input_ids=None, position_ids=None, inputs_embeds=None, slots_mapping=None, seq_len=None, **kwargs):
+    def forward(
+        self, input_ids=None, position_ids=None, inputs_embeds=None, slots_mapping=None, seq_len=None, **kwargs
+    ):
         # Basic inputs
         model_inputs, batch_size, cur_pos, input_len = {}, 1, 1, 1
         if input_ids is not None:
@@ -623,7 +625,11 @@ class ATBModelFromTorch(ATBModel):
         k_cache_name = module_name + "." + KV_CACHE_SURFFIX.k_cache
         v_cache_name = module_name + "." + KV_CACHE_SURFFIX.v_cache
         reshape_and_cache_inputs = [
-            module_name + ".k_embed_", module_name + ".v_embed_", k_cache_name, v_cache_name, FIXED_INPUTS.slots_mapping
+            module_name + ".k_embed_",
+            module_name + ".v_embed_",
+            k_cache_name,
+            v_cache_name,
+            FIXED_INPUTS.slots_mapping,
         ]
         self.k_cache_names.append(k_cache_name)
         self.v_cache_names.append(v_cache_name)
@@ -698,12 +704,12 @@ class ATBModelFromTorch(ATBModel):
             else:
                 op.inputs = gathered_module_inputs.get(op.op_name, []) + op.inputs
 
-    @staticmethod
-    def _replace_in_list(input_list, source, target):
-        return [target if ii == source else ii for ii in input_list]
-
     def _replace_input_ids_by_inputs_embeds_for_vl_model(self):
-        self.model_inputs = self._replace_in_list(self.model_inputs, FIXED_INPUTS.input_ids, FIXED_INPUTS.inputs_embeds)
+        if FIXED_INPUTS.input_ids in self.model_inputs:
+            self.model_inputs = [
+                FIXED_INPUTS.inputs_embeds if ii == FIXED_INPUTS.input_ids else ii for ii in self.model_inputs
+            ]
+
         embed_op_id, embed_outputs = -1, None
         for op_id, op in enumerate(self.operations[:4]):
             if len(op.inputs) == 2 and len(op.outputs) == 1 and FIXED_INPUTS.input_ids in op.inputs:  # Embedding
@@ -714,7 +720,8 @@ class ATBModelFromTorch(ATBModel):
                 continue
             if embed_outputs is None:
                 continue
-            op.inputs = self._replace_in_list(op.inputs, embed_outputs, FIXED_INPUTS.inputs_embeds)
+            if embed_outputs in op.inputs:
+                op.inputs = [FIXED_INPUTS.inputs_embeds if ii == embed_outputs else ii for ii in op.inputs]
 
         if embed_op_id >= 0:
             logger.info(f"Remove op: {self.operations[embed_op_id]}")
@@ -1012,8 +1019,8 @@ class ATBModelFromTorch(ATBModel):
 def generate_infer_file(output_file, source_path):
     from pathlib import Path
 
-    infer_file = Path(output_file).with_name('run.py')
-    contents_str = Path(__file__).with_name('run.py').read_text()
+    infer_file = Path(output_file).with_name("run.py")
+    contents_str = Path(__file__).with_name("run.py").read_text()
     contents_str = contents_str.replace("atb_model_placeholder", Path(output_file).stem)
     contents_str = contents_str.replace("model_path_placeholder", source_path)
     write_file(infer_file, contents_str)
@@ -1062,7 +1069,11 @@ def transform(source_path, input_names=BASIC_INPUT_NAMES, output_file=None, to_q
     out = atb_model.forward(input_ids=torch.arange(input_len), position_ids=torch.arange(input_len))
     print(out)
     "
-    """.format(model_name=model_name).replace(" " * 4, "")  # Remove the prefix "    "
+    """.format(
+            model_name=model_name
+        ).replace(
+            " " * 4, ""
+        )
     )
 
     infer_file = generate_infer_file(output_file, source_path)
