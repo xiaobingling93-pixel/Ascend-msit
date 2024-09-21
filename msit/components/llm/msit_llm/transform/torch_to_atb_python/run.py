@@ -10,28 +10,6 @@ from transformers.modeling_outputs import CausalLMOutputWithPast
 from atb_model_placeholder import Model
 
 
-def load_model_dict(model_path):
-    if Path(model_path).is_file():
-        state_dict = torch.load(model_path)
-        return state_dict
-    elif Path(model_path).is_dir():
-        suffix_list = [".bin", ".safetensors", ".pt"]
-        for suffix in suffix_list:
-            file_list = list(Path(model_path).glob("*" + suffix))
-            if not file_list:
-                continue
-            state_dict = {}
-            for fp in file_list:
-                if suffix == ".safetensors":
-                    with safe_open(fp, framework="pt") as ff:
-                        ss = {kk: ff.get_tensor(kk).half() for kk in ff.keys()}
-                else:
-                    ss = torch.load(fp)
-                state_dict.update(ss)
-            return state_dict
-    return {}
-
-
 class CausalLM(PreTrainedModel):
     def __init__(self, model_path):
         config = AutoConfig.from_pretrained(model_path)
@@ -160,5 +138,5 @@ if __name__ == "__main__":
 
     logger = logging.getLogger()
     logger.info("-" * 40)
-    logger.info("Input:%s", args.inputs)
-    logger.info("Output:%s", output_text)
+    logger.info("Input: %s", args.inputs)
+    logger.info("Output: %s", output_text)
