@@ -127,7 +127,7 @@ compare功能可以直接通过msit命令行形式启动精度对比。启动方
 
 | 使用示例                                                                                             | 使用场景                                 |
 |--------------------------------------------------------------------------------------------------|--------------------------------------|
-| [01_basic_usage](/msit/examples/cli/debug/compare/01_basic_usage)                                | 基础示例，运行onnx和om模型精度比对                 |
+| [01_basic_usage](/msit/examples/cli/debug/compare/01_basic_usage)                             | 基础示例，运行onnx和om模型精度比对                 |
 | [02_specify_input_data](/msit/examples/cli/debug/compare/02_specify_input_data)                  | 指定模型输入数据                             |
 | [03_save_output_data](/msit/examples/cli/debug/compare/03_save_output_data)                      | 指定结果输出目录                             |
 | [04_specify_input_shape_info](/msit/examples/cli/debug/compare/04_specify_input_shape_info)      | 指定模型输入的shape信息(动态场景必须进行指定)。          |
