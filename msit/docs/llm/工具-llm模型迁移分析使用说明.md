@@ -83,8 +83,7 @@ msit llm transform [-h] -s SOURCE [-atb ATB_MODEL_PATH] [--enable-sparse] [--to-
   #
   # ==============================
   # End-to-end inference example saved to: run.py
-  # You can run the model using the command below:
-  #     python run.py
+  # Execute by: python run.py
   ```
   参照输出的 `Run like:` 部分，导入生成的 py 文件，并调用推理
   ```py
@@ -156,6 +155,50 @@ msit llm transform [-h] -s SOURCE [-atb ATB_MODEL_PATH] [--enable-sparse] [--to-
   print({kk: vv.shape for kk, vv in out.items()})
   # {'output': torch.Size([32, 32000])}
   ```
+
+### Transformers LLava 迁移到 ATB python 模型
+- 从 huggingface 获取相应 LLava 模型
+- **迁移生成 ATB python 浮点模型**，将生成迁移完成的 ATB python 模型代码 py 文件，以及模型配置参数，并给出调用示例
+  ```sh
+  msit llm transform -s test_llava/ -py
+  # ...
+  # ==============================
+  # Saved to: llamaforcausallm_atb_float.py
+  #
+  # ==============================
+  # atb_model config:
+  # {'vocab_size': 32000, 'num_attention_heads': 32, 'head_dim': 32, 'max_batch_size': 1, 'max_seq_len': 1024}
+  #
+  # ==============================
+  # Run like:
+  #
+  # python3 -c "
+  # import torch, torch_npu
+  # import llamaforcausallm_atb_float
+  # from msit_llm.transform.torch_to_atb_python import ATBModel
+  # 
+  # atb_model = ATBModel(llamaforcausallm_atb_float.Model())
+  # weights = torch.load('$WEIGHT_PATH')  # Use actual WEIGHT_PATH
+  # atb_model.set_weights(weights)
+  # 
+  # input_len = 32
+  # out = atb_model.forward(input_ids=torch.arange(input_len),position_ids=torch.arange(input_len))
+  # print(out)
+  # "
+  #
+  # ==============================
+  # End-to-end inference example saved to: run_vl.py
+  # Execute by: python run_vl.py
+  ```
+  可直接运行 python run_vl.py 调用推理
+  ```sh
+  python run_vl.py -i {image_path} -t "text"
+  ```
+  
+  | 参数名                 | 描述                                                                                                                                                                | 必选 |
+  | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- |
+  | -i, --image           | 多模态模型推理中需要的图片路径                          | 是   |
+  | -t, --text          | 多模态模型推理中需要的对于输入图片的文字描述                                                                                                           | 否   |
 ***
 
 ## ATB cpp 迁移示例

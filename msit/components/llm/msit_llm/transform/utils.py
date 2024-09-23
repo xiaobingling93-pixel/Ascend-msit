@@ -15,6 +15,12 @@
 import os
 import stat
 from collections import namedtuple
+from pathlib import Path
+
+import torch
+from safetensors.torch import safe_open
+
+from msit_llm.common.log import logger
 
 _SCENARIOS = ["torch_to_float_atb", "float_atb_to_quant_atb", "torch_to_float_python_atb"]
 SCENARIOS = namedtuple("SCENARIOS", _SCENARIOS)(*_SCENARIOS)
@@ -43,3 +49,25 @@ def write_file(save_path, string):
     modes = stat.S_IWUSR | stat.S_IRUSR
     with os.fdopen(os.open(save_path, flags, modes), 'w') as ff:
         ff.write(string)
+
+
+def load_model_dict(model_path):
+    if Path(model_path).is_file():
+        state_dict = torch.load(model_path)
+        return state_dict
+    elif Path(model_path).is_dir():
+        suffix_list = ['.bin', '.safetensors', '.pt']
+        for suffix in suffix_list:
+            file_list = list(Path(model_path).glob('*' + suffix))
+            if not file_list:
+                continue
+            state_dict = {}
+            for fp in file_list:
+                if suffix == '.safetensors':
+                    with safe_open(fp, framework='pt') as ff:
+                        ss = {kk: ff.get_tensor(kk).half() for kk in ff.keys()}
+                else:
+                    ss = torch.load(fp)
+                state_dict.update(ss)
+            return state_dict
+    return {}
