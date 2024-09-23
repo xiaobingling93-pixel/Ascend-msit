@@ -10,6 +10,7 @@ from atb_model_placeholder import Model
 
 MODEL_PATH = "model_path_placeholder"
 
+
 class CausalLM(PreTrainedModel):
     def __init__(self, model_path):
         config = AutoConfig.from_pretrained(model_path)
@@ -53,7 +54,7 @@ class CausalLM(PreTrainedModel):
         )
         return model_inputs
 
-    def forward(self, input_ids, position_ids, use_cache=False, *args, **kwargs):
+    def forward(self, input_ids, position_ids, use_cache=False, **kwargs):
         if input_ids.dim() == 2:
             input_ids = input_ids[0]
 
@@ -118,8 +119,7 @@ class Runner:
         generate_text = self.tokenizer.batch_decode(
             generate_ids[:, :], skip_special_tokens=True, clean_up_tokenization_spaces=False
         )
-        output_text = generate_text[0][:]
-        return output_text
+        return generate_text[0][:]
 
 
 if __name__ == "__main__":
