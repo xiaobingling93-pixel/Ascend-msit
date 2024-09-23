@@ -77,7 +77,7 @@ dump功能可以直接通过msit命令行形式启动精度对比。启动方式
 
 | 使用示例                                                                                           | 使用场景                      |
 |------------------------------------------------------------------------------------------------|---------------------------|
-| [01_basic_usage](../../../examples/cli/debug/dump/01_basic_usage)                           | 基础示例，运行onnx模型dump         |
+| [01_basic_usage](../../../examples/cli/debug/dump/01_basic_usage)                              | 基础示例，运行onnx模型dump         |
 | [02_specify_input_data](../../../examples/cli/debug/dump/02_specify_input_data)             | 指定模型输入数据                  |
 | [03_save_output_data](../../../examples/cli/debug/dump/03_save_output_data)                 | 指定结果输出目录                  |
 | [04_specify_input_shape_info](../../../examples/cli/debug/dump/04_specify_input_shape_info) | 指定模型输入的shape信息(动态场景必须进行指定)。 |
