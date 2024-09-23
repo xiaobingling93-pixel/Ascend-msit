@@ -138,6 +138,7 @@ compare功能可以直接通过msit命令行形式启动精度对比。启动方
 | [09_single_op](/msit/examples/cli/debug/compare/09_single_op)                                 | 单算子比对模式                              |
 | [10_fusion_switch_file](/msit/examples/cli/debug/compare/10_fusion_switch_file)               | 关闭融合规则.om模型和原始.om模型精度比对              |
 | [11_mixing_precison_compare](/msit/examples/cli/debug/compare/11_mixing_precison_compare)      | 混合精度策略的.om模型和.om模型的精度比对              |
+| [12_alone_compare](/msit/examples/cli/debug/compare/14_alone_compare)                            | 指定dump数据的精度比对                        |
 
 ### 常见问题FAQ
 
