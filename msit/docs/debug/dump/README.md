@@ -67,7 +67,7 @@ dump功能可以直接通过msit命令行形式启动精度对比。启动方式
 | -ofs, --onnx-fusion-switch | onnxruntime算子融合开关，默认**开启**算子融合，如存在onnx dump数据中因算子融合导致缺失的，建议关闭此开关。使用方式：--onnx-fusion-switch False                                                                                                  | 否  |
 | --saved_model_signature   | tensorflow2.6框架下saved_model模型加载时需要的签名，当模型为saved_model时，该参数为必选参数。使用方式：--saved_model_signature serving，默认为serving_default                                                                                                     | 否  | |  |
 | --saved_model_tag_set     | tensorflow2.6框架下saved_model模型加载为session时的标签，可根据标签加载模型的不同部分，当模型为saved_model时，该参数为必选参数。使用方式：--saved_model_tag_set serve                                                                                                       | 否  | |  |
-| -dp, --device-pattern     | 设备模式，支持cpu和npu，目前npu模型下只支持saved_model模型。使用方式：-dp cpu                                                                                                                                                                     | 否  | |  |
+| -dp, --device-pattern     | 设备模式，支持cpu和npu，目前npu模式下只支持saved_model模型。使用方式：-dp cpu                                                                                                                                              | 否  | |  |
 | --tf-json                 | 用于dump saved_model模型在cpu侧的算子集合json，当dump saved_model 模型在cpu的数据时，为必选参数                                                                                                                             | 否  | |  |
 | -h    --help              | 用于查看全部的参数                                                                                                                                                                                         | 否  | |  |
 
@@ -81,4 +81,4 @@ dump功能可以直接通过msit命令行形式启动精度对比。启动方式
 | [02_specify_input_data](../../../examples/cli/debug/dump/02_specify_input_data)             | 指定模型输入数据                  |
 | [03_save_output_data](../../../examples/cli/debug/dump/03_save_output_data)                 | 指定结果输出目录                  |
 | [04_specify_input_shape_info](../../../examples/cli/debug/dump/04_specify_input_shape_info) | 指定模型输入的shape信息(动态场景必须进行指定)。 |
-| [05_caffe_model](../../../examples/cli/debug/dump/07_caffe_model)                           | 模型为Caffe框架的dump           |
+| [05_caffe_model](../../../examples/cli/debug/dump/05_caffe_model)                           | 模型为Caffe框架的dump           |
