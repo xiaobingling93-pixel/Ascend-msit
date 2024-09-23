@@ -20,9 +20,9 @@
 - 迁移后需要基于加速库 ATB 实现，因此支持的 oprations 限定在 ATB 已有算子
 
 ### 限定条件
-- **适用于 transformers 包，支持类似 LLaMA、QWEN 的典型模型结构迁移**
+- **适用于 transformers 包，支持类似 LLaMA、QWEN 的典型 LLM 模型结构迁移，以及 LLaVA 等 VL 模型迁移**
 - **当前 MindIE python 接口发布包基于 python 3.10，迁移功能也限定 python3.10；且 transformers 版本需要支持对应模型的 FX 构图，即 `transformers.utils.fx.symbolic_trace` 接口**
-- **ATB Python 模型当前硬件限定 Atlas 800I A2 / 900 A2**
+- **ATB Python 模型当前硬件限定 Atlas 800I A2 / 800T A2 / 900 A2**
 
 ### 环境说明
 - 安装 msit
