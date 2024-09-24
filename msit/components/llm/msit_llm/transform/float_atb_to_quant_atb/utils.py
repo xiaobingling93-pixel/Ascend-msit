@@ -50,17 +50,17 @@ def get_args_and_options():
     import platform    
     from clang import cindex
 
-    ATB_HOME_PATH = os.getenv("ATB_HOME_PATH", "")
-    ASCEND_TOOLKIT_HOME = os.getenv("ASCEND_TOOLKIT_HOME", "")
-    ATB_SPEED_COMPILE_PATH = os.path.dirname(os.path.dirname(os.getenv("ATB_SPEED_HOME_PATH", "")))
+    atb_home_path = os.getenv("ATB_HOME_PATH", "")
+    ascend_toolkit_home = os.getenv("ASCEND_TOOLKIT_HOME", "")
+    atb_speed_compile_path = os.path.dirname(os.path.dirname(os.getenv("ATB_SPEED_HOME_PATH", "")))
 
     cur_platform = platform.machine() + "-" + platform.system()  # like "aarch64-linux"
     include_pathes = [
-        os.path.join(ATB_HOME_PATH, "include"),
-        os.path.join(ASCEND_TOOLKIT_HOME, cur_platform, "include"),
-        ATB_SPEED_COMPILE_PATH,
-        os.path.join(ATB_SPEED_COMPILE_PATH, "core", "include"),
-        os.path.join(ATB_SPEED_COMPILE_PATH, "3rdparty", "nlohmannJson", "include"),
+        os.path.join(atb_home_path, "include"),
+        os.path.join(ascend_toolkit_home, cur_platform, "include"),
+        atb_speed_compile_path,
+        os.path.join(atb_speed_compile_path, "core", "include"),
+        os.path.join(atb_speed_compile_path, "3rdparty", "nlohmannJson", "include"),
     ]
     args = ["-fsyntax-only"]
     args.extend(["-I " + include_path for include_path in include_pathes])

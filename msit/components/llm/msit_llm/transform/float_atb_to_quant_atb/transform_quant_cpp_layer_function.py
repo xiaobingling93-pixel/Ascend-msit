@@ -69,7 +69,7 @@ class TransformQuantCppLayerFunction:
             if is_mlp_norm:
                 param_name = self.atb_node_params.get(cur_token_spelling, 'Not exist')
             elif is_separate_qkv_linear:
-                param_name = self.atb_node_params[cur_token_spelling]
+                param_name = self.atb_node_params(cur_token_spelling, 'Not exist')
             else:
                 param_name = self.all_tokens[cur_id + 1].spelling
 
@@ -143,7 +143,7 @@ class TransformQuantCppLayerFunction:
 
     def groupby_param_type(self):
         param_groups = {}
-        for _ , param_type in self.atb_param_types.items():
+        for _, param_type in self.atb_param_types.items():
             param_type_lower = param_type.lower()
             if "mlp" in param_type_lower:
                 param_groups[param_type] = MLP_PARAM
