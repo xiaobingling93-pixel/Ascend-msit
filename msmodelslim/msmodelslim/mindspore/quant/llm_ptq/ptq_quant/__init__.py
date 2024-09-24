@@ -15,6 +15,6 @@
 # Copyright Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
 
 from msmodelslim.mindspore.quant.llm_ptq.ptq_quant.quant_config import QuantConfig
-from msmodelslim.mindspore.quant.llm_ptq.ptq_quant.quant_tool import Calibrator
+from msmodelslim.mindspore.quant.llm_ptq.ptq_quant.quant_tools import Calibrator
 
 __all__ = ['Calibrator', 'QuantConfig']

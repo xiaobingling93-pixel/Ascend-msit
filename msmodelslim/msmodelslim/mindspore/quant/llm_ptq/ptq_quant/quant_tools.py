@@ -22,9 +22,9 @@ from mindspore.communication import get_rank
 from ascend_utils.common.security import check_type
 from msmodelslim import logger
 from msmodelslim.mindspore.quant.llm_ptq.ptq_quant import QuantConfig
-from mindspore_gs.ptq import PTQMode, PTQConfig, OutliersSuppressionType
-from mindspore_gs.common import BackendTarget
-from mindspore_gs.ptq.ptq import PTQ
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq import PTQMode, PTQConfig, OutliersSuppressionType
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.common import BackendTarget
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.ptq import PTQ
 
 
 class Calibrator(object):
