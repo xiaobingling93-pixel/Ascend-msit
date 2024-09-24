@@ -224,7 +224,8 @@ class NetworkHelper:
 
         Examples:
             >>> from mindspore import context
-            >>> from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.network_helpers.mf_net_helpers import MFLlama2Helper
+            >>> from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.network_helpers.mf_net_helpers \
+                import MFLlama2Helper
             >>> from mindformers import LlamaForCausalLM, LlamaConfig
             >>> from mindformers.tools.register.config import MindFormerConfig
             >>> context.set_context(mode=context.GRAPH_MODE, device_target="Ascend")
@@ -248,7 +249,8 @@ class NetworkHelper:
 
         Examples:
             >>> from mindspore import context
-            >>> from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.network_helpers.mf_net_helpers import MFLlama2Helper
+            >>> from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.network_helpers.mf_net_helpers \
+                import MFLlama2Helper
             >>> from mindformers import LlamaForCausalLM, LlamaConfig
             >>> from mindformers.tools.register.config import MindFormerConfig
             >>> context.set_context(mode=context.GRAPH_MODE, device_target="Ascend")

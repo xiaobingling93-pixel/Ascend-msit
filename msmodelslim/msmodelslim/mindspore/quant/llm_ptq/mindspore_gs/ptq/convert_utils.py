@@ -184,7 +184,6 @@ class SmoothAndQuantCell(Cell):
 
     def shard(self, strategy):
         """shard strategy for quant cell"""
-        # FIXME (1, *strategy[0]) only support 2D input such as llama network
         self.quant.shard(((1, *strategy[0]), (strategy[0][-1],), (strategy[0][-1],)))
 
 

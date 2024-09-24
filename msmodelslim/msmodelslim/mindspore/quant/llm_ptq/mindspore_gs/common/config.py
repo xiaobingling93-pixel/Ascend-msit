@@ -38,7 +38,7 @@ class GSBaseConfig:
     def dump(self, file_path: str):
         """dump config to yaml file"""
         parsed_dict = self._parse_dict()
-        with open(file_path, 'w') as fi:
+        with open(file_path, 'w', mode=0o644) as fi:
             yaml.safe_dump(parsed_dict, fi, allow_unicode=True)
 
     def load(self, yaml_file):

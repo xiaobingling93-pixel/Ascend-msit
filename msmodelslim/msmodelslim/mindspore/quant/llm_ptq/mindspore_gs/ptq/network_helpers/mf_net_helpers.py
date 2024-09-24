@@ -403,16 +403,6 @@ class MFParallelLlama2Helper(MFLlama2Helper):
 
     Raises:
         TypeError: If input `config` is not an instance of `MindFormerConfig`.
-
-    Examples:
-        >>> from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.network_helpers.mf_net_helpers import MFParallelLlama2Helper
-        >>> from mindformers.tools.register.config import MindFormerConfig
-        >>> mf_yaml_config_file = "/path/to/mf_yaml_config_file"
-        >>> mfconfig = MindFormerConfig(mf_yaml_config_file)
-        >>> helper = MFParallelLlama2Helper(mfconfig)
-        >>> network = helper.create_network()
-        >>> decoder_layers = helper.get_decoder_layers(network)
-        >>> helper.analysis_decoder_groups(network)
     """
     def create_network(self):
         """

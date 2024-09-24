@@ -261,8 +261,12 @@ class InnerPTQConfig(GSBaseConfig, PTQConfig):
             raise ValueError(f'Invalid approach: {self.approach}')
         if self.approach is PTQApproach.RTN and self.act_quant_dtype == msdtype.int8:
             raise ValueError(f"{self.approach} is not support act_quant_dtype == mindspore.dtype.int8.")
-        if self.approach is PTQApproach.RTN and self.weight_quant_dtype == msdtype.int8 and self.kvcache_quant_dtype == msdtype.int8:
-            raise ValueError(f"weight_quant_dtype and kvcache_quant_dtype are mindspore.dtype.int8, {self.approach} isn't supported.")
+        if self.approach is PTQApproach.RTN and self.weight_quant_dtype == msdtype.int8 and \
+            self.kvcache_quant_dtype == msdtype.int8:
+            raise ValueError(
+                f"weight_quant_dtype and kvcache_quant_dtype are mindspore.dtype.int8,"
+                f"{self.approach} isn't supported."
+                )
         if self.approach is PTQApproach.RTN and self.weight_quant_dtype is None and self.kvcache_quant_dtype is None:
             raise ValueError(f"weight_quant_dtype and kvcache_quant_dtype are None, {self.approach} can't take effect.")
         if list(set(self.fallback_blacklist.keys()) & set(self.opname_blacklist)):

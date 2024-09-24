@@ -31,7 +31,8 @@ from mindformers.modules.paged_attention_mgr import PagedAttentionMgr
 from mindformers.experimental.infer.core.layers import ColumnParallelLinear, RowParallelLinear
 from mindformers.experimental.distri_cores.create_comm import get_tp_group
 from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.common import logger
-from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.ptq_config import InnerPTQConfig, PTQMode, OutliersSuppressionType
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.ptq_config import InnerPTQConfig, PTQMode, \
+    OutliersSuppressionType
 from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.convert_utils import QuantCellV2, AntiQuantCell
 from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.ptq.wrapper_cell import WrapperCell
 from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.network_helpers import LayerType, NetworkHelper
@@ -361,7 +362,6 @@ class QuantLinearCell(WrapperLinearCell):
                 self.layer.bias_add = msops.Add()
             self.layer.has_bias = True
             self.layer.bias = Parameter(bias.astype(self.compute_type), name=bias_name)
-            # FIXME hangangqiang, decouple with smooth
             if self.cfg.outliers_suppression == OutliersSuppressionType.SMOOTH and not self.cfg.smooth_to_pre_layer:
                 smooth_scale = self.layer.matmul.mm.mul_scale.asnumpy()
             else:
@@ -602,6 +602,7 @@ class WeightQuantMatmul(Cell):
         output = self.weight_qbmm(x, weight, self.t_scale, self.t_zp_neg, None, None, None)
         return output.astype(self.dst_dtype)
 
+
 class AllQuantMatmulDeploy(Cell):
     """quant weight"""
 
@@ -641,11 +642,13 @@ class QuantPageAttentionMgrCell(WrapperCell):
         self.quantizer_key_min = None
         self.quantizer_value_max = None
         self.quantizer_value_min = None
+        self._layer = None
         self.kvcache_symmetric = cfg.kvcache_symmetric
         self.enable_deploy_fusion = cfg.enable_deploy_fusion
         self.kvcache_quant_min, self.kvcache_quant_max = get_quant_min_max(num_bits=8,
                                                                            signed=True,
                                                                            narrow_range=cfg.kvcache_narrow_range)
+    
     def process(self):
         if not self.key_samples or not self.value_samples:
             raise RuntimeError("Please catch ReshapeAndCache inputs before quantization.")
@@ -723,8 +726,8 @@ class QuantPageAttentionMgrDeployCell(Cell):
         d = kvcache.head_dim
         self._key_output_quantizer = AntiQuantCell(n, d, dst_type)
         self._value_output_quantizer = AntiQuantCell(n, d, dst_type)
-        key_t_zp = np.array(key_t_zp*-1).astype(np.float16)
-        value_t_zp = np.array(value_t_zp*-1).astype(np.float16)
+        key_t_zp = np.array(key_t_zp * -1).astype(np.float16)
+        value_t_zp = np.array(value_t_zp * -1).astype(np.float16)
         self.key_t_zp = Parameter(Tensor(key_t_zp, dtype=dtype.float16), name="key_t_zp")
         self.value_t_zp = Parameter(Tensor(value_t_zp, dtype=dtype.float16), name="value_t_zp")
         self.key_t_scale = Parameter(Tensor(key_t_scale, dtype=dtype.float16), name="key_t_scale")

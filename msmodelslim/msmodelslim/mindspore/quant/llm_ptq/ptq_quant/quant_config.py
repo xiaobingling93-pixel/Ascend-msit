@@ -16,9 +16,9 @@
 from mindspore import dtype as msdtype
 from mindformers import MindFormerConfig
 
+from ascend_utils.common.security import check_type, check_element_type
 from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.network_helpers.mf_net_helpers \
     import MFLlama2Helper, MFParallelLlama2Helper
-from ascend_utils.common.security import check_type, check_element_type
 
 
 class QuantConfig(object):
@@ -30,18 +30,17 @@ class QuantConfig(object):
                  disable_names: object = None,
                  config_path: str = None,
                  ):
-
-            self.w_bit = w_bit
-            self.a_bit = a_bit
-            self.use_kvcache_quant = use_kvcache_quant
-            self.do_smooth = do_smooth
-            self.disable_names = disable_names
-            self.config_path = config_path
-            self._check_params()
-            self.w_bit = msdtype.int8 if self.w_bit == 8 else None
-            self.a_bit = msdtype.int8 if self.a_bit == 8 else None
-            self.use_kvcache_quant = msdtype.int8 if self.use_kvcache_quant else None
-            self.msconfig = self.create_msconfig(self.config_path)
+        self.w_bit = w_bit
+        self.a_bit = a_bit
+        self.use_kvcache_quant = use_kvcache_quant
+        self.do_smooth = do_smooth
+        self.disable_names = disable_names
+        self.config_path = config_path
+        self._check_params()
+        self.w_bit = msdtype.int8 if self.w_bit == 8 else None
+        self.a_bit = msdtype.int8 if self.a_bit == 8 else None
+        self.use_kvcache_quant = msdtype.int8 if self.use_kvcache_quant else None
+        self.msconfig = self.create_msconfig(self.config_path)
     
     def _check_params(self):
         w_bit_list = [8, 16]

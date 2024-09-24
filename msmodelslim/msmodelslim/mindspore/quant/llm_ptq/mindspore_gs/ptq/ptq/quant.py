@@ -25,7 +25,8 @@ from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.comp_algo import CompAlgo
 from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.common import logger
 from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.common.utils import offload_network, value_check
 from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.processor import transform_network_inplace
-from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.ptq_config import PTQConfig, InnerPTQConfig, PTQApproach, PTQMode, OutliersSuppressionType
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.ptq_config import PTQConfig, InnerPTQConfig, \
+    PTQApproach, PTQMode, OutliersSuppressionType
 from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.network_helpers import NetworkHelper
 from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.ptq.wrapper_cell import WrapperCell
 from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.processor import Processor
@@ -62,24 +63,6 @@ class PTQ(CompAlgo):
         TypeError: If `config` type is not PTQConfig when it's not ``None``.
         ValueError: If not PYNATIVE mode when mode in config is PTQMode.QUANTIZE.
         ValueError: If act_quant_dtype is int8 and weight_quant_dtype is None.
-
-    Examples:
-        >>> import mindspore_gs
-        >>> from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq import PTQ
-        >>> from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq import PTQConfig
-        >>> from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.network_helpers.mf_net_helpers import MFLlama2Helper
-        >>> from mindformers.tools.register.config import MindFormerConfig
-        >>> from mindformers import LlamaForCausalLM, LlamaConfig
-        >>> mf_yaml_config_file = "/path/to/mf_yaml_config_file"
-        >>> mfconfig = MindFormerConfig(mf_yaml_config_file)
-        >>> helper = MFLlama2Helper(mfconfig)
-        >>> ptq_config = PTQConfig(mode=PTQMode.QUANTIZE, backend=backend, opname_blacklist=["w2", "lm_head"],
-                        weight_quant_dtype=msdtype.int8, act_quant_dtype=msdtype.int8,
-                        outliers_suppression=OutliersSuppressionType.SMOOTH)
-        >>> ptq = PTQ(ptq_config)
-        >>> network = LlamaForCausalLM(LlamaConfig(**mfconfig.model.model_config))
-        >>> fake_quant_net = ptq.apply(network, helper)
-        >>> quant_net = ptq.convert(fake_quant_net)
     """
 
     def __init__(self, config: Union[dict, PTQConfig] = None):

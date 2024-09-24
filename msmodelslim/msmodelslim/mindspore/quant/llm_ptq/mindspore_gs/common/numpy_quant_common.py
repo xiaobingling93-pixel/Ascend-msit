@@ -73,6 +73,7 @@ class NumpyQuantOps:
         i64_scale_deq = ui32_scale_deq.astype(np.int64)
         return i64_scale_deq.tolist()
 
+
 class NumpyFullQuant:
     """full quant process using numpy"""
     def __init__(self,
@@ -93,4 +94,4 @@ class NumpyFullQuant:
         return dequant_result
 
     def orin_process(self, activation, weight, bias):
-        return np.matmul(activation, weight) +  bias
+        return np.matmul(activation, weight) + bias

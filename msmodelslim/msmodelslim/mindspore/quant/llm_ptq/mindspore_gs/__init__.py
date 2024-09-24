@@ -21,4 +21,4 @@ from .comp_algo import CompAlgo
 from .common import BackendTarget
 from .ptq.ptq_config import PTQConfig, PTQMode
 
-__all__ = [ "CompAlgo", 'PTQConfig', 'PTQMode', 'BackendTarget']
+__all__ = ["CompAlgo", 'PTQConfig', 'PTQMode', 'BackendTarget']
