@@ -202,7 +202,11 @@ class KnowledgeSplitLargeKernelConv(KnowledgeBase):
             each = ((len(_16s) - 1) // num) + 1
             ksizes = [sum(_16s[i : i + each]) for i in range(0, len(_16s), each)]
             indices = list(accumulate([0, *ksizes[:-1]]))
-            kslices = [[*slc, (i, i + s)] for i, s in zip(indices, ksizes) for slc in kslices]
+            kslices = [
+                [*slc, (i, i + s)] 
+                for i, s in zip(indices, ksizes) 
+                for slc in kslices
+            ]
         return kslices
 
     def _split_large_kernel(self, graph: BaseGraph, matchinfo: Dict[str, List[Node]]) -> bool:
@@ -220,7 +224,8 @@ class KnowledgeSplitLargeKernelConv(KnowledgeBase):
         kshape: List[int] = conv0.attrs.get('kernel_shape', [1])
         slices = self._calculate_kernel_slices(kshape)
         outputs = [
-            self._create_kernel_slice_branch(conv0, graph, slc, idx == 0).outputs[0] for idx, slc in enumerate(slices)
+            self._create_kernel_slice_branch(conv0, graph, slc, idx == 0).outputs[0] 
+            for idx, slc in enumerate(slices)
         ]
 
         graph.add_node(

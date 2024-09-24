@@ -1,3 +1,18 @@
+# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
 import os
 
 import numpy as np
@@ -36,55 +51,6 @@ class Synthesizer(object):
         )
         
         self.from_args(
-            queries=queries,
-            input_token_ids=input_token_ids,
-            output_token_ids=output_token_ids,
-            passed=passed
-        )
-
-    def _update_attributes(self, **kwargs):
-        for key, value in kwargs.items():
-            if value is not None:
-                modified_value = self._sanitize_value(value)
-                self._info[key] = np.append(self._info[key], modified_value, axis=0)
-
-    def _sanitize_value(self, value):
-        # str is a iterable
-        if isinstance(value, str) or not hasattr(value, '__iter__'):
-            return np.array([str(value)], dtype=object)
-
-        return np.fromiter((str(item) for item in value), dtype=object)
-    
-    def from_args(self, *, queries=None, input_token_ids=None, output_token_ids=None, passed=None) -> None:
-        """Collecting dataset evaluation result from memory. User should take care of the evaluation details.
-        
-        If any parameter is `None`, it will not be added to the `Sythesizer`. This allows the user to add each
-        item iteratively whenever it is ready, without extra effort on collecting each item as a whole.
-
-        Parameters:
-        -----------
-        queries: str or iterable of str, optional
-            The queries or questions from the dataset that the model is evaluated on. Default to `None`.
-        input_token_ids: Any, optional
-            The input ids of the queries or questions after encoding. Default to `None`.
-        output_token_ids: Any, optional
-            The output ids of the model outputs, the generated texts before decoding. Default to `None`.
-        passed: {'Correct', 'Wrong'}, optional
-            Indicate whether the generated texts from the model is expected with respect to the dataset label.
-            `Correct` or `Wrong` depends on different evluation strategies under corresponding dataset.
-            Default to `None`
-
-        Examples
-        --------
-        >>> from msit_llm import Synthesizer
-        >>> synthesizer = Synthesizer()
-        >>> synthesizer.from_args(
-        ...     queries='Question 1', 
-        ...     input_token_ids=[1, 2, 3], 
-        ...     output_token_ids=[4, 5, 6], 
-        ...     passed='Correct')
-        """
-        self._update_attributes(
             queries=queries,
             input_token_ids=input_token_ids,
             output_token_ids=output_token_ids,
@@ -190,6 +156,42 @@ class Synthesizer(object):
         logger.info("Command '%s' returns successfully", command)
         return temp_dir_name
 
+    def from_args(self, *, queries=None, input_token_ids=None, output_token_ids=None, passed=None) -> None:
+        """Collecting dataset evaluation result from memory. User should take care of the evaluation details.
+        
+        If any parameter is `None`, it will not be added to the `Sythesizer`. This allows the user to add each
+        item iteratively whenever it is ready, without extra effort on collecting each item as a whole.
+
+        Parameters:
+        -----------
+        queries: str or iterable of str, optional
+            The queries or questions from the dataset that the model is evaluated on. Default to `None`.
+        input_token_ids: Any, optional
+            The input ids of the queries or questions after encoding. Default to `None`.
+        output_token_ids: Any, optional
+            The output ids of the model outputs, the generated texts before decoding. Default to `None`.
+        passed: {'Correct', 'Wrong'}, optional
+            Indicate whether the generated texts from the model is expected with respect to the dataset label.
+            `Correct` or `Wrong` depends on different evluation strategies under corresponding dataset.
+            Default to `None`
+
+        Examples
+        --------
+        >>> from msit_llm import Synthesizer
+        >>> synthesizer = Synthesizer()
+        >>> synthesizer.from_args(
+        ...     queries='Question 1', 
+        ...     input_token_ids=[1, 2, 3], 
+        ...     output_token_ids=[4, 5, 6], 
+        ...     passed='Correct')
+        """
+        self._update_attributes(
+            queries=queries,
+            input_token_ids=input_token_ids,
+            output_token_ids=output_token_ids,
+            passed=passed
+        )
+
     def to_csv(self, *, errors='trunc'):
         """Archive the collected result to csv file. 
         
@@ -245,7 +247,20 @@ class Synthesizer(object):
             raise ValueError
         
         return pd.DataFrame(self._info)
-    
+
+    def _update_attributes(self, **kwargs):
+        for key, value in kwargs.items():
+            if value is not None:
+                modified_value = self._sanitize_value(value)
+                self._info[key] = np.append(self._info[key], modified_value, axis=0)
+
+    def _sanitize_value(self, value):
+        # str is a iterable
+        if isinstance(value, str) or not hasattr(value, '__iter__'):
+            return np.array([str(value)], dtype=object)
+
+        return np.fromiter((str(item) for item in value), dtype=object)
+
     def _padding(self):
         max_len = max(map(len, self._info.values()))
 

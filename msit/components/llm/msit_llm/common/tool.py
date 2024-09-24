@@ -30,8 +30,15 @@ class TensorBinFile:
         self.dtype = 0
         self.format = 0
         self.dims = []
-        self.dtype_dict = {0: torch.float32, 1: torch.float16, 2: torch.int8, 3: torch.int32, 9: torch.int64,
-                           12: torch.bool, 27: torch.bfloat16}
+        self.dtype_dict = {
+            0: torch.float32, 
+            1: torch.float16, 
+            2: torch.int8, 
+            3: torch.int32, 
+            9: torch.int64,
+            12: torch.bool, 
+            27: torch.bfloat16
+        }
 
         self._parse_bin_file()
 
