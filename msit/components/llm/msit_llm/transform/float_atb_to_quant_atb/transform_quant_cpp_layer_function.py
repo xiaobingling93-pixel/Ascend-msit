@@ -19,7 +19,7 @@ NORM_PARAM = "NORM"
 LINEAR_PARAM = "LINEAR"
 MLP_PARAM = "MLP"
 ATTENTION_PARAM = "ATTENTION"
- 
+
 
 class TransformQuantCppLayerFunction:
     def __init__(self, contents, cursor, in_tensor_added, indent=4, enable_sparse=False):
