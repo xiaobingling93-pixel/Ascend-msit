@@ -30,18 +30,18 @@ from mindformers.modules.layers import Linear
 from mindformers.modules.paged_attention_mgr import PagedAttentionMgr
 from mindformers.experimental.infer.core.layers import ColumnParallelLinear, RowParallelLinear
 from mindformers.experimental.distri_cores.create_comm import get_tp_group
-from mindspore_gs.common import logger
-from mindspore_gs.ptq.ptq_config import InnerPTQConfig, PTQMode, OutliersSuppressionType
-from mindspore_gs.ptq.convert_utils import QuantCellV2, AntiQuantCell
-from mindspore_gs.ptq.ptq.wrapper_cell import WrapperCell
-from mindspore_gs.ptq.network_helpers import LayerType, NetworkHelper
-from mindspore_gs.quantization.quant_utils import (
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.common import logger
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.ptq_config import InnerPTQConfig, PTQMode, OutliersSuppressionType
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.convert_utils import QuantCellV2, AntiQuantCell
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.ptq.wrapper_cell import WrapperCell
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.network_helpers import LayerType, NetworkHelper
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.quantization.quant_utils import (
     get_quant_min_max, cal_quantization_params,
     quant_tensor_data,
     convert_fp32_to_int64
 )
-from mindspore_gs.common.numpy_quant_common import NumpyQuantOps
-from mindspore_gs.ptq.convert_utils import (
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.common.numpy_quant_common import NumpyQuantOps
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.convert_utils import (
     convert_to_quant_for_deploy,
     convert_to_antiquant_for_deploy
 )

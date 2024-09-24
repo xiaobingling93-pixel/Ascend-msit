@@ -21,7 +21,7 @@ from dataclasses import dataclass
 import numpy as np
 from mindspore.nn import Cell
 
-from mindspore_gs.common.utils import value_check
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.common.utils import value_check
 
 
 class LayerType(enum.Enum):
@@ -58,7 +58,7 @@ class LayerInfo:
             LayerType.CONCAT_LINEAR_LAYER].
 
     Example:
-        >>> from mindspore_gs.ptq.network_helpers import LayerInfo, LayerType
+        >>> from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.network_helpers import LayerInfo, LayerType
         >>> LayerInfo(name='model.layers.0.w_qkv', layer=layer, type=LayerType.CONCAT_LINEAR_LAYER)
     """
     name: str = ""
@@ -102,7 +102,7 @@ class NetworkHelper:
             Created network.
 
         Examples:
-            >>> from mindspore_gs.ptq.network_helpers.mf_net_helpers import MFLlama2Helper
+            >>> from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.network_helpers.mf_net_helpers import MFLlama2Helper
             >>> from mindformers.tools.register.config import MindFormerConfig
             >>> mf_yaml_config_file = "/path/to/mf_yaml_config_file"
             >>> mfconfig = MindFormerConfig(mf_yaml_config_file)
@@ -122,7 +122,7 @@ class NetworkHelper:
             Object as network specific.
 
         Examples:
-            >>> from mindspore_gs.ptq.network_helpers.mf_net_helpers import MFLlama2Helper
+            >>> from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.network_helpers.mf_net_helpers import MFLlama2Helper
             >>> from mindformers.tools.register.config import MindFormerConfig
             >>> mf_yaml_config_file = "/path/to/mf_yaml_config_file"
             >>> mfconfig = MindFormerConfig(mf_yaml_config_file)
@@ -143,7 +143,7 @@ class NetworkHelper:
             Object as network tokenizer.
 
         Examples:
-            >>> from mindspore_gs.ptq.network_helpers.mf_net_helpers import MFLlama2Helper
+            >>> from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.network_helpers.mf_net_helpers import MFLlama2Helper
             >>> from mindformers.tools.register.config import MindFormerConfig
             >>> mf_yaml_config_file = "/path/to/mf_yaml_config_file"
             >>> mfconfig = MindFormerConfig(mf_yaml_config_file)
@@ -174,7 +174,7 @@ class NetworkHelper:
         Examples:
             >>> import numpy as np
             >>> from mindspore import context
-            >>> from mindspore_gs.ptq.network_helpers.mf_net_helpers import MFLlama2Helper
+            >>> from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.network_helpers.mf_net_helpers import MFLlama2Helper
             >>> from mindformers import LlamaForCausalLM, LlamaConfig
             >>> from mindformers.tools.register.config import MindFormerConfig
             >>> context.set_context(mode=context.GRAPH_MODE, device_target="Ascend")
@@ -201,7 +201,7 @@ class NetworkHelper:
 
         Examples:
             >>> import numpy as np
-            >>> from mindspore_gs.ptq.network_helpers.mf_net_helpers import MFLlama2Helper
+            >>> from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.network_helpers.mf_net_helpers import MFLlama2Helper
             >>> from mindformers.tools.register.config import MindFormerConfig
             >>> mf_yaml_config_file = "/path/to/mf_yaml_config_file"
             >>> mfconfig = MindFormerConfig(mf_yaml_config_file)
@@ -224,7 +224,7 @@ class NetworkHelper:
 
         Examples:
             >>> from mindspore import context
-            >>> from mindspore_gs.ptq.network_helpers.mf_net_helpers import MFLlama2Helper
+            >>> from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.network_helpers.mf_net_helpers import MFLlama2Helper
             >>> from mindformers import LlamaForCausalLM, LlamaConfig
             >>> from mindformers.tools.register.config import MindFormerConfig
             >>> context.set_context(mode=context.GRAPH_MODE, device_target="Ascend")
@@ -248,7 +248,7 @@ class NetworkHelper:
 
         Examples:
             >>> from mindspore import context
-            >>> from mindspore_gs.ptq.network_helpers.mf_net_helpers import MFLlama2Helper
+            >>> from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.network_helpers.mf_net_helpers import MFLlama2Helper
             >>> from mindformers import LlamaForCausalLM, LlamaConfig
             >>> from mindformers.tools.register.config import MindFormerConfig
             >>> context.set_context(mode=context.GRAPH_MODE, device_target="Ascend")

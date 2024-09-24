@@ -17,9 +17,9 @@
 from mindformers import Linear
 from mindformers.experimental.infer.core.layers import ColumnParallelLinear, RowParallelLinear
 from mindformers.modules import PagedAttentionMgr
-from mindspore_gs.ptq.ptq.algorithms.anti_outliers import LinearSmoother
-from mindspore_gs.ptq.ptq.algorithms.quantizer import Quantizer
-from mindspore_gs.ptq.ptq.algorithms.deployer import Deployer
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.ptq.algorithms.anti_outliers import LinearSmoother
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.ptq.algorithms.quantizer import Quantizer
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.ptq.algorithms.deployer import Deployer
 from .wrapper_cells import (
     SmoothLinearCell, QuantLinearCell, QuantPageAttentionMgrCell,
     DeployLinearCell, DeployPageAttentionMgrCell

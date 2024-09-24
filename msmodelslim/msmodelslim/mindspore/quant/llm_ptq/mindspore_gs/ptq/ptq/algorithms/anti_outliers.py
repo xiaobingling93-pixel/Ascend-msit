@@ -16,12 +16,12 @@
 from typing import Tuple
 
 from mindspore.nn import Cell
-from mindspore_gs.common import logger
-from mindspore_gs.ptq.processor import Processor, transform_network_inplace
-from mindspore_gs.ptq.ptq_config import InnerPTQConfig
-from mindspore_gs.ptq.network_helpers import NetworkHelper
-from mindspore_gs.ptq.ptq.algorithm import Algorithm
-from mindspore_gs.ptq.ptq.wrapper_cell import WrapperCell
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.common import logger
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.processor import Processor, transform_network_inplace
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.ptq_config import InnerPTQConfig
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.network_helpers import NetworkHelper
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.ptq.algorithm import Algorithm
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.ptq.wrapper_cell import WrapperCell
 
 
 class LinearSmoother(Algorithm):

@@ -40,8 +40,8 @@ from mindformers.experimental.infer.core.transformer import (ParallelTransformer
 from mindformers.experimental.infer.core.norm import RMSNorm
 from mindformers.experimental.infer.core.layers import ColumnParallelLinear, RowParallelLinear
 from mindformers.experimental.distri_cores.create_comm import initialize_model_parallel
-from mindspore_gs.common.utils import value_check
-from mindspore_gs.ptq.processor import Processor
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.common.utils import value_check
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.processor import Processor
 from .network_helper import NetworkHelper, DecoderGroupInfo, LayerInfo, LayerType
 
 
@@ -405,7 +405,7 @@ class MFParallelLlama2Helper(MFLlama2Helper):
         TypeError: If input `config` is not an instance of `MindFormerConfig`.
 
     Examples:
-        >>> from mindspore_gs.ptq.network_helpers.mf_net_helpers import MFParallelLlama2Helper
+        >>> from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.network_helpers.mf_net_helpers import MFParallelLlama2Helper
         >>> from mindformers.tools.register.config import MindFormerConfig
         >>> mf_yaml_config_file = "/path/to/mf_yaml_config_file"
         >>> mfconfig = MindFormerConfig(mf_yaml_config_file)

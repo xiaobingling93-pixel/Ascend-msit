@@ -21,8 +21,8 @@ import os.path
 from mindspore.nn.cell import Cell
 from mindspore.train.callback import Callback
 from mindspore import export, context
-from mindspore_gs.common import logger
-from mindspore_gs.common.validator import Validator
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.common import logger
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.common.validator import Validator
 
 
 class Backend(enum.Enum):
@@ -114,7 +114,7 @@ class CompAlgo(abc.ABC):
 
         Examples:
             >>> import mindspore as ms
-            >>> from mindspore_gs.quantization import SimulatedQuantizationAwareTraining as SimQAT
+            >>> from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.quantization import SimulatedQuantizationAwareTraining as SimQAT
             >>> import numpy as np
             >>> ## 1) Define network to be trained
             >>> network = LeNet(10)
@@ -169,7 +169,7 @@ class CompAlgo(abc.ABC):
             An instance of Cell represents converted network.
 
         Examples:
-            >>> from mindspore_gs.quantization import SimulatedQuantizationAwareTraining as SimQAT
+            >>> from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.quantization import SimulatedQuantizationAwareTraining as SimQAT
             >>> ## 1) Define network to be trained
             >>> network = LeNet(10)
             >>> ## 2) Define MindSpore Golden Stick Algorithm, here we use base algorithm.

@@ -18,7 +18,7 @@ from typing import Union, Optional
 import mindspore
 from mindspore.nn.cell import Cell
 from mindspore.rewrite import PatternEngine, SymbolTree, Node, ScopedValue, NodeType
-from mindspore_gs.quantization.quant_cell import QuantCell
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.quantization.quant_cell import QuantCell
 
 
 mindspore.rewrite.common.namespace._subtree_black_list.append(QuantCell)

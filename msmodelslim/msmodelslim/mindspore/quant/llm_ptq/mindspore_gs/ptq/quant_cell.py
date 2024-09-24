@@ -15,7 +15,7 @@
 """ptq quant cells."""
 
 import abc
-from mindspore_gs.quantization.quant_cell import QuantCell
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.quantization.quant_cell import QuantCell
 
 
 class PTQCell(QuantCell):

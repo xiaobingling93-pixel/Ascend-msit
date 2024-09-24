@@ -24,8 +24,8 @@ from mindspore.ops.operations._infer_ops import QuantV2
 from mindspore.ops.operations.comm_ops import ReduceOp
 from mindspore.communication.management import GlobalComm
 from mindspore.ops.auto_generate import WeightQuantBatchMatmul, QuantBatchMatmul
-from mindspore_gs.ptq.fake_quantizer import LinearFakeQuantizer
-from mindspore_gs.common.numpy_quant_common import NumpyQuantOps
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.fake_quantizer import LinearFakeQuantizer
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.common.numpy_quant_common import NumpyQuantOps
 
 
 class AntiQuantCell(Cell):

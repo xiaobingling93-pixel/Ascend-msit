@@ -20,10 +20,10 @@ from typing import List, Union
 
 from mindspore import dtype as msdtype
 
-from mindspore_gs.common.config import GSBaseConfig
-from mindspore_gs.common.utils import value_check, list_value_check
-from mindspore_gs.common.register import RegisterMachine
-from mindspore_gs.common.gs_enum import BackendTarget
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.common.config import GSBaseConfig
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.common.utils import value_check, list_value_check
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.common.register import RegisterMachine
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.common.gs_enum import BackendTarget
 
 algo_cfg_register = RegisterMachine()
 
@@ -153,8 +153,8 @@ class PTQConfig:
         TypeError: If `outliers_suppression` is not a OutliersSuppressionType.
 
     Examples:
-        >>> from mindspore_gs.ptq import PTQConfig, PTQMode
-        >>> from mindspore_gs.common import BackendTarget
+        >>> from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq import PTQConfig, PTQMode
+        >>> from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.common import BackendTarget
         >>> PTQConfig(mode=PTQMode.DEPLOY, backend=BackendTarget.ASCEND, opname_blacklist=['layer0'])
         PTQConfig(mode=<PTQMode.DEPLOY: 'deploy'>, backend=<BackendTarget.ASCEND: 'ascend'>, opname_blacklist=['layer0'], algo_args={})
     """

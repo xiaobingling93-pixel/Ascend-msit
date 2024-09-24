@@ -19,7 +19,7 @@ import warnings
 from typing import Tuple
 
 from mindspore.nn import Cell
-from mindspore_gs.common import logger
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.common import logger
 
 
 class Processor(abc.ABC):

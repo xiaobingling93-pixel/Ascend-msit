@@ -21,7 +21,7 @@ import numpy as np
 from mindspore import dtype, Tensor
 import mindspore.dataset.transforms as C
 from mindspore.dataset import GeneratorDataset
-from mindspore_gs.common import logger
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.common import logger
 
 
 class SQuADDataset(GeneratorDataset):

@@ -15,8 +15,8 @@
 """NetworkQConfig for PTQ."""
 import abc
 
-from mindspore_gs.quantization.net_policy import NetPolicy
-from mindspore_gs.quantization.layer_policy import LayerPolicy, PerChannelArgs
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.quantization.net_policy import NetPolicy
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.quantization.layer_policy import LayerPolicy, PerChannelArgs
 from .fake_quantizer import FakeQuantizer
 
 

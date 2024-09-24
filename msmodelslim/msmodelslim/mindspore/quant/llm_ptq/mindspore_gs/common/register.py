@@ -17,7 +17,7 @@ registers for ptq
 """
 from typing import Dict
 
-from mindspore_gs.common import logger
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.common import logger
 
 
 class RegisterMachine:

@@ -19,10 +19,10 @@ from typing import Tuple
 
 from mindspore import dtype as msdtype
 from mindspore.nn import Cell
-from mindspore_gs.ptq.network_helpers import NetworkHelper
-from mindspore_gs.ptq.processor import Processor
-from mindspore_gs.ptq.ptq_config import LayerQuantizeAlgo, OutliersSuppressionType
-from mindspore_gs.common import logger
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.network_helpers import NetworkHelper
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.processor import Processor
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.ptq_config import LayerQuantizeAlgo, OutliersSuppressionType
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.common import logger
 from .wrapper_cell import WrapperCell
 
 

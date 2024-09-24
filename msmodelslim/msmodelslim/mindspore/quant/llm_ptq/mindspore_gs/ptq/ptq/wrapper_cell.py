@@ -17,8 +17,8 @@
 import abc
 from mindspore.nn import Cell
 from mindspore import ops as msops
-from mindspore_gs.ptq.ptq_config import InnerPTQConfig
-from mindspore_gs.ptq.network_helpers import NetworkHelper
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.ptq_config import InnerPTQConfig
+from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.network_helpers import NetworkHelper
 
 
 class WrapperCell(abc.ABC, Cell):
