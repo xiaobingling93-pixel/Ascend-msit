@@ -259,11 +259,13 @@ class ATBModel:
 
         self.kv_cache_names = [ii for ii in self.input_names if ii.split(".")[-1] in KV_CACHE_SURFFIX]
         self.past_key_values = {}
+        self.atb_model_has_set_weights = hasattr(self.atb_model, "set_weights")  # Supported after RC3
 
     def init_kv_cache(self):
         self.past_key_values = {ii: torch.zeros(self.cache_shape).to(self.dtype).npu() for ii in self.kv_cache_names}
         self.weights.update(self.past_key_values)
-        self.atb_model.set_weights(self.past_key_values)
+        if self.atb_model_has_set_weights:
+            self.atb_model.set_weights(self.past_key_values)
 
     def _calc_inv_freq_by_rope_theta(self):
         inv_freq_weight = 1.0 / (self.rope_theta ** (torch.arange(0, self.head_dim, 2) / self.head_dim))
@@ -308,7 +310,8 @@ class ATBModel:
             attention_mask = torch.where((1 - torch.tril(mask_tensor)).to(torch.bool), -torch.inf, 0)
             self.attention_mask = attention_mask.to(self.dtype).npu()
 
-        self.atb_model.set_weights(self.weights)  # ATB provided function, no need to pass weights again
+        if self.atb_model_has_set_weights:
+            self.atb_model.set_weights(self.weights)  # ATB provided function, no need to pass weights again
 
         if len(self.kv_cache_names) > 0:
             self.init_kv_cache()
@@ -324,6 +327,8 @@ class ATBModel:
     ):
         # Basic inputs
         model_inputs, batch_size, cur_pos, input_len = {}, 1, 1, 1
+        if not atb_model_has_set_weights:
+            model_inputs.update(self.weights)
         if input_ids is not None:
             batch_size = input_ids.shape[0] if input_ids.dim() == 2 else 1
             input_len = cur_pos = input_ids.shape[-1]
