@@ -108,31 +108,6 @@ class CompAlgo(abc.ABC):
 
         Args:
             save_mindir (bool): If ``True``, export MindIR automatically after training, else not.
-
-        Raises:
-            TypeError: If `need_save` is not bool.
-
-        Examples:
-            >>> import mindspore as ms
-            >>> from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.quantization import SimulatedQuantizationAwareTraining as SimQAT
-            >>> import numpy as np
-            >>> ## 1) Define network to be trained
-            >>> network = LeNet(10)
-            >>> ## 2) Define MindSpore Golden Stick Algorithm, here we use base algorithm.
-            >>> algo = SimQAT()
-            >>> ## 3) Enable automatically export MindIR after training.
-            >>> algo.set_save_mindir(save_mindir=True)
-            >>> ## 4) Set MindIR output path.
-            >>> algo.set_save_mindir_path(save_mindir_path="./lenet")
-            >>> ## 5) Apply MindSpore Golden Stick algorithm to origin network.
-            >>> network = algo.apply(network)
-            >>> ## 6) Set up Model.
-            >>> train_dataset = create_custom_dataset()
-            >>> net_loss = ms.nn.SoftmaxCrossEntropyWithLogits(sparse=True, reduction="mean")
-            >>> net_opt = ms.nn.Momentum(network.trainable_params(), 0.01, 0.9)
-            >>> model = ms.Model(network, net_loss, net_opt, metrics={"Accuracy": ms.train.Accuracy()})
-            >>> ## 7) Config callback in model.train, start training, then MindIR will be exported.
-            >>> model.train(1, train_dataset, callbacks=algo.callbacks())
         """
         Validator.check_bool(save_mindir, "save_mindir", self.__class__.__name__)
         self._config.save_mindir = save_mindir
@@ -167,21 +142,6 @@ class CompAlgo(abc.ABC):
 
         Returns:
             An instance of Cell represents converted network.
-
-        Examples:
-            >>> from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.quantization import SimulatedQuantizationAwareTraining as SimQAT
-            >>> ## 1) Define network to be trained
-            >>> network = LeNet(10)
-            >>> ## 2) Define MindSpore Golden Stick Algorithm, here we use base algorithm.
-            >>> algo = SimQAT()
-            >>> ## 3) Apply MindSpore Golden Stick algorithm to origin network.
-            >>> network = algo.apply(network)
-            >>> ## 4) Then you can start training, after which you can convert a compressed network to a standard
-            >>> ##    network, there are two ways to do that.
-            >>> ## 4.1) Convert without checkpoint.
-            >>> net_deploy = algo.convert(network)
-            >>> ## 4.2) Convert with checkpoint.
-            >>> net_deploy = algo.convert(network, ckpt_path)
         """
 
         return net_opt

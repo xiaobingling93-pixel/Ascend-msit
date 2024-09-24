@@ -16,6 +16,7 @@
 
 import numpy as np
 
+
 class NumpyQuantOps:
     """
     numpy quant ops for test.

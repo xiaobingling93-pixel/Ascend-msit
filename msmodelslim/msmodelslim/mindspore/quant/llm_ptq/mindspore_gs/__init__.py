@@ -22,7 +22,3 @@ from .common import BackendTarget
 from .ptq.ptq_config import PTQConfig, PTQMode
 
 __all__ = [ "CompAlgo", 'PTQConfig', 'PTQMode', 'BackendTarget']
-
-from .version import __version__, mindspore_version_check
-mindspore_version_check()
-__all__.extend(__version__)
