@@ -15,6 +15,7 @@
 from collections import OrderedDict
 import os
 import sys
+import re
 
 import numpy as np
 from msit_llm.common.log import logger
