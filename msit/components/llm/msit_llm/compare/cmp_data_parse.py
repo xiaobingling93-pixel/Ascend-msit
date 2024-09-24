@@ -129,14 +129,14 @@ class CompareDataATB(CompareDataParse):
 
         normpath = os.path.normpath(path)
         path_list = list(normpath.split(os.sep))
-        MAX_PARSE_LEVEL = 3
+        max_parse_level = 3
         parse_level = 0
         for index in reversed(range(len(path_list))):
             if any([path_list[index].startswith(x) for x in GLOBAL_HISTORY_AIT_DUMP_PATH_LIST]):
                 ait_dump_path = os.sep.join(path_list[0 : index + 1])
                 break
             parse_level += 1
-            if parse_level > MAX_PARSE_LEVEL:
+            if parse_level > max_parse_level:
                 break
 
         return ait_dump_path
@@ -344,22 +344,19 @@ class CompareDataTorch(CompareDataParse):
         self.ait_dump_path = self.parse_ait_dump_path(path)
         self.token_id, self.pid, self.tokens_path = self.get_ids_by_path(self.ait_dump_path, path)
         self.token_ids = [
-            int(t) if t.isdigit() else t for t in DataUtils.get_token_ids(self.tokens_path, self.token_id)
+            int(t) 
+            if t.isdigit() else t 
+            for t in DataUtils.get_token_ids(self.tokens_path, self.token_id)
         ]
 
         self.topo_file = self.get_topo_file_path(self.tokens_path)
         self.golden_root_node, self.golden_layer_type, self.golden_layer_nodes = self.parse()
 
-    @classmethod
-    def accept(cls, path: str, args) -> bool:
-        ait_dump_path = cls.parse_ait_dump_path(path)
-        return ait_dump_path is not None
-
     @staticmethod
     def parse_ait_dump_path(path):
         normpath = os.path.normpath(path)
-        MAX_PARSE_LEVEL = 3
-        for i in range(MAX_PARSE_LEVEL):
+        max_parse_level = 3
+        for i in range(max_parse_level):
             up_level = [".."] * i
             ait_dump_path = os.path.join(normpath, *up_level)
             if os.path.exists(os.path.join(ait_dump_path, "model_tree.json")):
@@ -394,6 +391,17 @@ class CompareDataTorch(CompareDataParse):
     @staticmethod
     def get_topo_file_path(tokens_path: str):
         return os.path.join(tokens_path, "model_tree.json")
+
+    @classmethod
+    def accept(cls, path: str, args) -> bool:
+        ait_dump_path = cls.parse_ait_dump_path(path)
+        return ait_dump_path is not None
+
+    def load_topo_info(self):
+        topo_path = self.get_topo_file_path(self.path, self.args.cmp_level)
+        with open(topo_path, "r") as file:
+            topo_info = json.load(file)
+        return topo_info
 
     def get_root_nodes(self) -> List[TreeNode]:
         return [self.golden_root_node]

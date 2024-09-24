@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+__all__ = ["KnowledgeBase", "KnowledgeFactory", "Pattern"]
+
+
 from auto_optimizer.pattern.knowledges.knowledge_base import KnowledgeBase
 from auto_optimizer.pattern.knowledge_factory import KnowledgeFactory
 
@@ -33,5 +37,3 @@ from auto_optimizer.pattern.knowledges import knowledge_bn_folding
 from auto_optimizer.pattern.knowledges import knowledge_modify_reflection_pad
 
 from auto_optimizer.pattern.pattern import Pattern
-
-__all__ = ["KnowledgeBase", "KnowledgeFactory", "Pattern"]
