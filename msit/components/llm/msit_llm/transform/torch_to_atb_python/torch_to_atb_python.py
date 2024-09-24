@@ -71,7 +71,7 @@ TORCH_MODULE_TO_ATB_MAP = {
         op_type="SelfAttention",
         op_param={"headNum": 1, "kvHeadNum": 1, "calcType": "PA_ENCODER", "qkScale": 1, "maskType": "MASK_TYPE_NORM"},
     ),
-    "SiLU.*": dict(op_type="Activation", op_param={"activationType": "ACTIVATION_SWISH"}),
+    "SiLU.{0,100}": dict(op_type="Activation", op_param={"activationType": "ACTIVATION_SWISH"}),
     "add": dict(op_type="Elewise", op_param={"elewiseType": "ELEWISE_ADD"}),
     "mul": dict(op_type="Elewise", op_param={"elewiseType": "ELEWISE_MUL"}),
 }
