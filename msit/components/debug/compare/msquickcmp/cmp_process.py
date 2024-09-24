@@ -127,8 +127,8 @@ def _append_is_npu_ops_to_csv(csv_path):
         for row in rows[1:]:
             is_npu_ops = "YES" if row[ground_truth_col] == "*" else "NO"
             row.append(is_npu_ops)
-        with ms_open(csv_path, mode="w") as file:
-            writer = csv.writer(file)
+        with ms_open(csv_path, mode='w') as f:
+            writer = csv.writer(f)
             writer.writerows(rows)
 
 

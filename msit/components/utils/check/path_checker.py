@@ -1,5 +1,5 @@
-from enum import Enum, auto, unique
 import os
+from enum import Enum, auto, unique
 from typing import Union
 
 from components.utils.check.checker import Checker, CheckResult, rule, EnumInstance
@@ -85,7 +85,7 @@ class PathChecker(Checker):
             self.status_err_msg = str(e)
         else:
             self.f_state = True
-            
+
         return ori_path, self.f_state, self.status_err_msg
 
     @rule()

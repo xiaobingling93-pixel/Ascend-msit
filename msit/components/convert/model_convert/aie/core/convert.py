@@ -21,9 +21,7 @@ from components.utils.log import logger
 
 
 class Convert:
-    def __init__(self,
-        config: ConvertConfig
-    ) -> None:
+    def __init__(self, config: ConvertConfig) -> None:
         self._config = config
         self.python_version = sys.executable or "python3"
 
@@ -39,7 +37,7 @@ class Convert:
         Exception Description:
             when invalid command throw exception
         """
-        logger.info('Execute command:%s' % cmd)
+        logger.info('Execute command:%s', cmd)
         process = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         while process.poll() is None:
             line = process.stdout.readline()
@@ -47,7 +45,7 @@ class Convert:
             if line:
                 logger.debug(line)
         if process.returncode != 0:
-            logger.error('Failed to execute command:%s' % " ".join(cmd))
+            logger.error('Failed to execute command:%s', " ".join(cmd))
 
     def convert_model(self) -> None:
         cur_dir = os.path.dirname(__file__)

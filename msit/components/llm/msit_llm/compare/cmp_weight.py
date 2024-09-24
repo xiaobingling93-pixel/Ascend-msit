@@ -31,12 +31,14 @@ def find_safetensors_files(golden_path):
     model_dir_path = os.path.abspath(golden_path)
     # 搜索给定目录下的所有文件，查找并存储safetensors文件路径
     # 如果没有找到safetensors文件就报错
-    safetensors_file_list = []
+    safetensors_file_list, bin_file_list = [], []
     for file in os.listdir(model_dir_path):
+        safetensors_file_path = os.path.join(model_dir_path, file)
         if file.endswith(".safetensors"):
-            safetensors_file_path = os.path.join(model_dir_path, file)
             safetensors_file_list.append(safetensors_file_path)
-    return safetensors_file_list
+        if file.endswith(".bin"):
+            bin_file_list.append(safetensors_file_path)
+    return safetensors_file_list if safetensors_file_list else bin_file_list
 
 
 def dequant(weight, weight_offset, weight_scale):
@@ -55,7 +57,11 @@ def compare_weight(gp_path, mp_path, output_path):
     mp_dict = load_file(mp_path_list[0])
 
     for g_path in tqdm(sorted_gp_path_list, desc="Comparing"):
-        gp_dict = load_file(g_path)
+        
+        if g_path.endswith(".safetensors"):
+            gp_dict = load_file(g_path)
+        elif g_path.endswith(".bin"):
+            gp_dict = torch.load(g_path, map_location="cpu")
 
         for ft_weight_key, ft_weight_value in gp_dict.items():
 
