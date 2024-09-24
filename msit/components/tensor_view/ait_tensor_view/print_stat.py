@@ -39,5 +39,5 @@ def print_stat(tensor: torch.Tensor):
         [tmp.min(), tmp.max(), tmp.mean(), tmp.std(), tmp.var()]
     ]
 
-    logger.info(tabulate(table, tablefmt="grid"))
+    logger.info("\n%s", tabulate(table, tablefmt="grid"))
     
