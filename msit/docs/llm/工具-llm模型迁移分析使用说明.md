@@ -22,7 +22,7 @@
 ### 限定条件
 - **适用于 transformers 包，支持类似 LLaMA、QWEN 的典型模型结构迁移**
 - **当前 MindIE python 接口发布包基于 python 3.10，迁移功能也限定 python3.10；且 transformers 版本需要支持对应模型的 FX 构图，即 `transformers.utils.fx.symbolic_trace` 接口**
-- **ATB Python 模型当前硬件限定 atlas d802**
+- **ATB Python 模型当前硬件限定 Atlas 900 A2**
 
 ### 环境说明
 - 安装 msit
@@ -44,8 +44,8 @@ msit llm transform [-h] -s SOURCE [-atb ATB_MODEL_PATH] [--enable-sparse] [--to-
 | -atb, --atb_model_path | 指定待调用的 cpp 代码路径。支持指定文件夹，参数指定为目录时目录下必须只存在一个cpp文件和一个h文件；或指定为文件，文件同级目录下必须存在同文件名的 cpp 文件和 h 文件 | 否   |
 | --enable-sparse        | 指定迁移为稀疏量化模型，不指定则迁移为量化模型                                                                                                                      | 否   |
 | --to-python, -py       | 指定在 Torch 模型迁移到 ATB 模型场景下，迁移为 ATB python 接口模型                                                                                                  | 否   |
-| --to-quant, -quant     | 指定在 Torch 模型迁移到 ATB python 接口模型场景下，迁移为量化模型，需要配合 `--to-python` 使用                                                                      | 否   |
-| --quant-disable-names  | 文件或 ',' 分割的字符串，指定在 Torch 模型迁移到 ATB python 接口量化模型场景下，量化回退层的名称；默认值 None 表示回退 `lm_head` 层                                 | 否   |
+| --to-quant, -quant     | 指定在 Torch 模型迁移到 ATB python 接口模型场景下，迁移为量化模型，**需要配合 `--to-python` 使用**                                                                      | 否   |
+| --quant-disable-names  | 文件或 ',' 分割的字符串，指定在 Torch 模型迁移到 ATB python 接口量化模型场景下，量化回退层的名称；**需要配合 `--to-python` 与 `--to-quant` 使用**；默认值 None 表示回退 `lm_head` 层 | 否   |
 | -l, --log-level        | 指定log level，默认为 info，可选值 debug, info, warning, error, fatal, critical                                                                                     | 否   |
 | -h, --help             | 命令行参数帮助信息|  否 |
 ***
@@ -67,32 +67,46 @@ msit llm transform [-h] -s SOURCE [-atb ATB_MODEL_PATH] [--enable-sparse] [--to-
   # ==============================
   # Run like:
   #
-  # ...
+  # python3 -c "
+  # import torch, torch_npu
+  # import llamaforcausallm_atb_float
+  # from msit_llm.transform.torch_to_atb_python import ATBModel
+  # 
+  # atb_model = ATBModel(llamaforcausallm_atb_float.Model())
+  # weights = torch.load('$WEIGHT_PATH')  # Use actual WEIGHT_PATH
+  # atb_model.set_weights(weights)
+  # 
+  # input_len = 32
+  # out = atb_model.forward(input_ids=torch.arange(input_len),position_ids=torch.arange(input_len))
+  # print(out)
   # "
+  #
+  # ==============================
+  # End-to-end inference example saved to: run.py
+  # Execute by: python run.py
   ```
   参照输出的 `Run like:` 部分，导入生成的 py 文件，并调用推理
   ```py
   import torch, torch_npu
   import llamaforcausallm_atb_float
-  from msit_llm.transform.torch_to_atb_python import ATBModel, ATBModelConfig
+  from msit_llm.transform.torch_to_atb_python import ATBModel
 
-  atb_model = llamaforcausallm_atb_float.atb_model()
+  atb_model = ATBModel(llamaforcausallm_atb_float.Model())
   weights = torch.load('test_llama/state_dict.pt')  # Use actual WEIGHT_PATH
-
-  vocab_size, num_attention_heads, head_dim = 32000, 32, 32
-  cc = ATBModelConfig(vocab_size=vocab_size, num_attention_heads=num_attention_heads, head_dim=head_dim)
-  aa = ATBModel(atb_model, cc)
-  aa.set_weights(weights)
+  atb_model.set_weights(weights)
 
   input_len = 32
-  out = aa.forward(
-      input_ids=torch.arange(input_len),
-      position_ids=torch.arange(input_len),
-      cos_table=torch.rand(input_len, head_dim),
-      sin_table=torch.rand(input_len, head_dim),
-  )
-  print(out)
+  out = atb_model.forward(input_ids=torch.arange(input_len),position_ids=torch.arange(input_len))
+  print({kk: vv.shape for kk, vv in out.items()})
   # {'output': torch.Size([32, 32000])}
+  ```
+  也可直接运行 python run.py 调用推理
+  ```sh
+  python run.py
+
+  # ==============================
+  # Input: 好雨知时节，当春
+  # Output: 好雨知时节，当春乃发生。
   ```
 ### Transformers LLaMA 迁移到 ATB python 量化模型
 - 从 huggingface 获取相应 LLaMA 模型
@@ -112,38 +126,79 @@ msit llm transform [-h] -s SOURCE [-atb ATB_MODEL_PATH] [--enable-sparse] [--to-
   # ==============================
   # Run like:
   #
+  # python3 -c "
   # import torch, torch_npu
   # import llamaforcausallm_atb_quant
-  # ...
-  # atb_model = llamaforcausallm_atb_quant.Model()
-  # ...
-  # print({kk: vv.shape for kk, vv in out.items()})
+  # from msit_llm.transform.torch_to_atb_python import ATBModel
+  # 
+  # atb_model = ATBModel(llamaforcausallm_atb_quant.Model())
+  # weights = torch.load('$WEIGHT_PATH')  # Use actual WEIGHT_PATH
+  # atb_model.set_weights(weights)
+  # 
+  # input_len = 32
+  # out = atb_model.forward(input_ids=torch.arange(input_len),position_ids=torch.arange(input_len))
+  # print(out)
   # "
   ```
   参照输出的 `Run like:` 部分，导入生成的 py 文件，并调用推理
   ```py
   import torch, torch_npu
   import llamaforcausallm_atb_quant
-  from msit_llm.transform.torch_to_atb_python import ATBModel, ATBModelConfig
+  from msit_llm.transform.torch_to_atb_python import ATBModel
 
-  atb_model = llamaforcausallm_atb_quant.Model()
-  weights = torch.load('$WEIGHT_PATH')  # Use actual WEIGHT_PATH
-
-  vocab_size, num_attention_heads, head_dim = 32000, 32, 32
-  cc = ATBModelConfig(vocab_size=vocab_size, num_attention_heads=num_attention_heads, head_dim=head_dim)
-  aa = ATBModel(atb_model, cc)
-  aa.set_weights(weights)
+  atb_model = ATBModel(llamaforcausallm_atb_quant.Model())
+  weights = torch.load('test_llama/quant_state_dict.pt')  # Use actual WEIGHT_PATH
+  atb_model.set_weights(weights)
 
   input_len = 32
-  out = aa.forward(
-      input_ids=torch.arange(input_len),
-      position_ids=torch.arange(input_len),
-      cos_table=torch.rand(input_len, head_dim),
-      sin_table=torch.rand(input_len, head_dim),
-  )
+  out = atb_model.forward(input_ids=torch.arange(input_len),position_ids=torch.arange(input_len))
   print({kk: vv.shape for kk, vv in out.items()})
   # {'output': torch.Size([32, 32000])}
   ```
+
+### Transformers LLava 迁移到 ATB python 模型
+- 从 huggingface 获取相应 LLava 模型
+- **迁移生成 ATB python 浮点模型**，将生成迁移完成的 ATB python 模型代码 py 文件，以及模型配置参数，并给出调用示例
+  ```sh
+  msit llm transform -s test_llava/ -py
+  # ...
+  # ==============================
+  # Saved to: llamaforcausallm_atb_float.py
+  #
+  # ==============================
+  # atb_model config:
+  # {'vocab_size': 32000, 'num_attention_heads': 32, 'head_dim': 32, 'max_batch_size': 1, 'max_seq_len': 1024}
+  #
+  # ==============================
+  # Run like:
+  #
+  # python3 -c "
+  # import torch, torch_npu
+  # import llamaforcausallm_atb_float
+  # from msit_llm.transform.torch_to_atb_python import ATBModel
+  # 
+  # atb_model = ATBModel(llamaforcausallm_atb_float.Model())
+  # weights = torch.load('$WEIGHT_PATH')  # Use actual WEIGHT_PATH
+  # atb_model.set_weights(weights)
+  # 
+  # input_len = 32
+  # out = atb_model.forward(input_ids=torch.arange(input_len),position_ids=torch.arange(input_len))
+  # print(out)
+  # "
+  #
+  # ==============================
+  # End-to-end inference example saved to: run_vl.py
+  # Execute by: python run_vl.py
+  ```
+  可直接运行 python run_vl.py 调用推理
+  ```sh
+  python run_vl.py -i {image_path} -t "text"
+  ```
+  
+  | 参数名                 | 描述                                                                                                                                                                | 必选 |
+  | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- |
+  | -i, --image           | 多模态模型推理中需要的图片路径                          | 是   |
+  | -t, --text          | 多模态模型推理中需要的对于输入图片的文字描述                                                                                                           | 否   |
 ***
 
 ## ATB cpp 迁移示例

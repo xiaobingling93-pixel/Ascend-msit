@@ -20,7 +20,6 @@ only_surgen=
 only_benchmark=
 only_analyze=
 only_convert=
-only_transplt=
 only_profile=
 only_llm=
 only_tensor_view=
@@ -35,7 +34,6 @@ while [[ "$#" -gt 0 ]]; do case $1 in
   --benchmark) only_benchmark=true;;
   --analyze) only_analyze=true;;
   --convert) only_convert=true;;
-  --transplt) only_transplt=true;;
   --profile) only_profile=true;;
   --llm) only_llm=true;;
   --tensor-view) only_tensor_view=true;;
@@ -64,7 +62,6 @@ if [ "$arg_help" -eq "1" ]; then
   echo " --benchmark : only install benchmark component"
   echo " --analyze : only install analyze component"
   echo " --convert : only install convert component"
-  echo " --transplt : only install transplt component"
   echo " --profile : only install profile component"
   echo " --llm : only install llm component"
   echo "--tensor-view: only install tensor-view component"
@@ -74,29 +71,26 @@ if [ "$arg_help" -eq "1" ]; then
   exit;
 fi
 
-SITE_PACKAGES="$(python3 -c 'import site; print(site.getsitepackages()[0])')"
-CONFIG_FILE="$SITE_PACKAGES/components/config/config.ini"
-
 # 若pip源为华为云，则优先安装skl2onnx(当前mirrors.huaweicloud.com中skl2onnx已停止更新，不包含1.14.1及以上版本)
 pre_check_skl2onnx(){
-  http_mirror_url=$(grep '^http_mirror_url=' "$CONFIG_FILE" | sed 's/^http_mirror_url=//')
-  https_mirror_url=$(grep '^https_mirror_url=' "$CONFIG_FILE" | sed 's/^https_mirror_url=//')
+  http_mirror_url=$(python3 -c "from components.utils.install import get_public_url; print(get_public_url('http_mirror_url'))")
+  https_mirror_url=$(python3 -c "from components.utils.install import get_public_url; print(get_public_url('https_mirror_url'))")
   pip_source_index_url=$(pip3 config list | grep index-url | awk -F'=' '{print $2}' | tr -d "'")
   if [ "${pip_source_index_url}" == "${http_mirror_url}" ] || [ "${pip_source_index_url}" == "${https_mirror_url}" ]
   then
-    mirror_tools_url=$(grep '^mirror_tools_url=' "$CONFIG_FILE" | sed 's/^mirror_tools_url=//')
+    mirror_tools_url=$(python3 -c "from components.utils.install import get_public_url; print(get_public_url('mirror_tools_url'))")
     pip3 install skl2onnx==1.14.1 -i $mirror_tools_url --trusted-host mirrors.tools.huawei.com
   fi
 }
 
 
 uninstall(){
-  pip3 uninstall msit analyze_tool convert_tool compare auto_optimizer msprof transplt ${all_uninstall}
-  pip3 uninstall ait analyze_tool convert_tool compare auto_optimizer msprof transplt ${all_uninstall}
-  if [ -z $only_debug ] && [ -z $only_compare ] && [ -z $only_surgen ] && [ -z $only_benchmark ] && [ -z $only_analyze ] && [ -z $only_convert ] && [ -z $only_transplt ] && [ -z $only_profile ] && [ -z $only_llm ] && [ -z $only_tensor_view ]
+  pip3 uninstall msit analyze_tool convert_tool compare auto_optimizer msprof ${all_uninstall}
+  pip3 uninstall ait analyze_tool convert_tool compare auto_optimizer msprof ${all_uninstall}
+  if [ -z $only_debug ] && [ -z $only_compare ] && [ -z $only_surgen ] && [ -z $only_benchmark ] && [ -z $only_analyze ] && [ -z $only_convert ] && [ -z $only_profile ] && [ -z $only_llm ] && [ -z $only_tensor_view ]
   then
-    pip3 uninstall msit msit-analyze aclruntime ais_bench msit-benchmark msit-convert msit-compare msit-surgeon msit-profile msit-transplt msit-llm msit-tensor-view ${all_uninstall}
-    pip3 uninstall ms-ait ait-analyze aclruntime ais_bench ait-benchmark ait-convert ait-compare ait-surgeon ait-profile ait-transplt ait-llm ait-tensor-view ${all_uninstall}
+    pip3 uninstall msit msit-analyze aclruntime ais_bench msit-benchmark msit-convert msit-compare msit-surgeon msit-profile msit-llm msit-tensor-view ${all_uninstall}
+    pip3 uninstall ms-ait ait-analyze aclruntime ais_bench ait-benchmark ait-convert ait-compare ait-surgeon ait-profile ait-llm ait-tensor-view ${all_uninstall}
   else
     if [ ! -z $only_compare ]
     then
@@ -127,12 +121,6 @@ uninstall(){
     then
       pip3 uninstall msit-convert ${all_uninstall}
       pip3 uninstall ait-convert ${all_uninstall}
-    fi
-
-    if [ ! -z $only_transplt ]
-    then
-      pip3 uninstall msit-transplt ${all_uninstall}
-      pip3 uninstall ait-transplt ${all_uninstall}
     fi
 
     if [ ! -z $only_profile ]
@@ -246,12 +234,6 @@ install(){
     bash ${CURRENT_DIR}/components/convert/build.sh
   fi
 
-  if [ ! -z $only_transplt ]
-  then
-    pip3 install ${CURRENT_DIR}/components/transplt ${arg_force_reinstall}
-    source ${CURRENT_DIR}/components/transplt/install.sh $full_install
-  fi
-
   if [ ! -z $only_profile ]
   then
     pip3 install ${CURRENT_DIR}/components/profile/msprof ${arg_force_reinstall}
@@ -269,7 +251,7 @@ install(){
         build_opchecker_so
     fi
 
-  if [ -z $only_compare ] && [ -z $only_surgeon ] && [ -z $only_benchmark ] && [ -z $only_analyze ] && [ -z $only_convert ] && [ -z $only_transplt ] && [ -z $only_profile ] && [ -z $only_llm ] && [ -z $only_tensor_view ]
+  if [ -z $only_compare ] && [ -z $only_surgeon ] && [ -z $only_benchmark ] && [ -z $only_analyze ] && [ -z $only_convert ] && [ -z $only_profile ] && [ -z $only_llm ] && [ -z $only_tensor_view ]
   then
     pre_check_skl2onnx
 
@@ -278,7 +260,6 @@ install(){
     ${CURRENT_DIR}/components/benchmark \
     ${CURRENT_DIR}/components/analyze \
     ${CURRENT_DIR}/components/convert \
-    ${CURRENT_DIR}/components/transplt \
     ${CURRENT_DIR}/components/profile/msprof \
     ${CURRENT_DIR}/components/llm \
     ${CURRENT_DIR}/components/tensor_view \
@@ -287,7 +268,6 @@ install(){
     bash ${CURRENT_DIR}/components/benchmark/msit_benchmark/install.sh
     bash ${CURRENT_DIR}/components/convert/build.sh
 
-    source ${CURRENT_DIR}/components/transplt/install.sh $full_install
     build_om_so
     build_opchecker_so
   fi

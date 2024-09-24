@@ -16,7 +16,7 @@ import numpy as np
 from transformers import PreTrainedModel, AutoTokenizer
 from tqdm import tqdm
 
-from security import json_safe_load, json_safe_dump, get_valid_path
+from security import json_safe_load, json_safe_dump, get_valid_path, get_valid_write_path
 from precision_tool import logger
 from precision_tool import truthfulqa_eval
 
@@ -78,6 +78,7 @@ class PrecisionTest:
         self.dataset_path = os.path.join(self.script_path, "dataset", self.dataset)
         if not os.path.exists(self.dataset_path):
             raise EnvironmentError(f"Dataset was not found, valid path should be '{self.dataset_path}")
+        self.dataset_path = get_valid_path(self.dataset_path)
         self.result_file = ""
         self.logger.info("Precision test was inited.")
 
@@ -300,7 +301,7 @@ class PrecisionTest:
                     response = self.tokenizer.decode(output)
                     answers.append(response)
 
-                answer_results = [answer.lstrip()[0] if answer else "-1" for answer in answers]
+                answer_results = [answer.lstrip()[0] if answer.lstrip() else "-1" for answer in answers]
                 is_correct = []
                 for answer_result, label in zip(answer_results, labels):
                     is_correct.append("Correct" if answer_result == label else "Wrong")
@@ -438,6 +439,7 @@ class PrecisionTest:
 
     def __save_humaneval_res(self, results):
         self.result_file = os.path.dirname(os.path.abspath(__file__)) + os.sep + "result.jsonl"
+        self.result_file = get_valid_write_path(self.result_file)
         mode = stat.S_IWUSR | stat.S_IRUSR
         flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
         with os.fdopen(os.open(self.result_file, flags=flags, mode=mode), "w") as fp:
@@ -732,7 +734,7 @@ class PrecisionTest:
                     response = self.tokenizer.decode(output)
                     answers.append(response)
 
-                answer_results = [answer.lstrip()[0] if answer else "-1" for answer in answers]
+                answer_results = [answer.lstrip()[0] if answer.lstrip() else "-1" for answer in answers]
                 is_correct = []
                 for answer_result, label in zip(answer_results, labels):
                     is_correct.append("Correct" if answer_result == label else "Wrong")

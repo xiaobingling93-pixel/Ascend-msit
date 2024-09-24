@@ -23,18 +23,13 @@ SET mingw_w64_path=
 SET skip_check_cert=
 
 SET all_component=1
-SET select_transplt=
 SET select_surgeon=
 SET uninstall=
 SET all_uninstall=
 
 :loop
 IF NOT "%1"=="" (
-    IF "%1"=="--transplt" (
-        SET select_transplt=1
-        SET all_component=0
-        SHIFT
-    ) ELSE IF "%1"=="--surgeon" (
+    IF "%1"=="--surgeon" (
         SET select_surgeon=1
         SET all_component=0
         SHIFT
@@ -106,19 +101,14 @@ IF NOT %errorlevel%==0 (
 
 :uninstall_func
 
-IF DEFINED select_transplt (
-    pip3 uninstall msit-transplt %all_uninstall%
-    pip3 uninstall ait-transplt %all_uninstall%
-)
-
 IF DEFINED select_surgeon (
     pip3 uninstall msit-surgeon %all_uninstall%
     pip3 uninstall ait-surgeon %all_uninstall%
 ) 
 
 IF %all_component%==1 (
-    pip3 uninstall msit msit-transplt msit-surgeon %all_uninstall%
-    pip3 uninstall ait ait-transplt ait-surgeon %all_uninstall%
+    pip3 uninstall msit msit-surgeon %all_uninstall%
+    pip3 uninstall ait ait-surgeon %all_uninstall%
 )
 
 GOTO:eof
@@ -133,7 +123,6 @@ IF NOT %errorlevel%==0 (
 )
 
 IF %all_component%==1 (
-    SET select_transplt=1
     SET select_surgeon=1
 )
 
@@ -142,20 +131,6 @@ IF DEFINED select_surgeon (
     pip3 install "%CURRENT_DIR%/components/debug/surgeon" %arg_force_reinstall%
     IF NOT %errorlevel%==0 (
         ECHO pip install surgeon failed, please check the failure reason.
-        EXIT /B 1
-    )
-)
-
-IF DEFINED select_transplt (
-    @REM install transplt component
-    pip3 install "%CURRENT_DIR%/components/transplt" %arg_force_reinstall%
-    IF NOT %errorlevel%==0 (
-        ECHO pip install transplt failed, please check the failure reason.
-        EXIT /B 1
-    )
-
-    CALL "%CURRENT_DIR%/components/transplt/install.bat" %skip_check_cert% %full_install% %llvm_path% %mingw_w64_path%
-    IF NOT %errorlevel%==0 (
         EXIT /B 1
     )
 )

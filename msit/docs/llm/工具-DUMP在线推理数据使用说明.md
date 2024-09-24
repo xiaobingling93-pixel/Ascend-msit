@@ -6,6 +6,14 @@ torch-npu(gpu)模型推理数据dump
 
 修改原推理脚本，在模型初始化之后，插入如下代码：
 ```
+# (可选)在推理模型完成初始化之前，启动确定性计算
+方法1：通过DumpConfig设定
+from msit_llm import DumpConfig
+dump_config = DumpConfig(seed=2024)
+方法2：手动引入接口
+from msit_llm import seed_all
+seed_all(seed=2024)
+
 # 推理模型已完成初始化 => model
 
 from msit_llm import DumpConfig, register_hook

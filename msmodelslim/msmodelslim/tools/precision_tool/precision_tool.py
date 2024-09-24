@@ -13,7 +13,7 @@ import pandas as pd
 from transformers import PreTrainedModel, AutoTokenizer
 from tqdm import tqdm
 
-from ascend_utils.common.security import json_safe_load, json_safe_dump, get_valid_write_path
+from ascend_utils.common.security import json_safe_load, json_safe_dump, get_valid_path, get_valid_write_path
 from msmodelslim import logger
 
 supported_dataset = ["boolq", "ceval_0_shot", "ceval_5_shot", "humaneval"]
@@ -68,6 +68,7 @@ class PrecisionTest:
         self.dataset_path = os.path.join(self.script_path, "dataset", self.dataset)
         if not os.path.exists(self.dataset_path):
             raise EnvironmentError(f"Dataset was not found, valid path should be '{self.dataset_path}")
+        self.dataset_path = get_valid_path(self.dataset_path)
         self.result_file = ""
         self.logger.info("Precision Test is inited.")
 
@@ -399,6 +400,7 @@ class PrecisionTest:
 
     def __save_humaneval_res(self, results):
         self.result_file = os.path.dirname(os.path.abspath(__file__)) + os.sep + "result.jsonl"
+        self.result_file = get_valid_write_path(self.result_file)
         mode = stat.S_IWUSR | stat.S_IRUSR
         flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
         with os.fdopen(os.open(self.result_file, flags=flags, mode=mode), "w") as fp:

@@ -1,14 +1,14 @@
 # msit debug compare功能使用指南
 
 ## 简介
-- compare一键式全流程精度比对（推理）功能将推理场景的精度比对做了自动化，适用于 TensorFlow、ONNX、Caffe 模型，用户只需要输入原始模型，对应的离线模型和输入，输出整网比对的结果，离线模型为通过 ATC 工具转换的 om 模型，输入 bin 文件需要符合模型的输入要求（支持模型多输入）。
+- compare一键式全流程精度比对（推理）功能将推理场景的精度比对做了自动化，适用于 TensorFlow、ONNX、Caffe 模型，用户输入原始模型，对应的离线模型和输入，输出整网比对的结果，还可以输入dump好的cpu、npu侧的算子数据直接进行精度比对。离线模型为通过 ATC 工具转换的 om 模型，输入 bin 文件需要符合模型的输入要求（支持模型多输入）。
 - 该功能使用约束场景说明，参考链接：[CANN商用版/场景约束](https://www.hiascend.com/document/detail/zh/canncommercial/80RC1/devaids/auxiliarydevtool/atlasaccuracy_16_0037.html)
 - 对于 Caffe 模型，目前不支持动态 shape 的模型比对。对于 `yolov2` / `yolov3` / `ssd` 等需要自定义实现层的模型，需要自行编译安装特定版本的 caffe。
 - **注意**：请确保ATC工具转换的om与当前运行环境使用的芯片型号一致。
 
 
 ## 工具安装
-- 一般工具安装请见 [msit一体化工具使用指南](https://gitee.com/ascend/msit/blob/master/msit/docs/install/README.md)
+- 一般工具安装请见 [msit一体化工具使用指南](/msit/docs/install/README.md)
 - 此外还提供容器安装方式（支持caffe精度比对）
 
 ### 容器方式安装
@@ -46,7 +46,8 @@ compare功能可以直接通过msit命令行形式启动精度对比。启动方
   ```
 
 ### 输出结果说明
-
+**注意**：
+- 单独compare功能：指定cpu侧以及npu侧的dump数据进行精度比对时，只生成result_{timestamp}.csv文件
 ```sh
 {output_path}/{timestamp}/{input_name-input_shape}  # {input_name-input_shape} 用来区分动态shape时不同的模型实际输入，静态shape时没有该层
 ├-- dump_data
@@ -81,25 +82,26 @@ compare功能可以直接通过msit命令行形式启动精度对比。启动方
 ├-- result_{timestamp}.csv                   # 比对结果文件
 └-- tmp                                      # 如果 -m 模型为 Tensorflow pb 文件, tfdbg 相关的临时目录
 ```
+
 #### 输出结果说明和分析步骤参考
 
-请移步[对比结果分析步骤](../../../examples/cli/debug/compare/result_analyse/README.md)
+请移步[对比结果分析步骤](/msit/examples/cli/debug/compare/result_analyse/README.md)
 
 
 #### 命令行入参说明
 
 | 参数名          | 描述                                                                                                                                                                                                                                                                                            | 必选 |
 |--------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----|
-| -gm，--golden-model | 模型文件 [.pb与saved_model, .onnx, .prototxt, .om] 路径，分别对应 TF, ONNX, Caffe, OM 模型。<br/>其中.pb为TF1.15版本模型格式，saved_model为TF2.6.5版本模型格式                                                                                                                                                                | 是  |
-| -om，--om-model | 昇腾AI处理器的离线模型 [.om, .mindir, saved_model]。<br/>TF2.6.5版本可以输入saved_model模型                                                                                                                                                                                                            | 是  |
-| -w，--weight  | -gm 为 Caffe 模型时对应的权重文件（.caffemodel）                                                                                                                                                                                                                                                           | 否  |
+| -gm，--golden-model | 模型文件 [.pb与saved_model, .onnx, .prototxt, .om] 路径，分别对应 TF, ONNX, Caffe, OM 模型。<br/>其中.pb为TF1.15版本模型文件，saved_model为TF2.6.5版本模型文件                                                                                                                                                                | 是  |
+| -om，--om-model | 昇腾AI处理器的离线模型 [.om, .mindir, saved_model]。<br/>TF2.6.5版本可以输入saved_model模型                                                                                                                                                                                                                      | 是  |
+| -w，--weight  | -w 为权重文件，当模型为caffe模型时，该参数为必选参数                                                                                                                                                                                                                                                                | 否  |
 | -i，--input   | 模型的输入数据路径，默认根据模型的input随机生成，多个输入以逗号分隔，例如：/home/input\_0.bin,/home/input\_1.bin,/home/input\_2.npy。注意：使用aipp模型时该输入为om模型的输入,且支持自动将npy文件转为bin文件                                                                                                                                                   | 否  |
 | -c，--cann-path | CANN包安装完后路径，默认会从从系统环境变量`ASCEND_TOOLKIT_HOME`中获取`CANN` 包路径，如果不存在则默认为 `/usr/local/Ascend/ascend-toolkit/latest`                                                                                                                                                                                 | 否  |
 | -o，--output  | 输出文件路径，默认为当前路径                                                                                                                                                                                                                                                                                | 否  |
 | -is，--input-shape | 模型输入的shape信息，默认为空，例如"input_name1:1,224,224,3;input_name2:3,300",节点中间使用英文分号隔开。input_name必须是转换前的网络模型中的节点名称                                                                                                                                                                                      | 否  |
 | -d，--device  | 指定运行设备 [0,255]，可选参数，默认0                                                                                                                                                                                                                                                                       | 否  |
-| --output-nodes ， -n | 用户指定的输出节点。多个节点用英文分号（;）隔开。例如:"node_name1:0;node_name2:1;node_name3:0"                                                                                                                                                                                                                          | 否  |
-| --output-size ，-outsize | 指定模型的输出size，有几个输出，就设几个值，每个值默认为**90000000**，如果模型输出超出大小，请指定此参数以修正。动态shape场景下，获取模型的输出size可能为0，用户需根据输入的shape预估一个较合适的值去申请内存。多个输出size用英文分号（,）隔开, 例如"10000,10000,10000"                                                                                                                              | 否  |
+| -n，--output-nodes | 用户指定的输出节点。多个节点用英文分号（;）隔开。例如:"node_name1:0;node_name2:1;node_name3:0"                                                                                                                                                                                                                          | 否  |
+| -outsize，--output-size | 指定模型的输出size，有几个输出，就设几个值，每个值默认为**90000000**，如果模型输出超出大小，请指定此参数以修正。动态shape场景下，获取模型的输出size可能为0，用户需根据输入的shape预估一个较合适的值去申请内存。多个输出size用英文分号（,）隔开, 例如"10000,10000,10000"                                                                                                                              | 否  |
 | --advisor    | 在比对结束后，针对比对结果进行数据分析，给出专家建议                                                                                                                                                                                                                                                                    | 否  |
 | -dr，--dym-shape-range | 动态Shape的阈值范围。如果设置该参数，那么将根据参数中所有的Shape列表进行依次推理和精度比对。(仅支持onnx模型)<br/>配置格式为："input_name1:1,3,200\~224,224-230;input_name2:1,300"。<br/>其中，input_name必须是转换前的网络模型中的节点名称；"\~"表示范围，a\~b\~c含义为[a: b :c]；"-"表示某一位的取值。 <br/>                                                                             | 否  |
 | --dump       | 是否dump所有算子的输出并进行精度对比。默认是True，即开启全部算子输出的比对。(仅支持onnx模型)<br/>使用方式：--dump False                                                                                                                                                                                                                   | 否  |
@@ -111,27 +113,33 @@ compare功能可以直接通过msit命令行形式启动精度对比。启动方
 | --fusion-switch-file| 昇腾模型融合规则配置文件，传入该文件后，compare工具会根据传入的融合规则配置文件，重新生成一个om文件，和--om-model传入的模型进行精度比较，例如：--fusion-switch-file ./fusion_switch.cfg，其中fusion_switch.cfg文件配置方法参见：[如何关闭/开启融合规则](https://www.hiascend.com/document/detail/zh/canncommercial/63RC1/reference/graphubfusionref/graphubfusionref_000003.html) | 否  |
 | -max, --max-cmp-size| 表示每个dump数据比较的最大字节数，用于精度比对过程提速，默认0(0表示全量比较)，当模型中算子的输出存在较大shape的、比较过于耗时情况，可以尝试打开。注意：需要使用最新cann版本(>=6.3.RC3)。使用方式：--max-cmp-size 1024                                                                                                                                                            | 否  |
 | -q,--quant_fusion_rule_file| 量化算子映射关系文件（昇腾模型压缩输出的json文件）。仅推理场景支持本参数。使用方式：--quant_fusion_rule_file                                                                                                                                                                                                                          | 否  | |  |
-| --saved_model_signature     | tensorflow2.6框架下saved_model模型加载时需要的签名。使用方式：--saved_model_signature serving，默认为serving_default                                                                                                                                                                                                 | 否  | |  |
-| --saved_model_tag_set       | tensorflow2.6框架下saved_model模型加载为session时的标签，可根据标签加载模型的不同部分；使用方式：--saved_model_tag_set serve                                                                                                                                                                                                   | 否  | |  |
-| -h    --help       | tensorflow2.6框架下saved_model模型加载为session时的标签，可根据标签加载模型的不同部分；使用方式：--saved_model_tag_set serve                                                                                                                                                                                                   | 否  | |  |
+| --saved_model_signature     | tensorflow2.6框架下saved_model模型加载时需要的签名，当模型为saved_model时，该参数为必选参数。使用方式：--saved_model_signature serving，默认为serving_default                                                                                                                                                                       | 否  | |  |
+| --saved_model_tag_set       | tensorflow2.6框架下saved_model模型加载为session时的标签，可根据标签加载模型的不同部分，当模型为saved_model时，该参数为必选参数。使用方式：--saved_model_tag_set serve                                                                                                                                                                         | 否  | |  |
+| -mp, --my-path      | 用于单独进行精度比对的npu侧dump数据路径                                                                                                                                                                                                                                                                       | 否  | |  |
+| -gp, --golden-path  | 用于单独进行精度比对的cpu侧dump数据路径                                                                                                                                                                                                                                                                       | 否  | |  |
+| --ops-json          | 用于单独进行精度比对时，cpu侧与npu侧算子的匹配规则json文件路径                                                                                                                                                                                                                                                          | 否  | |  |
+| -h    --help        | 用于查看全部的参数具体信息                                                                                                                                                                                                                                                                                 | 否  | |  |
+
+
 ### 使用场景
 
-请移步[compare使用示例](../../../examples/cli/debug/compare/)
+请移步[compare使用示例](/msit/examples/cli/debug/compare/)
 
 | 使用示例                                                                                             | 使用场景                                 |
 |--------------------------------------------------------------------------------------------------|--------------------------------------|
-| [01_basic_usage](../../../examples/cli/debug/compare/01_basic_usage)                             | 基础示例，运行onnx和om模型精度比对                 |
-| [02_specify_input_data](../../../examples/cli/debug/compare/02_specify_input_data)               | 指定模型输入数据                             |
-| [03_save_output_data](../../../examples/cli/debug/compare/03_save_output_data)                   | 指定结果输出目录                             |
-| [04_specify_input_shape_info](../../../examples/cli/debug/compare/04_specify_input_shape_info)   | 指定模型输入的shape信息(动态场景必须进行指定)。          |
-| [05_aipp_model_compare](../../../examples/cli/debug/compare/05_aipp_model_compare)               | 提供模型转换开启aipp参数的om模型与onnx模型进行精度比对的功能。 |
-| [06_npu_custom_op](../../../examples/cli/debug/compare/06_npu_custom_op)                         | onnx模型中存在NPU自定义算子场景                  |
-| [07_caffe_model](../../../examples/cli/debug/compare/07_caffe_model)                             | 标杆模型为Caffe框架的一键式精度比对                 |
-| [08_accuracy_error_location](../../../examples/cli/debug/compare/08_accuracy_error_location)     | 误差及累计误差一键式自动定位                       |
-| [09_single_op](../../../examples/cli/debug/compare/09_single_op)                                 | 单算子比对模式                              |
-| [10_fusion_switch_file](../../../examples/cli/debug/compare/10_fusion_switch_file)               | 关闭融合规则.om模型和原始.om模型精度比对              |
-| [11_mixing_precison_compare](../../../examples/cli/debug/compare/11_mixing_precison_compare)      | 混合精度策略的.om模型和.om模型的精度比对              |
+| [01_basic_usage](/msit/examples/cli/debug/compare/01_basic_usage)                             | 基础示例，运行onnx和om模型精度比对                 |
+| [02_specify_input_data](/msit/examples/cli/debug/compare/02_specify_input_data)               | 指定模型输入数据                             |
+| [03_save_output_data](/msit/examples/cli/debug/compare/03_save_output_data)                   | 指定结果输出目录                             |
+| [04_specify_input_shape_info](/msit/examples/cli/debug/compare/04_specify_input_shape_info)   | 指定模型输入的shape信息(动态场景必须进行指定)。          |
+| [05_aipp_model_compare](/msit/examples/cli/debug/compare/05_aipp_model_compare)               | 提供模型转换开启aipp参数的om模型与onnx模型进行精度比对的功能。 |
+| [06_npu_custom_op](/msit/examples/cli/debug/compare/06_npu_custom_op)                         | onnx模型中存在NPU自定义算子场景                  |
+| [07_caffe_model](/msit/examples/cli/debug/compare/07_caffe_model)                             | 标杆模型为Caffe框架的一键式精度比对                 |
+| [08_accuracy_error_location](/msit/examples/cli/debug/compare/08_accuracy_error_location)     | 误差及累计误差一键式自动定位                       |
+| [09_single_op](/msit/examples/cli/debug/compare/09_single_op)                                 | 单算子比对模式                              |
+| [10_fusion_switch_file](/msit/examples/cli/debug/compare/10_fusion_switch_file)               | 关闭融合规则.om模型和原始.om模型精度比对              |
+| [11_mixing_precison_compare](/msit/examples/cli/debug/compare/11_mixing_precison_compare)      | 混合精度策略的.om模型和.om模型的精度比对              |
+| [12_alone_compare](/msit/examples/cli/debug/compare/14_alone_compare)                            | 指定dump数据的精度比对                        |
 
 ### 常见问题FAQ
 
-* [compare常见问题](./FAQ.md)
+* [compare常见问题](/msit/docs/debug/compare/FAQ.md)

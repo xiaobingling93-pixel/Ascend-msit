@@ -90,6 +90,7 @@ def read_atb_data(file_path):
     raise ValueError("Tensor file path must be end with .bin.")
 
 
+
 def seed_all(seed=2024):
     if not isinstance(seed, int):
         raise argparse.ArgumentTypeError("%s is not an int." % seed)
@@ -117,9 +118,9 @@ def seed_all(seed=2024):
         torch.cuda.manual_seed_all(seed)
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.enable = False
-        torch.bachekds.cudnn.benchmark = False
-    if is_npu and torch.npu_is_available():
-        torch.npu.manual_seed(seed)
-        torch.npu.manual_seed_all(seed)
+        torch.backends.cudnn.benchmark = False
+    if is_npu and torch_npu.npu.is_available():
+        torch_npu.npu.manual_seed(seed)
+        torch_npu.npu.manual_seed_all(seed)
 
     logger.info(f"Enable deterministic computation sucess! current seed is {seed}.")

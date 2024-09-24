@@ -4,8 +4,7 @@
 Caffe 一键式精度比对
 
 ## 使用示例一
-- 环境中已安装 CANN 包以及 msit 工具
-- 环境中安装 caffe，其中 `Ubuntu 18.04` 可通过 `apt install caffe-cpu` 安装
+- caffe环境安装请参考：[msit一体化工具使用指南](https://gitee.com/ascend/msit/blob/master/msit/docs/install/README.md)
 - 对于 Caffe 模型，目前不支持动态 shape 的模型比对。对于 `yolov2` / `yolov3` / `ssd` 等需要自定义实现层的模型，需要自行编译安装特定版本的 caffe
 - 准备 Caffe 模型结构文件与权重文件，示例模型结构文件参照 [Caffe 模型结构文件示例](#caffe-模型结构文件示例)，以下使用该文件定义模型，并保存随机初始化的权重，实际使用中应使用已有的模型结构文件 `.prototxt` 与权重文件 `.caffemodel`
   ```py

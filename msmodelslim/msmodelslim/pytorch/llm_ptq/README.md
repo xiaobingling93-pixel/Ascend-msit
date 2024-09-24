@@ -231,31 +231,22 @@ python3 quant.py
 
 ### 精度保持策略
 
-在量化权重生成后，可以使用伪量化模型进行推理，检验伪量化精度是否正常。伪量化是指通过torch，通过浮点运算完成量化模型运算逻辑，运算过程中的数据和真实量化的数据差异只在算子精度上。如果伪量化精度不满足预期，真实量化结果也将无法满足预期。在调用Calibrator.run()方法后，构建Calibrator时传入的model会被替换为伪量化模型，可以直接调用进行前向推理，用来测试对话效果。如果伪量化结果不理想，可以参考以下手段进行调优：
+在量化权重生成后，可以使用伪量化模型进行推理，检验伪量化精度是否正常。伪量化是指通过torch，通过浮点运算完成量化模型运算逻辑，运算过程中的数据和真实量化的数据差异只在算子精度上，同时可以规避接入推理框架时引入的精度误差。如果伪量化精度不满足预期，真实量化结果也将无法满足预期。在调用Calibrator.run()方法后，构建Calibrator时传入的model会被替换为伪量化模型，可以直接调用进行前向推理，用来测试对话效果。如果伪量化结果不理想，可以参考以下手段进行调优。一般来说，W8A16的精度调优较为容易，W8A8和稀疏量化的精度调优相对复杂。
 
-1. 调整校准数据集：量化模型权重生成对校准数据集有一定依赖，需要根据模型运行场景选取适当的校准数据集。在伪量化精度较差时，可以适当增加校准数据集的数量。
+#### 数据集精度掉点严重，对话乱码或胡言乱语
 
-2. 设置Calibrator接口中的“disable_level”参数：配置Calibrator接口中的自动回退等级，可以设置为L0、L1，L2等，依次回退的线性层个数为0、1、2等，在模型精度损失较大时可以适当提升回退等级。
-以ChatGLM2-6B为例：
+1. 对于label free校准场景，确认浮点模型使用torch npu推理是否正常。量化校准依赖浮点模型推理，如果浮点推理异常，量化校准时获取到的数据分布信息不对，校准结果自然不对。
 
-观察到模型伪量化对话效果不理想，考虑进行回退操作。将disable_level设置为L1，生成量化权重。导出的量化权重缺少了key值'transformer.encoder.layers.0.mlp.dense_4h_to_h'对应的权重数据，则该线性层被回退。
+2. 适当增加回退层。某些模型中的部分Linear层对精度的影响比较显著。例如ChatGlm2-6B模型W8A8量化时的layers.0.mlp.dense_4h_to_h层，依据调优经验以及相关论文数据，模型靠前和靠后的decoder layer、各个decoder layer的mlp down层对精度的影响一般较大，可以优先考虑回退这些层。如果回退效果不理想的话，可以尝试较为激进的回退策略，例如回退掉所1/4或者1/2的Linear层，直到完全回退成浮点模型，模型的精度也完全回退成浮点模型的精度。退回越多，精度越高，性能越差。
 
-如果需要回退整层layer，需要进一步生成量化权重。缺少的linear位于第0层，在QuantConfig接口中的“disable_names”增加该层其余的线性层：'transformer.encoder.layers.0.self_attention.query_key_value','transformer.encoder.layers.0.self_attention.dense', 'transformer.encoder.layers.0.mlp.dense_h_to_4h'。再次生成的量化权重即为整层layer回退的量化权重。
+#### 数据集精度部分掉点，对话正常
 
-3. 引入离群值抑制AntiOutlier：在模型加载和模型量化之间插入离群值抑制代码，对模型进行离群值抑制，并调用PyTorch接口model.save_pretrained，保存离群值抑制后的浮点模型。
-以Llama13B为例：
-```
-# 离群值抑制
-print("outlier suppression start...")
-anti_config = AntiOutlierConfig(
-    anti_method="m2",
-    dev_type='cpu'   # 在npu进行量化时，则需要配置以下参数dev_type='npu'，dev_id=model.device.index。其中dev_id为正确设备号
-)
-anti_outlier = AntiOutlier(model, calib_data=dataset_calib, cfg=anti_config)
-anti_outlier.process()
-print("outlier suppression success...")
-# save float weight
-model.save_pretrained("./llama2-13b_outlier")
-```
+1. 调整量化参数。例如W8A8量化调整act_method，W8A16量化更换使用的w_method。act_method默认为1。该参数可以选 ‘1’ ‘2’ ‘3’：1代表min-max量化方式；2代表histogram量化方式；3代表min-max和histogram自动混合量化方式。LLM大模型场景下推荐使用3。（稀疏量化的情况下只支持1和2的方式）
 
-4. 配置QuantConfig接口中的“pr”：当pr设置为0.5时，导出的量化权重在一定范围内存在随机性，设置为1.0时可以避免随机性。
+2. 稀疏量化可以调整fraction，该参数的含义为限制异常值的保护范围，建议在0.01~0.1之间将相应的值调大来增加精度。Lowbit场景下，除了上述参数微调，还可以使用sigma调整sigma_factor，该参数的含义也为限制异常值的保护范围，建议在3.0~4.0之间将相应的值调小来增加精度。
+
+3. 使用异常值抑制算法，将do_smooth设置为True。W8A8量化使用anti_method=m1或m2，W8A16量化使用m3，通过抑制量化过程中的异常值，从而提高量化模型的精度。Lowbit场景下只需要开启即可，无需设置方法类型。
+
+4. 调整校准数据。校准数据的数量一般为20-40条。在选取时需要考虑模型部署时的具体推理场景，例如中文模型需要使用中文输入作为校准集；英文模型需要使用英文输入；代码生成类模型则使用代码生成类任务；中英文兼顾的模型考虑使用中英文混合的校准集合。正常情况下，可以增加数据得到精度提升，但是到一定数据后，提高数据对精度影响有限。有些场景下，减少数据反而能得到精度提升。（例如长数据场景）
+
+5. 增加回退层，可以使用disable_level自动回退功能按照一定的标准自动回退对精度影响比较大的Linear层，或者按照一定的经验，通过disable_name手动设置回退层。

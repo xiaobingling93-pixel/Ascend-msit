@@ -16,7 +16,7 @@ msit llm dump --exec "<任意包含ATB的程序执行命令>" [可选参数]
 
 # dump 不同类型数据
 msit llm dump --exec "<任意包含ATB的程序执行命令>" --type model tensor # 常用用于自动比对
-msit llm dump --exec "<任意包含ATB的程序执行命令>" --type model layer onnx # 常用于导出onnx查看网络结构
+msit llm dump --exec "<任意包含ATB的程序执行命令>" --type onnx # 常用于导出onnx查看网络结构
 
 # 仅dump layer 层的算子输出，常用于精度比对先找到存在问题的 layer 层。相比全量dump，可以节省磁盘空间和定位时间
 msit llm dump --exec "<任意包含ATB的程序执行命令>" --type model tensor -child False
@@ -35,7 +35,7 @@ msit llm dump --exec "<任意包含ATB的程序执行命令>" --type model tenso
 | 参数名                           | 描述                                                                                                                                                                                                                                                                                                                                | 必选 |
 |-------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| ---- |
 | --exec                        | 指定包含 ATB 的程序执行命令，使用示例： --exec "bash run.sh patches/models/modeling_xxx.py"。**注：命令中不支持重定向字符，如果需要重定向输出，建议将执行命令写入 shell 脚本，然后启动 shell 脚本。**                                                                                                                                                                                          | 是   |
-| --type                        | dump 类型，默认为['tensor']。使用方式：--type layer tensor。可选项有：<br /> model: 模型拓扑信息<br /> layer: Operation 维度拓扑信息<br /> op: ATB Operation 信息<br /> kernel: kernel Operation 信息<br /> tensor: tensor 数据(默认)<br /> cpu_profiling: cpu profiling 数据<br /> onnx: onnx 模型。仅用于模型结构可视化 | 否   |
+| --type                        | dump 类型，默认为['tensor', 'model']。使用方式：--type layer tensor。可选项有：<br /> model: 模型拓扑信息<br /> layer: Operation 维度拓扑信息<br /> op: ATB Operation 信息<br /> kernel: kernel Operation 信息<br /> tensor: tensor 数据(默认)<br /> cpu_profiling: cpu profiling 数据<br /> onnx: onnx 模型。仅用于模型结构可视化 | 否   |
 | -sd，--only-save-desc          | 只保存 tensor 描述信息开关，默认为否，开启开关时将 dump tensor 的描述信息，使用方式：-sd                                                                                                                                                                                                                                                                          | 否   |
 | -ids，--save-operation-ids     | 设置 dump 指定 id 的算子的 tensor，默认为空，全量 dump。使用方式：-ids 2, 3_1 表示只 dump 第 2 个 operation 和第 3 个 operation 的第 1 个算子的数据，id 从 0 开始。若不确定算子 id，可以先执行 msit llm dump --exec xx --type model 命令，将 model 信息 dump 下来，即可获得模型中所有的算子 id 信息。                                                                                                            | 否   |
 | -er，--execute-range           | 指定 dump 的 token 轮次范围，区间左右全闭，可以支持多个区间序列，默认为第 0 次，使用方式：-er 1,3 或 -er 3,5,7,7（代表区间[3,5],[7,7],也就是第 3，4，5，7 次 token）                                                                                                                                                                                                                  | 否   |

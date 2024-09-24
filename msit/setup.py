@@ -40,7 +40,7 @@ ait_sub_task_entry_points = [
 
 setup(
     name='msit',
-    version='7.0.0c730',
+    version='7.0.0c912',
     description='msIT, MindStudio Inference Tools',
     long_description_content_type='text/markdown',
     url=config.get('URL', 'msit_url'),
