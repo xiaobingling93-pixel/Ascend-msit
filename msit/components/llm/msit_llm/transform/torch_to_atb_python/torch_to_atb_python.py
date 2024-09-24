@@ -327,7 +327,7 @@ class ATBModel:
     ):
         # Basic inputs
         model_inputs, batch_size, cur_pos, input_len = {}, 1, 1, 1
-        if not atb_model_has_set_weights:
+        if not self.atb_model_has_set_weights:
             model_inputs.update(self.weights)
         if input_ids is not None:
             batch_size = input_ids.shape[0] if input_ids.dim() == 2 else 1
