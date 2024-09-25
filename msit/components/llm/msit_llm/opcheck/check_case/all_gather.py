@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import torch
-import torch_npu
 
 from msit_llm.opcheck import operation_test
 from msit_llm.common.log import logger
@@ -27,7 +26,7 @@ class OpcheckAllGatherOperation(operation_test.OperationTest):
 
     def test_all_gather(self):
         if self.pid is None:
-            logger_text = f"Cannot get a valid pid, AllGatherOperation is not supported!"
+            logger_text = "Cannot get a valid pid, AllGatherOperation is not supported!"
             logger.error(logger_text)
             return
 

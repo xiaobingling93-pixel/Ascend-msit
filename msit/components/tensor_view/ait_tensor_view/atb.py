@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from array import array
-import os
 import torch
 from torch import float16, float32, int8, int32, int64, bfloat16
 from components.utils.file_open_check import ms_open

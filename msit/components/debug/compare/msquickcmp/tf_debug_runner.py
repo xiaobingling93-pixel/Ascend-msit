@@ -20,7 +20,7 @@ This class is used to generate GUP dump data of the tf model.
 import argparse
 import sys
 import os
-import numpy as np
+
 import tensorflow as tf
 from tensorflow.python import debug as tf_debug
 

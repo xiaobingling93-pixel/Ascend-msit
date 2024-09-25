@@ -12,13 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import torch
-import torch_npu
-import torch.distributed as dist
-import torch.multiprocessing as mp
-
 from msit_llm.opcheck import operation_test
-from msit_llm.common.log import logger
 
 
 class OpcheckBroadcastOperation(operation_test.OperationTest):

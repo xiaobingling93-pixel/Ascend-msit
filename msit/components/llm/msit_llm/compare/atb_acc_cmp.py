@@ -21,10 +21,9 @@ from tqdm import tqdm
 from msit_llm.common.log import logger
 from msit_llm.compare.cmp_utils import BasicDataInfo, fill_row_data, save_compare_reault_to_csv, compare_data, read_data
 from msit_llm.compare.cmp_op_match import MatchLocation
-from msit_llm.compare.cmp_op_match import MatchLocation
 from msit_llm.compare.op_mapping import ATB_TORCH_BUILT_IN_OP_OUTPUT_MAPPING, ATB_TORCH_CUSTOM_OP_OUTPUT_MAPPING, \
     ATB_QUANT_FLOAT_NODE_MAPPING
-from msit_llm.dump.torch_dump.topo import ModelTree, TreeNode, TreeNode
+from msit_llm.dump.torch_dump.topo import ModelTree, TreeNode
 
 
 def acc_compare(golden_path, my_path, output_path=".", mapping_file_path=".", cmp_level="layer"):
@@ -183,7 +182,7 @@ def add_specific_path(golden_tensor, my_tensor, matched_path_pair):
         my_out_path = get_paths(_my_path, split_pattern='outtensor')
         for _golden_tensor_path, _my_tensor_path in zip(golden_out_path, my_out_path):
             matched_path_pair.append({'golden': _golden_tensor_path, 'my': _my_tensor_path})
-    except IndexError as e:
+    except IndexError:
         msg = f"Cannot find path! golden: {golden_tensor}, my: {my_tensor}"
         logger.debug(msg)
 
@@ -197,7 +196,6 @@ def get_matched_path_pair(matches):
 
 def search_mapping_relationships(gathered_golden_data, gathered_my_data):
     matches = []
-    matched_path_pair = []
     for golden_item, my_item in zip(gathered_golden_data, gathered_my_data):
         if "opType" in golden_item and "opType" in my_item:
             matches.append({'golden': golden_item, 'my': my_item})
@@ -447,7 +445,7 @@ def cmp_torch_atb(torch_model_topo_file, cmp_paths, mapping_file_path, cmp_level
     try:
         path_index = -2 if cmp_level == "layer" else -1
         pid = str(my_path.split("/")[path_index].split("_")[1])
-    except IndexError as e:
+    except IndexError:
         pid = ""
         msg = f"Cannot parse the right pid from my_path! my_path: {my_path}"
         logger.error(msg)

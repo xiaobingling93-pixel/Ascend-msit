@@ -79,7 +79,7 @@ class PathChecker(Checker):
             self.f_status = FileStatus(ori_path)     
         except OSError as e:
             self.status_err_msg = e.strerror + ': ' + e.filename
-        except TypeError as e:
+        except TypeError:
             self.status_err_msg = f'TypeError: {ori_path}'
         except Exception as e:
             self.status_err_msg = str(e)

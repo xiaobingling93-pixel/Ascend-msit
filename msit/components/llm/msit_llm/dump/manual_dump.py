@@ -13,7 +13,6 @@
 # limitations under the License.
 import os
 
-import numpy as np
 import torch
 
 from components.utils.file_open_check import ms_open

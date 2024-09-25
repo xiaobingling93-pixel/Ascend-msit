@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from multiprocessing import Pool
 import pathlib
 
 import click
@@ -21,7 +20,7 @@ from click.exceptions import UsageError
 
 from auto_optimizer.graph_optimizer.optimizer import GraphOptimizer, InferTestConfig, BigKernelConfig
 from auto_optimizer.graph_refactor.onnx.graph import OnnxGraph
-from auto_optimizer.tools.log import logger
+from components.debug.common import logger
 from auto_optimizer.common.utils import check_output_model_path
 from auto_optimizer.common.click_utils import optimize_onnx, CONTEXT_SETTINGS, \
     FormatMsg, cli_eva, list_knowledges

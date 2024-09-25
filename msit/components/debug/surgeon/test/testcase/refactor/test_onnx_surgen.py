@@ -13,21 +13,16 @@
 # limitations under the License.
 
 import os
-import logging
-import sys
 from typing import List
 
-import logging
+import logger
 
 from auto_optimizer.graph_refactor.interface.base_node import BaseNode
 from auto_optimizer.graph_refactor.interface.base_graph import BaseGraph
 from auto_optimizer.graph_refactor.onnx.graph import OnnxGraph
 from auto_optimizer.pattern.knowledges.knowledge_base import KnowledgeBase
-from auto_optimizer.pattern.matcher import Matcher, MatchResult
 from auto_optimizer.pattern.pattern import MatchPattern, Pattern, MatchBase
-
-logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='[%(levelname)s] %(message)s')
-logger = logging.getLogger(__name__)
+from components.debug.common import logger
 
 
 class DummyKnowledge(KnowledgeBase):
@@ -35,7 +30,7 @@ class DummyKnowledge(KnowledgeBase):
     def __init__(self) -> None:
         super().__init__()
         res = self._register_apply_funcs(pattern, [self._apply])
-        logging.info(f'register result : %s', res)
+        logger.info(f'register result : %s', res)
 
     def _apply(self):
         pass
@@ -72,7 +67,7 @@ def get_subgraph(onnxpath: str, pattern_: Pattern) -> None:
     # 根据定义的子图，在graph中查找匹配，返回一组MatchResult实例
     match_results = d.match_pattern(graph)
     if match_results is None or len(match_results) == 0:
-        logging.info('No subgraph is matched.')
+        logger.info('No subgraph is matched.')
         return
 
     input_op_name_list = get_input_op_name_list(pattern_)

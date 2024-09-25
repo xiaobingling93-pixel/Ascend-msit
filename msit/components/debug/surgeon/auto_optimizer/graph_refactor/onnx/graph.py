@@ -18,7 +18,7 @@ import os
 import itertools
 
 from typing import List, Dict, Union, Sequence, Optional, Tuple, Set
-from collections import deque, defaultdict
+from collections import deque
 
 import onnx
 import numpy as np
@@ -26,7 +26,7 @@ from onnx import helper, GraphProto, ModelProto, OperatorSetIdProto, version_con
 
 from auto_optimizer.graph_refactor import BaseGraph, Initializer, PlaceHolder, Node
 from auto_optimizer.graph_refactor.onnx.node import OnnxPlaceHolder, OnnxInitializer, OnnxNode
-from auto_optimizer.tools.log import logger
+from components.debug.common import logger
 from auto_optimizer.common.utils import check_output_model_path
 
 
@@ -52,7 +52,7 @@ class OnnxGraph(BaseGraph):
         elif isinstance(opsets, Sequence):
             opset_imports = [op for op in opsets if not op.domain or op.domain == '']
             if len(opset_imports) < len(opsets):
-                warnings.warn(f'Only one domain version is allowed, keep opset with domain "ai.onnx"')
+                warnings.warn('Only one domain version is allowed, keep opset with domain "ai.onnx"')
         else:
             opset_imports = opsets
 

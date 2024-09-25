@@ -14,7 +14,6 @@
 
 from functools import wraps
 import time
-import logging
 from typing import Callable
 import operator as op
 
@@ -23,6 +22,7 @@ import numpy as np
 from auto_optimizer.graph_refactor.interface.base_graph import BaseGraph
 from auto_optimizer.graph_refactor.interface.base_node import BaseNode, Initializer, Node, PlaceHolder
 from auto_optimizer.pattern.pattern import MatchBase
+from components.debug.common import logger
 
 
 def timing(func: Callable):
@@ -31,7 +31,7 @@ def timing(func: Callable):
         ts = time.time()
         res = func(*args, **kwargs)
         te = time.time()
-        logging.info(f'func:{func.__name__} args:[{args}, {kwargs}] took: {te - ts: 0.3f}s')
+        logger.info(f'func:{func.__name__} args:[{args}, {kwargs}] took: {te - ts: 0.3f}s')
         return res
 
     return wrapper

@@ -15,7 +15,6 @@ import functools
 import os
 import os.path
 
-import numpy as np
 import torch
 
 from msit_llm.dump.torch_dump.dump_config import DumpConfig

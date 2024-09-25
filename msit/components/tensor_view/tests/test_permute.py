@@ -16,7 +16,7 @@ import unittest
 
 import torch
 
-from msit.components.tensor_view.ait_tensor_view.operation import PermuteOperation
+from components.tensor_view.ait_tensor_view.operation import PermuteOperation
 
 
 class TestPermuteOperation(unittest.TestCase):

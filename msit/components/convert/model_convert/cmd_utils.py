@@ -19,7 +19,7 @@ import subprocess
 from model_convert.aoe.aoe_args_map import aoe_args
 from model_convert.atc.atc_args_map import atc_args
 from components.utils.security_check import get_valid_read_path, get_valid_write_path, MAX_READ_FILE_SIZE_32G
-from components.convert.common.log import logger
+from components.utils.log import logger
 
 input_file_args = ['model', 'weight', 'singleop', 'insert_op_conf', 'op_name_map', 'fusion_switch_file',
                    'compression_optimize_conf', 'op_debug_config']
@@ -84,6 +84,6 @@ def execute_cmd(cmd: list):
         line = result.stdout.readline()
         if line:
             line = line.strip()
-            print(line.decode('utf-8'))
+            logger.info(line.decode('utf-8'))
     logger.info("%s convert success", cmd[0].upper())
     return result.returncode

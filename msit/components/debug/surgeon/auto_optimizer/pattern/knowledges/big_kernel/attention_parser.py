@@ -19,7 +19,7 @@ import numpy as np
 
 from auto_optimizer.graph_refactor import OnnxGraph, OnnxNode, OnnxInitializer
 from auto_optimizer.pattern.knowledges.big_kernel.util import get_k_2nd_perm
-from auto_optimizer.tools.log import logger
+from components.debug.common import logger
 from auto_optimizer.pattern.knowledges.big_kernel.util import (
     MATMUL_W,
     RESHAPE_S,
