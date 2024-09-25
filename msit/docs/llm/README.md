@@ -4,7 +4,7 @@
 
 ## 简介
 
-目前昇腾大模型推理框架主要有 [**加速库(atb)**](msit/docs/glossary/README.md#atbascend-transformer-boost) 和 [**torchair**](/msit/docs/glossary/README.md#torchairtorch-图模式)。
+目前昇腾大模型推理框架主要有 [**MindIE**](https://www.hiascend.com/software/mindie) 和 [**torchair**](/msit/docs/glossary/README.md#torchairtorch-图模式)。
 
 开发者在推理开发过程中可能会遇到精度问题，可以使用大模型精度调试工具（Large Language Model Debug Tool）提供的大模型推理数据落盘（dump）和精度定位（compare）功能，帮助开发者快速定位推理开发过程中精度问题，发现根因，提升开发效率。
 

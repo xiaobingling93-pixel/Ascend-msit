@@ -184,8 +184,6 @@ CSV_PATH:
 
 输出结果同 `Analyzer` 的 [输出一致](#classmethod-analyze-golden-test)。
 
-> 注：如果传入的 csv 路径，需要确保其含有必要的表头 [^4]。如果传入的是模型推理脚本，目前只支持昇腾模型推理脚本，后续会泛化到所有推理路线。
-
 ### 使用示例
 1. 两个都是 `csv`
 ```sh
@@ -236,34 +234,51 @@ What is your name?,"[12, 13, 14, 15, 16, 17]","[12, 13, 14, 15, 16, 17]","[12, 1
 下列示例展示了如何通过命令行进行 `bad case` 分析
 
 ```py
+import time
+
 from msit_llm import Synthesizer, Analyzer
 
 
 golden_synthesizer = Synthesizer(
-   queries=['How are you?', 'Hello', 'What is your name?', 'What time is it?'],
+   queries=['Hello', 'How are you?', 'What is your name?', 'What time is it?', "Extra Question", "Extra Question"],
    input_token_ids=[[1, 2, 3, 4, 5], [6, 7, 8, 9, 10, 11], [12, 13, 14, 15, 16, 17], [18, 19, 20, 21, 22]],
    output_token_ids=[[1, 2, 3, 4, 5], [6, 7, 8, 9, 10, 11], [12, 13, 14, 15, 16, 17], [18, 19, 20, 21, 22]],
    passed=['Correct', 'Wrong', 'Correct', 'Correct']
 )
 
 test_synthesizer = Synthesizer(
-   queries=['Hello', 'How are you?', 'What is your name?', 'What time is it?', "Extra Question"],
-   input_token_ids=[[1, 2, 3, 4, 5], [6, 7, 8, 9, 10, 11], [12, 13, 14, 15, 16, 17], [18, 19, 20, 21, 22]],
-   output_token_ids=[[1, 2, 3, 4, 5], [6, 7, 8, 9, 10, 11], [12, 13, 14, 15, 16, 17], [18, 19, 20, 21, 22]],
-   passed=['Wrong', 'Correct', 'Wrong', 'Correct']
+   queries=['Hello', 'How are you?', 'What is your name?', 'What time is it?'], # 少几个问题
+   input_token_ids=[[1, 2, 3, 4, 5], [6, 7, 8, 9, 10, 11], [12, 13, 14, 15, 16, 17], [18, 19, 20, 21, 22], [1], [2]],
+   output_token_ids=[[1, 2, 3, 4, 5], [6, 7, 8, 9, 10, 11], [12, 13, 14, 15, 16, 17], [18, 19, 20, 21, 22], [2], [1]],
+   passed=['Wrong', 'Correct', 'Wrong', 'Correct', 'Wrong', 'Wrong']
 )
 
-golden_synthesizer.to_csv(errors='pad')
-test_synthesizer.to_csv(errors='pad')
+golden_synthesizer.to_csv()
+time.sleep(1) # 由于示例速度过快，导致时间戳一样，出现覆写，故停一秒，实际场景不会出现这个问题
+test_synthesizer.to_csv()
 ```
 
 运行之后，出现下列日志信信息（日志时间，进程号以及文件名可能存在出入）
 ```sh
 2024-09-25 13:55:09,487 - 243591 - msit_llm_logger - INFO - 'Sythesizer' has successfully finished the synthesis, the result is stored at 'msit_bad_case/synthesizer/20240925135509.csv'
-2024-09-25 13:55:09,487 - 243591 - msit_llm_logger - INFO - 'Sythesizer' has successfully finished the synthesis, the result is stored at 'msit_bad_case/synthesizer/20240925135509.csv'
+2024-09-25 13:55:09,487 - 243591 - msit_llm_logger - INFO - 'Sythesizer' has successfully finished the synthesis, the result is stored at 'msit_bad_case/synthesizer/20240925135510.csv'
 ```
 
 随后，使用命令行进行分析
 ```sh
-msit llm analyze -g msit_bad_case/synthesizer/20240925135509.csv -t msit_bad_case/synthesizer/20240925135509.csv
+msit llm analyze -g msit_bad_case/synthesizer/20240925135509.csv -t msit_bad_case/synthesizer/20240925135510.csv
 ```
+
+出现打印日志如下（日志时间，进程号以及文件名可能存在出入）：
+```sh
+2024-09-25 13:55:09,487 - 243591 - msit_llm_logger - INFO - Checking if path '/root/msit_bad_case/synthesizer/20240925135509.csv' is valid...
+2024-09-25 13:55:09,487 - 243591 - msit_llm_logger - INFO - Checking if path '/root/msit_bad_case/synthesizer/20240925135510.csv' is valid...
+2024-09-25 13:55:09,487 - 243591 - msit_llm_logger - INFO - Checking if the header of csv is valid...
+2024-09-25 13:55:09,487 - 243591 - msit_llm_logger - INFO - Checking if the header of csv is valid...
+2024-09-25 13:55:09,487 - 243591 - msit_llm_logger - INFO - Analyzing...
+2024-09-25 13:55:09,487 - 243591 - msit_llm_logger - INFO - 'Analyzer' has successfully finished the analysis, the result is stored at 'msit_bad_case/analyzer/20240925174505.csv'
+2024-09-25 13:55:09,487 - 243591 - msit_llm_logger - WARNING - There are '2' quer(ies) not matched, below is a partial display of these unmatched queries:
+        '4      Extra Question'
+        '5      Extra Question'
+```
+注意，warning 出现的原因是由于 `golden` 比 `test` 多了两个问题，所以出现了问题 unmatched 的情况。如果这种现象很普遍，`bad case` 分析工具会打印前 `5` 个问题。

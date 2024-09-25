@@ -105,7 +105,7 @@ class Synthesizer(object):
 
         Notes
         -----
-        The resulting csv file name will be purely time stamp, for example: _20240720042235.csv`.
+        The resulting csv file name will be purely time stamp, for example: 20240720042235.csv`.
             
         Exceptions
         ----------
