@@ -137,6 +137,8 @@ def check_input_path_legality(value):
         return value
     inputs_list = value.split(',')
     for input_path in inputs_list:
+        if os.path.islink(input_path):
+            raise argparse.ArgumentTypeError(f"input path: {input_path} is a symbolic link, Please check.")
         try:
             file_stat = FileStat(input_path)
         except Exception as err:
