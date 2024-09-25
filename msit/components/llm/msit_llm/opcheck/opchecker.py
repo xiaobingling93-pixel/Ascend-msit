@@ -19,6 +19,7 @@ import time
 import datetime
 from collections import namedtuple
 import torch
+import torch_npu
 
 from msit_llm.common.log import logger
 from msit_llm.common.constant import GLOBAL_HISTORY_AIT_DUMP_PATH_LIST, RAW_INPUT_PATH
