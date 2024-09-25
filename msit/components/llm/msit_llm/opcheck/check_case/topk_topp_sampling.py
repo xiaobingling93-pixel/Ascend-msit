@@ -15,8 +15,6 @@
 from enum import Enum
 from ctypes import CDLL
 import torch
-import torch_npu
-import torch.nn as nn
 
 from msit_llm.opcheck import operation_test
 from msit_llm.common.log import logger

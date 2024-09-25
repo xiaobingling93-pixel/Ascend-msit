@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from typing import List, Dict, Optional
-import logging
 import numpy as np
 
 from auto_optimizer.pattern.knowledge_factory import KnowledgeFactory
@@ -23,6 +22,7 @@ from auto_optimizer.pattern.pattern import MatchPattern, MatchBase, Pattern
 from auto_optimizer.pattern.matcher import MatchResult
 from auto_optimizer.pattern.knowledges.knowledge_base import KnowledgeBase
 from auto_optimizer.pattern.utils import NextNodeCount
+from components.debug.common import logger
 
 
 class NonNegetiveAxes(MatchBase):
@@ -135,7 +135,7 @@ class KnowledgeMergeConsecutiveSlice(KnowledgeBase):
         slices_total = [*slices_to_remove, slice_to_keep]
         # in case previous apply functions modified the graph and removed/renamed any node of current matching subgraph
         if any(node is None for node in slices_total):
-            logging.info("Some matching node have been removed or renamed, failed to optimizd.")
+            logger.info("Some matching node have been removed or renamed, failed to optimizd.")
             return False
 
         input_initializers: List[List[Optional[Initializer]]] = [
@@ -147,7 +147,7 @@ class KnowledgeMergeConsecutiveSlice(KnowledgeBase):
         if any(inp is None
                for lst in input_initializers 
                for inp in lst):
-            logging.info("Failed to get slices parameters.")
+            logger.info("Failed to get slices parameters.")
             return False
         input_values = [[inp.value for inp in lst] for lst in input_initializers]
         # add optional steps input, input_values should look like this now
@@ -162,7 +162,7 @@ class KnowledgeMergeConsecutiveSlice(KnowledgeBase):
         # duplicate axes means we can't merge these slice nodes together
         axes_to_merge = np.concatenate(input_values[2])
         if np.unique(axes_to_merge).size != axes_to_merge.size:
-            logging.info(f"Slice nodes have duplicate slice axis: {axes_to_merge}")
+            logger.info(f"Slice nodes have duplicate slice axis: {axes_to_merge}")
             return False
 
         # we start modify the graph from here, as all validations are finished so we can make sure optimize will success

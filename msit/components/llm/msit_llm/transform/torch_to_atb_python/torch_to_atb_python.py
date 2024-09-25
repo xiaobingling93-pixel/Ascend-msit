@@ -71,7 +71,7 @@ TORCH_MODULE_TO_ATB_MAP = {
         op_type="SelfAttention",
         op_param={"headNum": 1, "kvHeadNum": 1, "calcType": "PA_ENCODER", "qkScale": 1, "maskType": "MASK_TYPE_NORM"},
     ),
-    "SiLU": dict(op_type="Activation", op_param={"activationType": "ACTIVATION_SWISH"}),
+    "SiLU.{0,100}": dict(op_type="Activation", op_param={"activationType": "ACTIVATION_SWISH"}),
     "add": dict(op_type="Elewise", op_param={"elewiseType": "ELEWISE_ADD"}),
     "mul": dict(op_type="Elewise", op_param={"elewiseType": "ELEWISE_MUL"}),
 }
@@ -82,6 +82,7 @@ FX_OP_TYPES = namedtuple("FX_OP_TYPES", _FX_OP_TYPES)(*_FX_OP_TYPES)
 _FIXED_INPUTS = {
     "input_ids",
     "position_ids",
+    "inputs_embeds",
     "cos_table",
     "sin_table",
     "slots_mapping",
@@ -117,11 +118,12 @@ def build_transformers_model(source_path):
 
     try:
         config = AutoConfig.from_pretrained(source_path, trust_remote_code=True)
-        config = get_config_attr(config, "text_config", default=config)
-        model = AutoModelForCausalLM.from_config(config, trust_remote_code=True)
+        llm_model_config = get_config_attr(config, "text_config", default=config)
+        is_vl_model = llm_model_config is not config
+        model = AutoModelForCausalLM.from_config(llm_model_config, trust_remote_code=True)
     except Exception as error:
         raise ValueError(f"build model from {source_path} failed, make sure it works within transformers") from error
-    return model, config
+    return model, llm_model_config, is_vl_model
 
 
 def to_transformers_traced_module(model, input_names=BASIC_INPUT_NAMES, disable_check=True):
@@ -225,7 +227,7 @@ class ATBModel:
         self.atb_model = atb_model
         self.inputs = self.input_names = set(atb_model.input_names)
         self.outputs = self.output_names = atb_model.output_names
-        self.model_outputs, self.weights, self.inv_freq_weight = {}, {}, None
+        self.model_outputs, self.weights, self.inv_freq_weight, self.attention_mask = {}, {}, None, None
 
         if output_shape is not None and not isinstance(output_shape, (dict, list, tuple)):
             raise ValueError("output_shape should be None or type in one of (dict, list, tuple)")
@@ -254,10 +256,10 @@ class ATBModel:
             self.num_key_value_heads,
             self.head_dim,
         ]
-        self.inv_freq_weight = None
 
-        self.kv_cache_names = [ii for ii in self.input_names if ii.split('.')[-1] in KV_CACHE_SURFFIX]
+        self.kv_cache_names = [ii for ii in self.input_names if ii.split(".")[-1] in KV_CACHE_SURFFIX]
         self.past_key_values = {}
+        self.atb_model_has_set_weights = hasattr(self.atb_model, "set_weights")  # Supported after RC3
 
     def __call__(self, input_ids=None, position_ids=None, slots_mapping=None, **kwargs):
         return self.forward(input_ids, position_ids, slots_mapping, **kwargs)
@@ -265,7 +267,8 @@ class ATBModel:
     def init_kv_cache(self):
         self.past_key_values = {ii: torch.zeros(self.cache_shape).to(self.dtype).npu() for ii in self.kv_cache_names}
         self.weights.update(self.past_key_values)
-        self.atb_model.set_weights(self.past_key_values)
+        if self.atb_model_has_set_weights:
+            self.atb_model.set_weights(self.past_key_values)
 
     def _calc_inv_freq_by_rope_theta(self):
         inv_freq_weight = 1.0 / (self.rope_theta ** (torch.arange(0, self.head_dim, 2) / self.head_dim))
@@ -302,15 +305,16 @@ class ATBModel:
 
         need_cos_sin_table = FIXED_INPUTS.cos_table in self.inputs or FIXED_INPUTS.sin_table in self.inputs
         if need_cos_sin_table and self.inv_freq_weight is None:
-            logger.info(f"Set inv_freq_weight be rope_theta={self.rope_theta}")
+            logger.info(f"Set inv_freq_weight by rope_theta={self.rope_theta}")
             self.inv_freq_weight = self._calc_inv_freq_by_rope_theta()
 
         if FIXED_INPUTS.attention_mask in self.inputs:
             mask_tensor = torch.ones([self.atb_model_config.max_seq_len, self.atb_model_config.max_seq_len])
             attention_mask = torch.where((1 - torch.tril(mask_tensor)).to(torch.bool), -torch.inf, 0)
-            self.weights[FIXED_INPUTS.attention_mask] = attention_mask.to(self.dtype).npu()
+            self.attention_mask = attention_mask.to(self.dtype).npu()
 
-        self.atb_model.set_weights(self.weights)  # ATB provided function, no need to pass weights again
+        if self.atb_model_has_set_weights:
+            self.atb_model.set_weights(self.weights)  # ATB provided function, no need to pass weights again
 
         if len(self.kv_cache_names) > 0:
             self.init_kv_cache()
@@ -321,16 +325,25 @@ class ATBModel:
         if len(missing_weights) > 0:
             logger.warning(f"missing weights: {missing_weights}")
 
-    def forward(self, input_ids=None, position_ids=None, slots_mapping=None, seq_len=None, **kwargs):
+    def forward(
+        self, input_ids=None, position_ids=None, inputs_embeds=None, slots_mapping=None, seq_len=None, **kwargs
+    ):
         # Basic inputs
         model_inputs, batch_size, cur_pos, input_len = {}, 1, 1, 1
+        if not self.atb_model_has_set_weights:
+            model_inputs.update(self.weights)
         if input_ids is not None:
             batch_size = input_ids.shape[0] if input_ids.dim() == 2 else 1
-            input_len = cur_pos = input_ids.shape[-1]  # temp set, may overwrite by `position_ids`
+            input_len = cur_pos = input_ids.shape[-1]
             model_inputs[FIXED_INPUTS.input_ids] = input_ids.npu()
-            logger.debug(f"batch_size = {batch_size}")
+            logger.debug(f"batch_size = {batch_size}, input_len = {input_len}")
+        if inputs_embeds is not None:  # For VL model
+            batch_size = inputs_embeds.shape[0] if inputs_embeds.dim() == 3 else 1
+            input_len = cur_pos = inputs_embeds.shape[-2]
+            model_inputs[FIXED_INPUTS.inputs_embeds] = inputs_embeds.npu()
+            logger.debug(f"batch_size = {batch_size}, input_len = {input_len}")
         if position_ids is not None:
-            cur_pos = (position_ids[0, -1] if position_ids.dim() == 2 else position_ids[-1]) + 1
+            cur_pos = (position_ids[0, -1] if position_ids.dim() == 2 else position_ids[-1]).cpu() + 1
             model_inputs[FIXED_INPUTS.position_ids] = position_ids.npu()
             logger.debug(f"cur_pos = {cur_pos}")
 
@@ -352,13 +365,18 @@ class ATBModel:
                 # if either cos_table or sin_table is missing, the values of both will be calculated
                 cos_table, sin_table = self._calc_cos_sin_table_from_inv_freq(position_ids)
                 model_inputs[FIXED_INPUTS.cos_table], model_inputs[FIXED_INPUTS.sin_table] = cos_table, sin_table
+        if FIXED_INPUTS.attention_mask in self.inputs and FIXED_INPUTS.attention_mask not in model_inputs:
+            model_inputs[FIXED_INPUTS.attention_mask] = self.attention_mask
+        if FIXED_INPUTS.seq_len in self.inputs and FIXED_INPUTS.seq_len not in model_inputs:
+            seq_len = torch.ones([batch_size], dtype=torch.int).to(position_ids.device) * cur_pos
+            model_inputs[FIXED_INPUTS.attention_mask] = self.attention_mask
 
         # Show missing inputs, in some cases like testing scenario, this may not an error
         missing_inputs = self.inputs - set(model_inputs.keys()) - set(self.weights.keys())
         if len(missing_inputs) != 0:
             logger.warning(
                 f"Missing inputs: {missing_inputs}\nProvided: {model_inputs.keys()}\nCall `set_weights` if not already"
-            )  # Not raise error, model may still can be executed
+            )  # Not raising error, model may still can be executed
 
         # Creats output. Here output_shape maybe None or a dict or list
         if self.output_shape is None:
@@ -430,9 +448,10 @@ class ATBModelFromTorch(ATBModel):
         max_seq_len=1024,
         to_quant=False,
         quant_disable_names=None,
+        is_vl_model=False,
         dtype="float16",
     ):
-        self.torch_model, self.config = torch_model, config
+        self.torch_model, self.config, self.is_vl_model = torch_model, config, is_vl_model
         self.to_quant, self.quant_disable_names = to_quant, quant_disable_names or ()
         self.config = getattr(torch_model, "config", None) if config is None else config
         if self.config is None:
@@ -458,10 +477,11 @@ class ATBModelFromTorch(ATBModel):
         for ii in self.weight_names:
             self.weight_stack_map.setdefault(".".join(ii.split(".")[:-1]), []).append(ii)
 
-        self.torch_module_to_atb_map = {}
         self.num_key_value_heads = get_config_attr(self.config, "num_key_value_heads", default=self.num_attention_heads)
         self.rope_theta = get_config_attr(self.config, "rope_theta", default=1e4)
         self.rms_norm_eps = get_config_attr(self.config, "rms_norm_eps", default=1e-5)
+
+        self.torch_module_to_atb_map = {}
         for kk, vv in TORCH_MODULE_TO_ATB_MAP.items():
             re_key = re.compile(kk)
             if vv.get("op_type", None) == "SelfAttention" and "op_param" in vv:
@@ -646,7 +666,11 @@ class ATBModelFromTorch(ATBModel):
         k_cache_name = module_name + "." + KV_CACHE_SURFFIX.k_cache
         v_cache_name = module_name + "." + KV_CACHE_SURFFIX.v_cache
         reshape_and_cache_inputs = [
-            module_name + ".k_embed_", module_name + ".v_embed_", k_cache_name, v_cache_name, FIXED_INPUTS.slots_mapping
+            module_name + ".k_embed_",
+            module_name + ".v_embed_",
+            k_cache_name,
+            v_cache_name,
+            FIXED_INPUTS.slots_mapping,
         ]
         self.k_cache_names.append(k_cache_name)
         self.v_cache_names.append(v_cache_name)
@@ -720,6 +744,30 @@ class ATBModelFromTorch(ATBModel):
                 op.inputs = op.inputs + gathered_module_inputs.get(op.op_name, [])
             else:
                 op.inputs = gathered_module_inputs.get(op.op_name, []) + op.inputs
+
+    def _replace_input_ids_by_inputs_embeds_for_vl_model(self):
+        if FIXED_INPUTS.input_ids in self.model_inputs:
+            self.model_inputs = [
+                FIXED_INPUTS.inputs_embeds if ii == FIXED_INPUTS.input_ids else ii for ii in self.model_inputs
+            ]
+
+        embed_op_id, embed_outputs = -1, None
+        for op_id, op in enumerate(self.operations):
+            if len(op.inputs) == 2 and len(op.outputs) == 1 and FIXED_INPUTS.input_ids in op.inputs:  # Embedding
+                op.inputs = [FIXED_INPUTS.inputs_embeds]
+                embed_outputs = op.outputs[0]
+                embed_op_id = op_id
+                logger.info(f"Got Embedding op, embed_op_id: {embed_op_id}")
+                continue
+            if embed_outputs is None:
+                continue
+            if embed_outputs in op.inputs:
+                op.inputs = [FIXED_INPUTS.inputs_embeds if ii == embed_outputs else ii for ii in op.inputs]
+
+        if embed_op_id >= 0:
+            logger.info(f"Remove op: {self.operations[embed_op_id]}")
+            logger.info(f"Replace op inner names {embed_outputs} -> {FIXED_INPUTS.inputs_embeds}")
+            self.operations.pop(embed_op_id)
 
     def _stack_operations(self):
         stacked_operations, cur_stack, pre_stack_id = [], [], -1
@@ -826,6 +874,8 @@ class ATBModelFromTorch(ATBModel):
                 output_node_map[node.name] = previous_operation_out = operation_outputs[cur_module_name] = cur_outputs
 
         self._refine_inputs_outputs(input_node_map, output_node_map, operation_outputs)
+        if self.is_vl_model:
+            self._replace_input_ids_by_inputs_embeds_for_vl_model()
         self.operations[-1].outputs = self.model_outputs
         return self.model_inputs, self.model_outputs, self.weight_names, self.operations
 
@@ -980,19 +1030,24 @@ class ATBModelFromTorch(ATBModel):
         return output_file
 
 
-def generate_infer_file(output_file, source_path):
+def generate_infer_file(output_file, source_path, is_vl_model=False):
     from pathlib import Path
-    infer_file = Path(output_file).with_name('run.py')
-    contents_str = Path(__file__).with_name('run.py').read_text()
-    contents_str = contents_str.replace("atb_model_symbol", Path(output_file).stem)
-    contents_str = contents_str.replace("model_path_symbol", source_path)    
+
+    file_name = "run_vl.py" if is_vl_model else "run.py"
+    infer_file = Path(output_file).with_name(file_name)
+    contents_str = Path(__file__).with_name(file_name).read_text()
+    contents_str = contents_str.replace("atb_model_placeholder", Path(output_file).stem)
+    contents_str = contents_str.replace("model_path_placeholder", os.path.abspath(source_path))
     write_file(infer_file, contents_str)
     return infer_file
 
 
 def transform(source_path, input_names=BASIC_INPUT_NAMES, output_file=None, to_quant=False, quant_disable_names=None):
     logger.info("Building model using transformers...")
-    model, config = build_transformers_model(source_path)
+    model, config, is_vl_model = build_transformers_model(source_path)
+
+    if is_vl_model:
+        logger.info("Got VL model")
 
     logger.info("Transforming to atb")
     atb_model = ATBModelFromTorch(
@@ -1001,6 +1056,7 @@ def transform(source_path, input_names=BASIC_INPUT_NAMES, output_file=None, to_q
         input_names=input_names,
         to_quant=to_quant,
         quant_disable_names=quant_disable_names,
+        is_vl_model=is_vl_model,
     )
     output_file = atb_model.to_file(output_file=output_file)
 
@@ -1013,7 +1069,7 @@ def transform(source_path, input_names=BASIC_INPUT_NAMES, output_file=None, to_q
     model_name = os.path.splitext(os.path.basename(output_file))[0]
     logger.info("=" * 30)
     logger.info(
-        """Run like:
+        """Run simple inference like:
 
     python3 -c "
     import torch, torch_npu
@@ -1028,12 +1084,14 @@ def transform(source_path, input_names=BASIC_INPUT_NAMES, output_file=None, to_q
     out = atb_model.forward(input_ids=torch.arange(input_len), position_ids=torch.arange(input_len))
     print(out)
     "
-    """.format(model_name=model_name).replace(" " * 4, "")  # Remove the prefix "    "
+    """.format(
+            model_name=model_name
+        ).replace(
+            " " * 4, ""
+        )
     )
 
-    infer_file = generate_infer_file(output_file, source_path)
+    infer_file = generate_infer_file(output_file, source_path, is_vl_model=is_vl_model)
     logger.info("=" * 30)
     logger.info(f"End-to-end inference example saved to: {infer_file}")
-    logger.info(f"\n"
-                "You can run the model using the command below:\n"
-                "    python run.py")
+    logger.info(f"Execute by: python {infer_file}\n")

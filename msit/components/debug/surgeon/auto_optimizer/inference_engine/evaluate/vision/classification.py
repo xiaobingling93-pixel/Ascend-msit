@@ -12,9 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import sys
-import logging
 from abc import ABC
 
 import numpy as np
@@ -22,9 +19,7 @@ from tqdm import tqdm
 
 from auto_optimizer.inference_engine.evaluate.evaluate_base import EvaluateBase
 from auto_optimizer.inference_engine.data_process_factory import EvaluateFactory
-
-logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='[%(levelname)s] %(message)s')
-logger = logging.getLogger("auto-optimizer")
+from components.debug.common import logger
 
 
 @EvaluateFactory.register("classification")
@@ -34,7 +29,7 @@ class ClassificationEvaluate(EvaluateBase, ABC):
         """
         和基类的参数顺序和个数需要一致
         """
-        logging.debug("evaluate start")
+        logger.debug("evaluate start")
         try:
             topk = ClassificationEvaluate._get_params(cfg)
         except Exception as err:

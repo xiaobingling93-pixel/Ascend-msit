@@ -16,7 +16,6 @@ from json import dump
 import json
 from pathlib import Path
 import re
-import os
 import torch.nn as nn
 
 from msit_llm.transform.model_parser.kind import mlp, attention, convert, mname
@@ -212,7 +211,7 @@ def parse_input_max_count(content):
     res = regex_search(pattern_list, content)
     try:
         max_count = int(res)
-    except Exception as ex:
+    except Exception:
         max_count = -1
     return max_count
 

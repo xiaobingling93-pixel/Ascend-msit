@@ -12,16 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-import sys
 import os
 from typing import Dict, List
-import numpy as np
 
 from knowledge_base import Knowledge, KnowledgeGroup
-
-logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='[%(levelname)s] %(message)s')
-logger = logging.getLogger(__name__)
+from components.utils.log import logger
 
 
 def check_filetype(filename: str):

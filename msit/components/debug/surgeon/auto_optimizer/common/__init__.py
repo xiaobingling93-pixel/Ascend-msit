@@ -15,7 +15,6 @@
 from auto_optimizer.common.register import Register
 from auto_optimizer.common.config import Config
 from auto_optimizer.common.utils import format_to_module, typeassert, check_file_exist
-from auto_optimizer.common.log import setup_logging
 from auto_optimizer.common.singleton import Singleton
 
-__all__ = ["Register", "Config", "format_to_module", "typeassert", "check_file_exist", "setup_logging", "Singleton"]
+__all__ = ["Register", "Config", "format_to_module", "typeassert", "check_file_exist", "Singleton"]

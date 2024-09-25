@@ -19,12 +19,10 @@ This class mainly involves common function.
 import argparse
 import enum
 import itertools
-import logging
 import os
 import re
 import shutil
 import subprocess
-import sys
 import json
 
 import numpy as np
@@ -32,9 +30,8 @@ import pandas as pd
 from msquickcmp.common.dynamic_argument_bean import DynamicArgumentEnum
 
 from components.utils.security_check import get_valid_write_path
+from components.debug.common import logger
 
-logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='[%(levelname)s] %(message)s')
-logger = logging.getLogger(__name__)
 
 ACCURACY_COMPARISON_INVALID_PARAM_ERROR = 1
 ACCURACY_COMPARISON_INVALID_DATA_ERROR = 2
@@ -511,7 +508,7 @@ def parse_dym_shape_range(dym_shape_range):
         if len(shapestr) < 50:
             _check_shape_number(shapestr, DYNAMIC_DIM_PATTERN)
         else:
-            logger.error(get_shape_not_match_message(InputShapeError.TOO_LONG_PARAMS, input_shape))
+            logger.error(get_shape_not_match_message(InputShapeError.TOO_LONG_PARAMS, input_shapes))
             raise AccuracyCompareException(ACCURACY_COMPARISON_INVALID_PARAM_ERROR)
         for content in shapestr.split(","):
             if "~" in content:
@@ -654,11 +651,11 @@ def safe_delete_path_if_exists(path, is_log=False):
         path = get_valid_write_path(path, extensions=None, check_user_stat=False, is_dir=is_dir)
         if os.path.isfile(path):
             if is_log:
-                utils.logger.info("File %s exist and will be deleted.", path)
+                logger.info("File %s exist and will be deleted.", path)
             os.remove(path)
         else:
             if is_log:
-                utils.logger.info("Folder %s exist and will be deleted.", path)
+                logger.info("Folder %s exist and will be deleted.", path)
             shutil.rmtree(path)
 
 

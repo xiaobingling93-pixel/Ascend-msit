@@ -1,32 +1,19 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
-import argparse
-import copy
 import json
-import math
 import os
-import time
-from typing import Dict, List
 from typing import Optional
 import importlib
 import sys
 from dataclasses import dataclass
 
 import torch
-import torch_npu
-
 from transformers.configuration_utils import PretrainedConfig
 
-from atb_llm.utils import file_utils
+from atb_llm.utils import file_utils, bind_cpus, initialize_distributed
 from atb_llm.utils.cpu_binding import NpuHbmInfo
 from atb_llm.utils.env import ENV
 from atb_llm.utils.log import logger, print_log
-from atb_llm.utils.file_utils import safe_open
-from atb_llm.utils import bind_cpus, initialize_distributed, Weights
-from atb_llm.utils.env import ENV
-from atb_llm.utils.log import logger, print_log
-from examples.server.cache import CacheConfig, ModelConfig, CacheManager
-from examples.server.generate import decode_token, generate_req
-from examples.server.request import request_from_token
+from examples.server.cache import ModelConfig
 from atb_llm.runner.model_runner import ModelRunner
 from examples.run_pa import parse_arguments, PARunner
 
@@ -92,7 +79,7 @@ class TransModelRunner(ModelRunner):
                 bind_cpus(world_size, self.npu_id, ratio=1.0)
             except RuntimeError as e:
                 print_log(rank, logger.info, e)
-            except Exception as _:
+            except Exception:
                 print_log(rank, logger.info, 'Skip binding cpu.')
 
         param = RouterParam(

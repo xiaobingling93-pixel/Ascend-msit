@@ -12,13 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
 from abc import ABC
 
 from auto_optimizer.inference_engine.post_process.post_process_base import PostProcessBase
 from auto_optimizer.inference_engine.data_process_factory import PostProcessFactory
-
-logger = logging.getLogger("auto-optimizer")
+from components.debug.common import logger
 
 
 @PostProcessFactory.register("classification")

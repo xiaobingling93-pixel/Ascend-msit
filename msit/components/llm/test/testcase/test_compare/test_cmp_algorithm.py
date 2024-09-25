@@ -16,7 +16,7 @@ import os.path
 import pytest
 import torch
 
-from msit_llm.compare.cmp_algorithm import cosine_similarity, max_relative_error, mean_relative_error, \
+from components.utils.cmp_algorithm import cosine_similarity, max_relative_error, mean_relative_error, \
     relative_euclidean_distance
 
 

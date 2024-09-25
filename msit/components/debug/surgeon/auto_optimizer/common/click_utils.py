@@ -20,7 +20,6 @@ from multiprocessing import Pool
 from typing import List, Optional, Union
 
 import re
-import argparse
 import click
 
 from auto_optimizer import KnowledgeFactory
@@ -32,7 +31,7 @@ from auto_optimizer.graph_optimizer.optimizer import (
 )
 from auto_optimizer.graph_refactor.interface.base_graph import BaseGraph
 from auto_optimizer.graph_refactor.onnx.graph import OnnxGraph
-from auto_optimizer.tools.log import logger
+from components.debug.common import logger
 
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])

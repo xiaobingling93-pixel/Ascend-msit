@@ -13,10 +13,7 @@
 # limitations under the License.
 
 import os
-import stat
 import torch.nn as nn
-
-from msit_llm.transform.utils import write_file
 
 
 def init_save_name(save_name):

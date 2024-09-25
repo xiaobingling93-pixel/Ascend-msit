@@ -14,7 +14,6 @@
 
 import re
 import sys
-import logging
 from abc import ABC
 import subprocess
 
@@ -22,12 +21,13 @@ import numpy as np
 
 from auto_optimizer.inference_engine.inference.inference_base import InferenceBase
 from auto_optimizer.inference_engine.data_process_factory import InferenceFactory
+from components.debug.common import logger
 
 try:
     from ais_bench.infer.interface import InferSession
     import aclruntime
-except ImportError as exc:
-    logging.warning('Failed to import benchmark module, please install extra [inference] feature.')
+except ImportError:
+    logger.warning('Failed to import benchmark module, please install extra [inference] feature.')
 
 if 'aclruntime' in sys.modules:
     tensor_type_to_numpy_type = {
@@ -45,8 +45,6 @@ if 'aclruntime' in sys.modules:
         aclruntime.dtype.bool: np.bool_,
     }
 
-logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='[%(levelname)s] %(message)s')
-logger = logging.getLogger("auto-optimizer")
 
 
 @InferenceFactory.register("acl")
@@ -75,7 +73,7 @@ class AclInference(InferenceBase, ABC):
                 raise RuntimeError("msame inference failed!\n{}".format(log))
             time = float(match.group(1))
         elif self.tool == 'pyacl':
-            from pyacl.acl_infer import AclNet, init_acl, release_acl
+            from pyacl.acl_infer import AclNet, init_acl
 
             device_id = cfg.get('device_id', None) or 0
             try:
