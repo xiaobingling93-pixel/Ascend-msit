@@ -215,7 +215,7 @@ def test_msopen_given_mode_r_when_file_softlink_whitelist_empty_then_file_read_f
 def test_msopen_given_mode_r_when_file_softlink_target_right_then_file_read_succeed_case(file_name_which_is_softlink):
     with ms_open(file_name_which_is_softlink, mode="r", max_size=100, softlink=True) as aa:
         content = aa.read()
-    os.environ[RAW_INPUT_PATH] = os.path.abspath(os.readlink(file_name_which_is_softlink))
+    os.environ[RAW_INPUT_PATH] = os.path.abspath(os.path.dirname(os.readlink(file_name_which_is_softlink)))
 
     assert FileStat(file_name_which_is_softlink).check_basic_permission()
 
