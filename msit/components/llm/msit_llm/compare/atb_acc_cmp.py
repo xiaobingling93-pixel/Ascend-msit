@@ -76,20 +76,6 @@ def is_model_topo_exist(golden_path, cmp_level="layer"):
     return False, ""
 
 
-def compare_topo_json(golden_topo_json_path, my_topo_json_path):
-    try:
-        with open(golden_topo_json_path, 'r') as golden_file:
-            golden_data = json.load(golden_file)
-        with open(my_topo_json_path, 'r') as my_file:
-            my_data = json.load(my_file)
-        if golden_data == my_data:
-            return True
-        else:
-            return False
-    except (IOError, json.JSONDecodeError):
-        return False
-
-
 def compare_file(golden_path, my_path):
     golden_data = read_data(golden_path)
     my_data = read_data(my_path)
@@ -99,10 +85,15 @@ def compare_file(golden_path, my_path):
 # 手动映射比对能力
 def compare_metadata(golden_path, output_path="."):
     golden_meta_path = os.path.join(golden_path, "metadata.json")
-    with open(golden_meta_path, "r") as file:
-        golden_meta = json.load(file)
-    gathered_row_data = fill_in_data(golden_meta)
-    return save_compare_reault_to_csv(gathered_row_data, output_path)
+    from msit_llm.common.utils import check_input_path_legality, check_data_file_size
+    golden_meta_path = check_input_path_legality(golden_meta_path)
+    if check_data_file_size(golden_meta_path):
+        with open(golden_meta_path, "r") as file:
+            golden_meta = json.load(file)
+        gathered_row_data = fill_in_data(golden_meta)
+        return save_compare_reault_to_csv(gathered_row_data, output_path)
+    else:
+        raise ValueError("The golden path is invalid.")
 
 
 def fill_in_data(golden_meta):
@@ -145,35 +136,6 @@ def traverse_tree(node: dict, path, traverse_type='torch', node_id=''):
     return res
 
 
-# 加速库模型间比对相关
-def compare_atb_metadata_auto(golden_path, my_path, golden_topo_json_path, my_topo_json_path, output_path="."):
-    cur_my_path = os.path.dirname(os.path.abspath(my_path))
-    token_id = os.path.basename(cur_my_path).split('_')[1]
-
-    with open(golden_topo_json_path, "r") as file:
-        golden_topo = json.load(file)
-    with open(my_topo_json_path, "r") as file:
-        my_topo = json.load(file)
-
-    if compare_topo_json(golden_topo_json_path, my_topo_json_path):
-        # topo信息一致，走dtype和bs比对逻辑：
-        logger.info("Automatic mapping comparison starts! Comparing ATB tensors, the topos are same...")
-        gathered_golden_data = traverse_tree(golden_topo, golden_path, 'atb')
-        gathered_my_data = traverse_tree(my_topo, my_path, 'atb')
-        matched_path_pair = search_mapping_relationships(gathered_golden_data, gathered_my_data)
-    else:
-        # topo信息不一致，走量化浮点比对逻辑
-        logger.info('Automatic mapping comparison starts! Comparing ATB tensors, the topos are different...')
-        matched_path_pair = search_float_quant_matches(golden_path, my_path, golden_topo_json_path, my_topo_json_path)
-
-    gathered_row_data = []
-    for data_id, match in enumerate(matched_path_pair):
-        data_info = BasicDataInfo(match['golden'], match['my'], token_id, data_id)
-        row_data = fill_row_data(data_info, is_broadcast_tensor=True)
-        gathered_row_data.append(row_data)
-    return save_compare_reault_to_csv(gathered_row_data, output_path)
-
-
 def add_specific_path(golden_tensor, my_tensor, matched_path_pair):
     try:
         _golden_path = glob.glob(golden_tensor)[0]
@@ -207,7 +169,7 @@ def search_float_quant_matches(golden_path, my_path, golden_topo_json_path, my_t
     matched_path_pair = []
     golden_tree = ModelTree.atb_json_to_tree(golden_topo_json_path)
     my_tree = ModelTree.atb_json_to_tree(my_topo_json_path)
-    
+
     def get_subnode_by_name(target_node, target_name):
         for next_node in target_node.children:
             if next_node.node_name == target_name:
@@ -234,7 +196,7 @@ def search_float_quant_matches(golden_path, my_path, golden_topo_json_path, my_t
                 for my_name, golden_name in zip(my_type_map[key], golden_type_map[key]):
                     my_legal_opname[my_name] = golden_name
             elif key in ATB_QUANT_FLOAT_NODE_MAPPING and (ATB_QUANT_FLOAT_NODE_MAPPING[key] in golden_type_map) and \
-                (len(value) == len(golden_type_map[ATB_QUANT_FLOAT_NODE_MAPPING[key]])):
+                    (len(value) == len(golden_type_map[ATB_QUANT_FLOAT_NODE_MAPPING[key]])):
                 for my_name, golden_name in zip(my_type_map[key], golden_type_map[ATB_QUANT_FLOAT_NODE_MAPPING[key]]):
                     my_legal_opname[my_name] = golden_name
         for my_sub in my_node.children:
@@ -245,6 +207,7 @@ def search_float_quant_matches(golden_path, my_path, golden_topo_json_path, my_t
                 golden_tensor = os.path.join(os.path.abspath(golden_path), golden_level, 'after')
                 add_specific_path(golden_tensor, my_tensor, matched_path_pair)
                 type_based_matches(my_sub, get_subnode_by_name(golden_node, my_legal_opname[my_sub.node_name]))
+
     type_based_matches(my_tree, golden_tree)
     return matched_path_pair
 

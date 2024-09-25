@@ -198,12 +198,6 @@ class CompareDataATB(CompareDataParse):
         json_file_names = os.listdir(pid_path)
         return (os.path.join(pid_path, name) for name in json_file_names if name.endswith(".json"))
 
-    @staticmethod
-    def load_topo_info(topo_file_path):
-        with open(topo_file_path, "r") as file:
-            topo_info = json.load(file)
-        return topo_info
-
     def get_root_nodes(self) -> List[TreeNode]:
         if self.encode_root_node is None:
             return [self.decode_root_node]
@@ -275,14 +269,17 @@ class CompareDataATB(CompareDataParse):
         topo_infos = []
         for topo_file in topo_files:
             json_start_order = 0
-            with open(topo_file, "r") as file:
-                node_dict = json.loads(file.read(), parse_constant=lambda x: None)
-                nodes = node_dict.get("nodes", [])
-                if len(nodes) != 0:
-                    start_order_str: str = nodes[0].get("opName", "0").split("_")[-1]
-                    if start_order_str.isdigit():
-                        json_start_order = int(start_order_str)
-            topo_infos.append(dict(path=topo_file, json_start_order=json_start_order, node_cnt=len(nodes)))
+            from msit_llm.common.utils import check_input_path_legality, check_data_file_size
+            topo_file = check_input_path_legality(topo_file)
+            if check_data_file_size(topo_file):
+                with open(topo_file, "r") as file:
+                    node_dict = json.loads(file.read(), parse_constant=lambda x: None)
+                    nodes = node_dict.get("nodes", [])
+                    if len(nodes) != 0:
+                        start_order_str: str = nodes[0].get("opName", "0").split("_")[-1]
+                        if start_order_str.isdigit():
+                            json_start_order = int(start_order_str)
+                topo_infos.append(dict(path=topo_file, json_start_order=json_start_order, node_cnt=len(nodes)))
 
         topo_infos.sort(key=lambda x: x.get("json_start_order"))
 
@@ -397,12 +394,6 @@ class CompareDataTorch(CompareDataParse):
     @staticmethod
     def get_topo_file_path(tokens_path: str):
         return os.path.join(tokens_path, "model_tree.json")
-
-    def load_topo_info(self):
-        topo_path = self.get_topo_file_path(self.path, self.args.cmp_level)
-        with open(topo_path, "r") as file:
-            topo_info = json.load(file)
-        return topo_info
 
     def get_root_nodes(self) -> List[TreeNode]:
         return [self.golden_root_node]
