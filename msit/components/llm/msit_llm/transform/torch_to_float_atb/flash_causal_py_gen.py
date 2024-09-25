@@ -15,6 +15,7 @@
 import os
 import time
 from msit_llm.transform.torch_to_float_atb import utils
+from msit_llm.transform.utils import write_file
 from components.utils.install import get_public_url
         
         
@@ -74,5 +75,5 @@ def flash_causal_py_gen(parsed_model, save_name=None, save_dir=None):
     save_name = utils.init_save_name(f"flash_causal_{model_name_lower}" if save_name is None else save_name) + ".py"
     save_dir = utils.init_save_dir(model_name_lower if save_dir is None else save_dir, sub_dir=".")
     save_path = os.path.join(save_dir, save_name)
-    utils.write_file(save_path, rr)
+    write_file(save_path, rr)
     return save_path, rr
