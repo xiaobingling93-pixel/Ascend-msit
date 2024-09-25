@@ -20,9 +20,12 @@ import pandas as pd
 import torch
 
 from msit_llm.common.tool import read_atb_data
-from msit_llm.common.constant import TOKEN_ID, DATA_ID, GOLDEN_DATA_PATH, MY_DATA_PATH, CMP_FAIL_REASON, GOLDEN_DTYPE, \
-    GOLDEN_SHAPE, GOLDEN_MAX_VALUE, GOLDEN_MIN_VALUE, GOLDEN_MEAN_VALUE, MY_DTYPE, MY_SHAPE, MY_MAX_VALUE, MY_MIN_VALUE, \
-    MY_MEAN_VALUE, CSV_GOLDEN_HEADER, GLOBAL_HISTORY_AIT_DUMP_PATH_LIST
+from msit_llm.common.constant import (TOKEN_ID, DATA_ID, GOLDEN_DATA_PATH, MY_DATA_PATH,
+                                      CMP_FAIL_REASON, GOLDEN_DTYPE, GOLDEN_SHAPE,
+                                      GOLDEN_MAX_VALUE, GOLDEN_MIN_VALUE,
+                                      GOLDEN_MEAN_VALUE, MY_DTYPE, MY_SHAPE,
+                                      MY_MAX_VALUE, MY_MIN_VALUE, MY_MEAN_VALUE,
+                                      CSV_GOLDEN_HEADER, GLOBAL_HISTORY_AIT_DUMP_PATH_LIST)
 from msit_llm.common.log import logger
 from components.utils.cmp_algorithm import CMP_ALG_MAP, CUSTOM_ALG_MAP
 
@@ -32,15 +35,16 @@ MIN_LAYER_NUMBER = 10
 class BasicDataInfo:
     count_data_id = 0  # Count data_id, increment by 1 every time creating a new instance
     TORCH_UNSUPPORTED_D_TYPE_MAP = {"uint16": "int32", "uint32": "int64"}
-    @classmethod
-    def _count(cls):
-        cls.count_data_id += 1
 
     def __init__(self, golden_data_path, my_data_path, token_id=None, data_id=None):
         self.my_data_path, self.golden_data_path = my_data_path, golden_data_path
         self.token_id = self.get_token_id(my_data_path) if token_id is None else token_id
         self.data_id = self.count_data_id if data_id is None else data_id
         self._count()
+
+    @classmethod
+    def _count(cls):
+        cls.count_data_id += 1
 
     def to_dict(self):
         return {
@@ -132,7 +136,7 @@ def save_compare_reault_to_csv(gathered_row_data, output_path=".", columns=CSV_G
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
-    cur_time = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+    cur_time = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d%H%M%S')
     csv_save_path = os.path.join(output_path, f"msit_cmp_report_{cur_time}.csv")
 
     # 过滤不宜展示的数据，int8建议只与int8比较
