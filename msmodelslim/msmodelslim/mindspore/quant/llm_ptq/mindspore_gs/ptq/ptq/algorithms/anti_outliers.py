@@ -45,7 +45,7 @@ class LinearSmoother(Algorithm):
     @staticmethod
     def load_mindformers_plugin():
         # pylint: disable=unused-import
-        import mindspore_gs.ptq.ptq.wrappers.mindformers
+        import msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq.ptq.wrappers.mindformers
 
     def replace(self, decoder_layer_name: str, decoder_layer, network_helper: NetworkHelper = None):
         """infer_and_cache"""
