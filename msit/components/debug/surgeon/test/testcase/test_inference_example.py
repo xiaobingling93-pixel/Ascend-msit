@@ -14,7 +14,6 @@
 
 import os
 import unittest
-import logger
 from multiprocessing import Pool, Manager
 
 import timeout_decorator
