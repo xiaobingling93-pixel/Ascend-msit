@@ -274,7 +274,7 @@ class OpcheckCommand(BaseCommand):
             '-i',
             required=True,
             type=check_input_path_legality,
-            help='input directory.E.g:--input OUTPUT_DIR/PID_TID/0/')
+            help='input directory.E.g:--input OUTPUT_DIR/msit_dump_TIMESTAMP/tensors/device_id_PID/TID/')
 
         parser.add_argument(
             '--output',
@@ -282,7 +282,7 @@ class OpcheckCommand(BaseCommand):
             required=False,
             type=check_output_path_legality,
             default='./',
-            help='Data output directory.E.g:--output /xx/xxxx/xx')
+            help='Data output directory.E.g:--output /xx/xxx/xx')
 
         parser.add_argument(
             '--operation-ids',

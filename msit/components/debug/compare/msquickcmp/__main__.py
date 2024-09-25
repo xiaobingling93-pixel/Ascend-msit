@@ -50,14 +50,14 @@ class CompareCommand(BaseCommand):
             required=False,
             dest="golden_model",
             type=check_model_path_legality,
-            help='The original model (.onnx or .pb or .prototxt or .om) file path')
+            help='The original model (.pb or saved_model or .onnx or .prototxt or .om) file path')
         parser.add_argument(
             '-om',
             '--om-model',
             required=False,
             dest="om_model",
             type=check_om_path_legality,
-            help='The offline model (.om or .mindir) file path')
+            help='The offline model (.om or .mindir or saved_model) file path')
         parser.add_argument(
             '-w',
             '--weight',
@@ -197,8 +197,9 @@ class CompareCommand(BaseCommand):
         parser.add_argument(
             '--saved_model_tag_set',
             dest="saved_model_tag_set",
-            default='',
-            help="Enter the tagSet of the model. For example: --saved_model_tag_set ['serve', 'general_parser']")
+            default='serve',
+            help="Enter the tagSet of the model.Currently, multiple tagSets can be transferred, "
+                 "for example, --saved_model_tag_set ['serve', 'genenal_parser']")
         # alone compare parameters
         parser.add_argument(
             '-mp',
@@ -327,8 +328,9 @@ class DumpCommand(BaseCommand):
         parser.add_argument(
             '--saved_model_tag_set',
             dest="saved_model_tag_set",
-            default='',
-            help="Enter the tagSet of the model. For example: --saved_model_tag_set ['serve', 'general_parser']")
+            default='serve',
+            help="Enter the tagSet of the model.Currently, multiple tagSets can be transferred, "
+                 "for example, --saved_model_tag_set ['serve', 'genenal_parser']")
         parser.add_argument(
             '-dp',
             '--device-pattern',
