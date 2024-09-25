@@ -53,7 +53,7 @@ class OpChecker:
         self.check_patterns = []
         self.precision_metric = []
         self.precision_mode = NAMEDTUPLE_PRECISION_MODE.keep_origin_dtype
-        self.timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_%H%M%S")
         self.atb_rerun = False
         self.optimization_identify = False
         self.jobs = 1
