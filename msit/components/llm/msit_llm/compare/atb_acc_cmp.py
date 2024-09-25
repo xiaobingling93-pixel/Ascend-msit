@@ -147,6 +147,13 @@ def add_specific_path(golden_tensor, my_tensor, matched_path_pair):
         logger.debug(msg)
 
 
+def get_matched_path_pair(matches):
+    matched_path_pair = []
+    for match in matches:
+        add_specific_path(match['golden']['my_path'], match['my']['my_path'], matched_path_pair)
+    return matched_path_pair
+
+
 def search_mapping_relationships(gathered_golden_data, gathered_my_data):
     matches = []
     for golden_item, my_item in zip(gathered_golden_data, gathered_my_data):
@@ -200,13 +207,6 @@ def search_float_quant_matches(golden_path, my_path, golden_topo_json_path, my_t
                 type_based_matches(my_sub, get_subnode_by_name(golden_node, my_legal_opname[my_sub.node_name]))
 
     type_based_matches(my_tree, golden_tree)
-    return matched_path_pair
-
-
-def get_matched_path_pair(matches):
-    matched_path_pair = []
-    for match in matches:
-        add_specific_path(match['golden']['my_path'], match['my']['my_path'], matched_path_pair)
     return matched_path_pair
 
 
