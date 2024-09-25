@@ -15,8 +15,6 @@
 import os
 from typing import List
 
-import logger
-
 from auto_optimizer.graph_refactor.interface.base_node import BaseNode
 from auto_optimizer.graph_refactor.interface.base_graph import BaseGraph
 from auto_optimizer.graph_refactor.onnx.graph import OnnxGraph

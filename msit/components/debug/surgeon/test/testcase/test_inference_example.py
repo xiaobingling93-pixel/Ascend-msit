@@ -21,17 +21,13 @@ import timeout_decorator
 
 from auto_optimizer.common import Register
 from auto_optimizer.common.config import Config
-from auto_optimizer.common.log import LogLevel, setup_logging
+from components.debug.common import logger
 
 from auto_optimizer.inference_engine.data_process_factory import InferenceFactory
 from auto_optimizer.inference_engine.data_process_factory import EvaluateFactory
 from auto_optimizer.inference_engine.data_process_factory import PreProcessFactory
 from auto_optimizer.inference_engine.data_process_factory import PostProcessFactory
 from auto_optimizer.inference_engine.data_process_factory import DatasetFactory
-
-
-logging = logging.getLogger("auto-optimizer")
-setup_logging(level=LogLevel.WARNING)
 
 
 class TestResnet(unittest.TestCase):

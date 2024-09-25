@@ -227,13 +227,15 @@ class CompareCommand(BaseCommand):
             logger.error("The following args are required: -gm/--golden-model or -gp/--golden-path")
             self.parser.print_help()
             return
-        mindie_rt_op_mapping = os.path.join(args.ops_json, "mindie_rt_op_mapping.json")
-        mindie_torch_op_mapping = os.path.join(args.ops_json, "mindie_torch_op_mapping.json")
-        if os.path.exists(mindie_rt_op_mapping) and os.path.exists(mindie_torch_op_mapping):
-            from msquickcmp.mie_torch.mietorch_comp import MIETorchCompare
-            comparer = MIETorchCompare(args.golden_path, args.my_path, args.ops_json, args.out_path)
-            comparer.compare()
-            return 
+        
+        if args.ops_json is not None:
+            mindie_rt_op_mapping = os.path.join(args.ops_json, "mindie_rt_op_mapping.json")
+            mindie_torch_op_mapping = os.path.join(args.ops_json, "mindie_torch_op_mapping.json")
+            if os.path.exists(mindie_rt_op_mapping) and os.path.exists(mindie_torch_op_mapping):
+                from msquickcmp.mie_torch.mietorch_comp import MIETorchCompare
+                comparer = MIETorchCompare(args.golden_path, args.my_path, args.ops_json, args.out_path)
+                comparer.compare()
+                return
         cmp_args = CmpArgsAdapter(args.golden_model, args.om_model, args.weight_path, args.input_data_path,
                                   args.cann_path, args.out_path,
                                   args.input_shape, args.device, args.output_size, args.output_nodes, args.advisor,

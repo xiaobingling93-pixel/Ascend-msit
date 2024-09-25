@@ -15,42 +15,8 @@
 
 import logging
 
-
-class SanitizeFilter(logging.Filter):
-    def filter(self, record: logging.LogRecord) -> bool:
-        if record.msg:
-            record.msg = repr(record.msg)
-        return super().filter(record)
+from components.utils.log import set_logger
 
 
-def get_logger():
-    debug_logger = logging.getLogger("msit_debug_logger")
-    debug_logger.propagate = False
-    debug_logger.setLevel(logging.INFO)
-    if not debug_logger.handlers:
-        stream_handler = logging.StreamHandler()
-        formatter = logging.Formatter('%(asctime)s - %(process)s - %(name)s - %(levelname)s - %(message)s')
-        stream_handler.setFormatter(formatter)
-        stream_handler.addFilter(SanitizeFilter())
-        debug_logger.addHandler(stream_handler)
-    return debug_logger
-
-
-logger = get_logger()
-
-
-LOG_LEVELS = {
-    "debug": logging.DEBUG,
-    "info": logging.INFO,
-    "warning": logging.WARNING,
-    "error": logging.ERROR,
-    "fatal": logging.FATAL,
-    "critical": logging.CRITICAL
-}
-
-
-def set_log_level(level="info"):
-    if level.lower() in LOG_LEVELS:
-        logger.setLevel(LOG_LEVELS.get(level.lower()))
-    else:
-        logger.warning("Set %s log level failed.", level)
+logger = logging.getLogger("msit_debug_logger")
+set_logger(logger)
