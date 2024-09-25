@@ -36,12 +36,12 @@ msit install llm
 > * [精度预检使用说明](/msit/docs/llm/工具-精度预检使用说明.md)
 > * [异常检测使用说明](/msit/docs/llm/工具-异常检测使用说明.md)
 > * [llm模型迁移分析使用说明](/msit/docs/llm/工具-llm模型迁移分析使用说明.md)
-> * [MindIE-Torch场景-整网算子精度对比](/msit/docs/llm/MindIE-Torch场景-整网算子精度对比.md)
 
 #### 场景列表
 > * [加速库场景-输出Token的logits精度比对](/msit/docs/llm/加速库场景-输出Token的logits精度比对.md)
 > * [加速库场景-整网精度比对](/msit/docs/llm/加速库场景-整网精度比对.md)
 > * [TorchAir场景-整网算子精度比对](/msit/docs/llm/TorchAir场景-整网算子精度比对.md)
+> * [MindIE-Torch场景-整网算子精度对比](/msit/docs/llm/MindIE-Torch场景-整网算子精度对比.md)
 
 ## 大模型精度调试步骤
 
