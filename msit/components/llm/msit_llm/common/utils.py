@@ -101,7 +101,7 @@ def check_exec_script_file(script_path: str):
 def check_input_args(args: list):
     for arg in args:
         if arg in INVALID_CHARS:
-            raise argparse.ArgumentTypeError(f"Args has invalid chars.Please check")
+            raise argparse.ArgumentTypeError("Args has invalid chars. Please check")
 
 
 def check_exec_cmd(command: str):
@@ -126,9 +126,9 @@ def check_output_path_legality(value):
     try:
         file_stat = FileStat(path_value)
     except Exception as err:
-        raise argparse.ArgumentTypeError(f"output path:{path_value} is illegal. Please check.") from err
+        raise argparse.ArgumentTypeError(f"output path is illegal. Please check.") from err
     if not file_stat.is_basically_legal("write", strict_permission=False):
-        raise argparse.ArgumentTypeError(f"output path:{path_value} can not write. Please check.")
+        raise argparse.ArgumentTypeError(f"output path can not be written. Please check.")
     return path_value
 
 
@@ -149,7 +149,7 @@ def check_input_path_legality(value):
 def check_data_file_size(data_path, max_size=MAX_DATA_SIZE):
     try:
         file_stat = FileStat(data_path)
-    except Exception as e:
+    except Exception:
         raise Exception(f"data path: {data_path} is illegal. Please check it.")
 
     if not file_stat.is_legal_file_size(max_size):

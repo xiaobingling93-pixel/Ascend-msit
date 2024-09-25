@@ -13,10 +13,8 @@
 # limitations under the License.
 
 import torch
-import torch_npu
 
 from msit_llm.opcheck import operation_test
-from msit_llm.common.log import logger
 
 
 class OpcheckAddOperation(operation_test.OperationTest):

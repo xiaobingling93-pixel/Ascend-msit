@@ -15,9 +15,8 @@
 import itertools
 import re
 from enum import Enum
-from typing import Any
 from msit_llm.common.log import logger
-from msit_llm.dump.torch_dump.topo import ModelTree, TreeNode
+from msit_llm.dump.torch_dump.topo import TreeNode
 from msit_llm.compare.op_mapping import ATB_QUANT_FLOAT_NODE_MAPPING
 
 

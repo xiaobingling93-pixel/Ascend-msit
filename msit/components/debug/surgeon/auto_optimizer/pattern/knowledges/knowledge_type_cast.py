@@ -17,7 +17,7 @@ from enum import Enum
 from itertools import chain
 import numpy as np
 from onnx.onnx_cpp2py_export.shape_inference import InferenceError
-from onnx.defs import OpSchema, get_all_schemas
+from onnx.defs import get_all_schemas
 
 from auto_optimizer.pattern.knowledge_factory import KnowledgeFactory
 from auto_optimizer.pattern.knowledges.knowledge_base import KnowledgeBase
@@ -102,11 +102,9 @@ class OpTypeConstraint(object):
         """
         if io_type == IOType.NODE_INPUT:
             io_constraints = self._input_constraints
-            min_size = self._min_input
             max_size = self._max_input
         elif io_type == IOType.NODE_OUTPUT:
             io_constraints = self._output_constraints
-            min_size = self._min_output
             max_size = self._max_output
         if io_index < 0 or io_index >= max_size:
             return set()

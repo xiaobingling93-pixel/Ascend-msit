@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from typing import List, Dict
-import logging
 
 from auto_optimizer.pattern.knowledge_factory import KnowledgeFactory
 from auto_optimizer.graph_refactor.interface.base_graph import BaseGraph
@@ -22,6 +21,7 @@ from auto_optimizer.pattern.pattern import MatchPattern, Pattern
 from auto_optimizer.pattern.matcher import MatchResult
 from auto_optimizer.pattern.knowledges.knowledge_base import KnowledgeBase
 from auto_optimizer.pattern.utils import NextNodeCount
+from components.debug.common import logger
 
 
 # continue 4 Concat op
@@ -126,11 +126,11 @@ class KnowledgeMergeConsecutiveConcat(KnowledgeBase):
         concats_total = [*concats_to_remove, concat_to_keep]
         # in case previous apply functions modified the graph and removed/renamed any node of current matching subgraph
         if any(node is None for node in concats_total):
-            logging.info("Some matching node have been removed or renamed, failed to optimizd.")
+            logger.info("Some matching node have been removed or renamed, failed to optimizd.")
             return False
         # the axis attr of all concat nodes should be the same to be merged
         if len(set(node.attrs.get('axis', -1) for node in concats_total)) != 1:
-            logging.info("Matching nodes have different axes.")
+            logger.info("Matching nodes have different axes.")
             return False
 
         # collect all outputs of concat operators about to remove,

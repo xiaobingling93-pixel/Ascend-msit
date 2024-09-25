@@ -5,6 +5,9 @@ import json
 import queue
 from collections import Counter
 
+from msit_llm.common.log import logger
+
+
 FILE_PERMISSION = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP
 MODULE_ID_NOT_AVAILABLE = -1
 MIN_LAYER_NUMBER = 10
@@ -140,7 +143,7 @@ class ModelTree:
             try:
                 op_name = node_dict["name"]
             except Exception as e:
-                print(node_dict)
+                logger.info(node_dict)
                 raise e
             node_tensor_path = os.path.join(tensor_path, op_name)
             node = TreeNode(op_name, node_dict["type"], level, order, tensor_path=node_tensor_path)

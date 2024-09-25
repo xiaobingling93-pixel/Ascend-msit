@@ -145,7 +145,7 @@ class RelativeAbnormalStringRate(Metrics):
         
         try:
             filtered_field = [word for word in jieba.cut(word) if word not in self._EXCLUDE_LIST]
-        except Exception as e:
+        except Exception:
             logger.error("Trying to tokenize `%s`, but failed.", word)
             raise
         
@@ -184,7 +184,7 @@ class BLEU(Metrics):
         
         try:
             filtered_field = [word for word in jieba.cut(word) if word not in self._EXCLUDE_LIST]
-        except Exception as e:
+        except Exception:
             logger.error("Trying to tokenize `%s`, but failed.", word)
             raise
         
@@ -225,7 +225,7 @@ class ROUGE(Metrics):
         
         try:
             filtered_field = " ".join(jieba.cut(word))
-        except Exception as e:
+        except Exception:
             logger.error("Trying to tokenize `%s`, but failed.", word)
             raise
         

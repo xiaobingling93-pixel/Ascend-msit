@@ -19,7 +19,6 @@ from typing import List
 
 
 from msit_llm.common.log import logger
-from msit_llm.compare.atb_acc_cmp import is_model_topo_exist
 from msit_llm.compare.cmp_op_match import MatchLocation
 from msit_llm.dump.torch_dump.topo import ModelTree, TreeNode
 from msit_llm.common.constant import GLOBAL_HISTORY_AIT_DUMP_PATH_LIST

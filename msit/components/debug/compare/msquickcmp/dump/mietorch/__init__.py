@@ -23,5 +23,3 @@ cur_dir = os.path.dirname(os.path.abspath(__file__))
 mindie_rt_dump_config = os.path.join(cur_dir, "acl.json")
 os.environ["LD_PRELOAD"] = f'{mindie_rt_dump_so_path}:{os.environ.get("LD_PRELOAD", "")}'
 os.environ["MINDIE_RT_DUMP_CONFIG_PATH"] = mindie_rt_dump_config
-
-

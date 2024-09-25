@@ -15,6 +15,7 @@
 from typing import List
 
 from torch.nn import Module, Linear, Embedding, LayerNorm, GELU
+from msit_llm.common.log import logger
 
 
 def mname(module: Module):
@@ -93,7 +94,7 @@ def attention(name, modules: List[Module], size: int):
         ret["w"] = linear(next(names_iter), w)
         ret["o"] = linear(next(names_iter), o)
     else:
-        print("error linear size")
+        logger.error("error linear size")
 
     return ret
 

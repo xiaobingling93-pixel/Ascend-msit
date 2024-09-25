@@ -11,17 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import logging
-import math
+
 import os
 import sys
-import time
 import shutil
-import copy
-import subprocess
 import re
 
-from ait_prof.utils import logger
+from components.utils.log import logger
 from ait_prof.args_adapter import MsProfArgsAdapter
 
 PATH_MAX_LENGTH = 255

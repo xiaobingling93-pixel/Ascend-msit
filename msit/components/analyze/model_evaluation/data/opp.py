@@ -17,7 +17,8 @@ import json
 
 from typing import Dict
 
-from model_evaluation.common import utils, logger, Const
+from model_evaluation.common import utils, Const
+from components.utils.log import logger
 from model_evaluation.common.enum import SocType, Engine
 from model_evaluation.bean import OpInnerInfo
 

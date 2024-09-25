@@ -13,18 +13,14 @@
 # limitations under the License.
 
 import os
-import logging
 import sys
 import argparse
 import subprocess
 from typing import Union
+
 from components.utils.util import get_entry_points
 from components.utils.parser import BaseCommand
-
-logging.basicConfig(
-    stream=sys.stdout, level=logging.INFO, format='[%(levelname)s] %(message)s'
-)
-logger = logging.getLogger(__name__)
+from components.utils.log import logger
 
 
 def is_windows():
@@ -40,7 +36,7 @@ def warning_in_windows(title):
 
 def get_base_path():
     base = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    print(base)
+    logger.info(base)
     return base
 
 
