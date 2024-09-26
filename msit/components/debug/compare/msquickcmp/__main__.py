@@ -23,7 +23,7 @@ from components.debug.compare.msquickcmp.common.args_check import (
     check_number_list, check_dym_range_string, check_fusion_cfg_path_legality, check_quant_json_path_legality,
     safe_string, str2bool, check_path_exit
 )
-from msquickcmp.common.utils import logger, check_exec_cmd
+from msquickcmp.common.utils import logger
 from components.debug.compare.msquickcmp.dump.dump_process import dump_process
 from msquickcmp.dump.args_adapter import DumpArgsAdapter
 
@@ -347,7 +347,7 @@ class DumpCommand(BaseCommand):
             "--exec",
             dest="exec",
             required=False,
-            type=check_exec_cmd,
+            type=safe_string,
             help="Exec command to run acltransformer model inference, "
                  "only support MindIE-Torch dump scenario. "
                  "For example: --exec \'bash run.sh patches/models/modeling_xxx.py\' ")
