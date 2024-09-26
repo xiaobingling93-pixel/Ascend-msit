@@ -54,19 +54,6 @@ class Synthesizer(object):
             passed=passed
         )
 
-    def _update_attributes(self, **kwargs):
-        for key, value in kwargs.items():
-            if value is not None:
-                modified_value = self._sanitize_value(value)
-                self._info[key] = np.append(self._info[key], modified_value, axis=0)
-
-    def _sanitize_value(self, value):
-        # str is a iterable
-        if isinstance(value, str) or not hasattr(value, '__iter__'):
-            return np.array([str(value)], dtype=object)
-
-        return np.fromiter((str(item) for item in value), dtype=object)
-    
     def from_args(self, *, queries=None, input_token_ids=None, output_token_ids=None, passed=None) -> None:
         """Collecting dataset evaluation result from memory. User should take care of the evaluation details.
         
