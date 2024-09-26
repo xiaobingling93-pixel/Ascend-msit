@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 
-from msit_llm.bc_analyze.utils import get_timestamp, RandomNameSequence
+from msit_llm.bc_analyze.utils import get_timestamp
 from msit_llm.common.log import logger
 from msit_llm.common.constant import MSIT_BAD_CASE_FOLDER_NAME
 
@@ -12,10 +12,7 @@ class Synthesizer(object):
     """This class is used for collecting llm evluation results under several datasets"""
     HEADER = ['queries', 'input_token_ids', 'output_token_ids', 'passed']
     SYNTHESIZER_FOLDER_NAME = os.path.join(MSIT_BAD_CASE_FOLDER_NAME, 'synthesizer')
-    SYNTHESIZER_PREFIX = 'msit_synthesizer_result_'
 
-    _namer = RandomNameSequence()
-    
     def __init__(self, *, queries=None, input_token_ids=None, output_token_ids=None, passed=None) -> None:
         """Create a synthesizer collecting information from Large Language Model under dataset evluation
         
@@ -91,109 +88,6 @@ class Synthesizer(object):
             passed=passed
         )
 
-    @classmethod
-    def from_cmd(cls, command) -> str:
-        """Collecting dataset evaluation result from `command`. This method is a static method that will run the 
-        `command` in the subprocess and collect the desired results during running, the collecting result will be 
-        a csv file that stored at a temporary directory which will be returned by this method.
-
-        Currently only supports `Model Test` from `ATB Speed`.
-
-        Parameters
-        ----------
-        `command` : str
-            The model inference command should be run. It must somehow invoke python interpreter, otherwise 
-            nothing will be collected. Currently only supports `Model Test` from `ATB Speed`
-
-        Returns
-        -------
-        `temp_dir_name` : str
-            A temporary directory path name that points to the place where the collecting result csv file is 
-            stored.
-
-        Exceptions
-        ----------
-        `FileNotFoundError` : raise if `patcher` directory is not found in the msit site-packages directory
-        `RuntimeError` : raise if an error occured during `command` execution in the subprocess
-
-        Examples
-        --------
-        The logger prefixes, stdouts and stderrs are omitted in the following examples:
-        >>> from msit_llm import Synthesizer
-        >>> Synthesizer.from_cmd('bash run.sh pa_fp16 full_CEval 1 1 chatglm2_6b /data/chatglm2_6b 1')
-        INFO - Command 'bash run.sh pa_fp16 full_CEval 1 1 chatglm2_6b /data/chatglm2_6b 1' is running...
-        ......
-        INFO - Command 'bash run.sh pa_fp16 full_CEval 1 1 chatglm2_6b /data/chatglm2_6b 1' returns successfully
-        
-        An inccorect command:
-        >>> Synthesizer.from_cmd('b run.sh')
-        ERROR - 'b run.sh': command not found, please run it separately first before using 'from_cmd'
-
-        An error occured in the subprocess:
-        >>> Synthesizer.from_cmd('bash run.sh')
-        INFO - Command 'bash run.sh' is running...
-        ......
-        ERROR - Failed to run command 'bash run.sh', please run it separately first before using 'from_cmd'
-        """
-        import subprocess
-        import shlex
-
-        env = os.environ.copy()
-        patcher_folder = os.path.join(os.path.dirname(__file__), 'patcher')
-        if not os.path.exists(patcher_folder):
-            logger.error("Directory '%s' not found, please try to reinstall the latest msit", patcher_folder)
-            raise FileNotFoundError
-
-        env['PYTHONPATH'] = patcher_folder + ':' + env.get('PYTHONPATH', '')
-
-        temp_dir_name = 'msit_bad_case_rt' + next(cls._namer)
-        env['MSIT_TEMP_DIR_NAME'] = temp_dir_name
-
-        split_command = shlex.split(command)
-        if not split_command:
-            logger.error("Command is empty,please try to run it first")
-            raise ValueError()
-
-
-        if not split_command:
-            logger.error("Command is empty,please try to run it first")
-            raise ValueError()
-
-        known_invalid_command = {
-            "rm", "mv", "mkfs", "dd",
-            "chown", "chmod",
-            "shutdown", "reboot",
-            "curl", "wget",
-        }
-
-        if split_command[0] in known_invalid_command:
-            logger.error("Invalid command '%s'", split_command)
-            raise ValueError
-
-        logger.debug("Split command %s", split_command)
-
-        try:
-            child_process = subprocess.Popen(
-                split_command,
-                env=env,
-            )
-        except OSError:
-            logger.error(
-                "'%s': command not found, please run it separately first before using 'from_cmd'", command
-            )
-            raise
-
-        logger.info("Command '%s' is running...", command)
-
-        if child_process.wait() != 0:
-            logger.error(
-                "Failed to run command '%s', please run it separately first before using 'from_cmd'", command
-            )
-            raise RuntimeError
-        
-        logger.info("Command '%s' returns successfully", command)
-        return temp_dir_name
-
     def to_csv(self, *, errors='trunc'):
         """Archive the collected result to csv file. 
         
@@ -211,8 +105,7 @@ class Synthesizer(object):
 
         Notes
         -----
-        The resulting csv file name will be `msit_synthesizer_result_` plus a random eight characters string plus 
-        time stamp. For example, `msit_synthesizer_result_iew92iq5_20240720042235.csv`.
+        The resulting csv file name will be purely time stamp, for example: 20240720042235.csv`.
             
         Exceptions
         ----------
@@ -245,7 +138,7 @@ class Synthesizer(object):
         else:
             logger.error(
                 "Wrong value 'errors'. "
-                "Expected to be either '%s', '%s' or '%s', got '%s'", 'pad', 'trunc', 'strict', errors)
+                "Expected to be either '%s', '%s' or '%s', got %r", 'pad', 'trunc', 'strict', errors)
             raise ValueError
         
         return pd.DataFrame(self._info)
@@ -266,13 +159,13 @@ class Synthesizer(object):
             array = self._info[key]
             self._info[key] = array[:min_len]
     
-    def _save_result(self, df_to_save: pd.DataFrame, suffix='.csv'):
+    def _save_result(self, df_to_save: pd.DataFrame):
         if df_to_save.empty:
             logger.warning("'Synthesizer' detected that there is no data to save. Hence no result is saved")
             return
         
         os.makedirs(self.SYNTHESIZER_FOLDER_NAME, mode=0o700, exist_ok=True)
-        path = os.path.join(self.SYNTHESIZER_FOLDER_NAME, self._get_candidate_path(suffix=suffix))
+        path = os.path.join(self.SYNTHESIZER_FOLDER_NAME, f"{get_timestamp()}.csv")
 
         flags = os.O_WRONLY | os.O_CREAT
         modes = os.st.S_IRUSR | os.st.S_IWUSR | os.st.S_IRGRP
@@ -280,6 +173,3 @@ class Synthesizer(object):
             df_to_save.to_csv(file, encoding='utf-8', index=False)
         
         logger.info("'Sythesizer' has successfully finished the synthesis, the result is stored at '%s'", path)
-
-    def _get_candidate_path(self, suffix):
-        return self.SYNTHESIZER_PREFIX + next(self._namer) + get_timestamp() + suffix
