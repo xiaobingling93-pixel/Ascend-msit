@@ -172,9 +172,10 @@ Analyzer.analyze(csv1, synthesizer2)
 msit llm analyze [OPTIONS...] <CSV_PATH>
 
 OPTIONS:
-    -g, --golden            标杆 csv 路径
-    -t, --test              测试 csv 路径
+    -g, --golden            标杆 csv 路径，必选
+    -t, --test              测试 csv 路径，必选
     -h, --help              命令行参数帮助信息
+    
 ...
     表示两个或多个，这里表示 '两个'
 
