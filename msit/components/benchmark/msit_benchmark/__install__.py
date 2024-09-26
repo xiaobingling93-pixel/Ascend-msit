@@ -1,4 +1,4 @@
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import os
 import sys
 import subprocess
@@ -40,11 +41,11 @@ class BenchmarkInstall(AitInstaller):
 
         if find_links is not None:
             os.environ["MSIT_INSTALL_FIND_LINKS"] = os.path.realpath(find_links)
-        subprocess.run(["/bin/bash", os.path.abspath(os.path.join(os.path.dirname(__file__), "install.sh"))], shell=False)
+        subprocess.run(["/bin/bash", os.path.abspath(os.path.join(os.path.dirname(__file__), "install.sh"))])
 
     def download_extra(self, dest):
         if sys.platform == "win32":
             return
 
         os.environ["MSIT_DOWNLOAD_PATH"] = os.path.realpath(dest)
-        subprocess.run(["/bin/bash", os.path.abspath(os.path.join(os.path.dirname(__file__), "install.sh"))], shell=False)
+        subprocess.run(["/bin/bash", os.path.abspath(os.path.join(os.path.dirname(__file__), "install.sh"))])
