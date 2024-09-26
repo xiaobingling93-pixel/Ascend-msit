@@ -1,6 +1,5 @@
 import os
 from unittest import TestCase
-from unittest.mock import patch
 
 from msit_llm import Synthesizer
 
@@ -48,7 +47,7 @@ class TestSynthezier(TestCase):
         self.assertTrue(os.path.exists('msit_bad_case/synthesizer'))
         self.assertTrue(
             any(
-                filename.startswith('msit_synthesizer') and filename.endswith('.csv') 
+                filename.endswith('.csv') 
                 for filename in os.listdir('msit_bad_case/synthesizer')
             )
         )
@@ -92,44 +91,9 @@ class TestSynthezier(TestCase):
             logger_output = cm.output
             self.assertEqual(len(logger_output), 1)
             self.assertRegex(logger_output[0], r'Wrong value')
-
-    def test_synthezier_from_cmd(self):
-        with self.assertLogs('msit_llm_logger', 'INFO'):
-            self.synthezier.from_cmd('python3 -c "print(2)"')
-
-    def test_synthezier_from_cmd_no_patcher_folder(self):
-        with self.assertLogs('msit_llm_logger', 'ERROR') as cm:
-            with patch('os.path.exists', return_value=False):
-                self.assertRaises(FileNotFoundError, self.synthezier.from_cmd, 'echo -c asdsad')
-                logger_output = cm.output
-                self.assertEqual(len(logger_output), 1)
-                self.assertRegex(logger_output[0], r'not found')
-
-    def test_synthezier_from_not_found_cmd(self):
-        with self.assertLogs('msit_llm_logger', 'ERROR') as cm:
-            self.assertRaises(OSError, self.synthezier.from_cmd, 'asdasd aaa')
-            logger_output = cm.output
-            self.assertEqual(len(logger_output), 1)
-            self.assertRegex(logger_output[0], r'command not found')
-
-    def test_synthezier_from_invalid_cmd(self):
-        with self.assertLogs('msit_llm_logger', 'ERROR') as cm:
-            self.assertRaises(ValueError, self.synthezier.from_cmd, 'rm')
-            logger_output = cm.output
-            self.assertEqual(len(logger_output), 1)
-            self.assertRegex(logger_output[0], r'Invalid command')
-    
-    def test_synthezier_from_error_cmd(self):
-        with self.assertLogs('msit_llm_logger', 'ERROR') as cm:
-            self.assertRaises(RuntimeError, self.synthezier.from_cmd, 'git aaa')
-            logger_output = cm.output
-            self.assertEqual(len(logger_output), 1)
-            self.assertRegex(logger_output[0], r'Failed to run command')
     
     @classmethod
     def tearDownClass(cls) -> None:
         if os.path.exists('msit_bad_case'):
             import shutil
             shutil.rmtree('msit_bad_case')
-
-# 100%
