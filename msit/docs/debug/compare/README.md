@@ -140,6 +140,7 @@ compare功能可以直接通过msit命令行形式启动精度对比。启动方
 | [11_mixing_precison_compare](/msit/examples/cli/debug/compare/11_mixing_precison_compare)      | 混合精度策略的.om模型和.om模型的精度比对              |
 | [14_alone_compare](/msit/examples/cli/debug/compare/14_alone_compare)                            | 指定dump数据的精度比对                        |
 | [15_saved_model](/msit/examples/cli/debug/compare/15_saved_model)                            | 标杆模型为tensorflow2.6框架下saved_model模型的一键式精度比对                        |
+| [16_mindie_torch_compare](/msit/examples/cli/debug/compare/16_mindie_torch_compare)                            | MindIE-Torch场景-整网算子精度对比场景                        |
 
 ### 常见问题FAQ
 
