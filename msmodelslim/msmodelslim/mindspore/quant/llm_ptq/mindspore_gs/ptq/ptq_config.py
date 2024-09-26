@@ -156,7 +156,8 @@ class PTQConfig:
         >>> from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.ptq import PTQConfig, PTQMode
         >>> from msmodelslim.mindspore.quant.llm_ptq.mindspore_gs.common import BackendTarget
         >>> PTQConfig(mode=PTQMode.DEPLOY, backend=BackendTarget.ASCEND, opname_blacklist=['layer0'])
-        PTQConfig(mode=<PTQMode.DEPLOY: 'deploy'>, backend=<BackendTarget.ASCEND: 'ascend'>, opname_blacklist=['layer0'], algo_args={})
+        PTQConfig(mode=<PTQMode.DEPLOY: 'deploy'>, backend=<BackendTarget.ASCEND: 'ascend'>, opname_blacklist=['layer0'], \
+        algo_args={})
     """
     mode: PTQMode = PTQMode.QUANTIZE
     backend: BackendTarget = BackendTarget.ASCEND
