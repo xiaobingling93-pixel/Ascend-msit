@@ -1,5 +1,13 @@
 FROM ubuntu:18.04
 SHELL ["/bin/bash", "-c"]
+ARG UBUNTU_X86_ARCHIVE
+ARG UBUNTU_X86_SECURITY
+ARG UBUNTU_ARM64
+ARG HUAWEI_PATH
+ARG PYTHON_PATH
+ARG HUAWEI_PYTHON
+ARG MSIT_PATH
+ARG PYPI_TSINGHUA
 ARG CANN_TOOLKIT_PATH
 ADD $CANN_TOOLKIT_PATH ./
 ARG CANN_AMCT_PATH
@@ -11,17 +19,17 @@ ARG DEBIAN_FRONTEND=noninteractive
 #安装python、CANN_TOOLKIT,软件包、依赖，并配置环境变量写入.bashrc
 RUN groupadd HwHiAiUser && useradd -rm -d /home/HwHiAiUser -s /bin/bash -g HwHiAiUser -G HwHiAiUser -u 1001 HwHiAiUser  &&\
     if [ "$(uname -m)" = "x86_64" ]; then \
-        sed -i "s@http://.*archive.ubuntu.com@http://repo.huaweicloud.com@g" /etc/apt/sources.list \
-        && sed -i "s@http://.*security.ubuntu.com@http://repo.huaweicloud.com@g" /etc/apt/sources.list; \
+        sed -i "s@{UBUNTU_X86_ARCHIVE}@{HUAWEI_PATH}@g" /etc/apt/sources.list \
+        && sed -i "s@UBUNTU_X86_SECURITY@{HUAWEI_PATH}@g" /etc/apt/sources.list; \
     elif [ "$(uname -m)" = "aarch64" ]; then \
-        sed -i "s@http://ports.ubuntu.com@http://repo.huaweicloud.com@g" /etc/apt/sources.list; \
+        sed -i "s@h{UBUNTU_ARM64}@{HUAWEI_PATH}@g" /etc/apt/sources.list; \
     fi  &&\
     apt-get update && \
     apt-get install libbz2-dev -y &&\
     apt-get install liblzma-dev -y &&\
     apt-get install -y wget gnupg software-properties-common && \
     apt-get install -y sudo gcc g++ make cmake zlib1g zlib1g-dev openssl libsqlite3-dev libssl-dev libffi-dev unzip pciutils net-tools libblas-dev gfortran libblas3 libopenblas-dev libncursesw5-dev wget dkms &&\
-    wget https://www.python.org/ftp/python/3.7.5/Python-3.7.5.tgz   && \
+    wget {PYTHON_PATH}   && \
     tar -zxvf Python-3.7.5.tgz &&\
     cd Python-3.7.5 &&\
     ./configure --prefix=/usr/local/python3.7.5 --enable-loadable-sqlite-extensions --enable-shared &&\
@@ -34,7 +42,7 @@ RUN groupadd HwHiAiUser && useradd -rm -d /home/HwHiAiUser -s /bin/bash -g HwHiA
     echo "export PATH=/usr/local/python3.7.5/bin:\$PATH" >> /root/.bashrc &&\
     export LD_LIBRARY_PATH=/usr/local/python3.7.5/lib:$LD_LIBRARY_PATH &&\
     export PATH=/usr/local/python3.7.5/bin:$PATH &&\
-    pip3.7 config set global.index-url https://repo.huaweicloud.com/repository/pypi/simple && \
+    pip3.7 config set global.index-url {HUAWEI_PYTHON} && \
     pip3.7 config set global.trusted-host repo.huaweicloud.com && \
     pip3.7 config set global.timeout 600 && \
     pip3.7 install --upgrade pip &&\
@@ -100,12 +108,12 @@ RUN apt-get update &&\
 
 #安装msit以及依赖
 RUN apt-get install -y git &&\
-    git -c http.sslVerify=false clone https://gitee.com/ascend/msit.git &&\
+    git -c http.sslVerify=false clone {MSIT_PATH} &&\
     export LD_LIBRARY_PATH=/usr/local/python3.7.5/lib:$LD_LIBRARY_PATH &&\
     export PATH=/usr/local/python3.7.5/bin:$PATH &&\
     export LD_LIBRARY_PATH=/usr/local/python3.7.5/lib:$LD_LIBRARY_PATH &&\
     export PATH=/usr/local/python3.7.5/bin:$PATH &&\
-    pip3.7 config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple/ &&\
+    pip3.7 config set global.index-url {PYPI_TSINGHUA} &&\
     pip3.7 install skl2onnx==1.14.1 &&\
     cd msit/msit &&\
     chmod +x install.sh &&\
