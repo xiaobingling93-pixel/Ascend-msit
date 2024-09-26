@@ -16,7 +16,7 @@
   - `-gp, --golden-path` 指定cpu侧dump数据路径
   - `--ops-json ` 指定cpu侧与npu侧算子的匹配规则json文件路径
   - `-o, –-output` (可选) 输出文件路径，默认为当前路径
-
+- cpu、npu侧dump数据的获取方式，参考[msit debug dump功能](../../../../../docs/debug/dump/README.md)
 
 ### 输出结果说明和分析步骤参考
 
