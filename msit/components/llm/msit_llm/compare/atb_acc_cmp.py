@@ -87,7 +87,7 @@ def compare_metadata(golden_path, output_path="."):
     golden_meta_path = os.path.join(golden_path, "metadata.json")
     from msit_llm.common.utils import check_input_path_legality, check_data_file_size
     golden_meta_path = check_input_path_legality(golden_meta_path)
-    if check_data_file_size(golden_meta_path):
+    if check_data_file_size(golden_meta_path) and os.path.islink(golden_meta_path):
         with open(golden_meta_path, "r") as file:
             golden_meta = json.load(file)
         gathered_row_data = fill_in_data(golden_meta)

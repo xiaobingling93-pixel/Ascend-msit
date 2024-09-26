@@ -271,7 +271,7 @@ class CompareDataATB(CompareDataParse):
             json_start_order = 0
             from msit_llm.common.utils import check_input_path_legality, check_data_file_size
             topo_file = check_input_path_legality(topo_file)
-            if check_data_file_size(topo_file):
+            if check_data_file_size(topo_file) and os.path.islink(topo_file):
                 with open(topo_file, "r") as file:
                     node_dict = json.loads(file.read(), parse_constant=lambda x: None)
                     nodes = node_dict.get("nodes", [])
