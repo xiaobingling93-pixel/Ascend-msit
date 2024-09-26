@@ -14,7 +14,8 @@
 # ============================================================================
 
 """ configs for golden-stick """
-
+import os
+import stat
 from dataclasses import dataclass, field
 from typing import List
 
@@ -38,7 +39,9 @@ class GSBaseConfig:
     def dump(self, file_path: str):
         """dump config to yaml file"""
         parsed_dict = self._parse_dict()
-        with open(file_path, 'w', mode=0o755) as fi:
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+        mode = stat.S_IWUSR | stat.S_IRUSR
+        with os.fdopen(os.open(file_path, flags, mode), 'w') as fi:
             yaml.safe_dump(parsed_dict, fi, allow_unicode=True)
 
     def load(self, yaml_file):
