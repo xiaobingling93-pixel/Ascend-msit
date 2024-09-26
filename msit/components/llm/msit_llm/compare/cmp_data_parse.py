@@ -397,12 +397,6 @@ class CompareDataTorch(CompareDataParse):
         ait_dump_path = cls.parse_ait_dump_path(path)
         return ait_dump_path is not None
 
-    def load_topo_info(self):
-        topo_path = self.get_topo_file_path(self.path, self.args.cmp_level)
-        with open(topo_path, "r") as file:
-            topo_info = json.load(file)
-        return topo_info
-
     def get_root_nodes(self) -> List[TreeNode]:
         return [self.golden_root_node]
 
