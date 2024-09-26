@@ -1,6 +1,5 @@
-#!/usr/bin/env python
-# coding=utf-8
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """
 Function:
 This class mainly involves generate npu dump data function.
@@ -375,7 +375,7 @@ class NpuDumpData(DumpData):
             raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PATH_ERROR)
         self._convert_net_output_to_numpy(npu_net_output_data_path, npu_dump_data_path)
         if self.is_golden:
-            return npu_dump_data_path
+            return npu_dump_data_path, ""
         else:
             return npu_dump_data_path, npu_net_output_data_path
 
