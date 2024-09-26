@@ -81,3 +81,7 @@ msit/components/transplt/test/test.sh,https://msit-resources.obs.cn-south-1.myhu
 msit/components/transplt/tools/update_link/config.json,"https://www.hiascend.com/document/detail/zh/canncommercial//inferapplicationdev/aclcppdevg/aclcppdevg_03_%04d.html,",昇腾社区cann API地址
 msit/components/transplt/tools/update_link/config.json,"https://www.hiascend.com/document/detail/zh/mind-sdk//vision/mxvisionug/mxvisionug_%04d.html,",昇腾社区mind sdk API地址
 msit/components/transplt/tools/update_link/src/web_crawler.py,https://www.hiascend.com,昇腾社区地址
+msit/components/debug/compare/Dockerfile,http://.*security.ubuntu.com,构建compare组件的docker安装镜像
+msit/components/debug/compare/Dockerfile,http://mirrors.huaweicloud.com,构建compare组件的docker安装镜像
+msit/components/debug/compare/Dockerfile,https://mirrors.huaweicloud.com/ubuntu-ports/,构建compare组件的docker安装镜像
+msit/components/debug/compare/Dockerfile,repo.huaweicloud.com,构建compare组件的docker安装镜像
