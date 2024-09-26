@@ -53,7 +53,7 @@ ENV https_proxy=http://${USER_NAME}:${PASSWORD}@${PROXY_SERVER}:${PORT}
 RUN groupadd HwHiAiUser && useradd -rm -d /home/HwHiAiUser -s /bin/bash -g HwHiAiUser -G HwHiAiUser -u 1001 HwHiAiUser  &&\
     if [ "$(uname -m)" = "x86_64" ]; then \
 ```
-USER_NAME、PASSWORD等都是网络配置的相关参数，这里不予以介绍
+USER_NAME、PASSWORD等都是网络配置的相关参数，这里不予以介绍  
 3. 请将Ascend-cann-tookit<version+arch>.run改为实际上的toolkit路径(必须是相对路径)  
 4. 从这个[仓库](https://github.com/lenLRX/caffe)下载zip[代码](https://github.com/lenLRX/caffe/archive/refs/heads/ascend-amct.zip),得到的zip包可能叫ascend-amct.zip或caffe-ascend-amct.zip  
 5. 从[这里](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)下载amct的包Ascend-cann-amct_5.1.RC1.1_linux-aarch64.tar.gz(注意下载对应需要的版本如：X86，aarch64等)  
