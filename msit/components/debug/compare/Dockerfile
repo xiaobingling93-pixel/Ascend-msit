@@ -10,8 +10,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 ARG UBUNTU_X86_ARCHIVE
 ARG UBUNTU_X86_SECURITY
 ARG UBUNTU_ARM64 
-ARG HUAWEI_PATH_X
-ARG HUAWEI_PATH_A
+ARG HUAWEI_PATH_U
 ARG HUAWEI_PATH
 ARG PYTHON_PATH
 ARG HUAWEI_PYTHON
@@ -21,10 +20,10 @@ ARG PYPI_TSINGHUA
 #安装python、CANN_TOOLKIT,软件包、依赖，并配置环境变量写入.bashrc
 RUN groupadd HwHiAiUser && useradd -rm -d /home/HwHiAiUser -s /bin/bash -g HwHiAiUser -G HwHiAiUser -u 1001 HwHiAiUser  &&\
     if [ "$(uname -m)" = "x86_64" ]; then \
-        sed -i "s@${UBUNTU_X86_ARCHIVE}@${HUAWEI_PATH_X}@g" /etc/apt/sources.list \
-        && sed -i "s@${UBUNTU_X86_SECURITY}@${HUAWEI_PATH_X}@g" /etc/apt/sources.list; \
+        sed -i "s@${UBUNTU_X86_ARCHIVE}@${HUAWEI_PATH_U}@g" /etc/apt/sources.list \
+        && sed -i "s@${UBUNTU_X86_SECURITY}@${HUAWEI_PATH_U}@g" /etc/apt/sources.list; \
     elif [ "$(uname -m)" = "aarch64" ]; then \
-        sed -i "s@${UBUNTU_ARM64}@${HUAWEI_PATH_A}@g" /etc/apt/sources.list; \
+        sed -i "s@${UBUNTU_ARM64}@${HUAWEI_PATH_U}@g" /etc/apt/sources.list; \
     fi  &&\
     apt-get update && \
     apt-get install libbz2-dev -y &&\

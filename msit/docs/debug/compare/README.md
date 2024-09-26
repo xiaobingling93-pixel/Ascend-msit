@@ -21,8 +21,7 @@ docker build \
 --build-arg UBUNTU_X86_ARCHIVE=http://.*archive.ubuntu.com \
 --build-arg UBUNTU_X86_SECURITY=http://.*security.ubuntu.com \
 --build-arg UBUNTU_ARM64=http://ports.ubuntu.com \
---build-arg HUAWEI_PATH_X=http://mirrors.huaweicloud.com \
---build-arg HUAWEI_PATH_A=https://mirrors.huaweicloud.com/ubuntu-ports/ \
+--build-arg HUAWEI_PATH_U=https://mirrors.huaweicloud.com \
 --build-arg HUAWEI_PATH=repo.huaweicloud.com \
 --build-arg PYTHON_PATH=https://www.python.org/ftp/python/3.7.5/Python-3.7.5.tgz \
 --build-arg HUAWEI_PYTHON=https://repo.huaweicloud.com/repository/pypi/simple \
