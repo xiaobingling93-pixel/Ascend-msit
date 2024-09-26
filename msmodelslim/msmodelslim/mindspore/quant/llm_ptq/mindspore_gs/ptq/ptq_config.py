@@ -176,7 +176,7 @@ class PTQConfig:
         if self.weight_quant_dtype != msdtype.int8 and self.weight_quant_dtype is not None:
             raise ValueError(f'self.weight_quant_dtype: {self.weight_quant_dtype} is not mindspore.dtype.int8 or None.')
         if self.kvcache_quant_dtype != msdtype.int8 and self.kvcache_quant_dtype is not None:
-            raise ValueError(f'self.kvcache_quant_dtype: {self.kvcache_quant_dtype} is not mindspore.dtype.int8 or None.')
+            raise ValueError(f'self.kvcache_quant_dtype: {self.kvcache_quant_dtype} is not supported.')
         if self.act_quant_dtype != msdtype.int8 and self.act_quant_dtype is not None:
             raise ValueError(f'self.act_quant_dtype: {self.act_quant_dtype} is not mindspore.dtype.int8 or None.')
         value_check('outliers_suppression', self.outliers_suppression, OutliersSuppressionType)
