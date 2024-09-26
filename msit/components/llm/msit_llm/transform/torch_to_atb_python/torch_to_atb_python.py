@@ -955,7 +955,7 @@ class ATBModelFromTorch(ATBModel):
         # Has to split out from convert_fx_traced_module, needs actual Linear input names
         quant_disable_names = set([ii for ii in self.quant_disable_names if ii is not None and len(ii) > 0])
         operations_with_quant = []
-        for _ , op in enumerate(self.operations):
+        for _, op in enumerate(self.operations):
             logger.debug(f"op.op_name = {op.op_name}")
             if op.op_type not in ["Linear", "LinearParallel"]:
                 operations_with_quant.append(op)
