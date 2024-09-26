@@ -578,6 +578,78 @@ class ATBModelFromTorch(ATBModel):
             f"{indent * 2}self.rope_theta = {self.rope_theta}",
         ]
 
+        def _get_input_output_name(graph_name):
+            return f"{graph_name}_inputs", f"{graph_name}_outputs"
+
+        def _to_file(graph_name, operations, depth=0):
+            contents.append("")
+            if depth > 0:
+                contents.append(f"{indent * 2}{graph_name} = GraphOperation('{graph_name}')")
+                this_name = graph_name
+            else:
+                this_name = "self"
+
+            graph_inputs, graph_outputs = stacked_inputs.pop(0), stacked_outputs.pop(0)
+            contents.append(f"{indent * 2}{graph_name}_inputs = [")
+            for ii in sorted(graph_inputs, key=lambda xx: "0" if xx in FIXED_INPUTS else xx):
+                contents.append(f"{indent * 3}'{ii}',")
+            contents.append(f"{indent * 2}]")
+
+            if depth > 0:
+                contents.append(f"{indent * 2}{graph_name}_outputs = {graph_outputs}")
+            else:
+                contents.append(f"{indent * 2}{graph_name}_outputs = outputs or {graph_outputs}")
+            cur_inputs, cur_outputs = _get_input_output_name(graph_name)
+            contents.append(f"{indent * 2}{this_name}.add_input_output(input={cur_inputs}, output={cur_outputs})")
+            contents.append("")
+
+            sub_graph_id = 0
+            for op in operations:
+                if isinstance(op, list):
+                    sub_graph_name = f"sub_graph_{sub_graph_id}"
+                    sub_graph_inputs, sub_graph_outputs = stacked_inputs[0], stacked_outputs[0]
+                    _to_file(sub_graph_name, op, depth=depth + 1)
+                    cur_inputs, cur_outputs = _get_input_output_name(sub_graph_name)
+                    contents.append(
+                        f"{indent * 2}{this_name}.add_operation({sub_graph_name}, {cur_inputs}, {cur_outputs})"
+                    )
+                    contents.append(f"{indent * 2}{this_name}.{sub_graph_name} = {sub_graph_name}")
+                    contents.append("")
+                    sub_graph_id += 1
+                elif op.op_type == "add_reshape":
+                    function = get_lambda_source_code(op.function)
+                    contents.append(
+                        f"{indent * 2}{this_name}.add_reshape('{op.inputs[0]}', '{op.outputs[0]}', {function})"
+                    )
+                else:
+                    op_kwargs = f"op_type='{op.op_type}', op_param='{json.dumps(op.op_param)}', op_name='{op.op_name}'"
+
+                    if depth == 0:
+                        cur_op = f"{this_name}." + op.op_name.replace(".", "_")
+                        contents.append(f"{indent * 2}{cur_op} = BaseOperation({op_kwargs})")
+                    else:
+                        cur_op = f"BaseOperation({op_kwargs})"
+                    contents.append(f"{indent * 2}{this_name}.add_operation(")
+                    contents.append(f"{indent * 3}operation={cur_op},")
+                    contents.append(f"{indent * 3}input={op.inputs},")
+                    contents.append(f"{indent * 3}output={op.outputs},")
+                    contents.append(f"{indent * 2})")
+
+            contents.append("")
+            contents.append(f"{indent * 2}{this_name}.execute_as_single = {False if depth == 0 else True}")
+            contents.append(f"{indent * 2}{this_name}.build()")
+
+        _to_file(base_model_name, stacked_operations)
+        contents.append("")
+        contents_str = "\n".join(contents)
+
+        if output_file is None:
+            output_file = "_".join([base_model_name.lower(), "atb", "quant.py" if self.to_quant else "float.py"])
+        elif not output_file.endswith(".py"):
+            output_file += ".py"
+        write_file(output_file, contents_str)
+        return output_file
+
     def _get_node_type_and_inputs_and_name(self, node, output_node_map=None):
         output_node_map = output_node_map or {}
         cur_module_name = self._get_module_name_by_nn_module_stack(node)
@@ -806,12 +878,12 @@ class ATBModelFromTorch(ATBModel):
                 for ii in op.outputs:    
                     cur_outputs.append(ii)
                     if ii in op.inputs:
-                           inplace_outputs.append(ii)
-            cur_inputs = set(cur_inputs)
-            cur_outputs = set(cur_outputs)
-            inplace_outputs = set(inplace_outputs)
-            stacked_inputs.append(list(cur_inputs - (cur_outputs - inplace_outputs)))
-            stacked_outputs.append(list(cur_outputs & (all_inputs - cur_inputs)))
+                        inplace_outputs.append(ii)
+            cur_inputs_set = set(cur_inputs)
+            cur_outputs_set = set(cur_outputs)
+            inplace_outputs_set = set(inplace_outputs)
+            stacked_inputs.append(list(cur_inputs_set - (cur_outputs_set - inplace_outputs_set)))
+            stacked_outputs.append(list(cur_outputs_set & (all_inputs - cur_inputs_set)))
         return stacked_operations, stacked_inputs, stacked_outputs
 
     def convert_fx_traced_module(self):
@@ -956,78 +1028,6 @@ class ATBModelFromTorch(ATBModel):
 
         atb_model = _build_atb_model(self.model_name, stacked_operations)
         return atb_model
-
-        def _get_input_output_name(graph_name):
-            return f"{graph_name}_inputs", f"{graph_name}_outputs"
-
-        def _to_file(graph_name, operations, depth=0):
-            contents.append("")
-            if depth > 0:
-                contents.append(f"{indent * 2}{graph_name} = GraphOperation('{graph_name}')")
-                this_name = graph_name
-            else:
-                this_name = "self"
-
-            graph_inputs, graph_outputs = stacked_inputs.pop(0), stacked_outputs.pop(0)
-            contents.append(f"{indent * 2}{graph_name}_inputs = [")
-            for ii in sorted(graph_inputs, key=lambda xx: "0" if xx in FIXED_INPUTS else xx):
-                contents.append(f"{indent * 3}'{ii}',")
-            contents.append(f"{indent * 2}]")
-
-            if depth > 0:
-                contents.append(f"{indent * 2}{graph_name}_outputs = {graph_outputs}")
-            else:
-                contents.append(f"{indent * 2}{graph_name}_outputs = outputs or {graph_outputs}")
-            cur_inputs, cur_outputs = _get_input_output_name(graph_name)
-            contents.append(f"{indent * 2}{this_name}.add_input_output(input={cur_inputs}, output={cur_outputs})")
-            contents.append("")
-
-            sub_graph_id = 0
-            for op in operations:
-                if isinstance(op, list):
-                    sub_graph_name = f"sub_graph_{sub_graph_id}"
-                    sub_graph_inputs, sub_graph_outputs = stacked_inputs[0], stacked_outputs[0]
-                    _to_file(sub_graph_name, op, depth=depth + 1)
-                    cur_inputs, cur_outputs = _get_input_output_name(sub_graph_name)
-                    contents.append(
-                        f"{indent * 2}{this_name}.add_operation({sub_graph_name}, {cur_inputs}, {cur_outputs})"
-                    )
-                    contents.append(f"{indent * 2}{this_name}.{sub_graph_name} = {sub_graph_name}")
-                    contents.append("")
-                    sub_graph_id += 1
-                elif op.op_type == "add_reshape":
-                    function = get_lambda_source_code(op.function)
-                    contents.append(
-                        f"{indent * 2}{this_name}.add_reshape('{op.inputs[0]}', '{op.outputs[0]}', {function})"
-                    )
-                else:
-                    op_kwargs = f"op_type='{op.op_type}', op_param='{json.dumps(op.op_param)}', op_name='{op.op_name}'"
-
-                    if depth == 0:
-                        cur_op = f"{this_name}." + op.op_name.replace(".", "_")
-                        contents.append(f"{indent * 2}{cur_op} = BaseOperation({op_kwargs})")
-                    else:
-                        cur_op = f"BaseOperation({op_kwargs})"
-                    contents.append(f"{indent * 2}{this_name}.add_operation(")
-                    contents.append(f"{indent * 3}operation={cur_op},")
-                    contents.append(f"{indent * 3}input={op.inputs},")
-                    contents.append(f"{indent * 3}output={op.outputs},")
-                    contents.append(f"{indent * 2})")
-
-            contents.append("")
-            contents.append(f"{indent * 2}{this_name}.execute_as_single = {False if depth == 0 else True}")
-            contents.append(f"{indent * 2}{this_name}.build()")
-
-        _to_file(base_model_name, stacked_operations)
-        contents.append("")
-        contents_str = "\n".join(contents)
-
-        if output_file is None:
-            output_file = "_".join([base_model_name.lower(), "atb", "quant.py" if self.to_quant else "float.py"])
-        elif not output_file.endswith(".py"):
-            output_file += ".py"
-        write_file(output_file, contents_str)
-        return output_file
 
 
 def generate_infer_file(output_file, source_path, is_vl_model=False):

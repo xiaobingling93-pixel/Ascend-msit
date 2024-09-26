@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-CPP_COPYRIGHT_HEADER= """/*
+CPP_COPYRIGHT_HEADER = """/*
  * Copyright (c) Huawei Technologies Co., Ltd. {year}. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,7 +43,7 @@ all_atb_operation_headers = [
 ]
 
 
-BASIC_CLASS_FORMATTER= """
+BASIC_CLASS_FORMATTER = """
 namespace atb_speed {{
 namespace {model_name_lower} {{
 
@@ -64,7 +64,7 @@ DecoderLayerBinder::~DecoderLayerBinder() {{}}
 }} // namespace atb_speed
 """
 
-DECODER_LAYER_FORMATTER= """
+DECODER_LAYER_FORMATTER = """
 atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operation)
 {{
     atb::GraphParam opGraph;
@@ -101,7 +101,7 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
 """
 
 
-ATTENTION_FORMATTER= """
+ATTENTION_FORMATTER = """
     // attention
     atb_speed::common::FusionAttentionParam<atb::infer::RmsNormParam> fusionAttentionParam;
     // QKV linear param
@@ -197,7 +197,7 @@ ATTENTION_FORMATTER= """
 """
 
 
-RESIDUAL_ADD_FORMATTER= """
+RESIDUAL_ADD_FORMATTER = """
     // residual
     atb::infer::ElewiseParam addParam;
     addParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
@@ -210,7 +210,7 @@ RESIDUAL_ADD_FORMATTER= """
 """
 
 
-MLP_FORMATTER= """
+MLP_FORMATTER = """
     // mlp
     atb_speed::common::MlpParam<atb::infer::RmsNormParam> mlpParam;
     mlpParam.isBF16 = param.isBF16;
