@@ -7,6 +7,7 @@ import onnx
 import onnxruntime
 import numpy as np
 
+from ascend_utils.common import acl_inference
 from ascend_utils.common.security import get_valid_read_path, get_valid_write_path, SafeWriteUmask, \
     safe_delete_path_if_exists, check_type
 from msmodelslim.onnx.post_training_quant.util import check_input_data
@@ -24,7 +25,6 @@ from msmodelslim.onnx.squant_ptq.onnx_ptq_kia.quant_funcs_onnx import (
     disable_first_layer,
     disable_last_layer,
 )
-from ascend_utils.common import acl_inference
 from msmodelslim.onnx.squant_ptq.aok.tool_main import aok_export
 
 

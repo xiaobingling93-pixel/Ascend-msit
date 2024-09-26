@@ -10,10 +10,10 @@ import onnx
 from onnx import GraphProto, ModelProto, shape_inference
 # G.IMP.02 is deliberately violated because we don't want to enumerate all the many architectures here.
 # We accept that names of architectures classes must not be preceded with '_'
+from ascend_utils.common.security import get_valid_read_path, get_valid_write_path, SafeWriteUmask
 from msmodelslim.onnx.squant_ptq.aok.optimizer import architectures
 from msmodelslim.onnx.squant_ptq.aok.optimizer.optimizations import AbstractOptimization
 from msmodelslim.onnx.squant_ptq.aok.utils.utilities import rename_nodes, check_topology_sorting, simplify_model
-from ascend_utils.common.security import get_valid_read_path, get_valid_write_path, SafeWriteUmask
 
 
 class _InferenceRunInfo:
@@ -250,7 +250,7 @@ class GraphOptimizer:
             )
         else:
             self._logger.info("Search can't be performed because Runner is not defined")
-            opts, opt_model_path = self.apply_all_optimizations(
+            opts, __ = self.apply_all_optimizations(
                 baseline_model_path,
                 optimizations,
             )
