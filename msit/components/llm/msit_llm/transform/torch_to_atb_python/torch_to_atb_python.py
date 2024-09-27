@@ -738,6 +738,19 @@ class ATBModelFromTorch(ATBModel):
                 )
             )
 
+        if self.is_apply_rope:
+            inputs = [query_name, key_name, "gather_cos.out", "gather_sin.out", FIXED_INPUTS.seq_len]
+            query_name, key_name = module_name + ".q_embed", module_name + ".k_embed"
+            self.operations.append(
+                Operation(
+                    op_type="Rope",
+                    op_param={"rotaryCoeff": 2},
+                    inputs=inputs,
+                    outputs=[query_name, key_name],
+                    op_name=module_name + ".rope",
+                )
+            )
+
         k_cache_name = module_name + "." + KV_CACHE_SURFFIX.k_cache
         v_cache_name = module_name + "." + KV_CACHE_SURFFIX.v_cache
         reshape_and_cache_inputs = [
