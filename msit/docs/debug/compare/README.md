@@ -53,7 +53,7 @@ RUN groupadd HwHiAiUser && useradd -rm -d /home/HwHiAiUser -s /bin/bash -g HwHiA
 ```
   USER_NAME、PASSWORD等都是网络配置的相关参数，这里不予以介绍  
   APT_PATH 用户可自行配置源地址 例如：http://repo.huaweicloud.com ； https://mirrors.huaweicloud.com 等  
-  3. 如果在wget PYTHON_PATH的时候出现报错，并让use '--no-check-certificate'。则在wget ${PYTHON_PATH}处添use '--no-check-certificate'，示例如下：
+  3. 如果在wget PYTHON_PATH的时候出现报错，并让use '--no-check-certificate'。则在wget ${PYTHON_PATH}处添加use '--no-check-certificate'，示例如下：
 ```
 wget --no-check-certificate ${PYTHON_PATH}   && \
 ```
