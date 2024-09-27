@@ -15,7 +15,6 @@ ARG PYTHON_PATH
 ARG PYPI_PATH
 ARG PYPI_PATH_TRUST
 ARG MSIT_PATH
-ARG PYPI_TSINGHUA
 
 #安装python、CANN_TOOLKIT,软件包、依赖，并配置环境变量写入.bashrc
 RUN groupadd HwHiAiUser && useradd -rm -d /home/HwHiAiUser -s /bin/bash -g HwHiAiUser -G HwHiAiUser -u 1001 HwHiAiUser  &&\
@@ -36,6 +35,7 @@ RUN groupadd HwHiAiUser && useradd -rm -d /home/HwHiAiUser -s /bin/bash -g HwHiA
     ./configure --prefix=/usr/local/python3.7.5 --enable-loadable-sqlite-extensions --enable-shared &&\
     make -j`nproc` &&\
     make install &&\
+    cd - &&\ 
     ln -s /usr/local/python3.7.5/bin/python3 /usr/local/python3.7.5/bin/python3.7.5 &&\
     ln -s /usr/local/python3.7.5/bin/pip3 /usr/local/python3.7.5/bin/pip3.7.5 &&\
     echo python37_install_path=/usr/local/python3.7.5 > /etc/use_private_python.info &&\
@@ -63,7 +63,6 @@ RUN groupadd HwHiAiUser && useradd -rm -d /home/HwHiAiUser -s /bin/bash -g HwHiA
     pip3.7 install tornado absl-py &&\
     export LD_LIBRARY_PATH=/usr/local/python3.7.5/lib:$LD_LIBRARY_PATH &&\
     export PATH=/usr/local/python3.7.5/bin:$PATH &&\
-    cd - &&\ 
     chmod +x ./$CANN_TOOLKIT_PATH && ./$CANN_TOOLKIT_PATH --check &&\
     echo "y" | ./$CANN_TOOLKIT_PATH --install-for-all --devel &&\
     echo "export PATH=\$PATH:/usr/local/Ascend/ascend-toolkit/latest/atc/ccec_compiler/bin" >> /root/.bashrc && \
@@ -115,8 +114,6 @@ RUN apt-get install -y git &&\
     export PATH=/usr/local/python3.7.5/bin:$PATH &&\
     export LD_LIBRARY_PATH=/usr/local/python3.7.5/lib:$LD_LIBRARY_PATH &&\
     export PATH=/usr/local/python3.7.5/bin:$PATH &&\
-    pip3.7 config set global.index-url ${PYPI_TSINGHUA} &&\
-    pip3.7 install skl2onnx==1.14.1 &&\
     cd msit/msit &&\
     chmod +x install.sh &&\
     ./install.sh
