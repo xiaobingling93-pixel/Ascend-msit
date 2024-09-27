@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cpp_copyright_header = """/*
+CPP_COPYRIGHT_HEADER = """/*
  * Copyright (c) Huawei Technologies Co., Ltd. {year}. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,7 +43,7 @@ all_atb_operation_headers = [
 ]
 
 
-basic_class_formatter = """
+BASIC_CLASS_FORMATTER = """
 namespace atb_speed {{
 namespace {model_name_lower} {{
 
@@ -52,7 +52,7 @@ static const uint64_t OUT_TENSOR_COUNT = 1;
 static const uint64_t INTERMEDIATE_TENSOR_COUNT = 3;
 static const uint64_t NODE_COUNT = 4;
 
-{decoder_layer}
+{DECODER_LAYER_FORMATTER}
 
 DecoderLayerBinder::DecoderLayerBinder() {{}}
 
@@ -64,7 +64,7 @@ DecoderLayerBinder::~DecoderLayerBinder() {{}}
 }} // namespace atb_speed
 """
 
-decoder_layer_formatter = """
+DECODER_LAYER_FORMATTER = """
 atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operation)
 {{
     atb::GraphParam opGraph;
@@ -80,13 +80,13 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     atb::Node &mlpParallelNode = opGraph.nodes.at(nodeId++);
     atb::Node &mlpResidualAddNode = opGraph.nodes.at(nodeId++);
 
-    {attention_formatter}
+    {ATTENTION_FORMATTER}
 
-    {residual_add_formatter}
+    {RESIDUAL_ADD_FORMATTER}
 
-    {mlp_formatter}
+    {MLP_FORMATTER}
 
-    {mlp_residual_add_formatter}
+    {MLP_RESIDUAL_ADD_FORMATTER}
 
     opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
                                  atb::SVector<atb::TensorDesc> &outTensorDescs) {{
@@ -101,7 +101,7 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
 """
 
 
-attention_formatter = """
+ATTENTION_FORMATTER = """
     // attention
     atb_speed::common::FusionAttentionParam<atb::infer::RmsNormParam> fusionAttentionParam;
     // QKV linear param
@@ -197,7 +197,7 @@ attention_formatter = """
 """
 
 
-residual_add_formatter = """
+RESIDUAL_ADD_FORMATTER = """
     // residual
     atb::infer::ElewiseParam addParam;
     addParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
@@ -210,7 +210,7 @@ residual_add_formatter = """
 """
 
 
-mlp_formatter = """
+MLP_FORMATTER = """
     // mlp
     atb_speed::common::MlpParam<atb::infer::RmsNormParam> mlpParam;
     mlpParam.isBF16 = param.isBF16;
@@ -267,7 +267,7 @@ mlp_formatter = """
 """
 
 
-mlp_residual_add_formatter = """
+MLP_RESIDUAL_ADD_FORMATTER = """
     // residual
     CREATE_OPERATION(addParam, &mlpResidualAddNode.operation);
     mlpResidualAddNode.inTensorIds = {{
@@ -278,7 +278,7 @@ mlp_residual_add_formatter = """
 """
 
 
-parse_param_formatter = """
+PARSE_PARAM_FORMATTER = """
 void DecoderLayerBinder::ParseParam(const nlohmann::json &paramJson)
 {{
     ATB_LOG(INFO) << "enter DecoderLayerBinder ParseParam tokenOffset";
@@ -293,7 +293,7 @@ void DecoderLayerBinder::ParseParam(const nlohmann::json &paramJson)
 }}
 """
 
-bind_param_host_tensor_formatter = """
+BIND_PARAM_HOST_TENSOR_FORMATTER = """
 void DecoderLayerBinder::BindTensor(atb::VariantPack &variantPack)
 {{
     ATB_LOG(INFO) << "enter DecoderLayerBinder BindTensor";
