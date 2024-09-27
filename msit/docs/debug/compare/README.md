@@ -21,10 +21,10 @@ docker build \
 --build-arg UBUNTU_X86_ARCHIVE=http://.*archive.ubuntu.com \
 --build-arg UBUNTU_X86_SECURITY=http://.*security.ubuntu.com \
 --build-arg UBUNTU_ARM64=http://ports.ubuntu.com \
---build-arg HUAWEI_PATH_U=https://mirrors.huaweicloud.com \
---build-arg HUAWEI_PATH=repo.huaweicloud.com \
+--build-arg APT_PATH=http://repo.huaweicloud.com \
 --build-arg PYTHON_PATH=https://www.python.org/ftp/python/3.7.5/Python-3.7.5.tgz \
---build-arg HUAWEI_PYTHON=https://repo.huaweicloud.com/repository/pypi/simple \
+--build-arg PYPI_PATH=https://repo.huaweicloud.com/repository/pypi/simple \
+--build-arg PYPI_PATH_TRUST=repo.huaweicloud.com \
 --build-arg MSIT_PATH=https://gitee.com/ascend/msit.git \
 --build-arg PYPI_TSINGHUA=https://pypi.tuna.tsinghua.edu.cn/simple/ \
 -f Dockerfile . -t msit-caffe:latest
@@ -33,14 +33,14 @@ docker build \
 1. 非root用户请加上sudo  
 2. 若出现以下报错：
 ```
-Err:1 https://mirrors.huaweicloud.com/ubuntu-ports focal InRelease
-  Temporary failure resoving 'mirrors.huaweicloud.com'
-Err:2 https://mirrors.huaweicloud.com/ubuntu-ports focal-updates InRelease
-  Temporary failure resoving 'mirrors.huaweicloud.com'
+Err:1 http://repo.huaweicloud.com/ubuntu-ports focal InRelease
+  Temporary failure resoving 'repo.huaweicloud.com'
+Err:2 http://repo.huaweicloud.com/ubuntu-ports focal-updates InRelease
+  Temporary failure resoving 'repo.huaweicloud.com'
 ```
 则参照下述代码位置，添加环境变量：  
 ```
-ARG HUAWEI_PYTHON
+ARG PYPI_PATH_TRUST
 ARG MSIT_PATH
 ARG PYPI_TSINGHUA
 
@@ -52,7 +52,9 @@ ENV https_proxy=http://${USER_NAME}:${PASSWORD}@${PROXY_SERVER}:${PORT}
 RUN groupadd HwHiAiUser && useradd -rm -d /home/HwHiAiUser -s /bin/bash -g HwHiAiUser -G HwHiAiUser -u 1001 HwHiAiUser  &&\
     if [ "$(uname -m)" = "x86_64" ]; then \
 ```
-USER_NAME、PASSWORD等都是网络配置的相关参数，这里不予以介绍  
+  USER_NAME、PASSWORD等都是网络配置的相关参数，这里不予以介绍  
+  APT_PATH 用户可自行配置源地址 例如：http://repo.huaweicloud.com ； https://mirrors.huaweicloud.com 等
+
 3. 请将Ascend-cann-tookit<version+arch>.run改为实际上的toolkit路径(必须是相对路径)  
 4. 从这个[仓库](https://github.com/lenLRX/caffe)下载zip[代码](https://github.com/lenLRX/caffe/archive/refs/heads/ascend-amct.zip),得到的zip包可能叫ascend-amct.zip或caffe-ascend-amct.zip  
 5. 从[这里](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)下载amct的包Ascend-cann-amct_5.1.RC1.1_linux-aarch64.tar.gz(注意下载对应需要的版本如：X86，aarch64等)  

@@ -10,20 +10,20 @@ ARG DEBIAN_FRONTEND=noninteractive
 ARG UBUNTU_X86_ARCHIVE
 ARG UBUNTU_X86_SECURITY
 ARG UBUNTU_ARM64 
-ARG HUAWEI_PATH_U
-ARG HUAWEI_PATH
+ARG APT_PATH
 ARG PYTHON_PATH
-ARG HUAWEI_PYTHON
+ARG PYPI_PATH
+ARG PYPI_PATH_TRUST
 ARG MSIT_PATH
 ARG PYPI_TSINGHUA
 
 #安装python、CANN_TOOLKIT,软件包、依赖，并配置环境变量写入.bashrc
 RUN groupadd HwHiAiUser && useradd -rm -d /home/HwHiAiUser -s /bin/bash -g HwHiAiUser -G HwHiAiUser -u 1001 HwHiAiUser  &&\
     if [ "$(uname -m)" = "x86_64" ]; then \
-        sed -i "s@${UBUNTU_X86_ARCHIVE}@${HUAWEI_PATH_U}@g" /etc/apt/sources.list \
-        && sed -i "s@${UBUNTU_X86_SECURITY}@${HUAWEI_PATH_U}@g" /etc/apt/sources.list; \
+        sed -i "s@${UBUNTU_X86_ARCHIVE}@${APT_PATH}@g" /etc/apt/sources.list \
+        && sed -i "s@${UBUNTU_X86_SECURITY}@${APT_PATH}@g" /etc/apt/sources.list; \
     elif [ "$(uname -m)" = "aarch64" ]; then \
-        sed -i "s@${UBUNTU_ARM64}@${HUAWEI_PATH_U}@g" /etc/apt/sources.list; \
+        sed -i "s@${UBUNTU_ARM64}@${APT_PATH}@g" /etc/apt/sources.list; \
     fi  &&\
     apt-get update && \
     apt-get install libbz2-dev -y &&\
@@ -43,8 +43,8 @@ RUN groupadd HwHiAiUser && useradd -rm -d /home/HwHiAiUser -s /bin/bash -g HwHiA
     echo "export PATH=/usr/local/python3.7.5/bin:\$PATH" >> /root/.bashrc &&\
     export LD_LIBRARY_PATH=/usr/local/python3.7.5/lib:$LD_LIBRARY_PATH &&\
     export PATH=/usr/local/python3.7.5/bin:$PATH &&\
-    pip3.7 config set global.index-url ${HUAWEI_PYTHON} && \
-    pip3.7 config set global.trusted-host ${HUAWEI_PATH} && \
+    pip3.7 config set global.index-url ${PYPI_PATH} && \
+    pip3.7 config set global.trusted-host ${PYPI_PATH_TRUST} && \
     pip3.7 config set global.timeout 600 && \
     pip3.7 install --upgrade pip &&\
     pip3.7 install attrs &&\
@@ -63,8 +63,9 @@ RUN groupadd HwHiAiUser && useradd -rm -d /home/HwHiAiUser -s /bin/bash -g HwHiA
     pip3.7 install tornado absl-py &&\
     export LD_LIBRARY_PATH=/usr/local/python3.7.5/lib:$LD_LIBRARY_PATH &&\
     export PATH=/usr/local/python3.7.5/bin:$PATH &&\
+    cd - &&\ 
     chmod +x ./$CANN_TOOLKIT_PATH && ./$CANN_TOOLKIT_PATH --check &&\
-    ./$CANN_TOOLKIT_PATH --install-for-all --devel &&\
+    echo "y" | ./$CANN_TOOLKIT_PATH --install-for-all --devel &&\
     echo "export PATH=\$PATH:/usr/local/Ascend/ascend-toolkit/latest/atc/ccec_compiler/bin" >> /root/.bashrc && \
     echo "export PATH=\$PATH:/usr/local/Ascend/ascend-toolkit/latest/atc/bin" >> /root/.bashrc && \
     echo "export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:/usr/local/Ascend/driver/lib64/:/usr/local/Ascend/driver/lib64/common/:/usr/local/Ascend/driver/lib64/driver/:/usr/local/Ascend/ascend-toolkit/latest/acllib/lib64:/usr/local/Ascend/ascend-toolkit/latest/acllib/lib64/stub" >> /root/.bashrc && \
