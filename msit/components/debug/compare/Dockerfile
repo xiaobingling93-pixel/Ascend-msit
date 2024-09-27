@@ -40,7 +40,7 @@ RUN groupadd HwHiAiUser && useradd -rm -d /home/HwHiAiUser -s /bin/bash -g HwHiA
     ln -s /usr/local/python3.7.5/bin/pip3 /usr/local/python3.7.5/bin/pip3.7.5 &&\
     echo python37_install_path=/usr/local/python3.7.5 > /etc/use_private_python.info &&\
     echo "export LD_LIBRARY_PATH=/usr/local/python3.7.5/lib:$LD_LIBRARY_PATH" >> /root/.bashrc &&\
-    echo "export PATH=/usr/ local/python3.7.5/bin:\$PATH" >> /root/.bashrc &&\
+    echo "export PATH=/usr/local/python3.7.5/bin:\$PATH" >> /root/.bashrc &&\
     export LD_LIBRARY_PATH=/usr/local/python3.7.5/lib:$LD_LIBRARY_PATH &&\
     export PATH=/usr/local/python3.7.5/bin:$PATH &&\
     pip3.7 config set global.index-url ${PYPI_PATH} && \
