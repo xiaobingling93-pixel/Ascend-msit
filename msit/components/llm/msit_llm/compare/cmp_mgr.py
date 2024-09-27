@@ -36,6 +36,108 @@ class CompareMgr:
         self.op_match: OpMatchMgr = OpMatchMgr(args)
         self.compared_result = []  # 收集结果
 
+    @classmethod
+    def get_raw_path(cls, path: str):
+        raw_path = os.path.basename(path)
+        if any([raw_path.startswith(x) for x in GLOBAL_HISTORY_AIT_DUMP_PATH_LIST]):
+            raw_path = path
+        else:
+            raw_path = os.path.dirname(os.path.dirname(path))
+        return raw_path
+
+    @classmethod
+    def _flatten_and_enum_tuple(cls, *arr):
+        for item in arr:
+            if isinstance(item, (list, tuple)):
+                yield from cls._flatten_and_enum_tuple(*item)
+            else:
+                yield item
+
+    @classmethod
+    def _filter_rope_my_tensor_paths(cls, my_tensor_paths):
+        seqlen_path = None
+        valid_my_tensor_paths = []
+
+        if len(my_tensor_paths) != 5:
+            logger_text = f"Expected 5 tensors for RopeOperation but found {len(my_tensor_paths)}."
+            logger.debug(logger_text)
+            return seqlen_path, my_tensor_paths
+
+        for path in my_tensor_paths:
+            if "intensor4" in path.lower():
+                seqlen_path = path
+            elif "intensor2" in path.lower() or "intensor3" in path.lower():
+                valid_my_tensor_paths.append(path)
+
+        if len(valid_my_tensor_paths) != 2:
+            logger_text = (f"Expected intensor2.bin and intensor3.bin for RopeOperaton "
+                           f"but only found {valid_my_tensor_paths}.")
+            logger.debug(logger_text)
+            return seqlen_path, my_tensor_paths
+
+        valid_my_tensor_paths.sort(key=lambda path: ("intensor3" in path.lower()))
+        return seqlen_path, valid_my_tensor_paths
+
+    @classmethod
+    def _get_rope_type(cls, my_tensor_path):
+        rope_type = -1
+
+        # rope_type=0 means cos, rope_type=1 means sin
+        if "intensor2" in my_tensor_path.lower():
+            rope_type = 0
+        elif "intensor3" in my_tensor_path.lower():
+            rope_type = 1
+        else:
+            logger_text = f"Failed to get rope_type from {my_tensor_path}."
+            logger.debug(logger_text)
+
+        return rope_type
+
+    @classmethod
+    def _slice_tensor_by_seq_len(cls, golden_tensor_datas, seq_len, rope_type):
+        if seq_len is None:
+            logger_text = "seq_len is None, skipping slicing."
+            logger.debug(logger_text)
+            return golden_tensor_datas
+
+        tensor = golden_tensor_datas[0]
+        if tensor.ndimension() == 4:
+            if 1 <= seq_len < tensor.shape[2]:
+                return [tensor[:, :, seq_len - 1, :].to(dtype=tensor.dtype).squeeze(0)]
+            elif 1 <= seq_len < tensor.shape[1]:
+                return [tensor[:, seq_len - 1, :, :].to(dtype=tensor.dtype).squeeze(0)]
+            logger_text = f"seqLen is out of bounds for tensor with shape {tensor.shape}"
+            logger.error(logger_text)
+        elif tensor.ndimension() == 3:
+            if 1 <= seq_len < tensor.shape[0]:
+                return [tensor[seq_len - 1, :, rope_type].to(dtype=tensor.dtype).unsqueeze(0)]
+            logger_text = f"seqLen is out of bounds for tensor with shape {tensor.shape}"
+            logger.error(logger_text)
+        else:
+            logger_text = f"Unsupported tensor with dimensions {tensor.ndimension()}. Expected 3 or 4 dimensions."
+            logger.debug(logger_text)
+        return golden_tensor_datas
+
+    @classmethod
+    def _remove_adjacent_repeated_columns(cls, my_tensor_datas):
+        tensor = my_tensor_datas[0]
+        if tensor.ndimension() != 2 or tensor.shape[0] != 1:
+            logger_text = (f"Unexpected tensor with dimensions {tensor.ndimension()}. "
+                           f"Expected 2 dimensions with one row.")
+            logger.debug(logger_text)
+            return my_tensor_datas
+
+        if tensor.shape[1] < 2 or tensor.shape[1] % 2 != 0:
+            logger_text = f"Unexpected tensor shape {tensor.shape} to check whether has adjacent repeated columns."
+            logger.debug(logger_text)
+            return my_tensor_datas
+
+        if (tensor[:, ::2] == tensor[:, 1::2]).all():
+            return [tensor[:, ::2].to(dtype=tensor.dtype)]
+        logger_text = f"There are no adjacent repeated columns in the tensor {my_tensor_datas}."
+        logger.debug(logger_text)
+        return my_tensor_datas
+
     def init_compare_data(self, data_path: str, args) -> CompareDataParse:
         for cls_data in self.data_parsers:
             if cls_data.accept(data_path, args):
@@ -148,104 +250,3 @@ class CompareMgr:
             logger.debug(logger_text)
         return seq_len, my_tensor_paths
 
-    @classmethod
-    def _flatten_and_enum_tuple(cls, *arr):
-        for item in arr:
-            if isinstance(item, (list, tuple)):
-                yield from cls._flatten_and_enum_tuple(*item)
-            else:
-                yield item
-
-    @classmethod
-    def _filter_rope_my_tensor_paths(cls, my_tensor_paths):
-        seqlen_path = None
-        valid_my_tensor_paths = []
-
-        if len(my_tensor_paths) != 5:
-            logger_text = f"Expected 5 tensors for RopeOperation but found {len(my_tensor_paths)}."
-            logger.debug(logger_text)
-            return seqlen_path, my_tensor_paths
-
-        for path in my_tensor_paths:
-            if "intensor4" in path.lower():
-                seqlen_path = path
-            elif "intensor2" in path.lower() or "intensor3" in path.lower():
-                valid_my_tensor_paths.append(path)
-
-        if len(valid_my_tensor_paths) != 2:
-            logger_text = (f"Expected intensor2.bin and intensor3.bin for RopeOperaton "
-                           f"but only found {valid_my_tensor_paths}.")
-            logger.debug(logger_text)
-            return seqlen_path, my_tensor_paths
-
-        valid_my_tensor_paths.sort(key=lambda path: ("intensor3" in path.lower()))
-        return seqlen_path, valid_my_tensor_paths
-
-    @classmethod
-    def _get_rope_type(cls, my_tensor_path):
-        rope_type = -1
-
-        # rope_type=0 means cos, rope_type=1 means sin
-        if "intensor2" in my_tensor_path.lower():
-            rope_type = 0
-        elif "intensor3" in my_tensor_path.lower():
-            rope_type = 1
-        else:
-            logger_text = f"Failed to get rope_type from {my_tensor_path}."
-            logger.debug(logger_text)
-
-        return rope_type
-
-    @classmethod
-    def _slice_tensor_by_seq_len(cls, golden_tensor_datas, seq_len, rope_type):
-        if seq_len is None:
-            logger_text = "seq_len is None, skipping slicing."
-            logger.debug(logger_text)
-            return golden_tensor_datas
-
-        tensor = golden_tensor_datas[0]
-        if tensor.ndimension() == 4:
-            if 1 <= seq_len < tensor.shape[2]:
-                return [tensor[:, :, seq_len - 1, :].to(dtype=tensor.dtype).squeeze(0)]
-            elif 1 <= seq_len < tensor.shape[1]:
-                return [tensor[:, seq_len - 1, :, :].to(dtype=tensor.dtype).squeeze(0)]
-            logger_text = f"seqLen is out of bounds for tensor with shape {tensor.shape}"
-            logger.error(logger_text)
-        elif tensor.ndimension() == 3:
-            if 1 <= seq_len < tensor.shape[0]:
-                return [tensor[seq_len - 1, :, rope_type].to(dtype=tensor.dtype).unsqueeze(0)]
-            logger_text = f"seqLen is out of bounds for tensor with shape {tensor.shape}"
-            logger.error(logger_text)
-        else:
-            logger_text = f"Unsupported tensor with dimensions {tensor.ndimension()}. Expected 3 or 4 dimensions."
-            logger.debug(logger_text)
-        return golden_tensor_datas
-
-    @classmethod
-    def _remove_adjacent_repeated_columns(cls, my_tensor_datas):
-        tensor = my_tensor_datas[0]
-        if tensor.ndimension() != 2 or tensor.shape[0] != 1:
-            logger_text = (f"Unexpected tensor with dimensions {tensor.ndimension()}. "
-                           f"Expected 2 dimensions with one row.")
-            logger.debug(logger_text)
-            return my_tensor_datas
-
-        if tensor.shape[1] < 2 or tensor.shape[1] % 2 != 0:
-            logger_text = f"Unexpected tensor shape {tensor.shape} to check whether has adjacent repeated columns."
-            logger.debug(logger_text)
-            return my_tensor_datas
-
-        if (tensor[:, ::2] == tensor[:, 1::2]).all():
-            return [tensor[:, ::2].to(dtype=tensor.dtype)]
-        logger_text = f"There are no adjacent repeated columns in the tensor {my_tensor_datas}."
-        logger.debug(logger_text)
-        return my_tensor_datas
-    
-    @classmethod
-    def get_raw_path(cls, path: str):
-        raw_path = os.path.basename(path)
-        if any([raw_path.startswith(x) for x in GLOBAL_HISTORY_AIT_DUMP_PATH_LIST]):
-            raw_path = path
-        else:
-            raw_path = os.path.dirname(os.path.dirname(path))
-        return raw_path
