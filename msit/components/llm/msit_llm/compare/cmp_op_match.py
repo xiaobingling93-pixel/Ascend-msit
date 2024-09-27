@@ -49,8 +49,8 @@ class OpMatchMap:
         if key not in self.map:
             self.map[key] = score.value
         else:
-            oriValue = self.map.get(key)
-            self.map[key] = oriValue + score.value
+            ori_value = self.map.get(key)
+            self.map[key] = ori_value + score.value
 
     def get_match_map(self, enable_print: bool = True) -> tuple:
         '''
