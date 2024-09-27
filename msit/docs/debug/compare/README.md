@@ -14,15 +14,61 @@
 ### 容器方式安装
 容器方式安装目前提供了Ubuntu 18.04的docker镜像。在`<msit_project_root_path>/msit/components/debug/compare`目录下运行以下命令以构建镜像：
 ```shell
-docker build --build-arg CANN_TOOLKIT_PATH=Ascend-cann-tookit<version+arch>.run --build-arg CANN_AMCT_PATH=Ascend-cann-amctt<version+arch>.tar.gz \ 
---build-arg CAFFE_SRC=caffe-ascend-amct.zip -f Dockerfile . -t msit-caffe:latest
+docker build \
+--build-arg CANN_TOOLKIT_PATH=Ascend-cann-tookit<version+arch>.run \
+--build-arg CANN_AMCT_PATH=Ascend-cann-amctt<version+arch>.tar.gz \ 
+--build-arg CAFFE_SRC=caffe-ascend-amct.zip \
+--build-arg UBUNTU_X86_ARCHIVE=http://.*archive.ubuntu.com \
+--build-arg UBUNTU_X86_SECURITY=http://.*security.ubuntu.com \
+--build-arg UBUNTU_ARM64=http://ports.ubuntu.com \
+--build-arg APT_PATH=http://repo.huaweicloud.com \
+--build-arg PYTHON_PATH=https://www.python.org/ftp/python/3.7.5/Python-3.7.5.tgz \
+--build-arg PYPI_PATH=https://repo.huaweicloud.com/repository/pypi/simple \
+--build-arg PYPI_PATH_TRUST=repo.huaweicloud.com \
+--build-arg MSIT_PATH=https://gitee.com/ascend/msit.git \
+-f Dockerfile . -t msit-caffe:latest
 ```
-注意:
-1. 非root用户请加上sudo
-2. 请将Ascend-cann-tookit<version+arch>.run改为实际上的toolkit路径(必须是相对路径)
-3. 从这个[仓库](https://github.com/lenLRX/caffe)下载zip[代码](https://github.com/lenLRX/caffe/archive/refs/heads/ascend-amct.zip),得到的zip包可能叫ascend-amct.zip或caffe-ascend-amct.zip
-4. 从[这里](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)下载amct的包Ascend-cann-amct_5.1.RC1.1_linux-aarch64.tar.gz(注意下载对应需要的版本如：X86，aarch64等)
-5. 执行命令构建docker镜像,要求:
+注意:  
+1、非root用户请加上sudo  
+2、若出现以下报错：
+```
+Err:1 http://repo.huaweicloud.com/ubuntu-ports focal InRelease
+  Temporary failure resoving 'repo.huaweicloud.com'
+Err:2 http://repo.huaweicloud.com/ubuntu-ports focal-updates InRelease
+  Temporary failure resoving 'repo.huaweicloud.com'
+```
+则参照下述代码位置，添加环境变量：  
+```
+ARG PYPI_PATH_TRUST
+ARG MSIT_PATH
+ARG PYPI_TSINGHUA
+
+# 添加环境变量
+ENV http_proxy=http://${USER_NAME}:${PASSWORD}@${PROXY_SERVER}:${PORT}
+ENV https_proxy=http://${USER_NAME}:${PASSWORD}@${PROXY_SERVER}:${PORT}
+
+#安装python、CANN_TOOLKIT,软件包、依赖，并配置环境变量写入.bashrc
+RUN groupadd HwHiAiUser && useradd -rm -d /home/HwHiAiUser -s /bin/bash -g HwHiAiUser -G HwHiAiUser -u 1001 HwHiAiUser  &&\
+    if [ "$(uname -m)" = "x86_64" ]; then \
+```
+
+    
+  
+  USER_NAME、PASSWORD等都是网络配置的相关参数，这里不予以介绍  
+  APT_PATH 用户可自行配置源地址 例如：http://repo.huaweicloud.com ； https://mirrors.huaweicloud.com 等  
+  
+  3、如果在wget PYTHON_PATH的时候出现报错，并让use '--no-check-certificate'。则在wget ${PYTHON_PATH}处添加'--no-check-certificate'，示例如下：
+
+```
+wget --no-check-certificate ${PYTHON_PATH}   && \
+```
+
+
+
+4、请将Ascend-cann-tookit<version+arch>.run改为实际上的toolkit路径(必须是相对路径)  
+5、从这个[仓库](https://github.com/lenLRX/caffe)下载zip[代码](https://github.com/lenLRX/caffe/archive/refs/heads/ascend-amct.zip),得到的zip包可能叫ascend-amct.zip或caffe-ascend-amct.zip  
+6、从[这里](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)下载amct的包Ascend-cann-amct_5.1.RC1.1_linux-aarch64.tar.gz(注意下载对应需要的版本如：X86，aarch64等)  
+7、执行命令构建docker镜像,要求:
    * CANN_AMCT_PATH=步骤4下载的amct包名字
    * CAFFE_SRC=步骤3下载的caffe代码zip包
    运行以下命令以上述镜像启动容器：
