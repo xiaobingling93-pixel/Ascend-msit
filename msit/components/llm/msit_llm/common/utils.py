@@ -140,8 +140,6 @@ def check_input_path_legality(value):
         return value
     inputs_list = value.split(',')
     for input_path in inputs_list:
-        if os.path.islink(input_path):
-            raise argparse.ArgumentTypeError(f"input path: {input_path} is a symbolic link, Please check.")
         try:
             file_stat = FileStat(input_path)
         except Exception as err:
@@ -154,8 +152,8 @@ def check_input_path_legality(value):
 def check_data_file_size(data_path, max_size=MAX_DATA_SIZE):
     try:
         file_stat = FileStat(data_path)
-    except Exception:
-        raise Exception(f"data path: {data_path} is illegal. Please check it.")
+    except Exception as e:
+        raise Exception(f"data path: {data_path} is illegal. Please check it.") from e
 
     if not file_stat.is_legal_file_size(max_size):
         raise Exception(f"the size of file: {data_path} is out of max limit {MAX_DATA_SIZE} byte.")
