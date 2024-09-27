@@ -73,6 +73,8 @@ dump功能可以直接通过msit命令行形式启动精度对比。启动方式
 | --saved_model_tag_set   | tensorflow2.6框架下saved_model模型加载为session时的标签，可根据标签加载模型的不同部分。使用方式：--saved_model_tag_set serve，默认为serve，目前支持传入多个tagSet，使用如：--saved_model_tag_set ['serve', 'genenal_parser']                                                                                | 否  | |  |
 | -dp, --device-pattern     | 设备模式，支持cpu和npu，目前npu模式下只支持saved_model模型。使用方式：-dp cpu                                                                                                                                              | 否  | |  |
 | --tf-json                 | 用于dump saved_model模型在cpu侧的算子集合json，当dump saved_model 模型在cpu的数据时，为必选参数                                                                                                                             | 否  | |  |
+| --exec | MindIE-Torch推理脚本的执行命令。使用方式：--exec "python bert_inference.py"                                                                                                                                                                       | 否  | |  |
+| -opname，--operation-name | MindIE-Torch场景下需要Dump的算子，默认为 all，表示会对模型中所有 op 进行 Dump，其中元素为MindIE-Torch算子类型，若设置 operation-name，只会 Dump 指定的 op。使用方式：--operation-name MatMulv2_1,trans_Cast_0                                                                                                                                                                        | 否  | |  |
 | -h    --help              | 用于查看全部的参数                                                                                                                                                                                         | 否  | |  |
 
 ### 使用场景
@@ -87,3 +89,4 @@ dump功能可以直接通过msit命令行形式启动精度对比。启动方式
 | [04_specify_input_shape_info](../../../examples/cli/debug/dump/04_specify_input_shape_info) | 指定模型输入的shape信息(动态场景必须进行指定)。 |
 | [05_caffe_model](../../../examples/cli/debug/dump/05_caffe_model)                           | 模型为Caffe框架的dump           |
 | [06_saved_model](../../../examples/cli/debug/dump/06_saved_model)                           | 模型为tensorflow2.6框架下的 saved_model dump          |
+| [07_mindie_torch_compare](/msit/examples/cli/debug/compare/16_mindie_torch_compare)                            | MindIE-Torch场景-整网算子精度对比场景                        |
