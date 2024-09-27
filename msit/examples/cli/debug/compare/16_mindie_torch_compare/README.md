@@ -42,7 +42,7 @@
 
 ## 4. Compare 精度对比 
 
- - 执行 `msit debug compare --golden-path [/path/to/cpu/dumpdata] --my-path [/path/to/npu/dumpdata] --output [path/to/csv] --op-mapping-file [path/to/json]`，输出比对结果 csv 文件
+ - 执行 `msit debug compare --golden-path [/path/to/cpu/dumpdata] --my-path [/path/to/npu/dumpdata] --output [path/to/csv] --ops-json [path/to/json]`，输出比对结果 csv 文件
 
 ### 参数说明
 
