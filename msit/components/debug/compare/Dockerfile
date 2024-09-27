@@ -30,7 +30,7 @@ RUN groupadd HwHiAiUser && useradd -rm -d /home/HwHiAiUser -s /bin/bash -g HwHiA
     apt-get install liblzma-dev -y &&\
     apt-get install -y wget gnupg software-properties-common && \
     apt-get install -y sudo gcc g++ make cmake zlib1g zlib1g-dev openssl libsqlite3-dev libssl-dev libffi-dev unzip pciutils net-tools libblas-dev gfortran libblas3 libopenblas-dev libncursesw5-dev wget dkms &&\
-    wget --no-check-certificate ${PYTHON_PATH}   && \
+    wget ${PYTHON_PATH}   && \
     tar -zxvf Python-3.7.5.tgz &&\
     cd Python-3.7.5 &&\
     ./configure --prefix=/usr/local/python3.7.5 --enable-loadable-sqlite-extensions --enable-shared &&\
@@ -40,7 +40,7 @@ RUN groupadd HwHiAiUser && useradd -rm -d /home/HwHiAiUser -s /bin/bash -g HwHiA
     ln -s /usr/local/python3.7.5/bin/pip3 /usr/local/python3.7.5/bin/pip3.7.5 &&\
     echo python37_install_path=/usr/local/python3.7.5 > /etc/use_private_python.info &&\
     echo "export LD_LIBRARY_PATH=/usr/local/python3.7.5/lib:$LD_LIBRARY_PATH" >> /root/.bashrc &&\
-    echo "export PATH=/usr/local/python3.7.5/bin:\$PATH" >> /root/.bashrc &&\
+    echo "export PATH=/usr/ local/python3.7.5/bin:\$PATH" >> /root/.bashrc &&\
     export LD_LIBRARY_PATH=/usr/local/python3.7.5/lib:$LD_LIBRARY_PATH &&\
     export PATH=/usr/local/python3.7.5/bin:$PATH &&\
     pip3.7 config set global.index-url ${PYPI_PATH} && \
