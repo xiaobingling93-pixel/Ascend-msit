@@ -35,9 +35,7 @@ class TransformQuantCppLayerFunction:
         self.cur_param_index, self.cur_intensor_enum_index = 0, 0
         self.updates = []
 
-        # {node_name: param_name}, {param_name: [node_name]}
         self.atb_node_params, self.atb_param_nodes = self.get_atb_nodes_and_parameters()
-        # {param_name: param_type}
         self.atb_param_types = self.get_atb_parameters_type()
         self.param_groups = self.groupby_param_type()  # {param_type: group}
         self.norm_nodes = self.get_all_norm_nodes()
@@ -49,6 +47,62 @@ class TransformQuantCppLayerFunction:
             if (param_group == LINEAR_PARAM) and (len(nodes) > 1):
                 self.is_separate_qkv, self.separate_qkv_nodes = True, nodes
                 break
+
+    def __call__(self):
+        cur_id = 4  # starts from 4 and ends on -4, avoiding index overflow
+        self.cur_param_index, self.cur_intensor_enum_index = 0, 0
+        temp_atb_param_nodes = self.atb_param_nodes.copy()
+        norm_count, linear_count, is_mlp_norm, is_separate_qkv_linear = 0, 0, False, False
+
+        while cur_id < self.total_id:
+            cur_token = self.all_tokens[cur_id]
+            cur_token_spelling = cur_token.spelling
+            if self.need_to_check_mlp_norm:
+                is_mlp_norm = self.is_mlp_norm_node(cur_id) and norm_count > 0
+            if self.is_separate_qkv:
+                is_separate_qkv_linear = self.is_separate_qkv_node_operation(cur_token_spelling, cur_id)
+
+            if not is_mlp_norm and not is_separate_qkv_linear and cur_token_spelling not in self.param_groups:
+                cur_id += 1
+                continue
+
+            if is_mlp_norm:
+                param_name = self.atb_node_params.get(cur_token_spelling, 'Not exist')
+            elif is_separate_qkv_linear:
+                param_name = self.atb_node_params(cur_token_spelling, 'Not exist')
+            else:
+                param_name = self.all_tokens[cur_id + 1].spelling
+
+            if param_name not in self.atb_param_types or param_name not in temp_atb_param_nodes:
+                cur_id += 1
+                continue
+            node_name = temp_atb_param_nodes[param_name].pop(0)
+            if len(temp_atb_param_nodes[param_name]) == 0:
+                temp_atb_param_nodes.pop(param_name)
+            print_spelling(self.all_tokens[cur_id : cur_id + 3], info="current 3 tokens: ")
+
+            if self.enable_sparse and linear_count == 0 and cur_token_spelling == "LinearParam":
+                self.update_for_sparse_linear_param(cur_id)
+
+            if is_mlp_norm:
+                norm_count += 1
+                cur_id = self.update_for_mlp_norm(cur_id, param_name, node_name)
+            elif is_separate_qkv_linear:
+                linear_count += 1
+                cur_id = self.update_for_separate_qkv_linear(cur_id, param_name, node_name)
+            elif self.param_groups[cur_token_spelling] == NORM_PARAM and norm_count == 0:
+                norm_count += 1
+                cur_id = self.update_for_attention_norm(cur_id, param_name, node_name)
+            elif self.param_groups[cur_token_spelling] == LINEAR_PARAM and linear_count == 0:
+                linear_count += 1
+                cur_id = self.update_for_qkv_linear(cur_id, param_name, node_name)
+            elif self.is_output_linear(cur_token_spelling, node_name) and linear_count > 0:
+                linear_count += 1
+                cur_id = self.update_for_output_linear(cur_id, param_name, node_name)
+            elif self.param_groups[cur_token_spelling] == MLP_PARAM:
+                cur_id = self.update_for_mlp(cur_id, param_name, node_name)
+            cur_id += 1
+        return self.updates
 
     def get_atb_nodes_and_parameters(self):
         cur_id, atb_nodes, atb_node_params, atb_param_nodes = 0, [], {}, {}
@@ -89,7 +143,7 @@ class TransformQuantCppLayerFunction:
 
     def groupby_param_type(self):
         param_groups = {}
-        for param_name, param_type in self.atb_param_types.items():
+        for _, param_type in self.atb_param_types.items():
             param_type_lower = param_type.lower()
             if "mlp" in param_type_lower:
                 param_groups[param_type] = MLP_PARAM
@@ -113,8 +167,9 @@ class TransformQuantCppLayerFunction:
         return norm_nodes
 
     def is_mlp_norm_node_using_attn_norm_param(self):
-        attn_norm_param_name = self.atb_node_params[self.norm_nodes[0]]
-        return any([self.atb_node_params[norm_node] == attn_norm_param_name for norm_node in self.norm_nodes[1:]])
+        attn_norm_param_name = self.atb_node_params.get(self.norm_nodes[0], 'Not exist')
+        return any([self.atb_node_params.get(norm_node, 'Not exist') ==
+            attn_norm_param_name for norm_node in self.norm_nodes[1:]])
 
     def seek_till_node_operation_line(self, cur_id, node_name):
         pre_end_line_token_id = cur_id
@@ -239,7 +294,7 @@ class TransformQuantCppLayerFunction:
 
     def update_for_mlp_norm(self, cur_id, param_name, node_name):
         mlp_param_name = "mlp" + param_name
-        param_type = self.atb_param_types[param_name]
+        param_type = self.atb_param_types.get(param_name, 'Not exist')
         insert_contents = self.insert_contents_for_mlp_norm(mlp_param_name, param_type)
         cur_id = self.seek_till_previous_semicolon(cur_id)
         insert_start, insert_end, _ = self.seek_till_node_operation_line(cur_id, node_name)  # ignore this cur_id
@@ -356,63 +411,7 @@ class TransformQuantCppLayerFunction:
         return True
 
     def is_output_linear(self, cur_token_spelling, node_name):
-        return self.param_groups[cur_token_spelling] == LINEAR_PARAM and "out" in node_name.lower()
+        return self.param_groups.get(cur_token_spelling, 'Not exist') == LINEAR_PARAM and "out" in node_name.lower()
 
     def is_separate_qkv_node_operation(self, cur_token_spelling, cur_id):
         return cur_token_spelling in self.separate_qkv_nodes and self.all_tokens[cur_id + 2].spelling == "operation"
-
-    def __call__(self):
-        cur_id = 4  # starts from 4 and ends on -4, avoiding index overflow
-        self.cur_param_index, self.cur_intensor_enum_index = 0, 0
-        temp_atb_param_nodes = self.atb_param_nodes.copy()
-        norm_count, linear_count, is_mlp_norm, is_separate_qkv_linear = 0, 0, False, False
-
-        while cur_id < self.total_id:
-            cur_token = self.all_tokens[cur_id]
-            cur_token_spelling = cur_token.spelling
-            if self.need_to_check_mlp_norm:
-                is_mlp_norm = self.is_mlp_norm_node(cur_id) and norm_count > 0
-            if self.is_separate_qkv:
-                is_separate_qkv_linear = self.is_separate_qkv_node_operation(cur_token_spelling, cur_id)
-
-            if not is_mlp_norm and not is_separate_qkv_linear and cur_token_spelling not in self.param_groups:
-                cur_id += 1
-                continue
-
-            if is_mlp_norm:
-                param_name = self.atb_node_params[cur_token_spelling]
-            elif is_separate_qkv_linear:
-                param_name = self.atb_node_params[cur_token_spelling]
-            else:
-                param_name = self.all_tokens[cur_id + 1].spelling
-
-            if param_name not in self.atb_param_types or param_name not in temp_atb_param_nodes:
-                cur_id += 1
-                continue
-            node_name = temp_atb_param_nodes[param_name].pop(0)
-            if len(temp_atb_param_nodes[param_name]) == 0:
-                temp_atb_param_nodes.pop(param_name)
-            print_spelling(self.all_tokens[cur_id : cur_id + 3], info="current 3 tokens: ")
-
-            if self.enable_sparse and linear_count == 0 and cur_token_spelling == "LinearParam":
-                self.update_for_sparse_linear_param(cur_id)
-
-            if is_mlp_norm:
-                norm_count += 1
-                cur_id = self.update_for_mlp_norm(cur_id, param_name, node_name)
-            elif is_separate_qkv_linear:
-                linear_count += 1
-                cur_id = self.update_for_separate_qkv_linear(cur_id, param_name, node_name)
-            elif self.param_groups[cur_token_spelling] == NORM_PARAM and norm_count == 0:
-                norm_count += 1
-                cur_id = self.update_for_attention_norm(cur_id, param_name, node_name)
-            elif self.param_groups[cur_token_spelling] == LINEAR_PARAM and linear_count == 0:
-                linear_count += 1
-                cur_id = self.update_for_qkv_linear(cur_id, param_name, node_name)
-            elif self.is_output_linear(cur_token_spelling, node_name) and linear_count > 0:
-                linear_count += 1
-                cur_id = self.update_for_output_linear(cur_id, param_name, node_name)
-            elif self.param_groups[cur_token_spelling] == MLP_PARAM:
-                cur_id = self.update_for_mlp(cur_id, param_name, node_name)
-            cur_id += 1
-        return self.updates
