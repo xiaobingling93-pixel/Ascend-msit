@@ -64,7 +64,7 @@ TORCH_MODULE_TO_ATB_MAP = {
     "Embedding": dict(op_type="Gather", op_param={}, is_weights_first=True),
     "Gather": dict(op_type="Gather", op_param={}),
     ".*RMSNorm$": dict(op_type="RmsNorm", op_param={"layerType": "RMS_NORM_NORM", "epsilon": 1e-5}),
-    ".*LayerNorm$": dict(op_type="LayerNorm", op_param={"layerType": "LAYER_NORM_UNDEFINED"}),
+    ".*LayerNorm$": dict(op_type="LayerNorm", op_param={"layerType": "LAYER_NORM_NORM"}),
     "Linear": dict(op_type="Linear", op_param={"hasBias": False, "enAccum": False}),
     ".*Rotary.*": dict(op_type="Rope", op_param={"rotaryCoeff": 2}),
     ".*Attention$": dict(
@@ -491,7 +491,7 @@ class ATBModelFromTorch(ATBModel):
                 vv["op_param"].update({"epsilon": self.rms_norm_eps})
             self.torch_module_to_atb_map[re_key] = Operation(**vv)
 
-        self.pre_query_name, self.pre_key_name, self.pre_value_name, self.is_apply_rope = "", "", "", False
+        self.pre_qkv_name, self.pre_query_name, self.pre_key_name, self.pre_value_name, self.is_apply_rope = "", "", "", "", False
         self.model_inputs, self.model_outputs, self.operations = [], [], []
         # base graph is set execute_as_single=False, has to keep all operaions as property
         self.base_graph_operations, self.k_cache_names, self.v_cache_names = [], [], []
@@ -669,15 +669,17 @@ class ATBModelFromTorch(ATBModel):
             module_name = cur_module_name
         return node_module_type, cur_inputs, module_name
 
-    def _check_and_set_pre_qkv_name(self, atb_operation):
-        if atb_operation.op_type == "Linear":
-            sub_name = atb_operation.op_name.split(".")[-1]
-            if "q" in sub_name:
-                self.pre_query_name = atb_operation.outputs[0]
-            elif "k" in sub_name:
-                self.pre_key_name = atb_operation.outputs[0]
-            elif "v" in sub_name:
-                self.pre_value_name = atb_operation.outputs[0]
+    def _check_and_set_pre_qkv_name(self, atb_operation):
+        if atb_operation.op_type == "Linear":
+            sub_name = atb_operation.op_name.split(".")[-1]
+            if all(sub in sub_name for sub in ("q", "k", "v")):
+                self.pre_qkv_name = atb_operation.outputs[0]
+            elif "q" in sub_name:
+                self.pre_query_name = atb_operation.outputs[0]
+            elif "k" in sub_name:
+                self.pre_key_name = atb_operation.outputs[0]
+            elif "v" in sub_name:
+                self.pre_value_name = atb_operation.outputs[0]
 
     def _find_in_torch_module_to_atb_map(self, node_type):
         for kk, vv in self.torch_module_to_atb_map.items():
@@ -721,7 +723,20 @@ class ATBModelFromTorch(ATBModel):
             FIXED_INPUTS.seq_len,
         ]
 
-        query_name, key_name = self.pre_query_name, self.pre_key_name
+        query_name, key_name, value_name = self.pre_query_name, self.pre_key_name, self.pre_value_name
+        if self.pre_qkv_name:
+            inputs = self.pre_qkv_name
+            query_name, key_name, value_name = module_name + ".q",  module_name + ".k",  module_name + ".v"
+            self.operations.append(
+                Operation(
+                    op_type="Split",
+                    op_param={'splitDim':1, 'splitNum':3},
+                    inputs=[inputs],
+                    outputs=[query_name, key_name, value_name],
+                    op_name=module_name + ".split",
+                )
+            )
+
         if self.is_apply_rope:
             inputs = [query_name, key_name, "gather_cos.out", "gather_sin.out", FIXED_INPUTS.seq_len]
             query_name, key_name = module_name + ".q_embed", module_name + ".k_embed"
@@ -764,7 +779,7 @@ class ATBModelFromTorch(ATBModel):
             Operation(
                 op_type="add_reshape",
                 function=lambda org_shape: [org_shape[0], self.num_key_value_heads, self.head_dim],
-                inputs=[self.pre_value_name],
+                inputs=[value_name],
                 outputs=[module_name + ".v_embed_"],
                 op_name=module_name + ".v." + RESHPAE_KIND.reshape_qkv,
             ),
@@ -901,6 +916,8 @@ class ATBModelFromTorch(ATBModel):
                 self.model_outputs.append(node.name)
                 continue
             if not hasattr(node, "meta") or not node.meta.get(NN_MODULE_STACK, []):
+                if node.op == FX_OP_TYPES.call_function:
+                    output_node_map[node.name] = previous_operation_out
                 continue
 
             if base_module_name is None:
