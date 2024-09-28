@@ -672,7 +672,6 @@ class ATBModelFromTorch(ATBModel):
     def _check_and_set_pre_qkv_name(self, atb_operation):
         if atb_operation.op_type == "Linear":
             sub_name = atb_operation.op_name.split(".")[-1]
-            logger.info(f"Linear atb_op:{atb_operation}")
             if all(sub in sub_name for sub in ("q", "k", "v")):
                 self.pre_qkv_name = atb_operation.outputs[0]
             elif "q" in sub_name:
@@ -1092,7 +1091,7 @@ def transform(source_path, input_names=BASIC_INPUT_NAMES, output_file=None, to_q
     python3 -c "
     import torch, torch_npu
     import safetensors.torch
-    import qwen2forcausallm_atb_float
+    import {model_name}
     from msit_llm.transform.torch_to_atb_python import ATBModel
 
     files_to_load = [
@@ -1105,7 +1104,7 @@ def transform(source_path, input_names=BASIC_INPUT_NAMES, output_file=None, to_q
         weights = safetensors.torch.load_file(file_path)
         merged_weights.update(weights)
 
-    atb_model = ATBModel(qwen2forcausallm_atb_float.Model())
+    atb_model = ATBModel({model_name}.Model())
 
     atb_model.set_weights(merged_weights)
 
