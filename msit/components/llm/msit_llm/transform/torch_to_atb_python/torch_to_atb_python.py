@@ -1090,23 +1090,12 @@ def transform(source_path, input_names=BASIC_INPUT_NAMES, output_file=None, to_q
 
     python3 -c "
     import torch, torch_npu
-    import safetensors.torch
     import {model_name}
     from msit_llm.transform.torch_to_atb_python import ATBModel
 
-    files_to_load = [
-        'weights_path',
-    ]
-
-    merged_weights = {}
-
-    for file_path in files_to_load:
-        weights = safetensors.torch.load_file(file_path)
-        merged_weights.update(weights)
-
     atb_model = ATBModel({model_name}.Model())
-
-    atb_model.set_weights(merged_weights)
+    weights = torch.load(\'$WEIGHT_PATH\')  # Use actual WEIGHT_PATH
+    atb_model.set_weights(weights)
 
     input_len = 32
     out = atb_model.forward(input_ids=torch.arange(input_len), position_ids=torch.arange(input_len))
