@@ -917,6 +917,8 @@ class ATBModelFromTorch(ATBModel):
                 self.model_outputs.append(node.name)
                 continue
             if not hasattr(node, "meta") or not node.meta.get(NN_MODULE_STACK, []):
+                if node.op == FX_OP_TYPES.call_function:
+                    output_node_map[node.name] = previous_operation_out
                 continue
 
             if base_module_name is None:
@@ -1087,14 +1089,25 @@ def transform(source_path, input_names=BASIC_INPUT_NAMES, output_file=None, to_q
     logger.info(
         """Run simple inference like:
 
-    python3 -c "
-    import torch, torch_npu
-    import {model_name}
-    from msit_llm.transform.torch_to_atb_python import ATBModel
+python3 -c "
+import torch, torch_npu
+import safetensors.torch
+import qwen2forcausallm_atb_float
+from msit_llm.transform.torch_to_atb_python import ATBModel
 
-    atb_model = ATBModel({model_name}.Model())
-    weights = torch.load(\'$WEIGHT_PATH\')  # Use actual WEIGHT_PATH
-    atb_model.set_weights(weights)
+files_to_load = [
+    'weights_path',
+]
+
+merged_weights = {}
+
+for file_path in files_to_load:
+    weights = safetensors.torch.load_file(file_path)
+    merged_weights.update(weights)
+
+atb_model = ATBModel(qwen2forcausallm_atb_float.Model())
+
+atb_model.set_weights(merged_weights)
 
     input_len = 32
     out = atb_model.forward(input_ids=torch.arange(input_len), position_ids=torch.arange(input_len))
