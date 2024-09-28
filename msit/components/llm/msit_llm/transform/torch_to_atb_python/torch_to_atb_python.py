@@ -723,19 +723,19 @@ class ATBModelFromTorch(ATBModel):
             FIXED_INPUTS.seq_len,
         ]
 
-            query_name, key_name, value_name = self.pre_query_name, self.pre_key_name, self.pre_value_name
-            if self.pre_qkv_name:
-                inputs = self.pre_qkv_name
-                query_name, key_name, value_name = module_name + ".q",  module_name + ".k",  module_name + ".v"
-                self.operations.append(
-                    Operation(
-                        op_type="Split",
-                        op_param={'splitDim':1, 'splitNum':3},
-                        inputs=[inputs],
-                        outputs=[query_name, key_name, value_name],
-                        op_name=module_name + ".split",
-                    )
+        query_name, key_name, value_name = self.pre_query_name, self.pre_key_name, self.pre_value_name
+        if self.pre_qkv_name:
+            inputs = self.pre_qkv_name
+            query_name, key_name, value_name = module_name + ".q",  module_name + ".k",  module_name + ".v"
+            self.operations.append(
+                Operation(
+                    op_type="Split",
+                    op_param={'splitDim':1, 'splitNum':3},
+                    inputs=[inputs],
+                    outputs=[query_name, key_name, value_name],
+                    op_name=module_name + ".split",
                 )
+            )
 
         if self.is_apply_rope:
             inputs = [query_name, key_name, "gather_cos.out", "gather_sin.out", FIXED_INPUTS.seq_len]
