@@ -41,7 +41,6 @@ Err:2 http://repo.huaweicloud.com/ubuntu-ports focal-updates InRelease
 ```
 ARG PYPI_PATH_TRUST
 ARG MSIT_PATH
-ARG PYPI_TSINGHUA
 
 # 添加环境变量
 ENV http_proxy=http://${USER_NAME}:${PASSWORD}@${PROXY_SERVER}:${PORT}
