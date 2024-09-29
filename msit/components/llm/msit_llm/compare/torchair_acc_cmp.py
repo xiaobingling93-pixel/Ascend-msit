@@ -40,7 +40,7 @@ def get_torchair_ge_graph_path(my_path):
         return None
 
     my_path_depth = len(my_path.split(os.sep))
-    for cur_path, dirs, file_names in os.walk(my_path):
+    for cur_path, _, file_names in os.walk(my_path):
         for file_name in file_names:
             if file_name.startswith(GE_GRAPH_FILE_PREFIX) and file_name.endswith(".txt"):
                 return os.path.join(cur_path, file_name)
@@ -108,7 +108,7 @@ def gather_data_with_token_id(data_path):
     for token_dir in token_dirs:
         cur_basename = os.path.basename(token_dir)
         cur_token_id = int(cur_basename) if str.isdigit(cur_basename) else 0
-        for cur_path, dirs, file_names in os.walk(token_dir):
+        for cur_path, _, file_names in os.walk(token_dir):
             file_names = [os.path.join(cur_path, file_name) for file_name in file_names]
             gathered_files.setdefault(cur_token_id, []).extend(file_names)
     return gathered_files
@@ -198,9 +198,7 @@ def compare_single_data(golden_path, my_path, token_id=0, golden_data=None, my_d
     return fill_row_data(data_info, loaded_my_data=my_data, loaded_golden_data=golden_data)
 
 
-""" Comparing GE with FX """
-
-
+# Comparing GE with FX """
 def filter_valid_fx_desc_tensor_info(desc_key, desc_value):
     """Valid one like: 'attr': {'key': '_fx_tensor_name', 'value': {'s': 'add_1-aten.add.Tensor.OUTPUT.0'}}"""
     if not (desc_key == "attr" or desc_key.startswith("attr#")) or not isinstance(desc_value, dict):
@@ -226,7 +224,8 @@ def get_all_ops_from_fusion_op(op_name, graph_map_dict, ge_dump_data):
 
 def compare_ge_with_fx(graph_map, ge_dump_data, fx_dump_data, token_id=0):
     gathered_row_data = []
-    graph_map_dict = {graph["op"]["name"]: graph["op"] for graph in graph_map if "op" in graph and "name" in graph["op"]}
+    graph_map_dict = {graph["op"]["name"]: graph["op"] for graph in graph_map if
+                      "op" in graph and "name" in graph["op"]}
     ge_dump_data = sort_ge_dump_data(ge_dump_data, graph_map)
     for op_name, my_path in ge_dump_data.items():
         all_ops = get_all_ops_from_fusion_op(op_name, graph_map_dict, ge_dump_data)
@@ -269,7 +268,7 @@ def compare_ge_with_fx_single_op(op_info, fx_dump_data, op_name, my_path, token_
             fx_outputs = fx_dump_data.get(fx_tensor_name, {}).get("output", [])
             logger.debug(f"ge_inputs length: {len(ge_inputs)}, fx_inputs length:, {len(fx_inputs)}")
             logger.debug(f"ge_outputs length: {len(ge_outputs)}, fx_outputs length:, {len(fx_outputs)}")
-            gathered_row_data = compare_ops(fx_inputs, fx_outputs, ge_inputs, ge_outputs, token_id, my_path)
+            gathered_row_data = compare_ops((fx_inputs, fx_outputs), (ge_inputs, ge_outputs), token_id, my_path)
 
     return gathered_row_data
 
@@ -329,23 +328,21 @@ def compare_specials_private_ops(ge_inputs, ge_outputs, token_id, my_path):
     return gathered_row_data
 
 
-def compare_ops(fx_inputs, fx_outputs, ge_inputs, ge_outputs, token_id, my_path):
+def compare_ops(fx_tuple, ge_tuple, token_id, my_path):
     gathered_row_data = []
-    for cur_id, (fx_input, ge_input) in enumerate(zip(fx_inputs, ge_inputs)):
-        cur_ge_data = "{},{},{}".format(my_path, "inputs", cur_id)
+    for cur_id, (fx_input, ge_input) in enumerate(zip(fx_tuple[0], ge_tuple[0])):
+        cur_ge_data = f"{my_path},inputs,{cur_id}"
         row_data = compare_single_data(fx_input, cur_ge_data, token_id, my_data=ge_input)
         gathered_row_data.append(row_data)
-    for cur_id, (fx_output, ge_output) in enumerate(zip(fx_outputs, ge_outputs)):
-        cur_ge_data = "{},{},{}".format(my_path, "outputs", cur_id)
+    for cur_id, (fx_output, ge_output) in enumerate(zip(fx_tuple[1], ge_tuple[1])):
+        cur_ge_data = f"{my_path},outputs,{cur_id}"
         row_data = compare_single_data(fx_output, cur_ge_data, token_id, my_data=ge_output)
         gathered_row_data.append(row_data)
 
     return gathered_row_data
 
 
-""" Comparing fused GE with GE """
-
-
+# Comparing fused GE with GE
 def get_all_op_input_names(op_info):
     inputs = [vv for kk, vv in op_info.items() if kk == "input" or kk.startswith("input#")]
     return [":".join(ii.split(":")[:-1]) for ii in inputs]
@@ -429,16 +426,16 @@ def compare_ge_with_ge(graph_map, fused_ge_dump_data, ge_dump_data, token_id=0):
 
         for cur_id, (golden_input, my_input, golden_input_path) in enumerate(
                 zip(golden_inputs, my_inputs, golden_input_pathes)):
-            cur_ge_data = "{},{},{}".format(my_path, "inputs", cur_id)
+            cur_ge_data = f"{my_path},inputs,{cur_id}"
             if ",inputs," not in golden_output_path:
-                golden_output_path = "{},{},{}".format(golden_output_path, "inputs", cur_id)
+                golden_output_path = f"{golden_output_path},inputs,{cur_id}"
             row_data = compare_single_data(
                 golden_input_path, cur_ge_data, token_id, golden_data=golden_input, my_data=my_input
             )
             gathered_row_data.append(row_data)
         for cur_id, (golden_output, my_output) in enumerate(zip(golden_outputs, my_outputs)):
-            cur_ge_data = "{},{},{}".format(my_path, "outputs", cur_id)
-            golden_output_path = "{},{},{}".format(golden_output_path, "outputs", cur_id)
+            cur_ge_data = f"{my_path},outputs,{cur_id}"
+            golden_output_path = f"{golden_output_path},outputs,{cur_id}"
             row_data = compare_single_data(
                 golden_output_path, cur_ge_data, token_id, golden_data=golden_output, my_data=my_output
             )
@@ -453,9 +450,7 @@ def sort_ge_dump_data(dump_data, graph_map):
     return ge_dump_data
 
 
-""" Main entrance """
-
-
+# Main entrance """
 def acc_compare(golden_path, my_path, output_path=".", ge_graph_path=None):
     logger.info(f"[compare_torchair], golden_path: {golden_path}, my_path: {my_path}, ge_graph_path: {ge_graph_path}")
     set_msaccucmp_path_from_cann()

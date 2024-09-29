@@ -13,6 +13,7 @@
 # limitations under the License.
 import os
 import re
+from functools import wraps
 
 from msit_llm.common import utils
 from msit_llm.common.log import logger
@@ -21,6 +22,7 @@ from msit_llm.common.constant import get_ait_dump_path
 def singleton(cls):
     ins = {}
 
+    @wraps(cls)
     def run(*args, **kwargs):
         if cls not in ins:
             ins[cls] = cls(*args, **kwargs)
@@ -91,7 +93,7 @@ class DumpConfig:
 
         if not self._check_args():
             raise ValueError("Invalid args of DumpConfig.")
-        
+
         if seed is not None:
             from msit_llm import seed_all
             seed_all(seed=seed)
