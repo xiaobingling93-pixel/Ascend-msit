@@ -7,11 +7,11 @@ from typing import Union, List, Tuple, Dict, Set
 import torch
 from torch import Tensor
 
+from ascend_utils.common.utils import CallParams
+from ascend_utils.pytorch.dag.dag_torch_hook import DagTorchHook
 from msmodelslim import logger
 from msmodelslim.pytorch.prune.prune_policy import PrunePolicyGraphConv2D, \
     ImportanceInfo, PrunePolicyGraphLinear, PrunePolicy
-from ascend_utils.common.utils import CallParams
-from ascend_utils.pytorch.dag.dag_torch_hook import DagTorchHook
 
 
 class PruneTorch:
@@ -189,6 +189,42 @@ class PruneTorch:
         logger.debug("desc: %s", desc)
         return left_params, desc
 
+    def prune_by_desc(self, desc: Dict[str, Dict[str, Tuple[int, str]]]):
+        """
+        prune network by desc, use in inference
+
+        Args:
+            desc: prune info
+
+        Returns: None
+
+        Examples:
+        >>> desc = PruneTorch(dag).prune()
+        >>> # training
+        >>> # then inference
+        >>> PruneTorch(dag).prune_by_desc(desc)
+        """
+        if not isinstance(desc, dict):
+            raise TypeError("parameter desc must be dict")
+
+        ori_params = self.dag.get_params()
+        if ori_params == 0:
+            raise ValueError("network has no params")
+        try:
+            with self._dag_network:
+                for node_name, node_desc in desc.items():
+                    dag_node = self._dag_network.get_node_by_name(node_name)
+                    self._prune_one_node(dag_node, node_desc)
+        except ValueError as ex:
+            logger.error(ex)
+            raise ValueError("Please Check whether desc belongs to the network.") from ex
+
+        pruned_params = self.dag.get_params()
+        prune_off_ratio = (ori_params - pruned_params) / ori_params
+        logger.info(f"Number of original parameters: {ori_params}; ")
+        logger.info(f"Number of pruned parameters: {pruned_params}; ")
+        logger.info(f"Pruning off the ratio {prune_off_ratio * 100:.3f} %")
+    
     def _preprocess_un_prune_list(self, un_prune_list: List[Union[str, int]] = None) -> Set[str]:
         if un_prune_list is None:
             un_prune_name_list = [0, -1]
@@ -234,42 +270,6 @@ class PruneTorch:
                 continue
             node_analysis.add(policy.node_out)
             all_importance_for_sort.extend(policy.importance_infos)
-
-    def prune_by_desc(self, desc: Dict[str, Dict[str, Tuple[int, str]]]):
-        """
-        prune network by desc, use in inference
-
-        Args:
-            desc: prune info
-
-        Returns: None
-
-        Examples:
-        >>> desc = PruneTorch(dag).prune()
-        >>> # training
-        >>> # then inference
-        >>> PruneTorch(dag).prune_by_desc(desc)
-        """
-        if not isinstance(desc, dict):
-            raise TypeError("parameter desc must be dict")
-
-        ori_params = self.dag.get_params()
-        if ori_params == 0:
-            raise ValueError("network has no params")
-        try:
-            with self._dag_network:
-                for node_name, node_desc in desc.items():
-                    dag_node = self._dag_network.get_node_by_name(node_name)
-                    self._prune_one_node(dag_node, node_desc)
-        except ValueError as ex:
-            logger.error(ex)
-            raise ValueError("Please Check whether desc belongs to the network.") from ex
-
-        pruned_params = self.dag.get_params()
-        prune_off_ratio = (ori_params - pruned_params) / ori_params
-        logger.info(f"Number of original parameters: {ori_params}; ")
-        logger.info(f"Number of pruned parameters: {pruned_params}; ")
-        logger.info(f"Pruning off the ratio {prune_off_ratio * 100:.3f} %")
 
     def _prune_one_node(self, dag_node, node_desc):
         if dag_node is None:
