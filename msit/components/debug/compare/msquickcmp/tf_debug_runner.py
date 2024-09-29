@@ -1,6 +1,5 @@
-#!/usr/bin/env python
-# coding=utf-8
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """
 Function:
 This class is used to generate GUP dump data of the tf model.
@@ -24,10 +24,10 @@ import os
 import tensorflow as tf
 from tensorflow.python import debug as tf_debug
 
+from msquickcmp.common.utils import AccuracyCompareException
 from msquickcmp.common import utils, tf_common
 if tf_common.check_tf_version(tf_common.VERSION_TF2X):
     import tfdbg_ascend as dbg
-from msquickcmp.common.utils import AccuracyCompareException
 
 
 class TfDebugRunner(object):
