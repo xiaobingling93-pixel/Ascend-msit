@@ -17,6 +17,7 @@ import tempfile
 import warnings
 import os
 import itertools
+import copy
 
 from typing import List, Dict, Union, Sequence, Optional, Tuple, Set
 from collections import deque
