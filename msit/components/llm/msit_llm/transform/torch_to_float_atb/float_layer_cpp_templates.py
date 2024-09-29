@@ -52,7 +52,7 @@ static const uint64_t OUT_TENSOR_COUNT = 1;
 static const uint64_t INTERMEDIATE_TENSOR_COUNT = 3;
 static const uint64_t NODE_COUNT = 4;
 
-{DECODER_LAYER_FORMATTER}
+{decoder_layer}
 
 DecoderLayerBinder::DecoderLayerBinder() {{}}
 
@@ -80,13 +80,13 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     atb::Node &mlpParallelNode = opGraph.nodes.at(nodeId++);
     atb::Node &mlpResidualAddNode = opGraph.nodes.at(nodeId++);
 
-    {ATTENTION_FORMATTER}
+    {attention_formatter}
 
-    {RESIDUAL_ADD_FORMATTER}
+    {residual_add_formatter}
 
-    {MLP_FORMATTER}
+    {mlp_formatter}
 
-    {MLP_RESIDUAL_ADD_FORMATTER}
+    {mlp_residual_add_formatter}
 
     opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
                                  atb::SVector<atb::TensorDesc> &outTensorDescs) {{
