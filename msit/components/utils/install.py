@@ -45,12 +45,15 @@ def get_real_pkg_path(pkg_path):
 
 
 class AitInstaller:
+    @staticmethod
     def check(self):
         return "OK"
 
+    @staticmethod
     def build_extra(self, find_links):
         logger.info("there are no more extra dependencies to build")
 
+    @staticmethod
     def download_extra(self, dest):
         logger.info("there are no more extra dependencies to download")
 
@@ -271,7 +274,7 @@ def check_tools(names):
 
 
 def check_tool(pkg_name):
-    logger.debug(f"checking {pkg_name}")
+    logger.debug("checking %s", pkg_name)
     pkg_installer = get_installer(pkg_name)
 
     if not pkg_installer:

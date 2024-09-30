@@ -25,9 +25,6 @@ class CheckResult:
         self.passed = bool(passed)
         self.msg = msg
 
-    def get_msg(self):
-        return "pass" if self.passed else self.msg
-
     def __bool__(self):
         return self.passed
 
@@ -36,6 +33,9 @@ class CheckResult:
 
     def __repr__(self) -> str:
         return f"{self.passed}:{self.msg}"
+
+    def get_msg(self):
+        return "pass" if self.passed else self.msg
 
 
 class WaitingRule:
