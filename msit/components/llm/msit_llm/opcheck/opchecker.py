@@ -19,9 +19,11 @@ import time
 import datetime
 from collections import namedtuple
 import torch
+import torch_npu
 
 from msit_llm.common.log import logger
 from msit_llm.common.constant import GLOBAL_HISTORY_AIT_DUMP_PATH_LIST, RAW_INPUT_PATH
+from msit_llm.common.utils import check_data_file_size
 
 
 NAMEDTUPLE_PRECISION_METRIC = namedtuple('precision_metric', ['abs', 'kl', 'cos_sim'])('abs', 'kl', 'cos_sim')
@@ -52,7 +54,7 @@ class OpChecker:
         self.check_patterns = []
         self.precision_metric = []
         self.precision_mode = NAMEDTUPLE_PRECISION_MODE.keep_origin_dtype
-        self.timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_%H%M%S")
         self.atb_rerun = False
         self.optimization_identify = False
         self.jobs = 1
@@ -356,8 +358,9 @@ class OpChecker:
         op_param = {}
         json_path = os.path.join(dirpath, 'op_param.json')
         try:
-            with open(json_path, 'r') as f:
-                op_param = json.load(f)
+            if os.path.isfile(json_path) and check_data_file_size(json_path):
+                with open(json_path, 'r') as f:
+                    op_param = json.load(f)
         except Exception as e:
             logger_text = f"Cannot loads json file to json! Json file: {json_path} \n Exception: {e}"
             logger.debug(logger_text)

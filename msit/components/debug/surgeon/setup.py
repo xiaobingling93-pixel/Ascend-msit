@@ -22,12 +22,14 @@ with open('requirements.txt', encoding='utf-8') as f:
 with open('README.md', encoding='utf-8') as f:
     long_description = f.read()
 
-debug_sub_tasks = [{
-    "name": "surgeon",
-    "help_info": "surgeon tool for onnx modifying functions.",
-    "module": "auto_optimizer.ait_main",
-    "attr": "get_cmd_instance"
-}]
+debug_sub_tasks = [
+    {
+        "name": "surgeon",
+        "help_info": "surgeon tool for onnx modifying functions.",
+        "module": "auto_optimizer.ait_main",
+        "attr": "get_cmd_instance"
+    }
+]
 
 debug_sub_task_entry_points = [
     f"{t.get('name')}:{t.get('help_info')} = {t.get('module')}:{t.get('attr')}"

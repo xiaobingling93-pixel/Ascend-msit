@@ -35,7 +35,7 @@ WRITE_FILE_NOT_PERMITTED_STAT = stat.S_IWGRP | stat.S_IWOTH
 
 SOLUTION_LEVEL = 35
 SOLUTION_LEVEL_WIN = 45
-logging.addLevelName(SOLUTION_LEVEL, "SOLUTION")
+logging.addLevelName(SOLUTION_LEVEL, "\033[1;32m" + "SOLUTION" + "\033[0m")  # green [SOLUTION]
 logging.addLevelName(SOLUTION_LEVEL_WIN, "SOLUTION_WIN")
 
 SOLUTION_BASE_LOC = '\"gitee repo: Ascend/msit, wikis: ait_security_error_log_solution, chapter:'
@@ -181,14 +181,22 @@ class FileStat:
                 solution_log(SOLUTION_BASE_LOC + SOFT_LINK_SUB_CHAPTER)
                 return False
             target = os.readlink(self.file)
-            target_path = os.path.abspath(target)
-            file_path = os.path.abspath(self.file)
+            target_path = os.path.abspath(os.path.normpath(target)) # normpath更加规范
+            file_path = os.path.abspath(os.path.normpath(self.file))
             sub_paths = whitelist_path.split("|")
             illegal_softlink = True
             for sub_path in sub_paths:
-                if target_path.startswith(os.path.abspath(sub_path)) \
-                    and file_path.startswith(os.path.abspath(sub_path)) and not os.path.islink(sub_path):
+                sub_path_abs = os.path.abspath(os.path.normpath(sub_path))
+                # 检查子路径本身是否是软链接
+                if os.path.islink(sub_path_abs):
+                    continue
+                # 使用 os.path.commonpath 来比较路径
+                common_path_target = os.path.commonpath([sub_path_abs, target_path])
+                common_path_file = os.path.commonpath([sub_path_abs, file_path])
+                # 确保公共路径与子路径相同，表示目标路径和文件路径都在子路径内
+                if common_path_target == sub_path_abs and common_path_file == sub_path_abs:
                     illegal_softlink = False
+                    break  # 已找到合法路径，退出循环
             if illegal_softlink:
                 logger.error("path : %s is a soft link, not supported, please import file(or directory) "
                              "directly", self.file)

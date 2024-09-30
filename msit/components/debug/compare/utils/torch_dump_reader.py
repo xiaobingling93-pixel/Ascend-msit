@@ -1,4 +1,19 @@
-import os 
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import os
 import re 
 import json 
 
@@ -14,6 +29,21 @@ class TorchDumpFileReader(DumpFileReader):
         self.json_path = json_path 
         self.key_to_folder = self._map_keys_to_folders()
 
+    def get_tensor(self, key: str) -> torch.Tensor:
+        cpu_tensor = None 
+        folder_name = self.key_to_folder[key]
+        key_with_root = f'root.{folder_name}'
+        folder_path = os.path.join(self.path, key_with_root)
+        for file_name in os.listdir(folder_path):
+            if file_name.startswith('output'):
+                key_path = os.path.join(folder_path, file_name)
+                cpu_tensor = torch.load(key_path)
+                return cpu_tensor
+            else:
+                continue 
+
+        return cpu_tensor
+
     def _filter_keys(self, key_to_fold: dict) -> dict:
         keys = list(key_to_fold.values())
         keys.sort(key=len, reverse=True)
@@ -22,11 +52,11 @@ class TorchDumpFileReader(DumpFileReader):
             is_contained = any(other_key.startswith(key + '.') for other_key in keys if other_key != key)
             if not is_contained:
                 filtered_keys.add(key)
-            
+
         filtered_key_to_folder = {fusion_op: key for fusion_op, key in key_to_fold.items() if key in filtered_keys}
 
         return filtered_key_to_folder
-    
+
     def _map_keys_to_folders(self) -> dict:
         key_to_folder = {}
         key_to_id = {}
@@ -47,31 +77,16 @@ class TorchDumpFileReader(DumpFileReader):
         self.key_to_id = key_to_id
 
         return key_to_folder
-    
+
     def _extract_key_from_jit_node(self, jit_node: str) -> Optional[str]:
         match = re.search(r'scope:.*__module\.([^#\s]+)(?=\s*#)', jit_node)
         key_none = None
         if match:
             key = match.group(1)
-            return key 
+            return key
         else:
             return key_none
 
     def _get_keys(self) -> set:
         return set(self.key_to_folder.keys())
-    
-    def get_tensor(self, key: str) -> torch.Tensor:
-        cpu_tensor = None 
-        folder_name = self.key_to_folder[key]
-        key_with_root = f'root.{folder_name}'
-        folder_path = os.path.join(self.path, key_with_root)
-        for file_name in os.listdir(folder_path):
-            if file_name.startswith('output'):
-                key_path = os.path.join(folder_path, file_name)
-                cpu_tensor = torch.load(key_path)
-                return cpu_tensor
-            else:
-                continue 
-
-        return cpu_tensor
     

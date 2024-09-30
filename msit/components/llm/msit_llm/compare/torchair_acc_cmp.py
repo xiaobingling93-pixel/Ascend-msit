@@ -23,7 +23,6 @@ from msit_llm.common.utils import safe_string
 from msit_llm.compare.cmp_utils import BasicDataInfo, fill_row_data, save_compare_reault_to_csv
 from components.utils.acc_cmp import parse_torchair_dump_data, set_msaccucmp_path_from_cann
 
-
 GE_GRAPH_FILE_PREFIX = "dynamo_original_graph_"
 FUSION_OP_TYPE = "AutomaticBufferFusionOp"
 DUMP_FILE_FILTER_SUFIX = [".txt", ".npy", ".bin"]
@@ -43,7 +42,7 @@ def get_torchair_ge_graph_path(my_path):
     ge_graph_files = []
     my_path_depth = len(my_path.split(os.sep))
     timestamp_pattern = re.compile(r'(\d+)')
-    for cur_path, dirs, file_names in os.walk(my_path):
+    for cur_path, _, file_names in os.walk(my_path):
         for file_name in file_names:
             if file_name.startswith(GE_GRAPH_FILE_PREFIX) and file_name.endswith(".txt"):
                 match = timestamp_pattern.search(file_name)
@@ -109,7 +108,7 @@ def gather_data_with_token_id(data_path, fx=False):
     token_dirs, cur_token_id = [], 0
     # Detect the deepest dir level where sub dirs are all digits, and regard as tokens level.
     if fx:
-        for cur_path, dirs, file_names in os.walk(data_path):
+        for cur_path, dirs, _ in os.walk(data_path):
             if len(dirs) == 0:
                 continue
             if all([len(ii) < MAX_TOKEN_LEN and str.isdigit(ii) for ii in dirs]):
@@ -154,10 +153,10 @@ def gather_data_with_token_id(data_path, fx=False):
                 parent_dir_dict[parent_id] = {}
             if subdir_id not in parent_dir_dict[parent_id]:
                 parent_dir_dict[parent_id][subdir_id] = []
-            for cur_path, dirs, file_names in os.walk(token_dir):
+            for cur_path, _, file_names in os.walk(token_dir):
                 file_names = [os.path.join(cur_path, file_name) for file_name in file_names]
                 parent_dir_dict[parent_id][subdir_id].extend(file_names)
-        for parent_id, subdirs in parent_dir_dict.items():
+        for _, subdirs in parent_dir_dict.items():
             gathered_files_list.append(subdirs)
     return gathered_files_list
 
@@ -257,9 +256,7 @@ def compare_single_data(golden_path, my_path, token_id=0, golden_data=None, my_d
     return fill_row_data(data_info, loaded_my_data=my_data, loaded_golden_data=golden_data)
 
 
-""" Comparing GE with FX """
-
-
+# Comparing GE with FX
 def filter_valid_fx_desc_tensor_info(desc_key, desc_value):
     """Valid one like: 'attr': {'key': '_fx_tensor_name', 'value': {'s': 'add_1-aten.add.Tensor.OUTPUT.0'}}"""
     if not (desc_key == "attr" or desc_key.startswith("attr#")) or not isinstance(desc_value, dict):
@@ -285,7 +282,8 @@ def get_all_ops_from_fusion_op(op_name, graph_map_dict, ge_dump_data):
 
 def compare_ge_with_fx(graph_map, ge_dump_data, fx_dump_data, token_id=0):
     gathered_row_data = []
-    graph_map_dict = {graph["op"]["name"]: graph["op"] for graph in graph_map if "op" in graph and "name" in graph["op"]}
+    graph_map_dict = {graph["op"]["name"]: graph["op"] for graph in graph_map if
+                      "op" in graph and "name" in graph["op"]}
     ge_dump_data = sort_ge_dump_data(ge_dump_data, graph_map)
     for op_name, my_path in ge_dump_data.items():
         all_ops = get_all_ops_from_fusion_op(op_name, graph_map_dict, ge_dump_data)
@@ -328,21 +326,22 @@ def compare_ge_with_fx_single_op(op_info, fx_dump_data, op_name, my_path, token_
             fx_outputs = fx_dump_data.get(fx_tensor_name, {}).get("output", [])
             logger.debug(f"ge_inputs length: {len(ge_inputs)}, fx_inputs length:, {len(fx_inputs)}")
             logger.debug(f"ge_outputs length: {len(ge_outputs)}, fx_outputs length:, {len(fx_outputs)}")
-            gathered_row_data = compare_ops(fx_inputs, fx_outputs, ge_inputs, ge_outputs, token_id, my_path)
+            gathered_row_data = compare_ops((fx_inputs, fx_outputs), (ge_inputs, ge_outputs), token_id, my_path)
 
     return gathered_row_data
 
 
 def compare_ge_with_fx_multiple_ops(first_op_info, last_op_info, fx_dump_data, op_name, my_path, token_id):
     gathered_row_data = []
-    gathered_row_data.extend(compare_ge_with_fx_multiple_ops_details(first_op_info, fx_dump_data, op_name, my_path
-                                                                     , "input", token_id))
-    gathered_row_data.extend(compare_ge_with_fx_multiple_ops_details(last_op_info, fx_dump_data, op_name, my_path
-                                                                     , "output", token_id))
+    gathered_row_data.extend(compare_ge_with_fx_multiple_ops_details(first_op_info, fx_dump_data, op_name,
+                                                                     my_path, "input", token_id))
+    gathered_row_data.extend(compare_ge_with_fx_multiple_ops_details(last_op_info, fx_dump_data, op_name,
+                                                                     my_path, "output", token_id))
     return gathered_row_data
 
 
-def compare_ge_with_fx_multiple_ops_details(op_info: dict, fx_dump_data, op_name, my_path, input_or_output, token_id):
+def compare_ge_with_fx_multiple_ops_details(op_info: dict, *args):
+    fx_dump_data, op_name, my_path, input_or_output, token_id = args
     gathered_row_data = []
     for op_key, op_value in op_info.items():
         if not (op_key == "output_desc" or op_key.startswith("output_desc#")) or not isinstance(op_value, dict):
@@ -380,31 +379,29 @@ def compare_ge_with_fx_multiple_ops_details(op_info: dict, fx_dump_data, op_name
 def compare_specials_private_ops(ge_inputs, ge_outputs, token_id, my_path):
     gathered_row_data = []
     for cur_id, (ge_input, ge_output) in enumerate(zip(ge_inputs, ge_outputs)):
-        cur_ge_input_data = "{},{},{}".format(my_path, "inputs", cur_id)
-        cur_ge_output_data = "{},{},{}".format(my_path, "outputs", cur_id)
+        cur_ge_input_data = f"{my_path},inputs,{cur_id}"
+        cur_ge_output_data = f"{my_path},outputs,{cur_id}"
         row_data = compare_single_data(cur_ge_input_data, cur_ge_output_data, token_id, ge_input, ge_output)
         gathered_row_data.append(row_data)
 
     return gathered_row_data
 
 
-def compare_ops(fx_inputs, fx_outputs, ge_inputs, ge_outputs, token_id, my_path):
+def compare_ops(fx_tuple, ge_tuple, token_id, my_path):
     gathered_row_data = []
-    for cur_id, (fx_input, ge_input) in enumerate(zip(fx_inputs, ge_inputs)):
-        cur_ge_data = "{},{},{}".format(my_path, "inputs", cur_id)
+    for cur_id, (fx_input, ge_input) in enumerate(zip(fx_tuple[0], ge_tuple[0])):
+        cur_ge_data = f"{my_path},inputs,{cur_id}"
         row_data = compare_single_data(fx_input, cur_ge_data, token_id, my_data=ge_input)
         gathered_row_data.append(row_data)
-    for cur_id, (fx_output, ge_output) in enumerate(zip(fx_outputs, ge_outputs)):
-        cur_ge_data = "{},{},{}".format(my_path, "outputs", cur_id)
+    for cur_id, (fx_output, ge_output) in enumerate(zip(fx_tuple[1], ge_tuple[1])):
+        cur_ge_data = f"{my_path},outputs,{cur_id}"
         row_data = compare_single_data(fx_output, cur_ge_data, token_id, my_data=ge_output)
         gathered_row_data.append(row_data)
 
     return gathered_row_data
 
 
-""" Comparing fused GE with GE """
-
-
+# Comparing fused GE with GE
 def get_all_op_input_names(op_info):
     inputs = [vv for kk, vv in op_info.items() if kk == "input" or kk.startswith("input#")]
     return [":".join(ii.split(":")[:-1]) for ii in inputs]
@@ -488,16 +485,16 @@ def compare_ge_with_ge(graph_map, fused_ge_dump_data, ge_dump_data, token_id=0):
 
         for cur_id, (golden_input, my_input, golden_input_path) in enumerate(
                 zip(golden_inputs, my_inputs, golden_input_pathes)):
-            cur_ge_data = "{},{},{}".format(my_path, "inputs", cur_id)
+            cur_ge_data = f"{my_path},inputs,{cur_id}"
             if ",inputs," not in golden_output_path:
-                golden_output_path = "{},{},{}".format(golden_output_path, "inputs", cur_id)
+                golden_output_path = f"{golden_output_path},inputs,{cur_id}"
             row_data = compare_single_data(
                 golden_input_path, cur_ge_data, token_id, golden_data=golden_input, my_data=my_input
             )
             gathered_row_data.append(row_data)
         for cur_id, (golden_output, my_output) in enumerate(zip(golden_outputs, my_outputs)):
-            cur_ge_data = "{},{},{}".format(my_path, "outputs", cur_id)
-            golden_output_path = "{},{},{}".format(golden_output_path, "outputs", cur_id)
+            cur_ge_data = f"{my_path},outputs,{cur_id}"
+            golden_output_path = f"{golden_output_path},outputs,{cur_id}"
             row_data = compare_single_data(
                 golden_output_path, cur_ge_data, token_id, golden_data=golden_output, my_data=my_output
             )
@@ -512,9 +509,7 @@ def sort_ge_dump_data(dump_data, graph_map):
     return ge_dump_data
 
 
-""" Main entrance """
-
-
+# Main entrance
 def acc_compare(golden_path, my_path, output_path=".", ge_graph_path=None):
     logger.info(f"[compare_torchair], golden_path: {golden_path}, my_path: {my_path}, ge_graph_path: {ge_graph_path}")
     set_msaccucmp_path_from_cann()
@@ -557,4 +552,3 @@ def acc_compare(golden_path, my_path, output_path=".", ge_graph_path=None):
                 row_data = compare_ge_with_ge(graph_map, my_dump_data[token_id], golden_dump_data[token_id], token_id)
             gathered_row_data.extend(row_data)
         save_compare_reault_to_csv(gathered_row_data, output_path)
-

@@ -14,13 +14,16 @@
 import os
 import re
 
+from functools import wraps
 from msit_llm.common import utils
 from msit_llm.common.log import logger
 from msit_llm.common.constant import get_ait_dump_path
 
+
 def singleton(cls):
     ins = {}
 
+    @wraps(cls)
     def run(*args, **kwargs):
         if cls not in ins:
             ins[cls] = cls(*args, **kwargs)
@@ -53,18 +56,18 @@ def str_to_reg_str(name):
 @singleton
 class DumpConfig:
     def __init__(
-        self,
-        dump_path=None,
-        token_range=None,
-        module_list=None,
-        api_list=None,
-        tensor_part=2,
-        device_id=None,
-        dump_last_logits=False,
-        mode=None,
-        dump_weight=False,
-        layer_name=None,
-        seed=None,
+            self,
+            dump_path=None,
+            token_range=None,
+            module_list=None,
+            api_list=None,
+            tensor_part=2,
+            device_id=None,
+            dump_last_logits=False,
+            mode=None,
+            dump_weight=False,
+            layer_name=None,
+            seed=None,
     ):
         self.dump_path = dump_path or "./"
         self.mode = mode or ["module"]
@@ -91,7 +94,7 @@ class DumpConfig:
 
         if not self._check_args():
             raise ValueError("Invalid args of DumpConfig.")
-        
+
         if seed is not None:
             from msit_llm import seed_all
             seed_all(seed=seed)

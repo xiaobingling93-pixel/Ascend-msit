@@ -28,7 +28,11 @@ def main():
         f"For any issue, refer FAQ first: {AIT_FAQ_HOME}",
     )
 
-    cmd = BaseCommand("msit", None, ["ait_sub_task", AitInstallCommand(), AitBuildExtraCommand(), AitCheckCommand(), DownloadCommand()])
+    cmd = BaseCommand(
+        "msit", None, ["ait_sub_task", AitInstallCommand(), AitBuildExtraCommand(), 
+                       AitCheckCommand(), DownloadCommand()]
+    )
+    
     cmd.register_parser(parser)
 
     args = parser.parse_args()

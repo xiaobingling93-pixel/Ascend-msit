@@ -53,7 +53,7 @@ def handle_tensor_view(args):
     print_stat(tensor)
 
     if args.print:
-        print(tensor)
+        logger.info("\n%s", tensor)
 
     if args.output:
         out_path = args.output

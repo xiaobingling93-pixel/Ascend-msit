@@ -21,7 +21,8 @@ from msit_llm.common.log import logger
 from msit_llm.transform.model_parser import kind, parser
 from msit_llm.transform import torch_to_float_atb
 from msit_llm.transform.torch_to_float_atb.utils import (get_repeat_box_layer, 
-    dag_to_model, init_save_name, init_save_dir, write_file)
+    dag_to_model, init_save_name, init_save_dir)
+from msit_llm.transform.utils import write_file
 from components.utils.file_open_check import ms_open
 
 

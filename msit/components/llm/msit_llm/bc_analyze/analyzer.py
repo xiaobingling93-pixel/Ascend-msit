@@ -1,3 +1,18 @@
+# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
 import os
 
 import pandas as pd
@@ -5,6 +20,7 @@ import pandas as pd
 from msit_llm.bc_analyze.utils import get_timestamp
 from msit_llm.common.constant import MSIT_BAD_CASE_FOLDER_NAME
 from msit_llm.common.log import logger
+from msit_llm.common.utils import load_file_to_read_common_check
 
 
 class Analyzer(object):
@@ -13,91 +29,21 @@ class Analyzer(object):
     collect the result for you, and analyze it immediately.
     """
     ANALYZER_FOLDER_NAME = os.path.join(MSIT_BAD_CASE_FOLDER_NAME, 'analyzer')
-    BAD_CASE_CSV_PREFIX = 'msit_bad_case_result_'
 
-    @classmethod
-    def from_csv(cls, golden_csv_path: str, test_csv_path: str) -> None:
-        """Analyze the bad case by comparing `golden_csv_path` with `test_csv_path`, the analysis will be stored 
-        as a csv file. If there is no difference between these two, then no report will be saved.
-        
-        Paramters
-        ---------
-        `golden_csv_path` : str
-            The csv path that is considered to be the golden standard.
-        `test_csv_path` : str
-            The csv path that is considered to be the test result.
-
-        Notes
-        -----
-        The analysis csv file will be stored under the directory `msit_bad_case_analyze`, the csv file name will be 
-        `msit_bad_case_result_` plus the time stamp. For example, `msit_bad_case_result_20240720042235.csv`.
-
-        Exceptions
-        ----------
-        `ValueError` : raises if any path does not end with `.csv`
-        `OSError` : raises if any path does not exist, no permission to access, or file name too long
-        `PermssionError` : raises if the file owner is not the current user, or it is other writeable
-        `KeyError` : raises if the header of csv does not include any of 'queries', 'input_token_ids', 
-                    'output_token_ids', or 'passed'
-
-        Other errors may be occured by `pandas`
-
-        Examples
-        --------
-        >>> from msit_llm import Analyzer
-        >>> Analyzer.from_csv(csv1, csv2)
-        2024-08-07 04:44:08,278 - msit_llm_logger - INFO - 'Analyzer' received two csv paths, the golden one is:
-            'csv1'
-        and the test one is:
-            'csv2'
-        2024-08-07 04:45:12,512 - msit_llm_logger - INFO - Checking if path 'csv1' is valid...
-        2024-08-07 04:45:13,123 - msit_llm_logger - INFO - Checking if the header of csv is valid...
-        2024-08-07 04:45:14,546 - msit_llm_logger - INFO - Checking if path 'csv2' is valid...
-        2024-08-07 04:45:15,523 - msit_llm_logger - INFO - Checking if the header of csv is valid...
-        2024-08-07 04:45:16,166 - msit_llm_logger - INFO - Analyzing...
-        2024-08-07 04:45:17,125 - msit_llm_logger - INFO - 'Analyzer' has successfully finished the analysis ...
-        """
-        logger.info(
-            "'Analyzer' received two csv paths, the golden one is:\n\t'%s'\nand the test one is:\n\t'%s'", 
-            golden_csv_path, 
-            test_csv_path
-        )
-
-        golden_df = cls._validate_csv_path(golden_csv_path)
-        test_df = cls._validate_csv_path(test_csv_path)
-
-        cls._validate_df(golden_df)
-        cls._validate_df(test_df)
-
-        cls._compare_golden_with_test(golden_df, test_df)
-    
-    @classmethod
-    def _validate_csv_path(cls, csv_path: str) -> pd.DataFrame:
-        logger.info("Checking if path '%s' is valid...", csv_path)
+    @staticmethod
+    def _validate_csv_path(csv_path: str) -> pd.DataFrame:
+        logger.info("Checking if path %r is valid...", csv_path)
 
         if not isinstance(csv_path, str) or not csv_path.endswith('.csv'):
-            logger.error("Invalid csv path, only path with suffix '.csv' is allowed: '%s'", csv_path)
+            logger.error("Invalid csv path, only path with suffix '.csv' is allowed: %r", csv_path)
             raise ValueError
-
-        try:
-            file_status = os.stat(csv_path)
-        except OSError as e:
-            logger.error("%s: %s", e.strerror, csv_path)
-            raise
-
-        currrent_uid = os.getuid()
-        if file_status.st_uid != currrent_uid and currrent_uid != 0:
-            logger.error("Inconsistent owner. '%s' should be used only by its owner or superuser", csv_path)
-            raise PermissionError
         
-        if (os.st.S_IWOTH & file_status.st_mode) == os.st.S_IWOTH:
-            logger.error("Unsafe csv path, '%s' should not be other writeable", csv_path)
-            raise PermissionError
+        csv_path = load_file_to_read_common_check(csv_path)
 
         return pd.read_csv(csv_path, encoding='utf-8')
 
-    @classmethod
-    def _validate_df(cls, df: pd.DataFrame) -> None:
+    @staticmethod
+    def _validate_df(df: pd.DataFrame) -> None:
         logger.info("Checking if the header of csv is valid...")
         df.rename(columns={'pass': 'passed'}, inplace=True)
         df.dropna(inplace=True)
@@ -109,8 +55,8 @@ class Analyzer(object):
             )
             raise KeyError
     
-    @classmethod
-    def _compare_golden_with_test(cls, golden_df, test_df) -> None:
+    @staticmethod
+    def _compare_golden_with_test(golden_df, test_df) -> None:
         logger.info("Analyzing...")
         merged_df = golden_df.merge(test_df, on='queries', how='left', suffixes=('_golden', '_test'), indicator=True)
 
@@ -123,7 +69,7 @@ class Analyzer(object):
             desired_columns.append(f'{column}_golden')
             desired_columns.append(f'{column}_test')
 
-        cls._save_result(filtered_df[desired_columns])
+        Analyzer._save_result(filtered_df[desired_columns])
 
         not_both_mask = merged_df['_merge'] != 'both'
         not_both_count = not_both_mask.sum()
@@ -135,30 +81,26 @@ class Analyzer(object):
                 unmatched_queries.to_string(header=False)
             )
         
-    @classmethod
-    def _save_result(cls, df_to_save: pd.DataFrame, suffix='.csv') -> None:
+    @staticmethod
+    def _save_result(df_to_save: pd.DataFrame) -> None:
         if df_to_save.empty:
             logger.warning(
                 "'Analyzer' detected that there is no difference between the given golden result and test result. "
                 "Hence no result is saved")
             return
         
-        os.makedirs(cls.ANALYZER_FOLDER_NAME, mode=0o700, exist_ok=True)
-        path = os.path.join(cls.ANALYZER_FOLDER_NAME, cls._get_candidate_path(suffix=suffix))
+        os.makedirs(Analyzer.ANALYZER_FOLDER_NAME, mode=0o700, exist_ok=True)
+        path = os.path.join(Analyzer.ANALYZER_FOLDER_NAME, f"{get_timestamp()}.csv")
 
         flags = os.O_WRONLY | os.O_CREAT
         modes = os.st.S_IRUSR | os.st.S_IWUSR | os.st.S_IRGRP
         with os.fdopen(os.open(path, flags, modes), 'w') as file: 
             df_to_save.to_csv(file, encoding='utf-8', index=False)
 
-        logger.info("'Analyzer' has successfully finished the analysis, the result is stored at '%s'", path)
+        logger.info("'Analyzer' has successfully finished the analysis, the result is stored at %r", path)
 
-    @classmethod
-    def _get_candidate_path(cls, suffix):
-        return cls.BAD_CASE_CSV_PREFIX + get_timestamp() + suffix
-
-    @classmethod
-    def from_mixed(cls, golden, test) -> None:
+    @staticmethod
+    def analyze(golden, test) -> None:
         """This method is designed in case users collect the evaluation result in memory. Asides from path like,
         both `golden` and `test` can be an instance of `Synthesizer`.
 
@@ -192,14 +134,14 @@ class Analyzer(object):
         if isinstance(golden, Synthesizer):
             golden = golden.to_df(errors='trunc')
         else:
-            golden = cls._validate_csv_path(golden)
+            golden = Analyzer._validate_csv_path(golden)
         
         if isinstance(test, Synthesizer):
             test = test.to_df(errors='trunc')
         else:
-            test = cls._validate_csv_path(test)
+            test = Analyzer._validate_csv_path(test)
 
-        cls._validate_df(golden)
-        cls._validate_df(test)
+        Analyzer._validate_df(golden)
+        Analyzer._validate_df(test)
 
-        cls._compare_golden_with_test(golden, test)
+        Analyzer._compare_golden_with_test(golden, test)
