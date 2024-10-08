@@ -56,7 +56,7 @@ class Synthesizer(object):
             output_token_ids=output_token_ids,
             passed=passed
         )
-
+    
     def from_args(self, *, queries=None, input_token_ids=None, output_token_ids=None, passed=None) -> None:
         """Collecting dataset evaluation result from memory. User should take care of the evaluation details.
         
@@ -92,6 +92,105 @@ class Synthesizer(object):
             output_token_ids=output_token_ids,
             passed=passed
         )
+
+    @classmethod
+    def from_cmd(cls, command) -> str:
+        """Collecting dataset evaluation result from `command`. This method is a static method that will run the 
+        `command` in the subprocess and collect the desired results during running, the collecting result will be 
+        a csv file that stored at a temporary directory which will be returned by this method.
+
+        Currently only supports `Model Test` from `ATB Speed`.
+
+        Parameters
+        ----------
+        `command` : str
+            The model inference command should be run. It must somehow invoke python interpreter, otherwise 
+            nothing will be collected. Currently only supports `Model Test` from `ATB Speed`
+
+        Returns
+        -------
+        `temp_dir_name` : str
+            A temporary directory path name that points to the place where the collecting result csv file is 
+            stored.
+
+        Exceptions
+        ----------
+        `FileNotFoundError` : raise if `patcher` directory is not found in the msit site-packages directory
+        `RuntimeError` : raise if an error occured during `command` execution in the subprocess
+
+        Examples
+        --------
+        The logger prefixes, stdouts and stderrs are omitted in the following examples:
+        >>> from msit_llm import Synthesizer
+        >>> Synthesizer.from_cmd('bash run.sh pa_fp16 full_CEval 1 1 chatglm2_6b /data/chatglm2_6b 1')
+        INFO - Command 'bash run.sh pa_fp16 full_CEval 1 1 chatglm2_6b /data/chatglm2_6b 1' is running...
+        ......
+        INFO - Command 'bash run.sh pa_fp16 full_CEval 1 1 chatglm2_6b /data/chatglm2_6b 1' returns successfully
+        
+        An inccorect command:
+        >>> Synthesizer.from_cmd('b run.sh')
+        ERROR - 'b run.sh': command not found, please run it separately first before using 'from_cmd'
+
+        An error occured in the subprocess:
+        >>> Synthesizer.from_cmd('bash run.sh')
+        INFO - Command 'bash run.sh' is running...
+        ......
+        ERROR - Failed to run command 'bash run.sh', please run it separately first before using 'from_cmd'
+        """
+        import subprocess
+        import shlex
+
+        env = os.environ.copy()
+        patcher_folder = os.path.join(os.path.dirname(__file__), 'patcher')
+        if not os.path.exists(patcher_folder):
+            logger.error("Directory '%s' not found, please try to reinstall the latest msit", patcher_folder)
+            raise FileNotFoundError
+
+        env['PYTHONPATH'] = patcher_folder + ':' + env.get('PYTHONPATH', '')
+
+        temp_dir_name = 'msit_bad_case_rt' + next(cls._namer)
+        env['MSIT_TEMP_DIR_NAME'] = temp_dir_name
+
+        split_command = shlex.split(command)
+
+        if not split_command:
+            logger.error("Command is empty,please try to run it first")
+            raise ValueError()
+
+        known_invalid_command = {
+            "rm", "mv", "mkfs", "dd",
+            "chown", "chmod",
+            "shutdown", "reboot",
+            "curl", "wget",
+        }
+
+        if split_command[0] in known_invalid_command:
+            logger.error("Invalid command '%s'", split_command)
+            raise ValueError
+
+        logger.debug("Split command %s", split_command)
+
+        try:
+            child_process = subprocess.Popen(
+                split_command,
+                env=env,
+            )
+        except OSError:
+            logger.error(
+                "'%s': command not found, please run it separately first before using 'from_cmd'", command
+            )
+            raise
+
+        logger.info("Command '%s' is running...", command)
+
+        if child_process.wait() != 0:
+            logger.error(
+                "Failed to run command '%s', please run it separately first before using 'from_cmd'", command
+            )
+            raise RuntimeError
+        
+        logger.info("Command '%s' returns successfully", command)
+        return temp_dir_name
 
     def to_csv(self, *, errors='trunc'):
         """Archive the collected result to csv file. 
@@ -148,7 +247,7 @@ class Synthesizer(object):
             raise ValueError
         
         return pd.DataFrame(self._info)
-
+    
     def _update_attributes(self, **kwargs):
         for key, value in kwargs.items():
             if value is not None:
@@ -161,7 +260,7 @@ class Synthesizer(object):
             return np.array([str(value)], dtype=object)
 
         return np.fromiter((str(item) for item in value), dtype=object)
-
+    
     def _padding(self):
         max_len = max(map(len, self._info.values()))
 
