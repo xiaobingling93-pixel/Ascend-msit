@@ -46,15 +46,15 @@ def get_real_pkg_path(pkg_path):
 
 class AitInstaller:
     @staticmethod
-    def check(self):
+    def check():
         return "OK"
 
     @staticmethod
-    def build_extra(self, find_links):
+    def build_extra(find_links):
         logger.info("there are no more extra dependencies to build")
 
     @staticmethod
-    def download_extra(self, dest):
+    def download_extra(dest):
         logger.info("there are no more extra dependencies to download")
 
 

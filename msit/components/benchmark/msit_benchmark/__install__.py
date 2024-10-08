@@ -21,7 +21,8 @@ from components.utils.install import AitInstaller
 
 
 class BenchmarkInstall(AitInstaller):
-    def check(self):
+    @staticmethod
+    def check():
         check_res = []
         installed_pkg = [pkg.key for pkg in pkg_resources.working_set]
 
@@ -36,7 +37,8 @@ class BenchmarkInstall(AitInstaller):
         else:
             return "\n".join(check_res)
 
-    def build_extra(self, find_links=None):
+    @staticmethod
+    def build_extra(find_links=None):
         if sys.platform == "win32":
             return
 
@@ -44,7 +46,8 @@ class BenchmarkInstall(AitInstaller):
             os.environ["MSIT_INSTALL_FIND_LINKS"] = os.path.realpath(find_links)
         subprocess.run(["/bin/bash", os.path.abspath(os.path.join(os.path.dirname(__file__), "install.sh"))])
 
-    def download_extra(self, dest):
+    @staticmethod
+    def download_extra(dest):
         if sys.platform == "win32":
             return
 
