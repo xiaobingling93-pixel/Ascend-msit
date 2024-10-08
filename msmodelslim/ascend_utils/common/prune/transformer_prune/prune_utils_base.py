@@ -8,7 +8,8 @@ class PruneUtilsBase:
     def flip_dict(data):
         return {str(v): str(k) for k, v in data.items()}
 
-    def prune_bert_intra_block(self, model_state_dict, state_dict, is_parameter=True, parameter=None):
+    @staticmethod
+    def prune_bert_intra_block(model_state_dict, state_dict, is_parameter=True, parameter=None):
         """
         is_parameter and parameter just for mindspore
         parameter is mindspore.common.parameter

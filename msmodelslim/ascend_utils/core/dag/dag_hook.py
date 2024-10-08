@@ -64,6 +64,40 @@ class DagHook(DirectedAcyclicGraph, ABC):
     @property
     def calc_order(self):
         return self._calc_order
+    
+    @staticmethod
+    def _get_attr_names(obj: Any, filter_func: Optional[Callable]) -> List[str]:
+        if obj is None:
+            return []
+        if filter_func is not None:
+            return [attr_name for attr_name in dir(obj) if filter_func(getattr(obj, attr_name), attr_name)]
+        else:
+            return [attr_name for attr_name in dir(obj)]
+
+    @staticmethod
+    def _get_ops_hook_info(obj, attr_names) -> List[Tuple[Any, Tuple, str]]:
+        return [(getattr(obj, name), (obj, name), name) for name in attr_names]
+
+    @classmethod
+    def _get_operator_hook_infos(cls, obj) -> List[Tuple[Any, Tuple, str]]:
+        def is_operator(_, name):
+            return name in OperatorAttrName.attr_names
+
+        return cls._get_ops_hook_info(obj, cls._get_attr_names(obj, is_operator))
+
+    @classmethod
+    def _get_class_hook_infos(cls, obj, cls_type) -> List[Tuple[Any, Tuple, str]]:
+        def is_class(attr, _):
+            return inspect.isclass(attr) and issubclass(attr, cls_type)
+
+        return cls._get_ops_hook_info(obj, cls._get_attr_names(obj, is_class))
+
+    @classmethod
+    def _get_function_hook_infos(cls, obj) -> List[Tuple[Any, Tuple, str]]:
+        def is_function(attr, name):
+            return not inspect.isclass(attr) and not name.startswith("_") and callable(attr)
+
+        return cls._get_ops_hook_info(obj, cls._get_attr_names(obj, is_function))
 
     def get_params(self) -> int:
         return sum([param.nelement() for param in self.network.parameters()])
@@ -308,40 +342,3 @@ class DagHook(DirectedAcyclicGraph, ABC):
             [(ops instances, ops owner module, attr name, ops name)]
         """
         pass
-
-    @staticmethod
-    def _get_attr_names(obj: Any, filter_func: Optional[Callable]) -> List[str]:
-        if obj is None:
-            return []
-        if filter_func is not None:
-            return [attr_name for attr_name in dir(obj) if filter_func(getattr(obj, attr_name), attr_name)]
-        else:
-            return [attr_name for attr_name in dir(obj)]
-
-    @staticmethod
-    def _get_ops_hook_info(obj, attr_names) -> List[Tuple[Any, Tuple, str]]:
-        return [(getattr(obj, name), (obj, name), name) for name in attr_names]
-
-    @classmethod
-    def _get_operator_hook_infos(cls, obj) -> List[Tuple[Any, Tuple, str]]:
-        def is_operator(_, name):
-            return name in OperatorAttrName.attr_names
-
-        return cls._get_ops_hook_info(obj, cls._get_attr_names(obj, is_operator))
-
-    @classmethod
-    def _get_class_hook_infos(cls, obj, cls_type) -> List[Tuple[Any, Tuple, str]]:
-        def is_class(attr, _):
-            return inspect.isclass(attr) and issubclass(attr, cls_type)
-
-        return cls._get_ops_hook_info(obj, cls._get_attr_names(obj, is_class))
-
-    @classmethod
-    def _get_function_hook_infos(cls, obj) -> List[Tuple[Any, Tuple, str]]:
-        def is_function(attr, name):
-            return not inspect.isclass(attr) and not name.startswith("_") and callable(attr)
-
-        return cls._get_ops_hook_info(obj, cls._get_attr_names(obj, is_function))
-
-    def _is_repeat_block(self, module):
-        return False
