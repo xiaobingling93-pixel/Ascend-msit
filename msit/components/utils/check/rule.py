@@ -21,6 +21,9 @@ class NumConverter:
     def __init__(self, convert_type=float):
         self.convert_type = convert_type
 
+    def __call__(self, value) -> Any:
+        return self.convert(value)
+
     def convert(self, value: str):
         try:
             if self.convert_type == int:
@@ -31,9 +34,6 @@ class NumConverter:
                 return value, True, ""
         except ValueError as er:
             return value, False, str(er)
-
-    def __call__(self, value) -> Any:
-        return self.convert(value)
 
 
 class Rule:
