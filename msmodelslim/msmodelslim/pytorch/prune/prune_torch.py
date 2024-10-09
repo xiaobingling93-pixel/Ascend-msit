@@ -182,8 +182,8 @@ class PruneTorch:
             if left_chn != ori_chn:
                 logger.info(f"node name: {name} chn: {ori_chn} -> {left_chn}; ")
             else:
-                logger.debug(f"node name: {name} chn: {ori_chn} -> {left_chn}; ")
-        logger.debug(f"desc: {desc}")
+                logger.debug("node name: %s chn: %s -> %s; ", name, ori_chn, left_chn)
+        logger.debug("desc: %s", desc)
         return left_params, desc
 
     def _preprocess_un_prune_list(self, un_prune_list: List[Union[str, int]] = None) -> Set[str]:
