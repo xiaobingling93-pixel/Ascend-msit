@@ -17,10 +17,11 @@ from dataclasses import dataclass
 
 import numpy as np
 from PIL import Image
+
 from auto_optimizer.inference_engine.pre_process.pre_process_base import PreProcessBase
 from auto_optimizer.inference_engine.data_process_factory import PreProcessFactory
 from components.debug.common import logger
-
+from components.debug.surgeon.auto_optimizer.common.args_check import check_in_path_legality
 
 @dataclass
 class ImageParam:
@@ -62,7 +63,8 @@ class ImageNetPreProcess(PreProcessBase, ABC):
     @staticmethod
     def image_process(file_path, image_param):
         # RGBA to RGB
-        image = Image.open(file_path).convert('RGB')
+        checked_file_path = check_in_path_legality(file_path)
+        image = Image.open(checked_file_path).convert('RGB')
         image = ImageNetPreProcess.resize(image, image_param.resize)
         image = ImageNetPreProcess.center_crop(image, image_param.center_crop)
         if image_param.dtype == "fp32":

@@ -15,6 +15,7 @@
 import os
 from abc import abstractmethod
 
+from components.debug.surgeon.auto_optimizer.common.args_check import check_in_path_legality
 
 class DatasetBase(object):
     def __init__(self):
@@ -38,6 +39,6 @@ class DatasetBase(object):
         label_path = cfg["label_path"]
         real_dataset = os.path.realpath(dataset_path)
         real_label = os.path.realpath(label_path)
-        if not os.path.exists(real_dataset) or not os.path.exists(real_label):
-            raise RuntimeError("get params failed")
-        return real_dataset, real_label
+        checked_real_dataset = check_in_path_legality(real_dataset)
+        checked_real_label = check_in_path_legality(real_label)
+        return checked_real_dataset, checked_real_label

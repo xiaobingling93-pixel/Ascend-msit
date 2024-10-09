@@ -43,9 +43,12 @@ class ClassificationEvaluate(EvaluateBase, ABC):
                 raise RuntimeError("input params error len={}".format(len(in_data)))
             labels, data = in_data[0], in_data[1]
 
-            # 多batch下，按batch取出对应的数据，先判断文件名称和模型输出数据大小是否一致
-            if len(data[0]) != len(labels):
-                raise RuntimeError("input params error len={}".format(len(data[0])))
+            try:
+                # 多batch下，按batch取出对应的数据，先判断文件名称和模型输出数据大小是否一致
+                if len(data[0]) != len(labels):
+                    raise RuntimeError("input params error len={}".format(len(data[0])))
+            except IndexError as e:
+                raise RuntimeError(f"index error occurred: {str(e)}")
 
             for index, label in enumerate(labels):
                 for idx, k in enumerate(topk):

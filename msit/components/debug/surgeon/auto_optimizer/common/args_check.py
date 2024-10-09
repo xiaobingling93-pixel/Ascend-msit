@@ -69,8 +69,11 @@ def check_out_model_path_legality(value):
 
 def check_soc(value):
     ivalue = int(value)
-    pre_cmd = "npu-smi info -l"
-    res = subprocess.run(pre_cmd.split(), shell=False, stdout=subprocess.PIPE)
+    try:
+        pre_cmd = "npu-smi info -l"
+        res = subprocess.run(pre_cmd.split(), shell=False, stdout=subprocess.PIPE)
+    except Exception as e:
+        raise RuntimeError('The command "npu-smi" was not found on the current device.') from e
 
     tsum = 0
     for line in res.stdout.decode().split('\n'):
