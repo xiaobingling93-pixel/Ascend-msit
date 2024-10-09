@@ -1,6 +1,5 @@
-#!/usr/bin/env python
-# coding=utf-8
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """
 Function:
 This class mainly involves the accuracy_network_compare function.
@@ -130,9 +130,11 @@ class NetCompare(object):
             when invalid  msaccucmp command throw exception
         """
         self._check_pyc_to_python_version(self.msaccucmp_command_file_path, self.python_version)
-        msaccucmp_cmd = [self.python_version, self.msaccucmp_command_file_path, "compare", "-m",
-                         self.npu_dump_data_path, "-g",
-                         self.cpu_dump_data_path, "-f", self.output_json_path, "-out", self.arguments.out_path]
+        msaccucmp_cmd = [
+            self.python_version, self.msaccucmp_command_file_path, "compare", "-m",
+            self.npu_dump_data_path, "-g",
+            self.cpu_dump_data_path, "-f", self.output_json_path, "-out", self.arguments.out_path
+        ]
         if self._check_msaccucmp_compare_support_advisor():
             msaccucmp_cmd.append(ADVISOR_ARGS)
         if self._check_msaccucmp_compare_support_max_cmp_size():
@@ -172,8 +174,10 @@ class NetCompare(object):
                     npu_data = np.load(npu_dump_file.get(file_index))
                     golden_data = np.load(golden_net_output_info.get(file_index))
                     np.save(npu_dump_file.get(file_index), npu_data.reshape(golden_data.shape))
-                    msaccucmp_cmd = [self.python_version, self.msaccucmp_command_file_path, "compare", "-m",
-                                     npu_dump_file.get(file_index), "-g", golden_net_output_info.get(file_index)]
+                    msaccucmp_cmd = [
+                        self.python_version, self.msaccucmp_command_file_path, "compare", "-m",
+                        npu_dump_file.get(file_index), "-g", golden_net_output_info.get(file_index)
+                    ]
                     status, compare_result, header = self.execute_msaccucmp_command(msaccucmp_cmd, True)
                     if status == 2 or status == 0:
                         self.save_net_output_result_to_csv(npu_dump_file.get(file_index),
@@ -271,8 +275,10 @@ class NetCompare(object):
             if line[npu_dump_index] != "Node_Output":
                 writer.writerow(line)
             else:
-                new_content = [line[0], "NaN", "Node_Output", "NaN", "NaN",
-                               npu_file_name, "NaN", golden_file_name, "[]"]
+                new_content = [
+                    line[0], "NaN", "Node_Output", "NaN", "NaN",
+                    npu_file_name, "NaN", golden_file_name, "[]"
+                ]
                 if self._check_msaccucmp_compare_support_advisor():
                     new_content.append("NaN")
                 new_content.extend(result)
@@ -314,7 +320,9 @@ class NetCompare(object):
             writer.writerow(header_base_info)
         fp_write.seek(0, 0)
         index = len(fp_write.readlines()) - 1
-        new_content = [str(index), "NaN", "Node_Output", "NaN", "NaN",
-                       csv_info.npu_file_name, "NaN", csv_info.golden_file_name, "[]"]
+        new_content = [
+            str(index), "NaN", "Node_Output", "NaN", "NaN",
+            csv_info.npu_file_name, "NaN", csv_info.golden_file_name, "[]"
+        ]
         new_content.extend(csv_info.result)
         writer.writerow(new_content)

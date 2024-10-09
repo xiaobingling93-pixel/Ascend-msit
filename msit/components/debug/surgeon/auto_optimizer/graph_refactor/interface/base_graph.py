@@ -1,4 +1,5 @@
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -532,7 +533,11 @@ class BaseGraph(ABC):
                         queue.append(prev_node)
 
         # remove unused graph inputs and initializers
-        inputs = [inp for n in self._nodes for inp in n.inputs]
+        inputs = [
+            inp 
+            for n in self._nodes 
+            for inp in n.inputs
+        ]
         self._inputs = list(filter(lambda x: x.name in inputs, self._inputs))
         self._initializers = list(filter(lambda x: x.name in inputs, self._initializers))
 

@@ -1,6 +1,5 @@
-#!/usr/bin/env python
-# coding=utf-8
-# Copyright (c) 2024-2025 Huawei Technologies Co., Ltd.
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -76,7 +75,7 @@ class NpuTfAdapterDumpData(object):
         # copy input_data into destination path
         if self.input_path:
             input_path = self.input_path.split(",")
-            for i, input_file in enumerate(input_path):
+            for input_file in input_path:
                 if not os.path.isfile(input_file):
                     utils.logger.error("no such file exists: {}".format(input_file))
                     raise utils.AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PARAM_ERROR)
@@ -136,7 +135,7 @@ class NpuTfAdapterDumpData(object):
 
     def _change_dump_data_path(self):
         sub_dirs_with_files = []
-        for sub_dir, dirs, files in os.walk(self.dump_data_npu):
+        for sub_dir, _, files in os.walk(self.dump_data_npu):
             if files:
                 sub_dirs_with_files.append(sub_dir)
         sorted_paths = sorted(sub_dirs_with_files, key=lambda x: int(x.split('/')[-3].split('_')[-1]))

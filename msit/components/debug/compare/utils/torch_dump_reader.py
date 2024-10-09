@@ -1,4 +1,5 @@
-# Copyright (c) 2024-2025 Huawei Technologies Co., Ltd.
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,7 +30,7 @@ class TorchDumpFileReader(DumpFileReader):
         self.key_to_folder = self._map_keys_to_folders()
 
     def get_tensor(self, key: str) -> torch.Tensor:
-        cpu_tensor = None
+        cpu_tensor = None 
         folder_name = self.key_to_folder[key]
         key_with_root = f'root.{folder_name}'
         folder_path = os.path.join(self.path, key_with_root)
@@ -39,7 +40,7 @@ class TorchDumpFileReader(DumpFileReader):
                 cpu_tensor = torch.load(key_path)
                 return cpu_tensor
             else:
-                continue
+                continue 
 
         return cpu_tensor
 
@@ -76,7 +77,7 @@ class TorchDumpFileReader(DumpFileReader):
         self.key_to_id = key_to_id
 
         return key_to_folder
-    
+
     def _extract_key_from_jit_node(self, jit_node: str) -> Optional[str]:
         match = re.search(r'scope:.*__module\.([^#\s]+)(?=\s*#)', jit_node)
         key_none = None

@@ -14,7 +14,6 @@
 
 import os
 import unittest
-import logging
 from multiprocessing import Pool, Manager
 
 import timeout_decorator
@@ -88,7 +87,7 @@ class TestResnet(unittest.TestCase):
             loop = file_len // batch_size
         else:
             loop = file_len // batch_size + 1
-        logging.info("engine process loop count=%s", loop)
+        logger.info("engine process loop count=%s", loop)
 
         try:
             self._thread(loop, worker, batch_size, engine_cfg)
