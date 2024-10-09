@@ -1,6 +1,5 @@
-#!/usr/bin/env python
-# coding=utf-8
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """
 Function:
 This class mainly involves tf common function.
@@ -179,7 +179,7 @@ def get_model_inputs_dtype(model_path, serving, tag_set):
         tag_set = {tf.compat.v1.saved_model.tag_constants.SERVING} if tag_set == "" else tag_set
         model = tf.compat.v1.saved_model.load(sess, tag_set, model_path)
         inputs = model.signature_def[serving].inputs
-        for key, input_tensor in inputs.items():
+        for _, input_tensor in inputs.items():
             np_dtype = tf.dtypes.as_dtype(input_tensor.dtype).as_numpy_dtype
             inputs_dtype[input_tensor.name.split(':')[0]] = np_dtype
     return inputs_dtype

@@ -1,4 +1,5 @@
-# Copyright (c) 2024-2025 Huawei Technologies Co., Ltd.
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,11 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
+import os 
 import re 
 import json 
 
-import torch 
+import os
+import re
+import json
+
+import torch
 
 from components.debug.compare.utils.base_dump_reader import DumpFileReader
 from components.utils.acc_cmp import parse_torchair_dump_data
@@ -104,10 +109,9 @@ class GEDumpFileReader(DumpFileReader):
             for fusion_op, details in data.items():
                 jit_node = details.get('jit_node', '')
                 if jit_node:
-                    key_to_folder[fusion_op] = jit_node 
-        
+                    key_to_folder[fusion_op] = jit_node
+
         return key_to_folder
 
     def _get_keys(self) -> set:
         return set(self.key_to_folder.keys())
-
