@@ -48,7 +48,7 @@ class ClassificationEvaluate(EvaluateBase, ABC):
                 if len(data[0]) != len(labels):
                     raise RuntimeError("input params error len={}".format(len(data[0])))
             except IndexError as e:
-                raise RuntimeError(f"index error occurred: {str(e)}")
+                raise RuntimeError(f"index error occurred: {str(e)}") from e
 
             for index, label in enumerate(labels):
                 for idx, k in enumerate(topk):

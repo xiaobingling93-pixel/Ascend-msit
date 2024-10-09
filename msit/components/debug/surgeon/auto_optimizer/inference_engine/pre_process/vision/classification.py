@@ -23,6 +23,7 @@ from auto_optimizer.inference_engine.data_process_factory import PreProcessFacto
 from components.debug.common import logger
 from components.debug.surgeon.auto_optimizer.common.args_check import check_in_path_legality
 
+
 @dataclass
 class ImageParam:
     mean: list

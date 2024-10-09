@@ -17,6 +17,7 @@ from abc import abstractmethod
 
 from components.debug.surgeon.auto_optimizer.common.args_check import check_in_path_legality
 
+
 class DatasetBase(object):
     def __init__(self):
         pass
