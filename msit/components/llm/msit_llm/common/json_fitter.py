@@ -85,7 +85,8 @@ def parse_onnx_attr_from_atb_node_dict(atb_node_dict):
         if isinstance(atb_node_dict["param"][param_name], dict):
             for sub_param_name in atb_node_dict["param"][param_name]:
                 full_name = param_name + "." + sub_param_name
-                onnx_attr_dict = atb_param_to_onnx_attribute(full_name, atb_node_dict["param"][param_name][sub_param_name])
+                onnx_attr_dict = atb_param_to_onnx_attribute(full_name, 
+                                                             atb_node_dict["param"][param_name][sub_param_name])
                 onnx_attrs.append(onnx_attr_dict)
         else:
             onnx_attr_dict = atb_param_to_onnx_attribute(param_name, atb_node_dict["param"][param_name])

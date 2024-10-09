@@ -137,7 +137,7 @@ MSIT_BAD_CASE_FOLDER_NAME = 'msit_bad_case'
 
 
 def get_timestamp_sync():
-    max_timestamp = int(datetime.datetime.now().strftime("%s"))
+    max_timestamp = int(datetime.datetime.now(tz=datetime.timezone.utc).strftime("%s"))
 
     world_size = int(os.environ.get("LOCAL_WORLD_SIZE", "1"))
     if world_size < 2:

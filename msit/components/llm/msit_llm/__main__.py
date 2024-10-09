@@ -262,9 +262,9 @@ class CompareCommand(BaseCommand):
             comared = acc_compare(os.path.abspath(args.golden_path), os.path.abspath(args.my_path),
                         args.output, args.mapping_file, args.cmp_level)
             if not comared:
-                cmpMgr = CompareMgr(os.path.abspath(args.golden_path), os.path.abspath(args.my_path), args)
-                if cmpMgr.is_parsed_cmp_path():
-                    cmpMgr.compare(args.output)
+                cmp_mgr_instance = CompareMgr(os.path.abspath(args.golden_path), os.path.abspath(args.my_path), args)
+                if cmp_mgr_instance.is_parsed_cmp_path():
+                    cmp_mgr_instance.compare(args.output)
 
 
 class OpcheckCommand(BaseCommand):
