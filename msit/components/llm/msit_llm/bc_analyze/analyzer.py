@@ -31,6 +31,53 @@ class Analyzer(object):
     ANALYZER_FOLDER_NAME = os.path.join(MSIT_BAD_CASE_FOLDER_NAME, 'analyzer')
 
     @staticmethod
+    def analyze(golden, test) -> None:
+        """This method is designed in case users collect the evaluation result in memory. Asides from path like,
+        both `golden` and `test` can be an instance of `Synthesizer`.
+
+        Parameter
+        ---------
+        `golden` : str or Synthesizer
+            The csv path or Sythesizer instance that is considered to be the golden standard.
+        `test` : str
+            The csv path or Sythesizer instance that is considered to be the test result.
+
+        All the notes, exceptions are consistent to `from_csv`
+
+        Examples
+        --------
+        >>> from msit_llm import Synthezier, Analyzer
+        >>> golden_synthesizer = Synthesizer(
+        ...     queries='Question 1', 
+        ...     input_token_ids=[1, 2, 3], 
+        ...     output_token_ids=[4, 5, 6], 
+        ...     passed='Correct')
+        >>> Analyzer.from_mixed(golden_synthesizer, test_csv_path)
+        2024-08-07 04:45:13,123 - msit_llm_logger - INFO - Checking if the header of csv is valid...
+        2024-08-07 04:45:14,546 - msit_llm_logger - INFO - Checking if path 'test_csv_path' is valid...
+        2024-08-07 04:45:15,523 - msit_llm_logger - INFO - Checking if the header of csv is valid...
+        2024-08-07 04:45:16,166 - msit_llm_logger - INFO - Analyzing...
+        2024-08-07 04:45:13,651 - msit_llm_logger - INFO - 'Analyzer' has successfully finished the analysis,
+        the result is stored at 'msit_bad_case_analyze/msit_bad_case_result_ieqwe2q5_20240720042235.csv'
+        """
+        from msit_llm.bc_analyze.synthezier import Synthesizer
+        
+        if isinstance(golden, Synthesizer):
+            golden = golden.to_df(errors='trunc')
+        else:
+            golden = Analyzer._validate_csv_path(golden)
+        
+        if isinstance(test, Synthesizer):
+            test = test.to_df(errors='trunc')
+        else:
+            test = Analyzer._validate_csv_path(test)
+
+        Analyzer._validate_df(golden)
+        Analyzer._validate_df(test)
+
+        Analyzer._compare_golden_with_test(golden, test)
+
+    @staticmethod
     def _validate_csv_path(csv_path: str) -> pd.DataFrame:
         logger.info("Checking if path %r is valid...", csv_path)
 
@@ -98,50 +145,3 @@ class Analyzer(object):
             df_to_save.to_csv(file, encoding='utf-8', index=False)
 
         logger.info("'Analyzer' has successfully finished the analysis, the result is stored at %r", path)
-
-    @staticmethod
-    def analyze(golden, test) -> None:
-        """This method is designed in case users collect the evaluation result in memory. Asides from path like,
-        both `golden` and `test` can be an instance of `Synthesizer`.
-
-        Parameter
-        ---------
-        `golden` : str or Synthesizer
-            The csv path or Sythesizer instance that is considered to be the golden standard.
-        `test` : str
-            The csv path or Sythesizer instance that is considered to be the test result.
-
-        All the notes, exceptions are consistent to `from_csv`
-
-        Examples
-        --------
-        >>> from msit_llm import Synthezier, Analyzer
-        >>> golden_synthesizer = Synthesizer(
-        ...     queries='Question 1', 
-        ...     input_token_ids=[1, 2, 3], 
-        ...     output_token_ids=[4, 5, 6], 
-        ...     passed='Correct')
-        >>> Analyzer.from_mixed(golden_synthesizer, test_csv_path)
-        2024-08-07 04:45:13,123 - msit_llm_logger - INFO - Checking if the header of csv is valid...
-        2024-08-07 04:45:14,546 - msit_llm_logger - INFO - Checking if path 'test_csv_path' is valid...
-        2024-08-07 04:45:15,523 - msit_llm_logger - INFO - Checking if the header of csv is valid...
-        2024-08-07 04:45:16,166 - msit_llm_logger - INFO - Analyzing...
-        2024-08-07 04:45:13,651 - msit_llm_logger - INFO - 'Analyzer' has successfully finished the analysis,
-        the result is stored at 'msit_bad_case_analyze/msit_bad_case_result_ieqwe2q5_20240720042235.csv'
-        """
-        from msit_llm.bc_analyze.synthezier import Synthesizer
-        
-        if isinstance(golden, Synthesizer):
-            golden = golden.to_df(errors='trunc')
-        else:
-            golden = Analyzer._validate_csv_path(golden)
-        
-        if isinstance(test, Synthesizer):
-            test = test.to_df(errors='trunc')
-        else:
-            test = Analyzer._validate_csv_path(test)
-
-        Analyzer._validate_df(golden)
-        Analyzer._validate_df(test)
-
-        Analyzer._compare_golden_with_test(golden, test)
