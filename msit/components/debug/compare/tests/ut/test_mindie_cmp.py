@@ -21,7 +21,8 @@ flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
 mode = stat.S_IWUSR | stat.S_IRUSR  
 
 
-def test_rt_op_mapping_file():
+@pytest.fixture(scope='module')
+def rt_op_mapping_file():
     rt_op_mapping_data = [{
         "fusion_op": "Conv2D_5Relu_8",
         "fusion_ops": [
@@ -48,9 +49,14 @@ def test_rt_op_mapping_file():
     with os.fdopen(os.open(FAKE_RT_OP_MAPPING_JSON_PATH, flags, mode), 'w') as f:
         json.dump(rt_op_mapping_data, f, indent=4)
 
+    yield FAKE_RT_OP_MAPPING_JSON_PATH
+    
+    if os.path.exists(FAKE_RT_OP_MAPPING_JSON_PATH):
+        os.remove(FAKE_RT_OP_MAPPING_JSON_PATH)
 
 
-def test_torch_op_mapping_file():
+@pytest.fixture(scope='module')
+def torch_op_mapping_file():
     torch_op_mapping_data = [{
         "jit_node": "%input.9 : Float(1, 64, 56, 56) = aten::_convolution(%input.7, \
         %self.layer1.0.conv1.weight.1_fused_bn, %9_fused_bn.3, %6, %5, %6, %11, %5, \
@@ -69,9 +75,14 @@ def test_torch_op_mapping_file():
     FAKE_TORCH_OP_MAPPING_JSON_PATH = os.path.join(current_file_path, FAKE_TORCH_OP_MAPPING_JSON_PATH)
     with os.fdopen(os.open(FAKE_TORCH_OP_MAPPING_JSON_PATH, flags, mode), 'w') as f:
         json.dump(torch_op_mapping_data, f, indent=4)
+
+    yield FAKE_TORCH_OP_MAPPING_JSON_PATH
+
+    if os.path.exists(FAKE_TORCH_OP_MAPPING_JSON_PATH):
+        os.remove(FAKE_TORCH_OP_MAPPING_JSON_PATH)
     
 
-def test_mindie_torch_compare(mocker):
+def test_mindie_torch_compare(mocker, rt_op_mapping_file, torch_op_mapping_file):
     current_file_path = os.path.dirname(__file__)
     global FAKE_OPS_JSON
     FAKE_OPS_JSON = os.path.join(current_file_path, FAKE_OPS_JSON)
@@ -91,10 +102,7 @@ def test_mindie_torch_compare(mocker):
     df = pd.read_csv(csv_file_path)
     assert df.loc[0, "cosine_similarity"] == 1.0
     new_json_file = os.path.join(current_file_path, "test_resource", "op_map_updated.json")
-    if os.path.exists(FAKE_RT_OP_MAPPING_JSON_PATH):
-        os.remove(FAKE_RT_OP_MAPPING_JSON_PATH)
-    if os.path.exists(FAKE_TORCH_OP_MAPPING_JSON_PATH):
-        os.remove(FAKE_TORCH_OP_MAPPING_JSON_PATH)
+    
     if os.path.exists(csv_file_path):
         os.remove(csv_file_path)
     if os.path.exists(new_json_file):
