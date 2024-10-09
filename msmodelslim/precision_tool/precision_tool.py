@@ -27,7 +27,9 @@ supported_hardware = ["npu"]
 TENSOR_TYPE_PYTORCH = "pt"
 DATASET_HUMAN_EVAL = "humaneval"
 
-CalcParam = collections.namedtuple('CalcParam', ['tag', 'frame', 'idx', 'scores_true', 'scores_false', 'ref_true', 'ref_best'])
+CalcParam = collections.namedtuple('CalcParam', ['tag', 'frame', 'idx', 'scores_true', 
+                                   'scores_false', 'ref_true', 'ref_best'])
+
 
 def is_running_on_npu(device_name):
     return device_name.lower() == "npu"
@@ -507,7 +509,7 @@ class PrecisionTest:
                     if pd.isnull(frame.loc[idx, incorrect_col]):
                         self.logger.warning("References missing for {0}!".format(idx))
                         continue
-                    if not len(frame.loc[idx, incorrect_col]):
+                    if len(frame.loc[idx, incorrect_col]) == 0:
                         self.logger.warning("References missing for {0}!".format(idx))
                         continue
 
@@ -689,7 +691,8 @@ class PrecisionTest:
             return prompt
         
         def gen_prompt(train_df, subject, k=-1):
-            prompt = "The following are multiple choice questions (with answers) about {}.\n\n".format(format_subject(subject))
+            prompt = "The following are multiple choice questions " \
+                     "(with answers) about {}.\n\n".format(format_subject(subject))
             if k == -1:
                 k = train_df.shape[0]
             for i in range(k):
@@ -754,7 +757,8 @@ class PrecisionTest:
         total = ["total", correct_total / sum_total, correct_total, sum_total]
         self.logger.info(f"total result:{total}")
 
-    def __postprocess(self, text: str, options: str, cushion=True) -> str:
+    @staticmethod
+    def __postprocess(text: str, options: str, cushion=True) -> str:
         patterns = [
             f'答案是?\s?([{options}])',
             f'答案是?\s?：([{options}])',

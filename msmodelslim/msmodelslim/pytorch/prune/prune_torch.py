@@ -25,8 +25,11 @@ class PruneTorch:
             self._dag_network = network
         else:
             raise ValueError("network must be torch.nn.Module or Dag")
+        
+        def eval_func(chn_weight):
+            return torch.abs(chn_weight).mean().item()
 
-        self._importance_evaluation_function = lambda chn_weight: torch.abs(chn_weight).mean().item()
+        self._importance_evaluation_function = eval_func()
         self._node_reserved_ratio = 0.5
         self._align = 16
 
@@ -125,7 +128,7 @@ class PruneTorch:
 
         un_prune_name_set = self._preprocess_un_prune_list(un_prune_list)
 
-        logger.debug(f"un_prune_name_set: {un_prune_name_set}")
+        logger.debug("un_prune_name_set: %s", un_prune_name_set)
         all_importance_for_sort: List[ImportanceInfo] = []
         self._assessment_importance_conv(all_importance_for_sort, un_prune_name_set)
         self._assessment_importance_linear(all_importance_for_sort, un_prune_name_set)
