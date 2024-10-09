@@ -14,6 +14,7 @@
 
 
 import os
+from collections.abc import Iterable
 
 import numpy as np
 import pandas as pd
@@ -256,7 +257,7 @@ class Synthesizer(object):
 
     def _sanitize_value(self, value):
         # str is a iterable
-        if isinstance(value, str) or not hasattr(value, '__iter__'):
+        if isinstance(value, str) or not isinstance(value, Iterable):
             return np.array([str(value)], dtype=object)
 
         return np.fromiter((str(item) for item in value), dtype=object)
