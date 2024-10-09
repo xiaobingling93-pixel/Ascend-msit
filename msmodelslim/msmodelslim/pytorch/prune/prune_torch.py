@@ -185,7 +185,7 @@ class PruneTorch:
             if left_chn != ori_chn:
                 logger.info(f"node name: {name} chn: {ori_chn} -> {left_chn}; ")
             else:
-                logger.debug("node name: %s chn: %s -> %s; " % (name, ori_chn, left_chn))
+                logger.debug("node name: %s chn: %s -> %s; ", name, ori_chn, left_chn)
         logger.debug("desc: %s", desc)
         return left_params, desc
 

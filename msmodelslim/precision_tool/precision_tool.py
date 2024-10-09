@@ -595,7 +595,8 @@ class PrecisionTest:
             c = df.iloc[idx, 3]
             d = df.iloc[idx, 4]
             prompt = "\nThere is a single choice question about {}. Answer the question by replying A, B, C or D.\n" \
-                     "Q: {}\nA. {}\nB. {}\nC. {}\nD. {}\nLet's think step by step. A: ".format(name.replace("_", " "), question, a, b, c, d)
+                     "Q: {}\nA. {}\nB. {}\nC. {}\nD. {}\n" \
+                     "Let's think step by step. A: ".format(name.replace("_", " "), question, a, b, c, d)
             return prompt
 
         correct_total = 0
