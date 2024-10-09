@@ -18,6 +18,7 @@ import time
 
 import mindspore as ms
 from mindspore.communication import get_rank
+from mindspore.dataset.engine.datasets import RepeatDataset
 
 from ascend_utils.common.security import check_type
 from msmodelslim import logger
@@ -35,6 +36,8 @@ class Calibrator(object):
                  ) -> None:
 
         check_type(cfg, QuantConfig, param_name="cfg")
+        if calib_data is not None:
+            check_type(calib_data, RepeatDataset, param_name="calib_data")
         self.cfg = cfg
         self.logger = logger
         self.calib_data = calib_data
