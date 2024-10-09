@@ -16,7 +16,7 @@ import numpy as np
 from transformers import PreTrainedModel, AutoTokenizer
 from tqdm import tqdm
 
-from security import json_safe_load, json_safe_dump, get_valid_path, get_valid_write_path, get_valid_read_path
+from security import json_safe_load, json_safe_dump, get_valid_path, get_valid_write_path
 from precision_tool import logger
 from precision_tool import truthfulqa_eval
 

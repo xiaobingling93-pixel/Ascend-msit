@@ -13,8 +13,7 @@ import pandas as pd
 from transformers import PreTrainedModel, AutoTokenizer
 from tqdm import tqdm
 
-from ascend_utils.common.security import json_safe_load, json_safe_dump, get_valid_path, get_valid_write_path, \
-    get_valid_read_path
+from ascend_utils.common.security import json_safe_load, json_safe_dump, get_valid_path, get_valid_write_path
 from msmodelslim import logger
 
 supported_dataset = ["boolq", "ceval_0_shot", "ceval_5_shot", "humaneval"]

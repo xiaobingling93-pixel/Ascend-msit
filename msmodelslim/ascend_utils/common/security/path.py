@@ -7,11 +7,6 @@ import shutil
 import stat
 import json
 
-<<<<<<< HEAD
-from msmodelslim import logger
-from msmodelslim.tools.logger import LOGGER_FUNC
-=======
->>>>>>> 0a425b5ae ([sjh fix cleancode] fix ascend_utils/core...common...mindspore)
 from ascend_utils.common.security.type import check_dict_character
 from msmodelslim import logger
 
