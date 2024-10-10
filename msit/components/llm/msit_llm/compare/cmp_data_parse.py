@@ -114,15 +114,6 @@ class CompareDataATB(CompareDataParse):
         # mindie RC1 版本之后，会有两个模型: prefill和 decode，并且一定会有 warmup
         self.encode_root_node, self.decode_root_node = self.parse(self.topo_files)
 
-    @classmethod
-    def accept(cls, path: str, args) -> bool:
-        ait_dump_path = cls.parse_ait_dump_path(path)
-
-        if ait_dump_path and os.path.exists(path) and cls.get_topo_file_path(ait_dump_path) is not None:
-            return True
-        else:
-            return False
-
     @staticmethod
     def parse_ait_dump_path(path):
         ait_dump_path = None
@@ -181,6 +172,15 @@ class CompareDataATB(CompareDataParse):
     @staticmethod
     def get_model_path(ait_dump_path):
         return os.path.join(ait_dump_path, "model")
+
+    @classmethod
+    def accept(cls, path: str, args=None) -> bool:
+        ait_dump_path = cls.parse_ait_dump_path(path)
+
+        if ait_dump_path and os.path.exists(path) and cls.get_topo_file_path(ait_dump_path) is not None:
+            return True
+        else:
+            return False
 
     @classmethod
     def get_topo_file_path(cls, ait_dump_path, pid=None):
@@ -393,7 +393,7 @@ class CompareDataTorch(CompareDataParse):
         return os.path.join(tokens_path, "model_tree.json")
 
     @classmethod
-    def accept(cls, path: str, args) -> bool:
+    def accept(cls, path: str, args=None) -> bool:
         ait_dump_path = cls.parse_ait_dump_path(path)
         return ait_dump_path is not None
 
