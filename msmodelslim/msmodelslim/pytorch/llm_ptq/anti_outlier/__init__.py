@@ -2,6 +2,9 @@
 __all__ = ['AntiOutlier', 'AntiOutlierConfig', 'NormBias']
 
 
+__all__ = ['AntiOutlier', 'AntiOutlierConfig', 'NormBias']
+
+
 from .anti_outlier import AntiOutlier
 from .config import AntiOutlierConfig
 from .graph_utils import NormBias

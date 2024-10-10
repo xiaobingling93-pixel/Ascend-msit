@@ -217,9 +217,9 @@ class TransformQuant:
             elif cur_cursor.kind == self.cursor_kind.VAR_DECL and self.is_in_tensor_count(cur_spelling):
                 insert_contents, insert_start, insert_end = self.update_in_tensor_count(cur_cursor, contents)
             elif (
-                    cur_cursor.kind == self.cursor_kind.FUNCTION_DECL
-                    and cur_cursor.is_definition()
-                    and cur_spelling == "from_json"
+                cur_cursor.kind == self.cursor_kind.FUNCTION_DECL
+                and cur_cursor.is_definition()
+                and cur_spelling == "from_json"
             ):
                 insert_contents, insert_start, insert_end = self.update_from_json(cur_cursor, contents)
             elif self.is_layer_function(cur_cursor):
