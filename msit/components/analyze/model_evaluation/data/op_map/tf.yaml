@@ -33,7 +33,7 @@ AdjustHue: AdjustHue
 AdjustSaturation: AdjustSaturation
 AdpGetNext: AdpGetNext
 All: ReduceAll
-AllCandidateSampler: AllCandidateSampler
+AllCandidateSampler: AllCandidateSamplery
 Angle: Angle
 AnonymousSeedGenerator: AnonymousSeedGenerator
 Any: ReduceAny

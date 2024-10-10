@@ -8,6 +8,7 @@ __all__ = [
     'KVQuantConfig',
 ]
 
+
 from .base_config import BaseConfig
 from .weight_activation_quant_config import WeightActivationQuantConfig
 from .weight_quant_config import WeightQuantConfig

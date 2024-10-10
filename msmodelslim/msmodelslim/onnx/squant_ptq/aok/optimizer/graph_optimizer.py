@@ -250,7 +250,7 @@ class GraphOptimizer:
             )
         else:
             self._logger.info("Search can't be performed because Runner is not defined")
-            opts, __ = self.apply_all_optimizations(
+            opts, _ = self.apply_all_optimizations(
                 baseline_model_path,
                 optimizations,
             )
