@@ -135,5 +135,6 @@ class KnowledgeConv1d2Conv2d(KnowledgeBase):
         for node_dict in match_result.node_dicts:
             conv1d_name = node_dict.get('Conv')[0].name
             conv1d = graph[conv1d_name]
-            self._conv1d_to_conv2d(graph, conv1d)
+            if not self._conv1d_to_conv2d(graph, conv1d):
+                pass
         return True
