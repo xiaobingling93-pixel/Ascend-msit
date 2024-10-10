@@ -78,8 +78,9 @@ def check_soc(value):
         if ivalue > max_device_id or ivalue < 0:
             raise argparse.ArgumentTypeError(f"{value} is not a valid value. Please check device id. ")
     else:
-        raise RuntimeError("No davinci* files in the /dev/ directory, "
-                           "as the current device may not have the Ascend NPU suite. ")
+        raise RuntimeError(
+            "No davinci* files in the /dev/ directory. The current device may not have the Ascend NPU suite installed."
+        )
     return ivalue
 
 
