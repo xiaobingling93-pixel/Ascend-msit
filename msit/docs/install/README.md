@@ -40,10 +40,7 @@ git clone https://gitee.com/ascend/msit.git
 cd msit/msit
 
 # 2. 安装 msit 包
-pip install setuptools wheel
-python setup.py bdist_wheel
-cd ./dist
-pip install ./msit-*.whl
+pip install .
 
 # 3. 通过msit install 命令，安装所需组件，例如需要安装 surgeon 和 llm 时：
 msit install surgeon llm
