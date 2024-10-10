@@ -17,6 +17,8 @@
 - [msIT](#msit)
   - [目录](#目录)
   - [介绍](#介绍)
+    - [模型推理迁移全流程](#模型推理迁移全流程)
+    - [大模型推理迁移全流程](#大模型推理迁移全流程)
     - [msIT各子功能介绍](#msit各子功能介绍)
   - [工具安装](#工具安装)
   - [工具使用](#工具使用)
@@ -25,34 +27,33 @@
     - [msIT资源](#msit资源)
     - [常见问题FAQ](#常见问题faq)
   - [许可证](#许可证)
-  - [公网URL说明](#公网url说明)
   - [免责声明](#免责声明)
 
 ## 介绍
 msIT(MindStudio Inference Tools)作为昇腾统一推理工具，提供客户一体化开发工具，用于辅助用户进行模型迁移以及性能与精度的调试调优，当前包括benchmark、debug、analyze、llm等组件。
 
 ### 模型推理迁移全流程
-![模型推理迁移全流程](/msit-flow.png)
+![模型推理迁移全流程](../msit-flow.png)
 
 ### 大模型推理迁移全流程
-![大模型推理迁移全流程](/msit-llm-flow.png)
+![大模型推理迁移全流程](../msit-llm-flow.png)
 
 ### msIT各子功能介绍
 | 任务类型                                  | 子功能                                 | 说明                                       |
 |---------------------------------------|-------------------------------------|------------------------------------------|
-| [benchmark](/msit/docs/benchmark)     | -                                   | 用来针对指定的推理模型运行推理程序，并能够测试推理模型的性能（包括吞吐率、时延） |
-| debug(一站式调试)                          | [surgeon](/msit/docs/debug/surgeon) | 使能ONNX模型在昇腾芯片的优化，并提供基于ONNX的改图功能          |
-| debug(一站式调试)                          | [compare](/msit/docs/debug/compare) | 提供自动化的推理场景精度比对，用来定位问题算子                  |
-| debug(一站式调试)                          | [dump](/msit/docs/debug/dump)       | 提供传统模型的数据dump功能                          |
-| [analyze](/msit/components/analyze)   | -                                   | 提供其他平台模型迁移至昇腾平台的支持度分析功能                  |
-| [convert](/msit/components/convert)   | -                                   | 提供推理模型转换功能                               |
-| [profile](/msit/docs/profile)         | -                                   | 提供profiling，提供整网详细的性能数据及相关信息             |
-| [llm](/msit/docs/llm/README.md)       | -                                   | 提供加速库（atb）大模型推理调试工具，包括数据dump功能和数据比对功能    |
-| [tensor-view](/msit/docs/tensor_view) | -                                   | 提供查看、切片、转置、保存tensor的接口                   |
+| [benchmark](./docs/benchmark)     | -                                   | 用来针对指定的推理模型运行推理程序，并能够测试推理模型的性能（包括吞吐率、时延） |
+| debug(一站式调试)                          | [surgeon](./docs/debug/surgeon) | 使能ONNX模型在昇腾芯片的优化，并提供基于ONNX的改图功能          |
+| debug(一站式调试)                          | [compare](./docs/debug/compare) | 提供自动化的推理场景精度比对，用来定位问题算子                  |
+| debug(一站式调试)                          | [dump](./docs/debug/dump)       | 提供传统模型的数据dump功能                          |
+| [analyze](./docs/analyze)   | -                                   | 提供其他平台模型迁移至昇腾平台的支持度分析功能                  |
+| [convert](./docs/convert)   | -                                   | 提供推理模型转换功能                               |
+| [profile](./docs/profile)         | -                                   | 提供profiling，提供整网详细的性能数据及相关信息             |
+| [llm](./docs/llm/README.md)       | -                                   | 提供加速库（atb）大模型推理调试工具，包括数据dump功能和数据比对功能    |
+| [tensor-view](./docs/tensor_view) | -                                   | 提供查看、切片、转置、保存tensor的接口                   |
 
 
 ## 工具安装
-[一体化安装指导](/msit/docs/install/README.md)
+[一体化安装指导](./docs/install/README.md)
 
 
 ## 工具使用
@@ -108,12 +109,8 @@ msit的其他参数可参考 [一体化安装指导](/msit/docs/install/README.m
 
 [Apache License 2.0](/LICENSE)
 
-## 公网URL说明
-[公网URL说明](/msit/公网URL使用说明.csv)
-
 ## 免责声明
 
 msit仅提供在昇腾设备上的一体化开发工具，支持一站式调试调优，不对其质量或维护负责。
 如果您遇到了问题，Gitee/Ascend/msit提交issue，我们将根据您的issue跟踪解决。
 衷心感谢您对我们社区的理解和贡献。
-

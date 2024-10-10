@@ -16,6 +16,7 @@
 import argparse
 import re
 import subprocess
+from glob import glob
 from components.utils.file_open_check import FileStat, is_legal_args_path_string
 
 
@@ -69,16 +70,17 @@ def check_out_model_path_legality(value):
 
 def check_soc(value):
     ivalue = int(value)
-    pre_cmd = "npu-smi info -l"
-    res = subprocess.run(pre_cmd.split(), shell=False, stdout=subprocess.PIPE)
-
-    tsum = 0
-    for line in res.stdout.decode().split('\n'):
-        if "Chip Count" in line:
-            chip_count = int(line.split()[-1])
-            tsum += chip_count
-    if ivalue >= tsum or ivalue < 0:
-        raise argparse.ArgumentTypeError(f"{value} is not a valid value.Please check device id.")
+    pre_cmd = ["ls"]
+    pre_cmd.extend(glob("/dev/davinci*"))
+    if len(pre_cmd) > 1:
+        process = subprocess.run(pre_cmd, shell=False, stdout=subprocess.PIPE)
+        max_device_id = len(process.stdout.decode().split()) - 2
+        if ivalue > max_device_id or ivalue < 0:
+            raise argparse.ArgumentTypeError(f"{value} is not a valid value. Please check device id. ")
+    else:
+        raise RuntimeError(
+            "No davinci* files in the /dev/ directory. The current device may not have the Ascend NPU suite installed."
+        )
     return ivalue
 
 
