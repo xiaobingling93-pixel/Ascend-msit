@@ -364,7 +364,7 @@ class DumpCommand(BaseCommand):
         self.parser = parser
 
     def handle(self, args):
-        output_path = "./" if args.output == '' else args.output
+        output_path = "./" if args.out_path == '' else args.out_path
         if not is_enough_disk_space_left(output_path):
             raise OSError("Please make sure that the remaining disk space in the dump path is greater than 2 GB")
         if args.exec:
