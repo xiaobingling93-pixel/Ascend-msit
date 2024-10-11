@@ -6,11 +6,11 @@ from copy import deepcopy
 import torch
 import numpy as np
 
+from ascend_utils import count_parameters
+from ascend_utils.common import security
 from msmodelslim import logger
 from msmodelslim.pytorch.sparse.width_scale_network import WidthScaleNetwork
 from msmodelslim.pytorch.sparse.depth_scale_network import DepthScaleNetwork
-from ascend_utils import count_parameters
-from ascend_utils.common import security
 
 
 SparseMethods = namedtuple('SparseMethods', ['DEPTH_GROWTH', 'WIDTH_GROWTH'])('depth_growth', 'width_growth')
@@ -23,18 +23,6 @@ class OptimizerWithReset:
 
         self._init_params_group_info(model, optimizer)
         self._optimizer = optimizer
-
-    def _init_params_group_info(self, model, optimizer):
-        id_dict = {}
-        for group_id, group in enumerate(optimizer.param_groups):
-            for param in group['params']:
-                id_dict[id(param)] = group_id
-        self._params_group_dict = {name: id_dict[id(param)] for name, param in model.named_parameters()}
-
-        self._param_groups_args = []
-        for group in optimizer.param_groups:
-            group_args = {arg_name: [] if arg_name == "params" else arg_val for arg_name, arg_val in group.items()}
-            self._param_groups_args.append(deepcopy(group_args))
 
     def count_parameters(self):
         return sum([sum([np.prod(list(jj.shape)) for jj in ii['params']]) for ii in self._optimizer.param_groups])
@@ -49,6 +37,18 @@ class OptimizerWithReset:
         for param_group in param_groups:
             self._optimizer.add_param_group(param_group)
         setattr(self._optimizer, "state", defaultdict(dict))
+    
+    def _init_params_group_info(self, model, optimizer):
+        id_dict = {}
+        for group_id, group in enumerate(optimizer.param_groups):
+            for param in group['params']:
+                id_dict[id(param)] = group_id
+        self._params_group_dict = {name: id_dict[id(param)] for name, param in model.named_parameters()}
+
+        self._param_groups_args = []
+        for group in optimizer.param_groups:
+            group_args = {arg_name: [] if arg_name == "params" else arg_val for arg_name, arg_val in group.items()}
+            self._param_groups_args.append(deepcopy(group_args))
 
 
 class SparseForward:
@@ -97,30 +97,6 @@ class SparseForward:
         self._dag_model, self._global_batch_id, self._built_stage = None, 0, -1  # Init values
         self._is_on_npu = next(model.parameters()).device.type == "npu"
 
-    def scale_model(self, model, input_shapes, scale):
-        is_training = model.training
-        model.eval()
-
-        if self._dag_model is None:
-            dummy_inputs = [torch.ones([1] + list(input_shape)[1:]) for input_shape in input_shapes]  # batch_size as 1
-            if self._is_on_npu:
-                dummy_inputs = [dummy_input.npu() for dummy_input in dummy_inputs]
-            self._dag_model = self._dag_module(model, dummy_inputs[0] if len(dummy_inputs) == 1 else dummy_inputs)
-        self._dag_model.scale(scale)
-
-        if is_training:
-            model.train()
-        return model
-
-    def get_cur_stage(self):
-        self._global_batch_id += 1
-        logger.debug(f"SparseForward global_batch_id: {self._global_batch_id}")
-        return np.sum(self._cum_steps_each_stage < self._global_batch_id)
-
-    def set_initial_epoch(self, initial_epoch):
-        self._global_batch_id = initial_epoch * self._steps_per_epoch
-        self._built_stage = self.get_cur_stage()
-
     def __call__(self, *args, **kwargs):
         if not self._model.training:
             return self._model.original_forward(*args, **kwargs)
@@ -151,6 +127,30 @@ class SparseForward:
 
             self._built_stage += 1
         return self._model.original_forward(*args, **kwargs)
+    
+    def scale_model(self, model, input_shapes, scale):
+        is_training = model.training
+        model.eval()
+
+        if self._dag_model is None:
+            dummy_inputs = [torch.ones([1] + list(input_shape)[1:]) for input_shape in input_shapes]  # batch_size as 1
+            if self._is_on_npu:
+                dummy_inputs = [dummy_input.npu() for dummy_input in dummy_inputs]
+            self._dag_model = self._dag_module(model, dummy_inputs[0] if len(dummy_inputs) == 1 else dummy_inputs)
+        self._dag_model.scale(scale)
+
+        if is_training:
+            model.train()
+        return model
+    
+    def get_cur_stage(self):
+        self._global_batch_id += 1
+        logger.debug(f"SparseForward global_batch_id: {self._global_batch_id}")
+        return np.sum(self._cum_steps_each_stage < self._global_batch_id)
+    
+    def set_initial_epoch(self, initial_epoch):
+        self._global_batch_id = initial_epoch * self._steps_per_epoch
+        self._built_stage = self.get_cur_stage()
 
 
 def sparse_model_width(model, optimizer, steps_per_epoch, epochs_each_stage):
