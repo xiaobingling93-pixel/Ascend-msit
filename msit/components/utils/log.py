@@ -30,7 +30,7 @@ def set_log_level(level="info"):
     if level.lower() in LOG_LEVELS:
         logger.setLevel(LOG_LEVELS.get(level.lower()))
     else:
-        logger.warning("Set %r log level failed.", level)
+        logger.warning("Set %s log level failed.", level)
 
 
 def set_logger(msit_logger):
