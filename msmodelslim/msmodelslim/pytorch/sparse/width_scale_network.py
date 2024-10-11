@@ -6,10 +6,10 @@ import torch
 from torch import Tensor
 from torch.functional import F
 
-from msmodelslim import logger
 from ascend_utils.common.utils import CallParams
 from ascend_utils.core.dag.dag_node import DagNode
 from ascend_utils.pytorch.dag.dag_torch_hook import DagTorchHook
+from msmodelslim import logger
 
 
 class WidthScaleNetwork:
@@ -44,39 +44,6 @@ class WidthScaleNetwork:
         return self._network
 
     @staticmethod
-    def _is_all_node_not_in_graph(node_name, in_output_nodes, all_nodes_set):
-        in_graph_count = 0
-        all_count = 0
-        for in_out_node in in_output_nodes:
-            all_count += 1
-            if in_out_node in all_nodes_set:
-                in_graph_count += 1
-        if in_graph_count == 0:
-            return True
-        elif all_count != in_graph_count:
-            raise ValueError(f"Some node {node_name} upper or lower nodes are in the"
-                             f" graph to be prune, and some are not.")
-        else:
-            return False
-
-    @staticmethod
-    def _dfs_search_till_node_with_weight(start_node_set, mode="out") -> Set[DagNode]:
-        list_nodes = list(start_node_set)
-        seen_node_set = set()
-        while list_nodes:
-            cur_node = list_nodes.pop()
-            if hasattr(cur_node.node, "weight"):
-                continue
-
-            next_nodes = cur_node.output_nodes if mode == "out" else cur_node.input_nodes
-            for node in next_nodes:
-                if node in start_node_set or node in seen_node_set:
-                    continue
-                list_nodes.append(node)
-                seen_node_set.add(node)
-        return seen_node_set
-
-    @staticmethod
     def get_node_in_out_channel_count(dag_node) -> Tuple[int, int, int]:
         in_chn, out_chn, groups = 0, 0, 1
         if not hasattr(dag_node.node, "weight"):
@@ -103,6 +70,64 @@ class WidthScaleNetwork:
 
         return in_chn, out_chn, groups
 
+    @staticmethod
+    def rescale_weight(weight, target_shape):
+        if weight is None or len(weight.shape) == 0:
+            return weight
+
+        num_dims = len(weight.shape)
+        while weight.shape[0] < target_shape[0] or (num_dims > 1 and weight.shape[1] < target_shape[1]):
+            source_shape = weight.shape
+            if num_dims == 1:
+                if source_shape[0] < target_shape[0]:
+                    weight = torch.stack([weight, weight], dim=0).contiguous().view([-1])
+            elif source_shape[0] < target_shape[0] and source_shape[1] < target_shape[1]:
+                left_weight = F.pad(weight, [0, 0] * (num_dims - 2) + [0, 0, 0, source_shape[0]])
+                right_weight = F.pad(weight, [0, 0] * (num_dims - 2) + [0, 0, source_shape[0], 0])
+                weight = torch.stack([left_weight, right_weight], dim=1)
+                weight = weight.contiguous().view([left_weight.shape[0], -1, *source_shape[2:]])
+            elif source_shape[0] < target_shape[0]:
+                weight = torch.stack([weight, weight], dim=0)
+                weight = weight.contiguous().view([-1, *source_shape[1:]])
+            elif source_shape[1] < target_shape[1]:
+                weight = torch.stack([weight, weight], dim=1)
+                weight = weight.contiguous().view([source_shape[0], -1, *source_shape[2:]])
+        new_weight = weight[:target_shape[0]] if num_dims == 1 else weight[:target_shape[0], :target_shape[1]]
+        return new_weight.clone()
+    
+    @staticmethod
+    def _is_all_node_not_in_graph(node_name, in_output_nodes, all_nodes_set):
+        in_graph_count = 0
+        all_count = 0
+        for in_out_node in in_output_nodes:
+            all_count += 1
+            if in_out_node in all_nodes_set:
+                in_graph_count += 1
+        if in_graph_count == 0:
+            return True
+        elif all_count != in_graph_count:
+            raise ValueError(f"Some node {node_name} upper or lower nodes are in the"
+                             f" graph to be prune, and some are not.")
+        else:
+            return False
+    
+    @staticmethod
+    def _dfs_search_till_node_with_weight(start_node_set, mode="out") -> Set[DagNode]:
+        list_nodes = list(start_node_set)
+        seen_node_set = set()
+        while list_nodes:
+            cur_node = list_nodes.pop()
+            if hasattr(cur_node.node, "weight"):
+                continue
+
+            next_nodes = cur_node.output_nodes if mode == "out" else cur_node.input_nodes
+            for node in next_nodes:
+                if node in start_node_set or node in seen_node_set:
+                    continue
+                list_nodes.append(node)
+                seen_node_set.add(node)
+        return seen_node_set
+    
     @classmethod
     def prune_node(cls, dag_node, in_chn, out_chn, groups):
         if hasattr(dag_node.node, "num_features"):
@@ -134,31 +159,6 @@ class WidthScaleNetwork:
             dag_node.node.weight = torch.nn.Parameter(cls.rescale_weight(dag_node.node.weight.data, target_shape))
         if hasattr(dag_node.node, "bias") and dag_node.node.bias is not None:
             dag_node.node.bias = torch.nn.Parameter(cls.rescale_weight(dag_node.node.bias.data, [out_chn]))
-
-    @staticmethod
-    def rescale_weight(weight, target_shape):
-        if weight is None or len(weight.shape) == 0:
-            return weight
-
-        num_dims = len(weight.shape)
-        while weight.shape[0] < target_shape[0] or (num_dims > 1 and weight.shape[1] < target_shape[1]):
-            source_shape = weight.shape
-            if num_dims == 1:
-                if source_shape[0] < target_shape[0]:
-                    weight = torch.stack([weight, weight], dim=0).contiguous().view([-1])
-            elif source_shape[0] < target_shape[0] and source_shape[1] < target_shape[1]:
-                left_weight = F.pad(weight, [0, 0] * (num_dims - 2) + [0, 0, 0, source_shape[0]])
-                right_weight = F.pad(weight, [0, 0] * (num_dims - 2) + [0, 0, source_shape[0], 0])
-                weight = torch.stack([left_weight, right_weight], dim=1)
-                weight = weight.contiguous().view([left_weight.shape[0], -1, *source_shape[2:]])
-            elif source_shape[0] < target_shape[0]:
-                weight = torch.stack([weight, weight], dim=0)
-                weight = weight.contiguous().view([-1, *source_shape[1:]])
-            elif source_shape[1] < target_shape[1]:
-                weight = torch.stack([weight, weight], dim=1)
-                weight = weight.contiguous().view([source_shape[0], -1, *source_shape[2:]])
-        new_weight = weight[:target_shape[0]] if num_dims == 1 else weight[:target_shape[0], :target_shape[1]]
-        return new_weight.clone()
 
     def get_nodes_input_output(self, list_nodes) -> Tuple[Set[DagNode], Set[DagNode]]:
         set_input_nodes = set()
