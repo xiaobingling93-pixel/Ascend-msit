@@ -59,6 +59,7 @@ class DumpConfig:
             self,
             dump_path=None,
             token_range=None,
+            analyze=False,
             module_list=None,
             api_list=None,
             tensor_part=2,
@@ -75,6 +76,7 @@ class DumpConfig:
         self.dump_module = "module" in self.mode
         self.dump_api = "api" in self.mode
         self.token_range = token_range or [0]
+        self.analyze = analyze
         self.module_list = module_list or []
         self.api_list = api_list or []
         self.tensor_part = tensor_part
