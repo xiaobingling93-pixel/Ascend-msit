@@ -28,7 +28,7 @@ msit install llm
 
 
 #### 工具列表
-> * [BadCase分析使用说明](/msit/docs/llm/工具-大模型精度定位之BadCase分析工具.md)>
+> * [BadCase分析使用说明](/msit/docs/llm/工具-大模型精度定位之BadCase分析工具.md)
 > * [dump加速库数据使用说明](/msit/docs/llm/工具-DUMP加速库数据使用说明.md)
 > * [dump在线推理数据使用说明](/msit/docs/llm/工具-DUMP在线推理数据使用说明.md)
 > * [自动比对功能使用说明](/msit/docs/llm/工具-自动比对功能使用说明.md)

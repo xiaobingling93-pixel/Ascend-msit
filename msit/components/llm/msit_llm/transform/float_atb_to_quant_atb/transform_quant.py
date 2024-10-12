@@ -112,7 +112,7 @@ class TransformQuant:
             ff.write(contents)
 
     @staticmethod
-    def is_in_tensor_count(self, cur_spelling):
+    def is_in_tensor_count(cur_spelling):
         return cur_spelling.startswith("IN_") and cur_spelling.endswith("_COUNT")
 
     def get_in_tensor_added(self, enum_cursor):

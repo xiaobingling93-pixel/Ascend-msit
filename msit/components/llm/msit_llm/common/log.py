@@ -13,10 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-
-from components.utils.log import set_logger, set_log_level, LOG_LEVELS
+from components.utils.log import logger, set_log_level, LOG_LEVELS
 
 
-logger = logging.getLogger("msit_llm_logger")
-set_logger(logger)
+logger.name = 'msit_llm_loger'
