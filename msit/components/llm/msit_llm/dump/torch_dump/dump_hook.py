@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import functools
+from dataclasses import dataclass
 import os
 import os.path
 
@@ -110,6 +111,16 @@ class DumpHookModule:
             torch.save(paramter, os.path.join(dump_path, f"{dump_name}.pth"))
 
 
+@dataclass
+class DumpDataParams:
+    inputs: any
+    outputs: any
+    dump_path: str
+    tensor_part: int
+    module_name: str
+    dump_type: str
+
+    
 def wrap_torch_func(func):
 
     @functools.wraps(func)
@@ -133,26 +144,30 @@ def wrap_torch_func(func):
     return dump_api_data
 
 
-def dump_tensor(feat, feat_path):
+def dump_tensor(feat, feat_path, module_name, dump_type):
+    dump_config = DumpConfig()
     if isinstance(feat, (tuple, list)):
         for idx, tensor in enumerate(feat):
-            dump_tensor(tensor, "{}_{}".format(feat_path, idx))
+            dump_tensor(tensor, "{}_{}".format(feat_path, idx), module_name, dump_type)
     elif isinstance(feat, torch.Tensor):
         if not feat_path.endswith(".pth"):
             feat_path += ".pth"
         torch.save(feat, feat_path)
+        if dump_config.analyze == True:
+            from msit_llm.dump.torch_dump.dump_analyze import dump_analyze
+            dump_analyze(feat, feat_path, module_name, dump_type, dump_config.dump_path)
     else:
         logger.debug("Unrecognized data type %s, cannot be saved in path %s.", type(feat), feat_path)
 
 
-def dump_data(inputs, outputs, dump_path, tensor_part):
-    if tensor_part == 0:
-        dump_tensor(inputs, os.path.join(dump_path, "input"))
-    elif tensor_part == 1:
-        dump_tensor(outputs, os.path.join(dump_path, "output"))
+def dump_data(params: DumpDataParams):
+    if params.tensor_part == 0:
+        dump_tensor(params.inputs, os.path.join(params.dump_path, "input"), params.module_name, params.dump_type)
+    elif params.tensor_part == 1:
+        dump_tensor(params.outputs, os.path.join(params.dump_path, "output"), params.module_name, params.dump_type)
     else:
-        dump_tensor(inputs, os.path.join(dump_path, "input"))
-        dump_tensor(outputs, os.path.join(dump_path, "output"))
+        dump_tensor(params.inputs, os.path.join(params.dump_path, "input"), params.module_name, params.dump_type)
+        dump_tensor(params.outputs, os.path.join(params.dump_path, "output"), params.module_name, params.dump_type)
 
 
 def dump_module_data():
@@ -191,9 +206,23 @@ def dump_module_data():
             return
 
         dump_path = os.path.join(dump_config.dump_dir, str(dump_config.token_id), module_name)
+        dump_type = module.type
         if not os.path.exists(dump_path):
             os.makedirs(dump_path, mode=0o750)
-        dump_data(inputs, outputs, dump_path, dump_config.tensor_part)
+        # 使用时，创建一个DumpDataParams实例：
+        params = DumpDataParams(
+            inputs=inputs,
+            outputs=outputs,
+            dump_path=dump_path,
+            tensor_part=dump_config.tensor_part,
+            module_name=module_name,
+            dump_type=dump_type
+        )
+
+
+        # 然后将这个实例传递给dump_data函数：
+        dump_data(params)   
+
 
     return hook_func
 
