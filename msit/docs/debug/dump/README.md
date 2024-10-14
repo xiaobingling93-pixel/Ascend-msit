@@ -1,10 +1,14 @@
 # msit debug dump功能使用指南
 ## 简介
-- 提供了传统小模型场景下dump功能，适用于 TensorFlow、ONNX、Caffe 模型，用户只需要输入原始模型，对应的离线模型和输入。输入 bin 文件需要符合模型的输入要求（支持模型多输入）。
+- 提供了传统小模型场景下dump功能，适用于 TensorFlow、ONNX、Caffe 模型，用户只需要输入原始模型对应的离线模型和输入。输入的 bin 文件需要符合模型的输入要求（支持模型多输入）。
 
 
 ## 工具安装
-- 一般工具安装请见 [msit一体化工具使用指南](https://gitee.com/ascend/msit/blob/master/msit/docs/install/README.md)
+- 安装命令：
+- **注:** 目前debug dump 的安装集成到了 debug compare 命令里，用户只需要安装debug compare即可实现debug dump功能，命令如下：
+```shell
+msit install compare
+```
 
 
 ## 使用方法
@@ -56,8 +60,8 @@ dump功能可以直接通过msit命令行形式启动精度对比。启动方式
 
 | 参数名                       | 描述                                                                                                                                                                                                | 必选 |
 |---------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----|
-| -m，--model-path           | 模型文件 [.pb与saved_model，.onnx，.prototxt] 路径，分别对应 TF, ONNX, Caffe。<br/>其中.pb为TF1.15.5版本模型文件，saved_model为TF2.6.5版本模型文件                                                                                | 是  |
-| -w，--weight               | -m 为 Caffe 模型时对应的权重文件（.caffemodel）                                                                                                                                                                | 否  |
+| -m，--model           | 模型文件 [.pb与saved_model，.onnx，.prototxt] 路径，分别对应 TF, ONNX, Caffe。<br/>其中.pb为TF1.15.5版本模型文件，saved_model为TF2.6.5版本模型文件                                                                                | 否  |
+| -w，--weight               | -w 为权重文件，当模型为caffe模型时，该参数为必选参数                                                                                                                                                                    | 否  |
 | -i，--input                | 模型的输入数据路径，默认根据模型的input随机生成，多个输入以逗号分隔，例如：/home/input\_0.bin,/home/input\_1.bin,/home/input\_2.npy。注意：使用aipp模型时该输入为om模型的输入,且支持自动将npy文件转为bin文件                                                       | 否  |
 | -c，--cann-path            | CANN包安装完后路径，默认会从从系统环境变量`ASCEND_TOOLKIT_HOME`中获取`CANN` 包路径，如果不存在则默认为 `/usr/local/Ascend/ascend-toolkit/latest`                                                                                     | 否  |
 | -o，--output               | 输出文件路径，默认为当前路径                                                                                                                                                                                    | 否  |
@@ -65,10 +69,12 @@ dump功能可以直接通过msit命令行形式启动精度对比。启动方式
 | -d，--device               | 指定运行设备 [0,255]，可选参数，默认0                                                                                                                                                                           | 否  |
 | -dr，--dym-shape-range     | 动态Shape的阈值范围。如果设置该参数，那么将根据参数中所有的Shape列表进行依次推理和精度比对。(仅支持onnx模型)<br/>配置格式为："input_name1:1,3,200\~224,224-230;input_name2:1,300"。<br/>其中，input_name必须是转换前的网络模型中的节点名称；"\~"表示范围，a\~b\~c含义为[a: b :c]；"-"表示某一位的取值。 <br/> | 否  |
 | -ofs, --onnx-fusion-switch | onnxruntime算子融合开关，默认**开启**算子融合，如存在onnx dump数据中因算子融合导致缺失的，建议关闭此开关。使用方式：--onnx-fusion-switch False                                                                                                  | 否  |
-| --saved_model_signature   | tensorflow2.6框架下saved_model模型加载时需要的签名。使用方式：--saved_model_signature serving，默认为serving_default                                                                                                     | 否  | |  |
-| --saved_model_tag_set     | tensorflow2.6框架下saved_model模型加载为session时的标签，可根据标签加载模型的不同部分；使用方式：--saved_model_tag_set serve                                                                                                       | 否  | |  |
-| -dp, --device-pattern     | 设备模式，目前支持cpu和npu。使用方式：-dp cpu                                                                                                                                                                     | 否  | |  |
+| --saved_model_signature | tensorflow2.6框架下saved_model模型加载时需要的签名。使用方式：--saved_model_signature serving_default，默认为serving_default                                                                                                                                                                       | 否  | |  |
+| --saved_model_tag_set   | tensorflow2.6框架下saved_model模型加载为session时的标签，可根据标签加载模型的不同部分。使用方式：--saved_model_tag_set serve，默认为serve，目前支持传入多个tagSet，使用如：--saved_model_tag_set ['serve', 'genenal_parser']                                                                                | 否  | |  |
+| -dp, --device-pattern     | 设备模式，支持cpu和npu，目前npu模式下只支持saved_model模型。使用方式：-dp cpu                                                                                                                                              | 否  | |  |
 | --tf-json                 | 用于dump saved_model模型在cpu侧的算子集合json，当dump saved_model 模型在cpu的数据时，为必选参数                                                                                                                             | 否  | |  |
+| --exec | MindIE-Torch推理脚本的执行命令。使用方式：--exec "python bert_inference.py"                                                                                                                                                                       | 否  | |  |
+| -opname，--operation-name | MindIE-Torch场景下需要Dump的算子，默认为 all，表示会对模型中所有 op 进行 Dump，其中元素为MindIE-Torch算子类型，若设置 operation-name，只会 Dump 指定的 op。使用方式：--operation-name MatMulv2_1,trans_Cast_0                                                                                                                                                                        | 否  | |  |
 | -h    --help              | 用于查看全部的参数                                                                                                                                                                                         | 否  | |  |
 
 ### 使用场景
@@ -77,8 +83,10 @@ dump功能可以直接通过msit命令行形式启动精度对比。启动方式
 
 | 使用示例                                                                                           | 使用场景                      |
 |------------------------------------------------------------------------------------------------|---------------------------|
-| [01_basic_usage](../../../examples/cli/debug/compare/01_basic_usage)                           | 基础示例，运行onnx模型dump         |
-| [02_specify_input_data](../../../examples/cli/debug/compare/02_specify_input_data)             | 指定模型输入数据                  |
-| [03_save_output_data](../../../examples/cli/debug/compare/03_save_output_data)                 | 指定结果输出目录                  |
-| [04_specify_input_shape_info](../../../examples/cli/debug/compare/04_specify_input_shape_info) | 指定模型输入的shape信息(动态场景必须进行指定)。 |
-| [05_caffe_model](../../../examples/cli/debug/compare/07_caffe_model)                           | 模型为Caffe框架的dump           |
+| [01_basic_usage](../../../examples/cli/debug/dump/01_basic_usage)                              | 基础示例，运行onnx模型dump         |
+| [02_specify_input_data](../../../examples/cli/debug/dump/02_specify_input_data)             | 指定模型输入数据                  |
+| [03_save_output_data](../../../examples/cli/debug/dump/03_save_output_data)                 | 指定结果输出目录                  |
+| [04_specify_input_shape_info](../../../examples/cli/debug/dump/04_specify_input_shape_info) | 指定模型输入的shape信息(动态场景必须进行指定)。 |
+| [05_caffe_model](../../../examples/cli/debug/dump/05_caffe_model)                           | 模型为Caffe框架的dump           |
+| [06_saved_model](../../../examples/cli/debug/dump/06_saved_model)                           | 模型为tensorflow2.6框架下的 saved_model dump          |
+| [07_mindie_torch_compare](/msit/examples/cli/debug/compare/16_mindie_torch_compare)                            | MindIE-Torch场景-整网算子精度对比场景                        |

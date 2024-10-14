@@ -1,5 +1,5 @@
-# coding=utf-8
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -181,7 +181,8 @@ def check_dump_and_compare(args: CmpArgsAdapter):
         if args.my_path and args.golden_path and args.ops_json:
             return False
         else:
-            raise Exception(f"If you want to alone compare, you need to provide parameters like: -mp -gp and -ops-json")
+            raise Exception("If you want to alone compare, you need to provide parameters like: "
+                            "-mp -gp and --ops-json")
 
 
 def cmp_process(args: CmpArgsAdapter, use_cli: bool):
@@ -365,11 +366,13 @@ def fusion_close_model_convert(args: CmpArgsAdapter):
 
         close_fusion_om_file = os.path.join(args.out_path, 'close_fusion_om_model')
         atc_command_file_path = atc_utils.get_atc_path(args.cann_path)
-        atc_cmd = [atc_command_file_path, "--framework=5",
-                   "--soc_version=" + acl.get_soc_name(),
-                   "--model=" + args.model_path,
-                   "--output=" + close_fusion_om_file,
-                   "--fusion_switch_file=" + args.fusion_switch_file]
+        atc_cmd = [
+            atc_command_file_path, "--framework=5",
+            "--soc_version=" + acl.get_soc_name(),
+            "--model=" + args.model_path,
+            "--output=" + close_fusion_om_file,
+            "--fusion_switch_file=" + args.fusion_switch_file
+        ]
         if atc_input_shape_in_offline_model:
             atc_cmd.append("--input_shape=" + atc_input_shape_in_offline_model)
 
@@ -487,7 +490,7 @@ def single_op_compare(args, input_shape):
 
         # run compare
         utils.logger.setLevel(logging.ERROR)
-        res = run(cmg_args, input_shape, original_out_path, True)
+        run(cmg_args, input_shape, original_out_path, True)
         utils.logger.setLevel(logging.INFO)
         csv_list.extend(sp.find_all_csv(tmp_out_path))
         utils.logger.info("Comparision finished")
@@ -554,8 +557,10 @@ def subgraph_check(og, node_interval, args, onnx_data_path, input_shape):
     utils.logger.info("Extracting model Sucess!")
     utils.logger.info("Start using atc to convert onnx to om file")
     subgraph_om_file = os.path.join(args.out_path, 'tmp_for_accuracy_locat')
-    atc_cmd = ["atc", "--framework=5", "--soc_version=" + acl.get_soc_name(), "--model=" + subgraph_onnx_file, \
-               "--output=" + subgraph_om_file]
+    atc_cmd = [
+        "atc", "--framework=5", "--soc_version=" + acl.get_soc_name(), "--model=" + subgraph_onnx_file,
+        "--output=" + subgraph_om_file
+    ]
     subprocess.run(atc_cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     utils.logger.info("atc conversion Success!")
     utils.logger.info("Start to loading input data")
@@ -646,7 +651,7 @@ def csv_sum(original_out_path):
     xlsx_file_summary = os.path.join(original_out_path, "result_summary.xlsx")
 
     if os.path.exists(xlsx_file_summary):
-        logging.error("Error, file already exists!")
+        utils.logger.error("Error, file already exists!")
         os.remove(xlsx_file_summary)
 
     with os.fdopen(os.open(xlsx_file_summary, WRITE_FLAGS, WRITE_MODES), 'wb') as fp_write:

@@ -1,35 +1,28 @@
-from pathlib import Path
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import torch
 import torch_npu
-from msit_llm.transform.torch_to_atb_python import ATBModel
-from safetensors.torch import safe_open
-from transformers import AutoTokenizer, AutoConfig, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoConfig
 from transformers.modeling_utils import PreTrainedModel
 from transformers.modeling_outputs import CausalLMOutputWithPast
 
-from atb_model_symbol import Model
+from msit_llm.transform.torch_to_atb_python import ATBModel
+from msit_llm.transform.utils import load_model_dict
+from atb_model_placeholder import Model
 
-
-def load_model_dict(model_path):
-    if Path(model_path).is_file():
-        state_dict = torch.load(model_path)
-        return state_dict
-    elif Path(model_path).is_dir():
-        suffix_list = ['.bin', '.safetensors', '.pt']
-        for suffix in suffix_list:
-            file_list = list(Path(model_path).glob('*' + suffix))
-            if not file_list:
-                continue
-            state_dict = {}
-            for fp in file_list:
-                if suffix == '.safetensors':
-                    with safe_open(fp, framework='pt') as ff:
-                        ss = {kk: ff.get_tensor(kk).half() for kk in ff.keys()}
-                else:
-                    ss = torch.load(fp)
-                state_dict.update(ss)
-            return state_dict
-    return {}
+MODEL_PATH = "model_path_placeholder"
 
 
 class CausalLM(PreTrainedModel):
@@ -37,8 +30,8 @@ class CausalLM(PreTrainedModel):
         config = AutoConfig.from_pretrained(model_path)
         super().__init__(config)
 
-        device = torch.device(f'npu')
-        torch.npu.set_device(device)        
+        device = torch.device(f"npu")
+        torch.npu.set_device(device)
         self.placeholder = torch.zeros(1, device=device)
 
         self.atb_model = ATBModel(Model())
@@ -49,7 +42,7 @@ class CausalLM(PreTrainedModel):
         self.atb_model.init_kv_cache()
 
     def prepare_inputs_for_generation(
-            self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
+        self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
     ):
         if past_key_values:
             input_ids = input_ids[:, -1:]
@@ -73,9 +66,9 @@ class CausalLM(PreTrainedModel):
                 "attention_mask": attention_mask,
             }
         )
-        return model_inputs    
+        return model_inputs
 
-    def forward(self, input_ids, position_ids, use_cache=False, *args, **kwargs):
+    def forward(self, input_ids, position_ids, use_cache=False, **kwargs):
         if input_ids.dim() == 2:
             input_ids = input_ids[0]
 
@@ -91,17 +84,11 @@ class CausalLM(PreTrainedModel):
             past_key_values = None
             self.atb_model.init_kv_cache()
 
-        out = self.atb_model.forward(
-            input_ids=input_ids,
-            position_ids=position_ids,
-        )
+        out = self.atb_model.forward(input_ids=input_ids, position_ids=position_ids)
 
-        logits = out['output'].unsqueeze(0)
+        logits = out["output"].unsqueeze(0)
 
-        return CausalLMOutputWithPast(
-            logits=logits,
-            past_key_values=past_key_values
-            )    
+        return CausalLMOutputWithPast(logits=logits, past_key_values=past_key_values)
 
 
 class Runner:
@@ -110,15 +97,14 @@ class Runner:
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
         if self.tokenizer.pad_token is None:
-            self.tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+            self.tokenizer.add_special_tokens({"pad_token": "[PAD]"})
 
         self.max_input_length = 20
         self.max_output_length = 20
         self.batch_size = 1
-    
+
     def warm_up(self):
-        dummy_input_ids_full = torch.randint(
-            0, 32000, [self.batch_size, self.max_input_length], dtype=torch.long).npu()
+        dummy_input_ids_full = torch.randint(0, 32000, [self.batch_size, self.max_input_length], dtype=torch.long).npu()
         self.model.generate(inputs=dummy_input_ids_full, do_sample=False, max_new_tokens=10)
 
     def infer(self, input_text, use_cache=True):
@@ -126,15 +112,13 @@ class Runner:
             input_text = [input_text] * self.batch_size
 
         inputs = self.tokenizer(input_text, return_tensors="pt")
-        
+
         self.model.init_kv_cache()
 
         # Prefill
         with torch.no_grad():
             generate_ids = self.model.generate(
-                inputs=inputs.input_ids.npu(),
-                attention_mask=inputs.attention_mask.npu(),
-                max_new_tokens=1
+                inputs=inputs.input_ids.npu(), attention_mask=inputs.attention_mask.npu(), max_new_tokens=1
             )
 
         # Deocde
@@ -143,33 +127,31 @@ class Runner:
                 inputs=inputs.input_ids.npu(),
                 attention_mask=inputs.attention_mask.npu(),
                 max_new_tokens=self.max_output_length,
-                use_cache=use_cache
+                use_cache=use_cache,
             )
 
         generate_text = self.tokenizer.batch_decode(
-            generate_ids[:, :], skip_special_tokens=True,
-            clean_up_tokenization_spaces=False)
-        output_text = generate_text[0][:]
-        return output_text
-    
+            generate_ids[:, :], skip_special_tokens=True, clean_up_tokenization_spaces=False
+        )
+        return generate_text[0][:]
 
-def main():
-    runner = Runner("model_path_symbol")
 
-    input_text = '好雨知时节，当春'
-
-    runner.warm_up()
-    output_text = runner.infer(input_text, use_cache=False)
-
+if __name__ == "__main__":
+    import sys
     import logging
+    import argparse
+
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("-w", "--weight", type=str, default=MODEL_PATH, help="Model weight path")
+    parser.add_argument("-i", "--inputs", type=str, default="Who's there?", help="input for model")
+    args = parser.parse_known_args()[0]
+
+    runner = Runner(args.weight)
+    runner.warm_up()
+    output_text = runner.infer(args.inputs, use_cache=False)
+
+    logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger()
-    logger.info('-' * 40)
-    logger.info('Input:%s', input_text)
-    logger.info('Output:%s', output_text)
-
-
-if __name__ == '__main__':
-    main()
-
-
-
+    logger.info("-" * 40)
+    logger.info("Input: %s", args.inputs)
+    logger.info("Output: %s", output_text)

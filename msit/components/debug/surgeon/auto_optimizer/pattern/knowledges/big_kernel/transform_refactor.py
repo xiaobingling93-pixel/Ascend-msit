@@ -19,7 +19,7 @@ import numpy as np
 
 from auto_optimizer.graph_refactor import Node
 from auto_optimizer.pattern.knowledges.big_kernel.attention_parser import AttentionParser
-from auto_optimizer.tools.log import logger
+from components.debug.common import logger
 from auto_optimizer.graph_refactor.onnx import OnnxNode, OnnxInitializer, OnnxGraph
 from auto_optimizer.pattern.knowledges.big_kernel.util import QK_MASK_ADD, CONVERT_3DIMS_TO_4DIMS, START_ADD, END_ADD
 
@@ -187,7 +187,11 @@ class TransformRefactor:
                     next_node.inputs[idx] = end_add.outputs[0]
 
     def update_layernorm(self, match_result, ori_shape):
-        match_nodes = [node_dict for result in match_result for node_dict in result.node_dicts]
+        match_nodes = [
+            node_dict 
+            for result in match_result 
+            for node_dict in result.node_dicts
+        ]
         for i, nodes in enumerate(match_nodes):
             ln_nodes = list(nodes.values())
             first_node = ln_nodes[0][0]
@@ -275,7 +279,11 @@ class TransformRefactor:
                     input2.value = np.array(value)
 
     def remove_unused_initializers(self):
-        all_input = [inp for node in self.graph.nodes for inp in node.inputs]
+        all_input = [
+            inp 
+            for node in self.graph.nodes 
+            for inp in node.inputs
+        ]
         all_init = [init.name for init in self.graph.initializers]
         unused_init_names = set(all_init) - set(all_input)
         for init in self.graph.initializers:

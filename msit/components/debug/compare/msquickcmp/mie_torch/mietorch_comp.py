@@ -1,13 +1,27 @@
-import logging 
-import os 
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import os
 import csv 
 
 import torch 
 
-from msit_llm.common.log import logger 
-from msit_llm.compare.utils.ge_dump_reader import GEDumpFileReader
-from msit_llm.compare.utils.torch_dump_reader import TorchDumpFileReader
-from msit_llm.compare.cmp_algorithm import CMP_ALG_MAP, CUSTOM_ALG_MAP
+from components.debug.common import logger
+from components.debug.compare.utils.ge_dump_reader import GEDumpFileReader
+from components.debug.compare.utils.torch_dump_reader import TorchDumpFileReader
+from components.utils.cmp_algorithm import CMP_ALG_MAP, CUSTOM_ALG_MAP
 from components.utils.file_open_check import ms_open
 
 
@@ -50,7 +64,8 @@ class MIETorchCompare:
                 if npu_tensor.shape == (0,):
                     logger.warning("could not find the npu_tensor which key is: %s", cpu_key)
                     continue
-                tensors[cpu_key] = (cpu_tensor, npu_tensor)
+                if cpu_tensor.shape == npu_tensor.shape:
+                    tensors[cpu_key] = (cpu_tensor, npu_tensor)
         
         all_rows_data = []
         
@@ -63,7 +78,7 @@ class MIETorchCompare:
             tensor_pass, message = self.check_tensor(cpu_tensor, npu_tensor)
 
             if not tensor_pass:
-                logger.debug(f"check_tensor failed: %s", message)
+                logger.debug("check_tensor failed: %s", message)
                 row_data["cmp_fail_reason"] = message 
             else:
                 fail_messages = []
@@ -95,7 +110,7 @@ class MIETorchCompare:
             writer.writeheader()
             writer.writerows(sorted_rows)
         
-        logger.info(f"Comparison results saved to %s", csv_file_path)
+        logger.info("Comparison results saved to %s", csv_file_path)
 
         return csv_file_path
         

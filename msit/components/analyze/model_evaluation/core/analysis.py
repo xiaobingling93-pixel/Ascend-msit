@@ -1,4 +1,5 @@
-# Copyright (c) 2023 Huawei Technologies Co., Ltd.
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,12 +15,11 @@
 
 import os
 
-from dataclasses import dataclass
-from typing import Dict, List, Set
+from typing import Dict, List
 
-from model_evaluation.common import logger
+from components.utils.log import logger
 from model_evaluation.common import Const
-from model_evaluation.common.enum import Framework, AtcErr
+from model_evaluation.common.enum import Framework
 from model_evaluation.parser import AtcErrParser, OmParser, ModelParser
 from model_evaluation.bean import OpInfo, OpInnerInfo, ConvertConfig
 from model_evaluation.data import Opp, OpMap

@@ -1,5 +1,5 @@
-# coding=utf-8
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """
 Function:
 This class mainly involves common function.
@@ -19,12 +20,10 @@ This class mainly involves common function.
 import argparse
 import enum
 import itertools
-import logging
 import os
 import re
 import shutil
 import subprocess
-import sys
 import json
 
 import numpy as np
@@ -32,9 +31,8 @@ import pandas as pd
 from msquickcmp.common.dynamic_argument_bean import DynamicArgumentEnum
 
 from components.utils.security_check import get_valid_write_path
+from components.debug.common import logger
 
-logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='[%(levelname)s] %(message)s')
-logger = logging.getLogger(__name__)
 
 ACCURACY_COMPARISON_INVALID_PARAM_ERROR = 1
 ACCURACY_COMPARISON_INVALID_DATA_ERROR = 2
@@ -511,7 +509,7 @@ def parse_dym_shape_range(dym_shape_range):
         if len(shapestr) < 50:
             _check_shape_number(shapestr, DYNAMIC_DIM_PATTERN)
         else:
-            logger.error(get_shape_not_match_message(InputShapeError.TOO_LONG_PARAMS, input_shape))
+            logger.error(get_shape_not_match_message(InputShapeError.TOO_LONG_PARAMS, input_shapes))
             raise AccuracyCompareException(ACCURACY_COMPARISON_INVALID_PARAM_ERROR)
         for content in shapestr.split(","):
             if "~" in content:
@@ -580,7 +578,7 @@ def execute_command(cmd, info_need=True):
         ais_bench_logs += process.stdout.readline().decode()
     if process.returncode != 0:
         logger.error('Failed to execute command:%s' % " ".join(cmd))
-        logger.error(f'\nais_bench error log:\n {ais_bench_logs}')
+        logger.error(f'\nerror log:\n {ais_bench_logs}')
         raise AccuracyCompareException(ACCURACY_COMPARISON_INVALID_DATA_ERROR)
 
 
@@ -654,11 +652,11 @@ def safe_delete_path_if_exists(path, is_log=False):
         path = get_valid_write_path(path, extensions=None, check_user_stat=False, is_dir=is_dir)
         if os.path.isfile(path):
             if is_log:
-                utils.logger.info("File %s exist and will be deleted.", path)
+                logger.info("File %s exist and will be deleted.", path)
             os.remove(path)
         else:
             if is_log:
-                utils.logger.info("Folder %s exist and will be deleted.", path)
+                logger.info("Folder %s exist and will be deleted.", path)
             shutil.rmtree(path)
 
 

@@ -1,4 +1,5 @@
-# Copyright (c) Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,10 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+__all__ = ["Register", "Config", "format_to_module", "typeassert", "check_file_exist", "Singleton"]
+
 from auto_optimizer.common.register import Register
 from auto_optimizer.common.config import Config
 from auto_optimizer.common.utils import format_to_module, typeassert, check_file_exist
-from auto_optimizer.common.log import setup_logging
 from auto_optimizer.common.singleton import Singleton
-
-__all__ = ["Register", "Config", "format_to_module", "typeassert", "check_file_exist", "setup_logging", "Singleton"]

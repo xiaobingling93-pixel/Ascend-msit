@@ -13,8 +13,6 @@
 # limitations under the License.
 
 import torch
-import torch_npu
-import torch.nn as nn
 
 from msit_llm.opcheck import operation_test
 

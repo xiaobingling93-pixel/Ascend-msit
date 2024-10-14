@@ -1,7 +1,7 @@
 # msit debug compare功能使用指南
 
 ## 简介
-- compare一键式全流程精度比对（推理）功能将推理场景的精度比对做了自动化，适用于 TensorFlow、ONNX、Caffe 模型，用户只需要输入原始模型，对应的离线模型和输入，输出整网比对的结果，离线模型为通过 ATC 工具转换的 om 模型，输入 bin 文件需要符合模型的输入要求（支持模型多输入）。
+- compare一键式全流程精度比对（推理）功能将推理场景的精度比对做了自动化，适用于 TensorFlow、ONNX、Caffe 模型，用户输入原始模型，对应的离线模型和输入，输出整网比对的结果，还可以输入dump好的cpu、npu侧的算子数据直接进行精度比对。离线模型为通过 ATC 工具转换的 om 模型，输入 bin 文件需要符合模型的输入要求（支持模型多输入）。
 - 该功能使用约束场景说明，参考链接：[CANN商用版/场景约束](https://www.hiascend.com/document/detail/zh/canncommercial/80RC1/devaids/auxiliarydevtool/atlasaccuracy_16_0037.html)
 - 对于 Caffe 模型，目前不支持动态 shape 的模型比对。对于 `yolov2` / `yolov3` / `ssd` 等需要自定义实现层的模型，需要自行编译安装特定版本的 caffe。
 - **注意**：请确保ATC工具转换的om与当前运行环境使用的芯片型号一致。
@@ -14,15 +14,55 @@
 ### 容器方式安装
 容器方式安装目前提供了Ubuntu 18.04的docker镜像。在`<msit_project_root_path>/msit/components/debug/compare`目录下运行以下命令以构建镜像：
 ```shell
-docker build --build-arg CANN_TOOLKIT_PATH=Ascend-cann-tookit<version+arch>.run --build-arg CANN_AMCT_PATH=Ascend-cann-amctt<version+arch>.tar.gz \ 
---build-arg CAFFE_SRC=caffe-ascend-amct.zip -f Dockerfile . -t msit-caffe:latest
+docker build \
+--build-arg CANN_TOOLKIT_PATH=Ascend-cann-tookit<version+arch>.run \
+--build-arg CANN_AMCT_PATH=Ascend-cann-amctt<version+arch>.tar.gz \ 
+--build-arg CAFFE_SRC=caffe-ascend-amct.zip \
+--build-arg UBUNTU_X86_ARCHIVE=http://.*archive.ubuntu.com \
+--build-arg UBUNTU_X86_SECURITY=http://.*security.ubuntu.com \
+--build-arg UBUNTU_ARM64=http://ports.ubuntu.com \
+--build-arg APT_PATH=http://repo.huaweicloud.com \
+--build-arg PYTHON_PATH=https://www.python.org/ftp/python/3.7.5/Python-3.7.5.tgz \
+--build-arg PYPI_PATH=https://repo.huaweicloud.com/repository/pypi/simple \
+--build-arg PYPI_PATH_TRUST=repo.huaweicloud.com \
+--build-arg MSIT_PATH=https://gitee.com/ascend/msit.git \
+-f Dockerfile . -t msit-caffe:latest
 ```
-注意:
-1. 非root用户请加上sudo
-2. 请将Ascend-cann-tookit<version+arch>.run改为实际上的toolkit路径(必须是相对路径)
-3. 从这个[仓库](https://github.com/lenLRX/caffe)下载zip[代码](https://github.com/lenLRX/caffe/archive/refs/heads/ascend-amct.zip),得到的zip包可能叫ascend-amct.zip或caffe-ascend-amct.zip
-4. 从[这里](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)下载amct的包Ascend-cann-amct_5.1.RC1.1_linux-aarch64.tar.gz(注意下载对应需要的版本如：X86，aarch64等)
-5. 执行命令构建docker镜像,要求:
+注意:  
+1、非root用户请加上sudo  
+2、若出现以下报错：
+```
+Err:1 http://repo.huaweicloud.com/ubuntu-ports focal InRelease
+  Temporary failure resoving 'repo.huaweicloud.com'
+Err:2 http://repo.huaweicloud.com/ubuntu-ports focal-updates InRelease
+  Temporary failure resoving 'repo.huaweicloud.com'
+```
+则参照下述代码位置，添加环境变量：  
+```
+ARG PYPI_PATH_TRUST
+ARG MSIT_PATH
+
+# 添加环境变量
+ENV http_proxy=http://${USER_NAME}:${PASSWORD}@${PROXY_SERVER}:${PORT}
+ENV https_proxy=http://${USER_NAME}:${PASSWORD}@${PROXY_SERVER}:${PORT}
+
+#安装python、CANN_TOOLKIT,软件包、依赖，并配置环境变量写入.bashrc
+RUN groupadd HwHiAiUser && useradd -rm -d /home/HwHiAiUser -s /bin/bash -g HwHiAiUser -G HwHiAiUser -u 1001 HwHiAiUser  &&\
+    if [ "$(uname -m)" = "x86_64" ]; then \
+```
+
+`$USER_NAME`、`$PASSWORD` 等都是网络配置的相关参数，这里不予以介绍  
+`$APT_PATH` 用户可自行配置源地址 例如：http://repo.huaweicloud.com, https://mirrors.huaweicloud.com 等
+
+3、如果在 `wget ${PYTHON_PATH}` 的时候出现报错，显示需要 `use --no-check-certificate`。则在 `wget ${PYTHON_PATH}` 处添加 `--no-check-certificate`，示例如下：
+
+```
+wget --no-check-certificate ${PYTHON_PATH}   && \
+```
+4、请将Ascend-cann-tookit<version+arch>.run改为实际上的toolkit路径(必须是相对路径)  
+5、从这个[仓库](https://github.com/lenLRX/caffe)下载zip[代码](https://github.com/lenLRX/caffe/archive/refs/heads/ascend-amct.zip),得到的zip包可能叫ascend-amct.zip或caffe-ascend-amct.zip  
+6、从[这里](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)下载amct的包Ascend-cann-amct_5.1.RC1.1_linux-aarch64.tar.gz(注意下载对应需要的版本如：X86，aarch64等)  
+7、执行命令构建docker镜像,要求:
    * CANN_AMCT_PATH=步骤4下载的amct包名字
    * CAFFE_SRC=步骤3下载的caffe代码zip包
    运行以下命令以上述镜像启动容器：
@@ -94,14 +134,14 @@ compare功能可以直接通过msit命令行形式启动精度对比。启动方
 |--------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----|
 | -gm，--golden-model | 模型文件 [.pb与saved_model, .onnx, .prototxt, .om] 路径，分别对应 TF, ONNX, Caffe, OM 模型。<br/>其中.pb为TF1.15版本模型文件，saved_model为TF2.6.5版本模型文件                                                                                                                                                                | 是  |
 | -om，--om-model | 昇腾AI处理器的离线模型 [.om, .mindir, saved_model]。<br/>TF2.6.5版本可以输入saved_model模型                                                                                                                                                                                                                      | 是  |
-| -w，--weight  | -gm 为 Caffe 模型时对应的权重文件（.caffemodel）                                                                                                                                                                                                                                                           | 否  |
+| -w，--weight  | -w 为权重文件，当模型为caffe模型时，该参数为必选参数                                                                                                                                                                                                                                                                | 否  |
 | -i，--input   | 模型的输入数据路径，默认根据模型的input随机生成，多个输入以逗号分隔，例如：/home/input\_0.bin,/home/input\_1.bin,/home/input\_2.npy。注意：使用aipp模型时该输入为om模型的输入,且支持自动将npy文件转为bin文件                                                                                                                                                   | 否  |
 | -c，--cann-path | CANN包安装完后路径，默认会从从系统环境变量`ASCEND_TOOLKIT_HOME`中获取`CANN` 包路径，如果不存在则默认为 `/usr/local/Ascend/ascend-toolkit/latest`                                                                                                                                                                                 | 否  |
 | -o，--output  | 输出文件路径，默认为当前路径                                                                                                                                                                                                                                                                                | 否  |
 | -is，--input-shape | 模型输入的shape信息，默认为空，例如"input_name1:1,224,224,3;input_name2:3,300",节点中间使用英文分号隔开。input_name必须是转换前的网络模型中的节点名称                                                                                                                                                                                      | 否  |
 | -d，--device  | 指定运行设备 [0,255]，可选参数，默认0                                                                                                                                                                                                                                                                       | 否  |
-| --output-nodes ， -n | 用户指定的输出节点。多个节点用英文分号（;）隔开。例如:"node_name1:0;node_name2:1;node_name3:0"                                                                                                                                                                                                                          | 否  |
-| --output-size ，-outsize | 指定模型的输出size，有几个输出，就设几个值，每个值默认为**90000000**，如果模型输出超出大小，请指定此参数以修正。动态shape场景下，获取模型的输出size可能为0，用户需根据输入的shape预估一个较合适的值去申请内存。多个输出size用英文分号（,）隔开, 例如"10000,10000,10000"                                                                                                                              | 否  |
+| -n，--output-nodes | 用户指定的输出节点。多个节点用英文分号（;）隔开。例如:"node_name1:0;node_name2:1;node_name3:0"                                                                                                                                                                                                                          | 否  |
+| -outsize，--output-size | 指定模型的输出size，有几个输出，就设几个值，每个值默认为**90000000**，如果模型输出超出大小，请指定此参数以修正。动态shape场景下，获取模型的输出size可能为0，用户需根据输入的shape预估一个较合适的值去申请内存。多个输出size用英文分号（,）隔开, 例如"10000,10000,10000"                                                                                                                              | 否  |
 | --advisor    | 在比对结束后，针对比对结果进行数据分析，给出专家建议                                                                                                                                                                                                                                                                    | 否  |
 | -dr，--dym-shape-range | 动态Shape的阈值范围。如果设置该参数，那么将根据参数中所有的Shape列表进行依次推理和精度比对。(仅支持onnx模型)<br/>配置格式为："input_name1:1,3,200\~224,224-230;input_name2:1,300"。<br/>其中，input_name必须是转换前的网络模型中的节点名称；"\~"表示范围，a\~b\~c含义为[a: b :c]；"-"表示某一位的取值。 <br/>                                                                             | 否  |
 | --dump       | 是否dump所有算子的输出并进行精度对比。默认是True，即开启全部算子输出的比对。(仅支持onnx模型)<br/>使用方式：--dump False                                                                                                                                                                                                                   | 否  |
@@ -112,12 +152,12 @@ compare功能可以直接通过msit命令行形式启动精度对比。启动方
 | -single, --single-op| 单算子比对模式，默认关闭，开启时在输出路径下会生成single op目录，存放单算子比对结果文件使用方式：-single True                                                                                                                                                                                                                             | 否  |
 | --fusion-switch-file| 昇腾模型融合规则配置文件，传入该文件后，compare工具会根据传入的融合规则配置文件，重新生成一个om文件，和--om-model传入的模型进行精度比较，例如：--fusion-switch-file ./fusion_switch.cfg，其中fusion_switch.cfg文件配置方法参见：[如何关闭/开启融合规则](https://www.hiascend.com/document/detail/zh/canncommercial/63RC1/reference/graphubfusionref/graphubfusionref_000003.html) | 否  |
 | -max, --max-cmp-size| 表示每个dump数据比较的最大字节数，用于精度比对过程提速，默认0(0表示全量比较)，当模型中算子的输出存在较大shape的、比较过于耗时情况，可以尝试打开。注意：需要使用最新cann版本(>=6.3.RC3)。使用方式：--max-cmp-size 1024                                                                                                                                                            | 否  |
-| -q,--quant_fusion_rule_file| 量化算子映射关系文件（昇腾模型压缩输出的json文件）。仅推理场景支持本参数。使用方式：--quant_fusion_rule_file                                                                                                                                                                                                                          | 否  | |  |
-| --saved_model_signature     | tensorflow2.6框架下saved_model模型加载时需要的签名。使用方式：--saved_model_signature serving，默认为serving_default                                                                                                                                                                                                 | 否  | |  |
-| --saved_model_tag_set       | tensorflow2.6框架下saved_model模型加载为session时的标签，可根据标签加载模型的不同部分；使用方式：--saved_model_tag_set serve                                                                                                                                                                                                   | 否  | |  |
-| -mp, --my-path      | 用于单独进行精度比对的npu侧dump数据                                                                                                                                                                                                                                                                         | 否  | |  |
-| -gp, --golden-path  | 用于单独进行精度比对的cpu侧dump数据                                                                                                                                                                                                                                                                         | 否  | |  |
-| --ops-json          | 用于单独进行精度比对时，cpu侧与npu侧算子的匹配规则                                                                                                                                                                                                                                                                  | 否  | |  |
+| -q, --quant_fusion_rule_file| 量化算子映射关系文件（昇腾模型压缩输出的json文件）。仅推理场景支持本参数。使用方式：-quant_fusion_rule_file xxx.json （量化算子映射关系json文件）                                                                                                                                                                                                                        | 否  | |  |
+| --saved_model_signature | tensorflow2.6框架下saved_model模型加载时需要的签名。使用方式：--saved_model_signature serving_default，默认为serving_default                                                                                                                                                                       | 否  | |  |
+| --saved_model_tag_set   | tensorflow2.6框架下saved_model模型加载为session时的标签，可根据标签加载模型的不同部分。使用方式：--saved_model_tag_set serve，默认为serve，目前支持传入多个tagSet，使用如：--saved_model_tag_set ['serve', 'genenal_parser']                                                                                                                                                      | 否  | |  |
+| -mp, --my-path      | 用于单独进行精度比对的npu侧dump数据路径                                                                                                                                                                                                                                                                       | 否  | |  |
+| -gp, --golden-path  | 用于单独进行精度比对的cpu侧dump数据路径                                                                                                                                                                                                                                                                       | 否  | |  |
+| --ops-json          | 用于单独进行精度比对时，cpu侧与npu侧算子的匹配规则json文件路径                                                                                                                                                                                                                                                          | 否  | |  |
 | -h    --help        | 用于查看全部的参数具体信息                                                                                                                                                                                                                                                                                 | 否  | |  |
 
 
@@ -138,6 +178,9 @@ compare功能可以直接通过msit命令行形式启动精度对比。启动方
 | [09_single_op](/msit/examples/cli/debug/compare/09_single_op)                                 | 单算子比对模式                              |
 | [10_fusion_switch_file](/msit/examples/cli/debug/compare/10_fusion_switch_file)               | 关闭融合规则.om模型和原始.om模型精度比对              |
 | [11_mixing_precison_compare](/msit/examples/cli/debug/compare/11_mixing_precison_compare)      | 混合精度策略的.om模型和.om模型的精度比对              |
+| [14_alone_compare](/msit/examples/cli/debug/compare/14_alone_compare)                            | 指定dump数据的精度比对                        |
+| [15_saved_model](/msit/examples/cli/debug/compare/15_saved_model)                            | 标杆模型为tensorflow2.6框架下saved_model模型的一键式精度比对                        |
+| [16_mindie_torch_compare](/msit/examples/cli/debug/compare/16_mindie_torch_compare)                            | MindIE-Torch场景-整网算子精度对比场景                        |
 
 ### 常见问题FAQ
 

@@ -16,17 +16,16 @@
 
 - 准备 `python_bert_inference.py`，为模型的前向推理脚本
 
-- 执行 `msit llm dump --mindie_torch --exec "python_bert_inference.py" [--option]` Dump NPU数据 
+- 执行 `msit debug dump --exec "python_bert_inference.py" [--option]` Dump NPU数据 
 
   ```sh
-  msit llm dump --mindie_torch --output [/path/to/dump] --exec "python bert_inference.py" --operation-name MatMulv2_1,trans_Cast_0
+  msit debug dump --output [/path/to/dump] --exec "python bert_inference.py" --operation-name MatMulv2_1,trans_Cast_0
   ```
 
 - 参数说明 
 
 | 参数名          | 描述                                                                                                                             | 必选 |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------- | ---- |
-| --mindie_torch    | 是否是MindIE-Torch场景下的比对 | 是   |
 | --exec | MindIE-Torch推理脚本的执行命令                                                                                   | 是   |
 | --output | 指定Dump数据输出路径，默认为当前路径                                 | 否   | 
 | -opname, --operation-name | 需要Dump的算子，默认为 all，表示会对模型中所有 op 进行 Dump，其中元素为MindIE-Torch算子类型，若设置 operation-name，只会 Dump 指定的 op                                | 否   | 
@@ -43,7 +42,7 @@
 
 ## 4. Compare 精度对比 
 
- - 执行 `msit llm compare --golden-path [/path/to/cpu/dumpdata] --my-path [/path/to/npu/dumpdata] --output [path/to/csv] --op-mapping-file [path/to/json]`，输出比对结果 csv 文件
+ - 执行 `msit debug compare --golden-path [/path/to/cpu/dumpdata] --my-path [/path/to/npu/dumpdata] --output [path/to/csv] --ops-json [path/to/json]`，输出比对结果 csv 文件
 
 ### 参数说明
 
@@ -51,7 +50,7 @@
 | ---------------------- | ------------------------------------------------------------ | -------- |
 | --golden-path, -gp     | CPU/GPU Dump数据根路径                   | 是       |
 | --my-path, -mp         | NPU Dump数据根路径                         | 是       |
-| --op-mapping-file, -mf | 运行 `msit llm dump --mindie_torch` 时产生的算子映射关系文件路径，通常在当前文件夹下 | 是       |
+| --ops-json | 运行 `msit debug dump` 时产生的算子映射关系文件路径，通常在当前文件夹下 | 是       |
 | --output, -o           | 比对结果csv的输出路径                                        | 是       |
 
 ## 注意

@@ -13,18 +13,14 @@
 # limitations under the License.
 
 import os
-import logging
 import sys
 import argparse
 import subprocess
 from typing import Union
+
 from components.utils.util import get_entry_points
 from components.utils.parser import BaseCommand
-
-logging.basicConfig(
-    stream=sys.stdout, level=logging.INFO, format='[%(levelname)s] %(message)s'
-)
-logger = logging.getLogger(__name__)
+from components.utils.log import logger
 
 
 def is_windows():
@@ -40,7 +36,7 @@ def warning_in_windows(title):
 
 def get_base_path():
     base = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    print(base)
+    logger.info(base)
     return base
 
 
@@ -49,13 +45,16 @@ def get_real_pkg_path(pkg_path):
 
 
 class AitInstaller:
-    def check(self):
+    @staticmethod
+    def check():
         return "OK"
 
-    def build_extra(self, find_links):
+    @staticmethod
+    def build_extra(find_links):
         logger.info("there are no more extra dependencies to build")
 
-    def download_extra(self, dest):
+    @staticmethod
+    def download_extra(dest):
         logger.info("there are no more extra dependencies to download")
 
 
@@ -275,7 +274,7 @@ def check_tools(names):
 
 
 def check_tool(pkg_name):
-    logger.debug(f"checking {pkg_name}")
+    logger.debug("checking %s", pkg_name)
     pkg_installer = get_installer(pkg_name)
 
     if not pkg_installer:

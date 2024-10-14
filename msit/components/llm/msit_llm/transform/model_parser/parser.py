@@ -16,11 +16,11 @@ from json import dump
 import json
 from pathlib import Path
 import re
-import os
 import torch.nn as nn
 
 from msit_llm.transform.model_parser.kind import mlp, attention, convert, mname
 from components.utils.file_open_check import ms_open
+from msit_llm.common.utils import check_input_path_legality, check_data_file_size
 
 
 def has_child(module: nn.Module) -> bool:
@@ -212,7 +212,7 @@ def parse_input_max_count(content):
     res = regex_search(pattern_list, content)
     try:
         max_count = int(res)
-    except Exception as ex:
+    except Exception:
         max_count = -1
     return max_count
 
@@ -288,6 +288,9 @@ def update_weight_prefix(parsed_model, source_path):
     for fp in Path(source_path).glob('*.index.json'):
         if weight_name_list:
             break
+        fp = check_input_path_legality(str(fp))
+        if not check_data_file_size(fp):
+            return
         try:
             with open(fp) as ff:
                 dd = json.load(ff)            

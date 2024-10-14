@@ -15,9 +15,8 @@
 import itertools
 import re
 from enum import Enum
-from typing import Any
 from msit_llm.common.log import logger
-from msit_llm.dump.torch_dump.topo import ModelTree, TreeNode
+from msit_llm.dump.torch_dump.topo import TreeNode
 from msit_llm.compare.op_mapping import ATB_QUANT_FLOAT_NODE_MAPPING
 
 
@@ -50,8 +49,8 @@ class OpMatchMap:
         if key not in self.map:
             self.map[key] = score.value
         else:
-            oriValue = self.map.get(key)
-            self.map[key] = oriValue + score.value
+            ori_value = self.map.get(key)
+            self.map[key] = ori_value + score.value
 
     def get_match_map(self, enable_print: bool = True) -> tuple:
         '''

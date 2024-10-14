@@ -1,4 +1,5 @@
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,7 +21,6 @@ from multiprocessing import Pool
 from typing import List, Optional, Union
 
 import re
-import argparse
 import click
 
 from auto_optimizer import KnowledgeFactory
@@ -32,7 +32,7 @@ from auto_optimizer.graph_optimizer.optimizer import (
 )
 from auto_optimizer.graph_refactor.interface.base_graph import BaseGraph
 from auto_optimizer.graph_refactor.onnx.graph import OnnxGraph
-from auto_optimizer.tools.log import logger
+from components.debug.common import logger
 
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -238,7 +238,11 @@ def check_args(ctx: click.Context, params: click.Option, value: str):
     """
     check whether the param is provided
     """
-    args = [opt for param in ctx.command.params for opt in param.opts]
+    args = [
+        opt 
+        for param in ctx.command.params 
+        for opt in param.opts
+    ]
     if value in args:
         opt_name = parse_opt_name(params)
         raise click.BadOptionUsage(option_name=opt_name, message="Option {} requires an argument".format(opt_name))
@@ -247,7 +251,11 @@ def check_args(ctx: click.Context, params: click.Option, value: str):
 
 def check_node_name(ctx: click.Context, params: click.Option, value: str):
     value = check_args(ctx, params, value)
-    args = [opt + "=" for param in ctx.command.params for opt in param.opts]
+    args = [
+        opt + "=" 
+        for param in ctx.command.params 
+        for opt in param.opts
+    ]
     opt_name = parse_opt_name(params)
     for arg in args:
         if value.startswith(arg):

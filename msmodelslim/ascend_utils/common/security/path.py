@@ -7,8 +7,8 @@ import shutil
 import stat
 import json
 
-from msmodelslim import logger
 from ascend_utils.common.security.type import check_dict_character
+from msmodelslim import logger
 
 
 PATH_WHITE_LIST_REGEX = re.compile(r"[^_A-Za-z0-9/.-]")

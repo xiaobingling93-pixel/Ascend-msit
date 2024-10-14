@@ -24,7 +24,7 @@ function copy_source_code_dir_to_tests() {
 }
 
 function del_source_code_from_tests() {
-    rm -rf ${cur_dir}/../msquickcmp
+    rm -rf ${cur_dir}/msquickcmp
 }
 
 declare -i ret_val=0

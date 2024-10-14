@@ -21,13 +21,13 @@ def validate_parameters_by_func(parameter_constraints, in_class=False):
         raise TypeError(f"Parameter constraints expects dict, but got {type(parameter_constraints).__name__} instead.")
 
     if not parameter_constraints:
-        raise ValueError(f"Parameter constraints should not be empty.")
+        raise ValueError("Parameter constraints should not be empty.")
 
     if not all(isinstance(key, str) for key in parameter_constraints.keys()):
-        raise ValueError(f"Key of the parameter constraints only supports string.")
+        raise ValueError("Key of the parameter constraints only supports string.")
 
     if not all(isinstance(val, (tuple, list)) for val in parameter_constraints.values()):
-        raise ValueError(f"Value of the parameter constraints only supports tuple or list.")
+        raise ValueError("Value of the parameter constraints only supports tuple or list.")
 
     def decorator(func):
 
@@ -44,24 +44,28 @@ def validate_parameters_by_func(parameter_constraints, in_class=False):
                     try:
                         test_result = check_item(arg)
                     except Exception as e:
-                        raise RuntimeError(
-                            f"In the running function `{func.__name__}`, the argument `{constraint_name}`, whose value is `{arg}`, " 
-                            f"is invalid as it has not been passed through the designated constraints.") from e
+                        msg = f"In the running function `{func.__name__}`, the argument `{constraint_name}`, \
+                            whose value is `{arg}`, is invalid as it has not been passed through the designated \
+                            constraints."
+                        raise RuntimeError(msg) from e
 
                     try:
                         test_result = True if test_result is None else bool(test_result)
                     except Exception as e:
-                        raise RuntimeError(
-                            f"The result from the designated constraints `{check_name}` can not be interpreted as bool.") from e
+                        msg = f"The result from the designated constraints `{check_name}` \
+                            can not be interpreted as bool."
+                        raise RuntimeError(msg) from e
 
                     if not test_result:
-                        raise RuntimeError(
-                            f"In the running function `{func.__name__}`, the argument `{constraint_name}`, whose value is `{arg}`, " 
-                            f"is invalid as it has not been passed through the designated constraints.")
+                        msg = f"In the running function `{func.__name__}`, the argument `{constraint_name}`, \
+                            whose value is `{arg}`, is invalid as it has not been passed through the designated \
+                            constraints." 
+                        raise RuntimeError(msg)
 
                 else:
-                    raise TypeError(
-                        f"Provided `{check_item}` that associated with key `{constraint_name}` is invalid: Not callable.")
+                    msg = f"Provided `{check_item}` that associated with key `{constraint_name}` is invalid: \
+                        Not callable."
+                    raise TypeError(msg)
             
         if in_class:
             @functools.wraps(func)
@@ -121,13 +125,13 @@ def validate_parameters_by_type(parameter_constraints, in_class=False):
         raise TypeError(f"Parameter constraints expects dict, but got {type(parameter_constraints).__name__} instead.")
 
     if not parameter_constraints:
-        raise ValueError(f"Parameter constraints should not be empty.")
+        raise ValueError("Parameter constraints should not be empty.")
 
     if not all(isinstance(key, str) for key in parameter_constraints.keys()):
-        raise ValueError(f"Key of the parameter constraints only supports string.")
+        raise ValueError("Key of the parameter constraints only supports string.")
 
     if not all(isinstance(val, (tuple, list)) for val in parameter_constraints.values()):
-        raise ValueError(f"Value of the parameter constraints only supports tuple or list.")
+        raise ValueError("Value of the parameter constraints only supports tuple or list.")
 
     def decorator(func):
 
@@ -153,13 +157,14 @@ def validate_parameters_by_type(parameter_constraints, in_class=False):
                         return
                         
                 else:
-                    raise TypeError(
-                        f"Provided `{check_item}` that associated with key `{constraint_name}` is invalid. Only types "
-                        f"are allowed.")
+                    msg = f"Provided `{check_item}` that associated with key `{constraint_name}` is invalid. \
+                        Only types are allowed."
+                    raise TypeError(msg)
 
-            raise TypeError(
-                        f"In the running function `{func.__name__}`, the argument `{constraint_name}`, whose value is `{arg}`, "
-                        f"is invalid, where `{type_list}` is expected, but got `{type(arg).__name__}` instead.")
+            msg = f"In the running function `{func.__name__}`, the argument `{constraint_name}`, \
+                whose value is `{arg}`, is invalid, where `{type_list}` is expected, \
+                but got `{type(arg).__name__}` instead."
+            raise TypeError(msg)
 
         if in_class:
             @functools.wraps(func)

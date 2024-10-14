@@ -145,7 +145,7 @@ class RelativeAbnormalStringRate(Metrics):
         
         try:
             filtered_field = [word for word in jieba.cut(word) if word not in self._EXCLUDE_LIST]
-        except Exception as e:
+        except Exception:
             logger.error("Trying to tokenize `%s`, but failed.", word)
             raise
         
@@ -184,7 +184,7 @@ class BLEU(Metrics):
         
         try:
             filtered_field = [word for word in jieba.cut(word) if word not in self._EXCLUDE_LIST]
-        except Exception as e:
+        except Exception:
             logger.error("Trying to tokenize `%s`, but failed.", word)
             raise
         
@@ -225,7 +225,7 @@ class ROUGE(Metrics):
         
         try:
             filtered_field = " ".join(jieba.cut(word))
-        except Exception as e:
+        except Exception:
             logger.error("Trying to tokenize `%s`, but failed.", word)
             raise
         
@@ -293,7 +293,7 @@ class RelativeDistinctStringRate(Metrics):
     }
 )
 def get_metric(metric_name, thr=None) -> Metrics:
-    MAPPING = {
+    mapping = {
         "accuracy": Accuracy(thr),
         "rouge": ROUGE(thr),
         "rouge_1": ROUGE(thr, 1),
@@ -313,8 +313,8 @@ def get_metric(metric_name, thr=None) -> Metrics:
         "relative_distinct_4": RelativeDistinctStringRate(thr, 4),
     }
 
-    if metric_name not in MAPPING:
-        logger.error("`%s` is not supported. Please choose from %s.", metric_name, list(MAPPING.keys()))
+    if metric_name not in mapping:
+        logger.error("`%s` is not supported. Please choose from %s.", metric_name, list(mapping.keys()))
         raise KeyError
 
-    return MAPPING[metric_name]
+    return mapping[metric_name]

@@ -5,6 +5,10 @@ import json
 import queue
 from collections import Counter
 
+from msit_llm.common.log import logger
+from msit_llm.common.utils import check_data_file_size
+
+
 FILE_PERMISSION = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP
 MODULE_ID_NOT_AVAILABLE = -1
 MIN_LAYER_NUMBER = 10
@@ -125,22 +129,17 @@ class ModelTree:
     def __init__(self):
         self.root_node = TreeNode("root", "root")
 
-    def create_tree(self, module, module_ids, json_path) -> None:
-        self.root_node.op_type = str(type(module).__name__)
-        self._create_sub_tree(module, self.root_node, module_ids)
-        self.root_node.sort_children()
-        _tree_to_json(self.root_node, json_path)
-
     @staticmethod
     def json_to_tree(json_path: str, tensor_path="") -> TreeNode:
-        with open(json_path, "r") as file:
-            node_dict = json.loads(file.read(), parse_constant=lambda x: None)
+        if check_data_file_size(json_path):
+            with open(json_path, "r") as file:
+                node_dict = json.loads(file.read(), parse_constant=lambda x: None)
 
         def _dict_to_tree(node_dict, level, order, tensor_path):
             try:
                 op_name = node_dict["name"]
             except Exception as e:
-                print(node_dict)
+                logger.info(node_dict)
                 raise e
             node_tensor_path = os.path.join(tensor_path, op_name)
             node = TreeNode(op_name, node_dict["type"], level, order, tensor_path=node_tensor_path)
@@ -156,8 +155,9 @@ class ModelTree:
 
     @staticmethod
     def atb_json_to_tree(json_path: str, tensor_path="", start_order=0) -> TreeNode:
-        with open(json_path, "r") as file:
-            node_dict = json.loads(file.read(), parse_constant=lambda x: None)
+        if check_data_file_size(json_path):
+            with open(json_path, "r") as file:
+                node_dict = json.loads(file.read(), parse_constant=lambda x: None)
 
         def _atb_dict_to_tree(node_dict, level, order, tensor_path):
             ModelTree.atb_show_order = ModelTree.atb_show_order + 1
@@ -191,6 +191,12 @@ class ModelTree:
             return node
 
         return _atb_dict_to_tree(node_dict, 0, 0, tensor_path)
+
+    def create_tree(self, module, module_ids, json_path) -> None:
+        self.root_node.op_type = str(type(module).__name__)
+        self._create_sub_tree(module, self.root_node, module_ids)
+        self.root_node.sort_children()
+        _tree_to_json(self.root_node, json_path)
 
     def _create_sub_tree(self, module, father_node, module_ids):
         new_level = father_node.level + 1

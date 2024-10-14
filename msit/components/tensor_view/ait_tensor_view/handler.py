@@ -17,9 +17,8 @@ from os.path import splitext
 import torch
 
 from ait_tensor_view.atb import read_atb_data, write_atb_data
-from ait_tensor_view.operation import SliceOperation, PermuteOperation
 from ait_tensor_view.print_stat import print_stat
-from ait_tensor_view.logger import logger
+from components.utils.log import logger
 
 
 def replace(in_path: str, out_path: str) -> str:
@@ -54,7 +53,7 @@ def handle_tensor_view(args):
     print_stat(tensor)
 
     if args.print:
-        print(tensor)
+        logger.info("\n%s", tensor)
 
     if args.output:
         out_path = args.output

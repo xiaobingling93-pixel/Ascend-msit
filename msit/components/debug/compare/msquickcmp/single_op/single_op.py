@@ -1,5 +1,5 @@
-# coding=utf-8
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,8 +18,7 @@ import subprocess
 import acl
 
 from auto_optimizer import OnnxGraph
-from auto_optimizer.graph_refactor import Node
-from auto_optimizer.graph_refactor.onnx import OnnxNode, OnnxPlaceHolder, OnnxInitializer
+from auto_optimizer.graph_refactor.onnx import OnnxPlaceHolder, OnnxInitializer
 from auto_optimizer.graph_refactor.interface import PlaceHolder
 from msquickcmp.common import utils
 from msquickcmp.common.utils import AccuracyCompareException
@@ -42,7 +41,6 @@ def check_single_op_is_valid(single_op, dump, custom_op, locat):
 
 def get_memory_size_by_soc_type(device_id):
     npu_id = -1
-    memory_size = -1
     pre_cmd = "npu-smi info -m"
     map_res = subprocess.run(pre_cmd.split(), shell=False, stdout=subprocess.PIPE)
 
@@ -88,7 +86,7 @@ def generate_single_op_dir(out_path):
     """
     single_op_dir = os.path.join(out_path, 'single_op')
     if os.path.exists(single_op_dir):
-        os.rmdir(dir_path)
+        os.rmdir(single_op_dir)
     os.makedirs(single_op_dir)
     return single_op_dir
 

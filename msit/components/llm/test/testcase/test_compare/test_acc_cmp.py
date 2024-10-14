@@ -196,7 +196,9 @@ def test_read_data_when_npy(golden_data_file, test_data_file):
 
 
 def test_read_data_given_data_file_when_invalid_type_then_error(test_dat_path):
-    with pytest.raises(TypeError):
+    from argparse import ArgumentError
+    # check path_legality will raise ArgumentError instead of TypeError
+    with pytest.raises(ArgumentError):
         msit_llm.compare.cmp_utils.read_data(test_dat_path)
 
 

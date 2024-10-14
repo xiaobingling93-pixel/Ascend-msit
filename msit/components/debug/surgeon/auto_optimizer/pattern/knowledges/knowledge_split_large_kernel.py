@@ -14,7 +14,6 @@
 
 from itertools import accumulate
 from typing import List, Dict, Optional, Tuple
-import logging
 import operator as op
 
 import numpy as np
@@ -26,6 +25,7 @@ from auto_optimizer.graph_refactor.interface.base_node import BaseNode, Node, In
 from auto_optimizer.pattern.pattern import MatchPattern, Pattern, MatchBase
 from auto_optimizer.pattern.matcher import MatchResult
 from auto_optimizer.pattern.knowledges.knowledge_base import KnowledgeBase
+from components.debug.common import logger
 
 
 class LargeKernelConv(MatchBase):
@@ -202,25 +202,30 @@ class KnowledgeSplitLargeKernelConv(KnowledgeBase):
             each = ((len(_16s) - 1) // num) + 1
             ksizes = [sum(_16s[i : i + each]) for i in range(0, len(_16s), each)]
             indices = list(accumulate([0, *ksizes[:-1]]))
-            kslices = [[*slc, (i, i + s)] for i, s in zip(indices, ksizes) for slc in kslices]
+            kslices = [
+                [*slc, (i, i + s)] 
+                for i, s in zip(indices, ksizes) 
+                for slc in kslices
+            ]
         return kslices
 
     def _split_large_kernel(self, graph: BaseGraph, matchinfo: Dict[str, List[Node]]) -> bool:
         conv0: Optional[Node] = graph.get_node(matchinfo['LargeKernelConv'][0].name, node_type=Node)
         if conv0 is None:
-            logging.warning('Conv operator is no longer exists.')
+            logger.warning('Conv operator is no longer exists.')
             return False
 
         kweight: Optional[Initializer] = graph.get_node(conv0.inputs[1], node_type=Initializer)
         if kweight is None:
-            logging.warning('Failed to get conv kernel weight.')
+            logger.warning('Failed to get conv kernel weight.')
             return False
 
         # modification start from here
         kshape: List[int] = conv0.attrs.get('kernel_shape', [1])
         slices = self._calculate_kernel_slices(kshape)
         outputs = [
-            self._create_kernel_slice_branch(conv0, graph, slc, idx == 0).outputs[0] for idx, slc in enumerate(slices)
+            self._create_kernel_slice_branch(conv0, graph, slc, idx == 0).outputs[0] 
+            for idx, slc in enumerate(slices)
         ]
 
         graph.add_node(

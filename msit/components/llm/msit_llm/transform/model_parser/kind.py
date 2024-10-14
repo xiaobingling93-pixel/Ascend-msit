@@ -15,6 +15,7 @@
 from typing import List
 
 from torch.nn import Module, Linear, Embedding, LayerNorm, GELU
+from msit_llm.common.log import logger
 
 
 def mname(module: Module):
@@ -67,33 +68,33 @@ def attention(name, modules: List[Module], size: int):
     modules = [m for n, m in modules]
     names_iter = iter(names)
     if size == 5:
-        [q, k, v, o, r] = modules
+        [q, k, v, output, r] = modules
         ret["structure"] = "q-k-v-o-r"
         ret["q"] = linear(next(names_iter), q)
         ret["k"] = linear(next(names_iter), k)
         ret["v"] = linear(next(names_iter), v)
-        ret["o"] = linear(next(names_iter), o)
+        ret["o"] = linear(next(names_iter), output)
         ret["rope"] = rope(next(names_iter), r)
     elif size == 4:
-        [q, kv, o, r] = modules
+        [q, kv, output, r] = modules
         ret["structure"] = "q-kv-o-r"
         ret["q"] = linear(next(names_iter), q)
         ret["kv"] = linear(next(names_iter), kv)
-        ret["o"] = linear(next(names_iter), o)
+        ret["o"] = linear(next(names_iter), output)
         ret["rope"] = rope(next(names_iter), r)
     elif size == 3:
-        [w, o, r] = modules
+        [w, output, r] = modules
         ret["structure"] = "w-o-r"
         ret["w"] = linear(next(names_iter), w)
-        ret["o"] = linear(next(names_iter), o)
+        ret["o"] = linear(next(names_iter), output)
         ret["rope"] = rope(next(names_iter), r)
     elif size == 2:
-        [w, o] = modules
+        [w, output] = modules
         ret["structure"] = "w-o"
         ret["w"] = linear(next(names_iter), w)
-        ret["o"] = linear(next(names_iter), o)
+        ret["o"] = linear(next(names_iter), output)
     else:
-        print("error linear size")
+        logger.error("error linear size")
 
     return ret
 

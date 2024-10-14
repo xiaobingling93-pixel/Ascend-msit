@@ -1,4 +1,5 @@
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,7 +22,7 @@ from numpy.typing import NDArray
 from numpy.linalg import norm
 import onnxruntime as rt
 
-from auto_optimizer.tools.log import logger
+from components.debug.common import logger
 
 
 def typeassert(*ty_args, **ty_kwargs):

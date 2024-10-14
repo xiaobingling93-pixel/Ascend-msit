@@ -1,4 +1,5 @@
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,7 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import os
+import subprocess
 
 from components.utils.parser import BaseCommand
 from components.debug.compare.msquickcmp.adapter_cli.args_adapter import CmpArgsAdapter
@@ -29,6 +32,14 @@ from msquickcmp.dump.args_adapter import DumpArgsAdapter
 CANN_PATH = os.environ.get('ASCEND_TOOLKIT_HOME', "/usr/local/Ascend/ascend-toolkit/latest")
 
 
+def check_normal_dump_param(args):
+    if args.opname:
+        raise NotImplementedError("\'--operation-name\' or \'-opname\' only support "
+                                  "MindIE-Torch dump scenario.")
+    if args.exec:
+        raise NotImplementedError("\'--exec\' only support MindIE-Torch dump scenario.")
+
+
 class CompareCommand(BaseCommand):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -41,14 +52,14 @@ class CompareCommand(BaseCommand):
             required=False,
             dest="golden_model",
             type=check_model_path_legality,
-            help='The original model (.onnx or .pb or .prototxt or .om) file path')
+            help='The original model (.pb or saved_model or .onnx or .prototxt or .om) file path')
         parser.add_argument(
             '-om',
             '--om-model',
             required=False,
             dest="om_model",
             type=check_om_path_legality,
-            help='The offline model (.om or .mindir) file path')
+            help='The offline model (.om or .mindir or saved_model) file path')
         parser.add_argument(
             '-w',
             '--weight',
@@ -188,8 +199,9 @@ class CompareCommand(BaseCommand):
         parser.add_argument(
             '--saved_model_tag_set',
             dest="saved_model_tag_set",
-            default='',
-            help="Enter the tagSet of the model. For example: --saved_model_tag_set ['serve', 'general_parser']")
+            default='serve',
+            help="Enter the tagSet of the model.Currently, multiple tagSets can be transferred, "
+                 "for example, --saved_model_tag_set ['serve', 'genenal_parser']")
         # alone compare parameters
         parser.add_argument(
             '-mp',
@@ -218,6 +230,14 @@ class CompareCommand(BaseCommand):
             logger.error("The following args are required: -gm/--golden-model or -gp/--golden-path")
             self.parser.print_help()
             return
+        if args.ops_json is not None:
+            mindie_rt_op_mapping = os.path.join(args.ops_json, "mindie_rt_op_mapping.json")
+            mindie_torch_op_mapping = os.path.join(args.ops_json, "mindie_torch_op_mapping.json")
+            if os.path.exists(mindie_rt_op_mapping) and os.path.exists(mindie_torch_op_mapping):
+                from msquickcmp.mie_torch.mietorch_comp import MIETorchCompare
+                comparer = MIETorchCompare(args.golden_path, args.my_path, args.ops_json, args.out_path)
+                comparer.compare()
+                return
         cmp_args = CmpArgsAdapter(args.golden_model, args.om_model, args.weight_path, args.input_data_path,
                                   args.cann_path, args.out_path,
                                   args.input_shape, args.device, args.output_size, args.output_nodes, args.advisor,
@@ -238,7 +258,7 @@ class DumpCommand(BaseCommand):
         parser.add_argument(
             '-m',
             '--model',
-            required=True,
+            required=False,
             dest="model_path",
             type=check_model_path_legality,
             help='The original model (.onnx or .pb or saved_model) file path')
@@ -310,12 +330,13 @@ class DumpCommand(BaseCommand):
         parser.add_argument(
             '--saved_model_tag_set',
             dest="saved_model_tag_set",
-            default='',
-            help="Enter the tagSet of the model. For example: --saved_model_tag_set ['serve', 'general_parser']")
+            default='serve',
+            help="Enter the tagSet of the model.Currently, multiple tagSets can be transferred, "
+                 "for example, --saved_model_tag_set ['serve', 'genenal_parser']")
         parser.add_argument(
             '-dp',
             '--device-pattern',
-            required=True,
+            required=False,
             dest="device_pattern",
             help="Enter inference in npu or cpu device. For example: -dp cpu")
         parser.add_argument(
@@ -323,15 +344,41 @@ class DumpCommand(BaseCommand):
             required=False,
             dest="tf_json_path",
             help="When dump saved_model, you need provide tf-ops-json file path.")
+        parser.add_argument(
+            "--exec",
+            dest="exec",
+            required=False,
+            type=safe_string,
+            help="Exec command to run acltransformer model inference, "
+                 "only support MindIE-Torch dump scenario. "
+                 "For example: --exec \'bash run.sh patches/models/modeling_xxx.py\' ")
+        parser.add_argument(
+            "-opname",
+            "--operation-name",
+            required=False,
+            dest="opname",
+            type=safe_string,
+            default=None,
+            help="Operation names need to dump, only support MindIE-Torch dump scenario.")
         self.parser = parser
 
     def handle(self, args):
-        cmp_args = DumpArgsAdapter(args.model_path, args.weight_path, args.input_data_path,
-                                   args.cann_path, args.out_path, args.input_shape, args.device,
-                                   args.dym_shape_range, args.onnx_fusion_switch,
-                                   args.saved_model_signature, args.saved_model_tag_set,
-                                   args.device_pattern, args.tf_json_path)
-        dump_process(cmp_args, True)
+        if args.exec:
+            from components.debug.compare.msquickcmp.dump.mietorch.dump_config import DumpConfig
+            DumpConfig(dump_path=args.out_path, api_list=args.opname)
+            cmds = args.exec.split()
+            subprocess.run(cmds, shell=False)
+        else:
+            if (not args.model_path) or (not args.device_pattern):
+                raise NotImplementedError("If you do not inference with MindIE-Torch, "
+                                          "must use arguments '-m' and '-dp' to do next.")
+            check_normal_dump_param(args)
+            cmp_args = DumpArgsAdapter(args.model_path, args.weight_path, args.input_data_path,
+                                    args.cann_path, args.out_path, args.input_shape, args.device,
+                                    args.dym_shape_range, args.onnx_fusion_switch,
+                                    args.saved_model_signature, args.saved_model_tag_set,
+                                    args.device_pattern, args.tf_json_path)
+            dump_process(cmp_args, True)
 
 
 def get_compare_cmd_ins():

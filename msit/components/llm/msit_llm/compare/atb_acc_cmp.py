@@ -21,10 +21,9 @@ from tqdm import tqdm
 from msit_llm.common.log import logger
 from msit_llm.compare.cmp_utils import BasicDataInfo, fill_row_data, save_compare_reault_to_csv, compare_data, read_data
 from msit_llm.compare.cmp_op_match import MatchLocation
-from msit_llm.compare.cmp_op_match import MatchLocation
 from msit_llm.compare.op_mapping import ATB_TORCH_BUILT_IN_OP_OUTPUT_MAPPING, ATB_TORCH_CUSTOM_OP_OUTPUT_MAPPING, \
     ATB_QUANT_FLOAT_NODE_MAPPING
-from msit_llm.dump.torch_dump.topo import ModelTree, TreeNode, TreeNode
+from msit_llm.dump.torch_dump.topo import ModelTree, TreeNode
 
 
 def acc_compare(golden_path, my_path, output_path=".", mapping_file_path=".", cmp_level="layer"):
@@ -77,20 +76,6 @@ def is_model_topo_exist(golden_path, cmp_level="layer"):
     return False, ""
 
 
-def compare_topo_json(golden_topo_json_path, my_topo_json_path):
-    try:
-        with open(golden_topo_json_path, 'r') as golden_file:
-            golden_data = json.load(golden_file)
-        with open(my_topo_json_path, 'r') as my_file:
-            my_data = json.load(my_file)
-        if golden_data == my_data:
-            return True
-        else:
-            return False
-    except (IOError, json.JSONDecodeError):
-        return False
-
-
 def compare_file(golden_path, my_path):
     golden_data = read_data(golden_path)
     my_data = read_data(my_path)
@@ -100,10 +85,15 @@ def compare_file(golden_path, my_path):
 # 手动映射比对能力
 def compare_metadata(golden_path, output_path="."):
     golden_meta_path = os.path.join(golden_path, "metadata.json")
-    with open(golden_meta_path, "r") as file:
-        golden_meta = json.load(file)
-    gathered_row_data = fill_in_data(golden_meta)
-    return save_compare_reault_to_csv(gathered_row_data, output_path)
+    from msit_llm.common.utils import check_input_path_legality, check_data_file_size
+    golden_meta_path = check_input_path_legality(golden_meta_path)
+    if check_data_file_size(golden_meta_path):
+        with open(golden_meta_path, "r") as file:
+            golden_meta = json.load(file)
+        gathered_row_data = fill_in_data(golden_meta)
+        return save_compare_reault_to_csv(gathered_row_data, output_path)
+    else:
+        raise ValueError("The golden path is invalid.")
 
 
 def fill_in_data(golden_meta):
@@ -146,35 +136,6 @@ def traverse_tree(node: dict, path, traverse_type='torch', node_id=''):
     return res
 
 
-# 加速库模型间比对相关
-def compare_atb_metadata_auto(golden_path, my_path, golden_topo_json_path, my_topo_json_path, output_path="."):
-    cur_my_path = os.path.dirname(os.path.abspath(my_path))
-    token_id = os.path.basename(cur_my_path).split('_')[1]
-
-    with open(golden_topo_json_path, "r") as file:
-        golden_topo = json.load(file)
-    with open(my_topo_json_path, "r") as file:
-        my_topo = json.load(file)
-
-    if compare_topo_json(golden_topo_json_path, my_topo_json_path):
-        # topo信息一致，走dtype和bs比对逻辑：
-        logger.info("Automatic mapping comparison starts! Comparing ATB tensors, the topos are same...")
-        gathered_golden_data = traverse_tree(golden_topo, golden_path, 'atb')
-        gathered_my_data = traverse_tree(my_topo, my_path, 'atb')
-        matched_path_pair = search_mapping_relationships(gathered_golden_data, gathered_my_data)
-    else:
-        # topo信息不一致，走量化浮点比对逻辑
-        logger.info('Automatic mapping comparison starts! Comparing ATB tensors, the topos are different...')
-        matched_path_pair = search_float_quant_matches(golden_path, my_path, golden_topo_json_path, my_topo_json_path)
-
-    gathered_row_data = []
-    for data_id, match in enumerate(matched_path_pair):
-        data_info = BasicDataInfo(match['golden'], match['my'], token_id, data_id)
-        row_data = fill_row_data(data_info, is_broadcast_tensor=True)
-        gathered_row_data.append(row_data)
-    return save_compare_reault_to_csv(gathered_row_data, output_path)
-
-
 def add_specific_path(golden_tensor, my_tensor, matched_path_pair):
     try:
         _golden_path = glob.glob(golden_tensor)[0]
@@ -183,7 +144,7 @@ def add_specific_path(golden_tensor, my_tensor, matched_path_pair):
         my_out_path = get_paths(_my_path, split_pattern='outtensor')
         for _golden_tensor_path, _my_tensor_path in zip(golden_out_path, my_out_path):
             matched_path_pair.append({'golden': _golden_tensor_path, 'my': _my_tensor_path})
-    except IndexError as e:
+    except IndexError:
         msg = f"Cannot find path! golden: {golden_tensor}, my: {my_tensor}"
         logger.debug(msg)
 
@@ -197,7 +158,6 @@ def get_matched_path_pair(matches):
 
 def search_mapping_relationships(gathered_golden_data, gathered_my_data):
     matches = []
-    matched_path_pair = []
     for golden_item, my_item in zip(gathered_golden_data, gathered_my_data):
         if "opType" in golden_item and "opType" in my_item:
             matches.append({'golden': golden_item, 'my': my_item})
@@ -209,7 +169,7 @@ def search_float_quant_matches(golden_path, my_path, golden_topo_json_path, my_t
     matched_path_pair = []
     golden_tree = ModelTree.atb_json_to_tree(golden_topo_json_path)
     my_tree = ModelTree.atb_json_to_tree(my_topo_json_path)
-    
+
     def get_subnode_by_name(target_node, target_name):
         for next_node in target_node.children:
             if next_node.node_name == target_name:
@@ -236,7 +196,7 @@ def search_float_quant_matches(golden_path, my_path, golden_topo_json_path, my_t
                 for my_name, golden_name in zip(my_type_map[key], golden_type_map[key]):
                     my_legal_opname[my_name] = golden_name
             elif key in ATB_QUANT_FLOAT_NODE_MAPPING and (ATB_QUANT_FLOAT_NODE_MAPPING[key] in golden_type_map) and \
-                (len(value) == len(golden_type_map[ATB_QUANT_FLOAT_NODE_MAPPING[key]])):
+                    (len(value) == len(golden_type_map[ATB_QUANT_FLOAT_NODE_MAPPING[key]])):
                 for my_name, golden_name in zip(my_type_map[key], golden_type_map[ATB_QUANT_FLOAT_NODE_MAPPING[key]]):
                     my_legal_opname[my_name] = golden_name
         for my_sub in my_node.children:
@@ -247,6 +207,7 @@ def search_float_quant_matches(golden_path, my_path, golden_topo_json_path, my_t
                 golden_tensor = os.path.join(os.path.abspath(golden_path), golden_level, 'after')
                 add_specific_path(golden_tensor, my_tensor, matched_path_pair)
                 type_based_matches(my_sub, get_subnode_by_name(golden_node, my_legal_opname[my_sub.node_name]))
+
     type_based_matches(my_tree, golden_tree)
     return matched_path_pair
 
@@ -447,7 +408,7 @@ def cmp_torch_atb(torch_model_topo_file, cmp_paths, mapping_file_path, cmp_level
     try:
         path_index = -2 if cmp_level == "layer" else -1
         pid = str(my_path.split("/")[path_index].split("_")[1])
-    except IndexError as e:
+    except IndexError:
         pid = ""
         msg = f"Cannot parse the right pid from my_path! my_path: {my_path}"
         logger.error(msg)

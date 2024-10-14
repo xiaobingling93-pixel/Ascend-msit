@@ -1,4 +1,5 @@
-# Copyright (c) 2023 Huawei Technologies Co., Ltd.
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,10 +18,11 @@ import json
 
 from typing import List
 
-from model_evaluation.common import utils, logger
+from model_evaluation.common import utils
 from model_evaluation.common.enum import AtcErr, Framework
+from components.utils.log import logger
 from model_evaluation.parser.atc import AtcErrParser
-from model_evaluation.bean import OpInfo, OpInnerInfo, ConvertConfig
+from model_evaluation.bean import OpInfo, ConvertConfig
 
 
 class ModelParser:
@@ -45,7 +47,7 @@ class ModelParser:
     def parse_all_ops(self, convert=False) -> List[OpInfo]:
         if self._json_path == '' and convert:
             if not self.parse_model_to_json():
-                logger.error(f'parse model ops failed.')
+                logger.error('parse model ops failed.')
                 return []
 
         try:

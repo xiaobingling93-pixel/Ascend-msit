@@ -19,9 +19,11 @@ import time
 import datetime
 from collections import namedtuple
 import torch
+import torch_npu
 
 from msit_llm.common.log import logger
 from msit_llm.common.constant import GLOBAL_HISTORY_AIT_DUMP_PATH_LIST, RAW_INPUT_PATH
+from msit_llm.common.utils import check_data_file_size
 
 
 NAMEDTUPLE_PRECISION_METRIC = namedtuple('precision_metric', ['abs', 'kl', 'cos_sim'])('abs', 'kl', 'cos_sim')
@@ -52,7 +54,7 @@ class OpChecker:
         self.check_patterns = []
         self.precision_metric = []
         self.precision_mode = NAMEDTUPLE_PRECISION_MODE.keep_origin_dtype
-        self.timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_%H%M%S")
         self.atb_rerun = False
         self.optimization_identify = False
         self.jobs = 1
@@ -79,7 +81,7 @@ class OpChecker:
 
         try:
             ctypes.cdll.LoadLibrary(lib_opchecker_path).RegisterAll()
-        except Exception as e:
+        except Exception:
             logger_text = f"{lib_opchecker_path} loading failed, check if msit_llm installed correctly"
             logger.error(logger_text)
             return False
@@ -100,7 +102,7 @@ class OpChecker:
 
         try:
             torch.classes.load_library(libatb_speed_torch_path)
-        except Exception as e:
+        except Exception:
             logger_text = f"{libatb_speed_torch_path} loading failed, check if mindie_atb_models configured correctly"
             logger.error(logger_text)
             return False
@@ -113,7 +115,7 @@ class OpChecker:
             any([dirseg[-4].startswith(x) for x in GLOBAL_HISTORY_AIT_DUMP_PATH_LIST]):
             try:
                 pid = dirseg[-2].split("_")[1]
-            except (IndexError, AttributeError, TypeError, ValueError) as e:
+            except (IndexError, AttributeError, TypeError, ValueError):
                 pid = None
         elif cur_path == os.path.dirname(cur_path):
             cur_path, pid = None, None
@@ -144,8 +146,6 @@ class OpChecker:
         return input_path, base_path, pid, ret
 
     def args_init(self, args):
-        import torch_npu
-
         execution_flag = True
 
         self.input, self.base_path, self.pid, ret = self.check_input_legality(args.input)
@@ -184,7 +184,7 @@ class OpChecker:
         # 指定需要使用的npu设备
         try:
             torch.npu.set_device(torch.device(f"npu:{args.device_id}"))
-        except RuntimeError as e:
+        except RuntimeError:
             logger_text = "Failed to set the device. Device_id: {}".format(args.device_id)
             logger.error(logger_text)
             execution_flag = False
@@ -255,7 +255,7 @@ class OpChecker:
         basename = os.path.basename(dirpath)
         try:
             op_name = basename.split('_')[-1]
-        except IndexError as e:
+        except IndexError:
             logger_text = f"{dirpath} is not a valid tensor dir, please check"
             logger.debug(logger_text)
             op_name = None
@@ -263,7 +263,7 @@ class OpChecker:
         rel_path = os.path.relpath(dirpath, self.base_path)
         try:
             op_id = '_'.join([x.split('_')[0] for x in rel_path.split(os.path.sep)])
-        except IndexError as e:
+        except IndexError:
             logger_text = f"{dirpath} is not a valid tensor dir, please check"
             logger.debug(logger_text)
             op_id = None
@@ -358,8 +358,9 @@ class OpChecker:
         op_param = {}
         json_path = os.path.join(dirpath, 'op_param.json')
         try:
-            with open(json_path, 'r') as f:
-                op_param = json.load(f)
+            if os.path.isfile(json_path) and check_data_file_size(json_path):
+                with open(json_path, 'r') as f:
+                    op_param = json.load(f)
         except Exception as e:
             logger_text = f"Cannot loads json file to json! Json file: {json_path} \n Exception: {e}"
             logger.debug(logger_text)

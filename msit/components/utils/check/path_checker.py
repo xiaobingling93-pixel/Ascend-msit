@@ -1,3 +1,16 @@
+# Copyright (c) 2023-2023 Huawei Technologies Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 from enum import Enum, auto, unique
 from typing import Union
@@ -79,7 +92,7 @@ class PathChecker(Checker):
             self.f_status = FileStatus(ori_path)     
         except OSError as e:
             self.status_err_msg = e.strerror + ': ' + e.filename
-        except TypeError as e:
+        except TypeError:
             self.status_err_msg = f'TypeError: {ori_path}'
         except Exception as e:
             self.status_err_msg = str(e)

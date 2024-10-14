@@ -15,7 +15,9 @@
 import os
 import time
 from msit_llm.transform.torch_to_float_atb import utils
+from msit_llm.transform.utils import write_file
 from components.utils.install import get_public_url
+
 
 def float_model_h_gen(parsed_model, save_name=None, save_dir=None):
     from msit_llm.transform.torch_to_float_atb import float_model_h_templates as templates  # avoiding circular import
@@ -39,5 +41,5 @@ def float_model_h_gen(parsed_model, save_name=None, save_dir=None):
     save_name = utils.init_save_name("decoder_model" if save_name is None else save_name) + ".h"
     save_dir = utils.init_save_dir(model_name_lower if save_dir is None else save_dir, sub_dir="model")
     save_path = os.path.join(save_dir, save_name)
-    utils.write_file(save_path, rr)
+    write_file(save_path, rr)
     return save_path, rr

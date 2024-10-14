@@ -13,12 +13,11 @@
 # limitations under the License.
 import os
 
-import numpy as np
 import torch
 
 from components.utils.file_open_check import ms_open
 from msit_llm.common.log import logger
-from msit_llm.common.utils import check_input_path_legality, check_output_path_legality
+from msit_llm.common.utils import check_input_path_legality, check_output_path_legality, check_data_file_size
 from msit_llm.common.constant import get_ait_dump_path
 
 
@@ -60,8 +59,9 @@ def write_json_file(data_id, data_path, json_path, token_id, my_path):
     if not os.path.exists(json_path):
         json_data = {}
     else:
-        with open(json_path, 'r') as json_file:
-            json_data = json.load(json_file)
+        if check_data_file_size(json_path):
+            with open(json_path, 'r') as json_file:
+                json_data = json.load(json_file)
 
     json_data[data_id] = {token_id: [data_path, my_path]}
     with ms_open(json_path, "w") as f:

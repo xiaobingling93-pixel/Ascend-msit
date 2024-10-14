@@ -14,7 +14,6 @@
 
 
 import os
-import site
 import subprocess
 import shutil
 import re
@@ -201,7 +200,7 @@ def add_extracted_headers_to_csv(split_data: str, csv_buffer: dict, prefix: str,
 
 def merge_cpu_profiling_data(path):
     # 遍历目录下所有文件
-    for root, dirs, files in os.walk(path):
+    for root, _, files in os.walk(path):
         for file in files:
             if not re.match(r'operation_statistic_\d+\.txt', file):
                 continue

@@ -14,6 +14,7 @@
 
 import torch
 from tabulate import tabulate
+from components.utils.log import logger
 
 
 VALID_DTYPES = [
@@ -38,5 +39,5 @@ def print_stat(tensor: torch.Tensor):
         [tmp.min(), tmp.max(), tmp.mean(), tmp.std(), tmp.var()]
     ]
 
-    print(tabulate(table, tablefmt="grid"))
+    logger.info("\n%s", tabulate(table, tablefmt="grid"))
     

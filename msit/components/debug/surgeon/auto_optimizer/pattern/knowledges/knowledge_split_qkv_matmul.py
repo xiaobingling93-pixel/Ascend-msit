@@ -14,7 +14,6 @@
 
 from typing import List, Dict, Union
 import operator as op
-import logging
 
 import numpy as np
 
@@ -26,6 +25,7 @@ from auto_optimizer.pattern.pattern import Pattern
 from auto_optimizer.pattern.matcher import MatchResult
 from auto_optimizer.pattern.knowledges.knowledge_base import KnowledgeBase
 from auto_optimizer.pattern.utils import HasInputValue, NextNodeCount, AllNextnodesAreGather
+from components.debug.common import logger
 
 
 # QKV Slice 改图的简单图示，将MatMul到Transpose0的算子拆分为若干份，去掉Gather算子
@@ -227,7 +227,7 @@ class KnowledgeSplitQKVMatmul(KnowledgeBase):
         :return: 返回是否修改成功
         """
         if any(graph.get_node(node.name, node_type=Node) is None for nodes in matchinfo.values() for node in nodes):
-            logging.info("Some matching node have been removed or renamed, failed to optimizd.")
+            logger.info("Some matching node have been removed or renamed, failed to optimizd.")
             return False
 
         matmul_node = matchinfo['MatMul_0'][0]
@@ -239,7 +239,7 @@ class KnowledgeSplitQKVMatmul(KnowledgeBase):
         matmul_weight = graph.get_node(matmul_node.inputs[1], node_type=Initializer)
         resh_weight = graph.get_node(reshape_node.inputs[1], node_type=Initializer)
         if matmul_weight is None or resh_weight is None:
-            logging.info("The multiplicand of MatMul or shape parameter of Reshape operator is not Initializer.")
+            logger.info("The multiplicand of MatMul or shape parameter of Reshape operator is not Initializer.")
             return False
 
         # 假设矩阵乘法是(a,b)x(b,c), 结果为(a,c)，reshape算子将结果reshape为(d,e,...,n,k,...)
@@ -250,7 +250,7 @@ class KnowledgeSplitQKVMatmul(KnowledgeBase):
         dim_to_split = matmul_weight.value.shape[-1]
         first_dim_of_split = self._get_first_dim_of_split_after_reshape(dim_to_split, new_shape)
         if first_dim_of_split == -1:
-            logging.info(f"The Reshape operator {reshape_node.name} does not meet specific requirement.")
+            logger.info(f"The Reshape operator {reshape_node.name} does not meet specific requirement.")
             return False
 
         gather_nodes = graph.get_next_nodes(transpose_node.outputs[0])
@@ -259,12 +259,12 @@ class KnowledgeSplitQKVMatmul(KnowledgeBase):
         perm = transpose_node.attrs.get('perm', [])
         if not perm or not isinstance(perm, (list,)) or perm[0] != first_dim_of_split:
             # reshape后(d,e,...n,k,r,...)中的n这个维度应该被transpose至最前面
-            logging.info(f"The transpose operator {transpose_node.name} does not meet specific requirement.")
+            logger.info(f"The transpose operator {transpose_node.name} does not meet specific requirement.")
             return False
 
         if split_num != new_shape[perm[0]]:
             # gather算子的数量与transpose后数据首维度的size相等
-            logging.info(f"The number of Gather operators {split_num} is not equal to {new_shape[perm[0]]}.")
+            logger.info(f"The number of Gather operators {split_num} is not equal to {new_shape[perm[0]]}.")
             return False
 
         if gather_nodes[0].attrs.get('axis', 0) != 0:
@@ -273,14 +273,14 @@ class KnowledgeSplitQKVMatmul(KnowledgeBase):
         indices = self._get_gather_nodes_indices(gather_nodes, graph)
         if sorted(indices) != list(range(split_num)):
             # 几个Gather算子的indices不重不漏的对应[0, n)，即平分首维度
-            logging.info("The gather nodes does not split the first axis.")
+            logger.info("The gather nodes does not split the first axis.")
             return False
 
         for node in element_wise_nodes:
             input0 = graph.get_node(node.inputs[0], node_type=Initializer)
             input1 = graph.get_node(node.inputs[1], node_type=Initializer)
             if not ((input0 is None) ^ (input1 is None)):
-                logging.info(f"There should be exactly one Initializer parameter in Node {node.name}")
+                logger.info(f"There should be exactly one Initializer parameter in Node {node.name}")
                 # 所有逐元素运算算子都应该有且仅有一个参数是Initializer，另一个参数是PlaceHolder
                 return False
 
@@ -290,22 +290,22 @@ class KnowledgeSplitQKVMatmul(KnowledgeBase):
         for gather_node in gather_nodes:
             for next_node in graph.get_next_nodes(gather_node.outputs[0]):
                 if not isinstance(next_node, (Node,)):
-                    logging.info(f"Successor {next_node.name} of {gather_node.name} is not type Node.")
+                    logger.info(f"Successor {next_node.name} of {gather_node.name} is not type Node.")
                     return False
                 if op.eq(next_node.op_type, "Transpose"):
                     perm1 = next_node.attrs.get("perm", [])
                     if not (isinstance(perm1, (list,)) and len(splitted_perm) == len(perm1)):
-                        logging.info(f"The perm attribute of transpose operator {next_node.name} is invalid.")
+                        logger.info(f"The perm attribute of transpose operator {next_node.name} is invalid.")
                         return False
                     for node in graph.get_next_nodes(next_node.outputs[0]):
                         if not isinstance(node, (Node,)):
-                            logging.info(f"Node {node.name} is not type Node.")
+                            logger.info(f"Node {node.name} is not type Node.")
                             return False
 
         # pre_nodes用来存储前置节点，用于重新连接
         pre_node = graph.get_prev_node(matmul_node.inputs[0])
         if isinstance(pre_node, (Node,)) and pre_node.outputs[0] != matmul_node.inputs[0]:
-            logging.info("The output of previous node of MatMul doesn't match the input of MatMul.")
+            logger.info("The output of previous node of MatMul doesn't match the input of MatMul.")
             return False
         pre_nodes = [matmul_node.inputs[0] if pre_node is None else pre_node] * split_num
 

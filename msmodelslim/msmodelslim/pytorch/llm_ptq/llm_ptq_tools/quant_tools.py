@@ -17,10 +17,10 @@ from safetensors.torch import save_file
 
 from accelerate.hooks import add_hook_to_module, remove_hook_from_module
 
-from msmodelslim import logger as msmodelslim_logger
-from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config import QuantConfig
 from ascend_utils.common.security import (get_valid_write_path, SafeWriteUmask, check_element_type,
     check_type, check_dict_element, get_write_directory)
+from msmodelslim import logger as msmodelslim_logger
+from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config import QuantConfig
 from msmodelslim.pytorch.llm_ptq.anti_outlier.graph_utils import NormBias, extract_dag, input_to_cpu, norm_class_detect
 # KIA part
 from msmodelslim.pytorch.llm_ptq.anti_outlier.anti_outlier import deepcopy_model

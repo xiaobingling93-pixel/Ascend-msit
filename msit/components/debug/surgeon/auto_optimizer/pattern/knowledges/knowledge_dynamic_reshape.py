@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import os
-import logging
 import numpy as np
 
 from auto_optimizer.pattern.knowledge_factory import KnowledgeFactory
@@ -24,6 +23,7 @@ from auto_optimizer.graph_refactor.interface.base_node import BaseNode
 from auto_optimizer.pattern.knowledges.knowledge_base import KnowledgeBase
 from auto_optimizer.pattern.utils import insert_squeeze, insert_unsqueeze
 from auto_optimizer.common.utils import dump_op_outputs
+from components.debug.common import logger
 
 
 class DynamicReshapeMatch(MatchBase):
@@ -77,7 +77,7 @@ class KnowledgeDynamicReshape(KnowledgeBase):
             # infer and generate operator dump, the purpose is to obtain the input and output shapes
             self._generate_dump_data(graph, dynamic_axes)
         except RuntimeError as err:
-            logging.error(f'generate onnx infer dump data failed, err:{err}')
+            logger.error(f'generate onnx infer dump data failed, err:{err}')
             self._remove_dump_data()
             return False
         return True

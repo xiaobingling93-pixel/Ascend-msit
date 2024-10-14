@@ -2,7 +2,6 @@
 
 import logging
 
-from msmodelslim.mindspore.quant.ptq_quant.rollback_quant_nodes import get_rollback_nodes
 from ascend_utils.mindspore.quant.ptq_quant.weight_quantization import quant_weight
 from ascend_utils.mindspore.quant.ptq_quant.featuremap_quantization import quant_activation
 from ascend_utils.mindspore.quant.ptq_quant.process_utils import fuse_bn
@@ -10,6 +9,7 @@ from ascend_utils.mindspore.quant.ptq_quant.utils import custom_deepcopy
 from ascend_utils.common.security import json_safe_load
 from ascend_utils.common.security.mindspore import check_mindspore_cell
 from ascend_utils.common.security.mindspore import check_mindspore_input
+from msmodelslim.mindspore.quant.ptq_quant.rollback_quant_nodes import get_rollback_nodes
 
 
 def quantize_model(config_file, model, *input_data):

@@ -1,4 +1,5 @@
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,7 +24,7 @@ try:
     tensor_dtype_to_np_dtype = helper.tensor_dtype_to_np_dtype
     np_dtype_to_tensor_dtype = helper.np_dtype_to_tensor_dtype
 
-except AttributeError as e:
+except AttributeError:
     # onnx.__version__ before '1.13.0'
     from onnx import mapping
 

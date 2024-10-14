@@ -1,4 +1,5 @@
-# Copyright (c) 2023 Huawei Technologies Co., Ltd.
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,9 +17,10 @@ import os
 import csv
 
 from copy import deepcopy
-from typing import Dict, Any
+from typing import Dict
 
-from model_evaluation.common import logger, utils
+from model_evaluation.common import utils
+from components.utils.log import logger
 from model_evaluation.common import Const
 from model_evaluation.common.enum import Engine
 

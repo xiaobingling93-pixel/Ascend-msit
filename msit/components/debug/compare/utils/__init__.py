@@ -1,4 +1,5 @@
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,24 +12,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-import sys
-import logging
-from logging import StreamHandler
-
-
-def get_logger():
-    mylogger = logging.getLogger('analyze_tool_logger')
-    mylogger.propagate = False
-    mylogger.setLevel(logging.INFO)
-
-    fmt = '%(asctime)s %(levelname)s : %(message)s'
-    formatter = logging.Formatter(fmt)
-    console_handler = StreamHandler(stream=sys.stdout)
-    console_handler.setFormatter(formatter)
-    mylogger.addHandler(console_handler)
-
-    return mylogger
-
-
-logger = get_logger()
