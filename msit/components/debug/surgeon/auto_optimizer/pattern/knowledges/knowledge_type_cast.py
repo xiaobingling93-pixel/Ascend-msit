@@ -357,10 +357,10 @@ class TypeCastApply(object):
                     if prev_node.name not in node_map or not _is_generic_output:
                         # 如果前置节点当前输出通道后面存在转换到目标类型的 Cast 节点时，复用此节点
                         next_nodes = graph.get_next_nodes(node_input)
+                        numpy_onnx_type = numpy_onnx_type_map.get(cast_to, ElemType.UNDEFINED)
                         casts = list(
                             filter(
-                                lambda node: node.op_type == 'Cast'
-                                and node['to'] == numpy_onnx_type_map.get(cast_to, ElemType.UNDEFINED),
+                                lambda node: node.op_type == 'Cast' and node['to'] == numpy_onnx_type,
                                 next_nodes,
                             )
                         )
@@ -505,7 +505,7 @@ class TypeCastApply(object):
 
         # 直接对常量输入进行类型转换
         if cast_const_directly:
-            self._value_type_cast(const_node, cast_to)
+            const_node = self._value_type_cast(const_node, cast_to)
             return
 
         # 构造的新常量输入节点的名字
@@ -516,7 +516,7 @@ class TypeCastApply(object):
 
         new_const_node = graph.add_initializer(new_const_name, const_node.value.copy())
         const_map[new_const_name] = new_const_node
-        self._value_type_cast(new_const_node, cast_to)
+        new_const_node = self._value_type_cast(new_const_node, cast_to)
         graph[node.name].inputs[input_index] = new_const_name
         graph.update_map()
 

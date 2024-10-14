@@ -14,6 +14,7 @@
 
 
 import os
+from collections.abc import Iterable
 
 import numpy as np
 import pandas as pd
@@ -53,7 +54,7 @@ class Synthesizer(object):
             output_token_ids=output_token_ids,
             passed=passed
         )
-
+    
     def from_args(self, *, queries=None, input_token_ids=None, output_token_ids=None, passed=None) -> None:
         """Collecting dataset evaluation result from memory. User should take care of the evaluation details.
         
@@ -144,7 +145,7 @@ class Synthesizer(object):
             raise ValueError
         
         return pd.DataFrame(self._info)
-
+    
     def _update_attributes(self, **kwargs):
         for key, value in kwargs.items():
             if value is not None:
@@ -153,11 +154,11 @@ class Synthesizer(object):
 
     def _sanitize_value(self, value):
         # str is a iterable
-        if isinstance(value, str) or not hasattr(value, '__iter__'):
+        if isinstance(value, str) or not isinstance(value, Iterable):
             return np.array([str(value)], dtype=object)
 
         return np.fromiter((str(item) for item in value), dtype=object)
-
+    
     def _padding(self):
         max_len = max(map(len, self._info.values()))
 
