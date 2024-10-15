@@ -85,7 +85,7 @@ class DepthScaleNetwork:
     def _is_repeat_opts_with_weight(last_module: Module, this_module: Module):
         if this_module is None:
             return False
-        if type(this_module) != type(last_module):
+        if this_module.__class__ != last_module.__class__:
             return False
 
         last_param_info = [(name, parameter.shape) for name, parameter in last_module.named_parameters()]
