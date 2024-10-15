@@ -16,7 +16,7 @@ import numpy as np
 from transformers import PreTrainedModel, AutoTokenizer
 from tqdm import tqdm
 
-from security import json_safe_load, json_safe_dump, get_valid_path, get_valid_write_path
+from security import json_safe_load, json_safe_dump, get_valid_path, get_valid_write_path, get_valid_read_path
 from precision_tool import logger
 from precision_tool import truthfulqa_eval
 
@@ -183,7 +183,7 @@ class PrecisionTest:
             correct_total, sum_total = 0, 0
             for entry in glob.glob((Path(self.dataset_path) / "val/**/*.jsonl").as_posix(), recursive=True):
                 correct, dataset = 0, []
-
+                entry = get_valid_read_path(entry)
                 with open(entry, encoding='utf-8') as file:
                     for line in file:
                         single_json = json.loads(line)
@@ -236,6 +236,7 @@ class PrecisionTest:
 
         def get_subject_mapping():
             subject_mapping_path = os.path.join(self.dataset_path, "subject_mapping.json")
+            subject_mapping_path = get_valid_read_path(subject_mapping_path)
             with open(subject_mapping_path) as f:
                 subject_mapping = json.load(f)
             return subject_mapping
@@ -341,6 +342,7 @@ class PrecisionTest:
             for entry in tqdm(glob.glob((Path(self.dataset_path) / "*.jsonl").as_posix(), recursive=True),
                               desc='global'):
                 dataset = []
+                entry = get_valid_read_path(entry)
                 with open(entry, encoding='utf-8') as f:
                     for line in f:
                         line_json = json.loads(line)
@@ -400,6 +402,7 @@ class PrecisionTest:
             for entry in tqdm(glob.glob((Path(self.dataset_path) / "*.jsonl").as_posix(), recursive=True),
                               desc='global'):
                 dataset = []
+                entry = get_valid_read_path(entry)
                 with open(entry, encoding='utf-8') as f:
                     for line in f:
                         line_json = json.loads(line)
