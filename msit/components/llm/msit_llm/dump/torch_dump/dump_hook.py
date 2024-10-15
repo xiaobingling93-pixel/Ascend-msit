@@ -79,8 +79,9 @@ class DumpHookModule:
                 if not hasattr(py_module, api_name):
                     continue
                 api = getattr(py_module, api_name)
+                
                 ori_module_attrs[api_name] = api_name
-                new_api = wrap_torch_func(api)
+                new_api = wrap_torch_func(api, self.model)
                 setattr(py_module, api_name, new_api)  # hook api
 
             self.ori_torch_attr[py_module] = ori_module_attrs
@@ -121,7 +122,7 @@ class DumpDataParams:
     dump_type: str
 
     
-def wrap_torch_func(func):
+def wrap_torch_func(func, module: torch.nn.Module):
 
     @functools.wraps(func)
     def dump_api_data(*args, **kwargs):
@@ -130,15 +131,26 @@ def wrap_torch_func(func):
         dump_config = DumpConfig()
         if not dump_config.dump_flag or not dump_config.is_dump_cur_device or not dump_config.dump_api:
             return output
-
         dump_name = dump_config.get_api_folder_name(func.__name__)
+        dump_type = module.type
         if not dump_config.is_dump_layer(dump_name, api=func):
             return output
 
         api_dump_path = os.path.join(dump_config.dump_dir, str(dump_config.token_id), dump_name)
         if not os.path.exists(api_dump_path):
             os.makedirs(api_dump_path)
-        dump_data(args, output, api_dump_path, dump_config.tensor_part)
+        params = DumpDataParams(
+            inputs=args,
+            outputs=output,
+            dump_path=api_dump_path,
+            tensor_part=dump_config.tensor_part,
+            module_name=dump_name,
+            dump_type=dump_type
+        )
+
+
+        # 然后将这个实例传递给dump_data函数：
+        dump_data(params) 
         return output
 
     return dump_api_data
@@ -168,7 +180,6 @@ def dump_data(params: DumpDataParams):
     else:
         dump_tensor(params.inputs, os.path.join(params.dump_path, "input"), params.module_name, params.dump_type)
         dump_tensor(params.outputs, os.path.join(params.dump_path, "output"), params.module_name, params.dump_type)
-
 
 def dump_module_data():
     exec_count = 0
@@ -268,8 +279,9 @@ def has_tensor(feat):
 
 def dump_logits():
     # 将缓存的输出dump到文件中
-    def hook_func(*args):
+    def hook_func(module: torch.nn.Module, *args):
         config = DumpConfig()
+        dump_type = module.type
         if config.dump_last_logits and config.last_logits is not None and config.dump_flag:
             module_name, outputs = config.last_logits
 
@@ -277,6 +289,6 @@ def dump_logits():
 
             if not os.path.exists(dump_path):
                 os.makedirs(dump_path, mode=0o750)
-            dump_tensor(outputs, os.path.join(dump_path, "output"))
+            dump_tensor(outputs, os.path.join(dump_path, "output"), module_name, dump_type)
 
     return hook_func
