@@ -181,6 +181,7 @@ def dump_data(params: DumpDataParams):
         dump_tensor(params.inputs, os.path.join(params.dump_path, "input"), params.module_name, params.dump_type)
         dump_tensor(params.outputs, os.path.join(params.dump_path, "output"), params.module_name, params.dump_type)
 
+
 def dump_module_data():
     exec_count = 0
 
