@@ -23,6 +23,7 @@ from components.utils.log import logger
 from model_evaluation.common.enum import Engine, AtcErr
 from model_evaluation.parser.atc import AtcErrParser
 from model_evaluation.bean import OpInnerInfo
+from components.utils.check.rule import Rule
 
 
 class OmParser:
@@ -76,6 +77,7 @@ class OmParser:
                 return []
 
         try:
+            Rule.input_file().check(self._om_json, will_raise=True)
             with open(self._om_json) as f:
                 om_data = json.load(f)
         except Exception as e:

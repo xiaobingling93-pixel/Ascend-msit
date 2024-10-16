@@ -21,6 +21,7 @@ from onnx.onnx_cpp2py_export.checker import ValidationError
 from google.protobuf.message import DecodeError
 
 from model_evaluation.common.enum import ONNXCheckerError
+from components.utils.check.rule import Rule
 
 
 class OnnxGraph:
@@ -38,6 +39,7 @@ class OnnxGraph:
             raise RuntimeError(f'model {model_path} is not file.')
 
         try:
+            Rule.input_file().check(model_path, will_raise=True)
             graph = onnx.load_model(model_path)
         except DecodeError as e:
             raise RuntimeError(f'{e}') from e

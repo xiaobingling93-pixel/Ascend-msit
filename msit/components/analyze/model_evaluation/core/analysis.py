@@ -40,6 +40,7 @@ class Analyze:
             from model_evaluation.graph.onnx import OnnxGraph
 
             try:
+                Rule.input_file().check(self._model_path, will_raise=True)
                 self._graph: OnnxGraph = OnnxGraph.load(self._model_path)
             except RuntimeError as e:
                 logger.error(f'load onnx failed, err:{e}')
