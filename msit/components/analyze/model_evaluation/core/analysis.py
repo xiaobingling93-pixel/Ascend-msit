@@ -25,6 +25,7 @@ from model_evaluation.bean import OpInfo, OpInnerInfo, ConvertConfig
 from model_evaluation.data import Opp, OpMap
 from model_evaluation.core.result import OpResult, Result
 from model_evaluation.core.rule import Rule
+from components.utils.check.rule import Rule as CheckRule
 
 
 class Analyze:
@@ -40,7 +41,7 @@ class Analyze:
             from model_evaluation.graph.onnx import OnnxGraph
 
             try:
-                Rule.input_file().check(self._model_path, will_raise=True)
+                CheckRule.input_file().check(self._model_path, will_raise=True)
                 self._graph: OnnxGraph = OnnxGraph.load(self._model_path)
             except RuntimeError as e:
                 logger.error(f'load onnx failed, err:{e}')
