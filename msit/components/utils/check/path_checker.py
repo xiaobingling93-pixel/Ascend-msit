@@ -88,6 +88,7 @@ class PathChecker(Checker):
         self.status_err_msg = None
 
     def path_converter(self, ori_path):
+        ori_path = os.path.realpath(ori_path)
         try:
             self.f_status = FileStatus(ori_path)     
         except OSError as e:
