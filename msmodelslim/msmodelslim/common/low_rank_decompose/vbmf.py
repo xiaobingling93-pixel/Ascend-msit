@@ -4,6 +4,16 @@ import numpy as np
 from scipy.optimize import minimize_scalar
 
 
+class EvbSigma2Params:
+    def __init__(self, sigma2, low, median, svd_ss, residual, inner_thresh):
+        self.sigma2 = sigma2
+        self.low = low
+        self.median = median
+        self.svd_ss = svd_ss
+        self.residual = residual
+        self.inner_thresh = inner_thresh
+
+    
 def none_zero_divide(inputs, divisor, eps=1e-6):
     return np.divide(inputs, np.maximum(divisor, eps))
 
@@ -46,9 +56,17 @@ def evbmf(source_input, sigma2=None, high=None) -> int:
         if upper_bound < lower_bound:
             lower_bound, upper_bound = upper_bound, lower_bound
 
+        params = EvbSigma2Params(
+            sigma2=sigma2,
+            low=low,
+            median=median,
+            svd_ss=svd_ss,
+            residual=residual,
+            inner_thresh=inner_thresh
+        )
         sigma2_opt = minimize_scalar(
             evb_sigma2,
-            args=(low, median, svd_ss, residual, inner_thresh),
+            args=(params),
             bounds=[lower_bound, upper_bound],
             method='Bounded',
         )
@@ -60,7 +78,14 @@ def evbmf(source_input, sigma2=None, high=None) -> int:
     return int(threshold_pos)
 
 
-def evb_sigma2(sigma2, low, median, svd_ss, residual, inner_thresh):
+def evb_sigma2(params):
+    sigma2 = params.sigma2
+    low = params.low
+    median = params.median
+    svd_ss = params.svd_ss
+    residual = params.residual
+    inner_thresh = params.inner_thresh
+
     high = len(svd_ss)
 
     alpha = none_zero_divide(low, median)

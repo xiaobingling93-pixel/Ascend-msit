@@ -22,6 +22,56 @@ from msmodelslim.pytorch.quant.ptq_tools.ptq_kia.weight_transform import (
 )  # squant algorithm api
 
 
+class InitQuantParams:
+    def __init__(self,
+                 weight_name,
+                 input_scale_dict,
+                 input_offset_dict,
+                 weight_scale_dict,
+                 weight_offset_dict,
+                 quant_weight_dict):
+        self.weight_name = weight_name
+        self.input_scale_dict = input_scale_dict
+        self.input_offset_dict = input_offset_dict
+        self.weight_scale_dict = weight_scale_dict
+        self.weight_offset_dict = weight_offset_dict
+        self.quant_weight_dict = quant_weight_dict
+
+
+class ModelDeployQuantParams:
+    def __init__(self,
+                 quantized_weight_name, 
+                 quant_weight_dict, 
+                 input_scale_dict, 
+                 input_offset_dict, 
+                 weight_scale_dict, 
+                 weight_offset_dict,
+                 fuse_add=False):
+        self.quantized_weight_name = quantized_weight_name
+        self.quant_weight_dict = quant_weight_dict
+        self.input_scale_dict = input_scale_dict
+        self.input_offset_dict = input_offset_dict
+        self.weight_scale_dict = weight_scale_dict
+        self.weight_offset_dict = weight_offset_dict
+        self.fuse_add = fuse_add
+
+
+class ConvertLinearParams:
+    def __init__(self,
+                 onnx_model,
+                 input_scale,
+                 input_offset,
+                 weight_scale,
+                 weight_offset,
+                 quant_weight):
+        self.onnx_model = onnx_model
+        self.input_scale = input_scale
+        self.input_offset = input_offset
+        self.weight_scale = weight_scale
+        self.weight_offset = weight_offset
+        self.quant_weight = quant_weight
+
+
 def calculate_int_weight(weight_initializer,
                          weight_scale,
                          weight_offset,
@@ -261,9 +311,16 @@ def quantize_model_deploy(graph,
         fp_node = nodes[index]
         node_input = copy.deepcopy(fp_node.input)
         node_output = copy.deepcopy(fp_node.output)
-
-        quant_param = init_quant_param(weight_name, input_scale_dict, input_offset_dict, weight_scale_dict,
-                                       weight_offset_dict, quant_weight_dict)
+        
+        init_quant_params = InitQuantParams(
+            weight_name=weight_name,
+            input_scale_dict=input_scale_dict,
+            input_offset_dict=input_offset_dict,
+            weight_scale_dict=weight_scale_dict,
+            weight_offset_dict=weight_offset_dict,
+            quant_weight_dict=quant_weight_dict
+        )
+        quant_param = init_quant_param(init_quant_params)
 
         onnx_node_quant = convert_quant(quant_param, node_input, weight_name, quant_index)
         onnx_node_add = None
