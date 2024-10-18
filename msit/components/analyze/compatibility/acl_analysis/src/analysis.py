@@ -64,12 +64,14 @@ def process_line(line: str, line_num: int, filepath: str, result: Dict[Knowledge
                 result[knowledge] = []
             result[knowledge].append(f"{api} {filepath} Line: {line_num}")
 
+
 def process_file(filepath: str, result: Dict[Knowledge, List[str]]):
     line_num = 0
     with open(filepath, encoding='UTF-8') as f:
         for line in f.readlines():
             line_num += 1
             process_line(line, line_num, filepath, result)
+
 
 def process_directory(path: str, result: Dict[Knowledge, List[str]]):
     for root, _, files in os.walk(path):
@@ -86,6 +88,7 @@ def process_directory(path: str, result: Dict[Knowledge, List[str]]):
                 logger.error("Failed to load file %r due to %s", file_path, check_res)
 
             process_file(file_path, result)
+
 
 def analysis_310_to_310b(path: str) -> Dict[Knowledge, List[str]]:
     if os.path.islink(os.path.abspath(path)):
