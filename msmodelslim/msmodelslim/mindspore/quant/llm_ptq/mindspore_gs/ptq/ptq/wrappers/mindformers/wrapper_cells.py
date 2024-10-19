@@ -293,6 +293,7 @@ class QuantLinearCell(WrapperLinearCell):
         self.quantizer_x_min = None
         self.quantizer_w_max = None
         self.quantizer_w_min = None
+        self.cat_samples = None
         if isinstance(self.layer, (Linear, ColumnParallelLinear)):
             self.x_quant_max = msops.max
             self.x_quant_min = msops.min
@@ -380,7 +381,6 @@ class QuantLinearCell(WrapperLinearCell):
         super(QuantLinearCell, self).process()
         self.quant_weight()
         self.layer.weight._offload()
-        self.cat_samples = None
 
     def deploy(self):
         return self
