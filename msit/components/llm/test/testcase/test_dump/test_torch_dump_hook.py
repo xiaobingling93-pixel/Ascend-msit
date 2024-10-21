@@ -9,6 +9,8 @@ from msit_llm import DumpConfig
 from msit_llm import register_hook
 
 from components.llm.msit_llm.common.constant import GLOBAL_AIT_DUMP_PATH
+from components.llm.msit_llm.common.constant import get_ait_dump_path
+
 
 MODEL_NAME_LIST = ["root", "root.ln"]
 DUMP_PATH = f"./{GLOBAL_AIT_DUMP_PATH}"
@@ -27,11 +29,13 @@ class SampleModel(nn.Module):
 
 def test_hook_when_tp_default_then_save_inputs():
     model = SampleModel()
-    dump_config = DumpConfig(dump_path=DUMP_PATH)
+    dump_config = DumpConfig(dump_path=DUMP_PATH, analyze=True)
+    csv_path = get_ait_dump_path()
     register_hook(model, dump_config)
     x = torch.randn(4, 4)
     model(x)
     output_path_prefix = glob(os.path.join(DUMP_PATH, "*", "torch_tensors"))[0]
+    output_csv_path = os.path.join(DUMP_PATH, csv_path, "tensor_analyze.csv")
     for name in MODEL_NAME_LIST:
         except_input_path = os.path.join(output_path_prefix, "cpu_" + str(os.getpid()), "0", name, "input_0.pth")
         except_output_path = os.path.join(output_path_prefix, "cpu_" + str(os.getpid()), "0", name, "output.pth")
@@ -39,6 +43,7 @@ def test_hook_when_tp_default_then_save_inputs():
         assert os.path.exists(except_output_path)
     topo_path = os.path.join(output_path_prefix, "cpu_" + str(os.getpid()), "model_tree.json")
     assert os.path.exists(topo_path)
+    assert os.path.exists(output_csv_path)
         
     if os.path.exists(DUMP_PATH):
         shutil.rmtree(DUMP_PATH)
