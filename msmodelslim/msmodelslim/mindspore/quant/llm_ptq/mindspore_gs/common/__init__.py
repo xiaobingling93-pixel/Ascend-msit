@@ -15,5 +15,7 @@
 """
 MindSpore golden stick MinMaxPTQ Algorithm.
 """
+
+
 from msmodelslim import logger
 from .gs_enum import BackendTarget
