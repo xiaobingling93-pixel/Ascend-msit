@@ -64,7 +64,7 @@ def evbmf(source_input, sigma2=None, high=None) -> int:
         )
         sigma2_opt = minimize_scalar(
             evb_sigma2,
-            args=(params,),
+            args=params,
             bounds=[lower_bound, upper_bound],
             method='Bounded',
         )
