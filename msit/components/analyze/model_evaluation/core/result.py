@@ -127,7 +127,9 @@ class Result:
         if os.path.isfile(out_csv):
             os.remove(out_csv)
         try:
-            f = open(out_csv, 'x', newline='')
+            flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+            modes = os.st.S_IRUSR | os.st.S_IWUSR | os.st.S_IRGRP
+            f = os.fdopen(os.open(out_csv, flags, modes), 'w', newline='')
         except Exception as e:
             logger.error(f'open result.csv failed, err:{e}')
         fields = ['ori_op_name', 'ori_op_type', 'op_name', 'op_type', 'soc_type', 'engine', 'is_supported', 'details']
