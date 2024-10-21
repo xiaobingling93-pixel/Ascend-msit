@@ -5,8 +5,7 @@ from scipy.optimize import minimize_scalar
 
 
 class EvbSigma2Params:
-    def __init__(self, sigma2, low, median, svd_ss, residual, inner_thresh):
-        self.sigma2 = sigma2
+    def __init__(self, low, median, svd_ss, residual, inner_thresh):
         self.low = low
         self.median = median
         self.svd_ss = svd_ss
@@ -57,7 +56,6 @@ def evbmf(source_input, sigma2=None, high=None) -> int:
             lower_bound, upper_bound = upper_bound, lower_bound
 
         params = EvbSigma2Params(
-            sigma2=sigma2,
             low=low,
             median=median,
             svd_ss=svd_ss,
@@ -66,7 +64,7 @@ def evbmf(source_input, sigma2=None, high=None) -> int:
         )
         sigma2_opt = minimize_scalar(
             evb_sigma2,
-            args=(params),
+            args=(params,),
             bounds=[lower_bound, upper_bound],
             method='Bounded',
         )
@@ -78,8 +76,7 @@ def evbmf(source_input, sigma2=None, high=None) -> int:
     return int(threshold_pos)
 
 
-def evb_sigma2(params):
-    sigma2 = params.sigma2
+def evb_sigma2(sigma2, params):
     low = params.low
     median = params.median
     svd_ss = params.svd_ss
