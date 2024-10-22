@@ -127,6 +127,39 @@ class DagHook(DirectedAcyclicGraph, ABC):
         self._structure_tree[new_node] = node_struct_info
         self._replaced_nodes.add(dag_node)
 
+    @abstractmethod
+    def _before_parse(self):
+        pass
+
+    @abstractmethod
+    def _after_parse(self):
+        pass
+
+    @abstractmethod
+    def _get_module_children(self, module):
+        pass
+
+    @abstractmethod
+    def _get_module_cls(self):
+        pass
+
+    @abstractmethod
+    def _collecting_feature_map_info(self, output):
+        pass
+
+    @abstractmethod
+    def _get_all_hook_ops(self, user_hook_ops) -> List[Tuple[Any, Any, str]]:
+        """
+        get all need hook ops, include default ops and user ops
+
+        Args:
+            user_hook_ops: user hook ops
+
+        Returns:
+            [(ops instances, ops owner module, attr name, ops name)]
+        """
+        pass
+
     def _replace_node(self, parent_module, name_in_parent, new_node):
         setattr(parent_module, name_in_parent, new_node)
 
@@ -306,36 +339,3 @@ class DagHook(DirectedAcyclicGraph, ABC):
         self._structure_tree: Dict[Any, Dict] = {}
         self._parse_network_structure_tree(self.network, "", None, "")
         self._parse_network(self._inputs, parsed_nodes)
-
-    @abstractmethod
-    def _before_parse(self):
-        pass
-
-    @abstractmethod
-    def _after_parse(self):
-        pass
-
-    @abstractmethod
-    def _get_module_children(self, module):
-        pass
-
-    @abstractmethod
-    def _get_module_cls(self):
-        pass
-
-    @abstractmethod
-    def _collecting_feature_map_info(self, output):
-        pass
-
-    @abstractmethod
-    def _get_all_hook_ops(self, user_hook_ops) -> List[Tuple[Any, Any, str]]:
-        """
-        get all need hook ops, include default ops and user ops
-
-        Args:
-            user_hook_ops: user hook ops
-
-        Returns:
-            [(ops instances, ops owner module, attr name, ops name)]
-        """
-        pass

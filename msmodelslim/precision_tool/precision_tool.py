@@ -83,6 +83,68 @@ class PrecisionTest:
         self.dataset_path = get_valid_path(self.dataset_path)
         self.result_file = ""
         self.logger.info("Precision test was inited.")
+        
+    @staticmethod
+    def __postprocess(text: str, options: str, cushion=True) -> str:
+        patterns = [
+            f'答案是?\s?([{options}])',
+            f'答案是?\s?：([{options}])',
+            f'答案是?\s?:([{options}])',
+            f'答案应该?是\s?([{options}])',
+            f'答案应该?选\s?([{options}])',
+            f'答案为\s?([{options}])',
+            f'答案选\s?([{options}])',
+            f'选择?\s?([{options}])',
+            f'故选?\s?([{options}])'
+            f'只有选?项?\s?([{options}])\s?是?对',
+            f'只有选?项?\s?([{options}])\s?是?错',
+            f'只有选?项?\s?([{options}])\s?不?正确',
+            f'只有选?项?\s?([{options}])\s?错误',
+            f'说法不?对选?项?的?是\s?([{options}])',
+            f'说法不?正确选?项?的?是\s?([{options}])',
+            f'说法错误选?项?的?是\s?([{options}])',
+            f'([{options}])\s?是正确的',
+            f'([{options}])\s?是正确答案',
+            f'选项\s?([{options}])\s?正确',
+            f'所以答\s?([{options}])',
+            f'所以\s?([{options}][.。$]?$)',
+            f'所有\s?([{options}][.。$]?$)',
+            f'[\s，：:,]([{options}])[。，,\.]?$',
+            f'[\s，,：:][故即]([{options}])[。\.]?$',
+            f'[\s，,：:]因此([{options}])[。\.]?$',
+            f'[是为。]\s?([{options}])[。\.]?$',
+            f'因此\s?([{options}])[。\.]?$',
+            f'显然\s?([{options}])[。\.]?$',
+            f'答案是\s?(\S+)(?:。|$)',
+            f'答案应该是\s?(\S+)(?:。|$)',
+            f'答案为\s?(\S+)(?:。|$)',
+            f'[Tt]he answer is \(?([{options}])\)?',
+            f'[Tt]he answer is option \(?([{options}])\)?',
+            f'[Tt]he correct answer is \(?([{options}])\)?',
+            f'[Tt]he correct answer is option \(?([{options}])\)?',
+            f'[Tt]he answer to the question is \(?([{options}])\)?',
+            f'^选项\s?([{options}])',
+            f'^([{options}])\s?选?项',
+            f'(\s|^)[{options}][\s。，,：:\.$]',
+            f'(\s|^)[{options}](\s|$)',
+            f'1.\s?(.*?)$',
+            f'1.\s?([{options}])[.。$]?$',
+        ]
+        cushion_patterns = [
+            f'([{options}]):',
+            f'[{options}]',
+        ]
+
+        if cushion:
+            patterns.extend(cushion_patterns)
+        for pattern in patterns:
+            match = re.search(pattern, text)
+            if match:
+                outputs = match.group(0)
+                for i in options:
+                    if i in outputs:
+                        return i
+        return ''
 
     def test(self):
         self.logger.info("Begin to run precision test.")
@@ -761,65 +823,3 @@ class PrecisionTest:
             return
         total = ["total", correct_total / sum_total, correct_total, sum_total]
         self.logger.info(f"total result:{total}")
-
-    @staticmethod
-    def __postprocess(text: str, options: str, cushion=True) -> str:
-        patterns = [
-            f'答案是?\s?([{options}])',
-            f'答案是?\s?：([{options}])',
-            f'答案是?\s?:([{options}])',
-            f'答案应该?是\s?([{options}])',
-            f'答案应该?选\s?([{options}])',
-            f'答案为\s?([{options}])',
-            f'答案选\s?([{options}])',
-            f'选择?\s?([{options}])',
-            f'故选?\s?([{options}])'
-            f'只有选?项?\s?([{options}])\s?是?对',
-            f'只有选?项?\s?([{options}])\s?是?错',
-            f'只有选?项?\s?([{options}])\s?不?正确',
-            f'只有选?项?\s?([{options}])\s?错误',
-            f'说法不?对选?项?的?是\s?([{options}])',
-            f'说法不?正确选?项?的?是\s?([{options}])',
-            f'说法错误选?项?的?是\s?([{options}])',
-            f'([{options}])\s?是正确的',
-            f'([{options}])\s?是正确答案',
-            f'选项\s?([{options}])\s?正确',
-            f'所以答\s?([{options}])',
-            f'所以\s?([{options}][.。$]?$)',
-            f'所有\s?([{options}][.。$]?$)',
-            f'[\s，：:,]([{options}])[。，,\.]?$',
-            f'[\s，,：:][故即]([{options}])[。\.]?$',
-            f'[\s，,：:]因此([{options}])[。\.]?$',
-            f'[是为。]\s?([{options}])[。\.]?$',
-            f'因此\s?([{options}])[。\.]?$',
-            f'显然\s?([{options}])[。\.]?$',
-            f'答案是\s?(\S+)(?:。|$)',
-            f'答案应该是\s?(\S+)(?:。|$)',
-            f'答案为\s?(\S+)(?:。|$)',
-            f'[Tt]he answer is \(?([{options}])\)?',
-            f'[Tt]he answer is option \(?([{options}])\)?',
-            f'[Tt]he correct answer is \(?([{options}])\)?',
-            f'[Tt]he correct answer is option \(?([{options}])\)?',
-            f'[Tt]he answer to the question is \(?([{options}])\)?',
-            f'^选项\s?([{options}])',
-            f'^([{options}])\s?选?项',
-            f'(\s|^)[{options}][\s。，,：:\.$]',
-            f'(\s|^)[{options}](\s|$)',
-            f'1.\s?(.*?)$',
-            f'1.\s?([{options}])[.。$]?$',
-        ]
-        cushion_patterns = [
-            f'([{options}]):',
-            f'[{options}]',
-        ]
-
-        if cushion:
-            patterns.extend(cushion_patterns)
-        for pattern in patterns:
-            match = re.search(pattern, text)
-            if match:
-                outputs = match.group(0)
-                for i in options:
-                    if i in outputs:
-                        return i
-        return ''

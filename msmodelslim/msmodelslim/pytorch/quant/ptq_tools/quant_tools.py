@@ -14,6 +14,7 @@ from ascend_utils.common.security import check_type, get_valid_write_path, SafeW
 from ascend_utils.common import security
 from msmodelslim.pytorch.quant.ptq_tools.quant_modules import Quantizer, Conv2dQuantizer, LinearQuantizer
 from msmodelslim.pytorch.quant.ptq_tools.quant_deploy import quantize_model_deploy, convert_linear_params
+from msmodelslim.pytorch.quant.ptq_tools.quant_deploy import ConvertLinearParams, ModelDeployQuantParams
 from msmodelslim.pytorch.quant.ptq_tools.ptq_kia.quant_funcs import amp_decision  # squant algorithm api
 from msmodelslim import logger
 from msmodelslim.pytorch.quant.ptq_tools import QuantConfig
@@ -230,9 +231,17 @@ class Calibrator(object):
 
         input_scale, input_offset, weight_scale, weight_offset, quant_weight = \
             self.get_quant_params()
+        
+        linear_params = ConvertLinearParams(
+            onnx_model=model,
+            input_scale=input_scale,
+            input_offset=input_offset,
+            weight_scale=weight_scale,
+            weight_offset=weight_offset,
+            quant_weight=quant_weight
+        )
         input_scale, input_offset, weight_scale, weight_offset, quant_weight = \
-            convert_linear_params(model, input_scale, input_offset,
-                                  weight_scale, weight_offset, quant_weight)
+            convert_linear_params(linear_params)
         quantized_weight_namd = []
         for item in nodes:
             if item.op_type == "Conv":
@@ -249,14 +258,16 @@ class Calibrator(object):
                     quantized_weight_namd.append(weight_name)
                     logger.info("MatMul, item.name :%s, weight_name :%s ", item.name, weight_name)
 
-        quantize_model_deploy(graph,
-                    quantized_weight_namd,
-                    quant_weight,
-                    input_scale,
-                    input_offset,
-                    weight_scale,
-                    weight_offset,
-                    fuse_add)
+        quantize_model_deploy_params = ModelDeployQuantParams(
+            quantized_weight_name=quantized_weight_namd, 
+            quant_weight_dict=quant_weight,
+            input_scale_dict=input_scale,
+            input_offset_dict=input_offset,
+            weight_scale_dict=weight_scale,
+            weight_offset_dict=weight_offset,
+            fuse_add=fuse_add
+        )
+        quantize_model_deploy(graph, quantize_model_deploy_params)
 
         temp_quant_model_file = os.path.join(save_path, "{}_quant.onnx".format(model_arch))
         temp_quant_model_file = get_valid_write_path(temp_quant_model_file)
