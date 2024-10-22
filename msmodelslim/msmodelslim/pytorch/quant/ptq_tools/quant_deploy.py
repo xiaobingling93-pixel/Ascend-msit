@@ -296,7 +296,7 @@ def quantize_model_deploy(graph, params):
     input_offset_dict = params.input_offset_dict
     weight_scale_dict = params.weight_scale_dict
     weight_offset_dict = params.weight_offset_dict
-    fuse_add = fuse_add
+    fuse_add = params.fuse_add
 
     logging.info("before graph initializer:%d", len(graph.initializer))
     delete_same_bias_name(graph)
