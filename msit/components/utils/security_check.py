@@ -18,7 +18,9 @@ import sys
 import re
 import shutil
 
-PATH_WHITE_LIST_REGEX = re.compile(r"[^_A-Za-z0-9/.-]")
+from components.utils.constants import PATH_WHITE_LIST_REGEX
+
+
 STR_WHITE_LIST_REGEX = re.compile(r"[^_A-Za-z0-9\"'><=\[\])(,}{: /.~-]")
 MAX_READ_FILE_SIZE_4G = 4294967296  # 4G, 4 * 1024 * 1024 * 1024
 MAX_READ_FILE_SIZE_32G = 34359738368  # 32G, 32 * 1024 * 1024 * 1024

@@ -16,4 +16,4 @@
 from components.utils.log import logger, set_log_level, LOG_LEVELS
 
 
-logger.name = 'msit_llm_loger'
+logger.name = 'msit_llm_logger'
