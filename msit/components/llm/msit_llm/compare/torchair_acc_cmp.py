@@ -282,8 +282,8 @@ def get_all_ops_from_fusion_op(op_name, graph_map_dict, ge_dump_data):
 
 def compare_ge_with_fx(graph_map, ge_dump_data, fx_dump_data, token_id=0):
     gathered_row_data = []
-    graph_map_dict = {graph["op"]["name"]: graph["op"] for graph in graph_map if
-                      "op" in graph and "name" in graph["op"]}
+    graph_map_dict = {graph["op"]["name"]: graph["op"] \
+                      for graph in graph_map if "op" in graph and "name" in graph["op"]}
     ge_dump_data = sort_ge_dump_data(ge_dump_data, graph_map)
     for op_name, my_path in ge_dump_data.items():
         all_ops = get_all_ops_from_fusion_op(op_name, graph_map_dict, ge_dump_data)
@@ -293,8 +293,8 @@ def compare_ge_with_fx(graph_map, ge_dump_data, fx_dump_data, token_id=0):
         elif len(all_ops) > 1:
             first_op_info = graph_map_dict.get(all_ops[0])
             last_op_info = graph_map_dict.get(all_ops[-1])
-            gathered_row_data.extend(compare_ge_with_fx_multiple_ops(first_op_info, last_op_info, fx_dump_data, op_name,
-                                                                     my_path, token_id))
+            __args = [first_op_info, last_op_info, fx_dump_data, op_name, my_path, token_id]
+            gathered_row_data.extend(compare_ge_with_fx_multiple_ops(*__args))
         else:
             op_type = os.path.basename(my_path).split(".")[0]
             if "Cast" in op_type or "TransData" in op_type:
