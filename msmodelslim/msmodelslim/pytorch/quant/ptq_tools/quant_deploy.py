@@ -238,14 +238,14 @@ def init_quant_param(weight_name,
     return quant_param
 
 
-def quantize_model_deploy(graph, 
-                   quantized_weight_name, 
-                   quant_weight_dict, 
-                   input_scale_dict, 
-                   input_offset_dict, 
-                   weight_scale_dict, 
-                   weight_offset_dict,
-                   fuse_add=False):
+def quantize_model_deploy(graph, params):
+    quantized_weight_name = params.quantized_weight_name
+    quant_weight_dict = params.quant_weight_dict
+    input_scale_dict = params.input_scale_dict
+    input_offset_dict = params.input_offset_dict
+    weight_scale_dict = params.weight_scale_dict
+    weight_offset_dict = params.weight_offset_dict
+    fuse_add = params.fuse_add
 
     logger.info("before graph initializer:%d", len(graph.initializer))
     delete_same_bias_name(graph)
