@@ -178,7 +178,7 @@ def load_file_to_read_common_check(value: str, max_size=MAX_WEIGHT_DATA_SIZE, ex
             raise TypeError
 
         value_ext = os.path.splitext(value)[1]
-        if any(value_ext != ext for ext in exts):
+        if all(value_ext != ext for ext in exts):
             logger.error("Expected extenstion to be one of %r, got %r instead", exts, value_ext)
             raise ValueError
         
