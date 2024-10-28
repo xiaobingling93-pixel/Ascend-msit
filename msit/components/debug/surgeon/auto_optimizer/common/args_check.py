@@ -29,9 +29,9 @@ def check_in_path_legality(value):
     try:
         file_stat = FileStat(path_value)
     except Exception as err:
-        raise argparse.ArgumentTypeError("input path or file is illegal. Please check.") from err
+        raise argparse.ArgumentTypeError("Input path or file is illegal, please check.") from err
     if not file_stat.is_basically_legal('read'):
-        raise argparse.ArgumentTypeError("The current input file does not have right read permissions, please check.")
+        raise argparse.ArgumentTypeError("The current input file does not have right read permission, please check.")
     if file_stat.is_file and not file_stat.is_legal_file_type(["onnx"]):
         raise argparse.ArgumentTypeError("The file type of input path is illegal. Only support [.onnx] file.")
     if file_stat.is_file and not file_stat.is_legal_file_size(MAX_SIZE_LIMITE_NORMAL_MODEL):
@@ -44,7 +44,7 @@ def check_in_model_path_legality(value):
     try:
         file_stat = FileStat(path_value)
     except Exception as err:
-        raise argparse.ArgumentTypeError("input model path is illegal. Please check.") from err
+        raise argparse.ArgumentTypeError("Input model path is illegal, please check.") from err
     if not file_stat.is_basically_legal('read'):
         err_msg = "The current input model file does not have right read permission, please check."
         raise argparse.ArgumentTypeError(err_msg)
@@ -62,7 +62,7 @@ def check_out_model_path_legality(value):
     try:
         file_stat = FileStat(path_value)
     except Exception as err:
-        raise argparse.ArgumentTypeError("output model path is illegal, Please check.") from err
+        raise argparse.ArgumentTypeError("Output model path is illegal, please check.") from err
     if not file_stat.is_basically_legal('write'):
         err_msg = "The current output model path does not have right write permission, please check."
         raise argparse.ArgumentTypeError(err_msg)
