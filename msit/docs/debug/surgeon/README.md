@@ -111,10 +111,10 @@ optimize可简写为opt。
 | -d/--device                | NPU设备ID。默认为0。仅当启用infer-test选项时有意义。         | 否       |
 | --loop                     | 测试推理速度时推理次数。仅当启用infer-test选项时有意义。默认为100。 | 否       |
 | --threshold                | 推理速度提升阈值。仅当知识库的优化带来的提升超过这个值时才使用这个知识库，可以为负，负值表示接受负优化。默认为0，即默认只接受推理性能有提升的优化。仅当启用infer-test选项时有意义。 | 否       |
-| --input-shape              | 静态Shape图输入形状，ATC转换参数，可以省略。仅当启用infer-test选项时有意义。 | 否       |
+| -is/--input-shape              | 静态Shape图输入形状，ATC转换参数，可以省略。仅当启用infer-test选项时有意义。 | 否       |
 | --input-shape-range        | 动态Shape图形状范围，ATC转换参数。仅当启用infer-test选项时有意义。 | 否       |
 | --dynamic-shape            | 动态Shape图推理输入形状，benchmark推理时用的参数，含义同benchmark参数[--dym-shape](https://gitee.com/ascend/msit/tree/master/msit/docs/benchmark#%E9%AB%98%E7%BA%A7%E5%8A%9F%E8%83%BD%E5%8F%82%E6%95%B0)。仅当启用infer-test选项时有意义。 | 否       |
-| --output-size              | 动态Shape图推理输出实际size，benchmark推理时用的参数。含义同benchmark参数[--output-size](https://gitee.com/ascend/msit/tree/master/msit/docs/benchmark#%E9%AB%98%E7%BA%A7%E5%8A%9F%E8%83%BD%E5%8F%82%E6%95%B0)。仅当启用infer-test选项时有意义。 | 否       |
+| -outsize/--output-size              | 动态Shape图推理输出实际size，benchmark推理时用的参数。含义同benchmark参数[--output-size](https://gitee.com/ascend/msit/tree/master/msit/docs/benchmark#%E9%AB%98%E7%BA%A7%E5%8A%9F%E8%83%BD%E5%8F%82%E6%95%B0)。仅当启用infer-test选项时有意义。 | 否       |
 | -h/--help                  | 工具使用帮助信息。                                           | 否       |
 
 
@@ -151,8 +151,9 @@ extract 可简写为ext
 命令格式如下：
 
 ```bash
-msit debug surgeon concat [OPTIONS]
+msit debug surgeon concatenate [OPTIONS]
 ```
+concatenate 可简写为 concat
 
 参数说明：
 
