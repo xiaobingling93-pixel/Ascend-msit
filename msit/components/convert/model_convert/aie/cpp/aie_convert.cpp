@@ -31,7 +31,7 @@ int main(int argc, char** argv)
     std::string outputPath = argv[2];
     std::string socVersion = argv[3];
 
-    Builder* builder = Builder::CreateInferBuilder(socVersion);
+    Builder* builder = Builder::CreateInferBuilder(socVersion.c_str());
 
     auto network = builder->CreateNetwork();
 
