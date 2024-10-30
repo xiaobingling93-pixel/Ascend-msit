@@ -79,6 +79,6 @@ setup(
     entry_points={
         'console_scripts': ['auto_optimizer=auto_optimizer.__main__:cli'],
         'debug_sub_task': debug_sub_task_entry_points,
-        'ait_sub_task_installer': ['msit-surgeon=auto_optimizer.__install__:SurgeonInstall'],
+        'msit_sub_task_installer': ['msit-surgeon=auto_optimizer.__install__:SurgeonInstall'],
     },
 )

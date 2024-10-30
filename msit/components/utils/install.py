@@ -254,7 +254,7 @@ def install_tool(tool_info, find_links):
 
 
 def get_installer(pkg_name) -> Union[AitInstaller, None]:
-    entry_points = get_entry_points("ait_sub_task_installer")
+    entry_points = get_entry_points("msit_sub_task_installer")
     pkg_installer = None
     for entry_point in entry_points:
         if entry_point.name == pkg_name:
