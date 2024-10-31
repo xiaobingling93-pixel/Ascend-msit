@@ -100,7 +100,7 @@ class CompareDataATB(CompareDataParse):
         self.ait_dump_path = self.parse_ait_dump_path(path)
         self.token_id, self.pid, self.tokens_path = self.get_ids_by_path(self.ait_dump_path, path)
         logger.debug(
-            "atb input path is %s, \nait_dump_path is %s, \natb token_id is %s, \npid is %s, \ntokens_path is %s",
+            "atb input path is %s, \nmsit_dump_path is %s, \natb token_id is %s, \npid is %s, \ntokens_path is %s",
             str(path),
             str(self.ait_dump_path),
             str(self.token_id),
@@ -135,7 +135,7 @@ class CompareDataATB(CompareDataParse):
     @staticmethod
     def get_ids_by_path(ait_dump_path, path):
         """
-        ait_dump_path
+        msit_dump_path
             model
                 {pid}
                     {topo}.json
@@ -366,7 +366,7 @@ class CompareDataTorch(CompareDataParse):
     @staticmethod
     def get_ids_by_path(ait_dump_path, path):
         """
-        ait_dump_path
+        msit_dump_path
             {device_id}_{pid} == tokens_path
                 model_tree.json
                 {token_id}
