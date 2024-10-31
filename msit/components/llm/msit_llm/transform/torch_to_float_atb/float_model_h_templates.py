@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-copyright_header = """/*
+COPYRIGHT_HEADER = """/*
  * Copyright (c) Huawei Technologies Co., Ltd. {year}. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,7 +29,7 @@ copyright_header = """/*
  */
 """
 
-include_header_formater = """
+INCLUDE_HEADER_FORMATTER = """
 #ifndef ATB_SPEED_MODELS_{model_name_upper}_DECODER_MODEL_H
 #define ATB_SPEED_MODELS_{model_name_upper}_DECODER_MODEL_H
 
@@ -38,12 +38,12 @@ include_header_formater = """
 #include "atb_speed/utils/model_factory.h"
 """
 
-basic_class_formatter = """
+BASIC_CLASS_FORMATTER = """
 namespace atb_speed {{
 namespace {model_name_lower} {{
 class DecoderModel : public Model {{
 public:
-    {struct_param_formatter}
+    {STRUCT_PARAM_FORMATTER}
 
     explicit DecoderModel(const std::string &param);
     ~DecoderModel();
@@ -69,7 +69,7 @@ REGISTER_MODEL({model_name_lower}, DecoderModel);
 #endif
 """
 
-struct_param_formatter = """
+STRUCT_PARAM_FORMATTER = """
     struct Param {{
         // isFA为true则使用Flash Attention; 反之，则使用Paged Attention
         bool isFA = false;
