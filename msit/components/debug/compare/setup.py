@@ -65,6 +65,6 @@ setup(
     python_requires='>=3.7',
     entry_points={
         'debug_sub_task': debug_sub_task_entry_points,
-        'ait_sub_task_installer': ['msit-compare=msquickcmp.__install__:CompareInstall'],
+        'msit_sub_task_installer': ['msit-compare=msquickcmp.__install__:CompareInstall'],
     },
 )

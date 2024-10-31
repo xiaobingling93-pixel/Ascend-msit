@@ -23,7 +23,7 @@ convert模型转换工具依托ATC（Ascend Tensor Compiler），AOE（Ascend Op
 
 ## 工具安装
 
-- 如果使用aie做模型转换，需要在安装convert前安装AIE，AIE安装请参考AIE[安装指导](https://gitee.com/ascend/ModelZoo-PyTorch/blob/master/AscendIE/AscendIE/readme.md#%E5%AE%89%E8%A3%85%E5%92%8C%E9%83%A8%E7%BD%B2)
+- 如果使用aie做模型转换，需要在安装convert前安装AIE，AIE安装请参考AIE[安装指导](https://gitee.com/ascend/ModelZoo-PyTorch/blob/revert-merge-6246-master/AscendIE/AscendIE/readme.md#%E5%AE%89%E8%A3%85%E5%92%8C%E9%83%A8%E7%BD%B2)
 
   注：aie要求python3.9，在python3.7下安装aie会提示如下错误，请忽略，不影响模型转换。
   ```shell
@@ -51,8 +51,7 @@ msit convert目前支持以下3种子命令：
 ```shell
 msit convert atc [args]
 ```
-参数定义严格遵从ATC的参数定义，由于参数较多，详情可参考：https://www.hiascend.com/document/detail/zh/canncommercial/63RC2/inferapplicationdev/atctool/atctool_000041.html
-
+参数定义严格遵从ATC的参数定义，由于参数较多，详情可参考：https://www.hiascend.com/document/detail/zh/canncommercial/80RC22/devaids/auxiliarydevtool/atlasatc_16_0039.html#ZH-CN_TOPIC_0000001949484154__section6351244132417
 使用示例：
 ```shell
 msit convert atc --model resnet50.onnx --framework 5 --soc_version Ascend310P3 --output resnet50
@@ -62,7 +61,7 @@ msit convert atc --model resnet50.onnx --framework 5 --soc_version Ascend310P3 -
 ```shell
 msit convert aoe [args]
 ```
-参数定义严格遵从AOE的参数定义，由于参数较多，详情可参考：https://www.hiascend.com/document/detail/zh/canncommercial/63RC2/devtools/auxiliarydevtool/aoepar_16_001.html
+参数定义严格遵从AOE的参数定义，由于参数较多，详情可参考：https://www.hiascend.com/document/detail/zh/canncommercial/80RC22/devaids/auxiliarydevtool/auxiliarydevtool_0014.html
 
 使用示例：
 ```shell
@@ -80,6 +79,7 @@ msit convert aie [args]
 | -gm, --golden-model | 标杆模型输入路径，支持onnx模型                                       | 是    |
 | -of, --output-file  | 输出文件，需要有后缀 .om, 当前支持基于 AIE(Ascend Inference Engine) 的模型转换 | 是    |
 | -soc, --soc-version | 芯片类型                 | 是    |
+| -h, --help | 帮助信息                 | 否    |
 
 命令示例如下：
 

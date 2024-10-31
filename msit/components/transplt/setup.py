@@ -20,16 +20,16 @@ with open('requirements.txt', encoding='utf-8') as f:
 with open('README.md', encoding='utf-8') as f:
     long_description = f.read()
 
-ait_sub_tasks = [{
+msit_sub_tasks = [{
         "name": "transplt",
         "help_info": "Transplant tool to analyze inference applications",
         "module": "app_analyze.__main__",
         "attr": "get_cmd_instance",
     }]
 
-ait_sub_task_entry_points = [
+msit_sub_task_entry_points = [
     f"{t.get('name')}:{t.get('help_info')} = {t.get('module')}:{t.get('attr')}"
-    for t in ait_sub_tasks
+    for t in msit_sub_tasks
 ]
 
 setup(
@@ -57,8 +57,8 @@ setup(
     ],
     python_requires='>=3.7',
     entry_points={
-        'ait_sub_task': ait_sub_task_entry_points,
-        'ait_sub_task_installer': ['msit-transplt=app_analyze.__install__:TranspltInstall',
+        'msit_sub_task': msit_sub_task_entry_points,
+        'msit_sub_task_installer': ['msit-transplt=app_analyze.__install__:TranspltInstall',
                                    'msit-transplt-llvm=app_analyze.__install__:LlvmInstall'],
     },
 )
