@@ -28,7 +28,7 @@ def try_import_torchair():
         raise ee
 
 
-def get_ge_dump_config(dump_path="ait_ge_dump", dump_mode="all", fusion_switch_file=None,
+def get_ge_dump_config(dump_path="msit_ge_dump", dump_mode="all", fusion_switch_file=None,
                        dump_token=None, dump_layer=None):
     try_import_torchair()
 

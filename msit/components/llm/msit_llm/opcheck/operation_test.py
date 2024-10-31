@@ -20,6 +20,7 @@ import json
 import glob
 import argparse
 import torch
+import torch_npu
 
 from msit_llm.common.tool import read_atb_data
 from msit_llm.common.log import logger
@@ -103,6 +104,7 @@ class OperationTest(unittest.TestCase):
     def read_tensor_from_file(self, tensor_files):
         res = []
         for tensor_file in tensor_files:
+            tensor_file = os.path.realpath(tensor_file)
             tensor = read_atb_data(tensor_file).npu()
             res.append(tensor)
         return res
@@ -242,6 +244,9 @@ class OperationTest(unittest.TestCase):
             golden_out_tensors = self.golden_calc(self.in_tensors)
         except ZeroDivisionError as e:
             error_text = f"get ZeroDivisionError when calc {self.op_name} golden"
+            raise RuntimeError(error_text) from e
+        except IndexError as e:
+            error_text = f"get IndexError when calc {self.op_name} golden: {str(e)}"
             raise RuntimeError(error_text) from e
 
         if self.atb_rerun:

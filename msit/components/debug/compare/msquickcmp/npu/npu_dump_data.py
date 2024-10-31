@@ -1,6 +1,5 @@
-#!/usr/bin/env python
-# coding=utf-8
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """
 Function:
 This class mainly involves generate npu dump data function.
@@ -32,6 +32,9 @@ from msquickcmp.common.dump_data import DumpData
 from msquickcmp.common.utils import AccuracyCompareException, parse_input_shape_to_list
 from msquickcmp.common.dynamic_argument_bean import DynamicArgumentEnum
 from msquickcmp.npu.om_parser import OmParser
+
+from components.utils.check.rule import Rule
+
 
 BENCHMARK_DIR = "benchmark"
 ACL_JSON_PATH = "acl.json"
@@ -375,7 +378,7 @@ class NpuDumpData(DumpData):
             raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PATH_ERROR)
         self._convert_net_output_to_numpy(npu_net_output_data_path, npu_dump_data_path)
         if self.is_golden:
-            return npu_dump_data_path
+            return npu_dump_data_path, ""
         else:
             return npu_dump_data_path, npu_net_output_data_path
 
@@ -388,6 +391,7 @@ class NpuDumpData(DumpData):
         import aclruntime
 
         options = aclruntime.session_options()
+        Rule.input_file().check(self.offline_model_path, will_raise=True)
         aa = aclruntime.InferenceSession(self.offline_model_path, int(self.device), options)
         shape_list = [ii.shape for ii in aa.get_inputs()]
         dtype_list = [ii.datatype.name for ii in aa.get_inputs()]
@@ -537,6 +541,7 @@ class NpuDumpData(DumpData):
                 file_size.append(os.path.getsize(item))
             elif item.endswith("npy") or item.endswith("NPY"):
                 try:
+                    Rule.input_file().check(item, will_raise=True)
                     file_size.append(np.load(item).size)
                 except (ValueError, FileNotFoundError) as e:
                     utils.logger.error("The path {} can not get its size through numpy".format(item))

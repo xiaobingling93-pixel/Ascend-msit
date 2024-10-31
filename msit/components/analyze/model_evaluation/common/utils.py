@@ -1,4 +1,5 @@
-# Copyright (c) 2023 Huawei Technologies Co., Ltd.
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -55,9 +56,9 @@ def check_file_security(filepath: str) -> bool:
     if not os.path.exists(filepath):
         return True
     if os.path.islink(filepath):
-        logger.error(f'{filepath} is link.')
+        logger.error('%r is link.', filepath)
         return False
     if not os.path.isfile(filepath):
-        logger.error(f'{filepath} is not file.')
+        logger.error('%r is not file.', filepath)
         return False
     return True

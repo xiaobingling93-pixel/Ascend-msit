@@ -24,7 +24,7 @@ abs_path = os.path.dirname(os.path.realpath(__file__))
 with open(os.path.join(abs_path, "requirements.txt")) as f:
     required = f.read().splitlines()
 
-ait_sub_tasks = [
+msit_sub_tasks = [
     {
         "name": "debug",
         "help_info": "debug a wide variety of model issues",
@@ -33,9 +33,9 @@ ait_sub_tasks = [
     }
 ]
 
-ait_sub_task_entry_points = [
+msit_sub_task_entry_points = [
     f"{t.get('name')}:{t.get('help_info')} = {t.get('module')}:{t.get('attr')}"
-    for t in ait_sub_tasks
+    for t in msit_sub_tasks
 ]
 
 setup(
@@ -63,8 +63,7 @@ setup(
     python_requires='>=3.7',
     install_requires=required,
     entry_points={
-        'console_scripts': ['ait=components.__main__:ait_main',
-                            'msit=components.__main__:main'],
-        'ait_sub_task': ait_sub_task_entry_points,
+        'console_scripts': ['msit=components.__main__:main'],
+        'msit_sub_task': msit_sub_task_entry_points,
     },
 )

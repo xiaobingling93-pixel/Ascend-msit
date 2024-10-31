@@ -1,11 +1,12 @@
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-
-#     http://www.apache.org/licenses/LICENSE-2.0
-
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,9 +22,7 @@ from components.utils.log import logger
 
 
 class Convert:
-    def __init__(self,
-        config: ConvertConfig
-    ) -> None:
+    def __init__(self, config: ConvertConfig) -> None:
         self._config = config
         self.python_version = sys.executable or "python3"
 
@@ -39,7 +38,7 @@ class Convert:
         Exception Description:
             when invalid command throw exception
         """
-        logger.info('Execute command:%s' % cmd)
+        logger.info('Execute command:%s', cmd)
         process = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         while process.poll() is None:
             line = process.stdout.readline()
@@ -47,11 +46,11 @@ class Convert:
             if line:
                 logger.debug(line)
         if process.returncode != 0:
-            logger.error('Failed to execute command:%s' % " ".join(cmd))
+            logger.error('Failed to execute command:%s', " ".join(cmd))
 
     def convert_model(self) -> None:
         cur_dir = os.path.dirname(__file__)
-        aie_convert = os.path.join(cur_dir, "../aie_convert")
+        aie_convert = os.path.join(cur_dir, "..", "aie_convert")
         if not self._config.output.endswith(".om"):
             self._config.output += ".om"
         run_cmd = [aie_convert, self._config.model, self._config.output, self._config.soc_version]

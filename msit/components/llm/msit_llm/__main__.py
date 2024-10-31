@@ -17,6 +17,7 @@ import os
 import subprocess
 
 from components.utils.parser import BaseCommand
+from components.utils.security_check import is_enough_disk_space_left
 from msit_llm.dump.initial import init_dump_task, clear_dump_task
 from msit_llm.opcheck.opchecker import OpChecker, NAMEDTUPLE_PRECISION_METRIC, NAMEDTUPLE_PRECISION_MODE
 from msit_llm.errcheck.process import process_error_check
@@ -163,6 +164,8 @@ class DumpCommand(BaseCommand):
             logger.warning("Please ensure that your execution command is secure.")
             init_dump_task(args)
             # 有的大模型推理任务启动后，输入对话时有提示符，使用subprocess拉起子进程无法显示提示符
+            if not is_enough_disk_space_left(args.output):
+                raise OSError("Please make sure that the remaining disk space in the dump path is greater than 2 GB")
             cmds = args.exec.split()
             subprocess.run(cmds, shell=False)
             clear_dump_task(args)
@@ -262,9 +265,9 @@ class CompareCommand(BaseCommand):
             comared = acc_compare(os.path.abspath(args.golden_path), os.path.abspath(args.my_path),
                         args.output, args.mapping_file, args.cmp_level)
             if not comared:
-                cmpMgr = CompareMgr(os.path.abspath(args.golden_path), os.path.abspath(args.my_path), args)
-                if cmpMgr.is_parsed_cmp_path():
-                    cmpMgr.compare(args.output)
+                cmp_mgr_instance = CompareMgr(os.path.abspath(args.golden_path), os.path.abspath(args.my_path), args)
+                if cmp_mgr_instance.is_parsed_cmp_path():
+                    cmp_mgr_instance.compare(args.output)
 
 
 class OpcheckCommand(BaseCommand):
@@ -274,7 +277,7 @@ class OpcheckCommand(BaseCommand):
             '-i',
             required=True,
             type=check_input_path_legality,
-            help='input directory.E.g:--input OUTPUT_DIR/PID_TID/0/')
+            help='input directory.E.g:--input OUTPUT_DIR/msit_dump_TIMESTAMP/tensors/device_id_PID/TID/')
 
         parser.add_argument(
             '--output',
@@ -282,7 +285,7 @@ class OpcheckCommand(BaseCommand):
             required=False,
             type=check_output_path_legality,
             default='./',
-            help='Data output directory.E.g:--output /xx/xxxx/xx')
+            help='Data output directory.E.g:--output /xx/xxx/xx')
 
         parser.add_argument(
             '--operation-ids',

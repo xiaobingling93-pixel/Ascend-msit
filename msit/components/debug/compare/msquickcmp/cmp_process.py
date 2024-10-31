@@ -1,5 +1,5 @@
-# coding=utf-8
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -48,6 +48,7 @@ from msquickcmp.single_op import single_op as sp
 
 from components.utils.security_check import check_write_directory
 from components.utils.file_open_check import ms_open
+from components.utils.check.rule import Rule
 
 WRITE_MODES = stat.S_IWUSR | stat.S_IRUSR
 READ_WRITE_FLAGS = os.O_RDWR | os.O_CREAT
@@ -117,7 +118,7 @@ def _append_is_npu_ops_to_csv(csv_path):
     csv_path = _get_single_csv_in_folder(csv_path)
     if os.path.islink(csv_path):
         os.unlink(csv_path)
-    if os.path.exists(csv_path):
+    if Rule.input_file().check(csv_path):
         with open(csv_path, 'r') as f:
             reader = csv.reader(f)
             rows = [row for row in reader]
@@ -127,8 +128,8 @@ def _append_is_npu_ops_to_csv(csv_path):
         for row in rows[1:]:
             is_npu_ops = "YES" if row[ground_truth_col] == "*" else "NO"
             row.append(is_npu_ops)
-        with ms_open(csv_path, mode="w") as file:
-            writer = csv.writer(file)
+        with ms_open(csv_path, mode='w') as f:
+            writer = csv.writer(f)
             writer.writerows(rows)
 
 
@@ -316,7 +317,10 @@ def run_om_model_compare(args, use_cli):
         golden_dump_data_path = golden_dump.generate_dump_data(output_json_path)
     else:
         golden_dump.generate_inputs_data(npu_dump_data_path, use_aipp)
-        golden_dump_data_path = golden_dump.generate_dump_data(npu_dump_npy_path, npu_dump.om_parser)
+        if isinstance(golden_dump, NpuDumpData):
+            golden_dump_data_path, _ = golden_dump.generate_dump_data(npu_dump_npy_path, npu_dump.om_parser)
+        else:
+            golden_dump_data_path = golden_dump.generate_dump_data(npu_dump_npy_path, npu_dump.om_parser)
     golden_net_output_info = golden_dump.get_net_output_info()
 
     # if it's dynamic batch scenario, golden data files should be renamed
@@ -347,7 +351,7 @@ def run_om_model_compare(args, use_cli):
 
 def print_advisor_info(out_path):
     advisor_info_txt_path = os.path.join(out_path, 'advisor_summary.txt')
-    if os.path.exists(advisor_info_txt_path):
+    if Rule.input_file().check(advisor_info_txt_path):
         utils.logger.info(f"The advisor summary (.txt) is saved in :\"{advisor_info_txt_path}\"")
         with open(advisor_info_txt_path, 'r') as advisor_file:
             lines = advisor_file.readlines()
@@ -366,11 +370,13 @@ def fusion_close_model_convert(args: CmpArgsAdapter):
 
         close_fusion_om_file = os.path.join(args.out_path, 'close_fusion_om_model')
         atc_command_file_path = atc_utils.get_atc_path(args.cann_path)
-        atc_cmd = [atc_command_file_path, "--framework=5",
-                   "--soc_version=" + acl.get_soc_name(),
-                   "--model=" + args.model_path,
-                   "--output=" + close_fusion_om_file,
-                   "--fusion_switch_file=" + args.fusion_switch_file]
+        atc_cmd = [
+            atc_command_file_path, "--framework=5",
+            "--soc_version=" + acl.get_soc_name(),
+            "--model=" + args.model_path,
+            "--output=" + close_fusion_om_file,
+            "--fusion_switch_file=" + args.fusion_switch_file
+        ]
         if atc_input_shape_in_offline_model:
             atc_cmd.append("--input_shape=" + atc_input_shape_in_offline_model)
 
@@ -453,6 +459,7 @@ def single_op_compare(args, input_shape):
         subog = OnnxGraph.parse(subonnx)
 
         # load onnx input description
+        Rule.input_file().check(subonnx, will_raise=True)
         inputs_list = [(ii.name, ii.shape) for ii in onnxruntime.InferenceSession(subonnx).get_inputs()]
 
         # find all the data needed
@@ -488,7 +495,7 @@ def single_op_compare(args, input_shape):
 
         # run compare
         utils.logger.setLevel(logging.ERROR)
-        res = run(cmg_args, input_shape, original_out_path, True)
+        run(cmg_args, input_shape, original_out_path, True)
         utils.logger.setLevel(logging.INFO)
         csv_list.extend(sp.find_all_csv(tmp_out_path))
         utils.logger.info("Comparision finished")
@@ -555,15 +562,18 @@ def subgraph_check(og, node_interval, args, onnx_data_path, input_shape):
     utils.logger.info("Extracting model Sucess!")
     utils.logger.info("Start using atc to convert onnx to om file")
     subgraph_om_file = os.path.join(args.out_path, 'tmp_for_accuracy_locat')
-    atc_cmd = ["atc", "--framework=5", "--soc_version=" + acl.get_soc_name(), "--model=" + subgraph_onnx_file, \
-               "--output=" + subgraph_om_file]
+    atc_cmd = [
+        "atc", "--framework=5", "--soc_version=" + acl.get_soc_name(), "--model=" + subgraph_onnx_file,
+        "--output=" + subgraph_om_file
+    ]
     subprocess.run(atc_cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     utils.logger.info("atc conversion Success!")
     utils.logger.info("Start to loading input data")
     subog = OnnxGraph.parse(subgraph_onnx_file)
-    inputs_list = [(ii.name, ii.shape) for ii in onnxruntime.InferenceSession(subgraph_onnx_file).get_inputs()]
-    input_need_list = al.input_completion(og, inputs_list)
-    pattern = '|'.join(input_need_list)
+    if Rule.input_file().check(subgraph_onnx_file):
+        inputs_list = [(ii.name, ii.shape) for ii in onnxruntime.InferenceSession(subgraph_onnx_file).get_inputs()]
+        input_need_list = al.input_completion(og, inputs_list)
+        pattern = '|'.join(input_need_list)
     try:
         matched_files = al.find_npy_files_with_prefix(onnx_data_path, pattern)
     except Exception as e:
@@ -653,5 +663,6 @@ def csv_sum(original_out_path):
     with os.fdopen(os.open(xlsx_file_summary, WRITE_FLAGS, WRITE_MODES), 'wb') as fp_write:
         with pd.ExcelWriter(fp_write) as writer:
             for i, csv_file in enumerate(csv_file_list):
-                data = pd.read_csv(csv_file, na_values=['NAN'])
-                data.to_excel(writer, sheet_name=sheet_name_list[i], index=False, na_rep='NAN')
+                if Rule.input_file().check(csv_file):
+                    data = pd.read_csv(csv_file, na_values=['NAN'])
+                    data.to_excel(writer, sheet_name=sheet_name_list[i], index=False, na_rep='NAN')

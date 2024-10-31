@@ -14,11 +14,15 @@
 
 
 import pandas as pd
+from components.utils.check.rule import Rule
 
 
 # 读取
 def get_csv_to_df(file_path) -> any:
     '''返回pd类型数据'''
+    if not Rule.input_file().check(file_path):
+        logger.error("read csv file failed, please check %r", file_path)
+        raise OSError
     return pd.read_csv(file_path)
 
 
@@ -39,31 +43,31 @@ def get_nhead(df, n) -> any:
 
 
 # 属性获取或设置指定位置的值。指定要返回的单元格的行（索引）和列（标签）
-def get_value_from_str(df, rowStr, colStr) -> any:
-    return df.loc[rowStr, colStr]
+def get_value_from_str(df, row_str, col_str) -> any:
+    return df.loc[row_str, col_str]
 
 
 # 属性获取或设置指定位置的值。指定要返回的单元格的行（索引）和列（标签）
-def get_value_from_index(df, rowNum, colNum) -> any:
-    return df.iat[rowNum, colNum]
+def get_value_from_index(df, row_num, col_num) -> any:
+    return df.iat[row_num, col_num]
 
 
 def get_label_and_content(df) -> any:
-    labelList = []
-    contentList = []
+    label_list = []
+    content_list = []
     for label, content in df.iteritems():
-        labelList.append(label)
-        contentList.append(content)
-    return labelList, contentList
+        label_list.append(label)
+        content_list.append(content)
+    return label_list, content_list
 
 
 def get_index_and_row(df) -> any:
-    indexList = []
-    rowList = []
+    index_list = []
+    row_list = []
     for index, row in df.iterrows():
-        indexList.append(index)
-        rowList.append(row)
-    return indexList, rowList
+        index_list.append(index)
+        row_list.append(row)
+    return index_list, row_list
 
 
 # 方法检查 DataFrame 是否包含指定的值。
@@ -109,13 +113,6 @@ def add_row(df, rows) -> any:
 # 在满足col1列值条件的末尾插入行
 def insert_row_1(df, col, col_value, rows) -> any:
     i = df.index[(df[col] == col_value)].values[-1]
-    df_1 = df.loc[0:i, :].append(pd.DataFrame(rows), ignore_index=True)
-    return df_1.append(df.loc[i + 1 :, :], ignore_index=True)
-
-
-# 在满足col1、col2两列值条件的末尾插入行
-def insert_row_2(df, col1, col1_value, col2, col2_value, rows) -> any:
-    i = df.index[(df[col1] == col1_value) & (df[col2] == col2_value)].values[-1]
     df_1 = df.loc[0:i, :].append(pd.DataFrame(rows), ignore_index=True)
     return df_1.append(df.loc[i + 1 :, :], ignore_index=True)
 

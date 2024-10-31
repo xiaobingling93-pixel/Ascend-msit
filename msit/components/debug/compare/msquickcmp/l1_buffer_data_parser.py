@@ -1,6 +1,5 @@
-#!/usr/bin/env python
-# coding=utf-8
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """
 Function:
 This class mainly involves the main function.
@@ -49,13 +49,13 @@ class L1BufferDataParser:
         self._check_path_valid(self.dump_path, is_file=True)
         self._check_path_valid(self.output_path, is_file=False)
         if self.offset < 0 or self.offset >= self.TWO_M:
-            logger.error('The offset (%d) is invalid, out of range [0, %d). Please check the offset.'
-                  % (self.offset, self.TWO_M))
-            sys.exit(self.INVALID_PARAM_ERROR)
+            error_msg = f'The offset {self.offset} is invalid, out of range [0, {self.TWO_M}). Please check the offset.'
+            logger.error(error_msg)
+            raise RuntimeError(error_msg)
         if self.size <= 0 or self.size > self.TWO_M - self.offset:
-            logger.error('The size (%d) is invalid, out of range (0, %d). Please check the size.'
-                  % (self.size, self.TWO_M - self.offset))
-            sys.exit(self.INVALID_PARAM_ERROR)
+            error_msg = f'The size {self.size} is invalid, out of range (0, {diff}). Please check the size.'
+            logger.error(error_msg)
+            raise RuntimeError(error_msg)
 
     def parse(self):
         self.check_argument_valid()
@@ -73,27 +73,32 @@ class L1BufferDataParser:
 
     def _check_path_valid(self, path, is_file):
         if not os.path.exists(path):
-            logger.error('The path "%s" does not exist. Please check the path.' % path)
-            sys.exit(self.INVALID_PARAM_ERROR)
+            error_msg = f'The path {path} does not exist. Please check the path.'
+            logger.error(error_msg)
+            raise RuntimeError(error_msg)
         if not os.access(path, os.R_OK):
-            logger.error('You do not have permission to read the path "%s". Please check the path.' % path)
-            sys.exit(self.INVALID_PARAM_ERROR)
+            error_msg = f'You do not have permission to read the path {path}. Please check the path.'
+            logger.error(error_msg)
+            raise RuntimeError(error_msg)
         if is_file:
             if not os.path.isfile(path):
-                logger.error('The path "%s" is not a file. Please check the path.' % path)
-                sys.exit(self.INVALID_PARAM_ERROR)
+                error_msg = f'The path {path} is not a file. Please check the path.'
+                logger.error(error_msg)
+                raise RuntimeError(error_msg)
             file_size = os.path.getsize(path)
             if file_size != self.TWO_M:
-                logger.error('The l1 buffer data size (%d) is not %d for "%s". Please check the path.'
-                      % (file_size, self.TWO_M, path))
-                sys.exit(self.INVALID_PARAM_ERROR)
+                error_msg = f'The l1 buffer data size {file_size} is not {self.TWO_M} for {path}.'
+                logger.error(error_msg)
+                raise RuntimeError(error_msg)
         else:
             if not os.path.isdir(path):
-                logger.error('The path "%s" is not a directory. Please check the path.' % path)
-                sys.exit(self.INVALID_PARAM_ERROR)
+                error_msg = f'The path {path} is not a directory. Please check the path.'
+                logger.error(error_msg)
+                raise RuntimeError(error_msg)
             if not os.access(path, os.W_OK):
-                logger.error('You do not have permission to write the path "%s". Please check the path.' % path)
-                sys.exit(self.INVALID_PARAM_ERROR)
+                error_msg = f'You do not have permission to write the path {path}. Please check the path.'
+                logger.error(error_msg)
+                raise RuntimeError(error_msg)
 
 
 def _parser_argument(parser):

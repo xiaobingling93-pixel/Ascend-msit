@@ -1,4 +1,5 @@
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,10 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import os
 import subprocess
 
 from components.utils.parser import BaseCommand
+from components.utils.security_check import is_enough_disk_space_left
 from components.debug.compare.msquickcmp.adapter_cli.args_adapter import CmpArgsAdapter
 from components.debug.compare.msquickcmp.cmp_process import cmp_process
 from components.debug.compare.msquickcmp.common.args_check import (
@@ -23,7 +26,7 @@ from components.debug.compare.msquickcmp.common.args_check import (
     check_number_list, check_dym_range_string, check_fusion_cfg_path_legality, check_quant_json_path_legality,
     safe_string, str2bool, check_path_exit
 )
-from msquickcmp.common.utils import logger, check_exec_cmd
+from msquickcmp.common.utils import logger
 from components.debug.compare.msquickcmp.dump.dump_process import dump_process
 from msquickcmp.dump.args_adapter import DumpArgsAdapter
 
@@ -50,14 +53,14 @@ class CompareCommand(BaseCommand):
             required=False,
             dest="golden_model",
             type=check_model_path_legality,
-            help='The original model (.onnx or .pb or .prototxt or .om) file path')
+            help='The original model (.pb or saved_model or .onnx or .prototxt or .om) file path')
         parser.add_argument(
             '-om',
             '--om-model',
             required=False,
             dest="om_model",
             type=check_om_path_legality,
-            help='The offline model (.om or .mindir) file path')
+            help='The offline model (.om or .mindir or saved_model) file path')
         parser.add_argument(
             '-w',
             '--weight',
@@ -197,8 +200,9 @@ class CompareCommand(BaseCommand):
         parser.add_argument(
             '--saved_model_tag_set',
             dest="saved_model_tag_set",
-            default='',
-            help="Enter the tagSet of the model. For example: --saved_model_tag_set ['serve', 'general_parser']")
+            default='serve',
+            help="Enter the tagSet of the model.Currently, multiple tagSets can be transferred, "
+                 "for example, --saved_model_tag_set ['serve', 'genenal_parser']")
         # alone compare parameters
         parser.add_argument(
             '-mp',
@@ -227,13 +231,14 @@ class CompareCommand(BaseCommand):
             logger.error("The following args are required: -gm/--golden-model or -gp/--golden-path")
             self.parser.print_help()
             return
-        mindie_rt_op_mapping = os.path.join(args.ops_json, "mindie_rt_op_mapping.json")
-        mindie_torch_op_mapping = os.path.join(args.ops_json, "mindie_torch_op_mapping.json")
-        if os.path.exists(mindie_rt_op_mapping) and os.path.exists(mindie_torch_op_mapping):
-            from msquickcmp.mie_torch.mietorch_comp import MIETorchCompare
-            comparer = MIETorchCompare(args.golden_path, args.my_path, args.ops_json, args.out_path)
-            comparer.compare()
-            return 
+        if args.ops_json is not None:
+            mindie_rt_op_mapping = os.path.join(args.ops_json, "mindie_rt_op_mapping.json")
+            mindie_torch_op_mapping = os.path.join(args.ops_json, "mindie_torch_op_mapping.json")
+            if os.path.exists(mindie_rt_op_mapping) and os.path.exists(mindie_torch_op_mapping):
+                from msquickcmp.mie_torch.mietorch_comp import MIETorchCompare
+                comparer = MIETorchCompare(args.golden_path, args.my_path, args.ops_json, args.out_path)
+                comparer.compare()
+                return
         cmp_args = CmpArgsAdapter(args.golden_model, args.om_model, args.weight_path, args.input_data_path,
                                   args.cann_path, args.out_path,
                                   args.input_shape, args.device, args.output_size, args.output_nodes, args.advisor,
@@ -326,8 +331,9 @@ class DumpCommand(BaseCommand):
         parser.add_argument(
             '--saved_model_tag_set',
             dest="saved_model_tag_set",
-            default='',
-            help="Enter the tagSet of the model. For example: --saved_model_tag_set ['serve', 'general_parser']")
+            default='serve',
+            help="Enter the tagSet of the model.Currently, multiple tagSets can be transferred, "
+                 "for example, --saved_model_tag_set ['serve', 'genenal_parser']")
         parser.add_argument(
             '-dp',
             '--device-pattern',
@@ -343,7 +349,7 @@ class DumpCommand(BaseCommand):
             "--exec",
             dest="exec",
             required=False,
-            type=check_exec_cmd,
+            type=safe_string,
             help="Exec command to run acltransformer model inference, "
                  "only support MindIE-Torch dump scenario. "
                  "For example: --exec \'bash run.sh patches/models/modeling_xxx.py\' ")
@@ -358,6 +364,9 @@ class DumpCommand(BaseCommand):
         self.parser = parser
 
     def handle(self, args):
+        output_path = "./" if args.out_path == '' else args.out_path
+        if not is_enough_disk_space_left(output_path):
+            raise OSError("Please make sure that the remaining disk space in the dump path is greater than 2 GB")
         if args.exec:
             from components.debug.compare.msquickcmp.dump.mietorch.dump_config import DumpConfig
             DumpConfig(dump_path=args.out_path, api_list=args.opname)

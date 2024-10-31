@@ -1,6 +1,5 @@
-# !/usr/bin/env python
-# coding=utf-8
-# Copyright (c) 2024-2025 Huawei Technologies Co., Ltd.
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -66,10 +65,6 @@ class TfSaveModelDumpData(DumpData):
         self._create_dir()
 
     @staticmethod
-    def _is_op_exists(operation_name_to_check, operations):
-        return any(op.name == operation_name_to_check for op in operations)
-
-    @staticmethod
     def parse_json_file(output_json_path):
         try:
             with open(output_json_path, 'r', encoding='utf-8') as file:
@@ -81,6 +76,20 @@ class TfSaveModelDumpData(DumpData):
             raise RuntimeError(f"File '{output_json_path}' is not a valid JSON format. {e}") from e
 
     @staticmethod
+    def split_input_shape(input_shapes):
+        input_list = input_shapes.split(";")
+        input_shape_list = [
+            (name, [int(num) for num in shape_data_str_list])
+            for name, shape_data_str in (shape.split(":") for shape in input_list)
+            for shape_data_str_list in [shape_data_str.split(",")]
+        ]
+        return input_shape_list
+
+    @staticmethod
+    def _is_op_exists(operation_name_to_check, operations):
+        return any(op.name == operation_name_to_check for op in operations)
+
+    @staticmethod
     def _check_tf_version(expected_version):
         current_version = tf.__version__
         if current_version != expected_version:
@@ -89,17 +98,6 @@ class TfSaveModelDumpData(DumpData):
                 f"but found version {current_version}. Please install the correct "
                 "version of TensorFlow."
             )
-
-    @staticmethod
-    def split_input_shape(input_shapes):
-        input_list = input_shapes.split(";")
-        input_shape_list = [
-            (name, [int(num) for num in shape_data_str_list])
-            for name, shape_data_str in (shape.split(":") for shape in input_list)
-            for shape_data_str_list in [shape_data_str.split(",")]
-        ]
-
-        return input_shape_list
 
     def generate_inputs_data_for_dump(self):
         if self.input_path:

@@ -1,10 +1,11 @@
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+# http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -25,7 +26,7 @@ with open('requirements.txt', encoding='utf-8') as f:
 with open('README.md', encoding='utf-8') as f:
     long_description = f.read()
 
-ait_sub_tasks = [
+msit_sub_tasks = [
     {
         "name": "analyze",
         "help_info": "Analyze tool to evaluate compatibility of model conversion",
@@ -34,8 +35,9 @@ ait_sub_tasks = [
     }
 ]
 
-ait_sub_task_entry_points = [
-    f"{t.get('name')}:{t.get('help_info')} = {t.get('module')}:{t.get('attr')}" for t in ait_sub_tasks
+msit_sub_task_entry_points = [
+    f"{t.get('name')}:{t.get('help_info')} = {t.get('module')}:{t.get('attr')}" 
+    for t in msit_sub_tasks
 ]
 
 setup(
@@ -63,7 +65,7 @@ setup(
     ],
     python_requires='>=3.7',
     entry_points={
-        'ait_sub_task': ait_sub_task_entry_points,
-        'ait_sub_task_installer': ['msit-analyze=model_evaluation.__install__:AnalyzeInstall'],
+        'msit_sub_task': msit_sub_task_entry_points,
+        'msit_sub_task_installer': ['msit-analyze=model_evaluation.__install__:AnalyzeInstall'],
     },
 )

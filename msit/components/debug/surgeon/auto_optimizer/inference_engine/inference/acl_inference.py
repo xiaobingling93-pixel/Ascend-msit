@@ -68,7 +68,7 @@ class AclInference(InferenceBase, ABC):
             ]
             out = subprocess.run(msame_cmd, capture_output=True, shell=False)
             log = out.stdout.decode('utf-8')
-            match = re.search("Inference average time without first time: (.+) ms", log)
+            match = re.search("Inference average time without first time: (\d+(\.\d+)?) ms", log)
             if not match or out.returncode:
                 raise RuntimeError("msame inference failed!\n{}".format(log))
             time = float(match.group(1))

@@ -2,8 +2,8 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
 from multiprocessing import cpu_count
 
-from msmodelslim import logger
 from ascend_utils.common.security.type import check_type
+from msmodelslim import logger
 
 
 class CompressConfig:

@@ -1,4 +1,5 @@
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,11 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import copy
+
 import tempfile
 import warnings
 import os
 import itertools
+import copy
 
 from typing import List, Dict, Union, Sequence, Optional, Tuple, Set
 from collections import deque
@@ -28,6 +30,8 @@ from auto_optimizer.graph_refactor import BaseGraph, Initializer, PlaceHolder, N
 from auto_optimizer.graph_refactor.onnx.node import OnnxPlaceHolder, OnnxInitializer, OnnxNode
 from components.debug.common import logger
 from auto_optimizer.common.utils import check_output_model_path
+from components.utils.check.rule import Rule
+from components.utils.constants import MAX_FILE_SIZE_200G
 
 
 class OnnxGraph(BaseGraph):
@@ -65,6 +69,9 @@ class OnnxGraph(BaseGraph):
             'opset_imports': opset_imports,
         }
 
+        self._value_infos = []
+        self._value_map = {}
+
     @property
     def opset_imports(self) -> Optional[Sequence[OperatorSetIdProto]]:
         return self._meta.get('opset_imports')
@@ -81,9 +88,71 @@ class OnnxGraph(BaseGraph):
             self.graph = OnnxGraph.parse(converted_model)
             self._meta['opset_imports'] = [opset_imports]
 
+    @staticmethod
+    def connect_graph(graph1: 'OnnxGraph', graph2: 'OnnxGraph', io_map: List[str], graph_name: str):
+        """Implementation of concatenating two graphs based on the io_map.
+
+        1. Connect the outputs of the first graph and inputs of the second one.
+        2. Update value_infos, initializers, nodes, node_map, prev_map, next_map
+
+        Arguments:
+            graph1 (OnnxGraph): The first ONNX graph
+            graph2 (OnnxGraph): The second ONNX graph
+            io_map (list of pairs of string): The pairs of names [(out0/in0), (out1/in0), ...]
+                                                representing outputs of the first graph and inputs of the second
+                                                to be connected
+            graph_name (str): name of the combined graph.
+                              If not provided, the name is graph1.name and graph2.name connected by "_"
+
+        Returns:
+            graph (OnnxGraph): Combined graph
+
+        """
+
+        g_name = graph_name if graph_name else "_".join([graph1.name, graph2.name])
+        graph = OnnxGraph(g_name)
+        graph.nodes.extend(graph1.nodes)
+        g2_node_begin = len(graph.nodes)
+        graph.nodes.extend(graph2.nodes)
+        g2_node_end = len(graph.nodes)
+
+        io_map_g1_outs = {io[0] for io in io_map}
+        io_map_g2_ins = {io[1] for io in io_map}
+        reversed_io_map = {in_name: out_name for out_name, in_name in io_map}
+
+        # connecting outputs of the first graph with the inputs of the second
+        for node_idx in range(g2_node_begin, g2_node_end):
+            node = graph.nodes[node_idx]
+            for idx, name_ in enumerate(node.inputs):
+                if name_ in reversed_io_map:
+                    node.inputs[idx] = reversed_io_map.get(name_)
+
+        # add inputs and outputs
+        graph.inputs.extend(graph1.inputs)
+        graph.inputs.extend([inp for inp in graph2.inputs if inp.name not in io_map_g2_ins])
+
+        graph.outputs.extend([out for out in graph1.outputs if out.name not in io_map_g1_outs])
+        graph.outputs.extend(graph2.outputs)
+
+        # add initializers
+        graph.initializers.extend(graph1.initializers)
+        graph.initializers.extend([ini for ini in graph2.initializers if ini.name not in io_map_g2_ins])
+
+        # add value_infos
+        graph.value_infos.extend(graph1.value_infos)
+        graph.value_infos.extend([value_info for value_info in graph2.value_infos if value_info not in io_map_g2_ins])
+
+        # update g.node_map, g.prev_map and next_map
+        graph.update_map()
+
+        return graph
+
     @classmethod
     def parse(cls, path_or_bytes: Union[str, ModelProto, GraphProto], add_name_suffix: bool = False) -> 'OnnxGraph':
         if isinstance(path_or_bytes, str):
+            if not Rule.input_file().max_size(MAX_FILE_SIZE_200G).check(path_or_bytes):
+                logger.error("Load onnx failed")
+                raise OSError
             onnx_model = onnx.load(path_or_bytes)
         if isinstance(path_or_bytes, ModelProto):
             onnx_model = path_or_bytes
@@ -305,65 +374,6 @@ class OnnxGraph(BaseGraph):
 
         return graph
 
-    @staticmethod
-    def connect_graph(graph1: 'OnnxGraph', graph2: 'OnnxGraph', io_map: List[str], graph_name: str):
-        """Implementation of concatenating two graphs based on the io_map.
-
-        1. Connect the outputs of the first graph and inputs of the second one.
-        2. Update value_infos, initializers, nodes, node_map, prev_map, next_map
-
-        Arguments:
-            graph1 (OnnxGraph): The first ONNX graph
-            graph2 (OnnxGraph): The second ONNX graph
-            io_map (list of pairs of string): The pairs of names [(out0/in0), (out1/in0), ...]
-                                                representing outputs of the first graph and inputs of the second
-                                                to be connected
-            graph_name (str): name of the combined graph.
-                              If not provided, the name is graph1.name and graph2.name connected by "_"
-
-        Returns:
-            graph (OnnxGraph): Combined graph
-
-        """
-
-        g_name = graph_name if graph_name else "_".join([graph1.name, graph2.name])
-        graph = OnnxGraph(g_name)
-        graph.nodes.extend(graph1.nodes)
-        g2_node_begin = len(graph.nodes)
-        graph.nodes.extend(graph2.nodes)
-        g2_node_end = len(graph.nodes)
-
-        io_map_g1_outs = {io[0] for io in io_map}
-        io_map_g2_ins = {io[1] for io in io_map}
-        reversed_io_map = {in_name: out_name for out_name, in_name in io_map}
-
-        # connecting outputs of the first graph with the inputs of the second
-        for node_idx in range(g2_node_begin, g2_node_end):
-            node = graph.nodes[node_idx]
-            for idx, name_ in enumerate(node.inputs):
-                if name_ in reversed_io_map:
-                    node.inputs[idx] = reversed_io_map.get(name_)
-
-        # add inputs and outputs
-        graph.inputs.extend(graph1.inputs)
-        graph.inputs.extend([inp for inp in graph2.inputs if inp.name not in io_map_g2_ins])
-
-        graph.outputs.extend([out for out in graph1.outputs if out.name not in io_map_g1_outs])
-        graph.outputs.extend(graph2.outputs)
-
-        # add initializers
-        graph.initializers.extend(graph1.initializers)
-        graph.initializers.extend([ini for ini in graph2.initializers if ini.name not in io_map_g2_ins])
-
-        # add value_infos
-        graph.value_infos.extend(graph1.value_infos)
-        graph.value_infos.extend([value_info for value_info in graph2.value_infos if value_info not in io_map_g2_ins])
-
-        # update g.node_map, g.prev_map and next_map
-        graph.update_map()
-
-        return graph
-
     def add_input(self, name: str, dtype: str, shape: Sequence[Union[int, str]]) -> OnnxPlaceHolder:
         dtype = np.dtype(dtype)
         graph_input = OnnxPlaceHolder(name, dtype, shape)
@@ -444,13 +454,17 @@ class OnnxGraph(BaseGraph):
 
         try:
             inferred_model = onnx.shape_inference.infer_shapes(model, strict_mode=True)
-        except ValueError:
+        except ValueError as e:
             with tempfile.TemporaryDirectory() as tmpdirname:
                 onnx.save(model, os.path.join(tmpdirname, 'model.onnx'), save_as_external_data=True)
                 onnx.shape_inference.infer_shapes_path(
                     os.path.join(tmpdirname, 'model.onnx'), os.path.join(tmpdirname, 'inferred_model.onnx')
                 )
-                inferred_model = onnx.load(os.path.join(tmpdirname, 'inferred_model.onnx'))
+                infer_model_path = os.path.join(tmpdirname, 'inferred_model.onnx')
+                if not Rule.input_file().max_size(MAX_FILE_SIZE_200G).check(infer_model_path):
+                    logger.error("Load inferred model failed")
+                    raise OSError from e
+                inferred_model = onnx.load(infer_model_path)
 
         # update value_infos
         graph = inferred_model.graph
@@ -564,7 +578,11 @@ class OnnxGraph(BaseGraph):
                     value_infos.append(self.get_node(inp, PlaceHolder))
 
         # remove isolated inputs
-        valid_inputs = [inp for node in self.nodes for inp in node.inputs]
+        valid_inputs = [
+            inp 
+            for node in self.nodes 
+            for inp in node.inputs
+        ]
         input_name_list = list(set(valid_inputs) & set(input_name_list))
 
         # check input shape and input dtype

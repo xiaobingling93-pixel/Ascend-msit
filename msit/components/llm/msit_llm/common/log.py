@@ -13,44 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
+from components.utils.log import logger, set_log_level, LOG_LEVELS
 
 
-class SanitizeFilter(logging.Filter):
-    def filter(self, record: logging.LogRecord) -> bool:
-        if record.msg:
-            record.msg = repr(record.msg)
-        return super().filter(record)
-
-
-def get_logger():
-    llm_logger = logging.getLogger("msit_llm_logger")
-    llm_logger.propagate = False
-    llm_logger.setLevel(logging.INFO)
-    if not llm_logger.handlers:
-        stream_handler = logging.StreamHandler()
-        formatter = logging.Formatter('%(asctime)s - %(process)s - %(name)s - %(levelname)s - %(message)s')
-        stream_handler.setFormatter(formatter)
-        stream_handler.addFilter(SanitizeFilter())
-        llm_logger.addHandler(stream_handler)
-    return llm_logger
-
-
-logger = get_logger()
-
-
-LOG_LEVELS = {
-    "debug": logging.DEBUG,
-    "info": logging.INFO,
-    "warning": logging.WARNING,
-    "error": logging.ERROR,
-    "fatal": logging.FATAL,
-    "critical": logging.CRITICAL
-}
-
-
-def set_log_level(level="info"):
-    if level.lower() in LOG_LEVELS:
-        logger.setLevel(LOG_LEVELS.get(level.lower()))
-    else:
-        logger.warning("Set %s log level failed.", level)
+logger.name = 'msit_llm_loger'

@@ -78,6 +78,7 @@ ATTR_OBJECT_COUNT = "$Object.Count"
 ATTR_OBJECT_PREFIX = "$Object."
 
 MAX_DATA_SIZE = 2 * 1024 * 1024 * 1024  # 2G
+MAX_WEIGHT_DATA_SIZE = 32 * 1024 * 1024 * 1024  # 32G
 
 ASCEND_TOOLKIT_HOME = "ASCEND_TOOLKIT_HOME"
 ATB_PROB_LIB_WITH_ABI = "libatb_probe_abi1.so"
@@ -137,7 +138,7 @@ MSIT_BAD_CASE_FOLDER_NAME = 'msit_bad_case'
 
 
 def get_timestamp_sync():
-    max_timestamp = int(datetime.datetime.now().strftime("%s"))
+    max_timestamp = int(datetime.datetime.now(tz=datetime.timezone.utc).strftime("%s"))
 
     world_size = int(os.environ.get("LOCAL_WORLD_SIZE", "1"))
     if world_size < 2:

@@ -60,18 +60,24 @@ CONFIG_ATTR_CANDIDATES = {
 
 NN_MODULE_STACK = "nn_module_stack"
 SKIP_NODES = ["size", "getitem", "to", "float", "finfo", "dropout"]
+SKIP_MODULES = ["Dropout"]
 TORCH_MODULE_TO_ATB_MAP = {
     "Embedding": dict(op_type="Gather", op_param={}, is_weights_first=True),
     "Gather": dict(op_type="Gather", op_param={}),
     ".*RMSNorm$": dict(op_type="RmsNorm", op_param={"layerType": "RMS_NORM_NORM", "epsilon": 1e-5}),
-    ".*LayerNorm$": dict(op_type="LayerNorm", op_param={"layerType": "LAYER_NORM_UNDEFINED"}),
+    ".{0,100}LayerNorm$": dict(
+        op_type="LayerNorm",
+        op_param={"layerType": "LAYER_NORM_NORM", "normParam": {"beginParamsAxis": 1, "beginNormAxis": 1}},
+    ),
     "Linear": dict(op_type="Linear", op_param={"hasBias": False, "enAccum": False}),
     ".*Rotary.*": dict(op_type="Rope", op_param={"rotaryCoeff": 2}),
     ".*Attention$": dict(
         op_type="SelfAttention",
         op_param={"headNum": 1, "kvHeadNum": 1, "calcType": "PA_ENCODER", "qkScale": 1, "maskType": "MASK_TYPE_NORM"},
     ),
-    "SiLU": dict(op_type="Activation", op_param={"activationType": "ACTIVATION_SWISH"}),
+    "SiLU.{0,100}": dict(op_type="Activation", op_param={"activationType": "ACTIVATION_SWISH"}),
+    "Gelu.{0,100}": dict(op_type="Activation", op_param={"activationType": "ACTIVATION_GELU"}),
+    ".{0,100}Gelu": dict(op_type="Activation", op_param={"activationType": "ACTIVATION_GELU"}),
     "add": dict(op_type="Elewise", op_param={"elewiseType": "ELEWISE_ADD"}),
     "mul": dict(op_type="Elewise", op_param={"elewiseType": "ELEWISE_MUL"}),
 }
@@ -259,6 +265,7 @@ class ATBModel:
 
         self.kv_cache_names = [ii for ii in self.input_names if ii.split(".")[-1] in KV_CACHE_SURFFIX]
         self.past_key_values = {}
+        self.atb_model_has_set_weights = hasattr(self.atb_model, "set_weights")  # Supported after RC3
 
     def __call__(self, input_ids=None, position_ids=None, slots_mapping=None, **kwargs):
         return self.forward(input_ids, position_ids, slots_mapping, **kwargs)
@@ -266,21 +273,8 @@ class ATBModel:
     def init_kv_cache(self):
         self.past_key_values = {ii: torch.zeros(self.cache_shape).to(self.dtype).npu() for ii in self.kv_cache_names}
         self.weights.update(self.past_key_values)
-        self.atb_model.set_weights(self.past_key_values)
-
-    def _calc_inv_freq_by_rope_theta(self):
-        inv_freq_weight = 1.0 / (self.rope_theta ** (torch.arange(0, self.head_dim, 2) / self.head_dim))
-        return inv_freq_weight.float().npu()
-
-    def _calc_cos_sin_table_from_inv_freq(self, position_ids):
-        logger.debug(f"self.inv_freq_weight.shape = {self.inv_freq_weight.shape}")
-        logger.debug(f"position_ids.shape = {position_ids.shape}")
-        left = self.inv_freq_weight[None, :, None]
-        right = position_ids[:, None, :] if position_ids.dim() == 2 else position_ids[None, None, :]
-        freq = (left.to(right.device).float() @ right.float()).transpose(1, 2)
-        freq = torch.cat([freq, freq], dim=-1)[0].npu()  # has to be float npu values, and dim == 2
-        logger.debug(f"freq.shape = {freq.shape}")
-        return freq.cos().to(self.dtype), freq.sin().to(self.dtype)
+        if self.atb_model_has_set_weights:
+            self.atb_model.set_weights(self.past_key_values)
 
     def set_weights(self, weights):
         source_weights = set(weights.keys())
@@ -311,7 +305,8 @@ class ATBModel:
             attention_mask = torch.where((1 - torch.tril(mask_tensor)).to(torch.bool), -torch.inf, 0)
             self.attention_mask = attention_mask.to(self.dtype).npu()
 
-        self.atb_model.set_weights(self.weights)  # ATB provided function, no need to pass weights again
+        if self.atb_model_has_set_weights:
+            self.atb_model.set_weights(self.weights)  # ATB provided function, no need to pass weights again
 
         if len(self.kv_cache_names) > 0:
             self.init_kv_cache()
@@ -322,11 +317,11 @@ class ATBModel:
         if len(missing_weights) > 0:
             logger.warning(f"missing weights: {missing_weights}")
 
-    def forward(
-        self, input_ids=None, position_ids=None, inputs_embeds=None, slots_mapping=None, seq_len=None, **kwargs
-    ):
+    def forward(self, input_ids=None, position_ids=None, inputs_embeds=None, slots_mapping=None, **kwargs):
         # Basic inputs
         model_inputs, batch_size, cur_pos, input_len = {}, 1, 1, 1
+        if not self.atb_model_has_set_weights:
+            model_inputs.update(self.weights)
         if input_ids is not None:
             batch_size = input_ids.shape[0] if input_ids.dim() == 2 else 1
             input_len = cur_pos = input_ids.shape[-1]
@@ -343,10 +338,6 @@ class ATBModel:
             logger.debug(f"cur_pos = {cur_pos}")
 
         # inputs interpreted from others, or with default values
-        if FIXED_INPUTS.seq_len in self.inputs:
-            if seq_len is None:
-                seq_len = torch.ones([batch_size], dtype=torch.int).to(position_ids.device) * cur_pos
-            model_inputs[FIXED_INPUTS.seq_len] = seq_len.npu()
         if FIXED_INPUTS.slots_mapping in self.inputs:
             if slots_mapping is None:
                 slots_mapping = torch.zeros([batch_size * input_len], dtype=torch.int)
@@ -363,8 +354,8 @@ class ATBModel:
         if FIXED_INPUTS.attention_mask in self.inputs and FIXED_INPUTS.attention_mask not in model_inputs:
             model_inputs[FIXED_INPUTS.attention_mask] = self.attention_mask
         if FIXED_INPUTS.seq_len in self.inputs and FIXED_INPUTS.seq_len not in model_inputs:
-            seq_len = torch.ones([batch_size], dtype=torch.int).to(position_ids.device) * cur_pos
-            model_inputs[FIXED_INPUTS.attention_mask] = self.attention_mask
+            seq_len = torch.ones([batch_size], dtype=torch.int) * cur_pos
+            model_inputs[FIXED_INPUTS.seq_len] = seq_len.npu()
 
         # Show missing inputs, in some cases like testing scenario, this may not an error
         missing_inputs = self.inputs - set(model_inputs.keys()) - set(self.weights.keys())
@@ -375,23 +366,33 @@ class ATBModel:
 
         # Creats output. Here output_shape maybe None or a dict or list
         if self.output_shape is None:
-            self.model_outputs = {
-                ii: torch.ones([batch_size * input_len, self.vocab_size]).to(self.dtype).npu()
-                    for ii in self.outputs
-            }
+            self.model_outputs = {ii: torch.ones([batch_size * input_len, self.vocab_size]).to(self.dtype).npu() \
+                                  for ii in self.outputs}
         elif isinstance(self.output_shape, dict):
             self.model_outputs = {kk: torch.ones(vv).to(self.dtype).npu() for kk, vv in self.output_shape.items()}
         else:
-            self.model_outputs = {
-                kk: torch.ones(vv).to(self.dtype).npu()
-                for kk, vv in zip(self.outputs, self.output_shape)
-            }
+            self.model_outputs = {kk: torch.ones(vv).to(self.dtype).npu() \
+                                  for kk, vv in zip(self.outputs, self.output_shape)}
 
         # Run forward
         bind_map = {}
         if FIXED_INPUTS.seq_len in self.inputs:
             bind_map[FIXED_INPUTS.seq_len] = model_inputs[FIXED_INPUTS.seq_len].cpu()
         return self.atb_model.forward(model_inputs, self.model_outputs, bind_map)
+
+    def _calc_inv_freq_by_rope_theta(self):
+        inv_freq_weight = 1.0 / (self.rope_theta ** (torch.arange(0, self.head_dim, 2) / self.head_dim))
+        return inv_freq_weight.float().npu()
+
+    def _calc_cos_sin_table_from_inv_freq(self, position_ids):
+        logger.debug(f"self.inv_freq_weight.shape = {self.inv_freq_weight.shape}")
+        logger.debug(f"position_ids.shape = {position_ids.shape}")
+        left = self.inv_freq_weight[None, :, None]
+        right = position_ids[:, None, :] if position_ids.dim() == 2 else position_ids[None, None, :]
+        freq = (left.to(right.device).float() @ right.float()).transpose(1, 2)
+        freq = torch.cat([freq, freq], dim=-1)[0].npu()  # has to be float npu values, and dim == 2
+        logger.debug(f"freq.shape = {freq.shape}")
+        return freq.cos().to(self.dtype), freq.sin().to(self.dtype)
 
 
 class ATBModelFromTorch(ATBModel):
@@ -486,7 +487,8 @@ class ATBModelFromTorch(ATBModel):
                 vv["op_param"].update({"epsilon": self.rms_norm_eps})
             self.torch_module_to_atb_map[re_key] = Operation(**vv)
 
-        self.pre_query_name, self.pre_key_name, self.pre_value_name, self.is_apply_rope = "", "", "", False
+        self.pre_qkv_name, self.pre_query_name, self.pre_key_name, self.pre_value_name = "", "", "", ""
+        self.is_apply_rope = False
         self.model_inputs, self.model_outputs, self.operations = [], [], []
         # base graph is set execute_as_single=False, has to keep all operaions as property
         self.base_graph_operations, self.k_cache_names, self.v_cache_names = [], [], []
@@ -645,248 +647,14 @@ class ATBModelFromTorch(ATBModel):
         write_file(output_file, contents_str)
         return output_file
 
-    def _get_node_type_and_inputs_and_name(self, node, output_node_map=None):
-        output_node_map = output_node_map or {}
-        cur_module_name = self._get_module_name_by_nn_module_stack(node)
-        if node.op == FX_OP_TYPES.call_function and self._find_in_torch_module_to_atb_map(node.target.__name__):
-            node_module_type = node.target.__name__
-            # No other inputs if function
-            cur_inputs = []
-            for ii in node.all_input_nodes:
-                if ii.name not in output_node_map:
-                    continue
-                cur_inputs += output_node_map[ii.name]
-            module_name = cur_module_name + "." + node.name
-        else:
-            node_module_type = self._get_module_type_by_nn_module_stack(node)
-            # None marks for placeholder of other inputs
-            cur_inputs = self.weight_stack_map.get(cur_module_name, []) + [None]
-            module_name = cur_module_name
-        return node_module_type, cur_inputs, module_name
-
-    def _check_and_set_pre_qkv_name(self, atb_operation):
-        if atb_operation.op_type == "Linear":
-            sub_name = atb_operation.op_name.split(".")[-1]
-            if "q" in sub_name:
-                self.pre_query_name = atb_operation.outputs[0]
-            elif "k" in sub_name:
-                self.pre_key_name = atb_operation.outputs[0]
-            elif "v" in sub_name:
-                self.pre_value_name = atb_operation.outputs[0]
-
-    def _find_in_torch_module_to_atb_map(self, node_type):
-        for kk, vv in self.torch_module_to_atb_map.items():
-            if kk.fullmatch(node_type):
-                return vv.copy()
-        return None
-
-    def _convert_module(self, node_module_type, node_module_name, input_names):
-        atb_operation = self._find_in_torch_module_to_atb_map(node_module_type)
-        outputs = [node_module_name + ".out"]
-        atb_operation.op_name = node_module_name
-        atb_operation.inputs = getattr(atb_operation, "inputs", []) + input_names
-        atb_operation.outputs = getattr(atb_operation, "outputs", []) + outputs
-        return atb_operation
-
-    def _op_process_linear(self, atb_operation=None, module_name=""):
-        bias_name = f"{atb_operation.op_name}.bias"
-        if bias_name in self.weight_names:
-            atb_operation.op_param.update({"hasBias": True})
-        self.operations.append(atb_operation)
-
-    def _op_process_rope(self, atb_operation=None, module_name=""):
-        self.is_apply_rope = True
-        self.model_inputs += [FIXED_INPUTS.cos_table, FIXED_INPUTS.sin_table]
-        self.operations.append(
-            self._convert_module("Gather", "gather_cos", [FIXED_INPUTS.cos_table, FIXED_INPUTS.position_ids])
-        )
-        self.operations.append(
-            self._convert_module("Gather", "gather_sin", [FIXED_INPUTS.sin_table, FIXED_INPUTS.position_ids])
-        )
-
-        if FIXED_INPUTS.position_ids not in self.model_inputs:
-            self.model_inputs += [FIXED_INPUTS.position_ids]
-
-    def _op_process_attention(self, atb_operation=None, module_name=""):
-        atb_operation.inputs = [
-            module_name + ".q_embed_",
-            module_name + ".k_embed_",
-            module_name + ".v_embed_",
-            FIXED_INPUTS.attention_mask,
-            FIXED_INPUTS.seq_len,
-        ]
-
-        query_name, key_name = self.pre_query_name, self.pre_key_name
-        if self.is_apply_rope:
-            inputs = [query_name, key_name, "gather_cos.out", "gather_sin.out", FIXED_INPUTS.seq_len]
-            query_name, key_name = module_name + ".q_embed", module_name + ".k_embed"
-            self.operations.append(
-                Operation(
-                    op_type="Rope",
-                    op_param={"rotaryCoeff": 2},
-                    inputs=inputs,
-                    outputs=[query_name, key_name],
-                    op_name=module_name + ".rope",
-                )
-            )
-
-        k_cache_name = module_name + "." + KV_CACHE_SURFFIX.k_cache
-        v_cache_name = module_name + "." + KV_CACHE_SURFFIX.v_cache
-        reshape_and_cache_inputs = [
-            module_name + ".k_embed_",
-            module_name + ".v_embed_",
-            k_cache_name,
-            v_cache_name,
-            FIXED_INPUTS.slots_mapping,
-        ]
-        self.k_cache_names.append(k_cache_name)
-        self.v_cache_names.append(v_cache_name)
-        self.operations += [
-            Operation(
-                op_type="add_reshape",
-                function=lambda org_shape: [org_shape[0], self.num_attention_heads, self.head_dim],
-                inputs=[query_name],
-                outputs=[module_name + ".q_embed_"],
-                op_name=module_name + ".q." + RESHPAE_KIND.reshape_qkv,
-            ),
-            Operation(
-                op_type="add_reshape",
-                function=lambda org_shape: [org_shape[0], self.num_key_value_heads, self.head_dim],
-                inputs=[key_name],
-                outputs=[module_name + ".k_embed_"],
-                op_name=module_name + ".k." + RESHPAE_KIND.reshape_qkv,
-            ),
-            Operation(
-                op_type="add_reshape",
-                function=lambda org_shape: [org_shape[0], self.num_key_value_heads, self.head_dim],
-                inputs=[self.pre_value_name],
-                outputs=[module_name + ".v_embed_"],
-                op_name=module_name + ".v." + RESHPAE_KIND.reshape_qkv,
-            ),
-            Operation(
-                op_type="ReshapeAndCache",
-                op_param={},
-                inputs=reshape_and_cache_inputs,
-                outputs=[k_cache_name, v_cache_name],
-                op_name=module_name + ".reshape_and_cache",
-            ),
-            atb_operation,
-            Operation(
-                op_type="add_reshape",
-                function=lambda org_shape: [org_shape[0], reduce(lambda xx, yy: xx * yy, org_shape[1:])],
-                inputs=atb_operation.outputs,
-                outputs=[ii + "_" for ii in atb_operation.outputs],
-                op_name=module_name + "." + RESHPAE_KIND.reshape_0_12,
-            ),
-        ]
-
-        if FIXED_INPUTS.slots_mapping not in self.model_inputs:
-            self.model_inputs += [
-                FIXED_INPUTS.slots_mapping,
-                FIXED_INPUTS.attention_mask,
-                FIXED_INPUTS.seq_len,
-            ]
-        self.model_inputs += [k_cache_name, v_cache_name]
-
-    def _refine_inputs_outputs(self, input_node_map, output_node_map, operation_outputs):
-        gathered_module_inputs = {}
-        for kk, vv in input_node_map.items():
-            gathered_inputs = []
-            for ii in vv:
-                if ii in output_node_map:
-                    gathered_inputs += output_node_map[ii]
-            for ii in set(gathered_inputs):
-                if ii == kk or ii == kk + ".out":
-                    continue
-                gathered_module_inputs.setdefault(kk, []).extend(
-                    operation_outputs.get(ii, ii if isinstance(ii, list) else [ii])
-                )
-
-        for op in self.operations:
-            if not isinstance(op, list) and (len(op.inputs) == 0 or op.inputs[-1] is not None):
-                continue
-
-            op.inputs = op.inputs[:-1]  # Exclude last None
-            if op.is_weights_first:
-                op.inputs = op.inputs + gathered_module_inputs.get(op.op_name, [])
-            else:
-                op.inputs = gathered_module_inputs.get(op.op_name, []) + op.inputs
-
-    def _replace_input_ids_by_inputs_embeds_for_vl_model(self):
-        if FIXED_INPUTS.input_ids in self.model_inputs:
-            self.model_inputs = [
-                FIXED_INPUTS.inputs_embeds if ii == FIXED_INPUTS.input_ids else ii for ii in self.model_inputs
-            ]
-
-        embed_op_id, embed_outputs = -1, None
-        for op_id, op in enumerate(self.operations):
-            if len(op.inputs) == 2 and len(op.outputs) == 1 and FIXED_INPUTS.input_ids in op.inputs:  # Embedding
-                op.inputs = [FIXED_INPUTS.inputs_embeds]
-                embed_outputs = op.outputs[0]
-                embed_op_id = op_id
-                logger.info(f"Got Embedding op, embed_op_id: {embed_op_id}")
-                continue
-            if embed_outputs is None:
-                continue
-            if embed_outputs in op.inputs:
-                op.inputs = [FIXED_INPUTS.inputs_embeds if ii == embed_outputs else ii for ii in op.inputs]
-
-        if embed_op_id >= 0:
-            logger.info(f"Remove op: {self.operations[embed_op_id]}")
-            logger.info(f"Replace op inner names {embed_outputs} -> {FIXED_INPUTS.inputs_embeds}")
-            self.operations.pop(embed_op_id)
-
-    def _stack_operations(self):
-        stacked_operations, cur_stack, pre_stack_id = [], [], -1
-        for ii in self.operations:
-            cur_stack_id = self.get_cur_repeat_block_idx(ii.op_name)
-            if cur_stack_id == -1:  # Not a repeated block, could be in or out block
-                if len(cur_stack) > 0:
-                    stacked_operations.append(cur_stack)
-                stacked_operations.append(ii)
-                cur_stack = []
-                continue
-            if pre_stack_id != cur_stack_id:  # Changed to another block
-                if len(cur_stack) > 0:
-                    stacked_operations.append(cur_stack)
-                cur_stack = [ii]
-                pre_stack_id = cur_stack_id
-            else:  # Repeat block
-                cur_stack.append(ii)
-
-        all_inputs = set([ii for op in self.operations for ii in op.inputs])
-        base_graph_in_tensors = self.model_inputs + self.weight_names
-        valid_base_graph_inputs = [ii for ii in base_graph_in_tensors if ii in all_inputs]
-
-        all_outputs = set([ii for op in self.operations for ii in op.outputs])
-        base_graph_out_tensors = [ii for ii in all_outputs if ii not in all_inputs]
-
-        # record inputs and outputs for stacked GraphOperations
-        stacked_inputs, stacked_outputs = [valid_base_graph_inputs], [base_graph_out_tensors]
-        for ops in stacked_operations:
-            if not isinstance(ops, list):
-                continue
-            cur_inputs, cur_outputs, inplace_outputs = [], [], []
-            for op in ops:
-                for ii in op.inputs:
-                    cur_inputs.append(ii)
-                for ii in op.outputs:    
-                    cur_outputs.append(ii)
-                    if ii in op.inputs:
-                        inplace_outputs.append(ii)
-            cur_inputs_set = set(cur_inputs)
-            cur_outputs_set = set(cur_outputs)
-            inplace_outputs_set = set(inplace_outputs)
-            stacked_inputs.append(list(cur_inputs_set - (cur_outputs_set - inplace_outputs_set)))
-            stacked_outputs.append(list(cur_outputs_set & (all_inputs - cur_inputs_set)))
-        return stacked_operations, stacked_inputs, stacked_outputs
-
     def convert_fx_traced_module(self):
         previous_module_name, cur_module_name, previous_operation_out, base_module_name = None, None, None, None
         input_node_map, output_node_map, operation_outputs = {}, {}, {}
 
         for node in self.traced_module.graph.nodes:
-            logger.debug(f"\nnode.name = {node.name}, node.op = {node.op}")
+            logger.debug("=" * 30 + "\n")
+            logger.debug(f"node.name = {node.name}, node.op = {node.op}, node.meta = {node.meta}")
+            logger.debug(f"node.all_input_nodes = {node.all_input_nodes}, node.target = {node.target}")
             if node.op == FX_OP_TYPES.placeholder:  # Input node
                 self.model_inputs.append(node.name)
                 input_node_map[node.name] = [node.name]
@@ -896,6 +664,8 @@ class ATBModelFromTorch(ATBModel):
                 self.model_outputs.append(node.name)
                 continue
             if not hasattr(node, "meta") or not node.meta.get(NN_MODULE_STACK, []):
+                if node.op == FX_OP_TYPES.call_function:
+                    output_node_map[node.name] = previous_operation_out  # op like getitem, set to previous output
                 continue
 
             if base_module_name is None:
@@ -910,11 +680,17 @@ class ATBModelFromTorch(ATBModel):
             if cur_module_name == previous_module_name:
                 continue
             if self._should_skip_node(node):
+                logger.debug(f"Current node skipped: {node.name}")
+                continue
+            if node.op == FX_OP_TYPES.call_module and self._get_module_type_by_nn_module_stack(node) in SKIP_MODULES:
+                logger.debug(f"Current module skipped: {node.name}")
+                cur_module_name = previous_module_name  # Module like Dropout skipped, set back to previous name
                 continue
             previous_module_name = cur_module_name
 
             logger.debug(f"cur_module_name = {cur_module_name}, node.name = {node.name}")
             node_module_type, cur_inputs, module_name = self._get_node_type_and_inputs_and_name(node, output_node_map)
+            logger.debug(f"node_module_type={node_module_type}, cur_inputs={cur_inputs}, module_name={module_name}")
             if self._find_in_torch_module_to_atb_map(node_module_type) is None:
                 logger.warning(f"node not supported: node.name = {node.name}, node.type = {node_module_type}")
                 continue
@@ -1024,6 +800,263 @@ class ATBModelFromTorch(ATBModel):
         atb_model = _build_atb_model(self.model_name, stacked_operations)
         return atb_model
 
+    def _get_node_type_and_inputs_and_name(self, node, output_node_map=None):
+        output_node_map = output_node_map or {}
+        cur_module_name = self._get_module_name_by_nn_module_stack(node)
+        cur_model_type = self._get_module_type_by_nn_module_stack(node)
+        if node.op == FX_OP_TYPES.call_function and node.target.__name__ == "mul" and "gelu" in cur_model_type.lower():
+            cur_inputs = [None]
+            module_name = cur_module_name
+        elif node.op == FX_OP_TYPES.call_function and self._find_in_torch_module_to_atb_map(node.target.__name__):
+            cur_model_type = node.target.__name__
+            # No other inputs if function
+            cur_inputs = []
+            for ii in node.all_input_nodes:
+                if ii.name not in output_node_map:
+                    continue
+                cur_inputs += output_node_map[ii.name]
+            module_name = cur_module_name + "." + node.name
+        else:
+            # None marks for placeholder of other inputs
+            cur_inputs = self.weight_stack_map.get(cur_module_name, []) + [None]
+            module_name = cur_module_name
+        return cur_model_type, cur_inputs, module_name
+
+    def _check_and_set_pre_qkv_name(self, atb_operation):
+        if atb_operation.op_type == "Linear":
+            sub_name = atb_operation.op_name.split(".")[-1]
+            logger.debug(f"Checking if qkv Linear: {atb_operation}")
+            if all(sub in sub_name for sub in ("q", "k", "v")):
+                self.pre_qkv_name = atb_operation.outputs[0]
+            elif "q" in sub_name:
+                self.pre_query_name = atb_operation.outputs[0]
+            elif "k" in sub_name:
+                self.pre_key_name = atb_operation.outputs[0]
+            elif "v" in sub_name:
+                self.pre_value_name = atb_operation.outputs[0]
+
+    def _find_in_torch_module_to_atb_map(self, node_type):
+        for kk, vv in self.torch_module_to_atb_map.items():
+            if kk.fullmatch(node_type):
+                return vv.copy()
+        return None
+
+    def _convert_module(self, node_module_type, node_module_name, input_names):
+        atb_operation = self._find_in_torch_module_to_atb_map(node_module_type)
+        outputs = [node_module_name + ".out"]
+        atb_operation.op_name = node_module_name
+        atb_operation.inputs = getattr(atb_operation, "inputs", []) + input_names
+        atb_operation.outputs = getattr(atb_operation, "outputs", []) + outputs
+        return atb_operation
+
+    def _op_process_linear(self, atb_operation=None, module_name=""):
+        bias_name = f"{atb_operation.op_name}.bias"
+        if bias_name in self.weight_names:
+            atb_operation.op_param.update({"hasBias": True})
+        self.operations.append(atb_operation)
+
+    def _op_process_rope(self, atb_operation=None, module_name=""):
+        self.is_apply_rope = True
+        self.model_inputs += [FIXED_INPUTS.cos_table, FIXED_INPUTS.sin_table]
+        self.operations.append(
+            self._convert_module("Gather", "gather_cos", [FIXED_INPUTS.cos_table, FIXED_INPUTS.position_ids])
+        )
+        self.operations.append(
+            self._convert_module("Gather", "gather_sin", [FIXED_INPUTS.sin_table, FIXED_INPUTS.position_ids])
+        )
+
+        if FIXED_INPUTS.position_ids not in self.model_inputs:
+            self.model_inputs += [FIXED_INPUTS.position_ids]
+
+    def _op_process_attention(self, atb_operation=None, module_name=""):
+        atb_operation.inputs = [
+            module_name + ".q_embed_",
+            module_name + ".k_embed_",
+            module_name + ".v_embed_",
+            FIXED_INPUTS.attention_mask,
+            FIXED_INPUTS.seq_len,
+        ]
+
+        query_name, key_name, value_name = self.pre_query_name, self.pre_key_name, self.pre_value_name
+        if self.pre_qkv_name:
+            logger.debug(f"Got stacked QKV Linear: {self.pre_qkv_name}")
+            inputs = self.pre_qkv_name
+            query_name, key_name, value_name = module_name + ".q", module_name + ".k", module_name + ".v"
+            self.operations.append(
+                Operation(
+                    op_type="Split",
+                    op_param={"splitDim": 1, "splitNum": 3},
+                    inputs=[inputs],
+                    outputs=[query_name, key_name, value_name],
+                    op_name=module_name + ".split",
+                )
+            )
+        # Set back to default value
+        self.pre_qkv_name, self.pre_query_name, self.pre_key_name, self.pre_value_name = "", "", "", ""
+
+        if self.is_apply_rope:
+            inputs = [query_name, key_name, "gather_cos.out", "gather_sin.out", FIXED_INPUTS.seq_len]
+            query_name, key_name = module_name + ".q_embed", module_name + ".k_embed"
+            self.operations.append(
+                Operation(
+                    op_type="Rope",
+                    op_param={"rotaryCoeff": 2},
+                    inputs=inputs,
+                    outputs=[query_name, key_name],
+                    op_name=module_name + ".rope",
+                )
+            )
+
+        k_cache_name = module_name + "." + KV_CACHE_SURFFIX.k_cache
+        v_cache_name = module_name + "." + KV_CACHE_SURFFIX.v_cache
+        reshape_and_cache_inputs = [
+            module_name + ".k_embed_",
+            module_name + ".v_embed_",
+            k_cache_name,
+            v_cache_name,
+            FIXED_INPUTS.slots_mapping,
+        ]
+        self.k_cache_names.append(k_cache_name)
+        self.v_cache_names.append(v_cache_name)
+        self.operations += [
+            Operation(
+                op_type="add_reshape",
+                function=lambda org_shape: [org_shape[0], self.num_attention_heads, self.head_dim],
+                inputs=[query_name],
+                outputs=[module_name + ".q_embed_"],
+                op_name=module_name + ".q." + RESHPAE_KIND.reshape_qkv,
+            ),
+            Operation(
+                op_type="add_reshape",
+                function=lambda org_shape: [org_shape[0], self.num_key_value_heads, self.head_dim],
+                inputs=[key_name],
+                outputs=[module_name + ".k_embed_"],
+                op_name=module_name + ".k." + RESHPAE_KIND.reshape_qkv,
+            ),
+            Operation(
+                op_type="add_reshape",
+                function=lambda org_shape: [org_shape[0], self.num_key_value_heads, self.head_dim],
+                inputs=[value_name],
+                outputs=[module_name + ".v_embed_"],
+                op_name=module_name + ".v." + RESHPAE_KIND.reshape_qkv,
+            ),
+            Operation(
+                op_type="ReshapeAndCache",
+                op_param={},
+                inputs=reshape_and_cache_inputs,
+                outputs=[k_cache_name, v_cache_name],
+                op_name=module_name + ".reshape_and_cache",
+            ),
+            atb_operation,
+            Operation(
+                op_type="add_reshape",
+                function=lambda org_shape: [org_shape[0], reduce(lambda xx, yy: xx * yy, org_shape[1:])],
+                inputs=atb_operation.outputs,
+                outputs=[ii + "_" for ii in atb_operation.outputs],
+                op_name=module_name + "." + RESHPAE_KIND.reshape_0_12,
+            ),
+        ]
+
+        if FIXED_INPUTS.slots_mapping not in self.model_inputs:
+            self.model_inputs += [
+                FIXED_INPUTS.slots_mapping,
+                FIXED_INPUTS.attention_mask,
+                FIXED_INPUTS.seq_len,
+            ]
+        self.model_inputs += [k_cache_name, v_cache_name]
+
+    def _refine_inputs_outputs(self, input_node_map, output_node_map, operation_outputs):
+        gathered_module_inputs = {}
+        for kk, vv in input_node_map.items():
+            gathered_inputs = []
+            for ii in vv:
+                if ii in output_node_map:
+                    gathered_inputs += output_node_map[ii]
+            for ii in set(gathered_inputs):
+                if ii == kk or ii == kk + ".out":
+                    continue
+                gathered_module_inputs.setdefault(kk, []).extend(
+                    operation_outputs.get(ii, ii if isinstance(ii, list) else [ii])
+                )
+
+        for op in self.operations:
+            if not isinstance(op, list) and (len(op.inputs) == 0 or op.inputs[-1] is not None):
+                continue
+
+            op.inputs = op.inputs[:-1]  # Exclude last None
+            if op.is_weights_first:
+                op.inputs = op.inputs + gathered_module_inputs.get(op.op_name, [])
+            else:
+                op.inputs = gathered_module_inputs.get(op.op_name, []) + op.inputs
+
+    def _replace_input_ids_by_inputs_embeds_for_vl_model(self):
+        if FIXED_INPUTS.input_ids in self.model_inputs:
+            self.model_inputs = [FIXED_INPUTS.inputs_embeds if ii == FIXED_INPUTS.input_ids else ii \
+                                 for ii in self.model_inputs]
+
+        embed_op_id, embed_outputs = -1, None
+        for op_id, op in enumerate(self.operations):
+            if len(op.inputs) == 2 and len(op.outputs) == 1 and FIXED_INPUTS.input_ids in op.inputs:  # Embedding
+                op.inputs = [FIXED_INPUTS.inputs_embeds]
+                embed_outputs = op.outputs[0]
+                embed_op_id = op_id
+                logger.info(f"Got Embedding op, embed_op_id: {embed_op_id}")
+                continue
+            if embed_outputs is None:
+                continue
+            if embed_outputs in op.inputs:
+                op.inputs = [FIXED_INPUTS.inputs_embeds if ii == embed_outputs else ii for ii in op.inputs]
+
+        if embed_op_id >= 0:
+            logger.info(f"Remove op: {self.operations[embed_op_id]}")
+            logger.info(f"Replace op inner names {embed_outputs} -> {FIXED_INPUTS.inputs_embeds}")
+            self.operations.pop(embed_op_id)
+
+    def _stack_operations(self):
+        stacked_operations, cur_stack, pre_stack_id = [], [], -1
+        for ii in self.operations:
+            cur_stack_id = self.get_cur_repeat_block_idx(ii.op_name)
+            if cur_stack_id == -1:  # Not a repeated block, could be in or out block
+                if len(cur_stack) > 0:
+                    stacked_operations.append(cur_stack)
+                stacked_operations.append(ii)
+                cur_stack = []
+                continue
+            if pre_stack_id != cur_stack_id:  # Changed to another block
+                if len(cur_stack) > 0:
+                    stacked_operations.append(cur_stack)
+                cur_stack = [ii]
+                pre_stack_id = cur_stack_id
+            else:  # Repeat block
+                cur_stack.append(ii)
+
+        all_inputs = set([ii for op in self.operations for ii in op.inputs])
+        base_graph_in_tensors = self.model_inputs + self.weight_names
+        valid_base_graph_inputs = [ii for ii in base_graph_in_tensors if ii in all_inputs]
+
+        all_outputs = set([ii for op in self.operations for ii in op.outputs])
+        base_graph_out_tensors = [ii for ii in all_outputs if ii not in all_inputs]
+
+        # record inputs and outputs for stacked GraphOperations
+        stacked_inputs, stacked_outputs = [valid_base_graph_inputs], [base_graph_out_tensors]
+        for ops in stacked_operations:
+            if not isinstance(ops, list):
+                continue
+            cur_inputs, cur_outputs, inplace_outputs = [], [], []
+            for op in ops:
+                for ii in op.inputs:
+                    cur_inputs.append(ii)
+                for ii in op.outputs:
+                    cur_outputs.append(ii)
+                    if ii in op.inputs:
+                        inplace_outputs.append(ii)
+            cur_inputs_set = set(cur_inputs)
+            cur_outputs_set = set(cur_outputs)
+            inplace_outputs_set = set(inplace_outputs)
+            stacked_inputs.append(list(cur_inputs_set - (cur_outputs_set - inplace_outputs_set)))
+            stacked_outputs.append(list(cur_outputs_set & (all_inputs - cur_inputs_set)))
+        return stacked_operations, stacked_inputs, stacked_outputs
+
 
 def generate_infer_file(output_file, source_path, is_vl_model=False):
     from pathlib import Path
@@ -1062,9 +1095,12 @@ def transform(source_path, input_names=BASIC_INPUT_NAMES, output_file=None, to_q
     logger.info(f"atb_model config:\n{atb_model.atb_model_config.to_dict()}\n")
 
     model_name = os.path.splitext(os.path.basename(output_file))[0]
+    input_info = "input_ids=torch.arange(input_len)"
+    if FIXED_INPUTS.position_ids in atb_model.inputs:
+        input_info += ", position_ids=torch.arange(input_len)"
     logger.info("=" * 30)
     logger.info(
-        """Run simple inference like:
+        f"""Run simple inference like:
 
     python3 -c "
     import torch, torch_npu
@@ -1076,12 +1112,10 @@ def transform(source_path, input_names=BASIC_INPUT_NAMES, output_file=None, to_q
     atb_model.set_weights(weights)
 
     input_len = 32
-    out = atb_model.forward(input_ids=torch.arange(input_len), position_ids=torch.arange(input_len))
+    out = atb_model.forward({input_info})
     print(out)
     "
-    """.format(
-            model_name=model_name
-        ).replace(
+    """.replace(
             " " * 4, ""
         )
     )

@@ -1,4 +1,5 @@
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -53,11 +54,11 @@ def safe_string(value):
 
 def check_input_path(input_path):
     if not os.access(input_path, os.F_OK):
-        logger.error("Input path {} is not exist.".format(input_path))
+        logger.error("Input path %r is not exist.", input_path)
         return False
 
     if not os.access(input_path, os.R_OK):
-        logger.error("Input path {} is not readable.".format(input_path))
+        logger.error("Input path %r is not readable.", input_path)
         return False
 
     return True
@@ -65,12 +66,12 @@ def check_input_path(input_path):
 
 def check_output_model_path(output_model):
     if os.path.isdir(output_model):
-        logger.error("Output path {} is a directory.".format(output_model))
+        logger.error("Output path %r is a directory.", output_model)
         return False
 
     model_dir = os.path.dirname(os.path.abspath(output_model))
     if not os.path.exists(model_dir):
-        logger.error("Output path {} is not exist.".format(output_model))
+        logger.error("Output path %r is not exist.", output_model)
         return False
 
     return True
@@ -237,7 +238,11 @@ def check_args(ctx: click.Context, params: click.Option, value: str):
     """
     check whether the param is provided
     """
-    args = [opt for param in ctx.command.params for opt in param.opts]
+    args = [
+        opt 
+        for param in ctx.command.params 
+        for opt in param.opts
+    ]
     if value in args:
         opt_name = parse_opt_name(params)
         raise click.BadOptionUsage(option_name=opt_name, message="Option {} requires an argument".format(opt_name))
@@ -246,7 +251,11 @@ def check_args(ctx: click.Context, params: click.Option, value: str):
 
 def check_node_name(ctx: click.Context, params: click.Option, value: str):
     value = check_args(ctx, params, value)
-    args = [opt + "=" for param in ctx.command.params for opt in param.opts]
+    args = [
+        opt + "=" 
+        for param in ctx.command.params 
+        for opt in param.opts
+    ]
     opt_name = parse_opt_name(params)
     for arg in args:
         if value.startswith(arg):

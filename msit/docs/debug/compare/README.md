@@ -14,15 +14,55 @@
 ### 容器方式安装
 容器方式安装目前提供了Ubuntu 18.04的docker镜像。在`<msit_project_root_path>/msit/components/debug/compare`目录下运行以下命令以构建镜像：
 ```shell
-docker build --build-arg CANN_TOOLKIT_PATH=Ascend-cann-tookit<version+arch>.run --build-arg CANN_AMCT_PATH=Ascend-cann-amctt<version+arch>.tar.gz \ 
---build-arg CAFFE_SRC=caffe-ascend-amct.zip -f Dockerfile . -t msit-caffe:latest
+docker build \
+--build-arg CANN_TOOLKIT_PATH=Ascend-cann-tookit<version+arch>.run \
+--build-arg CANN_AMCT_PATH=Ascend-cann-amctt<version+arch>.tar.gz \ 
+--build-arg CAFFE_SRC=caffe-ascend-amct.zip \
+--build-arg UBUNTU_X86_ARCHIVE=http://.*archive.ubuntu.com \
+--build-arg UBUNTU_X86_SECURITY=http://.*security.ubuntu.com \
+--build-arg UBUNTU_ARM64=http://ports.ubuntu.com \
+--build-arg APT_PATH=http://repo.huaweicloud.com \
+--build-arg PYTHON_PATH=https://www.python.org/ftp/python/3.7.5/Python-3.7.5.tgz \
+--build-arg PYPI_PATH=https://repo.huaweicloud.com/repository/pypi/simple \
+--build-arg PYPI_PATH_TRUST=repo.huaweicloud.com \
+--build-arg MSIT_PATH=https://gitee.com/ascend/msit.git \
+-f Dockerfile . -t msit-caffe:latest
 ```
-注意:
-1. 非root用户请加上sudo
-2. 请将Ascend-cann-tookit<version+arch>.run改为实际上的toolkit路径(必须是相对路径)
-3. 从这个[仓库](https://github.com/lenLRX/caffe)下载zip[代码](https://github.com/lenLRX/caffe/archive/refs/heads/ascend-amct.zip),得到的zip包可能叫ascend-amct.zip或caffe-ascend-amct.zip
-4. 从[这里](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)下载amct的包Ascend-cann-amct_5.1.RC1.1_linux-aarch64.tar.gz(注意下载对应需要的版本如：X86，aarch64等)
-5. 执行命令构建docker镜像,要求:
+注意:  
+1、非root用户请加上sudo  
+2、若出现以下报错：
+```
+Err:1 http://repo.huaweicloud.com/ubuntu-ports focal InRelease
+  Temporary failure resoving 'repo.huaweicloud.com'
+Err:2 http://repo.huaweicloud.com/ubuntu-ports focal-updates InRelease
+  Temporary failure resoving 'repo.huaweicloud.com'
+```
+则参照下述代码位置，添加环境变量：  
+```
+ARG PYPI_PATH_TRUST
+ARG MSIT_PATH
+
+# 添加环境变量
+ENV http_proxy=http://${USER_NAME}:${PASSWORD}@${PROXY_SERVER}:${PORT}
+ENV https_proxy=http://${USER_NAME}:${PASSWORD}@${PROXY_SERVER}:${PORT}
+
+#安装python、CANN_TOOLKIT,软件包、依赖，并配置环境变量写入.bashrc
+RUN groupadd HwHiAiUser && useradd -rm -d /home/HwHiAiUser -s /bin/bash -g HwHiAiUser -G HwHiAiUser -u 1001 HwHiAiUser  &&\
+    if [ "$(uname -m)" = "x86_64" ]; then \
+```
+
+`$USER_NAME`、`$PASSWORD` 等都是网络配置的相关参数，这里不予以介绍  
+`$APT_PATH` 用户可自行配置源地址 例如：http://repo.huaweicloud.com, https://mirrors.huaweicloud.com 等
+
+3、如果在 `wget ${PYTHON_PATH}` 的时候出现报错，显示需要 `use --no-check-certificate`。则在 `wget ${PYTHON_PATH}` 处添加 `--no-check-certificate`，示例如下：
+
+```
+wget --no-check-certificate ${PYTHON_PATH}   && \
+```
+4、请将Ascend-cann-tookit<version+arch>.run改为实际上的toolkit路径(必须是相对路径)  
+5、从这个[仓库](https://github.com/lenLRX/caffe)下载zip[代码](https://github.com/lenLRX/caffe/archive/refs/heads/ascend-amct.zip),得到的zip包可能叫ascend-amct.zip或caffe-ascend-amct.zip  
+6、从[这里](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)下载amct的包Ascend-cann-amct_5.1.RC1.1_linux-aarch64.tar.gz(注意下载对应需要的版本如：X86，aarch64等)  
+7、执行命令构建docker镜像,要求:
    * CANN_AMCT_PATH=步骤4下载的amct包名字
    * CAFFE_SRC=步骤3下载的caffe代码zip包
    运行以下命令以上述镜像启动容器：
@@ -112,9 +152,9 @@ compare功能可以直接通过msit命令行形式启动精度对比。启动方
 | -single, --single-op| 单算子比对模式，默认关闭，开启时在输出路径下会生成single op目录，存放单算子比对结果文件使用方式：-single True                                                                                                                                                                                                                             | 否  |
 | --fusion-switch-file| 昇腾模型融合规则配置文件，传入该文件后，compare工具会根据传入的融合规则配置文件，重新生成一个om文件，和--om-model传入的模型进行精度比较，例如：--fusion-switch-file ./fusion_switch.cfg，其中fusion_switch.cfg文件配置方法参见：[如何关闭/开启融合规则](https://www.hiascend.com/document/detail/zh/canncommercial/63RC1/reference/graphubfusionref/graphubfusionref_000003.html) | 否  |
 | -max, --max-cmp-size| 表示每个dump数据比较的最大字节数，用于精度比对过程提速，默认0(0表示全量比较)，当模型中算子的输出存在较大shape的、比较过于耗时情况，可以尝试打开。注意：需要使用最新cann版本(>=6.3.RC3)。使用方式：--max-cmp-size 1024                                                                                                                                                            | 否  |
-| -q,--quant_fusion_rule_file| 量化算子映射关系文件（昇腾模型压缩输出的json文件）。仅推理场景支持本参数。使用方式：--quant_fusion_rule_file                                                                                                                                                                                                                          | 否  | |  |
-| --saved_model_signature | tensorflow2.6框架下saved_model模型加载时需要的签名，当模型为saved_model时，该参数为必选参数。使用方式：--saved_model_signature serving，默认为serving_default                                                                                                                                                                       | 否  | |  |
-| --saved_model_tag_set   | tensorflow2.6框架下saved_model模型加载为session时的标签，可根据标签加载模型的不同部分，当模型为saved_model时，该参数为必选参数。使用方式：--saved_model_tag_set serve                                                                                                                                                                         | 否  | |  |
+| -q, --quant_fusion_rule_file| 量化算子映射关系文件（昇腾模型压缩输出的json文件）。仅推理场景支持本参数。使用方式：-quant_fusion_rule_file xxx.json （量化算子映射关系json文件）                                                                                                                                                                                                                        | 否  | |  |
+| --saved_model_signature | tensorflow2.6框架下saved_model模型加载时需要的签名。使用方式：--saved_model_signature serving_default，默认为serving_default                                                                                                                                                                       | 否  | |  |
+| --saved_model_tag_set   | tensorflow2.6框架下saved_model模型加载为session时的标签，可根据标签加载模型的不同部分。使用方式：--saved_model_tag_set serve，默认为serve，目前支持传入多个tagSet，使用如：--saved_model_tag_set ['serve', 'genenal_parser']                                                                                                                                        | 否  | |  |
 | -mp, --my-path      | 用于单独进行精度比对的npu侧dump数据路径                                                                                                                                                                                                                                                                       | 否  | |  |
 | -gp, --golden-path  | 用于单独进行精度比对的cpu侧dump数据路径                                                                                                                                                                                                                                                                       | 否  | |  |
 | --ops-json          | 用于单独进行精度比对时，cpu侧与npu侧算子的匹配规则json文件路径                                                                                                                                                                                                                                                          | 否  | |  |
@@ -138,7 +178,9 @@ compare功能可以直接通过msit命令行形式启动精度对比。启动方
 | [09_single_op](/msit/examples/cli/debug/compare/09_single_op)                                 | 单算子比对模式                              |
 | [10_fusion_switch_file](/msit/examples/cli/debug/compare/10_fusion_switch_file)               | 关闭融合规则.om模型和原始.om模型精度比对              |
 | [11_mixing_precison_compare](/msit/examples/cli/debug/compare/11_mixing_precison_compare)      | 混合精度策略的.om模型和.om模型的精度比对              |
-| [12_alone_compare](/msit/examples/cli/debug/compare/14_alone_compare)                            | 指定dump数据的精度比对                        |
+| [14_alone_compare](/msit/examples/cli/debug/compare/14_alone_compare)                            | 指定dump数据的精度比对                        |
+| [15_saved_model](/msit/examples/cli/debug/compare/15_saved_model)                            | 标杆模型为tensorflow2.6框架下saved_model模型的一键式精度比对                        |
+| [16_mindie_torch_compare](/msit/examples/cli/debug/compare/16_mindie_torch_compare)                            | MindIE-Torch场景-整网算子精度对比场景                        |
 
 ### 常见问题FAQ
 

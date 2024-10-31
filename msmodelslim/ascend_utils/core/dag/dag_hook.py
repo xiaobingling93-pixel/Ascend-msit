@@ -64,6 +64,40 @@ class DagHook(DirectedAcyclicGraph, ABC):
     @property
     def calc_order(self):
         return self._calc_order
+    
+    @staticmethod
+    def _get_attr_names(obj: Any, filter_func: Optional[Callable]) -> List[str]:
+        if obj is None:
+            return []
+        if filter_func is not None:
+            return [attr_name for attr_name in dir(obj) if filter_func(getattr(obj, attr_name), attr_name)]
+        else:
+            return [attr_name for attr_name in dir(obj)]
+
+    @staticmethod
+    def _get_ops_hook_info(obj, attr_names) -> List[Tuple[Any, Tuple, str]]:
+        return [(getattr(obj, name), (obj, name), name) for name in attr_names]
+
+    @classmethod
+    def _get_operator_hook_infos(cls, obj) -> List[Tuple[Any, Tuple, str]]:
+        def is_operator(_, name):
+            return name in OperatorAttrName.attr_names
+
+        return cls._get_ops_hook_info(obj, cls._get_attr_names(obj, is_operator))
+
+    @classmethod
+    def _get_class_hook_infos(cls, obj, cls_type) -> List[Tuple[Any, Tuple, str]]:
+        def is_class(attr, _):
+            return inspect.isclass(attr) and issubclass(attr, cls_type)
+
+        return cls._get_ops_hook_info(obj, cls._get_attr_names(obj, is_class))
+
+    @classmethod
+    def _get_function_hook_infos(cls, obj) -> List[Tuple[Any, Tuple, str]]:
+        def is_function(attr, name):
+            return not inspect.isclass(attr) and not name.startswith("_") and callable(attr)
+
+        return cls._get_ops_hook_info(obj, cls._get_attr_names(obj, is_function))
 
     def get_params(self) -> int:
         return sum([param.nelement() for param in self.network.parameters()])
@@ -92,6 +126,39 @@ class DagHook(DirectedAcyclicGraph, ABC):
         dag_node.replace(new_node, type(new_node).__name__)
         self._structure_tree[new_node] = node_struct_info
         self._replaced_nodes.add(dag_node)
+
+    @abstractmethod
+    def _before_parse(self):
+        pass
+
+    @abstractmethod
+    def _after_parse(self):
+        pass
+
+    @abstractmethod
+    def _get_module_children(self, module):
+        pass
+
+    @abstractmethod
+    def _get_module_cls(self):
+        pass
+
+    @abstractmethod
+    def _collecting_feature_map_info(self, output):
+        pass
+
+    @abstractmethod
+    def _get_all_hook_ops(self, user_hook_ops) -> List[Tuple[Any, Any, str]]:
+        """
+        get all need hook ops, include default ops and user ops
+
+        Args:
+            user_hook_ops: user hook ops
+
+        Returns:
+            [(ops instances, ops owner module, attr name, ops name)]
+        """
+        pass
 
     def _replace_node(self, parent_module, name_in_parent, new_node):
         setattr(parent_module, name_in_parent, new_node)
@@ -272,70 +339,3 @@ class DagHook(DirectedAcyclicGraph, ABC):
         self._structure_tree: Dict[Any, Dict] = {}
         self._parse_network_structure_tree(self.network, "", None, "")
         self._parse_network(self._inputs, parsed_nodes)
-
-    @abstractmethod
-    def _before_parse(self):
-        pass
-
-    @abstractmethod
-    def _after_parse(self):
-        pass
-
-    @abstractmethod
-    def _get_module_children(self, module):
-        pass
-
-    @abstractmethod
-    def _get_module_cls(self):
-        pass
-
-    @abstractmethod
-    def _collecting_feature_map_info(self, output):
-        pass
-
-    @abstractmethod
-    def _get_all_hook_ops(self, user_hook_ops) -> List[Tuple[Any, Any, str]]:
-        """
-        get all need hook ops, include default ops and user ops
-
-        Args:
-            user_hook_ops: user hook ops
-
-        Returns:
-            [(ops instances, ops owner module, attr name, ops name)]
-        """
-        pass
-
-    @staticmethod
-    def _get_attr_names(obj: Any, filter_func: Optional[Callable]) -> List[str]:
-        if obj is None:
-            return []
-        if filter_func is not None:
-            return [attr_name for attr_name in dir(obj) if filter_func(getattr(obj, attr_name), attr_name)]
-        else:
-            return [attr_name for attr_name in dir(obj)]
-
-    @staticmethod
-    def _get_ops_hook_info(obj, attr_names) -> List[Tuple[Any, Tuple, str]]:
-        return [(getattr(obj, name), (obj, name), name) for name in attr_names]
-
-    @classmethod
-    def _get_operator_hook_infos(cls, obj) -> List[Tuple[Any, Tuple, str]]:
-        def is_operator(_, name):
-            return name in OperatorAttrName.attr_names
-
-        return cls._get_ops_hook_info(obj, cls._get_attr_names(obj, is_operator))
-
-    @classmethod
-    def _get_class_hook_infos(cls, obj, cls_type) -> List[Tuple[Any, Tuple, str]]:
-        def is_class(attr, _):
-            return inspect.isclass(attr) and issubclass(attr, cls_type)
-
-        return cls._get_ops_hook_info(obj, cls._get_attr_names(obj, is_class))
-
-    @classmethod
-    def _get_function_hook_infos(cls, obj) -> List[Tuple[Any, Tuple, str]]:
-        def is_function(attr, name):
-            return not inspect.isclass(attr) and not name.startswith("_") and callable(attr)
-
-        return cls._get_ops_hook_info(obj, cls._get_attr_names(obj, is_function))

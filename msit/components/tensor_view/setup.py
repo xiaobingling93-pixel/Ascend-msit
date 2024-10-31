@@ -17,16 +17,18 @@ from setuptools import setup, find_packages  # type: ignore
 with open('requirements.txt', encoding='utf-8') as f:
     required = f.read().splitlines()
 
-ait_sub_tasks = [{
+msit_sub_tasks = [
+    {
     "name": "tensor-view",
     "help_info": "view、slice、permute、save the dumped tensor",
     "module": "ait_tensor_view.main_cli",
     "attr": "get_cmd_instance"
-}]
+}
+]
 
-ait_sub_task_entry_points = [
+msit_sub_task_entry_points = [
     f"{t.get('name')}:{t.get('help_info')} = {t.get('module')}:{t.get('attr')}"
-    for t in ait_sub_tasks
+    for t in msit_sub_tasks
 ]
 
 setup(
@@ -40,7 +42,7 @@ setup(
     install_requires=required,
     python_requires='>=3.7',
     entry_points={
-        'ait_sub_task': ait_sub_task_entry_points,
-        'ait_sub_task_installer': ['msit-tensor-view=ait_tensor_view.__install__:TensorViewInstaller'],
+        'msit_sub_task': msit_sub_task_entry_points,
+        'msit_sub_task_installer': ['msit-tensor-view=ait_tensor_view.__install__:TensorViewInstaller'],
     },
 )

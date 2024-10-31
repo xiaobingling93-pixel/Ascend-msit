@@ -1,6 +1,7 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
 import json
 import os
+from pathlib import Path
 from typing import Optional
 import importlib
 import sys
@@ -212,10 +213,13 @@ def main():
         infer_inputs = args.input_texts
     if args.is_chat_model and args.input_file:
         infer_inputs = []
-        with open(args.input_file, 'r', encoding='utf-8') as file:
-            for line in file:
-                data_line = json.loads(line)
-                infer_inputs.append(data_line)
+        from msit_llm.common.utils import check_input_path_legality, check_data_file_size
+        args.input_file = check_input_path_legality(args.input_file)
+        if Path(args.input_file).is_file() and check_data_file_size(args.input_file):
+            with open(args.input_file, 'r', encoding='utf-8') as file:
+                for line in file:
+                    data_line = json.loads(line)
+                    infer_inputs.append(data_line)
 
     pa_runner = TransPARunner(**input_dict)
     print_log(rank, logger.info, f'pa_runner: {pa_runner}')

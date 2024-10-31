@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
 
 import os
 import stat
+from pathlib import Path
 from msit_llm.transform.float_atb_to_quant_atb.utils import (
     check_libclang_so,
     filter_chinese_char,
@@ -23,6 +24,7 @@ from msit_llm.transform.float_atb_to_quant_atb.utils import (
     update_contents,
 )
 from msit_llm.common.log import logger
+from msit_llm.common.utils import check_data_file_size
 
 USING_SCALE_BIAS_ITEMS = ["IN_QKV", "IN_QMIX", "IN_KMIX", "IN_VMIX", "IN_SELFOUTLINEAR", "IN_MLP"]
 USING_SPARSE_INDEX_ITEMS = ["IN_QKV", "IN_QMIX", "IN_KMIX", "IN_VMIX"]
@@ -74,7 +76,17 @@ class TransformQuant:
             logger.error(message)
             raise ValueError(message)
         self.in_tensor_added, self.indent, self.indent_prefix = in_tensor_added, indent, " " * indent
-        self.CursorKind = cindex.CursorKind
+        self.cursor_kind = cindex.CursorKind
+
+    def __call__(self):
+        cpp_contents = self.do_transform_quant(is_cpp=True)
+        target_cpp_file_path = self.to_quant_file_path(self.cpp_file_path, enable_sparse=self.enable_sparse)
+        self.write_to_file(target_cpp_file_path, cpp_contents)
+
+        hpp_contents = self.do_transform_quant(is_cpp=False)
+        target_hpp_file_path = self.to_quant_file_path(self.hpp_file_path, enable_sparse=self.enable_sparse)
+        self.write_to_file(target_hpp_file_path, hpp_contents)
+        return target_cpp_file_path, target_hpp_file_path
 
     @staticmethod
     def parse_file_as_cursor(file_path):
@@ -83,6 +95,10 @@ class TransformQuant:
         file_ext = os.path.splitext(file_path)[-1]
         temp_file = CPP_TEMP_FILE_NAME if file_ext in [".c", ".cpp"] else HPP_TEMP_FILE_NAME
 
+        if not Path(file_path).is_file():
+            raise ValueError(f"The file {file_path} is not an ordinary file.") 
+        check_data_file_size(file_path)
+           
         contents = open(file_path).read()
         contents = filter_chinese_char(contents)
         args, options = get_args_and_options()
@@ -100,6 +116,10 @@ class TransformQuant:
         file_permission = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP
         with os.fdopen(os.open(file_path, os.O_CREAT | os.O_WRONLY, file_permission), "w") as ff:
             ff.write(contents)
+
+    @staticmethod
+    def is_in_tensor_count(cur_spelling):
+        return cur_spelling.startswith("IN_") and cur_spelling.endswith("_COUNT")
 
     def get_in_tensor_added(self, enum_cursor):
         added_items = []
@@ -144,7 +164,7 @@ class TransformQuant:
         return insert_contents, insert_position, insert_position
 
     def update_in_tensor_count(self, cursor, contents):
-        cur_contents = contents[cursor.extent.end.offset :]
+        cur_contents = contents[cursor.extent.end.offset:]
         next_semicolon_pos = cur_contents.find(";")
         cur_in_tensor_count = int(cur_contents[:next_semicolon_pos].split("=")[-1].strip())
         cur_in_tensor_count += len(self.in_tensor_added)
@@ -173,12 +193,9 @@ class TransformQuant:
                 insert_contents += f"{self.indent_prefix}int {in_tensor.lower()} = 0;\n"
         return insert_contents, insert_start, insert_end
 
-    def is_in_tensor_count(self, cur_spelling):
-        return cur_spelling.startswith("IN_") and cur_spelling.endswith("_COUNT")
-
     def is_layer_function(self, cursor):
         # This check may change depending on actual situation
-        if cursor.kind != self.CursorKind.FUNCTION_DECL:
+        if cursor.kind != self.cursor_kind.FUNCTION_DECL:
             return False
         if not cursor.is_definition():
             return False
@@ -199,14 +216,14 @@ class TransformQuant:
         for cur_cursor in children:
             cur_spelling = cur_cursor.spelling
             print_spelling(cur_cursor, info=f"current cursor: {cur_spelling}, {cur_cursor.kind}, ")
-            if cur_cursor.kind == self.CursorKind.ENUM_DECL:
+            if cur_cursor.kind == self.cursor_kind.ENUM_DECL:
                 insert_contents, insert_start, insert_end = self.update_in_tensor_added_enum(cur_cursor, contents)
-            elif cur_cursor.kind == self.CursorKind.STRUCT_DECL:
+            elif cur_cursor.kind == self.cursor_kind.STRUCT_DECL:
                 insert_contents, insert_start, insert_end = self.update_param_struct(cur_cursor, contents)
-            elif cur_cursor.kind == self.CursorKind.VAR_DECL and self.is_in_tensor_count(cur_spelling):
+            elif cur_cursor.kind == self.cursor_kind.VAR_DECL and self.is_in_tensor_count(cur_spelling):
                 insert_contents, insert_start, insert_end = self.update_in_tensor_count(cur_cursor, contents)
             elif (
-                cur_cursor.kind == self.CursorKind.FUNCTION_DECL
+                cur_cursor.kind == self.cursor_kind.FUNCTION_DECL
                 and cur_cursor.is_definition()
                 and cur_spelling == "from_json"
             ):
@@ -224,16 +241,6 @@ class TransformQuant:
             updates.append((insert_start, insert_end, insert_contents))
             print_update_info(insert_contents, insert_start, insert_end)
         return update_contents(contents, updates)
-
-    def __call__(self):
-        cpp_contents = self.do_transform_quant(is_cpp=True)
-        target_cpp_file_path = self.to_quant_file_path(self.cpp_file_path, enable_sparse=self.enable_sparse)
-        self.write_to_file(target_cpp_file_path, cpp_contents)
-
-        hpp_contents = self.do_transform_quant(is_cpp=False)
-        target_hpp_file_path = self.to_quant_file_path(self.hpp_file_path, enable_sparse=self.enable_sparse)
-        self.write_to_file(target_hpp_file_path, hpp_contents)
-        return target_cpp_file_path, target_hpp_file_path
 
 
 def transform_quant(source_path, enable_sparse=False):

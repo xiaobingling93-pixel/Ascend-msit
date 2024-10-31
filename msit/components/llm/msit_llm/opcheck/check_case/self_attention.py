@@ -264,9 +264,7 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
 
         for idx in batch_status:
             q_s, kv_s = q_seqlen[idx], kv_seqlen[idx]
-            # (head_num, q_seq, head_size)
             q_slice = q[q_offset:q_offset + q_s][:].view(q_s, head_num, head_size).permute(1, 0, 2)
-            # get K^T (kv_head_num, head_size, k_seq)
             k_slice_t = k[k_offset:k_offset + kv_s][:].view(kv_s, kv_head_num, head_size).permute(1, 2, 0)
             v_slice = v[v_offset:v_offset + kv_s][:].view(kv_s, kv_head_num, head_size).permute(1, 0, 2)
 

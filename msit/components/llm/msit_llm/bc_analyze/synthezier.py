@@ -1,4 +1,20 @@
+# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
 import os
+from collections.abc import Iterable
 
 import numpy as np
 import pandas as pd
@@ -41,19 +57,6 @@ class Synthesizer(object):
             output_token_ids=output_token_ids,
             passed=passed
         )
-
-    def _update_attributes(self, **kwargs):
-        for key, value in kwargs.items():
-            if value is not None:
-                modified_value = self._sanitize_value(value)
-                self._info[key] = np.append(self._info[key], modified_value, axis=0)
-
-    def _sanitize_value(self, value):
-        # str is a iterable
-        if isinstance(value, str) or not hasattr(value, '__iter__'):
-            return np.array([str(value)], dtype=object)
-
-        return np.fromiter((str(item) for item in value), dtype=object)
     
     def from_args(self, *, queries=None, input_token_ids=None, output_token_ids=None, passed=None) -> None:
         """Collecting dataset evaluation result from memory. User should take care of the evaluation details.
@@ -245,6 +248,19 @@ class Synthesizer(object):
             raise ValueError
         
         return pd.DataFrame(self._info)
+    
+    def _update_attributes(self, **kwargs):
+        for key, value in kwargs.items():
+            if value is not None:
+                modified_value = self._sanitize_value(value)
+                self._info[key] = np.append(self._info[key], modified_value, axis=0)
+
+    def _sanitize_value(self, value):
+        # str is a iterable
+        if isinstance(value, str) or not isinstance(value, Iterable):
+            return np.array([str(value)], dtype=object)
+
+        return np.fromiter((str(item) for item in value), dtype=object)
     
     def _padding(self):
         max_len = max(map(len, self._info.values()))

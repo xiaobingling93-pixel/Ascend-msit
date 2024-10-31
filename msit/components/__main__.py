@@ -28,7 +28,11 @@ def main():
         f"For any issue, refer FAQ first: {AIT_FAQ_HOME}",
     )
 
-    cmd = BaseCommand("msit", None, ["ait_sub_task", AitInstallCommand(), AitBuildExtraCommand(), AitCheckCommand(), DownloadCommand()])
+    cmd = BaseCommand(
+        "msit", None, ["msit_sub_task", AitInstallCommand(), AitBuildExtraCommand(), 
+                       AitCheckCommand(), DownloadCommand()]
+    )
+    
     cmd.register_parser(parser)
 
     args = parser.parse_args()
@@ -41,12 +45,6 @@ def main():
                 raise Exception(
                     f"[ERROR] Refer FAQ if a known issue: {AIT_FAQ_HOME}"
                 ) from err
-
-
-def ait_main():
-    logger.warning("Attention: The 'ait' command will be deprecated in the future version, please use 'msit' instead.")
-
-    main()
 
 
 if __name__ == "__main__":

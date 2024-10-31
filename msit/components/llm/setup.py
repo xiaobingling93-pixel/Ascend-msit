@@ -25,19 +25,21 @@ with open('requirements.txt', encoding='utf-8') as f:
     required = f.read().splitlines()
 
 opchecker_lib_src = []
-for root, dirs, files in os.walk('components/llm/msit_llm/opcheck/test_framework/'):
+for root, _, files in os.walk('components/llm/msit_llm/opcheck/test_framework/'):
     opchecker_lib_src.append((os.path.join("/", root), [os.path.join(root, f) for f in files]))
 
-ait_sub_tasks = [{
+msit_sub_tasks = [
+    {
     "name": "llm",
     "help_info": "Large Language Model(llm) Debugger Tools.",
     "module": "msit_llm.__main__",
     "attr": "get_cmd_instance"
-}]
+}
+]
 
-ait_sub_task_entry_points = [
+msit_sub_task_entry_points = [
     f"{t.get('name')}:{t.get('help_info')} = {t.get('module')}:{t.get('attr')}"
-    for t in ait_sub_tasks
+    for t in msit_sub_tasks
 ]
 
 setup(
@@ -66,7 +68,7 @@ setup(
     include_package_data=True,
     python_requires='>=3.7',
     entry_points={
-        'ait_sub_task': ait_sub_task_entry_points,
-        'ait_sub_task_installer': ['msit-llm=msit_llm.__install__:LlmInstall'],
+        'msit_sub_task': msit_sub_task_entry_points,
+        'msit_sub_task_installer': ['msit-llm=msit_llm.__install__:LlmInstall'],
     },
 )

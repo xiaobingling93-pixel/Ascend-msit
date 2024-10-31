@@ -15,13 +15,13 @@
 from collections import OrderedDict
 import os
 import sys
+import re
 
 import numpy as np
 from msit_llm.common.log import logger
 from msit_llm.common.utils import safe_string
 from msit_llm.compare.cmp_utils import BasicDataInfo, fill_row_data, save_compare_reault_to_csv
 from components.utils.acc_cmp import parse_torchair_dump_data, set_msaccucmp_path_from_cann
-
 
 GE_GRAPH_FILE_PREFIX = "dynamo_original_graph_"
 FUSION_OP_TYPE = "AutomaticBufferFusionOp"
@@ -39,14 +39,25 @@ def get_torchair_ge_graph_path(my_path):
     if not os.path.isdir(my_path):
         return None
 
+    ge_graph_files = []
     my_path_depth = len(my_path.split(os.sep))
-    for cur_path, dirs, file_names in os.walk(my_path):
+    timestamp_pattern = re.compile(r'(\d+)')
+    for cur_path, _, file_names in os.walk(my_path):
         for file_name in file_names:
             if file_name.startswith(GE_GRAPH_FILE_PREFIX) and file_name.endswith(".txt"):
-                return os.path.join(cur_path, file_name)
+                match = timestamp_pattern.search(file_name)
+                if match:
+                    full_path = os.path.join(cur_path, file_name)
+                    timestamp = int(match.group(1))
+                    ge_graph_files.append((full_path, timestamp))
+
             cur_depth = len(cur_path.split(os.sep)) - my_path_depth
             if cur_depth > 5:  # Avoid going too deep
                 break
+
+    if ge_graph_files:
+        sorted_ge_graph_files = [file for file, timestamp in sorted(ge_graph_files, key=lambda x: x[1])]
+        return sorted_ge_graph_files
     return None
 
 
@@ -93,25 +104,61 @@ def parse_pbtxt_to_dict(pbtxt_path):
     return result
 
 
-def gather_data_with_token_id(data_path):
-    token_dirs, gathered_files, cur_token_id = [], {}, 0
+def gather_data_with_token_id(data_path, fx=False):
+    token_dirs, cur_token_id = [], 0
     # Detect the deepest dir level where sub dirs are all digits, and regard as tokens level.
-    for cur_path, dirs, file_names in os.walk(data_path):
-        if len(dirs) == 0:
-            continue
-        if all([len(ii) < MAX_TOKEN_LEN and str.isdigit(ii) for ii in dirs]):
-            dirs = sorted(dirs, key=lambda xx: int(xx))
-            token_dirs = [os.path.join(cur_path, dir_name) for dir_name in dirs]  # Search till deepest level
+    if fx:
+        for cur_path, dirs, _ in os.walk(data_path):
+            if len(dirs) == 0:
+                continue
+            if all([len(ii) < MAX_TOKEN_LEN and str.isdigit(ii) for ii in dirs]):
+                dirs = sorted(dirs, key=lambda xx: int(xx))
+                token_dirs = [os.path.join(cur_path, dir_name) for dir_name in dirs]
+                break
+    else:
+        for cur_path, dirs, _ in sorted(os.walk(data_path), key=lambda x: x[0]):
+            if not dirs:
+                token_dirs.append(cur_path)
+
     if len(token_dirs) == 0:
         token_dirs.append(data_path)  # Just use data_path if found no token like dirs
 
-    for token_dir in token_dirs:
-        cur_basename = os.path.basename(token_dir)
-        cur_token_id = int(cur_basename) if str.isdigit(cur_basename) else 0
-        for cur_path, dirs, file_names in os.walk(token_dir):
-            file_names = [os.path.join(cur_path, file_name) for file_name in file_names]
-            gathered_files.setdefault(cur_token_id, []).extend(file_names)
-    return gathered_files
+    gathered_files_list = []
+    if fx:
+        dump_dirs = {}
+        for token_dir in token_dirs:
+            cur_token_id = os.path.basename(token_dir)
+            cur_token_id = int(cur_token_id) if cur_token_id.isdigit() else 0
+            dump_dirs[cur_token_id] = sorted(
+                [os.path.join(token_dir, d) for d in os.listdir(token_dir) if
+                 os.path.isdir(os.path.join(token_dir, d))],
+                key=lambda x: os.path.basename(x)
+            )
+        num_dumps = len(dump_dirs.get(1, None))
+        for i in range(num_dumps):
+            gathered_files = {}
+            for cur_token_id, dumps in dump_dirs.items():
+                dump_path = dumps[i]
+                file_names = [os.path.join(dump_path, f) for f in os.listdir(dump_path) if f.endswith('.npy')]
+                gathered_files[cur_token_id] = file_names
+            gathered_files_list.append(gathered_files)
+    else:
+        parent_dir_dict = {}
+        for token_dir in token_dirs:
+            parent_dir = os.path.basename(os.path.dirname(token_dir))
+            subdir = os.path.basename(token_dir)
+            parent_id = int(parent_dir) if parent_dir.isdigit() else 0
+            subdir_id = int(subdir) if subdir.isdigit() else 0
+            if parent_id not in parent_dir_dict:
+                parent_dir_dict[parent_id] = {}
+            if subdir_id not in parent_dir_dict[parent_id]:
+                parent_dir_dict[parent_id][subdir_id] = []
+            for cur_path, _, file_names in os.walk(token_dir):
+                file_names = [os.path.join(cur_path, file_name) for file_name in file_names]
+                parent_dir_dict[parent_id][subdir_id].extend(file_names)
+        for _, subdirs in parent_dir_dict.items():
+            gathered_files_list.append(subdirs)
+    return gathered_files_list
 
 
 def init_ge_dump_data_from_bin_path(ge_dump_path):
@@ -128,34 +175,39 @@ def init_ge_dump_data_from_bin_path(ge_dump_path):
             'ConcatV2': '1/ConcatV2D.ConcatV2.42.6.1706596912161117',
       }}
     """
-    gathered_files = gather_data_with_token_id(ge_dump_path)
+    gathered_files_list = gather_data_with_token_id(ge_dump_path)
+    if not gathered_files_list:
+        raise Exception("Cannot get ge dump data, because the gathered_files_list is empty.")
 
-    dump_data_with_token_id = {}
-    for token_id, file_list in gathered_files.items():
-        cur_dump_data = {}
-        for file_name in sorted(file_list):
-            if os.path.splitext(file_name)[-1] in DUMP_FILE_FILTER_SUFIX:
-                continue
-            split_name = os.path.basename(file_name).split(".")
-            if len(split_name) < 5:
-                logger.warning(f"invalid file name: {file_name}, should contain at least 4 '.'")
-                continue
+    dump_data_with_token_id_list = []
+    for gathered_files in gathered_files_list:
+        dump_data_with_token_id = {}
+        for token_id, file_list in gathered_files.items():
+            cur_dump_data = {}
+            for file_name in sorted(file_list):
+                if os.path.splitext(file_name)[-1] in DUMP_FILE_FILTER_SUFIX:
+                    continue
+                split_name = os.path.basename(file_name).split(".")
+                if len(split_name) < 5:
+                    logger.warning(f"invalid file name: {file_name}, should contain at least 4 '.'")
+                    continue
 
-            cur_op_name = ".".join(split_name[1:-3])
-            if cur_op_name in cur_dump_data:
-                exists_file = cur_dump_data[cur_op_name]
-                exists_file_size = os.path.getsize(exists_file)
-                cur_file_size = os.path.getsize(file_name)
-                keep_one = file_name if cur_file_size > exists_file_size else exists_file
-                cur_dump_data[cur_op_name] = keep_one
-                logger.warning(f"duplicated op name: {cur_op_name}."
-                               f" [{os.path.basename(file_name)}, {os.path.basename(exists_file)}]."
-                               f" Will keep the larger one {os.path.basename(keep_one)}."
-                               )
-            else:
-                cur_dump_data[cur_op_name] = file_name
-        dump_data_with_token_id[token_id] = cur_dump_data
-    return dump_data_with_token_id
+                cur_op_name = ".".join(split_name[1:-3])
+                if cur_op_name in cur_dump_data:
+                    exists_file = cur_dump_data[cur_op_name]
+                    exists_file_size = os.path.getsize(exists_file)
+                    cur_file_size = os.path.getsize(file_name)
+                    keep_one = file_name if cur_file_size > exists_file_size else exists_file
+                    cur_dump_data[cur_op_name] = keep_one
+                    logger.warning(f"duplicated op name: {cur_op_name}."
+                                   f" [{os.path.basename(file_name)}, {os.path.basename(exists_file)}]."
+                                   f" Will keep the larger one {os.path.basename(keep_one)}."
+                                   )
+                else:
+                    cur_dump_data[cur_op_name] = file_name
+            dump_data_with_token_id[token_id] = cur_dump_data
+        dump_data_with_token_id_list.append(dump_data_with_token_id)
+    return dump_data_with_token_id_list
 
 
 def init_fx_dump_data_from_path(fx_dump_path):
@@ -174,23 +226,29 @@ def init_fx_dump_data_from_path(fx_dump_path):
         'output': ['1/mm-aten.mm.default.OUTPUT.0.20240125031118787351.npy']
       }}}
     """
-    gathered_files = gather_data_with_token_id(fx_dump_path)
+    gathered_files_list = gather_data_with_token_id(fx_dump_path, fx=True)
+    if not gathered_files_list:
+        raise Exception("Cannot get fx dump data, because the gathered_files_list is empty.")
 
-    dump_data_with_token_id = {}
-    for token_id, file_list in gathered_files.items():
-        cur_dump_data = {}
-        for file_path in sorted(file_list):
-            if not file_path.endswith("npy"):
-                continue
-            file_name = os.path.basename(file_path)
-            is_input = ".INPUT." in file_name
-            cur_op_name = file_name.split('.INPUT.' if is_input else ".OUTPUT.")[0]
-            cur_op_map = cur_dump_data.get(cur_op_name, {})
-            cur_op_map.setdefault("input" if is_input else "output", []).append(file_path)
-            cur_dump_data[cur_op_name] = cur_op_map
-        if len(cur_dump_data) > 0:
-            dump_data_with_token_id[token_id - 1] = cur_dump_data  # For FX data, token starts from 1, while GE is 0
-    return dump_data_with_token_id
+    dump_data_with_token_id_list = []
+    for gathered_files in gathered_files_list:
+        dump_data_with_token_id = {}
+        for token_id, file_list in gathered_files.items():
+            cur_dump_data = {}
+            for file_path in sorted(file_list):
+                if not file_path.endswith("npy"):
+                    continue
+                file_name = os.path.basename(file_path)
+                split_name = file_name.split(".")
+                is_input = ".INPUT." in file_name
+                cur_op_name = file_name.split('.INPUT.' if is_input else ".OUTPUT.")[0]
+                cur_op_map = cur_dump_data.get(cur_op_name, {})
+                cur_op_map.setdefault("input" if is_input else "output", []).append(file_path)
+                cur_dump_data[cur_op_name] = cur_op_map
+            if len(cur_dump_data) > 0:
+                dump_data_with_token_id[token_id - 1] = cur_dump_data  # For FX data, token starts from 1, while GE is 0
+        dump_data_with_token_id_list.append(dump_data_with_token_id)
+    return dump_data_with_token_id_list
 
 
 def compare_single_data(golden_path, my_path, token_id=0, golden_data=None, my_data=None):
@@ -198,9 +256,7 @@ def compare_single_data(golden_path, my_path, token_id=0, golden_data=None, my_d
     return fill_row_data(data_info, loaded_my_data=my_data, loaded_golden_data=golden_data)
 
 
-""" Comparing GE with FX """
-
-
+# Comparing GE with FX
 def filter_valid_fx_desc_tensor_info(desc_key, desc_value):
     """Valid one like: 'attr': {'key': '_fx_tensor_name', 'value': {'s': 'add_1-aten.add.Tensor.OUTPUT.0'}}"""
     if not (desc_key == "attr" or desc_key.startswith("attr#")) or not isinstance(desc_value, dict):
@@ -226,7 +282,8 @@ def get_all_ops_from_fusion_op(op_name, graph_map_dict, ge_dump_data):
 
 def compare_ge_with_fx(graph_map, ge_dump_data, fx_dump_data, token_id=0):
     gathered_row_data = []
-    graph_map_dict = {graph["op"]["name"]: graph["op"] for graph in graph_map if "op" in graph and "name" in graph["op"]}
+    graph_map_dict = {graph["op"]["name"]: graph["op"] \
+                      for graph in graph_map if "op" in graph and "name" in graph["op"]}
     ge_dump_data = sort_ge_dump_data(ge_dump_data, graph_map)
     for op_name, my_path in ge_dump_data.items():
         all_ops = get_all_ops_from_fusion_op(op_name, graph_map_dict, ge_dump_data)
@@ -236,8 +293,8 @@ def compare_ge_with_fx(graph_map, ge_dump_data, fx_dump_data, token_id=0):
         elif len(all_ops) > 1:
             first_op_info = graph_map_dict.get(all_ops[0])
             last_op_info = graph_map_dict.get(all_ops[-1])
-            gathered_row_data.extend(compare_ge_with_fx_multiple_ops(first_op_info, last_op_info, fx_dump_data, op_name,
-                                                                     my_path, token_id))
+            __args = [first_op_info, last_op_info, fx_dump_data, op_name, my_path, token_id]
+            gathered_row_data.extend(compare_ge_with_fx_multiple_ops(*__args))
         else:
             op_type = os.path.basename(my_path).split(".")[0]
             if "Cast" in op_type or "TransData" in op_type:
@@ -269,21 +326,22 @@ def compare_ge_with_fx_single_op(op_info, fx_dump_data, op_name, my_path, token_
             fx_outputs = fx_dump_data.get(fx_tensor_name, {}).get("output", [])
             logger.debug(f"ge_inputs length: {len(ge_inputs)}, fx_inputs length:, {len(fx_inputs)}")
             logger.debug(f"ge_outputs length: {len(ge_outputs)}, fx_outputs length:, {len(fx_outputs)}")
-            gathered_row_data = compare_ops(fx_inputs, fx_outputs, ge_inputs, ge_outputs, token_id, my_path)
+            gathered_row_data = compare_ops((fx_inputs, fx_outputs), (ge_inputs, ge_outputs), token_id, my_path)
 
     return gathered_row_data
 
 
 def compare_ge_with_fx_multiple_ops(first_op_info, last_op_info, fx_dump_data, op_name, my_path, token_id):
     gathered_row_data = []
-    gathered_row_data.extend(compare_ge_with_fx_multiple_ops_details(first_op_info, fx_dump_data, op_name, my_path
-                                                                     , "input", token_id))
-    gathered_row_data.extend(compare_ge_with_fx_multiple_ops_details(last_op_info, fx_dump_data, op_name, my_path
-                                                                     , "output", token_id))
+    gathered_row_data.extend(compare_ge_with_fx_multiple_ops_details(first_op_info, fx_dump_data, op_name,
+                                                                     my_path, "input", token_id))
+    gathered_row_data.extend(compare_ge_with_fx_multiple_ops_details(last_op_info, fx_dump_data, op_name,
+                                                                     my_path, "output", token_id))
     return gathered_row_data
 
 
-def compare_ge_with_fx_multiple_ops_details(op_info: dict, fx_dump_data, op_name, my_path, input_or_output, token_id):
+def compare_ge_with_fx_multiple_ops_details(op_info: dict, *args):
+    fx_dump_data, op_name, my_path, input_or_output, token_id = args
     gathered_row_data = []
     for op_key, op_value in op_info.items():
         if not (op_key == "output_desc" or op_key.startswith("output_desc#")) or not isinstance(op_value, dict):
@@ -321,31 +379,29 @@ def compare_ge_with_fx_multiple_ops_details(op_info: dict, fx_dump_data, op_name
 def compare_specials_private_ops(ge_inputs, ge_outputs, token_id, my_path):
     gathered_row_data = []
     for cur_id, (ge_input, ge_output) in enumerate(zip(ge_inputs, ge_outputs)):
-        cur_ge_input_data = "{},{},{}".format(my_path, "inputs", cur_id)
-        cur_ge_output_data = "{},{},{}".format(my_path, "outputs", cur_id)
+        cur_ge_input_data = f"{my_path},inputs,{cur_id}"
+        cur_ge_output_data = f"{my_path},outputs,{cur_id}"
         row_data = compare_single_data(cur_ge_input_data, cur_ge_output_data, token_id, ge_input, ge_output)
         gathered_row_data.append(row_data)
 
     return gathered_row_data
 
 
-def compare_ops(fx_inputs, fx_outputs, ge_inputs, ge_outputs, token_id, my_path):
+def compare_ops(fx_tuple, ge_tuple, token_id, my_path):
     gathered_row_data = []
-    for cur_id, (fx_input, ge_input) in enumerate(zip(fx_inputs, ge_inputs)):
-        cur_ge_data = "{},{},{}".format(my_path, "inputs", cur_id)
+    for cur_id, (fx_input, ge_input) in enumerate(zip(fx_tuple[0], ge_tuple[0])):
+        cur_ge_data = f"{my_path},inputs,{cur_id}"
         row_data = compare_single_data(fx_input, cur_ge_data, token_id, my_data=ge_input)
         gathered_row_data.append(row_data)
-    for cur_id, (fx_output, ge_output) in enumerate(zip(fx_outputs, ge_outputs)):
-        cur_ge_data = "{},{},{}".format(my_path, "outputs", cur_id)
+    for cur_id, (fx_output, ge_output) in enumerate(zip(fx_tuple[1], ge_tuple[1])):
+        cur_ge_data = f"{my_path},outputs,{cur_id}"
         row_data = compare_single_data(fx_output, cur_ge_data, token_id, my_data=ge_output)
         gathered_row_data.append(row_data)
 
     return gathered_row_data
 
 
-""" Comparing fused GE with GE """
-
-
+# Comparing fused GE with GE
 def get_all_op_input_names(op_info):
     inputs = [vv for kk, vv in op_info.items() if kk == "input" or kk.startswith("input#")]
     return [":".join(ii.split(":")[:-1]) for ii in inputs]
@@ -429,16 +485,16 @@ def compare_ge_with_ge(graph_map, fused_ge_dump_data, ge_dump_data, token_id=0):
 
         for cur_id, (golden_input, my_input, golden_input_path) in enumerate(
                 zip(golden_inputs, my_inputs, golden_input_pathes)):
-            cur_ge_data = "{},{},{}".format(my_path, "inputs", cur_id)
+            cur_ge_data = f"{my_path},inputs,{cur_id}"
             if ",inputs," not in golden_output_path:
-                golden_output_path = "{},{},{}".format(golden_output_path, "inputs", cur_id)
+                golden_output_path = f"{golden_output_path},inputs,{cur_id}"
             row_data = compare_single_data(
                 golden_input_path, cur_ge_data, token_id, golden_data=golden_input, my_data=my_input
             )
             gathered_row_data.append(row_data)
         for cur_id, (golden_output, my_output) in enumerate(zip(golden_outputs, my_outputs)):
-            cur_ge_data = "{},{},{}".format(my_path, "outputs", cur_id)
-            golden_output_path = "{},{},{}".format(golden_output_path, "outputs", cur_id)
+            cur_ge_data = f"{my_path},outputs,{cur_id}"
+            golden_output_path = f"{golden_output_path},outputs,{cur_id}"
             row_data = compare_single_data(
                 golden_output_path, cur_ge_data, token_id, golden_data=golden_output, my_data=my_output
             )
@@ -453,37 +509,46 @@ def sort_ge_dump_data(dump_data, graph_map):
     return ge_dump_data
 
 
-""" Main entrance """
-
-
+# Main entrance
 def acc_compare(golden_path, my_path, output_path=".", ge_graph_path=None):
     logger.info(f"[compare_torchair], golden_path: {golden_path}, my_path: {my_path}, ge_graph_path: {ge_graph_path}")
     set_msaccucmp_path_from_cann()
+
     if ge_graph_path is None:
         ge_graph_path = get_torchair_ge_graph_path(my_path)
+    if not ge_graph_path:
+        raise Exception("Can not get ge graph, Please check whether the input path contains graph.")
+    graph_map_list = []
+    for path in ge_graph_path:
+        graph_map_list.append(parse_pbtxt_to_dict(path))
 
-    graph_map = parse_pbtxt_to_dict(ge_graph_path)
-    my_dump_data = init_ge_dump_data_from_bin_path(my_path)
+    my_dump_data_list = init_ge_dump_data_from_bin_path(my_path)
+
     is_golden_fx = get_torchair_ge_graph_path(golden_path) is None
     if is_golden_fx:
         logger.info("Comparing GE with FX")
-        golden_dump_data = init_fx_dump_data_from_path(golden_path)
+        golden_dump_data_list = init_fx_dump_data_from_path(golden_path)
     else:
         logger.info("Comparing GE with GE")
-        golden_dump_data = init_ge_dump_data_from_bin_path(golden_path)
+        golden_dump_data_list = init_ge_dump_data_from_bin_path(golden_path)
 
-    logger.info(f"All token ids in my_dump_data: {my_dump_data.keys()}")
-    logger.info(f"All token ids in golden_dump_data: {golden_dump_data.keys()}")
+    graph_map_list_len = len(graph_map_list)
+    for i in range(graph_map_list_len):
+        logger.info(f"All token ids in my_dump_data: {my_dump_data_list[i].keys()}")
+        logger.info(f"All token ids in golden_dump_data: {golden_dump_data_list[i].keys()}")
+        graph_map = graph_map_list[i]
+        my_dump_data = my_dump_data_list[i]
+        golden_dump_data = golden_dump_data_list[i]
 
-    gathered_row_data = []
-    for token_id in my_dump_data:
-        if token_id not in golden_dump_data:
-            logger.warning(f"My token_id {token_id} not found in golden dump data")
-            continue
-        logger.info(f"Comparing token_id: {token_id}")
-        if is_golden_fx:
-            row_data = compare_ge_with_fx(graph_map, my_dump_data[token_id], golden_dump_data[token_id], token_id)
-        else:
-            row_data = compare_ge_with_ge(graph_map, my_dump_data[token_id], golden_dump_data[token_id], token_id)
-        gathered_row_data.extend(row_data)
-    return save_compare_reault_to_csv(gathered_row_data, output_path)
+        gathered_row_data = []
+        for token_id in my_dump_data:
+            if token_id not in golden_dump_data:
+                logger.warning(f"My token_id {token_id} not found in golden dump data")
+                continue
+            logger.info(f"Comparing token_id: {token_id}")
+            if is_golden_fx:
+                row_data = compare_ge_with_fx(graph_map, my_dump_data[token_id], golden_dump_data[token_id], token_id)
+            else:
+                row_data = compare_ge_with_ge(graph_map, my_dump_data[token_id], golden_dump_data[token_id], token_id)
+            gathered_row_data.extend(row_data)
+        save_compare_reault_to_csv(gathered_row_data, output_path)

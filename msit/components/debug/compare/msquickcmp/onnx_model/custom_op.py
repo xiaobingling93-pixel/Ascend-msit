@@ -1,5 +1,5 @@
-# coding=utf-8
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """
 Function:
 This class is used to modify ONNX model with Npu custom op.
@@ -23,6 +24,8 @@ import numpy as np
 from auto_optimizer import OnnxGraph
 from msquickcmp.common import utils
 from msquickcmp.common.utils import AccuracyCompareException
+
+from components.utils.check.rule import Rule
 
 
 DEFORMABLE_CONV2D_TYPE = "DeformableConv2D"
@@ -64,7 +67,7 @@ class CustomOp():
         return custom_op_path, inputs_map
 
 
-def convert_NC1HWC0_to_NCHW(shape_from: list, array: any) -> any:
+def convert_nc1hwc0_to_nchw(shape_from: list, array: any) -> any:
     """
     Convert the data format from NC1HWC0 to NCHW
     :param shape_from: the shape before convert
@@ -97,10 +100,16 @@ def get_deformable_conv2d_inputs_from_npu_dump(npu_dump_path):
         dump_type = file_name_info[-3]
 
         if DEFORMABLE_CONV2D_TYPE in op_name and op_type == "Conv2D" and dump_type == "output":
-            np_data = np.load(os.path.join(npu_dump_path, item), allow_pickle=True)
+            dump_path = os.path.join(npu_dump_path, item)
+            try:
+                Rule.input_file().check(dump_path, will_raise=True)
+                np_data = np.load(dump_path)
+            except Exception as err:
+                utils.logger.error(f"Load npu dump failed, exception is {err}, please check!")
+                raise
 
             if len(np_data.shape) == 5:
-                np_data = convert_NC1HWC0_to_NCHW(np_data.shape, np_data.flatten())
+                np_data = convert_nc1hwc0_to_nchw(np_data.shape, np_data.flatten())
 
             inputs_map[op_name] = np_data
 
@@ -130,7 +139,7 @@ def remove_deformable_conv2d_and_add_inputs(g:OnnxGraph, npu_dump_path):
     return inputs_map
 
 
-def get_BatchMultiClassNMS_inputs_from_npu_dump(npu_dump_path):
+def get_batch_multi_class_nms_inputs_from_npu_dump(npu_dump_path):
     inputs_map = {}
     
     for item in os.listdir(npu_dump_path):
@@ -146,7 +155,13 @@ def get_BatchMultiClassNMS_inputs_from_npu_dump(npu_dump_path):
 
         if BATCH_MULTI_CLASS_NMS_TYPE in op_name and \
             op_type == "BatchMultiClassNonMaxSuppression" and dump_type == "output":
-            np_data = np.load(os.path.join(npu_dump_path, item), allow_pickle=True)
+            dump_path = os.path.join(npu_dump_path, item)
+            try:
+                Rule.input_file().check(dump_path, will_raise=True)
+                np_data = np.load(dump_path)
+            except Exception as err:
+                utils.logger.error(f"Load npu dump failed, exception is {err}, please check!")
+                raise
 
             op_name_info = op_name.split('_')
             op_name = op_name_info[0] + '_' + op_name_info[1]
@@ -157,8 +172,8 @@ def get_BatchMultiClassNMS_inputs_from_npu_dump(npu_dump_path):
     return inputs_map
 
 
-def remove_BatchMultiClassNMS_and_add_inputs(g:OnnxGraph, npu_dump_path):
-    extend_inpus_map = get_BatchMultiClassNMS_inputs_from_npu_dump(npu_dump_path)
+def remove_batch_multi_class_nms_and_add_inputs(g:OnnxGraph, npu_dump_path):
+    extend_inpus_map = get_batch_multi_class_nms_inputs_from_npu_dump(npu_dump_path)
     inputs_map = {}
 
     for node in g.nodes:
@@ -192,7 +207,7 @@ def remove_BatchMultiClassNMS_and_add_inputs(g:OnnxGraph, npu_dump_path):
     return inputs_map
 
 
-def get_RoiExtractor_inputs_from_npu_dump(npu_dump_path):
+def get_roi_extractor_inputs_from_npu_dump(npu_dump_path):
     inputs_map = {}
     
     for item in os.listdir(npu_dump_path):
@@ -206,10 +221,16 @@ def get_RoiExtractor_inputs_from_npu_dump(npu_dump_path):
 
         dump_type = file_name_info[-3]
         if ROI_EXTRACTOR_TYPE in op_name and op_type == ROI_EXTRACTOR_TYPE and dump_type == "output":
-            np_data = np.load(os.path.join(npu_dump_path, item), allow_pickle=True)
+            dump_path = os.path.join(npu_dump_path, item)
+            try:
+                Rule.input_file().check(dump_path, will_raise=True)
+                np_data = np.load(dump_path)
+            except Exception as err:
+                utils.logger.error(f"Load npu dump failed, exception is {err}, please check!")
+                raise
 
             if len(np_data.shape) == 5:
-                np_data = convert_NC1HWC0_to_NCHW(np_data.shape, np_data.flatten())
+                np_data = convert_nc1hwc0_to_nchw(np_data.shape, np_data.flatten())
 
             op_name_info = op_name.split('_')
             op_name = op_name_info[0] + '_' + op_name_info[1]
@@ -218,8 +239,8 @@ def get_RoiExtractor_inputs_from_npu_dump(npu_dump_path):
     return inputs_map
 
 
-def remove_RoiExtractor_and_add_inputs(g:OnnxGraph, npu_dump_path):
-    extend_inpus_map = get_RoiExtractor_inputs_from_npu_dump(npu_dump_path)
+def remove_roi_extractor_and_add_inputs(g:OnnxGraph, npu_dump_path):
+    extend_inpus_map = get_roi_extractor_inputs_from_npu_dump(npu_dump_path)
     inputs_map = {}
 
     for node in g.nodes:
@@ -245,6 +266,6 @@ def remove_RoiExtractor_and_add_inputs(g:OnnxGraph, npu_dump_path):
 CUSTIOM_OP_MODIFY_FUNC = \
 {
     DEFORMABLE_CONV2D_TYPE: remove_deformable_conv2d_and_add_inputs,
-    BATCH_MULTI_CLASS_NMS_TYPE: remove_BatchMultiClassNMS_and_add_inputs,
-    ROI_EXTRACTOR_TYPE: remove_RoiExtractor_and_add_inputs
+    BATCH_MULTI_CLASS_NMS_TYPE: remove_batch_multi_class_nms_and_add_inputs,
+    ROI_EXTRACTOR_TYPE: remove_roi_extractor_and_add_inputs
 }

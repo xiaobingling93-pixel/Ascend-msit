@@ -1,4 +1,5 @@
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import os
 import sys
 import subprocess
@@ -19,7 +21,8 @@ from components.utils.install import AitInstaller
 
 
 class CompareInstall(AitInstaller):
-    def check(self):
+    @staticmethod
+    def check():
         check_res = []
         installed_pkg = [pkg.key for pkg in pkg_resources.working_set]
 
@@ -37,8 +40,9 @@ class CompareInstall(AitInstaller):
         else:
             return "\n".join(check_res)
 
-    def build_extra(self, find_links=None):
+    @staticmethod
+    def build_extra(find_links=None):
         if sys.platform == 'win32':
             return
         
-        subprocess.run(["/bin/bash", os.path.abspath(os.path.join(os.path.dirname(__file__), "install.sh"))], shell=False)
+        subprocess.run(["/bin/bash", os.path.abspath(os.path.join(os.path.dirname(__file__), "install.sh"))])

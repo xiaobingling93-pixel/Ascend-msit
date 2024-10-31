@@ -23,6 +23,7 @@
 - **适用于 transformers 包，支持类似 LLaMA、QWEN 的典型 LLM 模型结构迁移，以及 LLaVA 等 VL 模型迁移**
 - **当前 MindIE python 接口发布包基于 python 3.10，迁移功能也限定 python3.10；且 transformers 版本需要支持对应模型的 FX 构图，即 `transformers.utils.fx.symbolic_trace` 接口**
 - **ATB Python 模型当前硬件限定 Atlas 800I A2 / 800T A2 / 900 A2**
+- **ATB C++ 模型迁移适配 ATB RC3.B030 + mindie 1.0.RC3.B030**
 
 ### 环境说明
 - 安装 msit
@@ -83,8 +84,7 @@ msit llm transform [-h] -s SOURCE [-atb ATB_MODEL_PATH] [--enable-sparse] [--to-
   #
   # ==============================
   # End-to-end inference example saved to: run.py
-  # You can run the model using the command below:
-  #     python run.py
+  # Execute by: python run.py
   ```
   参照输出的 `Run like:` 部分，导入生成的 py 文件，并调用推理
   ```py
@@ -109,6 +109,11 @@ msit llm transform [-h] -s SOURCE [-atb ATB_MODEL_PATH] [--enable-sparse] [--to-
   # Input: 好雨知时节，当春
   # Output: 好雨知时节，当春乃发生。
   ```
+    | 参数名          | 描述                                                                                                                                                                | 必选 |
+  |--------------| ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |----|
+  | -i, --inputs | 多模态模型推理中需要的对于输入图片的文字描述，默认值为"Who's there?"                            | 否  |
+  | -w, --weight | 多模态模型的权重路径，默认使用输入的模型路径中的浮点权重| 否  |
+  | -h, --help   | 命令行参数帮助信息| 否  |
 ### Transformers LLaMA 迁移到 ATB python 量化模型
 - 从 huggingface 获取相应 LLaMA 模型
 - **需要相应量化权重**
@@ -156,6 +161,53 @@ msit llm transform [-h] -s SOURCE [-atb ATB_MODEL_PATH] [--enable-sparse] [--to-
   print({kk: vv.shape for kk, vv in out.items()})
   # {'output': torch.Size([32, 32000])}
   ```
+
+### Transformers LLava 迁移到 ATB python 模型
+- 从 huggingface 获取相应 LLava 模型  
+（注：transformers==4.44.2）
+- **迁移生成 ATB python 浮点模型**，将生成迁移完成的 ATB python 模型代码 py 文件，以及模型配置参数，并给出调用示例
+  ```sh
+  msit llm transform -s test_llava/ -py
+  # ...
+  # ==============================
+  # Saved to: llamaforcausallm_atb_float.py
+  #
+  # ==============================
+  # atb_model config:
+  # {'vocab_size': 32000, 'num_attention_heads': 32, 'head_dim': 32, 'max_batch_size': 1, 'max_seq_len': 1024}
+  #
+  # ==============================
+  # Run like:
+  #
+  # python3 -c "
+  # import torch, torch_npu
+  # import llamaforcausallm_atb_float
+  # from msit_llm.transform.torch_to_atb_python import ATBModel
+  # 
+  # atb_model = ATBModel(llamaforcausallm_atb_float.Model())
+  # weights = torch.load('$WEIGHT_PATH')  # Use actual WEIGHT_PATH
+  # atb_model.set_weights(weights)
+  # 
+  # input_len = 32
+  # out = atb_model.forward(input_ids=torch.arange(input_len),position_ids=torch.arange(input_len))
+  # print(out)
+  # "
+  #
+  # ==============================
+  # End-to-end inference example saved to: run_vl.py
+  # Execute by: python run_vl.py
+  ```
+  可直接运行 python run_vl.py 调用推理
+  ```sh
+  python run_vl.py -i {image_path} -t "text"
+  ```
+  
+  | 参数名                 | 描述                                                                                                                                                                | 必选 |
+  | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- |
+  | -i, --image           | 多模态模型推理中需要的图片路径                          | 是   |
+  | -t, --text          | 多模态模型推理中需要的对于输入图片的文字描述，默认值为"Describe the image."                                                                                                           | 否   |
+  | -w, --weight             | 多模态模型的权重路径，默认使用输入的模型路径中的浮点权重，可更改为量化后权重路径|  否 |
+  | -h, --help             | 命令行参数帮助信息|  否 |
 ***
 
 ## ATB cpp 迁移示例
@@ -189,6 +241,8 @@ msit llm transform [-h] -s SOURCE [-atb ATB_MODEL_PATH] [--enable-sparse] [--to-
   ```sh
   python qwen/run.py --model_path=/data/qwen-14b-chat
   ```
+  run.py的参数说明见[MindIE-LLM中run_pa.py的参数说明](https://gitee.com/ascend/MindIE-LLM/blob/master/examples/atb_models/examples/README.md#run_papy%E8%84%9A%E6%9C%AC%E5%8F%82%E6%95%B0%E4%BB%8B%E7%BB%8D)
+
   由于迁移的适配性问题，以及 `MindIE-LLM` 迭代更新，推理过程可能存在报错，仍依赖用户手动修复 python 文件中错误。
 ### ATB cpp 仅生成 python 调用代码
 - 若已存在 model 的 cpp 和 h 代码，可通过指定 -atb 或 --atb_model_path 来生成 python 调用代码

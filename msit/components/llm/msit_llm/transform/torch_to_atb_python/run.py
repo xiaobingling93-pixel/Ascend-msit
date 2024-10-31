@@ -150,6 +150,7 @@ if __name__ == "__main__":
     runner.warm_up()
     output_text = runner.infer(args.inputs, use_cache=False)
 
+    logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger()
     logger.info("-" * 40)
     logger.info("Input: %s", args.inputs)
