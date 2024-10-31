@@ -12,4 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+
+
 MAX_FILE_SIZE_200G = 200 * 1024 * 1024 * 1024
+
+PATH_WHITE_LIST_REGEX = re.compile(r"[^_A-Za-z0-9/.-]")

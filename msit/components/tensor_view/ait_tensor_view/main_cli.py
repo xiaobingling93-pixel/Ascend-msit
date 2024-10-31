@@ -13,26 +13,13 @@
 # limitations under the License.
 
 import argparse
+from functools import partial
 
 from ait_tensor_view.operation import SliceOperation, PermuteOperation
 from ait_tensor_view.handler import handle_tensor_view
 from components.utils.parser import BaseCommand
-from components.utils.file_open_check import FileStat, MAX_SIZE_LIMITE_NORMAL_FILE
-
-
-def check_input_path_legality(value):
-    if not value:
-        return value
-    if not value.endswith(".bin") and not value.endswith(".pth"):
-        raise ValueError("only .bin or .pth file is accepted")
-    try:
-        file_stat = FileStat(value)
-    except Exception as err:
-        raise argparse.ArgumentTypeError(f"input path:{value} is illegal. Please check.") from err
-    if not (file_stat.is_basically_legal('read', strict_permission=False) and 
-            file_stat.is_legal_file_size(MAX_SIZE_LIMITE_NORMAL_FILE)):
-        raise argparse.ArgumentTypeError(f"input path:{value} is illegal. Please check.")
-    return value
+from components.utils.file_open_check import FileStat
+from components.llm.msit_llm.common.utils import load_file_to_read_common_check_for_cli
 
 
 def check_output_path_legality(value):
@@ -73,7 +60,10 @@ class TensorViewCommand(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument(
             "--bin", "-b",
-            type=check_input_path_legality,
+            type=partial(
+                    load_file_to_read_common_check_for_cli,
+                    exts=['.bin', '.pth']
+                 ),
             required=True,
             help="Bin file path"
         )
