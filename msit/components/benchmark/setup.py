@@ -54,7 +54,7 @@ setup(
     ],
     python_requires=">=3.7",
     entry_points={
-        "ait_sub_task": msit_sub_task_entry_points,
-        "ait_sub_task_installer": ["msit-benchmark=msit_benchmark.__install__:BenchmarkInstall"],
+        "msit_sub_task": msit_sub_task_entry_points,
+        "msit_sub_task_installer": ["msit-benchmark=msit_benchmark.__install__:BenchmarkInstall"],
     },
 )

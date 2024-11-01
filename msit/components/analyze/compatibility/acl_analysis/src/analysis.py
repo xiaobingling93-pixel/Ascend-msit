@@ -99,5 +99,5 @@ def analysis_310_to_310b(path: str) -> Dict[Knowledge, List[str]]:
     result: Dict[Knowledge, List[str]] = {}
     process_directory(path, result)
     
-    logger.info("[info] Analysis finished.")
+    logger.info("Analysis finished.")
     return result

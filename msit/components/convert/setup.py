@@ -22,7 +22,7 @@ config.read('../config/config.ini')
 with open('requirements.txt', encoding='utf-8') as f:
     required = f.read().splitlines()
 
-ait_sub_tasks = [{
+msit_sub_tasks = [{
     "name": "convert",
     "help_info": "convert tool converts the model from ONNX, TensorFlow, Caffe and MindSpore to OM. \
                    It supports atc, aoe and aie.",
@@ -30,9 +30,9 @@ ait_sub_tasks = [{
     "attr": "get_cmd_instance"
 }]
 
-ait_sub_task_entry_points = [
+msit_sub_task_entry_points = [
     f"{t.get('name')}:{t.get('help_info')} = {t.get('module')}:{t.get('attr')}"
-    for t in ait_sub_tasks
+    for t in msit_sub_tasks
 ]
 
 setup(
@@ -58,7 +58,7 @@ setup(
     ],
     python_requires='>=3.7',
     entry_points={
-        'ait_sub_task': ait_sub_task_entry_points,
-        'ait_sub_task_installer': ['msit-convert=model_convert.__install__:ConvertInstall'],
+        'msit_sub_task': msit_sub_task_entry_points,
+        'msit_sub_task_installer': ['msit-convert=model_convert.__install__:ConvertInstall'],
     },
 )

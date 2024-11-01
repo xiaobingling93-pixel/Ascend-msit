@@ -103,12 +103,10 @@ IF NOT %errorlevel%==0 (
 
 IF DEFINED select_surgeon (
     pip3 uninstall msit-surgeon %all_uninstall%
-    pip3 uninstall ait-surgeon %all_uninstall%
 ) 
 
 IF %all_component%==1 (
     pip3 uninstall msit msit-surgeon %all_uninstall%
-    pip3 uninstall ait ait-surgeon %all_uninstall%
 )
 
 GOTO:eof
