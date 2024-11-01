@@ -25,18 +25,18 @@ def float_layer_h_gen(parsed_model, save_name=None, save_dir=None):
     model_name_lower = parsed_model.get("name", "model").lower()
 
     rr = ""
-    rr += float_layer_h_templates.copyright_header.format(
+    rr += float_layer_h_templates.COPYRIGHT_HEADER.format(
         year=time.localtime().tm_year,
         licenses_url=get_public_url('msit_licenses_url')
     )
-    rr += float_layer_h_templates.include_header_formater.format(
+    rr += float_layer_h_templates.INCLUDE_HEADER_FORMATTER.format(
         model_name_upper=model_name_lower.upper(),
     )
 
-    rr += float_layer_h_templates.basic_class_formatter.format(
+    rr += float_layer_h_templates.BASIC_CLASS_FORMATTER.format(
         model_name_lower=model_name_lower,
-        struct_param_formatter=float_layer_h_templates.struct_param_formatter.format(),
-        decoder_layer_tensor_id_formatter=float_layer_h_templates.decoder_layer_tensor_id_formatter.format()
+        STRUCT_PARAM_FORMATTER=float_layer_h_templates.STRUCT_PARAM_FORMATTER.format(),
+        DECODER_LAYER_TENSOR_ID_FORMATTER=float_layer_h_templates.DECODER_LAYER_TENSOR_ID_FORMATTER.format()
     )
 
     save_name = utils.init_save_name(save_name if save_name else "decoder_layer") + ".h"

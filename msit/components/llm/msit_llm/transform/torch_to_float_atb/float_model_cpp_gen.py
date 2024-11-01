@@ -25,40 +25,40 @@ def float_model_cpp_gen(parsed_model, save_name=None, save_dir=None):
     model_name_lower = parsed_model.get("name", "model").lower()
 
     rr = ""
-    rr += templates.copyright_header.format(
+    rr += templates.COPYRIGHT_HEADER.format(
         year=time.localtime().tm_year,
         licenses_url=get_public_url('msit_licenses_url')
     )
-    rr += templates.include_header_formater.format(
+    rr += templates.INCLUDE_HEADER_FORMATTER.format(
         model_name_lower=model_name_lower,
         other_operations="",
     )
 
     pre_properties = "\n".join([
-        templates.weight_count_formatter.format(),
-        templates.operation_count_formatter.format(),
-        templates.in_tensor_id_formatter.format(),
-        templates.internal_tensor_id_formatter.format(),
-        templates.out_tensor_id_formatter.format(),
-        templates.from_string_formatter.format(),
+        templates.WEIGHT_COUNT_FORMATTER.format(),
+        templates.OPERATION_COUNT_FORMATTER.format(),
+        templates.IN_TENSOR_ID_FORMATTER.format(),
+        templates.INTERNAL_TENSOR_ID_FORMATTER.format(),
+        templates.OUT_TENSOR_ID_FORMATTER.format(),
+        templates.FROM_STRING_FORMATTER.format(),
     ])
 
-    build_graph = templates.build_graph_formatter.format(
-        build_graph_pre_process_formatter=templates.build_graph_pre_process_formatter.format(),
-        build_graph_pre_process_norm_formatter=templates.build_graph_pre_process_norm_formatter.format(),
-        build_graph_layers_formatter=templates.build_graph_layers_formatter.format(model_name_lower=model_name_lower),
-        build_graph_post_process_norm_formatter=templates.build_graph_post_process_norm_formatter.format(),
-        build_graph_post_process_lmhead_formatter=templates.build_graph_post_process_lmhead_formatter.format(),
+    build_graph = templates.BUILD_GRAPH_FORMATTER.format(
+        BUILD_GRAPH_PRE_PROCESS_FORMATTER=templates.BUILD_GRAPH_PRE_PROCESS_FORMATTER.format(),
+        BUILD_GRAPH_PRE_PROCESS_NORM_FORMATTER=templates.BUILD_GRAPH_PRE_PROCESS_NORM_FORMATTER.format(),
+        BUILD_GRAPH_LAYERS_FORMATTER=templates.BUILD_GRAPH_LAYERS_FORMATTER.format(model_name_lower=model_name_lower),
+        BUILD_GRAPH_POST_PROCESS_NORM_FORMATTER=templates.BUILD_GRAPH_POST_PROCESS_NORM_FORMATTER.format(),
+        BUILD_GRAPH_POST_PROCESS_LMHEAD_FORMATTER=templates.BUILD_GRAPH_POST_PROCESS_LMHEAD_FORMATTER.format(),
     )
 
     post_properties = "\n".join([
-        templates.infer_shape_formatter.format(),
+        templates.INFER_SHAPE_FORMATTER.format(),
         build_graph,
-        templates.parse_param_formatter.format(),
-        templates.bind_param_host_tensor_formatter.format(),
+        templates.PARSE_PARAM_FORMATTER.format(),
+        templates.BIND_PARAM_HOST_TENSOR_FORMATTER.format(),
     ])
 
-    rr += templates.basic_class_formatter.format(
+    rr += templates.BASIC_CLASS_FORMATTER.format(
         model_name_lower=model_name_lower,
         pre_properties=pre_properties,
         post_properties=post_properties,
