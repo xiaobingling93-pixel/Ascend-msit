@@ -236,11 +236,12 @@ class TestCommon(unittest.TestCase):
         file_stat[6] = 300 * 1024 * 1024 * 1024
         file_stat = os.stat_result(file_stat)
         with patch('os.stat', return_value=file_stat):
-            with self.assertLogs('msit_logger', 'ERROR') as cm:
-                self.assertRaises(ValueError, load_file_to_read_common_check, __file__)
-                logger_output = cm.output
-                self.assertEqual(len(logger_output), 1)
-                self.assertRegex(logger_output[0], r'File too large')
+            with patch('builtins.input', return_value='n'):
+                with self.assertLogs('msit_logger', 'ERROR') as cm:
+                    self.assertRaises(ValueError, load_file_to_read_common_check, __file__)
+                    logger_output = cm.output
+                    self.assertEqual(len(logger_output), 1)
+                    self.assertRegex(logger_output[0], r'File too large')
 
     def test_load_file_to_read_common_check_file_other_writeable(self):
         file_stat = list(os.stat(__file__))
