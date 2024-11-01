@@ -216,12 +216,16 @@ class OmParser(object):
         return False, None
 
     def get_aipp_config_content(self):
+        aipp_configs = []
         for graph in self.json_object.get(GRAPH_OBJECT):
             for op in graph.get(OP_OBJECT):
                 for attr in op.get(ATTR_OBJECT):
                     if KEY_OBJECT in attr and attr.get(KEY_OBJECT) == AIPP_CONFIG_PATH:
-                        return attr.get(VALUE_OBJECT).get(S_OBJECT)
-        return ''
+                        aipp_configs.append(attr.get(VALUE_OBJECT).get(S_OBJECT))
+        if aipp_configs:
+            return aipp_configs
+        else:
+            return ''
 
     def get_sub_graph_name(self):
         subgraph_name = []
