@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-copyright_header = """/*
+COPYRIGHT_HEADER = """/*
  * Copyright (c) Huawei Technologies Co., Ltd. {year}. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,7 +29,7 @@ copyright_header = """/*
  */
 """
 
-include_header_formater = """
+INCLUDE_HEADER_FORMATTER = """
 #ifndef ATB_SPEED_MODELS_{model_name_upper}_DECODER_LAYER_H
 #define ATB_SPEED_MODELS_{model_name_upper}_DECODER_LAYER_H
 
@@ -41,13 +41,13 @@ include_header_formater = """
 #include "atb_speed/log.h"
 """
 
-basic_class_formatter = """
+BASIC_CLASS_FORMATTER = """
 namespace atb_speed {{
 namespace {model_name_lower} {{
 
-{struct_param_formatter}
+{STRUCT_PARAM_FORMATTER}
 
-{decoder_layer_tensor_id_formatter}
+{DECODER_LAYER_TENSOR_ID_FORMATTER}
 
 atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operation);
 
@@ -70,7 +70,7 @@ private:
 #endif
 """
 
-struct_param_formatter = """
+STRUCT_PARAM_FORMATTER = """
     struct DecoderLayerParam {{
         bool isFA = false;
         bool isPrefill = false;
@@ -97,7 +97,7 @@ struct_param_formatter = """
 """
 
 
-decoder_layer_tensor_id_formatter = """
+DECODER_LAYER_TENSOR_ID_FORMATTER = """
     enum DecoderLayerTensorId : int {{
         IN_HIDDEN_STATES = 0,
 
