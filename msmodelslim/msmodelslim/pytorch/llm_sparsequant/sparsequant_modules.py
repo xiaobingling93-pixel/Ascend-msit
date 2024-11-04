@@ -10,6 +10,7 @@ from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_modules import TensorQuanti
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config import QuantConfig
 from msmodelslim.pytorch.llm_sparsequant.atomic_power_outlier import quant_one_weight_by_outliers
 
+
 class LinearSparseQuantizer(nn.Module):
     """
     Class to quantize given linear layer weights
@@ -35,6 +36,7 @@ class LinearSparseQuantizer(nn.Module):
             bit=cfg.w_bit, is_signed=cfg.w_signed, is_enable=True,
             is_input=False, cfg=cfg, logger=logger
         )
+
     def set_param(self, linear):
         self.in_features = linear.in_features
         self.out_features = linear.out_features
@@ -51,18 +53,17 @@ class LinearSparseQuantizer(nn.Module):
         if self.quant_input.bit <= 8:
             x = self.quant_input(x)
 
-
         if self.quant_weight.cfg.co_sparse:
             if not self.weight_quant_flag:
                 per_channel = False if self.quant_weight.cfg.mm_tensor else True
                 recovered_weight, s_w, i8_w, offset_w = \
                     quant_one_weight_by_outliers(self.weight, powerquant=self.quant_weight.cfg.nonuniform,
-                                                  fraction=self.quant_weight.cfg.fraction,
-                                                  num_bits=self.quant_weight.cfg.w_bit,
-                                                  per_channel=per_channel)
+                                                 fraction=self.quant_weight.cfg.fraction,
+                                                 num_bits=self.quant_weight.cfg.w_bit,
+                                                 per_channel=per_channel)
 
                 self.new_weight = recovered_weight.to(self.weight.device).type_as(self.weight)
-                self.quant_weight,weight_scale = s_w.to(self.weight.device).type_as(self.weight)
+                self.quant_weight.weight_scale = s_w.to(self.weight.device).type_as(self.weight)
                 self.quant_weight.weight_offset = offset_w.to(self.weight.device).type_as(self.weight)
                 self.weight_quant_flag = True
                 self.weight.data = self.weight.data.cpu()  # Do not delete, for cpu offload
@@ -91,43 +92,43 @@ class LinearSparseQuantizer(nn.Module):
         if (input_scale is not None) and (weight_scale is not None):
             if len(weight_scale.shape) > 1:
                 weight_scale = weight_scale.reshape((len(x.shape) - 2) * (1,) + (1, weight.shape[0]))
-                # offset correction, offline calibration
-                correction = weight.sum(dim=1) * input_offset.to(torch.float32)
-                if self.quant_weight.int_bias:
-                    # int32 bias, offline calibration
-                    fp_scale = input_scale * weight_scale
-                    fp_scale = fp_scale.to(torch.float32)
-                    if self.bias is not None:
-                        bias_int = self.cal_bias_int(fp_scale)
-                    else:
-                        bias_int = torch.zeros(correction.size(0)).to(x.device)
-                    bias_int -= correction
-
-                    # int32 biasadd -> dequant
-                    fp_out = (int_out + bias_int) * fp_scale
-                    fp_out = fp_out.to(torch.float16)
-                else:
-                    # dequant
-                    fp_scale = input_scale * weight_scale
-                    fp_scale = fp_scale.to(torch.float32)
-
-                    fp_out = int_out * fp_scale
-                    fp_out = fp_out.to(torch.float16)
-
-                    # fp32 bias, offline calibration
-                    correction_fp = correction * fp_scale
-                    correction_fp = correction_fp.to(torch.float16)
-                    if self.bias is not None:
-                        bias_fp = self.bias.data.to(torch.float16) - correction_fp
-                    else:
-                        bias_fp = - correction_fp
-                    # fp32 biasadd
-                    fp_out += bias_fp
-            else:
-                fp_out = int_out
+            # offset correction, offline calibration
+            correction = weight.sum(dim=1) * input_offset.to(torch.float32)
+            if self.quant_weight.int_bias:
+                # int32 bias, offline calibration
+                fp_scale = input_scale * weight_scale
+                fp_scale = fp_scale.to(torch.float32)
                 if self.bias is not None:
-                    fp_out += self.bias.data
-            return dtype, fp_out
+                    bias_int = self.cal_bias_int(fp_scale)
+                else:
+                    bias_int = torch.zeros(correction.size(0)).to(x.divice)
+                bias_int -= correction
+
+                # int32 biasadd -> dequant
+                fp_out = (int_out + bias_int) * fp_scale
+                fp_out = fp_out.to(torch.float16)
+            else:
+                # dequant
+                fp_scale = input_scale * weight_scale
+                fp_scale = fp_scale.to(torch.float32)
+
+                fp_out = int_out * fp_scale
+                fp_out = fp_out.to(torch.float16)
+
+                # fp32 bias, offline calibration
+                correction_fp = correction * fp_scale
+                correction_fp = correction_fp.to(torch.float16)
+                if self.bias is not None:
+                    bias_fp = self.bias.data.to(torch.float16) - correction_fp
+                else:
+                    bias_fp = - correction_fp
+                # fp32 biasadd
+                fp_out += bias_fp
+        else:
+            fp_out = int_out
+            if self.bias is not None:
+                fp_out += self.bias.data
+        return dtype, fp_out
 
     def cal_bias_int(self, fp_scale):
         if fp_scale != 0:

@@ -22,7 +22,7 @@ class Quantizer(nn.Module):
 
     def __init__(self,
                  bit=8,
-                 is_signed=False,
+                 is_signed=True,
                  is_enable=False,
                  is_input=False,
                  cfg=None,
@@ -39,7 +39,7 @@ class Quantizer(nn.Module):
         self.is_sym = cfg.a_sym if is_input else cfg.w_sym
         self.is_calib = True
         self.pr = cfg.pr  # qdrop
-        self.mm_per_tensor = cfg.mm_per_tensor
+        self.mm_per_tensor = cfg.mm_tensor
         self.int_bias = cfg.int_bias
         self.w_hessian = cfg.w_hessian
         self.is_calib = True
@@ -85,7 +85,7 @@ class Quantizer(nn.Module):
                 self.logger.info("use histogram observer:%s, range_parm:%s", self.name, self.range_param)
                 self.observer = HistogramObserver(qscheme=torch.per_tensor_affine)
             elif 50 < self.range_param:
-                self.logger.info("use histogram observer:%s, range_parm:%s", self.name, self.range_param)
+                self.logger.info("use min-max observer:%s, range_parm:%s", self.name, self.range_param)
                 self.observer = StatMinMaxObserver(self.bit, self.is_signed, self.is_sym)
 
     def disable_input_quantization(self):
@@ -118,7 +118,7 @@ class Quantizer(nn.Module):
     def disable_int_infer(self):
         self.int_infer = False
         self.int_weight_flag = False
-        self.quant_weight_tensor = None
+        self.int_weight_tensor = None
 
     def get_scale_offset(self):
         if self.is_input:
@@ -220,12 +220,12 @@ class Quantizer(nn.Module):
                     *calling_params,
                     round_opt=self.round_opt,
                     mm_tensor=self.mm_per_tensor,
-                    hqq=self.use_hqq,
+                    hqq=self.use_hqq
                 )
         self.has_init_quant_para = True
 
     def _stat_dynamic_input(self, tensor):
-        """dynamic场景下获取当前input的tensor的min和max"""
+        """dynamic场景下获取当前input的tensor的min和max."""
         if tensor.dim() == 2:
             tensor_tmp = tensor.unsqueeze(0)
             x_min = tensor_tmp.min(2)[0]
@@ -250,24 +250,24 @@ class Quantizer(nn.Module):
                     dequant=False
                 )
                 self.int_weight_flag = False
-                return self.int_weight_tensor
-            else:
-                _, quant_weight_tensor = fake_quantize(
-                    tensor=tensor,
-                    scale=self.weight_scale,
-                    zero_point=self.weight_offset,
-                    bit=self.bit,
-                    is_signed=self.is_signed,
-                    dequant=True
-                )
-                return quant_weight_tensor
+            return self.int_weight_tensor
+        else:
+            _, quant_weight_tensor = fake_quantize(
+                tensor=tensor,
+                scale=self.weight_scale,
+                zero_point=self.weight_offset,
+                bit=self.bit,
+                is_signed=self.is_signed,
+                dequant=True
+            )
+            return quant_weight_tensor
 
     def _quant_activation_forward(self, tensor):
         if self.is_dynamic:
             self.input_scale, self.input_offset = linear_quantization_params(
                 self.bit, self.x_min, self.x_max, q_signed=self.is_signed, sym=self.is_sym
             )
-            
+
         dtype = tensor.dtype
         if (not self.is_calib) and self.int_infer:
             # int8*int8, offset correction
@@ -305,7 +305,7 @@ class TensorQuantizer(Quantizer):
     Class to quantize given tensor
     """
 
-    def __subclasshook__(self, **kwargs):
+    def __init__(self, **kwargs):
         super(TensorQuantizer, self).__init__(**kwargs)
 
     def forward(self, tensor, y=None):
@@ -317,7 +317,7 @@ class LinearQuantizer(nn.Module):
     Class to quantize given linear layer weights
     """
 
-    def __int__(self, cfg=None, logger=None):
+    def __init__(self, cfg=None, logger=None):
         """
         cfg: quantizaton configuration
         """
@@ -349,7 +349,7 @@ class LinearQuantizer(nn.Module):
     def set_ratio(self, ratio=0.9):
         self.quant_input.set_ratio(ratio)
 
-    def activation(self, x):
+    def activation_calib(self, x):
         self.quant_input(x)
 
     def weight_calib(self, y=None):
@@ -388,18 +388,18 @@ class LinearQuantizer(nn.Module):
             input_offset = input_offset.to(quant_param_dtype)
             weight_scale = weight_scale.to(quant_param_dtype)
             if len(weight_scale.shape) > 1:
-                weight_scale = weight_scale.reshape((len(x.shape) - 2) * (1,) + (1, weight_scale.shape[0]))
-                # offset correction, offline calibration
-                correction = weight.sum(dim=1) * input_offset.to(quant_param_dtype)
-                fp_scale = input_scale * weight_scale
-                fp_scale = fp_scale.to(quant_param_dtype)
-                fp_out = self._bias_and_dequant_process(correction, int_out, fp_scale, x.device, x_dtype)
-            else:
-                fp_out = int_out
-                if self.bias is not None:
-                    fp_out += self.bias.data
+                weight_scale = weight_scale.reshape((len(x.shape) - 2) * (1,) + (1, weight.shape[0]))
+            # offset correction, offline calibration
+            correction = weight.sum(dim=1) * input_offset.to(quant_param_dtype)
+            fp_scale = input_scale * weight_scale
+            fp_scale = fp_scale.to(quant_param_dtype)
+            fp_out = self._bias_and_dequant_process(correction, int_out, fp_scale, x.device, x_dtype)
+        else:
+            fp_out = int_out
+            if self.bias is not None:
+                fp_out += self.bias.data
 
-            return fp_out.to(ori_dtype)
+        return fp_out.to(ori_dtype)
 
     def _bias_and_dequant_process(self, correction, int_out, fp_scale, x_device, x_dtype):
         if self.quant_weight.int_bias:
@@ -522,7 +522,7 @@ def _layer_wise_activation_calib(all_tensors, module, name, device, offload_devi
         if device is not None:
             y = all_tensors[name][0].to(device)
             module.weight_calib(y)
-            y = y.to(offload_device)
+            y = y.to(offload_device)  # cpu-offload, do not delete!
         else:
             module.weight_calib(all_tensors[name][0])
     else:

@@ -19,7 +19,7 @@ from accelerate.hooks import add_hook_to_module, remove_hook_from_module
 from msmodelslim import logger as msmodelslim_logger
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config import QuantConfig
 from ascend_utils.common.security import (get_valid_write_path, SafeWriteUmask, check_element_type,
-    check_type, check_dict_element, get_write_directory, check_number, check_int)
+                                          check_type, check_dict_element, get_write_directory, check_number, check_int)
 from msmodelslim.pytorch.llm_ptq.anti_outlier.graph_utils import (
     NormBias, extract_dag, input_to_cpu, norm_class_detect, class_detect
 )
@@ -90,7 +90,7 @@ class Calibrator(object):
         self.init_model_accelerate(model)
         # 初始化dag类
         self.dag = self.extract_dag(model)
-        #初始化kvcache类
+        # 初始化kvcache类
         self.attention_class = None
         if self.use_kvcache_quant:
             self.get_kvcache(model)
@@ -104,7 +104,7 @@ class Calibrator(object):
             replace_RMSNorm(model)
 
         # 初始化模型权重json描述
-        self.quant_model_json_description = QuantModelJsonDescription(self.cfg.model_quant_type, 
+        self.quant_model_json_description = QuantModelJsonDescription(self.cfg.model_quant_type,
                                                                       self.cfg.use_kvcache_quant)
         if not re.match(r'^L((?!0)\d+|0)$', disable_level):
             raise ValueError('Please check the `disable_level` configuration.')
@@ -227,7 +227,7 @@ class Calibrator(object):
         def update_extremum(kv_cache, name, key, torch_function, value):
             if name not in kv_cache:
                 kv_cache[name] = {}
-                
+
             if key in kv_cache[name]:
                 kv_cache[name][key] = torch_function(kv_cache[name][key], value)
             else:
@@ -239,8 +239,8 @@ class Calibrator(object):
 
             hidden_dim = tensor.shape[-1]
             tensor = tensor.view(-1, hidden_dim).detach()
-            comming_max = torch.max(tensor, dim=0)[0]  
-            comming_min = torch.min(tensor, dim=0)[0]  
+            comming_max = torch.max(tensor, dim=0)[0]
+            comming_min = torch.min(tensor, dim=0)[0]
             max_min = [comming_max, comming_min]
 
             if num_kv == 2:
@@ -259,16 +259,16 @@ class Calibrator(object):
             if isinstance(y, tuple):
                 y = y[0]
             kv_tensor(name, x.shape[-1], y)
-        
+
         hooks = []
         for name, m in model.named_modules():
             if isinstance(m, nn.Linear):
                 if name in kv_linears:
                     hooks.append(
-                    m.register_forward_hook(
-                        functools.partial(kv_cache_hook, name=name))
-                )
-        
+                        m.register_forward_hook(
+                            functools.partial(kv_cache_hook, name=name))
+                    )
+
         for data in tqdm(self.calib_data):
             if isinstance(data, tuple) or isinstance(data, list):
                 with torch.no_grad():
@@ -278,7 +278,7 @@ class Calibrator(object):
                     model(**data)
         for h in hooks:
             h.remove()
-        
+
         return kv_cache
 
     def get_kvcache_quant_param(self, num_kv):
@@ -295,7 +295,7 @@ class Calibrator(object):
         key_weight = key + '.weight'
         new_key_scale, new_key_offset = new_key + '.kv_cache_scale', new_key + '.kv_cache_offset'
 
-        scale, zero_point = linear_quantization_params(8, kv_cache['min'], kv_cache['max'], 
+        scale, zero_point = linear_quantization_params(8, kv_cache['min'], kv_cache['max'],
                                                        integral_zero_point=True, q_signed=True, sym=self.kv_sym)
 
         self.quant_param_dict[new_key_scale] = scale.to('cpu')
@@ -704,7 +704,6 @@ class Calibrator(object):
                     self.logger.info(f"run MIN-MAX quantization on linear layer: {name}")
                 module.quant_weight(module.weight)
 
-
     def run_amp(self):
         max_input_dict = {}
 
@@ -870,7 +869,7 @@ class Calibrator(object):
     def get_norm_class(self, model, norm_class_name=None):
         if norm_class_name is not None:
             norm_class = list(set([m.__class__ for m in model.modules() \
-                if norm_class_name.lower() in m.__class__.__name__.lower()])) 
+                                   if norm_class_name.lower() in m.__class__.__name__.lower()]))
         else:
             norm_class = list(set([m.__class__ for m in model.modules() if "norm" in m.__class__.__name__.lower()]))
             if len(norm_class) != 1:
@@ -879,13 +878,13 @@ class Calibrator(object):
 
     def enable_kvcache_fake_quantization(self):
         num_layers = getattr(self.model.config, 'num_layers', None) \
-                     if hasattr(self.model, 'config') else None
+            if hasattr(self.model, 'config') else None
         for name, mod in self.model.named_modules():
             # set the variable and function of kvcache in attention class
             if self.attention_class and isinstance(mod, self.attention_class):
-                cache_sub_dict = {key : value for key, value in self.quant_param_dict.items() if name in key}
+                cache_sub_dict = {key: value for key, value in self.quant_param_dict.items() if name in key}
                 set_kvcache_vari_func(mod, cache_sub_dict, self.cfg, num_layers=num_layers)
-                
+
                 setattr(mod, 'original_forward', mod.forward)
                 setattr(mod, 'forward', new_forward.__get__(mod, mod.__class__))
 
