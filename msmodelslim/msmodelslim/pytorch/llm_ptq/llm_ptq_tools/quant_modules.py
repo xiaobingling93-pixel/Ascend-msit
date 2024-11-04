@@ -263,6 +263,11 @@ class Quantizer(nn.Module):
                 return quant_weight_tensor
 
     def _quant_activation_forward(self, tensor):
+        if self.is_dynamic:
+            self.input_scale, self.input_offset = linear_quantization_params(
+                self.bit, self.x_min, self.x_max, q_signed=self.is_signed, sym=self.is_sym
+            )
+            
         dtype = tensor.dtype
         if (not self.is_calib) and self.int_infer:
             # int8*int8, offset correction
