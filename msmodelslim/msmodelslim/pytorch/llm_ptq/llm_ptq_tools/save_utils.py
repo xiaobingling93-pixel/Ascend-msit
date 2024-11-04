@@ -52,13 +52,11 @@ def save_file_partial(weight_dict, safetensors_name, part_file_size):
     else:
         format_func = str
     for i in range(part_file_count):
-        part_file_map = {}
         part_file_name = safetensors_name.replace(".safetensors", f"-{format_func(i + 1)}-of-"
                                                                   f"{format_func(part_file_count)}.safetensors")
+        unit_name = part_file_name.split('/')[-1]
         for key in part_weight_list[i].keys():
-            unit_name = part_file_name.split('/')[-1]
-            part_file_map[key] = unit_name
-        file_map_dict.update(part_file_map)
+            file_map_dict[key] = unit_name
         part_file_path = get_valid_write_path(part_file_name, extensions=[".safetensors"])
         save_file(part_weight_list[i], part_file_path)
 
