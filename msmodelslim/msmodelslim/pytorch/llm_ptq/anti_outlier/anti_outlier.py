@@ -1,4 +1,4 @@
-# Copyright (c) Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
+#  Copyright (c) Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
 from __future__ import absolute_import, division, print_function
 
 import os
@@ -71,14 +71,14 @@ def model_to_cpu(model):
                 mod._hf_hook.detach_hook(mod)
 
 
-def mode_to_org_device_with_buffer(model, device_org='cpu'):
+def model_to_org_device_with_buffer(model, device_org='cpu'):
     if not judge_model_with_accelerate(model):
         model.to(device_org)
 
     # 将原模型的权重恢复到GPU（或meta）上
     for _, mod in model.named_modules():
-        if hasattr(mod, "_hf_hook"):
-            mod._hf_hook.detach_hook(mod)
+        if hasattr(mod, '_hf_hook'):
+            mod._hf_hook.init_hook(mod)
     device_map = model.hf_device_map
     for name, mod in model.named_modules():
         # 需要将之前在cpu上可能产生的buffer同步转移到module所在的设备上
@@ -86,7 +86,7 @@ def mode_to_org_device_with_buffer(model, device_org='cpu'):
             continue
         if name in device_map:
             device = device_map[name]
-        elif hasattr(mod, "device"):
+        elif hasattr(mod, 'device'):
             device = mod.device
         else:
             continue
@@ -121,7 +121,7 @@ def model_to_org_device(model, device_org='cpu'):
 def deepcopy_model(model,
                    logger,
                    device_org=None,
-                   mode_with_accelerate=True):
+                   model_with_accelerate=True):
     # 原模型转移到CPU上
     for mod in model.modules():
         try:
@@ -139,7 +139,7 @@ def deepcopy_model(model,
     # 删除accelerate封装的forward函数，将备份的forward函数恢复
     new_model = remove_hook_from_module(new_model, True)
 
-    model_to_org_device(new_model, device_org)
+    model_to_org_device(model, device_org)
 
     return new_model
 
@@ -166,13 +166,13 @@ def replace_rms_norm(model: nn.Module, norm_class_name: str):
     if judge_model_with_accelerate(model):
         model_to_org_device(model)
         for _, module in model.named_modules():
-            if isinstance(module, NormBias) and hasattr(module, '_old_hook'):
-                add_hook_to_module(module, module._hf_hook)
-                del module._old_hook
+            if isinstance(module, NormBias) and hasattr(module, 'old_hook'):
+                add_hook_to_module(module, module.old_hook)
+                del module.old_hook
 
 
 class AntiOutlier(object):
-    """Anti-outlier for LLM activate quantization."""
+    """Anti-outlier for LLM activation quantization."""
 
     def __init__(
             self,
@@ -184,11 +184,11 @@ class AntiOutlier(object):
         self.logger = msmodelslim_logger
 
         if norm_class_name is not None and not isinstance(norm_class_name, str):
-            raise TypeError("norm_class_name must be a str, please check it.")
+            raise TypeError("norm_class_name must be str, please check it.")
         if not isinstance(model, nn.Module):
-            raise TypeError("model must be a nn.Module, please check it.")
+            raise TypeError("model must be nn.Module, please check it.")
         if not isinstance(calib_data, list):
-            raise TypeError("calib_data must be a list, please check it.")
+            raise TypeError("calib_data must be list, please check it.")
         check_type(cfg, AntiOutlierConfig, param_name="config")
         self.with_accelerate = judge_model_with_accelerate(model)
 
@@ -198,13 +198,13 @@ class AntiOutlier(object):
         if self.cfg.device == "cpu":
             same_device = self.cfg.device == model.device.type
         else:
-            same_device = self.cfg.device == self.device
+            same_device = self.cfg.device == model.device
 
         if not same_device:
             self.logger.warning("Model is not on the deivce indicated in `AntiOutlierConfig`, "
                                 "Model is on the device `{}` while `AntiOutlierConfig` "
                                 "indicates `{}`".format(model.device, self.cfg.device))
-            self.logger.info("Transfering model from `{}` to `{}`...".format(model.device, self.device))
+            self.logger.info("Transfering model from `{}` to `{}`...".format(model.device, self.cfg.device))
             model = model.to(self.cfg.device)
             self.logger.info("Transfer done. Suggest to check model and calib_data (if provided) on the "
                              "device that `AntiOutlierConfig` indicates.")
@@ -229,7 +229,7 @@ class AntiOutlier(object):
         self.model = deepcopy_model(model,
                                     self.logger,
                                     device_org=self.device_org,
-                                    mode_with_accelerate=self.with_accelerate).float()
+                                    model_with_accelerate=self.model_with_accelerate).float()
         self.norm_linear_subgraph = None
 
         if calib_data is None:
@@ -264,7 +264,7 @@ class AntiOutlier(object):
 
         self.norm_linear_subgraph = self.dag.get_norm_linear_subgraph()
         if self.cfg.anti_method == 'm4':
-            self.linear_linear_subgraph = self.dag.get_linear_subgraph()
+            self.linear_linear_subgraph = self.dag.get_linear_linear_subgraph()
             self.norm_linear_subgraph.update(self.linear_linear_subgraph)
 
         del self.model
@@ -288,7 +288,7 @@ class AntiOutlier(object):
             act_stats[name]['tensor'] = tensor
 
         hidden_dim = tensor.shape[-1]
-        tensor = tensor.view(-1, hidden_dim).detach()  # [N, C]
+        tensor = tensor.view(-1, hidden_dim).detach()  # [N,C]
         coming_max = torch.max(tensor, dim=0)[0]  # [C]
         coming_min = torch.min(tensor, dim=0)[0]  # [C]
 
@@ -301,7 +301,7 @@ class AntiOutlier(object):
             stat_dict[STAT_KEY_MAX] = coming_max
 
         if STAT_KEY_MIN in stat_dict:
-            stat_dict[STAT_KEY_MIN] = torch.min(stat_dict[STAT_KEY_MIN], coming_min)
+            stat_dict[STAT_KEY_MIN] = torch.min(stat_dict[STAT_KEY_MIN], coming_min)  # [C]
         else:
             stat_dict[STAT_KEY_MIN] = coming_min
 
@@ -318,7 +318,7 @@ class AntiOutlier(object):
                 stat_dict[STAT_KEY_SHIFT] = torch.zeros(coming_max.size(0)).to(coming_max.device)
 
         # the tensor-wise max threshold
-        tensor_max = torch.max(tensor - stat[STAT_KEY_SHIFT])  # [N, C]
+        tensor_max = torch.max(tensor - stat_dict[STAT_KEY_SHIFT])  # [N, C]
         if STAT_KEY_THRESHOLD_TENSOR in stat_dict:
             stat_dict[STAT_KEY_THRESHOLD_TENSOR] = torch.max(stat_dict[STAT_KEY_THRESHOLD_TENSOR],
                                                              tensor_max)  # [N, C]
@@ -415,7 +415,7 @@ class AntiOutlier(object):
         if os.path.exists(output_path):
             os.remove(output_path)
 
-        with os.fdopen(os.open(output_path, write_flags, write_mode), 'w') as f:
+        with os.fdopen(os.open(output_path, write_flags, write_mode), "w") as f:
             torch.save(self.model, f)
 
     def get_num_attention_heads(self):

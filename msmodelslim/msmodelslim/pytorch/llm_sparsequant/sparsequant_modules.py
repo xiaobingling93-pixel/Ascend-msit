@@ -100,7 +100,7 @@ class LinearSparseQuantizer(nn.Module):
                     if self.bias is not None:
                         bias_int = self.cal_bias_int(fp_scale)
                     else:
-                        bias_int = torch.zeros(correction.size(0)).to(x.divice)
+                        bias_int = torch.zeros(correction.size(0)).to(x.device)
                     bias_int -= correction
 
                     # int32 biasadd -> dequant
