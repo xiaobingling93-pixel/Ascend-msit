@@ -29,7 +29,7 @@ def convert_to_inference_network(network):
             rename_parameters(new_subcell, name_prefix)
             network.insert_child_to_cell(name, new_subcell)
         else:
-            _ = convert_to_inference_network(cell)
+            convert_to_inference_network(cell)
     if isinstance(network, nn.SequentialCell):
         network.cell_list = list(network.cells())
 

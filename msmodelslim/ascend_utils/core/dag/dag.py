@@ -25,81 +25,6 @@ class DirectedAcyclicGraph:
     def dag_node_list(self) -> List[DagNode]:
         return self._dag_node_list
 
-    @staticmethod
-    def _clone_sub_graph(node_list_in_calc_order: List[DagNode]) -> List[DagNode]:
-        if node_list_in_calc_order is None or not isinstance(node_list_in_calc_order, list):
-            return []
-        dag_node_list = [DagNode(op_type=node.op_types, name=node.name) for node in node_list_in_calc_order]
-        dag_node_map = {node.name: node for node in dag_node_list}
-        for node in node_list_in_calc_order:
-            node_clone = dag_node_map[node.name]
-            node_clone.add_next_node(dag_node_map[node_output.name] for node_output in node.output_nodes)
-        return dag_node_list
-
-    @staticmethod
-    def _get_node_input_node(sub_graph):
-        # check 图只有一个输入和一个输出
-        input_node = None
-        output_node = None
-        for node in sub_graph:
-            if len(node.inputs) == 0:
-                if input_node is not None:
-                    raise ValueError("There can only be one input node.")
-                else:
-                    input_node = node
-            if len(node.outputs) == 0:
-                if output_node is not None:
-                    raise ValueError("There can only be one output node.")
-                else:
-                    output_node = node
-
-        for node in sub_graph:
-            for linked_node in chain(node.input_nodes, node.output_nodes):
-                if linked_node not in sub_graph:
-                    raise ValueError("There can only be one input/output node.")
-
-        node_names = set()
-        for node in sub_graph:
-            if node.name in node_names:
-                raise ValueError("The node name must be different.")
-            node_names.add(node.name)
-
-        if input_node is None or output_node is None:
-            raise ValueError("You must have an input and an output.")
-
-        return input_node
-
-    @staticmethod
-    def _get_node_list_in_calc_order(sub_graph, input_node):
-        # Sort by Calculation Order
-        node_list_in_calc_order = []
-        calculating_nodes: Queue[DagNode] = Queue()
-        calculating_nodes.put(input_node)
-        while len(node_list_in_calc_order) < len(sub_graph) and not calculating_nodes.empty():
-            calculating_node = calculating_nodes.get()
-            node_list_in_calc_order.append(calculating_node)
-            for next_will_calc_node in calculating_node.output_nodes:
-                if all((needed_input in node_list_in_calc_order for needed_input in next_will_calc_node.input_nodes)):
-                    calculating_nodes.put(next_will_calc_node)
-
-        return node_list_in_calc_order
-    
-    @staticmethod
-    def _get_proper_combination_of_outputs(ori_graph_outputs: List[DagNode],
-                                           sub_graph_outputs: List[DagNode]):
-        # check output count
-        if len(ori_graph_outputs) != len(sub_graph_outputs):
-            return
-
-        # Preprocessing op type classes
-        for seq in FullPermutation().get_all_permutations(len(sub_graph_outputs)):
-            for index_sub_node, index_ori_node in enumerate(seq):
-                if ori_graph_outputs[index_ori_node].op_type not in sub_graph_outputs[index_sub_node].op_types:
-                    break
-            else:
-                yield {sub_graph_outputs[index_sub_node].name: ori_graph_outputs[index_ori_node] for
-                       index_sub_node, index_ori_node in enumerate(seq)}
-    
     def search_nodes_by_class(self, cls: Type) -> Generator[DagNode, None, None]:
         check_type(cls, type, param_name="cls")
         for dag_node in self._dag_node_list:
@@ -160,6 +85,65 @@ class DirectedAcyclicGraph:
                     continue
                 for search_out in self._search_by_calc_order({input_node.name: node}, node_list_in_calc_order, 0):
                     yield search_out
+
+    @staticmethod
+    def _clone_sub_graph(node_list_in_calc_order: List[DagNode]) -> List[DagNode]:
+        if node_list_in_calc_order is None or not isinstance(node_list_in_calc_order, list):
+            return []
+        dag_node_list = [DagNode(op_type=node.op_types, name=node.name) for node in node_list_in_calc_order]
+        dag_node_map = {node.name: node for node in dag_node_list}
+        for node in node_list_in_calc_order:
+            node_clone = dag_node_map[node.name]
+            node_clone.add_next_node(dag_node_map[node_output.name] for node_output in node.output_nodes)
+        return dag_node_list
+
+    @staticmethod
+    def _get_node_input_node(sub_graph):
+        # check 图只有一个输入和一个输出
+        input_node = None
+        output_node = None
+        for node in sub_graph:
+            if len(node.inputs) == 0:
+                if input_node is not None:
+                    raise ValueError("There can only be one input node.")
+                else:
+                    input_node = node
+            if len(node.outputs) == 0:
+                if output_node is not None:
+                    raise ValueError("There can only be one output node.")
+                else:
+                    output_node = node
+
+        for node in sub_graph:
+            for linked_node in chain(node.input_nodes, node.output_nodes):
+                if linked_node not in sub_graph:
+                    raise ValueError("There can only be one input/output node.")
+
+        node_names = set()
+        for node in sub_graph:
+            if node.name in node_names:
+                raise ValueError("The node name must be different.")
+            node_names.add(node.name)
+
+        if input_node is None or output_node is None:
+            raise ValueError("You must have an input and an output.")
+
+        return input_node
+
+    @staticmethod
+    def _get_node_list_in_calc_order(sub_graph, input_node):
+        # Sort by Calculation Order
+        node_list_in_calc_order = []
+        calculating_nodes: Queue[DagNode] = Queue()
+        calculating_nodes.put(input_node)
+        while len(node_list_in_calc_order) < len(sub_graph) and not calculating_nodes.empty():
+            calculating_node = calculating_nodes.get()
+            node_list_in_calc_order.append(calculating_node)
+            for next_will_calc_node in calculating_node.output_nodes:
+                if all((needed_input in node_list_in_calc_order for needed_input in next_will_calc_node.input_nodes)):
+                    calculating_nodes.put(next_will_calc_node)
+
+        return node_list_in_calc_order
 
     @abstractmethod
     def get_params(self) -> int:
@@ -246,6 +230,21 @@ class DirectedAcyclicGraph:
             # the search continues based on the calculation order.
             for search_out in self._search_by_calc_order(matched_nodes, node_list_in_calc_order, index + 1):
                 yield search_out
+
+    def _get_proper_combination_of_outputs(self, ori_graph_outputs: List[DagNode],
+                                           sub_graph_outputs: List[DagNode]):
+        # check output count
+        if len(ori_graph_outputs) != len(sub_graph_outputs):
+            return
+
+        # Preprocessing op type classes
+        for seq in FullPermutation().get_all_permutations(len(sub_graph_outputs)):
+            for index_sub_node, index_ori_node in enumerate(seq):
+                if ori_graph_outputs[index_ori_node].op_type not in sub_graph_outputs[index_sub_node].op_types:
+                    break
+            else:
+                yield {sub_graph_outputs[index_sub_node].name: ori_graph_outputs[index_ori_node] for
+                       index_sub_node, index_ori_node in enumerate(seq)}
 
     def _remove_one_node(self, node: DagNode):
         if node in self.dag_node_list:

@@ -1,9 +1,9 @@
 # Copyright Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
 
-import logging
 from mindspore.nn import Conv2d
 from mindspore.train import serialization
 
+from msmodelslim import logger
 from ascend_utils.mindspore.quant.ptq_quant.convert_deploy import convert_to_inference_network
 from ascend_utils.mindspore.quant.ptq_quant.process_utils import convert_equact_to_relu
 from ascend_utils.common.security import get_valid_write_path
@@ -33,7 +33,7 @@ def save_model(file_name, quantized_model, *input_data, file_format='AIR'):
     if file_format not in ['AIR', 'MINDIR']:
         raise ValueError("For 'save_model', 'file_format' must be one of ['AIR', 'MINDIR']")
 
-    logging.info("Start to export %s file...", file_format)
+    logger.info("Start to export %s file...", file_format)
     try:
         if isinstance(input_data, (list, tuple)):
             serialization.export(q_model,
@@ -44,7 +44,7 @@ def save_model(file_name, quantized_model, *input_data, file_format='AIR'):
                                  input_data,
                                  file_name=file_name, file_format=file_format)
     except Exception as exception:
-        logging.warning(exception)
-        logging.warning("Fail to export %s file: %s", file_format, file_name)
+        logger.warning(exception)
+        logger.warning("Fail to export %s file: %s", file_format, file_name)
     else:
-        logging.info("Finish to export %s file: %s", file_format, file_name)
+        logger.info("Finish to export %s file: %s", file_format, file_name)

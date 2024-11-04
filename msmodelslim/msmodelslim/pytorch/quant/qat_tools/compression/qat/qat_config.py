@@ -4,8 +4,8 @@ from __future__ import absolute_import, division, print_function
 from dataclasses import dataclass
 from typing import List
 
-from ascend_utils.common.security import check_number
 from msmodelslim.pytorch.quant.qat_tools.common.config import Config
+from ascend_utils.common.security import check_number
 
 # onnx version
 ONNX_VERSION_LIST = [11, 13]

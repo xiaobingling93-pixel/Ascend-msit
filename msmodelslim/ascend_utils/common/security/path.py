@@ -7,8 +7,9 @@ import shutil
 import stat
 import json
 
-from ascend_utils.common.security.type import check_dict_character
 from msmodelslim import logger
+from msmodelslim.tools.logger import LOGGER_FUNC
+from ascend_utils.common.security.type import check_dict_character
 
 
 PATH_WHITE_LIST_REGEX = re.compile(r"[^_A-Za-z0-9/.-]")
@@ -173,15 +174,16 @@ def file_safe_write(obj, path, extensions=None, check_user_stat=True):
         file.write(obj)
 
 
-def safe_delete_path_if_exists(path):
+def safe_delete_path_if_exists(path, logger_level="info"):
     if os.path.exists(path):
         is_dir = os.path.isdir(path)
         path = get_valid_write_path(path, check_user_stat=False, is_dir=is_dir, warn_exists=False)  # Check if writable
+        logger_func = LOGGER_FUNC[logger_level]
         if os.path.isfile(path):
-            logger.info("File %s exist and will be deleted.", path)
+            logger_func(f"File '{path}' exists and will be deleted.")
             os.remove(path)
         else:
-            logger.info("Folder %s exist and will be deleted.", path)
+            logger_func(f"Folder '{path}' exists and will be deleted.")
             shutil.rmtree(path)
 
 

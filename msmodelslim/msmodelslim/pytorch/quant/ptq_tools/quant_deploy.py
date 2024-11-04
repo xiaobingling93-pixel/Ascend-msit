@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 # Copyright Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
 import copy
-import logging
 
 import numpy as np
 import onnx
 from onnx import helper
 import torch
 
+from msmodelslim import logger
 from msmodelslim.pytorch.quant.ptq_tools.ptq_kia.weight_transform import (
     calculate_conv_int_bias,
     create_new_weight,
@@ -20,56 +20,6 @@ from msmodelslim.pytorch.quant.ptq_tools.ptq_kia.weight_transform import (
     get_onnx_datatype,
     get_np_datatype
 )  # squant algorithm api
-
-
-class InitQuantParams:
-    def __init__(self,
-                 weight_name,
-                 input_scale_dict,
-                 input_offset_dict,
-                 weight_scale_dict,
-                 weight_offset_dict,
-                 quant_weight_dict):
-        self.weight_name = weight_name
-        self.input_scale_dict = input_scale_dict
-        self.input_offset_dict = input_offset_dict
-        self.weight_scale_dict = weight_scale_dict
-        self.weight_offset_dict = weight_offset_dict
-        self.quant_weight_dict = quant_weight_dict
-
-
-class ModelDeployQuantParams:
-    def __init__(self,
-                 quantized_weight_name, 
-                 quant_weight_dict, 
-                 input_scale_dict, 
-                 input_offset_dict, 
-                 weight_scale_dict, 
-                 weight_offset_dict,
-                 fuse_add=False):
-        self.quantized_weight_name = quantized_weight_name
-        self.quant_weight_dict = quant_weight_dict
-        self.input_scale_dict = input_scale_dict
-        self.input_offset_dict = input_offset_dict
-        self.weight_scale_dict = weight_scale_dict
-        self.weight_offset_dict = weight_offset_dict
-        self.fuse_add = fuse_add
-
-
-class ConvertLinearParams:
-    def __init__(self,
-                 onnx_model,
-                 input_scale,
-                 input_offset,
-                 weight_scale,
-                 weight_offset,
-                 quant_weight):
-        self.onnx_model = onnx_model
-        self.input_scale = input_scale
-        self.input_offset = input_offset
-        self.weight_scale = weight_scale
-        self.weight_offset = weight_offset
-        self.quant_weight = quant_weight
 
 
 def calculate_int_weight(weight_initializer,
@@ -256,13 +206,12 @@ def find_index(nodes, weight_name):
     raise LookupError
 
 
-def init_quant_param(params):
-    weight_name = params.weight_name
-    input_scale_dict = params.input_scale_dict
-    input_offset_dict = input_offset_dict
-    weight_scale_dict = weight_scale_dict
-    weight_offset_dict = weight_offset_dict
-    quant_weight_dict = quant_weight_dict
+def init_quant_param(weight_name,
+                     input_scale_dict,
+                     input_offset_dict,
+                     weight_scale_dict,
+                     weight_offset_dict,
+                     quant_weight_dict):
 
     quant_param = {}
     quant_param["input_scale"] = input_scale_dict[weight_name]
@@ -289,39 +238,32 @@ def init_quant_param(params):
     return quant_param
 
 
-def quantize_model_deploy(graph, params):
-    quantized_weight_name = params.quantized_weight_name
-    quant_weight_dict = params.quant_weight_dict
-    input_scale_dict = params.input_scale_dict
-    input_offset_dict = params.input_offset_dict
-    weight_scale_dict = params.weight_scale_dict
-    weight_offset_dict = params.weight_offset_dict
-    fuse_add = params.fuse_add
+def quantize_model_deploy(graph, 
+                   quantized_weight_name, 
+                   quant_weight_dict, 
+                   input_scale_dict, 
+                   input_offset_dict, 
+                   weight_scale_dict, 
+                   weight_offset_dict,
+                   fuse_add=False):
 
-    logging.info("before graph initializer:%d", len(graph.initializer))
+    logger.info("before graph initializer:%d", len(graph.initializer))
     delete_same_bias_name(graph)
-    logging.info("graph initializer:%d", len(graph.initializer))
+    logger.info("graph initializer:%d", len(graph.initializer))
 
     nodes = graph.node
     quant_index = -1
     for weight_name in quantized_weight_name:
         quant_index = get_quant_index(quant_index)
-        logging.info("enter this quantized module:%s", weight_name)
+        logger.info("enter this quantized module:%s", weight_name)
 
         index = find_index(nodes, weight_name)
         fp_node = nodes[index]
         node_input = copy.deepcopy(fp_node.input)
         node_output = copy.deepcopy(fp_node.output)
-        
-        init_quant_params = InitQuantParams(
-            weight_name=weight_name,
-            input_scale_dict=input_scale_dict,
-            input_offset_dict=input_offset_dict,
-            weight_scale_dict=weight_scale_dict,
-            weight_offset_dict=weight_offset_dict,
-            quant_weight_dict=quant_weight_dict
-        )
-        quant_param = init_quant_param(init_quant_params)
+
+        quant_param = init_quant_param(weight_name, input_scale_dict, input_offset_dict, weight_scale_dict,
+                                       weight_offset_dict, quant_weight_dict)
 
         onnx_node_quant = convert_quant(quant_param, node_input, weight_name, quant_index)
         onnx_node_add = None
@@ -383,7 +325,7 @@ def find_all_quant_nodes(all_bias, nodes):
         try:
             quant_weight_name = find_quant_node(nodes, nodes[index].input[1])
         except LookupError as err:
-            logging.info("quant node not finded: %s", nodes[index].input[1])
+            logger.info("quant node not finded: %s", nodes[index].input[1])
         else:
             all_quant_node.append(quant_weight_name)
     return all_quant_node
@@ -410,7 +352,7 @@ def get_linear_quant_map(onnx_model, weight_scale):
             if len(all_quant_node) != 0:
                 quant_map[name_value] = all_quant_node
         else:
-            logging.info("no value:%s, len of quant_map:%d, quant_map:%s", bias_name, len(quant_map), quant_map)
+            logger.info("no value:%s, len of quant_map:%d, quant_map:%s", bias_name, len(quant_map), quant_map)
     return quant_map
 
 
@@ -426,14 +368,13 @@ def get_new_dict(param_dict, quant_map):
     return new_dict
 
 
-def convert_linear_params(params):
-    onnx_model = params.onnx_model
-    input_scale = params.input_scale
-    input_offset = params.input_offset
-    weight_scale = params.weight_scale
-    weight_offset = params.weight_offset
-    quant_weight = params.quant_weight
-
+def convert_linear_params(onnx_model,
+                      input_scale,
+                      input_offset,
+                      weight_scale,
+                      weight_offset,
+                      quant_weight,
+                      ):
     quant_map = get_linear_quant_map(onnx_model, weight_scale)
     weight_scale = get_new_dict(weight_scale, quant_map)
     weight_offset = get_new_dict(weight_offset, quant_map)
