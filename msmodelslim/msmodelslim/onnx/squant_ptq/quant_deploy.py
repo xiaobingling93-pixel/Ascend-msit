@@ -225,6 +225,7 @@ def _find_index(nodes, weight_name):
     for idx, item in enumerate(nodes):
         if weight_name in item.input or weight_name + ".weight" in item.input:
             return idx
+    raise LookupError
 
 
 def _init_quant_param(weight_name, quant_params_dict: QuantParamsDict):
