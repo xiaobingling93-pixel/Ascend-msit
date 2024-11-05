@@ -258,10 +258,10 @@ def find_index(nodes, weight_name):
 def init_quant_param(params):
     weight_name = params.weight_name
     input_scale_dict = params.input_scale_dict
-    input_offset_dict = input_offset_dict
-    weight_scale_dict = weight_scale_dict
-    weight_offset_dict = weight_offset_dict
-    quant_weight_dict = quant_weight_dict
+    input_offset_dict = params.input_offset_dict
+    weight_scale_dict = params.weight_scale_dict
+    weight_offset_dict = params.weight_offset_dict
+    quant_weight_dict = params.quant_weight_dict
 
     quant_param = {}
     quant_param["input_scale"] = input_scale_dict[weight_name]
