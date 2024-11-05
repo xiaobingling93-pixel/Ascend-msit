@@ -3,13 +3,12 @@
 from mindspore.nn import Conv2d
 from mindspore.train import serialization
 
-from msmodelslim import logger
 from ascend_utils.mindspore.quant.ptq_quant.convert_deploy import convert_to_inference_network
 from ascend_utils.mindspore.quant.ptq_quant.process_utils import convert_equact_to_relu
 from ascend_utils.common.security import get_valid_write_path
 from ascend_utils.common.security.mindspore import check_mindspore_cell
 from ascend_utils.common.security.mindspore import check_mindspore_input
-
+from msmodelslim import logger
 
 def save_model(file_name, quantized_model, *input_data, file_format='AIR'):
     """
