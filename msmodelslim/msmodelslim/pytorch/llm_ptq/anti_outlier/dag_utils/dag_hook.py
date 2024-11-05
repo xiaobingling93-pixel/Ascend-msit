@@ -7,7 +7,6 @@ from typing import Union, Optional, Callable, Any, List, Tuple, Dict, Iterable, 
 
 import torch
 
-from msmodelslim import logger
 from ascend_utils.common.hook import FunctionReplace
 from ascend_utils.common.utils import (
     CallParams, ResListToRelease, concatenate_name_in_network, OperatorAttrName
@@ -15,6 +14,7 @@ from ascend_utils.common.utils import (
 from ascend_utils.core.dag.dag import DirectedAcyclicGraph
 from ascend_utils.core.dag.dag_node import DagNode
 from ascend_utils.core.dag.dag_node_io import DagNodeIO
+from msmodelslim import logger
 
 
 class DagHook(DirectedAcyclicGraph, ABC):

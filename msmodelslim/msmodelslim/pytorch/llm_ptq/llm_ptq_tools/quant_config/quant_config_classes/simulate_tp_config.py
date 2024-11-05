@@ -1,8 +1,8 @@
 #  Copyright (c) Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
+from ascend_utils.common.security import check_type
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config.quant_config_classes import BaseConfig
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config.quant_config_classes.config_utils import \
     check_and_generate_config_param
-from ascend_utils.common.security import check_type
 
 SUPPORT_TP_SIZES = [2, 4, 8, 16]
 
