@@ -63,7 +63,7 @@ def replace_module_with_saving_input(network, decompose_config=None, prefix_name
         elif hasattr(child_module, "named_children"):
             cur_prefix_name = full_name + "."
             replace_module_with_saving_input(child_module, decompose_config, prefix_name=cur_prefix_name)
-    return network
+
 
 
 def get_input_data_for_each_layer(network, decompose_config, datasets, max_iter=-1):
