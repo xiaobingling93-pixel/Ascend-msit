@@ -6,11 +6,16 @@ convert模型转换工具依托ATC（Ascend Tensor Compiler），AOE（Ascend Op
 
 ## 工具安装
 
-- 如果使用MindIE-RT做模型转换，需要在安装convert前安装MindIE，MindIE安装请参考MindIE[官方网站](https://www.hiascend.com/software/mindie)
+- 如果使用MindIE-RT做模型转换，需要在安装convert前安装MindIE，MindIE安装请参考MindIE[官方网站](https://www.hiascend.com/software/mindie)。
 
-  注：MindIE-RT的python API调用要求python为3.10版本，在其他python版本下安装会提示如下错误，请忽略，不影响模型转换。
+  注：MindIE-RT的python API调用要求python为3.10版本，在其他python版本下安装会报错。
+  MindIE 1.0.RC1版本的报错如下，请忽略，不影响模型转换：
   ```shell
   AscendIE python api Install failed, please install python3.10 firstly!
+  ```
+  MindIE 1.0.RC2版本后，安装失败会清空整个安装目录，因此必须在python3.10下安装才能使用模型转换功能，具体的安装报错信息如下：
+  ```shell
+  Install AscendIE python api failed, detail info can be checked in {install_path}/mindie_rt_install.log.
   ```
 
 - 工具安装请见 [msit一体化工具使用指南](../../docs/install/README.md)
@@ -38,7 +43,7 @@ msit convert atc [args]
 
 使用示例：
 ```shell
-msit convert atc --model resnet50.onnx --framework 5 --soc_version Ascend310P3 --output resnet50
+msit convert atc --model resnet50.onnx --framework 5 --soc_version {实际芯片型号} --output resnet50
 ```
 ### aoe命令
 使用AOE后端进行模型转换，命令格式如下：
@@ -67,7 +72,7 @@ msit convert aie [args]
 命令示例如下：
 
 ```shell
-msit convert aie --golden-model resnet50.onnx --output-file resnet50.om --soc-version Ascend310P3 
+msit convert aie --golden-model resnet50.onnx --output-file resnet50.om --soc-version {实际芯片型号} 
 ```
 
 #### 使用案例
