@@ -33,7 +33,7 @@ from sit_llm.transform.utils import load_atb_speed, NPUSocInfo
 from msit_llm.common.log import logger, set_log_level
 from msit_llm.transform.utils import write_file
 
-from functools import reduce
+
 
 atb_speed_path = os.getenv("ATB_SPEED_HOME_PATH", None)
 if not atb_speed_path:
