@@ -16,11 +16,11 @@ from mindspore import Parameter
 from mindformers.modules.layers import Linear
 from mindformers.models.modeling_utils import PreTrainedModel
 
-from msmodelslim.mindspore.llm_ptq.quant_funcs_ms import quant_one_weight_by_outliers
-from msmodelslim.mindspore.llm_ptq.quant_modules import LinearSparseQuantizer
-
 from ascend_utils.common.security import (get_valid_write_path, get_valid_read_path, check_element_type,
     check_type, check_dict_element, get_write_directory, SafeWriteUmask)
+
+from msmodelslim.mindspore.llm_ptq.quant_funcs_ms import quant_one_weight_by_outliers
+from msmodelslim.mindspore.llm_ptq.quant_modules import LinearSparseQuantizer
 from msmodelslim import logger as msmodelslim_logger
 from msmodelslim.mindspore.llm_ptq.quant_config import QuantConfig
 
@@ -165,8 +165,8 @@ class Calibrator(object):
                     fp_bias = None
                     
                 fp_weight = fp_ckpt_dict[f"{cell_name}.weight"]
-                quant_weight = quantized_weight_dict[f"{cell_name}.quant_weight"]
-                weight_scale = quantized_weight_dict[f"{cell_name}.weight_scale"]
+                quant_weight = quantized_weight_dict.get(f"{cell_name}.quant_weight", None)
+                weight_scale = quantized_weight_dict.get(f"{cell_name}.weight_scale", None)
                 input_scale = quantized_model_param_dict[f"{cell_name}.quant_input.input_scale"].astype(ms.float16)
                 input_offset = quantized_model_param_dict[f"{cell_name}.quant_input.input_offset"].astype(ms.int8)
 

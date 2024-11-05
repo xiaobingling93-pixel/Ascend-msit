@@ -7,9 +7,9 @@ import torch.nn as nn
 from transformers import PreTrainedTokenizerBase
 
 from ascend_utils.common.security import check_type, SafeWriteUmask, get_valid_write_path
+from ascend_utils.common import hook
 from msmodelslim.pytorch.ra_compression.ra_rope_config import RARopeCompressConfig
 from msmodelslim import logger
-from ascend_utils.common import hook
 
 DUMMY_INPUT_LENGTH = 2500
 REPET_TIMES = 4
