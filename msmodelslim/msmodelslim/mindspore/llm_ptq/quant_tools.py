@@ -16,11 +16,13 @@ from mindspore import Parameter
 from mindformers.modules.layers import Linear
 from mindformers.models.modeling_utils import PreTrainedModel
 
+from ascend_utils.common.security import (get_valid_write_path, get_valid_read_path, check_element_type,
+    check_type, check_dict_element, get_write_directory, SafeWriteUmask)
+
 from msmodelslim.mindspore.llm_ptq.quant_funcs_ms import quant_one_weight_by_outliers
 from msmodelslim.mindspore.llm_ptq.quant_modules import LinearSparseQuantizer
 
-from ascend_utils.common.security import (get_valid_write_path, get_valid_read_path, check_element_type,
-    check_type, check_dict_element, get_write_directory, SafeWriteUmask)
+
 from msmodelslim import logger as msmodelslim_logger
 from msmodelslim.mindspore.llm_ptq.quant_config import QuantConfig
 
