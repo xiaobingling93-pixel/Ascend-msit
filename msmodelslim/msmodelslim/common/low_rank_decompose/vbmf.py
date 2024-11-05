@@ -14,7 +14,6 @@ class EvbSigma2Params:
 def none_zero_divide(inputs, divisor, eps=1e-6):
     return np.divide(inputs, np.maximum(divisor, eps))
 
-
 def evbmf(source_input, sigma2=None, high=None) -> int:
     """Empirical Variational Bayes Matrix Factorization.
     Paper: Global analytic solution of fully-observed variational Bayesian matrix factorization.
@@ -52,6 +51,14 @@ def evbmf(source_input, sigma2=None, high=None) -> int:
 
         if upper_bound < lower_bound:
             lower_bound, upper_bound = upper_bound, lower_bound
+
+        params = EvbSigma2Params(
+            low=low,
+            median=median,
+            svd_ss=svd_ss,
+            residual=residual,
+            inner_thresh=inner_thresh
+        )
 
         sigma2_opt = minimize_scalar(
             evb_sigma2,

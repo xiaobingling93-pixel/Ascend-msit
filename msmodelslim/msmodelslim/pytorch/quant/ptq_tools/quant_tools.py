@@ -249,8 +249,7 @@ class Calibrator(object):
             quant_weight=quant_weight
         )
         input_scale, input_offset, weight_scale, weight_offset, quant_weight = \
-            convert_linear_params(model, input_scale, input_offset,
-                                  weight_scale, weight_offset, quant_weight)
+            convert_linear_params(linear_params)
         quantized_weight_namd = []
         for item in nodes:
             if item.op_type == "Conv":
