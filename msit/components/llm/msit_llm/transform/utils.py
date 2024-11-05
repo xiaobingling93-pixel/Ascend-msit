@@ -14,18 +14,44 @@
 
 import os
 import stat
+import sys
 from collections import namedtuple
 from pathlib import Path
+from dataclasses import dataclass
+from enum import Enum
+import subprocess
 
 import torch
 from safetensors.torch import safe_open
+import torch_npu
+
 
 from msit_llm.common.log import logger
 from msit_llm.common.utils import check_data_file_size
 from msit_llm.common.constant import MAX_WEIGHT_DATA_SIZE
 
+
+from msit_llm.transform.env import ENV     
+
 _SCENARIOS = ["torch_to_float_atb", "float_atb_to_quant_atb", "torch_to_float_python_atb"]
 SCENARIOS = namedtuple("SCENARIOS", _SCENARIOS)(*_SCENARIOS)
+
+@dataclass
+class NPUSocInfo:
+    soc_name:str = ""
+    soc_version: int = -1
+    need_nz: bool = False
+
+    def __post_init__(self):
+        self.soc_version = torch_npu._C._npu_get_soc_version()
+        if self.soc_version in (100, 101, 102, 103, 104, 200, 201, 202, 203):
+            self.need_nz = True
+
+
+def load_atb_speed():
+    lib_path = os.path.join(ENV.atb_speed_home_path, "lib/libatb_speed_torch.so")
+    torch.classes.load_library(lib_path)
+    sys.path.append(os.path.join(ENV.atb_speed_home_path, 'lib'))
 
 
 def get_transform_scenario(source_path, to_python=False):
