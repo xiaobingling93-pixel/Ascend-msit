@@ -35,7 +35,7 @@ def is_endswith_extensions(path, extensions):
 
 
 def get_valid_path(path, extensions=None):
-    check_type(path, str, "path") 
+    check_type(path, str, "path")
     if not path or len(path) == 0:
         raise ValueError("The value of the path cannot be empty.")
 
