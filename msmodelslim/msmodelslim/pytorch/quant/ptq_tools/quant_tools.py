@@ -68,6 +68,7 @@ class Calibrator(object):
         if calib_data:
             if not isinstance(calib_data, list):
                 raise ValueError("calib_data should be list of tensors")
+            self.check_calib_data(calib_data)
             return calib_data
 
         if self.cfg.input_shape:
@@ -77,13 +78,21 @@ class Calibrator(object):
                     requires_grad=False
                 )
             except RuntimeError as ex:
-                logging.error("calib_data init failed, please check input_shape. %s", str(ex))
+                logger.error("calib_data init failed, please check input_shape. %s", str(ex))
                 raise ex
             calib_data = [[rand_input]]
             return calib_data
 
         raise ValueError("The calib_data or input_shape"
                          " should be offered")
+
+    def check_calib_data(self, calib_data):
+        for i, calib_data_item in enumerate(calib_data):
+            check_type(calib_data_item, (list, dict), param_name=f'calib_data[{i}]')
+            for _, item in enumerate(calib_data_item):
+                if not isinstance(item, torch.Tensor):
+                    raise ValueError("Not all elements in calib_data are torch.Tensor, "
+                                     "please make sure that the model can run with model(*(calib_data[0]))")
 
     def amp(self, calib_amp=10):
         # for quantized model
@@ -209,7 +218,7 @@ class Calibrator(object):
                 torch.onnx.export(self.fp_model, dummpy_input, temp_fp_model_file,
                                   input_names=input_names, verbose=True, opset_version=11)
             except RuntimeError as ex:
-                logging.error("Export fp_model to onnx failed, please check model. %s", str(ex))
+                logger.error("Export fp_model to onnx failed, please check model. %s", str(ex))
                 raise ex
 
     def export_quant_onnx(self, model_arch, save_path, input_names=None, fuse_add=True, save_fp=False):
@@ -231,7 +240,6 @@ class Calibrator(object):
 
         input_scale, input_offset, weight_scale, weight_offset, quant_weight = \
             self.get_quant_params()
-        
         linear_params = ConvertLinearParams(
             onnx_model=model,
             input_scale=input_scale,
@@ -274,7 +282,7 @@ class Calibrator(object):
         with SafeWriteUmask():
             onnx.save(model, temp_quant_model_file)
             logger.info("Quantification ended and onnx is stored in %s ", temp_quant_model_file)
-            
+
         if not save_fp:
             os.remove(os.path.join(save_path, "{}_fp.onnx".format(model_arch)))
 

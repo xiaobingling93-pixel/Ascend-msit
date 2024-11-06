@@ -17,5 +17,6 @@ import re
 
 MAX_FILE_SIZE_200G = 200 * 1024 * 1024 * 1024
 MAX_DATA_SIZE = 2 * 1024 * 1024 * 1024  # 2G
+MAX_WEIGHT_DATA_SIZE = 32 * 1024 * 1024 * 1024  # 32G
 
 PATH_WHITE_LIST_REGEX = re.compile(r"[^_A-Za-z0-9/.-]")

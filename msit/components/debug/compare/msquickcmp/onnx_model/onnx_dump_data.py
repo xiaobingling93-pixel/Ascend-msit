@@ -34,6 +34,7 @@ from msquickcmp.common.convert import convert_bin_file_to_npy
 from msquickcmp.onnx_model.custom_op import CustomOp
 from components.utils.file_open_check import ms_open
 from components.utils import util
+from components.utils.constants import MAX_WEIGHT_DATA_SIZE
 
 NODE_TYPE_TO_DTYPE_MAP = {
     "tensor(int)": np.int32,
@@ -139,7 +140,7 @@ class OnnxDumpData(DumpData):
         if not self.onnx_fusion_switch:
             options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_DISABLE_ALL
         try:
-            model_path = util.load_file_to_read_common_check(model_path)
+            model_path = util.load_file_to_read_common_check(model_path, max_size=MAX_WEIGHT_DATA_SIZE)
             infersession = onnxruntime.InferenceSession(model_path, options)
         except Exception as e:
             utils.logger.error(f"Please check onnx model can run in local env. Error: {e}")
@@ -149,7 +150,7 @@ class OnnxDumpData(DumpData):
     def _load_onnx(self, model_path):
         # model_path str -> read as bytes -> deserialize to onnx_model
         #                                 -> onnxruntime load as session
-        model_path = util.load_file_to_read_common_check(model_path)
+        model_path = util.load_file_to_read_common_check(model_path, max_size=MAX_WEIGHT_DATA_SIZE)
         with open(model_path, "rb") as ff:
             model_contents = ff.read()
         onnx_model = onnx.load_model(model_path)

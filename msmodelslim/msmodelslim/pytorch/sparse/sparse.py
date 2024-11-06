@@ -6,11 +6,11 @@ from copy import deepcopy
 import torch
 import numpy as np
 
-from ascend_utils import count_parameters
-from ascend_utils.common import security
 from msmodelslim import logger
 from msmodelslim.pytorch.sparse.width_scale_network import WidthScaleNetwork
 from msmodelslim.pytorch.sparse.depth_scale_network import DepthScaleNetwork
+from ascend_utils import count_parameters
+from ascend_utils.common import security
 
 
 SparseMethods = namedtuple('SparseMethods', ['DEPTH_GROWTH', 'WIDTH_GROWTH'])('depth_growth', 'width_growth')
@@ -37,7 +37,7 @@ class OptimizerWithReset:
         for param_group in param_groups:
             self._optimizer.add_param_group(param_group)
         setattr(self._optimizer, "state", defaultdict(dict))
-    
+
     def _init_params_group_info(self, model, optimizer):
         id_dict = {}
         for group_id, group in enumerate(optimizer.param_groups):
@@ -127,7 +127,7 @@ class SparseForward:
 
             self._built_stage += 1
         return self._model.original_forward(*args, **kwargs)
-    
+
     def scale_model(self, model, input_shapes, scale):
         is_training = model.training
         model.eval()
@@ -142,12 +142,12 @@ class SparseForward:
         if is_training:
             model.train()
         return model
-    
+
     def get_cur_stage(self):
         self._global_batch_id += 1
         logger.debug(f"SparseForward global_batch_id: {self._global_batch_id}")
         return np.sum(self._cum_steps_each_stage < self._global_batch_id)
-    
+
     def set_initial_epoch(self, initial_epoch):
         self._global_batch_id = initial_epoch * self._steps_per_epoch
         self._built_stage = self.get_cur_stage()

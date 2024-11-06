@@ -6,9 +6,9 @@ from typing import List, Union, Tuple
 import torch
 from torch import Tensor
 from torch.nn import Module
+from msmodelslim import logger
 from ascend_utils.common.utils import CallParams
 from ascend_utils.pytorch.dag.dag_torch_hook import DagTorchHook
-from msmodelslim import logger
 
 
 class DepthScaleNetwork:
@@ -44,6 +44,37 @@ class DepthScaleNetwork:
         return self._repeat_operators
 
     @staticmethod
+    def _is_repeat_opts_with_weight(last_module: Module, this_module: Module):
+        if this_module is None:
+            return False
+        if this_module.__class__ != last_module.__class__:
+            return False
+
+        last_param_info = [(name, parameter.shape) for name, parameter in last_module.named_parameters()]
+        this_param_info = [(name, parameter.shape) for name, parameter in this_module.named_parameters()]
+        if len(last_param_info) == 0 or len(this_param_info) == 0:
+            return False
+
+        return last_param_info == this_param_info
+
+    @staticmethod
+    def _calc_enable_list(ori_enable_count, new_enable_count, all_count):
+        new_enable_count = min(new_enable_count, all_count)
+        if ori_enable_count >= new_enable_count:
+            enable_list = list(range(new_enable_count))
+        else:
+            floor_value = math.floor(new_enable_count / ori_enable_count)
+
+            enable_list = list(itertools.chain(
+                *itertools.repeat(list(range(ori_enable_count)), floor_value),
+                range(new_enable_count - floor_value * ori_enable_count)
+            ))
+
+            enable_list.sort()
+        unable_list = [None] * (all_count - len(enable_list))
+        return enable_list + unable_list
+
+    @staticmethod
     def disable_operator(operator: RepeatOperatorInfo):
         setattr(operator.parent_module, operator.attr_name, JumpingOffOperator())
         operator.enable = False
@@ -63,37 +94,6 @@ class DepthScaleNetwork:
             if name not in src_param_info:
                 raise ValueError(f"name [{name}] not in src param info ")
             parameter.data = src_param_info[name].data.clone()
-    
-    @staticmethod
-    def _calc_enable_list(ori_enable_count, new_enable_count, all_count):
-        new_enable_count = min(new_enable_count, all_count)
-        if ori_enable_count >= new_enable_count:
-            enable_list = list(range(new_enable_count))
-        else:
-            floor_value = math.floor(new_enable_count / ori_enable_count)
-
-            enable_list = list(itertools.chain(
-                *itertools.repeat(list(range(ori_enable_count)), floor_value),
-                range(new_enable_count - floor_value * ori_enable_count)
-            ))
-
-            enable_list.sort()
-        unable_list = [None] * (all_count - len(enable_list))
-        return enable_list + unable_list
-    
-    @staticmethod
-    def _is_repeat_opts_with_weight(last_module: Module, this_module: Module):
-        if this_module is None:
-            return False
-        if this_module.__class__ != last_module.__class__:
-            return False
-
-        last_param_info = [(name, parameter.shape) for name, parameter in last_module.named_parameters()]
-        this_param_info = [(name, parameter.shape) for name, parameter in this_module.named_parameters()]
-        if len(last_param_info) == 0 or len(this_param_info) == 0:
-            return False
-
-        return last_param_info == this_param_info
 
     def scale(self, scale: float):
         if not isinstance(scale, (int, float)):
@@ -118,12 +118,7 @@ class DepthScaleNetwork:
                     self.enable_operator(repeat_operator_list[index], repeat_operator_list[is_enable])
                 else:
                     self.disable_operator(repeat_operator_list[index])
-    
-    def _get_module_name(self, module):
-        if module not in self.dag.structure_tree:
-            return ""
-        return self.dag.structure_tree[module].get("name_in_network", "")
-    
+
     def _analysis(self, module: Module):
         sub_module_list = list(module.named_children())
         sub_module_list.sort(key=lambda x: self.dag.calc_order.index(x[1]) if x[1] in self.dag.calc_order else -1)
@@ -160,6 +155,10 @@ class DepthScaleNetwork:
                 continue
             self._analysis(sub_module)
 
+    def _get_module_name(self, module):
+        if module not in self.dag.structure_tree:
+            return ""
+        return self.dag.structure_tree[module].get("name_in_network", "")
 
 class JumpingOffOperator(Module):
     def forward(self, *args):
