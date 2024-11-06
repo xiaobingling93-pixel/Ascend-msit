@@ -19,7 +19,7 @@ class PruneConfig(object):
     def __init__(self):
         self.prune_state_dict_steps = []
         self.prune_blocks_params = []
-
+    
     @staticmethod
     def check_prune_config(config, target_steps: list):
         check_type(config, PruneConfig, param_name="config")
@@ -50,6 +50,8 @@ class PruneConfig(object):
         for layer_after, layer_before in layer_id_map.items():
             check_type(layer_after, int, param_name="layer_after")
             check_type(layer_before, int, param_name="layer_before")
+
+
 
     def get(self, config_name: str, default=None):
         if hasattr(self, config_name):

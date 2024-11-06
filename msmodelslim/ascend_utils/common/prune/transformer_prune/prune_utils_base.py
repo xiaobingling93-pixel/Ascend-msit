@@ -61,6 +61,9 @@ class PruneUtilsBase:
 
         new_state_dict = {}
         for weight_name in state_dict.keys():
+            if len(weight_name) > 512:
+                raise ValueError("Length of {} key exceeds limitation {}.".format(weight_name, 512))
+                
             match_flag = False
             for pruning_pass in pruning_passes:
                 pattern = pruning_pass['pattern']

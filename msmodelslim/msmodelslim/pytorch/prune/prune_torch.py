@@ -1,17 +1,16 @@
 # Copyright Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
 
-import logging
 from collections import Counter
 from typing import Union, List, Tuple, Dict, Set
 
 import torch
 from torch import Tensor
 
-from ascend_utils.common.utils import CallParams
-from ascend_utils.pytorch.dag.dag_torch_hook import DagTorchHook
 from msmodelslim import logger
 from msmodelslim.pytorch.prune.prune_policy import PrunePolicyGraphConv2D, \
     ImportanceInfo, PrunePolicyGraphLinear, PrunePolicy
+from ascend_utils.common.utils import CallParams
+from ascend_utils.pytorch.dag.dag_torch_hook import DagTorchHook
 
 
 class PruneTorch:
@@ -25,11 +24,8 @@ class PruneTorch:
             self._dag_network = network
         else:
             raise ValueError("network must be torch.nn.Module or Dag")
-        
-        def eval_func(chn_weight):
-            return torch.abs(chn_weight).mean().item()
 
-        self._importance_evaluation_function = eval_func()
+        self._importance_evaluation_function = lambda chn_weight: torch.abs(chn_weight).mean().item()
         self._node_reserved_ratio = 0.5
         self._align = 16
 
@@ -124,11 +120,11 @@ class PruneTorch:
             raise TypeError("prune ratio must be float")
 
         if reserved_ratio < 0.4 or reserved_ratio >= 1:
-            logging.warning("The prune ratio is abnormal. Please check.")
+            logger.warning("The prune ratio is abnormal. Please check.")
 
         un_prune_name_set = self._preprocess_un_prune_list(un_prune_list)
 
-        logger.debug("un_prune_name_set: %s", un_prune_name_set)
+        logger.debug(f"un_prune_name_set: {un_prune_name_set}")
         all_importance_for_sort: List[ImportanceInfo] = []
         self._assessment_importance_conv(all_importance_for_sort, un_prune_name_set)
         self._assessment_importance_linear(all_importance_for_sort, un_prune_name_set)
@@ -185,8 +181,8 @@ class PruneTorch:
             if left_chn != ori_chn:
                 logger.info(f"node name: {name} chn: {ori_chn} -> {left_chn}; ")
             else:
-                logger.debug("node name: %s chn: %s -> %s; ", name, ori_chn, left_chn)
-        logger.debug("desc: %s", desc)
+                logger.debug(f"node name: {name} chn: {ori_chn} -> {left_chn}; ")
+        logger.debug(f"desc: {desc}")
         return left_params, desc
 
     def prune_by_desc(self, desc: Dict[str, Dict[str, Tuple[int, str]]]):
@@ -224,7 +220,7 @@ class PruneTorch:
         logger.info(f"Number of original parameters: {ori_params}; ")
         logger.info(f"Number of pruned parameters: {pruned_params}; ")
         logger.info(f"Pruning off the ratio {prune_off_ratio * 100:.3f} %")
-    
+        
     def _preprocess_un_prune_list(self, un_prune_list: List[Union[str, int]] = None) -> Set[str]:
         if un_prune_list is None:
             un_prune_name_list = [0, -1]
@@ -237,7 +233,7 @@ class PruneTorch:
         for index, un_prune in enumerate(un_prune_name_list):
             if isinstance(un_prune, int):
                 if un_prune >= len(prune_list) or un_prune < - len(prune_list):
-                    logging.warning(f"error index({un_prune}), length of prune list is {len(prune_list)}")
+                    logger.warning(f"error index({un_prune}), length of prune list is {len(prune_list)}")
                 else:
                     un_prune_name_list[index] = prune_list[un_prune].name
             elif not isinstance(un_prune, str):

@@ -3,7 +3,6 @@
 import numpy as np
 from scipy.optimize import minimize_scalar
 
-
 class EvbSigma2Params:
     def __init__(self, low, median, svd_ss, residual, inner_thresh):
         self.low = low
@@ -12,10 +11,8 @@ class EvbSigma2Params:
         self.residual = residual
         self.inner_thresh = inner_thresh
 
-    
 def none_zero_divide(inputs, divisor, eps=1e-6):
     return np.divide(inputs, np.maximum(divisor, eps))
-
 
 def evbmf(source_input, sigma2=None, high=None) -> int:
     """Empirical Variational Bayes Matrix Factorization.
@@ -62,6 +59,7 @@ def evbmf(source_input, sigma2=None, high=None) -> int:
             residual=residual,
             inner_thresh=inner_thresh
         )
+
         sigma2_opt = minimize_scalar(
             evb_sigma2,
             args=params,
@@ -82,7 +80,6 @@ def evb_sigma2(sigma2, params):
     svd_ss = params.svd_ss
     residual = params.residual
     inner_thresh = params.inner_thresh
-
     high = len(svd_ss)
 
     alpha = none_zero_divide(low, median)
