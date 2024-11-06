@@ -8,7 +8,6 @@ import inspect
 from onnxruntime.quantization import QuantFormat, QuantType, quantize_static, CalibrationMethod
 import onnx
 
-from ascend_utils.common.security import get_valid_write_path, SafeWriteUmask
 from msmodelslim.onnx.post_training_quant.dag.parser import parse_model, get_depthwise_node
 from msmodelslim.onnx.post_training_quant.label_free.data_reader import DataReader
 from msmodelslim.onnx.post_training_quant.label_free.rollback_quant_nodes import match_activations, \
@@ -16,6 +15,7 @@ from msmodelslim.onnx.post_training_quant.label_free.rollback_quant_nodes import
 from msmodelslim import logger
 from msmodelslim.onnx.post_training_quant.util import get_quantized_nodes, ONNX_MODEL_SUFFIX, \
     LF_QUANTIZED_OP_TYPES
+from ascend_utils.common.security import get_valid_write_path, SafeWriteUmask
 
 
 def quantize_model(input_model_path, output_model_path, quant_config):
