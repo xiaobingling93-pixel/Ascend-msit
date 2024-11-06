@@ -43,8 +43,9 @@ class NPUSocInfo:
     need_nz: bool = False
 
     def __post_init__(self):
+        SOC_VERSION = (100, 101, 102, 103, 104, 200, 201, 202, 203)
         self.soc_version = torch_npu._C._npu_get_soc_version()
-        if self.soc_version in (100, 101, 102, 103, 104, 200, 201, 202, 203):
+        if self.soc_version in SOC_VERSION:
             self.need_nz = True
 
 
