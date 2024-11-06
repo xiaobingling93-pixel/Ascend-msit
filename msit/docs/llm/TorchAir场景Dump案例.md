@@ -3,7 +3,7 @@
   ```py
   import os, numpy as np
   import torch, torch_npu, torchair as tng, torchvision
-  from ait_llm.dump import torchair_dump
+  from msit_llm.dump import torchair_dump
 
   target_dtype = torch.float16
   model = torchvision.models.resnet50(pretrained=True).eval().to(target_dtype).npu()
@@ -24,7 +24,7 @@
   ```py
   import os, numpy as np
   import torch, torch_npu, torchair as tng, torchvision
-  from ait_llm.dump import torchair_dump
+  from msit_llm.dump import torchair_dump
 
   target_dtype = torch.float16
   model = torchvision.models.resnet50(pretrained=True).eval().to(target_dtype).npu()
@@ -45,7 +45,7 @@
   ```py
   import os, numpy as np
   import torch, torch_npu, torchair as tng, torchvision
-  from ait_llm.dump import torchair_dump
+  from msit_llm.dump import torchair_dump
 
   target_dtype = torch.float16
   model = torchvision.models.resnet50(pretrained=True).eval().to(target_dtype).npu()

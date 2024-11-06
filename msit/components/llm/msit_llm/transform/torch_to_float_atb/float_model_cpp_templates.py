@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-copyright_header = """/*
+COPYRIGHT_HEADER = """/*
  * Copyright (c) Huawei Technologies Co., Ltd. {year}. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -42,7 +42,7 @@ all_atb_operation_headers = [
     "layers/operations/word_embedding.h",
 ]
 
-include_header_formater = """
+INCLUDE_HEADER_FORMATTER = """
 #include "nlohmann/json.hpp"
 #include "vector"
 #include "atb/atb_infer.h"
@@ -55,7 +55,7 @@ include_header_formater = """
 #include "models/{model_name_lower}/model/decoder_model.h"
 """
 
-basic_class_formatter = """
+BASIC_CLASS_FORMATTER = """
 namespace atb_speed {{
 namespace {model_name_lower} {{
 
@@ -79,7 +79,7 @@ uint32_t DecoderModel::GetOutputNum() const {{ return graph_.outTensors.size(); 
 }} // namespace atb_speed
 """
 
-weight_count_formatter = """
+WEIGHT_COUNT_FORMATTER = """
 // Weight count
 const int WEIGHT_COUNT_PER_LAYER = 50;
 const int WEIGHT_COUNT_WORD_EMBEDDINGNODE = 1;
@@ -87,13 +87,13 @@ const int WEIGHT_COUNT_POST_NORM = 1;
 const int WEIGHT_COUNT_LM_HEAD = 1;
 """
 
-operation_count_formatter = """
+OPERATION_COUNT_FORMATTER = """
 // Operation count
 const int OPERATION_COUNT_BEFORE_LAYER = 2;  // wte(wordEmbed) + gather(cos/sin embedding)
 const int OPERATION_COUNT_AFTER_LAYER = 2;  // RmsNorm + LmHead
 """
 
-in_tensor_id_formatter = """
+IN_TENSOR_ID_FORMATTER = """
 enum InTensorId : int {{
     // define inTensor
     // idx: 0, input_ids, shape: FA: [batchSize, seqLen] PA: [seqLen]
@@ -129,7 +129,7 @@ enum InTensorId : int {{
 }};
 """
 
-internal_tensor_id_formatter = """
+INTERNAL_TENSOR_ID_FORMATTER = """
 enum InternalTensorId : int {{
     // define internelTensor
     // idx: 0, shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
@@ -142,14 +142,14 @@ enum InternalTensorId : int {{
 }};
 """
 
-out_tensor_id_formatter = """
+OUT_TENSOR_ID_FORMATTER = """
 enum OutTensorId : int {{
     OUT_TENSOR_HIDDENSTATES = 0,
     OUT_TENSOR_MAX,
 }};
 """
 
-from_string_formatter = """
+FROM_STRING_FORMATTER = """
 void DecoderModel::Param::FromString(const std::string &param)
 {{
     nlohmann::json paramJson = nlohmann::json::parse(param);
@@ -237,7 +237,7 @@ void DecoderModel::Param::FromString(const std::string &param)
 }}
 """
 
-infer_shape_formatter = """
+INFER_SHAPE_FORMATTER = """
 atb::Status DecoderModel::InferShape(
     const std::vector<atb::TensorDesc> &inTensorDescs,
     std::vector<atb::TensorDesc> &outTensorDescs
@@ -274,7 +274,7 @@ atb::Status DecoderModel::InferShape(
 }}
 """
 
-parse_param_formatter = """
+PARSE_PARAM_FORMATTER = """
 atb::Status DecoderModel::ParseParam(const std::string &param)
 {{
     ATB_LOG(INFO) << "ParseParam start.";
@@ -295,7 +295,7 @@ atb::Status DecoderModel::ParseParam(const std::string &param)
 }}
 """
 
-bind_param_host_tensor_formatter = """
+BIND_PARAM_HOST_TENSOR_FORMATTER = """
 atb::Status DecoderModel::BindParamHostTensor(uint32_t nodeId)
 {{
     ATB_LOG(INFO) << "BindParamHostTensor";
@@ -317,7 +317,7 @@ atb::Status DecoderModel::BindParamHostTensor(uint32_t nodeId)
 }}
 """
 
-build_graph_formatter = """
+BUILD_GRAPH_FORMATTER = """
 int64_t DecoderModel::BuildGraph()
 {{
     // set size
@@ -350,17 +350,17 @@ int64_t DecoderModel::BuildGraph()
 
     atb::Operation *op = nullptr;
 
-    {build_graph_pre_process_formatter}
-    {build_graph_pre_process_norm_formatter}
-    {build_graph_layers_formatter}
-    {build_graph_post_process_norm_formatter}
-    {build_graph_post_process_lmhead_formatter}
+    {BUILD_GRAPH_PRE_PROCESS_FORMATTER}
+    {BUILD_GRAPH_PRE_PROCESS_NORM_FORMATTER}
+    {BUILD_GRAPH_LAYERS_FORMATTER}
+    {BUILD_GRAPH_POST_PROCESS_NORM_FORMATTER}
+    {BUILD_GRAPH_POST_PROCESS_LMHEAD_FORMATTER}
     ATB_LOG(INFO) << "DecoderModel build graph success";
     return atb::NO_ERROR;
 }}
 """
 
-build_graph_pre_process_formatter = """
+BUILD_GRAPH_PRE_PROCESS_FORMATTER = """
     // wte
     if (param_.withEmbedding) {{
         auto &wordEmbeddingNode = graph_.nodes.at(nodeId++);
@@ -397,10 +397,10 @@ build_graph_pre_process_formatter = """
 
 """
 
-build_graph_pre_process_norm_formatter = """
+BUILD_GRAPH_PRE_PROCESS_NORM_FORMATTER = """
 """
 
-build_graph_layers_formatter = """
+BUILD_GRAPH_LAYERS_FORMATTER = """
     // layers
     for (int layerId = 0; layerId < param_.numHiddenLayers; ++layerId) {{
         auto &layerNode = graph_.nodes.at(nodeId++);
@@ -453,7 +453,7 @@ build_graph_layers_formatter = """
 
 """
 
-build_graph_post_process_norm_formatter = """
+BUILD_GRAPH_POST_PROCESS_NORM_FORMATTER = """
     auto &finalNormNode = graph_.nodes.at(nodeId++);
     atb::infer::RmsNormParam finalNormParam;
     finalNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
@@ -471,7 +471,7 @@ build_graph_post_process_norm_formatter = """
 
 """
 
-build_graph_post_process_lmhead_formatter = """
+BUILD_GRAPH_POST_PROCESS_LMHEAD_FORMATTER = """
     auto &lmHeadNode = graph_.nodes.at(nodeId++);
     atb_speed::common::LmHeadParam lmHeadParam;
     lmHeadParam.unpadInputs = !param_.isFA;

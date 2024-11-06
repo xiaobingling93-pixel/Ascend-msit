@@ -17,8 +17,10 @@ import sys
 import stat
 import re
 import logging
+
 from enum import Enum
 from components.utils.log import logger
+from components.utils.constants import PATH_WHITE_LIST_REGEX
 
 
 MAX_SIZE_UNLIMITE = -1  # 不限制，必须显式表示不限制，读取必须传入
@@ -27,7 +29,6 @@ MAX_SIZE_LIMITE_NORMAL_FILE = 4 * 1024 * 1024 * 1024  # 4G 普通模型文件，
 MAX_SIZE_LIMITE_MODEL_FILE = 100 * 1024 * 1024 * 1024  # 100G 超大模型文件，需要确定能处理大文件，可以根据实际要求变更
 
 PATH_WHITE_LIST_REGEX_WIN = re.compile(r"[^_:\\A-Za-z0-9/.-]")
-PATH_WHITE_LIST_REGEX = re.compile(r"[^_A-Za-z0-9/.-]")
 
 PERMISSION_NORMAL = 0o640  # 普通文件
 PERMISSION_KEY = 0o600  # 密钥文件

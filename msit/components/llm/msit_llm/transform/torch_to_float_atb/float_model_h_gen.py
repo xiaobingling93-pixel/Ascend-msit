@@ -25,17 +25,17 @@ def float_model_h_gen(parsed_model, save_name=None, save_dir=None):
     model_name_lower = parsed_model.get("name", "model").lower()
 
     rr = ""
-    rr += templates.copyright_header.format(
+    rr += templates.COPYRIGHT_HEADER.format(
         year=time.localtime().tm_year,
         licenses_url=get_public_url('msit_licenses_url')
     )
-    rr += templates.include_header_formater.format(
+    rr += templates.INCLUDE_HEADER_FORMATTER.format(
         model_name_upper=model_name_lower.upper(),
     )
 
-    rr += templates.basic_class_formatter.format(
+    rr += templates.BASIC_CLASS_FORMATTER.format(
         model_name_lower=model_name_lower,
-        struct_param_formatter=templates.struct_param_formatter.format(),
+        STRUCT_PARAM_FORMATTER=templates.STRUCT_PARAM_FORMATTER.format(),
     )
 
     save_name = utils.init_save_name("decoder_model" if save_name is None else save_name) + ".h"
