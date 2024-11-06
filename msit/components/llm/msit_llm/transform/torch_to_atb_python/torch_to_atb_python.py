@@ -35,11 +35,7 @@ from msit_llm.transform.utils import write_file
 
 from functools import reduce
 
-atb_speed_path = os.getenv("ATB_SPEED_HOME_PATH", None)
-if not atb_speed_path:
-    logger.warning("ATB_SPEED_HOME_PATH environment variable not valid, will skip build. Try install mindie")
-else:
-    sys.path.append(os.path.join(atb_speed_path, "lib"))
+
 
 try:
     from _libatb_torch import _GraphOperation as GraphOperation  # May error

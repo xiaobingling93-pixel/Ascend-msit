@@ -30,8 +30,8 @@ from msit_llm.common.log import logger
 from msit_llm.common.utils import check_data_file_size
 from msit_llm.common.constant import MAX_WEIGHT_DATA_SIZE
 
-
-from msit_llm.transform.env import ENV     
+from components.utils.check.rule import Rule
+  
 
 _SCENARIOS = ["torch_to_float_atb", "float_atb_to_quant_atb", "torch_to_float_python_atb"]
 SCENARIOS = namedtuple("SCENARIOS", _SCENARIOS)(*_SCENARIOS)
@@ -49,9 +49,18 @@ class NPUSocInfo:
 
 
 def load_atb_speed():
-    lib_path = os.path.join(ENV.atb_speed_home_path, "lib/libatb_speed_torch.so")
+    atb_speed_home_path: str = os.getenv("ATB_SPEED_HOME_PATH", None)
+    try:
+        Rule.input_dir().check(atb_speed_home_path)
+    except Exception as e:
+        logger.error(f'Failed to abtain ATB_SPEED_HOME_PATH, err:{e}')
+    lib_path = os.path.join(atb_speed_home_path, "lib/libatb_speed_torch.so")   
+    try:
+        Rule.input_file().check(lib_path)
+    except Exception as e:
+        logger.error(f'Failed to load libatb_speed_torch.so, err:{e}')
     torch.classes.load_library(lib_path)
-    sys.path.append(os.path.join(ENV.atb_speed_home_path, 'lib'))
+    sys.path.append(os.path.join(atb_speed_home_path, 'lib'))
 
 
 def get_transform_scenario(source_path, to_python=False):
