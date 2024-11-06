@@ -19,6 +19,8 @@ from tqdm import tqdm
 from security import json_safe_load, json_safe_dump, get_valid_path, get_valid_write_path, get_valid_read_path
 from precision_tool import logger
 from precision_tool import truthfulqa_eval
+from ascend_utils.common.security.type import check_type
+
 
 supported_dataset = ["boolq", "ceval_0_shot", "ceval_5_shot", "humaneval", "truthfulqa", "mmlu"]
 
@@ -62,8 +64,7 @@ class PrecisionTest:
             raise TypeError("Invalid model.")
         self.device = model.device
         self.tokenizer_return_type_id = tokenizer_return_type_id
-        if not isinstance(self.tokenizer_return_type_id, bool):
-            raise TypeError("Tokenizer return type id must be bool.")
+        check_type(self.tokenizer_return_type_id, bool, param_name="tokenizer_return_type_id")
         self.tokenizer = tokenizer
         if not self.__verify_tokenizer():
             raise TypeError("Tokenizer must be matched with model.")
