@@ -194,6 +194,34 @@ def check_dict_character(dict_value, key_max_len=512, param_name="dict"):
     check_dict_character_recursion(dict_value)
 
 
-def is_enough_disk_space_left(dump_path, required_space=MIN_DUMP_DISK_SPACE):
-    empty_disk_space = shutil.disk_usage(dump_path).free
+def find_existing_path(path, depth):
+    if os.path.exists(path):
+        return path
+    if depth <= 0:
+        raise RecursionError("Output path was not valied")
+    parent_path = os.path.dirname(path)
+    # 递归查找父目录
+    if parent_path and parent_path != path:
+        return find_existing_path(parent_path, depth - 1)
+    else:
+        raise ValueError("Output path was not valied.")
+
+
+def is_enough_disk_space_left(dump_path, logger, required_space=MIN_DUMP_DISK_SPACE, max_path_depth=200):
+    dump_path = os.path.abspath(dump_path)
+    existing_path = None
+    try:
+        existing_path = find_existing_path(dump_path, max_path_depth)
+    except ValueError:
+        logger.warning("Please check your output path parameter, it seems that it does not exist.")
+    except RecursionError:
+        logger.warning("The depth of the 'output' path is too large, maximum depth is 200.")
+    
+    if existing_path:
+        empty_disk_space = shutil.disk_usage(existing_path).free
+    else:
+        logger.warning("Please make sure that the disk has enough space to dump data.")
+        root_path = os.path.abspath(os.sep)
+        empty_disk_space = shutil.disk_usage(root_path).free
+
     return empty_disk_space >= required_space

@@ -71,7 +71,6 @@ class ConvertLinearParams:
         self.weight_offset = weight_offset
         self.quant_weight = quant_weight
 
-
 def calculate_int_weight(weight_initializer,
                          weight_scale,
                          weight_offset,
@@ -259,10 +258,10 @@ def find_index(nodes, weight_name):
 def init_quant_param(params):
     weight_name = params.weight_name
     input_scale_dict = params.input_scale_dict
-    input_offset_dict = input_offset_dict
-    weight_scale_dict = weight_scale_dict
-    weight_offset_dict = weight_offset_dict
-    quant_weight_dict = quant_weight_dict
+    input_offset_dict = params.input_offset_dict
+    weight_scale_dict = params.weight_scale_dict
+    weight_offset_dict = params.weight_offset_dict
+    quant_weight_dict = params.quant_weight_dict
 
     quant_param = {}
     quant_param["input_scale"] = input_scale_dict[weight_name]
@@ -312,7 +311,7 @@ def quantize_model_deploy(graph, params):
         fp_node = nodes[index]
         node_input = copy.deepcopy(fp_node.input)
         node_output = copy.deepcopy(fp_node.output)
-        
+
         init_quant_params = InitQuantParams(
             weight_name=weight_name,
             input_scale_dict=input_scale_dict,

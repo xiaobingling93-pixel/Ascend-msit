@@ -74,11 +74,14 @@ class OpChecker:
 
         logger_text = f"lib_opchecker_path is {lib_opchecker_path}"
         logger.info(logger_text)
-        if not os.path.exists(lib_opchecker_path):
-            logger_text = f"{lib_opchecker_path} not exists, check if msit_llm installed correctly"
-            logger.error(logger_text)
+
+        # check the path of libopchecker.so before opening it
+        check_res = Rule.input_file().check(lib_opchecker_path)
+        if not check_res:
+            logger.error("%r loading failed due to %s, check if msit_llm install correctly", lib_opchecker_path, check_res)
             return False
 
+        # Loading libopchecker.so
         try:
             ctypes.cdll.LoadLibrary(lib_opchecker_path).RegisterAll()
         except Exception:
