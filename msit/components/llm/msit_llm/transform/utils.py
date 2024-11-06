@@ -18,18 +18,14 @@ import sys
 from collections import namedtuple
 from pathlib import Path
 from dataclasses import dataclass
-from enum import Enum
-import subprocess
 
 import torch
 from safetensors.torch import safe_open
 import torch_npu
 
-
 from msit_llm.common.log import logger
 from msit_llm.common.utils import check_data_file_size
 from msit_llm.common.constant import MAX_WEIGHT_DATA_SIZE
-
 from components.utils.check.rule import Rule
   
 
