@@ -195,7 +195,7 @@ def load_file_to_read_common_check(path: str):
     if not check_file_size_based_on_ext(path):
         logger.error("File too large: %r", path)
         raise ValueError
-    
+
     if (os.st.S_IWOTH & file_status.st_mode) == os.st.S_IWOTH:
         logger.error("Vulnerable path: %r should not be other writeable", path)
         raise PermissionError
