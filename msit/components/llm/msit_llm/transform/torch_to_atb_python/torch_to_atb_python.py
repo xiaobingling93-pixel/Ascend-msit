@@ -31,9 +31,11 @@ from msit_llm.transform.utils import load_atb_speed, NPUSocInfo
 from msit_llm.common.log import logger, set_log_level
 from msit_llm.transform.utils import write_file
 
-
-
-
+atb_speed_path = os.getenv("ATB_SPEED_HOME_PATH", None)
+if not atb_speed_path:
+    logger.warning("ATB_SPEED_HOME_PATH environment variable not valid, will skip build. Try install mindie")
+else:
+    sys.path.append(os.path.join(atb_speed_path, "lib"))
 
 try:
     from _libatb_torch import _GraphOperation as GraphOperation  # May error
