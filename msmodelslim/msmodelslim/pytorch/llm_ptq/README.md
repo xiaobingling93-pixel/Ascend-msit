@@ -90,7 +90,7 @@ pip3 install sympy==1.11.1
 
 3. 新建模型的quant.py量化脚本，编辑quant.py文件，根据实际的量化场景导入样例代码，参考加粗字体信息提示，并根据实际情况进行修改。
 
-    - W8A8 per_channel量化场景导入的样例代码如下，kvcache、lowbit算法以及per_token算法量化场景导入的代码样例请参考w8a8量化场景。
+    - W8A8 per_channel量化场景导入的样例代码如下，kvcache、lowbit算法以及per_token算法量化场景导入的代码样例请参考[w8a8量化场景](/msit/msmodelslim/docs/量化及稀疏量化场景导入代码样例.md)。
 
 ```
 # 导入相关依赖
