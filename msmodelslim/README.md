@@ -68,6 +68,6 @@ export PATH=/usr/local/python3.7.5/bin:$PATH
 | [Transformer类模型权重剪枝调优](msmodelslim/pytorch/prune/transformer_prune)          | 模型权重剪枝是一种通过移除模型中不重要的权重（即那些对模型性能影响较小的权重）来减少模型复杂度的技术。剪枝后的模型权重更少，从而可以减少模型的存储需求，并可能加快模型的推理速度。                                                             |
 | [基于重要性评估的剪枝调优](msmodelslim/pytorch/prune)                  | 基于重要性评估进行剪枝调优是一种常用的方法，它涉及到评估模型中每个权重的重要性，并据此决定哪些权重应该被剪枝。  基于重要性评估的剪枝调优可以显著减少模型的大小，提高模型的推理效率，同时尽量保持模型的性能。这种方法在深度学习模型压缩和加速中非常有用，特别是在需要部署模型到资源受限的环境中的情况下。 |
 
-### [Python API接口说明](msmodelslim/docs/Python-API接口说明) 
+### [Python API接口说明](docs/Python-API接口说明) 
 #### 许可证
 [Apache License 2.0](LICENSE)
