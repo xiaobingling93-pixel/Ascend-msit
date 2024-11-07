@@ -3,11 +3,13 @@
 ## Pytorch
 目前支持对表1中的大模型进行量化（包括但不限于）。
 
-表1 已验证模型列表
-|模型名称|框架|
-|ChatGLM2-6B|PyTorch|
-|LLaMA2-7B|PyTorch|
-|LLaMa-13B|PyTorch|
+表1 已验证模型列表  
+
+| 模型名称 | 框架 |  
+|----------|-------|
+| ChatGLM2-6B | PyTorch |  
+| LLaMA2-7B | PyTorch |  
+| LLaMa-13B | PyTorch |  
 
 前提条件
 
@@ -186,9 +188,9 @@ print('Save quant weight success!')
 因为在存储量化参数过程中存在反序列化风险，所以已通过在存储过程中，将保存的量化结果文件夹权限设置为750，量化权重文件权限设置为400，量化权重描述文件设为600来消减风险。
 
 启动模型稀疏量化任务，并在指定的输出目录获取模型量化参数。
-
+```
 python3 sparse_quant.py
-
+```
 说明
 
 生成的模型权重文件quant_weight.npy将会用于压缩步骤（以ChatGLM2-6B为例）的步骤2。
@@ -200,19 +202,19 @@ python3 sparse_quant.py
 已参考前提条件，完成环境变量配置。
 
 进入权重压缩工具所在路径。
-
+```
 cd ${INSTALL_DIR}/tools/msmodelslim/pytorch/weight_compression/compress_graph
-
-${INSTALL_DIR}请替换为CANN软件安装后文件存储路径。例如，若安装的Ascend-cann-toolkit软件包，则安装后文件存储路径为：$HOME/Ascend/ascend-toolkit/latest。
+```
+```${INSTALL_DIR}```请替换为CANN软件安装后文件存储路径。例如，若安装的Ascend-cann-toolkit软件包，则安装后文件存储路径为：```$HOME/Ascend/ascend-toolkit/latest```。
 
 执行编译命令。
-
+```
 bash build.sh $HOME/Ascend/ascend-toolkit/latest
-
+```
 编译结束后，在当前路径下生成build目录，执行如下命令查看编译结果compress_executor。
-
+```
 cd build
-
+```
 用户参考稀疏量化步骤对ChatGLM2-6B为进行稀疏量化之后，在指定的输出目录“chatglm2”文件夹得到模型稀疏量化后的参数，目录示例如下：
 ```
 ├── deq_scale.npy
@@ -260,9 +262,9 @@ compressor.export(compress_info, info_root, dtype=np.int64)
 ```
 
 运行压缩脚本，并在指定的输出目录获取压缩后的权重文件，用于后续的推理部署任务，具体请参见MindIE的“加速库支持模型列表”章节中已适配量化的模型。
-
+```
 python3 compress.py
-
+```
 ## MindSpore
 
 前提条件
@@ -282,7 +284,7 @@ Atlas A2训练系列产品/Atlas 800I A2推理产品。
 大模型稀疏和压缩前须执行命令安装如下依赖。
 
 如下命令如果使用非root用户安装，需要在安装命令后加上--user，例如：pip3 install onnx --user。
-
+```
 pip3 install numpy==1.25.2
 pip3 install tqdm==4.66.1 
 pip3 install typepy           #需大于等于1.3.1版本 
@@ -293,6 +295,7 @@ pip3 install omegaconf        #需大于等于2.3.0版本
 pip3 install pycountry        #需大于等于22.3.5版本 
 pip3 install rouge_score      #需大于等于0.1.2版本 
 pip3 install peft             #需大于等于0.5.0版本
+```
 功能实现流程
 大模型压缩工具共分为稀疏、量化和权重压缩三大环节，用户需连续运行方可实现大模型压缩。
 
@@ -394,9 +397,9 @@ print('Save quant weight success!')
 因为在存储量化参数过程中存在反序列化风险，所以已通过在存储过程中，将保存的量化结果文件夹权限设置为750，量化权重文件权限设置为400，量化权重描述文件设为600来消减风险。
 
 启动模型稀疏量化任务，并在指定的输出目录获取模型量化参数，用于后续的推理部署任务
-
+```
 python3 sparse_quant.py
-
+```
 压缩步骤
 
 编译压缩函数。
@@ -404,19 +407,19 @@ python3 sparse_quant.py
 已参考前提条件，完成环境变量配置。
 
 进入权重压缩工具所在路径。
-
+```
 cd ${INSTALL_DIR}/tools/msmodelslim/pytorch/weight_compression/compress_graph
-
-${INSTALL_DIR}请替换为CANN软件安装后文件存储路径。例如，若安装的Ascend-cann-toolkit软件包，则安装后文件存储路径为：$HOME/Ascend/ascend-toolkit/latest。
+```
+```${INSTALL_DIR}```请替换为CANN软件安装后文件存储路径。例如，若安装的Ascend-cann-toolkit软件包，则安装后文件存储路径为：```$HOME/Ascend/ascend-toolkit/latest```。
 
 执行编译命令。
-
+```
 bash build.sh $HOME/Ascend/ascend-toolkit/latest
-
+```
 编译结束后，在当前路径下生成build目录，执行如下命令查看编译结果compress_executor。
-
+```
 cd build
-
+```
 用户参考稀疏量化步骤对指定模型进行稀疏量化之后，在指定的权重保存路径（./quant_weight.ckpt）下得到ckpt文件，并对待压缩的权重部分进行压缩操作。
 
 ```python
@@ -472,9 +475,9 @@ compressor.export(compress_info, info_root, dtype=np.int64)
 ```
 
 运行压缩脚本，并在指定的输出目录获取压缩后的权重文件，用于后续的推理部署任务。
-
+```
 python3 compress.py
-
+```
 说明
 
 用户需要将压缩后得到的权重文件（compress_weight、compress_index和compress_info）自行整合到ckpt文件中，才能用于后续的推理部署任务。
