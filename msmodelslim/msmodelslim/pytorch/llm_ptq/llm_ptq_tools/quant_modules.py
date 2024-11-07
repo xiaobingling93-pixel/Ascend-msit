@@ -58,8 +58,6 @@ class Quantizer(nn.Module):
         self.input_offset = None
         self.weight_scale = None
         self.weight_offset = None
-        self.x_min = None
-        self.x_max = None
         
         self.name = None
         self.range_param = None
