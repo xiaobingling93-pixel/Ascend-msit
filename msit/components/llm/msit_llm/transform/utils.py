@@ -14,18 +14,50 @@
 
 import os
 import stat
+import sys
 from collections import namedtuple
 from pathlib import Path
+from dataclasses import dataclass
 
 import torch
 from safetensors.torch import safe_open
+import torch_npu
 
 from msit_llm.common.log import logger
-from msit_llm.common.utils import check_data_file_size
+from msit_llm.common.utils import load_file_to_read_common_check
 from msit_llm.common.constant import MAX_WEIGHT_DATA_SIZE
+from components.utils.check.rule import Rule
+  
 
 _SCENARIOS = ["torch_to_float_atb", "float_atb_to_quant_atb", "torch_to_float_python_atb"]
 SCENARIOS = namedtuple("SCENARIOS", _SCENARIOS)(*_SCENARIOS)
+
+@dataclass
+class NPUSocInfo:
+    soc_name:str = ""
+    soc_version: int = -1
+    need_nz: bool = False
+
+    def __post_init__(self):
+        SOC_VERSION = (100, 101, 102, 103, 104, 200, 201, 202, 203)
+        self.soc_version = torch_npu._C._npu_get_soc_version()
+        if self.soc_version in SOC_VERSION:
+            self.need_nz = True
+
+
+def load_atb_speed():
+    atb_speed_home_path: str = os.getenv("ATB_SPEED_HOME_PATH", None)
+    try:
+        Rule.input_dir().check(atb_speed_home_path)
+    except Exception as e:
+        logger.error(f'Failed to abtain ATB_SPEED_HOME_PATH, err:{e}')
+    lib_path = os.path.join(atb_speed_home_path, "lib/libatb_speed_torch.so")   
+    try:
+        Rule.input_file().check(lib_path)
+    except Exception as e:
+        logger.error(f'Failed to load libatb_speed_torch.so, err:{e}')
+    torch.classes.load_library(lib_path)
+    sys.path.append(os.path.join(atb_speed_home_path, 'lib'))
 
 
 def get_transform_scenario(source_path, to_python=False):
@@ -54,8 +86,9 @@ def write_file(save_path, string):
 
 
 def load_model_dict(model_path):
-    if Path(model_path).is_file() and check_data_file_size(model_path, max_size=MAX_WEIGHT_DATA_SIZE):
-        state_dict = torch.load(model_path)
+    if Path(model_path).is_file():
+        model_path = load_file_to_read_common_check(model_path, max_size=MAX_WEIGHT_DATA_SIZE)
+        state_dict = torch.load(model_path, weights_only=True)
         return state_dict
     elif Path(model_path).is_dir():
         suffix_list = ['.bin', '.safetensors', '.pt']
@@ -65,15 +98,14 @@ def load_model_dict(model_path):
                 continue
             state_dict = {}
             for fp in file_list:
-                fp = str(fp)
-                if (not Path(fp).is_file() or 
-                    not check_data_file_size(fp, max_size=MAX_WEIGHT_DATA_SIZE)):
-                    continue  # 如果不是普通文件或者文件大小超过限制，则跳过该文件(实际上会报错并终止)
+                fp = load_file_to_read_common_check(str(fp), max_size=MAX_WEIGHT_DATA_SIZE)
+                
                 if suffix == '.safetensors':
                     with safe_open(fp, framework='pt') as ff:
                         ss = {kk: ff.get_tensor(kk).half() for kk in ff.keys()}
                 else:
-                    ss = torch.load(fp)
+                    ss = torch.load(fp, weights_only=True)
+                    
                 state_dict.update(ss)
             return state_dict
     return {}

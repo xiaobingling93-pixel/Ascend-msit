@@ -15,10 +15,11 @@
 import os
 import re
 import sys
-import stat
+
 import json
 import inspect
 import string
+import math
 from copy import deepcopy
 from collections import namedtuple
 from functools import reduce
@@ -26,14 +27,13 @@ from functools import reduce
 import torch
 import torch_npu
 
+from msit_llm.transform.utils import load_atb_speed, NPUSocInfo
 from msit_llm.common.log import logger, set_log_level
 from msit_llm.transform.utils import write_file
 
-atb_speed_path = os.getenv("ATB_SPEED_HOME_PATH", None)
-if not atb_speed_path:
-    logger.warning("ATB_SPEED_HOME_PATH environment variable not valid, will skip build. Try install mindie")
-else:
-    sys.path.append(os.path.join(atb_speed_path, "lib"))
+
+
+
 
 try:
     from _libatb_torch import _GraphOperation as GraphOperation  # May error
@@ -222,6 +222,7 @@ class ATBModelConfig:
 
 class ATBModel:
     def __init__(self, atb_model, atb_model_config=None, output_shape=None, dtype="float16"):
+        load_atb_speed()
         atb_model_config = atb_model_config or {}
         if isinstance(atb_model_config, dict):
             self.atb_model_config = ATBModelConfig(**atb_model_config)
@@ -251,17 +252,32 @@ class ATBModel:
             raise ValueError(f"dtype={dtype} not supported, valid ones are {list(FLOAT_DTYPES.keys())}")
         self.dtype = FLOAT_DTYPES.get(dtype)
 
+        self.soc_info = NPUSocInfo()
+        self.block = 128
         self.head_dim = getattr(atb_model, "head_dim", self.atb_model_config.head_dim)
         self.num_attention_heads = getattr(atb_model, "num_attention_heads", self.atb_model_config.num_attention_heads)
         self.num_key_value_heads = getattr(atb_model, "num_key_value_heads", self.atb_model_config.num_key_value_heads)
         self.vocab_size = getattr(atb_model, "vocab_size", self.atb_model_config.vocab_size)
         self.rope_theta = getattr(atb_model, "rope_theta", self.atb_model_config.rope_theta)
-        self.cache_shape = [
-            self.atb_model_config.max_batch_size,
-            self.atb_model_config.max_seq_len,
-            self.num_key_value_heads,
-            self.head_dim,
-        ]
+        self.num_blocks = math.ceil((self.atb_model_config.max_seq_len + 20) / 128 * self.atb_model_config.max_batch_size)
+        if self.soc_info.need_nz:
+            self.cache_shape = [
+                self.num_blocks,
+                self.head_dim * self.num_key_value_heads // 16,
+                self.block,
+                16
+            ]
+        else:
+            self.cache_shape = [
+                self.atb_model_config.max_batch_size,
+                self.atb_model_config.max_seq_len,
+                self.num_key_value_heads,
+                self.head_dim,
+            ]
+        
+        self.transdata_operation = torch.classes.OperationTorch.OperationTorch("TransdataOperation")
+        self.transdata_param = json.dumps({})
+        self.transdata_operation.set_param(self.transdata_param)
 
         self.kv_cache_names = [ii for ii in self.input_names if ii.split(".")[-1] in KV_CACHE_SURFFIX]
         self.past_key_values = {}
@@ -272,6 +288,9 @@ class ATBModel:
 
     def init_kv_cache(self):
         self.past_key_values = {ii: torch.zeros(self.cache_shape).to(self.dtype).npu() for ii in self.kv_cache_names}
+        if self.soc_info.need_nz:
+            for _, value in self.past_key_values.items():
+                value = torch_npu.npu_format_cast_(value, 29)
         self.weights.update(self.past_key_values)
         if self.atb_model_has_set_weights:
             self.atb_model.set_weights(self.past_key_values)
@@ -304,6 +323,9 @@ class ATBModel:
             mask_tensor = torch.ones([self.atb_model_config.max_seq_len, self.atb_model_config.max_seq_len])
             attention_mask = torch.where((1 - torch.tril(mask_tensor)).to(torch.bool), -torch.inf, 0)
             self.attention_mask = attention_mask.to(self.dtype).npu()
+
+            if self.soc_info.need_nz and attention_mask is not None:
+                self.attention_mask = self.transdata_operation.execute([self.attention_mask])[0]
 
         if self.atb_model_has_set_weights:
             self.atb_model.set_weights(self.weights)  # ATB provided function, no need to pass weights again

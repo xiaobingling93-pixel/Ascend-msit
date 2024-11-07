@@ -4,8 +4,8 @@ from mindspore.nn.cell import Cell
 
 from ascend_utils.mindspore.knowledge_distill.distill_dual_models_ms import DistillDualModelsMs
 from ascend_utils.common.security.mindspore import check_mindspore_cell
-from ascend_utils.mindspore.knowledge_distill.distill_losses_func_ms import DISTILL_LOSS_FUNC_MS
 from msmodelslim.common.knowledge_distill.knowledge_distill import KnowledgeDistillConfig
+from ascend_utils.mindspore.knowledge_distill.distill_losses_func_ms import DISTILL_LOSS_FUNC_MS
 from msmodelslim import logger
 
 

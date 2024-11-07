@@ -2,10 +2,10 @@
 
 from torch.nn.modules import Module
 
+from msmodelslim.common.knowledge_distill.knowledge_distill import KnowledgeDistillConfig
 from ascend_utils.pytorch.knowledge_distill.distill_losses_func_torch import DISTILL_LOSS_FUNC_TORCH
 from ascend_utils.common.security.pytorch import check_torch_module
 from ascend_utils.pytorch.knowledge_distill.distill_dual_models_torch import DistillDualModelsTorch
-from msmodelslim.common.knowledge_distill.knowledge_distill import KnowledgeDistillConfig
 from msmodelslim import logger
 
 
