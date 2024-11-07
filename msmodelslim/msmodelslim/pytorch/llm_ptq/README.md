@@ -90,7 +90,7 @@ pip3 install sympy==1.11.1
 
 3. 新建模型的quant.py量化脚本，编辑quant.py文件，根据实际的量化场景导入样例代码，参考加粗字体信息提示，并根据实际情况进行修改。
 
-    - W8A8 per_channel量化场景导入的样例代码如下，kvcache、lowbit算法以及per_token算法量化场景导入的代码样例请参考[w8a8量化场景](/msit/msmodelslim/docs/量化及稀疏量化场景导入代码样例.md)。
+    - W8A8 per_channel量化场景导入的样例代码如下，kvcache、lowbit算法以及per_token算法量化场景导入的代码样例请参考[w8a8量化场景](量化及稀疏量化场景导入代码样例.md)。
 
 ```
 # 导入相关依赖
@@ -195,7 +195,7 @@ python3 quant.py
 ```
 量化任务完成后，可能会存在模型精度下降的情况，可以参考精度保持策略进行配置优化减少精度损耗。
 ### 量化及稀疏量化场景导入代码样例
-其他场景样例可参考[此处](msit\msmodelslim\docs\量化及稀疏量化场景导入代码样例.md)
+其他场景样例可参考[此处](量化及稀疏量化场景导入代码样例.md)
 ### 量化后权重文件
 - npy格式
 当save_type设置为['numpy']或不设置时，量化权重会保存为npy文件，npy储存格式为字典，其中key值为各层Linear的名字，例如ChatGLM2-6B模型的transformer.encoder.layers.0.self_attention.query_key_value，value值为第0层query_key_value的Linear权重。
