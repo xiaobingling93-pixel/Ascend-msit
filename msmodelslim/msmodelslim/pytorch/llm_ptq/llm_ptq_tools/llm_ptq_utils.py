@@ -22,9 +22,8 @@ class QuantType(str, Enum):
     W8A8S = "W8A8S"  # 稀疏量化，Matmul的weight、activation均为8bit，且weight经过稀疏(权重数值分布范围可能小于8bit)
     W8A8SC = "W8A8SC"  # 稀疏量化压缩后的权重
     FLOAT = "FLOAT"  # 浮点
-    KV8 = 'C8' # kvcache量化，kvcache为8bit
+    KV8 = 'C8'  # kvcache量化，kvcache为8bit
     W8A8_DYNAMIC = "W8A8_DYNAMIC"  # W8A8静态量化与per-token动态量化混合量化
-
 
     @staticmethod
     def get_quant_type(w_bit, a_bit, is_sparse, is_dynamic, is_lowbit):
@@ -154,7 +153,7 @@ class QuantModelJsonDescription:
     def change_model_type(self, model_quant_type):
         QuantType.check_instance_of_enum(model_quant_type)
         self.quant_model_description[QuantModelJsonDescription.model_quant_type_name] = model_quant_type
-    
+
     def change_kvcache_type(self, use_kvcache_quant):
         if use_kvcache_quant:
             self.quant_model_description['kv_cache_type'] = QuantType.KV8
@@ -200,4 +199,3 @@ class WeightQuantMethod(str, Enum):
     def check_datafree_wmethod(w_method):
         if w_method not in [WeightQuantMethod.MinMax, WeightQuantMethod.HQQ]:
             raise ValueError(f"w_method {w_method} does not support Data-Free, please check it.")
-

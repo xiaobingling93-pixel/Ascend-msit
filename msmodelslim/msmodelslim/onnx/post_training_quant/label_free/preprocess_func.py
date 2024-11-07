@@ -4,8 +4,8 @@ import os
 
 import numpy as np
 
-from ascend_utils.common.security import get_valid_read_path, check_type, check_int
 from msmodelslim import logger
+from ascend_utils.common.security import get_valid_read_path, check_type, check_int
 
 
 MAX_PIXEL_VALUE = 255.0
