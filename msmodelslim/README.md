@@ -29,7 +29,7 @@ msModelSlim当前处于逐步开源过程中，计划通过630,930,1230三个版
 
 1230版本尚未发布，只支持通过开源方式使用。
 
-### 环境准备
+## 环境准备
 
 - 使用msModelSlim工具前，需参考《[CANN软件安装指南](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/80RC2alpha003/devaids/auxiliarydevtool/nottoctopics/zh-cn_topic_0000001800373652.html)》搭建开发环境。
 - 安装CANN软件后，需要以CANN运行用户登录环境，执行如下示例命令配置环境变量。
@@ -53,7 +53,7 @@ export PATH=/usr/local/python3.7.5/bin:$PATH
         - 请参考《[Ascend Extension for PyTorch 配置与安装](https://www.hiascend.com/document/detail/zh/Pytorch/60RC1/configandinstg/instg/insg_0001.html)》，安装PyTorch框架、torch_npu插件、Torchvision依赖和Apex混合精度模块。
         - 若PyTorch下需要统计模型的参数量信息，则执行如下命令安装依赖thop。
           如下命令如果使用非root用户安装，需要在安装命令后加上--user，例如：pip3 install thop --user。
-### 特性清单
+## 特性清单
 - msModelSlim针对开发者的差异化需求，提供了以下模型压缩方案：
 
 | 功能名称                          | 功能简介                                                                                                                                                  |
