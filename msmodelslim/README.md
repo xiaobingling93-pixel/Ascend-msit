@@ -54,7 +54,7 @@ export PATH=/usr/local/python3.7.5/bin:$PATH
         - 请参考《[Ascend Extension for PyTorch 配置与安装](https://www.hiascend.com/document/detail/zh/Pytorch/60RC1/configandinstg/instg/insg_0001.html)》，安装PyTorch框架、torch_npu插件、Torchvision依赖和Apex混合精度模块。
         - 若PyTorch下需要统计模型的参数量信息，则执行如下命令安装依赖thop。
           如下命令如果使用非root用户安装，需要在安装命令后加上--user，例如：pip3 install thop --user。
-### 特性清单
+## 特性清单
 - msModelSlim针对开发者的差异化需求，提供了以下模型压缩方案：
 
 | 功能名称                          | 功能简介                                                                                                                                                  |
