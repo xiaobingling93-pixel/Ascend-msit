@@ -44,8 +44,8 @@
 - 最终分析结果文件位于当前执行路径下 `./output.xlsx`，该结果中重点关注有对应关系的接口，并参照 `AscendAPILink` 中相关接口说明辅助完成迁移
 - 输出结果的表格文件具体字段说明以及使用方法参照 [01_basic_usage](../01_basic_usage) 及 [02_resnet50_inference](../02_resnet50_inference)
 ## ACL Encode
-- ACL 接口目前分为 V1 和 V2，昇腾 310 AI 处理器上，当前仅支持 V1 版本的媒体数据处理接口，昇腾310P AI处理器上，支持V1和V2两个版本的媒体数据处理接口，接口间 v1 到 V2 迁移参照 [昇腾310 AI处理器媒体数据处理V1->昇腾310P AI处理器媒体数据处理V2迁移指引](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/70RC1alpha001/infacldevg/aclcppdevg/aclcppdevg_000165.html)
-- **ACL V1 接口编译执行** 迁移完成后在 Ascend 310/310P 上执行，`ASCEND_TOOLKIT_HOME` 为实际 CANN 目录
+- ACL 接口目前分为 V1 和 V2，Atlas200/300/500推理产品上，当前仅支持 V1 版本的媒体数据处理接口，Atlas推理系列产品上，支持V1和V2两个版本的媒体数据处理接口，接口间 v1 到 V2 迁移参照 [迁移指引](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/70RC1alpha001/infacldevg/aclcppdevg/aclcppdevg_000165.html)
+- **ACL V1 接口编译执行** 迁移完成后在 Atlas200/300/500推理产品或Atlas推理系列产品 上执行，`ASCEND_TOOLKIT_HOME` 为实际 CANN 目录
   ```sh
   g++ acl_encode_v1.cpp -o acl_encode_v1 -I $ASCEND_TOOLKIT_HOME/runtime/include -DENABLE_DVPP_INTERFACE \
   -L $ASCEND_TOOLKIT_HOME/runtime/lib64/stub/ -lpthread -lstdc++  -lascendcl -lacl_dvpp
@@ -54,7 +54,7 @@
   # Open device 0 success
   # Writing JPEG file: sample_acl_v1.jpg, length: 164800
   ```
-- **ACL V2 接口编译执行** 迁移完成后在 Ascend 310P 上执行，`ASCEND_TOOLKIT_HOME` 为实际 CANN 目录，
+- **ACL V2 接口编译执行** 迁移完成后在 Atlas推理系列产品 上执行，`ASCEND_TOOLKIT_HOME` 为实际 CANN 目录，
   ```sh
   g++ acl_encode_v2.cpp -o acl_encode_v2 -I $ASCEND_TOOLKIT_HOME/runtime/include -DENABLE_DVPP_INTERFACE \
   -L $ASCEND_TOOLKIT_HOME/runtime/lib64/stub/ -lpthread -lstdc++  -lascendcl -lacl_dvpp -lacl_dvpp_mpi
@@ -63,4 +63,4 @@
   # Open device 0 success
   # Writing JPEG file: sample_acl_v2.jpg, length: 164800
   ```
-  Ascend310 上将报错 `acldvppMalloc malloc device data buffer failed, aclRet is -1610448875`
+  Atlas200/300/500推理产品 上将报错 `acldvppMalloc malloc device data buffer failed, aclRet is -1610448875`

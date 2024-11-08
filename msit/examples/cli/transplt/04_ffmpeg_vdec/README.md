@@ -185,7 +185,7 @@ DVPP在解码完成后，资源释放相关API如下：
 迁移后的代码实现可以参考[acl_decode.cpp](https://gitee.com/ascend/msit/tree/master/msit/examples/cli/transplt/04_ffmpeg_vdec/acl/acl_decode.cpp)。另外还有一个简化版本的实现[acl_decode_simplified.cpp](https://gitee.com/ascend/msit/tree/master/msit/examples/cli/transplt/04_ffmpeg_vdec/acl/acl_decode_simplified.cpp)，简化版本阉割了多线程解码能力，并且删除了许多错误检查代码，简化版代码只是为了让用户更方便的理解ACL视频解码的流程，实际运行过程中可能会存在未知问题。
 迁移完成后在`<msit工程目录>/msit/examples/cli/transplt/04_ffmpeg_vdec/acl`下使用 `g++` 编译源码文件，也可自行编写 `cmake` 文件，修改调整至可编译通过并正确执行。
 
-> **注意**： 迁移后的代码使用了ACL数据媒体处理V2版本的接口，该接口目前只支持昇腾310P AI处理器，请在310P的机器上编译运行迁移后的代码。
+> **注意**： 迁移后的代码使用了ACL数据媒体处理V2版本的接口，该接口目前只支持Atlas推理系列产品，请在Atlas推理系列产品的机器上编译运行迁移后的代码。
   
 ```sh
 g++ -O3 -std=c++11 acl_decode.cpp -o acl_decode -I$ASCEND_TOOLKIT_HOME/runtime/include/acl -I$ASCEND_TOOLKIT_HOME/runtime/include/acl/dvpp -L $ASCEND_TOOLKIT_HOME/runtime/lib64/stub -lacl_dvpp_mpi -lascendcl -lpthread -lstdc++

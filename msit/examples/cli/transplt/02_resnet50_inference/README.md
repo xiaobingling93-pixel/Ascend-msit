@@ -63,7 +63,7 @@
   安装成功并 source 后，`echo $MX_SDK_HOME` 不为空
 - **转出 om 模型**
   ```sh
-  SOC_VERSION=`python3 -c 'import acl; print(acl.get_soc_name())'`  # Ascend310 / Ascend310P3 or others
+  SOC_VERSION=`python3 -c 'import acl; print(acl.get_soc_name())'`  
   atc --model resnet50.onnx --output resnet50 --framework 5 --soc_version $SOC_VERSION
   ```
 - **`MXBas::Model` 模型构造** 参照 `AscendAPILink` 中链接 [mxVision 用户指南 Model](https://www.hiascend.com/document/detail/zh/mind-sdk/300/vision/mxvisionug/mxmanufactureug_0827.html)
@@ -138,7 +138,7 @@
   其中在 NPU 上执行时模型推理时间 **3.30807ms** 远小于 CPU 上 OpenCV 调用时的 `230.819ms`，且输出结果 `score` 相近
 ## MXBase ResNet50 推理 + AIPP 数据处理
 - **完成该部分迁移，可完全在昇腾 NPU 执行图像处理 -> 模型推理**
-- **由于实现差异，Ascend310 上 resize 只能用于 NV12 或 NV21 格式输入，Ascend310P3 上可正常处理 RGB_888 图片**
+- **由于实现差异，Atlas200/300/500推理产品 上 resize 只能用于 NV12 或 NV21 格式输入，Atlas推理系列产品上可正常处理 RGB_888 图片**
 - 分析结果中，图像处理相关 API
   | AccAPI     | AscendAPI              | Description                    |
   | ---------- | ---------------------- | ------------------------------ |
@@ -168,7 +168,7 @@
   ```
 - **转出带 AIPP 前处理的 om 模型**，其中 AIPP 负责将输入的 `256 x 256` 图像裁剪为 `224 x 224`，以及数值规范化
   ```sh
-  SOC_VERSION=`python3 -c 'import acl; print(acl.get_soc_name())'`  # Ascend310 / Ascend310P3 or others
+  SOC_VERSION=`python3 -c 'import acl; print(acl.get_soc_name())'`  
   atc --model resnet50.onnx --output resnet50_aipp --framework 5 --soc_version $SOC_VERSION --insert_op_conf aipp.config
   ```
 - **ImageProcessor::Decode 图像解码** 参照 `AscendAPILink` 中链接 [mxVision 用户指南 Decode](https://www.hiascend.com/document/detail/zh/mind-sdk/300/vision/mxvisionug/mxmanufactureug_0856.html)
@@ -190,7 +190,7 @@
   MxBase::Image decoded_image;
   processor.Decode(img_file, decoded_image, MxBase::ImageFormat::RGB_888);
   ```
-- **ImageProcessor::Resize 图像缩放，在 Ascend310 上不做迁移** 参照 `AscendAPILink` 中链接 [mxVision 用户指南 Resize](https://www.hiascend.com/document/detail/zh/mind-sdk/300/vision/mxvisionug/mxmanufactureug_0858.html)
+- **ImageProcessor::Resize 图像缩放，在Atlas200/300/500推理产品上不做迁移** 参照 `AscendAPILink` 中链接 [mxVision 用户指南 Resize](https://www.hiascend.com/document/detail/zh/mind-sdk/300/vision/mxvisionug/mxmanufactureug_0858.html)
   ```cpp
   // inputImage 输入缩放前的Image类
   // resize 输入图像缩放的宽高

@@ -80,7 +80,7 @@
   ```
 - **转出带 AIPP 前处理的 om 模型**，其中 AIPP 负责将输入的 `256 x 256` 图像裁剪为 `224 x 224`，以及数值规范化
   ```sh
-  SOC_VERSION=`python3 -c 'import acl; print(acl.get_soc_name())'`  # Ascend310 / Ascend310P3 or others
+  SOC_VERSION=`python3 -c 'import acl; print(acl.get_soc_name())'`  
   atc --model resnet50.onnx --output resnet50_aipp_async --framework 5 --soc_version $SOC_VERSION --insert_op_conf aipp_async.config
   ```
 - **ImageProcessor::Decode 图像解码** 参照 `AscendAPILink` 中链接 [mxVision 用户指南 Decode](https://www.hiascend.com/document/detail/zh/mind-sdk/300/vision/mxvisionug/mxmanufactureug_0856.html)
