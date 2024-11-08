@@ -54,7 +54,7 @@ msit convert atc [args]
 参数定义严格遵从ATC的参数定义，由于参数较多，详情可参考：https://www.hiascend.com/document/detail/zh/canncommercial/80RC22/devaids/auxiliarydevtool/atlasatc_16_0039.html#ZH-CN_TOPIC_0000001949484154__section6351244132417
 使用示例：
 ```shell
-msit convert atc --model resnet50.onnx --framework 5 --soc_version Ascend310P3 --output resnet50
+msit convert atc --model resnet50.onnx --framework 5 --soc_version <soc_version> --output resnet50
 ```
 ### aoe命令
 使用AOE后端进行模型转换，命令格式如下：
@@ -84,7 +84,7 @@ msit convert aie [args]
 命令示例如下：
 
 ```shell
-msit convert aie --golden-model resnet50.onnx --output-file resnet50.om --soc-version Ascend310P3 
+msit convert aie --golden-model resnet50.onnx --output-file resnet50.om --soc-version <soc_version> 
 ```
 
 #### 使用案例

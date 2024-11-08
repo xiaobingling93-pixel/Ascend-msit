@@ -107,7 +107,7 @@ optimize可简写为opt。
 | -as/--attention-start-node | 第一个attention结构的起始节点，与-bk配合使用，当启用大kernel优化开关时，需要提供该参数。 | 否       |
 | -ae/--attention-end-node   | 第一个attention结构的结束节点，与-bk配合使用，当启用大kernel优化开关时，需要提供该参数。 | 否       |
 | -t/--infer-test            | 当启用这个选项时，通过对比优化前后的推理速度来决定是否使用某知识库进行调优，保证可调优的模型均为正向调优。启用该选项需要安装额外依赖[inference]，并且需要安装CANN。 | 否       |
-| -soc/--soc-version         | 使用的昇腾芯片版本。默认为Ascend310P3。仅当启用infer-test选项时有意义。 | 否       |
+| -soc/--soc-version         | 使用的昇腾芯片版本。仅当启用infer-test选项时有意义。 | 否       |
 | -d/--device                | NPU设备ID。默认为0。仅当启用infer-test选项时有意义。         | 否       |
 | --loop                     | 测试推理速度时推理次数。仅当启用infer-test选项时有意义。默认为100。 | 否       |
 | --threshold                | 推理速度提升阈值。仅当知识库的优化带来的提升超过这个值时才使用这个知识库，可以为负，负值表示接受负优化。默认为0，即默认只接受推理性能有提升的优化。仅当启用infer-test选项时有意义。 | 否       |

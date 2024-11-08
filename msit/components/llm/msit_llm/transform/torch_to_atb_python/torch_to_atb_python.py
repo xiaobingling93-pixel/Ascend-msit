@@ -37,6 +37,7 @@ if not atb_speed_path:
 else:
     sys.path.append(os.path.join(atb_speed_path, "lib"))
 
+
 try:
     from _libatb_torch import _GraphOperation as GraphOperation  # May error
     from _libatb_torch import _BaseOperation as BaseOperation  # May error
