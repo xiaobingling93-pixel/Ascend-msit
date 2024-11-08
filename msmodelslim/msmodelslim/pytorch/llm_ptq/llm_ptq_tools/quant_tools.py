@@ -29,7 +29,7 @@ from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_modules import (
     Quantizer, LinearQuantizer, layer_wise_calib
 )
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_funcs import (
-    fake_quantize_save, get_features, linear_quantization_params
+    fake_quantize_save, get_features, linear_quantization_params, fully_analyze_activation
 )
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.kv_cache_utils import (
     set_kvcache_vari_func, new_forward
@@ -49,6 +49,16 @@ from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.llm_ptq_utils import (
     SAVE_TYPE_LIST,
     SAVE_TYPE_NUMPY,
     SAVE_TYPE_SAFE_TENSOR,
+)
+
+from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.fa_quant import (
+    configure_fa,
+    enable_fa_calibration,
+    disable_fa_calibration,
+    enable_fa_quantizer_record,
+    collect_fa_quantizer_record,
+    export_fa_quant_params,
+    is_attn_module_and_then_check_quantizer
 )
 
 from msmodelslim.pytorch.llm_ptq.anti_outlier.dag_utils.torch_dag_adapter import TorchDAGAdapter
@@ -86,6 +96,7 @@ class Calibrator(object):
         self.quant_param_dict = {}
         # 记录被量化module名称，相关的scale、offset等参数名称 key:weight的名称， value:scale、offset等参数的名称
         self.quantized_module_param_dict = defaultdict(list)
+        self.fa_module_param_dict = defaultdict(list)
 
         self.init_model_accelerate(model)
         # 初始化dag类
@@ -102,10 +113,16 @@ class Calibrator(object):
 
         if self.cfg.do_smooth:
             replace_RMSNorm(model)
+        
+        if not hasattr(self.cfg, 'use_fa_quant'):
+            self.cfg.use_fa_quant = False
+            self.cfg.fa_tp_size = 1
+            self.cfg.fa_amp = 0
 
         # 初始化模型权重json描述
-        self.quant_model_json_description = QuantModelJsonDescription(self.cfg.model_quant_type,
-                                                                      self.cfg.use_kvcache_quant)
+        self.quant_model_json_description = QuantModelJsonDescription(self.cfg.model_quant_type, 
+                                                                      self.cfg.use_kvcache_quant,
+                                                                      self.cfg.use_fa_quant)
         if not re.match(r'^L((?!0)\d+|0)$', disable_level):
             raise ValueError('Please check the `disable_level` configuration.')
         self.disable_level = disable_level
@@ -115,6 +132,9 @@ class Calibrator(object):
         self.rollback_names = None
         self.act_states = None
         self.rollback_names_process(model)
+        if self.cfg.use_fa_quant:
+            configure_fa(model, tp_size=self.cfg.fa_tp_size)
+
         if self.cfg.calib_mode == 1:
             if (self.cfg.a_bit <= 8) or self.cfg.w_hessian:
                 self.all_tensors = all_tensors
@@ -227,7 +247,7 @@ class Calibrator(object):
         def update_extremum(kv_cache, name, key, torch_function, value):
             if name not in kv_cache:
                 kv_cache[name] = {}
-
+                
             if key in kv_cache[name]:
                 kv_cache[name][key] = torch_function(kv_cache[name][key], value)
             else:
@@ -259,7 +279,7 @@ class Calibrator(object):
             if isinstance(y, tuple):
                 y = y[0]
             kv_tensor(name, x.shape[-1], y)
-
+        
         hooks = []
         for name, m in model.named_modules():
             if isinstance(m, nn.Linear):
@@ -386,7 +406,7 @@ class Calibrator(object):
             return self.quantize_model(model).to(self.cfg.device)
 
     def enable_quant(self):
-        enable_quantization(self.model, self.act_states, self.logger)
+        enable_quantization(self.model, self.act_states, self.logger, self.cfg.use_fa_quant)
 
     def get_calib_data(self, calib_data):
         check_type(calib_data, list, param_name='calib_data')
@@ -465,7 +485,11 @@ class Calibrator(object):
             # 如果浮点权重名称在量化权重名称中，说明是浮点转换为量化的权重，需要把量化权重加入safetensor_weight
             else:
                 self.set_quant_safetensor(ori_model_state_dict_name, safetensor_weight)
-
+        
+        if self.cfg.use_fa_quant:
+            for attention_module_name in self.fa_module_param_dict:
+                self.set_fa_quant_safetensor(attention_module_name, safetensor_weight)
+            
         for key, item in safetensor_weight.items():
             safetensor_weight[key] = item.cpu().contiguous()
 
@@ -498,6 +522,16 @@ class Calibrator(object):
             self.quant_model_json_description.change_weight_type(
                 quant_param_name, self.quant_model_json_description.model_quant_type)
 
+    def set_fa_quant_safetensor(self, attention_module_name, safetensor_weight):
+        for quant_param_name in self.fa_module_param_dict.get(attention_module_name):
+            quant_param = self.quant_param_dict.get(quant_param_name)
+            if quant_param is not None:
+                safetensor_weight[quant_param_name] = quant_param
+                self.quant_model_json_description.change_weight_type(quant_param_name, QuantType.FAQuant)
+            else:
+                self.quant_model_json_description.change_weight_type(quant_param_name, QuantType.FLOAT)
+
+
     def save_npy(self, output_path):
         quant_weight_dict = {}
         scale_dict = {}
@@ -508,6 +542,9 @@ class Calibrator(object):
         if self.use_kvcache_quant:
             kv_cache_scale = {}
             kv_cache_offset = {}
+        if self.cfg.use_fa_quant:
+            fa_quant_scale = {}
+            fa_quant_offset = {}
 
         for name, module in self.model.named_modules():
             weight_name = name + '.weight'
@@ -523,6 +560,10 @@ class Calibrator(object):
                     offset_dict[name] = self.quant_param_dict.get(name + '.weight_offset')
             if self.use_kvcache_quant:
                 self.get_kvcache_quant_params(weight_name, kv_cache_scale, kv_cache_offset)
+            if self.cfg.use_fa_quant and is_attn_module_and_then_check_quantizer(module, name):
+                quant_params_scale, quant_params_offset, _ = export_fa_quant_params(module, name)
+                fa_quant_scale.update(quant_params_scale)
+                fa_quant_offset.update(quant_params_offset)
 
         self.save_param(output_path, "quant_weight.npy", quant_weight_dict)
         if self.cfg.model_quant_type in [QuantType.W8A8, QuantType.W8A8S]:
@@ -536,6 +577,9 @@ class Calibrator(object):
         if self.use_kvcache_quant:
             self.save_param(output_path, "kv_cache_scale.npy", kv_cache_scale)
             self.save_param(output_path, "kv_cache_offset.npy", kv_cache_offset)
+        if self.cfg.use_fa_quant:
+            self.save_param(output_path, "fa_quant_scale.npy", fa_quant_scale)
+            self.save_param(output_path, "fa_quant_offset.npy", fa_quant_offset)
 
         anti_norm_wb = self.get_anti_fp_weight()
         if anti_norm_wb:
@@ -574,6 +618,12 @@ class Calibrator(object):
     def get_quant_params(self):
         self.model.eval()
         for name, module in self.model.named_modules():
+            if self.cfg.use_fa_quant and is_attn_module_and_then_check_quantizer(module, name):
+                quant_param_scale, quant_param_offset, attach_map = export_fa_quant_params(module, name)
+                self.quant_param_dict.update(quant_param_scale)
+                self.quant_param_dict.update(quant_param_offset)
+                self.fa_module_param_dict.update(attach_map)
+
             if isinstance(module, ParallelLinearCol):
                 quant_param, attach_map = module.get_quant_param()
                 self.quant_param_dict.update(quant_param)
@@ -683,15 +733,21 @@ class Calibrator(object):
         return fp_bias
 
     def run_calib_mode(self):
-        amp_done = not self.cfg.use_amp
+        amp_done = False
         for data in tqdm(self.calib_data):
+            if not amp_done and self.cfg.fa_amp:
+                enable_fa_quantizer_record(self.model)
+
             if isinstance(data, tuple) or isinstance(data, list):
                 self.model(*data)
             elif isinstance(data, dict):
                 self.model(**data)
 
-            if not amp_done:
+            if not amp_done and self.cfg.use_amp:
                 self.run_amp()
+                amp_done = True
+            if not amp_done and self.cfg.fa_amp:
+                self.run_fa_amp()
                 amp_done = True
         self.run_datafree_after_calib()
 
@@ -703,6 +759,7 @@ class Calibrator(object):
                     module.quant_weight.w_hessian = False
                     self.logger.info(f"run MIN-MAX quantization on linear layer: {name}")
                 module.quant_weight(module.weight)
+
 
     def run_amp(self):
         max_input_dict = {}
@@ -719,8 +776,22 @@ class Calibrator(object):
                 module.disable_input = True
                 module.disable_quant_weight()
         self.rollback_names.extend(layers_to_disable)
-        self.logger.info('The following layers will continue to use floating-point weights for forward computation:\n\t'
+        self.logger.info('The following linear layers will continue to use floating-point weights for forward computation:\n\t'
                          + '\n\t'.join([str(name) for name in sorted(self.rollback_names)]))
+
+    def run_fa_amp(self):
+        qkv_states_record = collect_fa_quantizer_record(self.model)
+        states_num_per_layer = 3
+        model_attention_layer_num = len(qkv_states_record.keys()) // states_num_per_layer
+        if model_attention_layer_num < self.cfg.fa_amp:
+            self.logger.warning("`fa_amp` exceeds the total attention layer number. Therefore, only up to the total attention layers will skip quantization")
+        disabled_module_names = fully_analyze_activation(qkv_states_record, self.cfg.fa_amp)
+        self.logger.info('The following attention layers will continue to use floating-point weights for forward computation:\n\t'
+                         + '\n\t'.join([str(name) for name in sorted(disabled_module_names)]))
+        for name, module in self.model.named_modules():
+            if is_attn_module_and_then_check_quantizer(module, name) and name in disabled_module_names:
+                module.fa_quantizer.reset()
+                module.fa_quantizer.disable_calibration()
 
     def run_datafree_mode(self):
         for name, module in self.model.named_modules():
@@ -922,7 +993,7 @@ class Calibrator(object):
 
         self.logger.info("Calibration end!")
 
-        disable_calibration(self.model, self.logger)
+        disable_calibration(self.model, self.logger, self.cfg.use_fa_quant)
         if self.use_kvcache_quant:
             self.enable_kvcache_fake_quantization()
         if self.cfg.a_bit != 8 and int_infer:
@@ -961,8 +1032,10 @@ def enable_quantization_by_module(name, module, act_states):
             module.init_act_and_observer(module.cfg)
 
 
-def enable_quantization(model, act_states, logger=None):
+def enable_quantization(model, act_states, logger=None, use_fa_quant=False):
     _ = logger  # Bypassing not using
+    if use_fa_quant:
+        enable_fa_calibration(model)
     for name, module in model.named_modules():
         if isinstance(module, Quantizer):
             enable_quantization_by_module(name, module, act_states)
@@ -974,8 +1047,10 @@ def enable_quantization(model, act_states, logger=None):
             module.calibration = True
 
 
-def disable_calibration(model, logger=None, custom_class=None):
+def disable_calibration(model, logger=None, custom_class=None, use_fa_quant=False):
     _ = logger  # Bypassing not using
+    if use_fa_quant:
+        disable_fa_calibration(model)
     for module in model.modules():
         if isinstance(module, Quantizer):
             module.disable_calib()
