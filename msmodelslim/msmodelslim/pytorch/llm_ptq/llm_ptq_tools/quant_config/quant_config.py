@@ -166,6 +166,27 @@ class QuantConfig:
         self._cur_config = QuantConfigFactory.get_quant_config('kv', last_config=self._cur_config, kv_sym=kv_sym)
         self._modify_quant_param()
         return self
+    
+    def fa_quant(self, 
+                 use_fa_quant: bool = True, 
+                 fa_amp: int = 0
+                 ):
+        """
+        FA量化的参数初始化
+        调用fa_quant()，默认自动打开
+
+        Arg:
+            use_fa_quant: 是否启用FA量化
+            fa_amp: 自动回退层数，以整个attention为单位进行回退
+        """
+        self._cur_config = QuantConfigFactory.get_quant_config('fa_quant', 
+                                                                last_config=self._cur_config, 
+                                                                use_fa_quant=use_fa_quant,
+                                                                fa_amp=fa_amp
+                                                                )
+        self._modify_quant_param()
+        return self
+        
 
     def simulate_tp(self,
                     tp_size,
@@ -195,4 +216,3 @@ class QuantConfig:
         """
         config_attribute = self._cur_config.__dict__
         self.__dict__.update(**config_attribute)
-
