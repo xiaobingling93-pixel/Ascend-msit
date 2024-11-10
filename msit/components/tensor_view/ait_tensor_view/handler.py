@@ -36,12 +36,7 @@ def handle_tensor_view(args):
     if in_ext == ".bin":
         tensor = read_atb_data(args.bin)
     else:
-        try:
-            tensor = torch.load(args.bin, weights_only=True, map_location="cpu")
-        except Exception as e:
-            logger.error("Trying to load a weight file that has potential risk "
-                         "is not allowed: %r", args.bin)
-            raise
+        tensor = torch.load(args.bin, weights_only=True, map_location="cpu")
 
     logger.info(f"source tensor shape: {tensor.shape}")
 

@@ -12,13 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import re
+import os
 
-from components.utils.log import logger
-from components.utils.constants import MAX_DATA_SIZE
-
-STR_WHITE_LIST_REGEX = re.compile(r"[^_A-Za-z0-9\"'><=\[\])(,}{: /.~-]")
+from components.utils.constants import TENSOR_MAX_SIZE, EXT_SIZE_MAPPING
 
 
 def get_entry_points(entry_points_name):
@@ -43,66 +40,35 @@ def confirmation_interaction(prompt):
     return bool(confirm_pattern.match(user_action))
 
 
-def load_file_to_read_common_check(value: str, max_size=MAX_DATA_SIZE, exts=None):
-    if isinstance(exts, (tuple, list)):
-        if not all(isinstance(ext, str) for ext in exts):
-            logger.error("Expected type 'List[str]', got %r instead", exts)
-            raise TypeError
+def check_file_ext(path, ext: str):
+    if not isinstance(ext, str):
+        raise TypeError("Expected type 'str', got %r instead" % type(exts))
+    
+    path_ext = os.path.splitext(path)[1]
 
-        value_ext = os.path.splitext(value)[1]
-        if all(value_ext != ext for ext in exts):
-            logger.error("Expected extenstion to be one of %r, got %r instead", exts, value_ext)
-            raise ValueError
-        
-    elif exts is not None:
-        logger.error("Expected 'exts' to be 'List[str]', got %r instead", type(exts))
-        raise TypeError
+    if path_ext != ext:
+        return False
     
-    if re.search(STR_WHITE_LIST_REGEX, value):
-        logger.error("Invalid character: %r", value)
-        raise ValueError
-    
-    # expand soft link
-    value = os.path.realpath(value)
-    
-    # file name too long, file not exists, directory readable
-    # no need to catch, argparse will handle that
-    try:
-        file_status = os.stat(value)
-    except OSError as e:
-        logger.error("%s: %r", e.strerror, value)
-        raise
-    
-    # not regular file
-    if not os.st.S_ISREG(file_status.st_mode):
-        logger.error("Not a regular file: %r", value)
-        raise ValueError
-    
-    confirmation_prompt = "The file %r is larger than expected. " \
-                          "Attempting to read such a file could potentially impact system performance.\n" \
-                          "Please confirm your awareness of the risks associated with this action ([y]/n): " % value
-    
-    if file_status.st_size > max_size and not confirmation_interaction(confirmation_prompt):
-        logger.error("File too large: %r", value)
-        raise ValueError
-    
-    # other writeable
-    if (os.st.S_IWOTH & file_status.st_mode) == os.st.S_IWOTH:
-        logger.error("Vulnerable path: %r should not be other writeable", value)
-        raise PermissionError
+    return True
 
-    # uid
-    cur_euid = os.geteuid()
-    if file_status.st_uid != cur_euid:
-        # not root
-        if cur_euid != 0:
-            logger.error("Inconsistent owner: %r", value)
-            raise PermissionError
-        
-        # root but reading a other writeable file
-        elif (os.st.S_IWGRP & file_status.st_mode) == os.st.S_IWGRP or \
-             (os.st.S_IWUSR & file_status.st_mode) == os.st.S_IWUSR:
-            logger.waring("Privilege escalation risk detected. Trying to read a file that belongs to"
-                          " a normal user and is writeable to the user itself or the user group")
 
-    return value
+def check_file_size_based_on_ext(path, ext=None):
+    """Check the file size based on extension. This function uses `os.stat` to get file size may lead to OSError"""
+
+    if not isinstance(path, str):
+        raise TypeError("Expected path to be 'str', got %r instead" % type(path))
+    
+    ext = ext or os.path.splitext(path)[1]
+    size = os.path.getsize(path) # may lead to errors
+
+    if ext in EXT_SIZE_MAPPING:
+        if size > EXT_SIZE_MAPPING[ext]:
+            return False
+    else:
+        if size > TENSOR_MAX_SIZE:
+            confirmation_prompt = "The file %r is larger than expected. " \
+                                "Attempting to read such a file could potentially impact system performance.\n" \
+                                "Please confirm your awareness of the risks associated with this action ([y]/n): " % path
+            return confirmation_interaction(confirmation_prompt)
+
+    return True

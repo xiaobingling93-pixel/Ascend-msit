@@ -65,6 +65,15 @@ def set_per_group_param(config):
                              "per-group scenario. Please check the config.")
 
 
+def set_fa_quant_param(config):
+    if not hasattr(config, "use_fa_config"):
+        config.use_fa_quant = False
+    if not hasattr(config, "fa_amp"):
+        config.fa_amp = 0
+    if not hasattr(config, "fa_tp_size"):
+        config.fa_tp_size = 1
+
+
 def check_dynamic_config(config):
     check_type(config.is_dynamic, bool, param_name='is_dynamic')
     if config.is_dynamic:
@@ -115,6 +124,7 @@ def check_and_generate_config_param(config):
     """
     set_quant_param(config)
     set_lowbit_param(config)
+    set_fa_quant_param(config)
     config.device, config.dev_id = validate_device(config.dev_type, config.dev_id, _SUPPORTED_DEVICES)
     check_type(config.w_bit, int, param_name="w_bit")
     check_type(config.a_bit, int, param_name="a_bit")
@@ -132,8 +142,10 @@ def check_and_generate_config_param(config):
     check_type(config.disable_last_linear, bool, param_name='disable_last_linear')
     check_type(config.use_kvcache_quant, bool, param_name="use_kvcache_quant")
     check_type(config.group_size, int, param_name="group_size")
-
     check_number(config.percdamp, float, 0, 1, param_name="percdamp")
+
+    if config.use_kvcache_quant and config.use_fa_quant:
+        raise ValueError("KV-cache and FA cannot be quantized at the same time!")
 
     check_sparse_config(config)
     check_lowbit_config(config)

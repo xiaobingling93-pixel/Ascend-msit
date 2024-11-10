@@ -47,7 +47,7 @@ from msquickcmp.npu.om_parser import OmParser
 from msquickcmp.single_op import single_op as sp
 
 from components.utils.security_check import check_write_directory
-from components.utils.file_open_check import ms_open
+from components.utils.file_open_check import ms_open, sanitize_csv_value
 from components.utils.check.rule import Rule
 from components.utils import util
 
@@ -129,6 +129,9 @@ def _append_is_npu_ops_to_csv(csv_path):
             row.append(is_npu_ops)
         with ms_open(csv_path, mode='w') as f:
             writer = csv.writer(f)
+            for line in rows:
+                for ele in line:
+                    sanitize_csv_value(ele)
             writer.writerows(rows)
 
 
@@ -482,7 +485,8 @@ def single_op_compare(args, input_shape):
 
         # set single op output data
         tmp_out_path = os.path.join(single_op_dir, f"single_op_{idx}")
-        os.makedirs(tmp_out_path)
+        if not os.path.exists(tmp_out_path):
+            os.makedirs(tmp_out_path)
         time_dir = time.strftime("%Y%m%d%H%M%S", time.localtime())
         original_out_path = os.path.realpath(os.path.join(args.out_path, time_dir))
 

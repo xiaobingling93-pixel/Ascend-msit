@@ -37,7 +37,7 @@ class TorchDumpFileReader(DumpFileReader):
         for file_name in os.listdir(folder_path):
             if file_name.startswith('output'):
                 key_path = os.path.join(folder_path, file_name)
-                cpu_tensor = torch.load(key_path)
+                cpu_tensor = torch.load(key_path, weights_only=True)
                 return cpu_tensor
             else:
                 continue 
@@ -79,13 +79,20 @@ class TorchDumpFileReader(DumpFileReader):
         return key_to_folder
 
     def _extract_key_from_jit_node(self, jit_node: str) -> Optional[str]:
-        match = re.search(r'scope:.*__module\.([^#\s]+)(?=\s*#)', jit_node)
+        # Here is an example of jit_node: "%968 : Float(1, 64, 56, 56) = aten::relu(%input.9), 
+        # scope: __module.layer1/__module.layer1.0/__module.layer1.0.relu # 
+        # /home/site-packages/torch/nn/functional.py:1469:0"
         key_none = None
-        if match:
-            key = match.group(1)
-            return key
-        else:
+        if len(jit_node.split("scope:")) < 2:
             return key_none
+        if "#" in jit_node:
+            jit_node_front = jit_node.split("#")[0]
+            if jit_node_front:
+                jit_node_front = jit_node_front.strip()
+                jit_node_front_list = jit_node_front.rsplit("__module.", 1)
+                if jit_node_front_list:
+                    key_none = jit_node_front_list[-1]
+        return key_none
 
     def _get_keys(self) -> set:
         return set(self.key_to_folder.keys())

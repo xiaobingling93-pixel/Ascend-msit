@@ -22,7 +22,8 @@ class QuantType(str, Enum):
     W8A8S = "W8A8S"  # 稀疏量化，Matmul的weight、activation均为8bit，且weight经过稀疏(权重数值分布范围可能小于8bit)
     W8A8SC = "W8A8SC"  # 稀疏量化压缩后的权重
     FLOAT = "FLOAT"  # 浮点
-    KV8 = 'C8'  # kvcache量化，kvcache为8bit
+    KV8 = "C8"  # kvcache量化，kvcache为8bit
+    FAQuant = "FAQuant" # flashattention量化为8bit
     W8A8_DYNAMIC = "W8A8_DYNAMIC"  # W8A8静态量化与per-token动态量化混合量化
 
     @staticmethod
@@ -66,13 +67,18 @@ class QuantType(str, Enum):
 
 class QuantModelJsonDescription:
     model_quant_type_name = "model_quant_type"
+    kv_cache_type_name = "kv_cache_type"
+    fa_quant_type_name = "fa_quant_type"
 
-    def __init__(self, model_quant_type, use_kvcache_quant=False):
+    def __init__(self, model_quant_type, use_kvcache_quant=False, use_fa_quant=False):
         self.quant_model_description = {}
         QuantType.check_instance_of_enum(model_quant_type)
         self.model_quant_type = model_quant_type
         self.change_model_type(model_quant_type)
+        if use_kvcache_quant and use_fa_quant:
+            raise ValueError("KV-cache and FA cannot be quantized at the same time!")
         self.change_kvcache_type(use_kvcache_quant)
+        self.change_fa_quant_type(use_fa_quant)
 
     @staticmethod
     def check_description(quant_model_json_description=None, quant_model_json_description_path=None):
@@ -156,7 +162,13 @@ class QuantModelJsonDescription:
 
     def change_kvcache_type(self, use_kvcache_quant):
         if use_kvcache_quant:
-            self.quant_model_description['kv_cache_type'] = QuantType.KV8
+            self.quant_model_description[QuantModelJsonDescription.kv_cache_type_name] = QuantType.KV8
+
+    def change_fa_quant_type(self, use_fa_quant):        
+        if use_fa_quant:
+            if self.model_quant_type != QuantType.W8A8:
+                raise ValueError("FA quantization is only applicable in the W8A8 quantization scenario")
+            self.quant_model_description[QuantModelJsonDescription.fa_quant_type_name] = QuantType.FAQuant
 
     def change_weight_type(self, weight_name, weight_quant_type):
         QuantType.check_instance_of_enum(weight_quant_type)
