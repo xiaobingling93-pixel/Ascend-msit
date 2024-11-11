@@ -6,33 +6,45 @@ Alibi编码是一种位置编码方法，与RazorAttention结合使用，通过A
 KV Cache的管理需考虑batch, seqlen, num_heads和head_size这四个维度，其中seqlen维度通常是压缩的重点，因为随着序列长度的增加，KV Cache的内存占用会迅速增长。传统的压缩方法可能会忽略不同注意力头（Heads）之间的差异，而RazorAttention加速技术则提供了一种更细粒度的内存压缩方法，针对使用Alibi编码的模型进行优化，可以更有效地识别哪些注意力头对于位置信息更为敏感，并据此调整压缩策略。RazorAttention加速技术支持全量加速和增量加速：
 
 全量加速：压缩后的KV Cache可直接用于模型推理，实现全量加速。
+
 增量加速：支持只更新和压缩新token对应的KV Cache部分。
+
 目前支持对表1中Alibi编码的大模型进行长序列压缩（包括但不限于）。
 
 表1 已验证模型列表
 |模型名称|框架|
+|----|-----|
 |baichuan2-13b|PyTorch|
 
-前提条件
+### 前提条件
 已参考环境准备，完成CANN开发环境的部署、PyTorch 2.1.0及以上版本的安装及Python环境变量的配置。
 执行命令安装如下依赖。
 以下命令若使用非root用户安装，需要在安装命令后加上--user，例如：pip3 install numpy==1.25.2 --user。
-
+```
 pip3 install numpy==1.26.4
 pip3 install transformers==4.43.1 
 pip3 install torch==2.1.0   # 安装CPU版本的PyTorch 2.1.0（不依赖torch_npu）
-功能实现流程
+```
+### 功能实现流程
+
 图1 压缩接口调用流程
-[![Alibi压缩接口调用流程]](Alibi压缩接口调用流程.png)
+![Alibi压缩接口调用流程](Alibi压缩接口调用流程.png)
+
 关键步骤说明如下：
 
 用户准备原始模型。
 调用RACompressConfig接口生成压缩配置，新建模型的压缩脚本run.py。
+
 执行压缩算法RACompressor启动长序列压缩任务，进行长序列压缩。
+
 调用get_compress_heads接口导出压缩窗口，并在指定路径中获取.pt文件，具体请参见MindIE的“加速库支持模型列表”章节中已适配量化的模型。
-压缩步骤（以baichuan2-13b为例）
+
+### 压缩步骤（以baichuan2-13b为例）
+
 用户准备原始模型。
+
 用户需要自行准备模型、权重文件。本样例以baichuan2-13b为例，从该网站下载权重文件，并上传至服务器的“baichuan 2-13b”文件夹，目录示例如下：
+```
 config.json
 configuration_baichuan.py
 cut_utils.py
@@ -51,7 +63,10 @@ special_tokens_map.json
 tokenization_baichuan.py
 tokenizer_config.json
 tokenizer.model
+```
+
 新建模型的压缩脚本run.py，将如下样例代码导入run.py文件，并执行。
+
 ```python
 from msmodelslim.pytorch.ra_compression import RACompressConfig, RACompressor
 from transformers import AutoTokenizer, AutoModelForCausalLM
@@ -84,29 +99,43 @@ RoPE（Rotary Position Embedding）编码是一种高效的位置编码方式，
 |Qwen2-72b-instruct|PyTorch|
 |llama3.1-70b|PyTorch|
 
-前提条件
+### 前提条件
 已参考环境准备，完成CANN开发环境的部署、PyTorch 2.1.0及以上版本的安装及Python环境变量的配置。
 执行命令安装如下依赖。
 以下命令若使用非root用户安装，需要在安装命令后加上--user，例如：pip3 install numpy==1.25.2 --user。
-
+```
 pip3 install numpy==1.26.4
 pip3 install transformers==4.43.1 
 pip3 install torch==2.1.0       # 安装CPU版本的PyTorch 2.1.0（依赖torch_npu）
 pip3 install torch_npu-2.1.0.xxx.whl   # xxx需要根据实际情况进行选择，具体请参见安装torch_npu插件
-功能实现流程
+```
+
+### 功能实现流程
+
 图2 压缩接口调用流程
-[![RoPE压缩接口调用流程]](RoPE压缩接口调用流程.png)
+
+![RoPE压缩接口调用流程](RoPE压缩接口调用流程.png)
+
 关键步骤说明如下：
 
 用户准备原始模型。
+
 调用RARopeCompressConfig接口生成压缩配置，并新建模型的压缩脚本run.py。
+
 调用RARopeCompressor启动长序列压缩任务，进行长序列压缩。
+
 调用get_compress_heads接口导出需保留的Head信息，并在指定路径获取.pt文件。
+
 用户可根据.pt文件进行压缩
+
 压缩后的文件可用于后续的推理部署，具体请参见MindIE的“加速库支持模型列表”章节中已适配量化的模型。
-压缩步骤（以Qwen2-72b-instruct为例）
+
+### 压缩步骤（以Qwen2-72b-instruct为例）
+
 用户准备原始模型。
+
 用户需要自行准备模型、权重文件。本样例以Qwen2-72b-instruct为例，从该网站下载权重文件，并上传至服务器的“Qwen2-72b-instruct”文件夹内，目录示例如下：
+```
 config.json
 generation_config.json
 merges.txt
@@ -117,7 +146,10 @@ model.safetensors.index.json
 tokenizer.json
 tokenizer config.json
 vocab.json
+```
+
 新建模型的量化脚本run.py，并将如下样例代码导入run.py文件，并执行以下命令。
+
 ```python
 import torch
 from msmodelslim.pytorch.ra_compression import RARopeCompressConfig, RARopeCompressor
@@ -146,6 +178,10 @@ ra = RARopeCompressor(model, tokenizer, config)
 ra.get_compress_heads(save_path)
 ```
 启动长序列压缩任务，并在“Qwen2-72b-instruct”文件夹的路径下获取需要保留KV Cached的Head信息的.pt文件。
+
 用户可根据.pt文件进行压缩。
+
 压缩后的文件可用于后续的推理部署，具体请参见MindIE的“加速库支持模型列表”章节中已适配量化的模型。
+```
 python3 run.py
+```
