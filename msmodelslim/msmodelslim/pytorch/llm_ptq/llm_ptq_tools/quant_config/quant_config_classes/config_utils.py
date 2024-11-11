@@ -66,7 +66,7 @@ def set_per_group_param(config):
 
 
 def set_fa_quant_param(config):
-    if not hasattr(config, "use_fa_config"):
+    if not hasattr(config, "use_fa_quant"):
         config.use_fa_quant = False
     if not hasattr(config, "fa_amp"):
         config.fa_amp = 0

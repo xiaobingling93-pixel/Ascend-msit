@@ -167,8 +167,7 @@ class QuantConfig:
         self._modify_quant_param()
         return self
     
-    def fa_quant(self, 
-                 use_fa_quant: bool = True, 
+    def fa_quant(self,
                  fa_amp: int = 0
                  ):
         """
@@ -176,12 +175,10 @@ class QuantConfig:
         调用fa_quant()，默认自动打开
 
         Arg:
-            use_fa_quant: 是否启用FA量化
             fa_amp: 自动回退层数，以整个attention为单位进行回退
         """
         self._cur_config = QuantConfigFactory.get_quant_config('fa_quant', 
-                                                                last_config=self._cur_config, 
-                                                                use_fa_quant=use_fa_quant,
+                                                                last_config=self._cur_config,
                                                                 fa_amp=fa_amp
                                                                 )
         self._modify_quant_param()
