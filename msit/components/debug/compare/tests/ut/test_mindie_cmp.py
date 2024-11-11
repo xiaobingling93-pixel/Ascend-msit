@@ -1,3 +1,17 @@
+# Copyright (c) 2024-2025 Huawei Technologies Co., Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 import json
 import stat
@@ -19,6 +33,16 @@ FAKE_TORCH_OP_MAPPING_JSON_PATH = "test_resource/mindie_torch_op_mapping.json"
 
 flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL  
 mode = stat.S_IWUSR | stat.S_IRUSR  
+
+
+@pytest.fixture(scope="function")
+def create_golden_data_and_my_data():
+    my_data = torch.randn(3, 3, dtype=torch.float32)
+    golden_data = torch.randn(3, 3, dtype=torch.float32)
+    bad_my_data = torch.randn(2, 3, dtype=torch.float32)
+    nan_golden_data = torch.full((3, 3), float('nan'))
+    golden_data_and_my_data = [my_data, golden_data, bad_my_data, nan_golden_data]
+    return golden_data_and_my_data
 
 
 @pytest.fixture(scope='module')
@@ -107,3 +131,29 @@ def test_mindie_torch_compare(mocker, rt_op_mapping_file, torch_op_mapping_file)
         os.remove(csv_file_path)
     if os.path.exists(new_json_file):
         os.remove(new_json_file)
+
+
+def test_check_tensor(create_golden_data_and_my_data):
+    my_data, golden_data, bad_golden_data, nan_golden_data = create_golden_data_and_my_data
+    cpu_tensor = golden_data.reshape(-1)
+    npu_tensor = my_data.reshape(-1)
+    nan_cpu_tensor = nan_golden_data.reshape(-1)
+    nan_npu_tensor = nan_golden_data.reshape(-1)
+    bad_npu_tensor = bad_golden_data.reshape(-1)
+    bad_nan_cpu_tensor = torch.full((2, 2), float('nan')).reshape(-1)
+
+    # test tensor shape
+    tensor_pass1, message1 = MIETorchCompare.check_tensor(cpu_tensor, npu_tensor)
+    tensor_pass2, message2 = MIETorchCompare.check_tensor(cpu_tensor, bad_npu_tensor)
+    # test isfinite check
+    tensor_pass3, message3 = MIETorchCompare.check_tensor(nan_cpu_tensor, npu_tensor)
+    tensor_pass4, message4 = MIETorchCompare.check_tensor(cpu_tensor, nan_npu_tensor)
+    tensor_pass5, message5 = MIETorchCompare.check_tensor(bad_nan_cpu_tensor, nan_npu_tensor)
+
+    assert (tensor_pass1, message1) == (True, "")
+    assert (tensor_pass2, message2) == (False, "data shape doesn't match.")
+    assert (tensor_pass3, message3) == (False, "cpu_data includes NAN or inf.")
+    assert (tensor_pass4, message4) == (False, "npu_data includes NAN or inf.")
+    assert (tensor_pass5, message5) == (
+        False, "data shape doesn't match. cpu_data includes NAN or inf. npu_data includes NAN or inf."
+    )
