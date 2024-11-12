@@ -993,7 +993,7 @@ class Calibrator(object):
 
         self.logger.info("Calibration end!")
 
-        disable_calibration(self.model, self.logger, self.cfg.use_fa_quant)
+        disable_calibration(self.model, self.logger, use_fa_quant=self.cfg.use_fa_quant)
         if self.use_kvcache_quant:
             self.enable_kvcache_fake_quantization()
         if self.cfg.a_bit != 8 and int_infer:
