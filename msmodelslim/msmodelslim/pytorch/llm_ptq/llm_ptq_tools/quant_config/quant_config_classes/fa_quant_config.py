@@ -16,7 +16,6 @@ class FAQuantConfig(BaseConfig):
 
     def __init__(self,
                  last_config: BaseConfig,
-                 use_fa_quant: bool = True,
                  fa_amp: int = 0
                  ):
         super().__init__()
@@ -24,12 +23,11 @@ class FAQuantConfig(BaseConfig):
         self._init_attribute_by_config(last_config)
 
         # 更新当前特有的属性
-        self.use_fa_quant = use_fa_quant
+        self.use_fa_quant = True
         self.fa_tp_size = 1
         self.fa_amp = fa_amp
 
         # 校验参数
-        check_type(use_fa_quant, bool, param_name='use_fa_quant')
         if self.fa_tp_size not in SUPPORT_TP_SIZES:
             raise ValueError(f'fa_tp_size should be in f{SUPPORT_TP_SIZES}, but got {self.fa_tp_size}.')
         check_number(fa_amp, int, min_value=0, param_name="fa_amp")

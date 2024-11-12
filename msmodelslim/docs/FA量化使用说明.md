@@ -213,7 +213,7 @@ from transformers.utils import (
 
 | **量化类型**                          | **需要配置的参数列表**                                       | **调用示例**                                                 |
 | ------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| fa_quant(use_fa_quant=True, fa_amp=5) | use_fa_quant用于是否开启FA量化，数据类型为bool，在调用fa_quant之后默认设置为True。  fa_amp用于配置自动精度回退，根据想要回退的layer的数量来设置。数据类型为int，数据取值范围是大于等于 0的整数，并且小于模型的layer数量，如果超出模型的layer数量将会报错。 | quant_config=QuantConfig(w_bit=8,  a_bit=8, disable_names=disable_names,dev_type='npu',dev_id=0)  .   fa_quant(fa_amp=5) |
+| fa_quant(fa_amp=5) | fa_amp用于配置自动精度回退，根据想要回退的layer的数量来设置。数据类型为int，数据取值范围是大于等于0，并且小于等于模型layer数量的整数，如果超出模型的layer数量将会取模型的最大layer数量为回退层数。 | quant_config=QuantConfig(w_bit=8,  a_bit=8, disable_names=disable_names,dev_type='npu',dev_id=0)  .   fa_quant(fa_amp=5) |
 
 ### 量化步骤（以Qwen2.5-7B为例）
 
