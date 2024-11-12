@@ -1,12 +1,25 @@
 /**
- * Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
  * Description: graph_utils.h for weight compression
  * Author: Huawei
  * Create: 2023-09-21
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #include "graph_utils.h"
 #include "ge_ir_build.h"
+#include "File.h"
 
 
 int RunCompressGraph(ge::Session *session, uint8_t* data, vector<int64_t> &shape, vector<int64_t> &compressParameters,
@@ -38,15 +51,27 @@ int RunCompressGraph(ge::Session *session, uint8_t* data, vector<int64_t> &shape
 
   auto infoData = reinterpret_cast<uint32_t*>(output_mm[2].GetData());
 
-  FILE *fp1 = fopen(paths[0].c_str(), "w+");
+  constexpr uint8_t OUTPUT_WEIGHT_PATH_INDEX = 0;
+  constexpr uint8_t INDEX_PATH_INDEX = 1;
+  constexpr uint8_t COMPRESS_INFO_PATH_INDEX = 2;
+  if (!File::CheckFileBeforeCreateOrWrite(paths[OUTPUT_WEIGHT_PATH_INDEX].c_str(), true)) {
+    return FAILED;
+  }
+  FILE *fp1 = fopen(paths[OUTPUT_WEIGHT_PATH_INDEX].c_str(), "w+");
   fwrite(output_mm[0].GetData(), sizeof(int8_t), infoData[2], fp1);
   fclose(fp1);
 
-  FILE *fp2 = fopen(paths[1].c_str(), "w+");
+  if (!File::CheckFileBeforeCreateOrWrite(paths[INDEX_PATH_INDEX].c_str(), true)) {
+    return FAILED;
+  }
+  FILE *fp2 = fopen(paths[INDEX_PATH_INDEX].c_str(), "w+");
   fwrite(output_mm[1].GetData(), sizeof(uint8_t), output_mm[1].GetSize(), fp2);
   fclose(fp2);
 
-  FILE *fp3 = fopen(paths[2].c_str(), "w+");
+  if (!File::CheckFileBeforeCreateOrWrite(paths[COMPRESS_INFO_PATH_INDEX].c_str(), true)) {
+    return FAILED;
+  }
+  FILE *fp3 = fopen(paths[COMPRESS_INFO_PATH_INDEX].c_str(), "w+");
   fwrite(output_mm[2].GetData(), sizeof(uint32_t), 3, fp3);
   fclose(fp3);
   
@@ -79,6 +104,10 @@ int RunSession(uint8_t* data, vector<int64_t> &shape,
   
   RunCompressGraph(session, data, shape, compressParameters, paths);
 
+  // destroy session
+  delete session;
+  session = nullptr;
+
   // system finalize
   ret = ge::GEFinalize();
   if (ret != SUCCESS) {
@@ -89,12 +118,37 @@ int RunSession(uint8_t* data, vector<int64_t> &shape,
   return SUCCESS;
 }
 
+bool areInputsValidStoll(int argc, char* argv[]) {
+  try {
+    const int INPUT_STOLL_COUNT = 7;
+    for (int i = 1; i <= INPUT_STOLL_COUNT; i++) {
+      std::stoll(argv[i]);
+    }
+  } catch (const std::invalid_argument &e) {
+    std::cout << "Invalid argument. Please check your input params." << std::endl;
+    return false;
+  } catch (const std::out_of_range &e) {
+    std::cout << "Out of range. Please check your input params." << std::endl;
+    return false;
+  } catch (...) {
+    std::cout << "An unknown error occurred." << std::endl;
+    return false;
+  }
+
+  return true;
+}
+
 int main(int argc, char* argv[])
 {
   if (argc != 12){
     std::cout<<"Please check your input params count is 11."<<std::endl;
     return FAILED;
   }
+
+  if (!areInputsValidStoll(argc, argv)) {
+    return FAILED;
+  }
+
   const int64_t dimK = std::stoll(argv[1]);
   const int64_t dimN = std::stoll(argv[2]);
   const int64_t isTight = std::stoll(argv[3]);
