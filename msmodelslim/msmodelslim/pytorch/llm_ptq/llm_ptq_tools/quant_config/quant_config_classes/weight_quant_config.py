@@ -3,7 +3,7 @@
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config.quant_config_classes import BaseConfig
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config.quant_config_classes.config_utils import \
     check_and_generate_config_param
-
+from ascend_utils.common.security import check_type
 
 class WeightQuantConfig(BaseConfig):
     """
@@ -16,7 +16,8 @@ class WeightQuantConfig(BaseConfig):
                  w_method: str = 'MinMax',
                  mm_tensor: bool = True,
                  w_sym: bool = True,
-                 group_size: int = 64
+                 group_size: int = 64,
+                 block_size: int = 64,
                  ):
         """
         Args:
@@ -35,6 +36,8 @@ class WeightQuantConfig(BaseConfig):
         self.mm_tensor = mm_tensor  # 权重量化为per-tensor，False为per-channel
         self.w_sym = w_sym  # 权重是否对称量化，只有在权重量化中支持调整
         self.group_size = group_size
+        self.block_size = block_size
 
         # 校验参数
+        check_type(self.block_size, int, param_name="block_size")
         check_and_generate_config_param(self)

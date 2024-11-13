@@ -491,6 +491,104 @@ class Conv2dQuantizer(nn.Module):
         )
 
 
+class LinearNf4Quantizer(nn.Module):
+    """
+    Class to quantize given linear layer weights
+    """
+    def __init__(self, cfg=None, logger=None):
+        """
+        cfg: quantizaton configuration
+        """
+        super(LinearNf4Quantizer, self).__init__()
+        self.weight = None
+        self.bias = None
+        self.weight_shape = None
+        self.bias_shape = None
+        self.dtype = None
+        self.device = None
+        self.weight_absmax = None
+        self.bias_absmax = None
+        self.NF4_MAPPING = None
+        self.blocksize = cfg.block_size
+
+    def normalize_data(self, data):
+        block_weight = data.view(-1, self.blocksize)
+        absmax, _ = torch.max(torch.abs(block_weight), dim=1, keepdim=True)
+        block_weight /= absmax
+        return block_weight, absmax
+    
+    def set_nf4_quantized_vari(self):
+        self.NF4_MAPPING = torch.tensor([
+        -1.0, -0.6961928009986877, -0.5250730514526367, -0.39491748809814453, -0.28444138169288635,
+        -0.18477343022823334, -0.09105003625154495, 0.0, 0.07958029955625534, 0.16093020141124725,
+        0.24611230194568634, 0.33791524171829224, 0.44070982933044434, 0.5626170039176941,
+        0.7229568362236023, 1.0
+        ], dtype=self.dtype).view(1, -1).to(self.device)
+    
+    def nf4_quantize(self, weight):
+        self.set_nf4_quantized_vari()
+        row, col = weight.shape
+        if row * col < 128256 * 4096:
+            diff = (weight.unsqueeze(-1) - self.NF4_MAPPING).abs()
+            uint8_weight = torch.argmin(diff, dim=-1)
+        else:
+            shape_dim = [[row, 0], [col, 1]] 
+            shape_dim = sorted(shape_dim, key=lambda x: (x[0]))
+            for i in range(shape_dim[0][0]):
+                diff = (weight.narrow(shape_dim[0][1], i, 1).unsqueeze(-1) - self.NF4_MAPPING).abs()
+                weight_slice = torch.argmin(diff, dim=-1)
+                if i == 0:
+                    uint8_weight = weight_slice
+                else:
+                    uint8_weight = torch.cat((uint8_weight, weight_slice), dim=1)
+        # Combine the two NF4 quantized weight to uint8 weight.
+        uint8_weight = uint8_weight.reshape(-1, 2)
+        nf4_weight = (uint8_weight[:, 0] * 16 + uint8_weight[:, 1]).to(torch.uint8)
+        return nf4_weight
+
+    def set_param(self, linear):
+        self.weight_shape = linear.weight.shape
+        self.dtype = linear.weight.dtype
+        self.device = linear.weight.device
+        self.weight = linear.weight.data
+        try:
+            self.bias = linear.bias.data
+            self.bias_shape = linear.bias.shape
+        except AttributeError:
+            self.bias = None
+
+    def quant_weight(self):
+        normalized_weight, self.weight_absmax = self.normalize_data(self.weight)
+        self.weight = self.nf4_quantize(normalized_weight)
+        try:
+            normalized_bias, self.bias_absmax = self.normalize_data(self.bias)
+            self.bias = self.nf4_quantize(normalized_bias)
+        except AttributeError:
+            self.bias = None
+
+    def nf4_dequantize(self, weight, shape, absmax):
+        weight = weight.view(-1).to(torch.int32)
+        weight = torch.stack([weight // 16, weight % 16], dim=1)
+        nf4_dequantized_weight = self.NF4_MAPPING.reshape(-1)[weight]
+        block_weight = nf4_dequantized_weight.view(-1, self.blocksize) * absmax.reshape(-1, 1)
+        weight = block_weight.view(shape)
+        return weight
+
+    def set_dequant_param(self):
+        self.weight = self.nf4_dequantize(self.weight, self.weight_shape, self.weight_absmax)
+        if self.bias is not None:
+            self.bias = self.nf4_dequantize(self.bias, self.bias_shape, self.bias_absmax)
+
+    def forward(self, x):
+        if self.weight.dtype != torch.float16 or (self.bias is not None and self.bias.dtype != torch.float16):
+            self.set_dequant_param()
+        if self.bias is not None:
+            output = torch.matmul(x, self.weight.T) + self.bias
+        else:
+            output = torch.matmul(x, self.weight.T)
+        return output
+
+
 def layer_wise_calib(quant_model, all_tensors, device='cpu'):
     """ Layer-wise calibration for quantized model"""
     quant_model.to(_OFFLOAD_DEVICE)

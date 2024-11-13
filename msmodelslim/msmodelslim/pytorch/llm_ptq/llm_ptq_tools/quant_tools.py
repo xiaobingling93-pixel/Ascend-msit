@@ -26,7 +26,7 @@ from msmodelslim.pytorch.llm_ptq.anti_outlier.graph_utils import (
 # KIA part
 from msmodelslim.pytorch.llm_ptq.anti_outlier.anti_outlier import deepcopy_model
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_modules import (
-    Quantizer, LinearQuantizer, layer_wise_calib
+    Quantizer, LinearQuantizer, LinearNf4Quantizer, layer_wise_calib
 )
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_funcs import (
     fake_quantize_save, get_features, linear_quantization_params, fully_analyze_activation
@@ -517,10 +517,11 @@ class Calibrator(object):
             ori_model_state_dict_name,
             self.quant_model_json_description.model_quant_type)
         # 将该量化linear的附属参数，scale、offset 等加入safetensor_weight
-        for quant_param_name in self.quantized_module_param_dict.get(ori_model_state_dict_name):
-            safetensor_weight[quant_param_name] = self.quant_param_dict.get(quant_param_name)
-            self.quant_model_json_description.change_weight_type(
-                quant_param_name, self.quant_model_json_description.model_quant_type)
+        if ori_model_state_dict_name in self.quantized_module_param_dict.keys():
+            for quant_param_name in self.quantized_module_param_dict.get(ori_model_state_dict_name):
+                safetensor_weight[quant_param_name] = self.quant_param_dict.get(quant_param_name)
+                self.quant_model_json_description.change_weight_type(
+                    quant_param_name, self.quant_model_json_description.model_quant_type)
 
     def set_fa_quant_safetensor(self, attention_module_name, safetensor_weight):
         for quant_param_name in self.fa_module_param_dict.get(attention_module_name):
@@ -624,6 +625,10 @@ class Calibrator(object):
                 self.quant_param_dict.update(quant_param_offset)
                 self.fa_module_param_dict.update(attach_map)
 
+            if isinstance(module, LinearNf4Quantizer):
+                self.quant_param_dict[name + '.weight'] = module.weight
+                if module.bias is not None:
+                    self.quant_param_dict[name + '.bias'] = module.bias
             if isinstance(module, ParallelLinearCol):
                 quant_param, attach_map = module.get_quant_param()
                 self.quant_param_dict.update(quant_param)
@@ -759,6 +764,9 @@ class Calibrator(object):
                     module.quant_weight.w_hessian = False
                     self.logger.info(f"run MIN-MAX quantization on linear layer: {name}")
                 module.quant_weight(module.weight)
+            elif isinstance(module, LinearNf4Quantizer):
+                self.logger.info(f"Running in Data-Free mode, quantizing the layer into NF4 type: {name}")
+                module.quant_weight()
 
 
     def run_amp(self):
@@ -798,6 +806,9 @@ class Calibrator(object):
             if isinstance(module, LinearQuantizer):
                 self.logger.info(f"Running in Data-Free mode, quantizing the layer: {name}")
                 module.quant_weight(module.weight)
+            elif isinstance(module, LinearNf4Quantizer):
+                self.logger.info(f"Running in Data-Free mode, quantizing the layer into NF4 type: {name}")
+                module.quant_weight()
             elif isinstance(module, LowBitLinearQuantizer):
                 with torch.no_grad():
                     module.fp_weight = module.weight.cpu().clone()
@@ -865,6 +876,8 @@ class Calibrator(object):
             if isinstance(mod, nn.Linear) or isinstance(mod, nn.modules.linear.NonDynamicallyQuantizableLinear):
                 if self.cfg.is_lowbit:
                     quant_mod = LowBitLinearQuantizer(cfg=self.cfg, logger=self.logger, name=name)
+                elif self.cfg.w_method is QuantType.NF4:
+                    quant_mod = LinearNf4Quantizer(cfg=self.cfg, logger=self.logger)
                 elif self.cfg.model_quant_type is not QuantType.W8A8S:
                     quant_mod = LinearQuantizer(cfg=self.cfg, logger=self.logger)
                 else:

@@ -95,7 +95,9 @@ class QuantConfig:
                      w_method: str = 'MinMax',
                      mm_tensor: bool = True,
                      w_sym: bool = True,
-                     group_size: int = 64):
+                     group_size: int = 64,
+                     block_size: int = 64,
+                     ):
         """
         权重量化的参数初始化，即 W8A16 或 W4A16
 
@@ -109,7 +111,8 @@ class QuantConfig:
         # 权重量化的参数, 所有量化Config的父类，存放通用参数
         self._cur_config = QuantConfigFactory.get_quant_config('weight', last_config=self._cur_config,
                                                                w_method=w_method, mm_tensor=mm_tensor,
-                                                               w_sym=w_sym, group_size=group_size)
+                                                               w_sym=w_sym, group_size=group_size,
+                                                               block_size=block_size)
         self._modify_quant_param()
         return self
 
