@@ -97,6 +97,8 @@ LOGGER_FUNC = {
 
 
 def set_logger_level(level="info"):
+    if not isinstance(level, str):
+        raise TypeError("level must be str.")
     if level.lower() in LOG_LEVEL:
         logger.setLevel(LOG_LEVEL.get(level.lower()))
     else:
