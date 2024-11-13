@@ -70,7 +70,7 @@ bool GetDataFromBin(string input_path, vector<int64_t> shapes, uint8_t** data, i
   // destroy pdata
   pdata = nullptr;
 
-  if (*data == nullptr){
+  if (*data == nullptr) {
     return false;
   }
   return true;

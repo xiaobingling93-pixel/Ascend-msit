@@ -118,10 +118,11 @@ int RunSession(uint8_t* data, vector<int64_t> &shape,
   return SUCCESS;
 }
 
-bool areInputsValidStoll(int argc, char* argv[]) {
+bool CheckInputsStollValid(int argc, char* argv[])
+{
   try {
-    const int INPUT_STOLL_COUNT = 7;
-    for (int i = 1; i <= INPUT_STOLL_COUNT; i++) {
+    const int inputStollCount = 7;
+    for (int i = 1; i <= inputStollCount; i++) {
       std::stoll(argv[i]);
     }
   } catch (const std::invalid_argument &e) {
@@ -140,12 +141,12 @@ bool areInputsValidStoll(int argc, char* argv[]) {
 
 int main(int argc, char* argv[])
 {
-  if (argc != 12){
-    std::cout<<"Please check your input params count is 11."<<std::endl;
+  if (argc != 12) {
+    std::cout << "Please check your input params count is 11." << std::endl;
     return FAILED;
   }
 
-  if (!areInputsValidStoll(argc, argv)) {
+  if (!CheckInputsStollValid(argc, argv)) {
     return FAILED;
   }
 

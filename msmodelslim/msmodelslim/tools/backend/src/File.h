@@ -82,7 +82,7 @@ public:
     // 获取文件权限
     static mode_t GetFilePermissions(const std::string& path);
     // 写文件前的校验
-    static bool CheckFileBeforeCreateOrWrite(const std::string &path, bool overwrite=false);
+    static bool CheckFileBeforeCreateOrWrite(const std::string &path, bool overwrite = false);
 };
 
-#endif //MS_SAFE_CHECK_BASE_FILE_H
+#endif // MS_SAFE_CHECK_BASE_FILE_H
