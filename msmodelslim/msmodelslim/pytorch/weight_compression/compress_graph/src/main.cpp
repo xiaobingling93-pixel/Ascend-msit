@@ -21,6 +21,7 @@
 #include "ge_ir_build.h"
 #include "File.h"
 
+constexpr int NUMBER_12 = 12;
 
 int RunCompressGraph(ge::Session *session, uint8_t* data, vector<int64_t> &shape, vector<int64_t> &compressParameters,
                          vector<string> paths){
@@ -120,7 +121,7 @@ int RunSession(uint8_t* data, vector<int64_t> &shape,
 
 bool CheckInputsStollValid(int argc, char* argv[])
 {
-  if (argc != 12) {
+  if (argc != NUMBER_12) {
     std::cout << "Please check your input params count is 11." << std::endl;
     return false;
   }
