@@ -247,7 +247,7 @@ bool File::CheckDir(const std::string &path)
         ERROR_LOG("path is not dir");
         return false;
     }
-    if (!IsOtherWritable(absPath)) {
+    if (IsOtherWritable(absPath)) {
         ERROR_LOG("dir permission should not be over 0o755(rwxr-xr-x)");
         return false;
     }

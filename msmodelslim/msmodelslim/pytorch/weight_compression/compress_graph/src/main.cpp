@@ -190,14 +190,27 @@ int main(int argc, char* argv[])
    10)isTiling: 0
   */
   vector<int64_t> compressParameters = {compress_size, index_size, isTight, 4, 2, 64, k_value, n_value, 1, compressType, isTiling};
-  if (!GetDataFromBin(inputWeightPath, inputWeightShape, &data, sizeof(int8_t))) {
-    std::cout<<"read file failed.\n";
-    return 1;
+  try {
+    if (!GetDataFromBin(inputWeightPath, inputWeightShape, &data, sizeof(int8_t))) {
+      std::cout<<"read file failed.\n";
+      return FAILED;
+    }
+
+    int ret = RunSession(data, inputWeightShape, paths, compressParameters);
+    // destroy data
+    delete[] data;
+    data = nullptr;
+
+    if (ret != SUCCESS){
+      std::cout<<"run session failed.\n";
+      return FAILED;
+    }
+  } catch (const std::exception& e) {
+    // destroy data
+    delete[] data;
+    data = nullptr;
+    std::cout<<"read file or run session failed.\n";
+    return FAILED;
   }
-  
-  int ret = RunSession(data, inputWeightShape, paths, compressParameters);
-  if (ret != SUCCESS){
-    std::cout<<"run session failed.\n";
-  }
-  return 0;
+  return SUCCESS;
 }
