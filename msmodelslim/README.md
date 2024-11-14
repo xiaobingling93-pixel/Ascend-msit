@@ -26,11 +26,11 @@ msModelSlim当前处于逐步开源过程中，计划通过630,930,1230三个版
     - 设置CANN环境变量；
     - 进入msmodelslim目录，运行安装脚本 `bash install.sh`;
     - 进入python环境路径 `cd 环境路径/env/.../site-packages/msmodelslim/pytorch/weight_compression/compress_graph/`
-    - (可选，稀疏量化场景下需要此步骤)编译weight_compression组件 `sudo bash build.sh {CANN包安装路径}/ascend-toolkit/latest`
-    - (可选，稀疏量化场景下需要此步骤)给build文件夹相关权限 `sudo chown -R 750 build`
+    - 给build文件夹相关权限 `sudo chown -R 750 build`
+    - 编译weight_compression组件 `sudo bash build.sh {CANN包安装路径}/ascend-toolkit/latest`
 
 
-## 环境准备
+### 环境准备
 
 - 使用msModelSlim工具前，需参考《[CANN软件安装指南](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/80RC2alpha003/devaids/auxiliarydevtool/nottoctopics/zh-cn_topic_0000001800373652.html)》搭建开发环境。
 - 安装CANN软件后，需要以CANN运行用户登录环境，执行如下示例命令配置环境变量。
