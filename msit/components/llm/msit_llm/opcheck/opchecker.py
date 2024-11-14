@@ -79,7 +79,9 @@ class OpChecker:
         # check the path of libopchecker.so before opening it
         check_res = Rule.input_file().check(lib_opchecker_path)
         if not check_res:
-            logger.error("%r loading failed due to %s, check if msit_llm install correctly", lib_opchecker_path, check_res)
+            logger.error(
+                "%r loading failed due to %s, check if msit_llm install correctly", lib_opchecker_path, check_res
+            )
             return False
 
         # Loading libopchecker.so

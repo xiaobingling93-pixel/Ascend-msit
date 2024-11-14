@@ -11,6 +11,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+__all__ = [
+    "Rule",
+    "NumberChecker",
+    "PathChecker",
+    "StringChecker",
+    "ArgsChecker",
+    "DictChecker",
+    "ObjectChecker",
+    "ListChecker",
+    "validate_params",
+]
+
 from .number_checker import NumberChecker
 from .path_checker import PathChecker
 from .string_checker import StringChecker
@@ -20,15 +32,3 @@ from .obj_checker import ObjectChecker
 from .list_checker import ListChecker
 from .func_wrapper import validate_params
 from .rule import Rule
-
-__all__ = [
-    Rule,
-    NumberChecker,
-    PathChecker,
-    StringChecker,
-    ArgsChecker,
-    DictChecker,
-    ObjectChecker,
-    ListChecker,
-    validate_params,
-]

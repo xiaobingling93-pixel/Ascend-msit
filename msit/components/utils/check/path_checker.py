@@ -135,7 +135,7 @@ class PathChecker(Checker):
         if flag:
             return self.f_status.ftype is not FileType.SYMLINK, f"Soft link: {self.instance}"
         else:
-            return True
+            return True, "Soft link check passed."
 
     @rule()
     def is_uid_matched(self, *uids: int) -> Union["PathChecker", CheckResult]:

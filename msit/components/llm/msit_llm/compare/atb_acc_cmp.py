@@ -94,6 +94,7 @@ def compare_metadata(golden_path, output_path="."):
     gathered_row_data = fill_in_data(golden_meta)
     return save_compare_reault_to_csv(gathered_row_data, output_path)
 
+
 def fill_in_data(golden_meta):
     gathered_row_data = []
     for data_id, golden_info in tqdm(golden_meta.items(), total=len(golden_meta)):

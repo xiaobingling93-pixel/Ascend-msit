@@ -262,7 +262,9 @@ class ATBModel:
         self.num_key_value_heads = getattr(atb_model, "num_key_value_heads", self.atb_model_config.num_key_value_heads)
         self.vocab_size = getattr(atb_model, "vocab_size", self.atb_model_config.vocab_size)
         self.rope_theta = getattr(atb_model, "rope_theta", self.atb_model_config.rope_theta)
-        self.num_blocks = math.ceil((self.atb_model_config.max_seq_len + 20) / 128 * self.atb_model_config.max_batch_size)
+        self.num_blocks = math.ceil(
+            (self.atb_model_config.max_seq_len + 20) / 128 * self.atb_model_config.max_batch_size
+        )
         if self.soc_info.need_nz:
             self.cache_shape = [
                 self.num_blocks,
