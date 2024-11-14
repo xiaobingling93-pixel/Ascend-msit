@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -113,6 +113,11 @@ bool File::IsFileWritable(const std::string& path)
     return access(path.c_str(), W_OK) == 0;
 }
 
+bool File::IsOtherWritable(const std::string& path)
+{
+    return ((GetFilePermissions(path) & READ_FILE_NOT_PERMITTED) > 0);
+}
+
 bool File::IsPathExist(const std::string& path)
 {
     struct stat buffer;
@@ -152,12 +157,30 @@ bool File::IsRegularFile(const std::string& path)
     return false;
 }
 
+bool File::IsDir(const std::string& path)
+{
+    struct stat buffer;
+    if (stat(path.c_str(), &buffer) == 0) {
+        return (buffer.st_mode & S_IFDIR) != 0;
+    }
+    return false;
+}
+
+std::string File::GetParentDir(const std::string& path)
+{
+    size_t found = path.find_last_of('/');
+    if (found != std::string::npos) {
+        return path.substr(0, found);
+    }
+    return '.';
+}
+
 mode_t File::GetFilePermissions(const std::string& path)
 {
     struct stat path_stat;
     if (stat(path.c_str(), &path_stat) != 0) {
         ERROR_LOG("file not exists");
-        return 0777; // 代表默认权限，表示所有用户都有读、写、执行权限
+        return MAX_PERMISSION;
     }
     mode_t permissions = path_stat.st_mode & (S_IRWXU | S_IRWXG | S_IRWXO);
     return permissions;
@@ -185,6 +208,47 @@ bool File::CheckOwner(const std::string &path)
     }
     if (buf.st_uid != getuid()) {
         ERROR_LOG("file owner is not process usr");
+        return false;
+    }
+    return true;
+}
+
+bool File::CheckDir(const std::string &path)
+{
+    std::string absPath = GetAbsPath(path);
+    if (absPath.empty()) {
+        ERROR_LOG("path is empty");
+        return false;
+    }
+    if (!IsPathLengthLegal(absPath)) {
+        ERROR_LOG("path length illegal");
+        return false;
+    }
+    if (!IsPathCharactersValid(absPath)) {
+        ERROR_LOG("path characters invalid");
+        return false;
+    }
+    if (!IsPathDepthValid(absPath)) {
+        ERROR_LOG("path depth invalid");
+        return false;
+    }
+    if (!IsPathExist(absPath)) {
+        ERROR_LOG("path not exist");
+        return false;
+    }
+    if (IsSoftLink(absPath)) {
+        ERROR_LOG("path is soft link");
+        return false;
+    }
+    if (!CheckOwner(absPath)) {
+        return false;
+    }
+    if (!IsDir(absPath)) {
+        ERROR_LOG("path is not dir");
+        return false;
+    }
+    if (!IsOtherWritable(absPath)) {
+        ERROR_LOG("dir permission should not be over 0o755(rwxr-xr-x)");
         return false;
     }
     return true;
@@ -232,5 +296,5 @@ bool File::CheckFileBeforeCreateOrWrite(const std::string &path, bool overwrite)
             return false;
         }
     }
-    return true;
+    return CheckDir(GetParentDir(absPath));
 }

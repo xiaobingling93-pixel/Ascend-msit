@@ -123,14 +123,16 @@ bool CheckInputsStollValid(int argc, char* argv[])
   try {
     const int inputStollCount = 7;
     for (int i = 1; i <= inputStollCount; i++) {
-      std::stoll(argv[i]);
+      try {
+        std::stoll(argv[i]);
+      } catch (const std::invalid_argument &e) {
+        std::cout << "Invalid argument for param " << i << ". Please check your input params." << std::endl;
+        return false;
+      } catch (const std::out_of_range &e) {
+        std::cout << "Out of range for param " << i << ". Please check your input params." << std::endl;
+        return false;
+      }
     }
-  } catch (const std::invalid_argument &e) {
-    std::cout << "Invalid argument. Please check your input params." << std::endl;
-    return false;
-  } catch (const std::out_of_range &e) {
-    std::cout << "Out of range. Please check your input params." << std::endl;
-    return false;
   } catch (...) {
     std::cout << "An unknown error occurred." << std::endl;
     return false;

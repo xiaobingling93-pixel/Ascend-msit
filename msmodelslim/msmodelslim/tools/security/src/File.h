@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2024-2024 Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,19 +41,10 @@ constexpr mode_t NORMAL_FILE_MODE_DEFAULT = 0640;
 constexpr mode_t READONLY_FILE_MODE_DEFAULT = 0440;
 constexpr mode_t SCRIPT_FILE_MODE_DEFAULT = 0550;
 constexpr mode_t NORMAL_DIR_MODE_DEFAULT = 0750;
+constexpr mode_t MAX_PERMISSION = 0777;
 constexpr mode_t READ_FILE_NOT_PERMITTED = S_IWGRP | S_IWOTH;
 constexpr mode_t WRITE_FILE_NOT_PERMITTED = S_IWGRP | S_IWOTH | S_IROTH | S_IXOTH;
 constexpr mode_t CREATE_FILE_MODE_DEFAULT = O_EXCL | O_CREAT;
-
-enum class FileType {
-    NUMPY,
-    JSON,
-    CSV,
-    OM,
-
-    /* Add new type before this line. */
-    COMMON
-};
 
 // File 类主要处理文件相关操作
 class File {

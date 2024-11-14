@@ -71,6 +71,7 @@ bool GetDataFromBin(string input_path, vector<int64_t> shapes, uint8_t** data, i
   pdata = nullptr;
 
   if (*data == nullptr) {
+    std::cout << "Invalid data ptr.\n";
     return false;
   }
   return true;

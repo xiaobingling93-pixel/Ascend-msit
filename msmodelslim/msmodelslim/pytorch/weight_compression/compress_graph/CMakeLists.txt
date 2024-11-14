@@ -31,7 +31,7 @@ include_directories(
 	    ${ASCEND_PATH}/${ARCH}-linux/include/ge/
 	    ${ASCEND_PATH}/${ARCH}-linux/include/parser/
         ./src/
-        ${TOOLS_PATH}/backend/src/
+        ${TOOLS_PATH}/security/src/
 )
 
 # add host lib path
@@ -40,7 +40,7 @@ link_directories(${ASCEND_PATH}/lib64/)
 add_executable(compress_excutor
         src/main.cpp
         src/graph_utils.cpp
-        ${TOOLS_PATH}/backend/src/File.cpp
-        ${TOOLS_PATH}/backend/src/Log.cpp)
+        ${TOOLS_PATH}/security/src/File.cpp
+        ${TOOLS_PATH}/security/src/Log.cpp)
 
 target_link_libraries(compress_excutor PRIVATE ascendcl graph ge_runner graph_base ge_compiler  c_sec pthread)
