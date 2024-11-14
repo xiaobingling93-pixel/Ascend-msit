@@ -528,7 +528,8 @@ class LinearNf4Quantizer(nn.Module):
     def nf4_quantize(self, weight):
         self.set_nf4_quantized_vari()
         row, col = weight.shape
-        if row * col < 128256 * 4096:
+        max_oom_shape = 128256 * 4096
+        if row * col < max_oom_shape:
             diff = (weight.unsqueeze(-1) - self.NF4_MAPPING).abs()
             uint8_weight = torch.argmin(diff, dim=-1)
         else:
@@ -580,7 +581,7 @@ class LinearNf4Quantizer(nn.Module):
             self.bias = self.nf4_dequantize(self.bias, self.bias_shape, self.bias_absmax)
 
     def forward(self, x):
-        if self.weight.dtype != torch.float16 or (self.bias is not None and self.bias.dtype != torch.float16):
+        if self.weight.dtype == torch.uint8 or (self.bias is not None and self.bias.dtype == torch.uint8):
             self.set_dequant_param()
         if self.bias is not None:
             output = torch.matmul(x, self.weight.T) + self.bias
