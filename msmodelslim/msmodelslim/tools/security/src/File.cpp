@@ -172,7 +172,7 @@ std::string File::GetParentDir(const std::string& path)
     if (found != std::string::npos) {
         return path.substr(0, found);
     }
-    return '.';
+    return ".";
 }
 
 mode_t File::GetFilePermissions(const std::string& path)

@@ -51,14 +51,21 @@ class File {
 public:
     File() = default;
     virtual ~File() = default;
+    // 文件夹校验：包括路径长度，文件存在性，软链接，属组，权限
+    static bool CheckDir(const std::string &path);
     // 文件权限校验
     static bool IsFileWritable(const std::string& path);
     // 文件存在性校验
     static bool IsPathExist(const std::string& path);
+    static bool IsOtherWritable(const std::string& path);
     // 软链接校验
     static bool IsSoftLink(const std::string &path);
+    // 校验是否是文件夹
+    static bool IsDir(const std::string& path);
     // 校验文件属组
     static bool CheckOwner(const std::string &path);
+    // 获取文件父目录
+    static std::string GetParentDir(const std::string& path);
     // 获取绝对路径
     static std::string GetFullPath(const std::string &originPath);
     static std::string GetAbsPath(const std::string &path);
