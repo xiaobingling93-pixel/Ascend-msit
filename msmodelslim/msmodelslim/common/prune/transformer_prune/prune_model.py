@@ -27,11 +27,12 @@ class PruneConfig(object):
 
     @staticmethod
     def check_steps_list(config, target_steps):
-        if hasattr(config, "prune_state_dict_steps"):
-            prune_state_dict_steps = getattr(config, "prune_state_dict_steps")
-            for step in prune_state_dict_steps:
-                if step not in target_steps:
-                    raise ValueError("Step {} not exist! Step must in {}".format(step, target_steps))
+        if not hasattr(config, "prune_state_dict_steps"):
+            return
+        prune_state_dict_steps = getattr(config, "prune_state_dict_steps")
+        for step in prune_state_dict_steps:
+            if step not in target_steps:
+                raise ValueError("Step {} not exist! Step must in {}".format(step, target_steps))
     
     @staticmethod
     def _check_steps(steps: list):
