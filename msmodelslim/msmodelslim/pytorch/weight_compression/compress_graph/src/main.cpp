@@ -192,7 +192,10 @@ int main(int argc, char* argv[])
   vector<int64_t> compressParameters = {compress_size, index_size, isTight, 4, 2, 64, k_value, n_value, 1, compressType, isTiling};
   try {
     if (!GetDataFromBin(inputWeightPath, inputWeightShape, &data, sizeof(int8_t))) {
-      std::cout<<"read file failed.\n";
+      // destroy data
+      delete[] data;
+      data = nullptr;
+      std::cout << "read file failed.\n";
       return FAILED;
     }
 
@@ -202,14 +205,14 @@ int main(int argc, char* argv[])
     data = nullptr;
 
     if (ret != SUCCESS){
-      std::cout<<"run session failed.\n";
+      std::cout << "run session failed.\n";
       return FAILED;
     }
   } catch (const std::exception& e) {
     // destroy data
     delete[] data;
     data = nullptr;
-    std::cout<<"read file or run session failed.\n";
+    std::cout << "read file or run session failed.\n";
     return FAILED;
   }
   return SUCCESS;
