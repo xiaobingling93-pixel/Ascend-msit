@@ -105,7 +105,8 @@ class QuantConfig:
             w_method: weight量化的方式
             mm_tensor: matmul的tensor（即weight）是per-tensor还是per-channel
             w_sym: 权重是否对称量化
-            group_size: per-group场景下group的大小，通常取64或128
+            group_size: per-group场景下group的大小，通常取64或128,
+            block_size: NF4场景下每个block的大小，通常取64或128,
 
         """
         # 权重量化的参数, 所有量化Config的父类，存放通用参数

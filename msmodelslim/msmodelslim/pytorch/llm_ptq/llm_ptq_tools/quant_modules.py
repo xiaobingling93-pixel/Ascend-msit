@@ -526,7 +526,8 @@ class LinearNf4Quantizer(nn.Module):
         ], dtype=self.dtype).view(1, -1).to(self.device)
     
     def nf4_quantize(self, weight):
-        self.set_nf4_quantized_vari()
+        if self.NF4_MAPPING is None:
+            self.set_nf4_quantized_vari()
         row, col = weight.shape
         max_oom_shape = 128256 * 4096
         if row * col < max_oom_shape:
