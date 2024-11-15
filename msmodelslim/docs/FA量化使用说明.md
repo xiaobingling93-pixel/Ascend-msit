@@ -378,7 +378,7 @@ model_path = '/data/model_path' # 原始浮点模型路径
 
 tokenizer = AutoTokenizer.from_pretrained(
     pretrained_model_name_or_path=model_path, 
-    trust_remote_code=True
+    trust_remote_code=True,
     device_map="auto",
 )
 
@@ -403,27 +403,20 @@ def build_prompt(title, text, passage):
     prompt = f"{title} -- {passage}\nQuestion:{text}?\nAnswer:"
     return prompt
 
-def get_calib_dataset(tokenizer, calib_list，device=model.device):
+def get_calib_dataset(tokenizer, calib_list, device=model.device):
     calib_dataset = []
     for calib_data in calib_list:
-        title = calib_data["title"]
-        text = calib_data["question"]
-        passage = calib_data["passage"]
-        queries = build_prompt(title, text, passage)
-        inputs = tokenizer(queries, return_tensors='pt')
-        calib_dataset.append([inputs.data['input_ids'].to(device), inputs.data['attention_mask'].to(device)])     
+        inputs = tokenizer(calib_data, return_tensors='pt')
+        calib_dataset.append([
+            inputs.data['input_ids'].to(device),
+            inputs.data['attention_mask'].to(device)
+        ])
+             
     return calib_dataset
 
-entry = "/path/to/calib_dataset" # 此示例中校准数据选取"precision_tool/dataset/boolq/dev.jsonl"
-calib_set = []
-i = 0
-with open(entry, encoding="utf-8") as file:
-    for line in file:
-        data =json.loads(line) # 将字符串转换为字典
-        while i < 50: # 获取50条校准数据
-            calib_set.append(data)
-            i += 1
-
+entry = "/path/to/calib_dataset" # 此示例中校准数据选取50条左右boolq数据
+with open(entry, 'r') as file:
+    calib_set = json.load(file)
 dataset_calib = get_calib_dataset(tokenizer, calib_set)
 """
 4、离群值抑制AntiOutlier(w8a8)
@@ -442,8 +435,8 @@ disable_names = []
 num_layers = 80
 disable_idx_lst = list(range(num_layers))
 for layer_index in disable_idx_lst:
-  down_proj_name = "model.layers.{}.mlp.down_porj".format(layer_index)
-  disable_names.append(down_proj_name)
+    down_proj_name = "model.layers.{}.mlp.down_proj".format(layer_index)
+    disable_names.append(down_proj_name)
 """
 6、执行PTQ量化校准 + 存储量化参数用于部署
 """
@@ -514,8 +507,8 @@ disable_names = []
 num_layers = 80
 disable_idx_lst = list(range(num_layers))
 for layer_index in disable_idx_lst:
-  down_proj_name = "model.layers.{}.mlp.down_porj".format(layer_index)
-  disable_names.append(down_proj_name)
+    down_proj_name = "model.layers.{}.mlp.down_proj".format(layer_index)
+    disable_names.append(down_proj_name)
 ```
 （3）（可选）调用fa_quant时设置回退层数。本模型无需设置该参数精度即可达标。
 ```python
@@ -561,8 +554,8 @@ disable_names = []
 num_layers = 80
 disable_idx_lst = list(range(num_layers))
 for layer_index in disable_idx_lst:
-  down_proj_name = "model.layers.{}.mlp.down_porj".format(layer_index)
-  disable_names.append(down_proj_name)
+    down_proj_name = "model.layers.{}.mlp.down_proj".format(layer_index)
+    disable_names.append(down_proj_name)
 ```
 （3）（可选）调用fa_quant时设置回退层数。本模型无需设置该参数精度即可达标。
 ```python
