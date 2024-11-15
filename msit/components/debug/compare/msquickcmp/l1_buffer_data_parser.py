@@ -24,7 +24,7 @@ import stat
 import sys
 
 from components.debug.common import logger
-
+from components.llm.msit_llm.common.utils import load_file_to_read_common_check
 
 OPEN_FLAGS = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
 OPEN_MODES = stat.S_IWUSR | stat.S_IRUSR
@@ -59,6 +59,7 @@ class L1BufferDataParser:
 
     def parse(self):
         self.check_argument_valid()
+        self.dump_path = load_file_to_read_common_check(self.dump_path)
         with open(self.dump_path, 'rb') as l1_buffer_data_file:
             if self.offset > 0:
                 l1_buffer_data_file.read(self.offset)

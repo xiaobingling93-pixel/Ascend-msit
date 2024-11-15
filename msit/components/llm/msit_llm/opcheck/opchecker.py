@@ -21,6 +21,7 @@ from collections import namedtuple
 import torch
 import torch_npu
 
+from components.utils.check.rule import Rule
 from msit_llm.common.log import logger
 from msit_llm.common.constant import GLOBAL_HISTORY_AIT_DUMP_PATH_LIST, RAW_INPUT_PATH
 from msit_llm.common.utils import load_file_to_read_common_check
@@ -359,9 +360,10 @@ class OpChecker:
         tensor_path = dirpath
 
         op_param = {}
-        json_path = load_file_to_read_common_check(os.path.join(dirpath, 'op_param.json'))
-
-        try:    
+        
+        json_path = os.path.join(dirpath, 'op_param.json')
+        try:  
+            json_path = load_file_to_read_common_check(json_path)  
             with open(json_path, 'r') as f:
                 op_param = json.load(f)
         except Exception as e:
