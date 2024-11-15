@@ -376,18 +376,21 @@ torch.npu.set_option(option)
 """
 model_path = '/data/model_path' # 原始浮点模型路径
 
-tokenizer = AutoTokenizer.from_pretrained(
-    pretrained_model_name_or_path=model_path, 
-    trust_remote_code=True,
-    device_map="auto",
-)
-
+# 这里以8卡32G机器为例，6卡量化。
 model = AutoModelForCausalLM.from_pretrained(
         pretrained_model_name_or_path=model_path,
         torch_dtype=torch.bfloat16, 
         trust_remote_code=True,
         device_map="auto",
+        max_memory={0:"28GiB",1:"28GiB",2:"28GiB",3:"28GiB",4:"28GiB",5:"28GiB",6:"0GiB",7:"0GiB"}
     ).eval()
+
+tokenizer = AutoTokenizer.from_pretrained(
+    pretrained_model_name_or_path=model_path, 
+    trust_remote_code=True,
+    device_map="auto",
+)
+tokenizer.pad_token = tokenizer.eso_token
 
 """
 数据集测原始模型浮点精度（此示例中选择的是boolq）
@@ -398,11 +401,6 @@ precision_test.test()
 """
 3、获取校准数据
 """
-# 一般数据都在cpu上，用npu进行量化的时候都需要指定数据到npu设备上
-def build_prompt(title, text, passage):
-    prompt = f"{title} -- {passage}\nQuestion:{text}?\nAnswer:"
-    return prompt
-
 def get_calib_dataset(tokenizer, calib_list, device=model.device):
     calib_dataset = []
     for calib_data in calib_list:
@@ -501,6 +499,8 @@ calibrator = Calibrator(
 
 - 量化回退(disable_names)
 （1）disable_level='L5': 自动回退5个layer
+<br>
+
 （2）回退所有down层：
 ```python
 disable_names = []
@@ -548,7 +548,7 @@ calibrator = Calibrator(
 
 - 量化回退(disable_names)
 （1）（可选）disable_level='L0': 本模型设置L0精度即可达标。
-（2）回退所有down层：
+<br>（2）回退所有down层：
 ```python
 disable_names = []
 num_layers = 80
