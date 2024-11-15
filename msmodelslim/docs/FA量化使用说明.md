@@ -390,7 +390,7 @@ tokenizer = AutoTokenizer.from_pretrained(
     trust_remote_code=True,
     device_map="auto",
 )
-tokenizer.pad_token = tokenizer.eso_token
+tokenizer.pad_token = tokenizer.eos_token
 
 """
 数据集测原始模型浮点精度（此示例中选择的是boolq）
