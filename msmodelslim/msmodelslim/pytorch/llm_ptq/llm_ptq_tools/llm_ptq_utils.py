@@ -24,10 +24,18 @@ class QuantType(str, Enum):
     FLOAT = "FLOAT"  # 浮点
     KV8 = "C8"  # kvcache量化，kvcache为8bit
     FAQuant = "FAQuant" # flashattention量化为8bit
+    NF4 = "NF4"  # Normal Float 4-Bit量化
     W8A8_DYNAMIC = "W8A8_DYNAMIC"  # W8A8静态量化与per-token动态量化混合量化
 
     @staticmethod
-    def get_quant_type(w_bit, a_bit, is_sparse, is_dynamic, is_lowbit):
+    def get_quant_type(params):
+        w_bit = params['w_bit']
+        a_bit = params['a_bit']
+        w_method = params['w_method']
+        is_sparse = params['is_sparse']
+        is_dynamic = params['is_dynamic']
+        is_lowbit = params['is_lowbit']
+        
         if is_dynamic:
             return QuantType.get_dynamic_quant_type(w_bit, a_bit)
         if is_sparse:
@@ -36,6 +44,8 @@ class QuantType(str, Enum):
             return QuantType.W8A8
         if w_bit == 8 and a_bit == 16:
             return QuantType.W8A16
+        if w_bit == 4 and a_bit == 16 and w_method == QuantType.NF4:
+            return QuantType.NF4
         if w_bit == 4 and a_bit == 16:
             return QuantType.W4A16
         if w_bit == 16 and a_bit == 16:
@@ -46,7 +56,7 @@ class QuantType(str, Enum):
 
     @staticmethod
     def is_value_in_enum(quant_type_value):
-        return quant_type_value in ["UNKNOWN", "W8A16", "W4A16", "W8A8", "W8A8S", "W8A8SC", "FLOAT", "W8A8_DYNAMIC"]
+        return quant_type_value in ["UNKNOWN", "W8A16", "W4A16", "W8A8", "W8A8S", "W8A8SC", "FLOAT", "W8A8_DYNAMIC", "NF4"]
 
     @staticmethod
     def check_instance_of_enum(instance):
@@ -55,7 +65,7 @@ class QuantType(str, Enum):
 
     @staticmethod
     def check_datafree_quant_type(quant_type_value):
-        if quant_type_value not in [QuantType.W8A16, QuantType.W4A16, QuantType.W8A8_DYNAMIC]:
+        if quant_type_value not in [QuantType.W8A16, QuantType.W4A16, QuantType.W8A8_DYNAMIC, QuantType.NF4]:
             raise ValueError(f"QuantType.{quant_type_value} does not support Data-Free, please check your QuantConfig.")
 
     @staticmethod
@@ -187,12 +197,15 @@ class WeightQuantMethod(str, Enum):
     MinMax = 'MinMax'
     GPTQ = 'GPTQ'
     HQQ = 'HQQ'
+    NF4 = 'NF4'
 
     @staticmethod
     def get_wmethod_config(w_method):
         w_hessian = False
         hqq = False
         if w_method == WeightQuantMethod.MinMax:
+            pass
+        elif w_method == WeightQuantMethod.NF4:
             pass
         elif w_method == WeightQuantMethod.GPTQ:
             w_hessian = True
@@ -209,5 +222,5 @@ class WeightQuantMethod(str, Enum):
 
     @staticmethod
     def check_datafree_wmethod(w_method):
-        if w_method not in [WeightQuantMethod.MinMax, WeightQuantMethod.HQQ]:
+        if w_method not in [WeightQuantMethod.MinMax, WeightQuantMethod.HQQ, WeightQuantMethod.NF4]:
             raise ValueError(f"w_method {w_method} does not support Data-Free, please check it.")

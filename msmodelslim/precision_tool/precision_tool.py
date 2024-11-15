@@ -140,11 +140,12 @@ class PrecisionTest:
             patterns.extend(cushion_patterns)
         for pattern in patterns:
             match = re.search(pattern, text)
-            if match:
-                outputs = match.group(0)
-                for i in options:
-                    if i in outputs:
-                        return i
+            if not match:
+                continue 
+            outputs = match.group(0)
+            for i in options:
+                if i in outputs:
+                    return i
         return ''
 
     def test(self):

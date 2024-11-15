@@ -95,7 +95,9 @@ class QuantConfig:
                      w_method: str = 'MinMax',
                      mm_tensor: bool = True,
                      w_sym: bool = True,
-                     group_size: int = 64):
+                     group_size: int = 64,
+                     block_size: int = 64,
+                     ):
         """
         权重量化的参数初始化，即 W8A16 或 W4A16
 
@@ -103,13 +105,15 @@ class QuantConfig:
             w_method: weight量化的方式
             mm_tensor: matmul的tensor（即weight）是per-tensor还是per-channel
             w_sym: 权重是否对称量化
-            group_size: per-group场景下group的大小，通常取64或128
+            group_size: per-group场景下group的大小，通常取64或128,
+            block_size: NF4场景下每个block的大小，通常取64或128,
 
         """
         # 权重量化的参数, 所有量化Config的父类，存放通用参数
         self._cur_config = QuantConfigFactory.get_quant_config('weight', last_config=self._cur_config,
                                                                w_method=w_method, mm_tensor=mm_tensor,
-                                                               w_sym=w_sym, group_size=group_size)
+                                                               w_sym=w_sym, group_size=group_size,
+                                                               block_size=block_size)
         self._modify_quant_param()
         return self
 

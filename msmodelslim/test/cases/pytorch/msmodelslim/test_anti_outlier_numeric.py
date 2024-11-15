@@ -4,6 +4,8 @@ import pytest
 from transformers import AutoTokenizer
 from transformers.models.llama import LlamaConfig, LlamaForCausalLM
 from msmodelslim.pytorch.llm_ptq.anti_outlier import AntiOutlier, AntiOutlierConfig
+from msit.components.debug.surgeon.auto_optimizer.pattern.knowledges.knowledge_avgpool_split import KERNEL_MAX_SIZE
+from msit.components.llm.msit_llm.common.json_fitter import atb_node_to_onnx_node
 
 
 def get_fake_llama_model_and_tokenizer():
