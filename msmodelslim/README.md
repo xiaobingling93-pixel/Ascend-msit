@@ -12,8 +12,8 @@ MindStudio ModelSlim，昇腾模型压缩工具。 【Powered by MindStudio】
 ## 使用案例及调优指南
 
 [FA3使用案例及调优指南](docs/FA量化使用说明.md)
-[w8a8精度调优策略](docs/w8a8精度调优策略.md)
-[w8a16精度调优策略](docs/w8a16精度调优策略.md)
+<br>[w8a8精度调优策略](docs/w8a8精度调优策略.md)
+<br>[w8a16精度调优策略](docs/w8a16精度调优策略.md)
 
 ## 使用说明
 
