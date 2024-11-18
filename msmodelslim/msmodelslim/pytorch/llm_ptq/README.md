@@ -116,7 +116,7 @@ def get_calib_dataset(tokenizer, calib_list):
         inputs = tokenizer([calib_data], return_tensors='pt').to(model.device)   
         print(inputs)
         calib_dataset.append([inputs.data['input_ids'], inputs.data['attention_mask']])     
-        return calib_dataset
+    return calib_dataset
 
 dataset_calib = get_calib_dataset(tokenizer, calib_list)  #校准数据获取
 
