@@ -7,6 +7,15 @@ MindStudio ModelSlim，昇腾模型压缩工具。 【Powered by MindStudio】
 
 昇腾压缩加速工具，一个以加速为目标、压缩为技术、昇腾为根本的亲和压缩工具。支持训练加速和推理加速，包括模型低秩分解、稀疏训练、训练后量化、量化感知训练等功能，昇腾AI模型开发用户可以灵活调用Python API接口，对模型进行性能调优，并支持导出不同格式模型，在昇腾AI处理器上运行。
 
+## [大模型已验证列表](docs/大模型已验证列表.md)
+
+## 使用案例及调优指南
+
+[Attention量化使用说明](docs/FA量化使用说明.md)
+<br>[w8a8精度调优策略](docs/w8a8精度调优策略.md)
+<br>[w8a16精度调优策略](docs/w8a16精度调优策略.md)
+<br>[量化使用案例](msmodelslim/pytorch/llm_ptq/量化及稀疏量化场景导入代码样例.md)
+
 ## 使用说明
 
 msModelSlim当前处于逐步开源过程中，计划通过630,930,1230三个版本进行过渡。  
@@ -25,9 +34,9 @@ msModelSlim当前处于逐步开源过程中，计划通过630,930,1230三个版
     - 进入到刚刚clone下来的msmodelslim的目录 `cd msit/msmodelslim`；
     - 设置CANN环境变量；
     - 进入msmodelslim目录，运行安装脚本 `bash install.sh`;
-    - 进入python环境路径 `cd 环境路径/env/.../site-packages/msmodelslim/pytorch/weight_compression/compress_graph/`
-    - 给build文件夹相关权限 `sudo chown -R 750 build`
-    - 编译weight_compression组件 `sudo bash build.sh {CANN包安装路径}/ascend-toolkit/latest`
+    - (可选，稀疏量化场景下需要此步骤)进入python环境路径 `cd 环境路径/env/.../site-packages/msmodelslim/pytorch/weight_compression/compress_graph/`
+    - (可选，稀疏量化场景下需要此步骤)编译weight_compression组件 `sudo bash build.sh {CANN包安装路径}/ascend-toolkit/latest`
+    - (可选，稀疏量化场景下需要此步骤)给build文件夹相关权限 `sudo chown -R 750 build`
 
 
 ### 环境准备
