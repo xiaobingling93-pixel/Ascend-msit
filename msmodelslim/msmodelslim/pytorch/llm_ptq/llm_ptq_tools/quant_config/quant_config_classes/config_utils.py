@@ -116,6 +116,23 @@ def check_lowbit_config(config):
         raise ValueError("act_method can not be 3 when running lowbit.")
 
 
+def check_NF4_config(config):
+    if config.w_method == 'NF':
+        msmodelslim_logger.warning("Mm_tensor don't work, NF4 only support block-size quantization.")
+        if config.w_bit != 4:
+            raise ValueError("w_bit must be 4 when running NF quantization.")
+        if config.a_bit != 16:
+            raise ValueError("a_bit must be 16 when running NF quantization.")
+        if config.is_lowbit:
+            raise ValueError("When using NF4 quantization, is_lowbit should be set to False.")
+        if config.use_fa_quant:
+            raise ValueError("NF4 and FA cannot be quantized at the same time!")
+        if config.use_kvcache_quant:
+            raise ValueError("NF4 and kvcache cannot be quantized at the same time!")
+        if hasattr(config, "tp_size"):
+            raise ValueError("NF4 and SimulateTP cannot be quantized at the same time!")
+        
+
 def check_and_generate_config_param(config):
     """
     所有config的校验都置于该函数，便于给所有BaseConfig类调用
@@ -151,6 +168,7 @@ def check_and_generate_config_param(config):
     check_lowbit_config(config)
     check_dynamic_config(config)
     set_per_group_param(config)
+    check_NF4_config(config)
 
     params = {
         'w_bit': config.w_bit,

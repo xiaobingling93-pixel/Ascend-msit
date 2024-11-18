@@ -6,6 +6,7 @@ from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config.quant_config_classes
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config.quant_config_classes.config_utils import \
     check_and_generate_config_param
 
+BLOCK_SIZE_LIST = [64, 128, 256, 512, 1024, 2048, 4096]
 
 class WeightQuantConfig(BaseConfig):
     """
@@ -42,4 +43,6 @@ class WeightQuantConfig(BaseConfig):
 
         # 校验参数
         check_type(self.block_size, int, param_name="block_size")
+        if self.block_size not in BLOCK_SIZE_LIST:
+            raise ValueError(f"group_size must be among choice {BLOCK_SIZE_LIST}, please check it.")
         check_and_generate_config_param(self)
