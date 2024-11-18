@@ -30,7 +30,7 @@ from msquickcmp.atc import atc_utils
 from msquickcmp.common import utils, tf_common
 from tensorflow.core.protobuf.rewriter_config_pb2 import RewriterConfig
 
-from components.llm.msit_llm.common.utils import load_file_to_read_common_check
+from components.utils.util import load_file_to_read_common_check
 from components.debug.compare.msquickcmp.common.tf_common import load_file_to_read_common_check_with_walk
 
 class NpuTfAdapterDumpData(object):

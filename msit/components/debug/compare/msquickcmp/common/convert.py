@@ -19,7 +19,7 @@ import numpy as np
 
 from msquickcmp.common import utils
 
-from components.llm.msit_llm.common.utils import load_file_to_read_common_check
+from components.utils.util import load_file_to_read_common_check
 
 
 MSACCUCMP_FILE_PATH = "toolkit/tools/operator_cmp/compare/msaccucmp.py"

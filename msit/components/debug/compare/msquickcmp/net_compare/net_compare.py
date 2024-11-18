@@ -32,7 +32,7 @@ from msquickcmp.common import utils
 from msquickcmp.common.utils import AccuracyCompareException
 from components.utils.file_open_check import sanitize_csv_value
 
-from components.llm.msit_llm.common.utils import load_file_to_read_common_check
+from components.utils.util import load_file_to_read_common_check
 
 MSACCUCMP_DIR_PATH = "toolkit/tools/operator_cmp/compare"
 MSACCUCMP_FILE_NAME = ["msaccucmp.py", "msaccucmp.pyc"]

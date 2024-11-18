@@ -34,7 +34,7 @@ from msquickcmp.common.dynamic_argument_bean import DynamicArgumentEnum
 from msquickcmp.npu.om_parser import OmParser
 
 from components.utils.check.rule import Rule
-from components.llm.msit_llm.common.utils import load_file_to_read_common_check
+from components.utils.util import load_file_to_read_common_check
 
 
 BENCHMARK_DIR = "benchmark"

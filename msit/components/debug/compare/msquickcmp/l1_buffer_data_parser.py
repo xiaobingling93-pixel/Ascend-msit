@@ -24,7 +24,7 @@ import stat
 import sys
 
 from components.debug.common import logger
-from components.llm.msit_llm.common.utils import load_file_to_read_common_check
+from components.utils.util import load_file_to_read_common_check
 
 OPEN_FLAGS = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
 OPEN_MODES = stat.S_IWUSR | stat.S_IRUSR
