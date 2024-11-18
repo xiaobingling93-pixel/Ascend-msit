@@ -84,7 +84,12 @@ class CausalLM(PreTrainedModel):
             past_key_values = None
             self.atb_model.init_kv_cache()
 
-        out = self.atb_model.forward(input_ids=input_ids, position_ids=position_ids)
+        contains_proj = any('proj' in weight for weight in self.atb_model.inputs)
+        
+        if contains_proj:
+            out = self.atb_model.forward(input_ids=input_ids, position_ids=position_ids)
+        else:
+            out = self.atb_model.forward(input_ids=input_ids)
 
         logits = out["output"].unsqueeze(0)
 
