@@ -20,7 +20,7 @@ import os
 
 import numpy as np
 
-from components.llm.msit_llm.common.utils import load_file_to_read_common_check
+from components.utils.util import load_file_to_read_common_check
 
 def calculate_flow(graph, startnode, endnode):
     """

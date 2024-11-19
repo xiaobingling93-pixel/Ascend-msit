@@ -49,7 +49,7 @@ from msquickcmp.single_op import single_op as sp
 from components.utils.security_check import check_write_directory
 from components.utils.file_open_check import ms_open, sanitize_csv_value
 from components.utils.check.rule import Rule
-from components.llm.msit_llm.common.utils import load_file_to_read_common_check
+from components.utils.util import load_file_to_read_common_check
 
 WRITE_MODES = stat.S_IWUSR | stat.S_IRUSR
 READ_WRITE_FLAGS = os.O_RDWR | os.O_CREAT
