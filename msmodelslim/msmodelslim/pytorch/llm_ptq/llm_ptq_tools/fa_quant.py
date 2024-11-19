@@ -123,7 +123,10 @@ class FAQuantizer:
 
         self._set_head_params(config)
 
+        self.processed_types = set()
+
     def quant(self, states_tensor: torch.Tensor, qkv: TensorType):
+        self.processed_types.add(qkv)
         check_type(states_tensor, torch.Tensor, param_name="states_tensor")
 
         if not self.is_calib and not self.dequant_infer:
@@ -162,6 +165,13 @@ class FAQuantizer:
             offset,
             bit=8
         )
+
+        expected_types = {"q", "k", "v"}
+        if self.processed_types != expected_types:
+            missing = expected_types - self.processed_types
+            raise RuntimeError(f"Missing qkv types:{missing}. "
+                               f"Please ensure all 'q', 'k', 'v' are processed.")
+
         return dequant_tensor.view(states_tensor.shape)
 
     def configure(self, bit: int, sym: bool, tp_size: int = 1):
