@@ -191,10 +191,14 @@ class AntiOutlier(object):
         else:
             self.device_org = None
 
-        self.model = deepcopy_model(model,
-                                    self.logger,
-                                    device_org=self.device_org,
-                                    model_with_accelerate=self.model_with_accelerate).float()
+        if model.device.type != 'cpu':    
+            self.model = deepcopy_model(model,
+                                        self.logger,
+                                        device_org=self.device_org,
+                                        model_with_accelerate=self.model_with_accelerate).float()
+        else:
+            self.model = model
+
         self.norm_linear_subgraph = None
 
         if calib_data is None:
