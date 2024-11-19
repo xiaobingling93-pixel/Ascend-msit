@@ -1,7 +1,8 @@
 # msit debug compare功能使用指南
 
 ## 简介
-- compare一键式全流程精度比对（推理）功能将推理场景的精度比对做了自动化，适用于 TensorFlow、ONNX、Caffe 模型，用户输入原始模型，对应的离线模型和输入，输出整网比对的结果，还可以输入dump好的cpu、npu侧的算子数据直接进行精度比对。离线模型为通过 ATC 工具转换的 om 模型，输入 bin 文件需要符合模型的输入要求（支持模型多输入）。
+- compare一键式全流程精度比对（推理）功能将推理场景的精度比对做了自动化，适用于 TensorFlow、TensorFlow2.0、ONNX、Caffe、MindIE-Torch模型，用户输入原始模型，对应的离线模型和输入，输出整网比对的结果，还可以输入dump好的cpu、npu侧的算子数据直接进行精度比对。离线模型为通过 ATC 工具转换的 om 模型，输入 bin 文件需要符合模型的输入要求（支持模型多输入）。在模型比对完成后，对首个精度问题节点进行误差定界定位，判断其是单层误差还是累计误差，并输出误差区间，相关信息存储在输出目录下。
+- 支持动态shape模型精度比对；支持单算子比对；支持AIPP(Artificial Intelligence Pre-Processing)数据预处理功能。
 - 该功能使用约束场景说明，参考链接：[CANN商用版/场景约束](https://www.hiascend.com/document/detail/zh/canncommercial/80RC1/devaids/auxiliarydevtool/atlasaccuracy_16_0037.html)
 - 对于 Caffe 模型，目前不支持动态 shape 的模型比对。对于 `yolov2` / `yolov3` / `ssd` 等需要自定义实现层的模型，需要自行编译安装特定版本的 caffe。
 - **注意**：请确保ATC工具转换的om与当前运行环境使用的芯片型号一致。
