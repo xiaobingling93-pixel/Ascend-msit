@@ -13,14 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os 
-import re 
-import json 
-
 import os
 import re
 import json
-
 import torch
 
 from components.debug.compare.utils.base_dump_reader import DumpFileReader
@@ -31,18 +26,59 @@ IS_MSACCUCMP_PATH_SET = False
 GLOBAL_TENSOR_CONVERTER = None
 
 
+def find_npu_dump_files(root_dir, matching_files, level=0, max_level=2):
+    for entry in os.listdir(root_dir):
+        full_path = os.path.join(root_dir, entry)
+        
+        if os.path.isfile(full_path):
+            matching_files.append(full_path)
+        # 目录给到Graph，最大往下匹配两个子目录，且最后一层文件名是 '0'
+        elif level < max_level:
+            if os.path.isdir(full_path):
+                sub_dir = os.path.join(full_path, '0')
+                if os.path.exists(sub_dir) and os.path.isdir(sub_dir):
+                    find_npu_dump_files(sub_dir, matching_files, level+1)
+                else:
+                    find_npu_dump_files(full_path, matching_files, level+1)
+
+
 class GEDumpFileReader(DumpFileReader):
     def __init__(self, npu_path: str, json_path: str):
         self.path = npu_path
         self.json_path = json_path
+        self.torch_mode = self.get_torch_mode(json_path)
         self.process_json_files()
         self.key_to_folder = self._map_keys_to_folders()
+        self.npu_files = None
+
+    @staticmethod
+    def get_torch_mode(json_path):
+        with open(os.path.join(json_path, 'mindie_torch_op_mapping.json')) as f:
+            torch_op_map = json.load(f)
+        item_keys = torch_op_map[0].keys()
+        if "jit_node" in item_keys:
+            return "TorchScript"
+        elif "fx_node" in item_keys:
+            return "TorchExport"
+        else:
+            return "Unsupport"
+
+    def get_torch_rt_mapping(self, torch_op_map):
+        if self.torch_mode == "TorchScript":
+            torch_rt_map = {item["rt_layer"]: item["jit_node"] for item in torch_op_map}
+        else:
+            torch_rt_map = {item["rt_layer"]: item["fx_node"] for item in torch_op_map}
+        
+        return torch_rt_map
 
     def process_json_files(self):
         with open(os.path.join(self.json_path, 'mindie_torch_op_mapping.json')) as f:
             torch_op_map = json.load(f)
 
-        rt_jit_map = {item["rt_layer"]: item["jit_node"] for item in torch_op_map}
+        if self.torch_mode not in ["TorchScript", "TorchExport"]:
+            raise NotImplementedError("Current only support 'TorchScript' and 'TorchExport' model.")
+        
+        rt_torch_map = self.get_torch_rt_mapping(torch_op_map)
 
         with open(os.path.join(self.json_path, 'mindie_rt_op_mapping.json')) as f:
             op_map = json.load(f)
@@ -56,7 +92,7 @@ class GEDumpFileReader(DumpFileReader):
         for item in op_map:
             ge_op = item.get("ge_op")
             rt_layer = item.get("rt_layer")
-            jit_node = rt_jit_map.get(rt_layer, None)
+            jit_node = rt_torch_map.get(rt_layer, None)
             fusion_op = item.get("fusion_op", ge_op)
 
             if cur_fuseop != fusion_op:
@@ -83,13 +119,13 @@ class GEDumpFileReader(DumpFileReader):
             json.dump(new_op_map, f, indent=4)
 
     def get_tensor(self, key: str) -> torch.Tensor:
-        folder_name = key
-        folder_path = self.path
-        files = os.listdir(folder_path)
-        pattern = re.compile(rf'{re.escape(folder_name)}\.\d')
-        matching_files = [file for file in files if pattern.search(file)]
+        if self.npu_files is None:
+            self.npu_files = []
+            find_npu_dump_files(self.path, self.npu_files)
+        pattern = re.compile(rf'{re.escape(key)}\.\d')
+        matching_files = [file for file in self.npu_files if pattern.search(file)]
         try:
-            tensor_file_path = os.path.join(folder_path, matching_files[0])
+            tensor_file_path = os.path.join(self.path, matching_files[0])
         except IndexError:
             npu_tensor = torch.empty(0)
         else:

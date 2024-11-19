@@ -33,9 +33,7 @@ class MIETorchCompare:
         self.output_path = output_path
 
         self.npu_reader = GEDumpFileReader(npu_path, json_path)
-        self.cpu_reader = TorchDumpFileReader(cpu_path, json_path)
-        self.cpu_keys = self.cpu_reader._get_keys()
-        self.npu_keys = self.npu_reader._get_keys()
+        self.cpu_reader = self.get_torch_dump_reader(cpu_path, json_path)
         self.output_path = output_path
     
     @staticmethod
@@ -55,18 +53,27 @@ class MIETorchCompare:
         
         return tensor_pass, " ".join(fail_reasons)
 
+    def get_torch_dump_reader(self, cpu_path, json_path):
+        torch_mode = self.npu_reader.torch_mode
+        if torch_mode == "TorchScript":
+            return TorchDumpFileReader(cpu_path, json_path, "TorchScript")
+        else:
+            return TorchDumpFileReader(cpu_path, json_path, "TorchExport")
+
     def compare(self):
         tensors = {}
-        for cpu_key in self.cpu_keys:
-            if cpu_key in self.npu_keys:
+        cpu_keys = self.cpu_reader._get_keys()
+        npu_keys = self.npu_reader._get_keys()
+        for cpu_key in cpu_keys:
+            if cpu_key in npu_keys:
                 cpu_tensor = self.cpu_reader.get_tensor(cpu_key)
                 npu_tensor = self.npu_reader.get_tensor(cpu_key)
                 if npu_tensor.shape == (0,):
                     logger.warning("could not find the npu_tensor which key is: %s", cpu_key)
                     continue
                 if cpu_tensor.shape == npu_tensor.shape:
+                    logger.info(f"{cpu_key} mapped.")
                     tensors[cpu_key] = (cpu_tensor, npu_tensor)
-        
         all_rows_data = []
         
         for key, (cpu_tensor, npu_tensor) in tensors.items():
@@ -91,7 +98,9 @@ class MIETorchCompare:
 
             all_rows_data.append(row_data)
         
-        return self.save_compare_result_to_csv(all_rows_data)
+        csv_file_path = self.save_compare_result_to_csv(all_rows_data)
+        logger.info("compare resut has been saved on %r ." %csv_file_path)
+
     
     def save_compare_result_to_csv(self, all_rows_data: list) -> str:
         if not all_rows_data:
@@ -115,8 +124,6 @@ class MIETorchCompare:
             writer = csv.DictWriter(csvfile, fieldnames=sorted_rows[0].keys())
             writer.writeheader()
             writer.writerows(sorted_rows)
-        
-        logger.info("Comparison results saved to %s", csv_file_path)
 
         return csv_file_path
         

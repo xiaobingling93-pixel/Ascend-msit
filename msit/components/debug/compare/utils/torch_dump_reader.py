@@ -16,17 +16,19 @@
 import os
 import json 
 from typing import Optional
-
 import torch 
 
 from components.debug.compare.utils.base_dump_reader import DumpFileReader
 from components.utils.util import safe_torch_load
 
+DELIMITER_MAP = {"TorchScript": '.', "TorchExport": '_'}
+
 
 class TorchDumpFileReader(DumpFileReader):
-    def __init__(self, cpu_path: str, json_path: str):
+    def __init__(self, cpu_path: str, json_path: str, torch_mode="TorchScript"):
         self.path = cpu_path
         self.json_path = json_path 
+        self.torch_mode = torch_mode
         self.key_to_folder = self._map_keys_to_folders()
 
     def get_tensor(self, key: str) -> torch.Tensor:
@@ -41,42 +43,21 @@ class TorchDumpFileReader(DumpFileReader):
                 return cpu_tensor
             else:
                 continue 
-
         return cpu_tensor
 
     def _filter_keys(self, key_to_fold: dict) -> dict:
         keys = list(key_to_fold.values())
         keys.sort(key=len, reverse=True)
         filtered_keys = set()
+        delimiter = DELIMITER_MAP.get(self.torch_mode)
         for key in keys:
-            is_contained = any(other_key.startswith(key + '.') for other_key in keys if other_key != key)
+            is_contained = any(other_key.startswith(key + delimiter) for other_key in keys if other_key != key)
             if not is_contained:
                 filtered_keys.add(key)
 
         filtered_key_to_folder = {fusion_op: key for fusion_op, key in key_to_fold.items() if key in filtered_keys}
 
         return filtered_key_to_folder
-
-    def _map_keys_to_folders(self) -> dict:
-        key_to_folder = {}
-        key_to_id = {}
-        json_path = os.path.join(self.json_path, 'op_map_updated.json')
-
-        with open(json_path, 'r') as f:
-            data = json.load(f)
-            for fusion_op, details in data.items():
-                id_ = details.get('id', float('inf'))
-                jit_node = details.get('jit_node', '')
-                if jit_node:
-                    key = self._extract_key_from_jit_node(jit_node)
-                    if key is not None:
-                        key_to_folder[fusion_op] = key
-                        key_to_id[key] = id_
-
-        key_to_folder = self._filter_keys(key_to_folder)
-        self.key_to_id = key_to_id
-
-        return key_to_folder
 
     def _extract_key_from_jit_node(self, jit_node: str) -> Optional[str]:
         # Here is an example of jit_node: "%968 : Float(1, 64, 56, 56) = aten::relu(%input.9), 
@@ -94,6 +75,42 @@ class TorchDumpFileReader(DumpFileReader):
                     key_none = jit_node_front_list[-1]
         return key_none
 
+    def _extract_key_from_fx_node(self, jit_node: str) -> Optional[str]:
+        # Here is an example of jit_node: "/layer1/0/relu/relu_1"
+        key_none = None
+        jit_node = jit_node.split("/")
+        if len(jit_node) < 3:
+            return key_none
+        jit_node = jit_node[1:-1]
+        return ".".join(jit_node)
+
+    def _extrace_key(self, data, key_to_folder: dict, key_to_id: dict):
+        for fusion_op, details in data.items():
+            id_ = details.get('id', float('inf'))
+            jit_node = details.get('jit_node', '')
+            if jit_node == '':
+                continue
+            if self.torch_mode == "TorchScript":
+                key = self._extract_key_from_jit_node(jit_node)
+            else:
+                key = self._extract_key_from_fx_node(jit_node)
+            if key is not None:
+                key_to_folder[fusion_op] = key
+                key_to_id[key] = id_
+
+    def _map_keys_to_folders(self) -> dict:
+        key_to_folder = {}
+        key_to_id = {}
+        json_path = os.path.join(self.json_path, 'op_map_updated.json')
+
+        with open(json_path, 'r') as f:
+            data = json.load(f)
+            self._extrace_key(data, key_to_folder, key_to_id)
+
+        key_to_folder = self._filter_keys(key_to_folder)
+        self.key_to_id = key_to_id
+
+        return key_to_folder
+
     def _get_keys(self) -> set:
         return set(self.key_to_folder.keys())
-    
