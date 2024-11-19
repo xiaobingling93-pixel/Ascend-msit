@@ -79,13 +79,15 @@ def model_to_org_device_with_buffer(model, device_org='cpu'):
     for _, mod in model.named_modules():
         if hasattr(mod, '_hf_hook'):
             mod._hf_hook.init_hook(mod)
-    device_map = model.hf_device_map
+
     for name, mod in model.named_modules():
         # 需要将之前在cpu上可能产生的buffer同步转移到module所在的设备上
         if not hasattr(mod, '_buffers'):
             continue
-        if name in device_map:
-            device = f"npu:{device_map[name]}" if "npu" in model.device.type else device_map[name]
+        if not judge_model_with_accelerate(model):
+            device = model.device
+        elif hasattr(model, 'hf_device_map'):
+            device = f"npu:{model.hf_device_map[name]}" if "npu" in model.device.type else model.hf_device_map[name]
         elif hasattr(mod, 'device'):
             device = mod.device
         else:
