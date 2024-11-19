@@ -10,7 +10,7 @@
 ## 2 执行解析脚本
 进入`msserverprofiler`文件夹，执行`parse_data_to_trace.py`脚本，具体命令如下：
 ```commandline
-python3 parse_data_to_trace.py --input ${your_file}/ --output ${output_dir}
+python3 parse_data_to_trace.py --input ${your_file} --output ${output_dir}
 ```
 ### 命令行参数
 
