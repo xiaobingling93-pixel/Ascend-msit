@@ -10,17 +10,16 @@ import onnx
 import numpy as np
 from tqdm import tqdm
 
+from ascend_utils.common import security
+from ascend_utils.common.security import check_type, get_valid_write_path, SafeWriteUmask, get_write_directory,  \
+    get_valid_read_path, safe_delete_path_if_exists, json_safe_dump
 from msmodelslim.pytorch.quant.ptq_tools.quant_modules import Quantizer, Conv2dQuantizer, LinearQuantizer
 from msmodelslim.pytorch.quant.ptq_tools.quant_deploy import quantize_model_deploy, convert_linear_params
 from msmodelslim.pytorch.quant.ptq_tools.quant_deploy import ConvertLinearParams, ModelDeployQuantParams
 from msmodelslim.pytorch.quant.ptq_tools.ptq_kia.quant_funcs import amp_decision  # squant algorithm api
 from ascend_utils.common.security.pytorch import check_torch_module
-from ascend_utils.common.security import check_type, get_valid_write_path, SafeWriteUmask, get_write_directory,  \
-    get_valid_read_path, safe_delete_path_if_exists, SafeWriteUmask
 from msmodelslim import logger
 from msmodelslim.pytorch.quant.ptq_tools import QuantConfig
-from ascend_utils.common import security
-from ascend_utils.common.security import json_safe_dump
 from msmodelslim.pytorch.quant.ptq_tools.quant_modules import TensorQuantizer
 
 weight_type = "W8A8"
@@ -334,7 +333,7 @@ class Calibrator(object):
         
             if isinstance(module, TensorQuantizer) and module.int_weight_tensor is not None:
                 quant_weight = module.int_weight_tensor
-                fp_weight_bias = self.ori_fp_weight[fp_name + '.bias']
+                fp_weight_bias = self.ori_fp_weight.get(fp_name + '.bias')
                 quant_param_dict[fp_name + '.weight'] = module.int_weight_tensor.round().to(torch.int8)
                 quant_param_dict[fp_name + '.bias'] = fp_weight_bias
                 fp_name_weight_list.append(fp_name + '.weight')
