@@ -1,3 +1,17 @@
+# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import sqlite3
 import json
 import os
@@ -139,12 +153,17 @@ def find_during_time_by_span_id(all_data_df):
 
     for _, data in all_data_df.iterrows():
         if data['event_type'] == 'start/end':
-            span_with_dur_time[data['mark_id']] = data['end_time'] - data['start_time']
+            span_with_dur_time[data['mark_id']] = {
+                'during_time': data['end_time'] - data['start_time'],
+                'start_time': data['start_time']
+            }
 
     for idx, data in all_data_df.iterrows():
         if data['span_id'] is not None:
-            if int(data['span_id']) in span_with_dur_time:
-                all_data_df.loc[idx, 'during_time'] = span_with_dur_time[int(data['span_id'])]
+            span_id = int(data['span_id'])
+            if span_id in span_with_dur_time:
+                all_data_df.loc[idx, 'during_time'] = span_with_dur_time[span_id]['during_time']
+                all_data_df.loc[idx, 'start_time'] = span_with_dur_time[span_id]['start_time']
     return all_data_df
 
 
