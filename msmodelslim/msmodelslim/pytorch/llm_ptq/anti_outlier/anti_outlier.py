@@ -95,8 +95,7 @@ def model_to_org_device_with_buffer(model, device_org='cpu'):
     # 将原模型的权重恢复到GPU（或meta）上
     for _, mod in model.named_modules():
         if hasattr(mod, '_hf_hook'):
-            mod._hf_hook.init_hook(mod)
-            
+            mod._hf_hook.init_hook(mod)           
     for name, mod in model.named_modules():
         # 需要将之前在cpu上可能产生的buffer同步转移到module所在的设备上
         if not hasattr(mod, '_buffers'):
