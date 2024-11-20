@@ -12,14 +12,12 @@
 
 关键步骤说明如下：
 
-#### 1.确定Attention:
-需确定模型基于哪一个Attention进行实现，以Qwen2.5模型为例，有Qwen2Attention、Qwen2FlashAttention2和Qwen2SdpaAttention三种Attention。如未特殊指定，默认为Qwen2Attention。
-
-#### 2.修改modeling文件：
+#### 1.修改modeling文件：
 
 （1）找到对应版本的modeling文件：
 
-每个模型的modeling文件路径和对应版本都可以在权重路径下的config里查到。以Qwen2.5_70B为例，权重目录下的config如下所示，config中`model_type="qwen2"`，`transformers_version="4.43.1"`。那么就可以去transformer库里找4.43.1版本的[modeling_qwen2.py](https://github.com/huggingface/transformers/blob/v4.43.1/src/transformers/models/qwen2/modeling_qwen2.py)
+每个模型的modeling文件路径和对应版本都可以在权重路径下的config里查到，其形式通常为：`modeling_{模型名称}.py`
+以Qwen2.5_72B为例，权重目录下的config如下所示，config中`model_type="qwen2"`，`transformers_version="4.43.1"`。那么就可以去transformer库里找4.43.1版本的[modeling_qwen2.py](https://github.com/huggingface/transformers/blob/v4.43.1/src/transformers/models/qwen2/modeling_qwen2.py)
 
 ```python
 {
@@ -51,7 +49,10 @@
 }
 ```
 
-（2）修改modeling文件：
+（2）确定Attention：
+需确定模型基于哪一个Attention进行实现，以Qwen2.5模型为例，有Qwen2Attention、Qwen2FlashAttention2和Qwen2SdpaAttention三种Attention。如未特殊指定，默认为Qwen2Attention。
+
+（3）修改modeling文件：
 
 - 添加引用依赖：
 
@@ -189,7 +190,12 @@ from transformers.utils import (
 )
 ```
 
-（3）修改完毕后的modeling文件需放在模型权重路径下，对config文件进行修改来指定模型加载时所使用的modeling文件。假设修改后的modeling文件为`modeling_qwen2_fa3.py`，config文件做如下修改：
+（4）修改完毕后的modeling文件需放在模型权重路径下，对config文件进行修改来指定模型加载时所使用的modeling文件。其一般形式为：
+```json
+"auto_map": {
+"AutoModelForCausalLM": "{文件名}.{architectures[0]}"}
+```
+假设修改后的modeling文件名为`modeling_qwen2_fa3.py`，`architectures[0]`从config中可知为`Qwen2ForCausalLM`，则对config文件做如下修改：
 
 ```json
 {
@@ -200,6 +206,7 @@ from transformers.utils import (
     // --------------------------------------------------
     "auto_map": {
     "AutoModelForCausalLM": "modeling_qwen2_fa3.Qwen2ForCausalLM"
+    },
     // --------------------------------------------------
     ...
     // 其他未修改的代码部分
@@ -208,7 +215,7 @@ from transformers.utils import (
 ```
 **注意**：在量化脚本里面通过transformers库对模型进行加载时，调用`from_pretrained`函数时一定要指定`trust_remote_code=True`让修改后的modeling文件能够正确的被加载。(请确保加载的modeling文件的安全性)
 
-#### 3.配置config:
+#### 2.配置config:
 
 `config = QuantConfig().fa_quant()`
 
