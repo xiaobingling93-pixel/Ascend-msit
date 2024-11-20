@@ -141,18 +141,18 @@ def mindir_to_om_process(args: CmpArgsAdapter):
     offline_model_path_ext = os.path.splitext(args.offline_model_path)[-1]
     if model_path_ext in [".onnx", ] and offline_model_path_ext in [".mindir", ]:
         is_mindir_compare_accuracy = True
-        ld_preload = os.getenv("LD_PRELOAD", "")
+        ld_preload = os.getenv("LD_PRELOAD")
         save_om_so_path = os.path.join(site.getsitepackages()[0], "msquickcmp", "libsaveom.so")
         if not os.path.exists(save_om_so_path):
             utils.logger.error("libsaveom.so not found, check the installation process")
             raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PARAM_ERROR)
-        if not os.getenv("LD_PRELOAD"):
+        
+        if not ld_preload:
             os.environ["LD_PRELOAD"] = save_om_so_path
-        elif save_om_so_path not in os.getenv("LD_PRELOAD").split(":"):
-            if len(ld_preload):
-                os.environ["LD_PRELOAD"] = save_om_so_path + ":" + ld_preload
-            else:
-                os.environ["LD_PRELOAD"] = save_om_so_path
+        else:
+            reload_paths = ld_preload.split(":")
+            if save_om_so_path not in reload_paths:
+                os.environ["LD_PRELOAD"] = f'{save_om_so_path}:{ld_preload}'
 
         utils.logger.info("Using {}".format(save_om_so_path))
 
