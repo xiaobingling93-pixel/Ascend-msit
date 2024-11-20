@@ -50,7 +50,7 @@ def concat_data_from_folder(folder_path):
                 db_path = os.path.join(root, filename)
                 data_df = load_data_from_database(db_path)
                 full_df = pd.concat([full_df, data_df], ignore_index=True)
-    if full_df.empty():
+    if full_df.empty:
         raise ValueError(f"No valid database found in {folder_path}, please check.")
     full_df = full_df.sort_values(by='start_time', ascending=True).reset_index(drop=True)
     return full_df
@@ -156,7 +156,7 @@ def data_convert(all_data_df):
     all_data_df['message'] = all_data_df['message'].apply(lambda x: convert_message_to_json(x))
     all_data_df['rid'] = all_data_df['message'].apply(lambda x: extract_rid(x))
     all_data_df['batch_type'] = all_data_df['message'].apply(lambda x: extract_batch_type(x))
-    all_data_df['rid'] = all_data_df['message'].apply(lambda x: modify_rid(x))
+    all_data_df['rid'] = all_data_df['rid'].apply(lambda x: modify_rid(x))
     all_data_df['name'] = all_data_df['message'].apply(lambda x: x.get('name', None))
     all_data_df.loc[all_data_df['name'] == 'ReqState', 'name'] = (
         all_data_df.loc[all_data_df['name'] == 'ReqState', 'message'].apply(
@@ -220,7 +220,7 @@ def create_trace_events(all_data_df):
             if idx == 0:
                 trace_events.append(
                     {
-                        "name": "flow_" + data['name'],
+                        "name": "flow_" + data['rid'],
                         "ph": "s",
                         "id": int(data['rid']),
                         "pid": data['pid'],
@@ -231,7 +231,7 @@ def create_trace_events(all_data_df):
             if idx > 0:
                 trace_events.append(
                     {
-                        "name": "flow_" + data['name'],
+                        "name": "flow_" + data['rid'],
                         "ph": "f",
                         "bp": "e",
                         "id": int(data['rid']),
@@ -242,7 +242,7 @@ def create_trace_events(all_data_df):
                 )
                 trace_events.append(
                     {
-                        "name": "flow_" + data['name'],
+                        "name": "flow_" + data['rid'],
                         "ph": "s",
                         "id": int(data['rid']),
                         "pid": data['pid'],
