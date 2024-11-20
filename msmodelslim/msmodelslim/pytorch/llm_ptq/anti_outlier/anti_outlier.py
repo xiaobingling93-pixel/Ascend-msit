@@ -7,10 +7,10 @@ import stat
 import copy
 import functools
 from typing import OrderedDict
-from tqdm import tqdm
-from tqdm.contrib import tzip
 from collections import OrderedDict as OrderedDict_CHECK
 
+from tqdm import tqdm
+from tqdm.contrib import tzip
 import torch
 import torch.nn as nn
 from transformers.configuration_utils import PretrainedConfig
