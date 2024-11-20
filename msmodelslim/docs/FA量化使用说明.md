@@ -16,9 +16,13 @@
 
 （1）找到对应版本的modeling文件：
 
-每个模型的modeling文件路径和对应版本都可以在权重路径下的config里查到，其形式通常为：`modeling_{模型名称}.py`
-<br>以Qwen2.5_72B为例，权重目录下的config如下所示，config中`model_type="qwen2"`，`transformers_version="4.43.1"`。那么就可以去transformer库里找4.43.1版本的[modeling_qwen2.py](https://github.com/huggingface/transformers/blob/v4.43.1/src/transformers/models/qwen2/modeling_qwen2.py)
+- 方式一：从transformers库中找到modeling文件：
+<br>`cd 环境路径/env/.../site-packages/transformers/models/{模型名称}/modeling_{模型名称}.py`
 
+- 方式二：通过`pip show transformers`查询transformers的`Version`，假设为`4.43.1`，则可以去transformer库里找到对应版本的`modeling_{模型名称}.py`，以Qwen2.5-72B为例，4.43.1版本的modeling文件地址为[modeling_qwen2.py](https://github.com/huggingface/transformers/blob/v4.43.1/src/transformers/models/qwen2/modeling_qwen2.py)
+
+- 注意：Llama3.1-70B模型需使用4.43.0及以上的modeling文件。
+- `模型名称`一般与config文件里的`model_type`保持一致，下附Qwen2.5-72B权重config。
 ```python
 {
   "architectures": [
