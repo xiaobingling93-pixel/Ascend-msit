@@ -188,6 +188,9 @@ class Quantizer(nn.Module):
             else:
                 return self.quant_weight_tensor
     
+    def stop_calibration(self):
+        self.observer = None
+        
     def _forward(self, data):
         self.input_scale,\
         self.input_offset = linear_quantization_params(
@@ -227,9 +230,7 @@ class Quantizer(nn.Module):
         elapsed = (time.perf_counter() - start)
         logger.info("Quantization time:%s ms", elapsed * 1000)
         self.has_init_quant_para = True
-    
-    def stop_calibration(self):
-        self.observer = None
+
 
 class TensorQuantizer(Quantizer):
     """
