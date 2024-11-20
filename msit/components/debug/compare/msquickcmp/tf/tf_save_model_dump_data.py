@@ -26,7 +26,7 @@ import numpy as np
 import tensorflow as tf
 from msquickcmp.common import utils, tf_common
 from msquickcmp.common.dump_data import DumpData
-from components.llm.msit_llm.common.utils import load_file_to_read_common_check
+from components.utils.util import load_file_to_read_common_check
 from components.debug.compare.msquickcmp.common.tf_common import load_file_to_read_common_check_with_walk
 
 

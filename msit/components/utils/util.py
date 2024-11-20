@@ -18,7 +18,8 @@ import pickle
 
 import torch
 
-from components.utils.constants import TENSOR_MAX_SIZE, EXT_SIZE_MAPPING
+from components.utils.constants import TENSOR_MAX_SIZE, EXT_SIZE_MAPPING, PATH_WHITE_LIST_REGEX
+from components.utils.log import logger
 
 
 def get_entry_points(entry_points_name):
@@ -99,3 +100,56 @@ def safe_torch_load(path, **kwargs):
             break
     
     return tensor
+
+
+def load_file_to_read_common_check(path: str, exts=None):
+    if not isinstance(path, str):
+        raise TypeError("'path' should be 'str'")
+    
+    if isinstance(exts, (tuple, list)):
+        if not any(check_file_ext(path, ext) for ext in exts):
+            logger.error("Expected extenstion to be one of %r", exts)
+            raise ValueError
+        
+    elif exts is not None:
+        logger.error("Expected 'exts' to be 'List[str]', got %r instead", type(exts))
+        raise TypeError
+    
+    if re.search(PATH_WHITE_LIST_REGEX, path):
+        logger.error("Invalid character: %r", path)
+        raise ValueError
+    
+    path = os.path.realpath(path)
+    
+    try:
+        file_status = os.stat(path)
+    except OSError as e:
+        logger.error("%s: %r", e.strerror, path)
+        raise
+    
+    if not os.st.S_ISREG(file_status.st_mode):
+        logger.error("Not a regular file: %r", path)
+        raise ValueError
+
+    if not check_file_size_based_on_ext(path):
+        logger.error("File too large: %r", path)
+        raise ValueError
+
+    if (os.st.S_IWOTH & file_status.st_mode) == os.st.S_IWOTH:
+        logger.error("Vulnerable path: %r should not be other writeable", path)
+        raise PermissionError
+
+    cur_euid = os.geteuid()
+    if file_status.st_uid != cur_euid:
+        # not root
+        if cur_euid != 0:
+            logger.error("File owner and current user are inconsistent: %r", path)
+            raise PermissionError
+        
+        # root but reading a other writeable file
+        elif (os.st.S_IWGRP & file_status.st_mode) == os.st.S_IWGRP or \
+             (os.st.S_IWUSR & file_status.st_mode) == os.st.S_IWUSR:
+            logger.warning("Privilege escalation risk detected. Trying to read a file that belongs to"
+                          " a normal user and is writeable to the user or the user group")
+
+    return path

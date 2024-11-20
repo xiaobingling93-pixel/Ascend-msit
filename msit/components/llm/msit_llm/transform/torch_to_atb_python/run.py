@@ -74,7 +74,7 @@ class CausalLM(PreTrainedModel):
 
         if position_ids is None:
             position_ids = torch.arange(input_ids.shape[0]).to(input_ids)
-
+   
         if position_ids.dim() == 2:
             position_ids = position_ids[0]
 
@@ -84,7 +84,10 @@ class CausalLM(PreTrainedModel):
             past_key_values = None
             self.atb_model.init_kv_cache()
 
-        out = self.atb_model.forward(input_ids=input_ids, position_ids=position_ids)
+        if "position_ids" in self.atb_model.inputs:
+            out = self.atb_model.forward(input_ids=input_ids, position_ids=position_ids)
+        else:
+            out = self.atb_model.forward(input_ids=input_ids)
 
         logits = out["output"].unsqueeze(0)
 

@@ -33,7 +33,7 @@ from msquickcmp.adapter_cli.args_adapter import CmpArgsAdapter
 from msquickcmp.common.convert import convert_bin_file_to_npy
 from msquickcmp.onnx_model.custom_op import CustomOp
 from components.utils.file_open_check import ms_open
-from components.llm.msit_llm.common.utils import load_file_to_read_common_check
+from components.utils.util import load_file_to_read_common_check
 
 
 NODE_TYPE_TO_DTYPE_MAP = {

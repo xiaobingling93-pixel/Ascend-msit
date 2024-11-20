@@ -30,7 +30,7 @@ from msquickcmp.common import utils, tf_common
 from msquickcmp.common.dump_data import DumpData
 from msquickcmp.common.utils import AccuracyCompareException
 
-from components.llm.msit_llm.common.utils import load_file_to_read_common_check
+from components.utils.util import load_file_to_read_common_check
 
 
 class TfDumpData(DumpData):
