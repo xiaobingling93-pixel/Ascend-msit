@@ -16,8 +16,9 @@ import torch.nn as nn
 from transformers.configuration_utils import PretrainedConfig
 from accelerate.hooks import add_hook_to_module, remove_hook_from_module
 
-from msmodelslim import logger as msmodelslim_logger
 from ascend_utils.common.security import get_valid_write_path, check_type
+
+from msmodelslim import logger as msmodelslim_logger
 
 try:
     import torch_npu
