@@ -876,7 +876,7 @@ class Calibrator(object):
             if isinstance(mod, nn.Linear) or isinstance(mod, nn.modules.linear.NonDynamicallyQuantizableLinear):
                 if self.cfg.is_lowbit:
                     quant_mod = LowBitLinearQuantizer(cfg=self.cfg, logger=self.logger, name=name)
-                elif self.cfg.w_method is QuantType.NF4:
+                elif self.cfg.w_method in QuantType.NF4:
                     quant_mod = LinearNf4Quantizer(cfg=self.cfg, logger=self.logger)
                 elif self.cfg.model_quant_type is not QuantType.W8A8S:
                     quant_mod = LinearQuantizer(cfg=self.cfg, logger=self.logger)

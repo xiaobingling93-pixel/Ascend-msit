@@ -79,13 +79,15 @@ def model_to_org_device_with_buffer(model, device_org='cpu'):
     for _, mod in model.named_modules():
         if hasattr(mod, '_hf_hook'):
             mod._hf_hook.init_hook(mod)
-    device_map = model.hf_device_map
+
     for name, mod in model.named_modules():
         # 需要将之前在cpu上可能产生的buffer同步转移到module所在的设备上
         if not hasattr(mod, '_buffers'):
             continue
-        if name in device_map:
-            device = device_map[name]
+        if not judge_model_with_accelerate(model):
+            device = model.device
+        elif hasattr(model, 'hf_device_map'):
+            device = f"npu:{model.hf_device_map[name]}" if "npu" in model.device.type else model.hf_device_map[name]
         elif hasattr(mod, 'device'):
             device = mod.device
         else:
@@ -93,29 +95,6 @@ def model_to_org_device_with_buffer(model, device_org='cpu'):
         for buffer_name, buffer in mod._buffers.items():
             if buffer is not None:
                 mod.register_buffer(buffer_name, buffer.to(device))
-
-
-def deepcopymodel(model: nn.Module):
-    device_org = next(model.parameters()).device
-    model_to_cpu(model)
-
-    new_model = copy.deepcopy(model)
-
-    remove_hook_from_module(new_model, True)
-
-    model_to_org_device_with_buffer(model, device_org)
-
-    return new_model
-
-
-def model_to_org_device(model, device_org='cpu'):
-    # 将原模型的权重恢复到NPU、CUDA（或meta）上
-    if judge_model_with_accelerate(model):
-        for mod in model.modules():
-            if hasattr(mod, "_hf_hook"):
-                mod._hf_hook.init_hook(mod)
-    else:
-        model.to(device_org)
 
 
 def deepcopy_model(model,
@@ -139,15 +118,12 @@ def deepcopy_model(model,
     # 删除accelerate封装的forward函数，将备份的forward函数恢复
     new_model = remove_hook_from_module(new_model, True)
 
-    model_to_org_device(model, device_org)
+    model_to_org_device_with_buffer(model, device_org)
 
     return new_model
 
 
 def replace_rms_norm(model: nn.Module, norm_class_name: str):
-    if judge_model_with_accelerate(model):
-        model_to_cpu(model)
-
     for name, module in model.named_modules():
         if module.__class__.__name__.lower() == 'layernorm':
             pass
@@ -161,14 +137,6 @@ def replace_rms_norm(model: nn.Module, norm_class_name: str):
                 new_module.to(module.weight.data.device)
 
             GraphOpt.set_module(model, name, new_module)
-
-    # 将原模型的权重恢复到GPU（或meta）上
-    if judge_model_with_accelerate(model):
-        model_to_org_device(model)
-        for _, module in model.named_modules():
-            if isinstance(module, NormBias) and hasattr(module, 'old_hook'):
-                add_hook_to_module(module, module.old_hook)
-                del module.old_hook
 
 
 class AntiOutlier(object):
@@ -187,8 +155,7 @@ class AntiOutlier(object):
             raise TypeError("norm_class_name must be str, please check it.")
         if not isinstance(model, nn.Module):
             raise TypeError("model must be nn.Module, please check it.")
-        if not isinstance(calib_data, list):
-            raise TypeError("calib_data must be list, please check it.")
+        self.calib_data = [] if calib_data is None else self.check_calib_data(calib_data)
         check_type(cfg, AntiOutlierConfig, param_name="config")
         self.with_accelerate = judge_model_with_accelerate(model)
 
@@ -226,10 +193,14 @@ class AntiOutlier(object):
         else:
             self.device_org = None
 
-        self.model = deepcopy_model(model,
-                                    self.logger,
-                                    device_org=self.device_org,
-                                    model_with_accelerate=self.model_with_accelerate).float()
+        if model.device.type != 'cpu':    
+            self.model = deepcopy_model(model,
+                                        self.logger,
+                                        device_org=self.device_org,
+                                        model_with_accelerate=self.model_with_accelerate).float()
+        else:
+            self.model = model
+
         self.norm_linear_subgraph = None
 
         if calib_data is None:
@@ -433,6 +404,23 @@ class AntiOutlier(object):
             )
         return num_attention_heads
 
+    def check_calib_data(self, calib_data):
+        check_type(calib_data, list, param_name='calib_data')
+        for i, calib_data_item in enumerate(calib_data):
+            element_not_tensor = False
+            check_type(calib_data_item, list, param_name=f'calib_data[{i}]')
+            for item in calib_data_item:
+                if not isinstance(item, torch.Tensor):
+                    element_not_tensor = True
+                    break
+            if element_not_tensor:
+                break
+                
+        if element_not_tensor:
+            self.logger.warning("Not all elements in calib_data are torch.Tensor, "
+                                "please make sure that the model can run with model(*(calib_data[0]))")
+        return calib_data
+
     def _process(self):
         act_stats = self.os_stats()
         if self.cfg.anti_method == 'm4':
@@ -466,3 +454,6 @@ class AntiOutlier(object):
                 weight_aware(self.cfg, norm_module, linear_modules, stats)
             elif self.cfg.anti_method == 'm4':
                 iter_smooth(self.cfg, norm_module, linear_modules, stats, num_attention_heads)
+
+
+    

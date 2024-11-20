@@ -24,7 +24,7 @@ import tensorflow as tf
 
 from msquickcmp.common import utils
 from msquickcmp.common.utils import AccuracyCompareException
-from components.llm.msit_llm.common.utils import load_file_to_read_common_check
+from components.utils.util import load_file_to_read_common_check
 
 
 DTYPE_MAP = {

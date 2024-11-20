@@ -44,7 +44,7 @@ class QuantType(str, Enum):
             return QuantType.W8A8
         if w_bit == 8 and a_bit == 16:
             return QuantType.W8A16
-        if w_bit == 4 and a_bit == 16 and w_method == QuantType.NF4:
+        if w_bit == 4 and a_bit == 16 and w_method in QuantType.NF4:
             return QuantType.NF4
         if w_bit == 4 and a_bit == 16:
             return QuantType.W4A16
@@ -197,7 +197,7 @@ class WeightQuantMethod(str, Enum):
     MinMax = 'MinMax'
     GPTQ = 'GPTQ'
     HQQ = 'HQQ'
-    NF4 = 'NF4'
+    NF = 'NF'
 
     @staticmethod
     def get_wmethod_config(w_method):
@@ -205,12 +205,12 @@ class WeightQuantMethod(str, Enum):
         hqq = False
         if w_method == WeightQuantMethod.MinMax:
             pass
-        elif w_method == WeightQuantMethod.NF4:
-            pass
         elif w_method == WeightQuantMethod.GPTQ:
             w_hessian = True
         elif w_method == WeightQuantMethod.HQQ:
             hqq = True
+        elif w_method == WeightQuantMethod.NF:
+            pass
         else:
             raise ValueError(f"w_method {w_method} illegal, please check it.")
         return w_hessian, hqq
@@ -222,5 +222,5 @@ class WeightQuantMethod(str, Enum):
 
     @staticmethod
     def check_datafree_wmethod(w_method):
-        if w_method not in [WeightQuantMethod.MinMax, WeightQuantMethod.HQQ, WeightQuantMethod.NF4]:
+        if w_method not in [WeightQuantMethod.MinMax, WeightQuantMethod.HQQ, WeightQuantMethod.NF]:
             raise ValueError(f"w_method {w_method} does not support Data-Free, please check it.")

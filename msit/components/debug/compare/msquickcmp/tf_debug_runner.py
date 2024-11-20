@@ -29,7 +29,7 @@ from msquickcmp.common import utils, tf_common
 if tf_common.check_tf_version(tf_common.VERSION_TF2X):
     import tfdbg_ascend as dbg
 
-from components.llm.msit_llm.common.utils import load_file_to_read_common_check
+from components.utils.util import load_file_to_read_common_check
 
 
 class TfDebugRunner(object):

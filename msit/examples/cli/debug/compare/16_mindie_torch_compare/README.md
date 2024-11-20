@@ -14,9 +14,9 @@
 
 ### NPU数据Dump
 
-- 准备 `python_bert_inference.py`，为模型的前向推理脚本
+- 准备 `bert_inference.py`，为模型的前向推理脚本
 
-- 执行 `msit debug dump --exec "python_bert_inference.py" [--option]` Dump NPU数据 
+- 执行 `msit debug dump --exec "python bert_inference.py" [--option]` Dump NPU数据 
 
   ```sh
   msit debug dump --output [/path/to/dump] --exec "python bert_inference.py" --operation-name MatMulv2_1,trans_Cast_0
@@ -51,7 +51,7 @@
 | --golden-path, -gp     | CPU/GPU Dump数据根路径                   | 是       |
 | --my-path, -mp         | NPU Dump数据根路径                         | 是       |
 | --ops-json | 运行 `msit debug dump` 时产生的算子映射关系文件路径，通常在当前文件夹下 | 是       |
-| --output, -o           | 比对结果csv的输出路径                                        | 是       |
+| --output, -o           | 比对结果csv的输出路径，默认为当前路径              | 否       |
 
 ## 注意
 
