@@ -133,4 +133,4 @@ class QuantConfig:
             raise ValueError("quant_mode is invalid, please check it.")
 
         if self.device not in DEVICE_LIST:
-            raise ValueError("dev_type is invalid, please check it.")
+            raise ValueError("device is invalid, please check it.")
