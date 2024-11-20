@@ -17,7 +17,7 @@
 （1）找到对应版本的modeling文件：
 
 每个模型的modeling文件路径和对应版本都可以在权重路径下的config里查到，其形式通常为：`modeling_{模型名称}.py`
-以Qwen2.5_72B为例，权重目录下的config如下所示，config中`model_type="qwen2"`，`transformers_version="4.43.1"`。那么就可以去transformer库里找4.43.1版本的[modeling_qwen2.py](https://github.com/huggingface/transformers/blob/v4.43.1/src/transformers/models/qwen2/modeling_qwen2.py)
+<br>以Qwen2.5_72B为例，权重目录下的config如下所示，config中`model_type="qwen2"`，`transformers_version="4.43.1"`。那么就可以去transformer库里找4.43.1版本的[modeling_qwen2.py](https://github.com/huggingface/transformers/blob/v4.43.1/src/transformers/models/qwen2/modeling_qwen2.py)
 
 ```python
 {
@@ -206,7 +206,7 @@ from transformers.utils import (
     // --------------------------------------------------
     "auto_map": {
     "AutoModelForCausalLM": "modeling_qwen2_fa3.Qwen2ForCausalLM"
-    },
+  },
     // --------------------------------------------------
     ...
     // 其他未修改的代码部分
