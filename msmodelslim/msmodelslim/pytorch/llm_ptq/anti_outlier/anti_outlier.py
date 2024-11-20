@@ -13,9 +13,9 @@ from tqdm.contrib import tzip
 import torch
 import torch.nn as nn
 from transformers.configuration_utils import PretrainedConfig
+from collections import OrderedDict
 from accelerate.hooks import add_hook_to_module, remove_hook_from_module
 
-from ascend_utils.common.security import get_valid_write_path, check_type
 from msmodelslim import logger as msmodelslim_logger
 
 try:
@@ -36,7 +36,10 @@ from msmodelslim.pytorch.llm_ptq.anti_outlier.anti_utils import (
     smooth_ln_fcs,
     os_ln_fcs,
     weight_aware,
+    attach_op,
+    Multiplier,
 )
+from ascend_utils.common.security import get_valid_write_path, check_type
 
 STAT_KEY_MAX = "max"
 STAT_KEY_MIN = "min"
@@ -47,6 +50,19 @@ STAT_KEY_SMOOTH_SCALE_MASK = "smooth_scale_mask"
 STAT_KEY_SMOOTH_SCALE = "smooth_scale"
 STAT_KEY_VARIANCE = "std"
 
+_PREDEFINED_FUSIONS = {
+    "SD3Transformer2DModel":
+    {
+        tuple(): ("context_embedder",)
+    }
+}
+
+_PREDEFINED_FUSION_KWARGS = {
+    "SD3Transformer2DModel":
+    {
+        "check_group_fusions": False
+    }
+}
 
 def judge_model_with_accelerate(model: nn.Module):
     for _, mod in model.named_modules():
@@ -79,7 +95,7 @@ def model_to_org_device_with_buffer(model, device_org='cpu'):
     for _, mod in model.named_modules():
         if hasattr(mod, '_hf_hook'):
             mod._hf_hook.init_hook(mod)
-
+            
     for name, mod in model.named_modules():
         # 需要将之前在cpu上可能产生的buffer同步转移到module所在的设备上
         if not hasattr(mod, '_buffers'):
@@ -193,7 +209,7 @@ class AntiOutlier(object):
         else:
             self.device_org = None
 
-        if model.device.type != 'cpu':    
+        if model.device.type != 'cpu':
             self.model = deepcopy_model(model,
                                         self.logger,
                                         device_org=self.device_org,
@@ -207,36 +223,41 @@ class AntiOutlier(object):
             calib_data = []
         else:
             self.calib_data = calib_data
+            
+        arch_fusions = _PREDEFINED_FUSIONS[self.cfg.arch] if self.cfg.arch in _PREDEFINED_FUSIONS else None
 
         try:
-            self.init_dag()
+            self.init_dag(arch_fusions)
         except Exception as e:
             raise Exception("Please check your config, model and input!", e) from e
 
         # 保存anti_outlier处理前的原始权重，作为属性存入model中
         setattr(self.model, 'ori_state_dict', states_dic)
 
-    def init_dag(self):
-        dummy_input = input_to_cpu(self.calib_data[0][0])
-        dummy_input = dummy_input[:1]
-
-        if self.norm_class_name is not None:
-            norm_class = list(OrderedDict.fromkeys([m.__class__ for m in self.model.modules() if
-                                                    self.norm_class_name.lower() == m.__class__.__name__.lower()]))
+    def init_dag(self, predefined_fusions=None):
+        if predefined_fusions is not None:
+            self.norm_linear_subgraph = predefined_fusions
         else:
-            norm_class = list(
-                OrderedDict.fromkeys(
-                    [m.__class__ for m in self.model.modules() if "norm" in m.__class__.__name__.lower()]))
-            norm_class = [norm_class[0]]
-            self.norm_class_name = norm_class[0].__name__.lower()
+            dummy_input = input_to_cpu(self.calib_data[0][0])
+            dummy_input = dummy_input[:1]
 
-        self.dag = extract_dag(self.model, dummy_input,
-                               hook_nodes=norm_class, anti_method=self.cfg.anti_method)
+            if self.norm_class_name is not None:
+                norm_class = list(OrderedDict.fromkeys([m.__class__ for m in self.model.modules() if
+                                                        self.norm_class_name.lower() == m.__class__.__name__.lower()]))
+            else:
+                norm_class = list(
+                    OrderedDict.fromkeys(
+                        [m.__class__ for m in self.model.modules() if "norm" in m.__class__.__name__.lower()]))
+                norm_class = [norm_class[0]]
+                self.norm_class_name = norm_class[0].__name__.lower()
 
-        self.norm_linear_subgraph = self.dag.get_norm_linear_subgraph()
-        if self.cfg.anti_method == 'm4':
-            self.linear_linear_subgraph = self.dag.get_linear_linear_subgraph()
-            self.norm_linear_subgraph.update(self.linear_linear_subgraph)
+            self.dag = extract_dag(self.model, dummy_input,
+                                hook_nodes=norm_class, anti_method=self.cfg.anti_method)
+
+            self.norm_linear_subgraph = self.dag.get_norm_linear_subgraph()
+            if self.cfg.anti_method == 'm4':
+                self.linear_linear_subgraph = self.dag.get_linear_linear_subgraph()
+                self.norm_linear_subgraph.update(self.linear_linear_subgraph)
 
         del self.model
         self.model = self.org_model
@@ -256,10 +277,11 @@ class AntiOutlier(object):
         # buffer the latest tensor
         if name not in act_stats:
             act_stats[name] = {}
-            act_stats[name]['tensor'] = tensor
+            if self.cfg.arch not in _PREDEFINED_FUSIONS:
+                act_stats[name]['tensor'] = tensor
 
         hidden_dim = tensor.shape[-1]
-        tensor = tensor.view(-1, hidden_dim).detach()  # [N,C]
+        tensor = tensor.reshape(-1, hidden_dim).detach()  # [N,C]
         coming_max = torch.max(tensor, dim=0)[0]  # [C]
         coming_min = torch.min(tensor, dim=0)[0]  # [C]
 
@@ -352,8 +374,11 @@ class AntiOutlier(object):
 
         for i in tqdm(range(len(self.calib_data))):
             inputs = self.calib_data[i]
-            input_dict = self.trans_to_dict(inputs)
-            self.model(**input_dict)
+            if self.cfg.arch not in _PREDEFINED_FUSIONS:
+                input_dict = self.trans_to_dict(inputs)
+                self.model(**input_dict)
+            else:
+                self.model(**inputs)
 
         for name in act_stats:
             stat_dict = act_stats[name]
@@ -390,16 +415,16 @@ class AntiOutlier(object):
             torch.save(self.model, f)
 
     def get_num_attention_heads(self):
-        check_type(self.model.config, PretrainedConfig, param_name="model.config")
+        check_type(self.model.config, (PretrainedConfig, OrderedDict), param_name="model.config")
 
         num_attention_heads = None
-        key_attention_heads = ["num_attention_heads", "n_head"]
+        key_attention_heads = ["num_attention_heads", "n_head", "num_heads"]
         for key in key_attention_heads:
             if hasattr(self.model.config, key):
                 num_attention_heads = getattr(self.model.config, key)
         if not num_attention_heads:
             raise ValueError(
-                f"the config of model must have num_attention_heads or n_head, \
+                f"the config of model must have num_attention_heads, n_head or num_heads, \
                                 please check or moddify the config file"
             )
         return num_attention_heads
@@ -408,28 +433,37 @@ class AntiOutlier(object):
         check_type(calib_data, list, param_name='calib_data')
         for i, calib_data_item in enumerate(calib_data):
             element_not_tensor = False
-            check_type(calib_data_item, list, param_name=f'calib_data[{i}]')
-            for item in calib_data_item:
-                if not isinstance(item, torch.Tensor):
-                    element_not_tensor = True
-                    break
-            if element_not_tensor:
-                break
-                
+            check_type(calib_data_item, (list, dict), param_name=f'calib_data[{i}]')
+            if isinstance(calib_data_item, list):
+                for item in calib_data_item:
+                    if not isinstance(item, torch.Tensor):
+                        element_not_tensor = True
+                        break
+            elif isinstance(calib_data_item, dict):
+                for key, value in calib_data_item.items():
+                    if not isinstance(value, torch.Tensor):
+                        element_not_tensor = True
+                        break
         if element_not_tensor:
             self.logger.warning("Not all elements in calib_data are torch.Tensor, "
                                 "please make sure that the model can run with model(*(calib_data[0]))")
-        return calib_data
 
+        return calib_data
+    
     def _process(self):
         act_stats = self.os_stats()
         if self.cfg.anti_method == 'm4':
             num_attention_heads = self.get_num_attention_heads()
-
-        for norm_name in tqdm(self.norm_linear_subgraph.keys()):
-            norm_module = PatternProcess.get_module_by_name(self.model, norm_name)
-
-            linear_names = self.norm_linear_subgraph[norm_name]
+            fusion_kwargs = _PREDEFINED_FUSION_KWARGS[self.cfg.arch] \
+                if self.cfg.arch in _PREDEFINED_FUSION_KWARGS else {}
+        scale_min = 1e-3 if self.cfg.arch in _PREDEFINED_FUSION_KWARGS else 1e-5
+        for norm_name_group in tqdm(self.norm_linear_subgraph.keys()):
+            if  isinstance(norm_name_group, str):
+                norm_name_group = (norm_name_group,)
+            norm_module = PatternProcess.get_module_by_name(self.model, norm_name_group[0]) \
+                if len(norm_name_group) > 0 else None
+            
+            linear_names = self.norm_linear_subgraph[norm_name_group]
             linear_modules = []
             linear_name = linear_names[0]
 
@@ -445,6 +479,11 @@ class AntiOutlier(object):
             for name in linear_names:
                 mod = PatternProcess.get_module_by_name(self.model, name)
                 linear_modules.append(mod)
+            
+            if norm_module is None:
+                norm_module =  Multiplier(
+                    torch.ones_like(stats[STAT_KEY_SMOOTH_SCALE]).to(linear_modules[0].weight.device)
+                )
 
             if self.cfg.anti_method == 'm1' or self.cfg.anti_method == 'm5':
                 smooth_ln_fcs(self.cfg, norm_module, linear_modules, stats, alpha=self.cfg.alpha)
@@ -453,7 +492,14 @@ class AntiOutlier(object):
             elif self.cfg.anti_method == 'm3':
                 weight_aware(self.cfg, norm_module, linear_modules, stats)
             elif self.cfg.anti_method == 'm4':
-                iter_smooth(self.cfg, norm_module, linear_modules, stats, num_attention_heads)
-
-
-    
+                iter_smooth(
+                    self.cfg,
+                    norm_module,
+                    linear_modules,
+                    stats,
+                    num_attention_heads,
+                    scale_min=scale_min,
+                    **fusion_kwargs,
+                )
+                if isinstance(norm_module, Multiplier):
+                    attach_op(self.model, norm_module, linear_modules, linear_names)
