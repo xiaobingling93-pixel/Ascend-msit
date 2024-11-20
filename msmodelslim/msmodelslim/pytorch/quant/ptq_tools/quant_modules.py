@@ -31,7 +31,7 @@ class Quantizer(nn.Module):
                  cfg=None):
         super(Quantizer, self).__init__()
         self.register_buffer('bit', torch.tensor(1))
-        self.bit = torch.tensor(bit)
+        self.bit = torch.tensor(bit).to(cfg.device)
         self.is_signed = is_signed
         self.is_enable = is_enable
         self.is_enable_input = is_enable
@@ -82,7 +82,7 @@ class Quantizer(nn.Module):
         if cfg.act_method == 1:
             self.observer = \
                 StatMinMaxObserver(self.bit, self.is_signed,
-                                   self.is_sym)
+                                   self.is_sym, method="quantile")
         elif cfg.act_method == 2:
             self.observer = \
                 HistogramObserver(qscheme=torch.per_tensor_affine)
@@ -162,6 +162,22 @@ class Quantizer(nn.Module):
         )
         return tensor
 
+    def _forward(self, data):
+        self.input_scale,\
+        self.input_offset = linear_quantization_params(
+            self.bit, self.x_min, self.x_max, q_signed=True, sym=self.is_sym
+        )
+        return self.new_quant_tensor(data)
+
+    def _update_input_observer(self, data):
+        if self.observer is not None:
+            self.observer.update(data)
+
+    def _observer_forward(self, data):
+        if self.observer is not None:
+            self.input_scale, self.input_offset = self.observer.get_scale_offset()
+        return self.new_quant_tensor(data)
+
     def tensor_forward(self, tensor):
         if not self.is_enable:
             return tensor
@@ -174,10 +190,11 @@ class Quantizer(nn.Module):
             self.disable_quantization(self.name)
             return tensor
         with torch.no_grad():
-            if self.weight_dfree:
-                self._init_data_free_param(tensor)
-            else:
-                self._init_weight_quant_normal(tensor)
+            if not self.is_input:
+                if self.weight_dfree:
+                    self._init_data_free_param(tensor)
+                else:
+                    self._init_weight_quant_normal(tensor)
             if self.is_input:
                 if not self.act_dfree:
                     self._update_input_observer(tensor)
@@ -186,20 +203,6 @@ class Quantizer(nn.Module):
                     return self._forward(tensor)
             else:
                 return self.quant_weight_tensor
-            
-    def _forward(self, data):
-        self.input_scale,\
-        self.input_offset = linear_quantization_params(
-            self.bit, self.x_min, self.x_max, q_signed=True, sym=self.is_sym
-        )
-        return self.new_quant_tensor(data)
-
-    def _update_input_observer(self, data):
-        self.observer.update(data)
-
-    def _observer_forward(self, data):
-        self.input_scale, self.input_offset = self.observer.get_scale_offset()
-        return self.new_quant_tensor(data)
 
     def _init_weight_quant_normal(self,
                                   weight,
@@ -219,11 +222,14 @@ class Quantizer(nn.Module):
             integral_zero_point,
             admm=self.admm,
             round_opt=self.round_opt,
+            force_per_channel=True
         )
         elapsed = (time.perf_counter() - start)
         logger.info("Quantization time:%s ms", elapsed * 1000)
         self.has_init_quant_para = True
-
+    
+    def stop_calibration(self):
+        self.observer = None
 
 class TensorQuantizer(Quantizer):
     """
