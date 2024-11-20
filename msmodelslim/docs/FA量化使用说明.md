@@ -17,9 +17,9 @@
 （1）找到对应版本的modeling文件：
 
 - 方式一：从transformers库中找到modeling文件，并复制到模型权重路径下，以便后续修改：
-<br>`cp 环境路径/env/.../site-packages/transformers/models/{模型名称}/modeling_{model_type}.py {权重路径}/modeling_{model_type}_fa3.py`
+<br>`cp {transformers库路径}/models/{模型名称}/modeling_{model_type}.py {权重路径}/modeling_{model_type}_fa3.py`
 
-- 方式二：通过`pip show transformers`查询transformers的`Version`，假设为`4.43.1`，则可以去transformer库里找到对应版本的`modeling_{模型名称}.py`，以Qwen2.5-72B为例，4.43.1版本的modeling文件地址为[modeling_qwen2.py](https://github.com/huggingface/transformers/blob/v4.43.1/src/transformers/models/qwen2/modeling_qwen2.py)
+- 方式二：通过`pip show transformers`查询transformers的`Version`，假设为`4.43.1`，则可以去transformer库里找到对应版本的`modeling_{model_type}.py`，以Qwen2.5-72B为例，4.43.1版本的modeling文件地址为[modeling_qwen2.py](https://github.com/huggingface/transformers/blob/v4.43.1/src/transformers/models/qwen2/modeling_qwen2.py)
 
 - 注意：Llama3.1-70B模型需使用4.43.0及以上的modeling文件。
 - `model_type`可从config文件中查询，下附Qwen2.5-72B权重config。
