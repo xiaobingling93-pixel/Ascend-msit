@@ -86,7 +86,7 @@ def model_to_org_device_with_buffer(model, device_org='cpu'):
             continue
         if not judge_model_with_accelerate(model):
             device = model.device
-        elif hasattr(model, 'hf_device_map'):
+        elif hasattr(model, 'hf_device_map') and name in model.hf_device_map:
             device = f"npu:{model.hf_device_map[name]}" if "npu" in model.device.type else model.hf_device_map[name]
         elif hasattr(mod, 'device'):
             device = mod.device
