@@ -170,7 +170,7 @@ class FAQuantizer:
         if self.processed_types != expected_types:
             missing = expected_types - self.processed_types
             raise RuntimeError(f"Missing qkv types:{missing}. "
-                               f"Please ensure all 'q', 'k', 'v' are processed.")
+                               f"Please ensure all {expected_types} are processed.")
 
         return dequant_tensor.view(states_tensor.shape)
 
