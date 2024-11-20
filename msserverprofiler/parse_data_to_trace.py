@@ -1,11 +1,13 @@
 import sqlite3
 import json
 import os
-import pandas as pd
-from enum import Enum
-import psutil
-import datetime
+import stat
+from datetime import datetime, timezone
 import argparse
+from enum import Enum
+
+import pandas as pd
+import psutil
 
 
 class ReqStatus(Enum):
@@ -268,11 +270,14 @@ def create_trace_events(all_data_df):
 
 
 def save_trace_data_into_json(trace_data, output):
-    current_datetime = datetime.datetime.now()
+    current_datetime = datetime.now(tz=timezone.utc)
     datetime_str = current_datetime.strftime("%Y%m%d%H%M%S")
 
     file_path = os.path.join(output, f'chrome_tracing_{datetime_str}.json')
-    with open(file_path, 'w') as f:
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    mode = stat.S_IWUSR | stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
+    file_descriptor = os.open(file_path, flags, mode)
+    with os.fdopen(file_descriptor, 'w') as f:
         json.dump(trace_data, f, ensure_ascii=False, indent=2)
 
 
