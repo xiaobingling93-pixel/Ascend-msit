@@ -9,14 +9,15 @@ import functools
 from typing import OrderedDict
 from tqdm import tqdm
 from tqdm.contrib import tzip
+from collections import OrderedDict as OrderedDict_CHECK
 
 import torch
 import torch.nn as nn
 from transformers.configuration_utils import PretrainedConfig
-from collections import OrderedDict
 from accelerate.hooks import add_hook_to_module, remove_hook_from_module
 
 from msmodelslim import logger as msmodelslim_logger
+from ascend_utils.common.security import get_valid_write_path, check_type
 
 try:
     import torch_npu
@@ -39,7 +40,6 @@ from msmodelslim.pytorch.llm_ptq.anti_outlier.anti_utils import (
     attach_op,
     Multiplier,
 )
-from ascend_utils.common.security import get_valid_write_path, check_type
 
 STAT_KEY_MAX = "max"
 STAT_KEY_MIN = "min"
@@ -415,7 +415,7 @@ class AntiOutlier(object):
             torch.save(self.model, f)
 
     def get_num_attention_heads(self):
-        check_type(self.model.config, (PretrainedConfig, OrderedDict), param_name="model.config")
+        check_type(self.model.config, (PretrainedConfig, OrderedDict_CHECK), param_name="model.config")
 
         num_attention_heads = None
         key_attention_heads = ["num_attention_heads", "n_head", "num_heads"]
@@ -440,7 +440,7 @@ class AntiOutlier(object):
                         element_not_tensor = True
                         break
             elif isinstance(calib_data_item, dict):
-                for key, value in calib_data_item.items():
+                for _, value in calib_data_item.items():
                     if not isinstance(value, torch.Tensor):
                         element_not_tensor = True
                         break
