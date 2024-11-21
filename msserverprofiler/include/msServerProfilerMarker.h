@@ -22,7 +22,7 @@
 
 #include "msServerProfilerDefines.h"
 
-typedef uint64_t SpanHandle;
+using SpanHandle = uint64_t;
 
 extern "C" {
 SpanHandle StartSpan();

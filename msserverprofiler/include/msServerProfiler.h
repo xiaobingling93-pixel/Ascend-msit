@@ -23,7 +23,7 @@
 
 #include "msServerProfilerMarker.h"
 
-#define MAX_RES_STR_IZE 128
+constexpr int MAX_RES_STR_IZE = 128;
 
 namespace msServerProfiler {
 
@@ -40,30 +40,25 @@ struct ResID {
 
     static const ResID ILLEGAL_RES;
 
-    ResID(int rid) {
+    explicit ResID(int rid): type(ResType::UINT64) {
         resValue.rid = static_cast<uint64_t>(rid);
-        type = ResType::UINT64;
     }
 
-    ResID(uint32_t rid) {
+    ResID(uint32_t rid): type(ResType::UINT64) {
         resValue.rid = static_cast<uint64_t>(rid);
-        type = ResType::UINT64;
     }
 
-    ResID(uint64_t rid) {
+    ResID(uint64_t rid): type(ResType::UINT64) {
         resValue.rid = static_cast<uint64_t>(rid);
-        type = ResType::UINT64;
     }
 
-    ResID(const char *strRid) {
+    ResID(const char *strRid): type(ResType::STRING) {
         for (size_t i = 0; i < MAX_RES_STR_IZE; i++) {
             resValue.strRid[i] = strRid[i];
             if (strRid[i] == '\0') {
                 break;
             }
         }
-
-        type = ResType::STRING;
     }
     ResID(const std::string &strRid) : ResID(strRid.c_str()) {}
 
@@ -79,8 +74,8 @@ class CollectorHelper;
 template <typename T>
 class ArrayCollectorHelper {
   public:
-    typedef void (*AttrCollectCallback)(CollectorHelper *pCollector,
-                                        T pParam);
+    using AttrCollectCallback = void (*)(CollectorHelper *pCollector,
+                                         T pParam);
 };
 
 class CollectorHelper {

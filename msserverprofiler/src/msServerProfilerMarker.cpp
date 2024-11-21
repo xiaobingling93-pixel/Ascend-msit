@@ -32,8 +32,9 @@
 #include "acl/acl_prof.h"
 #include "mstx/ms_tools_ext.h"
 
-#define MAX_TX_MSG_LEN (128)
-#define MAX_DEVICE_NUM (128)
+constexpr int MAX_TX_MSG_LEN = 128;
+constexpr int MAX_DEVICE_NUM = 128;
+constexpr int STRING_TO_UINT_BASE = 10;
 #define PROF_LOGD(...)   printf(__VA_ARGS__);     printf("\n")
 #define PROF_LOGE(...)    printf(__VA_ARGS__);     printf("\n")
 SpanHandle StartSpan() { return mstxRangeStartA("", nullptr); }
@@ -115,7 +116,7 @@ static inline char *TrimCStr(char *pcStr) {
 }
 static inline unsigned long Str2Uint(const char *pcStr) {
     char *endPtr;
-    return std::strtoul(pcStr, &endPtr, 10);
+    return std::strtoul(pcStr, &endPtr, STRING_TO_UINT_BASE);
 }
 
 static inline char *SplitStr(char *pcStr, char splitChar) {
@@ -165,14 +166,14 @@ ServerProfilerManager::ServerProfilerManager() {
 void ServerProfilerManager::ReadConfig() {
     time_t now = time(nullptr);
     tm *ltm = std::localtime(&now);
-    char *pConfigPath = getenv("PROF_CONFIG_PATH");
+    std::string strConfigPath = getenv("PROF_CONFIG_PATH");
 
-    if (pConfigPath && access(pConfigPath, F_OK) == 0) {
+    if (!strConfigPath.empty() && access(pConfigPath.c_str(), F_OK) == 0) {
         std::ifstream configFile;
-        configFile.open(pConfigPath, std::ios::in);
+        configFile.open(pConfigPath.c_str(), std::ios::in);
         char lineData[256] = {0};
         while (configFile.rdstate() != std::ios_base::eofbit) {
-            configFile.getline(lineData, sizeof(lineData) - 4);
+            configFile.getline(lineData, sizeof(lineData) - 1);
             if (configFile.rdstate() & std::ios_base::eofbit) {
                 break;
             }
