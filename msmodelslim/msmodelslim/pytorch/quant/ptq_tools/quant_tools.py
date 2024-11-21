@@ -316,7 +316,6 @@ class Calibrator(object):
             safe_delete_path_if_exists(save_fp_path)
 
     def get_quant_safetensor_params(self):
-        
         quant_param_dict = {}
         fp_name_weight_list = []
         quant_name = []
