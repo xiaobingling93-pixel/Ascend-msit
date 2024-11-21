@@ -47,4 +47,40 @@ if __name__ == '__main__':
     calibrator.export_quant_onnx("resnet50", "./output", ["input.1"])  # 用来导出昇腾可部署的量化onnx模型
 
 ```
+## 多模态量化场景
+说明
+多模态量化，当前硬件限定 Atlas 800I A2 / 800T A2 / 900 A2, 当前量化已经支持但不仅限于SD3和opensora1.2。
+多模态量化场景导入代码样例：
+```
+import torch
+from diffusers import StableDiffusion3Pipeline
 
+from msmodelslim.pytorch.quant.ptq_tools import Calibrator, QuantConfig
+
+
+pipe = StableDiffusion3Pipeline.from_pretrained("/stable-diffusion-3-medium-diffusers/", torch_dtype=torch.float16).to("npu") #模型路径
+pipe.set_progress_bar_config(disable=True)
+base = pipe
+model = pipe.transformer
+
+calib_dataset = torch.load("sd3_calib_data_v3.pth", map_location="npu")
+quant_config = QuantConfig(
+    w_bit=8,
+    a_bit=8,
+    w_signed=True,
+    a_signed=True,
+    w_sym=True,
+    a_sym=False,
+    act_quant=True,
+    act_method=1,
+    quant_mode=1,
+    disable_names=None,
+    amp_num=0,
+    keep_acc=None,
+    sigma=25,
+    device="npu"
+)
+calibrator = Calibrator(model, quant_config, calib_dataset)
+calibrator.run()
+calibrator.export_quant_safetensor("/output_path/")
+```
