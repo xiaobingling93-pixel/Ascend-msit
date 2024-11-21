@@ -24,22 +24,24 @@ from components.utils.file_open_check import ms_open
 
 IS_MSACCUCMP_PATH_SET = False
 GLOBAL_TENSOR_CONVERTER = None
+MAX_DEPTH = 2
+MAX_FILE_READ_SIZE = 100 * 1024   # 100KB
 
 
-def find_npu_dump_files(root_dir, matching_files, level=0, max_level=2):
+def find_npu_dump_files(root_dir, matching_files, depth=0):
     for entry in os.listdir(root_dir):
         full_path = os.path.join(root_dir, entry)
         
         if os.path.isfile(full_path):
             matching_files.append(full_path)
         # 目录给到Graph，最大往下匹配两个子目录，且最后一层文件名是 '0'
-        elif level < max_level:
+        elif depth < MAX_DEPTH:
             if os.path.isdir(full_path):
                 sub_dir = os.path.join(full_path, '0')
                 if os.path.exists(sub_dir) and os.path.isdir(sub_dir):
-                    find_npu_dump_files(sub_dir, matching_files, level+1)
+                    find_npu_dump_files(sub_dir, matching_files, depth+1)
                 else:
-                    find_npu_dump_files(full_path, matching_files, level+1)
+                    find_npu_dump_files(full_path, matching_files, depth+1)
 
 
 class GEDumpFileReader(DumpFileReader):
@@ -53,8 +55,10 @@ class GEDumpFileReader(DumpFileReader):
 
     @staticmethod
     def get_torch_mode(json_path):
-        with open(os.path.join(json_path, 'mindie_torch_op_mapping.json')) as f:
+        with ms_open(os.path.join(json_path, 'mindie_torch_op_mapping.json'), max_size=MAX_FILE_READ_SIZE) as f:
             torch_op_map = json.load(f)
+        if not torch_op_map:
+            raise ValueError("Please check your mindie_torch_op_mapping.json file, it's empty.")
         item_keys = torch_op_map[0].keys()
         if "jit_node" in item_keys:
             return "TorchScript"
@@ -72,7 +76,7 @@ class GEDumpFileReader(DumpFileReader):
         return torch_rt_map
 
     def process_json_files(self):
-        with open(os.path.join(self.json_path, 'mindie_torch_op_mapping.json')) as f:
+        with ms_open(os.path.join(self.json_path, 'mindie_torch_op_mapping.json'), max_size=MAX_FILE_READ_SIZE) as f:
             torch_op_map = json.load(f)
 
         if self.torch_mode not in ["TorchScript", "TorchExport"]:
@@ -80,7 +84,7 @@ class GEDumpFileReader(DumpFileReader):
         
         rt_torch_map = self.get_torch_rt_mapping(torch_op_map)
 
-        with open(os.path.join(self.json_path, 'mindie_rt_op_mapping.json')) as f:
+        with ms_open(os.path.join(self.json_path, 'mindie_rt_op_mapping.json'), max_size=MAX_FILE_READ_SIZE) as f:
             op_map = json.load(f)
 
         op_map = sorted(op_map, key=lambda x: x["id"])
@@ -115,7 +119,7 @@ class GEDumpFileReader(DumpFileReader):
         if cur_fuseop in new_op_map:
             new_op_map[cur_fuseop]["fuse_path"] = fuse_path
 
-        with ms_open(os.path.join(self.json_path, 'op_map_updated.json'), mode="w") as f:
+        with ms_open(os.path.join(self.json_path, 'op_map_updated.json'), mode="w", max_size=MAX_FILE_READ_SIZE) as f:
             json.dump(new_op_map, f, indent=4)
 
     def get_tensor(self, key: str) -> torch.Tensor:
@@ -140,7 +144,7 @@ class GEDumpFileReader(DumpFileReader):
         key_to_folder = {}
         json_path = os.path.join(self.json_path, 'op_map_updated.json')
 
-        with open(json_path, 'r') as f:
+        with ms_open(json_path, max_size=MAX_FILE_READ_SIZE) as f:
             data = json.load(f)
             for fusion_op, details in data.items():
                 jit_node = details.get('jit_node', '')

@@ -19,9 +19,11 @@ from typing import Optional
 import torch 
 
 from components.debug.compare.utils.base_dump_reader import DumpFileReader
+from components.utils.file_open_check import ms_open
 from components.utils.util import safe_torch_load
 
 DELIMITER_MAP = {"TorchScript": '.', "TorchExport": '_'}
+MAX_FILE_READ_SIZE = 100 * 1024   # 100KB
 
 
 class TorchDumpFileReader(DumpFileReader):
@@ -77,14 +79,13 @@ class TorchDumpFileReader(DumpFileReader):
 
     def _extract_key_from_fx_node(self, jit_node: str) -> Optional[str]:
         # Here is an example of jit_node: "/layer1/0/relu/relu_1"
-        key_none = None
         jit_node = jit_node.split("/")
         if len(jit_node) < 3:
-            return key_none
+            return None
         jit_node = jit_node[1:-1]
         return ".".join(jit_node)
 
-    def _extrace_key(self, data, key_to_folder: dict, key_to_id: dict):
+    def _extract_key(self, data, key_to_folder: dict, key_to_id: dict):
         for fusion_op, details in data.items():
             id_ = details.get('id', float('inf'))
             jit_node = details.get('jit_node', '')
@@ -103,9 +104,9 @@ class TorchDumpFileReader(DumpFileReader):
         key_to_id = {}
         json_path = os.path.join(self.json_path, 'op_map_updated.json')
 
-        with open(json_path, 'r') as f:
+        with ms_open(json_path, max_size=MAX_FILE_READ_SIZE) as f:
             data = json.load(f)
-            self._extrace_key(data, key_to_folder, key_to_id)
+            self._extract_key(data, key_to_folder, key_to_id)
 
         key_to_folder = self._filter_keys(key_to_folder)
         self.key_to_id = key_to_id

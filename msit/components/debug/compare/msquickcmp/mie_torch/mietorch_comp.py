@@ -72,10 +72,10 @@ class MIETorchCompare:
                     logger.warning("could not find the npu_tensor which key is: %s", cpu_key)
                     continue
                 if cpu_tensor.shape == npu_tensor.shape:
-                    logger.info(f"{cpu_key} mapped.")
                     tensors[cpu_key] = (cpu_tensor, npu_tensor)
         all_rows_data = []
-        
+        logger.info(f"{len(tensors)} tensors were matched in total.")
+
         for key, (cpu_tensor, npu_tensor) in tensors.items():
             row_data = {"Key": self.cpu_reader.key_to_folder[key]}
             npu_tensor = torch.from_numpy(npu_tensor)
@@ -98,14 +98,12 @@ class MIETorchCompare:
 
             all_rows_data.append(row_data)
         
-        csv_file_path = self.save_compare_result_to_csv(all_rows_data)
-        logger.info("compare resut has been saved on %r ." %csv_file_path)
+        self.save_compare_result_to_csv(all_rows_data)
 
     
-    def save_compare_result_to_csv(self, all_rows_data: list) -> str:
+    def save_compare_result_to_csv(self, all_rows_data: list):
         if not all_rows_data:
             logger.info("No data to save.")
-            return "No data to save."
         
         sorted_rows = sorted(
             all_rows_data,
@@ -124,6 +122,6 @@ class MIETorchCompare:
             writer = csv.DictWriter(csvfile, fieldnames=sorted_rows[0].keys())
             writer.writeheader()
             writer.writerows(sorted_rows)
-
-        return csv_file_path
+        
+        logger.info("compare resut has been saved on %r ." %csv_file_path)
         
