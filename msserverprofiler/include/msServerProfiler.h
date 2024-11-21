@@ -20,6 +20,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <limits>
 
 #include "msServerProfilerMarker.h"
 
@@ -63,7 +64,7 @@ struct ResID {
     ResID(const std::string &strRid) : ResID(strRid.c_str()) {}
 
     bool IsIllegal() const {
-        return resValue.rid == (uint64_t)-1 && type == ResType::UINT64;
+        return resValue.rid == std::numeric_limits<uint64_t>::max && type == ResType::UINT64;
     }
 };
 
