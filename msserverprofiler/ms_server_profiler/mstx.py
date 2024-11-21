@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import ctypes
+import logging
 
 
 class LibserverProfiler:
@@ -22,7 +23,7 @@ class LibserverProfiler:
         try:
             self.lib = ctypes.cdll.LoadLibrary("libms_server_profiler.so")
         except Exception as ex:
-            print("libserver_profiler.so load failed.", ex)
+            logging.error("libserver_profiler.so load failed.", ex)
             self.lib = None
 
         self.func_start_span = None

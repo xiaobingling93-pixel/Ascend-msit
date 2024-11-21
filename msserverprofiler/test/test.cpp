@@ -22,10 +22,11 @@ using namespace msServerProfiler;
 
 constexpr int TEST_VALUE_1234 = 1243;
 constexpr int TEST_VALUE_67 = 67;
+constexpr int TEST_VALUE_66 = 66;
 constexpr int TEST_VALUE_56 = 56;
 constexpr int TEST_VALUE_100 = 100;
 constexpr int TEST_VALUE_0 = 0;
-constexpr int TEST_VALUE_5 = 5;
+constexpr int TEST_SPEED_5 = 5;
 
 #define TEST_SMOKE(FUNC) do { \
     try { \
@@ -39,7 +40,7 @@ constexpr int TEST_VALUE_5 = 5;
     auto startTime = Now(); \
     (FUNC)(); \
     auto du = Now() - startTime; \
-    if (du > (ms) * 1000) { \
+    if (du > ((ms) * 1000)) { \
         std::cerr << (#FUNC) << " speed FAILED. " << du / 1000.0 << " > " << (ms) << std::endl; \
     } else { \
         std::cout << (#FUNC) << du / 1000.0 << " < " << (ms) << std::endl; \
@@ -57,7 +58,7 @@ void TestSpan() {
 void TestMetric() {
     auto prof = Metric<>("test_metric_66", ResID::ILLEGAL_RES);
     std::cout << "Test Metric" << std::endl;
-    prof.Mark(66);
+    prof.Mark(TEST_VALUE_66);
 
     Metric<>::AddMetric("test_metric_67", ResID::ILLEGAL_RES, TEST_VALUE_67);
 }
@@ -109,12 +110,12 @@ int64_t Now() {
 
 
 void SpeedTest() {
-    TEST_SPEED(TestSpan, TEST_VALUE_5);
-    TEST_SPEED(TestMetric, TEST_VALUE_5);
-    TEST_SPEED(TestEvent, TEST_VALUE_5);
-    TEST_SPEED(TestLinker, TEST_VALUE_5);
-    TEST_SPEED(TestSpan100NumAttr, TEST_VALUE_5);
-    TEST_SPEED(TestSpan100ObjAttr, TEST_VALUE_5);
+    TEST_SPEED(TestSpan, TEST_SPEED_5);
+    TEST_SPEED(TestMetric, TEST_SPEED_5);
+    TEST_SPEED(TestEvent, TEST_SPEED_5);
+    TEST_SPEED(TestLinker, TEST_SPEED_5);
+    TEST_SPEED(TestSpan100NumAttr, TEST_SPEED_5);
+    TEST_SPEED(TestSpan100ObjAttr, TEST_SPEED_5);
     
 }
 
