@@ -16,6 +16,7 @@ calibrator.export_quant_safetensor(output_path, safetensors_name=None, json_name
 | output_path | 输入 | 量化后的权重及相关参数保存路径。| 必选。<br>数据类型：string。|
 | safetensors_name | 输入 | safe_tensor格式量化权重文件的名称。| 可选。<br>数据类型：string。|
 | json_name | 输入 | safe_tensor格式量化权重json描述文件的名称。| 可选。<br>数据类型：string。|
+
 safe_tensor格式的权重文件和json描述文件。safetensors权重文件包含浮点、量化权重，量化层使用的量化权重和未量化层使用的原始浮点权重。json描述文件包含模型的所有module，并标明该module的量化或浮点类型，例如 FLOAT、W8A8。在多模态量化模型导出参数时需要使用safetensors导出格式，用于后续推理。
 
 ### 调用示例
