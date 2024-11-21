@@ -37,7 +37,6 @@ class ReqStatus(Enum):
 
 
 DEFAULT_FREQ = 1000000000
-SYS_START_CNT = 0
 SYS_TS = psutil.boot_time()
 
 
@@ -53,14 +52,15 @@ def find_config_files(folder_path):
 
 
 def get_sys_start_cnt(folder_path):
+    sys_start_cnt = 0
     config_path = find_config_files(folder_path)
     with open(config_path, 'r') as f:
         for line in f.readlines():
             if "cntvct:" in line:
                 key, value = line.strip.spilt(": ")
                 if key == "cntvct":
-                    SYS_START_CNT = int(value)
-    return SYS_START_CNT
+                    sys_start_cnt = int(value)
+    return sys_start_cnt
 
 def load_data_from_database(db_path):
     conn = sqlite3.connect(db_path)
@@ -92,8 +92,8 @@ def concat_data_from_folder(folder_path):
     return full_df
 
 
-def convert_syscnt_to_ts(cnt):
-    return (SYS_TS + ((cnt - SYS_START_CNT) / DEFAULT_FREQ)) * 1000
+def convert_syscnt_to_ts(cnt, sys_start_cnt):
+    return (SYS_TS + ((cnt - sys_start_cnt) / DEFAULT_FREQ)) * 1000
 
 
 def extract_span_info_from_message(message):
@@ -189,9 +189,9 @@ def find_during_time_by_span_id(all_data_df):
     return all_data_df
 
 
-def data_convert(all_data_df):
-    all_data_df['start_time'] = convert_syscnt_to_ts(all_data_df['start_time'])
-    all_data_df['end_time'] = convert_syscnt_to_ts(all_data_df['end_time'])
+def data_convert(all_data_df, sys_start_cnt):
+    all_data_df['start_time'] = convert_syscnt_to_ts(all_data_df['start_time'], sys_start_cnt)
+    all_data_df['end_time'] = convert_syscnt_to_ts(all_data_df['end_time'], sys_start_cnt)
     all_data_df[['span_id', 'message']] = (all_data_df['message'].apply
                                            (lambda x: pd.Series(extract_span_info_from_message(x))))
     all_data_df['message'] = all_data_df['message'].apply(lambda x: convert_message_to_json(x))
@@ -316,10 +316,15 @@ def create_trace_events(all_data_df, cpu_data_df):
 def sort_trace_events_by_cat(trace_events):
     sorting_order = ['Metrics', 'Request Status', 'Execute']
 
+    def get_sorting_key(event):
+        if 'cat' in event:
+            return sorting_order.index(event['cat'])
+        else:
+            return float('inf')
+
     sort_events_by_cat = sorted(
         (event for event in trace_events if 'cat' in event),
-        key=lambda x: sorting_order.index(x['cat']) if x['cat'] in sorting_order
-        else float('inf')
+        key=get_sorting_key
     )
     event_without_cat = [event for event in trace_events if 'cat' not in event]
     sorted_trace_events = sort_events_by_cat + event_without_cat
@@ -341,6 +346,7 @@ def add_cpu_events(cpu_data_df, trace_events):
                 }
             }
         )
+    return trace_events
 
 
 def save_trace_data_into_json(trace_data, output):
@@ -391,10 +397,10 @@ def check_output_path_valid(path):
     return path
 
 
-def read_cpu_data_from_db(db_path):
+def read_cpu_data_from_db(db_path, sys_start_cnt):
     cpu_data_df = find_cpu_data_from_folder(db_path)
-    cpu_data_df['start_time'] = convert_syscnt_to_ts(cpu_data_df['start_time'])
-    cpu_data_df['end_time'] = convert_syscnt_to_ts(cpu_data_df['end_time'])
+    cpu_data_df['start_time'] = convert_syscnt_to_ts(cpu_data_df['start_time'], sys_start_cnt)
+    cpu_data_df['end_time'] = convert_syscnt_to_ts(cpu_data_df['end_time'], sys_start_cnt)
     return cpu_data_df
 
 
@@ -430,10 +436,10 @@ def load_cpu_data_from_database(db_path):
 
 def main():
     db_path, output = parse_args()
-    SYS_START_CNT = get_sys_start_cnt(db_path)
+    sys_start_cnt = get_sys_start_cnt(db_path)
     all_data_df = concat_data_from_folder(db_path)
-    cpu_data_df = read_cpu_data_from_db(db_path)
-    all_data_df = data_convert(all_data_df)
+    cpu_data_df = read_cpu_data_from_db(db_path, sys_start_cnt)
+    all_data_df = data_convert(all_data_df, sys_start_cnt)
     trace_data = create_trace_events(all_data_df, cpu_data_df)
     save_trace_data_into_json(trace_data, output)
 
