@@ -17,5 +17,5 @@
 #include "../include/msServerProfiler.h"
 
 namespace msServerProfiler {
-const ResID ResID::ILLEGAL_RES = ResID((uint64_t)-1);
+const ResID ResID::ILLEGAL_RES = ResID(static_cast<uint64_t>(-1));
 } // namespace msServerProfiler

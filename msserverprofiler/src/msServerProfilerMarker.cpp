@@ -27,10 +27,11 @@
 #include <vector>
 #include <map>
 
-#include "../include/msServerProfilerMarker.h"
 #include "acl/acl.h"
 #include "acl/acl_prof.h"
 #include "mstx/ms_tools_ext.h"
+
+#include "../include/msServerProfilerMarker.h"
 
 constexpr int MAX_TX_MSG_LEN = 128;
 constexpr int MAX_DEVICE_NUM = 128;
@@ -86,49 +87,30 @@ bool IsEnable(uint32_t level) {
 }
 
 namespace msServerProfiler {
-static inline char *TrimCStr(char *pcStr) {
-    char *pcWalk = pcStr;
-    while (pcWalk != nullptr && *pcWalk != '\0') {
-        if (std::isspace(*pcWalk)) {
-            ++pcStr;
-        } else {
-            break;
-        }
-        ++pcWalk;
-    }
-    char *endEdge = nullptr;
-    while (pcWalk != nullptr && *pcWalk != '\0') {
-        if (std::isspace(*pcWalk)) {
-            if (endEdge == nullptr) {
-                endEdge = pcWalk;
-            }
-        } else {
-            endEdge = nullptr;
-        }
-        ++pcWalk;
-    }
-
-    if (endEdge != nullptr) {
-        *endEdge = '\0';
-    }
-
-    return pcStr;
+static inline std::string TrimStr(const std::string& str) {
+    auto start = str.find_first_not_of(" \t\n\v\f\r");
+    if (start == std::string::npos) {
+        return ""
+    };
+    auto end = str.find_last_not_of(" \t\n\v\f\r");
+    return str.substr(start, end - start + 1);
 }
+
 static inline unsigned long Str2Uint(const char *pcStr) {
     char *endPtr;
     return std::strtoul(pcStr, &endPtr, STRING_TO_UINT_BASE);
 }
 
-static inline char *SplitStr(char *pcStr, char splitChar) {
-    while (pcStr != nullptr && *pcStr != '\0') {
-        if (*pcStr == splitChar) {
-            *pcStr = '\0';
-            return pcStr + 1;
-        }
-        ++pcStr;
+static inline std::pair<std::string, std::string> SplitStr(const std::string& str, char splitChar) {
+
+    auto start = str.find_first_of(splitChar);
+    if (start == std::string::npos) {
+        return {"", ""};
+    } else {
+        return {str.substr(0, start), str.substr(start)};
     }
-    return nullptr;
 }
+
 
 bool MakeDirs(const std::string &dirPath) {
     if (access(dirPath.c_str(), F_OK) == 0) {
@@ -156,7 +138,8 @@ ServerProfilerManager &ServerProfilerManager::GetInstance() {
 }
 
 ServerProfilerManager::ServerProfilerManager() {
-    profPath_.append(getenv("HOME")).append("/.ms_server_profiler/");
+    std::string homePath = getenv("HOME") ? getenv("HOME") : "";
+    profPath_.append(homePath).append("/.ms_server_profiler/");
     ReadConfig();
     if (enable_) {
         StartProfiler();
@@ -166,7 +149,7 @@ ServerProfilerManager::ServerProfilerManager() {
 void ServerProfilerManager::ReadConfig() {
     time_t now = time(nullptr);
     tm *ltm = std::localtime(&now);
-    std::string strConfigPath = getenv("PROF_CONFIG_PATH");
+    std::string strConfigPath = getenv("PROF_CONFIG_PATH") ? getenv("PROF_CONFIG_PATH") : "";
 
     if (!strConfigPath.empty() && access(pConfigPath.c_str(), F_OK) == 0) {
         std::ifstream configFile;
@@ -178,12 +161,10 @@ void ServerProfilerManager::ReadConfig() {
                 break;
             }
 
-            char *pcValue = SplitStr(lineData, '=');
-            if (pcValue == nullptr) {
-                continue;
-            }
-            std::string key(TrimCStr(lineData));
-            std::string value(TrimCStr(pcValue));
+            auto pcValue = SplitStr(lineData, '=');
+            
+            std::string key(TrimStr(kvPair.first));
+            std::string value(TrimStr(kvPair.second));
 
             ReadEnable(key, value) || ReadProfPath(key, value) ||
                 ReadLevel(key, value);

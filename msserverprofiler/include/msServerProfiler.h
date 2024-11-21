@@ -40,19 +40,19 @@ struct ResID {
 
     static const ResID ILLEGAL_RES;
 
-    explicit ResID(int rid): type(ResType::UINT64) {
+    ResID(int rid): type(ResType::UINT64) noexcept {
         resValue.rid = static_cast<uint64_t>(rid);
     }
 
-    ResID(uint32_t rid): type(ResType::UINT64) {
+    ResID(uint32_t rid): type(ResType::UINT64) noexcept {
         resValue.rid = static_cast<uint64_t>(rid);
     }
 
-    ResID(uint64_t rid): type(ResType::UINT64) {
+    ResID(uint64_t rid): type(ResType::UINT64) noexcept {
         resValue.rid = static_cast<uint64_t>(rid);
     }
 
-    ResID(const char *strRid): type(ResType::STRING) {
+    ResID(const char *strRid): type(ResType::STRING) noexcept {
         for (size_t i = 0; i < MAX_RES_STR_IZE; i++) {
             resValue.strRid[i] = strRid[i];
             if (strRid[i] == '\0') {
@@ -67,14 +67,13 @@ struct ResID {
     }
 };
 
-enum MarkType { TYPE_EVENT = 0, TYPE_METRIC = 1, TYPE_SPAN = 2, TYPE_LINK = 3 };
+enum class MarkType { TYPE_EVENT = 0, TYPE_METRIC = 1, TYPE_SPAN = 2, TYPE_LINK = 3 };
 
-class CollectorHelper;
 
-template <typename T>
+template <typename TCollector, typename T>
 class ArrayCollectorHelper {
   public:
-    using AttrCollectCallback = void (*)(CollectorHelper *pCollector,
+    using AttrCollectCallback = void (*)(TCollector *pCollector,
                                          T pParam);
 };
 
@@ -98,7 +97,7 @@ class CollectorHelper {
     template <typename T>
     void AddArrayAttr(
         const char *attrName, const T &startIter, const T &endIter,
-        typename ArrayCollectorHelper<T>::AttrCollectCallback callback) {
+        typename ArrayCollectorHelper<CollectorHelper, T>::AttrCollectCallback callback) {
 
         msg_.append("\"").append(attrName).append("\"");
         for (T iter = startIter; iter != endIter; ++iter) {
@@ -232,7 +231,7 @@ class Span : public ProfilerBase<level> {
             Start();
         }
         this->AddAttr("name", spanName);
-        this->AddAttr("type", TYPE_SPAN);
+        this->AddAttr("type", MarkType::TYPE_SPAN);
         if (!rid.IsIllegal()) {
             this->AddAttr("rid", rid);
         }
@@ -268,7 +267,7 @@ class Metric : public ProfilerBase<level> {
             return;
         }
         this->AddAttr("name", metricName);
-        this->AddAttr("type", TYPE_METRIC);
+        this->AddAttr("type", MarkType::TYPE_METRIC);
         if (!rid.IsIllegal()) {
             this->AddAttr("rid", rid);
         }
@@ -296,7 +295,7 @@ class Event : public ProfilerBase<level> {
             return;
         }
         this->AddAttr("name", eventName);
-        this->AddAttr("type", TYPE_EVENT);
+        this->AddAttr("type", MarkType::TYPE_EVENT);
         if (!rid.IsIllegal()) {
             this->AddAttr("rid", rid);
         }
@@ -318,7 +317,7 @@ class ResLink : public ProfilerBase<level> {
   public:
     void Mark(const ResID &fromRid, const ResID &toRid) {
         if (this->IsEnable(level)) {
-            this->AddAttr("type", TYPE_LINK);
+            this->AddAttr("type", MarkType::TYPE_LINK);
             this->AddAttr("from", fromRid);
             this->AddAttr("to", toRid);
             MarkEvent(this->GetMsg().c_str());
