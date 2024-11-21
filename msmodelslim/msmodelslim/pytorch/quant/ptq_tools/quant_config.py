@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
-from ascend_utils.common.security import check_type, check_int, check_element_type, check_dict_character
+from ascend_utils.common.security import check_type, check_int, check_element_type, \
+    check_dict_character
 
 # quant_mode
 # 0 : data-free
@@ -12,6 +13,7 @@ QUANT_MODE_LIST = [0, 1]
 # 1 : min-max
 # 2 : histogram
 ACT_METHOD_LIST = [0, 1, 2]
+DEVICE_LIST = ['cpu', 'npu']
 
 
 class QuantConfig:
@@ -33,6 +35,7 @@ class QuantConfig:
         amp_num=0,
         keep_acc=None,
         sigma=25,
+        device='cpu',
     ):
         # Basic setting
         self.w_bit = w_bit
@@ -52,7 +55,7 @@ class QuantConfig:
         self.disable_names = disable_names
         # number of layers for AMP fallback
         self.amp_num = amp_num
-
+        self.device = device
         # Keep accuracy control, [bool, int] or bool
         # admm is for data-free/label-free, easy_quant is for data-free
         # round_opt is for label-free
@@ -107,8 +110,9 @@ class QuantConfig:
 
         if not isinstance(self.input_shape, list):
             raise TypeError("input_shape must be list, please check it.")
-        if len(self.input_shape) != 3 and len(self.input_shape) != 4:
-            raise ValueError("input_shape must be 3D (unbatched) or 4D (batched), please check it.")
+        if len(self.input_shape) not in [0, 3, 4, 5]:
+            raise ValueError("input_shape must be empty(has calib data), 3D (unbatched), 4D (batched) or 5D "
+            "(for video Diffusion Models inputs), please check it.")
         check_element_type(self.input_shape, element_type=int, value_type=list, param_name="input_shape")
 
         if not isinstance(self.act_quant, bool):
@@ -128,3 +132,5 @@ class QuantConfig:
         if self.quant_mode not in QUANT_MODE_LIST:
             raise ValueError("quant_mode is invalid, please check it.")
 
+        if self.device not in DEVICE_LIST:
+            raise ValueError("device is invalid, please check it.")

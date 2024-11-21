@@ -3,21 +3,27 @@
 from __future__ import absolute_import, division, print_function
 import os
 import copy
-import logging
 
 import torch
 import torch.nn as nn
 import onnx
 import numpy as np
-from ascend_utils.common.security.pytorch import check_torch_module
-from ascend_utils.common.security import check_type, get_valid_write_path, get_valid_read_path, safe_delete_path_if_exists, SafeWriteUmask
+from tqdm import tqdm
+
 from ascend_utils.common import security
+from ascend_utils.common.security import check_type, get_valid_write_path, SafeWriteUmask, get_write_directory,  \
+    get_valid_read_path, safe_delete_path_if_exists, json_safe_dump
 from msmodelslim.pytorch.quant.ptq_tools.quant_modules import Quantizer, Conv2dQuantizer, LinearQuantizer
 from msmodelslim.pytorch.quant.ptq_tools.quant_deploy import quantize_model_deploy, convert_linear_params
 from msmodelslim.pytorch.quant.ptq_tools.quant_deploy import ConvertLinearParams, ModelDeployQuantParams
 from msmodelslim.pytorch.quant.ptq_tools.ptq_kia.quant_funcs import amp_decision  # squant algorithm api
+from ascend_utils.common.security.pytorch import check_torch_module
 from msmodelslim import logger
 from msmodelslim.pytorch.quant.ptq_tools import QuantConfig
+from msmodelslim.pytorch.quant.ptq_tools.quant_modules import TensorQuantizer
+
+weight_type = "W8A8"
+float_type = "FLOAT"
 
 
 class Calibrator(object):
@@ -39,6 +45,13 @@ class Calibrator(object):
             fuse_module(model)
 
         self.fp_model = copy.deepcopy(model)
+
+        self.ori_fp_weight = {}
+        for key, value in self.fp_model.state_dict().items():
+            if not isinstance(value, torch.Tensor):
+                    continue
+            self.ori_fp_weight[key] = value
+
         self.model = self.quantize(model)
         self.set_quant()
 
@@ -88,11 +101,19 @@ class Calibrator(object):
 
     def check_calib_data(self, calib_data):
         for i, calib_data_item in enumerate(calib_data):
-            check_type(calib_data_item, (list, dict), param_name=f'calib_data[{i}]')
-            for _, item in enumerate(calib_data_item):
-                if not isinstance(item, torch.Tensor):
-                    raise ValueError("Not all elements in calib_data are torch.Tensor, "
-                                     "please make sure that the model can run with model(*(calib_data[0]))")
+            check_type(calib_data_item, (list, dict, tuple), param_name=f'calib_data[{i}]')
+            if isinstance(calib_data_item, dict):
+                for _, item in enumerate(calib_data_item.values()):
+                    if not isinstance(item, torch.Tensor):
+                        raise ValueError("Not all elements in calib_data are torch.Tensor, "
+                                        "please make sure that the model can run with model(*(calib_data[0]))"
+                                         "or with model(**(calib_data[0]))")
+            else:
+                for _, item in enumerate(calib_data_item):
+                    if item is not None and not isinstance(item, (torch.Tensor, int)):
+                        raise ValueError("Not all elements in calib_data are torch.Tensor, "
+                                        "please make sure that the model can run with model(*(calib_data[0]))"
+                                         "or with model(**(calib_data[0]))")
 
     def amp(self, calib_amp=10):
         # for quantized model
@@ -274,7 +295,7 @@ class Calibrator(object):
                     logger.info("MatMul, item.name :%s, weight_name :%s ", item.name, weight_name)
 
         quantize_model_deploy_params = ModelDeployQuantParams(
-            quantized_weight_name=quantized_weight_namd, 
+            quantized_weight_name=quantized_weight_namd,
             quant_weight_dict=quant_weight,
             input_scale_dict=input_scale,
             input_offset_dict=input_offset,
@@ -294,12 +315,89 @@ class Calibrator(object):
             save_fp_path = os.path.join(save_path, "{}_fp.onnx".format(model_arch))
             safe_delete_path_if_exists(save_fp_path)
 
+    def get_quant_safetensor_params(self):
+        quant_param_dict = {}
+        fp_name_weight_list = []
+        quant_name = []
+        original_type = next(self.model.parameters()).dtype
+        deq_type = torch.int64 if original_type==torch.float16 else torch.float32
+
+        for name, module in self.model.named_modules():
+            quant_name.append(name)
+            fp_name = name.rsplit(".", 1)[0]
+            if isinstance(module, TensorQuantizer) and module.input_scale is not None:
+                quant_param_dict[fp_name + '.input_scale'] = module.input_scale.to(original_type)
+                quant_param_dict[fp_name + '.input_offset'] = module.input_offset.to(original_type)
+                input_offset= module.input_offset
+        
+            if isinstance(module, TensorQuantizer) and module.int_weight_tensor is not None:
+                quant_weight = module.int_weight_tensor
+                fp_weight_bias = self.ori_fp_weight.get(fp_name + '.bias')
+                quant_param_dict[fp_name + '.weight'] = module.int_weight_tensor.round().to(torch.int8)
+                quant_param_dict[fp_name + '.bias'] = fp_weight_bias
+                fp_name_weight_list.append(fp_name + '.weight')
+
+                if fp_name + '.input_scale' in quant_param_dict:
+                    deq_scale = (quant_param_dict[fp_name + '.input_scale']*module.weight_scale).reshape(-1)
+                    quant_param_dict[fp_name + '.deq_scale'] = deq_scale.to(deq_type)
+                    correction = quant_weight.to(torch.float32).sum(dim=1) * input_offset.to(torch.float32)
+                    quant_bias = torch.round(fp_weight_bias / deq_scale - correction).round().to(torch.int32)
+                    quant_param_dict[fp_name + '.deq_scale'] = deq_scale
+                    quant_param_dict[fp_name + '.quant_bias'] = quant_bias
+
+        quant_model_description = {key: weight_type for key in quant_param_dict.keys()}
+        quant_model_description["model_quant_type"] = weight_type
+
+        quant_model_state_dict_list = list(quant_param_dict.keys())
+        for ori_model_state_dict_name, ori_model_state_dict in self.ori_fp_weight.items():
+            if ori_model_state_dict_name not in fp_name_weight_list:
+                quant_param_dict[ori_model_state_dict_name] = ori_model_state_dict
+                quant_model_description[ori_model_state_dict_name] = float_type
+        return quant_param_dict, quant_model_description
+
+
+    def export_quant_safetensor(self, output_path, safetensors_name=None, json_name=None):
+        """
+        基于浮点、量化两份独立权重，存储完整的量化、浮点混合权重，用户仅需加载一个混合权重即可
+        """
+        from safetensors.torch import save_file
+        check_type(output_path, str, param_name="output_path")
+        output_path = get_write_directory(output_path, write_mode=0o750)
+
+        if not isinstance(safetensors_name, str):
+            default_safetensors_name = f"quant_model_weight_{weight_type.lower()}.safetensors"
+            logger.warning(f"invalid `safetensors_name`, defaulting to `{default_safetensors_name}`")
+            safetensors_name = default_safetensors_name
+        if not isinstance(json_name, str):
+            default_json_name = f"quant_model_description_{weight_type.lower()}.json"
+            logger.warning(f"invalid `json_name`, defaulting to `{default_json_name}`")
+            json_name = default_json_name
+        
+        quant_model_weight_path = os.path.join(output_path, safetensors_name)
+        quant_model_description_path = os.path.join(output_path, json_name)
+        quant_model_weight_path = get_valid_write_path(quant_model_weight_path, extensions=[".safetensors"])
+        quant_model_description_path = get_valid_write_path(quant_model_description_path, extensions=[".json"])
+        
+        safetensor_weight, quant_model_description = self.get_quant_safetensor_params()
+
+        for key, item in safetensor_weight.items():
+            safetensor_weight[key] = item.cpu().contiguous()
+        logger.info("The directory path for the saved safetensors is %s", quant_model_weight_path)
+
+        with SafeWriteUmask(umask=0o377):
+            save_file(safetensor_weight, quant_model_weight_path)
+            json_safe_dump(quant_model_description, quant_model_description_path, indent=2)
+    
+
     def _run(self, calib_amp=10):
         logger.info("Calibration start!")
         self.model.eval()
         with torch.no_grad():
-            for data in self.calib_data:
-                self.model(*data)
+            for data in tqdm(self.calib_data):
+                if isinstance(data, dict):
+                    self.model(**data)
+                else:
+                    self.model(*data)
         logger.info("Calibration end!")
 
         if self.cfg.amp_num > 0:
