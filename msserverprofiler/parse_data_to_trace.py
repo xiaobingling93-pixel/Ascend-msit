@@ -1,4 +1,4 @@
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -37,8 +37,30 @@ class ReqStatus(Enum):
 
 
 DEFAULT_FREQ = 1000000000
+SYS_START_CNT = 0
 SYS_TS = psutil.boot_time()
 
+
+def find_config_files(folder_path):
+    config_path = None
+    for root, _, files in os.walk(folder_path):
+        for filename in files:
+            if filename == 'host_start.log':
+                config_path = os.path.join(root, filename)
+    if config_path is None:
+        raise ValueError(f"No valid config files found in {folder_path}, please check.")
+    return config_path
+
+
+def get_sys_start_cnt(folder_path):
+    config_path = find_config_files(folder_path)
+    with open(config_path, 'r') as f:
+        for line in f.readlines():
+            if "cntvct:" in line:
+                key, value = line.strip.spilt(": ")
+                if key == "cntvct":
+                    SYS_START_CNT = int(value)
+    return SYS_START_CNT
 
 def load_data_from_database(db_path):
     conn = sqlite3.connect(db_path)
@@ -71,7 +93,7 @@ def concat_data_from_folder(folder_path):
 
 
 def convert_syscnt_to_ts(cnt):
-    return SYS_TS + (cnt / DEFAULT_FREQ) * 1000
+    return (SYS_TS + ((cnt - SYS_START_CNT) / DEFAULT_FREQ)) * 1000
 
 
 def extract_span_info_from_message(message):
@@ -202,7 +224,7 @@ def add_args_for_state_type(message):
     return args
 
 
-def create_trace_events(all_data_df):
+def create_trace_events(all_data_df, cpu_data_df):
     trace_events = []
 
     for idx, data in all_data_df.iterrows():
@@ -272,20 +294,53 @@ def create_trace_events(all_data_df):
         if data['name'] == 'deviceKvCache':
             trace_events.append(
                 {
-                    "name": "KvCache Value",
+                    "name": "NPU Usage",
                     "ph": "C",
                     "ts": data['start_time'],
                     "pid": data['pid'],
-                    "tid": data['name'],
+                    "tid": "NPU Usage",
                     "cat": "Metrics",
                     "args": {
-                        'KvCache Value': data['message'].get('value', None)
+                        'NPU Usage': data['message'].get('value', None)
                     }
                 }
             )
 
+    trace_events = add_cpu_events(cpu_data_df, trace_events)
+    trace_events = sort_trace_events_by_cat(trace_events)
+
     trace_data = {"traceEvents": trace_events}
     return trace_data
+
+
+def sort_trace_events_by_cat(trace_events):
+    sorting_order = ['Metrics', 'Request Status', 'Execute']
+
+    sort_events_by_cat = sorted(
+        (event for event in trace_events if 'cat' in event),
+        key=lambda x: sorting_order.index(x['cat']) if x['cat'] in sorting_order
+        else float('inf')
+    )
+    event_without_cat = [event for event in trace_events if 'cat' not in event]
+    sorted_trace_events = sort_events_by_cat + event_without_cat
+    return sorted_trace_events
+
+
+def add_cpu_events(cpu_data_df, trace_events):
+    for _, data in cpu_data_df.iterrows():
+        trace_events.append(
+            {
+                "name": "CPU Usage",
+                "ph": "C",
+                "ts": data['start_time'],
+                "pid": 1,
+                "tid": "CPU Usage",
+                "cat": "Metrics",
+                "args": {
+                    'CPU Usage': data['usage']
+                }
+            }
+        )
 
 
 def save_trace_data_into_json(trace_data, output):
@@ -336,11 +391,50 @@ def check_output_path_valid(path):
     return path
 
 
+def read_cpu_data_from_db(db_path):
+    cpu_data_df = find_cpu_data_from_folder(db_path)
+    cpu_data_df['start_time'] = convert_syscnt_to_ts(cpu_data_df['start_time'])
+    cpu_data_df['end_time'] = convert_syscnt_to_ts(cpu_data_df['end_time'])
+    return cpu_data_df
+
+
+def find_cpu_data_from_folder(folder_path):
+    cpu_data_df = pd.DataFrame()
+    for root, _, files in os.walk(folder_path):
+        for filename in files:
+            if filename == 'host_cpu_usage.db':
+                db_path = os.path.join(root, filename)
+                cpu_data_df = load_cpu_data_from_database(db_path)
+    if cpu_data_df.empty:
+        raise ValueError(f"No valid cpu database found in {folder_path}, please check.")
+    cpu_data_df = cpu_data_df.sort_values(by='start_time', ascending=True).reset_index(drop=True)
+    return cpu_data_df
+
+
+def load_cpu_data_from_database(db_path):
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+            SELECT *
+            FROM CpuUsage
+            WHERE cpu_no == 'Avg'
+        """)
+
+    cpu_data = cursor.fetchall()
+    columns = [description[0] for description in cursor.description]
+    cpu_data_df = pd.DataFrame(cpu_data, columns=columns)
+    conn.close()
+    return cpu_data_df
+
+
 def main():
     db_path, output = parse_args()
+    SYS_START_CNT = get_sys_start_cnt(db_path)
     all_data_df = concat_data_from_folder(db_path)
+    cpu_data_df = read_cpu_data_from_db(db_path)
     all_data_df = data_convert(all_data_df)
-    trace_data = create_trace_events(all_data_df)
+    trace_data = create_trace_events(all_data_df, cpu_data_df)
     save_trace_data_into_json(trace_data, output)
 
 
