@@ -1,5 +1,7 @@
 ### 一、加速库场景下W8A8量化权重的使用案例
 
+量化工具与MindIE工具关系：msmodelslim作为量化工具提供量化能力给MindIE下的加速库框架调用。
+
 1.环境的安装与配置
 请参考《[MindIE安装指南](https://www.hiascend.com/document/detail/zh/mindie/10RC3/envdeployment/instg/mindie_instg_0001.html)》安装MindIE，并参考《MindIE安装指南》中“配置MindIE > [配置MindIE LLM](https://www.hiascend.com/document/detail/zh/mindie/10RC3/envdeployment/instg/mindie_instg_0028.html)”章节配置MindIE LLM。
 
@@ -31,10 +33,11 @@
 # 进入加速库路径下
 cd ${ATB_SPEED_HOME_PATH}
 # 运行脚本生成量化权重
-bash examples/models/llama/generate_quant_weight.sh --src {浮点权重路径} --dst {W8A8量化权重保存路径} --type llama2_13b_w8a8
+bash examples/models/llama/generate_quant_weight.sh -src {浮点权重路径} -dst {W8A8量化权重保存路径} -type llama2_13b_w8a8
 
 # 以上指令展示了生成LLama2-13b-hf W8A8权重，不同模型的参数配置不同，请参考模型Readme文件。
 # W8A8量化权重的config.json中应包含quantize字段，其值为"w8a8"。
+# MindIE量化脚本除了调用msmodelslim量化工具生成权重及权重描述外，还复制了tokenizer文件以及复制并修改了config.json到量化权重保存路径中。
 ```
 
   （3）量化后权重目录结构：
@@ -90,6 +93,7 @@ safetensors中储存格式为字典，包含量化权重和量化不修改的浮
 cd ${ATB_SPEED_HOME_PATH}
 # 运行推理脚本
 bash examples/models/llama/run_pa.sh {W8A8量化权重路径} 20
+# 参数20为推理结果最大长度
 ```
 
 预期推理结果：
