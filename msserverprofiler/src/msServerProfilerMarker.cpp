@@ -107,7 +107,7 @@ static inline std::pair<std::string, std::string> SplitStr(const std::string& st
     if (start == std::string::npos) {
         return {"", ""};
     } else {
-        return {str.substr(0, start), str.substr(start)};
+        return {str.substr(0, start), str.substr(start + 1`)};
     }
 }
 
