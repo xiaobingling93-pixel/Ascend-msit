@@ -41,19 +41,19 @@ struct ResID {
 
     static const ResID ILLEGAL_RES;
 
-    ResID(int rid): type(ResType::UINT64) noexcept {
+    ResID(int rid) noexcept : type(ResType::UINT64)  {
         resValue.rid = static_cast<uint64_t>(rid);
     }
 
-    ResID(uint32_t rid): type(ResType::UINT64) noexcept {
+    ResID(uint32_t rid) noexcept : type(ResType::UINT64) {
         resValue.rid = static_cast<uint64_t>(rid);
     }
 
-    ResID(uint64_t rid): type(ResType::UINT64) noexcept {
+    ResID(uint64_t rid) noexcept : type(ResType::UINT64) {
         resValue.rid = static_cast<uint64_t>(rid);
     }
 
-    ResID(const char *strRid): type(ResType::STRING) noexcept {
+    ResID(const char *strRid) noexcept : type(ResType::STRING) {
         for (size_t i = 0; i < MAX_RES_STR_IZE; i++) {
             resValue.strRid[i] = strRid[i];
             if (strRid[i] == '\0') {
@@ -61,14 +61,14 @@ struct ResID {
             }
         }
     }
-    ResID(const std::string &strRid) : ResID(strRid.c_str()) {}
+    ResID(const std::string &strRid) noexcept : ResID(strRid.c_str()) {}
 
     bool IsIllegal() const {
-        return resValue.rid == std::numeric_limits<uint64_t>::max && type == ResType::UINT64;
+        return resValue.rid == std::numeric_limits<uint64_t>::max() && type == ResType::UINT64;
     }
 };
 
-enum class MarkType { TYPE_EVENT = 0, TYPE_METRIC = 1, TYPE_SPAN = 2, TYPE_LINK = 3 };
+enum class MarkType : uint8_t { TYPE_EVENT = 0, TYPE_METRIC = 1, TYPE_SPAN = 2, TYPE_LINK = 3 };
 
 
 template <typename TCollector, typename T>
@@ -232,7 +232,7 @@ class Span : public ProfilerBase<level> {
             Start();
         }
         this->AddAttr("name", spanName);
-        this->AddAttr("type", MarkType::TYPE_SPAN);
+        this->AddAttr("type", static_cast<uint8_t>(MarkType::TYPE_SPAN));
         if (!rid.IsIllegal()) {
             this->AddAttr("rid", rid);
         }
@@ -268,7 +268,7 @@ class Metric : public ProfilerBase<level> {
             return;
         }
         this->AddAttr("name", metricName);
-        this->AddAttr("type", MarkType::TYPE_METRIC);
+        this->AddAttr("type", static_cast<uint8_t>(MarkType::TYPE_METRIC));
         if (!rid.IsIllegal()) {
             this->AddAttr("rid", rid);
         }
@@ -296,7 +296,7 @@ class Event : public ProfilerBase<level> {
             return;
         }
         this->AddAttr("name", eventName);
-        this->AddAttr("type", MarkType::TYPE_EVENT);
+        this->AddAttr("type", static_cast<uint8_t>(MarkType::TYPE_EVENT));
         if (!rid.IsIllegal()) {
             this->AddAttr("rid", rid);
         }
@@ -318,7 +318,7 @@ class ResLink : public ProfilerBase<level> {
   public:
     void Mark(const ResID &fromRid, const ResID &toRid) {
         if (this->IsEnable(level)) {
-            this->AddAttr("type", MarkType::TYPE_LINK);
+            this->AddAttr("type", static_cast<uint8_t>(MarkType::TYPE_LINK));
             this->AddAttr("from", fromRid);
             this->AddAttr("to", toRid);
             MarkEvent(this->GetMsg().c_str());

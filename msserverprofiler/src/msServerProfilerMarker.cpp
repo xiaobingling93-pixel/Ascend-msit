@@ -90,7 +90,7 @@ namespace msServerProfiler {
 static inline std::string TrimStr(const std::string& str) {
     auto start = str.find_first_not_of(" \t\n\v\f\r");
     if (start == std::string::npos) {
-        return ""
+        return "";
     };
     auto end = str.find_last_not_of(" \t\n\v\f\r");
     return str.substr(start, end - start + 1);
@@ -151,9 +151,9 @@ void ServerProfilerManager::ReadConfig() {
     tm *ltm = std::localtime(&now);
     std::string strConfigPath = getenv("PROF_CONFIG_PATH") ? getenv("PROF_CONFIG_PATH") : "";
 
-    if (!strConfigPath.empty() && access(pConfigPath.c_str(), F_OK) == 0) {
+    if (!strConfigPath.empty() && access(strConfigPath.c_str(), F_OK) == 0) {
         std::ifstream configFile;
-        configFile.open(pConfigPath.c_str(), std::ios::in);
+        configFile.open(strConfigPath.c_str(), std::ios::in);
         char lineData[256] = {0};
         while (configFile.rdstate() != std::ios_base::eofbit) {
             configFile.getline(lineData, sizeof(lineData) - 1);
@@ -161,7 +161,7 @@ void ServerProfilerManager::ReadConfig() {
                 break;
             }
 
-            auto pcValue = SplitStr(lineData, '=');
+            auto kvPair = SplitStr(lineData, '=');
             
             std::string key(TrimStr(kvPair.first));
             std::string value(TrimStr(kvPair.second));
@@ -245,7 +245,7 @@ void ServerProfilerManager::StartProfiler() {
 
     aclError retInit = aclInit(nullptr);
     if (retInit != ACL_ERROR_NONE) {
-        PROF_LOGE("acl init failed, ret = %d", ret);
+        PROF_LOGE("acl init failed, ret = %d", retInit);
     }
 
     aclError ret = aclprofInit(profPath_.c_str(), profPath_.size());
