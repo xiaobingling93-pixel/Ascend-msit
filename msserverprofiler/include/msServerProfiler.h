@@ -83,7 +83,7 @@ class CollectorHelper {
     template <typename T>
     inline void AddNumArrayAttr(const char *attrName, const T &startIter,
                                 const T &endIter) {
-        msg_.append("\"").append(attrName).append("\"");
+        msg_.append("\"").append(attrName).append("\":[");
         for (T iter = startIter; iter != endIter; ++iter) {
             msg_.append(std::to_string(*iter)).append(",");
         }
@@ -100,7 +100,7 @@ class CollectorHelper {
         const char *attrName, const T &startIter, const T &endIter,
         typename ArrayCollectorHelper<CollectorHelper, T>::AttrCollectCallback callback) {
 
-        msg_.append("\"").append(attrName).append("\"");
+        msg_.append("\"").append(attrName).append("\":[");
         for (T iter = startIter; iter != endIter; ++iter) {
             msg_.append("{");
             callback(this, iter);
