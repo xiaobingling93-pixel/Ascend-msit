@@ -458,12 +458,14 @@ class AntiOutlier(object):
                 if self.cfg.arch in _PREDEFINED_FUSION_KWARGS else {}
         scale_min = 1e-3 if self.cfg.arch in _PREDEFINED_FUSION_KWARGS else 1e-5
         for norm_name_group in tqdm(self.norm_linear_subgraph.keys()):
-            if  isinstance(norm_name_group, str):
-                norm_name_group = (norm_name_group,)
-            norm_module = PatternProcess.get_module_by_name(self.model, norm_name_group[0]) \
-                if len(norm_name_group) > 0 else None
-            
             linear_names = self.norm_linear_subgraph[norm_name_group]
+            if  isinstance(norm_name_group, str):
+                norm_module = PatternProcess.get_module_by_name(self.model, norm_name_group)
+            elif len(norm_name_group) > 0:
+                norm_module = PatternProcess.get_module_by_name(self.model, norm_name_group[0])
+            else:
+                norm_module = None
+
             linear_modules = []
             linear_name = linear_names[0]
 
