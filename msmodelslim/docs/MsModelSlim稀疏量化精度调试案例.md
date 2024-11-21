@@ -13,7 +13,7 @@ from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
 from precision_tool.precision_tool import PrecisionTest # precision_tool用于伪量化测精度
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Lowbit sparse quant demo")
+    parser = argparse.ArgumentParser(description="Sparse quant demo")
     parser.add_argument("--model_path", type=str, default="/path/to/model", help="The path to model float weights")
     parser.add_argument("--save_path", type=str, default="./path/to/save", help="The path to save quant weights")
     parser.add_argument("--device", type=str, default="npu:0", help="The device to execute quant process")
@@ -230,4 +230,3 @@ lowbit模式（参考[稀疏模式](#稀疏模式)）下，可以通过在QuantC
 可以通过在`QuantConfig`中指定`use_sigma=True`参数启用基于高斯分布的稀疏率控制。
 
 启用后，稀疏率不在是固定的比例，而是根据待量化权重的具体分布而定。可以通过调整`QuantConfig`中的`sigma_factor`参数调整稀疏率，**sigma_factor越小则稀疏率越低，模型精度越高，反之亦然**。
-
