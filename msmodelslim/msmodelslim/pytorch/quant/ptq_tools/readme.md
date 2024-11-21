@@ -78,7 +78,7 @@ quant_config = QuantConfig(
     amp_num=0,
     keep_acc=None,
     sigma=25,
-    device="npu"
+    device="npu" #设置模型运行device
 )
 calibrator = Calibrator(model, quant_config, calib_dataset)
 calibrator.run()
