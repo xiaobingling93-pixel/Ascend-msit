@@ -41,9 +41,9 @@ constexpr int TEST_SPEED_5 = 5;
     (FUNC)(); \
     auto du = Now() - startTime; \
     if (du > ((ms) * 1000)) { \
-        std::cerr << (#FUNC) << " speed FAILED. " << du / 1000.0 << " > " << (ms) << std::endl; \
+        std::cerr << (#FUNC) << " speed FAILED. " << (du / 1000.0) << " > " << (ms) << std::endl; \
     } else { \
-        std::cout << (#FUNC) << du / 1000.0 << " < " << (ms) << std::endl; \
+        std::cout << (#FUNC) << (du / 1000.0) << " < " << (ms) << std::endl; \
     }\
 } while(0)
 
