@@ -78,12 +78,14 @@ class TorchDumpFileReader(DumpFileReader):
         return key_none
 
     def _extract_key_from_fx_node(self, jit_node: str) -> Optional[str]:
-        # Here is an example of jit_node: "/layer1/0/relu/relu_1"
+        #jit_node示例: "/layer1/0/relu/relu_1"
         jit_node = jit_node.split("/")
         if len(jit_node) < 3:
             return None
         jit_node = jit_node[1:-1]
-        return ".".join(jit_node)
+        #模型经过fxGraph->export->compile后，dump下来的downsample算子在映射表中多一个下划线后缀
+        cpu_key = ".".join(jit_node).strip('_')
+        return cpu_key
 
     def _extract_key(self, data, key_to_folder: dict, key_to_id: dict):
         for fusion_op, details in data.items():
