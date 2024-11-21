@@ -171,7 +171,7 @@ class ProfilerBase {
     template <Level levelAttr=level, typename T>
     ProfilerBase &AddArrayAttr(
         const char *attrName, const T &startIter, const T &endIter,
-        typename ArrayCollectorHelper<T>::AttrCollectCallback callback) {
+        typename ArrayCollectorHelper<CollectorHelper, T>::AttrCollectCallback callback) {
         if (IsEnable(levelAttr)) {
             collector_.AddArrayAttr(attrName, startIter, endIter, callback);
         }
