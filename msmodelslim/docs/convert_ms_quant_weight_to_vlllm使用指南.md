@@ -1,12 +1,12 @@
 
 # 背景
 
-msmodelsim权重格式与开源工具AutoAWQ以及AutoGPTQ的格式存在差异，因此本文的目的是提供一份指南，用于将msmodeslim量化后的权重转换为与如上的开源工具格式一致的权重，以实现qwen2-7b W4A16转换后的权重能直接以hugingface形式加载权重。
-其中AutoAWQ仅支持w4a16的pergroup量化。AutoGPTQ支持W4A16和W8A16的per group和per channel量化。转换流程如下：
+msmodelsim权重格式与开源工具AutoAWQ、AutoGPTQ的格式存在差异，因此本文的目的是提供一份指南，用于将msmodeslim量化后的权重转换为与如上的开源工具格式一致的权重，以实现qwen2-7b W4A16转换后的权重能直接以hugingface形式加载权重。平台：msmodelsim在npu上量化以及转换，AutoAWQ和AutoGPTQ在GPU上进行量化和推理。
+其中AutoAWQ仅支持w4a16的pergroup量化。AutoGPTQ支持W4A16和W8A16的per group和per channel量化。转换流程如下。
 
 
-# 1.npu量化以及转换
-## 1.npu量化
+# 1.msmodelsim量化以及转换
+## 1.msmodelsim量化
 量化脚本跟正常的量化脚本一样，需要注意的地方有两处：
 a.离群值抑制AntiOutlier  awq需要修改，量化方式以及anti_method="m3"，表示使用awq算法，gptq不需要离群值抑制模块，注释即可。
 ```python
@@ -54,8 +54,8 @@ perchannel和pergroup的参数配置是有差异的。
 ```
 
 
-# 2.awq量化以及推理
-开源工具相关的环境配置和代码仓库，参考github, 量化和推理参考如下的readme.md，链接如下：
+# 2.开源工具awq量化以及推理
+开源工具相关的环境配置、量化和推理参考github上的readme.md，链接如下：
     awq: https://github.com/casper-hansen/AutoAWQ
     gptq: https://github.com/AutoGPTQ/AutoGPTQ
 
@@ -130,10 +130,11 @@ for idx, item in enumerate(res):
 ```
 
 
-## 2.2gptq量化以及推理
+## 2.2开源工具gptq量化以及推理
 ms转换为gptq进行推理和awq同理。
-首先去阅读gptq的readme.md，找到量化部分的示例，修改路径，和相关配置参数，运行即可。
+首先去阅读gptq的readme.md，找到量化部分的示例，修改路径，和相关配置参数，运行即可，最后生成量化权重文件。
 
+将经过msmodelslim量化以及经过转换脚本转换后的res.safetensors文件传入GPU生成的量化权重目录，替换掉之前的量化权重文件。
 推理脚本
 ```python
 from transformers import AutoTokenizer, TextGenerationPipeline

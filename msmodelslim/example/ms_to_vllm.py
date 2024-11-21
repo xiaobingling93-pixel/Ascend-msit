@@ -1,10 +1,14 @@
 # Copyright Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
 
+
+
 import argparse
 import json
 import torch
 import numpy as np
+
 from typing import List
+
 from safetensors.torch import load_file, save_file, safe_open
 
 
@@ -36,9 +40,9 @@ def awq_pack(iweight: torch.Tensor, w_bit:4, direction: str = "column"):
 
 def apply_order(
     iweight: torch.Tensor,
-    w_bit:4,
+    w_bit: int,
     direction: str = "column",
-    order: List[int] = ORDINAL_PACK_ORDER,
+    order: List[int] = None,
 ):
     storage_bits = 32
     pack_num = storage_bits // w_bit
@@ -144,10 +148,10 @@ def load_json_info(json_file_path):
                     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", type=str, default=None)
-    parser.add_argument("--json", type=str, default=None)
+    parser.add_argument("--model", type=str, default=None， type=ArgsChecker(Rule.config_file()))
+    parser.add_argument("--json", type=str, default=None， type=ArgsChecker(Rule.config_file()))
     parser.add_argument("--save_path", type=str, default='res.safetensors', help="The path to save converted quant weights")
-    parser.add_argument("--w_bit", type=int, default=4)
+    parser.add_argument("--w_bit", type=int, default=4，type=ArgsChecker(Rule.to_int().greater_than(0)))
     parser.add_argument("--target_tool", type=str, default="awq")
     args = parser.parse_args()
 
