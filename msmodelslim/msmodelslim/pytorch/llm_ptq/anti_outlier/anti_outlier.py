@@ -37,9 +37,12 @@ from msmodelslim.pytorch.llm_ptq.anti_outlier.anti_utils import (
     smooth_ln_fcs,
     os_ln_fcs,
     weight_aware,
-    attach_op,
-    Multiplier,
 )
+
+try:
+    from msmodelslim.pytorch.llm_ptq.anti_outlier.anti_utils import attach_op, Multiplier
+except:
+    attach_op, Multiplier = None, None
 
 STAT_KEY_MAX = "max"
 STAT_KEY_MIN = "min"
@@ -481,7 +484,7 @@ class AntiOutlier(object):
                 mod = PatternProcess.get_module_by_name(self.model, name)
                 linear_modules.append(mod)
             
-            if norm_module is None:
+            if Multiplier is not None and norm_module is None:
                 norm_module =  Multiplier(
                     torch.ones_like(stats[STAT_KEY_SMOOTH_SCALE]).to(linear_modules[0].weight.device)
                 )
@@ -502,5 +505,5 @@ class AntiOutlier(object):
                     scale_min=scale_min,
                     **fusion_kwargs,
                 )
-                if isinstance(norm_module, Multiplier):
+                if attach_op is not None and Multiplier is not None and isinstance(norm_module, Multiplier):
                     attach_op(self.model, norm_module, linear_modules, linear_names)
