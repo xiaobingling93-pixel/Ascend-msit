@@ -283,8 +283,11 @@ def get_all_ops_from_fusion_op(op_name, graph_map_dict, ge_dump_data):
 
 def compare_ge_with_fx(graph_map, ge_dump_data, fx_dump_data, token_id=0):
     gathered_row_data = []
-    graph_map_dict = {graph["op"]["name"]: graph["op"] \
-                      for graph in graph_map if "op" in graph and "name" in graph["op"]}
+    graph_map_dict = {
+        graph["op"]["name"]: graph["op"]
+        for graph in graph_map
+        if "op" in graph and "name" in graph["op"]
+    }
     ge_dump_data = sort_ge_dump_data(ge_dump_data, graph_map)
     for op_name, my_path in ge_dump_data.items():
         all_ops = get_all_ops_from_fusion_op(op_name, graph_map_dict, ge_dump_data)
