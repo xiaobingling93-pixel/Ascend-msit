@@ -5,7 +5,7 @@
 
 ### 函数原型
 ```python
-QuantConfig(w_bit=8, a_bit=8, w_signed=True, a_signed=False, w_sym=True, a_sym=False, input_shape=None, act_quant=True, act_method=0, quant_mode=0, disable_names=None, amp_num=0, keep_acc=None, sigma=25)
+QuantConfig(w_bit=8, a_bit=8, w_signed=True, a_signed=False, w_sym=True, a_sym=False, input_shape=None, act_quant=True, act_method=0, quant_mode=0, disable_names=None, amp_num=0, keep_acc=None, sigma=25, device='cpu')
 ```
 
 ### 参数说明
@@ -25,8 +25,8 @@ QuantConfig(w_bit=8, a_bit=8, w_signed=True, a_signed=False, w_sym=True, a_sym=F
 | amp_num | 输入 |混合精度量化回退层数。<br>精度降低过多时，可增加回退层数，推荐优先回退3~7层，如果精度恢复不明显，再增加回退层数。| 可选。<br>数据类型：int。<br>默认为0。|
 | keep_acc | 输入 | 精度保持策略。<br>(1)admm和round_opt是用来改善权重量化，减少权重量化误差，推荐在Label-Free模式下使用，适当改善量化效果。<br>(2)easy_quant用来改善激活量化，减少激活量化误差，推荐在Label-Free模式下使用，通常能够起到较好的改善效果。| 可选。<br>数据类型：dict。<br>包含以下三种精度保持策略：<br>(1)admm策略：数据类型[bool, int]，bool配置是否开启，int配置优化迭代次数。(2)easy_quant：数据类型[bool, int]，bool配置是否开启，int配置优化迭代次数。(3)round_opt：数据类型[bool]，bool配置是否开启。<br>输入模板为：keep_acc={'admm': [False, 1000], 'easy_quant': [False, 1000], 'round_opt': False} 。|
 | sigma | 输入 |Label-Free的量化统计方法。<br>建议输入值为0或25，卷积类模型使用sigma统计效果更好，transformers类模型min-max统计效果更好。| 可选。<br>数据类型：int。<br>默认为25。<br>(1)sigma=25时，使用sigma统计方法。<br>(2)sigma=0时，使用Min-Max统计方法。|
-
-
+| sigma | 输入 |Label-Free的量化统计方法。<br>建议输入值为0或25，卷积类模型使用sigma统计效果更好，transformers类模型min-max统计效果更好。| 可选。<br>数据类型：int。<br>默认为25。<br>(1)sigma=25时，使用sigma统计方法。<br>(2)sigma=0时，使用Min-Max统计方法。|
+| device | 输入 |选择模型运行的device。| 可选。<br>可选值为["cpu", "npu"]。<br>数据类型：str。<br>默认为"cpu"。|
 ### 调用示例
 ```python
 from msmodelslim.pytorch.quant.ptq_tools import QuantConfig
