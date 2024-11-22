@@ -80,9 +80,9 @@ msit benchmark --om-model /home/model/resnet50_v1.om --output ./output --dump 1
 
     更多dump配置请参见《[CANN 开发工具指南/准备离线模型dump数据文件](https://www.hiascend.com/document/detail/zh/canncommercial/63RC1/devtools/auxiliarydevtool/atlasaccuracy_16_0030.html)》中的“精度比对工具>比对数据准备>推理场景数据准备>准备离线模型dump数据文件”章节。
 
-- 通过该方式进行profiler采集时，如果配置了环境变量`export AIT_NO_MSPROF_MODE=1`，输出的性能数据文件需要参见《[CANN 开发工具指南/数据解析与导出/导出性能数据](https://www.hiascend.com/document/detail/zh/canncommercial/80RC22/devaids/auxiliarydevtool/atlasprofiling_16_0032.html)》，将性能数据解析并导出在mindstudio_profiler_output目录下的文件。
-- 通过该方式进行profiler采集时，如果**没有**配置环境变量`AIT_NO_MSPROF_MODE=1`，benchmark会将acl.json中与profiler相关的参数解析成msprof命令，调用msprof采集性能数据，msprof输出的文件含义参考[性能数据采集（msprof命令行方式）](https://www.hiascend.com/document/detail/zh/canncommercial/63RC1/devtools/auxiliarydevtool/atlasprofiling_16_0040.html)。
-- 如果acl.json文件中同时配置了profiler和dump参数，需要要配置环境变量`export AIT_NO_MSPROF_MODE=1`保证同时采集
+- 通过该方式进行profiler采集时，如果配置了环境变量`export MSIT_NO_MSPROF_MODE=1`，输出的性能数据文件需要参见《[CANN 开发工具指南/数据解析与导出/导出性能数据](https://www.hiascend.com/document/detail/zh/canncommercial/80RC22/devaids/auxiliarydevtool/atlasprofiling_16_0032.html)》，将性能数据解析并导出在mindstudio_profiler_output目录下的文件。
+- 通过该方式进行profiler采集时，如果**没有**配置环境变量`MSIT_NO_MSPROF_MODE=1`，benchmark会将acl.json中与profiler相关的参数解析成msprof命令，调用msprof采集性能数据，msprof输出的文件含义参考[性能数据采集（msprof命令行方式）](https://www.hiascend.com/document/detail/zh/canncommercial/63RC1/devtools/auxiliarydevtool/atlasprofiling_16_0040.html)。
+- 如果acl.json文件中同时配置了profiler和dump参数，需要要配置环境变量`export MSIT_NO_MSPROF_MODE=1`保证同时采集
 
 示例命令：
   ```bash
@@ -104,9 +104,9 @@ msit benchmark --om-model /home/model/resnet50_v1.om --output ./output --dump 1
 
     - 若命令存在，则使用该命令进行性能数据采集，解析并导出文件存储在mindstudio_profiler_output目录下。
     - 若命令不存在，则msprof层面会报错，benchmark层面不检查命令内容合法性。
-    - 若环境配置了AIT_NO_MSPROF_MODE=1，则使用--profiler参数采集性能数据时调用的是benchmark构造的默认acl.json文件。
+    - 若环境配置了MSIT_NO_MSPROF_MODE=1，则使用--profiler参数采集性能数据时调用的是benchmark构造的默认acl.json文件。
 
-- msprof命令不存在或环境配置了AIT_NO_MSPROF_MODE=1情况下，采集的性能数据文件未自动解析。参考《[CANN 开发工具指南/数据解析与导出/导出性能数据](https://www.hiascend.com/document/detail/zh/canncommercial/80RC22/devaids/auxiliarydevtool/atlasprofiling_16_0032.html)》，将性能数据解析并导出在mindstudio_profiler_output目录下的文件。
+- msprof命令不存在或环境配置了MSIT_NO_MSPROF_MODE=1情况下，采集的性能数据文件未自动解析。参考《[CANN 开发工具指南/数据解析与导出/导出性能数据](https://www.hiascend.com/document/detail/zh/canncommercial/80RC22/devaids/auxiliarydevtool/atlasprofiling_16_0032.html)》，将性能数据解析并导出在mindstudio_profiler_output目录下的文件。
 - 更多性能数据采集参数介绍请参见《[CANN 开发工具指南/性能数据采集（msprof命令行方式）](https://www.hiascend.com/document/detail/zh/canncommercial/63RC1/devtools/auxiliarydevtool/atlasprofiling_16_0041.html)》。
 
 ### 2.2 `--profiler` `--dump` 和 `--acl-json-path` 混合使用说明
