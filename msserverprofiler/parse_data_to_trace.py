@@ -57,7 +57,7 @@ def get_sys_start_cnt(folder_path):
     with open(config_path, 'r') as f:
         for line in f.readlines():
             if "cntvct:" in line:
-                key, value = line.strip.spilt(": ")
+                key, value = line.strip().split(": ")
                 if key == "cntvct":
                     sys_start_cnt = int(value)
     return sys_start_cnt
@@ -294,7 +294,7 @@ def create_trace_events(all_data_df, cpu_data_df):
         if data['name'] == 'deviceKvCache':
             trace_events.append(
                 {
-                    "name": "NPU Usage",
+                    "name": "Device KV Cache Left",
                     "ph": "C",
                     "ts": data['start_time'],
                     "pid": data['pid'],

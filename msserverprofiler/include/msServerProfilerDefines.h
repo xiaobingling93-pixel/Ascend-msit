@@ -16,7 +16,7 @@
  
 #ifndef MS_SERVER_PROFILER_DEFINES_H
 #define MS_SERVER_PROFILER_DEFINES_H
-
+#define SERVER_PROFILER
 #include <cstdint>
 
 namespace msServerProfiler {
