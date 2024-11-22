@@ -43,7 +43,7 @@ try:
     from msmodelslim.pytorch.llm_ptq.anti_outlier.anti_utils import attach_op, Multiplier
 except ImportError:
     attach_op, Multiplier = None, None
-    msmodelslim_logger.warning("当前CANN版本不支持import attach_op, Multiplier")
+    msmodelslim_logger.warning("The current CANN version does not support importing the attach_op and Multiplier packages.")
 
 STAT_KEY_MAX = "max"
 STAT_KEY_MIN = "min"
