@@ -7,6 +7,7 @@ from msmodelslim import logger as msmodelslim_logger
 
 _ANTI_METHODS = ['m1', 'm2', 'm3', 'm4', 'm5']
 _SUPPORTED_DEVICES = ["cpu", "npu", 'gpu']
+_SUPPORED_ARCHS = ["SD3Transformer2DModel"]
 
 
 class AntiMethods(str, Enum):
@@ -25,7 +26,8 @@ class AntiOutlierConfig:
             anti_method="m2",
             dev_type='cpu',
             dev_id=None,
-            w_sym=True
+            w_sym=True,
+            arch=None,
     ):
         # Basic setting
         self.w_bit = w_bit
@@ -41,6 +43,7 @@ class AntiOutlierConfig:
         self.os_k = 100
         self.ch_align = True
         self.w_adjust = True
+        self.arch = arch
 
         self.device, self.dev_id = validate_device(dev_type, dev_id, _SUPPORTED_DEVICES)
         check_type(self.w_bit, int, param_name='w_bit')
@@ -53,6 +56,10 @@ class AntiOutlierConfig:
                              .format(_ANTI_METHODS))
         if self.anti_method == "m5":
             self.ch_align = False
+        
+        if self.arch is not None and self.arch not in _SUPPORED_ARCHS:
+            raise ValueError("Configuration param `arch` must be either None or in choices {}"
+                             .format(_SUPPORED_ARCHS))
 
         if self.anti_method != AntiMethods.M3 and self.w_bit != 8:
             # 如果anti_method是非m3的情况下，anti outlier只能使用再w8a8的场景下
