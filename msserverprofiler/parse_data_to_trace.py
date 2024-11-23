@@ -195,7 +195,7 @@ def data_convert(all_data_df, sys_start_cnt):
     all_data_df['message'] = all_data_df['message'].apply(lambda x: convert_message_to_json(x))
     all_data_df['type'] = all_data_df['message'].apply(lambda x: x.get("type"))
     rid_link_map = {x.get("from"): x.get("to") for x in all_data_df[all_data_df["type"] == 3]["message"]}
-    all_data_df['rid'] = all_data_df['message', 'mark_id'].apply(lambda x: extract_rid(x["message"], rid_link_map), axis=1)
+    all_data_df['rid'] = all_data_df['message'].apply(lambda x: extract_rid(x, rid_link_map))
     all_data_df['batch_type'] = all_data_df['message'].apply(lambda x: extract_batch_type(x, rid_link_map))
     all_data_df['name'] = all_data_df['message'].apply(lambda x: x.get('name', None))
     all_data_df.loc[all_data_df['name'] == 'ReqState', 'name'] = (
@@ -316,7 +316,7 @@ def sort_trace_events_by_cat(trace_events):
     event_without_cat = [event for event in trace_events if 'cat' not in event]
     
     tid_sorting_order = ['deviceKvCache', 'hostKvCache', 'httpReq', 'httpRes', 'ReqEnQueue',
-                         'ReqDeQueue', 'ReqState', 'BatchSchedule', 'modelEexc']
+                         'ReqDeQueue', 'ReqState', 'BatchSchedule', 'modelExec']
     
     main_pid = 0
     for event_info in trace_events:
