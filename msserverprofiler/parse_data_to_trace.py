@@ -96,7 +96,7 @@ def concat_data_from_folder(folder_path):
                 data_df = load_data_from_database(db_path)
                 
                 data_df[["span_id", "message"]] = (data_df[["mark_id", "message"]].apply(
-                    lambda x: pd.Series(extract_span_info_from_message(x["mark_id"], x["message"])), axis=1
+                    lambda x: pd.Series(extract_span_info_from_message(x["message"], x["mark_id"])), axis=1
                 ))
                 data_df = data_df.groupby("span_id").apply(merge_message, include_groups=True)
                 
