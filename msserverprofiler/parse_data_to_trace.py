@@ -177,14 +177,6 @@ def extract_batch_type(message, rid_map):
         return 'Decode'
 
 
-def modify_rid(rid):
-    if rid is not None:
-        if rid.startswith('endpoint_common_'):
-            rid_num = int(rid[len('endpoint_common_'):])
-            return str(rid_num - 1)
-    return rid
-
-
 def get_state_name_by_value(value):
     if value:
         return ReqStatus(value).name
@@ -193,7 +185,6 @@ def get_state_name_by_value(value):
 
 
 def find_during_time_by_span_id(all_data_df):
-    span_with_dur_time = {}
     all_data_df['during_time'] = all_data_df['end_time'] - all_data_df['start_time']
     return all_data_df
 
@@ -206,7 +197,6 @@ def data_convert(all_data_df, sys_start_cnt):
     rid_link_map = {x.get("from"): x.get("to") for x in all_data_df[all_data_df["type"] == 3]["message"]}
     all_data_df['rid'] = all_data_df['message', 'mark_id'].apply(lambda x: extract_rid(x["message"], rid_link_map), axis=1)
     all_data_df['batch_type'] = all_data_df['message'].apply(lambda x: extract_batch_type(x, rid_link_map))
-    all_data_df['rid'] = all_data_df['rid'].apply(lambda x: modify_rid(x))
     all_data_df['name'] = all_data_df['message'].apply(lambda x: x.get('name', None))
     all_data_df.loc[all_data_df['name'] == 'ReqState', 'name'] = (
         all_data_df.loc[all_data_df['name'] == 'ReqState', 'message'].apply(
@@ -325,7 +315,8 @@ def sort_trace_events_by_cat(trace_events):
     )
     event_without_cat = [event for event in trace_events if 'cat' not in event]
     
-    tid_sorting_order = ['deviceKvCache', 'hostKvCache', 'httpReq', 'httpRes', 'ReqEeQueue', 'ReqDeQueue', 'ReqState', 'BatchSchedule']
+    tid_sorting_order = ['deviceKvCache', 'hostKvCache', 'httpReq', 'httpRes', 'ReqEnQueue',
+                         'ReqDeQueue', 'ReqState', 'BatchSchedule', 'modelEexc']
     
     main_pid = 0
     for event_info in trace_events:
