@@ -230,7 +230,7 @@ def add_args_for_state_type(message):
 def create_trace_events(all_data_df, cpu_data_df):
     trace_events = []
 
-    for idx, data in all_data_df.iterrows():
+    for _, data in all_data_df.iterrows():
         if data['event_type'] == 'marker' and data['name'] is not None:
             trace_events.append(
                 {
