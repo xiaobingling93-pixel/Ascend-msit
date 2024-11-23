@@ -37,6 +37,8 @@ class ReqStatus(Enum):
 
 
 DEFAULT_FREQ = 1000000000
+FREQ_TO_100MHZ = 100 * 1000 * 1000
+NANO_SECOND = 1000 * 1000 * 1000
 SYS_TS = psutil.boot_time()
 
 
@@ -62,6 +64,7 @@ def get_sys_start_cnt(folder_path):
                     sys_start_cnt = int(value)
     return sys_start_cnt
 
+
 def load_data_from_database(db_path):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
@@ -80,11 +83,23 @@ def load_data_from_database(db_path):
 
 def concat_data_from_folder(folder_path):
     full_df = pd.DataFrame()
+    
+    def merge_message(series):
+        series_merge = series.sort_values("mark_id")
+        series_merge.iloc[0, series_merge.columns.get_loc("message")] = "".join(series_merge["message"])
+        return series_merge.iloc[0]
+    
     for root, _, files in os.walk(folder_path):
         for filename in files:
             if filename == 'msproftx.db':
                 db_path = os.path.join(root, filename)
                 data_df = load_data_from_database(db_path)
+                
+                data_df[["span_id", "message"]] = (data_df[["mark_id", "message"]].apply(
+                    lambda x: pd.Series(extract_span_info_from_message(x["mark_id"], x["message"])), axis=1
+                ))
+                data_df = data_df.groupby("span_id").apply(merge_message, inlcude_groups=True)
+                
                 full_df = pd.concat([full_df, data_df], ignore_index=True)
     if full_df.empty:
         raise ValueError(f"No valid database found in {folder_path}, please check.")
@@ -92,12 +107,20 @@ def concat_data_from_folder(folder_path):
     return full_df
 
 
+def convert_nano_to_ts(cnt):
+    return (SYS_TS + ((cnt) / NANO_SECOND)) * 1000 * 1000
+
+
+def convert_cntvct_to_ts(cnt):
+    return (SYS_TS + ((cnt) / FREQ_TO_100MHZ)) * 1000 * 1000
+
+
 def convert_syscnt_to_ts(cnt, sys_start_cnt):
     return (SYS_TS + ((cnt - sys_start_cnt) / DEFAULT_FREQ)) * 1000
 
 
-def extract_span_info_from_message(message):
-    span_id = None
+def extract_span_info_from_message(message, mark_id):
+    span_id = str(mark_id)
     if message.startswith('span') and '|' in message and '=' in message:
         span_part = message.split("|")[0]
         span_id = span_part.split("=")[1]
@@ -114,13 +137,13 @@ def convert_message_to_json(message):
         return json.loads(message)
 
 
-def extract_ids_from_reslist(message):
+def extract_ids_from_reslist(message, rid_map):
     res_list = message.get('resList', None)
     rid = []
     token_id = []
     if res_list:
         for req in res_list:
-            rid.append(req.get('rid', None))
+            rid.append(rid_map.get(req.get('rid', None), req.get('rid', None)))
             token_id.append(req.get('iter', None))
         if len(res_list) > 1:
             return ','.join(rid), ','.join(token_id)
@@ -129,20 +152,20 @@ def extract_ids_from_reslist(message):
     return res_list, res_list
 
 
-def extract_rid(message):
+def extract_rid(message, rid_map):
     rid_from_message = message.get('rid', None)
     if rid_from_message is not None:
-        return str(rid_from_message)
+        return str(rid_map.get(rid_from_message, rid_from_message))
 
-    rid_from_reslist, _ = extract_ids_from_reslist(message)
+    rid_from_reslist, _ = extract_ids_from_reslist(message, rid_map)
     if rid_from_reslist is not None:
         return rid_from_reslist
     else:
         return rid_from_message
 
 
-def extract_batch_type(message):
-    _, token_id = extract_ids_from_reslist(message)
+def extract_batch_type(message, rid_map):
+    _, token_id = extract_ids_from_reslist(message, rid_map)
     if token_id is None:
         return token_id
     token_list = token_id.split(',') if isinstance(token_id, str) else [token_id]
@@ -171,32 +194,18 @@ def get_state_name_by_value(value):
 
 def find_during_time_by_span_id(all_data_df):
     span_with_dur_time = {}
-    all_data_df['during_time'] = None
-
-    for _, data in all_data_df.iterrows():
-        if data['event_type'] == 'start/end':
-            span_with_dur_time[data['mark_id']] = {
-                'during_time': data['end_time'] - data['start_time'],
-                'start_time': data['start_time']
-            }
-
-    for idx, data in all_data_df.iterrows():
-        if data['span_id'] is not None:
-            span_id = int(data['span_id'])
-            if span_id in span_with_dur_time:
-                all_data_df.loc[idx, 'during_time'] = span_with_dur_time[span_id]['during_time']
-                all_data_df.loc[idx, 'start_time'] = span_with_dur_time[span_id]['start_time']
+    all_data_df['during_time'] = all_data_df['end_time'] - all_data_df['start_time']
     return all_data_df
 
 
 def data_convert(all_data_df, sys_start_cnt):
-    all_data_df['start_time'] = convert_syscnt_to_ts(all_data_df['start_time'], sys_start_cnt)
-    all_data_df['end_time'] = convert_syscnt_to_ts(all_data_df['end_time'], sys_start_cnt)
-    all_data_df[['span_id', 'message']] = (all_data_df['message'].apply
-                                           (lambda x: pd.Series(extract_span_info_from_message(x))))
+    all_data_df['start_time'] = convert_cntvct_to_ts(all_data_df['start_time'])
+    all_data_df['end_time'] = convert_cntvct_to_ts(all_data_df['end_time'])
     all_data_df['message'] = all_data_df['message'].apply(lambda x: convert_message_to_json(x))
-    all_data_df['rid'] = all_data_df['message'].apply(lambda x: extract_rid(x))
-    all_data_df['batch_type'] = all_data_df['message'].apply(lambda x: extract_batch_type(x))
+    all_data_df['type'] = all_data_df['message'].apply(lambda x: x.get("type"))
+    rid_link_map = {x.get("from"): x.get("to") for x in all_data_df[all_data_df["type"] == 3]["message"]}
+    all_data_df['rid'] = all_data_df['message', 'mark_id'].apply(lambda x: extract_rid(x["message"], rid_link_map), axis=1)
+    all_data_df['batch_type'] = all_data_df['message'].apply(lambda x: extract_batch_type(x, rid_link_map))
     all_data_df['rid'] = all_data_df['rid'].apply(lambda x: modify_rid(x))
     all_data_df['name'] = all_data_df['message'].apply(lambda x: x.get('name', None))
     all_data_df.loc[all_data_df['name'] == 'ReqState', 'name'] = (
@@ -216,6 +225,10 @@ def add_args_for_state_type(message):
         args['queueSize'] = message.get('size', None)
     if name == 'deviceKvCache':
         args['kvCacheValue'] = message.get('value', None)
+        args['name'] = message.get('event', None)
+    if name == 'hostKvCache':
+        args['kvCacheValue'] = message.get('value', None)
+        args['name'] = message.get('event', None)
     if name == 'ReqDeQueue':
         args['queueID'] = message.get('queue', None)
         args['queueSize'] = message.get('size', None)
@@ -228,7 +241,7 @@ def create_trace_events(all_data_df, cpu_data_df):
     trace_events = []
 
     for idx, data in all_data_df.iterrows():
-        if data['event_type'] == 'marker' and data['name'] is not None and data['span_id'] is None:
+        if data['event_type'] == 'marker' and data['name'] is not None:
             trace_events.append(
                 {
                     "name": data['name'],
@@ -240,7 +253,7 @@ def create_trace_events(all_data_df, cpu_data_df):
                     "args": {**{'rid': data['rid']}, **add_args_for_state_type(data['message'])}
                 },
             )
-        if data['span_id'] is not None:
+        if data['event_type'] == "start/end" and data['name'] is not None:
             trace_events.append(
                 {
                     "name": data['name'],
@@ -258,43 +271,27 @@ def create_trace_events(all_data_df, cpu_data_df):
                 },
             )
         if data['rid'] is not None:
-            if idx == 0:
-                trace_events.append(
-                    {
-                        "name": "flow_" + data['rid'],
-                        "ph": "s",
-                        "id": int(data['rid']),
+            rids = str(data["rid"]).split(",")
+            for rid in rids:
+                flow_event = {
+                        "name": "flow_" + rid,
+                        "id": rid,
+                        "cat": rid,
                         "pid": data['pid'],
                         "tid": data['name'],
                         "ts": data['start_time']
                     }
-                )
-            if idx > 0:
-                trace_events.append(
-                    {
-                        "name": "flow_" + data['rid'],
-                        "ph": "f",
-                        "bp": "e",
-                        "id": int(data['rid']),
-                        "pid": data['pid'],
-                        "tid": data['name'],
-                        "ts": data['start_time']
-                    }
-                )
-                trace_events.append(
-                    {
-                        "name": "flow_" + data['rid'],
-                        "ph": "s",
-                        "id": int(data['rid']),
-                        "pid": data['pid'],
-                        "tid": data['name'],
-                        "ts": data['start_time']
-                    }
-                )
-        if data['name'] == 'deviceKvCache':
+                if data["name"] == "httpReq":
+                    flow_event["ph"] = 's'
+                elif data["name"] == "httpRes":
+                    flow_event["ph"] = 'f'
+                else:
+                    flow_event["ph"] = 't'
+                trace_events.append(flow_event)
+        if data['type'] == 1:
             trace_events.append(
                 {
-                    "name": "Device KV Cache Left",
+                    "name": data["name"],
                     "ph": "C",
                     "ts": data['start_time'],
                     "pid": data['pid'],
@@ -317,7 +314,7 @@ def sort_trace_events_by_cat(trace_events):
     sorting_order = ['Metrics', 'Request Status', 'Execute']
 
     def get_sorting_key(event):
-        if 'cat' in event:
+        if 'cat' in event and event["cat"] in sorting_order:
             return sorting_order.index(event['cat'])
         else:
             return float('inf')
@@ -327,7 +324,22 @@ def sort_trace_events_by_cat(trace_events):
         key=get_sorting_key
     )
     event_without_cat = [event for event in trace_events if 'cat' not in event]
-    sorted_trace_events = sort_events_by_cat + event_without_cat
+    
+    tid_sorting_order = ['deviceKvCache', 'hostKvCache', 'httpReq', 'httpRes', 'ReqEeQueue', 'ReqDeQueue', 'ReqState', 'BatchSchedule']
+    
+    main_pid = 0
+    for event_info in trace_events:
+        if event_info.get("name") in tid_sorting_order:
+            main_pid = event_info.get("pid")
+            break
+    tid_sorting_meta = [dict(
+        name="thread_sort_index",
+        ph="M",
+        pid=main_pid,
+        tid=tid,
+        args=dict(sort_index=index)) for index, tid in enumerate(tid_sorting_order)]
+        
+    sorted_trace_events = sort_events_by_cat + event_without_cat + tid_sorting_meta
     return sorted_trace_events
 
 
@@ -373,7 +385,7 @@ def parse_args():
         type=check_output_path_valid,
         default=os.getcwd(),
         help='Output file path to save results.')
-    
+
     args = parser.parse_args()
     return args.db_path, args.output
 
@@ -399,8 +411,8 @@ def check_output_path_valid(path):
 
 def read_cpu_data_from_db(db_path, sys_start_cnt):
     cpu_data_df = find_cpu_data_from_folder(db_path)
-    cpu_data_df['start_time'] = convert_syscnt_to_ts(cpu_data_df['start_time'], sys_start_cnt)
-    cpu_data_df['end_time'] = convert_syscnt_to_ts(cpu_data_df['end_time'], sys_start_cnt)
+    cpu_data_df['start_time'] = convert_nano_to_ts(cpu_data_df['start_time'])
+    cpu_data_df['end_time'] = convert_nano_to_ts(cpu_data_df['end_time'])
     return cpu_data_df
 
 
