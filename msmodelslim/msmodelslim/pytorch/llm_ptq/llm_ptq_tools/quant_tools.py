@@ -238,16 +238,11 @@ class Calibrator(object):
             v_name = 'v_proj'
 
             # 更新key极值
-            kv_cache_value = kv_cache.get(name, 'Not exist')
-            if kv_cache_value == 'Not exist':
-                pass
-            else:
-                # 更新key极值
-                update_extremum(kv_cache[name], k_name, 'max', torch.max, key_max)
-                update_extremum(kv_cache[name], k_name, 'min', torch.min, key_min)
-                # 更新value极值
-                update_extremum(kv_cache[name], v_name, 'max', torch.max, value_max)
-                update_extremum(kv_cache[name], v_name, 'min', torch.min, value_min)
+            update_extremum(kv_cache[name], k_name, 'max', torch.max, key_max)
+            update_extremum(kv_cache[name], k_name, 'min', torch.min, key_min)
+            # 更新value极值
+            update_extremum(kv_cache[name], v_name, 'max', torch.max, value_max)
+            update_extremum(kv_cache[name], v_name, 'min', torch.min, value_min)
 
         def update_extremum(kv_cache, name, key, torch_function, value):
             if name not in kv_cache:
