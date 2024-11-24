@@ -19,6 +19,7 @@ import os.path
 from components.utils.file_open_check import ms_open
 from msquickcmp.common import utils
 
+
 class DumpConfig:
     def __init__(
         self,

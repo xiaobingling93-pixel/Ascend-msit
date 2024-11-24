@@ -165,7 +165,7 @@ def dump_tensor(feat, feat_path, module_name, dump_type):
         if not feat_path.endswith(".pth"):
             feat_path += ".pth"
         torch.save(feat, feat_path)
-        if dump_config.analyze == True:
+        if dump_config.analyze is True:
             from msit_llm.dump.torch_dump.dump_analyze import dump_analyze
             dump_analyze(feat, feat_path, module_name, dump_type, dump_config.dump_path)
     else:
