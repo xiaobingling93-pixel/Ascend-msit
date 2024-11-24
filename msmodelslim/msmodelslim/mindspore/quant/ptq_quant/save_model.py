@@ -10,6 +10,7 @@ from ascend_utils.common.security.mindspore import check_mindspore_cell
 from ascend_utils.common.security.mindspore import check_mindspore_input
 from msmodelslim import logger
 
+
 def save_model(file_name, quantized_model, *input_data, file_format='AIR'):
     """
     Save the quantized model in the specified file format.

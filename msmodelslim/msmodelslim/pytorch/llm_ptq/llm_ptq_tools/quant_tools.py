@@ -16,7 +16,6 @@ from safetensors.torch import save_file
 
 from accelerate.hooks import add_hook_to_module, remove_hook_from_module
 
-from msmodelslim import logger as msmodelslim_logger
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config import QuantConfig
 from ascend_utils.common.security import (get_valid_write_path, SafeWriteUmask, check_element_type,
                                           check_type, check_dict_element, get_write_directory, check_number, check_int)
@@ -64,6 +63,7 @@ from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.fa_quant import (
 from msmodelslim.pytorch.llm_ptq.anti_outlier.dag_utils.torch_dag_adapter import TorchDAGAdapter
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.simulate_tp import ParallelLinearCol
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.save_utils import save_file_partial
+from msmodelslim import logger as msmodelslim_logger
 
 HF_HOOK = "_hf_hook"
 
@@ -238,11 +238,16 @@ class Calibrator(object):
             v_name = 'v_proj'
 
             # 更新key极值
-            update_extremum(kv_cache[name], k_name, 'max', torch.max, key_max)
-            update_extremum(kv_cache[name], k_name, 'min', torch.min, key_min)
-            # 更新value极值
-            update_extremum(kv_cache[name], v_name, 'max', torch.max, value_max)
-            update_extremum(kv_cache[name], v_name, 'min', torch.min, value_min)
+            kv_cache_value = kv_cache.get(name, 'Not exist')
+            if kv_cache_value == 'Not exist':
+                pass
+            else:
+                # 更新key极值
+                update_extremum(kv_cache[name], k_name, 'max', torch.max, key_max)
+                update_extremum(kv_cache[name], k_name, 'min', torch.min, key_min)
+                # 更新value极值
+                update_extremum(kv_cache[name], v_name, 'max', torch.max, value_max)
+                update_extremum(kv_cache[name], v_name, 'min', torch.min, value_min)
 
         def update_extremum(kv_cache, name, key, torch_function, value):
             if name not in kv_cache:
@@ -792,7 +797,8 @@ class Calibrator(object):
         states_num_per_layer = 3
         model_attention_layer_num = len(qkv_states_record.keys()) // states_num_per_layer
         if model_attention_layer_num < self.cfg.fa_amp:
-            self.logger.warning("`fa_amp` exceeds the total attention layer number. Therefore, only up to the total attention layers will skip quantization")
+            self.logger.warning("`fa_amp` exceeds the total attention layer number. Therefore, "
+                                "only up to the total attention layers will skip quantization")
         disabled_module_names = fully_analyze_activation(qkv_states_record, self.cfg.fa_amp)
         self.logger.info('The following attention layers will continue to use floating-point weights for forward computation:\n\t'
                          + '\n\t'.join([str(name) for name in sorted(disabled_module_names)]))

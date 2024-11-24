@@ -6,10 +6,10 @@ import torch
 from torch import Tensor
 from torch.functional import F
 
-from msmodelslim import logger
 from ascend_utils.common.utils import CallParams
 from ascend_utils.core.dag.dag_node import DagNode
 from ascend_utils.pytorch.dag.dag_torch_hook import DagTorchHook
+from msmodelslim import logger
 
 
 class WidthScaleNetwork:
@@ -58,23 +58,6 @@ class WidthScaleNetwork:
                              f" graph to be prune, and some are not.")
         else:
             return False
-
-    @staticmethod
-    def _dfs_search_till_node_with_weight(start_node_set, mode="out") -> Set[DagNode]:
-        list_nodes = list(start_node_set)
-        seen_node_set = set()
-        while list_nodes:
-            cur_node = list_nodes.pop()
-            if hasattr(cur_node.node, "weight"):
-                continue
-
-            next_nodes = cur_node.output_nodes if mode == "out" else cur_node.input_nodes
-            for node in next_nodes:
-                if node in start_node_set or node in seen_node_set:
-                    continue
-                list_nodes.append(node)
-                seen_node_set.add(node)
-        return seen_node_set
 
     @staticmethod
     def get_node_in_out_channel_count(dag_node) -> Tuple[int, int, int]:
@@ -128,6 +111,23 @@ class WidthScaleNetwork:
         new_weight = weight[:target_shape[0]] if num_dims == 1 else weight[:target_shape[0], :target_shape[1]]
         return new_weight.clone()
 
+    @staticmethod
+    def _dfs_search_till_node_with_weight(start_node_set, mode="out") -> Set[DagNode]:
+        list_nodes = list(start_node_set)
+        seen_node_set = set()
+        while list_nodes:
+            cur_node = list_nodes.pop()
+            if hasattr(cur_node.node, "weight"):
+                continue
+
+            next_nodes = cur_node.output_nodes if mode == "out" else cur_node.input_nodes
+            for node in next_nodes:
+                if node in start_node_set or node in seen_node_set:
+                    continue
+                list_nodes.append(node)
+                seen_node_set.add(node)
+        return seen_node_set
+    
     @classmethod
     def prune_node(cls, dag_node, in_chn, out_chn, groups):
         if hasattr(dag_node.node, "num_features"):
