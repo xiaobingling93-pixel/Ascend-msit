@@ -13,10 +13,10 @@ MindStudio ModelSlim，昇腾模型压缩工具。 【Powered by MindStudio】
 
 [Attention量化使用说明](docs/FA量化使用说明.md)
 <br>[w8a8精度调优策略](docs/w8a8精度调优策略.md)
-<br>[w8a16精度调优策略](docs/w8a16精度调优策略.md)
-<br>[稀疏量化](docs/稀疏量化精度调试案例.md)
-<br>[量化使用案例](msmodelslim/pytorch/llm_ptq/量化及稀疏量化场景导入代码样例.md)
-<br>[convert_ms_quant_weight_to_vlllm使用指南](docs/convert_ms_quant_weight_to_vlllm使用指南.md)
+<br>[w8a16&w4a16精度调优策略精度调优策略](docs/w8a16&w4a16精度调优策略.md)
+<br>[稀疏量化精度调试案例](docs/稀疏量化精度调试案例.md)
+<br>[量化及稀疏量化场景导入代码样例](msmodelslim/pytorch/llm_ptq/量化及稀疏量化场景导入代码样例.md)
+<br>[msModelSlim量化权重转AutoAWQ&AutoGPTQ使用指南](docs/msModelSlim量化权重转AutoAWQ&AutoGPTQ使用指南.md)
 
 ## 使用说明
 
