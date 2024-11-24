@@ -75,7 +75,7 @@ def check_file_size_based_on_ext(path, ext=None):
         if size > TENSOR_MAX_SIZE:
             confirmation_prompt = "The file %r is larger than expected. " \
                                 "Attempting to read such a file could potentially impact system performance.\n" \
-                                "Please confirm your awareness of the risks associated with this action ([y]/n): " % path
+                                "Please confirm your awareness of the risks associated with this action (y/n): " % path
             return confirmation_interaction(confirmation_prompt)
 
     return True

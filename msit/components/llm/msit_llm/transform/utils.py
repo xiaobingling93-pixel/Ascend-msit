@@ -32,6 +32,8 @@ from components.utils.check.rule import Rule
 
 _SCENARIOS = ["torch_to_float_atb", "float_atb_to_quant_atb", "torch_to_float_python_atb"]
 SCENARIOS = namedtuple("SCENARIOS", _SCENARIOS)(*_SCENARIOS)
+SOC_VERSION = (100, 101, 102, 103, 104, 200, 201, 202, 203)
+
 
 @dataclass
 class NPUSocInfo:
@@ -40,7 +42,6 @@ class NPUSocInfo:
     need_nz: bool = False
 
     def __post_init__(self):
-        SOC_VERSION = (100, 101, 102, 103, 104, 200, 201, 202, 203)
         self.soc_version = torch_npu._C._npu_get_soc_version()
         if self.soc_version in SOC_VERSION:
             self.need_nz = True

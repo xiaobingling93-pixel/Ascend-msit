@@ -1,4 +1,4 @@
-## cexport_param
+## export_param
 
 ### 功能说明 
 用于将Conv2dQuantizer, LinearQuantizer的输入和权重的量化参数保存为npy文件，该量化参数用于后续推理。包括量化输入尺度 (input scale)、量化输入偏移量(input offset)、量化权重尺度(weight_scale)、量化权重偏移量(weight_offset) 以及量化权重 (quant weight)。
