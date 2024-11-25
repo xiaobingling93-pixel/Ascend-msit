@@ -88,4 +88,4 @@ dump功能可以直接通过msit命令行形式启动精度对比。启动方式
 | [04_specify_input_shape_info](../../../examples/cli/debug/dump/04_specify_input_shape_info) | 指定模型输入的shape信息(动态场景必须进行指定)。 |
 | [05_caffe_model](../../../examples/cli/debug/dump/05_caffe_model)                           | 模型为Caffe框架的dump           |
 | [06_saved_model](../../../examples/cli/debug/dump/06_saved_model)                           | 模型为tensorflow2.6框架下的 saved_model dump          |
-| [07_mindie_torch_compare](/msit/examples/cli/debug/compare/16_mindie_torch_compare)                            | MindIE-Torch场景-整网算子精度对比场景                        |
+| [07_mindie_torch_dump](../../../examples/cli/debug/dump/07_mindie_torch_dump)          | MindIE-Torch场景-整网算子数据dump            |
