@@ -6,11 +6,6 @@
   pip3 install aclruntime-{version}-{python_version}-linux_{arch}.whl
   pip3 install ais_bench-{version}-py3-none-any.whl
   ```
-  或使用源码安装，其中 `--force-reinstall` 指定强制覆盖安装
-  ```sh
-  pip3 install -v 'git+https://gitee.com/ascend/tools.git#egg=aclruntime&subdirectory=ais-bench_workload/tool/ais_bench/backend' --force-reinstall
-  pip3 install -v 'git+https://gitee.com/ascend/tools.git#egg=ais_bench&subdirectory=ais-bench_workload/tool/ais_bench' --force-reinstall
-  ```
   分别提示如下信息则表示安装成功：
   ```sh
   # 成功安装aclruntime
