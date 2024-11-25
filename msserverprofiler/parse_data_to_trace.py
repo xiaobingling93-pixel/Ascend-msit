@@ -181,19 +181,22 @@ def extract_batch_type(message, rid_map):
     if token_id is None:
         return token_id
     token_list = token_id.split(',') if isinstance(token_id, str) else [token_id]
-    if len(token_list) == 1 and token_list[0] == '0':
+    if all(token == '0' for token in token_list):
         return 'Prefill'
-    elif '0' in token_list:
+    elif '0' in token_list and len(set(token_list)) > 1:
         return 'Prefill, Decode'
     else:
         return 'Decode'
 
 
 def get_state_name_by_value(value):
-    if value:
-        return ReqStatus(value).name
+    if value is not None:
+        try:
+            return ReqStatus(value).name
+        except ValueError:
+            return str(value)
     else:
-        return value
+        raise ValueError("Failed to get ReqState since new_value is None.")
 
 
 def find_during_time_by_span_id(all_data_df):
