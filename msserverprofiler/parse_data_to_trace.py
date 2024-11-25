@@ -59,7 +59,7 @@ def get_start_cnt(folder_path):
     cpu_start_cnt = 0
     config_path, _ = find_config_files(folder_path)
     with open(config_path, 'r') as f:
-        for line in f.readlines():
+        for line in f:
             if "cntvct:" in line:
                 sys_start_cnt = int(line.strip().split(": ")[1])
             elif "clock_monotonic_raw:" in line:
@@ -74,7 +74,7 @@ def get_default_freq(folder_path):
     _, info_path = find_config_files(folder_path)
     file_description = os.open(info_path, os.O_RDONLY)
     with os.fdopen(file_description, 'r') as info:
-        data = json.loads(info)
+        data = json.load(info)
         if 'CPU' not in data or not isinstance(data['CPU'], list) or len(data['CPU']) == 0:
             raise ValueError(f"Invalid or missing 'CPU' data in {info_path}.")
         cpu_data = data['CPU'][0]
