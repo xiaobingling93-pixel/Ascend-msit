@@ -4,9 +4,9 @@
 
 ### 前提条件
 
-前提条件参考[[大模型量化的前提条件](https://gitee.com/ascend/msit/blob/master/msmodelslim/msmodelslim/pytorch/llm_ptq/README.md#%E5%89%8D%E6%8F%90%E6%9D%A1%E4%BB%B6)]
+前提条件参考[大模型量化的前提条件](/msmodelslim/msmodelslim/pytorch/llm_ptq/README.md#前提条件)
 
-说明：仅Atlas 800I A2和Atlas 800I A3推理产品支持fa3量化功能。
+说明：仅Atlas 800I A2推理产品支持fa3量化功能。
 
 ### 功能实现流程
 
@@ -169,6 +169,8 @@ from ...utils import (
     logging,
     replace_return_docstrings,
 )
+# 以qwen模型为例 
+from .configuration_qwen2 import Qwen2Config
 """
 # 修改后的导入方式
 from transformers.activations import ACT2FN
@@ -192,6 +194,8 @@ from transformers.utils import (
     logging,
     replace_return_docstrings,
 )
+# 以qwen模型为例 
+from transformers.models.qwen2.configuration_qwen2 import Qwen2Config
 ```
 
 （4）对config文件进行修改来指定模型加载时所使用的modeling文件。其一般形式为：
@@ -238,39 +242,27 @@ from transformers.utils import (
 ```bash
 
 ├── config.json
-
 ├── modeling_qwen2.py
-
 ├── generation_config.json
-
 ├── merges.txt
-
 ├── model-00001-of-00004.safetensors
-
 ├── model-00002-of-00004.safetensors
-
 ├── model-00003-of-00004.safetensors
-
 ├── model-00004-of-00004.safetensors
-
 ├── model.safetensors.index.json
-
 ├── README.md
-
 ├── tokenizer_config.json.py
-
 ├── tokenizer.json
-
 ├── vocab.json
 
 ```
 
-2. 新建模型的量化脚本quant.py，编辑quant.py文件，根据实际的量化场景导入样例代码，参考加粗字体信息提示，并根据实际情况进行修改。
+2. 新建模型的量化脚本quant.py，编辑quant.py文件，根据实际的量化场景导入[样例代码](#量化脚本npu)，参考注释，并根据实际情况进行修改。
 
-注：fa3量化目前仅支持W8A8 per_channel量化场景和lowbit算法，W8A8 per_channel量化场景导入的样例见下文FA3精度调优处，lowbit算法的代码样例请参考w8a8量化场景。
+注：fa3量化目前仅支持W8A8 per_channel量化场景和lowbit算法，W8A8 per_channel量化场景导入的样例见下文[FA3精度调优处](#fa3精度调优)，lowbit算法的代码样例请参考[w8a8_lowbit量化场景](/msmodelslim/msmodelslim/pytorch/llm_ptq/量化及稀疏量化场景导入代码样例.md#w8a8_lowbit算法量化场景)。
 
 
-3. 启动模型量化任务，并在指定的输出目录获取模型量化参数，量化后权重文件的介绍请参见量化后权重文件，若使用MindIE进行后续的推理部署任务，请保存为safetensors格式，具体请参见MindIE的“加速库支持模型列表”章节中已适配量化的模型。
+3. 启动模型量化任务，并在指定的输出目录获取模型量化参数，量化后权重文件的介绍请参见[量化后权重文件](#量化后权重文件)，若使用MindIE进行后续的推理部署任务，请保存为safetensors格式，具体请参见[大语言模型列表](https://www.hiascend.com/document/detail/zh/mindie/10RC3/whatismindie/mindie_what_0003.html)章节中已适配量化的模型。
 
 ```python
 python3 quant.py
@@ -285,19 +277,12 @@ python3 quant.py
 ```bash
 
 ├── anti_fp_norm.npy  #Qwen模型已启用离群抑制功能，具体操作请参见使用离群值抑制功能，将会生成此文件。antioutlier算法生成浮点权重中的norm层权重文件，用于量化层的input和post norm的权重适配
-
 ├── deq_scale.npy    #W8A8量化的量化参数权重文件，Tensor数据类型为int64，deq_scale已针对量化算子进行数据类型转换，可直接适配算子。在量化BF16模型情况下，数据类型不会转换为int64，仍然为float32
-
 ├── fa_quant_offset.npy    #fa3量化的激活值量化偏移值参数文件，Tensor数据类型为bfoat16或float16
-
 ├── fa_quant_scale.npy   #fa3量化的激活值量化缩放因子参数文件，Tensor数据类型为bfoat16或float16
-
 ├── input_offset.npy  #W8A8量化的激活值量化偏移值权重文件，Tensor数据类型为float32
-
 ├── input_scale.npy   #W8A8量化的激活值量化缩放因子权重文件，Tensor数据类型为float32
-
 ├── quant_bias.npy   #W8A8量化的量化参数权重文件，Tensor数据类型为int32，quant_bias已考虑原始浮点模型linear层的bias值
-
 ├── quant_weight.npy  #量化权重文件，Tensor数据类型为int8
 
 ```
@@ -472,7 +457,7 @@ precision_test = PrecisionTest(model, tokenizer, "boolq", batch_size, "npu")
 precision_test.test()
 ```
 
-#### 本文仅给出FA3场景下Llama3.1-70B和Qwen2.5-72B的量化推荐配置，可按实际情况进行参数调整，详见[精度调优策略](https://gitee.com/ascend/msit/tree/dev/msmodelslim/docs/w8a8精度调优策略.md) 。
+#### 本文仅给出FA3场景下Llama3.1-70B和Qwen2.5-72B的量化推荐配置，可按实际情况进行参数调整，详见[精度调优策略](/msmodelslim/docs/w8a8精度调优策略.md) 。
 
 #### Llama3.1-70B 量化参数设置
 
