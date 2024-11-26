@@ -1,0 +1,42 @@
+import torch
+from accelerate.utils import OffloadedWeightsLoader
+
+HF_HOOK = '_hf_hook'
+WEIGHTS_MAP = 'weights_map'
+OLD_HOOK = 'old_hook'
+DEVICE_CPU = 'cpu'
+
+
+def judge_model_with_accelerate(model: torch.nn.Module) -> bool:
+    """
+
+    """
+    for _, mod in model.named_modules():
+        if judge_module_with_accelerate(mod):
+            return True
+    return False
+
+
+def judge_module_with_accelerate(module: torch.nn.Module) -> bool:
+    """
+
+    """
+    return hasattr(module, HF_HOOK)
+
+
+def get_offloaded_dataset(model: torch.nn.Module) -> OffloadedWeightsLoader | None:
+    """
+    if accelerate is on and offload to disk, return dataset, else return None
+    """
+
+    for _, mod in model.named_modules():
+        if judge_module_with_accelerate(mod):
+            hook = getattr(mod, HF_HOOK)
+            if hasattr(hook, OLD_HOOK):
+                hook = hook.old_hook
+            if hasattr(hook, WEIGHTS_MAP) \
+                    and getattr(hook, WEIGHTS_MAP) is not None \
+                    and isinstance(getattr(hook, WEIGHTS_MAP).dataset, OffloadedWeightsLoader) \
+                    and getattr(hook, WEIGHTS_MAP).dataset.save_folder:
+                return getattr(hook, WEIGHTS_MAP).dataset
+    return None
