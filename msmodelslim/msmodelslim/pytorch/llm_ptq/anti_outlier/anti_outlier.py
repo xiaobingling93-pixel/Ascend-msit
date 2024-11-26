@@ -44,7 +44,7 @@ try:
 except ImportError:
     attach_op, Multiplier = None, None
     msmodelslim_logger.warning(
-    "The current CANN version does not support importing the attach_op and Multiplier packages."
+        "The current CANN version does not support importing the attach_op and Multiplier packages."
     )
 
 STAT_KEY_MAX = "max"
