@@ -6,6 +6,10 @@
 
 准备已经使用msprof进行初步解析的性能数据，确认存在数据文件`${your_file}/PROF_XXXX/host/sqlite/msproftx.db`，并且数据库中存在名为`MsprofTxEx`的表。
 
+确认存在CPU数据文件`${your_file}/PROF_XXXX/host/sqlite/host_cpu_usage.db`，并且数据库中存在名为`CpuUsage`的表。
+
+确认`${your_file}/PROF_XXXX`路径下存在配置文件`host_start.log`和`info.json`。
+
 如果是刚刚采集的数据。建议使用 `msprof --export=on --output=PROF_XXXX` 先预处理一下
 
 

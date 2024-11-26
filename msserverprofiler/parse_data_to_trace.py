@@ -36,33 +36,52 @@ class ReqStatus(Enum):
     PREFILL_HOLD = 8
 
 
-DEFAULT_FREQ = 1000000000
-FREQ_TO_100MHZ = 100 * 1000 * 1000
-NANO_SECOND = 1000 * 1000 * 1000
+cpu_frequency = None
 SYS_TS = psutil.boot_time()
 
 
 def find_config_files(folder_path):
     config_path = None
+    info_path = None
     for root, _, files in os.walk(folder_path):
         for filename in files:
             if filename == 'host_start.log':
                 config_path = os.path.join(root, filename)
-    if config_path is None:
-        raise ValueError(f"No valid config files found in {folder_path}, please check.")
-    return config_path
+            if filename == 'info.json':
+                info_path = os.path.join(root, filename)
+    if config_path is None or info_path is None:
+        raise ValueError(f"Failed to get 'host_start.log' or 'info.json' from {folder_path}, please check.")
+    return config_path, info_path
 
 
-def get_sys_start_cnt(folder_path):
+def get_start_cnt(folder_path):
     sys_start_cnt = 0
-    config_path = find_config_files(folder_path)
+    cpu_start_cnt = 0
+    config_path, _ = find_config_files(folder_path)
     with open(config_path, 'r') as f:
-        for line in f.readlines():
+        for line in f:
             if "cntvct:" in line:
-                key, value = line.strip().split(": ")
-                if key == "cntvct":
-                    sys_start_cnt = int(value)
-    return sys_start_cnt
+                sys_start_cnt = int(line.strip().split(": ")[1])
+            elif "clock_monotonic_raw:" in line:
+                cpu_start_cnt = int(line.strip().split(": ")[1])
+    if sys_start_cnt == 0 or cpu_start_cnt == 0:
+        raise ValueError(f"Failed to find 'cntvct' or 'clock_monotonic_raw' in {config_path}, please check.")
+    return sys_start_cnt, cpu_start_cnt
+
+
+def get_default_freq(folder_path):
+    global cpu_frequency
+    _, info_path = find_config_files(folder_path)
+    file_description = os.open(info_path, os.O_RDONLY)
+    with os.fdopen(file_description, 'r') as info:
+        data = json.load(info)
+        if 'CPU' not in data or not isinstance(data['CPU'], list) or len(data['CPU']) == 0:
+            raise ValueError(f"Invalid or missing 'CPU' data in {info_path}.")
+        cpu_data = data['CPU'][0]
+        cpu_frequency = cpu_data.get('Frequency', None)
+        if cpu_frequency is None:
+            raise KeyError(f"Missing 'Frequency' value in 'CPU' data.")
+        cpu_frequency = float(cpu_frequency) * 1000 * 1000
 
 
 def load_data_from_database(db_path):
@@ -98,7 +117,7 @@ def concat_data_from_folder(folder_path):
                 data_df[["span_id", "message"]] = (data_df[["mark_id", "message"]].apply(
                     lambda x: pd.Series(extract_span_info_from_message(x["message"], x["mark_id"])), axis=1
                 ))
-                data_df = data_df.groupby("span_id").apply(merge_message, include_groups=True)
+                data_df = data_df.groupby("span_id").apply(merge_message, include_groups=False)
                 
                 full_df = pd.concat([full_df, data_df], ignore_index=True)
     if full_df.empty:
@@ -107,16 +126,9 @@ def concat_data_from_folder(folder_path):
     return full_df
 
 
-def convert_nano_to_ts(cnt):
-    return (SYS_TS + ((cnt) / NANO_SECOND)) * 1000 * 1000
-
-
-def convert_cntvct_to_ts(cnt):
-    return (SYS_TS + ((cnt) / FREQ_TO_100MHZ)) * 1000 * 1000
-
-
-def convert_syscnt_to_ts(cnt, sys_start_cnt):
-    return (SYS_TS + ((cnt - sys_start_cnt) / DEFAULT_FREQ)) * 1000
+def convert_syscnt_to_ts(cnt, start_cnt):
+    global cpu_frequency
+    return (SYS_TS + ((cnt - start_cnt) / cpu_frequency)) * 1000
 
 
 def extract_span_info_from_message(message, mark_id):
@@ -169,19 +181,22 @@ def extract_batch_type(message, rid_map):
     if token_id is None:
         return token_id
     token_list = token_id.split(',') if isinstance(token_id, str) else [token_id]
-    if len(token_list) == 1 and token_list[0] == '0':
+    if all(token == '0' for token in token_list):
         return 'Prefill'
-    elif '0' in token_list:
+    elif '0' in token_list and len(set(token_list)) > 1:
         return 'Prefill, Decode'
     else:
         return 'Decode'
 
 
 def get_state_name_by_value(value):
-    if value:
-        return ReqStatus(value).name
+    if value is not None:
+        try:
+            return ReqStatus(value).name
+        except ValueError:
+            return str(value)
     else:
-        return value
+        raise ValueError("Failed to get ReqState since new_value is None.")
 
 
 def find_during_time_by_span_id(all_data_df):
@@ -190,8 +205,8 @@ def find_during_time_by_span_id(all_data_df):
 
 
 def data_convert(all_data_df, sys_start_cnt):
-    all_data_df['start_time'] = convert_cntvct_to_ts(all_data_df['start_time'])
-    all_data_df['end_time'] = convert_cntvct_to_ts(all_data_df['end_time'])
+    all_data_df['start_time'] = convert_syscnt_to_ts(all_data_df['start_time'], sys_start_cnt)
+    all_data_df['end_time'] = convert_syscnt_to_ts(all_data_df['end_time'], sys_start_cnt)
     all_data_df['message'] = all_data_df['message'].apply(lambda x: convert_message_to_json(x))
     all_data_df['type'] = all_data_df['message'].apply(lambda x: x.get("type"))
     rid_link_map = {x.get("from"): x.get("to") for x in all_data_df[all_data_df["type"] == 3]["message"]}
@@ -275,6 +290,7 @@ def create_trace_events(all_data_df, cpu_data_df):
                     flow_event["ph"] = 's'
                 elif data["name"] == "httpRes":
                     flow_event["ph"] = 'f'
+                    flow_event["bp"] = 'e'
                 else:
                     flow_event["ph"] = 't'
                 trace_events.append(flow_event)
@@ -400,10 +416,10 @@ def check_output_path_valid(path):
     return path
 
 
-def read_cpu_data_from_db(db_path, sys_start_cnt):
+def read_cpu_data_from_db(db_path, cpu_start_cnt):
     cpu_data_df = find_cpu_data_from_folder(db_path)
-    cpu_data_df['start_time'] = convert_nano_to_ts(cpu_data_df['start_time'])
-    cpu_data_df['end_time'] = convert_nano_to_ts(cpu_data_df['end_time'])
+    cpu_data_df['start_time'] = convert_syscnt_to_ts(cpu_data_df['start_time'], cpu_start_cnt)
+    cpu_data_df['end_time'] = convert_syscnt_to_ts(cpu_data_df['end_time'], cpu_start_cnt)
     return cpu_data_df
 
 
@@ -439,9 +455,10 @@ def load_cpu_data_from_database(db_path):
 
 def main():
     db_path, output = parse_args()
-    sys_start_cnt = get_sys_start_cnt(db_path)
+    sys_start_cnt, cpu_start_cnt = get_start_cnt(db_path)
+    get_default_freq(db_path)
     all_data_df = concat_data_from_folder(db_path)
-    cpu_data_df = read_cpu_data_from_db(db_path, sys_start_cnt)
+    cpu_data_df = read_cpu_data_from_db(db_path, cpu_start_cnt)
     all_data_df = data_convert(all_data_df, sys_start_cnt)
     trace_data = create_trace_events(all_data_df, cpu_data_df)
     save_trace_data_into_json(trace_data, output)
