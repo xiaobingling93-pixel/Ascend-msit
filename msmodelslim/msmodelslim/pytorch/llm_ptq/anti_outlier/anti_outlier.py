@@ -6,18 +6,21 @@ import gc
 import stat
 import copy
 import functools
-from typing import OrderedDict
+from typing import OrderedDict, Mapping
 from collections import OrderedDict as OrderedDict_CHECK
 
 from tqdm import tqdm
 from tqdm.contrib import tzip
+
 import torch
 import torch.nn as nn
 from transformers.configuration_utils import PretrainedConfig
 from accelerate.hooks import add_hook_to_module, remove_hook_from_module
 
+from ascend_utils import ResListToRelease
 from ascend_utils.common.security import get_valid_write_path, check_type
 from msmodelslim import logger as msmodelslim_logger
+from msmodelslim.pytorch.llm_ptq.accelerate_adapter.switch import enabled_adapter
 
 try:
     import torch_npu
@@ -47,6 +50,8 @@ except ImportError:
         "The current CANN version does not support importing the attach_op and Multiplier packages."
     )
 
+from msmodelslim.pytorch.llm_ptq.accelerate_adapter import *
+
 STAT_KEY_MAX = "max"
 STAT_KEY_MIN = "min"
 STAT_KEY_SHIFT = "shift"
@@ -58,17 +63,20 @@ STAT_KEY_VARIANCE = "std"
 
 _PREDEFINED_FUSIONS = {
     "SD3Transformer2DModel":
-    {
-        tuple(): ("context_embedder",)
-    }
+        {
+            tuple(): ("context_embedder",)
+        }
 }
 
 _PREDEFINED_FUSION_KWARGS = {
     "SD3Transformer2DModel":
-    {
-        "check_group_fusions": False
-    }
+        {
+            "check_group_fusions": False
+        }
 }
+
+STATE_DICT_COPY_DIR = "copy"
+
 
 def judge_model_with_accelerate(model: nn.Module):
     for _, mod in model.named_modules():
@@ -149,15 +157,45 @@ def replace_rms_norm(model: nn.Module, norm_class_name: str):
         if module.__class__.__name__.lower() == 'layernorm':
             pass
         elif norm_class_name != 'layernorm' and module.__class__.__name__.lower() == norm_class_name.lower():
-            new_module = NormBias(module)
-
-            if hasattr(module, '_hf_hook'):
-                module._hf_hook.weights_map = None
-                new_module.old_hook = module._hf_hook
+            if enabled_adapter():
+                with PrepareWeight(module):
+                    new_module = NormBias(module)
+                    new_module.to(module.weight.data.device)
+                    move_update_weight_hook_if_need(module, new_module, as_submodule=True)
+                    GraphOpt.set_module(model, name, new_module)
             else:
-                new_module.to(module.weight.data.device)
+                new_module = NormBias(module)
 
-            GraphOpt.set_module(model, name, new_module)
+                if hasattr(module, '_hf_hook'):
+                    module._hf_hook.weights_map = None
+                    new_module.old_hook = module._hf_hook
+                else:
+                    new_module.to(module.weight.data.device)
+
+                GraphOpt.set_module(model, name, new_module)
+
+
+def copy_state_dict(model: torch.nn.Module, typ: str = 'disk') -> Mapping:
+    if check_model_compatible(model):
+        if typ == 'disk':
+            dataset = get_offloaded_dataset(model)
+            if dataset is None:
+                # 如果没有加载到 disk，则保持一致，保存 state_dict 到 cpu
+                config = MemoryStateDictConfig()
+            else:
+                # 否则在现有的 offload 路径下新建 copy 文件夹，然后保存到里面
+                save_folder = os.path.join(dataset.save_folder, STATE_DICT_COPY_DIR)
+                config = DiskStateDictConfig().save_folder(save_folder)
+        elif typ == 'cpu':
+            config = MemoryStateDictConfig()
+        else:
+            raise ValueError("state dict type must be disk or memory")
+        return copy_offloaded_state_dict(model, config)
+
+    states_dic = {}
+    for key, value in model.state_dict().items():
+        states_dic[key] = copy.deepcopy(value).to('cpu')
+    return states_dic
 
 
 class AntiOutlier(object):
@@ -183,12 +221,16 @@ class AntiOutlier(object):
         self.cfg = cfg
         self.device = self.cfg.device
 
+        # 开启低显存低内存模式
+        if self.cfg.is_adapter_enabled:
+            enable_adapter()
+
         if self.cfg.device == "cpu":
             same_device = self.cfg.device == model.device.type
         else:
             same_device = self.cfg.device == model.device
 
-        if not same_device:
+        if not check_model_compatible(model) and not same_device:
             self.logger.warning("Model is not on the deivce indicated in `AntiOutlierConfig`, "
                                 "Model is on the device `{}` while `AntiOutlierConfig` "
                                 "indicates `{}`".format(model.device, self.cfg.device))
@@ -197,13 +239,15 @@ class AntiOutlier(object):
             self.logger.info("Transfer done. Suggest to check model and calib_data (if provided) on the "
                              "device that `AntiOutlierConfig` indicates.")
 
+        replace_device_align_hook_if_needed(model)
+
         self.norm_class_name = norm_class_name
-        self.org_model = model
+        if not enabled_adapter():
+            self.org_model = model
 
         # 保存anti_outlier处理前的原始权重，为避免显存的额外占用，原始权重放在内存上
-        states_dic = {}
-        for key, value in self.org_model.state_dict().items():
-            states_dic[key] = copy.deepcopy(value).to('cpu')
+        states_dic = {} if enabled_adapter() and self.cfg.anti_method == 'm4' else copy_state_dict(model,
+                                                                                                   self.cfg.offload_type)
 
         try:
             self.model_with_accelerate = judge_model_with_accelerate(model)
@@ -214,7 +258,7 @@ class AntiOutlier(object):
         else:
             self.device_org = None
 
-        if model.device.type != 'cpu':
+        if not enabled_adapter() and model.device.type != 'cpu':
             self.model = deepcopy_model(model,
                                         self.logger,
                                         device_org=self.device_org,
@@ -228,7 +272,7 @@ class AntiOutlier(object):
             calib_data = []
         else:
             self.calib_data = calib_data
-            
+
         arch_fusions = _PREDEFINED_FUSIONS[self.cfg.arch] if self.cfg.arch in _PREDEFINED_FUSIONS else None
 
         try:
@@ -237,7 +281,8 @@ class AntiOutlier(object):
             raise Exception("Please check your config, model and input!", e) from e
 
         # 保存anti_outlier处理前的原始权重，作为属性存入model中
-        setattr(self.model, 'ori_state_dict', states_dic)
+        if not enabled_adapter():
+            setattr(self.model, 'ori_state_dict', states_dic)
 
     def init_dag(self, predefined_fusions=None):
         if predefined_fusions is not None:
@@ -256,16 +301,29 @@ class AntiOutlier(object):
                 norm_class = [norm_class[0]]
                 self.norm_class_name = norm_class[0].__name__.lower()
 
-            self.dag = extract_dag(self.model, dummy_input,
-                                hook_nodes=norm_class, anti_method=self.cfg.anti_method)
+            if not enabled_adapter():
+                self.dag = extract_dag(self.model, dummy_input,
+                                       hook_nodes=norm_class, anti_method=self.cfg.anti_method)
 
-            self.norm_linear_subgraph = self.dag.get_norm_linear_subgraph()
-            if self.cfg.anti_method == 'm4':
-                self.linear_linear_subgraph = self.dag.get_linear_linear_subgraph()
-                self.norm_linear_subgraph.update(self.linear_linear_subgraph)
+                self.norm_linear_subgraph = self.dag.get_norm_linear_subgraph()
+                if self.cfg.anti_method == 'm4':
+                    self.linear_linear_subgraph = self.dag.get_linear_linear_subgraph()
+                    self.norm_linear_subgraph.update(self.linear_linear_subgraph)
 
-        del self.model
-        self.model = self.org_model
+            else:
+                # 不要保存为成员变量，内部会引用模型以及模型的子模块，导致这些模块的参数正常无法释放
+                dag = extract_dag(self.model, dummy_input,
+                                  hook_nodes=norm_class, anti_method=self.cfg.anti_method)
+                self.norm_linear_subgraph = dag.get_norm_linear_subgraph()
+                if self.cfg.anti_method == 'm4':
+                    self.linear_linear_subgraph = dag.get_linear_linear_subgraph()
+                    self.norm_linear_subgraph.update(self.linear_linear_subgraph)
+                del dag
+
+        if not enabled_adapter():
+            del self.model
+            self.model = self.org_model
+
         replace_rms_norm(self.model, self.norm_class_name)
         gc.collect()
         return
@@ -454,7 +512,7 @@ class AntiOutlier(object):
                                 "please make sure that the model can run with model(*(calib_data[0]))")
 
         return calib_data
-    
+
     def _process(self):
         act_stats = self.os_stats()
         if self.cfg.anti_method == 'm4':
@@ -464,7 +522,7 @@ class AntiOutlier(object):
         scale_min = 1e-3 if self.cfg.arch in _PREDEFINED_FUSION_KWARGS else 1e-5
         for norm_name_group in tqdm(self.norm_linear_subgraph.keys()):
             linear_names = self.norm_linear_subgraph[norm_name_group]
-            if  isinstance(norm_name_group, str):
+            if isinstance(norm_name_group, str):
                 norm_module = PatternProcess.get_module_by_name(self.model, norm_name_group)
             elif len(norm_name_group) > 0:
                 norm_module = PatternProcess.get_module_by_name(self.model, norm_name_group[0])
@@ -486,27 +544,31 @@ class AntiOutlier(object):
             for name in linear_names:
                 mod = PatternProcess.get_module_by_name(self.model, name)
                 linear_modules.append(mod)
-            
+
             if Multiplier is not None and norm_module is None:
                 norm_module =  Multiplier(
                     torch.ones_like(stats[STAT_KEY_SMOOTH_SCALE]).to(linear_modules[0].weight.device)
                 )
 
-            if self.cfg.anti_method == 'm1' or self.cfg.anti_method == 'm5':
-                smooth_ln_fcs(self.cfg, norm_module, linear_modules, stats, alpha=self.cfg.alpha)
-            elif self.cfg.anti_method == 'm2':
-                os_ln_fcs(self.cfg, norm_module, linear_modules, stats, os_k=self.cfg.os_k)
-            elif self.cfg.anti_method == 'm3':
-                weight_aware(self.cfg, norm_module, linear_modules, stats)
-            elif self.cfg.anti_method == 'm4':
-                iter_smooth(
-                    self.cfg,
-                    norm_module,
-                    linear_modules,
-                    stats,
-                    num_attention_heads,
-                    scale_min=scale_min,
-                    **fusion_kwargs,
-                )
-                if attach_op is not None and Multiplier is not None and isinstance(norm_module, Multiplier):
-                    attach_op(self.model, norm_module, linear_modules, linear_names)
+            prepare_list = [PrepareWeight(norm_module, post_force=True, post_recurse=True)]
+            prepare_list += [PrepareWeight(mod, post_force=True) for mod in linear_modules]
+
+            with ResListToRelease(*prepare_list):
+                if self.cfg.anti_method == 'm1' or self.cfg.anti_method == 'm5':
+                    smooth_ln_fcs(self.cfg, norm_module, linear_modules, stats, alpha=self.cfg.alpha)
+                elif self.cfg.anti_method == 'm2':
+                    os_ln_fcs(self.cfg, norm_module, linear_modules, stats, os_k=self.cfg.os_k)
+                elif self.cfg.anti_method == 'm3':
+                    weight_aware(self.cfg, norm_module, linear_modules, stats)
+                elif self.cfg.anti_method == 'm4':
+                    iter_smooth(
+                        self.cfg,
+                        norm_module,
+                        linear_modules,
+                        stats,
+                        num_attention_heads,
+                        scale_min=scale_min,
+                        **fusion_kwargs,
+                    )
+                    if attach_op is not None and Multiplier is not None and isinstance(norm_module, Multiplier):
+                        attach_op(self.model, norm_module, linear_modules, linear_names)

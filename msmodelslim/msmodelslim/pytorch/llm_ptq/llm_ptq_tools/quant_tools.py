@@ -14,17 +14,18 @@ import numpy as np
 import torch.nn as nn
 from safetensors.torch import save_file
 
-from accelerate.hooks import add_hook_to_module, remove_hook_from_module
-
+from ascend_utils.common.security.type import check_mapping_element
 from msmodelslim import logger as msmodelslim_logger
+from msmodelslim.pytorch.llm_ptq.accelerate_adapter import enable_adapter, check_model_compatible, \
+    get_offloaded_dataset, MemoryStateDictConfig, DiskStateDictConfig, copy_offloaded_state_dict
+from msmodelslim.pytorch.llm_ptq.accelerate_adapter.lazy_handler import LazyTensor, handle_lazy_tensor
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config import QuantConfig
 from ascend_utils.common.security import (get_valid_write_path, SafeWriteUmask, check_element_type,
-                                          check_type, check_dict_element, get_write_directory, check_number, check_int)
+                                          check_type, get_write_directory, check_number, check_int)
 from msmodelslim.pytorch.llm_ptq.anti_outlier.graph_utils import (
     NormBias, extract_dag, input_to_cpu, norm_class_detect, class_detect
 )
 # KIA part
-from msmodelslim.pytorch.llm_ptq.anti_outlier.anti_outlier import deepcopy_model
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_modules import (
     Quantizer, LinearQuantizer, LinearNf4Quantizer, layer_wise_calib
 )
@@ -65,7 +66,10 @@ from msmodelslim.pytorch.llm_ptq.anti_outlier.dag_utils.torch_dag_adapter import
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.simulate_tp import ParallelLinearCol
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.save_utils import save_file_partial
 
+from msmodelslim.pytorch.llm_ptq.accelerate_adapter.hook_adapter import *
+
 HF_HOOK = "_hf_hook"
+STATE_DICT_COPY_DIR = "copy"
 
 
 class Calibrator(object):
@@ -88,6 +92,13 @@ class Calibrator(object):
         self.use_kvcache_quant = cfg.use_kvcache_quant
         self.norm_class_name = cfg.norm_class_name
 
+        if not (hasattr(self.cfg, "is_adapter_enabled") and self.cfg.is_adapter_enabled) and enabled_adapter():
+            raise ValueError("low memory mode is on, must keep on")
+
+        if hasattr(self.cfg, "is_adapter_enabled") and self.cfg.is_adapter_enabled:
+            enable_adapter()
+
+
         if model.dtype != model.config.torch_dtype:
             self.logger.warning(f'The model dtype {model.dtype} is not consistent with the model.config.torch_dtype '
                                 f'{model.config.torch_dtype}. The model will be regarded as {model.config.torch_dtype}'
@@ -98,7 +109,8 @@ class Calibrator(object):
         self.quantized_module_param_dict = defaultdict(list)
         self.fa_module_param_dict = defaultdict(list)
 
-        self.init_model_accelerate(model)
+        replace_device_align_hook_if_needed(model)
+
         # 初始化dag类
         self.dag = self.extract_dag(model)
         # 初始化kvcache类
@@ -108,19 +120,18 @@ class Calibrator(object):
             self.attention_class = class_detect(model, 'attention')
             self.transformer_class = class_detect(model, 'GLMTransformer')
 
-        # 记录浮点模型权重
-        self.ori_fp_weight = self.get_ori_model_weight(model)
+
 
         if self.cfg.do_smooth:
             replace_RMSNorm(model)
-        
+
         if not hasattr(self.cfg, 'use_fa_quant'):
             self.cfg.use_fa_quant = False
             self.cfg.fa_tp_size = 1
             self.cfg.fa_amp = 0
 
         # 初始化模型权重json描述
-        self.quant_model_json_description = QuantModelJsonDescription(self.cfg.model_quant_type, 
+        self.quant_model_json_description = QuantModelJsonDescription(self.cfg.model_quant_type,
                                                                       self.cfg.use_kvcache_quant,
                                                                       self.cfg.use_fa_quant)
         if not re.match(r'^L((?!0)\d+|0)$', disable_level):
@@ -130,8 +141,13 @@ class Calibrator(object):
         model = self.init_model_device(model)
         self.last_layer_name = None
         self.rollback_names = None
+        self.quant_linear_names = None
         self.act_states = None
         self.rollback_names_process(model)
+
+        # 记录浮点模型权重
+        self.ori_fp_weight = self.get_ori_model_weight(model, self.cfg)
+
         if self.cfg.use_fa_quant:
             configure_fa(model, tp_size=self.cfg.fa_tp_size)
 
@@ -149,22 +165,12 @@ class Calibrator(object):
             raise Exception("Please check the model and configuration.", e) from e
         self.logger.info("Quantizer initialized successful!")
 
-    def init_model_accelerate(self, model):
-        try:
-            self.model_with_accelerate = judge_model_with_accelerate(model)
-        except Exception as e:
-            raise Exception("Please check the model and configuration.", e) from e
-        if not self.model_with_accelerate:
-            self.device_org = next(model.parameters()).device
-        else:
-            self.device_org = None
-
     def init_model_device(self, model):
         if self.cfg.device == "cpu":
             same_device = self.cfg.device == model.device.type
         else:
             same_device = self.cfg.device == model.device
-        if not same_device:
+        if not enabled_adapter() and not same_device:
             self.logger.warning("Model is not on the deivce indicated in `QuantConfig`, "
                                 "Model is on the device `{}` while `QuantConfig` "
                                 "indicates `{}`".format(model.device, self.cfg.device))
@@ -183,19 +189,41 @@ class Calibrator(object):
             return True
         return False
 
-    def get_ori_model_weight(self, model):
+    def get_ori_model_weight(self, model: torch.nn.Module, cfg: QuantConfig):
         if hasattr(model, 'ori_state_dict'):
             ori_fp_weight = getattr(model, 'ori_state_dict')
         else:
-            ori_fp_weight = {}
-            for key, value in model.state_dict().items():
-                if not isinstance(value, torch.Tensor):
-                    self.logger.warning("The original float weight[{key}]is not torch.Tensor, "
-                                        "it won't be saved, may raise error.")
-                    continue
-                ori_fp_weight[key] = value.cpu()
-        check_dict_element(ori_fp_weight, value_type=torch.Tensor, param_name='ori_fp_weight',
-                           additional_msg="Failed to get original float weight, please check the model.")
+            ori_fp_weight = self.copy_ori_model_weight(model, cfg)
+        check_mapping_element(ori_fp_weight, value_type=torch.Tensor, param_name='ori_fp_weight',
+                              additional_msg="Failed to get original float weight, please check the model.")
+        return ori_fp_weight
+
+    def copy_ori_model_weight(self, model: torch.nn.Module, cfg: QuantConfig) -> Mapping:
+        if check_model_compatible(model):
+            typ = cfg.offload_type or 'disk'
+            if typ == 'disk':
+                dataset = get_offloaded_dataset(model)
+                if dataset is None:
+                    # 如果没有加载到 disk，则保持一致，保存 state_dict 到 cpu
+                    config = MemoryStateDictConfig()
+                else:
+                    # 否则在现有的 offload 路径下新建 copy 文件夹，然后保存到里面
+                    save_folder = os.path.join(dataset.save_folder, STATE_DICT_COPY_DIR)
+                    config = DiskStateDictConfig().save_folder(save_folder)
+            elif typ == 'memory':
+                config = MemoryStateDictConfig()
+            else:
+                raise ValueError("state dict type must be disk or memory")
+            config.skip_keys = set([f"{name}.weight"] for name in self.quant_linear_names)
+            return copy_offloaded_state_dict(model, config)
+
+        ori_fp_weight = {}
+        for key, value in model.state_dict().items():
+            if not isinstance(value, torch.Tensor):
+                self.logger.warning("The original float weight[{key}]is not torch.Tensor, "
+                                    "it won't be saved, may raise error.")
+                continue
+            ori_fp_weight[key] = value.cpu()
         return ori_fp_weight
 
     def extract_dag(self, model):
@@ -247,7 +275,7 @@ class Calibrator(object):
         def update_extremum(kv_cache, name, key, torch_function, value):
             if name not in kv_cache:
                 kv_cache[name] = {}
-                
+
             if key in kv_cache[name]:
                 kv_cache[name][key] = torch_function(kv_cache[name][key], value)
             else:
@@ -279,7 +307,7 @@ class Calibrator(object):
             if isinstance(y, tuple):
                 y = y[0]
             kv_tensor(name, x.shape[-1], y)
-        
+
         hooks = []
         for name, m in model.named_modules():
             if isinstance(m, nn.Linear):
@@ -368,6 +396,7 @@ class Calibrator(object):
             self.logger.info(f"The model contains a total of {len(label_threshold_dict)} nn.Linear layers.")
             auto_disable_names = self.get_auto_disable_names(label_threshold_dict)
             self.rollback_names = list(set(self.rollback_names + auto_disable_names))
+            self.quant_linear_names = [name for name in quant_name_list if name not in self.rollback_names]
 
             if self.disable_level != 'L0':
                 self.logger.info('Automatically disabled layer names are:\n\t' +
@@ -400,10 +429,7 @@ class Calibrator(object):
         return auto_disable_names
 
     def quantize(self, model):
-        if self.model_with_accelerate:
-            return self.quantize_model(model)
-        else:
-            return self.quantize_model(model).to(self.cfg.device)
+        return self.quantize_model(model)
 
     def enable_quant(self):
         enable_quantization(self.model, self.act_states, self.logger, self.cfg.use_fa_quant)
@@ -476,21 +502,38 @@ class Calibrator(object):
         # 修改 safetensor 权重
         safetensor_weight = {}
         quant_model_state_dict_list = list(self.quant_param_dict.keys())
-        for ori_model_state_dict_name, ori_model_state_dict in self.ori_fp_weight.items():
-            # 如果浮点权重名称不在量化权重名称中，说明是浮点独有的权重，需要把浮点权重加入safetensor_weight
-            if ori_model_state_dict_name not in quant_model_state_dict_list:
-                # Norm 有额外的anti weight、bias，单独补充
-                self.set_fp_safetensor(ori_model_state_dict_name, safetensor_weight, ori_model_state_dict)
+        if enabled_adapter() and self.cfg.should_save_lazily:
+            for ori_model_state_dict_name in self.ori_fp_weight:
+                # 如果浮点权重名称不在量化权重名称中，说明是浮点独有的权重，需要把浮点权重加入safetensor_weight
+                if ori_model_state_dict_name not in quant_model_state_dict_list:
+                    # Norm 有额外的anti weight、bias，单独补充
+                    self.set_fp_safetensor(ori_model_state_dict_name, safetensor_weight,
+                                           LazyTensor(lambda state_dict, k: state_dict[k].clone(),
+                                                      state_dict=self.ori_fp_weight,
+                                                      k=ori_model_state_dict_name))
 
-            # 如果浮点权重名称在量化权重名称中，说明是浮点转换为量化的权重，需要把量化权重加入safetensor_weight
-            else:
-                self.set_quant_safetensor(ori_model_state_dict_name, safetensor_weight)
-        
+                # 如果浮点权重名称在量化权重名称中，说明是浮点转换为量化的权重，需要把量化权重加入safetensor_weight
+                else:
+                    self.set_quant_safetensor(ori_model_state_dict_name, safetensor_weight)
+        else:
+            for ori_model_state_dict_name, ori_model_state_dict in self.ori_fp_weight.items():
+                # 如果浮点权重名称不在量化权重名称中，说明是浮点独有的权重，需要把浮点权重加入safetensor_weight
+                if ori_model_state_dict_name not in quant_model_state_dict_list:
+                    # Norm 有额外的anti weight、bias，单独补充
+                    self.set_fp_safetensor(ori_model_state_dict_name, safetensor_weight, ori_model_state_dict.clone())
+
+                # 如果浮点权重名称在量化权重名称中，说明是浮点转换为量化的权重，需要把量化权重加入safetensor_weight
+                else:
+                    self.set_quant_safetensor(ori_model_state_dict_name, safetensor_weight)
+
         if self.cfg.use_fa_quant:
             for attention_module_name in self.fa_module_param_dict:
                 self.set_fa_quant_safetensor(attention_module_name, safetensor_weight)
-            
+
         for key, item in safetensor_weight.items():
+            if isinstance(item, LazyTensor):
+                continue
+
             safetensor_weight[key] = item.cpu().contiguous()
 
         self.logger.info("The directory path for the saved safetensors is %s", quant_model_weight_path)
@@ -498,12 +541,13 @@ class Calibrator(object):
             if part_file_size is not None:
                 save_file_partial(safetensor_weight, quant_model_weight_path, part_file_size)
             else:
+                handle_lazy_tensor(safetensor_weight)
                 save_file(safetensor_weight, quant_model_weight_path)
         self.logger.info("Safetensors weight saved successfully!")
         self.quant_model_json_description.save(quant_model_description_path)
 
     def set_fp_safetensor(self, ori_model_state_dict_name, safetensor_weight, ori_model_state_dict):
-        safetensor_weight[ori_model_state_dict_name] = ori_model_state_dict.clone()
+        safetensor_weight[ori_model_state_dict_name] = ori_model_state_dict
         self.quant_model_json_description.change_weight_type(ori_model_state_dict_name, QuantType.FLOAT)
         if ori_model_state_dict_name in self.quantized_module_param_dict:
             for quant_param_name in self.quantized_module_param_dict[ori_model_state_dict_name]:
@@ -532,7 +576,6 @@ class Calibrator(object):
             else:
                 self.quant_model_json_description.change_weight_type(quant_param_name, QuantType.FLOAT)
 
-
     def save_npy(self, output_path):
         quant_weight_dict = {}
         scale_dict = {}
@@ -550,7 +593,9 @@ class Calibrator(object):
         for name, module in self.model.named_modules():
             weight_name = name + '.weight'
             if isinstance(module, (LinearQuantizer, LinearSparseQuantizer, LowBitLinearQuantizer)):
-                quant_weight_dict[name] = self.quant_param_dict.get(weight_name)
+                weight_tensor = self.quant_param_dict.get(weight_name)
+                quant_weight_dict[name] = weight_tensor.value if isinstance(weight_tensor, LazyTensor) \
+                    else weight_tensor
                 if self.cfg.model_quant_type in [QuantType.W8A8, QuantType.W8A8S]:
                     quant_bias_dict[name] = self.quant_param_dict.get(name + '.quant_bias')
                     deq_scale_dict[name] = self.quant_param_dict.get(name + '.deq_scale')
@@ -619,66 +664,86 @@ class Calibrator(object):
     def get_quant_params(self):
         self.model.eval()
         for name, module in self.model.named_modules():
-            if self.cfg.use_fa_quant and is_attn_module_and_then_check_quantizer(module, name):
-                quant_param_scale, quant_param_offset, attach_map = export_fa_quant_params(module, name)
-                self.quant_param_dict.update(quant_param_scale)
-                self.quant_param_dict.update(quant_param_offset)
-                self.fa_module_param_dict.update(attach_map)
+            with PrepareWeight(module):
+                if self.cfg.use_fa_quant and is_attn_module_and_then_check_quantizer(module, name):
+                    quant_param_scale, quant_param_offset, attach_map = export_fa_quant_params(module, name)
+                    self.quant_param_dict.update(quant_param_scale)
+                    self.quant_param_dict.update(quant_param_offset)
+                    self.fa_module_param_dict.update(attach_map)
 
-            if isinstance(module, LinearNf4Quantizer):
-                self.quant_param_dict[name + '.weight'] = module.weight
-                if module.bias is not None:
-                    self.quant_param_dict[name + '.bias'] = module.bias
-            if isinstance(module, ParallelLinearCol):
-                quant_param, attach_map = module.get_quant_param()
-                self.quant_param_dict.update(quant_param)
-                self.quantized_module_param_dict.update(attach_map)
-            # 处理 Norm 对应的 weight、bias
-            if isinstance(module, (NormBias, LlamaRMSNormBias)):
-                anti_norm_weight = module.module.weight.cpu() if isinstance(module, NormBias) else module.weight.cpu()
-                anti_norm_bias = module.bias.cpu()
-                anti_norm_name_weight = name + '.module.weight'
-                anti_norm_name_bias = name + '.module.bias'
-                self.quant_param_dict[anti_norm_name_weight] = anti_norm_weight.clone().detach()
-                self.quant_param_dict[anti_norm_name_bias] = anti_norm_bias.clone().detach()
-                self.quantized_module_param_dict[name + '.weight'] = [anti_norm_name_weight, anti_norm_name_bias]
+                if isinstance(module, LinearNf4Quantizer):
+                    self.quant_param_dict[name + '.weight'] = module.weight
+                    if module.bias is not None:
+                        self.quant_param_dict[name + '.bias'] = module.bias
+                if isinstance(module, ParallelLinearCol):
+                    quant_param, attach_map = module.get_quant_param()
+                    self.quant_param_dict.update(quant_param)
+                    self.quantized_module_param_dict.update(attach_map)
+                # 处理 Norm 对应的 weight、bias
+                if isinstance(module, (NormBias, LlamaRMSNormBias)):
+                    anti_norm_weight = module.module.weight.cpu() if isinstance(module,
+                                                                                NormBias) else module.weight.cpu()
+                    anti_norm_bias = module.bias.cpu()
+                    anti_norm_name_weight = name + '.module.weight'
+                    anti_norm_name_bias = name + '.module.bias'
+                    anti_norm_name_weight_value = anti_norm_weight.clone().detach()
+                    if enabled_adapter() and self.cfg.should_save_lazily:
+                        def get_anti_norm_weight(mod: torch.nn.Module) -> torch.Tensor:
+                            with PrepareWeight(mod):
+                                return mod.module.weight.cpu() if isinstance(mod,
+                                    NormBias) else mod.weight.cpu().clone().detach()
+                        anti_norm_name_weight_value = LazyTensor(
+                            get_anti_norm_weight, tensor=anti_norm_name_weight_value, mod=module)
+                    self.quant_param_dict[anti_norm_name_weight] = anti_norm_name_weight_value
 
-            # 处理Linear、以及附属scale、offset等params
-            if isinstance(module, (LinearQuantizer, LinearSparseQuantizer, LowBitLinearQuantizer)):
-                if not module.quant_weight.is_enable:
-                    continue
+                    self.quant_param_dict[anti_norm_name_bias] = anti_norm_bias.clone().detach()
+                    self.quantized_module_param_dict[name + '.weight'] = [anti_norm_name_weight, anti_norm_name_bias]
 
-                quant_weight, fp_weight, weight_scale, weight_offset = self.get_param_from_quantizer(module)
-                if quant_weight is None:
-                    continue
-                # 各种量化均需要提供 weight
-                quant_weight = quant_weight.cpu()
-                self.quant_param_dict[name + '.weight'] = quant_weight.to(torch.int8)
+                # 处理Linear、以及附属scale、offset等params
+                if isinstance(module, (LinearQuantizer, LinearSparseQuantizer, LowBitLinearQuantizer)):
+                    if not module.quant_weight.is_enable:
+                        continue
 
-                # W4A16/W8A16 需要提供 weight_scale、weight_offset
-                if self.cfg.model_quant_type in [QuantType.W8A16, QuantType.W4A16, QuantType.W8A8_DYNAMIC]:
-                    self.quant_param_dict[name + '.weight_scale'] = weight_scale
-                    self.quant_param_dict[name + '.weight_offset'] = weight_offset
-                    self.quantized_module_param_dict[name + '.weight'].append(name + '.weight_scale')
-                    self.quantized_module_param_dict[name + '.weight'].append(name + '.weight_offset')
-                # W8A8/W8A8S 需要提供 deq_scale、quant_bias、input_scale、input_offset
-                if self.cfg.model_quant_type in [QuantType.W8A8, QuantType.W8A8S]:
-                    input_scale = module.quant_input.input_scale.cpu()
-                    input_offset = module.quant_input.input_offset.cpu()
-                    self.quant_param_dict[name + '.input_scale'] = input_scale
-                    self.quant_param_dict[name + '.input_offset'] = input_offset
-                    self.quantized_module_param_dict[name + '.weight'].append(name + '.input_scale')
-                    self.quantized_module_param_dict[name + '.weight'].append(name + '.input_offset')
-                    deq_scale = self.deqscale_process(input_scale, weight_scale).to(torch.float32)
-                    correction = (quant_weight.to(torch.float32).sum(dim=1) * input_offset.to(torch.float32)).cpu()
-                    fp_bias = self.change_bias(fp_weight, module)
-                    quant_bias = torch.round(fp_bias / deq_scale - correction)
-                    deq_scale = deqscale2int64_by_dtype(deq_scale, self.model.config.torch_dtype == torch.bfloat16)
+                    quant_weight, fp_weight, weight_scale, weight_offset = self.get_param_from_quantizer(module)
+                    if quant_weight is None:
+                        continue
 
-                    self.quant_param_dict[name + '.quant_bias'] = quant_bias.cpu().to(torch.int32)
-                    self.quant_param_dict[name + '.deq_scale'] = deq_scale.cpu()
-                    self.quantized_module_param_dict[name + '.weight'].append(name + '.quant_bias')
-                    self.quantized_module_param_dict[name + '.weight'].append(name + '.deq_scale')
+                    # 各种量化均需要提供 weight
+                    quant_weight = quant_weight.cpu()
+                    save_quant_weight = quant_weight.to(torch.int8)
+                    if enabled_adapter() and self.cfg.should_save_lazily:
+                        def get_quant_weight(mod: torch.nn.Module) -> torch.Tensor:
+                            with PrepareWeight(mod):
+                                value, _, _, _ = self.get_param_from_quantizer(mod)
+                                return value.cpu().to(torch.int8)
+                        save_quant_weight = LazyTensor(get_quant_weight,
+                                                  tensor=save_quant_weight, mod=module)
+                    self.quant_param_dict[name + '.weight'] = save_quant_weight
+
+                    # W4A16/W8A16 需要提供 weight_scale、weight_offset
+                    if self.cfg.model_quant_type in [QuantType.W8A16, QuantType.W4A16, QuantType.W8A8_DYNAMIC]:
+                        self.quant_param_dict[name + '.weight_scale'] = weight_scale
+                        self.quant_param_dict[name + '.weight_offset'] = weight_offset
+                        self.quantized_module_param_dict[name + '.weight'].append(name + '.weight_scale')
+                        self.quantized_module_param_dict[name + '.weight'].append(name + '.weight_offset')
+                    # W8A8/W8A8S 需要提供 deq_scale、quant_bias、input_scale、input_offset
+                    if self.cfg.model_quant_type in [QuantType.W8A8, QuantType.W8A8S]:
+                        input_scale = module.quant_input.input_scale.cpu()
+                        input_offset = module.quant_input.input_offset.cpu()
+                        self.quant_param_dict[name + '.input_scale'] = input_scale
+                        self.quant_param_dict[name + '.input_offset'] = input_offset
+                        self.quantized_module_param_dict[name + '.weight'].append(name + '.input_scale')
+                        self.quantized_module_param_dict[name + '.weight'].append(name + '.input_offset')
+                        deq_scale = self.deqscale_process(input_scale, weight_scale).to(torch.float32)
+                        correction = (quant_weight.to(torch.float32).sum(dim=1) * input_offset.to(torch.float32)).cpu()
+                        fp_bias = self.change_bias(fp_weight, module)
+                        quant_bias = torch.round(fp_bias / deq_scale - correction)
+                        deq_scale = deqscale2int64_by_dtype(deq_scale, self.model.config.torch_dtype == torch.bfloat16)
+
+                        self.quant_param_dict[name + '.quant_bias'] = quant_bias.cpu().to(torch.int32)
+                        self.quant_param_dict[name + '.deq_scale'] = deq_scale.cpu()
+                        self.quantized_module_param_dict[name + '.weight'].append(name + '.quant_bias')
+                        self.quantized_module_param_dict[name + '.weight'].append(name + '.deq_scale')
 
         if hasattr(self.cfg, 'tp_size'):
             self.concat_simulate_linear()
@@ -768,7 +833,6 @@ class Calibrator(object):
                 self.logger.info(f"Running in Data-Free mode, quantizing the layer into NF4 type: {name}")
                 module.quant_weight()
 
-
     def run_amp(self):
         max_input_dict = {}
 
@@ -784,18 +848,21 @@ class Calibrator(object):
                 module.disable_input = True
                 module.disable_quant_weight()
         self.rollback_names.extend(layers_to_disable)
-        self.logger.info('The following linear layers will continue to use floating-point weights for forward computation:\n\t'
-                         + '\n\t'.join([str(name) for name in sorted(self.rollback_names)]))
+        self.logger.info(
+            'The following linear layers will continue to use floating-point weights for forward computation:\n\t'
+            + '\n\t'.join([str(name) for name in sorted(self.rollback_names)]))
 
     def run_fa_amp(self):
         qkv_states_record = collect_fa_quantizer_record(self.model)
         states_num_per_layer = 3
         model_attention_layer_num = len(qkv_states_record.keys()) // states_num_per_layer
         if model_attention_layer_num < self.cfg.fa_amp:
-            self.logger.warning("`fa_amp` exceeds the total attention layer number. Therefore, only up to the total attention layers will skip quantization")
+            self.logger.warning(
+                "`fa_amp` exceeds the total attention layer number. Therefore, only up to the total attention layers will skip quantization")
         disabled_module_names = fully_analyze_activation(qkv_states_record, self.cfg.fa_amp)
-        self.logger.info('The following attention layers will continue to use floating-point weights for forward computation:\n\t'
-                         + '\n\t'.join([str(name) for name in sorted(disabled_module_names)]))
+        self.logger.info(
+            'The following attention layers will continue to use floating-point weights for forward computation:\n\t'
+            + '\n\t'.join([str(name) for name in sorted(disabled_module_names)]))
         for name, module in self.model.named_modules():
             if is_attn_module_and_then_check_quantizer(module, name) and name in disabled_module_names:
                 module.fa_quantizer.reset()
@@ -871,26 +938,24 @@ class Calibrator(object):
                 _set_module(model, cur_decoder_name, quant_mod)
 
         for name, mod in model.named_modules():
-            if name in self.rollback_names:
-                continue
-            if isinstance(mod, nn.Linear) or isinstance(mod, nn.modules.linear.NonDynamicallyQuantizableLinear):
-                if self.cfg.is_lowbit:
-                    quant_mod = LowBitLinearQuantizer(cfg=self.cfg, logger=self.logger, name=name)
-                elif self.cfg.w_method in QuantType.NF4:
-                    quant_mod = LinearNf4Quantizer(cfg=self.cfg, logger=self.logger)
-                elif self.cfg.model_quant_type is not QuantType.W8A8S:
-                    quant_mod = LinearQuantizer(cfg=self.cfg, logger=self.logger)
-                else:
-                    quant_mod = LinearSparseQuantizer(cfg=self.cfg, logger=self.logger)
-                quant_mod.set_param(mod)
-
-                # 拷贝accelerate定义的hook
-                if hasattr(mod, HF_HOOK):
-                    add_hook_to_module(quant_mod, mod._hf_hook)
-                    remove_hook_from_module(mod)
-
-                _set_module(model, name, quant_mod)
-                del mod
+            with PrepareWeight(mod):
+                if name in self.rollback_names:
+                    continue
+                if isinstance(mod, nn.Linear) or isinstance(mod, nn.modules.linear.NonDynamicallyQuantizableLinear):
+                    if self.cfg.is_lowbit:
+                        quant_mod = LowBitLinearQuantizer(cfg=self.cfg, logger=self.logger, name=name)
+                    elif self.cfg.w_method in QuantType.NF4:
+                        quant_mod = LinearNf4Quantizer(cfg=self.cfg, logger=self.logger)
+                    elif self.cfg.model_quant_type is not QuantType.W8A8S:
+                        quant_mod = LinearQuantizer(cfg=self.cfg, logger=self.logger)
+                    else:
+                        quant_mod = LinearSparseQuantizer(cfg=self.cfg, logger=self.logger)
+                    quant_mod.set_param(mod)
+                    move_update_weight_hook_if_need(mod, quant_mod)
+                    _set_module(model, name, quant_mod)
+                    # 可能会有其他地方引用这个模块，但是可能很难找出来，保险起见清空相关参数
+                    clear_unused_module(mod)
+                    del mod
 
         if hasattr(self.cfg, 'tp_size'):
             simulate_linear = self.dag.get_allreduce_linear()
@@ -1016,22 +1081,6 @@ class Calibrator(object):
             enable_int_infer(self.model, self.logger)
 
 
-def load_backup_model(backup_model: nn.Module, device=None, model_with_accelerate: bool = False):
-    # 如果原model带有accelerate的hook，则这些hook也会被拷贝并且这些hook指向的还是model而非backup_model
-    # 1. 修改hook的指向
-    # 2. 将backup_model的权重放在正确的设备上
-
-    if model_with_accelerate:
-        for mod in backup_model.modules():
-            # 拷贝accelerate定义的hook
-            if hasattr(mod, HF_HOOK):
-                add_hook_to_module(mod, mod._hf_hook)
-    else:
-        backup_model.to(device)
-
-    return backup_model
-
-
 def enable_quantization_by_module(name, module, act_states):
     if '.tp_list' in name:
         states_name = ".".join(name.split(".")[:-3])
@@ -1102,13 +1151,6 @@ def set_ratio(model, ratio=0.9, logger=None):
             if logger:
                 logger.debug('Set the ratio: %s', name)
             module.set_ratio(ratio)
-
-
-def judge_model_with_accelerate(model: nn.Module):
-    for _, mod in model.named_modules():
-        if hasattr(mod, HF_HOOK):
-            return True
-    return False
 
 
 def deqscale2int64(scale):

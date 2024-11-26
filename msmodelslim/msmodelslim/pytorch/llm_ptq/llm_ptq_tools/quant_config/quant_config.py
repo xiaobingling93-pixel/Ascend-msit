@@ -1,5 +1,5 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
-
+from msmodelslim.pytorch.llm_ptq.accelerate_adapter.offloaded_state_dict import OFFLOAD_DISK
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config.quant_config_factory import QuantConfigFactory
 
 
@@ -157,7 +157,7 @@ class QuantConfig:
         self._cur_config = QuantConfigFactory.get_quant_config('sparse', last_config=self._cur_config,
                                                                act_method=act_method, fraction=fraction,
                                                                nonuniform=nonuniform, is_lowbit=is_lowbit,
-                                                               do_smooth=do_smooth, use_sigma=use_sigma, 
+                                                               do_smooth=do_smooth, use_sigma=use_sigma,
                                                                sigma_factor=sigma_factor)
         self._modify_quant_param()
         return self
@@ -170,7 +170,7 @@ class QuantConfig:
         self._cur_config = QuantConfigFactory.get_quant_config('kv', last_config=self._cur_config, kv_sym=kv_sym)
         self._modify_quant_param()
         return self
-    
+
     def fa_quant(self,
                  fa_amp: int = 0
                  ):
@@ -181,13 +181,12 @@ class QuantConfig:
         Arg:
             fa_amp: 自动回退层数，以整个attention为单位进行回退
         """
-        self._cur_config = QuantConfigFactory.get_quant_config('fa_quant', 
-                                                                last_config=self._cur_config,
-                                                                fa_amp=fa_amp
-                                                                )
+        self._cur_config = QuantConfigFactory.get_quant_config('fa_quant',
+                                                               last_config=self._cur_config,
+                                                               fa_amp=fa_amp
+                                                               )
         self._modify_quant_param()
         return self
-        
 
     def simulate_tp(self,
                     tp_size,
@@ -207,6 +206,24 @@ class QuantConfig:
                                                                tp_size=tp_size,
                                                                enable_communication_quant=enable_communication_quant,
                                                                enable_per_device_quant=enable_per_device_quant)
+        self._modify_quant_param()
+        return self
+
+    def low_memory(self,
+                   offload_type: str = OFFLOAD_DISK,
+                   should_save_lazily: bool = True,
+                   ):
+        """
+        低内存低显存参数初始化
+
+        Arg:
+            offload_type: state_dict 下放设备，可选（1）disk 磁盘；（2）memory 内存
+            should_save_lazily: 是否开启保存时懒计算权重，开启后量化保存耗时增加，降低内存使用
+        """
+        self._cur_config = QuantConfigFactory.get_quant_config('low_memory',
+                                                               last_config=self._cur_config,
+                                                               offload_type=offload_type,
+                                                               should_save_lazily=should_save_lazily)
         self._modify_quant_param()
         return self
 

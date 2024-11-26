@@ -4,10 +4,15 @@ from enum import Enum
 from ascend_utils.common.security.pytorch import validate_device
 from ascend_utils.common.security import check_type
 from msmodelslim import logger as msmodelslim_logger
+from msmodelslim.pytorch.llm_ptq.accelerate_adapter.offloaded_state_dict import OFFLOAD_DISK, OFFLOAD_MEMORY
 
 _ANTI_METHODS = ['m1', 'm2', 'm3', 'm4', 'm5']
 _SUPPORTED_DEVICES = ["cpu", "npu", 'gpu']
 _SUPPORED_ARCHS = ["SD3Transformer2DModel"]
+
+_OFFLOAD_TYPE = 'offload_type'
+_SUPPORTED_LOW_MEMORY_KEY = [_OFFLOAD_TYPE]
+_SUPPORTED_OFFLOAD_TYPE = [OFFLOAD_DISK, OFFLOAD_MEMORY]
 
 
 class AntiMethods(str, Enum):
@@ -28,6 +33,7 @@ class AntiOutlierConfig:
             dev_id=None,
             w_sym=True,
             arch=None,
+            low_memory=None,
     ):
         # Basic setting
         self.w_bit = w_bit
@@ -51,12 +57,24 @@ class AntiOutlierConfig:
         check_type(self.anti_method, str, param_name='anti_method')
         check_type(self.w_sym, bool, param_name='w_sym')
 
+        # check low_memory config, must be {"offload_type": "disk|memory"}
+        self.is_adapter_enabled = low_memory is not None
+        self.offload_type = OFFLOAD_DISK
+        if self.is_adapter_enabled:
+            check_type(low_memory, dict, param_name='low_memory')
+            for key in low_memory:
+                if key not in _SUPPORTED_LOW_MEMORY_KEY:
+                    raise KeyError(f"low_memory accept {_SUPPORTED_LOW_MEMORY_KEY}, not {key}")
+            self.offload_type = low_memory.get(_OFFLOAD_TYPE, OFFLOAD_DISK)
+            if self.offload_type not in _SUPPORTED_OFFLOAD_TYPE:
+                raise ValueError(f'offload_type should be in {_SUPPORTED_OFFLOAD_TYPE}, but got {self.offload_type}.')
+
         if self.anti_method not in _ANTI_METHODS:
             raise ValueError("Configuration param `anti_method` must be in choices {}"
                              .format(_ANTI_METHODS))
         if self.anti_method == "m5":
             self.ch_align = False
-        
+
         if self.arch is not None and self.arch not in _SUPPORED_ARCHS:
             raise ValueError("Configuration param `arch` must be either None or in choices {}"
                              .format(_SUPPORED_ARCHS))
