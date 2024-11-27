@@ -186,7 +186,7 @@ def copy_state_dict(model: torch.nn.Module, typ: str = 'disk') -> Mapping:
                 # 否则在现有的 offload 路径下新建 copy 文件夹，然后保存到里面
                 save_folder = os.path.join(dataset.save_folder, STATE_DICT_COPY_DIR)
                 config = DiskStateDictConfig().save_folder(save_folder)
-        elif typ == 'cpu':
+        elif typ == 'memory':
             config = MemoryStateDictConfig()
         else:
             raise ValueError("state dict type must be disk or memory")
