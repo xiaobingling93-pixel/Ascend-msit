@@ -33,4 +33,3 @@ from .list_checker import ListChecker
 from .func_wrapper import validate_params
 from .rule import Rule
 
-
