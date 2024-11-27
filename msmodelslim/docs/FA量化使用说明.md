@@ -4,7 +4,7 @@
 
 ### 前提条件
 
-前提条件参考[大模型量化的前提条件](/msmodelslim/msmodelslim/pytorch/llm_ptq/README.md#前提条件)
+前提条件参考[大模型量化的前提条件](../msmodelslim/pytorch/llm_ptq/README.md#前提条件)
 
 说明：仅Atlas 800I A2推理产品支持fa3量化功能。
 
@@ -259,7 +259,7 @@ from transformers.models.qwen2.configuration_qwen2 import Qwen2Config
 
 2. 新建模型的量化脚本quant.py，编辑quant.py文件，根据实际的量化场景导入[样例代码](#量化脚本npu)，参考注释，并根据实际情况进行修改。
 
-注：fa3量化目前仅支持W8A8 per_channel量化场景和lowbit算法，W8A8 per_channel量化场景导入的样例见下文[FA3精度调优处](#fa3精度调优)，lowbit算法的代码样例请参考[w8a8_lowbit量化场景](/msmodelslim/msmodelslim/pytorch/llm_ptq/量化及稀疏量化场景导入代码样例.md#w8a8_lowbit算法量化场景)。
+注：fa3量化目前仅支持W8A8 per_channel量化场景和lowbit算法，W8A8 per_channel量化场景导入的样例见下文[FA3精度调优处](#fa3精度调优)，lowbit算法的代码样例请参考[w8a8_lowbit量化场景](../msmodelslim/pytorch/llm_ptq/量化及稀疏量化场景导入代码样例.md#w8a8_lowbit算法量化场景)。
 
 
 3. 启动模型量化任务，并在指定的输出目录获取模型量化参数，量化后权重文件的介绍请参见[量化后权重文件](#量化后权重文件)，若使用MindIE进行后续的推理部署任务，请保存为safetensors格式，具体请参见[大语言模型列表](https://www.hiascend.com/document/detail/zh/mindie/10RC3/whatismindie/mindie_what_0003.html)章节中已适配量化的模型。
@@ -457,7 +457,7 @@ precision_test = PrecisionTest(model, tokenizer, "boolq", batch_size, "npu")
 precision_test.test()
 ```
 
-#### 本文仅给出FA3场景下Llama3.1-70B和Qwen2.5-72B的量化推荐配置，可按实际情况进行参数调整，详见[精度调优策略](/msmodelslim/docs/w8a8精度调优策略.md) 。
+#### 本文仅给出FA3场景下Llama3.1-70B和Qwen2.5-72B的量化推荐配置，可按实际情况进行参数调整，详见[精度调优策略](./w8a8精度调优策略.md) 。
 
 #### Llama3.1-70B 量化参数设置
 
