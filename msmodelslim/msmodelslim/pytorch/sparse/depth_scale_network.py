@@ -6,9 +6,9 @@ from typing import List, Union, Tuple
 import torch
 from torch import Tensor
 from torch.nn import Module
-from msmodelslim import logger
 from ascend_utils.common.utils import CallParams
 from ascend_utils.pytorch.dag.dag_torch_hook import DagTorchHook
+from msmodelslim import logger
 
 
 class DepthScaleNetwork:
@@ -58,23 +58,6 @@ class DepthScaleNetwork:
         return last_param_info == this_param_info
 
     @staticmethod
-    def _calc_enable_list(ori_enable_count, new_enable_count, all_count):
-        new_enable_count = min(new_enable_count, all_count)
-        if ori_enable_count >= new_enable_count:
-            enable_list = list(range(new_enable_count))
-        else:
-            floor_value = math.floor(new_enable_count / ori_enable_count)
-
-            enable_list = list(itertools.chain(
-                *itertools.repeat(list(range(ori_enable_count)), floor_value),
-                range(new_enable_count - floor_value * ori_enable_count)
-            ))
-
-            enable_list.sort()
-        unable_list = [None] * (all_count - len(enable_list))
-        return enable_list + unable_list
-
-    @staticmethod
     def disable_operator(operator: RepeatOperatorInfo):
         setattr(operator.parent_module, operator.attr_name, JumpingOffOperator())
         operator.enable = False
@@ -95,6 +78,23 @@ class DepthScaleNetwork:
                 raise ValueError(f"name [{name}] not in src param info ")
             parameter.data = src_param_info[name].data.clone()
 
+    @staticmethod
+    def _calc_enable_list(ori_enable_count, new_enable_count, all_count):
+        new_enable_count = min(new_enable_count, all_count)
+        if ori_enable_count >= new_enable_count:
+            enable_list = list(range(new_enable_count))
+        else:
+            floor_value = math.floor(new_enable_count / ori_enable_count)
+
+            enable_list = list(itertools.chain(
+                *itertools.repeat(list(range(ori_enable_count)), floor_value),
+                range(new_enable_count - floor_value * ori_enable_count)
+            ))
+
+            enable_list.sort()
+        unable_list = [None] * (all_count - len(enable_list))
+        return enable_list + unable_list
+    
     def scale(self, scale: float):
         if not isinstance(scale, (int, float)):
             raise TypeError(f"scale={scale} is required to be an int or float")

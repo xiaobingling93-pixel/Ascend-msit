@@ -6,11 +6,11 @@ from copy import deepcopy
 import torch
 import numpy as np
 
-from msmodelslim import logger
-from msmodelslim.pytorch.sparse.width_scale_network import WidthScaleNetwork
-from msmodelslim.pytorch.sparse.depth_scale_network import DepthScaleNetwork
 from ascend_utils import count_parameters
 from ascend_utils.common import security
+from msmodelslim.pytorch.sparse.width_scale_network import WidthScaleNetwork
+from msmodelslim.pytorch.sparse.depth_scale_network import DepthScaleNetwork
+from msmodelslim import logger
 
 
 SparseMethods = namedtuple('SparseMethods', ['DEPTH_GROWTH', 'WIDTH_GROWTH'])('depth_growth', 'width_growth')

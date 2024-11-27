@@ -7,7 +7,6 @@ from ascend_utils.common.security.type import check_type, check_element_type, ch
 from msmodelslim import logger
 
 
-
 class CompressConfig:
     """ The configuration for LLM weight compression """
     
