@@ -90,6 +90,7 @@ MOE模型支持W8A8_per-token量化场景、W8A16 per-channel量化场景和W8A1
 pip3 install protobuf==4.24.1
 pip3 install sentencepiece==0.1.99
 pip3 install sympy==1.11.1
+pip3 install transformer==4.43.0 # 参考ChatGLM2-6B仓chatglm2-6b/config.json里的相关版本要求
 ```
 
 3. 新建模型的quant.py量化脚本，编辑quant.py文件，根据实际的量化场景导入样例代码，参考加粗字体信息提示，并根据实际情况进行修改。
@@ -103,10 +104,10 @@ import torch_npu   # 若需要cpu上进行量化，可忽略此步骤
 from transformers import AutoTokenizer, AutoModel
 
 # for local path
-tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path='./chatglm2')
+tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path='./chatglm2') # 若存在自定义代码，需要配置参数trust_remote_code=True，请确保加载的modeling文件的安全性。
 model = AutoModel.from_pretrained(
     pretrained_model_name_or_path='./chatglm2'
-  ).npu()    # 若在npu上进行多卡量化时，需要先参考前提条件进行配置，并配置device_map='auto',创建model时需去掉.npu()；若在cpu上进行量化时，需要配置torch_dtype=torch.float32，创建model时需去掉.npu()
+  ).npu()    # 若在npu上进行多卡量化时，需要先参考前提条件进行配置，并配置device_map='auto',创建model时需去掉.npu()；若在cpu上进行量化时，需要配置torch_dtype=torch.float32，创建model时需去掉.npu();  若存在自定义代码，需要配置参数trust_remote_code=True，请确保加载的modeling文件的安全性。
 # 准备校准数据，请根据实际情况修改
 calib_list = ["中国的首都在哪里？",
               "请做一首诗歌：",
@@ -131,7 +132,7 @@ quant_config = QuantConfig(
     a_bit=8, 
     w_bit=8,       
     disable_names=['transformer.encoder.layers.0.self_attention.query_key_value','transformer.encoder.layers.0.self_attention.dense', 'transformer.encoder.layers.0.mlp.dense_h_to_4h'], 
-    dev_id=model.device.index， 
+    dev_id=model.device.index, 
     dev_type='npu',   # 在cpu进行量化时，需配置参数dev_type='cpu'，并取消dev_id=model.device.index参数的配置
     act_method=3,
     pr=0.5, 
