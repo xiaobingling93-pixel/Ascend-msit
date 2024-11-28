@@ -34,9 +34,15 @@ msit_sub_tasks = [
     }
 ]
 
-msit_sub_task_entry_points = [
-    f"{t.get('name')}:{t.get('help_info')} = {t.get('module')}:{t.get('attr')}" for t in msit_sub_tasks
-]
+msit_sub_task_entry_points = []
+for t in msit_sub_tasks:
+    name = t.get('name')
+    help_info = t.get('help_info')
+    module = t.get('module')
+    attr = t.get('attr')
+
+    entory_point = f"{name}:{help_info} = {module}:{attr}"
+    msit_sub_task_entry_points.append(entory_point)
 
 
 class DevelopWithShUmask(develop):

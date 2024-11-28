@@ -22,6 +22,7 @@ import numpy as np
 
 from components.utils.util import load_file_to_read_common_check
 
+
 def calculate_flow(graph, startnode, endnode):
     """
     Function:

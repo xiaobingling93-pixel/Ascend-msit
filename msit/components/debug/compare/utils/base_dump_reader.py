@@ -27,7 +27,7 @@ class DumpFileReader(ABC):
         pass
 
     @abstractmethod
-    def _get_keys(self) -> set:
+    def get_keys(self) -> set:
         pass
 
     @abstractmethod
