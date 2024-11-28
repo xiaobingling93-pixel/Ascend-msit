@@ -6,7 +6,6 @@ import gc
 import stat
 import copy
 import functools
-import inspect
 from typing import OrderedDict
 from collections import OrderedDict as OrderedDict_CHECK
 
@@ -501,23 +500,11 @@ class AntiOutlier(object):
                 weight_aware(self.cfg, norm_module, linear_modules, stats)
             elif self.cfg.anti_method == 'm4':
                 if 'scale_min' in inspect.signature(iter_smooth).parameters:
-                    iter_smooth(
-                        self.cfg,
-                        norm_module,
-                        linear_modules,
-                        stats,
-                        num_attention_heads,
-                        scale_min=scale_min,
-                        **fusion_kwargs,
-                    )
-                else:
-                    iter_smooth(
-                        self.cfg,
-                        norm_module,
-                        linear_modules,
-                        stats,
-                        num_attention_heads,
-                        **fusion_kwargs,
+                    fusion_kwargs.update({"scale_min": scale_min})
+                if 'check_group_fusions' not in inspect.signature(iter_smooth).parameters:
+                    fusion_kwargs.pop("check_group_fusions")
+                iter_smooth(
+                    self.cfg, norm_module, linear_modules, stats, num_attention_heads, **fusion_kwargs
                     )
                 if attach_op is not None and Multiplier is not None and isinstance(norm_module, Multiplier):
                     attach_op(self.model, norm_module, linear_modules, linear_names)
