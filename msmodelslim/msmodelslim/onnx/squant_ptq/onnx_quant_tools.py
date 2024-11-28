@@ -9,10 +9,10 @@ import numpy as np
 
 from ascend_utils.common.security import get_valid_read_path, get_valid_write_path, SafeWriteUmask, \
     safe_delete_path_if_exists, check_type
+from ascend_utils.common import acl_inference
 from msmodelslim.onnx.post_training_quant.util import check_input_data
 from msmodelslim.onnx.squant_ptq.quant_deploy import quantize_model_deploy, QuantParamsDict
 from msmodelslim.onnx.squant_ptq import QuantConfig
-from msmodelslim import logger
 from msmodelslim.onnx.squant_ptq.onnx_ptq_kia.quant_funcs_onnx import (
     merge_nodes,
     onnx_label_free_calib,
@@ -24,9 +24,8 @@ from msmodelslim.onnx.squant_ptq.onnx_ptq_kia.quant_funcs_onnx import (
     disable_first_layer,
     disable_last_layer,
 )
-from ascend_utils.common import acl_inference
 from msmodelslim.onnx.squant_ptq.aok.tool_main import aok_export
-
+from msmodelslim import logger
 
 class OnnxCalibrator(object):
     """ OnnxCalibrator for post-training quantization."""

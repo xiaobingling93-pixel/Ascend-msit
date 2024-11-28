@@ -19,6 +19,8 @@ from msmodelslim import logger as msmodelslim_logger
 from msmodelslim.pytorch.llm_ptq.accelerate_adapter import enable_adapter, check_model_compatible, \
     get_offloaded_dataset, MemoryStateDictConfig, DiskStateDictConfig, copy_offloaded_state_dict
 from msmodelslim.pytorch.llm_ptq.accelerate_adapter.lazy_handler import LazyTensor, handle_lazy_tensor
+from accelerate.hooks import add_hook_to_module, remove_hook_from_module
+
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config import QuantConfig
 from ascend_utils.common.security import (get_valid_write_path, SafeWriteUmask, check_element_type,
                                           check_type, get_write_directory, check_number, check_int)
@@ -65,6 +67,7 @@ from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.fa_quant import (
 from msmodelslim.pytorch.llm_ptq.anti_outlier.dag_utils.torch_dag_adapter import TorchDAGAdapter
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.simulate_tp import ParallelLinearCol
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.save_utils import save_file_partial
+from msmodelslim import logger as msmodelslim_logger
 
 from msmodelslim.pytorch.llm_ptq.accelerate_adapter.hook_adapter import *
 
@@ -857,8 +860,8 @@ class Calibrator(object):
         states_num_per_layer = 3
         model_attention_layer_num = len(qkv_states_record.keys()) // states_num_per_layer
         if model_attention_layer_num < self.cfg.fa_amp:
-            self.logger.warning(
-                "`fa_amp` exceeds the total attention layer number. Therefore, only up to the total attention layers will skip quantization")
+            self.logger.warning("`fa_amp` exceeds the total attention layer number. Therefore, "
+                                "only up to the total attention layers will skip quantization")
         disabled_module_names = fully_analyze_activation(qkv_states_record, self.cfg.fa_amp)
         self.logger.info(
             'The following attention layers will continue to use floating-point weights for forward computation:\n\t'

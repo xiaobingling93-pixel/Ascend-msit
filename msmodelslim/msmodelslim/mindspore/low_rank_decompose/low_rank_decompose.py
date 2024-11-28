@@ -5,6 +5,7 @@ import copy
 import mindspore as ms
 from mindspore import nn
 
+from ascend_utils.common.mindspore_utils import SaveInput, update_cell
 from msmodelslim.common.low_rank_decompose import (
     is_hidden_channels_valid,
     get_hidden_channels_by_layer_name,
@@ -16,7 +17,6 @@ from msmodelslim.common.low_rank_decompose import (
 from msmodelslim.common.low_rank_decompose import export
 from msmodelslim import logger
 from msmodelslim.tools.logger import progress_bar
-from ascend_utils.common.mindspore_utils import SaveInput, update_cell
 
 
 def weight_as_numpy(weight):

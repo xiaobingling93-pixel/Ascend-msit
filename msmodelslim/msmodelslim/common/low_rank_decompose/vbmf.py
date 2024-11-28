@@ -3,6 +3,7 @@
 import numpy as np
 from scipy.optimize import minimize_scalar
 
+
 class EvbSigma2Params:
     def __init__(self, low, median, svd_ss, residual, inner_thresh):
         self.low = low
@@ -10,6 +11,7 @@ class EvbSigma2Params:
         self.svd_ss = svd_ss
         self.residual = residual
         self.inner_thresh = inner_thresh
+
 
 def none_zero_divide(inputs, divisor, eps=1e-6):
     return np.divide(inputs, np.maximum(divisor, eps))
