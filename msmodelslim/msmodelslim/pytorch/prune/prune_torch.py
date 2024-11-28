@@ -6,11 +6,12 @@ from typing import Union, List, Tuple, Dict, Set
 import torch
 from torch import Tensor
 
-from msmodelslim import logger
-from msmodelslim.pytorch.prune.prune_policy import PrunePolicyGraphConv2D, \
-    ImportanceInfo, PrunePolicyGraphLinear, PrunePolicy
 from ascend_utils.common.utils import CallParams
 from ascend_utils.pytorch.dag.dag_torch_hook import DagTorchHook
+
+from msmodelslim.pytorch.prune.prune_policy import PrunePolicyGraphConv2D, \
+    ImportanceInfo, PrunePolicyGraphLinear, PrunePolicy
+from msmodelslim import logger
 
 
 class PruneTorch:

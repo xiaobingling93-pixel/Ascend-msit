@@ -128,7 +128,7 @@ class Quantizer(nn.Module):
                     start = time.perf_counter()
                     self.int_weight_tensor, \
                     self.quant_weight_tensor, \
-                    self.weight_scale,\
+                    self.weight_scale, \
                     self.weight_offset = weight_quant_opt(
                         data,
                         self.bit,
@@ -192,7 +192,7 @@ class Quantizer(nn.Module):
         self.observer = None
         
     def _forward(self, data):
-        self.input_scale,\
+        self.input_scale, \
         self.input_offset = linear_quantization_params(
             self.bit, self.x_min, self.x_max, q_signed=True, sym=self.is_sym
         )

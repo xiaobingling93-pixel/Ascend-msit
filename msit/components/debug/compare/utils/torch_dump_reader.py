@@ -47,6 +47,9 @@ class TorchDumpFileReader(DumpFileReader):
                 continue 
         return cpu_tensor
 
+    def get_keys(self) -> set:
+        return set(self.key_to_folder.keys())
+
     def _filter_keys(self, key_to_fold: dict) -> dict:
         keys = list(key_to_fold.values())
         keys.sort(key=len, reverse=True)
@@ -115,5 +118,3 @@ class TorchDumpFileReader(DumpFileReader):
 
         return key_to_folder
 
-    def _get_keys(self) -> set:
-        return set(self.key_to_folder.keys())
