@@ -503,7 +503,7 @@ class AntiOutlier(object):
                 if 'scale_min' in inspect.signature(iter_smooth).parameters:
                     fusion_kwargs.update({"scale_min": scale_min})
                 if 'check_group_fusions' not in inspect.signature(iter_smooth).parameters:
-                    fusion_kwargs.pop("check_group_fusions")
+                    fusion_kwargs.pop("check_group_fusions", None)
                 iter_smooth(
                     self.cfg, norm_module, linear_modules, stats, num_attention_heads, **fusion_kwargs
                     )
