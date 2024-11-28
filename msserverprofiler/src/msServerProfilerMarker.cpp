@@ -171,10 +171,10 @@ void ServerProfilerManager::ReadConfig() {
         }
     }
     profPath_.append(std::to_string(ltm->tm_mon + 1))
-        .append(std::to_string(ltm->tm_mday + 1))
+        .append(std::to_string(ltm->tm_mday))
         .append("-")
-        .append(std::to_string(ltm->tm_hour + 1))
-        .append(std::to_string(ltm->tm_min + 1))
+        .append(std::to_string(ltm->tm_hour))
+        .append(std::to_string(ltm->tm_min))
         .append("/");
 }
 
@@ -266,6 +266,7 @@ void ServerProfilerManager::StartProfiler() {
     if (retInit == ACL_ERROR_NONE) {
         aclprofSetConfig(ACL_PROF_HOST_SYS, "cpu", strlen("cpu"));
         aclprofSetConfig(ACL_PROF_HOST_SYS_USAGE, "cpu", strlen("cpu"));
+        aclprofSetConfig(ACL_PROF_HOST_SYS_USAGE_FREQ, "50", strlen("50"));
     }
 
     PROF_LOGD("begin to start profiling");
