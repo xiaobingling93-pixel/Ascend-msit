@@ -6,6 +6,7 @@ import gc
 import stat
 import copy
 import functools
+import inspect
 from typing import OrderedDict
 from collections import OrderedDict as OrderedDict_CHECK
 
