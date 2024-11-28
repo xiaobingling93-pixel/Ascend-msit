@@ -16,11 +16,14 @@ import os
 
 import json
 import inspect
-import math
+import math 
 from copy import deepcopy
+from pathlib import Path
 
 import torch
 import torch_npu
+
+from transformers.utils.fx import symbolic_trace
 
 from msit_llm.transform.utils import load_atb_speed, NPUSocInfo
 from msit_llm.common.log import logger
@@ -43,7 +46,7 @@ def build_transformers_model(source_path):
     try:
         from transformers import AutoConfig, AutoModelForCausalLM
     except ModuleNotFoundError as error:
-        raise ModuleNotFoundError("transformers package not found, try pip install transformers") from error
+        raise ModuleNotFoundError(f"Failed to build model from {source_path}, Please ensure that the models is compatible with transformers package") from error
 
     try:
         config = AutoConfig.from_pretrained(source_path)
@@ -56,7 +59,6 @@ def build_transformers_model(source_path):
 
 
 def to_transformers_traced_module(model, input_names=BASIC_INPUT_NAMES, disable_check=True):
-    from transformers.utils.fx import symbolic_trace
 
     return symbolic_trace(model, input_names=input_names, disable_check=disable_check)
 
@@ -71,7 +73,6 @@ def get_valid_name(name):
 
 
 def generate_infer_file(output_file, source_path, is_vl_model=False):
-    from pathlib import Path
 
     file_name = "run_vl.py" if is_vl_model else "run.py"
     infer_file = Path(output_file).with_name(file_name)
