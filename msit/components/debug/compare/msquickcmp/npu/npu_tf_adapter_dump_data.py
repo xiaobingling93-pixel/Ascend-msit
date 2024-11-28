@@ -33,6 +33,7 @@ from tensorflow.core.protobuf.rewriter_config_pb2 import RewriterConfig
 from components.utils.util import load_file_to_read_common_check
 from components.debug.compare.msquickcmp.common.tf_common import load_file_to_read_common_check_with_walk
 
+
 class NpuTfAdapterDumpData(object):
     """
     This class is used to generate NUP dump data of the tf2.6 save_model.
