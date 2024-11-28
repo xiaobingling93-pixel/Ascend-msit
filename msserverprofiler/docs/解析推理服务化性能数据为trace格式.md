@@ -12,6 +12,11 @@
 
 如果是刚刚采集的数据。建议使用 `msprof --export=on --output=PROF_XXXX` 先预处理一下
 
+## 2 环境依赖
+
+Python 3.7及以上
+
+Pandas 2.x
 
 ## 2 执行解析脚本
 进入`msserverprofiler`文件夹，执行`parse_data_to_trace.py`脚本，具体命令如下：

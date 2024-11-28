@@ -114,9 +114,10 @@ def concat_data_from_folder(folder_path):
                 db_path = os.path.join(root, filename)
                 data_df = load_data_from_database(db_path)
                 
-                data_df[["span_id", "message"]] = (data_df[["mark_id", "message"]].apply(
-                    lambda x: pd.Series(extract_span_info_from_message(x["message"], x["mark_id"])), axis=1
-                ))
+                span_info = data_df[["mark_id", "message"]].apply(
+                    lambda x: extract_span_info_from_message(x["message"], x["mark_id"]), axis=1
+                )
+                data_df[["span_id", "message"]] = pd.DataFrame(span_info.tolist())
                 data_df = data_df.groupby("span_id").apply(merge_message, include_groups=False)
                 
                 full_df = pd.concat([full_df, data_df], ignore_index=True)
@@ -128,7 +129,7 @@ def concat_data_from_folder(folder_path):
 
 def convert_syscnt_to_ts(cnt, start_cnt):
     global cpu_frequency
-    return (SYS_TS + ((cnt - start_cnt) / cpu_frequency)) * 1000
+    return (SYS_TS + ((cnt - start_cnt) / cpu_frequency)) * 1000 * 1000
 
 
 def extract_span_info_from_message(message, mark_id):
