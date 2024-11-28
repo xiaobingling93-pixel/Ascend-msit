@@ -11,6 +11,7 @@ from safetensors import safe_open
 
 from msmodelslim.pytorch.llm_ptq.accelerate_adapter.switch import enabled_adapter
 from msmodelslim import logger as msmodelslim_logger
+from msmodelslim.pytorch.llm_ptq.accelerate_adapter.utils import HF_HOOK
 
 
 class PrepareWeight:
@@ -19,7 +20,6 @@ class PrepareWeight:
     """
 
     def __init__(self, module: torch.nn.Module, post_force=False, post_recurse=False):
-
         self.module = module
         self.post_force = post_force
         self.post_recurse = post_recurse
@@ -28,9 +28,8 @@ class PrepareWeight:
         if not enabled_adapter():
             return
 
-        if hasattr(self.module, '_hf_hook'):
-
-            hook = getattr(self.module, '_hf_hook')
+        if hasattr(self.module, HF_HOOK):
+            hook = getattr(self.module, HF_HOOK)
 
             # enable and save old state
             if isinstance(hook, UpdateWeightsMapHook):
@@ -43,8 +42,8 @@ class PrepareWeight:
         if not enabled_adapter():
             return
 
-        if hasattr(self.module, '_hf_hook'):
-            hook = getattr(self.module, '_hf_hook')
+        if hasattr(self.module, HF_HOOK):
+            hook = getattr(self.module, HF_HOOK)
 
             hook.post_forward(self.module, *[torch.zeros([1])])
             # restore old state
@@ -54,8 +53,8 @@ class PrepareWeight:
 
 
 def upload_module_weights(module: torch.nn.Module, post_force=False, post_recurse=False):
-    if hasattr(module, '_hf_hook'):
-        hook = getattr(module, '_hf_hook')
+    if hasattr(module, HF_HOOK):
+        hook = getattr(module, HF_HOOK)
 
         if isinstance(hook, UpdateWeightsMapHook):
             hook.enable_post_force(post_force)
@@ -65,8 +64,8 @@ def upload_module_weights(module: torch.nn.Module, post_force=False, post_recurs
 
 
 def offload_module_weights(module: torch.nn.Module):
-    if hasattr(module, '_hf_hook'):
-        hook = getattr(module, '_hf_hook')
+    if hasattr(module, HF_HOOK):
+        hook = getattr(module, HF_HOOK)
         hook.post_forward(module, *[torch.zeros([1])], **{})
 
 
@@ -265,11 +264,11 @@ def replace_device_align_hook_if_needed(module: torch.nn.Module, recurse=True, p
 
     msmodelslim_logger.debug(f"replace_device_align_hook_if_needed for {prefix}")
 
-    if hasattr(module, '_hf_hook') and isinstance(getattr(module, '_hf_hook'), AlignDevicesHook):
-        old_hook = getattr(module, '_hf_hook')
+    if hasattr(module, HF_HOOK) and isinstance(getattr(module, HF_HOOK), AlignDevicesHook):
+        old_hook = getattr(module, HF_HOOK)
         replace_offloaded_weights_loader_if_need(old_hook)
-        new_hook = UpdateWeightsMapHook(getattr(module, '_hf_hook'))
-        setattr(module, '_hf_hook', new_hook)
+        new_hook = UpdateWeightsMapHook(getattr(module, HF_HOOK))
+        setattr(module, HF_HOOK, new_hook)
 
     if not recurse:
         return
@@ -285,8 +284,8 @@ def move_update_weight_hook_if_need(old_module, new_module, as_submodule=False, 
     if not enabled_adapter():
         return
 
-    if hasattr(old_module, '_hf_hook'):
-        hook: UpdateWeightsMapHook = getattr(old_module, '_hf_hook')
+    if hasattr(old_module, HF_HOOK):
+        hook: UpdateWeightsMapHook = getattr(old_module, HF_HOOK)
         remove_hook_from_module(old_module)
         hook.old_hook.place_submodules = as_submodule
         old_init_force = hook.enable_init_force(force_update)
@@ -299,8 +298,8 @@ def move_update_weight_hook_if_need(old_module, new_module, as_submodule=False, 
 def get_offloaded_weights_loader_if_have(module, recurse=True) -> WritableOffloadedWeightsLoader:
     loader = None
 
-    if hasattr(module, '_hf_hook'):
-        hook = getattr(module, '_hf_hook')
+    if hasattr(module, HF_HOOK):
+        hook = getattr(module, HF_HOOK)
 
         if isinstance(hook, UpdateWeightsMapHook):
 
@@ -313,7 +312,7 @@ def get_offloaded_weights_loader_if_have(module, recurse=True) -> WritableOffloa
     if not recurse:
         return None
 
-    for name, submodule in module.named_children():
+    for _, submodule in module.named_children():
         loader = get_offloaded_weights_loader_if_have(submodule, recurse)
         if loader is not None:
             return loader
