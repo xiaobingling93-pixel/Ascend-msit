@@ -1,5 +1,6 @@
 import gc
 from functools import lru_cache
+from typing import Optional
 
 import torch
 from accelerate.utils import OffloadedWeightsLoader
@@ -27,7 +28,7 @@ def judge_module_with_accelerate(module: torch.nn.Module) -> bool:
     return hasattr(module, HF_HOOK)
 
 
-def get_offloaded_dataset(model: torch.nn.Module) -> OffloadedWeightsLoader | None:
+def get_offloaded_dataset(model: torch.nn.Module) -> Optional[OffloadedWeightsLoader]:
     """
     if accelerate is on and offload to disk, return dataset, else return None
     """
@@ -45,7 +46,7 @@ def get_offloaded_dataset(model: torch.nn.Module) -> OffloadedWeightsLoader | No
     return None
 
 
-@lru_cache
+@lru_cache(maxsize=1)
 def is_npu_available():
     try:
         import torch_npu
@@ -55,7 +56,7 @@ def is_npu_available():
     return torch.npu.is_available()
 
 
-@lru_cache
+@lru_cache(maxsize=1)
 def is_cuda_available():
     return hasattr(torch, 'cuda') and torch.cuda.is_available()
 

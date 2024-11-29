@@ -1,7 +1,6 @@
 import torch.nn
 
-from msmodelslim.pytorch.llm_ptq.accelerate_adapter.utils import judge_model_with_accelerate, \
-    judge_module_with_accelerate
+from msmodelslim.pytorch.llm_ptq.accelerate_adapter.utils import judge_model_with_accelerate
 
 __enabled_adapter = False
 __model_compatible = {}
