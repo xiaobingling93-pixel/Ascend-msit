@@ -1,11 +1,14 @@
-from .hook_adapter import replace_device_align_hook_if_needed
-from .hook_adapter import move_update_weight_hook_if_need
-from .hook_adapter import get_state_dict_copy
-from .hook_adapter import clear_unused_module
-from .hook_adapter import PrepareWeight
-from .switch import check_model_compatible, enable_adapter, disable_adapter
+from .hook_adapter import (replace_device_align_hook_if_needed,
+                           move_update_weight_hook_if_need,
+                           get_state_dict_copy,
+                           clear_unused_module,
+                           PrepareWeight)
+from .switch import check_model_compatible, enable_adapter, disable_adapter, enabled_adapter
 from .utils import get_offloaded_dataset
-from .offloaded_state_dict import DiskStateDictConfig, MemoryStateDictConfig, copy_offloaded_state_dict
+from .offloaded_state_dict import (DiskStateDictConfig,
+                                   MemoryStateDictConfig,
+                                   copy_offloaded_state_dict)
+from .lazy_handler import LazyTensor, handle_lazy_tensor
 
 __all__ = [
     'replace_device_align_hook_if_needed',
@@ -17,10 +20,14 @@ __all__ = [
     'enable_adapter',
     'disable_adapter',
     'check_model_compatible',
+    'enabled_adapter',
 
     'get_offloaded_dataset',
 
     'copy_offloaded_state_dict',
     'DiskStateDictConfig',
     'MemoryStateDictConfig',
+
+    'LazyTensor',
+    'handle_lazy_tensor'
 ]
