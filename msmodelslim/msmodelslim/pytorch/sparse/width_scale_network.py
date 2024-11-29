@@ -44,22 +44,6 @@ class WidthScaleNetwork:
         return self._network
 
     @staticmethod
-    def _is_all_node_not_in_graph(node_name, in_output_nodes, all_nodes_set):
-        in_graph_count = 0
-        all_count = 0
-        for in_out_node in in_output_nodes:
-            all_count += 1
-            if in_out_node in all_nodes_set:
-                in_graph_count += 1
-        if in_graph_count == 0:
-            return True
-        elif all_count != in_graph_count:
-            raise ValueError(f"Some node {node_name} upper or lower nodes are in the"
-                             f" graph to be prune, and some are not.")
-        else:
-            return False
-
-    @staticmethod
     def get_node_in_out_channel_count(dag_node) -> Tuple[int, int, int]:
         in_chn, out_chn, groups = 0, 0, 1
         if not hasattr(dag_node.node, "weight"):
@@ -111,6 +95,22 @@ class WidthScaleNetwork:
         new_weight = weight[:target_shape[0]] if num_dims == 1 else weight[:target_shape[0], :target_shape[1]]
         return new_weight.clone()
 
+    @staticmethod
+    def _is_all_node_not_in_graph(node_name, in_output_nodes, all_nodes_set):
+        in_graph_count = 0
+        all_count = 0
+        for in_out_node in in_output_nodes:
+            all_count += 1
+            if in_out_node in all_nodes_set:
+                in_graph_count += 1
+        if in_graph_count == 0:
+            return True
+        elif all_count != in_graph_count:
+            raise ValueError(f"Some node {node_name} upper or lower nodes are in the"
+                             f" graph to be prune, and some are not.")
+        else:
+            return False
+            
     @staticmethod
     def _dfs_search_till_node_with_weight(start_node_set, mode="out") -> Set[DagNode]:
         list_nodes = list(start_node_set)

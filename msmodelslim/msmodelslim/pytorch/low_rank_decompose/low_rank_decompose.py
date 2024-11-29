@@ -270,7 +270,6 @@ def decompose_network_recursion(
                 do_decompose_weight=do_decompose_weight,
                 prefix_name=cur_prefix_name,
             )
-
     return network
 
 

@@ -42,7 +42,6 @@ def get_input_data_for_each_layer(network, decompose_config, datasets, max_iter=
 
     """ Convert Linear to a block with SaveInput, saving input_data for each Linear layer """
     replace_module_with_saving_input(network, decompose_config)
-
     """ Run Inference """
     input_data_dict = {}
     for iter_id, inputs in progress_bar(enumerate(datasets), desc='Running Inference'):

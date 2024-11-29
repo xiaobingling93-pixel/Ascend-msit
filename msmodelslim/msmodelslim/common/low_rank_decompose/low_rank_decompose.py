@@ -158,7 +158,10 @@ def decompose_weight_4d_tucker(source_input, hidden_out: int, hidden_in: int, in
     source_input = source_input.astype("float32")
     ranks = (hidden_out, hidden_in)
     if input_data is not None:
-        core, [last, first] = data_aware_decompose_4d(source_input, input_data=input_data, ranks=ranks)
+        try:
+            core, [last, first] = data_aware_decompose_4d(source_input, input_data=input_data, ranks=ranks)
+        except Exception as e:
+            raise Exception("Error from decompose_weight_4d_tucker function.", e) from e
     else:
         core, [last, first] = tucker(source_input, ranks=ranks, modes=[0, 1])
     first = first.T[:, :, None, None]
