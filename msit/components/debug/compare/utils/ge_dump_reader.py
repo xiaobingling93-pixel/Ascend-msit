@@ -139,6 +139,9 @@ class GEDumpFileReader(DumpFileReader):
             pass
 
         return npu_tensor
+    
+    def get_keys(self) -> set:
+        return set(self.key_to_folder.keys())
 
     def _map_keys_to_folders(self) -> dict:
         key_to_folder = {}
@@ -152,6 +155,4 @@ class GEDumpFileReader(DumpFileReader):
                     key_to_folder[fusion_op] = jit_node
 
         return key_to_folder
-
-    def _get_keys(self) -> set:
-        return set(self.key_to_folder.keys())
+  
