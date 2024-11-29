@@ -218,7 +218,6 @@ class Calibrator(object):
                 config = MemoryStateDictConfig()
             else:
                 raise ValueError("state dict type must be disk or memory")
-            config.skip_keys = set([f"{name}.weight"] for name in self.quant_linear_names)
             return copy_offloaded_state_dict(model, config)
 
         ori_fp_weight = {}
