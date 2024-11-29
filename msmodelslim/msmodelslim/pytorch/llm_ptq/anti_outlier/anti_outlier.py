@@ -50,7 +50,15 @@ except ImportError:
         "The current CANN version does not support importing the attach_op and Multiplier packages."
     )
 
-from msmodelslim.pytorch.llm_ptq.accelerate_adapter import *
+from msmodelslim.pytorch.llm_ptq.accelerate_adapter import (PrepareWeight,
+                                                            move_update_weight_hook_if_need,
+                                                            check_model_compatible,
+                                                            get_offloaded_dataset,
+                                                            MemoryStateDictConfig,
+                                                            DiskStateDictConfig,
+                                                            copy_offloaded_state_dict,
+                                                            enable_adapter,
+                                                            replace_device_align_hook_if_needed)
 
 STAT_KEY_MAX = "max"
 STAT_KEY_MIN = "min"
@@ -96,7 +104,7 @@ def model_to_cpu(model):
             mod.cpu()
         except Exception as e:
             # meta -> cpu
-            logger.info("Transfering meta model to cpu device...", e)
+            msmodelslim_logger.info("Transfering meta model to cpu device...", e)
             if hasattr(mod, "_hf_hook"):
                 mod._hf_hook.detach_hook(mod)
 
@@ -108,7 +116,7 @@ def model_to_org_device_with_buffer(model, device_org='cpu'):
     # 将原模型的权重恢复到GPU（或meta）上
     for _, mod in model.named_modules():
         if hasattr(mod, '_hf_hook'):
-            mod._hf_hook.init_hook(mod)           
+            mod._hf_hook.init_hook(mod)
     for name, mod in model.named_modules():
         # 需要将之前在cpu上可能产生的buffer同步转移到module所在的设备上
         if not hasattr(mod, '_buffers'):
@@ -544,7 +552,7 @@ class AntiOutlier(object):
                 linear_modules.append(mod)
 
             if Multiplier is not None and norm_module is None:
-                norm_module =  Multiplier(
+                norm_module = Multiplier(
                     torch.ones_like(stats[STAT_KEY_SMOOTH_SCALE]).to(linear_modules[0].weight.device)
                 )
 
