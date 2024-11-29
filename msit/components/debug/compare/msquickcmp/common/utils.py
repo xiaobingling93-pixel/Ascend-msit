@@ -560,7 +560,8 @@ def parse_dym_shape_range(dym_shape_range):
                             "Attempting to input such a shape could potentially impact system performance.\n" \
                             "Please confirm your awareness of the risks associated with this action ([y]/n): " % content
                 if (end - start) / step > DYM_SHAPE_END_MAX and not dym_shape_range_interaction(prompt):
-                    raise ValueError("--dym-shape-range is too large, start: %r, end: %r, step: %r" % (str(start), str(end), str(step)))
+                    raise ValueError("--dym-shape-range is too large, start: %r, end: %r, step: %r" % (str(start), \
+                                        str(end), str(step)))
                 ranges = [str(i) for i in range(start, end + 1, step)]
             elif "-" in content:
                 ranges = content.split("-")

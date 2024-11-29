@@ -46,7 +46,8 @@ def build_transformers_model(source_path):
     try:
         from transformers import AutoConfig, AutoModelForCausalLM
     except ModuleNotFoundError as error:
-        raise ModuleNotFoundError(f"Failed to build model from {source_path}, Please ensure that the models is compatible with transformers package") from error
+        raise ModuleNotFoundError(f"Failed to build model from {source_path}, Please ensure that \
+                        the models is compatible with transformers package") from error
 
     try:
         config = AutoConfig.from_pretrained(source_path)
