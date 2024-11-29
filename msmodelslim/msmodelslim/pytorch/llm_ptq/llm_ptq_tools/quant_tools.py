@@ -123,7 +123,8 @@ class Calibrator(object):
             self.attention_class = class_detect(model, 'attention')
             self.transformer_class = class_detect(model, 'GLMTransformer')
 
-
+        # 记录浮点模型权重
+        self.ori_fp_weight = self.get_ori_model_weight(model, self.cfg)
 
         if self.cfg.do_smooth:
             replace_RMSNorm(model)
@@ -147,10 +148,6 @@ class Calibrator(object):
         self.quant_linear_names = None
         self.act_states = None
         self.rollback_names_process(model)
-
-        # 记录浮点模型权重
-        self.ori_fp_weight = self.get_ori_model_weight(model, self.cfg)
-
         if self.cfg.use_fa_quant:
             configure_fa(model, tp_size=self.cfg.fa_tp_size)
 

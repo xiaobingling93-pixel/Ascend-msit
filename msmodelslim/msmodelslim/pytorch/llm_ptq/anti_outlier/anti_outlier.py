@@ -246,8 +246,7 @@ class AntiOutlier(object):
             self.org_model = model
 
         # 保存anti_outlier处理前的原始权重，为避免显存的额外占用，原始权重放在内存上
-        states_dic = {} if enabled_adapter() and self.cfg.anti_method == 'm4' else copy_state_dict(model,
-                                                                                                   self.cfg.offload_type)
+        states_dic = copy_state_dict(model, self.cfg.offload_type)
 
         try:
             self.model_with_accelerate = judge_model_with_accelerate(model)
@@ -281,8 +280,7 @@ class AntiOutlier(object):
             raise Exception("Please check your config, model and input!", e) from e
 
         # 保存anti_outlier处理前的原始权重，作为属性存入model中
-        if not enabled_adapter():
-            setattr(self.model, 'ori_state_dict', states_dic)
+        setattr(self.model, 'ori_state_dict', states_dic)
 
     def init_dag(self, predefined_fusions=None):
         if predefined_fusions is not None:
