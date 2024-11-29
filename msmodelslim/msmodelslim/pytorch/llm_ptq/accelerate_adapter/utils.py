@@ -1,3 +1,6 @@
+import gc
+from functools import lru_cache
+
 import torch
 from accelerate.utils import OffloadedWeightsLoader
 
@@ -40,3 +43,32 @@ def get_offloaded_dataset(model: torch.nn.Module) -> OffloadedWeightsLoader | No
                     and getattr(hook, WEIGHTS_MAP).dataset.save_folder:
                 return getattr(hook, WEIGHTS_MAP).dataset
     return None
+
+
+@lru_cache
+def is_npu_available():
+    try:
+        import torch_npu
+    except ImportError:
+        return False
+
+    return torch.npu.is_available()
+
+
+@lru_cache
+def is_cuda_available():
+    return hasattr(torch, 'cuda') and torch.cuda.is_available()
+
+
+def clear_device_cache(garbage_collection=False):
+    """
+    Clears the device cache by calling `torch.{backend}.empty_cache`. Can also run `gc.collect()`, but do note that
+    this is a *considerable* slowdown and should be used sparingly.
+    """
+    if garbage_collection:
+        gc.collect()
+
+    if is_npu_available():
+        torch.npu.empty_cache()
+    elif is_cuda_available():
+        torch.cuda.empty_cache()

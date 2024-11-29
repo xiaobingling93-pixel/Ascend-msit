@@ -20,9 +20,9 @@ import torch
 from accelerate.hooks import ModelHook, AlignDevicesHook, remove_hook_from_module, add_hook_to_module
 from accelerate.utils import PrefixedDataset, OffloadedWeightsLoader
 from accelerate.utils import offload_state_dict, offload_weight, save_offload_index, load_offloaded_weight
-from accelerate.utils.memory import clear_device_cache
 from safetensors import safe_open
 
+from msmodelslim.pytorch.llm_ptq.accelerate_adapter.utils import clear_device_cache
 from msmodelslim.pytorch.llm_ptq.accelerate_adapter.switch import enabled_adapter
 from msmodelslim import logger as msmodelslim_logger
 from msmodelslim.pytorch.llm_ptq.accelerate_adapter.utils import HF_HOOK
