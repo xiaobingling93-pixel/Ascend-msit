@@ -1,5 +1,4 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
-from msmodelslim.pytorch.llm_ptq.accelerate_adapter.offloaded_state_dict import OFFLOAD_DISK
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config.quant_config_factory import QuantConfigFactory
 
 
@@ -210,20 +209,20 @@ class QuantConfig:
         return self
 
     def low_memory(self,
-                   offload_type: str = OFFLOAD_DISK,
-                   should_save_lazily: bool = True,
+                   offload_type: str = "disk",
+                   enable_lazy_save: bool = True,
                    ):
         """
         低内存低显存参数初始化
 
         Arg:
             offload_type: state_dict 下放设备，可选（1）disk 磁盘；（2）memory 内存
-            should_save_lazily: 是否开启保存时懒计算权重，开启后量化保存耗时增加，降低内存使用
+            enable_lazy_save: 是否开启保存时懒计算权重，开启后量化保存耗时增加，降低内存使用
         """
         self._cur_config = QuantConfigFactory.get_quant_config('low_memory',
                                                                last_config=self._cur_config,
                                                                offload_type=offload_type,
-                                                               should_save_lazily=should_save_lazily)
+                                                               enable_lazy_save=enable_lazy_save)
         self._modify_quant_param()
         return self
 

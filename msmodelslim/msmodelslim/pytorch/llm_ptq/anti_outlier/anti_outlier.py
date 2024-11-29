@@ -20,7 +20,7 @@ from accelerate.hooks import add_hook_to_module, remove_hook_from_module
 from ascend_utils import ResListToRelease
 from ascend_utils.common.security import get_valid_write_path, check_type
 from msmodelslim import logger as msmodelslim_logger
-from msmodelslim.pytorch.llm_ptq.accelerate_adapter.switch import enabled_adapter
+from msmodelslim.pytorch.llm_ptq.accelerate_adapter import enabled_adapter
 
 try:
     import torch_npu
@@ -83,7 +83,7 @@ _PREDEFINED_FUSION_KWARGS = {
         }
 }
 
-STATE_DICT_COPY_DIR = "copy"
+STATE_DICT_COPY_DIR = "msmodelslim_copy"
 
 
 def judge_model_with_accelerate(model: nn.Module):
@@ -307,24 +307,14 @@ class AntiOutlier(object):
                 norm_class = [norm_class[0]]
                 self.norm_class_name = norm_class[0].__name__.lower()
 
-            if not enabled_adapter():
-                self.dag = extract_dag(self.model, dummy_input,
-                                       hook_nodes=norm_class, anti_method=self.cfg.anti_method)
-
-                self.norm_linear_subgraph = self.dag.get_norm_linear_subgraph()
-                if self.cfg.anti_method == 'm4':
-                    self.linear_linear_subgraph = self.dag.get_linear_linear_subgraph()
-                    self.norm_linear_subgraph.update(self.linear_linear_subgraph)
-
-            else:
-                # 不要保存为成员变量，内部会引用模型以及模型的子模块，导致这些模块的参数正常无法释放
-                dag = extract_dag(self.model, dummy_input,
-                                  hook_nodes=norm_class, anti_method=self.cfg.anti_method)
-                self.norm_linear_subgraph = dag.get_norm_linear_subgraph()
-                if self.cfg.anti_method == 'm4':
-                    self.linear_linear_subgraph = dag.get_linear_linear_subgraph()
-                    self.norm_linear_subgraph.update(self.linear_linear_subgraph)
-                del dag
+            # 不要保存为成员变量，内部会引用模型以及模型的子模块，导致这些模块的参数正常无法释放
+            dag = extract_dag(self.model, dummy_input,
+                              hook_nodes=norm_class, anti_method=self.cfg.anti_method)
+            self.norm_linear_subgraph = dag.get_norm_linear_subgraph()
+            if self.cfg.anti_method == 'm4':
+                self.linear_linear_subgraph = dag.get_linear_linear_subgraph()
+                self.norm_linear_subgraph.update(self.linear_linear_subgraph)
+            del dag
 
         if not enabled_adapter():
             del self.model

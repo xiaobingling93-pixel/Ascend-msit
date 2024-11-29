@@ -4,13 +4,14 @@ from enum import Enum
 from ascend_utils.common.security.pytorch import validate_device
 from ascend_utils.common.security import check_type
 from msmodelslim import logger as msmodelslim_logger
-from msmodelslim.pytorch.llm_ptq.accelerate_adapter.offloaded_state_dict import OFFLOAD_DISK, OFFLOAD_MEMORY
 
 _ANTI_METHODS = ['m1', 'm2', 'm3', 'm4', 'm5']
 _SUPPORTED_DEVICES = ["cpu", "npu", 'gpu']
 _SUPPORED_ARCHS = ["SD3Transformer2DModel"]
 
 _OFFLOAD_TYPE = 'offload_type'
+OFFLOAD_DISK = 'disk'
+OFFLOAD_MEMORY = 'memory'
 _SUPPORTED_LOW_MEMORY_KEY = [_OFFLOAD_TYPE]
 _SUPPORTED_OFFLOAD_TYPE = [OFFLOAD_DISK, OFFLOAD_MEMORY]
 

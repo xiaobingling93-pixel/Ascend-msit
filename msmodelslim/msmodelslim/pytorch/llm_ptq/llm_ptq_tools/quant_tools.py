@@ -7,6 +7,7 @@ import os
 import gc
 import functools
 from collections import defaultdict
+from typing import Mapping
 
 from tqdm import tqdm
 import torch
@@ -69,7 +70,11 @@ from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.simulate_tp import ParallelLinear
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.save_utils import save_file_partial
 from msmodelslim import logger as msmodelslim_logger
 
-from msmodelslim.pytorch.llm_ptq.accelerate_adapter.hook_adapter import *
+from msmodelslim.pytorch.llm_ptq.accelerate_adapter.hook_adapter import (enabled_adapter,
+                                                                         PrepareWeight,
+                                                                         replace_device_align_hook_if_needed,
+                                                                         move_update_weight_hook_if_need,
+                                                                         clear_unused_module)
 
 HF_HOOK = "_hf_hook"
 STATE_DICT_COPY_DIR = "copy"
@@ -100,7 +105,6 @@ class Calibrator(object):
 
         if hasattr(self.cfg, "is_adapter_enabled") and self.cfg.is_adapter_enabled:
             enable_adapter()
-
 
         if model.dtype != model.config.torch_dtype:
             self.logger.warning(f'The model dtype {model.dtype} is not consistent with the model.config.torch_dtype '
@@ -502,29 +506,23 @@ class Calibrator(object):
         # 修改 safetensor 权重
         safetensor_weight = {}
         quant_model_state_dict_list = list(self.quant_param_dict.keys())
-        if enabled_adapter() and self.cfg.should_save_lazily:
-            for ori_model_state_dict_name in self.ori_fp_weight:
-                # 如果浮点权重名称不在量化权重名称中，说明是浮点独有的权重，需要把浮点权重加入safetensor_weight
-                if ori_model_state_dict_name not in quant_model_state_dict_list:
+        for ori_model_state_dict_name in self.ori_fp_weight:
+            # 如果浮点权重名称不在量化权重名称中，说明是浮点独有的权重，需要把浮点权重加入safetensor_weight
+            if ori_model_state_dict_name not in quant_model_state_dict_list:
+                if enabled_adapter() and self.cfg.enable_lazy_save:
                     # Norm 有额外的anti weight、bias，单独补充
                     self.set_fp_safetensor(ori_model_state_dict_name, safetensor_weight,
                                            LazyTensor(lambda state_dict, k: state_dict[k].clone(),
                                                       state_dict=self.ori_fp_weight,
                                                       k=ori_model_state_dict_name))
-
-                # 如果浮点权重名称在量化权重名称中，说明是浮点转换为量化的权重，需要把量化权重加入safetensor_weight
                 else:
-                    self.set_quant_safetensor(ori_model_state_dict_name, safetensor_weight)
-        else:
-            for ori_model_state_dict_name, ori_model_state_dict in self.ori_fp_weight.items():
-                # 如果浮点权重名称不在量化权重名称中，说明是浮点独有的权重，需要把浮点权重加入safetensor_weight
-                if ori_model_state_dict_name not in quant_model_state_dict_list:
                     # Norm 有额外的anti weight、bias，单独补充
-                    self.set_fp_safetensor(ori_model_state_dict_name, safetensor_weight, ori_model_state_dict.clone())
+                    self.set_fp_safetensor(ori_model_state_dict_name, safetensor_weight,
+                                           self.ori_fp_weight[ori_model_state_dict_name].clone())
 
-                # 如果浮点权重名称在量化权重名称中，说明是浮点转换为量化的权重，需要把量化权重加入safetensor_weight
-                else:
-                    self.set_quant_safetensor(ori_model_state_dict_name, safetensor_weight)
+            # 如果浮点权重名称在量化权重名称中，说明是浮点转换为量化的权重，需要把量化权重加入safetensor_weight
+            else:
+                self.set_quant_safetensor(ori_model_state_dict_name, safetensor_weight)
 
         if self.cfg.use_fa_quant:
             for attention_module_name in self.fa_module_param_dict:
@@ -687,11 +685,12 @@ class Calibrator(object):
                     anti_norm_name_weight = name + '.module.weight'
                     anti_norm_name_bias = name + '.module.bias'
                     anti_norm_name_weight_value = anti_norm_weight.clone().detach()
-                    if enabled_adapter() and self.cfg.should_save_lazily:
+                    if enabled_adapter() and self.cfg.enable_lazy_save:
                         def get_anti_norm_weight(mod: torch.nn.Module) -> torch.Tensor:
                             with PrepareWeight(mod):
                                 return mod.module.weight.cpu() if isinstance(mod,
-                                    NormBias) else mod.weight.cpu().clone().detach()
+                                                                             NormBias) else mod.weight.cpu().clone().detach()
+
                         anti_norm_name_weight_value = LazyTensor(
                             get_anti_norm_weight, tensor=anti_norm_name_weight_value, mod=module)
                     self.quant_param_dict[anti_norm_name_weight] = anti_norm_name_weight_value
@@ -711,13 +710,14 @@ class Calibrator(object):
                     # 各种量化均需要提供 weight
                     quant_weight = quant_weight.cpu()
                     save_quant_weight = quant_weight.to(torch.int8)
-                    if enabled_adapter() and self.cfg.should_save_lazily:
+                    if enabled_adapter() and self.cfg.enable_lazy_save:
                         def get_quant_weight(mod: torch.nn.Module) -> torch.Tensor:
                             with PrepareWeight(mod):
                                 value, _, _, _ = self.get_param_from_quantizer(mod)
                                 return value.cpu().to(torch.int8)
+
                         save_quant_weight = LazyTensor(get_quant_weight,
-                                                  tensor=save_quant_weight, mod=module)
+                                                       tensor=save_quant_weight, mod=module)
                     self.quant_param_dict[name + '.weight'] = save_quant_weight
 
                     # W4A16/W8A16 需要提供 weight_scale、weight_offset
