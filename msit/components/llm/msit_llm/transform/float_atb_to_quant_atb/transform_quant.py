@@ -37,6 +37,7 @@ INDEX_SUFFIX = "INDEX"
 WEIGHT_SUFFIX = "WEIGHT"
 IN_BETA = "IN_BETA"
 IN_HOLDER = "IN_HOLDER"
+INS = "// Quant weights\n"
 
 
 class TransformQuant:
@@ -158,7 +159,7 @@ class TransformQuant:
                 break
 
         insert_contents = "".join([self.indent_prefix + ii + ",\n" for ii in self.in_tensor_added])
-        insert_contents = "\n" + self.indent_prefix + "// Quant weights\n" + insert_contents + "\n"
+        insert_contents = "\n" + self.indent_prefix + INS + insert_contents + "\n"
         return insert_contents, insert_position, insert_position
 
     def update_in_tensor_count(self, cursor, contents):

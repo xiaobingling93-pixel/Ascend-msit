@@ -71,6 +71,7 @@ class ConvertLinearParams:
         self.weight_offset = weight_offset
         self.quant_weight = quant_weight
 
+
 def calculate_int_weight(weight_initializer,
                          weight_scale,
                          weight_offset,

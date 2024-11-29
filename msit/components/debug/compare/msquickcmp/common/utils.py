@@ -501,7 +501,7 @@ def parse_input_shape_to_list(input_shape):
                             "Attempting to input such a shape could potentially impact system performance.\n" \
                             "Please confirm your awareness of the risks associated with this action ([y]/n): " % tensor
                 if dim_int > DYM_SHAPE_END_MAX and not dym_shape_range_interaction(prompt):
-                     raise ValueError("The dim of --input-shape %r is too large." % (str(dim_int)))
+                    raise ValueError("The dim of --input-shape %r is too large." % (str(dim_int)))
                 
             input_shape_list.append(shape_list_int)
         else:
@@ -560,7 +560,7 @@ def parse_dym_shape_range(dym_shape_range):
                             "Attempting to input such a shape could potentially impact system performance.\n" \
                             "Please confirm your awareness of the risks associated with this action ([y]/n): " % content
                 if (end - start) / step > DYM_SHAPE_END_MAX and not dym_shape_range_interaction(prompt):
-                     raise ValueError("--dym-shape-range is too large, start: %r, end: %r, step: %r" % (str(start), str(end), str(step)))
+                    raise ValueError("--dym-shape-range is too large, start: %r, end: %r, step: %r" % (str(start), str(end), str(step)))
                 ranges = [str(i) for i in range(start, end + 1, step)]
             elif "-" in content:
                 ranges = content.split("-")
