@@ -81,11 +81,6 @@ class WritableOffloadedWeightsLoader(OffloadedWeightsLoader):
                  device=None):
         super().__init__(state_dict, save_folder, index, device)
 
-    def update_all_keys(self):
-        self.all_keys = list(self.state_dict.keys())
-        self.all_keys.extend([key for key in self.index if key not in self.all_keys])
-        pass
-
     def __setitem__(self, key, value):
         if key in self.state_dict or self.save_folder is None:
             self.state_dict[key] = value
@@ -123,6 +118,11 @@ class WritableOffloadedWeightsLoader(OffloadedWeightsLoader):
 
         weight_file = os.path.join(self.save_folder, f"{key}.dat")
         return load_offloaded_weight(weight_file, weight_info)
+
+    def update_all_keys(self):
+        self.all_keys = list(self.state_dict.keys())
+        self.all_keys.extend([key for key in self.index if key not in self.all_keys])
+        pass
 
 
 class UpdateWeightsMapHook(ModelHook):
@@ -200,7 +200,7 @@ class UpdateWeightsMapHook(ModelHook):
 
         clear_device_cache(True)
 
-        return self
+        return
 
     def init_hook(self, module):
         self.depth = 0
@@ -255,7 +255,7 @@ def replace_offloaded_weights_loader_if_need(hook: AlignDevicesHook):
                                                     old_loader.device)
         hook.weights_map.dataset = new_loader
 
-    return hook
+    return
 
 
 def replace_device_align_hook_if_needed(module: torch.nn.Module, recurse=True, prefix=""):
@@ -316,6 +316,8 @@ def get_offloaded_weights_loader_if_have(module, recurse=True) -> WritableOffloa
         loader = get_offloaded_weights_loader_if_have(submodule, recurse)
         if loader is not None:
             return loader
+
+    return None
 
 
 def get_state_dict_copy(module: torch.nn.Module, skip_keys=None, device='cpu'):
