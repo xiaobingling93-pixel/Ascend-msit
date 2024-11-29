@@ -495,8 +495,7 @@ class Calibrator(object):
             keys_to_delete = [key for key in safetensor_weight.keys() if 'module.weight' in key]
             for key in keys_to_delete:
                 del safetensor_weight[key]
-        
-        if not hasattr(self.model, 'ori_state_dict'):
+
             keys_to_delete = [key for key in self.quant_model_json_description.quant_model_description.keys() if 'module.weight' in key]
             for key in keys_to_delete:
                 del self.quant_model_json_description.quant_model_description[key]
