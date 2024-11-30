@@ -36,7 +36,7 @@ class BaseConfig:
                  is_dynamic: bool = False,
                  group_size: int = 64,
                  percdamp: float = 0.01,
-                 low_memory: dict | None = None,
+                 low_memory: dict = None,
                  ):
         """
         Args:
