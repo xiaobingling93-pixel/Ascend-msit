@@ -80,6 +80,7 @@ class QuantConfig:
             open_outlier: 是否开启权重异常值划分
             is_dynamic: 是否使用动态量化，即w8a8中的activation动态生成
             percdamp: GPTQ所使用的矩阵正定偏置系数,当GPTQ运行出现非正定矩阵导致的报错时可以增大该参数
+            low_memory: 低内存低显存配置，配置为字典时开启，如 {'offload_type': 'disk' | 'memory', 'enable_lazy_save': True | False}
         """
         self._cur_config = QuantConfigFactory. \
             get_quant_config('base', w_bit=w_bit, a_bit=a_bit, act_method=act_method, w_method=w_method,

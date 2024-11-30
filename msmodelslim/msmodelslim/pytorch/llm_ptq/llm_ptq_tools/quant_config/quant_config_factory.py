@@ -7,7 +7,6 @@ from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config.quant_config_classes
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config.quant_config_classes import KVQuantConfig
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config.quant_config_classes import FAQuantConfig
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config.quant_config_classes import SimulateTPConfig
-from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config.quant_config_classes import LowMemoryConfig
 
 
 class QuantConfigFactory:
