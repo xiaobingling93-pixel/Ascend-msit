@@ -23,6 +23,12 @@ class MarkType(int, Enum):
     TYPE_SPAN = 2
     TYPE_LINK = 3
 
+class Level(int, Enum):
+    ERROR = 10
+    INFO = 20
+    DETAILED = 30
+    VERBOSE = 40
+
 
 class AttrCollect:
     def __init__(self) -> None:
