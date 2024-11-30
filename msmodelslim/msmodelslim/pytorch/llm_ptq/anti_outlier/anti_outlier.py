@@ -6,6 +6,7 @@ import gc
 import stat
 import copy
 import functools
+import inspect
 from typing import OrderedDict
 from collections import OrderedDict as OrderedDict_CHECK
 
@@ -200,10 +201,11 @@ class AntiOutlier(object):
         self.norm_class_name = norm_class_name
         self.org_model = model
 
-        # 保存anti_outlier处理前的原始权重，为避免显存的额外占用，原始权重放在内存上
-        states_dic = {}
-        for key, value in self.org_model.state_dict().items():
-            states_dic[key] = copy.deepcopy(value).to('cpu')
+        # 非m4或m5场景下，保存anti_outlier处理前的原始权重，为避免显存的额外占用，原始权重放在内存上
+        if self.cfg.anti_method not in ['m4', 'm5']:
+            states_dic = {}
+            for key, value in self.org_model.state_dict().items():
+                states_dic[key] = copy.deepcopy(value).to('cpu')
 
         try:
             self.model_with_accelerate = judge_model_with_accelerate(model)
@@ -236,8 +238,9 @@ class AntiOutlier(object):
         except Exception as e:
             raise Exception("Please check your config, model and input!", e) from e
 
-        # 保存anti_outlier处理前的原始权重，作为属性存入model中
-        setattr(self.model, 'ori_state_dict', states_dic)
+        # 非m4或m5场景下，保存anti_outlier处理前的原始权重，作为属性存入model中
+        if self.cfg.anti_method not in ['m4', 'm5']:
+            setattr(self.model, 'ori_state_dict', states_dic)
 
     def init_dag(self, predefined_fusions=None):
         if predefined_fusions is not None:
@@ -499,14 +502,12 @@ class AntiOutlier(object):
             elif self.cfg.anti_method == 'm3':
                 weight_aware(self.cfg, norm_module, linear_modules, stats)
             elif self.cfg.anti_method == 'm4':
+                if 'scale_min' in inspect.signature(iter_smooth).parameters:
+                    fusion_kwargs.update({"scale_min": scale_min})
+                if 'check_group_fusions' not in inspect.signature(iter_smooth).parameters:
+                    fusion_kwargs.pop("check_group_fusions", None)
                 iter_smooth(
-                    self.cfg,
-                    norm_module,
-                    linear_modules,
-                    stats,
-                    num_attention_heads,
-                    scale_min=scale_min,
-                    **fusion_kwargs,
-                )
+                    self.cfg, norm_module, linear_modules, stats, num_attention_heads, **fusion_kwargs
+                    )
                 if attach_op is not None and Multiplier is not None and isinstance(norm_module, Multiplier):
                     attach_op(self.model, norm_module, linear_modules, linear_names)

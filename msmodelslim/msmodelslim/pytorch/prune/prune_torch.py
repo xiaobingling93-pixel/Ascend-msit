@@ -14,6 +14,9 @@ from msmodelslim.pytorch.prune.prune_policy import PrunePolicyGraphConv2D, \
 from msmodelslim import logger
 
 
+def chn_weight(x):
+    return torch.abs(x).mean().item()
+
 class PruneTorch:
     def __init__(self, network: Union[torch.nn.Module, DagTorchHook],
                  inputs: Union[Tensor, List[Tensor], Tuple[Tensor], CallParams] = None):
@@ -26,7 +29,7 @@ class PruneTorch:
         else:
             raise ValueError("network must be torch.nn.Module or Dag")
 
-        self._importance_evaluation_function = lambda chn_weight: torch.abs(chn_weight).mean().item()
+        self._importance_evaluation_function = chn_weight
         self._node_reserved_ratio = 0.5
         self._align = 16
 

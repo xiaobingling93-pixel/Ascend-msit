@@ -62,8 +62,8 @@ class MIETorchCompare:
 
     def compare(self):
         tensors = {}
-        cpu_keys = self.cpu_reader._get_keys()
-        npu_keys = self.npu_reader._get_keys()
+        cpu_keys = self.cpu_reader.get_keys()
+        npu_keys = self.npu_reader.get_keys()
         for cpu_key in cpu_keys:
             if cpu_key in npu_keys:
                 cpu_tensor = self.cpu_reader.get_tensor(cpu_key)
@@ -123,5 +123,5 @@ class MIETorchCompare:
             writer.writeheader()
             writer.writerows(sorted_rows)
         
-        logger.info("compare resut has been saved on %r ." %csv_file_path)
+        logger.info("compare resut has been saved on %r ." % csv_file_path)
         
