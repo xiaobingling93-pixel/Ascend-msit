@@ -33,16 +33,22 @@ def get_offloaded_dataset(model: torch.nn.Module) -> Optional[OffloadedWeightsLo
     if accelerate is on and offload to disk, return dataset, else return None
     """
 
+    def check_weights_loader(hook):
+        return (
+                hasattr(hook, WEIGHTS_MAP)
+                and getattr(hook, WEIGHTS_MAP) is not None
+                and isinstance(getattr(hook, WEIGHTS_MAP).dataset, OffloadedWeightsLoader)
+                and getattr(hook, WEIGHTS_MAP).dataset.save_folder
+        )
+
     for _, mod in model.named_modules():
-        if judge_module_with_accelerate(mod):
-            hook = getattr(mod, HF_HOOK)
-            if hasattr(hook, OLD_HOOK):
-                hook = hook.old_hook
-            if hasattr(hook, WEIGHTS_MAP) \
-                    and getattr(hook, WEIGHTS_MAP) is not None \
-                    and isinstance(getattr(hook, WEIGHTS_MAP).dataset, OffloadedWeightsLoader) \
-                    and getattr(hook, WEIGHTS_MAP).dataset.save_folder:
-                return getattr(hook, WEIGHTS_MAP).dataset
+        if not judge_module_with_accelerate(mod):
+            continue
+        hook = getattr(mod, HF_HOOK)
+        if hasattr(hook, OLD_HOOK):
+            hook = hook.old_hook
+        if check_weights_loader(hook):
+            return getattr(hook, WEIGHTS_MAP).dataset
     return None
 
 

@@ -43,6 +43,7 @@ def copy_offloaded_state_dict(model: torch.nn.Module, config: StateDictConfig) -
 class MemoryStateDictConfig(StateDictConfig):
     typ = OFFLOAD_MEMORY
 
+    @property
     def args(self) -> Mapping:
         return {}
 
@@ -65,16 +66,16 @@ class DiskStateDictConfig(StateDictConfig):
         super().__init__()
         self.__save_folder = None
 
+    @property
+    def args(self):
+        return {self.ARG_SAVE_FOLDER: self.__save_folder}
+
     def save_folder(self, __save_folder: Optional[Union[str, os.PathLike]]) -> Self:
         if not isinstance(__save_folder, (str, os.PathLike)):
             raise ValueError("path to state dict must be str or os.PathLike")
 
         self.__save_folder = __save_folder
         return self
-
-    @property
-    def args(self):
-        return {self.ARG_SAVE_FOLDER: self.__save_folder}
 
 
 class DiskStateDict(WritableOffloadedWeightsLoader, StateDictBase):
