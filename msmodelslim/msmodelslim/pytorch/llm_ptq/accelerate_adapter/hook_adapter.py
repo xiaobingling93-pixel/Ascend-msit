@@ -88,11 +88,9 @@ class WritableOffloadedWeightsLoader(OffloadedWeightsLoader):
     对OffloadedWeightsLoader的拓展，支持参数写入
     """
 
-    def __init__(self,
-                 state_dict: Dict[str, torch.Tensor] = None,
+    def __init__(self, state_dict: Dict[str, torch.Tensor] = None,
                  save_folder: Optional[Union[str, os.PathLike]] = None,
-                 index: Mapping = None,
-                 device=None):
+                 index: Mapping = None, device=None):
         super().__init__(state_dict, save_folder, index, device)
 
     def __setitem__(self, key, value):
@@ -114,14 +112,10 @@ class WritableOffloadedWeightsLoader(OffloadedWeightsLoader):
         if weight_info.get("safetensors_file") is not None:
             device = "cpu" if self.device is None else self.device
             tensor = None
-            try:
-                # device默认gpu触发CUDA初始化，此处约束为NPU
-                with safe_open(weight_info["safetensors_file"], framework="pt", device=f"npu:{device}") as f:
-                    tensor = f.get_tensor(weight_info.get("weight_name", key))
-            except TypeError:
-                # if failed to get_tensor on the device, such as bf16 on mps, try to load it on CPU first
-                with safe_open(weight_info["safetensors_file"], framework="pt", device="cpu") as f:
-                    tensor = f.get_tensor(weight_info.get("weight_name", key))
+
+            # torch_npu不支持以int的方式加载，先加载到CPU上
+            with safe_open(weight_info["safetensors_file"], framework="pt", device="cpu") as f:
+                tensor = f.get_tensor(weight_info.get("weight_name", key))
 
             if "dtype" in weight_info:
                 tensor = tensor.to(getattr(torch, weight_info["dtype"]))

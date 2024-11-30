@@ -68,10 +68,6 @@ def is_cuda_available():
 
 
 def clear_device_cache(garbage_collection=False):
-    """
-    Clears the device cache by calling `torch.{backend}.empty_cache`. Can also run `gc.collect()`, but do note that
-    this is a *considerable* slowdown and should be used sparingly.
-    """
     if garbage_collection:
         gc.collect()
 
