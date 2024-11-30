@@ -176,7 +176,8 @@ class NetCompare(object):
                     npu_dump_file[file_index] = os.path.join(dir_path, each_file)
                     npu_dump_file[file_index] = load_file_to_read_common_check(npu_dump_file.get(file_index))
                     npu_data = np.load(npu_dump_file.get(file_index))
-                    golden_net_output_info[file_index] = load_file_to_read_common_check(golden_net_output_info.get(file_index))
+                    golden_net_output_info[file_index] = \
+                            load_file_to_read_common_check(golden_net_output_info.get(file_index))
                     golden_data = np.load(golden_net_output_info.get(file_index))
                     np.save(npu_dump_file.get(file_index), npu_data.reshape(golden_data.shape))
                     msaccucmp_cmd = [

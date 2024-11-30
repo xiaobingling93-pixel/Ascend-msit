@@ -201,10 +201,11 @@ class AntiOutlier(object):
         self.norm_class_name = norm_class_name
         self.org_model = model
 
-        # 保存anti_outlier处理前的原始权重，为避免显存的额外占用，原始权重放在内存上
-        states_dic = {}
-        for key, value in self.org_model.state_dict().items():
-            states_dic[key] = copy.deepcopy(value).to('cpu')
+        # 非m4或m5场景下，保存anti_outlier处理前的原始权重，为避免显存的额外占用，原始权重放在内存上
+        if self.cfg.anti_method not in ['m4', 'm5']:
+            states_dic = {}
+            for key, value in self.org_model.state_dict().items():
+                states_dic[key] = copy.deepcopy(value).to('cpu')
 
         try:
             self.model_with_accelerate = judge_model_with_accelerate(model)
@@ -237,8 +238,9 @@ class AntiOutlier(object):
         except Exception as e:
             raise Exception("Please check your config, model and input!", e) from e
 
-        # 保存anti_outlier处理前的原始权重，作为属性存入model中
-        setattr(self.model, 'ori_state_dict', states_dic)
+        # 非m4或m5场景下，保存anti_outlier处理前的原始权重，作为属性存入model中
+        if self.cfg.anti_method not in ['m4', 'm5']:
+            setattr(self.model, 'ori_state_dict', states_dic)
 
     def init_dag(self, predefined_fusions=None):
         if predefined_fusions is not None:

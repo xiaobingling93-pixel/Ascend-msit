@@ -123,5 +123,5 @@ class MIETorchCompare:
             writer.writeheader()
             writer.writerows(sorted_rows)
         
-        logger.info("compare resut has been saved on %r ." %csv_file_path)
+        logger.info("compare resut has been saved on %r ." % csv_file_path)
         

@@ -489,7 +489,17 @@ class Calibrator(object):
         if self.cfg.use_fa_quant:
             for attention_module_name in self.fa_module_param_dict:
                 self.set_fa_quant_safetensor(attention_module_name, safetensor_weight)
-            
+        
+        # m4和m5场景下删除权重和json中的'module.weight' 
+        if not hasattr(self.model, 'ori_state_dict'):
+            keys_to_delete = [key for key in safetensor_weight.keys() if 'module.weight' in key]
+            for key in keys_to_delete:
+                del safetensor_weight[key]
+
+            keys_to_delete = [key for key in self.quant_model_json_description.quant_model_description.keys() if 'module.weight' in key]
+            for key in keys_to_delete:
+                del self.quant_model_json_description.quant_model_description[key]
+
         for key, item in safetensor_weight.items():
             safetensor_weight[key] = item.cpu().contiguous()
 
@@ -639,9 +649,13 @@ class Calibrator(object):
                 anti_norm_bias = module.bias.cpu()
                 anti_norm_name_weight = name + '.module.weight'
                 anti_norm_name_bias = name + '.module.bias'
-                self.quant_param_dict[anti_norm_name_weight] = anti_norm_weight.clone().detach()
-                self.quant_param_dict[anti_norm_name_bias] = anti_norm_bias.clone().detach()
-                self.quantized_module_param_dict[name + '.weight'] = [anti_norm_name_weight, anti_norm_name_bias]
+                if not hasattr(self.model, 'ori_state_dict'):
+                    self.quant_param_dict[name + '.weight'] = anti_norm_weight.clone().detach()
+                    self.quantized_module_param_dict[anti_norm_name_weight] = [name + '.weight']
+                else:
+                    self.quant_param_dict[anti_norm_name_weight] = anti_norm_weight.clone().detach()
+                    self.quant_param_dict[anti_norm_name_bias] = anti_norm_bias.clone().detach()
+                    self.quantized_module_param_dict[name + '.weight'] = [anti_norm_name_weight, anti_norm_name_bias]
 
             # 处理Linear、以及附属scale、offset等params
             if isinstance(module, (LinearQuantizer, LinearSparseQuantizer, LowBitLinearQuantizer)):
@@ -784,7 +798,8 @@ class Calibrator(object):
                 module.disable_input = True
                 module.disable_quant_weight()
         self.rollback_names.extend(layers_to_disable)
-        self.logger.info('The following linear layers will continue to use floating-point weights for forward computation:\n\t'
+        self.logger.info('The following linear layers will continue to'
+                         'use floating-point weights for forward computation:\n\t'
                          + '\n\t'.join([str(name) for name in sorted(self.rollback_names)]))
 
     def run_fa_amp(self):
@@ -795,8 +810,10 @@ class Calibrator(object):
             self.logger.warning("`fa_amp` exceeds the total attention layer number. Therefore, "
                                 "only up to the total attention layers will skip quantization")
         disabled_module_names = fully_analyze_activation(qkv_states_record, self.cfg.fa_amp)
-        self.logger.info('The following attention layers will continue to use floating-point weights for forward computation:\n\t'
+        self.logger.info('The following attention layers will continue to'
+                         'use floating-point weights for forward computation:\n\t'
                          + '\n\t'.join([str(name) for name in sorted(disabled_module_names)]))
+        
         for name, module in self.model.named_modules():
             if is_attn_module_and_then_check_quantizer(module, name) and name in disabled_module_names:
                 module.fa_quantizer.reset()
