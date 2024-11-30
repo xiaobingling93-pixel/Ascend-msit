@@ -403,7 +403,7 @@ def check_input_path_valid(path):
         raise argparse.ArgumentTypeError(f"Path does not exist: {path}")
     if not os.path.isdir(path):
         raise argparse.ArgumentTypeError(f"Path is not a valid directory: {path}")
-    if '..' in path or path.startswith('/'):
+    if '..' in path:
         raise argparse.ArgumentTypeError(f"Path contains illegal characters: {path}")
     return path
 
@@ -442,10 +442,10 @@ def load_cpu_data_from_database(db_path):
     cursor = conn.cursor()
 
     cursor.execute("""
-            SELECT *
-            FROM CpuUsage
-            WHERE cpu_no == 'Avg'
-        """)
+        SELECT *
+        FROM CpuUsage
+        WHERE cpu_no == 'Avg'
+    """)
 
     cpu_data = cursor.fetchall()
     columns = [description[0] for description in cursor.description]
