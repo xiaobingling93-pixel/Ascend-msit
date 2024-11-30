@@ -296,6 +296,10 @@ def move_update_weight_hook_if_need(old_module, new_module, as_submodule=False, 
     将old_module的hook移动至new_module，as_submodule设置为True时，old_module将会成为new_module的子模块
     """
     if not enabled_adapter():
+        # 拷贝accelerate定义的hook
+        if hasattr(old_module, HF_HOOK):
+            add_hook_to_module(new_module, getattr(old_module, HF_HOOK))
+            remove_hook_from_module(old_module)
         return
 
     if hasattr(old_module, HF_HOOK):
