@@ -7,8 +7,6 @@ from .sparse_quant_config import SparseQuantConfig
 from .kv_quant_config import KVQuantConfig
 from .fa_quant_config import FAQuantConfig
 from .simulate_tp_config import SimulateTPConfig
-from .low_memory_config import LowMemoryConfig
-
 
 __all__ = [
     'BaseConfig',
@@ -18,5 +16,4 @@ __all__ = [
     'KVQuantConfig',
     'SimulateTPConfig',
     'FAQuantConfig',
-    'LowMemoryConfig'
 ]

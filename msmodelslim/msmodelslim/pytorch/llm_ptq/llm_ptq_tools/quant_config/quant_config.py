@@ -54,6 +54,7 @@ class QuantConfig:
                  is_dynamic: bool = False,
                  group_size: int = 64,
                  percdamp: float = 0.01,
+                 low_memory: dict | None = None
                  ):
         """
         Args:
@@ -87,7 +88,7 @@ class QuantConfig:
                              is_lowbit=is_lowbit, do_smooth=do_smooth, use_sigma=use_sigma,
                              sigma_factor=sigma_factor, disable_last_linear=disable_last_linear,
                              use_kvcache_quant=use_kvcache_quant, open_outlier=open_outlier, is_dynamic=is_dynamic,
-                             group_size=group_size, percdamp=percdamp)
+                             group_size=group_size, percdamp=percdamp, low_memory=low_memory)
         self._modify_quant_param()
 
     def weight_quant(self,
@@ -208,23 +209,6 @@ class QuantConfig:
         self._modify_quant_param()
         return self
 
-    def low_memory(self,
-                   offload_type: str = "disk",
-                   enable_lazy_save: bool = True,
-                   ):
-        """
-        低内存低显存参数初始化
-
-        Arg:
-            offload_type: state_dict 下放设备，可选（1）disk 磁盘；（2）memory 内存
-            enable_lazy_save: 是否开启保存时懒计算权重，开启后量化保存耗时增加，降低内存使用
-        """
-        self._cur_config = QuantConfigFactory.get_quant_config('low_memory',
-                                                               last_config=self._cur_config,
-                                                               offload_type=offload_type,
-                                                               enable_lazy_save=enable_lazy_save)
-        self._modify_quant_param()
-        return self
 
     def _modify_quant_param(self):
         """

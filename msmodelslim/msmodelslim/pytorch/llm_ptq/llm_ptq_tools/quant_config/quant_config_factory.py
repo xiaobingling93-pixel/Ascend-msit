@@ -22,7 +22,6 @@ class QuantConfigFactory:
         'kv': KVQuantConfig,
         'fa_quant': FAQuantConfig,
         'simulate_tp': SimulateTPConfig,
-        'low_memory': LowMemoryConfig,
     }
 
     @classmethod
