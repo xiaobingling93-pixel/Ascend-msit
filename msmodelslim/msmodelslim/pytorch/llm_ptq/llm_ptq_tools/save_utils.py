@@ -3,7 +3,7 @@ import torch
 from safetensors.torch import save_file
 from ascend_utils.common.security import json_safe_dump
 from ascend_utils.common.security import get_valid_write_path
-
+from msmodelslim.pytorch.llm_ptq.accelerate_adapter import LazyTensor, handle_lazy_tensor
 
 ONE_GB_FILE_BYTES = 1073741824  # 1G, 1 * 1024 * 1024 * 1024
 
@@ -21,6 +21,8 @@ def get_index_json(file_map_dict, total_size):
 
 
 def get_tensor_size(tensor):
+    if isinstance(tensor, LazyTensor):
+        return tensor.size
     return tensor.numel() * tensor.element_size()
 
 
@@ -57,8 +59,13 @@ def save_file_partial(weight_dict, safetensors_name, part_file_size):
         unit_name = part_file_name.split('/')[-1]
         for key in part_weight_list[i].keys():
             file_map_dict[key] = unit_name
+
+        handle_lazy_tensor(part_weight_list[i])
+
         part_file_path = get_valid_write_path(part_file_name, extensions=[".safetensors"])
         save_file(part_weight_list[i], part_file_path)
+
+        part_weight_list[i] = None
 
     index_json_dict = get_index_json(file_map_dict, total_size)
 
