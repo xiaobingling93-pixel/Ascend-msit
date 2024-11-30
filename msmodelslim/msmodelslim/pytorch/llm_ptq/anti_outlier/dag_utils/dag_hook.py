@@ -14,11 +14,10 @@ from ascend_utils.common.utils import (
 from ascend_utils.core.dag.dag import DirectedAcyclicGraph
 from ascend_utils.core.dag.dag_node import DagNode
 from ascend_utils.core.dag.dag_node_io import DagNodeIO
+
 from msmodelslim import logger
-
-import accelerate
-
 from msmodelslim.pytorch.llm_ptq.accelerate_adapter import enabled_adapter
+
 from .dag_model_hook import DagModelHook
 
 
@@ -209,7 +208,7 @@ class DagHook(DirectedAcyclicGraph, ABC):
 
         # register hook to modules of special types
         registered_hooks = []
-        for name, m in self.network.named_modules():
+        for _, m in self.network.named_modules():
             for module_class, hook in hooks.items():
                 if isinstance(m, module_class):
                     registered_hooks.append(m.register_forward_pre_hook(hook.get_pre_forward_hook(), with_kwargs=True))

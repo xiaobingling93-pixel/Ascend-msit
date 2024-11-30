@@ -14,13 +14,13 @@ import torch
 import numpy as np
 import torch.nn as nn
 from safetensors.torch import save_file
+from accelerate.hooks import add_hook_to_module, remove_hook_from_module
 
-from ascend_utils.common.security.type import check_mapping_element
 from msmodelslim import logger as msmodelslim_logger
+from ascend_utils.common.security.type import check_mapping_element
 from msmodelslim.pytorch.llm_ptq.accelerate_adapter import enable_adapter, check_model_compatible, \
     get_offloaded_dataset, MemoryStateDictConfig, DiskStateDictConfig, copy_offloaded_state_dict
 from msmodelslim.pytorch.llm_ptq.accelerate_adapter.lazy_handler import LazyTensor, handle_lazy_tensor
-from accelerate.hooks import add_hook_to_module, remove_hook_from_module
 
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config import QuantConfig
 from ascend_utils.common.security import (get_valid_write_path, SafeWriteUmask, check_element_type,
@@ -68,8 +68,6 @@ from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.fa_quant import (
 from msmodelslim.pytorch.llm_ptq.anti_outlier.dag_utils.torch_dag_adapter import TorchDAGAdapter
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.simulate_tp import ParallelLinearCol
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.save_utils import save_file_partial
-from msmodelslim import logger as msmodelslim_logger
-
 from msmodelslim.pytorch.llm_ptq.accelerate_adapter.hook_adapter import (enabled_adapter,
                                                                          PrepareWeight,
                                                                          replace_device_align_hook_if_needed,
