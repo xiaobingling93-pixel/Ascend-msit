@@ -16,8 +16,9 @@ import torch.nn as nn
 from safetensors.torch import save_file
 from accelerate.hooks import add_hook_to_module, remove_hook_from_module
 
-from msmodelslim import logger as msmodelslim_logger
 from ascend_utils.common.security.type import check_mapping_element
+
+from msmodelslim import logger as msmodelslim_logger
 from msmodelslim.pytorch.llm_ptq.accelerate_adapter import enable_adapter, check_model_compatible, \
     get_offloaded_dataset, MemoryStateDictConfig, DiskStateDictConfig, copy_offloaded_state_dict
 from msmodelslim.pytorch.llm_ptq.accelerate_adapter.lazy_handler import LazyTensor, handle_lazy_tensor
@@ -530,14 +531,15 @@ class Calibrator(object):
         if self.cfg.use_fa_quant:
             for attention_module_name in self.fa_module_param_dict:
                 self.set_fa_quant_safetensor(attention_module_name, safetensor_weight)
-        
+
         # m4和m5场景下删除权重和json中的'module.weight' 
         if not hasattr(self.model, 'ori_state_dict'):
             keys_to_delete = [key for key in safetensor_weight.keys() if 'module.weight' in key]
             for key in keys_to_delete:
                 del safetensor_weight[key]
 
-            keys_to_delete = [key for key in self.quant_model_json_description.quant_model_description.keys() if 'module.weight' in key]
+            keys_to_delete = [key for key in self.quant_model_json_description.quant_model_description.keys() if
+                              'module.weight' in key]
             for key in keys_to_delete:
                 del self.quant_model_json_description.quant_model_description[key]
 
@@ -692,7 +694,8 @@ class Calibrator(object):
                     self.quantized_module_param_dict.update(attach_map)
                 # 处理 Norm 对应的 weight、bias
                 if isinstance(module, (NormBias, LlamaRMSNormBias)):
-                    anti_norm_weight = module.module.weight.cpu() if isinstance(module, NormBias) else module.weight.cpu()
+                    anti_norm_weight = module.module.weight.cpu() if isinstance(module,
+                                                                                NormBias) else module.weight.cpu()
                     anti_norm_bias = module.bias.cpu()
                     anti_norm_name_weight = name + '.module.weight'
                     anti_norm_name_bias = name + '.module.bias'
@@ -702,7 +705,8 @@ class Calibrator(object):
                     else:
                         self.quant_param_dict[anti_norm_name_weight] = anti_norm_weight.clone().detach()
                         self.quant_param_dict[anti_norm_name_bias] = anti_norm_bias.clone().detach()
-                        self.quantized_module_param_dict[name + '.weight'] = [anti_norm_name_weight, anti_norm_name_bias]
+                        self.quantized_module_param_dict[name + '.weight'] = [anti_norm_name_weight,
+                                                                              anti_norm_name_bias]
 
                 # 处理Linear、以及附属scale、offset等params
                 if isinstance(module, (LinearQuantizer, LinearSparseQuantizer, LowBitLinearQuantizer)):
@@ -869,7 +873,7 @@ class Calibrator(object):
         self.logger.info('The following attention layers will continue to'
                          'use floating-point weights for forward computation:\n\t'
                          + '\n\t'.join([str(name) for name in sorted(disabled_module_names)]))
-        
+
         for name, module in self.model.named_modules():
             if is_attn_module_and_then_check_quantizer(module, name) and name in disabled_module_names:
                 module.fa_quantizer.reset()
