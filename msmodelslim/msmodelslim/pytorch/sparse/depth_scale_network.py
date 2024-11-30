@@ -44,20 +44,6 @@ class DepthScaleNetwork:
         return self._repeat_operators
 
     @staticmethod
-    def _is_repeat_opts_with_weight(last_module: Module, this_module: Module):
-        if this_module is None:
-            return False
-        if this_module.__class__ != last_module.__class__:
-            return False
-
-        last_param_info = [(name, parameter.shape) for name, parameter in last_module.named_parameters()]
-        this_param_info = [(name, parameter.shape) for name, parameter in this_module.named_parameters()]
-        if len(last_param_info) == 0 or len(this_param_info) == 0:
-            return False
-
-        return last_param_info == this_param_info
-
-    @staticmethod
     def disable_operator(operator: RepeatOperatorInfo):
         setattr(operator.parent_module, operator.attr_name, JumpingOffOperator())
         operator.enable = False
@@ -77,6 +63,20 @@ class DepthScaleNetwork:
             if name not in src_param_info:
                 raise ValueError(f"name [{name}] not in src param info ")
             parameter.data = src_param_info[name].data.clone()
+            
+    @staticmethod
+    def _is_repeat_opts_with_weight(last_module: Module, this_module: Module):
+        if this_module is None:
+            return False
+        if this_module.__class__ != last_module.__class__:
+            return False
+
+        last_param_info = [(name, parameter.shape) for name, parameter in last_module.named_parameters()]
+        this_param_info = [(name, parameter.shape) for name, parameter in this_module.named_parameters()]
+        if len(last_param_info) == 0 or len(this_param_info) == 0:
+            return False
+
+        return last_param_info == this_param_info
 
     @staticmethod
     def _calc_enable_list(ori_enable_count, new_enable_count, all_count):
