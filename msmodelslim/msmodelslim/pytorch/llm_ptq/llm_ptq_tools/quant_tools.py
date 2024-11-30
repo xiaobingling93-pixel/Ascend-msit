@@ -73,6 +73,7 @@ from msmodelslim.pytorch.llm_ptq.accelerate_adapter.hook_adapter import (enabled
                                                                          replace_device_align_hook_if_needed,
                                                                          move_update_weight_hook_if_need,
                                                                          clear_unused_module)
+from msmodelslim.pytorch.llm_ptq.accelerate_adapter.utils import judge_model_with_accelerate
 
 HF_HOOK = "_hf_hook"
 STATE_DICT_COPY_DIR = "copy"
@@ -113,6 +114,8 @@ class Calibrator(object):
         # 记录被量化module名称，相关的scale、offset等参数名称 key:weight的名称， value:scale、offset等参数的名称
         self.quantized_module_param_dict = defaultdict(list)
         self.fa_module_param_dict = defaultdict(list)
+
+        self.model_with_accelerate = judge_model_with_accelerate(model)
 
         replace_device_align_hook_if_needed(model)
 
@@ -430,7 +433,10 @@ class Calibrator(object):
         return auto_disable_names
 
     def quantize(self, model):
-        return self.quantize_model(model)
+        if self.model_with_accelerate:
+            return self.quantize_model(model)
+        else:
+            return self.quantize_model(model).to(self.cfg.device)
 
     def enable_quant(self):
         enable_quantization(self.model, self.act_states, self.logger, self.cfg.use_fa_quant)
