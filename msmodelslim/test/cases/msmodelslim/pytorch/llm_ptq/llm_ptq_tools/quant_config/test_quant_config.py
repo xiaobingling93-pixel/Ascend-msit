@@ -333,7 +333,7 @@ class TestQuantConfig:
             mm_tensor=False
         ).sparse_quant(
             act_method=1,
-            fraction=0.011,
+            fraction=0.012,
             nonuniform=False
         )
         assert compare_config_parameters(old_usage, new_usage) is False
