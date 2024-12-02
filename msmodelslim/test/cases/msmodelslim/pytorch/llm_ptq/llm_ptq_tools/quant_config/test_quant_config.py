@@ -85,7 +85,7 @@ class TestQuantConfig:
         )
         assert compare_config_parameters(new_config, old_config) is True
 
-    def test_old_w8a16_quant_config_should_compatible_when_given_not_equal_w8a16_param(self):
+    def test_old_w8a16_quant_config_should_not_compatible_when_given_not_equal_w8a16_param(self):
         new_config = QuantConfig(
             a_bit=16,
             w_bit=8,
@@ -108,7 +108,7 @@ class TestQuantConfig:
         new_config = QuantConfig(
             act_method=3,
             pr=2.0,
-            fractions=0.011,
+            fraction=0.011,
             nonuniform=False,
             mm_tensor=False,
             co_sparse=True
@@ -116,7 +116,7 @@ class TestQuantConfig:
         old_config = OldQuantConfig(
             act_method=3,
             pr=2.0,
-            fractions=0.011,
+            fraction=0.011,
             nonuniform=False,
             mm_tensor=False,
             co_sparse=True
@@ -127,7 +127,7 @@ class TestQuantConfig:
         new_config = QuantConfig(
             act_method=3,
             pr=2.0,
-            fractions=0.011,
+            fraction=0.011,
             nonuniform=False,
             mm_tensor=False,
             co_sparse=True
@@ -135,7 +135,7 @@ class TestQuantConfig:
         old_config = OldQuantConfig(
             act_method=3,
             pr=2.0,
-            fractions=0.012,
+            fraction=0.012,
             nonuniform=False,
             mm_tensor=False,
             co_sparse=True
@@ -443,7 +443,7 @@ class TestQuantConfig:
             disable_names=["test_linear"],
             dev_type='cpu',
             act_method=3,
-            mm_tensor=False,
+            mm_tensor=False
         )
         new_usage = QuantConfig(
             a_bit=8,
