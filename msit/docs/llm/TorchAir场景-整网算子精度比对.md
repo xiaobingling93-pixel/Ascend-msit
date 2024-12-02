@@ -42,7 +42,7 @@
   | dump_token         | 指定token进行dump,格式：[1,2,5],代表dump第1、2、5个token数据      | 否(默认为None，dump全量数据) |, 
   | dump_layer         | 指定layer进行dump，格式：["Add","Conv_1"],代表dump Add和Conv_1两层数据 | 否(默认为None，dump全量数据) | 
   
- - 查看读取bin数据的接口可以参考[加速库 DUMP 功能使用说明](/msit/docs/llm/工具-DUMP加速库数据使用说明.md)
+ - 读取、转换和保存 bin 数据的接口可以参考[API-读取和保存接口](./API-读取和保存接口.md)
 
   **GE模式 [开启融合（默认） Dump 案例](TorchAir场景Dump案例.md)**
 - **FX 模式 dump 数据** 添加 `get_fx_dump_config`，该配置与get_ge_dump_config的不同处在于，不能提供参数，如dump_path等。接下来配置 `config` 实例，配置模型 compile，并执行推理

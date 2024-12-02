@@ -20,7 +20,7 @@ import pandas as pd
 import torch
 
 from msit_llm.common.tool import read_atb_data
-from components.utils.tool import read_bin_data, convert_bin_data_to_npy
+from components.utils.tool import read_bin_data, convert_bin_data_to_pt
 from components.utils.util import safe_torch_load
 from msit_llm.common.utils import load_file_to_read_common_check
 from msit_llm.common.constant import (TOKEN_ID, DATA_ID, GOLDEN_DATA_PATH, MY_DATA_PATH,
@@ -170,7 +170,7 @@ def read_data(data_path):
     if data_path.endswith(".npy"):
         data = torch.as_tensor(np.load(data_path))
     elif data_path.endswith(".bin"):
-        data = convert_bin_data_to_npy(read_bin_data(data_path))
+        data = convert_bin_data_to_pt(read_bin_data(data_path))
     elif data_path.endswith(".pth") or data_path.endswith(".pt"):
         data = safe_torch_load(data_path, map_location=torch.device("cpu"))
     else:
