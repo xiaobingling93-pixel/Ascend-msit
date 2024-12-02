@@ -89,3 +89,7 @@ dump功能可以直接通过msit命令行形式启动精度对比。启动方式
 | [05_caffe_model](../../../examples/cli/debug/dump/05_caffe_model)                           | 模型为Caffe框架的dump           |
 | [06_saved_model](../../../examples/cli/debug/dump/06_saved_model)                           | 模型为tensorflow2.6框架下的 saved_model dump          |
 | [07_mindie_torch_dump](../../../examples/cli/debug/dump/07_mindie_torch_dump)          | MindIE-Torch场景-整网算子数据dump            |
+
+### 查看Dump数据
+
+读取、转换和保存 bin 数据的接口可以参考[API-读取和保存接口](./API-读取和保存接口.md)
