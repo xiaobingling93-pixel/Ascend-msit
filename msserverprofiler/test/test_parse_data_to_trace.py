@@ -1,7 +1,10 @@
 import argparse
-import pytest
+import os
 from unittest.mock import patch, MagicMock
+
+import pytest
 import pandas as pd
+
 import parse_data_to_trace as parse
 
 
