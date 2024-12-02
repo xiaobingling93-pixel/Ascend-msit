@@ -15,7 +15,7 @@
 ## 第一步：dump torch 模型 token 的输出 logits
 
 使用[在线推理 DUMP 功能](/msit/docs/llm/工具-DUMP在线推理数据使用说明.md)。将模型最后的输出的 logits dump 下来。
-
+- 查看读取bin数据的接口可以参考[加速库 DUMP 功能使用说明](/msit/docs/llm/工具-DUMP加速库数据使用说明.md)
 ```python
 from msit_llm import DumpConfig, register_hook #在模型py文件中文件开头导入DumpConfig和register_hook
 

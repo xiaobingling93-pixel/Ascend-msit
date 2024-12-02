@@ -89,3 +89,18 @@ dump功能可以直接通过msit命令行形式启动精度对比。启动方式
 | [05_caffe_model](../../../examples/cli/debug/dump/05_caffe_model)                           | 模型为Caffe框架的dump           |
 | [06_saved_model](../../../examples/cli/debug/dump/06_saved_model)                           | 模型为tensorflow2.6框架下的 saved_model dump          |
 | [07_mindie_torch_dump](../../../examples/cli/debug/dump/07_mindie_torch_dump)          | MindIE-Torch场景-整网算子数据dump            |
+
+### 查看Dump数据
+
+read_bin_data和convert_bin_data_to_pt提供读取bin数据的功能
+
+```python
+from components.utils.tool import read_bin_data, convert_bin_data_to_npy
+
+bin_file_path = "/xxx/xxx/xx.bin"
+data = convert_bin_data_to_pt(read_bin_data(bin_file_path))
+print("bin data: ", data)
+print("bin data shape: ", data.shape())
+```
+
+get_bin_data_from_dir提供读取批量bin数据的能力，返回所有bin文件路径的列表

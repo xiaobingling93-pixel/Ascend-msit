@@ -81,3 +81,18 @@ atb_json_to_onnx(layer_topo_info, model_level, {})
 model_level：可视化模型的节点深度，按需填写，比如填写为1，则表示生成深度为1的可视化模型，不填默认生成最大深度可视化模型  
 layer_topo_info：dump出来的layer拓扑信息或者model拓扑信息，json格式的文件    
 atb_json_to_onnx：读取op信息的缓存，多次调用可以复用缓存信息。外部调用可以不用关注，直接传入空的dict即可
+
+### 查看Dump数据
+
+read_bin_data和convert_bin_data_to_pt提供读取bin数据的功能
+
+```python
+from components.utils.tool import read_bin_data, convert_bin_data_to_npy
+
+bin_file_path = "/xxx/xxx/xx.bin"
+data = convert_bin_data_to_pt(read_bin_data(bin_file_path))
+print("bin data: ", data)
+print("bin data shape: ", data.shape())
+```
+
+get_bin_data_from_dir提供读取批量bin数据的能力，返回所有bin文件路径的列表
