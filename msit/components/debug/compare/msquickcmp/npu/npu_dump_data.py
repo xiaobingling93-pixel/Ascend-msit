@@ -503,15 +503,21 @@ class NpuDumpData(DumpData):
                 data_type = npu_net_output_data_info.get(index)[0]
                 shape = npu_net_output_data_info.get(index)[1]
                 data_len = utils.get_data_len_by_shape(shape)
-                original_net_output_data = np.fromfile(os.path.join(dir_path, each_file), data_type, data_len)
+                each_file_path = os.path.join(dir_path, each_file)
+                original_net_output_data = np.fromfile(each_file_path, data_type, data_len)
                 try:
                     net_output_data = original_net_output_data.reshape(shape)
                 except ValueError:
                     utils.logger.warning("The shape of net_output data from file {} is {}.".format(each_file, shape))
                     net_output_data = original_net_output_data
-                file_name = os.path.basename(each_file).split('.')[0]
+                    
+                each_file_index = each_file.split('_')[-1]
+                new_each_file = "output_" + each_file_index
+                file_name = os.path.basename(new_each_file).split('.')[0]
                 numpy_file_path = os.path.join(npu_net_output_data_path, file_name)
                 utils.save_numpy_data(numpy_file_path, net_output_data)
+                new_each_file_path = os.path.join(dir_path, new_each_file)
+                os.rename(each_file_path, new_each_file_path)
 
     def _check_input_path_param(self):
         if self.input_path == "":
