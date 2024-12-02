@@ -23,7 +23,7 @@ from components.utils.file_open_check import ms_open
 from components.utils.util import safe_torch_load
 
 DELIMITER_MAP = {"TorchScript": '.', "TorchExport": '_'}
-MAX_FILE_READ_SIZE = 100 * 1024   # 100KB
+MAX_FILE_READ_SIZE = 31457280  # 30 * 1024 * 1024, 30MB
 
 
 class TorchDumpFileReader(DumpFileReader):
