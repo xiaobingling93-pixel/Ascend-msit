@@ -14,7 +14,11 @@ from ascend_utils.common.utils import (
 from ascend_utils.core.dag.dag import DirectedAcyclicGraph
 from ascend_utils.core.dag.dag_node import DagNode
 from ascend_utils.core.dag.dag_node_io import DagNodeIO
+
 from msmodelslim import logger
+from msmodelslim.pytorch.llm_ptq.accelerate_adapter import enabled_adapter
+
+from .dag_model_hook import DagModelHook
 
 
 class DagHook(DirectedAcyclicGraph, ABC):
@@ -42,7 +46,10 @@ class DagHook(DirectedAcyclicGraph, ABC):
         self._replaced_nodes: Set[DagNode] = set()
 
         self._parse_network_structure_tree(self.network, "", None, "")
-        self._parse_network(self._inputs)
+        if enabled_adapter():
+            self._parse_network_with_hook(self._inputs)
+        else:
+            self._parse_network(self._inputs)
 
     def __enter__(self):
         """
@@ -179,6 +186,52 @@ class DagHook(DirectedAcyclicGraph, ABC):
         for sub_name, sub_module in self._get_module_children(module):
             sub_name_in_network = concatenate_name_in_network(name_in_network, sub_name)
             self._parse_network_structure_tree(sub_module, sub_name, module, sub_name_in_network)
+
+    def _parse_network_with_hook(self, inputs,
+                                 parsed_nodes: Optional[Dict[Any, DagNode]] = None):
+        self._dag_node_list.clear()
+        # prepare hook function
+        replace_stack: List[Any] = []
+        node_io_dict: Dict[int, DagNodeIO] = {}
+        parsed_node_list = [] if parsed_nodes is None else parsed_nodes
+
+        # create hook for special module types
+        hooks = {}
+        for op_hook_info in self._hook_ops:
+            _, ops_location, ops_name = op_hook_info
+            module_class, _ = ops_location
+            hooks[module_class] = DagModelHook(ops_name=ops_name,
+                                               replace_stack=replace_stack,
+                                               node_io_dict=node_io_dict,
+                                               parsed_node_list=parsed_node_list,
+                                               dag_hook=self)
+
+        # register hook to modules of special types
+        registered_hooks = []
+        for _, m in self.network.named_modules():
+            for module_class, hook in hooks.items():
+                if isinstance(m, module_class):
+                    registered_hooks.append(m.register_forward_pre_hook(hook.get_pre_forward_hook(), with_kwargs=True))
+                    registered_hooks.append(m.register_forward_hook(hook.get_post_forward_hook()))
+
+        # network construct and parse network
+        try:
+            if isinstance(inputs, CallParams):
+                self.network(*inputs.args, **inputs.kwargs)
+            elif isinstance(inputs, tuple) or isinstance(inputs, list):
+                self.network(*inputs)
+            elif isinstance(inputs, dict):
+                self.network(**inputs)
+            else:
+                self.network(inputs)
+        except RuntimeError as ex:
+            raise ValueError("Check whether the input is of the current network.") from ex
+
+        # remove dag hook
+        for hook in registered_hooks:
+            hook.remove()
+
+        logger.info("parse network over")
 
     def _parse_network(self, inputs,
                        parsed_nodes: Optional[Dict[Any, DagNode]] = None):
@@ -355,4 +408,7 @@ class DagHook(DirectedAcyclicGraph, ABC):
 
         self._structure_tree: Dict[int, Dict] = {}
         self._parse_network_structure_tree(self.network, "", None, "")
-        self._parse_network(self._inputs, parsed_nodes)
+        if enabled_adapter():
+            self._parse_network_with_hook(self._inputs, parsed_nodes)
+        else:
+            self._parse_network(self._inputs, parsed_nodes)
