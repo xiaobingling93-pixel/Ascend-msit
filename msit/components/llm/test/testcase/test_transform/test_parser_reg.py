@@ -1,14 +1,27 @@
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from unittest import TestCase
 import tempfile
-
-import torch.nn as nn
 
 from msit_llm.transform.model_parser.parser import parse_input_names, fix_parsed_model, \
         build_model_tree, get_weight_names, parse_input_max_count, parse_by_idx, \
             get_atb_model_names, process_layer
 
 from msit_llm.transform.model_parser.parser import parse_input_names
-
+from components.llm.test.testcase.test_transform.utils import SimpleModel_1, MLPModel, \
+        AttentionModel, SimpleModel_2, SimpleModel_3, EmptyModule, NoConfigModule
 
 LLAMA_CASE_01 = """
 DecoderModel::~DecoderModel() {}
@@ -33,7 +46,6 @@ std::map<std::string, std::vector<std::string>> GetLlamaModelInTensorCandidates(
     return llamaInTensorCandiadates;
 }
 """
-
 
 LLAMA_CASE_02 = """
 enum InTensorId : int {
@@ -70,7 +82,6 @@ enum InTensorId : int {
     IN_TENSOR_MAX,
 };
 """
-
 
 QWEN_CASE_01 = """
 enum InTensorId : int {
@@ -227,7 +238,6 @@ enum DecoderModelInternalTensorIdx : uint32_t {
 };
 """
 
-
 class TestParserReg(TestCase):
     def test_llama(self):
         self.assertEqual(
@@ -272,7 +282,6 @@ class TestFixParsedModel(TestCase):
                 'word_embeddings': 'embedding_weights'
             }
         }
-
         fix_parsed_model(parsed_model)
         expected_model = {
             'weight_names': {
@@ -290,7 +299,6 @@ class TestFixParsedModel(TestCase):
             }
         }
         fix_parsed_model(parsed_model)
-
         expected_model = {
             'weight_names': {
                 'model_name': 'qwen',
@@ -306,7 +314,6 @@ class TestFixParsedModel(TestCase):
                 'model_name': 'other'
             }
         }
-
         fix_parsed_model(parsed_model)
         expected_model = {
             'weight_names': {
@@ -327,17 +334,9 @@ class TestFixParsedModel(TestCase):
 
 
 class TestBuildModelTree(TestCase):
-
     def test_build_model_tree_simple(self):
-        class SimpleModel(nn.Module):
-            def __init__(self):
-                super(SimpleModel, self).__init__()
-                self.linear = nn.Linear(10, 20)
-                self.dropout = nn.Dropout(0.5)
-
-        model = SimpleModel()
+        model = SimpleModel_1()
         tree = build_model_tree(model)
-
         expected_tree = {
             "name": "SimpleModel",
             "children": [
@@ -351,16 +350,6 @@ class TestBuildModelTree(TestCase):
         self.assertEqual(tree, expected_tree)
 
     def test_build_model_tree_with_mlp(self):
- 
-        class MLPModel(nn.Module):
-            def __init__(self):
-                super(MLPModel, self).__init__()
-                self.mlp = nn.Sequential(
-                    nn.Linear(10, 20),
-                    nn.ReLU(),
-                    nn.Linear(20, 30)
-                )
-
         model = MLPModel()
         tree = build_model_tree(model)
         expected_tree = {
@@ -383,16 +372,9 @@ class TestBuildModelTree(TestCase):
                 }
             ]
         }
-
         self.assertEqual(tree, expected_tree)
 
     def test_build_model_tree_with_attention(self):
-
-        class AttentionModel(nn.Module):
-            def __init__(self):
-                super(AttentionModel, self).__init__()
-                self.attention = nn.MultiheadAttention(10, 1)
-
         model = AttentionModel()
         tree = build_model_tree(model)
         expected_tree = {
@@ -405,15 +387,23 @@ class TestBuildModelTree(TestCase):
         }
         self.assertEqual(tree, expected_tree)
 
+    def test_invalid_input(self):
+            with self.assertRaises(ValueError):
+                build_model_tree("not a module")
+
+    def test_empty_module(self):
+        model = EmptyModule()
+        expected_output = {
+            "name": "EmptyModule",
+            "children": [{'name': 'EmptyModule', 'children': []}]
+        }
+        self.assertEqual(build_model_tree(model), expected_output)
 
 
 class TestGetWeightNames(TestCase):
-
     def test_get_weight_names_without_rope(self):
-
         model = self.create_model(with_rope=True)
         result = get_weight_names(model)
-
         self.assertIn('weight_names', result)
         weight_names = result['weight_names']
         self.assertEqual(weight_names['pe_type'], 'ALIBI')
@@ -421,33 +411,20 @@ class TestGetWeightNames(TestCase):
         self.assertEqual(weight_names['word_embeddings'], 'embed')
         self.assertEqual(weight_names['lmhead'], 'linear')
 
-
     def create_model(self, with_rope):
+        return SimpleModel_2(with_rope)
 
-        class SimpleModel(nn.Module):
-            def __init__(self, with_rope):
-                super(SimpleModel, self).__init__()
-                self.embed = nn.Embedding(10, 10)
-                self.linear = nn.Linear(10, 10)
-                self.dropout = nn.Dropout(0.5)
-                self.config = type('Config', (object,), {'model_type': 'qwen_model'})
-        return SimpleModel(with_rope)
+    def test_invalid_input(self):
+        with self.assertRaises(ValueError):
+            get_weight_names("not a module")
 
-
-def test_parse_input_max_count():
-
-    assert parse_input_max_count("IN_TENSOR_Q_LEN_INDEX = 42;") == 42
-    assert parse_input_max_count("IN_TENSOR_COUNT = 100;") == 100
-    assert parse_input_max_count("No match here.") == -1
-    assert parse_input_max_count("") == -1
-    assert parse_input_max_count(None) == -1
-    assert parse_input_max_count("IN_TENSOR_Q_LEN_INDEX = abc;") == -1
-    assert parse_input_max_count("IN_TENSOR_Q_LEN_INDEX = 50; IN_TENSOR_COUNT = 75;") == 50
-    assert parse_input_max_count("IN_TENSOR_COUNT = 30; IN_TENSOR_Q_LEN_INDEX = 20;") == 30
+    def test_missing_config(self):
+        model = NoConfigModule()
+        with self.assertRaises(AttributeError):
+            get_weight_names(model)
 
 
 class TestParseInputMaxCount(TestCase):
-
     def test_normal_case_q_len_index(self):
         content = "IN_TENSOR_Q_LEN_INDEX = 42;"
         self.assertEqual(parse_input_max_count(content), 42)
@@ -474,9 +451,7 @@ class TestParseInputMaxCount(TestCase):
 
 
 class TestParseByIdx(TestCase):
-
-    def test_normal_case(self):
-        
+    def test_normal_case(self):       
         expected = ['IN_TENSOR_INPUT_IDS', 'IN_TENSOR_POSITION_IDS', 'IN_TENSOR_COS_TABLE', 
                     'IN_TENSOR_SIN_TABLE', 'IN_TENSOR_ATTENTION_MASK', 'IN_TENSOR_BLOCK_TABLES', 
                     'IN_TENSOR_SLOTS', 'IN_TENSOR_LAYER_IDX', 'IN_TENSOR_TOKEN_OFFSET', 
@@ -494,7 +469,6 @@ class TestParseByIdx(TestCase):
 
 
 class TestGetATBModelNames(TestCase):
-
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.files = []
@@ -547,35 +521,19 @@ class TestGetATBModelNames(TestCase):
         self.assertEqual(result, "ModelE")
 
 
-
 class TestProcessLayer(TestCase):
-
     def test_process_layer_with_children(self):
-
-        class SimpleModel(nn.Module):
-            def __init__(self):
-                super(SimpleModel, self).__init__()
-                self.layer1 = nn.Linear(10, 20)
-                self.layer2 = nn.Sequential(
-                    nn.Linear(20, 30),
-                    nn.Dropout(),
-                    nn.Linear(30, 40)
-                )
-                self.attention = nn.MultiheadAttention(60, 6)
-                self.norm1 = nn.LayerNorm(60)
-                self.norm2 = nn.LayerNorm(60)
-
-        model = SimpleModel()
-
-
+        model = SimpleModel_3()
         result = process_layer("layer", model)
         self.assertEqual(result["name"], "layer")
         self.assertIn("attention", result)
         self.assertIn("input_layernorm", result)
         self.assertIn("post_attention_layernorm", result)
-
         attention_result = result["attention"]
-        self.assertEqual(attention_result["name"], "attention")
-        
+        self.assertEqual(attention_result["name"], "attention") 
         self.assertEqual(result["input_layernorm"]["name"], "layer1")
         self.assertEqual(result["post_attention_layernorm"]["name"], "norm2")
+
+    def test_invalid_input(self):
+        with self.assertRaises(AttributeError):
+            process_layer("layer", "not a module")
