@@ -68,8 +68,8 @@ class MIETorchCompare:
             if cpu_key in npu_keys:
                 cpu_tensor = self.cpu_reader.get_tensor(cpu_key)
                 npu_tensor = self.npu_reader.get_tensor(cpu_key)
-                if npu_tensor.shape == (0,):
-                    logger.warning("could not find the npu_tensor which key is: %s", cpu_key)
+                if cpu_tensor is None or npu_tensor.shape == (0,):
+                    logger.warning("Could not find matched tensor which key is: %s", cpu_key)
                     continue
                 if cpu_tensor.shape == npu_tensor.shape:
                     tensors[cpu_key] = (cpu_tensor, npu_tensor)
