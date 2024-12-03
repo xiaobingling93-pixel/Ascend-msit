@@ -44,5 +44,5 @@ class WeightQuantConfig(BaseConfig):
         # 校验参数
         check_type(self.block_size, int, param_name="block_size")
         if self.block_size not in BLOCK_SIZE_LIST:
-            raise ValueError(f"group_size must be among choice {BLOCK_SIZE_LIST}, please check it.")
+            raise ValueError(f"block_size must be among choice {BLOCK_SIZE_LIST}, please check it.")
         check_and_generate_config_param(self)
