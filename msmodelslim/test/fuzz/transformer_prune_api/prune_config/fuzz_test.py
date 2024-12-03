@@ -15,11 +15,10 @@ import random
 import atheris
 
 from test.fuzz.common.utils import random_change_dict_value
-
+from msmodelslim.common.prune.transformer_prune.prune_model import PruneConfig
 
 @atheris.instrument_func
 def fuzz_test(input_bytes):
-    from msmodelslim.common.prune.transformer_prune.prune_model import PruneConfig
 
     fuzz_value = input_bytes.decode('utf-8', 'ignore').strip()
 
