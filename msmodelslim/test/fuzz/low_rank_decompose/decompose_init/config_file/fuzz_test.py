@@ -12,9 +12,11 @@ import logging
 
 import atheris
 
-with atheris.instrument_imports():
-    from msmodelslim.pytorch.low_rank_decompose import Decompose
+from msmodelslim.pytorch.low_rank_decompose import Decompose
 from test.resources.sample_net_torch import LrdSampleNetwork
+
+with atheris.instrument_imports():
+    pass
 
 
 @atheris.instrument_func
