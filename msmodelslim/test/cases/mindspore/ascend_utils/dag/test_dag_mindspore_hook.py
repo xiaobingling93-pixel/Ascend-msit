@@ -231,7 +231,8 @@ class TestNetworkParse:
     def test_get_node_by_name_given_g6_a1_when_any_pass(dag):
         assert isinstance(dag.get_node_by_name("g6_a1").node, FakeModuleAA)
 
-    def test_get_node_by_name_given_g7_d3_when_any_pass(self, dag):
+    @staticmethod
+    def test_get_node_by_name_given_g7_d3_when_any_pass(dag):
         assert isinstance(dag.get_node_by_name("g7_d3").node, FakeModuleDD)
 
     @staticmethod

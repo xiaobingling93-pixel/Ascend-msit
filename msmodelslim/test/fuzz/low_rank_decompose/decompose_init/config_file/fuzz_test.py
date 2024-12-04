@@ -12,14 +12,10 @@ import logging
 
 import atheris
 
-# Need to import first, otherwise `atheris.instrument_imports` will take a long time
-from scipy.optimize import minimize_scalar as _
-
-from test.resources.sample_net_torch import LrdSampleNetwork
-
-
 with atheris.instrument_imports():
     from msmodelslim.pytorch.low_rank_decompose import Decompose
+
+from test.resources.sample_net_torch import LrdSampleNetwork
 
 
 @atheris.instrument_func

@@ -13,10 +13,11 @@ import json
 
 import atheris
 
-from test.resources.sample_net_torch import LrdSampleNetwork
-
 with atheris.instrument_imports():
     from msmodelslim.pytorch.low_rank_decompose import Decompose
+
+from test.resources.sample_net_torch import LrdSampleNetwork
+
 
 
 @atheris.instrument_func
