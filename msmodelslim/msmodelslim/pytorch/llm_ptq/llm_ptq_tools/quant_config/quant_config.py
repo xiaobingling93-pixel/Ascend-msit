@@ -1,5 +1,4 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
-
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config.quant_config_factory import QuantConfigFactory
 
 
@@ -55,6 +54,7 @@ class QuantConfig:
                  is_dynamic: bool = False,
                  group_size: int = 64,
                  percdamp: float = 0.01,
+                 low_memory: dict = None
                  ):
         """
         Args:
@@ -80,6 +80,7 @@ class QuantConfig:
             open_outlier: 是否开启权重异常值划分
             is_dynamic: 是否使用动态量化，即w8a8中的activation动态生成
             percdamp: GPTQ所使用的矩阵正定偏置系数,当GPTQ运行出现非正定矩阵导致的报错时可以增大该参数
+            low_memory: 低内存低显存配置，配置为字典时开启，如 {'offload_type': 'disk' | 'memory', 'enable_lazy_save': True | False}
         """
         self._cur_config = QuantConfigFactory. \
             get_quant_config('base', w_bit=w_bit, a_bit=a_bit, act_method=act_method, w_method=w_method,
@@ -88,7 +89,7 @@ class QuantConfig:
                              is_lowbit=is_lowbit, do_smooth=do_smooth, use_sigma=use_sigma,
                              sigma_factor=sigma_factor, disable_last_linear=disable_last_linear,
                              use_kvcache_quant=use_kvcache_quant, open_outlier=open_outlier, is_dynamic=is_dynamic,
-                             group_size=group_size, percdamp=percdamp)
+                             group_size=group_size, percdamp=percdamp, low_memory=low_memory)
         self._modify_quant_param()
 
     def weight_quant(self,
@@ -157,7 +158,7 @@ class QuantConfig:
         self._cur_config = QuantConfigFactory.get_quant_config('sparse', last_config=self._cur_config,
                                                                act_method=act_method, fraction=fraction,
                                                                nonuniform=nonuniform, is_lowbit=is_lowbit,
-                                                               do_smooth=do_smooth, use_sigma=use_sigma, 
+                                                               do_smooth=do_smooth, use_sigma=use_sigma,
                                                                sigma_factor=sigma_factor)
         self._modify_quant_param()
         return self
@@ -170,7 +171,7 @@ class QuantConfig:
         self._cur_config = QuantConfigFactory.get_quant_config('kv', last_config=self._cur_config, kv_sym=kv_sym)
         self._modify_quant_param()
         return self
-    
+
     def fa_quant(self,
                  fa_amp: int = 0
                  ):
@@ -181,13 +182,12 @@ class QuantConfig:
         Arg:
             fa_amp: 自动回退层数，以整个attention为单位进行回退
         """
-        self._cur_config = QuantConfigFactory.get_quant_config('fa_quant', 
-                                                                last_config=self._cur_config,
-                                                                fa_amp=fa_amp
-                                                                )
+        self._cur_config = QuantConfigFactory.get_quant_config('fa_quant',
+                                                               last_config=self._cur_config,
+                                                               fa_amp=fa_amp
+                                                               )
         self._modify_quant_param()
         return self
-        
 
     def simulate_tp(self,
                     tp_size,
@@ -209,6 +209,7 @@ class QuantConfig:
                                                                enable_per_device_quant=enable_per_device_quant)
         self._modify_quant_param()
         return self
+
 
     def _modify_quant_param(self):
         """

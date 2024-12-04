@@ -2,6 +2,8 @@
 
 import re
 import importlib
+from typing import Mapping
+
 from modelslim import OLD_PACKAGE_NAME, NEW_PACKAGE_NAME
 
 
@@ -101,6 +103,15 @@ def check_dict_element(dict_value, value_type, param_name='dict', additional_msg
     check_type(dict_value, dict, param_name=param_name)
     additional_msg = (" " + additional_msg) if additional_msg else ""
     for key, value in dict_value.items():
+        if not isinstance(value, value_type):
+            raise ValueError("Param of dict {}[{}] should be {}, ".format(param_name, key, type_to_str(value_type))
+                             + additional_msg)
+
+def check_mapping_element(mapping_value, value_type, param_name='dict', additional_msg=None):
+    check_type(mapping_value, Mapping, param_name=param_name)
+    additional_msg = (" " + additional_msg) if additional_msg else ""
+    for key in mapping_value:
+        value = mapping_value[key]
         if not isinstance(value, value_type):
             raise ValueError("Param of dict {}[{}] should be {}, ".format(param_name, key, type_to_str(value_type))
                              + additional_msg)

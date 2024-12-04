@@ -8,7 +8,6 @@ from .kv_quant_config import KVQuantConfig
 from .fa_quant_config import FAQuantConfig
 from .simulate_tp_config import SimulateTPConfig
 
-
 __all__ = [
     'BaseConfig',
     'WeightActivationQuantConfig',
@@ -16,5 +15,5 @@ __all__ = [
     'SparseQuantConfig',
     'KVQuantConfig',
     'SimulateTPConfig',
-    'FAQuantConfig'
+    'FAQuantConfig',
 ]
