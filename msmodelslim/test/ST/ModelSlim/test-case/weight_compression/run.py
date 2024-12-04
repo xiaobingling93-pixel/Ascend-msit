@@ -3,9 +3,9 @@
 from __future__ import print_function
 
 import os
-import numpy as np
-
 import logging
+
+import numpy as np
 
 from modelslim.pytorch.weight_compression import CompressConfig, Compressor
 
