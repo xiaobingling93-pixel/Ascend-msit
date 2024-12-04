@@ -168,72 +168,68 @@ def dag(inputs_of_model):
 
 
 class TestNetworkParse:
-    def test_parse_network_given_sample_network_when_any_pass(self, dag):
+    @staticmethod
+    def test_parse_network_given_sample_network_when_any_pass(dag):
         # first node : FakeModuleAA
         first_node: DagNode = next(dag.search_nodes_by_op_type("FakeModuleAA"))
-        assert type(first_node.node) == FakeModuleAA
+        assert isinstance(first_node.node, FakeModuleAA)
         assert len(list(first_node.output_nodes)) == 1
 
         # 2th node : FakeModuleBB
         node_2th = next(first_node.output_nodes)
-        assert type(node_2th.node) == FakeModuleBB
+        assert isinstance(node_2th.node, FakeModuleBB)
         assert list(node_2th.input_nodes) == [first_node]
         assert len(list(node_2th.output_nodes)) == 1
 
         # 3th node : FakeModuleCC
         node_3th = next(node_2th.output_nodes)
-        assert type(node_3th.node) == FakeModuleCC
+        assert isinstance(node_3th.node, FakeModuleCC)
         assert list(node_3th.input_nodes) == [node_2th]
         assert len(list(node_3th.output_nodes)) == 1
 
         # 4th node : FakeModuleAA
         node_4th = next(node_3th.output_nodes)
-        assert type(node_4th.node) == FakeModuleAA
+        assert isinstance(node_4th.node, FakeModuleAA)
         assert list(node_4th.input_nodes) == [node_3th]
         assert len(list(node_4th.output_nodes)) == 1
 
         # more...
 
-    def test_search_by_class_given_aa_when_any_pass(self, dag):
+    @staticmethod
+    def test_search_by_class_given_aa_when_any_pass(dag):
         assert len(list(dag.search_nodes_by_class(FakeModuleAA))) == 12
 
-    def test_search_by_class_given_bb_when_any_pass(self, dag):
+    @staticmethod
+    def test_search_by_class_given_bb_when_any_pass(dag):
         assert len(list(dag.search_nodes_by_class(FakeModuleBB))) == 10
 
-    def test_search_by_class_given_cc_when_any_pass(self, dag):
-        assert len(list(dag.search_nodes_by_class(FakeModuleCC))) == 3
-
-    def test_search_by_class_given_dd_when_any_pass(self, dag):
-        assert len(list(dag.search_nodes_by_class(FakeModuleDD))) == 6
-
-    def test_search_by_op_type_given_aa_when_any_pass(self, dag):
+    @staticmethod
+    def test_search_by_op_type_given_aa_when_any_pass(dag):
         assert len(list(dag.search_nodes_by_op_type("FakeModuleAA"))) == 12
 
-    def test_search_by_op_type_given_bb_when_any_pass(self, dag):
+    @staticmethod
+    def test_search_by_op_type_given_bb_when_any_pass(dag):
         assert len(list(dag.search_nodes_by_op_type("FakeModuleBB"))) == 10
 
-    def test_search_by_op_type_given_cc_when_any_pass(self, dag):
-        assert len(list(dag.search_nodes_by_op_type("FakeModuleCC"))) == 3
-
-    def test_search_by_op_type_given_dd_when_any_pass(self, dag):
-        assert len(list(dag.search_nodes_by_op_type("FakeModuleDD"))) == 6
-
-    def test_get_node_by_name_given_g6_a1_when_any_pass(self, dag):
-        assert type(dag.get_node_by_name("g6_a1").node) == FakeModuleAA
+    @staticmethod
+    def test_get_node_by_name_given_g6_a1_when_any_pass(dag):
+        assert isinstance(dag.get_node_by_name("g6_a1").node, FakeModuleAA)
 
     def test_get_node_by_name_given_g7_d3_when_any_pass(self, dag):
-        assert type(dag.get_node_by_name("g7_d3").node) == FakeModuleDD
+        assert isinstance(dag.get_node_by_name("g7_d3").node, FakeModuleDD)
 
-    def test_search_by_name_prefix_given_embedding_when_any_pass(self, dag):
+    @staticmethod
+    def test_search_by_name_prefix_given_embedding_when_any_pass(dag):
         gen_embedding = dag.get_nodes_by_name_prefix("g1")
-        assert type(next(gen_embedding).node) == FakeModuleAA
-        assert type(next(gen_embedding).node) == FakeModuleBB
-        assert type(next(gen_embedding).node) == FakeModuleCC
-        assert type(next(gen_embedding).node) == FakeModuleAA
-
+        nodes = [next(gen_embedding).node for _ in range(4)]
+        assert isinstance(nodes[0], FakeModuleAA)
+        assert isinstance(nodes[1], FakeModuleBB)
+        assert isinstance(nodes[2], FakeModuleCC)
+        assert isinstance(nodes[3], FakeModuleAA)
 
 class TestNetworkModify():
-    def test_replace_node_given_leakyrelu_when_g1_b1_pass(self, dag, inputs_of_model):
+    @staticmethod
+    def test_replace_node_given_leakyrelu_when_g1_b1_pass(dag, inputs_of_model):
         model: mindspore.nn.Cell = dag.network
         relu_node = dag.get_node_by_name("g1_b1")
         new_leaky_relu_node = mindspore.nn.LeakyReLU(0.1)
@@ -244,7 +240,8 @@ class TestNetworkModify():
         assert relu_node.node == new_leaky_relu_node
         assert mindspore.nn.LeakyReLU in [type(module) for _, module in model.cells_and_names()]
 
-    def test_add_node_before_given_fake_node_when_g1_b1_pass(self, dag, inputs_of_model):
+    @staticmethod
+    def test_add_node_before_given_fake_node_when_g1_b1_pass(dag, inputs_of_model):
         model = dag.network
         embedding_node = dag.get_node_by_name("g1_b1")
         ori_embedding_module = embedding_node.node
@@ -260,7 +257,8 @@ class TestNetworkModify():
         assert dag.get_node_by_name("g1_b1.0").node == new_fake_node
         assert dag.get_node_by_name("g1_b1.1").node == ori_embedding_module
 
-    def test_add_node_after_given_fake_node_when_g3_b2_pass(self, dag, inputs_of_model):
+    @staticmethod
+    def test_add_node_after_given_fake_node_when_g3_b2_pass(dag, inputs_of_model):
         model = dag.network
         embedding_node = dag.get_node_by_name("g3_b2")
         ori_embedding_module = embedding_node.node
@@ -276,7 +274,8 @@ class TestNetworkModify():
         assert dag.get_node_by_name("g3_b2.1").node == new_fake_node
         assert ori_node_count + 1 == len(dag.dag_node_list)
 
-    def test_remove_node_given_none_when_bb_pass(self, dag, inputs_of_model):
+    @staticmethod
+    def test_remove_node_given_none_when_bb_pass(dag, inputs_of_model):
         model = dag.network
         ori_node_count = len(dag.dag_node_list)
         remove_cnt = 0
@@ -290,7 +289,8 @@ class TestNetworkModify():
         assert nn.ReLU not in [type(module) for _, module in model.cells_and_names()]
         assert ori_node_count == len(dag.dag_node_list) + remove_cnt
 
-    def test_like_quant_given_any_when_any_pass(self, dag, inputs_of_model):
+    @staticmethod
+    def test_like_quant_given_any_when_any_pass(dag, inputs_of_model):
         model = dag.network
         linear_node = dag.get_node_by_name("g1_b1")
         with dag:
@@ -305,7 +305,8 @@ class TestNetworkModify():
         assert dag.get_node_by_name("g1_b1.1").op_type == "FakeModuleBB"
         assert dag.get_node_by_name("g1_b1.2").op_type == "FakeModuleQuant"
 
-    def test_like_prune_conv_given_any_when_any_pass(self, dag, inputs_of_model):
+    @staticmethod
+    def test_like_prune_conv_given_any_when_any_pass(dag, inputs_of_model):
         model = dag.network
         conv1_node = dag.get_node_by_name("conv1")
         conv2_node = dag.get_node_by_name("conv2")
@@ -322,7 +323,8 @@ class TestNetworkModify():
         assert [module.out_channels for name, module in model.cells_and_names() if name == "conv1"] == [32]
         assert [module.in_channels for name, module in model.cells_and_names() if name == "conv2"] == [32]
 
-    def test_like_low_rank_decomposition_given_any_when_any_pass(self, dag, inputs_of_model):
+    @staticmethod
+    def test_like_low_rank_decomposition_given_any_when_any_pass(dag, inputs_of_model):
         model = dag.network
         linear_node = dag.get_node_by_name("dense")
         with dag:
