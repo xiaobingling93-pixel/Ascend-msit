@@ -204,12 +204,28 @@ class TestNetworkParse:
         assert len(list(dag.search_nodes_by_class(FakeModuleBB))) == 10
 
     @staticmethod
+    def test_search_nodes_by_class_given_cc_when_any_pass(dag):
+        assert len(list(dag.search_nodes_by_class(FakeModuleCC))) == 3
+
+    @staticmethod
+    def test_search_nodes_by_class_given_dd_when_any_pass(dag):
+        assert len(list(dag.search_nodes_by_class(FakeModuleDD))) == 6
+
+    @staticmethod
     def test_search_by_op_type_given_aa_when_any_pass(dag):
         assert len(list(dag.search_nodes_by_op_type("FakeModuleAA"))) == 12
 
     @staticmethod
     def test_search_by_op_type_given_bb_when_any_pass(dag):
         assert len(list(dag.search_nodes_by_op_type("FakeModuleBB"))) == 10
+
+    @staticmethod
+    def test_search_nodes_by_op_type_given_cc_when_any_pass(dag):
+        assert len(list(dag.search_nodes_by_op_type("FakeModuleCC"))) == 3
+
+    @staticmethod
+    def test_search_nodes_by_op_type_given_dd_when_any_pass(dag):
+        assert len(list(dag.search_nodes_by_op_type("FakeModuleDD"))) == 6
 
     @staticmethod
     def test_get_node_by_name_given_g6_a1_when_any_pass(dag):
