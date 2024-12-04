@@ -64,20 +64,20 @@ class TestParallelLinear:
             cfg = Config(tp_size=1)
             parallel_linear.set_param(linear, 'linear_tp1', cfg=cfg)
 
-            hidden_states = torch.randn(1.16)
+            hidden_states = torch.randn(1, 16)
             linear_out = linear(hidden_states)
             parallel_linear_out = parallel_linear(hidden_states)
             cos_sim = torch.cosine_similarity(linear_out, parallel_linear_out)
             assert cos_sim > 0.9
 
-    def test_tp_size1(self):
+    def test_tp_size2(self):
         with torch.no_grad():
             linear = torch.nn.Linear(in_features=16, out_features=16, bias=False)
             parallel_linear = ParallelLinearCol()
             cfg = Config(tp_size=2)
             parallel_linear.set_param(linear, 'linear_tp2', cfg=cfg)
 
-            hidden_states = torch.randn(1.16)
+            hidden_states = torch.randn(1, 16)
             linear_out = linear(hidden_states)
             parallel_linear_out = parallel_linear(hidden_states)
             cos_sim = torch.cosine_similarity(linear_out, parallel_linear_out)
@@ -98,7 +98,7 @@ class TestParallelLinear:
 
     def test_linear_bias(self):
         with torch.no_grad():
-            linear = torch.nn.Linear(in_features=16, out_features=32, bias=False)
+            linear = torch.nn.Linear(in_features=16, out_features=32, bias=True)
             parallel_linear = ParallelLinearCol()
             cfg = Config()
             parallel_linear.set_param(linear, 'linear_bias', cfg=cfg)
