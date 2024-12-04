@@ -1,12 +1,12 @@
 # Copyright Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
 import os
+
 import pytest
 import numpy as np
 import mindspore as ms
 
 from ascend_utils.common.utils import count_parameters
 from msmodelslim.mindspore.low_rank_decompose import low_rank_decompose
-
 from test.resources.sample_net_mindspore import LrdSampleNetwork
 
 
