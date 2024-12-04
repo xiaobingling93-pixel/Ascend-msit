@@ -65,8 +65,8 @@ Used to distinguish between different actual inputs of models in dynamic shapes,
 │   │   │                   ├-- ...
 │   │   │                   └-- Transpose.4.1682148327390978
 │   │   ├-- {time_stamp}
-│   │   │   ├-- input_0_0.bin
-│   │   │   └-- input_0_0.npy
+│   │   │   ├-- output_0.bin
+│   │   │   └-- output_0.npy
 │   │   └-- {time_stamp}_summary.json
 │   └-- {onnx or tf}                         # onnx / TF model dump data directory
 │       ├-- Add_100.0.1682148256368588.npy

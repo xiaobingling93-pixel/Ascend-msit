@@ -105,8 +105,8 @@ compare功能可以直接通过msit命令行形式启动精度对比。启动方
 │   │   │                   ├-- ...
 │   │   │                   └-- Transpose.4.1682148327390978
 │   │   ├-- {time_stamp}
-│   │   │   ├-- input_0_0.bin
-│   │   │   └-- input_0_0.npy
+│   │   │   ├-- output_0.bin
+│   │   │   └-- output_0.npy
 │   │   └-- {time_stamp}_summary.json
 │   └-- {onnx or tf or caffe} # 原模型 dump 数据存放路径，onnx / tf / caffe 分别对应 ONNX / Tensorflow / Caffe 模型
 │       ├-- Add_100.0.1682148256368588.npy
