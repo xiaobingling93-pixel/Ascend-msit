@@ -1,8 +1,10 @@
 import os
-import torch
 import logging
+
+import torch
 import torch.utils.data
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig
+
 from modelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
 from modelslim.pytorch.llm_ptq.anti_outlier import AntiOutlier, AntiOutlierConfig
 
@@ -35,9 +37,9 @@ calib_list = [
 # 定义函数，用于创建校准数据集
 def get_calib_dataset(tokenizer, calib_data_list):
     calib_dataset = []
-    for calib_data in calib_data_list:
+    for data in calib_data_list:
         # 对每个校准数据进行编码，并转换为PyTorch张量
-        inputs = tokenizer([calib_data], return_tensors='pt').to('cpu')
+        inputs = tokenizer([data], return_tensors='pt').to('cpu')
         logging.info("Encoded input: %s", inputs)  # 使用logging记录输入信息
         calib_dataset.append([inputs.data['input_ids'], inputs.data['attention_mask']])
     return calib_dataset

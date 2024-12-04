@@ -2,7 +2,9 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
 import os
 import numpy as np
+
 import logging
+
 from modelslim.pytorch.weight_compression import CompressConfig, Compressor
 
 # 定义一个函数用于创建目录，如果目录不存在则创建

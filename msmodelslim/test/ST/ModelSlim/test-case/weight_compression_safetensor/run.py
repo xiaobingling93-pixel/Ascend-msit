@@ -1,7 +1,9 @@
 # 导入所需的库
 import json
 import os
+
 import logging
+
 from safetensors.torch import load_file  # 用于加载safetensors格式的文件
 from modelslim.pytorch.weight_compression import CompressConfig, Compressor  # 用于模型权重压缩的配置和压缩器
 
