@@ -133,7 +133,7 @@ class TestQuantizer:
 
     def test_weight_quantizer_tensor_forward_with_int_infer_should_return_expected_result(self):
         # 普通的w_bit=8场景的权重的Quantizer.tensor_forward int infer测试
-        cfg = QuantConfig().weight_activation_quant()
+        cfg = QuantConfig().weight_quant()
         test_quantizer = Quantizer(
             bit=8, is_signed=True, is_enable=True, is_input=False, cfg=cfg, logger=logger, is_dynamic=False
         )
@@ -163,7 +163,7 @@ class TestQuantizer:
 
     def test_init_weight_quant_normal_should_return_expected_result(self):
         # 普通的w_bit=8场景的权重的Quantizer._init_weight_quant_normal测试
-        cfg = QuantConfig().weight_activation_quant()
+        cfg = QuantConfig().weight_quant()
         test_quantizer = Quantizer(
             bit=8, is_signed=True, is_enable=True, is_input=False, cfg=cfg, logger=logger, is_dynamic=False
         )
