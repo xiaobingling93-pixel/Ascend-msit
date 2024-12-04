@@ -1,5 +1,6 @@
 import os
 import torch
+import logging
 import torch.utils.data
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig
 from modelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
@@ -32,12 +33,12 @@ calib_list = [
 ]
 
 # 定义函数，用于创建校准数据集
-def get_calib_dataset(tokenizer, calib_list):
+def get_calib_dataset(tokenizer, calib_data_list):
     calib_dataset = []
-    for calib_data in calib_list:
+    for calib_data in calib_data_list:
         # 对每个校准数据进行编码，并转换为PyTorch张量
         inputs = tokenizer([calib_data], return_tensors='pt').to('cpu')
-        print(inputs)
+        logging.info("Encoded input: %s", inputs)  # 使用logging记录输入信息
         calib_dataset.append([inputs.data['input_ids'], inputs.data['attention_mask']])
     return calib_dataset
 
@@ -81,4 +82,4 @@ calibrator.run()
 # 保存量化后的模型权重
 calibrator.save(f"{os.environ['PROJECT_PATH']}/output/llm_ptq_ZS_3", save_type=["numpy", "safe_tensor"], part_file_size=1)
 # 打印保存量化权重成功的信息
-print('Save quant weight success!')
+logging.info('Save quant weight success!')

@@ -2,6 +2,7 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
 import os
 import numpy as np
+import logging
 from modelslim.pytorch.weight_compression import CompressConfig, Compressor
 
 # 定义一个函数用于创建目录，如果目录不存在则创建
@@ -48,4 +49,4 @@ src_root = f"{os.environ['PROJECT_PATH']}/resource/weight_compression"
 # 调用主函数执行权重压缩
 main(src_root)
 # 打印权重压缩成功的信息
-print("Weight Compression success!")
+logging.info("Weight Compression success!")

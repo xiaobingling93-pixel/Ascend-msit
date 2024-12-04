@@ -1,6 +1,7 @@
 # 导入所需的库
 import json
 import os
+import logging
 from safetensors.torch import load_file  # 用于加载safetensors格式的文件
 from modelslim.pytorch.weight_compression import CompressConfig, Compressor  # 用于模型权重压缩的配置和压缩器
 
@@ -35,3 +36,4 @@ compress_weight, compress_index, compress_info = compressor.run()
 # 使用export_safetensors()接口，保存压缩后的结果文件
 # 这里需要指定保存压缩结果的目录路径，以及压缩后的safetensors文件名和json文件名
 compressor.export_safetensors(f"{os.environ['PROJECT_PATH']}/output/weight_compression_safetensor", safetensors_name=None, json_name=None)
+logging.info("Weight Compression safetensor success!")
