@@ -233,7 +233,7 @@ python3 quant.py
  ...
 }
 ```
-    - json描述文件中储存的量化权重的总体类型model_quant_type，是否启用kvcache量化kv_cache_type，和其中各个权重的类型，来自原始浮点权重则为FLOAT，来自W8A8量化则为W8A8，来自稀疏量化则为W8A8S，来自压缩则为W8A8SC。
+    - json描述文件中储存的量化权重的总体类型model_quant_type，是否启用kvcache量化kv_cache_type，和其中各个权重的类型，来自原始浮点权重则为FLOAT，来自W8A8量化则为W8A8，来自稀疏量化则为W8A8S，来自压缩则为W8A8SC，来自NF4量化则为NF4。
 ```
 # llama模型稀疏量化生成的json描述文件部分内容
 {

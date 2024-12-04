@@ -23,7 +23,6 @@ import torch
 import torch_npu
 
 from msit_llm.common.tool import read_atb_data
-from components.utils.tool import read_bin_data, convert_bin_data_to_pt
 from msit_llm.common.log import logger
 from components.utils.cmp_algorithm import CMP_ALG_MAP, CUSTOM_ALG_MAP
 from msit_llm.opcheck.opchecker import NAMEDTUPLE_PRECISION_METRIC, NAMEDTUPLE_PRECISION_MODE
@@ -106,7 +105,7 @@ class OperationTest(unittest.TestCase):
         res = []
         for tensor_file in tensor_files:
             tensor_file = os.path.realpath(tensor_file)
-            tensor = convert_bin_data_to_pt(read_bin_data(tensor_file)).npu()
+            tensor = read_atb_data(tensor_file).npu()
             res.append(tensor)
         return res
 
