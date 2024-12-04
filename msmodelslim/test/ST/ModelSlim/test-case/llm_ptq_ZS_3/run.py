@@ -13,6 +13,17 @@ SEQ_LEN_OUT = 32
 
 # 从环境变量中获取模型文件的路径
 LOAD_PATH = f"{os.environ['PROJECT_PATH']}/resource/llm_ptq/llama2_7b/"
+
+# 定义函数，用于创建校准数据集
+def get_calib_dataset(tokenizer, calib_data_list):
+    calib_dataset = []
+    for data in calib_data_list:
+        # 对每个校准数据进行编码，并转换为PyTorch张量
+        inputs = tokenizer([data], return_tensors='pt').to('cpu')
+        logging.info("Encoded input: %s", inputs)  # 使用logging记录输入信息
+        calib_dataset.append([inputs.data['input_ids'], inputs.data['attention_mask']])
+    return calib_dataset
+
 # 加载模型配置
 config = AutoConfig.from_pretrained(LOAD_PATH, trust_remote_code=True)
 # 加载分词器
@@ -33,16 +44,6 @@ calib_list = [
     "Please help me write a job report on large model inference optimization:",
     "What are the most worth visiting scenic spots in China?"
 ]
-
-# 定义函数，用于创建校准数据集
-def get_calib_dataset(tokenizer, calib_data_list):
-    calib_dataset = []
-    for data in calib_data_list:
-        # 对每个校准数据进行编码，并转换为PyTorch张量
-        inputs = tokenizer([data], return_tensors='pt').to('cpu')
-        logging.info("Encoded input: %s", inputs)  # 使用logging记录输入信息
-        calib_dataset.append([inputs.data['input_ids'], inputs.data['attention_mask']])
-    return calib_dataset
 
 # 创建校准数据集
 dataset_calib = get_calib_dataset(tokenizer, calib_list)
