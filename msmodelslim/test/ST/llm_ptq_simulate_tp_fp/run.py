@@ -23,7 +23,6 @@ tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path=LOAD_PAT
                                           trust_remote_code=True)
 model = AutoModelForCausalLM.from_pretrained(pretrained_model_name_or_path=LOAD_PATH,
                                              torch_dtype=torch.float16, trust_remote_code=True).npu()
-# model.eval()
 
 calib_list = ["Where is the capital of China?",
               "Please make a poem:",
