@@ -35,13 +35,12 @@ class ExporterReqStatus(ExporterBase):
     name = "req_status"
 
     @classmethod
-    def intialize(cls, args):
+    def initialize(cls, args):
         cls.args = args
 
     @classmethod
     def export(cls, data) -> None:
         df = data.get('tx_data_df')[['message', 'start_time', 'end_time', 'name']]
-
         
         counters = []
         cur = [0 for _ in range(len(ReqStatus))]

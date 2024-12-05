@@ -26,9 +26,11 @@ from ms_server_profiler.parse import parse
 def init_exporters(exporter_classes, args):
     exporter_class_map = {exporter_cls.name: exporter_cls for exporter_cls in exporter_classes}
     selected_exporter = []
-    for name in args.exporter:
-        exporter = exporter_class_map[name]
-        exporter.intialize(args)
+    for name in args.exporter:           
+        exporter = exporter_class_map.get(name)
+        if exporter is None:
+            continue
+        exporter.initialize(args)
         selected_exporter.append(exporter)
 
     from pathlib import Path
