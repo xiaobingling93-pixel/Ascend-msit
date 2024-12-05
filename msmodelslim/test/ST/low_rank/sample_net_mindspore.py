@@ -5,11 +5,11 @@ import mindspore.nn as nn
 from mindspore.ops import operations as P
 
 
-def conv_bn_relu(in_channel, out_channel, kernel_size, stride, depth_wise, activation='relu6'):
+def conv_bn_relu(in_channel, out_channel, kernel_size, stride, depth_wise, ):
     output = [nn.Conv2d(in_channel, out_channel, kernel_size, stride, pad_mode="same",
                         group=1 if not depth_wise else in_channel), nn.BatchNorm2d(out_channel)]
-    if activation:
-        output.append(nn.get_activation(activation))
+
+    output.append(nn.get_activation('relu6'))
     return nn.SequentialCell(output)
 
 

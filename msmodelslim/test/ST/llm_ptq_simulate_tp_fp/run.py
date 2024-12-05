@@ -24,7 +24,7 @@ tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path=LOAD_PAT
 model = AutoModelForCausalLM.from_pretrained(pretrained_model_name_or_path=LOAD_PATH,
                                              torch_dtype=torch.float16, trust_remote_code=True).npu()
 
-calib_list = ["Where is the capital of China?",
+calib_list_all = ["Where is the capital of China?",
               "Please make a poem:",
               "I want to learn python, how should I learn it?",
               "Please help me write a job report on large model inference optimization:",
@@ -40,7 +40,7 @@ def get_calib_dataset(tokenizer_instance, calib_list):
     return calib_dataset
 
 
-dataset_calib = get_calib_dataset(tokenizer, calib_list)
+dataset_calib = get_calib_dataset(tokenizer, calib_list_all)
 
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
 
