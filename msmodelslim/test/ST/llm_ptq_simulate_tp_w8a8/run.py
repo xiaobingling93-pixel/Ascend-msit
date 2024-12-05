@@ -60,7 +60,7 @@ generate_ids = model.generate(test_input.input_ids.npu(), attention_mask=test_in
                               max_new_tokens=SEQ_LEN_OUT)
 res = tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)
 msmodelslim_logger.info(res)
-for idx, item in enumerate(res):
+for _, item in enumerate(res):
     msmodelslim_logger.info(item)
 
 calibrator.save(f"{os.environ['PROJECT_PATH']}/output/llm_ptq_simulate_w8a8", save_type=["safe_tensor"])
