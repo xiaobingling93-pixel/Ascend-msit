@@ -1,10 +1,10 @@
 import os
+import argparse
 import json
 from tqdm import tqdm
 import torch
 import torch.utils.data
 from transformers import AutoTokenizer, AutoModel
-import argparse
 
 
 from modelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator as SparseQuantCalibrator
@@ -29,8 +29,8 @@ def parse_args():
         default=f"{os.environ['PROJECT_PATH']}/output/sparse",
         help="Location to read and write the quant weights",
     )
-    args = parser.parse_args()
-    return args
+    parsed = parser.parse_args()
+    return parsed
 
 args = parse_args()
 data_path = args.data_path
