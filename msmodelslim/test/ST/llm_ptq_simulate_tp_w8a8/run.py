@@ -31,10 +31,10 @@ calib_list = ["Where is the capital of China?",
               "What are the most worth visiting scenic spots in China?"]
 
 
-def get_calib_dataset(tokenizer, calib_list):
+def get_calib_dataset(tokenizer_instance, calib_list):
     calib_dataset = []
     for calib_data in calib_list:
-        inputs = tokenizer([calib_data], return_tensors='pt')
+        inputs = tokenizer_instance([calib_data], return_tensors='pt')
         msmodelslim_logger.info(inputs)
         calib_dataset.append([inputs.data['input_ids'].npu(), inputs.data['attention_mask'].npu()])
     return calib_dataset

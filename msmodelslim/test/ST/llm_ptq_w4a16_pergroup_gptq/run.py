@@ -16,11 +16,11 @@ tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path=fp16_pat
 model = AutoModelForCausalLM.from_pretrained(pretrained_model_name_or_path=fp16_path, torch_dtype=torch.float32, trust_remote_code=True).cpu()
 
 # 获取校准数据函数定义
-def get_calib_dataset(tokenizer, calib_list):
+def get_calib_dataset(tokenizer_instance, calib_list):
     calib_dataset = []
     for calib_data in calib_list:
         text = calib_data['inputs_pretokenized']
-        inputs = tokenizer([text], return_tensors='pt').to('cpu')
+        inputs = tokenizer_instance([text], return_tensors='pt').to('cpu')
         msmodelslim_logger.info(inputs)
         calib_dataset.append([inputs.data['input_ids'], inputs.data['token_type_ids'], inputs.data['attention_mask']])
     return calib_dataset
