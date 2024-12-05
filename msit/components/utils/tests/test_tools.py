@@ -14,10 +14,11 @@
 
 import os
 import unittest
+import tempfile
 from unittest.mock import patch, MagicMock
 from collections import namedtuple
-import numpy as np
 
+import numpy as np
 import torch
 
 from components.utils.tool import get_bin_data_from_dir, read_bin_data, load_file_to_read_common_check, \
@@ -55,7 +56,7 @@ class TestReadAndConvertBinData(unittest.TestCase):
         bin_data_path = 'test_data.txt'
         with self.assertRaises(ValueError) as context:
             read_bin_data(bin_data_path)
-        self.assertTrue("must be end with .bin" in str(context.exception))
+        self.assertIn("must be end with .bin", str(context.exception))
 
     @patch('components.utils.tool.TensorBinFile')
     def test_convert_bin_data_to_pt_success(self, mock_tensor_bin_file):
@@ -115,23 +116,16 @@ class TestConvertBinDataToNpy(unittest.TestCase):
 
 class TestSaveData(unittest.TestCase):
     def setUp(self):
-        # Create a temporary directory
-        self.temp_dir = 'temp_test_dir'
-        if not os.path.exists(self.temp_dir):
-            os.makedirs(self.temp_dir)
+        # Create a temporary directory using tempfile
+        self.temp_dir = tempfile.TemporaryDirectory()
 
     def tearDown(self):
-        # Delete temporary directory
-        if os.path.exists(self.temp_dir):
-            for root, dirs, files in os.walk(self.temp_dir, topdown=False):
-                for name in files:
-                    os.remove(os.path.join(root, name))
-                for name in dirs:
-                    os.rmdir(os.path.join(root, name))
-            os.rmdir(self.temp_dir)
+        # The TemporaryDirectory is automatically cleaned up when the context ends,
+        # but we can explicitly close it here to ensure immediate cleanup.
+        self.temp_dir.cleanup()
 
     def test_save_torch_data_success(self):
-        pt_file_path = os.path.join(self.temp_dir, 'test.pt')
+        pt_file_path = os.path.join(self.temp_dir.name, 'test.pt')
         pt_data = torch.tensor([1, 2, 3])
         save_torch_data(pt_data, pt_file_path)
         # # Verify file
@@ -140,23 +134,21 @@ class TestSaveData(unittest.TestCase):
         self.assertTrue(torch.equal(loaded_data, pt_data))
 
     def test_save_torch_data_invalid_extension(self):
-        pt_file_path = os.path.join(self.temp_dir, 'test.txt')
-        pt_data = torch.tensor([1, 2, 3])
-        #  ValueError
-        with self.assertRaises(ValueError):
-            save_torch_data(pt_data, pt_file_path)
+        # Make sure to use self.temp_dir.name for the path
+        pt_file_path = os.path.join(self.temp_dir.name, 'test.txt')  # corrected line
+        with self.assertRaises(ValueError):  # Assuming that an invalid extension raises ValueError
+            save_torch_data(torch.tensor([1, 2, 3]), pt_file_path)
 
     def test_save_torch_data_directory_creation(self):
-        new_dir = os.path.join(self.temp_dir, 'new_subdir')
+        new_dir = os.path.join(self.temp_dir.name, 'new_subdir')
         pt_file_path = os.path.join(new_dir, 'test.pt')
         pt_data = torch.tensor([1, 2, 3])
-
         save_torch_data(pt_data, pt_file_path)
         # Verify file
         self.assertTrue(os.path.exists(pt_file_path))
 
     def test_save_npy_data_success(self):
-        npy_file_path = os.path.join(self.temp_dir, 'test.npy')
+        npy_file_path = os.path.join(self.temp_dir.name, 'test.npy')
         npy_data = np.array([1, 2, 3])
         save_npy_data(npy_file_path, npy_data)
         self.assertTrue(os.path.exists(npy_file_path))
@@ -165,14 +157,14 @@ class TestSaveData(unittest.TestCase):
         self.assertTrue(np.array_equal(loaded_data, npy_data))
 
     def test_save_npy_data_invalid_extension(self):
-        npy_file_path = os.path.join(self.temp_dir, 'test.txt')
+        npy_file_path = os.path.join(self.temp_dir.name, 'test.txt')
         npy_data = np.array([1, 2, 3])
         #  ValueError
         with self.assertRaises(ValueError):
             save_npy_data(npy_file_path, npy_data)
 
     def test_save_npy_data_directory_creation(self):
-        new_dir = os.path.join(self.temp_dir, 'new_subdir')
+        new_dir = os.path.join(self.temp_dir.name, 'new_subdir')
         npy_file_path = os.path.join(new_dir, 'test.npy')
         npy_data = np.array([1, 2, 3])
         save_npy_data(npy_file_path, npy_data)
