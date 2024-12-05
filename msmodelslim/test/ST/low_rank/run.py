@@ -1,18 +1,13 @@
-from __future__ import print_function
-
 import os
-import sys
 
 from ascend_utils.common.utils import count_parameters
 from msmodelslim import logger as msmodelslim_logger
 
-import torch
 import torchvision.models as models
 
 from modelslim.pytorch import low_rank_decompose as lrd_pt
 
 from copy import deepcopy
-import mindspore as ms
 from modelslim.mindspore import low_rank_decompose as lrd_ms
 from sample_net_mindspore import LrdSampleNetwork
 

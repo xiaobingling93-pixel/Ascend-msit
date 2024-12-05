@@ -65,7 +65,6 @@ class Unet(nn.Module):
         self.conv1_1 = conv_block(ch_in=self.ndf, ch_out=output_ch)
 
     def forward(self, x):
-        # x [none,3, 256, 256]
         x1 = self.conv1(x)  # [none,3,256,256]
 
         x1_ = self.Maxpool(x1)  # [none,64,128,128]
@@ -104,7 +103,6 @@ if __name__ == '__main__':
 
     os.makedirs(SAVE_PATH, exist_ok=True)
 
-    # model = torchvision.models.segmentation.fcn_resnet50(pretrained=True)
     model = Unet(3, output_ch=1)
     model.eval()
 
