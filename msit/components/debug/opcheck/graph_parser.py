@@ -17,7 +17,7 @@ import json
 
 from components.utils.file_open_check import ms_open
 
-MAX_GE_GRAPH_SIZE = 209715200   # 200 * 1024 *1024, 200MB
+MAX_GE_GRAPH_SIZE = 209715200   # 200 * 1024 * 1024, 200MB
 
 
 class InputOutputDesc(object):
@@ -41,6 +41,25 @@ class InputOutputDesc(object):
 
 class OpInfo(object):
     def __init__(self, op_info_dict):
+        """
+        op_info_dict like that:
+            "attr": [],
+            "dst_index": [],
+            "dst_name": "output",
+            "has_out_attr": true,
+            "id": 1,
+            "input": [],
+            "input_desc": [],
+            "input_i": [],
+            "input_name": [],
+            "is_input_const": [],
+            "name": "output",
+            "output_desc": [],
+            "output_i": [],
+            "src_index": [],
+            "src_name": [],
+            "type": "add",
+        """
         self.input_desc_list = [InputOutputDesc(**i) for i in op_info_dict.get("input_desc")]
         self.output_desc_list = [InputOutputDesc(**i) for i in op_info_dict.get("output_desc")]
         self.op_keys = op_info_dict.keys()

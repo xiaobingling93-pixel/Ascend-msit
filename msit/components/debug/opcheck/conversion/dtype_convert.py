@@ -21,8 +21,6 @@ import torch
 def bfloat16_conversion(container):
     """
     Convert bfloat16 string to numpy dtype
-    :param container:
-    :return:
     """
     # noinspection PyUnresolvedReferences
     return [dtype if dtype != "bfloat16" else tensorflow.bfloat16.as_numpy_dtype for dtype in container]
@@ -31,8 +29,6 @@ def bfloat16_conversion(container):
 def bfloat16_conversion_v2(container):
     """
     Convert bfloat16/int4/fp8 string to numpy dtype
-    :param container:
-    :return:
     """
     ret = list(container)
     special_dtypes = ("bfloat16", "int4", "float8_e5m2", "float8_e4m3fn", "float8_e8m0", "float4_e2m1", "float4_e1m2")
@@ -45,7 +41,10 @@ def bfloat16_conversion_v2(container):
     return ret
 
 
-def numpy_to_torch_tensor(np_array: numpy.ndarray, is_complex32: bool = False):
+def numpy_to_torch_tensor(np_array: numpy.ndarray, is_complex32=False):
+    """
+    Convert numpy data to torch.tensor
+    """
     if "bfloat16" in str(np_array.dtype):
         if hasattr(torch, "frombuffer"):
             return torch.frombuffer(np_array, dtype=torch.bfloat16).reshape(np_array.shape)
