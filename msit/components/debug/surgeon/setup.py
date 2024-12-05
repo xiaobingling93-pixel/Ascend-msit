@@ -19,8 +19,7 @@ config.read('../../config/config.ini')
 with open('requirements.txt', encoding='utf-8') as f:
     required = f.read().splitlines()
 
-with open('README.md', encoding='utf-8') as f:
-    long_description = f.read()
+
 
 debug_sub_tasks = [
     {
@@ -40,7 +39,7 @@ setup(
     name='msit-surgeon',
     version='7.0.0c1120',
     description='auto optimizer',
-    long_description=long_description,
+    long_description="",
     long_description_content_type='text/markdown',
     url=config.get('URL', 'msit_url'),
     packages=find_packages(),
