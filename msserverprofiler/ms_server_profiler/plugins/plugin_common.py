@@ -15,9 +15,24 @@
 from enum import Enum
 import json
 from ms_server_profiler.parse import PluginBase
-from ms_server_profiler.plugins.utils import convert_syscnt_to_ts
+from ms_server_profiler.utils import convert_syscnt_to_ts
 
 
+
+class PluginCommon(PluginBase):
+    name = "plugin_common"
+    depends = []
+
+    @classmethod
+    def parse(cls, data):
+        all_data_df = data["tx_data_df"]
+        sys_start_cnt = data["sys_start_cnt"]
+        cpu_frequency = data["cpu_frequency"]
+
+        all_data_df = data_convert(all_data_df, sys_start_cnt, cpu_frequency)
+        data["tx_data_df"] = all_data_df
+        return data
+    
 
 class ReqStatus(Enum):
     WAITING = 0
@@ -44,6 +59,7 @@ def extract_ids_from_reslist(message, rid_map):
         elif rid and token_id:
             return str(rid[0]), str(token_id[0])
     return res_list, res_list
+
 
 def convert_message_to_json(message):
     if message.startswith('{') and message.endswith('}'):
@@ -108,16 +124,3 @@ def data_convert(all_data_df, sys_start_cnt, cpu_frequency):
     return all_data_df
 
 
-class PluginCommon(PluginBase):
-    name = "plugin_common"
-    depends = []
-
-    @classmethod
-    def parse(cls, data):
-        all_data_df = data["tx_data_df"]
-        sys_start_cnt = data["sys_start_cnt"]
-        cpu_frequency = data["cpu_frequency"]
-
-        all_data_df = data_convert(all_data_df, sys_start_cnt, cpu_frequency)
-        data["tx_data_df"] = all_data_df
-        return data

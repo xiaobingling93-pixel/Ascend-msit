@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ms_server_profiler.plugins.utils import convert_syscnt_to_ts
+from ms_server_profiler.utils import convert_syscnt_to_ts
 from ms_server_profiler.parse import PluginBase
 
 

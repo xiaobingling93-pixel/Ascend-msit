@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import argparse
 
-from ms_server_profiler.plugins.plugin_common import PluginCommon, PluginCpuTimeStamp
+from ms_server_profiler.plugins.plugin_common import PluginCommon
+from ms_server_profiler.plugins.plugin_cpu_timestamp import PluginCpuTimeStamp
 from ms_server_profiler.exporters.exporter_trace import ExporterTrace
 from ms_server_profiler_analyze.plugins.plugin_req_status import PluginReqStatus
 from ms_server_profiler_analyze.exporters.exporter_req_status import ExporterReqStatus
@@ -35,9 +37,27 @@ def init_exporters(exporter_classes, args):
     return selected_exporter
 
 
+
+def check_input_path_valid(path):
+    if not os.path.exists(path):
+        raise argparse.ArgumentTypeError(f"Path does not exist: {path}")
+    if not os.path.isdir(path):
+        raise argparse.ArgumentTypeError(f"Path is not a valid directory: {path}")
+    if '..' in path:
+        raise argparse.ArgumentTypeError(f"Path contains illegal characters: {path}")
+    return path
+
+
+def check_output_path_valid(path):
+    path = os.path.abspath(path)
+    if not os.path.exists(path):
+        os.makedirs(path)
+    if not os.access(path, os.W_OK):
+        raise argparse.ArgumentTypeError(f"Output path is not writable: {path}")
+    return path
+
+
 def main():
-    from parse_data_to_trace import check_input_path_valid, check_output_path_valid
-    import os
     parser = argparse.ArgumentParser(description='MS Server Profiler')
     parser.add_argument(
         '--input_path',

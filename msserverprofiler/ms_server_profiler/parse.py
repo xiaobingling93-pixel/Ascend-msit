@@ -21,7 +21,7 @@ from typing import List
 from collections import defaultdict, deque
 import sqlite3
 
-from utils import US_PER_SECOND
+from ms_server_profiler.utils import US_PER_SECOND
 
 
 
@@ -79,21 +79,6 @@ def get_start_cnt(folder_path):
     if sys_start_cnt == 0 or cpu_start_cnt == 0:
         raise ValueError(f"Failed to find 'cntvct' or 'clock_monotonic_raw' in {config_path}, please check.")
     return sys_start_cnt, cpu_start_cnt
-
-
-def get_default_freq(folder_path):
-    global cpu_frequency
-    _, info_path = find_config_files(folder_path)
-    file_description = os.open(info_path, os.O_RDONLY)
-    with os.fdopen(file_description, 'r') as info:
-        data = json.load(info)
-        if 'CPU' not in data or not isinstance(data['CPU'], list) or len(data['CPU']) == 0:
-            raise ValueError(f"Invalid or missing 'CPU' data in {info_path}.")
-        cpu_data = data['CPU'][0]
-        cpu_frequency = cpu_data.get('Frequency', None)
-        if cpu_frequency is None:
-            raise KeyError(f"Missing 'Frequency' value in 'CPU' data.")
-        cpu_frequency = float(cpu_frequency) * US_PER_SECOND
 
 
 def load_data_from_database(db_path):
@@ -216,6 +201,7 @@ class DependencyNotFoundError(Exception):
         self.missing_dependency = missing_dependency
         super().__init__(f"Dependency '{missing_dependency}' not found for plugin '{plugin_name}'")
 
+
 def sort_plugins(plugins: List[PluginBase]) -> List[PluginBase]:
     # Build the dependency graph
     graph = defaultdict(list)
@@ -242,13 +228,12 @@ def sort_plugins(plugins: List[PluginBase]) -> List[PluginBase]:
                 queue.append(neighbor)
 
     # Check if topological sorting was successful (i.e., no cycles)
-    if len(sorted_plugins)!= len(indegree):
+    if len(sorted_plugins) != len(indegree):
         raise ValueError("A cycle was detected in the plugin dependencies.")
 
     # Create a mapping to return the sorted plugins
     sorted_plugin_objects = {plugin.name: plugin for plugin in plugins}
     return [sorted_plugin_objects[name] for name in sorted_plugins]
-
 
 
 def parse(input_path, plugins: List[PluginBase], exporters: List[ExporterBase]):
