@@ -20,6 +20,9 @@ import pandas as pd
 from msit_llm.bc_analyze.utils import get_timestamp
 from msit_llm.common.constant import MSIT_BAD_CASE_FOLDER_NAME
 from msit_llm.common.log import logger
+from components.utils.file_open_check import ms_open
+from components.utils.security_check import ms_makedirs
+from components.utils.check.rule import Rule
 
 
 class Analyzer(object):
@@ -109,6 +112,7 @@ class Analyzer(object):
             logger.error("Unsafe csv path, '%s' should not be other writeable", csv_path)
             raise PermissionError
 
+        Rule.input_file().check(csv_path, will_raise=True)
         return pd.read_csv(csv_path, encoding='utf-8')
 
     @classmethod
@@ -158,12 +162,12 @@ class Analyzer(object):
                 "Hence no result is saved")
             return
         
-        os.makedirs(cls.ANALYZER_FOLDER_NAME, mode=0o700, exist_ok=True)
+        ms_makedirs(cls.ANALYZER_FOLDER_NAME, mode=0o700, exist_ok=True)
         path = os.path.join(cls.ANALYZER_FOLDER_NAME, cls._get_candidate_path(suffix=suffix))
 
         flags = os.O_WRONLY | os.O_CREAT
         modes = os.st.S_IRUSR | os.st.S_IWUSR | os.st.S_IRGRP
-        with os.fdopen(os.open(path, flags, modes), 'w') as file: 
+        with ms_open(path, 'w') as file:
             df_to_save.to_csv(file, encoding='utf-8', index=False)
 
         logger.info("'Analyzer' has successfully finished the analysis, the result is stored at '%s'", path)
