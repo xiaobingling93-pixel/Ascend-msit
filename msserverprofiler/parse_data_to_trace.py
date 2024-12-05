@@ -128,7 +128,7 @@ def concat_data_from_folder(folder_path):
 
 
 def convert_syscnt_to_ts(cnt, start_cnt, cpu_frequency):
-    return (SYS_TS + ((cnt - start_cnt) / cpu_frequency)) * 1000 * 1000
+    return (SYS_TS + ((cnt - start_cnt) / cpu_frequency)) * US_PER_SECOND
 
 
 def extract_span_info_from_message(message, mark_id):
@@ -465,7 +465,7 @@ def get_cpu_freq(folder_path):
         cpu_frequency = cpu_data.get('Frequency', None)
         if cpu_frequency is None:
             raise KeyError(f"Missing 'Frequency' value in 'CPU' data.")
-        cpu_frequency = float(cpu_frequency) * 1000 * 1000
+        cpu_frequency = float(cpu_frequency) * US_PER_SECOND
     return cpu_frequency
 
 
