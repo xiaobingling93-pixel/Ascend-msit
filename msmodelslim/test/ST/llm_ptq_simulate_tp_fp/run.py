@@ -6,6 +6,8 @@ import torch_npu
 import torch.utils.data
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
+from msmodelslim import logger as msmodelslim_logger
+
 SEQ_LEN_OUT = 32
 
 default_device = torch.npu.current_device()
@@ -34,7 +36,7 @@ def get_calib_dataset(tokenizer, calib_list):
     calib_dataset = []
     for calib_data in calib_list:
         inputs = tokenizer([calib_data], return_tensors='pt')
-        print(inputs)
+        msmodelslim_logger.info(inputs)
         calib_dataset.append([inputs.data['input_ids'].npu(), inputs.data['attention_mask'].npu()])
     return calib_dataset
 
@@ -49,18 +51,18 @@ quant_config.simulate_tp(tp_size=4, enable_communication_quant=True, enable_per_
 calibrator = Calibrator(model, quant_config, calib_data=dataset_calib, disable_level='L1000')
 calibrator.run()
 
-print("testing quantized weights...")
+msmodelslim_logger.info("testing quantized weights...")
 test_prompt = "Common sense questions and answers\n\nQuestion: How to learn a new language\nFactual answer:"
 test_input = tokenizer(test_prompt, return_tensors="pt")
-print("model is inferring...")
+msmodelslim_logger.info("model is inferring...")
 model = model.npu()
 model.eval()
 generate_ids = model.generate(test_input.input_ids.npu(), attention_mask=test_input.attention_mask.npu(),
                               max_new_tokens=SEQ_LEN_OUT)
 res = tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)
-print(res)
+msmodelslim_logger.info(res)
 for idx, item in enumerate(res):
-    print(item)
+    msmodelslim_logger.info(item)
 
 calibrator.save(f"{os.environ['PROJECT_PATH']}/output/llm_ptq_simulate_fp", save_type=["safe_tensor"])
-print('Save quant weight success!')
+msmodelslim_logger.info('Save quant weight success!')

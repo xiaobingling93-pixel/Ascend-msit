@@ -6,6 +6,7 @@ import re
 import torch.utils.data
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from modelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
+from msmodelslim import logger as msmodelslim_logger
 
 # for local path
 fp16_path = f"{os.environ['PROJECT_PATH']}/resource/llm_ptq/llama2_7b/"  # 原始模型路径，其中的内容如下图
@@ -18,7 +19,7 @@ def get_calib_dataset(tokenizer, calib_list):
     for calib_data in calib_list:
         text = calib_data['inputs_pretokenized']
         inputs = tokenizer([text], return_tensors='pt').to('cpu')
-        print(inputs)
+        msmodelslim_logger.info(inputs)
         calib_dataset.append([inputs.data['input_ids'], inputs.data['token_type_ids'], inputs.data['attention_mask']])
     return calib_dataset
 

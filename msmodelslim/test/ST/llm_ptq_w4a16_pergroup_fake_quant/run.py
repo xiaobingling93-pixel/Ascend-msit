@@ -4,6 +4,8 @@ import torch
 from safetensors.torch import load_file
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import FakeQuantizeCalibrator
+from msmodelslim import logger as msmodelslim_logger
+
 
 # for local path
 LOAD_PATH = f"{os.environ['PROJECT_PATH']}/resource/llm_ptq/llama2_7b/"
@@ -19,4 +21,4 @@ with open(f"{os.environ['PROJECT_PATH']}/resource/llm_ptq_w4a16_pergroup/quant_m
     description_dic = json.load(file)
 fakecalibrator = FakeQuantizeCalibrator(model, None, "cpu", description_dic, safetensor_dic)
 model = fakecalibrator.model
-print('fake quant weight success!')
+msmodelslim_logger.info('fake quant weight success!')

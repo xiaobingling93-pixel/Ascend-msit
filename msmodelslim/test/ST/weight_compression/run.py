@@ -3,7 +3,7 @@
 import os
 import numpy as np
 from modelslim.pytorch.weight_compression import CompressConfig, Compressor
-
+from msmodelslim import logger as msmodelslim_logger
 
 def make_dir(path):
     if not os.path.exists(path):
@@ -29,4 +29,4 @@ def main(root):
 
 src_root = f"{os.environ['PROJECT_PATH']}/resource/weight_compression"
 main(src_root)
-print("Weight Compression success!")
+msmodelslim_logger.info("Weight Compression success!")
