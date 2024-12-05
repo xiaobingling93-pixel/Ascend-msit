@@ -1,7 +1,7 @@
 import os
 
-import torchvision.models as models
 from copy import deepcopy
+import torchvision.models as models
 
 from ascend_utils.common.utils import count_parameters
 from modelslim import logger as msmodelslim_logger
