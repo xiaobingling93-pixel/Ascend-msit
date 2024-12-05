@@ -71,7 +71,7 @@ class TestGetConfigAttr(TestCase):
     def test_get_nonexistent_attribute_with_default(self):
         self.assertEqual(get_config_attr(self.config1, 'nonexistent', 'default_value'), \
                                                 'default_value')   
-        self.assertEqual(get_config_attr(self.config1, 'nonexistent'))
+        self.assertIsNone(get_config_attr(self.config1, 'nonexistent'))
 
 
 class TestGetValidName(TestCase):
