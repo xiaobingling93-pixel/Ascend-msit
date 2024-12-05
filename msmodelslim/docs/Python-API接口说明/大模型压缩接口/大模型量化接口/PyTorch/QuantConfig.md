@@ -20,7 +20,7 @@ QuantConfig(a_bit=8, w_bit=8, disable_names=None, dev_type='cpu', dev_id=None, a
 | pr | 输入 | 量化选择概率。| 可选。<br>数据类型：float。取值范围：[0,1]。<br>默认值：1.0，建议取值1.0。|
 | w_sym | 输入 | 权重量化是否为对称量化。| 可选。<br>数据类型：bool。默认为True。<br>W8A8场景仅支持配置为True。|
 | mm_tensor | 输入 | 选择进行per-channel量化或per-tensor量化。| 可选。<br>数据类型：bool。默认为True。<br>True: per-tensor量化。<br>False: per-channel量化，建议选择该量化方式。|
-| w_method | 输入 | 选权重量化策略。| 可选。<br>数据类型：str。默认为'MinMax'，可选值：'MinMax','GPTQ','HQQ','NF'。<br>MinMax、HQQ和NF支持Data-Free。<br>GPTQ不支持Data-Free。<br>NF不支持per tensro,per channel,per group,low_bit,通信量化，kvcache量化，antioutlier混合使用|
+| w_method | 输入 | 选权重量化策略。| 可选。<br>数据类型：str。默认为'MinMax'，可选值：'MinMax','GPTQ','HQQ','NF'。<br>MinMax、HQQ和NF支持Data-Free。<br>GPTQ不支持Data-Free。<br>NF不支持per-tensor,per-channel,per-group,low_bit,通信量化，kvcache量化，antioutlier混合使用|
 | co_sparse | 输入 | 是否开启稀疏量化功能。| 可选。<br>数据类型：bool。默认值：False，不开启稀疏量化。<br>大模型稀疏量化场景下，优先使用lowbit稀疏量化功能，开启lowbit稀疏量化后，co_sparse参数自动失效。|
 | fraction | 输入 | 模型权重稀疏量化过程中被保护的异常值占比。| 可选。<br>数据类型：float。取值范围[0.01,0.1]。默认值为0.01。|
 | nonuniform | 输入 | 是否在稀疏量化中采用非均匀量化。| 可选。<br>数据类型：bool。默认值为False。|
@@ -51,4 +51,4 @@ quant_config = QuantConfig(pr=1.0, mm_tensor=Flase)
 | sparse_quant<br>稀疏量化的参数初始化。| act_method，fraction，nonuniform，is_lowbit，do_smooth，use_sigma，sigma_factor  | quant_config = QuantConfig(w_bit=4,disable_names=disable_names,dev_type='npu',dev_id=0).sparse_quant(is_lowbit=True) |
 | kv_quant<br>kvcache对称量化的参数初始化。<br>说明：调用本函数后，会自动将use_kvcache_quant设置为True。| kv_sym用于是否使用kvcache对称量化功能，为可选参数，数据类型为bool，默认值为True。<br>True：使用kvcache对称量化功能。False：使用kvcache非对称量化功能。  | quant_config = QuantConfig(w_bit=8,disable_names=disable_names,dev_type='npu',dev_id=0).kv_quant(kv_sym=True) |
 | simulate_tp<br>模拟多卡量化的参数初始化。<br>说明：默认会对通信层的linear进行模拟多卡量化，且每张卡会使用不同的量化参数。再通过使能enalbe_communication_quant参数启用模拟多卡通信量化的功能。| tp_size用于模拟多卡量化时的卡数，为必选参数，数据类型为int，数据取值范围为[2,4,8,16]。<br>enable_communication_quant用于是否使用模拟多卡通信量化的功能，为可选参数，数据类型为bool，默认为True。<br>True：使用模拟多卡通信量化场景。False：不使用模拟多卡通信量化场景。<br>enable_per_device_quant用于配置模拟多卡通信量化的方式。为可选参数，数据类型为bool，默认值为True。<br>True：每张卡使用不同的reduce scale。False：每张卡使用相同的reduce scale。| quant_config=QuantConfig(w_bit=4,disable_names=disable_names,dev_type='npu',dev_id=0).simulate_tp(tp_size=4, enable_communication_quant=True) |
-| NF4<br>Normal Float 4bit量化的参数初始化。| w_method， block_size  | quant_config = QuantConfig(w_bit=4,a_bit=16,dev_type='npu',dev_id=0).weight_quant(w_method='NF', block_size=64) |
+| NF4<br>Normal Float 4bit量化的参数初始化。| w_method用于选择不同的权重量化类型，此处选择'NF'量化。<br>block_size用于设置一个block内的元素的个数，类似per-group量化，越小量化精度越高。为可选参数，数据类型为int，默认值为64，数据取值范围为[64, 128, 256, 512, 1024, 2048, 4096]。  | quant_config = QuantConfig(w_bit=4,a_bit=16,dev_type='npu',dev_id=0).weight_quant(w_method='NF', block_size=64) |

@@ -81,3 +81,7 @@ atb_json_to_onnx(layer_topo_info, model_level, {})
 model_level：可视化模型的节点深度，按需填写，比如填写为1，则表示生成深度为1的可视化模型，不填默认生成最大深度可视化模型  
 layer_topo_info：dump出来的layer拓扑信息或者model拓扑信息，json格式的文件    
 atb_json_to_onnx：读取op信息的缓存，多次调用可以复用缓存信息。外部调用可以不用关注，直接传入空的dict即可
+
+### 查看和Dump数据
+
+读取、转换和保存 bin 数据的接口可以参考[API-读取和保存接口](./API-读取和保存接口.md)

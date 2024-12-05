@@ -35,7 +35,7 @@ msit_sub_task_entry_points = [
 
 setup(
     name="msit-benchmark",
-    version='7.0.0c912',
+    version='7.0.0c1120',
     description="msit benchmark tool",
     url=config.get('URL', 'msit_url'),
     packages=find_packages(),

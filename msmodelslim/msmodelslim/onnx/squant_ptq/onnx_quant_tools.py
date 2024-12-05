@@ -36,10 +36,13 @@ class OnnxCalibrator(object):
         self.logger = logger
         self.input_path = get_valid_read_path(input_model, extensions=".onnx")
         self.device_id = cfg.device_id
-        acl_inference.init_acl(device_id=self.device_id)
-        self.aok_configuration(cfg)
         self.use_onnx = cfg.use_onnx
         self.num_input = cfg.num_input
+
+        if not self.use_onnx or cfg.graph_optimize_level > 0:
+            acl_inference.init_acl(device_id=self.device_id)
+
+        self.aok_configuration(cfg)
 
         if not self.use_onnx and self.num_input == 0:
             raise ValueError("Input number should not be zero")
@@ -78,7 +81,8 @@ class OnnxCalibrator(object):
 
 
     def __del__(self):
-        acl_inference.release_acl(self.device_id)
+        if not self.use_onnx or self.graph_optimize_level > 0:
+            acl_inference.release_acl(self.device_id)
 
 
     def aok_configuration(self, cfg):
