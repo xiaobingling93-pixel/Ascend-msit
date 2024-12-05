@@ -14,7 +14,7 @@
 
 import argparse
 
-from ms_server_profiler.plugins.plugin_common import PluginCommon
+from ms_server_profiler.plugins.plugin_common import PluginCommon, PluginCpuTimeStamp
 from ms_server_profiler.exporters.exporter_trace import ExporterTrace
 from ms_server_profiler_analyze.plugins.plugin_req_status import PluginReqStatus
 from ms_server_profiler_analyze.exporters.exporter_req_status import ExporterReqStatus
@@ -56,7 +56,7 @@ def main():
         help='exporter to use')
 
     args = parser.parse_args()
-    plugins = [PluginCommon, PluginReqStatus]
+    plugins = [PluginCommon, PluginReqStatus, PluginCpuTimeStamp]
     exporter_classes = [ExporterTrace, ExporterReqStatus]
 
     exporters = init_exporters(exporter_classes, args)

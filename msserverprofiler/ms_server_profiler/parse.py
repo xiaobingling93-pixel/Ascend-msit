@@ -66,6 +66,50 @@ def sort_plugins(plugins: List[PluginBase]) -> List[PluginBase]:
     return plugins
 
 
+from typing import List
+from collections import defaultdict, deque
+
+class DependencyNotFoundError(Exception):
+    def __init__(self, plugin_name, missing_dependency):
+        self.plugin_name = plugin_name
+        self.missing_dependency = missing_dependency
+        super().__init__(f"Dependency '{missing_dependency}' not found for plugin '{plugin_name}'")
+
+def sort_plugins(plugins: List[PluginBase]) -> List[PluginBase]:
+    # Build the dependency graph
+    graph = defaultdict(list)
+    indegree = {plugin.name: 0 for plugin in plugins}
+
+    for plugin in plugins:
+        for dependency in plugin.depends:
+            if dependency not in indegree:
+                raise DependencyNotFoundError(plugin.name, dependency)
+            graph[dependency].append(plugin.name)
+            indegree[plugin.name] += 1
+
+    # Perform topological sorting
+    queue = deque([plugin.name for plugin in plugins if indegree[plugin.name] == 0])
+    sorted_plugins = []
+
+    while queue:
+        current = queue.popleft()
+        sorted_plugins.append(current)
+
+        for neighbor in graph[current]:
+            indegree[neighbor] -= 1
+            if indegree[neighbor] == 0:
+                queue.append(neighbor)
+
+    # Check if topological sorting was successful (i.e., no cycles)
+    if len(sorted_plugins)!= len(indegree):
+        raise ValueError("A cycle was detected in the plugin dependencies.")
+
+    # Create a mapping to return the sorted plugins
+    sorted_plugin_objects = {plugin.name: plugin for plugin in plugins}
+    return [sorted_plugin_objects[name] for name in sorted_plugins]
+
+
+
 def parse(input_path, plugins: List[PluginBase], exporters: List[ExporterBase]):
     buildin_plugins = []
 
