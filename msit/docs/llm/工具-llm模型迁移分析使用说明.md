@@ -22,6 +22,7 @@
 ### 限定条件
 - **适用于 transformers 包，支持类似 LLaMA、QWEN 的典型 LLM 模型结构迁移，以及 LLaVA 等 VL 模型迁移**
 - **当前 MindIE python 接口发布包基于 python 3.10/ python 3.11，迁移功能也限定 python3.10/ python 3.11；且 transformers 版本需要支持对应模型的 FX 构图，即 `transformers.utils.fx.symbolic_trace` 接口**
+- **使用最新的 mindIE B032 版本需要适配transformer==4.45.2**
 - **ATB Python 模型当前硬件限定 Atlas 800I A2 / 800T A2 / 900 A2 / 300I / 300I Pro / 300I Duo** 
 - **ATB C++ 模型迁移适配 ATB RC3.B030 + mindie 1.0.RC3.B030**
 
