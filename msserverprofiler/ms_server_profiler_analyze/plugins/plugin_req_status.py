@@ -12,7 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from enum import Enum
+
 from ms_server_profiler.parse import PluginBase
+
+
+class ReqStatus(Enum):
+    WAITING = 0
+    PENDING = 1
+    RUNNING = 2
+    SWAPPED = 3
+    RECOMPUTE = 4
+    SUSPENDED = 5
+    END = 6
+    STOP = 7
+    PREFILL_HOLD = 8
 
 
 class PluginReqStatus(PluginBase):
@@ -21,6 +35,22 @@ class PluginReqStatus(PluginBase):
 
     @classmethod
     def parse(cls, data):
+        tx_data_df = data.get('tx_data_df')
+        if tx_data_df is None:
+            raise ValueError("tx_data_df is None")
+        tx_data_df.loc[tx_data_df['name'] == 'ReqState', 'name'] = (
+            tx_data_df.loc[tx_data_df['name'] == 'ReqState', 'message'].apply(
+            lambda x: get_state_name_by_value(x.get('new_value', None))))
+        data['tx_data_df'] = tx_data_df
         return data
     
+
+def get_state_name_by_value(value):
+    if value is not None:
+        try:
+            return ReqStatus(value).name
+        except ValueError:
+            return str(value)
+    else:
+        raise ValueError("Failed to get ReqState since new_value is None.")
 

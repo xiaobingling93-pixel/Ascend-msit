@@ -51,13 +51,12 @@ class ExporterReqStatus(ExporterBase):
             name = message_dic.get('name', '')
             if name == 'httpReq':
                 cur[0] += 1
-            elif name =='ReqState':        
+            elif name =='ReqState':
                 ori_value = message_dic['ori_value']
                 new_value = message_dic['new_value']
                 cur[ori_value] -= 1
-                cur[new_value] += 1            
-            counters.append(cur.copy())
-        
+                cur[new_value] += 1
+            counters.append(cur.copy())        
         
         counters = pd.DataFrame(data=counters, columns=[x.name for x in ReqStatus])
         counters['timestamp'] = df['start_time']

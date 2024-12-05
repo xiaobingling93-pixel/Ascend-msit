@@ -12,21 +12,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ms_server_profiler.utils import convert_syscnt_to_ts
+
+import psutil
+
+from ms_server_profiler.constant import US_PER_SECOND
 from ms_server_profiler.parse import PluginBase
 
 
-class PluginCpuTimeStamp(PluginBase):
-    name = "plugin_cpu_timestamp"
+SYS_TS = psutil.boot_time()
+
+
+class PluginTimeStamp(PluginBase):
+    name = "plugin_timestamp"
     depends = []
 
     @classmethod
     def parse(cls, data):
+        tx_data_df = data.get('tx_data_df')
         cpu_data_df = data.get('cpu_data_df')
         cpu_start_cnt = data.get('cpu_start_cnt')
         cpu_frequency = data.get('cpu_frequency')
-
+        sys_start_cnt = data.get('sys_start_cnt')
+        
+        tx_data_df['start_time'] = convert_syscnt_to_ts(tx_data_df['start_time'], sys_start_cnt, cpu_frequency)
+        tx_data_df['end_time'] = convert_syscnt_to_ts(tx_data_df['end_time'], sys_start_cnt, cpu_frequency)
         cpu_data_df['start_time'] = convert_syscnt_to_ts(cpu_data_df['start_time'], cpu_start_cnt, cpu_frequency)
         cpu_data_df['end_time'] = convert_syscnt_to_ts(cpu_data_df['end_time'], cpu_start_cnt, cpu_frequency)
         data['cpu_data_df'] = cpu_data_df
+        data['tx_data_df'] = tx_data_df
         return data
+
+
+def convert_syscnt_to_ts(cnt, start_cnt, cpu_frequency):
+    return (SYS_TS + ((cnt - start_cnt) / cpu_frequency)) * US_PER_SECOND

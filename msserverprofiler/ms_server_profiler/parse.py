@@ -21,7 +21,7 @@ from typing import List
 from collections import defaultdict, deque
 import sqlite3
 
-from ms_server_profiler.utils import US_PER_SECOND
+from ms_server_profiler.constant import US_PER_SECOND
 
 
 
@@ -202,6 +202,11 @@ class DependencyNotFoundError(Exception):
         super().__init__(f"Dependency '{missing_dependency}' not found for plugin '{plugin_name}'")
 
 
+class DependencyCycleError(Exception):
+    def __init__(self):
+        super().__init__(f"A cycle was detected in the plugin dependencies.")
+
+
 def sort_plugins(plugins: List[PluginBase]) -> List[PluginBase]:
     # Build the dependency graph
     graph = defaultdict(list)
@@ -229,7 +234,7 @@ def sort_plugins(plugins: List[PluginBase]) -> List[PluginBase]:
 
     # Check if topological sorting was successful (i.e., no cycles)
     if len(sorted_plugins) != len(indegree):
-        raise ValueError("A cycle was detected in the plugin dependencies.")
+        raise DependencyCycleError("A cycle was detected in the plugin dependencies.")
 
     # Create a mapping to return the sorted plugins
     sorted_plugin_objects = {plugin.name: plugin for plugin in plugins}

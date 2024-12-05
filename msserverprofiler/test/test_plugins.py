@@ -83,9 +83,10 @@ class TestSortPlugins(unittest.TestCase):
         plugin_g = PluginG  # Cycle here
         plugins = [self.plugin_a, plugin_f, plugin_g]
 
-        with self.assertRaises(ValueError) as context:
+        from ms_server_profiler.parse import DependencyCycleError
+        with self.assertRaises(DependencyCycleError) as context:
             sort_plugins(plugins)
-        self.assertTrue('A cycle was detected' in str(context.exception))
+        self.assertTrue(isinstance(context.exception, DependencyCycleError))
     
     
 if __name__ == '__main__':
