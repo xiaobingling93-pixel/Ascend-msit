@@ -1,5 +1,5 @@
-import torch
 import os
+import torch
 import torch.utils.data
 import torch_npu
 from transformers import AutoTokenizer, AutoModelForCausalLM
@@ -23,10 +23,10 @@ calib_list = ["Where is the capital of China?",
               "What are the most worth visiting scenic spots in China?"]
 
 
-def get_calib_dataset(tokenizer, calib_list):
+def get_calib_dataset(tokenizers, calib_lists):
     calib_dataset = []
-    for calib_data in calib_list:
-        inputs = tokenizer([calib_data], return_tensors='pt')
+    for calib_data in calib_lists:
+        inputs = tokenizers([calib_data], return_tensors='pt')
         print(inputs)
         calib_dataset.append([inputs.data['input_ids'].npu(), inputs.data['attention_mask'].npu()])
     return calib_dataset
@@ -53,7 +53,7 @@ model.eval()
 generate_ids = model.generate(test_input.input_ids.npu(), attention_mask=test_input.attention_mask.npu(), max_new_tokens=SEQ_LEN_OUT)
 res = tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)
 print(res)
-for idx, item in enumerate(res):
+for _, item in enumerate(res):
     print(item)
 
 

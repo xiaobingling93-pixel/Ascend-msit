@@ -1,10 +1,11 @@
+import os
 from transformers import LlavaNextProcessor, LlavaNextForConditionalGeneration
 import torch
 from PIL import Image
 import requests
 from msmodelslim.pytorch.llm_ptq.anti_outlier import AntiOutlier, AntiOutlierConfig
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
-import os
+
 
 LOAD_PATH = f"{os.environ['PROJECT_PATH']}/resource/llm_ptq/llava_weight/"
 processor = LlavaNextProcessor.from_pretrained(LOAD_PATH)
@@ -48,3 +49,4 @@ quant_conf = QuantConfig(
 calibrator = Calibrator(model, quant_conf, calib_data=calib_data, disable_level='L0')
 calibrator.run()
 calibrator.save(f"{os.environ['PROJECT_PATH']}/output/llm_ptq_multi_model")
+image.close()

@@ -1,5 +1,5 @@
-import apex
 import os
+import apex
 import torch
 import torch_npu
 from apex import amp
