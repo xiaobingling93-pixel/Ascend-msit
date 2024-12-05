@@ -19,7 +19,7 @@ class ExporterTrace(ExporterBase):
     name = "trace"
 
     @classmethod
-    def intialize(cls, args):
+    def initialize(cls, args):
         cls.args = args
 
     @classmethod
