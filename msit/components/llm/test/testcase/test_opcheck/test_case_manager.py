@@ -81,22 +81,6 @@ def test_init_given_parameters_when_valid():
     assert cm.cases == []
 
 
-@pytest.mark.parametrize("case_info, expected_result", [
-    ({'op_name': 'valid_op'}, True),
-    ({'op_name': 'invalid_op'}, False)
-])
-def test_add_case_given_case_info_when_op_name_exists(case_info, expected_result, mock_dependencies):
-    cm = CaseManager(precision_metric=[NAMEDTUPLE_PRECISION_METRIC.abs])
-    with patch.dict(OP_NAME_DICT, {'valid_op': MockOP}):
-        result = cm.add_case(case_info)
-    assert result == expected_result
-    if expected_result:
-        assert len(cm.cases) == 1
-        assert cm.cases[0] == case_info
-    else:
-        assert len(cm.cases) == 0
-
-
 @pytest.mark.parametrize("case_queue_items, expected_result_queue_items", [
     ([{'op_name': 'valid_op'}], [{'op_name': 'valid_op'}]),
     ([], [])
@@ -111,56 +95,6 @@ def test_excute_case_given_case_queue(case_queue_items, expected_result_queue_it
         CaseManager.excute_case(case_queue, result_queue, 'info', [])
     assert case_queue.empty()
     assert result_queue.items == expected_result_queue_items
-
-
-@pytest.mark.parametrize("num_processes, log_level, custom_algorithms", [
-    (2, 'info', []),
-    (1, 'debug', ['custom_alg'])
-])
-def test_multi_process_given_valid_cases(num_processes, log_level, custom_algorithms,
-                                         mock_dependencies):
-    cm = CaseManager(precision_metric=[NAMEDTUPLE_PRECISION_METRIC.abs])
-    case_info = {'op_name': 'valid_op'}
-    cm.add_case(case_info)
-    with patch.dict(OP_NAME_DICT, {'valid_op': MockOP}):
-        cm.multi_process(num_processes=num_processes, log_level=log_level, custom_algorithms=custom_algorithms)
-    assert len(cm.cases) == 1
-
-
-def test_single_process_given_valid_cases(mock_dependencies):
-    cm = CaseManager(precision_metric=[NAMEDTUPLE_PRECISION_METRIC.abs])
-    case_info = {'op_name': 'valid_op'}
-    cm.add_case(case_info)
-    with patch.dict(OP_NAME_DICT, {'valid_op': MockOP}):
-        cm.single_process()
-    assert len(cm.cases) == 1
-
-
-@pytest.mark.parametrize("num_processes, log_level, custom_algorithms", [
-    (1, 'info', []),
-    (2, 'debug', ['custom_alg'])
-])
-def test_excute_cases_given_valid_cases(num_processes, log_level, custom_algorithms,
-                                        mock_dependencies):
-    cm = CaseManager(precision_metric=[NAMEDTUPLE_PRECISION_METRIC.abs])
-    case_info = {'op_name': 'valid_op'}
-    cm.add_case(case_info)
-    with patch.dict(OP_NAME_DICT, {'valid_op': MockOP}):
-        cm.excute_cases(num_processes=num_processes, log_level=log_level, custom_algorithms=custom_algorithms)
-    assert len(cm.cases) == 1
-
-
-@pytest.mark.parametrize("results, expected_call_count", [
-    ([{'op_id': '1', 'op_name': 'valid_op', 'op_param': {}, 'tensor_path': '', 'excuted_information': '',
-       'fail_reason': '', 'optimization_closed': '', 'res_detail': []}], 1),
-    ([], 0)
-])
-def test_write_op_result_to_csv_given_valid_results(results, expected_call_count,
-                                                    mock_dependencies):
-    cm = CaseManager(precision_metric=[NAMEDTUPLE_PRECISION_METRIC.abs], output_path='./test_output.xlsx')
-    with patch('pandas.DataFrame.to_excel') as mock_to_excel:
-        cm.write_op_result_to_csv(results)
-    assert mock_to_excel.call_count == expected_call_count
 
 
 @pytest.mark.parametrize("op_info, res_detail, expected_result", [
@@ -266,21 +200,3 @@ def test_write_op_result_to_csv_given_valid_results(results, expected_call_count
         cm.write_op_result_to_csv(results)
 
     assert mock_to_excel.call_count == expected_call_count
-
-
-@pytest.mark.parametrize("op_info, res_detail, expected_result", [
-    ({'op_id': '1', 'op_name': 'valid_op', 'op_param': {}, 'tensor_path': '', 'excuted_information': '',
-      'fail_reason': '', 'optimization_closed': ''},
-     {'precision_standard': 'standard', 'rel_pass_rate': '90%', 'max_rel': '0.1'},
-     {'out_tensor_id': '1', 'precision_standard': 'standard', 'rel_precision_rate(%)': '90%', 'max_rel_error': '0.1'}),
-    ({'op_id': '1', 'op_name': 'valid_op', 'op_param': {}, 'tensor_path': '', 'excuted_information': '',
-      'fail_reason': '', 'optimization_closed': ''}, {},
-     {'out_tensor_id': '1', 'precision_standard': 'NaN', 'rel_precision_rate(%)': 'NaN', 'max_rel_error': 'NaN'})
-])
-def test_update_single_op_result_given_valid_op_info(op_info, res_detail, expected_result, mock_dependencies):
-    cm = CaseManager(precision_metric=[NAMEDTUPLE_PRECISION_METRIC.abs], rerun=False, optimization_identify=False,
-                     output_path='./')
-    updated_op_info = cm._update_single_op_result(op_info, '1', res_detail)
-
-    for key, value in expected_result.items():
-        assert updated_op_info[key] == value
