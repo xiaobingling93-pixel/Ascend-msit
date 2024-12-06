@@ -71,6 +71,65 @@ class MockOperationTest:
             error5: 0.005,
             error6: 1
         }
+        
+    def __golden_compare_all(self, out_tensors, golden_out_tensors):
+        message, pass_flag = [], True
+
+        my_data_len, golden_data_len = len(out_tensors), len(golden_out_tensors)
+        if my_data_len != golden_data_len:
+            pass_flag = False
+            logger_text = f"Data count not equal, {my_data_len} != {golden_data_len}. Will compare only partial"
+            logger.info(logger_text)
+
+        for out_tensor, golden_out_tensor in zip(out_tensors, golden_out_tensors):
+            out_dtype = str(out_tensor.dtype)
+            p_s = self.precision_standard.get(out_dtype, [])
+            if len(p_s) != 2:
+                cur_message = f"{out_dtype} not supported!"
+                self.case_info['fail_reason'] = cur_message
+                raise RuntimeError(cur_message)
+
+            etol = self.erol_dict.get(p_s[0], 0.001)
+            err_rate = p_s[1]
+            ps_standard = f"{err_rate}%(error<{etol})"
+
+            rel_pass_rate, max_rel = MockOperationTest.get_rel_pass_rate(out_tensor, golden_out_tensor, etol)
+
+            if err_rate >= rel_pass_rate:
+                pass_flag = False
+                cur_message = f"relative pass rate: {rel_pass_rate} not met standart: {err_rate}."
+                message.append(cur_message)
+                logger.debug(cur_message)
+
+            rel_pass_rate = "%.16f" % float(rel_pass_rate)
+            max_rel = "%.16f" % float(max_rel)
+            (abs_pass_rate, max_abs, cos_sim, kl_div), cur_message = self.get_other_precisions(
+                out_tensor, golden_out_tensor, etol
+            )
+            if cur_message:
+                message.append(cur_message)
+
+            cur_result = {
+                "precision_standard": ps_standard,
+                "rel_pass_rate": rel_pass_rate,
+                "max_rel": max_rel,
+                "abs_pass_rate": abs_pass_rate,
+                "max_abs": max_abs,
+                "cos_sim": cos_sim,
+                "kl_div": kl_div,
+            }
+            for name, compare_func in CUSTOM_ALG_MAP.items():
+                cur_result[name], cur_message = compare_func(golden_out_tensor, out_tensor)
+                if cur_message:
+                    message.append(f"{name}: {cur_message}")
+            self.case_info['res_detail'].append(cur_result)
+
+            if pass_flag:
+                self.case_info['excuted_information'] = 'PASS'
+
+            else:
+                self.case_info['excuted_information'] = 'FAILED'
+            self.case_info['fail_reason'] = ", ".join(message)
 
     def validate_param(self, *param_names):
         ret = True
@@ -80,8 +139,7 @@ class MockOperationTest:
                 ret = False
                 msg = f"Cannot get golden data because opParam {param_name} is not correctly set!"
                 logger.error(msg)
-        return ret
-    
+        return ret    
 
     def get_in_tensors_from_single_device(self, i, rank):
         old_did_pid = f"{rank}_{self.pid}"
@@ -110,7 +168,6 @@ class MockOperationTest:
             _in_tensors = self.get_in_tensors_from_single_device(i, rank)
             new_in_tensors.extend(_in_tensors)
         return new_in_tensors
-
 
     def setUp(self):
         MockOperationTest.validate_path(self.tensor_path)
@@ -279,65 +336,6 @@ class MockOperationTest:
         kl_div_str = "%.16f" % kl if kl is not None else default_str
 
         return (abs_pass_rate_str, max_abs_error_str, cos_sim_str, kl_div_str), ", ".join(message)
-    
-    def __golden_compare_all(self, out_tensors, golden_out_tensors):
-        message, pass_flag = [], True
-
-        my_data_len, golden_data_len = len(out_tensors), len(golden_out_tensors)
-        if my_data_len != golden_data_len:
-            pass_flag = False
-            logger_text = f"Data count not equal, {my_data_len} != {golden_data_len}. Will compare only partial"
-            logger.info(logger_text)
-
-        for out_tensor, golden_out_tensor in zip(out_tensors, golden_out_tensors):
-            out_dtype = str(out_tensor.dtype)
-            p_s = self.precision_standard.get(out_dtype, [])
-            if len(p_s) != 2:
-                cur_message = f"{out_dtype} not supported!"
-                self.case_info['fail_reason'] = cur_message
-                raise RuntimeError(cur_message)
-
-            etol = self.erol_dict.get(p_s[0], 0.001)
-            err_rate = p_s[1]
-            ps_standard = f"{err_rate}%(error<{etol})"
-
-            rel_pass_rate, max_rel = MockOperationTest.get_rel_pass_rate(out_tensor, golden_out_tensor, etol)
-
-            if err_rate >= rel_pass_rate:
-                pass_flag = False
-                cur_message = f"relative pass rate: {rel_pass_rate} not met standart: {err_rate}."
-                message.append(cur_message)
-                logger.debug(cur_message)
-
-            rel_pass_rate = "%.16f" % float(rel_pass_rate)
-            max_rel = "%.16f" % float(max_rel)
-            (abs_pass_rate, max_abs, cos_sim, kl_div), cur_message = self.get_other_precisions(
-                out_tensor, golden_out_tensor, etol
-            )
-            if cur_message:
-                message.append(cur_message)
-
-            cur_result = {
-                "precision_standard": ps_standard,
-                "rel_pass_rate": rel_pass_rate,
-                "max_rel": max_rel,
-                "abs_pass_rate": abs_pass_rate,
-                "max_abs": max_abs,
-                "cos_sim": cos_sim,
-                "kl_div": kl_div,
-            }
-            for name, compare_func in CUSTOM_ALG_MAP.items():
-                cur_result[name], cur_message = compare_func(golden_out_tensor, out_tensor)
-                if cur_message:
-                    message.append(f"{name}: {cur_message}")
-            self.case_info['res_detail'].append(cur_result)
-
-            if pass_flag:
-                self.case_info['excuted_information'] = 'PASS'
-
-            else:
-                self.case_info['excuted_information'] = 'FAILED'
-            self.case_info['fail_reason'] = ", ".join(message)
 
     @staticmethod
     def validate_int_range(param_value, int_range, param_name=''):
@@ -380,6 +378,7 @@ class MockOperationTest:
             return [t.to(torch.float32) if t.dtype in float_types else t for t in tensors]
         else:
             return tensors
+        
     @staticmethod
     def get_rel_pass_rate(out, golden, etol):
         out, golden = out.reshape(-1).cpu(), golden.reshape(-1).cpu()
