@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from enum import Enum   
+
 from pathlib import Path
 import pandas as pd
-from enum import Enum   
 from matplotlib import pyplot as plt
 
 from ms_server_profiler.parse import ExporterBase
@@ -44,7 +45,7 @@ class ExporterReqStatus(ExporterBase):
         
         counters = []
         cur = [0 for _ in range(len(ReqStatus))]
-        for i, row in df.iterrows():
+        for _, row in df.iterrows():
             message = row['message']
             message_dic = message
 
