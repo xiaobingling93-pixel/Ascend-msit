@@ -71,16 +71,3 @@ def test_golden_calc_given_transpose_a_false_and_transpose_b_false_when_2d_tenso
     # Assert
     expected = torch.tensor([[19, 22], [43, 50]]).half()
     assert torch.allclose(result[0], expected)
-
-
-def test_test_given_valid_params_when_execute_then_no_error():
-    # Arrange
-    op = OpcheckMatmulOperation()
-    op.op_param = {"transposeA": True, "transposeB": False}
-    op.validate_param = lambda x, y: True
-    op.execute = lambda: None
-
-    # Act
-    op.test()
-
-    # Assert

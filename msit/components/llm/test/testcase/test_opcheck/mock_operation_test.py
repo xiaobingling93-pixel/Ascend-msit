@@ -31,7 +31,9 @@ FLOAT_EPSILON = torch.finfo(torch.float).eps
 
 
 class MockOperationTest:
-    def __init__(self, methodName='opTest', case_info={}):
+    def __init__(self, methodName='opTest', case_info=None):
+        if case_info is None:
+            case_info = {}
 
         self.case_info = case_info
         self.case_info['res_detail'] = []
@@ -80,17 +82,20 @@ class MockOperationTest:
                 logger.error(msg)
         return ret
 
-    def validate_int_range(self, param_value, int_range, param_name=''):
+    @staticmethod
+    def validate_int_range(param_value, int_range, param_name=''):
         ivalue = int(param_value)
         if ivalue not in int_range:
             error_msg = f"【{param_name}】{param_value} is not in range {int_range}!"
             raise argparse.ArgumentTypeError(error_msg)
 
-    def validate_path(self, path):
+    @staticmethod
+    def validate_path(path):
         if not path or not os.path.exists(path):
             raise RuntimeError(f"{path} not valid")
 
-    def get_tensor_path(self, path, tensor_type):
+    @staticmethod
+    def get_tensor_path(path, tensor_type):
         if os.path.exists(os.path.join(path, 'before')) and tensor_type == 'intensor':
             path = os.path.join(path, 'before')
         else:
@@ -100,7 +105,8 @@ class MockOperationTest:
         tensor_files = [os.path.join(path, x) for x in _tensor_path]
         return tensor_files
 
-    def read_tensor_from_file(self, tensor_files):
+    @staticmethod
+    def read_tensor_from_file(tensor_files):
         res = []
         for tensor_file in tensor_files:
             tensor_file = os.path.realpath(tensor_file)
@@ -118,9 +124,9 @@ class MockOperationTest:
             logger_text = f"Cannot find data on rank {i}! {self.op_name} needs tensors on all devices! Exception: {e}"
             logger.error(logger_text)
             raise RuntimeError(f"{new_tensor_path_pattern} not valid") from e
-        self.validate_path(new_tensor_path)
-        _in_tensor_files = self.get_tensor_path(new_tensor_path, "intensor")
-        return self.read_tensor_from_file(_in_tensor_files)
+        MockOperationTest.validate_path(new_tensor_path)
+        _in_tensor_files = MockOperationTest.get_tensor_path(new_tensor_path, "intensor")
+        return MockOperationTest.read_tensor_from_file(_in_tensor_files)
 
     def get_rank_info(self):
         rank = self.op_param.get("rank", None)
@@ -136,7 +142,8 @@ class MockOperationTest:
             new_in_tensors.extend(_in_tensors)
         return new_in_tensors
 
-    def force_dtype(self, tensors, precision_mode):
+    @staticmethod
+    def force_dtype(tensors, precision_mode):
         float_types = (torch.float, torch.float32, torch.float16, torch.half, torch.bfloat16)
         if precision_mode == NAMEDTUPLE_PRECISION_MODE.force_fp16:
             return [t.to(torch.float16) if t.dtype in float_types else t for t in tensors]
@@ -146,14 +153,14 @@ class MockOperationTest:
             return tensors
 
     def setUp(self):
-        self.validate_path(self.tensor_path)
-        _in_tensor_files = self.get_tensor_path(self.tensor_path, "intensor")
-        self.in_tensors = self.read_tensor_from_file(_in_tensor_files)
-        self.in_tensors = self.force_dtype(self.in_tensors, self.case_info['precision_mode'])
+        MockOperationTest.validate_path(self.tensor_path)
+        _in_tensor_files = MockOperationTest.get_tensor_path(self.tensor_path, "intensor")
+        self.in_tensors = MockOperationTest.read_tensor_from_file(_in_tensor_files)
+        self.in_tensors = MockOperationTest.force_dtype(self.in_tensors, self.case_info['precision_mode'])
         if not (self.atb_rerun and 'after' not in os.listdir(self.tensor_path)):
-            _out_tensor_files = self.get_tensor_path(self.tensor_path, "outtensor")
-            self.out_tensors = self.read_tensor_from_file(_out_tensor_files)
-            self.out_tensors = self.force_dtype(self.out_tensors, self.case_info['precision_mode'])
+            _out_tensor_files = MockOperationTest.get_tensor_path(self.tensor_path, "outtensor")
+            self.out_tensors = MockOperationTest.read_tensor_from_file(_out_tensor_files)
+            self.out_tensors = MockOperationTest.force_dtype(self.out_tensors, self.case_info['precision_mode'])
 
     def tearDown(self):
         if self.case_info['excuted_information'] != 'PASS':
@@ -276,7 +283,8 @@ class MockOperationTest:
     def execute_inplace(self):
         self.excute_common("inplace")
 
-    def get_rel_pass_rate(self, out, golden, etol):
+    @staticmethod
+    def get_rel_pass_rate(out, golden, etol):
         out, golden = out.reshape(-1).cpu(), golden.reshape(-1).cpu()
         size = out.shape[0]
         rel_errors = torch.where(
@@ -288,7 +296,8 @@ class MockOperationTest:
         max_rel_error = torch.max(rel_errors)
         return rel_pass_rate.item() * 100, max_rel_error.item()
 
-    def get_abs_pass_rate(self, out, golden, etol):
+    @staticmethod
+    def get_abs_pass_rate(out, golden, etol):
         size = out.shape[0]
         abs_errors = torch.where(
             torch.abs(golden) > FLOAT_EPSILON,
@@ -335,8 +344,9 @@ class MockOperationTest:
         kl_div_str = "%.16f" % kl if kl is not None else default_str
 
         return (abs_pass_rate_str, max_abs_error_str, cos_sim_str, kl_div_str), ", ".join(message)
-
-    def get_npu_device(self):
+    
+    @staticmethod
+    def get_npu_device():
         npu_device = os.environ.get("NPU_DEVICE")
         if npu_device is None:
             npu_device = "npu:0"
@@ -344,7 +354,8 @@ class MockOperationTest:
             npu_device = f"npu:{npu_device}"
         return npu_device
 
-    def get_soc_version(self):
+    @staticmethod
+    def get_soc_version():
         device_name = torch.npu.get_device_name()
         if re.search("Ascend910B", device_name, re.I):
             soc_version = 'Ascend910B'
@@ -359,7 +370,8 @@ class MockOperationTest:
         logger.debug(logger_text)
         return soc_version
 
-    def convert_data_format(self, data):
+    @staticmethod
+    def convert_data_format(data):
         dim0, dim1 = data.shape[0], data.shape[1]
         if data.dtype == torch.int8:
             data = data.reshape([1, dim1 // 32, dim0, 32]).permute(0, 2, 1, 3).reshape([dim0, dim1])
@@ -367,7 +379,8 @@ class MockOperationTest:
             data = data.reshape([1, dim1 // 16, dim0, 16]).permute(0, 2, 1, 3).reshape([dim0, dim1])
         return data
 
-    def nz_2_nd(self, data):
+    @staticmethod
+    def nz_2_nd(data):
         origin_shape = data.shape
         dims = list(range(len(origin_shape)))
         last_dims = dims[-4:]
@@ -399,7 +412,7 @@ class MockOperationTest:
             err_rate = p_s[1]
             ps_standard = f"{err_rate}%(error<{etol})"
 
-            rel_pass_rate, max_rel = self.get_rel_pass_rate(out_tensor, golden_out_tensor, etol)
+            rel_pass_rate, max_rel = MockOperationTest.get_rel_pass_rate(out_tensor, golden_out_tensor, etol)
 
             if err_rate >= rel_pass_rate:
                 pass_flag = False
