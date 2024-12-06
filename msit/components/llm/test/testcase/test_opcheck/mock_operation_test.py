@@ -71,66 +71,120 @@ class MockOperationTest:
             error5: 0.005,
             error6: 1
         }
+    
+    @staticmethod
+    def validate_int_range(param_value, int_range, param_name=''):
+        ivalue = int(param_value)
+        if ivalue not in int_range:
+            error_msg = f"【{param_name}】{param_value} is not in range {int_range}!"
+            raise argparse.ArgumentTypeError(error_msg)
         
-    def __golden_compare_all(self, out_tensors, golden_out_tensors):
-        message, pass_flag = [], True
+    @staticmethod
+    def validate_path(path):
+        if not path or not os.path.exists(path):
+            raise RuntimeError(f"{path} not valid")
+        
+    @staticmethod
+    def get_tensor_path(path, tensor_type):
+        if os.path.exists(os.path.join(path, 'before')) and tensor_type == 'intensor':
+            path = os.path.join(path, 'before')
+        else:
+            path = os.path.join(path, 'after')
+        _tensor_path = [x for x in os.listdir(path) if x.startswith(tensor_type)]
+        _tensor_path.sort(key=lambda x: int(x.split(tensor_type)[1].split('.')[0]))
+        tensor_files = [os.path.join(path, x) for x in _tensor_path]
+        return tensor_files
 
-        my_data_len, golden_data_len = len(out_tensors), len(golden_out_tensors)
-        if my_data_len != golden_data_len:
-            pass_flag = False
-            logger_text = f"Data count not equal, {my_data_len} != {golden_data_len}. Will compare only partial"
-            logger.info(logger_text)
+    @staticmethod
+    def read_tensor_from_file(tensor_files):
+        res = []
+        for tensor_file in tensor_files:
+            tensor_file = os.path.realpath(tensor_file)
+            tensor = read_atb_data(tensor_file).npu()
+            res.append(tensor)
+        return res
+    
+    @staticmethod
+    def force_dtype(tensors, precision_mode):
+        float_types = (torch.float, torch.float32, torch.float16, torch.half, torch.bfloat16)
+        if precision_mode == NAMEDTUPLE_PRECISION_MODE.force_fp16:
+            return [t.to(torch.float16) if t.dtype in float_types else t for t in tensors]
+        elif precision_mode == NAMEDTUPLE_PRECISION_MODE.force_fp32:
+            return [t.to(torch.float32) if t.dtype in float_types else t for t in tensors]
+        else:
+            return tensors
+        
+    @staticmethod
+    def get_rel_pass_rate(out, golden, etol):
+        out, golden = out.reshape(-1).cpu(), golden.reshape(-1).cpu()
+        size = out.shape[0]
+        rel_errors = torch.where(
+            torch.abs(golden) > FLOAT_EPSILON,
+            torch.abs(out / golden - 1),  # abs(aa - bb) / abs(bb) -> abs(aa / bb - 1)
+            torch.tensor(0, dtype=out.dtype),
+        )
+        rel_pass_rate = torch.sum(rel_errors <= etol) / size if size != 0 else 0
+        max_rel_error = torch.max(rel_errors)
+        return rel_pass_rate.item() * 100, max_rel_error.item()
+    
+    @staticmethod
+    def get_abs_pass_rate(out, golden, etol):
+        size = out.shape[0]
+        abs_errors = torch.where(
+            torch.abs(golden) > FLOAT_EPSILON,
+            torch.abs(out - golden),  # abs(aa - bb) / abs(bb) -> abs(aa / bb - 1)
+            torch.tensor(0, dtype=out.dtype),
+        )
+        abs_pass_rate = torch.sum(abs_errors <= etol) / size if size != 0 else 0
+        max_abs_error = torch.max(abs_errors)
+        return abs_pass_rate.item() * 100, max_abs_error.item()
+    
+    @staticmethod
+    def get_npu_device():
+        npu_device = os.environ.get("NPU_DEVICE")
+        if npu_device is None:
+            npu_device = "npu:0"
+        else:
+            npu_device = f"npu:{npu_device}"
+        return npu_device
+    
+    @staticmethod
+    def get_soc_version():
+        device_name = torch.npu.get_device_name()
+        if re.search("Ascend910B", device_name, re.I):
+            soc_version = 'Ascend910B'
+        elif re.search("Ascend310P", device_name, re.I):
+            soc_version = 'Ascend310P'
+        else:
+            raise RuntimeError(f"{device_name} is not supported")
+        device_count = torch.npu.device_count()
+        current_device = torch.npu.current_device()
+        logger_text = "Device Properties: device_name: {}, soc_version: {}, device_count: {}, current_device: {}" \
+            .format(device_name, soc_version, device_count, current_device)
+        logger.debug(logger_text)
+        return soc_version
+    
+    @staticmethod
+    def convert_data_format(data):
+        dim0, dim1 = data.shape[0], data.shape[1]
+        if data.dtype == torch.int8:
+            data = data.reshape([1, dim1 // 32, dim0, 32]).permute(0, 2, 1, 3).reshape([dim0, dim1])
+        else:
+            data = data.reshape([1, dim1 // 16, dim0, 16]).permute(0, 2, 1, 3).reshape([dim0, dim1])
+        return data
+    
+    @staticmethod
+    def nz_2_nd(data):
+        origin_shape = data.shape
+        dims = list(range(len(origin_shape)))
+        last_dims = dims[-4:]
 
-        for out_tensor, golden_out_tensor in zip(out_tensors, golden_out_tensors):
-            out_dtype = str(out_tensor.dtype)
-            p_s = self.precision_standard.get(out_dtype, [])
-            if len(p_s) != 2:
-                cur_message = f"{out_dtype} not supported!"
-                self.case_info['fail_reason'] = cur_message
-                raise RuntimeError(cur_message)
-
-            etol = self.erol_dict.get(p_s[0], 0.001)
-            err_rate = p_s[1]
-            ps_standard = f"{err_rate}%(error<{etol})"
-
-            rel_pass_rate, max_rel = MockOperationTest.get_rel_pass_rate(out_tensor, golden_out_tensor, etol)
-
-            if err_rate >= rel_pass_rate:
-                pass_flag = False
-                cur_message = f"relative pass rate: {rel_pass_rate} not met standart: {err_rate}."
-                message.append(cur_message)
-                logger.debug(cur_message)
-
-            rel_pass_rate = "%.16f" % float(rel_pass_rate)
-            max_rel = "%.16f" % float(max_rel)
-            (abs_pass_rate, max_abs, cos_sim, kl_div), cur_message = self.get_other_precisions(
-                out_tensor, golden_out_tensor, etol
-            )
-            if cur_message:
-                message.append(cur_message)
-
-            cur_result = {
-                "precision_standard": ps_standard,
-                "rel_pass_rate": rel_pass_rate,
-                "max_rel": max_rel,
-                "abs_pass_rate": abs_pass_rate,
-                "max_abs": max_abs,
-                "cos_sim": cos_sim,
-                "kl_div": kl_div,
-            }
-            for name, compare_func in CUSTOM_ALG_MAP.items():
-                cur_result[name], cur_message = compare_func(golden_out_tensor, out_tensor)
-                if cur_message:
-                    message.append(f"{name}: {cur_message}")
-            self.case_info['res_detail'].append(cur_result)
-
-            if pass_flag:
-                self.case_info['excuted_information'] = 'PASS'
-
-            else:
-                self.case_info['excuted_information'] = 'FAILED'
-            self.case_info['fail_reason'] = ", ".join(message)
-
+        perm = dims[:-4] + [last_dims[1]] + [last_dims[2]] + [last_dims[0]] + [last_dims[3]]
+        data = data.permute(perm)
+        nd_shape = data.shape[:-4] + (data.shape[-4] * data.shape[-3], data.shape[-2], data.shape[-1])
+        data = data.reshape(nd_shape)
+        return data
+        
     def validate_param(self, *param_names):
         ret = True
         for param_name in param_names:
@@ -335,117 +389,63 @@ class MockOperationTest:
         cos_sim_str = "%.10f" % cos_sim if cos_sim is not None else default_str
         kl_div_str = "%.16f" % kl if kl is not None else default_str
 
-        return (abs_pass_rate_str, max_abs_error_str, cos_sim_str, kl_div_str), ", ".join(message)
+        return (abs_pass_rate_str, max_abs_error_str, cos_sim_str, kl_div_str), ", ".join(message)  
+    
+    def __golden_compare_all(self, out_tensors, golden_out_tensors):
+        message, pass_flag = [], True
 
-    @staticmethod
-    def validate_int_range(param_value, int_range, param_name=''):
-        ivalue = int(param_value)
-        if ivalue not in int_range:
-            error_msg = f"【{param_name}】{param_value} is not in range {int_range}!"
-            raise argparse.ArgumentTypeError(error_msg)
-        
-    @staticmethod
-    def validate_path(path):
-        if not path or not os.path.exists(path):
-            raise RuntimeError(f"{path} not valid")
-        
-    @staticmethod
-    def get_tensor_path(path, tensor_type):
-        if os.path.exists(os.path.join(path, 'before')) and tensor_type == 'intensor':
-            path = os.path.join(path, 'before')
-        else:
-            path = os.path.join(path, 'after')
-        _tensor_path = [x for x in os.listdir(path) if x.startswith(tensor_type)]
-        _tensor_path.sort(key=lambda x: int(x.split(tensor_type)[1].split('.')[0]))
-        tensor_files = [os.path.join(path, x) for x in _tensor_path]
-        return tensor_files
+        my_data_len, golden_data_len = len(out_tensors), len(golden_out_tensors)
+        if my_data_len != golden_data_len:
+            pass_flag = False
+            logger_text = f"Data count not equal, {my_data_len} != {golden_data_len}. Will compare only partial"
+            logger.info(logger_text)
 
-    @staticmethod
-    def read_tensor_from_file(tensor_files):
-        res = []
-        for tensor_file in tensor_files:
-            tensor_file = os.path.realpath(tensor_file)
-            tensor = read_atb_data(tensor_file).npu()
-            res.append(tensor)
-        return res
-    
-    @staticmethod
-    def force_dtype(tensors, precision_mode):
-        float_types = (torch.float, torch.float32, torch.float16, torch.half, torch.bfloat16)
-        if precision_mode == NAMEDTUPLE_PRECISION_MODE.force_fp16:
-            return [t.to(torch.float16) if t.dtype in float_types else t for t in tensors]
-        elif precision_mode == NAMEDTUPLE_PRECISION_MODE.force_fp32:
-            return [t.to(torch.float32) if t.dtype in float_types else t for t in tensors]
-        else:
-            return tensors
-        
-    @staticmethod
-    def get_rel_pass_rate(out, golden, etol):
-        out, golden = out.reshape(-1).cpu(), golden.reshape(-1).cpu()
-        size = out.shape[0]
-        rel_errors = torch.where(
-            torch.abs(golden) > FLOAT_EPSILON,
-            torch.abs(out / golden - 1),  # abs(aa - bb) / abs(bb) -> abs(aa / bb - 1)
-            torch.tensor(0, dtype=out.dtype),
-        )
-        rel_pass_rate = torch.sum(rel_errors <= etol) / size if size != 0 else 0
-        max_rel_error = torch.max(rel_errors)
-        return rel_pass_rate.item() * 100, max_rel_error.item()
-    
-    @staticmethod
-    def get_abs_pass_rate(out, golden, etol):
-        size = out.shape[0]
-        abs_errors = torch.where(
-            torch.abs(golden) > FLOAT_EPSILON,
-            torch.abs(out - golden),  # abs(aa - bb) / abs(bb) -> abs(aa / bb - 1)
-            torch.tensor(0, dtype=out.dtype),
-        )
-        abs_pass_rate = torch.sum(abs_errors <= etol) / size if size != 0 else 0
-        max_abs_error = torch.max(abs_errors)
-        return abs_pass_rate.item() * 100, max_abs_error.item()
-    
-    @staticmethod
-    def get_npu_device():
-        npu_device = os.environ.get("NPU_DEVICE")
-        if npu_device is None:
-            npu_device = "npu:0"
-        else:
-            npu_device = f"npu:{npu_device}"
-        return npu_device
-    
-    @staticmethod
-    def get_soc_version():
-        device_name = torch.npu.get_device_name()
-        if re.search("Ascend910B", device_name, re.I):
-            soc_version = 'Ascend910B'
-        elif re.search("Ascend310P", device_name, re.I):
-            soc_version = 'Ascend310P'
-        else:
-            raise RuntimeError(f"{device_name} is not supported")
-        device_count = torch.npu.device_count()
-        current_device = torch.npu.current_device()
-        logger_text = "Device Properties: device_name: {}, soc_version: {}, device_count: {}, current_device: {}" \
-            .format(device_name, soc_version, device_count, current_device)
-        logger.debug(logger_text)
-        return soc_version
-    
-    @staticmethod
-    def convert_data_format(data):
-        dim0, dim1 = data.shape[0], data.shape[1]
-        if data.dtype == torch.int8:
-            data = data.reshape([1, dim1 // 32, dim0, 32]).permute(0, 2, 1, 3).reshape([dim0, dim1])
-        else:
-            data = data.reshape([1, dim1 // 16, dim0, 16]).permute(0, 2, 1, 3).reshape([dim0, dim1])
-        return data
-    
-    @staticmethod
-    def nz_2_nd(data):
-        origin_shape = data.shape
-        dims = list(range(len(origin_shape)))
-        last_dims = dims[-4:]
+        for out_tensor, golden_out_tensor in zip(out_tensors, golden_out_tensors):
+            out_dtype = str(out_tensor.dtype)
+            p_s = self.precision_standard.get(out_dtype, [])
+            if len(p_s) != 2:
+                cur_message = f"{out_dtype} not supported!"
+                self.case_info['fail_reason'] = cur_message
+                raise RuntimeError(cur_message)
 
-        perm = dims[:-4] + [last_dims[1]] + [last_dims[2]] + [last_dims[0]] + [last_dims[3]]
-        data = data.permute(perm)
-        nd_shape = data.shape[:-4] + (data.shape[-4] * data.shape[-3], data.shape[-2], data.shape[-1])
-        data = data.reshape(nd_shape)
-        return data
+            etol = self.erol_dict.get(p_s[0], 0.001)
+            err_rate = p_s[1]
+            ps_standard = f"{err_rate}%(error<{etol})"
+
+            rel_pass_rate, max_rel = MockOperationTest.get_rel_pass_rate(out_tensor, golden_out_tensor, etol)
+
+            if err_rate >= rel_pass_rate:
+                pass_flag = False
+                cur_message = f"relative pass rate: {rel_pass_rate} not met standart: {err_rate}."
+                message.append(cur_message)
+                logger.debug(cur_message)
+
+            rel_pass_rate = "%.16f" % float(rel_pass_rate)
+            max_rel = "%.16f" % float(max_rel)
+            (abs_pass_rate, max_abs, cos_sim, kl_div), cur_message = self.get_other_precisions(
+                out_tensor, golden_out_tensor, etol
+            )
+            if cur_message:
+                message.append(cur_message)
+
+            cur_result = {
+                "precision_standard": ps_standard,
+                "rel_pass_rate": rel_pass_rate,
+                "max_rel": max_rel,
+                "abs_pass_rate": abs_pass_rate,
+                "max_abs": max_abs,
+                "cos_sim": cos_sim,
+                "kl_div": kl_div,
+            }
+            for name, compare_func in CUSTOM_ALG_MAP.items():
+                cur_result[name], cur_message = compare_func(golden_out_tensor, out_tensor)
+                if cur_message:
+                    message.append(f"{name}: {cur_message}")
+            self.case_info['res_detail'].append(cur_result)
+
+            if pass_flag:
+                self.case_info['excuted_information'] = 'PASS'
+
+            else:
+                self.case_info['excuted_information'] = 'FAILED'
+            self.case_info['fail_reason'] = ", ".join(message)
