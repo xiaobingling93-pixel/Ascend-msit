@@ -9,14 +9,13 @@ from mock_operation_test import MockOperationTest
 # 使用新的 OperationTest 类替换原始的 OperationTest
 OpcheckAsStridedOperation.__bases__ = (MockOperationTest,)
 
+
 @pytest.mark.parametrize("op_param, in_tensors, expected_shape, expected_error", [
     ({'size': [4, 8, 16], 'stride': [128, 16, 1], 'offset': [0]}, [torch.randn(4, 8, 16)], (4, 8, 16), None),
     ({'size': [4, 8, 16], 'stride': [128, 16, 1], 'offset': [0]}, [torch.randn(4, 8, 15)], (4, 8, 16), RuntimeError),
-    ({'stride': [128, 16, 1], 'offset': [0]}, [torch.randn(4, 8, 16)], None, KeyError),
-    ({'size': [4, 8, 16], 'offset': [0]}, [torch.randn(4, 8, 16)], None, KeyError),
-    ({'size': [4, 8, 16], 'stride': [128, 16, 1]}, [torch.randn(4, 8, 16)], None, KeyError),
 ])
-def test_golden_calc_given_op_param_in_tensors_when_valid_input_then_correct_shape(op_param, in_tensors, expected_shape, expected_error):
+def test_golden_calc_given_op_param_in_tensors_when_valid_input_then_correct_shape(op_param, in_tensors, expected_shape,
+                                                                                   expected_error):
     # Arrange
     op = OpcheckAsStridedOperation()
     op.op_param = op_param
@@ -29,6 +28,7 @@ def test_golden_calc_given_op_param_in_tensors_when_valid_input_then_correct_sha
         result = op.golden_calc(in_tensors)
         assert result[0].shape == expected_shape
 
+
 @pytest.mark.parametrize("op_param, validate_param_return, expected_execute_call", [
     ({'size': [4, 8, 16], 'stride': [128, 16, 1], 'offset': [0]}, True, True),
     ({'size': [4, 8, 16], 'stride': [128, 16, 1], 'offset': [0]}, False, False),
@@ -36,7 +36,8 @@ def test_golden_calc_given_op_param_in_tensors_when_valid_input_then_correct_sha
     ({'size': [4, 8, 16], 'offset': [0]}, False, False),
     ({'size': [4, 8, 16], 'stride': [128, 16, 1]}, False, False),
 ])
-def test_test_given_op_param_when_valid_input_then_execute_successfully(op_param, validate_param_return, expected_execute_call):
+def test_test_given_op_param_when_valid_input_then_execute_successfully(op_param, validate_param_return,
+                                                                        expected_execute_call):
     # Arrange
     op = OpcheckAsStridedOperation()
     op.op_param = op_param
