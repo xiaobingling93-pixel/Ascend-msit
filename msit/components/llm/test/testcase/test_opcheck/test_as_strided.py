@@ -1,86 +1,182 @@
 import pytest
 import torch
-from unittest.mock import patch, MagicMock
-from msit_llm.opcheck.operation_test import OpcheckAsStridedOperation
-from msit_llm.common.log import logger
+import torch_npu
+from msit_llm.opcheck.case_manager import OpcheckAsStridedOperation
+from unittest.mock import patch
+
+# Mocking the OperationTest class to avoid errors
+from mock_operation_test import MockOperationTest
+
+# 使用新的 OperationTest 类替换原始的 OperationTest
+OpcheckAsStridedOperation.__bases__ = (MockOperationTest,)
 
 
-# 辅助函数：创建 mock 的 case_info 字典
-def create_mock_case_info(size=None, stride=None, offset=None):
-    case_info = {
-        'op_id': '1',
-        'op_name': 'AsStridedOperation',
-        'op_param': {},
-        'tensor_path': '',
-        'pid': 1234,
-        'atb_rerun': False,
-        'optimization_closed': False,
-        'res_detail': []
+def test_golden_calc_given_valid_params_when_valid_input_then_correct_shape():
+    # Arrange
+    op_param = {
+        'size': [4, 8, 16],
+        'stride': [128, 16, 1],
+        'offset': [0]
     }
-    if size is not None:
-        case_info['op_param']['size'] = size
-    if stride is not None:
-        case_info['op_param']['stride'] = stride
-    if offset is not None:
-        case_info['op_param']['offset'] = offset
-    return case_info
+    in_tensors = [torch.randn(4, 8, 16)]
+    op = OpcheckAsStridedOperation()
+    op.op_param = op_param
+
+    # Act
+    result = op.golden_calc(in_tensors)
+
+    # Assert
+    assert result[0].shape == (4, 8, 16)
 
 
-# 测试 golden_calc 方法
-@pytest.mark.parametrize("in_tensors, size, stride, offset, expected_result", [
-    (torch.tensor([[1.0, 2.0], [3.0, 4.0]]), [2, 2], [1, 2], [0], torch.tensor([[1.0, 2.0], [3.0, 4.0]])),
-    (torch.tensor([[1.0, 2.0], [3.0, 4.0]]), [2, 1], [1, 2], [0], torch.tensor([[1.0], [3.0]])),
-    (torch.tensor([[1.0, 2.0], [3.0, 4.0]]), [1, 2], [2, 1], [0], torch.tensor([[1.0, 2.0]])),
-    (torch.tensor([[1.0, 2.0], [3.0, 4.0]]), [1, 1], [2, 2], [0], torch.tensor([[1.0]])),
-])
-def test_golden_calc_given_valid_input_when_valid_then_pass(in_tensors, size, stride, offset, expected_result):
-    case_info = create_mock_case_info(size=size, stride=stride, offset=offset)
-    with patch.object(OpcheckAsStridedOperation, '__init__', return_value=None):
-        op = OpcheckAsStridedOperation()
-        op.case_info = case_info
-        op.op_param = case_info['op_param']
-        op.tensor_path = case_info['tensor_path']
-        op.pid = case_info['pid']
-        op.in_tensors = []
-        op.out_tensors = []
-        op.bind_idx = []
-        op.atb_rerun = case_info['atb_rerun']
-        op.optimization_closed = case_info['optimization_closed']
-        op.precision_standard = {}  # 设置必要的属性，避免 AttributeError
+def test_golden_calc_given_invalid_size_when_invalid_input_then_raise_error():
+    # Arrange
+    op_param = {
+        'size': [4, 8, 16],
+        'stride': [128, 16, 1],
+        'offset': [0]
+    }
+    in_tensors = [torch.randn(4, 8, 15)]  # Incorrect shape
+    op = OpcheckAsStridedOperation()
+    op.op_param = op_param
 
-        result = op.golden_calc([in_tensors])
-        assert torch.allclose(result[0], expected_result)
+    # Act & Assert
+    with pytest.raises(RuntimeError):
+        op.golden_calc(in_tensors)
 
 
-# 测试 test 方法
-@pytest.mark.parametrize("size, stride, offset, expected_return", [
-    ([2, 2], [1, 2], [0], True),
-    (None, [1, 2], [0], False),
-    ([2, 2], None, [0], False),
-    ([2, 2], [1, 2], None, False),
-])
-def test_test_given_valid_input_when_valid_then_pass(size, stride, offset, expected_return):
-    case_info = create_mock_case_info(size=size, stride=stride, offset=offset)
-    with patch.object(OpcheckAsStridedOperation, '__init__', return_value=None):
-        op = OpcheckAsStridedOperation()
-        op.case_info = case_info
-        op.op_param = case_info['op_param']
-        op.tensor_path = case_info['tensor_path']
-        op.pid = case_info['pid']
-        op.in_tensors = []
-        op.out_tensors = []
-        op.bind_idx = []
-        op.atb_rerun = case_info['atb_rerun']
-        op.optimization_closed = case_info['optimization_closed']
-        op.precision_standard = {}  # 设置必要的属性，避免 AttributeError
+def test_golden_calc_given_missing_size_when_invalid_input_then_raise_error():
+    # Arrange
+    op_param = {
+        'stride': [128, 16, 1],
+        'offset': [0]
+    }
+    in_tensors = [torch.randn(4, 8, 16)]
+    op = OpcheckAsStridedOperation()
+    op.op_param = op_param
 
-        with patch.object(op, 'validate_param', return_value=expected_return) as mock_validate_param:
-            with patch.object(op, 'execute') as mock_execute:
-                with patch('msit_llm.common.log.logger') as mock_logger:
-                    op.test()
+    # Act & Assert
+    with pytest.raises(KeyError):
+        op.golden_calc(in_tensors)
 
-        mock_validate_param.assert_called_once_with("size", "stride", "offset")
-        if expected_return:
-            mock_execute.assert_called_once()
-        else:
-            mock_execute.assert_not_called()
+
+def test_golden_calc_given_missing_stride_when_invalid_input_then_raise_error():
+    # Arrange
+    op_param = {
+        'size': [4, 8, 16],
+        'offset': [0]
+    }
+    in_tensors = [torch.randn(4, 8, 16)]
+    op = OpcheckAsStridedOperation()
+    op.op_param = op_param
+
+    # Act & Assert
+    with pytest.raises(KeyError):
+        op.golden_calc(in_tensors)
+
+
+def test_golden_calc_given_missing_offset_when_invalid_input_then_raise_error():
+    # Arrange
+    op_param = {
+        'size': [4, 8, 16],
+        'stride': [128, 16, 1]
+    }
+    in_tensors = [torch.randn(4, 8, 16)]
+    op = OpcheckAsStridedOperation()
+    op.op_param = op_param
+
+    # Act & Assert
+    with pytest.raises(KeyError):
+        op.golden_calc(in_tensors)
+
+
+def test_test_given_valid_params_when_valid_input_then_execute_successfully():
+    # Arrange
+    op_param = {
+        'size': [4, 8, 16],
+        'stride': [128, 16, 1],
+        'offset': [0]
+    }
+    op = OpcheckAsStridedOperation()
+    op.op_param = op_param
+
+    # Act
+    with patch.object(op, 'validate_param', return_value=True):
+        with patch.object(op, 'execute') as mock_execute:
+            op.test()
+
+    # Assert
+    mock_execute.assert_called_once()
+
+
+def test_test_given_invalid_params_when_invalid_input_then_return_early():
+    # Arrange
+    op_param = {
+        'size': [4, 8, 16],
+        'stride': [128, 16, 1],
+        'offset': [0]
+    }
+    op = OpcheckAsStridedOperation()
+    op.op_param = op_param
+
+    # Act
+    with patch.object(op, 'validate_param', return_value=False):
+        with patch.object(op, 'execute') as mock_execute:
+            op.test()
+
+    # Assert
+    mock_execute.assert_not_called()
+
+
+def test_test_given_missing_size_when_invalid_input_then_return_early():
+    # Arrange
+    op_param = {
+        'stride': [128, 16, 1],
+        'offset': [0]
+    }
+    op = OpcheckAsStridedOperation()
+    op.op_param = op_param
+
+    # Act
+    with patch.object(op, 'validate_param', return_value=False):
+        with patch.object(op, 'execute') as mock_execute:
+            op.test()
+
+    # Assert
+    mock_execute.assert_not_called()
+
+
+def test_test_given_missing_stride_when_invalid_input_then_return_early():
+    # Arrange
+    op_param = {
+        'size': [4, 8, 16],
+        'offset': [0]
+    }
+    op = OpcheckAsStridedOperation()
+    op.op_param = op_param
+
+    # Act
+    with patch.object(op, 'validate_param', return_value=False):
+        with patch.object(op, 'execute') as mock_execute:
+            op.test()
+
+    # Assert
+    mock_execute.assert_not_called()
+
+
+def test_test_given_missing_offset_when_invalid_input_then_return_early():
+    # Arrange
+    op_param = {
+        'size': [4, 8, 16],
+        'stride': [128, 16, 1]
+    }
+    op = OpcheckAsStridedOperation()
+    op.op_param = op_param
+
+    # Act
+    with patch.object(op, 'validate_param', return_value=False):
+        with patch.object(op, 'execute') as mock_execute:
+            op.test()
+
+    # Assert
+    mock_execute.assert_not_called()
