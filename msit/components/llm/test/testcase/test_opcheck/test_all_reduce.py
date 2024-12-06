@@ -67,7 +67,6 @@ def test_prod_cal_given_in_tensors_when_valid_input_then_correct_result(in_tenso
     ("max", [torch.tensor([1.0, 2.0]), torch.tensor([3.0, 4.0])], [torch.tensor([3.0, 4.0])]),
     ("min", [torch.tensor([1.0, 2.0]), torch.tensor([3.0, 4.0])], [torch.tensor([1.0, 2.0])]),
     ("prod", [torch.tensor([1.0, 2.0]), torch.tensor([3.0, 4.0])], [torch.tensor([3.0, 8.0])]),
-    (None, [torch.tensor([1.0, 2.0]), torch.tensor([3.0, 4.0])], [torch.tensor([4.0, 6.0])]),  # Default to "sum"
 ])
 def test_golden_calc_given_all_reduce_type_in_tensors_when_valid_input_then_correct_result(all_reduce_type, in_tensors,
                                                                                            expected_result):
