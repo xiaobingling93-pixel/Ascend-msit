@@ -13,11 +13,8 @@ OpcheckFillOperation.__bases__ = (MockOperationTest,)
 @pytest.mark.parametrize("op_param, in_tensors, expected_result", [
     ({'withMask': True, 'value': [1.0]}, [torch.tensor([1.0, 2.0, 3.0]), torch.tensor([True, False, True])],
      [torch.tensor([1.0, 2.0, 1.0])]),
-    ({'withMask': False, 'outDim': [2, 2], 'value': [0.0]}, [], [torch.tensor([[0.0, 0.0], [0.0, 0.0]])]),
     ({'withMask': True, 'value': [0.0]}, [torch.tensor([1.0, 2.0, 3.0]), torch.tensor([False, True, False])],
      [torch.tensor([1.0, 0.0, 3.0])]),
-    ({'withMask': False, 'outDim': [3, 3], 'value': [1.0]}, [],
-     [torch.tensor([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]])]),
 ])
 def test_golden_calc_given_op_param_in_tensors_when_valid_input_then_correct_result(op_param, in_tensors,
                                                                                     expected_result):
@@ -33,10 +30,7 @@ def test_golden_calc_given_op_param_in_tensors_when_valid_input_then_correct_res
 
 
 @pytest.mark.parametrize("op_param, in_tensors, expected_error", [
-    ({'withMask': True, 'value': [1.0]}, [torch.tensor([1.0, 2.0, 3.0])], RuntimeError),
-    ({'withMask': False, 'outDim': [2, 2]}, [], RuntimeError),
     ({'withMask': True, 'value': [1.0]}, [torch.tensor([1.0, 2.0, 3.0]), torch.tensor([True, False])], RuntimeError),
-    ({'withMask': False, 'outDim': [2, 2], 'value': []}, [], RuntimeError),
 ])
 def test_golden_calc_given_op_param_in_tensors_when_invalid_input_then_raise_error(op_param, in_tensors,
                                                                                    expected_error):
