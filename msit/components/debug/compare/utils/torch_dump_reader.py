@@ -26,7 +26,7 @@ from components.utils.check.rule import Rule
 from components.utils.constants import TENSOR_MAX_SIZE
 
 DELIMITER_MAP = {"TorchScript": '.', "TorchExport": '_'}
-MAX_FILE_READ_SIZE = 100 * 1024   # 100KB
+MAX_FILE_READ_SIZE = 31457280  # 30 * 1024 * 1024, 30MB
 
 
 class TorchDumpFileReader(DumpFileReader):
