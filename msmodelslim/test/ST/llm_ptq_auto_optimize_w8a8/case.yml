@@ -1,5 +1,5 @@
 case_type: modelslim
-case_name: llm_ptq_auto_optimize_w8a8_npu
+case_name: llm_ptq_auto_optimize_w8a8
 enable: y
 script:
   start: run.sh
