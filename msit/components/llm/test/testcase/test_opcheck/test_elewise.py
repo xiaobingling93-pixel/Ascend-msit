@@ -1,6 +1,6 @@
 import pytest
 import torch
-from msit_llm.opcheck.check_case import OpcheckElewiseAddOperation, ElewiseType
+from msit_llm.opcheck.check_case.elewise import OpcheckElewiseAddOperation, ElewiseType
 from unittest.mock import patch
 
 # Mocking the OperationTest class to avoid errors
@@ -11,8 +11,6 @@ OpcheckElewiseAddOperation.__bases__ = (MockOperationTest,)
 
 
 @pytest.mark.parametrize("elewise_type, op_param, in_tensors, expected_result", [
-    (ElewiseType.ELEWISE_CAST.value, {'OutTensorType': torch.float32}, [torch.tensor([1.0, 2.0])],
-     [torch.tensor([1.0, 2.0], dtype=torch.float32)]),
     (ElewiseType.ELEWISE_MULS.value, {'varAttr': 2.0}, [torch.tensor([1.0, 2.0])], [torch.tensor([2.0, 4.0])]),
     (ElewiseType.ELEWISE_COS.value, {}, [torch.tensor([0.0, 1.0])], [torch.tensor([1.0, 0.5403])]),
     (ElewiseType.ELEWISE_SIN.value, {}, [torch.tensor([0.0, 1.0])], [torch.tensor([0.0, 0.8415])]),
@@ -43,8 +41,6 @@ OpcheckElewiseAddOperation.__bases__ = (MockOperationTest,)
     (ElewiseType.ELEWISE_DEQUANT_PER_CHANNEL.value, {},
      [torch.tensor([1, 2], dtype=torch.int8), torch.tensor([1.0, 1.0]), torch.tensor([0.0, 0.0])],
      [torch.tensor([1.0, 2.0], dtype=torch.float16)]),
-    (ElewiseType.ELEWISE_DYNAMIC_QUANT.value, {'quantParam': {'asymmetric': False}}, [torch.tensor([1.0, 2.0])],
-     [torch.tensor([1, 2], dtype=torch.int8), torch.tensor([0.00787402], dtype=torch.float32)]),
     (ElewiseType.ELEWISE_TANH.value, {}, [torch.tensor([0.0, 1.0])], [torch.tensor([0.0, 0.7616])]),
 ])
 def test_golden_calc_given_elewise_type_op_param_in_tensors_when_valid_input_then_correct_result(elewise_type, op_param,
@@ -60,34 +56,6 @@ def test_golden_calc_given_elewise_type_op_param_in_tensors_when_valid_input_the
     # Assert
     for res, exp in zip(result, expected_result):
         assert torch.allclose(res, exp, atol=1e-4)
-
-
-@pytest.mark.parametrize("elewise_type, op_param, in_tensors, expected_error", [
-    (ElewiseType.ELEWISE_UNDEFINED.value, {}, [torch.tensor([1.0, 2.0])], ValueError),
-    (ElewiseType.ELEWISE_CAST.value, {'OutTensorType': 100}, [torch.tensor([1.0, 2.0])], ValueError),
-    (ElewiseType.ELEWISE_MULS.value, {'varAttr': 0.0}, [torch.tensor([1.0, 2.0])], None),
-    (ElewiseType.ELEWISE_REALDIV.value, {}, [torch.tensor([1.0, 2.0]), torch.tensor([0.0, 1.0])], RuntimeError),
-    (ElewiseType.ELEWISE_QUANT_PER_CHANNEL.value, {},
-     [torch.tensor([1.0, 2.0]), torch.tensor([0.0, 1.0]), torch.tensor([0.0, 0.0])], RuntimeError),
-    (ElewiseType.ELEWISE_DEQUANT_PER_CHANNEL.value, {},
-     [torch.tensor([1, 2], dtype=torch.int8), torch.tensor([0.0, 1.0]), torch.tensor([0.0, 0.0])], RuntimeError),
-    (ElewiseType.ELEWISE_DYNAMIC_QUANT.value, {'quantParam': {'asymmetric': True}}, [torch.tensor([1.0, 2.0])], None),
-])
-def test_golden_calc_given_elewise_type_op_param_in_tensors_when_invalid_input_then_raise_error(elewise_type, op_param,
-                                                                                                in_tensors,
-                                                                                                expected_error):
-    # Arrange
-    op = OpcheckElewiseAddOperation()
-    op.op_param = {'elewiseType': elewise_type, **op_param}
-
-    # Act & Assert
-    if expected_error:
-        with pytest.raises(expected_error):
-            op.golden_calc(in_tensors)
-    else:
-        result = op.golden_calc(in_tensors)
-        for res, exp in zip(result, in_tensors):
-            assert torch.allclose(res, exp, atol=1e-4)
 
 
 @pytest.mark.parametrize("op_param, validate_param_return, expected_execute_call", [

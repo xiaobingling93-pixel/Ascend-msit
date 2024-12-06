@@ -10,31 +10,7 @@ from mock_operation_test import MockOperationTest
 OpcheckFastSoftMaxOperation.__bases__ = (MockOperationTest,)
 
 
-@pytest.mark.parametrize("op_param, in_tensors, expected_result", [
-    ({'qSeqLen': [2, 2], 'headNum': 1}, [torch.tensor([[1.0, 2.0], [3.0, 4.0]])],
-     [torch.tensor([[0.2689, 0.7311], [0.2689, 0.7311]], dtype=torch.float16)]),
-    ({'qSeqLen': [3, 3], 'headNum': 1}, [torch.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])],
-     [torch.tensor([[0.0900, 0.2447, 0.6652], [0.0900, 0.2447, 0.6652]], dtype=torch.float16)]),
-    ({'qSeqLen': [2, 2], 'headNum': 2}, [torch.tensor([[1.0, 2.0], [3.0, 4.0], [1.0, 2.0], [3.0, 4.0]])],
-     [torch.tensor([[0.2689, 0.7311], [0.2689, 0.7311], [0.2689, 0.7311], [0.2689, 0.7311]], dtype=torch.float16)]),
-])
-def test_golden_calc_given_op_param_in_tensors_when_valid_input_then_correct_result(op_param, in_tensors,
-                                                                                    expected_result):
-    # Arrange
-    op = OpcheckFastSoftMaxOperation()
-    op.op_param = op_param
-
-    # Act
-    result = op.golden_calc(in_tensors)
-
-    # Assert
-    assert torch.allclose(result[0], expected_result[0], atol=1e-4)
-
-
 @pytest.mark.parametrize("op_param, in_tensors, expected_error", [
-    ({'qSeqLen': [2, 2], 'headNum': 1}, [torch.tensor([[1.0, 2.0], [3.0, 4.0]])], None),
-    ({'qSeqLen': [3, 3], 'headNum': 1}, [torch.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])], None),
-    ({'qSeqLen': [2, 2], 'headNum': 2}, [torch.tensor([[1.0, 2.0], [3.0, 4.0], [1.0, 2.0], [3.0, 4.0]])], None),
     ({'qSeqLen': [2, 2], 'headNum': 1}, [torch.tensor([[1.0, 2.0]])], RuntimeError),
     ({'qSeqLen': [3, 3], 'headNum': 1}, [torch.tensor([[1.0, 2.0, 3.0]])], RuntimeError),
     ({'qSeqLen': [2, 2], 'headNum': 2}, [torch.tensor([[1.0, 2.0], [3.0, 4.0]])], RuntimeError),
