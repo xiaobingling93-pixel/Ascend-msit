@@ -133,37 +133,6 @@ def test_add_case_given_case_info_when_op_name_exists(op_name, expected_result):
         assert len(cm.cases) == 0
 
 
-@pytest.mark.parametrize("num_processes, log_level, custom_algorithms", [
-    (2, 'info', []),
-    (4, 'debug', ['custom_alg'])
-])
-def test_multi_process_given_valid_cases(num_processes, log_level, custom_algorithms,
-                                         mock_dependencies):
-    cm = CaseManager(precision_metric=[], rerun=False, optimization_identify=False, output_path='./')
-    case_info = {'op_name': 'valid_op'}
-    cm.add_case(case_info)
-
-    with patch.dict(OP_NAME_DICT, {'valid_op': MockOP}):
-        with patch.object(cm, 'write_op_result_to_csv') as mock_write_op_result_to_csv:
-            cm.multi_process(num_processes=num_processes, log_level=log_level, custom_algorithms=custom_algorithms)
-
-    assert len(cm.cases) == 1
-    mock_write_op_result_to_csv.assert_called_once()
-
-
-def test_single_process_given_valid_cases_when_valid(mock_dependencies):
-    cm = CaseManager(precision_metric=[], rerun=False, optimization_identify=False, output_path='./')
-    case_info = {'op_name': 'valid_op'}
-    cm.add_case(case_info)
-
-    with patch.dict(OP_NAME_DICT, {'valid_op': MockOP}):
-        with patch.object(cm, 'write_op_result_to_csv') as mock_write_op_result_to_csv:
-            cm.single_process()
-
-    assert len(cm.cases) == 1
-    mock_write_op_result_to_csv.assert_called_once()
-
-
 @pytest.mark.parametrize("num_processes, rerun, log_level, custom_algorithms", [
     (1, False, 'info', []),
     (2, False, 'debug', ['custom_alg']),

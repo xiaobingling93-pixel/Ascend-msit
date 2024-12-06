@@ -3,6 +3,32 @@ import torch
 from unittest.mock import patch, MagicMock
 from msit_llm.opcheck.check_case import OpcheckAllReduceOperation
 from msit_llm.common.log import logger
+import os
+
+
+# 辅助函数：初始化 case_info 字典
+def create_case_info(pid=None, all_reduce_type=None, rank=None, rank_root=None, rank_size=None, backend=None):
+    case_info = {
+        'op_id': '1',
+        'op_name': 'AllReduceOperation',
+        'op_param': {},
+        'tensor_path': '',
+        'pid': pid,
+        'atb_rerun': False,
+        'optimization_closed': False,
+        'res_detail': []
+    }
+    if all_reduce_type is not None:
+        case_info['op_param']['allReduceType'] = all_reduce_type
+    if rank is not None:
+        case_info['op_param']['rank'] = rank
+    if rank_root is not None:
+        case_info['op_param']['rankRoot'] = rank_root
+    if rank_size is not None:
+        case_info['op_param']['rankSize'] = rank_size
+    if backend is not None:
+        case_info['op_param']['backend'] = backend
+    return case_info
 
 
 # 测试静态方法
@@ -29,26 +55,24 @@ def test_static_methods_given_valid_input_when_valid_then_pass(cal_func, in_tens
     ("prod", [torch.tensor([1.0, 2.0]), torch.tensor([3.0, 4.0])], [torch.tensor([3.0, 8.0])])
 ])
 def test_golden_calc_given_valid_input_when_valid_then_pass(all_reduce_type, in_tensors, expected_result):
-    op = OpcheckAllReduceOperation()
-    op.op_param = {"allReduceType": all_reduce_type}
+    case_info = create_case_info(pid=1234, all_reduce_type=all_reduce_type)
+    op = OpcheckAllReduceOperation(case_info=case_info)
     op.get_new_in_tensors = MagicMock(return_value=in_tensors)
     result = op.golden_calc(in_tensors)
     assert torch.allclose(result[0], expected_result[0])
 
 
 # 测试 test_all_reduce 方法
-@pytest.mark.parametrize("pid, all_reduce_type, rank, rank_root, rank_size, backend, expected_log_error, "
-                         "expected_return", [
-                             (None, "sum", 0, 0, 2, "hccl",
-                              "Cannot get a valid pid, AllReduceOperation is not supported!", None),
-                             (1234, "sum", 0, 0, 2, "hccl", None, True)
-                         ])
+@pytest.mark.parametrize(
+    "pid, all_reduce_type, rank, rank_root, rank_size, backend, expected_log_error, expected_return", [
+        (None, "sum", 0, 0, 2, "hccl", "Cannot get a valid pid, AllReduceOperation is not supported!", None),
+        (1234, "sum", 0, 0, 2, "hccl", None, True)
+    ])
 def test_test_all_reduce_given_valid_input_when_valid_then_pass(pid, all_reduce_type, rank, rank_root, rank_size,
                                                                 backend, expected_log_error, expected_return):
-    op = OpcheckAllReduceOperation()
-    op.pid = pid
-    op.op_param = {"allReduceType": all_reduce_type, "rank": rank, "rankRoot": rank_root, "rankSize": rank_size,
-                   "backend": backend}
+    case_info = create_case_info(pid=pid, all_reduce_type=all_reduce_type, rank=rank, rank_root=rank_root,
+                                 rank_size=rank_size, backend=backend)
+    op = OpcheckAllReduceOperation(case_info=case_info)
 
     with patch.object(op, 'validate_param', return_value=expected_return) as mock_validate_param:
         with patch.object(op, 'execute') as mock_execute:
