@@ -84,7 +84,7 @@ class TestSortPlugins(unittest.TestCase):
         plugins = [self.plugin_a, plugin_f, plugin_g]
 
         from ms_server_profiler.parse import DependencyCycleError
-        with self.assertRaises(DependencyCycleError) as context:
+        with self.assertRaises(Exception) as context:
             sort_plugins(plugins)
         self.assertTrue(isinstance(context.exception, DependencyCycleError))
     

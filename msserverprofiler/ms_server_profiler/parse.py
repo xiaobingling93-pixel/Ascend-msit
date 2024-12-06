@@ -16,10 +16,10 @@ from abc import abstractmethod
 import os
 import json
 from typing import List, Dict
-import pandas as pd
-from typing import List
 from collections import defaultdict, deque
 import sqlite3
+
+import pandas as pd
 
 from ms_server_profiler.constant import US_PER_SECOND
 
