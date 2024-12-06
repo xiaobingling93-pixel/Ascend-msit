@@ -1,6 +1,6 @@
 import pytest
 import torch
-from msit_llm.opcheck.case_manager import OpcheckAsStridedOperation
+from msit_llm.opcheck.check_case import OpcheckAsStridedOperation
 from unittest.mock import patch
 
 # Mocking the OperationTest class to avoid errors
