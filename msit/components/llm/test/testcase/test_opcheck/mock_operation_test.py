@@ -81,38 +81,7 @@ class MockOperationTest:
                 msg = f"Cannot get golden data because opParam {param_name} is not correctly set!"
                 logger.error(msg)
         return ret
-
-    @staticmethod
-    def validate_int_range(param_value, int_range, param_name=''):
-        ivalue = int(param_value)
-        if ivalue not in int_range:
-            error_msg = f"【{param_name}】{param_value} is not in range {int_range}!"
-            raise argparse.ArgumentTypeError(error_msg)
-
-    @staticmethod
-    def validate_path(path):
-        if not path or not os.path.exists(path):
-            raise RuntimeError(f"{path} not valid")
-
-    @staticmethod
-    def get_tensor_path(path, tensor_type):
-        if os.path.exists(os.path.join(path, 'before')) and tensor_type == 'intensor':
-            path = os.path.join(path, 'before')
-        else:
-            path = os.path.join(path, 'after')
-        _tensor_path = [x for x in os.listdir(path) if x.startswith(tensor_type)]
-        _tensor_path.sort(key=lambda x: int(x.split(tensor_type)[1].split('.')[0]))
-        tensor_files = [os.path.join(path, x) for x in _tensor_path]
-        return tensor_files
-
-    @staticmethod
-    def read_tensor_from_file(tensor_files):
-        res = []
-        for tensor_file in tensor_files:
-            tensor_file = os.path.realpath(tensor_file)
-            tensor = read_atb_data(tensor_file).npu()
-            res.append(tensor)
-        return res
+    
 
     def get_in_tensors_from_single_device(self, i, rank):
         old_did_pid = f"{rank}_{self.pid}"
@@ -142,15 +111,6 @@ class MockOperationTest:
             new_in_tensors.extend(_in_tensors)
         return new_in_tensors
 
-    @staticmethod
-    def force_dtype(tensors, precision_mode):
-        float_types = (torch.float, torch.float32, torch.float16, torch.half, torch.bfloat16)
-        if precision_mode == NAMEDTUPLE_PRECISION_MODE.force_fp16:
-            return [t.to(torch.float16) if t.dtype in float_types else t for t in tensors]
-        elif precision_mode == NAMEDTUPLE_PRECISION_MODE.force_fp32:
-            return [t.to(torch.float32) if t.dtype in float_types else t for t in tensors]
-        else:
-            return tensors
 
     def setUp(self):
         MockOperationTest.validate_path(self.tensor_path)
@@ -283,31 +243,6 @@ class MockOperationTest:
     def execute_inplace(self):
         self.excute_common("inplace")
 
-    @staticmethod
-    def get_rel_pass_rate(out, golden, etol):
-        out, golden = out.reshape(-1).cpu(), golden.reshape(-1).cpu()
-        size = out.shape[0]
-        rel_errors = torch.where(
-            torch.abs(golden) > FLOAT_EPSILON,
-            torch.abs(out / golden - 1),  # abs(aa - bb) / abs(bb) -> abs(aa / bb - 1)
-            torch.tensor(0, dtype=out.dtype),
-        )
-        rel_pass_rate = torch.sum(rel_errors <= etol) / size if size != 0 else 0
-        max_rel_error = torch.max(rel_errors)
-        return rel_pass_rate.item() * 100, max_rel_error.item()
-
-    @staticmethod
-    def get_abs_pass_rate(out, golden, etol):
-        size = out.shape[0]
-        abs_errors = torch.where(
-            torch.abs(golden) > FLOAT_EPSILON,
-            torch.abs(out - golden),  # abs(aa - bb) / abs(bb) -> abs(aa / bb - 1)
-            torch.tensor(0, dtype=out.dtype),
-        )
-        abs_pass_rate = torch.sum(abs_errors <= etol) / size if size != 0 else 0
-        max_abs_error = torch.max(abs_errors)
-        return abs_pass_rate.item() * 100, max_abs_error.item()
-
     def get_other_precisions(self, out, golden, etol):
         message = []
         precision_metric = self.case_info['precision_metric']
@@ -344,53 +279,6 @@ class MockOperationTest:
         kl_div_str = "%.16f" % kl if kl is not None else default_str
 
         return (abs_pass_rate_str, max_abs_error_str, cos_sim_str, kl_div_str), ", ".join(message)
-    
-    @staticmethod
-    def get_npu_device():
-        npu_device = os.environ.get("NPU_DEVICE")
-        if npu_device is None:
-            npu_device = "npu:0"
-        else:
-            npu_device = f"npu:{npu_device}"
-        return npu_device
-
-    @staticmethod
-    def get_soc_version():
-        device_name = torch.npu.get_device_name()
-        if re.search("Ascend910B", device_name, re.I):
-            soc_version = 'Ascend910B'
-        elif re.search("Ascend310P", device_name, re.I):
-            soc_version = 'Ascend310P'
-        else:
-            raise RuntimeError(f"{device_name} is not supported")
-        device_count = torch.npu.device_count()
-        current_device = torch.npu.current_device()
-        logger_text = "Device Properties: device_name: {}, soc_version: {}, device_count: {}, current_device: {}" \
-            .format(device_name, soc_version, device_count, current_device)
-        logger.debug(logger_text)
-        return soc_version
-
-    @staticmethod
-    def convert_data_format(data):
-        dim0, dim1 = data.shape[0], data.shape[1]
-        if data.dtype == torch.int8:
-            data = data.reshape([1, dim1 // 32, dim0, 32]).permute(0, 2, 1, 3).reshape([dim0, dim1])
-        else:
-            data = data.reshape([1, dim1 // 16, dim0, 16]).permute(0, 2, 1, 3).reshape([dim0, dim1])
-        return data
-
-    @staticmethod
-    def nz_2_nd(data):
-        origin_shape = data.shape
-        dims = list(range(len(origin_shape)))
-        last_dims = dims[-4:]
-
-        perm = dims[:-4] + [last_dims[1]] + [last_dims[2]] + [last_dims[0]] + [last_dims[3]]
-        data = data.permute(perm)
-        nd_shape = data.shape[:-4] + (data.shape[-4] * data.shape[-3], data.shape[-2], data.shape[-1])
-        data = data.reshape(nd_shape)
-        return data
-
     def __golden_compare_all(self, out_tensors, golden_out_tensors):
         message, pass_flag = [], True
 
@@ -449,3 +337,106 @@ class MockOperationTest:
             else:
                 self.case_info['excuted_information'] = 'FAILED'
             self.case_info['fail_reason'] = ", ".join(message)
+    @staticmethod
+    def validate_int_range(param_value, int_range, param_name=''):
+        ivalue = int(param_value)
+        if ivalue not in int_range:
+            error_msg = f"【{param_name}】{param_value} is not in range {int_range}!"
+            raise argparse.ArgumentTypeError(error_msg)
+    @staticmethod
+    def validate_path(path):
+        if not path or not os.path.exists(path):
+            raise RuntimeError(f"{path} not valid")
+    @staticmethod
+    def get_tensor_path(path, tensor_type):
+        if os.path.exists(os.path.join(path, 'before')) and tensor_type == 'intensor':
+            path = os.path.join(path, 'before')
+        else:
+            path = os.path.join(path, 'after')
+        _tensor_path = [x for x in os.listdir(path) if x.startswith(tensor_type)]
+        _tensor_path.sort(key=lambda x: int(x.split(tensor_type)[1].split('.')[0]))
+        tensor_files = [os.path.join(path, x) for x in _tensor_path]
+        return tensor_files
+
+    @staticmethod
+    def read_tensor_from_file(tensor_files):
+        res = []
+        for tensor_file in tensor_files:
+            tensor_file = os.path.realpath(tensor_file)
+            tensor = read_atb_data(tensor_file).npu()
+            res.append(tensor)
+        return res
+    @staticmethod
+    def force_dtype(tensors, precision_mode):
+        float_types = (torch.float, torch.float32, torch.float16, torch.half, torch.bfloat16)
+        if precision_mode == NAMEDTUPLE_PRECISION_MODE.force_fp16:
+            return [t.to(torch.float16) if t.dtype in float_types else t for t in tensors]
+        elif precision_mode == NAMEDTUPLE_PRECISION_MODE.force_fp32:
+            return [t.to(torch.float32) if t.dtype in float_types else t for t in tensors]
+        else:
+            return tensors        
+    @staticmethod
+    def get_rel_pass_rate(out, golden, etol):
+        out, golden = out.reshape(-1).cpu(), golden.reshape(-1).cpu()
+        size = out.shape[0]
+        rel_errors = torch.where(
+            torch.abs(golden) > FLOAT_EPSILON,
+            torch.abs(out / golden - 1),  # abs(aa - bb) / abs(bb) -> abs(aa / bb - 1)
+            torch.tensor(0, dtype=out.dtype),
+        )
+        rel_pass_rate = torch.sum(rel_errors <= etol) / size if size != 0 else 0
+        max_rel_error = torch.max(rel_errors)
+        return rel_pass_rate.item() * 100, max_rel_error.item()
+    @staticmethod
+    def get_abs_pass_rate(out, golden, etol):
+        size = out.shape[0]
+        abs_errors = torch.where(
+            torch.abs(golden) > FLOAT_EPSILON,
+            torch.abs(out - golden),  # abs(aa - bb) / abs(bb) -> abs(aa / bb - 1)
+            torch.tensor(0, dtype=out.dtype),
+        )
+        abs_pass_rate = torch.sum(abs_errors <= etol) / size if size != 0 else 0
+        max_abs_error = torch.max(abs_errors)
+        return abs_pass_rate.item() * 100, max_abs_error.item()
+    @staticmethod
+    def get_npu_device():
+        npu_device = os.environ.get("NPU_DEVICE")
+        if npu_device is None:
+            npu_device = "npu:0"
+        else:
+            npu_device = f"npu:{npu_device}"
+        return npu_device
+    @staticmethod
+    def get_soc_version():
+        device_name = torch.npu.get_device_name()
+        if re.search("Ascend910B", device_name, re.I):
+            soc_version = 'Ascend910B'
+        elif re.search("Ascend310P", device_name, re.I):
+            soc_version = 'Ascend310P'
+        else:
+            raise RuntimeError(f"{device_name} is not supported")
+        device_count = torch.npu.device_count()
+        current_device = torch.npu.current_device()
+        logger_text = "Device Properties: device_name: {}, soc_version: {}, device_count: {}, current_device: {}" \
+            .format(device_name, soc_version, device_count, current_device)
+        logger.debug(logger_text)
+        return soc_version
+    @staticmethod
+    def convert_data_format(data):
+        dim0, dim1 = data.shape[0], data.shape[1]
+        if data.dtype == torch.int8:
+            data = data.reshape([1, dim1 // 32, dim0, 32]).permute(0, 2, 1, 3).reshape([dim0, dim1])
+        else:
+            data = data.reshape([1, dim1 // 16, dim0, 16]).permute(0, 2, 1, 3).reshape([dim0, dim1])
+        return data
+    @staticmethod
+    def nz_2_nd(data):
+        origin_shape = data.shape
+        dims = list(range(len(origin_shape)))
+        last_dims = dims[-4:]
+
+        perm = dims[:-4] + [last_dims[1]] + [last_dims[2]] + [last_dims[0]] + [last_dims[3]]
+        data = data.permute(perm)
+        nd_shape = data.shape[:-4] + (data.shape[-4] * data.shape[-3], data.shape[-2], data.shape[-1])
+        data = data.reshape(nd_shape)
+        return data
