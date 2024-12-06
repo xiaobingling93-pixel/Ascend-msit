@@ -36,11 +36,13 @@ class TorchDumpFileReader(DumpFileReader):
         self.torch_mode = torch_mode
         self.key_to_folder = self._map_keys_to_folders()
 
-    def get_tensor(self, key: str) -> torch.Tensor:
+    def get_tensor(self, key: str) -> Optional[torch.Tensor]:
         cpu_tensor = None 
         folder_name = self.key_to_folder[key]
         key_with_root = f'root.{folder_name}'
         folder_path = os.path.join(self.path, key_with_root)
+        if not os.path.exists(folder_path):
+            return cpu_tensor
         for file_name in os.listdir(folder_path):
             if file_name.startswith('output'):
                 key_path = os.path.join(folder_path, file_name)
@@ -89,6 +91,9 @@ class TorchDumpFileReader(DumpFileReader):
         if len(jit_node) < 3:
             return None
         jit_node = jit_node[1:-1]
+        # 对每个node处理, 去除下划线分隔
+        jit_node = [node.replace('_', '.') for node in jit_node]
+
         #模型经过fxGraph->export->compile后，dump下来的downsample算子在映射表中多一个下划线后缀
         cpu_key = ".".join(jit_node).strip('_')
         return cpu_key
