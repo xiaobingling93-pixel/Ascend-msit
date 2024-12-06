@@ -125,7 +125,7 @@ std::string GetParentDir(const std::string& path) {
 std::string GetRoot(const std::string& path, int max_depth = 200)
 {
     if (max_depth <= 0) {
-        throw std::runtime_error("Max recursion depth exceeded while searching for root directory.")
+        throw std::runtime_error("Max recursion depth exceeded while searching for root directory.");
     }
     std::string parentDir = GetParentDir(path);
     // 如果父目录存在且已经创建了，就返回
