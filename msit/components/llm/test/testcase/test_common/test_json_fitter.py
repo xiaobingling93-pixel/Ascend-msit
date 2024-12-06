@@ -15,10 +15,12 @@
 import unittest
 import base64
 from unittest.mock import patch
+import onnx
 
 from msit_llm.common.json_fitter import atb_node_to_plain_node, atb_json_dict_node_parse, \
     atb_param_to_onnx_attribute, atb_param_to_onnx_attribute, parse_onnx_attr_from_atb_node_dict, \
-        atb_node_to_onnx_node, build_onnx_shape_info, TYPESTR2ONNXTYPE, atb_shape_to_onnx_shape
+    atb_node_to_onnx_node, build_onnx_shape_info, TYPESTR2ONNXTYPE, atb_shape_to_onnx_shape, \
+    csv_to_content, atb_json_to_onnx, atb_json_to_onnx_json
 
 
 class TestAtbNodeToPlainNode(unittest.TestCase):
@@ -486,4 +488,130 @@ class TestAtbShapeToOnnxShape(unittest.TestCase):
         ]
         
         atb_shape_to_onnx_shape(value_info, input_names, input_shapes)
+        self.assertEqual(value_info, expected_value_info)
+
+
+class IdentityFunction:
+    @staticmethod
+    def __call__(self, x):
+        return x
+
+
+class TestAtbFunctions(unittest.TestCase):
+
+    def test_atb_node_to_plain_node(self):
+        atb_node_dict = {
+            "opName": "test_node",
+            "opType": "TestOp",
+            "nodes": [
+                {
+                    "opName": "child_node_1",
+                    "opType": "ChildOp",
+                    "nodes": []
+                },
+                {
+                    "opName": "child_node_2",
+                    "opType": "ChildOp",
+                    "nodes": []
+                }
+            ]
+        }
+        result = atb_node_to_plain_node(atb_node_dict, 0, -1)
+        self.assertEqual(len(result), 0)
+
+    def test_atb_json_dict_node_parse(self):
+        atb_json_dict = {
+            "nodes": [
+                {
+                    "opName": "node_1",
+                    "opType": "Op1",
+                    "nodes": []
+                },
+                {
+                    "opName": "node_2",
+                    "opType": "Op2",
+                    "nodes": []
+                }
+            ]
+        }
+        result = atb_json_dict_node_parse(atb_json_dict, 1)
+        self.assertEqual(len(result), 2)  # 应该返回 2 个节点
+
+    def test_atb_param_to_onnx_attribute(self):
+        param_name = "test_param"
+        param_value = "test_value"
+        result = atb_param_to_onnx_attribute(param_name, param_value)
+        self.assertEqual(result["name"], param_name)
+        self.assertEqual(result["type"], "STRINGS")
+        self.assertEqual(base64.b64decode(result["strings"][0]).decode("utf-8"), param_value)
+
+    def test_parse_onnx_attr_from_atb_node_dict(self):
+        atb_node_dict = {
+            "param": {
+                "param1": 1.0,
+                "param2": {
+                    "sub_param1": 2.0,
+                    "sub_param2": 3.0
+                }
+            }
+        }
+        result = parse_onnx_attr_from_atb_node_dict(atb_node_dict)
+        self.assertEqual(len(result), 4)
+
+    def test_atb_node_to_onnx_node(self):
+        atb_node_dict = {
+            "opName": "test_op",
+            "opType": "TestOp",
+            "inTensors": ["input1", "input2"],
+            "outTensors": ["output1"],
+            "param": {
+                "param1": 1.0
+            }
+        }
+        result = atb_node_to_onnx_node(atb_node_dict)
+        self.assertEqual(result["name"], "test_op")
+        self.assertEqual(result["opType"], "TestOp")
+        self.assertEqual(result["input"], ["input1", "input2"])
+        self.assertEqual(result["output"], ["output1"])
+        self.assertEqual(len(result["attribute"]), 1)  # 应该返回 1 个属性
+
+    def test_build_onnx_shape_info(self):
+        name = "input_tensor"
+        input_shape_info = {
+            "type": "float32",
+            "shape": [1, 3, 224, 224]
+        }
+        result = build_onnx_shape_info(name, input_shape_info)
+        self.assertEqual(result["name"], name)
+        self.assertEqual(result["type"]["tensorType"]["elemType"], onnx.helper.TensorProto.FLOAT)
+        self.assertEqual(result["type"]["tensorType"]["shape"]["dim"][0]["dimValue"], 1)
+
+    def test_atb_shape_to_onnx_shape(self):
+        value_info = []
+        input_names = ["input1", "input2"]
+        input_shapes = [{"type": "float32", "shape": [1, 2]}, {"type": "int32", "shape": [3]}]
+
+        atb_shape_to_onnx_shape(value_info, input_names, input_shapes)
+
+        expected_value_info = [
+            {
+                "name": "input1",
+                "type": {
+                    "tensorType": {
+                        "elemType": onnx.helper.TensorProto.FLOAT,
+                        "shape": {"dim": [{"dimValue": 1}, {"dimValue": 2}]}
+                    }
+                }
+            },
+            {
+                "name": "input2",
+                "type": {
+                    "tensorType": {
+                        "elemType": onnx.helper.TensorProto.INT32,
+                        "shape": {"dim": [{"dimValue": 3}]}
+                    }
+                }
+            }
+        ]
+
         self.assertEqual(value_info, expected_value_info)
