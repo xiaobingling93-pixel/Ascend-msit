@@ -127,8 +127,9 @@ def concat_data_from_folder(folder_path):
     return full_df
 
 
-def convert_syscnt_to_ts(cnt, start_cnt, cpu_frequency):
-    return (SYS_TS + ((cnt - start_cnt) / cpu_frequency)) * US_PER_SECOND
+def convert_syscnt_to_ts(cnt, start_cnt):
+    global cpu_frequency
+    return (SYS_TS + ((cnt - start_cnt) / cpu_frequency)) * 1000 * 1000
 
 
 def extract_span_info_from_message(message, mark_id):
@@ -204,9 +205,9 @@ def find_during_time_by_span_id(all_data_df):
     return all_data_df
 
 
-def data_convert(all_data_df, sys_start_cnt, cpu_frequency):
-    all_data_df['start_time'] = convert_syscnt_to_ts(all_data_df['start_time'], sys_start_cnt, cpu_frequency)
-    all_data_df['end_time'] = convert_syscnt_to_ts(all_data_df['end_time'], sys_start_cnt, cpu_frequency)
+def data_convert(all_data_df, sys_start_cnt):
+    all_data_df['start_time'] = convert_syscnt_to_ts(all_data_df['start_time'], sys_start_cnt)
+    all_data_df['end_time'] = convert_syscnt_to_ts(all_data_df['end_time'], sys_start_cnt)
     all_data_df['message'] = all_data_df['message'].apply(lambda x: convert_message_to_json(x))
     all_data_df['type'] = all_data_df['message'].apply(lambda x: x.get("type"))
     rid_link_map = {x.get("from"): x.get("to") for x in all_data_df[all_data_df["type"] == 3]["message"]}
@@ -418,8 +419,8 @@ def check_output_path_valid(path):
 
 def read_cpu_data_from_db(db_path, cpu_start_cnt):
     cpu_data_df = find_cpu_data_from_folder(db_path)
-    cpu_data_df['start_time'] = convert_syscnt_to_ts(cpu_data_df['start_time'], cpu_start_cnt, cpu_frequency)
-    cpu_data_df['end_time'] = convert_syscnt_to_ts(cpu_data_df['end_time'], cpu_start_cnt, cpu_frequency)
+    cpu_data_df['start_time'] = convert_syscnt_to_ts(cpu_data_df['start_time'], cpu_start_cnt)
+    cpu_data_df['end_time'] = convert_syscnt_to_ts(cpu_data_df['end_time'], cpu_start_cnt)
     return cpu_data_df
 
 
@@ -453,29 +454,13 @@ def load_cpu_data_from_database(db_path):
     return cpu_data_df
 
 
-def get_cpu_freq(folder_path):
-    cpu_frequency = None
-    _, info_path = find_config_files(folder_path)
-    file_description = os.open(info_path, os.O_RDONLY)
-    with os.fdopen(file_description, 'r') as info:
-        data = json.load(info)
-        if 'CPU' not in data or not isinstance(data['CPU'], list) or len(data['CPU']) == 0:
-            raise ValueError(f"Invalid or missing 'CPU' data in {info_path}.")
-        cpu_data = data['CPU'][0]
-        cpu_frequency = cpu_data.get('Frequency', None)
-        if cpu_frequency is None:
-            raise KeyError(f"Missing 'Frequency' value in 'CPU' data.")
-        cpu_frequency = float(cpu_frequency) * US_PER_SECOND
-    return cpu_frequency
-
-
 def main():
     db_path, output = parse_args()
     sys_start_cnt, cpu_start_cnt = get_start_cnt(db_path)
-    cpu_frequency = get_default_freq(db_path)
+    get_default_freq(db_path)
     all_data_df = concat_data_from_folder(db_path)
-    cpu_data_df = read_cpu_data_from_db(db_path, cpu_start_cnt, cpu_frequency)
-    all_data_df = data_convert(all_data_df, sys_start_cnt, cpu_frequency)
+    cpu_data_df = read_cpu_data_from_db(db_path, cpu_start_cnt)
+    all_data_df = data_convert(all_data_df, sys_start_cnt)
     trace_data = create_trace_events(all_data_df, cpu_data_df)
     save_trace_data_into_json(trace_data, output)
 
