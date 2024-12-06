@@ -14,7 +14,6 @@ OpcheckCumsumOperation.__bases__ = (MockOperationTest,)
     ({'axes': [0]}, [torch.tensor([1.0, 2.0, 3.0])], [torch.tensor([1.0, 3.0, 6.0])]),
     ({'axes': [1]}, [torch.tensor([[1.0, 2.0], [3.0, 4.0]])], [torch.tensor([[1.0, 3.0], [3.0, 7.0]])]),
     ({'axes': [0]}, [torch.tensor([[1.0, 2.0], [3.0, 4.0]])], [torch.tensor([[1.0, 2.0], [4.0, 6.0]])]),
-    ({'axes': [1]}, [torch.tensor([1.0, 2.0, 3.0])], [torch.tensor([1.0, 3.0, 6.0])]),
 ])
 def test_golden_calc_given_op_param_in_tensors_when_valid_input_then_correct_result(op_param, in_tensors,
                                                                                     expected_result):
@@ -30,10 +29,6 @@ def test_golden_calc_given_op_param_in_tensors_when_valid_input_then_correct_res
 
 
 @pytest.mark.parametrize("op_param, in_tensors, expected_error", [
-    ({'axes': [0]}, [torch.tensor([1.0, 2.0, 3.0])], None),
-    ({'axes': [1]}, [torch.tensor([[1.0, 2.0], [3.0, 4.0]])], None),
-    ({'axes': [0]}, [torch.tensor([[1.0, 2.0], [3.0, 4.0]])], None),
-    ({'axes': [1]}, [torch.tensor([1.0, 2.0, 3.0])], None),
     ({'axes': [2]}, [torch.tensor([[1.0, 2.0], [3.0, 4.0]])], IndexError),
 ])
 def test_golden_calc_given_op_param_in_tensors_when_invalid_input_then_raise_error(op_param, in_tensors,
