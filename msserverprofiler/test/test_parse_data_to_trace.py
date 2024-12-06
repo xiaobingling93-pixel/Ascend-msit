@@ -1,7 +1,10 @@
 import argparse
-import pytest
+import os
 from unittest.mock import patch, MagicMock
+
+import pytest
 import pandas as pd
+
 import parse_data_to_trace as parse
 
 
@@ -58,7 +61,7 @@ def test_get_state_name_by_value_when_valid():
     assert parse.get_state_name_by_value(1) == "PENDING"
     assert parse.get_state_name_by_value(2) == "RUNNING"
     assert parse.get_state_name_by_value(3) == "SWAPPED"
-    assert parse.get_state_name_by_value(4) == "RECOMPUTED"
+    assert parse.get_state_name_by_value(4) == "RECOMPUTE"
     assert parse.get_state_name_by_value(5) == "SUSPENDED"
     assert parse.get_state_name_by_value(6) == "END"
     assert parse.get_state_name_by_value(7) == "STOP"
@@ -99,7 +102,7 @@ def test_load_cpu_data_from_database(mock_connect):
     cpu_data_df = parse.load_cpu_data_from_database(db_path)
 
     mock_connect.assert_called_once_with(db_path)
-    mock_cursor.excute.assert_called_once_with("""
+    mock_cursor.execute.assert_called_once_with("""
         SELECT *
         FROM CpuUsage
         WHERE cpu_no == 'Avg'
@@ -196,7 +199,7 @@ def test_add_args_for_state_type(message, exp_return):
     assert result == exp_return
 
 
-@patch('os.patch.exists')
+@patch('os.path.exists')
 @patch('os.access')
 @patch('os.makedirs')
 @patch('os.path.abspath')
@@ -212,7 +215,7 @@ def test_check_output_path_valid_when_path_not_exists(mock_abspath, mock_makedir
     mock_makedirs.assert_called_once_with(path)
 
 
-@patch('os.patch.exists')
+@patch('os.path.exists')
 @patch('os.access')
 @patch('os.makedirs')
 @patch('os.path.abspath')
@@ -225,10 +228,10 @@ def test_check_output_path_valid_when_path_valid(mock_abspath, mock_makedirs, mo
 
     result = parse.check_output_path_valid(path)
     assert result == path
-    mock_makedirs.assert_not_called(path)
+    mock_makedirs.assert_not_called()
 
 
-@patch('os.patch.exists')
+@patch('os.path.exists')
 @patch('os.access')
 @patch('os.makedirs')
 @patch('os.path.abspath')
@@ -241,10 +244,10 @@ def test_check_output_path_valid_when_path_not_writable(mock_abspath, mock_maked
 
     with pytest.raises(argparse.ArgumentTypeError):
         parse.check_output_path_valid(path)
-    mock_makedirs.assert_not_called(path)
+    mock_makedirs.assert_not_called()
 
 
-@patch('os.patch.exists')
+@patch('os.path.exists')
 @patch('os.path.isdir')
 def test_check_input_path_valid_when_path_not_exists(mock_isdir, mock_exists):
     path = "folder_path/input"
@@ -256,7 +259,7 @@ def test_check_input_path_valid_when_path_not_exists(mock_isdir, mock_exists):
         parse.check_input_path_valid(path)
 
 
-@patch('os.patch.exists')
+@patch('os.path.exists')
 @patch('os.path.isdir')
 def test_check_input_path_valid_when_path_not_dir(mock_isdir, mock_exists):
     path = "folder_path/input"
@@ -268,7 +271,7 @@ def test_check_input_path_valid_when_path_not_dir(mock_isdir, mock_exists):
         parse.check_input_path_valid(path)
 
 
-@patch('os.patch.exists')
+@patch('os.path.exists')
 @patch('os.path.isdir')
 def test_check_input_path_valid_when_path_illegal(mock_isdir, mock_exists):
     path = "folder_path/../input"
@@ -280,7 +283,7 @@ def test_check_input_path_valid_when_path_illegal(mock_isdir, mock_exists):
         parse.check_input_path_valid(path)
 
 
-@patch('os.patch.exists')
+@patch('os.path.exists')
 @patch('os.path.isdir')
 def test_check_input_path_valid_when_path_valid(mock_isdir, mock_exists):
     path = "folder_path/input"
