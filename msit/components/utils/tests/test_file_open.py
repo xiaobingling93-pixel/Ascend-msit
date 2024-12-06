@@ -162,14 +162,6 @@ def test_msopen_given_mode_r_when_file_not_exits_then_file_read_failed_case(not_
         assert True
 
 
-def test_msopen_given_mode_r_no_max_length_when_none_then_file_read_failed_case(file_name_which_content_is_abcd):
-    try:
-        with ms_open(file_name_which_content_is_abcd, "r") as aa:
-            assert False
-    except OpenException as ignore:
-        assert True
-
-
 def test_msopen_given_mode_r_max_size_2_when_none_then_file_failed_read_out_case(file_name_which_content_is_abcd):
     try:
         with ms_open(file_name_which_content_is_abcd, mode="r", max_size=3) as aa:

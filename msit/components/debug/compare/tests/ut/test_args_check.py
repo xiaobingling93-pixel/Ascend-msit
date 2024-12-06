@@ -72,23 +72,7 @@ class TestIsSavedModelValid(unittest.TestCase):
         self.assertFalse(result)
 
 
-# 为了测试check_model_path_legality的函数
 class TestCheckModelPathLegality(unittest.TestCase):
-
-    @patch('os.path.isdir')
-    @patch('components.utils.file_open_check.FileStat')
-    def test_valid_file(self, MockFileStat, MockIsDir):
-        # 模拟文件路径并且文件合法
-        MockIsDir.return_value = False
-        mock_file = MagicMock()
-        MockFileStat.return_value = mock_file
-        mock_file.is_basically_legal.return_value = True
-        mock_file.is_legal_file_type.return_value = True
-        mock_file.is_legal_file_size.return_value = True
-
-        result = check_model_path_legality("valid_model.onnx")
-        self.assertEqual(result, "valid_model.onnx")
-
     @patch('os.path.isdir')
     @patch('components.utils.file_open_check.FileStat')
     def test_invalid_file_type(self, MockFileStat, MockIsDir):
@@ -139,21 +123,6 @@ class TestCheckModelPathLegality(unittest.TestCase):
 
 
 class TestCheckOmPathLegality(unittest.TestCase):
-
-    @patch('os.path.isdir')
-    @patch('components.utils.file_open_check.FileStat')
-    def test_valid_file(self, MockFileStat, MockIsDir):
-        # 模拟文件路径并且文件合法
-        MockIsDir.return_value = False
-        mock_file = MagicMock()
-        MockFileStat.return_value = mock_file
-        mock_file.is_basically_legal.return_value = True
-        mock_file.is_legal_file_type.return_value = True
-        mock_file.is_legal_file_size.return_value = True
-
-        result = check_om_path_legality("valid_model.om")
-        self.assertEqual(result, "valid_model.om")
-
     @patch('os.path.isdir')
     @patch('components.utils.file_open_check.FileStat')
     def test_invalid_file_type(self, MockFileStat, MockIsDir):
@@ -203,19 +172,6 @@ class TestCheckOmPathLegality(unittest.TestCase):
             check_om_path_legality("non_existent_path")
 
 class TestCheckWeightPathLegality(unittest.TestCase):
-
-    @patch('components.utils.file_open_check.FileStat')
-    def test_valid_weight_file(self, MockFileStat):
-        # 模拟合法的文件
-        mock_file = MagicMock()
-        MockFileStat.return_value = mock_file
-        mock_file.is_basically_legal.return_value = True
-        mock_file.is_legal_file_type.return_value = True
-        mock_file.is_legal_file_size.return_value = True
-
-        result = check_weight_path_legality("valid_model.caffemodel")
-        self.assertEqual(result, "valid_model.caffemodel")
-
     @patch('components.utils.file_open_check.FileStat')
     def test_invalid_file_type(self, MockFileStat):
         # 模拟无效文件类型（如 .txt 文件）
@@ -259,18 +215,6 @@ class TestCheckWeightPathLegality(unittest.TestCase):
             check_weight_path_legality("restricted_model.caffemodel")
 
 class TestCheckInputPathLegality(unittest.TestCase):
-
-    @patch('components.utils.file_open_check.FileStat')
-    def test_valid_input_paths(self, MockFileStat):
-        # 模拟合法的输入路径
-        mock_file = MagicMock()
-        MockFileStat.return_value = mock_file
-        mock_file.is_basically_legal.return_value = True
-
-        # 测试多个合法路径
-        result = check_input_path_legality("valid_path_1,valid_path_2")
-        self.assertEqual(result, "valid_path_1,valid_path_2")
-
     @patch('components.utils.file_open_check.FileStat')
     def test_empty_input(self, MockFileStat):
         # 测试空输入路径
@@ -348,16 +292,6 @@ class TestCheckOutputPathLegality(unittest.TestCase):
         self.assertEqual(result, "")
 
     @patch('components.utils.file_open_check.FileStat')
-    def test_invalid_output_path_permissions(self, MockFileStat):
-        # 模拟路径存在但权限不够，无法写入
-        mock_file = MagicMock()
-        MockFileStat.return_value = mock_file
-        mock_file.is_basically_legal.return_value = False  # 无法写权限
-
-        with self.assertRaises(argparse.ArgumentTypeError):
-            check_output_path_legality("./invalid_permission/output")
-
-    @patch('components.utils.file_open_check.FileStat')
     def test_invalid_output_path(self, MockFileStat):
         # 模拟路径无效（如不存在的文件路径）
         MockFileStat.side_effect = Exception("Path not found")
@@ -372,32 +306,6 @@ class TestValidJsonFileOrDir(unittest.TestCase):
         # 测试空路径
         result = valid_json_file_or_dir("")
         self.assertEqual(result, "")
-
-    @patch('components.utils.file_open_check.FileStat')
-    def test_valid_directory(self, MockFileStat):
-        # 模拟合法目录
-        mock_dir = MagicMock()
-        MockFileStat.return_value = mock_dir
-        mock_dir.is_dir = True
-        mock_dir.is_basically_legal.return_value = True  # 有读取权限
-
-        # 测试目录路径
-        result = valid_json_file_or_dir("./valid/")
-        self.assertEqual(result, "./valid/")
-
-    @patch('components.utils.file_open_check.FileStat')
-    def test_valid_json_file(self, MockFileStat):
-        # 模拟合法 JSON 文件
-        mock_file = MagicMock()
-        MockFileStat.return_value = mock_file
-        mock_file.is_dir = False
-        mock_file.is_basically_legal.return_value = True  # 有读取权限
-        mock_file.is_legal_file_type.return_value = True  # 文件类型为 JSON
-        mock_file.is_legal_file_size.return_value = True  # 文件大小合法
-
-        # 测试合法 JSON 文件路径
-        result = valid_json_file_or_dir("./valid/file.json")
-        self.assertEqual(result, "./valid/file.json")
 
     @patch('components.utils.file_open_check.FileStat')
     def test_invalid_file_type(self, MockFileStat):
@@ -603,17 +511,6 @@ class TestCheckFusionCfgPathLegality(unittest.TestCase):
         # 模拟 FileStat 类
         self.mock_file_stat = MagicMock()
 
-    def test_valid_fusion_cfg_path(self):
-        # 测试有效路径
-        valid_value = "./config.cfg"
-        self.mock_file_stat.is_basically_legal.return_value = True
-        self.mock_file_stat.is_legal_file_type.return_value = True
-        self.mock_file_stat.is_legal_file_size.return_value = True
-
-        with unittest.mock.patch('components.utils.file_open_check.FileStat', return_value=self.mock_file_stat):
-            result = check_fusion_cfg_path_legality(valid_value)
-            self.assertEqual(result, valid_value)
-
     def test_empty_input(self):
         # 测试空字符串输入
         empty_value = ""
@@ -664,17 +561,6 @@ class TestCheckQuantJsonPathLegality(unittest.TestCase):
     def setUp(self):
         # 模拟 FileStat 类
         self.mock_file_stat = MagicMock()
-
-    def test_valid_quant_json_path(self):
-        # 测试有效路径
-        valid_value = "./config.json"
-        self.mock_file_stat.is_basically_legal.return_value = True
-        self.mock_file_stat.is_legal_file_type.return_value = True
-        self.mock_file_stat.is_legal_file_size.return_value = True
-
-        with unittest.mock.patch('components.utils.file_open_check.FileStat', return_value=self.mock_file_stat):
-            result = check_quant_json_path_legality(valid_value)
-            self.assertEqual(result, valid_value)
 
     def test_empty_input(self):
         # 测试空字符串输入

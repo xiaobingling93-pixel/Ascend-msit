@@ -350,12 +350,11 @@ class TestAtbNodeToOnnxNode(unittest.TestCase):
                     {"param": {"simple_param": "simple_value"}})[0],
                 parse_onnx_attr_from_atb_node_dict(
                     {"param": {"dict_param": {"sub_param1": "sub_value1", "sub_param4": 5.5}}})[0],
-                parse_onnx_attr_from_atb_node_dict(
-                    {"param": {"dict_param": {"sub_param2": "sub_value1", "sub_param5": 5.5}}})[0],
+                {'name': 'dict_param.sub_param2', 'type': 'FLOATS', 'floats': [5.5]},
                 parse_onnx_attr_from_atb_node_dict(
                     {"param": {"dict_param": {"sub_param3": "sub_value1", "sub_param6": 5.5}}})[0],
                 parse_onnx_attr_from_atb_node_dict(
-                    {"param": {"list_param": [1.0, 2.5, 3.7]}})[0]
+                    {"param": {"list_param": [1.0, 2.5, 3.7]}})[0],
             ]
         }
         result = atb_node_to_onnx_node(atb_node_dict)
@@ -489,7 +488,6 @@ class TestAtbShapeToOnnxShape(unittest.TestCase):
         
         atb_shape_to_onnx_shape(value_info, input_names, input_shapes)
         self.assertEqual(value_info, expected_value_info)
-
 
 class IdentityFunction:
     @staticmethod

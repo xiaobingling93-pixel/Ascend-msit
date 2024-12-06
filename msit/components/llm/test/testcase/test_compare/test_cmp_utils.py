@@ -134,7 +134,7 @@ class TestFillRowData(unittest.TestCase):
                 self.my_data_path = 'my_data.npy'
             
             @staticmethod
-            def to_dict(self):
+            def to_dict():
                 return {}
  
         data_info = MockBasicDataInfo()

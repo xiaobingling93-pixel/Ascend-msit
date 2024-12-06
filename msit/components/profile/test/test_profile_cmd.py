@@ -13,39 +13,68 @@
 # limitations under the License.
 import os
 import pytest
+import subprocess
+import shutil
+
+import torch
+from torch import nn
+
+try:
+    import acl
+except:
+    acl = None
 
 
-class TestClass:
-    @classmethod
-    def setup_class(cls):
-        """class level setup_class"""
-        cls.init(TestClass)
+TEST_ONNX_FILE = "test.onnx"
+TEST_OM_FILE = "test.om"
+OUTPUT_PATH = "output_datas/"
 
-    @classmethod
-    def get_cur_path(cls):
-        _current_dir = os.path.dirname(os.path.realpath(__file__))
-        return _current_dir
 
-    def init(self):
-        if not os.getenv("AIT_BENCHMARK_DT_DATA_PATH"):
-            self.model_path = os.path.join(self.get_cur_path(),
-                "../../benchmark/test/testdata/resnet50/model/pth_resnet50_bs1.om")
-        else:
-            self.model_path = os.path.join(os.getenv("AIT_BENCHMARK_DT_DATA_PATH"),
-                "resnet50/model/pth_resnet50_bs1.om")
-        self.output_path = os.path.join(self.get_cur_path(), "output_datas/")
-        self.app_cmd = "'msit benchmark -om {}'".format(self.model_path)
+class TestModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv = nn.Conv2d(3, 16, (3, 3))
 
-    def test_default_cmd(self):
-        cmd = "msit profile --application {} -o {}".format(self.app_cmd, self.output_path)
-        ret = os.system(cmd)
-        assert ret == 0
+    def forward(self, x):
+        return self.conv(x)
 
-    def test_not_default_cmd(self):
-        cmd = "msit profile --application {} -o {} --model-execution {} --sys-hardware-mem {} \
-            --sys-profiling {} --sys-pid-profiling {} --dvpp-profiling {} --runtime-api {} \
-            --task-time {} --aicpu {}".format(self.app_cmd, self.output_path,
-                                              "on", "on", "off", "off", "on",
-                                              "on", "on", "off", "off")
-        ret = os.system(cmd)
-        assert ret == 0
+
+@pytest.fixture(scope="module", autouse=True)
+def basic_onnx_model():
+    model = TestModel()
+    dummy_input = torch.randn((1, 3, 32, 32))
+    torch.onnx.export(model, dummy_input, TEST_ONNX_FILE)
+    os.chmod(TEST_ONNX_FILE, 0o640)
+
+    soc_version = acl.get_soc_name()
+    om_name = os.path.splitext(TEST_OM_FILE)[0]  # Get rid of .om
+    subprocess.run(
+        ["atc", "--model", TEST_ONNX_FILE, "--soc-version", soc_version, "--output", om_name, "--framework", "5"]
+    )
+
+    yield
+
+    if os.path.exists(TEST_ONNX_FILE):
+        os.remove(TEST_ONNX_FILE)
+    if os.path.exists(TEST_OM_FILE):
+        os.remove(TEST_OM_FILE)
+    if os.path.exists(OUTPUT_PATH):
+        shutil.rmtree(OUTPUT_PATH)
+
+
+def test_default_cmd():
+    app_cmd = "'msit benchmark -om {}'".format(TEST_OM_FILE)
+    cmd = "msit profile --application {} -o {}".format(app_cmd, OUTPUT_PATH)
+    ret = os.system(cmd)
+    assert ret == 0
+
+
+def test_not_default_cmd():
+    app_cmd = "'msit benchmark -om {}'".format(TEST_OM_FILE)
+    cmd = "msit profile --application {} -o {} --model-execution {} --sys-hardware-mem {} \
+	--sys-profiling {} --sys-pid-profiling {} --dvpp-profiling {} --runtime-api {} \
+	--task-time {} --aicpu {}".format(
+        app_cmd, OUTPUT_PATH, "on", "on", "off", "off", "on", "on", "on", "off", "off"
+    )
+    ret = os.system(cmd)
+    assert ret == 0

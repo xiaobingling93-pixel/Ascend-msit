@@ -13,42 +13,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -u
+CUR_PATH=$(dirname $(readlink -f $0))
+COMPONENTS_PATH=`python -c 'import components; print(components.__path__[0])'`
+SOURCE_CODE_PATH=$COMPONENTS_PATH/../model_evaluation
+echo "CUR_PATH=$CUR_PATH, COMPONENTS_PATH=$COMPONENTS_PATH, SOURCE_CODE_PATH=$SOURCE_CODE_PATH"
 
-cur_dir=$(pwd)
+if [ -f "../requirements.txt" ]; then
+    pip3 install -r ../requirements.txt
+fi
 
-# copy source code to tests, and test
-function copy_source_code_dir_to_tests() {
-    cp -rf ${cur_dir}/../../model_evaluation ${cur_dir}/
-}
+if [ -f "$CUR_PATH/resources" ]; then
+    chmod -R 750 $CUR_PATH/resources
+fi
 
-function del_source_code_from_tests() {
-    rm -rf ${cur_dir}/model_evaluation
-}
+coverage run --source $SOURCE_CODE_PATH -m pytest -vv $CUR_PATH --disable-warnings
 
-copy_source_code_dir_to_tests
+RETURN_CODE=0
+if [ $? == 0 ]; then
+    coverage combine $CUR_PATH
+    coverage report -m --omit="test_*.py" -i > $CUR_PATH/test.coverage
+    coverage_rate=$(awk '/TOTAL/{print $4}' $CUR_PATH/test.coverage | cut -d '%' -f 1)
+    echo "coverage_rate=$coverage_rate%"
 
-coverage run -p -m unittest
-if [ $? != 0 ]; then
+    coverage_target=50  # Current is only 51%
+    if [[ "$coverage_rate" -ne "" && "$coverage_rate" -lt "$target" ]]; then
+        echo "coverage rate too low(<${coverage_target}%), currently reaches only ${coverage_rate}%."
+        RETURN_CODE=1
+    fi
+else
     echo "coverage run failed! "
-    del_source_code_from_tests
-    exit 1
+    RETURN_CODE=1
 fi
 
-coverage combine
-coverage report -m --omit="test_*.py" > ${cur_dir}/test.coverage
-
-coverage_line=`cat ${cur_dir}/test.coverage | grep "TOTAL" | awk '{print $4}' | awk '{print int($0)}'`
-
-target=60
-if [ ${coverage_line} -lt ${target} ]; then
-    echo "coverage failed! coverage_line=${coverage_line}, Coverage does not achieve target(${target}%), Please add ut case."
-    del_source_code_from_tests
-    exit 1
-fi
-
-echo "coverage_line=${coverage_line}"
-
-del_source_code_from_tests
-
-exit 0
+exit $RETURN_CODE

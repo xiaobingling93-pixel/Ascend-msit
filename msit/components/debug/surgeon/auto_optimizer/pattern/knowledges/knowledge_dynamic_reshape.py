@@ -164,7 +164,7 @@ class KnowledgeDynamicReshape(KnowledgeBase):
         for j in range(self._dump_num):
             real_dump_path = f'{self._dump_path}{j}'
             if not os.path.exists(real_dump_path):
-                ms_makedirs(real_dump_path, 0o700)
+                ms_makedirs(real_dump_path, mode=0o700)
             dynamic_input = {}
             # generate dynamic input shape
             for axis in dynamic_axes:
