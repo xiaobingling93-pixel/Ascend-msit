@@ -1,9 +1,9 @@
-import pytest
-import torch
-from msit_llm.opcheck.check_case import OpcheckAllGatherOperation
 from unittest.mock import patch
 
-# Mocking the OperationTest class to avoid errors
+import torch
+import pytest
+
+from msit_llm.opcheck.check_case import OpcheckAllGatherOperation
 from mock_operation_test import MockOperationTest
 
 # 使用新的 OperationTest 类替换原始的 OperationTest
@@ -18,7 +18,11 @@ OpcheckAllGatherOperation.__bases__ = (MockOperationTest,)
 def test_golden_calc_given_in_tensors_when_valid_input_then_correct_shape(in_tensors, expected_shape):
     # Arrange
     op = OpcheckAllGatherOperation()
-    op.get_new_in_tensors = lambda: in_tensors
+
+    def get_new_in_tensors():
+        return in_tensors
+
+    op.get_new_in_tensors = get_new_in_tensors
 
     # Act
     if expected_shape is None:

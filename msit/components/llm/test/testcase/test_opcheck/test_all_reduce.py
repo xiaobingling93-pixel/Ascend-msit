@@ -1,9 +1,9 @@
-import pytest
-import torch
-from msit_llm.opcheck.check_case import OpcheckAllReduceOperation
 from unittest.mock import patch
 
-# Mocking the OperationTest class to avoid errors
+import torch
+import pytest
+
+from msit_llm.opcheck.check_case import OpcheckAllReduceOperation
 from mock_operation_test import MockOperationTest
 
 # 使用新的 OperationTest 类替换原始的 OperationTest
@@ -73,7 +73,11 @@ def test_golden_calc_given_all_reduce_type_in_tensors_when_valid_input_then_corr
     # Arrange
     op = OpcheckAllReduceOperation()
     op.op_param = {'allReduceType': all_reduce_type}
-    op.get_new_in_tensors = lambda: in_tensors
+
+    def get_new_in_tensors():
+        return in_tensors
+
+    op.get_new_in_tensors = get_new_in_tensors
 
     # Act
     result = op.golden_calc(None)

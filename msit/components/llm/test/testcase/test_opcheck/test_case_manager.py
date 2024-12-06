@@ -1,7 +1,8 @@
-import unittest
+from unittest.mock import patch
+
 import pytest
 import pandas as pd
-from unittest.mock import patch
+
 from msit_llm.opcheck.case_manager import CaseManager
 from msit_llm.opcheck.check_case import OP_NAME_DICT
 from msit_llm.opcheck.opchecker import NAMEDTUPLE_PRECISION_METRIC
@@ -9,7 +10,8 @@ from msit_llm.opcheck.opchecker import NAMEDTUPLE_PRECISION_METRIC
 
 # Mocking necessary imports and functions
 class MockTestLoader:
-    def getTestCaseNames(self, op):
+    @staticmethod
+    def getTestCaseNames(op):
         return ["test_case_1"]
 
 
@@ -48,17 +50,20 @@ class MockProcess:
 
 
 class MockPool:
-    def Process(self, target, args):
+    @staticmethod
+    def Process(target, args):
         return MockProcess(target, args)
 
 
 class MockManager:
-    def Queue(self):
+    @staticmethod
+    def Queue():
         return MockQueue()
 
 
 class MockTextTestRunner:
-    def run(self, suite):
+    @staticmethod
+    def run(suite):
         return unittest.TextTestResult(None, None, 0)
 
 

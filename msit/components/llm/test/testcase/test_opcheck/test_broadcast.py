@@ -1,9 +1,9 @@
-import pytest
-import torch
-from msit_llm.opcheck.check_case import OpcheckBroadcastOperation
 from unittest.mock import patch
 
-# Mocking the OperationTest class to avoid errors
+import torch
+import pytest
+
+from msit_llm.opcheck.check_case import OpcheckBroadcastOperation
 from mock_operation_test import MockOperationTest
 
 # 使用新的 OperationTest 类替换原始的 OperationTest
