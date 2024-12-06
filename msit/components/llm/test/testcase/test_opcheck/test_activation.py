@@ -1,6 +1,6 @@
-import pytest
 from unittest.mock import patch
 
+import pytest
 import torch
 
 from msit_llm.opcheck.check_case.activation import OpcheckActivationOperation, ActivationType, GeLUMode
