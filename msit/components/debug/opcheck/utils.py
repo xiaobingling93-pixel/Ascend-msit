@@ -13,9 +13,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Sequence
 from math import gcd
 import numpy as np
 
+
+def get(container: Sequence, idx: int, out_of_range=None):
+    """
+    If a container contains only one element, return that element for whatever the idx is
+    :param container: A container
+    :param idx: index
+    :param out_of_range: Out of Range return
+    :return: element
+    """
+    if len(container) == 1:
+        return container[0]
+    else:
+        if abs(idx) >= len(container):
+            if out_of_range:
+                return out_of_range
+            else:
+                return False
+        return container[idx]
+    
 
 def broadcast_to_maxshape(shapes: list):
     """
