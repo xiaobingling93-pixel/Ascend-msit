@@ -69,7 +69,7 @@ class TestSortPlugins(unittest.TestCase):
         from ms_server_profiler.parse import DependencyNotFoundError
         with self.assertRaises(Exception) as context:
             sort_plugins(plugins)
-        self.assertTrue(isinstance(context.exception, DependencyNotFoundError))
+        self.assertIsInstance(context.exception, DependencyNotFoundError)
 
     def test_cycle_detection(self):
         class PluginF(PluginBase):
@@ -86,7 +86,7 @@ class TestSortPlugins(unittest.TestCase):
         from ms_server_profiler.parse import DependencyCycleError
         with self.assertRaises(Exception) as context:
             sort_plugins(plugins)
-        self.assertTrue(isinstance(context.exception, DependencyCycleError))
+        self.assertIsInstance(context.exception, DependencyCycleError)
     
     
 if __name__ == '__main__':
