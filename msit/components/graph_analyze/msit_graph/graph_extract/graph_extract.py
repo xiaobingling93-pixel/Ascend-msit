@@ -26,8 +26,12 @@ import onnx
 from google.protobuf import text_format
 
 from components.utils.log import logger
-from components.utils.file_open_check import ms_open, OpenException, 
-    MAX_SIZE_LIMITE_CONFIG_FILE, MAX_SIZE_LIMITE_NORMAL_FILE
+from components.utils.file_open_check import(
+    ms_open, 
+    OpenException, 
+    MAX_SIZE_LIMITE_CONFIG_FILE, 
+    MAX_SIZE_LIMITE_NORMAL_FILE,
+)
 
 
 class GraphSummary:
@@ -56,19 +60,7 @@ class GraphAnalyze:
         pass
 
     @staticmethod
-    def _append_file_name_suffix(path, suffix):
-        """Appends a suffix to the base name of the file in the given path."""
-        tokens = path.rsplit('.', 1)  # Split the path by the last occurrence of '.'
-        if len(tokens) == 1:
-            # If there is no '.', treat the whole path as the base name
-            return tokens[0] + '_' + suffix
-        else:
-            # If there is an extension, split into base name and extension
-            base_name, extension = tokens
-            return f"{base_name}_{suffix}.{extension}"
-
-    @staticmethod
-    def _load_graph_def_from_pbtxt(path):
+    def load_graph_def_from_pbtxt(path):
         """Loads an ONNX graph definition from a binary protocol buffer file."""
         logger.info(f"Loading {path}, the graph maybe huge, please wait a minute...")
         try:
@@ -89,6 +81,102 @@ class GraphAnalyze:
         except Exception as e:
             logger.error(f"An unexpected error occurred: {e}")
             return None
+
+    @staticmethod
+    def extract_sub_graph(args):
+        """Extracts a sub-graph from the input graph based on specified criteria."""
+        input_path = args.input
+        output_path = args.output
+        if not output_path:
+            output_path = GraphAnalyze._append_file_name_suffix(input_path, "sub")
+
+        logger.info(f"Begin to read in graph from file {input_path}")
+        graph_def = GraphAnalyze.load_graph_def_from_pbtxt(input_path)
+
+        gs = GraphAnalyze._build_graph_summary(graph_def)
+
+        dump_node_names = GraphAnalyze._find_nodes_by_start_names(args, gs)
+        dump_node_names.update(GraphAnalyze._find_nodes_between_start_and_end(gs, args.start_node, args.end_node))
+        dump_node_names.update(GraphAnalyze._find_nodes_by_prefixes(gs, args.name_prefix))
+
+        if not dump_node_names:
+            logger.error("No nodes to dump")
+            return -1
+        GraphAnalyze._generate_graph(gs, dump_node_names, output_path, args.without_leaves)
+        return 0
+
+    @staticmethod
+    def find_nodes_by_type(input_path, node_type=None):
+        """Finds nodes in the graph by their operation type."""
+        logger.info(f"Begin to read in graph from file {input_path}")
+        graph_def = GraphAnalyze.load_graph_def_from_pbtxt(input_path)
+
+        node_types_to_names = {}
+        if node_type is not None:
+            node_type = set(node_type)
+            for node in graph_def.node:
+                if node.op_type in node_type:
+                    node_types_to_names.setdefault(node.op_type, []).append(node.name)
+        for node_type, node_names in node_types_to_names.items():
+            logger.info(f"Node type {node_type}:")
+            node_names.sort()
+            for node_name in node_names:
+                logger.info(f"  {node_name}")
+
+    @staticmethod
+    def strip(input_path, output_path=None):
+        """Strips Cons/ Data Node and Attribute from an ONNX model file."""
+        if not output_path:
+            output_path = GraphAnalyze._append_file_name_suffix(input_path, "sub")
+        logger.info(f"Begin to read from {input_path} and write to {output_path}")
+        
+        try:
+            line_count, drop_count, c_count, drop_c_count = GraphAnalyze._process_file(input_path, output_path)
+        except OpenException as oe:
+            logger.error(f"OpenException occurred: {oe}")
+        except FileNotFoundError as fnf:
+            logger.error(f"File not found: {fnf}")
+        except PermissionError as pe:
+            logger.error(f"Permission error: {pe}")
+        except text_format.ParseError as pe:
+            logger.error(f"Parse error: {pe}")
+        except Exception as e:
+            logger.error(f"An unexpected error occurred: {e}")
+        finally:
+            logger.info(f"Dropped lines count {drop_count}, char size {drop_c_count}; total lines count {line_count}, char size {c_count}")
+
+    @staticmethod
+    def print_graph_stat(input_path):
+        """Prints statistics about the operations in an ONNX graph."""
+        graph_def = GraphAnalyze.load_graph_def_from_pbtxt(input_path)
+
+        op_stat = Counter()
+        
+        def process_node(node):
+            op_stat[node.op_type] += 1
+            for attr in node.attribute:
+                if attr.HasField('g'):  # Check if the attribute has a subgraph
+                    for subnode in attr.g.node:
+                        process_node(subnode)
+        
+        for node in graph_def.node:
+            process_node(node)
+
+        logger.info("Graph stats:")
+        for op, count in sorted(op_stat.items(), key=lambda x: x[0]):
+            logger.info(f"\t{op} = {count}")
+
+     @staticmethod
+    def _append_file_name_suffix(path, suffix):
+        """Appends a suffix to the base name of the file in the given path."""
+        tokens = path.rsplit('.', 1)  # Split the path by the last occurrence of '.'
+        if len(tokens) == 1:
+            # If there is no '.', treat the whole path as the base name
+            return tokens[0] + '_' + suffix
+        else:
+            # If there is an extension, split into base name and extension
+            base_name, extension = tokens
+            return f"{base_name}_{suffix}.{extension}"
 
     @staticmethod
     def _save_graph_def(graph_def, path, as_text=False):
@@ -133,7 +221,7 @@ class GraphAnalyze:
         name, index = name_and_index
         try:
             return int(index), name
-        except ValueError:
+        except ValueError as e:
             logger.error(f"Index part of tensor name {tensor_name} is not an integer")
             raise ValueError(f"Index part of tensor name {tensor_name} is not an integer") from e
 
@@ -386,69 +474,6 @@ class GraphAnalyze:
         return dump_nodes
 
     @staticmethod
-    def extract_sub_graph(args):
-        """Extracts a sub-graph from the input graph based on specified criteria."""
-        input_path = args.input
-        output_path = args.output
-        if not output_path:
-            output_path = GraphAnalyze._append_file_name_suffix(input_path, "sub")
-
-        logger.info(f"Begin to read in graph from file {input_path}")
-        graph_def = GraphAnalyze._load_graph_def_from_pbtxt(input_path)
-
-        gs = GraphAnalyze._build_graph_summary(graph_def)
-
-        dump_node_names = GraphAnalyze._find_nodes_by_start_names(args, gs)
-        dump_node_names.update(GraphAnalyze._find_nodes_between_start_and_end(gs, args.start_node, args.end_node))
-        dump_node_names.update(GraphAnalyze._find_nodes_by_prefixes(gs, args.name_prefix))
-
-        if not dump_node_names:
-            logger.error("No nodes to dump")
-            return -1
-        GraphAnalyze._generate_graph(gs, dump_node_names, output_path, args.without_leaves)
-        return 0
-
-    @staticmethod
-    def find_nodes_by_type(input_path, node_type=None):
-        """Finds nodes in the graph by their operation type."""
-        logger.info(f"Begin to read in graph from file {input_path}")
-        graph_def = GraphAnalyze._load_graph_def_from_pbtxt(input_path)
-
-        node_types_to_names = {}
-        if node_type is not None:
-            node_type = set(node_type)
-            for node in graph_def.node:
-                if node.op_type in node_type:
-                    node_types_to_names.setdefault(node.op_type, []).append(node.name)
-        for node_type, node_names in node_types_to_names.items():
-            logger.info(f"Node type {node_type}:")
-            node_names.sort()
-            for node_name in node_names:
-                logger.info(f"  {node_name}")
-
-    @staticmethod
-    def strip(input_path, output_path=None):
-        """Strips Cons/ Data Node and Attribute from an ONNX model file."""
-        if not output_path:
-            output_path = GraphAnalyze._append_file_name_suffix(input_path, "sub")
-        logger.info(f"Begin to read from {input_path} and write to {output_path}")
-        
-        try:
-            line_count, drop_count, c_count, drop_c_count = GraphAnalyze._process_file(input_path, output_path)
-        except OpenException as oe:
-            logger.error(f"OpenException occurred: {oe}")
-        except FileNotFoundError as fnf:
-            logger.error(f"File not found: {fnf}")
-        except PermissionError as pe:
-            logger.error(f"Permission error: {pe}")
-        except text_format.ParseError as pe:
-            logger.error(f"Parse error: {pe}")
-        except Exception as e:
-            logger.error(f"An unexpected error occurred: {e}")
-        finally:
-            logger.info(f"Dropped lines count {drop_count}, char size {drop_c_count}; total lines count {line_count}, char size {c_count}")
-
-    @staticmethod
     def _process_file(input_path, output_path):
         """
         Processes a subgraph by iterating through its nodes, copying nodes that are not of type
@@ -457,8 +482,8 @@ class GraphAnalyze:
         Args:
             subgraph (onnx.GraphProto): The subgraph to process.
         """
-        graph = _load_graph_def_from_pbtxt(input_path)
-        logging.info(f"\t total node = {len(graph.node)}")
+        graph = GraphAnalyze.load_graph_def_from_pbtxt(input_path)
+        logger.info(f"\t total node = {len(graph.node)}")
 
         out = onnx.GraphProto()
         nodes_copy = []
@@ -491,31 +516,10 @@ class GraphAnalyze:
 
         nodes_copy.sort(key=lambda node: node.name)
         out.node.extend(nodes_copy)
-        logging.info(f"save to {output_path}")
-        logging.info(f"total node = {len(out.node)}")
+        logger.info(f"save to {output_path}")
+        logger.info(f"total node = {len(out.node)}")
 
         # Save graph
         model_def = onnx.helper.make_model(out, producer_name='onnx-subgraph')
         with open(output_path, 'w') as f:
             f.write(text_format.MessageToString(model_def))
-
-    @staticmethod
-    def print_graph_stat(input_path):
-        """Prints statistics about the operations in an ONNX graph."""
-        graph_def = GraphAnalyze._load_graph_def_from_pbtxt(input_path)
-
-        op_stat = Counter()
-        
-        def process_node(node):
-            op_stat[node.op_type] += 1
-            for attr in node.attribute:
-                if attr.HasField('g'):  # Check if the attribute has a subgraph
-                    for subnode in attr.g.node:
-                        process_node(subnode)
-        
-        for node in graph_def.node:
-            process_node(node)
-
-        logger.info("Graph stats:")
-        for op, count in sorted(op_stat.items(), key=lambda x: x[0]):
-            logger.info(f"\t{op} = {count}")
