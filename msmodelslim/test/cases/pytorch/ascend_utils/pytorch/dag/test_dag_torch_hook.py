@@ -167,7 +167,6 @@ def dag_to_search(inputs_of_model):
 
 
 class TestNetworkParse():
-    @staticmethod
     def test_parse_network_given_sample_network_when_any_pass(self, dag):
         # first node:Embedding
         first_node: DagNode = dag.dag_node_list[0]
@@ -222,55 +221,43 @@ class TestNetworkParse():
         assert len(list(node_11th.output_nodes)) == 1
 
         # more...
-    @classmethod
+    
     def test_search_by_class_given_relu_when_any_pass(self, dag):
         assert len(list(dag.search_nodes_by_class(nn.ReLU))) == 3
 
-    @classmethod
     def test_search_by_class_given_conv2d_when_any_pass(self, dag):
         assert len(list(dag.search_nodes_by_class(nn.Conv2d))) == 2
 
-    @classmethod
     def test_search_by_class_given_linear_when_any_pass(self, dag):
         assert len(list(dag.search_nodes_by_class(nn.Linear))) == 4
 
-    @classmethod
     def test_search_by_class_given_pool2d_when_any_pass(self, dag):
         assert len(list(dag.search_nodes_by_class(nn.AdaptiveAvgPool2d))) == 1
 
-    @staticmethod
     def test_search_by_op_type_given_relu_when_any_pass(self, dag):
         assert len(list(dag.search_nodes_by_op_type("ReLU"))) == 3
 
-    @staticmethod
     def test_search_by_op_type_given_conv2d_when_any_pass(self, dag):
         assert len(list(dag.search_nodes_by_op_type("Conv2d"))) == 2
 
-    @staticmethod
     def test_search_by_op_type_given_linear_when_any_pass(self, dag):
         assert len(list(dag.search_nodes_by_op_type("Linear"))) == 4
 
-    @staticmethod
     def test_search_by_op_type_given_pool2d_when_any_pass(self, dag):
         assert len(list(dag.search_nodes_by_op_type("AdaptiveAvgPool2d"))) == 1
 
-    @staticmethod
     def test_get_node_by_name_type_given_embedding_0_when_any_pass(self, dag):
         assert isinstance(dag.get_node_by_name("embedding.0").node, nn.Embedding)
 
-    @staticmethod
     def test_get_node_by_name_type_given_embedding_2_when_any_pass(self, dag):
         assert isinstance(dag.get_node_by_name("embedding.1").node, nn.Linear)
 
-    @staticmethod
     def test_get_node_by_name_type_given_embedding_3_when_any_pass(self, dag):
         assert isinstance(dag.get_node_by_name("embedding.2").node, nn.ReLU)
 
-    @staticmethod
     def test_get_node_by_name_type_given_classifier_0_when_any_pass(self, dag):
         assert isinstance(dag.get_node_by_name("classifier.0").node, nn.Linear)
 
-    @staticmethod
     def test_get_node_by_name_type_given_classifier_1_when_any_pass(self, dag):
         assert isinstance(dag.get_node_by_name("classifier.1").node, nn.Linear)
 
