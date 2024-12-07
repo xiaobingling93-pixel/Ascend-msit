@@ -1,8 +1,8 @@
 import pytest
+from unittest.mock import patch
 import torch
 import torch_npu
 from msit_llm.opcheck.check_case.self_attention import OpcheckUnpadSelfAttentionOperation, CalcType, KvCacheCfg, MaskType, KernelType, ClampType
-from unittest.mock import patch
 
 # Mocking the OperationTest class to avoid errors
 from mock_operation_test import MockOperationTest

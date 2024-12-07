@@ -7,11 +7,6 @@ from mock_operation_test import MockOperationTest
 
 OpcheckRepeatOperation.__bases__ = (MockOperationTest,)
 
-@pytest.fixture(scope="module", autouse=True)
-def setup_and_teardown():
-    # Setup
-    yield
-    # Teardown
 
 def test_golden_calc_given_valid_multiples_when_1d_tensor_then_correct_result():
     # Arrange
