@@ -159,3 +159,244 @@ class TestFuncWrapper:
         result = validate_params(**check_rules)
         assert isinstance(result, FuncWrapper)
         assert result.check_rules == check_rules
+import pytest
+from unittest.mock import MagicMock, patch
+import logging
+
+from components.utils.check.func_wrapper import validate_params, FuncWrapper
+from components.utils.check.number_checker import NumberChecker
+from components.utils.check.dict_checker import DictChecker
+from components.utils.check.string_checker import StringChecker
+
+
+@pytest.mark.parametrize("a_value, b_value, value", [
+    ("55", {"a": 8}, ValueError),
+    (3, ["a", 8], ValueError),
+])
+def test_func_wrapper_to_raise_when_fail(a_value, b_value, value):
+    @validate_params(a=NumberChecker().is_int(), b=DictChecker().is_dict()).to_raise()
+    def basic_func(a: int, b: dict):
+        return f"{a} is an int and {b} is a dict"
+
+    with pytest.raises(value):
+        basic_func(a_value, b_value)
+
+
+@pytest.mark.parametrize("a_value, b_value, value", [
+    (3, {"a": 8}, "3 is an int and {\'a\': 8} is a dict"),
+])
+def test_func_wrapper_to_raise_when_pass(a_value, b_value, value):
+    @validate_params(a=NumberChecker().is_int(), b=DictChecker().is_dict()).to_raise()
+    def basic_func(a: int, b: dict):
+        return f"{a} is an int and {b} is a dict"
+
+    res = basic_func(a_value, b_value)
+    assert res == value
+
+
+@pytest.mark.parametrize("a_value, b_value, value", [
+    (3, {"a": 8}, "3 is an int and {\'a\': 8} is a dict"),
+    ("55", {"a": 8}, False),
+    (3, ["a", 8], False),
+])
+def test_func_wrapper_to_return(a_value, b_value, value):
+    @validate_params(a=NumberChecker().is_int(), b=DictChecker().is_dict()).to_return(False)
+    def basic_func(a: int, b: dict):
+        return f"{a} is an int and {b} is a dict"
+
+    res = basic_func(a_value, b_value)
+    assert res == value
+
+
+@pytest.mark.parametrize("a_value, b_value, expected_exception", [
+    (None, {"a": 8}, ValueError),  # Test with None
+    ("100", {"a": 8}, ValueError),  # Test with string that could be an int
+    # (0, {}, ValueError),           # Test with boundary numeric value and empty dict
+    (999999999, {"a": 8}, None),  # Test with large int
+])
+def test_func_wrapper_to_raise_various_inputs(a_value, b_value, expected_exception):
+    @validate_params(a=NumberChecker().is_int(), b=DictChecker().is_dict()).to_raise()
+    def basic_func(a: int, b: dict):
+        return f"{a} is an int and {b} is a dict"
+
+    if expected_exception:
+        with pytest.raises(expected_exception):
+            basic_func(a_value, b_value)
+    else:
+        assert basic_func(a_value, b_value) == f"{a_value} is an int and {b_value} is a dict"
+
+
+@pytest.mark.parametrize("a_value, b_value, expected_output", [
+    # (0, {}, False),  # Test with zero and empty dict
+    (-1, None, False),  # Test with negative number and None
+])
+def test_func_wrapper_to_return_empty_inputs(a_value, b_value, expected_output):
+    @validate_params(a=NumberChecker().is_int(), b=DictChecker().is_dict()).to_return(False)
+    def basic_func(a: int, b: dict):
+        return f"{a} is an int and {b} is a dict"
+
+    res = basic_func(a_value, b_value)
+    assert res == expected_output
+
+
+def test_func_wrapper_no_rules():
+    @validate_params().to_return("No checks")
+    def basic_func():
+        return "No checks"
+
+    assert basic_func() == "No checks"
+
+
+@pytest.mark.parametrize("b_value, expected_output", [
+    ({"a": {"nested": 123}}, "3 is an int and {'a': {'nested': 123}} is a dict"),
+    # ({"a": {"nested": None}}, False),
+])
+def test_func_wrapper_nested_dicts(b_value, expected_output):
+    @validate_params(a=NumberChecker().is_int(), b=DictChecker().is_dict()).to_return(False)
+    def basic_func(a: int, b: dict):
+        return f"{a} is an int and {b} is a dict"
+
+    res = basic_func(3, b_value)
+    assert res == expected_output
+
+
+def test_func_wrapper_valid_params():
+    mock_number_checker = MagicMock(spec=NumberChecker)
+    mock_number_checker.check.return_value = True
+
+    mock_string_checker = MagicMock(spec=StringChecker)
+    mock_string_checker.check.return_value = True
+
+    check_rules = {
+        'age': mock_number_checker,
+        'name': mock_string_checker
+    }
+
+    @validate_params(**check_rules).to_return(ret_value="Success")
+    def sample_function(age, name):
+        return "Success"
+
+    result = sample_function(age=30, name="Alice")
+
+    assert result == "Success"
+    mock_number_checker.check.assert_called_once_with(30, will_raise=False)
+    mock_string_checker.check.assert_called_once_with("Alice", will_raise=False)
+
+
+def test_func_wrapper_invalid_params_return():
+    # Arrange
+    mock_number_checker = MagicMock(spec=NumberChecker)
+    mock_number_checker.check.return_value = False
+
+    check_rules = {
+        'age': mock_number_checker
+    }
+
+    @validate_params(**check_rules).to_return(ret_value="Invalid Age")
+    def sample_function(age):
+        return "Success"
+
+    result = sample_function(age=-1)
+
+    assert result == "Invalid Age"
+    mock_number_checker.check.assert_called_once_with(-1, will_raise=False)
+
+
+def test_func_wrapper_invalid_params_raise():
+    mock_number_checker = MagicMock(spec=NumberChecker)
+    mock_number_checker.check.return_value = False
+
+    check_rules = {
+        'age': mock_number_checker
+    }
+
+    @validate_params(**check_rules).to_raise()
+    def sample_function(age):
+        return "Success"
+
+    sample_function(age=-1)
+    mock_number_checker.check.assert_called_once_with(-1, will_raise=True)
+
+
+def test_func_wrapper_with_logger():
+    # Arrange
+    mock_number_checker = MagicMock(spec=NumberChecker)
+    mock_number_checker.check.return_value = False
+
+    check_rules = {
+        'age': mock_number_checker
+    }
+
+    mock_logger = MagicMock(spec=logging.Logger)
+
+    @validate_params(**check_rules).to_return(ret_value="Invalid Age", logger=mock_logger)
+    def sample_function(age):
+        return "Success"
+
+    result = sample_function(age=-1)
+
+    assert result == "Invalid Age"
+    mock_number_checker.check.assert_called_once_with(-1, will_raise=False)
+    mock_logger.error.assert_called_once_with("(False, 'age is invalid. False')")
+
+
+def test_func_wrapper_var_keyword_args():
+    mock_number_checker = MagicMock(spec=NumberChecker)
+    mock_number_checker.check.return_value = True
+
+    mock_dict_checker = MagicMock(spec=DictChecker)
+    mock_dict_checker.check.return_value = False
+
+    check_rules = {
+        'age': mock_number_checker,
+        'kwargs': mock_dict_checker
+    }
+
+    @validate_params(**check_rules).to_return(ret_value="Invalid Kwargs")
+    def sample_function(age, **kwargs):
+        return "Success"
+
+    result = sample_function(age=25, extra="data")
+
+    assert result == "Invalid Kwargs"
+    mock_number_checker.check.assert_called_once_with(25, will_raise=False)
+    mock_dict_checker.check.assert_called_once_with("data", will_raise=False)
+
+
+def test_create_wrapper_no_kwargs():
+    mock_number_checker = MagicMock(spec=NumberChecker)
+    mock_number_checker.check.return_value = True
+
+    check_rules = {
+        'age': mock_number_checker
+    }
+
+    @validate_params(**check_rules).to_return(ret_value="Valid")
+    def sample_function(age):
+        return "Valid"
+
+    result = sample_function(40)
+
+    assert result == "Valid"
+    mock_number_checker.check.assert_called_once_with(40, will_raise=False)
+
+
+def test_multiple_parameters():
+    mock_number_checker = MagicMock(spec=NumberChecker)
+    mock_number_checker.check.side_effect = [True, False]
+
+    check_rules = {
+        'age': mock_number_checker,
+        'score': mock_number_checker
+    }
+
+    @validate_params(**check_rules).to_return(ret_value="Invalid Score")
+    def sample_function(age, score):
+        return "Success"
+
+    result = sample_function(age=25, score=-10)
+
+    assert result == "Invalid Score"
+    assert mock_number_checker.check.call_count == 2
+    mock_number_checker.check.assert_any_call(25, will_raise=False)
+    mock_number_checker.check.assert_any_call(-10, will_raise=False)
