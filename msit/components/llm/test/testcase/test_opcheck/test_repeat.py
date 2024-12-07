@@ -66,13 +66,14 @@ def test_test_given_valid_multiples_when_execute_then_no_error():
     op = OpcheckRepeatOperation()
     op.op_param = {"multiples": (2,)}
 
-    def mock_validate_param():
+    def mock_validate_param(*args, **kwargs):
         True
 
     op.validate_param = mock_validate_param
 
     def mock_execute():
         pass
+
     op.execute = mock_execute
 
     # Act
@@ -86,8 +87,9 @@ def test_test_given_invalid_multiples_when_execute_then_return():
     op = OpcheckRepeatOperation()
     op.op_param = {"multiples": None}
 
-    def mock_validate_param():
+    def mock_validate_param(*args, **kwargs):
         False
+
     op.validate_param = mock_validate_param
 
     # Act
