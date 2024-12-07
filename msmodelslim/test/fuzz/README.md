@@ -25,5 +25,3 @@ pip3 install atheris coverage
 - 执行完毕后的结果文件包括：
   - `automl_fuzz_test_save_path` 测试过程中产生的临时文件，没有删除，用于检查实际生成的文件名是否合法
   - `automl_fuzz_coverage` 测试覆盖率结果
-## 详细解释以及样例编写
-- 参照 Wiki [使用 Atheris 进行 Python fuzz 测试](http://3ms.huawei.com/hi/group/3225441/wiki_7210351.html)
