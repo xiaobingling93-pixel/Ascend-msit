@@ -1,10 +1,22 @@
+# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import unittest
 from unittest.mock import patch, MagicMock
 
-from auto_optimizer.common.utils import meet_precision
-from auto_optimizer.pattern.knowledges.big_kernel.knowledge_big_kernel import KnowledgeBigKernel
-from auto_optimizer.graph_refactor.interface.base_graph import BaseGraph
 from auto_optimizer import KnowledgeFactory
+from auto_optimizer.graph_refactor.interface.base_graph import BaseGraph
 from auto_optimizer.graph_optimizer.optimizer import GraphOptimizer, InferTestConfig
 
 
@@ -93,7 +105,7 @@ class TestOptimize(unittest.TestCase):
         mock_knowledge_base.post_process.assert_called_once_with(mock_base_graph)
         
     @patch('auto_optimizer.graph_optimizer.GraphOptimizer.optimize')
-    def test_apply_knowledges(self, mock_optimize):
+    def test_apply_knowledges_with_graph(self, mock_optimize):
         mock_optimize.return_value = True
         graph, applied_knowledges = self.optimizer.apply_knowledges(self.graph)
         self.assertIsInstance(graph, BaseGraph)
