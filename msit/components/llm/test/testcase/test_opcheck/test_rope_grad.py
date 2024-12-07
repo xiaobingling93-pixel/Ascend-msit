@@ -5,12 +5,6 @@ from msit_llm.opcheck.check_case.rope_grad import OpcheckRopeGradOperation
 
 OpcheckRopeGradOperation.__bases__ = (MockOperationTest,)
 
-@pytest.fixture(scope="module", autouse=True)
-def setup_and_teardown():
-    # Setup
-    yield
-    # Teardown
-
 def test_golden_calc_given_empty_in_tensors_when_execution_then_raise_exception():
     # Arrange
     op = OpcheckRopeGradOperation()

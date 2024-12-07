@@ -6,11 +6,6 @@ from mock_operation_test import MockOperationTest
 
 
 OpcheckUnpadRopeOperation.__bases__ = (MockOperationTest,)
-@pytest.fixture(scope="module", autouse=True)
-def setup_and_teardown():
-    # Setup
-    yield
-    # Teardown
 
 def test_rotate_half_given_valid_input_when_even_dim_then_correct_output():
     # Arrange
