@@ -1,8 +1,12 @@
-import numpy as np
+# 标准库
 import pytest
+
+# 第三方库
+import numpy as np
 import torch
 import torch.nn as nn
 
+# 应用程序自定义模块
 from ascend_utils.core.dag.dag import DirectedAcyclicGraph
 from ascend_utils.core.dag.dag_node import DagNode
 from ascend_utils.pytorch.dag.dag_torch_hook import DagTorchHook
@@ -172,7 +176,7 @@ class TestNetworkParse():
 
         # 2th node : Linear
         node_2th = next(first_node.output_nodes)
-        assert type(node_2th.node) == nn.Linear
+        assert isinstance(node_2th.node, nn.Linear)
         assert list(node_2th.input_nodes) == [first_node]
         assert len(list(node_2th.output_nodes)) == 1
 
@@ -281,14 +285,14 @@ class TestNetworkParse():
 
     def test_get_node_by_name_prefix_given_embedding_when_any_pass(self, dag):
         gen_embedding = dag.get_nodes_by_name_prefix("emdedding.")
-        assert type(next(gen_embedding).node) == nn.Embedding
-        assert type(next(gen_embedding).node) == nn.Linear
-        assert type(next(gen_embedding).node) == nn.ReLU
+        assert isinstance(next(gen_embedding).node, nn.Embedding)
+        assert isinstance(next(gen_embedding).node, nn.Linear)
+        assert isinstance(next(gen_embedding).node, nn.ReLU)
 
     def test_search_by_name_prefix_given_feature_when_any_pass(self, dag):
         gen_feature = dag.get_nodes_by_name_prefix("feature.")
-        assert type(next(gen_feature).node) == nn.Conv2d
-        assert type(next(gen_feature).node) == nn.ReLU
+        assert isinstance(next(gen_feature).node, nn.Conv2d)
+        assert isinstance(next(gen_feature).node, nn.ReLU)
 
 
 class TestNetworkModify():
