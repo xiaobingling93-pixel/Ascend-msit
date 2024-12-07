@@ -77,8 +77,8 @@ class TestUtils(unittest.TestCase):
     def test_get_config_attr_given_config_when_attr_valid_then_return_sub_attr(self):
         mock_config = MagicMock()
         mock_config.text_config = "sub_config_value"
-        CONFIG_ATTR_CANDIDATES = {"text_config": ["text_config"]}
-        with patch("msit_llm.transform.torch_to_atb_python.env.CONFIG_ATTR_CANDIDATES", CONFIG_ATTR_CANDIDATES):
+        config_candidate = {"text_config": ["text_config"]}
+        with patch("msit_llm.transform.torch_to_atb_python.env.CONFIG_ATTR_CANDIDATES", config_candidate):
             result = get_config_attr(mock_config, "text_config")
             self.assertEqual(result, "sub_config_value")
 
