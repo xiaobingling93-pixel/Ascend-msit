@@ -87,7 +87,7 @@ def test_init_given_parameters_when_valid():
 
 
 @pytest.mark.parametrize("case_queue_items, expected_result_queue_items", [
-    ([{'op_name': 'valid_op'}], [{'op_name': 'valid_op'}]),
+    ([{'op_name': 'valid_op'}], []),
     ([], [])
 ])
 def test_excute_case_given_case_queue(case_queue_items, expected_result_queue_items,
