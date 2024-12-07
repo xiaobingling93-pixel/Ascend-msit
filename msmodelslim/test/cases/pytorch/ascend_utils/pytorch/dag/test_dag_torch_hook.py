@@ -6,6 +6,7 @@ import torch.nn as nn
 from ascend_utils.core.dag.dag import DirectedAcyclicGraph
 from ascend_utils.core.dag.dag_node import DagNode
 from ascend_utils.pytorch.dag.dag_torch_hook import DagTorchHook
+
 from test.resources.sample_net_torch import LrdSampleNetwork
 
 
@@ -162,10 +163,11 @@ def dag_to_search(inputs_of_model):
 
 
 class TestNetworkParse():
+    @staticmethod
     def test_parse_network_given_sample_network_when_any_pass(self, dag):
         # first node:Embedding
         first_node: DagNode = dag.dag_node_list[0]
-        assert type(first_node.node) == nn.Embedding
+        assert isinstance(first_node.node, nn.Embedding)
         assert len(list(first_node.output_nodes)) == 1
 
         # 2th node : Linear
@@ -176,7 +178,7 @@ class TestNetworkParse():
 
         # 3th node : ReLU
         node_3th = next(node_2th.output_nodes)
-        assert type(node_3th.node) == nn.ReLU
+        assert isinstance(node_3th.node, nn.ReLU)
         assert list(node_3th.input_nodes) == [node_2th]
         assert len(list(node_3th.output_nodes)) == 1
 
@@ -188,7 +190,7 @@ class TestNetworkParse():
 
         # 5th node : conv2d
         node_5th = next(node_4th.output_nodes)
-        assert type(node_5th.node) == nn.Conv2d
+        assert isinstance(node_5th.node, nn.Conv2d)
         assert list(node_5th.input_nodes) == [node_4th]
         assert len(list(node_5th.output_nodes)) == 1
 
@@ -205,7 +207,7 @@ class TestNetworkParse():
 
         # 10th node : AdaptiveAvgPool2d
         node_10th = next(node_9th.output_nodes)
-        assert type(node_10th.node) == nn.AdaptiveAvgPool2d
+        assert isinstance(node_10th.node, nn.AdaptiveAvgPool2d)
         assert list(node_10th.input_nodes) == [node_9th]
         assert len(list(node_10th.output_nodes)) == 1
 
@@ -216,54 +218,66 @@ class TestNetworkParse():
         assert len(list(node_11th.output_nodes)) == 1
 
         # more...
-
+    @classmethod
     def test_search_by_class_given_relu_when_any_pass(self, dag):
         assert len(list(dag.search_nodes_by_class(nn.ReLU))) == 3
 
+    @classmethod
     def test_search_by_class_given_conv2d_when_any_pass(self, dag):
         assert len(list(dag.search_nodes_by_class(nn.Conv2d))) == 2
 
+    @classmethod
     def test_search_by_class_given_linear_when_any_pass(self, dag):
         assert len(list(dag.search_nodes_by_class(nn.Linear))) == 4
 
+    @classmethod
     def test_search_by_class_given_pool2d_when_any_pass(self, dag):
         assert len(list(dag.search_nodes_by_class(nn.AdaptiveAvgPool2d))) == 1
 
+    @staticmethod
     def test_search_by_op_type_given_relu_when_any_pass(self, dag):
         assert len(list(dag.search_nodes_by_op_type("ReLU"))) == 3
 
+    @staticmethod
     def test_search_by_op_type_given_conv2d_when_any_pass(self, dag):
         assert len(list(dag.search_nodes_by_op_type("Conv2d"))) == 2
 
+    @staticmethod
     def test_search_by_op_type_given_linear_when_any_pass(self, dag):
         assert len(list(dag.search_nodes_by_op_type("Linear"))) == 4
 
+    @staticmethod
     def test_search_by_op_type_given_pool2d_when_any_pass(self, dag):
         assert len(list(dag.search_nodes_by_op_type("AdaptiveAvgPool2d"))) == 1
 
+    @staticmethod
     def test_get_node_by_name_type_given_embedding_0_when_any_pass(self, dag):
-        assert type(dag.get_node_by_name("embedding.0").node) == nn.Embedding
+        assert isinstance(dag.get_node_by_name("embedding.0").node, nn.Embedding)
 
+    @staticmethod
     def test_get_node_by_name_type_given_embedding_2_when_any_pass(self, dag):
-        assert type(dag.get_node_by_name("embedding.1").node) == nn.Linear
+        assert isinstance(dag.get_node_by_name("embedding.1").node, nn.Linear)
 
+    @staticmethod
     def test_get_node_by_name_type_given_embedding_3_when_any_pass(self, dag):
-        assert type(dag.get_node_by_name("embedding.2").node) == nn.ReLU
+        assert isinstance(dag.get_node_by_name("embedding.2").node, nn.ReLU)
 
+    @staticmethod
     def test_get_node_by_name_type_given_classifier_0_when_any_pass(self, dag):
-        assert type(dag.get_node_by_name("classifier.0").node) == nn.Linear
+        assert isinstance(dag.get_node_by_name("classifier.0").node, nn.Linear)
 
+    @staticmethod
     def test_get_node_by_name_type_given_classifier_1_when_any_pass(self, dag):
-        assert type(dag.get_node_by_name("classifier.1").node) == nn.Linear
+        assert isinstance(dag.get_node_by_name("classifier.1").node, nn.Linear)
 
     def test_get_node_by_name_type_given_feature_0_when_any_pass(self, dag):
-        assert type(dag.get_node_by_name("feature.0").node) == nn.Conv2d
+        assert isinstance(dag.get_node_by_name("feature.0").node, nn.Conv2d)
 
     def test_get_node_by_name_type_given_feature_1_when_any_pass(self, dag):
-        assert type(dag.get_node_by_name("feature.1").node) == nn.ReLU
+        assert isinstance(dag.get_node_by_name("feature.1").node, nn.ReLU)
 
     def test_get_node_by_name_type_given_pool_when_any_pass(self, dag):
-        assert type(dag.get_node_by_name("pool").node) == nn.AdaptiveAvgPool2d
+        assert isinstance(dag.get_node_by_name("pool").node, nn.AdaptiveAvgPool2d)
 
     def test_get_node_by_name_prefix_given_embedding_when_any_pass(self, dag):
         gen_embedding = dag.get_nodes_by_name_prefix("emdedding.")
