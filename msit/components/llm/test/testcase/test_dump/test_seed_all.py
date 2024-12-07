@@ -18,8 +18,8 @@ def test_same_seed_same_output():
     """Test that model produces the same output for the same seed."""
     config = LlamaConfig()
     config.num_hidden_layers = 2
-    config.hidden_size = 1024
-    config.intermediate_size = 4096 # smaller
+    config.hidden_size = 256
+    config.intermediate_size = 1024  # smaller
 
     output1 = get_moder_output(seed=1, config=config)
     output2 = get_moder_output(seed=1, config=config)
@@ -31,8 +31,8 @@ def test_different_seed_different_output():
     """Test that model produces the different output for the different seeds."""
     config = LlamaConfig()
     config.num_hidden_layers = 2
-    config.hidden_size = 1024
-    config.intermediate_size = 4096 # smaller
+    config.hidden_size = 256
+    config.intermediate_size = 1024  # smaller
 
     output1 = get_moder_output(seed=1, config=config)
     output2 = get_moder_output(seed=2, config=config)
@@ -44,10 +44,9 @@ def test_invalid_seed():
     """Test that an invalid seed raises an appropriate error."""
     config = LlamaConfig()
     config.num_hidden_layers = 2
-    config.hidden_size = 1024
-    config.intermediate_size = 4096 # smaller
+    config.hidden_size = 256
+    config.intermediate_size = 1024  # smaller
 
     # Test non-integer seed
     with pytest.raises(argparse.ArgumentTypeError):
-        seed_all(seed='invalid_seed')
-    
+        seed_all(seed="invalid_seed")

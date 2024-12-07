@@ -54,7 +54,7 @@ def check_dir(output_dir):
 
     else:
         logger.warning("Specified directory does not exist. Trying to create...")
-        ms_makedirs(output_dir, 0o750, exist_ok=True)
+        ms_makedirs(output_dir, mode=0o750, exist_ok=True)
 
 
 class CaseFilter(object):

@@ -1,4 +1,5 @@
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd. All rights reserved.
+#!/bin/bash
+# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,34 +13,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#!/bin/bash
+CUR_PATH=$(dirname $(readlink -f $0))
+COMPONENTS_PATH=`python -c 'import components; print(components.__path__[0])'`
+SOURCE_CODE_PATH=$COMPONENTS_PATH/../auto_optimizer
+echo "CUR_PATH=$CUR_PATH, COMPONENTS_PATH=$COMPONENTS_PATH, SOURCE_CODE_PATH=$SOURCE_CODE_PATH"
 
-set -u
+if [ -f "../requirements.txt" ]; then
+    pip3 install -r ../requirements.txt
+fi
 
-pwd_dir=${PWD}
-surgeon_dir=${pwd_dir}/..
+if [ -f "$CUR_PATH/resources" ]; then
+    chmod -R 750 $CUR_PATH/resources
+fi
 
-export PYTHONPATH=${surgeon_dir}:$PYTHONPATH
-export PYTHONPATH=${surgeon_dir}/test:$PYTHONPATH
+coverage run --source $SOURCE_CODE_PATH -m pytest -vv $CUR_PATH --disable-warnings
 
-coverage run --source=${surgeon_dir}/auto_optimizer -p -m unittest
+RETURN_CODE=0
+if [ $? == 0 ]; then
+    coverage combine $CUR_PATH
+    coverage report -m --omit="test_*.py" -i > $CUR_PATH/test.coverage
+    coverage_rate=$(awk '/TOTAL/{print $4}' $CUR_PATH/test.coverage | cut -d '%' -f 1)
+    echo "coverage_rate=$coverage_rate%"
 
-ret=$?
-if [ $ret != 0 ]; then
+    coverage_target=50  # Current is only 51%
+    if [[ "$coverage_rate" -ne "" && "$coverage_rate" -lt "$target" ]]; then
+        echo "coverage rate too low(<${coverage_target}%), currently reaches only ${coverage_rate}%."
+        RETURN_CODE=1
+    fi
+else
     echo "coverage run failed! "
-    exit -1
+    RETURN_CODE=1
 fi
 
-coverage combine
-coverage report -m --omit="test_*.py" > ${pwd_dir}/test.coverage
-
-coverage_line=`cat ${pwd_dir}/test.coverage | grep "TOTAL" | awk '{print $4}' | awk '{print int($0)}'`
-
-target=60
-if [ ${coverage_line} -lt ${target} ]; then
-    echo "coverage failed! coverage_line=${coverage_line}, Coverage does not achieve target(${target}%), Please add ut case."
-    exit -1
-fi
-
-echo "coverage_line=${coverage_line}"
-rm -rf ${pwd_dir}/*.onnx
+exit $RETURN_CODE

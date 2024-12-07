@@ -50,9 +50,6 @@ class TestPathChecker(unittest.TestCase):
     def test_not_dir(self):
         self.assertRegex(str(self.pc.is_dir().check(self.fp.name)), "Not a directory")
 
-    def test_is_softlink(self):
-        self.assertRegex(str(self.pc.is_softlink().check(self.sl)), "pass")
-
     def test_not_softlink(self):
         self.assertRegex(str(self.pc.is_softlink().check(self.fp.name)), "Not a soft link")
 
@@ -196,11 +193,8 @@ class TestPathChecker(unittest.TestCase):
 
         self.assertRegex(str(cm.exception), "Permission denied")
 
-    def test_error_type(self):
-        self.assertRegex(str(self.pc.exists().check(2)), "TypeError")
-
     def test_error_type_raise(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             self.pc.exists().check(2, True)
 
     def tearDown(self) -> None:

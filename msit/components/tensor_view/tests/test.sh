@@ -15,7 +15,7 @@
 
 CUR_PATH=$(dirname $(readlink -f $0))
 COMPONENTS_PATH=`python -c 'import components; print(components.__path__[0])'`
-SOURCE_CODE_PATH=$COMPONENTS_PATH/../model_convert
+SOURCE_CODE_PATH=$COMPONENTS_PATH/tensor_view
 echo "CUR_PATH=$CUR_PATH, COMPONENTS_PATH=$COMPONENTS_PATH, SOURCE_CODE_PATH=$SOURCE_CODE_PATH"
 
 if [ -f "../requirements.txt" ]; then
@@ -26,7 +26,7 @@ if [ -f "$CUR_PATH/resources" ]; then
     chmod -R 750 $CUR_PATH/resources
 fi
 
-coverage run --source $SOURCE_CODE_PATH -m pytest -vv $CUR_PATH/testcase --disable-warnings
+coverage run --source $SOURCE_CODE_PATH -m pytest -vv $CUR_PATH --disable-warnings
 
 RETURN_CODE=0
 if [ $? == 0 ]; then

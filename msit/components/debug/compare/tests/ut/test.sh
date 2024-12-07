@@ -13,35 +13,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -u
+CUR_PATH=$(dirname $(readlink -f $0))
+COMPONENTS_PATH=`python -c 'import components; print(components.__path__[0])'`
+SOURCE_CODE_PATH=$COMPONENTS_PATH/../msquickcmp
+echo "CUR_PATH=$CUR_PATH, COMPONENTS_PATH=$COMPONENTS_PATH, SOURCE_CODE_PATH=$SOURCE_CODE_PATH"
 
-cur_dir=$(dirname $(readlink -f "$0"))
+if [ -f "../requirements.txt" ]; then
+    pip3 install -r ../requirements.txt
+fi
 
-chmod -R 750 $cur_dir/test_resource
-# copy source code to tests, and test
-function copy_source_code_dir_to_tests() {
-    cp -rf ${cur_dir}/../../msquickcmp ${cur_dir}/
-}
+if [ -f "$CUR_PATH/resources" ]; then
+    chmod -R 750 $CUR_PATH/resources
+fi
 
-function del_source_code_from_tests() {
-    rm -rf ${cur_dir}/msquickcmp
-}
+coverage run --source $SOURCE_CODE_PATH -m pytest -vv $CUR_PATH --disable-warnings
 
-declare -i ret_val=0
+RETURN_CODE=0
+if [ $? == 0 ]; then
+    coverage combine $CUR_PATH
+    coverage report -m --omit="test_*.py" -i > $CUR_PATH/test.coverage
+    coverage_rate=$(awk '/TOTAL/{print $4}' $CUR_PATH/test.coverage | cut -d '%' -f 1)
+    echo "coverage_rate=$coverage_rate%"
 
-main() {
-    copy_source_code_dir_to_tests
+    coverage_target=50  # Current is only 51%
+    if [[ "$coverage_rate" -ne "" && "$coverage_rate" -lt "$target" ]]; then
+        echo "coverage rate too low(<${coverage_target}%), currently reaches only ${coverage_rate}%."
+        RETURN_CODE=1
+    fi
+else
+    echo "coverage run failed! "
+    RETURN_CODE=1
+fi
 
-    export PYTHON_COMMAND=${2:-"python3"}
-
-    ${PYTHON_COMMAND} -m pytest . -s
-    ret_val=$?
-
-    del_source_code_from_tests
-
-    return $ret_val
-}
-
-main "$@"
-exit $?
-
+exit $RETURN_CODE

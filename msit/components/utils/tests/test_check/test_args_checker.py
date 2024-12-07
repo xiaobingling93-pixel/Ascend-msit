@@ -12,6 +12,7 @@
 # limitations under the License.
 
 import pytest
+from argparse import ArgumentTypeError
 
 from components.utils.check import Rule, ArgsChecker
 
@@ -19,5 +20,5 @@ from components.utils.check import Rule, ArgsChecker
 def test_args_checker_given_type_checker_when_any_pass():
     args_checker = ArgsChecker(Rule.to_int())
     assert args_checker("12") == 12
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(ArgumentTypeError):
         args_checker("15.2")

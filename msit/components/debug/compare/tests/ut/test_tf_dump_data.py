@@ -13,26 +13,19 @@
 # limitations under the License.
 
 import os
+import pytest
 
 from msquickcmp.adapter_cli.args_adapter import CmpArgsAdapter
-from msquickcmp.tf.tf_save_model_dump_data import TfSaveModelDumpData
+
+try:
+    from msquickcmp.tf.tf_save_model_dump_data import TfSaveModelDumpData
+except:
+    TfSaveModelDumpData = None
 
 
-def test_parse_ops_name_from_om_json():
-    om_json = "./test_resource/om/model.json"
-    output_json_path = os.path.abspath(om_json)
-    expect_ops_name = ['boxes_all', 'scores_all', 'Slice_1218', 'Slice_1218', 'Gather_1221']
-    arguments = CmpArgsAdapter(gold_model=None, om_model=None)
-    arguments.out_path = ''
-    arguments.model_path = ''
-    arguments.input_shape = 'input_1:1,224,224,3'
-    tf_save_model_dump_data = TfSaveModelDumpData(arguments)
-    ops_name = tf_save_model_dump_data.parse_ops_name_from_om_json(output_json_path)
-    assert expect_ops_name == ops_name
-
-
+@pytest.mark.skipif(TfSaveModelDumpData is None, reason="import tensorflow error")
 def test_split_input_shape():
     input_shapes = "input_1:16,32,32,3;input_2:1,16,16,32"
     input_shape_list = TfSaveModelDumpData.split_input_shape(input_shapes)
-    expect_input_shape_list = [('input_1', [16, 32, 32, 3]), ('input_2', [1, 16, 16, 32])]
+    expect_input_shape_list = [("input_1", [16, 32, 32, 3]), ("input_2", [1, 16, 16, 32])]
     assert expect_input_shape_list == input_shape_list

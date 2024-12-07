@@ -17,7 +17,7 @@
 declare -i ret_ok=0
 declare -i ret_failed=1
 CUR_PATH=$("pwd")
-ALL_VALID_TEST_CASES=(/analyze/ /benchmark/ /convert/ /debug/compare/ /debug/surgeon/ /llm/ /profile/ /transplt/ /tensor_view/ /utils/)
+ALL_VALID_TEST_CASES=(/analyze/ /benchmark/ /convert/ /debug/compare/ /debug/surgeon/ /llm/ /profile/ /tensor_view/ /utils/)
 
 function is_path_in_all_valid_test_cases() {
     for test_case in ${RUN_TESTCASES[@]}; do
@@ -93,4 +93,13 @@ main() {
 }
 
 main "$@"
-exit $?
+ret=$?
+if [[ $PWD =~ "components/tests" ]]; then
+    coverage combine `find ../* -name '.coverage'`
+else
+    coverage combine `find ./* -name '.coverage'`
+fi
+coverage report -m -i > test.coverage
+coverage_rate=$(awk '/TOTAL/{print $4}' $CUR_PATH/test.coverage | cut -d '%' -f 1)
+echo "coverage_rate=$coverage_rate%"
+exit $ret

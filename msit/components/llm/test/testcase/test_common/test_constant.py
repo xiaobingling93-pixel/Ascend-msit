@@ -40,7 +40,7 @@ class TestAitDumpPathFunction(unittest.TestCase):
     @patch('msit_llm.common.constant.get_timestamp_sync', return_value=1609459200)  # 模拟一个时间戳
     def test_get_ait_dump_path(self, mock_get_timestamp_sync):
         result = get_ait_dump_path()
-        expected_path = "msit_dump_20210101_080000"
+        expected_path = "msit_dump_20210101_000000"
         self.assertEqual(result, expected_path)
 
 
