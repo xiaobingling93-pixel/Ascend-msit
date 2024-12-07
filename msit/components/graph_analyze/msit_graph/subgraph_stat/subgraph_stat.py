@@ -23,9 +23,13 @@ from itertools import combinations
 import pandas as pd
 
 from components.utils.log import logger
-from components.utils.file_open_check import ms_open, OpenException, 
-    MAX_SIZE_LIMITE_CONFIG_FILE, MAX_SIZE_LIMITE_NORMAL_FILE
-from msit_graph.graph_extract.graph_extra import _load_graph_def_from_pbtxt
+from components.utils.file_open_check import (
+    ms_open, 
+    OpenException, 
+    MAX_SIZE_LIMITE_CONFIG_FILE,
+    MAX_SIZE_LIMITE_NORMAL_FILE,
+)
+from msit_graph.graph_extract.graph_extract import GraphAnalyze
 
 
 class SimpleNode:
@@ -177,7 +181,7 @@ def has_subgraph(graph):
 
 
 def stat_subgraph(input_path, max_nodes=10, output_file='subgraph_counts.csv'):
-    graph_def = _load_graph_def_from_pbtxt(input_path)
+    graph_def = GraphAnalyze.load_graph_def_from_pbtxt(input_path)
     if graph_def is None:
         logger.info(f"Failed to parse the pbtxt file.")
         return
