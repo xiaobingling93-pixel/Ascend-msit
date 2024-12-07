@@ -23,11 +23,9 @@ import os
 import time
 
 import numpy as np
-import tensorflow as tf
-from msquickcmp.common import utils, tf_common
+from msquickcmp.common import utils
 from msquickcmp.common.dump_data import DumpData
 from components.utils.util import load_file_to_read_common_check
-from components.debug.compare.msquickcmp.common.tf_common import load_file_to_read_common_check_with_walk
 from components.utils.file_open_check import ms_open
 from components.utils.constants import TENSOR_MAX_SIZE
 from components.utils.check.rule import Rule
@@ -54,6 +52,8 @@ class TfSaveModelDumpData(DumpData):
     """
 
     def __init__(self, arguments, model_path):
+        from msquickcmp.common import tf_common
+
         super().__init__()
         self._check_tf_version("2.6.5")
         output_path = os.path.realpath(arguments.out_path)
@@ -97,6 +97,8 @@ class TfSaveModelDumpData(DumpData):
 
     @staticmethod
     def _check_tf_version(expected_version):
+        import tensorflow as tf
+
         current_version = tf.__version__
         if current_version != expected_version:
             raise ImportError(
@@ -165,6 +167,9 @@ class TfSaveModelDumpData(DumpData):
         Generate tf2.6 save_model dump data
         :return tf2.6 save_model dump data directory
         """
+        import tensorflow as tf
+        from components.debug.compare.msquickcmp.common.tf_common import load_file_to_read_common_check_with_walk
+
         op_names = parse_ops_name_from_om_json(tf_json_path)
         sess = tf.compat.v1.keras.backend.get_session()
         tag_set = {tf.compat.v1.saved_model.tag_constants.SERVING} if self.tag_set == "" else self.tag_set

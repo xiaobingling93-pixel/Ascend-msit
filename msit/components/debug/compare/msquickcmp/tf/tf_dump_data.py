@@ -24,9 +24,8 @@ import time
 
 import numpy as np
 import pexpect
-import tensorflow as tf
 
-from msquickcmp.common import utils, tf_common
+from msquickcmp.common import utils
 from msquickcmp.common.dump_data import DumpData
 from msquickcmp.common.utils import AccuracyCompareException
 from components.utils.file_open_check import ms_open
@@ -41,6 +40,8 @@ class TfDumpData(DumpData):
     """
 
     def __init__(self, arguments):
+        from msquickcmp.common import tf_common
+
         super().__init__()
         self.args = arguments
         output_path = os.path.realpath(self.args.out_path)
@@ -55,13 +56,14 @@ class TfDumpData(DumpData):
         self.net_output = {}
         self._load_graph()
         self._create_dir()
+        self.tf_common = tf_common
 
     def generate_inputs_data(self, npu_dump_data_path, use_aipp):
         """
         Generate tf model inputs data
         :return tf model inputs data directory
         """
-        inputs_tensor = tf_common.get_inputs_tensor(self.global_graph, self.args.input_shape)
+        inputs_tensor = self.tf_common.get_inputs_tensor(self.global_graph, self.args.input_shape)
         self._make_inputs_data(inputs_tensor)
 
     def generate_dump_data(self, output_json_path=None, npu_dump_path=None, om_parser=None):
@@ -70,9 +72,9 @@ class TfDumpData(DumpData):
         :return tf model dump data directory
         """
         outputs_tensor = self._get_outputs_tensor()
-        if tf_common.check_tf_version(tf_common.VERSION_TF2X):
+        if self.tf_common.check_tf_version(self.tf_common.VERSION_TF2X):
             self._run_model_tf2x(outputs_tensor)
-        elif tf_common.check_tf_version(tf_common.VERSION_TF1X):
+        elif self.tf_common.check_tf_version(self.tf_common.VERSION_TF1X):
             self._run_model_tf1x(outputs_tensor)
 
         return self.important_dirs.get("dump_data_tf")
@@ -94,6 +96,8 @@ class TfDumpData(DumpData):
         utils.create_directory(self.important_dirs.get("tmp"))
 
     def _load_graph(self):
+        import tensorflow as tf
+
         try:
             self.args.model_path = load_file_to_read_common_check(self.args.model_path)
             with tf.io.gfile.GFile(self.args.model_path, 'rb') as f:
@@ -123,8 +127,8 @@ class TfDumpData(DumpData):
                     utils.logger.error(
                         "The shape of %s is unknown. Please usr -i to assign the input path." % tensor.name)
                     raise AccuracyCompareException(utils.ACCURACY_COMPARISON_BIN_FILE_ERROR)
-                input_data = np.random.random(tf_common.convert_tensor_shape(tensor.shape)) \
-                    .astype(tf_common.convert_to_numpy_type(tensor.dtype))
+                input_data = np.random.random(self.tf_common.convert_tensor_shape(tensor.shape)) \
+                    .astype(self.tf_common.convert_to_numpy_type(tensor.dtype))
                 input_path = os.path.join(self.important_dirs.get("input"), "input_" + str(index) + ".bin")
                 input_path_list.append(input_path)
                 try:
@@ -152,7 +156,7 @@ class TfDumpData(DumpData):
             self.net_output_name.append(tensor_name)
         if self.args.input_shape:
             cmd += " -s " + '"' + self.args.input_shape + '"'
-        tf_common.execute_command(cmd)
+        self.tf_common.execute_command(cmd)
 
     def _run_model_tf1x(self, outputs_tensor):
         tf_debug_runner_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../", "tf_debug_runner.py")
@@ -195,17 +199,17 @@ class TfDumpData(DumpData):
         """Run tf debug with pexpect, should set tf debug ui_type='readline'"""
         tf_dbg = pexpect.spawn(cmd_line)
         tf_dbg.logfile = sys.stdout.buffer
-        tf_dbg.expect('tfdbg>', timeout=tf_common.TF_DEBUG_TIMEOUT)
+        tf_dbg.expect('tfdbg>', timeout=self.tf_common.TF_DEBUG_TIMEOUT)
         utils.logger.info("Start to run. Please wait....")
         tf_dbg.sendline('run')
-        index = tf_dbg.expect(['An error occurred during the run', 'tfdbg>'], timeout=tf_common.TF_DEBUG_TIMEOUT)
+        index = tf_dbg.expect(['An error occurred during the run', 'tfdbg>'], timeout=self.tf_common.TF_DEBUG_TIMEOUT)
         if index == 0:
             tf_dbg.sendline('exit')
             utils.logger.error("Failed to run command: %s" % (cmd_line))
             raise AccuracyCompareException(utils.ACCURACY_COMPARISON_PYTHON_COMMAND_ERROR)
         tensor_name_path = os.path.join(self.important_dirs.get("tmp"), 'tf_tensor_names.txt')
         tf_dbg.sendline('lt > %s' % tensor_name_path)
-        tf_dbg.expect('tfdbg>', timeout=tf_common.TF_DEBUG_TIMEOUT)
+        tf_dbg.expect('tfdbg>', timeout=self.tf_common.TF_DEBUG_TIMEOUT)
         if not os.path.exists(tensor_name_path):
             tf_dbg.sendline('exit')
             utils.logger.error("Failed to save tensor name to file.")
@@ -215,7 +219,7 @@ class TfDumpData(DumpData):
         utils.logger.info("Start to run %d pt commands. Please wait..." % len(pt_command_list))
         for cmd in pt_command_list:
             tf_dbg.sendline(cmd.strip())
-            tf_dbg.expect('tfdbg>', timeout=tf_common.TF_DEBUG_TIMEOUT)
+            tf_dbg.expect('tfdbg>', timeout=self.tf_common.TF_DEBUG_TIMEOUT)
         tf_dbg.sendline('exit')
         utils.logger.info('Finish dump tf data.')
 
