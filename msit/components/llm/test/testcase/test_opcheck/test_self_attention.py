@@ -1,5 +1,5 @@
-import pytest
 from unittest.mock import patch
+import pytest
 import torch
 import torch_npu
 from msit_llm.opcheck.check_case.self_attention import OpcheckUnpadSelfAttentionOperation, CalcType, KvCacheCfg, MaskType, KernelType, ClampType
