@@ -3,7 +3,7 @@ from unittest.mock import patch
 import pytest
 import torch
 
-from msit_llm.opcheck.check_case import OpcheckLayerNormOperation, LayerNormType, QuantType, DynamicQuantType
+from msit_llm.opcheck.check_case.layer_norm import OpcheckLayerNormOperation, LayerNormType, QuantType, DynamicQuantType
 from msit_llm.common.log import logger
 from mock_operation_test import MockOperationTest
 
