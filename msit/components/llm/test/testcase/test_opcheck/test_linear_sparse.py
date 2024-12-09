@@ -1,6 +1,8 @@
+from unittest.mock import patch
+
 import pytest
 import torch
-from unittest.mock import patch
+
 from msit_llm.opcheck.check_case import OpcheckLinearSparseOperation
 from msit_llm.common.log import logger
 from mock_operation_test import MockOperationTest
@@ -16,40 +18,38 @@ def mock_logger():
         yield mock_info, mock_debug
 
 
-def mock_get_soc_version(soc_version):
-    def _get_soc_version():
-        return soc_version
+def mock_validate_param(validate_param_return):
+    def _validate_param(*args):
+        return validate_param_return
 
-    return _get_soc_version
-
-
-def mock_convert_data_format(tensor):
-    return tensor
+    return _validate_param
 
 
-@pytest.mark.parametrize("soc_version, transposeA, transposeB, in_tensors, expected_result", [
-    ('Ascend310P', False, True, [torch.randn(2, 3), torch.randn(3, 2), torch.randn(2)], [torch.randn(2, 2)]),
+@pytest.mark.parametrize("transposeA, transposeB, in_tensors, expected_result", [
+    (False, True, [torch.randn(2, 3), torch.randn(3, 2), torch.randn(2)], [torch.randn(2, 2)]),
+    (True, False, [torch.randn(2, 3), torch.randn(3, 2), torch.randn(2)], [torch.randn(2, 2)]),
+    (False, False, [torch.randn(2, 3), torch.randn(3, 2), None, torch.tensor([2.0])], [torch.randn(2, 2)]),
+    (False, True, [torch.randn(2, 3), torch.randn(1, 3, 2, 4), torch.randn(2)], [torch.randn(2, 2)]),
+    (True, False, [torch.randn(2, 3, 4), torch.randn(4, 3), torch.randn(3)], [torch.randn(2, 3, 3)]),
+    (False, False, [torch.randn(2, 3), torch.randn(1, 3, 2, 4)], [torch.randn(2, 2)]),
+    (True, False, [torch.randn(2, 3, 4), torch.randn(4, 3)], [torch.randn(2, 3, 3)]),
 ])
-def test_golden_calc_when_valid_input(mock_logger, soc_version, transposeA, transposeB, in_tensors, expected_result):
+def test_golden_calc_when_valid_input(mock_logger, transposeA, transposeB, in_tensors, expected_result):
     op = OpcheckLinearSparseOperation()
     op.op_param = {"transposeA": transposeA, "transposeB": transposeB}
-    op.get_soc_version = mock_get_soc_version(soc_version)
-    op.convert_data_format = mock_convert_data_format
     result = op.golden_calc(in_tensors)
     for res, exp in zip(result, expected_result):
         assert torch.allclose(res, exp, atol=1e-4)
-    if soc_version == 'Ascend310P':
-        mock_logger[0].assert_called_once()
 
 
-@pytest.mark.parametrize("soc_version, transposeA, transposeB, in_tensors, expected_error", [
-    ('Ascend310P', False, True, [torch.randn(2, 3), torch.randn(3, 2)], RuntimeError),
+@pytest.mark.parametrize("transposeA, transposeB, in_tensors, expected_error", [
+    (False, True, [torch.randn(2, 3), torch.randn(3, 2)], RuntimeError),
+    (True, False, [torch.randn(2, 3), torch.randn(3, 2)], RuntimeError),
+    (False, False, [torch.randn(2, 3), torch.randn(3, 2)], RuntimeError),
 ])
-def test_golden_calc_when_invalid_input(soc_version, transposeA, transposeB, in_tensors, expected_error):
+def test_golden_calc_when_invalid_input(mock_logger, transposeA, transposeB, in_tensors, expected_error):
     op = OpcheckLinearSparseOperation()
     op.op_param = {"transposeA": transposeA, "transposeB": transposeB}
-    op.get_soc_version = mock_get_soc_version(soc_version)
-    op.convert_data_format = mock_convert_data_format
     with pytest.raises(expected_error):
         op.golden_calc(in_tensors)
 
@@ -66,7 +66,7 @@ def test_test_when_valid_input(mock_logger, transposeA, transposeB, tilingK, til
                                expected_execute_call):
     op = OpcheckLinearSparseOperation()
     op.op_param = {"transposeA": transposeA, "transposeB": transposeB, "tilingK": tilingK, "tilingN": tilingN}
-    op.validate_param = lambda *args: validate_param_return
+    op.validate_param = mock_validate_param(validate_param_return)
     with patch.object(op, 'execute') as mock_execute:
         op.test()
     if expected_execute_call:
@@ -76,17 +76,19 @@ def test_test_when_valid_input(mock_logger, transposeA, transposeB, tilingK, til
         mock_execute.assert_not_called()
 
 
-@pytest.mark.parametrize("soc_version, transposeA, transposeB, in_tensors, expected_result", [
-    ('Ascend310P', False, True, [torch.randn(2, 3), torch.randn(3, 2), torch.randn(2)], [torch.randn(2, 2)]),
+@pytest.mark.parametrize("transposeA, transposeB, in_tensors, expected_result", [
+    (False, True, [torch.randn(2, 3), torch.randn(3, 2), torch.randn(2)], [torch.randn(2, 2)]),
+    (True, False, [torch.randn(2, 3), torch.randn(3, 2), torch.randn(2)], [torch.randn(2, 2)]),
+    (False, False, [torch.randn(2, 3), torch.randn(3, 2), None, torch.tensor([2.0])], [torch.randn(2, 2)]),
+    (False, True, [torch.randn(2, 3), torch.randn(1, 3, 2, 4), torch.randn(2)], [torch.randn(2, 2)]),
+    (True, False, [torch.randn(2, 3, 4), torch.randn(4, 3), torch.randn(3)], [torch.randn(2, 3, 3)]),
+    (False, False, [torch.randn(2, 3), torch.randn(1, 3, 2, 4)], [torch.randn(2, 2)]),
+    (True, False, [torch.randn(2, 3, 4), torch.randn(4, 3)], [torch.randn(2, 3, 3)]),
 ])
-def test_golden_calc_when_valid_input_with_bias_and_deq_scale(mock_logger, soc_version, transposeA, transposeB,
-                                                              in_tensors, expected_result):
+def test_golden_calc_when_valid_input_with_bias_and_deq_scale(mock_logger, transposeA, transposeB, in_tensors,
+                                                              expected_result):
     op = OpcheckLinearSparseOperation()
     op.op_param = {"transposeA": transposeA, "transposeB": transposeB}
-    op.get_soc_version = mock_get_soc_version(soc_version)
-    op.convert_data_format = mock_convert_data_format
     result = op.golden_calc(in_tensors)
     for res, exp in zip(result, expected_result):
         assert torch.allclose(res, exp, atol=1e-4)
-    if soc_version == 'Ascend310P':
-        mock_logger[0].assert_called_once()
