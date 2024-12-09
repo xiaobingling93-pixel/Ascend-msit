@@ -261,7 +261,7 @@ from transformers.models.qwen2.configuration_qwen2 import Qwen2Config
 编辑quant.py文件，根据实际的量化场景导入[样例代码](#量化脚本npu)，参考注释，并根据实际情况进行修改。
 
 注意：
-- 需要将msmodelslim文件夹下的[precision_tool文件夹](../precision_tool/precision_tool.py)和量化脚本`quant.py`放置于同一目录下，再将待测试数据集放入precision_tool文件夹中，具体操作见：[Precision Tool 使用方法说明及数据集下载链接](https://gitee.com/ascend/msit/tree/master/msmodelslim/precision_tool)  
+- 需要将msmodelslim文件夹下的[precision_tool文件夹](../precision_tool/precision_tool.py)复制一份出来，和量化脚本`quant.py`放置于同一目录下，再将待测试数据集放入precision_tool文件夹中，具体操作见：[Precision Tool 使用方法说明及数据集下载链接](https://gitee.com/ascend/msit/tree/master/msmodelslim/precision_tool)  
 - fa3量化目前仅支持W8A8 per_channel量化场景和lowbit算法，W8A8 per_channel量化场景导入的样例见下文[FA3精度调优处](#fa3精度调优)，lowbit算法的代码样例请参考[w8a8_lowbit量化场景](../msmodelslim/pytorch/llm_ptq/量化及稀疏量化场景导入代码样例.md#w8a8_lowbit算法量化场景)。
 
 
