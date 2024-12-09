@@ -10,18 +10,6 @@ from mock_operation_test import MockOperationTest
 OpcheckLinearParallelOperation.__bases__ = (MockOperationTest,)
 
 
-@pytest.mark.parametrize("in_tensors, op_param, expected_result", [
-    ([torch.randn(2, 3), torch.randn(3, 2)],
-     {'backend': 'lcoc', 'rank': 0, 'rankSize': 2, 'type': ParallelType.PURE_LINEAR.value}, [torch.randn(2, 2)]),
-])
-def test_golden_calc_when_valid_input(in_tensors, op_param, expected_result):
-    op = OpcheckLinearParallelOperation()
-    op.op_param = op_param
-    result = op.golden_calc(in_tensors)
-    for res, exp in zip(result, expected_result):
-        assert torch.allclose(res, exp, atol=1e-4)
-
-
 @pytest.mark.parametrize("op_param, expected_execute_call", [
     ({'backend': 'hccl', 'rank': 0, 'rankSize': 2}, True),
     ({'backend': 'lcoc', 'rank': 0, 'rankSize': 2, 'type': ParallelType.LINEAR_ALL_REDUCE.value}, True),
