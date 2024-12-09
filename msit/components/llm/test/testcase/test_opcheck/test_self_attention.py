@@ -160,7 +160,7 @@ class GetAttentionParamsParams:
     qk_scale: float
     head_num: int
     kv_head_num: int
-    expected_params: List
+    expected_params: tuple
 
 
 @pytest.mark.parametrize("params", [
@@ -173,7 +173,7 @@ def test_get_attention_params_when_valid_input_then_correct_values(params):
     op.op_param['headNum'] = params.head_num
     op.op_param['kvHeadNum'] = params.kv_head_num
     result_params = op.get_attention_params(params.q)
-    assert result_params == params.expected_params
+    assert result_params == list(params.expected_params)
 
 
 @dataclass
