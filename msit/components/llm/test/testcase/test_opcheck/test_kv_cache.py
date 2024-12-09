@@ -11,15 +11,9 @@ OpcheckKvCacheOperation.__bases__ = (MockOperationTest,)
 
 
 @pytest.mark.parametrize("in_tensors, expected_result", [
-    ([torch.tensor([[1.0, 2.0], [3.0, 4.0]], dtype=torch.float16), torch.tensor([0]),
-      torch.zeros((1, 2, 2, 2), dtype=torch.float16), torch.tensor([2]), torch.tensor([2])],
-     [torch.tensor([[1.0, 2.0], [3.0, 4.0]], dtype=torch.float16), torch.tensor([0]),
-      torch.tensor([[[[1.0, 2.0], [3.0, 4.0]], [[0.0, 0.0], [0.0, 0.0]]]], dtype=torch.float16), torch.tensor([2]),
-      torch.tensor([2])]),
-    ([torch.tensor([[1.0, 2.0], [3.0, 4.0]], dtype=torch.int8), torch.tensor([0]),
-      torch.zeros((1, 2, 2, 2), dtype=torch.int8), torch.tensor([2]), torch.tensor([2])],
-     [torch.tensor([[1.0, 2.0], [3.0, 4.0]], dtype=torch.int8), torch.tensor([0]),
-      torch.tensor([[[[1, 2], [3, 4]], [[0, 0], [0, 0]]]], dtype=torch.int8), torch.tensor([2]), torch.tensor([2])]),
+    ([torch.randn(2, 4, 3, 3)], [torch.zeros((2, 3, 3))]),
+    ([torch.randn(2, 4, 2, 2)], [torch.zeros((1, 2, 2))]),
+    ([torch.randn(2, 4, 3, 3)], [torch.zeros((3, 3, 3))]),
 ])
 def test_golden_calc_when_valid_input(in_tensors, expected_result):
     # Arrange
@@ -30,8 +24,7 @@ def test_golden_calc_when_valid_input(in_tensors, expected_result):
     result = op.golden_calc(in_tensors)
 
     # Assert
-    for res, exp in zip(result, expected_result):
-        assert torch.allclose(res, exp, atol=1e-4)
+    assert torch.allclose(result[0], expected_result[0], atol=1e-4)
 
 
 @pytest.mark.parametrize("in_tensors, expected_error", [

@@ -11,16 +11,13 @@ OpcheckElewiseSubOperation.__bases__ = (MockOperationTest,)
 
 
 @pytest.mark.parametrize("op_param, in_tensors, expected_result", [
-    ({'seqLen': [2, 3], 'headNum': 2}, [torch.randn(2, 4, 3, 3)],
-     [torch.hstack([torch.randn(2, 3, 3).flatten(), torch.randn(2, 3, 3).flatten()])]),
-    ({'seqLen': [1, 2], 'headNum': 1}, [torch.randn(2, 4, 2, 2)],
-     [torch.hstack([torch.randn(1, 2, 2).flatten(), torch.randn(1, 2, 2).flatten()])]),
-    ({'seqLen': [3, 3], 'headNum': 3}, [torch.randn(2, 4, 3, 3)],
-     [torch.hstack([torch.randn(3, 3, 3).flatten(), torch.randn(3, 3, 3).flatten()])]),
+    ({'seqLen': [2, 3], 'headNum': 2}, [torch.randn(2, 4, 3, 3)], [torch.randn(2, 3, 3)]),
+    ({'seqLen': [1, 2], 'headNum': 1}, [torch.randn(2, 4, 2, 2)], [torch.randn(1, 2, 2)]),
+    ({'seqLen': [3, 3], 'headNum': 3}, [torch.randn(2, 4, 3, 3)], [torch.randn(3, 3, 3)]),
 ])
 def test_golden_calc_when_valid_input(op_param, in_tensors, expected_result):
     # Arrange
-    op = OpcheckElewiseSubOperation()
+    op = OpcheckGenAttentionMaskOperation()
     op.op_param = op_param
 
     # Act

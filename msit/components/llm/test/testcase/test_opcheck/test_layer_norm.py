@@ -19,12 +19,9 @@ def mock_logger():
 
 
 @pytest.mark.parametrize("layer_type, in_tensors, cur_param, expected_result", [
-    (LayerNormType.LAYER_NORM_NROM.value, [torch.randn(2, 4), torch.randn(4), torch.randn(4)], {'epsilon': 1e-5},
-     [torch.randn(2, 4)]),
-    (LayerNormType.LAYER_NORM_PRENORM.value, [torch.randn(2, 4), torch.randn(4), torch.randn(4), torch.randn(4)],
-     {'epsilon': 1e-5, 'zoomScaleValue': 1.0}, [torch.randn(2, 4), torch.randn(2, 4)]),
-    (LayerNormType.LAYER_NORM_POSTNORM.value, [torch.randn(2, 4), torch.randn(4), torch.randn(4), torch.randn(4)],
-     {'epsilon': 1e-5, 'zoomScale': 1.0}, [torch.randn(2, 4)]),
+    (LayerNormType.LAYER_NORM_NROM.value, [torch.randn(2, 4), torch.randn(4), torch.randn(4)], {'epsilon': 1e-5}, [torch.randn(2, 4)]),
+    (LayerNormType.LAYER_NORM_PRENORM.value, [torch.randn(2, 4), torch.randn(4), torch.randn(4), torch.randn(4)], {'epsilon': 1e-5, 'zoomScaleValue': 1.0}, [torch.randn(2, 4), torch.randn(2, 4)]),
+    (LayerNormType.LAYER_NORM_POSTNORM.value, [torch.randn(2, 4), torch.randn(4), torch.randn(4), torch.randn(4)], {'epsilon': 1e-5, 'zoomScale': 1.0}, [torch.randn(2, 4)]),
 ])
 def test_golden_calc_when_valid_input(layer_type, in_tensors, cur_param, expected_result):
     op = OpcheckLayerNormOperation()

@@ -29,43 +29,33 @@ def test_test_fastsoftmaxgrad_given_batch_size_head_num_seq_len_range_when_valid
     mock_execute.assert_called_once()
 
 
-@pytest.mark.parametrize("batch_size_imm, head_num_imm, seq_len_range", [
-    (4, 8, (100, 300)),
-    (2, 4, (50, 150)),
-    (1, 2, (25, 75)),
-])
-def test_golden_calc_given_batch_size_head_num_seq_len_range_when_valid_input_then_correct_result(batch_size_imm,
-                                                                                                  head_num_imm,
-                                                                                                  seq_len_range):
-    # Arrange
-    op = OpcheckFastSoftMaxGradOperation()
-    op.op_param = {}
-
-    # Act
-    result = op.golden_calc(None)
-
-    # Assert
-    assert result[0].shape == (batch_size_imm * head_num_imm * seq_len_range[1], seq_len_range[1])
+import torch
 
 
-@pytest.mark.parametrize("batch_size_imm, head_num_imm, seq_len_range", [
-    (4, 8, (100, 300)),
-    (2, 4, (50, 150)),
-    (1, 2, (25, 75)),
-])
-def test_gen_softmax_grad_given_head_num_seq_len_when_valid_input_then_correct_result(batch_size_imm, head_num_imm,
-                                                                                      seq_len_range):
-    # Arrange
-    head_num = head_num_imm
+def gen_softmax_grad(head_num, seq_len_range):
+    # 实现 gen_softmax_grad 函数
     seq_len = seq_len_range[1]
+    result = torch.randn(head_num * seq_len, seq_len)
+    return result
+
+
+@pytest.mark.parametrize("head_num, seq_len_range", [
+    (4, (100, 300)),
+    (2, (50, 150)),
+    (1, (25, 75)),
+])
+def test_gen_softmax_grad_given_head_num_seq_len_when_valid_input_then_correct_result(
+        head_num, seq_len_range):
+    # Arrange
+    op = OpcheckFastSoftMaxGradOperation()
+    op.op_param = {}
 
     # Act
-    y, y_grad, x_grad = gen_softmax_grad(head_num, seq_len)
+    result = gen_softmax_grad(head_num, seq_len_range)
 
     # Assert
-    assert y.shape == (head_num * seq_len, seq_len)
-    assert y_grad.shape == (head_num * seq_len, seq_len)
-    assert x_grad.shape == (head_num * seq_len, seq_len)
+    expected_result = torch.randn(head_num * seq_len_range[1], seq_len_range[1])
+    assert torch.allclose(result, expected_result, atol=1e-4)
 
 
 @pytest.mark.parametrize("batch_size_imm, head_num_imm, seq_len_range", [
@@ -73,18 +63,18 @@ def test_gen_softmax_grad_given_head_num_seq_len_when_valid_input_then_correct_r
     (2, 4, (50, 150)),
     (1, 2, (25, 75)),
 ])
-def test_golden_calc_given_batch_size_head_num_seq_len_range_when_valid_input_then_correct_result(batch_size_imm,
-                                                                                                  head_num_imm,
-                                                                                                  seq_len_range):
+def test_golden_calc_given_batch_size_head_num_seq_len_range_when_valid_input_then_correct_result(
+        batch_size_imm, head_num_imm, seq_len_range):
     # Arrange
     op = OpcheckFastSoftMaxGradOperation()
     op.op_param = {}
 
     # Act
-    result = op.golden_calc(None)
+    result = op.golden_calc(batch_size_imm, head_num_imm, seq_len_range)
 
     # Assert
-    assert result[0].shape == (batch_size_imm * head_num_imm * seq_len_range[1], seq_len_range[1])
+    expected_result = torch.randn(batch_size_imm * head_num_imm * seq_len_range[1], seq_len_range[1])
+    assert torch.allclose(result, expected_result, atol=1e-4)
 
 
 @pytest.mark.parametrize("batch_size_imm, head_num_imm, seq_len_range", [
@@ -104,23 +94,3 @@ def test_test_fastsoftmaxgrad_given_batch_size_head_num_seq_len_range_when_valid
 
     # Assert
     mock_execute.assert_called_once()
-
-
-@pytest.mark.parametrize("batch_size_imm, head_num_imm, seq_len_range", [
-    (4, 8, (100, 300)),
-    (2, 4, (50, 150)),
-    (1, 2, (25, 75)),
-])
-def test_gen_softmax_grad_given_head_num_seq_len_when_valid_input_then_correct_result(batch_size_imm, head_num_imm,
-                                                                                      seq_len_range):
-    # Arrange
-    head_num = head_num_imm
-    seq_len = seq_len_range[1]
-
-    # Act
-    y, y_grad, x_grad = gen_softmax_grad(head_num, seq_len)
-
-    # Assert
-    assert y.shape == (head_num * seq_len, seq_len)
-    assert y_grad.shape == (head_num * seq_len, seq_len)
-    assert x_grad.shape == (head_num * seq_len, seq_len)

@@ -19,12 +19,8 @@ def mock_logger():
 
 
 @pytest.mark.parametrize("compress_type, in_tensors, expected_result", [
-    (CompressType.COMPRESS_TYPE_KVHEAD.value,
-     [torch.randn(2, 4, 3), torch.randn(2, 4, 3), torch.randn(2, 3, 3), torch.randn(2, 3, 3), torch.tensor([0, 1]),
-      torch.tensor([1, 1]), torch.tensor([1, 1])], [torch.randn(2, 3, 3), torch.randn(2, 3, 3)]),
-    (CompressType.COMPRESS_TYPE_UNDEFINED.value,
-     [torch.randn(2, 4, 3), torch.randn(2, 4, 3), torch.randn(2, 3, 3), torch.randn(2, 3, 3), torch.tensor([0, 1])],
-     [torch.randn(2, 3, 3), torch.randn(2, 3, 3)]),
+    (CompressType.COMPRESS_TYPE_KVHEAD.value, [torch.randn(2, 4, 3), torch.randn(2, 4, 3), torch.randn(2, 3, 3), torch.randn(2, 3, 3), torch.tensor([0, 1]), torch.tensor([1, 1]), torch.tensor([1, 1])], [torch.randn(2, 3, 3), torch.randn(2, 3, 3)]),
+    (CompressType.COMPRESS_TYPE_UNDEFINED.value, [torch.randn(2, 4, 3), torch.randn(2, 4, 3), torch.randn(2, 3, 3), torch.randn(2, 3, 3), torch.tensor([0, 1])], [torch.randn(2, 3, 3), torch.randn(2, 3, 3)]),
 ])
 def test_golden_calc_when_valid_input(mock_logger, compress_type, in_tensors, expected_result):
     op = OpcheckReshapeAndCacheOperation()

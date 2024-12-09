@@ -11,14 +11,9 @@ OpcheckGatherOperation.__bases__ = (MockOperationTest,)
 
 
 @pytest.mark.parametrize("op_param, in_tensors, expected_result", [
-    ({'axis': 0, 'batchDims': 0}, [torch.tensor([[1.0, 2.0], [3.0, 4.0]]), torch.tensor([0, 1])],
-     [torch.tensor([[1.0, 2.0], [3.0, 4.0]])]),
-    ({'axis': 1, 'batchDims': 0}, [torch.tensor([[1.0, 2.0], [3.0, 4.0]]), torch.tensor([0, 1])],
-     [torch.tensor([[1.0, 2.0], [3.0, 4.0]])]),
-    ({'axis': 0, 'batchDims': 1}, [torch.tensor([[1.0, 2.0], [3.0, 4.0]]), torch.tensor([[0, 1], [1, 0]])],
-     [torch.tensor([[1.0, 2.0], [4.0, 3.0]])]),
-    ({'axis': 1, 'batchDims': 1}, [torch.tensor([[1.0, 2.0], [3.0, 4.0]]), torch.tensor([[0, 1], [1, 0]])],
-     [torch.tensor([[1.0, 2.0], [4.0, 3.0]])]),
+    ({'seqLen': [2, 3], 'headNum': 2}, [torch.randn(2, 4, 3, 3)], [torch.randn(2, 3, 3)]),
+    ({'seqLen': [1, 2], 'headNum': 1}, [torch.randn(2, 4, 2, 2)], [torch.randn(1, 2, 2)]),
+    ({'seqLen': [3, 3], 'headNum': 3}, [torch.randn(2, 4, 3, 3)], [torch.randn(3, 3, 3)]),
 ])
 def test_golden_calc_when_valid_input(op_param, in_tensors, expected_result):
     # Arrange

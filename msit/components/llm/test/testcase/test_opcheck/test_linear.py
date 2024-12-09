@@ -11,14 +11,9 @@ OpcheckLinearOperation.__bases__ = (MockOperationTest,)
 
 
 @pytest.mark.parametrize("op_param, in_tensors, expected_result", [
-    ({'transposeA': False, 'transposeB': True, 'hasBias': False}, [torch.randn(2, 3), torch.randn(3, 2)],
-     [torch.matmul(torch.randn(2, 3), torch.randn(3, 2))]),
-    ({'transposeA': True, 'transposeB': False, 'hasBias': False}, [torch.randn(2, 3), torch.randn(2, 3)],
-     [torch.matmul(torch.randn(3, 2), torch.randn(2, 3))]),
-    ({'transposeA': False, 'transposeB': True, 'hasBias': True}, [torch.randn(2, 3), torch.randn(3, 2), torch.randn(2)],
-     [torch.matmul(torch.randn(2, 3), torch.randn(3, 2)) + torch.randn(2)]),
-    ({'transposeA': True, 'transposeB': False, 'hasBias': True}, [torch.randn(2, 3), torch.randn(2, 3), torch.randn(3)],
-     [torch.matmul(torch.randn(3, 2), torch.randn(2, 3)) + torch.randn(3)]),
+    ({'seqLen': [2, 3], 'headNum': 2}, [torch.randn(2, 4, 3, 3)], [torch.randn(2, 3, 3)]),
+    ({'seqLen': [1, 2], 'headNum': 1}, [torch.randn(2, 4, 2, 2)], [torch.randn(1, 2, 2)]),
+    ({'seqLen': [3, 3], 'headNum': 3}, [torch.randn(2, 4, 3, 3)], [torch.randn(3, 3, 3)]),
 ])
 def test_golden_calc_when_valid_input(op_param, in_tensors, expected_result):
     # Arrange

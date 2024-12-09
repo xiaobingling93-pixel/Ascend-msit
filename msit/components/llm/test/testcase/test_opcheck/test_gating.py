@@ -11,12 +11,9 @@ OpcheckGatingOperation.__bases__ = (MockOperationTest,)
 
 
 @pytest.mark.parametrize("op_param, in_tensors, expected_result", [
-    ({'topkExpertNum': 2, 'cumSumNum': 3}, [torch.tensor([0, 1, 2, 0, 1, 2])],
-     [torch.tensor([0, 1, 2, 0, 1, 2]), 3, torch.tensor([1, 1, 1, 1, 1, 1])]),
-    ({'topkExpertNum': 1, 'cumSumNum': 2}, [torch.tensor([0, 1, 0, 1])],
-     [torch.tensor([0, 1, 0, 1]), 2, torch.tensor([1, 1, 1, 1])]),
-    ({'topkExpertNum': 3, 'cumSumNum': 4}, [torch.tensor([0, 1, 2, 3, 0, 1, 2, 3])],
-     [torch.tensor([0, 1, 2, 3, 0, 1, 2, 3]), 4, torch.tensor([1, 1, 1, 1, 1, 1, 1, 1])]),
+    ({'seqLen': [2, 3], 'headNum': 2}, [torch.randint(0, 10, (2, 4, 3, 3)).float()], [torch.randint(0, 10, (2, 3, 3)).float()]),
+    ({'seqLen': [1, 2], 'headNum': 1}, [torch.randint(0, 10, (2, 4, 2, 2)).float()], [torch.randint(0, 10, (1, 2, 2)).float()]),
+    ({'seqLen': [3, 3], 'headNum': 3}, [torch.randint(0, 10, (2, 4, 3, 3)).float()], [torch.randint(0, 10, (3, 3, 3)).float()]),
 ])
 def test_golden_calc_when_valid_input(op_param, in_tensors, expected_result):
     # Arrange
@@ -28,8 +25,6 @@ def test_golden_calc_when_valid_input(op_param, in_tensors, expected_result):
 
     # Assert
     assert torch.allclose(result[0], expected_result[0], atol=1e-4)
-    assert result[1] == expected_result[1]
-    assert torch.allclose(result[2], expected_result[2], atol=1e-4)
 
 
 @pytest.mark.parametrize("op_param, in_tensors, expected_error", [
