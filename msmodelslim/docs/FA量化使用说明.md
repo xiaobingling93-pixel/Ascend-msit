@@ -6,7 +6,7 @@
 
 前提条件参考[大模型量化的前提条件](../msmodelslim/pytorch/llm_ptq/README.md#前提条件)
 
-说明：仅Atlas 800I A2推理产品支持fa3量化功能。
+说明：仅Atlas 800I A2推理产品支持fa3量化功能。目前FA3量化功能仅验证了Llama3.1-70B和Qwen2.5-72B。
 
 ### 功能实现流程
 
@@ -251,15 +251,18 @@ from transformers.models.qwen2.configuration_qwen2 import Qwen2Config
 ├── model-00004-of-00004.safetensors
 ├── model.safetensors.index.json
 ├── README.md
-├── tokenizer_config.json.py
+├── tokenizer_config.json
 ├── tokenizer.json
 ├── vocab.json
 
 ```
 
-2. 新建模型的量化脚本quant.py，编辑quant.py文件，根据实际的量化场景导入[样例代码](#量化脚本npu)，参考注释，并根据实际情况进行修改。
+2. 新建模型的量化脚本quant.py，
+编辑quant.py文件，根据实际的量化场景导入[样例代码](#量化脚本npu)，参考注释，并根据实际情况进行修改。
 
-注：fa3量化目前仅支持W8A8 per_channel量化场景和lowbit算法，W8A8 per_channel量化场景导入的样例见下文[FA3精度调优处](#fa3精度调优)，lowbit算法的代码样例请参考[w8a8_lowbit量化场景](../msmodelslim/pytorch/llm_ptq/量化及稀疏量化场景导入代码样例.md#w8a8_lowbit算法量化场景)。
+注意：
+- 需要将msmodelslim文件夹下的[precision_tool文件夹](../precision_tool/precision_tool.py)和量化脚本`quant.py`放置于同一目录下，再将待测试数据集放入precision_tool文件夹中，具体操作见：[Precision Tool 使用方法说明及数据集下载链接](https://gitee.com/ascend/msit/tree/master/msmodelslim/precision_tool)  
+- fa3量化目前仅支持W8A8 per_channel量化场景和lowbit算法，W8A8 per_channel量化场景导入的样例见下文[FA3精度调优处](#fa3精度调优)，lowbit算法的代码样例请参考[w8a8_lowbit量化场景](../msmodelslim/pytorch/llm_ptq/量化及稀疏量化场景导入代码样例.md#w8a8_lowbit算法量化场景)。
 
 
 3. 启动模型量化任务，并在指定的输出目录获取模型量化参数，量化后权重文件的介绍请参见[量化后权重文件](#量化后权重文件)，若使用MindIE进行后续的推理部署任务，请保存为safetensors格式，具体请参见[大语言模型列表](https://www.hiascend.com/document/detail/zh/mindie/10RC3/whatismindie/mindie_what_0003.html)章节中已适配量化的模型。
