@@ -2,11 +2,11 @@ from unittest.mock import patch
 
 import pytest
 import torch
+from dataclasses import dataclass
 
 from msit_llm.opcheck.check_case.reshape_and_cache import OpcheckReshapeAndCacheOperation, CompressType
 from msit_llm.common.log import logger
 from mock_operation_test import MockOperationTest
-from dataclasses import dataclass
 
 # 使用新的 OperationTest 类替换原始的 OperationTest
 OpcheckReshapeAndCacheOperation.__bases__ = (MockOperationTest,)
@@ -153,3 +153,28 @@ def test_golden_calc_when_valid_input_with_different_compress_types(mock_logger,
     result = op.golden_calc(params.in_tensors)
     for res, exp in zip(result, params.expected_result):
         assert torch.allclose(res, exp, atol=1e-4)
+
+
+@dataclass
+class TestGoldenCalcParams:
+    soc_version: str
+    compress_type: int
+    in_tensors: list
+    expected_result: list
+
+
+@pytest.mark.parametrize("params", [
+    TestGoldenCalcParams("Ascend910B", CompressType.COMPRESS_TYPE_KVHEAD.value,
+                         [torch.randn(2, 4, 3), torch.randn(2, 4, 3), torch.randn(2, 3, 3), torch.randn(2, 3, 3),
+                          torch.tensor([0, 1]), torch.tensor([1, 1]), torch.tensor([1, 1])],
+                         [torch.randn(2, 3, 3), torch.randn(2, 3, 3)]),
+    TestGoldenCalcParams("Ascend910B", CompressType.COMPRESS_TYPE_UNDEFINED.value,
+                         [torch.randn(2, 4, 3), torch.randn(2, 4, 3), torch.randn(2, 3, 3), torch.randn(2, 3, 3),
+                          torch.tensor([0, 1])], [torch.randn(2, 3, 3), torch.randn(2, 3, 3)]),
+    TestGoldenCalcParams("OtherSocVersion", CompressType.COMPRESS_TYPE_UNDEFINED.value,
+                         [torch.randn(2, 4, 3), torch.randn(2, 4, 3), torch.randn(2, 3, 3, 3), torch.randn(2, 3, 3, 3),
+                          torch.tensor([0, 1])], [torch.randn(2, 3, 3, 3), torch.randn(2, 3, 3, 3)]),
+])
+def test_golden_calc_when_different_soc_versions(mock_logger, params):
+    op = OpcheckReshapeAndCacheOperation()
+    op
