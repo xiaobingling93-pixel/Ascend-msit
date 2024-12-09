@@ -17,7 +17,7 @@ OpcheckElewiseSubOperation.__bases__ = (MockOperationTest,)
 ])
 def test_golden_calc_when_valid_input(op_param, in_tensors, expected_result):
     # Arrange
-    op = OpcheckGenAttentionMaskOperation()
+    op = OpcheckElewiseSubOperation()
     op.op_param = op_param
 
     # Act
