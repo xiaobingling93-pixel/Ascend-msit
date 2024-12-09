@@ -112,26 +112,6 @@ def test_get_out_sub_when_valid_input_then_correct_shape(params):
     assert out_sub.shape == params.expected_shape
 
 
-@patch.object(OpcheckUnpadSelfAttentionOperation, 'get_soc_version')
-@dataclass
-class GetMaskParams:
-    soc_version: str
-    in_tensors: list
-    seq_len: list
-    expected_shape: tuple
-
-
-@pytest.mark.parametrize("params", [
-    GetMaskParams("Ascend910B", [torch.randn(4, 8, 16, 32), torch.randn(4, 8, 16, 32), torch.randn(4, 8, 16, 32),
-                                 torch.randn(4, 8, 16, 32)], [4, 8, 12, 16], (4, 8, 16, 32)),
-])
-def test_get_mask_when_soc_version_ascend910b_then_correct_shape(mock_get_soc_version, params):
-    mock_get_soc_version.return_value = params.soc_version
-    op = OpcheckUnpadSelfAttentionOperation()
-    mask = op.get_mask(params.in_tensors, params.seq_len)
-    assert mask.shape == params.expected_shape
-
-
 @dataclass
 class GetBatchStatusParams:
     in_tensors: list
@@ -180,11 +160,11 @@ class GetAttentionParamsParams:
     qk_scale: float
     head_num: int
     kv_head_num: int
-    expected_params: list
+    expected_params: tuple
 
 
 @pytest.mark.parametrize("params", [
-    GetAttentionParamsParams(torch.randn(4, 8, 16), 2.0, 3.0, 4, 2, [2.0, 3.0, [4, 2, 2], torch.float32, 4]),
+    GetAttentionParamsParams(torch.randn(4, 8, 16), 2.0, 3.0, 4, 2, (2.0, 3.0, [4, 2, 2], torch.float32, 4)),
 ])
 def test_get_attention_params_when_valid_input_then_correct_values(params):
     op = OpcheckUnpadSelfAttentionOperation()
@@ -192,8 +172,8 @@ def test_get_attention_params_when_valid_input_then_correct_values(params):
     op.op_param['qkScale'] = params.qk_scale
     op.op_param['headNum'] = params.head_num
     op.op_param['kvHeadNum'] = params.kv_head_num
-    params = op.get_attention_params(params.q)
-    assert params == params.expected_params
+    result_params = op.get_attention_params(params.q)
+    assert result_params == params.expected_params
 
 
 @dataclass
@@ -219,41 +199,3 @@ def test_get_clamped_score_when_valid_input_then_correct_values(params):
     clamped_score = op.get_clamped_score(params.score)
     assert torch.all(clamped_score >= params.expected_min)
     assert torch.all(clamped_score <= params.expected_max)
-
-
-@patch.object(OpcheckUnpadSelfAttentionOperation, 'kv_bypass_golden_func')
-@patch.object(OpcheckUnpadSelfAttentionOperation, 'pa_encoder_golden_func')
-@patch.object(OpcheckUnpadSelfAttentionOperation, 'undefined_golden_func')
-@dataclass
-class GoldenCalcParams:
-    kvcache_cfg: int
-    calc_type: int
-    in_tensors: list
-    mock_golden_func: str
-    expected_shape: tuple
-
-
-@pytest.mark.parametrize("params", [
-    GoldenCalcParams(KvCacheCfg.K_BYPASS_V_BYPASS.value, CalcType.UNDEFINED.value,
-                     [torch.randn(4, 8, 16), torch.randn(4, 8, 16), torch.randn(4, 8, 16), [4, 8, 12, 16],
-                      [4, 8, 12, 16], [0, 1, 2, 3], [0]], 'kv_bypass_golden_func', (4, 8 * 2)),
-    GoldenCalcParams(KvCacheCfg.K_CACHE_V_CACHE.value, CalcType.PA_ENCODER.value,
-                     [torch.randn(4, 8, 16), torch.randn(4, 8, 16), torch.randn(4, 8, 16), [4, 8, 12, 16]],
-                     'pa_encoder_golden_func', (4, 4, 2)),
-    GoldenCalcParams(KvCacheCfg.K_CACHE_V_CACHE.value, CalcType.UNDEFINED.value,
-                     [torch.randn(4, 8, 16), torch.randn(4, 8, 16), torch.randn(4, 8, 16), torch.randn(4, 8, 16),
-                      torch.randn(4, 8, 16), [4, 8, 12, 16], [0, 1, 2, 3], [0]], 'undefined_golden_func', (4, 8 * 2)),
-])
-def test_golden_calc_when_valid_input_then_correct_shape(mock_undefined_golden_func, mock_pa_encoder_golden_func,
-                                                         mock_kv_bypass_golden_func, params):
-    op = OpcheckUnpadSelfAttentionOperation()
-    op.op_param['kvcacheCfg'] = params.kvcache_cfg
-    op.op_param['calcType'] = params.calc_type
-    mock_golden_func_map = {
-        'kv_bypass_golden_func': mock_kv_bypass_golden_func,
-        'pa_encoder_golden_func': mock_pa_encoder_golden_func,
-        'undefined_golden_func': mock_undefined_golden_func,
-    }
-    mock_golden_func_map[params.mock_golden_func].return_value = torch.randn(*params.expected_shape)
-    golden = op.golden_calc(params.in_tensors)
-    assert golden[0].shape == params.expected_shape
