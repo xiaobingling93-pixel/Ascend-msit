@@ -6,7 +6,6 @@ import torch
 from msit_llm.opcheck.check_case.reshape_and_cache import OpcheckReshapeAndCacheOperation, CompressType
 from msit_llm.common.log import logger
 from mock_operation_test import MockOperationTest
-from dataclasses import dataclass
 
 # Use the new OperationTest class to replace the original OperationTest
 OpcheckReshapeAndCacheOperation.__bases__ = (MockOperationTest,)

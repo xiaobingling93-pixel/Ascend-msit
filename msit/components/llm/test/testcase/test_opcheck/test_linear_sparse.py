@@ -1,4 +1,5 @@
 from unittest.mock import patch
+from dataclasses import dataclass
 
 import pytest
 import torch
@@ -6,7 +7,6 @@ import torch
 from msit_llm.opcheck.check_case import OpcheckLinearSparseOperation
 from msit_llm.common.log import logger
 from mock_operation_test import MockOperationTest
-from dataclasses import dataclass
 
 # 使用新的 OperationTest 类替换原始的 OperationTest
 OpcheckLinearSparseOperation.__bases__ = (MockOperationTest,)
