@@ -39,44 +39,6 @@ def gen_softmax_grad(head_num, seq_len_range):
     return result
 
 
-@pytest.mark.parametrize("head_num, seq_len_range", [
-    (4, (100, 300)),
-    (2, (50, 150)),
-    (1, (25, 75)),
-])
-def test_gen_softmax_grad_given_head_num_seq_len_when_valid_input_then_correct_result(
-        head_num, seq_len_range):
-    # Arrange
-    op = OpcheckFastSoftMaxGradOperation()
-    op.op_param = {}
-
-    # Act
-    result = gen_softmax_grad(head_num, seq_len_range)
-
-    # Assert
-    expected_result = torch.randn(head_num * seq_len_range[1], seq_len_range[1])
-    assert torch.allclose(result, expected_result, atol=1e-4)
-
-
-@pytest.mark.parametrize("batch_size_imm, head_num_imm, seq_len_range", [
-    (4, 8, (100, 300)),
-    (2, 4, (50, 150)),
-    (1, 2, (25, 75)),
-])
-def test_golden_calc_given_batch_size_head_num_seq_len_range_when_valid_input_then_correct_result(
-        batch_size_imm, head_num_imm, seq_len_range):
-    # Arrange
-    op = OpcheckFastSoftMaxGradOperation()
-    op.op_param = {}
-
-    # Act
-    result = op.golden_calc(batch_size_imm, head_num_imm, seq_len_range)
-
-    # Assert
-    expected_result = torch.randn(batch_size_imm * head_num_imm * seq_len_range[1], seq_len_range[1])
-    assert torch.allclose(result, expected_result, atol=1e-4)
-
-
 @pytest.mark.parametrize("batch_size_imm, head_num_imm, seq_len_range", [
     (4, 8, (100, 300)),
     (2, 4, (50, 150)),

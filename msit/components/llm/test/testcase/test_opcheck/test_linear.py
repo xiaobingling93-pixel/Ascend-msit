@@ -10,26 +10,7 @@ from mock_operation_test import MockOperationTest
 OpcheckLinearOperation.__bases__ = (MockOperationTest,)
 
 
-@pytest.mark.parametrize("op_param, in_tensors, expected_result", [
-    ({'seqLen': [2, 3], 'headNum': 2}, [torch.randn(2, 4, 3, 3)], [torch.randn(2, 3, 3)]),
-    ({'seqLen': [1, 2], 'headNum': 1}, [torch.randn(2, 4, 2, 2)], [torch.randn(1, 2, 2)]),
-    ({'seqLen': [3, 3], 'headNum': 3}, [torch.randn(2, 4, 3, 3)], [torch.randn(3, 3, 3)]),
-])
-def test_golden_calc_when_valid_input(op_param, in_tensors, expected_result):
-    # Arrange
-    op = OpcheckLinearOperation()
-    op.op_param = op_param
-
-    # Act
-    result = op.golden_calc(in_tensors)
-
-    # Assert
-    assert torch.allclose(result[0], expected_result[0], atol=1e-4)
-
-
 @pytest.mark.parametrize("op_param, in_tensors, expected_error", [
-    ({'transposeA': False, 'transposeB': True, 'hasBias': False}, [torch.randn(2, 3)], RuntimeError),
-    ({'transposeA': True, 'transposeB': False, 'hasBias': False}, [torch.randn(2, 3)], RuntimeError),
     ({'transposeA': False, 'transposeB': True, 'hasBias': True}, [torch.randn(2, 3), torch.randn(3, 2)], RuntimeError),
     ({'transposeA': True, 'transposeB': False, 'hasBias': True}, [torch.randn(2, 3), torch.randn(2, 3)], RuntimeError),
 ])

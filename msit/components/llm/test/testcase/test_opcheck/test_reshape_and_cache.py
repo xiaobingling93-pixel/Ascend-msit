@@ -6,6 +6,7 @@ import torch
 from msit_llm.opcheck.check_case.reshape_and_cache import OpcheckReshapeAndCacheOperation, CompressType
 from msit_llm.common.log import logger
 from mock_operation_test import MockOperationTest
+from dataclasses import dataclass
 
 # 使用新的 OperationTest 类替换原始的 OperationTest
 OpcheckReshapeAndCacheOperation.__bases__ = (MockOperationTest,)
@@ -18,85 +19,137 @@ def mock_logger():
         yield mock_info, mock_debug
 
 
-@pytest.mark.parametrize("compress_type, in_tensors, expected_result", [
-    (CompressType.COMPRESS_TYPE_KVHEAD.value, [torch.randn(2, 4, 3), torch.randn(2, 4, 3), torch.randn(2, 3, 3), torch.randn(2, 3, 3), torch.tensor([0, 1]), torch.tensor([1, 1]), torch.tensor([1, 1])], [torch.randn(2, 3, 3), torch.randn(2, 3, 3)]),
-    (CompressType.COMPRESS_TYPE_UNDEFINED.value, [torch.randn(2, 4, 3), torch.randn(2, 4, 3), torch.randn(2, 3, 3), torch.randn(2, 3, 3), torch.tensor([0, 1])], [torch.randn(2, 3, 3), torch.randn(2, 3, 3)]),
+@dataclass
+class TestParams:
+    compress_type: int
+    in_tensors: list
+    expected_result: list
+
+
+@pytest.mark.parametrize("params", [
+    TestParams(CompressType.COMPRESS_TYPE_KVHEAD.value,
+               [torch.randn(2, 4, 3), torch.randn(2, 4, 3), torch.randn(2, 3, 3), torch.randn(2, 3, 3),
+                torch.tensor([0, 1]), torch.tensor([1, 1]), torch.tensor([1, 1])],
+               [torch.randn(2, 3, 3), torch.randn(2, 3, 3)]),
+    TestParams(CompressType.COMPRESS_TYPE_UNDEFINED.value,
+               [torch.randn(2, 4, 3), torch.randn(2, 4, 3), torch.randn(2, 3, 3), torch.randn(2, 3, 3),
+                torch.tensor([0, 1])], [torch.randn(2, 3, 3), torch.randn(2, 3, 3)]),
 ])
-def test_golden_calc_when_valid_input(mock_logger, compress_type, in_tensors, expected_result):
+def test_golden_calc_when_valid_input(mock_logger, params):
     op = OpcheckReshapeAndCacheOperation()
-    op.op_param = {"compressType": compress_type}
-    result = op.golden_calc(in_tensors)
-    for res, exp in zip(result, expected_result):
+    op.op_param = {"compressType": params.compress_type}
+    result = op.golden_calc(params.in_tensors)
+    for res, exp in zip(result, params.expected_result):
         assert torch.allclose(res, exp, atol=1e-4)
 
 
-@pytest.mark.parametrize("compress_type, in_tensors, expected_error", [
-    (CompressType.COMPRESS_TYPE_KVHEAD.value,
-     [torch.randn(2, 4, 3), torch.randn(2, 4, 3), torch.randn(2, 3, 3), torch.randn(2, 3, 3)], RuntimeError),
-    (CompressType.COMPRESS_TYPE_UNDEFINED.value,
-     [torch.randn(2, 4, 3), torch.randn(2, 4, 3), torch.randn(2, 3, 3), torch.randn(2, 3, 3)], RuntimeError),
-])
-def test_golden_calc_when_invalid_input(mock_logger, compress_type, in_tensors, expected_error):
-    op = OpcheckReshapeAndCacheOperation()
-    op.op_param = {"compressType": compress_type}
-    with pytest.raises(expected_error):
-        op.golden_calc(in_tensors)
+@dataclass
+class InvalidTestParams:
+    compress_type: int
+    in_tensors: list
+    expected_error: type
 
 
-@pytest.mark.parametrize("compress_type, in_tensors, expected_result", [
-    (CompressType.COMPRESS_TYPE_KVHEAD.value,
-     [torch.randn(2, 4, 3), torch.randn(2, 4, 3), torch.randn(2, 3, 3), torch.randn(2, 3, 3), torch.tensor([0, 1]),
-      torch.tensor([1, 1]), torch.tensor([1, 1])], [torch.randn(2, 3, 3), torch.randn(2, 3, 3)]),
+@pytest.mark.parametrize("params", [
+    InvalidTestParams(CompressType.COMPRESS_TYPE_KVHEAD.value,
+                      [torch.randn(2, 4, 3), torch.randn(2, 4, 3), torch.randn(2, 3, 3), torch.randn(2, 3, 3)],
+                      RuntimeError),
+    InvalidTestParams(CompressType.COMPRESS_TYPE_UNDEFINED.value,
+                      [torch.randn(2, 4, 3), torch.randn(2, 4, 3), torch.randn(2, 3, 3), torch.randn(2, 3, 3)],
+                      RuntimeError),
 ])
-def test_golden_func1_when_valid_input(mock_logger, compress_type, in_tensors, expected_result):
+def test_golden_calc_when_invalid_input(mock_logger, params):
     op = OpcheckReshapeAndCacheOperation()
-    op.op_param = {"compressType": compress_type}
-    result = op.golden_func1(in_tensors)
-    for res, exp in zip(result, expected_result):
+    op.op_param = {"compressType": params.compress_type}
+    with pytest.raises(params.expected_error):
+        op.golden_calc(params.in_tensors)
+
+
+@dataclass
+class TestFunc1Params:
+    compress_type: int
+    in_tensors: list
+    expected_result: list
+
+
+@pytest.mark.parametrize("params", [
+    TestFunc1Params(CompressType.COMPRESS_TYPE_KVHEAD.value,
+                    [torch.randn(2, 4, 3), torch.randn(2, 4, 3), torch.randn(2, 3, 3), torch.randn(2, 3, 3),
+                     torch.tensor([0, 1]), torch.tensor([1, 1]), torch.tensor([1, 1])],
+                    [torch.randn(2, 3, 3), torch.randn(2, 3, 3)]),
+])
+def test_golden_func1_when_valid_input(mock_logger, params):
+    op = OpcheckReshapeAndCacheOperation()
+    op.op_param = {"compressType": params.compress_type}
+    result = op.golden_func1(params.in_tensors)
+    for res, exp in zip(result, params.expected_result):
         assert torch.allclose(res, exp, atol=1e-4)
 
 
-@pytest.mark.parametrize("compress_type, in_tensors, expected_result", [
-    (CompressType.COMPRESS_TYPE_UNDEFINED.value,
-     [torch.randn(2, 4, 3), torch.randn(2, 4, 3), torch.randn(2, 3, 3), torch.randn(2, 3, 3), torch.tensor([0, 1])],
-     [torch.randn(2, 3, 3), torch.randn(2, 3, 3)]),
+@dataclass
+class TestFunc2Params:
+    compress_type: int
+    in_tensors: list
+    expected_result: list
+
+
+@pytest.mark.parametrize("params", [
+    TestFunc2Params(CompressType.COMPRESS_TYPE_UNDEFINED.value,
+                    [torch.randn(2, 4, 3), torch.randn(2, 4, 3), torch.randn(2, 3, 3), torch.randn(2, 3, 3),
+                     torch.tensor([0, 1])], [torch.randn(2, 3, 3), torch.randn(2, 3, 3)]),
 ])
-def test_golden_func2_when_valid_input(mock_logger, compress_type, in_tensors, expected_result):
+def test_golden_func2_when_valid_input(mock_logger, params):
     op = OpcheckReshapeAndCacheOperation()
-    op.op_param = {"compressType": compress_type}
-    result = op.golden_func2(in_tensors)
-    for res, exp in zip(result, expected_result):
+    op.op_param = {"compressType": params.compress_type}
+    result = op.golden_func2(params.in_tensors)
+    for res, exp in zip(result, params.expected_result):
         assert torch.allclose(res, exp, atol=1e-4)
 
 
-@pytest.mark.parametrize("compress_type, in_tensors, expected_result", [
-    (CompressType.COMPRESS_TYPE_UNDEFINED.value,
-     [torch.randn(2, 4, 3), torch.randn(2, 4, 3), torch.randn(2, 3, 3, 3), torch.randn(2, 3, 3, 3),
-      torch.tensor([0, 1])], [torch.randn(2, 3, 3, 3), torch.randn(2, 3, 3, 3)]),
+@dataclass
+class TestFunc3Params:
+    compress_type: int
+    in_tensors: list
+    expected_result: list
+
+
+@pytest.mark.parametrize("params", [
+    TestFunc3Params(CompressType.COMPRESS_TYPE_UNDEFINED.value,
+                    [torch.randn(2, 4, 3), torch.randn(2, 4, 3), torch.randn(2, 3, 3, 3), torch.randn(2, 3, 3, 3),
+                     torch.tensor([0, 1])], [torch.randn(2, 3, 3, 3), torch.randn(2, 3, 3, 3)]),
 ])
-def test_golden_func3_when_valid_input(mock_logger, compress_type, in_tensors, expected_result):
+def test_golden_func3_when_valid_input(mock_logger, params):
     op = OpcheckReshapeAndCacheOperation()
-    op.op_param = {"compressType": compress_type}
-    result = op.golden_func3(in_tensors)
-    for res, exp in zip(result, expected_result):
+    op.op_param = {"compressType": params.compress_type}
+    result = op.golden_func3(params.in_tensors)
+    for res, exp in zip(result, params.expected_result):
         assert torch.allclose(res, exp, atol=1e-4)
 
 
-@pytest.mark.parametrize("compress_type, in_tensors, expected_result", [
-    (CompressType.COMPRESS_TYPE_KVHEAD.value,
-     [torch.randn(2, 4, 3), torch.randn(2, 4, 3), torch.randn(2, 3, 3), torch.randn(2, 3, 3), torch.tensor([0, 1]),
-      torch.tensor([1, 1]), torch.tensor([1, 1])], [torch.randn(2, 3, 3), torch.randn(2, 3, 3)]),
-    (CompressType.COMPRESS_TYPE_UNDEFINED.value,
-     [torch.randn(2, 4, 3), torch.randn(2, 4, 3), torch.randn(2, 3, 3), torch.randn(2, 3, 3), torch.tensor([0, 1])],
-     [torch.randn(2, 3, 3), torch.randn(2, 3, 3)]),
-    (CompressType.COMPRESS_TYPE_UNDEFINED.value,
-     [torch.randn(2, 4, 3), torch.randn(2, 4, 3), torch.randn(2, 3, 3, 3), torch.randn(2, 3, 3, 3),
-      torch.tensor([0, 1])], [torch.randn(2, 3, 3, 3), torch.randn(2, 3, 3, 3)]),
+@dataclass
+class TestDifferentCompressTypesParams:
+    compress_type: int
+    in_tensors: list
+    expected_result: list
+
+
+@pytest.mark.parametrize("params", [
+    TestDifferentCompressTypesParams(CompressType.COMPRESS_TYPE_KVHEAD.value,
+                                     [torch.randn(2, 4, 3), torch.randn(2, 4, 3), torch.randn(2, 3, 3),
+                                      torch.randn(2, 3, 3), torch.tensor([0, 1]), torch.tensor([1, 1]),
+                                      torch.tensor([1, 1])], [torch.randn(2, 3, 3), torch.randn(2, 3, 3)]),
+    TestDifferentCompressTypesParams(CompressType.COMPRESS_TYPE_UNDEFINED.value,
+                                     [torch.randn(2, 4, 3), torch.randn(2, 4, 3), torch.randn(2, 3, 3),
+                                      torch.randn(2, 3, 3), torch.tensor([0, 1])],
+                                     [torch.randn(2, 3, 3), torch.randn(2, 3, 3)]),
+    TestDifferentCompressTypesParams(CompressType.COMPRESS_TYPE_UNDEFINED.value,
+                                     [torch.randn(2, 4, 3), torch.randn(2, 4, 3), torch.randn(2, 3, 3, 3),
+                                      torch.randn(2, 3, 3, 3), torch.tensor([0, 1])],
+                                     [torch.randn(2, 3, 3, 3), torch.randn(2, 3, 3, 3)]),
 ])
-def test_golden_calc_when_valid_input_with_different_compress_types(mock_logger, compress_type, in_tensors,
-                                                                    expected_result):
+def test_golden_calc_when_valid_input_with_different_compress_types(mock_logger, params):
     op = OpcheckReshapeAndCacheOperation()
-    op.op_param = {"compressType": compress_type}
-    result = op.golden_calc(in_tensors)
-    for res, exp in zip(result, expected_result):
+    op.op_param = {"compressType": params.compress_type}
+    result = op.golden_calc(params.in_tensors)
+    for res, exp in zip(result, params.expected_result):
         assert torch.allclose(res, exp, atol=1e-4)

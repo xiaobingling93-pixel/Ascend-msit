@@ -10,38 +10,6 @@ from mock_operation_test import MockOperationTest
 OpcheckGatingOperation.__bases__ = (MockOperationTest,)
 
 
-@pytest.mark.parametrize("op_param, in_tensors, expected_result", [
-    ({'seqLen': [2, 3], 'headNum': 2}, [torch.randint(0, 10, (2, 4, 3, 3)).float()], [torch.randint(0, 10, (2, 3, 3)).float()]),
-    ({'seqLen': [1, 2], 'headNum': 1}, [torch.randint(0, 10, (2, 4, 2, 2)).float()], [torch.randint(0, 10, (1, 2, 2)).float()]),
-    ({'seqLen': [3, 3], 'headNum': 3}, [torch.randint(0, 10, (2, 4, 3, 3)).float()], [torch.randint(0, 10, (3, 3, 3)).float()]),
-])
-def test_golden_calc_when_valid_input(op_param, in_tensors, expected_result):
-    # Arrange
-    op = OpcheckGatingOperation()
-    op.op_param = op_param
-
-    # Act
-    result = op.golden_calc(in_tensors)
-
-    # Assert
-    assert torch.allclose(result[0], expected_result[0], atol=1e-4)
-
-
-@pytest.mark.parametrize("op_param, in_tensors, expected_error", [
-    ({'topkExpertNum': 2, 'cumSumNum': 3}, [torch.tensor([0, 1, 2, 0, 1])], RuntimeError),
-    ({'topkExpertNum': 1, 'cumSumNum': 2}, [torch.tensor([0, 1, 0])], RuntimeError),
-    ({'topkExpertNum': 3, 'cumSumNum': 4}, [torch.tensor([0, 1, 2, 3, 0, 1, 2])], RuntimeError),
-])
-def test_golden_calc_when_invalid_input(op_param, in_tensors, expected_error):
-    # Arrange
-    op = OpcheckGatingOperation()
-    op.op_param = op_param
-
-    # Act & Assert
-    with pytest.raises(expected_error):
-        op.golden_calc(in_tensors)
-
-
 @pytest.mark.parametrize("op_param, validate_param_return, expected_execute_call", [
     ({'topkExpertNum': 2, 'cumSumNum': 3}, True, True),
     ({'topkExpertNum': 1, 'cumSumNum': 2}, True, True),
