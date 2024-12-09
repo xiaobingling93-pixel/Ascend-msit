@@ -160,11 +160,11 @@ class GetAttentionParamsParams:
     qk_scale: float
     head_num: int
     kv_head_num: int
-    expected_params: tuple
+    expected_params: List
 
 
 @pytest.mark.parametrize("params", [
-    GetAttentionParamsParams(torch.randn(4, 8, 16), 2.0, 3.0, 4, 2, (2.0, 3.0, [4, 2, 2], torch.float32, 4)),
+    GetAttentionParamsParams(torch.randn(4, 8, 16), 2.0, 3.0, 4, 2, [2.0, 3.0, [4, 2, 2], torch.float32, 4]),
 ])
 def test_get_attention_params_when_valid_input_then_correct_values(params):
     op = OpcheckUnpadSelfAttentionOperation()
