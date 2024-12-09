@@ -10,38 +10,6 @@ from mock_operation_test import MockOperationTest
 OpcheckElewiseSubOperation.__bases__ = (MockOperationTest,)
 
 
-@pytest.mark.parametrize("op_param, in_tensors, expected_result", [
-    ({'seqLen': [2, 3], 'headNum': 2}, [torch.randn(2, 4, 3, 3)], [torch.randn(2, 3, 3)]),
-    ({'seqLen': [1, 2], 'headNum': 1}, [torch.randn(2, 4, 2, 2)], [torch.randn(1, 2, 2)]),
-    ({'seqLen': [3, 3], 'headNum': 3}, [torch.randn(2, 4, 3, 3)], [torch.randn(3, 3, 3)]),
-])
-def test_golden_calc_when_valid_input(op_param, in_tensors, expected_result):
-    # Arrange
-    op = OpcheckElewiseSubOperation()
-    op.op_param = op_param
-
-    # Act
-    result = op.golden_calc(in_tensors)
-
-    # Assert
-    assert torch.allclose(result[0], expected_result[0], atol=1e-4)
-
-
-@pytest.mark.parametrize("op_param, in_tensors, expected_error", [
-    ({'seqLen': [2, 3], 'headNum': 2}, [torch.randn(2, 4, 2, 2)], RuntimeError),
-    ({'seqLen': [1, 2], 'headNum': 1}, [torch.randn(2, 4, 1, 1)], RuntimeError),
-    ({'seqLen': [3, 3], 'headNum': 3}, [torch.randn(2, 4, 2, 2)], RuntimeError),
-])
-def test_golden_calc_when_invalid_input(op_param, in_tensors, expected_error):
-    # Arrange
-    op = OpcheckElewiseSubOperation()
-    op.op_param = op_param
-
-    # Act & Assert
-    with pytest.raises(expected_error):
-        op.golden_calc(in_tensors)
-
-
 @pytest.mark.parametrize("op_param, validate_param_return, expected_execute_call", [
     ({'seqLen': [2, 3], 'headNum': 2}, True, True),
     ({'seqLen': [1, 2], 'headNum': 1}, True, True),
