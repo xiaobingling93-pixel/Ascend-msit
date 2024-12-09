@@ -17,6 +17,7 @@ def setup_and_teardown():
     yield
     # Teardown
 
+
 # Test cases for mask_nz_2_nd
 def test_mask_nz_2_nd_given_mask_and_context_lens_when_mask_type_alibi_then_correct_shape():
     mask = torch.randn(4, 8, 16, 32)
@@ -26,6 +27,7 @@ def test_mask_nz_2_nd_given_mask_and_context_lens_when_mask_type_alibi_then_corr
     result_mask = OpcheckPagedAttentionAttentionOperation.mask_nz_2_nd(mask, mask_type, context_lens, head_num)
     assert result_mask.shape == (1, head_num, 16, 16 * 16)
 
+
 def test_mask_nz_2_nd_given_mask_and_context_lens_when_mask_type_norm_then_correct_shape():
     mask = torch.randn(4, 8, 16, 32)
     mask_type = MaskType.MASK_TYPE_NORM.value
@@ -33,6 +35,7 @@ def test_mask_nz_2_nd_given_mask_and_context_lens_when_mask_type_norm_then_corre
     head_num = 4
     result_mask = OpcheckPagedAttentionAttentionOperation.mask_nz_2_nd(mask, mask_type, context_lens, head_num)
     assert result_mask.shape == (4, 16, 16 * 16)
+
 
 def test_mask_nz_2_nd_given_mask_and_context_lens_when_mask_type_undefined_then_correct_shape():
     mask = torch.randn(4, 8, 16, 32)
@@ -55,7 +58,8 @@ def test_get_quant_param_given_quant_type_has_quant_offset_when_quant_type_undef
 
 
 @patch.object(OpcheckPagedAttentionAttentionOperation, 'group_matmul')
-def test_ref_masked_attention_given_masked_attention_input_alibi_bias_when_quant_type_dequant_fusion_then_correct_shape(mock_group_matmul):
+def test_ref_masked_attention_given_masked_attention_input_alibi_bias_when_quant_type_dequant_fusion_then_correct_shape(
+        mock_group_matmul):
     op = OpcheckPagedAttentionAttentionOperation()
     masked_attention_input = [torch.randn(1, 8, 16), torch.randn(16, 4, 16), torch.randn(16, 4, 16), 1.0]
     alibi_bias = torch.randn(8, 1, 16)
