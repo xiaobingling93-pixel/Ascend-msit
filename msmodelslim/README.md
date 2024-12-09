@@ -7,6 +7,16 @@ MindStudio ModelSlim，昇腾模型压缩工具。 【Powered by MindStudio】
 
 昇腾压缩加速工具，一个以加速为目标、压缩为技术、昇腾为根本的亲和压缩工具。支持训练加速和推理加速，包括模型低秩分解、稀疏训练、训练后量化、量化感知训练等功能，昇腾AI模型开发用户可以灵活调用Python API接口，对模型进行性能调优，并支持导出不同格式模型，在昇腾AI处理器上运行。
 
+## 版本配套
+
+| 条件 | 要求 |
+|---|---|
+| CANN版本 | >= 8.0.RC1.alpha001 |
+| 硬件要求 | Atlas 800I A2 推理服务器、Atlas 300I Duo 推理卡|
+
+备注1：RC3 及之前的 CANN 包已包含该部分代码，可直接安装使用；RC4 及之后的 CANN 包需与该代码仓配套使用。
+备注2：固件与驱动版本与CANN版本的配套关系可在[下载固件与驱动](https://www.hiascend.com/hardware/firmware-drivers/community?product=4&model=32&cann=All&driver=1.0.RC2)界面查看。
+
 ## [大模型已验证列表](docs/大模型已验证列表.md)
 
 ## 使用案例及调优指南
