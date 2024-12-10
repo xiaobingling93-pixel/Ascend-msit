@@ -15,8 +15,9 @@
 import unittest
 from unittest.mock import patch, MagicMock
 import os
-import numpy as np
 import time
+
+import numpy as np
 
 from components.utils.check.rule import Rule
 from components.debug.compare.msquickcmp.common.utils import AccuracyCompareException
