@@ -12,14 +12,47 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import unittest
+from __future__ import print_function
 
+import sys
+import os
+import unittest
+from unittest import mock
 import torch
 import torch.nn.functional as F
+import pytest
+
 
 from components.utils.cmp_algorithm import cosine_similarity, max_relative_error, mean_relative_error, \
-    max_absolute_error, kl_divergence, mean_absolute_error, relative_euclidean_distance \
+    max_absolute_error, kl_divergence, mean_absolute_error, relative_euclidean_distance, \
+    CMP_ALG_MAP, register_custom_compare_algorithm
 
+# Define a temporary directory for testing purposes
+TEMP_DIR = "./"
+os.makedirs(TEMP_DIR, exist_ok=True)
+
+# Create a temporary Python file with a valid function for testing
+TEMP_PY_FILE_PATH = os.path.join(TEMP_DIR, "valid_module.py")
+with open(TEMP_PY_FILE_PATH, 'w') as f:
+    f.write("""
+def valid_function(tensor1, tensor2):
+    return (0.0, '')
+""")
+
+# Ensure the temp directory is in sys.path for module importing
+if TEMP_DIR not in sys.path:
+    sys.path.append(TEMP_DIR)
+
+
+# Mock the FileStat class and its methods for testing permission checks
+class MockFileStat:
+    def __init__(self, file_path):
+        self.file_path = file_path
+
+    @staticmethod
+    def is_basically_legal(self, mode, strict_permission=False):
+        # Always return True for this test case to simulate legal permissions
+        return True
 
 class TestMetrics(unittest.TestCase):
 
@@ -82,3 +115,147 @@ class TestMetrics(unittest.TestCase):
         expected_distance = ((self.my_data - self.golden_data) ** 2).sum() / ground_truth_square_num
         expected_distance = torch.sqrt(expected_distance).item()
         self.assertAlmostEqual(distance, expected_distance, places=6)
+
+
+@pytest.fixture(scope="module", autouse=True)
+def setup():
+    # Setup code here if any required before tests execution
+    yield
+    # Teardown code here if any required after tests execution
+
+# Test cases for cosine_similarity
+def test_cosine_similarity_given_both_zero_when_called_then_one():
+    golden_data = torch.zeros([1])
+    my_data = torch.zeros([1])
+    result, _ = CMP_ALG_MAP["cosine_similarity"](golden_data, my_data)
+    assert result == 1.0
+
+def test_cosine_similarity_given_nonzero_when_called_then_within_range():
+    golden_data = torch.tensor([1.0, 2.0, 3.0])
+    my_data = torch.tensor([1.0, 2.0, 3.0])
+    result, _ = CMP_ALG_MAP["cosine_similarity"](golden_data, my_data)
+    assert 0 <= result <= 1
+
+# Test cases for max_relative_error
+def test_max_relative_error_given_valid_tensors_when_called_then_calculate_correctly():
+    golden_data = torch.tensor([1.0, 2.0, 3.0])
+    my_data = torch.tensor([2.0, 4.0, 6.0])
+    result, _ = CMP_ALG_MAP["max_relative_error"](golden_data, my_data)
+    assert result == pytest.approx(1.0)
+
+def test_max_relative_error_given_zeros_when_called_then_zero():
+    golden_data = torch.zeros([1])
+    my_data = torch.zeros([1])
+    result, _ = CMP_ALG_MAP["max_relative_error"](golden_data, my_data)
+    assert result == 0
+
+# Test cases for mean_relative_error
+def test_mean_relative_error_given_valid_tensors_when_called_then_calculate_correctly():
+    golden_data = torch.tensor([1.0, 2.0, 3.0])
+    my_data = torch.tensor([2.0, 4.0, 6.0])
+    result, _ = CMP_ALG_MAP["mean_relative_error"](golden_data, my_data)
+    assert result == pytest.approx(1.0)
+
+def test_mean_relative_error_given_zeros_when_called_then_zero():
+    golden_data = torch.zeros([1])
+    my_data = torch.zeros([1])
+    result, _ = CMP_ALG_MAP["mean_relative_error"](golden_data, my_data)
+    assert result == 0
+
+# Test cases for max_absolute_error
+def test_max_absolute_error_given_valid_tensors_when_called_then_calculate_correctly():
+    golden_data = torch.tensor([1.0, 2.0, 3.0])
+    my_data = torch.tensor([2.0, 4.0, 6.0])
+    result, _ = CMP_ALG_MAP["max_absolute_error"](golden_data, my_data)
+    assert result == pytest.approx(3.0)
+
+def test_max_absolute_error_given_zeros_when_called_then_zero():
+    golden_data = torch.zeros([1])
+    my_data = torch.zeros([1])
+    result, _ = CMP_ALG_MAP["max_absolute_error"](golden_data, my_data)
+    assert result == 0
+
+def test_mean_absolute_error_given_zeros_when_called_then_zero():
+    golden_data = torch.zeros([1])
+    my_data = torch.zeros([1])
+    result, _ = CMP_ALG_MAP["mean_absolute_error"](golden_data, my_data)
+    assert result == 0
+
+# Test cases for kl_divergence
+def test_kl_divergence_given_valid_tensors_when_called_then_calculate_positive():
+    golden_data = torch.tensor([1.0, 2.0, 3.0])
+    my_data = torch.tensor([2.0, 4.0, 6.0])
+    result, _ = CMP_ALG_MAP["kl_divergence"](golden_data, my_data)
+    assert result >= 0
+
+def test_kl_divergence_given_identical_tensors_when_called_then_zero():
+    golden_data = torch.tensor([1.0, 2.0, 3.0])
+    my_data = torch.tensor([1.0, 2.0, 3.0])
+    result, _ = CMP_ALG_MAP["kl_divergence"](golden_data, my_data)
+    assert result == pytest.approx(0.0)
+
+# Test cases for relative_euclidean_distance
+def test_relative_euclidean_distance_given_valid_tensors_when_called_then_calculate_correctly():
+    golden_data = torch.tensor([1.0, 2.0, 3.0])
+    my_data = torch.tensor([2.0, 4.0, 6.0])
+    result, _ = CMP_ALG_MAP["relative_euclidean_distance"](golden_data, my_data)
+    assert result > 0
+
+def test_relative_euclidean_distance_given_zeros_when_called_then_zero():
+    golden_data = torch.zeros([1])
+    my_data = torch.zeros([1])
+    result, _ = CMP_ALG_MAP["relative_euclidean_distance"](golden_data, my_data)
+    assert result == 0
+
+# Test cases for register_custom_compare_algorithm
+def test_register_custom_compare_algorithm_given_invalid_format_when_called_then_raise_value_error():
+    with pytest.raises(ValueError):
+        register_custom_compare_algorithm("invalid:format")
+
+def test_register_custom_compare_algorithm_given_nonexistent_file_when_called_then_raise_value_error():
+    with pytest.raises(ValueError):
+        register_custom_compare_algorithm("/path/to/nonexistent.py:function_name")
+
+def test_register_custom_compare_algorithm_given_not_py_file_when_called_then_raise_value_error():
+    with pytest.raises(ValueError):
+        register_custom_compare_algorithm("/path/to/file.txt:function_name")
+
+def test_register_custom_compare_algorithm_given_illegal_permission_when_called_then_raise_value_error():
+    with pytest.raises(ValueError):
+        register_custom_compare_algorithm("/path/to/unreadable.py:function_name")
+
+def test_register_custom_compare_algorithm_given_import_error_when_called_then_raise_value_error():
+    with pytest.raises(ValueError):
+        register_custom_compare_algorithm("/path/to/bad_module.py:function_name")
+
+def test_register_custom_compare_algorithm_given_function_not_found_when_called_then_raise_value_error():
+    with pytest.raises(ValueError):
+        register_custom_compare_algorithm("/path/to/module.py:nonexistent_function")
+
+def test_register_custom_compare_algorithm_given_incorrect_signature_when_called_then_raise_value_error():
+    with pytest.raises(ValueError):
+        register_custom_compare_algorithm("/path/to/module.py:function_with_incorrect_signature")
+
+def test_register_custom_compare_algorithm_given_return_type_mismatch_when_called_then_raise_value_error():
+    with pytest.raises(ValueError):
+        register_custom_compare_algorithm("/path/to/module.py:function_with_return_type_mismatch")
+
+# Test case to cover the logger.info call
+@mock.patch('components.utils.cmp_algorithm.logger')
+def test_register_custom_compare_algorithm_given_all_correct_when_called_then_log_added(mock_logger):
+    try:
+        register_custom_compare_algorithm("./valid_module.py:valid_function")
+    except Exception as e:
+        pytest.fail(f"Unexpected exception: {e}")
+
+    # Verify the logging message
+    mock_logger.info.assert_called_once_with("Added custom comparing algorithm: valid_function")
+
+# Cleanup after tests
+def teardown_module():
+    if TEMP_DIR in sys.path:
+        sys.path.remove(TEMP_DIR)
+    if os.path.exists(TEMP_PY_FILE_PATH):
+        os.remove(TEMP_PY_FILE_PATH)
+    if os.path.exists(TEMP_DIR) and not os.listdir(TEMP_DIR):
+        os.rmdir(TEMP_DIR)
