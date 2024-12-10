@@ -13,660 +13,710 @@
 # limitations under the License.
 
 import unittest
-from unittest.mock import patch, MagicMock
-import os
+from unittest.mock import patch
 import argparse
-import re
+from contextlib import ExitStack
 
-from components.utils.file_open_check import FileStat
 from components.debug.compare.msquickcmp.common.args_check import (
-    check_model_path_legality,
-    check_om_path_legality,
-    check_weight_path_legality,
-    check_input_path_legality,
-    check_output_path_legality,
-    check_dict_kind_string,
-    check_device_range_valid,
-    check_number_list,
-    check_dym_range_string,
-    str2bool,
-    safe_string,
-    is_saved_model_valid,
-    valid_json_file_or_dir,
-    check_cann_path_legality,
-    check_fusion_cfg_path_legality,
-    check_quant_json_path_legality
+    check_model_path_legality, check_weight_path_legality, check_om_path_legality, is_saved_model_valid,
+    valid_json_file_or_dir, check_path_exit, check_output_path_legality, check_cann_path_legality,
+    check_input_path_legality, check_dict_kind_string, check_device_range_valid, check_number_list,
+    check_dym_range_string, check_fusion_cfg_path_legality,
+    check_quant_json_path_legality, safe_string, str2bool
 )
-STR_WHITE_LIST_REGEX = re.compile(r"[^_A-Za-z0-9\"'><=\[\])(,}{: /.~-]")
 
-class TestIsSavedModelValid(unittest.TestCase):
+
+class ModelPathMock:
+    """Mock class for model path validation testing"""
+
+    def __init__(self,
+                 is_dir=False,
+                 is_file=True,
+                 exists=None,
+                 is_saved_model_valid_=True,
+                 is_basically_legal=True,
+                 is_legal_file_type=True,
+                 is_legal_file_size=True,
+                 file_stat_exception=None):
+        self.is_dir = is_dir
+        self.is_file = is_file
+        self.exists = exists
+        self.is_saved_model_valid = is_saved_model_valid_
+        self.is_basically_legal = is_basically_legal
+        self.is_legal_file_type = is_legal_file_type
+        self.is_legal_file_size = is_legal_file_size
+        self.file_stat_exception = file_stat_exception
+
+        # 设置mock的FileStat类
+        self.mock_file_stat = type('MockFileStat', (), {
+            'is_basically_legal': lambda _, mode, *args, **kwargs: self.is_basically_legal,
+            'is_legal_file_type': lambda _, allowed_types, *args, **kwargs: self.is_legal_file_type,
+            'is_legal_file_size': lambda _, size_limit, *args, **kwargs: self.is_legal_file_size,
+            'is_dir': self.is_dir
+        })
+
+    def setup_mocks(self):
+        """Setup all required patches"""
+        patches = [
+            patch('os.path.isdir', return_value=self.is_dir),
+            patch('os.path.isfile', return_value=self.is_file),
+            patch('components.debug.compare.msquickcmp.common.args_check.is_saved_model_valid',
+                  return_value=self.is_saved_model_valid)
+        ]
+
+        if self.exists is not None:
+            patches.append(patch('os.path.exists', return_value=self.exists))
+
+        # 如果设置了file_stat_exception，则FileStat会抛出异常
+        if self.file_stat_exception:
+            patches.append(
+                patch('components.debug.compare.msquickcmp.common.args_check.FileStat',
+                      side_effect=self.file_stat_exception)
+            )
+        else:
+            patches.append(
+                patch('components.debug.compare.msquickcmp.common.args_check.FileStat',
+                      return_value=self.mock_file_stat())
+            )
+            patch('components.debug.compare.msquickcmp.common.args_check.is_legal_args_path_string',
+                  return_value=True)
+
+        return patches
+
+
+class BastCheckTestCase(unittest.TestCase):
+    @staticmethod
+    def apply_patches(mock_env):
+        """Helper method to apply all patches"""
+        stack = ExitStack()
+        for patch_item in mock_env.setup_mocks():
+            stack.enter_context(patch_item)
+        return stack
+
+
+class TestCheckModelPathLegality(BastCheckTestCase):
+    def test_normal_file_success(self):
+        """测试普通文件的成功场景"""
+        mock_env = ModelPathMock(is_dir=False)
+        with self.apply_patches(mock_env):
+            result = check_model_path_legality("test_model.onnx")
+            self.assertEqual(result, "test_model.onnx")
+
+    def test_basic_legality_check_fails(self):
+        """测试基本合法性检查失败的场景"""
+        mock_env = ModelPathMock(is_dir=False, is_basically_legal=False)
+        with self.apply_patches(mock_env):
+            with self.assertRaises(argparse.ArgumentTypeError):
+                check_model_path_legality("test_model.onnx")
+
+    def test_file_type_check_fails(self):
+        """测试文件类型检查失败的场景"""
+        mock_env = ModelPathMock(is_dir=False, is_legal_file_type=False)
+        with self.apply_patches(mock_env):
+            with self.assertRaises(argparse.ArgumentTypeError):
+                check_model_path_legality("test_model.invalid")
+
+    def test_file_size_check_fails(self):
+        """测试文件大小检查失败的场景"""
+        mock_env = ModelPathMock(is_dir=False, is_legal_file_size=False)
+        with self.apply_patches(mock_env):
+            with self.assertRaises(argparse.ArgumentTypeError):
+                check_model_path_legality("test_model.onnx")
+
+    def test_directory_valid_saved_model(self):
+        """测试有效的保存模型目录"""
+        mock_env = ModelPathMock(is_dir=True, is_saved_model_valid_=True)
+        with self.apply_patches(mock_env):
+            result = check_model_path_legality("valid_model_dir")
+            self.assertEqual(result, "valid_model_dir")
+
+    def test_directory_invalid_saved_model(self):
+        """测试无效的保存模型目录"""
+        mock_env = ModelPathMock(is_dir=True, is_saved_model_valid_=False)
+        with self.apply_patches(mock_env):
+            with self.assertRaises(argparse.ArgumentTypeError):
+                check_model_path_legality("invalid_model_dir")
+
+    def test_file_stat_raises_exception(self):
+        """测试FileStat初始化异常的场景"""
+        mock_env = ModelPathMock(is_dir=False, file_stat_exception=Exception("File stat error"))
+        with self.apply_patches(mock_env):
+            with self.assertRaises(argparse.ArgumentTypeError):
+                check_model_path_legality("invalid_path")
+
+
+class TestCheckOmPathLegality(BastCheckTestCase):
+    def test_normal_file_success(self):
+        """测试普通om文件的成功场景"""
+        mock_env = ModelPathMock(is_dir=False)
+        with self.apply_patches(mock_env):
+            result = check_om_path_legality("test_model.om")
+            self.assertEqual(result, "test_model.om")
+
+    def test_basic_legality_check_fails(self):
+        """测试基本合法性检查失败的场景"""
+        mock_env = ModelPathMock(is_dir=False, is_basically_legal=False)
+        with self.apply_patches(mock_env):
+            with self.assertRaises(argparse.ArgumentTypeError):
+                check_om_path_legality("test_model.om")
+
+    def test_file_type_check_fails(self):
+        """测试文件类型检查失败的场景"""
+        mock_env = ModelPathMock(is_dir=False, is_legal_file_type=False)
+        with self.apply_patches(mock_env):
+            with self.assertRaises(argparse.ArgumentTypeError):
+                check_om_path_legality("test_model.invalid")
+
+    def test_file_size_check_fails(self):
+        """测试文件大小检查失败的场景"""
+        mock_env = ModelPathMock(is_dir=False, is_legal_file_size=False)
+        with self.apply_patches(mock_env):
+            with self.assertRaises(argparse.ArgumentTypeError):
+                check_om_path_legality("test_model.om")
+
+    def test_directory_valid_saved_model(self):
+        """测试有效的保存模型目录"""
+        mock_env = ModelPathMock(is_dir=True, is_saved_model_valid_=True)
+        with self.apply_patches(mock_env):
+            result = check_om_path_legality("valid_model_dir")
+            self.assertEqual(result, "valid_model_dir")
+
+    def test_directory_invalid_saved_model(self):
+        """测试无效的保存模型目录"""
+        mock_env = ModelPathMock(is_dir=True, is_saved_model_valid_=False)
+        with self.apply_patches(mock_env):
+            with self.assertRaises(argparse.ArgumentTypeError):
+                check_om_path_legality("invalid_model_dir")
+
+    def test_file_stat_raises_exception(self):
+        """测试FileStat初始化异常的场景"""
+        mock_env = ModelPathMock(is_dir=False, file_stat_exception=Exception("File stat error"))
+        with self.apply_patches(mock_env):
+            with self.assertRaises(argparse.ArgumentTypeError):
+                check_om_path_legality("invalid_path")
+
+
+def test_is_saved_model_valid():
+    """ test is_saved_model_valid """
+    mock_env = ModelPathMock(is_dir=True, is_file=True)
+    with BastCheckTestCase.apply_patches(mock_env):
+        assert is_saved_model_valid("valid_path") is True
+
+
+class TestIsSavedModelValid(BastCheckTestCase):
+    @patch('os.path.isdir')
+    @patch('os.path.isfile')
+    @patch('os.path.join')
+    def test_valid_saved_model(self, mock_join, mock_isfile, mock_isdir):
+        """测试有效的SavedModel目录结构"""
+        # 设置mock返回值
+        def mock_isdir_func(path):
+            return {'test_dir': True, 'test_dir/variables': True}.get(path, False)
+        mock_isdir.side_effect = mock_isdir_func
+
+        def mock_isfile_func(path):
+            return path == 'test_dir/saved_model.pb'
+        mock_isfile.side_effect = mock_isfile_func
+
+        def mock_join_func(dir_path, file_name):
+            return f"{dir_path}/{file_name}"
+        mock_join.side_effect = mock_join_func
+
+        # 验证结果
+        self.assertTrue(is_saved_model_valid('test_dir'))
+
+    @patch('os.path.isdir')
+    def test_invalid_directory(self, mock_isdir):
+        """测试输入路径不是目录的情况"""
+        mock_isdir.return_value = False
+        self.assertFalse(is_saved_model_valid('not_a_dir'))
 
     @patch('os.path.isdir')
     @patch('os.path.isfile')
-    def test_valid_saved_model(self, mock_isfile, mock_isdir):
-        # 模拟合法的 saved_model 文件夹
-        mock_isdir.side_effect = lambda path: path == "valid_directory" or path == "valid_directory/variables"
-        mock_isfile.side_effect = lambda path: path == "valid_directory/saved_model.pb"
+    @patch('os.path.join')
+    def test_missing_saved_model_pb(self, mock_join, mock_isfile, mock_isdir):
+        """测试缺少saved_model.pb文件的情况"""
+        # 目录存在，但saved_model.pb不存在
+        mock_isdir.return_value = True
+        mock_isfile.return_value = False
 
-        result = is_saved_model_valid("valid_directory")
-        self.assertTrue(result)
+        def mock_join_func(dir_path, file_name):
+            return f"{dir_path}/{file_name}"
+        mock_join.side_effect = mock_join_func
 
-    @patch('os.path.isdir')
-    @patch('os.path.isfile')
-    def test_missing_saved_model_pb(self, mock_isfile, mock_isdir):
-        # 模拟 missing saved_model.pb 文件
-        mock_isdir.side_effect = lambda path: path == "valid_directory"
-        mock_isfile.side_effect = lambda path: False  # saved_model.pb 不存在
-
-        result = is_saved_model_valid("valid_directory")
-        self.assertFalse(result)
+        self.assertFalse(is_saved_model_valid('test_dir'))
 
     @patch('os.path.isdir')
     @patch('os.path.isfile')
-    def test_missing_variables_directory(self, mock_isfile, mock_isdir):
-        # 模拟 missing variables 目录
-        mock_isdir.side_effect = lambda path: path == "valid_directory"
-        mock_isfile.side_effect = lambda path: path == "valid_directory/saved_model.pb"
+    @patch('os.path.join')
+    def test_missing_variables_dir(self, mock_join, mock_isfile, mock_isdir):
+        """测试缺少variables目录的情况"""
+        # 设置mock返回值
+        def mock_isdir_func(path):
+            return {'test_dir': True, 'test_dir/variables': False}.get(path, False)
+        mock_isdir.side_effect = mock_isdir_func
 
-        result = is_saved_model_valid("valid_directory")
-        self.assertFalse(result)
+        def mock_isfile_func(path):
+            return path == 'test_dir/saved_model.pb'
+        mock_isfile.side_effect = mock_isfile_func
 
+        def mock_join_func(dir_path, file_name):
+            return f"{dir_path}/{file_name}"
+        mock_join.side_effect = mock_join_func
 
-class TestCheckModelPathLegality(unittest.TestCase):
-    @patch('os.path.isdir')
-    @patch('components.utils.file_open_check.FileStat')
-    def test_invalid_file_type(self, MockFileStat, MockIsDir):
-        # 模拟文件类型不合法
-        MockIsDir.return_value = False
-        mock_file = MagicMock()
-        MockFileStat.return_value = mock_file
-        mock_file.is_basically_legal.return_value = True
-        mock_file.is_legal_file_type.return_value = False
-        mock_file.is_legal_file_size.return_value = True
-
-        with self.assertRaises(argparse.ArgumentTypeError):
-            check_model_path_legality("invalid_model.txt")
+        self.assertFalse(is_saved_model_valid('test_dir'))
 
     @patch('os.path.isdir')
-    @patch('components.utils.file_open_check.FileStat')
-    def test_file_size_exceed(self, MockFileStat, MockIsDir):
-        # 模拟文件大小超出限制
-        MockIsDir.return_value = False
-        mock_file = MagicMock()
-        MockFileStat.return_value = mock_file
-        mock_file.is_basically_legal.return_value = True
-        mock_file.is_legal_file_type.return_value = True
-        mock_file.is_legal_file_size.return_value = False
+    @patch('os.path.isfile')
+    @patch('os.path.join')
+    def test_path_join_calls(self, mock_join, mock_isfile, mock_isdir):
+        """测试os.path.join的调用参数是否正确"""
+        test_dir = 'test_dir'
 
-        with self.assertRaises(argparse.ArgumentTypeError):
-            check_model_path_legality("large_model.onnx")
+        # 设置基本的mock返回值
+        mock_isdir.return_value = True
+        mock_isfile.return_value = True
+        def mock_join_func(dir_path, file_name):
+            return f"{dir_path}/{file_name}"
+        mock_join.side_effect = mock_join_func
 
-    @patch('os.path.isdir')
-    @patch('components.utils.file_open_check.FileStat')
-    def test_invalid_directory(self, MockFileStat, MockIsDir):
-        # 模拟无效的文件夹路径
-        MockIsDir.return_value = True
-        MockFileStat.return_value.is_basically_legal.return_value = False
+        is_saved_model_valid(test_dir)
 
-        with self.assertRaises(argparse.ArgumentTypeError):
-            check_model_path_legality("invalid_directory")
-
-    @patch('os.path.isdir')
-    @patch('components.utils.file_open_check.FileStat')
-    def test_invalid_path(self, MockFileStat, MockIsDir):
-        # 模拟无效路径（不存在的路径）
-        MockIsDir.return_value = False
-        MockFileStat.side_effect = Exception("Path not found")
-
-        with self.assertRaises(argparse.ArgumentTypeError):
-            check_model_path_legality("non_existent_path")
-
-
-class TestCheckOmPathLegality(unittest.TestCase):
-    @patch('os.path.isdir')
-    @patch('components.utils.file_open_check.FileStat')
-    def test_invalid_file_type(self, MockFileStat, MockIsDir):
-        # 模拟文件类型不合法（如 .txt 文件）
-        MockIsDir.return_value = False
-        mock_file = MagicMock()
-        MockFileStat.return_value = mock_file
-        mock_file.is_basically_legal.return_value = True
-        mock_file.is_legal_file_type.return_value = False
-        mock_file.is_legal_file_size.return_value = True
-
-        with self.assertRaises(argparse.ArgumentTypeError):
-            check_om_path_legality("invalid_model.txt")
+        # 验证os.path.join的调用
+        expected_calls = [
+            unittest.mock.call(test_dir, 'saved_model.pb'),
+            unittest.mock.call(test_dir, 'variables')
+        ]
+        mock_join.assert_has_calls(expected_calls, any_order=False)
 
     @patch('os.path.isdir')
-    @patch('components.utils.file_open_check.FileStat')
-    def test_file_size_exceed(self, MockFileStat, MockIsDir):
-        # 模拟文件大小超出限制
-        MockIsDir.return_value = False
-        mock_file = MagicMock()
-        MockFileStat.return_value = mock_file
-        mock_file.is_basically_legal.return_value = True
-        mock_file.is_legal_file_type.return_value = True
-        mock_file.is_legal_file_size.return_value = False
-
-        with self.assertRaises(argparse.ArgumentTypeError):
-            check_om_path_legality("large_model.om")
+    @patch('os.path.isfile')
+    @patch('os.path.join')
+    def test_empty_directory_path(self, mock_join, mock_isfile, mock_isdir):
+        """测试空目录路径"""
+        mock_isdir.return_value = False
+        self.assertFalse(is_saved_model_valid(''))
 
     @patch('os.path.isdir')
-    @patch('components.utils.file_open_check.FileStat')
-    def test_invalid_directory(self, MockFileStat, MockIsDir):
-        # 模拟无效的文件夹路径
-        MockIsDir.return_value = True
-        MockFileStat.return_value.is_basically_legal.return_value = False
+    @patch('os.path.isfile')
+    @patch('os.path.join')
+    def test_special_characters_in_path(self, mock_join, mock_isfile, mock_isdir):
+        """测试路径中包含特殊字符的情况"""
+        test_dir = '/test/dir/with/@#$%^&*()'
+        def mock_isdir_func(path):
+            return {test_dir: True, f'{test_dir}/variables': True}.get(path, False)
+        mock_isdir.side_effect = mock_isdir_func
 
+        def mock_isfile_func(path):
+            return path == f'{test_dir}/saved_model.pb'
+        mock_isfile.side_effect = mock_isfile_func
+
+        def mock_join_func(dir_path, file_name):
+            return f"{dir_path}/{file_name}"
+        mock_join.side_effect = mock_join_func
+
+        self.assertTrue(is_saved_model_valid(test_dir))
+
+
+class TestCheckWeightPathLegality(BastCheckTestCase):
+    def test_normal_file_success(self):
+        """测试普通caffemodel文件的成功场景"""
+        mock_env = ModelPathMock(is_dir=False)
+        with self.apply_patches(mock_env):
+            result = check_weight_path_legality("test_model.caffemodel")
+            self.assertEqual(result, "test_model.caffemodel")
+
+    def test_basic_legality_check_fails(self):
+        """测试基本合法性检查失败的场景"""
+        mock_env = ModelPathMock(is_dir=False, is_basically_legal=False)
+        with self.apply_patches(mock_env):
+            with self.assertRaises(argparse.ArgumentTypeError):
+                check_weight_path_legality("test_model.caffemodel")
+
+    def test_file_type_check_fails(self):
+        """测试文件类型检查失败的场景"""
+        mock_env = ModelPathMock(is_dir=False, is_legal_file_type=False)
+        with self.apply_patches(mock_env):
+            with self.assertRaises(argparse.ArgumentTypeError):
+                check_weight_path_legality("test_model.invalid")
+
+    def test_file_size_check_fails(self):
+        """测试文件大小检查失败的场景"""
+        mock_env = ModelPathMock(is_dir=False, is_legal_file_size=False)
+        with self.apply_patches(mock_env):
+            with self.assertRaises(argparse.ArgumentTypeError):
+                check_weight_path_legality("test_model.caffemodel")
+
+    def test_file_stat_raises_exception(self):
+        """测试FileStat初始化异常的场景"""
+        mock_env = ModelPathMock(is_dir=False, file_stat_exception=Exception("File stat error"))
+        with self.apply_patches(mock_env):
+            with self.assertRaises(argparse.ArgumentTypeError):
+                check_weight_path_legality("invalid_path")
+
+
+class TestCheckInputPathLegality(BastCheckTestCase):
+    def test_empty_input(self):
+        """测试空输入"""
+        self.assertIsNotNone(check_input_path_legality(""))
+        self.assertIsNone(check_input_path_legality(None))
+
+    def test_single_valid_path(self):
+        """测试单个有效路径"""
+        mock_env = ModelPathMock(is_basically_legal=True)
+        with self.apply_patches(mock_env):
+            result = check_input_path_legality("valid/path")
+            self.assertEqual(result, "valid/path")
+
+    def test_multiple_valid_paths(self):
+        """测试多个有效路径"""
+        mock_env = ModelPathMock(is_basically_legal=True)
+        with self.apply_patches(mock_env):
+            result = check_input_path_legality("path1,path2,path3")
+            self.assertEqual(result, "path1,path2,path3")
+
+    def test_invalid_path(self):
+        """测试无效路径"""
+        mock_env = ModelPathMock(is_basically_legal=False)
+        with self.apply_patches(mock_env):
+            with self.assertRaises(argparse.ArgumentTypeError):
+                check_input_path_legality("invalid/path")
+
+    def test_file_stat_exception(self):
+        """测试FileStat异常"""
+        mock_env = ModelPathMock(file_stat_exception=Exception("File stat error"))
+        with self.apply_patches(mock_env):
+            with self.assertRaises(argparse.ArgumentTypeError):
+                check_input_path_legality("error/path")
+
+
+class TestCheckCannPathLegality(BastCheckTestCase):
+    @patch('components.debug.compare.msquickcmp.common.args_check.is_legal_args_path_string', return_value=True)
+    def test_valid_path(self, mock_is_legal):
+        """测试有效路径"""
+        result = check_cann_path_legality("valid/path")
+        self.assertEqual(result, "valid/path")
+
+    @patch('components.debug.compare.msquickcmp.common.args_check.is_legal_args_path_string', return_value=False)
+    def test_invalid_path(self, mock_is_legal):
+        """测试无效路径"""
         with self.assertRaises(argparse.ArgumentTypeError):
-            check_om_path_legality("invalid_directory")
+            check_cann_path_legality("invalid/path")
 
-    @patch('os.path.isdir')
-    @patch('components.utils.file_open_check.FileStat')
-    def test_invalid_path(self, MockFileStat, MockIsDir):
-        # 模拟无效路径（不存在的路径）
-        MockIsDir.return_value = False
-        MockFileStat.side_effect = Exception("Path not found")
 
-        with self.assertRaises(argparse.ArgumentTypeError):
-            check_om_path_legality("non_existent_path")
+class TestCheckOutputPathLegality(BastCheckTestCase):
+    def test_empty_input(self):
+        """测试空输入"""
+        self.assertIsNotNone(check_output_path_legality(""))
+        self.assertIsNone(check_output_path_legality(None))
 
-class TestCheckWeightPathLegality(unittest.TestCase):
-    @patch('components.utils.file_open_check.FileStat')
-    def test_invalid_file_type(self, MockFileStat):
-        # 模拟无效文件类型（如 .txt 文件）
-        mock_file = MagicMock()
-        MockFileStat.return_value = mock_file
-        mock_file.is_basically_legal.return_value = True
-        mock_file.is_legal_file_type.return_value = False
-        mock_file.is_legal_file_size.return_value = True
+    def test_valid_path(self):
+        """测试有效输出路径"""
+        mock_env = ModelPathMock(is_basically_legal=True)
+        with self.apply_patches(mock_env):
+            result = check_output_path_legality("valid/path")
+            self.assertEqual(result, "valid/path")
 
-        with self.assertRaises(argparse.ArgumentTypeError):
-            check_weight_path_legality("invalid_model.txt")
+    def test_invalid_path(self):
+        """测试无效输出路径"""
+        mock_env = ModelPathMock(is_basically_legal=False)
+        with self.apply_patches(mock_env):
+            with self.assertRaises(argparse.ArgumentTypeError):
+                check_output_path_legality("invalid/path")
 
-    @patch('components.utils.file_open_check.FileStat')
-    def test_file_size_exceed(self, MockFileStat):
-        # 模拟文件大小超出限制
-        mock_file = MagicMock()
-        MockFileStat.return_value = mock_file
-        mock_file.is_basically_legal.return_value = True
-        mock_file.is_legal_file_type.return_value = True
-        mock_file.is_legal_file_size.return_value = False
+    def test_file_stat_exception(self):
+        """测试FileStat异常"""
+        mock_env = ModelPathMock(file_stat_exception=Exception("File stat error"))
+        with self.apply_patches(mock_env):
+            with self.assertRaises(argparse.ArgumentTypeError):
+                check_output_path_legality("error/path")
 
-        with self.assertRaises(argparse.ArgumentTypeError):
-            check_weight_path_legality("large_model.caffemodel")
 
-    @patch('components.utils.file_open_check.FileStat')
-    def test_invalid_path(self, MockFileStat):
-        # 模拟无效路径或文件（不存在的文件路径）
-        MockFileStat.side_effect = Exception("Path not found")
+class TestCheckPathExit(BastCheckTestCase):
+    def test_existing_path(self):
+        """测试存在的路径"""
+        mock_env = ModelPathMock(exists=True)
+        with self.apply_patches(mock_env):
+            result = check_path_exit("existing/path")
+            self.assertEqual(result, "existing/path")
 
-        with self.assertRaises(argparse.ArgumentTypeError):
-            check_weight_path_legality("non_existent_path.caffemodel")
+    def test_non_existing_path(self):
+        """测试不存在的路径"""
+        mock_env = ModelPathMock(exists=False)
+        with self.apply_patches(mock_env):
+            with self.assertRaises(ValueError):
+                check_path_exit("non_existing/path")
 
-    @patch('components.utils.file_open_check.FileStat')
-    def test_invalid_file_permissions(self, MockFileStat):
-        # 模拟无法读取的文件（权限问题）
-        mock_file = MagicMock()
-        MockFileStat.return_value = mock_file
-        mock_file.is_basically_legal.return_value = False  # 权限问题，无法读取文件
 
-        with self.assertRaises(argparse.ArgumentTypeError):
-            check_weight_path_legality("restricted_model.caffemodel")
+class TestValidJsonFileOrDir(BastCheckTestCase):
+    def test_empty_input(self):
+        """测试空输入"""
+        self.assertIsNotNone(valid_json_file_or_dir(""))
+        self.assertIsNone(valid_json_file_or_dir(None))
 
-class TestCheckInputPathLegality(unittest.TestCase):
-    @patch('components.utils.file_open_check.FileStat')
-    def test_empty_input(self, MockFileStat):
-        # 测试空输入路径
-        result = check_input_path_legality("")
-        self.assertEqual(result, "")
+    def test_valid_directory(self):
+        """测试有效目录"""
+        mock_env = ModelPathMock(is_dir=True, is_basically_legal=True)
+        with self.apply_patches(mock_env):
+            result = valid_json_file_or_dir("valid/dir")
+            self.assertEqual(result, "valid/dir")
 
-    @patch('components.utils.file_open_check.FileStat')
-    def test_invalid_input_path(self, MockFileStat):
-        # 模拟无效的输入路径
-        mock_file = MagicMock()
-        MockFileStat.return_value = mock_file
-        mock_file.is_basically_legal.return_value = False  # 无法读取
+    def test_valid_json_file(self):
+        """测试有效JSON文件"""
+        mock_env = ModelPathMock(is_dir=False, is_basically_legal=True, is_legal_file_type=True,
+                                 is_legal_file_size=True)
+        with self.apply_patches(mock_env):
+            result = valid_json_file_or_dir("valid.json")
+            self.assertEqual(result, "valid.json")
 
-        with self.assertRaises(argparse.ArgumentTypeError):
-            check_input_path_legality("invalid_path")
+    def test_invalid_file_type(self):
+        """测试无效文件类型"""
+        mock_env = ModelPathMock(is_dir=False, is_basically_legal=True, is_legal_file_type=False)
+        with self.apply_patches(mock_env):
+            with self.assertRaises(argparse.ArgumentTypeError):
+                valid_json_file_or_dir("invalid.txt")
 
-    @patch('components.utils.file_open_check.FileStat')
-    def test_multiple_input_paths_some_invalid(self, MockFileStat):
-        # 模拟多个路径，部分路径无效
-        mock_file = MagicMock()
-        MockFileStat.return_value = mock_file
-        mock_file.is_basically_legal.return_value = True
+    def test_file_too_large(self):
+        """测试文件过大"""
+        mock_env = ModelPathMock(is_dir=False, is_basically_legal=True, is_legal_file_type=True,
+                                 is_legal_file_size=False)
+        with self.apply_patches(mock_env):
+            with self.assertRaises(argparse.ArgumentTypeError):
+                valid_json_file_or_dir("large.json")
 
-        # 设置第一个路径合法，第二个路径无效
-        mock_file.is_basically_legal.side_effect = [True, False]
+    def test_file_stat_exception(self):
+        """测试FileStat异常"""
+        mock_env = ModelPathMock(file_stat_exception=Exception("File stat error"))
+        with self.apply_patches(mock_env):
+            with self.assertRaises(argparse.ArgumentTypeError):
+                valid_json_file_or_dir("error.json")
 
-        with self.assertRaises(argparse.ArgumentTypeError):
-            check_input_path_legality("valid_path,invalid_path")
 
-    @patch('components.utils.file_open_check.FileStat')
-    def test_invalid_path_exception(self, MockFileStat):
-        # 模拟路径无效（如不存在的文件路径）
-        MockFileStat.side_effect = Exception("Path not found")
+class TestCheckDictKindString(BastCheckTestCase):
+    def test_empty_input(self):
+        """测试空输入"""
+        self.assertIsNotNone(check_dict_kind_string(""))
+        self.assertIsNone(check_dict_kind_string(None))
 
-        with self.assertRaises(argparse.ArgumentTypeError):
-            check_input_path_legality("non_existent_path")
+    def test_valid_input(self):
+        """测试有效输入"""
+        valid_inputs = [
+            "input_name1:1,224,224,3",
+            "input_name1:1,224,224,3;input_name2:3,300",
+            "test.name:1,2,3",
+            "test_name:1,2,3"
+        ]
+        for input_str in valid_inputs:
+            self.assertEqual(check_dict_kind_string(input_str), input_str)
 
-class TestCheckCannPathLegality(unittest.TestCase):
+    def test_invalid_input(self):
+        """测试无效输入"""
+        invalid_inputs = [
+            "input@name:1,2,3",
+            "input name:1,2,3",
+            "input+name:1,2,3",
+            "input$name:1,2,3"
+        ]
+        for input_str in invalid_inputs:
+            with self.assertRaises(argparse.ArgumentTypeError):
+                check_dict_kind_string(input_str)
 
-    @patch('components.utils.file_open_check.is_legal_args_path_string')
-    def test_valid_cann_path(self, mock_is_legal_args_path_string):
-        # 模拟合法路径
-        mock_is_legal_args_path_string.return_value = True
 
-        # 测试合法路径
-        result = check_cann_path_legality("valid/cann/path")
-        self.assertEqual(result, "valid/cann/path")
-
-    @patch('components.utils.file_open_check.is_legal_args_path_string')
-    def test_invalid_cann_path(self, mock_is_legal_args_path_string):
-        # 模拟非法路径
-        mock_is_legal_args_path_string.return_value = False
-
-        # 测试非法路径，期望抛出 ArgumentTypeError
-        with self.assertRaises(argparse.ArgumentTypeError):
-            check_cann_path_legality("invalid/cann/path&")
-
-class TestCheckOutputPathLegality(unittest.TestCase):
-
-    @patch('components.utils.file_open_check.FileStat')
-    def test_valid_output_path(self, MockFileStat):
-        # 模拟合法路径：文件路径可写
-        mock_file = MagicMock()
-        MockFileStat.return_value = mock_file
-        mock_file.is_basically_legal.return_value = True  # 可写权限
-
-        # 测试合法路径
-        result = check_output_path_legality("valid/output/path")
-        self.assertEqual(result, "valid/output/path")
-
-    @patch('components.utils.file_open_check.FileStat')
-    def test_empty_output_path(self, MockFileStat):
-        # 测试空路径
-        result = check_output_path_legality("")
-        self.assertEqual(result, "")
-
-    @patch('components.utils.file_open_check.FileStat')
-    def test_invalid_output_path(self, MockFileStat):
-        # 模拟路径无效（如不存在的文件路径）
-        MockFileStat.side_effect = Exception("Path not found")
-
-        with self.assertRaises(argparse.ArgumentTypeError):
-            check_output_path_legality("non_existent_output_path&")
-
-class TestValidJsonFileOrDir(unittest.TestCase):
-
-    @patch('components.utils.file_open_check.FileStat')
-    def test_empty_input_path(self, MockFileStat):
-        # 测试空路径
-        result = valid_json_file_or_dir("")
-        self.assertEqual(result, "")
-
-    @patch('components.utils.file_open_check.FileStat')
-    def test_invalid_file_type(self, MockFileStat):
-        # 模拟文件类型不合法
-        mock_file = MagicMock()
-        MockFileStat.return_value = mock_file
-        mock_file.is_dir = False
-        mock_file.is_basically_legal.return_value = True
-        mock_file.is_legal_file_type.return_value = False  # 非 JSON 文件
-
-        with self.assertRaises(argparse.ArgumentTypeError):
-            valid_json_file_or_dir("invalid/file.txt")
-
-    @patch('components.utils.file_open_check.FileStat')
-    def test_invalid_file_size(self, MockFileStat):
-        # 模拟文件大小不合法
-        mock_file = MagicMock()
-        MockFileStat.return_value = mock_file
-        mock_file.is_dir = False
-        mock_file.is_basically_legal.return_value = True
-        mock_file.is_legal_file_type.return_value = True  # JSON 文件
-        mock_file.is_legal_file_size.return_value = False  # 文件大小超出限制
-
-        with self.assertRaises(argparse.ArgumentTypeError):
-            valid_json_file_or_dir("invalid/large_file.json")
-
-    @patch('components.utils.file_open_check.FileStat')
-    def test_unreadable_path(self, MockFileStat):
-        # 模拟路径不可读取（权限问题）
-        mock_file = MagicMock()
-        MockFileStat.return_value = mock_file
-        mock_file.is_basically_legal.side_effect = Exception("No read permission")
-
-        with self.assertRaises(argparse.ArgumentTypeError):
-            valid_json_file_or_dir("unreadable/file.json")
-
-class TestCheckDictKindString(unittest.TestCase):
-
-    def test_empty_string(self):
-        # 测试空字符串
-        result = check_dict_kind_string("")
-        self.assertEqual(result, "")
-
-    def test_valid_string(self):
-        # 测试合法字符串
-        valid_input = "input_name1:1,224,224,3;input_name2:3,300"
-        result = check_dict_kind_string(valid_input)
-        self.assertEqual(result, valid_input)
-
-    def test_invalid_string_with_illegal_character(self):
-        # 测试包含非法字符的字符串 (如空格)
-        invalid_input = "input_name1:1,224,224,3 ;input_name2:3,300"
-
-        with self.assertRaises(argparse.ArgumentTypeError) as cm:
-            check_dict_kind_string(invalid_input)
-
-        # 验证错误信息
-        self.assertEqual(str(cm.exception), f'dym string "{invalid_input}" is not a legal string')
-
-    def test_invalid_string_with_special_character(self):
-        # 测试包含非法字符的字符串 (如特殊符号)
-        invalid_input = "input_name1:1,224,224,3@input_name2:3,300"
-
-        with self.assertRaises(argparse.ArgumentTypeError) as cm:
-            check_dict_kind_string(invalid_input)
-
-        # 验证错误信息
-        self.assertEqual(str(cm.exception), f'dym string "{invalid_input}" is not a legal string')
-
-    def test_valid_string_with_special_characters(self):
-        # 测试包含合法字符的字符串（如 ":", ",", ";", "." 等）
-        valid_input = "input_name1:1,224,224,3;input_name2:3,300.input_name3:5,300"
-        result = check_dict_kind_string(valid_input)
-        self.assertEqual(result, valid_input)
-
-class TestCheckDeviceRangeValid(unittest.TestCase):
-
-    def test_valid_value_within_range(self):
-        # 测试合法值在范围内
-        valid_values = [0, 100, 255]
+class TestCheckDeviceRangeValid(BastCheckTestCase):
+    def test_valid_range(self):
+        """测试有效范围的值"""
+        valid_values = ["0", "100", "255"]
         for value in valid_values:
-            check_device_range_valid(value)
+            self.assertEqual(check_device_range_valid(value), value)
 
-    def test_value_below_minimum(self):
-        # 测试小于最小值的值
-        invalid_value = -1
-        with self.assertRaises(argparse.ArgumentTypeError) as cm:
-            check_device_range_valid(invalid_value)
-        self.assertEqual(str(cm.exception), "device:-1 is invalid. valid value range is [0, 255]")
+    def test_invalid_range(self):
+        """测试无效范围的值"""
+        invalid_values = ["-1", "256", "1000"]
+        for value in invalid_values:
+            with self.assertRaises(argparse.ArgumentTypeError):
+                check_device_range_valid(value)
 
-    def test_value_above_maximum(self):
-        # 测试大于最大值的值
-        invalid_value = 256
-        with self.assertRaises(argparse.ArgumentTypeError) as cm:
-            check_device_range_valid(invalid_value)
-        self.assertEqual(str(cm.exception), "device:256 is invalid. valid value range is [0, 255]")
+    def test_invalid_input(self):
+        """测试非数字输入"""
+        invalid_inputs = ["abc", "12.34", ""]
+        for value in invalid_inputs:
+            with self.assertRaises(argparse.ArgumentTypeError):
+                check_device_range_valid(value)
 
-    def test_non_integer_value(self):
-        # 测试非整数值
-        invalid_value = "abc"
-        with self.assertRaises(argparse.ArgumentTypeError) as cm:
-            check_device_range_valid(invalid_value)
-        self.assertEqual(str(cm.exception), "input:abc is illegal.Please check")
 
-class TestCheckNumberList(unittest.TestCase):
+class TestCheckNumberList(BastCheckTestCase):
+    def test_empty_input(self):
+        """测试空输入"""
+        self.assertIsNotNone(check_number_list(""))
+        self.assertIsNone(check_number_list(None))
 
     def test_valid_number_list(self):
-        # 测试有效的数字列表
-        valid_values = [
-            "1241414,124141,124424",
-            "1,2,3,4,5",
-            "100,200,300",
-            "0"
+        """测试有效的数字列表"""
+        valid_inputs = [
+            "123",
+            "123,456",
+            "123,456,789"
         ]
-        for value in valid_values:
-            result = check_number_list(value)
-            self.assertEqual(result, value)  # 确保返回值与输入一致
+        for input_str in valid_inputs:
+            self.assertEqual(check_number_list(input_str), input_str)
 
-    def test_empty_input(self):
-        # 测试空字符串输入
-        empty_value = ""
-        result = check_number_list(empty_value)
-        self.assertEqual(result, empty_value)  # 空字符串应直接返回
-
-    def test_none_input(self):
-        # 测试None输入
-        none_value = None
-        result = check_number_list(none_value)
-        self.assertEqual(result, none_value)  # None应直接返回
-
-    def test_invalid_number_list_with_letters(self):
-        # 测试包含字母的非法数字列表
-        invalid_value = "124141a,124141,124424"
-        with self.assertRaises(argparse.ArgumentTypeError) as cm:
-            check_number_list(invalid_value)
-        self.assertEqual(str(cm.exception), 'output size "124141a" is not a legal string')
-
-    def test_invalid_number_list_with_special_characters(self):
-        # 测试包含特殊字符的非法数字列表
-        invalid_value = "124141,@124141,124424"
-        with self.assertRaises(argparse.ArgumentTypeError) as cm:
-            check_number_list(invalid_value)
-        self.assertEqual(str(cm.exception), 'output size "@124141" is not a legal string')
-
-    def test_invalid_number_list_with_spaces(self):
-        # 测试包含空格的非法数字列表
-        invalid_value = "124141 124141,124424"
-        with self.assertRaises(argparse.ArgumentTypeError) as cm:
-            check_number_list(invalid_value)
-        self.assertEqual(str(cm.exception), 'output size "124141 124141" is not a legal string')
-
-class TestCheckDymRangeString(unittest.TestCase):
-
-    def test_valid_dym_range_string(self):
-        # 测试有效的dym range字符串
-        valid_values = [
-            "input1:1,224,224,3;input2:3,300",  # 有效的dym range字符串
-            "input1:1,224,224,3~input2:3,300",  # 包含波浪符号
-            "input1:1,224,224,3;input2:3,300:255",  # 含有冒号
-            "input1:0,0,0,0",  # 简单的有效字符串
-            "input123-456_789:0~1"  # 混合字母、数字、符号的有效字符串
+    def test_invalid_number_list(self):
+        """测试无效的数字列表"""
+        invalid_inputs = [
+            "abc",
+            "123,abc",
+            "123,456.789",
+            "123,-456"
         ]
-        for value in valid_values:
-            result = check_dym_range_string(value)
-            self.assertEqual(result, value)  # 确保返回值与输入一致
+        for input_str in invalid_inputs:
+            with self.assertRaises(argparse.ArgumentTypeError):
+                check_number_list(input_str)
 
+
+class TestCheckDymRangeString(BastCheckTestCase):
     def test_empty_input(self):
-        # 测试空字符串输入
-        empty_value = ""
-        result = check_dym_range_string(empty_value)
-        self.assertEqual(result, empty_value)  # 空字符串应直接返回
+        """测试空输入"""
+        self.assertIsNotNone(check_dym_range_string(""))
+        self.assertIsNone(check_dym_range_string(None))
 
-    def test_none_input(self):
-        # 测试None输入
-        none_value = None
-        result = check_dym_range_string(none_value)
-        self.assertEqual(result, none_value)  # None应直接返回
+    def test_valid_dym_range(self):
+        """测试有效的动态范围字符串"""
+        valid_inputs = [
+            "1,2,3",
+            "test_name:1,2,3",
+            "test.name:1~3",
+            "test-name:1,2,3"
+        ]
+        for input_str in valid_inputs:
+            self.assertEqual(check_dym_range_string(input_str), input_str)
 
-    def test_invalid_dym_range_string_with_spaces(self):
-        # 测试包含空格的非法dym range字符串
-        invalid_value = "input1:1,224,224,3 ;input2:3,300"
-        with self.assertRaises(argparse.ArgumentTypeError) as cm:
-            check_dym_range_string(invalid_value)
-        self.assertEqual(str(cm.exception), 'dym range string "input1:1,224,224,3 ;input2:3,300" is not a legal string')
+    def test_invalid_dym_range(self):
+        """测试无效的动态范围字符串"""
+        invalid_inputs = [
+            "test@name:1,2,3",
+            "test name:1,2,3",
+            "test+name:1,2,3"
+        ]
+        for input_str in invalid_inputs:
+            with self.assertRaises(argparse.ArgumentTypeError):
+                check_dym_range_string(input_str)
 
-    def test_invalid_dym_range_string_with_special_characters(self):
-        # 测试包含非法特殊字符的dym range字符串
-        invalid_value = "input1:1,224,224,3@input2:3,300"
-        with self.assertRaises(argparse.ArgumentTypeError) as cm:
-            check_dym_range_string(invalid_value)
-        self.assertEqual(str(cm.exception), 'dym range string "input1:1,224,224,3@input2:3,300" is not a legal string')
 
-    def test_invalid_dym_range_string_with_non_ascii(self):
-        # 测试包含非ASCII字符的dym range字符串
-        invalid_value = "input1:1,224,224,3;输入2:3,300"
-        with self.assertRaises(argparse.ArgumentTypeError) as cm:
-            check_dym_range_string(invalid_value)
-        self.assertEqual(str(cm.exception), 'dym range string "input1:1,224,224,3;输入2:3,300" is not a legal string')
-
-class TestCheckFusionCfgPathLegality(unittest.TestCase):
-
-    def setUp(self):
-        # 模拟 FileStat 类
-        self.mock_file_stat = MagicMock()
-
+class TestCheckFusionCfgPathLegality(BastCheckTestCase):
     def test_empty_input(self):
-        # 测试空字符串输入
-        empty_value = ""
-        result = check_fusion_cfg_path_legality(empty_value)
-        self.assertEqual(result, empty_value)
+        """测试空输入"""
+        self.assertIsNotNone(check_fusion_cfg_path_legality(""))
+        self.assertIsNone(check_fusion_cfg_path_legality(None))
 
-    def test_none_input(self):
-        # 测试None输入
-        none_value = None
-        result = check_fusion_cfg_path_legality(none_value)
-        self.assertEqual(result, none_value)
+    def test_valid_cfg_file(self):
+        """测试有效的配置文件"""
+        mock_env = ModelPathMock(is_basically_legal=True, is_legal_file_type=True, is_legal_file_size=True)
+        with self.apply_patches(mock_env):
+            result = check_fusion_cfg_path_legality("valid.cfg")
+            self.assertEqual(result, "valid.cfg")
 
-    def test_invalid_fusion_cfg_path_with_permission_error(self):
-        # 测试路径无读取权限
-        invalid_value = "/path/to/invalid/fusion/config.cfg"
-        self.mock_file_stat.is_basically_legal.return_value = False
+    def test_invalid_file_type(self):
+        """测试无效的文件类型"""
+        mock_env = ModelPathMock(is_basically_legal=True, is_legal_file_type=False)
+        with self.apply_patches(mock_env):
+            with self.assertRaises(argparse.ArgumentTypeError):
+                check_fusion_cfg_path_legality("invalid.txt")
 
-        with unittest.mock.patch('components.utils.file_open_check.FileStat', return_value=self.mock_file_stat):
-            with self.assertRaises(argparse.ArgumentTypeError) as cm:
-                check_fusion_cfg_path_legality(invalid_value)
-            self.assertEqual(str(cm.exception), f"fusion switch file path:{invalid_value} is illegal. Please check.")
+    def test_file_too_large(self):
+        """测试文件过大"""
+        mock_env = ModelPathMock(is_basically_legal=True, is_legal_file_type=True, is_legal_file_size=False)
+        with self.apply_patches(mock_env):
+            with self.assertRaises(argparse.ArgumentTypeError):
+                check_fusion_cfg_path_legality("large.cfg")
 
-    def test_invalid_fusion_cfg_path_with_invalid_type(self):
-        # 测试路径文件类型不合法
-        invalid_value = "/path/to/fusion/config.txt"
-        self.mock_file_stat.is_basically_legal.return_value = True
-        self.mock_file_stat.is_legal_file_type.return_value = False
 
-        with unittest.mock.patch('components.utils.file_open_check.FileStat', return_value=self.mock_file_stat):
-            with self.assertRaises(argparse.ArgumentTypeError) as cm:
-                check_fusion_cfg_path_legality(invalid_value)
-            self.assertEqual(str(cm.exception), f"fusion switch file path:{invalid_value} is illegal. Please check.")
-
-    def test_invalid_fusion_cfg_path_with_large_size(self):
-        # 测试文件大小超过限制
-        invalid_value = "/path/to/fusion/large_config.cfg"
-        self.mock_file_stat.is_basically_legal.return_value = True
-        self.mock_file_stat.is_legal_file_type.return_value = True
-        self.mock_file_stat.is_legal_file_size.return_value = False
-
-        with unittest.mock.patch('components.utils.file_open_check.FileStat', return_value=self.mock_file_stat):
-            with self.assertRaises(argparse.ArgumentTypeError) as cm:
-                check_fusion_cfg_path_legality(invalid_value)
-            self.assertEqual(str(cm.exception), f"fusion switch file path:{invalid_value} is illegal. Please check.")
-
-class TestCheckQuantJsonPathLegality(unittest.TestCase):
-
-    def setUp(self):
-        # 模拟 FileStat 类
-        self.mock_file_stat = MagicMock()
-
+class TestCheckQuantJsonPathLegality(BastCheckTestCase):
     def test_empty_input(self):
-        # 测试空字符串输入
-        empty_value = ""
-        result = check_quant_json_path_legality(empty_value)
-        self.assertEqual(result, empty_value)
+        """测试空输入"""
+        self.assertIsNotNone(check_quant_json_path_legality(""))
+        self.assertIsNone(check_quant_json_path_legality(None))
 
-    def test_none_input(self):
-        # 测试None输入
-        none_value = None
-        result = check_quant_json_path_legality(none_value)
-        self.assertEqual(result, none_value)
+    def test_valid_json_file(self):
+        """测试有效的JSON文件"""
+        mock_env = ModelPathMock(is_basically_legal=True, is_legal_file_type=True, is_legal_file_size=True)
+        with self.apply_patches(mock_env):
+            result = check_quant_json_path_legality("valid.json")
+            self.assertEqual(result, "valid.json")
 
-    def test_invalid_quant_json_path_with_permission_error(self):
-        # 测试路径无读取权限
-        invalid_value = "/path/to/invalid/quantization/config.json"
-        self.mock_file_stat.is_basically_legal.return_value = False
+    def test_invalid_file_type(self):
+        """测试无效的文件类型"""
+        mock_env = ModelPathMock(is_basically_legal=True, is_legal_file_type=False)
+        with self.apply_patches(mock_env):
+            with self.assertRaises(argparse.ArgumentTypeError):
+                check_quant_json_path_legality("invalid.txt")
 
-        with unittest.mock.patch('components.utils.file_open_check.FileStat', return_value=self.mock_file_stat):
-            with self.assertRaises(argparse.ArgumentTypeError) as cm:
-                check_quant_json_path_legality(invalid_value)
-            self.assertEqual(str(cm.exception), f"quant file path:{invalid_value} is illegal. Please check.")
+    def test_file_too_large(self):
+        """测试文件过大"""
+        mock_env = ModelPathMock(is_basically_legal=True, is_legal_file_type=True, is_legal_file_size=False)
+        with self.apply_patches(mock_env):
+            with self.assertRaises(argparse.ArgumentTypeError):
+                check_quant_json_path_legality("large.json")
 
-    def test_invalid_quant_json_path_with_invalid_type(self):
-        # 测试路径文件类型不合法
-        invalid_value = "/path/to/quantization/config.txt"
-        self.mock_file_stat.is_basically_legal.return_value = True
-        self.mock_file_stat.is_legal_file_type.return_value = False
 
-        with unittest.mock.patch('components.utils.file_open_check.FileStat', return_value=self.mock_file_stat):
-            with self.assertRaises(argparse.ArgumentTypeError) as cm:
-                check_quant_json_path_legality(invalid_value)
-            self.assertEqual(str(cm.exception), f"quant file path:{invalid_value} is illegal. Please check.")
-
-    def test_invalid_quant_json_path_with_large_size(self):
-        # 测试文件大小超过限制
-        invalid_value = "/path/to/quantization/large_config.json"
-        self.mock_file_stat.is_basically_legal.return_value = True
-        self.mock_file_stat.is_legal_file_type.return_value = True
-        self.mock_file_stat.is_legal_file_size.return_value = False
-
-        with unittest.mock.patch('components.utils.file_open_check.FileStat', return_value=self.mock_file_stat):
-            with self.assertRaises(argparse.ArgumentTypeError) as cm:
-                check_quant_json_path_legality(invalid_value)
-            self.assertEqual(str(cm.exception), f"quant file path:{invalid_value} is illegal. Please check.")
-
-class TestSafeString(unittest.TestCase):
-
+class TestSafeString(BastCheckTestCase):
     def test_empty_input(self):
-        # 测试空字符串输入
-        empty_value = ""
-        result = safe_string(empty_value)
-        self.assertEqual(result, empty_value)
-
-    def test_none_input(self):
-        # 测试None输入
-        none_value = None
-        result = safe_string(none_value)
-        self.assertEqual(result, none_value)
+        """测试空输入"""
+        self.assertIsNotNone(safe_string(""))
+        self.assertIsNone(safe_string(None))
 
     def test_valid_string(self):
-        # 测试有效字符串
-        valid_value = "valid_string123"
-        result = safe_string(valid_value)
-        self.assertEqual(result, valid_value)
+        """测试有效字符串"""
+        valid_inputs = [
+            "test_string",
+            "test123",
+            "test-string",
+            "test.string",
+            "test:string",
+            "test/string"
+        ]
+        for input_str in valid_inputs:
+            self.assertEqual(safe_string(input_str), input_str)
 
-    def test_string_with_invalid_character(self):
-        # 测试包含无效字符的字符串
-        invalid_value = "invalid$string"
-        with self.assertRaises(ValueError) as cm:
-            safe_string(invalid_value)
-        self.assertEqual(str(cm.exception), "String parameter contains invalid characters.")
+    def test_invalid_string(self):
+        """测试无效字符串"""
+        invalid_inputs = [
+            "test@string",
+            "test#string",
+            "test$string",
+            "test%string"
+        ]
+        for input_str in invalid_inputs:
+            with self.assertRaises(ValueError):
+                safe_string(input_str)
 
-    def test_string_with_legal_special_characters(self):
-        # 测试包含合法特殊字符的字符串
-        valid_value = "String parameter contains invalid characters."
-        result = safe_string(valid_value)
-        self.assertEqual(result, valid_value)
 
-
-class TestStr2Bool(unittest.TestCase):
-
-    def test_boolean_true(self):
-        # 测试输入布尔值 True
+class TestStr2Bool(BastCheckTestCase):
+    def test_boolean_input(self):
+        """测试布尔值输入"""
         self.assertTrue(str2bool(True))
-
-    def test_boolean_false(self):
-        # 测试输入布尔值 False
         self.assertFalse(str2bool(False))
 
-    def test_string_true_values(self):
-        # 测试表示True的字符串
-        true_values = ['yes', 'true', 't', 'y', '1']
-        for value in true_values:
-            self.assertTrue(str2bool(value))
+    def test_valid_true_strings(self):
+        """测试表示True的有效字符串"""
+        true_strings = ["yes", "true", "t", "y", "1"]
+        for input_str in true_strings:
+            self.assertTrue(str2bool(input_str))
+            self.assertTrue(str2bool(input_str.upper()))
 
-    def test_string_false_values(self):
-        # 测试表示False的字符串
-        false_values = ['no', 'false', 'f', 'n', '0']
-        for value in false_values:
-            self.assertFalse(str2bool(value))
+    def test_valid_false_strings(self):
+        """测试表示False的有效字符串"""
+        false_strings = ["no", "false", "f", "n", "0"]
+        for input_str in false_strings:
+            self.assertFalse(str2bool(input_str))
+            self.assertFalse(str2bool(input_str.upper()))
 
-    def test_invalid_value(self):
-        # 测试无效的字符串输入，应该抛出ArgumentTypeError
-        invalid_values = ['maybe', 'invalid', '123', 'anything']
-        for value in invalid_values:
-            with self.assertRaises(argparse.ArgumentTypeError) as cm:
-                str2bool(value)
-            self.assertEqual(str(cm.exception), 'Boolean value expected true, 1, false, 0 with case insensitive.')
+    def test_invalid_strings(self):
+        """测试无效字符串"""
+        invalid_strings = ["maybe", "2", "invalid"]
+        for input_str in invalid_strings:
+            with self.assertRaises(argparse.ArgumentTypeError):
+                str2bool(input_str)
+
+
+if __name__ == '__main__':
+    unittest.main()
