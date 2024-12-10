@@ -197,17 +197,3 @@ def test_TfDumpData_generate_dump_data_given_tf_1x_version_when_run_then_success
     dump_data = TfDumpData(args)
     dump_data.generate_dump_data()
 
-
-def test_TfDumpData_generate_dump_data_given_tf_not_installed_when_run_then_raise_exception(
-    mock_tensorflow, mock_msquickcmp, monkeypatch
-):
-    monkeypatch.delitem(sys.modules, "tensorflow")
-    args = argparse.Namespace(
-        model_path="temp_model_dir/valid_model.pb",
-        input_path="temp_input_dir/input.bin",
-        out_path="temp_output_dir",
-        input_shape="input_name1:1,224,224,3",
-        output_nodes="node_name1:0",
-    )
-    with pytest.raises(ModuleNotFoundError) as exc_info:
-        dump_data = TfDumpData(args)

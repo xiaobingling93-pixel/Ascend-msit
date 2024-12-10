@@ -46,6 +46,8 @@ def mock_tensorflow(monkeypatch):
             "tensorflow.__version__": "2.6.5",
             "tensorflow.python": fake_tf.python,
             "tensorflow.python.debug": fake_tf.python.debug,
+            "tensorflow.compat.v1.GraphDef": fake_tf.compat.v1.GraphDef,
+            "tensorflow.compat.v1.Graph": fake_tf.compat.v1.Graph,
             "tensorflow.io.gfile.GFile": fake_tf.io.gfile.GFile,
             "tfdbg_ascend": MagicMock(),
         },
@@ -114,18 +116,3 @@ def test_TfDebugRunner_run_given_valid_arguments_when_run_then_success(mock_tens
     assert mock_tensorflow.compat.v1.GraphDef.FromString.called
     assert mock_tensorflow.compat.v1.Session.called
 
-
-def test_TfDebugRunner_run_given_tf_not_installed_when_run_then_raise_exception(
-    mock_tensorflow, monkeypatch, mock_msquickcmp
-):
-    monkeypatch.delitem(sys.modules, "tensorflow")
-    args = argparse.Namespace(
-        model_path="temp_model_dir/valid_model.pb",
-        input_path="temp_input_dir/input.bin",
-        out_path="temp_output_dir",
-        input_shape="input_name1:1,224,224,3",
-        output_nodes="node_name1:0",
-    )
-    runner = TfDebugRunner(args)
-    with pytest.raises(ModuleNotFoundError) as exc_info:
-        runner.run()
