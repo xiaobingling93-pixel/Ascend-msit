@@ -110,7 +110,6 @@ def test_DumpArgsAdapter_given_empty_directory_when_init_then_success():
     create_test_dir(VALID_MODEL_PATH)
     create_test_dir(VALID_WEIGHT_PATH)
     create_test_dir(VALID_INPUT_DATA_PATH)
-    create_test_dir(VALID_CANN_PATH)
     create_test_dir(VALID_OUT_PATH)
     args = DumpArgsAdapter(
         model_path=VALID_MODEL_PATH,

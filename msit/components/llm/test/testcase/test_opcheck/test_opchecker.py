@@ -1,7 +1,7 @@
 import unittest 
 import os
 import stat
-from unittest.mock import patch, mock, MagicMock
+from unittest.mock import patch, MagicMock
 import pytest
 
 from msit_llm.opcheck.opchecker import _is_atb_only_saved_before, OpChecker
