@@ -199,16 +199,8 @@ python3 sparse_quant.py
 
 已参考前提条件，完成环境变量配置。
 
-进入权重压缩工具所在路径。
-```
-cd ${INSTALL_DIR}/tools/msmodelslim/pytorch/weight_compression/compress_graph
-```
-```${INSTALL_DIR}```请替换为CANN软件安装后文件存储路径。例如，若安装的Ascend-cann-toolkit软件包，则安装后文件存储路径为：```$HOME/Ascend/ascend-toolkit/latest```。
+编译步骤见[使用说明](../../../README.md#使用说明)中**稀疏量化场景**所需步骤。
 
-执行编译命令。
-```
-bash build.sh $HOME/Ascend/ascend-toolkit/latest
-```
 编译结束后，在当前路径下生成build目录，执行如下命令查看编译结果compress_executor。
 ```
 cd build
@@ -404,16 +396,8 @@ python3 sparse_quant.py
 
 已参考前提条件，完成环境变量配置。
 
-进入权重压缩工具所在路径。
-```
-cd ${INSTALL_DIR}/tools/msmodelslim/pytorch/weight_compression/compress_graph
-```
-```${INSTALL_DIR}```请替换为CANN软件安装后文件存储路径。例如，若安装的Ascend-cann-toolkit软件包，则安装后文件存储路径为：```$HOME/Ascend/ascend-toolkit/latest```。
+编译步骤见[使用说明](../../../README.md#使用说明)中**稀疏量化场景**所需步骤。
 
-执行编译命令。
-```
-bash build.sh $HOME/Ascend/ascend-toolkit/latest
-```
 编译结束后，在当前路径下生成build目录，执行如下命令查看编译结果compress_executor。
 ```
 cd build
