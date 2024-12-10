@@ -21,11 +21,13 @@ import torch
 from components.debug.compare.utils.base_dump_reader import DumpFileReader
 from components.utils.acc_cmp import parse_torchair_dump_data
 from components.utils.file_open_check import ms_open
+from components.utils.check.rule import Rule
+from components.utils.constants import TENSOR_MAX_SIZE
 
 IS_MSACCUCMP_PATH_SET = False
 GLOBAL_TENSOR_CONVERTER = None
 MAX_DEPTH = 2
-MAX_FILE_READ_SIZE = 100 * 1024   # 100KB
+MAX_FILE_READ_SIZE = 31457280  # 30 * 1024 * 1024, 30MB
 
 
 def find_npu_dump_files(root_dir, matching_files, depth=0):
@@ -76,7 +78,7 @@ class GEDumpFileReader(DumpFileReader):
         return torch_rt_map
 
     def process_json_files(self):
-        with ms_open(os.path.join(self.json_path, 'mindie_torch_op_mapping.json'), max_size=MAX_FILE_READ_SIZE) as f:
+        with ms_open(os.path.join(self.json_path, 'mindie_torch_op_mapping.json'), max_size=TENSOR_MAX_SIZE) as f:
             torch_op_map = json.load(f)
 
         if self.torch_mode not in ["TorchScript", "TorchExport"]:
@@ -84,7 +86,7 @@ class GEDumpFileReader(DumpFileReader):
         
         rt_torch_map = self.get_torch_rt_mapping(torch_op_map)
 
-        with ms_open(os.path.join(self.json_path, 'mindie_rt_op_mapping.json'), max_size=MAX_FILE_READ_SIZE) as f:
+        with ms_open(os.path.join(self.json_path, 'mindie_rt_op_mapping.json'), max_size=TENSOR_MAX_SIZE) as f:
             op_map = json.load(f)
 
         op_map = sorted(op_map, key=lambda x: x["id"])
@@ -129,7 +131,7 @@ class GEDumpFileReader(DumpFileReader):
         pattern = re.compile(rf'{re.escape(key)}\.\d')
         matching_files = [file for file in self.npu_files if pattern.search(file)]
         try:
-            tensor_file_path = os.path.join(self.path, matching_files[0])
+            tensor_file_path = matching_files[0]
         except IndexError:
             npu_tensor = torch.empty(0)
         else:
@@ -147,7 +149,8 @@ class GEDumpFileReader(DumpFileReader):
         key_to_folder = {}
         json_path = os.path.join(self.json_path, 'op_map_updated.json')
 
-        with ms_open(json_path, max_size=MAX_FILE_READ_SIZE) as f:
+        Rule.input_file().check(json_path, will_raise=True)
+        with ms_open(json_path, 'r', max_size=TENSOR_MAX_SIZE) as f:
             data = json.load(f)
             for fusion_op, details in data.items():
                 jit_node = details.get('jit_node', '')

@@ -1,4 +1,5 @@
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd. All rights reserved.
+#!/bin/bash
+# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,25 +13,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#!/bin/bash
+CUR_PATH=$(dirname $(readlink -f $0))
+COMPONENTS_PATH=`python -c 'import components; print(components.__path__[0])'`
+SOURCE_CODE_PATH=$COMPONENTS_PATH/../model_convert
+echo "CUR_PATH=$CUR_PATH, COMPONENTS_PATH=$COMPONENTS_PATH, SOURCE_CODE_PATH=$SOURCE_CODE_PATH"
 
-set -u
-
-pwd_dir=$(dirname $(readlink -f "$0"))
-
-# copy auto_optimizer to test file, and test
-cp ${pwd_dir}/../model_convert ${pwd_dir}/ -rf
-
-coverage run -p -m unittest discover testcase -p 'test_*.py'
-ret=$?
-if [ $ret != 0 ]; then
-    echo "coverage run failed! "
-    exit -1
+if [ -f "../requirements.txt" ]; then
+    pip3 install -r ../requirements.txt
 fi
 
-coverage combine
-coverage report -m --omit="test_*.py" > ${pwd_dir}/test.coverage
+if [ -f "$CUR_PATH/resources" ]; then
+    chmod -R 750 $CUR_PATH/resources
+fi
 
-coverage_line=`cat ${pwd_dir}/test.coverage | grep "TOTAL" | awk '{print $4}' | awk '{print int($0)}'`
+coverage run --source $SOURCE_CODE_PATH -m pytest -vv $CUR_PATH/testcase --disable-warnings
 
-echo "coverage_line=${coverage_line}"
+RETURN_CODE=0
+if [ $? == 0 ]; then
+    coverage combine $CUR_PATH
+    coverage report -m --omit="test_*.py" -i > $CUR_PATH/test.coverage
+    coverage_rate=$(awk '/TOTAL/{print $4}' $CUR_PATH/test.coverage | cut -d '%' -f 1)
+    echo "coverage_rate=$coverage_rate%"
+
+    coverage_target=50  # Current is only 51%
+    if [[ "$coverage_rate" -ne "" && "$coverage_rate" -lt "$target" ]]; then
+        echo "coverage rate too low(<${coverage_target}%), currently reaches only ${coverage_rate}%."
+        RETURN_CODE=1
+    fi
+else
+    echo "coverage run failed! "
+    RETURN_CODE=1
+fi
+
+exit $RETURN_CODE

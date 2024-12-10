@@ -11,6 +11,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
+
 from components.utils.check import Rule, ObjectChecker
 
 
@@ -29,3 +31,32 @@ def test_obj_checker_given_attr_rule_when_any_failed():
     obj_rule = ObjectChecker().is_attrs_valid(p_a=Rule.num(), p_b=Rule.str())
     assert not obj_rule.check(TmpObj("1", 1))
     assert len(str(obj_rule.check(TmpObj("1", 1))).split("\n")) == 2
+
+
+def test_obj_checker_given_attr_rule_when_both_failed():
+    obj_rule = ObjectChecker().is_attrs_valid(p_a=Rule.num(), p_b=Rule.str())
+    result = obj_rule.check(TmpObj("not_num", 123))
+    assert not bool(result), "Check should fail because both 'p_a' and 'p_b' are invalid"
+    err_msgs = str(result).split("\n")  
+    assert len(err_msgs) == 2, "There should be two error messages"
+    assert "p_a" in err_msgs[0], "'p_a' should be mentioned in the first error message"
+    assert "p_b" in err_msgs[1], "'p_b' should be mentioned in the second error message"
+
+
+def test_obj_checker_none_instance():
+    obj_rule = ObjectChecker().is_attrs_valid(p_a=Rule.num(), p_b=Rule.str())
+    result = obj_rule.check(None)
+    assert not bool(result), "Check should fail because instance is None"
+    assert "None" in str(result), "Error message should mention that instance is None"
+
+
+def test_obj_checker_missing_attribute():
+    obj_rule = ObjectChecker().is_attrs_valid(p_a=Rule.num(), p_b=Rule.str())
+    class ObjWithoutPB:
+        def __init__(self):
+            self.p_a = 1
+    result = obj_rule.check(ObjWithoutPB())
+    assert not bool(result), "Check should fail because 'p_b' attribute is missing"
+    err_msgs = str(result).split("\n")
+    assert len(err_msgs) == 1, "There should be one error message"
+    assert "p_b" in err_msgs[0], "'p_b' should be mentioned in the error message"

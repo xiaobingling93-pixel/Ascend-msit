@@ -1,0 +1,116 @@
+# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+# http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import os
+import sys
+
+from unittest.mock import patch, MagicMock, mock_open
+
+import pytest
+import numpy as np
+
+from components.utils.acc_cmp import (
+    set_msaccucmp_path_from_cann,
+    parse_torchair_dump_data,
+    default_tensor_converter,
+    IS_MSACCUCMP_PATH_SET,
+    GLOBAL_TENSOR_CONVERTER
+)
+from components.utils.check.string_checker import StringChecker
+cann_path = os.environ.get("TOOLCHAIN_HOME", os.environ.get("ASCEND_TOOLKIT_HOME", ""))
+sys.path.append(os.path.join(cann_path, "tools", "operator_cmp", "compare"))
+
+
+@pytest.fixture(scope="module", autouse=True)
+def reset_globals():
+    # Import the original globals from the acc_cmp module
+    from components.utils.acc_cmp import IS_MSACCUCMP_PATH_SET as orig_is_set, GLOBAL_TENSOR_CONVERTER as orig_converter
+
+    yield
+
+    # Reset the globals back to their original state after all tests
+    global IS_MSACCUCMP_PATH_SET, GLOBAL_TENSOR_CONVERTER
+    IS_MSACCUCMP_PATH_SET = orig_is_set
+    GLOBAL_TENSOR_CONVERTER = orig_converter
+
+
+def test_set_msaccucmp_path_from_cann_given_ascend_toolkit_home_when_valid_then_path_set():
+    with patch.dict('os.environ', {'ASCEND_TOOLKIT_HOME': '/mock/path'}), \
+         patch('components.utils.acc_cmp.os.path.exists', return_value=True) as mock_exists, \
+         patch('components.utils.acc_cmp.sys.path', new=[]):
+        set_msaccucmp_path_from_cann()
+        assert '/home/wgw/Ascend/ascend-toolkit/latest/toolkit/tools/operator_cmp/compare' in sys.path
+
+
+def test_set_msaccucmp_path_from_cann_given_no_env_when_invalid_then_oserror():
+    with patch.dict('os.environ', {}, clear=True), \
+         pytest.raises(OSError) as exc_info:
+        set_msaccucmp_path_from_cann()
+    assert "CANN toolkit in not installed or not set" in str(exc_info.value)
+
+
+def test_set_msaccucmp_path_from_cann_given_nonexistent_path_when_invalid_then_oserror():
+    with patch.dict('os.environ', {'TOOLCHAIN_HOME': '/mock/path'}), \
+         patch('os.path.exists') as mock_exists, \
+         pytest.raises(OSError) as exc_info:
+        mock_exists.return_value = False
+        set_msaccucmp_path_from_cann()
+    assert "/mock/path/tools/operator_cmp/compare not exists" in str(exc_info.value)
+
+
+def test_parse_torchair_dump_data_given_npz_file_when_valid_then_return_inputs_outputs():
+    mock_loaded = {
+        'inputs': [np.array([1])],
+        'outputs': [np.array([2])]
+    }
+    with patch('components.utils.acc_cmp.ms_open', mock_open(read_data=None)) as mocked_open, \
+         patch('components.utils.acc_cmp.np.load') as mock_np_load:
+        mock_np_load.return_value = mock_loaded
+        inputs, outputs = parse_torchair_dump_data('dummy.npz')
+        assert isinstance(inputs, list) and len(inputs) == 1
+        assert isinstance(outputs, list) and len(outputs) == 1
+
+
+def test_parse_torchair_dump_data_given_bin_file_when_valid_then_call_parser():
+    with patch('components.utils.acc_cmp.IS_MSACCUCMP_PATH_SET', True), \
+         patch('dump_parse.dump_utils.parse_dump_file') as mock_parse_dump, \
+         patch('cmp_utils.constant.const_manager.ConstManager') as mock_const_manager, \
+         patch('components.utils.acc_cmp.GLOBAL_TENSOR_CONVERTER') as mock_converter:
+        mock_parse_dump.return_value.input_data = [np.array([3])]
+        mock_parse_dump.return_value.output_data = [np.array([4])]
+        def mock_converter_side_effect(x):
+            return x * 2
+        mock_converter.side_effect = mock_converter_side_effect
+
+        inputs, outputs = parse_torchair_dump_data('dummy.bin')
+        mock_parse_dump.assert_called_once()
+        assert (inputs[0] == np.array([6])).all()
+        assert (outputs[0] == np.array([8])).all()
+
+
+def test_parse_torchair_dump_data_given_non_npz_and_uninitialized_when_set_path_called():
+    with patch('components.utils.acc_cmp.IS_MSACCUCMP_PATH_SET', False), \
+         patch('components.utils.acc_cmp.set_msaccucmp_path_from_cann') as mock_set_path, \
+         patch('dump_parse.dump_utils.parse_dump_file'), \
+         patch('cmp_utils.constant.const_manager.ConstManager'):
+        parse_torchair_dump_data('dummy.bin')
+        mock_set_path.assert_called_once()
+
+
+def test_default_tensor_converter_given_tensor_when_any_then_returns_reshaped_tensor():
+    mock_tensor = MagicMock()
+    mock_tensor.data = np.array([1, 2, 3])
+    mock_tensor.shape = (3,)
+    reshaped_tensor = default_tensor_converter(mock_tensor)
+    assert (reshaped_tensor == np.array([1, 2, 3])).all()

@@ -1,5 +1,6 @@
 from glob import glob
 import os
+import shutil
 import numpy as np
 import torch
 import torch.nn as nn
@@ -28,15 +29,15 @@ def test_dump_torchair_token_layer():
     target_dtype = torch.float16
     model = SampleModel().eval().to(target_dtype).npu()
 
-    aa = torch.ones(1, 3, 224, 224).to(target_dtype).npu()
+    aa = torch.ones(1, 32, 4).to(target_dtype).npu()
     dump_token = [0, 2, 5]
-    dump_layer = ["Add_8", "BNInfer_14"]
+    dump_layer = ["Add", "LayerNormV4_LayerNormV3"]
     config = torchair_dump.get_ge_dump_config(dump_token=dump_token, dump_layer=dump_layer, dump_path=DUMP_PATH)
     npu_backend = tng.get_npu_backend(compiler_config=config)
     model = torch.compile(model, backend=npu_backend, dynamic=True)
     with torch.no_grad():
         for _ in range(10):
-            shape = model(aa).shape
+            _ = model(aa)
 
     output_path_prefix = glob(os.path.join(DUMP_PATH, "**", "graph_*", "*"), recursive=True)
     assert len(os.listdir(output_path_prefix[0])) == len(dump_token)
@@ -47,6 +48,6 @@ def test_dump_torchair_token_layer():
         for layer in dump_layer:
             layer_path = glob(os.path.join(token_path, "*." + layer + ".*"))
             assert len(layer_path) > 0
-        
+
     if os.path.exists(DUMP_PATH):
         shutil.rmtree(DUMP_PATH)

@@ -26,6 +26,8 @@ from model_convert.aie.core.convert import Convert
 from model_convert.cmd_utils import add_arguments, gen_convert_cmd, execute_cmd
 from model_convert.__main__ import get_cmd_instance, BaseCommand, ModelConvertCommand, AieCommand
 
+TEST_ONNX_FILE = "test.onnx"
+
 
 class TestModel(nn.Module):
     def __init__(self):
@@ -40,15 +42,16 @@ class TestConvert(unittest.TestCase):
     def setUp(self) -> None:
         model = TestModel()
         dummy_input = torch.randn((1, 3, 32, 32))
-        torch.onnx.export(model, dummy_input, "test.onnx")
-        assert os.path.exists("test.onnx")
+        torch.onnx.export(model, dummy_input, TEST_ONNX_FILE)
+        os.chmod(TEST_ONNX_FILE, 0o640)
+        assert os.path.exists(TEST_ONNX_FILE)
 
     def tearDown(self) -> None:
-        if os.path.exists("test.onnx"):
-            os.remove("test.onnx")
+        if os.path.exists(TEST_ONNX_FILE):
+            os.remove(TEST_ONNX_FILE)
 
     def test_convert(self):
-        config = ConvertConfig("test.onnx", "test.om", "Ascend310")
+        config = ConvertConfig(TEST_ONNX_FILE, "test.om", "Ascend310")
         convert = Convert(config)
         convert.execute_command = mock.Mock(return_value="Execute command success.")
         convert.convert_model()
@@ -86,18 +89,18 @@ class TestConvert(unittest.TestCase):
         else:
             sys.argv.append("test")
         sys.argv.extend(
-            ["--model", 'test.onnx', '--framework', '5', '--soc_version', 'Ascend310P3', '--output', 'test']
+            ["--model", TEST_ONNX_FILE, "--framework", "5", "--soc_version", "Ascend310P3", "--output", "test"]
         )
         args = parser.parse_args()
         cmds = gen_convert_cmd(conf_args, args, backend="atc")
-        real_model_path = os.path.abspath("test.onnx")
+        real_model_path = os.path.abspath(TEST_ONNX_FILE)
         real_output = os.path.abspath("test")
         assert cmds == [
             "atc",
-            '--model=' + real_model_path,
-            '--framework=5',
-            '--output=' + real_output,
-            '--soc_version=Ascend310P3',
+            "--model=" + real_model_path,
+            "--framework=5",
+            "--output=" + real_output,
+            "--soc_version=Ascend310P3",
         ]
 
     def test_gen_convert_cmd_when_backend_aoe(self):
@@ -107,12 +110,12 @@ class TestConvert(unittest.TestCase):
             sys.argv = sys.argv[:1]
         else:
             sys.argv.append("test")
-        sys.argv.extend(["--model", 'test.onnx', '--job_type', '1', '--framework', '5', '--output', 'test'])
+        sys.argv.extend(["--model", TEST_ONNX_FILE, "--job_type", "1", "--framework", "5", "--output", "test"])
         args = parser.parse_args()
         cmds = gen_convert_cmd(conf_args, args, backend="aoe")
-        real_model_path = os.path.abspath("test.onnx")
+        real_model_path = os.path.abspath(TEST_ONNX_FILE)
         real_output = os.path.abspath("test")
-        assert cmds == ["aoe", '--model=' + real_model_path, '--framework=5', '--job_type=1', '--output=' + real_output]
+        assert cmds == ["aoe", "--model=" + real_model_path, "--framework=5", "--job_type=1", "--output=" + real_output]
 
     def test_gen_convert_cmd_when_backend_invalid_backend(self):
         parser = argparse.ArgumentParser()
@@ -124,9 +127,9 @@ class TestConvert(unittest.TestCase):
         sys.argv.extend(
             [
                 "--model",
-                'test.onnx',
-                '--job_type',
-                '1',
+                TEST_ONNX_FILE,
+                "--job_type",
+                "1",
             ]
         )
         args = parser.parse_args()
@@ -134,11 +137,11 @@ class TestConvert(unittest.TestCase):
             gen_convert_cmd(conf_args, args, backend="invalid")
 
     def test_execute_cmd_when_valid_cmd(self):
-        cmd = ['pwd']
+        cmd = ["pwd"]
         ret = execute_cmd(cmd)
         assert ret == 0
 
     def test_execute_cmd_when_invalid_cmd(self):
-        cmd = ['cp', 'test_execute_cmd.txt', './']
+        cmd = ["cp", "test_execute_cmd.txt", "./"]
         ret = execute_cmd(cmd)
         assert ret != 0

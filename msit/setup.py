@@ -15,6 +15,8 @@ import os
 
 from configparser import ConfigParser
 from setuptools import setup, find_packages
+from components.utils.file_open_check import ms_open
+from components.utils.constants import TENSOR_MAX_SIZE
 from setuptools.command.install import install
 from setuptools.command.develop import develop
 
@@ -22,7 +24,7 @@ config = ConfigParser()
 config.read("./components/config/config.ini")
 
 abs_path = os.path.dirname(os.path.realpath(__file__))
-with open(os.path.join(abs_path, "requirements.txt")) as f:
+with ms_open(os.path.join(abs_path, "requirements.txt")) as f:
     required = f.read().splitlines()
 
 msit_sub_tasks = [

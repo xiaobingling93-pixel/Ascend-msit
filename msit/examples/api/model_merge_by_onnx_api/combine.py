@@ -18,6 +18,7 @@ from typing import Dict, List, MutableMapping, Optional, Set, Tuple
 
 import onnx
 from onnx import GraphProto, ModelProto, TensorProto, checker, helper, utils
+from components.utils.check.rule import Rule
 
 from msit.msit.components.debug.surgeon.test.testcase.optimizer.knowledges.test_knowledge_avgpool_split import \
     make_dynamic_model
@@ -659,6 +660,8 @@ for previous_model_output, following_model_input in zip(previous_model_outputs, 
     connection_list.append(connection)
     logging.info("connect %s and %s ", previous_model_output, following_model_input)
 
+Rule.input_file().check(previous_model_path, will_raise=True)
+Rule.input_file().check(following_model_path, will_raise=True)
 previous_model = onnx.load(previous_model_path)
 following_model = onnx.load(following_model_path)
 
