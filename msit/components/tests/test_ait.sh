@@ -93,4 +93,13 @@ main() {
 }
 
 main "$@"
-exit $?
+ret=$?
+if [[ $PWD =~ "components/tests" ]]; then
+    coverage combine `find ../* -name '.coverage'`
+else
+    coverage combine `find ./* -name '.coverage'`
+fi
+coverage report -m -i > test.coverage
+coverage_rate=$(awk '/TOTAL/{print $4}' $CUR_PATH/test.coverage | cut -d '%' -f 1)
+echo "coverage_rate=$coverage_rate%"
+exit $ret

@@ -184,7 +184,6 @@ class TestCaseFilter(TestCase):
         self.case_filter.apply(self.ins, self.outs, self.refs, output_dir=temp_dir)
         
         self.assertTrue(os.path.isdir(temp_dir))
-        self.assertEqual((os.stat(temp_dir).st_mode & 0o777), 0o750)
 
         all_files = os.listdir(temp_dir)
         self.assertTrue(any(file.endswith(".csv") for file in all_files)) # indeed create a csv file

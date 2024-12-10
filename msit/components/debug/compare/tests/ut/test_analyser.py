@@ -25,7 +25,7 @@ OPEN_MODES = stat.S_IWUSR | stat.S_IRUSR
 
 @pytest.fixture(scope="module", autouse=True)
 def fake_csv_file():
-    test_csv_file_name = "/tmp/fake_test_csv.csv"
+    test_csv_file_name = "./fake_test_csv.csv"
 
     columns = ["Index", "OpType", "NPUDump", "DataType", "GroundTruth"]
     columns += ["CosineSimilarity", "RelativeEuclideanDistance", "KullbackLeiblerDivergence"]

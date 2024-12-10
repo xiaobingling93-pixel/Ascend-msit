@@ -14,8 +14,8 @@
 # limitations under the License.
 
 CUR_PATH=$(dirname $(readlink -f $0))
-COMPONENTS_PATH=$CUR_PATH/../../../
-SOURCE_CODE_PATH=$COMPONENTS_PATH/components/benchmark
+COMPONENTS_PATH=`python -c 'import components; print(components.__path__[0])'`
+SOURCE_CODE_PATH=$COMPONENTS_PATH/../msit_benchmark
 echo "CUR_PATH=$CUR_PATH, COMPONENTS_PATH=$COMPONENTS_PATH, SOURCE_CODE_PATH=$SOURCE_CODE_PATH"
 
 if [ -f "../requirements.txt" ]; then
@@ -26,7 +26,7 @@ if [ -f "$CUR_PATH/resources" ]; then
     chmod -R 750 $CUR_PATH/resources
 fi
 
-PYTHONPATH=$SOURCE_CODE_PATH:$PYTHONPATH coverage run --source $SOURCE_CODE_PATH -m pytest -vv $CUR_PATH --disable-warnings
+coverage run --source $SOURCE_CODE_PATH -m pytest -vv $CUR_PATH --disable-warnings
 
 RETURN_CODE=0
 if [ $? == 0 ]; then

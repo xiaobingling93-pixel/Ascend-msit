@@ -12,22 +12,22 @@ class TestSynthezier(TestCase):
     def setUpClass(cls):
         cls.golden = 'golden.csv'
         cls.golden_dict = {
-                'queries': ['How are you?', 'Hello', 'What is your name?', 'What time is it?'],
-                'input_token_ids': [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10, 11], [12, 13, 14, 15, 16, 17], [18, 19, 20, 21, 22]],
-                'output_token_ids': [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10, 11], [12, 13, 14, 15, 16, 17], [18, 19, 20, 21, 22]],
-                'passed': ['Correct', 'Wrong', 'Correct', 'Correct']
-            }
+            "queries": ["How are you?", "Hello", "What is your name?", "What time is it?"],
+            "input_token_ids": [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10, 11], [12, 13, 14, 15, 16, 17], [18, 19, 20, 21, 22]],
+            "output_token_ids": [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10, 11], [12, 13, 14, 15, 16, 17], [18, 19, 20, 21, 22]],
+            "passed": ["Correct", "Wrong", "Correct", "Correct"],
+        }
         golden_df = pd.DataFrame(cls.golden_dict)
         golden_df.to_csv(cls.golden, encoding='utf-8', index=False)
 
         cls.test = 'test.csv'
         cls.test_dict = {
-                'queries': ['How are you?', 'Hello', 'What is your name?', 'What time is it?'],
-                'input_token_ids': [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10, 11], [12, 13, 14, 15, 16, 17], [18, 19, 20, 21, 22]],
-                'output_token_ids': [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10, 11], [12, 13, 14, 15, 16, 17], [18, 19, 20, 21, 22]],
-                'passed': ['Wrong', 'Correct', 'Wrong', 'Correct']
-            }
-        
+            "queries": ["How are you?", "Hello", "What is your name?", "What time is it?"],
+            "input_token_ids": [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10, 11], [12, 13, 14, 15, 16, 17], [18, 19, 20, 21, 22]],
+            "output_token_ids": [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10, 11], [12, 13, 14, 15, 16, 17], [18, 19, 20, 21, 22]],
+            "passed": ["Wrong", "Correct", "Wrong", "Correct"],
+        }
+
         test_df = pd.DataFrame(cls.test_dict)
         test_df.to_csv(cls.test, encoding='utf-8', index=False)
         cls.analyzer = Analyzer()
@@ -35,7 +35,7 @@ class TestSynthezier(TestCase):
     def test_analyzer_from_csv(self):
         self.analyzer.analyze(golden=self.golden, test=self.test)
 
-        self.assertTrue(os.path.exists('msit_bad_case/analyzer'))
+        self.assertTrue(os.path.exists("msit_bad_case/analyzer"))
         self.assertTrue(
             any(
                 file_name.endswith('.csv') 
@@ -73,7 +73,7 @@ class TestSynthezier(TestCase):
         time.sleep(1)
         self.analyzer.analyze(golden=self.golden, test=Synthesizer(**self.test_dict))
 
-        self.assertTrue(os.path.exists('msit_bad_case/analyzer'))
+        self.assertTrue(os.path.exists("msit_bad_case/analyzer"))
         self.assertTrue(
             any(
                 file_name.endswith('.csv') 
@@ -84,12 +84,12 @@ class TestSynthezier(TestCase):
 
     def test_analyzer_unmatched_df(self):
         test_dict = {
-                'queries': ['How are you?', 'What is your name?', 'What time is it?', 'No!'],
-                'input_token_ids': [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10, 11], [12, 13, 14, 15, 16, 17], [18, 19, 20, 21, 22]],
-                'output_token_ids': [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10, 11], [12, 13, 14, 15, 16, 17], [18, 19, 20, 21, 22]],
-                'passed': ['Wrong', 'Correct', 'Wrong', 'Correct']
-            }
-        
+            "queries": ["How are you?", "What is your name?", "What time is it?", "No!"],
+            "input_token_ids": [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10, 11], [12, 13, 14, 15, 16, 17], [18, 19, 20, 21, 22]],
+            "output_token_ids": [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10, 11], [12, 13, 14, 15, 16, 17], [18, 19, 20, 21, 22]],
+            "passed": ["Wrong", "Correct", "Wrong", "Correct"],
+        }
+
         test = Synthesizer(**test_dict)
         with self.assertLogs('msit_llm_logger', 'WARNING') as cm: 
             self.analyzer.analyze(golden=self.golden, test=test)
@@ -102,8 +102,7 @@ class TestSynthezier(TestCase):
         os.remove(cls.golden)
         os.remove(cls.test)
 
-        if os.path.exists('msit_bad_case'):
+        if os.path.exists("msit_bad_case"):
             import shutil
-            shutil.rmtree('msit_bad_case')
 
-# 90%
+            shutil.rmtree("msit_bad_case")

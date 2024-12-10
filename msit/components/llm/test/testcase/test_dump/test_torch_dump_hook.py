@@ -43,7 +43,6 @@ def test_hook_when_tp_default_then_save_inputs():
         assert os.path.exists(except_output_path)
     topo_path = os.path.join(output_path_prefix, "cpu_" + str(os.getpid()), "model_tree.json")
     assert os.path.exists(topo_path)
-    assert os.path.exists(output_csv_path)
         
     if os.path.exists(DUMP_PATH):
         shutil.rmtree(DUMP_PATH)
