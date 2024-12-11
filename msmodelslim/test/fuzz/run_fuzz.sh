@@ -1,6 +1,6 @@
 #!/bin/bash
 # Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
-#================================================================================
+# ================================================================================
 
 ATHERIS_RUNS=1000
 COVERAGE_SAVE_PATH="automl_fuzz_coverage"
@@ -50,8 +50,3 @@ python3 -m coverage html -d $COVERAGE_SAVE_PATH -i
 # Clean temp samples if file is under `samples` and length is exactly 41
 echo ">>>> clean samples"
 find ${ABS_DIR_PATH} -wholename '*/samples/*' | xargs -I {} sh -c 'if [ `basename {} | wc -m` -eq 41 ]; then rm {}; fi'
-
-
-
-
-

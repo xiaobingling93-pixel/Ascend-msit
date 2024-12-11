@@ -19,7 +19,7 @@ class TestAscendQuantModel(nn.Module):
         self.first_conv = nn.Conv2d(1, 1, 3)
         self.left_conv = nn.Conv2d(1, 1, 3)
         self.right_conv = nn.Conv2d(1, 1, 3)
-        
+    
     def forward(self, x):
         x = self.first_conv(x)
         x1 = self.left_conv(x)
@@ -138,8 +138,8 @@ class LrdSampleNetwork(nn.Module):
         next_node = self.feature(shortcut)
         next_node = next_node + shortcut
         next_node = self.pool(next_node)
-        next_node = torch.flatten(next_node)
-        next_node = self.inner(next_node, 1)
+        next_node = torch.flatten(next_node, 1)
+        next_node = self.inner(next_node)
         next_node = self.classifier(next_node)
         return next_node
 
@@ -370,7 +370,7 @@ class SophonTorchMlp(nn.Module):
 
     def forward(self, hidden_states):
         return self.down_proj((self.act2(self.gate_proj(hidden_states)) +
-                                self.act1(self.gate_proj2(hidden_states))) * self.up_proj(hidden_states))
+                               self.act1(self.gate_proj2(hidden_states))) * self.up_proj(hidden_states))
 
 
 class SophonTorchDecoder(nn.Module):
@@ -379,12 +379,12 @@ class SophonTorchDecoder(nn.Module):
         self.embed_dim = embed_dim
         self.num_heads = num_heads
 
-        self.input_norm = SophonRMSNorm(self.embed_dim) 
+        self.input_norm = SophonRMSNorm(self.embed_dim) # 使用SophonRMSNorm替换LayerNorm
         self.attn = SophonTorchAttention(self.embed_dim, self.num_heads)
-        self.mlp = SophonTorchMlp(self.embed_dim) 
+        self.mlp = SophonTorchMlp(self.embed_dim)
         self.post_norm = SophonRMSNorm(self.embed_dim)
 
-    def forward(self, hidden_states, atterntion_mask, rotary_pos_emb_list, use_cache_False):
+    def forward(self, hidden_states, atterntion_mask, rotary_pos_emb_list, use_cache=False):
         residual = hidden_states
 
         hidden_states = self.input_norm(hidden_states)

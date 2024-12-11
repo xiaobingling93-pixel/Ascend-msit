@@ -54,7 +54,7 @@ def test_llm_ptq_w4a16_per_group():
     disable_names = []
     quant_config = QuantConfig(a_bit=16, w_bit=4, disable_names=disable_names, dev_type='cpu', w_sym=w_sym,
                                mm_tensor=False, is_lowbit=True, open_outlier=False, group_size=64, w_method='MinMax')
-    calibrator = Calibrator(model, quant_config, calib_data=[], disable_leve='L0')
+    calibrator = Calibrator(model, quant_config, calib_data=[], disable_level='L0')
     calibrator.run()  # 执行PTQ量化校准
     calibrator.save(TEST_SAVE_PATH, save_type=["numpy", "safe_tensor"])
 

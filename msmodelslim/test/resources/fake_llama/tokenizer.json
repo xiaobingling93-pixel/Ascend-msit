@@ -53,14 +53,14 @@
     "single": [
       {
         "SpecialToken": {
-        "id": "<s>",
-        "type_id": 0
+          "id": "<s>",
+          "type_id": 0
         }
       },
       {
         "Sequence": {
-        "id": "A",
-        "type_id": 0
+          "id": "A",
+          "type_id": 0
         }
       }
     ],
