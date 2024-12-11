@@ -148,10 +148,10 @@ def load_json_info(json_file_path):
                     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", type=str, default=None， type=ArgsChecker(Rule.config_file()))
-    parser.add_argument("--json", type=str, default=None， type=ArgsChecker(Rule.config_file()))
+    parser.add_argument("--model", type=str, default=None, type=ArgsChecker(Rule.config_file()))
+    parser.add_argument("--json", type=str, default=None, type=ArgsChecker(Rule.config_file()))
     parser.add_argument("--save_path", type=str, default='res.safetensors', help="The path to save converted quant weights")
-    parser.add_argument("--w_bit", type=int, default=4，type=ArgsChecker(Rule.to_int().greater_than(0)))
+    parser.add_argument("--w_bit", type=int, default=4,type=ArgsChecker(Rule.to_int().greater_than(0)))
     parser.add_argument("--target_tool", type=str, default="awq")
     args = parser.parse_args()
 
@@ -164,6 +164,3 @@ if __name__ == "__main__":
 
     vllm_weight = convert_ms_to_vllm(quant_tool, w_bit, weight_dict=tensor_info, json_dict=json_info)
     save_file(vllm_weight, args.save_path)
-
-
- 
