@@ -30,25 +30,34 @@ MindStudio ModelSlim，昇腾模型压缩工具。 【Powered by MindStudio】
 
 ## 使用说明
 
-msModelSlim当前处于逐步开源过程中，计划通过630,930,1230三个版本进行过渡。  
+msModelSlim当前处于逐步开源过程中，计划通过CANN的8.0.RC2, 8.0.RC3, 8.0.0三个版本进行过渡。  
 
-630、930版本支持通过CANN或开源方式使用，两边版本将保持一致，后续功能优化、新增将更新在开源版本中。  
-630版本CANN，下载链接  
+8.0.RC2版本和8.0.RC3版本支持通过CANN方式使用。  
+8.0.RC2版本CANN，下载链接：  
 [arm 版本](https://ascend-repo.obs.cn-east-2.myhuaweicloud.com/CANN/CANN%208.0.RC2/Ascend-cann-toolkit_8.0.RC2_linux-aarch64.run?response-content-type=application/octet-stream)  
-[x86 版本](https://ascend-repo.obs.cn-east-2.myhuaweicloud.com/CANN/CANN%208.0.RC2/Ascend-cann-toolkit_8.0.RC2_linux-x86_64.run?response-content-type=application/octet-stream) 
-**注意** 该版本存在已知问题，使用modelslim调用接口时，部分功能存在异常。请使用msmodelslim调用。 
+[x86 版本](https://ascend-repo.obs.cn-east-2.myhuaweicloud.com/CANN/CANN%208.0.RC2/Ascend-cann-toolkit_8.0.RC2_linux-x86_64.run?response-content-type=application/octet-stream)  
+**注意** 该版本存在已知问题，使用modelslim调用接口时，部分功能存在异常。请使用msmodelslim调用。  
+8.0.RC3版本CANN，下载链接：  
+[arm 版本](https://ascend-repo.obs.cn-east-2.myhuaweicloud.com/CANN/CANN%208.0.RC3/Ascend-cann-toolkit_8.0.RC3_linux-aarch64.run?response-content-type=application/octet-stream)  
+[x86 版本](https://ascend-repo.obs.cn-east-2.myhuaweicloud.com/CANN/CANN%208.0.RC3/Ascend-cann-toolkit_8.0.RC3_linux-x86_64.run?response-content-type=application/octet-stream) 
 
-版本交替期间提供两种方式使用msModelSlim工具：  
-1. 下载安装CANN并配置环境变量  
+CANN8.0.RC3之后的版本，将会只支持开源方式使用，通过CANN包直接使用的方式将不再受支持。后续功能优化、新增将更新在开源版本中。  
+
+版本交替期间提供两种方式使用msModelSlim工具：
+1. 下载安装CANN并配置环境变量。可以参考[使用说明](##使用说明)来下载CANN，参考[环境准备](###环境准备)来配置环境变量。
 2. 下载安装开源版本msModelSlim  
     **操作步骤：**
+    - 设置CANN环境变量，可以参考[环境准备](###环境准备)；
     - git clone下载本仓代码；
-    - 进入到刚刚clone下来的msmodelslim的目录 `cd msit/msmodelslim`；
-    - 设置CANN环境变量；
-    - 进入msmodelslim目录，运行安装脚本 `bash install.sh`;
-    - (可选，稀疏量化场景下需要此步骤)进入python环境路径 `cd 环境路径/env/.../site-packages/msmodelslim/pytorch/weight_compression/compress_graph/`
+    - 进入到刚刚clone下来的msmodelslim的目录 `cd msit/msmodelslim`；并在进入的msmodelslim目录下，运行安装脚本 `bash install.sh`;
+    - (可选，稀疏量化场景下需要此步骤)进入python环境下的site_packages包管理路径 `cd {python环境路径}/site-packages/msmodelslim/pytorch/weight_compression/compress_graph/`  
+    以下是以/usr/local/为用户所在目录，以3.7.5为python版本的样例代码：
+    ```
+    cd usr/local/lib/python3.7/site-packages/msmodelslim/pytorch/weight_compression/compress_graph/
+    ```
     - (可选，稀疏量化场景下需要此步骤)编译weight_compression组件 `sudo bash build.sh {CANN包安装路径}/ascend-toolkit/latest`
-    - (可选，稀疏量化场景下需要此步骤)给build文件夹相关权限 `sudo chown -R 750 build`
+    - (可选，稀疏量化场景下需要此步骤)上一步编译操作会得到bulid文件夹，给build文件夹相关权限 `chmod -R 550 build`
+    - (可选，使用Precision Tool需要此步骤)参考[precision_tool使用方法说明](precision_tool/readme.md/#precision-tool-使用方法说明)里的步骤设置环境变量
 
 
 ### 环境准备
@@ -85,7 +94,8 @@ export PATH=/usr/local/python3.7.5/bin:$PATH
 | [模型蒸馏](msmodelslim/common/knowledge_distill)                          | 蒸馏调优是一种模型压缩技术，它将一个大型、复杂的教师模型的知识转移到一个小型的学生模型中。在这个过程中，学生模型试图模仿教师模型的输出，通常是通过训练学生模型来匹配教师模型的输出或中间层的激活。                                                     |
 | [大模型量化](msmodelslim/pytorch/llm_ptq)                         | 大模型量化是一种模型压缩技术，它通过减少模型权重和激活的数值表示的精度来降低模型的存储和计算需求。量化工具通常会将高位浮点数转换为低位定点数，从而直接减少模型权重的体积。                                                                 |
 | [大模型稀疏量化](msmodelslim/pytorch/llm_sparsequant)和[权重压缩](msmodelslim/pytorch/weight_compression)                  | 大模型稀疏量化工具结合了模型量化与模型稀疏化两种技术，旨在通过减少模型体积和降低内存及带宽消耗来提升模型的性能。                                                                                              |
-| 训练后量化（[onnx](msmodelslim/onnx)/[pytorch](msmodelslim/pytorch/quant/ptq_tools)/[mindspore](msmodelslim/mindspore/quant/ptq_quant)) | 训练后量化不需要重新训练模型，而是在模型训练完成后直接对模型进行量化。                                                                                                                   |
+| [长序列压缩](msmodelslim/pytorch/ra_compression/README.md)                | 长序列压缩通过一种免训练的KV-Cache的缓存压缩算法（RazorAttention），直接应用于KV-Cache管理策略中，通过这种集成，Transformer模型能够在处理长序列时更加高效，同时保持或提升模型的性能。                                                                                              |
+| 训练后量化([onnx](msmodelslim/onnx)/[pytorch](msmodelslim/pytorch/quant/ptq_tools)/[mindspore](msmodelslim/mindspore/quant/ptq_quant)) | 训练后量化不需要重新训练模型，而是在模型训练完成后直接对模型进行量化。                                                                                                                   |
 | [量化感知训练](msmodelslim/pytorch/quant/qat_tools)                        | 量化感知训练是一种在模型训练过程中模拟量化效果的训练方法。通过在训练过程中加入量化操作，模型可以适应量化带来的精度损失，从而在量化后的模型上保持较高的性能。                                                                        |
 | [Transformer类模型权重剪枝调优](msmodelslim/pytorch/prune/transformer_prune)          | 模型权重剪枝是一种通过移除模型中不重要的权重（即那些对模型性能影响较小的权重）来减少模型复杂度的技术。剪枝后的模型权重更少，从而可以减少模型的存储需求，并可能加快模型的推理速度。                                                             |
 | [基于重要性评估的剪枝调优](msmodelslim/pytorch/prune)                  | 基于重要性评估进行剪枝调优是一种常用的方法，它涉及到评估模型中每个权重的重要性，并据此决定哪些权重应该被剪枝。  基于重要性评估的剪枝调优可以显著减少模型的大小，提高模型的推理效率，同时尽量保持模型的性能。这种方法在深度学习模型压缩和加速中非常有用，特别是在需要部署模型到资源受限的环境中的情况下。 |
