@@ -32,7 +32,7 @@ class TwoLayerNet(torch.nn.Module):
         self.linear1 = torch.nn.Linear(D_in, H, bias=True)
         self.linear2 = torch.nn.Linear(H, D_out, bias=True)
     
-    def forwad(self, x):
+    def forward(self, x):
         _ = self.linear1(x)
         y_pred = self.linear2(_)
         return y_pred

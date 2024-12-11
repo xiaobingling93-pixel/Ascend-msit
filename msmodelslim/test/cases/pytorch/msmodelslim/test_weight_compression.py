@@ -25,7 +25,7 @@ quant_weight_dict = {'model.layers.0.mlp.up_proj': data0}
 
 
 def load_from_file_fake(self, weight_path):
-    self.logger.info("Loading data0")
+    self.logger.info("Loading data")
     self.weights = quant_weight_dict
 
 
@@ -51,7 +51,7 @@ setattr(Compressor, 'load_from_file', load_from_file_fake)
 setattr(Compressor, 'run', run_fake)
 
 
-def test_weight_compression_should_get_comperssed_weight_when_given_right_param():
+def test_weight_compression_should_get_compressed_weight_when_given_right_param():
     fake_npy = 'quant_weight.npy'
     TEST_SAVE_PATH = 'msmodelslim_weight_compression'
     os.makedirs(TEST_SAVE_PATH, exist_ok=True)
@@ -79,7 +79,7 @@ def test_weight_compression_should_get_comperssed_weight_when_given_right_param(
         shutil.rmtree(TEST_SAVE_PATH)
 
 
-def test_weight_compression_safetensor_should_get_comperssed_weight_when_given_right_param():
+def test_weight_compression_safetensor_should_get_compressed_weight_when_given_right_param():
     TEST_SAVE_PATH = 'msmodelslim_weight_compression_safetensor'
     os.makedirs(TEST_SAVE_PATH, exist_ok=True)
     os.chdir(TEST_SAVE_PATH)
