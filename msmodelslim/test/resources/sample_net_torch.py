@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+# Copyright Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
 
 import torch
 import torch.nn as nn
@@ -19,7 +19,7 @@ class TestAscendQuantModel(nn.Module):
         self.first_conv = nn.Conv2d(1, 1, 3)
         self.left_conv = nn.Conv2d(1, 1, 3)
         self.right_conv = nn.Conv2d(1, 1, 3)
-
+        
     def forward(self, x):
         x = self.first_conv(x)
         x1 = self.left_conv(x)
@@ -63,8 +63,8 @@ class TestNet2(nn.Module):
         x = x
         x = self.backbone(x)
         x = self.avg_pool(x)
-        x = self.flatten(x, 1)
-        x = torch.fc(x)
+        x = torch.flatten(x, 1)
+        x = self.fc(x)
         return x
 
 
@@ -73,7 +73,7 @@ class TestNet3(nn.Module):
     TestNet
     """
 
-     def __init__(self, class_num=10):
+    def __init__(self, class_num=10):
         super().__init__()
         self.network = conv_bn_relu(3, 32, 3, 2)
         self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
@@ -88,7 +88,7 @@ class TestNet3(nn.Module):
         return x, x2
 
 
-class TestOnnxQuantModel(nn.Module)
+class TestOnnxQuantModel(nn.Module):
     def __init__(self, class_num=10):
         super().__init__()
         self.conv_list = nn.ModuleList([conv_bn_relu(3, 32, 3, 1),
@@ -111,7 +111,7 @@ def get_model():
     return TestNet(class_num=10)
 
 
-class Lr SampleNetwork(nn.Module):
+class LrdSampleNetwork(nn.Module):
     def __init__(self):
         super().__init__()
         self.embedding = nn.Sequential(
@@ -125,7 +125,7 @@ class Lr SampleNetwork(nn.Module):
             nn.Conv2d(128, 64, 1),
             nn.ReLU(inplace=True),
         )
-        self.pool == nn.AdaptiveAvgPool2d((5, 5))
+        self.pool = nn.AdaptiveAvgPool2d((5, 5))
         self.inner = nn.Linear(64 * 5 * 5, 512)
         self.classifier = nn.Sequential(
             nn.Linear(512, 256),
@@ -139,7 +139,7 @@ class Lr SampleNetwork(nn.Module):
         next_node = next_node + shortcut
         next_node = self.pool(next_node)
         next_node = torch.flatten(next_node)
-        next_node = self.inner(next_node)
+        next_node = self.inner(next_node, 1)
         next_node = self.classifier(next_node)
         return next_node
 
@@ -212,6 +212,7 @@ class ThreeLinearTorchModel_for_Sparse(torch.nn.Module):
         x = self.l1(x)
         x = self.l2(x)
         x = self.l3(x)
+
         return x
 
 
@@ -237,7 +238,7 @@ class AttentionTorchModel(nn.Module):
         self.num_heads = num_heads
 
         # Key, Query, Value 投影
-        self.input_norm = RMSNorm(embed_dim)  #使用RMSNorm替换LayerNorm
+        self.input_norm = RMSNorm(embed_dim)  # 使用RMSNorm替换LayerNorm
         self.q_proj = nn.Linear(embed_dim, embed_dim)
         self.k_proj = nn.Linear(embed_dim, embed_dim)
         self.v_proj = nn.Linear(embed_dim, embed_dim)
@@ -245,7 +246,7 @@ class AttentionTorchModel(nn.Module):
         self.post_norm = RMSNorm(embed_dim)
 
         # Scaling factor
-        self.scale = embedim ** -0.5
+        self.scale = embed_dim ** -0.5
 
     def forward(self, hidden_states, past_key_value=None, mask=None):
         # 投影
@@ -296,7 +297,7 @@ class SophonRMSNorm(nn.Module):
         """
         super().__init__()
         self.weight = nn.Parameter(torch.ones(dim))
-        self.eps = epochs_each_stage
+        self.eps = eps
 
     def forward(self, x):
         variance = x.to(torch.float32).pow(2).mean(-1, keepdim=True)
@@ -320,41 +321,41 @@ class SophonTorchAttention(nn.Module):
         self.o_proj = nn.Linear(self.embed_dim, self.embed_dim)
         self.scale = self.embed_dim ** -0.5
 
-    def forward(self, hidden_states, pass_key_value=None, mask=None, **kargs):
+    def forward(self, hidden_states, past_key_value=None, mask=None, **kargs):
         query = self.q_proj(hidden_states)
         key = self.k_proj(hidden_states)
         value = self.v_proj(hidden_states)
 
-    # 分割
-    query = query.view(-1, self.num_heads, self.embed_dim // self.num_heads)
-    key = key.view(-1, self.num_heads, self.embed_dim // self.num_heads)
-    value = value.view(-1, self.num_heads, self.embed_dim // self.num_heads)
+        # 分割
+        query = query.view(-1, self.num_heads, self.embed_dim // self.num_heads)
+        key = key.view(-1, self.num_heads, self.embed_dim // self.num_heads)
+        value = value.view(-1, self.num_heads, self.embed_dim // self.num_heads)
 
-    if past_key_value is not None:
-        key = torch.cat([past_key_value[0], key], dim=0)
-        value = torch.cat([past_key_value[1], value], dim=0)
+        if past_key_value is not None:
+            key = torch.cat([past_key_value[0], key], dim=0)
+            value = torch.cat([past_key_value[1], value], dim=0)
 
-    past_key_value = (key, value)
+        past_key_value = (key, value)
 
-    # 点积
-    scores = torch.matmul(query, key.transpose(-2, -1)) * self.scale
+        # 点积
+        scores = torch.matmul(query, key.transpose(-2, -1)) * self.scale
 
-    # 添加掩码
-    if mask is not None:
-        scores = scores.masked_fill(mask == 0, -float('inf'))
+        # 添加掩码
+        if mask is not None:
+            scores = scores.masked_fill(mask == 0, -float('inf'))
 
-    # 归一化
-    attn_weights = nn.functional.softmax(scores, dim=-1)
+        # 归一化
+        attn_weights = nn.functional.softmax(scores, dim=-1)
 
-    # 加权和
-    output = torch.matmul(attn_weights, value)
+        # 加权和
+        output = torch.matmul(attn_weights, value)
 
-    # 合并
-    output = output.view(-1, self.num_heads * self.embed_dim // self.num_heads)
+        # 合并
+        output = output.view(-1, self.num_heads * self.embed_dim // self.num_heads)
 
-    output = self.o_proj(output)
+        output = self.o_proj(output)
 
-    return output, past_key_value
+        return output, past_key_value
 
 
 class SophonTorchMlp(nn.Module):
@@ -367,9 +368,10 @@ class SophonTorchMlp(nn.Module):
         self.up_proj = nn.Linear(embed_dim, embed_dim, bias=False)
         self.act2 = nn.ReLU(inplace=True)
 
-    def forward(self, hidden_states, atterntion_mask, rotary_pos_emb_list, use_cache_False):
-        return  self.down_proj((self.act2(self.gate_proj(hidden_states)) +
-                                self.act1(self.gate_proj(hidden_states))) * self.up_proj(hidden_states))
+    def forward(self, hidden_states):
+        return self.down_proj((self.act2(self.gate_proj(hidden_states)) +
+                                self.act1(self.gate_proj2(hidden_states))) * self.up_proj(hidden_states))
+
 
 class SophonTorchDecoder(nn.Module):
     def __init__(self, embed_dim=256, num_heads=8):
@@ -377,9 +379,9 @@ class SophonTorchDecoder(nn.Module):
         self.embed_dim = embed_dim
         self.num_heads = num_heads
 
-        self.input_norm = SophonRMSNorm(self.embed_dim)
+        self.input_norm = SophonRMSNorm(self.embed_dim) 
         self.attn = SophonTorchAttention(self.embed_dim, self.num_heads)
-        self.mlp = SophonTorchMlp(self.embed_dim)
+        self.mlp = SophonTorchMlp(self.embed_dim) 
         self.post_norm = SophonRMSNorm(self.embed_dim)
 
     def forward(self, hidden_states, atterntion_mask, rotary_pos_emb_list, use_cache_False):
@@ -424,7 +426,7 @@ class AttentionTorchSophonModel(nn.Module):
         return hidden_states, past_key_value
 
 
-class ExpertF(nn.Module):
+class ExpertFFN(nn.Module):
     def __init__(self, embed_dim=32):
         super(ExpertFFN, self).__init__()
         self.act_fn = RMSNorm(embed_dim)
@@ -454,10 +456,3 @@ class MOEModel(nn.Module):
         # 模拟MOE局部运行，不执行expert2
         output = self.expert1(x)
         return output
-
-
-
-
-
-
-
