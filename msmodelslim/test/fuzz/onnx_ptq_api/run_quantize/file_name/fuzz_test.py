@@ -90,8 +90,3 @@ if __name__ == '__main__':
         os.remove(ONNX_MODEL_PATH)
     if os.path.exists(TEST_SAVE_PATH):
         os.removedirs(TEST_SAVE_PATH)
-
-
-
-
-

@@ -384,7 +384,7 @@ class SophonTorchDecoder(nn.Module):
         self.mlp = SophonTorchMlp(self.embed_dim)
         self.post_norm = SophonRMSNorm(self.embed_dim)
 
-    def forward(self, hidden_states, atterntion_mask, rotary_pos_emb_list, use_cache=False):
+    def forward(self, hidden_states, attention_mask, rotary_pos_emb_list, use_cache=False):
         residual = hidden_states
 
         hidden_states = self.input_norm(hidden_states)
