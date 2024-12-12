@@ -27,7 +27,7 @@ ONNX_MODEL_PATH = "./test.onnx"
 
 
 def get_calib_data1():
-    data_list = {"input": np.randm(3, 32, 32).astype(np.float32)}
+    data_list = {"input": np.random.randn(3, 32, 32).astype(np.float32)}
     return [data_list]
 
 
@@ -87,11 +87,6 @@ if __name__ == '__main__':
     atheris.Setup(sys.argv, fuzz_test)
     atheris.Fuzz()
     if os.path.exists(ONNX_MODEL_PATH):
-        os.exists(ONNX_MODEL_PATH)
+        os.remove(ONNX_MODEL_PATH)
     if os.path.exists(TEST_SAVE_PATH):
-        os.exists(TEST_SAVE_PATH)
-
-
-
-
-
+        os.removedirs(TEST_SAVE_PATH)
