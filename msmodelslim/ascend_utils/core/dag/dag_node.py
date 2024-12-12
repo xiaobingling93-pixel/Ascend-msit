@@ -1,5 +1,5 @@
 # Copyright Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
-import collections
+from collections.abc import Generator, Iterable
 from typing import Optional, Any, List, Iterable, Generator, Union, Set
 import torch
 
@@ -73,7 +73,7 @@ class DagNode:
 
     def add_next_node(self, nodes: Union["DagNode", Iterable["DagNode"]], output_name: Optional[str] = None) -> None:
         node_list = nodes
-        if not isinstance(nodes, (collections.Generator, collections.Iterable)):
+        if not isinstance(nodes, (Generator, Iterable)):
             node_list = [nodes]
         for node in node_list:
             if not isinstance(node, DagNode):
