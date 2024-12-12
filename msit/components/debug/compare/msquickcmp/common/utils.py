@@ -343,7 +343,7 @@ def get_dump_data_path(dump_dir, is_net_output=False, model_name=None):
 
     dump_data_path_list = []
     for dir_path, _, files in os.walk(dump_data_dir):
-        if len(files) != 0:
+        if files and not any(file.startswith("aclnn") for file in files):
             dump_data_path_list.append(dir_path)
             file_is_exist = True
 
