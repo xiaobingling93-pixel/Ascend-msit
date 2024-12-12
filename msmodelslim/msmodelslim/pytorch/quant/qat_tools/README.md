@@ -20,7 +20,7 @@
 ```
 quant_config = QatConfig(grad_scale=0.001)
 quant_logger = get_logger()
-model = qsin_qat(model, quant_config, quant_logger).to(device_calc)     #根据实际情况配置待量化模型实例、量化配置和量化输出日志，注意需把模型按照原训练流程部署在NPU设备
+model = qsin_qat(model, quant_config, quant_logger).to(model.device)     #根据实际情况配置待量化模型实例、量化配置和量化输出日志，注意需把模型按照原训练流程部署在NPU设备
 ```
 
 4. 调用原训练流程进行单卡训练，执行train_full_1p.sh启动单卡训练任务。
