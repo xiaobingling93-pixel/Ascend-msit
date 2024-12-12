@@ -151,7 +151,10 @@ def gather_data_with_token_id(data_path, fx=False):
     else:
         parent_dir_dict = {}
         for token_dir in token_dirs:
-            parent_dir = os.path.basename(os.path.dirname(token_dir))
+            parts = token_dir
+            for _ in range(3):
+                parts = os.path.basename(parts)
+            parent_dir = os.path.basename(parts)
             subdir = os.path.basename(token_dir)
             parent_id = int(parent_dir) if parent_dir.isdigit() else 0
             subdir_id = int(subdir) if subdir.isdigit() else 0
@@ -162,6 +165,7 @@ def gather_data_with_token_id(data_path, fx=False):
             for cur_path, _, file_names in os.walk(token_dir):
                 file_names = [os.path.join(cur_path, file_name) for file_name in file_names]
                 parent_dir_dict[parent_id][subdir_id].extend(file_names)
+        parent_dir_dict = dict(sorted(parent_dir_dict.items()))
         for _, subdirs in parent_dir_dict.items():
             gathered_files_list.append(subdirs)
     return gathered_files_list
