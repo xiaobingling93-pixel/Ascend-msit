@@ -206,14 +206,14 @@ class UpdateWeightsMapHook(ModelHook):
 
                 dataset[weights_map.prefix + key] = item.clone().detach().cpu()
 
-        clear_device_cache(True)
+        clear_device_cache()
 
         return
 
     def init_hook(self, module):
         self.depth = 0
         self.old_hook.offload = self.old_hook_offload
-        self.update_weights_map(module, force_update=True, recurse=True)
+        self.update_weights_map(module, force_update=self.init_force, recurse=self.init_recurse)
         self.logger.debug(f"init_hook {self.get_prefix()} depth={self.depth}")
         return self.old_hook.init_hook(module)
 
@@ -239,7 +239,8 @@ class UpdateWeightsMapHook(ModelHook):
 
     def post_forward(self, module, output):
 
-        self.depth -= 1
+        if self.depth > 0:
+            self.depth -= 1
 
         if self.depth == 0:
             # 对于嵌套的情况，所有嵌套都退出后，才更新权重
@@ -294,6 +295,12 @@ def move_update_weight_hook_if_need(old_module, new_module, as_submodule=False, 
         if hasattr(old_module, HF_HOOK):
             add_hook_to_module(new_module, getattr(old_module, HF_HOOK))
             remove_hook_from_module(old_module)
+        return
+
+    if hasattr(old_module, HF_HOOK) and id(old_module) == id(new_module):
+        hook: UpdateWeightsMapHook = getattr(old_module, HF_HOOK)
+        hook.old_hook.place_submodules = as_submodule
+        hook.init_hook(new_module)
         return
 
     if hasattr(old_module, HF_HOOK):
