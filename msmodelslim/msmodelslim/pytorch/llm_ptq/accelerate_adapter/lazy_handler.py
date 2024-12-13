@@ -17,9 +17,9 @@ class LazyTensor:
     def __init__(self, func: Callable[..., torch.Tensor], tensor: torch.Tensor = None, **kwargs):
         self._func = func
         self._kwargs = kwargs
-        self._size = tensor is not None and get_tensor_size(tensor)
 
-        if self._size is not None:
+        if tensor is not None:
+            self._size = get_tensor_size(tensor)
             return
 
         tensor = self._func(**self._kwargs)

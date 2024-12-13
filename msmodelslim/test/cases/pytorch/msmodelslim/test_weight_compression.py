@@ -97,7 +97,7 @@ def test_weight_compression_safetensor_should_get_compressed_weight_when_given_r
                             quant_model_description=quant_model_description)
     compress_weight, compress_index, compress_info = compressor.run()
 
-    compressor_export_safetensors(TEST_SAVE_PATH, 
+    compressor.export_safetensors(TEST_SAVE_PATH, 
                                   safetensors_name=None,
                                   json_name=None)
 
