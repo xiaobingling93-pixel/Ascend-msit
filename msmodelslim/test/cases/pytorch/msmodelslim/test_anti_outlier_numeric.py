@@ -1,21 +1,10 @@
-import os
-import torch
+# Copyright (c) Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
+
 import pytest
-from transformers import AutoTokenizer
-from transformers.models.llama import LlamaConfig, LlamaForCausalLM
+import torch
+
 from msmodelslim.pytorch.llm_ptq.anti_outlier import AntiOutlier, AntiOutlierConfig
-from msit.components.debug.surgeon.auto_optimizer.pattern.knowledges.knowledge_avgpool_split import KERNEL_MAX_SIZE
-from msit.components.llm.msit_llm.common.json_fitter import atb_node_to_onnx_node
-
-
-def get_fake_llama_model_and_tokenizer():
-    """
-    获取一个随机的、非常小的Llama模型以及其所对应的tokenizer，用于验证工具中某些数值算法的正确性
-    """
-    config_path = os.path.join(os.path.dirname(__file__), "config.json")
-    config = LlamaConfig.from_json_file(config_path)
-    tokenizer = AutoTokenizer.from_pretrained(os.path.dirname(__file__))
-    return LlamaForCausalLM(config), tokenizer
+from test.resources.fake_llam.fake_llama import get_fake_llama_model_and_tokenizer
 
 
 KEY_INPUT_IDS = "input_ids"
@@ -48,6 +37,6 @@ def helper_test_anti_outlier_numeric(anti_method):
         pytest.fail()
 
 
-@pytest.mark.parametrize("anti_method", [pytest.param(anti_method) for anti_method in ["m1", "m2", "m3", "m4", "m5"]])
+@pytest.mark.parametrize("anti_method", [pytest.param(anti_method) for anti_method in ['m1', 'm2', 'm3', 'm4', 'm5']])
 def test_anti_outlier_numeric(anti_method):
     helper_test_anti_outlier_numeric(anti_method)

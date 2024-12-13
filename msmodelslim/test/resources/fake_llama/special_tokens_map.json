@@ -7,7 +7,7 @@
     "single_word": false
   },
   "eos_token": {
-    "content": "<s>",
+    "content": "</s>",
     "lstrip": false,
     "normalized": true,
     "rstrip": false,

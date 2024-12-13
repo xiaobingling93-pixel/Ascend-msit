@@ -1,4 +1,5 @@
 import torch
+
 from msmodelslim.pytorch.llm_ptq.anti_outlier import AntiOutlier, AntiOutlierConfig
 
 setattr(AntiOutlier, 'init_dag', lambda *args, **kargs: None)
@@ -11,10 +12,10 @@ class OneModel(torch.nn.Module):
         self.device = torch.device('cpu')
         self.l1 = torch.nn.Linear(8, 8, bias=False)
 
-        def forward(self, x):
-            x = self.l1(x)
+    def forward(self, x):
+        x = self.l1(x)
 
-            return x
+        return x
 
 
 def test_anti_outlier_m1():

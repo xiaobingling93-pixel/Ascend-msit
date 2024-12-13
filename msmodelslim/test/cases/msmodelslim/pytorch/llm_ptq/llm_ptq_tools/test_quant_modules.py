@@ -33,7 +33,7 @@ class TestQuantizer:
         expected_result = torch.tensor([0.5, 1.0, 1.5, 2.0])
         assert torch.equal(result, expected_result)
 
-    def test_input_quantizer_tensor_forward_should_return_expected_result(self):
+    def test_intput_quantizer_tensor_forward_should_return_expected_result(self):
         # 普通的a_bit=8场景的激活的Quantizer.tensor_forward测试
         cfg = QuantConfig().weight_activation_quant()
         test_quantizer = Quantizer(
@@ -55,7 +55,7 @@ class TestQuantizer:
         assert torch.equal(input_scale, expected_input_scale)
         assert torch.equal(input_offset, expected_input_offset)
 
-    def test_input_quantizer_tensor_forward_with_dynamic_quant_should_return_expected_result(self):
+    def test_intput_quantizer_tensor_forward_with_dynamic_quant_should_return_expected_result(self):
         # 普通的a_bit=8动态量化场景的激活Quantizer.tensor_forward测试
         cfg = QuantConfig().weight_activation_quant()
         test_quantizer = Quantizer(
@@ -77,7 +77,7 @@ class TestQuantizer:
         assert torch.equal(input_scale, expected_input_scale)
         assert torch.equal(input_offset, expected_input_offset)
 
-    def test_input_quantizer_tensor_forward_with_int_infer_should_return_expected_result(self):
+    def test_intput_quantizer_tensor_forward_with_int_infer_should_return_expected_result(self):
         # 普通的a_bit=8量化场景的激活Quantizer.tensor_forward int infer测试
         cfg = QuantConfig().weight_activation_quant()
         test_quantizer = Quantizer(
@@ -105,7 +105,7 @@ class TestQuantizer:
         assert torch.equal(input_offset, expected_input_offset)
 
     def test_weight_quantizer_tensor_forward_should_return_expected_result(self):
-        # 普通w_bit=8场景的权重的Quantizer.tensor_forward测试
+        # 普通的w_bit=8场景的权重的Quantizer.tensor_forward测试
         cfg = QuantConfig().weight_quant()
         test_quantizer = Quantizer(
             bit=8, is_signed=True, is_enable=True, is_input=False, cfg=cfg, logger=logger, is_dynamic=False
@@ -230,7 +230,7 @@ class TestLinearQuantizer:
         expected_result = torch.tensor([[4.]])
         assert torch.equal(result, expected_result)
 
-    def test_forward_with_int_infer_should_return_expected_result(self):
+    def test_forward_should_return_expected_result(self):
         # 普通的w8a8场景的LinearQuantizer.forward的int_infer测试
         cfg = QuantConfig(w_bit=8, a_bit=8).weight_quant()
         linear = torch.nn.Linear(in_features=4, out_features=1, bias=False, dtype=torch.float32)
