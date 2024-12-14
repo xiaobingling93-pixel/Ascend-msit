@@ -8,7 +8,7 @@ import pytest
 from transformers import AutoConfig, AutoModelForCausalLM, PreTrainedTokenizerBase, PreTrainedTokenizerBase
 
 from ascend_utils.common.security import file_safe_write, safe_delete_path_if_exists
-from modelslim.pytorch.ra_compression import RARopeCompressConfig, RARopeCompressor
+from msmodelslim.pytorch.ra_compression import RARopeCompressConfig, RARopeCompressor
 
 
 torch.manual_seed(2024)
