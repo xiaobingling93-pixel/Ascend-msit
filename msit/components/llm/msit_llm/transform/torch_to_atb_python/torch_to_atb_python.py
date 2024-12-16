@@ -23,15 +23,17 @@ from functools import reduce
 
 import torch
 import torch_npu
+from transformers import AutoConfig
 
+from components.utils.file_open_check import ms_open
 from msit_llm.transform.utils import write_file
 from msit_llm.common.log import logger
 from msit_llm.transform.torch_to_atb_python.utils import to_transformers_traced_module, get_valid_name, \
     get_lambda_source_code, generate_infer_file, get_config_attr, build_transformers_model, \
-    ATBModel, ATBModelConfig, Operation
+    find_mindie_supported_model, ATBModel, ATBModelConfig, Operation 
 from msit_llm.transform.torch_to_atb_python.env import NN_MODULE_STACK, SKIP_NODES, SKIP_MODULES, \
     TORCH_MODULE_TO_ATB_MAP, FX_OP_TYPES, FIXED_INPUTS, KV_CACHE_SURFFIX, BASIC_INPUT_NAMES, \
-    RESHPAE_KIND
+    RESHPAE_KIND, GATE_UP_WEIGHT, DOWN_WEIGHT
 
 
 atb_speed_path = os.getenv("ATB_SPEED_HOME_PATH", None)
@@ -136,6 +138,10 @@ class ATBModelFromTorch(ATBModel):
         self.num_key_value_heads = get_config_attr(self.config, "num_key_value_heads", default=self.num_attention_heads)
         self.rope_theta = get_config_attr(self.config, "rope_theta", default=1e4)
         self.rms_norm_eps = get_config_attr(self.config, "rms_norm_eps", default=1e-5)
+        self.topk = get_config_attr(self.config, "num_experts_per_tok", default=0)
+        self.num_experts = get_config_attr(self.config, "num_local_experts", default=8)
+        self.model_type = get_config_attr(self.config, "torch_dtype", default="bfloat16")
+        self.num_layers = get_config_attr(self.config, "num_hidden_layers", default=8)
 
         self.torch_module_to_atb_map = {}
         for kk, vv in TORCH_MODULE_TO_ATB_MAP.items():
@@ -153,6 +159,7 @@ class ATBModelFromTorch(ATBModel):
         # base graph is set execute_as_single=False, has to keep all operaions as property
         self.base_graph_operations, self.k_cache_names, self.v_cache_names = [], [], []
 
+        self.is_moe = self.find_moe()
         self.convert_fx_traced_module()
         if to_quant:
             logger.info(f"calling convert_to_quant, quant_disable_names = {self.quant_disable_names}")
@@ -234,6 +241,10 @@ class ATBModelFromTorch(ATBModel):
             f"{indent * 2}self.num_key_value_heads, self.vocab_size = {self.num_key_value_heads}, {self.vocab_size}",
             f"{indent * 2}self.rope_theta = {self.rope_theta}",
         ]
+        if "Mixtral" in base_model_name:
+            contents.append(f"{indent * 2}self.topk = {self.topk}")
+            contents.append(f"{indent * 2}self.num_layers = {self.num_layers}")
+            contents.append(f"{indent * 2}self.num_experts = {self.num_experts}")
 
         def _get_input_output_name(graph_name):
             return f"{graph_name}_inputs", f"{graph_name}_outputs"
@@ -307,9 +318,20 @@ class ATBModelFromTorch(ATBModel):
         write_file(output_file, contents_str)
         return output_file
 
+    def find_moe(self):  
+        for key in list(self.traced_module.state_dict().keys()):
+            if "moe.experts" in key:
+                return  True
+        return False
+    
     def convert_fx_traced_module(self):
         previous_module_name, cur_module_name, previous_operation_out, base_module_name = None, None, None, None
         input_node_map, output_node_map, operation_outputs = {}, {}, {}
+
+        if self.is_moe:
+            for i in range(self.num_layers):
+                self.model_inputs += [GATE_UP_WEIGHT + str(i), DOWN_WEIGHT + str(i)]
+            self._op_process_rope()
 
         for node in self.traced_module.graph.nodes:
             logger.debug("=" * 30 + "\n")
@@ -332,12 +354,15 @@ class ATBModelFromTorch(ATBModel):
                 base_module_name = list(node.meta[NN_MODULE_STACK].keys())[0]
 
             cur_module_name = self._get_module_name_by_nn_module_stack(node)
+            #do rope in a unified manner 
+            if cur_module_name.endswith("self_attn.rotary_emb") and previous_module_name.endswith("self_attn") and self.is_moe:
+                continue
             input_node_map.setdefault(cur_module_name, []).extend([ii.name for ii in node.all_input_nodes])
 
             logger.debug(f"cur_module_name = {cur_module_name}, previous_module_name = {previous_module_name}")
             if cur_module_name != base_module_name:
                 output_node_map[node.name] = previous_operation_out  # will be overwriten later
-            if cur_module_name == previous_module_name:
+            if cur_module_name == previous_module_name or "gate" in cur_module_name or "experts" in cur_module_name:
                 continue
             if self._should_skip_node(node):
                 logger.debug(f"Current node skipped: {node.name}")
@@ -362,7 +387,20 @@ class ATBModelFromTorch(ATBModel):
             self._check_and_set_pre_qkv_name(atb_operation)
             logger.debug(f"atb_operation = {atb_operation.to_json()}")
             if not self.is_apply_rope and atb_operation.op_type == "Rope":
-                self._op_process_rope(atb_operation=atb_operation, module_name=module_name)
+                self._op_process_rope(atb_operation = atb_operation, module_name = module_name)
+            elif atb_operation.op_type =="MixtralSparseMoeBlock":
+                self._op_process_moe_gate(atb_operation = atb_operation, module_name = module_name)
+                self._op_process_moe_router(atb_operation = atb_operation, module_name = module_name)
+                self._op_process_moe_norm(atb_operation = atb_operation, module_name = module_name)
+                layer_id = re.findall(r'\d+', module_name)[0]
+                self._op_process_moe_mlp_init_routing(atb_operation = atb_operation, module_name = module_name)
+                self._op_process_moe_mlp_cast(atb_operation = atb_operation, module_name = module_name)
+                self._op_process_moe_mlp_gate_up_gmm(atb_operation = atb_operation, module_name = module_name, layer_id = layer_id)
+                self._op_process_moe_mlp_activation_block(atb_operation = atb_operation, module_name = module_name)
+                self._op_process_moe_mlp_down_gmm(atb_operation = atb_operation, module_name = module_name, layer_id = layer_id)
+                self._op_process_moe_mlp_moe_token_unpermute(atb_operation = atb_operation, module_name = module_name)
+                cur_outputs = self.operations[-1].outputs
+                output_node_map[node.name] = previous_operation_out = operation_outputs[cur_module_name] = cur_outputs
             elif atb_operation.op_type == "SelfAttention":
                 self._op_process_attention(atb_operation=atb_operation, module_name=module_name)
                 cur_outputs = self.operations[-1].outputs
@@ -527,6 +565,154 @@ class ATBModelFromTorch(ATBModel):
 
         if FIXED_INPUTS.position_ids not in self.model_inputs:
             self.model_inputs += [FIXED_INPUTS.position_ids]
+
+    def _op_process_moe_gate(self, atb_operation=None, module_name=""):
+        self.operations += [
+            Operation(
+                op_type="Linear",
+                op_param= {"hasBias": False, "enAccum": False},
+                inputs=[module_name.split("block_sparse_moe")[0] + "post_attention_layernorm.out", 
+                        module_name + ".gate.weight"],
+                outputs=[module_name + ".intermediate_router_logits"],
+                op_name=module_name + ".gate",
+            ),
+        ]
+    
+    def _op_process_moe_router(self, atb_operation=None, module_name=""):
+        self.operations += [
+            Operation(
+                op_type="Softmax",
+                op_param= {"axes":[1]},
+                inputs=[module_name + ".intermediate_router_logits"],
+                outputs=[module_name + ".intermediate_router_weights"],
+                op_name=module_name + ".router_softmax",
+            ),
+            Operation(
+                op_type="Sort",
+                op_param= {"num": [self.topk]},
+                inputs=[module_name + ".intermediate_router_weights"],
+                outputs=[module_name + ".intermediate_router_weights_topk", 
+                        module_name + ".intermediate_selected_experts"],
+                op_name=module_name + ".router_topk",
+            ),
+        ]
+    
+    def _op_process_moe_norm(self, atb_operation=None, module_name=""):
+        self.operations += [
+            Operation(
+                op_type="Reduce",
+                op_param= {"reduceType":"REDUCE_SUM", "axis":[1]},
+                inputs=[module_name + ".intermediate_router_weights_topk"],
+                outputs=[module_name + ".intermediate_router_weights_topk_sumed0"],
+                op_name=module_name + ".norm_sum",
+            ),
+            Operation(
+                op_type="add_reshape",
+                function=lambda org_shape: [org_shape[0], 1],
+                inputs=[module_name + ".intermediate_router_weights_topk_sumed0"],
+                outputs=[module_name + ".intermediate_router_weights_topk_sumed1"],
+                op_name=module_name + ".norm_reshape",
+            ),
+            Operation(
+                op_type="Elewise",
+                op_param= {"elewiseType": "ELEWISE_REALDIV"},
+                inputs=[module_name + ".intermediate_router_weights_topk", 
+                        module_name + ".intermediate_router_weights_topk_sumed1"],
+                outputs=[module_name + ".intermediate_router_weights_topk_reduced"],
+                op_name=module_name + ".norm_div",
+            ),
+        ]
+    
+    def _op_process_moe_mlp_init_routing(self, atb_operation=None, module_name=""):
+        self.operations += [
+            Operation(
+                op_type="MoeInitRouting",
+                op_param= {"topkNum":self.topk, "expertNum":self.num_experts},
+                inputs=[module_name.split("block_sparse_moe")[0] + "post_attention_layernorm.out", 
+                        module_name + ".intermediate_selected_experts"],
+                outputs=[module_name + ".intermediate_sorted_hidden_states", 
+                        module_name + ".intermediate_idx",
+                        module_name + ".intermediate_group_list"],
+                op_name=module_name + ".moe_init_routing",
+            )
+        ]
+
+    def _op_process_moe_mlp_cast(self, atb_operation=None, module_name=""):
+        self.operations += [
+            Operation(
+                op_type="Elewise",
+                op_param= {"elewiseType": "ELEWISE_CAST", 'outTensorType': 'ACL_INT64'},
+                inputs=[module_name + ".intermediate_group_list"],
+                outputs=[module_name + ".intermediate_group_list_int64"],
+                op_name=module_name + ".elewise_cast",
+            )
+        ]
+    
+    def _op_process_moe_mlp_gate_up_gmm(self, atb_operation=None, module_name="", layer_id=0):
+        self.operations += [
+            Operation(
+                op_type="GroupedMatmul",
+                op_param= {"transposeB": False, 'outTensorType': 'ACL_BF16' if self.model_type=="bfloat16" else 'ACL_FLOAT16'},
+                inputs=[module_name + ".intermediate_sorted_hidden_states",
+                        GATE_UP_WEIGHT+layer_id,
+                        module_name + ".intermediate_group_list_int64"],
+                outputs=[module_name + ".intermediate_matmul_gate_up_out"],
+                op_name=module_name + ".integrated_gmm_gate_up",
+            )
+        ]
+    
+    def _op_process_moe_mlp_activation_block(self, atb_operation=None, module_name=""):
+        self.operations += [
+            Operation(
+                op_type = "Split",
+                op_param = {"splitDim": 1, "splitNum": 2},
+                op_name = module_name + ".activation_split",
+                inputs =  [module_name + ".intermediate_matmul_gate_up_out"],
+                outputs = [module_name + ".intermediate_matmul_gate_out",
+                            module_name + ".intermediate_matmul_up_out",]
+            ),
+            Operation(
+                op_type = "Activation",
+                op_param = {'activationType': 'ACTIVATION_SWISH'},
+                op_name = module_name + ".activation",
+                inputs =  [module_name + ".intermediate_matmul_gate_out"],
+                outputs = [module_name + ".intermediate_swish_out_internal"]
+            ),
+            Operation(
+                op_type = "Elewise",
+                op_param = {'elewiseType': 'ELEWISE_MUL'},
+                op_name = module_name + ".activation_elewise_mul",
+                inputs =  [module_name + ".intermediate_swish_out_internal",
+                            module_name + ".intermediate_matmul_up_out"],
+                outputs = [module_name + ".intermediate_swish_out"]
+            )
+        ]
+    
+    def _op_process_moe_mlp_down_gmm(self, atb_operation=None, module_name="", layer_id=0):
+        self.operations += [
+            Operation(
+                op_type="GroupedMatmul",
+                op_param= {"transposeB": False, 'outTensorType': 'ACL_BF16' if self.model_type=="bfloat16" else 'ACL_FLOAT16'},
+                inputs=[module_name + ".intermediate_swish_out",
+                        DOWN_WEIGHT+layer_id,
+                        module_name + ".intermediate_group_list_int64"],
+                outputs=[module_name + ".intermediate_mlp_out"],
+                op_name=module_name + ".integrated_gmm_down",
+            )
+        ]
+    
+    def _op_process_moe_mlp_moe_token_unpermute(self, atb_operation=None, module_name=""):
+        self.operations += [
+            Operation(
+                op_type = "MoeTokenUnpermute",
+                op_param = {},
+                op_name = module_name + ".moe_token_unpermute",
+                inputs =  [module_name + ".intermediate_mlp_out",
+                            module_name + ".intermediate_idx",
+                            module_name + ".intermediate_router_weights_topk_reduced"],
+                outputs = [module_name + ".mlp_out"]
+            )
+        ]
 
     def _op_process_attention(self, atb_operation=None, module_name=""):
         atb_operation.inputs = [
@@ -718,58 +904,70 @@ class ATBModelFromTorch(ATBModel):
         return stacked_operations, stacked_inputs, stacked_outputs
 
 
-
 def transform(source_path, input_names=BASIC_INPUT_NAMES, output_file=None, to_quant=False, quant_disable_names=None):
     logger.info("Building model using transformers...")
-    model, config, is_vl_model = build_transformers_model(source_path)
+    config = AutoConfig.from_pretrained(source_path, trust_remote_code=True)
+    mindie_model_file = find_mindie_supported_model(config)
+    if mindie_model_file:
+        from pathlib import Path
 
-    if is_vl_model:
-        logger.info("Got VL model")
+        contents_str = Path(__file__).with_name("run.py").read_text()
+        run_pa_path = atb_speed_path + "/examples/models/{}/run_pa.sh".format(mindie_model_file)
+        contents_str = contents_str.replace('run_pa_path = "xxx"', f'run_pa_path = "{run_pa_path}"')
+        contents_str = contents_str.replace("mindie_supported = False", "mindie_supported = True")
+        contents_str = contents_str.replace('MODEL_PATH = "model_path_placeholder"', f'MODEL_PATH = "{source_path}"')
+        infer_file = "run.py"
+        write_file(infer_file, contents_str)
+    else:
+        model, config, is_vl_model = build_transformers_model(source_path)
 
-    logger.info("Transforming to atb")
-    atb_model = ATBModelFromTorch(
-        torch_model=model,
-        config=config,
-        input_names=input_names,
-        to_quant=to_quant,
-        quant_disable_names=quant_disable_names,
-        is_vl_model=is_vl_model,
-    )
-    output_file = atb_model.to_file(output_file=output_file)
+        if is_vl_model:
+            logger.info("Got VL model")
 
-    logger.info("=" * 30)
-    logger.info(f"Saved to: {output_file}\n")
-
-    logger.info("=" * 30)
-    logger.info(f"atb_model config:\n{atb_model.atb_model_config.to_dict()}\n")
-
-    model_name = os.path.splitext(os.path.basename(output_file))[0]
-    input_info = "input_ids=torch.arange(input_len)"
-    if FIXED_INPUTS.position_ids in atb_model.inputs:
-        input_info += ", position_ids=torch.arange(input_len)"
-    logger.info("=" * 30)
-    logger.info(
-        f"""Run simple inference like:
-
-    python3 -c "
-    import torch, torch_npu
-    import {model_name}
-    from msit_llm.transform.torch_to_atb_python import ATBModel
-
-    atb_model = ATBModel({model_name}.Model())
-    weights = torch.load(\'$WEIGHT_PATH\')  # Use actual WEIGHT_PATH
-    atb_model.set_weights(weights)
-
-    input_len = 32
-    out = atb_model.forward({input_info})
-    print(out)
-    "
-    """.replace(
-            " " * 4, ""
+        logger.info("Transforming to atb")
+        atb_model = ATBModelFromTorch(
+            torch_model=model,
+            config=config,
+            input_names=input_names,
+            to_quant=to_quant,
+            quant_disable_names=quant_disable_names,
+            is_vl_model=is_vl_model,
         )
-    )
+        output_file = atb_model.to_file(output_file=output_file)
 
-    infer_file = generate_infer_file(output_file, source_path, is_vl_model=is_vl_model)
-    logger.info("=" * 30)
+        logger.info("=" * 30)
+        logger.info(f"Saved to: {output_file}\n")
+
+        logger.info("=" * 30)
+        logger.info(f"atb_model config:\n{atb_model.atb_model_config.to_dict()}\n")
+
+        model_name = os.path.splitext(os.path.basename(output_file))[0]
+        input_info = "input_ids=torch.arange(input_len)"
+        if FIXED_INPUTS.position_ids in atb_model.inputs:
+            input_info += ", position_ids=torch.arange(input_len)"
+        logger.info("=" * 30)
+        logger.info(
+            f"""Run simple inference like:
+
+        python3 -c "
+        import torch, torch_npu
+        import {model_name}
+        from msit_llm.transform.torch_to_atb_python import ATBModel
+
+        atb_model = ATBModel({model_name}.Model())
+        weights = torch.load(\'$WEIGHT_PATH\')  # Use actual WEIGHT_PATH
+        atb_model.set_weights(weights)
+
+        input_len = 32
+        out = atb_model.forward({input_info})
+        print(out)
+        "
+        """.replace(
+                " " * 4, ""
+            )
+        )
+
+        infer_file = generate_infer_file(output_file, source_path, is_vl_model=is_vl_model)
+        logger.info("=" * 30)
     logger.info(f"End-to-end inference example saved to: {infer_file}")
     logger.info(f"Execute by: python {infer_file}\n")

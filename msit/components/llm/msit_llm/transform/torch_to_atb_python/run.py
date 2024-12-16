@@ -19,8 +19,8 @@ from transformers.modeling_utils import PreTrainedModel
 from transformers.modeling_outputs import CausalLMOutputWithPast
 
 from msit_llm.transform.torch_to_atb_python import ATBModel
-from msit_llm.transform.utils import load_model_dict
-from atb_model_placeholder import Model
+from msit_llm.transform.utils import load_model_dict, write_file
+from msit_llm.common.utils import check_input_path_legality
 
 MODEL_PATH = "model_path_placeholder"
 
@@ -143,18 +143,35 @@ if __name__ == "__main__":
     import sys
     import logging
     import argparse
-
+    mindie_supported = False
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("-w", "--weight", type=str, default=MODEL_PATH, help="Model weight path")
+    parser.add_argument("-w", "--weight", type=check_input_path_legality, default=MODEL_PATH, help="Model weight path")
     parser.add_argument("-i", "--inputs", type=str, default="Who's there?", help="input for model")
     args = parser.parse_known_args()[0]
-
-    runner = Runner(args.weight)
-    runner.warm_up()
-    output_text = runner.infer(args.inputs, use_cache=False)
-
+    run_pa_path = "xxx"
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger()
-    logger.info("-" * 40)
-    logger.info("Input: %s", args.inputs)
-    logger.info("Output: %s", output_text)
+    logger.info("Build it yourself Please ensure that the input is legal and compliant")
+    if mindie_supported:
+        import subprocess
+        from pathlib import Path
+
+        contents_str = Path(run_pa_path).read_text()
+        contents_str = contents_str.replace("Who is the CEO of Google?", args.inputs)
+        write_file(run_pa_path, contents_str)
+        command = ["bash", run_pa_path, args.weight]
+        result = subprocess.run(command, shell=False)
+        contents_str = Path(run_pa_path).read_text()
+        contents_str = contents_str.replace(args.inputs, "Who is the CEO of Google?")
+        write_file(run_pa_path, contents_str)
+    else:
+        from atb_model_placeholder import Model
+
+        runner = Runner(args.weight)
+        runner.warm_up()
+        output_text = runner.infer(args.inputs, use_cache=False)
+
+        
+        logger.info("-" * 40)
+        logger.info("Input: %r", args.inputs)
+        logger.info("Output: %s", output_text)
