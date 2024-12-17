@@ -17,7 +17,7 @@ class SafeGenerator:
 
     @staticmethod
     def get_config_from_pretrained(model_path, **kwargs):
-        model_path = get_valid_read_path(model_path, is_dir=True)
+        model_path = get_valid_read_path(model_path, is_dir=True, check_user_stat=False)
         try:
             config = AutoConfig.from_pretrained(model_path, local_files_only=True, **kwargs)
         except EnvironmentError:
@@ -32,7 +32,7 @@ class SafeGenerator:
 
     @staticmethod
     def get_model_from_pretrained(model_path, **kwargs):
-        model_path = get_valid_read_path(model_path, is_dir=True)
+        model_path = get_valid_read_path(model_path, is_dir=True, check_user_stat=False)
         try:
             model = AutoModelForCausalLM.from_pretrained(model_path, local_files_only=True, **kwargs)
         except EnvironmentError:
@@ -49,7 +49,7 @@ class SafeGenerator:
 
     @staticmethod
     def get_tokenizer_from_pretrained(model_path, **kwargs):
-        model_path = get_valid_read_path(model_path, is_dir=True)
+        model_path = get_valid_read_path(model_path, is_dir=True, check_user_stat=False)
         try:
             tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True, **kwargs)
         except EnvironmentError:
@@ -66,7 +66,7 @@ class SafeGenerator:
 
     @staticmethod
     def copy_tokenizer_files(model_dir, dest_dir):
-        model_dir = get_valid_read_path(model_dir, is_dir=True)
+        model_dir = get_valid_read_path(model_dir, is_dir=True, check_user_stat=False)
         if os.path.exists(dest_dir):
             dest_dir = get_valid_write_path(dest_dir, is_dir=True)
         else:
@@ -86,16 +86,14 @@ class SafeGenerator:
                     break
             if need_move:
                 src_filepath = os.path.join(model_dir, filename)
-                src_filepath = get_valid_read_path(src_filepath)
                 dest_filepath = os.path.join(dest_dir, filename)
-                dest_filepath = get_valid_write_path(dest_filepath)
                 shutil.copyfile(src_filepath, dest_filepath)
 
     @staticmethod
     def modify_config(model_dir, dest_dir, torch_dtype, quantize_type, args=None):
-        model_dir = get_valid_read_path(model_dir, is_dir=True)
+        model_dir = get_valid_read_path(model_dir, is_dir=True, check_user_stat=False)
         src_config_filepath = os.path.join(model_dir, 'config.json')
-        src_config_filepath = get_valid_read_path(src_config_filepath)
+        src_config_filepath = get_valid_read_path(src_config_filepath, check_user_stat=False)
         with os.fdopen(os.open(src_config_filepath, os.O_RDONLY, 0o600),
                 'r', encoding='utf-8') as fr:
             data = json.load(fr)
@@ -147,7 +145,7 @@ class SafeGenerator:
                 text = data.get(key_name, line)
                 dataset.append(text)
         return dataset
-
+    
 
 class ArgumentValidator:
     context = None
@@ -223,15 +221,15 @@ class ArgumentParser(argparse.ArgumentParser):
                     raise argparse.ArgumentTypeError(f"Validation failed for argument '{arg}': {e}")
         return args_all
 
-def update_argument(self, old_name: str, new_name: str = None, **kwargs) -> None:
-    old_name = old_name.lstrip('-')
-    if new_name:
-        kwargs.update({'dest': new_name.lstrip('-')})
-    for action in self._actions:
-        if action.dest == old_name:
-            for key, value in kwargs.items():
-                setattr(action, key, value)
-            
+    def update_argument(self, old_name: str, new_name: str = None, **kwargs) -> None:
+        old_name = old_name.lstrip('-')
+        if new_name:
+            kwargs.update({'dest': new_name.lstrip('-')})
+        for action in self._actions:
+            if action.dest == old_name:
+                for key, value in kwargs.items():
+                    setattr(action, key, value)
+
 
 class StringArgumentValidator(ArgumentValidator):
     def __init__(self, min_length: int = 0, max_length: int = float('inf'), allow_none: bool = False):
