@@ -834,14 +834,15 @@ class Calibrator(object):
     def run_datafree_after_calib(self):
         # 将稀疏模型校准集没有运行的部分切换成data-free模式
         for name, module in self.model.named_modules():
-            if isinstance(module, LinearQuantizer) and module.quant_weight.weight_scale is None:
-                if module.quant_weight.w_hessian:
-                    module.quant_weight.w_hessian = False
-                    self.logger.info(f"run MIN-MAX quantization on linear layer: {name}")
-                module.quant_weight(module.weight)
-            elif isinstance(module, LinearNf4Quantizer):
-                self.logger.info(f"Running in Data-Free mode, quantizing the layer into NF4 type: {name}")
-                module.quant_weight()
+            with PrepareWeight(module):
+                if isinstance(module, LinearQuantizer) and module.quant_weight.weight_scale is None:
+                    if module.quant_weight.w_hessian:
+                        module.quant_weight.w_hessian = False
+                        self.logger.info(f"run MIN-MAX quantization on linear layer: {name}")
+                    module.quant_weight(module.weight)
+                elif isinstance(module, LinearNf4Quantizer):
+                    self.logger.info(f"Running in Data-Free mode, quantizing the layer into NF4 type: {name}")
+                    module.quant_weight()
 
     def run_amp(self):
         max_input_dict = {}
