@@ -300,7 +300,6 @@ def move_update_weight_hook_if_need(old_module, new_module, as_submodule=False, 
     if hasattr(old_module, HF_HOOK) and id(old_module) == id(new_module):
         hook: UpdateWeightsMapHook = getattr(old_module, HF_HOOK)
         hook.old_hook.place_submodules = as_submodule
-        hook.init_hook(new_module)
         return
 
     if hasattr(old_module, HF_HOOK):
