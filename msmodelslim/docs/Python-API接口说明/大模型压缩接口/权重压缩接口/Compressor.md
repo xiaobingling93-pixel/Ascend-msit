@@ -21,9 +21,9 @@ Compressor(config: CompressConfig, weight_path=None, weight=None, quant_model_de
 - 使用weight_path参数进行权重压缩。
 ```python
 from modeslim.pytorch.weight_compression import CompressConfig, Compressor
-compress_config = CompressConfig(do_pseudo_sparse=False, sparse_ratio=1, is_debug=True, compress_disable_layer=None, record_detail_root="./", multiprocess_num=1)
-weight_save_path = ‘./quant_weight.npy’  # 根据实际情况修改带压缩的权重文件路径
-compressor = Compressor(config: CompressConfig, weight_path=weight_save_path)
+compress_config = CompressConfig(do_pseudo_sparse=False, sparse_ratio=1, is_debug=True, compress_disable_layers=None, record_detail_root="./", multiprocess_num=1)
+weight_save_path = './quant_weight.npy'  # 根据实际情况修改带压缩的权重文件路径
+compressor = Compressor(config=compress_config, weight_path=weight_save_path)
 ```
 
 - 使用weight、quant_model_description参数进行权重压缩。
@@ -41,5 +41,5 @@ sparse_weight = load_file(weight_path)
 with open(json_path, 'r') as f:
     quant_model_description = json.load(f)
 #使用Compressor接口，输入加载的压缩配置和待压缩权重文件
-compressor = Compressor(config:CompressConfig, weight=sparse_weight, quant_model_description=quant_model_description)
+compressor = Compressor(config=compress_config, weight=sparse_weight, quant_model_description=quant_model_description)
 ```
