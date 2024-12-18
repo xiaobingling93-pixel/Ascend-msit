@@ -15,7 +15,7 @@
 import numpy as np
 import tensorflow as tf
 
-from components.debug.opcheck.graph_parser import OpInfo
+from msit_opcheck.graph_parser import OpInfo
 
 
 def _conv2d(context: OpInfo):

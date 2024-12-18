@@ -15,8 +15,8 @@
 
 import tensorflow as tf
 
-from components.debug.opcheck.graph_parser import OpInfo
-from components.debug.opcheck.utils import ceil_div
+from msit_opcheck.graph_parser import OpInfo
+from msit_opcheck.utils import ceil_div
 
 
 def _update_params_for_other_format(shape, begin, size, input_format, ori_format):

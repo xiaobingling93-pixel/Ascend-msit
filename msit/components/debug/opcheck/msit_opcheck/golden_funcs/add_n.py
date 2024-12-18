@@ -15,7 +15,7 @@
 
 import numpy
 
-from components.debug.opcheck.graph_parser import OpInfo
+from msit_opcheck.graph_parser import OpInfo
 
 
 def _add_n(context: OpInfo):

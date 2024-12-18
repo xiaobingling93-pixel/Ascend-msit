@@ -18,8 +18,9 @@ from collections import deque
 import torch
 import numpy as np
 
-from components.debug.opcheck.graph_parser import OpInfo
-from components.debug.opcheck.utils import get
+from msit_opcheck.graph_parser import OpInfo
+from msit_opcheck.utils import get
+
 
 def _pad(context: OpInfo):
     bf16_mark = False

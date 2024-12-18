@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections import namedtuple
 from components.utils.parser import BaseCommand
-from components.utils.util import load_file_to_read_common_check
-from components.utils.security_check import check_write_directory
-from components.debug.common import logger
+from components.debug.compare.msquickcmp.common.args_check import (
+    check_input_path_legality, check_output_path_legality
+)
 
-NAMEDTUPLE_PRECISION_METRIC = namedtuple('precision_metric', ['abs', 'kl', 'cos_sim'])('abs', 'kl', 'cos_sim')
+from components.debug.common import logger
+from msit_opcheck.opchecker import OpChecker
 
 
 class OpcheckCommand(BaseCommand):
@@ -31,20 +31,22 @@ class OpcheckCommand(BaseCommand):
             '--input',
             '-i',
             required=True,
-            type=load_file_to_read_common_check,
+            type=check_input_path_legality,
             help='input directory.E.g:--input DUMP_DATA_DIR/{TIMESTAMP}')
 
         parser.add_argument(
             '--output',
             '-o',
             required=False,
-            type=check_write_directory,
+            type=check_output_path_legality,
             default='./',
             help='Data output directory.E.g:--output /xx/xxx/xx')
 
-    def handle(self, args, **kwargs):
+    def handle(self, args):
         # do opcheck
-        pass
+        opchecker = OpChecker(args)
+        
+        opchecker.start_test()
 
 
 def get_opcheck_cmd_ins():

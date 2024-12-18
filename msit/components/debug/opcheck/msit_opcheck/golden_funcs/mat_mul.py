@@ -17,9 +17,9 @@ import numpy as np
 import tensorflow as tf
 import torch
 
-from components.debug.opcheck.graph_parser import OpInfo
-from components.debug.opcheck.conversion.dtype_convert import get, bfloat16_conversion_v2
-from components.debug.opcheck.utils import ceil_div, align
+from msit_opcheck.graph_parser import OpInfo
+from msit_opcheck.conversion.dtype_convert import get, bfloat16_conversion_v2
+from msit_opcheck.utils import ceil_div, align
 
 
 def gen_axes_for_transpose(offset, base):

@@ -14,7 +14,7 @@
 
 import tensorflow as tf
 
-from components.debug.opcheck.graph_parser import OpInfo
+from msit_opcheck.graph_parser import OpInfo
 
 
 def dsl_gather_v2(context: OpInfo):

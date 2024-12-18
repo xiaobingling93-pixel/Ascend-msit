@@ -15,7 +15,7 @@
 import functools
 import numpy as np
 
-from components.debug.opcheck.graph_parser import OpInfo
+from msit_opcheck.graph_parser import OpInfo
 
 
 def _approximate_equal(context: OpInfo):

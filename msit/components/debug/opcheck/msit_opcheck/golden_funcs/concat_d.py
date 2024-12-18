@@ -14,8 +14,8 @@
 
 import numpy
 
-from components.debug.opcheck.conversion.shape_convert import update_axis_for_npu_inner_format
-from components.debug.opcheck.graph_parser import OpInfo
+from msit_opcheck.conversion.shape_convert import update_axis_for_npu_inner_format
+from msit_opcheck.graph_parser import OpInfo
 
 
 def concat_d(context: OpInfo):

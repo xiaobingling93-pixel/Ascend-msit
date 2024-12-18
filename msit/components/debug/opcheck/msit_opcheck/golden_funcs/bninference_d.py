@@ -17,8 +17,8 @@
 import numpy as np
 import tensorflow as tf
 
-from components.debug.opcheck.utils import broadcast_to_maxshape
-from components.debug.opcheck.graph_parser import OpInfo
+from msit_opcheck.utils import broadcast_to_maxshape
+from msit_opcheck.graph_parser import OpInfo
 
 
 def broadcast_inputs_shape(x, mean, context):

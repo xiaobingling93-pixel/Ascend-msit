@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -60,22 +59,71 @@ class OpInfo(object):
             "src_name": [],
             "type": "add",
         """
-        self.input_desc_list = [InputOutputDesc(**i) for i in op_info_dict.get("input_desc")]
-        self.output_desc_list = [InputOutputDesc(**i) for i in op_info_dict.get("output_desc")]
-        self.op_keys = op_info_dict.keys()
         self.param = op_info_dict
+        self.sub_graph_attr = None
+        self.sub_graph_input = None
+        self.graph_attr = None
+        self.op_type = None
+        self.input_desc_list = []
+        self.output_desc_list = []
+        self.init_input_output_desc()
+        
+    def init_input_output_desc(self):
+        if "input_desc" in self.param:
+            self.input_desc_list = [InputOutputDesc(**i) for i in self.param.get("input_desc")]
+        if "output_desc" in self.param:
+            self.output_desc_list = [InputOutputDesc(**i) for i in self.param.get("output_desc")]
+
+    def update_graph_info(self, graph_info_dict, global_attr):
+        self.sub_graph_attr = graph_info_dict.get("attr", [])
+        self.sub_graph_input = graph_info_dict.get("input", [])
+        self.graph_attr = global_attr
+
+    def update_op_type(self):
+        # 更新融合算子标记
+        result_op_type = self.param.get("type", None)
+        for attr in self.param['attr']:
+            if attr['key'] == '_datadump_original_op_types':
+                result_op_type = attr['value']['list']['s']
+        self.op_type = result_op_type
 
 
-def parse_ge_op_from_dump_json(json_path, op_type):
+def get_single_op_info_from_op_list(op_list, graph_info_dict, global_attr):
+    op_info_dict = {}
+    for op in op_list:
+        op_name = op.get("name", None)
+        if not op_name:
+            continue
+        op_name = op_name.replace('/', '_')
+        op_info_dict[op_name] = OpInfo(op)
+        op_info_dict[op_name].update_graph_info(graph_info_dict, global_attr)
+            
+    return op_info_dict
+
+
+def get_ge_graph_name(json_path):
+    # 解析ge_json 得到每一个子图的信息
+    with ms_open(json_path, max_size=MAX_GE_GRAPH_SIZE) as f:
+        ge_json_file = json.load(f)
+    graph_list = ge_json_file.get("graph")
+    for sub_graph in graph_list:
+        ge_dump_file_name = sub_graph.get("name", None)
+        yield ge_dump_file_name
+
+
+def get_all_opinfo(json_path, graph_name):
     with ms_open(json_path, max_size=MAX_GE_GRAPH_SIZE) as f:
         ge_file = json.load(f)
-
     graph = ge_file.get("graph")
-    op_list = graph[0].get("op")
-    final_op = None
-    for op in op_list:
-        if op.get("type") == op_type:
-            final_op = op
+    global_attr = ge_file.get("attr")
+
+    for sub_graph in graph:
+        if sub_graph['name'] != graph_name:
+            continue
+        op_list = sub_graph.get("op")
+        op_info_dict = get_single_op_info_from_op_list(op_list, sub_graph, global_attr)
+        break
     
-    op_info = OpInfo(final_op)
-    return op_info
+    return op_info_dict
+
+    

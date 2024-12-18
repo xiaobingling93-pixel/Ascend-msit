@@ -19,8 +19,8 @@ from typing import Tuple
 import numpy
 import tensorflow as tf
 
-from components.debug.opcheck.conversion import shape_convert
-from components.debug.opcheck.graph_parser import OpInfo
+from msit_opcheck.conversion import shape_convert
+from msit_opcheck.graph_parser import OpInfo
 
 
 def softmax(x, axis=None):

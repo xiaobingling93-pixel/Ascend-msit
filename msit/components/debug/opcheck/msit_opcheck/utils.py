@@ -12,10 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+from collections import namedtuple
 from typing import Sequence
 from math import gcd
 import numpy as np
+
+NAMEDTUPLE_PRECISION_METRIC = namedtuple('precision_metric', ['abs', 'kl', 'cos_sim'])('abs', 'kl', 'cos_sim')
+NAMEDTUPLE_PRECISION_MODE = namedtuple(
+    'precision_mode', ["keep_origin_dtype", "force_fp16", "force_fp32"]
+)("keep_origin_dtype", "force_fp16", "force_fp32")
 
 
 def get(container: Sequence, idx: int, out_of_range=None):

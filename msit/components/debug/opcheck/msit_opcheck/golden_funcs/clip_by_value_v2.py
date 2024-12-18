@@ -14,7 +14,7 @@
 
 import numpy as np 
 
-from components.debug.opcheck.graph_parser import OpInfo
+from msit_opcheck.graph_parser import OpInfo
 
 
 def _clip_by_value(context: OpInfo):

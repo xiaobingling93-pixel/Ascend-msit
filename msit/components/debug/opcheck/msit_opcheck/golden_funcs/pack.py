@@ -15,8 +15,8 @@
 
 import numpy as np
 
-from components.debug.opcheck.graph_parser import OpInfo
-from components.debug.opcheck.conversion.shape_convert import update_axis_for_npu_inner_format
+from msit_opcheck.graph_parser import OpInfo
+from msit_opcheck.conversion.shape_convert import update_axis_for_npu_inner_format
 
 
 def pack(context: OpInfo):

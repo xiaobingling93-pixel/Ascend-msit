@@ -19,9 +19,9 @@ import numpy as np
 import torch
 from scipy import special
 
-from components.debug.opcheck.graph_parser import OpInfo
-from components.debug.opcheck.conversion.shape_convert import transform
-from components.debug.opcheck.conversion.dtype_convert import bfloat16_conversion, numpy_to_torch_tensor
+from msit_opcheck.graph_parser import OpInfo
+from msit_opcheck.conversion.shape_convert import transform
+from msit_opcheck.conversion.dtype_convert import bfloat16_conversion, numpy_to_torch_tensor
 
 
 def str_to_dtype(dtype_str):

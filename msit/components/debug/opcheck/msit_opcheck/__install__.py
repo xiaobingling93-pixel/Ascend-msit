@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import importlib
+import pkg_resources
 from components.utils.install import AitInstaller
 
 
@@ -20,7 +20,7 @@ class OpCheckInstall(AitInstaller):
     @staticmethod
     def check():
         check_res = []
-        installed_pkg = [dist.name for dist in importlib.metadata.distributions()]
+        installed_pkg = [pkg.key for pkg in pkg_resources.working_set]
         if "tensorflow" not in installed_pkg:
             check_res.append("[error] tensorflow not installed. Please read xxx readme to install tensorflow packages.")
         

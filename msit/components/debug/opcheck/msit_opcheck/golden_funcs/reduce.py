@@ -18,8 +18,8 @@ import functools
 import numpy
 import tensorflow as tf
 
-from components.debug.opcheck.graph_parser import OpInfo
-from components.debug.opcheck.conversion.dtype_convert import bfloat16_conversion
+from msit_opcheck.graph_parser import OpInfo
+from msit_opcheck.conversion.dtype_convert import bfloat16_conversion
 
 D_BOUNDS = {
     "int8": (-128, 127),

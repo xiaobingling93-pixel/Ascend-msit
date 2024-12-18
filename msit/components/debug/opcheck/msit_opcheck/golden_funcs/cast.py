@@ -16,8 +16,8 @@ import tensorflow as tf
 import numpy as np
 import torch
 
-from components.debug.opcheck.conversion.dtype_convert import numpy_to_torch_tensor, str_to_dtype
-from components.debug.opcheck.graph_parser import OpInfo
+from msit_opcheck.conversion.dtype_convert import numpy_to_torch_tensor, str_to_dtype
+from msit_opcheck.graph_parser import OpInfo
 
 
 def _cast(context: OpInfo):

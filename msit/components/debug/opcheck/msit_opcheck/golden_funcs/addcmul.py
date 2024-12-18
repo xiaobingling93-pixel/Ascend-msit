@@ -15,8 +15,8 @@
 
 import numpy as np
 
-from components.debug.opcheck.graph_parser import OpInfo
-from components.debug.opcheck.utils import broadcast_to_maxshape
+from msit_opcheck.graph_parser import OpInfo
+from msit_opcheck.utils import broadcast_to_maxshape
 
 
 def _addcmul(context: OpInfo):

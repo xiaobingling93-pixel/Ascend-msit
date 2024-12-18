@@ -16,9 +16,9 @@ import re
 import math
 import numpy as np
 
-from components.debug.opcheck.conversion.dtype_convert import bfloat16_conversion_v2
-from components.debug.opcheck.utils import  ceil_div, align, get
-from components.debug.opcheck.graph_parser import OpInfo
+from msit_opcheck.conversion.dtype_convert import bfloat16_conversion_v2
+from msit_opcheck.utils import  ceil_div, align, get
+from msit_opcheck.graph_parser import OpInfo
 from components.debug.common import logger
 
 

@@ -15,7 +15,7 @@
 
 import numpy as np
 
-from components.debug.opcheck.graph_parser import OpInfo
+from msit_opcheck.graph_parser import OpInfo
 
 
 def _axpy_v2(context: OpInfo):
