@@ -23,14 +23,44 @@ from pathlib import Path
 import torch
 import torch_npu
 
-from transformers.utils.fx import symbolic_trace
+try:
+    from transformers import AutoConfig, AutoModelForCausalLM
+    from transformers.utils.fx import symbolic_trace
+except ModuleNotFoundError as error:
+    raise ModuleNotFoundError(f"transformers package not found!") from error
 
 from msit_llm.transform.utils import load_atb_speed, NPUSocInfo
 from msit_llm.common.log import logger
 from msit_llm.transform.utils import write_file
 from msit_llm.transform.torch_to_atb_python.env import CONFIG_ATTR_CANDIDATES, FIXED_INPUTS, \
-    KV_CACHE_SURFFIX, BASIC_INPUT_NAMES, VALID_NAME_CHARS, FLOAT_DTYPES
+    KV_CACHE_SURFFIX, BASIC_INPUT_NAMES, VALID_NAME_CHARS, FLOAT_DTYPES, MINDIE_ATB_MODEL, \
+    GATE_UP_WEIGHT, DOWN_WEIGHT
 
+
+def find_mindie_supported_model(config):
+    model_type = get_config_attr(config, "model_type", default = config)
+    num_local_experts = get_config_attr(config, "num_local_experts", default = config)
+    if model_type + str(num_local_experts) in MINDIE_ATB_MODEL.keys():
+        return MINDIE_ATB_MODEL[model_type + str(num_local_experts)]
+    return None
+
+
+def get_expert_weights(layer_id, num_experts, flag, weights):
+    #  layer_id: 0/1/2/3...    flag: GATE_UP_WEIGHT_  /DOWN_WEIHGT
+    name = ""
+    for key, _ in weights.items():
+        if "layers.0" in key and "experts.0.w1" in key:
+            name = key
+    res = []
+    if flag == "gate_up_weight_" and name is not None:
+        for i in range(num_experts):
+            w1 = weights[name.replace("layers.0", "layers."+str(layer_id)).replace("experts.0.w1", "experts."+str(i)+".w1")]
+            w3 = weights[name.replace("layers.0", "layers."+str(layer_id)).replace("experts.0.w1", "experts."+str(i)+".w3")]
+            res.append(torch.cat([w1,w3],dim=0))
+    elif flag == "down_weight_" and name is not None:
+        for i in range(num_experts):
+            res.append(weights[name.replace("layers.0", "layers."+str(layer_id)).replace("experts.0.w1", "experts."+str(i)+".w2")])
+    return res
 
 def get_config_attr(config, attr, default=None):
     if attr not in CONFIG_ATTR_CANDIDATES:
@@ -44,18 +74,12 @@ def get_config_attr(config, attr, default=None):
 
 def build_transformers_model(source_path):
     try:
-        from transformers import AutoConfig, AutoModelForCausalLM
-    except ModuleNotFoundError as error:
-        raise ModuleNotFoundError(f"Failed to build model from {source_path}" + 
-            "ensure that the models is compatible with transformers package") from error
-
-    try:
         config = AutoConfig.from_pretrained(source_path)
         llm_model_config = get_config_attr(config, "text_config", default=config)
         is_vl_model = llm_model_config is not config
         model = AutoModelForCausalLM.from_config(llm_model_config)
-    except Exception as error:
-        raise ValueError(f"build model from {source_path} failed, make sure it works within transformers") from error
+    except Exception as e:
+        raise ValueError(f"build model from {source_path} failed, make sure it works within transformers") from e
     return model, llm_model_config, is_vl_model
 
 
@@ -138,6 +162,7 @@ class ATBModelConfig:
         self.max_batch_size, self.max_seq_len, self.kwargs = max_batch_size, max_seq_len, kwargs
         self.num_key_value_heads = num_key_value_heads if num_key_value_heads > 0 else num_attention_heads
         self.rope_theta = rope_theta
+        self.topk, self.num_layeres, self.num_experts = 0, 0, 0
         for kk, vv in kwargs.items():
             setattr(self, kk, vv)
 
@@ -196,6 +221,11 @@ class ATBModel:
         self.num_key_value_heads = getattr(atb_model, "num_key_value_heads", self.atb_model_config.num_key_value_heads)
         self.vocab_size = getattr(atb_model, "vocab_size", self.atb_model_config.vocab_size)
         self.rope_theta = getattr(atb_model, "rope_theta", self.atb_model_config.rope_theta)
+        self.topk = getattr(atb_model, "topk", self.atb_model_config.topk)  
+        self.num_layers = getattr(atb_model, "num_layers", self.atb_model_config.num_layers)
+        self.num_experts = getattr(atb_model, "num_experts", self.atb_model_config.num_experts)
+        self.gate_up_weights = []
+        self.down_weights = []
         self.num_blocks = math.ceil(
             (self.atb_model_config.max_seq_len + 20) / 128 * self.atb_model_config.max_batch_size
         )
@@ -265,6 +295,14 @@ class ATBModel:
 
             if self.soc_info.need_nz and attention_mask is not None:
                 self.attention_mask = self.transdata_operation.execute([self.attention_mask])[0]
+        
+        for i in range(self.num_layers):
+            if GATE_UP_WEIGHT+str(i) in self.inputs:
+                cur_weights = get_expert_weights(i, self.num_experts, GATE_UP_WEIGHT, weights)
+                self.gate_up_weights.append(torch.stack([i.transpose(0,1) for i in cur_weights], dim=0).npu())
+            if DOWN_WEIGHT+str(i) in self.inputs:
+                cur_weights = get_expert_weights(i, self.num_experts, DOWN_WEIGHT, weights)
+                self.down_weights.append(torch.stack(cur_weights, dim=0).npu())
 
         if self.atb_model_has_set_weights:
             self.atb_model.set_weights(self.weights)  # ATB provided function, no need to pass weights again
@@ -339,6 +377,13 @@ class ATBModel:
         bind_map = {}
         if FIXED_INPUTS.seq_len in self.inputs:
             bind_map[FIXED_INPUTS.seq_len] = model_inputs[FIXED_INPUTS.seq_len].cpu()
+        
+        for i in range(self.num_layers):
+            if GATE_UP_WEIGHT+str(i) in self.inputs:
+                model_inputs[GATE_UP_WEIGHT+str(i)] = self.gate_up_weights[i]
+            if DOWN_WEIGHT+str(i) in self.inputs:
+                model_inputs[DOWN_WEIGHT+str(i)] = self.down_weights[i]
+
         return self.atb_model.forward(model_inputs, self.model_outputs, bind_map)
 
     def _calc_inv_freq_by_rope_theta(self):
