@@ -201,17 +201,17 @@ class Quantizer(nn.Module):
                 threshold = self.get_anti_outlier(self.sigma_weight, current_t)
                 if threshold > self.hessian_optim['std_threshold']:
                     # weight optimization based on Hessian information
-                    _, self.quant_weight_tensor, self.weight_scale, self.weight_offset = \
+                    _, _, self.weight_scale, self.weight_offset = \
                         init_weight_quant_hessian(weight, y, *calling_params, mm_tensor=self.mm_per_tensor)
                 else:
                     self.w_hessian = False
-                    _, self.quant_weight_tensor, self.weight_scale, self.weight_offset = \
+                    _, _, self.weight_scale, self.weight_offset = \
                         init_weight_quant_normal(
                             weight, *calling_params, mm_tensor=self.mm_per_tensor, hqq=self.use_hqq
                         )
             else:
                 # weight optimization based on Hessian information
-                _, self.quant_weight_tensor, self.weight_scale, self.weight_offset = \
+                _, _, self.weight_scale, self.weight_offset = \
                     init_weight_quant_hessian(weight, y, *calling_params, self.mm_per_tensor)
         else:
             _, _, self.weight_scale, self.weight_offset = \

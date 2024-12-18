@@ -78,3 +78,9 @@ RESHPAE_KIND = namedtuple("RESHPAE_KIND", _RESHPAE_KIND)(*_RESHPAE_KIND)
 VALID_NAME_CHARS = string.ascii_letters + string.digits + "_."
 FLOAT_DTYPES = {"float32": torch.float32, "float16": torch.float16, "bfloat16": torch.bfloat16}
 
+MINDIE_ATB_MODEL = {
+    "mixtral8": "mixtral"
+}
+GATE_UP_WEIGHT = "gate_up_weight_"
+DOWN_WEIGHT = "down_weight_"
+
