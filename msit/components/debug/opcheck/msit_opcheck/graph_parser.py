@@ -81,7 +81,7 @@ class OpInfo(object):
 
     def update_op_type(self):
         # 更新融合算子标记
-        result_op_type = self.param.get("type", None)
+        result_op_type = [self.param.get("type", None)]
         for attr in self.param['attr']:
             if attr['key'] == '_datadump_original_op_types':
                 result_op_type = attr['value']['list']['s']
