@@ -317,7 +317,7 @@ class LinearQuantizer(nn.Module):
     Class to quantize given linear layer weights
     """
 
-    def __init__(self, cfg=None, logger=None):
+    def __init__(self, cfg=None, logger=None, is_dynamic=False):
         """
         cfg: quantizaton configuration
         """
@@ -328,7 +328,7 @@ class LinearQuantizer(nn.Module):
         self.bias = None
         self.quant_input = TensorQuantizer(
             bit=cfg.a_bit, is_signed=cfg.a_signed, is_enable=True,
-            is_input=True, cfg=cfg, logger=logger, is_dynamic=cfg.is_dynamic
+            is_input=True, cfg=cfg, logger=logger, is_dynamic=is_dynamic
         )
         self.quant_weight = TensorQuantizer(
             bit=cfg.w_bit, is_signed=cfg.w_signed, is_enable=True,
