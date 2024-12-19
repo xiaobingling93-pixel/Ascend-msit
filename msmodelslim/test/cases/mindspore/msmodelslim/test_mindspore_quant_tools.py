@@ -15,7 +15,7 @@ from msmodelslim.mindspore.llm_ptq import QuantConfig, Calibrator
 
 
 def test_mindspore_sparse_run():
-    TEST_SAVE_PATH = "automl_llm_ptq_save_path"
+    TEST_SAVE_PATH = "msmodelslim_llm_ptq_save_path"
     os.makedirs(TEST_SAVE_PATH, exist_ok=True)
     os.chdir(TEST_SAVE_PATH)
 
@@ -44,7 +44,10 @@ def test_mindspore_sparse_run():
     )
 
     calibrator.run()
-
+    
+    if os.path.exists(tmp_sparse_weight_ckpt):
+        os.remove(tmp_sparse_weight_ckpt)
+    
     calibrator.save(tmp_sparse_weight_ckpt)
 
     fake_model = calibrator.fake_quantize_model()

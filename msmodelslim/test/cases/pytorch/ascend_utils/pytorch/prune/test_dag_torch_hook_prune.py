@@ -23,7 +23,7 @@ class MyLinearTestNet(nn.Module):
         x_out = self.features(x_in)
         return x_out
     
-class MyTestNet(nn.Module):
+class MyBNTestNet(nn.Module):
     def __init__(self) -> None:
         super().__init__()
         self.features = nn.Conv2d(4, 64, kernel_size=11, stride=4, padding=2, groups=1)   
@@ -71,22 +71,22 @@ def dag_linear(inputs_of_linear):
 
 class TestPruneConv2d():
     def test_prune_input_given_channel_4_delete_123_when_any_pass(self, dag_conv, inputs_like_img):
-        input_ori = inputs_like_imag.clone()
+        input_ori = inputs_like_img.clone()
         input_ori[:, [1, 2, 3], :, :] = 0
         ori_output = dag_conv.network(input_ori)
 
         assert dag_conv.dag_node_list[0].node.in_channels == 4
 
         prune_torch = PruneTorch(dag_conv)
-        dag_conv._inputs = inputs_ori[:, [0], :, :]
+        dag_conv._inputs = input_ori[:, [0], :, :]
         prune_torch.prune_by_desc({
             "features": {
                 "input": (1, '-' * 1 + 'x' * 3),
             },
         })
-        prune_output = prune_torch.network(inputs_like_img[:, [0], :, :])
+        pruned_output = prune_torch.network(inputs_like_img[:, [0], :, :])
 
-        assert (torch.round(ori_output *1000) == torch.round(prune_output * 1000)).sum() == ori_output.numel()
+        assert (torch.round(ori_output *1000) == torch.round(pruned_output * 1000)).sum() == ori_output.numel()
         assert dag_conv.dag_node_list[0].node.in_channels == 1
 
     def test_prune_output_given_channel_64_delete_32to63_when_any_pass(self, dag_conv, inputs_like_img):
@@ -97,7 +97,7 @@ class TestPruneConv2d():
         prune_torch = PruneTorch(dag_conv)
         prune_torch.prune_by_desc({
             "features": {
-                "outputs": (32, '-' * 32 + 'x' * 3),
+                "output": (32, '-' * 32 + 'x' * 32),
             },
         })
         pruned_output = prune_torch.network(inputs_like_img)
@@ -164,7 +164,7 @@ class TestPruneConv2d():
     def test_prune_bn_given_channel_24_delete_11to24_when_any_pass(self, dag_bn, inputs_like_img):
         ori_output = dag_bn.network(inputs_like_img)
 
-        assert dag_bn.get_node_by_name["batch_normal"].node.num_features == 64
+        assert dag_bn.get_node_by_name("batch_normal").node.num_features == 64
 
         prune_torch = PruneTorch(dag_bn)
         prune_torch.prune_by_desc({
@@ -179,7 +179,7 @@ class TestPruneConv2d():
 
         assert (torch.round(ori_output[:, 0:32, :, :] * 1000) == torch.round(
             pruned_output * 1000)).sum() == pruned_output.numel()
-        assert dag_bn.get_node_by_name["batch_normal"].node.num_features == 32
+        assert dag_bn.get_node_by_name("batch_normal").node.num_features == 32
     
 
     

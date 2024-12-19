@@ -37,5 +37,5 @@ with open(json_path, 'r') as f:
 compressor = Compressor(compress_config, weight=sparse_weight, quant_model_description=quant_model_description)
 compress_weight, compress_index, compress_info = compressor.run()
 #使用export_safetensors()接口，保存压缩后的结果文件
-compressor.export_safetensors(path, safetensors_name=None, json_name=None)
+compressor.export_safetensors(path=save_path, safetensors_name=None, json_name=None)
 ```

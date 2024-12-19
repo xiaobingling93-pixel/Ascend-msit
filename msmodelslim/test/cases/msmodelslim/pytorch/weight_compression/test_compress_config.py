@@ -78,9 +78,9 @@ class TestCompressConfig:
         )
 
     def test_arg_compress_disable_layers_with_wrong_data_type(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(TypeError):
             CompressConfig(compress_disable_layers=1)
-        with pytest.raises(ValueError):
+        with pytest.raises(TypeError):
             CompressConfig(compress_disable_layers='True')
 
     def test_arg_multiprocess_num_with_right_data_type(self):

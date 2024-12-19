@@ -4,7 +4,7 @@ import re
 import importlib
 from typing import Mapping
 
-from modelslim import OLD_PACKAGE_NAME, NEW_PACKAGE_NAME
+from msmodelslim import OLD_PACKAGE_NAME, NEW_PACKAGE_NAME
 
 
 STR_WHITE_LIST_REGEX = re.compile(r"[^_A-Za-z0-9\"'><=\[\])(,}{: /.~-]")
