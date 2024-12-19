@@ -11,7 +11,6 @@ import inspect
 from collections import OrderedDict as OrderedDict_CHECK
 from easydict import EasyDict
 
-from sympy.benchmarks.bench_meijerint import alpha
 from tqdm import tqdm
 import torch
 import torch.nn as nn
