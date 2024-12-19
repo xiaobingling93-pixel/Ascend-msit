@@ -11,10 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+options:
+  no_parent_owners: true
 approvers:
 - wo-wenjie
-- panyj1993
 - jhon-117
 - czr9775
 - hu-xiao-bo
@@ -23,7 +23,5 @@ reviewers:
 - hu-xiao-bo
 - Martin-M
 - yejiajun4
-- rookie_hongchuan
-- y30044005
 - zjks98
-- li-chang74
+- y30044005
