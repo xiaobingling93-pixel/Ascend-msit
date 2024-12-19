@@ -135,7 +135,7 @@ class DumpCommand(BaseCommand):
             required=False,
             nargs='+',
             default=['tensor', 'model'],
-            choices=['model', 'layer', 'op', 'kernel', 'tensor', 'cpu_profiling', 'onnx'],
+            choices=['model', 'layer', 'op', 'kernel', 'tensor', 'cpu_profiling', 'onnx', 'stats'],
             help='dump type.')
 
         parser.add_argument(
