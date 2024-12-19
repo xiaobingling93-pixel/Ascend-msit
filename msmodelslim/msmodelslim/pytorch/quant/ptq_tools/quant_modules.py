@@ -2,6 +2,7 @@
 # Copyright Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
 from __future__ import absolute_import, division, print_function
 import time
+import inspect
 
 import torch
 import torch.nn as nn
@@ -216,20 +217,29 @@ class Quantizer(nn.Module):
             return
 
         start = time.perf_counter()
-        _, \
-        _, \
-        self.weight_scale, \
-        self.weight_offset = init_weight_quant_normal(
-            weight,
-            self.bit,
-            self.is_sym,
-            self.is_signed,
-            integral_zero_point,
-            admm=self.admm,
-            round_opt=self.round_opt,
-            force_per_channel=True,
-            low_mem=True,
-        )
+        if 'low_mem' in inspect.signature(init_weight_quant_normal).parameters:
+            _, _, self.weight_scale, self.weight_offset = init_weight_quant_normal(
+                weight,
+                self.bit,
+                self.is_sym,
+                self.is_signed,
+                integral_zero_point,
+                admm=self.admm,
+                round_opt=self.round_opt,
+                force_per_channel=True,
+                low_mem=True,
+            )
+        else:
+            _, _, self.weight_scale, self.weight_offset = init_weight_quant_normal(
+                weight,
+                self.bit,
+                self.is_sym,
+                self.is_signed,
+                integral_zero_point,
+                admm=self.admm,
+                round_opt=self.round_opt,
+                force_per_channel=True,
+            )
         elapsed = (time.perf_counter() - start)
         logger.info("Quantization time:%s ms", elapsed * 1000)
         self.has_init_quant_para = True
