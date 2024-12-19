@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import torch
-
+import numpy as np
 from torch.nn import functional as F
 from components.utils.log import logger
 
-
 FLOAT_EPSILON = torch.finfo(torch.float).eps
+NP_FLOAT_EPSILON = np.finfo(np.float32).eps
 NAN = 'NaN'
 
 
@@ -29,6 +29,14 @@ def cosine_similarity(golden_data: torch.Tensor, my_data: torch.Tensor):
     return round(result, 10), ''  # Trunc to keeping only 10 decimals
 
 
+def np_cosine_similarity(golden_data: np.ndarray, my_data: np.ndarray):
+    if np.all(golden_data == 0) and np.all(my_data == 0):
+        return 1.0, ''  # both are all 0, return similarity 1
+
+    result = np.dot(golden_data, my_data) / (np.linalg.norm(golden_data) * np.linalg.norm(my_data))
+    return round(result, 10), ''  #
+
+
 def max_relative_error(golden_data: torch.Tensor, my_data: torch.Tensor):
     result = torch.where(
         torch.abs(golden_data) > FLOAT_EPSILON,
@@ -36,6 +44,17 @@ def max_relative_error(golden_data: torch.Tensor, my_data: torch.Tensor):
         torch.tensor(0, dtype=golden_data.dtype),
     ).max()
     return result.item(), ''
+
+
+def np_max_relative_error(golden_data: np.ndarray, my_data: np.ndarray):
+    result = np.max(
+        np.where(
+            np.abs(golden_data) > NP_FLOAT_EPSILON,
+            np.abs(my_data / golden_data - 1),  # abs(aa - bb) / abs(bb) -> abs(aa / bb - 1)
+            0
+        )
+    )
+    return result, ''
 
 
 def mean_relative_error(golden_data: torch.Tensor, my_data: torch.Tensor):
@@ -47,6 +66,17 @@ def mean_relative_error(golden_data: torch.Tensor, my_data: torch.Tensor):
     return result.item(), ''
 
 
+def np_mean_relative_error(golden_data: np.ndarray, my_data: np.ndarray):
+    result = np.mean(
+        np.where(
+            np.abs(golden_data) > NP_FLOAT_EPSILON,
+            np.abs(my_data / golden_data - 1),  # abs(aa - bb) / abs(bb) -> abs(aa / bb - 1)
+            0
+        )
+    )
+    return result, ''
+
+
 def max_absolute_error(golden_data: torch.Tensor, my_data: torch.Tensor):
     result = torch.where(
         torch.abs(golden_data) > FLOAT_EPSILON,
@@ -54,6 +84,17 @@ def max_absolute_error(golden_data: torch.Tensor, my_data: torch.Tensor):
         torch.tensor(0, dtype=my_data.dtype),
     ).max()
     return result.item(), ''
+
+
+def np_max_absolute_error(golden_data: np.ndarray, my_data: np.ndarray):
+    result = np.max(
+        np.where(
+            np.abs(golden_data) > NP_FLOAT_EPSILON,
+            np.abs(my_data - golden_data),  # abs(aa - bb) / abs(bb) -> abs(aa / bb - 1)
+            0
+        )
+    )
+    return result, ''
 
 
 def mean_absolute_error(golden_data: torch.Tensor, my_data: torch.Tensor):
@@ -65,8 +106,26 @@ def mean_absolute_error(golden_data: torch.Tensor, my_data: torch.Tensor):
     return result.item(), ''
 
 
+def np_mean_absolute_error(golden_data: np.ndarray, my_data: np.ndarray):
+    result = np.mean(
+        np.where(
+            np.abs(golden_data) > NP_FLOAT_EPSILON,
+            np.abs(my_data - golden_data),  # abs(aa - bb) / abs(bb) -> abs(aa / bb - 1)
+            0
+        )
+    )
+    return result, ''
+
+
 def kl_divergence(golden_data: torch.Tensor, my_data: torch.Tensor):
     result = F.kl_div(F.log_softmax(my_data, dim=-1), F.softmax(golden_data, dim=-1), reduction="sum").item()
+    return max(result, 0), ""
+
+
+def np_kl_divergence(golden_data: np.ndarray, my_data: np.ndarray):
+    golden_data = np.exp(golden_data - np.max(golden_data))
+    my_data= np.exp(my_data - np.max(my_data))
+    result = np.sum(golden_data * (np.log(golden_data) - my_data))
     return max(result, 0), ""
 
 
@@ -77,6 +136,15 @@ def relative_euclidean_distance(golden_data: torch.Tensor, my_data: torch.Tensor
 
     result = ((my_data - golden_data) ** 2).sum() / ground_truth_square_num
     return torch.sqrt(result).item(), ''
+
+
+def np_relative_euclidean_distance(golden_data: np.ndarray, my_data: np.ndarray):
+    ground_truth_square_num = np.sum(golden_data ** 2)
+    if np.sqrt(ground_truth_square_num)<= NP_FLOAT_EPSILON:
+        return 0.0, ''
+
+    result = np.sum((my_data - golden_data) ** 2) / ground_truth_square_num
+    return np.sqrt(result), ''
 
 
 def register_custom_compare_algorithm(custom_compare_algorithm):
@@ -139,6 +207,17 @@ CMP_ALG_MAP = {
     "mean_absolute_error": mean_absolute_error,
     "kl_divergence": kl_divergence,
     "relative_euclidean_distance": relative_euclidean_distance,
+}
+
+
+NP_CMP_ALG_MAP = {
+    "cosine_similarity": np_cosine_similarity,
+    "max_relative_error": np_max_relative_error,
+    "mean_relative_error": np_mean_relative_error,
+    "max_absolute_error": np_max_absolute_error,
+    "mean_absolute_error": np_mean_absolute_error,
+    "kl_divergence": np_kl_divergence,
+    "relative_euclidean_distance": np_relative_euclidean_distance,
 }
 
 CUSTOM_ALG_MAP = {}

@@ -11,3 +11,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+import pkg_resources
+from components.utils.install import AitInstaller
+
+
+class OpCheckInstall(AitInstaller):
+    @staticmethod
+    def check():
+        check_res = []
+        installed_pkg = [pkg.key for pkg in pkg_resources.working_set]
+        if "tensorflow" not in installed_pkg:
+            check_res.append("[error] tensorflow not installed. Please read xxx readme to install tensorflow packages.")
+        
+        if not check_res:
+            return "OK"
+        else:
+            return "\n".join(check_res)
+        
+    

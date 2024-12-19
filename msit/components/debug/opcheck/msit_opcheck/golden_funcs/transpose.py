@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,3 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+import numpy
+
+from msit_opcheck.graph_parser import OpInfo
+
+
+def _transpose(context: OpInfo):
+    input_array0 = context.param.get("input_arrays")[0]
+    perm = context.param.get("perm")
+    return numpy.transpose(input_array0, perm)
