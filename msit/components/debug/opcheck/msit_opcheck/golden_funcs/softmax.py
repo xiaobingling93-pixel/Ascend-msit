@@ -14,86 +14,98 @@
 # limitations under the License.
 
 import copy
-from typing import Tuple
-
-import numpy
+import numpy as np
 import tensorflow as tf
 
-from msit_opcheck.conversion import shape_convert
-from msit_opcheck.graph_parser import OpInfo
+from msit_opcheck.operation_test import OperationTest
+from msit_opcheck.conversion.shape_convert import fhd2nd, nz2nd, shd2nd, nd2fhd, nd2nz, to_NDC1HWC0
+from msit_opcheck.conversion.dtype_convert import DATA_TYPE_MAP
 
 
-def softmax(x, axis=None):
-    is_bf16 = False
-    if x.dtype == tf.bfloat16.as_numpy_dtype:
-        x = x.astype("float32")
-        is_bf16 = True
-    reduce_max = numpy.amax(x, axis=axis, keepdims=True)
-    sub_0 = numpy.subtract(x, reduce_max)
-    has_improve_precision = False
-    if sub_0.dtype == "float16":
-        sub_0 = sub_0.astype("float32")
-        has_improve_precision = True
-    exp_0 = numpy.exp(sub_0)
-    reduce_sum = numpy.sum(exp_0, axis=axis, keepdims=True)
-    out = numpy.divide(exp_0, reduce_sum)
-    if out.dtype == "float32" and has_improve_precision:
-        out = out.astype("float16")
-    if is_bf16:
-        out = out.astype(tf.bfloat16.as_numpy_dtype)
-    return out
+class SoftmaxOperation(OperationTest):
+    def golden_calc(self, in_tensors):
+        data_in = in_tensors[0]
+        for attr in self.op_param['attr']:
+            if attr['key'] == 'axes':
+                axis = attr['value']['list']['i']
+        for attr in self.op_param['input_desc'][0]['attr']:
+            if attr['key'] == 'origin_format':
+                ori_format = attr['value']['s']
+            if attr['key'] == 'origin_shape':
+                ori_shape = attr['value']['list']['i']
+        cur_format = self.op_param['input_desc'][0]['layout']
+        ipt_dtype = DATA_TYPE_MAP[self.op_param['input_desc'][0]['dtype']]
+        out_dtype = DATA_TYPE_MAP[self.op_param['output_desc'][0]['dtype']]
+        inputs = [cur_format, ori_format, ori_shape, data_in, axis, ipt_dtype, out_dtype]
+        res = self._softmax_v2(inputs)
+        return res
 
+    def test_softmax(self):
+        self.execute()
 
-def normalize_axis(axis, shape_length) -> Tuple:
-    normalized_axis = []
-    if isinstance(axis, int):
-        normalized_axis = [axis]
-    elif isinstance(axis, tuple):
-        normalized_axis = list(axis)
-    elif isinstance(axis, list):
-        normalized_axis = copy.deepcopy(axis)
-    if not normalized_axis:
-        normalized_axis = [-1]
-    normalized_axis = [v if v >= 0 else v + shape_length for v in normalized_axis]
-    normalized_axis = tuple(list(set(normalized_axis)))
-    return normalized_axis
+    def softmax(self, x, axis=None):
+        is_bf16 = False
+        if x.dtype == tf.bfloat16.as_numpy_dtype:
+            x = x.astype("float32")
+            is_bf16 = True
+        reduce_max = np.amax(x, axis=axis, keepdims=True)
+        sub_0 = np.subtract(x, reduce_max)
+        has_improve_precision = False
+        if sub_0.dtype == "float16":
+            sub_0 = sub_0.astype("float32")
+            has_improve_precision = True
+        exp_0 = np.exp(sub_0)
+        reduce_sum = np.sum(exp_0, axis=axis, keepdims=True)
+        out = np.divide(exp_0, reduce_sum)
+        if out.dtype == "float32" and has_improve_precision:
+            out = out.astype("float16")
+        if is_bf16:
+            out = out.astype(tf.bfloat16.as_numpy_dtype)
+        return out
 
+    def normalize_axis(self, axis, shape_length):
+        normalized_axis = []
+        if isinstance(axis, int):
+            normalized_axis = [axis]
+        elif isinstance(axis, tuple):
+            normalized_axis = list(axis)
+        elif isinstance(axis, list):
+            normalized_axis = copy.deepcopy(axis)
+        if not normalized_axis:
+            normalized_axis = [-1]
+        normalized_axis = [v if v >= 0 else v + shape_length for v in normalized_axis]
+        normalized_axis = tuple(list(set(normalized_axis)))
+        return normalized_axis
 
-def _softmax_v2(context: OpInfo):
-    format = context.param.get("stc_input_formats")[0]
-    ori_format = context.param.get("stc_input_ori_formats")[0]
-    ori_shape = context.param.get("stc_ori_inputs")[0]
-    data = context.param.get("input_arrays")[0]
-    axis = context.param.get("axes")
-    ipt_dtype = context.param.get("stc_input_dtypes")[0]
-    out_dtype = context.param.get("output_dtypes")[0]
+    def _softmax_v2(self, inputs):
+        
+        cur_format, ori_format, ori_shape, data, axis, ipt_dtype, out_dtype = inputs
+        if ipt_dtype == "float16":
+            data = data.astype("float32")
+        # the axis is corresponding to the original shape
+        # normalize axis
+        axis = self.normalize_axis(axis, len(ori_shape))
 
-    if ipt_dtype == "float16":
-        data = data.astype("float32")
-    # the axis is corresponding to the original shape
-    # normalize axis
-    axis = normalize_axis(axis, len(ori_shape))
+        # convert any format to ND
+        if cur_format == "NC1HWC0":
+            data = fhd2nd(data, ori_shape, ori_format)
+        elif cur_format == "FRACTAL_NZ":
+            data = nz2nd(data, ori_shape)
+        elif cur_format == "NDC1HWC0":
+            data = shd2nd(data, ori_shape, ori_format)
 
-    # convert any format to ND
-    if format == "NC1HWC0":
-        data = shape_convert.fhd2nd(data, ori_shape, ori_format)
-    elif format == "FRACTAL_NZ":
-        data = shape_convert.nz2nd(data, ori_shape)
-    elif format == "NDC1HWC0":
-        data = shape_convert.shd2nd(data, ori_shape, ori_format)
+        # calc softmax
+        result = self.softmax(data, axis)
 
-    # calc softmax
-    result = softmax(data, axis)
-
-    # convert ND to target format
-    if format == "NC1HWC0":
-        result = shape_convert.nd2fhd(result, ori_format, context.param.get("stc_outputs")[0])
-    elif format == "FRACTAL_NZ":
-        result = shape_convert.nd2nz(result, context.param.get("stc_outputs")[0])
-    elif format == "NDC1HWC0":
-        result = shape_convert.to_NDC1HWC0(result, ori_format, context.param.get("stc_outputs")[0])
-    if out_dtype == "bfloat16":
-        result = result.astype(tf.bfloat16.as_numpy_dtype, copy=False)
-    else:
-        result = result.astype(out_dtype, copy=False)
-    return result
+        # convert ND to target format
+        if cur_format == "NC1HWC0":
+            result = nd2fhd(result, ori_format)
+        elif cur_format == "FRACTAL_NZ":
+            result = nd2nz(result)
+        elif cur_format == "NDC1HWC0":
+            result = to_NDC1HWC0(result, ori_format)
+        if out_dtype == "bfloat16":
+            result = result.astype(tf.bfloat16.as_numpy_dtype, copy=False)
+        else:
+            result = result.astype(out_dtype, copy=False)
+        return result

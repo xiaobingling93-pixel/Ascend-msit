@@ -15,15 +15,21 @@
 
 import numpy as np
 
-from msit_opcheck.graph_parser import OpInfo
 from msit_opcheck.utils import broadcast_to_maxshape
+from msit_opcheck.operation_test import OperationTest
+from msit_opcheck.conversion.dtype_convert import DATA_TYPE_MAP
 
 
-def log_or(context: OpInfo):
-    x1, x2 = context.param.get("input_arrays")
-    shape_list = broadcast_to_maxshape([x1.shape, x2.shape])
-    x1 = x1.astype("float16")
-    x2 = x2.astype("float16")
-    x1 = np.broadcast_to(x1, shape_list[-1])
-    x2 = np.broadcast_to(x2, shape_list[-1])
-    return np.maximum(x1, x2).astype("int8")
+class LogicalOrOperation(OperationTest):
+    def golden_calc(self, in_tensors):
+        x1,x2 = in_tensors
+        out_type = DATA_TYPE_MAP[self.op_param['output_desc'][0]['dtype']]
+        shape_list = broadcast_to_maxshape([x1.shape, x2.shape])
+        x1 = x1.astype("float16")
+        x2 = x2.astype("float16")
+        x1 = np.broadcast_to(x1, shape_list[-1])
+        x2 = np.broadcast_to(x2, shape_list[-1])
+        return [np.maximum(x1, x2).astype(out_type, copy=False)]
+
+    def test_logical_or(self):
+        self.execute()

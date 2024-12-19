@@ -12,18 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np 
+import numpy as np
 
 from msit_opcheck.operation_test import OperationTest
-from msit_opcheck.conversion.dtype_convert import DATA_TYPE_MAP
 
 
-class AddOperation(OperationTest):
+class BiasAddOperation(OperationTest):
     def golden_calc(self, in_tensors):
-        res = in_tensors[0]
-        for i in range(1, len(in_tensors)):
-            res = np.add(res, in_tensors[i])
-        return res.astype(DATA_TYPE_MAP[self.op_param['output_desc'][0]['dtype']])
+        value, bias = in_tensors
+        bias_shape = [1] * (value.ndim - 1) + [bias.shape[0]]
+        bias_reshape = bias.reshape(bias_shape)
+        res = np.add(value, bias_reshape)
+        return res
     
-    def test_add(self):
+    def test_bias_add(self):
         self.execute()
+

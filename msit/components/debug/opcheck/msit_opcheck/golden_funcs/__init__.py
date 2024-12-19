@@ -13,5 +13,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-OP_DICT = dict({})
 
+from msit_opcheck.golden_funcs.logical_or import LogicalOrOperation
+from msit_opcheck.golden_funcs.pad import PadOperation
+from msit_opcheck.golden_funcs.add_n import AddOperation
+from msit_opcheck.golden_funcs.batchnorm import BatchNormOperation
+from msit_opcheck.golden_funcs.cast import CastOperation
+from msit_opcheck.golden_funcs.bias_add import BiasAddOperation
+from msit_opcheck.golden_funcs.softmax import SoftmaxOperation 
+from msit_opcheck.golden_funcs.mat_mul import MatmulOperation
+
+
+OP_DICT = dict({"Pad": PadOperation, 
+                "PadD": PadOperation, 
+                "LogicalOr": LogicalOrOperation, 
+                "Adds":AddOperation,
+                "Add":AddOperation, 
+                "BatchNorm":BatchNormOperation, 
+                "Cast":CastOperation, 
+                "SoftmaxV2": SoftmaxOperation, 
+                "BiasAdd":BiasAddOperation, 
+                "MatMulV2": MatmulOperation})
