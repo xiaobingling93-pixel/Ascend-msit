@@ -24,6 +24,7 @@ only_transplt=
 only_profile=
 only_llm=
 only_tensor_view=
+only_graph=
 arg_help=0
 
 while [[ "$#" -gt 0 ]]; do case $1 in
@@ -39,6 +40,7 @@ while [[ "$#" -gt 0 ]]; do case $1 in
   --profile) only_profile=true;;
   --llm) only_llm=true;;
   --tensor-view) only_tensor_view=true;;
+  --graph) only_graph=true;;
   --uninstall) uninstall=true;;
   -y) all_uninstall=-y;;
   -h|--help) arg_help=1;;
@@ -68,6 +70,7 @@ if [ "$arg_help" -eq "1" ]; then
   echo " --profile : only install profile component"
   echo " --llm : only install llm component"
   echo "--tensor-view: only install tensor-view component"
+  echo "--graph: only install graph component"
   echo " --full : using with install, install all components and dependencies, may need sudo privileges"
   echo " --uninstall : uninstall"
   echo " -y : using with uninstall, don't ask for confirmation of uninstall deletions"
@@ -91,7 +94,7 @@ uninstall(){
   pip3 uninstall msit analyze_tool convert_tool compare auto_optimizer msprof transplt ${all_uninstall}
   if [ -z $only_debug ] && [ -z $only_compare ] && [ -z $only_surgen ] && [ -z $only_benchmark ] && [ -z $only_analyze ] && [ -z $only_convert ] && [ -z $only_transplt ] && [ -z $only_profile ] && [ -z $only_llm ] && [ -z $only_tensor_view ]
   then
-    pip3 uninstall msit msit-analyze aclruntime ais_bench msit-benchmark msit-convert msit-compare msit-surgeon msit-profile msit-transplt msit-llm msit-tensor-view ${all_uninstall}
+    pip3 uninstall msit msit-analyze aclruntime ais_bench msit-benchmark msit-convert msit-compare msit-surgeon msit-profile msit-transplt msit-llm msit-tensor-view msit-graph ${all_uninstall}
   else
     if [ ! -z $only_compare ]
     then
@@ -137,6 +140,11 @@ uninstall(){
     if [ ! -z $only_tensor_view ]
     then
       pip3 uninstall msit-tensor-view ${all_uninstall}
+    fi
+
+    if [ ! -z $only_graph ]
+    then
+      pip3 uninstall msit-graph ${all_uninstall}
     fi
   fi
   exit;

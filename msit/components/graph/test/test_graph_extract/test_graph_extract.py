@@ -78,9 +78,9 @@ class TestGraphAnalyze(unittest.TestCase):
         self.assertIn("Index part of tensor name node_name:abc is not an integer", str(context.exception))
 
     def test__lookup_dump_nodes_given_forward_lookup_when_valid_then_correct_nodes_returned(self):
-        args = Namespace(stop_name=None, stop_type=None, layer_number=10, stop_leaves_count=0)
+        args = Namespace(stop_name=None, layer_number=10, stop_leaves_count=0)
         gs = GraphSummary()
-        start_node_names = ["node1"]
+        start_node_names = "node1"
         lookup_directions = GraphAnalyze.LOOKUP_FORWARD
 
         node1 = MagicMock(name="node1", input=[], output=["node2"], op_type="ge:Op1")
@@ -94,9 +94,9 @@ class TestGraphAnalyze(unittest.TestCase):
         self.assertEqual(result, {"node1", "node2"})
 
     def test__lookup_dump_nodes_given_backward_lookup_when_valid_then_correct_nodes_returned(self):
-        args = Namespace(stop_name=None, stop_type=None, layer_number=10, stop_leaves_count=0)
+        args = Namespace(stop_name=None, layer_number=10, stop_leaves_count=0)
         gs = GraphSummary()
-        start_node_names = ["node2"]
+        start_node_names = "node2"
         lookup_directions = GraphAnalyze.LOOKUP_BACKWARD
 
         node1 = MagicMock(name="node1", input=[], output=["node2"], op_type="ge:Op1")
@@ -110,9 +110,9 @@ class TestGraphAnalyze(unittest.TestCase):
         self.assertEqual(result, {"node1", "node2"})
 
     def test__lookup_dump_nodes_given_stop_name_when_valid_then_stops_at_correct_node(self):
-        args = Namespace(stop_name=["node2"], stop_type=None, layer_number=10, stop_leaves_count=0)
+        args = Namespace(stop_name="node2", layer_number=10, stop_leaves_count=0)
         gs = GraphSummary()
-        start_node_names = ["node1"]
+        start_node_names = "node1"
         lookup_directions = GraphAnalyze.LOOKUP_FORWARD
 
         node1 = MagicMock(name="node1", input=[], output=["node2"], op_type="ge:Op1")
@@ -125,21 +125,6 @@ class TestGraphAnalyze(unittest.TestCase):
         result = GraphAnalyze._lookup_dump_nodes(args, gs, start_node_names, lookup_directions)
         self.assertEqual(result, {"node1"})
 
-    def test__lookup_dump_nodes_given_stop_type_when_valid_then_stops_at_correct_op_type(self):
-        args = Namespace(stop_name=None, stop_type=["ge:Op2"], layer_number=10, stop_leaves_count=0)
-        gs = GraphSummary()
-        start_node_names = ["node1"]
-        lookup_directions = GraphAnalyze.LOOKUP_FORWARD
-
-        node1 = MagicMock(name="node1", input=[], output=["node2"], op_type="ge:Op1")
-        node2 = MagicMock(name="node2", input=["node1"], output=[], op_type="ge:Op2")
-
-        gs.names_to_node = {"node1": node1, "node2": node2}
-        gs.names_to_output_names = {"node1": ["node2"]}
-        gs.names_to_input_names = {"node2": ["node1"]}
-
-        result = GraphAnalyze._lookup_dump_nodes(args, gs, start_node_names, lookup_directions)
-        self.assertEqual(result, {"node1"})
 
     def test__generate_graph_given_backbone_names_when_valid_then_generates_correct_subgraph(self):
         gs = GraphSummary()
@@ -163,36 +148,4 @@ class TestGraphAnalyze(unittest.TestCase):
         GraphAnalyze._generate_graph(gs, backbone_names, output_path, without_leaves)
     
         GraphAnalyze._save_graph_def.assert_called_once()
-
-    #def test__find_nodes_between_start_and_end_given_valid_start_and_end_names_when_valid_then_returns_correct_nodes(self)
-
-    #def test__find_nodes_by_prefixes_given_valid_prefixes_when_valid_then_returns_correct_nodes
-
-    def test_extract_sub_graph_given_valid_args_when_valid_then_generates_correct_subgraph(self):
-        args = Namespace(input="path/to/input.pbtxt", output=None, start_node=["node1"], end_node=["node3"],
-                         name_prefix=["node"], without_leaves=False)
-        gs = GraphSummary()
-        input_path = "path/to/input.pbtxt"
-        output_path = "path/to/input_sub.pbtxt"
-
-        node1 = MagicMock(name="node1", input=[], output=["node2"], op_type="ge:Op1")
-        node2 = MagicMock(name="node2", input=["node1"], output=["node3"], op_type="ge:Op2")
-        node3 = MagicMock(name="node3", input=["node2"], output=[], op_type="ge:Op3")
-
-        gs.names_to_node = {"node1": node1, "node2": node2, "node3": node3}
-        gs.names_to_output_names = {"node1": ["node2"], "node2": ["node3"]}
-        gs.names_to_input_names = {"node2": ["node1"], "node3": ["node2"]}
-
-        graph_def_mock = MagicMock(node=[node1, node2, node3])
-        GraphAnalyze.load_graph_def_from_pbtxt = MagicMock(return_value=graph_def_mock)
-        GraphAnalyze._build_graph_summary = MagicMock(return_value=gs)
-        GraphAnalyze._find_nodes_by_start_names = MagicMock(return_value={"node1", "node2"})
-        GraphAnalyze._find_nodes_between_start_and_end = MagicMock(return_value={"node2", "node3"})
-        GraphAnalyze._find_nodes_by_prefixes = MagicMock(return_value={"node1", "node2"})
-        GraphAnalyze._generate_graph = MagicMock()
-
-        result = GraphAnalyze.extract_sub_graph(args)
-
-        self.assertEqual(result, 0)
-        GraphAnalyze._generate_graph.assert_called_once_with(gs, {"node1", "node2", "node3"}, output_path, False)
 

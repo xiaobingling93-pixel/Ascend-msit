@@ -15,11 +15,13 @@
 from __future__ import division
 from __future__ import print_function
 
-from collections import Counter
-from collections import defaultdict, deque
 import os
 
+from collections import Counter
+from collections import defaultdict, deque
 from itertools import combinations
+from datetime import datetime, timezone
+
 import pandas as pd
 
 from components.utils.log import logger
@@ -66,7 +68,7 @@ def parse_pbtxt(graph_def):
     return nodes
 
 
-def bfs_subgraph(root_name, nodes, max_nodes=10):
+def bfs_subgraph(root_name, nodes, max_nodes):
     """
     Perform a breadth-first search (BFS) starting from root_name to find a subgraph
     with up to max_nodes nodes.
@@ -120,12 +122,12 @@ def generate_subgraphs(root_name, nodes, bfs_nodes):
     :param bfs_nodes: List of node names forming the initial BFS-generated subgraph.
     :return: Set of tuples representing unique subgraph paths.
     """
-    subgraphs = set()
+    subgraphs = defaultdict(set)
     non_root_nodes = set(bfs_nodes) - {root_name}
 
     # Add the initial BFS subgraph as the first subgraph
     initial_subgraph_types = tuple(nodes[node_name].type for node_name in bfs_nodes)
-    subgraphs.add(initial_subgraph_types)
+    subgraphs[initial_subgraph_types].add(root_name)
 
     # Generate all subsets of non-root nodes
     for r in range(1, len(non_root_nodes) + 1):
@@ -144,12 +146,12 @@ def generate_subgraphs(root_name, nodes, bfs_nodes):
             if len(remaining_nodes) >= 2:
                 subgraph_types = tuple(nodes[node_name].type for node_name in remaining_nodes)
                 logger.debug(f"subgraph_types: {subgraph_types}")
-                subgraphs.add(subgraph_types)
+                subgraphs[subgraph_types].add(root_name)
 
     return subgraphs
 
 
-def find_duplicate_subgraphs(graphs, max_nodes=10):
+def find_duplicate_subgraphs(graphs, max_nodes=8):
     """
     Find and count all duplicate subgraphs in the given graph.
 
@@ -160,6 +162,7 @@ def find_duplicate_subgraphs(graphs, max_nodes=10):
     total_count = sum(len(nodes) for nodes in graphs)
     index_counter = 1
     subgraph_count = defaultdict(int)
+    subgraph_roots = defaultdict(list)
     for nodes in graphs:
         for node_name in nodes.keys():
             bfs_nodes = bfs_subgraph(node_name, nodes, max_nodes)
@@ -168,9 +171,10 @@ def find_duplicate_subgraphs(graphs, max_nodes=10):
             subgraphs = generate_subgraphs(node_name, nodes, bfs_nodes)
             logger.debug(f"subgraphs:{subgraphs}")
             index_counter += 1
-            for subgraph in subgraphs:
+            for subgraph, roots in subgraphs.items():
                 subgraph_count[subgraph] += 1
-    return subgraph_count
+                subgraph_roots[subgraph].extend(roots)
+    return subgraph_count, subgraph_roots
 
 
 def has_subgraph(graph):
@@ -180,11 +184,20 @@ def has_subgraph(graph):
     return False
 
 
-def stat_subgraph(input_path, max_nodes=10, output_file='subgraph_counts.csv'):
+def extract_indices(root_nodes_list):
+    # Extract indices from a list of node names
+    indices = [node.split('_')[-1] for node in root_nodes_list]
+    return '; '.join(indices)
+
+
+def stat_subgraph(input_path, max_nodes=8):
+    if max_nodes > 10:
+        logger.error(f"max_nodes is too large to calculate, please set it to a number less than 10")
+        return None
     graph_def = GraphAnalyze.load_graph_def_from_pbtxt(input_path)
     if graph_def is None:
-        logger.info(f"Failed to parse the pbtxt file.")
-        return
+        logger.error(f"Failed to parse the pbtxt file.")
+        return None
 
     graphs = []
     if has_subgraph(graph_def):
@@ -196,74 +209,104 @@ def stat_subgraph(input_path, max_nodes=10, output_file='subgraph_counts.csv'):
                         if nodes is not None:
                             graphs.append(nodes)
                         else:
-                            logger.info(f"Failed to parse the pbtxt file.")
+                            logger.error(f"Failed to get nodes information.")
+                            return None
     else:
         nodes = parse_pbtxt(graph_def)
         if nodes is not None:
             graphs.append(nodes)
         else:
-            logger.info(f"Failed to parse the pbtxt file.")
+            logger.error(f"Failed to get nodes information.")
+            return None
 
-    subgraph_count = find_duplicate_subgraphs(graphs, max_nodes)
+    subgraph_count, subgraph_roots = find_duplicate_subgraphs(graphs, max_nodes)
     # Sort duplicate subgraphs by their count in descending order
     duplicate_subgraphs = sorted(subgraph_count.items(), key=lambda x: x[1], reverse=True)
     # Prepare data for DataFrame
     data = {'Subgraph': [hash_value for hash_value, _ in duplicate_subgraphs],
-            'Count': [count for _, count in duplicate_subgraphs]}
+            'Count': [count for _, count in duplicate_subgraphs],
+            'Root Nodes Index': ['; '.join(map(str, subgraph_roots[hash_value])) for hash_value, _ in duplicate_subgraphs]}
+
+    # Extract indices from Root Nodes
+    data['Root Nodes Index'] = [extract_indices(root_nodes_str.split('; ')) for root_nodes_str in data['Root Nodes Index']]
 
     # Create DataFrame
     df = pd.DataFrame(data)
-
-    # Save DataFrame to Excel
-    df.to_csv(output_file, index=False)
-    logger.info(f"Results saved to {output_file}")
+    return df
 
 
-def calculate_average_durations(input2_df):
-    # Group by 'OP Type' and calculate the mean of 'Task Duration(us)'
-    average_durations = input2_df.groupby('OP Type')['Task Duration(us)'].mean().reset_index()
-    average_durations.columns = ['OP Type', 'Average Task Duration(us)']
-    return average_durations
-
-
-def preprocess_subgraph(subgraph_str):
-    # Remove 'ge:' prefix from each OP Type in the subgraph tuple
-    op_types = eval(subgraph_str)
-    cleaned_op_types = tuple(op_type.replace('ge:', '') for op_type in op_types)
-    return str(cleaned_op_types)
-
-
-def calculate_sum(input1_path, input2_path, output_path='subgraph_duration_stat.csv'):
-    # Read input CSV files
-    input1_df = pd.read_csv(input1_path)
-    input2_df = pd.read_csv(input2_path)
-
-    # Preprocess Subgraph column in input1_df
-    input1_df['Subgraph'] = input1_df['Subgraph'].apply(preprocess_subgraph)
-
-    # Calculate average durations for each OP Type
-    average_durations = calculate_average_durations(input2_df)
-
-    # Function to sum up the task durations based on the subgraph hash
-    def sum_task_durations(subgraph_hash, average_durations):
-        op_types = eval(subgraph_hash)  # Convert string representation of tuple to actual tuple
+def calculate_task_durations(subgraph_tuple, average_durations):
+    try:
         total_duration = 0.0
-        for op_type in op_types:
+        for op_type in subgraph_tuple:
             avg_duration = average_durations.loc[average_durations['OP Type'] == op_type, 
                 'Average Task Duration(us)'].values
             if len(avg_duration) > 0:
                 total_duration += avg_duration[0]
+            else:
+                logger.warning(f"No average duration found for OP Type: {op_type}")
         return total_duration
+    except (ValueError, TypeError) as e:
+        logger.error(f"Error calculating task durations: {e}")
+        return None
 
-    # Apply the function to create 'Task Sum Duration(us)' column
-    input1_df['Task Sum Duration(us)'] = input1_df['Subgraph'].apply(lambda x: sum_task_durations(x, average_durations))
 
-    # Calculate 'Total Duration(us)' column
-    input1_df['Total Duration(us)'] = input1_df['Count'] * input1_df['Task Sum Duration(us)']
+def calculate_average_durations(profile_df):
+    # Group by 'OP Type' and calculate the mean of 'Task Duration(us)'
+    average_durations = profile_df.groupby('OP Type')['Task Duration(us)'].mean().reset_index()
+    average_durations.columns = ['OP Type', 'Average Task Duration(us)']
+    return average_durations
 
-    # Select only the required columns for the output
-    output_df = input1_df[['Subgraph', 'Count', 'Task Sum Duration(us)', 'Total Duration(us)']]
 
-    # Save the result to output CSV file
-    output_df.to_csv(output_path, index=False)
-    logger.info(f"Results saved to {output_path}")
+def preprocess_subgraph(subgraph_tuple):
+    # Remove 'ge:' prefix from each OP Type
+    cleaned_op_types = tuple(op_type.replace('ge:', '') for op_type in subgraph_tuple)
+    return cleaned_op_types
+
+
+def calculate_sum(source, profile, max_nodes, output_path):
+    try:
+        # Check and set default output path if None
+        if output_path is None:
+            timestamp = datetime.now(tz=timezone.utc).strftime("%Y%m%d_%H%M%S")
+            output_path = f"fuse_duration_{timestamp}.csv"
+        GraphAnalyze.validate_file_path(source, '.pbtxt')
+        GraphAnalyze.validate_file_path(profile, '.csv')
+
+        subgraph_df = stat_subgraph(source, max_nodes)
+        if subgraph_df is None:
+            logger.error("Failed to get subgraph data.")
+            return
+
+        profile_df = pd.read_csv(profile)
+        if profile_df.empty:
+            logger.error("Profile DataFrame is empty, maybe {profile} is missing required columns .")
+            return
+
+        # Preprocess Subgraph column in subgraph_df
+        subgraph_df['Subgraph'] = subgraph_df['Subgraph'].apply(preprocess_subgraph)
+        if subgraph_df['Subgraph'].isnull().any():
+            logger.warning("Preprocessing failed for some subgraphs.")
+
+        # Calculate average durations for each OP Type
+        average_durations = calculate_average_durations(profile_df)
+        if average_durations is None:
+            logger.error("Failed to calculate average durations.")
+            return
+
+        # Apply the function to create 'Task Sum Duration(us)' column
+        subgraph_df['Task Sum Duration(us)'] = subgraph_df['Subgraph'].apply(lambda x: calculate_task_durations(x, average_durations))
+        if subgraph_df['Task Sum Duration(us)'].isnull().any():
+            logger.warning("Some task duration calculations failed.")
+
+        # Calculate 'Total Duration(us)' column
+        subgraph_df['Total Duration(us)'] = subgraph_df['Count'] * subgraph_df['Task Sum Duration(us)']
+
+        # Select only the required columns for the output
+        output_df = subgraph_df[['Subgraph', 'Count', 'Root Nodes Index', 'Task Sum Duration(us)', 'Total Duration(us)']]
+
+        # Save the result to output CSV file
+        output_df.to_csv(output_path, index=False)
+        logger.info(f"Results saved to {output_path}")
+    except Exception as e:
+        logger.error(f"Unexpected error during calculation: {e}")

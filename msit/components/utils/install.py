@@ -111,6 +111,11 @@ INSTALL_INFO_MAP = [
         "pkg-name": "msit-opcheck",
         "pkg-path": os.path.join("debug", "opcheck"),
     },
+    {
+        "arg-name": "graph",
+        "pkg-name": "msit-graph",
+        "pkg-path": "graph",
+    },
 ]
 
 ALL_SUB_TOOLS = [pkg.get("arg-name") for pkg in INSTALL_INFO_MAP]
