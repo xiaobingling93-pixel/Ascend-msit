@@ -21,6 +21,7 @@ import copy
 import argparse
 
 from collections import Counter, defaultdict, deque
+from datetime import datetime, timezone
 
 import onnx
 from google.protobuf import text_format
@@ -56,14 +57,28 @@ class GraphAnalyze:
     LOOKUP_BACKWARD = 2
     LOOKUP_ALL = 3
 
+    STRIP_CONST = 1
+    STRIP_ATTR_WITHOUT_SHAPE = 2
+    STRIP_ATTR = 3
+
     def __init__(self):
         pass
+
+    @staticmethod
+    def validate_file_path(file_path, expected_extension):
+        if not os.path.isfile(file_path):
+            logger.error(f"File not found: {file_path}")
+            raise FileNotFoundError(f"File not found: {file_path}")
+        if not file_path.endswith(expected_extension):
+            logger.error(f"Incorrect file extension for {file_path}. Expected {expected_extension}")
+            raise ValueError(f"Incorrect file extension for {file_path}. Expected {expected_extension}")
 
     @staticmethod
     def load_graph_def_from_pbtxt(path):
         """Loads an ONNX graph definition from a binary protocol buffer file."""
         logger.info(f"Loading {path}, the graph maybe huge, please wait a minute...")
         try:
+            GraphAnalyze.validate_file_path(path, ".pbtxt")
             with ms_open(path, "rb", MAX_SIZE_LIMITE_NORMAL_FILE) as f:
                 data = f.read()
                 model = onnx.ModelProto()
@@ -74,6 +89,8 @@ class GraphAnalyze:
             logger.error(f"OpenException occurred: {oe}")
         except FileNotFoundError as fnf:
             logger.error(f"File not found: {fnf}")
+        except ValueError as ve:
+            logger.error(f"Incorrect file extension: {ve} ")
         except PermissionError as pe:
             logger.error(f"Permission error: {pe}")
         except text_format.ParseError as pe:
@@ -88,62 +105,49 @@ class GraphAnalyze:
         input_path = args.input
         output_path = args.output
         if not output_path:
-            output_path = GraphAnalyze._append_file_name_suffix(input_path, "sub")
+            timestamp = datetime.now(tz=timezone.utc).strftime("%Y%m%d_%H%M%S")
+            output_path = GraphAnalyze._append_file_name_suffix(input_path, timestamp)
 
         logger.info(f"Begin to read in graph from file {input_path}")
         graph_def = GraphAnalyze.load_graph_def_from_pbtxt(input_path)
 
         gs = GraphAnalyze._build_graph_summary(graph_def)
 
-        dump_node_names = GraphAnalyze._find_nodes_by_start_names(args, gs)
-        dump_node_names.update(GraphAnalyze._find_nodes_between_start_and_end(gs, args.start_node, args.end_node))
-        dump_node_names.update(GraphAnalyze._find_nodes_by_prefixes(gs, args.name_prefix))
+        center_node, start_node, end_node = args.center_node, args.start_node, args.end_node
+        dump_node_names = set()
+
+        if center_node:
+            """Either center diffusion mode or start-end mode"""
+            dump_node_names.update(GraphAnalyze._find_nodes_by_center_name(args, gs, center_node))
+        elif start_node and end_node:
+            dump_node_names.update(GraphAnalyze._find_nodes_between_start_and_end(gs, start_node, end_node))
 
         if not dump_node_names:
-            logger.error("No nodes to dump")
+            logger.error("The input center_node or (start_node, end_node) is invalid! Please check!")
             return -1
         GraphAnalyze._generate_graph(gs, dump_node_names, output_path, args.without_leaves)
         return 0
 
     @staticmethod
-    def find_nodes_by_type(input_path, node_type=None):
-        """Finds nodes in the graph by their operation type."""
-        logger.info(f"Begin to read in graph from file {input_path}")
-        graph_def = GraphAnalyze.load_graph_def_from_pbtxt(input_path)
-
-        node_types_to_names = {}
-        if node_type is not None:
-            node_type = set(node_type)
-            for node in graph_def.node:
-                if node.op_type in node_type:
-                    node_types_to_names.setdefault(node.op_type, []).append(node.name)
-        for node_type, node_names in node_types_to_names.items():
-            logger.info(f"Node type {node_type}:")
-            node_names.sort()
-            for node_name in node_names:
-                logger.info(f"  {node_name}")
-
-    @staticmethod
-    def strip(input_path, output_path=None):
+    def strip(input_path, level=3, output_path=None):
         """Strips Cons/ Data Node and Attribute from an ONNX model file."""
+        if level < GraphAnalyze.STRIP_CONST or level > GraphAnalyze.STRIP_ATTR:
+            logger.warning(f"Wrong level value = {level}, strip the graph with default value(3).")
+            level = GraphAnalyze.STRIP_ATTR
         if not output_path:
-            output_path = GraphAnalyze._append_file_name_suffix(input_path, "sub")
+            timestamp = datetime.now(tz=timezone.utc).strftime("%Y%m%d_%H%M%S")
+            output_path = GraphAnalyze._append_file_name_suffix(input_path, timestamp)
         logger.info(f"Begin to read from {input_path} and write to {output_path}")
-        
-        try:
-            line_count, drop_count, c_count, drop_c_count = GraphAnalyze._process_file(input_path, output_path)
-        except OpenException as oe:
-            logger.error(f"OpenException occurred: {oe}")
-        except FileNotFoundError as fnf:
-            logger.error(f"File not found: {fnf}")
-        except PermissionError as pe:
-            logger.error(f"Permission error: {pe}")
-        except text_format.ParseError as pe:
-            logger.error(f"Parse error: {pe}")
-        except Exception as e:
-            logger.error(f"An unexpected error occurred: {e}")
-        finally:
-            logger.info(f"Dropped lines count {drop_count}, char size {drop_c_count}; total lines count {line_count}, char size {c_count}")
+
+        out = GraphAnalyze._process_file(input_path, level)
+
+        logger.info(f"save to {output_path}, total node = {len(out.node)}")
+
+        # Save graph
+        model_def = onnx.helper.make_model(out, producer_name='onnx-subgraph')
+        with open(output_path, 'w') as f:
+            f.write(text_format.MessageToString(model_def))
+
 
     @staticmethod
     def print_graph_stat(input_path):
@@ -166,7 +170,7 @@ class GraphAnalyze:
         for op, count in sorted(op_stat.items(), key=lambda x: x[0]):
             logger.info(f"\t{op} = {count}")
 
-     @staticmethod
+    @staticmethod
     def _append_file_name_suffix(path, suffix):
         """Appends a suffix to the base name of the file in the given path."""
         tokens = path.rsplit('.', 1)  # Split the path by the last occurrence of '.'
@@ -278,40 +282,17 @@ class GraphAnalyze:
         return gs
 
     @staticmethod
-    def _lookup_dump_nodes(args, gs, start_node_names, lookup_directions):
-        """
-        Finds nodes to dump based on specified criteria.
-        
-        Args:
-            args (Namespace): Command line arguments containing stop_name, stop_type, layer_number, stop_leaves_count.
-            gs (GraphSummary): The GraphSummary object containing graph information.
-            start_node_names (list): List of starting node names for lookup.
-            lookup_directions (int): Bitmask indicating lookup direction (forward or backward).
-            
-        Returns:
-            set: Set of node names that match the criteria.
-        """
+    def _lookup_dump_nodes(args, gs, center_node, lookup_directions):
+        """Finds nodes to dump based on specified criteria."""
+
         dump_tasks = deque()
         stop_name = args.stop_name
-        stop_type = args.stop_type
-
-        # Initialize stop names and types sets
-        if not stop_name:
-            stop_names = set()
-        else:
-            stop_names = set(stop_name)
-
-        if not stop_type:
-            stop_types = set()
-        else:
-            stop_types = set(stop_type)
 
         # Add initial tasks based on lookup directions
-        for start_node_name in start_node_names:
-            if lookup_directions & GraphAnalyze.LOOKUP_FORWARD:
-                dump_tasks.append((start_node_name, 'forward', 0))
-            if lookup_directions & GraphAnalyze.LOOKUP_BACKWARD:
-                dump_tasks.append((start_node_name, 'backward', 0))
+        if lookup_directions & GraphAnalyze.LOOKUP_FORWARD:
+            dump_tasks.append((center_node, 'forward', 0))
+        if lookup_directions & GraphAnalyze.LOOKUP_BACKWARD:
+            dump_tasks.append((center_node, 'backward', 0))
 
         dump_node_names = set()
 
@@ -319,32 +300,29 @@ class GraphAnalyze:
         while dump_tasks:
             node_name, direction, depth = dump_tasks.popleft()
             
-            if not node_name or node_name in stop_names:
+            if not node_name or node_name == stop_name:
                 continue
             
             node = gs.names_to_node.get(node_name)
-            if not node or node.op_type in stop_types:
+            if not node:
                 continue
 
             if depth >= args.layer_number:
                 continue
 
             dump_node_names.add(node_name)
-            stop_leaves_count = args.stop_leaves_count
 
             # Extend tasks based on the direction of lookup
             if direction == 'forward':
                 output_node_names = gs.names_to_output_names.get(node_name, [])
-                if stop_leaves_count == 0 or len(output_node_names) < stop_leaves_count:
-                    dump_tasks.extend(
-                        (output_node_name, direction, depth + 1) for output_node_name in output_node_names
-                    )
+                dump_tasks.extend(
+                    (output_node_name, direction, depth + 1) for output_node_name in output_node_names
+                )
             else:
                 input_node_names = gs.names_to_input_names.get(node_name, [])
-                if stop_leaves_count == 0 or len(input_node_names) < stop_leaves_count:
-                    dump_tasks.extend(
-                        (input_node_name, direction, depth + 1) for input_node_name in input_node_names
-                    )
+                dump_tasks.extend(
+                    (input_node_name, direction, depth + 1) for input_node_name in input_node_names
+                )
 
         return dump_node_names
 
@@ -390,10 +368,8 @@ class GraphAnalyze:
         GraphAnalyze._save_graph_def(out, output_path, as_text=True)
 
     @staticmethod
-    def _find_nodes_by_start_names(args, gs):
+    def _find_nodes_by_center_name(args, gs, center_node):
         """Finds nodes starting from specified names."""
-        if not args.name:
-            return set()
         lookup_directions = GraphAnalyze.LOOKUP_ALL
         if args.only_forward:
             lookup_directions ^= GraphAnalyze.LOOKUP_BACKWARD
@@ -402,79 +378,56 @@ class GraphAnalyze:
         if not lookup_directions:
             logger.error("The --only_forward and --only_backward cannot exist at the same time")
             return set()
+        if center_node not in gs.names_to_node:
+            logger.error(f"The node {center_node} can not be found in graph file, please check")
+            return set()
 
-        start_nodes = [node_name for node_name in args.name if node_name in gs.names_to_node]
-
-        logger.info(f"Begin to find dump nodes, start nodes {start_nodes}")
+        logger.info(f"Begin to find dump nodes, center node {center_node}")
         return GraphAnalyze._lookup_dump_nodes(
-            args, gs, start_nodes, lookup_directions
+            args, gs, center_node, lookup_directions
         )
 
     @staticmethod
-    def _find_nodes_between_start_and_end(gs, start_names=None, end_names=None):
-        """
-        Finds nodes between specified start and end names.
+    def _find_nodes_between_start_and_end(gs, start_name=None, end_name=None):
+        """Finds nodes between specified start and end names."""
+
+        if start_name not in gs.names_to_output_names:
+            logger.error(f"Can not find the node {start_name}'s output node")
+            return set()
+        if end_name not in gs.names_to_input_names:
+            logger.error(f"Can not find the node {end_name}'s input node")
+            return set()
+
+        logger.info(f"Begin to lookup nodes from {start_name} to {end_name}...")
+        dump_nodes = set()
+
+        nodes_to_end = {start_name}
+        que = deque([end_name])
         
-        Args:
-            gs (GraphSummary): The GraphSummary object containing graph information.
-            start_names (list): List of starting node names.
-            end_names (list): List of ending node names.
-            
-        Returns:
-            set: Set of node names that are between the specified start and end nodes.
-        """
-        if start_names is None or end_names is None:
-            logger.error("Both --start_name and --end_name must be provided")
-            return set()
+        while que:
+            node_name = que.popleft()
+            if not node_name or node_name in nodes_to_end or node_name == start_name:
+                continue
+            nodes_to_end.add(node_name)
+            que.extend(gs.names_to_input_names.get(node_name, []))
 
-        if len(start_names) != len(end_names):
-            logger.error("The number of --start_name and the --end_name must be the same")
-            return set()
+        dump_nodes_this_pattern = set()
+        que = deque([start_name])
+        
+        while que:
+            node_name = que.popleft()
+            if node_name in dump_nodes_this_pattern or node_name == end_name or node_name not in nodes_to_end:
+                continue
+            dump_nodes_this_pattern.add(node_name)
+            que.extend(gs.names_to_output_names.get(node_name, []))
 
-        logger.info("Begin to lookup nodes by start and end nodes...")
-        dump_nodes = set()
-
-        for start, end in zip(start_names, end_names):
-            nodes_to_end = set()
-            que = deque([end])
-            
-            while que:
-                node_name = que.popleft()
-                if not node_name or node_name in nodes_to_end or node_name == start:
-                    continue
-                nodes_to_end.add(node_name)
-                que.extend(gs.names_to_input_names.get(node_name, []))
-
-            dump_nodes_this_pattern = set()
-            que = deque([start])
-            
-            while que:
-                node_name = que.popleft()
-                if node_name in dump_nodes_this_pattern or node_name == end or node_name not in nodes_to_end:
-                    continue
-                dump_nodes_this_pattern.add(node_name)
-                que.extend(gs.names_to_output_names.get(node_name, []))
-
-            dump_nodes_this_pattern.add(end)
-            dump_nodes.update(dump_nodes_this_pattern)
+        dump_nodes_this_pattern.add(end_name)
+        dump_nodes.update(dump_nodes_this_pattern)
 
         return dump_nodes
 
     @staticmethod
-    def _find_nodes_by_prefixes(gs, name_prefix):
-        """Finds nodes matching specified prefixes."""
-        if name_prefix is None:
-            return set()
-        logger.info("Begin to lookup nodes by name prefixes...")
-        dump_nodes = set()
-        for name in gs.names_to_node.keys():
-            if any(name.startswith(prefix) for prefix in name_prefix):
-                dump_nodes.add(name)
-                break
-        return dump_nodes
-
-    @staticmethod
-    def _process_file(input_path, output_path):
+    def _process_file(input_path, level):
         """
         Processes a subgraph by iterating through its nodes, copying nodes that are not of type
         "ge:Const" or "ge:Data", and removes all attributes from the copied nodes.
@@ -488,19 +441,27 @@ class GraphAnalyze:
         out = onnx.GraphProto()
         nodes_copy = []
 
+        def strip_node(node_copy):
+            if level == GraphAnalyze.STRIP_ATTR_WITHOUT_SHAPE:
+                # Retain only attributes with 'shape' in their name
+                shape_attributes = [attr for attr in node_copy.attribute if 'shape' in attr.name]
+                node_copy.ClearField('attribute')
+                node_copy.attribute.extend(shape_attributes)                      
+            elif level == GraphAnalyze.STRIP_ATTR:
+                node_copy.ClearField('attribute')  # Remove all attributes
+            return node_copy
+
         def process_node(node):
             if node.op_type not in ("ge:Const", "ge:Data"):
                 node_copy = copy.deepcopy(node)
-                node_copy.ClearField('attribute')
-                nodes_copy.append(node_copy)
+                nodes_copy.append(strip_node(node_copy))
 
         def process_subgraph(subgraph):
             subgraph_nodes = []
             for subnode in subgraph.node:
                 if subnode.op_type not in ("ge:Const", "ge:Data"):
                     subnode_copy = copy.deepcopy(subnode)
-                    subnode_copy.ClearField('attribute')  # Remove all attributes
-                    subgraph_nodes.append(subnode_copy)
+                    subgraph_nodes.append(strip_node(subnode_copy))
             subgraph.ClearField('node')
             subgraph.node.extend(subgraph_nodes)
 
@@ -516,10 +477,5 @@ class GraphAnalyze:
 
         nodes_copy.sort(key=lambda node: node.name)
         out.node.extend(nodes_copy)
-        logger.info(f"save to {output_path}")
-        logger.info(f"total node = {len(out.node)}")
+        return out
 
-        # Save graph
-        model_def = onnx.helper.make_model(out, producer_name='onnx-subgraph')
-        with open(output_path, 'w') as f:
-            f.write(text_format.MessageToString(model_def))

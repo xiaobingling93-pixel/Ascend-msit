@@ -119,7 +119,7 @@ def test_find_duplicate_subgraphs_given_graphs_when_duplicates_then_count_duplic
             "Node3": SimpleNode("Node3", "OpType3")
         }
     ]
-    subgraph_count = find_duplicate_subgraphs(graphs, max_nodes=3)
+    subgraph_count, subgraph_root = find_duplicate_subgraphs(graphs, max_nodes=3)
     assert subgraph_count[("OpType1", "OpType2", "OpType3")] == 0
 
 # Test has_subgraph function
@@ -139,15 +139,6 @@ def test_has_subgraph_given_graph_def_when_no_subgraph_then_return_false():
     ]
     assert has_subgraph(graph_def) is False
 
-# Test stat_subgraph function
-@patch('pandas.DataFrame.to_csv')
-def test_stat_subgraph_given_input_path_when_valid_then_save_csv(mock_to_csv, mock_load_graph_def, mock_logger):
-    mock_load_graph_def.return_value = MagicMock()
-    graph_def = MagicMock()
-    graph_def.node = []
-    mock_load_graph_def.return_value = graph_def
-    stat_subgraph("input_path", max_nodes=10, output_file='subgraph_counts.csv')
-    mock_to_csv.assert_called_once()
 
 # Test calculate_average_durations function
 def test_calculate_average_durations_given_input2_df_when_valid_then_calculate_mean():
@@ -162,55 +153,11 @@ def test_calculate_average_durations_given_input2_df_when_valid_then_calculate_m
 
 # Test preprocess_subgraph function
 def test_preprocess_subgraph_given_subgraph_str_when_has_ge_prefix_then_remove_prefix():
-    subgraph_str = "('ge:OpType1', 'ge:OpType2')"
-    cleaned_subgraph = preprocess_subgraph(subgraph_str)
-    assert cleaned_subgraph == "('OpType1', 'OpType2')"
+    subgraph_tuple = ('ge:OpType1', 'ge:OpType2')
+    cleaned_subgraph = preprocess_subgraph(subgraph_tuple)
+    assert cleaned_subgraph == ('OpType1', 'OpType2')
 
 def test_preprocess_subgraph_given_subgraph_str_when_no_ge_prefix_then_return_original():
-    subgraph_str = "('OpType1', 'OpType2')"
-    cleaned_subgraph = preprocess_subgraph(subgraph_str)
-    assert cleaned_subgraph == "('OpType1', 'OpType2')"
-
-# Test calculate_sum function
-def test_calculate_sum_given_input1_path_input2_path_when_valid_then_save_csv():
-    input1_data = {
-        'Subgraph': ["('OpType1', 'OpType2')"],
-        'Count': [5]
-    }
-    input2_data = {
-        'OP Type': ['OpType1', 'OpType2'],
-        'Task Duration(us)': [100, 150]
-    }
-    input1_df = pd.DataFrame(input1_data)
-    input2_df = pd.DataFrame(input2_data)
-    input1_path = "input1.csv"
-    input2_path = "input2.csv"
-    input1_df.to_csv(input1_path, index=False)
-    input2_df.to_csv(input2_path, index=False)
-    calculate_sum(input1_path, input2_path, output_path='subgraph_duration_stat.csv')
-    output_df = pd.read_csv('subgraph_duration_stat.csv')
-    assert 'Task Sum Duration(us)' in output_df.columns
-    assert 'Total Duration(us)' in output_df.columns
-    os.remove(input1_path)
-    os.remove(input2_path)
-    os.remove('subgraph_duration_stat.csv')
-
-def test_calculate_sum_given_missing_columns_when_invalid_then_empty_df():
-    input1_data = {
-        'Subgraph': ["('OpType1', 'OpType2')"],
-        'Count': [5]
-    }
-    input2_data = {
-        'OP Type': ['OpType1', 'OpType2'],
-        'Task Duration(us)': [100, 150]
-    }
-    input1_df = pd.DataFrame(input1_data)
-    input2_df = pd.DataFrame(input2_data)
-    input1_path = "input1.csv"
-    input2_path = "input2.csv"
-    input1_df.to_csv(input1_path, index=False)
-    input2_df.to_csv(input2_path, index=False)
-    calculate_sum(input1_path, input2_path, output_path='subgraph_duration_stat.csv')
-    os.remove(input1_path)
-    os.remove(input2_path)
-    os.remove('subgraph_duration_stat.csv')
+    subgraph_tuple = ('OpType1', 'OpType2')
+    cleaned_subgraph = preprocess_subgraph(subgraph_tuple)
+    assert cleaned_subgraph == ('OpType1', 'OpType2')
