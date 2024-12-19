@@ -19,6 +19,8 @@ from components.utils.file_open_check import FileStat
 from components.utils.log import logger, set_log_level, LOG_LEVELS
 from msit_graph.graph_extract.graph_extract import GraphAnalyze
 from msit_graph.subgraph_stat.subgraph_stat import calculate_sum
+from msit_graph.inspect.scan import execute
+
 
 LOG_LEVELS_LOWER = [ii.lower() for ii in LOG_LEVELS.keys()]
 
@@ -219,6 +221,41 @@ class FuseCommand(BaseCommand):
         calculate_sum(args.source, args.profile, args.max_nodes, args.output)
 
 
+class InspectCommand(BaseCommand):
+    def add_arguments(self, parser, **kwargs) -> None:
+        parser.add_argument(
+            "-gp", 
+            "--graph-path", 
+            dest="graph_path", 
+            type=check_input_path_legality, 
+            required=True, 
+            help="<str> The path of .pbtxt."
+        )
+        parser.add_argument(
+            "-t", 
+            "--type", 
+            dest="type", 
+            type=str, 
+            required=True, 
+            choices=["dshape"], 
+            help="<str> The scan currently supports only dynamic shape inspection."
+        )
+        parser.add_argument("-l", "--log-level", dest="log_level", default="info", 
+                            choices=LOG_LEVELS_LOWER, help="specify log level")
+        parser.add_argument(
+            "-o", 
+            "--output", 
+            dest="output", 
+            type=check_output_path_legality, 
+            default="./", 
+            help="<str> A directory path, generate a table of dynamic shape operators with headers: Op_name, "
+            "Input_name, and Output_name."
+        )
+
+    def handle(self, args, **kwargs) -> None:
+        set_log_level(args.log_level)
+        execute(args)
+
 def get_cmd_instance():
     graph_analyze_help_info = "Graph analyze Tools."
     stats_cmd_instance = StatsCommand("stats", "Print statistic operator infomation")
@@ -230,8 +267,9 @@ def get_cmd_instance():
         The start-end mode is to specify one or more groups of start nodes and end nodes, and dump all nodes between the start and end nodes."""
     )
     fuse_cmd_instance = FuseCommand("fuse", "Count the number of repeated subgraphs and these average duration.")
+    inspect_cmd_instance = InspectCommand("inspect", "Scan the .pbtxt graph to obtain dynamic shape operators.")
 
     instances = [
-        stats_cmd_instance, strip_cmd_instance, extract_cmd_instance, fuse_cmd_instance
+        stats_cmd_instance, strip_cmd_instance, extract_cmd_instance, fuse_cmd_instance, inspect_cmd_instance
     ]
     return BaseCommand("graph", graph_analyze_help_info, instances)
