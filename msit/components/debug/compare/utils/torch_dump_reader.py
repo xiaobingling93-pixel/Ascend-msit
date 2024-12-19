@@ -21,12 +21,9 @@ import torch
 from components.debug.compare.utils.base_dump_reader import DumpFileReader
 from components.utils.file_open_check import ms_open
 from components.utils.util import safe_torch_load
-from components.utils.file_open_check import ms_open
-from components.utils.check.rule import Rule
-from components.utils.constants import TENSOR_MAX_SIZE
+from components.utils.constants import TEXT_FILE_MAX_SIZE
 
 DELIMITER_MAP = {"TorchScript": '.', "TorchExport": '_'}
-MAX_FILE_READ_SIZE = 31457280  # 30 * 1024 * 1024, 30MB
 
 
 class TorchDumpFileReader(DumpFileReader):
@@ -102,7 +99,7 @@ class TorchDumpFileReader(DumpFileReader):
         for fusion_op, details in data.items():
             id_ = details.get('id', float('inf'))
             jit_node = details.get('jit_node', '')
-            if jit_node == '':
+            if not jit_node:
                 continue
             if self.torch_mode == "TorchScript":
                 key = self._extract_key_from_jit_node(jit_node)
@@ -117,8 +114,7 @@ class TorchDumpFileReader(DumpFileReader):
         key_to_id = {}
         json_path = os.path.join(self.json_path, 'op_map_updated.json')
 
-        Rule.input_file().check(json_path, will_raise=True)
-        with ms_open(json_path, 'r', max_size=TENSOR_MAX_SIZE) as f:
+        with ms_open(json_path, max_size=TEXT_FILE_MAX_SIZE) as f:
             data = json.load(f)
             self._extract_key(data, key_to_folder, key_to_id)
 

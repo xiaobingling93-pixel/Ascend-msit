@@ -21,7 +21,7 @@ class FakeModuleAA(torch.nn.Module):
 
 class FakeModuleBB(torch.nn.Module):
     def forward(self, tensor_x):
-        return tensor_x + 2
+        return tensor_x * 2
 
 
 class FakeModuleCC(torch.nn.Module):
@@ -120,7 +120,7 @@ class Network2Search(torch.nn.Module):
         tensor_x = self.g6_a1(tensor_x)
         tensor_x1 = self.g6_b1(tensor_x)
         tensor_x2 = self.g6_c2(tensor_x)
-        tensor_x = self.g5_d1(tensor_x1, tensor_x2)
+        tensor_x = self.g6_d1(tensor_x1, tensor_x2)
         return tensor_x
 
     def forward_group7(self, tensor_x):
@@ -205,7 +205,7 @@ class TestNetworkParse():
         node_9th_from4th = list(node_4th.output_nodes)[1]
         assert node_9th_from4th == node_9th
         assert node_9th.node == torch.Tensor.__add__
-        assert list(node_9th,input_nodes) == [node_8th, node_4th]
+        assert list(node_9th.input_nodes) == [node_8th, node_4th]
         assert len(list(node_9th.output_nodes)) == 1
 
         # 10th node : AdaptiveAvgPool2d
@@ -221,7 +221,7 @@ class TestNetworkParse():
         assert len(list(node_11th.output_nodes)) == 1
 
         # more...
-    
+
     def test_search_by_class_given_relu_when_any_pass(self, dag):
         assert len(list(dag.search_nodes_by_class(nn.ReLU))) == 3
 
@@ -255,7 +255,7 @@ class TestNetworkParse():
     def test_get_node_by_name_type_given_embedding_3_when_any_pass(self, dag):
         assert isinstance(dag.get_node_by_name("embedding.2").node, nn.ReLU)
 
-    def test_get_node_by_name_type_given_classifier_0_when_any_pass(self, dag):
+    def test_get_node_by_name_type_given_classifier_0_when_any_pass(self, dag): 
         assert isinstance(dag.get_node_by_name("classifier.0").node, nn.Linear)
 
     def test_get_node_by_name_type_given_classifier_1_when_any_pass(self, dag):
@@ -270,8 +270,8 @@ class TestNetworkParse():
     def test_get_node_by_name_type_given_pool_when_any_pass(self, dag):
         assert isinstance(dag.get_node_by_name("pool").node, nn.AdaptiveAvgPool2d)
 
-    def test_get_node_by_name_prefix_given_embedding_when_any_pass(self, dag):
-        gen_embedding = dag.get_nodes_by_name_prefix("emdedding.")
+    def test_search_by_name_prefix_given_embedding_when_any_pass(self, dag):
+        gen_embedding = dag.get_nodes_by_name_prefix("embedding.")
         assert isinstance(next(gen_embedding).node, nn.Embedding)
         assert isinstance(next(gen_embedding).node, nn.Linear)
         assert isinstance(next(gen_embedding).node, nn.ReLU)
@@ -285,7 +285,7 @@ class TestNetworkParse():
 class TestNetworkModify():
     def test_replace_node_given_leakyrelu_when_embedding_2_pass(self, dag, inputs_of_model):
         model = dag.network
-        relu_node = dag.get_node_by_name("emdedding.2")
+        relu_node = dag.get_node_by_name("embedding.2")
         new_leaky_relu_node = torch.nn.LeakyReLU(0.1)
         dag.replace_node(relu_node, new_leaky_relu_node)
         output = model(inputs_of_model)
@@ -315,9 +315,9 @@ class TestNetworkModify():
         new_fake_node = FakeModuleAA()
         ori_node_count = len(dag.dag_node_list)
         with dag:
-            dag.add_node_before(embedding_node, new_fake_node)
+            dag.add_node_after(embedding_node, new_fake_node)
         output = model(inputs_of_model)
-
+        
         assert new_fake_node in [module for _, module in model.named_modules()]
         assert dag.get_node_by_name("embedding.2.0").node == ori_embedding_module
         assert dag.get_node_by_name("embedding.2.1").node == new_fake_node
@@ -328,7 +328,7 @@ class TestNetworkModify():
         ori_node_count = len(dag.dag_node_list)
         remove_cnt = 0
         with dag:
-            for relu_node in dag.search_nodes_by_type("ReLU"):
+            for relu_node in dag.search_nodes_by_op_type("ReLU"):
                 remove_cnt += 1
                 dag.remove_node(relu_node)
         out_put = model(inputs_of_model)
@@ -336,12 +336,12 @@ class TestNetworkModify():
         assert nn.ReLU not in [type(module) for _, module in model.named_modules()]
         assert ori_node_count == len(dag.dag_node_list) + remove_cnt
 
-    
+
     def test_like_quant_given_any_when_any_pass(self, dag, inputs_of_model):
         model = dag.network
         linear_node = dag.get_node_by_name("embedding.1")
         with dag:
-            dag.replace_node(linear_node, nn.Sequencial(
+            dag.replace_node(linear_node, nn.Sequential(
                 FakeModuleAA(),
                 linear_node.node,
                 FakeModuleAA()))
@@ -351,7 +351,7 @@ class TestNetworkModify():
         assert dag.get_node_by_name("embedding.1.1").op_type == "Linear"
         assert dag.get_node_by_name("embedding.1.2").op_type == "FakeModuleAA"
 
-    def test_like_prune_given_any_when_any_pass(self, dag, inputs_of_model):
+    def test_like_prune_conv_given_any_when_any_pass(self, dag, inputs_of_model):
         model = dag.network
         conv1_node = dag.get_node_by_name("feature.0")
         conv2_node = dag.get_node_by_name("feature.2")
@@ -381,9 +381,9 @@ class TestNetworkModify():
         assert dag.get_node_by_name("classifier.0.1").op_type == "Linear"
         assert [module.out_features for name, module in model.named_modules() if name == "classifier.0.0"] == [16]
         assert [module.in_features for name, module in model.named_modules() if name == "classifier.0.1"] == [16]
-        
-        
-class TestNetworkSearchGraph:
+
+
+class TestNetworkSearchGraph(): 
     def test_search_given_abca_when_any_pass(self, dag_to_search):
         node_a = DagNode(op_type="FakeModuleAA", name="node_a")
         node_b = DagNode(op_type="FakeModuleBB", name="node_b")
@@ -402,7 +402,7 @@ class TestNetworkSearchGraph:
         assert search_list[0]["node_b"].op_type == "FakeModuleBB"
         assert search_list[0]["node_c"].op_type == "FakeModuleCC"
         assert search_list[0]["node_a2"].op_type == "FakeModuleAA"
-    
+
     def test_search_given_ab_when_any_pass(self, dag_to_search):
         node_a = DagNode(op_type="FakeModuleAA", name="node_a")
         node_b = DagNode(op_type="FakeModuleBB", name="node_b")
@@ -432,7 +432,7 @@ class TestNetworkSearchGraph:
             assert sub_graph_in_network["node_a1"].op_type == "FakeModuleAA"
             assert sub_graph_in_network["node_b"].op_type == "FakeModuleBB"
             assert sub_graph_in_network["node_b1"].op_type == "FakeModuleBB"
-           
+            
     def test_search_given_abab_when_any_pass(self, dag_to_search):
         node_a = DagNode(op_type="FakeModuleAA", name="node_a")
         node_b = DagNode(op_type="FakeModuleBB", name="node_b")
@@ -486,11 +486,11 @@ class TestNetworkSearchGraph:
             assert sub_graph["node_b2"].op_type == "FakeModuleBB"
             assert sub_graph["node_d"].op_type == "FakeModuleDD"
             name_list.append([sub_graph["node_a"].name, sub_graph["node_b1"].name, sub_graph["node_b2"].name, 
-                              sub_graph["node_d"].name])
+                                sub_graph["node_d"].name])
             
         name_list.sort()
         assert name_list == [["g5_a1", "g5_b1", "g5_b2", "g5_d1"], ["g5_a1", "g5_b2", "g5_b1", "g5_d1"]]
-       
+        
     def test_search_given_a_bc_d_when_any_pass(self, dag_to_search):
         node_a = DagNode(op_type="FakeModuleAA", name="node_a")
         node_c = DagNode(op_type="FakeModuleCC", name="node_c")
@@ -564,7 +564,7 @@ class TestNetworkSearchGraph:
         with pytest.raises(ValueError, match="The node name must be different."):
             list(dag_to_search.search_sub_graph([node_a1, node_a2, node_a3]))
 
-    def test_get_possible_sub_graph_given_when_any_pass(self):
+    def test_get_possible_sub_graph_given_none_when_any_pass(self):
         node_a1 = DagNode(op_type="FakeModuleAA", name="node_a1")
         node_a2 = DagNode(op_type=set(["FakeModuleAA", None]), name="node_a2")
         node_a3 = DagNode(op_type=set(["FakeModuleAA"]), name="node_a3")

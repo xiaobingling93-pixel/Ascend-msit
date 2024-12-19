@@ -7,6 +7,14 @@ MindStudio ModelSlim，昇腾模型压缩工具。 【Powered by MindStudio】
 
 昇腾压缩加速工具，一个以加速为目标、压缩为技术、昇腾为根本的亲和压缩工具。支持训练加速和推理加速，包括模型低秩分解、稀疏训练、训练后量化、量化感知训练等功能，昇腾AI模型开发用户可以灵活调用Python API接口，对模型进行性能调优，并支持导出不同格式模型，在昇腾AI处理器上运行。
 
+
+## 环境和依赖
+
+- 硬件环境请参见《[昇腾产品形态说明](https://www.hiascend.com/document/detail/zh/canncommercial/80RC3/quickstart/quickstart/quickstart_18_0002.html)》。
+- 物理机、容器、虚拟机场景下驱动固件和CANN软件的安装方案参见《[安装方案](https://www.hiascend.com/document/detail/zh/canncommercial/80RC3/softwareinst/instg/instg_0001.html?Mode=PmIns&OS=Ubuntu&Software=cannToolKit)》。硬件配套的软件下载资源参见《[配套资源下载](https://www.hiascend.com/developer/download/commercial/result?module=cann)》，来安装昇腾设备开发或运行环境。
+- PyTorch框架、torch_npu插件（在npu上使用本工具进行大模型量化需要，在cpu上使用本工具进行大模型量化不需要）
+
+
 ## 版本配套
 
 | 条件 | 要求 |
@@ -14,67 +22,38 @@ MindStudio ModelSlim，昇腾模型压缩工具。 【Powered by MindStudio】
 | CANN版本 | >= 8.0.RC1.alpha001 |
 | 硬件要求 | Atlas 800I A2 推理服务器、Atlas 300I Duo 推理卡|
 
-备注1：RC3 及之前的 CANN 包已包含该部分代码，可直接安装使用；RC4 及之后的 CANN 包需与该代码仓配套使用。
-备注2：固件与驱动版本与CANN版本的配套关系可在[下载固件与驱动](https://www.hiascend.com/hardware/firmware-drivers/community?product=4&model=32&cann=All&driver=1.0.RC2)界面查看。
 
-## [大模型已验证列表](docs/大模型已验证列表.md)
+## 注意事项
+RC3 及之前的 CANN 包已包含msModelSlim代码，安装CANN包即可使用；RC4 及之后的 CANN 包需与msModelSlim代码仓配套使用。
 
-## 使用案例及调优指南
 
-[Attention量化使用说明](docs/FA量化使用说明.md)
-<br>[w8a8精度调优策略](docs/w8a8精度调优策略.md)
-<br>[w8a16精度调优策略](docs/w8a16&w4a16精度调优策略.md)
-<br>[稀疏量化精度调试案例](docs/稀疏量化精度调试案例.md)
-<br>[量化及稀疏量化场景导入代码样例](msmodelslim/pytorch/llm_ptq/量化及稀疏量化场景导入代码样例.md)
-<br>[msModelSlim量化权重转AutoAWQ&AutoGPTQ使用指南](docs/msModelSlim量化权重转AutoAWQ&AutoGPTQ使用指南.md)
+## msModelSlim安装方式
 
-## 使用说明
+msModelSlim当前处于逐步开源过程中，计划通过CANN的8.0.RC2、8.0.RC3、8.0.0三个版本进行过渡。  
 
-msModelSlim当前处于逐步开源过程中，计划通过630,930,1230三个版本进行过渡。  
+版本交替期间提供两种方式使用msModelSlim工具：
 
-630、930版本支持通过CANN或开源方式使用，两边版本将保持一致，后续功能优化、新增将更新在开源版本中。  
-630版本CANN，下载链接  
-[arm 版本](https://ascend-repo.obs.cn-east-2.myhuaweicloud.com/CANN/CANN%208.0.RC2/Ascend-cann-toolkit_8.0.RC2_linux-aarch64.run?response-content-type=application/octet-stream)  
-[x86 版本](https://ascend-repo.obs.cn-east-2.myhuaweicloud.com/CANN/CANN%208.0.RC2/Ascend-cann-toolkit_8.0.RC2_linux-x86_64.run?response-content-type=application/octet-stream) 
-**注意** 该版本存在已知问题，使用modelslim调用接口时，部分功能存在异常。请使用msmodelslim调用。 
+方式一：
+- 下载安装CANN（仅限8.0.RC3及之前的版本）并配置环境变量后即可使用msModelSlim。可以参考[安装CANN软件包](https://www.hiascend.com/document/detail/zh/canncommercial/80RC3/softwareinst/instg/instg_0007.html?Mode=PmIns&OS=Ubuntu&Software=cannToolKit)  
+**注意** ：8.0.RC2版本存在已知问题，使用modelslim调用接口时，部分功能存在异常。请使用msmodelslim调用。 
 
-版本交替期间提供两种方式使用msModelSlim工具：  
-1. 下载安装CANN并配置环境变量  
-2. 下载安装开源版本msModelSlim  
+方式二：  
+（CANN8.0.RC3之后的版本，将会只支持开源方式使用，通过CANN包直接使用的方式将不再受支持。后续功能优化、新增将更新在开源版本中。）
+- 下载安装CANN（8.0.RC3之后的版本）及开源版本的msModelSlim  
     **操作步骤：**
-    - git clone下载本仓代码；
-    - 进入到刚刚clone下来的msmodelslim的目录 `cd msit/msmodelslim`；
-    - 设置CANN环境变量；
-    - 进入msmodelslim目录，运行安装脚本 `bash install.sh`;
-    - (可选，稀疏量化场景下需要此步骤)进入python环境路径 `cd 环境路径/env/.../site-packages/msmodelslim/pytorch/weight_compression/compress_graph/`
+    - 下载安装CANN并设置环境变量，可以参考[安装CANN软件包](https://www.hiascend.com/document/detail/zh/canncommercial/80RC3/softwareinst/instg/instg_0007.html?Mode=PmIns&OS=Ubuntu&Software=cannToolKit)
+    - git clone下载msit仓代码；
+    - 进入到msit/msmodelslim的目录 `cd msit/msmodelslim`；并在进入的msmodelslim目录下，运行安装脚本 `bash install.sh`;
+    - (可选，稀疏量化场景下需要此步骤)进入python环境下的site_packages包管理路径 `cd {python环境路径}/site-packages/msmodelslim/pytorch/weight_compression/compress_graph/`  
+    以下是以/usr/local/为用户所在目录，以3.7.5为python版本的样例代码：
+    ```
+    cd usr/local/lib/python3.7/site-packages/msmodelslim/pytorch/weight_compression/compress_graph/
+    ```
     - (可选，稀疏量化场景下需要此步骤)编译weight_compression组件 `sudo bash build.sh {CANN包安装路径}/ascend-toolkit/latest`
-    - (可选，稀疏量化场景下需要此步骤)给build文件夹相关权限 `sudo chown -R 750 build`
+    - (可选，稀疏量化场景下需要此步骤)上一步编译操作会得到bulid文件夹，给build文件夹相关权限 `chmod -R 550 build`
+    - (可选，使用Precision Tool需要此步骤)参考[precision_tool使用方法说明](precision_tool/readme.md/#precision-tool-使用方法说明)里的步骤设置环境变量
 
 
-### 环境准备
-
-- 使用msModelSlim工具前，需参考《[CANN软件安装指南](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/80RC2alpha003/devaids/auxiliarydevtool/nottoctopics/zh-cn_topic_0000001800373652.html)》搭建开发环境。
-- 安装CANN软件后，需要以CANN运行用户登录环境，执行如下示例命令配置环境变量。
-
-```
-source {CANN包安装路径}/ascend-toolkit/set_env.sh
-```
-- 使用非root用户运行调优任务时，需要管理员用户将运行用户加入驱动运行用户组（例如：HwHiAiUser）中，保证普通用户对run包的lib库有读权限。
-- msModelSlim工具依赖Python，以Python3.7.5为例，请以运行用户执行如下命令设置Python3.7.5的相关环境变量。
-
-```
-#用于设置python3.7.5库文件路径
-export LD_LIBRARY_PATH=/usr/local/python3.7.5/lib:$LD_LIBRARY_PATH
-#如果用户环境存在多个python3版本，则指定使用python3.7.5版本
-export PATH=/usr/local/python3.7.5/bin:$PATH
-```
-- 用户根据实际需要自行安装以下AI框架包（请注意CANN与MindSpore、PyTorch的版本配套关系）：
-  - MindSpore：
-    请参考[MindSpore官网](https://www.mindspore.cn/install)安装MindSpore框架。
-  - PyTorch：
-        - 请参考《[Ascend Extension for PyTorch 配置与安装](https://www.hiascend.com/document/detail/zh/Pytorch/60RC1/configandinstg/instg/insg_0001.html)》，安装PyTorch框架、torch_npu插件、Torchvision依赖和Apex混合精度模块。
-        - 若PyTorch下需要统计模型的参数量信息，则执行如下命令安装依赖thop。
-          如下命令如果使用非root用户安装，需要在安装命令后加上--user，例如：pip3 install thop --user。
 ## 特性清单
 - msModelSlim针对开发者的差异化需求，提供了以下模型压缩方案：
 
@@ -85,11 +64,25 @@ export PATH=/usr/local/python3.7.5/bin:$PATH
 | [模型蒸馏](msmodelslim/common/knowledge_distill)                          | 蒸馏调优是一种模型压缩技术，它将一个大型、复杂的教师模型的知识转移到一个小型的学生模型中。在这个过程中，学生模型试图模仿教师模型的输出，通常是通过训练学生模型来匹配教师模型的输出或中间层的激活。                                                     |
 | [大模型量化](msmodelslim/pytorch/llm_ptq)                         | 大模型量化是一种模型压缩技术，它通过减少模型权重和激活的数值表示的精度来降低模型的存储和计算需求。量化工具通常会将高位浮点数转换为低位定点数，从而直接减少模型权重的体积。                                                                 |
 | [大模型稀疏量化](msmodelslim/pytorch/llm_sparsequant)和[权重压缩](msmodelslim/pytorch/weight_compression)                  | 大模型稀疏量化工具结合了模型量化与模型稀疏化两种技术，旨在通过减少模型体积和降低内存及带宽消耗来提升模型的性能。                                                                                              |
-| 训练后量化（[onnx](msmodelslim/onnx)/[pytorch](msmodelslim/pytorch/quant/ptq_tools)/[mindspore](msmodelslim/mindspore/quant/ptq_quant)) | 训练后量化不需要重新训练模型，而是在模型训练完成后直接对模型进行量化。                                                                                                                   |
+| [长序列压缩](msmodelslim/pytorch/ra_compression/README.md)                | 长序列压缩通过一种免训练的KV-Cache的缓存压缩算法（RazorAttention），直接应用于KV-Cache管理策略中，通过这种集成，Transformer模型能够在处理长序列时更加高效，同时保持或提升模型的性能。                                                                                              |
+| 训练后量化([onnx](msmodelslim/onnx)/[pytorch](msmodelslim/pytorch/quant/ptq_tools)/[mindspore](msmodelslim/mindspore/quant/ptq_quant)) | 训练后量化不需要重新训练模型，而是在模型训练完成后直接对模型进行量化。                                                                                                                   |
 | [量化感知训练](msmodelslim/pytorch/quant/qat_tools)                        | 量化感知训练是一种在模型训练过程中模拟量化效果的训练方法。通过在训练过程中加入量化操作，模型可以适应量化带来的精度损失，从而在量化后的模型上保持较高的性能。                                                                        |
 | [Transformer类模型权重剪枝调优](msmodelslim/pytorch/prune/transformer_prune)          | 模型权重剪枝是一种通过移除模型中不重要的权重（即那些对模型性能影响较小的权重）来减少模型复杂度的技术。剪枝后的模型权重更少，从而可以减少模型的存储需求，并可能加快模型的推理速度。                                                             |
 | [基于重要性评估的剪枝调优](msmodelslim/pytorch/prune)                  | 基于重要性评估进行剪枝调优是一种常用的方法，它涉及到评估模型中每个权重的重要性，并据此决定哪些权重应该被剪枝。  基于重要性评估的剪枝调优可以显著减少模型的大小，提高模型的推理效率，同时尽量保持模型的性能。这种方法在深度学习模型压缩和加速中非常有用，特别是在需要部署模型到资源受限的环境中的情况下。 |
 
 ### [Python API接口说明](docs/Python-API接口说明) 
+
+
+## [大模型已验证列表](docs/大模型已验证列表.md)
+
+## 使用案例及调优指南
+
+[Attention量化使用说明](docs/FA量化使用说明.md)
+<br>[w8a8精度调优策略](docs/w8a8精度调优策略.md)
+<br>[w8a16精度调优策略](docs/w8a16精度调优策略.md)
+<br>[稀疏量化精度调试案例](docs/稀疏量化精度调试案例.md)
+<br>[量化及稀疏量化场景导入代码样例](msmodelslim/pytorch/llm_ptq/量化及稀疏量化场景导入代码样例.md)
+<br>[msModelSlim量化权重转AutoAWQ&AutoGPTQ使用指南](docs/msModelSlim量化权重转AutoAWQ&AutoGPTQ使用指南.md)
+
 #### 许可证
-[Apache License 2.0](LICENSE)
+[Apache License 2.0](/LICENSE)

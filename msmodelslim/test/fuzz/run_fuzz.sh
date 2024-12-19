@@ -1,6 +1,6 @@
 #!/bin/bash
-#Copyright（c）Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
-#================================================================================
+# Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+# ================================================================================
 
 ATHERIS_RUNS=1000
 COVERAGE_SAVE_PATH="automl_fuzz_coverage"
@@ -22,7 +22,7 @@ for FUZZ_PY_FILE in `find ${ABS_DIR_PATH} -name fuzz_test.py`; do
     if [ ! -e $SAMPLE_PATH ]; then
         SAMPLE_PATH=""  # sample path not exists, skip specifying
     fi
-    PYTHONPATH="${AUTOML_PATH}:$PYTHONPATH" python3 -m coverage run --source={SOURCE_CODE} -p ${TEST_PATH}/fuzz_test.py $SAMPLE_PATH -atheris_runs=$ATHERIS_RUNS
+    PYTHONPATH="${AUTOML_PATH}:$PYTHONPATH" python3 -m coverage run --source=${SOURCE_CODE} -p ${TEST_PATH}/fuzz_test.py $SAMPLE_PATH -atheris_runs=$ATHERIS_RUNS
     RESULT=$?
 
     TEST_PATH_SPLIT=(${TEST_PATH[@]/fuzz\// })
@@ -36,9 +36,9 @@ echo ""
 echo ">>>> Fuzz results:"
 for ((i=0; $i<${#CASES[@]}; i=$i+1)); do
     if [ ${RESULTS[i]} -eq 0 ]; then
-        printf "       ${CASES[i]}: \033[32mPASSED\n\033[m"  # Green
+        printf "     ${CASES[i]}: \033[32mPASSED\n\033[m"  # Green
     else
-        printf "       ${CASES[i]}: \033[31mFAILED\n\033[m"  # Red
+        printf "     ${CASES[i]}: \033[31mFAILED\n\033[m"  # Red
     fi
 done
 
@@ -47,11 +47,6 @@ echo ">>>> Done fuzz, generating coverage result..."
 python3 -m coverage combine
 python3 -m coverage html -d $COVERAGE_SAVE_PATH -i
 
-#Clean temp samples if file is under `samples` and length is exactly 41
+# Clean temp samples if file is under `samples` and length is exactly 41
 echo ">>>> clean samples"
-find ${ABS_DIR_PATH} -wholename '*/sample/*' | xargs -I {} sh -c 'if [ `basename {} | wc -m` -eq 41 ]; then rm {}; fi'
-
-
-
-
-
+find ${ABS_DIR_PATH} -wholename '*/samples/*' | xargs -I {} sh -c 'if [ `basename {} | wc -m` -eq 41 ]; then rm {}; fi'

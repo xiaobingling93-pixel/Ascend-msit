@@ -141,7 +141,7 @@ tokenizer = AutoTokenizer.from_pretrained(
 ) 
 model = AutoModel.from_pretrained(
     pretrained_model_name_or_path='./chatglm2',
-    torch_dtype=torch.float32
+    torch_dtype=torch.float16
   ).npu()    # 如果需要在npu上进行多卡量化，需要先参考前提条件进行配置，并配置以下参数device_map='auto', torch_dtype为当前使用模型的默认数据类型；在npu上进行量化时，单卡校准需将模型移到npu上model = model.npu()，多卡校准时不需要
 # 准备校准数据，请根据实际情况修改
 calib_list = ["中国的首都在哪里？",
@@ -199,16 +199,8 @@ python3 sparse_quant.py
 
 已参考前提条件，完成环境变量配置。
 
-进入权重压缩工具所在路径。
-```
-cd ${INSTALL_DIR}/tools/msmodelslim/pytorch/weight_compression/compress_graph
-```
-```${INSTALL_DIR}```请替换为CANN软件安装后文件存储路径。例如，若安装的Ascend-cann-toolkit软件包，则安装后文件存储路径为：```$HOME/Ascend/ascend-toolkit/latest```。
+编译步骤见[使用说明](../../../README.md#使用说明)中**稀疏量化场景**所需步骤。
 
-执行编译命令。
-```
-bash build.sh $HOME/Ascend/ascend-toolkit/latest
-```
 编译结束后，在当前路径下生成build目录，执行如下命令查看编译结果compress_executor。
 ```
 cd build
@@ -259,7 +251,7 @@ compressor.export(compress_index, index_root)
 compressor.export(compress_info, info_root, dtype=np.int64)
 ```
 
-运行压缩脚本，并在指定的输出目录获取压缩后的权重文件，用于后续的推理部署任务，具体请参见MindIE的“加速库支持模型列表”章节中已适配量化的模型。
+运行压缩脚本，并在指定的输出目录获取压缩后的权重文件，用于后续的推理部署任务，具体请参见MindIE的[“MindIE支持模型列表”](https://www.hiascend.com/document/detail/zh/mindie/10RC3/whatismindie/mindie_what_0003.html)章节中已适配量化的模型。
 ```
 python3 compress.py
 ```
@@ -404,16 +396,8 @@ python3 sparse_quant.py
 
 已参考前提条件，完成环境变量配置。
 
-进入权重压缩工具所在路径。
-```
-cd ${INSTALL_DIR}/tools/msmodelslim/pytorch/weight_compression/compress_graph
-```
-```${INSTALL_DIR}```请替换为CANN软件安装后文件存储路径。例如，若安装的Ascend-cann-toolkit软件包，则安装后文件存储路径为：```$HOME/Ascend/ascend-toolkit/latest```。
+编译步骤见[使用说明](../../../README.md#使用说明)中**稀疏量化场景**所需步骤。
 
-执行编译命令。
-```
-bash build.sh $HOME/Ascend/ascend-toolkit/latest
-```
 编译结束后，在当前路径下生成build目录，执行如下命令查看编译结果compress_executor。
 ```
 cd build
@@ -422,6 +406,8 @@ cd build
 
 ```python
 import re
+import mindspore as ms
+import numpy as np
 linear_weight_pattern = r"model\.layers\.\d+\.(attention[^_]|feed_forward|augs_attn\d+).*\.weight$" #根据实际情况进行权重键值的筛选
 reg = re.compile(linear_weight_pattern)
 sparse_ckpt = ms.load_checkpoint(f"./quant_weight.ckpt")  #./quant_weight.ckpt为稀疏量化结果件的保存路径

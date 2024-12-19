@@ -50,12 +50,12 @@ def config():
 
 @pytest.fixture()
 def student_model():
-    yield TorchStudentModel
+    yield TorchStudentModel()
 
 
 @pytest.fixture()
 def teacher_model():
-    yield TorchTeacherModel
+    yield TorchTeacherModel()
 
 
 class TestDistillModel(object):

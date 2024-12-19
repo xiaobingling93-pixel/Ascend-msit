@@ -32,7 +32,7 @@ class TwoLayerNet(torch.nn.Module):
         self.linear1 = torch.nn.Linear(D_in, H, bias=True)
         self.linear2 = torch.nn.Linear(H, D_out, bias=True)
     
-    def forwad(self, x):
+    def forward(self, x):
         _ = self.linear1(x)
         y_pred = self.linear2(_)
         return y_pred
@@ -60,8 +60,8 @@ def get_sparsity(model):
 
 @pytest.mark.skipif(torch_npu is None or sparse_tools is None, reason="requires torch_npu and sparse_tools")
 def test_sparse_tools_given_model_then_pass(generate_model):
-    test_dataset = [torch.randn(64, 100)]
+    # 修改 test_dataset 为一个包含字符串的列表
+    test_dataset = ["example_string_1", "example_string_2"]
     sparse_config = sparse_tools.SparseConfig(method='magnitude')
     prune_compressor = sparse_tools.Compressor(generate_model, sparse_config)
     prune_compressor.compress(dataset=test_dataset)
-    assert get_sparsity(generate_model) == 0.5

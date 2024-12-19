@@ -175,11 +175,11 @@ tokenizer = AutoTokenizer.from_pretrained(
 ra = RARopeCompressor(model, tokenizer, config) 
 ra.get_compress_heads(save_path)
 ```
-启动长序列压缩任务，并在“Qwen2-72b-instruct”文件夹的路径下获取需要保留KV Cached的Head信息的.pt文件。
+启动长序列压缩任务，并在“Qwen2-72b-instruct”文件夹的路径下获取需要保留KV Cache的Head信息的.pt文件。
 
 用户可根据.pt文件进行压缩。
 
-压缩后的文件可用于后续的推理部署，具体请参见MindIE的“加速库支持模型列表”章节中已适配量化的模型。
+压缩后的文件可用于后续的推理部署，具体请参见MindIE的[“MindIE支持模型列表”](https://www.hiascend.com/document/detail/zh/mindie/10RC3/whatismindie/mindie_what_0003.html)章节中已适配量化的模型。
 ```
 python3 run.py
 ```
