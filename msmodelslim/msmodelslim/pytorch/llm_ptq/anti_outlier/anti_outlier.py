@@ -15,7 +15,7 @@ from tqdm import tqdm
 import torch
 import torch.nn as nn
 from transformers.configuration_utils import PretrainedConfig
-from accelerate.hooks import remove_hook_from_module
+from accelerate.hooks import add_hook_to_module, remove_hook_from_module
 
 from ascend_utils import ResListToRelease
 from ascend_utils.common.security import get_valid_write_path, check_type
