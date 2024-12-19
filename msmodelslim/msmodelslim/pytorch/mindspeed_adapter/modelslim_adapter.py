@@ -20,6 +20,7 @@ from modelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator
 from msmodelslim.pytorch.llm_ptq.anti_outlier.dag_utils.torch_dag_adapter import TorchDAGAdapter
 
 _SUPPORTED_DEVICES = ["npu", 'gpu']
+_SUPPORTED_PREFIX = ["model.", "model.module."]
 
 def get_norm_linear_subgraph(self):
     norm_linear_subgraph = defaultdict(list)
@@ -82,7 +83,7 @@ def set_module(ori_mod, submodule_key, module):
     setattr(cur_mod, tokens[-1], module)
 
 class ModelAdapter(nn.Module):
-    def __init__(self, model:nn.Module, dev_type='npu', forward_step=None):
+    def __init__(self, model:nn.Module, dev_type='npu', forward_step=None, prefix="model."):
         super(ModelAdapter, self).__init__()
         check_type(model, nn.Module, param_name="model")
         if forward_step and not callable(forward_step):
@@ -105,7 +106,10 @@ class ModelAdapter(nn.Module):
             raise ValueError("Model does't find a config!")
         self.config.torch_dtype = self.config.params_dtype
         self.dtype = self.config.params_dtype
-        self.prefix = "model."
+        check_type(prefix, str, "prefix")
+        if prefix not in _SUPPORTED_PREFIX:
+            raise ValueError("doesn't support this prefix! only support prefix options: 'model.' or 'model.module.'")
+        self.prefix = prefix
     
     def convert_model(self, model):
         for name, mod in model.named_modules():
@@ -118,11 +122,7 @@ class ModelAdapter(nn.Module):
                 new_mod.bias = mod.bias
                 set_module(model, name, new_mod)
         return model
-    
-    def set_prefix(self, prefix):
-        check_type(prefix, str, "prefix")
-        self.prefix = prefix
-    
+
     def state_dict(self, prefix=""):
         if prefix == '':
             org_state = self.model.state_dict(prefix=self.prefix)
