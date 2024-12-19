@@ -18,6 +18,13 @@ import numpy
 import torch
 
 
+DATA_TYPE_MAP={
+    "DT_FLOAT":"float32",
+    "DT_FLOAT16":"float16",
+    "DT_DOUBLE":"float64",
+    "DT_BOOL":"bool"
+}
+
 def bfloat16_conversion(container):
     """
     Convert bfloat16 string to numpy dtype

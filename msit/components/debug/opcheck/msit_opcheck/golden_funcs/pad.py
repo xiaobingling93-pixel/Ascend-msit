@@ -14,35 +14,35 @@
 # limitations under the License.
 
 from collections import deque
-
-import torch
 import numpy as np
+import torch
+from msit_opcheck.operation_test import OperationTest
 
-from msit_opcheck.graph_parser import OpInfo
-from msit_opcheck.utils import get
+class PadOperation(OperationTest):
+    def golden_calc(self, in_tensors):
+        input_data, paddings = in_tensors
+        input_format = self.op_param['input_desc'][0]['layout']
+        bf16_mark = False
+        if True:
+            pad_shape = deque()
+            for i in range(len(paddings)):
+                pad_shape.append(paddings[len(paddings) - 1 - i][0])
+                pad_shape.append(paddings[len(paddings) - 1 - i][1])
+
+            if (input_format == "NC1HWC0"):
+                pad_shape.appendleft(0)
+                pad_shape.appendleft(0)
+            if "bfloat16" in str(input_data.dtype):
+                bf16_mark = True
+                input_data = input_data.astype(np.float32)
+            input_data_tensor = torch.from_numpy(input_data)
+            golden = torch.constant_pad_nd(input_data_tensor, tuple(pad_shape), 0)
+            if bf16_mark:
+                golden.to(torch.bfloat16)
+            res = golden.numpy()
+        return [res]
+
+    def test_pad(self):
+        self.execute()
 
 
-def _pad(context: OpInfo):
-    bf16_mark = False
-    x = context.param.get("input_arrays")[0]
-    paddings = context.param.get("paddings")
-    x_format = get(context.param.get("stc_input_formats", 0))
-
-    pad_shape = deque()
-    for i in range(len(paddings)):
-        pad_shape.append(paddings[len(paddings) - 1 - i][0])
-        pad_shape.append(paddings[len(paddings) - 1 - i][1])
-    pad_shape_tensor = torch.tensor(pad_shape)
-
-    if (x_format == "NC1HWC0"):
-        pad_shape.appendleft(0)
-        pad_shape.appendleft(0)
-    if "bfloat16" in str(x.dtype):
-        bf16_mark = True
-        x = x.astype(np.float32)
-    x_tensor = torch.from_numpy(x)
-    golden = torch.constant_pad_nd(x_tensor, tuple(pad_shape), 0)
-    if bf16_mark:
-        golden.to(torch.bfloat16)
-    res = golden.numpy()
-    return res

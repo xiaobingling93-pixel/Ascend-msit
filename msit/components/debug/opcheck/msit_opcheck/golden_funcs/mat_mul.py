@@ -17,37 +17,12 @@ import numpy as np
 import tensorflow as tf
 import torch
 
-from msit_opcheck.graph_parser import OpInfo
-from msit_opcheck.conversion.dtype_convert import get, bfloat16_conversion_v2
-from msit_opcheck.utils import ceil_div, align
+from msit_opcheck.conversion.dtype_convert import bfloat16_conversion_v2, DATA_TYPE_MAP
+from msit_opcheck.operation_test import OperationTest
+from msit_opcheck.conversion.shape_convert import format_transformation_map
 
 
-def gen_axes_for_transpose(offset, base):
-    return [x for x in range(offset)] + [x + offset for x in base]
-
-
-def nd_to_fractal_nz(data: np.ndarray, trans_align_nd=False):
-    ori_shape = data.shape
-    m_ori, n_ori = ori_shape[-2:]
-    batch_ori = ori_shape[:-2]
-    batch_num = len(batch_ori)
-    batch_padding = ((0, 0),) * batch_num
-    if data.dtype == "int8":
-        m0, n0 = 16, 32
-    else:
-        m0, n0 = 16, 16
-    m1, n1 = ceil_div(m_ori, m0), ceil_div(n_ori, n0)
-    padding_m = m1 * m0 - m_ori
-    padding_n = n1 * n0 - n_ori
-    data = np.pad(data, (batch_padding + ((0, padding_m), (0, padding_n))), 'constant')
-    if trans_align_nd:
-        return data
-    array_trans = gen_axes_for_transpose(len(data.shape) - 2, [2, 0, 1, 3])
-    data = data.reshape(batch_ori + (m1, m0, n1, n0)).transpose(*array_trans)
-    return data
-
-
-def hf_32_input_gerenate(context: OpInfo, input_fp32):
+def hf_32_input_gerenate(input_fp32):   
     input_hf32 = input_fp32.view(np.int32)
     input_hf32 = np.right_shift(np.right_shift(input_hf32, 11) + 1, 1)
     input_hf32 = np.left_shift(input_hf32, 12)
@@ -55,17 +30,9 @@ def hf_32_input_gerenate(context: OpInfo, input_fp32):
     return input_hf32
 
 
-def helper_mm_and_bmm(context: OpInfo, name_parameter):
+def _matmul(inputs):
+    x1, x2, trans_a, trans_b, out_dtype, bias = inputs
     tf.compat.v1.disable_eager_execution()
-    x1, x2, bias, *_ = context.param.get("input_arrays")
-    trans_a = context.param.get(name_parameter[0])
-    trans_b = context.param.get(name_parameter[1])
-    format_bias = get(context.param.get("stc_input_formats"), 2)
-    format_out = context.param.get("output_formats")[0]
-
-    if context.param.get("impl_mode") == "enable_hi_float_32_execution":
-        x1 = hf_32_input_gerenate(context, x1)
-        x2 = hf_32_input_gerenate(context, x2)
 
     if x1.dtype == 'float32':
         a_data = x1.astype('float64')
@@ -80,45 +47,76 @@ def helper_mm_and_bmm(context: OpInfo, name_parameter):
         if len(a.shape) == 2:
             a = a.t()
         else:
-            a = a.transpose(-1,-2)
+            a = a.transpose(-1, -2)
     if trans_b:
         if len(b.shape) == 2:
             b = b.t()
         else:
             b = b.transpose(-1,-2)
-    res_pt = torch.matmul(a, b).numpy()
+    res_pt = torch.matmul(a, b).numpy() # (1, 1, 16, 16)
     if bias is not None:
         if x1.dtype == 'float32':
             bias = bias.astype('float64')
         else:
             bias = bias.astype('float32')
-        if format_bias == 'NC1HWC0':
-            res_pt = nd_to_fractal_nz(res_pt, True)
-            bias = bias.transpose(0, 1, 4, 2, 3).reshape(bias.shape)
-            res_pt = torch.from_numpy(res_pt)
-            bias = torch.from_numpy(bias)
-            res_pt = torch.add(res_pt, bias).numpy()
-        else:
-            if format_out == "FRACTAL_NZ":
-                res_pt = nd_to_fractal_nz(res_pt, True)
-                bias_shape = bias.shape[0]
-                align_bias = align(bias_shape, 16)
-                bias = np.pad(bias, (0, align_bias - bias_shape), 'constant', constant_values=(0, 0))
-                res_pt = torch.from_numpy(res_pt)
-                bias = torch.from_numpy(bias)
-                res_pt = torch.add(res_pt, bias).numpy()
-            else:
-                res_pt = torch.from_numpy(res_pt)
-                bias = torch.from_numpy(bias)
-                res_pt = torch.add(res_pt, bias).numpy()
-
-    if format_out == 'FRACTAL_NZ':
-        res_pt = nd_to_fractal_nz(res_pt)
-    output_dtype = bfloat16_conversion_v2(context.params.get("output_dtypes"))
-    return res_pt.astype(output_dtype[0], copy=False)
+        res_pt = torch.from_numpy(res_pt)
+        bias = torch.from_numpy(bias)
+        res_pt = torch.add(res_pt, bias).numpy()
+    output_dtype = bfloat16_conversion_v2([out_dtype])
+    return res_pt.astype(output_dtype[0], copy=False) 
 
 
-def _matmul(context: OpInfo):
-    return helper_mm_and_bmm(context, ["transpose_x1", "transpose_x2"])
+class MatmulOperation(OperationTest):
+    def golden_calc(self, in_tensors):
+        # input & params
+        x1 = in_tensors[0]
+        x2 = in_tensors[1]
+        out_dtype = DATA_TYPE_MAP[self.op_param['output_desc'][0]['dtype']]
+        for attr in self.op_param['attr']:
+            if attr['key'] == 'transpose_x1':
+                trans_a = attr['value']['b']
+            if attr['key'] == 'transpose_x2':
+                trans_b = attr['value']['b']
 
+        # output_desc
+        format_out = self.op_param['output_desc'][0]['layout']
+        for attr in self.op_param['output_desc'][0]['attr']:
+            if attr['key']=='origin_format':
+                out_ori_format = attr['value']['s']
+        out_shape = self.op_param['output_desc'][0]['shape']['dim']
 
+        # input format转换
+        for attr in self.op_param['input_desc'][0]['attr']:
+            if attr['key'] == 'origin_format':
+                x1_ori_format = attr['value']['s']
+            if attr['key'] == 'origin_shape':
+                x1_ori_shape = attr['value']['list']['i']
+        for attr in self.op_param['input_desc'][1]['attr']:
+            if attr['key'] == 'origin_format':
+                x2_ori_format = attr['value']['s']
+            if attr['key'] == 'origin_shape':
+                x2_ori_shape = attr['value']['list']['i']
+        x1_new_format = self.op_param['input_desc'][0]['layout']
+        x2_new_format = self.op_param['input_desc'][1]['layout']
+        x1 = format_transformation_map[x1_new_format][x1_ori_format](x1, x1_new_format, x1_ori_shape)
+        x2 = format_transformation_map[x2_new_format][x2_ori_format](x2, x2_new_format, x2_ori_shape)
+
+        # bias
+        bias = None
+        if len(in_tensors) > 2:
+            bias = in_tensors[2]
+            for attr in self.op_param['input_desc'][2]['attr']:
+                if attr['key'] == 'origin_format':
+                    bias_ori_format = attr['value']['s']
+                if attr['key'] == 'origin_shape':
+                    bias_ori_shape = attr['value']['list']['i']
+            bias_new_format = self.op_param['input_desc'][2]['layout']
+            bias = format_transformation_map[bias_new_format][bias_ori_format](bias, bias_new_format, bias_ori_shape)
+
+        inputs = [x1, x2, trans_a, trans_b, out_dtype, bias]
+        res = _matmul(inputs)
+        res = format_transformation_map[out_ori_format][format_out](res, out_ori_format, out_shape)
+        return [res]
+
+    def test_matmul(self):
+        self.execute()
