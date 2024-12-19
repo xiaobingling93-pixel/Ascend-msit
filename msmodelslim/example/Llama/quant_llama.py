@@ -1,10 +1,15 @@
 # Copyright Huawei Technologies Co., Ltd. 2024. All rights reserved.
 import os
 import json
-
+import sys
 import torch
-from ascend_utils.common.security.path import get_valid_write_path
-from utils import SafeGenerator, ArgumentParser, StringArgumentValidator, MAX_KEY_LENGTH, MAX_JSON_LENGTH
+
+current_directory = os.path.dirname(os.path.abspath(__file__))
+parent_directory = os.path.abspath(os.path.join(current_directory, '..', ".."))
+sys.path.append(parent_directory)
+
+from ascend_utils.common.security.path import get_valid_write_path, get_valid_read_path
+from example.common.utils import SafeGenerator, ArgumentParser, StringArgumentValidator, MAX_KEY_LENGTH, MAX_JSON_LENGTH
 from msmodelslim.pytorch.llm_ptq.anti_outlier import AntiOutlier, AntiOutlierConfig
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
 
@@ -21,6 +26,18 @@ def cmd_bool(cmd_arg):
     raise ValueError(f"{cmd_arg} should be True or False")
 
 
+def get_down_proj_disable_names(config_file: str) -> list:
+    fd = os.open(config_file, os.O_RDONLY)
+    with os.fdopen(fd, 'r', encoding='utf-8') as file:
+        config = json.load(file)
+    num_layers = config['num_hidden_layers']
+    disable_names = []
+    # 遍历层数并添加对应的 disable_names
+    for i in range(num_layers):
+        disable_names.append(f"model.layers.{i}.mlp.down_proj")
+    return disable_names
+
+
 def parse_arguments():
     parser = ArgumentParser()
     parser.add_argument('--model_path', type=str, help="model and tokenizer path")
@@ -35,7 +52,7 @@ def parse_arguments():
         '--calib_file',
         type=str,
         help='A jsonl file contains calibration data.',
-        default=f"{os.path.join(os.path.dirname(__file__), 'teacher_qualification.jsonl')}")
+        default = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'common', 'teacher_qualification.jsonl'))
     parser.add_argument('--w_bit', type=int, default=8)
     parser.add_argument('--a_bit', type=int, default=8)
     parser.add_argument('--disable_names', type=str, nargs='+', default=None)
@@ -64,7 +81,7 @@ def parse_arguments():
                         validator=StringArgumentValidator(min_length=1, max_length=MAX_KEY_LENGTH))
     parser.add_argument('--attention_mask_name', type=str, default='attention_mask',
                         validator=StringArgumentValidator(min_length=1, max_length=MAX_KEY_LENGTH))
-    parser.add_argument('--tokenizer_args', type=str, default='{}',
+    parser.add_argument('--tokenizer_args', type=str, default='{"padding_side":"left","pad_token":"<unk>"}',
                         validator=StringArgumentValidator(min_length=2, max_length=MAX_JSON_LENGTH))
     parser.add_argument('--disable_last_linear', type=cmd_bool, default=True)
     parser.add_argument('--model_name', type=str, default=None,
@@ -88,7 +105,7 @@ class Quantifier:
             self.model_path_or_name,
             low_cpu_mem_usage=True, torch_dtype=self.dtype,
             device_map=device_map,
-            use_safetensors=True, trust_remote_code=True
+            trust_remote_code=True
         )
 
         tokenizer_args = kwargs.get("tokenizer_args", {})
@@ -136,10 +153,17 @@ if __name__ == '__main__':
     model_path = args.model_path
     save_directory = args.save_directory
 
+    # Check if disable_names is provided, if not and a_bit is 8, generate disable_names
+    disable_names = args.disable_names
+    if not disable_names and args.a_bit == 8:
+        config_file = os.path.join(model_path, 'config.json')
+        config_file = get_valid_read_path(config_file, check_user_stat=False)
+        disable_names = get_down_proj_disable_names(config_file)
+
     quant_conf = QuantConfig(
         w_bit=args.w_bit,
         a_bit=args.a_bit,
-        disable_names=args.disable_names,
+        disable_names=disable_names,
         dev_type=args.device_type,
         dev_id=rank,
         act_method=args.act_method,
