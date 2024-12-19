@@ -1,4 +1,4 @@
-# Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
+# Copyright Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
 
 from typing import List, Any, Dict
 from transformers import PreTrainedModel
