@@ -156,7 +156,7 @@ class Calibrator(object):
         self.quant_linear_names = None
         self.act_states = None
         self.rollback_names_process(model)
-        self.is_deepseek_v2 = is_deepseek_v2_chat(self.model), is_deepseek_v2_lite(model)
+        self.is_deepseek_v2 = is_deepseek_v2_chat(model) or is_deepseek_v2_lite(model)
         if self.cfg.use_fa_quant:
             configure_fa(model, tp_size=self.cfg.fa_tp_size)
 
