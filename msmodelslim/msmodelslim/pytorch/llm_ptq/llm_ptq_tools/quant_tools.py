@@ -19,7 +19,8 @@ from accelerate.hooks import add_hook_to_module, remove_hook_from_module
 from ascend_utils.common.security.type import check_mapping_element
 
 from msmodelslim import logger as msmodelslim_logger
-from msmodelslim.pytorch.llm_ptq.hooks.factory import get_process_hooks
+from msmodelslim.pytorch.llm_ptq.hooks.factory import is_deepseek_v2_chat, is_deepseek_v2_lite, \
+    get_process_hooks
 from msmodelslim.pytorch.llm_ptq.accelerate_adapter import enable_adapter, check_model_compatible, \
     get_offloaded_dataset, MemoryStateDictConfig, DiskStateDictConfig, copy_offloaded_state_dict
 from msmodelslim.pytorch.llm_ptq.accelerate_adapter.lazy_handler import LazyTensor, handle_lazy_tensor
@@ -155,6 +156,7 @@ class Calibrator(object):
         self.quant_linear_names = None
         self.act_states = None
         self.rollback_names_process(model)
+        self.is_deepseek_v2 = is_deepseek_v2_chat(model) or is_deepseek_v2_lite(model)
         if self.cfg.use_fa_quant:
             configure_fa(model, tp_size=self.cfg.fa_tp_size)
 
@@ -571,7 +573,7 @@ class Calibrator(object):
 
     def set_quant_safetensor(self, ori_model_state_dict_name, safetensor_weight):
         model_quant_type = self.quant_model_json_description.model_quant_type
-        if "experts" in ori_model_state_dict_name:
+        if "mlp" in ori_model_state_dict_name and self.is_deepseek_v2:
             if self.quant_model_json_description.model_quant_type is QuantType.W8A8:
                 model_quant_type = QuantType.W8A8_DYNAMIC
         safetensor_weight[ori_model_state_dict_name] = self.quant_param_dict.get(ori_model_state_dict_name)
@@ -737,9 +739,8 @@ class Calibrator(object):
 
                     #所有专家层都使用动态量化
                     model_quant_type = self.cfg.model_quant_type 
-                    if "experts" in name:
-                        if self.cfg.model_quant_type is QuantType.W8A8:
-                            model_quant_type = QuantType.W8A8_DYNAMIC
+                    if "mlp" in name and self.is_deepseek_v2 and model_quant_type is QuantType.W8A8:
+                        model_quant_type = QuantType.W8A8_DYNAMIC
 
                     # W4A16/W8A16 需要提供 weight_scale、weight_offset
                     if model_quant_type in [QuantType.W8A16, QuantType.W4A16, QuantType.W8A8_DYNAMIC]:
@@ -971,7 +972,7 @@ class Calibrator(object):
                         quant_mod = LinearNf4Quantizer(cfg=self.cfg, logger=self.logger)
                     elif self.cfg.model_quant_type is not QuantType.W8A8S:
                         is_dynamic = self.cfg.is_dynamic
-                        if "experts" in name:
+                        if "mlp" in name and self.is_deepseek_v2:
                             if self.cfg.model_quant_type is QuantType.W8A8:
                                 is_dynamic = True
                         quant_mod = LinearQuantizer(cfg=self.cfg, logger=self.logger, is_dynamic=is_dynamic)
