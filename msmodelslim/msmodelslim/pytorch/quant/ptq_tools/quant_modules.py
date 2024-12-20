@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-# Copyright Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+# Copyright Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
 from __future__ import absolute_import, division, print_function
 import time
+import inspect
 
 import torch
 import torch.nn as nn
@@ -174,23 +175,25 @@ class Quantizer(nn.Module):
             self.disable_quantization(self.name)
             return tensor
         with torch.no_grad():
+            # for weight
             if not self.is_input:
                 if self.weight_dfree:
                     self._init_data_free_param(tensor)
                 else:
+                    # get the scale and offset
                     self._init_weight_quant_normal(tensor)
-            if self.is_input:
+                return self._weight_forward(tensor)
+            # for activation
+            else:
                 if not self.act_dfree:
+                    # update the scale and offset and return dequant_tensor
                     self._update_input_observer(tensor)
                     return self._observer_forward(tensor)
-                else:
-                    return self._forward(tensor)
-            else:
-                return self.quant_weight_tensor
-    
+                return self._forward(tensor)
+
     def stop_calibration(self):
         self.observer = None
-        
+
     def _forward(self, data):
         self.input_scale, \
         self.input_offset = linear_quantization_params(
@@ -214,22 +217,36 @@ class Quantizer(nn.Module):
             return
 
         start = time.perf_counter()
-        self.int_weight_tensor, \
-        self.quant_weight_tensor, \
-        self.weight_scale, \
-        self.weight_offset = init_weight_quant_normal(
-            weight,
-            self.bit,
-            self.is_sym,
-            self.is_signed,
-            integral_zero_point,
-            admm=self.admm,
-            round_opt=self.round_opt,
-            force_per_channel=True
-        )
+        if 'low_mem' in inspect.signature(init_weight_quant_normal).parameters:
+            _, _, self.weight_scale, self.weight_offset = init_weight_quant_normal(
+                weight,
+                self.bit,
+                self.is_sym,
+                self.is_signed,
+                integral_zero_point,
+                admm=self.admm,
+                round_opt=self.round_opt,
+                force_per_channel=True,
+                low_mem=True,
+            )
+        else:
+            _, _, self.weight_scale, self.weight_offset = init_weight_quant_normal(
+                weight,
+                self.bit,
+                self.is_sym,
+                self.is_signed,
+                integral_zero_point,
+                admm=self.admm,
+                round_opt=self.round_opt,
+                force_per_channel=True,
+            )
         elapsed = (time.perf_counter() - start)
         logger.info("Quantization time:%s ms", elapsed * 1000)
         self.has_init_quant_para = True
+
+    def _weight_forward(self, data):
+        _, dequant_tensor = fake_quantize(data, self.weight_scale, self.weight_offset, self.bit, self.round_opt)
+        return dequant_tensor
 
 
 class TensorQuantizer(Quantizer):
@@ -266,9 +283,9 @@ class LinearQuantizer(nn.Module):
     def set_param(self, linear):
         self.in_features = linear.in_features
         self.out_features = linear.out_features
-        self.weight = nn.Parameter(linear.weight.data.clone())
+        self.weight = linear.weight
         try:
-            self.bias = nn.Parameter(linear.bias.data.clone())
+            self.bias = linear.bias
         except AttributeError:
             self.bias = None
         finally:
@@ -327,9 +344,9 @@ class Conv2dQuantizer(nn.Module):
             self.transposed = None
             self.padding_mode = 'zeros'
             self.reversed_padding_repeated_twice = None
-        self.weight = nn.Parameter(conv.weight.data.clone())
+        self.weight = conv.weight
         try:
-            self.bias = nn.Parameter(conv.bias.data.clone())
+            self.bias = conv.bias
         except AttributeError:
             self.bias = None
         finally:

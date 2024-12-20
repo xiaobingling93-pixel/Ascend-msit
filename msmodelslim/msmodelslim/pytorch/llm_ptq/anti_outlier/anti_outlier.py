@@ -12,8 +12,6 @@ from collections import OrderedDict as OrderedDict_CHECK
 from easydict import EasyDict
 
 from tqdm import tqdm
-from tqdm.contrib import tzip
-
 import torch
 import torch.nn as nn
 from transformers.configuration_utils import PretrainedConfig
@@ -21,8 +19,10 @@ from accelerate.hooks import add_hook_to_module, remove_hook_from_module
 
 from ascend_utils import ResListToRelease
 from ascend_utils.common.security import get_valid_write_path, check_type
-from msmodelslim import logger as msmodelslim_logger
+from msmodelslim.pytorch.llm_ptq.hooks.hook_def import ProcessHook
+from msmodelslim.pytorch.llm_ptq.hooks.factory import get_process_hooks
 from msmodelslim.pytorch.llm_ptq.accelerate_adapter import enabled_adapter
+from msmodelslim import logger as msmodelslim_logger
 
 try:
     import torch_npu
@@ -267,6 +267,8 @@ class AntiOutlier(object):
         self.norm_class_name = norm_class_name
         if not enabled_adapter():
             self.org_model = model
+        
+        self.hooks = get_process_hooks(model)
 
         # 非m4或m5场景下，保存anti_outlier处理前的原始权重，为避免显存的额外占用，原始权重放在内存上
         if self.cfg.anti_method not in ['m4', 'm5']:
@@ -280,6 +282,18 @@ class AntiOutlier(object):
             self.device_org = next(model.parameters()).device
         else:
             self.device_org = None
+        
+         # 如果手动指定NORM_LINEAR结构，就无需拷贝模型了
+        if ProcessHook.GET_NORM_LINEAR_SUBGRAPH in self.hooks and self.hooks[
+            ProcessHook.GET_NORM_LINEAR_SUBGRAPH] is not None:
+            self.norm_linear_subgraph = self.hooks[ProcessHook.GET_NORM_LINEAR_SUBGRAPH](model)
+            self.model = model
+        else:
+            self.model = deepcopy_model(model,
+                                        self.logger,
+                                        device_org=self.device_org,
+                                        model_with_accelerate=self.model_with_accelerate).float()
+            self.norm_linear_subgraph = None
 
         if not enabled_adapter() and model.device.type != 'cpu':
             self.model = deepcopy_model(model,
@@ -288,8 +302,6 @@ class AntiOutlier(object):
                                         model_with_accelerate=self.model_with_accelerate).float()
         else:
             self.model = model
-
-        self.norm_linear_subgraph = None
 
         if calib_data is None:
             calib_data = []
@@ -323,15 +335,16 @@ class AntiOutlier(object):
                         [m.__class__ for m in self.model.modules() if "norm" in m.__class__.__name__.lower()]))
                 norm_class = [norm_class[0]]
                 self.norm_class_name = norm_class[0].__name__.lower()
-
-            # 不要保存为成员变量，内部会引用模型以及模型的子模块，导致这些模块的参数正常无法释放
-            dag = extract_dag(self.model, dummy_input,
-                              hook_nodes=norm_class, anti_method=self.cfg.anti_method)
-            self.norm_linear_subgraph = dag.get_norm_linear_subgraph()
-            if self.cfg.anti_method == 'm4':
-                self.linear_linear_subgraph = dag.get_linear_linear_subgraph()
-                self.norm_linear_subgraph.update(self.linear_linear_subgraph)
-            del dag
+            if ProcessHook.GET_NORM_LINEAR_SUBGRAPH not in self.hooks or self.hooks[
+                ProcessHook.GET_NORM_LINEAR_SUBGRAPH] is None:
+                # 不要保存为成员变量，内部会引用模型以及模型的子模块，导致这些模块的参数正常无法释放
+                dag = extract_dag(self.model, dummy_input,
+                                hook_nodes=norm_class, anti_method=self.cfg.anti_method)
+                self.norm_linear_subgraph = dag.get_norm_linear_subgraph()
+                if self.cfg.anti_method == 'm4':
+                    self.linear_linear_subgraph = dag.get_linear_linear_subgraph()
+                    self.norm_linear_subgraph.update(self.linear_linear_subgraph)
+                del dag
 
         if not enabled_adapter():
             del self.model
@@ -600,6 +613,12 @@ class AntiOutlier(object):
             for name in linear_names:
                 mod = PatternProcess.get_module_by_name(self.model, name)
                 linear_modules.append(mod)
+
+            is_shift = False
+            args = []
+            if ProcessHook.MODIFY_SMOOTH_ARGS in self.hooks and self.hooks[
+                ProcessHook.MODIFY_SMOOTH_ARGS] is not None:
+                args, fusion_kwargs = self.hooks[ProcessHook.MODIFY_SMOOTH_ARGS](self.cfg, norm_name_group, linear_names, args, fusion_kwargs)
 
             if Multiplier is not None and norm_module is None:
                 norm_module = Multiplier(

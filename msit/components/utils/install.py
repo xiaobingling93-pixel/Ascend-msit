@@ -101,6 +101,16 @@ INSTALL_INFO_MAP = [
         "pkg-path": os.path.join("debug", "compare"),
         "depends": ["msit-benchmark", "msit-surgeon"],
     },
+    {
+        "arg-name": "opcheck",
+        "pkg-name": "msit-opcheck",
+        "pkg-path": os.path.join("debug", "opcheck"),
+    },
+    {
+        "arg-name": "graph",
+        "pkg-name": "msit-graph",
+        "pkg-path": "graph",
+    },
 ]
 
 ALL_SUB_TOOLS = [pkg.get("arg-name") for pkg in INSTALL_INFO_MAP]
@@ -330,7 +340,7 @@ def download_comp(tool_info, dest):
     if not pkg_installer:
         pkg_installer = AitInstaller()
     pkg_installer.download_extra(dest)
-
+ 
 
 def get_public_url(url_name):
     if not isinstance(url_name, str):

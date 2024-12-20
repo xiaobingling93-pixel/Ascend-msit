@@ -16,7 +16,7 @@ from ascend_utils.common.security import check_type, get_valid_write_path, SafeW
 from msmodelslim.pytorch.quant.ptq_tools.quant_modules import Quantizer, Conv2dQuantizer, LinearQuantizer
 from msmodelslim.pytorch.quant.ptq_tools.quant_deploy import quantize_model_deploy, convert_linear_params
 from msmodelslim.pytorch.quant.ptq_tools.quant_deploy import ConvertLinearParams, ModelDeployQuantParams
-from msmodelslim.pytorch.quant.ptq_tools.ptq_kia.quant_funcs import amp_decision  # squant algorithm api
+from msmodelslim.pytorch.quant.ptq_tools.ptq_kia.quant_funcs import amp_decision, fake_quantize  # squant algorithm api
 from ascend_utils.common.security.pytorch import check_torch_module
 from msmodelslim import logger
 from msmodelslim.pytorch.quant.ptq_tools import QuantConfig
@@ -24,7 +24,7 @@ from msmodelslim.pytorch.quant.ptq_tools.quant_modules import TensorQuantizer
 
 weight_type = "W8A8"
 float_type = "FLOAT"
-
+CHECK_DTYPE = {'added_cond_kwargs': dict, 'return_dict':bool,'t_idx': int}
 
 class Calibrator(object):
     """ Calibrator for post-training quantization."""
@@ -103,11 +103,8 @@ class Calibrator(object):
         for i, calib_data_item in enumerate(calib_data):
             check_type(calib_data_item, (list, dict, tuple), param_name=f'calib_data[{i}]')
             if isinstance(calib_data_item, dict):
-                for _, item in enumerate(calib_data_item.values()):
-                    if not isinstance(item, torch.Tensor):
-                        raise ValueError("Not all elements in calib_data are torch.Tensor, "
-                                        "please make sure that the model can run with model(*(calib_data[0]))"
-                                         "or with model(**(calib_data[0]))")
+                for key, value in calib_data_item.items():
+                     check_type(value, CHECK_DTYPE.get(key, torch.Tensor))
             else:
                 for _, item in enumerate(calib_data_item):
                     if item is not None and not isinstance(item, (torch.Tensor, int)):
@@ -317,45 +314,43 @@ class Calibrator(object):
 
     def get_quant_safetensor_params(self):
         quant_param_dict = {}
-        fp_name_weight_list = []
+        quant_name_weight_list = []
         quant_name = []
         original_type = next(self.model.parameters()).dtype
-        deq_type = torch.int64 if original_type==torch.float16 else torch.float32
 
         for name, module in self.model.named_modules():
             quant_name.append(name)
             fp_name = name.rsplit(".", 1)[0]
             if isinstance(module, TensorQuantizer) and module.input_scale is not None:
-                quant_param_dict[fp_name + '.input_scale'] = module.input_scale.to(original_type)
-                quant_param_dict[fp_name + '.input_offset'] = module.input_offset.to(original_type)
-                input_offset= module.input_offset
+                quant_param_dict[fp_name + '.input_scale'] = module.input_scale.to(original_type).cpu()
+                quant_param_dict[fp_name + '.input_offset'] = module.input_offset.to(original_type).cpu()
+                input_offset= module.input_offset.cpu()
         
             if isinstance(module, TensorQuantizer) and module.int_weight_tensor is not None:
-                quant_weight = module.int_weight_tensor
-                fp_weight_bias = self.ori_fp_weight.get(fp_name + '.bias')
+                quant_weight = module.int_weight_tensor.cpu()
+                fp_weight_bias = self.ori_fp_weight.get(fp_name + '.bias').cpu()
                 quant_param_dict[fp_name + '.weight'] = module.int_weight_tensor.round().to(torch.int8)
                 quant_param_dict[fp_name + '.bias'] = fp_weight_bias
-                fp_name_weight_list.append(fp_name + '.weight')
+                quant_name_weight_list.append(fp_name + '.weight')
 
                 if fp_name + '.input_scale' in quant_param_dict:
-                    deq_scale = (quant_param_dict[fp_name + '.input_scale']*module.weight_scale).reshape(-1)
-                    quant_param_dict[fp_name + '.deq_scale'] = deq_scale.to(deq_type)
-                    correction = quant_weight.to(torch.float32).sum(dim=1) * input_offset.to(torch.float32)
-                    quant_bias = torch.round(fp_weight_bias / deq_scale - correction).round().to(torch.int32)
-                    quant_param_dict[fp_name + '.deq_scale'] = deq_scale
-                    quant_param_dict[fp_name + '.quant_bias'] = quant_bias
+                    deq_scale = deqscale_process(quant_param_dict[fp_name + '.input_scale'].cpu(), module.weight_scale.cpu()).cpu()
+                    correction = quant_weight.to(torch.float32).sum(dim=1) * input_offset.to(torch.float32).cpu()
+                    quant_bias = torch.round(fp_weight_bias / deq_scale - correction).to(torch.int32)
+                    quant_param_dict[fp_name + '.quant_bias'] = quant_bias.cpu()
+                    deq_scale = deqscale2int64_by_dtype(deq_scale, original_type == torch.bfloat16)
+                    quant_param_dict[fp_name + '.deq_scale'] = deq_scale.cpu()
 
         quant_model_description = {key: weight_type for key in quant_param_dict.keys()}
         quant_model_description["model_quant_type"] = weight_type
 
-        quant_model_state_dict_list = list(quant_param_dict.keys())
         for ori_model_state_dict_name, ori_model_state_dict in self.ori_fp_weight.items():
-            if ori_model_state_dict_name not in fp_name_weight_list:
+            if ori_model_state_dict_name not in quant_name_weight_list:
                 quant_param_dict[ori_model_state_dict_name] = ori_model_state_dict
                 quant_model_description[ori_model_state_dict_name] = float_type
         return quant_param_dict, quant_model_description
 
-
+ 
     def export_quant_safetensor(self, output_path, safetensors_name=None, json_name=None):
         """
         基于浮点、量化两份独立权重，存储完整的量化、浮点混合权重，用户仅需加载一个混合权重即可
@@ -388,22 +383,44 @@ class Calibrator(object):
             save_file(safetensor_weight, quant_model_weight_path)
             json_safe_dump(quant_model_description, quant_model_description_path, indent=2)
     
+    def _calculate_quant_weight(self):
+        for name, module in self.model.named_modules():
+            fp_name = name.rsplit(".", 1)[0]
+            if isinstance(module, TensorQuantizer) and module.weight_scale is not None and module.weight_offset is not None:
+                module.int_weight_tensor, _ = fake_quantize(self.ori_fp_weight.get(fp_name + '.weight'),
+                                                            module.weight_scale, 
+                                                            module.weight_offset, 
+                                                            module.bit)
 
     def _run(self, calib_amp=10):
         logger.info("Calibration start!")
         self.model.eval()
+        check_device = True
+        if isinstance(self.calib_data[0], dict):
+            model_device = self.model.device.type
+            data_deivce = next(iter(self.calib_data[0].values())).device.type
+            check_device = model_device == data_deivce
         with torch.no_grad():
             for data in tqdm(self.calib_data):
                 if isinstance(data, dict):
-                    self.model(**data)
+                    if check_device:
+                        self.model(**data)
+                    else:
+                        item = {kk: vv.to(model_device) if isinstance(vv, torch.Tensor) else vv for kk, vv in data.items()}
+                        self.model(**item)
+                        item  = {kk: vv.to(data_deivce) if isinstance(vv, torch.Tensor) else vv for kk, vv in data.items()}
                 else:
                     self.model(*data)
         logger.info("Calibration end!")
+        
+        # calculate quant weight before saving
+        self._calculate_quant_weight()
 
         if self.cfg.amp_num > 0:
             logger.info("AMP start!")
             self.amp(calib_amp)
             logger.info("AMP end!")
+
 
 
 def quantize_model(model, cfg=None):
@@ -549,3 +566,24 @@ def fuse_module(model):
             child_conv2d_name = name
         else:
             fuse_module(child)
+
+
+def deqscale_process(input_scale, scale):
+        deq_scale = input_scale * scale
+        if deq_scale.ndim > 1:
+            deq_scale = deq_scale.squeeze(1)
+        deq_scale = deq_scale.cpu()
+        return deq_scale
+
+def deqscale2int64(scale):
+    scale = scale.numpy()
+    scale = np.frombuffer(scale.tobytes(), dtype=np.int32).astype(np.int64)
+    scale = torch.tensor(scale)
+    return scale
+
+
+def deqscale2int64_by_dtype(scale, is_bf16):
+    if is_bf16:
+        return scale
+    else:
+        return deqscale2int64(scale)
