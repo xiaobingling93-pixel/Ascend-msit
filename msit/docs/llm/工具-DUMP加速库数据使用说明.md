@@ -18,6 +18,9 @@ msit llm dump --exec "<任意包含ATB的程序执行命令>" [可选参数]
 msit llm dump --exec "<任意包含ATB的程序执行命令>" --type model tensor # 常用用于自动比对
 msit llm dump --exec "<任意包含ATB的程序执行命令>" --type onnx # 常用于导出onnx查看网络结构
 
+# 仅dump统计量
+msit llm dump --exec "<任意包含ATB的程序执行命令>" --type model tensor stats # 查看模型tensor的统计量, 相比全量落盘，可节省磁盘空间，但需花费额外时间进行统计量的计算
+
 # 仅dump layer 层的算子输出，常用于精度比对先找到存在问题的 layer 层。相比全量dump，可以节省磁盘空间和定位时间
 msit llm dump --exec "<任意包含ATB的程序执行命令>" --type model tensor -child False
 
@@ -35,7 +38,7 @@ msit llm dump --exec "<任意包含ATB的程序执行命令>" --type model tenso
 | 参数名                           | 描述                                                                                                                                                                                                                                                                                                                                | 必选 |
 |-------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| ---- |
 | --exec                        | 指定包含 ATB 的程序执行命令，使用示例： --exec "bash run.sh patches/models/modeling_xxx.py"。**注：命令中不支持重定向字符，如果需要重定向输出，建议将执行命令写入 shell 脚本，然后启动 shell 脚本。**                                                                                                                                                                                          | 是   |
-| --type                        | dump 类型，默认为['tensor', 'model']。使用方式：--type layer tensor。可选项有：<br /> model: 模型拓扑信息(默认)，当dump model的时候，layer会跟着model一起dump下来<br /> layer: Operation 维度拓扑信息<br /> op: ATB Operation 信息<br /> kernel: kernel Operation 信息<br /> tensor: tensor 数据(默认)<br /> cpu_profiling: cpu profiling 数据<br /> onnx: onnx 模型。仅用于模型结构可视化 | 否   |
+| --type                        | dump 类型，默认为['tensor', 'model']。使用方式：--type layer tensor。可选项有：<br /> model: 模型拓扑信息(默认)，当dump model的时候，layer会跟着model一起dump下来<br /> layer: Operation 维度拓扑信息<br /> op: ATB Operation 信息<br /> kernel: kernel Operation 信息<br /> tensor: tensor 数据(默认)<br /> stats: 必须在--type同时填选tensor, 即[--type 其它 tensor stats], 最后仅落盘dump后tensor的以上所述7种统计量。会根据tensor的数据(仅支持数值数据类型，不支持bool/string等不可计算的数据类型)来计算统计量: [format、type、dims、max、min、mean、l2norm], **注：同时选择tensor和stats时，不再落盘全量tensor数据，仅落盘以上所述7种统计量** <br />  cpu_profiling: cpu profiling 数据<br /> onnx: onnx 模型。仅用于模型结构可视化 | 否   |
 | -sd，--only-save-desc          | 只保存 tensor 描述信息开关，默认为否，开启开关时将 dump tensor 的描述信息，使用方式：-sd                                                                                                                                                                                                                                                                          | 否   |
 | -ids，--save-operation-ids     | 设置 dump 指定 id 的算子的 tensor，默认为空，全量 dump。使用方式：-ids 2, 3_1 表示只 dump 第 2 个 operation 和第 3 个 operation 的第 1 个算子的数据，id 从 0 开始。若不确定算子 id，可以先执行 msit llm dump --exec xx --type model 命令，将 model 信息 dump 下来，即可获得模型中所有的算子 id 信息。                                                                                                            | 否   |
 | -er，--execute-range           | 指定 dump 的 token 轮次范围，区间左右全闭，可以支持多个区间序列，默认为第 0 次，使用方式：-er 1,3 或 -er 3,5,7,7（代表区间[3,5],[7,7],也就是第 3，4，5，7 次token）。此外，请确保输入多区间时的总输入长度不超过500个字符。                                                                                                                                                                                                         | 否   |
@@ -60,6 +63,7 @@ Dump 默认落盘路径 `{DUMP_DIR}`在当前目录下，如果指定 output 目
 注：`{device_id}`为设备号；`{PID}`为进程号；`{TID}`为 `token_id`；`{TIMESTAMP}`为时间戳；`{executeCount}`为 `operation`运行次数。
 
 - tensor 信息，具体路径是 `{DUMP_DIR}/msit_dump_{TIMESTAMP}/tensors/{device_id}_{PID}/{TID}`目录下(使用老版本的 cann 包可能导致 tensor 落盘路径不同）。
+- stats 统计量信息，具体路径是 `{DUMP_DIR}/msit_dump_{TIMESTAMP}/tensors/{device_id}_{PID}/{TID}`目录下(同`tensor 信息`落盘位置）。
 - layer 信息，具体路径是 `{DUMP_DIR}/msit_dump_{TIMESTAMP}/layer/{PID}`目录下。
 - model 信息，具体路径是 `{DUMP_DIR}/msit_dump_{TIMESTAMP}/model/{PID}`目录下。注：由于 model 由 layer 组合而成，因此使用 model 时，默认同时会落盘 layer 信息。
 - onnx 落盘位置和 model、layer 相同的目录。（落盘onnx文件格式为 xxx.onnx）

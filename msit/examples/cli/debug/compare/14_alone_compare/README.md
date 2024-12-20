@@ -9,7 +9,7 @@
 - 命令示例 
 - **注意：** 传入的-mp路径以及-gp路径必须为数据的上一层文件夹
   ```sh
-  msit debug compare -mp /home/HwHiAiUser/onnx_prouce_data/resnet_offical_onnx -gp /home/HwHiAiUser/onnx_prouce_data/model/resnet_offical_om 
+  msit debug compare -mp /home/HwHiAiUser/onnx_prouce_data/resnet_offical_om -gp /home/HwHiAiUser/onnx_prouce_data/model/resnet_offical_onnx
   --ops-json /home/HwHiAiUser/onnx_prouce_data/resnet_offical/ops.json -o /home/HwHiAiUser/result/test
   ```
   - `-mp, --my-path` 指定npu侧dump数据路径 
