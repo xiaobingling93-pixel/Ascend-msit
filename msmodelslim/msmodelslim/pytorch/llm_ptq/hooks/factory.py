@@ -1,11 +1,10 @@
 # Copyright Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
 
 from transformers import PreTrainedModel
-from msmodelslim import logger
 
 
 def is_deepseek_v2_chat(model: PreTrainedModel):
-    if model.config.model_type == "deepseek_v2":
+    if hasattr(model.config, 'model_type') and model.config.model_type == "deepseek_v2":
         if hasattr(model.config, 'q_lora_rank') and getattr(model.config, 'q_lora_rank') is not None:
             return True
 
@@ -13,7 +12,7 @@ def is_deepseek_v2_chat(model: PreTrainedModel):
 
 
 def is_deepseek_v2_lite(model: PreTrainedModel):
-    if model.config.model_type == "deepseek_v2":
+    if hasattr(model.config, 'model_type') and model.config.model_type == "deepseek_v2":
         if hasattr(model.config, 'q_lora_rank') and getattr(model.config, 'q_lora_rank') is None:
             return True
 

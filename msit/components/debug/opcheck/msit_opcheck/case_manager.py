@@ -102,7 +102,6 @@ class CaseManager:
                 "op_name": op_result.get('op_name', ""),
                 "op_param": json.dumps(op_result.get('op_param', "")),
                 "tensor_path": op_result.get('data_path_dict', ""),
-                "precision_result": op_result.get('excuted_information', ""),
                 "fail_reason": op_result.get('fail_reason', ""),
             }
             
@@ -116,7 +115,7 @@ class CaseManager:
         import pandas as pd
         op_infos = pd.DataFrame(op_infos)
         columns = [
-            "op_type", "op_name", "op_param", "tensor_path", "out_tensor_id", "precision_result",
+            "op_type", "op_name", "op_param", "tensor_path", "out_tensor_id",
             "rel_precision_rate(%)", "max_rel_error"
         ]
         if NAMEDTUPLE_PRECISION_METRIC.abs in self.precision_metric:
