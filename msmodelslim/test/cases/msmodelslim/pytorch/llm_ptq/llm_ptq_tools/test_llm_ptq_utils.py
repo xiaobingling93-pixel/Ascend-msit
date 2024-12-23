@@ -10,21 +10,103 @@ from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.llm_ptq_utils import QuantType, Q
 
 class TestQuantType:
     def test_get_quant_type(self):
-        quant_type = QuantType.get_quant_type(w_bit=8, a_bit=8, is_sparse=False, is_dynamic=False, is_lowbit=False)
+        params = {
+            'w_bit': 8, 
+            'a_bit': 8, 
+            'w_method': None,  # 根据实际状况填写
+            'is_sparse': False, 
+            'is_dynamic': False, 
+            'is_lowbit': False
+        }
+        quant_type = QuantType.get_quant_type(params)
         assert quant_type is QuantType.W8A8
-        quant_type = QuantType.get_quant_type(w_bit=8, a_bit=8, is_sparse=False, is_dynamic=True, is_lowbit=False)
+
+        params = {
+            'w_bit': 8, 
+            'a_bit': 8, 
+            'w_method': None,  # 根据实际状况填写
+            'is_sparse': False, 
+            'is_dynamic': True, 
+            'is_lowbit': False
+        }
+        quant_type = QuantType.get_quant_type(params)
         assert quant_type is QuantType.W8A8_DYNAMIC
-        quant_type = QuantType.get_quant_type(w_bit=8, a_bit=8, is_sparse=True, is_dynamic=False, is_lowbit=False)
+
+        params = {
+            'w_bit': 8, 
+            'a_bit': 8, 
+            'w_method': None,  # 根据实际状况填写
+            'is_sparse': True, 
+            'is_dynamic': False, 
+            'is_lowbit': False
+        }
+        quant_type = QuantType.get_quant_type(params)
         assert quant_type is QuantType.W8A8S
-        quant_type = QuantType.get_quant_type(w_bit=4, a_bit=8, is_sparse=False, is_dynamic=False, is_lowbit=True)
+
+        params = {
+            'w_bit': 4, 
+            'a_bit': 8, 
+            'w_method': None,  # 根据实际状况填写
+            'is_sparse': False, 
+            'is_dynamic': False, 
+            'is_lowbit': True
+        }
+        quant_type = QuantType.get_quant_type(params)
         assert quant_type is QuantType.W8A8S
-        quant_type = QuantType.get_quant_type(w_bit=8, a_bit=16, is_sparse=False, is_dynamic=False, is_lowbit=False)
+
+        params = {
+            'w_bit': 8, 
+            'a_bit': 16, 
+            'w_method': None,  # 根据实际状况填写
+            'is_sparse': False, 
+            'is_dynamic': False, 
+            'is_lowbit': False
+        }
+        quant_type = QuantType.get_quant_type(params)
         assert quant_type is QuantType.W8A16
-        quant_type = QuantType.get_quant_type(w_bit=4, a_bit=16, is_sparse=False, is_dynamic=False, is_lowbit=False)
+
+        params = {
+            'w_bit': 4, 
+            'a_bit': 16, 
+            'w_method': "NF4",  # 根据实际状况填写
+            'is_sparse': False, 
+            'is_dynamic': False, 
+            'is_lowbit': False
+        }
+        quant_type = QuantType.get_quant_type(params)
+        assert quant_type is QuantType.NF4
+
+        params = {
+            'w_bit': 4, 
+            'a_bit': 16, 
+            'w_method': "None",  # 根据实际状况填写
+            'is_sparse': False, 
+            'is_dynamic': False, 
+            'is_lowbit': False
+        }
+        quant_type = QuantType.get_quant_type(params)
         assert quant_type is QuantType.W4A16
-        quant_type = QuantType.get_quant_type(w_bit=16, a_bit=16, is_sparse=False, is_dynamic=False, is_lowbit=False)
+
+        params = {
+            'w_bit': 16, 
+            'a_bit': 16, 
+            'w_method': None,  # 根据实际状况填写
+            'is_sparse': False, 
+            'is_dynamic': False, 
+            'is_lowbit': False
+        }
+        quant_type = QuantType.get_quant_type(params)
         assert quant_type is QuantType.FLOAT
-        quant_type = QuantType.get_quant_type(w_bit=1, a_bit=8, is_sparse=False, is_dynamic=False, is_lowbit=False)
+
+        params = {
+            'w_bit': 1, 
+            'a_bit': 8, 
+            'w_method': None,  # 根据实际状况填写
+            'is_sparse': False, 
+            'is_dynamic': False, 
+            'is_lowbit': False
+        }
+        quant_type = QuantType.get_quant_type(params)
         assert quant_type is QuantType.UNKNOWN
 
     def test_is_value_in_enum_should_return_true_when_quant_type_value_is_right(self):

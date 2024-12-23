@@ -107,63 +107,96 @@ def parse_pbtxt_to_dict(pbtxt_path):
     return result
 
 
-def gather_data_with_token_id(data_path, fx=False):
-    token_dirs, cur_token_id = [], 0
-    # Detect the deepest dir level where sub dirs are all digits, and regard as tokens level.
-    if fx:
-        for cur_path, dirs, _ in os.walk(data_path):
+def judge_single_or_multi_device(path):
+    # 获取指定目录下所有文件和文件夹
+    entries = os.listdir(path)
+    # 过滤出文件夹
+    subdirs = [entry for entry in entries if os.path.isdir(os.path.join(path, entry))]
+    if len(subdirs) > 1:
+        return True
+    else:
+        return False
+
+def gather_data_with_token_id_fx(data_path, token_dirs):
+    for cur_path, dirs, _ in os.walk(data_path):
             if len(dirs) == 0:
                 continue
             if all([len(ii) < MAX_TOKEN_LEN and str.isdigit(ii) for ii in dirs]):
                 dirs = sorted(dirs, key=lambda xx: int(xx))
                 token_dirs = [os.path.join(cur_path, dir_name) for dir_name in dirs]
                 break
-    else:
-        for cur_path, dirs, _ in sorted(os.walk(data_path), key=lambda x: x[0]):
-            if not dirs:
-                token_dirs.append(cur_path)
+    
+    if len(token_dirs) == 0:
+        token_dirs.append(data_path)  # Just use data_path if found no token like dirs
+    
+    gathered_files_list = []
+    dump_dirs = {}
+    for token_dir in token_dirs:
+        cur_token_id = os.path.basename(token_dir)
+        cur_token_id = int(cur_token_id) if cur_token_id.isdigit() else 0
+        dump_dirs[cur_token_id] = sorted(
+            [
+                os.path.join(token_dir, d)
+                for d in os.listdir(token_dir)
+                if os.path.isdir(os.path.join(token_dir, d))
+            ],
+            key=lambda x: os.path.basename(x),
+        )
+    num_dumps = len(dump_dirs.get(1, None))
+    for i in range(num_dumps):
+        gathered_files = {}
+        for cur_token_id, dumps in dump_dirs.items():
+            dump_path = dumps[i]
+            file_names = [os.path.join(dump_path, f) for f in os.listdir(dump_path) if f.endswith(".npy")]
+            gathered_files[cur_token_id] = file_names
+        gathered_files_list.append(gathered_files)
+    return gathered_files_list
+
+
+def gather_data_with_token_id(data_path, fx=False):
+    is_multi_device = judge_single_or_multi_device(data_path)
+    token_dirs = []
+    # Detect the deepest dir level where sub dirs are all digits, and regard as tokens level.
+    if fx:
+        return gather_data_with_token_id_fx(data_path, token_dirs)
+    
+    for cur_path, dirs, _ in sorted(os.walk(data_path), key=lambda x: x[0]):
+        if not dirs:
+            token_dirs.append(cur_path)
 
     if len(token_dirs) == 0:
         token_dirs.append(data_path)  # Just use data_path if found no token like dirs
 
     gathered_files_list = []
-    if fx:
-        dump_dirs = {}
-        for token_dir in token_dirs:
-            cur_token_id = os.path.basename(token_dir)
-            cur_token_id = int(cur_token_id) if cur_token_id.isdigit() else 0
-            dump_dirs[cur_token_id] = sorted(
-                [
-                    os.path.join(token_dir, d)
-                    for d in os.listdir(token_dir)
-                    if os.path.isdir(os.path.join(token_dir, d))
-                ],
-                key=lambda x: os.path.basename(x),
-            )
-        num_dumps = len(dump_dirs.get(1, None))
-        for i in range(num_dumps):
-            gathered_files = {}
-            for cur_token_id, dumps in dump_dirs.items():
-                dump_path = dumps[i]
-                file_names = [os.path.join(dump_path, f) for f in os.listdir(dump_path) if f.endswith(".npy")]
-                gathered_files[cur_token_id] = file_names
-            gathered_files_list.append(gathered_files)
-    else:
-        parent_dir_dict = {}
-        for token_dir in token_dirs:
+    parent_dir_dict = {}
+    for token_dir in token_dirs:
+        if is_multi_device:
+            parts = token_dir
+            """
+            token_dir格式如下：
+            /home/dump/dump_20241114_113410/0/graph_1_0/1/4/
+            dump路径+时间戳+device_id+子图名称+子图ID号+token_id
+            对于多卡场景，应取device_id下相同的子图进行比较，
+            此处parts=/home/dump/dump_20241114_113410/0
+            """
+            for _ in range(3):
+                parts = os.path.dirname(parts)
+            parent_dir = os.path.basename(parts)
+        else:
             parent_dir = os.path.basename(os.path.dirname(token_dir))
-            subdir = os.path.basename(token_dir)
-            parent_id = int(parent_dir) if parent_dir.isdigit() else 0
-            subdir_id = int(subdir) if subdir.isdigit() else 0
-            if parent_id not in parent_dir_dict:
-                parent_dir_dict[parent_id] = {}
-            if subdir_id not in parent_dir_dict[parent_id]:
-                parent_dir_dict[parent_id][subdir_id] = []
-            for cur_path, _, file_names in os.walk(token_dir):
-                file_names = [os.path.join(cur_path, file_name) for file_name in file_names]
-                parent_dir_dict[parent_id][subdir_id].extend(file_names)
-        for _, subdirs in parent_dir_dict.items():
-            gathered_files_list.append(subdirs)
+        subdir = os.path.basename(token_dir)
+        parent_id = int(parent_dir) if parent_dir.isdigit() else 0
+        subdir_id = int(subdir) if subdir.isdigit() else 0
+        if parent_id not in parent_dir_dict:
+            parent_dir_dict[parent_id] = {}
+        if subdir_id not in parent_dir_dict[parent_id]:
+            parent_dir_dict[parent_id][subdir_id] = []
+        for cur_path, _, file_names in os.walk(token_dir):
+            file_names = [os.path.join(cur_path, file_name) for file_name in file_names]
+            parent_dir_dict[parent_id][subdir_id].extend(file_names)
+    parent_dir_dict = dict(sorted(parent_dir_dict.items()))
+    for _, subdirs in parent_dir_dict.items():
+        gathered_files_list.append(subdirs)
     return gathered_files_list
 
 

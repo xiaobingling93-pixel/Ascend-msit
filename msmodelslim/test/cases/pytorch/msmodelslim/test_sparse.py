@@ -39,7 +39,6 @@ def depth_model():
         nn.Flatten(),
         nn.Linear(32, 10, bias=False),
     )
-s
 
 @pytest.fixture(scope="function")
 def depth_optimizer(depth_model):

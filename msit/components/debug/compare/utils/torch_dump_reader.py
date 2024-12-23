@@ -21,12 +21,9 @@ import torch
 from components.debug.compare.utils.base_dump_reader import DumpFileReader
 from components.utils.file_open_check import ms_open
 from components.utils.util import safe_torch_load
-from components.utils.file_open_check import ms_open
-from components.utils.check.rule import Rule
-from components.utils.constants import TENSOR_MAX_SIZE
+from components.utils.constants import JSON_FILE_MAX_SIZE
 
 DELIMITER_MAP = {"TorchScript": '.', "TorchExport": '_'}
-MAX_FILE_READ_SIZE = 31457280  # 30 * 1024 * 1024, 30MB
 
 
 class TorchDumpFileReader(DumpFileReader):
@@ -85,29 +82,29 @@ class TorchDumpFileReader(DumpFileReader):
                     key_none = jit_node_front_list[-1]
         return key_none
 
-    def _extract_key_from_fx_node(self, jit_node: str) -> Optional[str]:
-        #jit_node示例: "/layer1/0/relu/relu_1"
-        jit_node = jit_node.split("/")
-        if len(jit_node) < 3:
+    def _extract_key_from_fx_node(self, fx_node: str) -> Optional[str]:
+        #fx_node示例: "/layer1/0/relu/relu_1"
+        fx_node = fx_node.split("/")
+        if len(fx_node) < 3:
             return None
-        jit_node = jit_node[1:-1]
+        fx_node = fx_node[1:-1]
         # 对每个node处理, 去除下划线分隔
-        jit_node = [node.replace('_', '.') for node in jit_node]
+        fx_node = [node.replace('_', '.') for node in fx_node]
 
         #模型经过fxGraph->export->compile后，dump下来的downsample算子在映射表中多一个下划线后缀
-        cpu_key = ".".join(jit_node).strip('_')
+        cpu_key = ".".join(fx_node).strip('_')
         return cpu_key
 
     def _extract_key(self, data, key_to_folder: dict, key_to_id: dict):
         for fusion_op, details in data.items():
             id_ = details.get('id', float('inf'))
-            jit_node = details.get('jit_node', '')
-            if jit_node == '':
+            torch_node = details.get('jit_node', '')
+            if not torch_node:
                 continue
             if self.torch_mode == "TorchScript":
-                key = self._extract_key_from_jit_node(jit_node)
+                key = self._extract_key_from_jit_node(torch_node)
             else:
-                key = self._extract_key_from_fx_node(jit_node)
+                key = self._extract_key_from_fx_node(torch_node)
             if key is not None:
                 key_to_folder[fusion_op] = key
                 key_to_id[key] = id_
@@ -117,8 +114,7 @@ class TorchDumpFileReader(DumpFileReader):
         key_to_id = {}
         json_path = os.path.join(self.json_path, 'op_map_updated.json')
 
-        Rule.input_file().check(json_path, will_raise=True)
-        with ms_open(json_path, 'r', max_size=TENSOR_MAX_SIZE) as f:
+        with ms_open(json_path, max_size=JSON_FILE_MAX_SIZE) as f:
             data = json.load(f)
             self._extract_key(data, key_to_folder, key_to_id)
 

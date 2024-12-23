@@ -5,7 +5,7 @@
 
 ### 函数原型
 ```python
-CompressConfig(do_pseudo_sparse=False, sparse_ratio=1, is_debug=False, compress_disable_layers=None, record_detail_root=’./’, multiprocess_num=1)
+CompressConfig(do_pseudo_sparse=False, sparse_ratio=1, is_debug=False, compress_disable_layers=None, record_detail_root='./', multiprocess_num=1)
 ```
 
 ### 参数说明
@@ -21,5 +21,5 @@ CompressConfig(do_pseudo_sparse=False, sparse_ratio=1, is_debug=False, compress_
 ### 调用示例
 ```python
 from automl.modeslim.pytorch.weight_compression import CompressConfig
-compress_config = CompressConfig(do_pseudo_sparse=False, sparse_ratio=1, is_debug=True, compress_disable_layer=None, record_detail_root=save_root, multiprocess_num=8)
+compress_config = CompressConfig(do_pseudo_sparse=False, sparse_ratio=1, is_debug=True, compress_disable_layers=None, record_detail_root=save_root, multiprocess_num=8)
 ```

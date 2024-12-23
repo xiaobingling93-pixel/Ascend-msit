@@ -113,10 +113,15 @@ class OldQuantConfig:
         self._check_lowbit_config()
         self._check_dynamic_config()
 
-        self.model_quant_type = QuantType.get_quant_type(w_bit=self.w_bit, a_bit=self.a_bit,
-                                                         is_sparse=self.co_sparse,
-                                                         is_dynamic=self.is_dynamic,
-                                                         is_lowbit=self.is_lowbit)
+        params = {
+            'w_bit': self.w_bit, 
+            'a_bit': self.a_bit, 
+            'w_method': "None",  # 根据实际状况填写
+            'is_sparse': self.co_sparse, 
+            'is_dynamic': self.is_dynamic, 
+            'is_lowbit': self.is_lowbit
+        }
+        self.model_quant_type = QuantType.get_quant_type(params)
         self.w_hessian, self.hqq = WeightQuantMethod.get_wmethod_config(w_method)
         WeightQuantMethod.check_quant_type(self.model_quant_type, w_method=w_method)
         check_type(self.disable_last_linear, bool, param_name='disable_last_linear')

@@ -19,6 +19,8 @@ from accelerate.hooks import add_hook_to_module, remove_hook_from_module
 from ascend_utils.common.security.type import check_mapping_element
 
 from msmodelslim import logger as msmodelslim_logger
+from msmodelslim.pytorch.llm_ptq.hooks.factory import is_deepseek_v2_chat, is_deepseek_v2_lite, \
+    get_process_hooks
 from msmodelslim.pytorch.llm_ptq.accelerate_adapter import enable_adapter, check_model_compatible, \
     get_offloaded_dataset, MemoryStateDictConfig, DiskStateDictConfig, copy_offloaded_state_dict
 from msmodelslim.pytorch.llm_ptq.accelerate_adapter.lazy_handler import LazyTensor, handle_lazy_tensor
@@ -154,6 +156,7 @@ class Calibrator(object):
         self.quant_linear_names = None
         self.act_states = None
         self.rollback_names_process(model)
+        self.is_deepseek_v2 = is_deepseek_v2_chat(model) or is_deepseek_v2_lite(model)
         if self.cfg.use_fa_quant:
             configure_fa(model, tp_size=self.cfg.fa_tp_size)
 
@@ -569,16 +572,20 @@ class Calibrator(object):
                     quant_param_name, self.quant_model_json_description.model_quant_type)
 
     def set_quant_safetensor(self, ori_model_state_dict_name, safetensor_weight):
+        model_quant_type = self.quant_model_json_description.model_quant_type
+        if "mlp" in ori_model_state_dict_name and self.is_deepseek_v2:
+            if self.quant_model_json_description.model_quant_type is QuantType.W8A8:
+                model_quant_type = QuantType.W8A8_DYNAMIC
         safetensor_weight[ori_model_state_dict_name] = self.quant_param_dict.get(ori_model_state_dict_name)
         self.quant_model_json_description.change_weight_type(
             ori_model_state_dict_name,
-            self.quant_model_json_description.model_quant_type)
+            model_quant_type)
         # 将该量化linear的附属参数，scale、offset 等加入safetensor_weight
         if ori_model_state_dict_name in self.quantized_module_param_dict.keys():
             for quant_param_name in self.quantized_module_param_dict.get(ori_model_state_dict_name):
                 safetensor_weight[quant_param_name] = self.quant_param_dict.get(quant_param_name)
                 self.quant_model_json_description.change_weight_type(
-                    quant_param_name, self.quant_model_json_description.model_quant_type)
+                    quant_param_name, model_quant_type)
 
     def set_fa_quant_safetensor(self, attention_module_name, safetensor_weight):
         for quant_param_name in self.fa_module_param_dict.get(attention_module_name):
@@ -730,14 +737,19 @@ class Calibrator(object):
                                                        tensor=save_quant_weight, mod=module)
                     self.quant_param_dict[name + '.weight'] = save_quant_weight
 
+                    #所有专家层都使用动态量化
+                    model_quant_type = self.cfg.model_quant_type 
+                    if "mlp" in name and self.is_deepseek_v2 and model_quant_type is QuantType.W8A8:
+                        model_quant_type = QuantType.W8A8_DYNAMIC
+
                     # W4A16/W8A16 需要提供 weight_scale、weight_offset
-                    if self.cfg.model_quant_type in [QuantType.W8A16, QuantType.W4A16, QuantType.W8A8_DYNAMIC]:
+                    if model_quant_type in [QuantType.W8A16, QuantType.W4A16, QuantType.W8A8_DYNAMIC]:
                         self.quant_param_dict[name + '.weight_scale'] = weight_scale
                         self.quant_param_dict[name + '.weight_offset'] = weight_offset
                         self.quantized_module_param_dict[name + '.weight'].append(name + '.weight_scale')
                         self.quantized_module_param_dict[name + '.weight'].append(name + '.weight_offset')
                     # W8A8/W8A8S 需要提供 deq_scale、quant_bias、input_scale、input_offset
-                    if self.cfg.model_quant_type in [QuantType.W8A8, QuantType.W8A8S]:
+                    if model_quant_type in [QuantType.W8A8, QuantType.W8A8S]:
                         input_scale = module.quant_input.input_scale.cpu()
                         input_offset = module.quant_input.input_offset.cpu()
                         self.quant_param_dict[name + '.input_scale'] = input_scale
@@ -834,14 +846,15 @@ class Calibrator(object):
     def run_datafree_after_calib(self):
         # 将稀疏模型校准集没有运行的部分切换成data-free模式
         for name, module in self.model.named_modules():
-            if isinstance(module, LinearQuantizer) and module.quant_weight.weight_scale is None:
-                if module.quant_weight.w_hessian:
-                    module.quant_weight.w_hessian = False
-                    self.logger.info(f"run MIN-MAX quantization on linear layer: {name}")
-                module.quant_weight(module.weight)
-            elif isinstance(module, LinearNf4Quantizer):
-                self.logger.info(f"Running in Data-Free mode, quantizing the layer into NF4 type: {name}")
-                module.quant_weight()
+            with PrepareWeight(module):
+                if isinstance(module, LinearQuantizer) and module.quant_weight.weight_scale is None:
+                    if module.quant_weight.w_hessian:
+                        module.quant_weight.w_hessian = False
+                        self.logger.info(f"run MIN-MAX quantization on linear layer: {name}")
+                    module.quant_weight(module.weight)
+                elif isinstance(module, LinearNf4Quantizer):
+                    self.logger.info(f"Running in Data-Free mode, quantizing the layer into NF4 type: {name}")
+                    module.quant_weight()
 
     def run_amp(self):
         max_input_dict = {}
@@ -958,7 +971,11 @@ class Calibrator(object):
                     elif self.cfg.w_method in QuantType.NF4:
                         quant_mod = LinearNf4Quantizer(cfg=self.cfg, logger=self.logger)
                     elif self.cfg.model_quant_type is not QuantType.W8A8S:
-                        quant_mod = LinearQuantizer(cfg=self.cfg, logger=self.logger)
+                        is_dynamic = self.cfg.is_dynamic
+                        if "mlp" in name and self.is_deepseek_v2:
+                            if self.cfg.model_quant_type is QuantType.W8A8:
+                                is_dynamic = True
+                        quant_mod = LinearQuantizer(cfg=self.cfg, logger=self.logger, is_dynamic=is_dynamic)
                     else:
                         quant_mod = LinearSparseQuantizer(cfg=self.cfg, logger=self.logger)
                     quant_mod.set_param(mod)
@@ -1097,12 +1114,14 @@ def enable_quantization_by_module(name, module, act_states):
         states_name = ".".join(name.split(".")[:-3])
     else:
         states_name = ".".join(name.split(".")[:-1])
+    range_param = 0
     if states_name in act_states:
         abs_max_tensor = max(abs(act_states[states_name]["t_max"]), abs(act_states[states_name]["t_min"]))
         range_param = abs_max_tensor / act_states[states_name]["std"]
-        module.enable_quantization(name, range_param)
-        if module.is_input:
-            module.init_act_and_observer(module.cfg)
+        
+    module.enable_quantization(name, range_param)
+    if module.is_input:
+        module.init_act_and_observer(module.cfg)
 
 
 def enable_quantization(model, act_states, logger=None, use_fa_quant=False):

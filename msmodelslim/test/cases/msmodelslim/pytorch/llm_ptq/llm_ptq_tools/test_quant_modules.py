@@ -230,7 +230,7 @@ class TestLinearQuantizer:
         expected_result = torch.tensor([[4.]])
         assert torch.equal(result, expected_result)
 
-    def test_forward_should_return_expected_result(self):
+    def test_forward_with_int_infer_should_return_expected_result(self):
         # 普通的w8a8场景的LinearQuantizer.forward的int_infer测试
         cfg = QuantConfig(w_bit=8, a_bit=8).weight_quant()
         linear = torch.nn.Linear(in_features=4, out_features=1, bias=False, dtype=torch.float32)
@@ -253,7 +253,7 @@ class TestLinearQuantizer:
         expected_result = torch.tensor([[4.], [4.]])
         assert torch.equal(result, expected_result)
 
-    def test_forward_with_int_bias_should_return_expected_result(self):
+    def test_forward_with_int_infer_and_int_bias_should_return_expected_result(self):
         # 普通的w8a8场景的带int bias的LinearQuantizer.forward的int_infer测试
         cfg = QuantConfig(w_bit=8, a_bit=8).weight_quant()
         linear = torch.nn.Linear(in_features=4, out_features=1, bias=True, dtype=torch.float32)
