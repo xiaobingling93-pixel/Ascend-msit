@@ -540,6 +540,8 @@ class AntiOutlier(object):
         return calib_data
 
     def check_multimodel(self, model):
+        if not hasattr(model.config, 'architectures'):
+            return False
         if(model.config.architectures[0] == 'LlavaForConditionalGeneration' or 
             (model.config.architectures[0]  == 'QWenLMHeadModel' and 
             hasattr(model.config, 'visual'))  ):
