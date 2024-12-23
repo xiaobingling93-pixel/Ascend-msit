@@ -871,7 +871,7 @@ class Calibrator(object):
                 module.disable_input = True
                 module.disable_quant_weight()
         self.rollback_names.extend(layers_to_disable)
-        self.logger.info('The following linear layers will continue to'
+        self.logger.info('The following linear layers will continue to '
                          'use floating-point weights for forward computation:\n\t'
                          + '\n\t'.join([str(name) for name in sorted(self.rollback_names)]))
 
@@ -883,7 +883,7 @@ class Calibrator(object):
             self.logger.warning("`fa_amp` exceeds the total attention layer number. Therefore, "
                                 "only up to the total attention layers will skip quantization")
         disabled_module_names = fully_analyze_activation(qkv_states_record, self.cfg.fa_amp)
-        self.logger.info('The following attention layers will continue to'
+        self.logger.info('The following attention layers will continue to '
                          'use floating-point weights for forward computation:\n\t'
                          + '\n\t'.join([str(name) for name in sorted(disabled_module_names)]))
 
