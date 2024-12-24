@@ -2,10 +2,11 @@
 
 import argparse
 import json
-import torch
-import numpy as np
-
 from typing import List
+
+import numpy as np
+import torch
+
 
 from safetensors.torch import load_file, save_file, safe_open
 
