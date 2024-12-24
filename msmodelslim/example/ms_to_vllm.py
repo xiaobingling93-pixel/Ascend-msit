@@ -1,12 +1,9 @@
 # Copyright Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
 
-
-
 import argparse
 import json
 import torch
 import numpy as np
-
 from typing import List
 
 from safetensors.torch import load_file, save_file, safe_open
@@ -56,7 +53,7 @@ def gptq_qweight_pack(iweight:torch.Tensor, w_bit:4):
     i = 0
     row = 0
     storage_bits = 32
-    intweight = intweight.numpy().astype(np.uint32)
+    iweight = iweight.numpy().astype(np.uint32)
     qweight = np.zeros((iweight.shape[0] // storage_bits * w_bit, iweight.shape[1]), dtype=np.uint32)
     while row < qweight.shape[0]:
         if w_bit in [4, 8]:
@@ -104,10 +101,7 @@ def convert_ms_to_vllm(targer_tool, w_bit, weight_dict, json_dict):
                         iweights  = apply_order(tensor, w_bit, direction, order)
                         qweight = awq_pack(iweights, w_bit)
                     else:
-                        order = GPTQ_PACK_ORDER
-                        iweights  = apply_order(tensor, w_bit, direction, order)
                         qweight = gptq_qweight_pack(iweights, w_bit)
-
                     vllm_weight_dict[vllm_name] = qweight
                 
                 elif name.endswith('.weight_scale'):
@@ -123,8 +117,6 @@ def convert_ms_to_vllm(targer_tool, w_bit, weight_dict, json_dict):
                         izeros = apply_order(tensor, w_bit, direction, order)
                         qzeros = awq_pack(izeros, w_bit, direction)
                     else:
-                        order = GPTQ_PACK_ORDER
-                        izeros = apply_order(tensor, w_bit, direction, order)
                         qzeros = gptq_qzeros_pack(izeros, w_bit)
                     vllm_weight_dict[vllm_name] = qzeros
                 
@@ -148,11 +140,11 @@ def load_json_info(json_file_path):
                     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", type=str, default=None, type=ArgsChecker(Rule.config_file()))
-    parser.add_argument("--json", type=str, default=None, type=ArgsChecker(Rule.config_file()))
+    parser.add_argument("--model", type=str, default=None, help="Quantied safetensors file path")
+    parser.add_argument("--json", type=str, default=None, help="Quantied description file path")
     parser.add_argument("--save_path", type=str, default='res.safetensors', help="The path to save converted quant weights")
-    parser.add_argument("--w_bit", type=int, default=4,type=ArgsChecker(Rule.to_int().greater_than(0)))
-    parser.add_argument("--target_tool", type=str, default="awq")
+    parser.add_argument("--w_bit", type=int, default=4, help="Quantied weight bits")
+    parser.add_argument("--target_tool", type=str, default="awq", help="target tool, value include awq and gptq")
     args = parser.parse_args()
 
     save_path = args.save_path
