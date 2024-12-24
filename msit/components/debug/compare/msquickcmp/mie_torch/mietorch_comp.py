@@ -103,7 +103,8 @@ class MIETorchCompare:
     
     def save_compare_result_to_csv(self, all_rows_data: list):
         if not all_rows_data:
-            logger.info("No data to save.")
+            logger.info("There is no comparison data to save.")
+            return
         
         sorted_rows = sorted(
             all_rows_data,
