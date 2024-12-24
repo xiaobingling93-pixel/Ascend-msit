@@ -21,7 +21,7 @@ import torch
 from components.debug.compare.utils.base_dump_reader import DumpFileReader
 from components.utils.file_open_check import ms_open
 from components.utils.util import safe_torch_load
-from components.utils.constants import TEXT_FILE_MAX_SIZE
+from components.utils.constants import JSON_FILE_MAX_SIZE
 
 DELIMITER_MAP = {"TorchScript": '.', "TorchExport": '_'}
 
@@ -114,7 +114,7 @@ class TorchDumpFileReader(DumpFileReader):
         key_to_id = {}
         json_path = os.path.join(self.json_path, 'op_map_updated.json')
 
-        with ms_open(json_path, max_size=TEXT_FILE_MAX_SIZE) as f:
+        with ms_open(json_path, max_size=JSON_FILE_MAX_SIZE) as f:
             data = json.load(f)
             self._extract_key(data, key_to_folder, key_to_id)
 
