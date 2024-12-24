@@ -4,6 +4,7 @@ import argparse
 import json
 import torch
 import numpy as np
+
 from typing import List
 
 from safetensors.torch import load_file, save_file, safe_open
@@ -101,7 +102,7 @@ def convert_ms_to_vllm(targer_tool, w_bit, weight_dict, json_dict):
                         iweights  = apply_order(tensor, w_bit, direction, order)
                         qweight = awq_pack(iweights, w_bit)
                     else:
-                        qweight = gptq_qweight_pack(iweights, w_bit)
+                        qweight = gptq_qweight_pack(tensor, w_bit)
                     vllm_weight_dict[vllm_name] = qweight
                 
                 elif name.endswith('.weight_scale'):
@@ -117,7 +118,7 @@ def convert_ms_to_vllm(targer_tool, w_bit, weight_dict, json_dict):
                         izeros = apply_order(tensor, w_bit, direction, order)
                         qzeros = awq_pack(izeros, w_bit, direction)
                     else:
-                        qzeros = gptq_qzeros_pack(izeros, w_bit)
+                        qzeros = gptq_qzeros_pack(tensor, w_bit)
                     vllm_weight_dict[vllm_name] = qzeros
                 
                 elif 'module.weight' in name and 'model.norm' not in name:
