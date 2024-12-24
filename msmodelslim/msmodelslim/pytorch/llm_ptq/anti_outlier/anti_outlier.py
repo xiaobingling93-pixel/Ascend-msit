@@ -593,7 +593,8 @@ class AntiOutlier(object):
             num_attention_heads = self.get_num_attention_heads()
             fusion_kwargs = _PREDEFINED_FUSION_KWARGS[self.cfg.arch] \
                 if self.cfg.arch in _PREDEFINED_FUSION_KWARGS else {}
-        scale_min = SCALE_MIN_SD3 if self.cfg.arch in _PREDEFINED_FUSION_KWARGS else SCALE_MIN_LLM
+        scale_min = SCALE_MIN_SD3 if self.cfg.arch in _PREDEFINED_FUSION_KWARGS \
+            else SCALE_MIN_LLM
         for norm_name_group in tqdm(self.norm_linear_subgraph.keys()):
             linear_names = self.norm_linear_subgraph[norm_name_group]
             if isinstance(norm_name_group, str):
