@@ -230,7 +230,7 @@ class AntiOutlier(object):
             norm_class_name=None,
     ):
         self.logger = msmodelslim_logger
-        if self.check_multimodel(model) and cfg.anti_method == 'm2':
+        if self.is_model_multimodel(model, cfg):
             self.cfg = cfg
             self.model = model
             self.calib_data = calib_data
@@ -542,13 +542,16 @@ class AntiOutlier(object):
 
         return calib_data
 
-    def check_multimodel(self, model):
+    def is_model_multimodel(self, model, cfg):
         if not hasattr(model.config, 'architectures'):
             return False
-        if (model.config.architectures[0] == 'LlavaForConditionalGeneration' or 
-            (model.config.architectures[0] == 'QWenLMHeadModel' and 
+        if(model.config.architectures[0] == 'LlavaForConditionalGeneration' or 
+            (model.config.architectures[0]  == 'QWenLMHeadModel' and 
             hasattr(model.config, 'visual'))):
-            return True
+            if(cfg.anti_method == 'm2'):
+                return True
+            else:
+                raise ValueError("anti_method must be m2 while using multimodel qwen-vl or llava-v1.5")
         return False
 
     def anti_for_multimodel(self, cfg, model):
@@ -579,7 +582,7 @@ class AntiOutlier(object):
                 del mod
 
     def _process(self):
-        if self.check_multimodel(self.model) and self.cfg.anti_method == 'm2':
+        if self.is_model_multimodel(self.model, self.cfg):
             self.anti_for_multimodel(self.cfg, self.model)
             data = self.calib_data[0]
             if isinstance(data, tuple) or isinstance(data, list):
@@ -902,7 +905,6 @@ class LlavaQuantDecoder(nn.Module):
         self.input_layernorm = org_layer.input_layernorm 
         self.post_attention_layernorm = org_layer.post_attention_layernorm
         self.act_fn = org_layer.mlp.act_fn
-
         self.layername = layername
 
         self.cac_migrate_attn = True
