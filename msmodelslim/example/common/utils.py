@@ -20,14 +20,18 @@ class SafeGenerator:
         model_path = get_valid_read_path(model_path, is_dir=True, check_user_stat=False)
         try:
             config = AutoConfig.from_pretrained(model_path, local_files_only=True, **kwargs)
-        except EnvironmentError:
-            raise EnvironmentError("Get config from pretrained failed, please check config file in the model path. "
-                                "If the file exists, "
-                                "make sure the folder's owner has execute permission.") from None
-        except Exception:
-            raise ValueError("Get config from pretrained failed, please check config file in the model path. "
-                            "If the file exists, "
-                            "make sure the folder's owner has execute permission.") from None
+        except EnvironmentError as env_err:
+            raise EnvironmentError(
+                f"Get model from pretrained failed, please check model weights files in the model path. "
+                f"If the file exists, make sure the folder's owner has execute permission."
+                f"Original error: {env_err}"
+            ) from env_err
+        except Exception as err:
+            raise ValueError(
+                f"Get model from pretrained failed, please check model weights files in the model path. "
+                f"If the file exists, make sure the folder's owner has execute permission."
+                f"Original error: {err}"
+            ) from err
         return config
 
     @staticmethod
@@ -35,16 +39,18 @@ class SafeGenerator:
         model_path = get_valid_read_path(model_path, is_dir=True, check_user_stat=False)
         try:
             model = AutoModelForCausalLM.from_pretrained(model_path, local_files_only=True, **kwargs)
-        except EnvironmentError:
-            raise EnvironmentError("Get model from pretrained failed, "
-                                "please check model weights files in the model path. "
-                                "If the file exists, "
-                                "make sure the folder's owner has execute permission.") from None
-        except Exception:
-            raise ValueError("Get model from pretrained failed, "
-                            "please check the input parameters model_path and kwargs. "
-                            "If the file exists, "
-                            "make sure the folder's owner has execute permission.") from None
+        except EnvironmentError as env_err:
+            raise EnvironmentError(
+                f"Get model from pretrained failed, please check model weights files in the model path. "
+                f"If the file exists, make sure the folder's owner has execute permission."
+                f"Original error: {env_err}"
+            ) from env_err
+        except Exception as err:
+            raise ValueError(
+                f"Get model from pretrained failed, please check model weights files in the model path. "
+                f"If the file exists, make sure the folder's owner has execute permission."
+                f"Original error: {err}"
+            ) from err
         return model
 
     @staticmethod
@@ -52,16 +58,18 @@ class SafeGenerator:
         model_path = get_valid_read_path(model_path, is_dir=True, check_user_stat=False)
         try:
             tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True, **kwargs)
-        except EnvironmentError:
-            raise EnvironmentError("Get tokenizer from pretrained failed, "
-                                "please check tokenizer files in the model path. "
-                                "If the file exists, "
-                                "make sure the folder's owner has execute permission.") from None
-        except Exception:
-            raise ValueError("Get tokenizer from pretrained failed, "
-                            "please check the input parameters model_path and kwargs. "
-                            "If the file exists, "
-                            "make sure the folder's owner has execute permission.") from None
+        except EnvironmentError as env_err:
+            raise EnvironmentError(
+                f"Get model from pretrained failed, please check model weights files in the model path. "
+                f"If the file exists, make sure the folder's owner has execute permission."
+                f"Original error: {env_err}"
+            ) from env_err
+        except Exception as err:
+            raise ValueError(
+                f"Get model from pretrained failed, please check model weights files in the model path. "
+                f"If the file exists, make sure the folder's owner has execute permission."
+                f"Original error: {err}"
+            ) from err
         return tokenizer
 
     @staticmethod

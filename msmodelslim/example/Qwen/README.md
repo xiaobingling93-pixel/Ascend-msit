@@ -60,7 +60,7 @@
   以及量化参数配置类 [Calibrator](https://gitee.com/ascend/msit/blob/dev/msmodelslim/docs/Python-API接口说明/大模型压缩接口/大模型量化接口/PyTorch/Calibrator.md)
 
 ### 使用案例
-- 请将{浮点权重路径}和{量化权重路径}替换为用户实际路径.
+- 请将{浮点权重路径}和{量化权重路径}替换为用户实际路径。
 - 如果需要使用npu多卡量化，请先配置环境变量，支持多卡量化：
   ```shell
   export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
@@ -68,37 +68,37 @@
   ```
   
 #### 1. Qwen1系列
-##### Qwen1-14b推荐使用W8A8 + Antioulier（离群值抑制）量化
+##### Qwen1-14b W8A8量化
 生成Qwen1-14b模型量化权重，antioutlier使用m2算法配置，使用min-max量化方式，在CPU上进行运算
   ```shell
   python3 quant_qwen.py --model_path {浮点权重路径} --save_directory {W8A8量化权重路径} --calib_file ../common/data_list_1.jsonl --w_bit 8 --a_bit 8 --device_type cpu  --anti_method m2 --act_method 1 --model_type qwen1
   ```
 
-##### Qwen1-72b推荐使用W8A16量化
+##### Qwen1-72b W8A16量化
 生成Qwen1-14b模型量化权重，激活值量化使用自动混合量化方式，在CPU上进行运算
   ```shell
   python3 quant_qwen.py --model_path {浮点权重路径} --save_directory {W8A16量化权重路径} --calib_file ../common/data_list_2.jsonl --w_bit 8 --a_bit 16 --device_type cpu  --act_method 3 --model_type qwen1
   ```
 #### 2. Qwen1.5系列
-##### Qwen1.5-14b, Qwen1.5-32b推荐使用W8A8 量化
+##### Qwen1.5-14b, Qwen1.5-32b W8A8 量化
 生成量化权重，使用min-max量化方式，校准数据集使用50条BoolQ数据，在npu上进行运算
   ```shell
   python3 quant_qwen.py --model_path {浮点权重路径} --save_directory {W8A8量化权重路径} --calib_file ../common/boolq.jsonl --w_bit 8 --a_bit 8 --device_type npu 
   ```
-稀疏量化权重请使用以下指令生成
+ 稀疏量化权重请使用以下指令生成
   ```shell
-  python3 quant_qwen.py --model_path {浮点权重路径} --save_directory {W4A8量化权重路径} --calib_file ../common/cn_en.jsonl  --use_sigma True --is_lowbit True 
+  python3 quant_qwen.py --model_path {浮点权重路径} --save_directory {W8A8量化权重路径} --calib_file ../common/cn_en.jsonl  --use_sigma True --is_lowbit True 
   ```
-##### Qwen1.5-72b 推荐使用W8A16量化
+##### Qwen1.5-72b W8A16量化
   ```shell
   python3 quant_qwen.py --model_path {浮点权重路径} --save_directory {W8A16量化权重路径}  --w_bit 8 --a_bit 16 --device_type npu 
   ```
 #### 3. Qwen2系列
-##### Qwen2-7b 推荐使用W8A8量化
+##### Qwen2-7b W8A8量化
   ```shell
   python3 quant_qwen.py --model_path {浮点权重路径} --save_directory {W8A8量化权重路径} --calib_file ../common/boolq.jsonl --w_bit 8 --a_bit 8 --device_type npu 
   ```
-##### Qwen2-72b 推荐使用W8A16量化
+##### Qwen2-72b W8A16量化
   ```shell
   python3 quant_qwen.py --model_path {浮点权重路径} --save_directory {W8A16量化权重路径}  --w_bit 8 --a_bit 16 --device_type npu 
   ```
@@ -110,7 +110,7 @@
   python3 quant_qwen.py --model_path {浮点权重路径} --save_directory {W4A8量化权重路径} --calib_file ../common/cn_en.jsonl --w_bit 4 --a_bit 8 --fraction 0.011 --co_sparse True --device_type npu --use_sigma True --is_lowbit True
   ```
 
-##### Qwen2-72b KV Cache 推荐使用W8A8量化
+##### Qwen2-72b KV Cache W8A8量化
   ```shell
   export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
   export PYTORCH_NPU_ALLOC_CONF=expandable_segments:False
@@ -119,7 +119,7 @@
   ```
 
 #### 4. Qwen2.5系列
-##### Qwen2.5-7b, Qwen2.5-14b, Qwen2.5-32b推荐使用W8A8 量化
+##### Qwen2.5-7b, Qwen2.5-14b, Qwen2.5-32b W8A8 量化
   ```shell
   python3 quant_qwen.py --model_path {浮点权重路径} --save_directory {W8A8量化权重路径} --calib_file ../common/boolq.jsonl --w_bit 8 --a_bit 8 --device_type npu  
   ```
