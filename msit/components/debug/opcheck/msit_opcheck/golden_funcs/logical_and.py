@@ -16,7 +16,7 @@
 import numpy as np
 
 from msit_opcheck.graph_parser import OpInfo
-from msit_opcheck.utils  import broadcast_to_maxshape
+from msit_opcheck.utils import broadcast_to_maxshape
 
 
 def log_and(context: OpInfo):

@@ -66,7 +66,7 @@ def _broadcast_to(context: OpInfo):
     input_shape_holder = tf.Variable(brc_shape)
     out = tf.broadcast_to(input_x_holder, input_shape_holder)
 
-    with tf.compat.v1.Session()  as sess:
+    with tf.compat.v1.Session() as sess:
         result = sess.run(out, feed_dict={input_x_holder: input_x, input_shape_holder: brc_shape})
     return [result]
 
@@ -92,7 +92,7 @@ def _mul(context: OpInfo):
         if input_dtype[0] == "bfloat16":
             x1 = x1.astype("float32")
             x2 = x2.astype("float32")
-        if input_dtype[0]!=input_dtype[1] :
+        if input_dtype[0] != input_dtype[1] :
             x1 = x1.astype("float32")
             x2 = x2.astype("float32")
         tensor_x1 = tf.compat.v1.placeholder(x1.dtype, shape=x1.shape)
@@ -449,10 +449,10 @@ def _floor_div(context: OpInfo):
     output_dtype = context.param.get("output_dtypes")[0]
     if "bfloat16" in str(input0.dtype):
         x, y = input0.astype("float32"), input1.astype("float32")
-        res = np.floor(np.divide(x,y))
+        res = np.floor(np.divide(x, y))
         return res.astype(input0.dtype, copy=False)
     else:
-        res = np.floor(np.divide(input0,input1)).astype(output_dtype)
+        res = np.floor(np.divide(input0, input1)).astype(output_dtype)
         return res
 
 
@@ -547,14 +547,14 @@ def _relu(context: OpInfo):
 def _sqrt_grad(context: OpInfo):
     input0, input1 = context.param.get("input_arrays")
     output_dtype = context.param.get("output_dtypes")[0]
-    if str(output_dtype)  == "bfloat16":
+    if str(output_dtype) == "bfloat16":
         input0 = input0.astype("float32")
         input1 = input1.astype("float32")
     div = numpy.divide(input1, input0)
     if output_dtype == "float16":
         div = div.astype("float16")
     res = numpy.multiply(0.5, div)
-    if str(output_dtype)  == "bfloat16":
+    if str(output_dtype) == "bfloat16":
         res = res.astype(tf.bfloat16.as_numpy_dtype)
     return res
 
@@ -632,9 +632,9 @@ def _apply_gradient_descent(context: OpInfo):
 
 def _cast(context: OpInfo):
     input0 = context.param.get("input_arrays")[0]
-    type = context.param.get("stc_input_dtypes")[0]
+    ori_type = context.param.get("stc_input_dtypes")[0]
     dst_type = context.param.get("output_dtypes")[0]
-    if type == "float32" and dst_type == "int64":
+    if ori_type == "float32" and dst_type == "int64":
         out = torch.tensor(input0, dtype=torch.int64).numpy()
         return out
     if dst_type == "complex32":
@@ -643,9 +643,9 @@ def _cast(context: OpInfo):
         imag = numpy.zeros(_shape + [1], dtype=numpy.float16)
         res = numpy.concatenate((input0, imag), axis=-1)
         return res
-    if type == "uint1":
+    if ori_type == "uint1":
         input0 = np.unpackbits(input0)
-    if type == "float32" and dst_type == "float16":
+    if ori_type == "float32" and dst_type == "float16":
         out = torch.tensor(input0, dtype=torch.float16).numpy()
         return out
     if dst_type == "complex64":
@@ -672,7 +672,7 @@ def _adds(context: OpInfo):
     if "bfloat16" in str(input0.dtype):
         x = input0.astype("float32")
         res = numpy.add(x, value)
-        return res.astype(tf.bfloat16.as_numpy_dtype,copy=False)
+        return res.astype(tf.bfloat16.as_numpy_dtype, copy=False)
     else:
         res = numpy.add(input0, value)
         return res.astype(context.param.get("output_dtypes")[0], copy=False)

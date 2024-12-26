@@ -201,7 +201,7 @@ class OpChecker:
             case_manager = CaseManager(self.precision_metric, result_csv_path)
 
             # 2.遍历npy_path，将算子信息添加到self.cases_info
-            op_info_dict =  get_all_opinfo(self.ge_json_path, graph_name)
+            op_info_dict = get_all_opinfo(self.ge_json_path, graph_name)
             self.bind_op_info_to_case_info(self.npy_path, op_info_dict)
 
             logger_text = f"Total {len(self.cases_info)} cases found under path: {self.dump_data_path}"

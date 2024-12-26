@@ -34,6 +34,7 @@ def _assign_add(context: OpInfo):
     else:
         return result
 
+
 def _assign_sub(context: OpInfo):
     var = context.param.get("input_arrays")[0]
     value = context.param.get("input_arrays")[1]

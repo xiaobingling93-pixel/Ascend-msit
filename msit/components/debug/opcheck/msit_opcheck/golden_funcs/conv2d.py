@@ -26,8 +26,8 @@ def _conv2d(context: OpInfo):
     strides = context.param.get("strides")
     pads = context.param.get("pads")
     dilations = context.param.get("dilations")
-    groups = context.param.get('groups') #('groups', 1)
-    data_format = context.param.get("data_format") #("data_format", "NCHW")
+    groups = context.param.get('groups')  # ('groups', 1)
+    data_format = context.param.get("data_format")  # ("data_format", "NCHW")
     # 5HD input only
     if len(x.shape) != 5:
         raise RuntimeError("conv2d testcase golden function supports NC1HWC0 input only!")
@@ -37,24 +37,24 @@ def _conv2d(context: OpInfo):
     pad_top, pad_bottom, pad_left, pad_right = pads
     strideh, stridew = strides[h_index], strides[w_index]
     dilationh, dilationw = dilations[h_index], dilations[w_index]
-    IN, IC, IH, IW, C0 = x.shape
-    C1KHKW, Cout1, Cout0, C0 = conv_filter.shape
-    _, _, KH, KW = conv_filter_ori_shape
-    ON = IN
-    OC = Cout1 * Cout0
-    OH = (IH + pad_top + pad_bottom - (dilationh * (KH - 1) + 1)) // strideh + 1
-    OW = (IW + pad_left + pad_right - (dilationw * (KW - 1) + 1)) // stridew + 1
+    n, c, h, w, c0 = x.shape
+    c1khkw, target_c1, target_c0, c0 = conv_filter.shape
+    _, _, ori_h, ori_w = conv_filter_ori_shape
+    target_n = n
+    target_c = target_c1 * target_c0
+    target_h = (h + pad_top + pad_bottom - (dilationh * (ori_h - 1) + 1)) // strideh + 1
+    target_w = (w + pad_left + pad_right - (dilationw * (ori_w - 1) + 1)) // stridew + 1
     # 5HD to HWCN
-    x = x.transpose(0, 2, 3, 1, 4).reshape(IN, IH, IW, IC*C0).astype(np.float32)
+    x = x.transpose(0, 2, 3, 1, 4).reshape(n, h, w, c * c0).astype(np.float32)
     tensor_x = tf.compat.v1.placeholder(x.dtype, shape=x.shape)
     # x filter to NHWC
-    conv_filter = conv_filter.transpose(0, 3, 1, 2).reshape(C0*C1KHKW, Cout1, Cout0)
-    conv_filter = conv_filter.reshape(C0*IC, KH*KW, Cout1, Cout0)
-    conv_filter = conv_filter.transpose(1, 0, 2, 3).reshape(KH, KW, C0*IC, Cout1, Cout0)
-    conv_filter = conv_filter.reshape(KH, KW, C0*IC, Cout1*Cout0).astype(np.float32)
+    conv_filter = conv_filter.transpose(0, 3, 1, 2).reshape(c0 * c1khkw, target_c1, target_c0)
+    conv_filter = conv_filter.reshape(c0 * c, ori_h * ori_w, target_c1, target_c0)
+    conv_filter = conv_filter.transpose(1, 0, 2, 3).reshape(ori_h, ori_w, c0 * c, target_c1, target_c0)
+    conv_filter = conv_filter.reshape(ori_h, ori_w, c0 * c, target_c1 * target_c0).astype(np.float32)
     if groups > 1:
-        Cout_per_group = conv_filter.shape[3] // groups
-        Cin_per_group = conv_filter.shape[2] // groups
+        output_c_per_group = conv_filter.shape[3] // groups
+        input_c_per_group = conv_filter.shape[2] // groups
         split_data = tf.split(value=tensor_x,
                               num_or_size_splits=groups,
                               axis=3,
@@ -66,8 +66,8 @@ def _conv2d(context: OpInfo):
         for data in split_data:
 
             conv_filter_per_group = \
-                conv_filter[:, :, 0:Cin_per_group,
-                split_group_index * Cout_per_group: (split_group_index + 1) * Cout_per_group]
+                conv_filter[:, :, 0:input_c_per_group,
+                split_group_index * output_c_per_group: (split_group_index + 1) * output_c_per_group]
 
             tf_conv2d_result = tf.nn.conv2d(data, conv_filter_per_group,
                                             strides=(strideh, stridew),
@@ -77,7 +77,7 @@ def _conv2d(context: OpInfo):
                                             dilations=dilations)
             if bias is not None:
                 bias_split_data = \
-                    bias[split_group_index * Cout_per_group:(split_group_index + 1) * Cout_per_group]
+                    bias[split_group_index * output_c_per_group:(split_group_index + 1) * output_c_per_group]
                 tf_conv2d_result = tf.nn.bias_add(tf_conv2d_result, bias_split_data)
             split_group_index += 1
             split_per_group_conv.append(tf_conv2d_result)
@@ -109,8 +109,8 @@ def _conv2d(context: OpInfo):
         if fusion_mode is not None and (fusion_mode == "relu" or fusion_mode == "conv_relu"):
             out = np.maximum(out, 0)
     # NHWC to NC1HWC0
-    output = out.reshape((ON, OH, OW, OC // C0, C0)).transpose(0, 3, 1, 2, 4).astype(np.float16)
-    return output
+    res = out.reshape((target_n, target_h, target_w, target_c // c0, c0)).transpose(0, 3, 1, 2, 4).astype(np.float16)
+    return res
 
 
 def _conv2d_add(context: OpInfo):
@@ -132,16 +132,16 @@ def _conv2d_add(context: OpInfo):
     pad_top, pad_bottom, pad_left, pad_right = pads
     strideh, stridew = strides[h_index], strides[w_index]
     dilationh, dilationw = dilations[h_index], dilations[w_index]
-    IN, IC, IH, IW, C0 = x.shape
-    WC, WH, WW, WN, _ = conv_filter.shape
-    ON = IN
-    OC = WN
-    OH = (IH + pad_top + pad_bottom - (dilationh * (WH - 1) + 1)) // strideh + 1
-    OW = (IW + pad_left + pad_right - (dilationw * (WW - 1) + 1)) // stridew + 1
+    n, c, h, w, c0 = x.shape
+    wc, wh, ww, wn, _ = conv_filter.shape
+    target_n = n
+    target_c = wn
+    target_h = (h + pad_top + pad_bottom - (dilationh * (wh - 1) + 1)) // strideh + 1
+    target_w = (w + pad_left + pad_right - (dilationw * (ww - 1) + 1)) // stridew + 1
     # x filter to NHWC
-    x = x.transpose(0, 2, 3, 1, 4).reshape(IN, IH, IW, IC * C0).astype(np.float32)
+    x = x.transpose(0, 2, 3, 1, 4).reshape(n, h, w, c * c0).astype(np.float32)
     # 5HD to HWCN
-    conv_filter = conv_filter.transpose(1, 2, 0, 4, 3).reshape(WH, WW, WC * C0, WN).astype(np.float32)
+    conv_filter = conv_filter.transpose(1, 2, 0, 4, 3).reshape(wh, ww, wc * c0, wn).astype(np.float32)
     tensor_x = tf.compat.v1.placeholder(x.dtype, shape=x.shape)
     tensor_filter = tf.compat.v1.placeholder(conv_filter.dtype, shape=conv_filter.shape)
     tf_conv2d_result = tf.nn.conv2d(tensor_x, tensor_filter, strides=(strideh, stridew),
@@ -164,8 +164,8 @@ def _conv2d_add(context: OpInfo):
     if fusion_mode is not None and (fusion_mode == "add" or fusion_mode == "conv_add"):
         out = np.maximum(out, 0)
     # NHWC to NC1HWC0
-    output = out.reshape((ON, OH, OW, OC // C0, C0)).transpose(0, 3, 1, 2, 4).copy().astype(np.float16)
-    return output
+    res = out.reshape((target_n, target_h, target_w, target_c // c0, c0)).transpose(0, 3, 1, 2, 4).copy().astype(np.float16)
+    return res
 
 
 def _conv2d_mul(context: OpInfo):
@@ -175,9 +175,9 @@ def _conv2d_mul(context: OpInfo):
     strides = context.param.get("strides")
     pads = context.param.get("pads")
     dilations = context.param.get("dilations")
-    groups = context.param.get('groups') #('groups', 1)
-    data_format = context.param.get("data_format") #("data_format", "NCHW")
-    offset_x = context.param.get("offset_x") #("offset_x", 0)
+    groups = context.param.get('groups')  # ('groups', 1)
+    data_format = context.param.get("data_format")  # ("data_format", "NCHW")
+    offset_x = context.param.get("offset_x")  # ("offset_x", 0)
     # 5HD input only
     if len(x.shape) != 5:
         raise RuntimeError("conv2d testcase golden function supports NC1HWC0 input only!")
@@ -187,16 +187,16 @@ def _conv2d_mul(context: OpInfo):
     pad_top, pad_bottom, pad_left, pad_right = pads
     strideh, stridew = strides[h_index], strides[w_index]
     dilationh, dilationw = dilations[h_index], dilations[w_index]
-    IN, IC, IH, IW, C0 = x.shape
-    WC, WH, WW, WN, _ = conv_filter.shape
-    ON = IN
-    OC = WN
-    OH = (IH + pad_top + pad_bottom - (dilationh * (WH - 1) + 1)) // strideh + 1
-    OW = (IW + pad_left + pad_right - (dilationw * (WW - 1) + 1)) // stridew + 1
+    n, c, h, w, c0 = x.shape
+    wc, wh, ww, wn, _ = conv_filter.shape
+    target_n = n
+    target_c = wn
+    target_h = (h + pad_top + pad_bottom - (dilationh * (wh - 1) + 1)) // strideh + 1
+    target_w = (w + pad_left + pad_right - (dilationw * (ww - 1) + 1)) // stridew + 1
     # x filter to NHWC
-    x = x.transpose(0, 2, 3, 1, 4).reshape(IN, IH, IW, IC * C0).astype(np.float32)
+    x = x.transpose(0, 2, 3, 1, 4).reshape(n, h, w, c * c0).astype(np.float32)
     # 5HD to HWCN
-    conv_filter = conv_filter.transpose(1, 2, 0, 4, 3).reshape(WH, WW, WC * C0, WN).astype(np.float32)
+    conv_filter = conv_filter.transpose(1, 2, 0, 4, 3).reshape(wh, ww, wc * c0, wn).astype(np.float32)
     tensor_x = tf.compat.v1.placeholder(x.dtype, shape=x.shape)
     tensor_filter = tf.compat.v1.placeholder(conv_filter.dtype, shape=conv_filter.shape)
     tf_conv2d_result = tf.nn.conv2d(tensor_x, tensor_filter, strides=(strideh, stridew),
@@ -218,8 +218,8 @@ def _conv2d_mul(context: OpInfo):
     if fusion_mode is not None and (fusion_mode == "mul" or fusion_mode == "conv_mul"):
         out = np.maximum(out, 0)
     # NHWC to NC1HWC0
-    output = out.reshape((ON, OH, OW, OC // C0, C0)).transpose(0, 3, 1, 2, 4).copy().astype(np.float16)
-    return output
+    res = out.reshape((target_n, target_h, target_w, target_c // c0, c0)).transpose(0, 3, 1, 2, 4).copy().astype(np.float16)
+    return res
 
 
 def _conv2d_relu(context: OpInfo):
@@ -241,16 +241,16 @@ def _conv2d_relu(context: OpInfo):
     pad_top, pad_bottom, pad_left, pad_right = pads
     strideh, stridew = strides[h_index], strides[w_index]
     dilationh, dilationw = dilations[h_index], dilations[w_index]
-    IN, IC, IH, IW, C0 = x.shape
-    WC, WH, WW, WN, _ = conv_filter.shape
-    ON = IN
-    OC = WN
-    OH = (IH + pad_top + pad_bottom - (dilationh * (WH - 1) + 1)) // strideh + 1
-    OW = (IW + pad_left + pad_right - (dilationw * (WW - 1) + 1)) // stridew + 1
+    n, c, h, w, c0 = x.shape
+    wc, wh, ww, wn, _ = conv_filter.shape
+    target_n = n
+    target_c = wn
+    target_h = (h + pad_top + pad_bottom - (dilationh * (wh - 1) + 1)) // strideh + 1
+    target_w = (w + pad_left + pad_right - (dilationw * (ww - 1) + 1)) // stridew + 1
     # x filter to NHWC
-    x = x.transpose(0, 2, 3, 1, 4).reshape(IN, IH, IW, IC * C0).astype(np.float32)
+    x = x.transpose(0, 2, 3, 1, 4).reshape(n, h, w, c * c0).astype(np.float32)
     # 5HD to HWCN
-    conv_filter = conv_filter.transpose(1, 2, 0, 4, 3).reshape(WH, WW, WC * C0, WN).astype(np.float32)
+    conv_filter = conv_filter.transpose(1, 2, 0, 4, 3).reshape(wh, ww, wc * c0, wn).astype(np.float32)
     tensor_x = tf.compat.v1.placeholder(x.dtype, shape=x.shape)
     tensor_filter = tf.compat.v1.placeholder(conv_filter.dtype, shape=conv_filter.shape)
     tf_conv2d_result = tf.nn.conv2d(tensor_x, tensor_filter, strides=(strideh, stridew),
@@ -272,5 +272,5 @@ def _conv2d_relu(context: OpInfo):
     if fusion_mode is not None and (fusion_mode == "relu" or fusion_mode == "conv_relu"):
         out = np.maximum(out, 0)
     # NHWC to NC1HWC0
-    output = out.reshape((ON, OH, OW, OC // C0, C0)).transpose(0, 3, 1, 2, 4).copy().astype(np.float16)
-    return output
+    res = out.reshape((target_n, target_h, target_w, target_c // c0, c0)).transpose(0, 3, 1, 2, 4).copy().astype(np.float16)
+    return res

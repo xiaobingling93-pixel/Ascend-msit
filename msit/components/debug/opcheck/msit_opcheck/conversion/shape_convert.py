@@ -38,7 +38,7 @@ PAD_C0_MAPPING = {
 }
 
 
-def align_factor(dtype: str="float16"):
+def align_factor(dtype: str = "float16"):
     return PAD_C0_MAPPING.get(dtype, 16)
 
 
@@ -46,7 +46,7 @@ def gen_axes_for_transpose(offset, base):
     return [x for x in range(offset)] + [x + offset for x in base]
 
 
-def determine_c0(dtype, target_shape: Union[List, Tuple]=None) -> int:
+def determine_c0(dtype, target_shape: Union[List, Tuple] = None) -> int:
     if not isinstance(dtype, str) and hasattr(dtype, 'name'):
         dtype = getattr(dtype, 'name')
     if target_shape and target_shape[-1] > 0:
@@ -192,22 +192,22 @@ def nz2nd(data, nd_shape):
     nd_shape = (1,) + tuple(nd_shape)
     data_shape = data.shape
     m, n = nd_shape[-2:]
-    N1, M1 = data_shape[-4:-2]
-    M0, N0 = data_shape[-2:]
-    pad_m = 1 + (m - 1) % M0
-    pad_n = 1 + (n - 1) % N0
+    n1, m1 = data_shape[-4:-2]
+    m0, n0 = data_shape[-2:]
+    pad_m = 1 + (m - 1) % m0
+    pad_n = 1 + (n - 1) % n0
     # (A0, A1, A2, ... , An, N1, M1, M0, N0) -> (A, N1, M1, M0, N0) -> (A, M1, M0, N1, N0)
     data = np.reshape(data, (np.prod(data_shape[:-4]),) + data_shape[-4:]).transpose((0, 2, 3, 1, 4))
-    main_block = data[:, :M1 - 1, :, :N1 - 1, :]  # main block
-    part_1 = data[:, M1 - 1, :pad_m, :N1 - 1, :]  # part 1
-    part_2 = data[:, :M1 - 1, :, N1 - 1, :pad_n]  # part 2
-    tail_block = data[:, M1 - 1, :pad_m, N1 - 1, :pad_n]  # tail_block
+    main_block = data[:, :m1 - 1, :, :n1 - 1, :]  # main block
+    part_1 = data[:, m1 - 1, :pad_m, :n1 - 1, :]  # part 1
+    part_2 = data[:, :m1 - 1, :, n1 - 1, :pad_n]  # part 2
+    tail_block = data[:, m1 - 1, :pad_m, n1 - 1, :pad_n]  # tail_block
     # Reshape
-    A = data.shape[0]
-    main_block = np.reshape(main_block, (A, (M1 - 1) * M0, (N1 - 1) * N0))
-    part_1 = np.reshape(part_1, (A, pad_m, (N1 - 1) * N0))
-    part_2 = np.reshape(part_2, (A, (M1 - 1) * M0, pad_n))
-    tail_block = np.reshape(tail_block, (A, pad_m, pad_n))
+    a = data.shape[0]
+    main_block = np.reshape(main_block, (a, (m1 - 1) * m0, (n1 - 1) * n0))
+    part_1 = np.reshape(part_1, (a, pad_m, (n1 - 1) * n0))
+    part_2 = np.reshape(part_2, (a, (m1 - 1) * m0, pad_n))
+    tail_block = np.reshape(tail_block, (a, pad_m, pad_n))
     # Concatenate
     main_concat_part1 = np.concatenate((main_block, part_1), axis=1)  # (A, M, (N1-1) *N0)
     part_2_concat_tail = np.concatenate((part_2, tail_block), axis=1)  # (A, M, pad_n)
@@ -219,7 +219,7 @@ def nz2nd(data, nd_shape):
     return nd
 
 
-def nd2nz(data, nz_shape: Union[List, Tuple]=None):
+def nd2nz(data, nz_shape: Union[List, Tuple] = None):
     """
     Convert ND format to FRACTAL_NZ format
     (A0, A1, A2, ..., An, M, N) -> (A, M, N)
@@ -244,61 +244,50 @@ def nd2nz(data, nz_shape: Union[List, Tuple]=None):
         data = np.reshape(data, (1,) * (3 - len(ori_nd_shape)) + ori_nd_shape)
     data_shape = data.shape
     nz_shape = nd_shape2nz_shape(data_shape, data.dtype, nz_shape)
-    A = np.prod(data_shape[:-2])
-    M, N = data_shape[-2:]
-    N1, M1 = nz_shape[-4:-2]
-    M0, N0 = nz_shape[-2:]
-    pad_m = 1 + (M - 1) % M0
-    pad_n = 1 + (N - 1) % N0
-    # (A0, A1, A2, ..., An, M, N) -> (A, M, N)
-    data = np.reshape(data, (A, M, N))
-    # (A, M, N) -> (A, M, (N1-1) *N0 + pad_n) -> (A, M, (N1-1) *N0) -> (A, (M1-1) *M0, (N1-1) *N0)
-    #                                                               -> (A, pad_m, (N1-1) *N0)
-    main_concat_part1 = data[:, :, :(N1 - 1) * N0]  # -> (A, M, (N1-1) *N0)
-    main_block = main_concat_part1[:, :(M1 - 1) * M0, :]  # (A, (M1-1) *M0, (N1-1) *N0)
-    part_1 = main_concat_part1[:, (M1 - 1) * M0:, :]  # (A, pad_m, (N1-1) *N0)
-    # (A, M, N) -> (A, M, (N1-1) *N0 + pad_n) -> (A, M, pad_n) -> (A, (M1-1) *M0, pad_n)
-    #                                                          -> (A, pad_m, pad_n)
-    part_2_concat_tail = data[:, :, (N1 - 1) * N0:]  # -> (A, M, pad_n)
-    part_2 = part_2_concat_tail[:, :(M1 - 1) * M0, :]  # (A, (M1-1) *M0, pad_n)
-    tail_block = part_2_concat_tail[:, (M1 - 1) * M0:, :]  # (A, pad_m, pad_n)
+    a = np.prod(data_shape[:-2])
+    m, n = data_shape[-2:]
+    n1, m1 = nz_shape[-4:-2]
+    m0, n0 = nz_shape[-2:]
+    pad_m = 1 + (m - 1) % m0
+    pad_n = 1 + (n - 1) % n0
 
-    # (A, (M1-1) *M0, (N1-1) *N0) -> (A, (M1-1), M0, (N1-1), N0) -> (A, [0, M1-2], M0, [0, N1-2], N0)
-    main_block = np.reshape(main_block, (A, (M1 - 1), M0, (N1 - 1), N0))  # (A, (M1-1), M0, (N1-1), N0)
-    # (A, pad_m, (N1-1) *N0)      -> (A, 1, pad_m, (N1-1), N0)   -> (A, [M1-1], [0, pad_m-1], [0, N1-2], N0)
-    part_1 = np.reshape(part_1, (A, 1, pad_m, (N1 - 1), N0))  # (A, 1, pad_m, (N1-1), N0)
-    # (A, (M1-1) *M0, pad_n)      -> (A, (M1-1), M0, 1, pad_n)   -> (A, [0, M1-2], M0, [N1-1], [0, pad_n-1])
-    part_2 = np.reshape(part_2, (A, (M1 - 1), M0, 1, pad_n))  # (A, (M1-1), M0, 1, pad_n)
-    # (A, pad_m, pad_n)           -> (A, 1, pad_m, 1, pad_n)     -> (A, [M1-1], [0, pad_m-1], [N1-1], [0, pad_n-1])
-    tail_block = np.reshape(tail_block, (A, 1, pad_m, 1, pad_n))  # (A, 1, pad_m, 1, pad_n)
+    data = np.reshape(data, (a, m, n))
 
-    # (A, [0, M1-2], M0, [N1-1], [0, pad_n-1]) => (A, [0, M1-2], M0, [N1-1], N0)
+    main_concat_part1 = data[:, :, :(n1 - 1) * n0]  # -> (A, M, (N1-1) *N0)
+    main_block = main_concat_part1[:, :(m1 - 1) * m0, :]  # (A, (M1-1) *M0, (N1-1) *N0)
+    part_1 = main_concat_part1[:, (m1 - 1) * m0:, :]  # (A, pad_m, (N1-1) *N0)
+
+    part_2_concat_tail = data[:, :, (n1 - 1) * n0:]  # -> (A, M, pad_n)
+    part_2 = part_2_concat_tail[:, :(m1 - 1) * m0, :]  # (A, (M1-1) *M0, pad_n)
+    tail_block = part_2_concat_tail[:, (m1 - 1) * m0:, :]  # (A, pad_m, pad_n)
+
+    main_block = np.reshape(main_block, (a, (m1 - 1), m0, (n1 - 1), n0))  # (A, (M1-1), M0, (N1-1), N0)
+    part_1 = np.reshape(part_1, (a, 1, pad_m, (n1 - 1), n0))  # (A, 1, pad_m, (N1-1), N0)
+    part_2 = np.reshape(part_2, (a, (m1 - 1), m0, 1, pad_n))  # (A, (M1-1), M0, 1, pad_n)
+    tail_block = np.reshape(tail_block, (a, 1, pad_m, 1, pad_n))  # (A, 1, pad_m, 1, pad_n)
+
     part_2_pad = np.concatenate((part_2,
-                                    np.zeros((A, M1-1, M0, 1, N0-pad_n), dtype=data.dtype)), axis=-1)
-    # (A, [0, M1-2], M0, [0, N1-2], N0) + (A, [0, M1-2], M0, [N1-1], N0) ==> (A, [0, M1-2], M0, N1, N0)
+                                    np.zeros((a, m1-1, m0, 1, n0-pad_n), dtype=data.dtype)), axis=-1)
+
     main_block_concat_part_2_pad = np.concatenate((main_block, part_2_pad), axis=-2)
-    # (A, [M1-1], [0, pad_m-1], [N1-1], [0, pad_n-1]) => (A, [M1-1], [0, pad_m-1], [N1-1], N0)
+
     tail_block_pad = np.concatenate((tail_block,
-                                        np.zeros((A, 1, pad_m, 1, N0-pad_n), dtype=data.dtype)), axis=-1)
-    # (A, [M1-1], [0, pad_m-1], [0, N1-2], N0) + (A, [M1-1], [0, pad_m-1], [N1-1], N0) ->
-    #                                            -> (A, [M1-1], [0, pad_m-1], N1, N0)
+                                        np.zeros((a, 1, pad_m, 1, n0-pad_n), dtype=data.dtype)), axis=-1)
+
     part_1_concat_tail_block_pad = np.concatenate((part_1, tail_block_pad), axis=-2)
 
-    # (A, [M1-1], [0, pad_m-1], N1, N0) => (A, [M1-1], M0, N1, N0)
     part_1_concat_tail_block_pad_pad \
         = np.concatenate((part_1_concat_tail_block_pad,
-                             np.zeros((A, 1, M0-pad_m, N1, N0), dtype=data.dtype)), axis=2)
-    # (A, [0, M1-2], M0, N1, N0) + (A, [M1-1], M0, N1, N0) ==> (A, M1, M0, N1, N0)
+                             np.zeros((a, 1, m0-pad_m, n1, n0), dtype=data.dtype)), axis=2)
     nz = np.concatenate((main_block_concat_part_2_pad, part_1_concat_tail_block_pad_pad), axis=1)
-    # (A, M1, M0, N1, N0) -> (A, N1, M1, M0, N0) -> (A0, A1, ..., An, N1, M1, M0, N0)
-    nz = np.transpose(nz, (0, 3, 1, 2, 4)).reshape(data_shape[:-2]+(N1, M1, M0, N0))
+    nz = np.transpose(nz, (0, 3, 1, 2, 4)).reshape(data_shape[:-2]+(n1, m1, m0, n0))
     if len(ori_nd_shape) <= 2:
         nz = np.reshape(nz, nz.shape[-4:])
 
     return nz
 
 
-def to_fractal_z(data: np.ndarray, ori_format: str, target_shape: Union[List, Tuple]=None, groups=None):
+def to_fractal_z(data: np.ndarray, ori_format: str, target_shape: Union[List, Tuple] = None, groups=None):
     data_shape = data.shape
     if not is_nchw_like(data_shape, ori_format):
         raise RuntimeError(f"shape: {data_shape} of format {ori_format} is not NCHW-like.")
@@ -311,29 +300,29 @@ def to_fractal_z(data: np.ndarray, ori_format: str, target_shape: Union[List, Tu
     c_out = n
     c0 = determine_c0(data.dtype.name, target_shape)
     group_dict = _calculate_group(c_in, c_out, groups, c0)
-    G = group_dict["real_g"]
+    g = group_dict["real_g"]
     ci_ori = group_dict["cin_ori"]
     co_ori = group_dict["cout_ori"]
     cin1_g = group_dict["cin1_g"]
     cou1_g = group_dict["cout1_g"]
-    E = group_dict["mag_factor"]
+    e = group_dict["mag_factor"]
     # Initialization
-    out = np.zeros([G * cou1_g * BLOCK_SIZE, cin1_g * c0, h, w], dtype=data.dtype)
+    out = np.zeros([g * cou1_g * BLOCK_SIZE, cin1_g * c0, h, w], dtype=data.dtype)
     data = data.transpose([ori_format.index("N"), ori_format.index("C"), ori_format.index("H"), ori_format.index("W")])
     for m in range(groups):
         for k in range(co_ori):
-            for l in range(0, ci_ori):
-                i = m // E
-                j = m % E
-                out[i * E * co_ori + j * co_ori + k, j * ci_ori + l, :, :] = \
-                    data[i * E * co_ori + j * co_ori + k, l, :, :]
+            for n in range(0, ci_ori):
+                i = m // e
+                j = m % e
+                out[i * e * co_ori + j * co_ori + k, j * ci_ori + n, :, :] = \
+                    data[i * e * co_ori + j * co_ori + k, n, :, :]
     # nchw->FRACTAL_Z
-    out = out.reshape((G, cou1_g * BLOCK_SIZE, cin1_g, c0, h, w)).transpose(0, 2, 4, 5, 1, 3)
-    out = out.reshape(G * cin1_g * h * w, cou1_g, BLOCK_SIZE, c0)
+    out = out.reshape((g, cou1_g * BLOCK_SIZE, cin1_g, c0, h, w)).transpose(0, 2, 4, 5, 1, 3)
+    out = out.reshape(g * cin1_g * h * w, cou1_g, BLOCK_SIZE, c0)
     return out
 
 
-def to_fractal_z_c04(data: np.ndarray, ori_format: str, target_shape: Union[List, Tuple]=None, groups=None):
+def to_fractal_z_c04(data: np.ndarray, ori_format: str, target_shape: Union[List, Tuple] = None, groups=None):
     data_shape = data.shape
     
     n, c = data_shape[ori_format.index("N")], data_shape[ori_format.index("C")]
@@ -344,35 +333,35 @@ def to_fractal_z_c04(data: np.ndarray, ori_format: str, target_shape: Union[List
     c_out = n
     c0 = determine_c0(data.dtype.name, target_shape)
     group_dict = _calculate_group(c_in, c_out, groups, c0)
-    G = group_dict["real_g"]
+    g = group_dict["real_g"]
     ci_ori = group_dict["cin_ori"]
     co_ori = group_dict["cout_ori"]
     cin1_g = group_dict["cin1_g"]
     cou1_g = group_dict["cout1_g"]
     # Initialization
-    out = np.zeros([G * cou1_g * BLOCK_SIZE, cin1_g * c0, h, w], dtype=data.dtype)
+    out = np.zeros([g * cou1_g * BLOCK_SIZE, cin1_g * c0, h, w], dtype=data.dtype)
     data = data.transpose([ori_format.index("N"), ori_format.index("C"), ori_format.index("H"), ori_format.index("W")])
     # NCHW->FractalZ_C04
     for k in range(co_ori):
-        for l in range(0, ci_ori):
-            out[k, l, :, :] = data[k, l, :, :]
+        for n in range(0, ci_ori):
+            out[k, n, :, :] = data[k, n, :, :]
     # NCHW->Fractal_Z
-    out = out.reshape((G, cou1_g * BLOCK_SIZE, cin1_g, c0, h, w)).transpose(0, 2, 4, 5, 1, 3)
-    out = out.reshape(G * cin1_g * h * w, cou1_g, BLOCK_SIZE, c0)
-    out_pad = np.zeros([align(G * cin1_g * h * w, 4), cou1_g, BLOCK_SIZE, c0], dtype=data.dtype)
-    for i in range(G * cin1_g * h * w):
+    out = out.reshape((g, cou1_g * BLOCK_SIZE, cin1_g, c0, h, w)).transpose(0, 2, 4, 5, 1, 3)
+    out = out.reshape(g * cin1_g * h * w, cou1_g, BLOCK_SIZE, c0)
+    out_pad = np.zeros([align(g * cin1_g * h * w, 4), cou1_g, BLOCK_SIZE, c0], dtype=data.dtype)
+    for i in range(g * cin1_g * h * w):
         out_pad[i, :, :, :] = out[i, :, :, :]
-    cin_outer = ceil_div(G * ceil_div(c_in, 4) * 4 * h * w, BLOCK_SIZE)
+    cin_outer = ceil_div(g * ceil_div(c_in, 4) * 4 * h * w, BLOCK_SIZE)
     fractal_z_c04_res = np.zeros([cin_outer, cou1_g, BLOCK_SIZE, c0], dtype=data.dtype)
     for k in range(cin_outer):
-        for l in range(cou1_g):
+        for n in range(cou1_g):
             for cou0 in range(BLOCK_SIZE):
                 for cin0 in range(c0):
-                    fractal_z_c04_res[k, l, cou0, cin0] = out_pad[k * 4 + cin0 // 4, l, cou0, cin0 % 4]
+                    fractal_z_c04_res[k, n, cou0, cin0] = out_pad[k * 4 + cin0 // 4, n, cou0, cin0 % 4]
     return fractal_z_c04_res
 
 
-def to_fractal_z_3d(data: np.ndarray, ori_format: str, target_shape: Union[list, tuple]=None, groups=None):
+def to_fractal_z_3d(data: np.ndarray, ori_format: str, target_shape: Union[list, tuple] = None, groups=None):
     data_shape = data.shape
     # shape转换：NCDHW 或者 NDHWC
     n, c = data_shape[ori_format.index("N")], data_shape[ori_format.index("C")]
@@ -423,7 +412,7 @@ def to_fractal_z_3d(data: np.ndarray, ori_format: str, target_shape: Union[list,
     return weight_group
 
 
-def to_NC1HWC0(data: np.ndarray, ori_format: str, target_shape: Union[List, Tuple] = None, groups=None):
+def to_nc1hwc0(data: np.ndarray, ori_format: str, target_shape: Union[List, Tuple] = None, groups=None):
     ori_shape = data.shape
     if len(ori_shape) > 4:
         raise RuntimeError("Please check original format and original shape: NC1HWC0 transformer doesn't support"
@@ -450,13 +439,13 @@ def to_NC1HWC0(data: np.ndarray, ori_format: str, target_shape: Union[List, Tupl
         w = ori_shape[transpose_axis[-1]]
     data = data.transpose(transpose_axis)
     num_2_padding_in_cin = c1 * c0 - c
-    zero_padding_array = np.zeros((n, num_2_padding_in_cin, h, w), dtype = data.dtype)
+    zero_padding_array = np.zeros((n, num_2_padding_in_cin, h, w), dtype=data.dtype)
     data = np.concatenate((data, zero_padding_array), axis=1)
     data = data.reshape((n, c1, c0, h, w)).transpose(0, 1, 3, 4, 2)
     return data
 
 
-def to_NDC1HWC0(data: np.ndarray, ori_format: str, target_shape: Union[List, Tuple]=None, groups=None):
+def to_ndc1hwc0(data: np.ndarray, ori_format: str, target_shape: Union[List, Tuple] = None, groups=None):
     ori_shape = data.shape
     n, c = ori_shape[ori_format.index("N")], ori_shape[ori_format.index("C")]
     h, w = ori_shape[ori_format.index("H")], ori_shape[ori_format.index("W")]
@@ -472,7 +461,7 @@ def to_NDC1HWC0(data: np.ndarray, ori_format: str, target_shape: Union[List, Tup
     return data
 
 
-def nd_to_fractal_nz(data: np.ndarray, ori_format: str, target_shape: Union[List, Tuple]=None, groups=None):
+def nd_to_fractal_nz(data: np.ndarray, ori_format: str, target_shape: Union[List, Tuple] = None, groups=None):
     ori_shape = data.shape
     m_ori, n_ori = ori_shape[-2:]
     batch_ori = ori_shape[:-2]
@@ -488,7 +477,7 @@ def nd_to_fractal_nz(data: np.ndarray, ori_format: str, target_shape: Union[List
     return data
 
 
-def nd_to_fractal_z(data: np.ndarray, ori_format: str, target_shape: Union[List, Tuple]=None, groups=None):
+def nd_to_fractal_z(data: np.ndarray, ori_format: str, target_shape: Union[List, Tuple] = None, groups=None):
     ori_shape = data.shape
     m_ori, n_ori = ori_shape[-2:]
     batch_ori = ori_shape[:-2]
@@ -561,7 +550,7 @@ def update_axis_for_npu_inner_format(ori_shape, axis, input_format, ori_format, 
     return axis
 
 
-def nc1hwc0_to_nhwc(data: np.ndarray, ori_format: str, target_shape: Union[List, Tuple]=None, groups=None):
+def nc1hwc0_to_nhwc(data: np.ndarray, ori_format: str, target_shape: Union[List, Tuple] = None, groups=None):
     """
     Convert the data format from NC1HWC0 to NHWC
     :param shape_from: the shape before convert
@@ -584,7 +573,7 @@ def nc1hwc0_to_nhwc(data: np.ndarray, ori_format: str, target_shape: Union[List,
     return tmp_input_tensor[:, :, :, :c_pad]
 
 
-def fractal_z_to_nd(data: np.ndarray, ori_format: str, target_shape: Union[List, Tuple]=None, groups=None):
+def fractal_z_to_nd(data: np.ndarray, ori_format: str, target_shape: Union[List, Tuple] = None, groups=None):
     shape_from = data.shape
     if len(target_shape) == 1:
         axis_h, axis_n, axis_c = 1, 1, target_shape[0]
@@ -607,7 +596,7 @@ def fractal_z_to_nd(data: np.ndarray, ori_format: str, target_shape: Union[List,
     return data_y
 
 
-def fractal_z_to_hwcn(data: np.ndarray, ori_format: str, target_shape: Union[List, Tuple]=None, groups=None):
+def fractal_z_to_hwcn(data: np.ndarray, ori_format: str, target_shape: Union[List, Tuple] = None, groups=None):
     shape_from = data.shape
     axis_c = target_shape[2]
     axis_n = target_shape[3]
@@ -628,30 +617,30 @@ def fractal_z_to_hwcn(data: np.ndarray, ori_format: str, target_shape: Union[Lis
 
 format_transformation_map = {
     "NHWC": {
-        "NC1HWC0": to_NC1HWC0,
+        "NC1HWC0": to_nc1hwc0,
         "FRACTAL_Z": to_fractal_z,
         "FRACTAL_Z_C04": to_fractal_z_c04
     },
     "NCHW": {
-        "NC1HWC0": to_NC1HWC0,
+        "NC1HWC0": to_nc1hwc0,
         "FRACTAL_Z": to_fractal_z,
         "FRACTAL_Z_C04": to_fractal_z_c04
     },
     "HWCN": {
-        "NC1HWC0": to_NC1HWC0,
+        "NC1HWC0": to_nc1hwc0,
         "FRACTAL_Z": to_fractal_z,
         "FRACTAL_Z_C04": to_fractal_z_c04
     },
     "NDHWC": {
-        "NDC1HWC0": to_NDC1HWC0,
+        "NDC1HWC0": to_ndc1hwc0,
         "FRACTAL_Z_3D": to_fractal_z_3d
     },
     "NCDHW": {
-        "NDC1HWC0": to_NDC1HWC0,
+        "NDC1HWC0": to_ndc1hwc0,
         "FRACTAL_Z_3D": to_fractal_z_3d
     },
     "DHWCN": {
-        "NC1HWC0": to_NDC1HWC0,
+        "NC1HWC0": to_ndc1hwc0,
         "FRACTAL_Z_3D": to_fractal_z_3d
     },
     "ND": {
@@ -676,7 +665,7 @@ def is_transformable(ori_format, target_format):
     return False
 
 
-def transform(data, ori_format, target_format, target_shape: Union[List, Tuple]=None, groups=None):
+def transform(data, ori_format, target_format, target_shape: Union[List, Tuple] = None, groups=None):
     if is_transformable(ori_format, target_format):
         return format_transformation_map[ori_format][target_format](data, ori_format, target_shape, groups)
     return None

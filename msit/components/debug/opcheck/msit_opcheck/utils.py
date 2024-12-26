@@ -21,25 +21,6 @@ NAMEDTUPLE_PRECISION_METRIC = namedtuple('precision_metric', ['abs', 'kl', 'cos_
 NAMEDTUPLE_PRECISION_MODE = namedtuple(
     'precision_mode', ["keep_origin_dtype", "force_fp16", "force_fp32"]
 )("keep_origin_dtype", "force_fp16", "force_fp32")
-
-
-def get(container: Sequence, idx: int, out_of_range=None):
-    """
-    If a container contains only one element, return that element for whatever the idx is
-    :param container: A container
-    :param idx: index
-    :param out_of_range: Out of Range return
-    :return: element
-    """
-    if len(container) == 1:
-        return container[0]
-    else:
-        if abs(idx) >= len(container):
-            if out_of_range:
-                return out_of_range
-            else:
-                return False
-        return container[idx]
     
 
 def broadcast_to_maxshape(shapes: list):
@@ -67,7 +48,7 @@ def broadcast_to_maxshape(shapes: list):
 
 
 def ceil_div(a, b):
-    return (a + b -1) // b
+    return (a + b - 1) // b
 
 
 def align(a, b):
