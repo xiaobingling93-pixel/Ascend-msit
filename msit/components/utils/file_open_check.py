@@ -332,7 +332,7 @@ def ms_open(file, mode="r", max_size=CONFIG_FILE_MAX_SIZE, softlink=False, write
 
     safe_parent_msg = Rule.path().is_safe_parent_dir().check(file)
     if not safe_parent_msg:
-        raise OpenException(f"parent dir of {os.path.realpath(file)} is not safe. {str(safe_parent_msg)}")
+        logger.warning(f"parent dir of {os.path.realpath(file)} is not safe. {str(safe_parent_msg)}")
 
     if "+" in mode:
         flags = os.O_RDONLY | os.O_RDWR
