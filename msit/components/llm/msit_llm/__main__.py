@@ -235,7 +235,12 @@ class CompareCommand(BaseCommand):
             '-w',
             action='store_true',
             help='Compare float weights and dequant weights, if True, do nothing if False')
-
+        
+        parser.add_argument(
+            '--stats',
+            '-st',
+            action='store_true',
+            help='Compare statistics, If set, will execute compare_statistics function')
 
     def handle(self, args, **kwargs):
 

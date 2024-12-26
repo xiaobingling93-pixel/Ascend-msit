@@ -64,6 +64,13 @@ class CompareDataParse(ABC):
         """
         return ""
 
+    def get_csv_path(self, token_id, node) -> tuple:
+        """
+        根据指定的token id ,和节点信息，输入输出位置，返回csv的位置
+        可以指定返回所有输出，所以可能有多个，所以返回值是tuple类型
+        """
+        return tuple()
+    
     def get_token_id(self) -> str:
         """
         返回指定的token id
@@ -436,3 +443,19 @@ class CompareDataTorch(CompareDataParse):
         logger.info("golden_layer_type: %s", golden_layer_type)
         golden_layer_nodes = golden_root_node.get_layer_node(golden_layer_type)
         return golden_root_node, golden_layer_type, golden_layer_nodes
+
+
+def get_csv_path(self, token_id, node: TreeNode) -> tuple:
+        csv_dir_path = os.path.join(self.tokens_path, str(token_id), node.tensor_path)
+        logger.debug(
+            "get_csv_path: token_id: %s, node: %s, tensor_dir_path: %s",
+            str(token_id),
+            str(node),
+            str(csv_dir_path),
+        )
+        statistics_csv_path = os.path.join(csv_dir_path, "statistics.csv")
+        if os.path.exists(statistics_csv_path):
+            return (statistics_csv_path,)
+        else:
+            logger.debug("csv dir file does not exist")
+            return tuple()

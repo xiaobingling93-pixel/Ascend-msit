@@ -45,12 +45,15 @@
   export PYTORCH_NPU_ALLOC_CONF=expandable_segments:False
   ```
 
-#### 生成DeepSeek-V2模型w8a16量化权重，使用histogram量化方式，在CPU上进行运算
+#### DeepSeek-V2模型量化
+##### DeepSeek-V2 w8a16量化
+- 生成DeepSeek-V2模型w8a16量化权重，使用histogram量化方式，在CPU上进行运算
   ```shell
   python3 quant_deepseek.py --model_path {浮点权重路径} --save_directory {W8A16量化权重路径} --device_type cpu --act_method 2 --w_bit 8 --a_bit 16
   ```
 
-#### 生成DeepSeek-V2模型w8a8 dynamic量化权重，使用histogram量化方式，在CPU上进行运算
+##### DeepSeek-V2 w8a8 dynamic量化
+- 生成DeepSeek-V2模型w8a8 dynamic量化权重，使用histogram量化方式，在CPU上进行运算
   ```shell
   python3 quant_deepseek.py --model_path {浮点权重路径} --save_directory {W8A8量化权重路径} --device_type cpu --act_method 2 --w_bit 8 --a_bit 8  --is_dynamic True
   ```

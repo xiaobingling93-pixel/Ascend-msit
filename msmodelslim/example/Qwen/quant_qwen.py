@@ -67,7 +67,7 @@ def parse_arguments():
         default = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'common', 'teacher_qualification.jsonl'))
     parser.add_argument('--w_bit', type=int, default=8)
     parser.add_argument('--a_bit', type=int, default=8)
-    parser.add_argument('--disable_names', type=str, nargs='+', default=["lm_head"])
+    parser.add_argument('--disable_names', type=str, nargs='+', default=None)
     parser.add_argument('--device_type', type=str, choices=[CPU, NPU], default=CPU)
     parser.add_argument('--fraction', type=float, default=0.01)
     parser.add_argument("--act_method", type=int, choices=[1, 2, 3], default=1,

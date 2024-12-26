@@ -553,6 +553,17 @@ def sort_ge_dump_data(dump_data, graph_map):
     ge_dump_data = OrderedDict((op_name, dump_data[op_name]) for op_name in sort_ops_list)
     return ge_dump_data
 
+def sort_by_timestamp(gathered_row_data):
+    """
+    gathered_row_data为保存比对结果的列表，列表里每个元素都是一个字典
+    1. 取每个字典的'my_data_path'字段x['my_data_path']，该字段的值如：OpType.OpName.12.7.1734070081497686,inputs,0
+    2. 按'.'分隔字符串x['my_data_path'].split('.') —> ['OpType', 'OpName', '12', '7', '1734070081497686,inputs,0']
+    3. x['my_data_path'].split('.')[-1]取最后一个元素为'1734070081497686,inputs,0'，该值包含时间戳（1734070081497686）和输入输出信息（inputs,0）
+    4. 按'1734070081497686,inputs,0'对比对结果重新排序得到sorted_gathered_row_data列表
+    5. 返回排序后的结果
+    """
+    sorted_gathered_row_data = sorted(gathered_row_data, key=lambda x: x['my_data_path'].split('.')[-1])
+    return sorted_gathered_row_data
 
 # Main entrance
 def acc_compare(golden_path, my_path, output_path=".", ge_graph_path=None):
@@ -596,5 +607,6 @@ def acc_compare(golden_path, my_path, output_path=".", ge_graph_path=None):
             else:
                 row_data = compare_ge_with_ge(graph_map, my_dump_data[token_id], golden_dump_data[token_id], token_id)
             gathered_row_data.extend(row_data)
-        save_compare_reault_to_csv(gathered_row_data, output_path)
+        sorted_gathered_row_data = sort_by_timestamp(gathered_row_data)
+        save_compare_reault_to_csv(sorted_gathered_row_data, output_path)
     return output_path

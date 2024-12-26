@@ -21,7 +21,7 @@ import torch
 from components.debug.compare.utils.base_dump_reader import DumpFileReader
 from components.utils.acc_cmp import parse_torchair_dump_data
 from components.utils.file_open_check import ms_open
-from components.utils.constants import TEXT_FILE_MAX_SIZE
+from components.utils.constants import JSON_FILE_MAX_SIZE
 
 IS_MSACCUCMP_PATH_SET = False
 GLOBAL_TENSOR_CONVERTER = None
@@ -55,7 +55,7 @@ class GEDumpFileReader(DumpFileReader):
 
     @staticmethod
     def get_torch_mode(json_path):
-        with ms_open(os.path.join(json_path, 'mindie_torch_op_mapping.json'), max_size=TEXT_FILE_MAX_SIZE) as f:
+        with ms_open(os.path.join(json_path, 'mindie_torch_op_mapping.json'), max_size=JSON_FILE_MAX_SIZE) as f:
             torch_op_map = json.load(f)
         if not torch_op_map:
             raise ValueError("Please check your mindie_torch_op_mapping.json file, it's empty.")
@@ -76,7 +76,7 @@ class GEDumpFileReader(DumpFileReader):
         return torch_rt_map
 
     def process_json_files(self):
-        with ms_open(os.path.join(self.json_path, 'mindie_torch_op_mapping.json'), max_size=TEXT_FILE_MAX_SIZE) as f:
+        with ms_open(os.path.join(self.json_path, 'mindie_torch_op_mapping.json'), max_size=JSON_FILE_MAX_SIZE) as f:
             torch_op_map = json.load(f)
 
         if self.torch_mode not in ["TorchScript", "TorchExport"]:
@@ -84,7 +84,7 @@ class GEDumpFileReader(DumpFileReader):
         
         rt_torch_map = self.get_torch_rt_mapping(torch_op_map)
 
-        with ms_open(os.path.join(self.json_path, 'mindie_rt_op_mapping.json'), max_size=TEXT_FILE_MAX_SIZE) as f:
+        with ms_open(os.path.join(self.json_path, 'mindie_rt_op_mapping.json'), max_size=JSON_FILE_MAX_SIZE) as f:
             op_map = json.load(f)
 
         op_map = sorted(op_map, key=lambda x: x["id"])
@@ -147,7 +147,7 @@ class GEDumpFileReader(DumpFileReader):
         key_to_folder = {}
         json_path = os.path.join(self.json_path, 'op_map_updated.json')
 
-        with ms_open(json_path, max_size=TEXT_FILE_MAX_SIZE) as f:
+        with ms_open(json_path, max_size=JSON_FILE_MAX_SIZE) as f:
             data = json.load(f)
             for fusion_op, details in data.items():
                 jit_node = details.get('jit_node', '')
