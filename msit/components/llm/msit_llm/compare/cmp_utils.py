@@ -14,6 +14,7 @@
 
 import datetime
 import os
+import csv
 
 import numpy as np
 import pandas as pd
@@ -27,11 +28,13 @@ from msit_llm.common.constant import (TOKEN_ID, DATA_ID, GOLDEN_DATA_PATH, MY_DA
                                       GOLDEN_MAX_VALUE, GOLDEN_MIN_VALUE,
                                       GOLDEN_MEAN_VALUE, MY_DTYPE, MY_SHAPE,
                                       MY_MAX_VALUE, MY_MIN_VALUE, MY_MEAN_VALUE,
-                                      CSV_GOLDEN_HEADER, GLOBAL_HISTORY_AIT_DUMP_PATH_LIST)
+                                      CSV_GOLDEN_HEADER, GLOBAL_HISTORY_AIT_DUMP_PATH_LIST,
+                                      STAT_CPM, CSV_STATISTICS_HEADER)
 from msit_llm.common.log import logger
-from components.utils.cmp_algorithm import CMP_ALG_MAP, CUSTOM_ALG_MAP
+from components.utils.cmp_algorithm import CMP_ALG_MAP, CUSTOM_ALG_MAP, CMP_STATICTISC_MAP
 from components.utils.security_check import ms_makedirs
 from components.utils.check.rule import Rule
+from components.utils.file_open_check import ms_open
 
 
 MIN_LAYER_NUMBER = 10
@@ -255,3 +258,117 @@ def align_tensors(tensor1, tensor2, dim=0):
         return smaller_replicated, larger_tensor
     else:
         return larger_tensor, smaller_replicated
+
+
+def read_csv_statistics(file_path):
+    with ms_open(file_path, mode='r') as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            if row['InputOutput'] == 'Output':
+                # Remove any empty values and log them.
+                clean_row = {k: v for k, v in row.items() if v}
+                if len(clean_row) != len(row):
+                    logger.debug(f"Missing required values: {row}")
+    return clean_row
+
+
+def read_bin_statictics(file_path):
+    required_fields = {'dims', 'max', 'min', 'mean', 'l2norm'}
+    data_dict = {}
+    end_found = False
+    with ms_open(file_path, mode='r') as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue 
+            if line.startswith('$End=1'):
+                end_found = True
+                break  
+            if '=' in line:
+                key, value = [item.strip() for item in line.split('=', 1)]
+                data_dict[key] = value
+    missing_fields = required_fields - set(data_dict.keys())
+    for field in missing_fields:
+        logger.debug(f"Missing required values'{field}'")
+    if not end_found:
+        error_msg = "Error: End marker '$End=1' not found"
+        logger.error(error_msg)
+    return data_dict
+
+
+def read_data_statistics(data_path):
+    data_path = load_file_to_read_common_check(data_path)
+    if Rule.input_file().check(data_path, will_raise=True):
+        if data_path.endswith(".csv"):
+            data = read_csv_statistics(data_path)
+        elif data_path.endswith(".bin"):
+            data = read_bin_statictics(data_path)
+        else:
+            logger.error("Unsupported data format %s", data_path)
+            raise TypeError("Unsupported data format.")
+    return data
+
+
+def convert_dict_values_to_fp32(key_list, data_dict):
+    lower_data_dict = {k.lower(): v for k, v in data_dict.items()}
+    converted_dict = {}
+    for key in key_list:
+        lower_key = key.lower()
+        if lower_key in lower_data_dict:
+            try:
+                converted_value = np.float32(lower_data_dict[key])
+                converted_dict[key] = converted_value
+            except ValueError:
+                logger.debug(f"Warning: Could not convert value for key '{key}' to float32.")
+                converted_dict[key] = None
+        else:
+            logger.error(f"Warning: Key '{key}' not found in the provided dictionary.")
+            converted_dict[key] = None 
+    return converted_dict
+
+
+def compare_data_statistics(golden_data, my_data):
+    row_data, fail_messages = {}, []
+    common_keys = set(golden_data.keys()) & set(my_data.keys())
+    for key in common_keys:
+        golden_value = golden_data.get(key)
+        my_value = my_data.get(key)
+        for name, cmp_func in list(CMP_STATICTISC_MAP.items()):
+            result, message = cmp_func(golden_value, my_value)
+            row_data[f"{key}_{name}"] = result
+            if len(message) > 0:
+                fail_messages.append(message)
+    return row_data
+
+
+def fill_row_data_statistics(data_info: BasicDataInfo, loaded_my_data=None, loaded_golden_data=None):
+    golden_data_path, my_data_path = data_info.golden_data_path, data_info.my_data_path
+    row_data = data_info.to_dict()
+    if loaded_golden_data is None and not os.path.isfile(golden_data_path):
+        row_data[CMP_FAIL_REASON] = f"golden_data_path: {golden_data_path} is not a file."
+        return row_data
+    if loaded_my_data is None and not os.path.isfile(my_data_path):
+        row_data[CMP_FAIL_REASON] = f"my_data_path: {my_data_path} is not a file."
+        return row_data
+    stat_cmp_list = STAT_CPM
+    golden_data = convert_dict_values_to_fp32(stat_cmp_list, loaded_golden_data)
+    my_data = convert_dict_values_to_fp32(stat_cmp_list, loaded_my_data)
+    row_data.update(compare_data_statistics(golden_data, my_data))
+    return row_data
+
+
+def save_statistics_compare_reault_to_csv(gathered_row_data, output_path=".", columns=CSV_STATISTICS_HEADER):
+    try:
+        ms_makedirs(output_path, exist_ok=True)
+    except OSError:
+        logger.error("cannot create file directory under output path, please check it!")
+    cur_time = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d%H%M%S')
+    csv_save_path = os.path.join(output_path, f"statstics_cmp_report_{cur_time}.csv")
+    filtered_row_data = [row_data for row_data in gathered_row_data if not row_data.get('cmp_fail_reason')]
+    gathered_row_data = filtered_row_data
+    data_frame = pd.DataFrame(gathered_row_data, columns=columns)
+    data_frame.fillna(value="", inplace=True)
+    data_frame.dropna(axis=0, how="all", inplace=True)
+    data_frame.to_csv(csv_save_path, index=False)
+    logger.info(f"Saved comparing results: {csv_save_path}")
+    return csv_save_path

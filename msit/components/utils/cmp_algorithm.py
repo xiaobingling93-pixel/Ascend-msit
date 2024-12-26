@@ -147,6 +147,18 @@ def np_relative_euclidean_distance(golden_data: np.ndarray, my_data: np.ndarray)
     return np.sqrt(result), ''
 
 
+def stat_absolute_error(golden_data, my_data):
+    error = abs(my_data - golden_data)
+    return error, ''
+
+
+def stat_relative_error(golden_data, my_data):
+    eps = np.finfo(np.float32).eps  
+    denominator = max(abs(golden_data), eps)
+    error = abs(my_data - golden_data) / denominator
+    return error, ''
+
+
 def register_custom_compare_algorithm(custom_compare_algorithm):
     import os
     import sys
@@ -221,3 +233,9 @@ NP_CMP_ALG_MAP = {
 }
 
 CUSTOM_ALG_MAP = {}
+
+
+CMP_STATICTISC_MAP = {
+    "stat_absolute_error": stat_absolute_error,
+    "stat_relative_error": stat_relative_error,
+}
