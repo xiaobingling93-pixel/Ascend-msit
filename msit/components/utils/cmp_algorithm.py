@@ -124,7 +124,7 @@ def kl_divergence(golden_data: torch.Tensor, my_data: torch.Tensor):
 
 def np_kl_divergence(golden_data: np.ndarray, my_data: np.ndarray):
     golden_data = np.exp(golden_data - np.max(golden_data))
-    my_data= np.exp(my_data - np.max(my_data))
+    my_data = np.exp(my_data - np.max(my_data))
     result = np.sum(golden_data * (np.log(golden_data) - my_data))
     return max(result, 0), ""
 
@@ -140,7 +140,7 @@ def relative_euclidean_distance(golden_data: torch.Tensor, my_data: torch.Tensor
 
 def np_relative_euclidean_distance(golden_data: np.ndarray, my_data: np.ndarray):
     ground_truth_square_num = np.sum(golden_data ** 2)
-    if np.sqrt(ground_truth_square_num)<= NP_FLOAT_EPSILON:
+    if np.sqrt(ground_truth_square_num) <= NP_FLOAT_EPSILON:
         return 0.0, ''
 
     result = np.sum((my_data - golden_data) ** 2) / ground_truth_square_num

@@ -69,10 +69,10 @@ class StatsCommand(BaseCommand):
         parser.add_argument(
             "-i",
             "--input",
-            dest = "input",
+            dest="input",
             type=check_input_path_legality,
-            required = True,
-            help = "input pbtxt path.E.g:--input /xx/xxxx/xx.pbtxt"
+            required=True,
+            help="input pbtxt path.E.g:--input /xx/xxxx/xx.pbtxt"
         )
         parser.add_argument("-l", "--log-level", dest="log_level", default="info", 
                             choices=LOG_LEVELS_LOWER, help="specify log level")
@@ -256,15 +256,19 @@ class InspectCommand(BaseCommand):
         set_log_level(args.log_level)
         execute(args)
 
+
 def get_cmd_instance():
     graph_analyze_help_info = "Graph analyze Tools."
     stats_cmd_instance = StatsCommand("stats", "Print statistic operator infomation")
-    strip_cmd_instance = StripCommand("strip", """Strip the redundant information on the pbtxt to open the graph faster. 
-        This could be useful if the pbtxt has a huge size that can not even be loaded."""
+    strip_cmd_instance = StripCommand("strip", """Strip the redundant information on the pbtxt to 
+        open the graph faster. This could be useful if the pbtxt has a huge size that can not 
+        even be loaded."""
     )
-    extract_cmd_instance= ExtractCommand("extract", """Extract subgraph. There are two extraction modes: center diffusion and start-end.
-        The center diffusion mode is as follows: Specify one or more nodes as the diffusion center, and then dump the multi-layer nodes upward or downward.
-        The start-end mode is to specify one or more groups of start nodes and end nodes, and dump all nodes between the start and end nodes."""
+    extract_cmd_instance= ExtractCommand("extract", """Extract subgraph. There are two extraction modes: 
+        center diffusion and start-end.  The center diffusion mode is as follows: Specify one or more nodes as 
+        the diffusion center, and then dump the multi-layer nodes upward or downward. The start-end mode is 
+        to specify one or more groups of start nodes and end nodes, and dump all nodes between the start and 
+        end nodes."""
     )
     fuse_cmd_instance = FuseCommand("fuse", "Count the number of repeated subgraphs and these average duration.")
     inspect_cmd_instance = InspectCommand("inspect", "Scan the .pbtxt graph to obtain dynamic shape operators.")

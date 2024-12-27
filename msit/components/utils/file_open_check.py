@@ -298,7 +298,8 @@ class FileStat:
         return False
 
 
-def ms_open(file, mode="r", max_size=CONFIG_FILE_MAX_SIZE, softlink=False, write_permission=PERMISSION_NORMAL, **kwargs):
+def ms_open(file, mode="r", max_size=CONFIG_FILE_MAX_SIZE, softlink=False, 
+            write_permission=PERMISSION_NORMAL, **kwargs):
     file_stat = FileStat(file)
 
     if file_stat.is_exists and file_stat.is_dir:
