@@ -16,7 +16,7 @@ import os
 
 import torch
 from msit_llm.common.log import logger
-from msit_llm.compare.cmp_utils import BasicDataInfo, fill_row_data, read_data
+from msit_llm.compare.cmp_utils import BasicDataInfo, fill_row_data, read_data, read_data_statistics
 
 
 def multi_block_cmp(atb_nodes, torch_nodes, my_root_node, atb_tensor_path, torch_tensor_path):
@@ -75,3 +75,18 @@ def get_cat_dim(atb_tensor_datas, torch_tensor_datas):
         if multi_atb_size == torch_tensor_size:
             return dim
     return -1
+
+
+def get_multi_statistics_paths(data_path, node_path, tensor_sub_dir):
+    tensor_device_name = os.path.basename(os.path.abspath(os.path.join(data_path, "..")))
+    device_tensor_paths = sorted(os.listdir(os.path.join(data_path, "..", "..")))
+    cur_tensor_path = os.path.abspath(os.path.join(node_path, tensor_sub_dir))
+    if not os.path.exists(cur_tensor_path):
+        msg = f"golden tensor path: {cur_tensor_path} is not exist."
+        logger.debug(msg)
+        return None, None
+    device_tensor_paths = [cur_tensor_path.replace(tensor_device_name, ii) for ii in device_tensor_paths]
+    for tensor_path in device_tensor_paths:
+        if os.path.exists(tensor_path):
+            tensor_datas = read_data_statistics(tensor_path)
+    return cur_tensor_path, tensor_datas

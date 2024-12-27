@@ -137,6 +137,34 @@ CSV_CMP_WEIGHT_HEADER.extend(list(CMP_ALG_MAP.keys()))
 
 MSIT_BAD_CASE_FOLDER_NAME = 'msit_bad_case'
 
+MAX = "max"
+MIN = "min"
+MEAN = "mean"
+L2NORM = "l2norm"
+STAT_CPM = [MAX, MIN, MEAN, L2NORM]
+
+MAX_STAT_ABSOLUTE_ERROR = "max_stat_absolute_error"
+MAX_STAT_RELATIVE_ERROR = "max_stat_relative_error"
+MIN_STAT_ABSOLUTE_ERROR = "min_stat_absolute_error"
+MIN_STAT_RELATIVE_ERROR = "min_stat_relative_error"
+MEAN_STAT_ABSOLUTE_ERROR = "mean_stat_absolute_error"
+MEAN_STAT_RELATIVE_ERROR = "mean_stat_relative_error"
+L2NORM_STAT_ABSOLUTE_ERROR = "l2norm_stat_absolute_error"
+L2NORM_STAT_RELATIVE_ERROR = "l2norm_stat_relative_error"
+CSV_STATISTICS_HEADER = [
+    TOKEN_ID,
+    DATA_ID,
+    GOLDEN_DATA_PATH,
+    MY_DATA_PATH,
+    MAX_STAT_ABSOLUTE_ERROR,
+    MAX_STAT_RELATIVE_ERROR,
+    MIN_STAT_ABSOLUTE_ERROR,
+    MIN_STAT_RELATIVE_ERROR,
+    MEAN_STAT_ABSOLUTE_ERROR,
+    MEAN_STAT_RELATIVE_ERROR,
+    L2NORM_STAT_ABSOLUTE_ERROR,
+    L2NORM_STAT_RELATIVE_ERROR
+]
 
 def get_timestamp_sync():
     max_timestamp = int(datetime.datetime.now(tz=datetime.timezone.utc).strftime("%s"))

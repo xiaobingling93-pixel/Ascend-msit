@@ -18,9 +18,11 @@ import torch
 from msit_llm.common.log import logger
 from msit_llm.compare.cmp_op_match import OpMatchMgr
 from msit_llm.compare.cmp_data_parse import CompareDataParse, CompareDataTorch, CompareDataATB
-from msit_llm.compare.cmp_utils import BasicDataInfo, fill_row_data, save_compare_reault_to_csv, read_data
-from msit_llm.compare.multi_block import get_multi_tensor_paths, get_cat_dim
+from msit_llm.compare.cmp_utils import BasicDataInfo, fill_row_data, save_compare_reault_to_csv, read_data, \
+                                    fill_row_data_statistics, save_statistics_compare_reault_to_csv
+from msit_llm.compare.multi_block import get_multi_tensor_paths, get_cat_dim, get_multi_statistics_paths
 from msit_llm.common.constant import RAW_INPUT_PATH, GLOBAL_HISTORY_AIT_DUMP_PATH_LIST
+
 
 
 class CompareMgr:
@@ -165,26 +167,76 @@ class CompareMgr:
             str(my_tokens),
             str(my_token_set),
         )
+        if self.args.statistic:
+            compared_result = self.perform_comparison(golden_tokens, my_tokens, op_map, is_statistics=True)
+            return save_statistics_compare_reault_to_csv(compared_result, output_path)
+        else:
+            compared_result = self.perform_comparison(golden_tokens, my_tokens, op_map, is_statistics=False)
+            return save_compare_reault_to_csv(compared_result, output_path)
+
+    def compare_tokens_stats(self, cmp_tokens, op_map, is_statistics=False):
+        compared_result = []
+
+        for token_id in cmp_tokens:
+            logger.debug("comparing tokens is %s ", str(token_id))
+            if is_statistics:
+                self.compare_statistics(token_id, token_id, op_map)
+            else:
+                self.compare_token(token_id, token_id, op_map)
+            # Collect the result of comparison
+            compared_result.extend(self.compared_result)
+
+        return compared_result
+    
+    def perform_comparison(self, golden_tokens, my_tokens, op_map, is_statistics=False):
+        golden_token_set = set(self._flatten_and_enum_tuple(golden_tokens))
+        my_token_set = set(self._flatten_and_enum_tuple(my_tokens))
+
         if not golden_token_set.isdisjoint(my_token_set):
             cmp_tokens = golden_token_set.intersection(my_token_set)
-
-            logger.debug("compare tokens is %s ", str(cmp_tokens))
-            for token_id in cmp_tokens:
-                logger.debug("comparing tokens is %s ", str(token_id))
-                self.compare_token(token_id, token_id, op_map)
-                logger.debug("compared tokens is %s ", str(token_id))
-        else:
-            if self.golden_data.get_token_id() is not None and self.my_data.get_token_id() is not None:
-                # 指定token，强制比对
-                for golden_token, my_token in itertools.product(golden_tokens, my_tokens):
+            compared_result = self.compare_tokens_stats(cmp_tokens, op_map, is_statistics)
+        elif self.golden_data.get_token_id() is not None and self.my_data.get_token_id() is not None:
+            # 强制比对指定token
+            compared_result = []
+            for golden_token, my_token in itertools.product(golden_tokens, my_tokens):
+                if is_statistics:
+                    self.compare_statistics(golden_token, my_token, op_map)
+                else:
                     self.compare_token(golden_token, my_token, op_map)
-            else:
-                logger.error(
-                    f"my tokens is {my_tokens} and golden tokens is {golden_tokens}. The two cannot be matched."
-                )
-                return None
+                compared_result.extend(self.compared_result)
+        else:
+            logger.error(
+                f"my tokens is {my_tokens} and golden tokens is {golden_tokens}. The two cannot be matched."
+            )
+            return None
 
-        return save_compare_reault_to_csv(self.compared_result, output_path)
+        return compared_result
+
+    def compare_statistics(self, golden_token_id, my_token_id, op_map):
+        for my_op, my_op_location, golden_op, _ in op_map:
+            logger.debug("------ compare (%s %s)------", str(my_op.node_name), str(golden_op.node_name))
+            golden_tensor_paths = list(self.golden_data.get_csv_path(golden_token_id, golden_op))
+            my_tensor_paths = list(self.my_data.get_tensor_path(my_token_id, my_op, my_op_location))
+            _, my_tensor_paths = self._handle_rope_operation_paths(my_tensor_paths)
+            
+            if len(golden_tensor_paths) == len(my_tensor_paths):
+                golden_tensor_paths.sort()
+                my_tensor_paths.sort()
+                tensor_pairs = zip(golden_tensor_paths, my_tensor_paths)
+            else:
+                tensor_pairs = itertools.product(golden_tensor_paths, my_tensor_paths)
+            for golden_tensor_path, my_tensor_path in tensor_pairs:
+                logger.debug("golden_path: %s; my_path:%s", str(golden_tensor_path), str(my_tensor_path))
+
+                _, my_tensor_datas = get_multi_statistics_paths(
+                    self.my_data.get_token_path(my_token_id), my_tensor_path, tensor_sub_dir=""
+                )
+                _, golden_tensor_datas = get_multi_statistics_paths(
+                    self.golden_data.get_token_path(golden_token_id), golden_tensor_path, tensor_sub_dir=""
+                )
+                data_info = BasicDataInfo(golden_tensor_path, my_tensor_path, token_id=my_token_id)
+                row_data = fill_row_data_statistics(data_info, my_tensor_datas, golden_tensor_datas)
+                self.compared_result.append(row_data)
 
     def compare_token(self, golden_token_id, my_token_id, op_map):
         for my_op, my_op_location, golden_op, golden_op_location in op_map:

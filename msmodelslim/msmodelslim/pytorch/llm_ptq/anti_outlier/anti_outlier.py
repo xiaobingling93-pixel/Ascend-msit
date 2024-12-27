@@ -78,6 +78,9 @@ STAT_KEY_THRESHOLD_TENSOR = "thres_t"
 STAT_KEY_SMOOTH_SCALE_MASK = "smooth_scale_mask"
 STAT_KEY_SMOOTH_SCALE = "smooth_scale"
 STAT_KEY_VARIANCE = "std"
+TENSOR = 'tensor'
+SCALE_MIN_LLM = 1e-5
+SCALE_MIN_SD3 = 1e-3
 
 _PREDEFINED_FUSIONS = {
     "SD3Transformer2DModel":
@@ -367,7 +370,7 @@ class AntiOutlier(object):
         if name not in act_stats:
             act_stats[name] = {}
             if self.cfg.arch not in _PREDEFINED_FUSIONS:
-                act_stats[name]['tensor'] = tensor
+                act_stats[name][TENSOR] = tensor
 
         hidden_dim = tensor.shape[-1]
         tensor = tensor.reshape(-1, hidden_dim).detach()  # [N,C]
@@ -590,7 +593,8 @@ class AntiOutlier(object):
             num_attention_heads = self.get_num_attention_heads()
             fusion_kwargs = _PREDEFINED_FUSION_KWARGS[self.cfg.arch] \
                 if self.cfg.arch in _PREDEFINED_FUSION_KWARGS else {}
-        scale_min = 1e-3 if self.cfg.arch in _PREDEFINED_FUSION_KWARGS else 1e-5
+        scale_min = SCALE_MIN_SD3 if self.cfg.arch in _PREDEFINED_FUSION_KWARGS \
+            else SCALE_MIN_LLM
         for norm_name_group in tqdm(self.norm_linear_subgraph.keys()):
             linear_names = self.norm_linear_subgraph[norm_name_group]
             if isinstance(norm_name_group, str):

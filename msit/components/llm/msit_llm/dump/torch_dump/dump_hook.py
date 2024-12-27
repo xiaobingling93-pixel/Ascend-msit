@@ -22,6 +22,7 @@ from msit_llm.dump.torch_dump.dump_config import DumpConfig
 from msit_llm.dump.torch_dump import hook_ops
 from msit_llm.common.log import logger
 from components.utils.security_check import ms_makedirs
+from msit_llm.dump.torch_dump.dump_statistics import dump_statistics
 
 
 class DumpHookModule:
@@ -163,9 +164,12 @@ def dump_tensor(feat, feat_path, module_name, dump_type):
         for idx, tensor in enumerate(feat):
             dump_tensor(tensor, "{}_{}".format(feat_path, idx), module_name, dump_type)
     elif isinstance(feat, torch.Tensor):
-        if not feat_path.endswith(".pth"):
-            feat_path += ".pth"
-        torch.save(feat, feat_path)
+        if dump_config.dump_statistics_mode != 0:
+            dump_statistics(feat, feat_path, module_name, dump_type)
+        if dump_config.dump_statistics_mode != 1:
+            if not feat_path.endswith(".pth"):
+                feat_path += ".pth"
+            torch.save(feat, feat_path)
         if dump_config.analyze is True:
             from msit_llm.dump.torch_dump.dump_analyze import dump_analyze
             dump_analyze(feat, feat_path, module_name, dump_type, dump_config.dump_path)

@@ -65,6 +65,7 @@ class DumpConfig:
             api_list=None,
             tensor_part=2,
             device_id=None,
+            dump_statistics_mode=0,
             dump_last_logits=False,
             mode=None,
             dump_weight=False,
@@ -88,6 +89,7 @@ class DumpConfig:
         self.module_ids = {}
         self.cur_module_id = 0
         self.dump_dir = ""
+        self.dump_statistics_mode = dump_statistics_mode
         self.dump_last_logits = dump_last_logits
         self.last_logits = None
         self.dump_weight = dump_weight
@@ -160,4 +162,6 @@ class DumpConfig:
         if self.tensor_part not in [0, 1, 2]:
             logger.error("tensor_part must be 0 or 1 or 2.")
             return False
+        if self.dump_statistics_mode not in [0, 1, 2]:
+            logger.error("dump_statistics  must be 0 or 1 or 2.")
         return True
