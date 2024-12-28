@@ -445,17 +445,17 @@ class CompareDataTorch(CompareDataParse):
         return golden_root_node, golden_layer_type, golden_layer_nodes
 
 
-def get_csv_path(self, token_id, node: TreeNode) -> tuple:
-        csv_dir_path = os.path.join(self.tokens_path, str(token_id), node.tensor_path)
-        logger.debug(
-            "get_csv_path: token_id: %s, node: %s, tensor_dir_path: %s",
-            str(token_id),
-            str(node),
-            str(csv_dir_path),
-        )
-        statistics_csv_path = os.path.join(csv_dir_path, "statistics.csv")
-        if os.path.exists(statistics_csv_path):
-            return (statistics_csv_path,)
-        else:
-            logger.debug("csv dir file does not exist")
-            return tuple()
+    def get_csv_path(self, token_id, node: TreeNode) -> tuple:
+            csv_dir_path = os.path.join(self.tokens_path, str(token_id), node.tensor_path)
+            logger.debug(
+                "get_csv_path: token_id: %s, node: %s, tensor_dir_path: %s",
+                str(token_id),
+                str(node),
+                str(csv_dir_path),
+            )
+            statistics_csv_path = os.path.join(csv_dir_path, "statistics.csv")
+            if os.path.exists(statistics_csv_path):
+                return (statistics_csv_path,)
+            else:
+                logger.debug("csv dir file does not exist")
+                return tuple()
