@@ -104,7 +104,7 @@ def generate_infer_file(output_file, source_path, is_vl_model=False):
     contents_str = Path(__file__).with_name(file_name).read_text()
     contents_str = contents_str.replace("atb_model_placeholder", Path(output_file).stem)
     contents_str = contents_str.replace("model_path_placeholder", os.path.abspath(source_path))
-    write_file(infer_file, contents_str)
+    write_file(str(infer_file), contents_str)
     return infer_file
 
 
@@ -222,7 +222,7 @@ class ATBModel:
         self.vocab_size = getattr(atb_model, "vocab_size", self.atb_model_config.vocab_size)
         self.rope_theta = getattr(atb_model, "rope_theta", self.atb_model_config.rope_theta)
         self.topk = getattr(atb_model, "topk", self.atb_model_config.topk)  
-        self.num_layers = getattr(atb_model, "num_layers", self.atb_model_config.num_layers)
+        self.num_layers = getattr(atb_model, "num_layeres", self.atb_model_config.num_layeres)
         self.num_experts = getattr(atb_model, "num_experts", self.atb_model_config.num_experts)
         self.gate_up_weights = []
         self.down_weights = []
