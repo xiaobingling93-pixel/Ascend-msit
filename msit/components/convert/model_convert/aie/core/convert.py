@@ -20,6 +20,8 @@ import subprocess
 from model_convert.aie.bean import ConvertConfig
 from components.utils.log import logger
 
+MAX_AIE_CONVERT_TIME = 300
+
 
 class Convert:
     def __init__(self, config: ConvertConfig) -> None:
@@ -40,13 +42,12 @@ class Convert:
         """
         logger.info('Execute command:%s', cmd)
         process = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        while process.poll() is None:
-            line = process.stdout.readline()
-            line = line.strip()
-            if line:
-                logger.debug(line)
+        stdout, _ = process.communicate(timeout=MAX_AIE_CONVERT_TIME)
         if process.returncode != 0:
             logger.error('Failed to execute command:%s', " ".join(cmd))
+            logger.error(stdout.decode())
+        else:
+            logger.debug(stdout.decode())
 
     def convert_model(self) -> None:
         cur_dir = os.path.dirname(__file__)
