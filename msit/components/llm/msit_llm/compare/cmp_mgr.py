@@ -167,7 +167,7 @@ class CompareMgr:
             str(my_tokens),
             str(my_token_set),
         )
-        if self.args.statistic:
+        if self.args.stats:
             compared_result = self.perform_comparison(golden_tokens, my_tokens, op_map, is_statistics=True)
             return save_statistics_compare_reault_to_csv(compared_result, output_path)
         else:
@@ -217,7 +217,6 @@ class CompareMgr:
             logger.debug("------ compare (%s %s)------", str(my_op.node_name), str(golden_op.node_name))
             golden_tensor_paths = list(self.golden_data.get_csv_path(golden_token_id, golden_op))
             my_tensor_paths = list(self.my_data.get_tensor_path(my_token_id, my_op, my_op_location))
-            _, my_tensor_paths = self._handle_rope_operation_paths(my_tensor_paths)
             
             if len(golden_tensor_paths) == len(my_tensor_paths):
                 golden_tensor_paths.sort()
