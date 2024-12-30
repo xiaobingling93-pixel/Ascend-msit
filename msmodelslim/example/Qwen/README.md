@@ -47,10 +47,10 @@
 | device_type | device类型 | 可选值：['cpu', 'npu']，默认为'cpu' |
 | calib_file | 量化校准数据 | 存放校准数据的json文件 |
 | disable_names | 手动回退的量化层名称 | 用户可根据精度要求手动设置，默认回退隐藏层的降维投影层 |
-| disable_level | L自动回退等级 | 配置示例如下：<br>(1)'L0':默认值，不执行回退。<br>(2)'L1'：回退1层。<br>(3)'L2'：回退2层。<br>(3)'L3'：回退3层。<br>(4)'L4'：回退4层。<br>(5)'L5'：回退5层.|
+| disable_level | L自动回退等级 | 配置示例如下：<br>'L0':默认值，不执行回退。<br>'L1'：回退1层。<br>'L2'：回退2层。<br>'L3'：回退3层。<br>'L4'：回退4层。<br>'L5'：回退5层。|
 | w_sym	| 权重量化是否为对称量化 | 默认为True，W8A8场景仅支持配置为True|
 | act_method | 激活值量化方法 | 可选值如下所示，默认为1。<br>(1) 1代表Label-Free场景的min-max量化方式。 <br>(2) 2代表Label-Free场景的histogram量化方式。 <br>(3) 3代表Label-Free场景的自动混合量化方式，LLM大模型场景下推荐使用。|
-| anti_method | 离群值抑制参数 | W8A8量化使用anti_method=m1或m2，W8A16量化使用m3 |
+| anti_method | 离群值抑制参数 |'m1': SmoothQuant算法。<br>'m2': SmoothQuant加强版算法，推荐使用。<br>'m3': AWQ算法。<br>'m4': smooth优化算法 。<br>'m5': CBQ量化算法。<br>默认为m2。|
 | co_sparse	| 是否开启稀疏量化功能 | 默认值：False，不开启稀疏量化 |
 | fraction | 模型权重稀疏量化过程中被保护的异常值占比  | 取值范围[0.01,0.1]。默认值为0.01。|
 | use_sigma | 是否启动sigma功能 | 默认为False，不开启sigma功能 |
