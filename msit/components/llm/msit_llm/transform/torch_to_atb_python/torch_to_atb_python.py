@@ -362,7 +362,7 @@ class ATBModelFromTorch(ATBModel):
             logger.debug(f"cur_module_name = {cur_module_name}, previous_module_name = {previous_module_name}")
             if cur_module_name != base_module_name:
                 output_node_map[node.name] = previous_operation_out  # will be overwriten later
-            if cur_module_name == previous_module_name or "gate" in cur_module_name or "experts" in cur_module_name:
+            if cur_module_name == previous_module_name:
                 continue
             if self._should_skip_node(node):
                 logger.debug(f"Current node skipped: {node.name}")
