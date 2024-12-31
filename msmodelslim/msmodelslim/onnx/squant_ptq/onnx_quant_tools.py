@@ -27,6 +27,7 @@ from msmodelslim.onnx.squant_ptq.onnx_ptq_kia.quant_funcs_onnx import (
 from msmodelslim.onnx.squant_ptq.aok.tool_main import aok_export
 from msmodelslim import logger
 
+
 class OnnxCalibrator(object):
     """ OnnxCalibrator for post-training quantization."""
 

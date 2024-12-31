@@ -1,3 +1,5 @@
+# Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
+
 import torch.nn
 
 from msmodelslim.pytorch.llm_ptq.accelerate_adapter.utils import judge_model_with_accelerate

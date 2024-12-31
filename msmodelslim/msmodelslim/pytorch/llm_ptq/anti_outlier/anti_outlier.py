@@ -545,13 +545,13 @@ class AntiOutlier(object):
     def check_multimodel(self, model):
         if not hasattr(model.config, 'architectures'):
             return False
-        if(model.config.architectures[0] == 'LlavaForConditionalGeneration' or 
-            (model.config.architectures[0]  == 'QWenLMHeadModel' and 
-            hasattr(model.config, 'visual'))  ):
+        if (model.config.architectures[0] == 'LlavaForConditionalGeneration' or 
+            (model.config.architectures[0] == 'QWenLMHeadModel' and 
+            hasattr(model.config, 'visual'))):
             return True
         return False
 
-    def anti_for_multimodel(self,cfg,model):
+    def anti_for_multimodel(self, cfg, model):
         def _set_module(ori_mod, submodule_key, module):
             tokens = submodule_key.split('.')
             sub_tokens = tokens[:-1]
@@ -560,7 +560,7 @@ class AntiOutlier(object):
                 cur_mod = getattr(cur_mod, s)
             setattr(cur_mod, tokens[-1], module)
             
-        blockDict = {
+        block_dict = {
             "QWenBlock" : QuantV2QwenBlock,
             "VisualAttentionBlock" : QuantVisualAttentionBlock,
             "LlamaDecoderLayer" : LlavaQuantDecoder,
@@ -569,8 +569,8 @@ class AntiOutlier(object):
 
         for name, mod in model.named_modules():
             mod_name = mod.__class__.__name__
-            if(mod_name in blockDict):
-                quant_mod = blockDict[mod_name](mod, cfg, name)
+            if (mod_name in block_dict):
+                quant_mod = block_dict[mod_name](mod, cfg, name)
                 self.logger.info("multiModel replace block name is `{}`".format(mod_name))
                 if hasattr(mod, '_hf_hook'):
                     add_hook_to_module(quant_mod, mod._hf_hook)
@@ -624,7 +624,12 @@ class AntiOutlier(object):
             args = []
             if ProcessHook.MODIFY_SMOOTH_ARGS in self.hooks and self.hooks[
                 ProcessHook.MODIFY_SMOOTH_ARGS] is not None:
-                args, fusion_kwargs = self.hooks[ProcessHook.MODIFY_SMOOTH_ARGS](self.cfg, norm_name_group, linear_names, args, fusion_kwargs)
+                args, fusion_kwargs = self.hooks[ProcessHook.MODIFY_SMOOTH_ARGS](
+                    self.cfg, 
+                    norm_name_group, 
+                    linear_names, args, 
+                    fusion_kwargs
+                )
 
             if Multiplier is not None and norm_module is None:
                 norm_module = Multiplier(
@@ -652,6 +657,7 @@ class AntiOutlier(object):
                     if attach_op is not None and Multiplier is not None and isinstance(norm_module, Multiplier):
                         attach_op(self.model, norm_module, linear_modules, linear_names)
 
+
 def get_config():
     a_qconfig = {
         'quantizer': 'FixedFakeQuantize',
@@ -668,6 +674,7 @@ def get_config():
     }
     return EasyDict(a_qconfig), EasyDict(w_qconfig)
 
+
 class QuantV2QwenBlock(nn.Module):
     def __init__(self, org_layer, cfg, layername):
         super().__init__()
@@ -680,7 +687,9 @@ class QuantV2QwenBlock(nn.Module):
 
         self.layername = layername
 
-    def forward(self, *args, **kwargs) -> Tuple[torch.FloatTensor, Optional[Tuple[torch.FloatTensor, torch.FloatTensor]]]:
+    def forward(
+        self, *args, **kwargs
+    ) -> Tuple[torch.FloatTensor, Optional[Tuple[torch.FloatTensor, torch.FloatTensor]]]:
         hidden_states = args[0]
         rotary_pos_emb = kwargs.pop("rotary_pos_emb")
         registered_causal_mask = kwargs.pop("registered_causal_mask")
@@ -771,6 +780,7 @@ class QuantV2QwenBlock(nn.Module):
             outputs += outputs_tmp[1:]
         return outputs
     
+
 class QuantVisualAttentionBlock(nn.Module):
     def __init__(self, org_layer, cfg, layername):
         super().__init__()
@@ -809,12 +819,15 @@ class QuantVisualAttentionBlock(nn.Module):
         post_ln_1 = self.ln_1(q_x)
          
         if self.cac_migrate_attn:
-            msmodelslim_logger.info("current block is QuantVisualAttentionBlock , layername:`{}` ".format(self.layername))
+            msmodelslim_logger.info(
+                f"current block is QuantVisualAttentionBlock , "
+                f"layername:`{self.layername}` "
+            )
             channel_max = post_ln_1.max(0)[0].max(0)[0]
             channel_min = post_ln_1.min(0)[0].min(0)[0]
             shift = (channel_max + channel_min) / 2
             post_ln_1 -= shift
-            if(self.attn.in_proj.bias is None):
+            if (self.attn.in_proj.bias is None):
                 msmodelslim_logger.warning("attn.in_proj.bias is None")
             self.attn.in_proj.bias.data += shift @ self.attn.in_proj.weight.data.T
                 
@@ -853,7 +866,7 @@ class QuantVisualAttentionBlock(nn.Module):
             channel_min = post_ln_2.min(0)[0].min(0)[0]
             shift = (channel_max + channel_min) / 2
             post_ln_2 -= shift
-            if(self.mlp.c_fc.bias is None):
+            if (self.mlp.c_fc.bias is None):
                 msmodelslim_logger.warning("mlp.c_fc.bias is None")
             self.mlp.c_fc.bias.data += shift @ self.mlp.c_fc.weight.data.T
             # calculate scale
@@ -861,7 +874,7 @@ class QuantVisualAttentionBlock(nn.Module):
             extra_dict = {
                 'bias': torch.cat([self.mlp.c_fc.bias]),
                 'shift': shift,
-                'observation_mask': None #test
+                'observation_mask': None  # test
                 }
 
             a_qconfig, w_qconfig = get_config()
@@ -880,6 +893,7 @@ class QuantVisualAttentionBlock(nn.Module):
         x = x + self.mlp(post_ln_2)
         return x
        
+
 class LlavaQuantDecoder(nn.Module):
     def __init__(self, org_layer, cfg, layername):
         super().__init__()
@@ -894,7 +908,9 @@ class LlavaQuantDecoder(nn.Module):
         self.cac_migrate_attn = True
         self.cac_migrate_mlp = True
 
-    def forward(self, *args, **kwargs) ->Tuple[torch.FloatTensor, Optional[Tuple[torch.FloatTensor, torch.FloatTensor]]]:
+    def forward(
+        self, *args, **kwargs
+    ) -> Tuple[torch.FloatTensor, Optional[Tuple[torch.FloatTensor, torch.FloatTensor]]]:
         hidden_states = args[0]
         attention_mask = kwargs.pop("attention_mask")
         position_ids = kwargs.pop("position_ids")
@@ -985,6 +1001,7 @@ class LlavaQuantDecoder(nn.Module):
      
         return outputs
 
+
 class LlavaClipVision(nn.Module):
     def __init__(self, org_layer, cfg, layername):
         super().__init__()
@@ -1024,8 +1041,16 @@ class LlavaClipVision(nn.Module):
                 self.self_attn.v_proj.bias.data += shift @ self.self_attn.v_proj.weight.data.T
 
             # calculate scale
-            weight_list = torch.cat([self.self_attn.q_proj.weight, self.self_attn.k_proj.weight, self.self_attn.v_proj.weight])
-            bias_list = torch.cat([self.self_attn.q_proj.bias, self.self_attn.k_proj.bias, self.self_attn.v_proj.bias])
+            weight_list = torch.cat([
+                self.self_attn.q_proj.weight, 
+                self.self_attn.k_proj.weight, 
+                self.self_attn.v_proj.weight]
+            )
+            bias_list = torch.cat([
+                self.self_attn.q_proj.bias, 
+                self.self_attn.k_proj.bias, 
+                self.self_attn.v_proj.bias]
+            )
             
 
             extra_dict = {
@@ -1071,7 +1096,7 @@ class LlavaClipVision(nn.Module):
             channel_min = hidden_states.min(0)[0].min(0)[0]
             shift = (channel_max + channel_min) / 2
             hidden_states -= shift
-            if(self.mlp.fc1.bias is None):
+            if (self.mlp.fc1.bias is None):
                 msmodelslim_logger.warning("mlp.fc1.bias is None")
             self.mlp.fc1.bias.data += shift @ self.mlp.fc1.weight.data.T
 
