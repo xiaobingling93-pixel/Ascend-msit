@@ -163,5 +163,6 @@ class DumpConfig:
             logger.error("tensor_part must be 0 or 1 or 2.")
             return False
         if self.dump_statistics_mode not in [0, 1, 2]:
-            logger.error("dump_statistics  must be 0 or 1 or 2.")
+            logger.error("dump_statistics_mode  must be 0 or 1 or 2.")
+            return False
         return True
