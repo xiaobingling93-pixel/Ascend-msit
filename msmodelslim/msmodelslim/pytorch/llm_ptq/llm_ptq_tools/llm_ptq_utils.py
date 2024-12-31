@@ -56,7 +56,8 @@ class QuantType(str, Enum):
 
     @staticmethod
     def is_value_in_enum(quant_type_value):
-        return quant_type_value in ["UNKNOWN", "W8A16", "W4A16", "W8A8", "W8A8S", "W8A8SC", "FLOAT", "W8A8_DYNAMIC", "NF4"]
+        return quant_type_value in ["UNKNOWN", "W8A16", "W4A16", "W8A8", "W8A8S", "W8A8SC", "FLOAT", "W8A8_DYNAMIC",
+                                    "NF4"]
 
     @staticmethod
     def check_instance_of_enum(instance):

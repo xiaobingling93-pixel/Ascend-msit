@@ -17,6 +17,8 @@ from safetensors.torch import save_file
 from accelerate.hooks import add_hook_to_module, remove_hook_from_module
 
 from ascend_utils.common.security.type import check_mapping_element
+from ascend_utils.common.security import (get_valid_write_path, SafeWriteUmask, check_element_type,
+                                          check_type, get_write_directory, check_number, check_int)
 
 from msmodelslim import logger as msmodelslim_logger
 from msmodelslim.pytorch.llm_ptq.hooks.factory import is_deepseek_v2_chat, is_deepseek_v2_lite, \
@@ -26,8 +28,6 @@ from msmodelslim.pytorch.llm_ptq.accelerate_adapter import enable_adapter, check
 from msmodelslim.pytorch.llm_ptq.accelerate_adapter.lazy_handler import LazyTensor, handle_lazy_tensor
 
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config import QuantConfig
-from ascend_utils.common.security import (get_valid_write_path, SafeWriteUmask, check_element_type,
-                                          check_type, get_write_directory, check_number, check_int)
 from msmodelslim.pytorch.llm_ptq.anti_outlier.graph_utils import (
     NormBias, extract_dag, input_to_cpu, norm_class_detect, class_detect
 )
@@ -272,6 +272,9 @@ class Calibrator(object):
             # 获取k_name和v_name
             k_name = 'k_proj'
             v_name = 'v_proj'
+
+            if name not in kv_cache:
+                kv_cache[name] = {}
 
             # 更新key极值
             update_extremum(kv_cache[name], k_name, 'max', torch.max, key_max)
@@ -541,8 +544,11 @@ class Calibrator(object):
             for key in keys_to_delete:
                 del safetensor_weight[key]
 
-            keys_to_delete = [key for key in self.quant_model_json_description.quant_model_description.keys() if
-                              'module.weight' in key]
+            keys_to_delete = [
+                key
+                for key in self.quant_model_json_description.quant_model_description.keys()
+                if 'module.weight' in key
+            ]
             for key in keys_to_delete:
                 del self.quant_model_json_description.quant_model_description[key]
 
