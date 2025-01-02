@@ -42,7 +42,7 @@ msit_sub_task_entry_points = [
 
 setup(
     name='msit-analyze',
-    version='7.0.0c1120',
+    version='7.0.0c1230',
     description='inference analyze tool',
     long_description=long_description,
     long_description_content_type='text/markdown',
