@@ -117,14 +117,15 @@ def judge_single_or_multi_device(path):
     else:
         return False
 
+
 def gather_data_with_token_id_fx(data_path, token_dirs):
     for cur_path, dirs, _ in os.walk(data_path):
-            if len(dirs) == 0:
-                continue
-            if all([len(ii) < MAX_TOKEN_LEN and str.isdigit(ii) for ii in dirs]):
-                dirs = sorted(dirs, key=lambda xx: int(xx))
-                token_dirs = [os.path.join(cur_path, dir_name) for dir_name in dirs]
-                break
+        if len(dirs) == 0:
+            continue
+        if all([len(ii) < MAX_TOKEN_LEN and str.isdigit(ii) for ii in dirs]):
+            dirs = sorted(dirs, key=lambda xx: int(xx))
+            token_dirs = [os.path.join(cur_path, dir_name) for dir_name in dirs]
+            break
     
     if len(token_dirs) == 0:
         token_dirs.append(data_path)  # Just use data_path if found no token like dirs
@@ -323,7 +324,9 @@ def get_all_ops_from_fusion_op(op_name, graph_map_dict, ge_dump_data):
 def compare_ge_with_fx(graph_map, ge_dump_data, fx_dump_data, token_id=0):
     gathered_row_data = []
     graph_map_dict = {
-        graph["op"]["name"]: graph["op"] for graph in graph_map if "op" in graph and "name" in graph["op"]
+        graph["op"]["name"]: graph["op"] 
+        for graph in graph_map 
+        if "op" in graph and "name" in graph["op"]
     }
     ge_dump_data = sort_ge_dump_data(ge_dump_data, graph_map)
     for op_name, my_path in ge_dump_data.items():

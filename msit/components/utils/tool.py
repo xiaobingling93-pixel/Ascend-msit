@@ -14,10 +14,12 @@
 
 """
 Function:
-This module is used to read and convert dump data for external users. When you use it, you need to import the following function.
+This module is used to read and convert dump data for external users. 
+When you use it, you need to import the following function.
 """
 
-import os, sys
+import os
+import sys
 
 import numpy as np
 import torch
