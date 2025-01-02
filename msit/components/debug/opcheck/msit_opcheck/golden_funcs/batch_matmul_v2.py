@@ -17,7 +17,7 @@ import math
 import numpy as np
 
 from msit_opcheck.conversion.dtype_convert import bfloat16_conversion_v2
-from msit_opcheck.utils import  ceil_div, align, get
+from msit_opcheck.utils import ceil_div, align
 from msit_opcheck.graph_parser import OpInfo
 from components.debug.common import logger
 
@@ -54,30 +54,31 @@ def fractal_shape(dtype):
     """
     res = re.match(r'[^\d]+(\d+)', dtype)
     bit_of_dtype = int(res[1])
-    if (32 * 8) % bit_of_dtype == 0 and bit_of_dtype !=0: 
+    if (32 * 8) % bit_of_dtype == 0 and bit_of_dtype != 0: 
         return 16, (32 * 8) // bit_of_dtype
     else:
         return 16, -1
 
 
-def shape_nd_to_Nz(shape, dtype='float16', before_mmad=True):
+def shape_nd_to_nz(shape, dtype='float16', before_mmad=True):
     """
-    >>> shape_nd_to_Nz([3,17])
+    >>> shape_nd_to_nz([3,17])
     [2, 1, 16, 16]
-    >>> shape_nd_to_Nz([4,5,3,17])
+    >>> shape_nd_to_nz([4,5,3,17])
     [4, 5, 2, 1, 16, 16]
-    >>> shape_nd_to_Nz([3,17], dtype='int8')
+    >>> shape_nd_to_nz([3,17], dtype='int8')
     [1, 1, 16, 32]
-    >>> shape_nd_to_Nz([16,27], dtype='int32')
+    >>> shape_nd_to_nz([16,27], dtype='int32')
     [4, 1, 16, 8]
-    >>> shape_nd_to_Nz([16,27], dtype='int32', before_mmad=False)
+    >>> shape_nd_to_nz([16,27], dtype='int32', before_mmad=False)
     [2, 1, 16, 16]
     """
     if (dtype, before_mmad) not in (
         ('float16', True), ('float32', False), ('int8', True),
         ('int32', False), ('int32', True), ('float64', False), (('float32', True))
     ):
-        logger.error(f"Please implement shape ND to FRACTAL_NZ with dtype {dtype} on {shape} {'before mmad' if before_mmad else 'after mmad'}")
+        mmad_msg = 'before mmad' if before_mmad else 'after mmad'
+        logger.error(f"Please implement shape ND to FRACTAL_NZ with dtype {dtype} on {shape} {mmad_msg}")
 
     if len(shape) >= 2:
         batch = shape[:-2]
@@ -135,7 +136,15 @@ def helper_mm_and_bmm(context: OpInfo, name_parameter):
     x1, x2, bias, *_ = context.param.get("original_input_arrays")
     trans_a = context.param.get("name_parameter")[0]
     trans_b = context.param.get("name_parameter")[1]
-    format_bias = get(context.param.get("stc_input_formats"), 2)
+    stc_input_formats = context.param.get("stc_input_formats")
+    idx = 2
+    if len(stc_input_formats) == 1:
+        format_bias = stc_input_formats[0]
+    elif not stc_input_formats:
+        format_bias = None
+    else:
+        format_bias = stc_input_formats[idx]
+
     format_out = context.param.get("output_formats")[0]
     if context.param.get("impl_mode") == "enable_hi_float_32_execution":
         x1 = hf_32_input_gerenate(context, x1)
@@ -153,12 +162,12 @@ def helper_mm_and_bmm(context: OpInfo, name_parameter):
         if len(a.shape) == 2:
             a = a.t()
         else:
-            a = a.transpose(-1,-2)
+            a = a.transpose(-1, -2)
     if trans_b:
         if len(b.shape) == 2:
             b = b.t()
         else:
-            b = b.transpose(-1,-2)
+            b = b.transpose(-1, -2)
     res_pt = torch.matmul(a, b).numpy()
     if bias is not None:
         if x1.dtype == 'float32':

@@ -18,7 +18,7 @@ import numpy as np
 from msit_opcheck.graph_parser import OpInfo
 
 
-def normalize_axis(axis, shape_length, ori_format, format) -> int:
+def normalize_axis(axis, shape_length, ori_format, targe_format) -> int:
     axis = axis if axis >= 0 else shape_length + axis
 
     format_map = {
@@ -27,8 +27,8 @@ def normalize_axis(axis, shape_length, ori_format, format) -> int:
         ("NCDHW", "NDC1HWC0"): {2: 1, 1: 2}
     }
 
-    if (ori_format, format) in format_map:
-        axis = format_map[(ori_format, format)].get(axis, axis)
+    if (ori_format, targe_format) in format_map:
+        axis = format_map[(ori_format, targe_format)].get(axis, axis)
 
     return axis
 
@@ -56,7 +56,7 @@ def _split_generic(context: OpInfo, split_type: str):
 
 
 def _split_v_d(context: OpInfo):
-    res = _split_generic(context,split_type='v')
+    res = _split_generic(context, split_type='v')
     return res
 
 

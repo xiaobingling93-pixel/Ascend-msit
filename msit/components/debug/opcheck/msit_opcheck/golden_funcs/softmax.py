@@ -18,7 +18,7 @@ import numpy as np
 import tensorflow as tf
 
 from msit_opcheck.operation_test import OperationTest
-from msit_opcheck.conversion.shape_convert import fhd2nd, nz2nd, shd2nd, nd2fhd, nd2nz, to_NDC1HWC0
+from msit_opcheck.conversion.shape_convert import fhd2nd, nz2nd, shd2nd, nd2fhd, nd2nz, to_ndc1hwc0
 from msit_opcheck.conversion.dtype_convert import DATA_TYPE_MAP
 
 
@@ -103,7 +103,7 @@ class SoftmaxOperation(OperationTest):
         elif cur_format == "FRACTAL_NZ":
             result = nd2nz(result)
         elif cur_format == "NDC1HWC0":
-            result = to_NDC1HWC0(result, ori_format)
+            result = to_ndc1hwc0(result, ori_format)
         if out_dtype == "bfloat16":
             result = result.astype(tf.bfloat16.as_numpy_dtype, copy=False)
         else:

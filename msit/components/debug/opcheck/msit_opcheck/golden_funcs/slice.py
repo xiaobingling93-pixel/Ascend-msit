@@ -95,7 +95,8 @@ def _slice(context: OpInfo):
     ori_format = context.param.get("stc_input_ori_formats")[0]
     org_shape = context.param.get("stc_ori_inputs")[0]
     if input_format in ("NDC1HWC0", "NC1HWC0", "FRACTAL_NZ", "FRACTAL_Z", "FRACTAL_Z_3D"):
-        begin_data, size_data = _update_params_for_other_format(org_shape, begin_data, size_data, input_format, ori_format)
+        begin_data, size_data = \
+            _update_params_for_other_format(org_shape, begin_data, size_data, input_format, ori_format)
 
     # indices 1
     x_shape = x_data.shape
@@ -103,5 +104,5 @@ def _slice(context: OpInfo):
 
     with tf.compat.v1.Session() as sess:
         gather_res = tf.compat.v1.slice(x, begin_data, size_data, name=None)
-        res = sess.run(gather_res, feed_dict={x: x_data,})
+        res = sess.run(gather_res, feed_dict={x: x_data, })
     return res
