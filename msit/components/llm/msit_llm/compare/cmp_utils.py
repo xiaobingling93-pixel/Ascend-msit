@@ -29,7 +29,8 @@ from msit_llm.common.constant import (TOKEN_ID, DATA_ID, GOLDEN_DATA_PATH, MY_DA
                                       GOLDEN_MEAN_VALUE, MY_DTYPE, MY_SHAPE,
                                       MY_MAX_VALUE, MY_MIN_VALUE, MY_MEAN_VALUE,
                                       CSV_GOLDEN_HEADER, GLOBAL_HISTORY_AIT_DUMP_PATH_LIST,
-                                      STAT_CPM, CSV_STATISTICS_HEADER)
+                                      STAT_CPM, CSV_STATISTICS_HEADER, GOLDEN_OP_TYPE,
+                                      MY_OP_TYPE)
 from msit_llm.common.log import logger
 from components.utils.cmp_algorithm import CMP_ALG_MAP, CUSTOM_ALG_MAP, CMP_STATICTISC_MAP
 from components.utils.security_check import ms_makedirs
@@ -44,10 +45,12 @@ class BasicDataInfo:
     count_data_id = 0  # Count data_id, increment by 1 every time creating a new instance
     TORCH_UNSUPPORTED_D_TYPE_MAP = {"uint16": "int32", "uint32": "int64"}
 
-    def __init__(self, golden_data_path, my_data_path, token_id=None, data_id=None):
+    def __init__(self, golden_data_path, my_data_path, op_type, token_id=None, data_id=None):
         self.my_data_path, self.golden_data_path = my_data_path, golden_data_path
         self.token_id = self.get_token_id(my_data_path) if token_id is None else token_id
         self.data_id = self.count_data_id if data_id is None else data_id
+        self.my_op_type = op_type[0]
+        self.golden_op_type = op_type[1]
         self._count()
 
     @classmethod
@@ -59,7 +62,9 @@ class BasicDataInfo:
             TOKEN_ID: str(self.token_id),
             DATA_ID: str(self.data_id),
             GOLDEN_DATA_PATH: self.golden_data_path,
+            GOLDEN_OP_TYPE: self.golden_op_type,
             MY_DATA_PATH: self.my_data_path,
+            MY_OP_TYPE: self.my_op_type
         }
 
     def get_token_id(self, cur_path):
