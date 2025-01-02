@@ -22,7 +22,7 @@ import torch
 import torch_npu
 
 from components.utils.check.rule import Rule
-from components.utils.file_open_check import ms_open
+from components.utils.file_open_check import ms_open, FileStat
 from msit_llm.common.log import logger
 from msit_llm.common.constant import GLOBAL_HISTORY_AIT_DUMP_PATH_LIST, RAW_INPUT_PATH
 from msit_llm.common.utils import load_file_to_read_common_check
@@ -366,13 +366,14 @@ class OpChecker:
         op_param = {}
         
         json_path = os.path.join(dirpath, 'op_param.json')
-        try:  
-            json_path = load_file_to_read_common_check(json_path)  
-            with ms_open(json_path, 'r', max_size=TENSOR_MAX_SIZE) as f:
-                op_param = json.load(f)
-        except Exception as e:
-            logger_text = f"Cannot loads json file to json! Json file: {json_path} \n Exception: {e}"
-            logger.debug(logger_text)
+        if FileStat(json_path).is_exists:
+            try:  
+                json_path = load_file_to_read_common_check(json_path)  
+                with ms_open(json_path, 'r', max_size=TENSOR_MAX_SIZE) as f:
+                    op_param = json.load(f)
+            except Exception as e:
+                logger_text = f"Cannot loads json file to json! Json file: {json_path} \n Exception: {e}"
+                logger.debug(logger_text)
 
         op_id, op_name = self.parse_op_id_name(dirpath)
         if op_id is None or op_name is None:
