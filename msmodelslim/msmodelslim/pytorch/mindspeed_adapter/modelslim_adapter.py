@@ -15,12 +15,13 @@ from megatron.core.tensor_parallel.mappings import (
     )
 from megatron.training import get_args
 
-from ascend_utils.common.security import check_dict_element,check_type
+from ascend_utils.common.security import check_dict_element, check_type
 from modelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator
 from msmodelslim.pytorch.llm_ptq.anti_outlier.dag_utils.torch_dag_adapter import TorchDAGAdapter
 
 _SUPPORTED_DEVICES = ["npu", 'gpu']
 _SUPPORTED_PREFIX = ["model.", "model.module."]
+
 
 def get_norm_linear_subgraph(self):
     norm_linear_subgraph = defaultdict(list)
@@ -41,8 +42,9 @@ def get_norm_linear_subgraph(self):
         else:
             qkv_linears = [node.name_in_network for node in self._node_list[start+1:start+4]]
             norm_linear_subgraph[norm_node].extend(qkv_linears)
-    norm_linear_subgraph = {k:v for k,v in norm_linear_subgraph.items() if len(v) > 0}
+    norm_linear_subgraph = {k: v for k, v in norm_linear_subgraph.items() if len(v) > 0}
     return norm_linear_subgraph
+
 
 def modelslim_adaption():
     from mindspeed.patch_utils import MindSpeedPatchesManager as aspm
@@ -52,12 +54,15 @@ def modelslim_adaption():
     aspm.register_patch(patch_string, get_norm_linear_subgraph)
     aspm.apply_patches()
 
+
 modelslim_adaption()
+
 
 class Forward(ABC):
     @abstractmethod
     def __call__(self, model, *args, **kwargs):
         pass
+
 
 class GenerateForward(Forward):
     def __call__(self, model, x):
@@ -65,7 +70,8 @@ class GenerateForward(Forward):
             return generate(model, x[0], tokens_to_generate=1)
         else:
             return generate(model, x, tokens_to_generate=1)
-        
+
+
 class ModelGenerateForward(Forward):
     def __call__(self, model, x):
         args = get_args()
@@ -73,7 +79,8 @@ class ModelGenerateForward(Forward):
         res = model.generate(x, max_new_tokens=1)
         args.max_new_tokens = max_new_tokens
         return res
-    
+
+
 def set_module(ori_mod, submodule_key, module):
     tokens = submodule_key.split('.')
     sub_tokens = tokens[:-1]
@@ -82,8 +89,9 @@ def set_module(ori_mod, submodule_key, module):
         cur_mod = getattr(cur_mod, s)
     setattr(cur_mod, tokens[-1], module)
 
+
 class ModelAdapter(nn.Module):
-    def __init__(self, model:nn.Module, dev_type='npu', forward_step=None, prefix="model."):
+    def __init__(self, model: nn.Module, dev_type='npu', forward_step=None, prefix="model."):
         super(ModelAdapter, self).__init__()
         check_type(model, nn.Module, param_name="model")
         if forward_step and not callable(forward_step):
@@ -91,7 +99,7 @@ class ModelAdapter(nn.Module):
         self.model = self.convert_model(model)
         if dev_type not in _SUPPORTED_DEVICES:
             raise ValueError("Configuration param `dev_id` cannot be correctly parsed! "
-                                "Please make sure a valid device id is input")
+                             "Please make sure a valid device id is input")
         self.device = dev_type
         self.forward_step = forward_step
         if hasattr(model, 'args'):
@@ -136,7 +144,7 @@ class ModelAdapter(nn.Module):
     
     def forward(self, *args, **kwargs):
         return self.forward_step(self.model, *args, **kwargs)
-    
+
 
 class CalibratorAdapter(Calibrator):
     def extract_dag(self, model):
