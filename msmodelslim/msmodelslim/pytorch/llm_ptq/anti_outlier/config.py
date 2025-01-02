@@ -13,7 +13,7 @@ _OFFLOAD_TYPE = 'offload_type'
 OFFLOAD_DISK = 'disk'
 OFFLOAD_MEMORY = 'memory'
 _SUPPORTED_LOW_MEMORY_KEY = [_OFFLOAD_TYPE]
-_SUPPORTED_OFFLOAD_TYPE = [OFFLOAD_DISK, OFFLOAD_MEMORY]
+_SUPPORTED_OFFLOAD_TYPE = [OFFLOAD_MEMORY]
 
 
 class AntiMethods(str, Enum):
@@ -60,13 +60,13 @@ class AntiOutlierConfig:
 
         # check low_memory config, must be {"offload_type": "disk|memory"}
         self.is_adapter_enabled = low_memory is not None
-        self.offload_type = OFFLOAD_DISK
+        self.offload_type = OFFLOAD_MEMORY
         if self.is_adapter_enabled:
             check_type(low_memory, dict, param_name='low_memory')
             for key in low_memory:
                 if key not in _SUPPORTED_LOW_MEMORY_KEY:
                     raise KeyError(f"low_memory accept {_SUPPORTED_LOW_MEMORY_KEY}, not {key}")
-            self.offload_type = low_memory.get(_OFFLOAD_TYPE, OFFLOAD_DISK)
+            self.offload_type = low_memory.get(_OFFLOAD_TYPE, OFFLOAD_MEMORY)
             if self.offload_type not in _SUPPORTED_OFFLOAD_TYPE:
                 raise ValueError(f'offload_type should be in {_SUPPORTED_OFFLOAD_TYPE}, but got {self.offload_type}.')
 
