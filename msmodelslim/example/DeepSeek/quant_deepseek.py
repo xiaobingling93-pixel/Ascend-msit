@@ -48,7 +48,7 @@ def parse_arguments():
         '--calib_file',
         type=str,
         help='A jsonl file contains calibration data.',
-        default = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'common', 'teacher_qualification.jsonl'))
+        default=os.path.join(os.path.dirname(os.path.dirname(__file__)), 'common', 'teacher_qualification.jsonl'))
     parser.add_argument('--w_bit', type=int, default=8)
     parser.add_argument('--a_bit', type=int, default=8)
     parser.add_argument('--disable_names', type=str, nargs='+', default=None)

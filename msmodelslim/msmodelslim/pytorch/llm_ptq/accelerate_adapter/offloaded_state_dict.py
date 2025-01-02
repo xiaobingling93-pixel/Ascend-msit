@@ -1,3 +1,5 @@
+# Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
+
 import os
 from abc import ABC, abstractmethod
 from typing import Optional, Union, Mapping, Type, Dict
@@ -105,7 +107,7 @@ class DiskStateDict(WritableOffloadedWeightsLoader, StateDictBase):
         return state_dict
 
 
-_default_state_dict = MemoryStateDict
+DefaultStateDict = MemoryStateDict
 
 _state_dict_class_map: Dict[str, StateDictBase] = {
     OFFLOAD_MEMORY: MemoryStateDict,
@@ -114,4 +116,4 @@ _state_dict_class_map: Dict[str, StateDictBase] = {
 
 
 def _select_state_dict(typ: str) -> Type[StateDictBase]:
-    return _state_dict_class_map.get(typ, _default_state_dict)
+    return _state_dict_class_map.get(typ, DefaultStateDict)

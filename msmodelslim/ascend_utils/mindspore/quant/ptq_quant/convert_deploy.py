@@ -32,5 +32,3 @@ def convert_to_inference_network(network):
             convert_to_inference_network(cell)
     if isinstance(network, nn.SequentialCell):
         network.cell_list = list(network.cells())
-
-    return network
