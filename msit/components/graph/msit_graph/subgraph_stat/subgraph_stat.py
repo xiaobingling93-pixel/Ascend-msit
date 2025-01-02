@@ -35,9 +35,9 @@ from msit_graph.graph_extract.graph_extract import GraphAnalyze
 
 
 class SimpleNode:
-    def __init__(self, name, type):
+    def __init__(self, name, typename):
         self.name = name
-        self.type = type
+        self.typename = typename
         self.inputs = []
         self.outputs = []
 
@@ -126,7 +126,7 @@ def generate_subgraphs(root_name, nodes, bfs_nodes):
     non_root_nodes = set(bfs_nodes) - {root_name}
 
     # Add the initial BFS subgraph as the first subgraph
-    initial_subgraph_types = tuple(nodes[node_name].type for node_name in bfs_nodes)
+    initial_subgraph_types = tuple(nodes[node_name].typename for node_name in bfs_nodes)
     subgraphs[initial_subgraph_types].add(root_name)
 
     # Generate all subsets of non-root nodes
@@ -144,7 +144,7 @@ def generate_subgraphs(root_name, nodes, bfs_nodes):
             remaining_nodes = set(bfs_nodes) - removed_nodes
             # Ensure the subgraph contains at least two nodes: root and one child
             if len(remaining_nodes) >= 2:
-                subgraph_types = tuple(nodes[node_name].type for node_name in remaining_nodes)
+                subgraph_types = tuple(nodes[node_name].typename for node_name in remaining_nodes)
                 logger.debug(f"subgraph_types: {subgraph_types}")
                 subgraphs[subgraph_types].add(root_name)
 
@@ -225,10 +225,15 @@ def stat_subgraph(input_path, max_nodes=8):
     # Prepare data for DataFrame
     data = {'Subgraph': [hash_value for hash_value, _ in duplicate_subgraphs],
             'Count': [count for _, count in duplicate_subgraphs],
-            'Root Nodes Index': ['; '.join(map(str, subgraph_roots[hash_value])) for hash_value, _ in duplicate_subgraphs]}
+            'Root Nodes Index': [
+            '; '.join(map(str, subgraph_roots[hash_value])) for hash_value, _ in duplicate_subgraphs
+            ]
+    }
 
     # Extract indices from Root Nodes
-    data['Root Nodes Index'] = [extract_indices(root_nodes_str.split('; ')) for root_nodes_str in data['Root Nodes Index']]
+    data['Root Nodes Index'] = [
+        extract_indices(root_nodes_str.split('; ')) for root_nodes_str in data['Root Nodes Index']
+    ]
 
     # Create DataFrame
     df = pd.DataFrame(data)
@@ -236,8 +241,8 @@ def stat_subgraph(input_path, max_nodes=8):
 
 
 def calculate_task_durations(subgraph_tuple, average_durations):
+    total_duration = 0.0
     try:
-        total_duration = 0.0
         for op_type in subgraph_tuple:
             avg_duration = average_durations.loc[average_durations['OP Type'] == op_type, 
                 'Average Task Duration(us)'].values
@@ -295,7 +300,9 @@ def calculate_sum(source, profile, max_nodes, output_path):
             return
 
         # Apply the function to create 'Task Sum Duration(us)' column
-        subgraph_df['Task Sum Duration(us)'] = subgraph_df['Subgraph'].apply(lambda x: calculate_task_durations(x, average_durations))
+        subgraph_df['Task Sum Duration(us)'] = subgraph_df['Subgraph'].apply(
+            lambda x: calculate_task_durations(x, average_durations)
+        )
         if subgraph_df['Task Sum Duration(us)'].isnull().any():
             logger.warning("Some task duration calculations failed.")
 
@@ -303,8 +310,10 @@ def calculate_sum(source, profile, max_nodes, output_path):
         subgraph_df['Total Duration(us)'] = subgraph_df['Count'] * subgraph_df['Task Sum Duration(us)']
 
         # Select only the required columns for the output
-        output_df = subgraph_df[['Subgraph', 'Count', 'Root Nodes Index', 'Task Sum Duration(us)', 'Total Duration(us)']]
-
+        output_df = subgraph_df[
+            ['Subgraph', 'Count', 'Root Nodes Index', 'Task Sum Duration(us)', 'Total Duration(us)']
+        ]
+       
         # Save the result to output CSV file
         output_df.to_csv(output_path, index=False)
         logger.info(f"Results saved to {output_path}")

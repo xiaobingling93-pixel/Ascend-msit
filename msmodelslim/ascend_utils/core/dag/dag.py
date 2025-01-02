@@ -245,7 +245,7 @@ class DirectedAcyclicGraph:
             else:
                 yield {sub_graph_outputs[index_sub_node].name: ori_graph_outputs[index_ori_node] for
                     index_sub_node, index_ori_node in enumerate(seq)}
-					   
+
     def _remove_one_node(self, node: DagNode):
         if node in self.dag_node_list:
             self.dag_node_list.remove(node)

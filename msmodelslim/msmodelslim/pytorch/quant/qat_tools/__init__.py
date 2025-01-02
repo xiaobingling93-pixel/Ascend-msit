@@ -1,8 +1,7 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
 
-kd_loss = ['kl_loss', 'dkd_loss', 'rkd_loss', 'sckd_loss']
 __all__ = ['qsin_qat', 'save_qsin_qat_model', 'QatConfig', 'get_logger', 'GISGD', 'QatModelWrapper', 'GraphOpt'] + \
-          kd_loss
+          ['kl_loss', 'dkd_loss', 'rkd_loss', 'sckd_loss']
 
 from .qat_kia.kd import kl_loss, dkd_loss, rkd_loss, sckd_loss
 from .qat_kia.GISGD import GISGD

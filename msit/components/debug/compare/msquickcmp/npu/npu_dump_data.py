@@ -441,7 +441,8 @@ class NpuDumpData(DumpData):
                 utils.logger.error("atc insert_op_config file contains no src_image_size_h or src_image_size_w")
                 raise utils.AccuracyCompareException(utils.ACCURACY_COMPARISON_WRONG_AIPP_CONTENT)
             if len(src_image_size_h) != len(src_image_size_w):
-                utils.logger.error("atc insert_op_config file's src_image_size_h number does not equal src_image_size_w")
+                utils.logger.error(
+                    "atc insert_op_config file's src_image_size_h number does not equal src_image_size_w")
                 raise utils.AccuracyCompareException(utils.ACCURACY_COMPARISON_WRONG_AIPP_CONTENT)
         if self.input_shape:
             inputs_list = parse_input_shape_to_list(self.input_shape)

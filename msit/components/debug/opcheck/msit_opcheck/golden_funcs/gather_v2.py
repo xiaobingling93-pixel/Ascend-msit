@@ -21,7 +21,7 @@ def dsl_gather_v2(context: OpInfo):
     """
     A numpy implementation of Gather
     """
-    params_data, indices_data = context.param.get("input_arrays")[0],context.param.get("input_arrays")[1]
+    params_data, indices_data = context.param.get("input_arrays")[0], context.param.get("input_arrays")[1]
     params_shape_len, indices_shape_len = len(params_data.shape), len(indices_data.shape)
 
     if "batch_dims" in context.param.get("other_runtime_params"):

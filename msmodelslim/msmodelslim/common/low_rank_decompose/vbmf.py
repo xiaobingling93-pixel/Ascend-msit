@@ -16,6 +16,7 @@ class EvbSigma2Params:
 def none_zero_divide(inputs, divisor, eps=1e-6):
     return np.divide(inputs, np.maximum(divisor, eps))
 
+
 def evbmf(source_input, sigma2=None, high=None) -> int:
     """Empirical Variational Bayes Matrix Factorization.
     Paper: Global analytic solution of fully-observed variational Bayesian matrix factorization.

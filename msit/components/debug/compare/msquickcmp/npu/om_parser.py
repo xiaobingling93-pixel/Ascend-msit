@@ -19,6 +19,7 @@ This class is used to om fusion parser.
 """
 import itertools
 import json
+from typing import Union, List
 
 import numpy as np
 
@@ -221,7 +222,7 @@ class OmParser(object):
                 return True, dym_arg
         return False, None
 
-    def get_aipp_config_content(self):
+    def get_aipp_config_content(self) -> Union[str, List]:
         aipp_configs = []
         for graph in self.json_object.get(GRAPH_OBJECT):
             for op in graph.get(OP_OBJECT):

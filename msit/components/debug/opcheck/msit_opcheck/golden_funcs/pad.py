@@ -18,6 +18,7 @@ import numpy as np
 import torch
 from msit_opcheck.operation_test import OperationTest
 
+
 class PadOperation(OperationTest):
     def golden_calc(self, in_tensors):
         input_data, paddings = in_tensors

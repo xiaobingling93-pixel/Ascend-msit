@@ -508,7 +508,7 @@ class LinearNf4Quantizer(nn.Module):
         self.device = None
         self.weight_absmax = None
         self.bias_absmax = None
-        self.NF4_MAPPING = None
+        self.nf4_mapping = None
         self.blocksize = cfg.block_size
 
     def normalize_data(self, data):
@@ -518,7 +518,7 @@ class LinearNf4Quantizer(nn.Module):
         return block_weight, absmax
     
     def set_nf4_quantized_vari(self):
-        self.NF4_MAPPING = torch.tensor([
+        self.nf4_mapping = torch.tensor([
         -1.0, -0.6961928009986877, -0.5250730514526367, -0.39491748809814453, -0.28444138169288635,
         -0.18477343022823334, -0.09105003625154495, 0.0, 0.07958029955625534, 0.16093020141124725,
         0.24611230194568634, 0.33791524171829224, 0.44070982933044434, 0.5626170039176941,
@@ -526,18 +526,18 @@ class LinearNf4Quantizer(nn.Module):
         ], dtype=self.dtype).view(1, -1).to(self.device)
     
     def nf4_quantize(self, weight):
-        if self.NF4_MAPPING is None:
+        if self.nf4_mapping is None:
             self.set_nf4_quantized_vari()
         row, col = weight.shape
         max_oom_shape = 128256 * 4096
         if row * col < max_oom_shape:
-            diff = (weight.unsqueeze(-1) - self.NF4_MAPPING).abs()
+            diff = (weight.unsqueeze(-1) - self.nf4_mapping).abs()
             uint8_weight = torch.argmin(diff, dim=-1)
         else:
             shape_dim = [[row, 0], [col, 1]] 
             shape_dim = sorted(shape_dim, key=lambda x: (x[0]))
             for i in range(shape_dim[0][0]):
-                diff = (weight.narrow(shape_dim[0][1], i, 1).unsqueeze(-1) - self.NF4_MAPPING).abs()
+                diff = (weight.narrow(shape_dim[0][1], i, 1).unsqueeze(-1) - self.nf4_mapping).abs()
                 weight_slice = torch.argmin(diff, dim=-1)
                 if i == 0:
                     uint8_weight = weight_slice
@@ -571,7 +571,7 @@ class LinearNf4Quantizer(nn.Module):
     def nf4_dequantize(self, weight, shape, absmax):
         weight = weight.view(-1).to(torch.int32)
         weight = torch.stack([weight // 16, weight % 16], dim=1)
-        nf4_dequantized_weight = self.NF4_MAPPING.reshape(-1)[weight]
+        nf4_dequantized_weight = self.nf4_mapping.reshape(-1)[weight]
         block_weight = nf4_dequantized_weight.view(-1, self.blocksize) * absmax.reshape(-1, 1)
         weight = block_weight.view(shape)
         return weight

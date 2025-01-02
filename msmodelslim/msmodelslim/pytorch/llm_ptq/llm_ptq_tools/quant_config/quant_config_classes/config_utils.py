@@ -123,7 +123,7 @@ def check_lowbit_config(config):
         raise ValueError("act_method can not be 3 when running lowbit.")
 
 
-def check_NF4_config(config):
+def check_nf4_config(config):
     if config.w_method == 'NF':
         msmodelslim_logger.warning("Mm_tensor don't work, NF4 only support block-size quantization.")
         if config.w_bit != 4:
@@ -192,7 +192,7 @@ def check_and_generate_config_param(config):
     check_lowbit_config(config)
     check_dynamic_config(config)
     set_per_group_param(config)
-    check_NF4_config(config)
+    check_nf4_config(config)
 
     params = {
         'w_bit': config.w_bit,

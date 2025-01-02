@@ -34,7 +34,6 @@ def replace_module_with_saving_input(network, decompose_config=None):
         elif isinstance(cell, nn.Conv2d):
             layer_with_input = nn.SequentialCell([SaveInput(cell.in_channels, name, is_channel_first=True), cell])
             update_cell(network, cell, name, layer_with_input)
-    return network
 
 
 def get_input_data_for_each_layer(network, decompose_config, datasets, max_iter=-1):

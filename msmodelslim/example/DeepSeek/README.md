@@ -29,7 +29,7 @@
 | w_bit | 权重量化bit | 大模型量化场景下，可配置为8或16 <br>大模型稀疏量化场景下，需配置为4 |
 | device_type | device类型 | 可选值：['cpu', 'npu']，默认为'cpu' |
 | disable_names | 手动回退的量化层名称 | 用户可根据精度要求手动设置，默认回退隐藏层的降维投影层 |
-| disable_level | L自动回退等级 | 配置示例如下：<br>(1)'L0':默认值，不执行回退。<br>(2)'L1'：回退1层。<br>(3)'L2'：回退2层。<br>(3)'L3'：回退3层。<br>(4)'L4'：回退4层。<br>(5)'L5'：回退5层.|
+| disable_level | L自动回退等级 | 配置示例如下：<br>'L0':默认值，不执行回退。<br>'L1'：回退1层。<br>'L2'：回退2层。<br>'L3'：回退3层。<br>'L4'：回退4层。<br>'L5'：回退5层。|
 | act_method | 激活值量化方法 | 可选值如下所示，默认为1。<br>(1) 1代表Label-Free场景的min-max量化方式。 <br>(2) 2代表Label-Free场景的histogram量化方式。 <br>(3) 3代表Label-Free场景的自动混合量化方式，LLM大模型场景下推荐使用。|
 | part_file_size | 单个权重文件最大大小 | DeepSeek场景下默认值为5GB |
 
