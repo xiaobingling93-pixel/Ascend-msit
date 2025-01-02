@@ -1,4 +1,4 @@
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# Copyright (c) 2023-2025 Huawei Technologies Co., Ltd.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,6 +15,7 @@ from typing import Any
 
 from components.utils.check import NumberChecker, ObjectChecker, StringChecker, DictChecker, PathChecker, ListChecker
 from components.utils.check.checker import Checker
+from components.utils.constants import INPUT_FILE_MAX_SIZE
 
 
 class NumConverter:
@@ -89,7 +90,7 @@ class Rule:
             .is_owner()
             .is_not_writable_to_others()
             .is_safe_parent_dir()
-            .max_size(2 * 1000 * 1000 * 1000)
+            .max_size(INPUT_FILE_MAX_SIZE)
             .as_default()
         )
 
