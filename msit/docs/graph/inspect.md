@@ -36,8 +36,8 @@ msit graph inspect <options>
 |-----|-----|-----|
 |--graph-path, -gp|是| pbtxt 文件的路径。|
 |--type, -t|是|指定具体的扫描类别，目前仅支持“动态 shape”（dshape）。|
-|--log-level, -l|否|日志等级，debug、info、warning、error|
-|--output, -o|否|输出目录，当前输出表头为 Op_name, Input_name, and Output_name，默认是 “./”。|
+|--log-level, -l|否|日志等级，debug、info、warning、error、fatal、critical。|
+|--output, -o|否|输出目录，当前输出表头为 Op_Name, SubOp_Name, Input, Output，默认是 “./”。|
 
 命令示例：
 
