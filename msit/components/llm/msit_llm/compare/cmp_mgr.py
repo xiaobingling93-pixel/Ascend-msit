@@ -234,7 +234,7 @@ class CompareMgr:
                 _, golden_tensor_datas = get_multi_statistics_paths(
                     self.golden_data.get_token_path(golden_token_id), golden_tensor_path, tensor_sub_dir=""
                 )
-                data_info = BasicDataInfo(golden_tensor_path, my_tensor_path, op_type, token_id=my_token_id)
+                data_info = BasicDataInfo(golden_tensor_path, my_tensor_path, token_id=my_token_id, op_type=op_type)
                 row_data = fill_row_data_statistics(data_info, my_tensor_datas, golden_tensor_datas)
                 self.compared_result.append(row_data)
 
@@ -280,7 +280,7 @@ class CompareMgr:
                     golden_tensor_datas[0] if dim_torch == -1 else torch.cat(golden_tensor_datas, dim_torch)
                 )
                 # 3. compare tensor_datas
-                data_info = BasicDataInfo(golden_tensor_path, my_tensor_path, op_type, token_id=my_token_id)
+                data_info = BasicDataInfo(golden_tensor_path, my_tensor_path, token_id=my_token_id, op_type=op_type)
                 row_data = fill_row_data(data_info, atb_tensor_data, torch_tensor_data)
                 self.compared_result.append(row_data)
 
