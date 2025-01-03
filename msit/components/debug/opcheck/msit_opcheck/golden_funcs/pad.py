@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
+# Copyright (c) Huawei Technologies Co., Ltd. 2024-2025. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,8 +16,9 @@
 from collections import deque
 import numpy as np
 import torch
-from msit_opcheck.operation_test import OperationTest
 
+from msit_opcheck.operation_test import OperationTest
+from msit_opcheck.constants import BFLOAT16
 
 class PadOperation(OperationTest):
     def golden_calc(self, in_tensors):
@@ -33,7 +34,7 @@ class PadOperation(OperationTest):
             if (input_format == "NC1HWC0"):
                 pad_shape.appendleft(0)
                 pad_shape.appendleft(0)
-            if "bfloat16" in str(input_data.dtype):
+            if BFLOAT16 in str(input_data.dtype):
                 bf16_mark = True
                 input_data = input_data.astype(np.float32)
             input_data_tensor = torch.from_numpy(input_data)
