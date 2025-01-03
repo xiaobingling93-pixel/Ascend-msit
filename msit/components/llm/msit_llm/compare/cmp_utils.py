@@ -45,14 +45,23 @@ class BasicDataInfo:
     count_data_id = 0  # Count data_id, increment by 1 every time creating a new instance
     TORCH_UNSUPPORTED_D_TYPE_MAP = {"uint16": "int32", "uint32": "int64"}
 
-    def __init__(self, golden_data_path, my_data_path, op_type, token_id=None, data_id=None):
+    def __init__(self, golden_data_path, my_data_path, token_id=None, data_id=None, op_type=None):
         self.my_data_path, self.golden_data_path = my_data_path, golden_data_path
         self.token_id = self.get_token_id(my_data_path) if token_id is None else token_id
         self.data_id = self.count_data_id if data_id is None else data_id
-        self.my_op_type = op_type[0]
-        self.golden_op_type = op_type[1]
+        self.my_op_type, self.golden_op_type = self._validate_op_type(op_type)
         self._count()
 
+    @staticmethod
+    def _validate_op_type(op_type):
+        if op_type is None:
+            return None, None
+        
+        if isinstance(op_type, (list, tuple)) and len(op_type) == 2:
+            return op_type[0], op_type[1]
+        else:
+            raise ValueError("op_type must be a list or tuple containing two elements")
+    
     @classmethod
     def _count(cls):
         cls.count_data_id += 1
