@@ -63,7 +63,6 @@ def replace_module_with_saving_input(network, decompose_config=None, prefix_name
         elif hasattr(child_module, "named_children"):
             cur_prefix_name = full_name + "."
             replace_module_with_saving_input(child_module, decompose_config, prefix_name=cur_prefix_name)
-    return network
 
 
 def get_input_data_for_each_layer(network, decompose_config, datasets, max_iter=-1):
@@ -270,7 +269,6 @@ def decompose_network_recursion(
                 do_decompose_weight=do_decompose_weight,
                 prefix_name=cur_prefix_name,
             )
-    return network
 
 
 def decompose_network(network, decompose_config, do_decompose_weight=True, datasets=None, max_iter=-1):
@@ -283,7 +281,8 @@ def decompose_network(network, decompose_config, do_decompose_weight=True, datas
     else:
         input_data_dict = None
 
-    return decompose_network_recursion(network, decompose_config, input_data_dict, do_decompose_weight)
+    decompose_network_recursion(network, decompose_config, input_data_dict, do_decompose_weight)
+    return network
 
 
 class Decompose(export.Decompose):

@@ -160,6 +160,7 @@ class DepthScaleNetwork:
             return ""
         return self.dag.structure_tree[module].get("name_in_network", "")
 
+
 class JumpingOffOperator(Module):
     def forward(self, *args):
         return args[0] if len(args) == 1 else args

@@ -1,3 +1,5 @@
+# Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
+
 import os
 import argparse
 import json
@@ -10,6 +12,7 @@ from ascend_utils.common.security.path import get_valid_read_path, get_valid_wri
 
 MAX_KEY_LENGTH = 256
 MAX_JSON_LENGTH = 4096
+
 
 class SafeGenerator:
     def __init__(self):

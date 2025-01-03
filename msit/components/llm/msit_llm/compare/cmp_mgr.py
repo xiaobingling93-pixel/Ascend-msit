@@ -214,6 +214,7 @@ class CompareMgr:
 
     def compare_statistics(self, golden_token_id, my_token_id, op_map):
         for my_op, my_op_location, golden_op, _ in op_map:
+            op_type = [my_op.op_type, golden_op.op_type]
             logger.debug("------ compare (%s %s)------", str(my_op.node_name), str(golden_op.node_name))
             golden_tensor_paths = list(self.golden_data.get_csv_path(golden_token_id, golden_op))
             my_tensor_paths = list(self.my_data.get_tensor_path(my_token_id, my_op, my_op_location))
@@ -233,12 +234,13 @@ class CompareMgr:
                 _, golden_tensor_datas = get_multi_statistics_paths(
                     self.golden_data.get_token_path(golden_token_id), golden_tensor_path, tensor_sub_dir=""
                 )
-                data_info = BasicDataInfo(golden_tensor_path, my_tensor_path, token_id=my_token_id)
+                data_info = BasicDataInfo(golden_tensor_path, my_tensor_path, op_type, token_id=my_token_id)
                 row_data = fill_row_data_statistics(data_info, my_tensor_datas, golden_tensor_datas)
                 self.compared_result.append(row_data)
 
     def compare_token(self, golden_token_id, my_token_id, op_map):
         for my_op, my_op_location, golden_op, golden_op_location in op_map:
+            op_type = [my_op.op_type, golden_op.op_type]
             logger.debug("------ compare (%s %s)------", str(my_op.node_name), str(golden_op.node_name))
             # 获取到所有需要比较的 tensor 的路径
             golden_tensor_paths = list(self.golden_data.get_tensor_path(golden_token_id, golden_op, golden_op_location))
@@ -278,7 +280,7 @@ class CompareMgr:
                     golden_tensor_datas[0] if dim_torch == -1 else torch.cat(golden_tensor_datas, dim_torch)
                 )
                 # 3. compare tensor_datas
-                data_info = BasicDataInfo(golden_tensor_path, my_tensor_path, token_id=my_token_id)
+                data_info = BasicDataInfo(golden_tensor_path, my_tensor_path, op_type, token_id=my_token_id)
                 row_data = fill_row_data(data_info, atb_tensor_data, torch_tensor_data)
                 self.compared_result.append(row_data)
 

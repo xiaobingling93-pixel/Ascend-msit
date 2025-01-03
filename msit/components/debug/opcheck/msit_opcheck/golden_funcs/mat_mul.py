@@ -52,7 +52,7 @@ def _matmul(inputs):
         if len(b.shape) == 2:
             b = b.t()
         else:
-            b = b.transpose(-1,-2)
+            b = b.transpose(-1, -2)
     res_pt = torch.matmul(a, b).numpy() # (1, 1, 16, 16)
     if bias is not None:
         if x1.dtype == 'float32':
@@ -81,7 +81,7 @@ class MatmulOperation(OperationTest):
         # output_desc
         format_out = self.op_param['output_desc'][0]['layout']
         for attr in self.op_param['output_desc'][0]['attr']:
-            if attr['key']=='origin_format':
+            if attr['key'] == 'origin_format':
                 out_ori_format = attr['value']['s']
         out_shape = self.op_param['output_desc'][0]['shape']['dim']
 

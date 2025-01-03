@@ -192,8 +192,8 @@ class OpChecker:
         # 指定需要使用的npu设备
         try:
             torch.npu.set_device(torch.device(f"npu:{args.device_id}"))
-        except RuntimeError:
-            logger_text = "Failed to set the device. Device_id: {}".format(args.device_id)
+        except RuntimeError as e:
+            logger_text = "Failed to set the device. Device_id: {}. Failed Reason: {}".format(args.device_id, e)
             logger.error(logger_text)
             execution_flag = False
 

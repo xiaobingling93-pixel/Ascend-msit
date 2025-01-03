@@ -38,8 +38,8 @@ from msit_llm.transform.torch_to_atb_python.env import CONFIG_ATTR_CANDIDATES, F
 
 
 def find_mindie_supported_model(config):
-    model_type = get_config_attr(config, "model_type", default = config)
-    num_local_experts = get_config_attr(config, "num_local_experts", default = config)
+    model_type = get_config_attr(config, "model_type", default=config)
+    num_local_experts = get_config_attr(config, "num_local_experts", default=config)
     if model_type + str(num_local_experts) in MINDIE_ATB_MODEL.keys():
         return MINDIE_ATB_MODEL[model_type + str(num_local_experts)]
     return None
@@ -54,13 +54,17 @@ def get_expert_weights(layer_id, num_experts, flag, weights):
     res = []
     if flag == "gate_up_weight_" and name is not None:
         for i in range(num_experts):
-            w1 = weights[name.replace("layers.0", "layers."+str(layer_id)).replace("experts.0.w1", "experts."+str(i)+".w1")]
-            w3 = weights[name.replace("layers.0", "layers."+str(layer_id)).replace("experts.0.w1", "experts."+str(i)+".w3")]
-            res.append(torch.cat([w1,w3],dim=0))
+            w1 = weights[name.replace("layers.0", "layers." + str(layer_id)) \
+                        .replace("experts.0.w1", "experts." + str(i)+".w1")]
+            w3 = weights[name.replace("layers.0", "layers." + str(layer_id)) \
+                        .replace("experts.0.w1", "experts." + str(i)+".w3")]
+            res.append(torch.cat([w1, w3], dim=0))
     elif flag == "down_weight_" and name is not None:
         for i in range(num_experts):
-            res.append(weights[name.replace("layers.0", "layers."+str(layer_id)).replace("experts.0.w1", "experts."+str(i)+".w2")])
+            res.append(weights[name.replace("layers.0", "layers." + str(layer_id)) \
+                            .replace("experts.0.w1", "experts." + str(i)+".w2")])
     return res
+
 
 def get_config_attr(config, attr, default=None):
     if attr not in CONFIG_ATTR_CANDIDATES:
@@ -299,7 +303,7 @@ class ATBModel:
         for i in range(self.num_layers):
             if GATE_UP_WEIGHT+str(i) in self.inputs:
                 cur_weights = get_expert_weights(i, self.num_experts, GATE_UP_WEIGHT, weights)
-                self.gate_up_weights.append(torch.stack([i.transpose(0,1) for i in cur_weights], dim=0).npu())
+                self.gate_up_weights.append(torch.stack([i.transpose(0, 1) for i in cur_weights], dim=0).npu())
             if DOWN_WEIGHT+str(i) in self.inputs:
                 cur_weights = get_expert_weights(i, self.num_experts, DOWN_WEIGHT, weights)
                 self.down_weights.append(torch.stack(cur_weights, dim=0).npu())

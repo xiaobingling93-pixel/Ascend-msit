@@ -94,8 +94,12 @@ class QuantConfig:
             raise ValueError("easy_quant should be in keep_accuracy")
         else:
             check_type(self.keep_acc['easy_quant'], list, param_name="the value of key 'easy_quant'")
-            check_type(self.keep_acc['easy_quant'][0], bool, param_name="first element in the value of keyword 'easy_quant'")
-            check_type(self.keep_acc['easy_quant'][1], int, param_name="second element in the value of keyword 'easy_quant'")
+            check_type(self.keep_acc['easy_quant'][0],
+                       bool,
+                       param_name="first element in the value of keyword 'easy_quant'")
+            check_type(self.keep_acc['easy_quant'][1],
+                       int,
+                       param_name="second element in the value of keyword 'easy_quant'")
         if 'round_opt' not in self.keep_acc:
             raise ValueError("round_opt should be in keep_accuracy")
         else:
@@ -113,7 +117,7 @@ class QuantConfig:
             raise TypeError("input_shape must be list, please check it.")
         if len(self.input_shape) not in VALID_INPUT_SHAPE_LIST:
             raise ValueError("input_shape must be empty(has calib data), 3D (unbatched), 4D (batched) or 5D "
-            "(for video Diffusion Models inputs), please check it.")
+                             "(for video Diffusion Models inputs), please check it.")
         check_element_type(self.input_shape, element_type=int, value_type=list, param_name="input_shape")
 
         if not isinstance(self.act_quant, bool):

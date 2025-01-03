@@ -17,6 +17,7 @@ from msmodelslim import logger
 def chn_weight(x):
     return torch.abs(x).mean().item()
 
+
 class PruneTorch:
     def __init__(self, network: Union[torch.nn.Module, DagTorchHook],
                  inputs: Union[Tensor, List[Tensor], Tuple[Tensor], CallParams] = None):

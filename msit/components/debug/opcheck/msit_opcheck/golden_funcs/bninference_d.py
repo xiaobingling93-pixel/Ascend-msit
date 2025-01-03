@@ -93,7 +93,7 @@ def __fused_compute(x, mean, variance):
 def _bninference_d(context: OpInfo):
     x, mean, variance, scale, bias = context.param.get("input_arrays")
     dtype = x.dtype
-    if str(dtype) == "bfloat16": #tf.bfloat16.as_numpy_dtype:
+    if str(dtype) == "bfloat16":  # tf.bfloat16.as_numpy_dtype:
         x = x.astype("float32")
         mean = mean.astype("float32")
         variance = variance.astype("float32")

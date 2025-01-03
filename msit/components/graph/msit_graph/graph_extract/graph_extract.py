@@ -27,7 +27,7 @@ import onnx
 from google.protobuf import text_format
 
 from components.utils.log import logger
-from components.utils.file_open_check import(
+from components.utils.file_open_check import (
     ms_open, 
     OpenException, 
     MAX_SIZE_LIMITE_CONFIG_FILE, 
@@ -249,10 +249,14 @@ class GraphAnalyze:
             input_indexes_and_names = [GraphAnalyze._get_node_index_and_name(input_name) for input_name in node.input]
             # Separate data inputs and control inputs based on index
             gs.names_to_data_input_names[node_name] = [
-                index_and_name[1] for index_and_name in input_indexes_and_names if index_and_name[0] >= 0
+                index_and_name[1] 
+                for index_and_name in input_indexes_and_names 
+                if index_and_name[0] >= 0
             ]
             gs.names_to_ctrl_input_names[node_name] = [
-                index_and_name[1] for index_and_name in input_indexes_and_names if index_and_name[0] < 0
+                index_and_name[1] 
+                for index_and_name in input_indexes_and_names 
+                if index_and_name[0] < 0
             ]
             gs.names_to_ctrl_input_names[node_name].sort()
             gs.names_to_input_names[node_name] = (

@@ -22,7 +22,7 @@ from msit_opcheck.conversion.dtype_convert import DATA_TYPE_MAP
 
 class LogicalOrOperation(OperationTest):
     def golden_calc(self, in_tensors):
-        x1,x2 = in_tensors
+        x1, x2 = in_tensors
         out_type = DATA_TYPE_MAP[self.op_param['output_desc'][0]['dtype']]
         shape_list = broadcast_to_maxshape([x1.shape, x2.shape])
         x1 = x1.astype("float16")

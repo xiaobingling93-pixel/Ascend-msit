@@ -8,6 +8,7 @@ from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config.quant_config_classes
 
 BLOCK_SIZE_LIST = [64, 128, 256, 512, 1024, 2048, 4096]
 
+
 class WeightQuantConfig(BaseConfig):
     """
     权重量化的Config

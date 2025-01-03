@@ -107,6 +107,7 @@ def check_dict_element(dict_value, value_type, param_name='dict', additional_msg
             raise ValueError("Param of dict {}[{}] should be {}, ".format(param_name, key, type_to_str(value_type))
                              + additional_msg)
 
+
 def check_mapping_element(mapping_value, value_type, param_name='dict', additional_msg=None):
     check_type(mapping_value, Mapping, param_name=param_name)
     additional_msg = (" " + additional_msg) if additional_msg else ""
