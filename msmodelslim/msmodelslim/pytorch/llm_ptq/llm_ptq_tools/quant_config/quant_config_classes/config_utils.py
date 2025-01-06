@@ -14,8 +14,8 @@ OFFLOAD_TYPE = 'offload_type'
 ENABLE_LAZY_SAVE = 'enable_lazy_save'
 OFFLOAD_DISK = 'disk'
 OFFLOAD_MEMORY = 'memory'
-_SUPPORTED_LOW_MEMORY_KEY = [OFFLOAD_TYPE, ENABLE_LAZY_SAVE]
-_SUPPORTED_OFFLOAD_TYPE = [OFFLOAD_DISK, OFFLOAD_MEMORY]
+_SUPPORTED_LOW_MEMORY_KEY = [OFFLOAD_TYPE]
+_SUPPORTED_OFFLOAD_TYPE = [OFFLOAD_MEMORY]
 
 
 def set_quant_param(config):
@@ -170,7 +170,7 @@ def check_and_generate_config_param(config):
 
     # check low_memory config, must be {"offload_type": "disk"|"memory", "enable_lazy_save": True|False}
     config.is_adapter_enabled = config.low_memory is not None
-    config.offload_type = OFFLOAD_DISK
+    config.offload_type = OFFLOAD_MEMORY
     config.enable_lazy_save = True
     if config.is_adapter_enabled:
         check_type(config.low_memory, dict, param_name='low_memory')
@@ -178,7 +178,7 @@ def check_and_generate_config_param(config):
             if key not in _SUPPORTED_LOW_MEMORY_KEY:
                 raise KeyError(f"low_memory accept {_SUPPORTED_LOW_MEMORY_KEY}, not {key}")
         
-        config.offload_type = config.low_memory.get(OFFLOAD_TYPE, OFFLOAD_DISK)
+        config.offload_type = config.low_memory.get(OFFLOAD_TYPE, OFFLOAD_MEMORY)
         if config.offload_type not in _SUPPORTED_OFFLOAD_TYPE:
             raise ValueError(f'offload_type should be in {_SUPPORTED_OFFLOAD_TYPE}, but got {config.offload_type}.')
         
