@@ -102,15 +102,14 @@ quant_config = { "zero_point": True, "q_group_size": 128, "w_bit": 4, "version":
 
 # Load model
 model = AutoAWQForCausalLM.from_pretrained(
-    model_path, low_cpu_mem_usage=True, use_cache=False, device_map='auto'，
+    model_path, low_cpu_mem_usage=True, use_cache=False, device_map='auto',
     torch_dtype=torch.bfloat16
 )
 tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
 
 data = load_dataset("json", data_files='./val.jsonl')['train']
 
-calib_data = [text for text in data["text"] if text.strip() != '' and len(text.split(' 
-')) > 20]
+calib_data = [text for text in data["text"] if text.strip() != '' and len(text.split(' ')) > 20]
 
 
 # Quantize
@@ -120,7 +119,7 @@ model.quantize(tokenizer, quant_config=quant_config, calib_data=calib_data)
 model.save_quantized(quant_path)
 tokenizer.save_pretrained(quant_path)
 
-printf(f'Model is quantized and saved at "{quan_path}"')
+print(f'Model is quantized and saved at "{quant_path}"')
 
 ```
 
@@ -139,7 +138,7 @@ quant_path = './quant_qwen2_7b'         # 浮点模型经过量化后的保存�
 quant_config = { "zero_point": True, "q_group_size": 128, "w_bit": 4, "version": "GEMM" }
 
 # Load model
-model = AutoAWQForCausalLM.from_pretrained(quant_path, fulse_layers=True)
+model = AutoAWQForCausalLM.from_quantized(quant_path, fuse_layers=True)
 tokenizer = AutoTokenizer.from_pretrained(quant_path, trust_remote_code=True, local_files_only=True,
                                                 use_fast=False)
 
@@ -149,7 +148,7 @@ print("model is inferring...")
 model.eval()
 generate_ids = model.generate(
     test_input.input_ids.cuda(),
-    attention_mask=test_input.attention_mask.cuda()), 
+    attention_mask=test_input.attention_mask.cuda(), 
     max_new_tokens=16
 )
 
@@ -184,7 +183,7 @@ examples = [
 ]
 
 # 加载未量化的模型，默认情况下，模型总是会被加载到 CPU 内存中
-model = AutoGPTQForCausalLM.from_pretrained(quant_path, device="cuda:0")
+model = AutoGPTQForCausalLM.from_quantized(quant_path, device="cuda:0")
 print(tokenizer.decode(model.generate(**tokenizer("auto_gptq is", return_tensors="pt").to(model.device))[0]))
 ```
 
