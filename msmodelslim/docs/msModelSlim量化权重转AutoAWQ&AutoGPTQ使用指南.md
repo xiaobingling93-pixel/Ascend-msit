@@ -21,8 +21,9 @@ AutoGPTQ：GPU
 [大模型量化工具依赖安装](https://gitee.com/ascend/msit/tree/master/msmodelslim/msmodelslim/pytorch/llm_ptq)  
 
 ## 1.1 msModelslim量化
-量化脚本跟正常的量化脚本一样，可以参考：https://gitee.com/ascend/msit/blob/master/msmodelslim/docs/w8a8%E7%B2%BE%E5%BA%A6%E8%B0%83%E4%BC%98%E7%AD%96%E7%95%A5.md。需要注意的地方有三处：
-a.离群值抑制AntiOutlierConfig a_bit和b_bit需要为指定的值，anti_method="m3"，表示使用AWQ算法，GPTQ算法不需要离群值抑制模块，注释即可。
+量化脚本跟正常的量化脚本一样，可以参考：https://gitee.com/ascend/msit/blob/master/msmodelslim/docs/w8a8%E7%B2%BE%E5%BA%A6%E8%B0%83%E4%BC%98%E7%AD%96%E7%95%A5.md。
+本文以W4A16量化方式示例进行说明。需要注意的地方有三处:  
+a.在离群值抑制配置（AntiOutlierConfig）中，a_bit和w_bit应根据量化方式进行设置。当anti_method被设置为"m3"时，代表使用AWQ算法；而对于GPTQ算法，则不需要使用离群值抑制模块，此时可以将相关配置注释掉。
 ```python
 anti_config = AntiOutlierConfig(anti_method="m3", dev_type="npu", a_bit=16, w_bit=4, dev_id=device_id，w_sym=True)  
 anti_outlier = AntiOutlier(model, calib_data=dataset_calib, cfg=anti_config)
@@ -30,9 +31,10 @@ anti_outlier.process()
 ```
 
 b.QuantConfig配置
-perchannel和pergroup的参数配置是有差异的。
-1)pergroup需要配置这三个参数：is_lowbit=True, open_outlier=False, group_size=128。 per channel。
-2)如果是AutoGPTQ需要更改w_method为='GPTQ', 如下的三个参数不需要配置，注释掉：is_lowbit=True, open_outlier=False, group_size=128。另外开启GPTQ跑量化时间相对较长。
+perchannel和pergroup的参数配置是有差异的。  
+1)pergroup需要配置这三个参数：is_lowbit=True, open_outlier=False, group_size=128。  
+2)perchannel场景下，如下的三个参数不需要配置，注释掉：is_lowbit=True, open_outlier=False, group_size=128。  
+3)如果是AutoGPTQ需要更改w_method为='GPTQ', 另外开启GPTQ跑量化时间相对较长。  
 如下为AutoAWQ的pergroup配置：
 
 ```python
@@ -50,8 +52,8 @@ quant_config = QuantConfig(
     group_size=128                 
 )
 ```
-c.关于保存的权重文件分片的简介
-首先本脚本仅支持未切片的safetensors权重转换，所以使用保存文件的时候，不要使用进行分片保存。  
+c.关于保存的权重文件
+本脚本仅支持未切片的safetensors权重转换，所以使用保存量化权重文件的时候，不要使用分片保存。  
 参考链接：https://gitee.com/ascend/msit/blob/dev/msmodelslim/docs/Python-API%E6%8E%A5%E5%8F%A3%E8%AF%B4%E6%98%8E/%E5%A4%A7%E6%A8%A1%E5%9E%8B%E5%8E%8B%E7%BC%A9%E6%8E%A5%E5%8F%A3/%E5%A4%A7%E6%A8%A1%E5%9E%8B%E9%87%8F%E5%8C%96%E6%8E%A5%E5%8F%A3/PyTorch/save().md
 ```python
 calibrator.save(output_path, safetensors_name=None, json_name=None, save_type=None, part_file_size=None)
@@ -59,33 +61,33 @@ calibrator.save(output_path, safetensors_name=None, json_name=None, save_type=No
 
 
 ## 1.2 转换脚本使用
-转换脚本路径位于本仓库：msit\msmodelslim\example\ms_to_vllm.py。链接：https://gitee.com/ascend/msit/blob/master/msmodelslim/example/ms_to_vllm.py
-本文以W4A16为例子进行讲解。经过上一步1.1使用msModelslim对权重进行量化，生成quant_weight_description_w4a16.json和quant_model_weight_w4a16.safetensors
-再使用ms_to_vllm.py进行格式转换，生成转换后的safetensors文件，用法如下：
+转换脚本路径位于：https://gitee.com/ascend/msit/blob/master/msmodelslim/example/ms_to_vllm.py。  
+经过上一步1.1使用msModelslim对权重进行量化，生成quant_model_description_w4a16.json和quant_model_weight_w4a16.safetensors，再使用转换脚本ms_to_vllm.py进行权重格式转换，生成转换后的safetensors文件，用法如下：
 ```python 
 命令：
-python ms_to_llm.py --model {weighted_safetensors_path} --json {weighted_json_path} --save_path  {converted_safetensors_path}  --w_bit {weight_bit}   --target_tool  {target_convert_tool}
+python ms_to_vllm.py --model {weighted_safetensors_path} --json {weighted_json_path} --save_path  {converted_safetensors_path}  --w_bit {weight_bit}   --target_tool  {target_convert_tool}
 
 说明：
-    model，必须参数，用于表示传入量化后的safetensors权重文件，可传入文件的绝对路径和相对路径
-    json，必选参数，用于表示传入的量化后json权重描述文件，传入文件的绝对路径和相对路径
-    save_path，可选参数，默认值res.safetensors，表示转换后的文件存储于当前目录的位置，路径为./res.safetensors，save_path不支持创建目录，仅支持创建文件
-    w_bit，可选参数，默认值为4，表示量化的权重位数，根据量化的权重写4或8
-    target_tool，可选参数，默认值为awq，表示转换的目标工具为AutoAWQ，仅支持awq和gptq，另一个参数gptq，表示AutoGPTQ工具
+    model，必选参数，string类型，用于表示传入量化后的safetensors权重文件，可传入文件的绝对路径和相对路径
+    json，必选参数，string类型，用于表示传入量化后的json权重描述文件，可传入文件的绝对路径和相对路径
+    save_path，可选参数，string类型，默认值为./res.safetensors，另外save_path仅支持在已有的目录路径下创建保存文件，不支持创建目录
+    w_bit，可选参数，int类型，可选值[4, 8]，默认值为4，表示量化的权重位数为4
+    target_tool，可选参数，string类型，可选值[awq, gptq], 默认值为awq，表示转换的目标工具为AutoAWQ
 
 使用示例：
-    python ms_to_llm.py --model ./quant_model_weight_w4a16.safetensor  --json ./quant_weight_description_w4a16.json   --save_path res.safetensors --target_tool awq 
+首先将权重转换脚本拷贝到量化权重目录下，然后在该目录下执行如下命令，最终在该目录下生成转换后的权重脚本文件res.safetensors：
+python ms_to_vllm.py --model ./quant_model_weight_w4a16.safetensors  --json ./quant_model_description_w4a16.json  --save_path res.safetensors --target_tool awq 
+
 ```
 
 # 2.开源工具AutoAWQ量化以及推理
 ## 2.1环境准备
-开源工具相关的环境配置、量化和推理参考github上的readme.md，链接如下：
-AutoAWQ: https://github.com/casper-hansen/AutoAWQ
+开源工具相关的环境配置、量化和推理参考github上的readme.md，链接：https://github.com/casper-hansen/AutoAWQ
 
 ## 2.2量化
 AutoAWQ量化, 需要注意的是，Version使用GEMM，如果没有传入数据集可能会报错，需要传入数据集val.jsonl文件, 参考网址：https://github.com/casper-hansen/AutoAWQ/issues/506
 ，数据集获取地址：https://huggingface.co/datasets/mit-han-lab/pile-val-backup/blob/main/val.jsonl.zst。     
-AutoAWQ量化脚本如下：
+AutoAWQ量化脚本示例如下：
 
 ```python
 from awq import AutoAWQForCausalLM
@@ -124,10 +126,9 @@ print(f'Model is quantized and saved at "{quant_path}"')
 ```
 
 ## 2.3推理
-首先，修改AutoAWQ量化后权重路径的model.safetensors.index.json文件, 将文件里面的weight_map中的权重文件名称改为msModelSlim转换后的文件名，比如：
-"res.safetensors"。最后运行推理脚本。
+首先，修改AutoAWQ量化后权重路径的model.safetensors.index.json文件，请将文件中的weight_map中的权重文件名称修改为第1.2节中的转换脚本所生成的权重文件名，然后运行推理脚本。
 
-AutoAWQ推理脚本测试对话如下：
+AutoAWQ推理脚本测试对话示例如下：
 ```python
 from awq import AutoAWQForCausalLM
 from transformers import AutoTokenizer
@@ -160,14 +161,16 @@ for idx, item in enumerate(res):
 
 # 3 开源工具AutoGPTQ量化以及推理
 
-## 3.1 量化
-ms转换为AutoGPTQ进行推理和AutoAWQ同理。参考链接：AutoGPTQ: https://github.com/AutoGPTQ/AutoGPTQ
-首先去阅读AutoGPTQ的readme.md，找到量化部分的示例，修改路径，和相关配置参数，运行即可，最后生成量化权重文件。
+## 3.1环境准备
+开源工具相关的环境配置、量化和推理参考github上的readme.md，链接如下：https://github.com/AutoGPTQ/AutoGPTQ  
 
+## 3.2量化
+msModelSlim转换为AutoGPTQ权重格式进行推理和AutoAWQ同理，首先去阅读AutoGPTQ的readme.md(链接如上第3.1节)，参考量化的示例，修改相关配置参数，然后进行量化，最后生成量化权重文件。  
+修改的配置包括路径和BaseQuantizeConfig接口，在BaseQuantizeConfig接口中，bits为量化的权重位数，对应msModelSlim中的w_bit；pergroup场景下，group_size设置的值与msModelSlim一致，在perchannel场景下，group_size设置为-1。
 
 ## 3.2推理
-将经过msmodelslim量化以及经过转换脚本转换后的res.safetensors文件传入GPU生成的量化权重目录，替换掉之前的量化权重文件。
-推理脚本如下：
+将经过msModelslim量化以及经过转换脚本转换后的res.safetensors文件传入GPU生成的量化权重目录，替换掉之前的量化权重文件，文件名保持一致，其他文件不需要修改。
+推理脚本示例如下：
 ```python
 from transformers import AutoTokenizer, TextGenerationPipeline
 from auto_gptq import AutoGPTQForCausalLM, BaseQuantizeConfig
@@ -187,9 +190,8 @@ model = AutoGPTQForCausalLM.from_quantized(quant_path, device="cuda:0")
 print(tokenizer.decode(model.generate(**tokenizer("auto_gptq is", return_tensors="pt").to(model.device))[0]))
 ```
 
-
 # 4.总结
-经过上述步骤，成功完成NPU的量化，并且量化权重经过转换脚本转换转换后能够在AutoAWQ和AutoGPTQ推理成功。
+经过上述步骤，成功完成msModelSlim在NPU上的量化，并且量化权重经过转换脚本转换后能够在AutoAWQ和AutoGPTQ推理成功。
 
 
 

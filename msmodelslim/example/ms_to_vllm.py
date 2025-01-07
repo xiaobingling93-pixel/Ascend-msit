@@ -51,6 +51,7 @@ def apply_order(
         iweight = iweight.view(pack_num, -1)[order, :].view(iweight.shape)
     return iweight
 
+
 def gptq_qweight_pack(iweight:torch.Tensor, w_bit:4):
     i = 0
     row = 0
@@ -66,6 +67,7 @@ def gptq_qweight_pack(iweight:torch.Tensor, w_bit:4):
     qweight = qweight.astype(np.int32)
     qweight = torch.from_numpy(qweight)
     return qweight
+
 
 def gptq_qzeros_pack(zeros:torch.Tensor, w_bit:4):
     i = 0
@@ -99,8 +101,8 @@ def convert_ms_to_vllm(targer_tool, w_bit, weight_dict, json_dict):
                     vllm_name = '.'.join(name.split('.')[:-1]) + '.qweight'
                     tensor = tensor.t().contiguous()
                     tensor.add_(8)
-                    if(targer_tool == 'awq'):
-                        iweights  = apply_order(tensor, w_bit, direction, order)
+                    if (targer_tool == 'awq'):
+                        iweights = apply_order(tensor, w_bit, direction, order)
                         qweight = awq_pack(iweights, w_bit)
                     else:
                         qweight = gptq_qweight_pack(tensor, w_bit)
@@ -115,7 +117,7 @@ def convert_ms_to_vllm(targer_tool, w_bit, weight_dict, json_dict):
                     vllm_name = '.'.join(name.split('.')[:-1]) + '.qzeros'
                     tensor = tensor.t().contiguous()
                     tensor.add_(8)
-                    if(targer_tool == 'awq'):
+                    if (targer_tool == 'awq'):
                         izeros = apply_order(tensor, w_bit, direction, order)
                         qzeros = awq_pack(izeros, w_bit, direction)
                     else:
