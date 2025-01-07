@@ -108,9 +108,8 @@ class OpChecker:
         self.npy_path = os.path.join(real_output_path, "tmp")
         os.makedirs(self.npy_path, 0o750, exist_ok=True)
 
-    def update_dump_data_path(self, graph_name):
+    def update_dump_data_path(self, new_dump_path):
         # 根据graph_name 更新 dump_data_path
-        new_dump_path = os.path.join(self.origin_dump_path, graph_name)
         for _ in range(2):  # 往下找两层子目录，要求有且仅有一个子目录
             items = os.listdir(new_dump_path)
             sub_dirs = [item for item in items if os.path.isdir(os.path.join(new_dump_path, item))]
@@ -192,7 +191,10 @@ class OpChecker:
         for graph_name in get_ge_graph_name(self.ge_json_path):
             if not graph_name:
                 continue
-            self.update_dump_data_path(graph_name)
+            new_dump_path = os.path.join(self.origin_dump_path, graph_name)
+            if not os.path.exists(new_dump_path):
+                continue
+            self.update_dump_data_path(new_dump_path)
 
             # 1.转化为npy  将所有bin文件转换成npy文件，存放在{output_path}/tmp下
             self.convert_all_bin_file_to_npy_data(self.dump_data_path, self.npy_path, self.msaccucmp_path)
