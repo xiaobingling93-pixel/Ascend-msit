@@ -249,7 +249,7 @@ class OperationTest(unittest.TestCase):
 
             rel_pass_rate, max_rel = self.get_rel_pass_rate(out_tensor, golden_out_tensor, etol)
 
-            if err_rate >= rel_pass_rate:
+            if err_rate > rel_pass_rate:
                 pass_flag = False
                 cur_message = f"relative pass rate: {rel_pass_rate} not met standard: {err_rate}."
                 message.append(cur_message)
