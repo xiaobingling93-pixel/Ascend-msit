@@ -14,7 +14,7 @@ pip3 install tensorflow==2.6.5 --no-index --find-links  https://ascend-repo.obs.
 pip install torch==1.11.0
 ```
 ### 3.工具安装
-- 工具安装请见 [msit一体化工具使用指南](../../../README.md)
+- 工具安装请见 [msit一体化工具使用指南](../../install/README.md)
 
 ## 使用方法
 ### 输入数据
@@ -36,36 +36,44 @@ msit debug opcheck -i /home/HwHiAiUser/result/test/{timestamp} -o /home/HwHiAiUs
 | --output, -o                | 输出文件的保存路径，默认为当前路径，为文件夹，示例：xx/xxx/xx                | 否       |
 | --help, -h              | 命令行参数帮助信息| 否       |
 
-### 输出文件各列说明
-|   表头   | 说明 |
-| -------- | -------------------------------------------------- |
-| op_type    | 算子类型，格式为以list包含的算子类名 |
-| op_name  | 算子名称，以'_'分隔的算子拓扑结构名|
-| op_param | 算子参数|
-| tensor_path | 算子输入intensor及输出outtentor的文件名称 |
-| out_tensor_id |  算子输出outtensor的序号（部分算子输出可能有多个outtensor） |
-| rel_precision_rate(%) | 实际的精度通过率（使用相对误差，全部通过则为100%）|
-| max_rel_error | 最大的相对误差值 |
-| abs_precision_rate(%) | 实际的绝对误差精度通过率 |
-| max_abs_error | 最大的绝对误差值 |
-| cosine_similarity | 余弦相似度 |
-| kl_divergence | kl散度 |
-| fail_reason | 失败原因，包括精度未通过原因及算法执行失败原因 |
+### 输出结果说明
+输出结果生成在result_{timestamp}.xlsx文件中，包含两张表格分别为opcheck_results及addition_failed_cases，分别包含预检成功及失败的算子。
+#### 结果表格各列说明
+| 表头                    | 说明                                     |
+|-----------------------|----------------------------------------|
+| op_type               | 算子类型，格式为以list包含的算子类名                   |
+| op_name               | 算子名称，以'_'分隔的算子拓扑结构名                    |
+| op_param              | 算子参数                                   |
+| tensor_path           | 算子输入intensor及输出outtentor的文件名称          |
+| out_tensor_id         | 算子输出outtensor的序号（部分算子输出可能有多个outtensor） |
+| rel_precision_rate(%) | 实际的精度通过率（使用相对误差，全部通过则为100%）            |
+| max_rel_error         | 最大的相对误差值                               |
+| abs_precision_rate(%) | 实际的绝对误差精度通过率                           |
+| max_abs_error         | 最大的绝对误差值                               |
+| cosine_similarity     | 余弦相似度                                  |
+| kl_divergence         | kl散度                                   |
+| fail_reason           | 失败原因，包括精度未达到给定的标准或算法执行失败原因             |
+
 相关计算公式为：
 ```
 相对误差：rel_error = abs(actual_output - golden_output) / abs(golden_output)
 精度通过率：rel_precision_rate = sum(rel_error <= etol) / size(rel_error) * 100
 精度比对结果：precision_result = bool(rel_precision_rate >= pass_rate)
 ```
-注：
-最终生成一个xlsx文件，包含两张表格分别为opcheck_results及addition_failed_cases，分别包含预检成功及失败的算子
 ### 目前精度预检算子支持情况
-|算子名称(A-G)|算子名称(H-M)|算子名称(N-T)|算子名称(U-Z)|
-|------|-----|-----|-----|
-|Add  |LogicalOr|Pad||
-|Adds|MatMulV2|PadD||
-|BatchNorm||SoftMaxV2||
-|BiasAdd||||
+| 算子名称(A-G) | 算子名称(H-M)  | 算子名称(N-T)  | 算子名称(U-Z) |
+|-----------|------------|------------|-----------|
+| Add       | LogicalOr  | Pad        |           |
+| Adds      | LogicalAnd | PadD       |           |
+| BatchNorm | MatMulV2   | Pack       |           |
+| BiasAdd   | Minimum    | SoftMaxV2  |           |
+| BNInfer   |            | ReduceMean |           |
+| ConcatV2  |            | ReduceSum  |           |
+| Conv2D    |            | Relu       |           |
+| GatherV2  |            | Sigmoid    |           |
+|           |            | Tanh       |           |
+|           |            | Tile       |           |
+|           |            | Transpose  |           |
 
 ## FAQ
 1. 为什么需要使用PyTorch 1.11.0版本？
