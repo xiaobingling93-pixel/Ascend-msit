@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
+# Copyright (c) Huawei Technologies Co., Ltd. 2024-2025. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,15 +15,23 @@
 
 import numpy as np
 
-from msit_opcheck.graph_parser import OpInfo
+from msit_opcheck.operation_test import OperationTest
 from msit_opcheck.conversion.shape_convert import update_axis_for_npu_inner_format
 
 
-def pack(context: OpInfo):
-    ori_shape = context.param.get("stc_ori_inputs")[0]
-    ori_format = context.param.get("stc_input_ori_formats")[0]
-    input_format = context.param.get("dyn_input_formats")[0]
-    axis = context.param.get("axis", 0)
-    input_arrays = context.param.get("input_arrays")
-    stack_axis = update_axis_for_npu_inner_format(ori_shape, axis, input_format, ori_format)
-    return np.stack(input_arrays, axis=stack_axis)
+class PackOperation(OperationTest):
+    def golden_calc(self, in_tensors):
+        input_format = self.op_param['input_desc'][0]['layout']
+        for attr in self.op_param['attr']:
+            if attr['key'] == 'axis':
+                axis = attr['value']['i']
+        for attr in self.op_param['input_desc'][0]['attr']:
+            if attr['key'] == 'origin_format':
+                ori_format = attr['value']['s']
+            if attr['key'] == 'origin_shape':
+                ori_shape = attr['value']['list']['i']
+        concat_dim = update_axis_for_npu_inner_format(ori_shape, axis, input_format, ori_format)
+        return [np.concatenate(in_tensors, axis=concat_dim)]
+
+    def test_pack(self):
+        self.execute()

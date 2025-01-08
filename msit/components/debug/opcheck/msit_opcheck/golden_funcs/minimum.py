@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) Huawei Technologies Co., Ltd. 2024-2025. All rights reserved.
+# Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,16 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import tensorflow as tf
 import numpy as np
 
 from msit_opcheck.operation_test import OperationTest
+from msit_opcheck.conversion.dtype_convert import DATA_TYPE_MAP, numpy_to_torch_tensor, bfloat16_conversion
 
 
-class TransposeOperation(OperationTest):
+class MinimumOperation(OperationTest):
     def golden_calc(self, in_tensors):
-        input_0, perm = in_tensors[:2]
-        res = np.transpose(input_0, perm)
+        x1 = in_tensors[0]
+        x2 = in_tensors[1]
+        out_dtype = DATA_TYPE_MAP[self.op_param['output_desc'][0]['dtype']]
+
+        res = np.minimum(x1, x2)
+        out_dtype = bfloat16_conversion(out_dtype)
+        res = res.astype(out_dtype[0])
         return [res]
 
-    def test_transpose(self):
+    def test_minimum(self):
         self.execute()

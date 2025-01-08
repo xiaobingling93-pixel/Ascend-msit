@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
+# Copyright (c) Huawei Technologies Co., Ltd. 2024-2025. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,8 +18,9 @@ import functools
 import numpy
 import tensorflow as tf
 
-from msit_opcheck.graph_parser import OpInfo
-from msit_opcheck.conversion.dtype_convert import bfloat16_conversion
+from msit_opcheck.operation_test import OperationTest
+from msit_opcheck.conversion.dtype_convert import bfloat16_conversion, DATA_TYPE_MAP
+from msit_opcheck.constants import FLOAT32, FLOAT16, BFLOAT16
 
 D_BOUNDS = {
     "int8": (-128, 127),
@@ -35,73 +36,80 @@ D_BOUNDS = {
 }
 
 
-def _reduce_x_get_axis(context: OpInfo):
-    axis = context.param.get("axes")  # reduce_x
-    if axis is None:
-        axis = context.param.get("axis")
+def _reduce_x_get_axis(op_info):
+    for attr in op_info['attr']:
+        if attr['key'] == 'axes':
+            axis = attr['value']['list']['i']
     return axis
 
 
-def __eliminate_duplicate_axes(axis, input_tensor):
+def _eliminate_duplicate_axes(axis, input_tensor):
     axis = tuple(set([_ax if _ax >= 0 else len(input_tensor.shape) + _ax for _ax in axis]))
     return axis
 
 
-def _reduce_sum(context: OpInfo):
-    x = context.param.get("input_arrays")[0]
-    axis = _reduce_x_get_axis(context)
-    if not axis:
-        noop_with_empty_axes = context.param.get("noop_with_empty_axes")
-        if noop_with_empty_axes is None or noop_with_empty_axes:
-            axis = []
+class ReduceSumOperation(OperationTest):
+    def golden_calc(self, in_tensors):
+        x = in_tensors[0]
+        axis = _reduce_x_get_axis(self.op_param)
+
+        x_dtype = DATA_TYPE_MAP[self.op_param['input_desc'][0]['dtype']]
+        out_dtype = DATA_TYPE_MAP[self.op_param['output_desc'][0]['dtype']]
+
+        axis = _eliminate_duplicate_axes(axis, x)
+
+        if not axis:
+            return [x]
+
+        if x_dtype in (FLOAT16, BFLOAT16):
+            x = x.astype(numpy.float32)
+            res = numpy.sum(x, axis=axis)
         else:
-            axis = []
-            for i, _ in enumerate(x.shape):
-                axis.append(i)
+            res = numpy.sum(x, axis=axis)
+        if out_dtype == BFLOAT16:
+            return [res.astype(tf.bfloat16.as_numpy_dtype, copy=False)]
 
-    axis = __eliminate_duplicate_axes(axis, context.param.get("input_arrays")[0])
+        return [res.astype(out_dtype, copy=False)]
 
-    if len(axis) == 0:
-        return x
-    x_dtype = context.param.get("stc_input_dtypes")[0]
-    y_dtype = context.param.get("output_dtypes")[0]
-    if x_dtype in ("float16", "bfloat16"):
-        x = x.astype(numpy.float32)
-        y = numpy.sum(x, axis=axis)
-    else:
-        y = numpy.sum(x, axis=axis)
-    if y_dtype == "bfloat16":
-        return y.astype(tf.bfloat16.as_numpy_dtype, copy=False)
-    return y.astype(y_dtype, copy=False)
+    def test_reduce_sum(self):
+        self.execute()
 
 
-def _reduce_mean(context: OpInfo):
-    axis = context.param.get("axes")
-    if axis is None:
-        axis = context.param.get("axis")
-    axis = __eliminate_duplicate_axes(axis, context.param.get("input_arrays")[0])
-    x = context.param.get("input_arrays")[0]
-    input_dtype = context.param.get("stc_input_dtypes")[0]
-    output_dtype = context.param.get("output_dtypes")
-    if len(axis) == 0:
-        return x
-    reduce_shape = [x.shape[idx] for idx, _ in enumerate(x.shape) if idx in axis]
-    cof_value = functools.reduce(lambda x, y: x*y, reduce_shape)
-    if context.param.get("stc_input_formats")[0] == "NC1HWC0" and (1 in axis) and (4 in axis):
-        input_c_values = context.param.get("!input_c_values")
-        if not input_c_values:
-            c_index = context.param.get("stc_input_ori_formats")[0].index("C")
-            input_c_values = [context.param.get("stc_ori_inputs")[0][c_index]]
-        cof_value = cof_value/x.shape[1]/x.shape[4]*input_c_values[0]
-    if input_dtype in ("float16", "bfloat16"):
-        x = x.astype(numpy.float32)/cof_value
-        y = numpy.sum(x, axis=axis)
-        if output_dtype[0] == "float16":
-            y = y.astype(numpy.float16)
-        elif output_dtype[0] == "bfloat16":
-            output_dtype = bfloat16_conversion(output_dtype)
-            y = y.astype(output_dtype[0])
-        return y
-    else:
-        x = x/cof_value
-        return numpy.sum(x, axis=axis)
+class ReduceMeanOperation(OperationTest):
+    def golden_calc(self, in_tensors):
+        x = in_tensors[0]
+        axis = _reduce_x_get_axis(self.op_param)
+
+        x_format = self.op_param['input_desc'][0]['layout']
+        x_dtype = DATA_TYPE_MAP[self.op_param['input_desc'][0]['dtype']]
+        out_dtype = DATA_TYPE_MAP[self.op_param['output_desc'][0]['dtype']]
+        for attr in self.op_param['input_desc'][0]['attr']:
+            if attr['key'] == "origin_format":
+                c_index = attr['value']['s']
+
+        axis = _eliminate_duplicate_axes(axis, x)
+
+        if not axis:
+            return [x]
+
+        reduce_shape = [x.shape[idx] for idx, _ in enumerate(x.shape) if idx in axis]
+        cof_value = functools.reduce(lambda x, y: x * y, reduce_shape)
+        if x_format == "NC1HWC0" and (1 in axis) and (4 in axis):
+            input_c_values = [x[c_index]]
+            cof_value = cof_value / x.shape[1] / x.shape[4] * input_c_values[0]
+        if x_dtype in (FLOAT16, BFLOAT16):
+            x = x.astype(numpy.float32) / cof_value
+            y = numpy.sum(x, axis=axis)
+            if out_dtype[0] == FLOAT16:
+                y = y.astype(numpy.float16)
+            elif out_dtype[0] == BFLOAT16:
+                output_dtype = bfloat16_conversion(out_dtype)
+                y = y.astype(output_dtype[0])
+            return [y]
+        else:
+            x = x / cof_value
+            return [numpy.sum(x, axis=axis, keepdims=True)]
+
+
+    def test_reduce_mean(self):
+        self.execute()
