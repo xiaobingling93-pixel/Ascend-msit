@@ -507,7 +507,7 @@ def add_prefix_graph(  # pylint: disable=too-many-branches
             g_node.name = _prefixed(prefix, g_node.name)
             for attribute in g_node.attribute:
                 if attribute.g:
-                    add_prefix_graph(
+                    _ = add_prefix_graph(
                         attribute.g, prefix, inplace=True, name_map=name_map
                     )
 
@@ -599,7 +599,7 @@ def add_prefix(
         m.CopyFrom(model)
         model = m
 
-    add_prefix_graph(
+    _ = add_prefix_graph(
         model.graph,
         prefix,
         rename_nodes=rename_nodes,

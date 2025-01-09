@@ -172,6 +172,7 @@ CSV_STATISTICS_HEADER = [
     L2NORM_STAT_RELATIVE_ERROR
 ]
 
+
 def get_timestamp_sync():
     max_timestamp = int(datetime.datetime.now(tz=datetime.timezone.utc).strftime("%s"))
 

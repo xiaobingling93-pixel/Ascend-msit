@@ -77,14 +77,11 @@ class GraphAnalyze:
     def load_graph_def_from_pbtxt(path):
         """Loads an ONNX graph definition from a binary protocol buffer file."""
         logger.info(f"Loading {path}, the graph maybe huge, please wait a minute...")
+        data = None
         try:
             GraphAnalyze.validate_file_path(path, ".pbtxt")
             with ms_open(path, "rb", MAX_SIZE_LIMITE_NORMAL_FILE) as f:
                 data = f.read()
-                model = onnx.ModelProto()
-                text_format.Parse(data, model)
-                logger.info(f"Load {path} success!")
-                return model.graph
         except OpenException as oe:
             logger.error(f"OpenException occurred: {oe}")
         except FileNotFoundError as fnf:
@@ -97,7 +94,12 @@ class GraphAnalyze:
             logger.error(f"Parse error: {pe}")
         except Exception as e:
             logger.error(f"An unexpected error occurred: {e}")
+        if not data:
             return None
+        model = onnx.ModelProto()
+        text_format.Parse(data, model)
+        logger.info(f"Load {path} success!")
+        return model.graph
 
     @staticmethod
     def extract_sub_graph(args):
