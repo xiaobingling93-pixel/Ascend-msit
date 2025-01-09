@@ -1,4 +1,4 @@
-from main_torch import check_min_version,override_topp_and_topk, parse_args, get_model, precision, performance, \
+from main_torch import check_min_version, override_topp_and_topk, parse_args, get_model, precision, performance, \
     cli_demo, webUI
 
 
