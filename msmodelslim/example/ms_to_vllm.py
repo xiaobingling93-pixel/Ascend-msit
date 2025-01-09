@@ -146,7 +146,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", type=str, default=None, help="Quantied safetensors file path")
     parser.add_argument("--json", type=str, default=None, help="Quantied description file path")
-    parser.add_argument("--save_path", type=str, default='res.safetensors', help="The path to save converted quant weights")
+    parser.add_argument("--save_path", type=str, 
+                        default='res.safetensors', 
+                        help="The path to save converted quant weights")
     parser.add_argument("--w_bit", type=int, default=4, help="Quantied weight bits")
     parser.add_argument("--target_tool", type=str, default="awq", help="target tool, value include awq and gptq")
     args = parser.parse_args()
