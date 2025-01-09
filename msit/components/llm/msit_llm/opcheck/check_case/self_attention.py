@@ -64,7 +64,10 @@ class OpcheckUnpadSelfAttentionOperation(operation_test.OperationTest):
             raise RuntimeError("get ZeroDivisionError when calc SelfAttentionOperation golden") from e     
         score = None
         for i in range(group_num):
-            group_score = torch.matmul(in_a.to(torch.bfloat16)[i * group_head: (i + 1) * group_head, :, :], in_b.to(torch.bfloat16)[i:(i + 1), :, :])
+            group_score = torch.matmul(
+                in_a.to(torch.bfloat16)[i * group_head: (i + 1) * group_head, :, :], 
+                in_b.to(torch.bfloat16)[i:(i + 1), :, :]
+            )
             if score is None:
                 score = group_score
             else:
