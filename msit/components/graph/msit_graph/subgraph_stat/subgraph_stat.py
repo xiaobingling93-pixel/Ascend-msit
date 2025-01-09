@@ -232,7 +232,8 @@ def stat_subgraph(input_path, max_nodes=8):
 
     # Extract indices from Root Nodes
     data['Root Nodes Index'] = [
-        extract_indices(root_nodes_str.split('; ')) for root_nodes_str in data['Root Nodes Index']
+        extract_indices(root_nodes_str.split('; ')) 
+        for root_nodes_str in data['Root Nodes Index']
     ]
 
     # Create DataFrame
