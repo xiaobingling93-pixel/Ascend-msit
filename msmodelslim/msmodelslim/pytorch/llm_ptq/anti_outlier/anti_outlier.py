@@ -583,8 +583,8 @@ class AntiOutlier(object):
                 del mod
 
     def _process(self):
-        if is_model_multimodal(model):
-            if cfg.anti_method != 'm2':
+        if is_model_multimodal(self.model):
+            if self.cfg.anti_method != 'm2':
                 raise ValueError("anti_method must be m2 while using multimodal qwen-vl or llava-v1.5")
             else:
                 self.anti_for_multimodal(self.cfg, self.model)
