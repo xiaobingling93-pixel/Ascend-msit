@@ -498,7 +498,7 @@ def single_op_compare(args, input_shape):
 
         # run compare
         utils.logger.setLevel(logging.ERROR)
-        run(cmg_args, input_shape, original_out_path, True)
+        _ = run(cmg_args, input_shape, original_out_path, True)
         utils.logger.setLevel(logging.INFO)
         csv_list.extend(sp.find_all_csv(tmp_out_path))
         utils.logger.info("Comparision finished")

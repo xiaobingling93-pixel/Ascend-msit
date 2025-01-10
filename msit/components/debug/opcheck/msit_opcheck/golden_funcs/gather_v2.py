@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright (c) Huawei Technologies Co., Ltd. 2024-2025. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,40 +14,41 @@
 
 import tensorflow as tf
 
-from msit_opcheck.graph_parser import OpInfo
+from msit_opcheck.operation_test import OperationTest
 
 
-def dsl_gather_v2(context: OpInfo):
-    """
-    A numpy implementation of Gather
-    """
-    params_data, indices_data = context.param.get("input_arrays")[0], context.param.get("input_arrays")[1]
-    params_shape_len, indices_shape_len = len(params_data.shape), len(indices_data.shape)
-
-    if "batch_dims" in context.param.get("other_runtime_params"):
-        batch_dims = context.param.get("batch_dims")
-    else:
+class GatherOperation(OperationTest):
+    def golden_calc(self, in_tensors):
+        params_data = in_tensors[0]
+        indices_data = in_tensors[1]
+        axis = 0
         batch_dims = 0
-
-    batch_dims = batch_dims if batch_dims >= 0 else batch_dims + indices_shape_len
-
-    if "axis_dict" in context.param.get("other_runtime_params"):
-        axis = context.param.get("axis_dict")
-    else:
-        if "axis" in context.param.get("other_runtime_params"):
-            axis = context.param.get("axis")
+        if len(in_tensors) > 2:
+            tmp_axis = in_tensors[2]
+            if tmp_axis.ndim == 0 or (tmp_axis.ndim == 1 and tmp_axis.size == 1):
+                axis = tmp_axis[0]
         else:
-            axis = 0
+            for attr in self.op_param['attr']:
+                if attr['key'] == 'axis':
+                    axis = attr['value']['i']
+                if attr['key'] == 'batch_dims':
+                    batch_dims = attr['value']['i']
 
-    axis = axis if axis >= 0 else axis + params_shape_len
-    
-    tf.compat.v1.disable_eager_execution()
-    # indices 1
-    params_shape = params_data.shape
-    indices_shape = indices_data.shape
-    params = tf.compat.v1.placeholder(dtype=params_data.dtype, shape=params_shape)
-    indices = tf.compat.v1.placeholder(dtype=indices_data.dtype, shape=indices_shape)
-    with tf.compat.v1.Session() as sess:
-        gather_res = tf.compat.v1.gather(params, indices, axis=axis, batch_dims=batch_dims, name=None)
-        res = sess.run(gather_res, feed_dict={params: params_data, indices: indices_data})
-    return res
+        params_shape_len = len(params_data.shape)
+        indices_shape_len = len(indices_data.shape)
+        batch_dims = batch_dims if batch_dims >= 0 else batch_dims + indices_shape_len
+        axis = axis if axis >= 0 else axis + params_shape_len
+
+        tf.compat.v1.disable_eager_execution()
+        params_shape = params_data.shape
+        indices_shape = indices_data.shape
+
+        params = tf.compat.v1.placeholder(dtype=params_data.dtype, shape=params_shape)
+        indices = tf.compat.v1.placeholder(dtype=indices_data.dtype, shape=indices_shape)
+        with tf.compat.v1.Session() as sess:
+            gather_res = tf.compat.v1.gather(params, indices, axis=axis, batch_dims=batch_dims, name=None)
+            res = sess.run(gather_res, feed_dict={params: params_data, indices: indices_data})
+        return [res]
+
+    def test_gather(self):
+        self.execute()

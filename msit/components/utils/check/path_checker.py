@@ -169,31 +169,31 @@ class PathChecker(Checker):
 
     @rule()
     def is_readable(self) -> Union["PathChecker", CheckResult]:
-        return os.access(self.instance, os.R_OK), "File is not readable"
+        return os.access(self.instance, os.R_OK), self.instance + " is not readable"
 
     @rule()
     def is_writeable(self) -> Union["PathChecker", CheckResult]:
-        return os.access(self.instance, os.W_OK), "File is not writable"
+        return os.access(self.instance, os.W_OK), self.instance + " is not writable"
 
     @rule()
     def is_executable(self) -> Union["PathChecker", CheckResult]:
-        return os.access(self.instance, os.X_OK), "File is not executable"
+        return os.access(self.instance, os.X_OK), self.instance + " is not executable"
 
     @rule()
     def is_not_readable_to_others(self) -> Union["PathChecker", CheckResult]:
-        return CheckResult(not bool(self.f_status.status_mode & os.st.S_IROTH), "File is readable to others")
+        return CheckResult(not bool(self.f_status.status_mode & os.st.S_IROTH), self.instance + " is readable to others")
 
     @rule()
     def is_not_writable_to_group(self) -> Union["PathChecker", CheckResult]:
-        return CheckResult(not bool(self.f_status.status_mode & os.st.S_IWGRP), "File is writable to groups")
+        return CheckResult(not bool(self.f_status.status_mode & os.st.S_IWGRP), self.instance + " is writable to groups")
 
     @rule()
     def is_not_writable_to_others(self) -> Union["PathChecker", CheckResult]:
-        return CheckResult(not bool(self.f_status.status_mode & os.st.S_IWOTH), "File is writable to others")
+        return CheckResult(not bool(self.f_status.status_mode & os.st.S_IWOTH), self.instance + " is writable to others")
 
     @rule()
     def is_not_executable_to_others(self) -> Union["PathChecker", CheckResult]:
-        return CheckResult(not bool(self.f_status.status_mode & os.st.S_IXOTH), "File is executable to others")
+        return CheckResult(not bool(self.f_status.status_mode & os.st.S_IXOTH), self.instance + " is executable to others")
 
     @rule()
     def max_perm(self, perm_bits: int) -> Union["PathChecker", CheckResult]:

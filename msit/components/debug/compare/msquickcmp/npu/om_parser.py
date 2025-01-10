@@ -232,7 +232,7 @@ class OmParser(object):
         if aipp_configs:
             return aipp_configs
         else:
-            return ''
+            return []
 
     def get_sub_graph_name(self):
         subgraph_name = []

@@ -264,7 +264,7 @@ def get_cmd_instance():
         open the graph faster. This could be useful if the pbtxt has a huge size that can not 
         even be loaded."""
     )
-    extract_cmd_instance= ExtractCommand("extract", """Extract subgraph. There are two extraction modes: 
+    extract_cmd_instance = ExtractCommand("extract", """Extract subgraph. There are two extraction modes: 
         center diffusion and start-end.  The center diffusion mode is as follows: Specify one or more nodes as 
         the diffusion center, and then dump the multi-layer nodes upward or downward. The start-end mode is 
         to specify one or more groups of start nodes and end nodes, and dump all nodes between the start and 
