@@ -218,6 +218,14 @@ def copy_state_dict(model: torch.nn.Module, typ: str = 'disk') -> Mapping:
         states_dic[key] = copy.deepcopy(value).to('cpu')
     return states_dic
 
+def is_model_multimodal(model):
+    if not hasattr(model.config, 'architectures'):
+        return False
+    if (model.config.architectures[0] == 'LlavaForConditionalGeneration' or 
+        (model.config.architectures[0] == 'QWenLMHeadModel' and 
+        hasattr(model.config, 'visual'))):
+        return True
+    return False
 
 class AntiOutlier(object):
     """Anti-outlier for LLM activation quantization."""
@@ -230,17 +238,22 @@ class AntiOutlier(object):
             norm_class_name=None,
     ):
         self.logger = msmodelslim_logger
-        if self.check_multimodel(model) and cfg.anti_method == 'm2':
-            self.cfg = cfg
-            self.model = model
-            self.calib_data = calib_data
-            return
 
         if norm_class_name is not None and not isinstance(norm_class_name, str):
             raise TypeError("norm_class_name must be str, please check it.")
         if not isinstance(model, nn.Module):
             raise TypeError("model must be nn.Module, please check it.")
         self.calib_data = [] if calib_data is None else self.check_calib_data(calib_data)
+
+        if is_model_multimodal(model):
+            if cfg.anti_method != 'm2':
+                raise ValueError("anti_method must be m2 while using multimodal qwen-vl or llava-v1.5")
+            else:
+                self.cfg = cfg
+                self.model = model
+                self.calib_data = calib_data
+                return
+
         check_type(cfg, AntiOutlierConfig, param_name="config")
         self.with_accelerate = judge_model_with_accelerate(model)
 
@@ -542,16 +555,7 @@ class AntiOutlier(object):
 
         return calib_data
 
-    def check_multimodel(self, model):
-        if not hasattr(model.config, 'architectures'):
-            return False
-        if (model.config.architectures[0] == 'LlavaForConditionalGeneration' or 
-            (model.config.architectures[0] == 'QWenLMHeadModel' and 
-            hasattr(model.config, 'visual'))):
-            return True
-        return False
-
-    def anti_for_multimodel(self, cfg, model):
+    def anti_for_multimodal(self, cfg, model):
         def _set_module(ori_mod, submodule_key, module):
             tokens = submodule_key.split('.')
             sub_tokens = tokens[:-1]
@@ -571,7 +575,7 @@ class AntiOutlier(object):
             mod_name = mod.__class__.__name__
             if (mod_name in block_dict):
                 quant_mod = block_dict[mod_name](mod, cfg, name)
-                self.logger.info("multiModel replace block name is `{}`".format(mod_name))
+                self.logger.info("multimodal model replace block `{}` to `{}`".format(mod_name, block_dict[mod_name].__name__))
                 if hasattr(mod, '_hf_hook'):
                     add_hook_to_module(quant_mod, mod._hf_hook)
                     remove_hook_from_module(mod)
@@ -579,14 +583,17 @@ class AntiOutlier(object):
                 del mod
 
     def _process(self):
-        if self.check_multimodel(self.model) and self.cfg.anti_method == 'm2':
-            self.anti_for_multimodel(self.cfg, self.model)
-            data = self.calib_data[0]
-            if isinstance(data, tuple) or isinstance(data, list):
-                self.model(*data)
-            elif isinstance(data, dict):
-                self.model(**data)
-            return
+        if is_model_multimodal(self.model):
+            if self.cfg.anti_method != 'm2':
+                raise ValueError("anti_method must be m2 while using multimodal qwen-vl or llava-v1.5")
+            else:
+                self.anti_for_multimodal(self.cfg, self.model)
+                data = self.calib_data[0]
+                if isinstance(data, tuple) or isinstance(data, list):
+                    self.model(*data)
+                elif isinstance(data, dict):
+                    self.model(**data)
+                return
 
         act_stats = self.os_stats()
         if self.cfg.anti_method == 'm4':
@@ -1007,10 +1014,9 @@ class LlavaClipVision(nn.Module):
         super().__init__()
         self.layer_norm1 = org_layer.layer_norm1
         self.layer_norm2 = org_layer.layer_norm2
-        self.self_attn = org_layer.self_attn
+        self.self_attn = org_layer.self_attn 
         self.mlp = org_layer.mlp
         self.act_fn = org_layer.mlp.activation_fn
-
         self.layername = layername
 
         self.cac_migrate_attn = True

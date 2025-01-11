@@ -556,6 +556,7 @@ def sort_ge_dump_data(dump_data, graph_map):
     ge_dump_data = OrderedDict((op_name, dump_data[op_name]) for op_name in sort_ops_list)
     return ge_dump_data
 
+
 def sort_by_timestamp(gathered_row_data):
     """
     gathered_row_data为保存比对结果的列表，列表里每个元素都是一个字典
@@ -567,6 +568,7 @@ def sort_by_timestamp(gathered_row_data):
     """
     sorted_gathered_row_data = sorted(gathered_row_data, key=lambda x: x['my_data_path'].split('.')[-1])
     return sorted_gathered_row_data
+
 
 # Main entrance
 def acc_compare(golden_path, my_path, output_path=".", ge_graph_path=None):

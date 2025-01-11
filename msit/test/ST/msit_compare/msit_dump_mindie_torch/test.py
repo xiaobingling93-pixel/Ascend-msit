@@ -17,14 +17,14 @@ import torch
 import torchvision.models as models
 import mindietorch
 
+from msit_llm import DumpConfig, register_hook
+
 # 创建随机输入数据，尺寸为（1, 3, 224, 224）对应于（batch_size, channels, height, width）
 input_data = torch.randn(1, 3, 224, 224)
 
 # 加载 ResNet-50 模型
 model = models.resnet50(pretrained=True)
 model.eval()  # 设置模型为评估模式
-
-from msit_llm import DumpConfig, register_hook
 
 dump_config = DumpConfig(dump_path="./dump/cpu")
 register_hook(model, dump_config)  # model是要dump中间tensor的模型实例，在模型初始化后添加代码
