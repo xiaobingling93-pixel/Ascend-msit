@@ -168,25 +168,19 @@ class CompareMgr:
             str(my_token_set),
         )
         if self.args.stats:
-            compared_result = self.perform_comparison(golden_tokens, my_tokens, op_map, is_statistics=True)
-            return save_statistics_compare_reault_to_csv(compared_result, output_path)
+            self.perform_comparison(golden_tokens, my_tokens, op_map, is_statistics=True)
+            return save_statistics_compare_reault_to_csv(self.compared_result, output_path)
         else:
-            compared_result = self.perform_comparison(golden_tokens, my_tokens, op_map, is_statistics=False)
-            return save_compare_reault_to_csv(compared_result, output_path)
+            self.perform_comparison(golden_tokens, my_tokens, op_map, is_statistics=False)
+            return save_compare_reault_to_csv(self.compared_result, output_path)
 
     def compare_tokens_stats(self, cmp_tokens, op_map, is_statistics=False):
-        compared_result = []
-
         for token_id in cmp_tokens:
             logger.debug("comparing tokens is %s ", str(token_id))
             if is_statistics:
                 self.compare_statistics(token_id, token_id, op_map)
             else:
                 self.compare_token(token_id, token_id, op_map)
-            # Collect the result of comparison
-            compared_result.extend(self.compared_result)
-
-        return compared_result
     
     def perform_comparison(self, golden_tokens, my_tokens, op_map, is_statistics=False):
         golden_token_set = set(self._flatten_and_enum_tuple(golden_tokens))
@@ -194,23 +188,18 @@ class CompareMgr:
 
         if not golden_token_set.isdisjoint(my_token_set):
             cmp_tokens = golden_token_set.intersection(my_token_set)
-            compared_result = self.compare_tokens_stats(cmp_tokens, op_map, is_statistics)
+            self.compare_tokens_stats(cmp_tokens, op_map, is_statistics)
         elif self.golden_data.get_token_id() is not None and self.my_data.get_token_id() is not None:
             # 强制比对指定token
-            compared_result = []
             for golden_token, my_token in itertools.product(golden_tokens, my_tokens):
                 if is_statistics:
                     self.compare_statistics(golden_token, my_token, op_map)
                 else:
                     self.compare_token(golden_token, my_token, op_map)
-                compared_result.extend(self.compared_result)
         else:
             logger.error(
                 f"my tokens is {my_tokens} and golden tokens is {golden_tokens}. The two cannot be matched."
             )
-            return None
-
-        return compared_result
 
     def compare_statistics(self, golden_token_id, my_token_id, op_map):
         for my_op, my_op_location, golden_op, _ in op_map:
