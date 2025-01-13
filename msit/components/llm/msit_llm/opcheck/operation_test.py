@@ -53,11 +53,14 @@ class OperationTest(unittest.TestCase):
         error4 = 'Error4‰'
         error5 = 'Error5‰'
         error6 = 'Error+/-1'
+        error7 = 'Error2^-20'
+        error8 = 'Error2^-10'
+        error9 = 'Error2^-8'
 
         self.precision_standard = {
             'torch.double': [error1, 99.99], 'torch.uint32': [error1, 99.99], 'torch.int64': [error1, 99.99],
-            'torch.float32': [error1, 99.99], 'torch.int32': [error1, 99.99], 'torch.uint64': [error1, 99.99],
-            'torch.float16': [error3, 99.9], 'torch.bfloat16': [error4, 99.6], 'torch.int8': [error6, 99.9],
+            'torch.float32': [error7, 99.99], 'torch.int32': [error1, 99.99], 'torch.uint64': [error1, 99.99],
+            'torch.float16': [error8, 99.9], 'torch.bfloat16': [error9, 99.9], 'torch.int8': [error6, 99.9],
             'torch.uint8': [error6, 99], 'torch.int16': [error6, 99.9], 'torch.uint16': [error6, 99.9],
             'torch.bool': [error1, 100]
         }
@@ -68,7 +71,10 @@ class OperationTest(unittest.TestCase):
             error3: 0.001,
             error4: 0.004,
             error5: 0.005,
-            error6: 1
+            error6: 1,
+            error7: 1 / (2 ** 20),
+            error8: 1 / (2 ** 10),
+            error9: 1 / (2 ** 8)
         }
 
     def validate_param(self, *param_names):
