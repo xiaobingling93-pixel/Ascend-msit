@@ -41,7 +41,7 @@
   import mindietorch
   import torchvision.models as models
 
-  model = models.resnet50(pretrained=True)
+  model = models.resnet50()
   model.eval()
   torch.manual_seed(88)   # 设置随机种子，确保cpu和npu侧模型输入一致
   input_data = torch.randn(1, 3, 224, 224)
@@ -65,7 +65,7 @@
   import mindietorch
   import torchvision.models as models
 
-  model = models.resnet50(pretrained=True)
+  model = models.resnet50()
   model.eval()
   input_data = torch.randn(1, 3, 224, 224)
 
@@ -94,7 +94,7 @@
       return new_gm
   
   input_data = torch.randn(1, 3, 224, 224)
-  model = models.resnet50(pretrained=True)
+  model = models.resnet50()
   model.eval()
   fx_model = fx_transform(model)
   
