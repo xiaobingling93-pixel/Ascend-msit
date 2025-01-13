@@ -23,7 +23,7 @@ class BiasAddOperation(OperationTest):
         bias_shape = [1] * (value.ndim - 1) + [bias.shape[0]]
         bias_reshape = bias.reshape(bias_shape)
         res = np.add(value, bias_reshape)
-        return res
+        return [res]
     
     def test_bias_add(self):
         self.execute()

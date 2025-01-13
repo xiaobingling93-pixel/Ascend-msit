@@ -23,7 +23,7 @@ class AddOperation(OperationTest):
         res = in_tensors[0]
         for i in range(1, len(in_tensors)):
             res = np.add(res, in_tensors[i])
-        return res.astype(DATA_TYPE_MAP[self.op_param['output_desc'][0]['dtype']])
+        return [res.astype(DATA_TYPE_MAP[self.op_param['output_desc'][0]['dtype']])]
     
     def test_add(self):
         self.execute()

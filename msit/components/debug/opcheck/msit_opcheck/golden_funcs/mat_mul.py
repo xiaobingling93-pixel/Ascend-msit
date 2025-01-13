@@ -63,7 +63,7 @@ def _matmul(inputs):
         bias = torch.from_numpy(bias)
         res_pt = torch.add(res_pt, bias).numpy()
     output_dtype = bfloat16_conversion_v2([out_dtype])
-    return res_pt.astype(output_dtype[0], copy=False) 
+    return res_pt.astype(output_dtype[0], copy=False)
 
 
 class MatmulOperation(OperationTest):
