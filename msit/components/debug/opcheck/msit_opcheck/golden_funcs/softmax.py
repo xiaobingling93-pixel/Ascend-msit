@@ -38,7 +38,7 @@ class SoftmaxOperation(OperationTest):
         out_dtype = DATA_TYPE_MAP[self.op_param['output_desc'][0]['dtype']]
         inputs = [cur_format, ori_format, ori_shape, data_in, axis, ipt_dtype, out_dtype]
         res = self._softmax_v2(inputs)
-        return res
+        return [res]
 
     def test_softmax(self):
         self.execute()
