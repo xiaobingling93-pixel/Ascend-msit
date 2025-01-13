@@ -64,7 +64,7 @@ class BatchNormOperation(OperationTest):
         output = res[0]
         if data_format == "NHWC":
             output = output.reshape(dims[0], dims[1], dims[2], dims[3]).permute(0, 2, 3, 1)
-        return np.expand_dims(output, axis=0)
+        return [np.expand_dims(output, axis=0)]
 
     def test_batch_norm(self):
         self.execute()
