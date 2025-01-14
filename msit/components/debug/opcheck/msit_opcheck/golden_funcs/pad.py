@@ -20,6 +20,7 @@ import torch
 from msit_opcheck.operation_test import OperationTest
 from msit_opcheck.constants import BFLOAT16
 
+
 class PadOperation(OperationTest):
     def golden_calc(self, in_tensors):
         input_data, paddings = in_tensors

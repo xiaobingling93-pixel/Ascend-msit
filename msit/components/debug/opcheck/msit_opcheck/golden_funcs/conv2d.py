@@ -143,7 +143,7 @@ class Conv2dOperation(OperationTest):
         x = format_transformation_map[x_new_format][x_ori_format](x, x_new_format, x_ori_shape)
         # x filter to NHWC
         if conv_filter_ori_format != conv_filter_new_format:
-            conv_filter = format_transformation_map[conv_filter_new_format][conv_filter_ori_format] \
+            conv_filter = format_transformation_map[conv_filter_new_format][conv_filter_ori_format]\
                 (conv_filter, conv_filter_new_format, conv_filter_ori_shape)
         if groups > 1:
             out = self.conv2d_with_groups(x, conv_filter, groups, bias, conv_params)
