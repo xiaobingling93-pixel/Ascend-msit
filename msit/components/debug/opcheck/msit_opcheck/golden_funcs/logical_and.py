@@ -20,6 +20,7 @@ from msit_opcheck.operation_test import OperationTest
 from msit_opcheck.conversion.dtype_convert import DATA_TYPE_MAP
 from msit_opcheck.constants import FLOAT16
 
+
 class LogicalAndOperation(OperationTest):
     def golden_calc(self, in_tensors):
         x1, x2 = in_tensors[:2]

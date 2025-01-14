@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,8 +16,8 @@ import logging
 import os
 import tensorflow as tf
 
-log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-logging.basicConfig(level=logging.INFO, format=log_format)
+LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
 
 # 获取 logger 实例
 logger = logging.getLogger("saved_model_logger")
@@ -44,7 +43,8 @@ def convert_saved_model_to_pb(saved_model_path, pb_model_path):
 
 
 if __name__ == '__main__':
-    model_path_resnet50 = f"{os.environ['PROJECT_PATH']}/resource/msit_compare/saved_model/model/resnet50" # 原始模型路径，其中的内容如下图
+    model_path_resnet50 = \
+        f"{os.environ['PROJECT_PATH']}/resource/msit_compare/saved_model/model/resnet50" # 原始模型路径，其中的内容如下图
     pb_model_path_resnet50 = f"{os.environ['PROJECT_PATH']}/resource/msit_compare/saved_model/model/resnet50.pb"
     # saved_model to pb
     convert_saved_model_to_pb(model_path_resnet50, pb_model_path_resnet50)
