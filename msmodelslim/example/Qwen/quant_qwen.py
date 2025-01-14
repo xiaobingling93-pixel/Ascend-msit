@@ -26,11 +26,7 @@ def cmd_bool(cmd_arg):
     raise ValueError(f"{cmd_arg} should be True or False")
 
 
-def get_down_proj_disable_names(config_file: str) -> list:
-    fd = os.open(config_file, os.O_RDONLY)
-    with os.fdopen(fd, 'r', encoding='utf-8') as file:
-        config = json.load(file)
-    num_layers = config['num_hidden_layers']
+def get_down_proj_disable_names(num_layers: int) -> list:
     disable_names = ["lm_head"]
     # 遍历层数并添加对应的 disable_names
     for i in range(num_layers):
@@ -38,11 +34,7 @@ def get_down_proj_disable_names(config_file: str) -> list:
     return disable_names
 
 
-def get_c_proj_disable_names(config_file: str) -> list:
-    fd = os.open(config_file, os.O_RDONLY)
-    with os.fdopen(fd, 'r', encoding='utf-8') as file:
-        config = json.load(file)
-    num_layers = config['num_hidden_layers']
+def get_c_proj_disable_names(num_layers: int) -> list:
     disable_names = ["lm_head"]
     # 遍历层数并添加对应的 disable_names
     for i in range(num_layers):
@@ -167,16 +159,15 @@ if __name__ == '__main__':
 
     model_path = args.model_path
     save_directory = args.save_directory
+    num_layers = checker.get_config_from_pretrained(model_path, trust_remote_code=True).num_hidden_layers
 
     # Check if disable_names is provided, if not and a_bit is 8, generate disable_names
     disable_names = args.disable_names
     if not disable_names and args.a_bit == 8:
-        config_file = os.path.join(model_path, 'config.json')
-        config_file = get_valid_read_path(config_file, check_user_stat=False)
         if args.model_type == 'qwen1':
-            disable_names = get_c_proj_disable_names(config_file)
+            disable_names = get_c_proj_disable_names(num_layers)
         else:
-            disable_names = get_down_proj_disable_names(config_file)
+            disable_names = get_down_proj_disable_names(num_layers)
 
     quant_conf = QuantConfig(
         w_bit=args.w_bit,

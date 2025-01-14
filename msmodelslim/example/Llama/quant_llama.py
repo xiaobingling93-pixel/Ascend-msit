@@ -26,15 +26,42 @@ def cmd_bool(cmd_arg):
     raise ValueError(f"{cmd_arg} should be True or False")
 
 
-def get_down_proj_disable_names(config_file: str) -> list:
-    fd = os.open(config_file, os.O_RDONLY)
-    with os.fdopen(fd, 'r', encoding='utf-8') as file:
-        config = json.load(file)
-    num_layers = config['num_hidden_layers']
+def get_down_proj_disable_names(num_layers: int) -> list:
     disable_names = []
     # 遍历层数并添加对应的 disable_names
     for i in range(num_layers):
         disable_names.append(f"model.layers.{i}.mlp.down_proj")
+    return disable_names
+
+
+def get_llama3_1_disable_names(num_layers: int) -> list:
+    disable_names = []
+    for i in range(num_layers):
+        disable_names.append(f"model.layers.{i}.mlp.down_proj")
+    # llama 3.1 70b 推荐回退所有down层和前5层下述各层
+    for i in range(5):
+        disable_names.append(f"model.layers.{i}.self_attn.q_proj")
+        disable_names.append(f"model.layers.{i}.self_attn.k_proj")
+        disable_names.append(f"model.layers.{i}.self_attn.v_proj")
+        disable_names.append(f"model.layers.{i}.self_attn.o_proj")
+        disable_names.append(f"model.layers.{i}.mlp.gate_proj")
+        disable_names.append(f"model.layers.{i}.mlp.up_proj")
+    disable_names.append("lm_head")
+    return disable_names
+
+
+def get_llama3_disable_names(num_layers: int) -> list:
+    disable_names = []
+    # llama 3 70b 推荐回退前5层下述各层
+    for i in range(5):
+        disable_names.append(f"model.layers.{i}.mlp.down_proj")
+        disable_names.append(f"model.layers.{i}.self_attn.q_proj")
+        disable_names.append(f"model.layers.{i}.self_attn.k_proj")
+        disable_names.append(f"model.layers.{i}.self_attn.v_proj")
+        disable_names.append(f"model.layers.{i}.self_attn.o_proj")
+        disable_names.append(f"model.layers.{i}.mlp.gate_proj")
+        disable_names.append(f"model.layers.{i}.mlp.up_proj")
+    disable_names.append("lm_head")
     return disable_names
 
 
@@ -86,6 +113,9 @@ def parse_arguments():
     parser.add_argument('--disable_last_linear', type=cmd_bool, default=True)
     parser.add_argument('--model_name', type=str, default=None,
                         validator=StringArgumentValidator(min_length=1, max_length=MAX_KEY_LENGTH, allow_none=True))
+    parser.add_argument('--model_type', type=str, default='llama2',
+                         choices=['llama', 'llama2', 'llama3', 'llama3.1_bf', 'llama3.1_fp'],
+                         help='Specify the type of llama model (choices: llama, llama2, llama3, llama3.1_bf, llama3.1_fp)')
     return parser.parse_args()
 
 
@@ -152,13 +182,17 @@ if __name__ == '__main__':
 
     model_path = args.model_path
     save_directory = args.save_directory
+    num_layers = checker.get_config_from_pretrained(model_path, trust_remote_code=True).num_hidden_layers
 
     # Check if disable_names is provided, if not and a_bit is 8, generate disable_names
     disable_names = args.disable_names
     if not disable_names and args.a_bit == 8:
-        config_file = os.path.join(model_path, 'config.json')
-        config_file = get_valid_read_path(config_file, check_user_stat=False)
-        disable_names = get_down_proj_disable_names(config_file)
+        if args.model_type == 'llama3':
+            disable_names = get_llama3_disable_names(num_layers)
+        elif args.model_type == 'llama3.1_fp':
+            disable_names = get_llama3_1_disable_names(num_layers)
+        else:
+            disable_names = get_down_proj_disable_names(num_layers)
 
     quant_conf = QuantConfig(
         w_bit=args.w_bit,
