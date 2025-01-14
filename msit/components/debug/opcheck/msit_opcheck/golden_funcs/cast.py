@@ -41,26 +41,26 @@ class CastOperation(OperationTest):
         
         if src_type == "float32" and dst_type == "int64":
             out = torch.tensor(data, dtype=torch.int64).numpy()
-            return out
+            return [out]
         if dst_type == "complex32":
             _shape = list(data.shape)
             data = data.reshape(_shape + [1])
             imag = np.zeros(_shape + [1], dtype=np.float16)
             res = np.concatenate((data, imag), axis=-1)
-            return res
+            return [res]
         if src_type == "uint1":
             data = np.unpackbits(data)
         if src_type == "float32" and dst_type == "float16":
             out = torch.tensor(data, dtype=torch.float16).numpy()
-            return out
+            return [out]
         if dst_type == "complex64":
             out = tf.cast(data, dtype=dst_type)
             with tf.compat.v1.Session() as sess:
                 res = sess.run(out)
-            return res
+            return [res]
             
         if src_type == "uint32":
-            return data.astype(dst_type)
+            return [data.astype(dst_type)]
         data_tensor = self.numpy_to_torch_tensor(data)
         out_dtype_torch = self.str_to_dtype(dst_type)
         out = data_tensor.to(out_dtype_torch)
@@ -69,7 +69,7 @@ class CastOperation(OperationTest):
             res = out.numpy().astype(tf.bfloat16.as_numpy_dtype)
         else:
             res = out.numpy()
-        return res
+        return [res]
     
     def test_cast(self):
         self.execute()
