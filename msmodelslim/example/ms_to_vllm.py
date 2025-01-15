@@ -8,19 +8,20 @@ import numpy as np
 import torch
 
 
-from safetensors.torch import load_file, save_file, safe_open
+from safetensors.torch import load_file, save_file
 
 
+TOOL_AWQ = 'awq'
+TOOL_GPTQ = 'gptq'
 QUANT_TYPE = ['W4A16', 'W8A16']
+STORAGE_BITS = 32
 ORDINAL_PACK_ORDER = [0, 1, 2, 3, 4, 5, 6, 7]
 AWQ_PACK_ORDER = [0, 2, 4, 6, 1, 3, 5, 7]
-GPTQ_PACK_ORDER = [7, 6, 5, 4, 3, 2, 1, 0]
 
 
-def awq_pack(iweight: torch.Tensor, w_bit:4, direction: str = "column"):
-    storage_bits = 32
-    pack_num = storage_bits // w_bit
-    shifts = torch.arange(0, storage_bits, w_bit, device=iweight.device)
+def awq_pack(iweight: torch.Tensor, w_bit:int, direction: str = "column"):
+    pack_num = STORAGE_BITS // w_bit
+    shifts = torch.arange(0, STORAGE_BITS, w_bit, device=iweight.device)
 
     iweight = iweight.to(torch.int8)
     iweight = torch.bitwise_and(iweight, 0x0F)  # eventually correct overflow
@@ -43,8 +44,7 @@ def apply_order(
     direction: str = "column",
     order: List[int] = None,
 ):
-    storage_bits = 32
-    pack_num = storage_bits // w_bit
+    pack_num = STORAGE_BITS // w_bit
     if direction == "column":
         iweight = iweight.view(-1, pack_num)[:, order].view(iweight.shape)
     elif direction == "row":
@@ -52,14 +52,15 @@ def apply_order(
     return iweight
 
 
-def gptq_qweight_pack(iweight:torch.Tensor, w_bit:4):
+def gptq_qweight_pack(iweight:torch.Tensor, w_bit:int):
     i = 0
     row = 0
-    storage_bits = 32
     iweight = iweight.numpy().astype(np.uint32)
-    qweight = np.zeros((iweight.shape[0] // storage_bits * w_bit, iweight.shape[1]), dtype=np.uint32)
+    if len(iweight.shape) < 2:
+        raise ValueError("Expected qweight to have at least 2 dimensions, but got shape: {}".format(iweight.shape))
+    qweight = np.zeros((iweight.shape[0] // STORAGE_BITS * w_bit, iweight.shape[1]), dtype=np.uint32)
     while row < qweight.shape[0]:
-        if w_bit in [4, 8]:
+        if w_bit in (4, 8):
             for j in range(i, i + (32 // w_bit)):
                 qweight[row] |= iweight[j] << (w_bit * (j - i))
             i += 32 // w_bit
@@ -69,16 +70,20 @@ def gptq_qweight_pack(iweight:torch.Tensor, w_bit:4):
     return qweight
 
 
-def gptq_qzeros_pack(zeros:torch.Tensor, w_bit:4):
+def gptq_qzeros_pack(zeros:torch.Tensor, w_bit:int):
     i = 0
     col = 0
-    storage_bits = 32
     if zeros.dtype == torch.bfloat16:
         zeros = zeros.to(torch.float16)
+    
+    #AutoGPTQ zeros -= 1, or it may breaks exllama kernels 
+    zeros -= 1    
     zeros = zeros.numpy().astype(np.uint32)
-    qzeros = np.zeros((zeros.shape[0], zeros.shape[1] // storage_bits * w_bit), dtype=np.uint32)
+    if len(zeros.shape) < 2:
+        raise ValueError("Expected zeros to have at least 2 dimensions, but got shape: {}".format(zeros.shape))
+    qzeros = np.zeros((zeros.shape[0], zeros.shape[1] // STORAGE_BITS * w_bit), dtype=np.uint32)
     while col < qzeros.shape[1]:
-        if w_bit in [2, 4, 8]:
+        if w_bit in (4, 8):
             for j in range(i, i + (32 // w_bit)):
                 qzeros[:, col] |= zeros[:, j] << (w_bit * (j - i))
             i += 32 // w_bit
@@ -89,7 +94,8 @@ def gptq_qzeros_pack(zeros:torch.Tensor, w_bit:4):
     return qzeros  
 
 
-def convert_ms_to_vllm(targer_tool, w_bit, weight_dict, json_dict):
+def convert_ms_to_vllm(target_tool, w_bit, weight_dict, json_dict):
+
     vllm_weight_dict = {}
     for name, quant_type in json_dict.items():
         if name in weight_dict.keys():
@@ -97,30 +103,42 @@ def convert_ms_to_vllm(targer_tool, w_bit, weight_dict, json_dict):
             if quant_type in QUANT_TYPE:
                 order = AWQ_PACK_ORDER
                 direction = 'column'
-                if name.endswith('.weight') and 'module.weight' not in name:
-                    vllm_name = '.'.join(name.split('.')[:-1]) + '.qweight'
+                if name.endswith('.weight') and '.module.weight' not in name:
+                    base_name = name.rsplit('.')[:-1]
+                    tmp_key = '.'.join(base_name) + '.module.weight'
+                    if tmp_key in weight_dict.keys():
+                        continue
+                    vllm_name = '.'.join(base_name) + '.qweight'
                     tensor = tensor.t().contiguous()
-                    tensor.add_(8)
-                    if (targer_tool == 'awq'):
+                    tensor = torch.clamp(tensor, -2**(w_bit - 1), 2**(w_bit - 1) - 1)
+                    if w_bit == 8:
+                        tensor = tensor.to(torch.int32)
+                    tensor.add_(2 ** (w_bit - 1))
+
+                    if target_tool == TOOL_AWQ:
                         iweights = apply_order(tensor, w_bit, direction, order)
                         qweight = awq_pack(iweights, w_bit)
-                    else:
+                    elif target_tool == TOOL_GPTQ:
                         qweight = gptq_qweight_pack(tensor, w_bit)
                     vllm_weight_dict[vllm_name] = qweight
                 
                 elif name.endswith('.weight_scale'):
-                    vllm_name = '.'.join(name.split('.')[:-1]) + '.scales'
+                    vllm_name = '.'.join(name.rsplit('.')[:-1]) + '.scales'
                     tensor = tensor.t().contiguous()
                     vllm_weight_dict[vllm_name] = tensor
 
                 elif name.endswith('.weight_offset'):
-                    vllm_name = '.'.join(name.split('.')[:-1]) + '.qzeros'
+                    vllm_name = '.'.join(name.rsplit('.')[:-1]) + '.qzeros'
                     tensor = tensor.t().contiguous()
-                    tensor.add_(8)
-                    if (targer_tool == 'awq'):
+                    tensor = torch.clamp(tensor, -2**(w_bit - 1), 2**(w_bit - 1) - 1)
+                    if w_bit == 8:
+                        tensor = tensor.to(torch.int32)
+                    tensor.add_(2 ** (w_bit - 1))
+
+                    if target_tool == TOOL_AWQ:
                         izeros = apply_order(tensor, w_bit, direction, order)
                         qzeros = awq_pack(izeros, w_bit, direction)
-                    else:
+                    elif target_tool == TOOL_GPTQ:
                         qzeros = gptq_qzeros_pack(tensor, w_bit)
                     vllm_weight_dict[vllm_name] = qzeros
                 
@@ -141,7 +159,21 @@ def load_json_info(json_file_path):
         quant_info = json.load(f)
 
     return quant_info
-                    
+
+
+def check_w_bit(value):
+    ivalue = int(value)
+    if ivalue not in (4, 8):
+        raise argparse.ArgumentTypeError(f"Invalid w_bit value: {value}. Supported values are 4 and 8.")
+    return ivalue
+
+
+def check_target_tool(value):
+    if value not in ("awq", "gptq"):
+        raise argparse.ArgumentTypeError(f"Invalid target_tool value: {value}. Supported values are 'awq' and 'gptq'.")
+    return value
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", type=str, default=None, help="Quantied safetensors file path")
@@ -149,8 +181,8 @@ if __name__ == "__main__":
     parser.add_argument("--save_path", type=str, 
                         default='res.safetensors', 
                         help="The path to save converted quant weights")
-    parser.add_argument("--w_bit", type=int, default=4, help="Quantied weight bits")
-    parser.add_argument("--target_tool", type=str, default="awq", help="target tool, value include awq and gptq")
+    parser.add_argument("--w_bit", type=check_w_bit, default=4, help="Quantied weight bits")
+    parser.add_argument("--target_tool", type=check_target_tool, default="awq", help="target tool, value include awq and gptq")
     args = parser.parse_args()
 
     save_path = args.save_path
