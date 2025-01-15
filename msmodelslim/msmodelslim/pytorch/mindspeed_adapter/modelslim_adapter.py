@@ -98,7 +98,7 @@ class ModelAdapter(nn.Module):
             raise ValueError("forward_step function must callable")
         self.model = self.convert_model(model)
         if dev_type not in _SUPPORTED_DEVICES:
-            raise ValueError("Configuration param `dev_id` cannot be correctly parsed! "
+            raise ValueError("Configuration param `dev_type` cannot be correctly parsed! "
                              "Please make sure a valid device id is input")
         self.device = dev_type
         self.forward_step = forward_step
