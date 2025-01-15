@@ -624,11 +624,12 @@ class AntiOutlier(object):
             if (is_expert):
                 continue
 
+            self.logger.debug(f"smooth {norm_name_group} -> {linear_names}")
+
             for name in linear_names:
                 mod = PatternProcess.get_module_by_name(self.model, name)
                 linear_modules.append(mod)
 
-            is_shift = False
             args = []
             if ProcessHook.MODIFY_SMOOTH_ARGS in self.hooks and self.hooks[
                 ProcessHook.MODIFY_SMOOTH_ARGS] is not None:
@@ -659,6 +660,7 @@ class AntiOutlier(object):
                         fusion_kwargs.update({"scale_min": scale_min})
                     if 'check_group_fusions' not in inspect.signature(iter_smooth).parameters:
                         fusion_kwargs.pop("check_group_fusions", None)
+                    self.logger.debug(f"fusion_kwargs is {fusion_kwargs}")
                     iter_smooth(
                         self.cfg, norm_module, linear_modules, stats, num_attention_heads, **fusion_kwargs
                         )
