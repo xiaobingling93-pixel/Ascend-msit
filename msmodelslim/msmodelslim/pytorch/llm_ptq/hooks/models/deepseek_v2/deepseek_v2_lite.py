@@ -38,10 +38,11 @@ def modify_smooth_args(cfg: AntiOutlierConfig,
     # 针对该模型进行m4量化时，需要对特定层开启偏移
     if cfg.anti_method == 'm4':
         is_shift = False
-        if 'norm' in norm_name and 'kv_b' not in linear_names:
+        if 'norm' in norm_name and 'kv_b' not in linear_names[0]:
             is_shift = True
 
         kwargs['is_shift'] = is_shift
+        kwargs['alpha'] = cfg.alpha
     return args, kwargs
 
 
