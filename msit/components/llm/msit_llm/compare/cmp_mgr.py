@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import re
 import itertools
 import torch
 
@@ -37,6 +38,39 @@ class CompareMgr:
         os.environ[RAW_INPUT_PATH] = self.golden_raw_path + "|" + self.my_raw_path
         self.op_match: OpMatchMgr = OpMatchMgr(args)
         self.compared_result = []  # 收集结果
+
+    @staticmethod
+    def filter_my_tensor_paths(golden_tensor_paths, my_tensor_paths):
+        tensor_filter_patterns = [
+            (r'root\.model\.layers\.\d+\.self_attn\.k_proj/output\.pth', 
+                '0_Attention/0_QKVLinearSplitPack/after/outtensor1.bin'),
+            (r'root\.model\.layers\.\d+\.self_attn\.v_proj/output\.pth', 
+                '0_Attention/0_QKVLinearSplitPack/after/outtensor2.bin'),
+            (r'root\.model\.layers\.\d+\.self_attn\.q_proj/output\.pth', 
+                '0_Attention/1_RotaryPositionEmbedding/before/intensor0.bin')  
+        ]
+        filtered_my_tensor_paths = []
+
+        for pattern, target_tensor in tensor_filter_patterns:
+            if any(re.search(pattern, path) for path in golden_tensor_paths):
+                filtered_my_tensor_paths = [path for path in my_tensor_paths if target_tensor in path]
+                logger.debug(f"Filtered my_tensor_paths based on pattern: {pattern}")
+                break 
+            
+        if not filtered_my_tensor_paths:
+            filtered_my_tensor_paths = my_tensor_paths
+
+        return filtered_my_tensor_paths
+    
+    @staticmethod
+    def filter_golden_tensor_paths(golden_tensor_paths):
+        exclude_pattern = re.compile(r'output_\d+_\d+\.pth$')
+        filtered_paths = [
+            path for path in golden_tensor_paths
+            if not exclude_pattern.search(path)
+        ]
+
+        return filtered_paths
 
     @classmethod
     def get_raw_path(cls, path: str):
@@ -207,7 +241,8 @@ class CompareMgr:
             logger.debug("------ compare (%s %s)------", str(my_op.node_name), str(golden_op.node_name))
             golden_tensor_paths = list(self.golden_data.get_csv_path(golden_token_id, golden_op))
             my_tensor_paths = list(self.my_data.get_tensor_path(my_token_id, my_op, my_op_location))
-            
+            my_tensor_paths = self.filter_my_tensor_paths(golden_tensor_paths, my_tensor_paths)
+            golden_tensor_paths = self.filter_golden_tensor_paths(golden_tensor_paths)
             if len(golden_tensor_paths) == len(my_tensor_paths):
                 golden_tensor_paths.sort()
                 my_tensor_paths.sort()
@@ -234,7 +269,8 @@ class CompareMgr:
             # 获取到所有需要比较的 tensor 的路径
             golden_tensor_paths = list(self.golden_data.get_tensor_path(golden_token_id, golden_op, golden_op_location))
             my_tensor_paths = list(self.my_data.get_tensor_path(my_token_id, my_op, my_op_location))
-
+            my_tensor_paths = self.filter_my_tensor_paths(golden_tensor_paths, my_tensor_paths)
+            golden_tensor_paths = self.filter_golden_tensor_paths(golden_tensor_paths)
             seq_len, my_tensor_paths = self._handle_rope_operation_paths(my_tensor_paths)
 
             if len(golden_tensor_paths) == len(my_tensor_paths):

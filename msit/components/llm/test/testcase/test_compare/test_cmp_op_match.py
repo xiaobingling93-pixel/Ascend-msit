@@ -5,7 +5,7 @@ from msit_llm.compare.cmp_op_match import OpMatchMap, MatchLocation
 from msit_llm.dump.torch_dump.topo import TreeNode
 from msit_llm.compare.cmp_op_match import policy_enhanced_name_match, policy_layer_type_cnt_match, \
                                             policy_name_full_match, policy_output, \
-                                            policy_outside_layer_name_match, policy_rope_operator_match
+                                            policy_layer_special_match, policy_rope_operator_match
 
 
 
@@ -154,7 +154,7 @@ def test_policy_layer_type_cnt_match():
 
 
 
-def test_policy_outside_layer_name_match():
+def test_policy_layer_special_match():
 
     golden_root = TreeNode('model', 'Baichuan')
     golden_child1 = TreeNode('embed_tokens', 'golden_operation1')
@@ -165,7 +165,7 @@ def test_policy_outside_layer_name_match():
     golden_root.add_child(golden_child3)
     
     my_root = TreeNode('model', 'BaichuanModel')
-    my_child1 = TreeNode('wordembed', 'my_operation1')
+    my_child1 = TreeNode('wordembedding', 'my_operation1')
     my_child2 = TreeNode('RmsNormOperation_123', 'my_operation2')
     my_child3 = TreeNode('lmhead', 'my_operation3')
     my_root.add_child(my_child1)
@@ -173,7 +173,7 @@ def test_policy_outside_layer_name_match():
     my_root.add_child(my_child3)
 
     match_map = OpMatchMap(golden_root, my_root)
-    policy_outside_layer_name_match(golden_root, my_root, match_map)
+    policy_layer_special_match(golden_root, my_root, match_map)
     matches = match_map.get_match_map(enable_print=True)
 
     expected_matches = [
