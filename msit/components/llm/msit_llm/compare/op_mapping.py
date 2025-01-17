@@ -11,6 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import re
+
+
+def is_word_embedding(name):
+    return ('embed_tokens' in name or 'word_embeddings' in name) \
+        and 'word_embeddings_layernorm' not in name
+
 
 ATB_TORCH_BUILT_IN_OP_OUTPUT_MAPPING = {
     "LayerNormOperation": "LayerNorm",
@@ -31,3 +38,19 @@ ATB_QUANT_FLOAT_NODE_MAPPING = {
     "LinearDequantOnly": "LinearNoQuant",
     "LinearRowParallelNoAdd": "LinearRowParallelAndAdd",
 }
+
+
+LAYER_OP_MAPPING_DICT = {
+    'wordembedding': is_word_embedding,
+    re.compile(r"^RmsNormOperation_\d+$"): 'root.model.norm',
+    'lmhead': 'lm_head',
+    'layernormoperation_35':'embeddings_layernorm',
+    'layernormoperation_66':'ln_f'
+}
+
+
+QWEN_OP_MAPPING = {
+        'qkv': ['self_attn.v_proj', 'self_attn.k_proj'],
+        'rotarypositionembedding': 'self_attn.q_proj'  
+}
+

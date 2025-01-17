@@ -2,9 +2,14 @@
 
 from transformers import PreTrainedModel
 
+_DEEPSEEK_V2_MODEL_TYPES = [
+    "deepseek_v2",
+    "deepseekv2"
+]
+
 
 def is_deepseek_v2_chat(model: PreTrainedModel):
-    if hasattr(model.config, 'model_type') and model.config.model_type == "deepseek_v2":
+    if hasattr(model.config, 'model_type') and model.config.model_type in _DEEPSEEK_V2_MODEL_TYPES:
         if hasattr(model.config, 'q_lora_rank') and getattr(model.config, 'q_lora_rank') is not None:
             return True
 
@@ -12,7 +17,7 @@ def is_deepseek_v2_chat(model: PreTrainedModel):
 
 
 def is_deepseek_v2_lite(model: PreTrainedModel):
-    if hasattr(model.config, 'model_type') and model.config.model_type == "deepseek_v2":
+    if hasattr(model.config, 'model_type') and model.config.model_type in _DEEPSEEK_V2_MODEL_TYPES:
         if hasattr(model.config, 'q_lora_rank') and getattr(model.config, 'q_lora_rank') is None:
             return True
 

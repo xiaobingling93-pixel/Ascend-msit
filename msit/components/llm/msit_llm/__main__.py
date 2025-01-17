@@ -197,7 +197,7 @@ class CompareCommand(BaseCommand):
             '-cl',
             dest="cmp_level",
             required=False,
-            default="layer",
+            default=None,
             choices=["layer", "token"],
             help='Compare level. only enabled for atb.')
 

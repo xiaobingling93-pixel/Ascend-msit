@@ -85,7 +85,7 @@ class TestGraphAnalyze(unittest.TestCase):
             GraphAnalyze._get_node_index_and_name("node_name")
         self.assertIn("Invalid tensor name format: node_name", str(context.exception))
 
-    def test__get_node_index_and_name_given_tensor_name_with_non_integer_index_when_invalid_then_raises_value_error(self):
+    def test__get_node_index_and_name_given_tensor_name_with_non_int_index_when_invalid_then_raises_value_error(self):
         with self.assertRaises(ValueError) as context:
             GraphAnalyze._get_node_index_and_name("node_name:abc")
         self.assertIn("Index part of tensor name node_name:abc is not an integer", str(context.exception))
