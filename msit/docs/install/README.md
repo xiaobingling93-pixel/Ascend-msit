@@ -147,7 +147,7 @@ msit check all
 
 | 参数名              | 描述                                                         | 必选 |
 |------------------| ------------------------------------------------------------ | ---- |
-| comp_names       | 是一个位置参数，指定需要安装的组件，当前可以选择的有：`all`/`llm`/`surgeon`/`analyze`/`convert`/`profile`/`tensor-view`/`benchmark`/`compare`/`opcheck`，具体选项可以使用`msit install --help` 查看。但指定为`all` 时，表明是需要安装所有组件 | 是   |
+| comp_names       | 是一个位置参数，指定需要安装的组件，当前可以选择的有：`all`/`llm`/`surgeon`/`analyze`/`convert`/`profile`/`tensor-view`/`benchmark`/`compare`/`opcheck`/`graph`，具体选项可以使用`msit install --help` 查看。但指定为`all` 时，表明是需要安装所有组件 | 是   |
 | --find-links, -f | 查找包的路径，一般用于离线安装时 | 否  |
 | --help, -h       | 帮助信息 | 否  |
 
@@ -159,7 +159,7 @@ msit install llm
 
 | 参数名        | 描述                                                         | 必选 |
 |------------| ------------------------------------------------------------ | ---- |
-| comp_names | 是一个位置参数，指定需要检查的组件，当前可以选择的有：`all`/`llm`/`surgeon`/`analyze`/`convert`/`profile`/`tensor-view`/`benchmark`/`compare`/`opcheck`，具体选项可以使用`msit check --help` 查看。但指定为`all` 时，表明是需要检查所有组件 | 是   |
+| comp_names | 是一个位置参数，指定需要检查的组件，当前可以选择的有：`all`/`llm`/`surgeon`/`analyze`/`convert`/`profile`/`tensor-view`/`benchmark`/`compare`/`opcheck`/`graph`，具体选项可以使用`msit check --help` 查看。但指定为`all` 时，表明是需要检查所有组件 | 是   |
 | --help, -h | 帮助信息 | 否  |
 
 ```bash 
@@ -172,7 +172,7 @@ msit check all
 
 | 参数名              | 描述     | 必选 |
 |------------------|-----------------------| ---- |
-| comp_names       | 是一个位置参数，指定需要构建的组件，当前可以选择的有：`llm`/`surgeon`/`analyze`/`convert`/`profile`/`tensor-view`/`benchmark`/`compare`/`opcheck`，具体选项可以使用`msit build-extra --help` 查看 | 是   |
+| comp_names       | 是一个位置参数，指定需要构建的组件，当前可以选择的有：`llm`/`surgeon`/`analyze`/`convert`/`profile`/`tensor-view`/`benchmark`/`compare`/`opcheck`/`graph`，具体选项可以使用`msit build-extra --help` 查看 | 是   |
 | --find-links, -f | 查找包的路径，一般用于离线安装时 | 否  |
 | --help, -h       | 帮助信息 | 否  |
 
@@ -186,7 +186,7 @@ msit build-extra llm
 
 | 参数名        | 描述                                                         | 必选 |
 |------------| ------------------------------------------------------------ | ---- |
-| comp_names | 是一个位置参数，指定需要下载的组件，当前可以选择的有：`all`/`llm`/`surgeon`/`analyze`/`convert`/`profile`/`tensor-view`/`benchmark`/`compare` ，具体选项可以使用`msit download --help` 查看| 是   |
+| comp_names | 是一个位置参数，指定需要下载的组件，当前可以选择的有：`all`/`llm`/`surgeon`/`analyze`/`convert`/`profile`/`tensor-view`/`benchmark`/`compare`/`graph` ，具体选项可以使用`msit download --help` 查看| 是   |
 | --dest     | 目标路径 | 是   |
 | --help, -h | 帮助信息 | 否  |
 
