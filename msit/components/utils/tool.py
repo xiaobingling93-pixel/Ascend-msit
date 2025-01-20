@@ -29,7 +29,6 @@ from components.llm.msit_llm.common.utils import check_output_path_legality
 from components.llm.msit_llm.common.tool import TensorBinFile
 from components.utils.check.rule import Rule
 from components.utils.util import load_file_to_read_common_check
-from msquickcmp.common import utils
 
 
 DEFAULT_PARSE_DTYPE = "uint8"
@@ -57,7 +56,7 @@ def get_bin_data_from_dir(dump_data_dir, max_depth=20):
     for root, _, files in os.walk(dump_data_dir):
         root_len = len(root.split('/'))
         if root_len - dump_data_dir_len >= max_depth:
-            utils.logger.error("Parse of bin dump data depth exceeds the max recursion limit %d." % (max_depth))
+            logger.error("Parse of bin dump data depth exceeds the max recursion limit %d." % (max_depth))
             raise RecursionError("Maximum recursion depth exceeded in comparison.")
         for filename in files:
             if filename.endswith(".bin"):
