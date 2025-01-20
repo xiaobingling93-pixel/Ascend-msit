@@ -104,11 +104,11 @@ def convert_ms_to_vllm(target_tool, w_bit, weight_dict, json_dict):
                 order = AWQ_PACK_ORDER
                 direction = 'column'
                 if name.endswith('.weight') and '.module.weight' not in name:
-                    base_name = name.rsplit('.')[:-1]
-                    tmp_key = '.'.join(base_name) + '.module.weight'
+                    base_name = name.rsplit('.', 1)[0]
+                    tmp_key = base_name + '.module.weight'
                     if tmp_key in weight_dict.keys():
                         continue
-                    vllm_name = '.'.join(base_name) + '.qweight'
+                    vllm_name = base_name + '.qweight'
                     tensor = tensor.t().contiguous()
                     tensor = torch.clamp(tensor, -2**(w_bit - 1), 2**(w_bit - 1) - 1)
                     if w_bit == 8:
@@ -123,12 +123,12 @@ def convert_ms_to_vllm(target_tool, w_bit, weight_dict, json_dict):
                     vllm_weight_dict[vllm_name] = qweight
                 
                 elif name.endswith('.weight_scale'):
-                    vllm_name = '.'.join(name.rsplit('.')[:-1]) + '.scales'
+                    vllm_name = name.rsplit('.', 1)[0] + '.scales'
                     tensor = tensor.t().contiguous()
                     vllm_weight_dict[vllm_name] = tensor
 
                 elif name.endswith('.weight_offset'):
-                    vllm_name = '.'.join(name.rsplit('.')[:-1]) + '.qzeros'
+                    vllm_name = name.rsplit('.', 1)[0] + '.qzeros'
                     tensor = tensor.t().contiguous()
                     tensor = torch.clamp(tensor, -2**(w_bit - 1), 2**(w_bit - 1) - 1)
                     if w_bit == 8:
