@@ -114,8 +114,9 @@ def parse_arguments():
     parser.add_argument('--model_name', type=str, default=None,
                         validator=StringArgumentValidator(min_length=1, max_length=MAX_KEY_LENGTH, allow_none=True))
     parser.add_argument('--model_type', type=str, default='llama2',
-                         choices=['llama', 'llama2', 'llama3', 'llama3.1_bf', 'llama3.1_fp'],
-                         help='Specify the type of llama model (choices: llama, llama2, llama3, llama3.1_bf, llama3.1_fp)')
+                        choices=['llama', 'llama2', 'llama3', 'llama3.1_bf', 'llama3.1_fp'],
+                        help='Specify the type of llama model'
+                        '(choices: llama, llama2, llama3, llama3.1_bf, llama3.1_fp)')
     return parser.parse_args()
 
 
