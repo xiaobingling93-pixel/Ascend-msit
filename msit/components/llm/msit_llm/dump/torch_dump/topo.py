@@ -124,6 +124,11 @@ class TreeNode:
         run(self, all_nodes)
         return all_nodes
 
+    def get_next_level_nodes(self):
+        next_level_nodes = []
+        for child_node in self.children:
+            next_level_nodes.extend(child_node.children)
+        return next_level_nodes
 
 class ModelTree:
     atb_show_order = 0

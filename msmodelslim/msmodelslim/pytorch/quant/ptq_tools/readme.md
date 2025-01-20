@@ -84,3 +84,53 @@ calibrator = Calibrator(model, quant_config, calib_dataset)
 calibrator.run()
 calibrator.export_quant_safetensor("/output_path/")
 ```
+
+### 校准数据获取方式
+在上面的示例中，校准数据为 sd3_calib_data_v3.pth，其获取方式如下：
+加载 SD3 预训练模型 --> 添加 Listener 类用于捕捉模型输入参数 --> 配置 calib_prompts --> 遍历 calib_prompts，输入 Listener 类中执行前向推理（num_inference_steps用于配置一个prompt生成多少个数据）--> 保存校准数据
+
+代码参考如下：
+```
+import torch
+from diffusers import StableDiffusion3Pipeline
+
+calib_data = []
+
+class Listener(torch.nn.Module):
+    def __init__(self, module):
+        super(Listener, self).__init__()
+        self.module = module
+        self.inputs = []
+    
+    def forward(self, *args, **kwargs):
+        sample = {}
+        for k in kwargs:
+            if isinstance(kwargs[k], torch.Tensor):
+                sample[k] = kwargs[k].cpu()
+            else:
+                sample[k] = kwargs[k]
+        self.inputs.append(sample)
+        return self.module(*args, **kwargs)
+
+pipe = StableDiffusion3Pipeline.from_pretrained("path_to_stable-diffusion-3-medium-diffusers", torch_dtype=torch.float16)
+pipe.to("npu")  # 使用gpu时则为pipe.to("cuda")
+
+pipe.transformer = Listener(pipe.transformer)
+
+# 校准prompts，根据需要配置多条
+calib_prompts = ['a photo of a cat holding a sign that says hello world']
+
+for prompt in calib_prompts:
+    image = pipe(
+        prompt=prompt,
+        negative_prompt="",
+        num_inference_steps=28,  # 此处配置为28，则一个prompt将会生成28条校准数据
+        height=1024,
+        width=1024,
+        guidance_scale=7.0,
+    ).images[0]
+
+calib_data = pipe.transformer.inputs
+
+torch.save(calib_data, "path_to_save/sd3_calib_data.pth")
+```

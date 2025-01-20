@@ -714,7 +714,8 @@ class Calibrator(object):
                     anti_norm_name_bias = name + '.module.bias'
                     if not hasattr(self.model, 'ori_state_dict'):
                         self.quant_param_dict[name + '.weight'] = anti_norm_weight.clone().detach()
-                        self.quantized_module_param_dict[anti_norm_name_weight] = [name + '.weight']
+                        self.quant_param_dict[name + '.bias'] = anti_norm_bias.clone().detach()
+                        self.quantized_module_param_dict[anti_norm_name_weight] = [name + '.weight', name + '.bias']
                     else:
                         self.quant_param_dict[anti_norm_name_weight] = anti_norm_weight.clone().detach()
                         self.quant_param_dict[anti_norm_name_bias] = anti_norm_bias.clone().detach()
@@ -743,8 +744,8 @@ class Calibrator(object):
                                                        tensor=save_quant_weight, mod=module)
                     self.quant_param_dict[name + '.weight'] = save_quant_weight
 
-                    #所有专家层都使用动态量化
-                    model_quant_type = self.cfg.model_quant_type 
+                    # 所有专家层都使用动态量化
+                    model_quant_type = self.cfg.model_quant_type
                     if "mlp" in name and self.is_deepseek_v2 and model_quant_type is QuantType.W8A8:
                         model_quant_type = QuantType.W8A8_DYNAMIC
 
@@ -900,39 +901,40 @@ class Calibrator(object):
 
     def run_datafree_mode(self):
         for name, module in self.model.named_modules():
-            if isinstance(module, LinearQuantizer):
-                self.logger.info(f"Running in Data-Free mode, quantizing the layer: {name}")
-                module.quant_weight(module.weight)
-            elif isinstance(module, LinearNf4Quantizer):
-                self.logger.info(f"Running in Data-Free mode, quantizing the layer into NF4 type: {name}")
-                module.quant_weight()
-            elif isinstance(module, LowBitLinearQuantizer):
-                with torch.no_grad():
-                    module.fp_weight = module.weight.cpu().clone()
+            with PrepareWeight(module):
+                if isinstance(module, LinearQuantizer):
                     self.logger.info(f"Running in Data-Free mode, quantizing the layer: {name}")
-                    recovered_weight, lowbit_weight_scale, _, lowbit_weight_offset = \
-                        quant_one_weight_by_outliers_low_bit(
-                            module.weight,
-                            powerquant=self.cfg.nonuniform,
-                            fraction=self.cfg.fraction,
-                            num_bits=self.cfg.w_bit,
-                            isolate_outlier_amax=False,
-                            per_channel=not self.cfg.mm_tensor,
-                            use_cuda=True if self.cfg.dev_type == 'gpu' else False,
-                            use_sigma=self.cfg.use_sigma,
-                            sigma_factor=self.cfg.sigma_factor,
-                            open_outlier=self.cfg.open_outlier,
-                            group_size=self.cfg.group_size,
-                            w_sym=self.cfg.w_sym,
-                            use_hqq=self.cfg.hqq
-                        )
-                    # 为降低显存占用，把部分权重放到cpu上
-                    module.quant_weight.weight_scale = lowbit_weight_scale.cpu()
-                    # 通过深拷贝的方式降低显存占用
-                    module.weight[:] = recovered_weight[:]
-                    module.quant_weight.weight_offset = lowbit_weight_offset.cpu()
+                    module.quant_weight(module.weight)
+                elif isinstance(module, LinearNf4Quantizer):
+                    self.logger.info(f"Running in Data-Free mode, quantizing the layer into NF4 type: {name}")
+                    module.quant_weight()
+                elif isinstance(module, LowBitLinearQuantizer):
+                    with torch.no_grad():
+                        module.fp_weight = module.weight.cpu().clone()
+                        self.logger.info(f"Running in Data-Free mode, quantizing the layer: {name}")
+                        recovered_weight, lowbit_weight_scale, _, lowbit_weight_offset = \
+                            quant_one_weight_by_outliers_low_bit(
+                                module.weight,
+                                powerquant=self.cfg.nonuniform,
+                                fraction=self.cfg.fraction,
+                                num_bits=self.cfg.w_bit,
+                                isolate_outlier_amax=False,
+                                per_channel=not self.cfg.mm_tensor,
+                                use_cuda=True if self.cfg.dev_type == 'gpu' else False,
+                                use_sigma=self.cfg.use_sigma,
+                                sigma_factor=self.cfg.sigma_factor,
+                                open_outlier=self.cfg.open_outlier,
+                                group_size=self.cfg.group_size,
+                                w_sym=self.cfg.w_sym,
+                                use_hqq=self.cfg.hqq
+                            )
+                        # 为降低显存占用，把部分权重放到cpu上
+                        module.quant_weight.weight_scale = lowbit_weight_scale.cpu()
+                        # 通过深拷贝的方式降低显存占用
+                        module.weight[:] = recovered_weight[:]
+                        module.quant_weight.weight_offset = lowbit_weight_offset.cpu()
 
-                module.weight_quant_flag = True
+                    module.weight_quant_flag = True
 
     def quantize_model(self, model):
         def _set_module(ori_mod, submodule_key, module):

@@ -7,32 +7,32 @@
 msit推理工具的安装包括**msit包**和**依赖的组件包**的安装，其中依赖包可以根据需求只添加所需要的组件包。
 
 
-|   依赖软件名称   | 是否必选 | 版本 | 备注                                                                                                                                                                                          |
-|-----------------|---------|------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| CANN              | 必 选  | 建议安装CANN商业版6.3.RC1以上版本 | 请参见《[CANN-6.3.RC1](https://www.hiascend.com/document/detail/zh/canncommercial/63RC1/envdeployment/instg/instg_000002.html)》安装昇腾设备开发或运行环境，即toolkit软件包。安装后请根据安装提示配置环境变量（可以参考  [配置环境变量](#说明) ）。 |
-| GCC               | 必 选 | 7.3.0版本                                | 请参见《[GCC安装指引](https://www.hiascend.com/document/detail/zh/canncommercial/63RC1/envdeployment/instg/instg_000091.html)》安装GCC编译器（centos 7.6平台默认为gcc 4.8编译器，可能**无法安装**本工具，建议更新gcc编译器后再安装）      |
-| Python               | 必选 | 支持Python3.7.5+、Python3.8.x、Python3.9.x、Python3.10.x | 如需使用TensorFlow模型的精度对比功能，请安装Python3.7.5版本，其他功能安装Python3.7.0以上版本即可，需要注意Python与Torch的版本依赖关系（如Python3.8对应Torch2.1.0）                                                                            |
-| TensorFlow  | 非必选 | 支持TensorFlow1.15.0（对应python版本3.7.5~3.7.11）和TensorFlow2.6.5（对应python版本3.7.5~3.7.11， 3.8.0~3.8.11， 3.9.0~3.9.2）| 参考 [Centos7.6上TensorFlow1.15.0 环境安装](https://bbs.huaweicloud.com/blogs/181055) 安装 TensorFlow1.15.0 环境。(如不使用TensorFlow模型的精度对比功能则不需要安装)                                                       |
-| Caffe    | 非必选 | 与python版本对应即可    | 参考 [Caffe Installation](http://caffe.berkeleyvision.org/installation.html) 安装 Caffe 环境。(如不使用 Caffe 模型的精度对比功能则不需要安装)                                                                         |
-| Clang      | 非必选 | 与python版本对应即可    | 依赖LLVM Clang，需安装[Clang工具](https://releases.llvm.org/)。                                                                                                          |
-| ATB | 非必选 | 支持1.0RC1和1.0RC2，与mindie-llm版本对应即可    | 依赖加速库ATB，需按照[MindIE-LLM](https://gitee.com/ascend/MindIE-LLM)说明安装加速库ATB工具。(如不使用msit llm dump、opcheck、errcheck等功能则不需要安装)                                                                     |
-| MindIE-LLM | 非必选 | 支持1.0RC1和1.0RC2，分别与CANN包版本8.0RC1和8.0RC2对应    | 依赖MindIE-LLM组件，需按照[MindIE-LLM](https://gitee.com/ascend/MindIE-LLM)说明安装MindIE-LLM。(如不使用msit llm dump、opcheck、errcheck等功能则不需要安装)                                                             |
+|   依赖软件名称   | 是否必选 | 版本                                                                                                            | 备注                                                                                                                                                                                                                             |
+|-----------------|---------|---------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| CANN              | 必 选  | 建议安装CANN商业版8.0.RC1以上版本                                                                                        | 请参见《[CANN-8.0.RC1](https://www.hiascend.com/document/detail/zh/canncommercial/80RC1/quickstart/quickstart/quickstart_18_0006.html)》安装昇腾设备开发或运行环境，即toolkit软件包。安装后请根据安装提示配置环境变量（可以参考  [配置环境变量](#说明) ）。                           |
+| GCC               | 必 选 | 7.3.0版本                                                                                                       | 请参见《[GCC安装指引](https://www.hiascend.com/document/detail/zh/canncommercial/80RC1/softwareinst/instg/instg_0123.html)》安装GCC编译器（centos 7.6平台默认为gcc 4.8编译器，可能**无法安装**本工具，建议更新gcc编译器后再安装） |
+| Python               | 必选 | 支持Python3.7.5+、Python3.8.x、Python3.9.x、Python3.10.x                                                           | 如需使用TensorFlow模型的精度对比功能，请安装Python3.7.5版本，其他功能安装Python3.7.0以上版本即可，需要注意Python与Torch的版本依赖关系（如Python3.8对应Torch2.1.0）                                                                                                               |
+| TensorFlow  | 非必选 | 支持TensorFlow1.15.0（对应python版本3.7.5~3.7.11）和TensorFlow2.6.5（对应python版本3.7.5~3.7.11， 3.8.0~3.8.11， 3.9.0~3.9.2） | 参考 [Centos7.6上TensorFlow1.15.0 环境安装](https://bbs.huaweicloud.com/blogs/181055) 安装 TensorFlow1.15.0 环境。(如不使用TensorFlow模型的精度对比功能则不需要安装)                                                                                          |
+| Caffe    | 非必选 | 与python版本对应即可                                                                                                 | 参考 [Caffe Installation](http://caffe.berkeleyvision.org/installation.html) 安装 Caffe 环境。(如不使用 Caffe 模型的精度对比功能则不需要安装)                                                                                                            |
+| Clang      | 非必选 | 与python版本对应即可                                                                                                 | 依赖LLVM Clang，需安装[Clang工具](https://releases.llvm.org/)。                                                                                                                                                                         |
+| ATB | 非必选 | 支持1.0RC1和1.0RC2，与mindie-llm版本对应即可                                                                             | 依赖加速库ATB，需按照[MindIE-LLM](https://gitee.com/ascend/MindIE-LLM)说明安装加速库ATB工具。(如不使用msit llm dump、opcheck、errcheck等功能则不需要安装)                                                                                                        |
+| MindIE-LLM | 非必选 | 支持1.0RC1和1.0RC2，分别与CANN包版本8.0.RC1和8.0.RC2对应                                                                   | 依赖MindIE-LLM组件，需按照[MindIE-LLM](https://gitee.com/ascend/MindIE-LLM)说明安装MindIE-LLM。(如不使用msit llm dump、opcheck、errcheck等功能则不需要安装)                                                                                                |
 
 ## msIT安装
+### 安装前置说明：
+- 安装开发运行环境的昇腾 AI 推理相关驱动、固件、CANN 包，参照 [CANN-8.0.RC1](https://www.hiascend.com/document/detail/zh/canncommercial/80RC1/quickstart/quickstart/quickstart_18_0006.html)。
+- 安装后用户可通过 **设置CANN_PATH环境变量** ，指定安装的CANN版本路径，例如：export CANN_PATH=/xxx/Ascend/ascend-toolkit/latest。
+- 若不设置，工具默认会从环境变量ASCEND_TOOLKIT_HOME和/usr/local/Ascend/ascend-toolkit/latest路径分别尝试获取CANN版本。
 
+
+### 安装方式说明
 安装方式包括：**源代码安装**和**pip源安装**，用户可以按需选取。
 - [源代码安装](#源代码安装): 使用源码安装，保证是最新的 msit 功能。
 - [pip源安装](#pip源安装): pip 安装 msit 包，一般一个季度发包一次。
 
 常见报错可以参照[msIT 安装常见问题](#常见问题-qa)
 
-### 安装前置说明：
-- 安装开发运行环境的昇腾 AI 推理相关驱动、固件、CANN 包，参照 [CANN-6.3.RC1](https://www.hiascend.com/document/detail/zh/canncommercial/63RC1/envdeployment/instg/instg_000002.html)。
-- 安装后用户可通过 **设置CANN_PATH环境变量** ，指定安装的CANN版本路径，例如：export CANN_PATH=/xxx/Ascend/ascend-toolkit/latest。
-- 若不设置，工具默认会从环境变量ASCEND_TOOLKIT_HOME和/usr/local/Ascend/ascend-toolkit/latest路径分别尝试获取CANN版本。
-
-
-### 源代码安装
+#### 源代码安装
 
 ```shell
 git clone https://gitee.com/ascend/msit.git
@@ -53,7 +53,7 @@ msit check all
 ```
 
 
-### pip源安装
+#### pip源安装
 
 ```shell
 # 1. 安装 msit 包

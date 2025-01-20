@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import re
 import itertools
 import torch
 
@@ -37,6 +38,39 @@ class CompareMgr:
         os.environ[RAW_INPUT_PATH] = self.golden_raw_path + "|" + self.my_raw_path
         self.op_match: OpMatchMgr = OpMatchMgr(args)
         self.compared_result = []  # 收集结果
+
+    @staticmethod
+    def filter_my_tensor_paths(golden_tensor_paths, my_tensor_paths):
+        tensor_filter_patterns = [
+            (r'root\.model\.layers\.\d+\.self_attn\.k_proj/output\.pth', 
+                '0_Attention/0_QKVLinearSplitPack/after/outtensor1.bin'),
+            (r'root\.model\.layers\.\d+\.self_attn\.v_proj/output\.pth', 
+                '0_Attention/0_QKVLinearSplitPack/after/outtensor2.bin'),
+            (r'root\.model\.layers\.\d+\.self_attn\.q_proj/output\.pth', 
+                '0_Attention/1_RotaryPositionEmbedding/before/intensor0.bin')  
+        ]
+        filtered_my_tensor_paths = []
+
+        for pattern, target_tensor in tensor_filter_patterns:
+            if any(re.search(pattern, path) for path in golden_tensor_paths):
+                filtered_my_tensor_paths = [path for path in my_tensor_paths if target_tensor in path]
+                logger.debug(f"Filtered my_tensor_paths based on pattern: {pattern}")
+                break 
+            
+        if not filtered_my_tensor_paths:
+            filtered_my_tensor_paths = my_tensor_paths
+
+        return filtered_my_tensor_paths
+    
+    @staticmethod
+    def filter_golden_tensor_paths(golden_tensor_paths):
+        exclude_pattern = re.compile(r'output_\d+_\d+\.pth$')
+        filtered_paths = [
+            path for path in golden_tensor_paths
+            if not exclude_pattern.search(path)
+        ]
+
+        return filtered_paths
 
     @classmethod
     def get_raw_path(cls, path: str):
@@ -168,25 +202,19 @@ class CompareMgr:
             str(my_token_set),
         )
         if self.args.stats:
-            compared_result = self.perform_comparison(golden_tokens, my_tokens, op_map, is_statistics=True)
-            return save_statistics_compare_reault_to_csv(compared_result, output_path)
+            self.perform_comparison(golden_tokens, my_tokens, op_map, is_statistics=True)
+            return save_statistics_compare_reault_to_csv(self.compared_result, output_path)
         else:
-            compared_result = self.perform_comparison(golden_tokens, my_tokens, op_map, is_statistics=False)
-            return save_compare_reault_to_csv(compared_result, output_path)
+            self.perform_comparison(golden_tokens, my_tokens, op_map, is_statistics=False)
+            return save_compare_reault_to_csv(self.compared_result, output_path)
 
     def compare_tokens_stats(self, cmp_tokens, op_map, is_statistics=False):
-        compared_result = []
-
         for token_id in cmp_tokens:
             logger.debug("comparing tokens is %s ", str(token_id))
             if is_statistics:
                 self.compare_statistics(token_id, token_id, op_map)
             else:
                 self.compare_token(token_id, token_id, op_map)
-            # Collect the result of comparison
-            compared_result.extend(self.compared_result)
-
-        return compared_result
     
     def perform_comparison(self, golden_tokens, my_tokens, op_map, is_statistics=False):
         golden_token_set = set(self._flatten_and_enum_tuple(golden_tokens))
@@ -194,23 +222,18 @@ class CompareMgr:
 
         if not golden_token_set.isdisjoint(my_token_set):
             cmp_tokens = golden_token_set.intersection(my_token_set)
-            compared_result = self.compare_tokens_stats(cmp_tokens, op_map, is_statistics)
+            self.compare_tokens_stats(cmp_tokens, op_map, is_statistics)
         elif self.golden_data.get_token_id() is not None and self.my_data.get_token_id() is not None:
             # 强制比对指定token
-            compared_result = []
             for golden_token, my_token in itertools.product(golden_tokens, my_tokens):
                 if is_statistics:
                     self.compare_statistics(golden_token, my_token, op_map)
                 else:
                     self.compare_token(golden_token, my_token, op_map)
-                compared_result.extend(self.compared_result)
         else:
             logger.error(
                 f"my tokens is {my_tokens} and golden tokens is {golden_tokens}. The two cannot be matched."
             )
-            return None
-
-        return compared_result
 
     def compare_statistics(self, golden_token_id, my_token_id, op_map):
         for my_op, my_op_location, golden_op, _ in op_map:
@@ -218,7 +241,8 @@ class CompareMgr:
             logger.debug("------ compare (%s %s)------", str(my_op.node_name), str(golden_op.node_name))
             golden_tensor_paths = list(self.golden_data.get_csv_path(golden_token_id, golden_op))
             my_tensor_paths = list(self.my_data.get_tensor_path(my_token_id, my_op, my_op_location))
-            
+            my_tensor_paths = self.filter_my_tensor_paths(golden_tensor_paths, my_tensor_paths)
+            golden_tensor_paths = self.filter_golden_tensor_paths(golden_tensor_paths)
             if len(golden_tensor_paths) == len(my_tensor_paths):
                 golden_tensor_paths.sort()
                 my_tensor_paths.sort()
@@ -245,7 +269,8 @@ class CompareMgr:
             # 获取到所有需要比较的 tensor 的路径
             golden_tensor_paths = list(self.golden_data.get_tensor_path(golden_token_id, golden_op, golden_op_location))
             my_tensor_paths = list(self.my_data.get_tensor_path(my_token_id, my_op, my_op_location))
-
+            my_tensor_paths = self.filter_my_tensor_paths(golden_tensor_paths, my_tensor_paths)
+            golden_tensor_paths = self.filter_golden_tensor_paths(golden_tensor_paths)
             seq_len, my_tensor_paths = self._handle_rope_operation_paths(my_tensor_paths)
 
             if len(golden_tensor_paths) == len(my_tensor_paths):

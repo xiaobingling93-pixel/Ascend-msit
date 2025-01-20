@@ -162,7 +162,10 @@ def save_compare_reault_to_csv(gathered_row_data, output_path=".", columns=CSV_G
 
     cur_time = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d%H%M%S')
     csv_save_path = os.path.join(output_path, f"msit_cmp_report_{cur_time}.csv")
-
+    gathered_row_data = list(filter(
+                lambda item: not ("cmp_fail_reason" in item and item["cmp_fail_reason"] == "data shape doesn't match."),
+                gathered_row_data
+            ))
     # 过滤不宜展示的数据，int8建议只与int8比较
     for row_data in gathered_row_data:
         if GOLDEN_DTYPE in row_data and MY_DTYPE in row_data:

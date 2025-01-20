@@ -385,7 +385,7 @@ class Calibrator(object):
 
         with SafeWriteUmask(umask=0o377):
             save_file(safetensor_weight, quant_model_weight_path)
-            json_safe_dump(quant_model_description, quant_model_description_path, indent=2)
+        json_safe_dump(quant_model_description, quant_model_description_path, indent=2)
     
     def _calculate_quant_weight(self):
         for name, module in self.model.named_modules():

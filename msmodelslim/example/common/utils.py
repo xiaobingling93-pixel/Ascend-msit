@@ -1,4 +1,4 @@
-# Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
+# Copyright Huawei Technologies Co., Ltd. 2025. All rights reserved.
 
 import os
 import argparse

@@ -148,11 +148,11 @@ if __name__ == '__main__':
 
     model_path = args.model_path
     save_directory = args.save_directory
-
+    num_layers = checker.get_config_from_pretrained(model_path, trust_remote_code=True).num_hidden_layers
+    
     # Check if disable_names is provided, if not and a_bit is 8, generate disable_names
     disable_names = args.disable_names
     if not disable_names:
-        num_layers = 1  # 可替换为实际的回退层数
         disable_names = get_disable_names(num_layers)
 
     quant_conf = QuantConfig(

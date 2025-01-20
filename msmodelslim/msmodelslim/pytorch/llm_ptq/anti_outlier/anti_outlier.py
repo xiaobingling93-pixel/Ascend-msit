@@ -82,18 +82,14 @@ TENSOR = 'tensor'
 SCALE_MIN_LLM = 1e-5
 SCALE_MIN_SD3 = 1e-3
 
+SD3_CONTEXT_EMBEDDER = "context_embedder"
+
 _PREDEFINED_FUSIONS = {
-    "SD3Transformer2DModel":
-        {
-            tuple(): ("context_embedder",)
-        }
+    tuple(): ("context_embedder",)
 }
 
 _PREDEFINED_FUSION_KWARGS = {
-    "SD3Transformer2DModel":
-        {
-            "check_group_fusions": False
-        }
+    "check_group_fusions": False
 }
 
 STATE_DICT_COPY_DIR = "msmodelslim_copy"
@@ -260,6 +256,10 @@ class AntiOutlier(object):
         self.cfg = cfg
         self.device = self.cfg.device
 
+        self.is_context_embedder_model = False
+        if SD3_CONTEXT_EMBEDDER + ".weight" in model.state_dict().keys():
+            self.is_context_embedder_model = True
+
         # 开启低显存低内存模式
         if self.cfg.is_adapter_enabled:
             enable_adapter()
@@ -324,10 +324,8 @@ class AntiOutlier(object):
         else:
             self.calib_data = calib_data
 
-        arch_fusions = _PREDEFINED_FUSIONS[self.cfg.arch] if self.cfg.arch in _PREDEFINED_FUSIONS else None
-
         try:
-            self.init_dag(arch_fusions)
+            self.init_dag()
         except Exception as e:
             raise Exception("Please check your config, model and input!", e) from e
 
@@ -335,9 +333,9 @@ class AntiOutlier(object):
         if self.cfg.anti_method not in ['m4', 'm5']:
             setattr(self.model, 'ori_state_dict', states_dic)
 
-    def init_dag(self, predefined_fusions=None):
-        if predefined_fusions is not None:
-            self.norm_linear_subgraph = predefined_fusions
+    def init_dag(self):
+        if self.is_context_embedder_model:
+            self.norm_linear_subgraph = _PREDEFINED_FUSIONS
         else:
             dummy_input = input_to_cpu(self.calib_data[0][0])
             dummy_input = dummy_input[:1]
@@ -382,7 +380,7 @@ class AntiOutlier(object):
         # buffer the latest tensor
         if name not in act_stats:
             act_stats[name] = {}
-            if self.cfg.arch not in _PREDEFINED_FUSIONS:
+            if not self.is_context_embedder_model:
                 act_stats[name][TENSOR] = tensor
 
         hidden_dim = tensor.shape[-1]
@@ -479,7 +477,7 @@ class AntiOutlier(object):
 
         for i in tqdm(range(len(self.calib_data))):
             inputs = self.calib_data[i]
-            if self.cfg.arch not in _PREDEFINED_FUSIONS:
+            if not self.is_context_embedder_model:
                 input_dict = self.trans_to_dict(inputs)
                 self.model(**input_dict)
             else:
@@ -598,10 +596,13 @@ class AntiOutlier(object):
         act_stats = self.os_stats()
         if self.cfg.anti_method == 'm4':
             num_attention_heads = self.get_num_attention_heads()
-            fusion_kwargs = _PREDEFINED_FUSION_KWARGS[self.cfg.arch] \
-                if self.cfg.arch in _PREDEFINED_FUSION_KWARGS else {}
-        scale_min = SCALE_MIN_SD3 if self.cfg.arch in _PREDEFINED_FUSION_KWARGS \
-            else SCALE_MIN_LLM
+            fusion_kwargs = {}
+        scale_min = SCALE_MIN_LLM
+        
+        if self.is_context_embedder_model:
+            fusion_kwargs = _PREDEFINED_FUSION_KWARGS
+            scale_min = SCALE_MIN_SD3
+        
         for norm_name_group in tqdm(self.norm_linear_subgraph.keys()):
             linear_names = self.norm_linear_subgraph[norm_name_group]
             if isinstance(norm_name_group, str):
@@ -623,11 +624,12 @@ class AntiOutlier(object):
             if (is_expert):
                 continue
 
+            self.logger.debug(f"smooth {norm_name_group} -> {linear_names}")
+
             for name in linear_names:
                 mod = PatternProcess.get_module_by_name(self.model, name)
                 linear_modules.append(mod)
 
-            is_shift = False
             args = []
             if ProcessHook.MODIFY_SMOOTH_ARGS in self.hooks and self.hooks[
                 ProcessHook.MODIFY_SMOOTH_ARGS] is not None:
@@ -658,6 +660,7 @@ class AntiOutlier(object):
                         fusion_kwargs.update({"scale_min": scale_min})
                     if 'check_group_fusions' not in inspect.signature(iter_smooth).parameters:
                         fusion_kwargs.pop("check_group_fusions", None)
+                    self.logger.debug(f"fusion_kwargs is {fusion_kwargs}")
                     iter_smooth(
                         self.cfg, norm_module, linear_modules, stats, num_attention_heads, **fusion_kwargs
                         )
