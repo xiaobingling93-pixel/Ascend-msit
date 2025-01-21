@@ -20,8 +20,8 @@ from msit_opcheck.utils import broadcast_to_maxshape
 from msit_opcheck.operation_test import OperationTest
 from msit_opcheck.constants import FLOAT32, FLOAT16, BFLOAT16
 
-scale_index = 3
-bias_index = 4
+SCALE_INDEX = 3
+BIAS_INDEX = 4
 
 
 def _fused_scale_bias_compute(x, mean, variance, scale, bias):
@@ -70,8 +70,8 @@ def _fused_compute(x, mean, variance):
 class BnInferenceOperation(OperationTest):
     def golden_calc(self, in_tensors):
         x, mean, variance = in_tensors[:3]
-        scale = in_tensors[scale_index] if len(in_tensors) > scale_index else None
-        bias = in_tensors[bias_index] if len(in_tensors) > bias_index else None
+        scale = in_tensors[SCALE_INDEX] if len(in_tensors) > SCALE_INDEX else None
+        bias = in_tensors[BIAS_INDEX] if len(in_tensors) > BIAS_INDEX else None
         input_format = self.op_param['input_desc'][0]['layout']
         dtype = x.dtype
         if str(dtype) == BFLOAT16:  # tf.bfloat16.as_numpy_dtype:

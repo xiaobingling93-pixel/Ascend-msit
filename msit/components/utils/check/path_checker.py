@@ -181,19 +181,23 @@ class PathChecker(Checker):
 
     @rule()
     def is_not_readable_to_others(self) -> Union["PathChecker", CheckResult]:
-        return CheckResult(not bool(self.f_status.status_mode & os.st.S_IROTH), self.instance + " is readable to others")
+        ins = self.instance + " is readable to others"
+        return CheckResult(not bool(self.f_status.status_mode & os.st.S_IROTH), ins)
 
     @rule()
     def is_not_writable_to_group(self) -> Union["PathChecker", CheckResult]:
-        return CheckResult(not bool(self.f_status.status_mode & os.st.S_IWGRP), self.instance + " is writable to groups")
+        ins = self.instance + " is writable to groups"
+        return CheckResult(not bool(self.f_status.status_mode & os.st.S_IWGRP), ins)
 
     @rule()
     def is_not_writable_to_others(self) -> Union["PathChecker", CheckResult]:
-        return CheckResult(not bool(self.f_status.status_mode & os.st.S_IWOTH), self.instance + " is writable to others")
+        ins = self.instance + " is writable to others"
+        return CheckResult(not bool(self.f_status.status_mode & os.st.S_IWOTH), ins)
 
     @rule()
     def is_not_executable_to_others(self) -> Union["PathChecker", CheckResult]:
-        return CheckResult(not bool(self.f_status.status_mode & os.st.S_IXOTH), self.instance + " is executable to others")
+        ins = self.instance + " is executable to others"
+        return CheckResult(not bool(self.f_status.status_mode & os.st.S_IXOTH), ins)
 
     @rule()
     def max_perm(self, perm_bits: int) -> Union["PathChecker", CheckResult]:
