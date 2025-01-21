@@ -85,7 +85,7 @@ class DirectedAcyclicGraph:
         return node_list_in_calc_order
     
     @staticmethod
-    def _get_proper_combination_of_outputs(self, ori_graph_outputs: List[DagNode],
+    def _get_proper_combination_of_outputs(ori_graph_outputs: List[DagNode],
                                            sub_graph_outputs: List[DagNode]):
         # check output count
         if len(ori_graph_outputs) != len(sub_graph_outputs):
