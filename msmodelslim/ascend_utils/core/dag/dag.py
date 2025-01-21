@@ -84,6 +84,22 @@ class DirectedAcyclicGraph:
 
         return node_list_in_calc_order
     
+    @staticmethod
+    def _get_proper_combination_of_outputs(ori_graph_outputs: List[DagNode],
+                                           sub_graph_outputs: List[DagNode]):
+        # check output count
+        if len(ori_graph_outputs) != len(sub_graph_outputs):
+            return
+
+        # Preprocessing op type classes
+        for seq in FullPermutation().get_all_permutations(len(sub_graph_outputs)):
+            for index_sub_node, index_ori_node in enumerate(seq):
+                if ori_graph_outputs[index_ori_node].op_type not in sub_graph_outputs[index_sub_node].op_types:
+                    break
+            else:
+                yield {sub_graph_outputs[index_sub_node].name: ori_graph_outputs[index_ori_node] for
+                    index_sub_node, index_ori_node in enumerate(seq)}
+    
     def search_nodes_by_class(self, cls: Type) -> Generator[DagNode, None, None]:
         check_type(cls, type, param_name="cls")
         for dag_node in self._dag_node_list:
@@ -230,21 +246,6 @@ class DirectedAcyclicGraph:
             # the search continues based on the calculation order.
             for search_out in self._search_by_calc_order(matched_nodes, node_list_in_calc_order, index + 1):
                 yield search_out
-
-    def _get_proper_combination_of_outputs(self, ori_graph_outputs: List[DagNode],
-                                           sub_graph_outputs: List[DagNode]):
-        # check output count
-        if len(ori_graph_outputs) != len(sub_graph_outputs):
-            return
-
-        # Preprocessing op type classes
-        for seq in FullPermutation().get_all_permutations(len(sub_graph_outputs)):
-            for index_sub_node, index_ori_node in enumerate(seq):
-                if ori_graph_outputs[index_ori_node].op_type not in sub_graph_outputs[index_sub_node].op_types:
-                    break
-            else:
-                yield {sub_graph_outputs[index_sub_node].name: ori_graph_outputs[index_ori_node] for
-                    index_sub_node, index_ori_node in enumerate(seq)}
 
     def _remove_one_node(self, node: DagNode):
         if node in self.dag_node_list:

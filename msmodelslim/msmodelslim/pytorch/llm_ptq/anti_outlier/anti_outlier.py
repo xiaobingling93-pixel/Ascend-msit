@@ -214,6 +214,7 @@ def copy_state_dict(model: torch.nn.Module, typ: str = 'disk') -> Mapping:
         states_dic[key] = copy.deepcopy(value).to('cpu')
     return states_dic
 
+
 def is_model_multimodal(model):
     if not hasattr(model.config, 'architectures'):
         return False
@@ -222,6 +223,7 @@ def is_model_multimodal(model):
         hasattr(model.config, 'visual'))):
         return True
     return False
+
 
 class AntiOutlier(object):
     """Anti-outlier for LLM activation quantization."""
@@ -573,7 +575,9 @@ class AntiOutlier(object):
             mod_name = mod.__class__.__name__
             if (mod_name in block_dict):
                 quant_mod = block_dict[mod_name](mod, cfg, name)
-                self.logger.info("multimodal model replace block `{}` to `{}`".format(mod_name, block_dict[mod_name].__name__))
+                self.logger.info(
+                    "multimodal model replace block `{}` to `{}`".format(mod_name, block_dict[mod_name].__name__)
+                )
                 if hasattr(mod, '_hf_hook'):
                     add_hook_to_module(quant_mod, mod._hf_hook)
                     remove_hook_from_module(mod)
