@@ -99,7 +99,7 @@ class ModelAdapter(nn.Module):
         self.model = self.convert_model(model)
         if dev_type not in _SUPPORTED_DEVICES:
             raise ValueError("Configuration param `dev_type` cannot be correctly parsed! "
-                             "Please make sure a valid device id is input")
+                             "Please make sure a valid device type is input")
         self.device = dev_type
         self.forward_step = forward_step
         if hasattr(model, 'args'):
