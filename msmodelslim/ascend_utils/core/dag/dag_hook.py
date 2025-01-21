@@ -98,7 +98,19 @@ class DagHook(DirectedAcyclicGraph, ABC):
             return not inspect.isclass(attr) and not name.startswith("_") and callable(attr)
 
         return cls._get_ops_hook_info(obj, cls._get_attr_names(obj, is_function))
+    
+    def get_module_cls(self): 
+        return self._get_module_cls()
 
+    def get_node_output(self): 
+        return self._get_node_output()
+    
+    def get_node_name(self): 
+        return self._get_node_name()
+    
+    def get_node_input(self): 
+        return self._get_node_input()
+    
     @abstractmethod
     def _before_parse(self):
         pass

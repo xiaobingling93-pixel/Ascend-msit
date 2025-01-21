@@ -271,6 +271,7 @@ def policy_layer_special_match(golden_root_node: TreeNode, my_root_node: TreeNod
     golden_name_set = set(golden_name2node.keys())
     my_name_set = set(my_name2node.keys())
     layer_op_mapping_dict = LAYER_OP_MAPPING_DICT
+    
     def match_names(name_set, pattern):
         if isinstance(pattern, re.Pattern):
             return [name for name in name_set if pattern.match(name)]
@@ -287,13 +288,13 @@ def policy_layer_special_match(golden_root_node: TreeNode, my_root_node: TreeNod
                 my_node = my_name2node.get(my_name)
                 golden_node = golden_name2node.get(golden_name)
                 if my_node and golden_node:
-                        match_map.add_score(
-                            my_node,
-                            MatchLocation.ALL_OUTPUT,
-                            golden_node,
-                            MatchLocation.ALL_OUTPUT,
-                            MatchScore.FULL_MATCH,
-                        )
+                    match_map.add_score(
+                        my_node,
+                        MatchLocation.ALL_OUTPUT,
+                        golden_node,
+                        MatchLocation.ALL_OUTPUT,
+                        MatchScore.FULL_MATCH,
+                    )
 
 
 def policy_layer_match(golden_root_node: TreeNode, my_root_node: TreeNode, match_map: OpMatchMap):
@@ -320,11 +321,15 @@ def policy_qwen_match(golden_root_node: TreeNode, my_root_node: TreeNode, match_
                 for op in torch_op:
                     op_lower = op.lower()
                     torch_op_to_golden_paths[op_lower] = [  
-                        path for lower, path in golden_path_dict.items() if op_lower in lower
+                        path 
+                        for lower, path in golden_path_dict.items() 
+                        if op_lower in lower
                     ]
             else:
                 torch_op_to_golden_paths[torch_op.lower()] = [
-                    path for lower, path in golden_path_dict.items() if torch_op.lower() in lower
+                    path 
+                    for lower, path in golden_path_dict.items() 
+                    if torch_op.lower() in lower
                 ]
         # 匹配 my_path 和 golden_paths
         for my_path_lower, my_path in my_path_dict.items():
