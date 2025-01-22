@@ -26,21 +26,21 @@ _SUPPORTED_PREFIX = ["model.", "model.module."]
 def get_norm_linear_subgraph(self):
     norm_linear_subgraph = defaultdict(list)
 
-    self._node_list = [node for node in self._node_list if "attn_linear" not in node.name_in_network]
+    self.node_list = [node for node in self.node_list if "attn_linear" not in node.name_in_network]
 
-    norm_positions = [i for i, x in enumerate(self._node_list) if x.op_type.lower() in self.norm_nodes]
+    norm_positions = [i for i, x in enumerate(self.node_list) if x.op_type.lower() in self.norm_nodes]
     num_norm = len(norm_positions)
 
     for i in range(num_norm - 1):
         start = norm_positions[i]
         end = norm_positions[i + 1]
-        interval_linears = [node.name_in_network for node in self._node_list[start+1:end-1]]
-        norm_node = self._node_list[start].name_in_network
+        interval_linears = [node.name_in_network for node in self.node_list[start+1:end-1]]
+        norm_node = self.node_list[start].name_in_network
         
         if len(interval_linears) <= 4:
             norm_linear_subgraph[norm_node].extend(interval_linears)
         else:
-            qkv_linears = [node.name_in_network for node in self._node_list[start+1:start+4]]
+            qkv_linears = [node.name_in_network for node in self.node_list[start+1:start+4]]
             norm_linear_subgraph[norm_node].extend(qkv_linears)
     norm_linear_subgraph = {k: v for k, v in norm_linear_subgraph.items() if len(v) > 0}
     return norm_linear_subgraph

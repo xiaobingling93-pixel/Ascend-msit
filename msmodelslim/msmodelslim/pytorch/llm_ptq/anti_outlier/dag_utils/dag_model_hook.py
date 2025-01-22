@@ -35,9 +35,9 @@ class DagModelHook(accelerate.hooks.ModelHook):
         # before call node
         self.replace_stack.append(model)
         # record input info
-        node_inputs = self.dag_hook._get_node_input(self.node_io_dict, *args, **kwargs)
-        node_struct_info = self.dag_hook._structure_tree.get(id(model), None)
-        name_in_network = self.dag_hook._get_node_name(node_struct_info, model)
+        node_inputs = self.dag_hook.get_node_input(self.node_io_dict, *args, **kwargs)
+        node_struct_info = self.dag_hook.structure_tree.get(id(model), None)
+        name_in_network = self.dag_hook.get_node_name(node_struct_info, model)
         self.infos[id(model)] = (node_inputs, name_in_network)
         return args, kwargs
 
@@ -47,17 +47,17 @@ class DagModelHook(accelerate.hooks.ModelHook):
 
         node_inputs, name_in_network = self.infos[id(model)]
         # record output info
-        outputs_dict: Dict[int, DagNodeIO] = self.dag_hook._get_node_output(output, [], name_in_network + ":output")
+        outputs_dict: Dict[int, DagNodeIO] = self.dag_hook.get_node_output(output, [], name_in_network + ":output")
         self.node_io_dict.update(outputs_dict)
         node_outputs = list(outputs_dict.values())
 
         # record node info
-        if isinstance(model, self.dag_hook._get_module_cls()) and model in self.parsed_node_list:
+        if isinstance(model, self.dag_hook.get_module_cls()) and model in self.parsed_node_list:
             dag_node = self.parsed_node_list[model]
             dag_node.set_node_io(node_inputs, node_outputs)
         else:
             dag_node: DagNode = DagNode(model, name_in_network, self.ops_type, node_inputs, node_outputs)
-        self.dag_hook._dag_node_list.append(dag_node)
+        self.dag_hook.dag_node_list.append(dag_node)
         self.replace_stack.pop()
 
         # 清理内存

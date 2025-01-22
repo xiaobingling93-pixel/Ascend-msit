@@ -66,7 +66,8 @@ class CompareMgr:
     def filter_golden_tensor_paths(golden_tensor_paths):
         exclude_pattern = re.compile(r'output_\d+_\d+\.pth$')
         filtered_paths = [
-            path for path in golden_tensor_paths
+            path 
+            for path in golden_tensor_paths
             if not exclude_pattern.search(path)
         ]
 

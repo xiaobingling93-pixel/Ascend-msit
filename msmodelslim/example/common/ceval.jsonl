@@ -1,5 +1,5 @@
 {"id": 0, "inputs_pretokenized": "下列关于税法基本原则的表述中，不正确的是____。\nA. 税收法定原则包括税收要件法定原则和税务合法性原则\nB. 税收公平原则源于法律上的平等性原则\nC. 税收效率原则包含经济效率和行政效率两个方面\nD. 税务机关按法定程序依法征税，可以自由做出减征、停征或免征税款的决定\nAnswer:"}
-{"id": 1, "inputs_pretokenized": "求极限：$\lim_{x\\rightarrow0}\\frac{\\int_{x^2}^x{\\frac{\\sin\\left(xt\\right)}{t}}\\mathrm{d}t}{x^2}=$____,\nA. $\\frac{5}{6}$\nB. 1\nC. $\\frac{7}{6}$\nD. $\\frac{4}{3}$\nAnswer:"}
+{"id": 1, "inputs_pretokenized": "求极限：$\\lim_{x\\rightarrow0}\\frac{\\int_{x^2}^x{\\frac{\\sin\\left(xt\\right)}{t}}\\mathrm{d}t}{x^2}=$____,\nA. $\\frac{5}{6}$\nB. 1\nC. $\\frac{7}{6}$\nD. $\\frac{4}{3}$\nAnswer:"}
 {"id": 2, "inputs_pretokenized": "蓝印花布是一种传统的民间纺织印染工艺品。蓝印花布印制方法始于____。\nA. 汉代\nB. 魏晋时期\nC. 唐代\nD. 宋代\nAnswer:"}
 {"id": 3, "inputs_pretokenized": "不属于第二信使的物质是____\nA. cAMP\nB. cGMP\nC. $IP_3$\nD. 胰岛素\nAnswer:"}
 {"id": 4, "inputs_pretokenized": "最早对管理的具体职能加以概括和系统论述的是____。\nA. 泰罗\nB. 法约尔\nC. 孔茨\nD. 韦伯\nAnswer:"}
@@ -43,7 +43,7 @@
 {"id": 42, "inputs_pretokenized": "Unix的软中断机制是____。\nA. 设备中断\nB. 信号量\nC. 系统调用\nD. 信号\nAnswer:"}
 {"id": 43, "inputs_pretokenized": "正常情况下，小儿颈曲形成的时间是____\nA. 7个月\nB. 6个月\nC. 4个月\nD. 3个月\nAnswer:"}
 {"id": 44, "inputs_pretokenized": "下列属于生理碱性盐的是____。\nA. $NaNO_3$\nB. $(NH_4)_2SO_4$\nC. $NH_4NO_3$\nD. $MgSO_4$\nAnswer:"}
-{"id": 45, "inputs_pretokenized": "设随机变量$X$和$Y$相互独立，且X$\sim N(0，1)，Y\sim N(0$，2)，则$D\\left(X^2Y^2\\right)=$____\nA. 10\nB. 20\nC. 32\nD. 45\nAnswer:"}
+{"id": 45, "inputs_pretokenized": "设随机变量$X$和$Y$相互独立，且X$\\sim N(0，1)，Y\\sim N(0$，2)，则$D\\left(X^2Y^2\\right)=$____\nA. 10\nB. 20\nC. 32\nD. 45\nAnswer:"}
 {"id": 46, "inputs_pretokenized": "下列园林建筑中，____形式优美且不讲究对称布局。\nA. 榭\nB. 轩\nC. 亭\nD. 廊\nAnswer:"}
 {"id": 47, "inputs_pretokenized": "影响血红蛋白氧饱和度的最主要因素是____\nA. PO2\nB. 血液pH值\nC. PCO2\nD. 血液的温度\nAnswer:"}
 {"id": 48, "inputs_pretokenized": "下列消费品，属于消费税征税范围的是____。\nA. 合成宝石首饰\nB. 洗发水\nC. 大客车\nD. 轮胎\nAnswer:"}

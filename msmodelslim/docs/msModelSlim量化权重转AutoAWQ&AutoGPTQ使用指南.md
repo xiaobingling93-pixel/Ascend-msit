@@ -25,7 +25,7 @@ AutoGPTQ：GPU
 本文以W4A16量化方式示例进行说明。需要注意的地方有三处:  
 a.在离群值抑制配置（AntiOutlierConfig）中，a_bit和w_bit应根据量化方式进行设置。当anti_method被设置为"m3"时，代表使用AWQ算法；而对于GPTQ算法，则不需要使用离群值抑制模块，此时可以将相关配置注释掉。
 ```python
-anti_config = AntiOutlierConfig(anti_method="m3", dev_type="npu", a_bit=16, w_bit=4, dev_id=device_id，w_sym=True)  
+anti_config = AntiOutlierConfig(anti_method="m3", dev_type="npu", a_bit=16, w_bit=4, dev_id=device_id, w_sym=True)  
 anti_outlier = AntiOutlier(model, calib_data=dataset_calib, cfg=anti_config)
 anti_outlier.process()
 ```
@@ -42,7 +42,7 @@ quant_config = QuantConfig(
     a_bit=16,                      # 激活值量化位数
     w_bit=4,                       # 权重量化位数
     disable_names=disable_names,   # 手动回退的量化层名称
-    mm_tensors=False,              # 默认True，表示使用per-tensor量化，False为per-channel量化
+    mm_tensor=False,               # 默认True，表示使用per-tensor量化，False为per-channel量化
     dev_type='npu',                # 量化的工具为NPU
     dev_id=0,                       
     w_sym=True,                    # 对称量化
