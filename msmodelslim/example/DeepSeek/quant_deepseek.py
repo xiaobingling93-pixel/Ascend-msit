@@ -1,4 +1,4 @@
-# Copyright Huawei Technologies Co., Ltd. 2024. All rights reserved.
+# Copyright Huawei Technologies Co., Ltd. 2025. All rights reserved.
 import os
 import json
 import sys
@@ -150,7 +150,6 @@ if __name__ == '__main__':
     save_directory = args.save_directory
     num_layers = checker.get_config_from_pretrained(model_path, trust_remote_code=True).num_hidden_layers
     
-    # Check if disable_names is provided, if not and a_bit is 8, generate disable_names
     disable_names = args.disable_names
     if not disable_names:
         disable_names = get_disable_names(num_layers)
