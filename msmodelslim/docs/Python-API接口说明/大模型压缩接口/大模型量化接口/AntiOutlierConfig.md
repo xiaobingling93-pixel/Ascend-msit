@@ -5,7 +5,7 @@
 
 ### 函数原型
 ```python
-AntiOutlierConfig(w_bit=8, a_bit=8, anti_method="m2", dev_type="cpu"，dev_id=None, w_sym=True, arch=None, low_memory={'offload_type':'memory'})
+AntiOutlierConfig(w_bit=8, a_bit=8, anti_method="m2", dev_type="cpu"，dev_id=None, w_sym=True, low_memory={'offload_type':'memory'})
 ```
 
 ### 参数说明
