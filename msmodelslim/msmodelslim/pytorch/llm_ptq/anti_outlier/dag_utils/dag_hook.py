@@ -64,6 +64,10 @@ class DagHook(DirectedAcyclicGraph, ABC):
         self._reparse_network()
         self._after_parse()
 
+    @property
+    def structure_tree(self):
+        return self._structure_tree
+
     @staticmethod
     def _call_ori_func(func, *args, **kwargs):
         return func(*args, **kwargs)
@@ -147,7 +151,7 @@ class DagHook(DirectedAcyclicGraph, ABC):
         pass
 
     @abstractmethod
-    def _get_module_cls(self):
+    def get_module_cls(self):
         pass
 
     @abstractmethod
@@ -166,6 +170,50 @@ class DagHook(DirectedAcyclicGraph, ABC):
             [(ops instances, ops owner module, attr name, ops name)]
         """
         pass
+
+    def get_node_name(self, node_struct_info, node_hook):
+        if node_struct_info is not None and "name_in_network" in node_struct_info:
+            return node_struct_info.get("name_in_network")
+        else:
+            if hasattr(node_hook, "__name__"):
+                node_type_name = node_hook.__name__
+            elif hasattr(node_hook, "name"):
+                node_type_name = node_hook.name
+            else:
+                node_type_name = ""
+
+            return node_type_name.strip("_") + "_" + str(len(self._dag_node_list))
+
+    def get_node_input(self, node_io_dict: Dict[int, DagNodeIO], *args, **kwargs) -> List[DagNodeIO]:
+        inputs: List[DagNodeIO] = []
+
+        inputs.extend(self._get_node_input_in_gen(node_io_dict, enumerate(args)))
+        inputs.extend(self._get_node_input_in_gen(node_io_dict, kwargs.items()))
+
+        return inputs
+
+    def get_node_output(self, output, deduplicate: List[int], name: str = "output") -> Dict[int, DagNodeIO]:
+        node_output_dict: Dict[int, DagNodeIO] = {}
+        id_output = id(output)
+        if id_output in deduplicate:
+            return node_output_dict
+        else:
+            deduplicate.append(id_output)
+
+        io_info = self._collecting_feature_map_info(output)
+        dag_node_output = DagNodeIO(id_output, name, io_info)
+        node_output_dict[id_output] = dag_node_output
+
+        if isinstance(output, dict):
+            for key, sub_output in output:
+                node_output_dict.update(
+                    self.get_node_output(sub_output, deduplicate, name + '.' + str(key)))
+        elif isinstance(output, list) or isinstance(output, tuple):
+            for index, sub_output in enumerate(output):
+                node_output_dict.update(
+                    self.get_node_output(sub_output, deduplicate, name + '.' + str(index)))
+
+        return node_output_dict
 
     def _parse_network_structure_tree(self, module,
                                       name: str,
@@ -294,11 +342,11 @@ class DagHook(DirectedAcyclicGraph, ABC):
             # before call node
             replace_stack.append(node_hook)
             # record input info
-            if len(args) > 0 and isinstance(args[0], self._get_module_cls()):  # param self is Module
+            if len(args) > 0 and isinstance(args[0], self.get_module_cls()):  # param self is Module
                 module_self = args[0]
-                inputs = self._get_node_input(node_io_dict, *args[1:], **kwargs)
+                inputs = self.get_node_input(node_io_dict, *args[1:], **kwargs)
                 node_struct_info = self._structure_tree.get(id(module_self), None)
-                name_in_network = self._get_node_name(node_struct_info, node_hook)
+                name_in_network = self.get_node_name(node_struct_info, node_hook)
                 # prevent the absence of accelarate hook cause device error
                 if hasattr(module_self, "_old_module"):
                     dev = next(module_self.parameters()).device
@@ -306,8 +354,8 @@ class DagHook(DirectedAcyclicGraph, ABC):
                     args = tuple(new_args)  # args is a tuple, so reconstruct one
             else:
                 module_self = node_hook
-                inputs = self._get_node_input(node_io_dict, *args, **kwargs)
-                name_in_network = self._get_node_name(None, node_hook)
+                inputs = self.get_node_input(node_io_dict, *args, **kwargs)
+                name_in_network = self.get_node_name(None, node_hook)
 
             # call node
             output = self._call_ori_func(node_hook, *args, **kwargs)
@@ -315,12 +363,12 @@ class DagHook(DirectedAcyclicGraph, ABC):
             # after call node
 
             # record output info
-            outputs_dict: Dict[int, DagNodeIO] = self._get_node_output(output, [], name_in_network + ":output")
+            outputs_dict: Dict[int, DagNodeIO] = self.get_node_output(output, [], name_in_network + ":output")
             node_io_dict.update(outputs_dict)
             outputs = list(outputs_dict.values())
 
             # record node info
-            if isinstance(module_self, self._get_module_cls()) and module_self in parsed_nodes:
+            if isinstance(module_self, self.get_module_cls()) and module_self in parsed_nodes:
                 dag_node = parsed_nodes[module_self]
                 dag_node.set_node_io(inputs, outputs)
             else:
@@ -330,27 +378,6 @@ class DagHook(DirectedAcyclicGraph, ABC):
             return output
 
         return wrapper
-
-    def _get_node_name(self, node_struct_info, node_hook):
-        if node_struct_info is not None and "name_in_network" in node_struct_info:
-            return node_struct_info.get("name_in_network")
-        else:
-            if hasattr(node_hook, "__name__"):
-                node_type_name = node_hook.__name__
-            elif hasattr(node_hook, "name"):
-                node_type_name = node_hook.name
-            else:
-                node_type_name = ""
-
-            return node_type_name.strip("_") + "_" + str(len(self._dag_node_list))
-
-    def _get_node_input(self, node_io_dict: Dict[int, DagNodeIO], *args, **kwargs) -> List[DagNodeIO]:
-        inputs: List[DagNodeIO] = []
-
-        inputs.extend(self._get_node_input_in_gen(node_io_dict, enumerate(args)))
-        inputs.extend(self._get_node_input_in_gen(node_io_dict, kwargs.items()))
-
-        return inputs
 
     def _get_node_input_in_gen(self, node_io_dict: Dict[int, DagNodeIO], gen: Iterable) -> List[DagNodeIO]:
         inputs: List[DagNodeIO] = []
@@ -363,34 +390,11 @@ class DagHook(DirectedAcyclicGraph, ABC):
 
             inputs.append(node_io_dict[id_input])
             if isinstance(argument, list) or isinstance(argument, tuple):
-                inputs.extend(self._get_node_input(node_io_dict, *argument))
+                inputs.extend(self.get_node_input(node_io_dict, *argument))
             if isinstance(argument, dict):
-                inputs.extend(self._get_node_input(node_io_dict, **argument))
+                inputs.extend(self.get_node_input(node_io_dict, **argument))
 
         return inputs
-
-    def _get_node_output(self, output, deduplicate: List[int], name: str = "output") -> Dict[int, DagNodeIO]:
-        node_output_dict: Dict[int, DagNodeIO] = {}
-        id_output = id(output)
-        if id_output in deduplicate:
-            return node_output_dict
-        else:
-            deduplicate.append(id_output)
-
-        io_info = self._collecting_feature_map_info(output)
-        dag_node_output = DagNodeIO(id_output, name, io_info)
-        node_output_dict[id_output] = dag_node_output
-
-        if isinstance(output, dict):
-            for key, sub_output in output:
-                node_output_dict.update(
-                    self._get_node_output(sub_output, deduplicate, name + '.' + str(key)))
-        elif isinstance(output, list) or isinstance(output, tuple):
-            for index, sub_output in enumerate(output):
-                node_output_dict.update(
-                    self._get_node_output(sub_output, deduplicate, name + '.' + str(index)))
-
-        return node_output_dict
 
     def _reparse_network(self):
         for node in self._replaced_nodes:
