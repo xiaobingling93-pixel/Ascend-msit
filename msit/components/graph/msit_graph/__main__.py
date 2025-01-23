@@ -108,7 +108,7 @@ class StripCommand(BaseCommand):
             '--output',
             required=False,
             type=check_output_path_legality,
-            help='output pbtxt path.E.g:--output /xx/xxxx/xx.pbtxt'
+            help="output pbtxt path.E.g:--output /xx/xxxx/xx.pbtxt"
         )
         parser.add_argument("-l", "--log-level", dest="log_level", default="info", 
                             choices=LOG_LEVELS_LOWER, help="specify log level")
@@ -125,55 +125,55 @@ class ExtractCommand(BaseCommand):
             "--input",
             type=check_input_path_legality,
             required=True,
-            help="input pb path. E.g: --input /path/to/input.pb"
+            help="input pbtxt path.E.g:--input /xx/xxxx/xx.pbtxt"
         )
         parser.add_argument(
             "-o",
             "--output",
             type=str,
-            help="output pb path. E.g: --output /path/to/output.pb"
+            help="output pbtxt path.E.g:--output /xx/xxxx/xx.pbtxt"
         )
         parser.add_argument(
             "--start-node",
             default=None,
-            help="Extract subgraphs by range, from start node to end node.. E.g: --start_node node"
+            help="Extract subgraphs by range, from start node to end node.. E.g: --start-node node_name"
         )
         parser.add_argument(
             "--end-node",
             default=None,
-            help="Extract subgraphs by range, from start node to end node. E.g: --end_node node"
+            help="Extract subgraphs by range, from start node to end node. E.g: --end-node node_name"
         )
         parser.add_argument(
             "--center-node",
             default=None,
-            help="Extracts subgraphs with the node as the center. E.g: --name node"
+            help="Extracts subgraphs with the node as the center. E.g: --center-node node_name"
         )
         parser.add_argument(
             "--layer-number",
             type=int,
             default=1,
-            help="front and back layers. E.g: --layer_number 2"
+            help="front and back layers. E.g: --layer-number 2"
         )
         parser.add_argument(
             "--only-forward",
             action='store_true',
-            help="only dump nodes forward. E.g: --only_forward"
+            help="only dump nodes forward. E.g: --only-forward"
         )
         parser.add_argument(
             "--only-backward",
             action='store_true',
-            help="only dump nodes backward. E.g: --only_backward"
+            help="only dump nodes backward. E.g: --only-backward"
         )
         parser.add_argument(
             "--without-leaves",
             action='store_true',
-            help="Without leaves when generate the result graph. E.g: --without_leaves"
+            help="Without leaves when generate the result graph. E.g: --without-leaves"
         )
         parser.add_argument(
             "--stop-name",
             default=None,
             action="append",
-            help="Specify a node name which stop the extract iteration. E.g: --stop_name stop1 --stop_name stop2"
+            help="Specify a node name which stop the extract iteration. E.g: --stop-name node_name"
         )
         parser.add_argument("-l", "--log-level", dest="log_level", default="info", 
                             choices=LOG_LEVELS_LOWER, help="specify log level")
@@ -224,12 +224,11 @@ class FuseCommand(BaseCommand):
 class InspectCommand(BaseCommand):
     def add_arguments(self, parser, **kwargs) -> None:
         parser.add_argument(
-            "-gp", 
-            "--graph-path", 
-            dest="graph_path", 
-            type=check_input_path_legality, 
-            required=True, 
-            help="<str> The path of .pbtxt."
+            "-i",
+            "--input",
+            type=check_input_path_legality,
+            required=True,
+            help="<str> input pbtxt path.E.g:--input /xx/xxxx/xx.pbtxt"
         )
         parser.add_argument(
             "-t", 

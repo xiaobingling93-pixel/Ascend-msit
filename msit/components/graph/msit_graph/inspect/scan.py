@@ -64,7 +64,7 @@ class DynamicShape:
 
 def execute(args):
     if args.type == "dshape":
-        pb_graph = GraphAnalyze.load_graph_def_from_pbtxt(args.graph_path)
+        pb_graph = GraphAnalyze.load_graph_def_from_pbtxt(args.input)
         dym_ops = DynamicShape(pb_graph).find_dynamic_shape_op()
         if os.path.exists(args.output) and os.path.isdir(args.output):
             save_dym_op(dym_ops, os.path.join(args.output, "dynamic_shape_ops.txt"))
