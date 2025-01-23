@@ -198,7 +198,7 @@ class CompareCommand(BaseCommand):
             dest="cmp_level",
             required=False,
             default=None,
-            choices=["layer", "token"],
+            choices=["layer", "module", "api"],
             help='Compare level. only enabled for atb.')
 
         parser.add_argument(

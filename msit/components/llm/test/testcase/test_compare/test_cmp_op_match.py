@@ -5,8 +5,8 @@ from msit_llm.compare.cmp_op_match import OpMatchMap, MatchLocation
 from msit_llm.dump.torch_dump.topo import TreeNode
 from msit_llm.compare.cmp_op_match import policy_enhanced_name_match, policy_layer_type_cnt_match, \
                                             policy_name_full_match, policy_output, \
-                                            policy_layer_special_match, policy_rope_operator_match
-
+                                            policy_layer_special_match, policy_rope_operator_match, \
+                                            policy_module_match
 
 
 @pytest.fixture
@@ -47,8 +47,6 @@ def test_policy_name_full_match():
         assert match == expected
 
 
-
-
 def test_policy_output():
 
     golden_root = TreeNode('lm_head', 'root.lm_head')
@@ -81,8 +79,6 @@ def test_policy_output():
     assert len(matches) == len(expected_matches)
     for match, expected in zip(matches, expected_matches):
         assert match == expected
-
-
 
 
 def test_policy_enhanced_name_match(patch_min_layer_number):
@@ -119,8 +115,6 @@ def test_policy_enhanced_name_match(patch_min_layer_number):
     assert len(matches) == len(expected_matches)
     for match, expected in zip(matches, expected_matches):
         assert match == expected
-
-
 
 
 def test_policy_layer_type_cnt_match():
@@ -187,8 +181,6 @@ def test_policy_layer_special_match():
         assert match == expected
 
 
-
-
 def test_policy_rope_operator_match(patch_min_layer_number):
 
     golden_root = TreeNode('model', 'Baichuan')
@@ -218,3 +210,36 @@ def test_policy_rope_operator_match(patch_min_layer_number):
     assert len(matches) == len(expected_matches)
     for match, expected in zip(matches, expected_matches):
         assert match == expected  
+
+
+def test_policy_module_match(patch_min_layer_number):
+    assert topo.MIN_LAYER_NUMBER == 0
+    # 创建测试用的树
+    golden_root = TreeNode('model', 'Baichuan')
+    golden_child1 = TreeNode('child1', 'decoder', tensor_path='transformer/self_attn')
+    golden_grandchild1 = TreeNode('grandchild1', 'self_attn', tensor_path='transformer/layer2/self_attn')
+    golden_grandchild2 = TreeNode('grandchild2', 'mlp', tensor_path='transformer/layer2/mlp')
+    
+    golden_child1.add_child(golden_grandchild1)
+    golden_child1.add_child(golden_grandchild2)
+    golden_root.add_child(golden_child1)
+
+    my_root = TreeNode('model', 'BaichuanModel')
+    my_child1 = TreeNode('child1', 'root', tensor_path='transformer/Attention')
+    my_grandchild1 = TreeNode('grandchild1', 'Attention', tensor_path='transformer/layer2/Attention')
+    my_grandchild2 = TreeNode('grandchild2', 'Mlp', tensor_path='transformer/layer2/Mlp')
+    
+    my_child1.add_child(my_grandchild1)
+    my_child1.add_child(my_grandchild2)
+    my_root.add_child(my_child1)
+    # 执行匹配策略
+    match_map = OpMatchMap(golden_root, my_root)
+    policy_module_match(golden_root, my_root, match_map)
+    matches = match_map.get_match_map(enable_print=True)
+    expected_matches = [
+        (my_grandchild1, MatchLocation.ALL_OUTPUT, golden_grandchild1, MatchLocation.ALL_OUTPUT),
+        (my_grandchild2, MatchLocation.ALL_OUTPUT, golden_grandchild2, MatchLocation.ALL_OUTPUT),
+    ]
+    assert len(matches) == len(expected_matches)
+    for match, expected in zip(matches, expected_matches):
+        assert match == expected
