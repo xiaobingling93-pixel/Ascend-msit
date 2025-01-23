@@ -5,7 +5,7 @@ from ascend_utils.common.security.pytorch import validate_device
 from ascend_utils.common.security import check_type
 from msmodelslim import logger as msmodelslim_logger
 
-_ANTI_METHODS = ['m1', 'm2', 'm3', 'm4', 'm5']
+_ANTI_METHODS = ['m1', 'm2', 'm3', 'm4', 'm5', 'm6']
 _SUPPORTED_DEVICES = ["cpu", "npu", 'gpu']
 
 _OFFLOAD_TYPE = 'offload_type'
@@ -21,6 +21,7 @@ class AntiMethods(str, Enum):
     M3 = "m3"
     M4 = "m4"
     M5 = "m5"
+    M6 = "m6"
 
 
 class AntiOutlierConfig:
@@ -33,6 +34,8 @@ class AntiOutlierConfig:
             dev_id=None,
             w_sym=True,
             low_memory=None,
+            disable_anti_names=[],
+            flex_config: dict = None,
     ):
         # Basic setting
         self.w_bit = w_bit
@@ -41,6 +44,7 @@ class AntiOutlierConfig:
         self.dev_type = dev_type
         self.dev_id = dev_id
         self.w_sym = w_sym
+        self.disable_anti_names = disable_anti_names
         self.w_signed = True
         self.a_signed = True
         self.a_sym = False
@@ -48,12 +52,15 @@ class AntiOutlierConfig:
         self.os_k = 100
         self.ch_align = True
         self.w_adjust = True
+        self.flex_config = self.setup_flex_config(flex_config)
 
         self.device, self.dev_id = validate_device(dev_type, dev_id, _SUPPORTED_DEVICES)
         check_type(self.w_bit, int, param_name='w_bit')
         check_type(self.a_bit, int, param_name='a_bit')
         check_type(self.anti_method, str, param_name='anti_method')
         check_type(self.w_sym, bool, param_name='w_sym')
+        check_type(self.disable_anti_names, list, param_name='disable_anti_names')
+        check_type(self.flex_config, dict, param_name='flex_config')
 
         # check low_memory config, must be {"offload_type": "disk|memory"}
         self.is_adapter_enabled = low_memory is not None
@@ -94,3 +101,22 @@ class AntiOutlierConfig:
             pass
         else:
             raise ValueError("w_sym can only be True when running anti_method='m3', please check it.")
+
+
+    @staticmethod
+    def setup_flex_config(flex_config):
+
+        flex_config_map = {'alpha': {'type': float, 'default': None},
+                           'beta': {'type': float, 'default': None}}
+
+        flex_config = {} if flex_config is None else flex_config
+
+        for key, val in flex_config_map.items():
+            if key not in flex_config:
+                flex_config[key] = val['default']
+
+        for key, _ in flex_config.items():
+            if key not in flex_config_map:
+                raise ValueError(f"{key} in flex config is not supported")
+
+        return flex_config
