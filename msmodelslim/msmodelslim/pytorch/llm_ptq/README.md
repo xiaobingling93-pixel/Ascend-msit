@@ -90,7 +90,7 @@ MOE模型支持W8A8_per-token量化场景、W8A16 per-channel量化场景和W8A1
 pip3 install protobuf==4.24.1
 pip3 install sentencepiece==0.1.99
 pip3 install sympy==1.11.1
-pip3 install transformer==4.43.0 # 参考ChatGLM2-6B仓chatglm2-6b/config.json里的相关版本要求
+pip3 install transformers==4.43.0 # 参考ChatGLM2-6B仓chatglm2-6b/config.json里的相关版本要求
 ```
 
 3. 新建模型的quant.py量化脚本，编辑quant.py文件，根据实际的量化场景导入样例代码，参考加粗字体信息提示，并根据实际情况进行修改。
