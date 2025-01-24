@@ -1,4 +1,4 @@
-# Copyright Huawei Technologies Co., Ltd. 2024. All rights reserved.
+# Copyright Huawei Technologies Co., Ltd. 2025. All rights reserved.
 import os
 import json
 import sys
@@ -185,12 +185,11 @@ if __name__ == '__main__':
     save_directory = args.save_directory
     num_layers = checker.get_config_from_pretrained(model_path, trust_remote_code=True).num_hidden_layers
 
-    # Check if disable_names is provided, if not and a_bit is 8, generate disable_names
     disable_names = args.disable_names
+    if not disable_names and args.model_type == 'llama3':
+        disable_names = get_llama3_disable_names(num_layers)
     if not disable_names and args.a_bit == 8:
-        if args.model_type == 'llama3':
-            disable_names = get_llama3_disable_names(num_layers)
-        elif args.model_type == 'llama3.1_fp':
+        if args.model_type == 'llama3.1_fp':
             disable_names = get_llama3_1_disable_names(num_layers)
         else:
             disable_names = get_down_proj_disable_names(num_layers)

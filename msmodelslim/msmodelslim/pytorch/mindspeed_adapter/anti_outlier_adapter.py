@@ -54,19 +54,16 @@ STAT_KEY_THRESHOLD_TENSOR = "thres_t"
 STAT_KEY_SMOOTH_SCALE_MASK = "smooth_scale_mask"
 STAT_KEY_SMOOTH_SCALE = "smooth_scale"
 STAT_KEY_VARIANCE = "std"
+SD3_CONTEXT_EMBEDDER = "context_embedder"
+SCALE_MIN_LLM = 1e-5
+SCALE_MIN_SD3 = 1e-3
 
 _PREDEFINED_FUSIONS = {
-    "SD3Transformer2DModel":
-        {
-            tuple(): ("context_embedder",)
-        }
+    tuple(): ("context_embedder",)
 }
 
 _PREDEFINED_FUSION_KWARGS = {
-    "SD3Transformer2DModel":
-        {
-            "check_group_fusions": False
-        }
+    "check_group_fusions": False
 }
 
 
@@ -92,6 +89,9 @@ class AntiOutlierAdapter(object):
 
         self.cfg = cfg
         self.device = self.cfg.device
+        self.is_context_embedder_model = False
+        if SD3_CONTEXT_EMBEDDER + ".weight" in model.state_dict().keys():
+            self.is_context_embedder_model = True
 
         if self.cfg.device == "cpu":
             raise ValueError("Mindspeed Model does't support CPU quantize!")
@@ -113,7 +113,7 @@ class AntiOutlierAdapter(object):
         except Exception as e:
             raise Exception("Please check your config, model and input!", e) from e
 
-    def init_dag(self, predefined_fusions=None):
+    def init_dag(self):
         # 1. Mindspeed model要用npu执行dag构图识别
         dummy_input = self.calib_data[0]
 
@@ -153,7 +153,7 @@ class AntiOutlierAdapter(object):
         # buffer the latest tensor
         if name not in act_stats:
             act_stats[name] = {}
-            if self.cfg.arch not in _PREDEFINED_FUSIONS:
+            if not self.is_context_embedder_model:
                 act_stats[name]['tensor'] = tensor
 
         hidden_dim = tensor.shape[-1]
@@ -250,7 +250,7 @@ class AntiOutlierAdapter(object):
 
         for i in tqdm(range(len(self.calib_data))):
             inputs = self.calib_data[i]
-            if self.cfg.arch not in _PREDEFINED_FUSIONS:
+            if not self.is_context_embedder_model:
                 input_dict = self.trans_to_dict(inputs)
                 self.model(**input_dict)
             else:
@@ -317,9 +317,13 @@ class AntiOutlierAdapter(object):
         act_stats = self.os_stats()
         if self.cfg.anti_method == 'm4':
             num_attention_heads = self.get_num_attention_heads()
-            fusion_kwargs = _PREDEFINED_FUSION_KWARGS[self.cfg.arch] \
-                if self.cfg.arch in _PREDEFINED_FUSION_KWARGS else {}
-        scale_min = 1e-3 if self.cfg.arch in _PREDEFINED_FUSION_KWARGS else 1e-5
+            fusion_kwargs = {}
+        scale_min = SCALE_MIN_LLM
+        
+        if self.is_context_embedder_model:
+            fusion_kwargs = _PREDEFINED_FUSION_KWARGS
+            scale_min = SCALE_MIN_SD3
+        
         for norm_name_group in tqdm(self.norm_linear_subgraph.keys()):
             linear_names = self.norm_linear_subgraph[norm_name_group]
             if isinstance(norm_name_group, str):
