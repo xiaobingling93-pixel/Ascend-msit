@@ -40,7 +40,7 @@ def main():
         type=str,
         default='info',
         choices=['debug', 'info', 'warning', 'error', 'fatal', 'critical'],
-        help='Log level to print.')
+        help='Log level to print')
 
     args = parser.parse_args()
 

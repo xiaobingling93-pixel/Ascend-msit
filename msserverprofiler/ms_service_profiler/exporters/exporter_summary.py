@@ -76,7 +76,7 @@ def process_req_record(req_map, record):
 
     if name == 'httpReq':
         req_map[rid] = {
-            'httpReq_start': record.get('start_datetime'),
+            'httpReq_start': record.get('start_time'),
             'token_id': {},
             'req_waiting_time': 0.0,
             'req_pending_time': 0.0,
@@ -87,7 +87,7 @@ def process_req_record(req_map, record):
     if name == 'httpRes':
         if rid in req_map:
             req_map[rid]['httpRes_end'] = record.get('end_time')
-            req_map[rid][is_complete] = True
+            req_map[rid]['is_complete'] = True
         else:
             logger.warning(f"Missing httpReq for httpRes with rid={rid}.")
         return
@@ -181,7 +181,7 @@ def gen_exporter_results(all_data_df):
         "exec_time (ms)":calculate_statistics(exec_time),
         "waiting_time (ms)":calculate_statistics(waiting_time),
         "input_token_num":calculate_statistics(input_token_num),
-        "generated_token_num":calculate_statistics(generated_token_num),
+        "generated_token_num":calculate_statistics(generated_token_num)
     }
 
     # 生成batch维度数据
@@ -285,7 +285,7 @@ def calculate_request_metrics(req_map):
 
         # 更新第一个请求的开始时间和最后一个请求的结束时间
         current_start_time = req_data["httpReq_start"]
-        current_end_time = req_data["httpReq_end"]
+        current_end_time = req_data["httpRes_end"]
         if first_request_start_time is None or current_start_time < first_request_start_time:
             first_request_start_time = current_start_time
         if last_request_end_time is None or current_end_time > last_request_end_time:
@@ -371,6 +371,6 @@ class ExporterSummary(ExporterBase):
         output = cls.args.output_path
 
         # 格式化存入csv
-        save_dataframe_to_csv(req_status, "request_summary.csv")
-        save_dataframe_to_csv(batch_status, "batch_summary.csv")
-        save_dataframe_to_csv(total_map, "service_summary.csv", include_stats=0)
+        save_dataframe_to_csv(req_status, output, "request_summary.csv")
+        save_dataframe_to_csv(batch_status, output, "batch_summary.csv")
+        save_dataframe_to_csv(total_map, output,"service_summary.csv", include_stats=0)
