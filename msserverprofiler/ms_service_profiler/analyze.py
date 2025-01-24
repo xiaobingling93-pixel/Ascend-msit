@@ -22,8 +22,6 @@ from ms_service_profiler.exporters.utils import check_input_path_valid, check_ou
 from ms_service_profiler.plugins import custom_plugins
 from ms_service_profiler.utils.log import set_log_level
 
-from msit.components.debug.compare.setup import required
-
 
 def main():
     parser = argparse.ArgumentParser(description='MS Server Profiler Analyze')
@@ -45,13 +43,12 @@ def main():
         help='Log level to print.')
 
     args = parser.parse_args()
-    args.split = 'on'
 
     # 初始化日志等级
     set_log_level(args.log_level)
 
     # 初始化Exporter
-    exporters = ExporterFactory.create_exporters(args)
+    exporters = [ExporterFactory.create_summary_exporter(args)]
 
     # 创建output目录
     Path(args.output_path).mkdir(parents=True, exist_ok=True)
