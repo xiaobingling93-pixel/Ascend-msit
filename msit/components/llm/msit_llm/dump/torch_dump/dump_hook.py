@@ -174,7 +174,7 @@ def dump_tensor(feat, feat_path, module_name, dump_type):
             from msit_llm.dump.torch_dump.dump_analyze import dump_analyze
             dump_analyze(feat, feat_path, module_name, dump_type, dump_config.dump_path)
     else:
-        logger.error("Unrecognized data type %r, cannot be saved in path %r.", type(feat), feat_path)
+        logger.warning("Unrecognized data type %r, cannot be saved in path %r.", type(feat), feat_path)
 
 
 def dump_data(params: DumpDataParams):
