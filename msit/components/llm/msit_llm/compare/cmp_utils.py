@@ -159,6 +159,7 @@ def save_compare_reault_to_csv(gathered_row_data, output_path=".", columns=CSV_G
         ms_makedirs(output_path, exist_ok=True)
     except OSError:
         logger.error("cannot create file directory under output path, please check it!")
+        raise
 
     cur_time = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d%H%M%S')
     csv_save_path = os.path.join(output_path, f"msit_cmp_report_{cur_time}.csv")
@@ -178,6 +179,42 @@ def save_compare_reault_to_csv(gathered_row_data, output_path=".", columns=CSV_G
     data_frame.to_csv(csv_save_path, index=False)
     logger.info(f"Saved comparing results: {csv_save_path}")
     return csv_save_path
+
+
+def save_compare_reault_to_xlsx(gathered_row_data_all, sheet_names, output_path=".", columns=CSV_GOLDEN_HEADER):
+    try:
+        ms_makedirs(output_path, exist_ok=True)
+    except OSError:
+        logger.error("cannot create file directory under output path, please check it!")
+        raise
+
+    cur_time = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d%H%M%S')
+    xlsx_save_path = os.path.join(output_path, f"msit_cmp_report_{cur_time}.xlsx")
+    for gathered_row_data in gathered_row_data_all:
+        gathered_row_data = list(filter(
+                    lambda item: not ("cmp_fail_reason" in item and item["cmp_fail_reason"] == "data shape doesn't match."),
+                    gathered_row_data
+                ))
+        # 过滤不宜展示的数据，int8建议只与int8比较
+        for row_data in gathered_row_data:
+            if GOLDEN_DTYPE in row_data and MY_DTYPE in row_data:
+                if (row_data[GOLDEN_DTYPE] == 'torch.int8') ^ (row_data[MY_DTYPE] == 'torch.int8'):
+                    gathered_row_data.remove(row_data)
+
+    data_frames = {}
+    for i, gathered_row_data in enumerate(gathered_row_data_all):
+        data_frames[sheet_names[i]] = pd.DataFrame(gathered_row_data, columns=columns)
+        data_frames[sheet_names[i]].fillna(value="", inplace=True)
+        data_frames[sheet_names[i]].dropna(axis=0, how="all", inplace=True)
+    with pd.ExcelWriter(xlsx_save_path) as writer:
+        if "layer" in data_frames.keys():
+            data_frames["layer"].to_excel(writer, sheet_name="layer", index=False)
+        if "module" in data_frames.keys():
+            data_frames["module"].to_excel(writer, sheet_name="module", index=False)
+        if "api" in data_frames.keys():
+            data_frames["api"].to_excel(writer, sheet_name="api", index=False)
+    logger.info(f"Saved comparing results: {xlsx_save_path}")
+    return xlsx_save_path
 
 
 def compare_data(golden_data, my_data):

@@ -20,7 +20,8 @@ from msit_llm.common.log import logger
 from msit_llm.compare.cmp_op_match import OpMatchMgr
 from msit_llm.compare.cmp_data_parse import CompareDataParse, CompareDataTorch, CompareDataATB
 from msit_llm.compare.cmp_utils import BasicDataInfo, fill_row_data, save_compare_reault_to_csv, read_data, \
-                                    fill_row_data_statistics, save_statistics_compare_reault_to_csv
+                                    fill_row_data_statistics, save_statistics_compare_reault_to_csv, \
+                                    save_compare_reault_to_xlsx
 from msit_llm.compare.multi_block import get_multi_tensor_paths, get_cat_dim, get_multi_statistics_paths
 from msit_llm.common.constant import RAW_INPUT_PATH, GLOBAL_HISTORY_AIT_DUMP_PATH_LIST
 
@@ -38,6 +39,7 @@ class CompareMgr:
         os.environ[RAW_INPUT_PATH] = self.golden_raw_path + "|" + self.my_raw_path
         self.op_match: OpMatchMgr = OpMatchMgr(args)
         self.compared_result = []  # 收集结果
+        self.compared_results = []  # 全部比对时收集结果
 
     @staticmethod
     def filter_my_tensor_paths(golden_tensor_paths, my_tensor_paths):
@@ -186,9 +188,9 @@ class CompareMgr:
         return self.golden_data is not None and self.my_data is not None
 
     def compare(self, output_path="."):
-        self.compared_result = []
+        self.compared_results = []
 
-        op_map = list(self.op_match.match(self.golden_data, self.my_data))
+        op_maps = list(self.op_match.match(self.golden_data, self.my_data))
         # 同步校验tokenid
         golden_tokens = self.golden_data.get_cmp_tokens()
         my_tokens = self.my_data.get_cmp_tokens()
@@ -202,12 +204,27 @@ class CompareMgr:
             str(my_tokens),
             str(my_token_set),
         )
-        if self.args.stats:
-            self.perform_comparison(golden_tokens, my_tokens, op_map, is_statistics=True)
-            return save_statistics_compare_reault_to_csv(self.compared_result, output_path)
+        if len(op_maps) == 1:
+            op_map = op_maps[0]
+            self.compared_result = []
+            if self.args.stats:
+                self.perform_comparison(golden_tokens, my_tokens, op_map, is_statistics=True)
+                return save_statistics_compare_reault_to_csv(self.compared_result, output_path)
+            else:
+                self.perform_comparison(golden_tokens, my_tokens, op_map, is_statistics=False)
+                return save_compare_reault_to_csv(self.compared_result, output_path)
+        elif len(op_maps) == 3:
+            sheet_names = ['layer', 'module', 'api']
+            for op_map in op_maps:
+                self.compared_result = []
+                if self.args.stats:
+                    self.perform_comparison(golden_tokens, my_tokens, op_map, is_statistics=True)
+                else:
+                    self.perform_comparison(golden_tokens, my_tokens, op_map, is_statistics=False)
+                self.compared_results.append(self.compared_result)
+            return save_compare_reault_to_xlsx(self.compared_results, sheet_names, output_path)
         else:
-            self.perform_comparison(golden_tokens, my_tokens, op_map, is_statistics=False)
-            return save_compare_reault_to_csv(self.compared_result, output_path)
+            return None
 
     def compare_tokens_stats(self, cmp_tokens, op_map, is_statistics=False):
         for token_id in cmp_tokens:
