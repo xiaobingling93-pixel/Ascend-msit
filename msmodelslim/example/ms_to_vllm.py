@@ -182,7 +182,9 @@ if __name__ == "__main__":
                         default='res.safetensors', 
                         help="The path to save converted quant weights")
     parser.add_argument("--w_bit", type=check_w_bit, default=4, help="Quantied weight bits")
-    parser.add_argument("--target_tool", type=check_target_tool, default="awq", help="target tool, value include awq and gptq")
+    parser.add_argument(
+        "--target_tool", type=check_target_tool, default="awq", help="target tool, value include awq and gptq"
+        )
     args = parser.parse_args()
 
     save_path = args.save_path

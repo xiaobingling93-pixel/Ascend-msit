@@ -170,19 +170,19 @@ class DagTorchHook(DagHook, ABC):
                 return args if len(args) > 0 else kwargs
 
         self.replace_node(dag_node, Eq())
+        
+    def get_module_cls(self):
+        return torch.nn.Module
+
+    def _after_parse(self):
+        self.network.to(self._tmp_device)
 
     def _before_parse(self):
         self._tmp_device = self._parse_network_device(self.network)
         self.network.cpu()
 
-    def _after_parse(self):
-        self.network.to(self._tmp_device)
-
     def _get_module_children(self, module):
         return module.named_children()
-
-    def _get_module_cls(self):
-        return torch.nn.Module
 
     def _collecting_feature_map_info(self, output):
         io_info = {}

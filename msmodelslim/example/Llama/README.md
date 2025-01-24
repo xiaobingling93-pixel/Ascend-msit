@@ -26,21 +26,27 @@
 
 #### 量化参数说明
 
-| 参数名 | 含义 | 使用方法 | 
-| ------ | ---- | -------- | 
-| model_path | 浮点权重路径 | 输入LLAMA权重目录路径 |
-| save_directory | 量化权重路径 | 输出量化结果目录路径 |
-| a_bit | 激活值量化bit | 大模型量化场景下，可配置为8或16 <br>大模型稀疏量化场景下，需配置为8 |
-| w_bit | 权重量化bit | 大模型量化场景下，可配置为8或16 <br>大模型稀疏量化场景下，需配置为4 |
-| device_type | device类型 | 可选值：['cpu', 'npu']，默认为'cpu' |
-| calib_file | 量化校准数据 | 存放校准数据的json文件 |
-| disable_names | 手动回退的量化层名称 | 用户可根据精度要求手动设置，默认回退隐藏层的降维投影层 |
-| disable_level | L自动回退等级 | 配置示例如下：<br>'L0':默认值，不执行回退。<br>'L1'：回退1层。<br>'L2'：回退2层。<br>'L3'：回退3层。<br>'L4'：回退4层。<br>'L5'：回退5层。|
-| w_sym	| 权重量化是否为对称量化 | 默认为True，W8A8场景仅支持配置为True|
-| act_method | 激活值量化方法 | 可选值如下所示，默认为1。<br>(1) 1代表Label-Free场景的min-max量化方式。 <br>(2) 2代表Label-Free场景的histogram量化方式。 <br>(3) 3代表Label-Free场景的自动混合量化方式，LLM大模型场景下推荐使用。|
-| anti_method | 离群值抑制参数 |'m1': SmoothQuant算法。<br>'m2': SmoothQuant加强版算法，推荐使用。<br>'m3': AWQ算法。<br>'m4': smooth优化算法 。<br>'m5': CBQ量化算法。<br>默认为m2。|
-| co_sparse	| 是否开启稀疏量化功能 | 默认值：False，不开启稀疏量化 |
-| fraction | 模型权重稀疏量化过程中被保护的异常值占比  | 取值范围[0.01,0.1]。默认值为0.01。|
+| 参数名 | 含义 | 默认值 | 使用方法 | 
+| ------ | ---- | --- | -------- | 
+| model_path | 浮点权重路径 | 无默认值 | 必选参数；<br>输入Llama权重目录路径。 |
+| model_type | qwen模型类型 | llama2|  若使用llama3模型，请输入该参数为llama3。 |
+| save_directory | 量化权重路径 | 无默认值 | 必选参数；<br>输出量化结果目录路径。 |
+| a_bit | 激活值量化bit | 8 |大模型量化场景下，可配置为8或16； <br>大模型稀疏量化场景下，需配置为8。 |
+| w_bit | 权重量化bit | 8 | 大模型量化场景下，可配置为8或16； <br>大模型稀疏量化场景下，需配置为4。 |
+| device_type | device类型 | cpu | 可选值：['cpu', 'npu'] |
+| calib_file | 量化校准数据 | teacher_qualification.jsonl | 存放校准数据的json文件。 |
+| disable_names | 手动回退的量化层名称 | w8a8量化默认回退所有down_proj层 <br> Llama3 w8a16量化默认回退前5层 | 用户可根据精度要求手动设置，默认回退隐藏层的降维投影层。 |
+| disable_level | L自动回退等级 | L0 | 配置示例如下：<br>'L0'：默认值，不执行回退。<br>'L1'：回退1层。<br>'L2'：回退2层。<br>'L3'：回退3层。<br>'L4'：回退4层。<br>'L5'：回退5层。|
+| act_method | 激活值量化方法 | 1 |(1) 1代表Label-Free场景的min-max量化方式。 <br>(2) 2代表Label-Free场景的histogram量化方式。 <br>(3) 3代表Label-Free场景的自动混合量化方式，LLM大模型场景下推荐使用。|
+| anti_method | 离群值抑制参数 | 无默认值 |'m1': SmoothQuant算法。<br>'m2': SmoothQuant加强版算法，推荐使用。<br>'m3': AWQ算法。<br>'m4': smooth优化算法 。<br>'m5': CBQ量化算法。<br>默认为m2。|
+| co_sparse	| 是否开启稀疏量化功能 | False | True: 使用稀疏量化功能；<br>False: 不使用稀疏量化功能。 |
+| fraction | 模型权重稀疏量化过程中被保护的异常值占比  |0.01| 取值范围[0.01,0.1]|
+| use_sigma | 是否启动sigma功能 | False|True: 开启sigma功能；<br>False: 不开启sigma功能。 |
+| is_lowbit | 是否开启lowbit量化功能 | False|(1) 当w_bit=4，a_bit=8时，为大模型稀疏量化场景，表示开启lowbit稀疏量化功能。<br>(2) 其他场景为大模型量化场景，会开启量化自动精度调优功能。<br>当前量化自动精度调优框架支持W8A8，W8A16量化。|
+| part_file_size | 量化权重文件大小 | 无限制 | 单个量化权重文件大小不超过xGB。|
+| use_kvcache_quant | 是否使用kvcache量化功能 | False | True: 使用kvcache量化功能；<br>False: 不使用kvcache量化功能。|
+| is_dynamic | 是否使用per-token动态量化功能 | False | True: 使用per-token动态量化；<br>False: 不使用per-token动态量化。 |
+| do_smooth | 是否开启smooth功能 | False | 是否开启smooth quant算法。|
 
 
 - 更多参数配置要求，请参考量化过程中配置的参数 [QuantConfig](https://gitee.com/ascend/msit/blob/dev/msmodelslim/docs/Python-API接口说明/大模型压缩接口/大模型量化接口/PyTorch/QuantConfig.md)
@@ -59,7 +65,10 @@
   ```shell
   python3 quant_llama.py --model_path {浮点权重路径} --save_directory {W8A16量化权重路径} --calib_file ../common/teacher_qualification.jsonl --w_bit 8 --a_bit 16 --act_method 3 
   ```
-
+##### LLaMa 33B 稀疏量化配置
+  ```shell
+  python3 quant_llama.py --model_path {浮点权重路径} --save_directory {W8A8S量化权重路径} --calib_file ../common/boolq.jsonl --act_method 2 --do_smooth True --use_sigma True --is_lowbit True --co_sparse True --w_bit 4 
+  ```
 #### LLaMa2
 ##### LLaMa2-7B/13B W8A8量化
 - 生成llama2-7b量化权重，antioutlier使用m1算法配置，使用min-max量化方式，校准数据集使用50条BoolQ数据，在CPU上进行运算
@@ -86,12 +95,6 @@
 ##### LLaMa2-70B W8A16量化
   ```shell
   python3 quant_llama.py --model_path {浮点权重路径} --save_directory {W8A16量化权重路径} --calib_file= ../common/teacher_qualification.jsonl --w_bit 8 --a_bit 16 --act_method 3 
-  ```
-
-
-##### LLaMa1 33B 稀疏量化配置
-  ```shell
-  python3 quant_llama.py --model_path {浮点权重路径} --save_directory {W8A8S量化权重路径} --calib_file ../common/boolq.jsonl --act_method 2 --do_smooth True --use_sigma True --is_lowbit True --co_sparse True --w_bit 4 
   ```
 
 #### LLaMa3

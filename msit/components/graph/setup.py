@@ -19,12 +19,8 @@ from setuptools import setup, find_packages  # type: ignore
 config = ConfigParser()
 config.read('../config/config.ini')
 
-
 with open('requirements.txt', encoding='utf-8') as f:
     required = f.read().splitlines()
-
-with open('README.md', encoding='utf-8') as f:
-    long_description = f.read()
 
 msit_sub_tasks = [
     {
@@ -44,8 +40,6 @@ setup(
     name='msit-graph',
     version='7.0.0c1219',
     description='graph analyze tool',
-    long_description=long_description,
-    long_description_content_type='text/markdown',
     url=config.get('URL', 'msit_url'),
     packages=find_packages(),
     package_data={'': ['*.sh', '*.cpp', '*.h', '*.txt']},

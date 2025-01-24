@@ -34,7 +34,7 @@ QuantConfig(a_bit=8, w_bit=8, disable_names=None, dev_type='cpu', dev_id=None, a
 | open_outlier | 输入 | 是否开启权重异常值划分。|可选。<br>数据类型：bool。<br>默认为True。<br>True：开启权重异常值划分。False：关闭权重异常值划分。<br>说明：(1)仅在lowbit设置为True时生效。(2)per_group量化场景下，需协同设置is_lowbit为True，open_outlier为False。|
 | group_size | 输入 | per_group量化中group的大小。|可选。<br>数据类型：int。<br>默认值为64，支持配置为64或128。<br>说明:仅适用于per_group量化场景，需协同设置is_lowbit为True，open_outlier为False。|
 | percdamp | 输入 | GPTQ算法的矩阵正定偏置系数，用于保障计算过程的稳定性。当GPTQ运行出现非正定矩阵导致的报错时，可以适当增大该参数。|可选。<br>数据类型：float。<br>取值范围为[0,1]，默认值为0.01。<br>说明:仅适用于w_method为GPTQ算法的情况。|
-| low_memory | 输入 | 使用低显存量化方法。  | 必选。<br> 数据类型：dict。<br>默认值为None。<br> 支持如下的字段： <br>当前支持offload_type关键字，且仅支持设置为memory。|
+| low_memory | 输入 | 使用低显存量化方法。| 可选。<br> 数据类型：dict。<br>默认值为None。<br> 支持如下的字段： <br>当前支持offload_type关键字，且仅支持设置为memory。|
 
 
 ### 调用示例一

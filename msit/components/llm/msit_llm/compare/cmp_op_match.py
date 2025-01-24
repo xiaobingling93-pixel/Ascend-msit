@@ -18,7 +18,7 @@ from enum import Enum
 from msit_llm.common.log import logger
 from msit_llm.dump.torch_dump.topo import TreeNode
 from msit_llm.compare.op_mapping import ATB_QUANT_FLOAT_NODE_MAPPING, LAYER_OP_MAPPING_DICT, \
-            QWEN_OP_MAPPING
+            QWEN_OP_MAPPING, MODULE_MAPPING_DICT
 
 
 class MatchScore(Enum):
@@ -371,6 +371,37 @@ def policy_qwen_match(golden_root_node: TreeNode, my_root_node: TreeNode, match_
         match_ops(golden_path_dict, my_path_dict, golden_path2node, my_path2node, match_map)     
 
 
+def policy_module_match(golden_root_node: TreeNode, my_root_node: TreeNode, match_map: OpMatchMap):
+    golden_layer_type = golden_root_node.get_layer_node_type()
+    golden_layer_nodes = golden_root_node.get_layer_node(golden_layer_type)
+    my_layer_type = my_root_node.get_layer_node_type()
+    my_layer_nodes = my_root_node.get_layer_node(my_layer_type)
+
+    def matches_any_path(paths, op_names):
+        return any(op_name in path for op_name in op_names for path in paths)
+
+    for golden_layer, my_layer in zip(golden_layer_nodes, my_layer_nodes):
+        golden_module_dict = {child.tensor_path: child for child in golden_layer.children}
+        my_module_dict = {child.tensor_path: child for child in my_layer.children}
+        for atb_op, torch_op in MODULE_MAPPING_DICT.items():
+            golden_module_all = [
+                path for path in golden_module_dict.keys()
+                if matches_any_path([path], torch_op)
+            ]
+            my_module_all = [
+                path for path in my_module_dict.keys()
+                if matches_any_path([path], [atb_op])
+            ]
+            for golden_module, my_module in zip(golden_module_all, my_module_all):
+                match_map.add_score(
+                    my_module_dict.get(my_module),
+                    MatchLocation.ALL_OUTPUT,
+                    golden_module_dict.get(golden_module),
+                    MatchLocation.ALL_OUTPUT,
+                    MatchScore.FULL_MATCH
+                )
+
+
 class OpMatchMgr:
 
     def __init__(self, args) -> None:
@@ -388,8 +419,13 @@ class OpMatchMgr:
             policy_layer_match,
             policy_layer_special_match
         ]
+        self.op_match_policies_module = [
+            policy_module_match
+        ]
         if args.cmp_level == "layer":
             self.selected_policies = self.op_match_policies_layer
+        elif args.cmp_level == "module":
+            self.selected_policies = self.op_match_policies_module
         else:
             self.selected_policies = self.op_match_policies
         

@@ -54,3 +54,12 @@ QWEN_OP_MAPPING = {
         'rotarypositionembedding': 'self_attn.q_proj'  
 }
 
+
+MODULE_MAPPING_DICT = {
+    # ATB算子: [Pytorch算子列表]
+    'Attention': ['self_attn', 'self_attention', 'Attention'],
+    'Mlp': ['mlp', 'Mlp'],
+    'mlp': ['mlp'],
+    'self_attn': ['self_attn'],
+    'self_attention': ['self_attention']
+}

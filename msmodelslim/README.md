@@ -84,6 +84,7 @@ msModelSlim当前处于逐步开源过程中，计划通过CANN的8.0.RC2、8.0.
 <br>[量化及稀疏量化场景导入代码样例](msmodelslim/pytorch/llm_ptq/量化及稀疏量化场景导入代码样例.md)
 <br>[msModelSlim量化权重转AutoAWQ&AutoGPTQ使用指南](docs/msModelSlim量化权重转AutoAWQ&AutoGPTQ使用指南.md)
 <br>[低显存量化特性使用说明](docs/低显存量化特性使用说明.md)
+<br>[mindspeed-llm框架量化使用说明](msmodelslim/pytorch/mindspeed_adapter/README.md)
 
 #### 许可证
 [Apache License 2.0](/LICENSE)
