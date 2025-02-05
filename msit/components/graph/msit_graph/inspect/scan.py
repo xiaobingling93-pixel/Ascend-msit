@@ -22,9 +22,9 @@ from msit_graph.graph_extract.graph_extract import GraphAnalyze
 
 def save_dym_op(data, path):
     with ms_open(path, 'w', TEXT_FILE_MAX_SIZE) as f:
-        f.write("\t".join(["Op_Name", "SubOp_Name", "Input", "Output"]) + "\n")
+        f.write(",".join(["Graph_Name", "Node_Name", "Input", "Output"]) + "\n")
         for row in data:
-            f.write("\t".join(map(str, row)) + "\n")
+            f.write(",".join(map(str, row)) + "\n")
     logger.info(f"The list of dynamic shape operator saved in {path}.")
 
 
@@ -32,6 +32,7 @@ class DynamicShape:
     def __init__(self, graph):
         self.graph = graph
         self.dynamic_to_static_edges = []
+        self.graph_name = []
 
     @staticmethod
     def is_dynamic_shape(node):
@@ -44,12 +45,15 @@ class DynamicShape:
 
     def add_dynamic_op(self, parent_name, sub_node_name, inputs, outputs):
         dynamic_op = (parent_name, sub_node_name, inputs, outputs)
-        if dynamic_op not in self.dynamic_to_static_edges:
+        if dynamic_op not in self.dynamic_to_static_edges and parent_name not in self.graph_name:
             self.dynamic_to_static_edges.append(dynamic_op)
+            self.graph_name.append(parent_name)
 
     def process_node(self, node, parent_name=None):
-        if self.is_dynamic_shape(node):
-            self.add_dynamic_op(parent_name or "", node.name, node.input, node.output)
+        if self.is_dynamic_shape(node) and parent_name:
+            node.input[:] = [";".join(node.input)]
+            node.output[:] = [";".join(node.output)]
+            self.add_dynamic_op(parent_name, node.name, node.input, node.output)
         for attr in node.attribute:
             if hasattr(attr, 'g') and attr.g:
                 for sub_node in attr.g.node:
@@ -61,12 +65,11 @@ class DynamicShape:
         return self.dynamic_to_static_edges
 
 
-
 def execute(args):
     if args.type == "dshape":
         pb_graph = GraphAnalyze.load_graph_def_from_pbtxt(args.input)
         dym_ops = DynamicShape(pb_graph).find_dynamic_shape_op()
         if os.path.exists(args.output) and os.path.isdir(args.output):
-            save_dym_op(dym_ops, os.path.join(args.output, "dynamic_shape_ops.txt"))
+            save_dym_op(dym_ops, os.path.join(args.output, "dynamic_shape_ops.csv"))
         else:
             raise Exception("Please check if the directory exists.")

@@ -561,6 +561,7 @@ class BCAnalyze(BaseCommand):
         Analyzer.analyze(golden=args.golden, test=args.test) # 后缀名判断在这里
 
 
+
 class BadCaseAnalyze(BaseCommand):
     def add_arguments(self, parser, **kwargs) -> None:
         parser.add_argument(
