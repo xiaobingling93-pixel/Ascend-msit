@@ -192,7 +192,7 @@ def save_compare_reault_to_xlsx(gathered_row_data_all, sheet_names, output_path=
     xlsx_save_path = os.path.join(output_path, f"msit_cmp_report_{cur_time}.xlsx")
     for gathered_row_data in gathered_row_data_all:
         gathered_row_data = list(filter(
-                    lambda item: not ("cmp_fail_reason" in item and item["cmp_fail_reason"] == "data shape doesn't match."),
+                    lambda x: not ("cmp_fail_reason" in x and x["cmp_fail_reason"] == "data shape doesn't match."),
                     gathered_row_data
                 ))
         # 过滤不宜展示的数据，int8建议只与int8比较
