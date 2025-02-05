@@ -433,7 +433,11 @@ class OpMatchMgr:
             self.selected_policies = [self.op_match_policies]
         else:
             self.cmp_all = True
-            self.selected_policies = [self.op_match_policies_layer, self.op_match_policies_module, self.op_match_policies]
+            self.selected_policies = [
+                self.op_match_policies_layer, 
+                self.op_match_policies_module, 
+                self.op_match_policies
+            ]
         
     def match(self, golden_data, my_data):
         match_map = OpMatchMap(golden_data=golden_data, my_data=my_data)
