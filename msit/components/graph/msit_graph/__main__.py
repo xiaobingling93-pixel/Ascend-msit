@@ -16,7 +16,7 @@ import argparse
 
 from components.utils.parser import BaseCommand
 from components.utils.file_open_check import FileStat
-from components.utils.log import logger, set_log_level, LOG_LEVELS
+from components.utils.log import set_log_level, LOG_LEVELS
 from msit_graph.graph_extract.graph_extract import GraphAnalyze
 from msit_graph.subgraph_stat.subgraph_stat import calculate_sum
 from msit_graph.inspect.scan import execute
