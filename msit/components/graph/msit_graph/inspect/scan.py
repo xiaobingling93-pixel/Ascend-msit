@@ -51,6 +51,8 @@ class DynamicShape:
 
     def process_node(self, node, parent_name=None):
         if self.is_dynamic_shape(node) and parent_name:
+            node.input[:] = [";".join(node.input)]
+            node.output[:] = [";".join(node.output)]
             self.add_dynamic_op(parent_name, node.name, node.input, node.output)
         for attr in node.attribute:
             if hasattr(attr, 'g') and attr.g:
