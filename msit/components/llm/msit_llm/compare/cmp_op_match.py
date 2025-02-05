@@ -385,11 +385,13 @@ def policy_module_match(golden_root_node: TreeNode, my_root_node: TreeNode, matc
         my_module_dict = {child.tensor_path: child for child in my_layer.children}
         for atb_op, torch_op in MODULE_MAPPING_DICT.items():
             golden_module_all = [
-                path for path in golden_module_dict.keys()
+                path 
+                for path in golden_module_dict.keys()
                 if matches_any_path([path], torch_op)
             ]
             my_module_all = [
-                path for path in my_module_dict.keys()
+                path 
+                for path in my_module_dict.keys()
                 if matches_any_path([path], [atb_op])
             ]
             for golden_module, my_module in zip(golden_module_all, my_module_all):
