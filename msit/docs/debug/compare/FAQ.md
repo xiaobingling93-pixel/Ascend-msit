@@ -105,3 +105,8 @@ sudo usermod -aG docker $USER
 ![输入图片说明](https://foruda.gitee.com/images/1699360631258718283/6e453470_8277365.png "屏幕截图")
 
 可以通过`msit debug surgeon`或者`onnxsim`对`onnx`模型进行优化，去除`reshape`算子。
+
+## 6.`onnx`模型改图后，比对结果表格中`I`列的`shape`信息和om模型的dump数据的`shape`不一致。
+进行onnx和om比对时，如果对onnx中的算子进行了修改，需要密切注意比对结果表格中，算子输出tensor的shape信息。该信息在比对表格中的`T`列（`CompareFailReason`）中会显示，如下图所示：
+![alt text](image.png)
+如果对onnx算子进行修改后出现精度问题，可优先通过`T`列的信息进行排查。若两边`shape`的乘积不一致，则说明该算子可能存在问题。
