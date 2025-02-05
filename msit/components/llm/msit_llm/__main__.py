@@ -597,6 +597,7 @@ class BCAnalyze(BaseCommand):
 
         Analyzer.from_csv(golden_csv_path=csv_path_lists[0], test_csv_path=csv_path_lists[1])
 
+
 class BadCaseAnalyze(BaseCommand):
     def add_arguments(self, parser, **kwargs) -> None:
         parser.add_argument(
@@ -620,6 +621,7 @@ class BadCaseAnalyze(BaseCommand):
     def handle(self, args, **kwargs) -> None:
         set_log_level(args.log_level)
         BadCaseAnalyzer.analyze(golden_csv_path=args.golden_path, test_csv_path=args.my_path) 
+
 
 def get_cmd_instance():
     llm_help_info = "Large Language Model(llm) Debugger Tools."

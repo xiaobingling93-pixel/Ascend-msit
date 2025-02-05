@@ -110,7 +110,8 @@ class BadCaseAnalyzer(object):
         if not_both_count != 0:
             unmatched_queries = merged_df['key'][not_both_mask].head()
             logger.warning(
-                "There are '%s' quer(ies) not matched, below is a partial display of these unmatched query's key:\n\t '%s'", 
+                "There are '%s' quer(ies) not matched, "
+                "below is a partial display of these unmatched query's key:\n\t '%s'", 
                 not_both_count,
                 unmatched_queries.to_string(header=False)
             )
@@ -134,6 +135,7 @@ class BadCaseAnalyzer(object):
     @classmethod
     def _get_candidate_path(cls, suffix):
         return cls.BAD_CASE_CSV_PREFIX + get_timestamp() + suffix
+
 
 def get_timestamp():
     cst_timezone = timezone(timedelta(hours=8))
