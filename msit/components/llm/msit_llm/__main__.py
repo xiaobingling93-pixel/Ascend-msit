@@ -28,6 +28,7 @@ from msit_llm.common.utils import str2bool, check_positive_integer, check_device
     check_dump_time_integer, check_data_can_convert_to_int, load_file_to_read_common_check
 from msit_llm.bc_analyze import Synthesizer, Analyzer
 from msit_llm.common.log import logger, set_log_level, LOG_LEVELS
+from msit_llm.badcase_analyze.bad_case_analyze import BadCaseAnalyzer
 
 
 LOG_LEVELS_LOWER = [ii.lower() for ii in LOG_LEVELS.keys()]
@@ -198,7 +199,7 @@ class CompareCommand(BaseCommand):
             dest="cmp_level",
             required=False,
             default=None,
-            choices=["layer", "module", "api"],
+            choices=["layer", "module", "api", "logits"],
             help='Compare level. only enabled for atb.')
 
         parser.add_argument(
@@ -559,6 +560,29 @@ class BCAnalyze(BaseCommand):
 
         Analyzer.analyze(golden=args.golden, test=args.test) # 后缀名判断在这里
 
+class BadCaseAnalyze(BaseCommand):
+    def add_arguments(self, parser, **kwargs) -> None:
+        parser.add_argument(
+            '--golden-path',
+            '-gp',
+            dest="golden_path",
+            required=True,
+            type=load_file_to_read_common_check, 
+            help="Golden result to compare with. It must be a valid csv path")
+
+        parser.add_argument(
+            '--my-path',
+            '-mp',
+            dest="my_path",
+            required=True,
+            type=load_file_to_read_common_check, 
+            help="My result to compare with the golden. It must be a valid csv path")
+
+        parser.add_argument("-l", "--log-level", default="info", choices=LOG_LEVELS_LOWER, help="specify log level")
+
+    def handle(self, args, **kwargs) -> None:
+        set_log_level(args.log_level)
+        BadCaseAnalyzer.analyze(golden_csv_path=args.golden_path, test_csv_path=args.my_path) 
 
 def get_cmd_instance():
     llm_help_info = "Large Language Model(llm) Debugger Tools."
@@ -568,9 +592,10 @@ def get_cmd_instance():
     errcheck_cmd_instance = ErrCheck("errcheck", "Error check tool for large language model.", alias_name='ee')
     transform_cmd_instance = Transform("transform", "Transform tool for large language model.")
     bc_analyze_cmd_instance = BCAnalyze("analyze", "Bad Case analyze tool for large language model.")
+    logits_bc_analyze_cmd_instance = BadCaseAnalyze('bcanalyze', "Bad case analyze tool for logits compare tool.")
 
     instances = [
         dump_cmd_instance, compare_cmd_instance, opcheck_cmd_instance, errcheck_cmd_instance, transform_cmd_instance,
-        bc_analyze_cmd_instance
+        bc_analyze_cmd_instance, logits_bc_analyze_cmd_instance
     ]
     return BaseCommand("llm", llm_help_info, instances)

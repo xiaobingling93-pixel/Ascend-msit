@@ -385,11 +385,13 @@ def policy_module_match(golden_root_node: TreeNode, my_root_node: TreeNode, matc
         my_module_dict = {child.tensor_path: child for child in my_layer.children}
         for atb_op, torch_op in MODULE_MAPPING_DICT.items():
             golden_module_all = [
-                path for path in golden_module_dict.keys()
+                path 
+                for path in golden_module_dict.keys()
                 if matches_any_path([path], torch_op)
             ]
             my_module_all = [
-                path for path in my_module_dict.keys()
+                path 
+                for path in my_module_dict.keys()
                 if matches_any_path([path], [atb_op])
             ]
             for golden_module, my_module in zip(golden_module_all, my_module_all):
@@ -405,6 +407,7 @@ def policy_module_match(golden_root_node: TreeNode, my_root_node: TreeNode, matc
 class OpMatchMgr:
 
     def __init__(self, args) -> None:
+        self.cmp_all = False
         self.op_match_policies = [
             policy_output,
             policy_name_full_match,
@@ -422,15 +425,23 @@ class OpMatchMgr:
         self.op_match_policies_module = [
             policy_module_match
         ]
-        if args.cmp_level == "layer":
-            self.selected_policies = self.op_match_policies_layer
+        if args.cmp_level == "layer" or args.cmp_level == "logits":
+            self.selected_policies = [self.op_match_policies_layer]
         elif args.cmp_level == "module":
-            self.selected_policies = self.op_match_policies_module
+            self.selected_policies = [self.op_match_policies_module]
+        elif args.cmp_level == "api":
+            self.selected_policies = [self.op_match_policies]
         else:
-            self.selected_policies = self.op_match_policies
+            self.cmp_all = True
+            self.selected_policies = [self.op_match_policies_layer, self.op_match_policies_module, self.op_match_policies]
         
     def match(self, golden_data, my_data):
         match_map = OpMatchMap(golden_data=golden_data, my_data=my_data)
+        match_maps = [match_map]
+        if self.cmp_all:
+            match_map1 = OpMatchMap(golden_data=golden_data, my_data=my_data)
+            match_map2 = OpMatchMap(golden_data=golden_data, my_data=my_data)
+            match_maps.extend([match_map1, match_map2])
         golden_trees = golden_data.get_root_nodes()
         my_trees = my_data.get_root_nodes()
         if len(golden_trees) != len(my_trees):
@@ -439,10 +450,11 @@ class OpMatchMgr:
             golden_trees = (golden_trees * max_len)[0:max_len]
             my_trees = (my_trees * max_len)[0:max_len]
         for golden_model_tree, my_model_tree in zip(golden_trees, my_trees):
-            for policy in self.selected_policies:
-                policy(golden_model_tree, my_model_tree, match_map)
+            for i, policy_group in enumerate(self.selected_policies):
+                for policy in policy_group:
+                    policy(golden_model_tree, my_model_tree, match_maps[i])
 
-        return match_map.get_match_map()
+        return [match_map.get_match_map() for match_map in match_maps]
     
 
 class OpMatchPolicyMapCount:
