@@ -16,7 +16,7 @@ import os
 import argparse
 from pathlib import Path
 
-from ms_service_profiler.parse import parse
+from ms_service_profiler.parse import parse, preprocess_prof_folders
 from ms_service_profiler.exporters.exporter_summary import ExporterSummary
 from ms_service_profiler.exporters.factory import ExporterFactory
 from ms_service_profiler.exporters.utils import check_input_path_valid, check_output_path_valid, create_sqlite_db
@@ -58,6 +58,9 @@ def main():
 
     # 初始化日志等级
     set_log_level(args.log_level)
+
+    # msprof预处理
+    preprocess_prof_folders(args.input_path)
 
     # 初始化Exporter
     wrapped_create_exporters = add_summary_exporter(ExporterFactory.create_exporters)
