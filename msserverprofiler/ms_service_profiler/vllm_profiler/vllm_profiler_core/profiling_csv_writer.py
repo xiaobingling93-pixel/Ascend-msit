@@ -12,18 +12,6 @@ EVENT_TYPE = namedtuple("event_type", _EVENT_TYPE)(*_EVENT_TYPE)
 
 
 class ProfillingCSVWriter:
-    """
-    >>> import time
-    >>> from vllm_profiler_core.profiling_csv_writer import profiling_csv_writer as pp
-    >>> pp.put_event({'event_type': 'start', 'http_rid': 123456, 'timestamp': time.time(), 'data': {}})
-    >>> pp.put_event({'event_type': 'start_process', 'http_rid': 123456, 'timestamp': time.time(), 'data': {}})
-    >>> pp.put_event({'event_type': 'prefill', 'http_rid': 123456, 'timestamp': time.time(), 'data': {'duration': 12, 'recv_tokens': 32}})
-    >>> pp.put_event({'event_type': 'decode', 'http_rid': 123456, 'timestamp': time.time(), 'data': {'duration': 12}})
-    >>> pp.put_event({'event_type': 'decode', 'http_rid': 123456, 'timestamp': time.time(), 'data': {'duration': 12}})
-    >>> pp.put_event({'event_type': 'finish', 'http_rid': 123456, 'timestamp': time.time(), 'data': {}})
-    >>> !cat profiling_1.csv
-    """
-
     def __init__(self, csv_file_pattern="profiling"):
         self.csv_file_pattern = csv_file_pattern
         self.request_stats, self.stats_lock, self.active_requests = {}, Lock(), 0

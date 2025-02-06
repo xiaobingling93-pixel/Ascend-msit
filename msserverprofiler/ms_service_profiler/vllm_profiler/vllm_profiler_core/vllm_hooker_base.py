@@ -8,7 +8,6 @@ import sys
 
 
 class vLLMHookerBase:
-
     def do_hook(self, hook_points, profiler_func_maker, pname=None):
         for ori_func in hook_points:
             profiler_func = profiler_func_maker(ori_func)
@@ -43,5 +42,4 @@ class vLLMHookerBase:
                 return False
             if max_version is not None and Version(max_version) < Version(version):
                 return False
-
         return True
