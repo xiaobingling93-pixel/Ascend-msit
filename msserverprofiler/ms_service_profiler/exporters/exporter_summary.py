@@ -315,7 +315,7 @@ def save_dataframe_to_csv(map_data, output, file_name, include_stats=1):
     file_path = output_path / file_name
 
     # 将map_data转换为DataFrame
-    df = convert_map_to_dataFrame(map_data, include_stats)
+    df = convert_map_to_dataframe(map_data, include_stats)
 
     # 保存到csv
     df.to_csv(file_path, index=False)
@@ -330,9 +330,9 @@ def convert_map_to_dataframe(map_data, include_stats):
                 "average": values["avg"],
                 "max": values["max"],
                 "min":values["min"],
-                "P50": values["P50"],
-                "P90": values["P90"],
-                "P99": values["P99"]
+                "P50": values["p50"],
+                "P90": values["p90"],
+                "P99": values["p99"]
             }
         else:
             value = format(values, ".8f") if metric == "generate_token_speed (token/s)" else values
