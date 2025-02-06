@@ -11,7 +11,7 @@ LayerSelector(model, layer_names=None, range_method="quantile")
 ### 参数说明
 | 参数名| 输入/返回值 | 含义 | 使用限制 |
 | ------ | ------ | ------ | ------ |
-| model | 输入 | 需要进行层选择分析的模型。| 必选。<br>数据类型：PyTorch模型。 |
+| model | 输入 | 需要进行层选择分析的模型。| 必选。<br>数据类型：torch.nn.Module |
 | layer_names | 输入 | 需要分析的层名称列表。| 可选。<br>数据类型：list。<br>默认值为None，表示分析所有线性层和卷积层。 |
 | range_method | 输入 | 用于计算量化难度的方法。| 可选。<br>数据类型：str。<br>默认值为"quantile"。<br>可选值："quantile"或"std"。 |
 
