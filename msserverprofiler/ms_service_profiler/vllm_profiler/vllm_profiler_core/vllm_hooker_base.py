@@ -15,8 +15,8 @@ import sys
 import traceback
 
 import functools
-from packaging.version import Version
 from abc import abstractmethod
+from packaging.version import Version
 
 from .hook_helper import HookHelper
 
@@ -38,12 +38,12 @@ class VLLMHookerBase:
     def init(self):
         pass
 
-    def get_parents_name(self, ori_func, index=1):
+    @staticmethod
+    def get_parents_name(ori_func, index=1):
         gen = traceback.walk_stack(None)
         try:
             for _ in range(index + 1):
                 f = next(gen)
-            print("f:", f[0])
             return f[0].f_code.co_name
         except StopIteration:
             return None
