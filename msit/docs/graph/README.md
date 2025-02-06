@@ -211,7 +211,7 @@ msit graph inspect -i ./test_pbgraph.pbtxt -t dshape -o ./output
 |参数名|参数作用|是否必选|
 |-----|-----|-----|
 |--type, -t|指定具体的扫描类别，目前仅支持“动态 shape”（dshape）。|是|
-|--output, -o|输出目录，当前输出表头为 Op_Name, SubOp_Name, Input, Output，默认是 “./”。|否|
+|--output, -o|输出目录，当前输出表头为 Graph_Name, Node_Name, Input, Output，默认是 “./”。|否|
 
 ## 免责声明
 
