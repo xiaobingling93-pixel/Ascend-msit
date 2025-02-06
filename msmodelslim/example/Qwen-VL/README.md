@@ -36,7 +36,7 @@
 
 ### 使用案例
 - 请将{浮点权重路径}和{量化权重路径}替换为用户实际路径。
-- 如果需要使用npu多卡量化，请先配置环境变量，仅支持1~3卡量化，暂不支持Atlas 300I Duo推理卡：
+- 如果需要使用npu多卡量化，请先配置环境变量，仅支持1~3卡量化，暂不支持Atlas推理系列产品：
   ```shell
   export ASCEND_RT_VISIBLE_DEVICES=0,1,2
   export PYTORCH_NPU_ALLOC_CONF=expandable_segments:False
