@@ -24,6 +24,7 @@ from ms_service_profiler.utils.log import set_log_level
 
 from msserverprofiler.exporters.exporter_summary import ExporterSummary
 
+
 def add_summary_exporter(func):
     def wrapper(args):
         default_exporters = func(args)
