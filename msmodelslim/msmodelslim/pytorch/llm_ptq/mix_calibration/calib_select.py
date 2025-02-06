@@ -423,7 +423,9 @@ class CalibrationData(object):
 
         self.read_config(config_path)
         self.mixed_dataset = []
-        self.save_path = get_valid_write_path(save_path)
+        self.save_path = None
+        if save_path is not None:
+            self.save_path = get_valid_write_path(save_path)
 
     def verify_model(self):
         if not isinstance(self.model, PreTrainedModel):
@@ -476,12 +478,10 @@ class CalibrationData(object):
     def add_custormized_dataset_processor(self, dataset_name, processor):
         """添加自定义dataset_processor"""
         self.custormized_dataset_processor[dataset_name] = processor
+        self.handlers[dataset_name] = CalibHandler(dataset_name, processor, self.shuffle_seed, self.batch_size)
 
     def process(self):
         """执行混合校准集"""
-        for dataset_name, processor in self.custormized_dataset_processor.items():
-            self.handlers[dataset_name] = CalibHandler(dataset_name, processor, self.shuffle_seed, self.batch_size)
-
         self.mixed_dataset = []
         for _, handler in self.handlers.items():
             self.mixed_dataset.extend(handler.run(self.model is not None))
