@@ -11,4 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from ms_service_profiler.profiler import Profiler, Level
+from vllm_profiler.vllm_profiler_core.vllm_hookers import all_hookers
+
+for hook_cls in all_hookers:
+    hooker = hook_cls()
+    if hooker.support_version("0.6.3"):
+        hooker.init()
