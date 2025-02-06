@@ -7,11 +7,12 @@ import functools
 import sys
 
 
-class vLLMHookerBase():
+class vLLMHookerBase:
 
     def do_hook(self, hook_points, profiler_func_maker, pname=None):
         for ori_func in hook_points:
             profiler_func = profiler_func_maker(ori_func)
+
             @functools.wraps(ori_func)
             def replace_func(*args, **kwargs):
                 if pname is not None and self.get_parents_name(ori_func) != pname:
@@ -23,7 +24,6 @@ class vLLMHookerBase():
     @abstractmethod
     def init(self):
         pass
-
 
     def get_parents_name(self, ori_func, index=1):
         gen = traceback.walk_stack(None)

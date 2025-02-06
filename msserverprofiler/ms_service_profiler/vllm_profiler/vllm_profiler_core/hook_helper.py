@@ -32,7 +32,7 @@ class HookHelper:
             logging.warning(warning_msg)
             raise ValueError(warning_msg)
         module = importlib.import_module(function_ins.__module__)
-        qualified_name = function_ins.__qualname__.split('.')
+        qualified_name = function_ins.__qualname__.split(".")
         classes = qualified_name[:-1]
         attr_name = qualified_name[-1]
         location = module
@@ -42,7 +42,7 @@ class HookHelper:
                 break
 
         if location is None:
-            warning_msg = "{} do not exists".format('.'.join(classes))
+            warning_msg = "{} do not exists".format(".".join(classes))
             logging.warning(warning_msg)
             raise ValueError(warning_msg)
         return location, attr_name
@@ -58,6 +58,6 @@ class HookHelper:
     def _get_method(self, func):
         if inspect.isclass(self.location):
             func_cls_name = inspect.getattr_static(self.location, self.attr_name).__class__.__name__
-            if func_cls_name in ('staticmethod', 'classmethod'):
+            if func_cls_name in ("staticmethod", "classmethod"):
                 return staticmethod(func)
         return func
