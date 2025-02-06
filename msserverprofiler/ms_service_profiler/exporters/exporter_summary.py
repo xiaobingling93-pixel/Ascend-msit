@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -319,6 +320,8 @@ def save_dataframe_to_csv(map_data, output, file_name, include_stats=1):
 
     # 保存到csv
     df.to_csv(file_path, index=False)
+
+    os.chmod(file_path, 0o640)
 
 
 def convert_map_to_dataframe(map_data, include_stats):
