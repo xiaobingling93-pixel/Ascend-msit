@@ -627,7 +627,7 @@ class Calibrator(object):
                     deq_scale_dict[name] = self.quant_param_dict.get(name + '.deq_scale')
                     scale_dict[name] = self.quant_param_dict.get(name + '.input_scale')
                     offset_dict[name] = self.quant_param_dict.get(name + '.input_offset')
-                if self.cfg.model_quant_type in [QuantType.W8A16, QuantType.W4A16, QuantType.W8A8_DYNAMIC]:
+                if self.cfg.model_quant_type in [QuantType.W8A16, QuantType.W4A16, QuantType.W8A8_DYNAMIC, QuantType.W8A8]:
                     scale_dict[name] = self.quant_param_dict.get(name + '.weight_scale')
                     offset_dict[name] = self.quant_param_dict.get(name + '.weight_offset')
             if self.use_kvcache_quant:
@@ -643,7 +643,7 @@ class Calibrator(object):
             self.save_param(output_path, "input_offset.npy", offset_dict)
             self.save_param(output_path, "quant_bias.npy", quant_bias_dict)
             self.save_param(output_path, "deq_scale.npy", deq_scale_dict)
-        if self.cfg.model_quant_type in [QuantType.W8A16, QuantType.W4A16, QuantType.W8A8_DYNAMIC]:
+        if self.cfg.model_quant_type in [QuantType.W8A16, QuantType.W4A16, QuantType.W8A8_DYNAMIC, QuantType.W8A8]:
             self.save_param(output_path, "weight_scale.npy", scale_dict)
             self.save_param(output_path, "weight_offset.npy", offset_dict)
         if self.use_kvcache_quant:
@@ -750,7 +750,7 @@ class Calibrator(object):
                         model_quant_type = QuantType.W8A8_DYNAMIC
 
                     # W4A16/W8A16 需要提供 weight_scale、weight_offset
-                    if model_quant_type in [QuantType.W8A16, QuantType.W4A16, QuantType.W8A8_DYNAMIC]:
+                    if model_quant_type in [QuantType.W8A16, QuantType.W4A16, QuantType.W8A8_DYNAMIC, QuantType.W8A8]:
                         self.quant_param_dict[name + '.weight_scale'] = weight_scale
                         self.quant_param_dict[name + '.weight_offset'] = weight_offset
                         self.quantized_module_param_dict[name + '.weight'].append(name + '.weight_scale')
