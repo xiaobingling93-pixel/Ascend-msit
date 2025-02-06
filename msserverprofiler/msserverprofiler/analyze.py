@@ -17,11 +17,12 @@ import argparse
 from pathlib import Path
 
 from ms_service_profiler.parse import parse, preprocess_prof_folders
-from ms_service_profiler.exporters.exporter_summary import ExporterSummary
 from ms_service_profiler.exporters.factory import ExporterFactory
 from ms_service_profiler.exporters.utils import check_input_path_valid, check_output_path_valid, create_sqlite_db
 from ms_service_profiler.plugins import custom_plugins
 from ms_service_profiler.utils.log import set_log_level
+
+from msserverprofiler.exporters.exporter_summary import ExporterSummary
 
 
 def add_summary_exporter(func):
