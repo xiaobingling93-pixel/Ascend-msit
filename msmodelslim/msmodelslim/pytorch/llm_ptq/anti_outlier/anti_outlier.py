@@ -411,6 +411,8 @@ class AntiOutlier(object):
         # buffer the latest tensor
         if name not in act_stats:
             act_stats[name] = {}
+            if self.cfg.anti_method != 'm6' or not is_flex_enabled(self.cfg.flex_config):
+                act_stats[name][TENSOR] = tensor
 
         hidden_dim = tensor.shape[-1]
         tensor = tensor.reshape(-1, hidden_dim).detach()  # [N,C]
@@ -427,8 +429,6 @@ class AntiOutlier(object):
                 act_stats[name][TENSOR] = [tensor.to("cpu").reshape(-1, tensor.shape[-1])]
             else:
                 act_stats[name][TENSOR].append(tensor.to("cpu").reshape(-1, tensor.shape[-1]))
-        else:
-            act_stats[name][TENSOR] = tensor
 
         # collect the min-max value
         if STAT_KEY_MAX in stat_dict:
