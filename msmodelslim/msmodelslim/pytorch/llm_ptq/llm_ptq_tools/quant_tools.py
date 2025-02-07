@@ -627,7 +627,8 @@ class Calibrator(object):
                     deq_scale_dict[name] = self.quant_param_dict.get(name + '.deq_scale')
                     scale_dict[name] = self.quant_param_dict.get(name + '.input_scale')
                     offset_dict[name] = self.quant_param_dict.get(name + '.input_offset')
-                if self.cfg.model_quant_type in [QuantType.W8A16, QuantType.W4A16, QuantType.W8A8_DYNAMIC, QuantType.W8A8]:
+                if self.cfg.model_quant_type in [QuantType.W8A16, QuantType.W4A16, QuantType.W8A8_DYNAMIC, \
+                                                 QuantType.W8A8]:
                     scale_dict[name] = self.quant_param_dict.get(name + '.weight_scale')
                     offset_dict[name] = self.quant_param_dict.get(name + '.weight_offset')
             if self.use_kvcache_quant:
