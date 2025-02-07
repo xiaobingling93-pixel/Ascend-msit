@@ -32,15 +32,15 @@ SUPPORT_METHOD = (QUANTILE, STD)
 def check_tensor_list(calib_data_item):
     for item in calib_data_item:
         if not isinstance(item, torch.Tensor):
-            return False
-    return True
+            return True
+    return False
 
 
 def check_tensor_dict(calib_data_item):
     for _, value in calib_data_item.items():
         if not isinstance(value, torch.Tensor):
-            return False
-    return True
+            return True
+    return False
 
 
 def check_calib_data(calib_data):
