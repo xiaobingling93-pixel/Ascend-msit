@@ -1,112 +1,128 @@
-### 公告
-```
-为了符合MindStudio对工具命名的统一规范，AIT将改名为msIT。
-相关工具命令行和python库名也会做相应变更，如对您业务有影响，请及时适配，并向各位业务组或项目组内的同事传达。
-以下是具体修改信息：
+#  msit使用手册
 
-1.命令行变更：原ait命令行将变更为msit。为了业务兼容与稳定，我们会保留ait命令行直到2024年9月30日；
-2.python库名变更：原ait_llm将变更为msit_llm，同样地，ait_llm的对外接口也会保留到2024年9月30日。
-3.ait命令下线：10月30日起，所有ait相关的命令已经下线，请使用msit进行替代。
+msit(MindStudio Inference Tools)作为昇腾统一推理工具，提供一体化开发功能，帮助用户进行模型迁移以及性能与精度的调试调优。目前，该工具包括 benchmark、debug、analyze、convert、profile、llm、tensor-view 等组件。
 
-请知悉以上修改内容，如有任何疑问或需要进一步协助，请通过以下方式随时与我们联系。谢谢！
-```
-[Issue](https://gitee.com/ascend/msit/issues) | [昇腾社区MindStudio问题求助](https://www.hiascend.com/forum/forum-0106101385921175006-1.html?filterCondition=1&topicClassId=0606101390016536003) | [昇腾社区工单系统](https://www.hiascend.com/feedback/add)
+## 安装说明
+环境依赖及工具安装详见[一体化安装指导](./docs/install/README.md)
 
-#  msIT
-
-## 目录
-- [msIT](#msit)
-  - [目录](#目录)
-  - [介绍](#介绍)
-    - [模型推理迁移全流程](#模型推理迁移全流程)
-    - [大模型推理迁移全流程](#大模型推理迁移全流程)
-    - [msIT各子功能介绍](#msit各子功能介绍)
-  - [工具安装](#工具安装)
-  - [工具使用](#工具使用)
-    - [命令行格式说明](#命令行格式说明)
-  - [参考](#参考)
-    - [msIT资源](#msit资源)
-    - [常见问题FAQ](#常见问题faq)
-  - [许可证](#许可证)
-  - [免责声明](#免责声明)
-
-## 介绍
-msIT(MindStudio Inference Tools)作为昇腾统一推理工具，提供客户一体化开发工具，用于辅助用户进行模型迁移以及性能与精度的调试调优，当前包括benchmark、debug、analyze、llm等组件。
-
-### 模型推理迁移全流程
-![模型推理迁移全流程](../msit-flow.png)
-
-### 大模型推理迁移全流程
-![大模型推理迁移全流程](../msit-llm-flow.png)
-
-### msIT各子功能介绍
-| 任务类型                                  | 子功能                                 | 说明                                       |
-|---------------------------------------|-------------------------------------|------------------------------------------|
-| [benchmark](./docs/benchmark)     | -                                   | 用来针对指定的推理模型运行推理程序，并能够测试推理模型的性能（包括吞吐率、时延） |
-| debug(一站式调试)                          | [surgeon](./docs/debug/surgeon) | 使能ONNX模型在昇腾芯片的优化，并提供基于ONNX的改图功能          |
-| debug(一站式调试)                          | [compare](./docs/debug/compare) | 提供自动化的推理场景精度比对，用来定位问题算子                  |
-| debug(一站式调试)                          | [dump](./docs/debug/dump)       | 提供传统模型的数据dump功能                          |
-| debug(一站式调试)                          | [opcheck](./docs/debug/opcheck)       | 提供基于GE推理后dump数据的算子精度预检能力          |
-| [analyze](./docs/analyze)   | -                                   | 提供其他平台模型迁移至昇腾平台的支持度分析功能                  |
-| [convert](./docs/convert)   | -                                   | 提供推理模型转换功能                               |
-| [profile](./docs/profile)         | -                                   | 提供profiling，提供整网详细的性能数据及相关信息             |
-| [llm](./docs/llm/README.md)       | -                                   | 提供加速库（atb）大模型推理调试工具，包括数据dump功能和数据比对功能    |
-| [tensor-view](./docs/tensor_view) | -                                   | 提供查看、切片、转置、保存tensor的接口                   |
-| [graph](./docs/graph)            | -                                   | 提供基于GE（Graph Engine，图引擎）的图统计、压缩、截取、性能分析等功能  |
-
-
-## 工具安装
-[一体化安装指导](./docs/install/README.md)
-
-
-## 工具使用
-
-### 命令行格式说明
-
-msit工具可通过msit可执行文件方式启动，若安装工具时未提示Python的PATH变量问题，或手动将Python安装可执行文件的目录加入PATH变量，则可以直接使用如下命令格式：
+## 工具使用说明
+msit工具通过命令行方式启动。
+如果在工具安装时没有遇到 Python 的 PATH 变量问题，或已经手动将 Python 可执行文件的目录添加到 PATH 变量中，则可以直接使用如下命令格式运行：
 
 ```bash
 msit <TASK> <SUB_TASK> [OPT] [ARGS]
 ```
-
-
-其中，```<TASK>```为任务类型，当前支持debug、benchmark、analyze、convert、profile、llm、tensor-view，后续可能会新增其他任务类型，可以通过如下方式```查看当前支持的任务列表```：
-
+例如使用llm的dump功能，启动命令为：
 ```bash
-msit -h
+msit llm dump <options>
 ```
+- `<TASK>` 为任务类型，当前支持 debug、benchmark、analyze、convert、profile、llm、graph、tensor-view，具体任务介绍查看 [各组件功能介绍章节](#各组件功能介绍)；
+- 或通过如下方式```查看当前支持的任务列表```：
 
-```<SUB_TASK>```为子任务类型，当前在debug任务下面，有surgeon、compare，当前在profile任务下面，有msprof;
-当前benchmark、analyze、convert任务没有子任务类型。后续其他任务会涉及扩展子任务类型，可以通过如下方式查看每个任务支持的```子功能列表```：
+    ```bash
+    msit -h
+    ```
 
-```bash
-msit debug -h
-```
+- `<SUB_TASK>` 为 `<TASK>` 下包含的子任务类型，以 `debug` 任务为例，可以通过如下方式查看每个任务支持的```子功能列表```：
+
+    ```bash
+    msit debug -h
+    ```
 
 
-```[OPT]```和```[ARGS]```为可选项以及参数，每个任务下面的可选项和参数都不同，以```debug任务下面的compare子任务```为例，可以通过如下方式```获取可选项和参数```
+- ```[OPT]``` 和 ```[ARGS]``` 为可选项及参数，每个任务下的可选项和参数可能不同，以 ```debug``` 任务下的 ```compare``` 子任务为例，可以通过如下方式```获取可选项和参数```
 
+    ```bash
+    msit debug compare -h
+    ```
+  
+## 各组件功能介绍
+### 1. LLM
+提供[**MindIE**](https://www.hiascend.com/software/mindie) 和 [**torchair**](/msit/docs/glossary/README.md#torchairtorch-图模式)框架下的[大模型推理调试工具](./docs/llm/README.md) ，包括以下模块：
 
-```bash
-msit debug compare -h
-```
-msit的其他参数可参考 [一体化安装指导](/msit/docs/install/README.md)
-## 参考
+#### 1.1 Dump
+提供了大模型推理过程的数据 dump 功能。包括以下两部分：
 
-### msIT资源
+[atb dump快速入门指南](./docs/llm/工具-DUMP加速库数据使用说明.md)\
+[pytorch dump快速入门指南](./docs/llm/工具-DUMP在线推理数据使用说明.md)
+#### 1.2 Compare
+提供大模型推理的自动比对功能，快速定位算子精度问题。
 
-* [msIT benchmark 快速入门指南](/msit/docs/benchmark/README.md)
-* [msIT debug surgeon 快速入门指南](/msit/docs/debug/surgeon/README.md)
-* [msIT debug compare 快速入门指南](/msit/docs/debug/compare/README.md)
-* [msIT analyze 快速入门指南](/msit/components/analyze/README.md)
-* [msIT convert 快速入门指南](/msit/components/convert/README.md)
-* [msIT profile 快速入门指南](/msit/docs/profile/README.md)
-* [msIT llm 快速入门指南](/msit/components/llm/)
+[compare快速入门指南](./docs/llm/工具-自动比对功能使用说明.md)
 
-### 常见问题FAQ
+#### 1.3 OpCheck
+提供加速库（atb）的单算子精度预检功能，检测加速库算子精度是否达标。
 
-* [msIT使用以及安装常见问题](https://gitee.com/ascend/msit/wikis/Home)
-* [msIT安全拦截报错解决](https://gitee.com/ascend/msit/wikis/ait_security_error_log_solution)
+[opcheck快速入门指南](./docs/llm/工具-精度预检使用说明.md)
+
+#### 1.4 ErrCheck
+提供异常检测能力，目前仅支持算子溢出检测。
+
+[异常检测使用说明](./docs/llm/工具-异常检测使用说明.md)
+
+#### 1.5 Transform
+提供PyTorch框架下模型迁移生成atb模型能力。
+
+[llm模型迁移快速入门指南](./docs/llm/工具-llm模型迁移分析使用说明.md)
+
+### 2. Debug
+提供一站式调试功能，用于传统小模型下定位用户推理过程中的问题，确保模型的正确性。该模块包括：
+
+#### 2.1 Dump
+提供了传统小模型场景下的数据 dump 功能，适用于TensorFlow、TensorFlow 2.0、ONNX、Caffe、MindIE-Torch框架。
+
+[dump快速入门指南](./docs/debug/dump/README.md) 
+
+#### 2.2 Compare
+提供了传统小模型推理场景下的自动化比对功能，用于定位问题算子，适用于TensorFlow、TensorFlow 2.0、ONNX、Caffe、MindIE-Torch框架。
+
+ [compare快速入门指南](./docs/debug/compare/README.md)
+
+#### 2.3 OpCheck
+提供了传统小模型场景下精度预检功能，支持对经过GE推理后 dump 落盘数据进行算子精度预检，检测kernel级别的算子精度是否达标。\
+**注:** 目前只支持TensorFlow 2.6.5
+
+[opcheck快速入门指南](./docs/debug/opcheck/README.md) 
+
+#### 2.4 Surgeon
+使能ONNX模型在昇腾芯片的优化，并提供基于ONNX的改图功能。
+
+[surgeon快速入门指南](./docs/debug/surgeon/README.md)
+
+### 3. Analyze
+提供模型从其他平台迁移至昇腾平台的支持度分析功能,分析算子支持情况、算子定义是否符合约束条件和算子输入是否为空。
+
+[analyze快速入门指南](./components/analyze/README.md) 
+
+### 4. Convert
+提供将ONNX、TensorFlow、Caffe、MindSpore等框架的模型文件转化为OM类型文件的功能，并支持调优。
+
+[convert快速入门指南](./docs/convert/README.md)
+
+### 5. Profile
+提供性能分析功能，面向OM类型文件（由onnx等文件转换为的离线模型）在昇腾设备上进行模型推理性能分析，提供整网详细的性能数据及相关信息。
+
+[profile快速入门指南](./docs/profile/README.md)
+
+### 6. Benchmark
+针对指定的推理模型运行推理程序，并能够测试推理模型的性能（包括吞吐率、时延），帮助用户评估推理模型的表现。
+
+[benchmark快速入门指南](./docs/benchmark/README.md) 
+
+### 7. Graph
+提供基于GE（Graph Engine，图引擎）的图统计、压缩、截取、性能分析等功能。
+
+[graph快速入门指南](./docs/graph/README.md) 
+
+### 8. Tensor-view
+提供了查看tensor的接口，并能够对tensor进行链式切片、转置操作。
+
+[tensor-view快速入门指南](./docs/tensor_view/README.md)
+
+## FAQ
+
+* [msit使用以及安装常见问题](https://gitee.com/ascend/msit/wikis/Home)
+* [msit安全拦截报错解决](https://gitee.com/ascend/msit/wikis/ait_security_error_log_solution)
 
 ## 许可证
 

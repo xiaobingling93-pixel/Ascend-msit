@@ -24,6 +24,16 @@ from msmodelslim.pytorch.llm_ptq.hooks.factory import get_process_hooks
 from msmodelslim.pytorch.llm_ptq.accelerate_adapter import enabled_adapter
 from msmodelslim import logger as msmodelslim_logger
 
+from msmodelslim.pytorch.llm_ptq.accelerate_adapter import (PrepareWeight,
+                                                            move_update_weight_hook_if_need,
+                                                            check_model_compatible,
+                                                            get_offloaded_dataset,
+                                                            MemoryStateDictConfig,
+                                                            DiskStateDictConfig,
+                                                            copy_offloaded_state_dict,
+                                                            enable_adapter,
+                                                            replace_device_align_hook_if_needed)
+                                                            
 try:
     import torch_npu
 except ImportError:
@@ -44,6 +54,14 @@ from msmodelslim.pytorch.llm_ptq.anti_outlier.anti_utils import (
     weight_aware,
 )
 
+_FLEX_SMOOTH_IMPORTED = False
+try:
+    from msmodelslim.pytorch.llm_ptq.anti_outlier.flex_smooth import flex_smooth
+except ImportError:
+    pass
+else:
+    _FLEX_SMOOTH_IMPORTED = True 
+
 try:
     from msmodelslim.pytorch.llm_ptq.anti_outlier.anti_utils import migration, migration_vit
 except ImportError:
@@ -59,16 +77,6 @@ except ImportError:
     msmodelslim_logger.warning(
         "The current CANN version does not support importing the attach_op and Multiplier packages."
     )
-
-from msmodelslim.pytorch.llm_ptq.accelerate_adapter import (PrepareWeight,
-                                                            move_update_weight_hook_if_need,
-                                                            check_model_compatible,
-                                                            get_offloaded_dataset,
-                                                            MemoryStateDictConfig,
-                                                            DiskStateDictConfig,
-                                                            copy_offloaded_state_dict,
-                                                            enable_adapter,
-                                                            replace_device_align_hook_if_needed)
 
 STAT_KEY_MAX = "max"
 STAT_KEY_MIN = "min"
@@ -253,10 +261,29 @@ class AntiOutlier(object):
                 return
 
         check_type(cfg, AntiOutlierConfig, param_name="config")
+
+        # 校验用户指定的不做异常值抑制的层是否存在
+        quant_name_list = []
+        conv_name_list = []
+        for name, mod in model.named_modules():
+            if isinstance(mod, nn.Linear):
+                quant_name_list.append(name)
+            if isinstance(mod, nn.Conv2d):
+                conv_name_list.append(name)
+        for name in cfg.disable_anti_names:
+            if name not in quant_name_list and name not in conv_name_list:
+                raise ValueError(
+                    f"cfg param `disable_anti_names` has invalid name {name}, "
+                    "please check your anti_outlier config."
+                )
+      
         self.with_accelerate = judge_model_with_accelerate(model)
 
         self.cfg = cfg
         self.device = self.cfg.device
+
+        if self.cfg.anti_method == "m6" and not _FLEX_SMOOTH_IMPORTED:
+            raise ImportError("CANN Toolkit version not match msmodelslim version, `m6` flex smooth not usable.")
 
         self.is_context_embedder_model = False
         if SD3_CONTEXT_EMBEDDER + ".weight" in model.state_dict().keys():
@@ -288,8 +315,8 @@ class AntiOutlier(object):
         
         self.hooks = get_process_hooks(model)
 
-        # 非m4或m5场景下，保存anti_outlier处理前的原始权重，为避免显存的额外占用，原始权重放在内存上
-        if self.cfg.anti_method not in ['m4', 'm5']:
+        # 非m4,m5,m6场景下，保存anti_outlier处理前的原始权重，为避免显存的额外占用，原始权重放在内存上
+        if self.cfg.anti_method not in ['m4', 'm5', 'm6']:
             states_dic = copy_state_dict(model, self.cfg.offload_type)
 
         try:
@@ -331,9 +358,11 @@ class AntiOutlier(object):
         except Exception as e:
             raise Exception("Please check your config, model and input!", e) from e
 
-        # 非m4或m5场景下，保存anti_outlier处理前的原始权重，作为属性存入model中
-        if self.cfg.anti_method not in ['m4', 'm5']:
+        # 非m4,m5,m6场景下，保存anti_outlier处理前的原始权重，作为属性存入model中
+        if self.cfg.anti_method not in ['m4', 'm5', 'm6']:
             setattr(self.model, 'ori_state_dict', states_dic)
+        else:
+            setattr(self.model, 'anti_method', self.cfg.anti_method)
 
     def init_dag(self):
         if self.is_context_embedder_model:
@@ -357,7 +386,7 @@ class AntiOutlier(object):
                 dag = extract_dag(self.model, dummy_input,
                                 hook_nodes=norm_class, anti_method=self.cfg.anti_method)
                 self.norm_linear_subgraph = dag.get_norm_linear_subgraph()
-                if self.cfg.anti_method == 'm4':
+                if self.cfg.anti_method in ['m4', 'm6']:
                     self.linear_linear_subgraph = dag.get_linear_linear_subgraph()
                     self.norm_linear_subgraph.update(self.linear_linear_subgraph)
                 del dag
@@ -365,8 +394,8 @@ class AntiOutlier(object):
         if not enabled_adapter():
             del self.model
             self.model = self.org_model
-
-        replace_rms_norm(self.model, self.norm_class_name)
+        if self.cfg.anti_method != "m6":
+            replace_rms_norm(self.model, self.norm_class_name)
         gc.collect()
         return
 
@@ -382,7 +411,7 @@ class AntiOutlier(object):
         # buffer the latest tensor
         if name not in act_stats:
             act_stats[name] = {}
-            if not self.is_context_embedder_model:
+            if self.cfg.anti_method != 'm6' or not is_flex_enabled(self.cfg.flex_config):
                 act_stats[name][TENSOR] = tensor
 
         hidden_dim = tensor.shape[-1]
@@ -391,6 +420,15 @@ class AntiOutlier(object):
         coming_min = torch.min(tensor, dim=0)[0]  # [C]
 
         stat_dict = act_stats[name]
+
+        def is_flex_enabled(flex_config):
+            return flex_config['alpha'] is None or flex_config['beta'] is None
+    
+        if self.cfg.anti_method == 'm6' and is_flex_enabled(self.cfg.flex_config):
+            if TENSOR not in act_stats[name]:
+                act_stats[name][TENSOR] = [tensor.to("cpu").reshape(-1, tensor.shape[-1])]
+            else:
+                act_stats[name][TENSOR].append(tensor.to("cpu").reshape(-1, tensor.shape[-1]))
 
         # collect the min-max value
         if STAT_KEY_MAX in stat_dict:
@@ -448,7 +486,7 @@ class AntiOutlier(object):
             stat_dict[STAT_KEY_SMOOTH_SCALE_MASK] = scale_mask
 
         # if anti_method is m4, set tensor_shift to False
-        tensor_shift = self.cfg.ch_align and not self.cfg.anti_method == 'm4'
+        tensor_shift = self.cfg.ch_align and self.cfg.anti_method not in ['m4', 'm6']
         if tensor_shift:
             channel_max = torch.max((tensor - stat_dict[STAT_KEY_SHIFT]).abs().detach(), dim=0)[0]
         else:
@@ -487,6 +525,8 @@ class AntiOutlier(object):
 
         for name in act_stats:
             stat_dict = act_stats[name]
+            if isinstance(stat_dict[TENSOR], (list, tuple)):
+                stat_dict[TENSOR] = torch.cat(stat_dict[TENSOR])
             for feature in stat_dict:
                 stat_dict[feature] = stat_dict[feature].to("cpu")
 
@@ -598,7 +638,7 @@ class AntiOutlier(object):
                 return
 
         act_stats = self.os_stats()
-        if self.cfg.anti_method == 'm4':
+        if self.cfg.anti_method in ['m4', 'm6']:
             num_attention_heads = self.get_num_attention_heads()
             fusion_kwargs = {}
         scale_min = SCALE_MIN_LLM
@@ -670,6 +710,17 @@ class AntiOutlier(object):
                         )
                     if attach_op is not None and Multiplier is not None and isinstance(norm_module, Multiplier):
                         attach_op(self.model, norm_module, linear_modules, linear_names)
+                elif self.cfg.anti_method == 'm6':
+                    disable_anti_set = set(self.cfg.disable_anti_names)
+                    if all(linear_name not in disable_anti_set for linear_name in linear_names):
+                        flex_smooth(
+                            self.cfg, 
+                            norm_module,
+                            linear_modules, 
+                            stats, 
+                            num_attention_heads, 
+                            **self.cfg.flex_config
+                        )
 
 
 def get_config():

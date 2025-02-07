@@ -20,7 +20,7 @@ AntiOutlierAdapter(model, calib_data=None, cfg=None, norm_class_name = None)
 根据实际需求，在QuantConfig初始化中完成所有参数的配置。
 ```python
 from msmodelslim.pytorch.llm_ptq.anti_outlier import AntiOutlierConfig
-from msmodelslim.pytorch.mindspeed import ModelAdapter, AntiOutlierAdapter, CalibratorAdapter
+from msmodelslim.pytorch.mindspeed_adapter import ModelAdapter, AntiOutlierAdapter, CalibratorAdapter
 anti_config = AntiOutlierConfig(anti_method="m5", dev_type='npu')
 anti_outlier = AntiOutlier(model, calib_data=dataset_calib, cfg=anti_config)
 anti_outlier.process() 
