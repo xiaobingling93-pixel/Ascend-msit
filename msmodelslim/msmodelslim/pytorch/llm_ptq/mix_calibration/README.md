@@ -1,0 +1,142 @@
+## CalibrationData 使用方法说明
+
+### 功能说明
+混合校准集接口，通过CalibrationData类混合指定的数据集，支持用户自定义数据集
+
+### 接口说明
+请参考 [CalibrationData](../../../../docs/Python-API接口说明/大模型压缩接口/大模型量化接口/CalibrationData.md)
+
+操作步骤：
+1. 前提条件：config文件，用于配置基础数据集的路径，名称包括 boolq、ceval_5_shot、gsm8k、mmlu
+    <br>数据集下载链接
+    ```
+    https://huggingface.co/datasets/ceval/ceval-exam
+    https://huggingface.co/datasets/google/boolq
+    https://huggingface.co/datasets/cais/mmlu
+    https://huggingface.co/datasets/openai/gsm8k
+    ```
+2. 如需正样本混合校准集，需要实例化tokenizer和model；否则设置为None
+3. 如需自定义数据集，创建自定义数据集处理类，继承自DatasetProcessorBase类，并重写process_data()和verify_positive_prompt()方法
+4. 实例化CalibrationData
+5. 如有自定义数据集，通过add_custormized_dataset_processor()接口传入自定义数据集名称和处理类的实例
+6. 设置样本数量，通过set_sample_size()接口
+7. 设置batch_size，通过set_batch_size()接口
+8. 设置随机种子，通过set_shuffle_seed()接口
+
+### config文件示例
+```json
+{"configurations": 
+    [
+        {
+          "dataset_name": "boolq",
+          "dataset_path": "./boolq/dev.jsonl"
+        },
+        {
+          "dataset_name": "ceval_5_shot",
+          "dataset_path": "./ceval_5_shot/"
+        },
+        {
+          "dataset_name": "gsm8k",
+          "dataset_path": "./gsm8k/GSM8K.jsonl"
+        },
+        {
+          "dataset_name": "mmlu",
+          "dataset_path": "./mmlu/"
+        }
+    ]  
+}
+```
+
+### 调用示例
+```python
+from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig 
+
+from msmodelslim.pytorch.llm_ptq.mix_calibration.calib_select import CalibrationData
+from msmodelslim.pytorch.llm_ptq.mix_calibration.dataset_processor_base import DatasetProcessorBase # 用户自定义数据集时需要引入
+
+class CustomizedProcessor(DatasetProcessorBase):
+    def __init__(self, dataset_path, tokenizer=None, model=None):
+        super().__init__(dataset_path, tokenizer, model)
+        pass
+    
+    def process_data(self, indexs):
+        """用于获取一组样本，输出为[{"prompt": prompt1, "ans": ans1},{"prompt": prompt2, "ans": ans2}]"""
+        pass
+    
+    def verify_positive_prompt(self, prompts, labels):
+        """用于验证一组prompts中的正样本，labels为对应标签，输出为[{"prompt": prompt1, "ans": ans1},{"prompt": prompt2, "ans": ans2}]"""
+        pass
+
+MODEL_PATH = "./model"
+CONFIG_PATH = "./mix_config.json"
+SAVE_PATH = "./mix_dataset.json"
+
+config = AutoConfig.from_pretrained(MODEL_PATH, trust_remote_code=True)
+tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path=MODEL_PATH,
+                                          trust_remote_code=True)
+model = AutoModelForCausalLM.from_pretrained(pretrained_model_name_or_path=MODEL_PATH,
+                                             trust_remote_code=True,
+                                             config=config,
+                                             torch_dtype='auto',
+                                             device_map='auto')
+
+# 基础支持的校准集包括boolq、ceval_5_shot、gsm8k、mmlu。 customized_dataset_name为用户自定义数据集名称
+# 当sample_size中设置了非config.json中配置的数据集且非用户自定义数据集名称时，会报错“Dataset {dataset_name} has no handler”
+# 当sample_size为空时，返回空结果
+sample_size = {"boolq": 4, "ceval_5_shot": 3, "gsm8k": 3, "mmlu": 2, "customized_dataset_name": 3}
+
+# 用户自定义数据集
+customized_dataset_path = "./customized_dataset"
+customized_processor = CustomizedProcessor(customized_dataset_path, tokenizer=tokenizer, model=model)
+
+calib_select = CalibrationData(config_path=CONFIG_PATH, save_path=SAVE_PATH, tokenizer=tokenizer, model=model)  # 若不需要正样本，tokenizer和model均置为None
+calib_select.add_custormized_dataset_processor("customized_dataset_name", customized_processor)     # 该调用需在设置采样数量之前
+calib_select.set_sample_size(sample_size)
+calib_select.set_batch_size(4)  # 该调用仅用于设置获取正样本时的batch，不对输出产生影响， 输入为int类型
+calib_select.set_shuffle_seed(1)
+
+mixed_dataset = calib_select.process()
+print(mixed_dataset)
+```
+
+### 混合校准集解析使用示例
+通过get_anti_dataset()方法的输出可以应用于离群值抑制模块``AntiOutlier(model, calib_data=dataset_calib, cfg=anti_config)``中``calib_data``的输入 <br>
+通过get_calib_dataset()方法的输出可以应用于量化模块``Calibrator(model, quant_config, calib_data=dataset_calib, disable_level='L0')``中``calib_data``的输入
+```python
+import torch
+import torch.nn.funtional as F
+
+def get_anti_dataset(tokenizer, mixed_dataset, device="npu"):
+    """用于离群值抑制的校准集"""
+    anti_data = []
+    for prpt_ans in mixed_dataset:
+        calib_dataset = []
+        calib_list = [prpt_ans["prompt"]]
+        max_len = 0
+        for calib_data in calib_list:
+            inputs = tokenizer(calib_data, return_tensors='pt')
+            calib_dataset.append(inputs.data['input_ids'].to(device))
+            max_len = max(max_len, inputs.data['input_ids'].size(1)) 
+        for i in range(len(calib_dataset)):
+            calib_dataset[i] = F.pad(calib_dataset[i], (0, max_len - calib_dataset[i].size(1)), value=0)
+        anti_data.append(torch.cat(calib_dataset))
+    
+    anti_dataset = []
+    for data in anti_data:
+        anti_dataset.append([data])
+    
+    return anti_dataset
+
+def get_calib_dataset(tokenizer, mixed_dataset, device='npu'):
+    """用于量化的校准集"""
+    dataset_calib = []
+    for prpt_ans in mixed_dataset:
+        calib_list = [prpt_ans["prompt"]]
+        calib_dataset = []
+        for calib_data in calib_list:
+            inputs = tokenizer(calib_data, return_tensors='pt').to(device)
+            calib_dataset.append([inputs.data['input_ids']])
+        dataset_calib += calib_dataset
+
+    return dataset_calib
+```
