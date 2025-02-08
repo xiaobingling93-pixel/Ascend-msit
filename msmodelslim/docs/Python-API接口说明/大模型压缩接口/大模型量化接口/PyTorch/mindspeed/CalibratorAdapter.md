@@ -20,7 +20,7 @@ CalibratorAdapter(model, cfg: quantconfig, calib_data=None, disable_level='L0', 
 ### 调用示例
 根据实际需求，在QuantConfig初始化中完成所有参数的配置。
 ```python
-from msmodelslim.pytorch.mindspeed import ModelAdapter, CalibratorAdapter
+from msmodelslim.pytorch.mindspeed_adapter import ModelAdapter, CalibratorAdapter
 model = ModelAdapter(model)
 quant_config = QuantConfig(dev_type='npu', pr=0.5, mm_tensor=Flase)
 calibrator = CalibratorAdapter(model, quant_config, calib_data=dataset_calib, disable_level='L0')
