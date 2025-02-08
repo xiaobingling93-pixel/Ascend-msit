@@ -29,6 +29,9 @@ class ConcatOperation(OperationTest):
                 ori_format = attr['value']['s']
             if attr['key'] == 'origin_shape':
                 ori_shape = attr['value']['list']['i']
+        if 'axis' not in locals():
+            axis = in_tensors[-1].item()
+            in_tensors = in_tensors[:-1]
         concat_dim = update_axis_for_npu_inner_format(ori_shape, axis, input_format, ori_format)
         return [np.concatenate(in_tensors, axis=concat_dim)]
 
