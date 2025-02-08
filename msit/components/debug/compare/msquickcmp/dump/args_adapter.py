@@ -33,6 +33,7 @@ class DumpArgsAdapter:
                  saved_model_tag_set="",
                  device_pattern="",
                  tf_json_path="",
+                 fusion_switch_file="",
                  custom_op="",
                  dump=True,
                  single_op="",
@@ -51,6 +52,7 @@ class DumpArgsAdapter:
         self.saved_model_tag_set = saved_model_tag_set
         self.device_pattern = device_pattern
         self.tf_json_path = tf_json_path
+        self.fusion_switch_file = fusion_switch_file
         self.custom_op = custom_op
         self.dump = dump
         self.single_op = single_op
