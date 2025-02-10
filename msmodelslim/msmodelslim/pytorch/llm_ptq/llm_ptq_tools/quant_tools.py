@@ -1155,6 +1155,8 @@ def disable_calibration(model, logger=None, custom_class=None, use_fa_quant=Fals
     for module in model.modules():
         if isinstance(module, Quantizer):
             module.disable_calib()
+        if isinstance(module, LowBitQuantizer):
+            module.disable_calib()
         if custom_class and isinstance(module, custom_class):
             module.disable_calib()
         if isinstance(module, ParallelLinearCol):
