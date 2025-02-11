@@ -25,14 +25,8 @@ from components.utils.check.rule import Rule
 from components.utils.file_open_check import ms_open, FileStat
 from msit_llm.common.log import logger
 from msit_llm.common.constant import GLOBAL_HISTORY_AIT_DUMP_PATH_LIST, RAW_INPUT_PATH
-from msit_llm.common.utils import load_file_to_read_common_check
+from msit_llm.common.utils import load_file_to_read_common_check, NAMEDTUPLE_PRECISION_MODE
 from components.utils.constants import TENSOR_MAX_SIZE
-
-
-NAMEDTUPLE_PRECISION_METRIC = namedtuple('precision_metric', ['abs', 'kl', 'cos_sim'])('abs', 'kl', 'cos_sim')
-NAMEDTUPLE_PRECISION_MODE = namedtuple(
-    'precision_mode', ["keep_origin_dtype", "force_fp16", "force_fp32"]
-)("keep_origin_dtype", "force_fp16", "force_fp32")
 
 
 class OpChecker:

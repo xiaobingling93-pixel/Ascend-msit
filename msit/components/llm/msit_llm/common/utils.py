@@ -16,6 +16,7 @@
 import os
 import argparse
 import re
+from collections import namedtuple
 
 from components.utils.constants import PATH_WHITE_LIST_REGEX
 from components.utils.util import check_file_size_based_on_ext, check_file_ext
@@ -26,6 +27,11 @@ from msit_llm.common.log import logger
 
 STR_WHITE_LIST_REGEX = re.compile(r"[^_A-Za-z0-9\"'><=\[\])(,}{: /.~-]")
 INVALID_CHARS = ['|', ';', '&', '&&', '||', '>', '>>', '<', '`', '\\', '!', '\n']
+
+NAMEDTUPLE_PRECISION_METRIC = namedtuple('precision_metric', ['abs', 'kl', 'cos_sim'])('abs', 'kl', 'cos_sim')
+NAMEDTUPLE_PRECISION_MODE = namedtuple(
+    'precision_mode', ["keep_origin_dtype", "force_fp16", "force_fp32"]
+)("keep_origin_dtype", "force_fp16", "force_fp32")
 
 
 def str2bool(v):

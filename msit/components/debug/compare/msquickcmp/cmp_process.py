@@ -208,6 +208,7 @@ def dump_and_compare(args, use_cli):
     args.offline_model_path = os.path.realpath(args.offline_model_path)
     args.cann_path = os.path.realpath(args.cann_path)
     args.input_path = convert_npy_to_bin(args.input_path)
+    args.fusion_switch_file = os.path.realpath(args.fusion_switch_file) if args.fusion_switch_file else None
     is_mindir_compare_accuracy = mindir_to_om_process(args)
     try:
         check_and_run(args, use_cli)
@@ -394,6 +395,8 @@ def check_and_run(args: CmpArgsAdapter, use_cli: bool):
         utils.check_file_or_directory_path(args.weight_path)
     utils.check_device_param_valid(args.device)
     utils.check_file_or_directory_path(os.path.realpath(args.out_path), True)
+    if args.fusion_switch_file:
+        utils.check_file_or_directory_path(args.fusion_switch_file)
     utils.check_convert_is_valid_used(args.dump, args.bin2npy, args.custom_op)
     utils.check_locat_is_valid(args.dump, args.locat)
     sp.check_single_op_is_valid(args.single_op, args.dump, args.custom_op, args.locat)
@@ -402,8 +405,9 @@ def check_and_run(args: CmpArgsAdapter, use_cli: bool):
     time_dir = time.strftime("%Y%m%d%H%M%S", time.localtime())
     original_out_path = os.path.realpath(os.path.join(args.out_path, time_dir))
     args.out_path = original_out_path
-
-    fusion_close_model_convert(args)
+    # close fusion if not saved_model
+    if not is_saved_model_valid(args.offline_model_path):
+        fusion_close_model_convert(args)
 
     # deal with the dymShape_range param if exists
     input_shapes = []

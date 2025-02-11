@@ -204,6 +204,8 @@ msit graph inspect -i ./test_pbgraph.pbtxt -t dshape -o ./output
 |--source| 读取的.pbtxt文件 |   是  |
 |--profile| 读取的profiling .csv文件|   是  |
 |--max-nodes| 重复结构允许包含的最大节点个数|  否   |
+|--min-nodes| 重复结构允许包含的最少节点个数|  否   |
+|--min-times| 仅呈现重复结构出现次数不小于该值的结果|  否   |
 |--output| 生成的.csv文件 |   否  |
 
 ### inspect参数

@@ -113,7 +113,7 @@ def get_subtree(nodes, node_name):
     return subtree
 
 
-def generate_subgraphs(root_name, nodes, bfs_nodes):
+def generate_subgraphs(root_name, nodes, bfs_nodes, min_nodes):
     """
     Generate all possible subgraphs by removing non-root nodes iteratively.
 
@@ -122,6 +122,10 @@ def generate_subgraphs(root_name, nodes, bfs_nodes):
     :param bfs_nodes: List of node names forming the initial BFS-generated subgraph.
     :return: Set of tuples representing unique subgraph paths.
     """
+
+    if len(bfs_nodes) < min_nodes:
+        return None
+
     subgraphs = defaultdict(set)
     non_root_nodes = set(bfs_nodes) - {root_name}
 
@@ -140,10 +144,8 @@ def generate_subgraphs(root_name, nodes, bfs_nodes):
             # Calculate the remaining nodes in the subgraph while maintaining order
             remaining_nodes = list(filter(lambda node: node not in removed_nodes, bfs_nodes))
 
-            # Calculate the remaining nodes in the subgraph
-            remaining_nodes = set(bfs_nodes) - removed_nodes
             # Ensure the subgraph contains at least two nodes: root and one child
-            if len(remaining_nodes) >= 2:
+            if len(remaining_nodes) >= min_nodes:
                 subgraph_types = tuple(nodes[node_name].typename for node_name in remaining_nodes)
                 logger.debug(f"subgraph_types: {subgraph_types}")
                 subgraphs[subgraph_types].add(root_name)
@@ -151,7 +153,7 @@ def generate_subgraphs(root_name, nodes, bfs_nodes):
     return subgraphs
 
 
-def find_duplicate_subgraphs(graphs, max_nodes=8):
+def find_duplicate_subgraphs(graphs, max_nodes=8, min_nodes=2):
     """
     Find and count all duplicate subgraphs in the given graph.
 
@@ -168,12 +170,15 @@ def find_duplicate_subgraphs(graphs, max_nodes=8):
             bfs_nodes = bfs_subgraph(node_name, nodes, max_nodes)
             logger.debug(f"------bfs_nodes {bfs_nodes}")
             logger.info(f"processing node {node_name}, {index_counter}/{total_count}")
-            subgraphs = generate_subgraphs(node_name, nodes, bfs_nodes)
+            subgraphs = generate_subgraphs(node_name, nodes, bfs_nodes, min_nodes)
+            if not subgraphs:
+                continue
             logger.debug(f"subgraphs:{subgraphs}")
             index_counter += 1
             for subgraph, roots in subgraphs.items():
                 subgraph_count[subgraph] += 1
                 subgraph_roots[subgraph].extend(roots)
+
     return subgraph_count, subgraph_roots
 
 
@@ -190,10 +195,55 @@ def extract_indices(root_nodes_list):
     return '; '.join(indices)
 
 
-def stat_subgraph(input_path, max_nodes=8):
-    if max_nodes > 10:
-        logger.error(f"max_nodes is too large to calculate, please set it to a number less than 10")
+def process_contained_subgraphs(duplicate_subgraphs):
+    result = []
+    current_count = None
+    current_group = []
+
+    def contains(small, big):
+        return all(item in big for item in small)
+
+    for subgraph, count in duplicate_subgraphs:
+        if current_count != count:
+            # Process the previous group
+            if current_group:
+                filtered_group = filter_contained(current_group, contains)
+                result.extend(filtered_group)
+            current_group = [(subgraph, count)]
+            current_count = count
+        else:
+            current_group.append((subgraph, count))
+
+    # Don't forget to process the last group
+    if current_group:
+        filtered_group = filter_contained(current_group, contains)
+        result.extend(filtered_group)
+
+    return result
+
+
+def filter_contained(group, contains):
+    subgraphs = [item[0] for item in group]
+    filtered_group = []
+    
+    for i, subgraph_i in enumerate(subgraphs):
+        if not any(contains(subgraph_i, subgraph_j) for j, subgraph_j in enumerate(subgraphs) if i != j):
+            filtered_group.append(group[i])
+    
+    return filtered_group
+
+
+def stat_subgraph(input_path, max_nodes=8, min_nodes=2, min_times=1):
+    if max_nodes > 10 or max_nodes < min_nodes:
+        logger.error(f"max_nodes should be between {min_nodes} and 10, please set it to an appropriate value")
         return None
+    if min_nodes < 2:
+        logger.warning(f"min_nodes can not be less than 2, it will be set as default value 2.")
+        min_nodes = 2
+    if min_times < 1:
+        logger.warning(f"min_times can not be less than 1, it will be set as default value 1.")
+        min_times = 1
+
     graph_def = GraphAnalyze.load_graph_def_from_pbtxt(input_path)
     if graph_def is None:
         logger.error(f"Failed to parse the pbtxt file.")
@@ -219,16 +269,21 @@ def stat_subgraph(input_path, max_nodes=8):
             logger.error(f"Failed to get nodes information.")
             return None
 
-    subgraph_count, subgraph_roots = find_duplicate_subgraphs(graphs, max_nodes)
+    subgraph_count, subgraph_roots = find_duplicate_subgraphs(graphs, max_nodes, min_nodes)
+
     # Sort duplicate subgraphs by their count in descending order
     duplicate_subgraphs = sorted(subgraph_count.items(), key=lambda x: x[1], reverse=True)
+
+    # Remove subgraphs that appear less than min_times
+    duplicate_subgraphs = [(value, count) for value, count in duplicate_subgraphs if count >= min_times]
+
+    # Process duplicate subgraphs to remove contained ones within the same count group
+    processed_subgraphs = process_contained_subgraphs(duplicate_subgraphs)
+
     # Prepare data for DataFrame
-    data = {'Subgraph': [hash_value for hash_value, _ in duplicate_subgraphs],
-            'Count': [count for _, count in duplicate_subgraphs],
-            'Root Nodes Index': [
-            '; '.join(map(str, subgraph_roots[hash_value])) for hash_value, _ in duplicate_subgraphs
-            ]
-    }
+    data = {'Subgraph': [value for value, _ in processed_subgraphs],
+            'Count': [count for _, count in processed_subgraphs],
+            'Root Nodes Index': ['; '.join(map(str, subgraph_roots[value])) for value, _ in processed_subgraphs]}
 
     # Extract indices from Root Nodes
     data['Root Nodes Index'] = [
@@ -270,20 +325,22 @@ def preprocess_subgraph(subgraph_tuple):
     return cleaned_op_types
 
 
-def calculate_sum(source, profile, max_nodes, output_path):
+def calculate_sum(args):
     try:
+        output_path = args.output
         # Check and set default output path if None
         if output_path is None:
             timestamp = datetime.now(tz=timezone.utc).strftime("%Y%m%d_%H%M%S")
             output_path = f"fuse_duration_{timestamp}.csv"
-        GraphAnalyze.validate_file_path(source, '.pbtxt')
-        GraphAnalyze.validate_file_path(profile, '.csv')
+        GraphAnalyze.validate_file_path(args.source, '.pbtxt')
+        GraphAnalyze.validate_file_path(args.profile, '.csv')
 
-        subgraph_df = stat_subgraph(source, max_nodes)
+        subgraph_df = stat_subgraph(args.source, args.max_nodes, args.min_nodes, args.min_times)
         if subgraph_df is None:
             logger.error("Failed to get subgraph data.")
             return
 
+        profile = args.profile
         profile_df = pd.read_csv(profile)
         if profile_df.empty:
             logger.error("Profile DataFrame is empty, maybe {profile} is missing required columns .")

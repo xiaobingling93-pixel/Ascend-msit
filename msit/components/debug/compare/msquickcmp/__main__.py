@@ -364,6 +364,11 @@ class DumpCommand(BaseCommand):
             type=safe_string,
             default=None,
             help="Operation names need to dump, only support MindIE-Torch dump scenario.")
+        parser.add_argument(
+            '--fusion-switch-file',
+            dest="fusion_switch_file",
+            type=check_fusion_cfg_path_legality,
+            help='You can disable selected fusion patterns in the configuration file in TF2.x')
         self.parser = parser
 
     def handle(self, args):
@@ -380,11 +385,13 @@ class DumpCommand(BaseCommand):
                 raise NotImplementedError("If you do not inference with MindIE-Torch, "
                                           "must use arguments '-m' and '-dp' to do next.")
             check_normal_dump_param(args)
-            cmp_args = DumpArgsAdapter(args.model_path, args.weight_path, args.input_data_path,
-                                    args.cann_path, args.out_path, args.input_shape, args.device,
-                                    args.dym_shape_range, args.onnx_fusion_switch,
-                                    args.saved_model_signature, args.saved_model_tag_set,
-                                    args.device_pattern, args.tf_json_path)
+            cmp_args = DumpArgsAdapter(args.model_path, weight_path=args.weight_path,
+                                       input_data_path=args.input_data_path, cann_path=args.cann_path,
+                                       out_path=args.out_path, input_shape=args.input_shape, device=args.device,
+                                       dym_shape_range=args.dym_shape_range, onnx_fusion_switch=args.onnx_fusion_switch,
+                                       saved_model_signature=args.saved_model_signature,
+                                       saved_model_tag_set=args.saved_model_tag_set, device_pattern=args.device_pattern,
+                                       tf_json_path=args.tf_json_path, fusion_switch_file=args.fusion_switch_file)
             dump_process(cmp_args, True)
 
 
