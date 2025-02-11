@@ -34,9 +34,11 @@ class AntiOutlierConfig:
             dev_id=None,
             w_sym=True,
             low_memory=None,
-            disable_anti_names=[],
+            disable_anti_names=None,
             flex_config: dict = None,
     ):
+        if disable_anti_names is None:
+            disable_anti_names = []
         # Basic setting
         self.w_bit = w_bit
         self.a_bit = a_bit
