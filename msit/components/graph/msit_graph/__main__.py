@@ -205,7 +205,19 @@ class FuseCommand(BaseCommand):
             type=int,
             default=8,
             help="Limiting the maximum number of nodes contained in a repeated subgraph"
-        )        
+        )
+        parser.add_argument(
+            "--min-nodes",
+            type=int,
+            default=2,
+            help="Limiting the minimum number of nodes contained in a repeated subgraph"
+        )
+        parser.add_argument(
+            "--min-times",
+            type=int,
+            default=1,
+            help="Filter repeated subgraphs whose occurrence times are less than it."
+        )          
         parser.add_argument(
             "-o",
             '--output',
@@ -218,7 +230,7 @@ class FuseCommand(BaseCommand):
 
     def handle(self, args, **kwargs) -> None:
         set_log_level(args.log_level)
-        calculate_sum(args.source, args.profile, args.max_nodes, args.output)
+        calculate_sum(args)
 
 
 class InspectCommand(BaseCommand):
