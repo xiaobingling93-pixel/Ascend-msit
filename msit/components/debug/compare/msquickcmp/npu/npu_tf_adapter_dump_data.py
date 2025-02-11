@@ -54,6 +54,7 @@ class NpuTfAdapterDumpData(object):
         self.input_shape = self.split_input_shape(arguments.input_shape)
         self.inputs_dtype = tf_common.get_model_inputs_dtype(model_path, self.serving, self.tag_set)
         self.cann_path = arguments.cann_path
+        self.fusion_switch_file = arguments.fusion_switch_file
         self._create_dir()
 
     @staticmethod
@@ -116,6 +117,8 @@ class NpuTfAdapterDumpData(object):
         custom_op.parameter_map["dump_path"].s = tf.compat.as_bytes(self.dump_data_npu)
         custom_op.parameter_map["dump_step"].s = tf.compat.as_bytes("0")
         custom_op.parameter_map["dump_mode"].s = tf.compat.as_bytes("all")
+        if self.fusion_switch_file:
+            custom_op.parameter_map["fusion_switch_file"].s = tf.compat.as_bytes(self.fusion_switch_file)
         config_proto.graph_options.rewrite_options.remapping = RewriterConfig.OFF
         # sess run predict
         with tf.compat.v1.Session(config=config_proto) as sess:

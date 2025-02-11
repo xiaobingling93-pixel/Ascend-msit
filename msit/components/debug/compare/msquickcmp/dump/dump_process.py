@@ -68,6 +68,7 @@ def dump_process(args: DumpArgsAdapter, use_cli: bool):
     args.weight_path = os.path.realpath(args.weight_path) if args.weight_path else None
     args.cann_path = os.path.realpath(args.cann_path)
     args.input_path = convert_npy_to_bin(args.input_path)
+    args.fusion_switch_file = os.path.realpath(args.fusion_switch_file) if args.fusion_switch_file else None
     check_and_dump(args, use_cli)
 
 
@@ -119,6 +120,8 @@ def check_and_dump(args, use_cli: bool):
     utils.check_file_or_directory_path(args.model_path, is_saved_model_valid(args.model_path))
     if args.weight_path:
         utils.check_file_or_directory_path(args.weight_path)
+    if args.fusion_switch_file:
+        utils.check_file_or_directory_path(args.fusion_switch_file)
     utils.check_device_param_valid(args.device)
     utils.check_file_or_directory_path(os.path.realpath(args.out_path), True)
     time_dir = time.strftime("%Y%m%d%H%M%S", time.localtime())
