@@ -29,7 +29,7 @@ bad case分析工具的主要功能是对输入的两个场景下的数据集精
 ## 使用方法
 
 ```shell
-msit llm bcAnalyze -gp {path} -mp {path}  [可选参数] 
+msit llm bcanalyze -gp {golden_path} -mp {my_path}  [可选参数] 
 ```
 
 用户可以传入数据集精度测评结果的 `csv` 路径，可以一键式进行 `bad case` 分析
@@ -38,8 +38,8 @@ msit llm bcAnalyze -gp {path} -mp {path}  [可选参数]
 
 | 参数名         | 别名  | 描述                               | 是否必选 |
 | ------------- |-------| ---------------------------------- | ------- |
-| golden_path   | gp    | 标杆环境数据集精度测评结果文件地址    | 是      |
-| my_path       | mp    | 测试环境数据集精度测评结果文件地址    | 是      |
+| golden-path   | gp    | 标杆环境数据集精度测评结果文件地址    | 是      |
+| my-path       | mp    | 测试环境数据集精度测评结果文件地址    | 是      |
 | help          | h     | 命令行帮助信息                      | 否      |
 
 
