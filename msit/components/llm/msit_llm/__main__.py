@@ -21,11 +21,11 @@ from components.utils.security_check import is_enough_disk_space_left
 from components.utils.file_open_check import ms_open
 from components.utils.constants import TENSOR_MAX_SIZE
 from msit_llm.dump.initial import init_dump_task, clear_dump_task
-from msit_llm.opcheck.opchecker import OpChecker, NAMEDTUPLE_PRECISION_METRIC, NAMEDTUPLE_PRECISION_MODE
 from msit_llm.errcheck.process import process_error_check
 from msit_llm.common.utils import str2bool, check_positive_integer, check_device_integer, safe_string, \
     check_ids_string, check_number_list, check_output_path_legality, check_input_path_legality, check_process_integer, \
-    check_dump_time_integer, check_data_can_convert_to_int, load_file_to_read_common_check
+    check_dump_time_integer, check_data_can_convert_to_int, load_file_to_read_common_check, \
+    NAMEDTUPLE_PRECISION_METRIC, NAMEDTUPLE_PRECISION_MODE
 from msit_llm.bc_analyze import Synthesizer, Analyzer
 from msit_llm.common.log import logger, set_log_level, LOG_LEVELS
 from msit_llm.badcase_analyze.bad_case_analyze import BadCaseAnalyzer
@@ -385,6 +385,11 @@ class OpcheckCommand(BaseCommand):
             for custom_compare_algorithm in args.custom_algorithms:
                 register_custom_compare_algorithm(custom_compare_algorithm)
 
+        try:
+            from msit_llm.opcheck.opchecker import OpChecker
+        except ImportError as e:
+            raise ImportError("Import msit_llm opchecker error") from e
+        
         op = OpChecker()
         logger.info("===================Opcheck start====================")
         op.start_test(args)

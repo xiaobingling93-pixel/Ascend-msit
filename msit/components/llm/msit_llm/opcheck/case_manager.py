@@ -19,7 +19,7 @@ import unittest
 import multiprocessing
 from msit_llm.opcheck.check_case import OP_NAME_DICT
 from components.utils.cmp_algorithm import CUSTOM_ALG_MAP
-from msit_llm.opcheck.opchecker import NAMEDTUPLE_PRECISION_METRIC
+from msit_llm.common.utils import NAMEDTUPLE_PRECISION_METRIC
 from msit_llm.common.log import logger, set_log_level
 
 

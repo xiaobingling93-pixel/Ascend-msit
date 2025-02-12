@@ -459,8 +459,6 @@ class CalibrationData(object):
         return True
 
     def read_config(self, config_path):
-        if config_path == "":
-            return
         config_path = get_valid_read_path(config_path)
         with open(config_path, "r") as f:
             config = json.load(f)
