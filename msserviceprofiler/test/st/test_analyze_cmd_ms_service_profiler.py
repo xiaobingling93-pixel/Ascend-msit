@@ -67,6 +67,7 @@ def check_summary_csv_content(output_path, csv_file_name):
                 float(value)
             except ValueError:
                 assert False, f"在 {column} 列的第 {index} 行，值 {value} 不是有效的数字"
+    return True
 
 
 def check_service_summary_csv_content(output_path, csv_file_name):
@@ -93,6 +94,7 @@ def check_service_summary_csv_content(output_path, csv_file_name):
                 float(value)
             except ValueError:
                 assert False, f"在 {column} 列的第 {index} 行，值 {value} 不是有效的数字"
+    return True
 
 
 class TestAnalyzeCmd(TestCase):
@@ -122,10 +124,21 @@ class TestAnalyzeCmd(TestCase):
         if execute_cmd(cmd) != self.COMMAND_SUCCESS or not os.path.exists(self.OUTPUT_PATH):
             self.assertFalse(True, msg="enable ms service profiler analyze task failed.")
 
-        # 校验summary.csv生成
         with self.subTest("Check request_summary.csv content"):
-            check_summary_csv_content(self.OUTPUT_PATH, self.REQUEST_CSV_FILE_NAME)
+            try:
+                result = check_summary_csv_content(self.OUTPUT_PATH, self.REQUEST_CSV_FILE_NAME)
+                self.assertTrue(result, f"检查 {self.REQUEST_CSV_FILE_NAME} 失败")
+            except Exception as e:
+                self.fail(f"检查 {self.REQUEST_CSV_FILE_NAME} 时发生异常: {e}")
         with self.subTest("Check batch_summary.csv content"):
-            check_summary_csv_content(self.OUTPUT_PATH, self.BATCH_CSV_FILE_NAME)
+            try:
+                result = check_summary_csv_content(self.OUTPUT_PATH, self.BATCH_CSV_FILE_NAME)
+                self.assertTrue(result, f"检查 {self.BATCH_CSV_FILE_NAME} 失败")
+            except Exception as e:
+                self.fail(f"检查 {self.BATCH_CSV_FILE_NAME} 时发生异常: {e}")
         with self.subTest("Check service_summary.csv content"):
-            check_service_summary_csv_content(self.OUTPUT_PATH, self.SERVICE_CSV_FILE_NAME)
+            try:
+                result = check_service_summary_csv_content(self.OUTPUT_PATH, self.SERVICE_CSV_FILE_NAME)
+                self.assertTrue(result, f"检查 {self.SERVICE_CSV_FILE_NAME} 失败")
+            except Exception as e:
+                self.fail(f"检查 {self.SERVICE_CSV_FILE_NAME} 时发生异常: {e}")
