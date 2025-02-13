@@ -16,3 +16,5 @@
 FLOAT32 = "float32"
 FLOAT16 = "float16"
 BFLOAT16 = "bfloat16"
+COMPLEX32 = "complex32"
+BOOL = "bool"

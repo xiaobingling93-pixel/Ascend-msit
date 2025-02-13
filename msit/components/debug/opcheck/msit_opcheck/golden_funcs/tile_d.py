@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import copy
-import numpy as np
 import tensorflow as tf
 
 from msit_opcheck.operation_test import OperationTest
@@ -29,7 +26,8 @@ class TileDOperation(OperationTest):
         for attr in self.op_param['attr']:
             if attr['key'] == 'multiples':
                 multiples = attr['value']['list']['i']
-
+        if 'multiples' not in locals():
+            multiples = in_tensors[1]
         # input format转换
         for attr in self.op_param['input_desc'][0]['attr']:
             if attr['key'] == 'origin_format':
