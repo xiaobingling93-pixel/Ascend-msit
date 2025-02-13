@@ -364,6 +364,10 @@ class AntiOutlier(object):
         else:
             setattr(self.model, 'anti_method', self.cfg.anti_method)
 
+    @staticmethod
+    def is_flex_enabled(flex_config):
+        return flex_config['alpha'] is None or flex_config['beta'] is None
+
     def init_dag(self):
         if self.is_context_embedder_model:
             self.norm_linear_subgraph = _PREDEFINED_FUSIONS
@@ -411,7 +415,7 @@ class AntiOutlier(object):
         # buffer the latest tensor
         if name not in act_stats:
             act_stats[name] = {}
-            if self.cfg.anti_method != 'm6' or not is_flex_enabled(self.cfg.flex_config):
+            if self.cfg.anti_method != 'm6' or not self.is_flex_enabled(self.cfg.flex_config):
                 act_stats[name][TENSOR] = tensor
 
         hidden_dim = tensor.shape[-1]
@@ -420,11 +424,8 @@ class AntiOutlier(object):
         coming_min = torch.min(tensor, dim=0)[0]  # [C]
 
         stat_dict = act_stats[name]
-
-        def is_flex_enabled(flex_config):
-            return flex_config['alpha'] is None or flex_config['beta'] is None
     
-        if self.cfg.anti_method == 'm6' and is_flex_enabled(self.cfg.flex_config):
+        if self.cfg.anti_method == 'm6' and self.is_flex_enabled(self.cfg.flex_config):
             if TENSOR not in act_stats[name]:
                 act_stats[name][TENSOR] = [tensor.to("cpu").reshape(-1, tensor.shape[-1])]
             else:
