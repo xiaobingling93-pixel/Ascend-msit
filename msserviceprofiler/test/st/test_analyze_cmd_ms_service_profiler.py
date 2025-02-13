@@ -67,7 +67,6 @@ def check_summary_csv_content(output_path, csv_file_name):
                 float(value)
             except ValueError:
                 assert False, f"在 {column} 列的第 {index} 行，值 {value} 不是有效的数字"
-    return True
 
 
 def check_service_summary_csv_content(output_path, csv_file_name):
@@ -94,7 +93,6 @@ def check_service_summary_csv_content(output_path, csv_file_name):
                 float(value)
             except ValueError:
                 assert False, f"在 {column} 列的第 {index} 行，值 {value} 不是有效的数字"
-    return True
 
 
 class TestAnalyzeCmd(TestCase):
