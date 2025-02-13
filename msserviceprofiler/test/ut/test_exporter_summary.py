@@ -275,7 +275,8 @@ class TestExporterSummaryFunctions(unittest.TestCase):
         input_token_record = {
             'name': 'modelExec',
             'rid': '0',
-            'recvTokenSize=': 4.0
+            'recvTokenSize=': 4.0,
+            'during_time': 142208.75
         }
         process_req_record(self.req_map, input_token_record)
         self.assertEqual(len(self.req_map), 1)
@@ -285,6 +286,10 @@ class TestExporterSummaryFunctions(unittest.TestCase):
         self.assertEqual(self.req_map['0']['input_token_num'], 4.0)
         self.assertEqual(self.req_map['0']['generated_token_num'], 250.0)
         self.assertEqual(self.req_map['0']['httpRes_end'], 1739276841538271.0)
+
+        rid_for_list = [0,1,2]
+        token_id_for_list = [0,0,0]
+        process_rid_token_list(self.req_map, rid_for_list, token_id_for_list, input_token_record)
 
 
 if __name__ == '__main__':
