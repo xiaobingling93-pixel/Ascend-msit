@@ -22,7 +22,7 @@ from ms_service_profiler.exporters.utils import check_input_path_valid, check_ou
 from ms_service_profiler.plugins import custom_plugins
 from ms_service_profiler.utils.log import set_log_level
 
-from msserverprofiler.exporters.exporter_summary import ExporterSummary
+from ms_service_profiler_ext.exporters.exporter_summary import ExporterSummary
 
 
 def add_summary_exporter(func):

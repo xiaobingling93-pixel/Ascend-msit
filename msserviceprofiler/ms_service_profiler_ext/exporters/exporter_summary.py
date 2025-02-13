@@ -89,6 +89,9 @@ def process_req_record(req_map, record):
         if rid in req_map:
             req_map[rid]['httpRes_end'] = record.get('end_time')
             req_map[rid]['is_complete'] = True
+            # 生成Token数量为replyTokenSize的值
+            if reply_token:
+                req_map[rid]['generated_token_num'] = reply_token
         else:
             logger.warning(f"Missing httpReq for httpRes with rid={rid}.")
         return
@@ -108,10 +111,6 @@ def process_req_record(req_map, record):
     # 输入Token数量为recvTokenSize的值
     if recv_token:
         req_map[rid]['input_token_num'] = recv_token
-
-    # 生成Token数量为replyTokenSize的值
-    if reply_token:
-        req_map[rid]['generated_token_num'] = reply_token
 
     rid_list = record.get('rid_list')
     token_id_list = record.get('token_id_list')
