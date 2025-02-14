@@ -20,7 +20,7 @@ from ms_service_profiler.exporters.base import ExporterBase
 from ms_service_profiler.utils.log import logger
 
 
-def is_contained_vaild_iter_info(rid_list, token_id_list):
+def is_contained_valid_iter_info(rid_list, token_id_list):
     if rid_list is None or token_id_list is None or len(rid_list) != len(token_id_list):
         return False
     return True
@@ -119,7 +119,7 @@ def process_req_record(req_map, record):
 
 def process_rid_token_list(req_map, rid_list, token_id_list, record):
 
-    if not is_contained_vaild_iter_info(rid_list, token_id_list):
+    if not is_contained_valid_iter_info(rid_list, token_id_list):
         return
 
     for i, value in enumerate(rid_list):
@@ -173,15 +173,15 @@ def gen_exporter_results(all_data_df):
     input_token_num = [req["input_token_num"] for req in req_view]
     generated_token_num = [req["generated_token_num"] for req in req_view]
 
-    #计算统计值
+    # 计算统计值
     req_stats = {
-        "first_token_latency (ms)":calculate_statistics(first_token_latency),
-        "subsequent_token_latency (ms)":calculate_statistics(subsequent_token_latency),
-        "total_time (ms)":calculate_statistics(total_time),
-        "exec_time (ms)":calculate_statistics(exec_time),
-        "waiting_time (ms)":calculate_statistics(waiting_time),
-        "input_token_num":calculate_statistics(input_token_num),
-        "generated_token_num":calculate_statistics(generated_token_num)
+        "first_token_latency (ms)": calculate_statistics(first_token_latency),
+        "subsequent_token_latency (ms)": calculate_statistics(subsequent_token_latency),
+        "total_time (ms)": calculate_statistics(total_time),
+        "exec_time (ms)": calculate_statistics(exec_time),
+        "waiting_time (ms)": calculate_statistics(waiting_time),
+        "input_token_num": calculate_statistics(input_token_num),
+        "generated_token_num": calculate_statistics(generated_token_num)
     }
 
     # 生成batch维度数据
@@ -329,16 +329,16 @@ def convert_map_to_dataframe(map_data, include_stats):
         if include_stats == 1:
             row = {
                 "Metric": metric,
-                "average": values["avg"],
-                "max": values["max"],
-                "min":values["min"],
+                "Average": values["avg"],
+                "Max": values["max"],
+                "Min":values["min"],
                 "P50": values["p50"],
                 "P90": values["p90"],
                 "P99": values["p99"]
             }
         else:
             value = format(values, ".8f") if metric == "generate_token_speed (token/s)" else values
-            row = {"Metric": metric, "value": value}
+            row = {"Metric": metric, "Value": value}
         data.append(row)
     return pd.DataFrame(data)
 

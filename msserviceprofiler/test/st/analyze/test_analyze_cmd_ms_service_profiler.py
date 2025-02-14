@@ -12,35 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import glob
 import os
-import logging
-import json
 import shutil
-import sqlite3
-import ast
 from unittest import TestCase
 import ast
 import pytest
 import pandas as pd
 from jsonschema import validate, ValidationError
-from ...st.utils import execute_cmd
-
-
-def check_column_actual(actual_columns, expected_columns, context):
-    """检查实际列名是否与预期列名一致"""
-    for col in expected_columns:
-        assert col in actual_columns, f"在 {context} 中未找到预期列名: {col}"
-
-
-def check_row(df, row_index, column):
-    """检查指定行和列的数据是否为数字"""
-    try:
-        value = df.at[row_index, column]
-        # 尝试将值转换为数字
-        float(value)
-    except (ValueError, KeyError):
-        assert False, f"在 {column} 列的第 {row_index} 行，值 {value} 不是有效的数字"
+from ...st.utils import check_column_actual, check_row
 
 
 def check_summary_csv_content(output_path, csv_file_name):
@@ -51,22 +30,19 @@ def check_summary_csv_content(output_path, csv_file_name):
     df = pd.read_csv(csv_file)
     actual_columns = df.columns.tolist()
 
-    expected_csv_columns = ['Metric', 'average', 'max', 'min', 'P50', 'P90', 'P99']
+    expected_csv_columns = ['Metric', 'Average', 'Max', 'Min', 'P50', 'P90', 'P99']
     check_column_actual(actual_columns, expected_csv_columns, context=csv_file_name)
+    # 检查Metric列的数据类型是否为字符串
+    for row_index in df.index:
+        value = df.at[row_index, 'Metric']
+        if not isinstance(value, str):
+            assert False, f"在Metric列的第{row_index}行，值 '{value}' 不是字符串类型"
 
-    columns_to_check = ['average', 'max', 'min', 'P50', 'P90', 'P99']
-
-    # 检查列名是否存在
-    for column in columns_to_check:
-        assert column in actual_columns, f"在 {csv_file_name} 中未找到预期列名: {column}"
-
-    # 新增：检查所有行的特定列数据格式是否为数字
-    for column in columns_to_check:
-        for index, value in df[column].items():
-            try:
-                float(value)
-            except ValueError:
-                assert False, f"在 {column} 列的第 {index} 行，值 {value} 不是有效的数字"
+    # 检查其他列的数据是否为数字
+    numeric_columns = ['Average', 'Max', 'Min', 'P50', 'P90', 'P99']
+    for column in numeric_columns:
+        for row_index in df.index:
+            check_row(df, row_index, column)
     return True
 
 
@@ -78,22 +54,20 @@ def check_service_summary_csv_content(output_path, csv_file_name):
     df = pd.read_csv(csv_file)
     actual_columns = df.columns.tolist()
 
-    expected_csv_columns = ['Metric', 'value']
+    expected_csv_columns = ['Metric', 'Value']
     check_column_actual(actual_columns, expected_csv_columns, context=csv_file_name)
 
-    columns_to_check = ['value']
+    # 检查Metric列的数据类型是否为字符串
+    for row_index in df.index:
+        value = df.at[row_index, 'Metric']
+        if not isinstance(value, str):
+            assert False, f"在Metric列的第{row_index}行，值 '{value}' 不是字符串类型"
 
-    # 检查列名是否存在
-    for column in columns_to_check:
-        assert column in actual_columns, f"在 {csv_file_name} 中未找到预期列名: {column}"
-
-    # 新增：检查所有行的特定列数据格式是否为数字
-    for column in columns_to_check:
-        for index, value in df[column].items():
-            try:
-                float(value)
-            except ValueError:
-                assert False, f"在 {column} 列的第 {index} 行，值 {value} 不是有效的数字"
+    # 检查其他列的数据是否为数字
+    numeric_columns = ['Value']
+    for column in numeric_columns:
+        for row_index in df.index:
+            check_row(df, row_index, column)
     return True
 
 

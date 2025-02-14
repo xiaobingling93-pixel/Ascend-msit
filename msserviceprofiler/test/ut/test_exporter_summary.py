@@ -17,7 +17,7 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 from ms_service_profiler.exporters.exporter_summary import (
-    is_contained_vaild_iter_info,
+    is_contained_valid_iter_info,
     process_batch_record,
     calculate_statistics,
     convert_map_to_dataframe,
@@ -41,25 +41,25 @@ class TestExporterSummaryFunctions(unittest.TestCase):
 
     def test_is_contained_valid_iter_info_normal(self):
         self.assertTrue(
-            is_contained_vaild_iter_info(self.valid_rid_list, self.valid_iter_list),
+            is_contained_valid_iter_info(self.valid_rid_list, self.valid_iter_list),
             "应验证有效迭代信息"
         )
 
     def test_is_contained_valid_iter_info_edge_cases(self):
         self.assertFalse(
-            is_contained_vaild_iter_info([], self.valid_iter_list),
+            is_contained_valid_iter_info([], self.valid_iter_list),
             "空rid列表应返回False"
         )
         self.assertFalse(
-            is_contained_vaild_iter_info([1], self.valid_iter_list),
+            is_contained_valid_iter_info([1], self.valid_iter_list),
             "长度不一致应返回False"
         )
         self.assertFalse(
-            is_contained_vaild_iter_info(None, self.valid_iter_list),
+            is_contained_valid_iter_info(None, self.valid_iter_list),
             "rid_list 为 None 应返回 False"
         )
         self.assertFalse(
-            is_contained_vaild_iter_info(self.valid_rid_list, None),
+            is_contained_valid_iter_info(self.valid_rid_list, None),
             "token_id_list 为 None 应返回 False"
         )
 
