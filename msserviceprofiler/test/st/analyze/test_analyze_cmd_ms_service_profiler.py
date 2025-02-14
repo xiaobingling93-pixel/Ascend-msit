@@ -22,39 +22,19 @@ from jsonschema import validate, ValidationError
 from ...st.utils import execute_cmd, check_column_actual, check_row
 
 
-def check_summary_csv_content(output_path, csv_file_name):
+def check_csv_content(output_path, csv_file_name):
     csv_file = os.path.join(output_path, csv_file_name)
     # 检查文件是否存在
     assert os.path.exists(csv_file), f"文件 {csv_file} 不存在"
     assert os.path.isfile(csv_file), f"{csv_file} 不是一个有效的文件"
     df = pd.read_csv(csv_file)
     actual_columns = df.columns.tolist()
-
-    expected_csv_columns = ['Metric', 'Average', 'Max', 'Min', 'P50', 'P90', 'P99']
-    check_column_actual(actual_columns, expected_csv_columns, context=csv_file_name)
-    # 检查Metric列的数据类型是否为字符串
-    for row_index in df.index:
-        value = df.at[row_index, 'Metric']
-        if not isinstance(value, str):
-            assert False, f"在Metric列的第{row_index}行，值 '{value}' 不是字符串类型"
-
-    # 检查其他列的数据是否为数字
-    numeric_columns = ['Average', 'Max', 'Min', 'P50', 'P90', 'P99']
-    for column in numeric_columns:
-        for row_index in df.index:
-            check_row(df, row_index, column)
-    return True
-
-
-def check_service_summary_csv_content(output_path, csv_file_name):
-    csv_file = os.path.join(output_path, csv_file_name)
-    # 检查文件是否存在
-    assert os.path.exists(csv_file), f"文件 {csv_file} 不存在"
-    assert os.path.isfile(csv_file), f"{csv_file} 不是一个有效的文件"
-    df = pd.read_csv(csv_file)
-    actual_columns = df.columns.tolist()
-
-    expected_csv_columns = ['Metric', 'Value']
+    if csv_file_name == 'service_summary.csv':
+        expected_csv_columns = ['Metric', 'Value']
+        numeric_columns = ['Value']
+    else:
+        expected_csv_columns = ['Metric', 'Average', 'Max', 'Min', 'P50', 'P90', 'P99']
+        numeric_columns = ['Average', 'Max', 'Min', 'P50', 'P90', 'P99']
     check_column_actual(actual_columns, expected_csv_columns, context=csv_file_name)
 
     # 检查Metric列的数据类型是否为字符串
@@ -64,7 +44,6 @@ def check_service_summary_csv_content(output_path, csv_file_name):
             assert False, f"在Metric列的第{row_index}行，值 '{value}' 不是字符串类型"
 
     # 检查其他列的数据是否为数字
-    numeric_columns = ['Value']
     for column in numeric_columns:
         for row_index in df.index:
             check_row(df, row_index, column)
@@ -82,10 +61,10 @@ class TestAnalyzeCmd(TestCase):
     ANALYZE_PROFILER = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")),
                                     "ms_service_profiler_ext/analyze.py")
 
-    def setup_class(self):
+    def setUp(self):
         os.makedirs(self.OUTPUT_PATH, mode=0o750, exist_ok=True)
 
-    def teardown_class(self):
+    def tearDown(self):
         shutil.rmtree(self.OUTPUT_PATH)
 
     def test_analyze_ms_service_profiler_data(self):
@@ -97,22 +76,21 @@ class TestAnalyzeCmd(TestCase):
         ]
         if execute_cmd(cmd) != self.COMMAND_SUCCESS or not os.path.exists(self.OUTPUT_PATH):
             self.assertFalse(True, msg="enable ms service profiler analyze task failed.")
-
         with self.subTest("Check request_summary.csv content"):
             try:
-                result = check_summary_csv_content(self.OUTPUT_PATH, self.REQUEST_CSV_FILE_NAME)
+                result = check_csv_content(self.OUTPUT_PATH, self.REQUEST_CSV_FILE_NAME)
                 self.assertTrue(result, f"检查 {self.REQUEST_CSV_FILE_NAME} 失败")
             except Exception as e:
                 self.fail(f"检查 {self.REQUEST_CSV_FILE_NAME} 时发生异常: {e}")
         with self.subTest("Check batch_summary.csv content"):
             try:
-                result = check_summary_csv_content(self.OUTPUT_PATH, self.BATCH_CSV_FILE_NAME)
+                result = check_csv_content(self.OUTPUT_PATH, self.BATCH_CSV_FILE_NAME)
                 self.assertTrue(result, f"检查 {self.BATCH_CSV_FILE_NAME} 失败")
             except Exception as e:
                 self.fail(f"检查 {self.BATCH_CSV_FILE_NAME} 时发生异常: {e}")
         with self.subTest("Check service_summary.csv content"):
             try:
-                result = check_service_summary_csv_content(self.OUTPUT_PATH, self.SERVICE_CSV_FILE_NAME)
+                result = check_csv_content(self.OUTPUT_PATH, self.SERVICE_CSV_FILE_NAME)
                 self.assertTrue(result, f"检查 {self.SERVICE_CSV_FILE_NAME} 失败")
             except Exception as e:
                 self.fail(f"检查 {self.SERVICE_CSV_FILE_NAME} 时发生异常: {e}")
