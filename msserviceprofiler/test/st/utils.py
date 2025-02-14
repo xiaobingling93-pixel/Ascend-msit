@@ -37,13 +37,30 @@ def check_column_actual(actual_columns, expected_columns, context):
     return True
 
 
-def check_row(df, row_index, column):
-    """检查指定行和列的数据是否为数字"""
-    try:
-        value = df.at[row_index, column]
-        # 尝试将值转换为数字
-        float(value)
-    except (ValueError, KeyError):
-        logging.error(f"在 {column} 列的第 {row_index} 行，值 {value} 不是有效的数字")
-        return False
+def check_row(df, expected_columns, numeric_columns):
+    """检查数据框中Metric列数据类型和指定列数据是否为数字"""
+    # 检查Metric列的数据类型是否为字符串
+    for row_index in df.index:
+        try:
+            value = df.at[row_index, 'Metric']
+            if not isinstance(value, str):
+                logging.error(f"在Metric列的第{row_index}行，值 '{value}' 不是字符串类型")
+                return False
+        except KeyError:
+            logging.error(f"数据框中不存在 'Metric' 列")
+            return False
+
+    # 检查其他列的数据是否为数字
+    for column in numeric_columns:
+        if column not in df.columns:
+            logging.error(f"数据框中不存在 {column} 列")
+            continue
+        for row_index in df.index:
+            try:
+                cell_value = df.at[row_index, column]
+                float(cell_value)
+            except (ValueError, KeyError):
+                logging.error(
+                    f"在 {column} 列的第 {row_index} 行，值 {cell_value} 不是有效的数字")
+                return False
     return True

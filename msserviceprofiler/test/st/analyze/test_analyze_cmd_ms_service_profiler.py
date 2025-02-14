@@ -32,21 +32,12 @@ def check_csv_content(output_path, csv_file_name, expected_csv_columns, numeric_
 
     check_column_actual(actual_columns, expected_csv_columns, context=csv_file_name)
 
-    # 检查Metric列的数据类型是否为字符串
-    for row_index in df.index:
-        value = df.at[row_index, 'Metric']
-        if not isinstance(value, str):
-            assert False, f"在Metric列的第{row_index}行，值 '{value}' 不是字符串类型"
-
-    # 检查其他列的数据是否为数字
-    for column in numeric_columns:
-        for row_index in df.index:
-            check_row(df, row_index, column)
-    return True
+    return check_row(df, expected_csv_columns, numeric_columns)
 
 
 class TestAnalyzeCmd(TestCase):
-    ST_DATA_PATH = os.getenv("MS_SERVICE_PROFILER", "/data/ms_service_profiler")
+    ST_DATA_PATH = os.getenv("MS_SERVICE_PROFILER",
+                             "/data/ms_service_profiler")
     INPUT_PATH = os.path.join(ST_DATA_PATH, "input/analyze/0211-1226")
     OUTPUT_PATH = os.path.join(ST_DATA_PATH, "output/analyze")
     REQUEST_CSV_FILE_NAME = "request_summary.csv"
@@ -70,10 +61,13 @@ class TestAnalyzeCmd(TestCase):
             "--output-path", self.OUTPUT_PATH
         ]
         if execute_cmd(cmd) != self.COMMAND_SUCCESS or not os.path.exists(self.OUTPUT_PATH):
-            self.assertFalse(True, msg="enable ms service profiler analyze task failed.")
+            self.assertFalse(
+                True, msg="enable ms service profiler analyze task failed.")
 
-        request_columns = ['Metric', 'Average', 'Max', 'Min', 'P50', 'P90', 'P99']
-        request_numeric_columns = ['Average', 'Max', 'Min', 'P50', 'P90', 'P99']
+        request_columns = ['Metric', 'Average',
+                           'Max', 'Min', 'P50', 'P90', 'P99']
+        request_numeric_columns = ['Average',
+                                   'Max', 'Min', 'P50', 'P90', 'P99']
 
         service_columns = ['Metric', 'Value']
         service_numeric_columns = ['Value']
