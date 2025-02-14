@@ -127,18 +127,18 @@ class TestExporterSummaryFunctions(unittest.TestCase):
         df = convert_map_to_dataframe(map_data, include_stats=1)
 
         self.assertListEqual(df.index.tolist(), [0, 1])
-        self.assertListEqual(df.columns.tolist(), ['Metric', 'average', 'max', 'min', 'P50', 'P90', 'P99'])
+        self.assertListEqual(df.columns.tolist(), ['Metric', 'Average', 'Max', 'Min', 'P50', 'P90', 'P99'])
 
-        self.assertAlmostEqual(df.loc[0, 'average'], 15.5)
-        self.assertEqual(df.loc[1, 'max'], 200)
+        self.assertAlmostEqual(df.loc[0, 'Average'], 15.5)
+        self.assertEqual(df.loc[1, 'Max'], 200)
 
         map_data_speed = {
             "generate_token_speed (token/s)": 123.456789
         }
         df_speed = convert_map_to_dataframe(map_data_speed, include_stats=0)
-        self.assertListEqual(df_speed.columns.tolist(), ['Metric', 'value'])
+        self.assertListEqual(df_speed.columns.tolist(), ['Metric', 'Value'])
         self.assertEqual(df_speed.loc[0, 'Metric'], "generate_token_speed (token/s)")
-        self.assertEqual(df_speed.loc[0, 'value'], "123.45678900")
+        self.assertEqual(df_speed.loc[0, 'Value'], "123.45678900")
 
     def test_full_request_lifecycle_metrics(self):
         req_map = {

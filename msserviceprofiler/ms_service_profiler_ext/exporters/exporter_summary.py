@@ -331,7 +331,7 @@ def convert_map_to_dataframe(map_data, include_stats):
                 "Metric": metric,
                 "Average": values["avg"],
                 "Max": values["max"],
-                "Min":values["min"],
+                "Min": values["min"],
                 "P50": values["p50"],
                 "P90": values["p90"],
                 "P99": values["p99"]
