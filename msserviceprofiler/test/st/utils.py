@@ -1,3 +1,17 @@
+import subprocess
+import os
+import re
+import logging
+
+
+def execute_cmd(cmd):
+    logging.info('Execute command:%s' % " ".join(cmd))
+    completed_process = subprocess.run(cmd, shell=False, stderr=subprocess.PIPE)
+    if completed_process.returncode != COMMAND_SUCESS:
+        logging.error(completed_process.stderr.decode())
+    return completed_process.returncode
+
+
 def check_column_actual(actual_columns, expected_columns, context):
     """检查实际列名是否与预期列名一致"""
     for col in expected_columns:
