@@ -12,14 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-from collections import defaultdict, deque
 from unittest.mock import patch, MagicMock
 
 import pytest
 import pandas as pd
 
-from components.utils.log import logger
 from msit_graph.subgraph_stat.subgraph_stat import (
     SimpleNode,
     parse_pbtxt,
@@ -28,12 +25,9 @@ from msit_graph.subgraph_stat.subgraph_stat import (
     generate_subgraphs,
     find_duplicate_subgraphs,
     has_subgraph,
-    stat_subgraph,
     calculate_average_durations,
     preprocess_subgraph,
-    calculate_sum
 )
-from msit_graph.graph_extract.graph_extract import GraphAnalyze
 
 
 # Fixture to mock logger
@@ -54,7 +48,7 @@ def mock_load_graph_def():
 def test_simple_node_init_given_name_and_type_when_valid_then_attributes_set():
     node = SimpleNode("Node1", "OpType1")
     assert node.name == "Node1"
-    assert node.type == "OpType1"
+    assert node.typename == "OpType1"
     assert node.inputs == []
     assert node.outputs == []
 
@@ -124,7 +118,7 @@ def test_generate_subgraphs_given_root_name_nodes_and_bfs_nodes_when_valid_then_
     }
     nodes["Node1"].outputs = ["Node2", "Node3"]
     bfs_nodes = ["Node1", "Node2", "Node3"]
-    subgraphs = generate_subgraphs("Node1", nodes, bfs_nodes)
+    subgraphs = generate_subgraphs("Node1", nodes, bfs_nodes, 1)
     assert len(subgraphs) >= 1
     assert ("OpType1", "OpType2", "OpType3") in subgraphs
 
