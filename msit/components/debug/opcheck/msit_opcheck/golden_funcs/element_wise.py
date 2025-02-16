@@ -71,42 +71,6 @@ def _broadcast_to(context: OpInfo):
     return [result]
 
 
-def _mul(context: OpInfo):
-    x1 = context.param.get("input_arrays")[0]
-    x2 = context.param.get("input_arrays")[1]
-    output_dtype = context.param.get("output_dtypes")
-    input_dtype = context.param.get("stc_input_dtypes")
-    if "complex32" in context.param.get("stc_input_dtypes"):
-        xreal, ximag = numpy.split(x1, 2, axis=-1)
-        yreal, yimag = numpy.split(x2, 2, axis=-1)
-        zreal = xreal * yreal - ximag * yimag
-        zimag = xreal * yimag + ximag * yreal
-        res = numpy.concatenate((zreal, zimag), axis=-1)
-        return res
-    elif "bool" in context.param.get("stc_input_dtypes"):
-        x1 = torch.tensor(x1)
-        x2 = torch.tensor(x2)
-        res = torch.mul(x1, x2).detach().numpy()
-        return res
-    else:
-        if input_dtype[0] == "bfloat16":
-            x1 = x1.astype("float32")
-            x2 = x2.astype("float32")
-        if input_dtype[0] != input_dtype[1] :
-            x1 = x1.astype("float32")
-            x2 = x2.astype("float32")
-        tensor_x1 = tf.compat.v1.placeholder(x1.dtype, shape=x1.shape)
-        tensor_x2 = tf.compat.v1.placeholder(x2.dtype, shape=x2.shape)
-        feed_dict = {tensor_x1: x1, tensor_x2: x2}
-        out = tf.multiply(tensor_x1, tensor_x2)
-        with tf.compat.v1.Session() as sess:
-            res = sess.run(out, feed_dict=feed_dict)
-
-        output_dtype = bfloat16_conversion(output_dtype)
-        res = res.astype(output_dtype[0])
-        return [res]
-
-
 def _abs(context: OpInfo):
     x = context.param.get("input_arrays")[0]
     if "complex32" in context.param.get("stc_input_dtypes"):
@@ -189,17 +153,6 @@ def _square(context: OpInfo):
     return res.astype(output_dtypes[0])
 
 
-def _minimum(context: OpInfo):
-    x1, x2 = context.param.get("input_arrays")
-    x_dtype = x1.dtype
-    if "bfloat16" in str(x_dtype) or "float16" in str(x_dtype):
-        x1 = x1.astype("float32")
-        x2 = x2.astype("float32")
-    res = numpy.minimum(x1, x2)
-    output_dtypes = bfloat16_conversion(context.param.get("output_dtypes"))
-    return res.astype(output_dtypes[0])
-
-
 def _floor(context: OpInfo):
     x1 = context.param.get("input_arrays")[0]
     x_dtype = x1.dtype
@@ -262,7 +215,6 @@ def _real(context: OpInfo):
     if "complex64" in context.param.get("stc_input_dtypes"):
         return x.real
     return None
-
 
 
 def _ger(context: OpInfo):
@@ -333,20 +285,6 @@ def _tanh_grad(context: OpInfo):
         return result.astype(tf.bfloat16.as_numpy_dtype, copy=False)
     else:
         return result.astype(context.param.get("output_dtypes")[0], copy=False)
-
-
-def _sigmoid(context: OpInfo):
-    input0 = context.param.get("input_arrays")[0]
-    if input0.dtype == tf.bfloat16.as_numpy_dtype:
-        input0 = input0.astype("float32")
-    tensor_neg = input0 * (-1)
-    tensor_exp = numpy.exp(tensor_neg)
-    tensor_add = tensor_exp + 1
-    res = 1 / tensor_add
-    if context.param.get("output_dtypes")[0] == "bfloat16":
-        return res.astype(tf.bfloat16.as_numpy_dtype, copy=False)
-    else:
-        return res.astype(context.param.get("output_dtypes")[0], copy=False)
 
 
 def _softplus(context: OpInfo):
@@ -459,30 +397,6 @@ def _floor_div(context: OpInfo):
 def _mod(context: OpInfo):
     input0 = context.param.get("input_arrays")[0]
     input1 = context.param.get("input_arrays")[1]
-    return numpy.fmod(input0, input1)
-
-
-def _add_n(context: OpInfo):
-    inputs = context.param.get("input_arrays")
-    if context.param.get("output_dtypes")[0] == "bfloat16":
-        out = inputs[0].astype("float32")
-        for inp in inputs[1:]:
-            out = numpy.add(out, inp.astype("float32"))
-        out = tf.cast(out, tf.bfloat16)
-        with tf.compat.v1.Session() as sess:
-            result = sess.run(out)
-    else:
-        result = inputs[0]
-        need_conv = inputs[0].dtype == "float16"
-        if need_conv:
-            result = inputs[0].astype("float32")
-        for inp in inputs[1:]:
-            if need_conv:
-                inp = inp.astype("float32")
-            result = numpy.add(result, inp, dtype=result.dtype)
-        if need_conv:
-            result = result.astype("float16")
-    return result
 
 
 def _sigmoid_grad(context: OpInfo):
@@ -517,31 +431,6 @@ def _fill_d(context: OpInfo):
     if transform(res, output_ori_format, output_format, output_shape) is not None:
         res = transform(res, output_ori_format, output_format, output_shape)
     return res
-
-
-def _tile_d(context: OpInfo):
-    x = context.param.get("input_arrays")[0]
-    multiples = context.param.get("multiples")
-    tensor_x = tf.placeholder(x.dtype, shape=x.shape)
-    out = tf.tile(tensor_x, multiples)
-    with tf.Session() as sess:
-        res = sess.run(out, feed_dict={tensor_x: x})
-    output_ori_format = context.param.get("output_ori_formats")[0]
-    output_format = context.param.get("output_formats")[0]
-    output_shape = context.param.get("stc_outputs")[0]
-    if transform(res, output_ori_format, output_format, output_shape) is not None:
-        res = transform(res, output_ori_format, output_format, output_shape)
-    return res
-
-
-def _relu(context: OpInfo):
-    input0 = context.param.get("input_arrays")[0]
-    if "bfloat16" in str(input0.dtype):
-        x = input0.astype("float32")
-        res = numpy.maximum(x, 0)
-        return res.astype(input0.dtype, copy=False)
-    else:
-        return numpy.maximum(input0, 0)
 
 
 def _sqrt_grad(context: OpInfo):
@@ -662,20 +551,6 @@ def _cast(context: OpInfo):
     else:
         res = out.numpy()
     return res
-
-
-def _adds(context: OpInfo):
-    input0 = context.param.get("input_arrays")[0]
-    value = context.param.get("value")
-    if str(input0.dtype) in ("int32", "int64"):
-        value = numpy.floor(value).astype(input0.dtype)
-    if "bfloat16" in str(input0.dtype):
-        x = input0.astype("float32")
-        res = numpy.add(x, value)
-        return res.astype(tf.bfloat16.as_numpy_dtype, copy=False)
-    else:
-        res = numpy.add(input0, value)
-        return res.astype(context.param.get("output_dtypes")[0], copy=False)
 
 
 def _div(context: OpInfo):

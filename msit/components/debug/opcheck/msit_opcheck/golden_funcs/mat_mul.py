@@ -14,12 +14,14 @@
 # limitations under the License.
 
 import numpy as np
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 import torch
 
 from msit_opcheck.conversion.dtype_convert import bfloat16_conversion_v2, DATA_TYPE_MAP
 from msit_opcheck.operation_test import OperationTest
 from msit_opcheck.conversion.shape_convert import format_transformation_map
+
+tf.disable_v2_behavior()
 
 
 def hf_32_input_gerenate(input_fp32):   
@@ -30,7 +32,7 @@ def hf_32_input_gerenate(input_fp32):
     return input_hf32
 
 
-def _matmul(inputs):
+def matmul(inputs):
     x1, x2, trans_a, trans_b, out_dtype, bias = inputs
     tf.compat.v1.disable_eager_execution()
 
@@ -114,7 +116,7 @@ class MatmulOperation(OperationTest):
             bias = format_transformation_map[bias_new_format][bias_ori_format](bias, bias_new_format, bias_ori_shape)
 
         inputs = [x1, x2, trans_a, trans_b, out_dtype, bias]
-        res = _matmul(inputs)
+        res = matmul(inputs)
         res = format_transformation_map[out_ori_format][format_out](res, out_ori_format, out_shape)
         return [res]
 
