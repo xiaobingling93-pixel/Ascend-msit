@@ -35,7 +35,10 @@ from msit_opcheck.golden_funcs.sigmoid import SigmoidOperation
 from msit_opcheck.golden_funcs.tanh import TanhOperation
 from msit_opcheck.golden_funcs.tile_d import TileDOperation
 from msit_opcheck.golden_funcs.transpose import TransposeOperation
-
+from msit_opcheck.golden_funcs.mul import MulOperation
+from msit_opcheck.golden_funcs.select import SelectOperation
+from msit_opcheck.golden_funcs.clip_by_value import ClipByValueOperation
+from msit_opcheck.golden_funcs.rsqrt import RsqrtOperation
 
 OP_DICT = dict({"Pad": PadOperation, 
                 "PadD": PadOperation, 
@@ -60,5 +63,9 @@ OP_DICT = dict({"Pad": PadOperation,
                 "Sigmoid": SigmoidOperation,
                 "Tanh": TanhOperation,
                 "Tile": TileDOperation,
-                "Transpose": TransposeOperation
+                "Transpose": TransposeOperation,
+                "Mul": MulOperation,
+                "Select": SelectOperation,
+                "ClipByValue":ClipByValueOperation,
+                "Rsqrt": RsqrtOperation,
                 })

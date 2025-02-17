@@ -15,6 +15,7 @@
 
 import copy
 from typing import Union, Tuple, List
+from functools import reduce
 
 import numpy as np
 
