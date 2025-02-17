@@ -1,0 +1,178 @@
+import os
+import csv
+from abc import ABC, abstractmethod
+
+from collector import FileCollector
+
+
+class ComparatorFactory:
+    _registry = {}
+
+    @classmethod
+    def register(cls, file_name: str):
+        def decorator(subclass):
+            cls._registry[file_name] = subclass
+            return subclass
+        return decorator
+
+    @classmethod
+    def create(cls, path_a: str, path_b: str):
+        base_name_a = os.path.basename(path_a).lower()
+        base_name_b = os.path.basename(path_b).lower()
+        
+        if base_name_a != base_name_b:
+            raise ValueError()
+        
+        if base_name_a not in cls._registry:
+            raise ValueError("Unsupported file type: %r" % base_name_a)
+
+        return cls._registry[base_name_a](path_a, path_b)
+    
+
+class Comparator(ABC):
+    def __init__(self, path_a: str, path_b: str):
+        self.path_a = path_a
+        self.path_b = path_b
+        
+    @abstractmethod
+    def compare(self):
+        pass
+
+
+@ComparatorFactory.register('batch_summary.csv')
+@ComparatorFactory.register('request_summary.csv')
+@ComparatorFactory.register('service_summary.csv')
+class CSVComparator(Comparator):
+    COLOR_RED = '\033[91m'
+    COLOR_GREEN = '\033[92m'
+    COLOR_RESET = '\033[0m'
+    UP_ARROW = '\u2191'
+    DOWN_ARROW = '\u2193'
+    
+    METRIC_WEIGHTS = {
+        'average': 0.4,
+        'max': 0.2,
+        'min': 0.1,
+        'P50': 0.1,
+        'P90': 0.1,
+        'P99': 0.1
+    }
+
+    def __init__(self, path_a, path_b):
+        super().__init__(path_a, path_b)
+        self.data_a = self._parse_csv(path_a)
+        self.data_b = self._parse_csv(path_b)
+        self.diff_data = []
+
+    def _parse_csv(self, path):
+        """Parse CSV into {Metric: {field: value}} structure"""
+        with open(path, 'r', encoding='utf-8') as f:
+            reader = csv.reader(f)
+            headers = next(reader)
+            return {
+                row[0]: {header: self._try_float(value) for header, value in zip(headers, row)}
+                for row in reader if row
+            }
+    
+    def _try_float(self, value):
+        """Safe conversion to float"""
+        try:
+            return float(value)
+        except ValueError:
+            return value
+    
+    def _format_value(self, value, threshold=0):
+        """Color formatting with arrows"""
+        if isinstance(value, (int, float)):
+            if value > threshold:
+                return f"{self.COLOR_RED}{value:+.4f}{self.UP_ARROW}{self.COLOR_RESET}"
+            elif value < threshold:
+                return f"{self.COLOR_GREEN}{value:+.4f}{self.DOWN_ARROW}{self.COLOR_RESET}"
+            return f"{value:+.4f}"
+        return str(value)
+
+    def _calculate_metrics(self, metric):
+        """Calculate differences and analysis metrics"""
+        a_data = self.data_a.get(metric, {})
+        b_data = self.data_b.get(metric, {})
+        
+        diff = {'Metric': metric}
+        analysis = {}
+        
+        # Calculate numerical differences
+        for field in a_data.keys():
+            if field == 'Metric' or not isinstance(a_data.get(field), (int, float)):
+                continue
+            a_val = a_data.get(field, 0)
+            b_val = b_data.get(field, 0)
+            diff[field] = b_val - a_val
+
+        # Calculate analysis metrics
+        analysis['Long Tail (P99-P90)'] = diff.get('P99', 0) - diff.get('P90', 0)
+        analysis['Range (max-min)'] = diff.get('max', 0) - diff.get('min', 0)
+        analysis['Average Change'] = diff.get('average', 0)
+        
+        # Calculate weighted score
+        score = sum(diff.get(k, 0) * v for k, v in self.METRIC_WEIGHTS.items())
+        
+        return diff, analysis, score
+    
+    def compare(self):
+        """Main comparison logic"""
+        total_score = 0
+        output_rows = []
+        headers = ['Metric'] + list(self.METRIC_WEIGHTS.keys())
+        output_rows.append(headers)
+        
+        # Process all metrics
+        all_metrics = set(self.data_a.keys()) | set(self.data_b.keys())
+        for metric in sorted(all_metrics):
+            diff, analysis, score = self._calculate_metrics(metric)
+            total_score += score
+            self.diff_data.append(diff)
+            
+            # Build output row
+            output_row = [metric] + [diff.get(k, 'N/A') for k in headers[1:]]
+            output_rows.append(output_row)
+            
+            # Print analysis
+            print(f"\n[ {metric} ]")
+            for name, value in analysis.items():
+                print(f"  {name:<20}: {self._format_value(value)}")
+            print(f"  {'Weighted Score':<20}: {self._format_value(score)}")
+
+        # Print final score
+        print(f"\n{'='*40}")
+        print(f"Total System Score: {self._format_value(total_score)}")
+        
+        # Save diff CSV
+        self._save_diff_csv(output_rows)
+        return self
+
+    def _save_diff_csv(self, rows):
+        """Save difference report"""
+        diff_path = f"diff_{os.path.basename(self.path_a)}"
+        with open(diff_path, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerows(rows)
+        print(f"\nDifference report saved to: {diff_path}")
+
+        
+@ComparatorFactory.register('profiler.db')
+class DBComparator(Comparator):
+    def compare(self):
+        print(2)
+
+
+class ComparisonExecutor(object):
+    def __init__(self, file_collector: FileCollector, max_workers: int=1):
+        self.file_collector = file_collector
+        self.max_workers = max_workers
+
+    def submit(self, dir_path_a: str, dir_path_b: str):
+        for path_a, path_b in self.file_collector.collect_pairs(dir_path_a, dir_path_b):
+            comparator = ComparatorFactory.create(path_a, path_b)
+            result_generator = comparator.compare()
+
+            #result_generator.generate()
+            #result_generator.save()
