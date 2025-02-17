@@ -24,7 +24,9 @@ from msit_opcheck.constants import BFLOAT16
 class PadOperation(OperationTest):
     def golden_calc(self, in_tensors):
         input_data, paddings = in_tensors
-        input_format = self.op_param['input_desc'][0]['layout']
+        for attr in self.op_param['input_desc'][0]['attr']:
+            if attr['key'] == 'origin_format':
+                input_format = attr['value']['s']
         bf16_mark = False
         if True:
             pad_shape = deque()
