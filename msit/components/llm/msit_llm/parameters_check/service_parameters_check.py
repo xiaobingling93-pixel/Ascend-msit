@@ -18,6 +18,7 @@ import argparse
 import ast
 import re
 import csv
+import pandas as pd
 from tabulate import tabulate
 
 from msit_llm.common.log import logger
@@ -27,15 +28,23 @@ service_parameters = ['temperature', 'top_k', 'top_p', 'do_sample', 'seed', 'rep
                       'frequency_penalty', 'presence_penalty', 'length_penalty', 'ignore_eos']
 
 
+def create_difference_dict(req_order, param, file1_value="N/A", file2_value="N/A"):
+    if req_order == -1:
+        return {"param": param, "file1_value": file1_value, "file2_value": file2_value}
+    else:
+        return {"req_order": req_order, "param": param, "file1_value": file1_value, "file2_value": file2_value}
+
+
+
 def extract_log_parameters(log_file_path):
     """
-    从日志文件中提取采样参数并返回字典
+    Extract sampling parameters from the log file and return a dictionary.
 
-    参数：
-        log_file_path (str): 日志文件路径
+    Parameters:
+        log_file_path (str): Path to the log file.
 
-    返回：
-        dict: 包含所有请求参数的字典，结构为{request_id: parameters_dict}
+    Returns:
+        dict: A dictionary containing all the request parameters, structured as {request_id: parameters_dict}.
     """
     result_dict = {}
 
@@ -54,6 +63,10 @@ def extract_log_parameters(log_file_path):
             # 匹配参数块开始行
             start_match = start_pattern.search(line)
             if start_match:
+                # 处理未完成的前一个请求
+                if current_request is not None:
+                    logger.error(f"Abandon incomplete block for request {current_request}")
+                # 开始新请求
                 current_request = start_match.group(1)
                 brace_count = 0
                 json_buffer = []
@@ -69,7 +82,7 @@ def extract_log_parameters(log_file_path):
                 json_buffer.append(line)
 
                 # 当大括号数量归零时尝试解析
-                if brace_count == 0 and current_request:
+                if brace_count == 0:
                     try:
                         json_str = ''.join(json_buffer)
                         params = json.loads(json_str)
@@ -80,21 +93,20 @@ def extract_log_parameters(log_file_path):
                     finally:
                         current_request = None
                         json_buffer = []
-                    # break
     return result_dict
 
 
 def extract_txt_parameters(log_file_path):
     """
-    从日志文件中提取采样参数并返回字典
+    Extract sampling parameters from the log file and return a dictionary.
 
-    参数：
-        log_file_path (str): 日志文件路径
+    Parameters:
+        log_file_path (str): Path to the log file.
 
-    返回：
-        dict: 包含所有请求参数的字典，结构为{request_id: parameters_dict}
+    Returns:
+        dict: A dictionary containing all the request parameters, structured as {request_id: parameters_dict}.
     """
-    with open(log_file_path, 'r') as file:
+    with ms_open(log_file_path, 'r') as file:
         param_str = file.read()
 
     # **第一步**：拆分每个 `request_id: SamplingParams(...)` 对
@@ -109,7 +121,6 @@ def extract_txt_parameters(log_file_path):
         if ':' in line:
             # **第二步**：提取 `request_id` 和 `SamplingParams(...)` 部分
             request_id, param_str = line.split(":", 1)
-            request_id = request_id.strip()  # 清理空白字符
 
             # **第三步**：去掉 "SamplingParams" 这个类名，只保留括号内部的部分
             param_str = param_str[param_str.find("(") + 1: param_str.rfind(")")]
@@ -124,6 +135,8 @@ def extract_txt_parameters(log_file_path):
                     depth += 1  # 进入嵌套
                 elif char in ")]}":
                     depth -= 1  # 退出嵌套
+                else:
+                    pass
 
                 if char == "," and depth == 0:  # 只有在 **不在嵌套** 时才能切割
                     params.append(current.strip())
@@ -156,7 +169,9 @@ def extract_txt_parameters(log_file_path):
     return param_dict
 
 
-def compare_parameters(dict_input1, dict_input2, path=""):
+def compare_parameters(dict_input1, dict_input2, path="", depth=0):
+    if depth > 5:
+        raise RecursionError(f"The recursion depth exceeds the maximum limit (5). Current path:{path}")
     """比对两个字典"""
     differences = []
 
@@ -164,87 +179,59 @@ def compare_parameters(dict_input1, dict_input2, path=""):
     for key in dict_input1:
         new_path = f"{path}.{key}" if path else key
         if key not in dict_input2:
-            differences.append({"key": new_path, "file1_value": dict_input1[key], "file2_value": "N/A"})
+            differences.append(create_difference_dict(-1, new_path, dict_input1[key], "N/A"))
         else:
             # 如果值是字典，则递归调用
             if isinstance(dict_input1[key], dict) and isinstance(dict_input2[key], dict):
-                differences.extend(compare_parameters(dict_input1[key], dict_input2[key], new_path))
+                differences.extend(compare_parameters(dict_input1[key], dict_input2[key], new_path, depth + 1))
             # 如果值是列表，则比对列表
             elif isinstance(dict_input1[key], list) and isinstance(dict_input2[key], list):
                 # 比较数组的长度
                 if len(dict_input1[key]) != len(dict_input2[key]):
-                    differences.append({
-                        "key": new_path, 
-                        "file1_value": dict_input1[key], 
-                        "file2_value": dict_input2[key]
-                        })
+                    differences.append(create_difference_dict(-1, new_path, dict_input1[key], dict_input2[key]))
                 else:
                     for i, (item1, item2) in enumerate(zip(dict_input1[key], dict_input2[key])):
                         if item1 != item2:
-                            differences.append({
-                                "key": f"{new_path}[{i}]", 
-                                "file1_value": dict_input1[key][i], 
-                                "file2_value": dict_input2[key][i]
-                                })
+                            differences.append(create_difference_dict(-1, f"{new_path}[{i}]",
+                                                                      dict_input1[key][i], dict_input2[key][i]))
             else:
                 # 比较值是否一致
                 if dict_input1[key] != dict_input2[key]:
-                    differences.append({
-                        "key": new_path, 
-                        "file1_value": dict_input1[key], 
-                        "file2_value": dict_input2[key]
-                        })
+                    differences.append(create_difference_dict(-1, new_path, dict_input1[key], dict_input2[key]))
 
     # 遍历第二个字典的key，找出遗漏的key
     for key in dict_input2:
         new_path = f"{path}.{key}" if path else key
         if key not in dict_input1:
-            differences.append({
-                "key": new_path, 
-                "file1_value": "N/A", 
-                "file2_value": dict_input2[key]
-                })
-
+            differences.append(create_difference_dict(-1, new_path, "N/A", dict_input2[key]))
     return differences
 
 
-def compare_service_parameters(dict_input1, dict_input2, req_order):
-    differences = []
+def compare_service_parameters(dict_input1, dict_input2, req_order, differences):
     for param in service_parameters:
         if param not in dict_input1 and param not in dict_input2:
-            differences.append({
-                "req_order": req_order, 
-                "key": param, 
-                "file1_value": "N/A", 
-                "file2_value": "N/A"
-                })
+            differences.append(create_difference_dict(req_order, param, "N/A", "N/A"))
         elif param not in dict_input1:
-            differences.append({
-                "req_order": req_order, 
-                "key": param, 
-                "file1_value": "N/A", 
-                "file2_value": dict_input2[param]})
+            differences.append(create_difference_dict(req_order, param, "N/A", dict_input2[param]))
 
         elif param not in dict_input2:
-            differences.append({
-                "req_order": req_order, 
-                "key": param, 
-                "file1_value": dict_input1[param], 
-                "file2_value": "N/A"
-                })
+            differences.append(create_difference_dict(req_order, param, dict_input1[param], "N/A"))
         else:
             if dict_input1[param] != dict_input2[param]:
-                differences.append({
-                    "req_order": req_order, 
-                    "key": param, 
-                    "file1_value": dict_input1[param], 
-                    "file2_value": dict_input2[param]
-                    })
-    return differences
+                differences.append(create_difference_dict(req_order, param, dict_input1[param], dict_input2[param]))
 
 
-def compare_files(input1, input2):
-    is_first = True
+def compare_and_generate(input1_params, input2_params):
+    differences = []
+    if len(input1_params) != len(input2_params):
+        logger.error('Please make sure that the request parameters are the same on both sides')
+    else:
+        for req_order, params in input1_params.items():
+            compare_service_parameters(input2_params[req_order], params, req_order, differences)
+        generate_report(differences)
+
+
+def service_params_check(input1, input2):
     if input1.endswith('.json') and input2.endswith('.json'):
         """加载两个 JSON 文件并进行比对"""
         with ms_open(input1, "r", encoding="utf-8") as f_gpu, ms_open(input2, "r", encoding="utf-8") as f_npu:
@@ -255,88 +242,23 @@ def compare_files(input1, input2):
     elif input1.endswith('.txt') and input2.endswith('.log'):
         gpu_input = extract_txt_parameters(input1)
         npu_input = extract_log_parameters(input2)
-        if len(gpu_input) != len(npu_input):
-            logger.error('Please make sure that the request parameters are the same on both sides')
-        else:
-            for req_order, params in npu_input.items():
-                differences = compare_service_parameters(gpu_input[req_order], params, req_order)
-                if is_first:
-                    generate_report(differences, mode='w', is_multi=True)
-                    is_first = False
-                else:
-                    generate_report(differences, mode='a', is_multi=True)
+        compare_and_generate(input1_params=npu_input, input2_params=gpu_input)
     elif input1.endswith('.log') and input2.endswith('.log'):
         npu_input1 = extract_log_parameters(input1)
         npu_input2 = extract_log_parameters(input2)
-        if len(npu_input1) != len(npu_input2):
-            logger.error('Please make sure that the request parameters are the same on both sides')
-        else:
-            for req_order, params in npu_input1.items():
-                differences = compare_service_parameters(npu_input2[req_order], params, req_order)
-                if is_first:
-                    generate_report(differences, mode='w', is_multi=True)
-                    is_first = False
-                else:
-                    generate_report(differences, mode='a', is_multi=True)
+        compare_and_generate(npu_input1, npu_input2)
     else:
         logger.error('Please make sure that the type and format of the input file is correct')
 
 
-def generate_report(differences, output_file="comparison_report.csv", mode='w', is_multi=False):
+def generate_report(differences, output_file="comparison_report.csv"):
     """生成比对报告并保存为CSV文件"""
     if not differences:
-        # 如果没有差异，返回一个绿色的提示并保存空报告
-        with ms_open(output_file, mode=mode, newline='', encoding='utf-8') as file:
-            writer = csv.writer(file)
-            writer.writerow(["No differences found!"])
         logger.info(f"No differences found")
-
     else:
-        # 创建并写入 CSV 文件
-        report = []
-        with ms_open(output_file, mode=mode, newline='', encoding='utf-8') as file:
-            writer = csv.writer(file)
-
-            # 写入表头
-            if is_multi:
-                writer.writerow(["req_order", "parameters", "value1", "value2"])
-            else:
-                writer.writerow(["parameters", "value1", "value2"])
-            # 写入每条差异
-            for diff in differences:
-                if diff["file1_value"] is None:
-                    diff["file1_value"] = "None"
-                if diff["file2_value"] is None:
-                    diff["file2_value"] = "None"
-                # 写入每一行
-                if is_multi:
-                    writer.writerow([diff["req_order"], diff["key"], diff["file1_value"], diff["file2_value"]])
-                    report.append([diff["req_order"], diff["key"], diff["file1_value"], diff["file2_value"]])
-                else:
-                    writer.writerow([diff["key"], diff["file1_value"], diff["file2_value"]])
-                    report.append([diff["key"], diff["file1_value"], diff["file2_value"]])
-
-        if is_multi:
-            table = tabulate(report, headers=["req_order", "parameters", "value1", "value2"], tablefmt="grid")
-        else:
-            table = tabulate(report, headers=["parameters", "value1", "value2"], tablefmt="grid")
+        df = pd.DataFrame(differences)
+        df.to_csv(output_file, na_rep="None", index=False, encoding='utf-8')
+        df = df.fillna("None")
+        table = tabulate(df, headers=df.columns, tablefmt="grid", missingval="None", showindex=False)
         logger.info(f"\n{table}")
     logger.info(f"Report saved to {output_file}")
-
-
-def main():
-    """主函数，处理命令行参数并调用比对逻辑"""
-    parser = argparse.ArgumentParser(description="Compare two files and generate a report.")
-    parser.add_argument("--input1", dest='input1', default='', type=str,
-                        help="<Optional> Path of GPU config json file", required=True)
-    parser.add_argument("--input2", dest='input2', default='', type=str,
-                        help="<Optional> Path of NPU config json file", required=True)
-    args = parser.parse_args()
-
-    compare_files(args.input1, args.input2)
-
-
-
-
-if __name__ == "__main__":
-    main()

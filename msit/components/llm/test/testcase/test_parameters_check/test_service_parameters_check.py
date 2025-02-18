@@ -1,14 +1,12 @@
 import unittest
 import os
-import json
 import tempfile
-from unittest.mock import patch
 from msit_llm.common.log import logger
-from service_parameters_check import (
+from msit_llm.parameters_check.service_parameters_check import (
     extract_log_parameters,
     extract_txt_parameters,
     compare_service_parameters,
-    compare_files,
+    service_params_check,
     generate_report,
     service_parameters,
 )
@@ -67,15 +65,16 @@ class TestUpdatedServiceParametersCheck(unittest.TestCase):
 
     def test_compare_service_parameters_missing(self):
         """测试服务参数全缺失场景"""
+        diffs = []
         params1 = {"temperature": 0.7}
         params2 = {"top_p": 0.9}
-        diffs = compare_service_parameters(params1, params2, 0)
+        compare_service_parameters(params1, params2, 1, diffs)
 
         # 验证所有服务参数都被检查
         self.assertEqual(len(diffs), len(service_parameters))
         # 验证存在的参数
-        self.assertTrue(any(d["key"] == "temperature" and d["file2_value"] == "N/A" for d in diffs))
-        self.assertTrue(any(d["key"] == "top_p" and d["file1_value"] == "N/A" for d in diffs))
+        self.assertTrue(any(d["param"] == "temperature" and d["file2_value"] == "N/A" for d in diffs))
+        self.assertTrue(any(d["param"] == "top_p" and d["file1_value"] == "N/A" for d in diffs))
 
     def test_cross_file_comparison(self):
         """测试跨文件类型比对（txt vs log）"""
@@ -90,46 +89,45 @@ class TestUpdatedServiceParametersCheck(unittest.TestCase):
         log_file = self.create_temp_file(log_content, ".log")
 
         # 执行比对
-        compare_files(txt_file, log_file)
+        service_params_check(txt_file, log_file)
 
         # 验证报告
         report_path = "comparison_report.csv"
         with open(report_path) as f:
             content = f.read()
         self.assertIn("top_p,0.9,0.8", content)
-        self.assertIn("req_order,parameters,value1,value2", content)
+        self.assertIn("req_order,param,file1_value,file2_value", content)
 
     def test_multi_request_report(self):
         """测试多请求报告生成"""
         # 生成测试差异数据
         diffs = [
-            {"req_order": 1, "key": "temperature", "file1_value": 0.7, "file2_value": 0.8},
-            {"req_order": 2, "key": "top_p", "file1_value": 0.9, "file2_value": 1.0}
+            {"req_order": 1, "param": "temperature", "file1_value": 0.7, "file2_value": 0.8},
+            {"req_order": 2, "param": "top_p", "file1_value": 0.9, "file2_value": 1.0}
         ]
 
         # 测试报告生成
         report_path = os.path.join(self.temp_dir.name, "multi_report.csv")
-        generate_report([diffs[0]], report_path, mode='w', is_multi=True)
-        generate_report([diffs[1]], report_path, mode='a', is_multi=True)
+        generate_report(diffs, report_path)
 
         # 验证报告内容
         with open(report_path) as f:
             lines = f.readlines()
-        self.assertEqual(len(lines), 4)  # Header + 2 rows
+        self.assertEqual(len(lines), 3)  # Header + 2 rows
         self.assertIn("1,temperature,0.7,0.8", lines[1])
-        self.assertIn("2,top_p,0.9,1.0", lines[3])
+        self.assertIn("2,top_p,0.9,1.0", lines[2])
 
     def test_none_handling_in_report(self):
         """测试None值在报告中的转换"""
         diffs = [{
             "req_order": 0,
-            "key": "seed",
+            "param": "seed",
             "file1_value": None,
             "file2_value": 42
         }]
 
         report_path = os.path.join(self.temp_dir.name, "none_report.csv")
-        generate_report(diffs, report_path, is_multi=True)
+        generate_report(diffs, report_path)
 
         with open(report_path) as f:
             content = f.read()
@@ -154,7 +152,7 @@ class TestUpdatedServiceParametersCheck(unittest.TestCase):
 
         # 执行比对并捕获异常
         with self.assertLogs(logger, level='ERROR') as cm:
-            compare_files(log1, log2)
+            service_params_check(log1, log2)
         self.assertTrue(any("ERROR" in log for log in cm.output))
 
 
