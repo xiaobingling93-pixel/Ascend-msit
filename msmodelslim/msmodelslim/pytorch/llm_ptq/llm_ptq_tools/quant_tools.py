@@ -50,8 +50,11 @@ from msmodelslim.pytorch.lowbit.calibration import (
 )
 from msmodelslim.pytorch.lowbit.quant_modules import LinearQuantizer as LowBitLinearQuantizer
 from msmodelslim.pytorch.lowbit.quant_modules import Quantizer as LowBitQuantizer
+from msmodelslim.pytorch.llm_ptq.save_utils import TensorCollector
+from msmodelslim.pytorch.llm_ptq.save_utils import NpySaver
+from msmodelslim.pytorch.llm_ptq.save_utils import SafeTensorSaver
+from msmodelslim.pytorch.llm_ptq.save_utils import JsonDescriptionSaver
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.llm_ptq_utils import QuantType, WeightQuantMethod
-from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.llm_ptq_utils import QuantModelJsonDescription
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.llm_ptq_utils import (
     SAVE_TYPE_LIST,
     SAVE_TYPE_NUMPY,
@@ -113,10 +116,13 @@ class Calibrator(object):
                                 f'{model.config.torch_dtype}. The model will be regarded as {model.config.torch_dtype}'
                                 f' type in subsequent process.')
 
-        self.quant_param_dict = {}
-        # 记录被量化module名称，相关的scale、offset等参数名称 key:weight的名称， value:scale、offset等参数的名称
-        self.quantized_module_param_dict = defaultdict(list)
-        self.fa_module_param_dict = defaultdict(list)
+        self.quant_param_collector = TensorCollector()
+        self.safe_tensor_saver = SafeTensorSaver()
+        self.json_description_saver = JsonDescriptionSaver(self.cfg)
+        self.npy_saver = NpySaver(self.cfg)
+        self.quant_param_collector.add_saver(self.safe_tensor_saver)
+        self.quant_param_collector.add_saver(self.json_description_saver)
+        self.quant_param_collector.add_saver(self.npy_saver)
 
         self.model_with_accelerate = judge_model_with_accelerate(model)
 
@@ -131,9 +137,6 @@ class Calibrator(object):
             self.attention_class = class_detect(model, 'attention')
             self.transformer_class = class_detect(model, 'GLMTransformer')
 
-        # 记录浮点模型权重
-        self.ori_fp_weight = self.get_ori_model_weight(model, self.cfg)
-
         if self.cfg.do_smooth:
             replace_RMSNorm(model)
 
@@ -142,10 +145,6 @@ class Calibrator(object):
             self.cfg.fa_tp_size = 1
             self.cfg.fa_amp = 0
 
-        # 初始化模型权重json描述
-        self.quant_model_json_description = QuantModelJsonDescription(self.cfg.model_quant_type,
-                                                                      self.cfg.use_kvcache_quant,
-                                                                      self.cfg.use_fa_quant)
         if not re.match(r'^L((?!0)\d+|0)$', disable_level):
             raise ValueError('Please check the `disable_level` configuration.')
         self.disable_level = disable_level
@@ -357,8 +356,8 @@ class Calibrator(object):
         scale, zero_point = linear_quantization_params(8, kv_cache['min'], kv_cache['max'],
                                                        integral_zero_point=True, q_signed=True, sym=self.kv_sym)
 
-        self.quant_param_dict[new_key_scale] = scale.to('cpu')
-        self.quant_param_dict[new_key_offset] = zero_point.to('cpu')
+        self.quant_param_collector[new_key_scale] = scale.to('cpu')
+        self.quant_param_collector[new_key_offset] = zero_point.to('cpu')
         self.quantized_module_param_dict[key_weight].append(new_key_scale)
         self.quantized_module_param_dict[key_weight].append(new_key_offset)
 
@@ -515,7 +514,7 @@ class Calibrator(object):
 
         # 修改 safetensor 权重
         safetensor_weight = {}
-        quant_model_state_dict_list = list(self.quant_param_dict.keys())
+        quant_model_state_dict_list = list(self.quant_param_collector.keys())
         for ori_model_state_dict_name in self.ori_fp_weight:
             # 如果浮点权重名称不在量化权重名称中，说明是浮点独有的权重，需要把浮点权重加入safetensor_weight
             if ori_model_state_dict_name not in quant_model_state_dict_list:
@@ -573,7 +572,7 @@ class Calibrator(object):
         self.quant_model_json_description.change_weight_type(ori_model_state_dict_name, QuantType.FLOAT)
         if ori_model_state_dict_name in self.quantized_module_param_dict:
             for quant_param_name in self.quantized_module_param_dict[ori_model_state_dict_name]:
-                safetensor_weight[quant_param_name] = self.quant_param_dict.get(quant_param_name)
+                safetensor_weight[quant_param_name] = self.quant_param_collector.get(quant_param_name)
                 self.quant_model_json_description.change_weight_type(
                     quant_param_name, self.quant_model_json_description.model_quant_type)
 
@@ -582,20 +581,20 @@ class Calibrator(object):
         if "mlp" in ori_model_state_dict_name and self.is_deepseek_v2:
             if self.quant_model_json_description.model_quant_type is QuantType.W8A8:
                 model_quant_type = QuantType.W8A8_DYNAMIC
-        safetensor_weight[ori_model_state_dict_name] = self.quant_param_dict.get(ori_model_state_dict_name)
+        safetensor_weight[ori_model_state_dict_name] = self.quant_param_collector.get(ori_model_state_dict_name)
         self.quant_model_json_description.change_weight_type(
             ori_model_state_dict_name,
             model_quant_type)
         # 将该量化linear的附属参数，scale、offset 等加入safetensor_weight
         if ori_model_state_dict_name in self.quantized_module_param_dict.keys():
             for quant_param_name in self.quantized_module_param_dict.get(ori_model_state_dict_name):
-                safetensor_weight[quant_param_name] = self.quant_param_dict.get(quant_param_name)
+                safetensor_weight[quant_param_name] = self.quant_param_collector.get(quant_param_name)
                 self.quant_model_json_description.change_weight_type(
                     quant_param_name, model_quant_type)
 
     def set_fa_quant_safetensor(self, attention_module_name, safetensor_weight):
         for quant_param_name in self.fa_module_param_dict.get(attention_module_name):
-            quant_param = self.quant_param_dict.get(quant_param_name)
+            quant_param = self.quant_param_collector.get(quant_param_name)
             if quant_param is not None:
                 safetensor_weight[quant_param_name] = quant_param
                 self.quant_model_json_description.change_weight_type(quant_param_name, QuantType.FAQuant)
@@ -619,18 +618,18 @@ class Calibrator(object):
         for name, module in self.model.named_modules():
             weight_name = name + '.weight'
             if isinstance(module, (LinearQuantizer, LinearSparseQuantizer, LowBitLinearQuantizer)):
-                weight_tensor = self.quant_param_dict.get(weight_name)
+                weight_tensor = self.quant_param_collector.get(weight_name)
                 quant_weight_dict[name] = weight_tensor.value if isinstance(weight_tensor, LazyTensor) \
                     else weight_tensor
                 if self.cfg.model_quant_type in [QuantType.W8A8, QuantType.W8A8S]:
-                    quant_bias_dict[name] = self.quant_param_dict.get(name + '.quant_bias')
-                    deq_scale_dict[name] = self.quant_param_dict.get(name + '.deq_scale')
-                    scale_dict[name] = self.quant_param_dict.get(name + '.input_scale')
-                    offset_dict[name] = self.quant_param_dict.get(name + '.input_offset')
-                if self.cfg.model_quant_type in [QuantType.W8A16, QuantType.W4A16, QuantType.W8A8_DYNAMIC, \
+                    quant_bias_dict[name] = self.quant_param_collector.get(name + '.quant_bias')
+                    deq_scale_dict[name] = self.quant_param_collector.get(name + '.deq_scale')
+                    scale_dict[name] = self.quant_param_collector.get(name + '.input_scale')
+                    offset_dict[name] = self.quant_param_collector.get(name + '.input_offset')
+                if self.cfg.model_quant_type in [QuantType.W8A16, QuantType.W4A16, QuantType.W8A8_DYNAMIC,
                                                  QuantType.W8A8]:
-                    scale_dict[name] = self.quant_param_dict.get(name + '.weight_scale')
-                    offset_dict[name] = self.quant_param_dict.get(name + '.weight_offset')
+                    scale_dict[name] = self.quant_param_collector.get(name + '.weight_scale')
+                    offset_dict[name] = self.quant_param_collector.get(name + '.weight_offset')
             if self.use_kvcache_quant:
                 self.get_kvcache_quant_params(weight_name, kv_cache_scale, kv_cache_offset)
             if self.cfg.use_fa_quant and is_attn_module_and_then_check_quantizer(module, name):
@@ -684,9 +683,9 @@ class Calibrator(object):
         if self.quantized_module_param_dict[weight_name]:
             for param_name in self.quantized_module_param_dict.get(weight_name):
                 if 'kv_cache_scale' in param_name:
-                    kv_cache_scale[param_name] = self.quant_param_dict.get(param_name)
+                    kv_cache_scale[param_name] = self.quant_param_collector.get(param_name)
                 elif 'kv_cache_offset' in param_name:
-                    kv_cache_offset[param_name] = self.quant_param_dict.get(param_name)
+                    kv_cache_offset[param_name] = self.quant_param_collector.get(param_name)
 
     def get_quant_params(self):
         self.model.eval()
@@ -694,17 +693,17 @@ class Calibrator(object):
             with PrepareWeight(module):
                 if self.cfg.use_fa_quant and is_attn_module_and_then_check_quantizer(module, name):
                     quant_param_scale, quant_param_offset, attach_map = export_fa_quant_params(module, name)
-                    self.quant_param_dict.update(quant_param_scale)
-                    self.quant_param_dict.update(quant_param_offset)
+                    self.quant_param_collector.update(quant_param_scale)
+                    self.quant_param_collector.update(quant_param_offset)
                     self.fa_module_param_dict.update(attach_map)
 
                 if isinstance(module, LinearNf4Quantizer):
-                    self.quant_param_dict[name + '.weight'] = module.weight
+                    self.quant_param_collector[name + '.weight'] = module.weight
                     if module.bias is not None:
-                        self.quant_param_dict[name + '.bias'] = module.bias
+                        self.quant_param_collector[name + '.bias'] = module.bias
                 if isinstance(module, ParallelLinearCol):
                     quant_param, attach_map = module.get_quant_param()
-                    self.quant_param_dict.update(quant_param)
+                    self.quant_param_collector.update(quant_param)
                     self.quantized_module_param_dict.update(attach_map)
                 # 处理 Norm 对应的 weight、bias
                 if isinstance(module, (NormBias, LlamaRMSNormBias)):
@@ -714,12 +713,12 @@ class Calibrator(object):
                     anti_norm_name_weight = name + '.module.weight'
                     anti_norm_name_bias = name + '.module.bias'
                     if not hasattr(self.model, 'ori_state_dict'):
-                        self.quant_param_dict[name + '.weight'] = anti_norm_weight.clone().detach()
-                        self.quant_param_dict[name + '.bias'] = anti_norm_bias.clone().detach()
+                        self.quant_param_collector[name + '.weight'] = anti_norm_weight.clone().detach()
+                        self.quant_param_collector[name + '.bias'] = anti_norm_bias.clone().detach()
                         self.quantized_module_param_dict[anti_norm_name_weight] = [name + '.weight', name + '.bias']
                     else:
-                        self.quant_param_dict[anti_norm_name_weight] = anti_norm_weight.clone().detach()
-                        self.quant_param_dict[anti_norm_name_bias] = anti_norm_bias.clone().detach()
+                        self.quant_param_collector[anti_norm_name_weight] = anti_norm_weight.clone().detach()
+                        self.quant_param_collector[anti_norm_name_bias] = anti_norm_bias.clone().detach()
                         self.quantized_module_param_dict[name + '.weight'] = [anti_norm_name_weight,
                                                                               anti_norm_name_bias]
 
@@ -743,7 +742,7 @@ class Calibrator(object):
 
                         save_quant_weight = LazyTensor(get_quant_weight,
                                                        tensor=save_quant_weight, mod=module)
-                    self.quant_param_dict[name + '.weight'] = save_quant_weight
+                    self.quant_param_collector[name + '.weight'] = save_quant_weight
 
                     # 所有专家层都使用动态量化
                     model_quant_type = self.cfg.model_quant_type
@@ -752,16 +751,16 @@ class Calibrator(object):
 
                     # W4A16/W8A16 需要提供 weight_scale、weight_offset
                     if model_quant_type in [QuantType.W8A16, QuantType.W4A16, QuantType.W8A8_DYNAMIC, QuantType.W8A8]:
-                        self.quant_param_dict[name + '.weight_scale'] = weight_scale
-                        self.quant_param_dict[name + '.weight_offset'] = weight_offset
+                        self.quant_param_collector[name + '.weight_scale'] = weight_scale
+                        self.quant_param_collector[name + '.weight_offset'] = weight_offset
                         self.quantized_module_param_dict[name + '.weight'].append(name + '.weight_scale')
                         self.quantized_module_param_dict[name + '.weight'].append(name + '.weight_offset')
                     # W8A8/W8A8S 需要提供 deq_scale、quant_bias、input_scale、input_offset
                     if model_quant_type in [QuantType.W8A8, QuantType.W8A8S]:
                         input_scale = module.quant_input.input_scale.cpu()
                         input_offset = module.quant_input.input_offset.cpu()
-                        self.quant_param_dict[name + '.input_scale'] = input_scale
-                        self.quant_param_dict[name + '.input_offset'] = input_offset
+                        self.quant_param_collector[name + '.input_scale'] = input_scale
+                        self.quant_param_collector[name + '.input_offset'] = input_offset
                         self.quantized_module_param_dict[name + '.weight'].append(name + '.input_scale')
                         self.quantized_module_param_dict[name + '.weight'].append(name + '.input_offset')
                         deq_scale = self.deqscale_process(input_scale, weight_scale).to(torch.float32)
@@ -770,8 +769,8 @@ class Calibrator(object):
                         quant_bias = torch.round(fp_bias / deq_scale - correction)
                         deq_scale = deqscale2int64_by_dtype(deq_scale, self.model.config.torch_dtype == torch.bfloat16)
 
-                        self.quant_param_dict[name + '.quant_bias'] = quant_bias.cpu().to(torch.int32)
-                        self.quant_param_dict[name + '.deq_scale'] = deq_scale.cpu()
+                        self.quant_param_collector[name + '.quant_bias'] = quant_bias.cpu().to(torch.int32)
+                        self.quant_param_collector[name + '.deq_scale'] = deq_scale.cpu()
                         self.quantized_module_param_dict[name + '.weight'].append(name + '.quant_bias')
                         self.quantized_module_param_dict[name + '.weight'].append(name + '.deq_scale')
 
@@ -788,9 +787,9 @@ class Calibrator(object):
                 concat_weight_list = []
                 for tp_index in range(module.cfg.tp_size):
                     concat_name = '.'.join([name, f'tp_list', str(tp_index), 'weight'])
-                    concat_weight_list.append(self.quant_param_dict.get(concat_name))
+                    concat_weight_list.append(self.quant_param_collector.get(concat_name))
                 concat_weight = torch.cat(concat_weight_list, dim=-1)
-                self.quant_param_dict[name + '.weight'] = concat_weight
+                self.quant_param_collector[name + '.weight'] = concat_weight
 
     def get_param_from_quantizer(self, module):
         quant_weight = None
@@ -1068,7 +1067,7 @@ class Calibrator(object):
         for name, mod in self.model.named_modules():
             # set the variable and function of kvcache in attention class
             if self.attention_class and isinstance(mod, self.attention_class):
-                cache_sub_dict = {key: value for key, value in self.quant_param_dict.items() if name in key}
+                cache_sub_dict = {key: value for key, value in self.quant_param_collector.items() if name in key}
                 set_kvcache_vari_func(mod, cache_sub_dict, self.cfg, num_layers=num_layers)
 
                 setattr(mod, 'original_forward', mod.forward)
