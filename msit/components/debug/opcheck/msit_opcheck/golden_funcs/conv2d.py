@@ -16,7 +16,6 @@ import numpy as np
 import tensorflow as tf
 
 from msit_opcheck.operation_test import OperationTest
-from msit_opcheck.conversion.shape_convert import format_transformation_map
 
 
 class Conv2dOperation(OperationTest):
@@ -120,43 +119,14 @@ class Conv2dOperation(OperationTest):
         x = in_tensors[0]
         conv_filter = in_tensors[1]
         bias = in_tensors[2] if len(in_tensors) > 2 else None
-        # get input params
-        for attr in self.op_param['input_desc'][0]['attr']:
-            if attr['key'] == 'origin_format':
-                x_ori_format = attr['value']['s']
-            if attr['key'] == 'origin_shape':
-                x_ori_shape = attr['value']['list']['i']
-        for attr in self.op_param['input_desc'][1]['attr']:
-            if attr['key'] == 'origin_format':
-                conv_filter_ori_format = attr['value']['s']
-            if attr['key'] == 'origin_shape':
-                conv_filter_ori_shape = attr['value']['list']['i']
-        conv_filter_new_format = self.op_param['input_desc'][1]['layout']
-        x_new_format = self.op_param['input_desc'][0]['layout']
         conv_params, groups = self.get_conv_params()
         x = x.astype(np.float32)
         conv_filter = conv_filter.astype(np.float32)
 
-        # 5HD to HWCN
-        if len(x.shape) != 5:
-            raise RuntimeError("conv2d testcase golden function supports NC1HWC0 input only!")
-        x = format_transformation_map[x_new_format][x_ori_format](x, x_new_format, x_ori_shape)
-        # x filter to NHWC
-        if conv_filter_ori_format != conv_filter_new_format:
-            filter_function = format_transformation_map[conv_filter_new_format][conv_filter_ori_format]
-            conv_filter = filter_function(conv_filter, conv_filter_new_format, conv_filter_ori_shape)
         if groups > 1:
             out = self.conv2d_with_groups(x, conv_filter, groups, bias, conv_params)
         else:
             out = self.conv2d(x, conv_filter, bias, conv_params)
-        for attr in self.op_param['output_desc'][0]['attr']:
-            if attr['key'] == 'origin_format':
-                out_ori_format = attr['value']['s']
-        out_format = self.op_param['output_desc'][0]['layout']
-        out_target_shape = self.op_param['output_desc'][0]['shape']['dim']
-        # output shape convert
-        if out_format != out_ori_format:
-            out = format_transformation_map[out_ori_format][out_format](out, out_ori_format, out_target_shape)
         return [out]
 
     def test_conv2d(self):

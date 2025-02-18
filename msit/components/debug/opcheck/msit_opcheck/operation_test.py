@@ -21,6 +21,7 @@ import numpy as np
 from components.debug.common import logger
 from components.utils.cmp_algorithm import NP_CMP_ALG_MAP, CUSTOM_ALG_MAP
 from msit_opcheck.utils import NAMEDTUPLE_PRECISION_METRIC, NAMEDTUPLE_PRECISION_MODE
+from msit_opcheck.conversion.shape_convert import is_transformable, format_transformation_map
 
 FLOAT_EPSILON = np.finfo(float).eps
 
@@ -126,9 +127,25 @@ class OperationTest(unittest.TestCase):
         if self.case_info['excuted_information'] != 'PASS':
             self.case_info['excuted_information'] = 'FAILED'
 
+    def tensor_format_transform(self, x, desc_type, order):
+        x_ori_shape, x_ori_format = None, None
+        x_new_format = self.op_param[desc_type][order]['layout']
+        for attr in self.op_param[desc_type][order]['attr']:
+            if attr['key'] == 'origin_format':
+                x_ori_format = attr['value']['s']
+            if attr['key'] == 'origin_shape':
+                if 'i' in attr['value']['list'].keys():
+                    x_ori_shape = attr['value']['list']['i']
+        if x_ori_shape and is_transformable(x_new_format, x_ori_format):
+            x = format_transformation_map[x_new_format][x_ori_format](x, x_new_format, x_ori_shape)
+        return x
+
     def excute_common(self):
         logger_text = f"———————— {self.op_type} {self.op_name} test start ————————"
         logger.info(logger_text)
+
+        for i in range(min(len(self.op_param['input_desc']), len(self.in_tensors))):
+            self.in_tensors[i] = self.tensor_format_transform(self.in_tensors[i], 'input_desc', i)
 
         try:
             golden_out_tensors = self.golden_calc(self.in_tensors)
@@ -145,6 +162,8 @@ class OperationTest(unittest.TestCase):
             self.case_info['fail_reason'] = "Unexpected Error when calc golden"
             raise RuntimeError(error_text) from e
 
+        for i in range(min(len(self.op_param['output_desc']), len(self.out_tensors))):
+            self.out_tensors[i] = self.tensor_format_transform(self.out_tensors[i], 'output_desc', i)
         out_tensors = self.out_tensors
 
         try:

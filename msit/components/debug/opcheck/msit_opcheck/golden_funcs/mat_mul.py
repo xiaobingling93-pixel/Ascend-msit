@@ -80,29 +80,6 @@ class MatmulOperation(OperationTest):
             if attr['key'] == 'transpose_x2':
                 trans_b = attr['value']['b']
 
-        # output_desc
-        format_out = self.op_param['output_desc'][0]['layout']
-        for attr in self.op_param['output_desc'][0]['attr']:
-            if attr['key'] == 'origin_format':
-                out_ori_format = attr['value']['s']
-        out_shape = self.op_param['output_desc'][0]['shape']['dim']
-
-        # input format转换
-        for attr in self.op_param['input_desc'][0]['attr']:
-            if attr['key'] == 'origin_format':
-                x1_ori_format = attr['value']['s']
-            if attr['key'] == 'origin_shape':
-                x1_ori_shape = attr['value']['list']['i']
-        for attr in self.op_param['input_desc'][1]['attr']:
-            if attr['key'] == 'origin_format':
-                x2_ori_format = attr['value']['s']
-            if attr['key'] == 'origin_shape':
-                x2_ori_shape = attr['value']['list']['i']
-        x1_new_format = self.op_param['input_desc'][0]['layout']
-        x2_new_format = self.op_param['input_desc'][1]['layout']
-        x1 = format_transformation_map[x1_new_format][x1_ori_format](x1, x1_new_format, x1_ori_shape)
-        x2 = format_transformation_map[x2_new_format][x2_ori_format](x2, x2_new_format, x2_ori_shape)
-
         # bias
         bias = None
         if len(in_tensors) > 2:
@@ -117,7 +94,6 @@ class MatmulOperation(OperationTest):
 
         inputs = [x1, x2, trans_a, trans_b, out_dtype, bias]
         res = matmul(inputs)
-        res = format_transformation_map[out_ori_format][format_out](res, out_ori_format, out_shape)
         return [res]
 
     def test_matmul(self):

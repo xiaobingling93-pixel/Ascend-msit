@@ -79,24 +79,15 @@ class ReduceMeanOperation(OperationTest):
     def golden_calc(self, in_tensors):
         x = in_tensors[0]
         axis = _reduce_x_get_axis(self.op_param)
-
-        x_format = self.op_param['input_desc'][0]['layout']
         x_dtype = DATA_TYPE_MAP[self.op_param['input_desc'][0]['dtype']]
         out_dtype = DATA_TYPE_MAP[self.op_param['output_desc'][0]['dtype']]
-        for attr in self.op_param['input_desc'][0]['attr']:
-            if attr['key'] == "origin_format":
-                c_index = attr['value']['s']
 
         axis = _eliminate_duplicate_axes(axis, x)
-
         if not axis:
             return [x]
 
         reduce_shape = [x.shape[idx] for idx, _ in enumerate(x.shape) if idx in axis]
         cof_value = functools.reduce(lambda x, y: x * y, reduce_shape)
-        if x_format == "NC1HWC0" and (1 in axis) and (4 in axis):
-            input_c_values = [x[c_index]]
-            cof_value = cof_value / x.shape[1] / x.shape[4] * input_c_values[0]
         if x_dtype in (FLOAT16, BFLOAT16):
             x = x.astype(numpy.float32) / cof_value
             y = numpy.sum(x, axis=axis)
