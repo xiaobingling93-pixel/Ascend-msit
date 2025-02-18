@@ -4,7 +4,6 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Dict, List, Tuple, Optional
 
-# 假设已有FileCollector实现
 from collector import FileCollector
 
 class ComparatorFactory:
