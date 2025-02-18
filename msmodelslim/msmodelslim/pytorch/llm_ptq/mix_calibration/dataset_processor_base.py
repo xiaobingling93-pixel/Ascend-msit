@@ -1,8 +1,8 @@
 # Copyright Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 
 
-class DatasetProcessorBase(metaclass=ABCMeta):
+class DatasetProcessorBase(ABC):
     def __init__(self, dataset_path, tokenizer=None, model=None):
         self.dataset_path = dataset_path
         self.dataset_size = 0
