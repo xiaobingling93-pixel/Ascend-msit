@@ -16,7 +16,7 @@
 CUR_DIR=$(dirname $(readlink -f $0))
 COMPONENTS_DIR=${CUR_DIR}/..
 TOP_DIR=${COMPONENTS_DIR}/..
-ALL_VALID_TEST_MODULE=(graph)
+ALL_VALID_TEST_MODULE=(convert graph)
 
 
 install_packages() {
@@ -42,6 +42,7 @@ install_packages() {
 
 init_msit_env() {
     export PYTHONPATH=${TOP_DIR}:${PYTHONPATH}
+    export PYTHONPATH=${COMPONENTS_DIR}/convert:${PYTHONPATH}
     export PYTHONPATH=${COMPONENTS_DIR}/graph:${PYTHONPATH}
 }
 
