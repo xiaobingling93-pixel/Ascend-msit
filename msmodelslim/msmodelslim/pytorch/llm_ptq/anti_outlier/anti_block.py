@@ -488,3 +488,186 @@ class LlavaClipVision(nn.Module):
     
         return outputs
 
+
+class QuantQwen2VLDecoderLayer(nn.Module):
+    def __init__(self, org_layer, cfg, layername):
+        super().__init__()
+        self.self_attn = org_layer.self_attn
+        self.mlp = org_layer.mlp
+        self.input_layernorm = org_layer.input_layernorm
+        self.post_attention_layernorm = org_layer.post_attention_layernorm
+        self.act_fn = org_layer.mlp.act_fn
+        self.cac_migrate_attn = True
+        self.cac_migrate_mlp = True
+        self.cfg = cfg
+        self.device = cfg.device
+        self.layername = layername
+
+    def forward(
+        self, *args, **kwargs
+    ) -> Tuple[torch.FloatTensor, Optional[Tuple[torch.FloatTensor, torch.FloatTensor]]]:
+        hidden_states = args[0]
+        attention_mask = kwargs.pop("attention_mask")
+        position_ids = kwargs.pop("position_ids")
+        past_key_value = kwargs.pop("past_key_value")
+        output_attentions = kwargs.pop("output_attentions")
+        use_cache = kwargs.pop("use_cache")
+        cache_position = kwargs.pop("cache_position")
+        position_embeddings = kwargs.pop("position_embeddings")
+
+        hidden_states = self.input_layernorm(hidden_states)
+        if self.cac_migrate_attn:
+            msmodelslim_logger.info(f'current block is QuantQwen2VLDecoderLayer, layername:{self.layername}')
+            weight_list = torch.cat([self.self_attn.q_proj.weight,
+                                     self.self_attn.k_proj.weight,
+                                     self.self_attn.v_proj.weight])
+            bias_list = None
+            dim = self.cfg.hidden_size // self.cfg.num_attention_heads
+            max_position_embeddings = self.cfg.max_position_embeddings
+            base = self.cfg.rope_theta
+            device = self.device
+            inv_freq = 1.0 / (base ** (torch.arange(0, dim, 2).float().to(device) / dim))
+            t = torch.arange(max_position_embeddings, device=device, dtype=inv_freq.dtype)
+            freqs = torch.outer(t, inv_freq)
+            emb = torch.cat((freqs, freqs), dim=-1)
+            cos_cached = emb.cos().to(torch.get_default_dtype())
+            sin_cached = emb.sin().to(torch.get_default_dtype())
+            extra_dict = {
+                'num_heads': self.self_attn.num_heads,
+                'num_key_value_heads': self.self_attn.num_key_value_heads,
+                'num_key_value_groups': self.self_attn.num_key_value_groups,
+                'cos_cached': cos_cached,
+                'sin_cached': sin_cached,
+                'head_dim': self.self_attn.head_dim,
+                'position_ids': position_ids[0],
+                'attention_mask': attention_mask,
+                'observation_mask': None
+            }
+            # update scale
+            a_qconfig, w_qconfig = get_config()
+            best_scale = \
+                migration(hidden_states, weight_list, a_qconfig, w_qconfig, 'llama_qkv', extra_dict, bias=bias_list)
+            hidden_states /= best_scale
+            self.self_attn.q_proj.weight.data *= best_scale
+            self.self_attn.k_proj.weight.data *= best_scale
+            self.self_attn.v_proj.weight.data *= best_scale
+            self.input_layernorm.weight.data = self.input_layernorm.weight.data.to('npu')
+            self.input_layernorm.weight.data /= best_scale
+            self.cac_migrate_attn = False
+        # Self Attention
+        hidden_states, self_attn_weights, present_key_value = self.self_attn(
+            hidden_states=hidden_states,
+            attention_mask=attention_mask,
+            position_ids=position_ids,
+            past_key_value=past_key_value,
+            output_attentions=output_attentions,
+            use_cache=use_cache,
+            cache_position=cache_position,
+            position_embeddings=position_embeddings,
+        )
+        hidden_states = residual + hidden_states
+        # Fully Connected
+        residual = hidden_states
+        hidden_states = self.post_attention_layernorm(hidden_states)
+        if self.cac_migrate_mlp:            
+            weight_list = torch.cat([self.mlp.gate_proj.weight,
+                                     self.mlp.up_proj.weight])
+            extra_dict = {
+                'observation_mask': None, 
+                'act_fn': self.act_fn
+            }
+            a_qconfig, w_qconfig = get_config()
+            best_scale = \
+                migration(hidden_states, weight_list, a_qconfig, w_qconfig, 'up_and_gate', extra_dict)
+            # update scale
+            hidden_states /= best_scale
+            self.mlp.gate_proj.weight.data *= best_scale
+            self.mlp.up_proj.weight.data *= best_scale
+            self.post_attention_layernorm.weight.data /= best_scale
+            self.cac_migrate_mlp = False
+        hidden_states = self.mlp(hidden_states)
+        hidden_states = residual + hidden_states
+        outputs = (hidden_states,)
+        if output_attentions:
+            outputs += (self_attn_weights,)
+        if use_cache:
+            outputs += (present_key_value,)
+        return outputs
+
+
+class QuantQwen2VLVisionBlock(nn.Module):
+    def __init__(self, org_layer, config, layername) -> None:
+        super().__init__()
+        config = config.vision_config
+        self.norm1 = org_layer.norm1
+        self.norm2 = org_layer.norm2
+        self.attn = org_layer.attn
+        self.mlp = org_layer.mlp
+        self.cac_migrate_attn = True
+        self.cac_migrate_mlp = True
+        self.layername = layername
+        self.cfg = config
+
+    def forward(self, hidden_states, cu_seqlens, rotary_pos_emb) -> torch.Tensor:
+        post_ln_1 = self.norm1(hidden_states)
+        if self.cac_migrate_attn:
+            msmodelslim_logger.info("current block is QuantQwen2VLVisionBlock , layername:`{}` ".format(self.layername))
+            channel_max = post_ln_1.max(0)[0]
+            channel_min = post_ln_1.min(0)[0]
+            shift = (channel_max + channel_min) / 2 
+            post_ln_1 -= shift
+            if(self.attn.qkv.bias is not None):
+                self.attn.qkv.bias.data += shift @ self.attn.qkv.weight.data.T
+            # calculate scale
+            weight_list = torch.cat([self.attn.qkv.weight])
+            extra_dict = {
+                'num_attention_heads_per_partition': self.attn.num_heads,
+                'cu_seqlens':cu_seqlens,
+                'rotary_pos_emb':rotary_pos_emb,
+                'embed_dim':self.cfg.embed_dim,
+                'head_dim':self.cfg.hidden_size // self.cfg.num_heads
+            }
+            
+            a_qconfig, w_qconfig = get_config()
+            post_ln_1 = post_ln_1.unsqueeze(1)
+            # update scale
+            best_scale = \
+                migration_vit(post_ln_1, weight_list, a_qconfig, w_qconfig, 'qwen2vl_function', extra_dict)
+            post_ln_1 /= best_scale
+            ## linear and ln
+            self.attn.qkv.weight.data *= best_scale
+            self.norm1.bias.data -= shift
+            self.norm1.weight.data /= best_scale
+            self.norm1.bias.data /= best_scale
+            self.cac_migrate_attn = False
+        hidden_states = hidden_states + self.attn(
+            post_ln_1, cu_seqlens=cu_seqlens, rotary_pos_emb=rotary_pos_emb
+        )
+        post_ln_2 = self.norm2(hidden_states)
+        if self.cac_migrate_mlp:
+            channel_max = post_ln_2.max(0)[0]
+            channel_min = post_ln_2.min(0)[0]
+            shift = (channel_max + channel_min) / 2
+            post_ln_2 -= shift
+            if(self.mlp.fc1.bias is not None):
+                self.mlp.fc1.bias.data += shift @ self.mlp.fc1.weight.data.T  
+            # calculate scale
+            weight_list = torch.cat([self.mlp.fc1.weight])
+            extra_dict = {
+                'bias': torch.cat([self.mlp.fc1.bias]),
+                'shift': shift,
+                'observation_mask': None
+                }
+            a_qconfig, w_qconfig = get_config()
+            # update scale
+            best_scale = \
+                migration_vit(post_ln_2, weight_list, a_qconfig, w_qconfig, 'c_fc', extra_dict)
+            post_ln_2 /= best_scale
+            ## linear and ln
+            self.mlp.fc1.weight.data *= best_scale
+            self.norm2.bias.data -= shift
+            self.norm2.weight.data /= best_scale
+            self.norm2.bias.data /= best_scale
+            self.cac_migrate_mlp = False
+        hidden_states = hidden_states + self.mlp(post_ln_2)
+        return hidden_states

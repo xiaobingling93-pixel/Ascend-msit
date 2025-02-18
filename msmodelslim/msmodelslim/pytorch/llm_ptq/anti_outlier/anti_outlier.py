@@ -57,7 +57,9 @@ from .anti_block import (
     QuantV2QwenBlock,
     QuantVisualAttentionBlock,
     LlavaQuantDecoder,
-    LlavaClipVision
+    LlavaClipVision,
+    QuantQwen2VLDecoderLayer,
+    QuantQwen2VLVisionBlock
 )
 _FLEX_SMOOTH_IMPORTED = False
 try:
@@ -227,6 +229,8 @@ def is_model_multimodal(model):
     if (model.config.architectures[0] == 'LlavaForConditionalGeneration' or 
         (model.config.architectures[0] == 'QWenLMHeadModel' and 
         hasattr(model.config, 'visual'))):
+        return True
+    if (model.config.architectures[0] == 'Qwen2VLForConditionalGeneration'):
         return True
     return False
 
@@ -609,6 +613,8 @@ class AntiOutlier(object):
             "VisualAttentionBlock" : QuantVisualAttentionBlock,
             "LlamaDecoderLayer" : LlavaQuantDecoder,
             "CLIPEncoderLayer" : LlavaClipVision,
+            "Qwen2VLDecoderLayer" : QuantQwen2VLDecoderLayer,
+            "Qwen2VLVisionBlock" : QuantQwen2VLVisionBlock
             }
         self.model.config.device = self.device
         for name, mod in model.named_modules():
