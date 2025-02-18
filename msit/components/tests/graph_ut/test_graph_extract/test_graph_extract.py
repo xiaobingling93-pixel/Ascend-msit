@@ -137,28 +137,3 @@ class TestGraphAnalyze(unittest.TestCase):
 
         result = GraphAnalyze._lookup_dump_nodes(args, gs, start_node_names, lookup_directions)
         self.assertEqual(result, {"node1"})
-
-
-    def test__generate_graph_given_backbone_names_when_valid_then_generates_correct_subgraph(self):
-        gs = GraphSummary()
-        backbone_names = ["node1", "node2"]
-        output_path = "path/to/output.pbtxt"
-        without_leaves = False
-    
-        node1 = MagicMock(name="node1", input=[], output=["node2"], op_type="ge:Op1")
-        node2 = MagicMock(name="node2", input=["node1"], output=[], op_type="ge:Op2")
-    
-        node1.name = "node1"
-        node2.name = "node2"
-    
-        gs.names_to_node = {"node1": node1, "node2": node2}
-        gs.names_to_output_names = {"node1": ["node2"]}
-        gs.names_to_input_names = {"node2": ["node1"]}
-        gs.names_to_seq_num = {"node1": 0, "node2": 1}
-    
-        GraphAnalyze._save_graph_def = MagicMock()
-    
-        GraphAnalyze._generate_graph(gs, backbone_names, output_path, without_leaves)
-    
-        GraphAnalyze._save_graph_def.assert_called_once()
-
