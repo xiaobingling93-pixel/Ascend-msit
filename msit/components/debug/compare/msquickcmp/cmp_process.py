@@ -177,7 +177,7 @@ def _process_is_npu_and_is_precision_error_ops(header, rows):
             else:
                 row.append(NO)
         except ValueError as e:
-            print(f"Skipping row due to invalid data: {row}. Error: {e}")
+            utils.logger.error(f"Skipping row due to invalid data: {row}. Error: {e}")
             continue
     return rows
 
