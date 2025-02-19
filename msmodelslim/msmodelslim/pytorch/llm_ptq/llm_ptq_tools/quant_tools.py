@@ -20,8 +20,7 @@ from ascend_utils.common.security import check_element_type, check_type, get_wri
 
 from msmodelslim import logger as msmodelslim_logger
 from msmodelslim.pytorch.llm_ptq.hooks.factory import is_deepseek_v2_chat, is_deepseek_v2_lite
-from msmodelslim.pytorch.llm_ptq.accelerate_adapter import enable_adapter, check_model_compatible, \
-    get_offloaded_dataset, MemoryStateDictConfig, DiskStateDictConfig, copy_offloaded_state_dict
+from msmodelslim.pytorch.llm_ptq.accelerate_adapter import enable_adapter
 
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config import QuantConfig
 from msmodelslim.pytorch.llm_ptq.anti_outlier.graph_utils import class_detect
@@ -180,42 +179,6 @@ class Calibrator(object):
         if self.cfg.use_kvcache_quant:
             return True
         return False
-
-    def get_ori_model_weight(self, model: torch.nn.Module, cfg: QuantConfig):
-        if hasattr(model, 'ori_state_dict'):
-            ori_fp_weight = getattr(model, 'ori_state_dict')
-        else:
-            ori_fp_weight = self.copy_ori_model_weight(model, cfg)
-        check_mapping_element(ori_fp_weight, value_type=torch.Tensor, param_name='ori_fp_weight',
-                              additional_msg="Failed to get original float weight, please check the model.")
-        return ori_fp_weight
-
-    def copy_ori_model_weight(self, model: torch.nn.Module, cfg: QuantConfig) -> Mapping:
-        if check_model_compatible(model):
-            typ = cfg.offload_type or 'disk'
-            if typ == 'disk':
-                dataset = get_offloaded_dataset(model)
-                if dataset is None:
-                    # 如果没有加载到 disk，则保持一致，保存 state_dict 到 cpu
-                    config = MemoryStateDictConfig()
-                else:
-                    # 否则在现有的 offload 路径下新建 copy 文件夹，然后保存到里面
-                    save_folder = os.path.join(dataset.save_folder, STATE_DICT_COPY_DIR)
-                    config = DiskStateDictConfig().save_folder(save_folder)
-            elif typ == 'memory':
-                config = MemoryStateDictConfig()
-            else:
-                raise ValueError("state dict type must be disk or memory")
-            return copy_offloaded_state_dict(model, config)
-
-        ori_fp_weight = {}
-        for key, value in model.state_dict().items():
-            if not isinstance(value, torch.Tensor):
-                self.logger.warning("The original float weight[{key}]is not torch.Tensor, "
-                                    "it won't be saved, may raise error.")
-                continue
-            ori_fp_weight[key] = value.cpu()
-        return ori_fp_weight
 
     def extract_dag(self, model):
         if not self.init_dag():
