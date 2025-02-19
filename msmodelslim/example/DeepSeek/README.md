@@ -5,12 +5,17 @@
 
 - [DeepSeek-V2](https://github.com/deepseek-ai/DeepSeek-V2)推出了MLA (Multi-head Latent Attention)，其利用低秩键值联合压缩来消除推理时键值缓存的瓶颈，从而支持高效推理；在FFN部分采用了DeepSeekMoE架构，能够以更低的成本训练更强的模型。
 
+- [DeepSeek-Coder](https://github.com/deepseek-ai/DeepSeek-Coder) 由一系列代码语言模型组成，均从头开始在含 87% 代码、 13% 英文和中文自然语言的 2T 标记上训练，各模型以 16K 窗口大小和额外填空任务在项目级代码语料库预训练以支持项目级代码补全和填充。
+
 #### DeepSeek模型当前已验证的量化方法
-- W8A8量化：DeepSeek-V2-Lite-Chat-16B, DeepSeek-V2-Chat-236B
-- W8A16量化：DeepSeek-V2-Lite-Chat-16B, DeepSeek-V2-Chat-236B
+- W8A8量化：DeepSeek-V2-Lite-Chat-16B, DeepSeek-V2-Chat-236B, DeepSeek-Coder-33B
+- W8A16量化：DeepSeek-V2-Lite-Chat-16B, DeepSeek-V2-Chat-236B, DeepSeek-Coder-33B
+- W8A8C8量化：DeepSeek-Coder-33B
  
 #### 此模型仓已适配的模型版本
 - [Deepseek-V2-Chat](https://huggingface.co/deepseek-ai/DeepSeek-V2-Chat)
+- [Deepseek-V2-Lite-Chat](https://huggingface.co/deepseek-ai/DeepSeek-V2-Lite-Chat)
+- [DeepSeek-Coder-33B](https://huggingface.co/deepseek-ai/deepseek-coder-33b-instruct)
 
 ## 环境配置
 
@@ -65,4 +70,23 @@
 - 生成DeepSeek-V2模型w8a8 dynamic量化权重，使用histogram量化方式，在CPU上进行运算
   ```shell
   python3 quant_deepseek.py --model_path {浮点权重路径} --save_directory {W8A8量化权重路径} --device_type cpu --act_method 2 --w_bit 8 --a_bit 8  --is_dynamic True
+  ```
+
+#### DeepSeek-Coder-33B模型量化
+##### DeepSeek-Coder-33B w8a8量化
+- 生成DeepSeek-Coder-33B模型w8a8量化权重，使用自动混合min-max和histogram的激活值量化方式，SmoothQuant加强版算法，在NPU上进行运算
+  ```shell
+  python3 quant_deepseek.py --model_path {浮点权重路径} --save_directory {W8A8量化权重路径} --device_type npu --act_method 3 --anti_method m2 --w_bit 8 --a_bit 8 --model_name deepseek_coder
+  ```
+
+##### DeepSeek-Coder-33B w8a16量化
+- 生成DeepSeek-Coder-33B模型w8a16量化权重，使用AWQ算法，在NPU上进行运算
+  ```shell
+  python3 quant_deepseek.py --model_path {浮点权重路径} --save_directory {W8A16量化权重路径} --device_type npu --anti_method m3 --w_bit 8 --a_bit 16 --model_name deepseek_coder
+  ```
+
+##### DeepSeek-Coder-33B w8a8c8量化
+- 生成DeepSeek-Coder-33B模型w8a8c8量化权重，使用histogram激活值量化方式，SmoothQuant加强版算法，在NPU上进行运算
+  ```shell
+  python3 quant_deepseek.py --model_path {浮点权重路径} --save_directory {W8A8C8量化权重路径} --device_type npu --act_method 2 --anti_method m2 --w_bit 8 --a_bit 8 --use_kvcache_quant True --model_name deepseek_coder
   ```
