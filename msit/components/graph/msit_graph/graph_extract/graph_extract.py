@@ -150,7 +150,6 @@ class GraphAnalyze:
         with open(output_path, 'w') as f:
             f.write(text_format.MessageToString(model_def))
 
-
     @staticmethod
     def print_graph_stat(input_path):
         """Prints statistics about the operations in an ONNX graph."""

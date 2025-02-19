@@ -55,8 +55,8 @@ class TestDynamicShape(unittest.TestCase):
     def test_process_node(self):
         sub_node = MagicMock()
         sub_node.name = "SubNode"
-        sub_node.input = "Input2"
-        sub_node.output = "Output2"
+        sub_node.input = ["Input2"]
+        sub_node.output = ["Output2"]
         sub_node.attribute = []
 
         attr_with_graph = MagicMock()
@@ -64,8 +64,8 @@ class TestDynamicShape(unittest.TestCase):
 
         node = MagicMock()
         node.name = "ParentNode"
-        node.input = "Input1"
-        node.output = "Output1"
+        node.input = ["Input1"]
+        node.output = ["Output1"]
         node.attribute = [attr_with_graph]
 
         dynamic_shape = DynamicShape(None)
@@ -73,7 +73,7 @@ class TestDynamicShape(unittest.TestCase):
         dynamic_shape.dynamic_to_static_edges = []
         dynamic_shape.process_node(node)
 
-        expected = ("ParentNode", "SubNode", "Input2", "Output2")
+        expected = ("ParentNode", "SubNode", ["Input2"], ["Output2"])
         self.assertIn(expected, dynamic_shape.dynamic_to_static_edges)
 
     def test_find_dynamic_shape_op(self):

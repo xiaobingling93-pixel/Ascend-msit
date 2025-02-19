@@ -16,11 +16,12 @@
 import numpy as np
 
 from msit_opcheck.operation_test import OperationTest
-from msit_opcheck.conversion.shape_convert import update_axis_for_npu_inner_format
+from msit_opcheck.conversion.shape_convert import update_axis_for_npu_inner_format, is_transformable
 
 
 class PackOperation(OperationTest):
     def golden_calc(self, in_tensors):
+        ori_shape, ori_format = None, None
         input_format = self.op_param['input_desc'][0]['layout']
         for attr in self.op_param['attr']:
             if attr['key'] == 'axis':
@@ -30,8 +31,9 @@ class PackOperation(OperationTest):
                 ori_format = attr['value']['s']
             if attr['key'] == 'origin_shape':
                 ori_shape = attr['value']['list']['i']
-        concat_dim = update_axis_for_npu_inner_format(ori_shape, axis, input_format, ori_format)
-        return [np.concatenate(in_tensors, axis=concat_dim)]
+        if ori_shape is not None and not is_transformable(input_format, ori_format):
+            axis = update_axis_for_npu_inner_format(ori_shape, axis, input_format, ori_format)
+        return [np.concatenate(in_tensors, axis=axis)]
 
     def test_pack(self):
         self.execute()

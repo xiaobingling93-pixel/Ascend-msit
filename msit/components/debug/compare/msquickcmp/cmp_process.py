@@ -39,7 +39,8 @@ from msquickcmp.common import utils
 from msquickcmp.common.args_check import is_saved_model_valid
 from msquickcmp.common.convert import convert_bin_dump_data_to_npy
 from msquickcmp.common.convert import convert_npy_to_bin
-from msquickcmp.common.utils import AccuracyCompareException, get_shape_to_directory_name, safe_delete_path_if_exists
+from msquickcmp.common.utils import AccuracyCompareException, get_shape_to_directory_name, \
+    safe_delete_path_if_exists, OPTYPE_WHITWLIST
 from msquickcmp.net_compare import analyser
 from msquickcmp.net_compare.net_compare import NetCompare
 from msquickcmp.npu.npu_dump_data import NpuDumpData, DynamicInput
@@ -57,6 +58,13 @@ READ_WRITE_FLAGS = os.O_RDWR | os.O_CREAT
 WRITE_FLAGS = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
 ERROR_INTERVAL_INFO_FILE = "error_interval_info.txt"
 MAX_MEMORY_USE = 6 * 1024 * 1024 * 1024
+COSINE_SIMILARITY = 0.99
+RELATIVE_EUCLIDEAN_DISTANCE = 0.05
+KULLBACK_LEIBLER_DIVERGENCE = 0.005
+ROOT_MEAN_SQUARE_ERROR = 1.0
+MEAN_RELATIVE_ERROR = 1.0
+YES = "YES"
+NO = "NO"
 
 
 def _generate_golden_data_model(args, npu_dump_npy_path):
@@ -116,24 +124,80 @@ def _get_single_csv_in_folder(csv_path):
     raise IOError(f"None csv file exists in folder {csv_path}")
 
 
-def _append_is_npu_ops_to_csv(csv_path):
-    csv_path = _get_single_csv_in_folder(csv_path)
+def _read_and_process_csv(csv_path, process_func):
     if Rule.input_file().check(csv_path):
         with ms_open(csv_path, 'r', max_size=TENSOR_MAX_SIZE) as f:
             reader = csv.reader(f)
             rows = [row for row in reader]
         header = rows[0]
-        ground_truth_col = header.index("GroundTruth")
-        header.append('IsNpuOps')
-        for row in rows[1:]:
-            is_npu_ops = "YES" if row[ground_truth_col] == "*" else "NO"
+        rows = process_func(header, rows)
+    return rows
+
+
+def _write_csv(csv_path, rows):
+    with ms_open(csv_path, mode='w') as f:
+        writer = csv.writer(f)
+        for line in rows:
+            for ele in line:
+                _ = sanitize_csv_value(ele)
+        writer.writerows(rows)
+
+
+def _process_is_npu_and_is_precision_error_ops(header, rows):
+    ground_truth_col = header.index("GroundTruth")
+    optype_col = header.index("OpType")
+    cosine_similarity_col = header.index("CosineSimilarity")
+    relative_euclidean_distance_col = header.index("RelativeEuclideanDistance")
+    kullback_leibler_divergence_col = header.index("KullbackLeiblerDivergence")
+    root_mean_square_error_col = header.index("RootMeanSquareError")
+    mean_relative_error_col = header.index("MeanRelativeError")
+
+    header.append('IsNpuOps')
+    header.append('IsPrecisionError')
+    for row in rows[1:]:
+        try:
+            is_npu_ops = YES if row[ground_truth_col] == "*" else NO
             row.append(is_npu_ops)
-        with ms_open(csv_path, mode='w') as f:
-            writer = csv.writer(f)
-            for line in rows:
-                for ele in line:
-                    sanitize_csv_value(ele)
-            writer.writerows(rows)
+
+            optype = row[optype_col]
+            cosine_similarity = row[cosine_similarity_col]
+            relative_euclidean_distance = float(row[relative_euclidean_distance_col])
+            kullback_leibler_divergence = float(row[kullback_leibler_divergence_col])
+            root_mean_square_error = float(row[root_mean_square_error_col])
+            mean_relative_error = float(row[mean_relative_error_col])
+            if optype in OPTYPE_WHITWLIST or cosine_similarity.lower() == 'nan':
+                row.append(NO)
+                continue
+            if _is_row_precison_error(cosine_similarity, 
+                                    relative_euclidean_distance, 
+                                    kullback_leibler_divergence, 
+                                    root_mean_square_error, 
+                                    mean_relative_error):
+                row.append(YES)
+            else:
+                row.append(NO)
+        except ValueError as e:
+            utils.logger.error(f"Skipping row due to invalid data: {row}. Error: {e}")
+            continue
+    return rows
+
+
+def _is_row_precison_error(cosine_similarity, 
+                            relative_euclidean_distance, 
+                            kullback_leibler_divergence, 
+                            root_mean_square_error, 
+                            mean_relative_error):
+    return (float(cosine_similarity) < COSINE_SIMILARITY or
+            relative_euclidean_distance > RELATIVE_EUCLIDEAN_DISTANCE or
+            kullback_leibler_divergence > KULLBACK_LEIBLER_DIVERGENCE or
+            root_mean_square_error > ROOT_MEAN_SQUARE_ERROR or
+            mean_relative_error > MEAN_RELATIVE_ERROR)
+
+
+def _append_column_to_csv(csv_path):
+    csv_path = _get_single_csv_in_folder(csv_path)
+    rows = _read_and_process_csv(csv_path, _process_is_npu_and_is_precision_error_ops)
+    _write_csv(csv_path, rows)
 
 
 def mindir_to_om_process(args: CmpArgsAdapter):
@@ -245,7 +309,7 @@ def compare_process(args: CmpArgsAdapter):
     else:
         invalid_rows, _ = analyser.Analyser(args.out_path)('ALL_INVALID')
     print_advisor_info(args.out_path)
-    _append_is_npu_ops_to_csv(args.out_path)
+    _append_column_to_csv(args.out_path)
 
     return invalid_rows
 
@@ -275,7 +339,7 @@ def run(args: CmpArgsAdapter, input_shape, original_out_path, use_cli: bool):
         else:
             invalid_rows, _ = analyser.Analyser(args.out_path)('ALL_INVALID')
         print_advisor_info(args.out_path)
-        _append_is_npu_ops_to_csv(args.out_path)
+        _append_column_to_csv(args.out_path)
     else:
         invalid_rows = run_om_model_compare(args, use_cli)
 
@@ -348,7 +412,7 @@ def run_om_model_compare(args, use_cli):
     else:
         invalid_rows, _ = analyser.Analyser(args.out_path)('ALL_INVALID')
     print_advisor_info(args.out_path)
-    _append_is_npu_ops_to_csv(args.out_path)
+    _append_column_to_csv(args.out_path)
     return invalid_rows
 
 

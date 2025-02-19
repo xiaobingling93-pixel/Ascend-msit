@@ -15,3 +15,7 @@
 **/.idea
 **/.gradle
 onnx-modifier/python
+
+# DT check file
+.coverage
+xmlcov

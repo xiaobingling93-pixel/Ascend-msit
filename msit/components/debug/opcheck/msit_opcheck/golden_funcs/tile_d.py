@@ -28,28 +28,11 @@ class TileDOperation(OperationTest):
                 multiples = attr['value']['list']['i']
         if 'multiples' not in locals():
             multiples = in_tensors[1]
-        # input format转换
-        for attr in self.op_param['input_desc'][0]['attr']:
-            if attr['key'] == 'origin_format':
-                x_ori_format = attr['value']['s']
-            if attr['key'] == 'origin_shape':
-                x_ori_shape = attr['value']['list']['i']
-        x_new_format = self.op_param['input_desc'][0]['layout']
-        if x_new_format != x_ori_format:
-            x = format_transformation_map[x_new_format][x_ori_format](x, x_new_format, x_ori_shape)
 
         tensor_x = tf.compat.v1.placeholder(x.dtype, shape=x.shape)
         out = tf.tile(tensor_x, multiples)
         with tf.compat.v1.Session() as sess:
             res = sess.run(out, feed_dict={tensor_x: x})
-
-        for attr in self.op_param['output_desc'][0]['attr']:
-            if attr['key'] == 'origin_format':
-                output_ori_format = attr['value']['s']
-        output_format = self.op_param['output_desc'][0]['layout']
-        output_shape = self.op_param['output_desc'][0]['shape']['dim']
-        if transform(res, output_ori_format, output_format, output_shape) is not None:
-            res = transform(res, output_ori_format, output_format, output_shape)
         return [res]
 
     def test_tiled(self):
