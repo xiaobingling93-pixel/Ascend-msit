@@ -2,12 +2,14 @@
 
 from __future__ import absolute_import, division, print_function
 
+import copy
+import itertools
 import re
 import os
 import gc
 import functools
 from collections import defaultdict
-from typing import Mapping
+from typing import Mapping, Optional
 
 from tqdm import tqdm
 import torch
@@ -22,6 +24,7 @@ from ascend_utils.common.security import (get_valid_write_path, SafeWriteUmask, 
                                           check_type, get_write_directory, check_number, check_int)
 
 from msmodelslim import logger as msmodelslim_logger
+from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.layer_config_manager import LayerConfigManager
 from msmodelslim.pytorch.llm_ptq.hooks.factory import is_deepseek_v2_chat, is_deepseek_v2_lite, \
     get_process_hooks
 from msmodelslim.pytorch.llm_ptq.accelerate_adapter import enable_adapter, check_model_compatible, \
@@ -81,6 +84,7 @@ from msmodelslim.pytorch.llm_ptq.accelerate_adapter.utils import judge_model_wit
 
 HF_HOOK = "_hf_hook"
 STATE_DICT_COPY_DIR = "copy"
+ALLOWED_MIX_TYPES = {"w8a8", "w8a16", "w8a8_dynamic", "float"}
 
 
 class Calibrator(object):
@@ -90,12 +94,23 @@ class Calibrator(object):
                  cfg: QuantConfig,
                  calib_data=None,
                  disable_level='L0',
-                 all_tensors=None):
+                 all_tensors=None,
+                 mix_cfg: Optional[dict] = None):
         check_type(model, nn.Module, param_name="model")
         check_type(cfg, QuantConfig, param_name="cfg")
         check_type(disable_level, str, param_name='disable_level')
         if all_tensors:
             check_element_type(all_tensors, torch.Tensor, dict, param_name="all_tensors")
+
+        if mix_cfg:  # 当 mix_cfg 不为 None 且非空字典时才进行检查
+            if not isinstance(mix_cfg, dict):
+                raise ValueError("mix_cfg must be a dict if provided.")
+            for key, value in mix_cfg.items():
+                # key 不做校验, value必须属于指定范围
+                if value not in ALLOWED_MIX_TYPES:
+                    raise ValueError(
+                        f"mix_cfg中'{key}'指定的量化类型'{value}'不在允许列表{ALLOWED_MIX_TYPES}之内，"
+                        f"请检查配置或扩展ALLOWED_MIX_TYPES后再使用。")
 
         self.cfg = cfg
         self.logger = msmodelslim_logger
@@ -158,6 +173,48 @@ class Calibrator(object):
         self.act_states = None
         self.rollback_names_process(model)
         self.is_deepseek_v2 = is_deepseek_v2_chat(model) or is_deepseek_v2_lite(model)
+
+        # for backward compatibility, when quantifying deepseek v2 model with w8a8,
+        # the quant config of all mlp layers is w8a8_dynamic, and the quant config of other layers is w8a8
+        if self.is_deepseek_v2 and mix_cfg is None and cfg.model_quant_type == QuantType.W8A8:
+            mix_cfg = {"*.mlp.*": "w8a8_dynamic", "*": "w8a8"}
+
+        # this initializes is kept for forward compatibility
+        # in the future, this will receive a cfg_store object from outside, but now it is None
+        self.cfg_store = None
+
+        if self.cfg_store is None:
+            self.cfg_store = {
+                "default": copy.deepcopy(cfg),
+                'rollback': QuantConfig(w_bit=16, a_bit=16),
+                'float': QuantConfig(w_bit=16, a_bit=16)
+            }
+
+        # for int8 quantization, we will convert the cfg to w8a8, w8a16, w8a8_dynamic if not in cfg_store
+        if cfg.w_bit == 8:
+            if 'w8a8' not in self.cfg_store:
+                try:
+                    new_cfg = LayerConfigManager.convert_to_w8a8(cfg)
+                    self.cfg_store['w8a8'] = new_cfg
+                except Exception as e:
+                    self.logger.warning(f"Failed to build w8a8 config. reason: {e}")
+            if 'w8a16' not in self.cfg_store:
+                try:
+                    new_cfg = LayerConfigManager.convert_to_w816(cfg)
+                    self.cfg_store['w8a16'] = new_cfg
+                except Exception as e:
+                    self.logger.warning(f"Failed to build w8a16 config. reason: {e}")
+            if 'w8a8_dynamic' not in self.cfg_store:
+                try:
+                    new_cfg = LayerConfigManager.convert_to_w8a8_dynamic(cfg)
+                    self.cfg_store['w8a8_dynamic'] = new_cfg
+                except Exception as e:
+                    self.logger.warning(f"Failed to build w8a8_dynamic config. reason: {e}")
+
+        self.layer_cfg_manager = LayerConfigManager(mix_cfg=mix_cfg, cfg_store=self.cfg_store,
+                                                    rollback_names=self.rollback_names)
+        self.layer_cfg_manager.build_config_map(model)
+
         if self.cfg.use_fa_quant:
             configure_fa(model, tp_size=self.cfg.fa_tp_size)
 
@@ -564,7 +621,7 @@ class Calibrator(object):
             for attention_module_name in self.fa_module_param_dict:
                 self.set_fa_quant_safetensor(attention_module_name, safetensor_weight)
 
-        # m4和m5场景下删除权重和json中的'module.weight' 
+        # m4和m5场景下删除权重和json中的'module.weight'
         if not hasattr(self.model, 'ori_state_dict'):
             keys_to_delete = [key for key in safetensor_weight.keys() if 'module.weight' in key]
             for key in keys_to_delete:
@@ -601,13 +658,11 @@ class Calibrator(object):
             for quant_param_name in self.quantized_module_param_dict[ori_model_state_dict_name]:
                 safetensor_weight[quant_param_name] = self.quant_param_dict.get(quant_param_name)
                 self.quant_model_json_description.change_weight_type(
-                    quant_param_name, self.quant_model_json_description.model_quant_type)
+                    quant_param_name, QuantType.FLOAT)
 
-    def set_quant_safetensor(self, ori_model_state_dict_name, safetensor_weight):
-        model_quant_type = self.quant_model_json_description.model_quant_type
-        if "mlp" in ori_model_state_dict_name and self.is_deepseek_v2:
-            if self.quant_model_json_description.model_quant_type is QuantType.W8A8:
-                model_quant_type = QuantType.W8A8_DYNAMIC
+    def set_quant_safetensor(self, ori_model_state_dict_name: str, safetensor_weight):
+        model_quant_type = self.layer_cfg_manager.get_layer_config(
+            ori_model_state_dict_name.replace('.weight', '')).model_quant_type
         safetensor_weight[ori_model_state_dict_name] = self.quant_param_dict.get(ori_model_state_dict_name)
         self.quant_model_json_description.change_weight_type(
             ori_model_state_dict_name,
@@ -717,6 +772,9 @@ class Calibrator(object):
     def get_quant_params(self):
         self.model.eval()
         for name, module in self.model.named_modules():
+
+            layer_cfg = self.layer_cfg_manager.get_layer_config(name)
+
             with PrepareWeight(module):
                 if self.cfg.use_fa_quant and is_attn_module_and_then_check_quantizer(module, name):
                     quant_param_scale, quant_param_offset, attach_map = export_fa_quant_params(module, name)
@@ -772,9 +830,7 @@ class Calibrator(object):
                     self.quant_param_dict[name + '.weight'] = save_quant_weight
 
                     # 所有专家层都使用动态量化
-                    model_quant_type = self.cfg.model_quant_type
-                    if "mlp" in name and self.is_deepseek_v2 and model_quant_type is QuantType.W8A8:
-                        model_quant_type = QuantType.W8A8_DYNAMIC
+                    model_quant_type = layer_cfg.model_quant_type
 
                     # W4A16/W8A16 需要提供 weight_scale、weight_offset
                     if model_quant_type in [QuantType.W8A16, QuantType.W4A16, QuantType.W8A8_DYNAMIC, QuantType.W8A8]:
@@ -1001,16 +1057,15 @@ class Calibrator(object):
                 if name in self.rollback_names:
                     continue
                 if isinstance(mod, nn.Linear) or isinstance(mod, nn.modules.linear.NonDynamicallyQuantizableLinear):
-                    if self.cfg.is_lowbit:
-                        quant_mod = LowBitLinearQuantizer(cfg=self.cfg, logger=self.logger, name=name)
-                    elif self.cfg.w_method in QuantType.NF4:
-                        quant_mod = LinearNf4Quantizer(cfg=self.cfg, logger=self.logger)
-                    elif self.cfg.model_quant_type is not QuantType.W8A8S:
-                        is_dynamic = self.cfg.is_dynamic
-                        if "mlp" in name and self.is_deepseek_v2:
-                            if self.cfg.model_quant_type is QuantType.W8A8:
-                                is_dynamic = True
-                        quant_mod = LinearQuantizer(cfg=self.cfg, logger=self.logger, is_dynamic=is_dynamic)
+                    # every linear layer will have a standalone config
+                    layer_cfg = self.layer_cfg_manager.get_layer_config(name)
+
+                    if layer_cfg.is_lowbit:
+                        quant_mod = LowBitLinearQuantizer(cfg=layer_cfg, logger=self.logger, name=name)
+                    elif layer_cfg.w_method in QuantType.NF4:
+                        quant_mod = LinearNf4Quantizer(cfg=layer_cfg, logger=self.logger)
+                    elif layer_cfg.model_quant_type is not QuantType.W8A8S:
+                        quant_mod = LinearQuantizer(cfg=layer_cfg, logger=self.logger)
                     else:
                         quant_mod = LinearSparseQuantizer(cfg=self.cfg, logger=self.logger)
                     quant_mod.set_param(mod)
@@ -1030,12 +1085,13 @@ class Calibrator(object):
 
         for name, mod in model.named_modules():
             if name in simulate_linear:
+                layer_cfg = self.layer_cfg_manager.get_layer_config(name)
                 tp_mod = ParallelLinearCol()
                 tp_mod.set_param(mod, name, cfg=self.cfg)
                 if name in self.rollback_names:
                     tp_mod.quant_type = QuantType.FLOAT
                 else:
-                    tp_mod.quant_type = self.cfg.model_quant_type
+                    tp_mod.quant_type = layer_cfg.model_quant_type
                 if hasattr(mod, HF_HOOK):
                     add_hook_to_module(tp_mod, mod._hf_hook)
                     remove_hook_from_module(mod)
@@ -1153,7 +1209,7 @@ def enable_quantization_by_module(name, module, act_states):
     if states_name in act_states:
         abs_max_tensor = max(abs(act_states[states_name]["t_max"]), abs(act_states[states_name]["t_min"]))
         range_param = abs_max_tensor / act_states[states_name]["std"]
-        
+
     module.enable_quantization(name, range_param)
     if module.is_input:
         module.init_act_and_observer(module.cfg)
