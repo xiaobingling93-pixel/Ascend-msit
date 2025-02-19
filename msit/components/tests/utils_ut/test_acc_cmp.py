@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import sys
 
 from unittest.mock import patch, MagicMock, mock_open
@@ -27,9 +26,6 @@ from components.utils.acc_cmp import (
     IS_MSACCUCMP_PATH_SET,
     GLOBAL_TENSOR_CONVERTER
 )
-from components.utils.check.string_checker import StringChecker
-cann_path = os.environ.get("TOOLCHAIN_HOME", os.environ.get("ASCEND_TOOLKIT_HOME", ""))
-sys.path.append(os.path.join(cann_path, "tools", "operator_cmp", "compare"))
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -46,11 +42,12 @@ def reset_globals():
 
 
 def test_set_msaccucmp_path_from_cann_given_ascend_toolkit_home_when_valid_then_path_set():
-    with patch.dict('os.environ', {'ASCEND_TOOLKIT_HOME': '/mock/path'}), \
-         patch('components.utils.acc_cmp.os.path.exists', return_value=True) as mock_exists, \
-         patch('components.utils.acc_cmp.sys.path', new=[]):
+    with patch.dict('os.environ', {'TOOLCHAIN_HOME': '/mock/path'}), \
+         patch('components.utils.acc_cmp.os.path.exists', return_value=True), \
+         patch('components.utils.acc_cmp.sys.path', new=[]), \
+         patch('components.utils.acc_cmp.GLOBAL_TENSOR_CONVERTER', return_value=True):
         set_msaccucmp_path_from_cann()
-        assert '/home/wgw/Ascend/ascend-toolkit/latest/toolkit/tools/operator_cmp/compare' in sys.path
+        assert '/mock/path/tools/operator_cmp/compare' in sys.path
 
 
 def test_set_msaccucmp_path_from_cann_given_no_env_when_invalid_then_oserror():
@@ -83,27 +80,64 @@ def test_parse_torchair_dump_data_given_npz_file_when_valid_then_return_inputs_o
 
 
 def test_parse_torchair_dump_data_given_bin_file_when_valid_then_call_parser():
+    # mock cmp_utils module
+    mock_cmp_utils = MagicMock()
+    mock_constant = MagicMock()
+    mock_const_manager = MagicMock()
+    mock_manager = MagicMock()    
+    mock_cmp_utils.constant = mock_constant
+    mock_constant.const_manager = mock_const_manager
+    mock_const_manager.ConstManager = mock_manager
+    # mock dump_parse module and it's submodule
+    mock_dump_parse =  MagicMock()
+    mock_dump_utils = MagicMock()
+    mock_parse_dump_file = MagicMock()
+    mock_dump_parse.dump_utils = mock_dump_utils
+    mock_dump_utils.parse_dump_file = mock_parse_dump_file
+
     with patch('components.utils.acc_cmp.IS_MSACCUCMP_PATH_SET', True), \
-         patch('dump_parse.dump_utils.parse_dump_file') as mock_parse_dump, \
-         patch('cmp_utils.constant.const_manager.ConstManager') as mock_const_manager, \
-         patch('components.utils.acc_cmp.GLOBAL_TENSOR_CONVERTER') as mock_converter:
-        mock_parse_dump.return_value.input_data = [np.array([3])]
-        mock_parse_dump.return_value.output_data = [np.array([4])]
+         patch('components.utils.acc_cmp.GLOBAL_TENSOR_CONVERTER') as mock_converter, \
+         patch.dict('sys.modules', {
+             'dump_parse': mock_dump_parse,
+             'dump_parse.dump_utils': mock_dump_utils,
+             'cmp_utils': mock_cmp_utils,
+             'cmp_utils.constant': mock_constant,
+             'cmp_utils.constant.const_manager': mock_const_manager
+         }):
+        mock_manager.OLD_DUMP_TYPE = "old_dump_type"
+        mock_parse_dump_file.return_value.input_data = [np.array([3])]
+        mock_parse_dump_file.return_value.output_data = [np.array([4])]
         def mock_converter_side_effect(x):
             return x * 2
         mock_converter.side_effect = mock_converter_side_effect
-
         inputs, outputs = parse_torchair_dump_data('dummy.bin')
-        mock_parse_dump.assert_called_once()
+        mock_parse_dump_file.assert_called_once()
         assert (inputs[0] == np.array([6])).all()
         assert (outputs[0] == np.array([8])).all()
 
 
 def test_parse_torchair_dump_data_given_non_npz_and_uninitialized_when_set_path_called():
+    mock_cmp_utils = MagicMock()
+    mock_constant = MagicMock()
+    mock_const_manager = MagicMock()
+    mock_manager = MagicMock()    
+    mock_cmp_utils.constant = mock_constant
+    mock_constant.const_manager = mock_const_manager
+    mock_const_manager.ConstManager = mock_manager
+    mock_dump_parse =  MagicMock()
+    mock_dump_utils = MagicMock()
+    mock_parse_dump_file = MagicMock()
+    mock_dump_parse.dump_utils = mock_dump_utils
+    mock_dump_utils.parse_dump_file = mock_parse_dump_file
     with patch('components.utils.acc_cmp.IS_MSACCUCMP_PATH_SET', False), \
          patch('components.utils.acc_cmp.set_msaccucmp_path_from_cann') as mock_set_path, \
-         patch('dump_parse.dump_utils.parse_dump_file'), \
-         patch('cmp_utils.constant.const_manager.ConstManager'):
+         patch.dict('sys.modules', {
+             'dump_parse': mock_dump_parse,
+             'dump_parse.dump_utils': mock_dump_utils,
+             'cmp_utils': mock_cmp_utils,
+             'cmp_utils.constant': mock_constant,
+             'cmp_utils.constant.const_manager': mock_const_manager
+         }):
         parse_torchair_dump_data('dummy.bin')
         mock_set_path.assert_called_once()
 

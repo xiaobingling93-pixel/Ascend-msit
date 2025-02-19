@@ -11,10 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from __future__ import print_function
-
-import sys
 import os
 import unittest
 from unittest import mock
@@ -27,32 +23,6 @@ from components.utils.cmp_algorithm import cosine_similarity, max_relative_error
     max_absolute_error, kl_divergence, mean_absolute_error, relative_euclidean_distance, \
     CMP_ALG_MAP, register_custom_compare_algorithm
 
-# Define a temporary directory for testing purposes
-TEMP_DIR = "./"
-os.makedirs(TEMP_DIR, exist_ok=True)
-
-# Create a temporary Python file with a valid function for testing
-TEMP_PY_FILE_PATH = os.path.join(TEMP_DIR, "valid_module.py")
-with open(TEMP_PY_FILE_PATH, 'w') as f:
-    f.write("""
-def valid_function(tensor1, tensor2):
-    return (0.0, '')
-""")
-
-# Ensure the temp directory is in sys.path for module importing
-if TEMP_DIR not in sys.path:
-    sys.path.append(TEMP_DIR)
-
-
-# Mock the FileStat class and its methods for testing permission checks
-class MockFileStat:
-    def __init__(self, file_path):
-        self.file_path = file_path
-
-    @staticmethod
-    def is_basically_legal(self, mode, strict_permission=False):
-        # Always return True for this test case to simulate legal permissions
-        return True
 
 class TestMetrics(unittest.TestCase):
 
@@ -116,12 +86,6 @@ class TestMetrics(unittest.TestCase):
         expected_distance = torch.sqrt(expected_distance).item()
         self.assertAlmostEqual(distance, expected_distance, places=6)
 
-
-@pytest.fixture(scope="module", autouse=True)
-def setup():
-    # Setup code here if any required before tests execution
-    yield
-    # Teardown code here if any required after tests execution
 
 # Test cases for cosine_similarity
 def test_cosine_similarity_given_both_zero_when_called_then_one():
@@ -243,19 +207,12 @@ def test_register_custom_compare_algorithm_given_return_type_mismatch_when_calle
 # Test case to cover the logger.info call
 @mock.patch('components.utils.cmp_algorithm.logger')
 def test_register_custom_compare_algorithm_given_all_correct_when_called_then_log_added(mock_logger):
+    with open("./resource/valid_module.py", 'w') as f:
+        f.write("""def valid_function(tensor1, tensor2):\n\treturn (0.0, '')""")
     try:
-        register_custom_compare_algorithm("./valid_module.py:valid_function")
+        register_custom_compare_algorithm("./resource/valid_module.py:valid_function")
     except Exception as e:
         pytest.fail(f"Unexpected exception: {e}")
-
-    # Verify the logging message
+    finally:
+        os.remove("./resource/valid_module.py")
     mock_logger.info.assert_called_once_with("Added custom comparing algorithm: valid_function")
-
-# Cleanup after tests
-def teardown_module():
-    if TEMP_DIR in sys.path:
-        sys.path.remove(TEMP_DIR)
-    if os.path.exists(TEMP_PY_FILE_PATH):
-        os.remove(TEMP_PY_FILE_PATH)
-    if os.path.exists(TEMP_DIR) and not os.listdir(TEMP_DIR):
-        os.rmdir(TEMP_DIR)
