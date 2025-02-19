@@ -41,8 +41,12 @@ def add_compare_visual_db_table(db_filepath, df, table_name):
 
 
 def compare_csv(fp_a, fp_b):
-    df_a = pd.read_csv(fp_a)
-    df_b = pd.read_csv(fp_b)
+    try:
+        df_a = pd.read_csv(fp_a)
+        df_b = pd.read_csv(fp_b)
+    except Exception as ex:
+        logger.error(f'failed to read csv, please check {fp_a}.')
+        return None
     
     # 确保列名一致
     if set(df_a.columns) != set(df_b.columns):
@@ -81,13 +85,13 @@ def compare_csv(fp_a, fp_b):
         metric = row['Metric']
         
         # 添加 a 数据
-        a_row = {'Metric': metric, 'Data Source': str(fp_a.parent)}
+        a_row = {'Metric': metric, 'Data Source': str(Path(fp_a).parent)}
         for col in df_a.columns[1:]:
             a_row[col] = row[f'{col}_a']
         rows.append(a_row)
         
         # 添加 b 数据
-        b_row = {'Metric': metric, 'Data Source': str(fp_b.parent)}
+        b_row = {'Metric': metric, 'Data Source': str(Path(fp_b).parent)}
         for col in df_a.columns[1:]:
             b_row[col] = row[f'{col}_b']
         rows.append(b_row)
@@ -116,7 +120,10 @@ def compare(input_a, input_b):
         fp_b = Path(input_b) / filename
         if filename.endswith('.csv'):
             df = compare_csv(fp_a, fp_b)
-            res[f"{name}"] = df
+            if df is None:
+                logger.error(f'failed to compare {name}, please check {filename}.')
+            else:
+                res[f"{name}"] = df
     return res
 
 
