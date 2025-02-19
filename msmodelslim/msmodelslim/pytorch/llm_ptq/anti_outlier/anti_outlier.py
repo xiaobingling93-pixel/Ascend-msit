@@ -19,15 +19,13 @@ from ascend_utils import ResListToRelease
 from ascend_utils.common.security import get_valid_write_path, check_type
 from msmodelslim.pytorch.llm_ptq.hooks.hook_def import ProcessHook
 from msmodelslim.pytorch.llm_ptq.hooks.factory import get_process_hooks
-from msmodelslim.pytorch.llm_ptq.accelerate_adapter import enabled_adapter
 from msmodelslim import logger as msmodelslim_logger
 
 from msmodelslim.pytorch.llm_ptq.accelerate_adapter import (PrepareWeight,
                                                             move_update_weight_hook_if_need,
-                                                            check_model_compatible,
-                                                            enable_adapter,
                                                             replace_device_align_hook_if_needed)
-                                                            
+from ..accelerate_adapter.utils import judge_model_with_accelerate, judge_module_with_accelerate
+
 try:
     import torch_npu
 except ImportError:
@@ -95,19 +93,12 @@ _PREDEFINED_FUSION_KWARGS = {
 STATE_DICT_COPY_DIR = "msmodelslim_copy"
 
 
-def judge_model_with_accelerate(model: nn.Module):
-    for _, mod in model.named_modules():
-        if hasattr(mod, '_hf_hook'):
-            return True
-    return False
-
-
 def replace_rms_norm(model: nn.Module, norm_class_name: str):
     for name, module in model.named_modules():
         if module.__class__.__name__.lower() == 'layernorm':
             pass
         elif norm_class_name != 'layernorm' and module.__class__.__name__.lower() == norm_class_name.lower():
-            if enabled_adapter():
+            if judge_module_with_accelerate(module):
                 with PrepareWeight(module):
                     new_module = NormBias(module)
                     new_module.to(module.weight.data.device)
@@ -115,13 +106,7 @@ def replace_rms_norm(model: nn.Module, norm_class_name: str):
                     GraphOpt.set_module(model, name, new_module)
             else:
                 new_module = NormBias(module)
-
-                if hasattr(module, '_hf_hook'):
-                    module._hf_hook.weights_map = None
-                    new_module.old_hook = module._hf_hook
-                else:
-                    new_module.to(module.weight.data.device)
-
+                new_module.to(module.weight.data.device)
                 GraphOpt.set_module(model, name, new_module)
 
 
@@ -192,16 +177,12 @@ class AntiOutlier(object):
         if SD3_CONTEXT_EMBEDDER + ".weight" in model.state_dict().keys():
             self.is_context_embedder_model = True
 
-        # 开启低显存低内存模式
-        if self.cfg.is_adapter_enabled:
-            enable_adapter()
-
         if self.cfg.device == "cpu":
             same_device = self.cfg.device == model.device.type
         else:
             same_device = self.cfg.device == model.device
 
-        if not check_model_compatible(model) and not same_device:
+        if not self.with_accelerate and not same_device:
             self.logger.warning("Model is not on the deivce indicated in `AntiOutlierConfig`, "
                                 "Model is on the device `{}` while `AntiOutlierConfig` "
                                 "indicates `{}`".format(model.device, self.cfg.device))
@@ -213,16 +194,10 @@ class AntiOutlier(object):
         replace_device_align_hook_if_needed(model)
 
         self.norm_class_name = norm_class_name
-        if not enabled_adapter():
-            self.org_model = model
-        
+
         self.hooks = get_process_hooks(model)
 
-        try:
-            self.model_with_accelerate = judge_model_with_accelerate(model)
-        except Exception as e:
-            raise Exception("Please check the model and configuration.", e) from e
-        if not self.model_with_accelerate:
+        if not self.with_accelerate:
             self.device_org = next(model.parameters()).device
         else:
             self.device_org = None
@@ -280,9 +255,6 @@ class AntiOutlier(object):
                     self.norm_linear_subgraph.update(self.linear_linear_subgraph)
                 del dag
 
-        if not enabled_adapter():
-            del self.model
-            self.model = self.org_model
         if self.cfg.anti_method != "m6":
             replace_rms_norm(self.model, self.norm_class_name)
         gc.collect()

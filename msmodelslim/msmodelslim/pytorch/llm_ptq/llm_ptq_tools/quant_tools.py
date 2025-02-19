@@ -20,7 +20,6 @@ from ascend_utils.common.security import check_element_type, check_type, get_wri
 
 from msmodelslim import logger as msmodelslim_logger
 from msmodelslim.pytorch.llm_ptq.hooks.factory import is_deepseek_v2_chat, is_deepseek_v2_lite
-from msmodelslim.pytorch.llm_ptq.accelerate_adapter import enable_adapter
 
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config import QuantConfig
 from msmodelslim.pytorch.llm_ptq.anti_outlier.graph_utils import class_detect
@@ -62,8 +61,7 @@ from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.fa_quant import (
 
 from msmodelslim.pytorch.llm_ptq.anti_outlier.dag_utils.torch_dag_adapter import TorchDAGAdapter
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.simulate_tp import ParallelLinearCol
-from msmodelslim.pytorch.llm_ptq.accelerate_adapter.hook_adapter import (enabled_adapter,
-                                                                         PrepareWeight,
+from msmodelslim.pytorch.llm_ptq.accelerate_adapter.hook_adapter import (PrepareWeight,
                                                                          replace_device_align_hook_if_needed,
                                                                          move_update_weight_hook_if_need,
                                                                          clear_unused_module)
@@ -92,12 +90,6 @@ class Calibrator(object):
         self.calib_data = self.get_calib_data([]) if calib_data is None else self.get_calib_data(calib_data)
         self.use_kvcache_quant = cfg.use_kvcache_quant
         self.norm_class_name = cfg.norm_class_name
-
-        if not (hasattr(self.cfg, "is_adapter_enabled") and self.cfg.is_adapter_enabled) and enabled_adapter():
-            raise ValueError("low memory mode is on, must keep on")
-
-        if hasattr(self.cfg, "is_adapter_enabled") and self.cfg.is_adapter_enabled:
-            enable_adapter()
 
         if model.dtype != model.config.torch_dtype:
             self.logger.warning(f'The model dtype {model.dtype} is not consistent with the model.config.torch_dtype '
@@ -161,7 +153,7 @@ class Calibrator(object):
             same_device = self.cfg.device == model.device.type
         else:
             same_device = self.cfg.device == model.device
-        if not enabled_adapter() and not same_device:
+        if not judge_model_with_accelerate(model) and not same_device:
             self.logger.warning("Model is not on the deivce indicated in `QuantConfig`, "
                                 "Model is on the device `{}` while `QuantConfig` "
                                 "indicates `{}`".format(model.device, self.cfg.device))

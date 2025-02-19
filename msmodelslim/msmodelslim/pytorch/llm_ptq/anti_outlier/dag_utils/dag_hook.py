@@ -16,7 +16,6 @@ from ascend_utils.core.dag.dag_node import DagNode
 from ascend_utils.core.dag.dag_node_io import DagNodeIO
 
 from msmodelslim import logger
-from msmodelslim.pytorch.llm_ptq.accelerate_adapter import enabled_adapter
 
 from .dag_model_hook import DagModelHook
 

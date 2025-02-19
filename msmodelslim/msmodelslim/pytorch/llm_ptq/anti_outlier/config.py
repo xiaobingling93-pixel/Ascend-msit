@@ -8,12 +8,6 @@ from msmodelslim import logger as msmodelslim_logger
 _ANTI_METHODS = ['m1', 'm2', 'm3', 'm4', 'm5', 'm6']
 _SUPPORTED_DEVICES = ["cpu", "npu", 'gpu']
 
-_OFFLOAD_TYPE = 'offload_type'
-OFFLOAD_DISK = 'disk'
-OFFLOAD_MEMORY = 'memory'
-_SUPPORTED_LOW_MEMORY_KEY = [_OFFLOAD_TYPE]
-_SUPPORTED_OFFLOAD_TYPE = [OFFLOAD_MEMORY]
-
 
 class AntiMethods(str, Enum):
     M1 = "m1"
@@ -33,7 +27,6 @@ class AntiOutlierConfig:
             dev_type='cpu',
             dev_id=None,
             w_sym=True,
-            low_memory=None,
             disable_anti_names=None,
             flex_config: dict = None,
     ):
@@ -63,18 +56,6 @@ class AntiOutlierConfig:
         check_type(self.w_sym, bool, param_name='w_sym')
         check_type(self.disable_anti_names, list, param_name='disable_anti_names')
         check_type(self.flex_config, dict, param_name='flex_config')
-
-        # check low_memory config, must be {"offload_type": "disk|memory"}
-        self.is_adapter_enabled = low_memory is not None
-        self.offload_type = OFFLOAD_MEMORY
-        if self.is_adapter_enabled:
-            check_type(low_memory, dict, param_name='low_memory')
-            for key in low_memory:
-                if key not in _SUPPORTED_LOW_MEMORY_KEY:
-                    raise KeyError(f"low_memory accept {_SUPPORTED_LOW_MEMORY_KEY}, not {key}")
-            self.offload_type = low_memory.get(_OFFLOAD_TYPE, OFFLOAD_MEMORY)
-            if self.offload_type not in _SUPPORTED_OFFLOAD_TYPE:
-                raise ValueError(f'offload_type should be in {_SUPPORTED_OFFLOAD_TYPE}, but got {self.offload_type}.')
 
         if self.anti_method not in _ANTI_METHODS:
             raise ValueError("Configuration param `anti_method` must be in choices {}"
