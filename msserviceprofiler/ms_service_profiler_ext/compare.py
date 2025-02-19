@@ -22,7 +22,7 @@ import shutil
 import pandas as pd
 
 from ms_service_profiler.exporters.utils import check_input_path_valid, check_output_path_valid
-from ms_service_profiler.utils.log import set_log_level
+from ms_service_profiler.utils.log import set_log_level, logger
 
 
 db_write_lock = multiprocessing.Lock()
@@ -40,13 +40,6 @@ def add_compare_visual_db_table(db_filepath, df, table_name):
             raise ValueError(f"Cannot write {table_name} into {db_filepath}.") from ex
 
 
-def compare_abs_and_persent(row):
-    a, b = row
-    if b == 0:
-        return f'{a - b:+.2f} | '
-    return f'{a - b:+.2f} | {(a - b) / b * 100:+.2f}%'
-
-
 def compare_csv(fp_a, fp_b):
     df_a = pd.read_csv(fp_a)
     df_b = pd.read_csv(fp_b)
@@ -58,18 +51,27 @@ def compare_csv(fp_a, fp_b):
     # 按 Metric 列合并两个 DataFrame
     df_merged = pd.merge(df_a, df_b, on='Metric', suffixes=('_a', '_b'))
 
-    # 动态计算差值
+    # 计算差值
     for col in df_a.columns[1:]:  # 跳过 Metric 列
-        # 计算绝对差值
-        abs_diff = (df_merged[f'{col}_a'] - df_merged[f'{col}_b'])
-        
-        # 计算百分比相对差值（避免除以零错误）
-        rel_diff = abs_diff / df_merged[f'{col}_a'].replace(0, pd.NA) * 100
-        with pd.option_context('future.no_silent_downcasting', True):
-            rel_diff = rel_diff.fillna(0)  # 将 NaN 替换为 0
-        
-        # 合并为字符串格式
-        df_merged[f'{col}_diff'] = abs_diff.round(2).astype(str) + '|' + rel_diff.round(2).astype(str) + '%'
+        got_error = False
+        try:
+            # 计算绝对差值
+            abs_diff = (df_merged[f'{col}_a'] - df_merged[f'{col}_b'])
+            
+            # 计算百分比相对差值（避免除以零错误）
+            rel_diff = abs_diff / df_merged[f'{col}_a'].replace(0, pd.NA) * 100
+            with pd.option_context('future.no_silent_downcasting', True):
+                rel_diff = rel_diff.fillna(0)  # 将 NaN 替换为 0
+            
+            # 合并为字符串格式
+            df_merged[f'{col}_diff'] = abs_diff.round(2).astype(str) + '|' + rel_diff.round(2).astype(str) + '%'
+        except Exception as ex:
+            error_msg = f'Calculate Diff Error: f{ex}'
+            df_merged[f'{col}_diff'] = error_msg
+            if not got_error:
+                logger.warning(error_msg)
+                got_error = True
+
 
     # 存储所有行的列表
     rows = []
