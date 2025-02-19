@@ -34,6 +34,15 @@ def get_disable_names(num_layers: int) -> list:
     return disable_names
 
 
+def get_disable_names_deepseekcoder(num_layers: int) -> list:
+    disable_names = []
+    # 遍历层数并添加对应的 disable_names
+    for i in range(num_layers):
+        disable_names.append(f"model.layers.{i}.mlp.down_proj")
+    disable_names.append("lm_head")
+    return disable_names
+
+
 def parse_arguments():
     parser = ArgumentParser()
     parser.add_argument('--model_path', type=str, help="model and tokenizer path")
@@ -152,7 +161,10 @@ if __name__ == '__main__':
     
     disable_names = args.disable_names
     if not disable_names:
-        disable_names = get_disable_names(num_layers)
+        if args.model_name == 'deepseek_coder':
+            disable_names = get_disable_names_deepseekcoder(num_layers)
+        else:
+            disable_names = get_disable_names(num_layers)
 
     quant_conf = QuantConfig(
         w_bit=args.w_bit,
@@ -185,7 +197,8 @@ if __name__ == '__main__':
                                                     anti_method=args.anti_method, w_sym=args.w_sym,
                                                     dev_type=args.device_type, dev_id=rank)
     elif args.anti_method:
-        anti_outlier_config_val = AntiOutlierConfig(anti_method=args.anti_method)
+        anti_outlier_config_val = AntiOutlierConfig(anti_method=args.anti_method,
+                                                    dev_type=args.device_type, dev_id=rank)
     tokenizer_args = json.loads(args.tokenizer_args)
     quantifier = Quantifier(
         model_path, quant_conf, anti_outlier_config_val,
