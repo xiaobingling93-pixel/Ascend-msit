@@ -131,7 +131,7 @@ def visualize(results, output_path):
             for i in range(0, len(df), 3):
                 if i + 3 <= len(df):
                     new_col_name = df.loc[i, "Metric"]
-                    df[new_col_name] = df.iloc[i:i+3, :]['value'].reset_index(drop=True)
+                    df[new_col_name] = df.iloc[i:i + 3, :]['value'].reset_index(drop=True)
             df.drop(columns=['Metric', 'value'], inplace=True)
             df = df.iloc[:3, :]
         add_compare_visual_db_table(output_path, df, name)
