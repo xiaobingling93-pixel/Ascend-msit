@@ -2,7 +2,7 @@
 import os.path
 from dataclasses import dataclass, field
 from logging import Logger
-from typing import Optional
+from typing import Optional, Union
 
 from msmodelslim import logger as msmodelslim_logger
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.llm_ptq_utils import SAVE_TYPE_SAFE_TENSOR
@@ -49,7 +49,7 @@ class SafetensorsSaverConfig:
 class SafetensorsSaver(BaseSaver):
     type_ = SAVE_TYPE_SAFE_TENSOR
 
-    def __init__(self, cfg: SafetensorsSaverConfig | dict):
+    def __init__(self, cfg: Union[SafetensorsSaverConfig, dict]):
         super().__init__()
 
         cfg = SafetensorsSaverConfig.from_dict(cfg)

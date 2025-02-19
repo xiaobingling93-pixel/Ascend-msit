@@ -15,6 +15,7 @@
 import fnmatch
 from dataclasses import dataclass, field
 from logging import Logger
+from typing import Union
 
 from msmodelslim import logger as msmodelslim_logger
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.llm_ptq_utils import SAVE_TYPE_NUMPY
@@ -42,7 +43,7 @@ class NpySaverConfig:
 class NpySaver(BaseSaver):
     type_ = SAVE_TYPE_NUMPY
 
-    def __init__(self, cfg: NpySaverConfig | dict):
+    def __init__(self, cfg: Union[NpySaverConfig, dict]):
         super().__init__()
 
         cfg = NpySaverConfig.from_dict(cfg)

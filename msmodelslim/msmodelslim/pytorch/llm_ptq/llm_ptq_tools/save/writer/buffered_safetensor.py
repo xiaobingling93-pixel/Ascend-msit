@@ -25,6 +25,7 @@ from ascend_utils.common.security import json_safe_dump, SafeWriteUmask, check_t
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.save.writer.base import BaseWriter
 
 ONE_GB_FILE_BYTES = 1073741824  # 1G, 1 * 1024 * 1024 * 1024
+FILE_TMP_SUFFIX = '-of-00000.safetensors'
 
 
 def get_index_json(file_map_dict, total_size):
@@ -83,7 +84,7 @@ class BufferedSafetensorsWriter(BaseWriter):
 
         # rename safetensors
         for i in range(self._save_count):
-            src_file = os.path.join(self.save_directory, f"{self.save_prefix}-{i + 1:05d}-of-00000.safetensors")
+            src_file = os.path.join(self.save_directory, f"{self.save_prefix}-{i + 1:05d}{FILE_TMP_SUFFIX}")
             # 仿照开源权重命名均为model-0000x-of-0000x.safetensors，超过99999命名为model-x-of-x.safetensors
             if self._save_count <= 99999:
                 dst_file_name = f"{self.save_prefix}-{i + 1:05d}-of-{self._save_count:05d}.safetensors"
@@ -99,20 +100,23 @@ class BufferedSafetensorsWriter(BaseWriter):
 
     def save_index(self):
         # process safetensor index json
+        if self._save_count <= 99999:
+            suffix = f"-of-{self._save_count:05d}.safetensors"
+        else:
+            suffix = f"-of-{self._save_count}.safetensors"
         for key in self.saved_keys_map.keys():
-            self.saved_keys_map[key] = self.saved_keys_map[key].removesuffix(
-                '-of-00000.safetensors') + f'-of-{self._save_count:05d}.safetensors'
+            self.saved_keys_map[key] = self.saved_keys_map[key].replace(FILE_TMP_SUFFIX, suffix)
 
         # save index json
         index_json_dict = get_index_json(self.saved_keys_map, self.total_size)
-        index_json_name = os.path.join(self.save_directory, self.save_prefix + '.index.json')
+        index_json_name = os.path.join(self.save_directory, self.save_prefix + '.safetensors.index.json')
         index_json_path = get_valid_write_path(index_json_name, extensions=[".json"])
         json_safe_dump(index_json_dict, index_json_path, indent=2)
         self.logger.debug(f'Save index json to {index_json_path} successfully')
 
     def save_one_file(self) -> None:
         self._save_count += 1
-        save_file_name = f"{self.save_prefix}-{self._save_count:05d}-of-00000.safetensors"
+        save_file_name = f"{self.save_prefix}-{self._save_count:05d}{FILE_TMP_SUFFIX}"
         full_save_file_name = os.path.join(self.save_directory, save_file_name)
         full_save_file_name = get_valid_write_path(full_save_file_name, extensions=[".safetensors"])
 

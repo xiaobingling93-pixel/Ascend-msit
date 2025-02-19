@@ -20,6 +20,7 @@ from ascend_utils.common.security import check_element_type, check_type, get_wri
 
 from msmodelslim import logger as msmodelslim_logger
 from msmodelslim.pytorch.llm_ptq.hooks.factory import is_deepseek_v2_chat, is_deepseek_v2_lite
+from msmodelslim.pytorch.llm_ptq.hooks.once import register_bias
 
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config import QuantConfig
 from msmodelslim.pytorch.llm_ptq.anti_outlier.graph_utils import class_detect
@@ -103,6 +104,8 @@ class Calibrator(object):
         self.model_with_accelerate = judge_model_with_accelerate(model)
 
         replace_device_align_hook_if_needed(model)
+
+        register_bias(model)
 
         # 初始化dag类
         self.dag = self.extract_dag(model)
@@ -448,6 +451,10 @@ class Calibrator(object):
                                     part_file_size=part_file_size)
 
         # quantifier 应基于量化方法予以抽象，当前仅实现了与保存相关的逻辑
+        origin_state_dict = None
+        if hasattr(self.model, 'origin_state_dict'):
+            origin_state_dict = self.model.origin_state_dict
+
         quantifier = ComplexQuantifier(cfg=self.cfg,
                                        is_deepseek_v2=self.is_deepseek_v2,
                                        rollback_names=self.rollback_names,
@@ -471,7 +478,8 @@ class Calibrator(object):
             for name, module in model.named_modules():
                 # kv_cache量化特殊处理
                 if name in self.kv_cache_quant_params:
-                    yield from self.kv_cache_quant_params[name]
+                    for k, v in self.kv_cache_quant_params[name]:
+                        yield k, QuantType.KV8, v
 
                 with PrepareWeight(module):
                     yield from weight_of_module_generator(name, module)
@@ -633,6 +641,8 @@ class Calibrator(object):
                     else:
                         quant_mod = LinearSparseQuantizer(cfg=self.cfg, logger=self.logger)
                     quant_mod.set_param(mod)
+                    if hasattr(mod, 'origin_bias') and mod.origin_bias is not None:
+                        quant_mod.origin_bias = mod.origin_bias
                     move_update_weight_hook_if_need(mod, quant_mod)
                     _set_module(model, name, quant_mod)
                     # 可能会有其他地方引用这个模块，但是可能很难找出来，保险起见清空相关参数

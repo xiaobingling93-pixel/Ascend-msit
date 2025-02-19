@@ -118,12 +118,13 @@ class ComplexQuantifier:
         is_norm_bias = isinstance(module, NormBias)
         anti_norm_weight: torch.Tensor = module.module.weight.cpu() if is_norm_bias else module.weight.cpu()
         anti_norm_bias: torch.Tensor = module.bias.cpu()
-        anti_norm_name_weight = name + '.module.weight' if self.is_inner_norm_used else name + '.weight'
-        anti_norm_name_bias = name + '.module.bias' if self.is_inner_norm_used else name + '.bias'
-        yield anti_norm_name_weight, model_quant_type, anti_norm_weight.clone().detach()
-        yield anti_norm_name_bias, model_quant_type, anti_norm_bias.clone().detach()
+        is_inner_norm_used = self.is_inner_norm_used and is_norm_bias
+        anti_norm_name_weight = name + '.module.weight' if is_inner_norm_used else name + '.weight'
+        yield anti_norm_name_weight, model_quant_type, anti_norm_weight.clone().detach().cpu()
+        anti_norm_name_bias = name + '.module.bias' if is_inner_norm_used else name + '.bias'
+        yield anti_norm_name_bias, model_quant_type, anti_norm_bias.clone().detach().cpu()
         if self.is_inner_norm_used:
-            yield name + '.weight', QuantType.FLOAT, module.weight.cpu()
+            yield name + '.weight', QuantType.FLOAT, module.weight.clone().detach().cpu()
 
     def generate_weight_of_linear_module(self, name, module, model_quant_type):
         if not module.quant_weight.is_enable:
@@ -141,6 +142,8 @@ class ComplexQuantifier:
         quant_weight: torch.Tensor = quant_weight.to(device=fp_weight.device)
         save_quant_weight = quant_weight.cpu().to(torch.int8)
         yield name + '.weight', model_quant_type, save_quant_weight
+        if hasattr(module, 'origin_bias') and module.origin_bias is not None:
+            yield name + '.bias', QuantType.FLOAT, module.origin_bias
 
         # W4A16/W8A16 需要提供 weight_scale、weight_offset
         if model_quant_type in [QuantType.W8A16, QuantType.W4A16, QuantType.W8A8_DYNAMIC, QuantType.W8A8]:
