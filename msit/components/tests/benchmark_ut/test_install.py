@@ -1,4 +1,4 @@
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# Copyright (c) 2023-2025 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,13 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import sys
-import argparse
 from collections import namedtuple
-
-
-import pytest
 
 ACL_RUNTIME = namedtuple("aclruntime", "key")("aclruntime")
 AIS_BENCH_RUNTIME = namedtuple("ais_bench", "key")("ais-bench")

@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025 Huawei Technologies Co., Ltd.
 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,13 +14,8 @@
 
 import unittest
 import argparse
-import os
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
-from ait_tensor_view.operation import SliceOperation, PermuteOperation
-from components.utils.file_open_check import FileStat
-from components.utils.parser import BaseCommand
-from components.llm.msit_llm.common.utils import load_file_to_read_common_check_for_cli
 from components.tensor_view.ait_tensor_view.main_cli import (
     check_output_path_legality,
     parse_operations,
