@@ -74,6 +74,7 @@ STATE_DICT_COPY_DIR = "copy"
 class Calibrator(object):
     """ Calibrator for post-training quantization."""
 
+    @torch.no_grad()
     def __init__(self, model,
                  cfg: QuantConfig,
                  calib_data=None,
@@ -404,6 +405,7 @@ class Calibrator(object):
             self.logger.warning("Not all elements in calib_data are torch.Tensor, "
                                 "please make sure that the model can run with model(*(calib_data[0]))")
 
+    @torch.no_grad()
     def run(self, int_infer=False):
         check_type(int_infer, bool, additional_msg="`int_infer` should be boolean type!")
 
@@ -412,6 +414,7 @@ class Calibrator(object):
         except Exception as ex:
             raise Exception("Please check the model and configuration.", ex) from ex
 
+    @torch.no_grad()
     def save(self, output_path, safetensors_name=None, json_name=None, save_type=None, part_file_size=None):
         check_type(output_path, str, param_name="output_path")
         output_path = get_write_directory(output_path, write_mode=0o750)

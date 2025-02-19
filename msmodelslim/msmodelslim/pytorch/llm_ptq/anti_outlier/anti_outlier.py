@@ -123,6 +123,7 @@ def is_model_multimodal(model):
 class AntiOutlier(object):
     """Anti-outlier for LLM activation quantization."""
 
+    @torch.no_grad()
     def __init__(
             self,
             model: nn.Module,
