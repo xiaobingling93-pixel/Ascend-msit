@@ -123,7 +123,7 @@ def execute_command(cmd, info_need=True):
     if info_need:
         logger.info("Execute command: " + " ".join(cmd))
     try:
-        process = subprocess.run(cmd, shell=False, check=True, text=True,\
+        process = subprocess.run(cmd, shell=False, check=True, text=True, \
                                  stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     except Exception as e:
         logger.error(f"Failed to execute modeltest cmd, error code: {e.returncode}")
