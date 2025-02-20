@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,17 +15,17 @@
 
 import os
 import re
+import sqlite3
 import argparse
 from pathlib import Path
 from contextlib import contextmanager
-import sqlite3
+
 import pandas as pd
-
-from msserviceprofiler.ms_service_profiler_ext.compare_tools import CSVComparator, DBComparator
-from compare_tools.collector import FileCollector
-
 from ms_service_profiler.exporters.utils import check_input_path_valid, check_output_path_valid
 from ms_service_profiler.utils.log import set_log_level, logger
+
+from compare_tools.collector import FileCollector
+from msserviceprofiler.ms_service_profiler_ext.compare_tools import CSVComparator, DBComparator
 
 
 @contextmanager
