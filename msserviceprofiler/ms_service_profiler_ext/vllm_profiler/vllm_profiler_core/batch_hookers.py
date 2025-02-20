@@ -11,9 +11,37 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from collections import Counter
 from ms_service_profiler import Profiler, Level
 from vllm.sequence import SequenceGroupMetadata, SequenceStatus
 from .vllm_hooker_base import VLLMHookerBase
+
+
+def compare_deques(queue1, queue2):
+    counter1 = Counter(queue1)
+    counter2 = Counter(queue2)
+    diff = counter1 - counter2
+    return diff
+
+
+def queue_profiler(before_queue, after_queue, queue_name):
+    # 队列元素减少
+    less_queue = compare_deques(before_queue, after_queue)
+    rid_list = []
+    for seq_group in less_queue:
+        rid_list.append(seq_group.request_id)
+    if len(rid_list) > 0:
+        Profiler(Level.INFO).res(rid_list).metric("QueueSize", len(after_queue)).\
+            metric_scope(queue_name).event("Dequeue")
+    
+    # 队列元素增加
+    add_queue = compare_deques(after_queue, before_queue)
+    rid_list.clear()
+    for seq_group in add_queue:
+        rid_list.append(seq_group.request_id)
+    if len(rid_list) > 0:
+        Profiler(Level.INFO).res(rid_list).metric("QueueSize", len(after_queue)).\
+            metric_scope(queue_name).event("Enqueue")
 
 
 class SchedulerHook(VLLMHookerBase):
@@ -90,14 +118,90 @@ class SchedulerHook(VLLMHookerBase):
 
         def free_finished_seq_groups_maker(ori_func):
             def free_finished_seq_groups(this, *args, **kwargs):
+                before_running_queue = this.running
                 for seq_group in this.running:
                     Profiler(Level.INFO).res(seq_group.request_id).metric_inc('RUNNING', -1).\
                         metric_inc('FINISHED', 1).event("ReqState")
-                    Profiler(Level.INFO).res(seq_group.request_id).event("Dequeue")
                 ori_func(this, *args, **kwargs)
+                queue_profiler(before_running_queue, this.running, "running")
+
             return free_finished_seq_groups
         
         self.do_hook([Scheduler.free_finished_seq_groups], free_finished_seq_groups_maker)
+
+        def add_seq_group_to_running_maker(ori_func):
+            def _add_seq_group_to_running(this, seq_group, *args, **kwargs):
+                ori_func(this, *args, **kwargs)
+                Profiler(Level.INFO).res([seq_group.request_id]).metric("QueueSize", len(this.running)).\
+                    metric_scope('running').event("Enqueue")
+            
+            return _add_seq_group_to_running
+
+        self.do_hook([Scheduler._add_seq_group_to_running], add_seq_group_to_running_maker)
+
+        def schedule_priority_preemption_maker(ori_func):
+            def _schedule_priority_preemption(this, budget, *args, **kwargs):
+                before_waiting_queue = this.waiting
+                before_running_queue = this.running
+                force_preemption_count = ori_func(this, *args, **kwargs)
+                queue_profiler(before_waiting_queue, this.waiting, "waiting")
+                queue_profiler(before_running_queue, this.running, "running")
+                return force_preemption_count
+            
+            return _schedule_priority_preemption
+        
+        self.do_hook([Scheduler._schedule_priority_preemption], schedule_priority_preemption_maker)
+
+        def schedule_default_maker(ori_func):
+            def _schedule_default(this, *args, **kwargs):
+                before_swapped_queue = this.swapped
+                before_running_queue = this.running
+                before_waiting_queue = this.waiting
+                scheduler_outputs = ori_func(this, *args, **kwargs)
+                queue_profiler(before_swapped_queue, this.swapped, "swapped")
+                queue_profiler(before_running_queue, this.running, "running")
+                queue_profiler(before_waiting_queue, this.waiting, "waiting")
+                return scheduler_outputs
+            
+            return _schedule_default
+        
+        self.do_hook([Scheduler._schedule_default], schedule_default_maker)
+
+        def schedule_chunked_prefill_maker(ori_func):
+            def _schedule_chunked_prefill(this, *args, **kwargs):
+                before_running_queue = this.running
+                before_waiting_queue = this.waiting
+                before_swapped_queue = this.swapped
+                scheduler_outputs = ori_func(this, *args, **kwargs)
+                queue_profiler(before_running_queue, this.running, "running")
+                queue_profiler(before_waiting_queue, this.waiting, "waiting")
+                queue_profiler(before_swapped_queue, this.swapped, "swapped")
+                return scheduler_outputs
+            
+            return _schedule_chunked_prefill
+        
+        self.do_hook([Scheduler._schedule_chunked_prefill], schedule_chunked_prefill_maker)
+
+        def add_seq_group_maker(ori_func):
+            def add_seq_group(this, seq_group, *args, **kwargs):
+                ori_func(this, seq_group, *args, **kwargs)
+                Profiler(Level.INFO).res([seq_group.request_id]).metric("QueueSize", len(this.waiting)).\
+                    metric_scope('waiting').event("Enqueue")
+                
+            return add_seq_group
+        
+        self.do_hook([Scheduler.add_seq_group], add_seq_group_maker)
+
+        def add_seq_group_to_swapped_maker(ori_func):
+            def _add_seq_group_to_swapped(this, seq_group, *args, **kwargs):
+                ori_func(this, seq_group, *args, **kwargs)
+                Profiler(Level.INFO).res([seq_group.request_id]).metric("QueueSize", len(this.swapped)).\
+                    metric_scope('swapped').event("Enqueue")
+
+            return _add_seq_group_to_swapped
+        
+        self.do_hook([Scheduler._add_seq_group_to_swapped], add_seq_group_to_swapped_maker)
+                
 
 
 class LLMEngineHook(VLLMHookerBase):
@@ -109,7 +213,6 @@ class LLMEngineHook(VLLMHookerBase):
         def add_processed_request_maker(ori_func):
             def _add_processed_request(this, request_id, *args, **kwargs):
                 ori_func(this, request_id, *args, **kwargs)
-                Profiler(Level.INFO).res(request_id).event("Enqueue")
                 Profiler(Level.INFO).res(request_id).metric_inc('WAITING', 1).event("ReqState")
 
             return _add_processed_request
