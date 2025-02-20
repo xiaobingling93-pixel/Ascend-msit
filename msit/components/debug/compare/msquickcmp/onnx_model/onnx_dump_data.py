@@ -127,11 +127,13 @@ class OnnxDumpData(DumpData):
             self.inputs_map.update(self.extend_inputs_map)
 
     def get_output_map(self, output_list):
-        output_map, res_idx = {}, 0
+        output_map, res_idx, output_list_size = {}, 0, len(output_list)
         for node in self.origin_model.graph.node:
             for node_output in node.output:
                 output_map[node_output] = output_list[res_idx]
                 res_idx += 1
+                if res_idx >= output_list_size:
+                    return output_map
         return output_map
 
     def get_input_map(self, input_map, output_list):
@@ -356,7 +358,8 @@ class OnnxDumpData(DumpData):
                     file_name_map.append(f"{new_file_name},{file_name}\n")
                     file_name = new_file_name
                 file_path = os.path.join(self.onnx_dump_data_dir, file_name)
-                np.save(file_path, input_map.get(node_input))
+                if input_map.get(node_input) is not None:
+                    np.save(file_path, input_map.get(node_input))
             for j, output in enumerate(node.output):
                 if not self.dump and output not in net_output_node:
                     continue
