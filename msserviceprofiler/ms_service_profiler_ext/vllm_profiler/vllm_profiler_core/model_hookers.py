@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .vllm_hooker_base import VLLMHookerBase
 from ms_service_profiler import Profiler, Level
+from .vllm_hooker_base import VLLMHookerBase
 
 
 class ModelRunnerExecuteHook(VLLMHookerBase):
