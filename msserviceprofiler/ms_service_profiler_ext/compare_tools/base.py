@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,16 +12,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from vllm_profiler.vllm_profiler_core.vllm_hookers import all_hookers
-from vllm_profiler.vllm_profiler_core.model_hookers import model_hookers
-from vllm_profiler.vllm_profiler_core.batch_hookers import batch_hookers
-from vllm_profiler.vllm_profiler_core.kvcache_hookers import kvcache_hookers
 
-all_hookers += kvcache_hookers
-all_hookers += model_hookers
-all_hookers += batch_hookers
+from abc import ABC, abstractmethod
 
-for hook_cls in all_hookers:
-    hooker = hook_cls()
-    if hooker.support_version("0.6.3"):
-        hooker.init()
+
+class BaseComparator(ABC):
+    SUPPORTED_EXTENSIONS = []
+    
+    def __init__(self, out_db_conn, excel_writer):
+        self.out_db_conn = out_db_conn
+        self.excel_writer = excel_writer
+    
+    @classmethod
+    def supports(cls, file_extension):
+        return file_extension in cls.SUPPORTED_EXTENSIONS
+    
+    @abstractmethod
+    def process(self, file_a, file_b):
+        pass

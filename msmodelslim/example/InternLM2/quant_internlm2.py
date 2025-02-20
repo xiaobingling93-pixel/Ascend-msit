@@ -9,9 +9,10 @@ parent_directory = os.path.abspath(os.path.join(current_directory, '..', ".."))
 sys.path.append(parent_directory)
 
 from ascend_utils.common.security.path import get_valid_write_path, get_valid_read_path
-from example.common.utils import SafeGenerator, ArgumentParser, StringArgumentValidator, MAX_KEY_LENGTH, MAX_JSON_LENGTH
+from example.common.utils import SafeGenerator, ArgumentParser, StringArgumentValidator, MAX_JSON_LENGTH, MAX_KEY_LENGTH
 from msmodelslim.pytorch.llm_ptq.anti_outlier import AntiOutlier, AntiOutlierConfig
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
+from msmodelslim import logger
 
 
 CPU = "cpu"
@@ -26,20 +27,11 @@ def cmd_bool(cmd_arg):
     raise ValueError(f"{cmd_arg} should be True or False")
 
 
-def get_disable_names(num_layers: int) -> list:
+def get_down_proj_disable_names(num_layers: int) -> list:
     disable_names = []
     # 遍历层数并添加对应的 disable_names
     for i in range(num_layers):
-        disable_names.append(f"model.layers.{i}.self_attn.kv_b_proj")
-    return disable_names
-
-
-def get_disable_names_deepseekcoder(num_layers: int) -> list:
-    disable_names = []
-    # 遍历层数并添加对应的 disable_names
-    for i in range(num_layers):
-        disable_names.append(f"model.layers.{i}.mlp.down_proj")
-    disable_names.append("lm_head")
+        disable_names.append(f"model.layers.{i}.feed_forward.w2")     
     return disable_names
 
 
@@ -47,7 +39,7 @@ def parse_arguments():
     parser = ArgumentParser()
     parser.add_argument('--model_path', type=str, help="model and tokenizer path")
     parser.add_argument('--save_directory', type=str)
-    parser.add_argument('--part_file_size', type=int, default=5)
+    parser.add_argument('--part_file_size', type=int, default=None)
     parser.add_argument(
         '--calib_texts',
         type=str,
@@ -58,6 +50,7 @@ def parse_arguments():
         type=str,
         help='A jsonl file contains calibration data.',
         default=os.path.join(os.path.dirname(os.path.dirname(__file__)), 'common', 'teacher_qualification.jsonl'))
+    parser.add_argument('--anti_file', type=str, default=None)
     parser.add_argument('--w_bit', type=int, default=8)
     parser.add_argument('--a_bit', type=int, default=8)
     parser.add_argument('--disable_names', type=str, nargs='+', default=None)
@@ -74,7 +67,7 @@ def parse_arguments():
     parser.add_argument('--tp_size', type=int, default=1)
     parser.add_argument('--sigma_factor', type=float, default=3.0)
     parser.add_argument('--is_lowbit', type=cmd_bool, default=False)
-    parser.add_argument('--mm_tensor', type=cmd_bool, default=True)
+    parser.add_argument('--mm_tensor', type=cmd_bool, default=True) 
     parser.add_argument('--w_sym', type=cmd_bool, default=True)
     parser.add_argument('--use_kvcache_quant', type=cmd_bool, default=False)
     parser.add_argument('--use_fa_quant', type=cmd_bool, default=False)
@@ -96,7 +89,7 @@ def parse_arguments():
 
 class Quantifier:
     def __init__(self, model_path_or_name, quant_config=None,
-        anti_outlier_config=None, device_type='cpu', **kwargs):
+                 anti_outlier_config=None, device_type='cpu', **kwargs):
         safe_generator = SafeGenerator()
         self.device_type = device_type
         device_map = CPU if self.device_type == CPU else "auto"
@@ -112,7 +105,6 @@ class Quantifier:
             device_map=device_map,
             trust_remote_code=True
         )
-
         tokenizer_args = kwargs.get("tokenizer_args", {})
         self.tokenizer = safe_generator.get_tokenizer_from_pretrained(
             self.model_path_or_name, use_fast=False, trust_remote_code=True, legacy=False, **tokenizer_args
@@ -129,23 +121,19 @@ class Quantifier:
                 [inputs.data[input_ids_name], inputs.data[attention_mask_name]])
         return tokenized_data
 
-    def convert(self, tokenized_data, save_path, disable_level, part_file_size=None):
+    def convert(self, tokenized_calib_data, tokenized_anti_data, save_path, disable_level, part_file_size=None):
         if self.device_type == NPU:
             # 避免在线编译算子，使用二进制编译的算子
             torch.npu.set_compile_mode(jit_compile=False)
 
         if self.anti_outlier_config is not None:
-            if self.model_name == "baichuan":
-                anti_outlier = AntiOutlier(self.model, calib_data=tokenized_data,
-                                           cfg=self.anti_outlier_config, norm_class_name="RMSNorm")
-            else:
-                anti_outlier = AntiOutlier(self.model, calib_data=tokenized_data, cfg=self.anti_outlier_config)
+            anti_outlier = AntiOutlier(self.model, calib_data=tokenized_anti_data, cfg=self.anti_outlier_config)
             anti_outlier.process()
 
-        if not os.path.exists(save_path):
-            os.mkdir(save_path)
-
-        calibrator = Calibrator(self.model, self.quant_config, calib_data=tokenized_data, disable_level=disable_level)
+        calibrator = Calibrator(self.model, 
+                                self.quant_config, 
+                                calib_data=tokenized_calib_data, 
+                                disable_level=disable_level)
         calibrator.run()
         calibrator.save(save_path, save_type=["safe_tensor"], part_file_size=part_file_size)
 
@@ -153,18 +141,21 @@ class Quantifier:
 if __name__ == '__main__':
     args = parse_arguments()
     checker = SafeGenerator()
-    rank: int = int(os.getenv("RANK", "0"))
+    try:
+        rank: int = int(os.getenv("RANK", "0"))
+    except ValueError as e:
+        logger.error(f"Error converting 'RANK' environment variable to integer: {e}")
+        logger.error("Defaulting to 0.")
+        rank: int = 0
 
     model_path = args.model_path
     save_directory = args.save_directory
     num_layers = checker.get_config_from_pretrained(model_path, trust_remote_code=True).num_hidden_layers
-    
+
+    # Check if disable_names is provided, if not and a_bit is 8, generate disable_names
     disable_names = args.disable_names
-    if not disable_names:
-        if args.model_name == 'deepseek_coder':
-            disable_names = get_disable_names_deepseekcoder(num_layers)
-        else:
-            disable_names = get_disable_names(num_layers)
+    if not disable_names and args.a_bit == 8:
+        disable_names = get_down_proj_disable_names(num_layers)
 
     quant_conf = QuantConfig(
         w_bit=args.w_bit,
@@ -197,31 +188,40 @@ if __name__ == '__main__':
                                                     anti_method=args.anti_method, w_sym=args.w_sym,
                                                     dev_type=args.device_type, dev_id=rank)
     elif args.anti_method:
-        anti_outlier_config_val = AntiOutlierConfig(anti_method=args.anti_method,
-                                                    dev_type=args.device_type, dev_id=rank)
+        anti_outlier_config_val = AntiOutlierConfig(anti_method=args.anti_method)
     tokenizer_args = json.loads(args.tokenizer_args)
     quantifier = Quantifier(
         model_path, quant_conf, anti_outlier_config_val,
         device_type=args.device_type, tokenizer_args=tokenizer_args,
         model_name=args.model_name,
     )
+
     tokenized_calib_data = None
     calib_file = args.calib_file
+    anti_file = args.anti_file
     calib_texts = checker.load_jsonl(calib_file) if calib_file else args.calib_texts
+    anti_texts = checker.load_jsonl(anti_file) if anti_file else calib_texts
     if calib_texts is not None:
         tokenized_calib_data = quantifier.get_tokenized_data(
             calib_texts,
             input_ids_name=args.input_ids_name,
             attention_mask_name=args.attention_mask_name
         )
-
+    if anti_texts is not None:
+        tokenized_anti_data = quantifier.get_tokenized_data(
+            anti_texts,
+            input_ids_name=args.input_ids_name,
+            attention_mask_name=args.attention_mask_name
+        )
     if not os.path.exists(save_directory):
         os.makedirs(save_directory, exist_ok=True)
 
-    # check dst dir
     save_directory = get_valid_write_path(save_directory, is_dir=True)
-    #为适配工具稀疏量化传入w_bit=4,a_bit=8暂时修改quant_type
-    quantifier.convert(tokenized_calib_data, save_directory, args.disable_level, part_file_size=args.part_file_size)
+    quantifier.convert(tokenized_calib_data, 
+                       tokenized_anti_data, save_directory, 
+                       args.disable_level, 
+                       part_file_size=args.part_file_size)
+
     quant_type = f"w{args.w_bit}a{args.a_bit}"
     is_sparseCompress = args.w_bit == 4 and args.a_bit == 8 and (args.co_sparse or args.is_lowbit)
     if is_sparseCompress:

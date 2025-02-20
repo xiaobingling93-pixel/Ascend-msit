@@ -1,21 +1,16 @@
-# DeepSeek 量化案例
+# InternLM2 量化案例
 
 ## 模型介绍
-- [DeepSeek-LLM](https://github.com/deepseek-ai/deepseek-LLM)从包含2T token的中英文混合数据集中，训练得到7B Base、7B Chat、67B Base与67B Chat四种模型
+- InternLM开源了InternLM系列的多个基础模型和为实际场景量身定制的聊天模型。此代码仓中实现了一套基于NPU硬件的Internlm推理模型。配合加速库使用，旨在NPU上获得极致的推理性能。
 
-- [DeepSeek-V2](https://github.com/deepseek-ai/DeepSeek-V2)推出了MLA (Multi-head Latent Attention)，其利用低秩键值联合压缩来消除推理时键值缓存的瓶颈，从而支持高效推理；在FFN部分采用了DeepSeekMoE架构，能够以更低的成本训练更强的模型。
+#### Internlm2 模型当前已验证的量化方法
+- W8A8量化：Internlm2-20B
+- W8A16量化：Internlm2-20B
+- KV cache量化：Internlm2-20B
 
-- [DeepSeek-Coder](https://github.com/deepseek-ai/DeepSeek-Coder) 由一系列代码语言模型组成，均从头开始在含 87% 代码、 13% 英文和中文自然语言的 2T 标记上训练，各模型以 16K 窗口大小和额外填空任务在项目级代码语料库预训练以支持项目级代码补全和填充。
 
-#### DeepSeek模型当前已验证的量化方法
-- W8A8量化：DeepSeek-V2-Lite-Chat-16B, DeepSeek-V2-Chat-236B, DeepSeek-Coder-33B
-- W8A16量化：DeepSeek-V2-Lite-Chat-16B, DeepSeek-V2-Chat-236B, DeepSeek-Coder-33B
-- W8A8C8量化：DeepSeek-Coder-33B
- 
 #### 此模型仓已适配的模型版本
-- [Deepseek-V2-Chat](https://huggingface.co/deepseek-ai/DeepSeek-V2-Chat)
-- [Deepseek-V2-Lite-Chat](https://huggingface.co/deepseek-ai/DeepSeek-V2-Lite-Chat)
-- [DeepSeek-Coder-33B](https://huggingface.co/deepseek-ai/deepseek-coder-33b-instruct)
+- [Internlm2-20B](https://huggingface.co/internlm/internlm2-chat-20b/tree/main)
 
 ## 环境配置
 
@@ -23,7 +18,8 @@
 
 ## 量化权重生成
 
-- 量化权重统一使用[quant_deepseek.py](./quant_deepseek.py)脚本生成，以下提供DeepSeek模型量化权重生成快速启动命令。
+- 量化权重统一使用[quant_internlm2.py](./quant_internlm2.py)脚本生成，以下提供internlm2模型量化权重生成快速启动命令。
+
 
 #### 量化参数说明
 | 参数名 | 含义 | 默认值 | 使用方法 | 
@@ -46,10 +42,8 @@
 | use_kvcache_quant | 是否使用kvcache量化功能 | False | True: 使用kvcache量化功能；<br>False: 不使用kvcache量化功能。|
 | is_dynamic | 是否使用per-token动态量化功能 | False | True: 使用per-token动态量化；<br>False: 不使用per-token动态量化。 |
 
-
 - 更多参数配置要求，请参考量化过程中配置的参数 [QuantConfig](https://gitee.com/ascend/msit/blob/dev/msmodelslim/docs/Python-API接口说明/大模型压缩接口/大模型量化接口/PyTorch/QuantConfig.md)
   以及量化参数配置类 [Calibrator](https://gitee.com/ascend/msit/blob/dev/msmodelslim/docs/Python-API接口说明/大模型压缩接口/大模型量化接口/PyTorch/Calibrator.md)
-
 
 ### 使用案例
 - 请将{浮点权重路径}和{量化权重路径}替换为用户实际路径。
@@ -58,35 +52,18 @@
   export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
   export PYTORCH_NPU_ALLOC_CONF=expandable_segments:False
   ```
+  
+#### Internlm2-20B 
 
-#### DeepSeek-V2模型量化
-##### DeepSeek-V2 w8a16量化
-- 生成DeepSeek-V2模型w8a16量化权重，使用histogram量化方式，在CPU上进行运算
+##### Internlm2-20B W8A8量化
   ```shell
-  python3 quant_deepseek.py --model_path {浮点权重路径} --save_directory {W8A16量化权重路径} --device_type cpu --act_method 2 --w_bit 8 --a_bit 16
+  python3 quant_internlm2.py --model_path {浮点权重路径} --save_directory {W8A8量化权重路径} --w_bit 8 --a_bit 8 --device_type npu
   ```
-
-##### DeepSeek-V2 w8a8 dynamic量化
-- 生成DeepSeek-V2模型w8a8 dynamic量化权重，使用histogram量化方式，在CPU上进行运算
+##### Internlm2-20B W8A16量化
   ```shell
-  python3 quant_deepseek.py --model_path {浮点权重路径} --save_directory {W8A8量化权重路径} --device_type cpu --act_method 2 --w_bit 8 --a_bit 8  --is_dynamic True
+  python3 quant_internlm2.py --model_path {浮点权重路径} --save_directory {W8A16量化权重路径} --w_bit 8 --a_bit 16 --device_type npu --anti_method m1
   ```
-
-#### DeepSeek-Coder-33B模型量化
-##### DeepSeek-Coder-33B w8a8量化
-- 生成DeepSeek-Coder-33B模型w8a8量化权重，使用自动混合min-max和histogram的激活值量化方式，SmoothQuant加强版算法，在NPU上进行运算
+##### Internlm2-20B KV Cache W8A8量化
   ```shell
-  python3 quant_deepseek.py --model_path {浮点权重路径} --save_directory {W8A8量化权重路径} --device_type npu --act_method 3 --anti_method m2 --w_bit 8 --a_bit 8 --model_name deepseek_coder
-  ```
-
-##### DeepSeek-Coder-33B w8a16量化
-- 生成DeepSeek-Coder-33B模型w8a16量化权重，使用AWQ算法，在NPU上进行运算
-  ```shell
-  python3 quant_deepseek.py --model_path {浮点权重路径} --save_directory {W8A16量化权重路径} --device_type npu --anti_method m3 --w_bit 8 --a_bit 16 --model_name deepseek_coder
-  ```
-
-##### DeepSeek-Coder-33B w8a8c8量化
-- 生成DeepSeek-Coder-33B模型w8a8c8量化权重，使用histogram激活值量化方式，SmoothQuant加强版算法，在NPU上进行运算
-  ```shell
-  python3 quant_deepseek.py --model_path {浮点权重路径} --save_directory {W8A8C8量化权重路径} --device_type npu --act_method 2 --anti_method m2 --w_bit 8 --a_bit 8 --use_kvcache_quant True --model_name deepseek_coder
+  python3 quant_internlm2.py --model_path {浮点权重路径} --save_directory {W8A8C8量化权重路径} --w_bit 8 --a_bit 8 --device_type npu --use_kvcache_quant True --disable_level L5
   ```
