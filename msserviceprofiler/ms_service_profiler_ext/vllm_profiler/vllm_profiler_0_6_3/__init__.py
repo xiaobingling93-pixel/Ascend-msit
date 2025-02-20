@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from vllm_profiler.vllm_profiler_core.vllm_hookers import all_hookers
+from vllm_profiler.vllm_profiler_core.model_hookers import model_hookers
 from vllm_profiler.vllm_profiler_core.batch_hookers import batch_hookers
 
-for hook_cls in all_hookers:
-    hooker = hook_cls()
-    if hooker.support_version("0.6.3"):
-        hooker.init()
+all_hookers += kvcache_hookers
+all_hookers += model_hookers
+all_hookers += batch_hookers
 
-for hook_cls in batch_hookers:
+for hook_cls in all_hookers:
     hooker = hook_cls()
     if hooker.support_version("0.6.3"):
         hooker.init()
