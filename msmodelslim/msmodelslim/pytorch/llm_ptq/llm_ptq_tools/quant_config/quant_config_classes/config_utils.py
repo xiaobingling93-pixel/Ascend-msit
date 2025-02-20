@@ -97,6 +97,10 @@ def check_sparse_config(config):
     if config.co_sparse and config.is_lowbit:
         config.co_sparse = False
 
+    is_sparse_quant = config.co_sparse or (config.is_lowbit and config.w_bit == 4)
+    if not is_sparse_quant:
+        return
+
     if config.co_sparse:
         config.pr = 1.0
         if config.w_bit != 4:
@@ -138,7 +142,7 @@ def check_nf4_config(config):
             raise ValueError("NF4 and kvcache cannot be quantized at the same time!")
         if hasattr(config, "tp_size"):
             raise ValueError("NF4 and SimulateTP cannot be quantized at the same time!")
-        
+
 
 def check_and_generate_config_param(config):
     """
