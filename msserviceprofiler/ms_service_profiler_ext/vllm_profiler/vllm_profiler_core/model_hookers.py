@@ -50,7 +50,33 @@ class ModelRunnerExecuteHook(VLLMHookerBase):
 
             return execute_model
 
-        sefl.do_hook([ModelRunner.execute_model], execute_model_maker)
+        self.do_hook([ModelRunner.execute_model], execute_model_maker)
 
 
-model_hookers = [ModelRunnerExecuteHook]
+class ModelForwardHook(VLLMHookerBase):
+    vllm_version = ("0.6.3", "0.6.3")
+
+    def init(self):
+        from vllm.attention.backends.utils import CommonAttentionState
+
+        def begin_forward_maker(ori_func):
+            def begin_forward(this, model_input):
+                prof = Profiler(Level.INFO)
+                prof.span_start("Forward")
+                ret = ori_func(this, model_input)
+
+                request_id_list = []
+
+                for request_id, _ in model_input.request_ids_to_seq_ids.items():
+                    request_id_list.append(request_id)
+
+                prof.res(request_id_list)
+                prof.span_end()
+                return ret
+
+            return begin_forward
+
+        self.do_hook([CommonAttentionState.begin_forward], begin_forward_maker)
+
+
+model_hookers = [ModelRunnerExecuteHook, ModelForwardHook]
