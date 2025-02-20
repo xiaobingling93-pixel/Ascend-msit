@@ -721,4 +721,8 @@ def parse_json_file(json_path):
 
 
 def load_npy_from_buffer(raw_data, dtype, shape):
-    return np.frombuffer(raw_data, dtype=dtype).reshape(shape)  
+    no_dump_data = None
+    try:
+        return np.frombuffer(raw_data, dtype=dtype).reshape(shape)  
+    except Exception as e:
+        return no_dump_data

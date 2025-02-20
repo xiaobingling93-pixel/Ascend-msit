@@ -71,7 +71,7 @@ def _generate_golden_data_model(args, npu_dump_npy_path):
     if is_saved_model_valid(args.model_path):
         from msquickcmp.tf.tf_save_model_dump_data import TfSaveModelDumpData
 
-        return TfSaveModelDumpData(args, args.model_path)
+        return TfSaveModelDumpData(args, args.model_path), None
     model_name, extension = utils.get_model_name_and_extension(args.model_path)
     if args.weight_path and ".prototxt" == extension:
         from msquickcmp.caffe_model.caffe_dump_data import CaffeDumpData
@@ -429,7 +429,8 @@ def run_om_model_compare(args, use_cli):
         invalid_rows, _ = analyser.Analyser(args.out_path)()
     else:
         invalid_rows, _ = analyser.Analyser(args.out_path)('ALL_INVALID')
-        
+    
+    node_output_show_list = None    
     if model_extension == ".onnx":
         node_output_show_list = _get_model_output_node_name_list(golden_dump.model_with_inputs_session, 
                                                                  golden_dump.origin_model)
@@ -443,18 +444,19 @@ def _get_model_output_node_name_list(model_with_inputs_session, origin_model):
     node_output_show_list = []
     for node_name in net_output_node_name_list :
         pre_node = _find_previous_node(origin_model.graph, node_name)
+        if pre_node is None:
+            return None
         node_output_show_list.append(pre_node)
     return node_output_show_list
     
 
-
 def _find_previous_node(graph, output_name):
     # 遍历所有节点
     for node in graph.node:
-        if output_name in [get_valid_name(output) for output in node.output]:
+        if output_name in [output for output in node.output]:
             # 找到目标输出节点
             return node.name
-    raise ValueError(f"Output node '{output_name}' not found in the graph")
+    return None
 
 
 def print_advisor_info(out_path):
@@ -778,4 +780,3 @@ def csv_sum(original_out_path):
                 if Rule.input_file().check(csv_file):
                     data = pd.read_csv(csv_file, na_values=['NAN'])
                     data.to_excel(writer, sheet_name=sheet_name_list[i], index=False, na_rep='NAN')
-
