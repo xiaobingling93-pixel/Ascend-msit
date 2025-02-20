@@ -32,8 +32,9 @@ class FileCollector(object):
         file_set_b = self._collect(dir_path_b)
 
         intersection = file_set_a & file_set_b
-        if diff := file_set_a ^ file_set_b:
-            logger.warning(
+        diff = file_set_a ^ file_set_b
+        if diff:
+            logger.error(
                 "The files shown below are not matched in both directories %r and will not be compared", 
                 list(diff)
             )

@@ -86,7 +86,9 @@ def process_files(file_pairs, output_db, output_excel):
                         try:
                             comparator.process(file_a, file_b)
                         except Exception as e:
-                            logger.warning("During comparing %r and %r, there is an error ocurred: %r", file_a, file_b, e)
+                            logger.error(
+                                "During comparing %r and %r, there is an error ocurred: %r", file_a, file_b, e
+                            )
                 logger.info("End to compare %r and %r", file_a, file_b)
 
     shutil.copy(

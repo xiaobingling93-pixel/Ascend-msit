@@ -1,8 +1,24 @@
-import pandas as pd
+# -*- coding: utf-8 -*-
+# Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 from pathlib import Path
+
+import pandas as pd
 
 from .base import BaseComparator
 from ms_service_profiler.utils.log import logger
+
 
 class CSVComparator(BaseComparator):
     SUPPORTED_EXTENSIONS = ['.csv']
@@ -21,7 +37,7 @@ class CSVComparator(BaseComparator):
         
         # 确保列名一致
         if set(df_a.columns) != set(df_b.columns):
-            logger.warning("两个 CSV 文件的列名不一致！")
+            logger.error("两个 CSV 文件的列名不一致！")
             return None
 
         # 按 Metric 列合并两个 DataFrame
