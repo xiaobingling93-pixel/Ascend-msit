@@ -8,6 +8,7 @@ except ImportError:
 from typing import Union
 
 
+# Copy and modified from Open-Sora-Plan repo v1.2: opensora.sample.pipeline_opensora_sp
 class ReStep_OpenSoraPipeline_v_1_2(OpenSoraPipeline):
     def __init__(self, tokenizer: T5Tokenizer, text_encoder: T5EncoderModel, vae: AutoencoderKL,
                  transformer: Transformer2DModel, scheduler: DPMSolverMultistepScheduler):

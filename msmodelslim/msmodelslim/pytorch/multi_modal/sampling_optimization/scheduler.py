@@ -6,6 +6,7 @@ from diffusers import EulerAncestralDiscreteScheduler as EulerAncestralDiscreteS
 from diffusers.configuration_utils import register_to_config
 
 
+# Copied and modified from diffusers.schedulers.scheduling_euler_ancestral_discrete.EulerAncestralDiscreteScheduler
 class EulerAncestralDiscreteSchedulerExample(EulerAncestralDiscreteScheduler_base):
     @register_to_config
     def __init__(
