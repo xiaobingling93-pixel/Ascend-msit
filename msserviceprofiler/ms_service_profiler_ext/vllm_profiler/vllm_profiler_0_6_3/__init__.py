@@ -11,8 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from vllm_profiler.vllm_profiler_core.vllm_hookers import all_hookers
+from vllm_profiler.vllm_profiler_core.kvcache_hookers import kvcache_hookers
 
+
+all_hookers = []
+all_hookers += kvcache_hookers
 for hook_cls in all_hookers:
     hooker = hook_cls()
     if hooker.support_version("0.6.3"):
