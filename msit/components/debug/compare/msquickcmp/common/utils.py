@@ -74,6 +74,7 @@ INVALID_CHARS = ['|', ';', '&', '&&', '||', '>', '>>', '<', '`', '\\', '!', '\n'
 MAX_READ_FILE_SIZE_4G = 4294967296  # 4G, 4 * 1024 * 1024 * 1024
 DYM_SHAPE_END_MAX = 1000000
 MAX_TENSOR_SHAPE_CONUT = 200
+OPTYPE_WHITWLIST = ['Data', 'TransData', 'PartitionCall']
 
 
 class AccuracyCompareException(Exception):

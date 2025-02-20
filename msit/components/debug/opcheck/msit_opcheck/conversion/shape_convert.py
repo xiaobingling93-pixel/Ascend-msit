@@ -574,7 +574,39 @@ def nc1hwc0_to_nhwc(data: np.ndarray, ori_format: str, target_shape: Union[List,
     return tmp_input_tensor[:, :, :, :c_pad]
 
 
-def fractal_z_to_nd(data: np.ndarray, ori_format: str, target_shape: Union[List, Tuple] = None, groups=None):
+def nc1hwc0_to_nchw(data: np.ndarray, ori_format: str, target_shape: Union[List, Tuple] = None, groups=None):
+    shape_from = data.shape
+    n_from = shape_from[0]
+    c1_from = shape_from[1]
+    h_from = shape_from[2]
+    w_from = shape_from[3]
+    c0_from = shape_from[4]
+    c1_mul_c0 = c1_from * c0_from
+    c_pad = None if c1_mul_c0 == target_shape[-1] else target_shape[-1] - c1_mul_c0
+
+    reshape_data = data.reshape(n_from, c1_from, h_from, w_from, c0_from)
+    tmp_input_tensor = np.transpose(reshape_data, axes=(0, 1, 4, 2, 3))
+    tmp_input_tensor = tmp_input_tensor.reshape((n_from, c1_from * c0_from, h_from, w_from))
+    return tmp_input_tensor[:, :c_pad, :, :]
+
+
+def nc1hwc0_to_hwcn(data: np.ndarray, ori_format: str, target_shape: Union[List, Tuple] = None, groups=None):
+    shape_from = data.shape
+    n_from = shape_from[0]
+    c1_from = shape_from[1]
+    h_from = shape_from[2]
+    w_from = shape_from[3]
+    c0_from = shape_from[4]
+    c1_mul_c0 = c1_from * c0_from
+    c_pad = None if c1_mul_c0 == target_shape[-1] else target_shape[-1] - c1_mul_c0
+
+    reshape_data = data.reshape(n_from, c1_from, h_from, w_from, c0_from)
+    tmp_input_tensor = np.transpose(reshape_data, axes=(2, 3, 1, 4, 0))
+    tmp_input_tensor = tmp_input_tensor.reshape((h_from, w_from, c1_from * c0_from, n_from))
+    return tmp_input_tensor[:, :, :c_pad, :]
+
+
+def fractal_nz_to_nd(data: np.ndarray, ori_format: str, target_shape: Union[List, Tuple] = None, groups=None):
     shape_from = data.shape
     if len(target_shape) == 1:
         axis_h, axis_n, axis_c = 1, 1, target_shape[0]
@@ -595,6 +627,71 @@ def fractal_z_to_nd(data: np.ndarray, ori_format: str, target_shape: Union[List,
     if len(target_shape) <= 2:
         data_y = data_y.reshape([data_y.shape[1], data_y.shape[2]])
     return data_y
+
+
+def fractal_nz_to_nchw(data: np.ndarray, ori_format: str, target_shape: Union[List, Tuple] = None, groups=None):
+    shape_from = data.shape
+    if len(target_shape) == 1:
+        axis_h, axis_n, axis_c = 1, 1, target_shape[0]
+    elif len(target_shape) == 2:
+        axis_h, axis_n, axis_c = 1, target_shape[0], target_shape[1]
+    else:
+        axis_h, axis_n, axis_c = reduce(lambda x, y: x * y, target_shape[:-2]), target_shape[-2], target_shape[-1]
+    axis_c0 = shape_from[-1]
+    axis_ni = shape_from[-2]
+    axis_no = shape_from[-3]
+    axis_c1 = shape_from[-4]
+    c_pad = None if axis_c1 * axis_c0 == axis_c else axis_c - axis_c1 * axis_c0
+    n_pad = None if axis_no * axis_ni == axis_n else axis_n - axis_no * axis_ni
+    tmp_input_tensor = data.reshape(axis_h, axis_c1, axis_no, axis_ni, axis_c0)
+    tmp_input_tensor = np.transpose(tmp_input_tensor, axes=(0, 2, 3, 1, 4))
+    tmp_input_tensor = tmp_input_tensor.reshape((axis_h, axis_no * axis_ni, axis_c1 * axis_c0))
+    data_y = tmp_input_tensor[:, :n_pad, :c_pad]
+    if len(target_shape) <= 2:
+        data_y = data_y.reshape([data_y.shape[1], data_y.shape[2]])
+    return data_y
+
+
+def fractal_nz_to_nhwc(data: np.ndarray, ori_format: str, target_shape: Union[List, Tuple] = None, groups=None):
+    shape_from = data.shape
+    if len(target_shape) == 1:
+        axis_h, axis_n, axis_c = 1, 1, target_shape[0]
+    elif len(target_shape) == 2:
+        axis_h, axis_n, axis_c = 1, target_shape[0], target_shape[1]
+    else:
+        axis_h, axis_n, axis_c = reduce(lambda x, y: x * y, target_shape[:-2]), target_shape[-2], target_shape[-1]
+    axis_ni = shape_from[-2]
+    axis_no = shape_from[-3]
+    axis_c0 = shape_from[-1]
+    axis_c1 = shape_from[-4]
+    n_pad = None if axis_no * axis_ni == axis_n else axis_n - axis_no * axis_ni
+    c_pad = None if axis_c1 * axis_c0 == axis_c else axis_c - axis_c1 * axis_c0
+    tmp_input_tensor = data.reshape(axis_h, axis_c1, axis_no, axis_ni, axis_c0)
+    tmp_input_tensor = np.transpose(tmp_input_tensor, axes=(0, 2, 3, 1, 4))
+    tmp_input_tensor = tmp_input_tensor.reshape((axis_h, axis_no * axis_ni, axis_c1 * axis_c0))
+    data_y = tmp_input_tensor[:, :n_pad, :c_pad]
+    if len(target_shape) <= 2:
+        data_y = data_y.reshape([data_y.shape[1], data_y.shape[2]])
+    return data_y
+
+    
+def fractal_z_to_nchw(data: np.ndarray, ori_format: str, target_shape: Union[List, Tuple] = None, groups=None):
+    shape_from = data.shape
+    axis_c = target_shape[1]
+    axis_n = target_shape[0]
+    axis_no = shape_from[1]
+    axis_ni = shape_from[2]
+    axis_h = target_shape[2]
+    axis_w = target_shape[3]
+    axis_c1 = shape_from[0] // (axis_h * axis_w)
+    axis_c0 = shape_from[3]
+    c_pad = None if axis_c1 * axis_c0 == axis_c else axis_c - axis_c1 * axis_c0
+    n_pad = None if axis_no * axis_ni == axis_n else axis_n - axis_no * axis_ni
+    tmp_input_tensor = data.reshape(axis_c1, axis_h, axis_w, axis_no, axis_ni, axis_c0)
+    # transpose the shape from (c1,h,w,no,ni,c0) to (no,ni,c1,c0,h,w)
+    tmp_input_tensor = np.transpose(tmp_input_tensor, (3, 4, 0, 5, 1, 2))
+    tmp_input_tensor = tmp_input_tensor.reshape((axis_no * axis_ni, axis_c1 * axis_c0, axis_h, axis_w))
+    return tmp_input_tensor[:n_pad, :c_pad, :, :, ]
 
 
 def fractal_z_to_hwcn(data: np.ndarray, ori_format: str, target_shape: Union[List, Tuple] = None, groups=None):
@@ -651,9 +748,17 @@ format_transformation_map = {
     },
     "NC1HWC0": {
         "NHWC" : nc1hwc0_to_nhwc,
+        "NCHW": nc1hwc0_to_nchw,
+        "HWCN": nc1hwc0_to_hwcn
+
     },
     "FRACTAL_NZ": {
-        "ND" : fractal_z_to_nd,
+        "ND" : fractal_nz_to_nd,
+        "NCHW": fractal_nz_to_nchw,
+        "NHWC": fractal_nz_to_nhwc
+    },
+    "FRACTAL_Z": {
+        "NCHW": fractal_z_to_nchw,
         "HWCN": fractal_z_to_hwcn
     }
 }

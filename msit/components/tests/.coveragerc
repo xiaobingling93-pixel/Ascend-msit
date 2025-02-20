@@ -1,0 +1,4 @@
+[run]
+omit = */test_*.py
+       setup.py
+       __init__.py

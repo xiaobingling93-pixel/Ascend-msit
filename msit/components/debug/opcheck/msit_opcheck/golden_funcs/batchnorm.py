@@ -29,9 +29,6 @@ class BatchNormOperation(OperationTest):
         for attr in self.op_param['attr']:
             if attr['key'] == 'epsilon':
                 eps = float(attr['value']['f'])
-        for attr in self.op_param['output_desc'][0]['attr']:
-            if attr['key'] == "origin_format":
-                data_format = attr['value']['s']
 
         if output_dtype == "bfloat16" or output_dtype == "float16":
             data_x = data_x.astype("float32")
@@ -43,27 +40,14 @@ class BatchNormOperation(OperationTest):
             data_bias = data_bias.astype("float64")
         
         is_training = False
-        
-        tensor_x = torch.from_numpy(data_x).squeeze(0)  # 1NHWC--->NHWC
-        tensor_weight = torch.from_numpy(data_weight).squeeze(0)
-        tensor_bias = torch.from_numpy(data_bias).squeeze(0)
-        tensor_running_mean = torch.from_numpy(data_running_mean).squeeze(0)
-        tensor_running_var = torch.from_numpy(data_running_var).squeeze(0)
-
-        if data_format == "NHWC":
-            tensor_x = tensor_x.permute(0, 3, 1, 2)
-            dims = tensor_x.shape
-
-        res = torch.ops.aten.native_batch_norm(input=tensor_x.reshape(dims[0] * dims[1], dims[2], dims[3]), 
-                                               weight=tensor_weight.view(dims[0] * dims[1]), 
-                                               bias=tensor_bias.view(dims[0] * dims[1]),
-                                               running_mean=tensor_running_mean.view(dims[0] * dims[1]), 
-                                               running_var=tensor_running_var.view(dims[0] * dims[1]),
+        res = torch.ops.aten.native_batch_norm(input=torch.from_numpy(data_x),
+                                               weight=torch.from_numpy(data_weight).view(-1),
+                                               bias=torch.from_numpy(data_bias).view(-1),
+                                               running_mean=torch.from_numpy(data_running_mean).view(-1),
+                                               running_var=torch.from_numpy(data_running_var).view(-1),
                                                training=is_training, momentum=momentum, eps=eps)
         
         output = res[0]
-        if data_format == "NHWC":
-            output = output.reshape(dims[0], dims[1], dims[2], dims[3]).permute(0, 2, 3, 1)
         return [np.expand_dims(output, axis=0)]
 
     def test_batch_norm(self):
