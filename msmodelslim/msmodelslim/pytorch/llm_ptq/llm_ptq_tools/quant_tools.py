@@ -15,6 +15,7 @@ import numpy as np
 import torch.nn as nn
 from safetensors.torch import save_file
 from accelerate.hooks import add_hook_to_module, remove_hook_from_module
+from einops import rearrange
 
 from ascend_utils.common.security.type import check_mapping_element
 from ascend_utils.common.security import (get_valid_write_path, SafeWriteUmask, check_element_type,
@@ -262,12 +263,37 @@ class Calibrator(object):
                 key_max, value_max = torch.chunk(comming_max, chunk_size, dim=0)
                 key_min, value_min = torch.chunk(comming_min, chunk_size, dim=0)
             elif chunk_size == 3:
-                res_dim = comming_max.shape[-1] - in_hidden_size
-
-                _, kv_max = torch.split(comming_max, [in_hidden_size, res_dim])
-                _, kv_min = torch.split(comming_min, [in_hidden_size, res_dim])
-                key_max, value_max = torch.chunk(kv_max, 2, dim=0)
-                key_min, value_min = torch.chunk(kv_min, 2, dim=0)
+                # 判断模型类型，少数模型的qkv切块策略特殊，需要单独处理
+                if model.config.model_type in {"internlm2"}:
+                    # 确定 gs 和 d
+                    gs = model.config.num_attention_heads // model.config.num_key_value_heads + 2
+                    d = model.config.hidden_size // model.config.num_attention_heads
+                    #  计算 h : h = int(comming_max.numel() / (gs * d)) 
+                    # 使用 rearrange 函数将 comming_max 和 comming_min 重排为 (h, gs, d) 的形状
+                    qkv_states_max = rearrange(
+                        comming_max,
+                        "(h gs d) -> h gs d",
+                        gs=gs,
+                        d=d,
+                    )
+                    qkv_states_min = rearrange(
+                        comming_min,
+                        "(h gs d) -> h gs d",
+                        gs=gs,
+                        d=d,
+                    )
+                    # 提取 key_max_states 和 value_max_states
+                    key_max = qkv_states_max[:, -2, :].reshape(-1)
+                    value_max = qkv_states_max[:, -1, :].reshape(-1)
+                    key_min = qkv_states_min[:, -2, :].reshape(-1)
+                    value_min = qkv_states_min[:, -1, :].reshape(-1)
+                # 原有切块逻辑
+                else:
+                    res_dim = comming_max.shape[-1] - in_hidden_size
+                    _, kv_max = torch.split(comming_max, [in_hidden_size, res_dim])
+                    _, kv_min = torch.split(comming_min, [in_hidden_size, res_dim])
+                    key_max, value_max = torch.chunk(kv_max, 2, dim=0)
+                    key_min, value_min = torch.chunk(kv_min, 2, dim=0)
 
             # 获取k_name和v_name
             k_name = 'k_proj'
