@@ -15,9 +15,9 @@
 from pathlib import Path
 
 import pandas as pd
+from ms_service_profiler.utils.log import logger
 
 from .base import BaseComparator
-from ms_service_profiler.utils.log import logger
 
 
 class CSVComparator(BaseComparator):
