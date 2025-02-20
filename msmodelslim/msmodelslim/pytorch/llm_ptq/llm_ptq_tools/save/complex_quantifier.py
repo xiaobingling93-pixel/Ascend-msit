@@ -8,6 +8,7 @@ from msmodelslim.pytorch.lowbit.calibration import LlamaRMSNormBias
 from msmodelslim.pytorch.lowbit.quant_modules import LinearQuantizer as LowBitLinearQuantizer
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_funcs import fake_quantize_save
 
+from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.layer_config_manager import LayerConfigManager
 from msmodelslim.pytorch.llm_sparsequant.sparsequant_modules import LinearSparseQuantizer
 from msmodelslim.pytorch.llm_ptq.anti_outlier.graph_utils import NormBias
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_modules import LinearQuantizer, LinearNf4Quantizer
@@ -62,12 +63,13 @@ def _get_module_quant_input(module):
 
 
 class ComplexQuantifier:
-    def __init__(self, cfg, is_deepseek_v2, rollback_names, torch_dtype, is_inner_norm_used):
+    def __init__(self, cfg, is_deepseek_v2, rollback_names, torch_dtype, is_inner_norm_used, layer_cfg_manager):
         self.cfg = cfg
         self.is_deepseek_v2 = is_deepseek_v2
         self.rollback_names = rollback_names
         self.torch_dtype = torch_dtype
         self.is_inner_norm_used = is_inner_norm_used
+        self.layer_cfg_manager: LayerConfigManager = layer_cfg_manager
 
         self.skip_module_names = set()
 
@@ -75,7 +77,7 @@ class ComplexQuantifier:
         if name in self.skip_module_names:
             return
 
-        model_quant_type = self.cfg.model_quant_type
+        model_quant_type = self.layer_cfg_manager.get_layer_config(name).model_quant_type
         if self.cfg.use_fa_quant and is_attn_module_and_then_check_quantizer(module, name):
             yield from self.generate_weight_of_fa_module(name, module)
         elif isinstance(module, LinearNf4Quantizer):
@@ -123,7 +125,7 @@ class ComplexQuantifier:
         yield anti_norm_name_weight, model_quant_type, anti_norm_weight.clone().detach().cpu()
         anti_norm_name_bias = name + '.module.bias' if is_inner_norm_used else name + '.bias'
         yield anti_norm_name_bias, model_quant_type, anti_norm_bias.clone().detach().cpu()
-        if self.is_inner_norm_used:
+        if is_inner_norm_used:
             yield name + '.weight', QuantType.FLOAT, module.weight.clone().detach().cpu()
 
     def generate_weight_of_linear_module(self, name, module, model_quant_type):

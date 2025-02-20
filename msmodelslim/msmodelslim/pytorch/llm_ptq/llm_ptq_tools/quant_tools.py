@@ -538,15 +538,12 @@ class Calibrator(object):
                                     part_file_size=part_file_size)
 
         # quantifier 应基于量化方法予以抽象，当前仅实现了与保存相关的逻辑
-        origin_state_dict = None
-        if hasattr(self.model, 'origin_state_dict'):
-            origin_state_dict = self.model.origin_state_dict
-
         quantifier = ComplexQuantifier(cfg=self.cfg,
                                        is_deepseek_v2=self.is_deepseek_v2,
                                        rollback_names=self.rollback_names,
                                        torch_dtype=self.model.config.torch_dtype,
-                                       is_inner_norm_used=not hasattr(self.model, 'anti_method'))
+                                       is_inner_norm_used=not hasattr(self.model, 'anti_method'),
+                                       layer_cfg_manager=self.layer_cfg_manager)
         self._save_weights_of_model(quantifier, saver)
 
     def _save_weights_of_model(self, quantifier, saver):
