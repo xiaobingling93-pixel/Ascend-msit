@@ -12,6 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from vllm_profiler.vllm_profiler_core.vllm_hookers import all_hookers
+from vllm_profiler.vllm_profiler_core.model_hookers import model_hookers
+
+all_hookers = []
+all_hookers += kvcache_hookers
+all_hookers += model_hookers
 
 for hook_cls in all_hookers:
     hooker = hook_cls()
