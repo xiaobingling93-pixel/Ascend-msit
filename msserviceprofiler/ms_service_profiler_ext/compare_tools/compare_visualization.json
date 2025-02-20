@@ -174,7 +174,7 @@
             ]
           }
         ],
-        "title": "request",
+        "title": "Request 维度数据比对",
         "type": "table"
       },
       {
@@ -271,7 +271,7 @@
             ]
           }
         ],
-        "title": "Panel Title",
+        "title": "Batch 维度数据比对",
         "type": "barchart"
       }
     ],
