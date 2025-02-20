@@ -11,9 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from .vllm_hooker_base import VLLMHookerBase
-
 from ms_service_profiler import Profiler, Level
+
+from .vllm_hooker_base import VLLMHookerBase
 
 
 class KVCacheManagerHook(VLLMHookerBase):
