@@ -17,15 +17,17 @@ import os
 import re
 import sqlite3
 import argparse
+import shutil
 from pathlib import Path
 from contextlib import contextmanager
 
 import pandas as pd
+
+from ms_service_profiler_ext.compare_tools import CSVComparator, DBComparator
+from ms_service_profiler_ext.compare_tools.collector import FileCollector
+
 from ms_service_profiler.exporters.utils import check_input_path_valid, check_output_path_valid
 from ms_service_profiler.utils.log import set_log_level, logger
-
-from compare_tools.collector import FileCollector
-from msserviceprofiler.ms_service_profiler_ext.compare_tools import CSVComparator, DBComparator
 
 
 @contextmanager
@@ -87,6 +89,12 @@ def process_files(file_pairs, output_db, output_excel):
                             logger.warning("During comparing %r and %r, there is an error ocurred: %r", file_a, file_b, e)
                 logger.info("End to compare %r and %r", file_a, file_b)
 
+    shutil.copy(
+        'ms_service_profiler_ext/compare_tools/compare_visualization.json',
+        Path(output_db).with_name("compare_visualization.json")
+    )
+
+
 def main():    
     args = parse_args()
     set_log_level(args.log_level)
@@ -96,7 +104,7 @@ def main():
         pattern=re.compile(r'(batch|service|request)_summary\.csv|profiler\.db'),
         max_iter=100
     )
-    
+
     file_pairs = file_collector.collect_pairs(args.input_path, args.golden_path)
     process_files(file_pairs, f'{result_prefix}.db', f'{result_prefix}.xlsx')
     
