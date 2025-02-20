@@ -40,4 +40,3 @@ class JsonDescriptionWriter(BaseWriter):
         quant_model_description_path = os.path.join(self.save_dir, self.json_name)
         quant_model_description_path = get_valid_write_path(quant_model_description_path, extensions=[".json"])
         self.quant_model_json_description.save(quant_model_description_path)
-        # self.logger.info(f'Save json description to {quant_model_description_path} successfully')

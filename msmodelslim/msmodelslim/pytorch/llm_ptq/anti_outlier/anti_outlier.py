@@ -24,7 +24,8 @@ from msmodelslim import logger as msmodelslim_logger
 from msmodelslim.pytorch.llm_ptq.accelerate_adapter import (PrepareWeight,
                                                             move_update_weight_hook_if_need,
                                                             replace_device_align_hook_if_needed)
-from msmodelslim.pytorch.llm_ptq.accelerate_adapter.utils import judge_model_with_accelerate, judge_module_with_accelerate
+from msmodelslim.pytorch.llm_ptq.accelerate_adapter.utils import (judge_model_with_accelerate,
+                                                                  judge_module_with_accelerate)
 from msmodelslim.pytorch.llm_ptq.hooks.once import register_bias
 
 try:
