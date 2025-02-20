@@ -28,7 +28,7 @@ import numpy as np
 from msquickcmp.common.dump_data import DumpData
 from msquickcmp.common import utils
 from msquickcmp.common.utils import AccuracyCompareException
-from msquickcmp.common.utils import InputShapeError
+from msquickcmp.common.utils import InputShapeError, load_npy_from_buffer
 from msquickcmp.adapter_cli.args_adapter import CmpArgsAdapter
 from msquickcmp.common.convert import convert_bin_file_to_npy
 from msquickcmp.onnx_model.custom_op import CustomOp
@@ -55,6 +55,8 @@ NODE_TYPE_TO_DTYPE_MAP = {
     "tensor(complex128)": np.complex_,
 }
 MAX_PROTOBUF = 2000000000
+ONNX_DTYPE = {1: np.float32, 2: np.float64}
+MAX_FILE_NAME_LEN = 255
 
 
 class OnnxDumpData(DumpData):
@@ -124,15 +126,37 @@ class OnnxDumpData(DumpData):
         if self.custom_op_type:
             self.inputs_map.update(self.extend_inputs_map)
 
+    def get_output_map(self, output_list):
+        output_map, res_idx, output_list_size = {}, 0, len(output_list)
+        for node in self.origin_model.graph.node:
+            for node_output in node.output:
+                output_map[node_output] = output_list[res_idx]
+                res_idx += 1
+                if res_idx >= output_list_size:
+                    return output_map
+        return output_map
+
+    def get_input_map(self, input_map, output_list):
+        output_map = self.get_output_map(output_list)
+        input_map = self.augment_input_map(input_map, output_map)
+        return input_map
+
+    def augment_input_map(self, input_map, output_map):
+        for temp in self.origin_model.graph.initializer:
+            npy_data = load_npy_from_buffer(temp.raw_data, ONNX_DTYPE.get(temp.data_type), temp.dims)
+            input_map[temp.name] = npy_data
+        input_map = {**input_map, **output_map}
+        return input_map
+    
     def generate_dump_data(self, npu_dump_path=None, om_parser=None):
         self._modify_model_add_outputs_nodes(
             self.model_with_inputs, self.dump_model_with_inputs_path
         )
         session = self._load_session(self.dump_model_with_inputs_path)
         dump_bins = self._run_model(session, self.inputs_map)
-
+        augment_inputs_map = self.get_input_map(self.inputs_map, dump_bins)
         net_output_node = [output_item.name for output_item in self.model_with_inputs_session.get_outputs()]
-        self._save_dump_data(dump_bins, self.model_with_inputs, net_output_node)
+        self._save_dump_data(dump_bins, self.model_with_inputs, net_output_node, augment_inputs_map)
 
         return self.onnx_dump_data_dir
 
@@ -320,15 +344,27 @@ class OnnxDumpData(DumpData):
         outputs_name = [node.name for node in session.get_outputs()]
         return session.run(outputs_name, inputs_map)
 
-    def _save_dump_data(self, dump_bins, old_onnx_model, net_output_node):
+    def _save_dump_data(self, dump_bins, old_onnx_model, net_output_node, input_map):
         res_idx = 0
         file_name_map = []
         for node in old_onnx_model.graph.node:
+            #存储onnx的输入dump数据
+            for i, node_input in enumerate(node.input):
+                if not self.dump:
+                    break
+                file_name = self._generate_dump_data_file_name("input_" + node.name, i)
+                if len(file_name) > MAX_FILE_NAME_LEN:
+                    new_file_name = str(round(time.time() * 1e6)) + str(len(file_name_map)) + ".npy"
+                    file_name_map.append(f"{new_file_name},{file_name}\n")
+                    file_name = new_file_name
+                file_path = os.path.join(self.onnx_dump_data_dir, file_name)
+                if input_map.get(node_input) is not None:
+                    np.save(file_path, input_map.get(node_input))
             for j, output in enumerate(node.output):
                 if not self.dump and output not in net_output_node:
                     continue
                 file_name = self._generate_dump_data_file_name(node.name, j)
-                if len(file_name) > 255:
+                if len(file_name) > MAX_FILE_NAME_LEN:
                     new_file_name = str(round(time.time() * 1e6)) + str(len(file_name_map)) + ".npy"
                     file_name_map.append(f"{new_file_name},{file_name}\n")
                     file_name = new_file_name

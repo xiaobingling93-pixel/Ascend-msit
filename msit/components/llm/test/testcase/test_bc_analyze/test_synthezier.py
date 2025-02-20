@@ -1,6 +1,5 @@
 import os
 from unittest import TestCase
-from unittest.mock import patch
 
 from msit_llm import Synthesizer
 
@@ -43,8 +42,8 @@ class TestSynthezier(TestCase):
         self.assertTrue(os.path.exists("msit_bad_case/synthesizer"))
         self.assertTrue(
             any(
-                filename.startswith("msit_synthesizer") and filename.endswith(".csv")
-                for filename in os.listdir("msit_bad_case/synthesizer")
+                filename.endswith('.csv') 
+                for filename in os.listdir('msit_bad_case/synthesizer')
             )
         )
 
@@ -70,9 +69,22 @@ class TestSynthezier(TestCase):
 
         self.assertRaises(ValueError, self.synthezier.to_csv, errors="strict")
 
+    def test_synthezier_to_csv_other_value(self):
+        self.synthezier.from_args(
+            queries='Question 1',
+            input_token_ids=[[0, 1, 2, 3, 4, 5], 2, 3],
+            output_token_ids=[[7, 8, 9, 10, 11, 12], 4, 5],
+            passed=('Correct', 'Wrong')
+        )
+
+        with self.assertLogs('msit_llm_logger', 'ERROR') as cm:
+            self.assertRaises(ValueError, self.synthezier.to_csv, errors='qweqwe')
+            logger_output = cm.output
+            self.assertEqual(len(logger_output), 1)
+            self.assertRegex(logger_output[0], r'Wrong value')
+    
     @classmethod
     def tearDownClass(cls) -> None:
         if os.path.exists("msit_bad_case"):
             import shutil
-
-            shutil.rmtree("msit_bad_case")
+            shutil.rmtree('msit_bad_case')

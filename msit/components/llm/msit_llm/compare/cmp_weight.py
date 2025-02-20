@@ -33,12 +33,14 @@ def find_safetensors_files(golden_path):
     model_dir_path = os.path.abspath(golden_path)
     # 搜索给定目录下的所有文件，查找并存储safetensors文件路径
     # 如果没有找到safetensors文件就报错
-    safetensors_file_list = []
+    safetensors_file_list, bin_file_list = [], []
     for file in os.listdir(model_dir_path):
+        safetensors_file_path = os.path.join(model_dir_path, file)
         if file.endswith(".safetensors"):
-            safetensors_file_path = os.path.join(model_dir_path, file)
             safetensors_file_list.append(safetensors_file_path)
-    return safetensors_file_list
+        if file.endswith(".bin"):
+            bin_file_list.append(safetensors_file_path)
+    return safetensors_file_list if safetensors_file_list else bin_file_list
 
 
 def dequant(weight, weight_offset, weight_scale):

@@ -10,9 +10,9 @@ import pandas as pd
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from transformers import PreTrainedModel, AutoTokenizer
+from transformers import PreTrainedModel, AutoTokenizer, PreTrainedTokenizerBase
 from ascend_utils.common.security import json_safe_load, get_valid_path, get_valid_read_path, get_valid_write_path, \
-    SafeWriteUmask
+    SafeWriteUmask, check_type
 
 from msmodelslim.pytorch.llm_ptq.mix_calibration.dataset_processor_base import DatasetProcessorBase
 from msmodelslim import logger as msmodelslim_logger
@@ -414,6 +414,8 @@ class CalibrationData(object):
         if self.model is not None and not self.verify_model():
             raise TypeError("Invalid model")
         self.tokenizer = tokenizer
+        if tokenizer is not None:
+            check_type(tokenizer, PreTrainedTokenizerBase, param_name="tokenizer")
         if self.model is not None and not self.verify_tokenizer():
             raise TypeError("Tokenizer must be matched with model.")
 
@@ -425,6 +427,7 @@ class CalibrationData(object):
         self.mixed_dataset = []
         self.save_path = None
         if save_path is not None:
+            check_type(save_path, str, "save_path")
             self.save_path = get_valid_write_path(save_path)
 
     def verify_model(self):
@@ -459,11 +462,19 @@ class CalibrationData(object):
         return True
 
     def read_config(self, config_path):
-        config_path = get_valid_read_path(config_path)
+        config_path = get_valid_read_path(config_path, extensions=[".json", ".jsonl"])
         with open(config_path, "r") as f:
             config = json.load(f)
+        if "configurations" not in config.keys():
+            raise ValueError(f"config should have attribute configurations")
         dataset_cfg = config["configurations"]
+
         for cfg in dataset_cfg:
+            if "dataset_name" not in cfg.keys():
+                raise ValueError(f"config should have attribute dataset_name")
+            if "dataset_path" not in cfg.keys():
+                raise ValueError(f"config should have attribute dataset_path")
+
             dataset_name = cfg["dataset_name"]
             path = cfg["dataset_path"]
             if dataset_name not in SUPPORTED_DATASET_NAME:
@@ -475,6 +486,10 @@ class CalibrationData(object):
 
     def add_custormized_dataset_processor(self, dataset_name, processor):
         """添加自定义dataset_processor"""
+        if not isinstance(dataset_name, str):
+            raise argparse.ArgumentTypeError("%s is not an str." % dataset_name)
+        if not isinstance(processor, DatasetProcessorBase):
+            raise argparse.ArgumentTypeError("%s is not an DatasetProcessorBase." % processor)
         self.custormized_dataset_processor[dataset_name] = processor
         self.handlers[dataset_name] = CalibHandler(dataset_name, processor, self.shuffle_seed, self.batch_size)
 
@@ -491,11 +506,18 @@ class CalibrationData(object):
             with SafeWriteUmask(umask=0o377):
                 with open(self.save_path, 'w') as file:
                     json.dump(self.mixed_dataset, file, indent=2)
+                    msmodelslim_logger.info(f"Save mixed dataset success, save path:{self.save_path}")
         return self.mixed_dataset
 
     def set_sample_size(self, sample_size: dict):
         """设置每个数据集的采样数量"""
+        if not isinstance(sample_size, dict):
+            raise TypeError("sample_size should be dict")
         for dataset_name, size in sample_size.items():
+            if not isinstance(dataset_name, str):
+                raise TypeError("sample_size keys should be string")
+            if not isinstance(size, int):
+                raise TypeError("sample_size values should be int")
             if dataset_name not in self.handlers.keys():
                 self.logger.error(f"Dataset {dataset_name} has no handler")
                 return
@@ -505,6 +527,8 @@ class CalibrationData(object):
         """设置batch_size"""
         if not isinstance(batch_size, int):
             raise argparse.ArgumentTypeError("%s is not an int." % batch_size)
+        if batch_size == 0:
+            raise ValueError("batch_size cant be zero")
         self.batch_size = batch_size
 
     def set_shuffle_seed(self, shuffle_seed):

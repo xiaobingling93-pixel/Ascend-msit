@@ -71,22 +71,22 @@ def _generate_golden_data_model(args, npu_dump_npy_path):
     if is_saved_model_valid(args.model_path):
         from msquickcmp.tf.tf_save_model_dump_data import TfSaveModelDumpData
 
-        return TfSaveModelDumpData(args, args.model_path)
+        return TfSaveModelDumpData(args, args.model_path), None
     model_name, extension = utils.get_model_name_and_extension(args.model_path)
     if args.weight_path and ".prototxt" == extension:
         from msquickcmp.caffe_model.caffe_dump_data import CaffeDumpData
 
-        return CaffeDumpData(args)
+        return CaffeDumpData(args), extension
     elif ".pb" == extension:
         from msquickcmp.tf.tf_dump_data import TfDumpData
 
-        return TfDumpData(args)
+        return TfDumpData(args), extension
     elif ".onnx" == extension:
         from msquickcmp.onnx_model.onnx_dump_data import OnnxDumpData
 
-        return OnnxDumpData(args, npu_dump_npy_path)
+        return OnnxDumpData(args, npu_dump_npy_path), extension
     elif ".om" == extension:
-        return NpuDumpData(arguments=args, is_golden=True)
+        return NpuDumpData(arguments=args, is_golden=True), extension
 
     else:
         utils.logger.error("Only model files whose names end with .pb or .onnx or .prototxt are supported")
@@ -124,13 +124,13 @@ def _get_single_csv_in_folder(csv_path):
     raise IOError(f"None csv file exists in folder {csv_path}")
 
 
-def _read_and_process_csv(csv_path, process_func):
+def _read_and_process_csv(csv_path, process_func, node_output_show_list):
     if Rule.input_file().check(csv_path):
         with ms_open(csv_path, 'r', max_size=TENSOR_MAX_SIZE) as f:
             reader = csv.reader(f)
             rows = [row for row in reader]
         header = rows[0]
-        rows = process_func(header, rows)
+        rows = process_func(header, rows, node_output_show_list)
     return rows
 
 
@@ -143,7 +143,7 @@ def _write_csv(csv_path, rows):
         writer.writerows(rows)
 
 
-def _process_is_npu_and_is_precision_error_ops(header, rows):
+def _process_is_npu_and_is_precision_error_ops(header, rows, node_output_name_list):
     ground_truth_col = header.index("GroundTruth")
     optype_col = header.index("OpType")
     cosine_similarity_col = header.index("CosineSimilarity")
@@ -153,6 +153,7 @@ def _process_is_npu_and_is_precision_error_ops(header, rows):
     mean_relative_error_col = header.index("MeanRelativeError")
 
     header.append('IsNpuOps')
+    header.append('IsOutputNode')
     header.append('IsPrecisionError')
     for row in rows[1:]:
         try:
@@ -165,6 +166,10 @@ def _process_is_npu_and_is_precision_error_ops(header, rows):
             kullback_leibler_divergence = float(row[kullback_leibler_divergence_col])
             root_mean_square_error = float(row[root_mean_square_error_col])
             mean_relative_error = float(row[mean_relative_error_col])
+            if _is_output_node(row[ground_truth_col], node_output_name_list):
+                row.append(YES)
+            else:
+                row.append(NO)
             if optype in OPTYPE_WHITWLIST or cosine_similarity.lower() == 'nan':
                 row.append(NO)
                 continue
@@ -176,6 +181,7 @@ def _process_is_npu_and_is_precision_error_ops(header, rows):
                 row.append(YES)
             else:
                 row.append(NO)
+                
         except ValueError as e:
             utils.logger.error(f"Skipping row due to invalid data: {row}. Error: {e}")
             continue
@@ -194,10 +200,22 @@ def _is_row_precison_error(cosine_similarity,
             mean_relative_error > MEAN_RELATIVE_ERROR)
 
 
-def _append_column_to_csv(csv_path):
-    csv_path = _get_single_csv_in_folder(csv_path)
-    rows = _read_and_process_csv(csv_path, _process_is_npu_and_is_precision_error_ops)
+def _is_output_node(groundtruth, onnxnode_output_name_list):
+    return groundtruth.strip() in onnxnode_output_name_list
+
+
+def _append_column_to_csv(csv_path, node_output_show_list=None):
+    if node_output_show_list is None:
+        node_output_show_list = []
+    csv_path = _get_single_csv_in_folder(csv_path)   
+    rows = _read_and_process_csv(csv_path, _process_is_npu_and_is_precision_error_ops, node_output_show_list) 
     _write_csv(csv_path, rows)
+
+
+def get_valid_name(name: str):
+    if name and name[0] == "/":
+        name = name.lstrip("/")
+    return name.replace(".", "_").replace("/", "_")
 
 
 def mindir_to_om_process(args: CmpArgsAdapter):
@@ -375,7 +393,7 @@ def run_om_model_compare(args, use_cli):
         npu_dump_npy_path = ""
 
     # generate onnx inputs data
-    golden_dump = _generate_golden_data_model(args, npu_dump_npy_path)
+    golden_dump, model_extension = _generate_golden_data_model(args, npu_dump_npy_path)
     expect_net_output_node = npu_dump.get_expect_output_name()
 
     # generate dump data by golden model
@@ -411,9 +429,34 @@ def run_om_model_compare(args, use_cli):
         invalid_rows, _ = analyser.Analyser(args.out_path)()
     else:
         invalid_rows, _ = analyser.Analyser(args.out_path)('ALL_INVALID')
+    
+    node_output_show_list = None    
+    if model_extension == ".onnx":
+        node_output_show_list = _get_model_output_node_name_list(golden_dump.model_with_inputs_session, 
+                                                                 golden_dump.origin_model)
     print_advisor_info(args.out_path)
-    _append_column_to_csv(args.out_path)
+    _append_column_to_csv(args.out_path, node_output_show_list)
     return invalid_rows
+
+
+def _get_model_output_node_name_list(model_with_inputs_session, origin_model):
+    net_output_node_name_list = [item.name for item in model_with_inputs_session.get_outputs()]
+    node_output_show_list = []
+    for node_name in net_output_node_name_list :
+        pre_node = _find_previous_node(origin_model.graph, node_name)
+        if pre_node is None:
+            return None
+        node_output_show_list.append(pre_node)
+    return node_output_show_list
+    
+
+def _find_previous_node(graph, output_name):
+    # 遍历所有节点
+    for node in graph.node:
+        if output_name in [output for output in node.output]:
+            # 找到目标输出节点
+            return node.name
+    return None
 
 
 def print_advisor_info(out_path):

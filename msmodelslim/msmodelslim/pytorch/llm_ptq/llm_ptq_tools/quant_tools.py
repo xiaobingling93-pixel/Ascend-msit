@@ -2,18 +2,20 @@
 
 from __future__ import absolute_import, division, print_function
 
+import copy
 import itertools
 import re
 import os
 import gc
 import functools
 from collections import defaultdict
-from typing import Mapping
+from typing import Mapping, Optional
 
 from tqdm import tqdm
 import torch
 import torch.nn as nn
 from accelerate.hooks import add_hook_to_module, remove_hook_from_module
+from einops import rearrange
 
 from ascend_utils.common.security.type import check_mapping_element
 from ascend_utils.common.security import check_element_type, check_type, get_write_directory, check_int
@@ -21,6 +23,12 @@ from ascend_utils.common.security import check_element_type, check_type, get_wri
 from msmodelslim import logger as msmodelslim_logger
 from msmodelslim.pytorch.llm_ptq.hooks.factory import is_deepseek_v2_chat, is_deepseek_v2_lite
 from msmodelslim.pytorch.llm_ptq.hooks.once import register_bias
+from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.layer_config_manager import LayerConfigManager
+from msmodelslim.pytorch.llm_ptq.hooks.factory import is_deepseek_v2_chat, is_deepseek_v2_lite, \
+    get_process_hooks
+from msmodelslim.pytorch.llm_ptq.accelerate_adapter import enable_adapter, check_model_compatible, \
+    get_offloaded_dataset, MemoryStateDictConfig, DiskStateDictConfig, copy_offloaded_state_dict
+from msmodelslim.pytorch.llm_ptq.accelerate_adapter.lazy_handler import LazyTensor, handle_lazy_tensor
 
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config import QuantConfig
 from msmodelslim.pytorch.llm_ptq.anti_outlier.graph_utils import class_detect
@@ -70,6 +78,7 @@ from msmodelslim.pytorch.llm_ptq.accelerate_adapter.utils import judge_model_wit
 
 HF_HOOK = "_hf_hook"
 STATE_DICT_COPY_DIR = "copy"
+ALLOWED_MIX_TYPES = {"w8a8", "w8a16", "w8a8_dynamic", "float"}
 
 
 class Calibrator(object):
@@ -80,12 +89,23 @@ class Calibrator(object):
                  cfg: QuantConfig,
                  calib_data=None,
                  disable_level='L0',
-                 all_tensors=None):
+                 all_tensors=None,
+                 mix_cfg: Optional[dict] = None):
         check_type(model, nn.Module, param_name="model")
         check_type(cfg, QuantConfig, param_name="cfg")
         check_type(disable_level, str, param_name='disable_level')
         if all_tensors:
             check_element_type(all_tensors, torch.Tensor, dict, param_name="all_tensors")
+
+        if mix_cfg:  # 当 mix_cfg 不为 None 且非空字典时才进行检查
+            if not isinstance(mix_cfg, dict):
+                raise ValueError("mix_cfg must be a dict if provided.")
+            for key, value in mix_cfg.items():
+                # key 不做校验, value必须属于指定范围
+                if value not in ALLOWED_MIX_TYPES:
+                    raise ValueError(
+                        f"mix_cfg中'{key}'指定的量化类型'{value}'不在允许列表{ALLOWED_MIX_TYPES}之内，"
+                        f"请检查配置或扩展ALLOWED_MIX_TYPES后再使用。")
 
         self.cfg = cfg
         self.logger = msmodelslim_logger
@@ -135,6 +155,48 @@ class Calibrator(object):
         self.act_states = None
         self.rollback_names_process(model)
         self.is_deepseek_v2 = is_deepseek_v2_chat(model) or is_deepseek_v2_lite(model)
+
+        # for backward compatibility, when quantifying deepseek v2 model with w8a8,
+        # the quant config of all mlp layers is w8a8_dynamic, and the quant config of other layers is w8a8
+        if self.is_deepseek_v2 and mix_cfg is None and cfg.model_quant_type == QuantType.W8A8:
+            mix_cfg = {"*.mlp.*": "w8a8_dynamic", "*": "w8a8"}
+
+        # this initializes is kept for forward compatibility
+        # in the future, this will receive a cfg_store object from outside, but now it is None
+        self.cfg_store = None
+
+        if self.cfg_store is None:
+            self.cfg_store = {
+                "default": copy.deepcopy(cfg),
+                'rollback': QuantConfig(w_bit=16, a_bit=16),
+                'float': QuantConfig(w_bit=16, a_bit=16)
+            }
+
+        # for int8 quantization, we will convert the cfg to w8a8, w8a16, w8a8_dynamic if not in cfg_store
+        if cfg.w_bit == 8:
+            if 'w8a8' not in self.cfg_store:
+                try:
+                    new_cfg = LayerConfigManager.convert_to_w8a8(cfg)
+                    self.cfg_store['w8a8'] = new_cfg
+                except Exception as e:
+                    self.logger.warning(f"Failed to build w8a8 config. reason: {e}")
+            if 'w8a16' not in self.cfg_store:
+                try:
+                    new_cfg = LayerConfigManager.convert_to_w816(cfg)
+                    self.cfg_store['w8a16'] = new_cfg
+                except Exception as e:
+                    self.logger.warning(f"Failed to build w8a16 config. reason: {e}")
+            if 'w8a8_dynamic' not in self.cfg_store:
+                try:
+                    new_cfg = LayerConfigManager.convert_to_w8a8_dynamic(cfg)
+                    self.cfg_store['w8a8_dynamic'] = new_cfg
+                except Exception as e:
+                    self.logger.warning(f"Failed to build w8a8_dynamic config. reason: {e}")
+
+        self.layer_cfg_manager = LayerConfigManager(mix_cfg=mix_cfg, cfg_store=self.cfg_store,
+                                                    rollback_names=self.rollback_names)
+        self.layer_cfg_manager.build_config_map(model)
+
         if self.cfg.use_fa_quant:
             configure_fa(model, tp_size=self.cfg.fa_tp_size)
 
@@ -204,12 +266,37 @@ class Calibrator(object):
                 key_max, value_max = torch.chunk(comming_max, chunk_size, dim=0)
                 key_min, value_min = torch.chunk(comming_min, chunk_size, dim=0)
             elif chunk_size == 3:
-                res_dim = comming_max.shape[-1] - in_hidden_size
-
-                _, kv_max = torch.split(comming_max, [in_hidden_size, res_dim])
-                _, kv_min = torch.split(comming_min, [in_hidden_size, res_dim])
-                key_max, value_max = torch.chunk(kv_max, 2, dim=0)
-                key_min, value_min = torch.chunk(kv_min, 2, dim=0)
+                # 判断模型类型，少数模型的qkv切块策略特殊，需要单独处理
+                if model.config.model_type in {"internlm2"}:
+                    # 确定 gs 和 d
+                    gs = model.config.num_attention_heads // model.config.num_key_value_heads + 2
+                    d = model.config.hidden_size // model.config.num_attention_heads
+                    #  计算 h : h = int(comming_max.numel() / (gs * d))
+                    # 使用 rearrange 函数将 comming_max 和 comming_min 重排为 (h, gs, d) 的形状
+                    qkv_states_max = rearrange(
+                        comming_max,
+                        "(h gs d) -> h gs d",
+                        gs=gs,
+                        d=d,
+                    )
+                    qkv_states_min = rearrange(
+                        comming_min,
+                        "(h gs d) -> h gs d",
+                        gs=gs,
+                        d=d,
+                    )
+                    # 提取 key_max_states 和 value_max_states
+                    key_max = qkv_states_max[:, -2, :].reshape(-1)
+                    value_max = qkv_states_max[:, -1, :].reshape(-1)
+                    key_min = qkv_states_min[:, -2, :].reshape(-1)
+                    value_min = qkv_states_min[:, -1, :].reshape(-1)
+                # 原有切块逻辑
+                else:
+                    res_dim = comming_max.shape[-1] - in_hidden_size
+                    _, kv_max = torch.split(comming_max, [in_hidden_size, res_dim])
+                    _, kv_min = torch.split(comming_min, [in_hidden_size, res_dim])
+                    key_max, value_max = torch.chunk(kv_max, 2, dim=0)
+                    key_min, value_min = torch.chunk(kv_min, 2, dim=0)
 
             # 获取k_name和v_name
             k_name = 'k_proj'
@@ -628,16 +715,15 @@ class Calibrator(object):
                 if name in self.rollback_names:
                     continue
                 if isinstance(mod, nn.Linear) or isinstance(mod, nn.modules.linear.NonDynamicallyQuantizableLinear):
-                    if self.cfg.is_lowbit:
-                        quant_mod = LowBitLinearQuantizer(cfg=self.cfg, logger=self.logger, name=name)
-                    elif self.cfg.w_method in QuantType.NF4:
-                        quant_mod = LinearNf4Quantizer(cfg=self.cfg, logger=self.logger)
-                    elif self.cfg.model_quant_type is not QuantType.W8A8S:
-                        is_dynamic = self.cfg.is_dynamic
-                        if "mlp" in name and self.is_deepseek_v2:
-                            if self.cfg.model_quant_type is QuantType.W8A8:
-                                is_dynamic = True
-                        quant_mod = LinearQuantizer(cfg=self.cfg, logger=self.logger, is_dynamic=is_dynamic)
+                    # every linear layer will have a standalone config
+                    layer_cfg = self.layer_cfg_manager.get_layer_config(name)
+
+                    if layer_cfg.is_lowbit:
+                        quant_mod = LowBitLinearQuantizer(cfg=layer_cfg, logger=self.logger, name=name)
+                    elif layer_cfg.w_method in QuantType.NF4:
+                        quant_mod = LinearNf4Quantizer(cfg=layer_cfg, logger=self.logger)
+                    elif layer_cfg.model_quant_type is not QuantType.W8A8S:
+                        quant_mod = LinearQuantizer(cfg=layer_cfg, logger=self.logger)
                     else:
                         quant_mod = LinearSparseQuantizer(cfg=self.cfg, logger=self.logger)
                     quant_mod.set_param(mod)
@@ -659,12 +745,13 @@ class Calibrator(object):
 
         for name, mod in model.named_modules():
             if name in simulate_linear:
+                layer_cfg = self.layer_cfg_manager.get_layer_config(name)
                 tp_mod = ParallelLinearCol()
                 tp_mod.set_param(mod, name, cfg=self.cfg)
                 if name in self.rollback_names:
                     tp_mod.quant_type = QuantType.FLOAT
                 else:
-                    tp_mod.quant_type = self.cfg.model_quant_type
+                    tp_mod.quant_type = layer_cfg.model_quant_type
                 if hasattr(mod, HF_HOOK):
                     add_hook_to_module(tp_mod, mod._hf_hook)
                     remove_hook_from_module(mod)

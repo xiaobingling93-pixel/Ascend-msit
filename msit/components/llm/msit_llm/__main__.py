@@ -547,60 +547,24 @@ class BCAnalyze(BaseCommand):
             '-g',
             dest="golden",
             required=True,
-            type=safe_string,
-            help="Golden result to compare with. If it is path like, then it will be considered as a "
-                 "csv path. If not, analyzer will treat it as a command and invoke synthesizer to collect the result.")
+            type=load_file_to_read_common_check, # 文件判断在里面
+            help="Golden result to compare with. It must be a valid csv path")
 
         parser.add_argument(
             '--test',
             '-t',
             dest="test",
             required=True,
-            type=safe_string,
-            help="Test result to compare with the golden. If it is path like, then it will be considered as a "
-                 "csv path. If not, analyzer will treat it as a command and invoke synthesizer to collect the result.")
+            type=load_file_to_read_common_check, # 文件判断在里面
+            help="Test result to compare with the golden. It must be a valid csv path")
 
         parser.add_argument("-l", "--log-level", default="info", choices=LOG_LEVELS_LOWER, help="specify log level")
 
     def handle(self, args, **kwargs) -> None:
         set_log_level(args.log_level)
 
-        items = ['golden', 'test']
-        csv_path_lists = []
-        for item in items:
-            component = getattr(args, item)
-            if not os.path.exists(component):
-                temp_dir = Synthesizer.from_cmd(component)
-                csv_dir = os.path.join(temp_dir, Synthesizer.SYNTHESIZER_FOLDER_NAME)
+        Analyzer.analyze(golden=args.golden, test=args.test) # 后缀名判断在这里
 
-                try:
-                    csv_path = next(
-                        file_name
-                        for file_name in os.listdir(csv_dir)
-                        if file_name.startswith('msit_synthesizer_result') and file_name.endswith('.csv')
-                    )
-                except FileNotFoundError:
-                    logger.error(
-                        "Directory '%s' is not found due to the internal errors, "
-                        "please check the log result",
-                        csv_dir
-                    )
-                    raise
-                except StopIteration:
-                    logger.error(
-                        "There is no csv file under directory '%s', "
-                        "please check the log result",
-                        csv_dir
-                    )
-                    raise
-
-                full_csv_path = os.path.join(csv_dir, csv_path)
-            else:
-                full_csv_path = component
-
-            csv_path_lists.append(full_csv_path)
-
-        Analyzer.from_csv(golden_csv_path=csv_path_lists[0], test_csv_path=csv_path_lists[1])
 
 
 class BadCaseAnalyze(BaseCommand):

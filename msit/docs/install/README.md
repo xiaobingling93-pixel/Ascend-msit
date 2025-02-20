@@ -69,7 +69,7 @@ msit install all
 msit check all 
 ```
 
-> windows 下，仅支持安装 transplt 和 surgeon 组件
+> windows 下，仅支持安装 surgeon 组件
 
 ## 卸载
 
@@ -138,7 +138,7 @@ msit check all
 > 注意：
 > 1. 离线安装不支持 windows 中安装
 > 2. 离线安装首先要下载安装包，要保证下载安装包机器与离线安装机器一致。包括python版本，平台，操作系统等
-> 3. 离线安装不支持 llvm 的安装，llvm 是 transplt 依赖的组件，请用户自行安装
+> 3. 离线安装不支持 llvm 的安装
 
 
 # 安装相关命令行参数

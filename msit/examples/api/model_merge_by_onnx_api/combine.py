@@ -20,6 +20,9 @@ import onnx
 from onnx import GraphProto, ModelProto, TensorProto, checker, helper, utils
 from components.utils.check.rule import Rule
 
+from msit.msit.components.debug.surgeon.test.testcase.optimizer.knowledges.test_knowledge_avgpool_split import \
+    make_dynamic_model
+
 
 def check_overlapping_names(
         g1: GraphProto, g2: GraphProto, io_map: Optional[List[Tuple[str, str]]] = None

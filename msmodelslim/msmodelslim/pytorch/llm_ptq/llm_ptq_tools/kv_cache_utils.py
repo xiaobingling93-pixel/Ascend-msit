@@ -94,6 +94,10 @@ def split_kvcache(kvcache):
         else:
             cache_k = [kvcache[0]]
             cache_v = [kvcache[1]]
+    # kv cache适配glm模型，解析tensor类型的kvcache
+    elif isinstance(kvcache, torch.Tensor):
+        cache_k = [kvcache[0][0]]
+        cache_v = [kvcache[0][1]]
     else:
         cache_k = kvcache.key_cache
         cache_v = kvcache.value_cache
