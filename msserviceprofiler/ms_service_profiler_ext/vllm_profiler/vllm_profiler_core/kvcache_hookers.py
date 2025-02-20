@@ -34,9 +34,10 @@ class KVCacheManagerHook(VLLMHookerBase):
         def append_slots_maker(ori_func):
             def append_slots(this, seq, num_lookahead_slots, *args, **kwargs):
                 profiler = Profiler(Level.INFO)
-                ori_func(this, seq, num_lookahead_slots, *args, **kwargs)
+                new_cows = ori_func(this, seq, num_lookahead_slots, *args, **kwargs)
                 profiler.domain("kvcache").res(seq.seq_id).metric(
                     "block_num", len(this.block_tables)).event("AppendSlots")
+                return new_cows
             return append_slots
 
         def swap_in_maker(ori_func):
