@@ -30,7 +30,7 @@ class DBComparator(BaseComparator):
 
     def _merge_tables(self, cursor, table_name):
         cursor.execute(f'''
-            CREATE TABLE {table_name} (
+            CREATE TABLE IF NOT EXISTS {table_name} (
                 batch_type TEXT,
                 batch_size_a INTEGER,
                 batch_size_b INTEGER

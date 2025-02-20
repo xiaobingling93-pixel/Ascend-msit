@@ -48,8 +48,8 @@ def connect_db(db_path):
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="MS Server Profiler Compare Tool")
 
-    parser.add_argument("dir_path_a", type=check_input_path_valid, help="Directory containing analyzed results")
-    parser.add_argument("dir_path_b", type=check_input_path_valid, help="Directory containing analyzed results")
+    parser.add_argument("input_path", type=check_input_path_valid, help="Directory containing analyzed results")
+    parser.add_argument("golden_path", type=check_input_path_valid, help="Directory containing analyzed results")
     parser.add_argument(
         "--output-path",
         type=check_output_path_valid,
@@ -77,28 +77,31 @@ def process_files(file_pairs, output_db, output_excel):
         with pd.ExcelWriter(output_excel, engine='openpyxl') as excel_writer:
             for file_a, file_b in file_pairs:
                 ext = Path(file_a).suffix.lower()
-                
+                logger.info("Begin to compare %r and %r", file_a, file_b)
                 for comparator_cls in comparators.values():
                     if comparator_cls.supports(ext):
                         comparator = comparator_cls(db_conn, excel_writer)
-                        comparator.process(file_a, file_b)
-
+                        try:
+                            comparator.process(file_a, file_b)
+                        except Exception as e:
+                            logger.warning("During comparing %r and %r, there is an error ocurred: %r", file_a, file_b, e)
+                logger.info("End to compare %r and %r", file_a, file_b)
 
 def main():    
     args = parse_args()
     set_log_level(args.log_level)
     
-    output_dir = Path(args.output_path)
-    output_dir.mkdir(exist_ok=True)
-    
-    result_prefix = output_dir / 'compare_result'
+    result_prefix = os.path.join(args.output_path, 'compare_result')
     file_collector = FileCollector(
         pattern=re.compile(r'(batch|service|request)_summary\.csv|profiler\.db'),
         max_iter=100
     )
     
-    file_pairs = file_collector.collect_pairs(args.dir_path_a, args.dir_path_b)
+    file_pairs = file_collector.collect_pairs(args.input_path, args.golden_path)
     process_files(file_pairs, f'{result_prefix}.db', f'{result_prefix}.xlsx')
+    
+    logger.info("Comparing finished successfully, the results stored under %r", args.output_path)
+    logger.info("\nWhat's Next?\n\tYou may use the `grafana` to have a better visualization of the comparison results")
 
 
 if __name__ == '__main__':
