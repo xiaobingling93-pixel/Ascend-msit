@@ -1,5 +1,8 @@
+# Copyright Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+
 import os
 import argparse
+import logging
 
 import torch
 import torch.distributed as dist
@@ -15,9 +18,11 @@ from opensora.sample.pipeline_opensora_sp import OpenSoraPipeline
 
 from msmodelslim.pytorch.multi_modal.sampling_optimization.scheduler import EulerAncestralDiscreteSchedulerExample
 
+logger = logging.getLogger(__name__)
+
 
 def load_t2v_checkpoint(model_path):
-    print('load_t2v_checkpoint, ', model_path)
+    logger.info('load_t2v_checkpoint, %s', str(model_path))
     if args.model_type == 'udit':
         transformer_model = UDiTT2V.from_pretrained(model_path, cache_dir=args.cache_dir,
                                                     low_cpu_mem_usage=False, device_map=None,
@@ -48,7 +53,7 @@ def load_t2v_checkpoint(model_path):
 if __name__ == "__main__":
     import logging
 
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_path", type=str, default='LanguageBind/Open-Sora-Plan-v1.0.0')
@@ -89,7 +94,6 @@ if __name__ == "__main__":
     # 初始化分布式环境
     local_rank = int(os.getenv('RANK', 0))
     world_size = int(os.getenv('WORLD_SIZE', 1))
-    print('world_size', world_size)
     if torch_npu is not None and npu_config.on_npu:
         torch_npu.npu.set_device(local_rank)
     else:
@@ -121,7 +125,6 @@ if __name__ == "__main__":
 
     # set eval mode
     vae.eval()
-    # text_encoder.eval()
     text_encoder.bfloat16().eval()
 
     if args.sample_method == 'EulerAncestralDiscrete':
@@ -141,6 +144,7 @@ if __name__ == "__main__":
 
     save_img_path = args.save_img_path
     full_path = args.model_path
+    os.makedirs(args.save_dir, exist_ok=True)
 
     from msmodelslim.pytorch.multi_modal.sampling_optimization import ReStepSearchConfig, ReStepAdaptor
 
@@ -162,3 +166,6 @@ if __name__ == "__main__":
 
     # do the scheduler timestep search
     scheduler_timestep = restep_adaptor.search()
+
+    if local_rank == 0:
+        logger.info("Searched scheduler timestep: %s", scheduler_timestep)

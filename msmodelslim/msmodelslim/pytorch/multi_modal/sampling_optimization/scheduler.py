@@ -1,3 +1,5 @@
+# Copyright Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+
 from typing import Optional, Union, List
 import numpy as np
 import torch
@@ -62,7 +64,8 @@ class EulerAncestralDiscreteSchedulerExample(EulerAncestralDiscreteScheduler_bas
             # If timesteps is already an np.array, we keep it as is
 
         else:
-            # "linspace", "leading", "trailing" corresponds to annotation of Table 2. of https://arxiv.org/abs/2305.08891
+            # "linspace", "leading", "trailing" corresponds to annotation of
+            #   Table 2. of https://arxiv.org/abs/2305.08891
             if self.config.timestep_spacing == "linspace":
                 timesteps = np.linspace(0, self.config.num_train_timesteps - 1, num_inference_steps, dtype=np.float32)[
                             ::-1
@@ -82,7 +85,8 @@ class EulerAncestralDiscreteSchedulerExample(EulerAncestralDiscreteScheduler_bas
                 timesteps -= 1
             else:
                 raise ValueError(
-                    f"{self.config.timestep_spacing} is not supported. Please make sure to choose one of 'linspace', 'leading' or 'trailing'."
+                    f"{self.config.timestep_spacing} is not supported. "
+                    f"Please make sure to choose one of 'linspace', 'leading' or 'trailing'."
                 )
 
         sigmas = np.array(((1 - self.alphas_cumprod) / self.alphas_cumprod) ** 0.5)

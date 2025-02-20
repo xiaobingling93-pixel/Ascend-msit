@@ -1,19 +1,96 @@
+# Copyright Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+from typing import Union, Optional, List, Tuple
+
 import torch.distributed
 
-try:
-    from opensora.sample.pipeline_opensora_sp import *
-except ImportError:
-    raise ImportError("Cannot find package Open-Sora-Plan 1.2, please install it first.")
+from diffusers import AutoencoderKL, DPMSolverMultistepScheduler, Transformer2DModel
+from einops import rearrange
+from transformers import T5EncoderModel
 
-from typing import Union
+try:
+    from opensora.sample.pipeline_opensora_sp import OpenSoraPipeline, T5Tokenizer, hccl_info, \
+        get_sequence_parallel_state, ImagePipelineOutput
+except ImportError:
+    raise ImportError("Cannot find package Open-Sora-Plan 1.2, please install it first.") from e
 
 
 # Copy and modified from Open-Sora-Plan repo v1.2: opensora.sample.pipeline_opensora_sp
-class ReStep_OpenSoraPipeline_v_1_2(OpenSoraPipeline):
+class ReStepOpenSoraPipelineV1_2(OpenSoraPipeline):
     def __init__(self, tokenizer: T5Tokenizer, text_encoder: T5EncoderModel, vae: AutoencoderKL,
                  transformer: Transformer2DModel, scheduler: DPMSolverMultistepScheduler):
         super().__init__(tokenizer, text_encoder, vae, transformer, scheduler)
         self.args = None
+
+    @staticmethod
+    def split_sequence(sequence, local_rank, world_size):
+        old_shape = sequence.shape
+        x = sequence.shape[2] // world_size
+        sequence = rearrange(sequence.view((*old_shape[:3], -1)), 'b c (n x) s -> b c n x s', n=world_size,
+                             x=x).contiguous()
+        sequence = sequence[:, :, local_rank, :, :]
+        return sequence.view((*old_shape[:2], x, *old_shape[3:]))
+
+    @staticmethod
+    def gather_sequences(sequence, world_size):
+        sequence_shape = list(sequence.shape)
+        full_shape = [sequence_shape[0] * world_size] + sequence_shape[1:]
+        all_sequences = torch.zeros(full_shape, dtype=sequence.dtype, device=sequence.device)
+        torch.distributed.all_gather_into_tensor(all_sequences, sequence)
+        sequences_list = list(all_sequences.chunk(world_size, dim=0))
+        sequence = torch.cat(sequences_list, dim=2)
+        return sequence
+
+    @staticmethod
+    def get_sequence_parallel_state():
+        return get_sequence_parallel_state()
+
+    @torch.no_grad()
+    def get_text_embeddings(
+            self,
+            prompt: Union[str, List[str]] = None,
+            negative_prompt: str = "",
+            guidance_scale: float = 4.5,
+            num_images_per_prompt: Optional[int] = 1,
+            prompt_embeds: Optional[torch.FloatTensor] = None,
+            prompt_attention_mask: Optional[torch.FloatTensor] = None,
+            negative_prompt_embeds: Optional[torch.FloatTensor] = None,
+            negative_prompt_attention_mask: Optional[torch.FloatTensor] = None,
+            clean_caption: bool = True,
+            max_sequence_length: int = 300,
+            **kwargs,
+    ) -> Union[ImagePipelineOutput, Tuple]:
+
+        device = getattr(self, '_execution_device', None) or getattr(self, 'device', None) or torch.device('cuda')
+        device = kwargs.get('device', device)  # fix bug
+
+        do_classifier_free_guidance = guidance_scale > 1.0
+
+        # 3. Encode input prompt
+        (
+            prompt_embeds,
+            prompt_attention_mask,
+            negative_prompt_embeds,
+            negative_prompt_attention_mask,
+        ) = self.encode_prompt(
+            prompt,
+            do_classifier_free_guidance,
+            negative_prompt=negative_prompt,
+            num_images_per_prompt=num_images_per_prompt,
+            device=device,
+            prompt_embeds=prompt_embeds,
+            negative_prompt_embeds=negative_prompt_embeds,
+            prompt_attention_mask=prompt_attention_mask,
+            negative_prompt_attention_mask=negative_prompt_attention_mask,
+            clean_caption=clean_caption,
+            max_sequence_length=max_sequence_length,
+        )
+
+        return (
+            prompt_embeds,
+            prompt_attention_mask,
+            negative_prompt_embeds,
+            negative_prompt_attention_mask,
+        )
 
     def one_step_sample(self, latents, timestep, step_index, encoder_states, extra_step_kwargs, added_cond_kwargs, ):
         timestep *= self.scheduler.num_train_timesteps
@@ -60,75 +137,3 @@ class ReStep_OpenSoraPipeline_v_1_2(OpenSoraPipeline):
         torch.cuda.synchronize()
         torch.distributed.barrier()
         return latents
-
-    @staticmethod
-    def split_sequence(sequence, local_rank, world_size):
-        old_shape = sequence.shape
-        x = sequence.shape[2] // world_size
-        sequence = rearrange(sequence.view((*old_shape[:3], -1)), 'b c (n x) s -> b c n x s', n=world_size,
-                             x=x).contiguous()
-        sequence = sequence[:, :, local_rank, :, :]
-        return sequence.view((*old_shape[:2], x, *old_shape[3:]))
-
-    @staticmethod
-    def gather_sequences(sequence, world_size):
-        sequence_shape = list(sequence.shape)
-        full_shape = [sequence_shape[0] * world_size] + sequence_shape[1:]
-        all_sequences = torch.zeros(full_shape, dtype=sequence.dtype, device=sequence.device)
-        torch.distributed.all_gather_into_tensor(all_sequences, sequence)
-        sequences_list = list(all_sequences.chunk(world_size, dim=0))
-        sequence = torch.cat(sequences_list, dim=2)
-        return sequence
-
-    @staticmethod
-    def get_sequence_parallel_state():
-        return get_sequence_parallel_state()
-
-    @torch.no_grad()
-    def get_text_embeddings(
-            self,
-            prompt: Union[str, List[str]] = None,
-            negative_prompt: str = "",
-            guidance_scale: float = 4.5,
-            num_images_per_prompt: Optional[int] = 1,
-            prompt_embeds: Optional[torch.FloatTensor] = None,
-            prompt_attention_mask: Optional[torch.FloatTensor] = None,
-            negative_prompt_embeds: Optional[torch.FloatTensor] = None,
-            negative_prompt_attention_mask: Optional[torch.FloatTensor] = None,
-            clean_caption: bool = True,
-            max_sequence_length: int = 300,
-            **kwargs,
-    ) -> Union[ImagePipelineOutput, Tuple]:
-
-        # import ipdb;ipdb.set_trace()
-        device = getattr(self, '_execution_device', None) or getattr(self, 'device', None) or torch.device('cuda')
-        device = kwargs.get('device', device)  # fix bug
-
-        do_classifier_free_guidance = guidance_scale > 1.0
-
-        # 3. Encode input prompt
-        (
-            prompt_embeds,
-            prompt_attention_mask,
-            negative_prompt_embeds,
-            negative_prompt_attention_mask,
-        ) = self.encode_prompt(
-            prompt,
-            do_classifier_free_guidance,
-            negative_prompt=negative_prompt,
-            num_images_per_prompt=num_images_per_prompt,
-            device=device,
-            prompt_embeds=prompt_embeds,
-            negative_prompt_embeds=negative_prompt_embeds,
-            prompt_attention_mask=prompt_attention_mask,
-            negative_prompt_attention_mask=negative_prompt_attention_mask,
-            clean_caption=clean_caption,
-            max_sequence_length=max_sequence_length,
-        )
-
-        return (
-            prompt_embeds,
-            prompt_attention_mask,
-            negative_prompt_embeds,
-            negative_prompt_attention_mask,
-        )

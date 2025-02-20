@@ -1,13 +1,17 @@
+# Copyright Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+
 import os
 import math
 import argparse
+import logging
+import gc
 
 import torch
 import torch.distributed as dist
 from torchvision.utils import save_image
 import torch_npu
 
-import imageio, gc
+import imageio
 from diffusers.schedulers import (DDIMScheduler, DDPMScheduler, PNDMScheduler,
                                   EulerDiscreteScheduler, DPMSolverMultistepScheduler,
                                   HeunDiscreteScheduler, EulerAncestralDiscreteScheduler,
@@ -26,9 +30,11 @@ from opensora.npu_config import npu_config
 
 from msmodelslim.pytorch.multi_modal.sampling_optimization.scheduler import EulerAncestralDiscreteSchedulerExample
 
+logger = logging.getLogger(__name__)
+
 
 def load_t2v_checkpoint(model_path):
-    print('load_t2v_checkpoint, ', model_path)
+    logger.info('load_t2v_checkpoint, %s', model_path)
     if args.model_type == 'udit':
         transformer_model = UDiTT2V.from_pretrained(model_path, cache_dir=args.cache_dir,
                                                     low_cpu_mem_usage=False, device_map=None,
@@ -63,10 +69,7 @@ def run_model_and_save_images(pipeline, model_path):
         text_prompt = open(args.text_prompt[0], 'r').readlines()
         args.text_prompt = [i.strip() for i in text_prompt]
 
-    try:
-        checkpoint_name = f"{os.path.basename(model_path)}"
-    except:
-        checkpoint_name = "final"
+    checkpoint_name = "final"
     positive_prompt = """
     (masterpiece), (best quality), (ultra-detailed), (unwatermarked), 
     {}. 
@@ -81,7 +84,7 @@ def run_model_and_save_images(pipeline, model_path):
 
     seed = int(os.environ.get('RANDOM_SEED', 42))
     for index, prompt in enumerate(args.text_prompt):
-        print(f'set all seed: {seed}')
+        logger.info('set all seed: %s', str(seed))
         npu_config.seed_everything(seed)
         videos = pipeline(positive_prompt.format(prompt),
                           negative_prompt=negative_prompt,
@@ -96,33 +99,33 @@ def run_model_and_save_images(pipeline, model_path):
                           max_sequence_length=args.max_sequence_length,
                           timesteps=timesteps_set
                           ).images
-        print(videos.shape)
 
+        vid_name = (f'{args.sample_method}_{index}_{checkpoint_name}'
+                    f'_gs{args.guidance_scale}_s{args.num_sampling_steps}.{ext}')
         if hccl_info.rank <= 0:
-            try:
-                if args.num_frames == 1:
-                    videos = videos[:, 0].permute(0, 3, 1, 2)  # b t h w c -> b c h w
-                    save_image(videos / 255.0, os.path.join(args.save_img_path,
-                                                            f'{args.sample_method}_{index}_{checkpoint_name}_gs{args.guidance_scale}_s{args.num_sampling_steps}.{ext}'),
-                               nrow=1, normalize=True, value_range=(0, 1))  # t c h w
+            if args.num_frames == 1:
+                videos = videos[:, 0].permute(0, 3, 1, 2)  # b t h w c -> b c h w
+                save_image(videos / 255.0,
+                           os.path.join(args.save_img_path, vid_name),
+                           nrow=1, normalize=True, value_range=(0, 1))  # t c h w
 
-                else:
-                    imageio.mimwrite(
-                        os.path.join(
-                            args.save_img_path,
-                            f'{args.sample_method}_{index}_{checkpoint_name}__gs{args.guidance_scale}_s{args.num_sampling_steps}.{ext}'
-                        ), videos[0],
-                        fps=args.fps, quality=6, codec='libx264',
-                        output_params=['-threads', '20'])  # highest quality is 10, lowest is 0
-            except:
-                print('Error when saving {}'.format(prompt))
+            else:
+                imageio.mimwrite(
+                    os.path.join(
+                        args.save_img_path,
+                        vid_name
+                    ), videos[0],
+                    fps=args.fps, quality=6, codec='libx264',
+                    output_params=['-threads', '20'])  # highest quality is 10, lowest is 0
             video_grids.append(videos)
     if hccl_info.rank <= 0:
         video_grids = torch.cat(video_grids, dim=0)
 
         def get_file_name():
-            return os.path.join(args.save_img_path,
-                                f'{args.sample_method}_gs{args.guidance_scale}_s{args.num_sampling_steps}_{checkpoint_name}.{ext}')
+            return os.path.join(
+                args.save_img_path,
+                f'{args.sample_method}_gs{args.guidance_scale}_s{args.num_sampling_steps}_{checkpoint_name}.{ext}'
+            )
 
         if args.num_frames == 1:
             save_image(video_grids / 255.0, get_file_name(),
@@ -132,14 +135,13 @@ def run_model_and_save_images(pipeline, model_path):
             imageio.mimwrite(get_file_name(), video_grids, fps=args.fps, quality=6)
 
         output_path = get_file_name()
-        # check_sha256_with_backup(output_path)
-        print('concat video file saved at: {}'.format(output_path))
+        logger.info('concat video file saved at: %s', output_path)
 
 
 if __name__ == "__main__":
     import logging
 
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_path", type=str, default='LanguageBind/Open-Sora-Plan-v1.0.0')
@@ -176,14 +178,12 @@ if __name__ == "__main__":
     # 初始化分布式环境
     local_rank = int(os.getenv('RANK', 0))
     world_size = int(os.getenv('WORLD_SIZE', 1))
-    print('world_size', world_size)
     if torch_npu is not None and npu_config.on_npu:
         torch_npu.npu.set_device(local_rank)
     else:
         torch.cuda.set_device(local_rank)
     dist.init_process_group(backend='nccl', init_method='env://', world_size=world_size, rank=local_rank)
     initialize_sequence_parallel_state(world_size)
-    # torch.manual_seed(args.seed)
     weight_dtype = torch.bfloat16
     device = f"npu:{torch.cuda.current_device()}"
 
@@ -210,7 +210,6 @@ if __name__ == "__main__":
 
     # set eval mode
     vae.eval()
-    # text_encoder.eval()
     text_encoder.bfloat16().eval()
 
     if args.sample_method == 'DDIM':
@@ -243,7 +242,7 @@ if __name__ == "__main__":
             timesteps = json.load(f)
 
         timesteps_set = [x * 1000 for x in timesteps][::-1]
-        print(f'set timesteps_set to {timesteps_set}')
+        logger.info('set timesteps_set to %s', str(timesteps_set))
     else:
         timesteps_set = None
 
@@ -267,7 +266,7 @@ if __name__ == "__main__":
     full_path = args.model_path
 
     pipeline: OpenSoraPipeline = load_t2v_checkpoint(full_path)
-    print('load model')
+    logger.info('load model')
 
     gc.collect()
     torch.cuda.empty_cache()

@@ -1,3 +1,5 @@
+# Copyright Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+import json
 import os
 import glob
 import random
@@ -12,9 +14,37 @@ import torch
 from opensora.sample.pipeline_opensora_sp import OpenSoraPipeline
 
 from .schedule_optimizer import AYSOptimizer
-from .model_open_sora_plan1_2_sp import ReStep_OpenSoraPipeline_v_1_2
+from .model_open_sora_plan1_2_sp import ReStepOpenSoraPipelineV1_2
 
 logger = logging.getLogger(__name__)
+
+
+def dump_json(data, filename="output.json", permissions=0o640):
+    """
+    Dump JSON data to a file with specified file permissions.
+
+    This function creates the file using os.open to set permissions,
+    taking into account the system umask, and then confirms the file
+    permissions with os.chmod.
+
+    Parameters:
+        data: JSON-serializable data.
+        filename (str): Output file path (default "output.json").
+        permissions (int): File permissions (default 0o650, i.e. owner read/write, group read/execute).
+
+    Raises:
+        Exception: Propagates any error encountered during file writing or permission setting.
+    """
+    try:
+        # 使用 os.open 创建文件，指定权限，并确保存在时覆盖（O_TRUNC）
+        with os.fdopen(os.open(filename, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, permissions), 'w') as f:
+            json.dump(data, f, indent=4)
+
+        # 确认文件权限
+        os.chmod(filename, permissions)
+    except Exception as e:
+        logger.error("Error saving JSON data", exc_info=True)
+        raise
 
 
 # ----------------- ReStep 相关数据结构 -----------------
@@ -26,6 +56,22 @@ class ReStepSearchConfig:
     monte_carlo_iters: int = 5
 
     num_sampling_steps: int = 50
+
+
+def check_exist_and_read_permission(path: str) -> None:
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"The specified path does not exist: {path}")
+
+    if not os.access(path, os.R_OK):
+        raise PermissionError(f"Read permission is denied for the path: {path}")
+
+
+def check_exist_and_write_permission(path: str) -> None:
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"The specified path does not exist: {path}")
+
+    if not os.access(path, os.W_OK):
+        raise PermissionError(f"Write permission is denied for the path: {path}")
 
 
 # ----------------- 适配器实现 -----------------
@@ -40,6 +86,15 @@ class ReStepAdaptor:
         config: ReStepSearchConfig 配置对象
         """
         self.search_config = config
+        self.videos_paths = None
+
+        if not isinstance(pipeline, OpenSoraPipeline):
+            raise ValueError("pipeline must be OpenSoraPipeline")
+
+        if not isinstance(config, ReStepSearchConfig):
+            raise ValueError("config must be ReStepSearchConfig")
+
+        self.check_search_config(config)
 
         if "RANK" in os.environ and "WORLD_SIZE" in os.environ:
             self.rank = int(os.environ["RANK"])
@@ -48,8 +103,8 @@ class ReStepAdaptor:
         else:
             raise RuntimeError("RANK and WORLD_SIZE must be set in environment")
 
-        pipeline: ReStep_OpenSoraPipeline_v_1_2 \
-            = self.replace_obj_class(pipeline, ReStep_OpenSoraPipeline_v_1_2)
+        pipeline: ReStepOpenSoraPipelineV1_2 \
+            = self.replace_obj_class(pipeline, ReStepOpenSoraPipelineV1_2)
 
         self.pipeline = pipeline
 
@@ -63,6 +118,49 @@ class ReStepAdaptor:
         torch.cuda.empty_cache()
         gc.collect()
         gc.collect()
+
+    def check_search_config(self, config: ReStepSearchConfig) -> None:
+        """
+        Validate the search configuration.
+
+        Checks performed:
+          - Ensure `config.videos_path` exists and has both read and write permissions.
+          - Verify `config.num_sampling_steps` is an integer and at least 1.
+          - Confirm `config.neighbour_type` is either 'uniform' or 'random'.
+          - Ensure the videos directory contains between 5 and 20 .mp4 files.
+          - Validate `config.monte_carlo_iters` is an integer greater than 0 and
+            less than or equal to the number of .mp4 videos in the directory.
+
+        Raises:
+            ValueError: If any of the validations fail.
+        """
+        # Check that the videos_path exists with the appropriate permissions.
+        check_exist_and_read_permission(config.videos_path)
+        check_exist_and_write_permission(config.videos_path)
+
+        # Validate the number of sampling steps.
+        if not isinstance(config.num_sampling_steps, int) or config.num_sampling_steps < 1:
+            raise ValueError("config.num_sampling_steps must be an integer and >= 1")
+
+        # Validate the neighbour type.
+        if config.neighbour_type not in {'uniform', 'random'}:
+            raise ValueError("config.neighbour_type must be either 'uniform' or 'random'")
+
+        # Gather all .mp4 files in the specified videos_path.
+        video_dir = config.videos_path
+        mp4_files = glob.glob(os.path.join(video_dir, '*.mp4'))
+        num_videos = len(mp4_files)
+
+        if not (5 <= num_videos <= 20):
+            raise ValueError("videos_path must contain between 5 and 20 .mp4 videos")
+
+        # Validate monte_carlo_iters based on the number of available videos.
+        if not (isinstance(config.monte_carlo_iters, int) and 0 < config.monte_carlo_iters <= num_videos):
+            raise ValueError(
+                "config.monte_carlo_iters must be an integer greater than 0 "
+                "and <= the number of .mp4 videos in videos_path")
+
+        self.videos_paths = mp4_files
 
     def search(self):
         pipeline_args = self.pipeline.args
@@ -94,12 +192,13 @@ class ReStepAdaptor:
         generator = torch.Generator(device=device)
         extra_step_kwargs = pipeline.prepare_extra_step_kwargs(generator=generator, eta=None)
 
-        vid_path = config.videos_path
-        videos_paths = list(glob.glob(os.path.join(vid_path, '*'), recursive=False))
+        videos_paths = self.videos_paths
+
         save_dir = config.save_dir
 
         os.makedirs(save_dir, exist_ok=True)
-        logger.debug("Result will saved at: %s", save_dir)
+        save_file_path = os.path.join(save_dir, 'searched_schedule.txt')
+        logger.info("Result will saved at: %s", save_file_path)
 
         denoising_fn = functools.partial(pipeline.one_step_sample,
                                          encoder_states=no_guid_states,
@@ -115,6 +214,9 @@ class ReStepAdaptor:
 
         with torch.no_grad():
             schedule = optimizer.optimize(schedule, config.monte_carlo_iters)
+
+        dump_json(schedule, save_file_path)
+        logger.info("Search result saved at: %s", save_file_path)
 
         return schedule
 
