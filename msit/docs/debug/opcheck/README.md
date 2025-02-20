@@ -61,19 +61,18 @@ msit debug opcheck -i /home/HwHiAiUser/result/test/{timestamp} -o /home/HwHiAiUs
 精度比对结果：precision_result = bool(rel_precision_rate >= pass_rate)
 ```
 ### 目前精度预检算子支持情况
-| 算子名称(A-G) | 算子名称(H-M)  | 算子名称(N-T)  | 算子名称(U-Z) |
-|-----------|------------|------------|-----------|
-| Add       | LogicalOr  | Pad        |           |
-| Adds      | LogicalAnd | PadD       |           |
-| BatchNorm | MatMulV2   | Pack       |           |
-| BiasAdd   | Minimum    | SoftMaxV2  |           |
-| BNInfer   |            | ReduceMean |           |
-| ConcatV2  |            | ReduceSum  |           |
-| Conv2D    |            | Relu       |           |
-| GatherV2  |            | Sigmoid    |           |
-|           |            | Tanh       |           |
-|           |            | Tile       |           |
-|           |            | Transpose  |           |
+| 算子名称(A-G)     | 算子名称(H-M)  | 算子名称(N-R)  | 算子名称(S-Z)   |
+|---------------|------------|------------|-------------|
+| Add           | LogicalOr  | Pad        | SoftMaxV2   |
+| Adds          | LogicalAnd | PadD       | Sub         |
+| BatchNorm     | Less       | Pack       | Sigmoid     |
+| BatchMatMulV2 | Mul        | ReduceMean | StrideSlice |
+| BiasAdd       | Minimum    | Rsqrt      | Tanh        |
+| BNInfer       | Mul        | ReduceMean | Tile        |
+| ConcatV2      | MatMulV2   | ReduceSum  | Transpose   |
+| Conv2D        |            | Relu       |             |
+| ClipByValue   |            |            |             |
+| GatherV2      |            |            |             |
 
 ## FAQ
 1. 为什么需要使用PyTorch 1.11.0版本？

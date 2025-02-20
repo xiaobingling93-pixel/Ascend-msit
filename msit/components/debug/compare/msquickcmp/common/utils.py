@@ -718,3 +718,11 @@ def parse_json_file(json_path):
                                 f"valid. {e}") from e
     except json.JSONDecodeError as e:
         raise RuntimeError(f"File '{json_path}' is not a valid JSON format. {e}") from e
+
+
+def load_npy_from_buffer(raw_data, dtype, shape):
+    no_dump_data = None
+    try:
+        return np.frombuffer(raw_data, dtype=dtype).reshape(shape)  
+    except Exception as e:
+        return no_dump_data
