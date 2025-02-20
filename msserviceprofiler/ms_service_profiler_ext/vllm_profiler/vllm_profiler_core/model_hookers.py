@@ -61,17 +61,13 @@ class ModelForwardHook(VLLMHookerBase):
 
         def begin_forward_maker(ori_func):
             def begin_forward(this, model_input):
-                prof = Profiler(Level.INFO)
-                prof.span_start("Forward")
                 ret = ori_func(this, model_input)
-
                 request_id_list = []
 
                 for request_id, _ in model_input.request_ids_to_seq_ids.items():
                     request_id_list.append(request_id)
-
-                prof.res(request_id_list)
-                prof.span_end()
+                prof = Profiler(Level.INFO)
+                prof.res(request_id_list).event("Forward")
                 return ret
 
             return begin_forward
