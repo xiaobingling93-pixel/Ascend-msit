@@ -43,14 +43,19 @@ def add_compare_visual_db_table(db_filepath, df, table_name):
 def compare_csv(fp_a, fp_b):
     try:
         df_a = pd.read_csv(fp_a)
-        df_b = pd.read_csv(fp_b)
     except Exception as ex:
         logger.error(f'failed to read csv, please check {fp_a}.')
         return None
     
+    try:
+        df_b = pd.read_csv(fp_b)
+    except Exception as ex:
+        logger.error(f'failed to read csv, please check {fp_b}.')
+        return None
+    
     # 确保列名一致
     if set(df_a.columns) != set(df_b.columns):
-        raise ValueError("两个 CSV 文件的列名不一致！")
+        logger.error(f"两个 CSV 文件的列名不一致！{fp_a}:{df_a.columns} , {fp_b}:{df_b.columns}")
 
     # 按 Metric 列合并两个 DataFrame
     df_merged = pd.merge(df_a, df_b, on='Metric', suffixes=('_a', '_b'))
