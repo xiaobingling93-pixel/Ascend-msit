@@ -45,7 +45,7 @@ class AntiOutlierConfig:
         self.a_sym = False
         self.alpha = 0.5
         self.os_k = 100
-        self.ch_align = True
+        self.ch_align = False
         self.w_adjust = True
         self.flex_config = self.setup_flex_config(flex_config)
 

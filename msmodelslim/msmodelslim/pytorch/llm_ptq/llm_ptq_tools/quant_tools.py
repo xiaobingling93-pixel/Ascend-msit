@@ -536,7 +536,6 @@ class Calibrator(object):
         quantifier = ComplexQuantifier(cfg=self.cfg,
                                        rollback_names=self.rollback_names,
                                        torch_dtype=self.model.config.torch_dtype,
-                                       is_inner_norm_used=not hasattr(self.model, 'anti_method'),
                                        layer_cfg_manager=self.layer_cfg_manager)
         self._save_weights_of_model(quantifier, saver)
 
