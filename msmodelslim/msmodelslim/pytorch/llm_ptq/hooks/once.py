@@ -23,8 +23,8 @@ def once(func):
 @once
 def register_bias_func(model: torch.nn.Module):
     for _, module in model.named_modules():
-        if isinstance(module, torch.nn.Linear) and hasattr(module, 'bias') and module.bias is not None:
-            module.origin_bias = module.bias
+        module.has_origin_bias = (isinstance(module, torch.nn.Linear)
+                                  and hasattr(module, 'bias') and module.bias is not None)
 
 
 register_bias = register_bias_func

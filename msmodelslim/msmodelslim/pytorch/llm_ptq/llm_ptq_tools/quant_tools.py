@@ -536,7 +536,6 @@ class Calibrator(object):
         quantifier = ComplexQuantifier(cfg=self.cfg,
                                        rollback_names=self.rollback_names,
                                        torch_dtype=self.model.config.torch_dtype,
-                                       is_inner_norm_used=not hasattr(self.model, 'anti_method'),
                                        layer_cfg_manager=self.layer_cfg_manager)
         self._save_weights_of_model(quantifier, saver)
 
@@ -718,8 +717,8 @@ class Calibrator(object):
                     else:
                         quant_mod = LinearSparseQuantizer(cfg=self.cfg, logger=self.logger)
                     quant_mod.set_param(mod)
-                    if hasattr(mod, 'origin_bias') and mod.origin_bias is not None:
-                        quant_mod.origin_bias = mod.origin_bias
+                    # 获取原权重是否有bias
+                    quant_mod.has_origin_bias = hasattr(mod, 'has_origin_bias') and mod.has_origin_bias
                     move_update_weight_hook_if_need(mod, quant_mod)
                     _set_module(model, name, quant_mod)
                     # 可能会有其他地方引用这个模块，但是可能很难找出来，保险起见清空相关参数
