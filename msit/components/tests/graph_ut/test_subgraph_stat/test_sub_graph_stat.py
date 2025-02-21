@@ -30,13 +30,6 @@ from msit_graph.subgraph_stat.subgraph_stat import (
 )
 
 
-# Fixture to mock logger
-@pytest.fixture
-def mock_logger():
-    with patch('components.utils.log.logger') as mock_logger:
-        yield mock_logger
-
-
 # Fixture to mock load_graph_def_from_pbtxt
 @pytest.fixture
 def mock_load_graph_def():
