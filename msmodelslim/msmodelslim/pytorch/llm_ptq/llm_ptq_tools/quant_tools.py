@@ -24,8 +24,6 @@ from msmodelslim import logger as msmodelslim_logger
 from msmodelslim.pytorch.llm_ptq.hooks.factory import is_deepseek_v2_chat, is_deepseek_v2_lite
 from msmodelslim.pytorch.llm_ptq.hooks.once import register_bias
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.layer_config_manager import LayerConfigManager
-from msmodelslim.pytorch.llm_ptq.hooks.factory import is_deepseek_v2_chat, is_deepseek_v2_lite, \
-    get_process_hooks
 
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config import QuantConfig
 from msmodelslim.pytorch.llm_ptq.anti_outlier.graph_utils import class_detect
@@ -536,7 +534,6 @@ class Calibrator(object):
 
         # quantifier 应基于量化方法予以抽象，当前仅实现了与保存相关的逻辑
         quantifier = ComplexQuantifier(cfg=self.cfg,
-                                       is_deepseek_v2=self.is_deepseek_v2,
                                        rollback_names=self.rollback_names,
                                        torch_dtype=self.model.config.torch_dtype,
                                        is_inner_norm_used=not hasattr(self.model, 'anti_method'),

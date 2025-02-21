@@ -63,9 +63,8 @@ def _get_module_quant_input(module):
 
 
 class ComplexQuantifier:
-    def __init__(self, cfg, is_deepseek_v2, rollback_names, torch_dtype, is_inner_norm_used, layer_cfg_manager):
+    def __init__(self, cfg, rollback_names, torch_dtype, is_inner_norm_used, layer_cfg_manager):
         self.cfg = cfg
-        self.is_deepseek_v2 = is_deepseek_v2
         self.rollback_names = rollback_names
         self.torch_dtype = torch_dtype
         self.is_inner_norm_used = is_inner_norm_used
@@ -144,10 +143,6 @@ class ComplexQuantifier:
         quant_weight, fp_weight, weight_scale, weight_offset = self.get_param_from_quantizer(module)
         if quant_weight is None:
             return
-
-        # 所有专家层都使用动态量化
-        if "mlp" in name and self.is_deepseek_v2 and model_quant_type is QuantType.W8A8:
-            model_quant_type = QuantType.W8A8_DYNAMIC
 
         # 各种量化均需要提供 weight
         quant_weight: torch.Tensor = quant_weight.to(device=fp_weight.device)
