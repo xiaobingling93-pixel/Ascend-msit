@@ -27,7 +27,6 @@ from msmodelslim.pytorch.llm_ptq.accelerate_adapter.hook_adapter import UpdateWe
 from msmodelslim.pytorch.llm_ptq.accelerate_adapter.hook_adapter import (replace_device_align_hook_if_needed,
                                                                          move_update_weight_hook_if_need,
                                                                          PrepareWeight)
-from msmodelslim.pytorch.llm_ptq.accelerate_adapter.switch import enable_adapter, enabled_adapter, disable_adapter
 from msmodelslim.pytorch.llm_ptq.accelerate_adapter.utils import HF_HOOK
 
 ALL_CPU_DEVICE_MAP = {
@@ -91,19 +90,7 @@ def check_all_hook(model: PreTrainedModel, target_hook_type, allow_none: bool = 
     return True
 
 
-def test_do_nothing_when_switch_is_off(clear_offload_dir):
-    disable_adapter()
-    assert not enabled_adapter()
-
-    model = get_fake_dispatched_llama_model(CPU_DISK_DEVICE_MAP)
-    replace_device_align_hook_if_needed(model)
-    assert check_all_hook(model, AlignDevicesHook)
-
-
 def test_no_error_if_model_has_no_device_align_hook(clear_offload_dir):
-    enable_adapter()
-    assert enabled_adapter()
-
     model = get_fake_dispatched_llama_model(ALL_CPU_DEVICE_MAP)
     assert not any([value.device.type == 'meta' for _, value in model.state_dict().items()])
     replace_device_align_hook_if_needed(model)
@@ -111,9 +98,6 @@ def test_no_error_if_model_has_no_device_align_hook(clear_offload_dir):
 
 
 def test_replace_result_if_model_has_device_align_hook(clear_offload_dir):
-    enable_adapter()
-    assert enabled_adapter()
-
     model = get_fake_dispatched_llama_model(CPU_DISK_DEVICE_MAP)
     assert any([value.device.type == 'meta' for _, value in model.state_dict().items()])
     replace_device_align_hook_if_needed(model)
@@ -121,9 +105,6 @@ def test_replace_result_if_model_has_device_align_hook(clear_offload_dir):
 
 
 def test_prepare_weight_can_load_weight_from_disk(clear_offload_dir):
-    enable_adapter()
-    assert enabled_adapter()
-
     model = get_fake_dispatched_llama_model(CPU_DISK_DEVICE_MAP)
     replace_device_align_hook_if_needed(model)
     assert any([value.device.type == 'meta' for _, value in model.state_dict().items()])
@@ -136,9 +117,6 @@ def test_prepare_weight_can_load_weight_from_disk(clear_offload_dir):
 
 @torch.no_grad()
 def test_prepare_weight_can_update_weight_with_post_force(clear_offload_dir):
-    enable_adapter()
-    assert enabled_adapter()
-
     model = get_fake_dispatched_llama_model(CPU_DISK_DEVICE_MAP)
     replace_device_align_hook_if_needed(model)
     assert any([value.device.type == 'meta' for _, value in model.state_dict().items()])
@@ -160,9 +138,6 @@ def test_prepare_weight_can_update_weight_with_post_force(clear_offload_dir):
 
 @torch.no_grad()
 def test_prepare_weight_can_manage_new_submodule_with_post_recurse(clear_offload_dir):
-    enable_adapter()
-    assert enabled_adapter()
-
     model = get_fake_dispatched_llama_model(CPU_DISK_DEVICE_MAP)
     replace_device_align_hook_if_needed(model)
     assert any([value.device.type == 'meta' for _, value in model.state_dict().items()])
@@ -187,9 +162,6 @@ def test_prepare_weight_can_manage_new_submodule_with_post_recurse(clear_offload
 
 @torch.no_grad()
 def test_prepare_weight_can_manage_new_parameters_automatic(clear_offload_dir):
-    enable_adapter()
-    assert enabled_adapter()
-
     model = get_fake_dispatched_llama_model(CPU_DISK_DEVICE_MAP)
     replace_device_align_hook_if_needed(model)
     assert any([value.device.type == 'meta' for _, value in model.state_dict().items()])

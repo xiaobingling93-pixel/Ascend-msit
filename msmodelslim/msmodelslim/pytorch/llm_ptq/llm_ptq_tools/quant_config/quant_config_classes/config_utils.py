@@ -10,13 +10,6 @@ A_BIT_LIST = [8, 16]
 W_BIT_LIST = [4, 8]
 GROUP_SIZE_LIST = [64, 128]
 
-OFFLOAD_TYPE = 'offload_type'
-ENABLE_LAZY_SAVE = 'enable_lazy_save'
-OFFLOAD_DISK = 'disk'
-OFFLOAD_MEMORY = 'memory'
-_SUPPORTED_LOW_MEMORY_KEY = [OFFLOAD_TYPE]
-_SUPPORTED_OFFLOAD_TYPE = [OFFLOAD_MEMORY]
-
 
 def set_quant_param(config):
     config.w_signed = True
@@ -171,23 +164,6 @@ def check_and_generate_config_param(config):
     check_type(config.use_kvcache_quant, bool, param_name="use_kvcache_quant")
     check_type(config.group_size, int, param_name="group_size")
     check_number(config.percdamp, float, 0, 1, param_name="percdamp")
-
-    # check low_memory config, must be {"offload_type": "disk"|"memory", "enable_lazy_save": True|False}
-    config.is_adapter_enabled = config.low_memory is not None
-    config.offload_type = OFFLOAD_MEMORY
-    config.enable_lazy_save = True
-    if config.is_adapter_enabled:
-        check_type(config.low_memory, dict, param_name='low_memory')
-        for key in config.low_memory:
-            if key not in _SUPPORTED_LOW_MEMORY_KEY:
-                raise KeyError(f"low_memory accept {_SUPPORTED_LOW_MEMORY_KEY}, not {key}")
-        
-        config.offload_type = config.low_memory.get(OFFLOAD_TYPE, OFFLOAD_MEMORY)
-        if config.offload_type not in _SUPPORTED_OFFLOAD_TYPE:
-            raise ValueError(f'offload_type should be in {_SUPPORTED_OFFLOAD_TYPE}, but got {config.offload_type}.')
-        
-        config.enable_lazy_save = config.low_memory.get(ENABLE_LAZY_SAVE, True)
-        check_type(config.enable_lazy_save, bool, param_name=ENABLE_LAZY_SAVE)
 
     if config.use_kvcache_quant and config.use_fa_quant:
         raise ValueError("KV-cache and FA cannot be quantized at the same time!")
