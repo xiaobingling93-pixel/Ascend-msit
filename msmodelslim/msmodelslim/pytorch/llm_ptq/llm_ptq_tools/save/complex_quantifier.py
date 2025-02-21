@@ -108,9 +108,18 @@ class ComplexQuantifier:
 
     def generate_weight_of_tp_module(self, name, module, model_quant_type):
         quant_param, _ = module.get_quant_param()
+        for mod_name, mod in module.named_modules(prefix=name):
+            if mod_name == name:
+                continue
+
+            for param_name, _, param in self.generate_weight_of_module(mod_name, mod):
+                quant_param[param_name] = param
+            self.skip_module_names.add(mod_name)
+
         if hasattr(self.cfg, 'tp_size'):
             self.concat_simulate_linear(name, module, quant_param)
-        for name, param in quant_param:
+
+        for name, param in quant_param.items():
             yield name, model_quant_type, param
 
     def generate_weight_of_norm_module(self, name, module, model_quant_type):
@@ -125,7 +134,7 @@ class ComplexQuantifier:
         yield anti_norm_name_weight, model_quant_type, anti_norm_weight.clone().detach().cpu()
         anti_norm_name_bias = name + '.module.bias' if is_inner_norm_used else name + '.bias'
         yield anti_norm_name_bias, model_quant_type, anti_norm_bias.clone().detach().cpu()
-        if is_inner_norm_used:
+        if self.is_inner_norm_used:
             yield name + '.weight', QuantType.FLOAT, module.weight.clone().detach().cpu()
 
     def generate_weight_of_linear_module(self, name, module, model_quant_type):

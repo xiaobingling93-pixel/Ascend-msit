@@ -6,12 +6,12 @@ class BaseSaver(ABC):
 
     @abstractmethod
     def pre_process(self) -> None:
-        ...
+        pass
 
     @abstractmethod
     def save(self, name, meta, data) -> None:
-        ...
+        pass
 
     @abstractmethod
     def post_process(self) -> None:
-        ...
+        pass
