@@ -22,8 +22,7 @@ from accelerate.utils import PrefixedDataset, OffloadedWeightsLoader
 from accelerate.utils import offload_state_dict, offload_weight, save_offload_index, load_offloaded_weight
 from safetensors import safe_open
 
-from msmodelslim.pytorch.llm_ptq.accelerate_adapter.utils import clear_device_cache
-from msmodelslim.pytorch.llm_ptq.accelerate_adapter.switch import enabled_adapter
+from msmodelslim.pytorch.llm_ptq.accelerate_adapter.utils import clear_device_cache, judge_module_with_accelerate
 from msmodelslim import logger as msmodelslim_logger
 from msmodelslim.pytorch.llm_ptq.accelerate_adapter.utils import HF_HOOK
 
@@ -39,48 +38,50 @@ class PrepareWeight:
         self.post_recurse = post_recurse
 
     def __enter__(self):
-        if not enabled_adapter():
+        if not judge_module_with_accelerate(self.module):
             return
 
-        if hasattr(self.module, HF_HOOK):
-            hook = getattr(self.module, HF_HOOK)
+        hook = getattr(self.module, HF_HOOK)
 
-            # enable and save old state
-            if isinstance(hook, UpdateWeightsMapHook):
-                self.post_force = hook.enable_post_force(self.post_force)
-                self.post_recurse = hook.enable_post_recurse(self.post_recurse)
+        # enable and save old state
+        if isinstance(hook, UpdateWeightsMapHook):
+            self.post_force = hook.enable_post_force(self.post_force)
+            self.post_recurse = hook.enable_post_recurse(self.post_recurse)
 
-            hook.pre_forward(self.module, *[], **{})
+        hook.pre_forward(self.module, *[], **{})
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if not enabled_adapter():
+        if not judge_module_with_accelerate(self.module):
             return
 
-        if hasattr(self.module, HF_HOOK):
-            hook = getattr(self.module, HF_HOOK)
+        hook = getattr(self.module, HF_HOOK)
 
-            hook.post_forward(self.module, *[torch.zeros([1])])
-            # restore old state
-            if isinstance(hook, UpdateWeightsMapHook):
-                hook.enable_post_force(self.post_force)
-                hook.enable_post_recurse(self.post_recurse)
+        hook.post_forward(self.module, *[torch.zeros([1])])
+        # restore old state
+        if isinstance(hook, UpdateWeightsMapHook):
+            hook.enable_post_force(self.post_force)
+            hook.enable_post_recurse(self.post_recurse)
 
 
 def upload_module_weights(module: torch.nn.Module, post_force=False, post_recurse=False):
-    if hasattr(module, HF_HOOK):
-        hook = getattr(module, HF_HOOK)
+    if not judge_module_with_accelerate(module):
+        return
 
-        if isinstance(hook, UpdateWeightsMapHook):
-            hook.enable_post_force(post_force)
-            hook.enable_post_recurse(post_recurse)
+    hook = getattr(module, HF_HOOK)
 
-        hook.pre_forward(module, *[], **{})
+    if isinstance(hook, UpdateWeightsMapHook):
+        hook.enable_post_force(post_force)
+        hook.enable_post_recurse(post_recurse)
+
+    hook.pre_forward(module, *[], **{})
 
 
 def offload_module_weights(module: torch.nn.Module):
-    if hasattr(module, HF_HOOK):
-        hook = getattr(module, HF_HOOK)
-        hook.post_forward(module, *[torch.zeros([1])], **{})
+    if not judge_module_with_accelerate(module):
+        return
+
+    hook = getattr(module, HF_HOOK)
+    hook.post_forward(module, *[torch.zeros([1])], **{})
 
 
 class WritableOffloadedWeightsLoader(OffloadedWeightsLoader):
@@ -268,12 +269,9 @@ def replace_offloaded_weights_loader_if_need(hook: AlignDevicesHook):
 
 
 def replace_device_align_hook_if_needed(module: torch.nn.Module, recurse=True, prefix=""):
-    if not enabled_adapter():
-        return
-
     msmodelslim_logger.debug(f"replace_device_align_hook_if_needed for {prefix}")
 
-    if hasattr(module, HF_HOOK) and isinstance(getattr(module, HF_HOOK), AlignDevicesHook):
+    if judge_module_with_accelerate(module) and isinstance(getattr(module, HF_HOOK), AlignDevicesHook):
         old_hook = getattr(module, HF_HOOK)
         replace_offloaded_weights_loader_if_need(old_hook)
         new_hook = UpdateWeightsMapHook(getattr(module, HF_HOOK))
@@ -290,33 +288,28 @@ def move_update_weight_hook_if_need(old_module, new_module, as_submodule=False, 
     """
     将old_module的hook移动至new_module，as_submodule设置为True时，old_module将会成为new_module的子模块
     """
-    if not enabled_adapter():
-        # 拷贝accelerate定义的hook
-        if hasattr(old_module, HF_HOOK):
-            add_hook_to_module(new_module, getattr(old_module, HF_HOOK))
-            remove_hook_from_module(old_module)
+    if not judge_module_with_accelerate(old_module):
         return
 
-    if hasattr(old_module, HF_HOOK) and id(old_module) == id(new_module):
+    if id(old_module) == id(new_module):
         hook: UpdateWeightsMapHook = getattr(old_module, HF_HOOK)
         hook.old_hook.place_submodules = as_submodule
         return
 
-    if hasattr(old_module, HF_HOOK):
-        hook: UpdateWeightsMapHook = getattr(old_module, HF_HOOK)
-        remove_hook_from_module(old_module)
-        hook.old_hook.place_submodules = as_submodule
-        old_init_force = hook.enable_init_force(force_update)
-        old_init_recurse = hook.enable_init_recurse(as_submodule)
-        add_hook_to_module(new_module, hook)
-        hook.enable_init_force(old_init_force)
-        hook.enable_init_recurse(old_init_recurse)
+    hook: UpdateWeightsMapHook = getattr(old_module, HF_HOOK)
+    remove_hook_from_module(old_module)
+    hook.old_hook.place_submodules = as_submodule
+    old_init_force = hook.enable_init_force(force_update)
+    old_init_recurse = hook.enable_init_recurse(as_submodule)
+    add_hook_to_module(new_module, hook)
+    hook.enable_init_force(old_init_force)
+    hook.enable_init_recurse(old_init_recurse)
 
 
 def get_offloaded_weights_loader_if_have(module, recurse=True) -> WritableOffloadedWeightsLoader:
     loader = None
 
-    if hasattr(module, HF_HOOK):
+    if judge_module_with_accelerate(module):
         hook = getattr(module, HF_HOOK)
 
         if isinstance(hook, UpdateWeightsMapHook):
@@ -354,9 +347,6 @@ def get_state_dict_copy(module: torch.nn.Module, skip_keys=None, device='cpu'):
 
 
 def clear_unused_module(module: torch.nn.Module):
-    if not enabled_adapter():
-        return
-
     # 情况该模块的参数、子模块、Buffer
     module._parameters = {}
     module._named_modules = {}
