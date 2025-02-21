@@ -1,4 +1,4 @@
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# Copyright (c) 2023-2025 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ from model_convert.__main__ import get_cmd_instance, BaseCommand, ModelConvertCo
 TEST_ONNX_FILE = "test.onnx"
 
 
-class TestModel(nn.Module):
+class NewTestModel(nn.Module):
     def __init__(self):
         super().__init__()
         self.conv = nn.Conv2d(3, 16, (3, 3))
@@ -40,7 +40,7 @@ class TestModel(nn.Module):
 
 class TestConvert(unittest.TestCase):
     def setUp(self) -> None:
-        model = TestModel()
+        model = NewTestModel()
         dummy_input = torch.randn((1, 3, 32, 32))
         torch.onnx.export(model, dummy_input, TEST_ONNX_FILE)
         os.chmod(TEST_ONNX_FILE, 0o640)
