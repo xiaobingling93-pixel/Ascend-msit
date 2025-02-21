@@ -146,8 +146,8 @@ class ComplexQuantifier:
         quant_weight: torch.Tensor = quant_weight.to(device=fp_weight.device)
         save_quant_weight = quant_weight.cpu().to(torch.int8)
         yield name + '.weight', model_quant_type, save_quant_weight
-        if hasattr(module, 'origin_bias') and module.origin_bias is not None:
-            yield name + '.bias', QuantType.FLOAT, module.origin_bias
+        if hasattr(module, 'has_origin_bias') and module.has_origin_bias:
+            yield name + '.bias', QuantType.FLOAT, torch.zeros(quant_weight.shape[1])
 
         # W4A16/W8A16 需要提供 weight_scale、weight_offset
         if model_quant_type in [QuantType.W8A16, QuantType.W4A16, QuantType.W8A8_DYNAMIC, QuantType.W8A8]:
