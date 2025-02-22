@@ -34,7 +34,7 @@ OmniAttentionGeneticSearcher.search_on_this_sparsity(sparsity)
 from msmodelslim.pytorch.omni_attention_pattern.omni_config import OmniAttentionConfig
 from msmodelslim.pytorch.omni_attention_pattern.omni_tools import OmniAttentionGeneticSearcher
 
-config = OmniAttentionConfig(model_path="{步骤一创建的模型路径}", pool_size=50)
+config = OmniAttentionConfig(model_path="{步骤一创建的模型路径}", save_path="{保存路径}", pool_size=50)
 
 searcher = OmniAttentionGeneticSearcher(config)
 searcher.search_on_this_sparsity(sparsity=50)

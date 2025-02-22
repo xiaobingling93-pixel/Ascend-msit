@@ -6,12 +6,12 @@
 
 表1 已验证模型列表
 
-|模型名称|框架|
-|----|-----|
-|Qwen2.5-7B|PyTorch|
-|Llama3-8B|PyTorch|
-|Qwen2.5-72B|PyTorch|
-|Llama3-70B|PyTorch|
+| 模型名称         |框架|
+|--------------|-----|
+| Qwen2.5-7B   |PyTorch|
+| Llama3-8B    |PyTorch|
+| Qwen2.5-72B  |PyTorch|
+| Llama3.1-70B |PyTorch|
 
 ### 前提条件
 已参考环境准备，完成CANN开发环境的部署、PyTorch 2.1.0及以上版本的安装及Python环境变量的配置。
@@ -26,12 +26,13 @@ pip3 install torch_npu>=2.1.0
 ### 接口说明
 OmniAttentionConfig类：
 
-|参数名|含义|是否必填| 使用说明                                                  |
-|----|----|----|-------------------------------------------------------|
-|pool_size|控制遗传算法初始化个体数量|非必填| 数据类型为INT，默认值为50，建议值在50左右（搜寻时间在10h左右）。个体数量越大，耗时越久      |
-|num_mutation|每轮进化变异的个体数量|非必填| 数据类型为INT，默认值为10，建议使用默认值。仅在调用search_incremental()方法中使用 |
-|model_path|模型路径|必填| 数据类型为string                                           |
-|seed|随机种子|非必填| 数据类型为INT，默认值为42                                       |
+| 参数名          | 含义            |是否必填| 使用说明                                                  |
+|--------------|---------------|----|-------------------------------------------------------|
+| pool_size    | 控制遗传算法初始化个体数量 |非必填| 数据类型为INT，默认值为50，建议值在50左右（搜寻时间在10h左右）。个体数量越大，耗时越久      |
+| num_mutation | 每轮进化变异的个体数量   |非必填| 数据类型为INT，默认值为10，建议使用默认值。仅在调用search_incremental()方法中使用 |
+| model_path   | 模型路径          |必填| 数据类型为string                                           |
+| save_path    | 保存路径          |必填| 数据类型为string                                           |
+| seed         | 随机种子          |非必填| 数据类型为INT，默认值为42                                       |
 <br>
 OmniAttentionGeneticSearcher类：
 
@@ -85,7 +86,7 @@ vocab.json
 from msmodelslim.pytorch.omni_attention_pattern.omni_config import OmniAttentionConfig
 from msmodelslim.pytorch.omni_attention_pattern.omni_tools import OmniAttentionGeneticSearcher
 
-config = OmniAttentionConfig(model_path="{步骤一创建的模型路径}", pool_size=50)
+config = OmniAttentionConfig(model_path="{步骤一创建的模型路径}", save_path="{保存路径}", pool_size=50)
 
 searcher = OmniAttentionGeneticSearcher(config)
 searcher.search_on_this_sparsity(sparsity=50)
@@ -94,13 +95,12 @@ searcher.search_on_this_sparsity(sparsity=50)
 参数`pool_size`控制遗传算法初始化个体的数量。参数`sparsity`控制得到的pattern的稀疏度，`sparsity`越大，则压缩力度越大，pattern中的压缩头的数量越多，也就是说，推理时的性能越快，对精度的影响也可能会更大。
 
 #### 步骤3：检查输出
-搜索出的最佳pattern会保存在`omni_attention_pattern/output`文件夹下，每种模型有一个自己的子文件夹。例如:
+搜索出的最佳pattern会保存在用户指定的“save_path”文件夹下，每种模型有一个自己的子文件夹。例如:
 
 ```
-- omni_attention_pattern/
--- output/
---- Qwen2.5-7B-Instruct/                            #模型名称
------ genetic_rowwise_sparsity_20_score_80.tsv      #示例生成文件
+- {save_path}/
+-- Qwen2.5-7B-Instruct/                            #模型名称
+---- genetic_rowwise_sparsity_20_score_80.tsv      #示例生成文件
 
 生成命名规则：
 search_incremental()的生成文件：
@@ -108,8 +108,8 @@ search_incremental()的生成文件：
     其中sparsity为当前稀疏度，score为得分，即在规定数据集中正确的数量
     
 search_on_this_sparsity(sparsity)的生成文件：
-    genetic_rowwise_sparsity_{sparsity}_round_{round}_score_{score}.tsv
-    其中，sparsity为输入稀疏度，round为进化轮次，score为得分，用户可直接选取分数最高（即为最后轮次）结果
+    genetic_rowwise_on_this_sparsity_{sparsity}_score_{score}.tsv
+    其中，sparsity为输入稀疏度，score为得分，用户可直接选取分数最高（即为最后轮次）结果
 ```
 
 #### 步骤4：使用pattern
@@ -117,6 +117,6 @@ search_on_this_sparsity(sparsity)的生成文件：
 ```
 export ATB_LLM_OMNI_ATTENTION_ENABLE=1
 export ATB_LLM_OMNI_SHIFT_WINDOWS_ENABLE=1
-export ATB_LLM_OMNI_ATTENTION_PATTERN_FILE={用户生成pattern路径}
+export ATB_LLM_OMNI_ATTENTION_PATTERN_FILE={步骤三用户生成pattern路径，指定到具体tsv文件}
 ```
 只要如上所示指定pattern对应的tsv文件，MindIE会读取该pattern并用于推理加速。
