@@ -36,6 +36,7 @@ setup(
     package_data={
         '': [
             'LICENSE',
+            'data.json',
             'README.md',
             '*.txt',
             '*.bat',

@@ -11,8 +11,8 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig, Dynami
 from ascend_utils.common.security import SafeWriteUmask
 
 from msmodelslim import logger as msmodelslim_logger
-from .omni_config import OmniAttentionConfig
-from .omni_utils import patch_with_omni_attn_pattern
+from msmodelslim.pytorch.omni_attention_pattern.omni_config import OmniAttentionConfig
+from msmodelslim.pytorch.omni_attention_pattern.omni_utils import patch_with_omni_attn_pattern
 
 # 用于评分question的数量
 ORDINAL_NUMBERS = [
@@ -53,8 +53,7 @@ class OmniAttentionGeneticSearcher:
         self.sparsity = 90
 
         self.work_dir = os.path.dirname(os.path.abspath(__file__))
-        self.data_dir = os.path.join(self.work_dir, 'data')
-        self.out_dir = os.path.join(self.work_dir, 'output', self.config._model_name)
+        self.out_dir = os.path.join(config.save_path, self.config._model_name)
         os.makedirs(self.out_dir, exist_ok=True)
 
         seed = config.seed
@@ -94,8 +93,8 @@ class OmniAttentionGeneticSearcher:
         """
         对输入数据进行分词处理。
         """
-        with open(os.path.join(self.data_dir, 'data.json'), 'r', encoding='utf-8') as fi:
-            data = json.load(fi)
+        with open(os.path.join(self.work_dir, 'data.json'), 'r', encoding='utf-8') as f:
+            data = json.load(f)
 
         self.num_books = len(data)
         self.prompts: list[torch.LongTensor] = []
@@ -298,17 +297,16 @@ class OmniAttentionGeneticSearcher:
                     best_pattern = pattern
 
             score_array_this_stage = score_per_head / occur_per_head
-            with SafeWriteUmask(umask=0o377):
-                out_file = os.path.join(
-                    self.out_dir,
-                    f'genetic_rowwise_sparsity_{self.sparsity:d}_\
-                        round_{genetic_round}_score_{best_score_this_round}.tsv'
-                )
-                # 将最佳模式保存为文件，格式为 TSV，每个值为 0 或 1（1 表示稀疏位置）
-                np.savetxt(out_file, 1 - best_pattern, delimiter='\t', fmt='%d')
-                msmodelslim_logger.info(f"Saving best pattern with sparsity {self.sparsity:d} to path {out_file}.")
-
             genetic_round += 1
+
+        with SafeWriteUmask(umask=0o377):
+            out_file = os.path.join(
+                self.out_dir,
+                f'genetic_rowwise_on_this_sparsity_{self.sparsity:d}_score_{best_score_this_round}.tsv'
+            )
+            # 将最佳模式保存为文件，格式为 TSV，每个值为 0 或 1（1 表示稀疏位置）
+            np.savetxt(out_file, 1 - best_pattern, delimiter='\t', fmt='%d')
+            msmodelslim_logger.info(f"Saving best pattern with sparsity {self.sparsity:d} to path {out_file}.")
 
     def mutation(self, score_per_head: np.ndarray) -> list[np.ndarray]:
         """

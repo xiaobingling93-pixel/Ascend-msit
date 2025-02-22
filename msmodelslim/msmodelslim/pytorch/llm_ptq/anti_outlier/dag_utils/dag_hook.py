@@ -16,7 +16,6 @@ from ascend_utils.core.dag.dag_node import DagNode
 from ascend_utils.core.dag.dag_node_io import DagNodeIO
 
 from msmodelslim import logger
-from msmodelslim.pytorch.llm_ptq.accelerate_adapter import enabled_adapter
 
 from .dag_model_hook import DagModelHook
 
@@ -46,10 +45,7 @@ class DagHook(DirectedAcyclicGraph, ABC):
         self._replaced_nodes: Set[DagNode] = set()
 
         self._parse_network_structure_tree(self.network, "", None, "")
-        if enabled_adapter():
-            self._parse_network_with_hook(self._inputs)
-        else:
-            self._parse_network(self._inputs)
+        self._parse_network_with_hook(self._inputs)
 
     def __enter__(self):
         """
@@ -412,7 +408,4 @@ class DagHook(DirectedAcyclicGraph, ABC):
 
         self._structure_tree: Dict[int, Dict] = {}
         self._parse_network_structure_tree(self.network, "", None, "")
-        if enabled_adapter():
-            self._parse_network_with_hook(self._inputs, parsed_nodes)
-        else:
-            self._parse_network(self._inputs, parsed_nodes)
+        self._parse_network_with_hook(self._inputs, parsed_nodes)

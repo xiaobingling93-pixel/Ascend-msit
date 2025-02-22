@@ -4,12 +4,10 @@ from __future__ import absolute_import, division, print_function
 import os
 import gc
 import stat
-import copy
 import functools
 from typing import OrderedDict, Mapping, Optional, Tuple, List
 import inspect
 from collections import OrderedDict as OrderedDict_CHECK
-from easydict import EasyDict
 
 from tqdm import tqdm
 import torch
@@ -21,19 +19,15 @@ from ascend_utils import ResListToRelease
 from ascend_utils.common.security import get_valid_write_path, check_type
 from msmodelslim.pytorch.llm_ptq.hooks.hook_def import ProcessHook
 from msmodelslim.pytorch.llm_ptq.hooks.factory import get_process_hooks
-from msmodelslim.pytorch.llm_ptq.accelerate_adapter import enabled_adapter
 from msmodelslim import logger as msmodelslim_logger
 
 from msmodelslim.pytorch.llm_ptq.accelerate_adapter import (PrepareWeight,
                                                             move_update_weight_hook_if_need,
-                                                            check_model_compatible,
-                                                            get_offloaded_dataset,
-                                                            MemoryStateDictConfig,
-                                                            DiskStateDictConfig,
-                                                            copy_offloaded_state_dict,
-                                                            enable_adapter,
                                                             replace_device_align_hook_if_needed)
-                                                            
+from msmodelslim.pytorch.llm_ptq.accelerate_adapter.utils import (judge_model_with_accelerate,
+                                                                  judge_module_with_accelerate)
+from msmodelslim.pytorch.llm_ptq.hooks.once import register_bias
+
 try:
     import torch_npu
 except ImportError:
@@ -59,6 +53,7 @@ from .anti_block import (
     LlavaQuantDecoder,
     LlavaClipVision
 )
+
 _FLEX_SMOOTH_IMPORTED = False
 try:
     from msmodelslim.pytorch.llm_ptq.anti_outlier.flex_smooth import flex_smooth
@@ -74,7 +69,6 @@ except ImportError:
     msmodelslim_logger.warning(
         "The current CANN version does not support importing the attach_op and Multiplier packages."
     )
-
 
 STAT_KEY_MAX = "max"
 STAT_KEY_MIN = "min"
@@ -101,86 +95,12 @@ _PREDEFINED_FUSION_KWARGS = {
 STATE_DICT_COPY_DIR = "msmodelslim_copy"
 
 
-def judge_model_with_accelerate(model: nn.Module):
-    for _, mod in model.named_modules():
-        if hasattr(mod, '_hf_hook'):
-            return True
-    return False
-
-
-def model_to_cpu(model):
-    if not judge_model_with_accelerate(model):
-        model.to("cpu")
-        return
-
-    for _, mod in model.named_modules():
-        try:
-            # npu, cuda -> cpu
-            mod.cpu()
-        except Exception as e:
-            # meta -> cpu
-            msmodelslim_logger.info("Transfering meta model to cpu device...", e)
-            if hasattr(mod, "_hf_hook"):
-                mod._hf_hook.detach_hook(mod)
-
-
-def model_to_org_device_with_buffer(model, device_org='cpu'):
-    if not judge_model_with_accelerate(model):
-        model.to(device_org)
-
-    # 将原模型的权重恢复到GPU（或meta）上
-    for _, mod in model.named_modules():
-        if hasattr(mod, '_hf_hook'):
-            mod._hf_hook.init_hook(mod)
-    for name, mod in model.named_modules():
-        # 需要将之前在cpu上可能产生的buffer同步转移到module所在的设备上
-        if not hasattr(mod, '_buffers'):
-            continue
-        if not judge_model_with_accelerate(model):
-            device = model.device
-        elif hasattr(model, 'hf_device_map') and name in model.hf_device_map:
-            device = f"npu:{model.hf_device_map[name]}" if "npu" in model.device.type else model.hf_device_map[name]
-        elif hasattr(mod, 'device'):
-            device = mod.device
-        else:
-            continue
-        for buffer_name, buffer in mod._buffers.items():
-            if buffer is not None:
-                mod.register_buffer(buffer_name, buffer.to(device))
-
-
-def deepcopy_model(model,
-                   logger,
-                   device_org=None,
-                   model_with_accelerate=True):
-    # 原模型转移到CPU上
-    for mod in model.modules():
-        try:
-            # npu, cuda -> cpu
-            mod.cpu()
-        except Exception as e:
-            # meta -> cpu
-            logger.info("Transfering meta model to cpu device...", e)
-            if hasattr(mod, "_hf_hook"):
-                mod._hf_hook.detach_hook(mod)
-
-    # 深拷贝model
-    new_model = copy.deepcopy(model)
-
-    # 删除accelerate封装的forward函数，将备份的forward函数恢复
-    new_model = remove_hook_from_module(new_model, True)
-
-    model_to_org_device_with_buffer(model, device_org)
-
-    return new_model
-
-
 def replace_rms_norm(model: nn.Module, norm_class_name: str):
     for name, module in model.named_modules():
         if module.__class__.__name__.lower() == 'layernorm':
             pass
         elif norm_class_name != 'layernorm' and module.__class__.__name__.lower() == norm_class_name.lower():
-            if enabled_adapter():
+            if judge_module_with_accelerate(module):
                 with PrepareWeight(module):
                     new_module = NormBias(module)
                     new_module.to(module.weight.data.device)
@@ -188,37 +108,8 @@ def replace_rms_norm(model: nn.Module, norm_class_name: str):
                     GraphOpt.set_module(model, name, new_module)
             else:
                 new_module = NormBias(module)
-
-                if hasattr(module, '_hf_hook'):
-                    module._hf_hook.weights_map = None
-                    new_module.old_hook = module._hf_hook
-                else:
-                    new_module.to(module.weight.data.device)
-
+                new_module.to(module.weight.data.device)
                 GraphOpt.set_module(model, name, new_module)
-
-
-def copy_state_dict(model: torch.nn.Module, typ: str = 'disk') -> Mapping:
-    if check_model_compatible(model):
-        if typ == 'disk':
-            dataset = get_offloaded_dataset(model)
-            if dataset is None:
-                # 如果没有加载到 disk，则保持一致，保存 state_dict 到 cpu
-                config = MemoryStateDictConfig()
-            else:
-                # 否则在现有的 offload 路径下新建 copy 文件夹，然后保存到里面
-                save_folder = os.path.join(dataset.save_folder, STATE_DICT_COPY_DIR)
-                config = DiskStateDictConfig().save_folder(save_folder)
-        elif typ == 'memory':
-            config = MemoryStateDictConfig()
-        else:
-            raise ValueError("state dict type must be disk or memory")
-        return copy_offloaded_state_dict(model, config)
-
-    states_dic = {}
-    for key, value in model.state_dict().items():
-        states_dic[key] = copy.deepcopy(value).to('cpu')
-    return states_dic
 
 
 def is_model_multimodal(model):
@@ -234,6 +125,7 @@ def is_model_multimodal(model):
 class AntiOutlier(object):
     """Anti-outlier for LLM activation quantization."""
 
+    @torch.no_grad()
     def __init__(
             self,
             model: nn.Module,
@@ -288,16 +180,12 @@ class AntiOutlier(object):
         if SD3_CONTEXT_EMBEDDER + ".weight" in model.state_dict().keys():
             self.is_context_embedder_model = True
 
-        # 开启低显存低内存模式
-        if self.cfg.is_adapter_enabled:
-            enable_adapter()
-
         if self.cfg.device == "cpu":
             same_device = self.cfg.device == model.device.type
         else:
             same_device = self.cfg.device == model.device
 
-        if not check_model_compatible(model) and not same_device:
+        if not self.with_accelerate and not same_device:
             self.logger.warning("Model is not on the deivce indicated in `AntiOutlierConfig`, "
                                 "Model is on the device `{}` while `AntiOutlierConfig` "
                                 "indicates `{}`".format(model.device, self.cfg.device))
@@ -309,43 +197,23 @@ class AntiOutlier(object):
         replace_device_align_hook_if_needed(model)
 
         self.norm_class_name = norm_class_name
-        if not enabled_adapter():
-            self.org_model = model
-        
+
         self.hooks = get_process_hooks(model)
 
-        # 非m4,m5,m6场景下，保存anti_outlier处理前的原始权重，为避免显存的额外占用，原始权重放在内存上
-        if self.cfg.anti_method not in ['m4', 'm5', 'm6']:
-            states_dic = copy_state_dict(model, self.cfg.offload_type)
-
-        try:
-            self.model_with_accelerate = judge_model_with_accelerate(model)
-        except Exception as e:
-            raise Exception("Please check the model and configuration.", e) from e
-        if not self.model_with_accelerate:
+        if not self.with_accelerate:
             self.device_org = next(model.parameters()).device
         else:
             self.device_org = None
-        
-         # 如果手动指定NORM_LINEAR结构，就无需拷贝模型了
+
+        # 如果手动指定NORM_LINEAR结构，就无需拷贝模型了
+        self.norm_linear_subgraph = None
         if ProcessHook.GET_NORM_LINEAR_SUBGRAPH in self.hooks and self.hooks[
             ProcessHook.GET_NORM_LINEAR_SUBGRAPH] is not None:
             self.norm_linear_subgraph = self.hooks[ProcessHook.GET_NORM_LINEAR_SUBGRAPH](model)
-            self.model = model
-        else:
-            self.model = deepcopy_model(model,
-                                        self.logger,
-                                        device_org=self.device_org,
-                                        model_with_accelerate=self.model_with_accelerate).float()
-            self.norm_linear_subgraph = None
 
-        if not enabled_adapter() and model.device.type != 'cpu':
-            self.model = deepcopy_model(model,
-                                        self.logger,
-                                        device_org=self.device_org,
-                                        model_with_accelerate=self.model_with_accelerate).float()
-        else:
-            self.model = model
+        self.model = model
+
+        register_bias(self.model)
 
         if calib_data is None:
             calib_data = []
@@ -358,9 +226,7 @@ class AntiOutlier(object):
             raise Exception("Please check your config, model and input!", e) from e
 
         # 非m4,m5,m6场景下，保存anti_outlier处理前的原始权重，作为属性存入model中
-        if self.cfg.anti_method not in ['m4', 'm5', 'm6']:
-            setattr(self.model, 'ori_state_dict', states_dic)
-        else:
+        if self.cfg.anti_method in ['m4', 'm5', 'm6']:
             setattr(self.model, 'anti_method', self.cfg.anti_method)
 
     @staticmethod
@@ -394,9 +260,6 @@ class AntiOutlier(object):
                     self.norm_linear_subgraph.update(self.linear_linear_subgraph)
                 del dag
 
-        if not enabled_adapter():
-            del self.model
-            self.model = self.org_model
         if self.cfg.anti_method != "m6":
             replace_rms_norm(self.model, self.norm_class_name)
         gc.collect()
