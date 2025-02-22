@@ -47,7 +47,9 @@
 | use_kvcache_quant | 是否使用kvcache量化功能 | False | True: 使用kvcache量化功能；<br>False: 不使用kvcache量化功能。|
 | is_dynamic | 是否使用per-token动态量化功能 | False | True: 使用per-token动态量化；<br>False: 不使用per-token动态量化。 |
 | do_smooth | 是否开启smooth功能 | False | 是否开启smooth quant算法。|
-
+| anti_calib_file | 离群值抑制校准数据文件 | None | 用于离群值抑制的校准数据文件路径(.json或.jsonl格式)。|
+| disable_threshold | 自动选择回退层的阈值 | 0 | 当值大于0时，会根据该阈值自动选择需要回退的层。值越大，回退的层越多。|
+| pdmix | 是否使用PDMix量化类型 | False | True: 使用PDMix量化类型；<br>False: 不使用PDMix量化类型。|
 
 - 更多参数配置要求，请参考量化过程中配置的参数 [QuantConfig](https://gitee.com/ascend/msit/blob/dev/msmodelslim/docs/Python-API接口说明/大模型压缩接口/大模型量化接口/PyTorch/QuantConfig.md)
   以及量化参数配置类 [Calibrator](https://gitee.com/ascend/msit/blob/dev/msmodelslim/docs/Python-API接口说明/大模型压缩接口/大模型量化接口/PyTorch/Calibrator.md)
@@ -122,4 +124,17 @@
 - 相比于W8A8量化，需额外设置`use_fa_quant`参数为True
   ```shell
   python3 quant_llama.py --model_path {浮点权重路径} --save_directory {W8A8量化权重路径} --calib_file ../common/boolq.jsonl  --device_type npu --disable_level L5 --anti_method m3 --act_method 3 --use_fa_quant True
+  ```
+##### Llama3.1-70B W8A8-pdmix量化(prefill阶段 w8a8动态量化, decode阶段 w8a8量化) 搭配 KV cache int8量化
+  ```shell
+  python3 quant_llama.py --model_path {浮点权重路径} \
+  --save_directory {W8A8-pdmix量化权重路径} \
+  --calib_file ./calib_data/calib_prompt.jsonl  \
+  --anti_calib_file ./calib_data/anti_calib_prompt.jsonl \
+  --device_type npu \
+  --anti_method m6 \
+  --act_method 3 \
+  --use_kvcache_quant True \
+  --disable_threshold 1 \
+  --pdmix True
   ```

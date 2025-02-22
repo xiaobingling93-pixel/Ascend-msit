@@ -57,6 +57,9 @@
 | part_file_size | 量化权重文件大小 | 无限制 | 单个量化权重文件大小不超过xGB。|
 | use_kvcache_quant | 是否使用kvcache量化功能 | False | True: 使用kvcache量化功能；<br>False: 不使用kvcache量化功能。|
 | is_dynamic | 是否使用per-token动态量化功能 | False | True: 使用per-token动态量化；<br>False: 不使用per-token动态量化。 |
+| disable_threshold | 自动回退阈值 | 0 | 当值大于0时，会根据阈值自动选择需要回退的层。|
+| anti_calib_file | 离群值抑制校准数据文件 | None | 用于离群值抑制的校准数据文件路径(.json或.jsonl)。|
+| pdmix | 是否使用PDMix量化类型 | False | True: 使用PDMix量化类型；<br>False: 不使用PDMix量化类型。|
 
 - 更多参数配置要求，请参考量化过程中配置的参数 [QuantConfig](https://gitee.com/ascend/msit/blob/dev/msmodelslim/docs/Python-API接口说明/大模型压缩接口/大模型量化接口/PyTorch/QuantConfig.md)
   以及量化参数配置类 [Calibrator](https://gitee.com/ascend/msit/blob/dev/msmodelslim/docs/Python-API接口说明/大模型压缩接口/大模型量化接口/PyTorch/Calibrator.md)
@@ -134,4 +137,17 @@
 ##### Qwen2.5-Coder-7B 稀疏量化 
   ```shell
   python3 quant_qwen.py --model_path {浮点权重路径} --save_directory {W4A8量化权重路径} --calib_file ../common/humaneval_x.jsonl --w_bit 4 --a_bit 8 --device_type cpu --fraction 0.02 --co_sparse True  --use_sigma True --is_lowbit False
+  ```
+##### Qwen2-72b W8A8-pdmix量化(prefill阶段 w8a8动态量化, decode阶段 w8a8量化) 搭配 KV cache int8量化
+  ```shell
+  python3 quant_qwen.py --model_path {浮点权重路径} \
+  --save_directory {W8A8-pdmix量化权重路径} \
+  --calib_file ./calib_data/calib_prompt.jsonl  \
+  --anti_calib_file ./calib_data/anti_calib_prompt.jsonl \
+  --device_type npu \
+  --anti_method m6 \
+  --act_method 3 \
+  --use_kvcache_quant True \
+  --disable_threshold 1 \
+  --pdmix True
   ```
