@@ -33,12 +33,12 @@ class CSVComparator(BaseComparator):
             df_b = pd.read_csv(file_b)
         except Exception as ex:
             logger.error(f'failed to read csv, please check {file_a}.')
-            return None
+            return pd.DataFrame()
         
         # 确保列名一致
         if set(df_a.columns) != set(df_b.columns):
             logger.error("两个 CSV 文件的列名不一致！")
-            return None
+            return pd.DataFrame()
 
         # 按 Metric 列合并两个 DataFrame
         df_merged = pd.merge(df_a, df_b, on='Metric', suffixes=('_a', '_b'))
@@ -63,7 +63,6 @@ class CSVComparator(BaseComparator):
                 if not got_error:
                     logger.warning(error_msg)
                     got_error = True
-
 
         # 存储所有行的列表
         rows = []
@@ -95,6 +94,8 @@ class CSVComparator(BaseComparator):
         return result
 
     def _save_visualization_database(self, df, sheet_name):
+        if df.shape[0] == 0:
+            return            
         if sheet_name == "service":
             for i in range(0, len(df), 3):
                 if i + 3 <= len(df):
