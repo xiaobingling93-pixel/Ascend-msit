@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 import argparse
 from components.profile.msprof.ait_prof.main_cli import (
     ProfileCommand,
@@ -20,7 +20,7 @@ from components.profile.msprof.ait_prof.main_cli import (
     check_application_string_legality,
     get_cmd_instance
 )
-from components.utils.file_open_check import FileStat
+
 
 class TestProfileCommand(unittest.TestCase):
     def test_check_output_path_legality(self):
@@ -33,7 +33,6 @@ class TestProfileCommand(unittest.TestCase):
         with self.assertRaises(argparse.ArgumentTypeError):
             check_output_path_legality("/ille@gal/path/output")
         
-
     def test_check_application_string_legality(self):
         # 测试合法应用字符串
         legal_str = "legal_app_str123"

@@ -11,34 +11,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import os
 import sys
-import copy
 import unittest
 from argparse import Namespace
-from collections import deque, Counter
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock
 
-from onnx import ModelProto, GraphProto
-
-from components.utils.log import logger
 from msit_graph.graph_extract.graph_extract import GraphAnalyze, GraphSummary
-
-# Mocking the required modules and classes
-sys.modules['onnx'] = MagicMock()
-sys.modules['google.protobuf.text_format'] = MagicMock()
-sys.modules['components.utils.log'] = MagicMock()
-sys.modules['components.utils.file_open_check'] = MagicMock()
 
 
 class TestGraphAnalyze(unittest.TestCase):
 
     def setUp(self):
-        # Mocking the logger and other necessary parts
-        self.logger_mock = MagicMock()
-        global logger
-        logger = self.logger_mock
-
         # Mocking the onnx and text_format modules
         self.onnx_mock = sys.modules['onnx']
         self.text_format_mock = sys.modules['google.protobuf.text_format']
