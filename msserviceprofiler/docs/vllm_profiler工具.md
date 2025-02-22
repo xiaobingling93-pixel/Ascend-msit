@@ -33,7 +33,7 @@ export SERVICE_PROF_CONFIG_PATH=ms_service_profiler_config.json
 6. 调用`msprof --export=on --output=${logs_prof}/PROF_xxx_xxx_xxx`命令行处理`${logs_prof}`目录下所有的落盘数据，生成msproftx.db文件
 
 # 结果说明
-### 1. 执行推理处理时间数据，数据包含字段：
+### 1. 执行推理处理时间数据
 ① ModelExec，表示模型执行时间
 ```
 rid: 请求ID
