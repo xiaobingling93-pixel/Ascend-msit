@@ -1,5 +1,5 @@
 torchrun --nnodes=1 --nproc_per_node 8  --master_port 29503 \
-    -m msmodelslim.pytorch.multi_modal.examples.osp1_2.sample_t2v_sp \
+    -m example.osp1_2.sample_t2v_sp \
     --model_path /path/to/checkpoint-xxx/model_ema \
     --num_frames 29 \
     --height 480 \

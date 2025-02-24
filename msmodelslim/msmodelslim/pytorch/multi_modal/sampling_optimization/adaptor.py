@@ -11,10 +11,7 @@ import gc
 import numpy as np
 import torch
 
-from opensora.sample.pipeline_opensora_sp import OpenSoraPipeline
-
 from .schedule_optimizer import AYSOptimizer
-from .model_open_sora_plan1_2_sp import ReStepOpenSoraPipelineV1_2
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +79,7 @@ def check_exist_and_write_permission(path: str) -> None:
 class ReStepAdaptor:
     _timestep_idx = None
 
-    def __init__(self, pipeline: OpenSoraPipeline,
+    def __init__(self, pipeline,
                  config: ReStepSearchConfig,
                  ):
         """
@@ -92,7 +89,7 @@ class ReStepAdaptor:
         self.search_config = config
         self.videos_paths = None
 
-        if not isinstance(pipeline, OpenSoraPipeline):
+        if pipeline is None:
             raise ValueError("pipeline must be OpenSoraPipeline")
 
         if not isinstance(config, ReStepSearchConfig):
@@ -106,9 +103,6 @@ class ReStepAdaptor:
             self.local_rank = torch.cuda.current_device()
         else:
             raise RuntimeError("RANK and WORLD_SIZE must be set in environment")
-
-        pipeline: ReStepOpenSoraPipelineV1_2 \
-            = self.replace_obj_class(pipeline, ReStepOpenSoraPipelineV1_2)
 
         self.pipeline = pipeline
 
