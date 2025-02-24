@@ -22,7 +22,6 @@ from ascend_utils.common.security import check_element_type, check_type, get_wri
 
 from msmodelslim import logger as msmodelslim_logger
 from msmodelslim.pytorch.llm_ptq.hooks.factory import is_deepseek_v2_chat, is_deepseek_v2_lite
-from msmodelslim.pytorch.llm_ptq.hooks.once import register_bias
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.layer_config_manager import LayerConfigManager
 
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config import QuantConfig
@@ -119,8 +118,6 @@ class Calibrator(object):
         self.model_with_accelerate = judge_model_with_accelerate(model)
 
         replace_device_align_hook_if_needed(model)
-
-        register_bias(model)
 
         # 初始化dag类
         self.dag = self.extract_dag(model)
@@ -717,8 +714,6 @@ class Calibrator(object):
                     else:
                         quant_mod = LinearSparseQuantizer(cfg=self.cfg, logger=self.logger)
                     quant_mod.set_param(mod)
-                    # 获取原权重是否有bias
-                    quant_mod.has_origin_bias = hasattr(mod, 'has_origin_bias') and mod.has_origin_bias
                     move_update_weight_hook_if_need(mod, quant_mod)
                     _set_module(model, name, quant_mod)
                     # 可能会有其他地方引用这个模块，但是可能很难找出来，保险起见清空相关参数

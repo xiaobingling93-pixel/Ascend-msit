@@ -16,7 +16,7 @@ import unittest
 from unittest.mock import patch
 import numpy as np
 import pandas as pd
-from ms_service_profiler.exporters.exporter_summary import (
+from ms_service_profiler_ext.exporters.exporter_summary import (
     is_contained_valid_iter_info,
     process_batch_record,
     calculate_statistics,
