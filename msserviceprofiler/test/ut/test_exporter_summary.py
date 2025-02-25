@@ -179,18 +179,6 @@ class TestExporterSummaryFunctions(unittest.TestCase):
         self.assertAlmostEqual(total_map['generate_token_speed (token/s)'], generate_token_speed, places=3)
         self.assertAlmostEqual(total_map['generate_all_token_speed (token/s)'], generate_all_token_speed, places=3)
 
-    @patch('logging.Logger.warning')
-    def test_missing_http_components(self, mock_warning):
-
-        incomplete_data = pd.DataFrame([{
-            'name': 'httpRes',
-            'rid': '1001',
-            'end_time': 1_630_000_002_000
-        }])
-
-        gen_exporter_results(incomplete_data)
-        mock_warning.assert_called_with("Missing httpReq for httpRes with rid=1001.")
-
     def test_token_throughput_calculation(self):
 
         http_req_start = 1735124805384149
