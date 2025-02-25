@@ -92,7 +92,7 @@ def process_files(file_pairs, output_db, output_excel):
                 logger.info("End to compare %r and %r", file_a, file_b)
 
     shutil.copy(
-        'ms_service_profiler_ext/compare_tools/compare_visualization.json',
+        Path(__file__).parent / 'compare_tools' / 'compare_visualization.json',
         Path(output_db).with_name("compare_visualization.json")
     )
 
