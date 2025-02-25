@@ -62,7 +62,6 @@ class TestCompareCmd(TestCase):
             self.assertFalse(
                 True, msg="enable ms service profiler compare task failed.")
             return
-        print(list(Path(self.COMPARE_OUTPUT_PATH).glob("*")))
         self.assertTrue((Path(self.COMPARE_OUTPUT_PATH) / 'compare_result.xlsx').exists())
         self.assertTrue((Path(self.COMPARE_OUTPUT_PATH) / 'compare_result.db').exists())
         self.assertTrue((Path(self.COMPARE_OUTPUT_PATH) / 'compare_visualization.json').exists())

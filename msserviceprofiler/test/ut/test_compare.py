@@ -1,4 +1,17 @@
-import sqlite3
+# Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
@@ -17,7 +30,7 @@ logger.warning = MagicMock()
 
 
 # Test cases for compare csv
-def test_compare_csv(tmp_path):
+def test_compare_csv_collectly(tmp_path):
     output_db = tmp_path / 'output.db'
     output_excel = tmp_path / 'output.xlsx'
 
@@ -39,7 +52,7 @@ def test_compare_csv(tmp_path):
 
 
 # Test cases for compare csv
-def test_compare_csv1(tmp_path):
+def test_compare_csv_missing_file(tmp_path):
     output_db = tmp_path / 'output.db'
     output_excel = tmp_path / 'output.xlsx'
 
@@ -57,7 +70,7 @@ def test_compare_csv1(tmp_path):
 
 
 # Test cases for compare csv
-def test_compare_csv2(tmp_path):
+def test_compare_csv_wrong_value(tmp_path):
     output_db = tmp_path / 'output.db'
     output_excel = tmp_path / 'output.xlsx'
 
@@ -74,6 +87,7 @@ def test_compare_csv2(tmp_path):
         with pd.ExcelWriter(output_excel, engine='openpyxl') as excel_writer:
             comparator = CSVComparator(db_conn, excel_writer)
             comparator.process(file_a, file_b)
+
 
 # Test cases for main
 def test_main_given_valid_args_when_run_then_success(tmp_path):
