@@ -29,6 +29,7 @@
 │   │   └-- {time_stamp}_summary.json
 │   └-- {onnx or tf or caffe}        # 原模型 dump 数据存放路径，onnx / tf / caffe 分别对应 ONNX / Tensorflow / Caffe 模型
 │       ├-- Add_100.0.1682148256368588.npy
+│       ├-- input_Add_100.0.1682148256368588.npy  # 如果是onnx模型，则会dump输入数据，并增加对应的input前缀
 │       ├-- ...
 │       └-- Where_22.0.1682148253575249.npy
 ├-- input
@@ -41,19 +42,21 @@
 ```
 
 ## 比对结果文件各字段含义说明
-- **比对结果** 在文件 `result_{timestamp}.csv` 中，比对结果的含义与基础精度比对工具完全相同，其中每个字段的含义可参考 [CANN商用版/比对步骤（推理场景）](https://www.hiascend.com/document/detail/zh/canncommercial/60RC1/devtools/auxiliarydevtool/atlasaccuracy_16_0039.html)
+- **比对结果** 在文件 `result_{timestamp}.csv` 中，比对结果的含义与基础精度比对工具完全相同，其中每个字段的含义可参考 [CANN商用版/比对步骤（推理场景）](https://www.hiascend.com/document/detail/zh/canncommercial/800/devaids/devtools/modelaccuracy/atlasaccuracy_16_0064.html)
 
 * 下面简要介绍说明结果信息：
-  |                  OpType |  NPUDump | DataType | Address | GroundTruth | DataType | TensorIndex|Shape|Overflow|CosineSimilarity|...|MeanRelativeError|CompareFailReason|IsNpuOps|
-  |------------------------:|---------:|---------:|--------:|------------:|---------:|-----------:|----:|-------:|---------------:|--:|----------------:|----------------:|-------:|
-  |                      Sub|Sub_26Mul_28| float16 |    NaN |Sub_26,Mul_28|   float32|Sub_26Mul_28:output:0|[1,1,1,108]|NO|      1|...|         0.000364|                 |NO      |
+  |                  OpType |  NPUDump | DataType | Address | GroundTruth | DataType | TensorIndex|Shape|Overflow|CosineSimilarity|...|MeanRelativeError|CompareFailReason|IsNpuOps|IsOutputNode|IsPrecisionError|
+  |------------------------:|---------:|---------:|--------:|------------:|---------:|-----------:|----:|-------:|---------------:|--:|----------------:|----------------:|-------:|-------:|-------:|
+  |                      Sub|Sub_26Mul_28| float16 |    NaN |Sub_26,Mul_28|   float32|Sub_26Mul_28:output:0|[1,1,1,108]|NO|      1|...|         0.000364|                 |NO      |NO      |NO      |
 如上所示的结果文件中主要关注以下几项:
- - [x] [NPUDump]:这个对应om模型中的算子,由于融合规则,可能会对应多个GPU/CPU算子
- - [x] [DataType]:一共有两个,一个是NPU侧的数据类型,一个是CPU/GPU侧的数据类型,二者有所不同,可能会有精度损失问题.
- - [x] [GroundTruth]:om算子所对应的onnx模型算子
- - [x] [Overflow]:数据是否出现上下溢. 
- - [x] [CompareFailReason]:比对失败原因,误差可能会因为除零非法或者不对应等原因造成无法计算,变为NaN值,会列出详细原因.
- - [x] [IsNpuOps]:用于过滤是否是npu独有节点.
+ - [x] [NPUDump]:这个对应om模型中的算子,由于融合规则,可能会对应多个GPU/CPU算子。
+ - [x] [DataType]:一共有两个,一个是NPU侧的数据类型,一个是CPU/GPU侧的数据类型,二者有所不同,可能会有精度损失问题。
+ - [x] [GroundTruth]:om算子所对应的onnx模型算子。
+ - [x] [Overflow]:数据是否出现上溢出或下溢出。
+ - [x] [CompareFailReason]:比对失败原因,误差可能会因为除零非法或者不对应等原因造成无法计算,变为NaN值,会列出详细原因。
+ - [x] [IsNpuOps]:用于过滤是否为npu独有节点。
+ - [x] [IsOutputNode]:用于过滤是否为模型的整网输出节点。
+ - [x] [IsPrecisionError]:用于过滤是否为精度异常的节点。
  - [x] [CosineSimilarity][RelativeEuclideanDistance]...[MeanRelativeError]：这是各类误差比对类型结果,主要需要看是否某一项超过精度阈值(即某项异常),若超过则需要重点关注.各对比算法说明如下：
 
   |                  误差比对类型名称 |  说明 |
