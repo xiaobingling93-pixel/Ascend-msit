@@ -15,13 +15,15 @@
 import os
 import shutil
 import unittest
+from unittest.mock import Mock
 
 import pandas as pd
 import openpyxl
 import pytest
 
 from msquickcmp.cmp_process import csv_sum, _process_is_npu_and_is_precision_error_ops, \
-    _is_row_precision_error
+    _is_row_precision_error, _is_output_node, _get_model_output_node_name_list, \
+    _find_previous_node
 
 FAKE_CSV_PATH = "./test_resource/test_csv_sum"
 
@@ -88,31 +90,33 @@ class TestProcessIsNpuAndIsPrecisionErrorOps(unittest.TestCase):
             # RelativeEuclideanDistance 
             ["/extractor/Softmax", "Add", "0.999", "0.06", "0.001", "0.04", "0.03"],
             # KullbackLeiblerDivergence
-            ["/extractor/Softmax", "Add", "0.999", "0.005", "0.007", "0.04", "0.03"],
+            ["/extractor/Reshape_3", "Add", "0.999", "0.005", "0.007", "0.04", "0.03"],
             # RootMeanSquareError
             ["/extractor/Softmax", "Add", "0.999", "0.005", "0.001", "1.1", "0.03"], 
             # MeanRelativeError
-            ["/extractor/Softmax", "Add", "0.999", "0.005", "0.001", "0.04", "10"] 
+            ["/extractor/Concat_1", "Add", "0.999", "0.005", "0.001", "0.04", "10"] 
         ]
-
-        processed_rows = _process_is_npu_and_is_precision_error_ops(self.header, self.rows)
+        node_output_name_list = ["/extractor/Reshape_3", "/extractor/Concat_1"]
+        
+        processed_rows = _process_is_npu_and_is_precision_error_ops(self.header, self.rows, node_output_name_list)
 
         self.assertIn('IsNpuOps', self.header)
+        self.assertIn('IsOutputNode', self.header)
         self.assertIn('IsPrecisionError', self.header)
 
         expected_results = [
-            ["YES", "YES"],  
-            ["YES", "NO"],  
-            ["NO", "YES"],  
-            ["NO", "NO"],
-            ["NO", "YES"],
-            ["NO", "YES"],
-            ["NO", "YES"],
-            ["NO", "YES"]     
+            ["YES", "NO", "YES"],  
+            ["YES", "NO", "NO"],  
+            ["NO", "NO", "YES"],  
+            ["NO", "NO", "NO"],
+            ["NO", "NO", "YES"],
+            ["NO", "YES", "YES"],
+            ["NO", "NO", "YES"],
+            ["NO", "YES", "YES"]     
         ]
         
         for i, row in enumerate(processed_rows[1:]):
-            self.assertEqual(row[-2:], expected_results[i])
+            self.assertEqual(row[-3:], expected_results[i])
 
 
 class TestIsRowPrecisionError(unittest.TestCase):
@@ -151,3 +155,63 @@ class TestIsRowPrecisionError(unittest.TestCase):
         # Multiple indicators do not meet the requirements
         result = _is_row_precision_error(0.85, 0.15, 0.06, 0.03, 0.02)
         self.assertTrue(result)
+        
+        
+class TestIsOutputNodeError(unittest.TestCase):
+    
+    def test__is_output_node(self):
+        node_output_name_list = []
+        result_false = _is_output_node("/extractor/Concat_1", node_output_name_list)
+        self.assertFalse(result_false)
+        
+        node_output_name_list = ["/extractor/Reshape_3", "/extractor/Concat_1"]
+        result_true = _is_output_node("/extractor/Reshape_3", node_output_name_list)
+        self.assertTrue(result_true)
+        
+        result_false = _is_output_node("", node_output_name_list)
+        self.assertFalse(result_false)
+
+
+class MockSession:
+    def get_outputs(self):
+        return [MockNode(name="output_1", outputs=["net_output"]), MockNode(name="output_2", outputs=["net_output"])]
+
+class MockGraph:
+    def __init__(self, nodes):
+        self.node = nodes
+
+class MockNode:
+    def __init__(self, name, outputs):
+        self.name = name
+        self.output = outputs
+
+
+def test_find_previous_node():
+    # 创建模拟的节点
+    node1 = MockNode(name="node1", outputs=["output_1"])
+    node2 = MockNode(name="node2", outputs=["output_2"])
+    graph = MockGraph(nodes=[node1, node2])
+
+    # 测试找到前一个节点
+    assert _find_previous_node(graph, "output_1") == "node1"
+    assert _find_previous_node(graph, "output_2") == "node2"
+
+    # 测试未找到前一个节点
+    assert _find_previous_node(graph, "output_3") is None
+
+
+def test_get_model_output_node_name_list():
+    # 创建模拟的会话和模型
+    session = MockSession()
+    node1 = MockNode(name="node1", outputs=["output_1"])
+    node2 = MockNode(name="node2", outputs=["output_2"])
+    origin_model = Mock(graph=MockGraph(nodes=[node1, node2]))
+    # 测试正常情况
+    result = _get_model_output_node_name_list(session, origin_model)
+    assert result == ["node1", "node2"], f"Expected ['node1', 'node2'], but got {result}"
+
+    # 测试找不到前一个节点的情况
+    node3 = MockNode(name="node3", outputs=["output_3"])
+    origin_model.graph.node = [node3]  # 修改模型节点
+    result = _get_model_output_node_name_list(session, origin_model)
+    assert result is None, f"Expected None, but got {result}"
