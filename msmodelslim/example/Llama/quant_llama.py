@@ -1,4 +1,4 @@
-# Copyright Huawei Technologies Co., Ltd. 2024. All rights reserved.
+# Copyright Huawei Technologies Co., Ltd. 2025. All rights reserved.
 import os
 import json
 import sys
@@ -65,6 +65,7 @@ def get_llama3_disable_names(num_layers: int) -> list:
     disable_names.append("lm_head")
     return disable_names
 
+
 def get_padding_data(tokenizer, calib_list, device_type):
     calib_dataset = []
     max_len = 0
@@ -80,6 +81,7 @@ def get_padding_data(tokenizer, calib_list, device_type):
         new_calib_dataset.append(new_inputs)
     return [torch.cat(new_calib_dataset)]
 
+
 def get_batch_tokenized_data(tokenizer, input_texts, device_type, batch_size=4):
     batch_ant_calib_texts = [input_texts[i:i + batch_size] for i in range(0, len(input_texts), batch_size)]
     tokenized_ant_calib_data = []
@@ -88,11 +90,13 @@ def get_batch_tokenized_data(tokenizer, input_texts, device_type, batch_size=4):
         tokenized_ant_calib_data.append(tmp)
     return tokenized_ant_calib_data
 
+
 def auto_layer_select(model, disable_names, disable_threshold, select_layer_data):
 
     layer_selector = LayerSelector(model=model, layer_names=disable_names)
     layer_selector.run(select_layer_data)
     return layer_selector.select_layers_by_threshold(disable_threshold)
+
 
 def parse_arguments():
     parser = ArgumentParser()
@@ -144,7 +148,8 @@ def parse_arguments():
                         validator=StringArgumentValidator(min_length=1, max_length=MAX_KEY_LENGTH, allow_none=True))
     parser.add_argument('--model_type', type=str, default='llama2',
                          choices=['llama', 'llama2', 'llama3', 'llama3.1_bf', 'llama3.1_fp'],
-                         help='Specify the type of llama model (choices: llama, llama2, llama3, llama3.1_bf, llama3.1_fp)')
+                         help='Specify the type of llama model \
+                            (choices: llama, llama2, llama3, llama3.1_bf, llama3.1_fp)')
     parser.add_argument('--anti_calib_file', type=str, default=None,
                        help='Path to anti-calibration data file (.json or .jsonl)')
     parser.add_argument('--disable_threshold', type=float, default=0,
@@ -279,7 +284,8 @@ if __name__ == '__main__':
     elif args.anti_method == 'm6':
         keys = ['.o_proj']
         anti_disable_names = ["model.layers.{}.self_attn.o_proj".format(i) for i in range(num_layers)]
-        anti_outlier_config_val = AntiOutlierConfig(anti_method=args.anti_method,\
+        anti_outlier_config_val = AntiOutlierConfig(anti_method=args.anti_method,
+                                                    dev_type=args.device_type,
                                                     disable_anti_names=anti_disable_names, flex_config={})
     elif args.anti_method:
         anti_outlier_config_val = AntiOutlierConfig(anti_method=args.anti_method)
@@ -293,7 +299,7 @@ if __name__ == '__main__':
     )
     tokenized_calib_data = []
     calib_file = args.calib_file
-    calib_texts = checker.load_calib_data(calib_file) if calib_file else args.anti_calib_file
+    calib_texts = checker.load_jsonl(calib_file) if calib_file else args.anti_calib_file
     if calib_texts is not None:
         tokenized_calib_data = quantifier.get_tokenized_data(
             calib_texts,
@@ -302,7 +308,7 @@ if __name__ == '__main__':
         )
 
     tokenized_ant_calib_data = tokenized_calib_data
-    ant_calib_texts = checker.load_calib_data(args.anti_calib_file)
+    ant_calib_texts = checker.load_jsonl(args.anti_calib_file)
     if ant_calib_texts is not None:
         tokenized_ant_calib_data = quantifier.get_batch_tokenized_data(ant_calib_texts)
 
