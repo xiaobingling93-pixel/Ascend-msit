@@ -79,8 +79,7 @@ class BufferedSafetensorsWriter(BaseWriter):
 
     def _close(self) -> None:
         # save last file if needed
-        if self.wait_save_keys:
-            self.save_one_file()
+        self.save_one_file()
 
         # rename safetensors
         for i in range(self._save_count):
@@ -115,6 +114,15 @@ class BufferedSafetensorsWriter(BaseWriter):
         self.logger.debug(f'Save index json to {index_json_path} successfully')
 
     def save_one_file(self) -> None:
+        # no tensors no saving
+        if not self.wait_save_keys:
+            return
+
+        # one tensor larger than max size
+        if self._wait_save_size > self.max_size:
+            self.logger.warning(f'Tensor is too large with size {self._wait_save_size / ONE_GB_FILE_BYTES}GB, '
+                                f'exceeds file size limit: {self.max_size / ONE_GB_FILE_BYTES}GB')
+
         self._save_count += 1
         save_file_name = f"{self.save_prefix}-{self._save_count:05d}{FILE_TMP_SUFFIX}"
         full_save_file_name = os.path.join(self.save_directory, save_file_name)
