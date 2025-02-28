@@ -521,6 +521,16 @@ class Calibrator(object):
 
         self._save(output_path, safetensors_name, json_name, save_type, part_file_size)
 
+        # For filtering bf16 weights during the calibrator.save()
+        class EmptyModule(nn.Module):
+            def __init__(self) -> None:
+                super(EmptyModule, self).__init__()
+            
+            def forward(self, x):
+                return x
+
+        self.model.save_pretrained(output_path, state_dict=EmptyModule().state_dict())     
+
     def _save(self, output_path, safetensors_name, json_name, save_type, part_file_size):
         saver = SaverFactory.create(save_type,
                                     output_dir=output_path,
@@ -545,6 +555,9 @@ class Calibrator(object):
             saver.save(name, meta, tensor)
 
         saver.post_process()
+        # Add quant description in config.json
+        quant_desc = saver.saver_list[0].meta_writer.quant_model_json_description.quant_model_description
+        self.model.config.quantization_config = quant_desc
         self.logger.info('Save successfully!')
 
     def generate_weight_of_model(self, model, weight_of_module_generator):
