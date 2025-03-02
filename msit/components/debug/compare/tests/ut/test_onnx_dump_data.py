@@ -13,6 +13,7 @@
 # limitations under the License.
 import os
 import shutil
+from unittest import mock
 
 import pytest
 import torch
@@ -26,6 +27,10 @@ from msquickcmp.common.utils import AccuracyCompareException
 FAKE_ONNX_MODEL_PATH = "fake_msquickcmp_test_onnx_model.onnx"
 OUT_PATH = FAKE_ONNX_MODEL_PATH.replace(".onnx", "")
 INPUT_SHAPE = (1, 3, 32, 32)
+AUGMENG_INPUTS_MAP_KEYS_LIST = ['input.1', '2.weight', '2.bias', '5.weight', '5.bias', '6.weight', 
+                                '6.bias', 'onnx::Conv_22', 'onnx::Conv_23', '/0/Conv_output_0', 
+                                '/2/Conv_output_0', '/3/GlobalAveragePool_output_0', 
+                                '/4/Flatten_output_0', '/5/Gemm_output_0', '20']
 
 
 class Args:
@@ -122,7 +127,8 @@ def fake_arguments():
 
 
 def test_init_given_valid_when_any_then_pass(fake_arguments):
-    aa = OnnxDumpData(fake_arguments)
+    with mock.patch('components.utils.security_check._check_parent_dir_safe', return_value=True):
+        aa = OnnxDumpData(fake_arguments)
 
     assert aa.origin_model is not None
     assert aa.origin_model is aa.model_with_inputs
@@ -155,8 +161,9 @@ def test_generate_inputs_data_given_input_path_when_valid_then_pass(fake_argumen
     input_data.tofile(input_path)
     fake_arguments.input_path = input_path
     aa = OnnxDumpData(fake_arguments)
-    aa.generate_inputs_data()
-
+    with mock.patch('components.utils.check.checker.Checker.check', return_value=True):
+        aa.generate_inputs_data()
+        
     assert aa.inputs_map is not None
     assert len(aa.inputs_map) == 1
     assert np.allclose(list(aa.inputs_map.values())[0], input_data, atol=1e-7)
@@ -194,7 +201,8 @@ def test_generate_inputs_data_given_input_path_when_shape_not_match_then_error(f
     fake_arguments.input_path = input_path
     aa = OnnxDumpData(fake_arguments)
     with pytest.raises(AccuracyCompareException):
-        aa.generate_inputs_data()
+        with mock.patch('components.utils.check.checker.Checker.check', return_value=True):
+            aa.generate_inputs_data()
 
 
 def test_generate_inputs_data_given_input_shape_when_shape_not_match_then_error(fake_arguments):
@@ -231,3 +239,15 @@ def test_load_onnx_given_no_named_node_model_when_any_then_pass(reshape_model):
 
     print([y.name for y in x.graph.node])
     assert len(set((y.name for y in x.graph.node))) == len(x.graph.node)
+    
+def test_get_input_map(fake_arguments, reshape_model):
+    origin_model = OnnxDumpData(fake_arguments)
+    input_data, inputs_map = np.random.random(INPUT_SHAPE).astype("float32"), {}
+    inputs_map["input.1"] = input_data
+    origin_model.inputs_map = inputs_map
+    session = origin_model._load_session(origin_model.dump_model_with_inputs_path)
+    dump_bins = origin_model._run_model(session, inputs_map)
+    augment_inputs_map = origin_model.get_input_map(origin_model.inputs_map, dump_bins)
+    
+    # augment data success!
+    assert list(augment_inputs_map.keys()) == AUGMENG_INPUTS_MAP_KEYS_LIST

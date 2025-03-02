@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025 Huawei Technologies Co., Ltd.
 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import os
 import unittest
 
 import torch
@@ -25,6 +25,7 @@ class TestWriteReadAtbData(unittest.TestCase):
 
         write_atb_data(tensor, "./test.bin")
         actual_tensor = read_atb_data("./test.bin")
+        os.remove("./test.bin")
         assert torch.equal(tensor, actual_tensor)
 
     def test_with_dtype(self):
@@ -32,6 +33,7 @@ class TestWriteReadAtbData(unittest.TestCase):
 
         write_atb_data(tensor, "./test-dtype.bin")
         actual_tensor = read_atb_data("./test-dtype.bin")
+        os.remove("./test-dtype.bin")
         assert torch.equal(tensor, actual_tensor)
 
     def test_with_dims(self):
@@ -40,4 +42,5 @@ class TestWriteReadAtbData(unittest.TestCase):
 
         write_atb_data(tensor, "./test-dims.bin")
         actual_tensor = read_atb_data("./test-dims.bin")
+        os.remove("./test-dims.bin")
         assert torch.equal(tensor, actual_tensor)
