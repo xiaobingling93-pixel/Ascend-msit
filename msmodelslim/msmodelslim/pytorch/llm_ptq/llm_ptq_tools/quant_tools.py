@@ -537,7 +537,8 @@ class Calibrator(object):
                                     cfg=self.cfg,
                                     safetensors_name=safetensors_name,
                                     json_name=json_name,
-                                    part_file_size=part_file_size)
+                                    part_file_size=part_file_size,
+                                    model=self.model)
 
         # quantifier 应基于量化方法予以抽象，当前仅实现了与保存相关的逻辑
         quantifier = ComplexQuantifier(cfg=self.cfg,
@@ -555,9 +556,6 @@ class Calibrator(object):
             saver.save(name, meta, tensor)
 
         saver.post_process()
-        # Add quant description in config.json
-        quant_desc = saver.saver_list[0].meta_writer.quant_model_json_description.quant_model_description
-        self.model.config.quantization_config = quant_desc
         self.logger.info('Save successfully!')
 
     def generate_weight_of_model(self, model, weight_of_module_generator):
