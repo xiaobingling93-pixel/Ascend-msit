@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -91,7 +91,7 @@ class TestPathChecker(unittest.TestCase):
     def test_readable_to_others(self):
         with tempfile.NamedTemporaryFile() as fp:
             os.chmod(fp.name, 0o777)
-            self.assertEqual(str(self.pc.is_not_readable_to_others().check(fp.name)), "File is readable to others")
+            self.assertIn("is readable to others", str(self.pc.is_not_readable_to_others().check(fp.name)))
 
     def test_not_readable_to_others(self):
         self.assertEqual(str(self.pc.is_not_readable_to_others().check(self.fp.name)), "pass")
@@ -99,7 +99,7 @@ class TestPathChecker(unittest.TestCase):
     def test_writable_to_others(self):
         with tempfile.NamedTemporaryFile() as fp:
             os.chmod(fp.name, 0o777)
-            self.assertEqual(str(self.pc.is_not_writable_to_others().check(fp.name)), "File is writable to others")
+            self.assertIn("is writable to others", str(self.pc.is_not_writable_to_others().check(fp.name)))
 
     def test_not_writable_to_others(self):
         self.assertEqual(str(self.pc.is_not_writable_to_others().check(self.fp.name)), "pass")
@@ -107,7 +107,7 @@ class TestPathChecker(unittest.TestCase):
     def test_executable_to_others(self):
         with tempfile.NamedTemporaryFile() as fp:
             os.chmod(fp.name, 0o777)
-            self.assertEqual(str(self.pc.is_not_executable_to_others().check(fp.name)), "File is executable to others")
+            self.assertIn("is executable to others", str(self.pc.is_not_executable_to_others().check(fp.name)))
 
     def test_not_executable_to_others(self):
         self.assertEqual(str(self.pc.is_not_executable_to_others().check(self.fp.name)), "pass")

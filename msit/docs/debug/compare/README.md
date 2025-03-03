@@ -111,6 +111,7 @@ compare功能可以直接通过msit命令行形式启动精度对比。启动方
 │   │   └-- {time_stamp}_summary.json
 │   └-- {onnx or tf or caffe} # 原模型 dump 数据存放路径，onnx / tf / caffe 分别对应 ONNX / Tensorflow / Caffe 模型
 │       ├-- Add_100.0.1682148256368588.npy
+│       ├-- input_Add_100.0.1682148256368588.npy  # 如果是onnx模型，则会dump输入数据，并增加对应的input前缀
 │       ├-- ...
 │       └-- Where_22.0.1682148253575249.npy
 ├-- input

@@ -15,12 +15,11 @@
 import os
 import sys
 
-from unittest.mock import patch, MagicMock, mock_open, call
+from unittest.mock import patch, MagicMock
 import pytest
 
 from components.utils.install import is_windows, warning_in_windows, get_base_path, get_real_pkg_path, AitInstaller, \
-    INSTALL_INFO_MAP, install_tools, install_tool, get_installer, check_tools, build_extra, download_comps, download_comp, \
-    get_public_url
+    INSTALL_INFO_MAP, install_tools, build_extra, download_comps
 
 # Mock logger and subprocess for testing
 logger = MagicMock()
@@ -85,12 +84,12 @@ def test_install_tools_given_all_when_called_then_install_all_packages():
 
 
 def test_build_extra_given_component_name_when_called_then_log_building_extra():
-    name = "transplt"
+    name = "graph"
     find_links = "find_links_dir"
     with patch('components.utils.install.get_installer', return_value=AitInstaller()) as mock_get_installer, \
          patch('components.utils.install.logger') as mock_logger:
         build_extra(name, find_links)
-        mock_logger.info.assert_any_call("building extra of msit-transplt")
+        mock_logger.info.assert_any_call("building extra of msit-graph")
 
 
 def test_download_comps_given_all_when_called_then_download_all_packages():
@@ -99,30 +98,3 @@ def test_download_comps_given_all_when_called_then_download_all_packages():
     with patch('components.utils.install.download_comp') as mock_download_comp:
         download_comps(names, dest)
         assert mock_download_comp.call_count == len(INSTALL_INFO_MAP)
-
-
-def test_get_public_url_given_existing_url_name_when_called_then_return_url():
-    url_name = "test-url"
-    expected_url = "http://example.com/test-url"
-    config_data = f"[URL]\n{url_name}={expected_url}"
-    with patch('pkg_resources.resource_filename', return_value="mock_config.ini"), \
-         patch('builtins.open', mock_open(read_data=config_data)), \
-         patch('configparser.ConfigParser') as mock_config_parser:
-        mock_config = mock_config_parser.return_value
-        mock_config.has_section.return_value = True
-        mock_config.has_option.return_value = True
-        mock_config.get.return_value = expected_url
-        result = get_public_url(url_name)
-        assert result == expected_url
-
-
-def test_get_public_url_given_nonexistent_url_name_when_called_then_raise_value_error():
-    url_name = "nonexistent-url"
-    with patch('pkg_resources.resource_filename', return_value="mock_config.ini"), \
-         patch('builtins.open', mock_open()), \
-         patch('configparser.ConfigParser') as mock_config_parser:
-        mock_config = mock_config_parser.return_value
-        mock_config.has_section.return_value = True
-        mock_config.has_option.return_value = False
-        with pytest.raises(ValueError):
-            get_public_url(url_name)

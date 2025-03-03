@@ -173,7 +173,7 @@ def _process_is_npu_and_is_precision_error_ops(header, rows, node_output_name_li
             if optype in OPTYPE_WHITWLIST or cosine_similarity.lower() == 'nan':
                 row.append(NO)
                 continue
-            if _is_row_precison_error(cosine_similarity, 
+            if _is_row_precision_error(cosine_similarity, 
                                     relative_euclidean_distance, 
                                     kullback_leibler_divergence, 
                                     root_mean_square_error, 
@@ -188,7 +188,7 @@ def _process_is_npu_and_is_precision_error_ops(header, rows, node_output_name_li
     return rows
 
 
-def _is_row_precison_error(cosine_similarity, 
+def _is_row_precision_error(cosine_similarity, 
                             relative_euclidean_distance, 
                             kullback_leibler_divergence, 
                             root_mean_square_error, 
@@ -210,12 +210,6 @@ def _append_column_to_csv(csv_path, node_output_show_list=None):
     csv_path = _get_single_csv_in_folder(csv_path)   
     rows = _read_and_process_csv(csv_path, _process_is_npu_and_is_precision_error_ops, node_output_show_list) 
     _write_csv(csv_path, rows)
-
-
-def get_valid_name(name: str):
-    if name and name[0] == "/":
-        name = name.lstrip("/")
-    return name.replace(".", "_").replace("/", "_")
 
 
 def mindir_to_om_process(args: CmpArgsAdapter):
