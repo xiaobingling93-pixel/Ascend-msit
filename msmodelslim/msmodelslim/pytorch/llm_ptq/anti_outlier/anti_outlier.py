@@ -470,7 +470,6 @@ class AntiOutlier(object):
             "LlamaDecoderLayer" : LlavaQuantDecoder,
             "CLIPEncoderLayer" : LlavaClipVision,
             }
-        self.model.config.device = self.device
         for name, mod in model.named_modules():
             mod_name = mod.__class__.__name__
             if (mod_name in block_dict):
