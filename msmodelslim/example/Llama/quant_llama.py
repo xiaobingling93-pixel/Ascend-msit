@@ -299,7 +299,7 @@ if __name__ == '__main__':
     )
     tokenized_calib_data = []
     calib_file = args.calib_file
-    calib_texts = checker.load_jsonl(calib_file) if calib_file else args.anti_calib_file
+    calib_texts = checker.load_jsonl(calib_file) if calib_file else args.calib_texts
     if calib_texts is not None:
         tokenized_calib_data = quantifier.get_tokenized_data(
             calib_texts,
@@ -308,9 +308,10 @@ if __name__ == '__main__':
         )
 
     tokenized_ant_calib_data = tokenized_calib_data
-    ant_calib_texts = checker.load_jsonl(args.anti_calib_file)
-    if ant_calib_texts is not None:
-        tokenized_ant_calib_data = quantifier.get_batch_tokenized_data(ant_calib_texts)
+    if args.anti_calib_file:
+        ant_calib_texts = checker.load_jsonl(args.anti_calib_file)
+        if ant_calib_texts is not None:
+            tokenized_ant_calib_data = quantifier.get_batch_tokenized_data(ant_calib_texts)
 
     if args.disable_threshold > 0:
         quantifier.create_quant_config(num_layers, tokenized_ant_calib_data)
