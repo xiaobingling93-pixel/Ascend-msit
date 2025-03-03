@@ -72,7 +72,7 @@ bash scripts/text_condition/gpu/sample_t2v_sp.sh
 ```
 
 #### 2. 搜索 timestep
-获取到模型pipeline对象后，设置采样优化参数，传入生成的校准视频文件夹目录，调用`ReStepAdaptor`类进行 `timestep` 搜索，完整示例脚本： [search_t2v_sp.sh](./examples/scripts/search_t2v_sp.sh)。
+获取到模型pipeline对象后，设置采样优化参数，传入生成的校准视频文件夹目录，调用`ReStepAdaptor`类进行 `timestep` 搜索，完整示例脚本： [search_t2v_sp.sh](../../../example/osp1_2/search_t2v_sp.sh)。
 ```python3
 # Load pipeline, for example
 pipeline: OpenSoraPipeline = load_t2v_checkpoint(model_path)
@@ -95,10 +95,10 @@ restep_adaptor = ReStepAdaptor(pipeline, config)
 scheduler_timestep = restep_adaptor.search()
 ```
 
-### 3. 用搜索的 timestep 进行推理
+#### 3. 用搜索的 timestep 进行推理
 
 
-示例推理命令（完整脚本请参考[sample_t2v_sp.sh](./examples/scripts/sample_t2v_sp.sh)）： 
+示例推理命令（完整脚本请参考[sample_t2v_sp.sh](../../../example/osp1_2/sample_t2v_sp.sh)）： 
 ```shell
 torchrun --nnodes=1 --nproc_per_node 8  --master_port 29503 \
     -m msmodelslim.pytorch.multi_modal.examples.osp1_2.sample_t2v_sp \
@@ -113,4 +113,4 @@ torchrun --nnodes=1 --nproc_per_node 8  --master_port 29503 \
     --schedule_timestep "/path/of/schedule/timestep/file.txt"
 ```
 其中，`--schedule_timestep` 为搜索得到的 timestep 文件路径。
-可参考[search_t2v_sp.sh](./examples/scripts/search_t2v_sp.sh)修改模型参数路径和搜索得到的 timestep 文件路径，执行带采样优化的推理生成。
+可参考[search_t2v_sp.sh](../../../example/osp1_2/examples/scripts/search_t2v_sp.sh)修改模型参数路径和搜索得到的 timestep 文件路径，执行带采样优化的推理生成。
