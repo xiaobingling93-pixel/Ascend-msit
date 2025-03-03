@@ -7,7 +7,8 @@
 
 | 模型名称             | 框架 | 优化特性          |  
 |------------------|-------|---------------|
-| [OpenSoraPlanV1.2](https://github.com/PKU-YuanGroup/Open-Sora-Plan/releases/tag/v1.2.0) | PyTorch | [采样优化](#采样优化) |
+| [OpenSoraPlanV1.2](https://github.com/PKU-YuanGroup/Open-Sora-Plan/releases/tag/v1.2.0) | PyTorch | [采样优化](#采样优化), [DiT缓存优化](#dit缓存优化) |
+
 - 注意： 目前OpenSoraPlanV1.2模型的采样优化功能仅支持在29*480p场景下，生成结果达成2×加速，vbench精度损失<1%
 
 ## 环境要求
@@ -41,9 +42,180 @@ pip install -e .[train]
 
 
 
+## DiT缓存优化
+
+DiT缓存优化适配器，用于优化DiT（Diffusion Transformer）模型的推理性能，通过缓存中间计算结果来加速推理生成。
+
+### 原理介绍
+
+DiT模型在推理过程中需要多次计算transformer block的输出。传统的实现方式会在每个timestep重新计算所有block的输出，而缓存优化通过分析模型在不同timestep的行为，找到可以重复利用的中间计算结果。
+
+主要优化思路：
+1. **缓存区域选择**：通过搜索算法找到最适合缓存的transformer block区域
+2. **时间步优化**：确定缓存的有效时间范围，在关键时间步进行缓存更新
+3. **增量计算**：对于非关键时间步，使用缓存的增量计算结果
+4. **质量保证**：通过校准视频确保优化后的结果与原始质量一致
+
+优化流程：
+1. 首先使用原始模型生成一组校准视频，作为质量基准
+2. 通过搜索算法探索不同的缓存配置
+3. 评估每个缓存配置生成的结果与校准视频的差异
+4. 选择能在减少计算量的同时保持生成质量的最优缓存配置
+
+```mermaid
+%%{init: {'theme': 'forest'}}%%
+sequenceDiagram
+    participant U as 用户
+    participant S as 搜索系统
+    participant M as 模型
+    
+    U->>S: 启动配置搜索
+    S->>M: 生成校准视频
+    M-->>S: 返回基准结果
+    loop 配置搜索迭代
+        S->>S: 生成缓存配置方案
+        S->>M: 使用当前配置推理
+        M-->>S: 返回优化结果
+        S->>S: 质量对比评估
+    end
+    S-->>U: 返回最优配置
+```
+
+### 使用流程概览
+
+```mermaid
+%%{init: {'theme': 'forest'}}%%
+graph TD
+    A[1.准备环境和模型] --> B[2.定义pipeline运行函数]
+    B --> C[3.配置和初始化缓存适配器]
+    C --> D[4.执行缓存配置搜索]
+    D --> E[5.使用优化配置进行推理]
+```
+
+### 详细使用步骤
+*详细使用接口说明请参考 [DitCache接口文档](../../../docs/Python-API接口说明/多模态推理优化接口/DitCache/)，[DitCacheAdaptor ](../../../docs/Python-API接口说明/多模态推理优化接口/DitCache/DitCacheAdaptor.md)*
+
+#### 1. 准备环境和模型
+
+首先确保已完成环境配置和模型下载：
+- 参考[环境要求](#环境要求)完成环境安装和模型权重下载
+
+#### 2. 定义pipeline运行函数
+
+需要定义一个闭包函数来运行pipeline并返回生成的视频。此函数将被缓存搜索过程调用，用于生成校准视频和评估不同缓存配置：
+
+```python
+def run_pipeline_and_save_videos(pipeline):
+    """运行pipeline并返回生成的视频列表
+    
+    Args:
+        pipeline: 模型pipeline实例
+        
+    Returns:
+        List[np.ndarray]: 生成的视频列表，每个视频shape为(num_frames, h, w, c)
+    """
+    positive_prompt = """
+    (masterpiece), (best quality), (ultra-detailed),
+    {}
+    """
+    
+    videos = pipeline(
+        positive_prompt.format("a dog running on the beach"),
+        num_frames=29,
+        height=480,
+        width=640,
+        num_inference_steps=100,
+        guidance_scale=7.5
+    ).images
+    
+    return videos
+```
+
+⚠️ **重要**: 在使用DitCache时，必须在pipeline前向的每个timestep开始时调用`DitCacheAdaptor.set_timestep_idx()`。这通常在模型的去噪循环中进行：
+
+```python
+# 在去噪循环中设置timestep
+for step_id, t in enumerate(timesteps):
+    DitCacheAdaptor.set_timestep_idx(step_id)  # 必须在每个timestep开始时调用
+    model_output = pipeline(...)
+```
+
+#### 3. 配置和初始化缓存适配器
+
+```python
+from msmodelslim.pytorch.multi_modal.dit_cache import DitCacheSearchConfig, DitCacheAdaptor
+
+# 设置缓存搜索配置
+config = DitCacheSearchConfig(
+    cache_ratio=1.3,  # 缓存加速比，推荐1.3
+    num_sampling_steps=100  # 采样步数
+)
+
+# 创建缓存适配器
+cache_adaptor = DitCacheAdaptor(pipeline, config)
+```
+
+#### 4. 执行缓存配置搜索
+
+```python
+# 执行搜索并获取最优配置
+searched_config = cache_adaptor.search(
+    run_pipeline_and_save_videos=run_pipeline_and_save_videos,
+    prompts_num=1  # 生成视频的数量
+)
+```
+
+完整的搜索脚本示例 [dit_cache_search_t2v_sp.sh](../../../example/osp1_2/dit_cache_search_t2v_sp.sh)：
+```bash
+#!/bin/bash
+torchrun --nnodes=1 --nproc_per_node 8 --master_port 29503 \
+    -m example.osp1_2.search_t2v_sp \
+    --model_path /path/to/checkpoint-xxx/model_ema \
+    --num_frames 29 \
+    --height 480 \
+    --width 640 \
+    --num_sampling_steps 100 \
+    ...
+    --text_prompt examples/prompt_list_0.txt \
+    --search_type dit_cache \
+    --cache_ratio 1.3 \
+    --cache_save_path "./dit_cache_config.json"  # 保存搜索结果的路径
+```
+
+#### 5. 使用优化配置进行推理
+
+完整的推理脚本示例 [dit_cache_sample_t2v_sp.sh](../../../example/osp1_2/dit_cache_sample_t2v_sp.sh)：
+```bash
+#!/bin/bash
+torchrun --nnodes=1 --nproc_per_node 8 --master_port 29503 \
+    -m example.osp1_2.sample_t2v_sp \
+    --model_path /path/to/checkpoint-xxx/model_ema \
+    --num_frames 29 \
+    --height 480 \
+    --width 640 \
+    --text_encoder_name google/mt5-xxl \
+    --text_prompt examples/prompt_list_0.txt \
+    --save_img_path "./sample_video_test" \
+    --fps 24 \
+    --guidance_scale 7.5 \
+    --num_sampling_steps 100 \
+    --sample_method EulerAncestralDiscrete \
+    --model_type "dit" \
+    --dit_cache_config "./dit_cache_config.json"  # 使用搜索得到的缓存配置
+```
+
+### 注意事项
+
+1. **必须设置timestep**: 在每个timestep开始时调用`DitCacheAdaptor.set_timestep_idx(step_id)`
+2. **搜索时间**: 缓存配置搜索过程包含校准视频生成和配置评估，可能需要较长时间
+3. **配置复用**: 搜索得到的缓存配置可以保存为JSON文件，可以重复使用
+4. **场景适配**: 不同的模型和场景可能需要不同的缓存配置，建议针对具体使用场景进行搜索优化
+5. **参数一致性**: 确保在搜索和推理时使用相同的模型参数配置（如采样步数、图像尺寸等）
+6. **加速效果**: 在29\*480p和93\*720p场景下，生成结果可达到约1.3倍加速，同时保持生成质量
+
+
 ## 自适应采样优化
 
-> **注意**: 采样优化功能目前处于实验阶段，优化策略和接口可能会随版本更新而调整。
 
 采样优化适配器，用于搜索和优化稳定扩散模型的采样步骤，以提高推理效率。
 
