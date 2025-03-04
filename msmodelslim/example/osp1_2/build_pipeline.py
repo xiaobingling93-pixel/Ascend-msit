@@ -19,7 +19,7 @@ from opensora.npu_config import npu_config
 from opensora.acceleration.parallel_states import initialize_sequence_parallel_state, get_sequence_parallel_state
 from opensora.sample.pipeline_opensora_sp import OpenSoraPipeline
 
-from example.osp1_2.model.model_open_sora_plan1_2_sp import OpenSoraPipelineV12
+from example.osp1_2.model.model_open_sora_plan1_2_sp import OpenSoraPipelineV1x2
 from msmodelslim.tools.logger import logger
 
 
@@ -77,7 +77,7 @@ def build_pipeline(args):
         # set eval mode
         transformer_model.eval()
 
-        pipeline = OpenSoraPipelineV12(vae=vae, text_encoder=text_encoder,
+        pipeline = OpenSoraPipelineV1x2(vae=vae, text_encoder=text_encoder,
                                        tokenizer=tokenizer, scheduler=scheduler,
                                        transformer=transformer_model).to(device)
 

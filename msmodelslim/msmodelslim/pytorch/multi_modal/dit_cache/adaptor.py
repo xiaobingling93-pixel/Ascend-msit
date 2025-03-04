@@ -159,7 +159,7 @@ class DitCacheAdaptor:
         """Initialize the DiT Cache Adaptor.
 
         Args:
-            pipeline: The pipeline object (expected to be OpenSoraPipelineV12 type)
+            pipeline: The pipeline object (expected to be OpenSoraPipelineV1x2 type)
                      that contains transformer blocks at the specified path.
             config (DitCacheSearchConfig): Configuration object for cache behavior
                      and search parameters.

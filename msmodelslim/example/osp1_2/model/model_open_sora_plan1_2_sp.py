@@ -18,8 +18,54 @@ except ImportError as e:
 NCCL_INFO = None
 
 
+class OneStepSampleArgs:
+    def __init__(
+            self,
+            latents,
+            timestep,
+            step_index,
+            encoder_states,
+            extra_step_kwargs,
+            added_cond_kwargs
+    ) -> None:
+        self.latents = latents,
+        self.timestep = timestep,
+        self.step_index = step_index,
+        self.encoder_states = encoder_states,
+        self.extra_step_kwargs = extra_step_kwargs,
+        self.added_cond_kwargs = added_cond_kwargs
+
+
+class TextEmbeddingsArgs:
+    def __init__(
+            self,
+            prompt: Union[str, List[str]] = None,
+            negative_prompt: str = "",
+            guidance_scale: float = 4.5,
+            num_images_per_prompt: Optional[int] = 1,
+            prompt_embeds: Optional[torch.FloatTensor] = None,
+            prompt_attention_mask: Optional[torch.FloatTensor] = None,
+            negative_prompt_embeds: Optional[torch.FloatTensor] = None,
+            negative_prompt_attention_mask: Optional[torch.FloatTensor] = None,
+            clean_caption: bool = True,
+            max_sequence_length: int = 300,
+            **kwargs
+    ) -> None:
+        self.prompt = prompt
+        self.negative_prompt = negative_prompt
+        self.guidance_scale = guidance_scale
+        self.num_images_per_prompt = num_images_per_prompt
+        self.prompt_embeds = prompt_embeds
+        self.prompt_attention_mask = prompt_attention_mask
+        self.negative_prompt_embeds = negative_prompt_embeds
+        self.negative_prompt_attention_mask = negative_prompt_attention_mask
+        self.clean_caption = clean_caption
+        self.max_sequence_length = max_sequence_length
+        self.kwargs = kwargs
+
+
 # Copy and modified from Open-Sora-Plan repo v1.2: opensora.sample.pipeline_opensora_sp
-class OpenSoraPipelineV12(OpenSoraPipeline):
+class OpenSoraPipelineV1x2(OpenSoraPipeline):
     def __init__(self, tokenizer: T5Tokenizer, text_encoder: T5EncoderModel, vae: AutoencoderKL,
                  transformer: Transformer2DModel, scheduler: DPMSolverMultistepScheduler):
         super().__init__(tokenizer, text_encoder, vae, transformer, scheduler)
@@ -251,18 +297,25 @@ class OpenSoraPipelineV12(OpenSoraPipeline):
     @torch.no_grad()
     def get_text_embeddings(
             self,
-            prompt: Union[str, List[str]] = None,
-            negative_prompt: str = "",
-            guidance_scale: float = 4.5,
-            num_images_per_prompt: Optional[int] = 1,
-            prompt_embeds: Optional[torch.FloatTensor] = None,
-            prompt_attention_mask: Optional[torch.FloatTensor] = None,
-            negative_prompt_embeds: Optional[torch.FloatTensor] = None,
-            negative_prompt_attention_mask: Optional[torch.FloatTensor] = None,
-            clean_caption: bool = True,
-            max_sequence_length: int = 300,
-            **kwargs,
+            args: TextEmbeddingsArgs
     ) -> Union[ImagePipelineOutput, Tuple]:
+        """获取文本嵌入
+        
+        Args:
+            args: TextEmbeddingsArgs，包含所有获取文本嵌入的相关参数
+        """
+        # 使用args的命名字段访问参数
+        prompt = args.prompt
+        negative_prompt = args.negative_prompt
+        guidance_scale = args.guidance_scale
+        num_images_per_prompt = args.num_images_per_prompt
+        prompt_embeds = args.prompt_embeds
+        prompt_attention_mask = args.prompt_attention_mask
+        negative_prompt_embeds = args.negative_prompt_embeds
+        negative_prompt_attention_mask = args.negative_prompt_attention_mask
+        clean_caption = args.clean_caption
+        max_sequence_length = args.max_sequence_length
+        kwargs = args.kwargs
 
         device = getattr(self, '_execution_device', None) or getattr(self, 'device', None) or torch.device('cuda')
         device = kwargs.get('device', device)  # fix bug
@@ -296,7 +349,25 @@ class OpenSoraPipelineV12(OpenSoraPipeline):
             negative_prompt_attention_mask,
         )
 
-    def one_step_sample(self, latents, timestep, step_index, encoder_states, extra_step_kwargs, added_cond_kwargs, ):
+    def one_step_sample(self, args: OneStepSampleArgs):
+        """执行一步采样
+        
+        Args:
+            args: OneStepSampleArgs，包含:
+                latents: 潜在变量
+                timestep: 当前时间步
+                step_index: 步骤索引
+                encoder_states: 编码器状态
+                extra_step_kwargs: 额外步骤参数
+                added_cond_kwargs: 额外条件参数
+        """
+        latents = args.latents
+        timestep = args.timestep
+        step_index = args.step_index
+        encoder_states = args.encoder_states
+        extra_step_kwargs = args.extra_step_kwargs
+        added_cond_kwargs = args.added_cond_kwargs
+
         timestep *= self.scheduler.num_train_timesteps
 
         timesteps_old = self.scheduler.timesteps.cpu().numpy().tolist()

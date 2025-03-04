@@ -12,6 +12,7 @@ import numpy as np
 import torch
 
 from .schedule_optimizer import AYSOptimizer
+from example.osp1_2.model.model_open_sora_plan1_2_sp import OneStepSampleArgs, TextEmbeddingsArgs
 
 logger = logging.getLogger(__name__)
 
@@ -198,11 +199,17 @@ class ReStepAdaptor:
         save_file_path = os.path.join(save_dir, 'searched_schedule.txt')
         logger.info("Result will saved at: %s", save_file_path)
 
-        denoising_fn = functools.partial(pipeline.one_step_sample,
-                                         encoder_states=no_guid_states,
-                                         extra_step_kwargs=extra_step_kwargs,
-                                         added_cond_kwargs=added_cond_kwargs,
-                                         )
+        def denoising_fn(latents, timestep, step_index):
+            return pipeline.one_step_sample(
+                OneStepSampleArgs(
+                    latents=latents,
+                    timestep=timestep,
+                    step_index=step_index,
+                    encoder_states=no_guid_states,
+                    extra_step_kwargs=extra_step_kwargs,
+                    added_cond_kwargs=added_cond_kwargs
+                )
+            )
 
         scheduler.set_timesteps(config.num_sampling_steps, device=device)
 
@@ -242,18 +249,19 @@ class ReStepAdaptor:
             """
 
         self.seed_everything(42)
-        res = self.pipeline.get_text_embeddings(positive_prompt,
-                                                negative_prompt=negative_prompt,
-                                                num_frames=args.num_frames,
-                                                height=args.height,
-                                                width=args.width,
-                                                num_inference_steps=args.num_sampling_steps,
-                                                guidance_scale=args.guidance_scale,
-                                                num_images_per_prompt=1,
-                                                mask_feature=True,
-                                                device=f"npu:{torch.cuda.current_device()}",
-                                                max_sequence_length=args.max_sequence_length,
-                                                )
+        res = self.pipeline.get_text_embeddings(TextEmbeddingsArgs(
+            prompt=positive_prompt,
+            negative_prompt=negative_prompt,
+            num_frames=args.num_frames,
+            height=args.height,
+            width=args.width,
+            num_inference_steps=args.num_sampling_steps,
+            guidance_scale=args.guidance_scale,
+            num_images_per_prompt=1,
+            mask_feature=True,
+            device=f"npu:{torch.cuda.current_device()}",
+            max_sequence_length=args.max_sequence_length,
+        ))
 
         self.pipeline.text_encoder = self.pipeline.text_encoder.to('cpu')
         self.clear_cache()
