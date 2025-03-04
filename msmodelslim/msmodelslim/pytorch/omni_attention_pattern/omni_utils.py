@@ -1,10 +1,10 @@
 # Copyright Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 import math
-import numpy as np
 import types
-import torch
-
 from typing import Optional, Tuple, Union
+
+import torch
+import numpy as np
 from transformers import Qwen2ForCausalLM, LlamaForCausalLM, DynamicCache
 from transformers.models.qwen2.modeling_qwen2 import Qwen2Attention
 from transformers.models.llama.modeling_llama import apply_rotary_pos_emb, LlamaAttention
