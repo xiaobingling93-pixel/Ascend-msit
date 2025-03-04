@@ -1,3 +1,4 @@
+# Copyright 2024 Katherine Crowson and The HuggingFace Team. All rights reserved.
 # Copyright Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 
 from typing import Optional, Union, List
