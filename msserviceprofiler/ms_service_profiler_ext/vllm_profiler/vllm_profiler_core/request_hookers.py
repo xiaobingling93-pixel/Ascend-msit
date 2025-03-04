@@ -15,12 +15,12 @@ import time
 
 from vllm.sequence import SequenceGroupMetadata
 from ms_service_profiler import Profiler, Level
-from .vllm_hooker_base import vLLMHookerBase
+from .vllm_hooker_base import VLLMHookerBase
 
 
 # generate -> add_request -> schedule -> execute_model
 # 在请求进入引擎时记录时间戳，用于后续计算队列等待时间。
-class EngineRequestTrackerHook(vLLMHookerBase):
+class EngineRequestTrackerHook(VLLMHookerBase):
     vllm_version = ("0.6.3", "0.6.3")
 
     def init(self):
@@ -31,8 +31,8 @@ class EngineRequestTrackerHook(vLLMHookerBase):
             def add_request(this, request_id, prompt, *args, **kwargs):
                 # 记录请求进入系统的时间                
                 profiler = Profiler(Level.INFO)
-                profiler.domain("request").res(request_id).metric(
-                    "timestamp", time.time()).event("RequestAdded")                
+                profiler.domain("http").res(request_id).metric(
+                    "timestamp", time.time()).event("httpReq")              
                 return ori_func(this, request_id, prompt, *args, **kwargs)
             return add_request
 
@@ -40,7 +40,7 @@ class EngineRequestTrackerHook(vLLMHookerBase):
 
 
 # 通过调度器获取 prefill/decode 阶段的请求元数据
-class SchedulerHook(vLLMHookerBase):
+class SchedulerHook(VLLMHookerBase):
     vllm_version = ("0.6.3", "0.6.3")
 
     def init(self):
@@ -61,11 +61,11 @@ class SchedulerHook(vLLMHookerBase):
                     # 判断阶段 (prefill or decode)
                     if seq_group.is_prompt: 
                         profiler = Profiler(Level.INFO)
-                        profiler.domain("request").res(request_id).metric(
+                        profiler.domain("http").res(request_id).metric(
                             "timestamp", time.time()).event("PrefillStart")
                     else:
                         profiler = Profiler(Level.INFO)
-                        profiler.domain("request").res(request_id).metric(
+                        profiler.domain("http").res(request_id).metric(
                             "timestamp", time.time()).event("DecodeStart")
                 return result
             return schedule
@@ -75,7 +75,7 @@ class SchedulerHook(vLLMHookerBase):
 
 
 # 捕获请求完成或失败事件
-class ServerGenerateHook(vLLMHookerBase):
+class ServerGenerateHook(VLLMHookerBase):
     vllm_version = ("0.6.3", "0.6.3")
 
     def init(self):
@@ -89,14 +89,14 @@ class ServerGenerateHook(vLLMHookerBase):
                 try:
                     # 记录请求开始处理时间
                     profiler = Profiler(Level.INFO)
-                    profiler.domain("request").res(request_id).metric(
+                    profiler.domain("http").res(request_id).metric(
                         "timestamp", time.time()).event("ProcessingStart")
                     ret = ori_func(this, prompt, sampling_params, request_id, *args, **kwargs)
                     cache_gen_2_req_id[id(ret)] = request_id
                     return ret
                 except Exception as e:
                     profiler = Profiler(Level.INFO)
-                    profiler.domain("request").res(request_id).metric(
+                    profiler.domain("http").res(request_id).metric(
                         "timestamp", time.time()).metric(
                         "error_type", type(e).__name__).metric(
                         "error_message", str(e)).event("RequestFailed")
@@ -115,7 +115,7 @@ class ServerGenerateHook(vLLMHookerBase):
                 except Exception as e:
                     if request_id is not None:
                         profiler = Profiler(Level.INFO)
-                        profiler.domain("request").res(request_id).metric(
+                        profiler.domain("http").res(request_id).metric(
                             "timestamp", time.time()).metric(
                             "error_type", type(e).__name__).metric(
                             "error_message", str(e)).event("RequestFailed")
@@ -124,8 +124,8 @@ class ServerGenerateHook(vLLMHookerBase):
                     if request_id is not None:
                         # 记录完成事件
                         profiler = Profiler(Level.INFO)
-                        profiler.domain("request").res(request_id).metric(
-                            "timestamp", time.time()).event("RequestCompleted")
+                        profiler.domain("http").res(request_id).metric(
+                            "timestamp", time.time()).event("httpRes")
                         cache_gen_2_req_id.pop(id(iterator), None)
 
             return iterate_with_cancellation

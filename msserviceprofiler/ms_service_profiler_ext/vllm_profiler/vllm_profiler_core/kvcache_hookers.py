@@ -27,16 +27,16 @@ class KVCacheManagerHook(VLLMHookerBase):
             def allocate(this, seq_group, *args, **kwargs):
                 profiler = Profiler(Level.INFO)
                 ori_func(this, seq_group, *args, **kwargs)
-                profiler.domain("kvcache").res(seq_group.request_id).metric(
-                    "block_num", len(this.block_tables)).event("Allocate")
+                profiler.domain("KVCache").res(seq_group.request_id).metric(
+                    "deviceBlock", len(this.block_tables)).event("Allocate")
             return allocate
 
         def append_slots_maker(ori_func):
             def append_slots(this, seq, num_lookahead_slots, *args, **kwargs):
                 profiler = Profiler(Level.INFO)
                 new_cows = ori_func(this, seq, num_lookahead_slots, *args, **kwargs)
-                profiler.domain("kvcache").res(seq.seq_id).metric(
-                    "block_num", len(this.block_tables)).event("AppendSlots")
+                profiler.domain("KVCache").res(seq.seq_id).metric(
+                    "deviceBlock", len(this.block_tables)).event("AppendSlots")
                 return new_cows
             return append_slots
 
@@ -44,8 +44,8 @@ class KVCacheManagerHook(VLLMHookerBase):
             def swap_in(this, seq_group, *args, **kwargs):
                 profiler = Profiler(Level.INFO)
                 res = ori_func(this, seq_group, *args, **kwargs)
-                profiler.domain("kvcache").res(seq_group.request_id).attr(
-                    "swap", "swap_in").metric("block_num", len(this.block_tables)).event("SwapIn")
+                profiler.domain("KVCache").res(seq_group.request_id).attr(
+                    "swap", "swap_in").metric("deviceBlock", len(this.block_tables)).event("SwapIn")
                 return res
             return swap_in
 
@@ -53,8 +53,8 @@ class KVCacheManagerHook(VLLMHookerBase):
             def swap_out(this, seq_group, *args, **kwargs):
                 profiler = Profiler(Level.INFO)
                 res = ori_func(this, seq_group, *args, **kwargs)
-                profiler.domain("kvcache").res(seq_group.request_id).attr(
-                    "swap", "swap_out").metric("block_num", len(this.block_tables)).event("SwapOut")
+                profiler.domain("KVCache").res(seq_group.request_id).attr(
+                    "swap", "swap_out").metric("deviceBlock", len(this.block_tables)).event("SwapOut")
                 return res
             return swap_out
 
@@ -62,15 +62,15 @@ class KVCacheManagerHook(VLLMHookerBase):
             def free(this, seq, *args, **kwargs):
                 profiler = Profiler(Level.INFO)
                 ori_func(this, seq, *args, **kwargs)
-                profiler.domain("kvcache").res(seq.seq_id).metric(
-                    "block_num", len(this.block_tables)).event("Free")
+                profiler.domain("KVCache").res(seq.seq_id).metric(
+                    "deviceBlock", len(this.block_tables)).event("Free")
             return free
 
         def get_stats_maker(ori_func):
             def get_stats(this, *args, **kwargs):
                 profiler = Profiler(Level.INFO)
                 stats = ori_func(this, *args, **kwargs)
-                profiler.domain("kvcache").attr(
+                profiler.domain("KVCache").attr(
                     "cpuHitCache", stats.cpu_cache_usage_sys).attr(
                     "gpuHitCache", stats.gpu_cache_usage_sys).event("GetCacheHitRate")
                 return stats
