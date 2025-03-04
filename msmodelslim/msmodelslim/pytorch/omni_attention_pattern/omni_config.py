@@ -1,7 +1,7 @@
 # Copyright Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 import os
 from dataclasses import dataclass
-from ascend_utils.common.security import check_type, get_valid_path, get_valid_write_path
+from ascend_utils.common.security import check_type, get_valid_read_path, get_valid_write_path
 
 
 @dataclass
@@ -21,24 +21,22 @@ class OmniAttentionConfig:
     '''
 
     def __post_init__(self):
-        if self.model_path is None:
-            raise ValueError("Please specify path to HF model and tokenizer.")
-        if self.save_path is None:
-            raise ValueError("Please verify pattern save path")
+        if self.model_path is None or len(self.model_path) == 0:
+            raise ValueError("Please specify path to HF model and tokenizer, model_path can't be empty.")
+        if self.save_path is None or len(self.save_path) == 0:
+            raise ValueError("Please verify pattern save path, save_path can't be empty")
+
+        check_type(self.num_mutation, int, param_name="num_mutation")
+        check_type(self.seed, int, param_name="seed")
+        check_type(self.pool_size, int, param_name="pool_size")
 
         check_type(self.model_path, str, param_name="model_path")
-        self.model_path = get_valid_path(self.model_path)
+        self.model_path = get_valid_read_path(self.model_path, is_dir=True)
         self._model_name = os.path.basename(os.path.abspath(self.model_path))
 
         check_type(self.save_path, str, param_name="save_path")
         get_valid_write_path(self.save_path, is_dir=True)
 
-        if not isinstance(self.pool_size, int) or self.pool_size <= 0:
-            raise TypeError("pool_size must be positive int")
-
-        if not isinstance(self.num_mutation, int):
-            raise TypeError("num_mutation must be int")
-
-        if not isinstance(self.seed, int):
-            raise TypeError("random seed must be int")
+        if self.pool_size <= 0:
+            raise ValueError("pool_size must be positive int")
 
