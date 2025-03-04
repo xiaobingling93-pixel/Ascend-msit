@@ -25,7 +25,7 @@ class ModelRunnerExecuteHook(VLLMHookerBase):
         def execute_model_maker(ori_func):
             def execute_model(this, model_input, kv_caches, *args, **kwargs):
                 prof = Profiler(Level.INFO)
-                prof.span_start("ModelExec")
+                prof.span_start("modelExec")
                 ret = ori_func(this, model_input, kv_caches, *args, **kwargs)
 
                 is_prefill = model_input.attn_metadata.prefill_metadata
