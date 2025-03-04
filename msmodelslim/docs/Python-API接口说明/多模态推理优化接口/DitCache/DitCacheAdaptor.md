@@ -5,10 +5,10 @@
 DiT（Diffusion Transformer）缓存适配器类，用于优化DiT模型的推理性能。通过缓存和复用中间计算结果来减少计算量，在保持生成质量的同时提升推理效率。
 
 主要特性：
-- 自动搜索最优缓存配置
-- 支持增量计算和结果复用
-- 内置质量评估机制
-- 可保存和复用搜索配置
+- 自动搜索最优缓存配置。
+- 支持增量计算和结果复用。
+- 内置质量评估机制。
+- 保存和复用搜索配置。
 
 ## 2. API参考
 
@@ -71,7 +71,7 @@ def search(self,
 - prompts_num (int): 生成视频的数量，默认为1
 
 ##### 返回值
-- DitCacheConfig: 包含以下优化参数的配置对象
+- DitCacheConfig: 包含以下优化参数的配置对象：
   - cache_step_start: 开始使用缓存的时间步
   - cache_step_interval: 缓存更新间隔
   - cache_block_start: 开始缓存的block索引
@@ -116,40 +116,36 @@ searched_config = cache_adaptor.search(
 ```
 
 ### 3.2 使用流程
-1. 初始化DitCacheAdaptor实例
-2. 在扩散循环中，每个时间步开始时调用set_timestep_idx()
-3. 调用search()方法进行缓存配置搜索
-4. 使用返回的缓存配置进行推理
+1. 初始化DitCacheAdaptor实例。
+2. 在扩散循环中，每个时间步开始时调用set_timestep_idx()。
+3. 调用search()方法进行缓存配置搜索。
+4. 使用返回的缓存配置进行推理。
 
 ### 3.3 注意事项
 
 1. **必须设置timestep**
-   - 在每个timestep开始时调用`DitCacheAdaptor.set_timestep_idx(step_id)`
-   - 通常在模型的去噪循环中进行：
-   ```python
-   for step_id, t in enumerate(timesteps):
-       DitCacheAdaptor.set_timestep_idx(step_id)  # 必须在每个timestep开始时调用
-       model_output = pipeline(...)
-   ```
+    在每个timestep开始时调用`DitCacheAdaptor.set_timestep_idx(step_id)`。通常在模型的去噪循环中进行，示例如下：
+    ```python
+    for step_id, t in enumerate(timesteps):
+        DitCacheAdaptor.set_timestep_idx(step_id)  # 必须在每个timestep开始时调用
+        model_output = pipeline(...)
+    ```
 
-2. **搜索配置**
-   - cache_ratio推荐设置为1.3，表示期望的加速比
-   - 搜索过程包含校准视频生成和配置评估，可能需要较长时间
-   - 建议在性能较好的设备上运行搜索过程
+1. **搜索配置**
 
-3. **配置保存和复用**
-   - 搜索得到的配置可以保存为JSON文件
-   - 相同场景下可以直接加载使用，无需重新搜索
+    cache_ratio推荐设置为1.3表示期望的加速比，搜索过程包含校准视频生成和配置评估可能需要较长时间，建议在性能较好的设备上运行搜索过程。
 
-4. **使用场景**
-   - 当前支持29*480p和93*720p场景
-   - 可达到约1.3倍加速，同时保持生成质量
-   - 不同场景可能需要重新搜索最优配置
+2. **配置保存和复用**
 
-5. **参数一致性**
-   - 确保搜索和推理时使用相同的模型参数配置，优化后的缓存配置应用于推理时，需要确保模型和数据处理流程与
-搜索时保持一致
-   - 包括但不限于：采样步数、图像尺寸等
+    搜索得到的配置可以保存为JSON文件，相同场景下可以直接加载使用而无需重新搜索。
+
+3. **使用场景**
+
+    当前支持29\*480p和93\*720p场景，可达到约1.3倍加速同时保持生成质量，不同场景可能需要重新搜索最优配置。
+
+4. **参数一致性**
+
+    确保搜索和推理时使用相同的模型参数配置，优化后的缓存配置应用于推理时需要确保模型和数据处理流程与搜索时保持一致，包括但不限于采样步数、图像尺寸等。
 
 ## 4. 技术原理
 
@@ -157,8 +153,8 @@ searched_config = cache_adaptor.search(
 
 #### 4.1.1 基本假设
 DiT缓存优化基于以下核心思想：
-- 在扩散过程中，相邻时间步的transformer block输出变化是渐进的
-- 某些block的计算结果可以通过增量方式获得，无需完整重算
+- 在扩散过程中，相邻时间步的transformer block输出变化是渐进的。
+- 某些block的计算结果可以通过增量方式获得，无需完整重算。
 
 #### 4.1.2 数学模型
 在扩散模型中，令 $h_{t,i}$ 表示时间步 $t$ 第 $i$ 个transformer block的隐状态输出：
@@ -166,9 +162,9 @@ DiT缓存优化基于以下核心思想：
 $$ h_{t,i} = \mathcal{F}_i(h_{t,i-1}), \quad i \in [1,N] $$
 
 其中：
-- $\mathcal{F}_i$ 表示第 $i$ 个transformer block的变换函数
-- $N$ 为transformer block总数
-- $t \in [0,T]$ 为扩散时间步，$T$ 为总时间步数
+- $\mathcal{F}_i$ 表示第 $i$ 个transformer block的变换函数。
+- $N$ 为transformer block总数。
+- $t \in [0,T]$ 为扩散时间步，$T$ 为总时间步数。
 
 ### 4.2 增量计算
 
@@ -194,21 +190,21 @@ $$ h_{t,j} = h_{t,i} + \Delta_{t,[i:j]} \approx h_{t,i} + \Delta_{t-1,[i:j]} $$
 ### 4.3 缓存策略
 
 #### 4.3.1 基础计算
-对于起始block $(i = \text{block_start})$，直接计算：
+对于起始block $(i = block\_start)$，直接计算：
 
 $$ h_{t,i} = \mathcal{F}_i(h_{t,i-1}) $$
 
 #### 4.3.2 增量更新机制
-在缓存更新时间点 $(t \bmod \text{interval} = 0)$，计算并存储区间差异：
+在缓存更新时间点 $(t \bmod interval = 0)$，计算并存储区间差异：
 
 $$ \Delta_{t,[i:j]} = \mathcal{F}_{[i:j]}(h_{t,i}) - h_{t,i} $$
 
 其中 $\mathcal{F}_{[i:j]}$ 表示从block $i$ 到 $j$ 的复合变换。
 
 #### 4.3.3 增量重建过程
-在缓存复用期间 $(t \bmod \text{interval} \neq 0)$，使用存储的差异重建输出：
+在缓存复用期间 $(t \bmod interval \neq 0)$，使用存储的差异重建输出：
 
-$$ h_{t,j} = h_{t,i} + \Delta_{t-\delta t,[i:j]}, \quad \delta t = t \bmod \text{interval} $$
+$$ h_{t,j} = h_{t,i} + \Delta_{t-\delta t,[i:j]}, \quad \delta t = t \bmod interval $$
 
 ### 4.4 工程实现
 
@@ -264,12 +260,12 @@ elif _block_idx == blk_end:
 
 #### 4.4.3 配置参数
 缓存机制的关键控制参数：
-- `cache_step_start`: 开始使用缓存的时间步
-- `cache_step_interval`: 缓存更新间隔
-- `cache_block_start`: 起始缓存block位置
-- `cache_num_blocks`: 缓存block数量
+- `cache_step_start`: 开始使用缓存的时间步。
+- `cache_step_interval`: 缓存更新间隔。
+- `cache_block_start`: 起始缓存block位置。
+- `cache_num_blocks`: 缓存block数量。
 
 #### 4.4.4 实现注意事项
-1. 必须在每个时间步开始时调用`set_timestep_idx()`
-2. 确保缓存参数合理设置，避免影响生成质量
-3. 注意内存使用，及时清理不需要的缓存
+1. 必须在每个时间步开始时调用`set_timestep_idx()`。
+2. 确保缓存参数合理设置，避免影响生成质量。
+3. 注意内存使用，及时清理不需要的缓存。
