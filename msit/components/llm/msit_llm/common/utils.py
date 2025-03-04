@@ -33,6 +33,10 @@ NAMEDTUPLE_PRECISION_MODE = namedtuple(
     'precision_mode', ["keep_origin_dtype", "force_fp16", "force_fp32"]
 )("keep_origin_dtype", "force_fp16", "force_fp32")
 
+DEVICE_COUNT_MAX = 256
+DEVICE_NUM_MIN = 0
+DEVICE_NUM_MAX = 255
+
 
 def str2bool(v):
     if isinstance(v, bool):
@@ -241,3 +245,42 @@ def load_file_to_read_common_check_for_cli(value, exts=None):
     except Exception as e:
         raise argparse.ArgumentTypeError("%r" % value) from e
     return value
+
+
+def check_device_integer_range_valid(device_id):
+    if device_id < DEVICE_NUM_MIN or device_id > DEVICE_NUM_MAX:
+        raise argparse.ArgumentTypeError("device id: {} is invalid. valid value range is [{}, {}]".format(
+                        device_id, DEVICE_NUM_MIN, DEVICE_NUM_MAX))
+
+
+def check_device_range_valid(value):
+    # if contain , split to int list
+    try:
+        # Check if the value contains a comma; if so, split into a list of integers
+        if ',' in value:
+            ilist = [int(v) for v in value.split(',')]
+            if len(ilist) > DEVICE_COUNT_MAX:
+                raise argparse.ArgumentTypeError(
+                    f"too much device id in --device, max permitted count is {DEVICE_COUNT_MAX}"
+                )
+            for ivalue in ilist:
+                check_device_integer_range_valid(ivalue)
+            return ilist
+        else:
+            # default as single int value
+            if not value.isdigit():
+                raise argparse.ArgumentTypeError("%s contains special characters other than numbers." % value)
+            ivalue = int(value)
+            check_device_integer_range_valid(ivalue)
+            return ivalue
+    except ValueError as e:
+        raise argparse.ArgumentTypeError("Argument npu-id invalid input value: {}. "
+                                         "Please provide a valid integer or a comma-separated list of integers."
+                                         .format(value)) from e
+
+
+def check_token_range(value):
+    ivalue = int(value)
+    if ivalue <= 0:
+        raise ValueError("Token range must greater than 0")
+    return ivalue

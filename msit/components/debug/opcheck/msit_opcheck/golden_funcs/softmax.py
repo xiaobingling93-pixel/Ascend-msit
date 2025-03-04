@@ -29,14 +29,11 @@ class SoftmaxOperation(OperationTest):
             if attr['key'] == 'axes':
                 axis = attr['value']['list']['i']
         for attr in self.op_param['input_desc'][0]['attr']:
-            if attr['key'] == 'origin_format':
-                ori_format = attr['value']['s']
             if attr['key'] == 'origin_shape':
                 ori_shape = attr['value']['list']['i']
-        cur_format = self.op_param['input_desc'][0]['layout']
         ipt_dtype = DATA_TYPE_MAP[self.op_param['input_desc'][0]['dtype']]
         out_dtype = DATA_TYPE_MAP[self.op_param['output_desc'][0]['dtype']]
-        inputs = [cur_format, ori_format, ori_shape, data_in, axis, ipt_dtype, out_dtype]
+        inputs = [ori_shape, data_in, axis, ipt_dtype, out_dtype]
         res = self._softmax_v2(inputs)
         return [res]
 
@@ -79,31 +76,16 @@ class SoftmaxOperation(OperationTest):
 
     def _softmax_v2(self, inputs):
         
-        cur_format, ori_format, ori_shape, data, axis, ipt_dtype, out_dtype = inputs
+        ori_shape, data, axis, ipt_dtype, out_dtype = inputs
         if ipt_dtype == "float16":
             data = data.astype("float32")
         # the axis is corresponding to the original shape
         # normalize axis
         axis = self.normalize_axis(axis, len(ori_shape))
 
-        # convert any format to ND
-        if cur_format == "NC1HWC0":
-            data = fhd2nd(data, ori_shape, ori_format)
-        elif cur_format == "FRACTAL_NZ":
-            data = nz2nd(data, ori_shape)
-        elif cur_format == "NDC1HWC0":
-            data = shd2nd(data, ori_shape, ori_format)
-
         # calc softmax
         result = self.softmax(data, axis)
 
-        # convert ND to target format
-        if cur_format == "NC1HWC0":
-            result = nd2fhd(result, ori_format)
-        elif cur_format == "FRACTAL_NZ":
-            result = nd2nz(result)
-        elif cur_format == "NDC1HWC0":
-            result = to_ndc1hwc0(result, ori_format)
         if out_dtype == "bfloat16":
             result = result.astype(tf.bfloat16.as_numpy_dtype, copy=False)
         else:

@@ -3,6 +3,7 @@ import os
 import json
 import sys
 import torch
+import torch.nn.functional as F
 
 current_directory = os.path.dirname(os.path.abspath(__file__))
 parent_directory = os.path.abspath(os.path.join(current_directory, '..', ".."))
@@ -12,7 +13,7 @@ from ascend_utils.common.security.path import get_valid_write_path, get_valid_re
 from example.common.utils import SafeGenerator, ArgumentParser, StringArgumentValidator, MAX_KEY_LENGTH, MAX_JSON_LENGTH
 from msmodelslim.pytorch.llm_ptq.anti_outlier import AntiOutlier, AntiOutlierConfig
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
-
+from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.layer_select import LayerSelector
 
 CPU = "cpu"
 NPU = "npu"
@@ -65,6 +66,38 @@ def get_llama3_disable_names(num_layers: int) -> list:
     return disable_names
 
 
+def get_padding_data(tokenizer, calib_list, device_type):
+    calib_dataset = []
+    max_len = 0
+    for calib_data in calib_list:
+        inputs = tokenizer(calib_data, return_tensors='pt', add_special_tokens=False)
+        calib_dataset.append(
+            inputs.data['input_ids'].to(device_type)
+        )
+        max_len = max(max_len, inputs.data['input_ids'].size(1))
+    new_calib_dataset = []
+    for inputs in calib_dataset:
+        new_inputs = F.pad(inputs, (0, max_len - inputs.size(1)), value=0)
+        new_calib_dataset.append(new_inputs)
+    return [torch.cat(new_calib_dataset)]
+
+
+def get_batch_tokenized_data(tokenizer, input_texts, device_type, batch_size=4):
+    batch_ant_calib_texts = [input_texts[i:i + batch_size] for i in range(0, len(input_texts), batch_size)]
+    tokenized_ant_calib_data = []
+    for prompt in batch_ant_calib_texts:
+        tmp = get_padding_data(tokenizer, prompt, device_type)
+        tokenized_ant_calib_data.append(tmp)
+    return tokenized_ant_calib_data
+
+
+def auto_layer_select(model, disable_names, disable_threshold, select_layer_data):
+
+    layer_selector = LayerSelector(model=model, layer_names=disable_names)
+    layer_selector.run(select_layer_data)
+    return layer_selector.select_layers_by_threshold(disable_threshold)
+
+
 def parse_arguments():
     parser = ArgumentParser()
     parser.add_argument('--model_path', type=str, help="model and tokenizer path")
@@ -114,20 +147,27 @@ def parse_arguments():
     parser.add_argument('--model_name', type=str, default=None,
                         validator=StringArgumentValidator(min_length=1, max_length=MAX_KEY_LENGTH, allow_none=True))
     parser.add_argument('--model_type', type=str, default='llama2',
-                        choices=['llama', 'llama2', 'llama3', 'llama3.1_bf', 'llama3.1_fp'],
-                        help='Specify the type of llama model'
-                        '(choices: llama, llama2, llama3, llama3.1_bf, llama3.1_fp)')
+                         choices=['llama', 'llama2', 'llama3', 'llama3.1_bf', 'llama3.1_fp'],
+                         help='Specify the type of llama model \
+                            (choices: llama, llama2, llama3, llama3.1_bf, llama3.1_fp)')
+    parser.add_argument('--anti_calib_file', type=str, default=None,
+                       help='Path to anti-calibration data file (.json or .jsonl)')
+    parser.add_argument('--disable_threshold', type=float, default=0,
+                       help='Disable threshold when auto select disable names')
+    parser.add_argument('--pdmix', type=cmd_bool, default=False,
+                       help='use pdmix quantization type')
     return parser.parse_args()
 
 
 class Quantifier:
-    def __init__(self, model_path_or_name, quant_config=None,
-                 anti_outlier_config=None, device_type='cpu', **kwargs):
+    def __init__(self, model_path_or_name, args,
+                 anti_outlier_config=None, device_type='cpu', rank=0, **kwargs):
+        self.args = args
+        self.rank = rank
         safe_generator = SafeGenerator()
         self.device_type = device_type
         device_map = CPU if self.device_type == CPU else "auto"
 
-        self.quant_config = quant_config
         self.anti_outlier_config = anti_outlier_config
         self.model_path_or_name = model_path_or_name
         self.config = safe_generator.get_config_from_pretrained(self.model_path_or_name, trust_remote_code=True)
@@ -138,12 +178,59 @@ class Quantifier:
             device_map=device_map,
             trust_remote_code=True
         )
-
         tokenizer_args = kwargs.get("tokenizer_args", {})
         self.tokenizer = safe_generator.get_tokenizer_from_pretrained(
             self.model_path_or_name, use_fast=False, trust_remote_code=True, legacy=False, **tokenizer_args
         )
         self.model_name = kwargs.get("model_name", None)
+        self.quant_config = None
+
+    def create_quant_config(self, num_layers, select_layer_data=None):
+        args = self.args
+        # Check if disable_names is provided, if not and a_bit is 8, generate disable_names
+        disable_names = args.disable_names
+        if not disable_names and args.a_bit == 8:
+            if args.disable_threshold > 0:
+                disable_names = get_down_proj_disable_names(num_layers)
+            elif args.model_type == 'llama3':
+                disable_names = get_llama3_disable_names(num_layers)
+            elif args.model_type == 'llama3.1_fp':
+                disable_names = get_llama3_1_disable_names(num_layers)
+            else:
+                disable_names = get_down_proj_disable_names(num_layers)
+        if args.disable_threshold > 0:
+            disable_names = auto_layer_select(self.model, disable_names, args.disable_threshold, select_layer_data)
+
+        quant_config = QuantConfig(
+            w_bit=args.w_bit,
+            a_bit=args.a_bit,
+            disable_names=disable_names,
+            dev_type=args.device_type,
+            dev_id=self.rank,
+            act_method=args.act_method,
+            w_sym=args.w_sym,
+            mm_tensor=False,
+            co_sparse=args.co_sparse,
+            fraction=args.fraction,
+            sigma_factor=args.sigma_factor,
+            use_sigma=args.use_sigma,
+            is_lowbit=args.is_lowbit,
+            do_smooth=args.do_smooth,
+            open_outlier=args.open_outlier,
+            group_size=args.group_size,
+            use_kvcache_quant=args.use_kvcache_quant,
+            is_dynamic=args.is_dynamic,
+            disable_last_linear=args.disable_last_linear,
+        )
+
+        if args.use_fa_quant:
+            quant_config = quant_config.fa_quant(fa_amp=args.fa_amp)
+        self.quant_config = quant_config
+
+
+
+    def get_batch_tokenized_data(self, input_texts, batch_size=4):
+        return get_batch_tokenized_data(self.tokenizer, input_texts, self.device_type, batch_size)
 
     def get_tokenized_data(self, input_texts,
                            input_ids_name='input_ids',
@@ -155,17 +242,20 @@ class Quantifier:
                 [inputs.data[input_ids_name], inputs.data[attention_mask_name]])
         return tokenized_data
 
-    def convert(self, tokenized_data, save_path, disable_level, part_file_size=None):
+    def convert(self, tokenized_data, save_path, disable_level, part_file_size=None, tokenized_ant_calib_data=None):
         if self.device_type == NPU:
             # 避免在线编译算子，使用二进制编译的算子
             torch.npu.set_compile_mode(jit_compile=False)
+        if tokenized_ant_calib_data is None:
+            tokenized_ant_calib_data = tokenized_data
 
         if self.anti_outlier_config is not None:
             if self.model_name == "baichuan":
-                anti_outlier = AntiOutlier(self.model, calib_data=tokenized_data,
+                anti_outlier = AntiOutlier(self.model, calib_data=tokenized_ant_calib_data,
                                            cfg=self.anti_outlier_config, norm_class_name="RMSNorm")
             else:
-                anti_outlier = AntiOutlier(self.model, calib_data=tokenized_data, cfg=self.anti_outlier_config)
+                anti_outlier = AntiOutlier(self.model, calib_data=tokenized_ant_calib_data, \
+                                           cfg=self.anti_outlier_config)
             anti_outlier.process()
 
         if not os.path.exists(save_path):
@@ -185,54 +275,29 @@ if __name__ == '__main__':
     save_directory = args.save_directory
     num_layers = checker.get_config_from_pretrained(model_path, trust_remote_code=True).num_hidden_layers
 
-    disable_names = args.disable_names
-    if not disable_names and args.model_type == 'llama3':
-        disable_names = get_llama3_disable_names(num_layers)
-    if not disable_names and args.a_bit == 8:
-        if args.model_type == 'llama3.1_fp':
-            disable_names = get_llama3_1_disable_names(num_layers)
-        else:
-            disable_names = get_down_proj_disable_names(num_layers)
-
-    quant_conf = QuantConfig(
-        w_bit=args.w_bit,
-        a_bit=args.a_bit,
-        disable_names=disable_names,
-        dev_type=args.device_type,
-        dev_id=rank,
-        act_method=args.act_method,
-        w_sym=args.w_sym,
-        mm_tensor=False,
-        co_sparse=args.co_sparse,
-        fraction=args.fraction,
-        sigma_factor=args.sigma_factor,
-        use_sigma=args.use_sigma,
-        is_lowbit=args.is_lowbit,
-        do_smooth=args.do_smooth,
-        open_outlier=args.open_outlier,
-        group_size=args.group_size,
-        use_kvcache_quant=args.use_kvcache_quant,
-        is_dynamic=args.is_dynamic,
-        disable_last_linear=args.disable_last_linear,
-    )
-
-    if args.use_fa_quant:
-        quant_conf = quant_conf.fa_quant(fa_amp=args.fa_amp)
 
     anti_outlier_config_val = None
     if args.anti_method == 'm3':
         anti_outlier_config_val = AntiOutlierConfig(a_bit=args.a_bit, w_bit=args.w_bit,
                                                     anti_method=args.anti_method, w_sym=args.w_sym,
                                                     dev_type=args.device_type, dev_id=rank)
+    elif args.anti_method == 'm6':
+        keys = ['.o_proj']
+        anti_disable_names = ["model.layers.{}.self_attn.o_proj".format(i) for i in range(num_layers)]
+        anti_outlier_config_val = AntiOutlierConfig(anti_method=args.anti_method,
+                                                    dev_type=args.device_type,
+                                                    disable_anti_names=anti_disable_names, flex_config={})
     elif args.anti_method:
         anti_outlier_config_val = AntiOutlierConfig(anti_method=args.anti_method)
     tokenizer_args = json.loads(args.tokenizer_args)
     quantifier = Quantifier(
-        model_path, quant_conf, anti_outlier_config_val,
-        device_type=args.device_type, tokenizer_args=tokenizer_args,
+        model_path, args, anti_outlier_config_val,
+        device_type=args.device_type, 
+        rank=rank,
+        tokenizer_args=tokenizer_args,
         model_name=args.model_name,
     )
-    tokenized_calib_data = None
+    tokenized_calib_data = []
     calib_file = args.calib_file
     calib_texts = checker.load_jsonl(calib_file) if calib_file else args.calib_texts
     if calib_texts is not None:
@@ -242,13 +307,25 @@ if __name__ == '__main__':
             attention_mask_name=args.attention_mask_name
         )
 
+    tokenized_ant_calib_data = tokenized_calib_data
+    if args.anti_calib_file:
+        ant_calib_texts = checker.load_jsonl(args.anti_calib_file)
+        if ant_calib_texts is not None:
+            tokenized_ant_calib_data = quantifier.get_batch_tokenized_data(ant_calib_texts)
+
+    if args.disable_threshold > 0:
+        quantifier.create_quant_config(num_layers, tokenized_ant_calib_data)
+    else:
+        quantifier.create_quant_config(num_layers)
+
     if not os.path.exists(save_directory):
         os.makedirs(save_directory, exist_ok=True)
 
     # check dst dir
     save_directory = get_valid_write_path(save_directory, is_dir=True)
     #为适配工具稀疏量化传入w_bit=4,a_bit=8暂时修改quant_type
-    quantifier.convert(tokenized_calib_data, save_directory, args.disable_level, part_file_size=args.part_file_size)
+    quantifier.convert(tokenized_calib_data, save_directory, args.disable_level, part_file_size=args.part_file_size, \
+                       tokenized_ant_calib_data=tokenized_ant_calib_data)
     quant_type = f"w{args.w_bit}a{args.a_bit}"
     is_sparseCompress = args.w_bit == 4 and args.a_bit == 8 and (args.co_sparse or args.is_lowbit)
     if is_sparseCompress:

@@ -133,6 +133,8 @@ class SafeGenerator:
                 'open_outlier': args.open_outlier,
                 'is_dynamic': args.is_dynamic
             }
+            if hasattr(args, 'pdmix') and args.pdmix:
+                quantization_config.update({"pdmix": args.pdmix})
             if args.use_reduce_quant:
                 quantization_config.update({"reduce_quant_type": "per_channel"})
             data['quantization_config'] = quantization_config

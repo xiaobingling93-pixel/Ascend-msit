@@ -75,46 +75,67 @@ def process_req_record(req_map, record):
         print_warning_log('rid or name')
         return
 
-    if name == 'httpReq':
+    # req_map中存在rid则保存，不存在则默认
+    if rid not in req_map:
         req_map[rid] = {
-            'httpReq_start': record.get('start_time'),
+            'httpReq_start': None,
+            'httpRes_end': None,
             'token_id': {},
             'req_waiting_time': 0.0,
             'req_pending_time': 0.0,
-            'is_complete': False
+            'is_complete': False,
+            'generated_token_num': None,
+            'input_token_num': None,
         }
-        return
+    entry = req_map[rid]
 
-    if name == 'httpRes':
-        if rid in req_map:
-            req_map[rid]['httpRes_end'] = record.get('end_time')
-            req_map[rid]['is_complete'] = True
-            # 生成Token数量为replyTokenSize的值
-            if reply_token:
-                req_map[rid]['generated_token_num'] = reply_token
-        else:
-            logger.warning(f"Missing httpReq for httpRes with rid={rid}.")
-        return
+    # 处理不同name的记录
+    if name == 'httpReq':
+        entry['httpReq_start'] = record.get('start_time')
+        entry['token_id'] = entry.get('token_id', {})  # 确保token_id存在
+        entry.setdefault('req_waiting_time', 0.0)
+        entry.setdefault('req_pending_time', 0.0)
+        entry['is_complete'] = False  # 重置完成状态
+    elif name == 'httpRes':
+        entry['httpRes_end'] = record.get('end_time')
+        entry['is_complete'] = True
 
-    if req_map.get(rid) is not None:
-        if name == 'httpRes':
-            req_map[rid]['httpRes_end'] = record.get('end_time')
-
-    # 队列waiting时长
+    # 处理队列状态时间
     if req_wait_status == 1:
-        req_map[rid]['req_waiting_time'] = record.get('during_time')
-
-    # 队列pending时长
+        entry['req_waiting_time'] = record.get('during_time', 0.0)
     if req_pend_status == 1:
-        req_map[rid]['req_pending_time'] = record.get('during_time')
+        entry['req_pending_time'] = record.get('during_time', 0.0)
 
-    # 输入Token数量为recvTokenSize的值
-    if recv_token:
-        req_map[rid]['input_token_num'] = recv_token
+    # 处理Token数量
+    if recv_token is not None:
+        entry['input_token_num'] = recv_token
+    if reply_token is not None:
+        entry['generated_token_num'] = reply_token
 
+    # 处理rid_list和token_id_list
     rid_list = record.get('rid_list')
     token_id_list = record.get('token_id_list')
     process_rid_token_list(req_map, rid_list, token_id_list, record)
+
+    # 检查并移除空数据
+    if is_empty_entry(entry):
+        req_map.pop(rid)
+
+
+def is_empty_entry(entry):
+    """
+    检查entry是否为空数据，即为默认值的场景
+    """
+    return (
+        entry['httpReq_start'] is None
+        and entry['httpRes_end'] is None
+        and not entry['token_id']  # 空字典
+        and entry['req_waiting_time'] == 0.0
+        and entry['req_pending_time'] == 0.0
+        and entry['is_complete'] is False
+        and entry['generated_token_num'] is None
+        and entry['input_token_num'] is None
+    )
 
 
 def process_rid_token_list(req_map, rid_list, token_id_list, record):

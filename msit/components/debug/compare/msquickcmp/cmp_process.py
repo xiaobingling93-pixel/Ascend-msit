@@ -39,7 +39,8 @@ from msquickcmp.common import utils
 from msquickcmp.common.args_check import is_saved_model_valid
 from msquickcmp.common.convert import convert_bin_dump_data_to_npy
 from msquickcmp.common.convert import convert_npy_to_bin
-from msquickcmp.common.utils import AccuracyCompareException, get_shape_to_directory_name, safe_delete_path_if_exists
+from msquickcmp.common.utils import AccuracyCompareException, get_shape_to_directory_name, \
+    safe_delete_path_if_exists, OPTYPE_WHITWLIST
 from msquickcmp.net_compare import analyser
 from msquickcmp.net_compare.net_compare import NetCompare
 from msquickcmp.npu.npu_dump_data import NpuDumpData, DynamicInput
@@ -57,28 +58,35 @@ READ_WRITE_FLAGS = os.O_RDWR | os.O_CREAT
 WRITE_FLAGS = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
 ERROR_INTERVAL_INFO_FILE = "error_interval_info.txt"
 MAX_MEMORY_USE = 6 * 1024 * 1024 * 1024
+COSINE_SIMILARITY = 0.99
+RELATIVE_EUCLIDEAN_DISTANCE = 0.05
+KULLBACK_LEIBLER_DIVERGENCE = 0.005
+ROOT_MEAN_SQUARE_ERROR = 1.0
+MEAN_RELATIVE_ERROR = 1.0
+YES = "YES"
+NO = "NO"
 
 
 def _generate_golden_data_model(args, npu_dump_npy_path):
     if is_saved_model_valid(args.model_path):
         from msquickcmp.tf.tf_save_model_dump_data import TfSaveModelDumpData
 
-        return TfSaveModelDumpData(args, args.model_path)
+        return TfSaveModelDumpData(args, args.model_path), None
     model_name, extension = utils.get_model_name_and_extension(args.model_path)
     if args.weight_path and ".prototxt" == extension:
         from msquickcmp.caffe_model.caffe_dump_data import CaffeDumpData
 
-        return CaffeDumpData(args)
+        return CaffeDumpData(args), extension
     elif ".pb" == extension:
         from msquickcmp.tf.tf_dump_data import TfDumpData
 
-        return TfDumpData(args)
+        return TfDumpData(args), extension
     elif ".onnx" == extension:
         from msquickcmp.onnx_model.onnx_dump_data import OnnxDumpData
 
-        return OnnxDumpData(args, npu_dump_npy_path)
+        return OnnxDumpData(args, npu_dump_npy_path), extension
     elif ".om" == extension:
-        return NpuDumpData(arguments=args, is_golden=True)
+        return NpuDumpData(arguments=args, is_golden=True), extension
 
     else:
         utils.logger.error("Only model files whose names end with .pb or .onnx or .prototxt are supported")
@@ -116,24 +124,92 @@ def _get_single_csv_in_folder(csv_path):
     raise IOError(f"None csv file exists in folder {csv_path}")
 
 
-def _append_is_npu_ops_to_csv(csv_path):
-    csv_path = _get_single_csv_in_folder(csv_path)
+def _read_and_process_csv(csv_path, process_func, node_output_show_list):
     if Rule.input_file().check(csv_path):
         with ms_open(csv_path, 'r', max_size=TENSOR_MAX_SIZE) as f:
             reader = csv.reader(f)
             rows = [row for row in reader]
         header = rows[0]
-        ground_truth_col = header.index("GroundTruth")
-        header.append('IsNpuOps')
-        for row in rows[1:]:
-            is_npu_ops = "YES" if row[ground_truth_col] == "*" else "NO"
+        rows = process_func(header, rows, node_output_show_list)
+    return rows
+
+
+def _write_csv(csv_path, rows):
+    with ms_open(csv_path, mode='w') as f:
+        writer = csv.writer(f)
+        for line in rows:
+            for ele in line:
+                _ = sanitize_csv_value(ele)
+        writer.writerows(rows)
+
+
+def _process_is_npu_and_is_precision_error_ops(header, rows, node_output_name_list):
+    ground_truth_col = header.index("GroundTruth")
+    optype_col = header.index("OpType")
+    cosine_similarity_col = header.index("CosineSimilarity")
+    relative_euclidean_distance_col = header.index("RelativeEuclideanDistance")
+    kullback_leibler_divergence_col = header.index("KullbackLeiblerDivergence")
+    root_mean_square_error_col = header.index("RootMeanSquareError")
+    mean_relative_error_col = header.index("MeanRelativeError")
+
+    header.append('IsNpuOps')
+    header.append('IsOutputNode')
+    header.append('IsPrecisionError')
+    for row in rows[1:]:
+        try:
+            is_npu_ops = YES if row[ground_truth_col] == "*" else NO
             row.append(is_npu_ops)
-        with ms_open(csv_path, mode='w') as f:
-            writer = csv.writer(f)
-            for line in rows:
-                for ele in line:
-                    sanitize_csv_value(ele)
-            writer.writerows(rows)
+
+            optype = row[optype_col]
+            cosine_similarity = row[cosine_similarity_col]
+            relative_euclidean_distance = float(row[relative_euclidean_distance_col])
+            kullback_leibler_divergence = float(row[kullback_leibler_divergence_col])
+            root_mean_square_error = float(row[root_mean_square_error_col])
+            mean_relative_error = float(row[mean_relative_error_col])
+            if _is_output_node(row[ground_truth_col], node_output_name_list):
+                row.append(YES)
+            else:
+                row.append(NO)
+            if optype in OPTYPE_WHITWLIST or cosine_similarity.lower() == 'nan':
+                row.append(NO)
+                continue
+            if _is_row_precision_error(cosine_similarity, 
+                                    relative_euclidean_distance, 
+                                    kullback_leibler_divergence, 
+                                    root_mean_square_error, 
+                                    mean_relative_error):
+                row.append(YES)
+            else:
+                row.append(NO)
+                
+        except ValueError as e:
+            utils.logger.error(f"Skipping row due to invalid data: {row}. Error: {e}")
+            continue
+    return rows
+
+
+def _is_row_precision_error(cosine_similarity, 
+                            relative_euclidean_distance, 
+                            kullback_leibler_divergence, 
+                            root_mean_square_error, 
+                            mean_relative_error):
+    return (float(cosine_similarity) < COSINE_SIMILARITY or
+            relative_euclidean_distance > RELATIVE_EUCLIDEAN_DISTANCE or
+            kullback_leibler_divergence > KULLBACK_LEIBLER_DIVERGENCE or
+            root_mean_square_error > ROOT_MEAN_SQUARE_ERROR or
+            mean_relative_error > MEAN_RELATIVE_ERROR)
+
+
+def _is_output_node(groundtruth, onnxnode_output_name_list):
+    return groundtruth.strip() in onnxnode_output_name_list
+
+
+def _append_column_to_csv(csv_path, node_output_show_list=None):
+    if node_output_show_list is None:
+        node_output_show_list = []
+    csv_path = _get_single_csv_in_folder(csv_path)   
+    rows = _read_and_process_csv(csv_path, _process_is_npu_and_is_precision_error_ops, node_output_show_list) 
+    _write_csv(csv_path, rows)
 
 
 def mindir_to_om_process(args: CmpArgsAdapter):
@@ -245,7 +321,7 @@ def compare_process(args: CmpArgsAdapter):
     else:
         invalid_rows, _ = analyser.Analyser(args.out_path)('ALL_INVALID')
     print_advisor_info(args.out_path)
-    _append_is_npu_ops_to_csv(args.out_path)
+    _append_column_to_csv(args.out_path)
 
     return invalid_rows
 
@@ -275,7 +351,7 @@ def run(args: CmpArgsAdapter, input_shape, original_out_path, use_cli: bool):
         else:
             invalid_rows, _ = analyser.Analyser(args.out_path)('ALL_INVALID')
         print_advisor_info(args.out_path)
-        _append_is_npu_ops_to_csv(args.out_path)
+        _append_column_to_csv(args.out_path)
     else:
         invalid_rows = run_om_model_compare(args, use_cli)
 
@@ -311,7 +387,7 @@ def run_om_model_compare(args, use_cli):
         npu_dump_npy_path = ""
 
     # generate onnx inputs data
-    golden_dump = _generate_golden_data_model(args, npu_dump_npy_path)
+    golden_dump, model_extension = _generate_golden_data_model(args, npu_dump_npy_path)
     expect_net_output_node = npu_dump.get_expect_output_name()
 
     # generate dump data by golden model
@@ -347,9 +423,34 @@ def run_om_model_compare(args, use_cli):
         invalid_rows, _ = analyser.Analyser(args.out_path)()
     else:
         invalid_rows, _ = analyser.Analyser(args.out_path)('ALL_INVALID')
+    
+    node_output_show_list = None    
+    if model_extension == ".onnx":
+        node_output_show_list = _get_model_output_node_name_list(golden_dump.model_with_inputs_session, 
+                                                                 golden_dump.origin_model)
     print_advisor_info(args.out_path)
-    _append_is_npu_ops_to_csv(args.out_path)
+    _append_column_to_csv(args.out_path, node_output_show_list)
     return invalid_rows
+
+
+def _get_model_output_node_name_list(model_with_inputs_session, origin_model):
+    net_output_node_name_list = [item.name for item in model_with_inputs_session.get_outputs()]
+    node_output_show_list = []
+    for node_name in net_output_node_name_list :
+        pre_node = _find_previous_node(origin_model.graph, node_name)
+        if pre_node is None:
+            return None
+        node_output_show_list.append(pre_node)
+    return node_output_show_list
+    
+
+def _find_previous_node(graph, output_name):
+    # 遍历所有节点
+    for node in graph.node:
+        if output_name in [output for output in node.output]:
+            # 找到目标输出节点
+            return node.name
+    return None
 
 
 def print_advisor_info(out_path):

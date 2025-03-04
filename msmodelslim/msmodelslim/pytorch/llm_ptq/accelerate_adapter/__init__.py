@@ -7,11 +7,6 @@ __all__ = [
     'clear_unused_module',
     'PrepareWeight',
 
-    'enable_adapter',
-    'disable_adapter',
-    'check_model_compatible',
-    'enabled_adapter',
-
     'get_offloaded_dataset',
 
     'copy_offloaded_state_dict',
@@ -27,7 +22,6 @@ from .hook_adapter import (replace_device_align_hook_if_needed,
                            get_state_dict_copy,
                            clear_unused_module,
                            PrepareWeight)
-from .switch import check_model_compatible, enable_adapter, disable_adapter, enabled_adapter
 from .utils import get_offloaded_dataset
 from .offloaded_state_dict import (DiskStateDictConfig,
                                    MemoryStateDictConfig,

@@ -15,13 +15,13 @@
     https://huggingface.co/datasets/cais/mmlu
     https://huggingface.co/datasets/openai/gsm8k
     ```
-2. 如需正样本混合校准集，需要实例化tokenizer和model；否则设置为None
-3. 如需自定义数据集，创建自定义数据集处理类，继承自DatasetProcessorBase类，并重写process_data()和verify_positive_prompt()方法
-4. 实例化CalibrationData
-5. 如有自定义数据集，通过add_custormized_dataset_processor()接口传入自定义数据集名称和处理类的实例
-6. 设置样本数量，通过set_sample_size()接口
-7. 设置batch_size，通过set_batch_size()接口
-8. 设置随机种子，通过set_shuffle_seed()接口
+2. 如需自定义数据集，创建自定义数据集处理类，继承自DatasetProcessorBase类，并重写process_data()和verify_positive_prompt()方法
+3. 实例化CalibrationData，如需正样本混合校准集，需要实例化tokenizer和model，并作为参数传入CalibrationData；否则设置为None。如需保存需要设置保存路径
+4. 如有自定义数据集，通过add_custormized_dataset_processor()接口传入自定义数据集名称和处理类的实例
+5. 设置样本数量，通过set_sample_size()接口
+6. 设置batch_size，通过set_batch_size()接口
+7. 设置随机种子，通过set_shuffle_seed()接口
+8. 调用process接口运行，生成混合校准集
 
 ### config文件示例
 ```json
@@ -54,18 +54,39 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig
 from msmodelslim.pytorch.llm_ptq.mix_calibration.calib_select import CalibrationData
 from msmodelslim.pytorch.llm_ptq.mix_calibration.dataset_processor_base import DatasetProcessorBase # 用户自定义数据集时需要引入
 
+# 继承自DatasetProcessorBase，并重写抽象方法
 class CustomizedProcessor(DatasetProcessorBase):
     def __init__(self, dataset_path, tokenizer=None, model=None):
         super().__init__(dataset_path, tokenizer, model)
-        pass
+        self.ori_prompts = []
+        self.ori_answers = []
     
     def process_data(self, indexs):
         """用于获取一组样本，输出为[{"prompt": prompt1, "ans": ans1},{"prompt": prompt2, "ans": ans2}]"""
-        pass
+        prmpts_anses = []
+        for idx in indexs:
+            prmpts_anses.append({"prompt": self.ori_prompts[idx], "ans": self.ori_answers[idx]})
+        return prmpts_anses
     
     def verify_positive_prompt(self, prompts, labels):
         """用于验证一组prompts中的正样本，labels为对应标签，输出为[{"prompt": prompt1, "ans": ans1},{"prompt": prompt2, "ans": ans2}]"""
-        pass
+        prpt_ans = []
+        with torch.no_grad():
+            inputs = self.tokenizer(prompts, padding=True, return_tensors="pt").to(self.model.device)
+            outputs = self.model.generate(**inputs, do_sample=False, max_new_tokens=20)
+            
+            answers = []
+            for idx in range(len(outputs)):
+                output = outputs.tolist()[idx][len(inputs["input_ids"][idx]):]
+                response = self.tokenizer.decode(output)
+                answers.append(response)
+            answers = [answer.lstrip()[0] if answer.lstrip() else "-1" for answer in answers]
+
+            for ans, label, prmpt in zip(answers, labels, prompts):
+                if ans == label:
+                    prpt_ans.append({"prompt": prmpt, "ans": ans})
+
+        return prpt_ans
 
 MODEL_PATH = "./model"
 CONFIG_PATH = "./mix_config.json"
@@ -100,8 +121,8 @@ print(mixed_dataset)
 ```
 
 ### 混合校准集解析使用示例
-通过get_anti_dataset()方法的输出可以应用于离群值抑制模块``AntiOutlier(model, calib_data=dataset_calib, cfg=anti_config)``中``calib_data``的输入 <br>
-通过get_calib_dataset()方法的输出可以应用于量化模块``Calibrator(model, quant_config, calib_data=dataset_calib, disable_level='L0')``中``calib_data``的输入
+通过get_anti_dataset()方法，以混合校准集生成的mixed_dataset为输入，输出可以应用于离群值抑制模块``AntiOutlier(model, calib_data=mixed_dataset, cfg=anti_config)``中``calib_data``的输入 <br>
+通过get_calib_dataset()方法，以混合校准集生成的mixed_dataset为输入，输出可以应用于量化模块``Calibrator(model, quant_config, calib_data=mixed_dataset, disable_level='L0')``中``calib_data``的输入
 ```python
 import torch
 import torch.nn.funtional as F

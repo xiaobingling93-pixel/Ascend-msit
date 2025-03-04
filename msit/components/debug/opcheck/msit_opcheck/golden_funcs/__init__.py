@@ -39,6 +39,10 @@ from msit_opcheck.golden_funcs.mul import MulOperation
 from msit_opcheck.golden_funcs.select import SelectOperation
 from msit_opcheck.golden_funcs.clip_by_value import ClipByValueOperation
 from msit_opcheck.golden_funcs.rsqrt import RsqrtOperation
+from msit_opcheck.golden_funcs.less import LessOperation
+from msit_opcheck.golden_funcs.sub import SubOperation
+from msit_opcheck.golden_funcs.stridedslice import StridedSliceOperation
+from msit_opcheck.golden_funcs.batch_matmul import BatchMatMulOperation
 
 OP_DICT = dict({"Pad": PadOperation, 
                 "PadD": PadOperation, 
@@ -68,4 +72,8 @@ OP_DICT = dict({"Pad": PadOperation,
                 "Select": SelectOperation,
                 "ClipByValue":ClipByValueOperation,
                 "Rsqrt": RsqrtOperation,
+                "Less": LessOperation,
+                "Sub": SubOperation,
+                "StridedSlice": StridedSliceOperation,
+                "BatchMatMulV2": BatchMatMulOperation,
                 })

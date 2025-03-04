@@ -16,7 +16,7 @@ import unittest
 from unittest.mock import patch
 import numpy as np
 import pandas as pd
-from ms_service_profiler.exporters.exporter_summary import (
+from ms_service_profiler_ext.exporters.exporter_summary import (
     is_contained_valid_iter_info,
     process_batch_record,
     calculate_statistics,
@@ -178,18 +178,6 @@ class TestExporterSummaryFunctions(unittest.TestCase):
         generate_all_token_speed = (10 + 20) / total_exec_time
         self.assertAlmostEqual(total_map['generate_token_speed (token/s)'], generate_token_speed, places=3)
         self.assertAlmostEqual(total_map['generate_all_token_speed (token/s)'], generate_all_token_speed, places=3)
-
-    @patch('logging.Logger.warning')
-    def test_missing_http_components(self, mock_warning):
-
-        incomplete_data = pd.DataFrame([{
-            'name': 'httpRes',
-            'rid': '1001',
-            'end_time': 1_630_000_002_000
-        }])
-
-        gen_exporter_results(incomplete_data)
-        mock_warning.assert_called_with("Missing httpReq for httpRes with rid=1001.")
 
     def test_token_throughput_calculation(self):
 
