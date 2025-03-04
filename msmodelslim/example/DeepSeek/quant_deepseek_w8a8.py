@@ -7,11 +7,12 @@ from tqdm import tqdm
 
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig
 
+from convert_fp8_to_bf16 import auto_convert_model_fp8_to_bf16, OpsType
+
 from msmodelslim.tools.copy_config_files import copy_config_files, modify_config_json
 from msmodelslim.pytorch.llm_ptq.anti_outlier import AntiOutlierConfig, AntiOutlier
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
 from msmodelslim.tools.logger import set_logger_level
-from msmodelslim import logger
 
 
 def parse_args():
@@ -24,6 +25,8 @@ def parse_args():
     parser.add_argument('--calib_dataset', type=str, default="./calib_prompt.json",
                         help="The calib data for calibration")
     parser.add_argument('--batch_size', type=int, default=1, help="Batch size for anti and calibration")
+    parser.add_argument('--from_fp8', action='store_true', help="Origin model is of fp8")
+    parser.add_argument('--from_bf16', action='store_true', help="Origin model is of bf16")
     return parser.parse_args()
 
 
@@ -67,6 +70,8 @@ model = AutoModelForCausalLM.from_pretrained(pretrained_model_name_or_path=model
                                                  "cpu": "1500GiB"
                                              },
                                              attn_implementation='eager')
+
+auto_convert_model_fp8_to_bf16(model, model_path, OpsType.get_ops_type(args.from_bf16, args.from_fp8))
 
 pbar.update(1)
 
