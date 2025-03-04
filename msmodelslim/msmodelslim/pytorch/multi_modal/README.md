@@ -184,6 +184,64 @@ torchrun --nnodes=1 --nproc_per_node 8 --master_port 29503 \
 
 #### 5. 使用优化配置进行推理
 
+##### 5.1 工作流程
+
+```mermaid
+flowchart LR
+    A[加载缓存配置] --> B[初始化DitCacheAdaptor]
+    B --> C[更新缓存配置]
+    C --> D[执行pipeline推理]
+    D --> E[设置timestep_idx]
+    E --> F[执行当前时间步]
+    F --> |下一时间步| E
+```
+
+##### 5.2 使用示例
+```python
+import json
+from msmodelslim.pytorch.multi_modal.dit_cache import DitCacheAdaptor, DitCacheSearchConfig
+
+# 1. 加载缓存配置
+with open("./dit_cache_config.json", 'r') as f:
+    cache_config = json.load(f)
+
+# 2. 初始化缓存适配器并更新配置
+adaptor = DitCacheAdaptor(
+    pipeline=pipeline,
+    config=DitCacheSearchConfig(num_sampling_steps=100)  # 与推理步数保持一致
+)
+adaptor.update_cache_config(**cache_config)
+
+# 3. 执行推理
+output = pipeline(
+    prompt="a dog running on the beach",
+    num_frames=29,
+    height=480,
+    width=640,
+    guidance_scale=7.5,
+    num_inference_steps=100
+)
+```
+在 pipeline 中显式调用 `DitCacheAdaptor.set_timestep_idx()`
+```python
+# 注意：在pipeline的前向传播代码中，需要在每个时间步开始时调用set_timestep_idx
+# 示例：在pipeline的扩散循环中
+for step_id, t in enumerate(timesteps):
+    DitCacheAdaptor.set_timestep_idx(step_id)  # 在每个时间步开始时设置
+    # ... 执行当前时间步的计算 ...
+
+```
+
+缓存配置文件示例 (dit_cache_config.json):
+```json
+{
+    "cache_block_start": 8,    # 起始缓存block位置
+    "cache_num_blocks": 4,     # 缓存block数量
+    "cache_step_start": 20,    # 开始使用缓存的时间步
+    "cache_step_interval": 2   # 缓存更新间隔
+}
+```
+##### 5.3 完整推理脚本
 完整的推理脚本示例 [dit_cache_sample_t2v_sp.sh](../../../example/osp1_2/dit_cache_sample_t2v_sp.sh)：
 ```bash
 #!/bin/bash
