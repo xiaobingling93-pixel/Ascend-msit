@@ -188,7 +188,8 @@ if __name__ == '__main__':
                                                     anti_method=args.anti_method, w_sym=args.w_sym,
                                                     dev_type=args.device_type, dev_id=rank)
     elif args.anti_method:
-        anti_outlier_config_val = AntiOutlierConfig(anti_method=args.anti_method)
+        anti_outlier_config_val = AntiOutlierConfig(anti_method=args.anti_method,
+                                                    dev_type=args.device_type)
     tokenizer_args = json.loads(args.tokenizer_args)
     quantifier = Quantifier(
         model_path, quant_conf, anti_outlier_config_val,
