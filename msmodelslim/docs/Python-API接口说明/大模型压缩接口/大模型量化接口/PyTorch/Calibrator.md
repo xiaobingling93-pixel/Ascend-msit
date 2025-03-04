@@ -34,7 +34,7 @@ Calibrator(model, cfg: quantconfig, calib_data=None, disable_level='L0', all_ten
 ```python
 mix_cfg = {
     "model.layers.0.mlp.down_proj": "w8a16",  # 层名，匹配成功
-    "model.layers.1.mlp.down_proj?": "w8a16",  # fnmatch通配符，匹配成功
+    "model.layers.1.mlp.down_pro?": "w8a16",  # fnmatch通配符，匹配成功
     "?q_proj": "w8a8_dynamic",  # fnmatch通配符，匹配失败
     "*q_proj": "float",  # fnmatch通配符，匹配成功
     "model.layers.[012].mlp.down_proj": "w8a8_dynamic",  # fnmatch通配符，匹配成功012，但因为0、1已经被匹配，所以这里只有2。
