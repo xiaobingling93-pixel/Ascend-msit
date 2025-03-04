@@ -67,10 +67,11 @@ msit debug opcheck -i /home/HwHiAiUser/result/test/{timestamp} -o /home/HwHiAiUs
 | Adds          | LogicalAnd | PadD       | Sub         |
 | BatchNorm     | Less       | Pack       | Sigmoid     |
 | BatchMatMulV2 | Mul        | ReduceMean | StrideSlice |
-| BiasAdd       | Minimum    | Rsqrt      | Tanh        |
-| BNInfer       | Mul        | ReduceMean | Tile        |
-| ConcatV2      | MatMulV2   | ReduceSum  | Transpose   |
-| Conv2D        |            | Relu       |             |
+| BiasAdd       | Minimum    | Rsqrt      | Select      |
+| BNInfer       | Mul        | Relu       | Tile        |
+| Cast          | MatMulV2   | ReduceSum  | Tanh        |
+| ConcatV2      |            |            | Transpose   |
+| Conv2D        |            |            |             |
 | ClipByValue   |            |            |             |
 | GatherV2      |            |            |             |
 
