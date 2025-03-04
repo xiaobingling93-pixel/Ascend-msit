@@ -58,6 +58,17 @@ def _get_module_quant_input(module):
     scale = weight_scale.cpu() if weight_scale is not None else None
     offset = weight_offset.cpu() if weight_offset is not None else None
     round_opt = False if isinstance(module, LowBitLinearQuantizer) else module.quant_weight.round_opt
+
+    if hasattr(module.quant_weight, 'weight_scale_second') and \
+       hasattr(module.quant_weight, 'weight_offset_second'):
+        weight_scale_second = module.quant_weight.weight_scale_second
+        weight_offset_second = module.quant_weight.weight_offset_second
+        scale_second = weight_scale_second.cpu() if weight_scale_second is not None else None
+        offset_second = weight_offset_second.cpu() if weight_offset_second is not None else None
+        if scale_second is not None and offset_second is not None:
+            scale = [scale, scale_second]
+            offset = [offset, offset_second]
+
     ret = fp_weight, device, scale, offset, round_opt
     return ret
 
@@ -149,6 +160,19 @@ class ComplexQuantifier:
         if hasattr(module, 'bias') and module.bias is not None:
             yield name + '.bias', QuantType.FLOAT, module.bias
 
+        # W4A8_DYNAMIC 有两种量化模式，一种分阶段量化（将浮点先量化成int8，然后再量化成 int4），一种直接量化（将浮点直接量化成 int4）
+        if model_quant_type in [QuantType.W4A8_DYNAMIC]:
+            is_scale_list = isinstance(weight_scale, list) and len(weight_scale) == 2
+            is_offset_list = isinstance(weight_offset, list) and len(weight_offset) == 2
+            if is_scale_list and is_offset_list:
+                yield name + '.weight_scale', model_quant_type, weight_scale[0].cpu()
+                yield name + '.weight_offset', model_quant_type, weight_offset[0].cpu()
+                yield name + '.weight_scale_second', model_quant_type, weight_scale[1].cpu()
+                yield name + '.weight_offset_second', model_quant_type, weight_offset[1].cpu()
+            else:
+                yield name + '.weight_scale', model_quant_type, weight_scale.cpu()
+                yield name + '.weight_offset', model_quant_type, weight_offset.cpu()
+
         # W4A16/W8A16 需要提供 weight_scale、weight_offset
         if model_quant_type in [QuantType.W8A16, QuantType.W4A16, QuantType.W8A8_DYNAMIC, QuantType.W8A8]:
             yield name + '.weight_scale', model_quant_type, weight_scale.cpu()
@@ -207,7 +231,18 @@ class ComplexQuantifier:
                 bit = 8
             else:
                 bit = self.cfg.w_bit
-            quant_weight, _ = fake_quantize_save(fp_weight, weight_scale, weight_offset, bit=bit,
+            
+            is_scale_list = isinstance(weight_scale, list) and len(weight_scale) == 2
+            is_offset_list = isinstance(weight_offset, list) and len(weight_offset) == 2
+            if is_scale_list and is_offset_list:
+                # w4a8 分阶段量化，因此需要两次fake_quantize_save得到量化后的权重
+                first_quant_weight, _ = fake_quantize_save(fp_weight, weight_scale[0], weight_offset[0], bit=8,
+                                                          round_opt=round_opt, device=module.weight.device)
+                quant_weight, _ = fake_quantize_save(first_quant_weight, weight_scale[1], weight_offset[1], bit=4,
+                                                            round_opt=round_opt, device=module.weight.device,
+                                                            group_size=self.cfg.group_size)
+            else:
+                quant_weight, _ = fake_quantize_save(fp_weight, weight_scale, weight_offset, bit=bit,
                                                  round_opt=round_opt, device=module.weight.device,
                                                  group_size=self.cfg.group_size)
         res = quant_weight, fp_weight, weight_scale, weight_offset
