@@ -51,24 +51,6 @@ class BufferedSafetensorsWriter(BaseWriter):
         self._save_count: int = 0
         self.save_directory: str = save_directory
 
-    def _write(self, key: str, value: torch.Tensor) -> None:
-        check_type(value, torch.Tensor)
-        if value.device.type == 'meta':
-            self.logger.warning(f"Skip meta tensor {key}")
-            return
-
-        tensor = value.detach().cpu().contiguous()
-
-        tensor_size = tensor.numel() * tensor.element_size()
-        if self._wait_save_size + tensor_size >= self.max_size:
-            self.save_one_file()
-
-        self.wait_save_keys[key] = tensor
-        self.total_size += tensor_size
-        self._wait_save_size += tensor_size
-        self.logger.debug(
-            f"Add new tensor {key}, device: {tensor.device}, size: {tensor_size}, total: {self._wait_save_size}")
-
     @property
     def save_directory(self) -> str:
         return self._save_directory
@@ -76,26 +58,6 @@ class BufferedSafetensorsWriter(BaseWriter):
     @save_directory.setter
     def save_directory(self, value: str) -> None:
         self._save_directory = get_write_directory(value, write_mode=0o750)
-
-    def _close(self) -> None:
-        # save last file if needed
-        self.save_one_file()
-
-        # rename safetensors
-        for i in range(self._save_count):
-            src_file = os.path.join(self.save_directory, f"{self.save_prefix}-{i + 1:05d}{FILE_TMP_SUFFIX}")
-            # 仿照开源权重命名均为model-0000x-of-0000x.safetensors，超过99999命名为model-x-of-x.safetensors
-            if self._save_count <= 99999:
-                dst_file_name = f"{self.save_prefix}-{i + 1:05d}-of-{self._save_count:05d}.safetensors"
-            else:
-                dst_file_name = f"{self.save_prefix}-{i + 1}-of-{self._save_count}.safetensors"
-            dst_file = os.path.join(self.save_directory, dst_file_name)
-            shutil.move(src_file, dst_file)
-            self.logger.debug(f"{src_file} -> {dst_file}")
-        self.logger.debug(f'Save .safetensors to {self.save_directory} successfully')
-
-        self.save_index()
-        self.logger.info(f'Save safetensors files to {self.save_directory} successfully')
 
     def save_index(self):
         # process safetensor index json
@@ -135,3 +97,41 @@ class BufferedSafetensorsWriter(BaseWriter):
         self.wait_save_keys.clear()
         self._wait_save_size = 0
         self.logger.debug(f"End save {full_save_file_name}")
+
+    def _write(self, key: str, value: torch.Tensor) -> None:
+        check_type(value, torch.Tensor)
+        if value.device.type == 'meta':
+            self.logger.warning(f"Skip meta tensor {key}")
+            return
+
+        tensor = value.detach().cpu().contiguous()
+
+        tensor_size = tensor.numel() * tensor.element_size()
+        if self._wait_save_size + tensor_size >= self.max_size:
+            self.save_one_file()
+
+        self.wait_save_keys[key] = tensor
+        self.total_size += tensor_size
+        self._wait_save_size += tensor_size
+        self.logger.debug(
+            f"Add new tensor {key}, device: {tensor.device}, size: {tensor_size}, total: {self._wait_save_size}")
+
+    def _close(self) -> None:
+        # save last file if needed
+        self.save_one_file()
+
+        # rename safetensors
+        for i in range(self._save_count):
+            src_file = os.path.join(self.save_directory, f"{self.save_prefix}-{i + 1:05d}{FILE_TMP_SUFFIX}")
+            # 仿照开源权重命名均为model-0000x-of-0000x.safetensors，超过99999命名为model-x-of-x.safetensors
+            if self._save_count <= 99999:
+                dst_file_name = f"{self.save_prefix}-{i + 1:05d}-of-{self._save_count:05d}.safetensors"
+            else:
+                dst_file_name = f"{self.save_prefix}-{i + 1}-of-{self._save_count}.safetensors"
+            dst_file = os.path.join(self.save_directory, dst_file_name)
+            shutil.move(src_file, dst_file)
+            self.logger.debug(f"{src_file} -> {dst_file}")
+        self.logger.debug(f'Save .safetensors to {self.save_directory} successfully')
+
+        self.save_index()
+        self.logger.info(f'Save safetensors files to {self.save_directory} successfully')

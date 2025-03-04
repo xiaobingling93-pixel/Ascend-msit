@@ -531,33 +531,6 @@ class Calibrator(object):
 
         self.model.save_pretrained(output_path, state_dict=EmptyModule().state_dict())     
 
-    def _save(self, output_path, safetensors_name, json_name, save_type, part_file_size):
-        saver = SaverFactory.create(save_type,
-                                    output_dir=output_path,
-                                    cfg=self.cfg,
-                                    safetensors_name=safetensors_name,
-                                    json_name=json_name,
-                                    part_file_size=part_file_size,
-                                    model=self.model)
-
-        # quantifier 应基于量化方法予以抽象，当前仅实现了与保存相关的逻辑
-        quantifier = ComplexQuantifier(cfg=self.cfg,
-                                       rollback_names=self.rollback_names,
-                                       torch_dtype=self.model.config.torch_dtype,
-                                       layer_cfg_manager=self.layer_cfg_manager)
-        self._save_weights_of_model(quantifier, saver)
-
-    def _save_weights_of_model(self, quantifier, saver):
-        self.model.eval()
-        saver.pre_process()
-
-        weight_collector = self.generate_weight_of_model(self.model, quantifier.generate_weight_of_module)
-        for name, meta, tensor in weight_collector:
-            saver.save(name, meta, tensor)
-
-        saver.post_process()
-        self.logger.info('Save successfully!')
-
     def generate_weight_of_model(self, model, weight_of_module_generator):
         with tqdm(desc='Collect quant param', total=sum(1 for _, _ in self.model.named_modules())) as progress:
             for name, module in model.named_modules():
@@ -806,12 +779,42 @@ class Calibrator(object):
         for name, mod in self.model.named_modules():
             # set the variable and function of kvcache in attention class
             if self.attention_class and isinstance(mod, self.attention_class):
-                cache_sub_dict = {key: value for key, value in itertools.chain(*self.kv_cache_quant_params.values()) if
-                                  name in key}
+                cache_sub_dict = {
+                    key: value
+                    for key, value in itertools.chain(*self.kv_cache_quant_params.values())
+                    if name in key
+                }
                 set_kvcache_vari_func(mod, cache_sub_dict, self.cfg, num_layers=num_layers)
 
                 setattr(mod, 'original_forward', mod.forward)
                 setattr(mod, 'forward', new_forward.__get__(mod, mod.__class__))
+
+    def _save(self, output_path, safetensors_name, json_name, save_type, part_file_size):
+        saver = SaverFactory.create(save_type,
+                                    output_dir=output_path,
+                                    cfg=self.cfg,
+                                    safetensors_name=safetensors_name,
+                                    json_name=json_name,
+                                    part_file_size=part_file_size,
+                                    model=self.model)
+
+        # quantifier 应基于量化方法予以抽象，当前仅实现了与保存相关的逻辑
+        quantifier = ComplexQuantifier(cfg=self.cfg,
+                                       rollback_names=self.rollback_names,
+                                       torch_dtype=self.model.config.torch_dtype,
+                                       layer_cfg_manager=self.layer_cfg_manager)
+        self._save_weights_of_model(quantifier, saver)
+
+    def _save_weights_of_model(self, quantifier, saver):
+        self.model.eval()
+        saver.pre_process()
+
+        weight_collector = self.generate_weight_of_model(self.model, quantifier.generate_weight_of_module)
+        for name, meta, tensor in weight_collector:
+            saver.save(name, meta, tensor)
+
+        saver.post_process()
+        self.logger.info('Save successfully!')
 
     def _get_module_quant_input(self, module):
         fp_weight = module.weight.cpu()
