@@ -8,13 +8,14 @@ from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.llm_ptq_utils import QuantType, W
 _SUPPORTED_DEVICES = ["cpu", "npu", 'gpu']
 A_BIT_LIST = [8, 16]
 W_BIT_LIST = [4, 8]
-GROUP_SIZE_LIST = [64, 128]
+GROUP_SIZE_LIST = [32, 64, 128, 256, 512]
 
 
 def set_quant_param(config):
     config.w_signed = True
     config.a_signed = True
     config.a_sym = False
+    config.is_stage_quant = False
     config.input_shape = []
     config.act_quant = True
     config.amp_num = 0
@@ -48,7 +49,7 @@ def set_lowbit_param(config):
 
 
 def set_per_group_param(config):
-    is_per_group = config.a_bit == 16 and not config.open_outlier and config.is_lowbit
+    is_per_group = check_per_group(config)
     if is_per_group:
         if config.group_size not in GROUP_SIZE_LIST:
             raise ValueError(f"group_size must be among choice {GROUP_SIZE_LIST}, please check it.")
@@ -65,6 +66,15 @@ def set_per_group_param(config):
                              "per-group scenario. Please check the config.")
 
 
+def check_per_group(config):
+    if config.a_bit == 16 and (not config.open_outlier) and (config.is_lowbit):
+        return True
+    is_w4a8 = config.w_bit == 4 and config.a_bit == 8
+    if is_w4a8 and (not config.open_outlier) and (config.is_lowbit):
+        return True
+    return False
+
+
 def set_fa_quant_param(config):
     if not hasattr(config, "use_fa_quant"):
         config.use_fa_quant = False
@@ -77,8 +87,8 @@ def set_fa_quant_param(config):
 def check_dynamic_config(config):
     check_type(config.is_dynamic, bool, param_name='is_dynamic')
     if config.is_dynamic:
-        if config.w_bit != 8:
-            raise ValueError("w_bit must be 8 when running dynamic quantization.")
+        if config.w_bit not in [4, 8]:
+            raise ValueError("w_bit must be 4 or 8 when running dynamic quantization.")
         if config.a_bit != 8:
             raise ValueError("a_bit must be 8 when running dynamic quantization.")
 
@@ -137,6 +147,31 @@ def check_nf4_config(config):
             raise ValueError("NF4 and SimulateTP cannot be quantized at the same time!")
 
 
+def is_w4a8_sparse(config):
+    # w4a8_sparse 两种开启方式，只能二选一开启方式
+    # 方式一：co_sparse = True
+    is_w4a8 = config.w_bit == 4 and config.a_bit == 8
+    if is_w4a8 and config.co_sparse:
+        return True
+    # 方式二：is_lowbit = True，为了和 w4a8_dynamic 区分, 需要同时满足 is_lowbit = True 和 is_dynamic = False
+    if is_w4a8 and config.is_lowbit and not config.is_dynamic:
+        return True
+    return False
+
+
+def check_and_set_w4a8_dynamic_config(config):
+    is_per_group = False
+    if not config.open_outlier and config.is_lowbit and config.group_size in GROUP_SIZE_LIST:
+        is_per_group = True
+    # w4a8_dynamic 需要开启 per-group 量化和动态量化
+    if config.w_bit == 4 and config.a_bit == 8 and not (config.is_dynamic or is_per_group):
+        raise TypeError("W4A8_DYNAMIC should be used with per-group quantization and dynamic quantization")
+    else:
+        # w_sym and a_sym should be True when w_bit = 4 and a_bit = 8
+        config.a_sym = True
+        config.is_stage_quant = True
+
+
 def check_and_generate_config_param(config):
     """
     所有config的校验都置于该函数，便于给所有BaseConfig类调用
@@ -157,6 +192,7 @@ def check_and_generate_config_param(config):
     check_type(config.disable_last_linear, bool, param_name='disable_last_linear')
     if config.a_bit == 8 and not config.w_sym:
         raise TypeError("w_sym should be True when a_bit = 8, please check it")
+
     check_type(config.co_sparse, bool, param_name="co_sparse")
     check_type(config.is_lowbit, bool, param_name='is_lowbit')
     check_type(config.open_outlier, bool, param_name="open_outlier")
@@ -173,6 +209,9 @@ def check_and_generate_config_param(config):
     check_dynamic_config(config)
     set_per_group_param(config)
     check_nf4_config(config)
+    is_w4a8s = is_w4a8_sparse(config)
+    if not is_w4a8s:
+        check_and_set_w4a8_dynamic_config(config)
 
     params = {
         'w_bit': config.w_bit,

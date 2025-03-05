@@ -27,6 +27,8 @@ class QuantType(str, Enum):
     NF4 = "NF4"  # Normal Float 4-Bit量化
     W8A8_DYNAMIC = "W8A8_DYNAMIC"  # W8A8静态量化与per-token动态量化混合量化
 
+    W4A8_DYNAMIC = "W4A8_DYNAMIC"  # W4A8静态量化与per-token动态量化混合量化
+
     @staticmethod
     def get_quant_type(params):
         w_bit = params['w_bit']
@@ -56,8 +58,8 @@ class QuantType(str, Enum):
 
     @staticmethod
     def is_value_in_enum(quant_type_value):
-        return quant_type_value in ["UNKNOWN", "W8A16", "W4A16", "W8A8", "W8A8S", "W8A8SC", "FLOAT", "W8A8_DYNAMIC",
-                                    "NF4"]
+        return quant_type_value in ["UNKNOWN", "W8A16", "W4A16", "W8A8", "W8A8S", 
+                                    "W8A8SC", "FLOAT", "W8A8_DYNAMIC", "NF4"]
 
     @staticmethod
     def check_instance_of_enum(instance):
@@ -66,13 +68,17 @@ class QuantType(str, Enum):
 
     @staticmethod
     def check_datafree_quant_type(quant_type_value):
-        if quant_type_value not in [QuantType.W8A16, QuantType.W4A16, QuantType.W8A8_DYNAMIC, QuantType.NF4]:
-            raise ValueError(f"QuantType.{quant_type_value} does not support Data-Free, please check your QuantConfig.")
+        if quant_type_value not in [QuantType.W8A16, QuantType.W4A16, 
+                                    QuantType.W8A8_DYNAMIC, QuantType.NF4, QuantType.W4A8_DYNAMIC]:
+            raise ValueError(f"QuantType.{quant_type_value} does not support \
+                             Data-Free, please check your QuantConfig.")
 
     @staticmethod
     def get_dynamic_quant_type(w_bit, a_bit):
         if w_bit == 8 and a_bit == 8:
             return QuantType.W8A8_DYNAMIC
+        if w_bit == 4 and a_bit == 8:
+            return QuantType.W4A8_DYNAMIC
         return QuantType.UNKNOWN
 
 

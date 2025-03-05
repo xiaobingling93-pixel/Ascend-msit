@@ -7,6 +7,7 @@ import itertools
 import re
 import os
 import gc
+import inspect
 import functools
 from collections import defaultdict
 from typing import Mapping, Optional
@@ -51,6 +52,7 @@ from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.llm_ptq_utils import QuantType, W
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.llm_ptq_utils import (
     SAVE_TYPE_LIST,
     SAVE_TYPE_NUMPY,
+    SAVE_TYPE_SAFE_TENSOR,
 )
 
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.fa_quant import (
@@ -515,7 +517,14 @@ class Calibrator(object):
                 f"Defaulting to `{SAVE_TYPE_NUMPY}` type."
             )
             save_type = [SAVE_TYPE_NUMPY]
-
+        if self.cfg.model_quant_type == QuantType.W4A8_DYNAMIC and SAVE_TYPE_NUMPY in save_type:
+            if len(save_type) == 1:
+                raise ValueError("W4A8_DYNAMIC quantization does not support saving to numpy format, "
+                                 "please check it.")
+            elif SAVE_TYPE_SAFE_TENSOR in save_type:
+                self.logger.error("W4A8_DYNAMIC quantization does not support saving to numpy format, "
+                                    "defaulting to `{SAVE_TYPE_SAFE_TENSOR}` type.")
+                save_type = [SAVE_TYPE_SAFE_TENSOR]
         if part_file_size is not None:
             check_int(part_file_size, min_value=1)
 
@@ -574,6 +583,46 @@ class Calibrator(object):
                 elif isinstance(module, LinearNf4Quantizer):
                     self.logger.info(f"Running in Data-Free mode, quantizing the layer into NF4 type: {name}")
                     module.quant_weight()
+                elif isinstance(module, LowBitLinearQuantizer) and hasattr(module, 'weight_quant_flag'):
+                    if not module.weight_quant_flag:
+                        self.logger.info(f"Running in Data-Free mode, quantizing the layer: {name}")
+                        module.fp_weight = module.weight.cpu().clone()
+                        kwargs = {
+                            'powerquant': self.cfg.nonuniform,
+                            'fraction': self.cfg.fraction, 
+                            'num_bits': self.cfg.w_bit,
+                            'isolate_outlier_amax': False,
+                            'per_channel': not self.cfg.mm_tensor,
+                            'use_cuda': True if self.cfg.dev_type == 'gpu' else False,
+                            'use_sigma': self.cfg.use_sigma,
+                            'sigma_factor': self.cfg.sigma_factor,
+                            'open_outlier': self.cfg.open_outlier,
+                            'group_size': self.cfg.group_size,
+                            'w_sym': self.cfg.w_sym,
+                            'use_hqq': self.cfg.hqq
+                        }
+                        if 'progressive' in inspect.signature(quant_one_weight_by_outliers_low_bit).parameters:
+                            kwargs['progressive'] = self.cfg.is_stage_quant
+                        recovered_weight, scale_w, _, offset_w = quant_one_weight_by_outliers_low_bit(
+                            module.weight,
+                            **kwargs
+                        )
+                        is_scale_w_list = isinstance(scale_w, list) and len(scale_w) == 2
+                        is_offset_w_list = isinstance(offset_w, list) and len(offset_w) == 2
+                        if is_scale_w_list and is_offset_w_list:
+                            module.quant_weight.weight_scale = scale_w[0].cpu()
+                            module.quant_weight.weight_offset = offset_w[0].cpu()
+                            module.quant_weight.weight_scale_second = scale_w[1].cpu()
+                            module.quant_weight.weight_offset_second = offset_w[1].cpu()
+                        else:
+                            module.quant_weight.weight_scale = scale_w.cpu()
+                            module.quant_weight.weight_offset = offset_w.cpu()
+                        module.has_init_quant_para = True
+                        with torch.no_grad():
+                            module.weight[:] = recovered_weight[:]
+                        
+                        module.weight_quant_flag = True
+                        
 
     def run_amp(self):
         max_input_dict = {}
@@ -624,27 +673,39 @@ class Calibrator(object):
                     with torch.no_grad():
                         module.fp_weight = module.weight.cpu().clone()
                         self.logger.info(f"Running in Data-Free mode, quantizing the layer: {name}")
-                        recovered_weight, lowbit_weight_scale, _, lowbit_weight_offset = \
-                            quant_one_weight_by_outliers_low_bit(
-                                module.weight,
-                                powerquant=self.cfg.nonuniform,
-                                fraction=self.cfg.fraction,
-                                num_bits=self.cfg.w_bit,
-                                isolate_outlier_amax=False,
-                                per_channel=not self.cfg.mm_tensor,
-                                use_cuda=True if self.cfg.dev_type == 'gpu' else False,
-                                use_sigma=self.cfg.use_sigma,
-                                sigma_factor=self.cfg.sigma_factor,
-                                open_outlier=self.cfg.open_outlier,
-                                group_size=self.cfg.group_size,
-                                w_sym=self.cfg.w_sym,
-                                use_hqq=self.cfg.hqq
-                            )
-                        # 为降低显存占用，把部分权重放到cpu上
-                        module.quant_weight.weight_scale = lowbit_weight_scale.cpu()
-                        # 通过深拷贝的方式降低显存占用
-                        module.weight[:] = recovered_weight[:]
-                        module.quant_weight.weight_offset = lowbit_weight_offset.cpu()
+                        kwargs = {
+                            'powerquant': self.cfg.nonuniform,
+                            'fraction': self.cfg.fraction, 
+                            'num_bits': self.cfg.w_bit,
+                            'isolate_outlier_amax': False,
+                            'per_channel': not self.cfg.mm_tensor,
+                            'use_cuda': True if self.cfg.dev_type == 'gpu' else False,
+                            'use_sigma': self.cfg.use_sigma,
+                            'sigma_factor': self.cfg.sigma_factor,
+                            'open_outlier': self.cfg.open_outlier,
+                            'group_size': self.cfg.group_size,
+                            'w_sym': self.cfg.w_sym,
+                            'use_hqq': self.cfg.hqq
+                        }
+                        if 'progressive' in inspect.signature(quant_one_weight_by_outliers_low_bit).parameters:
+                            kwargs['progressive'] = self.cfg.is_stage_quant
+                        recovered_weight, scale_w, _, offset_w = quant_one_weight_by_outliers_low_bit(
+                            module.weight,
+                            **kwargs
+                        )
+                        is_scale_w_list = isinstance(scale_w, list) and len(scale_w) == 2
+                        is_offset_w_list = isinstance(offset_w, list) and len(offset_w) == 2
+                        if is_scale_w_list and is_offset_w_list:
+                            module.quant_weight.weight_scale = scale_w[0].cpu()
+                            module.quant_weight.weight_offset = offset_w[0].cpu()
+                            module.quant_weight.weight_scale_second = scale_w[1].cpu()
+                            module.quant_weight.weight_offset_second = offset_w[1].cpu()
+                        else:
+                            module.quant_weight.weight_scale = scale_w.cpu()
+                            module.quant_weight.weight_offset = offset_w.cpu()
+                        module.has_init_quant_para = True
+                        with torch.no_grad():
+                            module.weight[:] = recovered_weight[:]
 
                     module.weight_quant_flag = True
 
