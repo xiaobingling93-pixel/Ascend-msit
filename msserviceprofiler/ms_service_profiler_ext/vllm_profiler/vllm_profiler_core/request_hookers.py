@@ -133,4 +133,23 @@ class ServerGenerateHook(VLLMHookerBase):
         self.do_hook([iterate_with_cancellation], iterate_with_cancellation_maker, pname="generate")
 
 
-request_hookers = [EngineRequestTrackerHook, SchedulerHook, ServerGenerateHook]
+class LLMEngineHook(VLLMHookerBase):
+    vllm_version = ("0.6.3", "0.6.3")
+
+    def init(self):
+        from vllm.engine.llm_engine import LLMEngine
+
+        def get_stats_maker(ori_func):
+            def get_stats(this, *args, **kwargs):
+                profiler = Profiler(Level.INFO)
+                stats = ori_func(this, *args, **kwargs)
+                profiler.domain("http").metric(
+                    "recvTokenSize", stats.num_prompt_tokens_iter).metric(
+                    "replyTokenSize", stats.num_generation_tokens_iter).event("GetTokenSize")
+                return stats
+            return get_stats
+
+        self.do_hook([LLMEngine._get_stats], get_stats_maker)
+
+
+request_hookers = [EngineRequestTrackerHook, SchedulerHook, ServerGenerateHook, LLMEngineHook]
