@@ -288,7 +288,8 @@ if __name__ == '__main__':
                                                     dev_type=args.device_type,
                                                     disable_anti_names=anti_disable_names, flex_config={})
     elif args.anti_method:
-        anti_outlier_config_val = AntiOutlierConfig(anti_method=args.anti_method)
+        anti_outlier_config_val = AntiOutlierConfig(anti_method=args.anti_method,
+                                                    dev_type=args.device_type)
     tokenizer_args = json.loads(args.tokenizer_args)
     quantifier = Quantifier(
         model_path, args, anti_outlier_config_val,

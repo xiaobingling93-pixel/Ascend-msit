@@ -1,60 +1,30 @@
 # Copyright Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+# Note: This file is copied and modified from Open-Sora-Plan repo v1.2: opensora.sample.sample_t2v_sp
 
 import os
 import argparse
-import logging
 
 import torch
 import torch.distributed as dist
 import torch_npu
 from transformers import T5EncoderModel, T5Tokenizer, AutoTokenizer, MT5EncoderModel
+from diffusers.schedulers import (DDIMScheduler, DDPMScheduler, PNDMScheduler,
+                                  EulerDiscreteScheduler, DPMSolverMultistepScheduler,
+                                  HeunDiscreteScheduler, EulerAncestralDiscreteScheduler,
+                                  DEISMultistepScheduler, KDPM2AncestralDiscreteScheduler)
+from diffusers.schedulers.scheduling_dpmsolver_singlestep import DPMSolverSinglestepScheduler
 
 from opensora.models.causalvideovae import ae_stride_config, CausalVAEModelWrapper
-from opensora.models.diffusion.udit.modeling_udit import UDiTT2V
 from opensora.models.diffusion.opensora.modeling_opensora import OpenSoraT2V
 from opensora.npu_config import npu_config
 from opensora.acceleration.parallel_states import initialize_sequence_parallel_state, get_sequence_parallel_state
 from opensora.sample.pipeline_opensora_sp import OpenSoraPipeline
 
-from msmodelslim.pytorch.multi_modal.sampling_optimization.scheduler import EulerAncestralDiscreteSchedulerExample
-
-logger = logging.getLogger(__name__)
-
-
-def load_t2v_checkpoint(model_path):
-    logger.info('load_t2v_checkpoint, %s', str(model_path))
-    if args.model_type == 'udit':
-        transformer_model = UDiTT2V.from_pretrained(model_path, cache_dir=args.cache_dir,
-                                                    low_cpu_mem_usage=False, device_map=None,
-                                                    torch_dtype=weight_dtype)
-    elif args.model_type == 'dit':
-        transformer_model = OpenSoraT2V.from_pretrained(model_path, cache_dir=args.cache_dir,
-                                                        low_cpu_mem_usage=False, device_map=None,
-                                                        torch_dtype=weight_dtype)
-    else:
-        transformer_model = LatteT2V.from_pretrained(model_path, cache_dir=args.cache_dir, low_cpu_mem_usage=False,
-                                                     device_map=None, torch_dtype=weight_dtype)
-
-    # set eval mode
-    transformer_model.eval()
-
-    pipeline = OpenSoraPipeline(vae=vae,
-                                text_encoder=text_encoder,
-                                tokenizer=tokenizer,
-                                scheduler=scheduler,
-                                transformer=transformer_model).to(device)
-
-    if args.compile:
-        pipeline.transformer = torch.compile(pipeline.transformer)
-
-    return pipeline
+from example.osp1_2.model.model_open_sora_plan1_2_sp import OpenSoraPipelineV1x2
+from msmodelslim.tools.logger import logger
 
 
-if __name__ == "__main__":
-    import logging
-
-    logging.basicConfig(level=logging.INFO)
-
+def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_path", type=str, default='LanguageBind/Open-Sora-Plan-v1.0.0')
     parser.add_argument("--version", type=str, default=None, choices=[None, '65x512x512', '65x256x256', '17x256x256'])
@@ -80,13 +50,42 @@ if __name__ == "__main__":
     parser.add_argument('--save_memory', action='store_true')
 
     # sample_optimization
-    parser.add_argument("--save_dir", type=str, required=True,
+    parser.add_argument("--save_dir", type=str, default=None,
                         help='The path to save file about the optimized schedule timestep')
-    parser.add_argument("--videos_path", type=str, required=True, help='The path of calibration videos')
+    parser.add_argument("--videos_path", type=str, default=None, help='The path of calibration videos')
     parser.add_argument("--neighbour_type", type=str, required=False, default="uniform")
     parser.add_argument("--monte_carlo_iters", type=int, required=False, default=5)
 
+    # dit cache
+    parser.add_argument("--search_type", choices=['restep', 'dit_cache'], required=True, default='restep')
+    parser.add_argument("--cache_ratio", type=float, default=1.3)
+    parser.add_argument("--cache_save_path", type=str, default=None)
+
     args = parser.parse_args()
+    return args
+
+
+def build_pipeline(args):
+    def load_t2v_checkpoint(model_path):
+        logger.info('load_t2v_checkpoint, %s', str(model_path))
+        if args.model_type == 'dit':
+            transformer_model = OpenSoraT2V.from_pretrained(model_path, cache_dir=args.cache_dir,
+                                                            low_cpu_mem_usage=False, device_map=None,
+                                                            torch_dtype=weight_dtype)
+        else:
+            raise ValueError('--model_type is not supported')
+
+        # set eval mode
+        transformer_model.eval()
+
+        pipeline = OpenSoraPipelineV1x2(vae=vae, text_encoder=text_encoder,
+                                       tokenizer=tokenizer, scheduler=scheduler,
+                                       transformer=transformer_model).to(device)
+
+        if args.compile:
+            pipeline.transformer = torch.compile(pipeline.transformer)
+
+        return pipeline
 
     if torch_npu is not None:
         npu_config.print_msg(args)
@@ -127,13 +126,28 @@ if __name__ == "__main__":
     vae.eval()
     text_encoder.bfloat16().eval()
 
-    if args.sample_method == 'EulerAncestralDiscrete':
-        scheduler = EulerAncestralDiscreteSchedulerExample()
+    if args.sample_method == 'DDIM':
+        scheduler = DDIMScheduler(clip_sample=False)
+    elif args.sample_method == 'EulerDiscrete':
+        scheduler = EulerDiscreteScheduler()
+    elif args.sample_method == 'DDPM':
+        scheduler = DDPMScheduler(clip_sample=False)
+    elif args.sample_method == 'DPMSolverMultistep':
+        scheduler = DPMSolverMultistepScheduler()
+    elif args.sample_method == 'DPMSolverSinglestep':
+        scheduler = DPMSolverSinglestepScheduler()
+    elif args.sample_method == 'PNDM':
+        scheduler = PNDMScheduler()
+    elif args.sample_method == 'HeunDiscrete':
+        scheduler = HeunDiscreteScheduler()
+    elif args.sample_method == 'EulerAncestralDiscrete':
+        scheduler = EulerAncestralDiscreteScheduler()
+    elif args.sample_method == 'DEISMultistep':
+        scheduler = DEISMultistepScheduler()
+    elif args.sample_method == 'KDPM2AncestralDiscrete':
+        scheduler = KDPM2AncestralDiscreteScheduler()
     else:
         raise ValueError(f'args.sample_method: {args.sample_method} not supported.')
-
-    if args.num_frames not in {29}:
-        raise ValueError(f'args.num_frames: {args.sample_method} not supported. Only support 29 frames.')
 
     # read text_prompt
     if not isinstance(args.text_prompt, list):
@@ -142,30 +156,11 @@ if __name__ == "__main__":
         text_prompt = open(args.text_prompt[0], 'r').readlines()
         args.text_prompt = [i.strip() for i in text_prompt]
 
-    save_img_path = args.save_img_path
     full_path = args.model_path
-    os.makedirs(args.save_dir, exist_ok=True)
-
-    from msmodelslim.pytorch.multi_modal.sampling_optimization import ReStepSearchConfig, ReStepAdaptor
 
     # get original pipeline
     pipeline: OpenSoraPipeline = load_t2v_checkpoint(full_path)
     # save osp1.2 config args to the pipeline obj
     pipeline.args = args
 
-    # set restep search config
-    config = ReStepSearchConfig(
-        videos_path=args.videos_path,
-        save_dir=args.save_dir,
-        neighbour_type=args.neighbour_type,
-        monte_carlo_iters=args.monte_carlo_iters,
-    )
-
-    # create ReStepAdaptor
-    restep_adaptor = ReStepAdaptor(pipeline, config)
-
-    # do the scheduler timestep search
-    scheduler_timestep = restep_adaptor.search()
-
-    if local_rank == 0:
-        logger.info("Searched scheduler timestep: %s", scheduler_timestep)
+    return pipeline

@@ -16,6 +16,13 @@ class NpyWriter(BaseWriter):
         self.file_name = file_name
         self.dict = {}
 
+    def save_param(self):
+        output_path = os.path.join(self.save_directory, self.file_name)
+        output_path = get_valid_write_path(output_path)
+        with SafeWriteUmask(umask=0o377):
+            np.save(output_path, self.dict)
+        self.logger.info(f'Save npy to {output_path} successfully')
+
     def _write(self, key: str, value: torch.Tensor) -> None:
         check_type(value, torch.Tensor)
         self.dict[key] = value
@@ -26,10 +33,3 @@ class NpyWriter(BaseWriter):
 
         self.save_param()
         del self.dict
-
-    def save_param(self):
-        output_path = os.path.join(self.save_directory, self.file_name)
-        output_path = get_valid_write_path(output_path)
-        with SafeWriteUmask(umask=0o377):
-            np.save(output_path, self.dict)
-        self.logger.info(f'Save npy to {output_path} successfully')

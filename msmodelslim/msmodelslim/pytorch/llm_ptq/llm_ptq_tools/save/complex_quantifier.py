@@ -62,6 +62,27 @@ def _get_module_quant_input(module):
     return ret
 
 
+# for clean code
+def generate_weight_of_rms_norm_module(name, module):
+    yield name + '.weight', QuantType.FLOAT, module.weight.clone().cpu()
+
+
+# for clean code
+def generate_weight_of_fa_module(name, module):
+    quant_param_scale, quant_param_offset, _ = export_fa_quant_params(module, name)
+    for name, param in quant_param_scale.items():
+        yield name, QuantType.FAQuant, param
+    for name, param in quant_param_offset.items():
+        yield name, QuantType.FAQuant, param
+
+
+# for clean code
+def generate_weight_of_nf_module(name, module):
+    yield name + '.weight', QuantType.NF4, module.weight
+    if module.bias is not None:
+        yield name + '.bias', QuantType.NF4, module.bias
+
+
 class ComplexQuantifier:
     def __init__(self, cfg, rollback_names, torch_dtype, layer_cfg_manager):
         self.cfg = cfg
@@ -77,34 +98,22 @@ class ComplexQuantifier:
 
         model_quant_type = self.layer_cfg_manager.get_layer_config(name).model_quant_type
         if self.cfg.use_fa_quant and is_attn_module_and_then_check_quantizer(module, name):
-            yield from self.generate_weight_of_fa_module(name, module)
+            yield from generate_weight_of_fa_module(name, module)
         elif isinstance(module, LinearNf4Quantizer):
-            yield from self.generate_weight_of_nf_module(name, module)
+            yield from generate_weight_of_nf_module(name, module)
         elif isinstance(module, ParallelLinearCol):
             yield from self.generate_weight_of_tp_module(name, module, model_quant_type)
         # 处理 Norm 对应的 weight、bias
         elif isinstance(module, NormBias):
             yield from self.generate_weight_of_norm_module(name, module, model_quant_type)
         elif isinstance(module, LlamaRMSNormBias):
-            yield from self.generate_weight_of_rms_norm_module(name, module)
+            yield from generate_weight_of_rms_norm_module(name, module)
         # 处理Linear、以及附属scale、offset等params
         elif isinstance(module, (LinearQuantizer, LinearSparseQuantizer, LowBitLinearQuantizer)):
             yield from self.generate_weight_of_linear_module(name, module, model_quant_type)
         else:
             for key, param in module.named_parameters(name, recurse=False):
                 yield key, QuantType.FLOAT, param
-
-    def generate_weight_of_nf_module(self, name, module):
-        yield name + '.weight', QuantType.NF4, module.weight
-        if module.bias is not None:
-            yield name + '.bias', QuantType.NF4, module.bias
-
-    def generate_weight_of_fa_module(self, name, module):
-        quant_param_scale, quant_param_offset, _ = export_fa_quant_params(module, name)
-        for name, param in quant_param_scale.items():
-            yield name, QuantType.FAQuant, param
-        for name, param in quant_param_offset.items():
-            yield name, QuantType.FAQuant, param
 
     def generate_weight_of_tp_module(self, name, module, model_quant_type):
         quant_param, _ = module.get_quant_param()
@@ -130,9 +139,6 @@ class ComplexQuantifier:
         anti_norm_bias: torch.Tensor = module.bias
         yield name + '.weight', model_quant_type, anti_norm_weight.clone().cpu()
         yield name + '.bias', model_quant_type, anti_norm_bias.clone().cpu()
-
-    def generate_weight_of_rms_norm_module(self, name, module):
-        yield name + '.weight', QuantType.FLOAT, module.weight.clone().cpu()
 
     def generate_weight_of_linear_module(self, name, module, model_quant_type):
         if not module.quant_weight.is_enable:

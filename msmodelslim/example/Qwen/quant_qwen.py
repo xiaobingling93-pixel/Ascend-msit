@@ -264,7 +264,8 @@ if __name__ == '__main__':
                                                     disable_anti_names=anti_disable_names, \
                                                     flex_config={'alpha': 0.6, 'beta': 0.3})
     elif args.anti_method:
-        anti_outlier_config_val = AntiOutlierConfig(anti_method=args.anti_method)
+        anti_outlier_config_val = AntiOutlierConfig(anti_method=args.anti_method,
+                                                    dev_type=args.device_type)
 
     tokenizer_args = json.loads(args.tokenizer_args)
     if tokenizer_args == {} and args.model_type == 'qwen1':

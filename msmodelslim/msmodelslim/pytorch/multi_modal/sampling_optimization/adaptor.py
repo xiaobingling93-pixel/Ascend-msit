@@ -11,10 +11,8 @@ import gc
 import numpy as np
 import torch
 
-from opensora.sample.pipeline_opensora_sp import OpenSoraPipeline
-
+from example.osp1_2.model.model_open_sora_plan1_2_sp import OneStepSampleArgs, TextEmbeddingsArgs
 from .schedule_optimizer import AYSOptimizer
-from .model_open_sora_plan1_2_sp import ReStepOpenSoraPipelineV1_2
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +80,7 @@ def check_exist_and_write_permission(path: str) -> None:
 class ReStepAdaptor:
     _timestep_idx = None
 
-    def __init__(self, pipeline: OpenSoraPipeline,
+    def __init__(self, pipeline,
                  config: ReStepSearchConfig,
                  ):
         """
@@ -92,7 +90,7 @@ class ReStepAdaptor:
         self.search_config = config
         self.videos_paths = None
 
-        if not isinstance(pipeline, OpenSoraPipeline):
+        if pipeline is None:
             raise ValueError("pipeline must be OpenSoraPipeline")
 
         if not isinstance(config, ReStepSearchConfig):
@@ -106,9 +104,6 @@ class ReStepAdaptor:
             self.local_rank = torch.cuda.current_device()
         else:
             raise RuntimeError("RANK and WORLD_SIZE must be set in environment")
-
-        pipeline: ReStepOpenSoraPipelineV1_2 \
-            = self.replace_obj_class(pipeline, ReStepOpenSoraPipelineV1_2)
 
         self.pipeline = pipeline
 
@@ -186,8 +181,10 @@ class ReStepAdaptor:
         ) = self.get_default_prompt(pipeline_args)
 
         bs = 1
-        no_guid_states = {'encoder_hidden_states': negative_prompt_embeds.expand(bs, -1, -1).unsqueeze(1),
-                          'encoder_attention_mask': negative_prompt_attention_mask.expand(bs, -1).unsqueeze(1)}
+        no_guid_states = {
+            'encoder_hidden_states': negative_prompt_embeds.expand(bs, -1, -1).unsqueeze(1),
+            'encoder_attention_mask': negative_prompt_attention_mask.expand(bs, -1).unsqueeze(1)
+        }
         if self.pipeline.get_sequence_parallel_state():
             no_guid_states['encoder_hidden_states'] = pipeline.split_sequence(no_guid_states['encoder_hidden_states'],
                                                                               self.local_rank, self.world_size)
@@ -204,11 +201,17 @@ class ReStepAdaptor:
         save_file_path = os.path.join(save_dir, 'searched_schedule.txt')
         logger.info("Result will saved at: %s", save_file_path)
 
-        denoising_fn = functools.partial(pipeline.one_step_sample,
-                                         encoder_states=no_guid_states,
-                                         extra_step_kwargs=extra_step_kwargs,
-                                         added_cond_kwargs=added_cond_kwargs,
-                                         )
+        def denoising_fn(latents, timestep, step_index):
+            return pipeline.one_step_sample(
+                OneStepSampleArgs(
+                    latents=latents,
+                    timestep=timestep,
+                    step_index=step_index,
+                    encoder_states=no_guid_states,
+                    extra_step_kwargs=extra_step_kwargs,
+                    added_cond_kwargs=added_cond_kwargs
+                )
+            )
 
         scheduler.set_timesteps(config.num_sampling_steps, device=device)
 
@@ -248,18 +251,19 @@ class ReStepAdaptor:
             """
 
         self.seed_everything(42)
-        res = self.pipeline.get_text_embeddings(positive_prompt,
-                                                negative_prompt=negative_prompt,
-                                                num_frames=args.num_frames,
-                                                height=args.height,
-                                                width=args.width,
-                                                num_inference_steps=args.num_sampling_steps,
-                                                guidance_scale=args.guidance_scale,
-                                                num_images_per_prompt=1,
-                                                mask_feature=True,
-                                                device=f"npu:{torch.cuda.current_device()}",
-                                                max_sequence_length=args.max_sequence_length,
-                                                )
+        res = self.pipeline.get_text_embeddings(TextEmbeddingsArgs(
+            prompt=positive_prompt,
+            negative_prompt=negative_prompt,
+            num_frames=args.num_frames,
+            height=args.height,
+            width=args.width,
+            num_inference_steps=args.num_sampling_steps,
+            guidance_scale=args.guidance_scale,
+            num_images_per_prompt=1,
+            mask_feature=True,
+            device=f"npu:{torch.cuda.current_device()}",
+            max_sequence_length=args.max_sequence_length,
+        ))
 
         self.pipeline.text_encoder = self.pipeline.text_encoder.to('cpu')
         self.clear_cache()

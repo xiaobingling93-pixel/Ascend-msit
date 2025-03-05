@@ -1,10 +1,11 @@
 # Copyright Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+# Note: This file is copied and modified from Open-Sora-Plan repo v1.2: opensora.sample.sample_t2v_sp
 
 import os
 import math
 import argparse
-import logging
 import gc
+import json
 
 import torch
 import torch.distributed as dist
@@ -25,12 +26,11 @@ from opensora.models.causalvideovae import ae_stride_config, CausalVAEModelWrapp
 from opensora.models.diffusion.udit.modeling_udit import UDiTT2V
 from opensora.models.diffusion.opensora.modeling_opensora import OpenSoraT2V
 from opensora.utils.utils import save_video_grid
-from opensora.sample.pipeline_opensora_sp import OpenSoraPipeline
 from opensora.npu_config import npu_config
 
-from msmodelslim.pytorch.multi_modal.sampling_optimization.scheduler import EulerAncestralDiscreteSchedulerExample
-
-logger = logging.getLogger(__name__)
+from ascend_utils.common.security import get_write_directory
+from example.osp1_2.model.model_open_sora_plan1_2_sp import OpenSoraPipelineV1x2
+from msmodelslim.tools.logger import logger
 
 
 def load_t2v_checkpoint(model_path):
@@ -49,11 +49,11 @@ def load_t2v_checkpoint(model_path):
     # set eval mode
     transformer_model.eval()
 
-    pipeline = OpenSoraPipeline(vae=vae,
-                                text_encoder=text_encoder,
-                                tokenizer=tokenizer,
-                                scheduler=scheduler,
-                                transformer=transformer_model).to(device)
+    pipeline = OpenSoraPipelineV1x2(vae=vae,
+                                    text_encoder=text_encoder,
+                                    tokenizer=tokenizer,
+                                    scheduler=scheduler,
+                                    transformer=transformer_model).to(device)
 
     if args.compile:
         pipeline.transformer = torch.compile(pipeline.transformer)
@@ -139,10 +139,6 @@ def run_model_and_save_images(pipeline, model_path):
 
 
 if __name__ == "__main__":
-    import logging
-
-    logging.basicConfig(level=logging.INFO)
-
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_path", type=str, default='LanguageBind/Open-Sora-Plan-v1.0.0')
     parser.add_argument("--version", type=str, default=None, choices=[None, '65x512x512', '65x256x256', '17x256x256'])
@@ -169,6 +165,9 @@ if __name__ == "__main__":
 
     # set searched timestep
     parser.add_argument("--schedule_timestep", type=str, required=False, default=None)
+
+    # set searched dit-cache config
+    parser.add_argument("--dit_cache_config", type=str, required=False, default=None)
 
     args = parser.parse_args()
 
@@ -227,7 +226,7 @@ if __name__ == "__main__":
     elif args.sample_method == 'HeunDiscrete':
         scheduler = HeunDiscreteScheduler()
     elif args.sample_method == 'EulerAncestralDiscrete':
-        scheduler = EulerAncestralDiscreteSchedulerExample()
+        scheduler = EulerAncestralDiscreteScheduler()
     elif args.sample_method == 'DEISMultistep':
         scheduler = DEISMultistepScheduler()
     elif args.sample_method == 'KDPM2AncestralDiscrete':
@@ -236,8 +235,9 @@ if __name__ == "__main__":
         raise ValueError(f'args.sample_method: {args.sample_method} not supported.')
 
     if args.schedule_timestep is not None:
-        import json
+        from example.osp1_2.model.scheduler import EulerAncestralDiscreteSchedulerExample
 
+        scheduler = EulerAncestralDiscreteSchedulerExample()
         with open(args.schedule_timestep, 'r') as f:
             timesteps = json.load(f)
 
@@ -246,8 +246,14 @@ if __name__ == "__main__":
     else:
         timesteps_set = None
 
+    if args.dit_cache_config is not None:
+        with open(args.dit_cache_config, 'r') as f:
+            cache_config = json.load(f)
+    else:
+        cache_config = None
+
     if not os.path.exists(args.save_img_path):
-        os.makedirs(args.save_img_path, exist_ok=True)
+        get_write_directory(args.save_img_path)
 
     if args.num_frames == 1:
         video_length = 1
@@ -265,11 +271,20 @@ if __name__ == "__main__":
     save_img_path = args.save_img_path
     full_path = args.model_path
 
-    pipeline: OpenSoraPipeline = load_t2v_checkpoint(full_path)
+    pipeline = load_t2v_checkpoint(full_path)
     logger.info('load model')
 
     gc.collect()
     torch.cuda.empty_cache()
     torch.npu.empty_cache()
+
+    if cache_config is not None:
+        from msmodelslim.pytorch.multi_modal.dit_cache import DitCacheAdaptor, DitCacheSearchConfig
+
+        # add adaptor to add cache func to the dit blocks
+        adaptor = DitCacheAdaptor(pipeline)
+        adaptor.update_cache_config(**cache_config)
+
+        logger.info('using cache config: %s', str(cache_config))
 
     run_model_and_save_images(pipeline, args.model_path)
