@@ -521,16 +521,6 @@ class Calibrator(object):
 
         self._save(output_path, safetensors_name, json_name, save_type, part_file_size)
 
-        # For filtering bf16 weights during the calibrator.save()
-        class EmptyModule(nn.Module):
-            def __init__(self) -> None:
-                super(EmptyModule, self).__init__()
-            
-            def forward(self, x):
-                return x
-
-        self.model.save_pretrained(output_path, state_dict=EmptyModule().state_dict())     
-
     def generate_weight_of_model(self, model, weight_of_module_generator):
         with tqdm(desc='Collect quant param', total=sum(1 for _, _ in self.model.named_modules())) as progress:
             for name, module in model.named_modules():
@@ -795,8 +785,7 @@ class Calibrator(object):
                                     cfg=self.cfg,
                                     safetensors_name=safetensors_name,
                                     json_name=json_name,
-                                    part_file_size=part_file_size,
-                                    model=self.model)
+                                    part_file_size=part_file_size)
 
         # quantifier 应基于量化方法予以抽象，当前仅实现了与保存相关的逻辑
         quantifier = ComplexQuantifier(cfg=self.cfg,

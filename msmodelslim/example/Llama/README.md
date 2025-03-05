@@ -15,6 +15,7 @@
 #### 此模型仓已适配的模型版本权重获取地址
   - [LLaMa系列](https://github.com/facebookresearch/llama/tree/llama_v1)
   - [LLaMa2系列](https://github.com/facebookresearch/llama/tree/v2)
+  - [LLaMa3系列](https://github.com/meta-llama/llama3)
 
 ## 环境配置
 
@@ -123,7 +124,7 @@
 - 需修改`modeling_llama.py`文件和`config.json`文件，配置方法参考[FA量化使用说明](https://gitee.com/ascend/msit/blob/master/msmodelslim/docs/FA%E9%87%8F%E5%8C%96%E4%BD%BF%E7%94%A8%E8%AF%B4%E6%98%8E.md)。 
 - 相比于W8A8量化，需额外设置`use_fa_quant`参数为True
   ```shell
-  python3 quant_llama.py --model_path {浮点权重路径} --save_directory {W8A8量化权重路径} --calib_file ../common/boolq.jsonl  --device_type npu --disable_level L5 --anti_method m3 --act_method 3 --use_fa_quant True
+  python3 quant_llama.py --model_path {浮点权重路径} --save_directory {W8A8量化权重路径} --calib_file ../common/boolq.jsonl --w_bit 8 --a_bit 8 --device_type npu --disable_level L5 --anti_method m4 --act_method 3 --use_fa_quant True
   ```
 ##### Llama3.1-70B W8A8-pdmix量化(prefill阶段 w8a8动态量化, decode阶段 w8a8量化) 搭配 KV cache int8量化
   ```shell
