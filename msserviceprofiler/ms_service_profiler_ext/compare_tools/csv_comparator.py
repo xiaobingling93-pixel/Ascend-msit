@@ -16,9 +16,9 @@ from pathlib import Path
 
 import pandas as pd
 from ms_service_profiler.utils.log import logger
-from ms_service_profiler.utils.csv_fields import BaseCSVFields, ServiceCSVFields
 
 from .base import BaseComparator
+from ..utils.csv_fields import BaseCSVFields, ServiceCSVFields
 
 
 class CSVComparator(BaseComparator):
@@ -42,7 +42,7 @@ class CSVComparator(BaseComparator):
             return pd.DataFrame()
 
         # 按 Metric 列合并两个 DataFrame
-        df_merged = pd.merge(df_a, df_b, on=BaseCSVFields.metric, suffixes=('_a', '_b'))
+        df_merged = pd.merge(df_a, df_b, on=BaseCSVFields.METRIC, suffixes=('_a', '_b'))
 
         # 计算差值
         for col in df_a.columns[1:]:  # 跳过 Metric 列
@@ -70,22 +70,22 @@ class CSVComparator(BaseComparator):
 
         # 遍历合并后的 DataFrame
         for _, row in df_merged.iterrows():
-            metric = row[BaseCSVFields.metric]
+            metric = row[BaseCSVFields.METRIC]
 
             # 添加 a 数据
-            a_row = {BaseCSVFields.metric: metric, 'Data Source': 'Input Data'}
+            a_row = {BaseCSVFields.METRIC: metric, 'Data Source': 'Input Data'}
             for col in df_a.columns[1:]:
                 a_row[col] = row[f'{col}_a']
             rows.append(a_row)
 
             # 添加 b 数据
-            b_row = {BaseCSVFields.metric: metric, 'Data Source': 'Golden Data'}
+            b_row = {BaseCSVFields.METRIC: metric, 'Data Source': 'Golden Data'}
             for col in df_a.columns[1:]:
                 b_row[col] = row[f'{col}_b']
             rows.append(b_row)
 
             # 添加 diff 数据
-            diff_row = {BaseCSVFields.metric: metric, 'Data Source': 'Different'}
+            diff_row = {BaseCSVFields.METRIC: metric, 'Data Source': 'Different'}
             for col in df_a.columns[1:]:
                 diff_row[col] = row[f'{col}_diff']
             rows.append(diff_row)
@@ -95,15 +95,14 @@ class CSVComparator(BaseComparator):
         return result
 
     def _save_visualization_database(self, df, sheet_name):
-        print(ServiceCSVFields.value)
         if df.shape[0] == 0:
             return
         if sheet_name == "service":
             for i in range(0, len(df), 3):
                 if i + 3 <= len(df):
-                    new_col_name = df.loc[i, BaseCSVFields.metric]
-                    df[new_col_name] = df.iloc[i:i + 3, :][ServiceCSVFields.value].reset_index(drop=True)
-            df.drop(columns=[BaseCSVFields.metric, ServiceCSVFields.value], inplace=True)
+                    new_col_name = df.loc[i, ServiceCSVFields.METRIC]
+                    df[new_col_name] = df.iloc[i:i + 3, :][ServiceCSVFields.VALUE].reset_index(drop=True)
+            df.drop(columns=[ServiceCSVFields.METRIC, ServiceCSVFields.VALUE], inplace=True)
             df = df.iloc[:3, :]
 
         df.to_sql(name=sheet_name, con=self.out_db_conn, if_exists='replace', index=False)
