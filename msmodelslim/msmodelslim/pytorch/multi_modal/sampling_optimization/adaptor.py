@@ -11,8 +11,8 @@ import gc
 import numpy as np
 import torch
 
-from .schedule_optimizer import AYSOptimizer
 from example.osp1_2.model.model_open_sora_plan1_2_sp import OneStepSampleArgs, TextEmbeddingsArgs
+from .schedule_optimizer import AYSOptimizer
 
 logger = logging.getLogger(__name__)
 
@@ -181,8 +181,10 @@ class ReStepAdaptor:
         ) = self.get_default_prompt(pipeline_args)
 
         bs = 1
-        no_guid_states = {'encoder_hidden_states': negative_prompt_embeds.expand(bs, -1, -1).unsqueeze(1),
-                          'encoder_attention_mask': negative_prompt_attention_mask.expand(bs, -1).unsqueeze(1)}
+        no_guid_states = {
+            'encoder_hidden_states': negative_prompt_embeds.expand(bs, -1, -1).unsqueeze(1),
+            'encoder_attention_mask': negative_prompt_attention_mask.expand(bs, -1).unsqueeze(1)
+        }
         if self.pipeline.get_sequence_parallel_state():
             no_guid_states['encoder_hidden_states'] = pipeline.split_sequence(no_guid_states['encoder_hidden_states'],
                                                                               self.local_rank, self.world_size)

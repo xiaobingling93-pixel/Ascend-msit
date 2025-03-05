@@ -545,4 +545,4 @@ class DitCacheAdaptor:
                 path_checker.safe_delete_path_if_exists(self._temp_cache_dir)
                 logger_debug(f"Cleaned up temporary cache directory: {self._temp_cache_dir}")
             except Exception as e:
-                logger_root.warning(f"Failed to clean up temporary cache directory: {e}")
+                logger_root.warning(f"Failed to clean up temporary cache directory: %s", e)
