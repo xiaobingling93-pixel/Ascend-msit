@@ -13,8 +13,8 @@ class OmniAttentionConfig:
     seed: int = 42
     '''
     Args:
-        pool_size: 数据类型为int，遗传算法初始化个体数量，默认值为50
-        num_mutation: 数据类型为int，每次进化变异个体数量，默认值为10
+        pool_size: 数据类型为int，遗传算法初始化个体数量，应大于0，默认值为50
+        num_mutation: 数据类型为int，每次进化变异个体数量，应大于0，，默认值为10
         model_path: 数据类型为str，模型路径
         save_path: 数据类型为str，pattern保存路径
         seed: 数据类型为int，随机种子
@@ -39,4 +39,6 @@ class OmniAttentionConfig:
 
         if self.pool_size <= 0:
             raise ValueError("pool_size must be positive int")
+        if self.num_mutation <= 0:
+            raise ValueError("num_mutation must be positive int")
 
