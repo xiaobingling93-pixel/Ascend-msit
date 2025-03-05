@@ -16,6 +16,7 @@ from pathlib import Path
 
 import pandas as pd
 from ms_service_profiler.utils.log import logger
+from ms_service_profiler.utils.csv_fields import BaseCSVFields, ServiceCSVFields
 
 from .base import BaseComparator
 
@@ -26,7 +27,7 @@ class CSVComparator(BaseComparator):
     def process(self, file_a, file_b):
         df = self.compare_csv(file_a, file_b)
         self._save_results(df, file_a)
-        
+
     def compare_csv(self, file_a, file_b):
         try:
             df_a = pd.read_csv(file_a)
@@ -34,14 +35,14 @@ class CSVComparator(BaseComparator):
         except Exception as ex:
             logger.error(f'failed to read csv, please check {file_a}.')
             return pd.DataFrame()
-        
+
         # 确保列名一致
         if set(df_a.columns) != set(df_b.columns):
             logger.error("两个 CSV 文件的列名不一致！")
             return pd.DataFrame()
 
         # 按 Metric 列合并两个 DataFrame
-        df_merged = pd.merge(df_a, df_b, on='Metric', suffixes=('_a', '_b'))
+        df_merged = pd.merge(df_a, df_b, on=BaseCSVFields.metric, suffixes=('_a', '_b'))
 
         # 计算差值
         for col in df_a.columns[1:]:  # 跳过 Metric 列
@@ -49,12 +50,12 @@ class CSVComparator(BaseComparator):
             try:
                 # 计算绝对差值
                 abs_diff = (df_merged[f'{col}_a'] - df_merged[f'{col}_b'])
-                
+
                 # 计算百分比相对差值（避免除以零错误）
                 rel_diff = abs_diff / df_merged[f'{col}_a'].replace(0, pd.NA) * 100
                 with pd.option_context('future.no_silent_downcasting', True):
                     rel_diff = rel_diff.fillna(0)  # 将 NaN 替换为 0
-                
+
                 # 合并为字符串格式
                 df_merged[f'{col}_diff'] = abs_diff.round(2).astype(str) + '|' + rel_diff.round(2).astype(str) + '%'
             except Exception as ex:
@@ -69,39 +70,40 @@ class CSVComparator(BaseComparator):
 
         # 遍历合并后的 DataFrame
         for _, row in df_merged.iterrows():
-            metric = row['Metric']
-            
+            metric = row[BaseCSVFields.metric]
+
             # 添加 a 数据
-            a_row = {'Metric': metric, 'Data Source': 'Input Data'}
+            a_row = {BaseCSVFields.metric: metric, 'Data Source': 'Input Data'}
             for col in df_a.columns[1:]:
                 a_row[col] = row[f'{col}_a']
             rows.append(a_row)
-            
+
             # 添加 b 数据
-            b_row = {'Metric': metric, 'Data Source': 'Golden Data'}
+            b_row = {BaseCSVFields.metric: metric, 'Data Source': 'Golden Data'}
             for col in df_a.columns[1:]:
                 b_row[col] = row[f'{col}_b']
             rows.append(b_row)
-            
+
             # 添加 diff 数据
-            diff_row = {'Metric': metric, 'Data Source': 'Different'}
+            diff_row = {BaseCSVFields.metric: metric, 'Data Source': 'Different'}
             for col in df_a.columns[1:]:
                 diff_row[col] = row[f'{col}_diff']
             rows.append(diff_row)
 
         # 将所有行转换为 DataFrame
-        result = pd.DataFrame(rows)        
+        result = pd.DataFrame(rows)
         return result
 
     def _save_visualization_database(self, df, sheet_name):
+        print(ServiceCSVFields.value)
         if df.shape[0] == 0:
-            return            
+            return
         if sheet_name == "service":
             for i in range(0, len(df), 3):
                 if i + 3 <= len(df):
-                    new_col_name = df.loc[i, "Metric"]
-                    df[new_col_name] = df.iloc[i:i + 3, :]['value'].reset_index(drop=True)
-            df.drop(columns=['Metric', 'value'], inplace=True)
+                    new_col_name = df.loc[i, BaseCSVFields.metric]
+                    df[new_col_name] = df.iloc[i:i + 3, :][ServiceCSVFields.value].reset_index(drop=True)
+            df.drop(columns=[BaseCSVFields.metric, ServiceCSVFields.value], inplace=True)
             df = df.iloc[:3, :]
 
         df.to_sql(name=sheet_name, con=self.out_db_conn, if_exists='replace', index=False)
@@ -110,3 +112,4 @@ class CSVComparator(BaseComparator):
         sheet_name = Path(source_file).stem.split('_')[0]
         df.to_excel(self.excel_writer, sheet_name=sheet_name, index=False)
         self._save_visualization_database(df, sheet_name)
+

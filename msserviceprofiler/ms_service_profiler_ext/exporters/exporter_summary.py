@@ -18,6 +18,7 @@ import numpy as np
 import pandas as pd
 from ms_service_profiler.exporters.base import ExporterBase
 from ms_service_profiler.utils.log import logger
+from ms_service_profiler.utils.csv_fields import RequestCSVFields, BatchCSVFields, ServiceCSVFields
 
 
 def is_contained_valid_iter_info(rid_list, token_id_list):
@@ -46,21 +47,21 @@ def process_batch_record(batch_map, record):
         prefill_key = f"prefill_{rid_tuple}"
         if prefill_key not in batch_map:
             batch_map[prefill_key] = {
-                'prefill_batch_num': 0,
-                'prefill_exec_time (ms)': 0.0
+                BatchCSVFields.prefill_batch_num : 0,
+                BatchCSVFields.prefill_exec_time : 0.0
             }
-        batch_map[prefill_key]['prefill_batch_num'] = int(record.get('batch_size'))
-        batch_map[prefill_key]['prefill_exec_time (ms)'] += float(record.get('during_time')) / 1000
+        batch_map[prefill_key][BatchCSVFields.prefill_batch_num] = int(record.get('batch_size'))
+        batch_map[prefill_key][BatchCSVFields.prefill_exec_time] += float(record.get('during_time')) / 1000
 
     if batch_type == 'Decode':
         decode_key = f"decode_{rid_tuple}"
         if decode_key not in batch_map:
             batch_map[decode_key] = {
-                'decode_batch_num': 0,
-                'decode_exec_time (ms)': 0.0
+                BatchCSVFields.decode_batch_num: 0,
+                BatchCSVFields.decode_exec_time: 0.0
             }
-        batch_map[decode_key]['decode_batch_num'] = int(record.get('batch_size'))
-        batch_map[decode_key]['decode_exec_time (ms)'] += float(record.get('during_time')) / 1000
+        batch_map[decode_key][BatchCSVFields.decode_batch_num] = int(record.get('batch_size'))
+        batch_map[decode_key][BatchCSVFields.decode_exec_time] += float(record.get('during_time')) / 1000
 
 
 def process_req_record(req_map, record):
@@ -196,13 +197,13 @@ def gen_exporter_results(all_data_df):
 
     # 计算统计值
     req_stats = {
-        "first_token_latency (ms)": calculate_statistics(first_token_latency),
-        "subsequent_token_latency (ms)": calculate_statistics(subsequent_token_latency),
-        "total_time (ms)": calculate_statistics(total_time),
-        "exec_time (ms)": calculate_statistics(exec_time),
-        "waiting_time (ms)": calculate_statistics(waiting_time),
-        "input_token_num": calculate_statistics(input_token_num),
-        "generated_token_num": calculate_statistics(generated_token_num)
+        RequestCSVFields.first_token_latency: calculate_statistics(first_token_latency),
+        RequestCSVFields.subsequent_token_latency: calculate_statistics(subsequent_token_latency),
+        RequestCSVFields.total_time: calculate_statistics(total_time),
+        RequestCSVFields.exec_time: calculate_statistics(exec_time),
+        RequestCSVFields.waiting_time: calculate_statistics(waiting_time),
+        RequestCSVFields.input_token_num: calculate_statistics(input_token_num),
+        RequestCSVFields.generated_token_num: calculate_statistics(generated_token_num)
     }
 
     # 生成batch维度数据
@@ -242,18 +243,18 @@ def calculate_batch_metrics(batch_map):
 
     for key, value in batch_map.items():
         if key.startswith('prefill'):
-            prefill_batch_num_list.append(value.get('prefill_batch_num', 0))
-            prefill_exec_time_list.append(value.get('prefill_exec_time (ms)', 0.0))
+            prefill_batch_num_list.append(value.get(BatchCSVFields.prefill_batch_num, 0))
+            prefill_exec_time_list.append(value.get(BatchCSVFields.prefill_exec_time, 0.0))
         elif key.startswith('decode'):
-            decode_batch_num_list.append(value.get('decode_batch_num', 0))
-            decode_exec_time_list.append(value.get('decode_exec_time (ms)', 0.0))
+            decode_batch_num_list.append(value.get(BatchCSVFields.decode_batch_num, 0))
+            decode_exec_time_list.append(value.get(BatchCSVFields.decode_exec_time, 0.0))
 
     # 计算统计指标
     batch_status = {
-        "prefill_batch_num": calculate_statistics(prefill_batch_num_list),
-        "decode_batch_num": calculate_statistics(decode_batch_num_list),
-        "prefill_exec_time (ms)": calculate_statistics(prefill_exec_time_list),
-        "decode_exec_time (ms)": calculate_statistics(decode_exec_time_list)
+        BatchCSVFields.prefill_batch_num: calculate_statistics(prefill_batch_num_list),
+        BatchCSVFields.decode_batch_num: calculate_statistics(decode_batch_num_list),
+        BatchCSVFields.prefill_exec_time: calculate_statistics(prefill_exec_time_list),
+        BatchCSVFields.decode_exec_time: calculate_statistics(decode_exec_time_list)
     }
 
     return batch_status
@@ -262,10 +263,10 @@ def calculate_batch_metrics(batch_map):
 def calculate_request_metrics(req_map):
     req_view = []
     total_map = {
-        "total_input_token_num": 0,
-        "total_generated_token_num": 0,
-        "generate_token_speed (token/s)": 0,
-        "generate_all_token_speed (token/s)": 0
+        ServiceCSVFields.total_input_token_num: 0,
+        ServiceCSVFields.total_generated_token_num: 0,
+        ServiceCSVFields.generate_token_speed: 0,
+        ServiceCSVFields.generate_all_token_speed: 0
     }
     first_request_start_time, last_request_end_time = None, None
     for req_id, req_data in req_map.items():
@@ -301,8 +302,8 @@ def calculate_request_metrics(req_map):
         req_view.append(record)
 
         # 更新总体维度数据
-        total_map["total_input_token_num"] += input_token_num
-        total_map["total_generated_token_num"] += generated_token_num
+        total_map[ServiceCSVFields.total_input_token_num] += input_token_num
+        total_map[ServiceCSVFields.total_generated_token_num] += generated_token_num
 
         # 更新第一个请求的开始时间和最后一个请求的结束时间
         current_start_time = req_data["httpReq_start"]
@@ -317,12 +318,12 @@ def calculate_request_metrics(req_map):
 
         # 计算generate_token_speed和generate_all_token_speed
         if total_exec_time > 0:
-            total_map["generate_token_speed (token/s)"] = total_map["total_generated_token_num"] / total_exec_time
-            total_map["generate_token_speed (token/s)"] = round(total_map["generate_token_speed (token/s)"], 4)
+            total_map[ServiceCSVFields.generate_token_speed] = total_map[ServiceCSVFields.total_generated_token_num] / total_exec_time
+            total_map[ServiceCSVFields.generate_token_speed] = round(total_map[ServiceCSVFields.generate_token_speed], 4)
 
-            total_map["generate_all_token_speed (token/s)"] = (total_map["total_input_token_num"] + total_map[
-                "total_generated_token_num"]) / total_exec_time
-            total_map["generate_all_token_speed (token/s)"] = round(total_map["generate_all_token_speed (token/s)"], 4)
+            total_map[ServiceCSVFields.generate_all_token_speed] = (total_map[ServiceCSVFields.total_input_token_num] + total_map[
+                ServiceCSVFields.total_generated_token_num]) / total_exec_time
+            total_map[ServiceCSVFields.generate_all_token_speed] = round(total_map[ServiceCSVFields.generate_all_token_speed], 4)
 
     return req_view, total_map
 
@@ -349,17 +350,17 @@ def convert_map_to_dataframe(map_data, include_stats):
     for metric, values in map_data.items():
         if include_stats == 1:
             row = {
-                "Metric": metric,
-                "Average": values["avg"],
-                "Max": values["max"],
-                "Min": values["min"],
-                "P50": values["p50"],
-                "P90": values["p90"],
-                "P99": values["p99"]
+                BatchCSVFields.metric: metric,
+                BatchCSVFields.avg: values["avg"],
+                BatchCSVFields.max: values["max"],
+                BatchCSVFields.min: values["min"],
+                BatchCSVFields.p50: values["p50"],
+                BatchCSVFields.p90: values["p90"],
+                BatchCSVFields.p99: values["p99"]
             }
         else:
-            value = format(values, ".8f") if metric == "generate_token_speed (token/s)" else values
-            row = {"Metric": metric, "Value": value}
+            value = format(values, ".8f") if metric == ServiceCSVFields.generate_token_speed else values
+            row = {ServiceCSVFields.metric: metric, ServiceCSVFields.value: value}
         data.append(row)
     return pd.DataFrame(data)
 
@@ -394,6 +395,7 @@ class ExporterSummary(ExporterBase):
         output = cls.args.output_path
 
         # 格式化存入csv
-        save_dataframe_to_csv(req_status, output, "request_summary.csv")
-        save_dataframe_to_csv(batch_status, output, "batch_summary.csv")
-        save_dataframe_to_csv(total_map, output, "service_summary.csv", include_stats=0)
+        save_dataframe_to_csv(req_status, output, RequestCSVFields.path_name)
+        save_dataframe_to_csv(batch_status, output, BatchCSVFields.path_name)
+        save_dataframe_to_csv(total_map, output, ServiceCSVFields.path_name, include_stats=0)
+
