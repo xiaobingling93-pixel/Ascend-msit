@@ -59,7 +59,9 @@ from .anti_block import (
     LlavaQuantDecoder,
     LlavaClipVision,
     QuantQwen2VLDecoderLayer,
-    QuantQwen2VLVisionBlock
+    QuantQwen2VLVisionBlock,
+    QuantInternLM2DecoderLayer,
+    QuantInternVisionEncoderLayer
 )
 _FLEX_SMOOTH_IMPORTED = False
 try:
@@ -230,7 +232,9 @@ def is_model_multimodal(model):
         (model.config.architectures[0] == 'QWenLMHeadModel' and 
         hasattr(model.config, 'visual'))):
         return True
-    if (model.config.architectures[0] == 'Qwen2VLForConditionalGeneration'):
+    elif (model.config.architectures[0] == 'Qwen2VLForConditionalGeneration'):
+        return True
+    elif (model.config.architectures[0] == 'InternVLChatModel'):
         return True
     return False
 
@@ -609,12 +613,14 @@ class AntiOutlier(object):
             setattr(cur_mod, tokens[-1], module)
             
         block_dict = {
-            "QWenBlock" : QuantV2QwenBlock,
-            "VisualAttentionBlock" : QuantVisualAttentionBlock,
-            "LlamaDecoderLayer" : LlavaQuantDecoder,
-            "CLIPEncoderLayer" : LlavaClipVision,
-            "Qwen2VLDecoderLayer" : QuantQwen2VLDecoderLayer,
-            "Qwen2VLVisionBlock" : QuantQwen2VLVisionBlock
+            "QWenBlock": QuantV2QwenBlock,
+            "VisualAttentionBlock": QuantVisualAttentionBlock,
+            "LlamaDecoderLayer": LlavaQuantDecoder,
+            "CLIPEncoderLayer": LlavaClipVision,
+            "Qwen2VLDecoderLayer": QuantQwen2VLDecoderLayer,
+            "Qwen2VLVisionBlock": QuantQwen2VLVisionBlock,
+            "InternLM2DecoderLayer": QuantInternLM2DecoderLayer,
+            "InternVisionEncoderLayer": QuantInternVisionEncoderLayer
             }
         self.model.config.device = self.device
         for name, mod in model.named_modules():
