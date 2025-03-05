@@ -90,7 +90,7 @@ class SafeGenerator:
                                             f"which exceeds the limit {max_file_num}.")
         for filename in filenames:
             need_move = False
-            file_names = ['tokenizer', 'tokenization', 'special_token_map', 'generation', 'configuration']
+            file_names = ['tokenizer', 'tokenization', 'special_token_map', 'generation', 'configuration', 'tiktoken']
             for f in file_names:
                 if f in filename:
                     need_move = True
