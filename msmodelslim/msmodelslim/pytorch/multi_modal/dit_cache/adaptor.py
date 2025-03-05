@@ -409,7 +409,7 @@ class DitCacheAdaptor:
             search_cache_path=search_cache_path
         )
 
-        logger_info("***** Start searching for dit cache with config %s", str(config))
+        logger_info("***** Start searching for dit cache with config %s", self.search_config)
         searcher = dit_cache_searcher.DitCacheSearcher(
             config=config,
             pipeline=self.pipeline,

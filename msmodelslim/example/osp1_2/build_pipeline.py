@@ -57,7 +57,7 @@ def get_args():
     parser.add_argument("--monte_carlo_iters", type=int, required=False, default=5)
 
     # dit cache
-    parser.add_argument("--search_type", choices=['restep', 'dit_cache'], required=True, default='restep')
+    parser.add_argument("--search_type", choices=['restep', 'dit_cache'], default='restep')
     parser.add_argument("--cache_ratio", type=float, default=1.3)
     parser.add_argument("--cache_save_path", type=str, default=None)
 
