@@ -3,7 +3,7 @@
 
 ### 函数原型
 ```python
-OmniAttentionConfig(pool_size=100, num_mutation=10, model_path=None, save_path=None, seed=42)
+OmniAttentionConfig(pool_size=50, num_mutation=10, model_path=None, save_path=None, seed=42)
 ```
 
 ### 参数说明

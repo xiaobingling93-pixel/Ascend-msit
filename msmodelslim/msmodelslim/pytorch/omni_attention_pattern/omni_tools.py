@@ -270,9 +270,11 @@ class OmniAttentionGeneticSearcher:
         执行遗传搜索算法，寻找最佳的注意力模式。
         遗传算法通过进化生成模式池，对每个模式进行评分，并逐轮优化，直到得分不再提升为止。
         """
-        if sparsity is None or sparsity <= 0 or sparsity >= 100:
+        if sparsity is None:
             raise ValueError("Please check sparsity, should be an integer greater than zero and less than 100")
         check_type(sparsity, int, param_name="sparsity")
+        if sparsity <= 0 or sparsity >= 100:
+            raise ValueError("Please check sparsity, should be an integer greater than zero and less than 100")
 
         self.sparsity = sparsity
         score_per_head = np.zeros((self.num_layers, self.num_kv_heads), dtype=float) + EPSILON
