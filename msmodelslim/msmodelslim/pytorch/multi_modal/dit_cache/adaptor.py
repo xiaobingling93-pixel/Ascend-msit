@@ -159,7 +159,7 @@ class DitCacheAdaptor:
         """Initialize the DiT Cache Adaptor.
 
         Args:
-            pipeline: The pipeline object (expected to be OpenSoraPipelineV12 type)
+            pipeline: The pipeline object (expected to be OpenSoraPipelineV1x2 type)
                      that contains transformer blocks at the specified path.
             config (DitCacheSearchConfig): Configuration object for cache behavior
                      and search parameters.
@@ -545,4 +545,4 @@ class DitCacheAdaptor:
                 path_checker.safe_delete_path_if_exists(self._temp_cache_dir)
                 logger_debug(f"Cleaned up temporary cache directory: {self._temp_cache_dir}")
             except Exception as e:
-                logger_root.warning(f"Failed to clean up temporary cache directory: {e}")
+                logger_root.warning(f"Failed to clean up temporary cache directory: %s", e)

@@ -1,4 +1,5 @@
 # Copyright Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+# Note: This file is copied and modified from Open-Sora-Plan repo v1.2: opensora.sample.sample_t2v_sp
 
 import os
 import math
@@ -28,7 +29,7 @@ from opensora.utils.utils import save_video_grid
 from opensora.npu_config import npu_config
 
 from ascend_utils.common.security import get_write_directory
-from example.osp1_2.model.model_open_sora_plan1_2_sp import OpenSoraPipelineV12
+from example.osp1_2.model.model_open_sora_plan1_2_sp import OpenSoraPipelineV1x2
 from msmodelslim.tools.logger import logger
 
 
@@ -48,7 +49,7 @@ def load_t2v_checkpoint(model_path):
     # set eval mode
     transformer_model.eval()
 
-    pipeline = OpenSoraPipelineV12(vae=vae,
+    pipeline = OpenSoraPipelineV1x2(vae=vae,
                                     text_encoder=text_encoder,
                                     tokenizer=tokenizer,
                                     scheduler=scheduler,
