@@ -33,7 +33,7 @@ class ModelRunnerExecuteHook(VLLMHookerBase):
                 request_id_list = []
 
                 for request_id, _ in model_input.request_ids_to_seq_ids.items():
-                    request_id_list.append(request_id)
+                    request_id_list.append({"rid": request_id})
 
                 prof.res(request_id_list)
 
