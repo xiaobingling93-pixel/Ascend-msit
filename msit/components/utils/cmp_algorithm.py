@@ -159,6 +159,23 @@ def stat_relative_error(golden_data, my_data):
     return error, ''
 
 
+def l1_norm(golden_data: torch.Tensor, my_data: torch.Tensor):
+    '''
+    Function: compute l1_norm
+    '''
+    golden_data = golden_data.double()
+    my_data = my_data.double()
+    if golden_data.abs().sum() == 0 and my_data.abs().sum() == 0:
+        return 0, ''
+    elif golden_data.abs().sum() == 0:
+        return 1, ''
+    else:
+        logger.debug(f"my data sum: {my_data.abs().sum()}")
+        logger.debug(f"golden data sum: {golden_data.abs().sum()}")
+        result = my_data.abs().sum() / golden_data.abs().sum() - 1
+        return result.item(), ''
+
+
 def register_custom_compare_algorithm(custom_compare_algorithm):
     import os
     import sys

@@ -284,3 +284,33 @@ def check_token_range(value):
     if ivalue <= 0:
         raise ValueError("Token range must greater than 0")
     return ivalue
+
+
+def check_cosine_similarity(value):
+    try:
+        ivalue = float(value)
+    except Exception as err:
+        raise argparse.ArgumentTypeError(f"Cosine similarity is invalid. Please check.") from err
+    if ivalue < -1 or ivalue > 1:
+        raise argparse.ArgumentTypeError("Cosine similarity: %s is an invalid float value" % value)
+    return ivalue
+
+
+def check_kl_divergence(value):
+    try:
+        ivalue = float(value)
+    except Exception as err:
+        raise argparse.ArgumentTypeError(f"KL_divergence is invalid. Please check.") from err
+    if ivalue < 0:
+        raise argparse.ArgumentTypeError("KL_divergence: %s is an invalid float value" % value)
+    return ivalue
+
+
+def check_l1_norm(value):
+    try:
+        ivalue = float(value)
+    except Exception as err:
+        raise argparse.ArgumentTypeError(f"L1_Norm is invalid. Please check.") from err
+    if ivalue < -1:
+        raise argparse.ArgumentTypeError("L1_Norm: %s is an invalid float value" % value)
+    return ivalue
