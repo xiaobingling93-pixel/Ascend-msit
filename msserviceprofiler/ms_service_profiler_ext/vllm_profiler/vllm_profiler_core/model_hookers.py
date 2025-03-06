@@ -25,7 +25,7 @@ class ModelRunnerExecuteHook(VLLMHookerBase):
         def execute_model_maker(ori_func):
             def execute_model(this, model_input, kv_caches, *args, **kwargs):
                 prof = Profiler(Level.INFO)
-                prof.span_start("ModelExec")
+                prof.span_start("modelExec")
                 ret = ori_func(this, model_input, kv_caches, *args, **kwargs)
 
                 is_prefill = model_input.attn_metadata.prefill_metadata
@@ -33,7 +33,7 @@ class ModelRunnerExecuteHook(VLLMHookerBase):
                 request_id_list = []
 
                 for request_id, _ in model_input.request_ids_to_seq_ids.items():
-                    request_id_list.append(request_id)
+                    request_id_list.append({"rid": request_id})
 
                 prof.res(request_id_list)
 

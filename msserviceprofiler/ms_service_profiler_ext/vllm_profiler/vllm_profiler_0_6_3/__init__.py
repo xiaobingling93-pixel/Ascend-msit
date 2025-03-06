@@ -15,10 +15,12 @@ from vllm_profiler.vllm_profiler_core.vllm_hookers import all_hookers
 from vllm_profiler.vllm_profiler_core.model_hookers import model_hookers
 from vllm_profiler.vllm_profiler_core.batch_hookers import batch_hookers
 from vllm_profiler.vllm_profiler_core.kvcache_hookers import kvcache_hookers
+from vllm_profiler.vllm_profiler_core.request_hookers import request_hookers
 
 all_hookers += kvcache_hookers
 all_hookers += model_hookers
 all_hookers += batch_hookers
+all_hookers += request_hookers
 
 for hook_cls in all_hookers:
     hooker = hook_cls()
