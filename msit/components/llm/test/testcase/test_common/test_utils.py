@@ -34,6 +34,11 @@ from msit_llm.common.utils import (
     check_data_file_size,
     str2bool,
     load_file_to_read_common_check,
+    check_device_integer_range_valid,
+    check_device_range_valid,
+    check_cosine_similarity, 
+    check_kl_divergence,
+    check_l1_norm
 )
 
 
@@ -169,6 +174,69 @@ def test_str2bool_valid(value, expected):
 def test_str2bool_invalid(value):
     with pytest.raises(ArgumentTypeError):
         str2bool(value)
+
+
+def test_check_device_integer_range_valid():
+    valid_id = 5
+    assert valid_id == check_device_range_valid(valid_id)
+
+    invalid_id = -1
+    with pytest.raises(ArgumentTypeError):
+        check_device_integer_range_valid(invalid_id)
+
+
+def test_check_device_range_valid(self):
+    valid_single = "5"
+    result = check_device_range_valid(valid_single)
+    assert result == 5
+
+    valid_multi = "1,2,3"
+    result = check_device_range_valid(valid_multi)
+    assert result == [1, 2, 3]
+
+    invalid_char = "a"
+    with pytest.raises(ArgumentTypeError):
+        check_device_range_valid(invalid_char)
+
+
+def test_check_cosine_similarity(self):
+    valid_cosine = "0.5"
+    result = check_cosine_similarity(valid_cosine)
+    assert result == 0.5
+
+    invalid_cosine = "2"
+    with pytest.raises(ArgumentTypeError):
+        check_cosine_similarity(invalid_cosine)
+
+    non_num_cosine = "abc"
+    with pytest.raises(ArgumentTypeError):
+        check_cosine_similarity(non_num_cosine)
+
+def test_check_kl_divergence(self):
+    valid_kl = "0.5"
+    result = check_kl_divergence(valid_kl)
+    assert result == 0.5
+
+    invalid_kl = "-0.5"
+    with pytest.raises(ArgumentTypeError):
+        check_kl_divergence(invalid_kl)
+
+    non_num_kl = "abc"
+    with pytest.raises(ArgumentTypeError):
+        check_kl_divergence(non_num_kl)
+
+def test_check_l1_norm(self):
+    valid_l1 = "0.5"
+    result = check_l1_norm(valid_l1)
+    assert result == 0.5
+
+    invalid_l1 = "-2"
+    with pytest.raises(ArgumentTypeError):
+        check_l1_norm(invalid_l1)
+
+    non_num_l1 = "abc"
+    with pytest.raises(ArgumentTypeError):
+        check_l1_norm(non_num_l1)
 
 
 class TestCommon(unittest.TestCase):

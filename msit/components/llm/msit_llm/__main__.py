@@ -25,6 +25,7 @@ from msit_llm.errcheck.process import process_error_check
 from msit_llm.common.utils import str2bool, check_positive_integer, check_device_integer, safe_string, \
     check_ids_string, check_number_list, check_output_path_legality, check_input_path_legality, check_process_integer, \
     check_dump_time_integer, check_data_can_convert_to_int, load_file_to_read_common_check, \
+    check_cosine_similarity, check_kl_divergence, check_l1_norm, \
     check_device_range_valid, check_token_range, NAMEDTUPLE_PRECISION_METRIC, NAMEDTUPLE_PRECISION_MODE
 from msit_llm.bc_analyze import Synthesizer, Analyzer
 from msit_llm.common.log import logger, set_log_level, LOG_LEVELS
@@ -653,6 +654,80 @@ class LogitsDump(BaseCommand):
         logits_dumper.dump_logits()
 
 
+class LogitsCompare(BaseCommand):
+    def add_arguments(self, parser, **kwargs) -> None:
+        parser.add_argument(
+            '--golden-path',
+            '-gp',
+            dest="golden_path",
+            required=True,
+            type=check_input_path_legality, 
+            help="Golden result to compare with. It must be a valid csv path")
+
+        parser.add_argument(
+            '--my-path',
+            '-mp',
+            dest="my_path",
+            required=True,
+            type=check_input_path_legality, 
+            help="My result to compare with the golden. It must be a valid csv path")
+
+        parser.add_argument(
+            "--cosine-similarity",
+            "-cs",
+            dest="cosine_similarity",
+            type=check_cosine_similarity,
+            default=0.999,
+            help="Metric value of cosine similarity, default 0.999"
+        )
+
+        parser.add_argument(
+            "--kl-divergence",
+            "-kl",
+            dest="kl_divergence",
+            type=check_kl_divergence,
+            default=0.0001,
+            help="Metric value of KL divergence, default 0.0001"
+        )
+
+        parser.add_argument(
+            "--l1-norm",
+            "-l1",
+            dest="l1_norm",
+            type=check_l1_norm,
+            default=0.01,
+            help="Metric value of L1_Norm, default 0.01"
+        )
+
+        parser.add_argument(
+            "--dtype",
+            "-d",
+            dest="dtype",
+            type=str,
+            choices=['fp16', 'bf16', 'fp32'],
+            default='fp16',
+            help="The data precision types required for calculating ULP, default fp16"
+        )
+
+        parser.add_argument(
+            '--output-dir',
+            '-o',
+            dest="output_dir",
+            type=check_output_path_legality,
+            default='./output',
+            help="Data output directory. E.g: '--output /xx/xxxx/xx', default=./output")
+
+        parser.add_argument("--log-level", "-l", default="info", choices=LOG_LEVELS_LOWER, help="specify log level")
+
+    def handle(self, args, **kwargs) -> None:
+
+        from msit_llm.logits_compare.logits_cmp import LogitsComparison
+
+        set_log_level(args.log_level)
+        logits_cmp = LogitsComparison(args)
+        logits_cmp.process_comparsion()
+
+
 def get_cmd_instance():
     llm_help_info = "Large Language Model(llm) Debugger Tools."
     dump_cmd_instance = DumpCommand("dump", "Dump tool for ascend transformer boost", alias_name="dd")
@@ -663,9 +738,10 @@ def get_cmd_instance():
     bc_analyze_cmd_instance = BCAnalyze("analyze", "Bad Case analyze tool for large language model.")
     logits_bc_analyze_cmd_instance = BadCaseAnalyze('bcanalyze', "Bad case analyze tool for logits compare tool.")
     logits_dump_cmd_instance = LogitsDump('logitsdump', "Logits dump tool for logits compare tool.")
+    logits_compare_cmd_instance = LogitsCompare('logitscmp', "Logits comparison tool for logits compare tool.")
 
     instances = [
         dump_cmd_instance, compare_cmd_instance, opcheck_cmd_instance, errcheck_cmd_instance, transform_cmd_instance,
-        bc_analyze_cmd_instance, logits_bc_analyze_cmd_instance, logits_dump_cmd_instance
+        bc_analyze_cmd_instance, logits_bc_analyze_cmd_instance, logits_dump_cmd_instance, logits_compare_cmd_instance
     ]
     return BaseCommand("llm", llm_help_info, instances)

@@ -35,7 +35,33 @@ def create_difference_dict(req_order, param, file1_value="N/A", file2_value="N/A
         return {"req_order": req_order, "param": param, "file1_value": file1_value, "file2_value": file2_value}
 
 
+def parse_parameter_line(line, params, current_request, file_line_number):
+    extract_params = line.strip().split(':', 1)   # 防止value值中含冒号的情况
+    if len(extract_params) == 2:
+        key_part, value_part = extract_params   # 将参数分为key和value两部分，例如"temperature"和[0.69999]
 
+        key = key_part.strip().strip('"')    # 去掉key中多余的空格和""
+        value = value_part.strip().strip('[],')  # 去掉value中多余的空格和[]
+
+        if value == 'null':
+            value = 'None'
+
+        try:
+            parsed_value = ast.literal_eval(value)
+            if key == 'do_sample' and parsed_value is not None:
+                parsed_value = bool(parsed_value)
+            params[key] = parsed_value
+        except (ValueError, SyntaxError) as e:
+            logger.error(f"Value parsing error at line {file_line_number} (request {current_request}): {e}")
+    elif '{' not in extract_params and '}' not in extract_params and extract_params != ['']:  # 过滤{ }和空行
+        logger.warning(
+            f"Unexpected parameter format at line {file_line_number}: "
+            f"'{line.strip()}' (request: {current_request})"
+        )
+    else:
+        pass
+
+    
 def extract_log_parameters(log_file_path):
     """
     Extract sampling parameters from the log file and return a dictionary.
@@ -44,55 +70,52 @@ def extract_log_parameters(log_file_path):
         log_file_path (str): Path to the log file.
 
     Returns:
-        dict: A dictionary containing all the request parameters, structured as {request_id: parameters_dict}.
+        dict: A dictionary containing all the request parameters, structured as {request_id_counter: parameters_dict}.
     """
     result_dict = {}
 
-    # 定义正则表达式模式
+    # 定义正则表达式
     start_pattern = re.compile(
-        r'\[endpoint\] Sampling parameters for request id: (\S+)'
+        r'\[endpoint\] Sampling parameters for request id: (\S+)'  
+        r'|'  
+        r'Sampling parameters for trace ids \[([^]]*)\]:'  
     )
 
     current_request = None
-    json_buffer = []
     brace_count = 0
+    flag_begin = False
+    match_cache = ""
 
     with ms_open(log_file_path, 'r', encoding='utf-8') as f:
-        count_line = 1
-        for line in f:
+        request_id_counter = 1
+        for file_line_number, line in enumerate(f, 1):
             # 匹配参数块开始行
             start_match = start_pattern.search(line)
             if start_match:
                 # 处理未完成的前一个请求
                 if current_request is not None:
                     logger.error(f"Abandon incomplete block for request {current_request}")
-                # 开始新请求
-                current_request = start_match.group(1)
+
+                # 提取请求标识符（request_id 或 trace_id）
+                current_request = start_match.group(1) or start_match.group(2)
                 brace_count = 0
-                json_buffer = []
+                match_cache = start_match
                 continue
 
+            if match_cache and '{' in line:
+                params = {}
+                flag_begin = True
             # 处理参数块内容
-            if current_request:
-                # 统计大括号数量
+            if flag_begin:
                 brace_count += line.count('{')
                 brace_count -= line.count('}')
-
-                # 收集JSON内容
-                json_buffer.append(line)
-
-                # 当大括号数量归零时尝试解析
+                parse_parameter_line(line, params, current_request, file_line_number)
                 if brace_count == 0:
-                    try:
-                        json_str = ''.join(json_buffer)
-                        params = json.loads(json_str)
-                        result_dict[count_line] = params
-                        count_line += 1
-                    except json.JSONDecodeError as e:
-                        logger.error(f"解析失败：{current_request}，错误：{e}")
-                    finally:
-                        current_request = None
-                        json_buffer = []
+                    result_dict[request_id_counter] = params
+                    request_id_counter += 1
+                    flag_begin = False
+                    match_cache = ""
+                    current_request = None
     return result_dict
 
 
@@ -104,7 +127,7 @@ def extract_txt_parameters(log_file_path):
         log_file_path (str): Path to the log file.
 
     Returns:
-        dict: A dictionary containing all the request parameters, structured as {request_id: parameters_dict}.
+        dict: A dictionary containing all the request parameters, structured as {request_id_counter: parameters_dict}.
     """
     with ms_open(log_file_path, 'r') as file:
         param_str = file.read()
@@ -115,14 +138,19 @@ def extract_txt_parameters(log_file_path):
 
     param_dict = {}
     request_id_counter = 1  # 用来跟踪每个 request_id 的顺序
+    request_id_cache = []
 
     for line in lines:
         # 找到包含 `request_id: SamplingParams(...)` 的行
         if ':' in line:
             # **第二步**：提取 `request_id` 和 `SamplingParams(...)` 部分
             request_id, param_str = line.split(":", 1)
+            if request_id in request_id_cache:
+                continue
+            request_id_cache.append(request_id)
 
-            # **第三步**：去掉 "SamplingParams" 这个类名，只保留括号内部的部分
+            # **第三步**：提取do_sample参数; 去掉 "SamplingParams" 这个类名，只保留括号内部的部分
+            do_sample = param_str.split(')')[1].split(':')
             param_str = param_str[param_str.find("(") + 1: param_str.rfind(")")]
 
             # **第四步**：逐字符解析，确保不会拆开 `[]`, `{}`, `()`，并把参数分割成键值对
@@ -162,7 +190,8 @@ def extract_txt_parameters(log_file_path):
                     parsed_value = value.strip("'")  # 处理普通字符串
 
                 request_params[key] = parsed_value  # 存入字典
-
+            if do_sample != ['']:
+                request_params[do_sample[0]] = bool(do_sample[1])
             # **第六步**：使用 request_id_counter 作为 param_dict 的键
             param_dict[request_id_counter] = request_params
             request_id_counter += 1  # 增加 request_id_counter
@@ -210,7 +239,7 @@ def compare_parameters(dict_input1, dict_input2, path="", depth=0):
 def compare_service_parameters(dict_input1, dict_input2, req_order, differences):
     for param in service_parameters:
         if param not in dict_input1 and param not in dict_input2:
-            differences.append(create_difference_dict(req_order, param, "N/A", "N/A"))
+            continue
         elif param not in dict_input1:
             differences.append(create_difference_dict(req_order, param, "N/A", dict_input2[param]))
 
@@ -257,8 +286,11 @@ def generate_report(differences, output_file="comparison_report.csv"):
         logger.info(f"No differences found")
     else:
         df = pd.DataFrame(differences)
+        df['file1_value'] = df['file1_value'].astype(str)
+        df['file2_value'] = df['file2_value'].astype(str)
         df.to_csv(output_file, na_rep="None", index=False, encoding='utf-8')
-        df = df.fillna("None")
-        table = tabulate(df, headers=df.columns, tablefmt="grid", missingval="None", showindex=False)
+        df = df.replace({"nan": "None"})
+        table = tabulate(df, headers=df.columns, tablefmt="grid", missingval="None",
+                         showindex=False, disable_numparse=True)
         logger.info(f"\n{table}")
-    logger.info(f"Report saved to {output_file}")
+        logger.info(f"Report saved to {output_file}")

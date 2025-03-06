@@ -17,7 +17,7 @@ import pytest
 import torch
 
 from components.utils.cmp_algorithm import cosine_similarity, max_relative_error, mean_relative_error, \
-    relative_euclidean_distance
+    relative_euclidean_distance, l1_norm
 
 
 @pytest.fixture(scope='module', autouse=True)
@@ -60,4 +60,9 @@ def test_relative_euclidean_distance_when_low_acc(golden_data, test_data):
     test_data = 10 * test_data
     res, message = relative_euclidean_distance(golden_data, test_data)
     assert res == 9.0
+    assert message == ''
+
+def test_l1_norm(golden_data, test_data):
+    res, message = l1_norm(golden_data, test_data)
+    assert res == 0.0
     assert message == ''
