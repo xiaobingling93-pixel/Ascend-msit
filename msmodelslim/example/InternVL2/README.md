@@ -10,16 +10,18 @@
 
 #### 此模型仓已适配的模型版本权重获取地址
 ##### InternVL 2.0
-- [InternVL 2.0](https://huggingface.co/spaces/OpenGVLab/InternVL)
+- [InternVL 2.0-8B](https://huggingface.co/OpenGVLab/InternVL2-8B/tree/main)
+- [InternVL 2.0-40B](https://huggingface.co/OpenGVLab/InternVL2-40B/tree/main)
 
 ## 环境配置
 
 - 环境配置请参考[使用说明](https://gitee.com/ascend/msit/blob/master/msmodelslim/README.md)
 - transformers版本请参照模型路径下config.json配置为4.37.2
+- 另需安装pip包：pip install timm, fastchat
 
 ## 量化权重生成
 
-- 量化权重统一使用[quant_internvl2.py](./quant_qwen2vl.py)脚本生成，以下提供Qwen2VL模型量化权重生成快速启动命令。
+- 量化权重统一使用[quant_internvl2.py](./quant_internvl2.py)脚本生成，以下提供InternVL 2.0模型量化权重生成快速启动命令。
 
 
 #### 量化参数说明

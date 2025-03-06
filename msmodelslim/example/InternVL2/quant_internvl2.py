@@ -3,7 +3,7 @@ import argparse
 from transformers import AutoModel, AutoTokenizer, AutoConfig
 from internvl2_utils import get_tokenized_data, get_textvqa_calibration
 from msmodelslim.pytorch.llm_ptq.anti_outlier import AntiOutlierConfig, AntiOutlier
-from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfi
+from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
 
 
 CPU = "cpu"
