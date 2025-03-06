@@ -487,6 +487,7 @@ class AntiOutlier(object):
         for name, mod in model.named_modules():
             mod_name = mod.__class__.__name__
             if (mod_name in block_dict):
+                self.model.config.device = self.device
                 quant_mod = block_dict[mod_name](mod, self.model.config, name)
                 self.logger.info(
                     "multimodal model replace block `{}` to `{}`".format(mod_name, block_dict[mod_name].__name__)
