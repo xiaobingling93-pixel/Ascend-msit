@@ -9,7 +9,7 @@ current_directory = os.path.dirname(os.path.abspath(__file__))
 parent_directory = os.path.abspath(os.path.join(current_directory, '..', ".."))
 sys.path.append(parent_directory)
 
-from ascend_utils.common.security.path import get_valid_write_path, get_valid_read_path
+from ascend_utils.common.security import get_valid_write_path, get_valid_read_path, json_safe_load
 from example.common.utils import SafeGenerator, ArgumentParser, StringArgumentValidator, MAX_KEY_LENGTH, MAX_JSON_LENGTH
 from msmodelslim.pytorch.llm_ptq.anti_outlier import AntiOutlier, AntiOutlierConfig
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
@@ -147,9 +147,9 @@ def parse_arguments():
     parser.add_argument('--model_name', type=str, default=None,
                         validator=StringArgumentValidator(min_length=1, max_length=MAX_KEY_LENGTH, allow_none=True))
     parser.add_argument('--model_type', type=str, default='llama2',
-                         choices=['llama', 'llama2', 'llama3', 'llama3.1_bf', 'llama3.1_fp'],
+                         choices=['llama', 'llama2', 'llama3', 'llama3.1_bf', 'llama3.1_fp', 'llama3.1_instruct'],
                          help='Specify the type of llama model \
-                            (choices: llama, llama2, llama3, llama3.1_bf, llama3.1_fp)')
+                            (choices: llama, llama2, llama3, llama3.1_bf, llama3.1_fp, llama3.1_instruct)')
     parser.add_argument('--anti_calib_file', type=str, default=None,
                        help='Path to anti-calibration data file (.json or .jsonl)')
     parser.add_argument('--disable_threshold', type=float, default=0,
@@ -195,6 +195,8 @@ class Quantifier:
             elif args.model_type == 'llama3':
                 disable_names = get_llama3_disable_names(num_layers)
             elif args.model_type == 'llama3.1_fp':
+                disable_names = get_llama3_1_disable_names(num_layers)
+            elif args.model_type == 'llama3.1_instruct':
                 disable_names = get_llama3_1_disable_names(num_layers)
             else:
                 disable_names = get_down_proj_disable_names(num_layers)
@@ -266,6 +268,20 @@ class Quantifier:
         calibrator.save(save_path, save_type=["safe_tensor"], part_file_size=part_file_size)
 
 
+def get_anti_dataset(tokenizer, calib_list, device_type):
+    calib_dataset = []
+    max_len = 0
+    for calib_data in calib_list:
+        inputs = tokenizer(calib_data, return_tensors='pt')
+        calib_dataset.append(
+            inputs.data['input_ids'].to(device_type)
+        )
+        max_len = max(max_len, inputs.data['input_ids'].size(1))
+    for i, cur_calib in enumerate(calib_dataset):
+        calib_dataset[i] = F.pad(cur_calib, (0, max_len - cur_calib.size(1)), value=0)
+    return torch.cat(calib_dataset)
+
+
 if __name__ == '__main__':
     args = parse_arguments()
     checker = SafeGenerator()
@@ -310,9 +326,22 @@ if __name__ == '__main__':
 
     tokenized_ant_calib_data = tokenized_calib_data
     if args.anti_calib_file:
-        ant_calib_texts = checker.load_jsonl(args.anti_calib_file)
-        if ant_calib_texts is not None:
-            tokenized_ant_calib_data = quantifier.get_batch_tokenized_data(ant_calib_texts)
+        if args.model_type == "llama3.1_instruct":
+            anti_calib_file_path = get_valid_read_path(args.anti_calib_file, "json", is_dir=False)
+            with open(anti_calib_file_path, "r") as f:
+                anti_prompt = json.load(f)
+            anti_data = []
+            for i, _ in enumerate(anti_prompt):
+                tmp = get_anti_dataset(quantifier.tokenizer, anti_prompt[i], args.device_type)
+                anti_data.append(tmp)
+            
+            tokenized_ant_calib_data = []
+            for data in anti_data:
+                tokenized_ant_calib_data.append([data])
+        else:
+            ant_calib_texts = checker.load_jsonl(args.anti_calib_file)
+            if ant_calib_texts is not None:
+                tokenized_ant_calib_data = quantifier.get_batch_tokenized_data(ant_calib_texts)
 
     if args.disable_threshold > 0:
         quantifier.create_quant_config(num_layers, tokenized_ant_calib_data)
@@ -334,6 +363,8 @@ if __name__ == '__main__':
     is_w8a8_dynamic = args.w_bit == 8 and args.a_bit == 8 and args.is_dynamic
     if is_w8a8_dynamic:
         quant_type = "w8a8_dynamic"
+    if quantifier.quant_config.model_quant_type == "W4A8_DYNAMIC":
+        quant_type = "w4a8_dynamic"
     auto_config = checker.get_config_from_pretrained(model_path, trust_remote_code=True)
     checker.modify_config(model_path, save_directory, auto_config.torch_dtype,
                 quant_type, args)
