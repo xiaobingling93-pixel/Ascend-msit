@@ -102,6 +102,10 @@ class Calibrator(object):
                     raise ValueError(
                         f"mix_cfg中'{key}'指定的量化类型'{value}'不在允许列表{ALLOWED_MIX_TYPES}之内，"
                         f"请检查配置或扩展ALLOWED_MIX_TYPES后再使用。")
+        if 'progressive' not in inspect.signature(quant_one_weight_by_outliers_low_bit).parameters \
+            and cfg.model_quant_type == QuantType.W4A8_DYNAMIC:
+            raise ValueError("Current cann version is not support W4A8_DYNAMIC, \
+                             if you want to use this feature, please upgrade it.")
 
         self.cfg = cfg
         self.logger = msmodelslim_logger
@@ -506,7 +510,7 @@ class Calibrator(object):
                                  "please check it.")
             elif SAVE_TYPE_SAFE_TENSOR in save_type:
                 self.logger.error("W4A8_DYNAMIC quantization does not support saving to numpy format, "
-                                    "defaulting to `{SAVE_TYPE_SAFE_TENSOR}` type.")
+                                    f"defaulting to `{SAVE_TYPE_SAFE_TENSOR}` type.")
                 save_type = [SAVE_TYPE_SAFE_TENSOR]
         if part_file_size is not None:
             check_int(part_file_size, min_value=1)
@@ -576,6 +580,7 @@ class Calibrator(object):
                         }
                         if 'progressive' in inspect.signature(quant_one_weight_by_outliers_low_bit).parameters:
                             kwargs['progressive'] = self.cfg.is_stage_quant
+                            
                         recovered_weight, scale_w, _, offset_w = quant_one_weight_by_outliers_low_bit(
                             module.weight,
                             **kwargs
@@ -662,6 +667,7 @@ class Calibrator(object):
                         }
                         if 'progressive' in inspect.signature(quant_one_weight_by_outliers_low_bit).parameters:
                             kwargs['progressive'] = self.cfg.is_stage_quant
+
                         recovered_weight, scale_w, _, offset_w = quant_one_weight_by_outliers_low_bit(
                             module.weight,
                             **kwargs

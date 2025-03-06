@@ -163,13 +163,17 @@ def check_and_set_w4a8_dynamic_config(config):
     is_per_group = False
     if not config.open_outlier and config.is_lowbit and config.group_size in GROUP_SIZE_LIST:
         is_per_group = True
-    # w4a8_dynamic 需要开启 per-group 量化和动态量化
-    if config.w_bit == 4 and config.a_bit == 8 and not (config.is_dynamic or is_per_group):
-        raise TypeError("W4A8_DYNAMIC should be used with per-group quantization and dynamic quantization")
-    else:
-        # w_sym and a_sym should be True when w_bit = 4 and a_bit = 8
-        config.a_sym = True
-        config.is_stage_quant = True
+    
+    if config.w_bit == 4 and config.a_bit == 8:
+        # w4a8_dynamic 需要同时开启 per-group 量化和动态量化
+        if not (config.is_dynamic and is_per_group):
+            raise TypeError("W4A8_DYNAMIC should be used with per-group quantization and dynamic quantization")
+        elif not config.w_sym:
+            raise TypeError("W4A8_DYNAMIC should be used with w_sym=True")
+        else:
+            # w_sym and a_sym should be True when w_bit = 4 and a_bit = 8
+            config.a_sym = True
+            config.is_stage_quant = True
 
 
 def check_and_generate_config_param(config):
