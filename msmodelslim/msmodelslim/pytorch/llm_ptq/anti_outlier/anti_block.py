@@ -514,7 +514,7 @@ class QuantQwen2VLDecoderLayer(nn.Module):
         use_cache = kwargs.pop("use_cache")
         cache_position = kwargs.pop("cache_position")
         position_embeddings = kwargs.pop("position_embeddings")
-
+        residual = hidden_states
         hidden_states = self.input_layernorm(hidden_states)
         if self.cac_migrate_attn:
             msmodelslim_logger.info(f'current block is QuantQwen2VLDecoderLayer, layername:{self.layername}')
