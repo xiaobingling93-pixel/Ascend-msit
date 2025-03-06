@@ -2,7 +2,7 @@
 
 ## 模型介绍
 
-- [LLaMA（Large Language Model Meta AI）](https://github.com/facebookresearch/llama/tree/llama_v1)和 [LLaMA2（Large Language Model Meta AI 2）](https://github.com/facebookresearch/llama)，是由 Meta AI 发布的一个开放且高效的大型基础语言模型，可以通过自然语言交互的方式提供知识、文本生成、语言翻译、语言理解、代码编写和解释等任务。
+- [LLaMA（Large Language Model Meta AI）](https://github.com/facebookresearch/llama/tree/llama_v1)、 [LLaMA2（Large Language Model Meta AI 2）](https://github.com/facebookresearch/llama)和[LlaMa3（Large Language Model Meta AI 3）](https://github.com/meta-llama/llama3)，是由 Meta AI 发布的一个开放且高效的大型基础语言模型，可以通过自然语言交互的方式提供知识、文本生成、语言翻译、语言理解、代码编写和解释等任务。
 
 #### LLAMA模型当前已验证的量化方法
 
@@ -11,6 +11,7 @@
 - 稀疏量化：LLaMa-33B，LLaMa2-7B，LLaMa2-13B, Llama3.1-70B
 - KV cache量化: Llama3.1-70B
 - Attention 量化：Llama3.1-70B
+- W4A8_DYNAMIC 量化：Llama3.1-8B-Instruct, Llama3.1-70B-Instruct
 
 #### 此模型仓已适配的模型版本权重获取地址
   - [LLaMa系列](https://github.com/facebookresearch/llama/tree/llama_v1)
@@ -139,3 +140,16 @@
   --disable_threshold 1 \
   --pdmix True
   ```
+
+##### Llama3.1-8B-Instruct W4A8_DYNAMIC量化
+  ```shell
+  python3 quant_llama.py --model_path {浮点权重路径} --save_directory {量化权重路径} --w_bit 4 --device_type npu --anti_method m3 --act_method 1 --model_type llama3.1_instruct --is_lowbit True --mm_tensor False --open_outlier False --group_size 32 --is_dynamic True --anti_calib_file ./calib_data/anti_prompt.json
+  ```
+
+##### Llama3.1-70B-Instruct W4A8_DYNAMIC量化
+  ```shell
+  python3 quant_llama.py --model_path {浮点权重路径} --save_directory {量化权重路径} --w_bit 4 --device_type npu --anti_method m3 --act_method 1 --model_type llama3.1_instruct --is_lowbit True --mm_tensor False --open_outlier False --group_size 32 --is_dynamic True --anti_calib_file ./calib_data/anti_prompt.json
+  ```
+
+
+
