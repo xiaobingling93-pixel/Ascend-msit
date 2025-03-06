@@ -11,8 +11,7 @@ from msmodelslim.tools.copy_config_files import copy_config_files, modify_config
 from msmodelslim.pytorch.llm_ptq.anti_outlier import AntiOutlierConfig, AntiOutlier
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
 from msmodelslim.tools.logger import set_logger_level
-from msmodelslim import logger
-
+from msmodelslim.tools.add_safetensors import add_safetensors
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -45,7 +44,8 @@ def get_calib_dataset_batch(model_tokenizer, calib_list, batch_size, device="npu
 
 args = parse_args()
 set_logger_level("info")
-pbar = tqdm(total=4, position=0, desc="Total Process")
+# 显示整个量化过程各个步骤的进度条
+pbar = tqdm(total=5, position=0, desc="Total Process")
 model_path = args.model_path
 config = AutoConfig.from_pretrained(pretrained_model_name_or_path=model_path, trust_remote_code=True)
 config.num_hidden_layers = args.layer_count if args.layer_count != 0 else config.num_hidden_layers
@@ -119,4 +119,7 @@ custom_hooks = {
 }
 copy_config_files(input_path=args.model_path, output_path=args.save_path, quant_config=quant_config,
                   custom_hooks=custom_hooks)
+pbar.update(1)
+add_safetensors(org_paths=args.model_path, target_dir=args.save_path, safetensors_prefix="mtp_float",
+               max_file_size_gb=5, prefix="model.layers.61.", quant_type="FLOAT")
 pbar.update(1)
