@@ -418,6 +418,7 @@ class DitCacheAdaptor:
 
         # Start search
         [cache_block_start, cache_step_interval, cache_num_blocks, cache_step_start] = searcher.search()[0]
+        dist.barrier()
 
         searched_config = DitCacheConfig(
             cache_step_start=cache_step_start,
@@ -540,6 +541,8 @@ class DitCacheAdaptor:
 
     def _cleanup_temp_cache_dir(self):
         """Clean up temporary cache directory."""
+        if self.rank != 0:
+            return
         if self._temp_cache_dir and os.path.exists(self._temp_cache_dir):
             try:
                 path_checker.safe_delete_path_if_exists(self._temp_cache_dir)
