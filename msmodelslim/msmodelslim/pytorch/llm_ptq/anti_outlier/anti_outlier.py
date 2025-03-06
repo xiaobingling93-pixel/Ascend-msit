@@ -63,7 +63,7 @@ try:
 except ImportError:
     pass
 else:
-    _FLEX_SMOOTH_IMPORTED = True 
+    _FLEX_SMOOTH_IMPORTED = True
 
 try:
     from msmodelslim.pytorch.llm_ptq.anti_outlier.anti_utils import attach_op, Multiplier
@@ -118,9 +118,9 @@ def replace_rms_norm(model: nn.Module, norm_class_name: str):
 def is_model_multimodal(model):
     if not hasattr(model.config, 'architectures'):
         return False
-    if (model.config.architectures[0] == 'LlavaForConditionalGeneration' or 
-        (model.config.architectures[0] == 'QWenLMHeadModel' and 
-        hasattr(model.config, 'visual'))):
+    if (model.config.architectures[0] == 'LlavaForConditionalGeneration' or
+            (model.config.architectures[0] == 'QWenLMHeadModel' and
+             hasattr(model.config, 'visual'))):
         return True
     elif (model.config.architectures[0] == 'Qwen2VLForConditionalGeneration'):
         return True
@@ -174,7 +174,7 @@ class AntiOutlier(object):
                     f"cfg param `disable_anti_names` has invalid name {name}, "
                     "please check your anti_outlier config."
                 )
-      
+
         self.with_accelerate = judge_model_with_accelerate(model)
 
         self.cfg = cfg
@@ -258,7 +258,7 @@ class AntiOutlier(object):
                 ProcessHook.GET_NORM_LINEAR_SUBGRAPH] is None:
                 # 不要保存为成员变量，内部会引用模型以及模型的子模块，导致这些模块的参数正常无法释放
                 dag = extract_dag(self.model, dummy_input,
-                                hook_nodes=norm_class, anti_method=self.cfg.anti_method)
+                                  hook_nodes=norm_class, anti_method=self.cfg.anti_method)
                 self.norm_linear_subgraph = dag.get_norm_linear_subgraph()
                 if self.cfg.anti_method in ['m4', 'm6']:
                     self.linear_linear_subgraph = dag.get_linear_linear_subgraph()
@@ -283,7 +283,9 @@ class AntiOutlier(object):
         if name not in act_stats:
             act_stats[name] = {}
             if self.cfg.anti_method != 'm6' or not self.is_flex_enabled(self.cfg.flex_config):
-                act_stats[name][TENSOR] = tensor
+                # store collected tensor in cpu while stat_tensor,
+                # otherwise it will occupy too much device memory then cause OOM
+                act_stats[name][TENSOR] = tensor.cpu()
 
         hidden_dim = tensor.shape[-1]
         tensor = tensor.reshape(-1, hidden_dim).detach()  # [N,C]
