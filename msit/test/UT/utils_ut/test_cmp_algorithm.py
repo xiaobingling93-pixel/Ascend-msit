@@ -207,6 +207,7 @@ def test_register_custom_compare_algorithm_given_return_type_mismatch_when_calle
 # Test case to cover the logger.info call
 @mock.patch('components.utils.cmp_algorithm.logger')
 def test_register_custom_compare_algorithm_given_all_correct_when_called_then_log_added(mock_logger):
+    os.makedirs("./resource", exist_ok=True)
     with open("./resource/valid_module.py", 'w') as f:
         f.write("""def valid_function(tensor1, tensor2):\n\treturn (0.0, '')""")
     try:
