@@ -7,6 +7,7 @@ import shutil
 
 from typing import Any, Dict, Union
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig
+from ascend_utils.common.security import json_safe_load, json_safe_dump
 from ascend_utils.common.security.path import get_valid_read_path, get_valid_write_path
 
 
@@ -104,10 +105,11 @@ class SafeGenerator:
     def modify_config(model_dir, dest_dir, torch_dtype, quantize_type, args=None):
         model_dir = get_valid_read_path(model_dir, is_dir=True, check_user_stat=False)
         src_config_filepath = os.path.join(model_dir, 'config.json')
-        src_config_filepath = get_valid_read_path(src_config_filepath, check_user_stat=False)
-        with os.fdopen(os.open(src_config_filepath, os.O_RDONLY, 0o600),
-                'r', encoding='utf-8') as fr:
-            data = json.load(fr)
+        data = json_safe_load(src_config_filepath, check_user_stat=False)
+        dest_dir = get_valid_write_path(dest_dir, is_dir=True)
+        dest_quant_description_filepath = os.path.join(dest_dir, \
+            f"quant_model_description_{quantize_type.lower()}.json")
+        quant_description_data = json_safe_load(dest_quant_description_filepath, check_user_stat=False)
         data['torch_dtype'] = str(torch_dtype).split(".")[1]
         data['quantize'] = quantize_type
         if args is not None:
@@ -137,13 +139,11 @@ class SafeGenerator:
                 quantization_config.update({"pdmix": args.pdmix})
             if args.use_reduce_quant:
                 quantization_config.update({"reduce_quant_type": "per_channel"})
-            data['quantization_config'] = quantization_config
+            quant_description_data.update(quantization_config)
+            data['quantization_config'] = quant_description_data
 
-        dest_dir = get_valid_write_path(dest_dir, is_dir=True)
         dest_config_filepath = os.path.join(dest_dir, 'config.json')
-        with os.fdopen(os.open(dest_config_filepath, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600),
-                'w', encoding='utf-8') as fw:
-            json.dump(data, fw, indent=4)
+        json_safe_dump(data, dest_config_filepath, 4)
 
     @staticmethod
     def load_jsonl(dataset_path, key_name='inputs_pretokenized'):

@@ -3,7 +3,6 @@ import os.path
 from dataclasses import dataclass, field
 from logging import Logger
 from typing import Optional, Union
-from transformers import PreTrainedModel
 
 from msmodelslim import logger as msmodelslim_logger
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.llm_ptq_utils import SAVE_TYPE_SAFE_TENSOR
@@ -18,7 +17,6 @@ class SafetensorsSaverConfig:
 
     output_dir: str
     model_quant_type: str
-    model: PreTrainedModel
     use_kvcache_quant: bool = False
     use_fa_quant: bool = False
 
@@ -56,7 +54,6 @@ class SafetensorsSaver(BaseSaver):
 
         cfg = SafetensorsSaverConfig.from_dict(cfg)
         self.logger = cfg.logger
-        self.model = cfg.model
 
         if cfg.part_file_size is None:
             file_path = os.path.join(cfg.output_dir, cfg.safetensors_name)
@@ -85,7 +82,4 @@ class SafetensorsSaver(BaseSaver):
         self.weight_writer.close()
         self.meta_writer.close()
 
-        self.model.config.quantization_config = (
-            self.meta_writer.quant_model_json_description.quant_model_description
-        )
         self.logger.info(f'Safetensors weight saved successfully')
