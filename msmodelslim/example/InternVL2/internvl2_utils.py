@@ -1,3 +1,4 @@
+# Copyright Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 import os
 import json
 import random
@@ -11,13 +12,14 @@ from torchvision.transforms.functional import InterpolationMode
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
 
+
 def build_transform(input_size):
-    MEAN, STD = IMAGENET_MEAN, IMAGENET_STD
+    mean, std = IMAGENET_MEAN, IMAGENET_STD
     transform = T.Compose([
         T.Lambda(lambda img: img.convert('RGB') if img.mode != 'RGB' else img),
         T.Resize((input_size, input_size), interpolation=InterpolationMode.BICUBIC),
         T.ToTensor(),
-        T.Normalize(mean=MEAN, std=STD)
+        T.Normalize(mean=mean, std=std)
     ])
     return transform
 
@@ -38,15 +40,17 @@ def find_closest_aspect_ratio(aspect_ratio, target_ratios, width, height, image_
     return best_ratio
 
 
-def dynamic_preprocess(image, min_num=1, max_num=12, image_size =448, use_thumbnail=False):
+def dynamic_preprocess(image, min_num=1, max_num=12, image_size=448, use_thumbnail=False):
     orig_width, orig_height = image.size
     aspect_ratio = orig_width / orig_height
 
     # calculate the existing image aspect ratio
-    target_ratios = set(
-        (i, j) for n in range(min_num, max_num + 1) for i in range(1, n + 1) for j in range(1, n + 1)
-        if i * j <= max_num and i * j >= min_num
-    )
+    target_ratios = set()
+    for n in range(min_num, max_num + 1):
+        for i in range(1, n + 1):
+            for j in range(1, n + 1):
+                if i * j <= max_num and i * j >= min_num:
+                    target_ratios.add((i, j))
     target_ratios = sorted(target_ratios, key=lambda x: x[0] * x[1])
 
     # find the closest aspect ratio to the target
@@ -72,7 +76,8 @@ def dynamic_preprocess(image, min_num=1, max_num=12, image_size =448, use_thumbn
         # split the image
         split_img = resized_img.crop(box)
         processed_images.append(split_img)
-    assert len(processed_images) == blocks
+    if len(processed_images) != blocks:
+        raise ValueError("The number of processed images does not match the expected number of blocks.")
     if use_thumbnail and len(processed_images) != 1:
         thumbnail_img = image.resize((image_size, image_size))
         processed_images.append(thumbnail_img)
@@ -88,7 +93,7 @@ def load_image(image_file, input_size=448, max_num=12):
     return pixel_values
 
 
-def get_textvqa_calibration(textvqa_path, calib_num=30, getAll=False):
+def get_textvqa_calibration(textvqa_path, calib_num=30, get_all_calib=False):
     val_json = 'textvqa_val.jsonl'
     calibration_dataset = []
     
@@ -99,7 +104,7 @@ def get_textvqa_calibration(textvqa_path, calib_num=30, getAll=False):
             line_dict['image_url'] = line_dict['image']
             calibration_dataset.append(line_dict)
     
-    if not getAll:
+    if not get_all_calib:
         calibration_dataset = random.sample(calibration_dataset, calib_num)
     
     return calibration_dataset
@@ -107,11 +112,11 @@ def get_textvqa_calibration(textvqa_path, calib_num=30, getAll=False):
 
 def get_tokenized_data(tokenizer, inputs, dtype=torch.float16):
     tokenization_data = []
-    for _, input in tqdm(enumerate(inputs), total=len(inputs)):
-        question = input.get('text')
+    for _, input_item in tqdm(enumerate(inputs), total=len(inputs)):
+        question = input_item.get('text')
         query = '<|im_start|>system\n你是由上海人工智能实验室联合商汤科技开发的书生多模态大模型，英文名叫InternVL, 是一个有用无害的人工智能助手。<|im_end|>' + \
         '<|im_start|>user\n<image>\n' + question + '<|im_end|><|im_start|>assistant\n'
-        image_url = input['image_url']
+        image_url = input_item['image_url']
         pixel_values = load_image(image_url, max_num=12).to('npu').to(dtype)
         generation_config = dict(max_new_tokens=1024, do_sample=False)
         tokenization_data.append([tokenizer, pixel_values, query, generation_config])
