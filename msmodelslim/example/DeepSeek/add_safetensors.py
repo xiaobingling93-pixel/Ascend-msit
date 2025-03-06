@@ -8,9 +8,11 @@ from tqdm import tqdm
 from safetensors import safe_open
 from safetensors.torch import save_file
 
+from convert_fp8_to_bf16 import weight_dequant
+
 from ascend_utils.common.security import json_safe_load, json_safe_dump, get_valid_read_path
 from msmodelslim import logger as msmodelslim_logger
-from msmodelslim.tools.convert_fp8_to_bf16 import weight_dequant
+
 
 
 def find_file_with_pattern(target_dir, pattern):
