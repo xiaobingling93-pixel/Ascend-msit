@@ -28,11 +28,11 @@ class OneStepSampleArgs:
             extra_step_kwargs,
             added_cond_kwargs
     ) -> None:
-        self.latents = latents,
-        self.timestep = timestep,
-        self.step_index = step_index,
-        self.encoder_states = encoder_states,
-        self.extra_step_kwargs = extra_step_kwargs,
+        self.latents = latents
+        self.timestep = timestep
+        self.step_index = step_index
+        self.encoder_states = encoder_states
+        self.extra_step_kwargs = extra_step_kwargs
         self.added_cond_kwargs = added_cond_kwargs
 
 
