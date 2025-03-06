@@ -16,13 +16,13 @@ from tqdm import tqdm
 import torch
 import torch.nn as nn
 from accelerate.hooks import add_hook_to_module, remove_hook_from_module
-from einops import rearrange
 
 from ascend_utils.common.security.type import check_mapping_element
 from ascend_utils.common.security import check_element_type, check_type, get_write_directory, check_int
 
 from msmodelslim import logger as msmodelslim_logger
-from msmodelslim.pytorch.llm_ptq.hooks.factory import is_deepseek_v2_chat, is_deepseek_v2_lite
+from msmodelslim.pytorch.llm_ptq.hooks.factory import is_deepseek_v2_chat, is_deepseek_v2_lite, \
+    cutting_method_registry
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.layer_config_manager import LayerConfigManager
 
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config import QuantConfig
@@ -255,42 +255,25 @@ class Calibrator(object):
 
         def update_key_value_extremums(kv_cache, name, max_min, in_hidden_size, chunk_size):
             comming_max, comming_min = max_min[0], max_min[1]
-            # 分块操作
-            if chunk_size == 2:
+            # 检查模型类型并调用相应的切割方法
+            model_type = model.config.model_type
+
+            if model_type in cutting_method_registry.cutting_methods:
+                # 判断模型是否属于特殊qkv排列类型，并执行特殊的切割方法
+                cut_method = cutting_method_registry.get_cutting_method(model_type)
+                key_max, value_max, key_min, value_min = cut_method(comming_max, comming_min, model)
+            elif chunk_size == 2:
                 key_max, value_max = torch.chunk(comming_max, chunk_size, dim=0)
                 key_min, value_min = torch.chunk(comming_min, chunk_size, dim=0)
             elif chunk_size == 3:
-                # 判断模型类型，少数模型的qkv切块策略特殊，需要单独处理
-                if model.config.model_type in {"internlm2"}:
-                    # 确定 gs 和 d
-                    gs = model.config.num_attention_heads // model.config.num_key_value_heads + 2
-                    d = model.config.hidden_size // model.config.num_attention_heads
-                    #  计算 h : h = int(comming_max.numel() / (gs * d))
-                    # 使用 rearrange 函数将 comming_max 和 comming_min 重排为 (h, gs, d) 的形状
-                    qkv_states_max = rearrange(
-                        comming_max,
-                        "(h gs d) -> h gs d",
-                        gs=gs,
-                        d=d,
-                    )
-                    qkv_states_min = rearrange(
-                        comming_min,
-                        "(h gs d) -> h gs d",
-                        gs=gs,
-                        d=d,
-                    )
-                    # 提取 key_max_states 和 value_max_states
-                    key_max = qkv_states_max[:, -2, :].reshape(-1)
-                    value_max = qkv_states_max[:, -1, :].reshape(-1)
-                    key_min = qkv_states_min[:, -2, :].reshape(-1)
-                    value_min = qkv_states_min[:, -1, :].reshape(-1)
-                # 原有切块逻辑
-                else:
-                    res_dim = comming_max.shape[-1] - in_hidden_size
-                    _, kv_max = torch.split(comming_max, [in_hidden_size, res_dim])
-                    _, kv_min = torch.split(comming_min, [in_hidden_size, res_dim])
-                    key_max, value_max = torch.chunk(kv_max, 2, dim=0)
-                    key_min, value_min = torch.chunk(kv_min, 2, dim=0)
+                res_dim = comming_max.shape[-1] - in_hidden_size
+                _, kv_max = torch.split(comming_max, [in_hidden_size, res_dim])
+                _, kv_min = torch.split(comming_min, [in_hidden_size, res_dim])
+                key_max, value_max = torch.chunk(kv_max, 2, dim=0)
+                key_min, value_min = torch.chunk(kv_min, 2, dim=0)
+            else:
+                key_max, value_max, key_min, value_min = \
+                cutting_method_registry.default_cut(comming_max, comming_min, in_hidden_size)
 
             # 获取k_name和v_name
             k_name = 'k_proj'
