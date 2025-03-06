@@ -95,4 +95,4 @@ class LLMEngineHook(VLLMHookerBase):
         self.do_hook([LLMEngine._get_stats], get_stats_maker)
 
 
-request_hookers = [EngineRequestTrackerHook, SchedulerHook, ServerGenerateHook, LLMEngineHook]
+request_hookers = [EngineRequestTrackerHook, ServerGenerateHook, LLMEngineHook]
