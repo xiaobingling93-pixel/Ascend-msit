@@ -8,12 +8,12 @@ from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig
 
 from convert_fp8_to_bf16 import auto_convert_model_fp8_to_bf16, OpsType
+from add_safetensors import add_safetensors
 
 from msmodelslim.tools.copy_config_files import copy_config_files, modify_config_json
 from msmodelslim.pytorch.llm_ptq.anti_outlier import AntiOutlierConfig, AntiOutlier
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
 from msmodelslim.tools.logger import set_logger_level
-from msmodelslim.tools.add_safetensors import add_safetensors
 
 
 def parse_args():
@@ -128,5 +128,5 @@ copy_config_files(input_path=args.model_path, output_path=args.save_path, quant_
                   custom_hooks=custom_hooks)
 pbar.update(1)
 add_safetensors(org_paths=args.model_path, target_dir=args.save_path, safetensors_prefix="mtp_float",
-               max_file_size_gb=5, prefix="model.layers.61.", quant_type="FLOAT")
+               max_file_size_gb=5, prefix="model.layers.61.")
 pbar.update(1)
