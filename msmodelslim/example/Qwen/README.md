@@ -26,6 +26,7 @@
 - [Qwen2.5-7B-Instruct](https://huggingface.co/Qwen/Qwen2.5-7B-Instruct/tree/main)
 - [Qwen2.5-14B-Instruct](https://huggingface.co/Qwen/Qwen2.5-14B-Instruct/tree/main)
 - [Qwen2.5-32B-Instruct](https://huggingface.co/Qwen/Qwen2.5-32B-Instruct/tree/main)
+- [Qwen2.5-72B-Instruct](https://huggingface.co/Qwen/Qwen2.5-72B-Instruct/tree/main)
 
 ## 环境配置
 
@@ -132,13 +133,13 @@
 - 需修改`modeling_llama.py`文件和`config.json`文件，配置方法参考[FA量化使用说明](https://gitee.com/ascend/msit/blob/master/msmodelslim/docs/FA%E9%87%8F%E5%8C%96%E4%BD%BF%E7%94%A8%E8%AF%B4%E6%98%8E.md)。 
 - 相比于W8A8量化，需额外设置`use_fa_quant`参数为True
   ```shell
-  python3 quant_qwen.py --model_path {浮点权重路径} --save_directory {W8A8量化权重路径} --calib_file ../common/boolq.jsonl --w_bit 8 --a_bit 8 --device_type npu  --use_fa_quant True
+  python3 quant_qwen.py --model_path {浮点权重路径} --save_directory {W8A8量化权重路径} --calib_file ../common/boolq.jsonl --w_bit 8 --a_bit 8 --device_type npu --anti_method m4 --act_method 1 --use_fa_quant True
   ```
 ##### Qwen2.5-Coder-7B 稀疏量化 
   ```shell
   python3 quant_qwen.py --model_path {浮点权重路径} --save_directory {W4A8量化权重路径} --calib_file ../common/humaneval_x.jsonl --w_bit 4 --a_bit 8 --device_type cpu --fraction 0.02 --co_sparse True  --use_sigma True --is_lowbit False
   ```
-##### Qwen2-72b W8A8-pdmix量化(prefill阶段 w8a8动态量化, decode阶段 w8a8量化) 搭配 KV cache int8量化
+##### Qwen2.5-72b W8A8-pdmix量化(prefill阶段 w8a8动态量化, decode阶段 w8a8量化) 搭配 KV cache int8量化
   ```shell
   python3 quant_qwen.py --model_path {浮点权重路径} \
   --save_directory {W8A8-pdmix量化权重路径} \

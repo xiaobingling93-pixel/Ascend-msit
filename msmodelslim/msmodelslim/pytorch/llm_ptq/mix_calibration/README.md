@@ -24,6 +24,8 @@
 8. 调用process接口运行，生成混合校准集
 
 ### config文件示例
+- 第一层为dict，key为"configurations"，value为一个list，包含多个数据集信息
+- 每个数据集为一个dict，key为"dataset_name"和"dataset_path"，用来配置数据集的名称和路径
 ```json
 {"configurations": 
     [

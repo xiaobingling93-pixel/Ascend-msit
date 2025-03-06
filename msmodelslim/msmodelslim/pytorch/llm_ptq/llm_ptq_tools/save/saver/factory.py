@@ -37,7 +37,6 @@ class SaverFactory:
         safetensors_name = kwargs['safetensors_name']
         json_name = kwargs['json_name']
         part_file_size = kwargs['part_file_size']
-        model = kwargs['model']
 
         return SafetensorsSaverConfig(output_dir=output_dir,
                                       model_quant_type=cfg.model_quant_type,
@@ -45,8 +44,7 @@ class SaverFactory:
                                       use_fa_quant=cfg.use_fa_quant,
                                       safetensors_name=safetensors_name,
                                       json_name=json_name,
-                                      part_file_size=part_file_size,
-                                      model=model).get_saver()
+                                      part_file_size=part_file_size).get_saver()
 
     @staticmethod
     def create_npy_saver(typ, **kwargs) -> NpySaver:

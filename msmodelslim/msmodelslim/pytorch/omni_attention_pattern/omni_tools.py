@@ -3,12 +3,14 @@ import math
 import random
 import os
 import json
+import stat
+
 from tqdm import tqdm
 
 import numpy as np
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig, DynamicCache
-from ascend_utils.common.security import SafeWriteUmask
+from ascend_utils.common.security import check_type, get_valid_write_path
 
 from msmodelslim import logger as msmodelslim_logger
 from msmodelslim.pytorch.omni_attention_pattern.omni_config import OmniAttentionConfig
@@ -49,6 +51,9 @@ class OmniAttentionGeneticSearcher:
         参数:
         config (OmniAttentionConfig): 包含模型配置和搜索参数的对象。
         """
+        if not isinstance(config, OmniAttentionConfig):
+            raise TypeError("config should be OmniAttentionConfig")
+
         self.config = config
         self.sparsity = 90
 
@@ -249,12 +254,15 @@ class OmniAttentionGeneticSearcher:
                 if score > best_score:
                     best_score = score
                     best = pattern
-            with SafeWriteUmask(umask=0o377):
-                out_file = os.path.join(
-                    self.out_dir,
-                    f'genetic_rowwise_sparsity_{self.sparsity:d}_score_{best_score}.tsv')
-                np.savetxt(out_file, 1 - best, delimiter='\t', fmt='%d')
-                msmodelslim_logger.info(f"Saving best pattern to path {out_file}.")
+
+            out_file = os.path.join(
+                self.out_dir,
+                f'genetic_rowwise_sparsity_{self.sparsity:d}_score_{best_score}.tsv')
+            out_file = get_valid_write_path(out_file, warn_exists=True)
+            np.savetxt(out_file, 1 - best, delimiter='\t', fmt='%d')
+            os.chmod(out_file, stat.S_IRUSR)
+            msmodelslim_logger.info(f"Saving best pattern to path {out_file}.")
+
             prev_best = best.copy()
 
     def search_on_this_sparsity(self, sparsity):
@@ -262,6 +270,12 @@ class OmniAttentionGeneticSearcher:
         执行遗传搜索算法，寻找最佳的注意力模式。
         遗传算法通过进化生成模式池，对每个模式进行评分，并逐轮优化，直到得分不再提升为止。
         """
+        if sparsity is None:
+            raise ValueError("Please check sparsity, should be an integer greater than zero and less than 100")
+        check_type(sparsity, int, param_name="sparsity")
+        if sparsity <= 0 or sparsity >= 100:
+            raise ValueError("Please check sparsity, should be an integer greater than zero and less than 100")
+
         self.sparsity = sparsity
         score_per_head = np.zeros((self.num_layers, self.num_kv_heads), dtype=float) + EPSILON
         occur_per_head = np.zeros((self.num_layers, self.num_kv_heads), dtype=float) + EPSILON
@@ -299,14 +313,15 @@ class OmniAttentionGeneticSearcher:
             score_array_this_stage = score_per_head / occur_per_head
             genetic_round += 1
 
-        with SafeWriteUmask(umask=0o377):
-            out_file = os.path.join(
-                self.out_dir,
-                f'genetic_rowwise_on_this_sparsity_{self.sparsity:d}_score_{best_score_this_round}.tsv'
-            )
-            # 将最佳模式保存为文件，格式为 TSV，每个值为 0 或 1（1 表示稀疏位置）
-            np.savetxt(out_file, 1 - best_pattern, delimiter='\t', fmt='%d')
-            msmodelslim_logger.info(f"Saving best pattern with sparsity {self.sparsity:d} to path {out_file}.")
+        out_file = os.path.join(
+            self.out_dir,
+            f'genetic_rowwise_on_this_sparsity_{self.sparsity:d}_score_{best_score_this_round}.tsv'
+        )
+        out_file = get_valid_write_path(out_file, warn_exists=True)
+        # 将最佳模式保存为文件，格式为 TSV，每个值为 0 或 1（1 表示稀疏位置）
+        np.savetxt(out_file, 1 - best_pattern, delimiter='\t', fmt='%d')
+        os.chmod(out_file, stat.S_IRUSR)
+        msmodelslim_logger.info(f"Saving best pattern with sparsity {self.sparsity:d} to path {out_file}.")
 
     def mutation(self, score_per_head: np.ndarray) -> list[np.ndarray]:
         """
@@ -348,8 +363,8 @@ class OmniAttentionGeneticSearcher:
             mutations.append(mutated)
 
         # 将变异后的基因掩码扩展为 `(num_layers, num_kv_heads)` 形状
-        for i in range(len(mutations)):
-            mutations[i] = mutations[i][:, None].repeat(self.num_kv_heads, axis=1)
+        for i, mutation in enumerate(mutations):
+            mutations[i] = mutation[:, None].repeat(self.num_kv_heads, axis=1)
         return mutations
 
     def evolution(

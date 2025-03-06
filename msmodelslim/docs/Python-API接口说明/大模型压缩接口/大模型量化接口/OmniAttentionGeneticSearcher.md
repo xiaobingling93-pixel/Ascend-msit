@@ -14,7 +14,7 @@ OmniAttentionGeneticSearcher(config)
 ### API接口说明
 #### search_incremental()
 ```python
-# 执行遗传搜索算法，寻找最佳的注意力模式。可选
+# 执行遗传搜索算法，寻找最佳的注意力模式。可选接口
 # 
 # 输出：0-90稀疏度，步长为10，每个稀疏度对应的最佳pattern，以文件的形式保存
 OmniAttentionGeneticSearcher.search_incremental()
@@ -22,9 +22,9 @@ OmniAttentionGeneticSearcher.search_incremental()
 
 #### search_on_this_sparsity(sparsity)
 ```python
-# 以指定的稀疏度，寻找最佳的注意力模式。可选
+# 以指定的稀疏度，寻找最佳的注意力模式。可选接口
 # 
-# 输入：sparsity，数据类型为INT，表示稀疏度，数值范围为0~100，超过此范围数值将会被截断
+# 输入：sparsity，必选参数，数据类型为INT，表示稀疏度，数值范围为0~100，超过此范围数值将会被截断
 # 输出：指定稀疏度下最佳注意力模式，以文件的形式保存
 OmniAttentionGeneticSearcher.search_on_this_sparsity(sparsity)
 ```

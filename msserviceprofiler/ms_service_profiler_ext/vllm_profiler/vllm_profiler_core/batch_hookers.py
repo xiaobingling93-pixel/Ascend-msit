@@ -58,7 +58,7 @@ class SchedulerHook(VLLMHookerBase):
                 rid_list = []
                 for seq_group_metadata in seq_group_metadata_list:
                     if isinstance(seq_group_metadata, SequenceGroupMetadata):
-                        data = {"rid": seq_group_metadata.request_id, "iter": seq_group_metadata.token_chunk_size}
+                        data = {"rid": seq_group_metadata.request_id, "iter_size": seq_group_metadata.token_chunk_size}
                         rid_list.append(data)
                 prof.res(rid_list)
                 prof.span_end()

@@ -1,5 +1,5 @@
 torchrun --nnodes=1 --nproc_per_node 8  --master_port 29503 \
-    -m msmodelslim.pytorch.multi_modal.examples.osp1_2.search_t2v_sp \
+    -m example.osp1_2.sample_t2v_sp \
     --model_path /path/to/checkpoint-xxx/model_ema \
     --num_frames 29 \
     --height 480 \
@@ -12,13 +12,11 @@ torchrun --nnodes=1 --nproc_per_node 8  --master_port 29503 \
     --save_img_path "./sample_video_test" \
     --fps 24 \
     --guidance_scale 7.5 \
-    --num_sampling_steps 50 \
+    --num_sampling_steps 100 \
     --enable_tiling \
     --tile_overlap_factor 0.125 \
     --save_memory \
     --max_sequence_length 512 \
     --sample_method EulerAncestralDiscrete \
     --model_type "dit" \
-    --save_dir "/path/to/save/schedule/timestep/file" \
-    --videos_path "/path/of/calibration/videos"
-
+    --dit_cache_config "/path/of/cache/config/file"
