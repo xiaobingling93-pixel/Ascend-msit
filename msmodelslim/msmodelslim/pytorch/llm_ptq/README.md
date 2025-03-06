@@ -203,6 +203,7 @@ python3 quant.py
 ### 量化后权重文件
 - npy格式
 当[save_type](/msmodelslim/docs/Python-API接口说明/大模型压缩接口/大模型量化接口/PyTorch/save().md)设置为['numpy']或不设置时，量化权重会保存为npy文件，npy储存格式为字典，其中key值为各层Linear的名字，例如ChatGLM2-6B模型的transformer.encoder.layers.0.self_attention.query_key_value，value值为第0层query_key_value的Linear权重。
+> 注意：w4a8_dynamic 量化类型不支持 ['numpy'] 格式保存。因此，当 save_type 设置为['numpy']时，会有报错提醒。当 save_type 设置为 ['numpy', 'safe_tensor']时，会保存 `safe_tensor` 格式数据；而对于 `numpy` 格式数据，会跳过保存，并会在日志中输出一个 error 提示。
 ```
 ├── anti_fp_norm.npy   #LLaMA模型且已启用离群抑制功能，具体操作请参见使用离群值抑制功能，将会生成此文件。antioutlier算法生成浮点权重中的norm层权重文件，用于量化层的input和post norm的权重适配
 ├── deq_scale.npy      #W8A8量化和稀疏量化的量化参数权重文件，Tensor数据类型为int64，deq_scale已针对量化算子进行数据类型转换，可直接适配算子。在量化BF16模型情况下，数据类型不会转换为int64，仍然为float32
@@ -235,7 +236,9 @@ python3 quant.py
  ...
 }
 ```
-    - json描述文件中储存的量化权重的总体类型model_quant_type，是否启用kvcache量化kv_cache_type，和其中各个权重的类型，来自原始浮点权重则为FLOAT，来自W8A8量化则为W8A8，来自稀疏量化则为W8A8S，来自压缩则为W8A8SC，来自NF4量化则为NF4。
+> 注意：当使用 w4a8_dynamic 量化类型时，safe_tensor 的内容会多生成一个 weight_scale_second 和 weight_offset_second 的 key 和对应的 tensor 值。
+    
+- json描述文件中储存的量化权重的总体类型model_quant_type，是否启用kvcache量化kv_cache_type，和其中各个权重的类型，来自原始浮点权重则为FLOAT，来自W8A8量化则为W8A8，来自稀疏量化则为W8A8S，来自压缩则为W8A8SC，来自NF4量化则为NF4。
 ```
 # llama模型稀疏量化生成的json描述文件部分内容
 {
@@ -250,6 +253,7 @@ python3 quant.py
  ...
 }
 ```
+> 注意：当使用 w4a8_dynamic 量化类型时，json 描述文件中会多生成一个 model_quant_type_second 和 kv_cache_type_second 的 key 和对应的量化类型 W4A8_DYNAMIC。
 
 ### 精度保持策略
 
