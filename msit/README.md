@@ -44,11 +44,11 @@ msit llm dump <options>
 提供了大模型推理过程的数据 dump 功能。包括以下两部分：
 
 [atb dump快速入门指南](./docs/llm/工具-DUMP加速库数据使用说明.md)\
-[pytorch dump快速入门指南](./docs/llm/工具-DUMP在线推理数据使用说明.md)
+[Pytorch dump快速入门指南](./docs/llm/工具-Pytorch场景数据dump.md)
 #### 1.2 Compare
 提供大模型推理的自动比对功能，快速定位算子精度问题。
 
-[compare快速入门指南](./docs/llm/工具-自动比对功能使用说明.md)
+[compare快速入门指南](./docs/llm/工具-大模型精度比对.md)
 
 #### 1.3 OpCheck
 提供加速库（atb）的单算子精度预检功能，检测加速库算子精度是否达标。

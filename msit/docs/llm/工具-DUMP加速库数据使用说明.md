@@ -9,6 +9,8 @@
 5. **【保存 cpu_profiling 数据能力】** 保存 cpu profiling 信息，主要用于 host 侧性能定位，数据下发慢等问题，主要是算子开发、熟悉 atb 框架的开发人员定位使用
 6. **【保存 tiling 数据能力】** tiling 数据是 host 侧计算生成，用于 device 侧进行数据切分。主要用于算子开发人员定位算子精度异常问题
 
+- 加速库算子 tensor 及拓扑信息保存会占用磁盘，当落盘路径磁盘空间小于2G，会输出如下提示："Disk space is not enough, it's must more than 2G, free size(MB) is:"
+
 ## 使用方式
 
 ```bash
