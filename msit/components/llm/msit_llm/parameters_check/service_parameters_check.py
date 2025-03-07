@@ -130,71 +130,107 @@ def extract_txt_parameters(log_file_path):
         dict: A dictionary containing all the request parameters, structured as {request_id_counter: parameters_dict}.
     """
     with ms_open(log_file_path, 'r') as file:
-        param_str = file.read()
+        content = file.read()
 
-    # **第一步**：拆分每个 `request_id: SamplingParams(...)` 对
-    # 假设每个 request_id 和 SamplingParams 一对都在一行或一段中
-    lines = param_str.split("\n")
-
+    lines = content.split("\n")
     param_dict = {}
-    request_id_counter = 1  # 用来跟踪每个 request_id 的顺序
+    request_id_counter = 1
     request_id_cache = []
 
     for line in lines:
         # 找到包含 `request_id: SamplingParams(...)` 的行
-        if ':' in line:
-            # **第二步**：提取 `request_id` 和 `SamplingParams(...)` 部分
+        if not line.strip() or ':' not in line:
+            continue
+
+        # 提取 `request_id` 和 `SamplingParams(...)` 部分
+        try:
             request_id, param_str = line.split(":", 1)
-            if request_id in request_id_cache:
+        except ValueError as e:
+            logger.warning(f"get param_str failed ,the line is {line}, fail reason is {e}")
+            continue
+
+        request_id = request_id.strip()
+        param_str = param_str.strip()
+
+        # 跳过重复request_id
+        if request_id in request_id_cache:
+            continue
+        request_id_cache.append(request_id)
+
+        # 利用正则提取SamplingParams后的参数
+        start_match = re.findall(r'SamplingParams\(([^"]*)\)', param_str)
+        # 检查是否包含SamplingParams(...)
+        if not start_match:
+            logger.warning('Please check whether the SamplingParams(...) is correct')
+            continue
+        params_str = start_match[0]
+
+        # 使用栈结构解析参数并检查括号匹配
+        params = []
+        current_param = []
+        stack = []
+        error_flag = False
+        for char in params_str:
+            if char == ',' and not stack:
+                params.append(''.join(current_param).strip())
+                current_param = []
                 continue
-            request_id_cache.append(request_id)
+            current_param.append(char)
+            if char in '([{':
+                # 将对应的闭括号压入栈
+                if char == '(':
+                    stack.append(')')
+                elif char == '[':
+                    stack.append(']')
+                elif char == '{':
+                    stack.append('}')
+            elif char in ')]}':
+                if not stack:
+                    logger.warning(f"Extra closing bracket '{char}' in line: {line}")
+                    error_flag = True
+                    break
+                if char != stack[-1]:
+                    logger.warning(f"Mismatched brackets: expected '{stack[-1]}', got '{char}' in line: {line}")
+                    error_flag = True
+                    break
+                stack.pop()
 
-            # **第三步**：提取do_sample参数; 去掉 "SamplingParams" 这个类名，只保留括号内部的部分
-            do_sample = param_str.split(')')[1].split(':')
-            param_str = param_str[param_str.find("(") + 1: param_str.rfind(")")]
+        # 处理最后一个参数
+        if not error_flag and current_param:
+            params.append(''.join(current_param).strip())
 
-            # **第四步**：逐字符解析，确保不会拆开 `[]`, `{}`, `()`，并把参数分割成键值对
-            params = []
-            current = ""
-            depth = 0  # 用于跟踪嵌套深度（如 `[]`, `{}`, `()`）
+        # 检查是否有未闭合的括号
+        if not error_flag and stack:
+            logger.warning(f"Unclosed brackets {stack} in line: {line}")
+            error_flag = True
 
-            for char in param_str:
-                if char in "([{":
-                    depth += 1  # 进入嵌套
-                elif char in ")]}":
-                    depth -= 1  # 退出嵌套
-                else:
-                    pass
+        if error_flag:
+            logger.warning(f"Skipping invalid parameters in line: {line}")
+            continue
+        # 解析键值对并存入字典
+        request_params = {}
+        for param in params:
+            if '=' not in param:
+                logger.warning(f'Please check whether the parameter: {param} is correct.')
+                continue
+            key, value = param.split('=', 1)
+            key = key.strip()
+            value = value.strip()
+            try:
+                parsed_value = ast.literal_eval(value)
+            except (ValueError, SyntaxError):
+                parsed_value = value.strip("'\"")  # 处理带引号的字符串
+            request_params[key] = parsed_value
 
-                if char == "," and depth == 0:  # 只有在 **不在嵌套** 时才能切割
-                    params.append(current.strip())
-                    current = ""
-                else:
-                    current += char
+        if 'do_sample:True' in param_str:
+            request_params['do_sample'] = True
+        elif 'do_sample:False' in param_str:
+            request_params['do_sample'] = False
+        else:
+            logger.warning(f'Please check that the content of the do_sample is correct.')
 
-            # 处理最后一个参数
-            if current:
-                params.append(current.strip())
-
-            # **第五步**：解析键值对并存入字典
-            request_params = {}
-            for pair in params:
-                key, value = pair.split("=", 1)  # 只拆分第一个 `=`
-                key = key.strip()
-                value = value.strip()
-
-                # 尝试将值转换为 Python 变量
-                try:
-                    parsed_value = ast.literal_eval(value)  # 解析 Python 数据类型（列表、None、True、False、数字）
-                except (ValueError, SyntaxError):
-                    parsed_value = value.strip("'")  # 处理普通字符串
-
-                request_params[key] = parsed_value  # 存入字典
-            if do_sample != ['']:
-                request_params[do_sample[0]] = bool(do_sample[1])
-            # **第六步**：使用 request_id_counter 作为 param_dict 的键
-            param_dict[request_id_counter] = request_params
-            request_id_counter += 1  # 增加 request_id_counter
+        param_dict[request_id_counter] = request_params  # 使用 request_id_counter 作为 param_dict 的键
+        request_id_counter += 1  # 增加 request_id_counter
     return param_dict
 
 
