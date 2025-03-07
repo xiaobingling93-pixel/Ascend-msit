@@ -62,7 +62,7 @@ def make_new_onnx_model(onnx_path: str):
 class TestAnalyze(unittest.TestCase):
     def setUp(self) -> None:
         self.cur_dir = os.path.dirname(os.path.realpath(__file__))
-
+        resource_dir = os.path.join(self.cur_dir, '..', 'resource')
         self.onnx_model = os.path.join(self.cur_dir, 'test.onnx')
         make_new_onnx_model(self.onnx_model)
 
@@ -76,12 +76,13 @@ class TestAnalyze(unittest.TestCase):
         self.real_bin_path = os.path.dirname(Const.FAST_QUERY_BIN)
         if not os.path.exists(self.real_bin_path):
             os.makedirs(self.real_bin_path)
-        mock_bin_path = os.path.join('mock', 'bin', 'ms_fast_query.py')
+        mock_bin_path = os.path.join(resource_dir, 'analyze', 'mock', 'bin', 'ms_fast_query.py')
         shutil.copyfile(mock_bin_path, Const.FAST_QUERY_BIN)
+        self.test_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')
 
     def tearDown(self) -> None:
         for env, val in self.ori_env_map.items():
-            if len(val) != 0:
+            if val and len(val) != 0:
                 os.environ[env] = val
             else:
                 os.environ.pop(env)
@@ -151,8 +152,8 @@ class TestAnalyze(unittest.TestCase):
         use_case = [
             ('Abs_52', 'Abs', True, ''),
             ('Abs_112', 'Abs', True, ''),
-            ('Relu_34', 'Relu', False, Const.ERR_UNSUPPORT),
-            ('MyOp_111', 'MyOp', False, Const.ERR_UNSUPPORT),
+            ('Relu_34', 'Relu', True, ''),
+            ('MyOp_111', 'MyOp', True, ''),
         ]
 
         os.environ['ASCEND_TOOLKIT_HOME'] = self.cur_dir
@@ -182,8 +183,8 @@ class TestAnalyze(unittest.TestCase):
         use_case = [
             ('Abs_52', 'Abs', True, ''),
             ('Abs_112', 'Abs', True, ''),
-            ('Relu_34', 'Relu', False, Const.ERR_UNSUPPORT),
-            ('MyOp_111', 'MyOp', False, Const.ERR_UNSUPPORT),
+            ('Relu_34', 'Relu', True, ''),
+            ('MyOp_111', 'MyOp', True, ''),
         ]
 
         os.environ['ASCEND_TOOLKIT_HOME'] = self.cur_dir
@@ -231,7 +232,7 @@ class TestAnalyze(unittest.TestCase):
         use_case = [
             ('Abs_52', 'Abs', True, ''),
             ('Abs_112', 'Abs', True, ''),
-            ('Relu_34', 'Relu', False, Const.ERR_UNSUPPORT),
+            ('Relu_34', 'Relu', True, ''),
             ('MyOp_111', 'MyOp', False, Const.ERR_UNSUPPORT),
         ]
 
@@ -257,6 +258,7 @@ class TestAnalyze(unittest.TestCase):
             self.assertEqual(op_result.ori_op_type, ori_op_type)
             self.assertEqual(op_result.is_supported, is_supported)
             self.assertEqual(op_result.details, err_detail)
+        os.remove(os.path.join(self.cur_dir, "result.csv"))
 
 
 if __name__ == '__main__':

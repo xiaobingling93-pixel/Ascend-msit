@@ -16,7 +16,6 @@ import unittest
 import os
 import shutil
 
-from unittest import mock
 from unittest.mock import patch
 
 from model_evaluation.bean import OpInnerInfo
@@ -30,6 +29,7 @@ class TestOmParser(unittest.TestCase):
     def setUp(self) -> None:
         self.cur_dir = os.path.dirname(os.path.realpath(__file__))
         self.om_path = os.path.join(self.cur_dir, 'test.om')
+        self.resource_path = os.path.join(self.cur_dir, '..', 'resource', 'analyze')
 
     def test_parse_om_to_json_success_case(self):
         om_parser = OmParser(self.om_path, self.cur_dir)
@@ -54,7 +54,7 @@ class TestOmParser(unittest.TestCase):
     def test_parse_all_ops_success_case(self):
         om_parser = OmParser(self.om_path, self.cur_dir)
 
-        src_path = os.path.join(self.cur_dir, 'dataset', 'model', 'test.om.json')
+        src_path = os.path.join(self.resource_path, 'dataset', 'model', 'test.om.json')
         dst_path = os.path.join(self.cur_dir, 'test.om.json')
         shutil.copyfile(src_path, dst_path)
 
