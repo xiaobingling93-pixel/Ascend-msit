@@ -26,8 +26,10 @@ from ms_service_profiler_ext.exporters.exporter_summary import (
     calculate_request_metrics,
     gen_exporter_results,
     process_each_record,
-    save_dataframe_to_csv
+    save_dataframe_to_csv,
+    calculate_batch_metrics
 )
+from ms_service_profiler_ext.utils.csv_fields import RequestCSVFields, BatchCSVFields, ServiceCSVFields
 
 
 class TestExporterSummaryFunctions(unittest.TestCase):
@@ -278,6 +280,70 @@ class TestExporterSummaryFunctions(unittest.TestCase):
         rid_for_list = [0, 1, 2]
         token_id_for_list = [0, 0, 0]
         process_rid_token_list(self.req_map, rid_for_list, token_id_for_list, input_token_record)
+
+    def test_calculate_batch_metrics(self):
+        batch_map = {
+            "prefill_[1,2]": {
+                BatchCSVFields.PREFILL_BATCH_NUM: 8,
+                BatchCSVFields.PREFILL_EXEC_TIME: 1.5
+            },
+            "prefill_[3]": {
+                BatchCSVFields.PREFILL_BATCH_NUM: 4,
+                BatchCSVFields.PREFILL_EXEC_TIME: 0.8
+            },
+            "decode_[4,5]": {
+                BatchCSVFields.DECODE_BATCH_NUM: 6,
+                BatchCSVFields.DECODE_EXEC_TIME: 2.0
+            },
+            "decode_[6]": {
+                BatchCSVFields.DECODE_BATCH_NUM: 2,
+                BatchCSVFields.DECODE_EXEC_TIME: 0.5
+            }
+        }
+        result = calculate_batch_metrics(batch_map)
+
+        prefill_batch_stats = result[BatchCSVFields.PREFILL_BATCH_NUM]
+        self.assertEqual(prefill_batch_stats['avg'], (8 + 4) / 2)
+        self.assertEqual(prefill_batch_stats['p50'], 6.0)
+
+        prefill_time_stats = result[BatchCSVFields.PREFILL_EXEC_TIME]
+        self.assertAlmostEqual(prefill_time_stats['avg'], (1.5 + 0.8) / 2, places=2)
+
+        decode_batch_stats = result[BatchCSVFields.DECODE_BATCH_NUM]
+        self.assertEqual(decode_batch_stats['avg'], (6 + 2) / 2)
+
+        decode_time_stats = result[BatchCSVFields.DECODE_EXEC_TIME]
+        self.assertAlmostEqual(decode_time_stats['max'], 2.0)
+
+        empty_result = calculate_batch_metrics({})
+        for field in [
+            BatchCSVFields.PREFILL_BATCH_NUM,
+            BatchCSVFields.DECODE_BATCH_NUM,
+            BatchCSVFields.PREFILL_EXEC_TIME,
+            BatchCSVFields.DECODE_EXEC_TIME
+        ]:
+            self.assertTrue(
+                np.isnan(empty_result[field]['avg']),
+                f"空 batch_map 时 {field} 的 avg 应为 NaN"
+            )
+
+        partial_batch_map = {
+            "prefill_[7]": {
+                BatchCSVFields.PREFILL_EXEC_TIME: 1.2
+            },
+            "decode_[8]": {
+                BatchCSVFields.DECODE_BATCH_NUM: 3,
+            }
+        }
+        partial_result = calculate_batch_metrics(partial_batch_map)
+
+        self.assertEqual(
+            partial_result[BatchCSVFields.PREFILL_BATCH_NUM]['avg'], 0.0
+        )
+
+        self.assertEqual(
+            partial_result[BatchCSVFields.DECODE_EXEC_TIME]['max'], 0.0
+        )
 
 
 if __name__ == '__main__':
