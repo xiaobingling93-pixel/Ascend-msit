@@ -150,9 +150,8 @@ class OnnxGraph(BaseGraph):
     @classmethod
     def parse(cls, path_or_bytes: Union[str, ModelProto, GraphProto], add_name_suffix: bool = False) -> 'OnnxGraph':
         if isinstance(path_or_bytes, str):
-            if not Rule.input_file().max_size(ONNX_MODEL_MAX_SIZE).check(path_or_bytes):
-                logger.error("The onnx file size has exceeded 2GB and cannot be read.")
-                raise OSError
+            if os.path.getsize(path_or_bytes) > ONNX_MODEL_MAX_SIZE:
+                raise Exception("The onnx file size has exceeded 2GB and cannot be read.")
             onnx_model = onnx.load(path_or_bytes)
         if isinstance(path_or_bytes, ModelProto):
             onnx_model = path_or_bytes
