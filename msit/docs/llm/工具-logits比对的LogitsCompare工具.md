@@ -11,6 +11,10 @@ Logits Compare工具主要功能是将两个环境下获取的Logits结果，按
 （1）余弦相似度、KL散度以及L1_Norm比对阈值通过。
 （2）Logits中最大元素的误差值不超过数值精度的一个ULP（数值精度的最小单元）。
 
+## 环境依赖
+
+`torch`版本需使用`2.3.1`及以上版本，否则在调用`log_softmax`时，可能产生"无法应用于`float16`精度数据"的错误。
+
 ## 使用方法
 
 ```shell
@@ -29,8 +33,9 @@ msit llm logitscmp -gp {golden_logits_path} -mp {my_logits_path}  -cs {cosine_si
 | --kl-divergence      | -kl  | KL散度的比对阈值（默认0.0001，取值范围：[0, +∞)）              | 否     |
 | --l1-norm            | -l1  | L1_Normd的比对阈值（默认0.01，取值范围：[-1, +∞)）             | 否     |
 | --dtype              | -d   | 计算ULP时设定的数值精度（默认fp16，仅可输入bf16、fp16、fp32）   | 否     |
-| --output-dir         | -o   | 结果输出文件夹                                                | 否      |
+| --output-dir         | -o   | 结果输出文件夹（默认值"./output"）                             | 否      |
 | --help               | -h   | 命令行帮助信息                                                | 否      |
+| --log-level          | -l   | 设定日志级别（默认值"info"）                                   | 否      |
 
 ## 结果说明
 
