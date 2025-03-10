@@ -25,7 +25,7 @@ export SERVICE_PROF_CONFIG_PATH=ms_service_profiler_config.json
 {
     "enable": 1,
     "prof_dir": "${logs_prof}",
-    "profiler_level": "INFO"
+    "profiler_level": "L1"
 }
 ```
 参数说明：
@@ -33,7 +33,7 @@ export SERVICE_PROF_CONFIG_PATH=ms_service_profiler_config.json
 | ---- | ---- | ---- |
 |enable|是否开启性能数据采集的开关，取值为：0，关闭；1，开启|是|
 |prof_dir|采集到的性能数据的存放路径。默认值为$HOME/.ms_server_profiler|否|
-|profiler_level|数据采集等级，取值为：ERROE = 10，异常级别的性能数据；INFO = 20，普通级别的性能数据，默认值；DETAILED = 30，详细级别的性能数据；VERBOSE = 40，冗长的性能数据。|否|
+|profiler_level|数据采集等级，取值为：L0，异常级别的性能数据；L1，普通级别的性能数据，默认值；L2，详细级别的性能数据；L3，冗长的性能数据。|否|
 4. 可选：指定卡运行命令，例如`export ASCEND_RT_VISIBLE_DEVICES=1`为指定1卡运行
 5. 拉取vllm框架，发送请求，在步骤3中的ms_service_profiler_config.json设置的`${logs_prof}`路径下，会落盘profiling数据
 6. 调用`msprof --export=on --output=${logs_prof}/PROF_xxx_xxx_xxx`命令行处理`${logs_prof}`目录下所有的落盘数据，生成msproftx.db文件
