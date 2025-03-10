@@ -14,11 +14,12 @@
 
 import logging
 import sqlite3
+import unittest
 from argparse import Namespace
 from pathlib import Path
+from unittest.mock import ANY, MagicMock
+
 import pytest
-import unittest
-from unittest.mock import MagicMock, ANY
 
 from ms_service_profiler.exporters.factory import ExporterFactory
 from ms_service_profiler.utils.log import set_logger
@@ -29,6 +30,40 @@ from ms_service_profiler_ext.analyze import main, add_summary_exporter, set_log_
 
 
 class TestMainFunction:
+    def __init__(self):
+        self.mock_args = None
+
+    @staticmethod
+    def test_add_summary_exporter_decorator(mocker):
+        mock_initialize = mocker.patch.object(ExporterSummary, 'initialize')
+        original_create_exporters = MagicMock(return_value=['exporter1', 'exporter2'])
+        wrapped_func = add_summary_exporter(original_create_exporters)
+
+        args = Namespace(output_path='/fake/output')
+        exporters = wrapped_func(args)
+
+        assert len(exporters) == 3
+        assert isinstance(exporters[-1], ExporterSummary)
+        mock_initialize.assert_called_once_with(args)
+
+    @staticmethod
+    def test_command_line_interface(mocker):
+        mock_main = mocker.patch('ms_service_profiler_ext.analyze.main')
+        mocker.patch('sys.argv', ['script_name', '--input-path', '/fake/input'])
+
+        import ms_service_profiler_ext.analyze
+        ms_service_profiler_ext.analyze.main()
+        mock_main.assert_called_once()
+
+    @staticmethod
+    def test_invalid_input_path(mocker):
+        mocker.patch(
+            'argparse.ArgumentParser.parse_args',
+            side_effect=ValueError("Invalid path: '/invalid/path'")
+        )
+        with pytest.raises(ValueError, match=r"Invalid path.*"):
+            main()
+
     @pytest.fixture(autouse=True)
     def mock_dependencies(self, mocker):
         self.mock_args = Namespace(
@@ -47,30 +82,3 @@ class TestMainFunction:
         mocker.patch('os.path.exists', return_value=True)
         mocker.patch('ms_service_profiler.parse.find_file_in_dir', return_value=True)
 
-    def test_add_summary_exporter_decorator(self, mocker):
-        mock_initialize = mocker.patch.object(ExporterSummary, 'initialize')
-        original_create_exporters = MagicMock(return_value=['exporter1', 'exporter2'])
-        wrapped_func = add_summary_exporter(original_create_exporters)
-
-        args = Namespace(output_path='/fake/output')
-        exporters = wrapped_func(args)
-
-        assert len(exporters) == 3
-        assert isinstance(exporters[-1], ExporterSummary)
-        mock_initialize.assert_called_once_with(args)
-
-    def test_command_line_interface(self, mocker):
-        mock_main = mocker.patch('ms_service_profiler_ext.analyze.main')
-        mocker.patch('sys.argv', ['script_name', '--input-path', '/fake/input'])
-
-        import ms_service_profiler_ext.analyze
-        ms_service_profiler_ext.analyze.main()
-        mock_main.assert_called_once()
-
-    def test_invalid_input_path(self, mocker):
-        mocker.patch(
-            'argparse.ArgumentParser.parse_args',
-            side_effect=ValueError("Invalid path: '/invalid/path'")
-        )
-        with pytest.raises(ValueError, match=r"Invalid path.*"):
-            main()
