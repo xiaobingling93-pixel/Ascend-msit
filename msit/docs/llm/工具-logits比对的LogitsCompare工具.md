@@ -25,9 +25,9 @@ msit llm logitscmp -gp {golden_logits_path} -mp {my_logits_path}  -cs {cosine_si
 | -------------------- | ---- | ----------------------------------------------------------- | ------- |
 | --golden-path        | -gp  | 存放标杆的Logits数据的文件夹                                  | 是      |
 | --my-path            | -mp  | 存放待比对Logits数据的文件夹                                  | 是     |
-| --cosine-similarity  | -cs  | 余弦相似度的比对阈值（默认0.999）                              | 否     |
-| --kl-divergence      | -kl  | KL散度的比对阈值（默认0.0001）                                | 否     |
-| --l1-norm            | -l1  | L1_Normd的比对阈值（默认0.01）                                | 否     |
+| --cosine-similarity  | -cs  | 余弦相似度的比对阈值（默认0.999，取值范围：[-1, 1]）            | 否     |
+| --kl-divergence      | -kl  | KL散度的比对阈值（默认0.0001，取值范围：[0, +∞)）              | 否     |
+| --l1-norm            | -l1  | L1_Normd的比对阈值（默认0.01，取值范围：[-1, +∞)）             | 否     |
 | --dtype              | -d   | 计算ULP时设定的数值精度（默认fp16，仅可输入bf16、fp16、fp32）   | 否     |
 | --output-dir         | -o   | 结果输出文件夹                                                | 否      |
 | --help               | -h   | 命令行帮助信息                                                | 否      |
