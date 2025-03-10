@@ -20,10 +20,13 @@ from argparse import Namespace
 import tempfile
 import pytest
 
-from test.st.analyze.test_analyze_cmd_ms_service_profiler import check_csv_content
+
 from ms_service_profiler.exporters.factory import ExporterFactory
 from ms_service_profiler_ext.exporters.exporter_summary import ExporterSummary
 from ms_service_profiler_ext.analyze import main, add_summary_exporter
+
+from test.st.analyze.test_analyze_cmd_ms_service_profiler import check_csv_content
+
 
 class TestMainFunction:
     ST_DATA_PATH = os.getenv("MS_SERVICE_PROFILER", "/data/ms_service_profiler")
