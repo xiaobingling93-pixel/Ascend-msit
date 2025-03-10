@@ -12,23 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
 import os
 import shutil
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 from argparse import Namespace
 import tempfile
-import pytest
 
 from ms_service_profiler.exporters.factory import ExporterFactory
 from ms_service_profiler_ext.exporters.exporter_summary import ExporterSummary
 from ms_service_profiler_ext.analyze import main, add_summary_exporter
 from test.st.analyze.test_analyze_cmd_ms_service_profiler import check_csv_content
 
-
 class TestMainFunction:
-    ST_DATA_PATH = os.getenv("MS_SERVICE_PROFILER",
-                             "/data/ms_service_profiler")
+    ST_DATA_PATH = os.getenv("MS_SERVICE_PROFILER", "/data/ms_service_profiler")
     REAL_INPUT_PATH = os.path.join(ST_DATA_PATH, "input/analyze/0211-1226")
     REQUEST_CSV = "request_summary.csv"
     BATCH_CSV = "batch_summary.csv"
@@ -56,10 +54,8 @@ class TestMainFunction:
         mock_initialize = mocker.patch.object(ExporterSummary, 'initialize')
         original_create_exporters = MagicMock(return_value=['exporter1', 'exporter2'])
         wrapped_func = add_summary_exporter(original_create_exporters)
-
         args = Namespace(output_path='/fake/output')
         exporters = wrapped_func(args)
-
         assert len(exporters) == 3
         assert isinstance(exporters[-1], ExporterSummary)
         mock_initialize.assert_called_once_with(args)
@@ -68,7 +64,6 @@ class TestMainFunction:
     def test_command_line_interface(mocker):
         mock_main = mocker.patch('ms_service_profiler_ext.analyze.main')
         mocker.patch('sys.argv', ['script_name', '--input-path', '/fake/input'])
-
         import ms_service_profiler_ext.analyze
         ms_service_profiler_ext.analyze.main()
         mock_main.assert_called_once()
@@ -90,16 +85,10 @@ class TestMainFunction:
                 output_path=tmp_output,
                 log_level="info"
             )
-
-            print(real_args)
-
             mocker.patch('argparse.ArgumentParser.parse_args', return_value=real_args)
-
             main()
-
             output_path = Path(tmp_output)
             assert (output_path / "profiler.db").is_file(), "数据库文件未生成"
-
             csv_checks = [
                 (TestMainFunction.REQUEST_CSV, ['Metric', 'Average', 'Max', 'Min', 'P50', 'P90', 'P99'],
                  ['Average', 'Max', 'Min', 'P50', 'P90', 'P99']),
@@ -107,7 +96,6 @@ class TestMainFunction:
                  ['Average', 'Max', 'Min', 'P50', 'P90', 'P99']),
                 (TestMainFunction.SERVICE_CSV, ['Metric', 'Value'], ['Value'])
             ]
-
             for csv_file, expected_columns, numeric_columns in csv_checks:
                 assert check_csv_content(
                     tmp_output,
