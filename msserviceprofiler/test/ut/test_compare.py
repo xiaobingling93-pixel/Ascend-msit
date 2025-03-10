@@ -25,8 +25,15 @@ from ms_service_profiler_ext.compare import (
 )
 from ms_service_profiler_ext.compare_tools import CSVComparator
 from ms_service_profiler_ext.compare import connect_db, process_files
+from ms_service_profiler_ext.utils.csv_fields import ServiceCSVFields
 
 logger.warning = MagicMock()
+
+
+def build_test_data_df(value_list):
+    test_data = {'Metric': ['m1', 'm2']}
+    test_data[ServiceCSVFields.VALUE] = value_list
+    return pd.DataFrame(test_data)
 
 
 # Test cases for compare csv
@@ -38,8 +45,8 @@ def test_compare_csv_collectly(tmp_path):
     input_b = tmp_path / "input_b" / "service_summary.csv"
     input_a.parent.mkdir(exist_ok=True)
     input_b.parent.mkdir(exist_ok=True)
-    df_a = pd.DataFrame({'Metric': ['m1', 'm2'], 'value': [10, 20]})
-    df_b = pd.DataFrame({'Metric': ['m1', 'm2'], 'value': [15, 25]})
+    df_a = build_test_data_df([10, 20])
+    df_b = build_test_data_df([15, 25])
     df_a.to_csv(input_a, index=False)
     df_b.to_csv(input_b, index=False)
     
@@ -60,7 +67,7 @@ def test_compare_csv_missing_file(tmp_path):
     file_b = tmp_path / "input_b" / "service_summary.csv"
     file_a.parent.mkdir(exist_ok=True)
     file_b.parent.mkdir(exist_ok=True)
-    df_a = pd.DataFrame({'Metric': ['m1', 'm2'], 'value': [10, 20]})
+    df_a = build_test_data_df([10, 20])
     df_a.to_csv(file_a, index=False)
     
     with connect_db(output_db) as db_conn:
@@ -78,8 +85,8 @@ def test_compare_csv_wrong_value(tmp_path):
     file_b = tmp_path / "input_b" / "service_summary.csv"
     file_a.parent.mkdir(exist_ok=True)
     file_b.parent.mkdir(exist_ok=True)
-    df_a = pd.DataFrame({'Metric': ['m1', 'm2'], 'value': [10, 20]})
-    df_b = pd.DataFrame({'Metric': ['m1', 'm2'], 'value': [15, '25']})
+    df_a = build_test_data_df([10, 20])
+    df_b = build_test_data_df([15, '25'])
     df_a.to_csv(file_a, index=False)
     df_b.to_csv(file_b, index=False)
     
@@ -96,8 +103,8 @@ def test_main_given_valid_args_when_run_then_success(tmp_path):
     input_b = tmp_path / "input_b"
     Path(input_a).mkdir(exist_ok=True)
     Path(input_b).mkdir(exist_ok=True)
-    df_a = pd.DataFrame({'Metric': ['m1', 'm2'], 'value': [10, 20]})
-    df_b = pd.DataFrame({'Metric': ['m1', 'm2'], 'value': [15, 25]})
+    df_a = build_test_data_df([10, 20])
+    df_b = build_test_data_df([15, 25])
     df_a.to_csv(Path(input_a) / "service_summary.csv", index=False)
     df_b.to_csv(Path(input_b) / "service_summary.csv", index=False)
 

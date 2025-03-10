@@ -24,17 +24,23 @@ export SERVICE_PROF_CONFIG_PATH=ms_service_profiler_config.json
 ```
 {
     "enable": 1,
-    "prof_dir": ${logs_prof},
-    "profiler_level": 100
+    "prof_dir": "${logs_prof}",
+    "profiler_level": "INFO"
 }
 ```
-4. 可选：指定卡运行命令，例如`export ASCEND_RT_VISIBIE_DEVICES=1`为指定1卡运行
+参数说明：
+|参数|说明|是否必选|
+| ---- | ---- | ---- |
+|enable|是否开启性能数据采集的开关，取值为：0，关闭；1，开启|是|
+|prof_dir|采集到的性能数据的存放路径。默认值为$HOME/.ms_server_profiler|否|
+|profiler_level|数据采集等级，取值为：ERROE = 10，异常级别的性能数据；INFO = 20，普通级别的性能数据，默认值；DETAILED = 30，详细级别的性能数据；VERBOSE = 40，冗长的性能数据。|否|
+4. 可选：指定卡运行命令，例如`export ASCEND_RT_VISIBLE_DEVICES=1`为指定1卡运行
 5. 拉取vllm框架，发送请求，在步骤3中的ms_service_profiler_config.json设置的`${logs_prof}`路径下，会落盘profiling数据
 6. 调用`msprof --export=on --output=${logs_prof}/PROF_xxx_xxx_xxx`命令行处理`${logs_prof}`目录下所有的落盘数据，生成msproftx.db文件
 
 # 结果说明
 ### 1. 执行推理处理时间数据
-① ModelExec，表示模型执行时间
+① modelExec，表示模型执行时间
 ```
 rid: 请求ID
 batch_type: batch类型
@@ -58,7 +64,7 @@ scope：队列名称，通常含有waiting、running队列
 ```
 rid: 当前调度batch中的请求ID列表
 QueueSize：当前队列大小
-iter:当前迭代返回token长度
+iter_size:当前迭代返回token长度
 ```
 
 ③ ReqState，表示请求状态变化信息
@@ -82,7 +88,7 @@ rid: 请求ID
 block_num: 追加的block数量
 ```
 
-③ Rree，请求过程中释放的缓存字段
+③ Free，请求过程中释放的缓存字段
 ```
 domain：表示当前为kvcache相关信息
 rid: 请求ID
