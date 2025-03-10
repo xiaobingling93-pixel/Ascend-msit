@@ -14,16 +14,17 @@
 
 import os
 import shutil
-import pandas as pd
+import tempfile
+from argparse import Namespace
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-from argparse import Namespace
-import tempfile
+
+import pandas as pd
 import pytest
 
 from ms_service_profiler.exporters.factory import ExporterFactory
+from ms_service_profiler_ext.analyze import add_summary_exporter, main
 from ms_service_profiler_ext.exporters.exporter_summary import ExporterSummary
-from ms_service_profiler_ext.analyze import main, add_summary_exporter
 
 
 def check_csv_content(output_path, csv_file_name, expected_csv_columns, numeric_columns):
@@ -82,23 +83,6 @@ class TestMainFunction:
     BATCH_CSV = "batch_summary.csv"
     SERVICE_CSV = "service_summary.csv"
 
-    @pytest.fixture(autouse=True)
-    def mock_dependencies(self, mocker):
-        mock_args = Namespace(
-            input_path='/fake/input',
-            output_path='/fake/output',
-            log_level='info'
-        )
-        mocker.patch('argparse.ArgumentParser.parse_args', return_value=mock_args)
-        mocker.patch('ms_service_profiler.utils.log.set_log_level')
-        mocker.patch('ms_service_profiler.parse.preprocess_prof_folders')
-        mocker.patch('ms_service_profiler.exporters.factory.ExporterFactory.create_exporters', return_value=[])
-        mocker.patch.object(Path, 'mkdir')
-        mocker.patch('ms_service_profiler.exporters.utils.create_sqlite_db')
-        mocker.patch('os.path.exists', return_value=True)
-        mocker.patch('ms_service_profiler.parse.find_file_in_dir', return_value=True)
-        return mock_args
-
     @staticmethod
     def test_add_summary_exporter_decorator(mocker):
         mock_initialize = mocker.patch.object(ExporterSummary, 'initialize')
@@ -153,3 +137,20 @@ class TestMainFunction:
                     expected_columns,
                     numeric_columns
                 ), f"{csv_file} 内容校验失败"
+
+    @pytest.fixture(autouse=True)
+    def mock_dependencies(self, mocker):
+        mock_args = Namespace(
+            input_path='/fake/input',
+            output_path='/fake/output',
+            log_level='info'
+        )
+        mocker.patch('argparse.ArgumentParser.parse_args', return_value=mock_args)
+        mocker.patch('ms_service_profiler.utils.log.set_log_level')
+        mocker.patch('ms_service_profiler.parse.preprocess_prof_folders')
+        mocker.patch('ms_service_profiler.exporters.factory.ExporterFactory.create_exporters', return_value=[])
+        mocker.patch.object(Path, 'mkdir')
+        mocker.patch('ms_service_profiler.exporters.utils.create_sqlite_db')
+        mocker.patch('os.path.exists', return_value=True)
+        mocker.patch('ms_service_profiler.parse.find_file_in_dir', return_value=True)
+        return mock_args
