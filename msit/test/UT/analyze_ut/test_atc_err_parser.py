@@ -33,7 +33,7 @@ class TestAtcErrParser(unittest.TestCase):
         }
         self.errinfo_map = {}
         cur_dir = os.path.dirname(os.path.realpath(__file__))
-        err_path = os.path.join(cur_dir, 'dataset', 'atc_err')
+        err_path = os.path.join(cur_dir, '..', 'resource', 'analyze', 'dataset', 'atc_err')
         for errcode, err_file in err_file_map.items():
             errfile_path = os.path.join(err_path, err_file)
             if not os.path.isfile(errfile_path):

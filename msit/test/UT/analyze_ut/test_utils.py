@@ -27,11 +27,11 @@ class TestOpMap(unittest.TestCase):
         real_dir = os.path.join(cur_dir, 'testdir')
         os.mkdir(real_dir)
         self.assertFalse(utils.check_file_security(real_dir))
-        os.removedirs('testdir')
+        os.removedirs(real_dir)
         self.assertTrue(utils.check_file_security(real_dir))
 
         real_file = os.path.join(cur_dir, 'test.sh')
-        self.assertTrue(utils.check_file_security(real_dir))
+        self.assertTrue(utils.check_file_security(real_file))
 
     def test_get_framework(self):
         model = 'xxx/test.onnx'

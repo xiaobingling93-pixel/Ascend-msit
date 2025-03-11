@@ -33,7 +33,7 @@ opt_out = click.option('-o', '--output', 'output', type=str, required=True, help
 @opt_out
 def fast_query(query_type, opp_path, output) -> None:
     cur_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-    data_path = os.path.join(cur_dir, 'dataset', 'opp', 'opp.json')
+    data_path = os.path.join(cur_dir, 'resource', 'analyze', 'dataset', 'opp', 'opp.json')
 
     out_path = os.path.realpath(output)
     if data_path == out_path:

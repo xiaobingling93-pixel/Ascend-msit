@@ -29,10 +29,11 @@ class TestModelParser(unittest.TestCase):
 
     def setUp(self) -> None:
         self.cur_dir = os.path.dirname(os.path.realpath(__file__))
-        self.model_path = os.path.join(self.cur_dir, 'test.onnx')
+        self.resource_dir = os.path.join(self.cur_dir, '..', 'resource', 'analyze')
+        self.model_path = os.path.join(self.resource_dir, 'test.onnx')
         self.config = ConvertConfig(framework=Framework.ONNX)
 
-        err_data_path = os.path.join(self.cur_dir, 'dataset', 'atc_err')
+        err_data_path = os.path.join(self.resource_dir, 'dataset', 'atc_err')
         err_file = 'atc_err_ez9010.txt'
         err_file_path = os.path.join(err_data_path, err_file)
 
@@ -44,7 +45,7 @@ class TestModelParser(unittest.TestCase):
             self.errinfo = 'E19010: No parser is registered for Op [Conv_52, optype [ai.onnx::11::Convx]].'
 
     def test_parse_model_to_json_fail_case(self):
-        model_parser = ModelParser(self.model_path, self.cur_dir, self.config)
+        model_parser = ModelParser(self.model_path, self.resource_dir, self.config)
 
         utils.exec_command = mock.Mock(return_value=('', 'Run error.'))
         res = model_parser.parse_model_to_json()
@@ -55,14 +56,14 @@ class TestModelParser(unittest.TestCase):
         self.assertFalse(res)
 
     def test_parse_model_to_json_success_case(self):
-        model_parser = ModelParser(self.model_path, self.cur_dir, self.config)
+        model_parser = ModelParser(self.model_path, self.resource_dir, self.config)
 
         utils.exec_command = mock.Mock(return_value=('ATC run success', ''))
         res = model_parser.parse_model_to_json()
         self.assertTrue(res)
 
     def test_parse_model_to_om_fail_case(self):
-        model_parser = ModelParser(self.model_path, self.cur_dir, self.config)
+        model_parser = ModelParser(self.model_path, self.resource_dir, self.config)
 
         utils.exec_command = mock.Mock(return_value=('', 'Run error.'))
 
@@ -71,7 +72,7 @@ class TestModelParser(unittest.TestCase):
         self.assertEqual(errinfo, '')
 
     def test_parse_model_to_om_err_ez9010_case(self):
-        model_parser = ModelParser(self.model_path, self.cur_dir, self.config)
+        model_parser = ModelParser(self.model_path, self.resource_dir, self.config)
 
         utils.exec_command = mock.Mock(return_value=(self.errinfo, ''))
 
@@ -80,16 +81,16 @@ class TestModelParser(unittest.TestCase):
         self.assertNotEqual(len(errinfo), 0)
 
     def test_parse_all_ops_fail_case(self):
-        model_parser = ModelParser(self.model_path, self.cur_dir, self.config)
+        model_parser = ModelParser(self.model_path, self.resource_dir, self.config)
 
         ops = model_parser.parse_all_ops()
         self.assertEqual(ops, [])
 
     def test_parse_all_ops_success_case(self):
-        model_parser = ModelParser(self.model_path, self.cur_dir, self.config)
+        model_parser = ModelParser(self.model_path, self.resource_dir, self.config)
 
-        src_path = os.path.join(self.cur_dir, 'dataset', 'model', 'test.onnx.json')
-        dst_path = os.path.join(self.cur_dir, 'test.onnx.json')
+        src_path = os.path.join(self.resource_dir, 'dataset', 'model', 'test.onnx.json')
+        dst_path = os.path.join(self.resource_dir, 'test.onnx.json')
         shutil.copyfile(src_path, dst_path)
 
         model_parser._json_path = dst_path

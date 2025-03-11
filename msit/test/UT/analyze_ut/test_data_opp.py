@@ -34,14 +34,14 @@ class TestOpp(unittest.TestCase):
         self.real_bin_path = os.path.dirname(Const.FAST_QUERY_BIN)
         if not os.path.exists(self.real_bin_path):
             os.makedirs(self.real_bin_path)
-        mock_bin_path = os.path.join('mock', 'bin', 'ms_fast_query.py')
+        resource_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', 'resource')
+        mock_bin_path = os.path.join(resource_dir, 'analyze', 'mock', 'bin', 'ms_fast_query.py')
         shutil.copyfile(mock_bin_path, Const.FAST_QUERY_BIN)
-
-        self.cur_dir = os.path.dirname(os.path.realpath(__file__))
+        self.test_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')
 
     def tearDown(self) -> None:
         for env, val in self.ori_env_map.items():
-            if len(val) != 0:
+            if val and len(val) != 0:
                 os.environ[env] = val
             else:
                 os.environ.pop(env)
@@ -52,23 +52,22 @@ class TestOpp(unittest.TestCase):
     def test_load_opp_fail_case(self):
         opp = None
         try:
-            opp = Opp.load_opp(SocType.Ascend310.name, self.cur_dir)
+            opp = Opp.load_opp(SocType.Ascend310.name, self.test_dir)
         except RuntimeError:
             pass
         self.assertIsNone(opp)
 
     def test_load_opp_success_case(self):
-        os.environ['ASCEND_TOOLKIT_HOME'] = self.cur_dir
-        os.environ['ASCEND_OPP_PATH'] = self.cur_dir
+        os.environ['ASCEND_TOOLKIT_HOME'] = self.test_dir
+        os.environ['ASCEND_OPP_PATH'] = self.test_dir
 
-        opp = Opp.load_opp(SocType.Ascend310.name, self.cur_dir)
+        opp = Opp.load_opp(SocType.Ascend310.name, self.test_dir)
         self.assertIsNotNone(opp)
 
     def test_query_op_info_success_case(self):
-        os.environ['ASCEND_TOOLKIT_HOME'] = self.cur_dir
-        os.environ['ASCEND_OPP_PATH'] = self.cur_dir
-
-        opp = Opp.load_opp(SocType.Ascend310.name, self.cur_dir)
+        os.environ['ASCEND_TOOLKIT_HOME'] = self.test_dir
+        os.environ['ASCEND_OPP_PATH'] = self.test_dir
+        opp = Opp.load_opp(SocType.Ascend310.name, self.test_dir)
         self.assertIsNotNone(opp)
 
         op_info = opp.query_op_info('Abs')
@@ -76,20 +75,20 @@ class TestOpp(unittest.TestCase):
         self.assertEqual(op_info.op_engine, Engine.AICORE)
 
     def test_query_op_info_fail_case(self):
-        os.environ['ASCEND_TOOLKIT_HOME'] = self.cur_dir
-        os.environ['ASCEND_OPP_PATH'] = self.cur_dir
+        os.environ['ASCEND_TOOLKIT_HOME'] = self.test_dir
+        os.environ['ASCEND_OPP_PATH'] = self.test_dir
 
-        opp = Opp.load_opp(SocType.Ascend310.name, self.cur_dir)
+        opp = Opp.load_opp(SocType.Ascend310.name, self.test_dir)
         self.assertIsNotNone(opp)
 
         op_info = opp.query_op_info('NoneOp')
         self.assertEqual(op_info.op_type, '')
 
     def test_query_ascend310p_op_engine_success_case(self):
-        os.environ['ASCEND_TOOLKIT_HOME'] = self.cur_dir
-        os.environ['ASCEND_OPP_PATH'] = self.cur_dir
+        os.environ['ASCEND_TOOLKIT_HOME'] = self.test_dir
+        os.environ['ASCEND_OPP_PATH'] = self.test_dir
 
-        opp = Opp.load_opp(SocType.Ascend310P.name, self.cur_dir)
+        opp = Opp.load_opp(SocType.Ascend310P.name, self.test_dir)
         self.assertIsNotNone(opp)
 
         engine = opp.query_op_engine('SparseSoftmax')
@@ -99,10 +98,10 @@ class TestOpp(unittest.TestCase):
         self.assertEqual(engine, Engine.DVPP)
 
     def test_query_ascend310_op_engine_success_case(self):
-        os.environ['ASCEND_TOOLKIT_HOME'] = self.cur_dir
-        os.environ['ASCEND_OPP_PATH'] = self.cur_dir
+        os.environ['ASCEND_TOOLKIT_HOME'] = self.test_dir
+        os.environ['ASCEND_OPP_PATH'] = self.test_dir
 
-        opp = Opp.load_opp(SocType.Ascend310.name, self.cur_dir)
+        opp = Opp.load_opp(SocType.Ascend310.name, self.test_dir)
         self.assertIsNotNone(opp)
 
         engine = opp.query_op_engine('Abs')
@@ -112,10 +111,10 @@ class TestOpp(unittest.TestCase):
         self.assertEqual(engine, Engine.HOST_CPU)
 
     def test_query_ascend310_op_engine_fail_case(self):
-        os.environ['ASCEND_TOOLKIT_HOME'] = self.cur_dir
-        os.environ['ASCEND_OPP_PATH'] = self.cur_dir
+        os.environ['ASCEND_TOOLKIT_HOME'] = self.test_dir
+        os.environ['ASCEND_OPP_PATH'] = self.test_dir
 
-        opp = Opp.load_opp(SocType.Ascend310.name, self.cur_dir)
+        opp = Opp.load_opp(SocType.Ascend310.name, self.test_dir)
         self.assertIsNotNone(opp)
 
         engine = opp.query_op_engine('NoneOp')
