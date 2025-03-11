@@ -662,7 +662,7 @@ class LogitsCompare(BaseCommand):
             dest="golden_path",
             required=True,
             type=check_input_path_legality, 
-            help="Golden result to compare with. It must be a valid csv path")
+            help="Golden result to compare with. It must be a valid folder path")
 
         parser.add_argument(
             '--my-path',
@@ -670,7 +670,7 @@ class LogitsCompare(BaseCommand):
             dest="my_path",
             required=True,
             type=check_input_path_legality, 
-            help="My result to compare with the golden. It must be a valid csv path")
+            help="My result to compare with the golden. It must be a valid folder path")
 
         parser.add_argument(
             "--cosine-similarity",
