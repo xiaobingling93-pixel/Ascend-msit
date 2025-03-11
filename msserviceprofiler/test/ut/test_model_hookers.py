@@ -13,9 +13,9 @@
 # limitations under the License.
 
 import sys
-import pytest
-
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.model_hookers import ModelRunnerExecuteHook, \
     ModelForwardHook
