@@ -14,7 +14,9 @@
 
 import sys
 import pytest
+
 from unittest.mock import MagicMock, patch
+
 from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.model_hookers import ModelRunnerExecuteHook, \
     ModelForwardHook
 
