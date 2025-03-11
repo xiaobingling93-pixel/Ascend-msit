@@ -26,13 +26,14 @@ from ms_service_profiler_ext.exporters.exporter_summary import (
     calculate_request_metrics,
     gen_exporter_results,
     process_each_record,
-    save_dataframe_to_csv
+    save_dataframe_to_csv,
+    calculate_batch_metrics
 )
+from ms_service_profiler_ext.utils.csv_fields import RequestCSVFields, BatchCSVFields, ServiceCSVFields
 
 
 class TestExporterSummaryFunctions(unittest.TestCase):
     def setUp(self):
-        # 公共测试数据
         self.sample_batch_map = {}
         self.sample_req_map = {'1001': {'token_id': {}}}
         self.valid_rid_list = [1, 2]
@@ -42,25 +43,25 @@ class TestExporterSummaryFunctions(unittest.TestCase):
     def test_is_contained_valid_iter_info_normal(self):
         self.assertTrue(
             is_contained_valid_iter_info(self.valid_rid_list, self.valid_iter_list),
-            "应验证有效迭代信息"
+            "Valid iteration information should be verified."
         )
 
     def test_is_contained_valid_iter_info_edge_cases(self):
         self.assertFalse(
             is_contained_valid_iter_info([], self.valid_iter_list),
-            "空rid列表应返回False"
+            "An empty rid list should return False."
         )
         self.assertFalse(
             is_contained_valid_iter_info([1], self.valid_iter_list),
-            "长度不一致应返回False"
+            "Inconsistent lengths should return False."
         )
         self.assertFalse(
             is_contained_valid_iter_info(None, self.valid_iter_list),
-            "rid_list 为 None 应返回 False"
+            "If rid_list is None, it should return False."
         )
         self.assertFalse(
             is_contained_valid_iter_info(self.valid_rid_list, None),
-            "token_id_list 为 None 应返回 False"
+            "If token_id_list is None, it should return False."
         )
 
     def test_process_batch_record_multiple_types(self):
@@ -72,7 +73,7 @@ class TestExporterSummaryFunctions(unittest.TestCase):
         }
         process_batch_record(self.sample_batch_map, prefill_record)
         prefill_key = f"prefill_{str(prefill_record['rid_list'])}"
-        self.assertIn(prefill_key, self.sample_batch_map, f"键 {prefill_key} 未在 sample_batch_map 中找到")
+        self.assertIn(prefill_key, self.sample_batch_map, f"The key {prefill_key} was not found in sample_batch_map.")
         self.assertEqual(self.sample_batch_map[prefill_key]['prefill_batch_num'], 8)
         self.assertAlmostEqual(self.sample_batch_map[prefill_key]['prefill_exec_time (ms)'], 1500.0)
 
@@ -85,7 +86,7 @@ class TestExporterSummaryFunctions(unittest.TestCase):
         }
         process_batch_record(self.sample_batch_map, decode_record)
         decode_key = f"decode_{str(decode_record['rid_list'])}"
-        self.assertIn(decode_key, self.sample_batch_map, f"键 {decode_key} 未在 sample_batch_map 中找到")
+        self.assertIn(decode_key, self.sample_batch_map, f"The key {decode_key} was not found in sample_batch_map.")
         self.assertEqual(self.sample_batch_map[decode_key]['decode_batch_num'], 4)
         self.assertAlmostEqual(self.sample_batch_map[decode_key]['decode_exec_time (ms)'], 500.0)
         unknown_record = {
@@ -95,7 +96,7 @@ class TestExporterSummaryFunctions(unittest.TestCase):
             'during_time': 200_000
         }
         process_batch_record(self.sample_batch_map, unknown_record)
-        self.assertEqual(len(self.sample_batch_map), 2, "未知 batch_type 不应添加新项")
+        self.assertEqual(len(self.sample_batch_map), 2, "Unknown batch_type should not add new items.")
 
     def test_calculate_statistics_comprehensive(self):
         """测试全面的统计计算"""
@@ -117,7 +118,7 @@ class TestExporterSummaryFunctions(unittest.TestCase):
 
         non_numeric_data = [10, 'a', 30]
         result = calculate_statistics(non_numeric_data)
-        self.assertTrue(np.isnan(result['avg']), "包含非数字元素应返回 nan")
+        self.assertTrue(np.isnan(result['avg']), "If it contains non - numeric elements, it should return NaN.")
 
     def test_convert_map_to_dataframe_detailed(self):
         map_data = {
@@ -223,7 +224,7 @@ class TestExporterSummaryFunctions(unittest.TestCase):
             'start_time': 1_630_000_000_000
         }
         process_each_record(self.sample_req_map, self.sample_batch_map, record)
-        self.assertIn('1002', self.sample_req_map, "请求记录应被处理")
+        self.assertIn('1002', self.sample_req_map, "Request records should be processed.")
 
     @patch('pandas.DataFrame.to_csv')
     @patch('os.chmod')
@@ -279,6 +280,167 @@ class TestExporterSummaryFunctions(unittest.TestCase):
         token_id_for_list = [0, 0, 0]
         process_rid_token_list(self.req_map, rid_for_list, token_id_for_list, input_token_record)
 
+    def test_calculate_batch_metrics(self):
+        batch_map = {
+            "prefill_[1,2]": {
+                BatchCSVFields.PREFILL_BATCH_NUM: 8,
+                BatchCSVFields.PREFILL_EXEC_TIME: 1.5
+            },
+            "prefill_[3]": {
+                BatchCSVFields.PREFILL_BATCH_NUM: 4,
+                BatchCSVFields.PREFILL_EXEC_TIME: 0.8
+            },
+            "decode_[4,5]": {
+                BatchCSVFields.DECODE_BATCH_NUM: 6,
+                BatchCSVFields.DECODE_EXEC_TIME: 2.0
+            },
+            "decode_[6]": {
+                BatchCSVFields.DECODE_BATCH_NUM: 2,
+                BatchCSVFields.DECODE_EXEC_TIME: 0.5
+            }
+        }
+        result = calculate_batch_metrics(batch_map)
+
+        prefill_batch_stats = result[BatchCSVFields.PREFILL_BATCH_NUM]
+        self.assertEqual(prefill_batch_stats['avg'], (8 + 4) / 2)
+        self.assertEqual(prefill_batch_stats['p50'], 6.0)
+
+        prefill_time_stats = result[BatchCSVFields.PREFILL_EXEC_TIME]
+        self.assertAlmostEqual(prefill_time_stats['avg'], (1.5 + 0.8) / 2, places=2)
+
+        decode_batch_stats = result[BatchCSVFields.DECODE_BATCH_NUM]
+        self.assertEqual(decode_batch_stats['avg'], (6 + 2) / 2)
+
+        decode_time_stats = result[BatchCSVFields.DECODE_EXEC_TIME]
+        self.assertAlmostEqual(decode_time_stats['max'], 2.0)
+
+        empty_result = calculate_batch_metrics({})
+        for field in [
+            BatchCSVFields.PREFILL_BATCH_NUM,
+            BatchCSVFields.DECODE_BATCH_NUM,
+            BatchCSVFields.PREFILL_EXEC_TIME,
+            BatchCSVFields.DECODE_EXEC_TIME
+        ]:
+            self.assertTrue(
+                np.isnan(empty_result[field]['avg']),
+                f"When batch_map is empty, the avg of {field} should be NaN."
+            )
+
+        partial_batch_map = {
+            "prefill_[7]": {
+                BatchCSVFields.PREFILL_EXEC_TIME: 1.2
+            },
+            "decode_[8]": {
+                BatchCSVFields.DECODE_BATCH_NUM: 3,
+            }
+        }
+        partial_result = calculate_batch_metrics(partial_batch_map)
+
+        self.assertEqual(
+            partial_result[BatchCSVFields.PREFILL_BATCH_NUM]['avg'], 0.0
+        )
+
+        self.assertEqual(
+            partial_result[BatchCSVFields.DECODE_EXEC_TIME]['max'], 0.0
+        )
+
+
+    def test_process_batch_record_update_existing_keys(self):
+        prefill_record_1 = {
+            'batch_type': 'Prefill',
+            'rid_list': [1001],
+            'batch_size': 8,
+            'during_time': 1_500_000
+        }
+        process_batch_record(self.sample_batch_map, prefill_record_1)
+        prefill_key = f"prefill_{str(prefill_record_1['rid_list'])}"
+
+        prefill_record_2 = {
+            'batch_type': 'Prefill',
+            'rid_list': [1001],
+            'batch_size': 4,
+            'during_time': 800_000
+        }
+        process_batch_record(self.sample_batch_map, prefill_record_2)
+
+        self.assertEqual(self.sample_batch_map[prefill_key][BatchCSVFields.PREFILL_BATCH_NUM], 4)  # 覆盖原值
+        self.assertAlmostEqual(self.sample_batch_map[prefill_key][BatchCSVFields.PREFILL_EXEC_TIME], 1500 + 800)
+
+        decode_record_1 = {
+            'batch_type': 'Decode',
+            'rid_list': [2001],
+            'batch_size': 6,
+            'during_time': 900_000  # 0.9秒
+        }
+        process_batch_record(self.sample_batch_map, decode_record_1)
+        decode_key = f"decode_{str(decode_record_1['rid_list'])}"
+
+        decode_record_2 = {
+            'batch_type': 'Decode',
+            'rid_list': [2001],  # 相同的 rid_list
+            'batch_size': 3,
+            'during_time': 300_000  # 0.3秒
+        }
+        process_batch_record(self.sample_batch_map, decode_record_2)
+
+        self.assertEqual(self.sample_batch_map[decode_key][BatchCSVFields.DECODE_BATCH_NUM], 3)  # 覆盖原值
+        self.assertAlmostEqual(self.sample_batch_map[decode_key][BatchCSVFields.DECODE_EXEC_TIME], 900 + 300)
+
+    def test_process_batch_record_edge_cases(self):
+        # 空 rid_list 的 Prefill 记录
+        prefill_record_empty_rid = {
+            'batch_type': 'Prefill',
+            'rid_list': [],
+            'batch_size': 8,
+            'during_time': 1_500_000
+        }
+        process_batch_record(self.sample_batch_map, prefill_record_empty_rid)
+        prefill_key = "prefill_[]"
+        self.assertIn(prefill_key, self.sample_batch_map)
+        self.assertEqual(self.sample_batch_map[prefill_key][BatchCSVFields.PREFILL_BATCH_NUM], 8)
+
+        # 无效 batch_type
+        invalid_record = {
+            'batch_type': 'InvalidType',
+            'rid_list': [3001],
+            'batch_size': 2,
+            'during_time': 200_000
+        }
+        process_batch_record(self.sample_batch_map, invalid_record)
+        self.assertEqual(len(self.sample_batch_map), 1, "无效 batch_type 不应添加新条目")
+
+    def test_process_batch_record_mixed_calls(self):
+        prefill_record = {
+            'batch_type': 'Prefill',
+            'rid_list': [1001],
+            'batch_size': 8,
+            'during_time': 1_500_000
+        }
+        process_batch_record(self.sample_batch_map, prefill_record)
+        prefill_key = f"prefill_{str(prefill_record['rid_list'])}"
+
+        decode_record = {
+            'batch_type': 'Decode',
+            'rid_list': [2001],
+            'batch_size': 4,
+            'during_time': 500_000
+        }
+        process_batch_record(self.sample_batch_map, decode_record)
+        decode_key = f"decode_{str(decode_record['rid_list'])}"
+
+        prefill_record_2 = {
+            'batch_type': 'Prefill',
+            'rid_list': [1002],
+            'batch_size': 6,
+            'during_time': 1_200_000
+        }
+        process_batch_record(self.sample_batch_map, prefill_record_2)
+        prefill_key_2 = f"prefill_{str(prefill_record_2['rid_list'])}"
+
+        self.assertEqual(len(self.sample_batch_map), 3)
+        self.assertIn(prefill_key, self.sample_batch_map)
+        self.assertIn(decode_key, self.sample_batch_map)
+        self.assertIn(prefill_key_2, self.sample_batch_map)
 
 if __name__ == '__main__':
     unittest.main()

@@ -49,7 +49,7 @@ def test_compare_csv_collectly(tmp_path):
     df_b = build_test_data_df([15, 25])
     df_a.to_csv(input_a, index=False)
     df_b.to_csv(input_b, index=False)
-    
+
     file_pairs = [[input_a, input_b]]
     with connect_db(output_db) as db_conn:
         with pd.ExcelWriter(output_excel, engine='openpyxl') as excel_writer:
@@ -69,7 +69,7 @@ def test_compare_csv_missing_file(tmp_path):
     file_b.parent.mkdir(exist_ok=True)
     df_a = build_test_data_df([10, 20])
     df_a.to_csv(file_a, index=False)
-    
+
     with connect_db(output_db) as db_conn:
         with pd.ExcelWriter(output_excel, engine='openpyxl') as excel_writer:
             comparator = CSVComparator(db_conn, excel_writer)
@@ -89,7 +89,7 @@ def test_compare_csv_wrong_value(tmp_path):
     df_b = build_test_data_df([15, '25'])
     df_a.to_csv(file_a, index=False)
     df_b.to_csv(file_b, index=False)
-    
+
     with connect_db(output_db) as db_conn:
         with pd.ExcelWriter(output_excel, engine='openpyxl') as excel_writer:
             comparator = CSVComparator(db_conn, excel_writer)
