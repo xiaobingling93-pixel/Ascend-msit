@@ -108,7 +108,7 @@ class SchedulerHook(VLLMHookerBase):
 
         def swap_out_maker(ori_func):
             def _swap_out(this, seq_group, *args, **kwargs):
-                if self.block_manager.can_swap_out(seq_group):
+                if this.block_manager.can_swap_out(seq_group):
                     Profiler(Level.INFO).res(seq_group.request_id).metric_inc('RUNNING', -1).\
                         metric_inc('SWAPPED', 1).event("ReqState")
                 ori_func(this, seq_group, *args, **kwargs)
@@ -131,7 +131,7 @@ class SchedulerHook(VLLMHookerBase):
 
         def add_seq_group_to_running_maker(ori_func):
             def _add_seq_group_to_running(this, seq_group, *args, **kwargs):
-                ori_func(this, *args, **kwargs)
+                ori_func(this, seq_group, *args, **kwargs)
                 Profiler(Level.INFO).res([seq_group.request_id]).metric("QueueSize", len(this.running)).\
                     metric_scope('running').event("Enqueue")
             
@@ -143,7 +143,7 @@ class SchedulerHook(VLLMHookerBase):
             def _schedule_priority_preemption(this, budget, *args, **kwargs):
                 before_waiting_queue = this.waiting
                 before_running_queue = this.running
-                force_preemption_count = ori_func(this, *args, **kwargs)
+                force_preemption_count = ori_func(this, budget, *args, **kwargs)
                 queue_profiler(before_waiting_queue, this.waiting, "waiting")
                 queue_profiler(before_running_queue, this.running, "running")
                 return force_preemption_count
