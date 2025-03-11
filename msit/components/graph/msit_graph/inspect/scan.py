@@ -16,12 +16,12 @@ import os
 
 from components.utils.log import logger
 from components.utils.file_open_check import ms_open
-from components.utils.constants import TEXT_FILE_MAX_SIZE
+from components.utils.constants import CSV_FILE_MAX_SIZE
 from msit_graph.graph_extract.graph_extract import GraphAnalyze
 
 
 def save_dym_op(data, path):
-    with ms_open(path, 'w', TEXT_FILE_MAX_SIZE) as f:
+    with ms_open(path, 'w', CSV_FILE_MAX_SIZE) as f:
         f.write(",".join(["Graph_Name", "Node_Name", "Input", "Output"]) + "\n")
         for row in data:
             f.write(",".join(map(str, row)) + "\n")

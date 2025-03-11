@@ -21,7 +21,8 @@ MIND_STUDIO_LOGO = "[Powered by MindStudio]"
 PATH_WHITE_LIST_REGEX = re.compile(r"[^_A-Za-z0-9/.-]")
 
 CONFIG_FILE_MAX_SIZE = 1 * 1024 * 1024 # work for .ini config file
-TEXT_FILE_MAX_SIZE = 100 * 1024 * 1024 # work for txt, csv, py
+TEXT_FILE_MAX_SIZE = 100 * 1024 * 1024 # work for txt, py
+CSV_FILE_MAX_SIZE = 1024 * 1024 * 1024
 JSON_FILE_MAX_SIZE = 1024 * 1024 * 1024
 ONNX_MODEL_MAX_SIZE = 2 * 1024 * 1024 * 1024
 TENSOR_MAX_SIZE = 10 * 1024 * 1024 * 1024
@@ -30,7 +31,7 @@ INPUT_FILE_MAX_SIZE = 5 * 1024 * 1024 * 1024
 
 EXT_SIZE_MAPPING = {
     ".ini": CONFIG_FILE_MAX_SIZE,
-    '.csv': TEXT_FILE_MAX_SIZE,
+    '.csv': CSV_FILE_MAX_SIZE,
     '.json': JSON_FILE_MAX_SIZE,
     '.txt': TEXT_FILE_MAX_SIZE,
     '.py': TEXT_FILE_MAX_SIZE,
