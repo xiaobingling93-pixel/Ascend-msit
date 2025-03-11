@@ -1,17 +1,3 @@
-# Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 from argparse import Namespace
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -26,41 +12,24 @@ from ms_service_profiler_ext.exporters.exporter_summary import ExporterSummary
 
 
 class TestMainFunction:
-    _mock_args = None
-    _mocker = None
-
-    @pytest.fixture(autouse=True)
-    def _inject_mocker(self, mocker):
-        type(self)._mocker = mocker
-        type(self)._mock_args = Namespace(
-            input_path='/fake/input',
-            output_path='/fake/output',
-            log_level='info'
-        )
-
-        mocker.patch('argparse.ArgumentParser.parse_args', return_value=self._mock_args)
-        mocker.patch('ms_service_profiler.utils.log.set_log_level')
-        mocker.patch('ms_service_profiler.parse.preprocess_prof_folders')
-        mocker.patch('ms_service_profiler.exporters.factory.ExporterFactory.create_exporters', return_value=[])
-        mocker.patch.object(Path, 'mkdir')
-        mocker.patch('ms_service_profiler.exporters.utils.create_sqlite_db')
-        mocker.patch('os.path.exists', return_value=True)
-        mocker.patch('ms_service_profiler.parse.find_file_in_dir', return_value=True)
-        mocker.patch('os.makedirs')
-        mocker.patch('sqlite3.connect')
-
-        yield
-
-        type(self)._mocker = None
-        type(self)._mock_args = None
+    mock_args = None
+    mocker = None
 
     @property
     def mock_args(self):
-        return self.__class__._mock_args
+        return self.__class__.mock_args
+
+    @mock_args.setter
+    def mock_args(self, value):
+        self.__class__._mock_args = value
 
     @property
     def mocker(self):
-        return self.__class__._mocker
+        return self.__class__.mocker
+
+    @mocker.setter
+    def mocker(self, value):
+        self.__class__._mocker = value
 
     def test_add_summary_exporter_decorator(self):
         mock_initialize = self.mocker.patch.object(ExporterSummary, 'initialize')
@@ -108,3 +77,28 @@ class TestMainFunction:
         exporters = wrapped_create_exporters(self.mock_args)
         assert len(exporters) == len(original_exporters) + 1
         assert isinstance(exporters[-1], ExporterSummary)
+
+    @pytest.fixture(autouse=True)
+    def _inject_mocker(self, mocker):
+        self.mocker = mocker
+        self.mock_args = Namespace(
+            input_path='/fake/input',
+            output_path='/fake/output',
+            log_level='info'
+        )
+
+        # 2. 配置全局mock
+        mocker.patch('argparse.ArgumentParser.parse_args', return_value=self.mock_args)
+        mocker.patch('ms_service_profiler.utils.log.set_log_level')
+        mocker.patch('ms_service_profiler.parse.preprocess_prof_folders')
+        mocker.patch('ms_service_profiler.exporters.factory.ExporterFactory.create_exporters', return_value=[])
+        mocker.patch.object(Path, 'mkdir')
+        mocker.patch('ms_service_profiler.exporters.utils.create_sqlite_db')
+        mocker.patch('os.path.exists', return_value=True)
+        mocker.patch('ms_service_profiler.parse.find_file_in_dir', return_value=True)
+        mocker.patch('os.makedirs')
+        mocker.patch('sqlite3.connect')
+
+        yield
+        self.mocker = None
+        self.mock_args = None
