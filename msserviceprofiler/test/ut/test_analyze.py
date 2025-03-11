@@ -12,12 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-import sqlite3
-import unittest
 from argparse import Namespace
 from pathlib import Path
-from unittest.mock import ANY, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -29,14 +26,19 @@ from ms_service_profiler_ext.exporters.exporter_summary import ExporterSummary
 
 
 class TestMainFunction:
+    _mock_args = None
+    _mocker = None
+
     @pytest.fixture(autouse=True)
-    def setup_mock_args(self, mocker):
-        self.mock_args = Namespace(
+    def _inject_mocker(self, mocker):
+        type(self)._mocker = mocker
+        type(self)._mock_args = Namespace(
             input_path='/fake/input',
             output_path='/fake/output',
             log_level='info'
         )
-        mocker.patch('argparse.ArgumentParser.parse_args', return_value=self.mock_args)
+
+        mocker.patch('argparse.ArgumentParser.parse_args', return_value=self._mock_args)
         mocker.patch('ms_service_profiler.utils.log.set_log_level')
         mocker.patch('ms_service_profiler.parse.preprocess_prof_folders')
         mocker.patch('ms_service_profiler.exporters.factory.ExporterFactory.create_exporters', return_value=[])
@@ -44,13 +46,26 @@ class TestMainFunction:
         mocker.patch('ms_service_profiler.exporters.utils.create_sqlite_db')
         mocker.patch('os.path.exists', return_value=True)
         mocker.patch('ms_service_profiler.parse.find_file_in_dir', return_value=True)
-        mocker.patch('os.path.exists', return_value=True)
         mocker.patch('os.makedirs')
         mocker.patch('sqlite3.connect')
 
-    def test_add_summary_exporter_decorator(self, mocker):
-        mock_initialize = mocker.patch.object(ExporterSummary, 'initialize')
+        yield
+
+        type(self)._mocker = None
+        type(self)._mock_args = None
+
+    @property
+    def mock_args(self):
+        return self.__class__._mock_args
+
+    @property
+    def mocker(self):
+        return self.__class__._mocker
+
+    def test_add_summary_exporter_decorator(self):
+        mock_initialize = self.mocker.patch.object(ExporterSummary, 'initialize')
         original_create_exporters = MagicMock(return_value=['exporter1', 'exporter2'])
+
         wrapped_func = add_summary_exporter(original_create_exporters)
 
         args = Namespace(output_path='/fake/output')
@@ -60,29 +75,30 @@ class TestMainFunction:
         assert isinstance(exporters[-1], ExporterSummary)
         mock_initialize.assert_called_once_with(args)
 
-    def test_command_line_interface(self, mocker):
-        mock_main = mocker.patch('ms_service_profiler_ext.analyze.main')
-        mocker.patch('sys.argv', ['script_name', '--input-path', '/fake/input'])
+    def test_command_line_interface(self):
+        mock_main = self.mocker.patch('ms_service_profiler_ext.analyze.main')
+        self.mocker.patch('sys.argv', ['script_name', '--input-path', '/fake/input'])
 
         ms_service_profiler_ext.analyze.main()
         mock_main.assert_called_once()
 
-    def test_invalid_input_path(self, mocker):
-        mocker.patch(
+    def test_invalid_input_path(self):
+        self.mocker.patch(
             'argparse.ArgumentParser.parse_args',
             side_effect=ValueError("Invalid path: '/invalid/path'")
         )
+
         with pytest.raises(ValueError, match=r"Invalid path.*"):
             main()
 
-    def test_main_applies_summary_exporter_decorator(self, mocker):
+    def test_main_applies_summary_exporter_decorator(self):
         original_exporters = ["exporter1", "exporter2"]
-        mock_create_exporters = mocker.patch(
+        self.mocker.patch(
             'ms_service_profiler.exporters.factory.ExporterFactory.create_exporters',
             return_value=original_exporters
         )
 
-        spy_add_summary = mocker.spy(ms_service_profiler_ext.analyze, 'add_summary_exporter')
+        spy_add_summary = self.mocker.spy(ms_service_profiler_ext.analyze, 'add_summary_exporter')
 
         main()
 
