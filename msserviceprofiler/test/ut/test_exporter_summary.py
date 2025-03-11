@@ -34,7 +34,6 @@ from ms_service_profiler_ext.utils.csv_fields import RequestCSVFields, BatchCSVF
 
 class TestExporterSummaryFunctions(unittest.TestCase):
     def setUp(self):
-        # 公共测试数据
         self.sample_batch_map = {}
         self.sample_req_map = {'1001': {'token_id': {}}}
         self.valid_rid_list = [1, 2]
@@ -44,25 +43,25 @@ class TestExporterSummaryFunctions(unittest.TestCase):
     def test_is_contained_valid_iter_info_normal(self):
         self.assertTrue(
             is_contained_valid_iter_info(self.valid_rid_list, self.valid_iter_list),
-            "应验证有效迭代信息"
+            "Valid iteration information should be verified."
         )
 
     def test_is_contained_valid_iter_info_edge_cases(self):
         self.assertFalse(
             is_contained_valid_iter_info([], self.valid_iter_list),
-            "空rid列表应返回False"
+            "An empty rid list should return False."
         )
         self.assertFalse(
             is_contained_valid_iter_info([1], self.valid_iter_list),
-            "长度不一致应返回False"
+            "Inconsistent lengths should return False."
         )
         self.assertFalse(
             is_contained_valid_iter_info(None, self.valid_iter_list),
-            "rid_list 为 None 应返回 False"
+            "If rid_list is None, it should return False."
         )
         self.assertFalse(
             is_contained_valid_iter_info(self.valid_rid_list, None),
-            "token_id_list 为 None 应返回 False"
+            "If token_id_list is None, it should return False."
         )
 
     def test_process_batch_record_multiple_types(self):
@@ -74,7 +73,7 @@ class TestExporterSummaryFunctions(unittest.TestCase):
         }
         process_batch_record(self.sample_batch_map, prefill_record)
         prefill_key = f"prefill_{str(prefill_record['rid_list'])}"
-        self.assertIn(prefill_key, self.sample_batch_map, f"键 {prefill_key} 未在 sample_batch_map 中找到")
+        self.assertIn(prefill_key, self.sample_batch_map, f"The key {prefill_key} was not found in sample_batch_map.")
         self.assertEqual(self.sample_batch_map[prefill_key]['prefill_batch_num'], 8)
         self.assertAlmostEqual(self.sample_batch_map[prefill_key]['prefill_exec_time (ms)'], 1500.0)
 
@@ -87,7 +86,7 @@ class TestExporterSummaryFunctions(unittest.TestCase):
         }
         process_batch_record(self.sample_batch_map, decode_record)
         decode_key = f"decode_{str(decode_record['rid_list'])}"
-        self.assertIn(decode_key, self.sample_batch_map, f"键 {decode_key} 未在 sample_batch_map 中找到")
+        self.assertIn(decode_key, self.sample_batch_map, f"The key {decode_key} was not found in sample_batch_map.")
         self.assertEqual(self.sample_batch_map[decode_key]['decode_batch_num'], 4)
         self.assertAlmostEqual(self.sample_batch_map[decode_key]['decode_exec_time (ms)'], 500.0)
         unknown_record = {
@@ -97,7 +96,7 @@ class TestExporterSummaryFunctions(unittest.TestCase):
             'during_time': 200_000
         }
         process_batch_record(self.sample_batch_map, unknown_record)
-        self.assertEqual(len(self.sample_batch_map), 2, "未知 batch_type 不应添加新项")
+        self.assertEqual(len(self.sample_batch_map), 2, "Unknown batch_type should not add new items.")
 
     def test_calculate_statistics_comprehensive(self):
         """测试全面的统计计算"""
@@ -119,7 +118,7 @@ class TestExporterSummaryFunctions(unittest.TestCase):
 
         non_numeric_data = [10, 'a', 30]
         result = calculate_statistics(non_numeric_data)
-        self.assertTrue(np.isnan(result['avg']), "包含非数字元素应返回 nan")
+        self.assertTrue(np.isnan(result['avg']), "If it contains non - numeric elements, it should return NaN.")
 
     def test_convert_map_to_dataframe_detailed(self):
         map_data = {
@@ -225,7 +224,7 @@ class TestExporterSummaryFunctions(unittest.TestCase):
             'start_time': 1_630_000_000_000
         }
         process_each_record(self.sample_req_map, self.sample_batch_map, record)
-        self.assertIn('1002', self.sample_req_map, "请求记录应被处理")
+        self.assertIn('1002', self.sample_req_map, "Request records should be processed.")
 
     @patch('pandas.DataFrame.to_csv')
     @patch('os.chmod')
@@ -324,7 +323,7 @@ class TestExporterSummaryFunctions(unittest.TestCase):
         ]:
             self.assertTrue(
                 np.isnan(empty_result[field]['avg']),
-                f"空 batch_map 时 {field} 的 avg 应为 NaN"
+                f"When batch_map is empty, the avg of {field} should be NaN."
             )
 
         partial_batch_map = {

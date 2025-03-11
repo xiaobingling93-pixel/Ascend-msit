@@ -29,8 +29,8 @@ from ms_service_profiler_ext.exporters.exporter_summary import ExporterSummary
 
 def check_csv_content(output_path, csv_file_name, expected_csv_columns, numeric_columns):
     csv_file = os.path.join(output_path, csv_file_name)
-    assert os.path.exists(csv_file), f"文件 {csv_file} 不存在"
-    assert os.path.isfile(csv_file), f"{csv_file} 不是一个有效的文件"
+    assert os.path.exists(csv_file), f"file {csv_file} not exist."
+    assert os.path.isfile(csv_file), f"{csv_file} is not a valid file."
     df = pd.read_csv(csv_file)
     actual_columns = df.columns.tolist()
 
@@ -42,27 +42,29 @@ def check_csv_content(output_path, csv_file_name, expected_csv_columns, numeric_
 def check_column_actual(actual_columns, expected_columns, context):
     for col in expected_columns:
         if col not in actual_columns:
-            logging.error(f"在 {context} 中未找到预期列名: {col}")
+            logging.error(f"The expected column name: {col} was not found in {context}.")
             return False
     return True
 
 
 def check_row(df, expected_columns, numeric_columns):
-    # 检查Metric列的数据类型是否为字符串
     for row_index in df.index:
         try:
             value = df.at[row_index, 'Metric']
             if not isinstance(value, str):
-                logging.error(f"在Metric列的第{row_index}行，值 '{value}' 不是字符串类型")
+                logging.error(
+                    f"In the {row_index}-the row of the 'Metric' column, "
+                    f"the value '{value}' is not of string type."
+                )
                 return False
         except KeyError:
-            logging.error(f"数据框中不存在 'Metric' 列")
+            logging.error(f"The 'Metric' column does not exist in the DataFrame.")
             return False
 
     # 检查其他列的数据是否为数字
     for column in numeric_columns:
         if column not in df.columns:
-            logging.error(f"数据框中不存在 {column} 列")
+            logging.error(f"The {column} column does not exist in the DataFrame.")
             continue
         for row_index in df.index:
             try:
@@ -70,7 +72,9 @@ def check_row(df, expected_columns, numeric_columns):
                 float(cell_value)
             except (ValueError, KeyError):
                 logging.error(
-                    f"在 {column} 列的第 {row_index} 行，值 {cell_value} 不是有效的数字")
+                    f"In the {row_index}-the row of the {column} column, "
+                    f"the value {cell_value} is not a valid number."
+                )
                 return False
     return True
 
@@ -122,7 +126,7 @@ class TestMainFunction:
             mocker.patch('argparse.ArgumentParser.parse_args', return_value=real_args)
             main()
             output_path = Path(tmp_output)
-            assert (output_path / "profiler.db").is_file(), "数据库文件未生成"
+            assert (output_path / "profiler.db").is_file(), "The database file was not generated."
             csv_checks = [
                 (TestMainFunction.REQUEST_CSV, ['Metric', 'Average', 'Max', 'Min', 'P50', 'P90', 'P99'],
                  ['Average', 'Max', 'Min', 'P50', 'P90', 'P99']),
@@ -136,7 +140,7 @@ class TestMainFunction:
                     csv_file,
                     expected_columns,
                     numeric_columns
-                ), f"{csv_file} 内容校验失败"
+                ), f"{csv_file} Content verification failed."
 
     @pytest.fixture(autouse=True)
     def mock_dependencies(self, mocker):
