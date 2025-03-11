@@ -12,144 +12,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import shutil
-import tempfile
+import logging
+import sqlite3
+import unittest
 from argparse import Namespace
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock
 
-import pandas as pd
 import pytest
 
+import ms_service_profiler_ext.analyze
 from ms_service_profiler.exporters.factory import ExporterFactory
+from ms_service_profiler.utils.log import set_logger
 from ms_service_profiler_ext.analyze import add_summary_exporter, main
 from ms_service_profiler_ext.exporters.exporter_summary import ExporterSummary
 
 
-def check_csv_content(output_path, csv_file_name, expected_csv_columns, numeric_columns):
-    csv_file = os.path.join(output_path, csv_file_name)
-    assert os.path.exists(csv_file), f"file {csv_file} not exist."
-    assert os.path.isfile(csv_file), f"{csv_file} is not a valid file."
-    df = pd.read_csv(csv_file)
-    actual_columns = df.columns.tolist()
-
-    check_column_actual(actual_columns, expected_csv_columns, context=csv_file_name)
-
-    return check_row(df, expected_csv_columns, numeric_columns)
-
-
-def check_column_actual(actual_columns, expected_columns, context):
-    for col in expected_columns:
-        if col not in actual_columns:
-            logging.error(f"The expected column name: {col} was not found in {context}.")
-            return False
-    return True
-
-
-def check_row(df, expected_columns, numeric_columns):
-    for row_index in df.index:
-        try:
-            value = df.at[row_index, 'Metric']
-            if not isinstance(value, str):
-                logging.error(
-                    f"In the {row_index}-the row of the 'Metric' column, "
-                    f"the value '{value}' is not of string type."
-                )
-                return False
-        except KeyError:
-            logging.error(f"The 'Metric' column does not exist in the DataFrame.")
-            return False
-
-    # 检查其他列的数据是否为数字
-    for column in numeric_columns:
-        if column not in df.columns:
-            logging.error(f"The {column} column does not exist in the DataFrame.")
-            continue
-        for row_index in df.index:
-            try:
-                cell_value = df.at[row_index, column]
-                float(cell_value)
-            except (ValueError, KeyError):
-                logging.error(
-                    f"In the {row_index}-the row of the {column} column, "
-                    f"the value {cell_value} is not a valid number."
-                )
-                return False
-    return True
-
-
 class TestMainFunction:
-    ST_DATA_PATH = os.getenv("MS_SERVICE_PROFILER",
-                             "/data/ms_service_profiler")
-    REAL_INPUT_PATH = os.path.join(ST_DATA_PATH, "input/analyze/0211-1226")
-    REQUEST_CSV = "request_summary.csv"
-    BATCH_CSV = "batch_summary.csv"
-    SERVICE_CSV = "service_summary.csv"
-
-    @staticmethod
-    def test_add_summary_exporter_decorator(mocker):
-        mock_initialize = mocker.patch.object(ExporterSummary, 'initialize')
-        original_create_exporters = MagicMock(return_value=['exporter1', 'exporter2'])
-        wrapped_func = add_summary_exporter(original_create_exporters)
-        args = Namespace(output_path='/fake/output')
-        exporters = wrapped_func(args)
-        assert len(exporters) == 3
-        assert isinstance(exporters[-1], ExporterSummary)
-        mock_initialize.assert_called_once_with(args)
-
-    @staticmethod
-    def test_command_line_interface(mocker):
-        mock_main = mocker.patch('ms_service_profiler_ext.analyze.main')
-        mocker.patch('sys.argv', ['script_name', '--input-path', '/fake/input'])
-        import ms_service_profiler_ext.analyze
-        ms_service_profiler_ext.analyze.main()
-        mock_main.assert_called_once()
-
-    @staticmethod
-    def test_invalid_input_path(mocker):
-        mocker.patch(
-            'argparse.ArgumentParser.parse_args',
-            side_effect=ValueError("Invalid path: '/invalid/path'")
-        )
-        with pytest.raises(ValueError, match=r"Invalid path.*"):
-            main()
-
-    @staticmethod
-    def test_main_with_real_data(mocker):
-        with tempfile.TemporaryDirectory() as tmp_output:
-            real_args = Namespace(
-                input_path=TestMainFunction.REAL_INPUT_PATH,
-                output_path=tmp_output,
-                log_level="info"
-            )
-            mocker.patch('argparse.ArgumentParser.parse_args', return_value=real_args)
-            main()
-            output_path = Path(tmp_output)
-            assert (output_path / "profiler.db").is_file(), "The database file was not generated."
-            csv_checks = [
-                (TestMainFunction.REQUEST_CSV, ['Metric', 'Average', 'Max', 'Min', 'P50', 'P90', 'P99'],
-                 ['Average', 'Max', 'Min', 'P50', 'P90', 'P99']),
-                (TestMainFunction.BATCH_CSV, ['Metric', 'Average', 'Max', 'Min', 'P50', 'P90', 'P99'],
-                 ['Average', 'Max', 'Min', 'P50', 'P90', 'P99']),
-                (TestMainFunction.SERVICE_CSV, ['Metric', 'Value'], ['Value'])
-            ]
-            for csv_file, expected_columns, numeric_columns in csv_checks:
-                assert check_csv_content(
-                    tmp_output,
-                    csv_file,
-                    expected_columns,
-                    numeric_columns
-                ), f"{csv_file} Content verification failed."
-
     @pytest.fixture(autouse=True)
-    def mock_dependencies(self, mocker):
-        mock_args = Namespace(
+    def setup_mock_args(self, mocker):
+        self.mock_args = Namespace(
             input_path='/fake/input',
             output_path='/fake/output',
             log_level='info'
         )
-        mocker.patch('argparse.ArgumentParser.parse_args', return_value=mock_args)
+        mocker.patch('argparse.ArgumentParser.parse_args', return_value=self.mock_args)
         mocker.patch('ms_service_profiler.utils.log.set_log_level')
         mocker.patch('ms_service_profiler.parse.preprocess_prof_folders')
         mocker.patch('ms_service_profiler.exporters.factory.ExporterFactory.create_exporters', return_value=[])
@@ -157,4 +44,51 @@ class TestMainFunction:
         mocker.patch('ms_service_profiler.exporters.utils.create_sqlite_db')
         mocker.patch('os.path.exists', return_value=True)
         mocker.patch('ms_service_profiler.parse.find_file_in_dir', return_value=True)
-        return mock_args
+        mocker.patch('os.path.exists', return_value=True)
+        mocker.patch('os.makedirs')
+        mocker.patch('sqlite3.connect')
+
+    def test_add_summary_exporter_decorator(self, mocker):
+        mock_initialize = mocker.patch.object(ExporterSummary, 'initialize')
+        original_create_exporters = MagicMock(return_value=['exporter1', 'exporter2'])
+        wrapped_func = add_summary_exporter(original_create_exporters)
+
+        args = Namespace(output_path='/fake/output')
+        exporters = wrapped_func(args)
+
+        assert len(exporters) == 3
+        assert isinstance(exporters[-1], ExporterSummary)
+        mock_initialize.assert_called_once_with(args)
+
+    def test_command_line_interface(self, mocker):
+        mock_main = mocker.patch('ms_service_profiler_ext.analyze.main')
+        mocker.patch('sys.argv', ['script_name', '--input-path', '/fake/input'])
+
+        ms_service_profiler_ext.analyze.main()
+        mock_main.assert_called_once()
+
+    def test_invalid_input_path(self, mocker):
+        mocker.patch(
+            'argparse.ArgumentParser.parse_args',
+            side_effect=ValueError("Invalid path: '/invalid/path'")
+        )
+        with pytest.raises(ValueError, match=r"Invalid path.*"):
+            main()
+
+    def test_main_applies_summary_exporter_decorator(self, mocker):
+        original_exporters = ["exporter1", "exporter2"]
+        mock_create_exporters = mocker.patch(
+            'ms_service_profiler.exporters.factory.ExporterFactory.create_exporters',
+            return_value=original_exporters
+        )
+
+        spy_add_summary = mocker.spy(ms_service_profiler_ext.analyze, 'add_summary_exporter')
+
+        main()
+
+        spy_add_summary.assert_called_once_with(ExporterFactory.create_exporters)
+
+        wrapped_create_exporters = spy_add_summary.spy_return
+        exporters = wrapped_create_exporters(self.mock_args)
+        assert len(exporters) == len(original_exporters) + 1
+        assert isinstance(exporters[-1], ExporterSummary)

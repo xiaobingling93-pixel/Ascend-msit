@@ -345,5 +345,102 @@ class TestExporterSummaryFunctions(unittest.TestCase):
         )
 
 
+    def test_process_batch_record_update_existing_keys(self):
+        prefill_record_1 = {
+            'batch_type': 'Prefill',
+            'rid_list': [1001],
+            'batch_size': 8,
+            'during_time': 1_500_000
+        }
+        process_batch_record(self.sample_batch_map, prefill_record_1)
+        prefill_key = f"prefill_{str(prefill_record_1['rid_list'])}"
+
+        prefill_record_2 = {
+            'batch_type': 'Prefill',
+            'rid_list': [1001],
+            'batch_size': 4,
+            'during_time': 800_000
+        }
+        process_batch_record(self.sample_batch_map, prefill_record_2)
+
+        self.assertEqual(self.sample_batch_map[prefill_key][BatchCSVFields.PREFILL_BATCH_NUM], 4)  # 覆盖原值
+        self.assertAlmostEqual(self.sample_batch_map[prefill_key][BatchCSVFields.PREFILL_EXEC_TIME], 1500 + 800)
+
+        decode_record_1 = {
+            'batch_type': 'Decode',
+            'rid_list': [2001],
+            'batch_size': 6,
+            'during_time': 900_000  # 0.9秒
+        }
+        process_batch_record(self.sample_batch_map, decode_record_1)
+        decode_key = f"decode_{str(decode_record_1['rid_list'])}"
+
+        decode_record_2 = {
+            'batch_type': 'Decode',
+            'rid_list': [2001],  # 相同的 rid_list
+            'batch_size': 3,
+            'during_time': 300_000  # 0.3秒
+        }
+        process_batch_record(self.sample_batch_map, decode_record_2)
+
+        self.assertEqual(self.sample_batch_map[decode_key][BatchCSVFields.DECODE_BATCH_NUM], 3)  # 覆盖原值
+        self.assertAlmostEqual(self.sample_batch_map[decode_key][BatchCSVFields.DECODE_EXEC_TIME], 900 + 300)
+
+    def test_process_batch_record_edge_cases(self):
+        # 空 rid_list 的 Prefill 记录
+        prefill_record_empty_rid = {
+            'batch_type': 'Prefill',
+            'rid_list': [],
+            'batch_size': 8,
+            'during_time': 1_500_000
+        }
+        process_batch_record(self.sample_batch_map, prefill_record_empty_rid)
+        prefill_key = "prefill_[]"
+        self.assertIn(prefill_key, self.sample_batch_map)
+        self.assertEqual(self.sample_batch_map[prefill_key][BatchCSVFields.PREFILL_BATCH_NUM], 8)
+
+        # 无效 batch_type
+        invalid_record = {
+            'batch_type': 'InvalidType',
+            'rid_list': [3001],
+            'batch_size': 2,
+            'during_time': 200_000
+        }
+        process_batch_record(self.sample_batch_map, invalid_record)
+        self.assertEqual(len(self.sample_batch_map), 1, "无效 batch_type 不应添加新条目")
+
+    def test_process_batch_record_mixed_calls(self):
+        prefill_record = {
+            'batch_type': 'Prefill',
+            'rid_list': [1001],
+            'batch_size': 8,
+            'during_time': 1_500_000
+        }
+        process_batch_record(self.sample_batch_map, prefill_record)
+        prefill_key = f"prefill_{str(prefill_record['rid_list'])}"
+
+        decode_record = {
+            'batch_type': 'Decode',
+            'rid_list': [2001],
+            'batch_size': 4,
+            'during_time': 500_000
+        }
+        process_batch_record(self.sample_batch_map, decode_record)
+        decode_key = f"decode_{str(decode_record['rid_list'])}"
+
+        prefill_record_2 = {
+            'batch_type': 'Prefill',
+            'rid_list': [1002],
+            'batch_size': 6,
+            'during_time': 1_200_000
+        }
+        process_batch_record(self.sample_batch_map, prefill_record_2)
+        prefill_key_2 = f"prefill_{str(prefill_record_2['rid_list'])}"
+
+        self.assertEqual(len(self.sample_batch_map), 3)
+        self.assertIn(prefill_key, self.sample_batch_map)
+        self.assertIn(decode_key, self.sample_batch_map)
+        self.assertIn(prefill_key_2, self.sample_batch_map)
+
 if __name__ == '__main__':
     unittest.main()
