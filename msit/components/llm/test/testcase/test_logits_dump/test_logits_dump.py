@@ -155,9 +155,11 @@ class TestCommandExecution(TestCase):
 
     @patch('subprocess.run')
     def test_failed_execution(self, mock_run):
-        mock_process = MagicMock()
-        mock_process.returncode = 1
-        mock_run.return_value = mock_process
+        mock_run.side_effect = subprocess.CalledProcessError(
+            returncode=1,
+            cmd=["invalid_command"],
+            output="Mocked error output"
+        )
         
         with self.assertRaises(RuntimeError):
             execute_command(["invalid_command"])
@@ -182,60 +184,13 @@ class TestDelEnvironment(TestCase):
 
 class TestLogitsDumper(TestCase):
     def setUp(self):
-        self.dumper = LogitsDumper(
-            model_config_path="model.yaml",
-            task_config_path="task.yaml",
-            bad_case_result_csv="cases.csv",
-            device_id=0,
-            output_dir="./output",
-            token_range=512
-        )
-
-    def test_build_modeltest_cmd(self):
-        # 测试 build_modeltest_cmd 方法
-        device_num = 1
-        expected_cmd = [
-            "modeltest", "--model_config_path model.yaml", "--task_config_path task.yaml",
-            "--batch_size 1", "--tp 1", "--output_dir ./output", "--lcoc_disable", "--save_debug_enable"
-        ]
-        result = self.dumper.build_modeltest_cmd(device_num)
-        self.assertEqual(result, expected_cmd)
-
-    @patch('os.environ', {})
-    def test_build_cmd_for_npu_single_card(self):
-        # 测试 build_cmd_for_npu 方法在单卡情况下
-        device_num = 1
-        visible_device = "0"
-        with patch.object(self.dumper, 'build_modeltest_cmd') as mock_build_modeltest_cmd:
-            mock_build_modeltest_cmd.return_value = "mock_cmd_infer_part"
-            result = self.dumper.build_cmd_for_npu(device_num, visible_device)
-            self.assertEqual(result, "mock_cmd_infer_part")
-            self.assertEqual(os.environ['ASCEND_RT_VISIBLE_DEVICES'], visible_device)
-    
-    @patch('os.environ', {})
-    def test_build_cmd_for_npu_multi_card(self):
-        # 测试 build_cmd_for_npu 方法在多卡情况下
-        device_num = 2
-        MASTER_PORT = 9826
-        visible_device = "0,1"
-        with patch.object(self.dumper, 'build_modeltest_cmd') as mock_build_modeltest_cmd:
-            mock_build_modeltest_cmd.return_value = "mock_cmd_infer_part"
-            expected_cmd = f"torchrun --nproc_per_node {device_num} --master_port {MASTER_PORT}"\
-                            " --no-python mock_cmd_infer_part"
-            result = self.dumper.build_cmd_for_npu(device_num, visible_device)
-            self.assertEqual(result, expected_cmd)
-            self.assertEqual(os.environ['ASCEND_RT_VISIBLE_DEVICES'], visible_device)
-
-    @patch('os.environ', {})
-    def test_build_cmd_for_gpu(self):
-        # 测试 build_cmd_for_gpu 方法
-        device_num = 1
-        visible_device = "0"
-        with patch.object(self.dumper, 'build_modeltest_cmd') as mock_build_modeltest_cmd:
-            mock_build_modeltest_cmd.return_value = "mock_cmd_infer_part"
-            result = self.dumper.build_cmd_for_gpu(device_num, visible_device)
-            self.assertEqual(result, "mock_cmd_infer_part")
-            self.assertEqual(os.environ['CUDA_VISIBLE_DEVICES'], visible_device)
+        class Args:
+            pass
+        args = Args()
+        args.exec = "modeltest cmd"
+        args.bad_case_result_csv = "cases.csv"
+        args.token_range = 512
+        self.dumper = LogitsDumper(args)
 
     @patch('msit_llm.logits_dump.logits_dump.build_bad_case_list')
     @patch('msit_llm.logits_dump.logits_dump.check_npu')
@@ -253,19 +208,17 @@ class TestLogitsDumper(TestCase):
         self.assertEqual(str(cm.exception), "NPU/GPU is not available")
         mock_del_env.assert_called()
 
-    @patch('msit_llm.logits_dump.logits_dump.LogitsDumper.build_cmd_for_npu')
     @patch('msit_llm.logits_dump.logits_dump.build_bad_case_list')
     @patch('msit_llm.logits_dump.logits_dump.check_npu')
     @patch('msit_llm.logits_dump.logits_dump.check_gpu')
     @patch('subprocess.run')
     @patch('msit_llm.logits_dump.logits_dump.del_env')
     def test_dump_logits_no_device(self, mock_del_env, mock_execute_command, mock_check_gpu, 
-                                   mock_check_npu, mock_build_bad_case_list, mock_build_cmd_for_npu):
+                                   mock_check_npu, mock_build_bad_case_list):
         # 测试 dump_logits 方法在NPU设备的情况下
         mock_check_npu.return_value = True
         mock_check_gpu.return_value = False
         mock_build_bad_case_list.return_value = []
-        mock_build_cmd_for_npu.return_value = "mock_cmd_model_infer"
         mock_process = MagicMock()
         mock_process.returncode = 0
         mock_execute_command.return_value = mock_process
