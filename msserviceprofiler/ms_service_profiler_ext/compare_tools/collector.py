@@ -35,7 +35,7 @@ class FileCollector(object):
         diff = file_set_a ^ file_set_b
         if diff:
             logger.error(
-                "The files shown below are not matched in both directories %r and will not be compared", 
+                "The files shown below are not matched in both directories %r and will not be compared",
                 list(diff)
             )
 
@@ -46,10 +46,13 @@ class FileCollector(object):
 
     def _validate_param(self):
         if not isinstance(self.pattern, re.Pattern):
-            raise ValueError("`pattern` type should be `re.Pattern`, but got %r instead" % type(self.pattern))
+            raise TypeError("'pattern' type should be 're.Pattern', but got %r instead" % type(self.pattern).__name__)
 
         if not isinstance(self.max_iter, int):
-            raise ValueError("`max_iter` type should be `int`, but got %r instead" % type(self.max_iter))
+            raise TypeError("'max_iter' type should be 'int', but got %r instead" % type(self.max_iter).__name__)
+        
+        if self.max_iter < 1:
+            raise ValueError("'max_iter' should not be less than 1")
 
     def _collect(self, dir_path: str) -> Set:
         res = set()
