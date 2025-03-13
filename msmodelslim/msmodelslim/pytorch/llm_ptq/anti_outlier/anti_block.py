@@ -616,7 +616,7 @@ class QuantQwen2VLVisionBlock(nn.Module):
             channel_min = post_ln_1.min(0)[0]
             shift = (channel_max + channel_min) / 2 
             post_ln_1 -= shift
-            if(self.attn.qkv.bias is not None):
+            if self.attn.qkv.bias is not None:
                 self.attn.qkv.bias.data += shift @ self.attn.qkv.weight.data.T
             # calculate scale
             weight_list = torch.cat([self.attn.qkv.weight])
@@ -649,7 +649,7 @@ class QuantQwen2VLVisionBlock(nn.Module):
             channel_min = post_ln_2.min(0)[0]
             shift = (channel_max + channel_min) / 2
             post_ln_2 -= shift
-            if(self.mlp.fc1.bias is not None):
+            if self.mlp.fc1.bias is not None:
                 self.mlp.fc1.bias.data += shift @ self.mlp.fc1.weight.data.T  
             # calculate scale
             weight_list = torch.cat([self.mlp.fc1.weight])
@@ -728,7 +728,7 @@ class QuantInternLM2DecoderLayer(nn.Module):
                 'rotary_emb': self.attention.rotary_emb
             }
             a_qconfig, w_qconfig = get_config()
-            best_scale = migration(hidden_states, weight_list, a_qconfig, w_qconfig,\
+            best_scale = migration(hidden_states, weight_list, a_qconfig, w_qconfig, \
                                     'internvl_llm_function', extra_dict, bias=bias_list)
             hidden_states /= best_scale
             self.attention.wqkv.weight.data *= best_scale
@@ -826,7 +826,7 @@ class QuantInternVisionEncoderLayer(nn.Module):
             shift = (channel_max + channel_min) / 2
             post_ln_1 -= shift
 
-            if(self.attn.qkv.bias is not None):
+            if self.attn.qkv.bias is not None:
                 self.attn.qkv.bias.data += shift @ self.attn.qkv.weight.data.T
                 
             head_dim = self.cfg.hidden_size // self.cfg.num_attention_heads
@@ -840,7 +840,7 @@ class QuantInternVisionEncoderLayer(nn.Module):
                 'proj_drop': self.attn.proj_drop,
                 'qk_normalization': qk_normalization,
             }
-            if(qk_normalization):
+            if qk_normalization:
                 extra_dict['q_norm'] = self.attn.q_norm
                 extra_dict['k_norm'] = self.attn.k_norm
             a_qconfig, w_qconfig = get_config()
