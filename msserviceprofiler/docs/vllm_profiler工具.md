@@ -23,7 +23,7 @@ export SERVICE_PROF_CONFIG_PATH=ms_service_profiler_config.json
 其中ms_service_profiler_config.json中包含文件内容：
 ```
 {
-    "enable": 1,
+    "enable": 0,
     "prof_dir": "${logs_prof}",
     "profiler_level": "L1"
 }
@@ -34,6 +34,9 @@ export SERVICE_PROF_CONFIG_PATH=ms_service_profiler_config.json
 |enable|是否开启性能数据采集的开关，取值为：0，关闭；1，开启|是|
 |prof_dir|采集到的性能数据的存放路径。默认值为$HOME/.ms_server_profiler|否|
 |profiler_level|数据采集等级，取值为：L0，异常级别的性能数据；L1，普通级别的性能数据，默认值；L2，详细级别的性能数据；L3，冗长的性能数据。|否|
+
+**注意**：拉起vllm框架前，就需要配置SERVICE_PROF_CONFIG_PATH环境变量，其中ms_service_profiler_config.json文件中的enable字段必须设置为0；当vllm框架拉起成功后，再将enable字段修改为1，再发送请求即可落盘profiling数据。
+
 4. 可选：指定卡运行命令，例如`export ASCEND_RT_VISIBLE_DEVICES=1`为指定1卡运行
 5. 拉取vllm框架，发送请求，在步骤3中的ms_service_profiler_config.json设置的`${logs_prof}`路径下，会落盘profiling数据
 6. 调用`msprof --export=on --output=${logs_prof}/PROF_xxx_xxx_xxx`命令行处理`${logs_prof}`目录下所有的落盘数据，生成msproftx.db文件
@@ -100,4 +103,23 @@ block_num: 释放的block数量
 domain：表示当前为kvcache相关信息
 cpuHitCache: cpu缓存命中率
 gpuHitCache: gpu缓存命中率
+```
+
+### 4. request数据
+① httpReq，表示请求到达
+```
+domain：表示当前为http请求相关信息
+rid: 请求ID
+```
+
+② recvTokenSize，表示请求输入长度
+```
+domain：表示当前为http请求相关信息
+rid: 请求ID
+```
+
+③ replyTokenSize，表示请求输出长度
+```
+domain：表示当前为http请求相关信息
+rid: 请求ID
 ```
