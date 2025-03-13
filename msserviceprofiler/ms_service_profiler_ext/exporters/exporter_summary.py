@@ -262,6 +262,58 @@ def calculate_batch_metrics(batch_map):
     return batch_status
 
 
+def get_non_first_token_latency(req_data):
+    token_id = req_data["token_id"]
+    subsequent_token_latency = []
+    sorted_tokens = sorted(token_id.items(), key=lambda x: int(x[0]))
+    for i in range(1, len(sorted_tokens)):
+        current_token_time = sorted_tokens[i][1]
+        previous_token_time = sorted_tokens[i - 1][1]
+        latency = round((current_token_time - previous_token_time) / 1000, 4)
+        subsequent_token_latency.append(latency)
+    return subsequent_token_latency
+
+
+def get_total_exec_time(req_data):
+    first_request_start_time, last_request_end_time = None, None
+    # 更新第一个请求的开始时间和最后一个请求的结束时间
+    current_start_time = req_data["httpReq_start"]
+    current_end_time = req_data["httpRes_end"]
+    if first_request_start_time is None or current_start_time < first_request_start_time:
+        first_request_start_time = current_start_time
+    if last_request_end_time is None or current_end_time > last_request_end_time:
+        last_request_end_time = current_end_time
+
+    return round((last_request_end_time - first_request_start_time) / 1000000, 4)
+
+
+def gen_result_record(req_id, req_data):
+    input_token_num = req_data["input_token_num"]
+    generated_token_num = req_data["generated_token_num"]
+
+    # 从字典中取出数据
+    record = {
+        "req_id": req_id,
+        "first_token_latency": round(req_data["first_token_latency"] / 1000, 4),
+        "exec_time": round(req_data["exec_time"] / 1000, 4),
+        "input_token_num": input_token_num,
+        "generated_token_num": generated_token_num
+    }
+
+    # 非首Token时延
+    record["subsequent_token_latency"] = get_non_first_token_latency(req_data)
+
+    # 总时长
+    total_time = req_data["httpRes_end"] - req_data["httpReq_start"]
+    total_time = total_time / 1000
+    record["total_time"] = total_time
+
+    # 队列等待时长
+    waiting_time = req_data["req_pending_time"] + req_data["req_waiting_time"]
+    record["waiting_time"] = waiting_time
+    return record
+
+
 def calculate_request_metrics(req_map):
     req_view = []
     total_map = {
@@ -270,53 +322,17 @@ def calculate_request_metrics(req_map):
         ServiceCSVFields.GENERATE_TOKEN_SPEED: 0,
         ServiceCSVFields.GENERATE_ALL_TOKEN_SPEED: 0
     }
-    first_request_start_time, last_request_end_time = None, None
+
     for req_id, req_data in req_map.items():
-        input_token_num = req_data["input_token_num"]
-        generated_token_num = req_data["generated_token_num"]
-        # 从字典中取出数据
-        record = {
-            "req_id": req_id,
-            "first_token_latency": round(req_data["first_token_latency"] / 1000, 4),
-            "exec_time": round(req_data["exec_time"] / 1000, 4),
-            "input_token_num": input_token_num,
-            "generated_token_num": generated_token_num
-        }
-        # 非首Token时延
-        token_id = req_data["token_id"]
-        subsequent_token_latency = []
-        sorted_tokens = sorted(token_id.items(), key=lambda x: int(x[0]))
-        for i in range(1, len(sorted_tokens)):
-            current_token_time = sorted_tokens[i][1]
-            previous_token_time = sorted_tokens[i - 1][1]
-            latency = round((current_token_time - previous_token_time) / 1000, 4)
-            subsequent_token_latency.append(latency)
-        record["subsequent_token_latency"] = subsequent_token_latency
-
-        # 总时长
-        total_time = req_data["httpRes_end"] - req_data["httpReq_start"]
-        total_time = total_time / 1000
-        record["total_time"] = total_time
-
-        # 队列等待时长
-        waiting_time = req_data["req_pending_time"] + req_data["req_waiting_time"]
-        record["waiting_time"] = waiting_time
+        record = gen_result_record(req_id, req_data)
         req_view.append(record)
 
         # 更新总体维度数据
-        total_map[ServiceCSVFields.TOTAL_INPUT_TOKEN_NUM] += input_token_num
-        total_map[ServiceCSVFields.TOTAL_GENERATED_TOKEN_NUM] += generated_token_num
-
-        # 更新第一个请求的开始时间和最后一个请求的结束时间
-        current_start_time = req_data["httpReq_start"]
-        current_end_time = req_data["httpRes_end"]
-        if first_request_start_time is None or current_start_time < first_request_start_time:
-            first_request_start_time = current_start_time
-        if last_request_end_time is None or current_end_time > last_request_end_time:
-            last_request_end_time = current_end_time
+        total_map[ServiceCSVFields.TOTAL_INPUT_TOKEN_NUM] += req_data["input_token_num"]
+        total_map[ServiceCSVFields.TOTAL_GENERATED_TOKEN_NUM] += req_data["generated_token_num"]
 
         # 计算total_exec_time
-        total_exec_time = round((last_request_end_time - first_request_start_time) / 1000000, 4)
+        total_exec_time = get_total_exec_time(req_data)
 
         # 计算generate_token_speed和generate_all_token_speed
         if total_exec_time > 0:
