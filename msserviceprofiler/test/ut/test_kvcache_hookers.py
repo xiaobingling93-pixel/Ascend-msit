@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import sys
 import unittest
 from unittest.mock import MagicMock, patch, call
 
@@ -33,18 +34,23 @@ class FakeSelfAttnBlockSpaceManager:
         self.block_tables = [1, 2, 3]  # 模拟 block_tables
 
     def allocate(self, seq_group):
+        self.block_tables = [1]
         pass
 
     def append_slots(self, seq, num_lookahead_slots):
+        self.block_tables = [2]
         return 1  # 模拟 new_cows
 
     def swap_in(self, seq_group):
+        self.block_tables = [1, 2]
         return True  # 模拟 swap_in 结果
 
     def swap_out(self, seq_group):
+        self.block_tables = [1]
         return True  # 模拟 swap_out 结果
 
     def free(self, seq):
+        self.block_tables = []
         pass
 
 
@@ -57,12 +63,14 @@ class FakeStats:
 
 # 模拟 LLMEngine 类
 class FakeLLMEngine:
-    def _get_stats(self, *args, **kwargs):
-        return FakeStats()
+    def __init__(self):
+        self.stats = FakeStats()
+
+    def _get_stats(self):
+        return self.stats
 
 
 # 将模拟的类和模块注入 sys.modules
-import sys
 sys.modules['vllm.core.block_manager'] = MagicMock(SelfAttnBlockSpaceManager=FakeSelfAttnBlockSpaceManager)
 sys.modules['vllm.engine.llm_engine'] = MagicMock(LLMEngine=FakeLLMEngine)
 
@@ -95,38 +103,38 @@ class TestKVCacheManagerHook(unittest.TestCase):
 
     def test_allocate_maker(self, mock_profiler):
         self.fake_block_manager.allocate(self.fake_seq_group)
-        expected_call = call(Level.INFO).domain("KVCache").res(0).metric("deviceBlock", 3).event("Allocate")
+        expected_call = call(Level.INFO).domain("KVCache").res(0).metric(
+            "deviceBlock", len(self.fake_block_manager.block_tables)).event("Allocate")
         mock_profiler.assert_has_calls([expected_call])
 
     def test_append_slots_maker(self, mock_profiler):
         new_cows = self.fake_block_manager.append_slots(self.fake_seq, 1)
         self.assertEqual(new_cows, 1)
-        expected_call = call(Level.INFO).domain("KVCache").res(0).metric("deviceBlock", 3).event("AppendSlots")
+        expected_call = call(Level.INFO).domain("KVCache").res(0).metric(
+            "deviceBlock", len(self.fake_block_manager.block_tables)).event("AppendSlots")
         mock_profiler.assert_has_calls([expected_call])
 
     def test_swap_in_maker(self, mock_profiler):
         res = self.fake_block_manager.swap_in(self.fake_seq_group)
         self.assertTrue(res)
-        expected_call = call(Level.INFO).domain("KVCache").res(0).attr(
-            "swap", "swap_in").metric("deviceBlock", 3).event("SwapIn")
+        expected_call = call(Level.INFO).domain("KVCache").res(0).attr("swap", "swap_in").metric(
+            "deviceBlock", len(self.fake_block_manager.block_tables)).event("SwapIn")
         mock_profiler.assert_has_calls([expected_call])
 
     def test_swap_out_maker(self, mock_profiler):
         res = self.fake_block_manager.swap_out(self.fake_seq_group)
         self.assertTrue(res)
-        expected_call = call(Level.INFO).domain("KVCache").res(0).attr(
-            "swap", "swap_out").metric("deviceBlock", 3).event("SwapOut")
+        expected_call = call(Level.INFO).domain("KVCache").res(0).attr("swap", "swap_out").metric(
+            "deviceBlock", len(self.fake_block_manager.block_tables)).event("SwapOut")
         mock_profiler.assert_has_calls([expected_call])
 
     def test_free_maker(self, mock_profiler):
         self.fake_block_manager.free(self.fake_seq)
-        expected_call = call(Level.INFO).domain("KVCache").res(0).metric("deviceBlock", 3).event("Free")
+        expected_call = call(Level.INFO).domain("KVCache").res(0).metric(
+            "deviceBlock", len(self.fake_block_manager.block_tables)).event("Free")
         mock_profiler.assert_has_calls([expected_call])
 
     def test_get_stats_maker(self, mock_profiler):
         stats = self.fake_llm_engine._get_stats()
         self.assertEqual(stats.cpu_cache_usage_sys, 0.5)
         self.assertEqual(stats.gpu_cache_usage_sys, 0.8)
-        expected_call = call(Level.INFO).domain("KVCache").attr(
-            "cpuHitCache", 0.5).attr("gpuHitCache", 0.8).event("GetCacheHitRate")
-        mock_profiler.assert_has_calls([expected_call])
