@@ -8,7 +8,7 @@ from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.llm_ptq_utils import QuantType, W
 _SUPPORTED_DEVICES = ["cpu", "npu", 'gpu']
 A_BIT_LIST = [8, 16]
 W_BIT_LIST = [4, 8]
-GROUP_SIZE_LIST = [32, 64, 128, 256, 512]
+GROUP_SIZE_LIST = [32, 64, 128]
 
 
 def set_quant_param(config):
