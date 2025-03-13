@@ -11,7 +11,7 @@ QuantConfig(a_bit=8, w_bit=8, disable_names=None, dev_type='cpu', dev_id=None, a
 ### 参数说明
 | 参数名| 输入/返回值 | 含义 | 使用限制 |
 | ------ | ------ | ------ | ------ |
-| a_bit | 输入 | 激活值量化bit。| 可选。<br>数据类型：int。<br>可选值为8和16，默认为8。<br>大模型量化场景下，可配置为8或16。per_group的场景下需配置为16。is_dynamic参数配置为True，使用per-token动态量化场景下，需配置为8。<br>大模型稀疏量化场景下，需配置为8。 |
+| a_bit | 输入 | 激活值量化bit。| 可选。<br>数据类型：int。<br>可选值为8和16，默认为8。<br>大模型量化场景下，可配置为8或16。per_group的场景下需配置为8或16（a_bit=8 当前仅在 w4a8 量化中使用）。is_dynamic参数配置为True，使用per-token动态量化场景下，需配置为8。<br>大模型稀疏量化场景下，需配置为8。 |
 | w_bit | 输入 | 权重量化bit。| 可选。<br>数据类型：int。<br> 可选值为4和8，默认为8。<br>大模型量化场景下，可配置为4或8。is_dynamic参数配置为True，使用per-token动态量化场景下，需配置为4或8。<br>大模型稀疏量化场景下，需配置为4。 |
 | disable_names | 输入 | 权需排除量化的节点名称，即手动回退的量化层名称。<br>如精度太差，推荐回退量化敏感层，如分类层、输入层、检测head层等。| 可选。<br>数据类型：object。 |
 | dev_type | 输入 | device类型。| 可选。<br>数据类型：object。<br>可选值：['cpu', 'npu']，默认为'cpu'。 |
