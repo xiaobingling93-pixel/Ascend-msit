@@ -108,7 +108,8 @@ class Quantifier:
         self.dtype = self.config.torch_dtype if self.device_type == NPU else torch.float32
         self.model = safe_generator.get_model_from_pretrained(
             self.model_path_or_name,
-            low_cpu_mem_usage=True, torch_dtype=self.dtype,
+            low_cpu_mem_usage=True, 
+            torch_dtype=self.dtype,
             device_map=device_map,
             trust_remote_code=True
         )

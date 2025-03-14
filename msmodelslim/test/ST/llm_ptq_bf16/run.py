@@ -24,10 +24,13 @@ def get_calib_dataset(_tokenizer, _calib_list):
     return calib_dataset
 
 
-tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path=IN_MODEL_PATH)
+tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path=IN_MODEL_PATH, 
+                                          local_files_only=True)
 model = AutoModelForCausalLM.from_pretrained(
     pretrained_model_name_or_path=IN_MODEL_PATH,
-    torch_dtype=torch.bfloat16, use_safetensors=True).cpu()
+    torch_dtype=torch.bfloat16, 
+    use_safetensors=True, 
+    local_files_only=True).cpu()
 print(f"loading success!")
 
 calib_list = [

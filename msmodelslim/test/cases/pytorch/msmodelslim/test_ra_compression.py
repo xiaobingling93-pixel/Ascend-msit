@@ -53,7 +53,7 @@ def test_ra_compression_given_model_then_pass():
 
     from msmodelslim.pytorch.ra_compression import RACompressor
 
-    config = AutoConfig.from_pretrained("./")
+    config = AutoConfig.from_pretrained("./", local_files_only=True)
     model = AutoModelForCausalLM.from_config(config)
     raconfig = RACompressConfig(theta=0.00001, alpha=100)
     output_model_path = "./win.pt"

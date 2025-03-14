@@ -6,9 +6,12 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 
 LOAD_PATH = f"{os.environ['PROJECT_PATH']}/resource/llm_ptq/llama2_7b/"
 tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path=LOAD_PATH,
-                                          trust_remote_code=True)
+                                          trust_remote_code=True, 
+                                          local_files_only=True)
 model = AutoModelForCausalLM.from_pretrained(pretrained_model_name_or_path=LOAD_PATH,
-                                             torch_dtype=torch.float16, trust_remote_code=True).npu()
+                                             torch_dtype=torch.float16, 
+                                             trust_remote_code=True, 
+                                             local_files_only=True).npu()
 
 # NF4量化常用于Qlora等训练场景，AntiOutlier离群值抑制等对激活的操作不推荐在该场景使用
 

@@ -8,12 +8,15 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 SEQ_LEN_OUT = 12
 
 load_path = f"{os.environ['PROJECT_PATH']}/resource/llm_ptq/llama2_7b/"
-tokenizer = AutoTokenizer.from_pretrained(load_path, trust_remote_code=True, local_files_only=True,
-                                                use_fast=False)
+tokenizer = AutoTokenizer.from_pretrained(load_path, 
+                                          trust_remote_code=True, 
+                                          local_files_only=True,
+                                          use_fast=False)
 
 model = AutoModelForCausalLM.from_pretrained(load_path,
-                                                    trust_remote_code=True,
-                                                    torch_dtype=torch.float16).npu()
+                                             trust_remote_code=True,
+                                             torch_dtype=torch.float16, 
+                                             local_files_only=True).npu()
 
 
 calib_list = ["Where is the capital of China?",

@@ -66,7 +66,8 @@ class OmniAttentionGeneticSearcher:
         np.random.seed(seed)
         torch.manual_seed(seed)
 
-        model_config = AutoConfig.from_pretrained(config.model_path)
+        model_config = AutoConfig.from_pretrained(config.model_path, 
+                                                  local_files_only=True)
 
         self.num_layers = model_config.num_hidden_layers
         self.num_kv_heads = model_config.num_key_value_heads
@@ -91,7 +92,8 @@ class OmniAttentionGeneticSearcher:
             attn_implementation="eager",
             device_map="auto",
         )
-        self.tokenizer = AutoTokenizer.from_pretrained(path)
+        self.tokenizer = AutoTokenizer.from_pretrained(path, 
+                                                       local_files_only=True)
         self.device = self.model.device
 
     def tokenize_inputs(self):

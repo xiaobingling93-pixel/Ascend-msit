@@ -20,13 +20,16 @@ max_memory = generate_max_memory({
     "cpu": 457403
 })
 load_path = f"{os.environ['PROJECT_PATH']}/resource/llm_ptq/llama2_7b/"
-tokenizer = AutoTokenizer.from_pretrained(load_path, trust_remote_code=True, local_files_only=True,
-                                        use_fast=False)
+tokenizer = AutoTokenizer.from_pretrained(load_path, 
+                                          trust_remote_code=True, 
+                                          local_files_only=True,
+                                          use_fast=False)
 
 model = AutoModelForCausalLM.from_pretrained(load_path,
                                              trust_remote_code=True,
                                              torch_dtype=torch.float32,
-                                             max_memory=max_memory)
+                                             max_memory=max_memory, 
+                                             local_files_only=True)
 model.eval()
 
 '''

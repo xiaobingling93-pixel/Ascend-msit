@@ -16,6 +16,7 @@ model = AutoModelForCausalLM.from_pretrained(
     torch_dtype=torch.float16,
     trust_remote_code=True,
     device_map="auto",
+    local_files_only=True
 ).eval()
 
 tokenizer = AutoTokenizer.from_pretrained(
@@ -23,7 +24,8 @@ tokenizer = AutoTokenizer.from_pretrained(
     pad_token='<|extra_0|>',
     eos_token='<|endoftext|>',
     padding_side='left',
-    trust_remote_code=True
+    trust_remote_code=True, 
+    local_files_only=True
 )
 
 ra = RARopeCompressor(model, tokenizer, config)

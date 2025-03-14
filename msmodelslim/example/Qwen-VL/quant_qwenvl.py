@@ -22,16 +22,23 @@ if __name__ == '__main__':
     parser.add_argument('--device_type', type=str, choices=[CPU, NPU], default=CPU)
     args = parser.parse_args()
 
-    tokenizer = AutoTokenizer.from_pretrained(args.model_path, trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(args.model_path, 
+                                              trust_remote_code=True, 
+                                              local_files_only=True)
     tokenizer.padding_side = 'left'
     tokenizer.pad_token_id = tokenizer.eod_id
 
     ##1.加载模型
     device_map = CPU if args.device_type == CPU else "auto"
-    config = AutoConfig.from_pretrained(args.model_path, trust_remote_code=True)
+    config = AutoConfig.from_pretrained(args.model_path, 
+                                        trust_remote_code=True, 
+                                        local_files_only=True)
     dtype = config.torch_dtype if args.device_type == NPU else torch.float32
-    model = AutoModelForCausalLM.from_pretrained(
-        args.model_path, device_map=device_map, trust_remote_code=True, torch_dtype=torch.float16).eval()
+    model = AutoModelForCausalLM.from_pretrained(args.model_path, 
+                                                 device_map=device_map, 
+                                                 trust_remote_code=True, 
+                                                 torch_dtype=torch.float16, 
+                                                 local_files_only=True).eval()
 
 
     ##2.设置回退层

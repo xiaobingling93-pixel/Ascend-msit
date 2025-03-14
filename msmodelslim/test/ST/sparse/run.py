@@ -37,10 +37,13 @@ data_path = args.data_path
 fp16_path = args.fp16_path
 save_path = args.save_path
 tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path=fp16_path,
-                                          trust_remote_code=True)
+                                          trust_remote_code=True, 
+                                          local_files_only=True)
 
 model = AutoModel.from_pretrained(pretrained_model_name_or_path=fp16_path,
-                                  torch_dtype=torch.float32, trust_remote_code=True)
+                                  torch_dtype=torch.float32, 
+                                  trust_remote_code=True, 
+                                  local_files_only=True)
 
 choices = ["A", "B", "C", "D"]
 choice_tokens = [tokenizer.encode(choice, add_special_tokens=False)[0] for choice in choices]

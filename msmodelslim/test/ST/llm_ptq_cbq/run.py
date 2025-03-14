@@ -20,10 +20,13 @@ torch.npu.set_option(option)
 
 LOAD_PATH = f"{os.environ['PROJECT_PATH']}/resource/llm_ptq/llama2_7b/"
 tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path=LOAD_PATH,
-                                          trust_remote_code=True)
+                                          trust_remote_code=True, 
+                                          local_files_only=True)
 tokenizer.pad_token_id = 0
 model = AutoModelForCausalLM.from_pretrained(pretrained_model_name_or_path=LOAD_PATH,
-                                             torch_dtype=torch.float16, trust_remote_code=True).npu()
+                                             torch_dtype=torch.float16, 
+                                             trust_remote_code=True, 
+                                             local_files_only=True).npu()
 
 calib_list_all = ["Where is the capital of China?",
               "Please make a poem:",

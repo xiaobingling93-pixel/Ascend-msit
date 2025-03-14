@@ -8,10 +8,12 @@ from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
 
 
 LOAD_PATH = f"{os.environ['PROJECT_PATH']}/resource/llm_ptq/llava_weight/"
-processor = LlavaNextProcessor.from_pretrained(LOAD_PATH)
+processor = LlavaNextProcessor.from_pretrained(LOAD_PATH, 
+                                               local_files_only=True)
 model = LlavaNextForConditionalGeneration.from_pretrained(LOAD_PATH,
                                                           torch_dtype=torch.float32,
-                                                          low_cpu_mem_usage=True).cpu()
+                                                          low_cpu_mem_usage=True, 
+                                                          local_files_only=True).cpu()
 
 
 images_list = os.listdir(f"{os.environ['PROJECT_PATH']}/resource/llm_ptq/coco2/")

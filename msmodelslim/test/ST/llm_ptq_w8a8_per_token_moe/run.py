@@ -3,11 +3,14 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 from modelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
 
 fp16_path = f"{os.environ['PROJECT_PATH']}/resource/llm_ptq/MOE_tiny/"
-tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path=fp16_path, trust_remote_code=True)
+tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path=fp16_path, 
+                                          trust_remote_code=True, 
+                                          local_files_only=True)
 tokenizer.add_special_tokens({'pad_token': '[PAD]'})
 tokenizer.pad_token_id = tokenizer.eos_token_id
 model = AutoModelForCausalLM.from_pretrained(pretrained_model_name_or_path=fp16_path,
-                                             trust_remote_code=True).cpu()
+                                             trust_remote_code=True, 
+                                             local_files_only=True).cpu()
 
 disable_names = []
 disable_names.append('lm_head')

@@ -380,6 +380,7 @@ model = AutoModelForCausalLM.from_pretrained(
         pretrained_model_name_or_path=model_path,
         torch_dtype=torch.bfloat16, 
         trust_remote_code=True,
+        local_files_only=True,
         device_map="auto",
         max_memory={0:"28GiB",1:"28GiB",2:"28GiB",3:"28GiB",4:"28GiB",5:"28GiB",6:"0GiB",7:"0GiB"}
     ).eval()
@@ -387,6 +388,7 @@ model = AutoModelForCausalLM.from_pretrained(
 tokenizer = AutoTokenizer.from_pretrained(
     pretrained_model_name_or_path=model_path, 
     trust_remote_code=True,
+    local_files_only=True,
     device_map="auto",
 )
 tokenizer.pad_token = tokenizer.eos_token

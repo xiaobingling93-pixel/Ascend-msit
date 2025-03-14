@@ -7,9 +7,12 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 
 LOAD_PATH = f"{os.environ['PROJECT_PATH']}/resource/llm_ptq/llama2_7b/"
 tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path=LOAD_PATH,
-                                          trust_remote_code=True)
+                                          trust_remote_code=True, 
+                                          local_files_only=True)
 model = AutoModelForCausalLM.from_pretrained(pretrained_model_name_or_path=LOAD_PATH,
-                                             torch_dtype=torch.float16, trust_remote_code=True).npu()
+                                             torch_dtype=torch.float16, 
+                                             trust_remote_code=True, 
+                                             local_files_only=True).npu()
 
 # 量化配置，请根据实际情况修改
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig    # 导入量化配置接口

@@ -5,8 +5,10 @@ from modelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
 
 # for local path
 LOAD_PATH = f"{os.environ['PROJECT_PATH']}/resource/llm_ptq/llama2_7b/"
-model = AutoModelForCausalLM.from_pretrained(pretrained_model_name_or_path=LOAD_PATH, torch_dtype=torch.float32,
-                                             trust_remote_code=True).cpu()
+model = AutoModelForCausalLM.from_pretrained(pretrained_model_name_or_path=LOAD_PATH, 
+                                             torch_dtype=torch.float32,
+                                             trust_remote_code=True, 
+                                             local_files_only=True).cpu()
 
 disable_names=[]
 disable_names.append('lm_head')
