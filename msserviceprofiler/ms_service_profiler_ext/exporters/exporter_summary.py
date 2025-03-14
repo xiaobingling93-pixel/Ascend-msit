@@ -274,19 +274,6 @@ def get_non_first_token_latency(req_data):
     return subsequent_token_latency
 
 
-def get_total_exec_time(req_data):
-    first_request_start_time, last_request_end_time = None, None
-    # 更新第一个请求的开始时间和最后一个请求的结束时间
-    current_start_time = req_data["httpReq_start"]
-    current_end_time = req_data["httpRes_end"]
-    if first_request_start_time is None or current_start_time < first_request_start_time:
-        first_request_start_time = current_start_time
-    if last_request_end_time is None or current_end_time > last_request_end_time:
-        last_request_end_time = current_end_time
-
-    return round((last_request_end_time - first_request_start_time) / 1000000, 4)
-
-
 def gen_result_record(req_id, req_data):
     input_token_num = req_data["input_token_num"]
     generated_token_num = req_data["generated_token_num"]
@@ -323,6 +310,7 @@ def calculate_request_metrics(req_map):
         ServiceCSVFields.GENERATE_ALL_TOKEN_SPEED: 0
     }
 
+    first_request_start_time, last_request_end_time = None, None
     for req_id, req_data in req_map.items():
         record = gen_result_record(req_id, req_data)
         req_view.append(record)
@@ -331,8 +319,16 @@ def calculate_request_metrics(req_map):
         total_map[ServiceCSVFields.TOTAL_INPUT_TOKEN_NUM] += req_data["input_token_num"]
         total_map[ServiceCSVFields.TOTAL_GENERATED_TOKEN_NUM] += req_data["generated_token_num"]
 
+        # 更新第一个请求的开始时间和最后一个请求的结束时间
+        current_start_time = req_data["httpReq_start"]
+        current_end_time = req_data["httpRes_end"]
+        if first_request_start_time is None or current_start_time < first_request_start_time:
+            first_request_start_time = current_start_time
+        if last_request_end_time is None or current_end_time > last_request_end_time:
+            last_request_end_time = current_end_time
+
         # 计算total_exec_time
-        total_exec_time = get_total_exec_time(req_data)
+        total_exec_time = round((last_request_end_time - first_request_start_time) / 1000000, 4)
 
         # 计算generate_token_speed和generate_all_token_speed
         if total_exec_time > 0:

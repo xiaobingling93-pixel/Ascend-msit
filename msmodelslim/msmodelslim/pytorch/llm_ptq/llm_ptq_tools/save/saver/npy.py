@@ -72,26 +72,39 @@ class NpySaver(BaseSaver):
         pass
 
     def save(self, name, meta, data) -> None:
-        if name.endswith('.weight') or name.endswith('.bias'):
-            self.quant_weight_writer.write(name, data)
-        elif name.endswith('.quant_bias'):
-            self.quant_bias_writer.write(name, data)
-        elif name.endswith('.deq_scale'):
-            self.deq_scale_writer.write(name, data)
-        elif name.endswith('.input_scale') or name.endswith('.weight_scale'):
-            self.input_scale_writer.write(name, data)
-        elif name.endswith('.input_offset') or name.endswith('.weight_offset'):
-            self.input_offset_writer.write(name, data)
-        elif name.endswith('.kv_cache_scale'):
-            self.kv_cache_scale_writer.write(name, data)
-        elif name.endswith('.kv_cache_offset'):
-            self.kv_cache_offset_writer.write(name, data)
-        elif fnmatch.fnmatch(name, '*.fa_*scale*'):
+        # keep suffix
+        if fnmatch.fnmatch(name, '*.fa_*scale*'):
             self.fa_quant_scale_writer.write(name, data)
         elif fnmatch.fnmatch(name, '*.fa_*offset*'):
             self.fa_quant_offset_writer.write(name, data)
         elif fnmatch.fnmatch(name, '*norm.weight') or fnmatch.fnmatch(name, '*norm.bias'):
             self.anti_fp_norm_writer.write(name, data)
+        elif name.endswith('.kv_cache_scale'):
+            self.kv_cache_scale_writer.write(name, data)
+        elif name.endswith('.kv_cache_offset'):
+            self.kv_cache_offset_writer.write(name, data)
+        # remove suffix
+        elif name.endswith('.weight') or name.endswith('.bias'):
+            new_name = name.replace('.weight', '').replace('.bias', '')
+            self.quant_weight_writer.write(new_name, data)
+        elif name.endswith('.quant_bias'):
+            new_name = name.replace('.quant_bias', '')
+            self.quant_bias_writer.write(new_name, data)
+        elif name.endswith('.deq_scale'):
+            new_name = name.replace('.deq_scale', '')
+            self.deq_scale_writer.write(new_name, data)
+        elif name.endswith('.input_scale'):
+            new_name = name.replace('.input_scale', '')
+            self.input_scale_writer.write(new_name, data)
+        elif name.endswith('.input_offset'):
+            new_name = name.replace('.input_offset', '')
+            self.input_offset_writer.write(new_name, data)
+        elif name.endswith('.weight_scale'):
+            new_name = name.replace('.weight_scale', '')
+            self.weight_scale_writer.write(new_name, data)
+        elif name.endswith('.weight_offset'):
+            new_name = name.replace('.weight_offset', '')
+            self.weight_offset_writer.write(new_name, data)
 
     def post_process(self) -> None:
         for writer in self.writer_list:

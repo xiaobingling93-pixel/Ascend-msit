@@ -69,15 +69,6 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def compare_two_files(comparator, file_a, file_b):
-    try:
-        comparator.process(file_a, file_b)
-    except Exception as e:
-        logger.error(
-            "During comparing %r and %r, there is an error ocurred: %r", file_a, file_b, e
-        )
-
-
 def process_file_pairs(file_pairs, db_conn, excel_writer):
     comparators = {
         '.csv': CSVComparator,
@@ -88,10 +79,16 @@ def process_file_pairs(file_pairs, db_conn, excel_writer):
         ext = Path(file_a).suffix.lower()
         logger.info("Begin to compare %r and %r", file_a, file_b)
         for comparator_cls in comparators.values():
-            if comparator_cls.supports(ext):
-                comparator = comparator_cls(db_conn, excel_writer)
-                compare_two_files(comparator, file_a, file_b)
-                logger.info("End to compare %r and %r", file_a, file_b)
+            if not comparator_cls.supports(ext):
+                continue
+            comparator = comparator_cls(db_conn, excel_writer)
+            try:
+                comparator.process(file_a, file_b)
+            except Exception as e:
+                logger.error(
+                    "During comparing %r and %r, there is an error ocurred: %r", file_a, file_b, e
+                )
+            logger.info("End to compare %r and %r", file_a, file_b)
 
 
 def process_files(file_pairs, output_db, output_excel):
