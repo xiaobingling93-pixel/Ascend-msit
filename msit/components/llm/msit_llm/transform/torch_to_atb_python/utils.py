@@ -78,7 +78,7 @@ def get_config_attr(config, attr, default=None):
 
 def build_transformers_model(source_path):
     try:
-        config = AutoConfig.from_pretrained(source_path)
+        config = AutoConfig.from_pretrained(source_path, local_files_only=True)
         llm_model_config = get_config_attr(config, "text_config", default=config)
         is_vl_model = llm_model_config is not config
         model = AutoModelForCausalLM.from_config(llm_model_config)

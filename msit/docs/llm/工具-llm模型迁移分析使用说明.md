@@ -25,6 +25,7 @@
 - **使用最新的 mindIE B032 版本需要适配transformers==4.45.2**
 - **ATB Python 模型当前硬件限定 Atlas 800I A2 / 800T A2 / 900 A2 / 300I / 300I Pro / 300I Duo** 
 - **ATB C++ 模型迁移适配 ATB RC3.B030 + mindie 1.0.RC3.B030**
+- **在使用迁移功能时限制只允许从本地导入权重及配置文件**
 
 ### 环境说明
 - 安装 msit

@@ -52,7 +52,7 @@ def build_model(source_path):
         raise ModuleNotFoundError("transformers package not found, try pip install transformers") from error
 
     try:
-        config = AutoConfig.from_pretrained(source_path)
+        config = AutoConfig.from_pretrained(source_path, local_files_only=True)
         config = try_setting_small_model(config)
         model = AutoModelForCausalLM.from_config(config)
     except Exception as error:
