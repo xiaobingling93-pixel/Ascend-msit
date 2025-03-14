@@ -45,14 +45,8 @@ async def fake_iterate_with_cancellation(iterator, is_cancelled):
     yield "output"
 
 
-# 将模拟的类和模块注入 sys.modules
-sys.modules['vllm.engine.llm_engine'] = MagicMock(LLMEngine=FakeLLMEngine)
-sys.modules['vllm.engine.async_llm_engine'] = MagicMock(AsyncLLMEngine=FakeAsyncLLMEngine)
-sys.modules['vllm.sequence'] = MagicMock(SequenceGroupMetadata=FakeSequenceGroupMetadata)
-
 # 导入被测试的类
 from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.request_hookers import (
-    EngineRequestTrackerHook, LLMEngineHook,
     Profiler, Level
 )
 
@@ -61,6 +55,11 @@ from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.request_hookers im
 class TestVLLMHookers(unittest.TestCase):
 
     def setUp(self):
+        # 将模拟的类和模块注入 sys.modules
+        sys.modules['vllm.engine.llm_engine'] = MagicMock(LLMEngine=FakeLLMEngine)
+        sys.modules['vllm.engine.async_llm_engine'] = MagicMock(AsyncLLMEngine=FakeAsyncLLMEngine)
+        sys.modules['vllm.sequence'] = MagicMock(SequenceGroupMetadata=FakeSequenceGroupMetadata)
+
         # 初始化测试的Fake实例
         self.fake_llm_engine = FakeLLMEngine()
         self.fake_async_llm_engine = FakeAsyncLLMEngine()
@@ -68,6 +67,11 @@ class TestVLLMHookers(unittest.TestCase):
         self.fake_prompt = "test_prompt"
 
     def test_engine_request_tracker_hook(self, mock_profiler):
+        # 导入被测试的类
+        from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.request_hookers import (
+            EngineRequestTrackerHook
+        )
+
         # 初始化 EngineRequestTrackerHook
         engine_request_tracker_hook = EngineRequestTrackerHook()
         engine_request_tracker_hook.init()
@@ -81,6 +85,11 @@ class TestVLLMHookers(unittest.TestCase):
         mock_profiler.assert_has_calls([expected_call])
 
     def test_llm_engine_hook(self, mock_profiler):
+        # 导入被测试的类
+        from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.request_hookers import (
+            LLMEngineHook
+        )
+
         # 初始化 LLMEngineHook
         llm_engine_hook = LLMEngineHook()
         llm_engine_hook.init()

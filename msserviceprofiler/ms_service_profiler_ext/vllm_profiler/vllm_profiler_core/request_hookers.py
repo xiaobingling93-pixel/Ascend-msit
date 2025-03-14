@@ -13,7 +13,6 @@
 # limitations under the License.
 import time
 
-from vllm.sequence import SequenceGroupMetadata
 from ms_service_profiler import Profiler, Level
 from .vllm_hooker_base import VLLMHookerBase
 
