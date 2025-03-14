@@ -14,7 +14,6 @@
 
 from unittest import mock
 from unittest import mock, TestCase
-import pytest
 
 from components.llm.msit_llm.dump.initial import is_use_cxx11, read_cpu_profiling_data, \
     split_cpu_profiling_data, clear_dump_task

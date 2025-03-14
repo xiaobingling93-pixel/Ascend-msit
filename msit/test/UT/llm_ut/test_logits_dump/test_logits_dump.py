@@ -18,7 +18,6 @@ from unittest import TestCase
 from unittest.mock import patch, MagicMock
 
 import pandas as pd
-import numpy as np
 
 from msit_llm.logits_dump.logits_dump import build_bad_case_list, build_humaneval_bad_case_list,\
                                              build_humanevalx_bad_case_list, build_others_bad_case_list,\

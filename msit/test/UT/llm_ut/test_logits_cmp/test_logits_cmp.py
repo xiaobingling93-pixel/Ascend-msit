@@ -17,7 +17,6 @@ import csv
 import shutil
 import unittest
 import tempfile
-import argparse
 from unittest.mock import patch, MagicMock
 
 import torch
