@@ -98,18 +98,9 @@ class FakeLLMEngine:
         pass
 
 
-# 将模拟的类和模块注入 sys.modules
-sys.modules['vllm.core.scheduler'] = MagicMock(Scheduler=FakeScheduler)
-sys.modules['vllm.engine.llm_engine'] = MagicMock(LLMEngine=FakeLLMEngine)
-sys.modules['vllm.sequence'] = MagicMock(
-    SequenceGroupMetadata=FakeSequenceGroupMetadata,
-    SequenceStatus=FakeSequenceStatus
-)
-
 
 # 导入被测试的类
 from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.batch_hookers import (
-    SchedulerHook, LLMEngineHook,
     Profiler, queue_profiler, Level
 )
 
@@ -119,6 +110,19 @@ from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.batch_hookers impo
 class TestSchedulerHook(unittest.TestCase):
 
     def setUp(self):
+        # 将模拟的类和模块注入 sys.modules
+        sys.modules['vllm.core.scheduler'] = MagicMock(Scheduler=FakeScheduler)
+        sys.modules['vllm.engine.llm_engine'] = MagicMock(LLMEngine=FakeLLMEngine)
+        sys.modules['vllm.sequence'] = MagicMock(
+            SequenceGroupMetadata=FakeSequenceGroupMetadata,
+            SequenceStatus=FakeSequenceStatus
+        )
+
+        # 导入被测试的类
+        from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.batch_hookers import (
+            SchedulerHook, LLMEngineHook
+        )
+
         # 初始化 Hook 实例
         self.scheduler_hook = SchedulerHook()
         self.llm_engine_hook = LLMEngineHook()

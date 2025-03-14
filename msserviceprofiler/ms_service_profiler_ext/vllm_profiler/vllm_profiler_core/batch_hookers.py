@@ -13,7 +13,6 @@
 # limitations under the License.
 from collections import Counter
 from ms_service_profiler import Profiler, Level
-from vllm.sequence import SequenceGroupMetadata, SequenceStatus
 from .vllm_hooker_base import VLLMHookerBase
 
 
@@ -49,6 +48,7 @@ class SchedulerHook(VLLMHookerBase):
 
     def init(self):
         from vllm.core.scheduler import Scheduler
+        from vllm.sequence import SequenceGroupMetadata, SequenceStatus
 
         def schedule_maker(ori_func):
             def schedule(this, *args, **kwargs):

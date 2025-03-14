@@ -70,14 +70,9 @@ class FakeLLMEngine:
         return self.stats
 
 
-# 将模拟的类和模块注入 sys.modules
-sys.modules['vllm.core.block_manager'] = MagicMock(SelfAttnBlockSpaceManager=FakeSelfAttnBlockSpaceManager)
-sys.modules['vllm.engine.llm_engine'] = MagicMock(LLMEngine=FakeLLMEngine)
-
-
 # 导入被测试的类
 from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.kvcache_hookers import (
-    KVCacheManagerHook, Profiler, Level
+    Profiler, Level
 )
 
 
@@ -85,6 +80,12 @@ from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.kvcache_hookers im
 class TestKVCacheManagerHook(unittest.TestCase):
 
     def setUp(self):
+        # 将模拟的类和模块注入 sys.modules
+        sys.modules['vllm.core.block_manager'] = MagicMock(SelfAttnBlockSpaceManager=FakeSelfAttnBlockSpaceManager)
+        sys.modules['vllm.engine.llm_engine'] = MagicMock(LLMEngine=FakeLLMEngine)
+
+        # 导入被测试的类
+        from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.kvcache_hookers import KVCacheManagerHook
         # 初始化 Hook 实例
         self.kvcache_hook = KVCacheManagerHook()
         
