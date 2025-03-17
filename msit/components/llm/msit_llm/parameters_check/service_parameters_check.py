@@ -43,8 +43,8 @@ def parse_parameter_line(line, params, current_request, file_line_number):
         key = key_part.strip().strip('"')    # 去掉key中多余的空格和""
         value = value_part.strip().strip('[],')  # 去掉value中多余的空格和[]
 
-        if value == 'null':
-            value = 'None'
+        # ast模块无法解析true/false/null值, 先将其转成相对应的值
+        value = value.replace('true', 'True').replace('false', 'False').replace('null', 'None')
 
         try:
             parsed_value = ast.literal_eval(value)

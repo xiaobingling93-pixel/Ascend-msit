@@ -297,6 +297,31 @@ class TestUpdatedServiceParametersCheck(unittest.TestCase):
         differences = [{'req_order': 1, 'param': '=;+', 'file1_value': 0.5, 'file2_value': 0.6}]
         with self.assertRaises(ValueError):
             csv_input_safecheck(differences)
+    
+    def test_ast_abnormal_value(self):
+        """测试ast无法处理的字符串"""
+        txt_content = "req0: SamplingParams(temperature=0.7, frequency_penalty=0.9)do_sample:True"
+        log_content = """
+                [endpoint] Sampling parameters for request id: any_id
+                {
+                  "temperature": 0.7, 
+                  "frequency_penalty": null,
+                  "watermark": true,
+                  "do_sample": false,
+                }
+                """
+        txt_file = self.create_temp_file(txt_content, ".txt")
+        log_file = self.create_temp_file(log_content, ".log")
+        # 执行比对
+        service_params_check(txt_file, log_file)
+        # 验证报告
+        report_path = "comparison_report.csv"
+        with open(report_path) as f:
+            content = f.read()
+        self.assertIn("do_sample,True,False", content)
+        self.assertIn("watermark,N/A,True", content)
+        self.assertIn("frequency_penalty,0.9,None", content)
+        self.assertIn("req_order,param,file1_value,file2_value", content)
 
 
 if __name__ == '__main__':
