@@ -34,10 +34,10 @@ def get_config():
 
 
 def check_internvl2_8b_model(cfg):
-    INTERNVL2_8B_VISION_LAYERS = 24
-    INTERNVL2_8B_LLM_LAYERS = 32
-    if cfg.vision_config.num_hidden_layers == INTERNVL2_8B_VISION_LAYERS:
-        if cfg.llm_config.num_hidden_layers == INTERNVL2_8B_LLM_LAYERS:
+    internvl2_8b_vision_layers = 24
+    internvl2_8b_llm_layers = 32
+    if cfg.vision_config.num_hidden_layers == internvl2_8b_vision_layers:
+        if cfg.llm_config.num_hidden_layers == internvl2_8b_llm_layers:
             return True
     return False
 
