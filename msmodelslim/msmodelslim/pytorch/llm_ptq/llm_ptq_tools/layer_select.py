@@ -108,7 +108,10 @@ class QuantileMethod(RangeMethod):
             x = x.reshape(-1)
             x = torch.sort(x)[0]
             sample_step = self.sample_step
-            x_sample = x[sample_step // 2 : : sample_step].view(-1, 1)
+            if x.numel() < sample_step:
+                x_sample = x
+            else:
+                x_sample = x[sample_step // 2::sample_step].view(-1, 1)
             if name not in act_stats:
                 act_stats[name] = {}
                 act_stats[name]['tensor'] = [x_sample.to('cpu')]
@@ -202,14 +205,14 @@ class LayerSelector:
         '''
 
         self.logger = msmodelslim_logger
+        if not isinstance(model, nn.Module):
+            raise TypeError("model must be nn.Module, please check it.")
         self.model = model
         if layer_names is None:
             self.layer_names = get_all_linear_conv_module(model)
         else:
             self.layer_names = list(set(layer_names))
         check_type(range_method, str, param_name="range_method")
-        if not isinstance(model, nn.Module):
-            raise TypeError("model must be nn.Module, please check it.")
         check_layer_names(model, self.layer_names)
         self.range_method = RangeMethodFactory.create_method(range_method)
         self.layer_scores = None
