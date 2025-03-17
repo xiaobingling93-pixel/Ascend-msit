@@ -22,12 +22,17 @@ if __name__ == '__main__':
 
     # 1.加载模型
     device_map = CPU if args.device_type == CPU else "auto"
-    model = Qwen2VLForConditionalGeneration.from_pretrained(
-        args.model_path, device_map=device_map, trust_remote_code=True, torch_dtype="auto").eval()
-    config = AutoConfig.from_pretrained(args.model_path, trust_remote_code=True)
+    model = Qwen2VLForConditionalGeneration.from_pretrained(args.model_path, 
+                                                            device_map=device_map, 
+                                                            trust_remote_code=True, 
+                                                            torch_dtype="auto", 
+                                                            local_files_only=True).eval()
+    config = AutoConfig.from_pretrained(args.model_path, 
+                                        trust_remote_code=True, 
+                                        local_files_only=True)
     
     # 2.加载处理器
-    processor = AutoProcessor.from_pretrained(args.model_path)
+    processor = AutoProcessor.from_pretrained(args.model_path, local_files_only=True)
 
     # 3.设置回退层
     disable_names = []

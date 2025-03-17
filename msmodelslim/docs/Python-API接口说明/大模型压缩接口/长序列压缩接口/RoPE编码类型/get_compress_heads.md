@@ -29,12 +29,14 @@ model_path = "/home/wgw/Meta-Llama-3.1-70B-Instruct/"
  
 model = AutoModelForCausalLM.from_pretrained(
         pretrained_model_name_or_path=model_path,
+        local_files_only=True,
         torch_dtype=torch.bfloat16, 
         device_map="auto"
     ).eval()
  
 tokenizer = AutoTokenizer.from_pretrained(
         pretrained_model_name_or_path=model_path,
+        local_files_only=True,
         pad_token='<|extra_0|>',
         eos_token='<|endoftext|>',
         padding_side='left'

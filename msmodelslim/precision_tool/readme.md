@@ -17,8 +17,14 @@ import torch
 
 if __name__ == '__main__':
     model_path = "meta-llama/Llama-2-7b-chat-hf"
-    model = AutoModelForCausalLM.from_pretrained(model_path, torch_dtype=torch.float16, device_map="auto", use_safetensors=True).eval()
-    tokenizer = AutoTokenizer.from_pretrained(model_path)
+    model = AutoModelForCausalLM.from_pretrained(
+        model_path, 
+        torch_dtype=torch.float16, 
+        device_map="auto", 
+        use_safetensors=True, 
+        local_files_only=True
+        ).eval()
+    tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
     precision_test = PrecisionTest(model, tokenizer, "truthfulqa", 1, "npu")
     precision_test.test()
 

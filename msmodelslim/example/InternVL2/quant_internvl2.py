@@ -23,16 +23,22 @@ if __name__ == '__main__':
 
     # 1.加载模型
     device_map = CPU if args.device_type == CPU else "auto"
-    config = AutoConfig.from_pretrained(args.model_path, trust_remote_code=True)
+    config = AutoConfig.from_pretrained(args.model_path, 
+                                        local_files_only=True, 
+                                        trust_remote_code=True)
     dtype = config.torch_dtype
     model = AutoModel.from_pretrained(
         args.model_path,
         torch_dtype=dtype,
+        local_files_only=True,
         low_cpu_mem_usage=True,
         device_map=device_map,
         use_safetensors=True,
         trust_remote_code=True).eval()
-    tokenizer = AutoTokenizer.from_pretrained(args.model_path, trust_remote_code=True, use_fast=False)
+    tokenizer = AutoTokenizer.from_pretrained(args.model_path, 
+                                              local_files_only=True, 
+                                              trust_remote_code=True, 
+                                              use_fast=False)
 
     # 2.调用chat接口
     model.forward = model.chat

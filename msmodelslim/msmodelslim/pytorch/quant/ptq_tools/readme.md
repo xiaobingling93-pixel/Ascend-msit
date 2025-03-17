@@ -51,14 +51,18 @@ if __name__ == '__main__':
 说明
 多模态量化，当前硬件限定 Atlas 800I A2 / 800T A2 / 900 A2, 当前量化已经支持但不仅限于SD3和opensora1.2。
 多模态量化场景导入代码样例：
-```
+```python
 import torch
 from diffusers import StableDiffusion3Pipeline
 
 from msmodelslim.pytorch.quant.ptq_tools import Calibrator, QuantConfig
 
 
-pipe = StableDiffusion3Pipeline.from_pretrained("/stable-diffusion-3-medium-diffusers/", torch_dtype=torch.float16).to("npu") #模型路径
+pipe = StableDiffusion3Pipeline.from_pretrained(
+    "/stable-diffusion-3-medium-diffusers/", 
+    torch_dtype=torch.float16, 
+    local_files_only=True
+    ).to("npu") #模型路径
 pipe.set_progress_bar_config(disable=True)
 base = pipe
 model = pipe.transformer
@@ -90,7 +94,7 @@ calibrator.export_quant_safetensor("/output_path/")
 加载 SD3 预训练模型 --> 添加 Listener 类用于捕捉模型输入参数 --> 配置 calib_prompts --> 遍历 calib_prompts，输入 Listener 类中执行前向推理（num_inference_steps用于配置一个prompt生成多少个数据）--> 保存校准数据
 
 代码参考如下：
-```
+```python
 import torch
 from diffusers import StableDiffusion3Pipeline
 
@@ -112,7 +116,11 @@ class Listener(torch.nn.Module):
         self.inputs.append(sample)
         return self.module(*args, **kwargs)
 
-pipe = StableDiffusion3Pipeline.from_pretrained("path_to_stable-diffusion-3-medium-diffusers", torch_dtype=torch.float16)
+pipe = StableDiffusion3Pipeline.from_pretrained(
+    "path_to_stable-diffusion-3-medium-diffusers", 
+    torch_dtype=torch.float16, 
+    local_files_only=True
+    )
 pipe.to("npu")  # 使用gpu时则为pipe.to("cuda")
 
 pipe.transformer = Listener(pipe.transformer)

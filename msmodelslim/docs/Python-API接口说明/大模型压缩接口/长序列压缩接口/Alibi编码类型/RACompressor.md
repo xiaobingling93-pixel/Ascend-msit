@@ -18,7 +18,8 @@ RACompressor(model, cfg)
 ### 调用示例
 ```python
 from msmodelslim.pytorch.ra_compression import RACompressConfig, RACompressor
-model = AutoModelForCausalLM.from_pretrained(pretrained_model_name_or_path="baichuan2-13b/float_path/").float().cpu()  # 需根据模型的实际路径配置
+model = AutoModelForCausalLM.from_pretrained(pretrained_model_name_or_path="baichuan2-13b/float_path/", 
+                                             local_files_only=True).float().cpu()  # 需根据模型的实际路径配置
 config = RACompressConfig(theta=0.00001, alpha=100)
 ra = RACompressor(model,config) 
 ```

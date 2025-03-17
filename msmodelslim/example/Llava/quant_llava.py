@@ -24,13 +24,18 @@ if __name__ == '__main__':
     parser.add_argument('--device_type', type=str, choices=[CPU, NPU], default=CPU)
     args = parser.parse_args()
 
-    processor = AutoProcessor.from_pretrained(args.model_path, pad_token="<pad>")
+    processor = AutoProcessor.from_pretrained(args.model_path, 
+                                              local_files_only=True, 
+                                              pad_token="<pad>")
     ##1.加载模型
     device_map = CPU if args.device_type == CPU else "auto"
-    config = AutoConfig.from_pretrained(args.model_path, trust_remote_code=True)
+    config = AutoConfig.from_pretrained(args.model_path, 
+                                        local_files_only=True, 
+                                        trust_remote_code=True)
     dtype = config.torch_dtype if args.device_type == NPU else torch.float32
     model = LlavaForConditionalGeneration.from_pretrained(
-        args.model_path, 
+        args.model_path,
+        local_files_only=True, 
         torch_dtype=dtype, 
         device_map=device_map
     ).eval()

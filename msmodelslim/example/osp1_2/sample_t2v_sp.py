@@ -36,16 +36,26 @@ from msmodelslim.tools.logger import logger
 def load_t2v_checkpoint(model_path):
     logger.info('load_t2v_checkpoint, %s', model_path)
     if args.model_type == 'udit':
-        transformer_model = UDiTT2V.from_pretrained(model_path, cache_dir=args.cache_dir,
-                                                    low_cpu_mem_usage=False, device_map=None,
-                                                    torch_dtype=weight_dtype)
+        transformer_model = UDiTT2V.from_pretrained(model_path, 
+                                                    cache_dir=args.cache_dir,
+                                                    low_cpu_mem_usage=False, 
+                                                    device_map=None,
+                                                    torch_dtype=weight_dtype, 
+                                                    local_files_only=True)
     elif args.model_type == 'dit':
-        transformer_model = OpenSoraT2V.from_pretrained(model_path, cache_dir=args.cache_dir,
-                                                        low_cpu_mem_usage=False, device_map=None,
-                                                        torch_dtype=weight_dtype)
+        transformer_model = OpenSoraT2V.from_pretrained(model_path, 
+                                                        cache_dir=args.cache_dir,
+                                                        low_cpu_mem_usage=False, 
+                                                        device_map=None,
+                                                        torch_dtype=weight_dtype, 
+                                                        local_files_only=True)
     else:
-        transformer_model = LatteT2V.from_pretrained(model_path, cache_dir=args.cache_dir, low_cpu_mem_usage=False,
-                                                     device_map=None, torch_dtype=weight_dtype)
+        transformer_model = LatteT2V.from_pretrained(model_path, 
+                                                     cache_dir=args.cache_dir, 
+                                                     low_cpu_mem_usage=False,
+                                                     device_map=None, 
+                                                     torch_dtype=weight_dtype, 
+                                                     local_files_only=True)
     # set eval mode
     transformer_model.eval()
 
@@ -203,9 +213,14 @@ if __name__ == "__main__":
 
     vae.vae_scale_factor = ae_stride_config[args.ae]
 
-    text_encoder = MT5EncoderModel.from_pretrained(args.text_encoder_name, cache_dir=args.cache_dir,
-                                                   low_cpu_mem_usage=True, torch_dtype=weight_dtype).to(device)
-    tokenizer = T5Tokenizer.from_pretrained(args.text_encoder_name, cache_dir=args.cache_dir)
+    text_encoder = MT5EncoderModel.from_pretrained(args.text_encoder_name, 
+                                                   cache_dir=args.cache_dir,
+                                                   low_cpu_mem_usage=True, 
+                                                   torch_dtype=weight_dtype, 
+                                                   local_files_only=True).to(device)
+    tokenizer = T5Tokenizer.from_pretrained(args.text_encoder_name, 
+                                            cache_dir=args.cache_dir, 
+                                            local_files_only=True)
 
     # set eval mode
     vae.eval()

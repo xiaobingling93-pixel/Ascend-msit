@@ -7,9 +7,13 @@ from modelslim.pytorch.llm_ptq.anti_outlier import AntiOutlier, AntiOutlierConfi
 
 # for local path
 fp16_path = f"{os.environ['PROJECT_PATH']}/resource/llm_ptq/llama2_7b/"  # 原始模型路径，其中的内容如下图
-tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path=fp16_path, trust_remote_code=True)
-model = AutoModelForCausalLM.from_pretrained(pretrained_model_name_or_path=fp16_path, torch_dtype=torch.float32,
-                                             trust_remote_code=True).cpu()
+tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path=fp16_path, 
+                                          trust_remote_code=True, 
+                                          local_files_only=True)
+model = AutoModelForCausalLM.from_pretrained(pretrained_model_name_or_path=fp16_path, 
+                                             torch_dtype=torch.float32,
+                                             trust_remote_code=True, 
+                                             local_files_only=True).cpu()
 
 # 获取校准数据函数定义
 disable_names = []

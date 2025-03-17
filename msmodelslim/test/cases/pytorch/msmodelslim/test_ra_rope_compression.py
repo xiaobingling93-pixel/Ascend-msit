@@ -59,7 +59,7 @@ class FakeTokenizer(PreTrainedTokenizerBase):
 def test_ra_compression_given_model_then_pass():
     output_model_path = "./win.pt"
 
-    config = AutoConfig.from_pretrained("./")
+    config = AutoConfig.from_pretrained("./", local_files_only=True)
     model = AutoModelForCausalLM.from_config(config)
     tokenizer = FakeTokenizer()
 

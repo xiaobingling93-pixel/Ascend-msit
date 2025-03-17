@@ -9,8 +9,10 @@ from msmodelslim import logger as msmodelslim_logger
 
 # for local path
 LOAD_PATH = f"{os.environ['PROJECT_PATH']}/resource/llm_ptq/llama2_7b/"
-model = AutoModelForCausalLM.from_pretrained(pretrained_model_name_or_path=LOAD_PATH, torch_dtype=torch.float32,
-                                             trust_remote_code=True).cpu()
+model = AutoModelForCausalLM.from_pretrained(pretrained_model_name_or_path=LOAD_PATH, 
+                                             torch_dtype=torch.float32,
+                                             trust_remote_code=True, 
+                                             local_files_only=True).cpu()
 
 # 使用load_file()函数读取safetensor格式文件并将其解析为字典
 safetensor_dic = load_file(

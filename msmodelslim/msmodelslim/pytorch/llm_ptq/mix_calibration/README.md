@@ -94,14 +94,16 @@ MODEL_PATH = "./model"
 CONFIG_PATH = "./mix_config.json"
 SAVE_PATH = "./mix_dataset.json"
 
-config = AutoConfig.from_pretrained(MODEL_PATH, trust_remote_code=True)
+config = AutoConfig.from_pretrained(MODEL_PATH, trust_remote_code=True, local_files_only=True)
 tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path=MODEL_PATH,
-                                          trust_remote_code=True)
+                                          trust_remote_code=True, 
+                                          local_files_only=True)
 model = AutoModelForCausalLM.from_pretrained(pretrained_model_name_or_path=MODEL_PATH,
                                              trust_remote_code=True,
                                              config=config,
                                              torch_dtype='auto',
-                                             device_map='auto')
+                                             device_map='auto', 
+                                             local_files_only=True)
 
 # 基础支持的校准集包括boolq、ceval_5_shot、gsm8k、mmlu。 customized_dataset_name为用户自定义数据集名称
 # 当sample_size中设置了非config.json中配置的数据集且非用户自定义数据集名称时，会报错“Dataset {dataset_name} has no handler”

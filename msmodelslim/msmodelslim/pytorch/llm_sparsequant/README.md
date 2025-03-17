@@ -137,11 +137,13 @@ import torch.utils.data
 from transformers import AutoTokenizer, AutoModel
 # for local path
 tokenizer = AutoTokenizer.from_pretrained(
-    pretrained_model_name_or_path='./chatglm2'
+    pretrained_model_name_or_path='./chatglm2', 
+    local_files_only=True
 ) 
 model = AutoModel.from_pretrained(
     pretrained_model_name_or_path='./chatglm2',
-    torch_dtype=torch.float16
+    torch_dtype=torch.float16, 
+    local_files_only=True
   ).npu()    # 如果需要在npu上进行多卡量化，需要先参考前提条件进行配置，并配置以下参数device_map='auto', torch_dtype为当前使用模型的默认数据类型；在npu上进行量化时，单卡校准需将模型移到npu上model = model.npu()，多卡校准时不需要
 # 准备校准数据，请根据实际情况修改
 calib_list = ["中国的首都在哪里？",

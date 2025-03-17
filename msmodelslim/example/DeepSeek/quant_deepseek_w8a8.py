@@ -77,7 +77,9 @@ def main():
     # 显示整个量化过程各个步骤的进度条
     pbar = tqdm(total=5, position=0, desc="Total Process")
     model_path = args.model_path
-    config = AutoConfig.from_pretrained(pretrained_model_name_or_path=model_path, trust_remote_code=True)
+    config = AutoConfig.from_pretrained(pretrained_model_name_or_path=model_path, 
+                                        local_files_only=True, 
+                                        trust_remote_code=True)
     # Set layer count to 0 means use all layers, otherwise it will only use the first layer_count layers
     config.num_hidden_layers = args.layer_count if args.layer_count != 0 else config.num_hidden_layers
     # Set model type to deepseekv2 because we only support deepseekv2 now,
@@ -87,12 +89,14 @@ def main():
     config.use_cache = False
 
     tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path=model_path,
+                                              local_files_only=True,
                                               config=config,
                                               trust_remote_code=True,
                                               use_fast=True,
                                               add_eos_token=True)
 
     model = AutoModelForCausalLM.from_pretrained(pretrained_model_name_or_path=model_path,
+                                                 local_files_only=True,
                                                  config=config,
                                                  trust_remote_code=True,
                                                  device_map={

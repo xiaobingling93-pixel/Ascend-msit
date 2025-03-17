@@ -69,8 +69,11 @@ def build_pipeline(args):
     def load_t2v_checkpoint(model_path):
         logger.info('load_t2v_checkpoint, %s', str(model_path))
         if args.model_type == 'dit':
-            transformer_model = OpenSoraT2V.from_pretrained(model_path, cache_dir=args.cache_dir,
-                                                            low_cpu_mem_usage=False, device_map=None,
+            transformer_model = OpenSoraT2V.from_pretrained(model_path, 
+                                                            local_files_only=True, 
+                                                            cache_dir=args.cache_dir,
+                                                            low_cpu_mem_usage=False, 
+                                                            device_map=None,
                                                             torch_dtype=weight_dtype)
         else:
             raise ValueError('--model_type is not supported')
@@ -118,9 +121,14 @@ def build_pipeline(args):
 
     vae.vae_scale_factor = ae_stride_config[args.ae]
 
-    text_encoder = MT5EncoderModel.from_pretrained(args.text_encoder_name, cache_dir=args.cache_dir,
-                                                   low_cpu_mem_usage=True, torch_dtype=weight_dtype).to(device)
-    tokenizer = T5Tokenizer.from_pretrained(args.text_encoder_name, cache_dir=args.cache_dir)
+    text_encoder = MT5EncoderModel.from_pretrained(args.text_encoder_name, 
+                                                   cache_dir=args.cache_dir,
+                                                   low_cpu_mem_usage=True, 
+                                                   torch_dtype=weight_dtype, 
+                                                   local_files_only=True).to(device)
+    tokenizer = T5Tokenizer.from_pretrained(args.text_encoder_name, 
+                                            cache_dir=args.cache_dir, 
+                                            local_files_only=True)
 
     # set eval mode
     vae.eval()

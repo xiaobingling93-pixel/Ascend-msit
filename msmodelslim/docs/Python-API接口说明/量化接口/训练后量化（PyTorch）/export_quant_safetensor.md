@@ -24,7 +24,7 @@ safe_tensor格式的权重文件和json描述文件。safetensors权重文件包
 ```python
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
 quant_config = QuantConfig(act_method=1, quant_mode=1,device="npu")
-pipe = OpenSoraPipeline12.from_pretrained("open-sora/")
+pipe = OpenSoraPipeline12.from_pretrained("open-sora/", local_files_only=True)
 pipe = compile_pipe(pipe)
 model = pipe.transformer   #根据模型实际路径配置
 calibrator = Calibrator(model, quant_config, calib_dataset)

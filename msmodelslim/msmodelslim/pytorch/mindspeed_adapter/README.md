@@ -78,7 +78,8 @@ def main():
     args = get_args()
     model = MegatronModuleForCausalLM.from_pretrained(
         model_provider=model_provider,
-        pretrained_model_name_or_path=args.load
+        pretrained_model_name_or_path=args.load, 
+        local_files_only=True
     )
     tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_name_or_path, trust_remote_code=True, local_files_only=True)
     quant(model) #插入之前写好的量化函数

@@ -17,12 +17,18 @@ LOAD_PATH = f"{os.environ['PROJECT_PATH']}/resource/llm_ptq/llama2_7b/"
 calib_dataset = []
 
 # 加载模型配置
-config = AutoConfig.from_pretrained(LOAD_PATH, trust_remote_code=True)
+config = AutoConfig.from_pretrained(LOAD_PATH, 
+                                    trust_remote_code=True, 
+                                    local_files_only=True)
 # 加载分词器
-tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path=LOAD_PATH, trust_remote_code=True)
+tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path=LOAD_PATH, 
+                                          trust_remote_code=True, 
+                                          local_files_only=True)
 # 加载模型，并指定数据类型为float32，然后移动到CPU
 model = AutoModelForCausalLM.from_pretrained(pretrained_model_name_or_path=LOAD_PATH,
-                                             torch_dtype=torch.float32, trust_remote_code=True).cpu()
+                                             torch_dtype=torch.float32, 
+                                             trust_remote_code=True, 
+                                             local_files_only=True).cpu()
 
 # 设置分词器的填充侧和填充符号
 tokenizer.padding_side = 'left'
