@@ -117,11 +117,14 @@ class QuantConfig:
         self.opset_version = None
         soc_version = acl.get_soc_name()
         check_number(self.graph_optimize_level, int, 0, 2, param_name="graph_optimize_level")
+
+        supported_soc_versions = ['Ascend310P3', 'Ascend310P5', 'Ascend310P7']
         if self.graph_optimize_level > 0:
-            if soc_version == 'Ascend310P3':
-                self.soc_version = 'Ascend310P3'
+            if soc_version in supported_soc_versions:
+                self.soc_version = soc_version
             else:
-                raise ValueError('Because of aok optimizition, the soc_version should be Ascend310P3')
+                raise ValueError(f'Because of aok optimization, the soc_version should be one of {supported_soc_versions}')
+        
         self.iterations = 100
         self.runs = 1
         self.device_id = device_id
