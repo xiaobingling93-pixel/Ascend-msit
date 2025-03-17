@@ -1,6 +1,7 @@
 import unittest
 import os
 import tempfile
+from unittest.mock import patch
 from msit_llm.common.log import logger
 from msit_llm.parameters_check.service_parameters_check import (
     extract_log_parameters,
@@ -8,7 +9,6 @@ from msit_llm.parameters_check.service_parameters_check import (
     compare_service_parameters,
     service_params_check,
     generate_report,
-    service_parameters,
 )
 
 
@@ -74,8 +74,6 @@ class TestUpdatedServiceParametersCheck(unittest.TestCase):
         params2 = {"top_p": 0.9}
         compare_service_parameters(params1, params2, 1, diffs)
 
-        # 验证所有服务参数都被检查
-        # self.assertEqual(len(diffs), len(service_parameters))
         # 验证存在的参数
         self.assertTrue(any(d["param"] == "temperature" and d["file2_value"] == "N/A" for d in diffs))
         self.assertTrue(any(d["param"] == "top_p" and d["file1_value"] == "N/A" for d in diffs))
@@ -132,6 +130,103 @@ class TestUpdatedServiceParametersCheck(unittest.TestCase):
         self.assertIn("top_p,0.9,0.8", content)
         self.assertIn("do_sample,True,False", content)
         self.assertIn("req_order,param,file1_value,file2_value", content)
+
+    @patch("msit_llm.common.log.logger.warning")
+    def test_no_sampling_params(self, mock_error):
+        """测试日志中没有 SamplingParams 的情况"""
+        # 准备测试文件
+        txt_content = "req0: "
+        log_content = """
+        [endpoint] Sampling parameters for request id: any_id
+        {
+           "temperature": [0.7], 
+        }
+        """
+        txt_file = self.create_temp_file(txt_content, ".txt")
+        log_file = self.create_temp_file(log_content, ".log")
+        # 执行比对
+        service_params_check(txt_file, log_file)
+        # 获取所有错误消息文本
+        error_messages = [args[0] for args, _ in mock_error.call_args_list]
+        # 验证必须包含的关键错误
+        self.assertIn("Please check whether the SamplingParams(...) is correct", error_messages[0])
+
+    @patch("msit_llm.common.log.logger.warning")
+    def test_unclosed_parentheses(self, mock_error):
+        """测试 SamplingParams 括号未闭合"""
+        # 准备测试文件
+        txt_content = "req0: SamplingParams("
+        log_content = """
+        [endpoint] Sampling parameters for request id: any_id
+        {
+           "temperature": [0.7], 
+        }
+        """
+        txt_file = self.create_temp_file(txt_content, ".txt")
+        log_file = self.create_temp_file(log_content, ".log")
+        # 执行比对
+        service_params_check(txt_file, log_file)
+        # 获取所有错误消息文本
+        error_messages = [args[0] for args, _ in mock_error.call_args_list]
+        # 验证必须包含的关键错误
+        self.assertIn("Please check whether the SamplingParams(...) is correct", error_messages[0])
+
+    @patch("msit_llm.common.log.logger.warning")
+    def test_invalid_parameter_format(self, mock_error):
+        """测试参数格式错误（无等号）"""
+        # 准备测试文件
+        txt_content = "req0: SamplingParams(temperature0.7)"
+        log_content = """
+        [endpoint] Sampling parameters for request id: any_id
+        {
+           "temperature": [0.7], 
+        }
+        """
+        txt_file = self.create_temp_file(txt_content, ".txt")
+        log_file = self.create_temp_file(log_content, ".log")
+        # 执行比对
+        service_params_check(txt_file, log_file)
+        error_messages = [args[0] for args, _ in mock_error.call_args_list]
+        self.assertIn("Please check whether the parameter: temperature0.7 is correct.", error_messages[0])
+
+    @patch("msit_llm.common.log.logger.warning")
+    def test_invalid_do_sample(self, mock_warning):
+        """测试 do_sample 解析异常"""
+        # 准备测试文件
+        txt_content = "req0: SamplingParams(temperature=0.7)do_sample:-"
+        log_content = """
+        [endpoint] Sampling parameters for request id: any_id
+        {
+           "temperature": [0.7], 
+        }
+        """
+        txt_file = self.create_temp_file(txt_content, ".txt")
+        log_file = self.create_temp_file(log_content, ".log")
+        # 执行比对
+        service_params_check(txt_file, log_file)
+
+        mock_warning.assert_called_with("Please check that the content of the do_sample is correct.")
+
+    @patch("msit_llm.common.log.logger.warning")
+    def test_mismatched_brackets_params(self, mock_error):
+        """测试参数括号不匹配"""
+        # 准备测试文件
+        txt_content = "req0: SamplingParams(temperature=1.0, stop=['stop1', 'stop2'})"
+        log_content = """
+        [endpoint] Sampling parameters for request id: any_id
+        {
+           "temperature": [0.7], 
+        }
+        """
+        txt_file = self.create_temp_file(txt_content, ".txt")
+        log_file = self.create_temp_file(log_content, ".log")
+        # 执行比对
+        service_params_check(txt_file, log_file)
+        # 获取所有错误消息文本
+        error_messages = [args[0] for args, _ in mock_error.call_args_list]
+        # 验证必须包含的关键错误
+        self.assertIn("Mismatched brackets: expected ']', got '}' in line: req0: SamplingParams("
+                      "temperature=1.0, stop=['stop1', 'stop2'})", error_messages[0])
 
     def test_multi_request_report(self):
         """测试多请求报告生成"""
