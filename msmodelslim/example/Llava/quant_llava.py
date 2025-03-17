@@ -42,7 +42,8 @@ if __name__ == '__main__':
 
 
     ##2.设置回退层
-    disable_names = [f"language_model.model.layers.{layer}.mlp.down_proj" for layer in range(32)]
+    text_num_layers = config.text_config.num_hidden_layers
+    disable_names = [f"language_model.model.layers.{layer}.mlp.down_proj" for layer in range(text_num_layers)]
     disable_names.append('language_model.lm_head') 
 
     ##3.校准集
