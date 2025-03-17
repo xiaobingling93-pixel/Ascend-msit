@@ -22,7 +22,7 @@ import pandas as pd
 from tabulate import tabulate
 
 from msit_llm.common.log import logger
-from components.utils.file_open_check import ms_open
+from components.utils.file_open_check import ms_open, sanitize_csv_value
 
 service_parameters = ['temperature', 'top_k', 'top_p', 'do_sample', 'seed', 'repetition_penalty', 'watermark',
                       'frequency_penalty', 'presence_penalty', 'length_penalty', 'ignore_eos']
@@ -316,11 +316,20 @@ def service_params_check(input1, input2):
         logger.error('Please make sure that the type and format of the input file is correct')
 
 
+def csv_input_safecheck(csv_input):
+    logger.info('Safety check for csv content')
+    for dif in csv_input:
+        for key, value in dif.items():
+            sanitize_csv_value(key)
+            sanitize_csv_value(value)
+
+
 def generate_report(differences, output_file="comparison_report.csv"):
     """生成比对报告并保存为CSV文件"""
     if not differences:
         logger.info(f"No differences found")
     else:
+        csv_input_safecheck(differences)
         df = pd.DataFrame(differences)
         df['file1_value'] = df['file1_value'].astype(str)
         df['file2_value'] = df['file2_value'].astype(str)

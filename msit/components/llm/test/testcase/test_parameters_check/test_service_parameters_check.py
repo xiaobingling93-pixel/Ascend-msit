@@ -9,6 +9,7 @@ from msit_llm.parameters_check.service_parameters_check import (
     compare_service_parameters,
     service_params_check,
     generate_report,
+    csv_input_safecheck
 )
 
 
@@ -290,6 +291,12 @@ class TestUpdatedServiceParametersCheck(unittest.TestCase):
         with self.assertLogs(logger, level='ERROR') as cm:
             service_params_check(log1, log2)
         self.assertTrue(any("ERROR" in log for log in cm.output))
+    
+    def test_malicious_key_raises_exception(self):
+        """测试恶意名称触发异常"""
+        differences = [{'req_order': 1, 'param': '=;+', 'file1_value': 0.5, 'file2_value': 0.6}]
+        with self.assertRaises(ValueError):
+            csv_input_safecheck(differences)
 
 
 if __name__ == '__main__':
