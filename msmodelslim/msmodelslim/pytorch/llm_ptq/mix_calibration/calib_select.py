@@ -348,6 +348,7 @@ class CalibHandler:
         random_idxs = list(range(dataset_size))
         random.shuffle(random_idxs)
         idxs_batches = [random_idxs[i:i + self.batch_size] for i in range(0, len(random_idxs), self.batch_size)]
+        sampling_pbar = tqdm(total=self.sample_size, leave=False, desc=f"{self.dataset_name} sampling progress")
 
         for idx_batch in idxs_batches:
             if len(self.output_dataset) >= self.sample_size:
@@ -357,11 +358,13 @@ class CalibHandler:
             prmpts_anses = self.dataset_processor.process_data(idx_batch)
             if not need_positive_prompt:
                 self.output_dataset.extend(prmpts_anses)
+                sampling_pbar.update(len(prmpts_anses))
             else:
                 prompts = [d["prompt"] for d in prmpts_anses if "prompt" in d]
                 labels = [d['ans'] for d in prmpts_anses if "ans" in d]
                 prmpts_gts = self.dataset_processor.verify_positive_prompt(prompts, labels)
                 self.output_dataset.extend(prmpts_gts)
+                sampling_pbar.update(len(prmpts_gts))
 
         msmodelslim_logger.warning(
             f"Dataset {self.dataset_name} : available samples is less than the number of samples.")
