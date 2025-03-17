@@ -24,7 +24,7 @@ from msit_llm.common.log import logger
 from msit_llm.common.utils import load_file_to_read_common_check
 from components.utils.util import safe_torch_load
 from components.utils.security_check import ms_makedirs
-from components.utils.constants import TEXT_FILE_MAX_SIZE
+from components.utils.constants import CSV_FILE_MAX_SIZE
 from components.utils.cmp_algorithm import cosine_similarity, kl_divergence, l1_norm
 from components.utils.file_open_check import ms_open, sanitize_csv_value
 
@@ -308,7 +308,7 @@ class LogitsComparison:
         ms_makedirs(self.output_dir, mode=0o700, exist_ok=True)
         output_csv = os.path.join(self.output_dir, result_filename)
         logger.info(f"Save compare result to {output_csv}")
-        with ms_open(output_csv, 'w', max_size=TEXT_FILE_MAX_SIZE) as f:
+        with ms_open(output_csv, 'w', max_size=CSV_FILE_MAX_SIZE) as f:
             writer = csv.writer(f)
             writer.writerow([FILE_NAME, KEY, TOKEN_ID, COS_SIMILARITY, KL_DIVERGENCE, L1_NORM, ULP_MAX_DIFF, ULP,
                              PASSED, CMP_FAIL_REASON])
