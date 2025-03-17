@@ -426,8 +426,8 @@ class CalibrationData(object):
         self.read_config(config_path)
         self.mixed_dataset = []
         self.save_path = None
-        if save_path is not None:
-            check_type(save_path, str, "save_path")
+        check_type(save_path, str, "save_path")
+        if len(save_path) > 0:
             self.save_path = get_valid_write_path(save_path)
 
     def verify_model(self):
