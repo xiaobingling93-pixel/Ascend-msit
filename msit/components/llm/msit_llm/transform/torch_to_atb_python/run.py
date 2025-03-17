@@ -155,7 +155,7 @@ if __name__ == "__main__":
     if mindie_supported:
         import subprocess
         from pathlib import Path
-
+        run_pa_path = check_input_path_legality(run_pa_path)
         contents_str = Path(run_pa_path).read_text()
         contents_str = contents_str.replace("Who is the CEO of Google?", args.inputs)
         write_file(run_pa_path, contents_str)
