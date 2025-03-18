@@ -596,20 +596,12 @@ class BadCaseAnalyze(BaseCommand):
 class LogitsDump(BaseCommand):
     def add_arguments(self, parser, **kwargs) -> None:
         parser.add_argument(
-            '--model-config-path',
-            '-mcp',
-            dest="model_config_path",
+            '--exec',
+            '-e',
+            dest="exec",
             required=True,
-            type=load_file_to_read_common_check, 
-            help="Model config path for modeltest. It must be a valid yaml path")
-
-        parser.add_argument(
-            '--task-config-path',
-            '-tcp',
-            dest="task_config_path",
-            required=True,
-            type=load_file_to_read_common_check, 
-            help="Task config path for modeltest. It must be a valid yaml path")
+            type=safe_string, 
+            help="Test cmd for modeltest. It must be a valid cmd")
 
         parser.add_argument(
             '--bad-case-result',
@@ -619,22 +611,6 @@ class LogitsDump(BaseCommand):
             type=load_file_to_read_common_check,
             help="Bad case result csv file from BadCaseAnalyze tool, It must be a valid csv path")
 
-        parser.add_argument(
-            '--device',
-            '-d',
-            dest="device_id",
-            type=check_device_range_valid,
-            default="0",
-            help="The devices that programer run on. E.g: '--device 0,1,2,3', default=0")
-        
-        parser.add_argument(
-            '--output-dir',
-            '-o',
-            dest="output_dir",
-            type=check_output_path_legality,
-            default='./output',
-            help="Data output directory. E.g: '--output /xx/xxxx/xx', default=./output")
-        
         parser.add_argument(
             '--token-range',
             '-tr',

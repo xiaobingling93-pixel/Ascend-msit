@@ -22,7 +22,6 @@ from msit_llm.common.log import logger
 
 HUMANEVAL_X_KEY_PREFIX = ["CPP", "Go", "Java", "JavaScript", "Python"]
 HUMANEVAL_KEY_PREFIX = "HumanEval"
-MASTER_PORT = 9826
 
 
 # 生成humaneval-X数据集的bad case list
@@ -140,70 +139,29 @@ def del_env():
 
 class LogitsDumper:
     def __init__(self, args):
-        self.model_config_path = args.model_config_path
-        self.task_config_path = args.task_config_path
+        self.exec = args.exec
         self.bad_case_result_csv = args.bad_case_result_csv
-        self.device_id = args.device_id
-        self.output_dir = args.output_dir
         self.token_range = args.token_range
 
-    def build_modeltest_cmd(self, device_num):
-        cmd_infer_part = [
-            "modeltest",
-            "--model_config_path", self.model_config_path,
-            "--task_config_path", self.task_config_path,
-            "--batch_size", "1",
-            "--tp", str(device_num),
-            "--output_dir", self.output_dir,
-            "--lcoc_disable", "--save_debug_enable"
-        ]
-        return cmd_infer_part
-
-    def build_cmd_for_npu(self, device_num, visible_device):
-        os.environ['ASCEND_RT_VISIBLE_DEVICES'] = visible_device
-        cmd_infer_part = self.build_modeltest_cmd(device_num)
-        if device_num == 1: # 单卡
-            cmd_model_infer = cmd_infer_part
-        else: # 多卡
-            cmd_trochrun = [
-                "torchrun",
-                "--nproc_per_node", str(device_num),
-                "--master_port", str(MASTER_PORT),
-                "--no-python"
-            ]
-            cmd_model_infer = cmd_trochrun + cmd_infer_part
-        return cmd_model_infer
-    
-    def build_cmd_for_gpu(self, device_num, visible_device):
-        os.environ['CUDA_VISIBLE_DEVICES'] = visible_device
-        cmd_model_infer = self.build_modeltest_cmd(device_num)
-        return cmd_model_infer
 
     def dump_logits(self):
         bad_case_list = build_bad_case_list(self.bad_case_result_csv)
         os.environ['BAD_CASE_LOGITS_DUMP'] = "True"
         os.environ['LOGITS_DUMP_TOKEN_MAX_LENGTH'] = f"{self.token_range}"
         os.environ['BAD_CASE_LIST'] = repr(bad_case_list)
-        if isinstance(self.device_id, int):
-            device_num = 1
-            visible_device = f"{self.device_id}"
-        else:
-            device_num = len(self.device_id)
-            str_device_id = [str(id) for id in self.device_id]
-            visible_device = ",".join(str_device_id)
-        if check_npu():
-            logger.info("Infer model and dump logits on NPU device")
-            cmd_model_infer = self.build_cmd_for_npu(device_num, visible_device)
-        elif check_gpu():
-            logger.info("Infer model and dump logits on GPU device")
-            cmd_model_infer = self.build_cmd_for_gpu(device_num, visible_device)
-        else:
+        cmd_model_infer = self.exec.split()
+        if len(cmd_model_infer) < 1:
+            raise RuntimeError("The input command is empty.")
+        elif cmd_model_infer[0] != "torchrun" and cmd_model_infer[0] != "modeltest":
+            raise RuntimeError("The input command is invaild."\
+                               " It needs to start with either 'torchrun' or 'modeltest'.")
+        if not (check_npu() or check_gpu()):
             del_env()
             raise RuntimeError("NPU/GPU is not available")
 
         execute_command(cmd_model_infer, True)
 
-        result_path = f"{self.output_dir}/data/{{DEVICE_TYPE}}/precision_test/{{dataset}}/"\
+        result_path = f"{{output_dir}}/data/{{DEVICE_TYPE}}/precision_test/{{dataset}}/"\
                        "{{data_type}}/{{model_name}}/logits/"
         logger.info("'Logits Dump' has successfully finished, the logits is stored at '%s'", result_path)
         logger.info("The logits dump process is finished. Eliminate the impact of the environment variables.")
