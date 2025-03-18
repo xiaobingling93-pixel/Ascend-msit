@@ -69,6 +69,5 @@
         device_map=device_map,
         use_safetensors=True,
         trust_remote_code=True,
-        local_file_only=True,
         max_memory={0: "20GB", 1: "20GB", 2: "20GB", 3: "20GB", 4: "20GB", 5: "20GB", 6: "20GB", 7: "20GB", "cpu": "20GB"}).eval()
 ```
