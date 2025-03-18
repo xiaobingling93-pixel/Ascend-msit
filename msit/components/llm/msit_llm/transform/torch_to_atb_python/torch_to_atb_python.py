@@ -394,7 +394,10 @@ class ATBModelFromTorch(ATBModel):
                 self._op_process_moe_gate(atb_operation=atb_operation, module_name=module_name)
                 self._op_process_moe_router(atb_operation=atb_operation, module_name=module_name)
                 self._op_process_moe_norm(atb_operation=atb_operation, module_name=module_name)
-                layer_id = re.findall(r'\d+', module_name)[0]
+                find_names = re.findall(r'\d+', module_name)
+                if len(find_names) < 1:
+                    raise RuntimeError(f"Invalid module name: {module_name}")
+                layer_id = find_names[0]
                 self._op_process_moe_mlp_init_routing(atb_operation=atb_operation, module_name=module_name)
                 self._op_process_moe_mlp_cast(atb_operation=atb_operation, module_name=module_name)
                 self._op_process_moe_mlp_gate_up_gmm(atb_operation=atb_operation, 
@@ -405,6 +408,8 @@ class ATBModelFromTorch(ATBModel):
                                                 module_name=module_name, 
                                                 layer_id=layer_id)
                 self._op_process_moe_mlp_moe_token_unpermute(atb_operation=atb_operation, module_name=module_name)
+                if len(self.operations) < 1:
+                    raise RuntimeError("Build operations failed, Please check it!")
                 cur_outputs = self.operations[-1].outputs
                 output_node_map[node.name] = previous_operation_out = operation_outputs[cur_module_name] = cur_outputs
             elif atb_operation.op_type == "SelfAttention":
