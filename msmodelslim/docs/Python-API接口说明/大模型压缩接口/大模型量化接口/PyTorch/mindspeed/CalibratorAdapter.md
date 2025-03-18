@@ -3,6 +3,11 @@
 ### 功能说明
 针对Mindspeed-LLM模型的量化参数配置类，继承自Calibrator，对外接口与Calibrator一致, 不支持cpu执行量化。
 
+### 继承关系
+CalibratorAdapter继承自Calibrator类，保持了与Calibrator相同的外部接口，包括：
+- run()：执行量化流程
+- save()：保存量化后的模型和权重
+
 ### 函数原型
 ```python
 CalibratorAdapter(model, cfg: quantconfig, calib_data=None, disable_level='L0', all_tensors=None)
@@ -24,4 +29,6 @@ from msmodelslim.pytorch.mindspeed_adapter import ModelAdapter, CalibratorAdapte
 model = ModelAdapter(model)
 quant_config = QuantConfig(dev_type='npu', pr=0.5, mm_tensor=Flase)
 calibrator = CalibratorAdapter(model, quant_config, calib_data=dataset_calib, disable_level='L0')
+calibrator.run()  # 与Calibrator相同的用法
+calibrator.save(quant_weight_save_path)  # 与Calibrator相同的用法
 ```
