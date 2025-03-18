@@ -57,5 +57,5 @@
 ##### GLM-4-9B w8a8c8量化
 - 生成GLM-4-9B模型w8a8c8量化权重，使用histogram量化方式，在NPU上进行运算
   ```shell
-  python3 quant_glm.py --model_path {浮点权重路径} --save_directory {W8A8C8量化权重路径} --device_type npu --act_method 2 --anti_method m4 --disable_level L0 --w_bit 8 --a_bit 8 --use_kvcache_quant True --calib_file ../common/mix_dataset_glm.json --anti_file ../common/mix_dataset_glm.json
+  python3 quant_glm.py --model_path {浮点权重路径} --save_directory {W8A8C8量化权重路径} --device_type npu --act_method 2 --disable_level L0 --w_bit 8 --a_bit 8 --use_kvcache_quant True --calib_file ../common/mix_dataset_glm.json --anti_file ../common/mix_dataset_glm.json
   ```
