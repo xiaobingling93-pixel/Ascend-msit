@@ -33,6 +33,15 @@ def get_config():
     return EasyDict(a_qconfig), EasyDict(w_qconfig)
 
 
+def check_internvl2_8b_model(cfg):
+    internvl2_8b_vision_layers = 24
+    internvl2_8b_llm_layers = 32
+    if cfg.vision_config.num_hidden_layers == internvl2_8b_vision_layers:
+        if cfg.llm_config.num_hidden_layers == internvl2_8b_llm_layers:
+            return True
+    return False
+
+
 class QuantV2QwenBlock(nn.Module):
     def __init__(self, org_layer, cfg, layername):
         super().__init__()
@@ -500,7 +509,6 @@ class QuantQwen2VLDecoderLayer(nn.Module):
         self.cac_migrate_attn = True
         self.cac_migrate_mlp = True
         self.cfg = cfg
-        self.device = cfg.device
         self.layername = layername
 
     def forward(
@@ -525,7 +533,7 @@ class QuantQwen2VLDecoderLayer(nn.Module):
             dim = self.cfg.hidden_size // self.cfg.num_attention_heads
             max_position_embeddings = self.cfg.max_position_embeddings
             base = self.cfg.rope_theta
-            device = self.device
+            device = hidden_states.device
             inv_freq = 1.0 / (base ** (torch.arange(0, dim, 2).float().to(device) / dim))
             t = torch.arange(max_position_embeddings, device=device, dtype=inv_freq.dtype)
             freqs = torch.outer(t, inv_freq)
@@ -676,9 +684,7 @@ class QuantQwen2VLVisionBlock(nn.Module):
 class QuantInternLM2DecoderLayer(nn.Module):
     def __init__(self, org_layer, cfg, layername):
         super().__init__()
-        self.device = cfg.device
         self.cfg = cfg.llm_config
-        self.device = cfg.device
         self.attention = org_layer.attention
         self.act_fn = org_layer.feed_forward.act_fn
         self.feed_forward = org_layer.feed_forward
@@ -792,6 +798,7 @@ class QuantInternLM2DecoderLayer(nn.Module):
 class QuantInternVisionEncoderLayer(nn.Module):
     def __init__(self, org_layer, cfg, layername):
         super().__init__()
+        self.all_cfg = cfg
         self.cfg = cfg.vision_config
 
         self.embed_dim = self.cfg.hidden_size
@@ -863,6 +870,10 @@ class QuantInternVisionEncoderLayer(nn.Module):
             channel_min = post_ln_2.min(0)[0].min(0)[0]
             shift = (channel_max + channel_min) / 2
             post_ln_2 -= shift
+            if check_internvl2_8b_model(self.all_cfg):
+                if self.mlp.fc1.bias is not None:
+                    self.mlp.fc1.bias.data += shift @ self.mlp.fc1.weight.data.T
+
             # calculate scale
             weight_list = torch.cat([self.mlp.fc1.weight])
             extra_dict = {

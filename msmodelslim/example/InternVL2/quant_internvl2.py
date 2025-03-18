@@ -18,7 +18,7 @@ if __name__ == '__main__':
     parser.add_argument('--w_bit', type=int, default=8)
     parser.add_argument('--a_bit', type=int, default=8)
     parser.add_argument('--device_type', type=str, choices=[CPU, NPU], default=CPU)
-    parser.add_argument('--is_8B_model', type=bool, default=True, help='whether to use 8B model')
+    parser.add_argument('--is_8B_model', action="store_true", help='whether to use 8B model')
     args = parser.parse_args()
 
     # 1.加载模型
