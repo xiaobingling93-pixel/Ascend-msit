@@ -42,7 +42,8 @@ if __name__ == '__main__':
 
 
     ##2.设置回退层
-    disable_names = [f"transformer.h.{layer}.mlp.c_proj" for layer in range(32)]
+    num_layers = config.num_hidden_layers
+    disable_names = [f"transformer.h.{layer}.mlp.c_proj" for layer in range(num_layers)]
     disable_names.append("transformer.visual.attn_pool.attn.out_proj")
     disable_names.append("lm_head")
 
