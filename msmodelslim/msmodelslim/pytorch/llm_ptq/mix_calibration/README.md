@@ -129,7 +129,7 @@ print(mixed_dataset)
 通过get_calib_dataset()方法，以混合校准集生成的mixed_dataset为输入，输出可以应用于量化模块``Calibrator(model, quant_config, calib_data=mixed_dataset, disable_level='L0')``中``calib_data``的输入
 ```python
 import torch
-import torch.nn.funtional as F
+import torch.nn.functional as F
 
 def get_anti_dataset(tokenizer, mixed_dataset, device="npu"):
     """用于离群值抑制的校准集"""
