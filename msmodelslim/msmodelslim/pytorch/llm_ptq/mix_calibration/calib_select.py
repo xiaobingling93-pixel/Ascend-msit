@@ -25,13 +25,11 @@ class BoolqProcessor(DatasetProcessorBase):
     def __init__(self, dataset_path, tokenizer=None, model=None):
         super().__init__(dataset_path, tokenizer, model)
         self.choice_tokens = []
-        self.ori_dataset = []
         self.dataset_path = get_valid_read_path(self.dataset_path)
         with open(self.dataset_path, encoding='utf-8') as f:
             for line in f:
                 line_json = json.loads(line)
-                self.ori_dataset.append(line_json)
-                self.dataset_size += 1
+                self.ori_prompts.append(line_json)
 
         if self.model is not None:
             sample_yes = "How can we learning machine learning: yes"
@@ -49,7 +47,7 @@ class BoolqProcessor(DatasetProcessorBase):
 
         prmpts_anses = []
         for idx in indexs:
-            sample_data = self.ori_dataset[idx]
+            sample_data = self.ori_prompts[idx]
             title = sample_data["title"]
             quest = sample_data["question"]
             passage = sample_data["passage"]
@@ -93,7 +91,6 @@ class CEval5ShotProcessor(DatasetProcessorBase):
             for i in range(task_len):
                 subject_prompt.append(self.format_example(val_df, i, include_answer=False))
                 self.ori_answers.append(val_df.iloc[i, len(self.choices) + 1])
-                self.dataset_size += 1
             train_prompts = [self.gen_prompt(dev_df, task_name, self.shot)] * len(subject_prompt)
             self.ori_prompts.extend([t + p for t, p in zip(train_prompts, subject_prompt)])
         self.ori_prompts = [prompt.encode().decode(encoding="utf8") for prompt in self.ori_prompts]
@@ -171,14 +168,12 @@ class CEval5ShotProcessor(DatasetProcessorBase):
 class Gsm8kProcessor(DatasetProcessorBase):
     def __init__(self, dataset_path, tokenizer=None, model=None):
         super().__init__(dataset_path, tokenizer, model)
-        self.ori_dataset = []
         self.cot_prompt = ''
         self.dataset_path = get_valid_read_path(self.dataset_path)
         with open(self.dataset_path, encoding='utf-8') as f:
             for line in f:
                 line_json = json.loads(line)
-                self.ori_dataset.append(line_json)
-                self.dataset_size += 1
+                self.ori_prompts.append(line_json)
 
     def build_prompt(self, question, answer):
         if self.cot_prompt == '':
@@ -192,7 +187,7 @@ class Gsm8kProcessor(DatasetProcessorBase):
     def process_data(self, indexs):
         prmpts_anses = []
         for idx in indexs:
-            sample_data = self.ori_dataset[idx]
+            sample_data = self.ori_prompts[idx]
             question = sample_data["question"]
             answer = sample_data["answer"]
             prmpts_anses.append(self.build_prompt(question, answer))
@@ -236,8 +231,6 @@ class MmluProcessor(DatasetProcessorBase):
         self.choices = ("A", "B", "C", "D")
 
         subject_mapping = self.get_subject_mapping()
-        self.ori_prompts = []
-        self.ori_answers = []
         for task_name in tqdm(subject_mapping):
             dev_df, val_df = self.load_csv_by_task_name(task_name, self.dataset_path)
             task_len = val_df.shape[0]
@@ -246,7 +239,6 @@ class MmluProcessor(DatasetProcessorBase):
             for i in range(task_len):
                 self.ori_prompts.append(self.format_example(val_df, i, include_answer=False))
                 self.ori_answers.append(val_df.iloc[i, len(self.choices) + 1])
-                self.dataset_size += 1
             train_prompts = [self.gen_prompt(dev_df, task_name, self.shot)] * len(subject_prompt)
             self.ori_prompts.extend([t + p for t, p in zip(train_prompts, subject_prompt)])
         self.ori_prompts = [prpt.encode().decode(encoding="utf8") for prpt in self.ori_prompts]
