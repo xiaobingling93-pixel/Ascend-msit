@@ -9,12 +9,12 @@ CalibrationData(config_path, save_path, tokenizer=None, model=None)
 ```
 
 ## 参数说明
-| 参数名| 输入/返回值 | 含义          | 使用限制                                                |
-| ----- |--------|-------------|-----------------------------------------------------|
-| config_path | 输入     | 数据集config路径 | 必选。<br>数据类型：string。                                 |
-| save_path | 输入     | 混合数据集保存路径   | 可选，为空则不保存到文件。<br>数据类型：string。                       |
-| tokenizer | 输入     | 分词器实例       | 可选。<br>数据类型：根据模型生成的PreTrainedTokenizer的子类           |
-| model | 输入     | 待量化模型实例     | 可选，用于获取正样本。<br>数据类型：PyTorch模型                       |
+| 参数名| 输入/返回值 | 含义          | 使用限制                                           |
+| ----- |--------|-------------|------------------------------------------------|
+| config_path | 输入     | 数据集config路径 | 必选。<br>数据类型：string。                            |
+| save_path | 输入     | 混合数据集保存文件路径 | 可选，为空则不保存到文件；<br>如选择，需为json文件。<br>数据类型：string。 |
+| tokenizer | 输入     | 分词器实例       | 可选。<br>数据类型：根据模型生成的PreTrainedTokenizer的子类      |
+| model | 输入     | 待量化模型实例     | 可选，用于获取正样本。<br>数据类型：PyTorch模型                  |
 
 
 ## API接口说明

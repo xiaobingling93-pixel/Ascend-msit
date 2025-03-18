@@ -431,7 +431,7 @@ class CalibrationData(object):
         self.save_path = None
         check_type(save_path, str, "save_path")
         if len(save_path) > 0:
-            self.save_path = get_valid_write_path(save_path)
+            self.save_path = get_valid_write_path(path=save_path, extensions="json", is_dir=False)
 
     def verify_model(self):
         if not isinstance(self.model, PreTrainedModel):
