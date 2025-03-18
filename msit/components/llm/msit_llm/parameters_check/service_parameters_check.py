@@ -23,6 +23,7 @@ from tabulate import tabulate
 
 from msit_llm.common.log import logger
 from components.utils.file_open_check import ms_open, sanitize_csv_value
+from components.utils.constants import TEXT_FILE_MAX_SIZE, JSON_FILE_MAX_SIZE, LOG_FILE_MAX_SIZE
 
 service_parameters = ['temperature', 'top_k', 'top_p', 'do_sample', 'seed', 'repetition_penalty', 'watermark',
                       'frequency_penalty', 'presence_penalty', 'length_penalty', 'ignore_eos']
@@ -86,7 +87,7 @@ def extract_log_parameters(log_file_path):
     flag_begin = False
     match_cache = ""
 
-    with ms_open(log_file_path, 'r', encoding='utf-8', max_size=100*1024*1024) as f:
+    with ms_open(log_file_path, 'r', encoding='utf-8', max_size=LOG_FILE_MAX_SIZE) as f:
         request_id_counter = 1
         for file_line_number, line in enumerate(f, 1):
             # 匹配参数块开始行
@@ -129,7 +130,7 @@ def extract_txt_parameters(log_file_path):
     Returns:
         dict: A dictionary containing all the request parameters, structured as {request_id_counter: parameters_dict}.
     """
-    with ms_open(log_file_path, 'r', max_size=100*1024*1024) as file:
+    with ms_open(log_file_path, 'r', max_size=TEXT_FILE_MAX_SIZE) as file:
         content = file.read()
 
     lines = content.split("\n")
@@ -299,8 +300,8 @@ def compare_and_generate(input1_params, input2_params):
 def service_params_check(input1, input2):
     if input1.endswith('.json') and input2.endswith('.json'):
         """加载两个 JSON 文件并进行比对"""
-        with (ms_open(input1, "r", encoding="utf-8", max_size=100*1024*1024) as f_gpu, 
-              ms_open(input2, "r", encoding="utf-8", max_size=100*1024*1024) as f_npu):
+        with ms_open(input1, "r", encoding="utf-8", max_size=JSON_FILE_MAX_SIZE) as f_gpu, \
+             ms_open(input2, "r", encoding="utf-8", max_size=JSON_FILE_MAX_SIZE) as f_npu:
             dict_input1 = json.load(f_gpu)
             dict_input2 = json.load(f_npu)
         differences = compare_parameters(dict_input1, dict_input2)
