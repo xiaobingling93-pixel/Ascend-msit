@@ -31,67 +31,35 @@ class EngineRequestTrackerHook(VLLMHookerBase):
                 # 记录请求进入系统的时间                
                 profiler = Profiler(Level.INFO)
                 profiler.domain("http").res(request_id).metric(
-                    "timestamp", time.time()).event("httpReq")              
+                    "timestamp", time.time()).event("httpReq")
                 return ori_func(this, request_id, prompt, *args, **kwargs)
+
             return add_request
 
         self.do_hook([LLMEngine.add_request, AsyncLLMEngine.add_request], add_request_maker)
 
 
-# 捕获请求完成或失败事件
-class ServerGenerateHook(VLLMHookerBase):
-    vllm_version = ("0.6.3", "0.6.3")
-
-    def init(self):
-        from vllm.engine.async_llm_engine import AsyncLLMEngine
-        from vllm.utils import iterate_with_cancellation
-
-        cache_gen_2_req_id = {}  # Recording request_id in `generate`, and save in `iterate_with_cancellation_maker`
-
-        def iterate_with_cancellation_maker(ori_func):
-            async def iterate_with_cancellation(iterator, is_cancelled, *args, **kwargs):
-                request_id = cache_gen_2_req_id.get(id(iterator), None)
-                try:
-                    async for out in ori_func(iterator, is_cancelled, *args, **kwargs):
-                        yield out
-                except Exception as e:
-                    if request_id is not None:
-                        profiler = Profiler(Level.INFO)
-                        profiler.domain("http").res(request_id).metric(
-                            "timestamp", time.time()).metric(
-                            "error_type", type(e).__name__).metric(
-                            "error_message", str(e)).event("RequestFailed")
-                    raise
-                finally:
-                    if request_id is not None:
-                        # 记录完成事件
-                        profiler = Profiler(Level.INFO)
-                        profiler.domain("http").res(request_id).metric(
-                            "timestamp", time.time()).event("httpRes")
-                        cache_gen_2_req_id.pop(id(iterator), None)
-
-            return iterate_with_cancellation
-
-        self.do_hook([iterate_with_cancellation], iterate_with_cancellation_maker, pname="generate")
-
-
+# 采集请求返回的数据
 class LLMEngineHook(VLLMHookerBase):
     vllm_version = ("0.6.3", "0.6.3")
 
     def init(self):
         from vllm.engine.llm_engine import LLMEngine
 
-        def get_stats_maker(ori_func):
-            def get_stats(this, *args, **kwargs):
-                profiler = Profiler(Level.INFO)
-                stats = ori_func(this, *args, **kwargs)
-                profiler.domain("http").metric(
-                    "recvTokenSize", stats.num_prompt_tokens_iter).metric(
-                    "replyTokenSize", stats.num_generation_tokens_iter).event("GetTokenSize")
-                return stats
-            return get_stats
+        def validate_output_maker(ori_func):
+            def validate_output(output, output_type):
+                profiler = Profiler(level.INFO)
+                if output.finished is True:
+                    request_id = output.request_id
+                    input_token_size = len(output.prompt_token_ids)
+                    output_token_size = len(output.outputs[0].token_ids)
+                    profiler.domain("http").res(request_id).metric("recvTokenSize", input_token_size).metric(
+                        "replyTokenSize", output_token_size).event("httpRes")
+                return ori_func(output, output_type)
 
-        self.do_hook([LLMEngine._get_stats], get_stats_maker)
+            return validate_output
+
+        self.do_hook([LLMEngine.validate_output], validate_output_maker)
 
 
-request_hookers = [EngineRequestTrackerHook, ServerGenerateHook, LLMEngineHook]
+request_hookers = [EngineRequestTrackerHook, LLMEngineHook]
