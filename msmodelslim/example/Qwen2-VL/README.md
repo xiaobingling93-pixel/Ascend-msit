@@ -18,10 +18,11 @@
 
 ## 环境配置
 
-- 环境配置请参考[使用说明](https://gitee.com/ascend/msit/blob/master/msmodelslim/README.md)
+- 环境配置请参考[使用说明](../../README.md)
 - transformers版本请参照模型路径下config.json配置
 - 另外需要单独安排pip包：qwen_vl_utils
     - pip install qwen_vl_utils
+- transformers版本需要配置安装为4.46.0
 
 ## 量化权重生成
 
@@ -32,15 +33,15 @@
 | 参数名 | 含义 | 默认值 | 使用方法 | 
 | ------ | ---- | --- | -------- | 
 | model_path | 浮点权重路径 | 无默认值 | 必选参数；<br>输入QWen2-VL权重目录路径。 |
-| calib_images | 校准集图片路径 | ./coco_pic | 可选参数；<br>输入校准数据集的目录路径。本示例中图片来源于公开数据集[COCO](https://cocodataset.org/)。 |
+| calib_images | 校准集图片路径 | ./coco_pic | 可选参数；<br>输入校准数据集的目录路径。本示例中图片来源于公开数据集[COCO](https://cocodataset.org/)。 需要选取其中30张图片。|
 | save_directory | 量化权重路径 | 无默认值 | 必选参数；<br>输出量化结果目录路径。 |
 | a_bit | 激活值量化bit | 8 |大模型量化场景下，可配置为8或16； <br>大模型稀疏量化场景下，需配置为8。 <br>Qwen2-VL当前仅支持配置为8。|
 | w_bit | 权重量化bit | 8 | 大模型量化场景下，可配置为8或16； <br>大模型稀疏量化场景下，需配置为4。 <br>Qwen2-VL当前仅支持配置为8。|
 | device_type | device类型 | cpu | 可选值：['cpu', 'npu'] |
 | part_file_size | 量化权重文件大小 | 无限制 | 单个量化权重文件大小不超过xGB。|
 
-- 更多参数配置要求，请参考量化过程中配置的参数 [QuantConfig](https://gitee.com/ascend/msit/blob/dev/msmodelslim/docs/Python-API接口说明/大模型压缩接口/大模型量化接口/PyTorch/QuantConfig.md)
-  以及量化参数配置类 [Calibrator](https://gitee.com/ascend/msit/blob/dev/msmodelslim/docs/Python-API接口说明/大模型压缩接口/大模型量化接口/PyTorch/Calibrator.md)
+- 更多参数配置要求，请参考量化过程中配置的参数 [QuantConfig](../../docs/Python-API接口说明/大模型压缩接口/大模型量化接口/PyTorch/QuantConfig.md)
+  以及量化参数配置类 [Calibrator](../../docs/Python-API接口说明/大模型压缩接口/大模型量化接口/PyTorch/Calibrator.md)
 
 ### 使用案例
 - 请将{浮点权重路径}和{量化权重路径}替换为用户实际路径。
