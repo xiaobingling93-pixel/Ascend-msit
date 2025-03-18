@@ -30,8 +30,7 @@ class EngineRequestTrackerHook(VLLMHookerBase):
             def add_request(this, request_id, prompt, *args, **kwargs):
                 # 记录请求进入系统的时间                
                 profiler = Profiler(Level.INFO)
-                profiler.domain("http").res(request_id).metric(
-                    "timestamp", time.time()).event("httpReq")
+                profiler.domain("http").res(request_id).event("httpReq")
                 return ori_func(this, request_id, prompt, *args, **kwargs)
 
             return add_request
