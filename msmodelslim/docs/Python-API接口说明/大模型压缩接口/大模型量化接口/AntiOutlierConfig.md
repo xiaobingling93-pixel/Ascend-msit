@@ -5,7 +5,7 @@
 
 ### 函数原型
 ```python
-AntiOutlierConfig(w_bit=8, a_bit=8, anti_method="m2", dev_type="cpu"，dev_id=None, w_sym=True, low_memory={'offload_type':'memory'})
+AntiOutlierConfig(w_bit=8, a_bit=8, anti_method="m2", dev_type="cpu"，dev_id=None, w_sym=True)
 ```
 
 ### 参数说明
@@ -19,7 +19,6 @@ AntiOutlierConfig(w_bit=8, a_bit=8, anti_method="m2", dev_type="cpu"，dev_id=No
 | dev_type | 输入 | device类型。| 可选。<br>数据类型：object。<br>可选值：['cpu', 'npu']，默认为'cpu'。 |
 | dev_id | 输入 | DEVICE ID。| 可选。<br>数据类型：int。<br>默认值为None。<br>仅在“dev_type”配置为“npu”时生效。“dev_id”指定的Device ID优先级高于环境变量配置的Device ID。 |
 | w_sym | 输入 | 权重是否对称量化。| 可选。<br>数据类型：bool。<br>默认为True。<br>anti_method设置为m3时，可以选择为False，需与QuantConfig中的w_sym参数设置一致。 |
-| low_memory | 输入 | 使用低显存量化方法。| 可选  <br>数据类型：dict。<br>默认值为None。<br>当前仅支持"offload_type"关键字，且仅支持设置为"memory"。 |
 
 ### 调用示例
 根据实际需求，在QuantConfig初始化中完成所有参数的配置。
