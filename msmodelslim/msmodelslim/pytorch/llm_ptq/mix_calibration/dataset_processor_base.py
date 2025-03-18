@@ -5,7 +5,8 @@ from abc import ABC, abstractmethod
 class DatasetProcessorBase(ABC):
     def __init__(self, dataset_path, tokenizer=None, model=None):
         self.dataset_path = dataset_path
-        self.dataset_size = 0
+        self.ori_prompts = []
+        self.ori_answers = []
         self.tokenizer = tokenizer
         self.model = model
 
@@ -22,4 +23,4 @@ class DatasetProcessorBase(ABC):
         return prpt_ans
 
     def get_dataset_size(self):
-        return self.dataset_size
+        return len(self.ori_prompts)
