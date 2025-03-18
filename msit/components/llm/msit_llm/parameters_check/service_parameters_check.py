@@ -334,7 +334,8 @@ def generate_report(differences, output_file="comparison_report.csv"):
         df = pd.DataFrame(differences)
         df['file1_value'] = df['file1_value'].astype(str)
         df['file2_value'] = df['file2_value'].astype(str)
-        df.to_csv(output_file, na_rep="None", index=False, encoding='utf-8')
+        with ms_open(output_file, 'w') as f:
+            df.to_csv(f, na_rep="None", index=False, encoding='utf-8')
         df = df.replace({"nan": "None"})
         table = tabulate(df, headers=df.columns, tablefmt="grid", missingval="None",
                          showindex=False, disable_numparse=True)
