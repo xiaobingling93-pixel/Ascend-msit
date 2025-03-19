@@ -43,7 +43,7 @@ class KVCacheManagerHook(VLLMHookerBase):
                         break
                 new_cows = ori_func(this, seq, num_lookahead_slots, *args, **kwargs)
                 profiler.domain("KVCache").res(request_id).metric(
-                    "deviceBlock", len(this.block_tables)).event("AppendSlots")
+                    "deviceBlock", len(this.block_tables)).event("AppendSlot")
                 return new_cows
             return append_slots
 
