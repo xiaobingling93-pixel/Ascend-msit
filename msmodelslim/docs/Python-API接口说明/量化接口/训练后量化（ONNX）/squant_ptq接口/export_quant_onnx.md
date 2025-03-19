@@ -5,7 +5,7 @@
 
 ### 函数原型
 ```python
-export_quant_onnx(save_path, fuse_add=True, use_external=Flase)
+export_quant_onnx(save_path, fuse_add=True, use_external=False)
 ```
 
 ### 参数说明

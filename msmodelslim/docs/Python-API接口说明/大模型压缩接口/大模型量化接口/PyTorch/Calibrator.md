@@ -64,7 +64,7 @@ disable_names=["model.layers.5.mlp.down_proj"]
 根据实际需求，在QuantConfig初始化中完成所有参数的配置。
 ```python
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
-quant_config = QuantConfig(dev_type='cpu', pr=0.5, mm_tensor=Flase)
+quant_config = QuantConfig(dev_type='cpu', pr=0.5, mm_tensor=False)
 model = AutoModel.from_pretrained('/chatglm2-6b', 
                                   local_files_only=True,
                                   torch_dtype=torch.float32).cpu()   #根据模型实际路径配置
@@ -75,7 +75,7 @@ calibrator = Calibrator(model, quant_config, calib_data=dataset_calib, disable_l
 根据实际需求，在QuantConfig初始化中完成所有参数的配置。
 ```python
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
-quant_config = QuantConfig(dev_type='cpu', pr=0.5, mm_tensor=Flase)
+quant_config = QuantConfig(dev_type='cpu', pr=0.5, mm_tensor=False)
 model = AutoModel.from_pretrained('/chatglm2-6b', 
                                   local_files_only=True, 
                                   torch_dtype=torch.float32).cpu()   #根据模型实际路径配置

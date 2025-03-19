@@ -40,7 +40,7 @@ QuantConfig(a_bit=8, w_bit=8, disable_names=None, dev_type='cpu', dev_id=None, a
 根据实际需求，在QuantConfig初始化中完成所有参数的配置。
 ```python
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
-quant_config = QuantConfig(pr=1.0, mm_tensor=Flase)
+quant_config = QuantConfig(pr=1.0, mm_tensor=False)
 ```
 
 ### 调用示例二
