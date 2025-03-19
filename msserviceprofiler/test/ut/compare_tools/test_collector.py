@@ -21,7 +21,7 @@ import unittest
 from unittest import mock
 
 from ms_service_profiler_ext.compare_tools.collector import FileCollector
-from ms_service_profiler_ext.utils.csv_fields import BatchCSVFields, RequestCSVFields
+from ms_service_profiler_ext.common.csv_fields import BatchCSVFields, RequestCSVFields
 
 
 class TestFileCollector(unittest.TestCase):

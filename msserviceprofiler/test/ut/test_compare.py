@@ -25,7 +25,7 @@ from ms_service_profiler_ext.compare import (
 )
 from ms_service_profiler_ext.compare_tools import CSVComparator
 from ms_service_profiler_ext.compare import connect_db, process_files
-from ms_service_profiler_ext.utils.csv_fields import ServiceCSVFields
+from ms_service_profiler_ext.common.csv_fields import ServiceCSVFields
 
 logger.warning = MagicMock()
 

@@ -1,0 +1,93 @@
+import os
+import stat
+import shutil
+import unittest
+import tempfile
+from unittest import mock
+
+import sys
+sys.path.append("/Users/JiawangLiu/Desktop/workspace/test/msit/msserviceprofiler/ms_service_profiler_ext/")
+from common.sec import list_dir_common_check, traverse_dir_common_check
+
+
+class TestSec(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.temp_dir = tempfile.mkdtemp()
+
+    def setUp(self):
+        self.stat_dict = dict(
+            st_mode=0, st_ino=0, st_dev=0, st_nlink=0,
+            st_uid=0, st_gid=0, 
+            st_size=0, 
+            st_atime=0, st_mtime=0, st_ctime=0
+        )
+        
+        self.mock_os_access = mock.patch('os.access', return_value=True)
+        
+    def test_list_dir_common_check_not_exists_should_raise(self):
+        self.assertRaises(OSError, list_dir_common_check, "a")
+
+    def test_list_dir_common_check_file_name_too_long_should_raise(self):
+        self.assertRaises(OSError, list_dir_common_check, "a" * 4096)
+    
+    def test_list_dir_common_check_other_file_type_should_raise(self):
+        other_file_type = [stat.S_IFLNK, stat.S_IFBLK, stat.S_IFIFO, stat.S_IFCHR, stat.S_IFSOCK]
+        for file_type in other_file_type:
+            with self.subTest(file_type=file_type):
+                self.stat_dict['st_mode'] = file_type | 0o777
+                with mock.patch('os.stat', return_value=os.stat_result(self.stat_dict.values())):
+                    self.assertRaises(OSError, list_dir_common_check, "a")
+    
+    def test_list_dir_common_check_soft_link_should_raise(self):
+        top_dir = "soft_link_test"
+        test_dir = "test_dir"
+        soft_link_dir = "soft_link_dir"
+        input_dir = "input_dir"
+        
+        os.makedirs(os.path.join(top_dir, test_dir, input_dir))
+        os.symlink(test_dir, os.path.join(top_dir, soft_link_dir))
+        
+        try:
+            self.assertRaises(OSError, list_dir_common_check, os.path.join(top_dir, soft_link_dir))
+        finally:
+            shutil.rmtree(top_dir)
+                
+    def test_list_dir_common_check_not_readable_should_raise(self):
+        self.stat_dict['st_mode'] = stat.S_IFDIR | 0o333  # not readable
+        with mock.patch('os.stat', return_value=os.stat_result(self.stat_dict.values())):
+            self.assertRaises(OSError, list_dir_common_check, "a")
+    
+    def test_list_dir_common_check_group_other_writable_should_raise(self):
+        abnormal_file_mode_lists = [stat.S_IWGRP, stat.S_IWOTH, stat.S_IWGRP | stat.S_IWOTH]
+        
+        for file_mode in abnormal_file_mode_lists:
+            with self.subTest(file_mode=file_mode):
+                self.stat_dict['st_mode'] = stat.S_IFDIR | file_mode
+                self.mock_os_access.start()
+                with mock.patch('os.stat', return_value=os.stat_result(self.stat_dict.values())):
+                    self.assertRaises(OSError, list_dir_common_check, "a")
+    
+    def test_list_dir_common_check_not_owner_should_raise(self):
+        self.mock_os_access.start()
+        self.stat_dict['st_mode'] = stat.S_IFDIR | 0o750
+        self.stat_dict['st_uid'] = 2
+        with mock.patch('os.stat', return_value=os.stat_result(self.stat_dict.values())):
+            self.assertRaises(OSError, list_dir_common_check, "a")
+            
+    def test_traverse_dir_common_check_not_executable_should_raise(self):
+        test_dir = os.path.join(self.temp_dir, "traverse_dir")
+        os.mkdir(test_dir, 0o400)
+        try:
+            self.assertRaises(ArithmeticError, traverse_dir_common_check, "a")
+        except:
+        
+    def tearDown(self):
+        self.mock_os_access.stop()
+        
+    @classmethod
+    def tearDownClass(cls):
+        return super().tearDownClass()
+        
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

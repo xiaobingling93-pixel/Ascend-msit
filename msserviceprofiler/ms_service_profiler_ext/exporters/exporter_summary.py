@@ -20,7 +20,7 @@ import pandas as pd
 from ms_service_profiler.exporters.base import ExporterBase
 from ms_service_profiler.utils.log import logger
 
-from ..utils.csv_fields import RequestCSVFields, BatchCSVFields, ServiceCSVFields
+from ..common.csv_fields import RequestCSVFields, BatchCSVFields, ServiceCSVFields
 
 
 def is_contained_valid_iter_info(rid_list, token_id_list):

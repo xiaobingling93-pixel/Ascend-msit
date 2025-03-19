@@ -25,8 +25,9 @@ import pandas as pd
 
 from ms_service_profiler_ext.compare_tools import CSVComparator, DBComparator
 from ms_service_profiler_ext.compare_tools.collector import FileCollector
+from ms_service_profiler_ext.common.sec import list_dir_common_check
 
-from ms_service_profiler.exporters.utils import check_input_path_valid, check_output_path_valid
+from ms_service_profiler.exporters.utils import check_output_path_valid
 from ms_service_profiler.utils.log import set_log_level, logger
 
 
@@ -50,8 +51,8 @@ def connect_db(db_path):
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="MS Server Profiler Compare Tool")
 
-    parser.add_argument("input_path", type=check_input_path_valid, help="Directory containing analyzed results")
-    parser.add_argument("golden_path", type=check_input_path_valid, help="Directory containing analyzed results")
+    parser.add_argument("input_path", type=list_dir_common_check, help="Directory containing analyzed results")
+    parser.add_argument("golden_path", type=list_dir_common_check, help="Directory containing analyzed results")
     parser.add_argument(
         "--output-path",
         type=check_output_path_valid,

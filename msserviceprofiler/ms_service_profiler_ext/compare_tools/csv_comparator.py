@@ -18,7 +18,7 @@ import pandas as pd
 from ms_service_profiler.utils.log import logger
 
 from .base import BaseComparator
-from ..utils.csv_fields import BaseCSVFields, ServiceCSVFields
+from ..common.csv_fields import BaseCSVFields, ServiceCSVFields
 
 
 class CSVComparator(BaseComparator):
