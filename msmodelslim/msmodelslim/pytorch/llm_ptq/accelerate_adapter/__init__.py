@@ -9,10 +9,6 @@ __all__ = [
 
     'get_offloaded_dataset',
 
-    'copy_offloaded_state_dict',
-    'DiskStateDictConfig',
-    'MemoryStateDictConfig',
-
     'LazyTensor',
     'handle_lazy_tensor'
 ]
@@ -23,7 +19,4 @@ from .hook_adapter import (replace_device_align_hook_if_needed,
                            clear_unused_module,
                            PrepareWeight)
 from .utils import get_offloaded_dataset
-from .offloaded_state_dict import (DiskStateDictConfig,
-                                   MemoryStateDictConfig,
-                                   copy_offloaded_state_dict)
 from .lazy_handler import LazyTensor, handle_lazy_tensor

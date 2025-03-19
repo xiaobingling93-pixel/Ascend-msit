@@ -410,7 +410,7 @@ cd build
 import re
 import mindspore as ms
 import numpy as np
-linear_weight_pattern = r"model\.layers\.\d+\.(attention[^_]|feed_forward|augs_attn\d+).*\.weight$" #根据实际情况进行权重键值的筛选
+linear_weight_pattern = r"^(?=.{1,100}$)model\.layers\.\d+\.(attention[^_]|feed_forward|augs_attn\d+).*\.weight$" #根据实际情况进行权重键值的筛选
 reg = re.compile(linear_weight_pattern)
 sparse_ckpt = ms.load_checkpoint(f"./quant_weight.ckpt")  #./quant_weight.ckpt为稀疏量化结果件的保存路径
 compressed_weight_dict = {}

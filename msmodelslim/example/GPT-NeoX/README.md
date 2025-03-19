@@ -47,6 +47,8 @@
 | input_ids_name | 指定分词结果中输入 ID 对应的键名 | input_ids | 无 |
 | attention_mask_name | 指定分词结果中注意力掩码对应的键名 | attention_mask | 无 |
 | model_name | 模型名称，可选参数 | None | 用于控制异常值抑制参数 |
+| use_reduce_quant | 权重量化是否是lccl all reduce量化 | False | 用于MindIE推理的标识 |
+| tp_size | 模拟多卡量化时的卡数 | 1 | 数据取值范围为[1,2,4,8,16]，默认值为1，不启用模拟多卡量化。<br>设置为2、4、8,16时，对于通信层的linear会进行模拟多卡，每张卡使用不同的scale和offset进行量化 |
 
 
 - 更多参数配置要求，请参考量化过程中配置的参数 [QuantConfig](https://gitee.com/ascend/msit/blob/dev/msmodelslim/docs/Python-API接口说明/大模型压缩接口/大模型量化接口/PyTorch/QuantConfig.md)
