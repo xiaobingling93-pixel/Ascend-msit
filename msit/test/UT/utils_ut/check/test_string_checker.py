@@ -59,14 +59,15 @@ class TestStringChecker(unittest.TestCase):
     def test_str_not_safe(self):
         err_msg = "String parameter contains invalid characters"
 
-        invalid_str = ['&', '+', '@', '#', '$']
+        invalid_str = ['&', '+', '@', '#', '$', "b=d", "echo xxx > /dev/null", "{", "}", "<", ">", "~", "'", '"', 
+                       "[", "]", "(", ")", ":"]
         for path in invalid_str:
             with self.subTest(path=path):
                 res_msg = str(StringChecker().is_str_safe().check(path))
                 self.assertEqual(res_msg, err_msg)
 
     def test_str_safe(self):
-        valid_str = ['a', 'b', 'a_b', 'c-d', 'b=d', 'rm -rf /', 'echo xxx > /dev/null']
+        valid_str = ['a', 'b', 'a_b', 'c-d', 'bd', 'rm']
         for path in valid_str:
             with self.subTest(path=path):
                 res_msg = str(StringChecker().is_str_safe().check(path))
