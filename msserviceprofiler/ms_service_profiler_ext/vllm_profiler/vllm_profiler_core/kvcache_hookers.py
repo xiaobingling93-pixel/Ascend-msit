@@ -68,8 +68,13 @@ class KVCacheManagerHook(VLLMHookerBase):
         def free_maker(ori_func):
             def free(this, seq, *args, **kwargs):
                 profiler = Profiler(Level.INFO)
+                request_id = seq.seq_id
+                for k, v in self.request_dict.items():
+                    if seq in v:
+                        request_id = k
+                        break
                 ori_func(this, seq, *args, **kwargs)
-                profiler.domain("KVCache").res(seq.seq_id).metric(
+                profiler.domain("KVCache").res(request_id).metric(
                     "deviceBlock", len(this.block_tables)).event("Free")
             return free
 
