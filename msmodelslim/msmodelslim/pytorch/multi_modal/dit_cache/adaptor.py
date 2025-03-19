@@ -285,7 +285,7 @@ class DitCacheAdaptor:
             ValueError: If not called before DiT block forward pass
         """
         cls._timestep_idx = t_idx
-        logger_debug('set timestep idx: %s', t_idx)
+        logger_debug('set timestep idx: %r', t_idx)
 
     @classmethod
     def get_timestep_idx(cls):
@@ -338,7 +338,7 @@ class DitCacheAdaptor:
 
         def generate_videos(config_, pipeline_):
             # Log function entry
-            logger_debug("Entering generate_videos function with config_: %s", config_)
+            logger_debug("Entering generate_videos function with config_: %r", config_)
 
             # Copy key values from config_ to local variables for fixed snapshot
             use_cache = getattr(config_, 'use_cache', True) and config_.cache_num_dit_blocks != 0
@@ -370,7 +370,7 @@ class DitCacheAdaptor:
                     vid_name = ("sample_{sample_idx:04d}_{cache_dit_block_start}_{cache_step_interval}"
                                 "_{cache_num_dit_blocks}_{cache_step_start}.mp4")
                 vid_path = os.path.join(search_cache_path, vid_name)
-                logger_debug("Generated video file path template: %s", vid_path)
+                logger_debug("Generated video file path template: %r", vid_path)
                 return vid_path
 
             # Save and verify generated videos
@@ -382,7 +382,7 @@ class DitCacheAdaptor:
                     cache_num_dit_blocks=cache_num_dit_blocks,
                     cache_step_start=cache_step_start
                 )
-                logger_debug("Saving video #%d to path: %s", sample_idx, video_path)
+                logger_debug("Saving video #%d to path: %r", sample_idx, video_path)
                 fps = getattr(self.pipeline, 'config', {}).get('fps', 24)
                 path_checker.get_valid_write_path(video_path)
                 imageio.mimwrite(
@@ -394,9 +394,9 @@ class DitCacheAdaptor:
                     output_params=['-threads', '20']
                 )
                 if os.path.exists(video_path):
-                    logger_debug("Video file successfully generated: %s", video_path)
+                    logger_debug("Video file successfully generated: %r", video_path)
                 else:
-                    logger_root.error("Video file not generated: %s", video_path)
+                    logger_root.error("Video file not generated: %r", video_path)
 
             logger_debug("Exiting generate_videos function")
 
@@ -409,7 +409,7 @@ class DitCacheAdaptor:
             search_cache_path=search_cache_path
         )
 
-        logger_info("***** Start searching for dit cache with config %s", self.search_config)
+        logger_info("***** Start searching for dit cache with config %r", self.search_config)
         searcher = dit_cache_searcher.DitCacheSearcher(
             config=config,
             pipeline=self.pipeline,
@@ -428,7 +428,7 @@ class DitCacheAdaptor:
         )
 
         self.dit_cache_config = searched_config
-        logger_info("***** Finish searching for dit cache with result: %s", searched_config)
+        logger_info("***** Finish searching for dit cache with result: %r", searched_config)
 
         # Clean up temporary cache directory
         self._cleanup_temp_cache_dir()
@@ -475,14 +475,14 @@ class DitCacheAdaptor:
                     # Base block: call forward and update cache
                     if _block_idx == blk_start:
                         logger_debug(
-                            "cache: t_idx=%s, block=%s: store cache for input hidden states",
+                            "cache: t_idx=%r, block=%r: store cache for input hidden states",
                             t_idx, _block_idx)
                         self.cache[START_HIDDEN_KEY] = hidden_states
 
                     if is_step_to_store_cache:
                         return orig_forward(hidden_states, *args, **kwargs)
                     else:
-                        logger_debug("cache: t_idx=%s, block=%s: cache skipped block",
+                        logger_debug("cache: t_idx=%r, block=%r: cache skipped block",
                                      t_idx, _block_idx)
                         return DitCacheDummy()
 
@@ -500,7 +500,7 @@ class DitCacheAdaptor:
                         delta_hidden = hidden_states - last_block_hidden_states
                         self.cache[DELTA_HIDDEN_KEY] = delta_hidden
 
-                        logger_debug("cache: t_idx=%s, block=%s: calculate delta hidden states and save to cache",
+                        logger_debug("cache: t_idx=%r, block=%r: calculate delta hidden states and save to cache",
                                      t_idx, _block_idx)
                         return hidden_states
                     else:
@@ -510,7 +510,7 @@ class DitCacheAdaptor:
 
                         hidden_states_reuse = self.cache[DELTA_HIDDEN_KEY] + last_block_hidden_states
 
-                        logger_debug("cache: t_idx=%s, block=%s: reuse the cached delta hidden",
+                        logger_debug("cache: t_idx=%r, block=%r: reuse the cached delta hidden",
                                      t_idx, _block_idx)
                         return hidden_states_reuse
 
@@ -548,4 +548,4 @@ class DitCacheAdaptor:
                 path_checker.safe_delete_path_if_exists(self._temp_cache_dir)
                 logger_debug(f"Cleaned up temporary cache directory: {self._temp_cache_dir}")
             except Exception as e:
-                logger_root.warning(f"Failed to clean up temporary cache directory: %s", e)
+                logger_root.warning(f"Failed to clean up temporary cache directory: %r", e)

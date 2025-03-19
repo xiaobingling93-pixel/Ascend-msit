@@ -82,7 +82,7 @@ class RARopeCompressor(object):
         with SafeWriteUmask():
             output_model_path = get_valid_write_path(save_path, extensions=".pt")
             torch.save(head_dict, output_model_path)
-        logger.info("heads file is stored in %s ", output_model_path)
+        logger.info("heads file is stored in %r ", output_model_path)
 
     def select_top_heads(self, data, ratio):
         # 将所有列表里的值汇总
