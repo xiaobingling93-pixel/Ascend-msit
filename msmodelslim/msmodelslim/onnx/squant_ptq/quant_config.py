@@ -123,8 +123,11 @@ class QuantConfig:
             if soc_version in supported_soc_versions:
                 self.soc_version = soc_version
             else:
-                raise ValueError(f'Because of aok optimization, the soc_version should be one of {supported_soc_versions}')
-        
+                raise ValueError(
+                    'Because of aok optimization, the soc_version should be one of '
+                    f'{supported_soc_versions}'
+                )
+                
         self.iterations = 100
         self.runs = 1
         self.device_id = device_id
