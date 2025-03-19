@@ -29,6 +29,7 @@ from ms_service_profiler_ext.common.sec import list_dir_common_check
 
 from ms_service_profiler.exporters.utils import check_output_path_valid
 from ms_service_profiler.utils.log import set_log_level, logger
+from ms_service_profiler.utils.file_open_check import ms_open
 
 
 @contextmanager
@@ -118,7 +119,9 @@ def main():
         logger.warning("No files to compare, please check the input directories")
         return
     
-    process_files(file_pairs, f'{result_prefix}.db', f'{result_prefix}.xlsx')
+    with ms_open(f'{result_prefix}.db') as db_path:
+        with ms_open(f'{result_prefix}.xlsx') as xlsx_path:
+            process_files(file_pairs, db_path, xlsx_path)
     
     logger.info("Comparing finished successfully, the results stored under %r", args.output_path)
     logger.info("\nWhat's Next?\n\tYou may use the `grafana` to have a better visualization of the comparison results")
