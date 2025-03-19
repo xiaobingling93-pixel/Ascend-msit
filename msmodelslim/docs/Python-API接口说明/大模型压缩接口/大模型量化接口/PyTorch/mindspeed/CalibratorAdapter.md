@@ -27,7 +27,7 @@ CalibratorAdapter(model, cfg: quantconfig, calib_data=None, disable_level='L0', 
 ```python
 from msmodelslim.pytorch.mindspeed_adapter import ModelAdapter, CalibratorAdapter
 model = ModelAdapter(model)
-quant_config = QuantConfig(dev_type='npu', pr=0.5, mm_tensor=Flase)
+quant_config = QuantConfig(dev_type='npu', pr=0.5, mm_tensor=False)
 calibrator = CalibratorAdapter(model, quant_config, calib_data=dataset_calib, disable_level='L0')
 calibrator.run()  # 与Calibrator相同的用法
 calibrator.save(quant_weight_save_path)  # 与Calibrator相同的用法
