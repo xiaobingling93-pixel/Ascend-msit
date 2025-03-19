@@ -38,10 +38,13 @@ class MockTensorFlow:
     Session = MagicMock()
 
 
-@pytest.fixture
-def mock_tensorflow(monkeypatch):
-    with patch.dict(sys.modules, {"tensorflow": MockTensorFlow}):
-        yield MockTensorFlow
+@pytest.fixture(scope="module")
+def import_tf_common():
+    original_modules = sys.modules.copy()
+    sys.modules['tensorflow'] = MockTensorFlow
+    from msquickcmp.common import tf_common
+    yield tf_common
+    sys.modules = original_modules
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -59,40 +62,40 @@ def setup_teardown():
         os.rmdir("test_dir")
 
 
-def test_execute_command_given_valid_cmd_when_executed_then_pass(mock_tensorflow):
-    from msquickcmp.common import tf_common
+def test_execute_command_given_valid_cmd_when_executed_then_pass(import_tf_common):
+    tf_common = import_tf_common
 
     cmd = ["echo", "test"]
     status_code = tf_common.execute_command(cmd)
     assert status_code == 0
 
 
-def test_execute_command_given_none_cmd_when_executed_then_fail(mock_tensorflow):
-    from msquickcmp.common import tf_common
+def test_execute_command_given_none_cmd_when_executed_then_fail(import_tf_common):
+    tf_common = import_tf_common
 
     cmd = None
     status_code = tf_common.execute_command(cmd)
     assert status_code == -1
 
 
-def test_convert_to_numpy_type_given_valid_tensor_type_when_converted_then_pass(mock_tensorflow):
-    from msquickcmp.common import tf_common
+def test_convert_to_numpy_type_given_valid_tensor_type_when_converted_then_pass(import_tf_common):
+    tf_common = import_tf_common
 
     tensor_type = MockTensorFlow.float32
     np_type = tf_common.convert_to_numpy_type(tensor_type)
     assert np_type == np.float32
 
 
-def test_convert_to_numpy_type_given_invalid_tensor_type_when_converted_then_fail(mock_tensorflow):
-    from msquickcmp.common import tf_common
+def test_convert_to_numpy_type_given_invalid_tensor_type_when_converted_then_fail(import_tf_common):
+    tf_common = import_tf_common
 
     tensor_type = "invalid_type"
     with pytest.raises(tf_common.utils.AccuracyCompareException):
         tf_common.convert_to_numpy_type(tensor_type)
 
 
-def test_convert_tensor_shape_given_valid_tensor_shape_when_converted_then_pass(mock_tensorflow):
-    from msquickcmp.common import tf_common
+def test_convert_tensor_shape_given_valid_tensor_shape_when_converted_then_pass(import_tf_common):
+    tf_common = import_tf_common
 
     tensor_shape = MagicMock()
     tensor_shape.as_list.return_value = [1, 2, 3]
@@ -100,8 +103,8 @@ def test_convert_tensor_shape_given_valid_tensor_shape_when_converted_then_pass(
     assert shape_tuple == (1, 2, 3)
 
 
-def test_convert_tensor_shape_given_none_dim_when_converted_then_fail(mock_tensorflow):
-    from msquickcmp.common import tf_common
+def test_convert_tensor_shape_given_none_dim_when_converted_then_fail(import_tf_common):
+    tf_common = import_tf_common
 
     tensor_shape = MagicMock()
     tensor_shape.as_list.return_value = [1, None, 3]
@@ -109,8 +112,8 @@ def test_convert_tensor_shape_given_none_dim_when_converted_then_fail(mock_tenso
         tf_common.convert_tensor_shape(tensor_shape)
 
 
-def test_verify_and_adapt_dynamic_shape_given_valid_input_shapes_when_verified_then_pass(mock_tensorflow):
-    from msquickcmp.common import tf_common
+def test_verify_and_adapt_dynamic_shape_given_valid_input_shapes_when_verified_then_pass(import_tf_common):
+    tf_common = import_tf_common
 
     input_shapes = {"op_name": [1, 2, 3]}
     op_name = "op_name"
@@ -120,8 +123,8 @@ def test_verify_and_adapt_dynamic_shape_given_valid_input_shapes_when_verified_t
     assert adapted_tensor.shape == [1, None, 3]
 
 
-def test_verify_and_adapt_dynamic_shape_given_invalid_input_shapes_when_verified_then_fail(mock_tensorflow):
-    from msquickcmp.common import tf_common
+def test_verify_and_adapt_dynamic_shape_given_invalid_input_shapes_when_verified_then_fail(import_tf_common):
+    tf_common = import_tf_common
 
     input_shapes = {"op_name": [1, 2, 4]}
     op_name = "op_name"
@@ -131,8 +134,8 @@ def test_verify_and_adapt_dynamic_shape_given_invalid_input_shapes_when_verified
         tf_common.verify_and_adapt_dynamic_shape(input_shapes, op_name, tensor)
 
 
-def test_get_inputs_data_given_valid_input_paths_when_retrieved_then_pass(mock_tensorflow):
-    from msquickcmp.common import tf_common
+def test_get_inputs_data_given_valid_input_paths_when_retrieved_then_pass(import_tf_common):
+    tf_common = import_tf_common
 
     inputs_tensor = [MagicMock(dtype=MockTensorFlow.float32, shape=[3])]
     input_paths = "test_dir/test_file.bin"
@@ -140,8 +143,8 @@ def test_get_inputs_data_given_valid_input_paths_when_retrieved_then_pass(mock_t
     assert len(inputs_map) == 1
 
 
-def test_get_model_inputs_dtype_given_valid_model_path_when_retrieved_then_pass(mock_tensorflow):
-    from msquickcmp.common import tf_common
+def test_get_model_inputs_dtype_given_valid_model_path_when_retrieved_then_pass(import_tf_common):
+    tf_common = import_tf_common
 
     model_path = "test_dir"
     serving = "serving_default"
@@ -150,16 +153,16 @@ def test_get_model_inputs_dtype_given_valid_model_path_when_retrieved_then_pass(
     assert isinstance(inputs_dtype, dict)
 
 
-def test_split_tag_set_given_valid_tag_set_when_split_then_pass(mock_tensorflow):
-    from msquickcmp.common import tf_common
+def test_split_tag_set_given_valid_tag_set_when_split_then_pass(import_tf_common):
+    tf_common = import_tf_common
 
     saved_model_tag_set = "tag1,tag2"
     tag_sets = tf_common.split_tag_set(saved_model_tag_set)
     assert tag_sets == ["tag1", "tag2"]
 
 
-def test_load_file_to_read_common_check_with_walk_given_valid_model_path_when_checked_then_pass(mock_tensorflow):
-    from msquickcmp.common import tf_common
+def test_load_file_to_read_common_check_with_walk_given_valid_model_path_when_checked_then_pass(import_tf_common):
+    tf_common = import_tf_common
 
     model_path = "test_dir"
     tf_common.load_file_to_read_common_check_with_walk(model_path)

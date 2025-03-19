@@ -769,7 +769,7 @@ def csv_sum(original_out_path):
         os.remove(xlsx_file_summary)
 
     with ms_open(xlsx_file_summary, 'wb') as fp_write:
-        with pd.ExcelWriter(fp_write) as writer:
+        with pd.ExcelWriter(xlsx_file_summary) as writer:
             for i, csv_file in enumerate(csv_file_list):
                 if Rule.input_file().check(csv_file):
                     data = pd.read_csv(csv_file, na_values=['NAN'])

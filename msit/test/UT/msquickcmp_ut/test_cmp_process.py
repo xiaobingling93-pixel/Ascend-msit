@@ -12,49 +12,60 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
+import os, sys
 import shutil
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, MagicMock
 
 import pandas as pd
 import openpyxl
 import pytest
 
-from msquickcmp.cmp_process import csv_sum, _process_is_npu_and_is_precision_error_ops, \
-    _is_row_precision_error, _is_output_node, _get_model_output_node_name_list, \
-    _find_previous_node
 
-FAKE_CSV_PATH = "./test_resource/test_csv_sum"
+@pytest.fixture(scope="module")
+def import_cmp_process():
+    original_modules = sys.modules.copy()
+    mock_acl = MagicMock()
+    sys.modules['acl'] = mock_acl
+    from msquickcmp.cmp_process import csv_sum, _get_model_output_node_name_list, \
+        _find_previous_node
+    functions = {
+        "csv_sum": csv_sum,
+        "_get_model_output_node_name_list": _get_model_output_node_name_list,
+        "_find_previous_node": _find_previous_node
+    }
+    yield functions
+    sys.modules = original_modules
 
 
 @pytest.fixture(scope="function")
 def generate_fake_path():
+    cur_dir = os.path.dirname(os.path.realpath(__file__))
+    resource_dir = os.path.join(cur_dir, 'test_csv_sum', "2023072009")
 
-    os.mkdir(FAKE_CSV_PATH, 0o750)
-    sub_folder_name = os.path.join(FAKE_CSV_PATH, "2023072009")
-    os.mkdir(sub_folder_name, 0o750)
-    os.mkdir('./test_resource/test_csv_sum/2023072009/images-2_3_638_640', 0o750)
-    os.mkdir('./test_resource/test_csv_sum/2023072009/images-2_3_640_640', 0o750)
+    os.makedirs(resource_dir, 0o750, exist_ok=True)
+    os.makedirs(os.path.join(resource_dir, "images-2_3_638_640"), 0o750, exist_ok=True)
+    os.makedirs(os.path.join(resource_dir, "images-2_3_640_640"), 0o750, exist_ok=True)
 
     df1 = pd.DataFrame({'A': [1, 2, 3], 'B': ['a', 'b', 'c']})
-    df1.to_csv('./test_resource/test_csv_sum/2023072009/images-2_3_638_640/file1.csv', index=False)
+    df1.to_csv(os.path.join(resource_dir, "images-2_3_638_640", "file1.csv"), index=False)
 
     df2 = pd.DataFrame({'A': [1, 2, 3], 'B': ['a', 'b', 'c']})
-    df2.to_csv('./test_resource/test_csv_sum/2023072009/images-2_3_640_640/file2.csv', index=False)
+    df2.to_csv(os.path.join(resource_dir, "images-2_3_640_640", "file2.csv"), index=False)
 
-    with pd.ExcelWriter("./test_resource/test_csv_sum/expected_output.xlsx") as writer:
+    with pd.ExcelWriter(os.path.join(cur_dir, "test_csv_sum", "expected_output.xlsx")) as writer:
         df1.to_excel(writer, sheet_name='images-2_3_638_640', index=False)
         df2.to_excel(writer, sheet_name='images-2_3_640_640', index=False)
+    yield resource_dir
 
-    yield sub_folder_name
-    shutil.rmtree(FAKE_CSV_PATH)
+    shutil.rmtree(os.path.join(cur_dir, "test_csv_sum"))
 
 
-def test_csv_sum_given_path_when_valid_then_pass(generate_fake_path):
+def test_csv_sum_given_path_when_valid_then_pass(import_cmp_process, generate_fake_path):
+    csv_sum = import_cmp_process["csv_sum"]
     csv_sum(generate_fake_path)
-    result_summary = openpyxl.load_workbook('./test_resource/test_csv_sum/2023072009/result_summary.xlsx')
-    expected_output = openpyxl.load_workbook('./test_resource/test_csv_sum/expected_output.xlsx')
+    expected_output = openpyxl.load_workbook(os.path.join(generate_fake_path, '..', 'expected_output.xlsx'))
+    result_summary = openpyxl.load_workbook(os.path.join(generate_fake_path, 'result_summary.xlsx'))
 
     sheets1 = result_summary.sheetnames
     sheets2 = expected_output.sheetnames
@@ -74,6 +85,15 @@ def test_csv_sum_given_path_when_valid_then_pass(generate_fake_path):
 
 
 class TestProcessIsNpuAndIsPrecisionErrorOps(unittest.TestCase):
+    def setUp(self):
+        self.original_modules = sys.modules.copy()
+        mock_acl = MagicMock()
+        sys.modules['acl'] = mock_acl
+        from msquickcmp.cmp_process import _process_is_npu_and_is_precision_error_ops
+        self._process_is_npu_and_is_precision_error_ops = _process_is_npu_and_is_precision_error_ops
+
+    def tearDown(self):
+        sys.modules = self.original_modules
 
     def test_process_function(self):
         self.header = ["GroundTruth", "OpType", "CosineSimilarity", 
@@ -98,7 +118,7 @@ class TestProcessIsNpuAndIsPrecisionErrorOps(unittest.TestCase):
         ]
         node_output_name_list = ["/extractor/Reshape_3", "/extractor/Concat_1"]
         
-        processed_rows = _process_is_npu_and_is_precision_error_ops(self.header, self.rows, node_output_name_list)
+        processed_rows = self._process_is_npu_and_is_precision_error_ops(self.header, self.rows, node_output_name_list)
 
         self.assertIn('IsNpuOps', self.header)
         self.assertIn('IsOutputNode', self.header)
@@ -120,55 +140,73 @@ class TestProcessIsNpuAndIsPrecisionErrorOps(unittest.TestCase):
 
 
 class TestIsRowPrecisionError(unittest.TestCase):
+    def setUp(self):
+        self.original_modules = sys.modules.copy()
+        mock_acl = MagicMock()
+        sys.modules['acl'] = mock_acl
+        from msquickcmp.cmp_process import _is_row_precision_error
+        self._is_row_precision_error = _is_row_precision_error
+
+    def tearDown(self):
+        sys.modules = self.original_modules
 
     def test_below_thresholds(self):
         # All metrics are below the threshold
-        result = _is_row_precision_error(0.95, 0.05, 0.04, 0.01, 0.005)
+        result = self._is_row_precision_error(0.95, 0.05, 0.04, 0.01, 0.005)
         self.assertTrue(result)
 
     def test_cosine_similarity_below_threshold(self):
         # only cosine similarity is below the threshold
-        result = _is_row_precision_error(0.85, 0.05, 0.04, 0.01, 0.005)
+        result = self._is_row_precision_error(0.85, 0.05, 0.04, 0.01, 0.005)
         self.assertTrue(result)
 
     def test_relative_euclidean_distance_above_threshold(self):
         # only relative Euclidean distance above threshold
-        result = _is_row_precision_error(0.95, 0.15, 0.04, 0.01, 0.005)
+        result = self._is_row_precision_error(0.95, 0.15, 0.04, 0.01, 0.005)
         self.assertTrue(result)
 
     def test_kullback_leibler_divergence_above_threshold(self):
         # only Kullback-Leibler above threshold
-        result = _is_row_precision_error(0.95, 0.05, 0.06, 0.01, 0.005)
+        result = self._is_row_precision_error(0.95, 0.05, 0.06, 0.01, 0.005)
         self.assertTrue(result)
 
     def test_root_mean_square_error_above_threshold(self):
         # only RootMeanSquareError is above the threshold
-        result = _is_row_precision_error(0.95, 0.05, 0.04, 0.03, 0.005)
+        result = self._is_row_precision_error(0.95, 0.05, 0.04, 0.03, 0.005)
         self.assertTrue(result)
 
     def test_mean_relative_error_above_threshold(self):
         # only mean relative error is above the threshold
-        result = _is_row_precision_error(0.95, 0.05, 0.04, 0.01, 0.02)
+        result = self._is_row_precision_error(0.95, 0.05, 0.04, 0.01, 0.02)
         self.assertTrue(result)
 
     def test_multiple_errors(self):
         # Multiple indicators do not meet the requirements
-        result = _is_row_precision_error(0.85, 0.15, 0.06, 0.03, 0.02)
+        result = self._is_row_precision_error(0.85, 0.15, 0.06, 0.03, 0.02)
         self.assertTrue(result)
         
         
 class TestIsOutputNodeError(unittest.TestCase):
+    def setUp(self):
+        self.original_modules = sys.modules.copy()
+        mock_acl = MagicMock()
+        sys.modules['acl'] = mock_acl
+        from msquickcmp.cmp_process import _is_output_node
+        self._is_output_node = _is_output_node
+
+    def tearDown(self):
+        sys.modules = self.original_modules
     
     def test__is_output_node(self):
         node_output_name_list = []
-        result_false = _is_output_node("/extractor/Concat_1", node_output_name_list)
+        result_false = self._is_output_node("/extractor/Concat_1", node_output_name_list)
         self.assertFalse(result_false)
         
         node_output_name_list = ["/extractor/Reshape_3", "/extractor/Concat_1"]
-        result_true = _is_output_node("/extractor/Reshape_3", node_output_name_list)
+        result_true = self._is_output_node("/extractor/Reshape_3", node_output_name_list)
         self.assertTrue(result_true)
         
-        result_false = _is_output_node("", node_output_name_list)
+        result_false = self._is_output_node("", node_output_name_list)
         self.assertFalse(result_false)
 
 
@@ -176,9 +214,11 @@ class MockSession:
     def get_outputs(self):
         return [MockNode(name="output_1", outputs=["net_output"]), MockNode(name="output_2", outputs=["net_output"])]
 
+
 class MockGraph:
     def __init__(self, nodes):
         self.node = nodes
+
 
 class MockNode:
     def __init__(self, name, outputs):
@@ -186,7 +226,8 @@ class MockNode:
         self.output = outputs
 
 
-def test_find_previous_node():
+def test_find_previous_node(import_cmp_process):
+    _find_previous_node = import_cmp_process["_find_previous_node"]
     # 创建模拟的节点
     node1 = MockNode(name="node1", outputs=["output_1"])
     node2 = MockNode(name="node2", outputs=["output_2"])
@@ -200,7 +241,8 @@ def test_find_previous_node():
     assert _find_previous_node(graph, "output_3") is None
 
 
-def test_get_model_output_node_name_list():
+def test_get_model_output_node_name_list(import_cmp_process):
+    _get_model_output_node_name_list = import_cmp_process["_get_model_output_node_name_list"]
     # 创建模拟的会话和模型
     session = MockSession()
     node1 = MockNode(name="node1", outputs=["output_1"])

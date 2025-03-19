@@ -14,9 +14,6 @@
 
 import unittest
 from unittest.mock import patch
-import os
-
-import components.debug.compare.msquickcmp.common.utils
 from components.debug.compare.msquickcmp.common.utils import check_exec_cmd, check_dynamic_shape, \
     AccuracyCompareException
 

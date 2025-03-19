@@ -17,6 +17,7 @@ from unittest import mock
 
 import pytest
 import torch
+from torch.onnx.utils import export
 import onnx
 import numpy as np
 
@@ -27,10 +28,6 @@ from msquickcmp.common.utils import AccuracyCompareException
 FAKE_ONNX_MODEL_PATH = "fake_msquickcmp_test_onnx_model.onnx"
 OUT_PATH = FAKE_ONNX_MODEL_PATH.replace(".onnx", "")
 INPUT_SHAPE = (1, 3, 32, 32)
-AUGMENG_INPUTS_MAP_KEYS_LIST = ['input.1', '2.weight', '2.bias', '5.weight', '5.bias', '6.weight', 
-                                '6.bias', 'onnx::Conv_22', 'onnx::Conv_23', '/0/Conv_output_0', 
-                                '/2/Conv_output_0', '/3/GlobalAveragePool_output_0', 
-                                '/4/Flatten_output_0', '/5/Gemm_output_0', '20']
 
 
 class Args:
@@ -50,7 +47,7 @@ def width_model():
         torch.nn.Linear(32, 32),
         torch.nn.Linear(32, 10),
     )
-    torch.onnx.export(model, torch.ones(INPUT_SHAPE), FAKE_ONNX_MODEL_PATH)
+    export(model, torch.ones(INPUT_SHAPE), FAKE_ONNX_MODEL_PATH)
     yield FAKE_ONNX_MODEL_PATH
 
     if os.path.exists(FAKE_ONNX_MODEL_PATH):
@@ -59,7 +56,7 @@ def width_model():
         shutil.rmtree(OUT_PATH)
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope="module")
 def reshape_model():
     temp_onnx_name = "reshape" + FAKE_ONNX_MODEL_PATH
     original_shape = [2, 3, 4]
@@ -101,7 +98,7 @@ def reshape_model():
             ),
         ],
     )
-    model = onnx.helper.make_model(graph, producer_name='ONNX respace')
+    model = onnx.helper.make_model(graph, producer_name='ONNX respace', opset_imports=[onnx.helper.make_opsetid('ai.onnx', 18)])
     onnx.save(model, temp_onnx_name)
 
     yield temp_onnx_name
@@ -234,20 +231,22 @@ def test_generate_dump_data_given_valid_when_any_then_pass(fake_arguments):
     assert os.path.exists(onnx_dump_data_dir)
     assert len(os.listdir(onnx_dump_data_dir)) > 0
 
+
 def test_load_onnx_given_no_named_node_model_when_any_then_pass(reshape_model):
     x, _ = OnnxDumpData._load_onnx(None, reshape_model)
 
-    print([y.name for y in x.graph.node])
     assert len(set((y.name for y in x.graph.node))) == len(x.graph.node)
-    
+
+
 def test_get_input_map(fake_arguments, reshape_model):
+    fake_arguments.model_path = reshape_model
     origin_model = OnnxDumpData(fake_arguments)
-    input_data, inputs_map = np.random.random(INPUT_SHAPE).astype("float32"), {}
-    inputs_map["input.1"] = input_data
+    input_data, inputs_map = np.random.random((2, 3, 4)).astype("float32"), {}
+    inputs_map["data"] = input_data
     origin_model.inputs_map = inputs_map
-    session = origin_model._load_session(origin_model.dump_model_with_inputs_path)
+    session = origin_model._load_session(reshape_model)
     dump_bins = origin_model._run_model(session, inputs_map)
     augment_inputs_map = origin_model.get_input_map(origin_model.inputs_map, dump_bins)
     
     # augment data success!
-    assert list(augment_inputs_map.keys()) == AUGMENG_INPUTS_MAP_KEYS_LIST
+    assert list(augment_inputs_map.keys()) == ['data', 'reshaped', 'reshaped2']

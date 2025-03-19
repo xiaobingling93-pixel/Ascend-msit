@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
+import os, sys
 import subprocess
 import shutil
 
@@ -20,14 +20,19 @@ from unittest import mock
 import pytest
 import numpy as np
 import pandas as pd
-import acl
 
 from auto_optimizer import OnnxGraph
-from auto_optimizer.graph_refactor import Node
 from auto_optimizer.graph_refactor.onnx import OnnxNode, OnnxPlaceHolder, OnnxInitializer
 from msquickcmp.common import utils
 from msquickcmp.common.utils import AccuracyCompareException
-from msquickcmp.single_op import single_op as sp
+
+
+@pytest.fixture(scope="function", autouse=True)
+def import_cmp_process(monkeypatch):
+    mock_acl = mock.MagicMock()
+    monkeypatch.setitem(sys.modules, "acl", mock_acl)
+    from msquickcmp.single_op import single_op as sp
+    return sp
 
 
 @pytest.fixture(scope="function")
@@ -78,7 +83,8 @@ def create_accumulate_shape_size_graph(name: str = 'test_accumulate_shape_size')
     )
 
 
-def test_broken_when_valid_then_passs(create_broken_graph):
+def test_broken_when_valid_then_passs(create_broken_graph, import_cmp_process):
+    sp = import_cmp_process
     create_broken_graph.infer_shape()
     subgraph_onnx_file = './broken.onnx'
     sp.broken(create_broken_graph, subgraph_onnx_file)
@@ -87,7 +93,8 @@ def test_broken_when_valid_then_passs(create_broken_graph):
     assert len(create_broken_graph.outputs) == 6
 
 
-def test_dynamic_divide_onnx_when_valid_then_pass(create_dynamic_divide_onnx_graph):
+def test_dynamic_divide_onnx_when_valid_then_pass(create_dynamic_divide_onnx_graph, import_cmp_process):
+    sp = import_cmp_process
     create_dynamic_divide_onnx_graph.infer_shape()
     out_path = './test_dynamic_divide_onnx/'
     if os.path.exists(out_path):
@@ -99,7 +106,8 @@ def test_dynamic_divide_onnx_when_valid_then_pass(create_dynamic_divide_onnx_gra
     assert subonnx_list == ['./test_dynamic_divide_onnx/0_broken.onnx', './test_dynamic_divide_onnx/1_broken.onnx']
 
 
-def test_accumulate_shape_size_when_valid_then_pass(create_accumulate_shape_size_graph):
+def test_accumulate_shape_size_when_valid_then_pass(create_accumulate_shape_size_graph, import_cmp_process):
+    sp = import_cmp_process
     create_accumulate_shape_size_graph.infer_shape()
     node_0 = OnnxNode('sqrt0', 'Sqrt', inputs=['input'], outputs=['output'], attrs={})
     node_1 = OnnxNode('sqrt1', 'Sqrt', inputs=['input_1'], outputs=['output_1'], attrs={})
@@ -109,14 +117,16 @@ def test_accumulate_shape_size_when_valid_then_pass(create_accumulate_shape_size
     assert ans_2 == np.dtype('float32').itemsize * 2 * 8 * 3 * 768 * 768
 
 
-def test_generate_single_op_dir_when_valid_then_pass():
+def test_generate_single_op_dir_when_valid_then_pass(import_cmp_process):
+    sp = import_cmp_process
     out_path = 'fake_test_path'
     single_op_dir = sp.generate_single_op_dir(out_path)
     shutil.rmtree(out_path)
     assert single_op_dir == 'fake_test_path/single_op'
 
 
-def test_get_memory_size_by_soc_type_when_invalid_npu_id_then_failed():
+def test_get_memory_size_by_soc_type_when_invalid_npu_id_then_failed(import_cmp_process):
+    sp = import_cmp_process
     with pytest.raises(AccuracyCompareException):
         with mock.patch("subprocess.run", return_value=subprocess.CompletedProcess(
                         args=[''],
@@ -127,7 +137,8 @@ def test_get_memory_size_by_soc_type_when_invalid_npu_id_then_failed():
             assert ret == utils.ACCURACY_COMPARISON_INVALID_DEVICE_ERROR
 
 
-def test_get_memory_size_by_soc_type_when_invalid_memory_size_then_failed():
+def test_get_memory_size_by_soc_type_when_invalid_memory_size_then_failed(import_cmp_process):
+    sp = import_cmp_process
     with pytest.raises(AccuracyCompareException):
         with mock.patch("subprocess.run", return_value=subprocess.CompletedProcess(
                         args=[''],
@@ -138,7 +149,8 @@ def test_get_memory_size_by_soc_type_when_invalid_memory_size_then_failed():
             assert ret == utils.ACCURACY_COMPARISON_INVALID_DEVICE_ERROR
 
 
-def test_find_all_csv_when_valid_then_pass():
+def test_find_all_csv_when_valid_then_pass(import_cmp_process):
+    sp = import_cmp_process
     out_path = 'find_all_csv_test_path'
     if os.path.exists(out_path):
         shutil.rmtree(out_path)
