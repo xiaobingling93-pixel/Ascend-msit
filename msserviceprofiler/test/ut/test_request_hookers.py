@@ -13,36 +13,41 @@
 # limitations under the License.
 import sys
 import unittest
+from dataclasses import dataclass
 from unittest.mock import MagicMock, patch, call
 
 
-# 模拟 SequenceGroupMetadata 类
-class FakeSequenceGroupMetadata:
-    def __init__(self, request_id):
-        self.request_id = request_id
+# 模拟 RequestOutput 类
+class FakeRequestOutput:
+    def __init__(self):
+        self.request_id = "123"
+        self.prompt_token_ids = [0, 1, 2, 3, 4]
+        self.finished = True
+        self.outputs = [FakeCompletionOutput]
+
+
+@dataclass
+class FakeCompletionOutput:
+    token_ids = (0, 1, 2)
 
 
 # 模拟 LLMEngine 类
 class FakeLLMEngine:
     def __init__(self):
-        self.stats = MagicMock(num_prompt_tokens_iter=10, num_generation_tokens_iter=5)
+        pass
 
     def add_request(self, request_id, prompt):
         pass
 
-    def _get_stats(self):
-        return self.stats
+    @classmethod
+    def _get_stats(cls, output, output_type):
+        pass
 
 
 # 模拟 AsyncLLMEngine 类
 class FakeAsyncLLMEngine:
     def add_request(self, request_id, prompt):
         pass
-
-
-# 模拟 iterate_with_cancellation 函数
-async def fake_iterate_with_cancellation(iterator, is_cancelled):
-    yield "output"
 
 
 # 导入被测试的类
@@ -58,13 +63,14 @@ class TestVLLMHookers(unittest.TestCase):
         # 将模拟的类和模块注入 sys.modules
         sys.modules['vllm.engine.llm_engine'] = MagicMock(LLMEngine=FakeLLMEngine)
         sys.modules['vllm.engine.async_llm_engine'] = MagicMock(AsyncLLMEngine=FakeAsyncLLMEngine)
-        sys.modules['vllm.sequence'] = MagicMock(SequenceGroupMetadata=FakeSequenceGroupMetadata)
 
         # 初始化测试的Fake实例
         self.fake_llm_engine = FakeLLMEngine()
         self.fake_async_llm_engine = FakeAsyncLLMEngine()
         self.fake_request_id = 123
         self.fake_prompt = "test_prompt"
+        self.fake_output = FakeRequestOutput()
+        self.fake_output_type = object
 
     def test_engine_request_tracker_hook(self, mock_profiler):
         # 导入被测试的类
@@ -80,8 +86,7 @@ class TestVLLMHookers(unittest.TestCase):
         self.fake_llm_engine.add_request(self.fake_request_id, self.fake_prompt)
 
         # 验证 Profiler 调用
-        expected_call = call(Level.INFO).domain("http").res(self.fake_request_id).metric(
-            "timestamp", unittest.mock.ANY).event("httpReq")
+        expected_call = call(Level.INFO).domain("http").res(self.fake_request_id).event("httpReq")
         mock_profiler.assert_has_calls([expected_call])
 
     def test_llm_engine_hook(self, mock_profiler):
@@ -94,11 +99,11 @@ class TestVLLMHookers(unittest.TestCase):
         llm_engine_hook = LLMEngineHook()
         llm_engine_hook.init()
 
-        # 调用 _get_stats 方法
-        stats = self.fake_llm_engine._get_stats()
+        # 调用 validate_output 方法
+        self.fake_llm_engine.validate_output(self.fake_output, self.fake_output_type)
 
         # 验证 Profiler 调用
-        expected_call = call(Level.INFO).domain("http").metric(
-            "recvTokenSize", 10).metric(
-            "replyTokenSize", 5).event("GetTokenSize")
+        expected_call = call(Level.INFO).domain("http").res("123").metric(
+            "recvTokenSize", 5).metric(
+            "replyTokenSize", 3).event("httpRes")
         mock_profiler.assert_has_calls([expected_call])

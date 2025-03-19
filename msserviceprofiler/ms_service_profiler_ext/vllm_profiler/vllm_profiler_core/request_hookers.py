@@ -47,7 +47,7 @@ class LLMEngineHook(VLLMHookerBase):
 
         def validate_output_maker(ori_func):
             def validate_output(output, output_type):
-                profiler = Profiler(level.INFO)
+                profiler = Profiler(Level.INFO)
                 if output.finished is True:
                     request_id = output.request_id
                     input_token_size = len(output.prompt_token_ids)
