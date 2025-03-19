@@ -8,9 +8,11 @@
 1. 用户需自行准备模型、训练脚本和数据集，本样例以PyTorch框架的ResNet50和数据集ImageNet为例。
 
 2. 编辑模型的训练脚本pytorch_resnet50_apex.py文件，导入低秩分解的库文件。
-```
-from msmodelslim.pytorch import low_rank_decompose   
-from ascend_utils.common.utils import count_parameters #请根据实际情况导入对应框架的库文件
+```python
+from msmodelslim.pytorch import low_rank_decompose
+# 请根据实际情况导入对应框架的库文件
+from ascend_utils.common.utils import count_parameters 
+from ascend_utils.common.security import SafeWriteUmask
 ```
 - 说明
 MindSpore框架下库文件的路径为msmodelslim.mindspore，PyTorch框架下库文件的路径为 msmodelslim.pytorch.low_rank_decompose。
@@ -43,7 +45,8 @@ print("Decomposed model parameters:", count_parameters(model))
 8. 多卡训练时，需要先在单卡训练下保存模型权重（单卡训练时无需执行，直接启动调优任务即可）。
 ```
 state_dict_file = "/home/xxx/decompose_state_dict.ckpt"   #请根据实际情况配置模型权重文件保存的路径及名称
-torch.save(model.state_dict(),state_dict_file)
+with SafeWriteUmask():
+    torch.save(model.state_dict(),state_dict_file)
 ```
 
 9. 多卡训练时，需要在多卡下指定 do_decompose_weight=False，只转换模型结构为低秩分解后的模型，不分解模型权重。然后加载单卡训练下保存的权重（单卡训练时无需执行，直接启动调优任务即可）。

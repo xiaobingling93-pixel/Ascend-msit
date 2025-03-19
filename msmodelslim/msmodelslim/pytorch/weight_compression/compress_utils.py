@@ -23,40 +23,44 @@ def compress_weight_fun(weights, record_detail_root='./'):
     shape_k, shape_n = weights.shape[:2]
     get_valid_write_path(record_detail_root, is_dir=True)
     write_root = makedirs(os.path.join(record_detail_root, str(os.getpid()), '.tmp'))
-    input_weight_path = os.path.join(write_root, 'input_weight_path.bin')
-    get_valid_write_path(input_weight_path)
-    compress_output_path = os.path.join(write_root, 'compress_output.bin')
-    get_valid_write_path(compress_output_path) 
-    compress_index_path = os.path.join(write_root, 'compress_index.bin')
-    get_valid_write_path(compress_index_path) 
-    compress_info_path = os.path.join(write_root, 'compress_info.bin')
-    get_valid_write_path(compress_info_path) 
+    try:
+        input_weight_path = os.path.join(write_root, 'input_weight_path.bin')
+        get_valid_write_path(input_weight_path)
+        compress_output_path = os.path.join(write_root, 'compress_output.bin')
+        get_valid_write_path(compress_output_path) 
+        compress_index_path = os.path.join(write_root, 'compress_index.bin')
+        get_valid_write_path(compress_index_path) 
+        compress_info_path = os.path.join(write_root, 'compress_info.bin')
+        get_valid_write_path(compress_info_path) 
 
-    with SafeWriteUmask(umask=0o177):
-        weights.astype(np.int8).tofile(input_weight_path)
+        with SafeWriteUmask(umask=0o177):
+            weights.astype(np.int8).tofile(input_weight_path)
 
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    compress_excutor_path = os.path.join(current_dir, 'compress_graph', 'build', 'compress_excutor')
-    command = '{} {} {} 1 1 1 0 0 {} {} {} {}'.format(compress_excutor_path, shape_k, shape_n, 
-                        input_weight_path, compress_output_path, compress_index_path, compress_info_path)
-    with SafeWriteUmask(umask=0o077):
-        process = subprocess.Popen(command.split(), shell=False, stdout=subprocess.PIPE)
-        process.wait(timeout=600)
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        compress_excutor_path = os.path.join(current_dir, 'compress_graph', 'build', 'compress_excutor')
+        command = '{} {} {} 1 1 1 0 0 {} {} {} {}'.format(compress_excutor_path, shape_k, shape_n, 
+                            input_weight_path, compress_output_path, compress_index_path, compress_info_path)
+        with SafeWriteUmask(umask=0o077):
+            process = subprocess.Popen(command.split(), shell=False, stdout=subprocess.PIPE)
+            process.wait(timeout=600)
 
-    is_output_exist = os.path.exists(compress_output_path)
-    is_index_exist = os.path.exists(compress_index_path)
-    is_info_exist = os.path.exists(compress_info_path)
-    if is_output_exist and is_index_exist and is_info_exist:
-        output = np.fromfile(compress_output_path, dtype=np.int8)
-        index = np.fromfile(compress_index_path, dtype=np.int8)
-        info = np.fromfile(compress_info_path, dtype=np.uint32)
-        result = list(info), output, index
+        is_output_exist = os.path.exists(compress_output_path)
+        is_index_exist = os.path.exists(compress_index_path)
+        is_info_exist = os.path.exists(compress_info_path)
+        if is_output_exist and is_index_exist and is_info_exist:
+            output = np.fromfile(compress_output_path, dtype=np.int8)
+            index = np.fromfile(compress_index_path, dtype=np.int8)
+            info = np.fromfile(compress_info_path, dtype=np.uint32)
+            result = list(info), output, index
+        else:
+            result = None, None, None
+    except Exception as e:
+        raise Exception("Error from compress function.", e) from e
+    finally:
         tmp_dir = os.path.join(record_detail_root, str(os.getpid()))
         safe_delete_path_if_exists(tmp_dir, logger_level="debug")
-    else:
-        result = None, None, None 
-    
-    return result 
+
+    return result
 
 
 def round_up(val, align):

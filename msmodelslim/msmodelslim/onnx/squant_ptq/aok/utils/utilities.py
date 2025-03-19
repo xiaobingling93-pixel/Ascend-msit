@@ -7,15 +7,14 @@ from typing import Iterable, Optional
 import numpy as np
 import onnx
 from onnx import TensorProto, helper, mapping, NodeProto, ModelProto, AttributeProto, GraphProto
-from ascend_utils.common.security import get_valid_read_path
+from ascend_utils.common.security import get_valid_read_path, safe_delete_path_if_exists
 
 
 def create_empty_folder(folder_name):
     """
     Create folder
     """
-    if os.path.exists(folder_name):
-        shutil.rmtree(folder_name)
+    safe_delete_path_if_exists(folder_name)
     os.mkdir(folder_name, mode=0o750)
 
 

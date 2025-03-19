@@ -6,6 +6,7 @@ import onnx
 import numpy as np
 from onnx import helper
 
+from ascend_utils.common.security import SafeWriteUmask
 from msmodelslim.onnx.post_training_quant.dag.node import OnnxNode, QuantizableOnnxNode
 from msmodelslim.onnx.post_training_quant.dag.param import NodeParam, Tensor
 from msmodelslim import logger
@@ -375,7 +376,8 @@ class OnnxGraph:
 
     def save_model(self, model_path):
         onnx_model = self.build_model()
-        onnx.save(onnx_model, model_path)
+        with SafeWriteUmask():
+            onnx.save(onnx_model, model_path)
 
     def remove_node(self, node: OnnxNode):
         logger.debug("Remove the node %s", node.name)
