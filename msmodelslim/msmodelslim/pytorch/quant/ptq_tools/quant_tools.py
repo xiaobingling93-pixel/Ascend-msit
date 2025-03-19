@@ -202,7 +202,7 @@ class Calibrator(object):
         logger.info("Path of quant param is %s ", save_path)
         if not os.path.exists(save_path):
             save_path = get_valid_write_path(save_path)
-            os.makedirs(save_path)
+            os.makedirs(save_path, mode=0o750, exist_ok=True)
         input_scale, input_offset, weight_scale, weight_offset, quant_weight = self.get_quant_params()
         self.save_param(save_path, "input_scale.npy", input_scale)
         self.save_param(save_path, "input_offset.npy", input_offset)
