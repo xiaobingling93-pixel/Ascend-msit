@@ -84,7 +84,7 @@ def _common_security_checks(
     return os.path.realpath(path)
 
 
-def read_file_common_check(path: str, *, raise_argprase: bool = False):
+def read_file_common_check(path: str, *, raise_argprase: bool = True):
     return _common_security_checks(
         path, 
         is_dir=False, 
@@ -92,7 +92,7 @@ def read_file_common_check(path: str, *, raise_argprase: bool = False):
         raise_argprase=raise_argprase
     )
 
-def execute_file_common_check(path: str, *, raise_argprase: bool = False):
+def execute_file_common_check(path: str, *, raise_argprase: bool = True):
     return _common_security_checks(
         path, 
         is_dir=False, 
@@ -100,7 +100,7 @@ def execute_file_common_check(path: str, *, raise_argprase: bool = False):
         raise_argprase=raise_argprase
     )
     
-def list_dir_common_check(path: str, *, raise_argprase: bool = False):
+def list_dir_common_check(path: str, *, raise_argprase: bool = True):
     return _common_security_checks(
         path, 
         is_dir=True, 
@@ -108,7 +108,7 @@ def list_dir_common_check(path: str, *, raise_argprase: bool = False):
         raise_argprase=raise_argprase
     )
 
-def traverse_dir_common_check(path: str, *, raise_argprase: bool = False):
+def traverse_dir_common_check(path: str, *, raise_argprase: bool = True):
     return _common_security_checks(
         path, 
         is_dir=True, 
