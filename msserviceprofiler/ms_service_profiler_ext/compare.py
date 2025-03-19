@@ -119,9 +119,9 @@ def main():
         logger.warning("No files to compare, please check the input directories")
         return
     
-    with ms_open(f'{result_prefix}.db', 'w', encoding='utf-8') as db_path:
-        with ms_open(f'{result_prefix}.xlsx', 'w', encoding='utf-8') as xlsx_path:
-            process_files(file_pairs, db_path, xlsx_path)
+    with ms_open(f'{result_prefix}.db', 'w', encoding='utf-8'):
+        with ms_open(f'{result_prefix}.xlsx', 'w', encoding='utf-8'):
+            process_files(file_pairs, f'{result_prefix}.db', f'{result_prefix}.xlsx')
     
     logger.info("Comparing finished successfully, the results stored under %r", args.output_path)
     logger.info("\nWhat's Next?\n\tYou may use the `grafana` to have a better visualization of the comparison results")
