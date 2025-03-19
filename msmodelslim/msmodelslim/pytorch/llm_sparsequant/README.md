@@ -410,6 +410,9 @@ cd build
 import re
 import mindspore as ms
 import numpy as np
+
+from ascend_utils.common.security import SafeWriteUmask #请根据实际情况导入对应框架的库文件
+
 linear_weight_pattern = r"^(?=.{1,100}$)model\.layers\.\d+\.(attention[^_]|feed_forward|augs_attn\d+).*\.weight$" #根据实际情况进行权重键值的筛选
 reg = re.compile(linear_weight_pattern)
 sparse_ckpt = ms.load_checkpoint(f"./quant_weight.ckpt")  #./quant_weight.ckpt为稀疏量化结果件的保存路径
@@ -419,7 +422,8 @@ for k, v in sparse_ckpt.items():
         if k in disable_names:
             continue
         compressed_weight_dict[k] = v.numpy() 
-np.save(f"quant_weight.npy", compressed_weight_dict)
+with SafeWriteUmask():
+    np.save(f"quant_weight.npy", compressed_weight_dict)
 ```
 
 说明
