@@ -234,7 +234,7 @@ class FAQuantizer:
         try:
             num_key_value_heads = config.num_key_value_heads
         except AttributeError as e:
-            self.logger.info("Failed to obtain `num_key_value_heads`, assuming Multi-head Attention by default.")
+            self.logger.warning("Failed to obtain `num_key_value_heads`, assuming Multi-head Attention by default.")
             num_key_value_heads = num_head
         self.set_head_params(num_head, head_dim, num_key_value_heads)
 

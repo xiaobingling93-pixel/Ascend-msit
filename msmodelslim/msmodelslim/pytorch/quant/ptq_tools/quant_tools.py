@@ -199,7 +199,7 @@ class Calibrator(object):
             np.save(output_path, output_file)
 
     def export_param(self, save_path):
-        logger.info("Path of quant param is %s ", save_path)
+        logger.info("Path of quant param is %r ", save_path)
         if not os.path.exists(save_path):
             save_path = get_valid_write_path(save_path)
             os.makedirs(save_path, mode=0o750, exist_ok=True)
@@ -381,7 +381,7 @@ class Calibrator(object):
 
         for key, item in safetensor_weight.items():
             safetensor_weight[key] = item.cpu().contiguous()
-        logger.info("The directory path for the saved safetensors is %s", quant_model_weight_path)
+        logger.info("The directory path for the saved safetensors is %r", quant_model_weight_path)
 
         with SafeWriteUmask(umask=0o377):
             save_file(safetensor_weight, quant_model_weight_path)
