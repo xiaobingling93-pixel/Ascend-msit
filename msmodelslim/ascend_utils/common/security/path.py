@@ -71,13 +71,13 @@ def check_others_not_writable(path):
         bool(dir_stat.st_mode & stat.S_IWOTH)     # 其他用户可写
     )
     if is_writable:
-        logger.warning("The file path %s may be insecure because it can be written by others.", path)
+        logger.warning("The file path %r may be insecure because it can be written by others.", path)
 
 
 def check_path_owner_consistent(path):
     file_owner = os.stat(path).st_uid
     if file_owner != os.getuid() and os.getuid() != 0:
-        logger.warning("The file path %s may be insecure because is does not belong to you.", path)
+        logger.warning("The file path %r may be insecure because is does not belong to you.", path)
 
 
 def check_dirpath_before_read(path):
