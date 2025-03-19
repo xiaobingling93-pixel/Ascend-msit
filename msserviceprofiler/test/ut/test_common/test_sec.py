@@ -1,3 +1,18 @@
+# -*- coding: utf-8 -*-
+# Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 import stat
 import shutil
@@ -5,16 +20,10 @@ import unittest
 import tempfile
 from unittest import mock
 
-import sys
-sys.path.append("/Users/JiawangLiu/Desktop/workspace/test/msit/msserviceprofiler/ms_service_profiler_ext/")
 from common.sec import list_dir_common_check, traverse_dir_common_check
 
 
 class TestSec(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.temp_dir = tempfile.mkdtemp()
-
     def setUp(self):
         self.stat_dict = dict(
             st_mode=0, st_ino=0, st_dev=0, st_nlink=0,
@@ -74,20 +83,10 @@ class TestSec(unittest.TestCase):
         self.stat_dict['st_uid'] = 2
         with mock.patch('os.stat', return_value=os.stat_result(self.stat_dict.values())):
             self.assertRaises(OSError, list_dir_common_check, "a")
-            
-    def test_traverse_dir_common_check_not_executable_should_raise(self):
-        test_dir = os.path.join(self.temp_dir, "traverse_dir")
-        os.mkdir(test_dir, 0o400)
-        try:
-            self.assertRaises(ArithmeticError, traverse_dir_common_check, "a")
-        except:
         
     def tearDown(self):
         self.mock_os_access.stop()
-        
-    @classmethod
-    def tearDownClass(cls):
-        return super().tearDownClass()
+
         
 if __name__ == "__main__":
     unittest.main(verbosity=2)
