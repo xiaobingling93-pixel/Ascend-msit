@@ -43,6 +43,7 @@
 | w_bit             | 权重量化bit              | 8                           | 大模型量化场景下，可配置为8或16； <br>大模型稀疏量化场景下，需配置为4。                                                                                |
 | device_type       | device类型             | cpu                         | 可选值：['cpu', 'npu']                                                                                                      |
 | calib_file        | 量化校准数据               | teacher_qualification.jsonl | 存放校准数据的json文件。                                                                                                          |
+| calib_text | 量化校准数据列表 | 无 | 校准数据集。 |
 | disable_names     | 手动回退的量化层名称           | 默认回退所有down_proj层            | 用户可根据精度要求手动设置，默认回退隐藏层的降维投影层。                                                                                            |
 | disable_level     | L自动回退等级              | L0                          | 配置示例如下：<br>'L0'：默认值，不执行回退。<br>'L1'：回退1层。<br>'L2'：回退2层。<br>'L3'：回退3层。<br>'L4'：回退4层。<br>'L5'：回退5层。                        |
 | act_method        | 激活值量化方法              | 1                           | (1) 1代表Label-Free场景的min-max量化方式。 <br>(2) 2代表Label-Free场景的histogram量化方式。 <br>(3) 3代表Label-Free场景的自动混合量化方式，LLM大模型场景下推荐使用。 |
@@ -54,6 +55,17 @@
 | part_file_size    | 量化权重文件大小             | 无限制                         | 单个量化权重文件大小不超过xGB。                                                                                                       |
 | use_kvcache_quant | 是否使用kvcache量化功能      | False                       | True: 使用kvcache量化功能；<br>False: 不使用kvcache量化功能。                                                                          |
 | is_dynamic        | 是否使用per-token动态量化功能  | False                       | True: 使用per-token动态量化；<br>False: 不使用per-token动态量化。                                                                      |
+| use_fa_quant | 是否使用FA3量化 | False | True: 使用FA3量化类型；<br>False: 不使用FA3量化类型。|
+| fa_amp | FA3量化场景下的自动回退的layer数量 | 0 | 数据类型为int，默认值为0。数据取值范围是大于等于0，并且小于等于模型layer数量，如果超出模型的layer数量将会取模型的最大layer数量为回退层数。 |
+| open_outlier | 是否开启权重异常值划分 | True | True：开启权重异常值划分。<br>False：关闭权重异常值划分。<br>说明：(1)仅在lowbit设置为True时生效。(2)per_group量化场景下，需协同设置is_lowbit为True，open_outlier为False。|
+| group_size | per_group量化中group的大小 | 64 | 默认值为64，支持配置为32,64,128。<br>说明:仅适用于per_group量化场景，需协同设置is_lowbit为True，open_outlier为False。|
+| disable_last_linear | 是否回退最后linear层 | True | True：回退最后linear层。<br>False：不回退最后linear层 |
+| tokenizer_args | 加载自定义tokenizer时传入的自定义参数 | 无 | 以字典方式传入 |
+| input_ids_name | 指定分词结果中输入 ID 对应的键名 | input_ids | 无 |
+| attention_mask_name | 指定分词结果中注意力掩码对应的键名 | attention_mask | 无 |
+| model_name | 模型名称，可选参数 | None | 用于控制异常值抑制参数 |
+| use_reduce_quant | 权重量化是否是lccl all reduce量化 | False | 用于MindIE推理的标识 |
+| tp_size | 模拟多卡量化时的卡数 | 1 | 数据取值范围为[1,2,4,8,16]，默认值为1，不启用模拟多卡量化。<br>设置为2、4、8,16时，对于通信层的linear会进行模拟多卡，每张卡使用不同的scale和offset进行量化 |
 
 #### quant_deepseek_w8a8.py 量化参数说明
 
