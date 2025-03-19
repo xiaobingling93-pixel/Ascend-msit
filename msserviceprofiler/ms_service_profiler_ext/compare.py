@@ -103,7 +103,7 @@ def process_files(file_pairs, output_db, output_excel):
     )
 
 
-def main():    
+def main():
     args = parse_args()
     set_log_level(args.log_level)
     
@@ -114,6 +114,10 @@ def main():
     )
 
     file_pairs = file_collector.collect_pairs(args.input_path, args.golden_path)
+    if not file_pairs:
+        logger.warning("No files to compare, please check the input directories")
+        return
+    
     process_files(file_pairs, f'{result_prefix}.db', f'{result_prefix}.xlsx')
     
     logger.info("Comparing finished successfully, the results stored under %r", args.output_path)
