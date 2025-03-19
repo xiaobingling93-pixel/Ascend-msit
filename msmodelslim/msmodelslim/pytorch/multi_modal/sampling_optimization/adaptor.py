@@ -199,7 +199,7 @@ class ReStepAdaptor:
 
         os.makedirs(save_dir, exist_ok=True)
         save_file_path = os.path.join(save_dir, 'searched_schedule.txt')
-        logger.info("Result will saved at: %s", save_file_path)
+        logger.info("Result will saved at: %r", save_file_path)
 
         def denoising_fn(latents, timestep, step_index):
             return pipeline.one_step_sample(
@@ -223,7 +223,7 @@ class ReStepAdaptor:
             schedule = optimizer.optimize(schedule, config.monte_carlo_iters)
 
         dump_json(schedule, save_file_path)
-        logger.info("Search result saved at: %s", save_file_path)
+        logger.info("Search result saved at: %r", save_file_path)
 
         return schedule
 
