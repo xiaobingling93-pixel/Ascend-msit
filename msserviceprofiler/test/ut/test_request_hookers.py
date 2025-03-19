@@ -103,7 +103,9 @@ class TestVLLMHookers(unittest.TestCase):
         self.fake_llm_engine.validate_output(self.fake_output, self.fake_output_type)
 
         # 验证 Profiler 调用
-        expected_call = call(Level.INFO).domain("http").res("123").metric(
-            "recvTokenSize", 5).metric(
+        expected_call_1 = call(Level.INFO).domain("http").res("123").metric(
+            "recvTokenSize", 5).event("httpRes")
+        expected_call_2 = call(Level.INFO).domain("http").res("123").metric(
             "replyTokenSize", 3).event("httpRes")
-        mock_profiler.assert_has_calls([expected_call])
+        mock_profiler.assert_has_calls([expected_call_1])
+        mock_profiler.assert_has_calls([expected_call_2])

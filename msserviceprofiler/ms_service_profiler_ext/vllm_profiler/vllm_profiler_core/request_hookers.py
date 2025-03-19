@@ -47,12 +47,15 @@ class LLMEngineHook(VLLMHookerBase):
 
         def validate_output_maker(ori_func):
             def validate_output(output, output_type):
-                profiler = Profiler(Level.INFO)
+                profiler_recv = Profiler(Level.INFO)
+                profiler_reply = Profiler(Level.INFO)
                 if output.finished is True:
                     request_id = output.request_id
                     input_token_size = len(output.prompt_token_ids)
                     output_token_size = len(output.outputs[0].token_ids)
-                    profiler.domain("http").res(request_id).metric("recvTokenSize", input_token_size).metric(
+                    profiler_recv.domain("http").res(request_id).metric(
+                        "recvTokenSize", input_token_size).event("httpRes")
+                    profiler_reply.domain("http").res(request_id).metric(
                         "replyTokenSize", output_token_size).event("httpRes")
                 return ori_func(output, output_type)
 
