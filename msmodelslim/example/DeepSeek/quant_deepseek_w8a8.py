@@ -29,7 +29,6 @@ def parse_args():
                         help="The calib data for anti outlier")
     parser.add_argument('--calib_dataset', type=str, default="./calib_prompt.json",
                         help="The calib data for calibration")
-    parser.add_argument('--batch_size', type=int, default=1, help="Batch size for anti and calibration")
     parser.add_argument('--from_fp8', action='store_true', help="Origin model is of fp8")
     parser.add_argument('--from_bf16', action='store_true', help="Origin model is of bf16")
     return parser.parse_args()
@@ -41,7 +40,7 @@ def custom_hook(model_config):
     model_config["model_type"] = "deepseekv2"
 
 
-def get_calib_dataset_batch(model_tokenizer, calib_list, batch_size, device="npu"):
+def get_calib_dataset_batch(model_tokenizer, calib_list, batch_size=1, device="npu"):
     calib_dataset = []
     calib_list = [calib_list[i:i + batch_size] for i in range(0, len(calib_list), batch_size)]
     for calib_data in calib_list:

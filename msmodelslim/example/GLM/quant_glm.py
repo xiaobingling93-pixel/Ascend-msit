@@ -171,7 +171,7 @@ if __name__ == '__main__':
     disable_names = args.disable_names
     if not disable_names and args.a_bit == 8:
         disable_names = [f"transformer.encoder.layers.{i}.mlp.dense_4h_to_h"
-                        for i in range(0, 39)]
+                        for i in range(num_layers)]
 
     quant_conf = QuantConfig(
         w_bit=args.w_bit,
