@@ -19,6 +19,7 @@ import unittest
 
 from msit_opcheck.golden_funcs import OP_DICT
 from components.utils.cmp_algorithm import CUSTOM_ALG_MAP
+from components.utils.file_open_check import sanitize_csv_value
 from msit_opcheck.utils import NAMEDTUPLE_PRECISION_METRIC
 from components.debug.common import logger
 
@@ -80,7 +81,7 @@ class CaseManager:
                     op_cur = op(name, case_info=case_info)
                     suite.addTest(op_cur)
             except Exception as err:
-                logger.error(f"{testnames} fun failed.")
+                logger.error(f"{testnames} run failed.")
         
         runner.run(suite)
         self.write_op_result_to_csv(self.cases)
@@ -104,7 +105,9 @@ class CaseManager:
                 "tensor_path": op_result.get('data_path_dict', ""),
                 "fail_reason": op_result.get('fail_reason', ""),
             }
-            
+
+            for v in op_info.values():
+                sanitize_csv_value(v)
             if len(op_result['res_detail']) > 0:
                 for cur_id, res_detail in enumerate(op_result['res_detail']):
                     op_infos.append(self._update_single_op_result(op_info, cur_id, res_detail))
