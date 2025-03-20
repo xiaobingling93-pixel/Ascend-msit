@@ -14,6 +14,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig
 from convert_fp8_to_bf16 import auto_convert_model_fp8_to_bf16, OpsType
 from add_safetensors import add_safetensors
 
+from ascend_utils.common.security import get_valid_read_path
 from msmodelslim.tools.copy_config_files import copy_config_files, modify_config_json
 from msmodelslim.pytorch.llm_ptq.anti_outlier import AntiOutlierConfig, AntiOutlier
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
@@ -111,13 +112,16 @@ def main():
 
     pbar.update(1)
 
-    with open(args.anti_dataset, "r") as file:
+    anti_dataset_path = get_valid_read_path(args.anti_dataset, "json", is_dir=False)
+    calib_dataset_path = get_valid_read_path(args.calib_dataset, "json", is_dir=False)
+
+    with open(anti_dataset_path, "r") as file:
         anti_prompt = json.load(file)
-    with open(args.calib_dataset, "r") as file:
+    with open(calib_dataset_path, "r") as file:
         calib_prompt = json.load(file)
 
-    anti_dataset = get_calib_dataset_batch(tokenizer, anti_prompt, args.batch_size, model.device)
-    dataset_calib = get_calib_dataset_batch(tokenizer, calib_prompt, args.batch_size, model.device)
+    anti_dataset = get_calib_dataset_batch(tokenizer, anti_prompt, 1, model.device)
+    dataset_calib = get_calib_dataset_batch(tokenizer, calib_prompt, 1, model.device)
 
     with torch.no_grad():
         anti_config = AntiOutlierConfig(w_bit=8,

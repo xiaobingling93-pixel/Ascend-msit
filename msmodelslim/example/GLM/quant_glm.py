@@ -212,10 +212,12 @@ if __name__ == '__main__':
         device_type=args.device_type, tokenizer_args=tokenizer_args,
         model_name=args.model_name,
     )
-
-    with open(args.anti_file, 'r') as f:
+    anti_file_path = get_valid_read_path(args.anti_file, "json", is_dir=False)
+    calib_file_path = get_valid_read_path(args.calib_file, "json", is_dir=False)
+    
+    with open(anti_file_path, 'r') as f:
         anti_prompts = json.load(f)
-    with open(args.calib_file, 'r') as f:
+    with open(calib_file_path, 'r') as f:
         calib_prompts = json.load(f)
 
     anti_dataset = []
