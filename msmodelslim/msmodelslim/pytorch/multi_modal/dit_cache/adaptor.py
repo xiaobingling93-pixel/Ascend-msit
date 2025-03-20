@@ -25,6 +25,8 @@ DELTA_HIDDEN_KEY = 'delta_hidden'
 
 
 def get_rank():
+    if not dist.is_initialized():
+        return 0
     return dist.get_rank() if dist.is_initialized() else 0
 
 
@@ -51,11 +53,23 @@ class DitCacheConfig:
         cache_block_start: Starting block index for caching region
         cache_num_blocks: Number of blocks in caching region
     """
-    use_cache: bool = True
     cache_step_start: int = None
     cache_step_interval: int = None  # Compute every n timesteps, reuse cache for others
     cache_block_start: int = None  # Starting block index (0 means from first block)
     cache_num_blocks: int = None  # Number of blocks to cache
+
+    def __post_init__(self):
+        if not isinstance(self.cache_step_start, int) or self.cache_step_start < 0:
+            raise ValueError("cache_step_start must be a non-negative integer")
+
+        if not isinstance(self.cache_step_interval, int) or self.cache_step_interval <= 0:
+            raise ValueError("cache_step_interval must be a positive integer")
+
+        if not isinstance(self.cache_block_start, int) or self.cache_block_start < 0:
+            raise ValueError("cache_block_start must be a non-negative integer")
+
+        if not isinstance(self.cache_num_blocks, int) or self.cache_num_blocks < 0:
+            raise ValueError("cache_num_blocks must be a non-negative integer")
 
     def __iter__(self):
         """Enables dict(config) calls"""
@@ -83,13 +97,13 @@ class DitCacheSearchConfig:
     dit_block_num: Optional[int] = None
     num_sampling_steps: int = None
 
-    def _check_params(self):
+    def __post_init__(self):
         """Validates configuration parameters"""
 
         if not isinstance(self.cache_ratio, (int, float)):
             raise ValueError("cache_ratio must be a number")
-        if not (1.0 < self.cache_ratio < 2.0):
-            raise ValueError("cache_ratio should be in the range of (1.0, 2.0)")
+        if not (1.0 <= self.cache_ratio <= 2.0):
+            raise ValueError("cache_ratio should be in the range of [1.0, 2.0]")
 
         if self.dit_block_num is not None:
             if not isinstance(self.dit_block_num, int):
@@ -170,9 +184,7 @@ class DitCacheAdaptor:
             ValueError: If config is not DitCacheSearchConfig or if dit_block_path
                        is invalid.
         """
-        if config is None:
-            config = DitCacheSearchConfig()
-        else:
+        if config is not None:
             if not isinstance(config, DitCacheSearchConfig):
                 raise ValueError("config must be DitCacheSearchConfig")
 
@@ -180,7 +192,7 @@ class DitCacheAdaptor:
         self.pipeline = pipeline
         self.search_config = config
         self.cache = {}  # Stores block outputs from previous timestep, keyed by block index
-        self.rank = dist.get_rank()
+        self.rank = get_rank()
 
         # Validate path format during initialization
         if not isinstance(dit_block_path, str) or not dit_block_path:
@@ -203,9 +215,14 @@ class DitCacheAdaptor:
                 f"Error: {str(e)}"
             ) from None
 
-        self.search_config.dit_block_num = len(obj_dit_blocks)
+        if self.search_config is not None:
+            if self.search_config.dit_block_num is not None:
+                if self.search_config.dit_block_num != len(obj_dit_blocks):
+                    raise ValueError('dit_block_num not equal to the number of blocks in the dit_block_path')
+            self.search_config.dit_block_num = len(obj_dit_blocks)
 
-        self.dit_cache_config = DitCacheConfig()
+        self.dit_cache_config = None
+        self.enable_cache = True
 
         self._add_cache_to_dit_block(obj_dit_blocks)
 
@@ -284,6 +301,8 @@ class DitCacheAdaptor:
         Raises:
             ValueError: If not called before DiT block forward pass
         """
+        if not isinstance(t_idx, int) or t_idx < 0:
+            raise ValueError("t_idx must be non-negative integer")
         cls._timestep_idx = t_idx
         logger_debug('set timestep idx: %r', t_idx)
 
@@ -329,12 +348,12 @@ class DitCacheAdaptor:
                 - `cache_block_start` (int): Starting block index for cache region
                 - `cache_num_blocks` (int): Number of blocks in cache region
         """
+        if self.search_config is None:
+            raise ValueError("search_config must be set before calling search()")
         if not callable(run_pipeline_and_save_videos):
             raise ValueError("run_pipeline_and_save_videos must be callable")
         if not isinstance(prompts_num, int) or prompts_num <= 0:
             raise ValueError("prompts_num must be a positive integer")
-
-        search_cache_path = self._setup_temp_cache_dir()
 
         def generate_videos(config_, pipeline_):
             # Log function entry
@@ -348,11 +367,13 @@ class DitCacheAdaptor:
             cache_step_interval = config_.cache_step_interval
 
             # Sync configuration to current object
-            self.dit_cache_config.use_cache = use_cache
-            self.dit_cache_config.cache_block_start = cache_dit_block_start
-            self.dit_cache_config.cache_num_blocks = cache_num_dit_blocks
-            self.dit_cache_config.cache_step_start = cache_step_start
-            self.dit_cache_config.cache_step_interval = cache_step_interval
+            self.enable_cache = use_cache
+            self.dit_cache_config = DitCacheConfig(
+                cache_block_start=cache_dit_block_start,
+                cache_num_blocks=cache_num_dit_blocks,
+                cache_step_start=cache_step_start,
+                cache_step_interval=cache_step_interval,
+            )
 
             # Generate videos using external function
             videos = run_pipeline_and_save_videos(pipeline_)
@@ -400,25 +421,31 @@ class DitCacheAdaptor:
 
             logger_debug("Exiting generate_videos function")
 
-        # ----------------- Search Interface Integration -----------------
-        config = dit_cache_searcher.DitCacheSearcherConfig(
-            dit_block_num=self.search_config.dit_block_num,
-            prompts_num=prompts_num,
-            num_sampling_steps=self.search_config.num_sampling_steps,
-            cache_ratio=self.search_config.cache_ratio,
-            search_cache_path=search_cache_path
-        )
+        try:
+            search_cache_path = self._setup_temp_cache_dir()
 
-        logger_info("***** Start searching for dit cache with config %r", self.search_config)
-        searcher = dit_cache_searcher.DitCacheSearcher(
-            config=config,
-            pipeline=self.pipeline,
-            generate_videos=generate_videos
-        )
+            # ----------------- Search Interface Integration -----------------
+            config = dit_cache_searcher.DitCacheSearcherConfig(
+                dit_block_num=self.search_config.dit_block_num,
+                prompts_num=prompts_num,
+                num_sampling_steps=self.search_config.num_sampling_steps,
+                cache_ratio=self.search_config.cache_ratio,
+                search_cache_path=search_cache_path
+            )
 
-        # Start search
-        [cache_block_start, cache_step_interval, cache_num_blocks, cache_step_start] = searcher.search()[0]
-        dist.barrier()
+            logger_info("***** Start searching for dit cache with config %r", self.search_config)
+            searcher = dit_cache_searcher.DitCacheSearcher(
+                config=config,
+                pipeline=self.pipeline,
+                generate_videos=generate_videos
+            )
+
+            # Start search
+            [cache_block_start, cache_step_interval, cache_num_blocks, cache_step_start] = searcher.search()[0]
+            dist.barrier()
+        finally:
+            # Clean up temporary cache directory
+            self._cleanup_temp_cache_dir()
 
         searched_config = DitCacheConfig(
             cache_step_start=cache_step_start,
@@ -428,10 +455,9 @@ class DitCacheAdaptor:
         )
 
         self.dit_cache_config = searched_config
+        self.enable_cache = True
         logger_info("***** Finish searching for dit cache with result: %r", searched_config)
 
-        # Clean up temporary cache directory
-        self._cleanup_temp_cache_dir()
         return searched_config
 
     def _add_cache_to_dit_block(self, dit_blocks: nn.ModuleList):
@@ -452,20 +478,27 @@ class DitCacheAdaptor:
 
             def forward_with_cache(blk_obj, hidden_states, *args, orig_forward=_orig_forward, _block_idx=block_idx,
                                    **kwargs):
+                use_cache = self.enable_cache
+                # Direct forward when cache disabled
+                if not use_cache:
+                    return orig_forward(hidden_states, *args, **kwargs)
+
                 sr = self.dit_cache_config
+                if self.dit_cache_config is None:
+                    raise ValueError("You must set the dit cache config to enable forward with cache")
+
                 t_start = sr.cache_step_start
                 t_interval = sr.cache_step_interval
                 blk_start = sr.cache_block_start
                 blk_end = sr.cache_block_start + sr.cache_num_blocks - 1
-                use_cache = sr.use_cache
                 t_idx = self.get_timestep_idx()
 
                 if use_cache and self._timestep_idx is None:
                     raise ValueError(
                         "You must call DitCacheAdaptor.set_timestep_idx(t_idx) at the beginning of timestep.")
 
-                # Direct forward when cache disabled or t_idx < cache_step_start
-                if (t_idx < t_start) or (not use_cache):
+                # Direct forward when t_idx < cache_step_start
+                if t_idx < t_start:
                     return orig_forward(hidden_states, *args, **kwargs)
 
                 is_step_to_store_cache = (t_idx - t_start) % t_interval == 0
@@ -534,8 +567,11 @@ class DitCacheAdaptor:
             logger_debug(f"Created shared cache directory: {temp_dir}")
             temp_dir_list[0] = temp_dir
 
-        # 所有进程都参与广播，使用相同大小的列表
-        dist.broadcast_object_list(temp_dir_list, src=0)
+        if dist.is_initialized():
+            # 所有进程都参与广播，使用相同大小的列表
+            dist.broadcast_object_list(temp_dir_list, src=0)
+        else:
+            pass
         self._temp_cache_dir = temp_dir_list[0]
         return self._temp_cache_dir
 
