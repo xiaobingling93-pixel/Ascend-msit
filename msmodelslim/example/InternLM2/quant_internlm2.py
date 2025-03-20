@@ -215,7 +215,7 @@ if __name__ == '__main__':
             attention_mask_name=args.attention_mask_name
         )
     if not os.path.exists(save_directory):
-        os.makedirs(save_directory, exist_ok=True)
+        os.makedirs(save_directory, mode=0o750, exist_ok=True)
 
     save_directory = get_valid_write_path(save_directory, is_dir=True)
     quantifier.convert(tokenized_calib_data, 

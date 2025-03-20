@@ -82,7 +82,7 @@ class SafeGenerator:
         if os.path.exists(dest_dir):
             dest_dir = get_valid_write_path(dest_dir, is_dir=True)
         else:
-            os.makedirs(dest_dir, exist_ok=True)
+            os.makedirs(dest_dir, mode=0o750, exist_ok=True)
             dest_dir = get_valid_write_path(dest_dir, is_dir=True)
         filenames = os.listdir(model_dir)
         max_file_num = 1024
