@@ -16,8 +16,10 @@ import tempfile
 from pathlib import Path
 
 import pytest
+import pandas as pd
 
-from components.utils.file_open_check import ms_open, FileStat, OpenException
+from components.utils.file_open_check import ms_open, FileStat, OpenException, SanitizeErrorType,\
+                                             sanitize_cell_for_dataframe, sanitize_csv_value
 from components.utils.file_open_check import PERMISSION_NORMAL, PERMISSION_KEY, RAW_INPUT_PATH
 
 
@@ -242,3 +244,59 @@ def test_msopen_given_other_w_parent_dir_then_file_read_failed_case():
                 aa.write("no way")
     except OpenException as ignore:
         assert True
+
+
+@pytest.mark.parametrize("value, errors, expected", [
+    # 非字符串类型直接返回
+    (123, SanitizeErrorType.strict.value, 123),
+    (45.67, SanitizeErrorType.replace.value, 45.67),
+    (None, SanitizeErrorType.ignore.value, None),
+    
+    # 可转数值的字符串
+    ("123", SanitizeErrorType.strict.value, "123"),
+    ("-45.67", SanitizeErrorType.strict.value, "-45.67"),
+    ("+3.14", SanitizeErrorType.strict.value, "+3.14"),
+    
+    # 安全字符串
+    ("hello", SanitizeErrorType.strict.value, "hello"),
+    ("123abc", SanitizeErrorType.strict.value, "123abc"),
+])
+def test_sanitize_csv_value_normal(value, errors, expected):
+    assert sanitize_csv_value(value, errors) == expected
+
+
+@pytest.mark.parametrize("value", [
+    "=;+exploit",
+    "+;=injection",
+    "-;-dangerous",
+    "@;@malicious"
+])
+def test_sanitize_csv_value_strict_raises(value):
+    with pytest.raises(ValueError):
+        sanitize_csv_value(value, SanitizeErrorType.strict.value)
+
+
+### sanitize_cell_for_dataframe 测试用例 ###
+
+def test_dataframe_sanitize_no_change():
+    """测试安全数据框无修改"""
+    df = pd.DataFrame({
+        "numbers": [1, 2.3, "4.5"],
+        "strings": ["safe", "123", "normal"]
+    })
+    original = df.copy()
+    sanitize_cell_for_dataframe(df)
+    pd.testing.assert_frame_equal(df, original)
+
+
+def test_dataframe_sanitize_malicious_detection():
+    """测试恶意值检测"""
+    df = pd.DataFrame({
+        "attack_col": ["=;+cmd", "safe_value"],
+        "normal_col": [123, "@;-hack"]
+    })
+    
+    with pytest.raises(ValueError) as excinfo:
+        sanitize_cell_for_dataframe(df)
+    
+    assert "Malicious value" in str(excinfo.value)
