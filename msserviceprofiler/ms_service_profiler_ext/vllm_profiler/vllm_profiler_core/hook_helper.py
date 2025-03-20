@@ -24,7 +24,7 @@ class HookHelper:
         self.attr_name = None
         if ori_function_define is None:
             return
-        elif inspect.isfunction(ori_function_define):
+        elif inspect.isfunction(ori_function_define) or inspect.ismethod(ori_function_define):
             self.ori_function = ori_function_define
             self.location, self.attr_name = self.get_location(self.ori_function)
         elif callable(ori_function_define):
