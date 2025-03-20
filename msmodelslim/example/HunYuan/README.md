@@ -4,10 +4,10 @@
 - [Tencent-Hunyuan-Large](https://github.com/Tencent/Tencent-Hunyuan-Large) 目前业界开源的基于 Transformer 的最大 MoE 模型，拥有 3890 亿个参数、520 亿个活跃参数，且其具备高质量合成数据增强训练、KV 缓存压缩、专家特定学习率缩放、长上下文处理能力强（预训练模型支持 256K 文本序列，Instruct 模型支持 128K）。
 
 #### HunYuan 模型当前已验证的量化方法
-- W8A8混合量化：Tencent-Hunyuan-Lager
+- W8A8混合量化：Tencent-Hunyuan-Large
  
 #### 此模型仓已适配的模型版本
-- [Tencent-Hunyuan-Lager](https://huggingface.co/tencent/Tencent-Hunyuan-Large/tree/main/Hunyuan-A52B-Instruct)
+- [Tencent-Hunyuan-Large](https://huggingface.co/tencent/Tencent-Hunyuan-Large/tree/main/Hunyuan-A52B-Instruct)
 
 ## 环境配置
 
