@@ -17,8 +17,10 @@ import sys
 import stat
 import re
 import logging
-
 from enum import Enum
+
+import pandas as pd
+
 from components.utils.log import logger
 from components.utils.constants import PATH_WHITE_LIST_REGEX
 from components.utils.check import Rule
@@ -115,6 +117,13 @@ class SanitizeErrorType(Enum):
     replace = "replace"
     
     
+def sanitize_cell_for_dataframe(df: pd.DataFrame):
+    for _, row in df.iterrows():           # 遍历每一行
+        for col_name in df.columns:                # 遍历每一列
+            cell_value = row[col_name]             # 获取单元格值
+            sanitize_csv_value(cell_value)         # 校验每个格子内容
+
+
 def sanitize_csv_value(value: str, errors=SanitizeErrorType.strict.value):
     
     if errors == SanitizeErrorType.ignore.value or not isinstance(value, str):

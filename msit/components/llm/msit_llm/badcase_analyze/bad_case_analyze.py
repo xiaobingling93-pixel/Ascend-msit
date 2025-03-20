@@ -20,7 +20,7 @@ import pandas as pd
 from msit_llm.common.log import logger
 from msit_llm.common.constant import MSIT_BAD_CASE_FOLDER_NAME
 from msit_llm.common.utils import load_file_to_read_common_check
-from components.utils.file_open_check import ms_open
+from components.utils.file_open_check import ms_open, sanitize_cell_for_dataframe
 from components.utils.security_check import ms_makedirs
 from components.utils.constants import CSV_FILE_MAX_SIZE
 
@@ -123,6 +123,8 @@ class BadCaseAnalyzer(object):
                 "'Analyzer' detected that there is no difference between the given golden result and test result. "
                 "Hence no result is saved")
             return
+        
+        sanitize_cell_for_dataframe(df_to_save)
         
         ms_makedirs(cls.ANALYZER_FOLDER_NAME, mode=0o700, exist_ok=True)
         path = os.path.join(cls.ANALYZER_FOLDER_NAME, cls._get_candidate_path(suffix=suffix))

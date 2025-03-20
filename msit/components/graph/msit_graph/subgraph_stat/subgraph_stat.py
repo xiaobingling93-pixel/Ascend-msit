@@ -32,6 +32,7 @@ from components.utils.file_open_check import (
     MAX_SIZE_LIMITE_NORMAL_FILE,
 )
 from msit_graph.graph_extract.graph_extract import GraphAnalyze
+from components.utils.file_open_check import sanitize_cell_for_dataframe
 
 
 class SimpleNode:
@@ -371,7 +372,7 @@ def calculate_sum(args):
         output_df = subgraph_df[
             ['Subgraph', 'Count', 'Root Nodes Index', 'Task Sum Duration(us)', 'Total Duration(us)']
         ]
-       
+        sanitize_cell_for_dataframe(output_df)
         # Save the result to output CSV file
         output_df.to_csv(output_path, index=False)
         logger.info(f"Results saved to {output_path}")
