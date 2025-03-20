@@ -36,11 +36,11 @@ class FakeLLMEngine:
     def __init__(self):
         pass
 
-    def add_request(self, request_id, prompt):
+    @classmethod
+    def validate_output(cls, output, output_type):
         pass
 
-    @classmethod
-    def _get_stats(cls, output, output_type):
+    def add_request(self, request_id, prompt):
         pass
 
 
