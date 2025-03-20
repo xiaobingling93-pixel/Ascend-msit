@@ -252,12 +252,12 @@ class GraphAnalyze:
             gs.names_to_data_input_names[node_name] = [
                 index_and_name[1] 
                 for index_and_name in input_indexes_and_names 
-                if index_and_name[0] >= 0
+                if len(index_and_name) >= 2 and index_and_name[0] >= 0
             ]
             gs.names_to_ctrl_input_names[node_name] = [
                 index_and_name[1] 
                 for index_and_name in input_indexes_and_names 
-                if index_and_name[0] < 0
+                if len(index_and_name) >= 2 and index_and_name[0] < 0
             ]
             gs.names_to_ctrl_input_names[node_name].sort()
             gs.names_to_input_names[node_name] = (
