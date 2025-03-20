@@ -22,11 +22,13 @@ class KVCacheManagerHook(VLLMHookerBase):
     def init(self):
         from vllm.core.block_manager import SelfAttnBlockSpaceManager
         from vllm.engine.llm_engine import LLMEngine
+        self.request_dict = {}
         
         def allocate_maker(ori_func):
             def allocate(this, seq_group, *args, **kwargs):
                 profiler = Profiler(Level.INFO)
                 ori_func(this, seq_group, *args, **kwargs)
+                self.request_dict[seq_group.request_id] = seq_group.seqs
                 profiler.domain("KVCache").res(seq_group.request_id).metric(
                     "deviceBlock", len(this.block_tables)).event("Allocate")
             return allocate
@@ -34,9 +36,14 @@ class KVCacheManagerHook(VLLMHookerBase):
         def append_slots_maker(ori_func):
             def append_slots(this, seq, num_lookahead_slots, *args, **kwargs):
                 profiler = Profiler(Level.INFO)
+                request_id = seq.seq_id
+                for k, v in self.request_dict.items():
+                    if seq in v:
+                        request_id = k
+                        break
                 new_cows = ori_func(this, seq, num_lookahead_slots, *args, **kwargs)
-                profiler.domain("KVCache").res(seq.seq_id).metric(
-                    "deviceBlock", len(this.block_tables)).event("AppendSlots")
+                profiler.domain("KVCache").res(request_id).metric(
+                    "deviceBlock", len(this.block_tables)).event("AppendSlot")
                 return new_cows
             return append_slots
 
@@ -61,8 +68,13 @@ class KVCacheManagerHook(VLLMHookerBase):
         def free_maker(ori_func):
             def free(this, seq, *args, **kwargs):
                 profiler = Profiler(Level.INFO)
+                request_id = seq.seq_id
+                for k, v in self.request_dict.items():
+                    if seq in v:
+                        request_id = k
+                        break
                 ori_func(this, seq, *args, **kwargs)
-                profiler.domain("KVCache").res(seq.seq_id).metric(
+                profiler.domain("KVCache").res(request_id).metric(
                     "deviceBlock", len(this.block_tables)).event("Free")
             return free
 
@@ -72,7 +84,7 @@ class KVCacheManagerHook(VLLMHookerBase):
                 stats = ori_func(this, *args, **kwargs)
                 profiler.domain("KVCache").attr(
                     "cpuHitCache", stats.cpu_cache_usage_sys).attr(
-                    "gpuHitCache", stats.gpu_cache_usage_sys).event("GetCacheHitRate")
+                    "hitCache", stats.gpu_cache_usage_sys).event("GetCacheHitRate")
                 return stats
             return get_stats
 
