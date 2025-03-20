@@ -106,7 +106,7 @@ def seed_all(seed=2024):
         raise argparse.ArgumentTypeError("%s is not an int." % seed)
     
     os.environ[LCCL_DETERMINISTIC] = "1"
-    os.environ[HCCL_DETERMINISTIC] = "1"
+    os.environ[HCCL_DETERMINISTIC] = "true"
     os.environ[ATB_MATMUL_SHUFFLE_K_ENABLE] = "0"
     os.environ[ATB_LLM_LCOC_ENABLE] = "0"
 
