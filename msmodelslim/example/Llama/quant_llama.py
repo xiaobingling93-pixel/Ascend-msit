@@ -14,6 +14,7 @@ from example.common.utils import SafeGenerator, ArgumentParser, StringArgumentVa
 from msmodelslim.pytorch.llm_ptq.anti_outlier import AntiOutlier, AntiOutlierConfig
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.layer_select import LayerSelector
+from msmodelslim import logger
 
 CPU = "cpu"
 NPU = "npu"
@@ -285,7 +286,13 @@ def get_anti_dataset(tokenizer, calib_list, device_type):
 if __name__ == '__main__':
     args = parse_arguments()
     checker = SafeGenerator()
-    rank: int = int(os.getenv("RANK", "0"))
+    
+    try:
+        rank: int = int(os.getenv("RANK", "0"))
+    except ValueError as e:
+        logger.warning(f"Error converting 'RANK' environment variable to integer: {e}")
+        logger.info("Defaulting to 0.")
+        rank: int = 0
 
     model_path = args.model_path
     save_directory = args.save_directory

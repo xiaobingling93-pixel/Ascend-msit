@@ -153,8 +153,8 @@ if __name__ == '__main__':
     try:
         rank: int = int(os.getenv("RANK", "0"))
     except ValueError as e:
-        logger.error(f"Error converting 'RANK' environment variable to integer: {e}")
-        logger.error("Defaulting to 0.")
+        logger.warning(f"Error converting 'RANK' environment variable to integer: {e}")
+        logger.info("Defaulting to 0.")
         rank: int = 0
 
     model_path = args.model_path
