@@ -20,6 +20,7 @@ import numpy as np
 
 from components.debug.common import logger
 from components.utils.cmp_algorithm import NP_CMP_ALG_MAP, CUSTOM_ALG_MAP
+from components.utils.util import load_file_to_read_common_check
 from msit_opcheck.utils import NAMEDTUPLE_PRECISION_METRIC, NAMEDTUPLE_PRECISION_MODE
 from msit_opcheck.conversion.shape_convert import is_transformable, format_transformation_map
 
@@ -76,9 +77,15 @@ class OperationTest(unittest.TestCase):
         return ret
 
     def validate_int_range(self, param_value, int_range, param_name=''):
-        ivalue = int(param_value)
+        try:
+            ivalue = int(param_value)
+        except ValueError as e:
+            logger_text = f"Error: The value '{param_value}' cannot be converted to an integer."
+            logger.error(logger_text)
+            raise RuntimeError(logger_text) from e
+
         if ivalue not in int_range:
-            error_msg = f"【{param_name}】{param_value} is not in range {int_range}!"
+            error_msg = f"[{param_name}]{param_value} is not in range {int_range}!"
             raise argparse.ArgumentTypeError(error_msg)
 
     def validate_path(self, path):
@@ -90,6 +97,7 @@ class OperationTest(unittest.TestCase):
         for data_path in self.data_path_dict[tensor_type]:
             if os.path.exists(os.path.join(path, data_path)):
                 cur_path = os.path.join(path, data_path)
+                cur_path = load_file_to_read_common_check(cur_path)
                 tensor_files.append(cur_path)
             else:
                 raise RuntimeError(f"{data_path} not valid")
@@ -99,6 +107,7 @@ class OperationTest(unittest.TestCase):
         res = []
         for tensor_file in tensor_files:
             tensor_file = os.path.realpath(tensor_file)
+            tensor_file = load_file_to_read_common_check(tensor_file)
             tensor = np.load(tensor_file)
             res.append(tensor)
         return res
