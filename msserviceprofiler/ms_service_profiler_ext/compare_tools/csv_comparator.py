@@ -18,7 +18,7 @@ import pandas as pd
 from ms_service_profiler.utils.log import logger
 
 from .base import BaseComparator
-from ..utils.csv_fields import BaseCSVFields, ServiceCSVFields
+from ..common.csv_fields import BaseCSVFields, ServiceCSVFields
 
 
 class CSVComparator(BaseComparator):
@@ -111,4 +111,3 @@ class CSVComparator(BaseComparator):
         sheet_name = Path(source_file).stem.split('_')[0]
         df.to_excel(self.excel_writer, sheet_name=sheet_name, index=False)
         self._save_visualization_database(df, sheet_name)
-

@@ -19,6 +19,8 @@ from typing import List, Tuple, Set
 
 from ms_service_profiler.utils.log import logger
 
+from ms_service_profiler_ext.common.sec import read_file_common_check
+
 
 class FileCollector(object):
     def __init__(self, pattern: re.Pattern, max_iter=100) -> None:
@@ -67,20 +69,12 @@ class FileCollector(object):
             if self.pattern.match(file_path):
                 full_path = os.path.join(dir_path, file_path)
                 
-                if os.path.islink(full_path):
-                    logger.warning("%r is a soft link and will not be compared, "
-                                   "if this is not what you want, please use a regular file instead", file_path)
+                try:
+                    read_file_common_check(full_path, raise_argprase=False)
+                except OSError as e:
+                    logger.warning("%r will not be processed due to %s", full_path, e)
                     continue
-                
-                if not os.path.isfile(full_path):
-                    logger.warning("%r is not a regular file and will not be compared, "
-                                   "if this is not what you want, please use a regular file instead", file_path)
-                    continue
-                
-                if os.path.getsize(full_path) > 10 * 1024 * 1024 * 1024:
-                    logger.warning("%r exceeds the expected file size and will not be compared", file_path)
-                    continue
-                
+
                 res.add(file_path)
 
         return res

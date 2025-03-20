@@ -29,7 +29,7 @@ from ms_service_profiler_ext.exporters.exporter_summary import (
     save_dataframe_to_csv,
     calculate_batch_metrics
 )
-from ms_service_profiler_ext.utils.csv_fields import RequestCSVFields, BatchCSVFields, ServiceCSVFields
+from ms_service_profiler_ext.common.csv_fields import RequestCSVFields, BatchCSVFields, ServiceCSVFields
 
 
 class TestExporterSummaryFunctions(unittest.TestCase):
