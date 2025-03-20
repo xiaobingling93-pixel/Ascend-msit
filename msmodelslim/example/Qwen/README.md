@@ -157,7 +157,7 @@
   python3 quant_qwen.py --model_path {浮点权重路径} \
   --save_directory {W8A8-pdmix量化权重路径} \
   --calib_file ./calib_data/calib_prompt.jsonl  \
-  --anti_calib_file ./calib_data/anti_calib_prompt.jsonl \
+  --anti_calib_file ./calib_data/anti_prompt.jsonl \
   --device_type npu \
   --anti_method m6 \
   --act_method 3 \
