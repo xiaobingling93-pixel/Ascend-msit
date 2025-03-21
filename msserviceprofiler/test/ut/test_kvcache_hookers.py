@@ -114,7 +114,7 @@ class TestKVCacheManagerHook(unittest.TestCase):
         new_cows = self.fake_block_manager.append_slots(self.fake_seq, 1)
         self.assertEqual(new_cows, 1)
         expected_call = call(Level.INFO).domain("KVCache").res(0).metric(
-            "deviceBlock", len(self.fake_block_manager.block_tables)).event("AppendSlots")
+            "deviceBlock", len(self.fake_block_manager.block_tables)).event("AppendSlot")
         mock_profiler.assert_has_calls([expected_call])
 
     def test_swap_in_maker(self, mock_profiler):
