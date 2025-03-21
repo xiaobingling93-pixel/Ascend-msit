@@ -70,7 +70,7 @@ class FileCollector(object):
                 full_path = os.path.join(dir_path, file_path)
                 
                 try:
-                    read_file_common_check(full_path, raise_argprase=False)
+                    read_file_common_check(full_path, raise_argparse=False)
                 except OSError as e:
                     logger.warning("%r will not be processed due to %s", full_path, e)
                     continue

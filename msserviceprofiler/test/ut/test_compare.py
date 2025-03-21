@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-import pytest
 import pandas as pd
 from ms_service_profiler_ext.compare import (
     connect_db,
@@ -105,8 +105,14 @@ def test_main_given_valid_args_when_run_then_success(tmp_path):
     Path(input_b).mkdir(exist_ok=True)
     df_a = build_test_data_df([10, 20])
     df_b = build_test_data_df([15, 25])
-    df_a.to_csv(Path(input_a) / "service_summary.csv", index=False)
-    df_b.to_csv(Path(input_b) / "service_summary.csv", index=False)
+    csv_a = Path(input_a) / "service_summary.csv"
+    csv_b = Path(input_b) / "service_summary.csv"
+    df_a.to_csv(csv_a, index=False)
+    df_b.to_csv(csv_b, index=False)
+    input_a.chmod(0o750)
+    input_b.chmod(0o750)
+    csv_a.chmod(0o640)
+    csv_b.chmod(0o640)
 
     args = [str(input_a), str(input_b), "--output-path", str(tmp_path), "--log-level", "info"]
 
