@@ -1,9 +1,9 @@
 torchrun --nnodes=1 --nproc_per_node 8  --master_port 29503 \
     -m example.osp1_2.sample_t2v_sp \
     --model_path /path/to/checkpoint-xxx/model_ema \
-    --num_frames 29 \
-    --height 480 \
-    --width 640 \
+    --num_frames 93 \
+    --height 720 \
+    --width 1280 \
     --cache_dir "../cache_dir" \
     --text_encoder_name google/mt5-xxl \
     --text_prompt examples/prompt_list_0.txt \
