@@ -18,8 +18,9 @@ from unittest.mock import MagicMock, patch, call
 
 # 模拟 SequenceGroupMetadata 类
 class FakeSequenceGroupMetadata:
-    def __init__(self, request_id):
+    def __init__(self, request_id, seqs):
         self.request_id = request_id
+        self.seqs = seqs
 
 
 # 模拟 Sequence 类
@@ -95,8 +96,9 @@ class TestKVCacheManagerHook(unittest.TestCase):
         # 定义测试参数变量
         self.fake_request_id = 0
         self.fake_seq_id = 1
-        self.fake_seq_group = FakeSequenceGroupMetadata(self.fake_request_id)
         self.fake_seq = FakeSequence(self.fake_seq_id)
+        self.fake_seqs = [self.fake_seq]
+        self.fake_seq_group = FakeSequenceGroupMetadata(self.fake_request_id, self.fake_seqs)
 
         # 初始化测试的Fake实例
         self.fake_block_manager = FakeSelfAttnBlockSpaceManager()
