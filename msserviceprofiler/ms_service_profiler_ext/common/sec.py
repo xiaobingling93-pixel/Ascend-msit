@@ -87,12 +87,12 @@ def _common_security_checks(
     *,
     is_dir: bool,
     require_executable: bool,
-    raise_argprase: bool = False
+    raise_argparse: bool = False
 ) -> str:
     if not isinstance(path, str):
         raise TypeError("Expected path to be 'str', got %r instead" % type(path))
     
-    error_type = argparse.ArgumentTypeError if raise_argprase else OSError
+    error_type = argparse.ArgumentTypeError if raise_argparse else OSError
     
     try:
         st = os.stat(path)
@@ -111,37 +111,37 @@ def _common_security_checks(
     return _normal_user_extra_checks(path, st, is_dir, require_executable, error_type)
 
 
-def read_file_common_check(path: str, *, raise_argprase: bool = True):
+def read_file_common_check(path: str, *, raise_argparse: bool = True):
     return _common_security_checks(
         path, 
         is_dir=False, 
         require_executable=False, 
-        raise_argprase=raise_argprase
+        raise_argparse=raise_argparse
     )
 
 
-def execute_file_common_check(path: str, *, raise_argprase: bool = True):
+def execute_file_common_check(path: str, *, raise_argparse: bool = True):
     return _common_security_checks(
         path, 
         is_dir=False, 
         require_executable=True, 
-        raise_argprase=raise_argprase
+        raise_argparse=raise_argparse
     )
     
 
-def list_dir_common_check(path: str, *, raise_argprase: bool = True):
+def list_dir_common_check(path: str, *, raise_argparse: bool = True):
     return _common_security_checks(
         path, 
         is_dir=True, 
         require_executable=False, 
-        raise_argprase=raise_argprase
+        raise_argparse=raise_argparse
     )
 
 
-def traverse_dir_common_check(path: str, *, raise_argprase: bool = True):
+def traverse_dir_common_check(path: str, *, raise_argparse: bool = True):
     return _common_security_checks(
         path, 
         is_dir=True, 
         require_executable=True, 
-        raise_argprase=raise_argprase
+        raise_argparse=raise_argparse
     )
