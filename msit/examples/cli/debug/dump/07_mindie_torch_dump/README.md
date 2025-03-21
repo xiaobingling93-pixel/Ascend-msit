@@ -125,7 +125,7 @@
 
 ### 3.2 CPU/GPU数据Dump
 
-- CPU/GPU数据Dump请参考[CPU/GPU数据Dump](../../../../../docs/llm/工具-DUMP在线推理数据使用说明.md)
+- CPU/GPU数据Dump请参考[CPU/GPU数据Dump](../../../../../docs/llm/工具-Pytorch场景数据dump.md)
 
 ## 注意
 

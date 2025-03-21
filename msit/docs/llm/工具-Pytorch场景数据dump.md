@@ -72,6 +72,7 @@ register_hook(model, config, hook_type=”dump_data”)
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from transformers import AutoTokenizer, LlamaForCausalLM
 
 # 导入工具的数据采集接口
 from msit_llm import DumpConfig, register_hook
@@ -88,17 +89,17 @@ if __name__ == "__main__":
     register_hook(model, config)
     # 开启模型推理
     with torch.no_grad():
-    inputs = tokenizer(
-                "What's deep learning?",
-                return_tensors="pt", 
-                truncation=True, 
-                max_length=10).to('npu')
-    
-    # delete token_type_ids
-    if 'token_type_ids' in inputs:
-        del inputs['token_type_ids']
+        inputs = tokenizer(
+                    "What's deep learning?",
+                    return_tensors="pt", 
+                    truncation=True, 
+                    max_length=10).to('npu')
+        
+        # delete token_type_ids
+        if 'token_type_ids' in inputs:
+            del inputs['token_type_ids']
 
-    outputs = model.generate(**inputs, do_sample=False, max_new_tokens=10)
+        outputs = model.generate(**inputs, do_sample=False, max_new_tokens=10)
 
 ```
 
