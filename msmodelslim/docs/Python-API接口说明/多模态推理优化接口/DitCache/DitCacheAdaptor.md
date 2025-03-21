@@ -65,17 +65,68 @@ def search(self,
 执行缓存配置搜索，寻找最优的缓存策略。
 
 ##### 参数
-- run_pipeline_and_save_videos (Callable): 运行pipeline并返回生成视频的函数
-  - 输入参数: pipeline (OpenSoraPipeline)
-  - 返回值: List[np.ndarray]，生成的视频列表，每个视频shape为(num_frames, h, w, c)
-- prompts_num (int): 生成视频的数量，默认为1
+
+| 参数名                   | 类型         | 含义                                           | 默认值 | 备注                                                                 |
+|------------------------|--------------|------------------------------------------------|--------|----------------------------------------------------------------------|
+| `run_pipeline_and_save_videos` | `Callable`   | 运行 pipeline 并返回生成视频的函数                     | 无     | 输入参数：`pipeline (OpenSoraPipeline)`<br>返回值：`List[np.ndarray]`，每个视频的 shape 为 `(num_frames, h, w, c)` |
+| `prompts_num`           | `int`        | 生成视频的数量                                 | `1`    | 控制生成视频的个数                                                   |
+
 
 ##### 返回值
-- DitCacheConfig: 包含以下优化参数的配置对象：
-  - cache_step_start: 开始使用缓存的时间步
-  - cache_step_interval: 缓存更新间隔
-  - cache_block_start: 开始缓存的block索引
-  - cache_num_blocks: 缓存的block数量
+
+返回值是一个用于配置 DiT 缓存机制的对象 `DitCacheConfig`，包含以下字段：
+
+| 字段名               | 类型   | 含义                                           |
+|--------------------|--------|------------------------------------------------|
+| `cache_step_start`     | `int` | 开始使用缓存的时间步                              |
+| `cache_step_interval`  | `int` | 缓存计算的时间步间隔，每隔多少步重新计算缓存              |
+| `cache_block_start`    | `int` | 开始缓存的 block 索引，`0` 表示从第一个 block 开始        |
+| `cache_num_blocks`     | `int` | 要缓存的 block 数量                                 |
+
+
+#### 2.4.3 `update_cache_config`
+
+用于手动更新当前的缓存策略配置，包括缓存的起始 block、数量及时间步相关参数。调用该方法可在无需重新搜索的情况下直接应用指定缓存策略。
+
+```python
+def update_cache_config(self,
+                        cache_block_start: int,
+                        cache_num_blocks: int,
+                        cache_step_start: int,
+                        cache_step_interval: int)
+```
+
+##### 参数说明
+
+| 参数名               | 输入/输出 | 类型   | 含义                         |
+|--------------------|------------|--------|------------------------------|
+| `cache_block_start`    | 输入       | `int` | 开始缓存的 block 索引（从 0 开始）     |
+| `cache_num_blocks`     | 输入       | `int` | 缓存的 block 数量                   |
+| `cache_step_start`     | 输入       | `int` | 从该时间步开始启用缓存               |
+| `cache_step_interval`  | 输入       | `int` | 每隔多少时间步重新计算一次缓存         |
+
+##### 使用示例
+
+```python
+from msmodelslim.pytorch.multi_modal.dit_cache import DitCacheAdaptor, DitCacheSearchConfig
+
+# 创建 adaptor，为 DiT 模型添加缓存功能
+adaptor = DitCacheAdaptor(pipeline)
+
+# 设置缓存配置
+cache_config = dict(
+    cache_block_start=2,
+    cache_num_blocks=4,
+    cache_step_start=10,
+    cache_step_interval=5
+)
+adaptor.update_cache_config(**cache_config)
+
+# 使用 pipeline 执行推理，生成视频
+...
+```
+
+
 
 ## 3. 使用指南
 

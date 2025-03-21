@@ -7,7 +7,7 @@
 
 | 模型名称 | 框架 | 优化特性 | 说明 |
 |---------|------|----------|------|
-| OpenSoraPlanV1.2 | PyTorch | [采样优化](#采样优化), [DiT缓存优化](#dit缓存优化) | • [模型源码链接](https://github.com/PKU-YuanGroup/Open-Sora-Plan/releases/tag/v1.2.0)<br>• 采样优化目前仅支持29\*480p场景,可达到2×加速,vbench精度损失<1% |
+| OpenSoraPlanV1.2 | PyTorch | [采样优化](#自适应采样优化), [DiT缓存优化](#dit缓存优化) | • [模型源码链接](https://github.com/PKU-YuanGroup/Open-Sora-Plan/releases/tag/v1.2.0)<br>• 采样优化目前仅支持29\*480p场景,可达到2×加速,vbench精度损失<1% |
 
 ## 环境要求
 
@@ -17,7 +17,7 @@
     - Atlas 800I A2推理产品。
 
 ### 软件依赖
-- 已参考环境准备，完成CANN开发环境的部署、以及PyTorch 2.1.0及以上版本的框架和npu插件、Python环境变量配置。
+- 已参考环境准备，完成CANN开发环境的部署（CANN版本>= 8.1.RC1）、以及PyTorch 2.1.0及以上版本的框架和npu插件、Python环境变量配置。
 - 参考开源模型仓库[OpenSoraPlanV1.2](https://github.com/PKU-YuanGroup/Open-Sora-Plan/releases/tag/v1.2.0) 的readme，下载模型权重，完成模型所需的python环境依赖的安装。
 
 ### 环境配置
@@ -119,9 +119,9 @@ def run_pipeline_and_save_videos(pipeline):
     
     videos = pipeline(
         positive_prompt.format("a dog running on the beach"),
-        num_frames=29,
-        height=480,
-        width=640,
+        num_frames=93,
+        height=720,
+        width=1280,
         num_inference_steps=100,
         guidance_scale=7.5
     ).images
@@ -169,9 +169,9 @@ searched_config = cache_adaptor.search(
 torchrun --nnodes=1 --nproc_per_node 8 --master_port 29503 \
     -m example.osp1_2.search_t2v_sp \
     --model_path /path/to/checkpoint-xxx/model_ema \
-    --num_frames 29 \
-    --height 480 \
-    --width 640 \
+    --num_frames 93 \
+    --height 720 \
+    --width 1280 \
     --num_sampling_steps 100 \
     ...
     --text_prompt examples/prompt_list_0.txt \
@@ -213,9 +213,9 @@ adaptor.update_cache_config(**cache_config)
 # 3. 执行推理
 output = pipeline(
     prompt="a dog running on the beach",
-    num_frames=29,
-    height=480,
-    width=640,
+    num_frames=93,
+    height=720,
+    width=1280,
     guidance_scale=7.5,
     num_inference_steps=100
 )
@@ -246,9 +246,9 @@ for step_id, t in enumerate(timesteps):
 torchrun --nnodes=1 --nproc_per_node 8 --master_port 29503 \
     -m example.osp1_2.sample_t2v_sp \
     --model_path /path/to/checkpoint-xxx/model_ema \
-    --num_frames 29 \
-    --height 480 \
-    --width 640 \
+    --num_frames 93 \
+    --height 720 \
+    --width 1280 \
     --text_encoder_name google/mt5-xxl \
     --text_prompt examples/prompt_list_0.txt \
     --save_img_path "./sample_video_test" \
@@ -341,4 +341,4 @@ torchrun --nnodes=1 --nproc_per_node 8  --master_port 29503 \
     --schedule_timestep "/path/of/schedule/timestep/file.txt"
 ```
 其中，`--schedule_timestep` 为搜索得到的 timestep 文件路径。
-可参考[search_t2v_sp.sh](../../../example/osp1_2/examples/scripts/search_t2v_sp.sh)修改模型参数路径和搜索得到的 timestep 文件路径，执行带采样优化的推理生成。
+可参考[search_t2v_sp.sh](../../../example/osp1_2/search_t2v_sp.sh)修改模型参数路径和搜索得到的 timestep 文件路径，执行带采样优化的推理生成。
