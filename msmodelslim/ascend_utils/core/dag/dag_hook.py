@@ -13,6 +13,8 @@ from ascend_utils.core.dag.dag_node import DagNode
 from ascend_utils.core.dag.dag_node_io import DagNodeIO
 from msmodelslim import logger
 
+MAX_RECURSIVE_DEPTH = 100
+
 
 class DagHook(DirectedAcyclicGraph, ABC):
     """
@@ -199,7 +201,13 @@ class DagHook(DirectedAcyclicGraph, ABC):
     def _parse_network_structure_tree(self, module,
                                       name: str,
                                       parent_module: Optional,
-                                      name_in_network: str) -> NoReturn:
+                                      name_in_network: str,
+                                      depth: int = 1) -> NoReturn:
+        if depth > MAX_RECURSIVE_DEPTH:
+            raise ValueError(
+                'The recursive func depth exceeds MAX_RECURSIVE_DEPTH={} '
+                'when parsing network structure'.format(MAX_RECURSIVE_DEPTH))
+
         if module in self._structure_tree:
             parent_module_info = self._structure_tree[module].get("parent_module_info", [])
             parent_module_info.append((parent_module, name))
@@ -215,7 +223,7 @@ class DagHook(DirectedAcyclicGraph, ABC):
                 sub_module = sub_module[0]
                 sub_name += ".*"
             sub_name_in_network = concatenate_name_in_network(name_in_network, sub_name)
-            self._parse_network_structure_tree(sub_module, sub_name, module, sub_name_in_network)
+            self._parse_network_structure_tree(sub_module, sub_name, module, sub_name_in_network, depth=depth + 1)
 
     def _parse_network(self, inputs,
                        parsed_nodes: Optional[Dict[Any, DagNode]] = None):
@@ -335,7 +343,14 @@ class DagHook(DirectedAcyclicGraph, ABC):
 
         return inputs
 
-    def _get_node_output(self, output, deduplicate: List[int], name: str = "output") -> Dict[int, DagNodeIO]:
+    def _get_node_output(self, output, deduplicate: List[int], name: str = "output",
+                         depth: int = 1) -> Dict[int, DagNodeIO]:
+        if depth > MAX_RECURSIVE_DEPTH:
+            raise ValueError(
+                'The recursive func depth exceeds MAX_RECURSIVE_DEPTH={} '
+                'when parsing the node output'.format(MAX_RECURSIVE_DEPTH)
+            )
+
         node_output_dict: Dict[int, DagNodeIO] = {}
         id_output = id(output)
         if id_output in deduplicate:
@@ -350,11 +365,13 @@ class DagHook(DirectedAcyclicGraph, ABC):
         if isinstance(output, dict):
             for key, sub_output in output:
                 node_output_dict.update(
-                    self._get_node_output(sub_output, deduplicate, name + '.' + str(key)))
+                    self._get_node_output(sub_output, deduplicate, name + '.' + str(key), depth=depth + 1)
+                )
         elif isinstance(output, list) or isinstance(output, tuple):
             for index, sub_output in enumerate(output):
                 node_output_dict.update(
-                    self._get_node_output(sub_output, deduplicate, name + '.' + str(index)))
+                    self._get_node_output(sub_output, deduplicate, name + '.' + str(index), depth=depth + 1)
+                )
 
         return node_output_dict
 
