@@ -84,7 +84,7 @@ rid: 请求ID
 deviceBlock: 分配的block数量
 ```
 
-② AppendSlots，表示请求过程中新增内存进行缓存的字段
+② AppendSlot，表示请求过程中新增内存进行缓存的字段
 ```
 domain：表示当前为kvcache相关信息
 rid: 请求ID
@@ -102,7 +102,7 @@ deviceBlock: 释放的block数量
 ```
 domain：表示当前为kvcache相关信息
 cpuHitCache: cpu缓存命中率
-gpuHitCache: gpu缓存命中率
+hitCache: gpu缓存命中率
 ```
 
 ### 4. request数据
