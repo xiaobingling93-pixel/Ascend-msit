@@ -429,7 +429,7 @@ class OpMatchMgr:
             self.selected_policies = [self.op_match_policies_layer]
         elif args.cmp_level == "module":
             self.selected_policies = [self.op_match_policies_module]
-        elif args.cmp_level == "api":
+        elif args.cmp_level == "api" or args.stats:
             self.selected_policies = [self.op_match_policies]
         else:
             self.cmp_all = True
