@@ -15,8 +15,6 @@
 from ms_service_profiler import Profiler, Level
 from .vllm_hooker_base import VLLMHookerBase
 
-is_model_first_run = True
-
 
 class ModelRunnerExecuteHook(VLLMHookerBase):
     vllm_version = ("0.6.3", "0.6.3")
