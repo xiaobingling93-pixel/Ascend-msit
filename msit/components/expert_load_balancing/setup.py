@@ -36,7 +36,7 @@ msit_sub_task_entry_points = [
 
 setup(
     name='msit-expert-load-balancing',
-    version='7.0.0c1230',
+    version='8.0.0c330',
     description='Deepseek model load balancing affinity expert optimization in static and dynamic scenarios',
     packages=find_packages(), 
     license='Apache-2.0',
@@ -47,13 +47,14 @@ setup(
         'Intended Audience :: Developers',
         'License :: Apache-2.0 Software License',
         'Programming Language :: Python :: 3 :: Only',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
         'Topic :: Scientific/Engineering',
         'Topic :: Software Development'
     ],
-    python_requires='>=3.7',
+    python_requires='>=3.9',
     entry_points={
         'msit_sub_task': msit_sub_task_entry_points,
         'msit_sub_task_installer': ['msit-expert-load-balancing=elb.__install__:ExpertLoadBalanceInstall'],
