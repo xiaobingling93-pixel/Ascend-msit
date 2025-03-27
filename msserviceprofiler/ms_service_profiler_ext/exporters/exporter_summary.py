@@ -132,14 +132,14 @@ def is_empty_entry(entry):
     检查entry是否为空数据，即为默认值的场景
     """
     return (
-            entry['httpReq_start'] is None
-            and entry['httpRes_end'] is None
-            and not entry['token_id']  # 空字典
-            and entry['req_waiting_time'] == 0.0
-            and entry['req_pending_time'] == 0.0
-            and entry['is_complete'] is False
-            and entry['generated_token_num'] is None
-            and entry['input_token_num'] is None
+        entry['httpReq_start'] is None
+        and entry['httpRes_end'] is None
+        and not entry['token_id']  # 空字典
+        and entry['req_waiting_time'] == 0.0
+        and entry['req_pending_time'] == 0.0
+        and entry['is_complete'] is False
+        and entry['generated_token_num'] is None
+        and entry['input_token_num'] is None
     )
 
 
