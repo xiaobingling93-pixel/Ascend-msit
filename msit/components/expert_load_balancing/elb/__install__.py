@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
+# Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,20 +32,3 @@ class ExpertLoadBalanceInstall(AitInstaller):
             return "OK"
         else:
             return "\n".join(check_res)
-
-    @staticmethod
-    def build_extra(find_links=None):
-        if sys.platform == "win32":
-            return
-
-        if find_links is not None:
-            os.environ["MSIT_INSTALL_FIND_LINKS"] = os.path.realpath(find_links)
-        subprocess.run(["/bin/bash", os.path.abspath(os.path.join(os.path.dirname(__file__), "install.sh"))])
-
-    @staticmethod
-    def download_extra(dest):
-        if sys.platform == "win32":
-            return
-
-        os.environ["MSIT_DOWNLOAD_PATH"] = os.path.realpath(dest)
-        subprocess.run(["/bin/bash", os.path.abspath(os.path.join(os.path.dirname(__file__), "install.sh"))])
