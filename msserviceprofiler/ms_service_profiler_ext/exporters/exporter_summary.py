@@ -153,6 +153,14 @@ def process_rid_token_list(req_map, rid_list, token_id_list, record):
             print_warning_log('httpReq')
             continue
 
+        # 执行总时长
+        if record.get('name') == 'modelExec':
+            during_time = record.get('during_time')
+            if isinstance(during_time, (int, float)):
+                req_map[req_rid]['exec_time'] += during_time
+            else:
+                logger.warning(f"Invalid during_time: {during_time} for rid={req_rid}")
+
         cur_iter = token_id_list[i]
         if cur_iter is None:
             print_warning_log('token_id_list')
@@ -167,13 +175,7 @@ def process_rid_token_list(req_map, rid_list, token_id_list, record):
             else:
                 req_map[req_rid]['first_token_latency'] += record.get('during_time')
 
-        # 执行总时长
-        if record.get('name') == 'modelExec':
-            during_time = record.get('during_time')
-            if isinstance(during_time, (int, float)):
-                req_map[req_rid]['exec_time'] += during_time
-            else:
-                logger.warning(f"Invalid during_time: {during_time} for rid={req_rid}")
+
 
 
 def gen_exporter_results(all_data_df):
