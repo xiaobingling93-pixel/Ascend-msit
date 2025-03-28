@@ -176,8 +176,6 @@ def process_rid_token_list(req_map, rid_list, token_id_list, record):
                 req_map[req_rid]['first_token_latency'] += record.get('during_time')
 
 
-
-
 def gen_exporter_results(all_data_df):
     req_map = {}
     batch_map = {}
