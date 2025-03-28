@@ -32,3 +32,8 @@ msServiceProfiler 是一款基于昇腾平台，支持MindIE Service框架和vLL
 git clone https://gitee.com/ascend/msit.git
 cd msit/msserviceprofiler
 ```
+
+## 支持与帮助
+🐛 [Issue提交](https://gitee.com/ascend/msit/issues)
+
+💬 [昇腾论坛](https://www.hiascend.com/forum/forum-0106101385921175006-1.html)

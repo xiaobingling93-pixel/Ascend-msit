@@ -191,4 +191,3 @@ recvTokenSize：表示请求输入长度
 replyTokenSize：表示请求输出长度
 ```
 
-## 附录
