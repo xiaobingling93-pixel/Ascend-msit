@@ -5,6 +5,7 @@ import re
 from typing import Any, Optional, Union, List, Tuple, Dict
 
 from ascend_utils.common import security
+from ascend_utils.common.security.type import check_element_type
 from msmodelslim.common.low_rank_decompose import RankMethods
 from msmodelslim import logger
 
@@ -159,8 +160,8 @@ class Decompose:
         )
 
     def _get_decomposed_config_(self, hidden_channels, excludes=None, divisor=64):
-        if excludes is not None and not isinstance(excludes, (list, tuple)):
-            raise ValueError("Parameter excludes is not a valid list or tuple value.")
+        if excludes is not None:
+            check_element_type(excludes, str, value_type=(list, tuple), param_name="excludes")
         elif not isinstance(divisor, (int, float)) or divisor <= 0:
             raise ValueError("Parameter divisor is not a valid int or float value.")
         else:
