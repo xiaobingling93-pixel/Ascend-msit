@@ -1,16 +1,24 @@
 # Copyright Huawei Technologies Co., Ltd. 2025. All rights reserved.
 import argparse
 import os
+import sys
 
 from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
 import torch
 
-from modelslim.pytorch.llm_ptq.anti_outlier import AntiOutlierConfig, AntiOutlier
+current_directory = os.path.dirname(os.path.abspath(__file__))
+parent_directory = os.path.abspath(os.path.join(current_directory, '..', ".."))
+sys.path.append(parent_directory)
+
+from example.common.utils import cmd_bool
+from msmodelslim.pytorch.llm_ptq.anti_outlier import AntiOutlierConfig, AntiOutlier
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
 
 
 CPU = "cpu"
 NPU = "npu"
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--model_path', type=str, default='')
@@ -20,10 +28,11 @@ if __name__ == '__main__':
     parser.add_argument('--w_bit', type=int, default=8)
     parser.add_argument('--a_bit', type=int, default=8)
     parser.add_argument('--device_type', type=str, choices=[CPU, NPU], default=CPU)
+    parser.add_argument('--trust_remote_code', type=cmd_bool, default=False)
     args = parser.parse_args()
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_path, 
-                                              trust_remote_code=True, 
+                                              trust_remote_code=args.trust_remote_code,
                                               local_files_only=True)
     tokenizer.padding_side = 'left'
     tokenizer.pad_token_id = tokenizer.eod_id
@@ -31,12 +40,12 @@ if __name__ == '__main__':
     ##1.加载模型
     device_map = CPU if args.device_type == CPU else "auto"
     config = AutoConfig.from_pretrained(args.model_path, 
-                                        trust_remote_code=True, 
+                                        trust_remote_code=args.trust_remote_code,
                                         local_files_only=True)
     dtype = config.torch_dtype if args.device_type == NPU else torch.float32
     model = AutoModelForCausalLM.from_pretrained(args.model_path, 
                                                  device_map=device_map, 
-                                                 trust_remote_code=True, 
+                                                 trust_remote_code=args.trust_remote_code,
                                                  torch_dtype=torch.float16, 
                                                  local_files_only=True).eval()
 
