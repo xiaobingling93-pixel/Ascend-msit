@@ -106,12 +106,12 @@ convert_bin_data_to_pt(bin_tensor)
 - 一般想读取bin文件的数据并打印 tensor 格式可以使用如下示例的方式
 
 ```python
-from components.utils.tool import read_bin_data, convert_bin_data_to_npy
+from components.utils.tool import read_bin_data, convert_bin_data_to_pt
 
 bin_file_path = "/xxx/xxx/xx.bin"
 data = convert_bin_data_to_pt(read_bin_data(bin_file_path))
 print("bin data: ", data)
-print("bin data shape: ", data.shape())
+print("bin data shape: ", data.shape)
 ```
 
 <a name="convert_bin_data_to_npy"></a>
