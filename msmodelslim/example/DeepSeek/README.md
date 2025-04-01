@@ -66,6 +66,7 @@
 | model_name | 模型名称，可选参数 | None | 用于控制异常值抑制参数 |
 | use_reduce_quant | 权重量化是否是lccl all reduce量化 | False | 用于MindIE推理的标识 |
 | tp_size | 模拟多卡量化时的卡数 | 1 | 数据取值范围为[1,2,4,8,16]，默认值为1，不启用模拟多卡量化。<br>设置为2、4、8,16时，对于通信层的linear会进行模拟多卡，每张卡使用不同的scale和offset进行量化 |
+| trust_remote_code | 是否信任自定义代码 | False | 指定`trust_remote_code=True`让修改后的自定义代码文件能够正确的被加载。(请确保加载的自定义代码文件的安全性) |
 
 #### quant_deepseek_w8a8.py 量化参数说明
 
@@ -101,6 +102,7 @@
   ```shell
   python3 quant_deepseek.py --model_path {浮点权重路径} --save_directory {W8A16量化权重路径} --device_type cpu --act_method 2 --w_bit 8 --a_bit 16
   ```
+- 若加载自定义模型，调用`from_pretrained`函数时要指定`trust_remote_code=True`让修改后的自定义代码文件能够正确的被加载。(请确保加载的自定义代码文件的安全性)
 
 ##### DeepSeek-V2 w8a8 dynamic量化
 
