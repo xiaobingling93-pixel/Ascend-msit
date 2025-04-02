@@ -112,7 +112,9 @@ def add_safetensors(org_paths, target_dir, safetensors_prefix, max_file_size_gb=
             # 如果当前文件大小超过限制，保存当前文件并开始新文件
             if (current_file_size + tensor_size) > max_file_size and new_data:
                 file_name = f"{safetensors_prefix}-{file_count+1}.safetensors"
+                ori_mask = os.umask(0o377)
                 save_file(new_data, os.path.join(target_dir, file_name))
+                os.umask(ori_mask)
                 # 更新索引
                 for name in new_data.keys():
                     index_data["weight_map"][name] = file_name
@@ -127,7 +129,9 @@ def add_safetensors(org_paths, target_dir, safetensors_prefix, max_file_size_gb=
     # 保存最后一个文件
     if new_data:
         file_name = f"{safetensors_prefix}-{file_count+1}.safetensors"
+        ori_mask = os.umask(0o377)
         save_file(new_data, os.path.join(target_dir, file_name))
+        os.umask(ori_mask)
         for name in new_data.keys():
             index_data["weight_map"][name] = file_name
             desc_data[name] = "FLOAT"
