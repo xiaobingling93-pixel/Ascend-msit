@@ -47,14 +47,19 @@ class BoolqProcessor(DatasetProcessorBase):
 
         prmpts_anses = []
         for idx in indexs:
-            sample_data = self.ori_prompts[idx]
-            title = sample_data["title"]
-            quest = sample_data["question"]
-            passage = sample_data["passage"]
-            ans = sample_data["answer"]
+            try:
+                sample_data = self.ori_prompts[idx]
+                title = sample_data["title"]
+                quest = sample_data["question"]
+                passage = sample_data["passage"]
+                ans = sample_data["answer"]
 
-            prompt = build_prompt(title, quest, passage)
-            prmpts_anses.append({"prompt": prompt, "ans": ans})
+                prompt = build_prompt(title, quest, passage)
+                prmpts_anses.append({"prompt": prompt, "ans": ans})
+            except KeyError as e:
+                msmodelslim_logger.error(
+                    f"sample_data has no key: {self.dataset_name}, please check your dataset."
+                )
         return prmpts_anses
 
     def verify_positive_prompt(self, prompts, labels):
@@ -271,6 +276,8 @@ class MmluProcessor(DatasetProcessorBase):
     def format_example(self, df, idx, include_answer=True):
         prompt = df.iloc[idx, 0]
         k = len(self.choices)
+        if k + 1 >= len(df.columns):
+            raise IndexError(f"Can not get column {k + 1}, please check your dataset.")
         for j in range(k):
             prompt += "\n{}. {}".format(self.choices[j], df.iloc[idx, j + 1])
         prompt += "\nAnswer:"
