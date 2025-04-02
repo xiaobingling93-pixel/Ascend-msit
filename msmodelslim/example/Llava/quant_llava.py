@@ -12,6 +12,7 @@ parent_directory = os.path.abspath(os.path.join(current_directory, '..', ".."))
 sys.path.append(parent_directory)
 
 from example.common.utils import cmd_bool
+from ascend_utils.common.security import get_valid_read_path, get_write_directory
 from msmodelslim.pytorch.llm_ptq.anti_outlier import AntiOutlierConfig, AntiOutlier
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
 
@@ -31,6 +32,11 @@ if __name__ == '__main__':
     parser.add_argument('--device_type', type=str, choices=[CPU, NPU], default=CPU)
     parser.add_argument('--trust_remote_code', type=cmd_bool, default=False)
     args = parser.parse_args()
+
+    # check args
+    args.model_path = get_valid_read_path(args.model_path, is_dir=True, check_user_stat=False)
+    args.calib_images = get_valid_read_path(args.calib_images, is_dir=True, check_user_stat=False)
+    args.save_directory = get_write_directory(args.save_directory, write_mode=0o750)
 
     processor = AutoProcessor.from_pretrained(args.model_path, 
                                               local_files_only=True, 
