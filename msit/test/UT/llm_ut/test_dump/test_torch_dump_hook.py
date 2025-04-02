@@ -12,7 +12,7 @@ from components.llm.msit_llm.common.constant import get_ait_dump_path
 
 
 MODEL_NAME_LIST = ["root", "root.ln"]
-DUMP_PATH = "./msit_dump"
+DUMP_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)), "msit_dump")
 
 
 class SampleModel(nn.Module):

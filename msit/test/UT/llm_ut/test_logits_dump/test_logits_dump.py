@@ -124,15 +124,18 @@ class TestHardwareCheck(TestCase):
         mock_cuda.return_value = False
         self.assertFalse(check_gpu())
 
-    @patch('torch_npu.npu.is_available')
-    def test_check_npu(self, mock_npu):
-        # 测试NPU可用场景
-        mock_npu.return_value = True
-        self.assertTrue(check_npu())
-        
-        # 测试NPU不可用场景
-        mock_npu.return_value = False
+    def test_check_npu(self):
+        # 测试torch npu未安装场景
         self.assertFalse(check_npu())
+
+        MockTorchNpu = MagicMock()
+        with patch.dict("sys.modules", {"torch_npu": MockTorchNpu}):
+            # 测试NPU可用场景
+            MockTorchNpu.npu.is_available = lambda: True
+            self.assertTrue(check_npu())
+            # 测试NPU不可用场景
+            MockTorchNpu.npu.is_available = lambda: False
+            self.assertFalse(check_npu())
 
 
 class TestCommandExecution(TestCase):
