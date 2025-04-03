@@ -160,11 +160,13 @@ class Decompose:
         )
 
     def _get_decomposed_config_(self, hidden_channels, excludes=None, divisor=64):
-        if excludes is not None:
-            check_element_type(excludes, str, value_type=(list, tuple), param_name="excludes")
+        if excludes is not None and not isinstance(excludes, (list, tuple)):
+            raise ValueError("Parameter excludes is not a valid list or tuple value.")
         elif not isinstance(divisor, (int, float)) or divisor <= 0:
             raise ValueError("Parameter divisor is not a valid int or float value.")
         else:
+            if excludes is not None:
+                check_element_type(excludes, str, value_type=(list, tuple), param_name="excludes")
             self.decompose_config = self.get_decomposed_config_backend(
                 network=self.model,
                 hidden_channels=hidden_channels,
