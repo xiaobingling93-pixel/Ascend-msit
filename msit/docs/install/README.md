@@ -42,14 +42,15 @@ cd msit/msit
 # 2. 安装 msit 包
 pip install .
 
-# 3. 通过msit install 命令，安装所需组件，例如需要安装 surgeon 和 llm 时：
-msit install surgeon llm
+# 3. 通过以下命令，查看组件名，根据业务需求安装相应的组件
+# 参考各组件功能介绍:(https://gitee.com/ascend/msit/tree/master/msit#%E5%90%84%E7%BB%84%E4%BB%B6%E5%8A%9F%E8%83%BD%E4%BB%8B%E7%BB%8D)
+msit install -h
 
-# 4. 如果需要安装所有组件，可以使用 install all：
-msit install all
+# 4. 如果需要安装llm：
+msit install llm
 
 # 5. 安装之后可以使用 msit check 命令检查安装是否成功：
-msit check all 
+msit check llm 
 ```
 
 
@@ -59,14 +60,15 @@ msit check all
 # 1. 安装 msit 包
 pip install msit
 
-# 2. 通过msit install 命令，安装所需组件，例如需要安装 surgeon 和 llm 时：
-msit install surgeon llm
+# 3. 通过以下命令，查看组件名，根据业务需求安装相应功能的组件
+# 参考各组件功能介绍:(https://gitee.com/ascend/msit/tree/master/msit#%E5%90%84%E7%BB%84%E4%BB%B6%E5%8A%9F%E8%83%BD%E4%BB%8B%E7%BB%8D)
+msit install -h
 
-# 3. 如果需要安装所有组件，可以使用 install all：
-msit install all
+# 4. 如果需要安装llm：
+msit install llm
 
-# 4. 安装之后可以使用 msit check 命令检查安装是否成功：
-msit check all 
+# 5. 安装之后可以使用 msit check 命令检查安装是否成功：
+msit check llm 
 ```
 
 > windows 下，仅支持安装 surgeon 组件
