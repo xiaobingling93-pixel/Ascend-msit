@@ -12,16 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import stat
 import pytest
-import click
-
-import torch as _  # Bypass later importing error: libgomp.so cannot allocate memory in static TLS block
-import sklearn as _  # Bypass later importing error: libgomp.so cannot allocate memory in static TLS block
-
+from unittest.mock import patch, MagicMock
 from msquickcmp.adapter_cli.args_adapter import CmpArgsAdapter
-from msquickcmp.cmp_process import cmp_process
 from msquickcmp.common import utils
 
 
@@ -45,7 +38,12 @@ def compare_cli() -> None:
 
 
 def test_args_invalid_path_err(compare_cli):
-    with pytest.raises(utils.AccuracyCompareException) as error:
+    mock_acl = MagicMock()
+    with pytest.raises(utils.AccuracyCompareException) as error, \
+         patch.dict('sys.modules', {
+             'acl': mock_acl,
+         }):
+        from msquickcmp.cmp_process import cmp_process
         cmp_process(compare_cli, True)
 
     assert error.value.error_info == utils.ACCURACY_COMPARISON_INVALID_PATH_ERROR

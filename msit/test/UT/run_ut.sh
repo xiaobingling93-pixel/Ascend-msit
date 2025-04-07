@@ -45,6 +45,7 @@ init_msit_env() {
     export PYTHONPATH=${COMPONENTS_DIR}/analyze:${PYTHONPATH}
     export PYTHONPATH=${COMPONENTS_DIR}/benchmark:${PYTHONPATH}
     export PYTHONPATH=${COMPONENTS_DIR}/convert:${PYTHONPATH}
+    export PYTHONPATH=${COMPONENTS_DIR}/debug/compare:${PYTHONPATH}
     export PYTHONPATH=${COMPONENTS_DIR}/graph:${PYTHONPATH}
     export PYTHONPATH=${COMPONENTS_DIR}/llm:${PYTHONPATH}
     export PYTHONPATH=${COMPONENTS_DIR}/profile/msprof:${PYTHONPATH}
