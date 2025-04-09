@@ -34,7 +34,7 @@ MODEL_PATH = "model_path_placeholder"
  
 class CausalLM(PreTrainedModel):
     def __init__(self, model_path):
-        config = AutoConfig.from_pretrained(model_path)
+        config = AutoConfig.from_pretrained(model_path, local_files_only=True)
         for attr in TEXT_CONFIG_ATTR_CANDIDATES:
             if hasattr(config, attr):
                 config = getattr(config, attr)
@@ -136,8 +136,8 @@ if __name__ == "__main__":
     args = parser.parse_known_args()[0]
 
     MODEL_PATH = args.weight
-    processor = AutoProcessor.from_pretrained(MODEL_PATH)
-    model = VLForConditionalGeneration.from_pretrained(MODEL_PATH)
+    processor = AutoProcessor.from_pretrained(MODEL_PATH, local_files_only=True)
+    model = VLForConditionalGeneration.from_pretrained(MODEL_PATH, local_files_only=True)
 
     try:
         with Image.open(args.image) as image:

@@ -27,7 +27,7 @@ MODEL_PATH = "model_path_placeholder"
 
 class CausalLM(PreTrainedModel):
     def __init__(self, model_path):
-        config = AutoConfig.from_pretrained(model_path)
+        config = AutoConfig.from_pretrained(model_path, local_files_only=True)
         super().__init__(config)
 
         device = torch.device(f"npu")
@@ -98,7 +98,7 @@ class Runner:
     def __init__(self, model_path):
         self.model = CausalLM(model_path)
 
-        self.tokenizer = AutoTokenizer.from_pretrained(model_path)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
         if self.tokenizer.pad_token is None:
             self.tokenizer.add_special_tokens({"pad_token": "[PAD]"})
 

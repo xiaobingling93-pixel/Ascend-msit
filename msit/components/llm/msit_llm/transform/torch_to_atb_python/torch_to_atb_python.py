@@ -919,7 +919,7 @@ class ATBModelFromTorch(ATBModel):
 
 def transform(source_path, input_names=BASIC_INPUT_NAMES, output_file=None, to_quant=False, quant_disable_names=None):
     logger.info("Building model using transformers...")
-    config = AutoConfig.from_pretrained(source_path, trust_remote_code=True)
+    config = AutoConfig.from_pretrained(source_path, local_files_only=True)
     mindie_model_file = find_mindie_supported_model(config)
     if mindie_model_file:
         from pathlib import Path
