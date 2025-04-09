@@ -218,6 +218,12 @@ def save_compare_reault_to_xlsx(gathered_row_data_all, sheet_names, output_path=
 
 
 def compare_data(golden_data, my_data):
+    golden_data_dtype = golden_data.dtype
+    my_data_dtype = my_data.dtype
+    if golden_data_dtype != torch.float32:
+        logger.info(f"The dtype of golden_data is {golden_data_dtype}, convert it to fp32")
+    if my_data_dtype != torch.float32:
+        logger.info(f"The dtype of my_data is {my_data_dtype}, convert it to fp32")
     golden_data_fp32 = golden_data.reshape(-1).float()
     my_data_fp32 = my_data.reshape(-1).float()
     return compare_tensor(golden_data_fp32, my_data_fp32)
