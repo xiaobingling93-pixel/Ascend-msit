@@ -43,28 +43,36 @@ def load_expert_popularity_csv(csv_file_path):
         - decode_df: decode_info.csv 的内容，若文件不存在或读取失败则为 None。
         - prefill_df: prefill_info.csv 的内容，若文件不存在或读取失败则为 None。
     """
-    def _load_single_file(file_name):
+    decode_info = None
+    prefill_info = None
+
+    for file_name in ["decode_info.csv", "prefill_info.csv"]:
         file_path = os.path.join(csv_file_path, file_name)
+        
         if not os.path.isfile(file_path):
-            logger.warning(f"Warning: File not found: {file_path}")
-            return None
+            logger.warning(f"File not found: {file_path}")
+            continue
+        
         try:
             df = pd.read_csv(file_path)
-            logger.info(f"Successfully loaded {file_name}. Shape: {df.shape}")
-            return df
-        except pd.errors.EmptyDataError:
-            logger.error(f"Error: File is empty: {file_path}")
-        except pd.errors.ParserError:
-            logger.error(f"Error: Failed to parse CSV: {file_path}")
+            logger.info(f"Successfully loaded {file_name}.")
+            
+            if file_name == "decode_info.csv":
+                decode_info = df
+            elif file_name == "prefill_info.csv":
+                prefill_info = df
+        except pd.errors.EmptyDataError as e:
+            raise ValueError(f"decode_info or prefill_info is empty: {file_path}") from e
+        except pd.errors.ParserError as e:
+            raise ValueError(f"Failed to parse CSV: {file_path}") from e
         except Exception as e:
-            logger.error(f"Error reading {file_path}: {str(e)}")
-        return None
-
-    # 分别加载 decode 和 prefill 文件
-    decode_df = _load_single_file("decode_info.csv")
-    prefill_df = _load_single_file("prefill_info.csv")
+            raise RuntimeError(f"Error reading {file_path}: {str(e)}") from e
+        
+    if decode_info.empty and prefill_info.empty:
+        raise FileNotFoundError(f"No decode_info.csv or prefill_info.csv found in {csv_file_path}."
+                                f"Check that the input file is correct to generate the files.")
     
-    return decode_df, prefill_df
+    return decode_info, prefill_info
 
 
 def get_csv_path(csv_file_path, file_name):
@@ -80,7 +88,8 @@ def get_csv_path(csv_file_path, file_name):
     """
     file_path = os.path.join(csv_file_path, file_name)
     if not os.path.exists(file_path):
-        logger.error(f"The file {file_path} does not exist.")
+        raise FileNotFoundError(f"The file {file_path} does not exist."
+                                f"Check whether the output path in the input parameter -o is correct.")
 
     return file_path
 
@@ -103,39 +112,36 @@ def merge_csv_columns(csv_path, pattern_prefix):
     
     files = glob.glob(file_pattern)
     filtered_files = [f for f in files if re.match(rf".*{pattern_prefix}_(\d+)\.csv", f)]
+    if not filtered_files:
+        raise FileNotFoundError(f"No files found matching the pattern {file_pattern}.")
+
     filtered_files = sort_filenames(filtered_files)
 
     logger.info(f"{pattern_prefix} file number is {len(filtered_files)}")
-    if not filtered_files:
-        logger.error(f"No files found matching the pattern {file_pattern}")
-        return None
-    
-    # 初始化一个空的列表，用于存储列
     all_columns = []
     column_count = 0
     
-    # 遍历每个文件，将其每列添加到all_columns列表中
-    for _, file in enumerate(filtered_files):
-        logger.info(f"Processing file: {file}")
+    for file in filtered_files:
+        logger.info(f"Processing file: {file}.")
         df = pd.read_csv(file, header=None)
         if df.empty:
-            logger.warning(f"Warning: File {file} is empty.")
-            continue
+            raise ValueError(f"File {file} is empty. Check the input decode or prefill file.")
         
         for col in range(df.shape[1]):
             all_columns.append(df.iloc[:, col].rename(f'expert_{column_count}'))
             column_count += 1
     
     if not all_columns:
-        logger.warning("No columns to concatenate.")
-        return None
+        raise ValueError("No columns to concatenate. Check whether the ipnut csv path is correct."
+                         "Or whether the csv file in the folder is valid.")
+    
     final_df = pd.concat(all_columns, axis=1)
     return final_df
 
 
 def save_matrix_to_json(output_path, file_name, deployment):
     if deployment.ndim != 3:
-        raise ValueError(f"部署矩阵必须是三维数组，但当前维度为 {deployment.ndim}D\n")
+        raise ValueError(f"部署矩阵必须是三维数组，但当前维度为 {deployment.ndim}D。")
     num_layers = deployment.shape[0]
     num_cards = deployment.shape[1]
 
@@ -158,7 +164,7 @@ def save_matrix_to_json(output_path, file_name, deployment):
         with open(file_name, 'w') as f:
             json.dump(data, f, indent=4)
     except Exception as e:
-        logger.error(f"保存json文件 {deployment} 时出错: {e}")
+        raise RuntimeError(f"保存json文件 {deployment} 时出错") from e
 
 
 def save_dataframes(prefill_final_df, decode_final_df, output_dir):
@@ -183,8 +189,7 @@ def get_csv_dimensions(input_csv_path):
     try:
         df = pd.read_csv(input_csv_path)
         if df.empty:
-            logger.warning(f"警告: 文件包含空数据 {input_csv_path}")
-            return dimensions
+            raise ValueError(f"文件包含空数据 {input_csv_path}")
         row_count = df.shape[0]  # 第0维（行数）58
         col_count = df.shape[1]  # 第1维（列数）256
         dimensions = (row_count, col_count)
@@ -192,12 +197,12 @@ def get_csv_dimensions(input_csv_path):
         logger.info(f"成功读取: {input_csv_path}")
         logger.info(f"输入文件: 行数={row_count}, 列数={col_count}")
         
-    except pd.errors.EmptyDataError:
-        logger.error(f"错误: 文件无有效数据 {input_csv_path}")
-    except pd.errors.ParserError:
-        logger.error(f"错误: CSV格式解析失败 {input_csv_path}")
+    except pd.errors.EmptyDataError as e:
+        raise ValueError(f"文件无有效数据 {input_csv_path}") from e
+    except pd.errors.ParserError as e:
+        raise ValueError(f"CSV格式解析失败 {input_csv_path}") from e
     except Exception as e:
-        logger.error(f"未知错误: {str(e)}")
+        raise RuntimeError(f"未知错误") from e
     
     return dimensions
 
@@ -221,7 +226,7 @@ def process_c2lb(args, output_dir):
 
     if decode_df is not None:
         try:
-            num_original_expert = decode_df.shape[1]  # 第1维（列数）
+            num_original_expert = decode_df.shape[1] 
             decode_np = decode_df.to_numpy()
             lb_and_intra_layer_affinity_redundancy_deploy(
                 decode_np, 
@@ -233,11 +238,11 @@ def process_c2lb(args, output_dir):
             )
             logger.info(f"C2LB processed decode data -> {decode_file_name}")
         except Exception as e:
-            logger.error(f"Failed to process decode data: {str(e)}")
+            raise RuntimeError(f"Failed to process decode data: {str(e)}") from e
 
     if prefill_df is not None:
         try:
-            num_original_expert = prefill_df.shape[1]  # 第1维（列数）
+            num_original_expert = prefill_df.shape[1] 
             prefill_np = prefill_df.to_numpy()
             lb_and_intra_layer_affinity_redundancy_deploy(
                 prefill_np,  
@@ -249,11 +254,10 @@ def process_c2lb(args, output_dir):
             )
             logger.info(f"C2LB processed prefill data -> {prefill_file_name}")
         except Exception as e:
-            logger.error(f"Failed to process prefill data: {str(e)}")
+            raise RuntimeError(f"Failed to process prefill data: {str(e)}") from e
     
-    # 如果两个文件都不存在
     if decode_df is None and prefill_df is None:
-        logger.warning("Warning: No valid decode/prefill data found in", output_dir)
+        raise FileNotFoundError("No valid decode/prefill data found in", output_dir)
     
 
 def process_speculative_moe(args, file_names, output_dir):
@@ -268,26 +272,23 @@ def process_speculative_moe(args, file_names, output_dir):
         file_names (list): 需要处理的 CSV 文件名列表（例如 ["decode_info.csv", "prefill_info.csv"]）。
         output_dir (str): 输出结果的目录路径。
     """
-    # 定义输入文件与输出文件的映射关系（修正 preill 拼写错误）
+
     input_output_map = {
         "decode_info.csv": "decode_global_deployment.json",
         "prefill_info.csv": "prefill_global_deployment.json"
     }   
 
     for input_file in file_names:
-        # 检查是否为支持的文件类型
         if input_file not in input_output_map:
             logger.warning(f"忽略不支持的文件 {input_file}")
             continue
 
-        # 生成输入和输出路径
         input_csv_path = get_csv_path(output_dir, input_file)
         dimensions = get_csv_dimensions(input_csv_path)
         output_file_name = input_output_map[input_file]
         output_path = os.path.join(output_dir, output_file_name)
         num_layer = dimensions[0]
         num_original_expert = dimensions[1]
-        # 处理当前文件
         try:
             speculative_moe_algo_multi_process(
                 args.num_npus,
@@ -299,10 +300,10 @@ def process_speculative_moe(args, file_names, output_dir):
                 output_path
             )
             logger.info(f"Speculative MOE 处理完成: {input_file} -> {output_file_name}")
-        except FileNotFoundError:
-            logger.error(f"错误: 输入文件不存在 {input_csv_path}")
+        except FileNotFoundError as e:
+            raise FileNotFoundError(f"输入文件不存在 {input_csv_path}") from e
         except Exception as e:
-            logger.error(f"处理 {input_file} 时发生异常: {str(e)}")
+            raise FileNotFoundError(f"处理 {input_file} 时发生异常: {str(e)}") from e
 
 
 def check_file_type(folder_path):
@@ -342,7 +343,7 @@ def load_balancing(args):
     logger.info(f"Total 'decode' files: {decode_count}")
 
     # Merge CSV columns for prefill and decode
-    prefill_final_df = None
+    prefill_final_df = None   
     decode_final_df = None
     if PREFILL in file_types:
         prefill_final_df = merge_csv_columns(args.expert_popularity_csv_load_path, PREFILL)
