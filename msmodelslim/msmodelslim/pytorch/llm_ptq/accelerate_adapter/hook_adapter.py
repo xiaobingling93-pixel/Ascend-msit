@@ -349,7 +349,7 @@ def get_state_dict_copy(module: torch.nn.Module, skip_keys=None, device='cpu'):
 
 
 def clear_unused_module(module: torch.nn.Module):
-    # 情况该模块的参数、子模块、Buffer
+    # 清空该模块的参数、子模块、Buffer
     module._parameters = {}
     module._named_modules = {}
     module._named_buffers = {}

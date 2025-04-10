@@ -42,7 +42,6 @@ class Quantizer(nn.Module):
         self.mm_per_tensor = cfg.mm_tensor
         self.int_bias = cfg.int_bias
         self.w_hessian = cfg.w_hessian
-        self.is_calib = True
         self.use_hqq = cfg.hqq
         self.is_dynamic = is_dynamic
         self.int_infer = False
