@@ -10,6 +10,16 @@ from transformers.configuration_utils import PretrainedConfig
 
 from ascend_utils.common.security import check_type
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_funcs import linear_quantization_params, fake_quantize
+from msmodelslim import logger as msmodelslim_logger
+_SUPPORT_RECALL_WINDOW = False
+try:
+    from msmodelslim.pytorch.lowbit.atomic_power_outlier import recall_window
+except ImportError:
+    msmodelslim_logger.warning(
+        "The current CANN version does not support recall_window method."
+    )
+else:
+    _SUPPORT_RECALL_WINDOW = True
 
 
 class TensorType(Enum):
@@ -33,11 +43,13 @@ class QKVQuantizer:
         self.offset = None
         self.is_record = False
         self.single_record = None
+        self.ratio = None
 
-    def configure(self, bit: int, sym: bool, num_head: int):
+    def configure(self, bit: int, sym: bool, num_head: int, ratio: float):
         self.bit = bit
         self.sym = sym
         self.num_head = num_head
+        self.ratio = ratio
 
     def update(self, samples: torch.Tensor, tp_size: int):
         if self.is_record:
@@ -50,8 +62,7 @@ class QKVQuantizer:
 
         num_head_per_device = self.num_head // tp_size
         samples = samples.contiguous().view(tp_size * num_head_per_device, -1)
-        samples_max = samples.max(dim=-1, keepdim=True)[0]
-        samples_min = samples.min(dim=-1, keepdim=True)[0]
+        samples_min, samples_max = recall_window(samples, self.ratio, -1, True)
         ## min value
         if self._min_values is None:
             self._min_values = samples_min
@@ -117,6 +128,8 @@ class FAQuantizer:
         self.logger = logger
         self.debug_mode = False
 
+        if not _SUPPORT_RECALL_WINDOW:
+            raise ImportError("The current CANN version does not support recall_window method!")
         self.q_observer = QKVQuantizer()
         self.k_observer = QKVQuantizer()
         self.v_observer = QKVQuantizer()
@@ -177,9 +190,9 @@ class FAQuantizer:
     def configure(self, bit: int, sym: bool, tp_size: int = 1):
         self.tp_size = tp_size
 
-        self.q_observer.configure(bit, sym, self.num_head)
-        self.k_observer.configure(bit, sym, self.num_kv_head)
-        self.v_observer.configure(bit, sym, self.num_kv_head)
+        self.q_observer.configure(bit, sym, self.num_head, 0.9999)
+        self.k_observer.configure(bit, sym, self.num_kv_head, 0.9999)
+        self.v_observer.configure(bit, sym, self.num_kv_head, 1.0)
         
     def set_head_params(self, num_head: int, head_dim: int, num_kv_head: int):
         self.num_head = num_head
