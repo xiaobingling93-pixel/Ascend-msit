@@ -32,7 +32,7 @@ Atlas 800I A2 w8a8量化
   ```
 
 ##### DeepSeek-R1-Distill-Llama-8B 稀疏量化
-Atlas 300I DUO/Atlas 300I Pro/Atlas 300V
+Atlas 300I DUO  使用以下方法稀疏量化
 - 稀疏量化
 ```shell
   # 指定当前机器上可用的逻辑NPU核心 通过修改convert_quant_weight.sh文件中export ASCEND_RT_VISIBLE_DEVICES值 指定使用卡号及数量 
@@ -69,7 +69,7 @@ cd msit/msmodelslim/example/Qwen
 python3 quant_qwen.py --model_path {浮点权重路径} --save_directory {W8A8量化权重路径} --calib_file ../common/boolq.jsonl  --device_type npu --disable_names "lm_head" --anti_method m4 --trust_remote_code True
 ```
 ##### DeepSeek-R1-Distill-Qwen-1.5B 稀疏量化
-Atlas 300I DUO/Atlas 300I Pro/Atlas 300V
+Atlas 300I DUO 使用以下方法稀疏量化
 - 稀疏量化
 ```shell
 cd msit/msmodelslim/example/Qwen
@@ -91,7 +91,7 @@ Atlas 800I A2 w8a8量化
   python3 quant_qwen.py --model_path {浮点权重路径} --save_directory {W8A8量化权重路径} --calib_file ../common/boolq.jsonl --w_bit 8 --a_bit 8 --device_type npu --trust_remote_code True
   ```
 ##### DeepSeek-R1-Distill-Qwen-7B 稀疏量化
-Atlas 300I DUO/Atlas 300I Pro/Atlas 300V
+Atlas 300I DUO 使用以下方法稀疏量化
 - 稀疏量化
 ```shell
 cd msit/msmodelslim/example/Qwen
@@ -123,11 +123,7 @@ cd msit/msmodelslim/example/Qwen
 export ASCEND_RT_VISIBLE_DEVICES=0
 python3 quant_qwen.py --model_path {浮点权重路径} --save_directory {W8A8S量化权重路径} --calib_file ../common/cn_en.jsonl --w_bit 4 --a_bit 8 --fraction 0.011 --co_sparse True --device_type npu --use_sigma True --is_lowbit True --sigma_factor 4.0 --anti_method m4 --trust_remote_code True
 ```
-Atlas 300I Pro/Atlas 300V 使用以下方法稀疏量化
-```shell
-cd msit/msmodelslim/example/Qwen
-python3 quant_qwen.py --model_path {浮点权重路径} --save_directory {W8A8S量化权重路径} --calib_file ../common/cn_en.jsonl --w_bit 4 --a_bit 8 --fraction 0.011 --co_sparse True --device_type npu --use_sigma True --is_lowbit True --sigma_factor 4.0 --anti_method m4 --trust_remote_code True
-```
+
 - 权重压缩
 ```shell
   # TP数为tensor parallel并行个数
@@ -152,11 +148,7 @@ cd msit/msmodelslim/example/Qwen
 export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3
 python3 quant_qwen.py --model_path {浮点权重路径} --save_directory {W8A8S量化权重路径} --calib_file ../common/cn_en.jsonl --w_bit 4 --a_bit 8 --fraction 0.011 --co_sparse True --device_type npu --use_sigma True --is_lowbit True --sigma_factor 4.0 --anti_method m4 --trust_remote_code True
 ```
-Atlas 300I Pro/Atlas 300V 使用以下方法稀疏量化
-```shell
-cd msit/msmodelslim/example/Qwen
-python3 quant_qwen.py --model_path {浮点权重路径} --save_directory {W8A8S量化权重路径} --calib_file ../common/cn_en.jsonl --w_bit 4 --a_bit 8 --fraction 0.011 --co_sparse True --device_type npu --use_sigma True --is_lowbit True --sigma_factor 4.0 --anti_method m4 --trust_remote_code True
-```
+
 - 权重压缩
 ```shell
 # TP数为tensor parallel并行个数
