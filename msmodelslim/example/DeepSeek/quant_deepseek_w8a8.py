@@ -38,6 +38,7 @@ def parse_args():
     parser.add_argument('--batch_size', type=int, default=4, help="Batch size for anti and calibration")
     parser.add_argument('--from_fp8', action='store_true', help="Origin model is of fp8")
     parser.add_argument('--from_bf16', action='store_true', help="Origin model is of bf16")
+    parser.add_argument('--fa_quant', action="store_true", help="Enable fa quant")
     return parser.parse_args()
 
 
@@ -154,6 +155,16 @@ def main():
     for ids in range(config.num_hidden_layers):
         disable_names.append("model.layers." + str(ids) + ".self_attn.kv_b_proj")
 
+    if 'R1' in args.model_path.upper():
+        disable_attn_layers = [0, 1, 2, 46, 47, 50, 54, 55, 56, 57, 58, 59, 60]
+    elif 'V3' in args.model_path.upper():
+        disable_attn_layers = [0, 1, 2, 46, 50, 51, 53, 54, 55, 56, 57, 59, 60]
+    else:
+        disable_attn_layers = []
+    for ids in disable_attn_layers:
+        if ids < num_layer:
+            disable_names.append("model.layers." + str(ids) + ".self_attn")
+
     quant_config = QuantConfig(
         a_bit=8,
         w_bit=8,
@@ -166,6 +177,8 @@ def main():
         mm_tensor=False,
     )
 
+    if args.fa_quant:
+        quant_config = quant_config.fa_quant()
     calibrator = Calibrator(model, quant_config, calib_data=dataset_calib, disable_level="L0")
     calibrator.run()
     pbar.update(1)

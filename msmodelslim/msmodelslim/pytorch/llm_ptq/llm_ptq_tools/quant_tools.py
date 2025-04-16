@@ -10,7 +10,7 @@ import gc
 import inspect
 import functools
 from collections import defaultdict
-from typing import Mapping, Optional
+from typing import Mapping, List, Optional
 
 from tqdm import tqdm
 import torch
@@ -61,7 +61,8 @@ from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.fa_quant import (
     disable_fa_calibration,
     enable_fa_quantizer_record,
     collect_fa_quantizer_record,
-    is_attn_module_and_then_check_quantizer
+    is_attn_module_and_then_check_quantizer,
+    install_fa_quantizer
 )
 
 from msmodelslim.pytorch.llm_ptq.anti_outlier.dag_utils.torch_dag_adapter import TorchDAGAdapter
@@ -147,6 +148,11 @@ class Calibrator(object):
         self.disable_level = disable_level
 
         model = self.init_model_device(model)
+
+        if self.cfg.use_fa_quant:
+            install_fa_quantizer(model, model.config, self.logger)
+            configure_fa(model, tp_size=self.cfg.fa_tp_size)
+
         self.last_layer_name = None
         self.rollback_names = None
         self.quant_linear_names = None
@@ -215,9 +221,6 @@ class Calibrator(object):
         self.layer_cfg_manager = LayerConfigManager(mix_cfg=mix_cfg, cfg_store=self.cfg_store,
                                                     rollback_names=self.rollback_names)
         self.layer_cfg_manager.build_config_map(model)
-
-        if self.cfg.use_fa_quant:
-            configure_fa(model, tp_size=self.cfg.fa_tp_size)
 
         if self.cfg.calib_mode == 1:
             if (self.cfg.a_bit <= 8) or self.cfg.w_hessian:
@@ -395,11 +398,22 @@ class Calibrator(object):
         # 自动回退lm_head层
         quant_name_list = []
         conv_name_list = []
+        attn_name_list = []
+        
+        quant_name_set = set()
+        conv_name_set = set()
+        attn_name_set = set()
+
         for name, module in list(model.named_modules()):
             if isinstance(module, (nn.Linear, nn.modules.linear.NonDynamicallyQuantizableLinear)):
                 quant_name_list.append(name)
+                quant_name_set.add(name)
             elif isinstance(module, nn.Conv2d):
                 conv_name_list.append(name)
+                quant_name_set.add(name)
+            elif is_attn_module_and_then_check_quantizer(module, name):
+                attn_name_list.append(name)
+                attn_name_set.add(name)
         if quant_name_list:
             last_layer_name = quant_name_list[-1]
         else:
@@ -408,7 +422,7 @@ class Calibrator(object):
             self.logger.info("conv2d is in the model and will not be quantified")
         # 校验用户指定的回退层是否存在
         for name in self.cfg.disable_names:
-            if name not in quant_name_list and name not in conv_name_list:
+            if name not in quant_name_set and name not in conv_name_set and name not in attn_name_set:
                 raise ValueError(f"`disable_names` has invalid key `{name}`, please check your model configurations.")
         if self.cfg.disable_last_linear:
             self.logger.info(f"Automatically disabling the last linear layer: {last_layer_name} "
@@ -475,7 +489,7 @@ class Calibrator(object):
             return self.quantize_model(model).to(self.cfg.device)
 
     def enable_quant(self):
-        enable_quantization(self.model, self.act_states, self.logger, self.cfg.use_fa_quant)
+        enable_quantization(self.model, self.act_states, self.logger, self.cfg.use_fa_quant, self.cfg.disable_names)
 
     def get_calib_data(self, calib_data):
         check_type(calib_data, list, param_name='calib_data')
@@ -939,11 +953,13 @@ def enable_quantization_by_module(name, module, act_states):
         module.init_act_and_observer(module.cfg)
 
 
-def enable_quantization(model, act_states, logger=None, use_fa_quant=False):
+def enable_quantization(model, act_states, logger=None, use_fa_quant=False, skip_modules: List[str] = None):
     _ = logger  # Bypassing not using
     if use_fa_quant:
-        enable_fa_calibration(model)
+        enable_fa_calibration(model, skip_modules)
     for name, module in model.named_modules():
+        if skip_modules and name in skip_modules:
+            continue
         if isinstance(module, Quantizer):
             enable_quantization_by_module(name, module, act_states)
         if isinstance(module, LowBitQuantizer):

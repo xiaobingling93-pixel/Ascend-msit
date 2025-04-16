@@ -24,10 +24,6 @@ def get_norm_linear_subgraph(model: PreTrainedModel):
         kv_a_proj_with_mqa = 'model.layers.' + str(layer) + '.self_attn.kv_a_proj_with_mqa'
         norm_linear[input_layernorm] = [q_a_proj, kv_a_proj_with_mqa]
 
-        kv_b_proj = 'model.layers.' + str(layer) + '.self_attn.kv_b_proj'
-        kv_a_layernorm = 'model.layers.' + str(layer) + '.self_attn.kv_a_layernorm'
-        norm_linear[kv_a_layernorm] = [kv_b_proj]
-
         q_b_proj = 'model.layers.' + str(layer) + '.self_attn.q_b_proj'
         q_a_layernorm = 'model.layers.' + str(layer) + '.self_attn.q_a_layernorm'
         norm_linear[q_a_layernorm] = [q_b_proj]
