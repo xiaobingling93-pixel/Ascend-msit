@@ -489,9 +489,9 @@ class CalibrationData(object):
     def add_custormized_dataset_processor(self, dataset_name, processor):
         """添加自定义dataset_processor"""
         if not isinstance(dataset_name, str):
-            raise argparse.ArgumentTypeError("%s is not an str." % dataset_name)
+            raise argparse.ArgumentTypeError("%r is not an str." % dataset_name)
         if not isinstance(processor, DatasetProcessorBase):
-            raise argparse.ArgumentTypeError("%s is not an DatasetProcessorBase." % processor)
+            raise argparse.ArgumentTypeError("%r is not an DatasetProcessorBase." % processor)
         self.custormized_dataset_processor[dataset_name] = processor
         self.handlers[dataset_name] = CalibHandler(dataset_name, processor, self.shuffle_seed, self.batch_size)
 
@@ -528,7 +528,7 @@ class CalibrationData(object):
     def set_batch_size(self, batch_size: int):
         """设置batch_size"""
         if not isinstance(batch_size, int):
-            raise argparse.ArgumentTypeError("%s is not an int." % batch_size)
+            raise argparse.ArgumentTypeError("%r is not an int." % batch_size)
         if batch_size == 0:
             raise ValueError("batch_size cant be zero")
         self.batch_size = batch_size
@@ -536,5 +536,5 @@ class CalibrationData(object):
     def set_shuffle_seed(self, shuffle_seed):
         """设置随机种子"""
         if not isinstance(shuffle_seed, int):
-            raise argparse.ArgumentTypeError("%s is not an int." % shuffle_seed)
+            raise argparse.ArgumentTypeError("%r is not an int." % shuffle_seed)
         self.shuffle_seed = shuffle_seed
