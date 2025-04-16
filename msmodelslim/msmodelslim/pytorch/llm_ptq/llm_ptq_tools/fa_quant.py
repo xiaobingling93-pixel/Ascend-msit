@@ -312,10 +312,12 @@ def export_fa_quant_params(module: torch.nn.Module, name: str) -> Tuple[dict, ..
 def is_attn_module_and_then_check_quantizer(module: torch.nn.Module, module_name: str) -> bool:
     if "Attention" not in module.__class__.__name__:
         return False
-    if not (hasattr(module, "fa_quantizer") or isinstance(module.fa_quantizer, FAQuantizer)):
+    if hasattr(module, "fa_quantizer") and isinstance(module.fa_quantizer, FAQuantizer):
+        return True
+    if hasattr(module, "fa_quantizer") and not isinstance(module.fa_quantizer, FAQuantizer):
         raise AttributeError(f"`FAQuantizer` is not detected in {module_name}. "
-                             f"Please check the modeling file and insert FAQuantizer in the correct place.")
-    return True
+                                f"Please check the modeling file and insert FAQuantizer in the correct place.")
+    return False
 
 
 class AttentionType(Enum):
