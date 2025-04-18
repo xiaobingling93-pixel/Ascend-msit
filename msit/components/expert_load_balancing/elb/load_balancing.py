@@ -21,12 +21,11 @@ import pandas as pd
 import torch
 
 from c2lb import lb_and_intra_layer_affinity_redundancy_deploy
+from c2lb_dynamic import lb_redundancy_deploy_for_dynamic
 from speculative_moe import speculative_moe_algo_multi_process
 from components.utils.log import logger
-
-
-PREFILL = "prefill"
-DECODE = "decode"
+from components.expert_load_balancing.elb.constant import PREFILL, DECODE, DECODE_FILE_NAME, \
+                        PREFILL_FILE_NAME, ALGORITHM_C2LB, ALGORITHM_SPECULATIVE_MOE
 
 
 def load_expert_popularity_csv(csv_file_path):
@@ -219,9 +218,7 @@ def process_c2lb(args, output_dir):
     - args: 包含算法参数的命名空间。
     - output_dir: 输出结果的目录路径。
     """
-    decode_file_name = "decode_global_deployment"
-    prefill_file_name = "prefill_global_deployment" 
-    
+
     decode_df, prefill_df = load_expert_popularity_csv(output_dir)
 
     if decode_df is not None:
@@ -232,11 +229,11 @@ def process_c2lb(args, output_dir):
                 decode_np, 
                 args.num_redundancy_expert, 
                 output_dir, 
-                decode_file_name,
+                DECODE_FILE_NAME,
                 args.num_npus, 
                 num_original_expert, 
             )
-            logger.info(f"C2LB processed decode data -> {decode_file_name}")
+            logger.info(f"C2LB processed decode data -> {DECODE_FILE_NAME}")
         except Exception as e:
             raise RuntimeError(f"Failed to process decode data: {str(e)}") from e
 
@@ -248,11 +245,11 @@ def process_c2lb(args, output_dir):
                 prefill_np,  
                 args.num_redundancy_expert, 
                 output_dir, 
-                prefill_file_name,
+                PREFILL_FILE_NAME,
                 args.num_npus, 
                 num_original_expert,
             )
-            logger.info(f"C2LB processed prefill data -> {prefill_file_name}")
+            logger.info(f"C2LB processed prefill data -> {PREFILL_FILE_NAME}")
         except Exception as e:
             raise RuntimeError(f"Failed to process prefill data: {str(e)}") from e
     
@@ -304,6 +301,55 @@ def process_speculative_moe(args, file_names, output_dir):
             raise FileNotFoundError(f"输入文件不存在 {input_csv_path}") from e
         except Exception as e:
             raise FileNotFoundError(f"处理 {input_file} 时发生异常: {str(e)}") from e
+
+
+def process_dynamic_c2lb(args, file_names, output_dir):
+    """Process dynamic C2LB algorithm and save results based on available data files.
+    
+    支持场景:
+    - 只有 decode_info.csv 时: 处理 decode 数据。
+    - 只有 prefill_info.csv 时: 处理 prefill 数据。
+    - 两者都存在时: 同时处理 decode 和 prefill 数据。
+    
+    参数:
+    - args: 包含算法参数的命名空间。
+    - output_dir: 输出结果的目录路径。
+    """
+    
+    decode_df, prefill_df = load_expert_popularity_csv(output_dir)
+
+    if decode_df is not None:
+        try:
+            decode_np = decode_df.to_numpy()
+            lb_redundancy_deploy_for_dynamic(
+                decode_np, 
+                args.num_redundancy_expert, 
+                output_dir, 
+                DECODE_FILE_NAME,
+                args.num_nodes, 
+                args.num_npus
+            )
+            logger.info(f"dynamic C2LB processed decode data -> {DECODE_FILE_NAME}")
+        except Exception as e:
+            raise RuntimeError(f"Failed to process decode data: {str(e)}") from e
+
+    if prefill_df is not None:
+        try:
+            prefill_np = prefill_df.to_numpy()
+            lb_redundancy_deploy_for_dynamic(
+                prefill_np,  
+                args.num_redundancy_expert, 
+                output_dir, 
+                PREFILL_FILE_NAME,
+                args.num_nodes, 
+                args.num_npus
+            )
+            logger.info(f"dynamic C2LB processed prefill data -> {PREFILL_FILE_NAME}")
+        except Exception as e:
+            raise RuntimeError(f"Failed to process decode data: {str(e)}") from e
+
+    if decode_df is None and prefill_df is None:
+        raise FileNotFoundError(f"No valid decode/prefill data found in {output_dir}")
 
 
 def check_file_type(folder_path):
@@ -361,8 +407,10 @@ def load_balancing(args):
         file_names.append("decode_info.csv")
 
     # c2lb算法
-    if args.algorithm == '0':
+    if args.algorithm == ALGORITHM_C2LB:
         process_c2lb(args, output_dir=args.output_dir)
     # process_speculative_moe算法
-    else:
+    elif args.algorithm == ALGORITHM_SPECULATIVE_MOE:
         process_speculative_moe(args, file_names=file_names, output_dir=args.output_dir)
+    else:
+        process_dynamic_c2lb(args, file_names=file_names, output_dir=args.output_dir)

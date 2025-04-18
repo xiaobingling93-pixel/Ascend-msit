@@ -75,8 +75,9 @@ class ExpertLoadBalanceCommmand(BaseCommand):
             type=str,
             required=False,
             default="1",
-            choices=['0', '1'],
-            help="algorithm type. 0代表计算通信负载均衡算法(C2LB), 1代表speculative moe interface algorithm。")
+            choices=['0', '1', '2'],
+            help="algorithm type. 0代表计算通信负载均衡算法(C2LB), 1代表speculative moe interface algorithm，"
+                    "2 代表生成动态场景下的C2LB算法，生成初始配置文件")
 
     def handle(self, args, **kwargs) -> None:
         logger.info("===================load balancing algorithm start====================")
