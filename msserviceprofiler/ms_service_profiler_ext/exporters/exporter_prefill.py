@@ -33,8 +33,6 @@ class ExporterPrefill(ExporterBase):
         batch_size = cls.args.prefill_batch_size
         batch_num = cls.args.prefill_number
         df = data.get('tx_data_df')
-        if log_level == 'debug':
-            save_dataframe_to_csv(df, output, 'all_prefill.csv')
         if df is None:
             logger.error("The data is empty, please check")
             return

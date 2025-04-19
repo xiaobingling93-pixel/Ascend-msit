@@ -27,8 +27,6 @@ EVENT_PAIRS = [
     ('convertTensorBatchToBackend', 'getInputMetadata'),
     ('getInputMetadata', 'preprocess'),
     ('getInputMetadata', 'prepareInputs'),
-    ('prepareInputs', 'operatorExecute'),
-    ('preprocess', 'forward'),
     ('forward', 'sample'),
     ('operatorExecute', 'sample'),
     ('postprocess', 'generateOutput'),
@@ -167,8 +165,6 @@ def get_event_pair_df(framework_df, name):
                 'end_time(microsecond)': next_start,
                 'pid': current_events.iloc[i]['pid'],
                 'tid': current_events.iloc[i]['tid'],
-                'message': None,
-                'mark_id': None,
                 'start_datetime': None,
                 'end_datetime': None,
                 'batch_type': None,
@@ -186,7 +182,6 @@ def get_event_pair_df(framework_df, name):
     
 
 def postprocess_framework_df(framework_df, post_event_pairs, name):
-    filter_time = 100000
     if framework_df.empty:
         logger.warning(f'{name}: df is empty')
         return framework_df
@@ -232,8 +227,6 @@ def postprocess_framework_df(framework_df, post_event_pairs, name):
             'end_time(microsecond)': next_start,
             'pid': current_events.iloc[0]['pid'],
             'tid': current_events.iloc[0]['tid'],
-            'message': None,
-            'mark_id': None,
             'start_datetime': None,
             'end_datetime': None,
             'batch_type': None,
@@ -241,12 +234,6 @@ def postprocess_framework_df(framework_df, post_event_pairs, name):
         }
         new_rows.append(new_row)
     new_df = pd.DataFrame(new_rows)
-    specific_row = new_df[new_df['name'] == 'Between-batchFrameworkProcessing-serializeExcueteMessage']
-    if specific_row.empty:
-        return pd.DataFrame()
-    if (int)(specific_row['during_time(microsecond)'].iloc[0]) > filter_time:
-        logger.debug(f'{name}: time is large than filter_time, continue')
-        return pd.DataFrame()
     framework_df = pd.concat([framework_df, new_df], ignore_index=True)
     framework_df = framework_df.sort_values(by=['start_time(microsecond)']).reset_index(drop=True)
     handletask_rows = framework_df[framework_df['name'] == 'handleTaskExecution']
@@ -298,13 +285,14 @@ def get_batch_framework(framework_df, name):
     else:
         return pd.DataFrame()
 
-    filter_name = ['deserializeExecuteRequestsForInfer', 'convertTensorBatchToBackend'
-                   'Between-convertTensorBatchToBackend-convertTensorBatchToBackend',
+    filter_name = ['deserializeExecuteRequestsForInfer', 'convertTensorBatchToBackend',
+                   'Between-deserializeExecuteRequestsForInfer-convertTensorBatchToBackend',
                    'Between-convertTensorBatchToBackend-getInputMetadata']
     result_df = sorted_groups[(sorted_groups['pid'] == generate_output_pid) &
                               (sorted_groups['tid'] == generate_output_tid)]
     result_df1 = sorted_groups[(sorted_groups['pid'] == generate_output_pid) &
                                (sorted_groups['name'].isin(filter_name))]
+    result_df = pd.concat([result_df, result_df1])
     other_group = sorted_groups[sorted_groups['pid'] != generate_output_pid]
     other_group = other_group[~other_group['name'].isin(result_df['name'])]
     other_df = other_group.drop_duplicates(subset='name', keep='first')
@@ -330,7 +318,16 @@ def get_filter_df(framework_df, name):
 
 
 def get_statistics_data(framework_df, filter_name, name):
-    start_index = framework_df[framework_df['name'] == filter_name].index[-1]
+    if framework_df.empty:
+        logger.warning(f"{name}: The dataframe is empty")
+        return framework_df
+    batch = framework_df[framework_df['name'] == filter_name]
+    if len(batch) == 1:
+        start_index = framework_df[framework_df['name'] == filter_name].index[-1]
+        end_index = -1
+    else:
+        start_index = framework_df[framework_df['name'] == filter_name].index[-2]
+        end_index = framework_df[framework_df['name'] == filter_name].index[-1]
     framework_df['max'] = framework_df.groupby('name')['during_time(microsecond)'].transform('max')
     framework_df['min'] = framework_df.groupby('name')['during_time(microsecond)'].transform('min')
     framework_df['mean'] = framework_df.groupby('name')['during_time(microsecond)'].transform('mean')
@@ -343,7 +340,7 @@ def get_statistics_data(framework_df, filter_name, name):
         framework_df = framework_df.iloc[:, :10]
     else:
         framework_df = framework_df.iloc[:, :11]
-    return framework_df[start_index:]
+    return framework_df[start_index: end_index]
 
 
 def get_batch_all_time(framework_df, name):

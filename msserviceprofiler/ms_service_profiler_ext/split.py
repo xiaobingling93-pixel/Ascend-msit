@@ -32,7 +32,8 @@ def add_exporters(args):
         exporter_cls.append(ExporterPrefill)
     if args.decode_batch_size > 0:
         exporter_cls.append(ExporterDecode)
-    for exporter in exporter_cls:
+    for cls in exporter_cls:
+        exporter = cls()
         exporter.initialize(args)
         exporters.append(exporter)
     return exporters
