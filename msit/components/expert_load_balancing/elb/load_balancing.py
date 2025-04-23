@@ -24,6 +24,7 @@ from c2lb import lb_and_intra_layer_affinity_redundancy_deploy
 from c2lb_dynamic import lb_redundancy_deploy_for_dynamic
 from speculative_moe import speculative_moe_algo_multi_process
 from components.utils.log import logger
+from components.utils.file_open_check import ms_open
 from components.expert_load_balancing.elb.constant import PREFILL, DECODE, DECODE_FILE_NAME, \
                         PREFILL_FILE_NAME, ALGORITHM_C2LB, ALGORITHM_SPECULATIVE_MOE
 
@@ -116,12 +117,12 @@ def merge_csv_columns(csv_path, pattern_prefix):
 
     filtered_files = sort_filenames(filtered_files)
 
-    logger.info(f"{pattern_prefix} file number is {len(filtered_files)}")
+    logger.debug(f"{pattern_prefix} file number is {len(filtered_files)}")
     all_columns = []
     column_count = 0
     
     for file in filtered_files:
-        logger.info(f"Processing file: {file}.")
+        logger.debug(f"Processing file: {file}.")
         df = pd.read_csv(file, header=None)
         if df.empty:
             raise ValueError(f"File {file} is empty. Check the input decode or prefill file.")
@@ -139,10 +140,16 @@ def merge_csv_columns(csv_path, pattern_prefix):
 
 
 def save_matrix_to_json(output_path, file_name, deployment):
-    if deployment.ndim != 3:
-        raise ValueError(f"部署矩阵必须是三维数组，但当前维度为 {deployment.ndim}D。")
-    num_layers = deployment.shape[0]
-    num_cards = deployment.shape[1]
+    def get_ndim(obj):
+        if isinstance(obj, list):
+            return 1 + (get_ndim(obj[0]) if obj else 0)
+        return 0
+    
+    cur_dim = get_ndim(deployment)
+    if cur_dim != 3:
+        raise ValueError(f"部署矩阵必须是三维数组，但当前维度为 {cur_dim}D。")
+    num_layers = len(deployment)
+    num_cards = len(deployment[0])
 
     data = {"moe_layer_count": num_layers}
     layer_list = []
@@ -150,7 +157,7 @@ def save_matrix_to_json(output_path, file_name, deployment):
         layer = {"layer_id": i, "device_count": num_cards}
         device_list = []
         for j in range(num_cards):
-            device = {"device_id": j, "device_expert": deployment[i, j].tolist()}
+            device = {"device_id": j, "device_expert": list(deployment[i][j])}
             device_list.append(device)
         layer["device_list"] = device_list
         layer_list.append(layer)
@@ -160,10 +167,32 @@ def save_matrix_to_json(output_path, file_name, deployment):
 
     # 保存为 JSON 文件
     try:
-        with open(file_name, 'w') as f:
+        with ms_open(file_name, 'w') as f:
             json.dump(data, f, indent=4)
     except Exception as e:
         raise RuntimeError(f"保存json文件 {deployment} 时出错") from e
+
+
+def dump_tables(deploy_fp, d2e_tables_list, n_devices):
+    layer_list = []
+
+    for layer_idx, d2e_tables in enumerate(d2e_tables_list):
+        device_list = [
+            {"device_id": d, "device_expert": d2e_tables[layer_idx][d].tolist()} 
+            for d in range(n_devices)
+        ]
+        layer_list.append({
+            "layer_id": layer_idx,
+            "device_count": n_devices,
+            "device_list": device_list
+        })
+    json_data = {
+        "moe_layer_count": len(layer_list),
+        "layer_list": layer_list
+    }
+    logger.debug(json_data)
+    with ms_open(deploy_fp, 'w') as json_file:
+        json.dump(json_data, json_file, indent=4)
 
 
 def save_dataframes(prefill_final_df, decode_final_df, output_dir):
@@ -218,22 +247,21 @@ def process_c2lb(args, output_dir):
     - args: 包含算法参数的命名空间。
     - output_dir: 输出结果的目录路径。
     """
-
+    logger.info("Generating Files with the C2lb Algorithm for Static Scenarios")
     decode_df, prefill_df = load_expert_popularity_csv(output_dir)
 
     if decode_df is not None:
         try:
             num_original_expert = decode_df.shape[1] 
             decode_np = decode_df.to_numpy()
-            lb_and_intra_layer_affinity_redundancy_deploy(
+            global_deployment = lb_and_intra_layer_affinity_redundancy_deploy(
                 decode_np, 
                 args.num_redundancy_expert, 
-                output_dir, 
-                DECODE_FILE_NAME,
                 args.num_npus, 
                 num_original_expert, 
             )
-            logger.info(f"C2LB processed decode data -> {DECODE_FILE_NAME}")
+            save_matrix_to_json(output_dir, DECODE_FILE_NAME, global_deployment)
+            logger.info(f"C2LB processed decode data -> {DECODE_FILE_NAME}.json")
         except Exception as e:
             raise RuntimeError(f"Failed to process decode data: {str(e)}") from e
 
@@ -241,15 +269,14 @@ def process_c2lb(args, output_dir):
         try:
             num_original_expert = prefill_df.shape[1] 
             prefill_np = prefill_df.to_numpy()
-            lb_and_intra_layer_affinity_redundancy_deploy(
+            global_deployment = lb_and_intra_layer_affinity_redundancy_deploy(
                 prefill_np,  
                 args.num_redundancy_expert, 
-                output_dir, 
-                PREFILL_FILE_NAME,
                 args.num_npus, 
                 num_original_expert,
             )
-            logger.info(f"C2LB processed prefill data -> {PREFILL_FILE_NAME}")
+            save_matrix_to_json(output_dir, PREFILL_FILE_NAME, global_deployment)
+            logger.info(f"C2LB processed prefill data -> {PREFILL_FILE_NAME}.json")
         except Exception as e:
             raise RuntimeError(f"Failed to process prefill data: {str(e)}") from e
     
@@ -269,7 +296,7 @@ def process_speculative_moe(args, file_names, output_dir):
         file_names (list): 需要处理的 CSV 文件名列表（例如 ["decode_info.csv", "prefill_info.csv"]）。
         output_dir (str): 输出结果的目录路径。
     """
-
+    logger.info("Generating Files with the Speculative Moe Algorithm for Static Scenarios")
     input_output_map = {
         "decode_info.csv": "decode_global_deployment.json",
         "prefill_info.csv": "prefill_global_deployment.json"
@@ -287,15 +314,15 @@ def process_speculative_moe(args, file_names, output_dir):
         num_layer = dimensions[0]
         num_original_expert = dimensions[1]
         try:
-            speculative_moe_algo_multi_process(
+            results = speculative_moe_algo_multi_process(
                 args.num_npus,
                 args.num_nodes,
                 num_layer,
                 num_original_expert,
                 args.num_redundancy_expert,
                 input_csv_path,
-                output_path
             )
+            dump_tables(output_path, results, args.num_npus)
             logger.info(f"Speculative MOE 处理完成: {input_file} -> {output_file_name}")
         except FileNotFoundError as e:
             raise FileNotFoundError(f"输入文件不存在 {input_csv_path}") from e
@@ -315,36 +342,34 @@ def process_dynamic_c2lb(args, file_names, output_dir):
     - args: 包含算法参数的命名空间。
     - output_dir: 输出结果的目录路径。
     """
-    
+    logger.info("Generating Initialization Files with the C2lb Algorithm for Dynamic Scenarios")
     decode_df, prefill_df = load_expert_popularity_csv(output_dir)
 
     if decode_df is not None:
         try:
             decode_np = decode_df.to_numpy()
-            lb_redundancy_deploy_for_dynamic(
+            global_deployment = lb_redundancy_deploy_for_dynamic(
                 decode_np, 
                 args.num_redundancy_expert, 
-                output_dir, 
-                DECODE_FILE_NAME,
                 args.num_nodes, 
                 args.num_npus
             )
-            logger.info(f"dynamic C2LB processed decode data -> {DECODE_FILE_NAME}")
+            save_matrix_to_json(output_dir, DECODE_FILE_NAME, global_deployment)
+            logger.info(f"dynamic C2LB processed decode data -> {DECODE_FILE_NAME}.json")
         except Exception as e:
             raise RuntimeError(f"Failed to process decode data: {str(e)}") from e
 
     if prefill_df is not None:
         try:
             prefill_np = prefill_df.to_numpy()
-            lb_redundancy_deploy_for_dynamic(
+            global_deployment = lb_redundancy_deploy_for_dynamic(
                 prefill_np,  
                 args.num_redundancy_expert, 
-                output_dir, 
-                PREFILL_FILE_NAME,
                 args.num_nodes, 
                 args.num_npus
             )
-            logger.info(f"dynamic C2LB processed prefill data -> {PREFILL_FILE_NAME}")
+            save_matrix_to_json(output_dir, PREFILL_FILE_NAME, global_deployment)
+            logger.info(f"dynamic C2LB processed prefill data -> {PREFILL_FILE_NAME}.json")
         except Exception as e:
             raise RuntimeError(f"Failed to process decode data: {str(e)}") from e
 

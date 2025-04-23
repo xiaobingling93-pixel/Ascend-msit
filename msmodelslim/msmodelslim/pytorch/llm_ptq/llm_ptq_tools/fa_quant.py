@@ -58,8 +58,20 @@ class QKVQuantizer:
             self.is_record = False
 
         batch_size, num_head, seq_len, head_dim = samples.shape
-        samples = samples.contiguous().view(tp_size * num_head, -1)
-        samples_min, samples_max = recall_window(samples, self.ratio, -1, True)
+
+        if not _SUPPORT_RECALL_WINDOW:
+            if num_head != self.num_head:
+                raise ValueError("The number of heads in the input states tensor \
+                                  does not match the preset value!")
+
+            num_head_per_device = self.num_head // tp_size
+            samples = samples.contiguous().view(tp_size * num_head_per_device, -1)
+            samples_max = samples.max(dim=-1, keepdim=True)[0]
+            samples_min = samples.min(dim=-1, keepdim=True)[0]
+        else:
+            samples = samples.contiguous().view(tp_size * num_head, -1)
+            samples_min, samples_max = recall_window(samples, self.ratio, -1, True)
+
         ## min value
         if self._min_values is None:
             self._min_values = samples_min
@@ -125,8 +137,6 @@ class FAQuantizer:
         self.logger = logger
         self.debug_mode = False
 
-        if not _SUPPORT_RECALL_WINDOW:
-            raise ImportError("The current CANN version does not support recall_window method!")
         self.q_observer = QKVQuantizer()
         self.k_observer = QKVQuantizer()
         self.v_observer = QKVQuantizer()
