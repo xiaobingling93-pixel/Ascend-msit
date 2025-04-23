@@ -14,7 +14,7 @@ pip install msprechecker
 
 ### 1.2.2 源码使用
 
-性能预检工具的源码已开源，位于开源网站 gitee 的 [msIT](https://gitee.com/ascend/msit/tree/msserviceprofiler_dev/msit) 仓内的 msserviceprofiler_dev 分支下。您可以使用下列步骤直接使用工具
+性能预检工具的源码已开源，位于开源网站 gitee 的 [msIT](https://gitee.com/ascend/msit/tree/master/msit) 仓内的。您可以使用下列步骤直接使用工具
 
 1. 代码仓获取（二选一）
    
@@ -22,7 +22,7 @@ pip install msprechecker
     <summary>git 获取 </summary>
    
    ```sh
-   git clone https://gitee.com/ascend/msit.git -b msserviceprofiler_dev
+   git clone https://gitee.com/ascend/msit.git
    ```
    
    </details>
@@ -30,8 +30,8 @@ pip install msprechecker
    <details>
     <summary>打包下载 </summary>
    
-   1. 点击 [链接](https://gitee.com/ascend/msit/blob/msserviceprofiler_dev) 跳转
-   2. 确保分支位于 msserviceprofiler_dev
+   1. 点击 [链接](https://gitee.com/ascend/msit/blob/master) 跳转
+   2. 确保分支位于 master
    3. 点击右上角橘黄色 '克隆/下载' 按钮即可下载到本地
    4. 解压
    
