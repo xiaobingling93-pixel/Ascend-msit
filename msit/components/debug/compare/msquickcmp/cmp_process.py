@@ -50,7 +50,7 @@ from msquickcmp.single_op import single_op as sp
 from components.utils.security_check import check_write_directory, ms_makedirs
 from components.utils.file_open_check import ms_open, sanitize_csv_value
 from components.utils.check.rule import Rule
-from components.utils.util import load_file_to_read_common_check
+from components.utils.util import load_file_to_read_common_check, filter_cmd
 from components.utils.constants import TENSOR_MAX_SIZE
 
 WRITE_MODES = stat.S_IWUSR | stat.S_IRUSR
@@ -674,6 +674,7 @@ def subgraph_check(og, node_interval, args, onnx_data_path, input_shape):
         "atc", "--framework=5", "--soc_version=" + acl.get_soc_name(), "--model=" + subgraph_onnx_file,
         "--output=" + subgraph_om_file
     ]
+    atc_cmd = filter_cmd(atc_cmd)
     subprocess.run(atc_cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     utils.logger.info("atc conversion Success!")
     utils.logger.info("Start to loading input data")

@@ -33,7 +33,7 @@ from msquickcmp.common.dynamic_argument_bean import DynamicArgumentEnum
 
 from components.utils.security_check import get_valid_write_path, ms_makedirs
 from components.debug.common import logger
-from components.utils.util import load_file_to_read_common_check
+from components.utils.util import load_file_to_read_common_check, filter_cmd
 from components.utils.file_open_check import ms_open
 from components.utils.constants import TENSOR_MAX_SIZE
 
@@ -617,6 +617,7 @@ def execute_command(cmd, info_need=True):
     Exception Description:
         when invalid command throw exception
     """
+    cmd = filter_cmd(cmd)
     if info_need:
         logger.info('Execute command:%s' % " ".join(cmd))
     process = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)

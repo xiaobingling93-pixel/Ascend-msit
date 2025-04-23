@@ -34,7 +34,7 @@ from components.utils.file_open_check import sanitize_csv_value, MAX_SIZE_LIMITE
 from components.utils.file_open_check import ms_open
 from components.utils.check.rule import Rule
 
-from components.utils.util import load_file_to_read_common_check
+from components.utils.util import load_file_to_read_common_check, filter_cmd
 from components.utils.constants import TENSOR_MAX_SIZE
 
 MSACCUCMP_DIR_PATH = "toolkit/tools/operator_cmp/compare"
@@ -75,6 +75,7 @@ class NetCompare(object):
 
     @staticmethod
     def execute_command_line(cmd):
+        cmd = filter_cmd(cmd)
         utils.logger.info('Execute command:%s' % " ".join(cmd))
         process = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         return process

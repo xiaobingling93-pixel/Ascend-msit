@@ -18,6 +18,7 @@ import subprocess
 from pathlib import Path
 import shutil
 
+from components.utils.util import filter_cmd
 from components.debug.common import logger
 from components.utils.security_check import check_write_directory
 from components.debug.compare.msquickcmp.common.args_check import check_input_path_legality
@@ -59,6 +60,7 @@ class OpChecker:
     @staticmethod
     def execute_convert_npy_command(command):
         try:
+            command = filter_cmd(command)
             result = subprocess.run(command, shell=False, capture_output=True, text=True)
             if result.returncode == 0:
                 return result.stdout.strip()

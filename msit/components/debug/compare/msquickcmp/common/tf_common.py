@@ -24,7 +24,7 @@ import tensorflow as tf
 
 from msquickcmp.common import utils
 from msquickcmp.common.utils import AccuracyCompareException
-from components.utils.util import load_file_to_read_common_check
+from components.utils.util import load_file_to_read_common_check, filter_cmd
 from components.utils.check.rule import Rule
 
 DTYPE_MAP = {
@@ -62,6 +62,7 @@ def execute_command(cmd: str):
     if cmd is None:
         utils.logger.error("Command is None.")
         return -1
+    cmd = filter_cmd(cmd)
     utils.logger.info("[Run CMD]: %s" % cmd)
     complete_process = subprocess.run(cmd, shell=False)
     return complete_process.returncode

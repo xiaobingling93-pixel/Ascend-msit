@@ -18,7 +18,7 @@ from itertools import product
 
 from components.utils.util import (confirmation_interaction, 
                                    check_file_ext, 
-                                   check_file_size_based_on_ext)
+                                   check_file_size_based_on_ext, filter_cmd)
 
 
 class TestUtil(unittest.TestCase):
@@ -98,3 +98,41 @@ class TestUtil(unittest.TestCase):
                     self.assertTrue(check_file_size_based_on_ext('random_file', ext))
                     self.assertTrue(check_file_size_based_on_ext('random_file' + ext))
                     self.assertTrue(check_file_size_based_on_ext('random_file'))
+
+
+class TestFilterCmd(unittest.TestCase):
+    def test_valid_characters(self):
+        input_args = ["hello", "world123", "file_name.txt", "path/to/file", "a-b-c", "A_B_C", "1 2 3", "var=value"]
+        expected = input_args.copy()
+        self.assertEqual(filter_cmd(input_args), expected)
+
+    def test_invalid_characters(self):
+        input_args = ["hello!", "world@123", "file$name", "path/to|file", "a{b}c", "A#B#C"]
+        expected = []
+        self.assertEqual(filter_cmd(input_args), expected)
+
+    def test_mixed_valid_invalid(self):
+        input_args = ["valid", "inval!d", "good123", "bad@arg", "ok"]
+        expected = ["valid", "good123", "ok"]
+        self.assertEqual(filter_cmd(input_args), expected)
+
+    def test_empty_input(self):
+        self.assertEqual(filter_cmd([]), [])
+    
+    def test_non_string_input(self):
+        input_args = [123, 45.67, True, None]
+        expected = ["123", "45.67", "True", "None"]
+        self.assertEqual(filter_cmd(input_args), expected)
+    
+    def test_whitespace_only(self):
+        self.assertEqual(filter_cmd([" ", "   "]), [" ", "   "])
+    
+    def test_edge_cases(self):
+        input_args = ["", "-._ /=", "a"*1000]
+        expected = ["-._ /=", "a"*1000]
+        self.assertEqual(filter_cmd(input_args), expected)
+    
+    def test_non_ascii(self):
+        input_args = ["héllo", "世界", "café"]
+        expected = []
+        self.assertEqual(filter_cmd(input_args), expected)
