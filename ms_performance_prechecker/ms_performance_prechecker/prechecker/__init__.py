@@ -40,7 +40,10 @@ CHECKERS = {
     CHECKER_TYPES.model: [model_config_checker, model_size_checker, model_sha256_collecter],
 }
 
-CHECKERS[CHECKER_TYPES.all] = [ii for key, checker in CHECKERS.items() for ii in checker if key != CHECKER_TYPES.all]
+CHECKERS[CHECKER_TYPES.all] = []
+for key, checker in CHECKERS.items():
+    if key != CHECKER_TYPES.all:
+        CHECKERS[CHECKER_TYPES.all].extend(checker)
 
 CHECKER_INFOS = {
     CHECKER_TYPES.basic: "checking env / system info",
