@@ -72,6 +72,7 @@ _CONFIG = ["name", "value", "reason", "suggestions", "condition", "suggested", "
 CONFIG = namedtuple("CONFIG", _CONFIG)(*_CONFIG)
 NOT_EMPTY_VALUE = "非空值"
 
+
 def get_default_suggestions():
     suggestion_file = os.path.join(os.path.dirname(__file__), "default_config.yaml")
     with open(suggestion_file, "r") as ff:
