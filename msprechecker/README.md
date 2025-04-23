@@ -50,7 +50,7 @@ python -m msprechecker --help
 
 ### 1.2.3 离线安装
 
-1. 在能够访问网络的机器上，访问 [PyPI 官方源](https://pypi.org/project/ms-performance-prechecker/#files)
+1. 在能够访问网络的机器上，访问 [PyPI 官方源](https://pypi.org/project/msprechecker/#files)
 2. 左侧点击 `Download files`，随后点击 `Built Distribution` 下方链接进行下载，如下图所示：
    ![image](./pics/download.png)
    ![image](./pics/download_1.png)
@@ -301,7 +301,7 @@ msprechecker distribute_compare
 #### WARNING
 使用该功能之前，请 **务必** 准备好 rank table file，上述功能假设以下两种情况任一满足：
 1. 环境变量 RANKFILETABLE 已正确配置
-2. 通过 `ms_performance_precheck distribute_compare` 的 `-ranktable` 或者 `--rankfiletable` 参数进行指定 rank file table 的路径
+2. 通过 `msprechecker distribute_compare` 的 `-ranktable` 或者 `--rankfiletable` 参数进行指定 rank file table 的路径
    否则功能 **无法** 正常运行
 
 也可不使用多机配置文件，手动配置 `master` 节点和 `LOCAL_RANK` 信息，以双机场景为例，`master` 节点运行：
@@ -499,6 +499,6 @@ ENV_SUGGESTIONS 配置项说明：
 }
 ```
 
-随后命令行输入预检命令 `ms_performance_precheck precheck`，会出现我们配置的校验项，如下：
+随后命令行输入预检命令 `msprechecker precheck`，会出现我们配置的校验项，如下：
 
 ![image](./pics/env.png)
