@@ -17,9 +17,9 @@ import torch
 import torch_npu
 import yaml
 
-from ms_performance_prechecker.prechecker.register import PrecheckerBase
-from ms_performance_prechecker.prechecker.utils import logger
-from ms_performance_prechecker.prechecker.hardware_capacity.time_analyze import TimeAnalyze
+from msprechecker.prechecker.register import PrecheckerBase
+from msprechecker.prechecker.utils import logger
+from msprechecker.prechecker.hardware_capacity.time_analyze import TimeAnalyze
 
 
 class CPUChecker(PrecheckerBase):

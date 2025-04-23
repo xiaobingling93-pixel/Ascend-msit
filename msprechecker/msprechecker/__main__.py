@@ -20,19 +20,19 @@ import tempfile
 from collections import namedtuple
 from glob import glob
 
-from ms_performance_prechecker.prechecker import CHECKERS, CHECKER_INFOS_STR
-from ms_performance_prechecker.prechecker.utils import str_ignore_case, logger, set_log_level
-from ms_performance_prechecker.prechecker.utils import LOG_LEVELS, RUN_MODES, CHECKER_TYPES
-from ms_performance_prechecker.prechecker.utils import MIES_INSTALL_PATH, MINDIE_SERVICE_DEFAULT_PATH, RANKTABLEFILE
-from ms_performance_prechecker.prechecker.utils import deep_compare_dict, get_next_dict_item
+from msprechecker.prechecker import CHECKERS, CHECKER_INFOS_STR
+from msprechecker.prechecker.utils import str_ignore_case, logger, set_log_level
+from msprechecker.prechecker.utils import LOG_LEVELS, RUN_MODES, CHECKER_TYPES
+from msprechecker.prechecker.utils import MIES_INSTALL_PATH, MINDIE_SERVICE_DEFAULT_PATH, RANKTABLEFILE
+from msprechecker.prechecker.utils import deep_compare_dict, get_next_dict_item
 
 
 LOG_LEVELS_LOWER = [ii.lower() for ii in LOG_LEVELS.keys()]
 
 DEFAULT_DUMP_PATH = os.path.join(
-    tempfile.gettempdir(), f"ms_performance_prechecker_dump_{time.strftime('%Y%m%d_%H%M%S')}.json"
+    tempfile.gettempdir(), f"msprechecker_dump_{time.strftime('%Y%m%d_%H%M%S')}.json"
 )
-DAFAULT_ENV_SAVE_PATH = "ms_performance_prechecker_env.sh"
+DAFAULT_ENV_SAVE_PATH = "msprechecker_env.sh"
 
 RANKTABLE_FILE = os.getenv(RANKTABLEFILE, None)
 MINDIE_SERVICE_PATH = os.getenv(MIES_INSTALL_PATH, MINDIE_SERVICE_DEFAULT_PATH)
@@ -95,7 +95,7 @@ def get_all_register_prechecker(checkers=(CHECKER_TYPES.basic,)):
 
 
 def print_contents():
-    from ms_performance_prechecker.prechecker.register import CONTENTS, CONTENT_PARTS
+    from msprechecker.prechecker.register import CONTENTS, CONTENT_PARTS
 
     logger.info(f"")
 
@@ -168,7 +168,7 @@ def run_compare(dump_file_paths=None, **kwargs):
 
 
 def run_precheck(
-    save_env="ms_performance_prechecker_env.sh",
+    save_env="msprechecker_env.sh",
     service_config_path=None,
     checkers=(CHECKER_TYPES.basic,),
     additional_checks_yaml=None,
@@ -199,7 +199,7 @@ def run_distribute_compare(
     checkers=(CHECKER_TYPES.basic,),
     **kwargs,
 ):
-    from ms_performance_prechecker.prechecker import cluster_collector
+    from msprechecker.prechecker import cluster_collector
 
     dump_env = run_env_dump(
         dump_file_path=None, service_config_path=service_config_path, checkers=checkers, ranktable_file=ranktable_file
@@ -240,7 +240,7 @@ def sub_parser_precheck(subparsers):
     parser.add_argument(
         "-s",
         "--save_env",
-        default="ms_performance_prechecker_env.sh",
+        default="msprechecker_env.sh",
         help="Save env changes as a file which could be applied directly.",
     )
     for ii in DUMP_COMMON_ARGS + COMMON_ARGS:

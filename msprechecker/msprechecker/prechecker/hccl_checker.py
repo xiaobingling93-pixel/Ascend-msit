@@ -16,10 +16,10 @@ import os
 import platform
 from glob import glob
 from concurrent import futures
-from ms_performance_prechecker.prechecker.register import register_checker, GroupPrechecker, PrecheckerBase
-from ms_performance_prechecker.prechecker.register import show_check_result, record, CONTENT_PARTS, CheckResult
-from ms_performance_prechecker.prechecker.utils import logger
-from ms_performance_prechecker.prechecker.utils import parse_ranktable_file, run_shell_command, get_interface_by_ip
+from msprechecker.prechecker.register import register_checker, GroupPrechecker, PrecheckerBase
+from msprechecker.prechecker.register import show_check_result, record, CONTENT_PARTS, CheckResult
+from msprechecker.prechecker.utils import logger
+from msprechecker.prechecker.utils import parse_ranktable_file, run_shell_command, get_interface_by_ip
 
 _DAVINCI_DEVICES = sorted(glob("/dev/davinci*"))
 NPU_DEVICES = [int(ii.split("davinci")[-1]) for ii in _DAVINCI_DEVICES if str.isdigit(ii.split("davinci")[-1])]

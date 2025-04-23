@@ -17,7 +17,7 @@ from collections import namedtuple
 
 import yaml
 
-from ms_performance_prechecker.prechecker.utils import get_dict_value_by_pos, logger
+from msprechecker.prechecker.utils import get_dict_value_by_pos, logger
 
 """
 Yaml 配置模板：
@@ -111,7 +111,7 @@ def convert_value_type(value, domain):
 
 
 def is_value_met_suggestions(current_value, suggested_values, current_configs):
-    from ms_performance_prechecker.prechecker.match_special_value import is_value_met_special_suggestions
+    from msprechecker.prechecker.match_special_value import is_value_met_special_suggestions
     if not suggested_values:
         return current_value is not None  # suggested_values is empty, check if current_value not None
     normal_value_suggestions, special_value_suggestions = [], []
@@ -131,7 +131,7 @@ def is_value_met_suggestions(current_value, suggested_values, current_configs):
 
 
 def suggestion_rule_checker(current_configs, suggestion_rule, env_info, domain, action_func=None):
-    from ms_performance_prechecker.prechecker.register import show_check_result, CheckResult
+    from msprechecker.prechecker.register import show_check_result, CheckResult
 
     if not suggestion_rule:
         return (CheckResult.OK, None, None)

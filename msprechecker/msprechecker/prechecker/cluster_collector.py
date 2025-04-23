@@ -15,8 +15,8 @@ import os
 from collections import namedtuple
 
 import torch
-from ms_performance_prechecker.prechecker.utils import parse_mindie_server_config, read_csv_or_json, logger
-from ms_performance_prechecker.prechecker.utils import get_local_to_master_ip, get_interface_by_ip
+from msprechecker.prechecker.utils import parse_mindie_server_config, read_csv_or_json, logger
+from msprechecker.prechecker.utils import get_local_to_master_ip, get_interface_by_ip
 
 _DISTIBUT_ENVS = ["ranktable_map", "master_ip", "master_port", "local_ip", "rank", "interface", "world_size"]
 DISTIBUT_ENVS = namedtuple("DISTIBUT_ENVS", _DISTIBUT_ENVS)(*_DISTIBUT_ENVS)

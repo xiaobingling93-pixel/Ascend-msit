@@ -13,7 +13,7 @@
 # limitations under the License.
 import json
 import re
-from ms_performance_prechecker.prechecker.utils import get_dict_value_by_pos, deep_compare_dict, str_to_digit, logger
+from msprechecker.prechecker.utils import get_dict_value_by_pos, deep_compare_dict, str_to_digit, logger
 
 CALCULATING_OPS = ["+", "-", "*", "/", "//"]
 COMPARING_OPS = ['>=', '<=', '!=', '=', '>', '<']

@@ -14,7 +14,7 @@
 
 __all__ = ["hardware_checkers"]
 
-from ms_performance_prechecker.prechecker.hardware_capacity.cpu_checker import cpu_checker
-from ms_performance_prechecker.prechecker.hardware_capacity.npu_checker import npu_checker
+from msprechecker.prechecker.hardware_capacity.cpu_checker import cpu_checker
+from msprechecker.prechecker.hardware_capacity.npu_checker import npu_checker
 
 hardware_checkers = [cpu_checker, npu_checker]
