@@ -20,26 +20,6 @@ from components.llm.msit_llm.__install__ import LlmInstall
 
 
 class TestLlmInstall(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.test_dir = '/tmp/test_llm_install'
-
-    @classmethod
-    def tearDownClass(cls):
-        if os.path.exists(cls.test_dir):
-            os.rmdir(cls.test_dir)
-
-    def setUp(self):
-        # Create a temporary directory for tests
-        os.makedirs(self.test_dir, exist_ok=True)
-        self.original_cwd = os.getcwd()
-        os.chdir(self.test_dir)
-
-    def tearDown(self):
-        os.chdir(self.original_cwd)
-        if os.path.exists(self.test_dir):
-            os.rmdir(self.test_dir)
-
     @mock.patch('components.llm.msit_llm.__install__.subprocess.run')
     def test_build_extra_with_find_links(self, mock_run):
         find_links_path = '/path/to/find_links'

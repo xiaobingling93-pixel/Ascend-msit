@@ -1,7 +1,6 @@
 import os
+import warnings
 from unittest import TestCase
-from unittest.mock import patch
-
 import pandas as pd
 
 from msit_llm.badcase_analyze.bad_case_analyze import BadCaseAnalyzer
@@ -56,6 +55,7 @@ class TestLogitsBadCaseAnalyzer(TestCase):
         cls.analyzer = BadCaseAnalyzer()
 
     def test_logits_badcase_analyzer_for_right_csv_path(self):
+        warnings.filterwarnings("ignore", category=DeprecationWarning, module="pandas")
         self.analyzer.analyze(golden_csv_path=self.golden, test_csv_path=self.test)
 
         self.assertTrue(os.path.exists("msit_bad_case/analyzer"))
@@ -88,6 +88,7 @@ class TestLogitsBadCaseAnalyzer(TestCase):
             self.assertRegex(logger_output, r'Unmatched csv columns, expected to have')
 
     def test_logits_badcase_analyzer_unmatched_df(self):
+        warnings.filterwarnings("ignore", category=DeprecationWarning, module="pandas")
         with self.assertLogs('msit_logger', 'WARNING') as cm:
             self.analyzer.analyze(golden_csv_path=self.golden, test_csv_path=self.my_path_unmatched_content)
             logger_output = cm.output
