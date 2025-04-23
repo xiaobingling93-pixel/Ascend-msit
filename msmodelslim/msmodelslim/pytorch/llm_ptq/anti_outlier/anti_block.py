@@ -729,7 +729,85 @@ class QuantQwen2VLVisionBlock(nn.Module):
             self.cac_migrate_mlp = False
         hidden_states = hidden_states + self.mlp(post_ln_2)
         return hidden_states
-    
+
+
+class QuantQwen25VLVisionBlock(nn.Module):
+    """
+    适配OS+优化的migrator异常值抑制算法，在原始Qwen2.5-VL视觉部分Vision Block中调用异常值抑制算法接口处理，
+    在前向执行过程中直接完成异常值抑制处理。
+    """
+    def __init__(self, org_layer: nn.Module, config, layername: str) -> None:
+        super().__init__()
+        config = config.vision_config
+        self.norm1 = org_layer.norm1
+        self.norm2 = org_layer.norm2
+        self.attn = org_layer.attn
+        self.mlp = org_layer.mlp
+        self.act_fn = org_layer.mlp.act_fn
+        self.cac_migrate_attn = True
+        self.cac_migrate_mlp = True
+        self.layername = layername
+        self.cfg = config
+
+    def forward(self, hidden_states, cu_seqlens, **kwargs) -> torch.Tensor:
+        if not check_migration_import(migration_vit):
+            raise ImportError("The current CANN version does not support migration_vit algorithm.")
+        
+        rotary_pos_emb = kwargs.pop("rotary_pos_emb", None)
+        position_embeddings = kwargs.pop("position_embeddings", None)
+
+        post_ln_1 = self.norm1(hidden_states)
+        if self.cac_migrate_attn:
+            msmodelslim_logger.info(f'current block is QuantQwen25VLVisionBlock, layername:{self.layername}')
+
+            # calculate scale
+            weight_list = torch.cat([self.attn.qkv.weight])
+            extra_dict = {
+                'num_attention_heads_per_partition': self.attn.num_heads,
+                'cu_seqlens': cu_seqlens,
+                'rotary_pos_emb': rotary_pos_emb,
+                'position_embeddings': position_embeddings,
+                'embed_dim': self.cfg.hidden_size,
+                'head_dim': self.cfg.out_hidden_size // self.cfg.num_heads
+            }
+            
+            a_qconfig, w_qconfig = get_config()
+            post_ln_1 = post_ln_1.unsqueeze(1)
+            # update scale
+            best_scale = migration_vit(post_ln_1, weight_list, a_qconfig, w_qconfig, 'qwen2vl_function', extra_dict)
+            post_ln_1 /= best_scale
+            ## linear and ln
+            self.attn.qkv.weight.data *= best_scale
+            self.norm1.weight.data /= best_scale
+            self.cac_migrate_attn = False
+        hidden_states = hidden_states + self.attn(
+            post_ln_1, cu_seqlens=cu_seqlens, rotary_pos_emb=rotary_pos_emb, position_embeddings=position_embeddings
+        )
+        post_ln_2 = self.norm2(hidden_states)
+        if self.cac_migrate_mlp:
+            # calculate scale
+            weight_list = torch.cat([self.mlp.gate_proj.weight, self.mlp.up_proj.weight])
+            bias_list = torch.cat([self.mlp.gate_proj.bias, self.mlp.up_proj.bias])
+            extra_dict = {
+                'bias': bias_list,
+                'observation_mask': None,
+                'act_fn': self.act_fn
+                }
+            a_qconfig, w_qconfig = get_config()
+            post_ln_2 = post_ln_2.unsqueeze(0)
+            # update scale
+            best_scale = \
+                migration_vit(post_ln_2, weight_list, a_qconfig, w_qconfig, 'up_and_gate', extra_dict)
+            post_ln_2 /= best_scale
+            ## linear and ln
+            self.mlp.gate_proj.weight.data *= best_scale
+            self.mlp.up_proj.weight.data *= best_scale
+            self.norm2.weight.data /= best_scale
+            self.cac_migrate_mlp = False
+        hidden_states = hidden_states + self.mlp(post_ln_2)
+        hidden_states = hidden_states.squeeze(0)
+        return hidden_states
+
 
 class QuantInternLM2DecoderLayer(nn.Module):
     def __init__(self, org_layer, cfg, layername):
