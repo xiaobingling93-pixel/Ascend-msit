@@ -1,2 +1,2 @@
-recursive-include msprechecker/prechecker/ *.yml
-recursive-include msprechecker/prechecker/ *.yaml
+recursive-include msprechecker/preset_yaml_checkers/ *.yml
+recursive-include msprechecker/preset_yaml_checkers/ *.yaml

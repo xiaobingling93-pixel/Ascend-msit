@@ -74,7 +74,8 @@ NOT_EMPTY_VALUE = "非空值"
 
 
 def get_default_suggestions():
-    suggestion_file = os.path.join(os.path.dirname(__file__), "default_config.yaml")
+    package_path = os.path.dirname(os.path.dirname(__file__))
+    suggestion_file = os.path.join(package_path, "preset_yaml_checkers", "default_config.yaml")
     with open(suggestion_file, "r") as ff:
         suggestion_content = yaml.safe_load(ff)
     return suggestion_content
