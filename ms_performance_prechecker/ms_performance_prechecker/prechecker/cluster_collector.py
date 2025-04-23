@@ -22,7 +22,7 @@ _DISTIBUT_ENVS = ["ranktable_map", "master_ip", "master_port", "local_ip", "rank
 DISTIBUT_ENVS = namedtuple("DISTIBUT_ENVS", _DISTIBUT_ENVS)(*_DISTIBUT_ENVS)
 GLOBAL_DISTRIBUTE_COLLECTOR = None
 GLOBAL_DISTRIBUTE_ENV = {}
-DAFAULT_MASTER_PORT = 29400
+DEFAULT_MASTER_PORT = 29400
 MAX_SENDING_LEN = 40960
 
 
@@ -87,9 +87,9 @@ def init_global_distribute_env(ranktable_file=None, service_config_path=None, ma
         master_port = mindie_service_config.get("ServerConfig", {}).get("port", None)
     if master_port is None:
         logger.warning(
-            f"service_config_path not provided or port not set, will use default master port {DAFAULT_MASTER_PORT}"
+            f"service_config_path not provided or port not set, will use default master port {DEFAULT_MASTER_PORT}"
         )
-        master_port = DAFAULT_MASTER_PORT
+        master_port = DEFAULT_MASTER_PORT
 
     GLOBAL_DISTRIBUTE_ENV[DISTIBUT_ENVS.master_port] = master_port
     GLOBAL_DISTRIBUTE_ENV[DISTIBUT_ENVS.world_size] = len(ranktable_map)
