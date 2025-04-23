@@ -172,7 +172,6 @@ def parse_nested_dict_condition(input_value, condition, config):
     # 从 config 中读取实际使用的 key（如 config["xxx"]="y1"）
     inner_key = get_dict_value_by_pos(config, outer_key)
 
-    ## 必然匹配吗？
     if inner_key not in inner_dict:
         return False
         
