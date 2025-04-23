@@ -73,6 +73,10 @@ def get_file_sha256s(file_path_regex, block_size=4096, num_blocks=1000):
 
 class ModelSizeChecker(PrecheckerBase):
     __checker_name__ = "ModelSize"
+    
+    @staticmethod
+    def to_g_size(src_size):
+        return "{:.2f}G".format(src_size / 1024 / 1024 / 1024)
 
     def collect_env(self, mindie_service_path=None, **kwargs):
         model_name, model_weight_path = get_model_path_from_mindie_config(mindie_service_path=mindie_service_path)
@@ -84,10 +88,6 @@ class ModelSizeChecker(PrecheckerBase):
         model_weight_size = get_file_sizes(os.path.join(model_weight_path, "*.safetensors"))
         logger.debug(f"ModelSizeChecker model_weight_size={get_next_dict_item(model_weight_size)}")
         return {"model_name": model_name, "model_json_size": model_json_size, "model_weight_size": model_weight_size}
-
-    @staticmethod
-    def to_g_size(src_size):
-        return "{:.2f}G".format(src_size / 1024 / 1024 / 1024)
 
     def do_precheck(self, model_config, **kwargs):
         if not model_config:

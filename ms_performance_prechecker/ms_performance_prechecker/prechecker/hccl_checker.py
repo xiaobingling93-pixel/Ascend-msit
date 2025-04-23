@@ -181,11 +181,11 @@ class HcclPingChecker(PrecheckerBase):
             return None
 
         multi_server_results = {}
-        for server_id, (server_ip, device_ips) in enumerate(ranktable_ips.items()):
+        for server_ip, device_ips in ranktable_ips.items():
             if server_ip == self.local_ip:
                 continue
             logger.info(f"HCCL Ping server_ip={server_ip}, devices={len(device_ips)} ...")
-            for device_id, device_ip in enumerate(device_ips):
+            for device_ip in device_ips:
                 if device_ip is None:
                     continue
                 logger.debug(f"HcclPingChecker server_ip={server_ip}, device_ip={device_ip}")
