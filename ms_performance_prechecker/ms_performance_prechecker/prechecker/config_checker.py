@@ -94,9 +94,9 @@ class ModelConfigChecker(ConfigCheckerBase):
         return {"model_name": model_name, "model_config": model_config}
 
     def do_precheck(self, current_config, additional_checks=None, **kwargs):
-        if not model_info:
+        if not current_config:
             return
-        model_name, model_config = model_info.get("model_name", None), model_info.get("model_config", None)
+        model_name, model_config = current_config.get("model_name", None), current_config.get("model_config", None)
         if not model_name or not model_config:
             return
         if not is_deepseek_model(model_name):
