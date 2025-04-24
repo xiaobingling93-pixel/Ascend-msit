@@ -53,6 +53,7 @@ from .anti_block import (
     LlavaClipVision,
     QuantQwen2VLDecoderLayer,
     QuantQwen2VLVisionBlock,
+    QuantQwen25VLVisionBlock,
     QuantInternLM2DecoderLayer,
     QuantInternVisionEncoderLayer
 )
@@ -124,6 +125,8 @@ def is_model_multimodal(model):
         return True
     elif (model.config.architectures[0] == 'Qwen2VLForConditionalGeneration'):
         return True
+    elif (model.config.architectures[0] == 'Qwen2_5_VLForConditionalGeneration'):
+        return True
     elif (model.config.architectures[0] == 'InternVLChatModel'):
         return True
     return False
@@ -150,7 +153,8 @@ class AntiOutlier(object):
 
         if is_model_multimodal(model):
             if cfg.anti_method != 'm2':
-                raise ValueError("anti_method must be m2 while using multimodal qwen-vl or llava-v1.5")
+                self.logger.warning("multi modal understanding models use other anti_methods(not 'm2')" + \
+                                    "may not be supported or the performance may be bad.")
             else:
                 self.cfg = cfg
                 self.model = model
@@ -475,6 +479,8 @@ class AntiOutlier(object):
             "CLIPEncoderLayer": LlavaClipVision,
             "Qwen2VLDecoderLayer": QuantQwen2VLDecoderLayer,
             "Qwen2VLVisionBlock": QuantQwen2VLVisionBlock,
+            "Qwen2_5_VLDecoderLayer": QuantQwen2VLDecoderLayer,
+            "Qwen2_5_VLVisionBlock": QuantQwen25VLVisionBlock,
             "InternLM2DecoderLayer": QuantInternLM2DecoderLayer,
             "InternVisionEncoderLayer": QuantInternVisionEncoderLayer
         }
@@ -494,7 +500,8 @@ class AntiOutlier(object):
     def _process(self):
         if is_model_multimodal(self.model):
             if self.cfg.anti_method != 'm2':
-                raise ValueError("anti_method must be m2 while using multimodal qwen-vl or llava-v1.5")
+                self.logger.warning("multi modal understanding models use other anti_methods(not 'm2')" + \
+                                    "may not be supported or the performance may be bad.")
             else:
                 self.anti_for_multimodal(self.model)
                 data = self.calib_data[0]
