@@ -205,7 +205,7 @@ def suggestion_rule_checker(current_configs, suggestion_rule, env_info, domain, 
                 check_item,
                 CheckResult.ERROR,
                 action=action_func and action_func(check_item, suggestion_value),
-                reason=reason,
+                reason=reason + f"，当前值 {current_value}",
             )
             return (CheckResult.ERROR, suggestion_value, current_value)
 
