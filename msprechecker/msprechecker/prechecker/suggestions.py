@@ -81,12 +81,12 @@ def get_default_suggestions():
     inner_npu_type = NPU_TYPE_TO_INNER_MAP.get(get_npu_info(), None)
     suggestion_file_name = "default_config.yaml"
     for ii in preset_yamls:
-        if inner_npu_type and inner_npu_type in ii:
+        if inner_npu_type and inner_npu_type in ii:  # Need to condider other conditions, currently NPU_TYPE only
             suggestion_file_name = ii
             break
-    logger.info(f"Using preset yaml file: {suggestion_file_name}, current npu_type: {inner_npu_type}")
-
     suggestion_file = os.path.join(preset_yaml_checkers_path, suggestion_file_name)
+    logger.info(f"Using preset yaml file: {suggestion_file}, current npu_type: {inner_npu_type}")
+    
     with open(suggestion_file, "r") as ff:
         suggestion_content = yaml.safe_load(ff)
     return suggestion_content
