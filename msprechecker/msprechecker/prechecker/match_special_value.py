@@ -86,7 +86,7 @@ def _apply_operator(operator, input_val, condition_val):
     # 不等判断
     if operator == '!=':
         return deep_compare_dict(
-            dicts=[input_val, condition_val],names=["input", "condition"], need_print_diff=False,
+            dicts=[input_val, condition_val], names=["input", "condition"], need_print_diff=False
         )
 
     # 数值比较操作符处理
