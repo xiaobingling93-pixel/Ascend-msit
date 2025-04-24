@@ -16,17 +16,17 @@ __all__ = [
     "CHECKERS",
 ]
 
-from ms_performance_prechecker.prechecker.config_checker import (
+from msprechecker.prechecker.config_checker import (
     mindie_config_checker,
     ranktable_checker,
     model_config_checker,
     user_config_checker,
 )
-from ms_performance_prechecker.prechecker.env_checker import env_checker
-from ms_performance_prechecker.prechecker.system_checker import system_checker
-from ms_performance_prechecker.prechecker.hccl_checker import hccl_checker
-from ms_performance_prechecker.prechecker.model_checker import model_size_checker, model_sha256_collecter
-from ms_performance_prechecker.prechecker.utils import CHECKER_TYPES
+from msprechecker.prechecker.env_checker import env_checker
+from msprechecker.prechecker.system_checker import system_checker
+from msprechecker.prechecker.hccl_checker import hccl_checker
+from msprechecker.prechecker.model_checker import model_size_checker, model_sha256_collecter
+from msprechecker.prechecker.utils import CHECKER_TYPES
 
 CHECKERS = {
     CHECKER_TYPES.basic: [

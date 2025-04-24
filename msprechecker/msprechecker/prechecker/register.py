@@ -14,7 +14,7 @@
 
 from enum import Enum
 from collections import namedtuple
-from ms_performance_prechecker.prechecker.utils import logger
+from msprechecker.prechecker.utils import logger
 
 # 创建一个全局的注册表，注册为分析函数
 REGISTRY = {}

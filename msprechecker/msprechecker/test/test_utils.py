@@ -15,7 +15,7 @@ import errno
 import unittest
 from unittest.mock import patch
 
-from ms_performance_prechecker.prechecker.utils import (
+from msprechecker.prechecker.utils import (
     str_ignore_case,
     str_to_digit,
     is_deepseek_model,

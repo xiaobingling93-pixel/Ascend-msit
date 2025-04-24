@@ -174,7 +174,7 @@ def get_version_info(mindie_service_path):
     return version_info
 
 
-logger = logging.getLogger("ms_performance_prechecker_logger")
+logger = logging.getLogger("msprechecker_logger")
 set_logger(logger)
 
 

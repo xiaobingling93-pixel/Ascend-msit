@@ -13,11 +13,11 @@
 # limitations under the License.
 
 import os
-from ms_performance_prechecker.prechecker.register import register_checker, cached, PrecheckerBase
-from ms_performance_prechecker.prechecker.register import show_check_result, record, CONTENT_PARTS, CheckResult
-from ms_performance_prechecker.prechecker.utils import logger, get_version_info, get_npu_info, get_global_env_info
-from ms_performance_prechecker.prechecker.suggestions import GLOBAL_DEFAULT_CONFIG, DOMAIN, CONFIG
-from ms_performance_prechecker.prechecker.suggestions import update_to_default_suggestions, suggestion_rule_checker
+from msprechecker.prechecker.register import register_checker, cached, PrecheckerBase
+from msprechecker.prechecker.register import show_check_result, record, CONTENT_PARTS, CheckResult
+from msprechecker.prechecker.utils import logger, get_version_info, get_npu_info, get_global_env_info
+from msprechecker.prechecker.suggestions import GLOBAL_DEFAULT_CONFIG, DOMAIN, CONFIG
+from msprechecker.prechecker.suggestions import update_to_default_suggestions, suggestion_rule_checker
 
 
 def save_env_contents(fix_pair, save_path):

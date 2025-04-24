@@ -13,13 +13,13 @@
 # limitations under the License.
 
 import os
-from ms_performance_prechecker.prechecker.register import PrecheckerBase
-from ms_performance_prechecker.prechecker.utils import logger, get_npu_info, get_global_env_info
-from ms_performance_prechecker.prechecker.utils import parse_mindie_server_config, parse_ranktable_file
-from ms_performance_prechecker.prechecker.utils import get_model_path_from_mindie_config, get_mindie_server_config
-from ms_performance_prechecker.prechecker.utils import is_deepseek_model, read_csv_or_json
-from ms_performance_prechecker.prechecker.suggestions import GLOBAL_DEFAULT_CONFIG, DOMAIN, NOT_EMPTY_VALUE
-from ms_performance_prechecker.prechecker.suggestions import update_to_default_suggestions, suggestion_rule_checker
+from msprechecker.prechecker.register import PrecheckerBase
+from msprechecker.prechecker.utils import logger, get_npu_info, get_global_env_info
+from msprechecker.prechecker.utils import parse_mindie_server_config, parse_ranktable_file
+from msprechecker.prechecker.utils import get_model_path_from_mindie_config, get_mindie_server_config
+from msprechecker.prechecker.utils import is_deepseek_model, read_csv_or_json
+from msprechecker.prechecker.suggestions import GLOBAL_DEFAULT_CONFIG, DOMAIN, NOT_EMPTY_VALUE
+from msprechecker.prechecker.suggestions import update_to_default_suggestions, suggestion_rule_checker
 
 
 class ConfigCheckerBase(PrecheckerBase):

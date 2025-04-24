@@ -14,9 +14,9 @@
 
 import os
 import platform
-from ms_performance_prechecker.prechecker.register import register_checker, GroupPrechecker, PrecheckerBase
-from ms_performance_prechecker.prechecker.register import show_check_result, record, CONTENT_PARTS, CheckResult
-from ms_performance_prechecker.prechecker.utils import get_dict_value_by_pos, str_to_digit, logger, run_shell_command
+from msprechecker.prechecker.register import register_checker, GroupPrechecker, PrecheckerBase
+from msprechecker.prechecker.register import show_check_result, record, CONTENT_PARTS, CheckResult
+from msprechecker.prechecker.utils import get_dict_value_by_pos, str_to_digit, logger, run_shell_command
 
 try:
     import acl
