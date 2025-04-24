@@ -174,7 +174,7 @@ def parse_nested_dict_condition(input_value, condition, config):
 def is_value_met_special_suggestions(input_value, condition, config):
     if isinstance(input_value, dict):
         logger.debug(f"is_value_met_special_suggestions input_value={input_value}, condition={condition}")
-        condition_dict = get_dict_value_by_pos(condition)
+        condition_dict = get_dict_value_by_pos(config, condition)
         return compare_dicts(input_value, condition_dict or {})
 
     logger.debug(f"is_value_met_special_suggestions condition={condition}")

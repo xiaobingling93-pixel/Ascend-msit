@@ -71,14 +71,13 @@ DOMAIN = namedtuple("DOMAIN", _DOMAIN)(*_DOMAIN)
 _CONFIG = ["name", "value", "reason", "suggestions", "condition", "suggested", "not_suggested"]
 CONFIG = namedtuple("CONFIG", _CONFIG)(*_CONFIG)
 NOT_EMPTY_VALUE = "非空值"
-NPU_TYPE_TO_INNER_MAP = {"d802": "A2", "d803": "A3"}
 
 
 def get_default_suggestions():
     preset_yaml_checkers_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "preset_yaml_checkers")
     preset_yamls = os.listdir(preset_yaml_checkers_path) if os.path.exists(preset_yaml_checkers_path) else []
 
-    inner_npu_type = NPU_TYPE_TO_INNER_MAP.get(get_npu_info(), None)
+    inner_npu_type = get_npu_info(to_inner_type=True)  # Value like A2 A3
     suggestion_file_name = "default_config.yaml"
     for ii in preset_yamls:
         if inner_npu_type and inner_npu_type in ii:  # Need to condider other conditions, currently NPU_TYPE only

@@ -41,7 +41,7 @@ class ConfigCheckerBase(PrecheckerBase):
         update_to_default_suggestions(self.domain, additional_checks)
 
         env_info = get_global_env_info()
-        env_info["NPU_TYPE"] = get_npu_info()
+        env_info["NPU_TYPE"] = get_npu_info(to_inner_type=True)  # Value like A2 A3
         current_config.update(env_info)  # Also update env values into config
         for suggestion_rule in GLOBAL_DEFAULT_CONFIG.get(self.domain, []):
             result, suggestion_value, current_value = suggestion_rule_checker(
