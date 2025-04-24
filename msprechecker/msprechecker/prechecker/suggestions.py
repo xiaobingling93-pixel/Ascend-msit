@@ -17,7 +17,7 @@ from collections import namedtuple
 
 import yaml
 
-from msprechecker.prechecker.utils import get_dict_value_by_pos, logger
+from msprechecker.prechecker.utils import get_dict_value_by_pos, logger, get_npu_info
 
 """
 Yaml 配置模板：
@@ -71,11 +71,22 @@ DOMAIN = namedtuple("DOMAIN", _DOMAIN)(*_DOMAIN)
 _CONFIG = ["name", "value", "reason", "suggestions", "condition", "suggested", "not_suggested"]
 CONFIG = namedtuple("CONFIG", _CONFIG)(*_CONFIG)
 NOT_EMPTY_VALUE = "非空值"
+NPU_TYPE_TO_INNER_MAP = {"d802": "A2", "d803": "A3"}
 
 
 def get_default_suggestions():
-    package_path = os.path.dirname(os.path.dirname(__file__))
-    suggestion_file = os.path.join(package_path, "preset_yaml_checkers", "default_config.yaml")
+    preset_yaml_checkers_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "preset_yaml_checkers")
+    preset_yamls = os.listdir(preset_yaml_checkers_path) if os.path.exists(preset_yaml_checkers_path) else []
+
+    inner_npu_type = NPU_TYPE_TO_INNER_MAP.get(get_npu_info(), None)
+    suggestion_file_name = "default_config.yaml"
+    for ii in preset_yamls:
+        if inner_npu_type in ii:
+            suggestion_file_name = ii
+            break
+    logger.info(f"Using preset yaml file: {suggestion_file_name}, current npu_type: {inner_npu_type}")
+
+    suggestion_file = os.path.join(preset_yaml_checkers_path, suggestion_file_name)
     with open(suggestion_file, "r") as ff:
         suggestion_content = yaml.safe_load(ff)
     return suggestion_content

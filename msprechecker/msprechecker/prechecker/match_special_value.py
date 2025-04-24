@@ -81,20 +81,12 @@ def _apply_operator(operator, input_val, condition_val):
     # 等值判断（深度结构比较）
     logger.debug(f"_apply_operator operator={operator}, input_val={input_val}, condition_val={condition_val}")
     if operator in ('=', None):
-        return not deep_compare_dict(
-            dicts=[input_val, condition_val],
-            names=["input", "condition"],
-            parent_key="",
-            skip_keys=None
-        )
+        return not deep_compare_dict(dicts=[input_val, condition_val], names=["input", "condition"])
 
     # 不等判断
     if operator == '!=':
         return deep_compare_dict(
-            dicts=[input_val, condition_val],
-            names=["input", "condition"],
-            parent_key="",
-            skip_keys=None
+            dicts=[input_val, condition_val],names=["input", "condition"], need_print_diff=False,
         )
 
     # 数值比较操作符处理
@@ -181,7 +173,8 @@ def parse_nested_dict_condition(input_value, condition, config):
 
 def is_value_met_special_suggestions(input_value, condition, config):
     if isinstance(input_value, dict):
-        condition_dict = to_json_object(condition)
+        logger.debug(f"is_value_met_special_suggestions input_value={input_value}, condition={condition}")
+        condition_dict = get_dict_value_by_pos(condition)
         return compare_dicts(input_value, condition_dict or {})
 
     logger.debug(f"is_value_met_special_suggestions condition={condition}")

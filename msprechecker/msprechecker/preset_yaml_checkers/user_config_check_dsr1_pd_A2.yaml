@@ -1,0 +1,55 @@
+user_config:
+  - name: deploy_config:p_pod_npu_num
+    value: 8
+    reason: "deploy_config:p_pod_npu_num在A2场景应该是8"
+  - name: deploy_config:d_pod_npu_num
+    value: 8
+    reason: "deploy_config:d_pod_npu_num在A2场景应该是8"
+  - name: deploy_config:prefill_distribute_enable
+    value: 0
+    reason: "deploy_config:prefill_distribute_enable在A2场景应该是0"
+  - name: deploy_config:decode_distribute_enable
+    value: 1
+    reason: "deploy_config:decode_distribute_enable在A2场景应该是1"
+  - name: mindie_server_prefill_config:BackendConfig:ModelDeployConfig:ModelConfig:0:dp
+    value: = 16 // mindie_server_prefill_config:BackendConfig:ModelDeployConfig:ModelConfig:0:tp
+    reason: "mindie_server_prefill_config需要调整为 dp 与 tp 的乘积 = 16"
+  - name: mindie_server_prefill_config:BackendConfig:ModelDeployConfig:ModelConfig:0:tp
+    value: = 16 // mindie_server_prefill_config:BackendConfig:ModelDeployConfig:ModelConfig:0:dp;[2,4,8]
+    reason: "mindie_server_prefill_config需要调整为 dp 与 tp 的乘积 = 16, 且 tp 只支持2，4，8"
+  - name: mindie_server_decode_config:BackendConfig:ModelDeployConfig:ModelConfig:0:dp
+    value: = 64 // mindie_server_decode_config:BackendConfig:ModelDeployConfig:ModelConfig:0:tp
+    reason: "mindie_server_decode_config需要调整为 dp 与 tp 的乘积 = 64"
+  - name: mindie_server_decode_config:BackendConfig:ModelDeployConfig:ModelConfig:0:tp
+    value: = 64 // mindie_server_decode_config:BackendConfig:ModelDeployConfig:ModelConfig:0:dp;[1]
+    reason: "mindie_server_decode_config需要调整为 dp 与 tp 的乘积 = 64, 且 tp 只支持1"
+  - name: mindie_ms_controller_config:deploy_mode
+    value: "pd_separate"
+    reason: "mindie_ms_controller_config:deploy_mode应该是pd_separate"
+  - name: mindie_ms_controller_config:multi_node_infer_config:multi_node_infer_enable
+    value: true
+    reason: "mindie_ms_controller_config:multi_node_infer_config:multi_node_infer_enable应该是true"
+  - name: mindie_ms_controller_config:default_p_rate
+    value: = = deploy_config:p_instances_num
+    reason: "mindie_ms_controller_config:default_p_rate应该与deploy_config:p_instances_num一致"
+  - name: mindie_ms_controller_config:default_d_rate
+    value: = = deploy_config:d_instances_num
+    reason: "mindie_ms_controller_config:default_d_rate应该与deploy_config:d_instances_num"
+  - name: mindie_server_prefill_config:BackendConfig:multiNodesInferEnabled
+    value: true
+    reason: "mindie_server_prefill_config:BackendConfig:multiNodesInferEnabled应该是true"
+  - name: mindie_server_decode_config:BackendConfig:multiNodesInferEnabled
+    value: false
+    reason: "mindie_server_decode_config:BackendConfig:multiNodesInferEnabled应该是false"
+  - name: mindie_server_decode_config:BackendConfig:ScheduleConfig:distributedEnable
+    value: true
+    reason: "mindie_server_decode_config:BackendConfig:ScheduleConfig:distributedEnable应该是true"
+  - name: mindie_server_prefill_config:BackendConfig:ScheduleConfig:distributedEnable
+    value: null
+    reason: "mindie_server_prefill_config:BackendConfig:ScheduleConfig:distributedEnable不应该配置"
+  - name: mindie_server_prefill_config:ServerConfig:inferMode
+    value: "dmi"
+    reason: "mindie_server_prefill_config:ServerConfig:inferMode在PD分离场景应该是dmi"
+  - name: mindie_server_decode_config:ServerConfig:inferMode
+    value: "dmi"
+    reason: "mindie_server_decode_config:ServerConfig:inferMode在PD分离场景应该是dmi"
