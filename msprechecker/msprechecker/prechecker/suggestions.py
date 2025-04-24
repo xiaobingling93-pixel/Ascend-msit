@@ -17,7 +17,7 @@ from collections import namedtuple
 
 import yaml
 
-from msprechecker.prechecker.utils import get_dict_value_by_pos, logger
+from msprechecker.prechecker.utils import get_dict_value_by_pos, logger, get_npu_info
 
 """
 Yaml 配置模板：
@@ -74,8 +74,18 @@ NOT_EMPTY_VALUE = "非空值"
 
 
 def get_default_suggestions():
-    package_path = os.path.dirname(os.path.dirname(__file__))
-    suggestion_file = os.path.join(package_path, "preset_yaml_checkers", "default_config.yaml")
+    preset_yaml_checkers_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "preset_yaml_checkers")
+    preset_yamls = os.listdir(preset_yaml_checkers_path) if os.path.exists(preset_yaml_checkers_path) else []
+
+    inner_npu_type = get_npu_info(to_inner_type=True)  # Value like A2 A3
+    suggestion_file_name = "default_config.yaml"
+    for ii in preset_yamls:
+        if inner_npu_type and inner_npu_type in ii:  # Need to condider other conditions, currently NPU_TYPE only
+            suggestion_file_name = ii
+            break
+    suggestion_file = os.path.join(preset_yaml_checkers_path, suggestion_file_name)
+    logger.info(f"Using preset yaml file: {suggestion_file}, current npu_type: {inner_npu_type}")
+    
     with open(suggestion_file, "r") as ff:
         suggestion_content = yaml.safe_load(ff)
     return suggestion_content
@@ -194,7 +204,7 @@ def suggestion_rule_checker(current_configs, suggestion_rule, env_info, domain, 
                 check_item,
                 CheckResult.ERROR,
                 action=action_func and action_func(check_item, suggestion_value),
-                reason=reason,
+                reason=reason + f"，当前值 {current_value}",
             )
             return (CheckResult.ERROR, suggestion_value, current_value)
 

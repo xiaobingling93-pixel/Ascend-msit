@@ -43,6 +43,7 @@ LOG_LEVELS = {
 
 PORT_RANGE_MIN = 1
 PORT_RANGE_MAX = 65535
+NPU_TYPE_TO_INNER_MAP = {"d802": "A2", "d803": "A3"}
 
 
 def str_ignore_case(value):
@@ -87,7 +88,7 @@ def print_diff(diffs, names, key=""):
         print(f"        {diffs[index]}")
 
 
-def deep_compare_dict(dicts, names, parent_key="", skip_keys=None):
+def deep_compare_dict(dicts, names, parent_key="", skip_keys=None, need_print_diff=True):
     if skip_keys and parent_key in skip_keys:
         return False
 
@@ -117,7 +118,8 @@ def deep_compare_dict(dicts, names, parent_key="", skip_keys=None):
                 has_diff = cur_has_diff or has_diff
     else:
         if not same([str(x) for x in dicts]):
-            print_diff([str(x) for x in dicts], names, parent_key)
+            if need_print_diff:
+                print_diff([str(x) for x in dicts], names, parent_key)
             return True
     return has_diff
 
@@ -327,15 +329,17 @@ def get_global_env_info():
     return ret_envs
 
 
-def get_npu_info():
+def get_npu_info(to_inner_type=False):
     result = run_shell_command("lspci", fail_msg=", will skip getting npu info.")
+    npu_type = None
     for line in result.stdout.splitlines():
         if "accelerators" in line:
             match = re.search(r"Device (d\d{3})", line)
             if match:
                 device_id = match.group(1)
-                return device_id
-    return None
+                npu_type = device_id
+                break
+    return NPU_TYPE_TO_INNER_MAP.get(npu_type, None) if to_inner_type else npu_type
 
 
 class ProcessBarStreamHandler(logging.StreamHandler):
