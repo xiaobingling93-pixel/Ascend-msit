@@ -74,8 +74,13 @@ def _get_module_quant_input(module):
 
 
 # for clean code
-def generate_weight_of_rms_norm_module(name, module):
-    yield name + '.weight', QuantType.FLOAT, module.weight.clone().cpu()
+def generate_weight_of_rms_norm_module(name, module, model_quant_type):
+    anti_norm_weight: torch.Tensor = module.weight
+    anti_norm_bias: torch.Tensor = module.bias
+    yield name + '.weight', QuantType.FLOAT, anti_norm_weight.clone().cpu()
+    yield name + '.bias', QuantType.FLOAT, anti_norm_bias.clone().cpu()
+    yield name + '.module.weight', model_quant_type, anti_norm_weight.clone().cpu()
+    yield name + '.module.bias', model_quant_type, anti_norm_bias.clone().cpu()
 
 
 # for clean code
@@ -118,7 +123,7 @@ class ComplexQuantifier:
         elif isinstance(module, NormBias):
             yield from self.generate_weight_of_norm_module(name, module, model_quant_type)
         elif isinstance(module, LlamaRMSNormBias):
-            yield from generate_weight_of_rms_norm_module(name, module)
+            yield from generate_weight_of_rms_norm_module(name, module, model_quant_type)
         # 处理Linear、以及附属scale、offset等params
         elif isinstance(module, (LinearQuantizer, LinearSparseQuantizer, LowBitLinearQuantizer)):
             yield from self.generate_weight_of_linear_module(name, module, model_quant_type)
@@ -148,8 +153,10 @@ class ComplexQuantifier:
 
         anti_norm_weight: torch.Tensor = module.module.weight
         anti_norm_bias: torch.Tensor = module.bias
-        yield name + '.weight', model_quant_type, anti_norm_weight.clone().cpu()
-        yield name + '.bias', model_quant_type, anti_norm_bias.clone().cpu()
+        yield name + '.weight', QuantType.FLOAT, anti_norm_weight.clone().cpu()
+        yield name + '.bias', QuantType.FLOAT, anti_norm_bias.clone().cpu()
+        yield name + '.module.weight', model_quant_type, anti_norm_weight.clone().cpu()
+        yield name + '.module.bias', model_quant_type, anti_norm_bias.clone().cpu()
 
     def generate_weight_of_linear_module(self, name, module, model_quant_type):
         if not module.quant_weight.is_enable:
