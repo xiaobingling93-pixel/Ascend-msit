@@ -67,8 +67,10 @@ def load_expert_popularity_csv(csv_file_path):
             raise ValueError(f"Failed to parse CSV: {file_path}") from e
         except Exception as e:
             raise RuntimeError(f"Error reading {file_path}: {str(e)}") from e
-        
-    if decode_info.empty and prefill_info.empty:
+
+    is_decode_missing = decode_info is None or decode_info.empty
+    is_prefill_missing = prefill_info is None or prefill_info.empty
+    if is_decode_missing and is_prefill_missing:
         raise FileNotFoundError(f"No decode_info.csv or prefill_info.csv found in {csv_file_path}."
                                 f"Check that the input file is correct to generate the files.")
     
