@@ -106,33 +106,35 @@ class TestFilterCmd(unittest.TestCase):
         expected = input_args.copy()
         self.assertEqual(filter_cmd(input_args), expected)
 
-    def test_invalid_characters(self):
+    def test_invalid_characters_raises_error(self):
         input_args = ["hello!", "world@123", "file$name", "path/to|file", "a{b}c", "A#B#C"]
-        expected = []
-        self.assertEqual(filter_cmd(input_args), expected)
+        for arg in input_args:
+            with self.assertRaises(ValueError, msg=f"Expected ValueError for input: {arg}"):
+                filter_cmd([arg])
 
-    def test_mixed_valid_invalid(self):
+    def test_mixed_valid_invalid_raises_error(self):
         input_args = ["valid", "inval!d", "good123", "bad@arg", "ok"]
-        expected = ["valid", "good123", "ok"]
-        self.assertEqual(filter_cmd(input_args), expected)
+        with self.assertRaises(ValueError):
+            filter_cmd(input_args)
 
     def test_empty_input(self):
         self.assertEqual(filter_cmd([]), [])
-    
+
     def test_non_string_input(self):
         input_args = [123, 45.67, True, None]
         expected = ["123", "45.67", "True", "None"]
         self.assertEqual(filter_cmd(input_args), expected)
-    
+
     def test_whitespace_only(self):
         self.assertEqual(filter_cmd([" ", "   "]), [" ", "   "])
-    
+
     def test_edge_cases(self):
         input_args = ["", "-._ /=", "a"*1000]
-        expected = ["-._ /=", "a"*1000]
-        self.assertEqual(filter_cmd(input_args), expected)
-    
-    def test_non_ascii(self):
+        with self.assertRaises(ValueError):
+            filter_cmd(input_args)
+
+    def test_non_ascii_raises_error(self):
         input_args = ["héllo", "世界", "café"]
-        expected = []
-        self.assertEqual(filter_cmd(input_args), expected)
+        for arg in input_args:
+            with self.assertRaises(ValueError, msg=f"Expected ValueError for input: {arg}"):
+                filter_cmd([arg])
