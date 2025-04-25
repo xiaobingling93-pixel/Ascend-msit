@@ -332,7 +332,7 @@ def process_speculative_moe(args, file_names, output_dir):
             raise FileNotFoundError(f"处理 {input_file} 时发生异常: {str(e)}") from e
 
 
-def process_dynamic_c2lb(args, file_names, output_dir):
+def process_dynamic_c2lb(args, output_dir):
     """Process dynamic C2LB algorithm and save results based on available data files.
     
     支持场景:
@@ -440,4 +440,4 @@ def load_balancing(args):
     elif args.algorithm == ALGORITHM_SPECULATIVE_MOE:
         process_speculative_moe(args, file_names=file_names, output_dir=args.output_dir)
     else:
-        process_dynamic_c2lb(args, file_names=file_names, output_dir=args.output_dir)
+        process_dynamic_c2lb(args, output_dir=args.output_dir)

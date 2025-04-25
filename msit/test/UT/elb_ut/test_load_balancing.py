@@ -12,12 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import shutil
 import unittest
-from unittest.mock import patch, mock_open, MagicMock
 import tempfile
+import logging 
+import re
+from unittest.mock import patch, mock_open, MagicMock, call
 
+import torch
 import json
 import numpy as np
+import pandas as pd
+
+from components.utils.file_open_check import OpenException
+from components.utils.log import logger
+from components.expert_load_balancing.elb.constant import PREFILL, DECODE, DECODE_FILE_NAME, \
+                        PREFILL_FILE_NAME, ALGORITHM_C2LB, ALGORITHM_SPECULATIVE_MOE
 
 
 with patch.dict("sys.modules", {
@@ -25,7 +35,9 @@ with patch.dict("sys.modules", {
     "c2lb_dynamic": MagicMock(),
     "speculative_moe": MagicMock()
 }):
-    from components.expert_load_balancing.elb.load_balancing import save_matrix_to_json, dump_tables
+    from components.expert_load_balancing.elb.load_balancing import save_matrix_to_json, dump_tables, \
+    load_expert_popularity_csv, get_csv_path, merge_csv_columns, get_csv_dimensions, check_file_type, \
+    save_dataframes, process_c2lb, process_speculative_moe, process_dynamic_c2lb, load_balancing
 
 
 class TestSaveMatrixToJson(unittest.TestCase):
@@ -105,19 +117,16 @@ class TestSaveMatrixToJson(unittest.TestCase):
 
 class TestDumpTables(unittest.TestCase):
     def setUp(self):
-        """ 在每个测试开始前运行 """
-        self.test_path = "test.json"  # 定义测试文件路径
-        if os.path.exists(self.test_path):  # 如果文件已存在，先删除
+        self.test_path = "test.json"
+        if os.path.exists(self.test_path):
             os.remove(self.test_path)
 
     def tearDown(self):
-        """ 在每个测试结束后运行 """
-        if os.path.exists(self.test_path):  # 如果文件存在，删除它
+        if os.path.exists(self.test_path):
             os.remove(self.test_path)
 
     @patch('components.utils.file_open_check.ms_open', mock_open())
     def test_dump_tables_given_valid_input_when_processed_then_success(self):
-        """ 测试正常输入情况 """
         test_d2e =  [
             np.array([[1, 2], [3, 4]], dtype=np.int32), 
             np.array([[5, 6], [7, 8]], dtype=np.float32) 
@@ -154,7 +163,6 @@ class TestDumpTables(unittest.TestCase):
 
     @patch('components.utils.file_open_check.ms_open', mock_open())
     def test_dump_tables_given_empty_layers_when_processed_then_success(self):
-        """ 测试空层列表 """
         dump_tables(self.test_path, [], n_devices=2)
         with open(self.test_path, 'r') as f:
             data = json.load(f)
@@ -187,3 +195,858 @@ class TestDumpTables(unittest.TestCase):
             invalid_data = [MagicMock()]
             invalid_data[0].__getitem__.side_effect = IndexError
             dump_tables(self.test_path, invalid_data, n_devices=1)
+
+
+class TestLoadExpertPopularityCSV(unittest.TestCase):
+    
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.temp_dir)
+
+    def _create_csv_file(self, filename, content):
+        file_path = os.path.join(self.temp_dir, filename)
+        with open(file_path, "w") as f:
+            f.write(content)
+        return file_path
+
+    def test_both_files_exist(self):
+        self._create_csv_file("decode_info.csv", "col1,col2\n1,2\n3,4")
+        self._create_csv_file("prefill_info.csv", "colA,colB\n5,6\n7,8")
+
+        decode_df, prefill_df = load_expert_popularity_csv(self.temp_dir)
+        self.assertIsInstance(decode_df, pd.DataFrame)
+        self.assertIsInstance(prefill_df, pd.DataFrame)
+        self.assertEqual(len(decode_df), 2)
+        self.assertEqual(len(prefill_df), 2)
+
+    def test_only_decode_exists(self):
+        self._create_csv_file("decode_info.csv", "col1,col2\n1,2")
+
+        decode_df, prefill_df = load_expert_popularity_csv(self.temp_dir)
+        self.assertIsNotNone(decode_df)
+        self.assertIsNone(prefill_df)
+
+    def test_only_prefill_exists(self):
+        self._create_csv_file("prefill_info.csv", "colA,colB\n5,6")
+
+        decode_df, prefill_df = load_expert_popularity_csv(self.temp_dir)
+        self.assertIsNone(decode_df)
+        self.assertIsNotNone(prefill_df)
+
+    def test_no_files_exist(self):
+        with self.assertRaises(FileNotFoundError):
+            load_expert_popularity_csv(self.temp_dir)
+    
+    def test_empty_file_raises_error(self):
+        self._create_csv_file("decode_info.csv", "")  
+
+        with self.assertRaises(ValueError) as cm:
+            load_expert_popularity_csv(self.temp_dir)
+        self.assertIn("empty", str(cm.exception))
+    
+    def test_header_only_returns_empty_df(self):
+        self._create_csv_file("prefill_info.csv", "colA,colB") 
+
+        with self.assertRaises(FileNotFoundError) as cm:
+            load_expert_popularity_csv(self.temp_dir)
+        self.assertIn("No decode_info.csv or prefill_info.csv found", str(cm.exception))
+
+    @patch("pandas.read_csv")
+    def test_general_exception_handling(self, mock_read_csv):
+        mock_read_csv.side_effect = PermissionError("模拟权限错误")
+        self._create_csv_file("decode_info.csv", "col1,col2\n1,2")
+
+        with self.assertRaises(RuntimeError) as cm:
+            load_expert_popularity_csv(self.temp_dir)
+        self.assertIn("Error reading", str(cm.exception))
+
+
+class TestGetCSVPath(unittest.TestCase):
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp()
+    
+    def tearDown(self):
+        shutil.rmtree(self.temp_dir)
+
+    def _create_file(self, filename):
+        file_path = os.path.join(self.temp_dir, filename)
+        with open(file_path, "w") as f:
+            f.write("mock_data")
+        return file_path
+
+    def test_valid_file_path(self):
+        file_name = "decode_info.csv"
+        expected_path = self._create_file(file_name)
+        result_path = get_csv_path(self.temp_dir, file_name)
+        self.assertEqual(result_path, expected_path)
+
+        file_name = "prefill_info.csv"
+        expected_path = self._create_file(file_name)
+        result_path = get_csv_path(self.temp_dir, file_name)
+        self.assertEqual(result_path, expected_path)
+    
+    def test_file_not_found(self):
+        file_name = "non_existent.csv"
+        full_path = os.path.join(self.temp_dir, file_name)
+        
+        with self.assertRaises(FileNotFoundError) as cm:
+            get_csv_path(self.temp_dir, file_name)
+        
+        self.assertIn(full_path, str(cm.exception))
+        self.assertIn("parameter -o", str(cm.exception))
+
+    def test_path_concatenation(self):
+        file_name = "test.csv"
+        expected_path = os.path.join(self.temp_dir + os.sep, file_name)
+        self._create_file(file_name)
+        result_path = get_csv_path(self.temp_dir + os.sep, file_name)
+        self.assertEqual(result_path, expected_path)
+    
+        rel_dir = "."
+        file_name = "rel_test.csv"
+        expected_path = os.path.join(rel_dir, file_name)
+        with open(file_name, "w") as f:
+            f.write("data")
+        try:
+            result_path = get_csv_path(rel_dir, file_name)
+            self.assertEqual(result_path, expected_path)
+        finally:
+            os.remove(file_name)
+        
+    def test_invalid_filename(self):
+        with self.assertRaises(FileNotFoundError):
+            get_csv_path(self.temp_dir, "../invalid_path.csv")
+
+
+class TestMergeCSVColumns(unittest.TestCase):
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.temp_dir)
+
+    def _create_test_csv(self, filename, columns=3, rows=2):
+        file_path = os.path.join(self.temp_dir, filename)
+        data = np.random.rand(rows, columns)
+        df = pd.DataFrame(data)
+        df.to_csv(file_path, header=False, index=False)
+        return file_path
+
+    def test_normal_merge(self):
+        files = [
+            self._create_test_csv("pattern_0.csv", columns=2),
+            self._create_test_csv("pattern_1.csv", columns=3),
+            self._create_test_csv("pattern_2.csv", columns=1)
+        ]
+        result_df = merge_csv_columns(self.temp_dir, "pattern")
+        self.assertEqual(result_df.shape, (2, 6))  # 2行，2+3+1=6列
+        expected_columns = [f"expert_{i}" for i in range(6)]
+        self.assertListEqual(list(result_df.columns), expected_columns)
+    
+    def test_no_files_found(self):
+        with self.assertRaises(FileNotFoundError) as cm:
+            merge_csv_columns(self.temp_dir, "non_existent")
+        self.assertIn("No files found", str(cm.exception))
+
+    def test_empty_file(self):
+        empty_file = os.path.join(self.temp_dir, "pattern_0.csv")
+        with open(empty_file, "w") as f:
+            pass  
+        with self.assertRaises(ValueError) as cm:
+            merge_csv_columns(self.temp_dir, "pattern")
+    
+    def test_invalid_filename_format(self):
+        self._create_test_csv("pattern_abc.csv")
+        self._create_test_csv("pattern_1.csv")   
+
+        result_df = merge_csv_columns(self.temp_dir, "pattern")
+        self.assertEqual(result_df.shape[1], 3)
+
+    def test_file_sorting(self):
+        files = [
+            self._create_test_csv("pattern_10.csv"),
+            self._create_test_csv("pattern_2.csv"),
+            self._create_test_csv("pattern_1.csv")
+        ]
+        with self.assertLogs(logger="msit_logger", level="DEBUG") as log:
+            merge_csv_columns(self.temp_dir, "pattern")
+
+        logged_files = [record.message for record in log.records 
+                       if "Processing file" in record.message]
+        expected_order = sorted(files, key=lambda x: int(re.search(r'_(\d+)\.', x).group(1)))
+        self.assertIn(os.path.basename(expected_order[0]), logged_files[0])
+
+    def test_column_merging(self):
+        file1 = os.path.join(self.temp_dir, "pattern_0.csv")
+        pd.DataFrame([[1, 2], [3, 4]]).to_csv(file1, header=False, index=False)
+        
+        file2 = os.path.join(self.temp_dir, "pattern_1.csv")
+        pd.DataFrame([[5], [6]]).to_csv(file2, header=False, index=False)
+        result_df = merge_csv_columns(self.temp_dir, "pattern")
+        expected_data = [
+            [1, 2, 5],
+            [3, 4, 6]
+        ]
+        np.testing.assert_array_equal(result_df.values, expected_data)
+
+    def test_path_handling(self):
+        self._create_test_csv("pattern_0.csv")
+
+        abs_path = os.path.abspath(self.temp_dir)
+        result_abs = merge_csv_columns(abs_path, "pattern")
+        self.assertFalse(result_abs.empty)
+
+        rel_path = os.path.relpath(self.temp_dir)
+        result_rel = merge_csv_columns(rel_path, "pattern")
+        self.assertFalse(result_rel.empty)
+
+
+class TestGetCSVDimensions(unittest.TestCase):
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.temp_dir)
+
+    def _create_csv_file(self, filename, data=None, header=True):
+        """create csv file"""
+        file_path = os.path.join(self.temp_dir, filename)
+        if data is not None:
+            df = pd.DataFrame(data)
+            df.to_csv(file_path, header=header, index=False)
+        else:
+            open(file_path, 'w').close()
+        return file_path
+
+    def test_valid_csv(self):
+        test_data = np.random.rand(3, 5)
+        csv_path = self._create_csv_file("valid.csv", test_data)
+        with self.assertLogs(logger="msit_logger", level="INFO") as log:
+            rows, cols = get_csv_dimensions(csv_path)
+
+        self.assertEqual((rows, cols), (3, 5))
+        self.assertIn(f"成功读取: {csv_path}", log.output[0])
+        self.assertIn("行数=3, 列数=5", log.output[1])
+
+    def test_empty_file(self):
+        csv_path = self._create_csv_file("empty.csv", data=None)
+        with self.assertRaises(ValueError) as cm:
+            get_csv_dimensions(csv_path)
+        self.assertIn("文件无有效数据", str(cm.exception))
+
+    def test_malformed_csv(self):
+        csv_path = os.path.join(self.temp_dir, "malformed.csv")
+        # 创建列数不一致的CSV
+        with open(csv_path, 'w') as f:
+            f.write("col1,col2\n1\n3,4,5")
+
+        with self.assertRaises(ValueError) as cm:
+            get_csv_dimensions(csv_path)
+        self.assertIn("CSV格式解析失败", str(cm.exception))
+
+    def test_nonexistent_file(self):
+        fake_path = os.path.join(self.temp_dir, "non_existent.csv")
+        
+        with self.assertRaises(RuntimeError) as cm:
+            get_csv_dimensions(fake_path)
+        self.assertIn("未知错误", str(cm.exception))
+
+    def test_empty_dataframe(self):
+        csv_path = self._create_csv_file("headers_only.csv", data=[], header=True)
+
+        with self.assertRaises(ValueError) as cm:
+            get_csv_dimensions(csv_path)
+        self.assertIn("文件无有效数据", str(cm.exception))
+    
+    @patch("pandas.read_csv")
+    def test_permission_error(self, mock_read):
+        """
+        Exception example: Simulating file read permission error
+        """
+        mock_read.side_effect = PermissionError("权限拒绝")
+        csv_path = os.path.join(self.temp_dir, "dummy.csv")
+        open(csv_path, 'w').close()
+
+        with self.assertRaises(RuntimeError) as cm:
+            get_csv_dimensions(csv_path)
+        self.assertIn("未知错误", str(cm.exception))
+
+
+class TestCheckFileType(unittest.TestCase):
+    def setUp(self):
+        """
+        Create a temporary directory
+        """
+        self.temp_dir = tempfile.mkdtemp()
+    
+    def tearDown(self):
+        """
+        Clean up temporary directories
+        """
+        shutil.rmtree(self.temp_dir)
+
+    def _create_files(self, filenames):
+        """
+        Create a list of specified file names in a temporary directory
+        """
+        for fname in filenames:
+            open(os.path.join(self.temp_dir, fname), 'w').close()
+
+    # Test mixed file types
+    def test_both_types(self):
+        """
+        Normal scenario: both prefill and decode files exist
+        """
+        self._create_files([
+            "prefill_data1.csv",
+            "prefill_data2.csv",
+            "decode_info1.csv",
+            "other_file.txt"
+        ])
+
+        types, p_count, d_count = check_file_type(self.temp_dir)
+        self.assertEqual(types, {PREFILL, DECODE})
+        self.assertEqual(p_count, 2)
+        self.assertEqual(d_count, 1)
+
+    # Test prefill files only
+    def test_only_prefill(self):
+        """
+        Boundary scenario: only prefill type
+        """
+        self._create_files([
+            "PREFILL_2023.csv",
+            "prefill_backup.csv",
+            "image.png"
+        ])
+        
+        types, p_count, d_count = check_file_type(self.temp_dir)
+        self.assertEqual(types, {PREFILL})
+        self.assertEqual(p_count, 2)
+        self.assertEqual(d_count, 0)
+    
+    # Test decode file only
+    def test_only_decode(self):
+        """
+        Boundary scenario: only decode type
+        """
+        self._create_files([
+            "DECODE_results.csv",
+            "my_decode_file.csv",
+            "temp.csv"
+        ])
+        
+        types, p_count, d_count = check_file_type(self.temp_dir)
+        self.assertEqual(types, {DECODE})
+        self.assertEqual(p_count, 0)
+        self.assertEqual(d_count, 2)
+
+    # Test Empty folder
+    def test_empty_folder(self):
+        """
+        Boundary scenario: No CSV file
+        """
+        types, p_count, d_count = check_file_type(self.temp_dir)
+        self.assertEqual(types, set())
+        self.assertEqual(p_count, 0)
+        self.assertEqual(d_count, 0)
+
+    # Test Mixed case test
+    def test_case_insensitive(self):
+        """
+        Verify case insensitivity
+        """
+        self._create_files([
+            "PReFill_test.CSV",
+            "DECODE_data.Csv",
+            "preFILL_alt.CSV"
+        ])
+        
+        types, p_count, d_count = check_file_type(self.temp_dir)
+        self.assertEqual(types, {PREFILL, DECODE})
+        self.assertEqual(p_count, 2)
+        self.assertEqual(d_count, 1)
+    
+     # Test Invalid path processing
+    def test_invalid_path(self):
+        """
+        Abnormal scenario: The path does not exist
+        """
+        with self.assertRaises(FileNotFoundError):
+            check_file_type("/non/existent/path")
+
+
+class TestSaveDataFrames(unittest.TestCase):
+    def setUp(self):
+        """
+        Create a temporary directory
+        """
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.test_dir = self.temp_dir.name
+
+    def tearDown(self):
+        """
+        Clean up temporary directories
+        """
+        self.temp_dir.cleanup()
+
+    def _get_file_path(self, filename):
+        """
+        Get the file path in the temporary directory
+        """
+        return os.path.join(self.test_dir, filename)
+
+    def _assert_file_exists_with_data(self, filename, expected_df):
+        """
+        Verify that the file exists and the data matches
+        """
+        file_path = self._get_file_path(filename)
+        self.assertTrue(os.path.exists(file_path), f"文件 {filename} 未生成")
+        actual_df = pd.read_csv(file_path)
+        pd.testing.assert_frame_equal(actual_df, expected_df)
+
+    def _assert_file_not_exists(self, filename):
+        """
+        Verify that the file does not exist
+        """
+        file_path = self._get_file_path(filename)
+        self.assertFalse(os.path.exists(file_path), f"意外生成了文件 {filename}")
+
+    # Test Both data frames are valid
+    def test_save_both_valid_dataframes(self):
+        prefill_df = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
+        decode_df = pd.DataFrame({"X": [5, 6], "Y": [7, 8]})
+
+        save_dataframes(prefill_df, decode_df, self.test_dir)
+        self._assert_file_exists_with_data("prefill_info.csv", prefill_df)
+        self._assert_file_exists_with_data("decode_info.csv", decode_df)
+
+    # Test Save only prefill
+    def test_save_prefill_only(self):
+        prefill_df = pd.DataFrame({"C": [9]})
+        save_dataframes(prefill_df, None, self.test_dir)
+        self._assert_file_exists_with_data("prefill_info.csv", prefill_df)
+        self._assert_file_not_exists("decode_info.csv")
+
+     # Test save only decode
+    def test_save_decode_only(self):
+        decode_df = pd.DataFrame({"Z": [10]})
+        save_dataframes(None, decode_df, self.test_dir)
+        self._assert_file_not_exists("prefill_info.csv")
+        self._assert_file_exists_with_data("decode_info.csv", decode_df)
+
+    # Test Empty data frame processing
+    def test_prefill_empty_dataframes(self):
+        save_dataframes(pd.DataFrame(), pd.DataFrame({"D": [11]}), self.test_dir)
+        self._assert_file_not_exists("prefill_info.csv")
+        self._assert_file_exists_with_data("decode_info.csv", pd.DataFrame({"D": [11]}))
+
+    def test_decode_empty_dataframes(self):
+        save_dataframes(pd.DataFrame({"E": [12]}), pd.DataFrame(), self.test_dir)
+        self._assert_file_exists_with_data("prefill_info.csv", pd.DataFrame({"E": [12]}))
+        self._assert_file_not_exists("decode_info.csv")
+
+    # Test Both are empty
+    def test_both_empty_dataframes(self):
+        save_dataframes(pd.DataFrame(), pd.DataFrame(), self.test_dir)
+        self._assert_file_not_exists("prefill_info.csv")
+        self._assert_file_not_exists("decode_info.csv")
+    
+    # Test Overwriting existing files
+    def test_overwrite_existing_files(self):
+        df1 = pd.DataFrame({"H": [15]})
+        save_dataframes(df1, None, self.test_dir)
+        self._assert_file_exists_with_data("prefill_info.csv", df1)
+
+        df2 = pd.DataFrame({"H": [16, 17]})
+        save_dataframes(df2, None, self.test_dir)
+        self._assert_file_exists_with_data("prefill_info.csv", df2)
+
+
+class TestProcessC2LB(unittest.TestCase):
+    def setUp(self):
+        """
+        Initialize the mock object
+        """
+        self.mock_args = MagicMock()
+        self.mock_args.num_redundancy_expert = 3
+        self.mock_args.num_npus = 8
+        self.output_dir = "/mock/output"
+
+        # log capture
+        self.log_capture = []
+        self.logger = logging.getLogger("msit_logger")
+        self.logger.setLevel(logging.INFO)
+
+        class LogHandler(logging.Handler):
+            def emit(handler, record):
+                self.log_capture.append(record)
+
+        self.logger.addHandler(LogHandler())
+
+    def tearDown(self):
+        """
+        Clean up log processor
+        """
+        self.logger = logging.getLogger("msit_logger")
+        self.logger.handlers = []
+
+    # Test only process decoded data
+    @patch("components.expert_load_balancing.elb.load_balancing.load_expert_popularity_csv")
+    @patch("components.expert_load_balancing.elb.load_balancing.save_matrix_to_json")
+    @patch("components.expert_load_balancing.elb.load_balancing.lb_and_intra_layer_affinity_redundancy_deploy")  # 修正补丁路径
+    def test_process_decode_only(self, mock_algo, mock_save, mock_load):
+        # test data
+        mock_df = MagicMock(spec=pd.DataFrame)
+        mock_df.shape = (10, 5)
+        mock_df.empty = False
+        mock_load.return_value = (mock_df, None)
+        
+        # algorithm return values
+        mock_algo.return_value = [[1,2],[3,4]]
+
+        process_c2lb(self.mock_args, self.output_dir)
+
+        # Verify call chain
+        mock_algo.assert_called_once_with(
+            mock_df.to_numpy(),
+            self.mock_args.num_redundancy_expert,
+            self.mock_args.num_npus,
+            5  
+        )
+        mock_save.assert_called_once_with(
+            self.output_dir,
+            "decode_global_deployment", 
+            [[1,2], [3,4]]
+        )
+        # Verify log output
+        self.assertIn("C2LB processed decode data", self.log_capture[1].getMessage())
+
+    # Test Processing only prefill data
+    @patch("components.expert_load_balancing.elb.load_balancing.load_expert_popularity_csv")
+    @patch("components.expert_load_balancing.elb.load_balancing.save_matrix_to_json")
+    @patch("components.expert_load_balancing.elb.load_balancing.lb_and_intra_layer_affinity_redundancy_deploy")
+    def test_process_prefill_only(self, mock_algo, mock_save, mock_load):
+        mock_df = MagicMock(spec=pd.DataFrame)
+        mock_df.shape = (8, 3) 
+        mock_df.empty = False
+        mock_load.return_value = (None, mock_df) 
+        
+        process_c2lb(self.mock_args, self.output_dir)
+
+        mock_algo.assert_called_once_with(
+            mock_df.to_numpy(),
+            self.mock_args.num_redundancy_expert,
+            self.mock_args.num_npus,
+            3
+        )
+        mock_save.assert_called_once_with(
+            self.output_dir,
+            "prefill_global_deployment", 
+            mock_algo.return_value
+        )
+
+        self.assertIn("C2LB processed prefill data", self.log_capture[1].getMessage())
+
+    # Process two data sets simultaneously
+    @patch("components.expert_load_balancing.elb.load_balancing.load_expert_popularity_csv")
+    @patch("components.expert_load_balancing.elb.load_balancing.save_matrix_to_json")
+    @patch("components.expert_load_balancing.elb.load_balancing.lb_and_intra_layer_affinity_redundancy_deploy")
+    def test_process_both_datasets(self, mock_algo, mock_save, mock_load):
+        decode_df = MagicMock(spec=pd.DataFrame)
+        decode_df.shape = (5, 2)
+        prefill_df = MagicMock(spec=pd.DataFrame)
+        prefill_df.shape = (5, 3)
+        mock_load.return_value = (decode_df, prefill_df)
+        
+        mock_algo.side_effect = [
+            [[1,1]],
+            [[2,2]] 
+        ]
+
+        process_c2lb(self.mock_args, self.output_dir)
+
+        self.assertEqual(mock_algo.call_count, 2)
+        calls = [
+            call(decode_df.to_numpy(), 3, 8, 2),
+            call(prefill_df.to_numpy(), 3, 8, 3)
+        ]
+        mock_algo.assert_has_calls(calls, any_order=False)
+
+        mock_save.assert_has_calls([
+            call(self.output_dir, "decode_global_deployment", [[1,1]]),
+            call(self.output_dir, "prefill_global_deployment", [[2,2]])
+        ])
+
+    # Test Algorithm execution failed
+    @patch("components.expert_load_balancing.elb.load_balancing.load_expert_popularity_csv")
+    @patch("components.expert_load_balancing.elb.load_balancing.lb_and_intra_layer_affinity_redundancy_deploy")
+    def test_algorithm_failure(self, mock_algo, mock_load):
+        mock_df = MagicMock(spec=pd.DataFrame)
+        mock_df.shape = (4, 2)
+        mock_load.return_value = (mock_df, None)
+        
+        mock_algo.side_effect = ValueError("Invalid input shape")
+
+        with self.assertRaises(RuntimeError) as cm:
+            process_c2lb(self.mock_args, self.output_dir)
+        self.assertIn("Failed to process decode data", str(cm.exception))
+        self.assertIn("Invalid input shape", str(cm.exception.__cause__))
+    
+     # Test No valid data file
+    @patch("components.expert_load_balancing.elb.load_balancing.load_expert_popularity_csv")
+    def test_no_data_files(self, mock_load):
+        """验证空数据场景异常抛出"""
+        mock_load.return_value = (None, None)
+        with self.assertRaises(FileNotFoundError) as cm:
+            process_c2lb(self.mock_args, self.output_dir)
+        self.assertIn("No valid decode/prefill data found", str(cm.exception))
+
+
+class TestProcessSpeculativeMOE(unittest.TestCase):
+    def setUp(self):
+        """初始化模拟对象和测试参数"""
+        self.mock_args = MagicMock()
+        self.mock_args.num_npus = 8
+        self.mock_args.num_nodes = 4
+        self.mock_args.num_redundancy_expert = 2
+        self.output_dir = "/mock/output"
+        # log capture
+        self.log_capture = []
+        self.logger = logging.getLogger("msit_logger")
+        self.logger.setLevel(logging.INFO)
+
+        class LogHandler(logging.Handler):
+            def emit(handler, record):
+                self.log_capture.append(record)
+
+        self.logger.addHandler(LogHandler())
+
+    def tearDown(self):
+        """
+        Clean up log processor
+        """
+        self.logger = logging.getLogger("msit_logger")
+        self.logger.handlers = []
+
+    # Test Processing a single decode file
+    @patch("components.expert_load_balancing.elb.load_balancing.get_csv_path")
+    @patch("components.expert_load_balancing.elb.load_balancing.get_csv_dimensions")
+    @patch("components.expert_load_balancing.elb.load_balancing.speculative_moe_algo_multi_process")
+    @patch("components.expert_load_balancing.elb.load_balancing.dump_tables")
+    def test_process_single_decode(self, mock_dump, mock_algo, mock_dim, mock_path):
+        mock_path.return_value = "/mock/decode.csv"
+        mock_dim.return_value = (10, 5)
+        mock_algo.return_value = {"result": "mock_data"}
+        
+        file_list = ["decode_info.csv"]
+        process_speculative_moe(self.mock_args, file_list, self.output_dir)
+
+        mock_path.assert_called_once_with(self.output_dir, "decode_info.csv")
+        mock_dim.assert_called_once_with("/mock/decode.csv")
+        mock_algo.assert_called_once_with(
+            self.mock_args.num_npus,  # num_npus
+            self.mock_args.num_nodes,  # num_nodes
+            10, # num_layer
+            5,  # num_original_expert
+            self.mock_args.num_redundancy_expert,  # num_redundancy_expert
+            "/mock/decode.csv"
+        )
+        mock_dump.assert_called_once_with(
+            os.path.join(self.output_dir, "decode_global_deployment.json"),
+            {"result": "mock_data"},
+            8
+        )
+        self.assertIn("Speculative MOE 处理完成: decode_info.csv", self.log_capture[1].getMessage())
+
+    # Test Processing two files at the same time
+    @patch("components.expert_load_balancing.elb.load_balancing.get_csv_path")
+    @patch("components.expert_load_balancing.elb.load_balancing.get_csv_dimensions")
+    @patch("components.expert_load_balancing.elb.load_balancing.speculative_moe_algo_multi_process")
+    @patch("components.expert_load_balancing.elb.load_balancing.dump_tables")
+    def test_process_both_files(self, mock_dump, mock_algo, mock_dim, mock_path):
+        mock_dim.side_effect = [
+            (8, 3),
+            (10, 5) 
+        ]
+        mock_path.side_effect = [
+            "/mock/prefill.csv",
+            "/mock/decode.csv"
+        ]
+        mock_algo.side_effect = [
+            {"prefill": "data"},
+            {"decode": "data"}
+        ]
+
+        file_list = ["prefill_info.csv", "decode_info.csv"]
+        process_speculative_moe(self.mock_args, file_list, self.output_dir)
+
+        self.assertEqual(mock_algo.call_count, 2)
+        calls = [
+            call(8, 4, 8, 3, 2, "/mock/prefill.csv"),
+            call(8, 4, 10, 5, 2, "/mock/decode.csv")
+        ]
+        mock_algo.assert_has_calls(calls)
+
+        self.assertEqual(mock_dump.call_count, 2)
+    
+    # Test File does not exist exception
+    @patch("components.expert_load_balancing.elb.load_balancing.get_csv_path")
+    @patch("components.expert_load_balancing.elb.load_balancing.get_csv_dimensions")
+    def test_file_not_found(self, mock_dim, mock_path):
+        mock_path.side_effect = [
+            "/mock/prefill.csv",
+            "/mock/decode.csv"
+        ]
+        mock_dim.side_effect = [
+            (8, 3),
+            (10, 5)  
+        ]
+        with self.assertRaises(FileNotFoundError) as cm:
+            process_speculative_moe(self.mock_args, ["decode_info.csv"], self.output_dir)
+        self.assertIn("输入文件不存在", str(cm.exception))
+
+    # Test Unsupported file type
+    @patch("components.expert_load_balancing.elb.load_balancing.get_csv_path")
+    def test_unsupported_file(self, mock_path):
+        with self.assertLogs(logger="msit_logger", level="WARNING") as log:
+            process_speculative_moe(self.mock_args, ["invalid.csv"], self.output_dir)
+        self.assertIn("忽略不支持的文件 invalid.csv", log.output[0])
+
+    # Test Algorithm execution exception
+    @patch("components.expert_load_balancing.elb.load_balancing.get_csv_path")
+    @patch("components.expert_load_balancing.elb.load_balancing.get_csv_dimensions")
+    @patch("components.expert_load_balancing.elb.load_balancing.speculative_moe_algo_multi_process")
+    def test_algorithm_failure(self, mock_algo, mock_dim, mock_path):
+        mock_path.return_value = "/mock/file.csv"
+        mock_dim.side_effect = [
+            (8, 3),
+            (10, 5) 
+        ]
+        mock_algo.side_effect = ValueError("模拟算法错误")
+        with self.assertRaises(FileNotFoundError) as cm:
+            process_speculative_moe(self.mock_args, ["decode_info.csv"], self.output_dir)
+        self.assertIn("处理 decode_info.csv 时发生异常", str(cm.exception))
+
+
+class TestProcessDynamicC2LB(unittest.TestCase):
+    def setUp(self):
+        """
+        Initialize the mock object
+        """
+        self.mock_args = MagicMock()
+        self.mock_args.num_redundancy_expert = 3
+        self.mock_args.num_npus = 8
+        self.mock_args.num_nodes = 4
+        self.output_dir = "/mock/output"
+
+        # log capture
+        self.log_capture = []
+        self.logger = logging.getLogger("msit_logger")
+        self.logger.setLevel(logging.INFO)
+
+        class LogHandler(logging.Handler):
+            def emit(handler, record):
+                self.log_capture.append(record)
+
+        self.logger.addHandler(LogHandler())
+
+    def tearDown(self):
+        """
+        Clean up log processor
+        """
+        self.logger = logging.getLogger("msit_logger")
+        self.logger.handlers = []
+
+    # Test only process decoded data
+    @patch("components.expert_load_balancing.elb.load_balancing.load_expert_popularity_csv")
+    @patch("components.expert_load_balancing.elb.load_balancing.lb_redundancy_deploy_for_dynamic")  # 修正补丁路径
+    @patch("components.expert_load_balancing.elb.load_balancing.save_matrix_to_json")
+    def test_process_decode_only(self, mock_save, mock_algo, mock_load):
+        # test data
+        mock_df = MagicMock(spec=pd.DataFrame)
+        mock_df.shape = (10, 5)
+        mock_df.empty = False
+        mock_load.return_value = (mock_df, None)
+        
+        # algorithm return values
+        mock_algo.return_value = [[1,2],[3,4]]
+
+        process_dynamic_c2lb(self.mock_args, self.output_dir)
+
+        # Verify call chain
+        mock_algo.assert_called_once_with(
+            mock_df.to_numpy(),
+            self.mock_args.num_redundancy_expert,
+            self.mock_args.num_nodes,
+            self.mock_args.num_npus
+        )
+        mock_save.assert_called_once_with(
+            self.output_dir,
+            "decode_global_deployment", 
+            [[1,2], [3,4]]
+        )
+        # Verify log output
+        self.assertIn("C2LB processed decode data", self.log_capture[1].getMessage())
+    
+    # Test Processing only prefill data
+    @patch("components.expert_load_balancing.elb.load_balancing.load_expert_popularity_csv")
+    @patch("components.expert_load_balancing.elb.load_balancing.lb_redundancy_deploy_for_dynamic") 
+    def test_process_prefill_only(self, mock_algo, mock_load):
+        mock_df = MagicMock()
+        mock_df.empty = False
+        mock_df.to_numpy.return_value = "mock_prefill_data"
+        mock_load.return_value = (None, mock_df)
+        
+        mock_algo.side_effect = ValueError("模拟算法错误")
+
+        with self.assertRaises(RuntimeError) as cm:
+            process_dynamic_c2lb(self.mock_args, self.output_dir)
+        self.assertIn("Failed to process decode data", str(cm.exception))
+        self.assertIn("模拟算法错误", str(cm.exception.__cause__))
+
+     # Test Processing two datasets simultaneously
+    @patch("components.expert_load_balancing.elb.load_balancing.load_expert_popularity_csv")
+    @patch("components.expert_load_balancing.elb.load_balancing.lb_redundancy_deploy_for_dynamic")  # 修正补丁路径
+    @patch("components.expert_load_balancing.elb.load_balancing.save_matrix_to_json")
+    def test_process_both_datasets(self, mock_save, mock_algo, mock_load):
+        decode_df = MagicMock(spec=pd.DataFrame)
+        prefill_df = MagicMock(spec=pd.DataFrame)
+        decode_df.empty = prefill_df.empty = False
+        mock_load.return_value = (decode_df, prefill_df)
+        
+        mock_algo.side_effect = [
+            [[1,2]],
+            [[3,4]]
+        ]
+
+        process_dynamic_c2lb(self.mock_args, self.output_dir)
+
+        self.assertEqual(mock_algo.call_count, 2)
+        calls = [
+            call(decode_df.to_numpy(), 3, 4, 8),
+            call(prefill_df.to_numpy(), 3, 4, 8)
+        ]
+        mock_algo.assert_has_calls(calls)
+
+        mock_save.assert_has_calls([
+            call(self.output_dir, "decode_global_deployment", [[1, 2]]),
+            call(self.output_dir, "prefill_global_deployment", [[3, 4]])
+        ])
+
+     # Test Empty data file processing
+    @patch("components.expert_load_balancing.elb.load_balancing.load_expert_popularity_csv")
+    def test_empty_datafiles(self, mock_load):
+        mock_load.return_value = (None, None)
+        with self.assertRaises(FileNotFoundError) as cm:
+            process_dynamic_c2lb(self.mock_args, self.output_dir)
+        self.assertIn(f"No valid decode/prefill data found in {self.output_dir}", str(cm.exception))
+
+    # Test Invalid data format processing
+    @patch("components.expert_load_balancing.elb.load_balancing.load_expert_popularity_csv")
+    def test_invalid_data_format(self, mock_load):
+        mock_load.return_value = ("invalid_type", None)
+        with self.assertRaises(RuntimeError):
+            process_dynamic_c2lb(self.mock_args, self.output_dir)
