@@ -443,62 +443,72 @@ msprechecker_logger - INFO - == compare end ==
 
 预检工具除了提供内置的环境变量检测之外，还可以自定义配置用户需要检测的环境变量。
 
-操作步骤如下：
+YAML内容可分为五类：
 
-1. 找到需要修改的文件；目前自定义配置需要修改源码，所以首先需要找到需要修改的文件，因此 PyPI / 离线安装和源码使用的方式不同：
-   
-   - 如果工具使用PyPI / 离线安装，使用如下脚本找到需要修改的文件
-     ```bash
-     python -c "import msprechecker; import os; base = msprechecker.__file__; print(os.path.realpath(os.path.join(base, '../prechecker/env_suggestion.py')))"
-     ```
-     
-     返回样例如下：
-     ```bash
-     /usr/local/lib/python3.11/site-packages/msprechecker/prechecker/env_suggestion.py
-     ```
-     
-     返回的文件路径即为需要修改的文件
-   - 如果工具使用源码进行使用，假设用户将 msit 克隆到 `<root_dir>` 下，则需要修改的文件为 `<root_dir>/msit/msprechecker/msprechecker/prechecker/env_suggestion.py`
-2. 使用任意编辑器修改文件。文件最开头会有修改配置指南，如下：
+1. `environment_variables`：环境变量基线
+2. `mindie_config`：服务化配置基线
+3. `ranktable`：ranktable基线
+4. `model_config`：模型配置基线
+5. `user_config`：启动配置基线
 
-```bash
-# 关键信息已省略，请以实际为准
-配置指南：
-ENV_SUGGESTIONS 配置项说明：
-    xxx
+五类配置中任何一类下均支持以下7种属性描述词：
 
-简化配置：
-    xxx
+1. `name`：字段名
+2. `value`：基线取值
+3. `reason`：原因提示
+4. `suggestions`：场景描述部分
+5. `condition`：建议（或不建议）的具体场景
+6. `suggested`：建议场景部分
+7. `not_suggested`：不建议场景部分
 
+以上4~7为拓展配置，用于说明value在不同场景下的取值reason。
 
-建议样例1：xxx
-建议配置1：xxx
-建议样例2：xxx
-建议配置2：xxx
-建议样例3：xxx
-建议配置3：xxx
+**name**
+支持嵌套，用于确定待配置的配置变量名，每向下一级就增加一个冒号，如：
+`features:experimental:enabled`
+
+在ranktable、user_config基线配置中，由于`server_list`等为列表，因此也支持以`0`数字作为一个级别，如：
+`BackendConfig:ModelDeployConfig:ModelConfig:0:tp`
+对应的user_config配置文件如下（注意列表顺序用`0、1、2...`表示）：
+```
+BackendConfig" : {
+"interNodeTLSEnabled" : false,
+"ModelDeployConfig" :
+    {
+        "truncation" : false,
+        "ModelConfig" : [
+            {
+                "tp": 1,
+...
+
 ```
 
-根据指南进行配置即可。
+**value**
+一般value直接配置值，如：
+* `value: 'localhost'`或`value: false`
 
+如有特殊需要也可以用计算符号配合比较符号进行限制或赋值，value中支持的表达式包括：
+* 支持的计算符号：`"+", "-", "\*", "/", "//"`
+* 支持的比较符号：`'>=', '<=', '!=', '=', '>', '<'`
 
-如使用 `vi` 或者 `vim` 在线编辑，出现如下乱码
+另外，`=`开头可以接上自定义的规则，如
+* `value: = 1+1`
+* `value: = 1 + server_list:0:device:0:rank_id`(通过与其他name的value计算来确定取值)
+* `value: = =1`(与`value: 1`效果相同)
+* `value: = >1`
+* `value: = >=1`
 
-![image](./pics/utf-8.png)
+value还支持分号`;`对多个表达式进行分割，如：
+* `value: = 1 + server_list:0:device:0:rank_id ; < 5`
+代表`value`在等于`server_list:0:device:0:rank_id`的前提下，还需要满足`value < 5`
 
-只需输入 `set encoding=utf-8` 即可恢复正常
+value也可以为空
+* 为空时仅检查该配置项存在性。
 
-
-样例：在 `ENV_SUGGESTIONS` 列表中添加如下字段：
-
-```py
-{
-    "ENV": "ABC",
-    "SUGGESTION_VALUE": "BCD",
-    "REASON": "NO REASON"
-}
+value也支持列表形式：
 ```
-
-随后命令行输入预检命令 `msprechecker precheck`，会出现我们配置的校验项，如下：
-
-![image](./pics/env.png)
+value:
+- 2
+- 3
+- >9
+```
