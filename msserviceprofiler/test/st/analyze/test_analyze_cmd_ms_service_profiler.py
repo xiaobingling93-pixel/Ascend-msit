@@ -58,7 +58,7 @@ def check_kvcache_csv_content(output_path, csv_file_name):
             return False
 
     # 定义一个函数，用于检查res_list的格式
-    def check_row(df, row_index, columns):
+    def check_rows(df, row_index, columns):
         for column in columns:
             if not is_whole_number(df.iloc[row_index][column]):
                 raise AssertionError(f"{row_index}行的{column}不是整数")
@@ -68,7 +68,7 @@ def check_kvcache_csv_content(output_path, csv_file_name):
     columns_to_check = ['device_kvcache_left']
     for row_index in rows_to_check:
         for column in columns_to_check:
-            check_row(df, row_index, [column])
+            check_rows(df, row_index, [column])
 
 
 def check_batch_csv_content(output_path, csv_file_name):
@@ -114,7 +114,7 @@ def check_request_csv_content(output_path, csv_file_name):
             return False
 
     # 定义一个函数，用于检查数据框的某一行的特定列是否满足条件
-    def check_row(df, row_index, columns):
+    def check_rows(df, row_index, columns):
         for column in columns:
             if not is_whole_number(df.iloc[row_index][column]):
                 raise AssertionError(f"{row_index}行的{column}不是整数")
@@ -124,7 +124,7 @@ def check_request_csv_content(output_path, csv_file_name):
     columns_to_check = ['recv_token_size', 'reply_token_size']
     for row_index in rows_to_check:
         for column in columns_to_check:
-            check_row(df, row_index, [column])
+            check_rows(df, row_index, [column])
 
 
 def check_pullkvcache_csv_content(csv_file):
