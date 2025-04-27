@@ -27,17 +27,20 @@ import pandas as pd
 from components.utils.file_open_check import OpenException
 from components.utils.log import logger
 from components.expert_load_balancing.elb.constant import PREFILL, DECODE, DECODE_FILE_NAME, \
-                        PREFILL_FILE_NAME, ALGORITHM_C2LB, ALGORITHM_SPECULATIVE_MOE
+                        PREFILL_FILE_NAME, ALGORITHM_C2LB, ALGORITHM_SPECULATIVE_MOE, ALGORITHM_DYNAMIC_C2LB, A2, A3
 
 
 with patch.dict("sys.modules", {
     "c2lb": MagicMock(),
     "c2lb_dynamic": MagicMock(),
-    "speculative_moe": MagicMock()
+    "speculative_moe": MagicMock(),
+    "c2lb_a3": MagicMock(),
+    "speculative_moe_a3": MagicMock()
 }):
     from components.expert_load_balancing.elb.load_balancing import save_matrix_to_json, dump_tables, \
     load_expert_popularity_csv, get_csv_path, merge_csv_columns, get_csv_dimensions, check_file_type, \
-    save_dataframes, process_c2lb, process_speculative_moe, process_dynamic_c2lb, load_balancing
+    save_dataframes, process_c2lb, process_speculative_moe, process_dynamic_c2lb, load_balancing, process_c2lb_a3, \
+    process_speculative_moe_a3, select_algorithm, load_balancing
 
 
 class TestSaveMatrixToJson(unittest.TestCase):
@@ -427,8 +430,8 @@ class TestGetCSVDimensions(unittest.TestCase):
             rows, cols = get_csv_dimensions(csv_path)
 
         self.assertEqual((rows, cols), (3, 5))
-        self.assertIn(f"成功读取: {csv_path}", log.output[0])
-        self.assertIn("行数=3, 列数=5", log.output[1])
+        self.assertIn(f"Successfully read", log.output[0])
+        self.assertIn("Number of row=3, Number of columns=5", log.output[1])
 
     def test_empty_file(self):
         csv_path = self._create_csv_file("empty.csv", data=None)
@@ -859,7 +862,7 @@ class TestProcessSpeculativeMOE(unittest.TestCase):
             {"result": "mock_data"},
             8
         )
-        self.assertIn("Speculative MOE 处理完成: decode_info.csv", self.log_capture[1].getMessage())
+        self.assertIn("Speculative MOE processing is complete", self.log_capture[1].getMessage())
 
     # Test Processing two files at the same time
     @patch("components.expert_load_balancing.elb.load_balancing.get_csv_path")
@@ -906,7 +909,7 @@ class TestProcessSpeculativeMOE(unittest.TestCase):
         ]
         with self.assertRaises(FileNotFoundError) as cm:
             process_speculative_moe(self.mock_args, ["decode_info.csv"], self.output_dir)
-        self.assertIn("输入文件不存在", str(cm.exception))
+        self.assertIn("The input file does not exist", str(cm.exception))
 
     # Test Unsupported file type
     @patch("components.expert_load_balancing.elb.load_balancing.get_csv_path")
@@ -928,7 +931,7 @@ class TestProcessSpeculativeMOE(unittest.TestCase):
         mock_algo.side_effect = ValueError("模拟算法错误")
         with self.assertRaises(FileNotFoundError) as cm:
             process_speculative_moe(self.mock_args, ["decode_info.csv"], self.output_dir)
-        self.assertIn("处理 decode_info.csv 时发生异常", str(cm.exception))
+        self.assertIn("An exception occurred while processing", str(cm.exception))
 
 
 class TestProcessDynamicC2LB(unittest.TestCase):
@@ -1050,3 +1053,463 @@ class TestProcessDynamicC2LB(unittest.TestCase):
         mock_load.return_value = ("invalid_type", None)
         with self.assertRaises(RuntimeError):
             process_dynamic_c2lb(self.mock_args, self.output_dir)
+
+
+class TestProcessC2LBA3(unittest.TestCase):
+    def setUp(self):
+        """
+        Initialize the mock object
+        """
+        self.mock_args = MagicMock()
+        self.mock_args.num_redundancy_expert = 3
+        self.mock_args.num_npus = 8
+        self.output_dir = "/mock/output"
+
+        # log capture
+        self.log_capture = []
+        self.logger = logging.getLogger("msit_logger")
+        self.logger.setLevel(logging.INFO)
+
+        class LogHandler(logging.Handler):
+            def emit(handler, record):
+                self.log_capture.append(record)
+
+        self.logger.addHandler(LogHandler())
+
+    def tearDown(self):
+        """
+        Clean up log processor
+        """
+        self.logger = logging.getLogger("msit_logger")
+        self.logger.handlers = []
+
+    # Test only process decoded data
+    @patch("components.expert_load_balancing.elb.load_balancing.load_expert_popularity_csv")
+    @patch("components.expert_load_balancing.elb.load_balancing.save_matrix_to_json_a3")
+    @patch("components.expert_load_balancing.elb.load_balancing.lb_and_intra_layer_affinity_redundancy_deploy_a3")  # 修正补丁路径
+    def test_process_decode_only(self, mock_algo, mock_save, mock_load):
+        # test data
+        mock_df = MagicMock(spec=pd.DataFrame)
+        mock_df.shape = (10, 5)
+        mock_df.empty = False
+        mock_load.return_value = (mock_df, None)
+        
+        # algorithm return values
+        mock_algo.return_value = [[1,2],[3,4]]
+
+        process_c2lb_a3(self.mock_args, self.output_dir)
+
+        # Verify call chain
+        mock_algo.assert_called_once_with(
+            mock_df.to_numpy(),
+            self.mock_args.num_redundancy_expert,
+            self.mock_args.num_npus,
+            5  
+        )
+        mock_save.assert_called_once_with(
+            self.output_dir,
+            "decode_global_deployment", 
+            [[1,2], [3,4]]
+        )
+        # Verify log output
+        self.assertIn("C2LB A3 processed decode data", self.log_capture[1].getMessage())
+
+    # Test Processing only prefill data
+    @patch("components.expert_load_balancing.elb.load_balancing.load_expert_popularity_csv")
+    @patch("components.expert_load_balancing.elb.load_balancing.save_matrix_to_json_a3")
+    @patch("components.expert_load_balancing.elb.load_balancing.lb_and_intra_layer_affinity_redundancy_deploy_a3")
+    def test_process_prefill_only(self, mock_algo, mock_save, mock_load):
+        mock_df = MagicMock(spec=pd.DataFrame)
+        mock_df.shape = (8, 3) 
+        mock_df.empty = False
+        mock_load.return_value = (None, mock_df) 
+        
+        process_c2lb_a3(self.mock_args, self.output_dir)
+
+        mock_algo.assert_called_once_with(
+            mock_df.to_numpy(),
+            self.mock_args.num_redundancy_expert,
+            self.mock_args.num_npus,
+            3
+        )
+        mock_save.assert_called_once_with(
+            self.output_dir,
+            "prefill_global_deployment", 
+            mock_algo.return_value
+        )
+
+        self.assertIn("C2LB A3 processed prefill data", self.log_capture[1].getMessage())
+
+    # Process two data sets simultaneously
+    @patch("components.expert_load_balancing.elb.load_balancing.load_expert_popularity_csv")
+    @patch("components.expert_load_balancing.elb.load_balancing.save_matrix_to_json_a3")
+    @patch("components.expert_load_balancing.elb.load_balancing.lb_and_intra_layer_affinity_redundancy_deploy_a3")
+    def test_process_both_datasets(self, mock_algo, mock_save, mock_load):
+        decode_df = MagicMock(spec=pd.DataFrame)
+        decode_df.shape = (5, 2)
+        prefill_df = MagicMock(spec=pd.DataFrame)
+        prefill_df.shape = (5, 3)
+        mock_load.return_value = (decode_df, prefill_df)
+        
+        mock_algo.side_effect = [
+            [[1,1]],
+            [[2,2]] 
+        ]
+
+        process_c2lb_a3(self.mock_args, self.output_dir)
+
+        self.assertEqual(mock_algo.call_count, 2)
+        calls = [
+            call(decode_df.to_numpy(), 3, 8, 2),
+            call(prefill_df.to_numpy(), 3, 8, 3)
+        ]
+        mock_algo.assert_has_calls(calls, any_order=False)
+
+        mock_save.assert_has_calls([
+            call(self.output_dir, "decode_global_deployment", [[1,1]]),
+            call(self.output_dir, "prefill_global_deployment", [[2,2]])
+        ])
+
+    # Test Algorithm execution failed
+    @patch("components.expert_load_balancing.elb.load_balancing.load_expert_popularity_csv")
+    @patch("components.expert_load_balancing.elb.load_balancing.lb_and_intra_layer_affinity_redundancy_deploy_a3")
+    def test_algorithm_failure(self, mock_algo, mock_load):
+        mock_df = MagicMock(spec=pd.DataFrame)
+        mock_df.shape = (4, 2)
+        mock_load.return_value = (mock_df, None)
+        
+        mock_algo.side_effect = ValueError("Invalid input shape")
+
+        with self.assertRaises(RuntimeError) as cm:
+            process_c2lb_a3(self.mock_args, self.output_dir)
+        self.assertIn("Failed to process decode data", str(cm.exception))
+        self.assertIn("Invalid input shape", str(cm.exception.__cause__))
+    
+     # Test No valid data file
+    @patch("components.expert_load_balancing.elb.load_balancing.load_expert_popularity_csv")
+    def test_no_data_files(self, mock_load):
+        """验证空数据场景异常抛出"""
+        mock_load.return_value = (None, None)
+        with self.assertRaises(FileNotFoundError) as cm:
+            process_c2lb_a3(self.mock_args, self.output_dir)
+        self.assertIn("No valid decode/prefill data found", str(cm.exception))
+
+
+class TestProcessSpeculativeMOEA3(unittest.TestCase):
+    def setUp(self):
+        """
+        Initialize the mock object
+        """
+        self.mock_args = MagicMock()
+        self.mock_args.num_npus = 8
+        self.mock_args.num_nodes = 4
+        self.mock_args.num_redundancy_expert = 2
+        self.mock_args.share_expert_devices = 0
+        self.output_dir = "/mock/output"
+        # log capture
+        self.log_capture = []
+        self.logger = logging.getLogger("msit_logger")
+        self.logger.setLevel(logging.INFO)
+
+        class LogHandler(logging.Handler):
+            def emit(handler, record):
+                self.log_capture.append(record)
+
+        self.logger.addHandler(LogHandler())
+
+    def tearDown(self):
+        """
+        Clean up log processor
+        """
+        self.logger = logging.getLogger("msit_logger")
+        self.logger.handlers = []
+
+    # Test Processing a single decode file
+    @patch("components.expert_load_balancing.elb.load_balancing.get_csv_path")
+    @patch("components.expert_load_balancing.elb.load_balancing.get_csv_dimensions")
+    @patch("components.expert_load_balancing.elb.load_balancing.speculative_moe_algo_multi_process_a3")
+    @patch("components.expert_load_balancing.elb.load_balancing.dump_tables_a3")
+    def test_process_single_decode(self, mock_dump, mock_algo, mock_dim, mock_path):
+        mock_path.return_value = "/mock/decode.csv"
+        mock_dim.return_value = (10, 5)
+        mock_algo.return_value = {"result": "mock_data"}
+        
+        file_list = ["decode_info.csv"]
+        process_speculative_moe_a3(self.mock_args, file_list, self.output_dir)
+
+        mock_path.assert_called_once_with(self.output_dir, "decode_info.csv")
+        mock_dim.assert_called_once_with("/mock/decode.csv")
+        mock_algo.assert_called_once_with(
+            self.mock_args.num_npus,  # num_npus
+            self.mock_args.num_nodes,  # num_nodes
+            10, # num_layer
+            5,  # num_original_expert
+            self.mock_args.num_redundancy_expert,  # num_redundancy_expert
+            "/mock/decode.csv"
+        )
+        mock_dump.assert_called_once_with(
+            os.path.join(self.output_dir, "decode_global_deployment.json"),
+            {"result": "mock_data"},
+            8,
+            0
+        )
+        self.assertIn("Speculative MOE A3", self.log_capture[1].getMessage())
+
+    # Test Processing two files at the same time
+    @patch("components.expert_load_balancing.elb.load_balancing.get_csv_path")
+    @patch("components.expert_load_balancing.elb.load_balancing.get_csv_dimensions")
+    @patch("components.expert_load_balancing.elb.load_balancing.speculative_moe_algo_multi_process_a3")
+    @patch("components.expert_load_balancing.elb.load_balancing.dump_tables_a3")
+    def test_process_both_files(self, mock_dump, mock_algo, mock_dim, mock_path):
+        mock_dim.side_effect = [
+            (8, 3),
+            (10, 5) 
+        ]
+        mock_path.side_effect = [
+            "/mock/prefill.csv",
+            "/mock/decode.csv"
+        ]
+        mock_algo.side_effect = [
+            {"prefill": "data"},
+            {"decode": "data"}
+        ]
+
+        file_list = ["prefill_info.csv", "decode_info.csv"]
+        process_speculative_moe_a3(self.mock_args, file_list, self.output_dir)
+
+        self.assertEqual(mock_algo.call_count, 2)
+        calls = [
+            call(8, 4, 8, 3, 2, "/mock/prefill.csv"),
+            call(8, 4, 10, 5, 2, "/mock/decode.csv")
+        ]
+        mock_algo.assert_has_calls(calls)
+
+        self.assertEqual(mock_dump.call_count, 2)
+    
+    # Test File does not exist exception
+    @patch("components.expert_load_balancing.elb.load_balancing.get_csv_path")
+    @patch("components.expert_load_balancing.elb.load_balancing.get_csv_dimensions")
+    def test_file_not_found(self, mock_dim, mock_path):
+        mock_path.side_effect = [
+            "/mock/prefill.csv",
+            "/mock/decode.csv"
+        ]
+        mock_dim.side_effect = [
+            (8, 3),
+            (10, 5)  
+        ]
+        with self.assertRaises(FileNotFoundError) as cm:
+            process_speculative_moe_a3(self.mock_args, ["decode_info.csv"], self.output_dir)
+        self.assertIn("The input file does not exist", str(cm.exception))
+
+    # Test Unsupported file type
+    @patch("components.expert_load_balancing.elb.load_balancing.get_csv_path")
+    def test_unsupported_file(self, mock_path):
+        with self.assertLogs(logger="msit_logger", level="WARNING") as log:
+            process_speculative_moe_a3(self.mock_args, ["invalid.csv"], self.output_dir)
+        self.assertIn("Ignore unsupported files", log.output[0])
+
+    # Test Algorithm execution exception
+    @patch("components.expert_load_balancing.elb.load_balancing.get_csv_path")
+    @patch("components.expert_load_balancing.elb.load_balancing.get_csv_dimensions")
+    @patch("components.expert_load_balancing.elb.load_balancing.speculative_moe_algo_multi_process_a3")
+    def test_algorithm_failure(self, mock_algo, mock_dim, mock_path):
+        mock_path.return_value = "/mock/file.csv"
+        mock_dim.side_effect = [
+            (8, 3),
+            (10, 5) 
+        ]
+        mock_algo.side_effect = ValueError("模拟算法错误")
+        with self.assertRaises(FileNotFoundError) as cm:
+            process_speculative_moe_a3(self.mock_args, ["decode_info.csv"], self.output_dir)
+        self.assertIn("An exception occurred while processing", str(cm.exception))
+
+
+class TestSelectAlgorithm(unittest.TestCase):
+    def setUp(self):
+        self.mock_args = MagicMock()
+        self.mock_args.output_dir = "/mock/output"
+        self.file_names = ["decode_info.csv"]
+
+    @patch("components.expert_load_balancing.elb.load_balancing.process_c2lb")
+    def test_a2_c2lb(self, mock_process):
+        self.mock_args.algorithm = "0"
+        self.mock_args.device_type = "a2"
+        
+        select_algorithm(self.mock_args, self.file_names)
+        mock_process.assert_called_once_with(self.mock_args, output_dir="/mock/output")
+
+    @patch("components.expert_load_balancing.elb.load_balancing.process_speculative_moe")
+    def test_a2_speculative_moe(self, mock_process):
+        self.mock_args.algorithm = "1"
+        self.mock_args.device_type = "a2"
+        
+        select_algorithm(self.mock_args, self.file_names)
+        mock_process.assert_called_once_with(
+            self.mock_args, 
+            file_names=self.file_names,
+            output_dir="/mock/output"
+        )
+
+    @patch("components.expert_load_balancing.elb.load_balancing.process_dynamic_c2lb")
+    def test_a2_dynamic_c2lb(self, mock_process):
+        self.mock_args.algorithm = "2"
+        self.mock_args.device_type = "a2"
+        
+        select_algorithm(self.mock_args, self.file_names)
+        mock_process.assert_called_once_with(
+            self.mock_args, 
+            file_names=self.file_names,
+            output_dir="/mock/output"
+        )
+
+    @patch("components.expert_load_balancing.elb.load_balancing.process_c2lb_a3")
+    def test_a3_c2lb_valid(self, mock_process):
+        self.mock_args.algorithm = "0"
+        self.mock_args.device_type = "a3"
+        self.mock_args.share_expert_devices = 0
+        
+        select_algorithm(self.mock_args, self.file_names)
+        mock_process.assert_called_once_with(self.mock_args, output_dir="/mock/output")
+    
+    def test_a3_c2lb_invalid_share_expert(self):
+        self.mock_args.algorithm = "0"
+        self.mock_args.device_type = "a3"
+        self.mock_args.share_expert_devices = 1
+        
+        with self.assertRaises(ValueError) as cm:
+            select_algorithm(self.mock_args, self.file_names)
+        self.assertIn("incorrect share expert devices", str(cm.exception))
+    
+    @patch("components.expert_load_balancing.elb.load_balancing.process_speculative_moe_a3")
+    def test_a3_speculative_moe(self, mock_process):
+        self.mock_args.algorithm = "1"
+        self.mock_args.device_type = "a3"
+        
+        select_algorithm(self.mock_args, self.file_names)
+        mock_process.assert_called_once_with(
+            self.mock_args, 
+            file_names=self.file_names,
+            output_dir="/mock/output"
+        )
+    
+    def test_invalid_combinations(self):
+        test_cases = [
+            ("Invalid-Algo", "a2", "无效算法类型"),
+            ("0", "Invalid-Device", "无效设备类型"),
+            ("Dynamic-C2LB", "4", "不支持的算法设备组合")
+        ]
+
+        for algo, device, desc in test_cases:
+            with self.subTest(algo=algo, device=device, desc=desc):
+                self.mock_args.algorithm = algo
+                self.mock_args.device_type = device
+                
+                with self.assertRaises(ValueError) as cm:
+                    select_algorithm(self.mock_args, self.file_names)
+                self.assertIn("valid parameters", str(cm.exception))
+
+
+class TestLoadBalancing(unittest.TestCase):
+    def setUp(self):
+        """初始化模拟对象和默认参数"""
+        self.mock_args = MagicMock()
+        self.mock_args.expert_popularity_csv_load_path = "/mock/input"
+        self.mock_args.output_dir = "/mock/output"
+        self.mock_args.algorithm = "C2LB"
+        
+        # log capture
+        self.log_capture = []
+        self.logger = logging.getLogger("msit_logger")
+        self.logger.setLevel(logging.INFO)
+
+        class LogHandler(logging.Handler):
+            def emit(handler, record):
+                self.log_capture.append(record)
+
+        self.logger.addHandler(LogHandler())
+
+    def tearDown(self):
+        """
+        Clean up log processor
+        """
+        self.logger = logging.getLogger("msit_logger")
+        self.logger.handlers = []
+
+    @patch("components.expert_load_balancing.elb.load_balancing.check_file_type")
+    @patch("components.expert_load_balancing.elb.load_balancing.merge_csv_columns")
+    @patch("components.expert_load_balancing.elb.load_balancing.save_dataframes")
+    @patch("components.expert_load_balancing.elb.load_balancing.select_algorithm")
+    def test_process_both_files_with_c2lb(self, mock_select, mock_save, mock_merge, mock_check):
+        mock_check.return_value = ({"prefill", "decode"}, 2, 3)
+        mock_merge.side_effect = [
+            "merged_prefill",  
+            "merged_decode"  
+        ]
+
+        load_balancing(self.mock_args)
+        mock_check.assert_called_once_with("/mock/input")
+        self.assertEqual(mock_merge.call_args_list, [
+            call("/mock/input", "prefill"),
+            call("/mock/input", "decode")
+        ])
+        
+        mock_save.assert_called_once_with("merged_prefill", "merged_decode", "/mock/output")
+        mock_select.assert_called_once_with(
+            self.mock_args,
+            ["prefill_info.csv", "decode_info.csv"]
+        )
+        
+        log_messages = [record.getMessage() for record in self.log_capture]
+        self.assertIn("Detected file types", log_messages[0])
+        self.assertIn("Total 'prefill' files: 2", log_messages[1])
+        self.assertIn("Total 'decode' files: 3", log_messages[2])
+    
+    @patch("components.expert_load_balancing.elb.load_balancing.check_file_type")
+    @patch("components.expert_load_balancing.elb.load_balancing.merge_csv_columns")
+    @patch("components.expert_load_balancing.elb.load_balancing.save_dataframes")
+    @patch("components.expert_load_balancing.elb.load_balancing.select_algorithm")
+    def test_single_decode_with_speculative(self, mock_select, mock_save, mock_merge, mock_check):
+        mock_check.return_value = ({"decode"}, 0, 2)
+        mock_merge.return_value = "merged_decode"
+        self.mock_args.algorithm = "1"
+
+        load_balancing(self.mock_args)
+        
+        mock_merge.assert_called_once_with("/mock/input", "decode")
+        mock_select.assert_called_once_with(
+            self.mock_args,
+            ["decode_info.csv"]
+        )
+
+    @patch("components.expert_load_balancing.elb.load_balancing.check_file_type")
+    @patch("components.expert_load_balancing.elb.load_balancing.merge_csv_columns")
+    @patch("components.expert_load_balancing.elb.load_balancing.save_dataframes")
+    @patch("components.expert_load_balancing.elb.load_balancing.select_algorithm")
+    def test_single_prefill_with_dynamic(self, mock_select, mock_save, mock_merge, mock_check):
+        mock_check.return_value = ({"prefill"}, 3, 0)
+        mock_merge.return_value = "merged_prefill"
+        self.mock_args.algorithm = "Dynamic-C2LB"
+
+        load_balancing(self.mock_args)
+        mock_select.assert_called_once_with(
+            self.mock_args,
+            ["prefill_info.csv"]
+        )
+
+    @patch("components.expert_load_balancing.elb.load_balancing.check_file_type")
+    def test_no_valid_files(self, mock_check):
+        mock_check.return_value = (set(), 0, 0)
+        with self.assertRaises(ValueError):
+            load_balancing(self.mock_args)
+
+    @patch("components.expert_load_balancing.elb.load_balancing.check_file_type")
+    @patch("components.expert_load_balancing.elb.load_balancing.merge_csv_columns")
+    @patch("components.expert_load_balancing.elb.load_balancing.save_dataframes")
+    @patch("components.expert_load_balancing.elb.load_balancing.select_algorithm")
+    def test_empty_merge_results(self, mock_select, mock_save, mock_merge, mock_check):
+        mock_check.return_value = ({"prefill"}, 1, 0)
+        mock_merge.return_value = None
+
+        load_balancing(self.mock_args)
+        mock_save.assert_called_once_with(None, None, "/mock/output")
