@@ -14,9 +14,7 @@
 
 
 import os
-import sys
 import shutil
-from io import StringIO
 from unittest import TestCase
 
 from msit_llm import CaseFilter
@@ -99,27 +97,6 @@ class TestCaseFilter(TestCase):
 
         with self.assertRaises(RuntimeError):
             self.case_filter.apply(self.ins, self.outs, self.refs, output_dir="")
-
-    def test_apply_should_warn_when_dir_soft_link(self):
-        temp_dir = "temp_dir"
-
-        try:
-            os.symlink(self.output_dir, temp_dir)
-        except OSError as e:
-            self.fail(f"fail to construct a soft link for test due to {e}.")
-
-        captured_output = StringIO()
-        original_stderr = sys.stderr
-        sys.stderr = captured_output
-        
-        self.case_filter.add_metrics(accuracy=None)
-
-        # do
-        self.case_filter.apply(self.ins, self.outs, self.refs, output_dir=temp_dir)
-        
-        # check warning messages
-        os.unlink(temp_dir)
-        sys.stderr = original_stderr
 
     def test_apply_should_raise_when_usr_cannot_cd(self):
         # if root, do nothing

@@ -1,5 +1,6 @@
 import unittest
 import os
+import warnings
 import tempfile
 from unittest.mock import patch
 from msit_llm.common.log import logger
@@ -17,12 +18,19 @@ class TestUpdatedServiceParametersCheck(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.test_files = []
+        warnings.filterwarnings("ignore", category=DeprecationWarning, module="pandas")
 
     def tearDown(self):
         self.temp_dir.cleanup()
         for f in self.test_files:
             if os.path.exists(f):
                 os.remove(f)
+
+    @classmethod
+    def tearDownClass(cls):
+        output_dir = os.path.dirname(__file__)
+        comparison_file_path = os.path.join(output_dir, "..", "..", "comparison_report.csv")
+        os.remove(comparison_file_path)
 
     def create_temp_file(self, content, suffix=".log"):
         temp_file = tempfile.NamedTemporaryFile(
@@ -323,6 +331,3 @@ class TestUpdatedServiceParametersCheck(unittest.TestCase):
         self.assertIn("frequency_penalty,0.9,None", content)
         self.assertIn("req_order,param,file1_value,file2_value", content)
 
-
-if __name__ == '__main__':
-    unittest.main()
