@@ -21,7 +21,13 @@ def modify_config_json(src_path: str, dst_path: str, quant_config, custom_hook=N
     """
     model_config = json_safe_load(src_path)
     model_config['quantize'] = str(quant_config.model_quant_type.value).lower()
-    model_config['quantization_config'] = {}
+    
+    matched_files = glob.glob(os.path.join(dst_path.split("config.json")[0], \
+                                f"quant_model_description_*.json"))
+    dest_quant_description_filepath = matched_files[0]
+    quant_description_data = json_safe_load(dest_quant_description_filepath, check_user_stat=False)
+
+    model_config['quantization_config'] = quant_description_data
     if quant_config.use_kvcache_quant:
         model_config['quantization_config']['kv_quant_type'] = 'C8'
     if custom_hook:
