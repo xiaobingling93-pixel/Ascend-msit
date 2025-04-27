@@ -1,4 +1,4 @@
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# Copyright (c) 2023-2025 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ import shutil
 import re
 
 from components.utils.log import logger
-from ait_prof.args_adapter import MsProfArgsAdapter
+from msit_prof.args_adapter import MsProfArgsAdapter
 
 PATH_MAX_LENGTH = 255
 
@@ -82,15 +82,15 @@ def args_rules(args):
     
     #其他参数校验，只可能为on/off
     args_list = {
-        'model_execution':args.model_execution,
-        'sys_hardware_mem':args.sys_hardware_mem,
-        'sys_cpu_profiling':args.sys_cpu_profiling,
-        'sys_profiling':args.sys_profiling,
-        'sys_pid_profiling':args.sys_pid_profiling,
-        'dvpp_profiling':args.dvpp_profiling,
-        'runtime_api':args.runtime_api,
-        'task_time':args.task_time,
-        'aicpu':args.aicpu
+        'model_execution': args.model_execution,
+        'sys_hardware_mem': args.sys_hardware_mem,
+        'sys_cpu_profiling': args.sys_cpu_profiling,
+        'sys_profiling': args.sys_profiling,
+        'sys_pid_profiling': args.sys_pid_profiling,
+        'dvpp_profiling': args.dvpp_profiling,
+        'runtime_api': args.runtime_api,
+        'task_time': args.task_time,
+        'aicpu': args.aicpu
     }
 
     for args_name, args_value in args_list.items():

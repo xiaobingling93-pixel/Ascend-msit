@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import unittest
-from components.profile.msprof.ait_prof.args_adapter import MsProfArgsAdapter
+from components.profile.msit_prof.args_adapter import MsProfArgsAdapter
 
 class TestMsProfArgsAdapter(unittest.TestCase):
     def test_msprofargsadapter_initialization(self):

@@ -83,7 +83,7 @@ INSTALL_INFO_MAP = [
     {
         "arg-name": "profile",
         "pkg-name": "msit-profile",
-        "pkg-path": os.path.join("profile", "msprof"),
+        "pkg-path": "profile",
     },
     {
         "arg-name": "tensor-view",
