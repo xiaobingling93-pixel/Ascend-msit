@@ -155,15 +155,16 @@ def main():
     for ids in range(config.num_hidden_layers):
         disable_names.append("model.layers." + str(ids) + ".self_attn.kv_b_proj")
 
-    if 'R1' in args.model_path.upper():
-        disable_attn_layers = [0, 1, 2, 46, 47, 50, 54, 55, 56, 57, 58, 59, 60]
-    elif 'V3' in args.model_path.upper():
-        disable_attn_layers = [0, 1, 2, 46, 50, 51, 53, 54, 55, 56, 57, 59, 60]
-    else:
-        disable_attn_layers = []
-    for ids in disable_attn_layers:
-        if ids < num_layer:
-            disable_names.append("model.layers." + str(ids) + ".self_attn")
+    if args.fa_quant:
+        if 'R1' in args.model_path.upper():
+            disable_attn_layers = [0, 1, 2, 46, 47, 50, 54, 55, 56, 57, 58, 59, 60]
+        elif 'V3' in args.model_path.upper():
+            disable_attn_layers = [0, 1, 2, 46, 50, 51, 53, 54, 55, 56, 57, 59, 60]
+        else:
+            disable_attn_layers = []
+        for ids in disable_attn_layers:
+            if ids < num_layer:
+                disable_names.append("model.layers." + str(ids) + ".self_attn")
 
     quant_config = QuantConfig(
         a_bit=8,
