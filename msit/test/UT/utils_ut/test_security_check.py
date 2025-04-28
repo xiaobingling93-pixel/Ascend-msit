@@ -36,7 +36,8 @@ from components.utils.security_check import (
     check_dict_character,
     find_existing_path,
     is_enough_disk_space_left,
-    ms_makedirs
+    ms_makedirs,
+    check_positive_integer
 )
 
 MAX_READ_FILE_SIZE_4G = 4294967296  # 4G, 4 * 1024 * 1024 * 1024
@@ -330,3 +331,53 @@ def test_get_valid_read_path_given_existing_directory_with_correct_permissions_w
             get_valid_read_path("/path/to/existing/dir", is_dir=True)
         except ValueError as e:
             pytest.fail(f"get_valid_read_path() raised an unexpected ValueError: {e}")
+
+
+class TestCheckPositiveInteger(unittest.TestCase):
+    def test_valid_values(self):
+        test_cases = [
+            ("0", 0),     
+            ("1", 1),     
+            ("1000000", 1e6), 
+            (123, 123),     
+            ("  456  ", 456) 
+        ]
+        
+        for input_val, expected in test_cases:
+            with self.subTest(input=input_val, expected=expected):
+                result = check_positive_integer(input_val)
+                self.assertEqual(result, expected)
+        
+    def test_invalid_ranges(self):
+        test_cases = [
+            "1000001",
+            "-5",       
+        ]
+        
+        for value in test_cases:
+            with self.subTest(value=value), \
+                 self.assertRaises(ValueError) as cm:
+                check_positive_integer(value)
+                
+            self.assertIn(f"{value} is an invalid positive int value", str(cm.exception))
+
+    def test_invalid_types(self):
+        test_cases = [
+            "abc",     
+            "123abc",  
+            None,      
+            [],         
+            {"key": 1}  
+        ]
+        
+        for value in test_cases:
+            with self.subTest(value=value), \
+                 self.assertRaises((ValueError, TypeError)):
+                check_positive_integer(value)
+
+    def test_extremely_large_values(self):
+        with self.assertRaises(ValueError):
+            check_positive_integer(1e100)
+            
+        with self.assertRaises(ValueError):
+            check_positive_integer("12345678901234567890")

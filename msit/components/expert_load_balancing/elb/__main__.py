@@ -19,6 +19,7 @@ import subprocess
 from components.utils.parser import BaseCommand
 from components.utils.log import logger
 from components.debug.compare.msquickcmp.common.args_check import check_output_path_legality, check_input_path_legality
+from components.utils.security_check import check_positive_integer
 
 
 class ExpertLoadBalanceCommmand(BaseCommand):
@@ -26,13 +27,13 @@ class ExpertLoadBalanceCommmand(BaseCommand):
     def add_arguments(self, parser, **kwargs) -> None:
         parser.add_argument(
             '--info-csv-path',
-            '-isp',
+            '-icp',
             dest="expert_popularity_csv_load_path",
             required=True,
             type=check_input_path_legality,
             help="Data input directory. Contains  CSV files"
             "which might have been generated during prefill or decoder.")
-
+        
         parser.add_argument(
             '--output-dir',
             '-o',
@@ -45,16 +46,25 @@ class ExpertLoadBalanceCommmand(BaseCommand):
             '--num-redundant-expert',
             '-nre',
             dest="num_redundancy_expert",
-            type=int,
+            type=check_positive_integer,
             required=False,
             default=64,
             help="Number of redundant experts.")
 
         parser.add_argument(
+            '--num-share-expert-devices',
+            '-nsed',
+            dest="share_expert_devices",
+            type=check_positive_integer,
+            required=False,
+            default=0,
+            help="Number of shared experts.")
+        
+        parser.add_argument(
             '--num-nodes',
             '-nd',
             dest="num_nodes",
-            type=int,
+            type=check_positive_integer,
             required=False,
             default=8,
             help="Number of nodes.")
@@ -63,7 +73,7 @@ class ExpertLoadBalanceCommmand(BaseCommand):
             '--num-npus',
             '-nn',
             dest="num_npus",
-            type=int,
+            type=check_positive_integer,
             required=False,
             default=64,
             help="Number of npu.")
@@ -77,7 +87,16 @@ class ExpertLoadBalanceCommmand(BaseCommand):
             default="1",
             choices=['0', '1', '2'],
             help="algorithm type. 0代表计算通信负载均衡算法(C2LB), 1代表speculative moe interface algorithm，"
-                    "2 代表生成动态场景下的C2LB算法，生成初始配置文件")
+                    "2 代表生成动态场景下的C2LB算法，生成初始配置文件。")
+        
+        parser.add_argument(
+            '--device-type',
+            '-dt',
+            dest="device_type",
+            type=str,
+            required=True,
+            choices=['a2', 'a3'],
+            help="device type. a2 代表适用于Atlas 800I A2推理服务器, a3 代表适用于Atlas 800I A3推理服务器。")
 
     def handle(self, args, **kwargs) -> None:
         logger.info("===================load balancing algorithm start====================")

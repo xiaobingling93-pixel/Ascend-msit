@@ -19,3 +19,7 @@ PREFILL_FILE_NAME = "prefill_global_deployment"
 
 ALGORITHM_C2LB = "0"
 ALGORITHM_SPECULATIVE_MOE = "1"
+ALGORITHM_DYNAMIC_C2LB = "2"
+
+A2 = "a2"
+A3 = "a3"

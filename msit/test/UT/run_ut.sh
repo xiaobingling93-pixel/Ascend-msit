@@ -51,6 +51,7 @@ init_msit_env() {
     export PYTHONPATH=${COMPONENTS_DIR}/profile/msprof:${PYTHONPATH}
     export PYTHONPATH=${COMPONENTS_DIR}/tensor_view:${PYTHONPATH}
     export PYTHONPATH=${COMPONENTS_DIR}/debug/surgeon:${PYTHONPATH}
+    export PYTHONPATH=${COMPONENTS_DIR}/expert_load_balancing:${PYTHONPATH}
 }
 
 run_single_module_ut() {

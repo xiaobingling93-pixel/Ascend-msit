@@ -250,3 +250,10 @@ def _check_parent_dir_safe(dir_path):
 def ms_makedirs(dir_path, **kwargs):
     _check_parent_dir_safe(dir_path)
     os.makedirs(dir_path, **kwargs)
+
+
+def check_positive_integer(value):
+    ivalue = int(value)
+    if ivalue < 0 or ivalue > 1e6:
+        raise ValueError("%s is an invalid positive int value" % value)
+    return ivalue
