@@ -1,4 +1,4 @@
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# Copyright (c) 2023-2025 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 
 import pandas as pd
 from components.utils.check.rule import Rule
+from components.utils.log import logger
 
 
 # 读取
@@ -114,7 +115,7 @@ def add_row(df, rows) -> any:
 def insert_row_1(df, col, col_value, rows) -> any:
     i = df.index[(df[col] == col_value)].values[-1]
     df_1 = df.loc[0:i, :].append(pd.DataFrame(rows), ignore_index=True)
-    return df_1.append(df.loc[i + 1 :, :], ignore_index=True)
+    return df_1.append(df.loc[i + 1:, :], ignore_index=True)
 
 
 # 删除指定某列值的行

@@ -234,7 +234,7 @@ install(){
 
   if [ ! -z $only_profile ]
   then
-    pip3 install ${CURRENT_DIR}/components/profile/msprof ${arg_force_reinstall}
+    pip3 install ${CURRENT_DIR}/components/profile ${arg_force_reinstall}
   fi
 
   if [ ! -z $only_llm ]
@@ -258,7 +258,7 @@ install(){
     ${CURRENT_DIR}/components/benchmark \
     ${CURRENT_DIR}/components/analyze \
     ${CURRENT_DIR}/components/convert \
-    ${CURRENT_DIR}/components/profile/msprof \
+    ${CURRENT_DIR}/components/profile \
     ${CURRENT_DIR}/components/llm \
     ${CURRENT_DIR}/components/tensor_view \
     ${arg_force_reinstall}

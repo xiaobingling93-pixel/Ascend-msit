@@ -14,7 +14,7 @@
 import unittest
 from unittest.mock import patch, MagicMock
 import pandas as pd
-from components.profile.msprof.ait_prof.api import get_csv_to_df, get_nlargest, get_top3_sum, get_nhead, \
+from components.profile.msit_prof.api import get_csv_to_df, get_nlargest, get_top3_sum, get_nhead, \
     get_value_from_str, get_value_from_index, get_label_and_content, get_index_and_row, check_value, \
     get_bigger_value, get_smaller_value, get_item_value, set_item_value, get_col_value, \
     set_col_value, add_row, insert_row_1, drop_row_1, drop_row_2

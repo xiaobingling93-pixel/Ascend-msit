@@ -1,4 +1,4 @@
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# Copyright (c) 2023-2025 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,8 +15,8 @@
 import argparse
 import re
 from components.utils.parser import BaseCommand
-from ait_prof.msprof_process import msprof_process
-from ait_prof.args_adapter import MsProfArgsAdapter
+from msit_prof.msprof_process import msprof_process
+from msit_prof.args_adapter import MsProfArgsAdapter
 from components.utils.file_open_check import FileStat
 
 

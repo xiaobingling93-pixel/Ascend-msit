@@ -14,7 +14,7 @@
 import unittest
 from unittest.mock import patch
 import argparse
-from components.profile.msprof.ait_prof.main_cli import (
+from components.profile.msit_prof.main_cli import (
     ProfileCommand,
     check_output_path_legality,
     check_application_string_legality,

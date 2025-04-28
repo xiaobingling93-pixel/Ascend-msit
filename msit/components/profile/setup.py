@@ -1,4 +1,4 @@
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# Copyright (c) 2023-2025 Huawei Technologies Co., Ltd.
 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,14 +16,11 @@ from setuptools import setup, find_packages  # type: ignore
 with open('requirements.txt', encoding='utf-8') as f:
     required = f.read().splitlines()
 
-with open('README.md', encoding='utf-8') as f:
-    long_description = f.read()
-
 msit_sub_tasks = [
     {
     "name": "profile",
     "help_info": "get profiling data of a given programma",
-    "module": "ait_prof.main_cli",
+    "module": "msit_prof.main_cli",
     "attr": "get_cmd_instance"
 }
 ]
@@ -37,7 +34,6 @@ setup(
     name='msit-profile',
     version='7.0.0c1230',
     description='msprof tool',
-    long_description=long_description,
     url='msit_msprof url',
     packages=find_packages(),
     keywords='msit_msprof tool',
@@ -45,6 +41,6 @@ setup(
     python_requires='>=3.7',
     entry_points={
         'msit_sub_task': msit_sub_task_entry_points,
-        'msit_sub_task_installer': ['msit-profile=ait_prof.__install__:MsProfInstall'],
+        'msit_sub_task_installer': ['msit-profile=msit_prof.__install__:MsProfInstall'],
     }
 )
