@@ -1359,7 +1359,6 @@ class TestSelectAlgorithm(unittest.TestCase):
         select_algorithm(self.mock_args, self.file_names)
         mock_process.assert_called_once_with(
             self.mock_args, 
-            file_names=self.file_names,
             output_dir="/mock/output"
         )
 
