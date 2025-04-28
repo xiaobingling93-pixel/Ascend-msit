@@ -54,7 +54,7 @@ def check_tf_version(version):
     return False
 
 
-def execute_command(cmd: str):
+def execute_command(cmd: list):
     """ Execute shell command
     :param cmd: command
     :return: status code
@@ -63,7 +63,7 @@ def execute_command(cmd: str):
         utils.logger.error("Command is None.")
         return -1
     cmd = filter_cmd(cmd)
-    utils.logger.info("[Run CMD]: %s" % cmd)
+    utils.logger.info("[Run CMD]: %s" % " ".join(cmd))
     complete_process = subprocess.run(cmd, shell=False)
     return complete_process.returncode
 
