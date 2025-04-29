@@ -1,6 +1,7 @@
 # Copyright Huawei Technologies Co., Ltd. 2024. All rights reserved.
 import argparse
 import os
+import glob
 from unittest.mock import MagicMock
 
 from ascend_utils.common.security import safe_copy_file, json_safe_dump, json_safe_load, get_valid_read_path, \
