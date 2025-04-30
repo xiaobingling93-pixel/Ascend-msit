@@ -125,6 +125,7 @@ def parse_arguments():
     parser.add_argument('--pdmix', type=cmd_bool, default=False,
                        help='use pdmix quantization type')
     parser.add_argument('--trust_remote_code', type=cmd_bool, default=False)
+    parser.add_argument('--mindie_format', type=cmd_bool, default=False)
     return parser.parse_args()
 
 
