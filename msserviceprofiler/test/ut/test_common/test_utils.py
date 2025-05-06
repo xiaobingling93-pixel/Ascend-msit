@@ -45,18 +45,6 @@ class TestUtilsFuctions(unittest.TestCase):
         result = preprocess_framework_df(framework_df)
         self.assertIsNone(result)
 
-    def test_is_valid_prefill_rid_0(self):
-        batch_group = pd.DataFrame({
-            'rid_list': [['0']]
-        })
-        framework_df = pd.DataFrame({
-            'rid': ['1'],
-            'name': ['httpReq']
-        })
-
-        result = is_valid_prefill(batch_group, framework_df)
-
-        self.assertFalse(result)
     
     def test_postprocess_framework_df_null(self):
         # 创建测试数据

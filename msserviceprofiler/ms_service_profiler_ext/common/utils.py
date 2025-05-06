@@ -94,13 +94,13 @@ def preprocess_framework_df(framework_df):
     return framework_df
 
 
-def is_valid_prefill(batch_group, framework_df):
+def is_valid_prefill(batch_group, rid, framework_df):
     batch_row = batch_group.iloc[0]
-    rid = batch_row['rid_list'][0]
-    if rid == '0':
-        return False
+    cur_rid = batch_row['rid_list'][0]
+    if rid != -1:
+        cur_rid = rid
 
-    target_encode = framework_df[(framework_df['rid'] == str(rid)) & 
+    target_encode = framework_df[(framework_df['rid'] == str(cur_rid)) & 
                                  (framework_df['name'] == 'httpReq')]
     return not target_encode.empty
 
@@ -184,18 +184,23 @@ def get_full_batch(group, framework_df):
     return result
 
 
-def get_groups(framework_df, batch_size, name):
+def get_groups(framework_df, batch_size, rid, name):
     result_df = []
     
     groups = framework_df.groupby((framework_df['name'] == 'batchFrameworkProcessing').cumsum())
     for _, group in groups:
-        batch_group = group[(group['name'] == 'batchFrameworkProcessing') &
-                                            (group['batch_type'] == name) &
-                                            (group['batch_size'] == str(batch_size))]
+        if rid != -1:
+            batch_group = group[(group['name'] == 'batchFrameworkProcessing') &
+                                (group['batch_type'] == name)]
+            batch_group = batch_group[batch_group['rid_list'].apply(lambda x: rid in x)]
+        elif batch_size > 0:
+            batch_group = group[(group['name'] == 'batchFrameworkProcessing') &
+                                (group['batch_type'] == name) &
+                                (group['batch_size'] == str(batch_size))]
         if batch_group.empty:
             continue
 
-        if name == 'Prefill' and not is_valid_prefill(batch_group, framework_df):
+        if name == 'Prefill' and not is_valid_prefill(batch_group, rid, framework_df):
             continue
         result = get_full_batch(group, framework_df)
 
@@ -248,10 +253,6 @@ def get_event_pair_df(framework_df, name):
                 'end_time(microsecond)': next_start,
                 'pid': current_events.iloc[i]['pid'],
                 'tid': current_events.iloc[i]['tid'],
-                'start_datetime': None,
-                'end_datetime': None,
-                'batch_type': None,
-                'batch_size': None
             }
             new_rows.append(new_row)
 
@@ -262,31 +263,10 @@ def get_event_pair_df(framework_df, name):
     result_df = pd.concat([framework_df, new_df], ignore_index=True)
     result_df = result_df.sort_values(by='start_time(microsecond)').reset_index(drop=True)
     return result_df
-    
 
-def postprocess_framework_df(framework_df, post_event_pairs, name):
-    if framework_df.empty:
-        logger.warning(f'{name}: df is empty')
-        return framework_df
-    all_time_rows = framework_df[framework_df['name'] == 'AllTime']
-    start_time = all_time_rows['start_time(microsecond)']
-    end_time = all_time_rows['end_time(microsecond)']
-    all_time_rows.loc[:, 'start_time(microsecond)'] = end_time
-    all_time_rows.loc[:, 'end_time(microsecond)'] = start_time
-    # 更新 framework_df 中的对应行
-    framework_df.update(all_time_rows)
-    if name == 'Prefill':
-        if 'continueBatching' not in framework_df['name'].values:
-            post_event_pairs.append(('deserializeExecuteResponse', 'httpRes'))
-            if 'httpRes' not in framework_df['name'].values:
-                post_event_pairs.append(('deserializeExecuteResponse', 'AllTime'))
+
+def get_post_event_df(post_event_pairs, framework_df, name):
     new_rows = []
-    if 'preprocessBatch' not in framework_df['name'].values:
-        post_event_pairs.append(('batchFrameworkProcessing', 'serializeExcueteMessage'))
-    if 'continueBatching' not in framework_df['name'].values and name == 'Decode':
-        post_event_pairs.append(('deserializeExecuteResponse', 'AllTime'))
-    if 'generateOutput' not in framework_df['name'].values:
-        post_event_pairs.append(('postprocess', 'processPythonExecResult'))
     # 遍历每个事件对
     for current_name, next_name in post_event_pairs:
         # 收集当前事件的所有实例
@@ -310,12 +290,35 @@ def postprocess_framework_df(framework_df, post_event_pairs, name):
             'end_time(microsecond)': next_start,
             'pid': current_events.iloc[0]['pid'],
             'tid': current_events.iloc[0]['tid'],
-            'start_datetime': None,
-            'end_datetime': None,
         }
         new_rows.append(new_row)
     new_df = pd.DataFrame(new_rows)
-    framework_df = pd.concat([framework_df, new_df], ignore_index=True)
+
+    return new_df
+
+
+def postprocess_framework_df(framework_df, post_event_pairs, name):
+    if framework_df.empty:
+        logger.warning(f'{name}: df is empty')
+        return framework_df
+    
+    # 更新AllTime行
+    framework_df.loc[framework_df['name'] == 'AllTime', ['start_time(microsecond)', 'end_time(microsecond)']] = \
+        framework_df.loc[framework_df['name'] == 'AllTime', ['end_time(microsecond)', 'start_time(microsecond)']].values()
+
+    if name == 'Prefill':
+        if 'continueBatching' not in framework_df['name'].values:
+            post_event_pairs.append(('deserializeExecuteResponse', 'httpRes'))
+            if 'httpRes' not in framework_df['name'].values:
+                post_event_pairs.append(('deserializeExecuteResponse', 'AllTime'))
+    new_rows = []
+    if 'preprocessBatch' not in framework_df['name'].values:
+        post_event_pairs.append(('batchFrameworkProcessing', 'serializeExcueteMessage'))
+    if 'continueBatching' not in framework_df['name'].values and name == 'Decode':
+        post_event_pairs.append(('deserializeExecuteResponse', 'AllTime'))
+    
+    post_df = get_post_event_df(post_event_pairs, framework_df, name)
+    framework_df = pd.concat([framework_df, post_df], ignore_index=True)
     framework_df = framework_df.sort_values(by=['start_time(microsecond)']).reset_index(drop=True)
     framework_df = framework_df[framework_df['name'] != 'handleTaskExecution']  # 删除 'handleTaskExecution' 行
     if name == 'Decode':
@@ -401,23 +404,26 @@ def get_filter_df(framework_df, name):
 
 def get_statistics_data(framework_df, filter_name, name):
     if framework_df.empty:
-        logger.warning(f"{name}: The dataframe is empty")
+        logger.warning(f"{name}: The dataframe is empty, no csv file create")
         return framework_df
     batch = framework_df[framework_df['name'] == filter_name]
     if len(batch) == 1:
         start_index = framework_df[framework_df['name'] == filter_name].index[-1]
-        end_index = -1
+        end_index = None
     else:
         start_index = framework_df[framework_df['name'] == filter_name].index[-2]
-        end_index = framework_df[framework_df['name'] == filter_name].index[-1]
+        end_index = framework_df[framework_df['name'] == filter_name].index[-1] - 1
     framework_df['max'] = framework_df.groupby('name')['during_time(microsecond)'].transform('max')
     framework_df['min'] = framework_df.groupby('name')['during_time(microsecond)'].transform('min')
     framework_df['mean'] = framework_df.groupby('name')['during_time(microsecond)'].transform('mean')
     framework_df['std'] = framework_df.groupby('name')['during_time(microsecond)'].transform('std')
+    # 标准差为0时显示0
+    framework_df['std'] = framework_df['std'].fillna(0)
     framework_df.insert(2, 'max', framework_df.pop('max'))
     framework_df.insert(3, 'min', framework_df.pop('min'))
     framework_df.insert(4, 'mean', framework_df.pop('mean'))
     framework_df.insert(5, 'std', framework_df.pop('std'))
+    framework_df = framework_df.rename(columns={'during_time(microsecond)': 'during_time(millisecond)'})
     if name == 'Decode':
         framework_df = framework_df.iloc[:, :10]
     else:
@@ -464,16 +470,18 @@ def get_batch_all_time(framework_df, name):
     return result_df
 
 
-def get_batch_concat_df(filter_df, framework_df, cacl_num, name):
+def get_batch_concat_df(filter_df, framework_df, cacl_num, rid, name):
     concat_df = pd.DataFrame()
     empty_row = pd.DataFrame(index=[0])
     for i in range(cacl_num):
-        rid = filter_df[i].iloc[0]['rid_list'][0]
+        cur_rid = filter_df[i].iloc[0]['rid_list'][0]
+        if cur_rid != -1:
+            cur_rid = rid
         cur_df = get_batch_framework(filter_df[i], name)
         if cur_df.equals(pd.DataFrame()):
             continue
         if name == 'Prefill':
-            http_df = framework_df[(framework_df['rid'] == str(rid)) & (framework_df['name'].isin(HTTP_LIST))]
+            http_df = framework_df[(framework_df['rid'] == str(cur_rid)) & (framework_df['name'].isin(HTTP_LIST))]
             cur_df = pd.concat([cur_df, http_df], ignore_index=True)
             post_event_pairs = [
                 ('encode', 'batchFrameworkProcessing'),
@@ -494,13 +502,14 @@ def get_batch_concat_df(filter_df, framework_df, cacl_num, name):
     return concat_df
 
 
-def process_exporter(framework_df, batch_size, batch_num, name):
+def process_exporter(framework_df, batch_size, batch_num, rid, name):
     # 划分组
-    result_df = get_groups(framework_df, batch_size, name)
+    result_df = get_groups(framework_df, batch_size, rid, name)
     len_result_df = len(result_df)
 
     if len(result_df) == 0:
         logger.warning(f'{name}: no batchFrameworkProcessing with batch_size {batch_size}')
+        logger.warning(f'{name}: no batchFrameworkProcessing with rid {rid}')
         return pd.DataFrame()
     
     cacl_num = len_result_df if len_result_df <= batch_num else batch_num
