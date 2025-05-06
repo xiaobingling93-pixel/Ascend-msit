@@ -15,8 +15,8 @@ from ms_service_profiler.exporters.base import ExporterBase
 from ms_service_profiler.exporters.utils import save_dataframe_to_csv
 from ms_service_profiler.utils.log import logger
 
-from ..common.utils import get_batch_all_time, process_exporter, get_filter_df
-from ..common.utils import get_statistics_data, preprocess_framework_df
+from ..common.split_utils import get_batch_all_time, process_exporter, get_filter_df
+from ..common.split_utils import get_statistics_data, preprocess_framework_df
 
 
 class ExporterPrefill(ExporterBase):
