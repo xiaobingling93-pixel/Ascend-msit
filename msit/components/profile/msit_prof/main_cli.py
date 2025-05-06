@@ -115,7 +115,7 @@ class AnalyzeCommand(BaseCommand):
             "--mode",
             dest="mode",
             required=False,
-            default='graph',
+            default="graph",
             choices=["graph"],
             help="Configure the model inference tuning scenario. Currently, only 'graph' mode are supported."
         )
