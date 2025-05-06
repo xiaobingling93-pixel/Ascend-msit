@@ -15,8 +15,8 @@ from ms_service_profiler.exporters.base import ExporterBase
 from ms_service_profiler.exporters.utils import save_dataframe_to_csv
 from ms_service_profiler.utils.log import logger
 
-from ..common.utils import get_batch_all_time, process_exporter, get_filter_df
-from ..common.utils import get_statistics_data, preprocess_framework_df
+from ..common.split_utils import get_batch_all_time, process_exporter, get_filter_df
+from ..common.split_utils import get_statistics_data, preprocess_framework_df
 
 
 class ExporterDecode(ExporterBase):
@@ -32,6 +32,7 @@ class ExporterDecode(ExporterBase):
         log_level = cls.args.log_level
         batch_size = cls.args.decode_batch_size
         batch_num = cls.args.decode_number
+        rid = cls.args.decode_rid
         df = data.get('tx_data_df')
         if df is None:
             logger.error("The data is empty, please check")
@@ -41,7 +42,7 @@ class ExporterDecode(ExporterBase):
             return
         filter_df = get_filter_df(framework_df, 'Decode')
         add_all_time_df = get_batch_all_time(filter_df, 'Decode')
-        framework_df = process_exporter(add_all_time_df, batch_size, batch_num, 'Decode')
+        framework_df = process_exporter(add_all_time_df, batch_size, batch_num, rid, 'Decode')
         if log_level == 'debug':
             save_dataframe_to_csv(add_all_time_df, output, "decode1.csv")
             save_dataframe_to_csv(framework_df, output, f"decode_{batch_num}.csv")
