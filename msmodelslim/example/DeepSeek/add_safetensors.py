@@ -10,7 +10,7 @@ from safetensors.torch import save_file
 
 from convert_fp8_to_bf16 import weight_dequant
 
-from ascend_utils.common.security import json_safe_load, json_safe_dump, get_valid_read_path
+from ascend_utils.common.security import json_safe_load, json_safe_dump, get_valid_read_path, get_valid_write_path
 from msmodelslim import logger as msmodelslim_logger
 
 
@@ -113,7 +113,9 @@ def add_safetensors(org_paths, target_dir, safetensors_prefix, max_file_size_gb=
             if (current_file_size + tensor_size) > max_file_size and new_data:
                 file_name = f"{safetensors_prefix}-{file_count+1}.safetensors"
                 ori_mask = os.umask(0o377)
-                save_file(new_data, os.path.join(target_dir, file_name))
+                save_path = os.path.join(target_dir, file_name)
+                save_path = get_valid_write_path(save_path, is_dir=False)
+                save_file(new_data, save_path)
                 os.umask(ori_mask)
                 # 更新索引
                 for name in new_data.keys():
@@ -130,7 +132,9 @@ def add_safetensors(org_paths, target_dir, safetensors_prefix, max_file_size_gb=
     if new_data:
         file_name = f"{safetensors_prefix}-{file_count+1}.safetensors"
         ori_mask = os.umask(0o377)
-        save_file(new_data, os.path.join(target_dir, file_name))
+        save_path = os.path.join(target_dir, file_name)
+        save_path = get_valid_write_path(save_path, is_dir=False)
+        save_file(new_data, save_path)
         os.umask(ori_mask)
         for name in new_data.keys():
             index_data["weight_map"][name] = file_name

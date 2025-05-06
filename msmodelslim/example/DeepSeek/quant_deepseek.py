@@ -93,6 +93,7 @@ def parse_arguments():
     parser.add_argument('--model_name', type=str, default=None,
                         validator=StringArgumentValidator(min_length=1, max_length=MAX_KEY_LENGTH, allow_none=True))
     parser.add_argument('--trust_remote_code', type=cmd_bool, default=False)
+    parser.add_argument('--mindie_format', type=cmd_bool, default=False)
     return parser.parse_args()
 
 
@@ -154,7 +155,7 @@ class Quantifier:
             anti_outlier.process()
 
         if not os.path.exists(save_path):
-            os.mkdir(save_path)
+            os.mkdir(save_path, mode=0o750)
 
         calibrator = Calibrator(self.model, self.quant_config, calib_data=tokenized_data, disable_level=disable_level)
         calibrator.run()

@@ -55,7 +55,6 @@ def parse_arguments():
     parser.add_argument('--do_smooth', type=cmd_bool, default=False)
     parser.add_argument('--use_sigma', type=cmd_bool, default=False)
     parser.add_argument('--use_reduce_quant', type=cmd_bool, default=False)
-    parser.add_argument('--tp_size', type=int, default=1)
     parser.add_argument('--sigma_factor', type=float, default=3.0)
     parser.add_argument('--is_lowbit', type=cmd_bool, default=False)
     parser.add_argument('--mm_tensor', type=cmd_bool, default=True)
@@ -76,6 +75,7 @@ def parse_arguments():
     parser.add_argument('--model_name', type=str, default=None,
                         validator=StringArgumentValidator(min_length=1, max_length=MAX_KEY_LENGTH, allow_none=True))
     parser.add_argument('--trust_remote_code', type=cmd_bool, default=False)
+    parser.add_argument('--mindie_format', type=cmd_bool, default=False)
     return parser.parse_args()
 
 
@@ -225,7 +225,7 @@ if __name__ == '__main__':
         )
 
     if not os.path.exists(save_directory):
-        os.makedirs(save_directory, exist_ok=True)
+        os.makedirs(save_directory, mode=0o750, exist_ok=True)
 
     # check dst dir
     save_directory = get_valid_write_path(save_directory, is_dir=True)
@@ -238,6 +238,7 @@ if __name__ == '__main__':
         input_path=model_path,
         output_path=save_directory,
         quant_config=quant_conf,
+        mindie_format=args.mindie_format,
         custom_hooks=custom_hooks
     )
     checker.copy_tokenizer_files(model_path, save_directory)

@@ -8,6 +8,7 @@ import torch
 import torchvision.transforms as T
 from torchvision.transforms.functional import InterpolationMode
 
+from ascend_utils.common.security import get_valid_read_path
 
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
@@ -85,6 +86,7 @@ def dynamic_preprocess(image, min_num=1, max_num=12, image_size=448, use_thumbna
 
 
 def load_image(image_file, input_size=448, max_num=12):
+    image_file = get_valid_read_path(image_file, is_dir=False)
     image = Image.open(image_file).convert('RGB')
     transform = build_transform(input_size=input_size)
     images = dynamic_preprocess(image, image_size=input_size, use_thumbnail=True, max_num=max_num)
@@ -97,7 +99,9 @@ def get_textvqa_calibration(textvqa_path, calib_num=30, get_all_calib=False):
     val_json = 'textvqa_val.jsonl'
     calibration_dataset = []
     
-    with open(os.path.join(textvqa_path, val_json), 'r') as file:
+    val_json_path = os.path.join(textvqa_path, val_json)
+    val_json_path = get_valid_read_path(val_json_path)
+    with open(val_json_path, 'r') as file:
         for line in file:
             line_dict = json.loads(line.strip())
             line_dict['text'] = line_dict['question']

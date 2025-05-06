@@ -1,17 +1,18 @@
 # Copyright Huawei Technologies Co., Ltd. 2024. All rights reserved.
 import argparse
 import os
+import glob
 from unittest.mock import MagicMock
 
 from ascend_utils.common.security import safe_copy_file, json_safe_dump, json_safe_load, get_valid_read_path, \
     get_valid_write_path
 
 
-def copy_json(src_path: str, dst_path: str, quant_config):
+def copy_json(src_path: str, dst_path: str, quant_config, mindie_format: bool):
     safe_copy_file(src_path, dst_path)
 
 
-def modify_config_json(src_path: str, dst_path: str, quant_config, custom_hook=None):
+def modify_config_json(src_path: str, dst_path: str, quant_config, mindie_format: bool, custom_hook=None):
     """
     复制config.json
     @param src_path: 源目录
@@ -22,14 +23,34 @@ def modify_config_json(src_path: str, dst_path: str, quant_config, custom_hook=N
     model_config = json_safe_load(src_path)
     model_config['quantize'] = str(quant_config.model_quant_type.value).lower()
     
-    matched_files = glob.glob(os.path.join(dst_path.split("config.json")[0], \
-                                f"quant_model_description_*.json"))
-    dest_quant_description_filepath = matched_files[0]
+    if mindie_format:
+        matched_files = glob.glob(os.path.join(dst_path.split("config.json")[0], \
+                                    f"quant_model_description_*.json"))
+        dest_quant_description_filepath = matched_files[0]
+    else:
+        dest_quant_description_filepath = os.path.join(dst_path.split("config.json")[0], \
+                                                        f"quant_model_description.json")
+    dest_quant_description_filepath = get_valid_write_path(dest_quant_description_filepath, is_dir=False)
     quant_description_data = json_safe_load(dest_quant_description_filepath, check_user_stat=False)
 
-    model_config['quantization_config'] = quant_description_data
+    quantization_config = quant_description_data
     if quant_config.use_kvcache_quant:
-        model_config['quantization_config']['kv_quant_type'] = 'C8'
+        quantization_config['kv_quant_type'] = "C8"
+    else:
+        quantization_config['kv_quant_type'] = None
+    
+    if quant_config.use_fa_quant:
+        quantization_config['use_fa_quant'] = "FAQuant"
+    else:
+        quantization_config['use_fa_quant'] = None
+
+    quantization_config['group_size'] = quant_config.group_size
+
+    if mindie_format:
+        model_config['quantization_config'] = quantization_config
+    else:
+        json_safe_dump(quantization_config, dest_quant_description_filepath, indent=4)
+    
     if custom_hook:
         custom_hook(model_config)
     json_safe_dump(model_config, dst_path, indent=4)
@@ -46,7 +67,7 @@ FILE_HOOKS = {
 DEFAULT_FILE_HOOKS = copy_json
 
 
-def copy_config_files(input_path, output_path, quant_config, custom_hooks=None):
+def copy_config_files(input_path, output_path, quant_config, mindie_format, custom_hooks=None):
     """
     复制模型配置文件
     @param input_path: 源目录
@@ -68,7 +89,7 @@ def copy_config_files(input_path, output_path, quant_config, custom_hooks=None):
             hook = custom_hooks[file]
         else:
             hook = FILE_HOOKS.get(file, DEFAULT_FILE_HOOKS)
-        hook(src_path, dst_path, quant_config)
+        hook(src_path, dst_path, quant_config, mindie_format)
 
 
 if __name__ == '__main__':

@@ -564,7 +564,7 @@ def select_algorithm(args, file_names):
         process_speculative_moe(args, file_names=file_names, output_dir=args.output_dir)
     # 动态场景下 A2 c2lb 算法
     elif args.algorithm == ALGORITHM_DYNAMIC_C2LB and args.device_type == A2:
-        process_dynamic_c2lb(args, file_names=file_names, output_dir=args.output_dir)
+        process_dynamic_c2lb(args, output_dir=args.output_dir)
     # 静态场景下 A3 c2lb 算法
     elif args.algorithm == ALGORITHM_C2LB and args.device_type == A3:
         if args.share_expert_devices == 0:

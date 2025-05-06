@@ -39,6 +39,7 @@ def parse_args():
     parser.add_argument('--from_fp8', action='store_true', help="Origin model is of fp8")
     parser.add_argument('--from_bf16', action='store_true', help="Origin model is of bf16")
     parser.add_argument('--fa_quant', action="store_true", help="Enable fa quant")
+    parser.add_argument('--mindie_format', action="store_true", help="Enable only mindie config save")
     return parser.parse_args()
 
 
@@ -155,15 +156,16 @@ def main():
     for ids in range(config.num_hidden_layers):
         disable_names.append("model.layers." + str(ids) + ".self_attn.kv_b_proj")
 
-    if 'R1' in args.model_path.upper():
-        disable_attn_layers = [0, 1, 2, 46, 47, 50, 54, 55, 56, 57, 58, 59, 60]
-    elif 'V3' in args.model_path.upper():
-        disable_attn_layers = [0, 1, 2, 46, 50, 51, 53, 54, 55, 56, 57, 59, 60]
-    else:
-        disable_attn_layers = []
-    for ids in disable_attn_layers:
-        if ids < num_layer:
-            disable_names.append("model.layers." + str(ids) + ".self_attn")
+    if args.fa_quant:
+        if 'R1' in args.model_path.upper():
+            disable_attn_layers = [0, 1, 2, 46, 47, 50, 54, 55, 56, 57, 58, 59, 60]
+        elif 'V3' in args.model_path.upper():
+            disable_attn_layers = [0, 1, 2, 46, 50, 51, 53, 54, 55, 56, 57, 59, 60]
+        else:
+            disable_attn_layers = []
+        for ids in disable_attn_layers:
+            if ids < num_layer:
+                disable_names.append("model.layers." + str(ids) + ".self_attn")
 
     quant_config = QuantConfig(
         a_bit=8,
@@ -183,8 +185,12 @@ def main():
     calibrator.run()
     pbar.update(1)
 
+    if args.mindie_format:
+        quant_model_description_json_name = "quant_model_description_w8a8_dynamic.json"
+    else:
+        quant_model_description_json_name = "quant_model_description.json"
     calibrator.save(save_path,
-                    json_name="quant_model_description_w8a8_dynamic.json",
+                    json_name=quant_model_description_json_name,
                     safetensors_name="quant_model_weight_w8a8_dynamic.safetensors",
                     save_type=["safe_tensor"],
                     part_file_size=4)
@@ -193,7 +199,7 @@ def main():
         'config.json': functools.partial(modify_config_json, custom_hook=custom_hook)
     }
     copy_config_files(input_path=model_path, output_path=save_path, quant_config=quant_config,
-                      custom_hooks=custom_hooks)
+                      mindie_format=args.mindie_format, custom_hooks=custom_hooks)
     pbar.update(1)
     add_safetensors(org_paths=model_path, target_dir=save_path, safetensors_prefix="mtp_float",
                     max_file_size_gb=5, prefix="model.layers.61.")
