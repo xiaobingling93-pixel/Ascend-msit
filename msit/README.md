@@ -76,7 +76,9 @@ msit llm dump <options>
 #### 2.2 Compare
 提供了传统小模型推理场景下的自动化比对功能，用于定位问题算子，适用于TensorFlow、TensorFlow 2.0、ONNX、Caffe、MindIE-Torch框架。
 
- [compare快速入门指南](./docs/debug/compare/README.md)
+[compare快速入门指南](./docs/debug/compare/README.md)
+
+[融合pass比对](./debug/compare/融合算子匹配对应pass使用说明.md)
 
 #### 2.3 OpCheck
 提供了传统小模型场景下精度预检功能，支持对经过GE推理后 dump 落盘数据进行算子精度预检，检测kernel级别的算子精度是否达标。\

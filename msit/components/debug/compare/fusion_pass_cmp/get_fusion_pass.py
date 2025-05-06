@@ -13,7 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import json
+import subprocess
+import argparse
+from glob import glob
+from time import time
+from datetime import datetime
+from dataclasses import dataclass
+
 import pandas as pd
 import numpy as np
 
@@ -21,6 +29,52 @@ from components.utils.log import logger
 from components.utils.constants import JSON_FILE_MAX_SIZE
 from components.utils.file_open_check import ms_open
 from components.utils.check.rule import Rule
+from components.utils.util import filter_cmd
+from components.utils.file_open_check import FileStat
+
+
+@dataclass
+class FusionParams:
+    fusion_after_data_dir: str
+    fusion_before_data_dir: str
+    fusion_after_model: str
+    fusion_before_model: str
+
+
+def execute_command(cmd: list):
+    if not isinstance(cmd, list):
+        raise TypeError(f"Expected list, but got {type(cmd).__name__}.")
+    cmd = filter_cmd(cmd)
+    logger.info("[Run CMD]: %r." % ' '.join(cmd))
+    subprocess.run(cmd, shell=False)
+    return
+
+
+def get_pass(params: FusionParams, output_path: str, fusion_node_switch: bool):
+    fusion_after_data_dir = params.fusion_after_data_dir
+    fusion_before_data_dir = params.fusion_before_data_dir
+    fusion_after_model = params.fusion_after_model
+    fusion_before_model = params.fusion_before_model
+    formatted_date = datetime.fromtimestamp(int(time())).strftime("%Y%m%d_%H%M%S")
+    msit_dir = os.path.join(output_path, f"msit_{formatted_date}")
+    os.makedirs(msit_dir, mode=0o750)
+    logger.info('Created directory %r.' % msit_dir)
+    run_compare(fusion_after_data_dir, fusion_before_data_dir, fusion_after_model, fusion_before_model, msit_dir)
+    try:
+        cmp_res_file = glob(os.path.join(msit_dir, "result_*"))[0]
+    except IndexError as e:
+        raise FileNotFoundError(f"No result file found in directory: {msit_dir}.") from e
+    logger.info(f"Result of the comparison: {cmp_res_file}.")
+    out_csv_path = os.path.join(msit_dir, "fusion_pass_info.csv")
+    fusion_pass_analysis(cmp_res_file, fusion_after_model, out_csv_path, fusion_node_switch)
+
+
+def run_compare(fusion_after_data_dir, fusion_before_data_dir, fusion_after_model, fusion_before_model, output_dir):
+    cann_path = os.environ.get("ASCEND_TOOLKIT_HOME", "/usr/local/Ascend/ascend-toolkit/latest")
+    msaccucmp = os.path.join(cann_path, "tools", "operator_cmp", "compare", "msaccucmp.py")
+    cmd = ["python3", msaccucmp, "compare", "-m", fusion_after_data_dir, "-g", fusion_before_data_dir, "-f", \
+           fusion_after_model, "-cf", fusion_before_model, "-out", output_dir]
+    execute_command(cmd)
 
 
 def fusion_pass_analysis(csv_result_path, fusion_json_path, out_csv_path, fusion_node_switch):
@@ -100,3 +154,69 @@ def write_output_to_csv(file_path, op_info_dict, out_csv):
     df = df.drop(columns=['Index', 'Address.1', 'DataType.1', 'CompareFailReason'])
     df.to_csv(out_csv, index=False)
     return
+
+
+def check_output_path_legality(value):
+    if not value:
+        return value
+    path_value = value
+    try:
+        file_stat = FileStat(path_value)
+    except FileNotFoundError as ffe:
+        raise argparse.ArgumentTypeError("output path %r does not exist." % path_value) from ffe
+    except PermissionError as pe:
+        raise argparse.ArgumentTypeError("permission denied for output path %r." % path_value) from pe
+    except Exception as err:
+        raise argparse.ArgumentTypeError(
+            "an unexpected error occurred while checking the output path %r." % path_value
+            ) from err
+    if not file_stat.is_basically_legal("write", strict_permission=False):
+        raise argparse.ArgumentTypeError("output path %r cannot be written to." % path_value)
+    return path_value
+
+
+def check_input_path_legality(value):
+    if not value:
+        return value
+    path_value = value
+    try:
+        file_stat = FileStat(path_value)
+    except FileNotFoundError as ffe:
+        raise argparse.ArgumentTypeError("input path %r does not exist." % path_value) from ffe
+    except PermissionError as pe:
+        raise argparse.ArgumentTypeError("permission denied for input path %r." % path_value) from pe
+    except Exception as err:
+        raise argparse.ArgumentTypeError(
+            "an unexpected error occurred while checking the input path %r." % path_value
+            ) from err
+    if not file_stat.is_basically_legal('read', strict_permission=False):
+        raise argparse.ArgumentTypeError("input path %r cannot be read." % path_value)
+    return path_value
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Compare precision data for fusion operators")
+    parser.add_argument("-m", "--fusion-after-dir", dest="fusion_after_dir", type=check_input_path_legality,
+                        help="Directory for precision data when fusion switch is enabled.", required=True)
+    parser.add_argument("-g", "--fusion-before-dir", dest="fusion_before_dir", type=check_input_path_legality,
+                        help="Directory for precision data when fusion switch is disabled.", required=True)
+    parser.add_argument("-f", "--fusion-after-model", dest="fusion_after_model", type=check_input_path_legality, 
+                        help="JSON file for the model with fusion enabled.", required=True)
+    parser.add_argument("-cf", "--fusion-before-model", dest="fusion_before_model", type=check_input_path_legality, 
+                        help="JSON file for the model with fusion disabled.", required=True)
+    parser.add_argument("-o", "--output-path", dest="output_path", type=check_output_path_legality, 
+                        help="Directory for output files.", default="./")
+    parser.add_argument("-fn", "--fusion-node-switch", dest="fusion_node_switch", action="store_false",
+                        default=True, help="Whether to output only fusion operators (default: True).")
+    args = parser.parse_args()
+    params = FusionParams(
+    fusion_after_data_dir=args.fusion_after_dir,
+    fusion_before_data_dir=args.fusion_before_dir,
+    fusion_after_model=args.fusion_after_model,
+    fusion_before_model=args.fusion_before_model
+    )
+    get_pass(params, args.output_path, args.fusion_node_switch)
+
+
+if __name__ == "__main__":
+    main()
