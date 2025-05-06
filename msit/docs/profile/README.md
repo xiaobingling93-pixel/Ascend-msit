@@ -14,7 +14,7 @@
 #### 使用入口
 profile可以直接通过msit命令行形式启动模型推理的性能分析。使用msit benchmark(msit benchmark为msit自带的推理工程，用户只需修改om路径即可进行模型推理的性能分析及数据采集)推理的性能分析的命令如下：
 ```bash
-msit profile --application "msit benchmark -om *.om --device 0" --output <some path>
+msit profile msprof --application "msit benchmark -om *.om --device 0" --output <some path>
 ```
 其中，*为OM离线模型文件名；<some path>为路径名称。
 得到主要输出结果如下：

@@ -1,4 +1,4 @@
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# Copyright (c) 2023-2025 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,25 +14,15 @@
 import unittest
 from unittest.mock import patch
 import argparse
+from components.utils.parser import BaseCommand
 from components.profile.msit_prof.main_cli import (
-    ProfileCommand,
-    check_output_path_legality,
+    ProfileCommand, AnalyzeCommand,
     check_application_string_legality,
     get_cmd_instance
 )
 
 
 class TestProfileCommand(unittest.TestCase):
-    def test_check_output_path_legality(self):
-        # 测试合法路径
-        legal_path = "/path/to/legal/output"
-        self.assertEqual(check_output_path_legality(legal_path), legal_path)
-    
-    def test_check_output_path_illegal(self):
-        # 测试非法路径
-        with self.assertRaises(argparse.ArgumentTypeError):
-            check_output_path_legality("/ille@gal/path/output")
-        
     def test_check_application_string_legality(self):
         # 测试合法应用字符串
         legal_str = "legal_app_str123"
@@ -49,11 +39,16 @@ class TestProfileCommand(unittest.TestCase):
         cmd.add_arguments(mock_parser)
         mock_parser.add_argument.assert_called()
 
+
+class TestAnalyzeCommand(unittest.TestCase):
+    @patch('argparse.ArgumentParser')
+    def test_add_arguments(self, mock_parser):
+        cmd = AnalyzeCommand("analyze", "help_info")
+        cmd.add_arguments(mock_parser)
+        mock_parser.add_argument.assert_called()
+
     def test_get_cmd_instance(self):
         instance = get_cmd_instance()
-        self.assertIsInstance(instance, ProfileCommand)
+        self.assertIsInstance(instance, BaseCommand)
         self.assertEqual(instance.name, "profile")
-        self.assertEqual(instance.help_info, "get profiling data of a given programma")
-
-if __name__ == '__main__':
-    unittest.main()
+        self.assertEqual(instance.help_info, "Provides a one-stop performance tuning and analysis tools.")
