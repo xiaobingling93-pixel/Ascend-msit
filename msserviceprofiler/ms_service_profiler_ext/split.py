@@ -28,9 +28,9 @@ from ms_service_profiler_ext.exporters.exporter_decode import ExporterDecode
 def add_exporters(args):
     exporter_cls = []
     exporters = []
-    if args.prefill_batch_size > 0:
+    if args.prefill_batch_size > 0 or args.prefill_rid != -1:
         exporter_cls.append(ExporterPrefill)
-    if args.decode_batch_size > 0:
+    if args.decode_batch_size > 0 or args.decode_rid != -1:
         exporter_cls.append(ExporterDecode)
     for cls in exporter_cls:
         exporter = cls()
@@ -77,6 +77,18 @@ def main():
         type=int,
         default=1,
         help='The number of Decode batch to calc statistical data')
+    parser.add_argument(
+       '--prefill-rid',
+       type=int,
+       default=-1,
+       help='The rid for Prefill batch to split' 
+    )
+    parser.add_argument(
+        '--decode-rid',
+        type=int,
+        default=-1,
+        help='The rid for Decode batch to split'
+    )
 
     args = parser.parse_args()
 
