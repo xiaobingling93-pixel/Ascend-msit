@@ -114,6 +114,8 @@ class SafeGenerator:
         quant_description_data = json_safe_load(dest_quant_description_filepath, check_user_stat=False)
         
         data['torch_dtype'] = str(torch_dtype).split(".")[1]
+        if args.mindie_format:
+            data['quantize'] = quantize_type
         if args is not None:
             quantization_config = {
                 # 当is_lowbit为True，open_outlier为False时，group_size生效
