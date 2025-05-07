@@ -18,7 +18,7 @@ import shutil
 import re
 
 from components.utils.log import logger
-from msit_prof.args_adapter import MsProfArgsAdapter
+from msit_prof.msprof.args_adapter import MsProfArgsAdapter
 
 PATH_MAX_LENGTH = 255
 

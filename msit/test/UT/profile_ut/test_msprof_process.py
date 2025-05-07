@@ -13,7 +13,7 @@
 # limitations under the License.
 import unittest
 from unittest.mock import patch, MagicMock
-from components.profile.msit_prof.msprof_process import (
+from components.profile.msit_prof.msprof.msprof_process import (
     remove_invalid_chars,
     msprof_run_profiling,
     args_rules, msprof_process
@@ -75,10 +75,10 @@ class TestMsprofUtils(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             args_rules(args)
 
-    @patch('components.profile.msit_prof.msprof_process.args_rules')
+    @patch('components.profile.msit_prof.msprof.msprof_process.args_rules')
     @patch('shutil.which')
     @patch('os.getenv')
-    @patch('components.profile.msit_prof.msprof_process.msprof_run_profiling')
+    @patch('components.profile.msit_prof.msprof.msprof_process.msprof_run_profiling')
     def test_msprof_process_success(self, mock_msprof_run_profiling, mock_os_getenv, mock_shutil_which, mock_args_rules):
         mock_args = MagicMock()
         mock_args_rules.return_value = mock_args

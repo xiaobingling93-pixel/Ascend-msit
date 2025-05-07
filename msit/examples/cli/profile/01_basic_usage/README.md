@@ -12,7 +12,7 @@
   - 昇腾AI处理器的离线模型（.om）路径
 - **不指定模型输入** 命令示例，**其中--application中的路径需使用绝对路径**
   ```sh
-  msit profile --application "msit benchmark -om /home/HwHiAiUser/resnet101_bs1.om" --output output_data/
+  msit profile msprof --application "msit benchmark -om /home/HwHiAiUser/resnet101_bs1.om" --output output_data/
   ```
   - `--application` 配置为运行环境上app可执行文件，可配置msit自带的benchmark推理程序，需配置msit自带的benchmark推理程序，具体使用方法参照参数说明及benchmark使用。
   - `-o, --output` (可选) 搜集到的profiling数据的存放路径，默认为当前路径下输出output目录

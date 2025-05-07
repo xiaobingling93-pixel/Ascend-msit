@@ -15,9 +15,11 @@
 import os
 import stat
 import sys
+import argparse
 import re
 import shutil
 
+from components.utils.file_open_check import FileStat
 from components.utils.constants import PATH_WHITE_LIST_REGEX
 
 
@@ -257,3 +259,51 @@ def check_positive_integer(value):
     if ivalue < 0 or ivalue > 1e6:
         raise ValueError("%s is an invalid positive int value" % value)
     return ivalue
+
+
+def check_output_path_legality(value):
+    if not value:
+        return value
+    path_value = value
+    try:
+        file_stat = FileStat(path_value)
+    except Exception as err:
+        raise argparse.ArgumentTypeError("Output path is illegal, please check.") from err
+    if not file_stat.is_basically_legal("write"):
+        raise argparse.ArgumentTypeError("The current output path does not have right write permission, please check.")
+    return path_value
+
+
+def check_input_opsummary_legality(value):
+    if not value:
+        return value
+    file_path = value
+    try:
+        file_stat = FileStat(file_path)
+    except Exception as err:
+        raise argparse.ArgumentTypeError("Check permissions failed when load op_summary file, please check.") from err
+    if not file_stat.is_basically_legal('read', strict_permission=True):
+        raise argparse.ArgumentTypeError("Op_summary file: %r cannot be read, please check." % file_path)
+    if not file_stat.is_legal_file_type(["csv"]):
+        raise argparse.ArgumentTypeError("Op_summary file muse be 'csv' type, please check.")
+    return file_path
+
+
+def valid_ops_map_file(value):
+    if not value:
+        return value
+    file_path = value
+    try:
+        file_stat = FileStat(file_path)
+    except Exception as err:
+        raise argparse.ArgumentTypeError("Input path: %r is illegal." % file_path) from err
+    if not file_stat.is_basically_legal('read', strict_permission=True):
+        raise argparse.ArgumentTypeError("GE graph file: %r cannot be read, please check." % file_path)
+
+    if file_stat.is_dir:
+        raise argparse.ArgumentTypeError("We need GE graph file, bug you give a path!")
+    if not file_stat.is_legal_file_type(["txt"]):
+        err_msg = "Please make sure that the file you provide is correct, " \
+                  "we need files similar to ge_proto_xx_graph_Build.txt"
+        raise argparse.ArgumentTypeError(err_msg)
+    return file_path

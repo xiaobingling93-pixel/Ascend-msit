@@ -14,6 +14,7 @@
 import os
 import stat
 import unittest
+import argparse
 import tempfile
 
 from unittest.mock import patch, Mock
@@ -37,8 +38,13 @@ from components.utils.security_check import (
     find_existing_path,
     is_enough_disk_space_left,
     ms_makedirs,
-    check_positive_integer
+    check_positive_integer,
+    check_output_path_legality,
+    check_input_opsummary_legality,
+    valid_ops_map_file
 )
+from components.utils.file_open_check import FileStat
+
 
 MAX_READ_FILE_SIZE_4G = 4294967296  # 4G, 4 * 1024 * 1024 * 1024
 MAX_READ_FILE_SIZE_32G = 34359738368  # 32G, 32 * 1024 * 1024 * 1024
@@ -76,12 +82,6 @@ class TestMakedirs(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.dp.cleanup()
-
-@pytest.fixture(scope="module", autouse=True)
-def setup():
-    # Setup code here if necessary
-    yield
-    # Teardown code here if necessary
 
 
 def test_is_belong_to_user_or_group_given_path_when_valid_then_pass():
@@ -252,8 +252,6 @@ def test_check_dict_character_given_invalid_characters_in_keys_when_called_then_
     with pytest.raises(ValueError, match=r"dict key contains invalid characters\."):
         check_dict_character({invalid_key: "value"})
 
-def is_belong_to_user_or_group(file_stat):
-    return file_stat.st_uid == os.getuid() or file_stat.st_gid in os.getgroups()
 
 def test_get_valid_read_path_given_nonexistent_file_when_called_then_raises_value_error():
     with patch('components.utils.security_check.get_valid_path', return_value="/nonexistent/file"), \
@@ -381,3 +379,44 @@ class TestCheckPositiveInteger(unittest.TestCase):
             
         with self.assertRaises(ValueError):
             check_positive_integer("12345678901234567890")
+
+
+def test_check_output_path_legality_when_path_is_valid_then_pass():
+    legal_path = "/path/to/legal/output"
+    assert check_output_path_legality(legal_path) == legal_path
+
+
+def test_check_output_path_illegal_when_path_is_invalid_then_raise_error():
+    with pytest.raises(argparse.ArgumentTypeError):
+        check_output_path_legality("/ille@gal/path/output")
+
+
+def test_check_input_opsummary_legality_given_valid_path_when_all_checks_pass_then_return_path():
+    with patch.object(FileStat, "is_basically_legal") as mock_legal, \
+         patch.object(FileStat, "is_legal_file_type") as mock_file_type:
+        mock_legal.return_value = True
+        mock_file_type.return_value = True
+        file_path = 'valid.csv'
+        result = check_input_opsummary_legality(file_path)
+        assert result == file_path
+
+
+def test_check_input_opsummary_legality_given_non_csv_when_checked_then_raise_error():
+    with patch.object(FileStat, "is_basically_legal") as mock_legal, \
+         patch.object(FileStat, "is_legal_file_type") as mock_file_type, \
+         pytest.raises(argparse.ArgumentTypeError, match="Op_summary file muse be 'csv'") as exc_info:
+        mock_legal.return_value = True
+        mock_file_type.return_value = False
+        check_input_opsummary_legality('file.txt')
+
+
+@patch("components.utils.file_open_check.FileStat")
+def test_valid_ops_map_file_given_valid_file_when_all_checks_pass_then_return_path(mock_filestat):
+    with patch.object(FileStat, "is_basically_legal") as mock_legal, \
+         patch.object(FileStat, "is_legal_file_type") as mock_file_type, \
+         patch.object(FileStat, "is_dir") as mock_is_dir, \
+         pytest.raises(argparse.ArgumentTypeError, match="We need GE graph file, bug you give a path!") as exc_info:
+        mock_legal.return_value = True
+        mock_file_type.return_value = True
+        mock_is_dir.return_value = False
+        valid_ops_map_file('ge_proto_graph_Build.txt')

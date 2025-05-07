@@ -14,23 +14,13 @@
 
 import argparse
 import re
+
 from components.utils.parser import BaseCommand
-from msit_prof.msprof_process import msprof_process
-from msit_prof.args_adapter import MsProfArgsAdapter
-from components.utils.file_open_check import FileStat
-
-
-def check_output_path_legality(value):
-    if not value:
-        return value
-    path_value = value
-    try:
-        file_stat = FileStat(path_value)
-    except Exception as err:
-        raise argparse.ArgumentTypeError(f"weight path:{path_value} is illegal. Please check.") from err
-    if not file_stat.is_basically_legal("write"):
-        raise argparse.ArgumentTypeError(f"output path:{path_value} is illegal. Please check.")
-    return path_value
+from components.utils.security_check import check_output_path_legality, check_input_opsummary_legality, \
+                                            valid_ops_map_file
+from msit_prof.msprof.msprof_process import msprof_process
+from msit_prof.msprof.args_adapter import MsProfArgsAdapter
+from msit_prof.analyze.autofuse.single_op_analyze import SingleOpAnalyzer
 
 
 def check_application_string_legality(value):
@@ -119,7 +109,69 @@ class ProfileCommand(BaseCommand):
         return msprof_process(args_adapter)
 
 
+class AnalyzeCommand(BaseCommand):
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--mode",
+            dest="mode",
+            required=False,
+            default="graph",
+            choices=["graph"],
+            help="Configure the model inference tuning scenario. Currently, only 'graph' mode are supported."
+        )
+        parser.add_argument(
+            "-f",
+            "--framework",
+            dest="framework",
+            required=False,
+            default="tf",
+            choices=["tf"],
+            help="Specify the AI framework to use. Currently, only 'TensorFlow' is supported."
+        )
+        parser.add_argument(
+            "--origin",
+            dest="origin",
+            type=check_input_opsummary_legality,
+            required=True,
+            help="Specify the path of op_summary data collected after disabling all fusion strategies."
+        )
+        parser.add_argument(
+            "--fused",
+            dest="fused",
+            type=check_input_opsummary_legality,
+            required=True,
+            help="Specify the path of op_summary data collected after ebale 'autofuse' fusion strategies."
+        )
+        parser.add_argument(
+            "-ops",
+            "--ops-graph",
+            dest="ops_graph",
+            type=valid_ops_map_file,
+            required=True,
+            help="Specify the file path of dumped GE graph."
+        )
+        parser.add_argument(
+            "-o",
+            "--output",
+            dest="output",
+            type=check_output_path_legality,
+            required=False,
+            default="./",
+            help="Specify the save path for the performance analysis result."
+        )
+
+    def handle(self, args):
+        autofuse_analyzer = SingleOpAnalyzer(args)
+        autofuse_analyzer.analyze()
+
+
 def get_cmd_instance():
-    help_info = "get profiling data of a given programma"
-    cmd_instance = ProfileCommand("profile", help_info)
-    return cmd_instance
+    profile_help_info = "Provides a one-stop performance tuning and analysis tools."
+    analyze_help_info = "Supports the analysis of profiling data and provides analysis reports" \
+                        "to guide model performance tuning."
+    msprof_instance = ProfileCommand("msprof", "get profiling data of a given programma.")
+    analyze_instance = AnalyzeCommand("analyze", analyze_help_info)
+    instances = [
+        msprof_instance, analyze_instance
+    ]
+    return BaseCommand("profile", profile_help_info, instances)
