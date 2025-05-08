@@ -5,7 +5,7 @@ import os
 import gc
 import stat
 import functools
-from typing import OrderedDict, Mapping, Optional, Tuple, List
+from typing import OrderedDict, Mapping, Optional, Tuple, List, Union
 import inspect
 from collections import OrderedDict as OrderedDict_CHECK
 
@@ -17,8 +17,7 @@ from accelerate.hooks import add_hook_to_module, remove_hook_from_module
 
 from ascend_utils import ResListToRelease
 from ascend_utils.common.security import get_valid_write_path, check_type
-from msmodelslim.pytorch.llm_ptq.hooks.hook_def import ProcessHook
-from msmodelslim.pytorch.llm_ptq.hooks.factory import get_process_hooks
+from msmodelslim.pytorch.llm_ptq.model import ModelAdapterRegistry
 from msmodelslim import logger as msmodelslim_logger
 
 from msmodelslim.pytorch.llm_ptq.accelerate_adapter import (PrepareWeight,
@@ -33,7 +32,6 @@ except ImportError:
     msmodelslim_logger.warning("Unable to import torch_npu.")
 
 from msmodelslim.pytorch.llm_ptq.anti_outlier.graph_utils import (
-    extract_dag,
     GraphOpt,
     PatternProcess,
     NormBias,
@@ -117,6 +115,8 @@ def replace_rms_norm(model: nn.Module, norm_class_name: str):
 
 
 def is_model_multimodal(model):
+    if not hasattr(model, 'config'):
+        return False
     if not hasattr(model.config, 'architectures'):
         return False
     if (model.config.architectures[0] == 'LlavaForConditionalGeneration' or
@@ -209,20 +209,16 @@ class AntiOutlier(object):
 
         self.norm_class_name = norm_class_name
 
-        self.hooks = get_process_hooks(model)
+        self.model_adapter = ModelAdapterRegistry.get_adapter(model)
 
         if not self.with_accelerate:
             self.device_org = next(model.parameters()).device
         else:
             self.device_org = None
 
-        # 如果手动指定NORM_LINEAR结构，就无需拷贝模型了
-        self.norm_linear_subgraph = None
-        if ProcessHook.GET_NORM_LINEAR_SUBGRAPH in self.hooks and self.hooks[
-            ProcessHook.GET_NORM_LINEAR_SUBGRAPH] is not None:
-            self.norm_linear_subgraph = self.hooks[ProcessHook.GET_NORM_LINEAR_SUBGRAPH](model)
-
         self.model = model
+
+        self.norm_linear_subgraph = {}
 
         try:
             self.init_dag()
@@ -253,16 +249,7 @@ class AntiOutlier(object):
                         [m.__class__ for m in self.model.modules() if "norm" in m.__class__.__name__.lower()]))
                 norm_class = [norm_class[0]]
                 self.norm_class_name = norm_class[0].__name__.lower()
-            if ProcessHook.GET_NORM_LINEAR_SUBGRAPH not in self.hooks or self.hooks[
-                ProcessHook.GET_NORM_LINEAR_SUBGRAPH] is None:
-                # 不要保存为成员变量，内部会引用模型以及模型的子模块，导致这些模块的参数正常无法释放
-                dag = extract_dag(self.model, dummy_input,
-                                  hook_nodes=norm_class, anti_method=self.cfg.anti_method)
-                self.norm_linear_subgraph = dag.get_norm_linear_subgraph()
-                if self.cfg.anti_method in ['m4', 'm6']:
-                    self.linear_linear_subgraph = dag.get_linear_linear_subgraph()
-                    self.norm_linear_subgraph.update(self.linear_linear_subgraph)
-                del dag
+            self.norm_linear_subgraph = self.model_adapter.get_norm_linear_subgraph(self.cfg, dummy_input, norm_class)
 
         if self.cfg.anti_method != "m6":
             replace_rms_norm(self.model, self.norm_class_name)
@@ -433,7 +420,7 @@ class AntiOutlier(object):
         if not num_attention_heads:
             raise ValueError(
                 f"the config of model must have num_attention_heads, n_head or num_heads, \
-                                please check or moddify the config file"
+                                please check or modify the config file"
             )
         return num_attention_heads
 
@@ -510,14 +497,18 @@ class AntiOutlier(object):
                     self.model(**data)
                 return
 
+        smooth_kwargs = {}
+
         act_stats = self.os_stats()
         if self.cfg.anti_method in ['m4', 'm6']:
             num_attention_heads = self.get_num_attention_heads()
-            fusion_kwargs = {}
+            smooth_kwargs = {
+                "num_attention_heads": num_attention_heads
+            }
         scale_min = SCALE_MIN_LLM
         
         if self.is_context_embedder_model:
-            fusion_kwargs = _PREDEFINED_FUSION_KWARGS
+            smooth_kwargs.update(_PREDEFINED_FUSION_KWARGS)
             scale_min = SCALE_MIN_SD3
         
         for norm_name_group in tqdm(self.norm_linear_subgraph.keys()):
@@ -550,14 +541,15 @@ class AntiOutlier(object):
                 linear_modules.append(mod)
 
             args = []
-            if ProcessHook.MODIFY_SMOOTH_ARGS in self.hooks and self.hooks[
-                ProcessHook.MODIFY_SMOOTH_ARGS] is not None:
-                args, fusion_kwargs = self.hooks[ProcessHook.MODIFY_SMOOTH_ARGS](
-                    self.cfg, 
-                    norm_name_group, 
-                    linear_names, args, 
-                    fusion_kwargs
-                )
+            args, smooth_kwargs = self.model_adapter.modify_smooth_args(
+                self.cfg,
+                norm_name_group,
+                linear_names,
+                args,
+                smooth_kwargs
+            )
+
+            self.logger.debug(f"smooth_kwargs is {smooth_kwargs}")
 
             if Multiplier is not None and norm_module is None:
                 if len(linear_modules) < 1:
@@ -578,23 +570,26 @@ class AntiOutlier(object):
                     weight_aware(self.cfg, norm_module, linear_modules, stats)
                 elif self.cfg.anti_method == 'm4':
                     if 'scale_min' in inspect.signature(iter_smooth).parameters:
-                        fusion_kwargs.update({"scale_min": scale_min})
+                        smooth_kwargs.update({"scale_min": scale_min})
                     if 'check_group_fusions' not in inspect.signature(iter_smooth).parameters:
-                        fusion_kwargs.pop("check_group_fusions", None)
-                    self.logger.debug(f"fusion_kwargs is {fusion_kwargs}")
+                        smooth_kwargs.pop("check_group_fusions", None)
                     iter_smooth(
-                        self.cfg, norm_module, linear_modules, stats, num_attention_heads, **fusion_kwargs
+                        self.cfg,
+                        norm_module,
+                        linear_modules,
+                        stats,
+                        **smooth_kwargs
                         )
                     if attach_op is not None and Multiplier is not None and isinstance(norm_module, Multiplier):
                         attach_op(self.model, norm_module, linear_modules, linear_names)
                 elif self.cfg.anti_method == 'm6':
                     disable_anti_set = set(self.cfg.disable_anti_names)
+                    smooth_kwargs.update(self.cfg.flex_config)
                     if all(linear_name not in disable_anti_set for linear_name in linear_names):
                         flex_smooth(
                             self.cfg, 
                             norm_module,
                             linear_modules, 
                             stats, 
-                            num_attention_heads, 
-                            **self.cfg.flex_config
+                            **smooth_kwargs
                         )

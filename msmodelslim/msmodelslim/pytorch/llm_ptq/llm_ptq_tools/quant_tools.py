@@ -21,8 +21,8 @@ from ascend_utils.common.security.type import check_mapping_element
 from ascend_utils.common.security import check_element_type, check_type, get_write_directory, check_int
 
 from msmodelslim import logger as msmodelslim_logger
-from msmodelslim.pytorch.llm_ptq.hooks.factory import is_deepseek_v2_chat, is_deepseek_v2_lite, \
-    cutting_method_registry
+from msmodelslim.pytorch.llm_ptq.model.deepseek_v2.deepseek_v2 import is_deepseek_v2
+from msmodelslim.pytorch.llm_ptq.model.factory import cutting_method_registry
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.layer_config_manager import LayerConfigManager
 
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config import QuantConfig
@@ -104,7 +104,7 @@ class Calibrator(object):
                         f"mix_cfg中'{key}'指定的量化类型'{value}'不在允许列表{ALLOWED_MIX_TYPES}之内，"
                         f"请检查配置或扩展ALLOWED_MIX_TYPES后再使用。")
         if 'progressive' not in inspect.signature(quant_one_weight_by_outliers_low_bit).parameters \
-            and cfg.model_quant_type == QuantType.W4A8_DYNAMIC:
+                and cfg.model_quant_type == QuantType.W4A8_DYNAMIC:
             raise ValueError("Current cann version is not support W4A8_DYNAMIC, \
                              if you want to use this feature, please upgrade it.")
 
@@ -158,13 +158,13 @@ class Calibrator(object):
         self.quant_linear_names = None
         self.act_states = None
         self.rollback_names_process(model)
-        self.is_deepseek_v2 = is_deepseek_v2_chat(model) or is_deepseek_v2_lite(model)
+        self.is_deepseek_v2 = is_deepseek_v2(model)
 
         # for backward compatibility, when quantifying deepseek v2 model with w8a8,
         # the quant config of all mlp layers is w8a8_dynamic, and the quant config of other layers is w8a8
         if self.is_deepseek_v2 and mix_cfg is None and cfg.model_quant_type == QuantType.W8A8:
             mix_cfg = {"*.mlp.*": "w8a8_dynamic", "*": "w8a8"}
-        
+
         # this initializes is kept for forward compatibility
         # in the future, this will receive a cfg_store object from outside, but now it is None
         self.cfg_store = None
@@ -189,7 +189,7 @@ class Calibrator(object):
                     self.cfg_store['w8a8_dynamic'] = new_cfg
                 except Exception as e:
                     self.logger.warning(f"Failed to build w8a8_dynamic config. reason: {e}")
-            
+
         if self.cfg_store is None:
             self.cfg_store = {
                 "default": copy.deepcopy(cfg),
@@ -301,7 +301,7 @@ class Calibrator(object):
                 key_min, value_min = torch.chunk(kv_min, 2, dim=0)
             else:
                 key_max, value_max, key_min, value_min = \
-                cutting_method_registry.default_cut(comming_max, comming_min, in_hidden_size)
+                    cutting_method_registry.default_cut(comming_max, comming_min, in_hidden_size)
 
             # 获取k_name和v_name
             k_name = 'k_proj'
@@ -399,7 +399,7 @@ class Calibrator(object):
         quant_name_list = []
         conv_name_list = []
         attn_name_list = []
-        
+
         quant_name_set = set()
         conv_name_set = set()
         attn_name_set = set()
@@ -545,7 +545,7 @@ class Calibrator(object):
                                  "please check it.")
             elif SAVE_TYPE_SAFE_TENSOR in save_type:
                 self.logger.error("W4A8_DYNAMIC quantization does not support saving to numpy format, "
-                                    f"defaulting to `{SAVE_TYPE_SAFE_TENSOR}` type.")
+                                  f"defaulting to `{SAVE_TYPE_SAFE_TENSOR}` type.")
                 save_type = [SAVE_TYPE_SAFE_TENSOR]
         if part_file_size is not None:
             check_int(part_file_size, min_value=1)
@@ -602,7 +602,7 @@ class Calibrator(object):
                             module.fp_weight = module.weight.cpu().clone()
                         kwargs = {
                             'powerquant': module.cfg.nonuniform,
-                            'fraction': module.cfg.fraction, 
+                            'fraction': module.cfg.fraction,
                             'num_bits': module.cfg.w_bit,
                             'isolate_outlier_amax': False,
                             'per_channel': not module.cfg.mm_tensor,
@@ -616,7 +616,7 @@ class Calibrator(object):
                         }
                         if 'progressive' in inspect.signature(quant_one_weight_by_outliers_low_bit).parameters:
                             kwargs['progressive'] = module.cfg.is_stage_quant
-                            
+
                         recovered_weight, scale_w, _, offset_w = quant_one_weight_by_outliers_low_bit(
                             module.weight,
                             **kwargs
@@ -635,9 +635,8 @@ class Calibrator(object):
                         if not module.cfg.is_stage_quant:
                             with torch.no_grad():
                                 module.weight[:] = recovered_weight[:]
-                        
+
                         module.weight_quant_flag = True
-                        
 
     def run_amp(self):
         max_input_dict = {}
@@ -691,7 +690,7 @@ class Calibrator(object):
                         self.logger.info(f"Running in Data-Free mode, quantizing the layer: {name}")
                         kwargs = {
                             'powerquant': module.cfg.nonuniform,
-                            'fraction': module.cfg.fraction, 
+                            'fraction': module.cfg.fraction,
                             'num_bits': module.cfg.w_bit,
                             'isolate_outlier_amax': False,
                             'per_channel': not module.cfg.mm_tensor,

@@ -199,8 +199,6 @@ class UpdateWeightsMapHook(ModelHook):
 
                 if key not in weights_map:
                     self.logger.debug(f"{weights_map.prefix + key} not in weight map, add it")
-                else:
-                    self.logger.debug(f"update {weights_map.prefix + key} in weight map")
 
                 dataset = weights_map.dataset
 
@@ -217,13 +215,11 @@ class UpdateWeightsMapHook(ModelHook):
         self.depth = 0
         self.old_hook.offload = self.old_hook_offload
         self.update_weights_map(module, force_update=self.init_force, recurse=self.init_recurse)
-        self.logger.debug(f"init_hook {self.get_prefix()} depth={self.depth}")
         return self.old_hook.init_hook(module)
 
     def detach_hook(self, module):
         self.depth = 0
         self.old_hook.offload = self.old_hook_offload
-        self.logger.debug(f"detach_hook {self.get_prefix()} depth={self.depth}")
         return self.old_hook.detach_hook(module)
 
     def pre_forward(self, module, *args, **kwargs):
@@ -233,8 +229,6 @@ class UpdateWeightsMapHook(ModelHook):
         if self.depth > 1:
             # 对于嵌套的情况，不要再从WritableOffloadedWeightsLoader中再次加载
             self.old_hook.offload = False
-
-        self.logger.debug(f"pre_forward {self.get_prefix()} depth={self.depth}")
 
         args, kwargs = self.old_hook.pre_forward(module, *args, **kwargs)
 
@@ -249,8 +243,6 @@ class UpdateWeightsMapHook(ModelHook):
             # 对于嵌套的情况，所有嵌套都退出后，才更新权重
             self.old_hook.offload = self.old_hook_offload
             self.update_weights_map(module, force_update=self.post_force, recurse=self.post_recurse)
-
-        self.logger.debug(f"post_forward {self.get_prefix()} depth={self.depth}")
 
         output = self.old_hook.post_forward(module, output)
 

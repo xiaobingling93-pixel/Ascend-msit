@@ -125,6 +125,7 @@ def parse_arguments():
     parser.add_argument('--pdmix', type=cmd_bool, default=False,
                        help='use pdmix quantization type')
     parser.add_argument('--trust_remote_code', type=cmd_bool, default=False)
+    parser.add_argument('--layer_count', type=int, default=0)
     parser.add_argument('--mindie_format', type=cmd_bool, default=False)
     return parser.parse_args()
 
@@ -144,6 +145,8 @@ class Quantifier:
             self.model_path_or_name,
             trust_remote_code=self.trust_remote_code
         )
+        self.layer_count = kwargs.get("layer_count", 0)
+        self.config.num_hidden_layers = self.layer_count if self.layer_count > 0 else self.config.num_hidden_layers
         self.dtype = self.config.torch_dtype if self.device_type == NPU else torch.float32
         self.model = safe_generator.get_model_from_pretrained(
             self.model_path_or_name,
@@ -249,11 +252,13 @@ if __name__ == '__main__':
 
     model_path = get_valid_read_path(args.model_path, is_dir=True, check_user_stat=True)
     save_directory = get_write_directory(args.save_directory, write_mode=0o750)
-    
+
     num_layers = checker.get_config_from_pretrained(
         model_path,
         trust_remote_code=args.trust_remote_code
     ).num_hidden_layers
+
+    num_layers = args.layer_count if args.layer_count > 0 else num_layers
 
     anti_outlier_config_val = None
     if args.anti_method == 'm3':
@@ -281,7 +286,7 @@ if __name__ == '__main__':
     quantifier = Quantifier(
         model_path, args, anti_outlier_config_val,
         device_type=args.device_type, tokenizer_args=tokenizer_args,
-        model_name=args.model_name,
+        model_name=args.model_name, layer_count=args.layer_count
     )
 
 
@@ -315,10 +320,10 @@ if __name__ == '__main__':
 
     quantifier.convert(tokenized_calib_data, save_directory, args.disable_level, part_file_size=args.part_file_size, \
                        tokenized_ant_calib_data=tokenized_ant_calib_data)
-    
+
     # 通过 model_quant_type 获得 quant_type
     quant_type = quantifier.quant_config.model_quant_type.lower()
-    
+
     auto_config = checker.get_config_from_pretrained(model_path, trust_remote_code=args.trust_remote_code)
     checker.modify_config(model_path, save_directory, auto_config.torch_dtype,
                 quant_type, args)

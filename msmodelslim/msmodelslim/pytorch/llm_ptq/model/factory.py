@@ -1,58 +1,19 @@
-# Copyright Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
+#  -*- coding: utf-8 -*-
+#  Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
+#  #
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#  #
+#  http://www.apache.org/licenses/LICENSE-2.0
+#  #
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
 
-from transformers import PreTrainedModel
-
-_DEEPSEEK_V2_MODEL_TYPES = [
-    "deepseek_v2",
-    "deepseekv2",
-    "deepseek_v3",
-    "deepseekv3",
-]
-
-_HUNYUAN_MODEL_TYPES = [
-    "hunyuan"
-]
-
-
-def is_deepseek_v2_chat(model: PreTrainedModel):
-    if hasattr(model.config, 'model_type') and model.config.model_type in _DEEPSEEK_V2_MODEL_TYPES:
-        if hasattr(model.config, 'q_lora_rank') and getattr(model.config, 'q_lora_rank') is not None:
-            return True
-
-    return False
-
-
-def is_deepseek_v2_lite(model: PreTrainedModel):
-    if hasattr(model.config, 'model_type') and model.config.model_type in _DEEPSEEK_V2_MODEL_TYPES:
-        if hasattr(model.config, 'q_lora_rank') and getattr(model.config, 'q_lora_rank') is None:
-            return True
-
-    return False
-
-
-def is_hunyuan_large(model: PreTrainedModel):
-    if hasattr(model.config, 'model_type') and model.config.model_type in _HUNYUAN_MODEL_TYPES:
-        if (hasattr(model.config, 'num_experts')
-                and isinstance(model.config.num_experts, int)
-                and model.config.num_experts > 1):
-            return True
-
-    return False
-
-
-def get_process_hooks(model: PreTrainedModel):
-    hooks = {}
-    if is_deepseek_v2_chat(model):
-        from .models.deepseek_v2.deepseek_v2_chat import get_hooks
-        return get_hooks(model)
-    elif is_deepseek_v2_lite(model):
-        from .models.deepseek_v2.deepseek_v2_lite import get_hooks
-        return get_hooks(model)
-    elif is_hunyuan_large(model):
-        from .models.hunyuan.hunyuan_large import get_hooks
-        return get_hooks(model)
-
-    return hooks
+import torch
 
 
 class CuttingMethodRegistry:
@@ -96,7 +57,7 @@ class CuttingMethodRegistry:
         key_min = qkv_states_min[:, -2, :].reshape(-1)
         value_min = qkv_states_min[:, -1, :].reshape(-1)
         return key_max, value_max, key_min, value_min
-    
+
     def register_cutting_methods(self):
         """
         注册切割方法，将方法添加到 cutting_methods 字典中。
@@ -106,13 +67,14 @@ class CuttingMethodRegistry:
     def get_cutting_method(self, model_type):
         """
         根据模型类型获取对应的切割方法。如果模型类型不存在于字典中，则返回 None。
-        
+
         参数:
         model_type (str): 模型类型的名称。
-        
+
         返回:
         function: 对应的切割方法或 None。
         """
         return self.cutting_methods.get(model_type, None)
+
 
 cutting_method_registry = CuttingMethodRegistry()
