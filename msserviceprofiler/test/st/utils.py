@@ -16,6 +16,7 @@ import subprocess
 import os
 import re
 import logging
+import pytest
 
 COMMAND_SUCCESS = 0
 
@@ -63,4 +64,45 @@ def check_row(df, expected_columns, numeric_columns):
                 logging.error(
                     f"在 {column} 列的第 {row_index} 行，值 {cell_value} 不是有效的数字")
                 return False
+    return True
+
+
+def check_no_empty_lines_before_first_line(dataframe, context=""):
+    empty_line = 0
+    # 检查是否有空行
+    for _, row in dataframe.iterrows():
+        if row.isnull().all():
+            empty_line += 1
+        else:
+            break
+    
+    pytest.assume(empty_line == 0, f"{context} table has {empty_line} empty lines before first line.")
+
+
+def check_no_empty_lines_between_first_last_line(dataframe, context=""):
+    # 计算非空行的数量
+    empty_rows = dataframe.eq('').all(axis=1)
+    num_empty_rows = empty_rows.sum()
+    pytest.assume(num_empty_rows == 0, f"{context} table has empty lines.")
+
+
+def check_during_time(dataframe, context=""):
+    # 检查所需列是否存在于数据框中
+    required_columns = ['end_time(microsecond)', 'start_time(microsecond)', 'during_time(millisecond)']
+    for col in required_columns:
+        if col not in dataframe.columns:
+            logging.error(f"The column {col} not found in {context}.")
+            return False
+
+    # 检查during_time是否正确
+    for index, row in dataframe.iloc[:-1].iterrows():
+        end_time = row['end_time(microsecond)']
+        start_time = row['start_time(microsecond)']
+        during_time = row['during_time(millisecond)']
+        # 计算 end_time - start_time 与 during_time 的差值
+        diff = abs((end_time - start_time) / 1000 - during_time)
+        if diff > 1:
+            logging.error(f"In row {index} of {context}, the during_time is not correct.")
+            return False
+
     return True
