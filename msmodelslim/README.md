@@ -5,14 +5,14 @@
 
 MindStudio ModelSlim，昇腾模型压缩工具。 【Powered by MindStudio】
 
-昇腾压缩加速工具，一个以加速为目标、压缩为技术、昇腾为根本的亲和压缩工具。支持训练加速和推理加速，包括模型低秩分解、稀疏训练、训练后量化、量化感知训练等功能，昇腾AI模型开发用户可以灵活调用Python API接口，对模型进行性能调优，并支持导出不同格式模型，在昇腾AI处理器上运行。
+昇腾模型压缩工具，一个以加速为目标、压缩为技术、昇腾为根本的亲和压缩工具。支持训练加速和推理加速，包括模型低秩分解、稀疏训练、训练后量化、量化感知训练等功能，昇腾AI模型开发用户可以灵活调用Python API接口，对模型进行性能调优，并支持导出不同格式模型，在昇腾AI处理器上运行。
 
 
 ## 环境和依赖
 
-- 硬件环境请参见《[昇腾产品形态说明](https://www.hiascend.com/document/detail/zh/canncommercial/80RC3/quickstart/quickstart/quickstart_18_0002.html)》。
-- 物理机、容器、虚拟机场景下驱动固件和CANN软件的安装方案参见《[安装方案](https://www.hiascend.com/document/detail/zh/canncommercial/80RC3/softwareinst/instg/instg_0001.html?Mode=PmIns&OS=Ubuntu&Software=cannToolKit)》。硬件配套的软件下载资源参见《[配套资源下载](https://www.hiascend.com/developer/download/commercial/result?module=cann)》，来安装昇腾设备开发或运行环境。
-- PyTorch框架、torch_npu插件（在npu上使用本工具进行大模型量化需要，在cpu上使用本工具进行大模型量化不需要）
+- 硬件环境请参见《[昇腾产品形态说明](https://www.hiascend.com/document/detail/zh/canncommercial/81RC1/quickstart/productform/hardwaredesc_0001.html)》。
+- 物理机、容器、虚拟机场景下驱动固件和CANN软件的安装方案参见《[安装方案](https://www.hiascend.com/document/detail/zh/canncommercial/81RC1/softwareinst/instg/instg_0002.html?Mode=PmIns&InstallType=local&OS=Ubuntu&Software=cannToolKit)》。硬件配套的软件下载资源参见《[配套资源下载](https://www.hiascend.com/developer/download/commercial/result?module=cann)》，来安装昇腾设备开发或运行环境。
+- PyTorch框架为必选依赖；torch_npu 插件则视目标设备而定，仅在 NPU 上进行量化时需要，CPU 上不依赖。
 
 
 ## 版本配套
@@ -24,7 +24,7 @@ MindStudio ModelSlim，昇腾模型压缩工具。 【Powered by MindStudio】
 
 
 ## 注意事项
-RC3 及之前的 CANN 包已包含msModelSlim代码，安装CANN包即可使用；RC4 及之后的 CANN 包需与msModelSlim代码仓配套使用。
+8.0.RC3 及之前的 CANN 包已包含msModelSlim代码，安装CANN包即可使用；8.0.RC4 及之后的 CANN 包需与msModelSlim代码仓配套使用。
 
 
 ## msModelSlim安装方式

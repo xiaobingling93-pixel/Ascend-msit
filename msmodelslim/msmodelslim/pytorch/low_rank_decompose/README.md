@@ -1,6 +1,6 @@
 ## 模型低秩分解
 
-深度学习运算，尤其是CV（计算机视觉）和NLP（自然语言学习）类任务运算，包含大量的矩阵运算，而低秩分解通过将大矩阵分解为若干个低秩矩阵的乘积，从而降低存储空间和计算量，降低推理开销。
+深度学习运算，尤其是CV（计算机视觉）和NLP（自然语言处理）类任务运算，包含大量的矩阵运算，而低秩分解通过将大矩阵分解为若干个低秩矩阵的乘积，从而降低存储空间和计算量，降低推理开销。
 
 当前支持在训练服务器上对MindSpore和PyTorch框架下模型进行低秩分解，执行前需要参考环境准备完成开发环境部署、Python环境变量、所需框架及训练服务器环境变量配置。
 
@@ -15,9 +15,9 @@ from ascend_utils.common.utils import count_parameters
 from ascend_utils.common.security import SafeWriteUmask
 ```
 - 说明
-MindSpore框架下库文件的路径为msmodelslim.mindspore，PyTorch框架下库文件的路径为 msmodelslim.pytorch.low_rank_decompose。
+MindSpore框架下库文件的路径为msmodelslim.mindspore.low_rank_decompose，PyTorch框架下库文件的路径为 msmodelslim.pytorch.low_rank_decompose。
 
-3. （可选）调整日志输出等级，启动训练任务后，将打屏显示调试的日志信息。
+3. （可选）调整日志输出等级，启动训练任务后，将打屏显示设置级别的日志信息。[日志级别说明](../../../docs/Python-API接口说明/公共接口.md#参数说明)
 ```
 from msmodelslim import set_logger_level
 set_logger_level("info")        #根据实际情况配置
