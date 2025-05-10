@@ -25,7 +25,7 @@ def modify_config_json(src_path: str, dst_path: str, quant_config, mindie_format
     
     if mindie_format:
         matched_files = glob.glob(os.path.join(dst_path.split("config.json")[0], \
-                                    f"quant_model_description_*.json"))
+                                    f"quant_model_description*.json"))
         dest_quant_description_filepath = matched_files[0]
     else:
         dest_quant_description_filepath = os.path.join(dst_path.split("config.json")[0], \
