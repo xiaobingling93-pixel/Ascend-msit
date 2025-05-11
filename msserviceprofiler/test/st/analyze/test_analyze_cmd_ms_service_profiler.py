@@ -389,4 +389,4 @@ class TestAnalyzeCmd(TestCase):
             self.assertFalse(True, msg="enable ms service profiler analyze task failed.")
 
         with self.subTest("Check pullkvcache csv content"):
-            check_pullkvcache_csv_content(os.path.join(self.OUTPUT_PATH, "pd_separate_kvcache.csv"))
+            check_pullkvcache_csv_content(os.path.join(self.OUTPUT_PATH, "pd_split_kvcache.csv"))
