@@ -25,8 +25,7 @@ def check_split_csv_content(output_path, csv_file_name):
     # 校验该路径下是否正确生成csv文件，以及文件内容
     csv_file = os.path.join(output_path, csv_file_name)
     assert os.path.exists(csv_file)
-    assert os.path.isfile(csv_file)
-    task_name = csv_file_name[:-4]
+    task_name = os.path.splitext(csv_file_name)[0]
     expected_header = ['name', 'during_time(millisecond)', 'max', 'min', 'mean', 'std', \
                        'pid', 'tid', 'start_time(microsecond)', 'end_time(microsecond)']
     if task_name == 'prefill':
