@@ -2,7 +2,7 @@
 from unittest.mock import MagicMock
 import pytest
 
-from msmodelslim.pytorch.llm_ptq.hooks.models.hunyuan.hunyuan_large import get_norm_linear_subgraph, modify_smooth_args
+from msmodelslim.pytorch.llm_ptq.model.hunyuan.hunyuan_large import HunyuanLargeAdapter
 from msmodelslim.pytorch.llm_ptq.anti_outlier import AntiOutlierConfig
 
 
@@ -10,17 +10,18 @@ class TestGetNormLinearSubgraph:
     """测试 get_norm_linear_subgraph 函数的不同场景"""
 
     @staticmethod
-    def create_mock_model(num_layers):
+    def create_adapter(num_layers):
         """创建模拟的预训练模型"""
         model = MagicMock()
         model.config = MagicMock()
         model.config.num_hidden_layers = num_layers
-        return model
+        adapter = HunyuanLargeAdapter(model)
+        return adapter
 
     def test_normal_case_with_three_layers(self):
         """测试当模型层为3层 覆盖全分支情形"""
-        model = self.create_mock_model(3)
-        result = get_norm_linear_subgraph(model)
+        adapter = self.create_adapter(3)
+        result = adapter.get_norm_linear_subgraph(AntiOutlierConfig(anti_method='m4'))
 
         # 检查总共有3层
         assert len(result) == 3
@@ -46,8 +47,8 @@ class TestGetNormLinearSubgraph:
 
     def test_min_layer(self):
         """测试边界条件：模型最少层数"""
-        model = self.create_mock_model(1)
-        result = get_norm_linear_subgraph(model)
+        adapter = self.create_adapter(1)
+        result = adapter.get_norm_linear_subgraph(AntiOutlierConfig(anti_method='m4'))
 
         assert len(result) == 1
         key = 'model.layers.0.input_layernorm'
@@ -59,8 +60,8 @@ class TestGetNormLinearSubgraph:
 
     def test_max_layers(self):
         """测试边界条件：模型最多层数"""
-        model = self.create_mock_model(999)
-        result = get_norm_linear_subgraph(model)
+        adapter = self.create_adapter(999)
+        result = adapter.get_norm_linear_subgraph(AntiOutlierConfig(anti_method='m4'))
 
         # 检查最后一层（998，偶数）
         key = 'model.layers.998.input_layernorm'
@@ -70,21 +71,30 @@ class TestGetNormLinearSubgraph:
 
     def test_invalid_layers_zero(self):
         """测试边界条件：模型层数小于条件值"""
-        model = self.create_mock_model(0)
+        adapter = self.create_adapter(0)
         with pytest.raises(ValueError) as excinfo:
-            get_norm_linear_subgraph(model)
+            adapter.get_norm_linear_subgraph(AntiOutlierConfig(anti_method='m4'))
         assert "invalid" in str(excinfo.value).lower()
 
     def test_invalid_layers_exceed(self):
         """测试边界条件：模型层数大于条件值"""
-        model = self.create_mock_model(1000)
+        adapter = self.create_adapter(1000)
         with pytest.raises(ValueError) as excinfo:
-            get_norm_linear_subgraph(model)
+            adapter.get_norm_linear_subgraph(AntiOutlierConfig(anti_method='m4'))
         assert "invalid" in str(excinfo.value).lower()
 
 
 class TestModifySmoothArgs:
     """测试 modify_smooth_args 函数的不同场景"""
+    
+    @staticmethod
+    def create_adapter(num_layers):
+        """创建模拟的预训练模型"""
+        model = MagicMock()
+        model.config = MagicMock()
+        model.config.num_hidden_layers = num_layers
+        adapter = HunyuanLargeAdapter(model)
+        return adapter
 
     @staticmethod
     def create_anti_config(method='m4'):
@@ -93,8 +103,9 @@ class TestModifySmoothArgs:
 
     def test_m4_with_norm_in_name(self):
         """测试当 anti_method=m4 且 norm_name 包含 'norm' 的情况"""
+        adapter = self.create_adapter(3)
         cfg = self.create_anti_config()
-        args, kwargs = modify_smooth_args(
+        args, kwargs = adapter.modify_smooth_args(
             cfg=cfg,
             norm_name="layer.norm",
             linear_names="dummy",
@@ -109,8 +120,9 @@ class TestModifySmoothArgs:
 
     def test_m4_without_norm_in_name(self):
         """测试当 anti_method=m4 但 norm_name 不含 'norm' 的情况"""
+        adapter = self.create_adapter(3)
         cfg = self.create_anti_config()
-        args, kwargs = modify_smooth_args(
+        args, kwargs = adapter.modify_smooth_args(
             cfg=cfg,
             norm_name="linear_layer",
             linear_names="dummy",
@@ -123,10 +135,11 @@ class TestModifySmoothArgs:
 
     def test_non_m4_method(self):
         """测试当 anti_method 不是 m4 时不应修改参数"""
+        adapter = self.create_adapter(3)
         cfg = self.create_anti_config(method="m1")
         original_kwargs = {"key": "value"}
 
-        args, kwargs = modify_smooth_args(
+        args, kwargs = adapter.modify_smooth_args(
             cfg=cfg,
             norm_name="layer.norm",  # 即使包含 norm 也不应生效
             linear_names="dummy",
@@ -140,8 +153,9 @@ class TestModifySmoothArgs:
 
     def test_edge_case_empty_norm_name(self):
         """测试边界条件：空 norm_name"""
+        adapter = self.create_adapter(3)
         cfg = self.create_anti_config()
-        args, kwargs = modify_smooth_args(
+        args, kwargs = adapter.modify_smooth_args(
             cfg=cfg,
             norm_name="",
             linear_names="dummy",
@@ -153,8 +167,9 @@ class TestModifySmoothArgs:
 
     def test_override_existing_kwargs(self):
         """测试覆盖已存在的 kwargs 参数"""
+        adapter = self.create_adapter(3)
         cfg = self.create_anti_config()
-        args, kwargs = modify_smooth_args(
+        args, kwargs = adapter.modify_smooth_args(
             cfg=cfg,
             norm_name="norm.bias",
             linear_names="dummy",
