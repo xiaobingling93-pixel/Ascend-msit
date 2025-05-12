@@ -8,9 +8,6 @@
 
 开发者在推理开发过程中可能会遇到精度问题，可以使用大模型精度调试工具（Large Language Model Debug Tool）提供的大模型推理数据落盘（dump）和精度定位（compare）功能，帮助开发者快速定位推理开发过程中精度问题，发现根因，提升开发效率。
 
-大模型迁移分析工具用于辅助将 torch 模型迁移到加速库，以及加速库浮点模型迁移稀疏量化模型。
-
-
 #### 安装
 
 - msit llm 使用依赖 CANN-toolkit、加速库 ATB和 MindIE-LLM，各依赖库版本要求参照具体[安装说明文档](/msit/docs/install/README.md)。
@@ -26,16 +23,13 @@ msit install llm
 
 * msit历史版本提供whl包进行安装，可以参考：[历史版本安装](#历史版本安装)
 
-
 #### 工具列表
-> * [BadCase分析使用说明](/msit/docs/llm/工具-大模型精度定位之BadCase分析工具.md)
-> * [dump加速库数据使用说明](/msit/docs/llm/工具-DUMP加速库数据使用说明.md)
-> * [dump在线推理数据使用说明](/msit/docs/llm/工具-Pytorch场景数据dump.md)
-> * [自动比对功能使用说明](/msit/docs/llm/工具-大模型精度比对.md)
-> * [手动映射比对能力说明](/msit/docs/llm/工具-手动映射比对能力说明.md)
-> * [精度预检使用说明](/msit/docs/llm/工具-精度预检使用说明.md)
-> * [异常检测使用说明](/msit/docs/llm/工具-异常检测使用说明.md)
-> * [llm模型迁移分析使用说明](/msit/docs/llm/工具-llm模型迁移分析使用说明.md)
+> * [BadCase分析使用说明](../llm/工具-大模型精度定位之BadCase分析工具.md)
+> * [dump加速库数据使用说明](../llm/工具-DUMP加速库数据使用说明.md)
+> * [dump在线推理数据使用说明](../llm/工具-Pytorch场景数据dump.md)
+> * [自动比对功能使用说明](../llm/工具-大模型精度比对.md)
+> * [精度预检使用说明](../llm/工具-精度预检使用说明.md)
+> * [异常检测使用说明](../llm/工具-异常检测使用说明.md)
 
 #### 场景列表
 > * [加速库场景-输出Token的logits精度比对](/msit/docs/llm/加速库场景-输出Token的logits精度比对.md)
@@ -55,7 +49,7 @@ msit install llm
       - 概要流程：
         - 需要dump 标杆数据和存在精度问题的数据，llm内提供了多种工具dump数据。
         - 将dump 数据进行自动比对或者手动比对，查找输入误差小，但是输出误差大的算子。
-        - 可以由粗到细，由外到内的排查。先dump定位哪个block存在异常，再dump Block内部算子数据进行进一步定位。可以减少dump的时间以及磁盘空间占用。
+        - 可以由粗到细，由外到内的排查。先dump定位哪个block存在异常，再dump block内部算子数据进行进一步定位。可以减少dump的时间以及磁盘空间占用。
       - 排查流程详细说明文档：
         - [**工具-大模型精度比对**](/msit/docs/llm/工具-大模型精度比对.md)：加速库推理场景，如何定位存在精度问题算子。
         - [**TorchAir场景-整网算子精度比对**](/msit/docs/llm/TorchAir场景-整网算子精度比对.md)：torchair 推理场景，如何定位存在精度问题算子。

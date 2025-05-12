@@ -23,8 +23,8 @@
 以下是设置CANN包环境变量的通用方法(假设CANN包安装目录为`ACTUAL_CANN_PATH`)：
 * 执行如下命令：
 
-    ```
-    source $ACTUAL_CANN_PATH/Ascend/ascend-toolkit/set_env.sh- [目录](#目录)
+    ```bash
+    source $ACTUAL_CANN_PATH/Ascend/ascend-toolkit/set_env.sh
     ```
 
 ## 2、Q：使用./install.sh进行安装却报-bash: ./install.sh: Permission denied
@@ -119,7 +119,7 @@ export https_proxy="http://用户名:密码@代理地址"
     > * 普通用户下`ACTUAL_CANN_PATH`一般为`$HOME`，root用户下一般为`/usr/local`
 
 ## 10、Q：如果安装过程中，出现以下提示：WARNING: env ASCEND_HOME is not set. aie command cannot be used.
-**A:** 如果不使用msit convert aie命令，忽略此告警。具体参考[convert功能使用指南](https://gitee.com/ascend/msit/tree/master/msit/components/convert)
+**A:** 如果不使用msit convert aie命令，忽略此告警。具体参考[convert功能使用指南](../convert/README.md)
 
 
 ## 11、Q：如果安装过程中，出现以下提示：WARNING: env ACLTRANSFORMER_HOME_PATH is not set. Dump on demand package cannot be used.

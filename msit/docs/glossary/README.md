@@ -12,4 +12,4 @@
 #### torchair(torch 图模式)
 
 * torchair为用户提供了一种高效、灵活的模型部署方案，使得用户可以更加轻松地将模型应用于实际场景中。torchair将torch的FX图转换为GE计算图，并提供了GE计算图的编译与执行接口。FX图是PyTorch中的一种中间表示方式，用于表示模型的计算图和操作序列。GE计算图是昇腾AI处理器的计算图，用于表示模型的计算图和操作序列。将FX图转换为GE计算图可以实现跨平台的模型部署并加速模型的推理。
-* 详细情况参考[《昇腾社区CANN开发套件中的开发指南对应章节》](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/80RC1alpha003/devguide/moddevg/torchair)
+* 详细情况参考[《昇腾社区CANN开发套件中的开发指南对应章节》](https://www.hiascend.com/document/detail/zh/Pytorch/700/modthirdparty/torchairuseguide/torchair_0002.html)
