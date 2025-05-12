@@ -46,7 +46,7 @@ def stop_st_process(process_list):
 
 def run_st(module_choice):
     timeout = 3600
-    modules = ["analyze"]
+    modules = ["analyze", "split"]
     if module_choice != "all":
         modules = [module_choice]
     process_list = []
