@@ -54,6 +54,12 @@ def main():
         default='info',
         choices=['debug', 'info', 'warning', 'error', 'fatal', 'critical'],
         help='Log level to print.')
+    parser.add_argument(
+        '--format',
+        nargs='+',
+        default=['json', 'csv', 'db'],
+        choices=['json', 'csv', 'db'],
+        help='Format to save.')
 
     args = parser.parse_args()
 
