@@ -69,7 +69,7 @@ def add_safetensors(org_paths, target_dir, safetensors_prefix, max_file_size_gb=
     org_paths = get_valid_read_path(org_paths, is_dir=True, check_user_stat=False)
     target_dir = get_valid_read_path(target_dir, is_dir=True, check_user_stat=False)
     index_path = find_file_with_pattern(target_dir, "quant_model_weight_*.index.json")
-    desc_path = find_file_with_pattern(target_dir, "quant_model_description_*.json")
+    desc_path = find_file_with_pattern(target_dir, "quant_model_description*.json")
 
     msmodelslim_logger.info(f"find file in target_dir: \nindex: {index_path}\ndescription: {desc_path}")
 
