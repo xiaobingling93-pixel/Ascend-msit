@@ -34,7 +34,8 @@ def parse_args():
     parser.add_argument('--batch_size', type=int, default=1, help="Batch size for anti and calibration")
     parser.add_argument('--from_fp8', action='store_true', help="Origin model is of fp8")
     parser.add_argument('--from_bf16', action='store_true', help="Origin model is of bf16")
-    parser.add_argument('--mindie_format', action="store_true", help="Enable only mindie config save")
+    parser.add_argument('--mindie_format', action="store_true", help="Compatible with quantization formats \
+                        supported by before B050 version of MindIE")
     return parser.parse_args()
 
 

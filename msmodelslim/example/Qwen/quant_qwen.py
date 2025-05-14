@@ -126,7 +126,8 @@ def parse_arguments():
                        help='use pdmix quantization type')
     parser.add_argument('--trust_remote_code', type=cmd_bool, default=False)
     parser.add_argument('--layer_count', type=int, default=0)
-    parser.add_argument('--mindie_format', type=cmd_bool, default=False)
+    parser.add_argument('--mindie_format', action="store_true", help="Compatible with quantization formats \
+                        supported by before B050 version of MindIE")
     return parser.parse_args()
 
 
