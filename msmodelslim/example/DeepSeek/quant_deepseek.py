@@ -93,7 +93,8 @@ def parse_arguments():
     parser.add_argument('--model_name', type=str, default=None,
                         validator=StringArgumentValidator(min_length=1, max_length=MAX_KEY_LENGTH, allow_none=True))
     parser.add_argument('--trust_remote_code', type=cmd_bool, default=False)
-    parser.add_argument('--mindie_format', type=cmd_bool, default=False)
+    parser.add_argument('--mindie_format', action="store_true", help="Compatible with quantization formats \
+                        supported by before B050 version of MindIE")
     return parser.parse_args()
 
 

@@ -26,6 +26,8 @@ MindStudio ModelSlim，昇腾模型压缩工具。 【Powered by MindStudio】
 ## 注意事项
 RC3 及之前的 CANN 包已包含msModelSlim代码，安装CANN包即可使用；RC4 及之后的 CANN 包需与msModelSlim代码仓配套使用。
 
+**【Notice！！！】** 非多模态模型，如果量化后的权重需要在MindIE迭代四B050版本前部署，请在执行量化命令时加上 **--mindie-format** 参数。
+
 
 ## msModelSlim安装方式
 
