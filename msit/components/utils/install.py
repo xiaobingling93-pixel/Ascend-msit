@@ -14,13 +14,21 @@
 
 import os
 import sys
-import argparse
 import subprocess
 from typing import Union
 
-from components.utils.util import get_entry_points
-from components.utils.parser import BaseCommand
 from components.utils.log import logger
+
+
+def get_entry_points(entry_points_name):
+    try:
+        from importlib import metadata
+
+        return metadata.entry_points().get(entry_points_name, [])
+    except Exception:
+        import pkg_resources
+
+        return list(pkg_resources.iter_entry_points(entry_points_name))
 
 
 def is_windows():
@@ -118,99 +126,6 @@ INSTALL_INFO_MAP = [
     },
         
 ]
-
-ALL_SUB_TOOLS = [pkg.get("arg-name") for pkg in INSTALL_INFO_MAP]
-ALL_SUB_TOOLS_WITH_ALL = ["all"]
-ALL_SUB_TOOLS_WITH_ALL.extend(ALL_SUB_TOOLS)
-
-
-class AitInstallCommand(BaseCommand):
-    def __init__(self) -> None:
-        super().__init__("install", "install msit tools", group="Install Command")
-
-    def add_arguments(self, parser: argparse.ArgumentParser):
-        parser.add_argument(
-            "comp_names",
-            default=None,
-            nargs="+",
-            choices=ALL_SUB_TOOLS_WITH_ALL,
-            help="component's name",
-        )
-
-        parser.add_argument(
-            "--find-links", "-f",
-            default=None,
-            type=str,
-            help="the dir look for archives",
-        )
-
-    def handle(self, args):
-        install_tools(args.comp_names, args.find_links)
-
-
-class AitCheckCommand(BaseCommand):
-    def __init__(self) -> None:
-        super().__init__("check", "check msit tools status.", group="Install Command")
-
-    def add_arguments(self, parser: argparse.ArgumentParser):
-        parser.add_argument(
-            "comp_names",
-            default=None,
-            nargs="+",
-            choices=ALL_SUB_TOOLS_WITH_ALL,
-            help="component's name",
-        )
-
-    def handle(self, args):
-        check_tools(args.comp_names)
-
-
-class AitBuildExtraCommand(BaseCommand):
-    def __init__(self) -> None:
-        super().__init__("build-extra", "build msit tools extra", group="Install Command")
-
-    def add_arguments(self, parser: argparse.ArgumentParser):
-        parser.add_argument(
-            "comp_name",
-            default=None,
-            choices=ALL_SUB_TOOLS,
-            help="component's name",
-        )
-
-        parser.add_argument(
-            "--find-links", "-f",
-            default=None,
-            type=str,
-            help="the dir look for archives",
-        )
-
-    def handle(self, args):
-        build_extra(args.comp_name, args.find_links)
-
-
-class DownloadCommand(BaseCommand):
-    def __init__(self) -> None:
-        super().__init__("download", "download packages", group="Install Command")
-
-    def add_arguments(self, parser: argparse.ArgumentParser):
-        parser.add_argument(
-            "comp_names",
-            default=None,
-            choices=ALL_SUB_TOOLS_WITH_ALL,
-            help="component's name",
-        )
-
-        parser.add_argument(
-            "--dest", "-d",
-            default=None,
-            required=True,
-            type=str,
-            help=" Download packages into <dir>.",
-        )
-
-    def handle(self, args):
-        download_comps(args.comp_names, args.dest)
-
 
 
 def get_install_info_follow_depends(install_infos):

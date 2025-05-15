@@ -23,17 +23,6 @@ from components.utils.log import logger
 from components.utils.file_open_check import is_legal_path_length
 
 
-def get_entry_points(entry_points_name):
-    try:
-        from importlib import metadata
-
-        return metadata.entry_points().get(entry_points_name, [])
-    except Exception:
-        import pkg_resources
-
-        return list(pkg_resources.iter_entry_points(entry_points_name))
-
-
 def confirmation_interaction(prompt):
     confirm_pattern = re.compile(r'y(?:es)?', re.IGNORECASE)
     

@@ -14,14 +14,13 @@
 
 import os
 import sys
-
 from unittest.mock import patch, MagicMock
 import pytest
 
 from components.utils.install import is_windows, warning_in_windows, get_base_path, get_real_pkg_path, AitInstaller, \
-    INSTALL_INFO_MAP, install_tools, build_extra, download_comps
+    INSTALL_INFO_MAP, install_tools, build_extra, download_comps, get_entry_points
 
-# Mock logger and subprocess for testing
+
 logger = MagicMock()
 subprocess = MagicMock()
 
@@ -31,6 +30,18 @@ def setup():
     with patch('components.utils.install.logger', logger), \
          patch('components.utils.install.subprocess', subprocess):
         yield
+
+
+@pytest.mark.filterwarnings("ignore:Deprecated call to:DeprecationWarning")
+@pytest.mark.filterwarnings("ignore:pkg_resources is deprecated:DeprecationWarning")
+@patch('importlib.metadata.entry_points')
+@patch('pkg_resources.iter_entry_points')
+def test_get_entry_points_given_valid_entry_points_name_and_importlib_metadata_throws_exception_when_fallback_to_pkg_resources_then_entry_points_returned(mock_iter_entry_points, mock_entry_points):
+    mock_entry_points.side_effect = Exception('Test exception')
+    mock_iter_entry_points.return_value = ['entry_point1', 'entry_point2']
+    result = get_entry_points('test_entry_points')
+    assert result == ['entry_point1', 'entry_point2']
+    mock_iter_entry_points.assert_called_once_with('test_entry_points')
 
 
 def test_is_windows_given_windows_platform_when_called_then_true():
