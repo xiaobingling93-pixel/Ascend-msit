@@ -14,19 +14,23 @@
 
 import sys
 from collections import namedtuple
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
+import pytest
 
 ACL_RUNTIME = namedtuple("aclruntime", "key")("aclruntime")
 AIS_BENCH_RUNTIME = namedtuple("ais_bench", "key")("ais-bench")
 
 
 def test_install_check_given_all_installed_then_pass():
-    sys.modules["pkg_resources"] = namedtuple("pkg_resources", "working_set")([ACL_RUNTIME, AIS_BENCH_RUNTIME])
-    from msit_benchmark.__install__ import BenchmarkInstall
+    mock_pkg = MagicMock()
+    mock_pkg.working_set = [ACL_RUNTIME, AIS_BENCH_RUNTIME]
+    with patch.dict(sys.modules, {"pkg_resources": mock_pkg}):
+        from msit_benchmark.__install__ import BenchmarkInstall
+        assert BenchmarkInstall().check() == "OK"
 
-    assert BenchmarkInstall().check() == "OK"
 
-
+@pytest.mark.filterwarnings("ignore:Deprecated call to:DeprecationWarning")
+@pytest.mark.filterwarnings("ignore:pkg_resources is deprecated:DeprecationWarning")
 @patch("subprocess.run")
 def test_install_build_extra_given_valid_then_pass(mock_run):
     from msit_benchmark.__install__ import BenchmarkInstall

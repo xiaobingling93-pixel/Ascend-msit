@@ -11,14 +11,29 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import os
 import argparse
 
-from components.utils.parser import BaseCommand
+from components.utils.parser import BaseCommand, AitInstallCommand, AitBuildExtraCommand, \
+                                    AitCheckCommand, DownloadCommand
 from components.utils.constants import AIT_FAQ_HOME, MIND_STUDIO_LOGO
-from components.utils.file_open_check import UmaskWrapper
-from components.utils.install import AitInstallCommand, AitBuildExtraCommand, AitCheckCommand, DownloadCommand
 from components.utils.log import logger
+
+
+class UmaskWrapper:
+    """Write with preset umask
+    >>> with UmaskWrapper():
+    >>>     ...
+    """
+
+    def __init__(self, umask=0o027):
+        self.umask, self.ori_umask = umask, None
+
+    def __enter__(self):
+        self.ori_umask = os.umask(self.umask)
+
+    def __exit__(self, exc_type=None, exc_val=None, exc_tb=None):
+        os.umask(self.ori_umask)
 
 
 def main():
