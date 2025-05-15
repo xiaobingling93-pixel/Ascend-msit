@@ -1,13 +1,15 @@
 # 权重压缩基本使用流程
 
 ## 编译压缩函数
-进入automl/msmodelslim/pytorch/weight_compression/compress_graph路径下
-设置环境变量 export ASCEND_HOME_PATH=path/to/ascend
-执行编译命令 bash build.sh ${ASCEND_HOME_PATH}
-编译结束后在automl/msmodelslim/pytorch/weight_compression/compress_graph/build路径下存放编译结果compress_excutor
+- 进入{python环境路径}/site-packages/msmodelslim/pytorch/weight_compression/compress_graph路径下，以/usr/local/为用户所在目录，以3.7.5为python版本的样例代码：
+```
+cd usr/local/lib/python3.7/site-packages/msmodelslim/pytorch/weight_compression/compress_graph/
+```
+- 编译weight_compression组件 `sudo bash build.sh {CANN包安装路径}/ascend-toolkit/latest`
+- 上一步编译操作会得到bulid文件夹，给build文件夹相关权限 `chmod -R 550 build`
 
 ## 导入工具
-from automl.modeslim.pytorch.weight_compression import CompressConfig, Compressor
+from msmodeslim.pytorch.weight_compression import CompressConfig, Compressor
 
 ## 设置压缩工具配置
 由于压缩工具调用的压缩函数已将大部分配置参数固定，因此在工具层面无需设置很多参数。
@@ -31,7 +33,7 @@ compressor = Compressor(compress_config, path_save)
 compress_weight, compress_index, compress_info = compressor.run()
 ```
 说明：
-1. `Compressor.run()`有一个参数`bool: weight_transpose`，默认为`False`，即是否开启权重转置。目前已知chatGLM2-6B无需开启权重转置
+1. `compressor.run()`有一个参数`bool: weight_transpose`，默认为`False`，即是否开启权重转置。目前已知chatGLM2-6B无需开启权重转置
 2. 开启多进程权重压缩模式时，需要手动设置当前环境下最大可打开文件数，可参考以下命令：
     ```bash
     #check current limit
@@ -50,4 +52,4 @@ compressor.export(compress_weight, weight_root)
 compressor.export(compress_index, index_root)
 compressor.export(compress_info, info_root, dtype=np.int64) # info数据为int64格式需要特别声明，否则默认将会保存为int8的格式
 ```
-说明：权重压缩工具在加载输入的权重文件时，存在一定的反序列化攻击安全风险。权重压缩工具通过界面提示操作存在反序列化攻击的安全风险，在加载前用户交互确认加载的权重文件无风险后，才开始进行对文件的操作。
+说明：权重压缩工具在加载输入的权重文件时，存在一定的反序列化攻击安全风险。权重压缩工具通过界面提示操作存在反序列化攻击的安全风险，在加载前用户交互确认加载的权重文件无风险后，再进行后续操作。
