@@ -37,7 +37,7 @@ pip3 install torch==2.1.0   # 安装CPU版本的PyTorch 2.1.0（不依赖torch_n
 
 执行压缩算法RACompressor启动长序列压缩任务，进行长序列压缩。
 
-调用get_compress_heads接口导出压缩窗口，并在指定路径中获取.pt文件，具体请参见MindIE的“加速库支持模型列表”章节中已适配量化的模型。
+调用get_compress_heads接口导出压缩窗口，并在指定路径中获取.pt文件，具体请参见MindIE的[“加速库支持模型列表”](https://www.hiascend.com/document/detail/zh/mindie/20RC1/modellist/mindie_modellist_0001.html)章节中已适配量化的模型。
 
 ### 压缩步骤（以baichuan2-13b为例）
 
@@ -86,7 +86,7 @@ ra.get_alibi_windows(save_path)
 ```
 执行以下命令，启动长序列压缩任务，并在“baichuan 2-13b”文件夹的路径下获取.pt文件。
 python3 run.py
-.pt文件可用于后续的推理部署任务，具体请参见MindIE的“加速库支持模型列表”章节中已适配量化的模型。
+.pt文件可用于后续的推理部署任务，具体请参见MindIE的[“加速库支持模型列表”](https://www.hiascend.com/document/detail/zh/mindie/20RC1/modellist/mindie_modellist_0001.html)章节中已适配量化的模型。
 
 ## RoPE编码类型
 RoPE（Rotary Position Embedding）编码是一种高效的位置编码方式，有以下特点：
@@ -136,7 +136,7 @@ pip3 install torch_npu-2.1.0.xxx.whl   # xxx需要根据实际情况进行选择
 
 用户可根据.pt文件进行压缩
 
-压缩后的文件可用于后续的推理部署，具体请参见MindIE的“加速库支持模型列表”章节中已适配量化的模型。
+压缩后的文件可用于后续的推理部署，具体请参见MindIE的[“加速库支持模型列表”](https://www.hiascend.com/document/detail/zh/mindie/20RC1/modellist/mindie_modellist_0001.html)章节中已适配量化的模型。
 
 ### 压缩步骤（以Qwen2-72b-instruct为例）
 
