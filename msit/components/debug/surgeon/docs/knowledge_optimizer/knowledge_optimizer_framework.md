@@ -149,7 +149,7 @@ node_dicts的结果如下：
 
 ## 2. 如何测试改图知识库
 
-写好了知识库后应该如何进行测试以保证知识库的正确性呢，框架提供了一个用于测试的[helper类](https://gitee.com/ascend/msit/blob/master/msit/components/debug/surgeon/test/testcase/helper.py)，运行该文件完成测试。
+写好了知识库后应该如何进行测试以保证知识库的正确性呢，框架提供了一个用于测试的[helper类](../../../../../test/UT/surgeon_ut/helper.py)，运行该文件完成测试。
 
 ```mermaid
 classDiagram
@@ -186,7 +186,6 @@ OptimizationConfig是一个封装参数的类，其中graph是待优化的图，
 
 使用时，让知识库的单元测试类同时继承unittest.TestCase和KnowledgeTestHelper即可使用。
 
-关于这些接口的使用细节，请参见[源代码以及现有知识库的单元测试](https://gitee.com/ascend/msit/tree/master/msit/components/debug/surgeon/test/testcase/optimizer/knowledges)
 
 
 

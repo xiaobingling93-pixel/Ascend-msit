@@ -41,11 +41,10 @@ BaseGraph 类提供了基本的接口用于增删改查节点：
 |                                              | 修改opset_imports  | g.opset_imports = int                                   |
 | [基础功能](./graph_refactor_API.md#基础功能) | 解析模型文件       | OnnxGraph.parse(path_or_bytes)                          |
 |                                              | 将图保存成模型文件 | g.save(path, save_as_external_data, all_tensors_to_one_file)                                            |
-|                                              | 图转为GraphProto   | g.proto()                                               |
-|                                              | 图转为ModelProto   | g.model()                                               |
 |                                              | 更新前后节点关系   | g.update_map()                                          |
 |                                              | 算子节点拓扑排序   | g.toposort()                                            |
 | [实用功能](./graph_refactor_API.md#实用功能) | 模型截断           | g.extract(save_path, input_name_list, output_name_list) |
+| | 提取子图  | g.extract_subgraph([start_node_name1, start_node_name2], [end_node_name1, end_node_name2], subgraph_path=None, is_check_subgraph=False, input_shape=None, input_dtype=None) -> BaseGraph  | 
 |                                              | 维度推断           | g.infer_shape()                                         |
 |                                              | 模型简化           | g.simplify(**kwargs)                                    |
  |                                              | 模型拼接          | OnnxGraph.concat_graph(g1, g2, io_map)               |
