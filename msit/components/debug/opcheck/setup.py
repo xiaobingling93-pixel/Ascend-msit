@@ -35,7 +35,7 @@ debug_sub_task_entry_points = [
 
 setup(
     name='msit-opcheck',
-    version='7.0.0c1219',
+    version='8.0.0',
     description='This tool enables operation check tool for GE compile model.',
     long_description="",
     url=config.get('URL', 'msit_debug_opcheck_url'),
