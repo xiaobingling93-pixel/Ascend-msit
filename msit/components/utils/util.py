@@ -16,8 +16,6 @@ import re
 import os
 import pickle
 
-import torch
-
 from components.utils.constants import TENSOR_MAX_SIZE, EXT_SIZE_MAPPING, PATH_WHITE_LIST_REGEX
 from components.utils.log import logger
 from components.utils.file_open_check import is_legal_path_length
@@ -72,6 +70,7 @@ def check_file_size_based_on_ext(path, ext=None):
 
 
 def safe_torch_load(path, **kwargs):
+    import torch # Do not move it !!! it may caused Import Error
     kwargs['weights_only'] = True
     tensor = None
     
