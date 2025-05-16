@@ -36,7 +36,7 @@ msit_sub_task_entry_points = [
 
 setup(
     name='msit-expert-load-balancing',
-    version='8.0.0c330',
+    version='8.0.0',
     description='Deepseek model load balancing affinity expert optimization in static and dynamic scenarios',
     packages=find_packages(), 
     license='Apache-2.0',

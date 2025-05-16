@@ -38,7 +38,7 @@ msit_sub_task_entry_points = [
 
 setup(
     name='msit-graph',
-    version='7.0.0c1219',
+    version='8.0.0',
     description='graph analyze tool',
     url=config.get('URL', 'msit_url'),
     packages=find_packages(),

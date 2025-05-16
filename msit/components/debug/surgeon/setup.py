@@ -37,7 +37,7 @@ debug_sub_task_entry_points = [
 
 setup(
     name='msit-surgeon',
-    version='7.0.0c1230',
+    version='8.0.0',
     description='auto optimizer',
     long_description="",
     long_description_content_type='text/markdown',
