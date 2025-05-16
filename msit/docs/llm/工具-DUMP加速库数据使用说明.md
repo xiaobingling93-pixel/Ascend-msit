@@ -33,6 +33,9 @@ msit llm dump --exec "<任意包含ATB的程序执行命令>" --type model tenso
 msit llm dump --exec "<任意包含ATB的程序执行命令>" --type model tensor -ids 3 # dump 编号为 3 的layer的输入输出数据
 msit llm dump --exec "<任意包含ATB的程序执行命令>" --type model tensor -ids 3_1 # dump 编号为 3 的layer数据中第 1 个子算子的输入输出数据
 
+# dump 时开启/关闭 用软链接存储落盘文件
+msit llm dump --exec "<任意包含ATB的程序执行命令>" # 默认为关闭
+msit llm dump --exec "<任意包含ATB的程序执行命令>" --enable-symlink # 打开软链接存储落盘文件的功能
 ```
 
 ## 命令行参数
@@ -51,6 +54,7 @@ msit llm dump --exec "<任意包含ATB的程序执行命令>" --type model tenso
 | --save-tensor-part, -stp      | 指定保存 tensor 的部分，0 为仅 intensor，1 为仅 outtensor，2 为全部保存，默认为 2。使用示例：-stp 1                                                                                                                                                                                                                                                            | 否   |
 | -o, --output                  | 指定 dump 数据的输出目录，默认为'./'，使用示例：-o aasx/sss                                                                                                                                                                                                                                                                                          | 否   |
 | -device, --device-id          | 指定 dump 数据的 device id，默认为 None 表示不限制。如指定 --device-id 1，将只 dump 1 卡的数据                                                                                                                                                                                                                                                             | 否   |
+| -symlink, --enable-symlink    | 选择正在 dump 的数据若与已保存的文件中的数据相同时， 是否使用软链接来节省磁盘空间和运行时间，默认为不开启。如指定 --enable-symlink 或 -symlink，则开启使用软链接功能                                                                                                                                                                                                                                                             | 否   |
 | -l, --log-level               | 指定 log level，默认为 info，可选值 debug, info, warning, error, fatal, critical                                                                                                                                                                                                                                                            | 否   |
 | -h, --help                    | 命令行参数帮助信息| 否 | 
 | -seed                | 设定确定性计算的种子，默认为None表示不开启确定性计算。如果设置种子，可以不输入。如果不输入那么为2024，如果输入那么需要输入一个能转换为int的值。使用示例：-seed 1                                                                                                                                                            | 否   |

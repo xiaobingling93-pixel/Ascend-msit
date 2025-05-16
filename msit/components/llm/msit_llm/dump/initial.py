@@ -30,7 +30,8 @@ from msit_llm.common.constant import ATB_HOME_PATH, ATB_SAVE_TENSOR_TIME, ATB_SA
     ATB_SAVE_TILING, LD_PRELOAD, ATB_OUTPUT_DIR, ATB_SAVE_CHILD, ATB_SAVE_TENSOR_PART, \
     ASCEND_TOOLKIT_HOME, ATB_PROB_LIB_WITH_ABI, ATB_PROB_LIB_WITHOUT_ABI, ATB_SAVE_CPU_PROFILING, \
     ATB_CUR_PID, ATB_DUMP_SUB_PROC_INFO_SAVE_PATH, ATB_DEVICE_ID, ATB_AIT_LOG_LEVEL, ATB_DUMP_TYPE, get_ait_dump_path, \
-    ATB_TIMESTAMP, GLOBAL_HISTORY_AIT_DUMP_PATH_LIST, ATB_SAVE_TENSOR_IN_BEFORE_OUT_AFTER, ATB_SAVE_TENSOR_STATISTICS
+    ATB_TIMESTAMP, GLOBAL_HISTORY_AIT_DUMP_PATH_LIST, ATB_SAVE_TENSOR_IN_BEFORE_OUT_AFTER, ATB_SAVE_TENSOR_STATISTICS, \
+    ATB_SAVE_SYMLINK
 
 
 def is_use_cxx11():
@@ -115,6 +116,7 @@ def init_dump_task(args):
     os.environ[ATB_SAVE_TILING] = "1" if args.tiling else "0"
     os.environ[ATB_SAVE_TENSOR_PART] = str(args.save_tensor_part)
     os.environ[ATB_SAVE_CPU_PROFILING] = "1" if "cpu_profiling" in args.type else "0"
+    os.environ[ATB_SAVE_SYMLINK] = "1" if args.enable_symlink else "0"
     os.environ[ATB_CUR_PID] = str(os.getpid())
 
     if args.device_id is not None:
