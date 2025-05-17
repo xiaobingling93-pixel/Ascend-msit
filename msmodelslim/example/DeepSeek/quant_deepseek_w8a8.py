@@ -40,7 +40,7 @@ def parse_args():
     parser.add_argument('--from_bf16', action='store_true', help="Origin model is of bf16")
     parser.add_argument('--fa_quant', action="store_true", help="Enable fa quant")
     parser.add_argument('--mindie_format', action="store_true", help="Compatible with quantization formats \
-                        supported by before B050 version of MindIE")
+                        supported by before 2.1.RC1 version of MindIE")
     return parser.parse_args()
 
 

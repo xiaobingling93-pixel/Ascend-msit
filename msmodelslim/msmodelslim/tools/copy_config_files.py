@@ -23,36 +23,30 @@ def modify_config_json(src_path: str, dst_path: str, quant_config, mindie_format
     model_config = json_safe_load(src_path)
     model_config['quantize'] = str(quant_config.model_quant_type.value).lower()
     
-    if mindie_format:
-        matched_files = glob.glob(os.path.join(dst_path.split("config.json")[0], \
-                                    f"quant_model_description*.json"))
-        dest_quant_description_filepath = matched_files[0]
-    else:
-        dest_quant_description_filepath = os.path.join(dst_path.split("config.json")[0], \
-                                                        f"quant_model_description.json")
+    config_dir = dst_path.split("config.json")[0]
+    dest_quant_description_filepath = (
+        glob.glob(os.path.join(config_dir, "quant_model_description*.json"))[0]
+        if mindie_format
+        else os.path.join(config_dir, "quant_model_description.json")
+    )
     dest_quant_description_filepath = get_valid_write_path(dest_quant_description_filepath, is_dir=False)
     quant_description_data = json_safe_load(dest_quant_description_filepath, check_user_stat=False)
+    quantization_config = {} if mindie_format else quant_description_data
 
-    quantization_config = quant_description_data
-    if quant_config.use_kvcache_quant:
-        quantization_config['kv_quant_type'] = "C8"
-    else:
-        quantization_config['kv_quant_type'] = None
+    quantization_config.update({
+        'kv_quant_type': "C8" if quant_config.use_kvcache_quant else None,
+        'use_fa_quant': "FAQuant" if quant_config.use_fa_quant else None,
+        'group_size': quant_config.group_size
+    })
     
-    if quant_config.use_fa_quant:
-        quantization_config['use_fa_quant'] = "FAQuant"
-    else:
-        quantization_config['use_fa_quant'] = None
-
-    quantization_config['group_size'] = quant_config.group_size
-
     if mindie_format:
         model_config['quantization_config'] = quantization_config
     else:
         json_safe_dump(quantization_config, dest_quant_description_filepath, indent=4)
-    
+
     if custom_hook:
         custom_hook(model_config)
+
     json_safe_dump(model_config, dst_path, indent=4)
 
 

@@ -35,7 +35,7 @@ def parse_args():
     parser.add_argument('--from_fp8', action='store_true', help="Origin model is of fp8")
     parser.add_argument('--from_bf16', action='store_true', help="Origin model is of bf16")
     parser.add_argument('--mindie_format', action="store_true", help="Compatible with quantization formats \
-                        supported by before B050 version of MindIE")
+                        supported by before 2.1.RC1 version of MindIE")
     return parser.parse_args()
 
 
@@ -183,8 +183,12 @@ def main():
     calibrator.run()
     pbar.update(1)
 
+    if args.mindie_format:
+        quant_model_description_json_name = "quant_model_description_w8a8_dynamic.json"
+    else:
+        quant_model_description_json_name = "quant_model_description.json"
     calibrator.save(save_path,
-                    json_name="quant_model_description_w8a8_dynamic.json",
+                    json_name=quant_model_description_json_name,
                     safetensors_name="quant_model_weight_w8a8_dynamic.safetensors",
                     save_type=["safe_tensor"],
                     part_file_size=4)

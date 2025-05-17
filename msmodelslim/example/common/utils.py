@@ -154,7 +154,7 @@ class SafeGenerator:
             quant_description_data.update(quantization_config)
             
             if args.mindie_format:
-                data['quantization_config'] = quant_description_data
+                data['quantization_config'] = quantization_config
 
         dest_config_filepath = os.path.join(dest_dir, 'config.json')
         json_safe_dump(data, dest_config_filepath, 4)
