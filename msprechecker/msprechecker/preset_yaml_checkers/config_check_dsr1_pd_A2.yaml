@@ -29,12 +29,6 @@ user_config:
   - name: mindie_ms_controller_config:multi_node_infer_config:multi_node_infer_enable
     value: true
     reason: "mindie_ms_controller_config:multi_node_infer_config:multi_node_infer_enable应该是true"
-  - name: mindie_ms_controller_config:default_p_rate
-    value: = = deploy_config:p_instances_num
-    reason: "mindie_ms_controller_config:default_p_rate应该与deploy_config:p_instances_num一致"
-  - name: mindie_ms_controller_config:default_d_rate
-    value: = = deploy_config:d_instances_num
-    reason: "mindie_ms_controller_config:default_d_rate应该与deploy_config:d_instances_num"
   - name: mindie_server_prefill_config:BackendConfig:multiNodesInferEnabled
     value: true
     reason: "mindie_server_prefill_config:BackendConfig:multiNodesInferEnabled应该是true"

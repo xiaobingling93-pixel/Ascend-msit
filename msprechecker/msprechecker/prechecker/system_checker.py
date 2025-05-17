@@ -266,8 +266,9 @@ class TransparentHugepageChecker(PrecheckerBase):
 
 class CpuHighPerformanceChecker(PrecheckerBase):
     __checker_name__ = "CpuHighPerformance"
-
-    def collect_env(self, **kwargs):
+    
+    @staticmethod
+    def _normal_check():
         cpu_count = os.cpu_count()
         is_performances = []
         for core in range(cpu_count):
@@ -280,17 +281,66 @@ class CpuHighPerformanceChecker(PrecheckerBase):
                     if line.strip() == "performance":
                         is_performances.append(True)
                         break
-        performance_count = len(is_performances)
-        record(f"0700 CPU 是否高性能模式：{'是' if cpu_count == performance_count else '否'}", part=CONTENT_PARTS.sys)
-        return dict(cpu_count=cpu_count, performance_count=performance_count)
+        
+        return cpu_count, len(is_performances)
+   
+    @staticmethod    
+    def _kunpeng_check():
+        import re
+        import shlex
+        import subprocess
+        try:
+            proc = subprocess.run(
+                shlex.split("dmidecode -t processor | grep Speed"),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=5,
+                check=True,
+                text=True
+            )
+        except (FileNotFoundError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+            logger.debug("Error occured during running 'dmidecode': %s", e)
+            return False
+        
+        # 'dmidecode' needs root privilege, otherwise return 0 with stderr
+        if proc.stderr:
+            logger.debug("Error occured during running 'dmidecode': %s", proc.stderr)
+            return False
+
+        max_speed_pattern = re.compile(r"Max Speed: (\d+) MHz")
+        current_speed_pattern = re.compile(r"Current Speed: (\d+) MHz")
+        
+        max_speed = max_speed_pattern.findall(proc.stdout)
+        current_speed = current_speed_pattern.findall(proc.stdout)
+        
+        return max_speed == current_speed
+              
+    def collect_env(self, **kwargs):
+        cpu_count, performance_count = CpuHighPerformanceChecker._normal_check()
+        is_high_performance_on = cpu_count == performance_count or CpuHighPerformanceChecker._kunpeng_check()
+        
+        record(f"0700 CPU 是否高性能模式：{'是' if is_high_performance_on else '否'}", part=CONTENT_PARTS.sys)
+        return dict(
+            cpu_count=cpu_count,
+            performance_count=performance_count,
+            is_high_performance_on=is_high_performance_on
+        )
 
     def do_precheck(self, cpu_info, **kwargs):
         if cpu_info is None:
             return
         cpu_count = cpu_info.get("cpu_count")
         performance_count = cpu_info.get("performance_count")
+        is_high_performance_on = cpu_info.get("is_high_performance_on")
+        
+        if is_high_performance_on:
+            show_check_result(
+                "system",
+                "CPU高性能模式",
+                CheckResult.OK
+            )
 
-        if performance_count != cpu_count:
+        elif performance_count != cpu_count:
             yum_cmd = "EulerOS/CentOS: yum install kernel-tools"
             apt_cmd = "Ubuntu：apt install cpufrequtils"
             run_cmd = "cpupower -c all frequency-set -g performance"
@@ -299,8 +349,9 @@ class CpuHighPerformanceChecker(PrecheckerBase):
             show_check_result(
                 "system",
                 "CPU高性能模式",
-                CheckResult.ERROR,
-                action=f"开启 CPU 高性能模式：{run_cmd}；\n        "
+                CheckResult.WARN,
+                action=f"常规 CPU 高性能模式开启校验失败，如果您确保已经开启了高性能模式，请忽略。\n        "
+                f"开启 CPU 高性能模式：{run_cmd}；\n        "
                 f"如果没有 cpupower 命令可以通过 {yum_cmd} 或 {apt_cmd} 安装；\n        "
                 f"{fail_info}\n        "
                 f"如果需要回退，可以使用命令：{undo_cmd}",
