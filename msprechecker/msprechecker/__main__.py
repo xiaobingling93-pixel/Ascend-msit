@@ -258,7 +258,7 @@ def sub_parser_dump(subparsers):
         "--dump_file_path",
         nargs="?",
         default=DEFAULT_DUMP_PATH,
-        help="Path save envs. It could be a list of path when you want to compare envs of multiple path.",
+        help="Path save envs. It could be a list of path when you want to compare envs of multiple path. [TODO]",
     )
     for ii in DUMP_COMMON_ARGS + COMMON_ARGS:
         parser.add_argument(*ii.get("args", []), **ii.get("kwargs", {}))
