@@ -139,7 +139,7 @@ class SingleOpAnalyzer:
 
     def save_analyze_result(self, analyze_result):
         result_df = pd.DataFrame(analyze_result)
-        analyze_result_path = os.path.join(self.output_path, "profile_analyse.csv")
+        analyze_result_path = os.path.join(self.output_path, "profile_analysis.csv")
         sort_df = result_df.sort_values(by="Time Difference", ascending=True, na_position='last')
         sort_df.to_csv(analyze_result_path, index=False, na_rep='NaN')
         logger.info("analyze result save to %r" % analyze_result_path)

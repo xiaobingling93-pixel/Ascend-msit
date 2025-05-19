@@ -5,7 +5,7 @@
 
 ## 使用方法
 ### 前置条件
-- 工具在运行过程中，会调用atc工具对ge的dump图进行转换，使用前请先确保source了CANN的环境变量。例如: source /usr/local/Ascend/ascend-toolkit/set_env.sh
+- 工具在运行过程中，会调用ATC工具对GE的dump图进行转换，使用前请先确保source了CANN的环境变量。例如: source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 ### 使用入口
 在安装好msit-profile工具后，可以直接通过命令行使用。
@@ -25,8 +25,10 @@ msit profile analyze --origin /tmp/op_summary_origin.csv --fused /tmp/op_summary
   | -h, --help               | 工具使用帮助信息。               | 否  |
 
 
-## 分析结果介绍
-运行结束后，指定的output路径下生成一个profile_analyze.csv文件，里面记录了融合算子的性能分析结果，当前仅支持自动融合相关的两类融合算子（算子类型为AscBackend和FusedAscBackend）。
+## 输出件介绍
+> 性能分析结果
+
+运行结束后，指定的output路径下生成一个profile_analysis.csv文件，里面记录了融合算子的性能分析结果，当前仅支持自动融合相关的两类融合算子（算子类型为AscBackend和FusedAscBackend）。
 分析结果有很多列，下面对每一列的含义进行介绍：
   | 列名                    | 描述                                       | 
   | ------------------------ | ---------------------------------------- | 
@@ -39,3 +41,7 @@ msit profile analyze --origin /tmp/op_summary_origin.csv --fused /tmp/op_summary
   | Time Difference   | 融合后算子耗时**减去**融合前算子耗时       | 
   | Origin Duration(us) Each Op   | 每个原始算子的耗时和列表，分别记录每个原始算子的算子名称和对应耗时和     | 
   | Not Found Origin Op   | 融合前算子中没有采集到profiling信息的算子名称       | 
+
+  > ATC转换文件
+  
+  运行过程中会调用ATC工具对GE的dump图进行转换，转换后的文件保存在--output参数指定的路径下，文件名为ge_proto_build.json。
