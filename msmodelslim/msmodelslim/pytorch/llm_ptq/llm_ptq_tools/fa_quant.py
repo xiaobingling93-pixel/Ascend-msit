@@ -60,10 +60,6 @@ class QKVQuantizer:
         batch_size, num_head, seq_len, head_dim = samples.shape
 
         if not _SUPPORT_RECALL_WINDOW:
-            if num_head != self.num_head:
-                raise ValueError("The number of heads in the input states tensor \
-                                  does not match the preset value!")
-
             num_head_per_device = self.num_head // tp_size
             samples = samples.contiguous().view(tp_size * num_head_per_device, -1)
             samples_max = samples.max(dim=-1, keepdim=True)[0]
@@ -151,6 +147,12 @@ class FAQuantizer:
 
         if not self.is_calib and not self.dequant_infer:
             return states_tensor
+
+        expected_types = {"q", "k", "v"}
+        if self.processed_types != expected_types:
+            missing = expected_types - self.processed_types
+            raise RuntimeError(f"Missing qkv types:{missing}. "
+                               f"Please ensure all {expected_types} are processed.")
 
         if TensorType(qkv) == TensorType.Q:
             scale, offset = self.q_observer.get_scale_offset(
