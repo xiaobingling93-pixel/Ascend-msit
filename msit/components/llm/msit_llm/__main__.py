@@ -160,6 +160,15 @@ class DumpCommand(BaseCommand):
             default=None,
             help='set random seed, will ensure that the random results are consistent with each run.')
 
+        parser.add_argument(
+            '--enable-symlink',
+            '-symlink',
+            required=False,
+            dest="enable_symlink",
+            action='store_true',
+            default=False,
+            help='Enable symbolic links for duplicate files (saves disk space and runtime).')
+
         parser.add_argument("--log-level", "-l", default="info", choices=LOG_LEVELS_LOWER, help="specify log level.")
 
     def handle(self, args, **kwargs):
