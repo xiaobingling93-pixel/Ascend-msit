@@ -2,7 +2,7 @@
 
 ## 介绍
 
-msit convert aie命令依托AIE（Ascend Inference Engine）推理引擎，提供由ONNX模型转换至om模型的功能。
+msit convert aie命令依托MindIE（Mind Inference Engine）推理引擎，提供由ONNX模型转换至om模型的功能。
 
 ## 使用场景约束
 1. 当前仅支持**Atlas200/300/500推理产品以及Atlas推理系列产品**平台的AIE转换；
