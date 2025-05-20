@@ -162,7 +162,7 @@ class SafeGenerator:
         if not args.mindie_format:
             os.remove(dest_quant_description_filepath)
             new_dest_quant_description_filepath = os.path.join(dest_dir, f"quant_model_description.json")
-            new_dest_quant_description_filepath = get_valid_write_path(new_dest_quant_description_filepath,\
+            new_dest_quant_description_filepath = get_valid_write_path(new_dest_quant_description_filepath, \
                                                                         is_dir=False)
             json_safe_dump(quant_description_data, new_dest_quant_description_filepath, 4)
 

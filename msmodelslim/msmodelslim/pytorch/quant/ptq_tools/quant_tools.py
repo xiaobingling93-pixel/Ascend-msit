@@ -229,7 +229,7 @@ class Calibrator(object):
             dummpy_input = tuple(self.calib_data[0])
         self.fp_model.eval()
 
-        if "yolov5" in model_arch.lower() :
+        if "yolov5" in model_arch.lower():
             self.fp_model.model[-1].export = True
 
         temp_fp_model_file = os.path.join(save_path, "{}_fp.onnx".format(model_arch))

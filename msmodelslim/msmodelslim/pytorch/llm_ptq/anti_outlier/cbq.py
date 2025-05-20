@@ -32,7 +32,7 @@ def otsu(data, pos=True):
     for idx, _ in enumerate(data):
         up_cate = data[:idx + 1]
         bottom_cate = data[idx + 1:]
-        if bottom_cate.shape[0] == 0 :
+        if bottom_cate.shape[0] == 0:
             continue 
         if pos is True:
             _inter, _, _ = inter_category_distance(up_cate, bottom_cate)

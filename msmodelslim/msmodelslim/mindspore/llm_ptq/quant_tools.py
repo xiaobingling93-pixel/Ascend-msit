@@ -108,7 +108,7 @@ class Calibrator(object):
         fake_quant_model = self.quantize_model(self.original_model, is_fake_quant=True)
         
         quantized_model_dict = {
-            k : v
+            k: v
             for k, v in self.model.parameters_dict().items()
             if "key_cache" not in k and "value_cache" not in k
         }

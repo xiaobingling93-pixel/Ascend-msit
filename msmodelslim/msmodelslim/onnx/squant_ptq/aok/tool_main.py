@@ -17,7 +17,7 @@ DEFAULT_BATCH_SIZE = 1
 def optimize_model(model_path, args: argparse.Namespace,
                    opt_filter: int,
                    runner: Runner,
-                   aok_model_path:str):
+                   aok_model_path: str):
     optimizer = GraphOptimizer(msmodelslim_logger) \
         .set_opset_version(args.opset_version) \
         .set_ir_version(IR_VERSION) \

@@ -21,7 +21,7 @@ ORDINAL_PACK_ORDER = [0, 1, 2, 3, 4, 5, 6, 7]
 AWQ_PACK_ORDER = [0, 2, 4, 6, 1, 3, 5, 7]
 
 
-def awq_pack(iweight: torch.Tensor, w_bit:int, direction: str = "column"):
+def awq_pack(iweight: torch.Tensor, w_bit: int, direction: str = "column"):
     pack_num = STORAGE_BITS // w_bit
     shifts = torch.arange(0, STORAGE_BITS, w_bit, device=iweight.device)
 
@@ -54,7 +54,7 @@ def apply_order(
     return iweight
 
 
-def gptq_qweight_pack(iweight:torch.Tensor, w_bit:int):
+def gptq_qweight_pack(iweight: torch.Tensor, w_bit: int):
     i = 0
     row = 0
     iweight = iweight.numpy().astype(np.uint32)
@@ -72,7 +72,7 @@ def gptq_qweight_pack(iweight:torch.Tensor, w_bit:int):
     return qweight
 
 
-def gptq_qzeros_pack(zeros:torch.Tensor, w_bit:int):
+def gptq_qzeros_pack(zeros: torch.Tensor, w_bit: int):
     i = 0
     col = 0
     if zeros.dtype == torch.bfloat16:
