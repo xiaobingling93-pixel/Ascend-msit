@@ -38,9 +38,48 @@ class TestSingleOpAnalyzer(unittest.TestCase):
         self.analyzer.origin_df = pd.DataFrame({
             'Op Name': ['op1', 'op2', 'op3'],
             'OP Type': ['Conv2D', 'Reshape', 'FusedAscBackend'],
+            'Input Data Types': ['FLOAT', 'FLOAT', 'FLOAT'],
+            'Input Shapes': [512, 512, 512],
+            'Output Data Types': ['FLOAT', 'FLOAT', 'FLOAT'],
+            'Output Shapes': [512, 512, 512],
             'Task Duration(us)': [50, 5, 100]
         })
+    
+    def test_calculate_hbm_valid_inputs(self):
+        test_cases = [
+            (("INT32", "2,3"), [24 / 1024]), 
+            (("FLOAT;INT32", '"1,2,3";4'), [12/1024, 16/1024]),
+            (("INT32;FLOAT", "5,5;10"), [100/1024, 20/1024]), 
+            (("FLOAT", "  100 , 200 "), [40000/1024]),
+        ]
+        for input_val, expected in test_cases:
+            with self.subTest(input=input_val, expected=expected):
+                result = self.analyzer.calculate_hbms(input_val[0], input_val[1])
+                self.assertEqual(result, expected)
 
+    def test_calculate_hbm_empty_values(self):
+        test_cases = [
+            (("", "1,2")),
+            (("INT32", "")), 
+            (("", "")),
+        ]
+        for case in test_cases:
+            with self.subTest(input=case):
+                result = self.analyzer.calculate_hbms(case[0], case[1])
+                self.assertEqual(result, 0)        
+
+    def test_calculate_total_hbm_list_input(self):
+        test_cases = [
+            ([], 10, 10), 
+            ([2, 3.5], 0, 5.5),
+            ([-5, 10], 3, 8), 
+            ([1, 2, 3], -2, 4)
+        ]
+        for op_hbm, start, expected in test_cases:
+            with self.subTest(op_hbm=op_hbm, start=start):
+                result = self.analyzer.calculate_total_hbms(op_hbm, start)
+                self.assertAlmostEqual(result, expected)
+    
     def test_init_given_valid_args_when_initializing_then_attributes_set_correctly(self):
         self.assertEqual(self.analyzer.fused_op_summary, "fused.csv")
         self.assertEqual(self.analyzer.origin_op_summary, "origin.csv")
@@ -114,17 +153,40 @@ class TestSingleOpAnalyzer(unittest.TestCase):
     def test_analyze_origin_ops_given_valid_fuse_node_and_origin_ops_found_when_analyzing_then_origin_ops_returned(self):
         self.analyzer.ops_mapping_dict = {'fuse_op': [OpInfo('op1'), OpInfo('op2')]}
         total_origin_op_name = {'op1', 'op2', 'op3'}
-        origin_op_duration_sum, not_found_op_list = self.analyzer.analyze_origin_ops('fuse_op', total_origin_op_name)
+        origin_op_duration_sum, origin_op_hbms, origin_op_hbms_sum, origin_op_hbms_save, not_found_op_list = self.analyzer.analyze_origin_ops('fuse_op', total_origin_op_name)
         self.assertEqual(len(origin_op_duration_sum), 2)
         self.assertEqual(len(not_found_op_list), 0)
+        self.assertEqual(len(origin_op_hbms), 2)
+        self.assertEqual(len(origin_op_hbms_sum), 1)
+        self.assertEqual(len(origin_op_hbms_save), 2)
 
     def test_compute_performance_diff_given_valid_dataframes_when_computing_then_performance_diff_calculated(self):
         analyze_result = defaultdict(list)
-        single_fused_df = pd.DataFrame({'Task Duration(us)': [100], "Op Name": 'fuse', "OP Type": "my"})
-        origin_op_df = pd.DataFrame({'Task Duration(us)': [50], "Op Name": 'ori', "OP Type": "cpu"})
-        SingleOpAnalyzer.compute_performance_diff(single_fused_df, origin_op_df, analyze_result, 'fuse_op')
+        single_fused_df = pd.DataFrame(
+            {'Task Duration(us)': [100], 
+            "Op Name": 'fuse', 
+            "OP Type": "my",
+            'Input Data Types': 'FLOAT',
+            'Input Shapes': 128,
+            'Output Data Types': 'FLOAT',
+            'Output Shapes': 121},
+        )
+        origin_op_df = pd.DataFrame(
+            {'Task Duration(us)': [50], 
+            "Op Name": 'ori', 
+            "OP Type": "cpu",
+            'Input Data Types': 'FLOAT',
+            'Input Shapes': 512,
+            'Output Data Types': 'FLOAT',
+            'Output Shapes': 512}
+        )
+        origin_op_hbms_save = [1234, 5678]
+        SingleOpAnalyzer.compute_performance_diff(single_fused_df, origin_op_df, analyze_result, 'fuse_op', origin_op_hbms_save)
         self.assertEqual(analyze_result["Time Ratio"][0], 2.0)
         self.assertEqual(analyze_result["Time Difference"][0], 50.0)
+        self.assertEqual(analyze_result["HBMs Difference"][0], '(input:-1233.75, output:-5677.763671875)')
+        self.assertEqual(analyze_result["HBMs Ratio"][0], '(input:0.0002025931928687196, output:4.162171979570271e-05)')
+        self.assertEqual(analyze_result["Fused HBMs(KB)"][0], '(input:0.25, output:0.236328125)')
 
     @patch('pandas.DataFrame.to_csv')
     def test_save_analyze_result_given_valid_result_when_saving_then_csv_created(self, mock_to_csv):
@@ -144,7 +206,7 @@ class TestSingleOpAnalyzer(unittest.TestCase):
                     convert_ge_graph=MagicMock(), get_fuse_graph_to_origin_op_mapping=MagicMock(),
                     load_op_summary=MagicMock(return_value={'fuse_op'}), get_filter_origin_df=MagicMock(),
                     compute_performance_diff=MagicMock(), save_analyze_result=MagicMock(),
-                    analyze_origin_ops=MagicMock(return_value=([], [])))
+                    analyze_origin_ops=MagicMock(return_value=([], [], [], [], [])))
     def test_analyze_given_valid_input_when_analyzing_then_analysis_complete(self):
         self.analyzer.fused_name_to_type = {'fuse_op': "unknown"}
         self.analyzer.analyze()
