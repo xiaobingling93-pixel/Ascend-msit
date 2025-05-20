@@ -20,6 +20,7 @@ from modelevalstate.config.config import DeployPolicy
 import modelevalstate.optimizer.optimizer as optimizer
 import modelevalstate.train.source_to_train as train
 
+
 def main():
     parser = argparse.ArgumentParser(description="msserviceprofiler command line tool")
 
