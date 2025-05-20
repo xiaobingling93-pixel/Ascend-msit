@@ -7,15 +7,16 @@
   	- [单机预检快速使用](#单机预检快速使用)
   	- [结果字段介绍](#结果字段介绍)
   	- [非 K8S 部署时的一键配置环境变量](#非-k8s-部署时的一键配置环境变量)
-  - [多机预检](#多机预检)
-  	- [多机预检快速使用](#多机预检快速使用)
-  	- [运行结果](#运行结果)
   - [落盘和比对](#落盘和比对)
   	- [落盘快速使用](#落盘快速使用)
   	- [落盘文件介绍](#落盘文件介绍)
   	- [比对快速使用](#比对快速使用)
   	- [比对结果说明](#比对结果说明)
-  - [自定义配置](#自定义配置)
+  - [多机环境比对](#多机环境比对)
+  	- [多机环境比对快速使用](#多机环境比对快速使用)
+  	- [运行结果](#运行结果)
+  - [自定义检查项配置](#自定义检查项配置)
+  	- [自定义检查项配置使用说明](#自定义检查项配置使用说明)
   	- [Yaml 文件的基本形式](#yaml-文件的基本形式)
   	- [name 字段](#name-字段)
   	- [value 字段](#value-字段)
@@ -48,6 +49,8 @@
     - 源码使用
       ```sh
       git clone https://gitee.com/ascend/msit.git
+      # 安装依赖
+      pip install -r msit.master/msprechecker/requirements.txt
       # 将项目源码加入到 python 环境变量
       export PYTHONPATH=$PWD/msit/msprechecker:$PYTHONPATH
       # 验证是否可用
@@ -78,7 +81,7 @@
 
 # 单机预检
 ## 单机预检快速使用
-  - 非 K8S 时检查环境变量、MindIE `config.json`、模型配置、hccl 等
+  - 非 K8S 时检查环境变量、MindIE `config.json`、模型配置、hccl、CPU/NPU 硬件等
     ```bash
     msprechecker precheck
     ```
@@ -268,53 +271,6 @@
   - **回滚环境变量** 执行 `source msprechecker_env.sh 0`，终端会出现 `ENABLE=0` 字样。随后再次运行预检工具，打屏信息与最初一致
 ***
 
-# 多机预检
-## 多机预检快速使用
-  - 在多机环境的 **每台机器** 上分别运行
-    ```bash
-    msprechecker distribute_compare
-    ```
-    其中，`distribute_compare` 表明使用多机环境比对功能。主节点运行之后，会进行同步状态，等待子节点返回结果
-  - **多机环境**：master 节点等信息默认通过 ranktable 文件获取，也可手动指定，以下方式中任选一种
-    - 环境变量 `RANKFILETABLE` 已正确配置，则可以直接使用
-    - 或通过参数 `--rankfiletable, -ranktable` 指定 rank file table 的路径
-    - 如果没有 ranktable 文件，则可以手动配置 `master` 节点和 `LOCAL_RANK` 信息，以双机场景为例，`master` 节点运行：
-      ```sh
-      msprechecker distribute_compare -ip 12.34.56.78 -port 10000 -rank 0 -size 2
-      ```
-      `slaver` 节点运行：
-      ```sh
-      msprechecker distribute_compare -ip 12.34.56.78 -port 10000 -rank 1 -size 2
-      ```
-      - `-ip` 是 `--master_ip` 的缩写，代表 `master` 节点的IP地址
-      - `-port` 代表节点间通信的端口
-      - `-rank` 是 `--local_rank` 的缩写, 代表不同节点的 `rank` 值
-      - `-size` 是 `--world_size` 的缩写, 代表节点的个数
-  - **端口**：工具默认使用服务化 `config.json` 的 `port` 作为通信端口，如果每找到 `config.json` 则使用 pytorch 的默认通信端口 `29400`，如以上端口已被占用，需要通过 `--port` 更换端口
-## 运行结果
-  - 如果不同服务器间环境配置没有差异，则会在终端出现如下打屏信息：
-    ```bash
-    msprechecker_logger - INFO - local_ip: 12.34.56.78., interface: abcd123qwe
-    msprechecker_logger - INFO - DistributeCollector: master_ip=12.34.56.78, master_port=1025, rank=0, world_size=2
-    msprechecker_logger - INFO - No difference found
-    msprechecker_logger - INFO - == compare end ==
-    ```
-  - 如果不同服务器环境配置存在差异，则会在终端展示差异项。比如，展示内容为：
-    ```bash
-    - key .Env.ASDOPS_LOG_TO_FILE diffs
-      * 12.34.56.78:
-        1
-      * 12.34.56.79:
-        0
-    - key .Env.LCCL_PARALLEL diffs
-      * 12.34.56.78:
-        type <str> : 0
-      * 12.34.56.79:
-        type <NoneType> : None
-    ```
-    表明环境变量 `ASDOPS_LOG_TO_FILE` 和 `LCCL_PARALLEL` 在`master` 节点 `12.34.56.78` 和 `slaver` 节点 `12.34.56.79` 之间存在差异
-***
-
 # 落盘和比对
 ## 落盘快速使用
   - 推理过程中，如果出现 **异常** 或者 ​**性能不及预期**​，可以使用 ​**落盘** 功能​，将环境相关信息进行落盘，方便后续比对。推理结束后，性能预检工具支持比对推理中落盘的环境变量和配置项，帮助快速发现可能影响性能的差异点，实现问题快速定位
@@ -371,7 +327,59 @@
     表明环境变量 `CPU_AFFINITY_CONF` 在四个文件 `b`, `c`, `d`, `e` 中存在差异。其中 `b` 文件中，该环境变量的值为 `None`，即没有设置该环境变量；而 `c`, `d`, `e` 均设置为 2
 ***
 
-# 自定义配置
+# 多机环境比对
+## 多机环境比对快速使用
+  - 在多机环境的 **每台机器** 上分别运行
+    ```bash
+    msprechecker distribute_compare
+    ```
+    其中，`distribute_compare` 表明使用多机环境比对功能。主节点运行之后，会进行同步状态，等待子节点返回结果
+  - **多机环境**：master 节点等信息默认通过 ranktable 文件获取，也可手动指定，以下方式中任选一种
+    - 环境变量 `RANKFILETABLE` 已正确配置，则可以直接使用
+    - 或通过参数 `--rankfiletable, -ranktable` 指定 rank file table 的路径
+    - 如果没有 ranktable 文件，则可以手动配置 `master` 节点和 `LOCAL_RANK` 信息，以双机场景为例，`master` 节点运行：
+      ```sh
+      msprechecker distribute_compare -ip 12.34.56.78 -port 10000 -rank 0 -size 2
+      ```
+      `slaver` 节点运行：
+      ```sh
+      msprechecker distribute_compare -ip 12.34.56.78 -port 10000 -rank 1 -size 2
+      ```
+      - `-ip` 是 `--master_ip` 的缩写，代表 `master` 节点的IP地址
+      - `-port` 代表节点间通信的端口
+      - `-rank` 是 `--local_rank` 的缩写, 代表不同节点的 `rank` 值
+      - `-size` 是 `--world_size` 的缩写, 代表节点的个数
+  - **端口**：工具默认使用服务化 `config.json` 的 `port` 作为通信端口，如果每找到 `config.json` 则使用 pytorch 的默认通信端口 `29400`，如以上端口已被占用，需要通过 `--port` 更换端口
+## 运行结果
+  - 如果不同服务器间环境配置没有差异，则会在终端出现如下打屏信息：
+    ```bash
+    msprechecker_logger - INFO - local_ip: 12.34.56.78., interface: abcd123qwe
+    msprechecker_logger - INFO - DistributeCollector: master_ip=12.34.56.78, master_port=1025, rank=0, world_size=2
+    msprechecker_logger - INFO - No difference found
+    msprechecker_logger - INFO - == compare end ==
+    ```
+  - 如果不同服务器环境配置存在差异，则会在终端展示差异项。比如，展示内容为：
+    ```bash
+    - key .Env.ASDOPS_LOG_TO_FILE diffs
+      * 12.34.56.78:
+        1
+      * 12.34.56.79:
+        0
+    - key .Env.LCCL_PARALLEL diffs
+      * 12.34.56.78:
+        type <str> : 0
+      * 12.34.56.79:
+        type <NoneType> : None
+    ```
+    表明环境变量 `ASDOPS_LOG_TO_FILE` 和 `LCCL_PARALLEL` 在`master` 节点 `12.34.56.78` 和 `slaver` 节点 `12.34.56.79` 之间存在差异
+***
+
+# 自定义检查项配置
+## 自定义检查项配置使用说明
+  - precheck / dump / distribute_compare 支持指定自定义的 yaml 检查项，将在默认检查项基础上覆盖自定义内容，通过参数 `-add, --additional_checks_yaml` 指定
+    ```sh
+    msprechecker precheck -add foo.yaml
+    ```
 ## Yaml 文件的基本形式
   - 预检工具除了提供内置的环境变量检测之外，还可以自定义配置用户需要检测的环境变量
   - YAML内容可分为五类：
