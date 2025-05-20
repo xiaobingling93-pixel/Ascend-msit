@@ -1,5 +1,5 @@
-# Copyright Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
 #!/bin/bash
+# Copyright Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
 if [ ! -d "$ASCEND_HOME_PATH/" ]; then
     echo "ASCEND_HOME_PATH not exist.\
     Please check that the cann package is installed.\
@@ -20,7 +20,7 @@ for file in $(find $src_dir -type f -name "*.so"); do
     if [ ! -d "$dst_dir" ]; then
         mkdir $dst_dir
         touch $dst_dir"__init__.py"
-        chmod 644 $dst_dir"__init__.py"
+        chmod 640 $dst_dir"__init__.py"
     fi
     cp $file $dst_dir
     chmod 550 $dst_dir$file_name

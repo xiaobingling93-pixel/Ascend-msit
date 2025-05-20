@@ -14,7 +14,7 @@ from msmodelslim import logger
 
 class RACompressor(object):
 
-    def __init__(self, model, cfg:RACompressConfig):
+    def __init__(self, model, cfg: RACompressConfig):
         check_type(model, nn.Module)
         check_type(cfg, RACompressConfig, param_name="cfg")
         if not hasattr(model, "config"):

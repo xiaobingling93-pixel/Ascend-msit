@@ -18,7 +18,7 @@ INPUT_IDS = "input_ids"
 
 class RARopeCompressor(object):
 
-    def __init__(self, model, tokenizer, cfg:RARopeCompressConfig):
+    def __init__(self, model, tokenizer, cfg: RARopeCompressConfig):
         check_type(model, nn.Module, param_name="model")
         check_type(cfg, RARopeCompressConfig, param_name="cfg")
         check_type(tokenizer, PreTrainedTokenizerBase, param_name="tokenizer")

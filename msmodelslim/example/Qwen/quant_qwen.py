@@ -280,9 +280,9 @@ if __name__ == '__main__':
     tokenizer_args = json.loads(args.tokenizer_args)
     if tokenizer_args == {} and args.model_type == 'qwen1':
         tokenizer_args = {
-            "padding_side":"left",
-            "pad_token":"<|extra_0|>",
-            "eos_token":"<|endoftext|>"
+            "padding_side": "left",
+            "pad_token": "<|extra_0|>",
+            "eos_token": "<|endoftext|>"
         }
     quantifier = Quantifier(
         model_path, args, anti_outlier_config_val,
