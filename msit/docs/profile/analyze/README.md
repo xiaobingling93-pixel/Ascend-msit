@@ -29,6 +29,7 @@ msit profile analyze --origin /tmp/op_summary_origin.csv --fused /tmp/op_summary
 > 性能分析结果
 
 运行结束后，指定的output路径下生成一个profile_analysis.csv文件，里面记录了融合算子的性能分析结果，当前仅支持自动融合相关的两类融合算子（算子类型为AscBackend和FusedAscBackend）。
+- HBM（High Bandwidth Memory）指的是传输数据量，单位为KB。
 分析结果有很多列，下面对每一列的含义进行介绍：
   | 列名                    | 描述                                       | 
   | ------------------------ | ---------------------------------------- | 
@@ -39,8 +40,13 @@ msit profile analyze --origin /tmp/op_summary_origin.csv --fused /tmp/op_summary
   | Origin Durations(us)   | 融合前所有单算子耗时总和  | 
   | Time Ratio    | 融合后算子耗时**除以**融合前算子耗时总和  | 
   | Time Difference   | 融合后算子耗时**减去**融合前算子耗时       | 
+  | HBMs Difference  | 融合后算子HBM**减去**融合前算子HBM总和  |
+  | HBMs Ratio   | 融合后算子HBM**除以**融合前算子HBM总和  | 
+  | Fused HBMs(KB) | 融合后算子的输入和输出HBM(单位为KB)  |
   | Origin Duration(us) Each Op   | 每个原始算子的耗时和列表，分别记录每个原始算子的算子名称和对应耗时和     | 
-  | Not Found Origin Op   | 融合前算子中没有采集到profiling信息的算子名称       | 
+  | Origin HBMs Each Op(KB) | 每个原始算子的HBM列表，分别记录每个原始算子的输入HBM和输出HBM |
+  | Origin HBMs Total(KB) | 所有原始算子输入HBM总和和输出HBM总和 |
+  | Not Found Origin Op   | 融合前算子中没有采集到profiling信息的算子名称 | 
 
   > ATC转换文件
   

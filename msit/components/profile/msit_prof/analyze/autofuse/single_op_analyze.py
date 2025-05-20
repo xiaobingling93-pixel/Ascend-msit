@@ -14,6 +14,7 @@
 import os
 import subprocess
 from collections import defaultdict
+from functools import reduce
 
 import pandas as pd
 import numpy as np
@@ -24,8 +25,24 @@ from msit_prof.analyze.parser.ge_graph import get_all_subgraph
 
 
 AUTO_FUSE_OP_TYPE = ["AscBackend", "FusedAscBackend"]
-PERFORMANCE_COLUMNS = ["Task Duration(us)", "Op Name", "OP Type"]
+PERFORMANCE_COLUMNS = [
+    "Task Duration(us)", 
+    "Op Name", 
+    "OP Type", 
+    "Input Shapes",
+    "Input Data Types",
+    "Output Shapes",
+    "Output Data Types"
+]
 NO_PROF_OP_TYPE_LIST = ["Reshape", "ExpandDims"]
+OP_TYPE_TO_BYTE = {
+    'FLOAT': 2,
+    'INT64': 8,
+    'INT32': 4,
+    'INT8': 1,
+    'BOOL': 1
+}
+KB_DIVISOR = 1024
 
 
 class OpInfo:
@@ -51,12 +68,66 @@ class SingleOpAnalyzer:
         self.fused_name_to_type = dict()
 
     @staticmethod
-    def compute_performance_diff(single_fused_df, origin_op_df, analyze_result, fused_name):
+    def calculate_hbms(data_type, data_shape):
+        hbms = []
+        if not data_type or not data_shape:
+            logger.debug("data_type or data_shape is None.")
+            return 0
+      
+        data_type = data_type.split(";")
+        data_shape = data_shape.split(";")
+        for dt, ds in zip(data_type, data_shape):
+            shape_list = list(map(int, ds.strip('"').split(',')))
+            size = reduce(lambda x, y: x * y, shape_list, 1)
+            hbms.append(float(size * OP_TYPE_TO_BYTE[dt] / KB_DIVISOR))
+        return hbms
+
+    @staticmethod
+    def calculate_total_hbms(op_hbms, op_hbms_sum):
+        if isinstance(op_hbms, list):
+            op_hbms_sum += sum(op_hbms)
+        elif isinstance(op_hbms, (int, float)):
+            op_hbms_sum += op_hbms
+        else:
+            raise ValueError("The value contains other types. Check the output of the function 'calculate_hbms' ")
+        return op_hbms_sum
+
+    @staticmethod
+    def compute_performance_diff(single_fused_df, origin_op_df, analyze_result, fused_name, origin_op_hbms_save):
+        fused_hbms = []
+        hbms_diff = []
+        hbms_ratio = []
+        fused_input_hbms_sum = 0
+        fused_output_hbms_sum = 0
         if single_fused_df.empty:
             logger.error(f"{fused_name} can not found fused profiling data.")
             raise ValueError("The file specified by the '--fused' parameter does not match the GE dump graph.")
         single_fused_df = single_fused_df[PERFORMANCE_COLUMNS]
         fused_duration_sum = sum(single_fused_df["Task Duration(us)"].to_list())
+        # 采集多轮数据，每轮数据完全一致，只去一轮的数据即可
+        fused_input_shapes = str(single_fused_df["Input Shapes"].iloc[0])
+        fused_input_types = str(single_fused_df["Input Data Types"].iloc[0])
+        fused_output_shapes = str(single_fused_df["Output Shapes"].iloc[0])
+        fused_output_types = str(single_fused_df["Output Data Types"].iloc[0])
+
+        fused_input_hbms = SingleOpAnalyzer.calculate_hbms(fused_input_types, fused_input_shapes)
+        fused_output_hbms = SingleOpAnalyzer.calculate_hbms(fused_output_types, fused_output_shapes)
+        fused_input_hbms_sum = SingleOpAnalyzer.calculate_total_hbms(fused_input_hbms, fused_input_hbms_sum)
+        fused_output_hbms_sum = SingleOpAnalyzer.calculate_total_hbms(fused_output_hbms, fused_output_hbms_sum)
+
+        input_hbms_diff = fused_input_hbms_sum - origin_op_hbms_save[0]
+        output_hbms_diff = fused_output_hbms_sum - origin_op_hbms_save[1]
+        hbms_diff.append(f"(input:{input_hbms_diff}, output:{output_hbms_diff})")
+
+        input_hbms_ratio = 'NaN'
+        output_hbms_ratio = 'NaN'
+        if origin_op_hbms_save[0] != 0:
+            input_hbms_ratio = fused_input_hbms_sum / origin_op_hbms_save[0]
+        if origin_op_hbms_save[1] != 0:
+            output_hbms_ratio = fused_output_hbms_sum / origin_op_hbms_save[1]
+            
+        hbms_ratio.append(f"(input:{input_hbms_ratio}, output:{output_hbms_ratio})")
+        fused_hbms.append(f"(input:{fused_input_hbms_sum}, output:{fused_output_hbms_sum})")
         analyze_result["Fused Durations(us)"].append(fused_duration_sum)
         if origin_op_df.empty:
             return
@@ -65,6 +136,9 @@ class SingleOpAnalyzer:
         analyze_result["Origin Durations(us)"].append(origin_duration_sum)
         analyze_result["Time Ratio"].append(fused_duration_sum / origin_duration_sum)
         analyze_result["Time Difference"].append(fused_duration_sum - origin_duration_sum)
+        analyze_result["HBMs Difference"].append(hbms_diff[0])
+        analyze_result["HBMs Ratio"].append(hbms_ratio[0])
+        analyze_result["Fused HBMs(KB)"].append(fused_hbms[0])
 
     def convert_ge_graph(self):
         atc_cmd = [
@@ -128,14 +202,36 @@ class SingleOpAnalyzer:
     def analyze_origin_ops(self, fuse_node_name, total_origin_op_name):
         not_found_op_list = []
         origin_op_duration_sum = []
+        origin_op_hbms = []
+        origin_op_hbms_sum = []
+        input_op_hbms_sum = 0
+        output_op_hbms_sum = 0
         for op in self.ops_mapping_dict[fuse_node_name]:
             origin_single_df = self.origin_df[self.origin_df["Op Name"] == op.op_name]
+            origin_single_op_input_type = None
+            origin_single_op_input_shape = None
+            origin_single_op_output_type = None
+            origin_single_op_output_shape = None
+            if not origin_single_df.empty:
+                origin_single_op_input_type = str(origin_single_df["Input Data Types"].iloc[0])
+                origin_single_op_input_shape = str(origin_single_df["Input Shapes"].iloc[0])
+                origin_single_op_output_type = str(origin_single_df["Output Data Types"].iloc[0])
+                origin_single_op_output_shape = str(origin_single_df["Output Shapes"].iloc[0])
+
+            input_op_hbms = self.calculate_hbms(origin_single_op_input_type, origin_single_op_input_shape)
+            input_op_hbms_sum = self.calculate_total_hbms(input_op_hbms, input_op_hbms_sum)
+            output_op_hbms = self.calculate_hbms(origin_single_op_output_type, origin_single_op_output_shape)
+            output_op_hbms_sum = self.calculate_total_hbms(output_op_hbms, output_op_hbms_sum)
+            origin_op_hbms_save = [input_op_hbms_sum, output_op_hbms_sum]
+
+            origin_op_hbms.append(f"({op.op_name}, input:{input_op_hbms_sum}, output:{output_op_hbms_sum})")
             duration_time = str(origin_single_df["Task Duration(us)"].sum())
             origin_op_duration_sum.append(f"({op.op_name}, {duration_time})")
             # 有些算子不会上device计算，因此采集不到profiling数据，要进行过滤
             if op.op_name not in total_origin_op_name and op.op_type not in NO_PROF_OP_TYPE_LIST:
                 not_found_op_list.append(op.op_name)
-        return origin_op_duration_sum, not_found_op_list
+        origin_op_hbms_sum.append(f"(input:{input_op_hbms_sum}, output:{output_op_hbms_sum})")
+        return origin_op_duration_sum, origin_op_hbms, origin_op_hbms_sum, origin_op_hbms_save, not_found_op_list
 
     def save_analyze_result(self, analyze_result):
         result_df = pd.DataFrame(analyze_result)
@@ -152,12 +248,20 @@ class SingleOpAnalyzer:
         can_compare_fuse_nodes = self.load_op_summary()
         total_origin_op_name = set(self.origin_df["Op Name"]) # profiling采集到的算子
         for fuse_node_name in can_compare_fuse_nodes:
-            origin_op_duration_sum, not_found_op_list = self.analyze_origin_ops(fuse_node_name, total_origin_op_name)
+            origin_op_duration_sum, origin_op_hbms, origin_op_hbms_sum, \
+                origin_op_hbms_save, not_found_op_list = self.analyze_origin_ops(fuse_node_name, 
+                                                                                total_origin_op_name)
             single_fused_df = self.fuse_df[self.fuse_df["Op Name"] == fuse_node_name]
             analyze_result["Fuse OpName"].append(fuse_node_name)
             analyze_result["Fuse OpType"].append(self.fused_name_to_type[fuse_node_name])
             origin_op_df = self.get_filter_origin_df(fuse_node_name, analyze_result)
-            self.compute_performance_diff(single_fused_df, origin_op_df, analyze_result, fuse_node_name)
+            self.compute_performance_diff(
+                        single_fused_df, 
+                        origin_op_df, 
+                        analyze_result, 
+                        fuse_node_name, 
+                        origin_op_hbms_save
+            )
             if origin_op_df.empty:
                 analyze_result["Origin Durations(us)"].append(np.nan)
                 analyze_result["Time Ratio"].append(np.nan)
@@ -165,6 +269,11 @@ class SingleOpAnalyzer:
             if not_found_op_list:
                 analyze_result["Time Ratio"][-1] = np.nan
                 analyze_result["Time Difference"][-1] = np.nan
+                analyze_result["HBMs Difference"][-1] = np.nan
+                analyze_result["HBMs Ratio"][-1] = np.nan
+
             analyze_result["Origin Duration(us) Each Op"].append("; ".join(origin_op_duration_sum))
+            analyze_result["Origin HBMs Each Op(KB)"].append("; ".join(origin_op_hbms))
+            analyze_result["Origin HBMs Total(KB)"].append("; ".join(origin_op_hbms_sum))
             analyze_result["Not Found Origin Op"].append("; ".join(not_found_op_list))
         self.save_analyze_result(analyze_result)
