@@ -253,13 +253,7 @@ def sub_parser_dump(subparsers):
         RUN_MODES.dump, formatter_class=argparse.ArgumentDefaultsHelpFormatter, help="dump configuration"
     )
 
-    parser.add_argument(
-        "-d",
-        "--dump_file_path",
-        nargs="?",
-        default=DEFAULT_DUMP_PATH,
-        help="Path save envs. It could be a list of path when you want to compare envs of multiple path. [TODO]",
-    )
+    parser.add_argument("-d", "--dump_file_path", default=DEFAULT_DUMP_PATH, help="Path for saving envs")
     for ii in DUMP_COMMON_ARGS + COMMON_ARGS:
         parser.add_argument(*ii.get("args", []), **ii.get("kwargs", {}))
     parser.set_defaults(func=run_env_dump)
