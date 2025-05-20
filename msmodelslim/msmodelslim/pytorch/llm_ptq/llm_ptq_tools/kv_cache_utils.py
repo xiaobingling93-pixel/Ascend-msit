@@ -17,7 +17,7 @@ def set_kvcache_vari_func(mod, cache_sub_dict, cfg, num_layers=None):
         'v_min': None, 'v_max': None,
         'k_scale': None, 'k_offset': None,
         'v_scale': None, 'v_offset': None,
-        'cache_seq_index': None, 'cache_bz_index':None,
+        'cache_seq_index': None, 'cache_bz_index': None,
         'layer_idx': 0, 'kv_sym': kv_sym,
     }
     for attr, value in attributes.items():
@@ -25,10 +25,10 @@ def set_kvcache_vari_func(mod, cache_sub_dict, cfg, num_layers=None):
             setattr(mod, attr, value)
 
     attr_map = {
-            'k_scale':['k_proj', 'scale'], 
-            'k_offset':['k_proj', 'offset'],  
-            'v_scale':['v_proj', 'scale'],
-            'v_offset':['v_proj', 'offset']  
+            'k_scale': ['k_proj', 'scale'], 
+            'k_offset': ['k_proj', 'offset'],  
+            'v_scale': ['v_proj', 'scale'],
+            'v_offset': ['v_proj', 'offset']  
     }
     for new_att, att_keys in attr_map.items():
         position_str, att_str = att_keys
