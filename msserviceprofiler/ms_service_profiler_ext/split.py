@@ -39,7 +39,7 @@ def add_exporters(args):
     return exporters
 
 
-def main():
+def arg_parse():
     parser = argparse.ArgumentParser(description='MS Server Profiler Split')
     parser.add_argument(
         '--input-path',
@@ -89,8 +89,12 @@ def main():
         default=-1,
         help='The rid for Decode batch to split'
     )
-
     args = parser.parse_args()
+    return args
+
+
+def main():
+    args = arg_parse()
 
     # 初始化日志等级
     set_log_level(args.log_level)
