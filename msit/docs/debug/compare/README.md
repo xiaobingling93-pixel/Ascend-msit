@@ -1,15 +1,15 @@
 # msit debug compare功能使用指南
 
 ## 简介
-- compare一键式全流程精度比对（推理）功能将推理场景的精度比对做了自动化，适用于 TensorFlow、TensorFlow2.0、ONNX、Caffe、MindIE-Torch模型，用户输入原始模型，对应的离线模型和输入，输出整网比对的结果，还可以输入dump好的cpu、npu侧的算子数据直接进行精度比对。离线模型为通过 ATC 工具转换的 om 模型，输入 bin 文件需要符合模型的输入要求（支持模型多输入）。在模型比对完成后，对首个精度问题节点进行误差定界定位，判断其是单层误差还是累计误差，并输出误差区间，相关信息存储在输出目录下。
+- compare一键式全流程精度比对（推理）功能将推理场景的精度比对做了自动化，适用于 TensorFlow、TensorFlow2.0、ONNX、Caffe、MindIE-Torch模型，用户输入原始模型，对应的离线模型和输入，输出整网比对的结果，还可以输入已dump的CPU和NPU侧的算子数据直接进行精度比对。离线模型为通过 ATC 工具转换的 om 模型，输入 bin 文件需要符合模型的输入要求（支持模型多输入）。在模型比对完成后，对首个精度问题节点进行误差定界定位，判断其是单层误差还是累计误差，并输出误差区间，相关信息存储在输出目录下。
 - 支持动态shape模型精度比对；支持单算子比对；支持AIPP(Artificial Intelligence Pre-Processing)数据预处理功能。
-- 该功能使用约束场景说明，参考链接：[CANN商用版/场景约束](https://www.hiascend.com/document/detail/zh/canncommercial/80RC1/devaids/auxiliarydevtool/atlasaccuracy_16_0037.html)
+- 该功能使用约束场景说明，参考链接：[Tensor比对/说明与约束](https://www.hiascend.com/document/detail/zh/canncommercial/81RC1/devaids/devtools/modelaccuracy/atlasaccuracy_16_0072.html)
 - 对于 Caffe 模型，目前不支持动态 shape 的模型比对。对于 `yolov2` / `yolov3` / `ssd` 等需要自定义实现层的模型，需要自行编译安装特定版本的 caffe。
 - **注意**：请确保ATC工具转换的om与当前运行环境使用的芯片型号一致。
 
 
 ## 工具安装
-- 一般工具安装请见 [msit一体化工具使用指南](/msit/docs/install/README.md)
+- 一般工具安装请见 [msit 工具安装](/msit/docs/install/README.md)
 - 此外还提供容器安装方式（支持caffe精度比对）
 
 ### 容器方式安装
@@ -17,7 +17,7 @@
 ```shell
 docker build \
 --build-arg CANN_TOOLKIT_PATH=Ascend-cann-tookit<version+arch>.run \
---build-arg CANN_AMCT_PATH=Ascend-cann-amctt<version+arch>.tar.gz \ 
+--build-arg CANN_AMCT_PATH=Ascend-cann-amct<version+arch>.tar.gz \ 
 --build-arg CAFFE_SRC=caffe-ascend-amct.zip \
 --build-arg UBUNTU_X86_ARCHIVE=http://.*archive.ubuntu.com \
 --build-arg UBUNTU_X86_SECURITY=http://.*security.ubuntu.com \
@@ -53,20 +53,21 @@ RUN groupadd HwHiAiUser && useradd -rm -d /home/HwHiAiUser -s /bin/bash -g HwHiA
 ```
 
 `$USER_NAME`、`$PASSWORD` 等都是网络配置的相关参数，这里不予以介绍  
-`$APT_PATH` 用户可自行配置源地址 例如：http://repo.huaweicloud.com, https://mirrors.huaweicloud.com 等
+`$APT_PATH` 用户可自行配置源地址 例如：`http://repo.huaweicloud.com`, `https://mirrors.huaweicloud.com` 等
 
 3、如果在 `wget ${PYTHON_PATH}` 的时候出现报错，显示需要 `use --no-check-certificate`。则在 `wget ${PYTHON_PATH}` 处添加 `--no-check-certificate`，示例如下：
 
 ```
-wget --no-check-certificate ${PYTHON_PATH}   && \
+wget --no-check-certificate ${PYTHON_PATH}
 ```
 4、请将Ascend-cann-tookit<version+arch>.run改为实际上的toolkit路径(必须是相对路径)  
-5、从这个[仓库](https://github.com/lenLRX/caffe)下载zip[代码](https://github.com/lenLRX/caffe/archive/refs/heads/ascend-amct.zip),得到的zip包可能叫ascend-amct.zip或caffe-ascend-amct.zip  
+5、从这个[仓库](https://github.com/lenLRX/caffe)下载zip[代码](https://github.com/lenLRX/caffe/archive/refs/heads/ascend-amct.zip),得到的zip包叫ascend-amct.zip或caffe-ascend-amct.zip  
 6、从[这里](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)下载amct的包Ascend-cann-amct_5.1.RC1.1_linux-aarch64.tar.gz(注意下载对应需要的版本如：X86，aarch64等)  
-7、执行命令构建docker镜像,要求:
-   * CANN_AMCT_PATH=步骤4下载的amct包名字
-   * CAFFE_SRC=步骤3下载的caffe代码zip包
-   运行以下命令以上述镜像启动容器：
+7、构建docker镜像, 其中要求:
+   * CANN_AMCT_PATH为步骤6下载的amct包所在路径
+   * CAFFE_SRC为步骤5下载的caffe代码zip包所在路径
+
+8、运行以下命令，使用上述镜像启动容器：
 ```shell
 docker run -it -v=`pwd`:/work   -v /usr/local/Ascend/driver:/usr/local/Ascend/driver -v /usr/bin/npu-smi:/usr/bin/npu-smi \
 -v /usr/local/Ascend/add-ons:/usr/local/Ascend/add-ons --device /dev/davinci0 --device /dev/davinci_manager --device /dev/hisi_hdc --device /dev/devmm_svm  msit-caffe:latest
@@ -152,7 +153,7 @@ compare功能可以直接通过msit命令行形式启动精度对比。启动方
 | --locat      | 开启后,自动在每次比对结束后,对误差超阈值的首个节点(任一类误差),执行误差定位流程,自动定位误差的区间范围(无论单节点还是累计误差)。使用方式：--locat True                                                                                                                                                                                                                                                                             | 否  |
 | -ofs, --onnx-fusion-switch| onnxruntime算子融合开关，默认**开启**算子融合，如存在onnx dump数据中因算子融合导致缺失的，建议关闭此开关。使用方式：--onnx-fusion-switch False                                                                                                                                                                                                                                                                  | 否  |
 | -single, --single-op| 单算子比对模式，默认关闭，开启时在输出路径下会生成single op目录，存放单算子比对结果文件使用方式：-single True                                                                                                                                                                                                                                                                                                 | 否  |
-| --fusion-switch-file| 昇腾模型融合规则配置文件，传入该文件后，compare工具会关闭文件中指定的融合规则，(1)对于om模型，根据--golden-model重新生成一个om文件，和--om-model传入的模型进行精度比较；(2)对于TensorFlow框架，在NPU上运行关闭指定融合规则的模型，和标杆模型进行比较。参数使用方法：--fusion-switch-file ./fusion_switch.cfg，其中fusion_switch.cfg文件配置方法参见：[关闭融合规则](https://www.hiascend.com/document/detail/zh/canncommercial/80RC1/developmentguide/appdevg/aclcppdevg/aclcppdevg_000105.html) | 否  |
+| --fusion-switch-file| 昇腾模型融合规则配置文件，传入该文件后，compare工具会关闭文件中指定的融合规则，(1)对于om模型，根据--golden-model重新生成一个om文件，和--om-model传入的模型进行精度比较；(2)对于TensorFlow框架，在NPU上运行关闭指定融合规则的模型，和标杆模型进行比较。参数使用方法：--fusion-switch-file ./fusion_switch.cfg，其中fusion_switch.cfg文件配置方法参见：[关闭融合规则](https://www.hiascend.com/document/detail/zh/canncommercial/81RC1/developmentguide/appdevg/aclcppdevg/aclcppdevg_000105.html) | 否  |
 | -max, --max-cmp-size| 表示每个dump数据比较的最大字节数，用于精度比对过程提速，默认0(0表示全量比较)，当模型中算子的输出存在较大shape的、比较过于耗时情况，可以尝试打开。注意：需要使用cann(>=6.3.RC3)。使用方式：--max-cmp-size 1024                                                                                                                                                                                                                                    | 否  |
 | -q, --quant_fusion_rule_file| 量化算子映射关系文件（昇腾模型压缩输出的json文件）。仅推理场景支持本参数。使用方式：-quant_fusion_rule_file xxx.json （量化算子映射关系json文件）                                                                                                                                                                                                                                                                     | 否  | |  |
 | --saved_model_signature | tensorflow2.6框架下saved_model模型加载时需要的签名。使用方式：--saved_model_signature serving_default，默认为serving_default                                                                                                                                                                                                                                                             | 否  | |  |
@@ -193,7 +194,7 @@ compare功能可以直接通过msit命令行形式启动精度对比。启动方
 
 ## 简介
 - 此脚本用于dump TensorFlow1.x框架下.pb模型在GPU上的算子输出数据，基于TensorFlow Debugging工具（tf_debug)。
-- 此功能包含在msit debug dump中,直接运行该脚本较复杂，不建议直接使用
+- 此功能包含在msit debug dump中，直接运行该脚本较复杂，不建议直接使用
 
 ## 工具安装
 - 安装命令：
@@ -204,8 +205,7 @@ msit install compare
 ## 使用方法
 ### 功能介绍
 #### 使用入口
-cd到**保存数据的路径**下运行tf debug runner相关命令，
-命令示例如下，**其中路径需使用绝对路径**
+在**保存数据的路径**下运行tf debug runner相关命令，命令示例如下，**其中路径需使用绝对路径**
   ```sh
   python3 /msit_path/msit/components/debug/compare/msquickcmp/tf_debug_runner.py -m /model_path/tf/model.pb -i /path/tf/input.bin -o /output_path/tf/output --output_nodes "output_node:0"
   ```
@@ -213,7 +213,7 @@ cd到**保存数据的路径**下运行tf debug runner相关命令，
 ```commandline
 tfdbg> run
 ```
-**run**命令执行完成后，参考CANN资料[准备GPU侧npy数据文件](https://www.hiascend.com/document/detail/zh/canncommercial/80RC3/devaids/devtools/modelaccuracy/atlasaccuracy_16_0006.html)
+**run**命令执行完成后，参考CANN资料[准备GPU侧npy数据文件](https://www.hiascend.com/document/detail/zh/canncommercial/81RC1/devaids/devtools/modelaccuracy/atlasaccuracy_16_0006.html)
 **收集npy数据文件**章节进行数据收集
 #### 输出结果说明
 
