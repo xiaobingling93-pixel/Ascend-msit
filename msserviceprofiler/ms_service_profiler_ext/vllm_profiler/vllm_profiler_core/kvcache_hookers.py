@@ -17,7 +17,7 @@ from .vllm_hooker_base import VLLMHookerBase
 
 
 class KVCacheManagerHook(VLLMHookerBase):
-    vllm_version = ("0.6.3", "0.8.4")
+    vllm_version = ("0.6.3", "0.6.3")
     
     def init(self):
         from vllm.core.block_manager import SelfAttnBlockSpaceManager

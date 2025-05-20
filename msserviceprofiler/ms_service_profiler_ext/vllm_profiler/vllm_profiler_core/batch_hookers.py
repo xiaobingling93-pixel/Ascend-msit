@@ -44,7 +44,7 @@ def queue_profiler(before_queue, after_queue, queue_name):
 
 
 class SchedulerHook(VLLMHookerBase):
-    vllm_version = ("0.6.3", "0.8.4")
+    vllm_version = ("0.6.3", "0.6.3")
 
     def init(self):
         from vllm.core.scheduler import Scheduler
@@ -205,7 +205,7 @@ class SchedulerHook(VLLMHookerBase):
 
 
 class LLMEngineHook(VLLMHookerBase):
-    vllm_version = ("0.6.3", "0.8.4")
+    vllm_version = ("0.6.3", "0.6.3")
 
     def init(self):
         from vllm.engine.llm_engine import LLMEngine
