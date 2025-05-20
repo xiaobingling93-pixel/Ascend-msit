@@ -59,6 +59,7 @@
   - **离线安装**
     - 在能够访问网络的机器上，访问 [PyPI 官方源](https://pypi.org/project/msprechecker/#files)
     - 左侧点击 `Download files`，随后点击 `Built Distribution` 下方链接进行下载，如下图所示：
+
       ![image](./pics/download.png)
       ![image](./pics/download_1.png)
     - 下载完成后，上传到服务器中
