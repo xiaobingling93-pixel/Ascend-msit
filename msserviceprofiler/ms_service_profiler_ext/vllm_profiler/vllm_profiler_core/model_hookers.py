@@ -17,7 +17,7 @@ from .vllm_hooker_base import VLLMHookerBase
 
 
 class ModelRunnerExecuteHook(VLLMHookerBase):
-    vllm_version = ("0.6.3", "0.6.3")
+    vllm_version = ("0.6.3", "0.8.4")
 
     def __init__(self):
         super().__init__()
@@ -63,7 +63,7 @@ class ModelRunnerExecuteHook(VLLMHookerBase):
 
 
 class ModelForwardHook(VLLMHookerBase):
-    vllm_version = ("0.6.3", "0.6.3")
+    vllm_version = ("0.6.3", "0.8.4")
 
     def __init__(self):
         super().__init__()
