@@ -140,6 +140,9 @@ def policy_name_full_match(golden_root_node: TreeNode, my_root_node: TreeNode, m
 op_mapping_dict = {
     # ATB算子: Pytorch算子
     ('qkv', 'linearoperation'): 'self_attn.w_pack',
+    ('qkv', 'splitoperation'): 'self_attn.v_proj',
+    ('qkvlinear', 'splitoperation'): 'self_attn.k_proj',
+    ('qkvlinearsplit', 'splitoperation'): 'self_attn.q_proj',
     ('attention', 'linearoperation'): 'self_attn.o_proj',
     ('mlp', 'rmsnormoperation'): 'mlp.post_attention_layernorm',
     ('mlp', 'splitoperation'): 'mlp.gate_proj',
@@ -316,7 +319,7 @@ def policy_qwen_match(golden_root_node: TreeNode, my_root_node: TreeNode, match_
         # 预处理 torch_ops 和其对应的 golden_paths
         torch_op_to_golden_paths = {}
         qwen_op_mapping = QWEN_OP_MAPPING
-        for torch_op in qwen_op_mapping.get('qkv', []) + [qwen_op_mapping.get('rotarypositionembedding')]:
+        for torch_op in qwen_op_mapping.get('qkv', []):
             if isinstance(torch_op, list):
                 for op in torch_op:
                     op_lower = op.lower()
