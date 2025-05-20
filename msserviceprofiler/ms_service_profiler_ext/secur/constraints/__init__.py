@@ -15,12 +15,12 @@
 
 __all__ = [
     "BaseConstraint",
-    "READ_FILE_COMMON_CHECK",
     "InvalidParameterError",
     "make_constraint",
     "where",
-    "path"
+    "Path",
+    "Rule"
 ]
 
 from .base import InvalidParameterError, BaseConstraint
-from .helper import make_constraint, where, path, READ_FILE_COMMON_CHECK
+from .helper import make_constraint, where, Path, Rule

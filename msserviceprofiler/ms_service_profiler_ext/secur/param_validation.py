@@ -33,14 +33,12 @@ def validate_parameter_constraint(parameter_constraint, params, caller_name):
         constraint = make_constraint(constraint)
 
         if not constraint.is_satisfied_by(param_val):
-            mark_red = lambda s: f"\033[0;31m{s}\033[0m"
-            mark_green = lambda s: f"\033[0;33m{s}\033[0m"
-
             raise InvalidParameterError(
-                f"The parameter '{mark_red(param_name)}' of '{mark_red(caller_name)}' "
-                f"must satisfy the following requirement:\n\t {mark_green(constraint)}.\n"
+                f"The parameter '\033[0;31m{param_name!r}\033[0m' of '\033[0;31m{caller_name!r}\033[0m' "
+                f"must satisfy the following requirement:\n\t \033[0;33m{constraint}\033[0m.\n"
                 f"Got \033[0;31m{param_val!r}\033[0m instead."
             )
+
 
 def validate_params(parameter_constraint):
 

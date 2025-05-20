@@ -20,6 +20,7 @@ from .base import BaseConstraint
 
 class FunctionConstraint(BaseConstraint):
     def __init__(self, func, description=None):
+        super().__init__(description=description)
         # Check if the function has exactly one parameter
         sig = inspect.signature(func)
 
@@ -41,7 +42,9 @@ class FunctionConstraint(BaseConstraint):
 
 
 class AndConstraint(BaseConstraint):
-    def __init__(self, *constraints):
+    def __init__(self, *constraints, description=None):
+        super().__init__(description=description)
+
         self.constraints = constraints
         self.description = " and ".join(str(c) for c in constraints)
 
@@ -50,7 +53,9 @@ class AndConstraint(BaseConstraint):
 
 
 class OrConstraint(BaseConstraint):
-    def __init__(self, *constraints):
+    def __init__(self, *constraints, description=None):
+        super().__init__(description=description)
+        
         self.constraints = constraints
         self.description = " or ".join(str(c) for c in constraints)
 
@@ -59,7 +64,9 @@ class OrConstraint(BaseConstraint):
     
     
 class NotConstraint(BaseConstraint):
-    def __init__(self, constraint):
+    def __init__(self, constraint, *, description=None):
+        super().__init__(description=description)
+        
         self.constraint = constraint
         self.description = f"not {self.constraint}"
 
@@ -69,6 +76,8 @@ class NotConstraint(BaseConstraint):
 
 class IfElseConstraint(BaseConstraint):
     def __init__(self, condition, if_constraint, else_constraint, *, description=None):
+        super().__init__(description=description)
+        
         if isinstance(condition, bool):
             if description is None:
                 raise ValueError("'description' must not be None when 'condition' is a function")

@@ -34,39 +34,48 @@ class PathConstraintBuilder:
         is_executable, is_not_writable_to_group_or_others, is_consistent_to_current_user,
         is_size_reasonable
     """
-    
-    def is_file(self): 
+    @staticmethod
+    def is_file(): 
         return IsFile()
     
-    def file_exists(self): 
+    @staticmethod
+    def file_exists(): 
         return Exists()
     
-    def is_dir(self): 
+    @staticmethod
+    def is_dir(): 
         return IsDir()
     
-    def has_soft_link(self): 
+    @staticmethod
+    def has_soft_link(): 
         return HasSoftLink()
     
-    def is_readable(self): 
+    @staticmethod
+    def is_readable(): 
         return IsReadable()
     
-    def is_writable(self): 
+    @staticmethod
+    def is_writable(): 
         return IsWritable()
     
-    def is_executable(self): 
+    @staticmethod
+    def is_executable(): 
         return IsExecutable()
     
-    def is_writable_to_group_or_others(self):
+    @staticmethod
+    def is_writable_to_group_or_others():
         return IsWritableToGroupOrOthers()
     
-    def is_consistent_to_current_user(self):
+    @staticmethod
+    def is_consistent_to_current_user():
         return IsConsistentToCurrentUser()
     
-    def is_size_reasonable(self, *, size_limit=None, require_confirm=True):
+    @staticmethod
+    def is_size_reasonable(*, size_limit=None, require_confirm=True):
         return IsSizeReasonable(size_limit=size_limit, require_confirm=require_confirm)
 
 
-path = PathConstraintBuilder()
+Path = PathConstraintBuilder
 
 
 def make_constraint(constraint, description=None):
@@ -94,18 +103,18 @@ def where(condition, if_constraint, else_constraint, *, description=None):
 class Rule:
     read_file_common_check: BaseConstraint = where(
         os.getuid() == 0, 
-        path.is_file(),
-        path.is_file() & ~path.has_soft_link() & 
-        path.is_readable() & ~path.is_writable_to_group_or_others() & 
-        path.is_consistent_to_current_user() & path.is_size_reasonable(),
+        Path.is_file(),
+        Path.is_file() & ~Path.has_soft_link() & 
+        Path.is_readable() & ~Path.is_writable_to_group_or_others() & 
+        Path.is_consistent_to_current_user() & Path.is_size_reasonable(),
         description="current user is root"
     )
 
     exec_file_common_check: BaseConstraint = where(
         os.getuid() == 0, 
-        path.is_file(),
-        path.is_file() & ~path.has_soft_link() & 
-        path.is_writable() & ~path.is_writable_to_group_or_others() & 
-        path.is_consistent_to_current_user() & path.is_size_reasonable(),
+        Path.is_file(),
+        Path.is_file() & ~Path.has_soft_link() & 
+        Path.is_writable() & ~Path.is_writable_to_group_or_others() & 
+        Path.is_consistent_to_current_user() & Path.is_size_reasonable(),
         description="current user is root"
     )
