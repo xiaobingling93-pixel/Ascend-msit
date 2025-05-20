@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+from dataclasses import dataclass
+
 from .logic import FunctionConstraint, IfElseConstraint
 from ._path import (
     IsFile, Exists, IsDir, HasSoftLink, IsReadable, 
@@ -31,45 +34,36 @@ class PathConstraintBuilder:
         is_executable, is_not_writable_to_group_or_others, is_consistent_to_current_user,
         is_size_reasonable
     """
-    @property
+    
     def is_file(self): 
         return IsFile()
     
-    @property
     def file_exists(self): 
         return Exists()
     
-    @property
     def is_dir(self): 
         return IsDir()
     
-    @property
     def has_soft_link(self): 
         return HasSoftLink()
     
-    @property
     def is_readable(self): 
         return IsReadable()
     
-    @property
     def is_writable(self): 
         return IsWritable()
     
-    @property
     def is_executable(self): 
         return IsExecutable()
     
-    @property
     def is_writable_to_group_or_others(self):
         return IsWritableToGroupOrOthers()
     
-    @property
     def is_consistent_to_current_user(self):
         return IsConsistentToCurrentUser()
     
-    @property
-    def is_size_reasonable(self):
-        return IsSizeReasonable()
+    def is_size_reasonable(self, *, size_limit=None, require_confirm=True):
+        return IsSizeReasonable(size_limit=size_limit, require_confirm=require_confirm)
 
 
 path = PathConstraintBuilder()
@@ -87,11 +81,31 @@ def make_constraint(constraint, description=None):
     )
 
 
-def where(condition, if_constraint, else_constraint):
-    return IfElseConstraint(condition, make_constraint(if_constraint), make_constraint(else_constraint))
+def where(condition, if_constraint, else_constraint, *, description=None):
+    return IfElseConstraint(
+        condition,
+        make_constraint(if_constraint),
+        make_constraint(else_constraint),
+        description=description
+    )
 
 
-READ_FILE_COMMON_CHECK = (
-    path.is_file & ~path.has_soft_link & path.is_readable & 
-    path.is_writable_to_group_or_others & path.is_consistent_to_current_user & path.is_size_reasonable
-)
+@dataclass(frozen=True)
+class Rule:
+    read_file_common_check: BaseConstraint = where(
+        os.getuid() == 0, 
+        path.is_file(),
+        path.is_file() & ~path.has_soft_link() & 
+        path.is_readable() & ~path.is_writable_to_group_or_others() & 
+        path.is_consistent_to_current_user() & path.is_size_reasonable(),
+        description="current user is root"
+    )
+
+    exec_file_common_check: BaseConstraint = where(
+        os.getuid() == 0, 
+        path.is_file(),
+        path.is_file() & ~path.has_soft_link() & 
+        path.is_writable() & ~path.is_writable_to_group_or_others() & 
+        path.is_consistent_to_current_user() & path.is_size_reasonable(),
+        description="current user is root"
+    )

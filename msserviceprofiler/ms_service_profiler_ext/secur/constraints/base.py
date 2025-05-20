@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from abc import ABC, abstractmethod
 
 
@@ -22,6 +23,9 @@ class InvalidParameterError(Exception):
 
 class BaseConstraint(ABC):
     description = ""
+    
+    def __init__(self, *, description=None):
+        self.description = self.description if description is None else description
 
     def __str__(self):
         return self.description
@@ -41,7 +45,30 @@ class BaseConstraint(ABC):
     def __invert__(self):
         from .logic import NotConstraint
         return NotConstraint(self)
+    
+    def __call__(self, val):
+        return self.is_satisfied_by(val)
 
     @abstractmethod
     def is_satisfied_by(self, val):
         pass
+    
+
+class BasePathConstraint(BaseConstraint):
+    def __init__(self, *, description=None):
+        super().__init__(description=description)
+        
+    def __str__(self):
+        return self.description
+        
+    def _get_path_stat(self, path: str):
+        st = None
+        # does not support file descriptor
+        if not isinstance(path, (str, os.PathLike)):
+            raise TypeError(f"'path' must be str or os.PathLike. Got {type(path).__name__} instead")
+        
+        try:
+            st = os.stat(path, follow_symlinks=False)
+        except OSError:
+            pass
+        return st

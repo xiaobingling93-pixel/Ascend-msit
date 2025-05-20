@@ -61,23 +61,29 @@ class OrConstraint(BaseConstraint):
 class NotConstraint(BaseConstraint):
     def __init__(self, constraint):
         self.constraint = constraint
-        self.description = f"not ({self.constraint})"
+        self.description = f"not {self.constraint}"
 
     def is_satisfied_by(self, val):
         return not self.constraint.is_satisfied_by(val)
 
 
 class IfElseConstraint(BaseConstraint):
-    def __init__(self, condition, if_constraint, else_constraint):
-        self.condition = condition
+    def __init__(self, condition, if_constraint, else_constraint, *, description=None):
+        if isinstance(condition, bool):
+            if description is None:
+                raise ValueError("'description' must not be None when 'condition' is a function")
+            self.condition = FunctionConstraint(lambda _: condition, description)
+        elif isinstance(condition, BaseConstraint):
+            self.condition = condition  
+        else:
+            raise TypeError(f"'condition' must be bool or BaseConstraint. Got {type(condition).__name__} instead")
+
         self.if_constraint = if_constraint
         self.else_constraint = else_constraint
-        self.description = f"if {condition.description} then {if_constraint} else {else_constraint}"
+        self.description = f"if {self.condition.description}, then {if_constraint}. Otherwise {else_constraint}"
 
     def is_satisfied_by(self, val):
-        condition = self.condition if isinstance(self.condition, bool) else self.condition.is_satisfied_by(val)
-
-        if condition:
+        if self.condition.is_satisfied_by(val):
             return self.if_constraint.is_satisfied_by(val)
         else:
             return self.else_constraint.is_satisfied_by(val)
