@@ -50,8 +50,7 @@ LAYER_OP_MAPPING_DICT = {
 
 
 QWEN_OP_MAPPING = {
-        'qkv': ['self_attn.v_proj', 'self_attn.k_proj'],
-        'rotarypositionembedding': 'self_attn.q_proj'  
+        'qkv': ['self_attn.v_proj', 'self_attn.k_proj', 'self_attn.q_proj']
 }
 
 

@@ -42,27 +42,39 @@ class CompareMgr:
         self.compared_results = []  # 全部比对时收集结果
 
     @staticmethod
-    def filter_my_tensor_paths(golden_tensor_paths, my_tensor_paths):
+    def filter_tensor_paths(golden_tensor_paths, my_tensor_paths, path_prefix='qkv'):
+        # 根据 path_prefix 构建对应的目标路径
+        if path_prefix == 'qkv':
+            q_path = '0_Attention/0_QKVLinearSplitPack/after/outtensor0.bin'
+            k_path = '0_Attention/0_QKVLinearSplitPack/after/outtensor1.bin'
+            v_path = '0_Attention/0_QKVLinearSplitPack/after/outtensor2.bin'
+            rotary_path = '0_Attention/1_RotaryPositionEmbedding/before/intensor0.bin'
+        elif path_prefix == 'qkv_split':
+            q_path = '0_Attention/0_QKVLinearSplitPack/1_SplitOperation/after/outtensor0.bin'
+            k_path = '0_Attention/0_QKVLinearSplitPack/1_SplitOperation/after/outtensor1.bin'
+            v_path = '0_Attention/0_QKVLinearSplitPack/1_SplitOperation/after/outtensor2.bin'
+            rotary_path = None  # 如果 split 模式下不需要 rotary 路径
+        else:
+            raise ValueError(f"Unsupported path_prefix: {path_prefix}")
+
         tensor_filter_patterns = [
-            (r'root\.model\.layers\.\d+\.self_attn\.k_proj/output\.pth', 
-                '0_Attention/0_QKVLinearSplitPack/after/outtensor1.bin'),
-            (r'root\.model\.layers\.\d+\.self_attn\.v_proj/output\.pth', 
-                '0_Attention/0_QKVLinearSplitPack/after/outtensor2.bin'),
-            (r'root\.model\.layers\.\d+\.self_attn\.q_proj/output\.pth', 
-                '0_Attention/1_RotaryPositionEmbedding/before/intensor0.bin')  
+            (r'root\.model\.layers\.\d+\.self_attn\.k_proj/output\.pth', k_path),
+            (r'root\.model\.layers\.\d+\.self_attn\.v_proj/output\.pth', v_path),
+            (r'root\.model\.layers\.\d+\.self_attn\.q_proj/output\.pth', q_path),
         ]
-        filtered_my_tensor_paths = []
+        # 如果不是 split 模式，添加 rotary 的规则
+        if rotary_path:
+            tensor_filter_patterns.append(
+                (r'root\.model\.layers\.\d+\.self_attn\.q_proj/output\.pth', rotary_path)
+            )
+        matched_my_paths = set()
+        for golden_pattern, target_tensor in tensor_filter_patterns:
+            if any(re.search(golden_pattern, path) for path in golden_tensor_paths):
+                matched = [path for path in my_tensor_paths if target_tensor in path]
+                matched_my_paths.update(matched)
+                logger.debug(f"Matched pattern: {golden_pattern} => Target: '{target_tensor}")
 
-        for pattern, target_tensor in tensor_filter_patterns:
-            if any(re.search(pattern, path) for path in golden_tensor_paths):
-                filtered_my_tensor_paths = [path for path in my_tensor_paths if target_tensor in path]
-                logger.debug(f"Filtered my_tensor_paths based on pattern: {pattern}")
-                break 
-            
-        if not filtered_my_tensor_paths:
-            filtered_my_tensor_paths = my_tensor_paths
-
-        return filtered_my_tensor_paths
+        return list(matched_my_paths) if matched_my_paths else my_tensor_paths
     
     @staticmethod
     def filter_golden_tensor_paths(golden_tensor_paths):
@@ -259,7 +271,8 @@ class CompareMgr:
             logger.debug("------ compare (%s %s)------", str(my_op.node_name), str(golden_op.node_name))
             golden_tensor_paths = list(self.golden_data.get_csv_path(golden_token_id, golden_op))
             my_tensor_paths = list(self.my_data.get_tensor_path(my_token_id, my_op, my_op_location))
-            my_tensor_paths = self.filter_my_tensor_paths(golden_tensor_paths, my_tensor_paths)
+            my_tensor_paths = self.filter_tensor_paths(golden_tensor_paths, my_tensor_paths, 'qkv')
+            my_tensor_paths = self.filter_tensor_paths(golden_tensor_paths, my_tensor_paths, 'qkv_split')
             golden_tensor_paths = self.filter_golden_tensor_paths(golden_tensor_paths)
             if len(golden_tensor_paths) == len(my_tensor_paths):
                 golden_tensor_paths.sort()
@@ -287,7 +300,8 @@ class CompareMgr:
             # 获取到所有需要比较的 tensor 的路径
             golden_tensor_paths = list(self.golden_data.get_tensor_path(golden_token_id, golden_op, golden_op_location))
             my_tensor_paths = list(self.my_data.get_tensor_path(my_token_id, my_op, my_op_location))
-            my_tensor_paths = self.filter_my_tensor_paths(golden_tensor_paths, my_tensor_paths)
+            my_tensor_paths = self.filter_tensor_paths(golden_tensor_paths, my_tensor_paths, 'qkv')
+            my_tensor_paths = self.filter_tensor_paths(golden_tensor_paths, my_tensor_paths, 'qkv_split')
             golden_tensor_paths = self.filter_golden_tensor_paths(golden_tensor_paths)
             seq_len, my_tensor_paths = self._handle_rope_operation_paths(my_tensor_paths)
 
