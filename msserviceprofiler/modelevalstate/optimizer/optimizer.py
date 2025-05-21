@@ -905,15 +905,19 @@ def main(args: argparse.Namespace):
     pso.run()
 
 
-parser = argparse.ArgumentParser(prog='optimizer')
-parser.add_argument("-lb", "--load_breakpoint", default=False, action="store_true",
-                    help="Continue from where the last optimization was aborted.")
-parser.add_argument("-d", "--deploy_policy", default=DeployPolicy.single.value,
-                    choices=[k.value for k in list(DeployPolicy)],
-                    help="Indicates whether the multi-node running policy is used.")
-parser.add_argument("--backup", default=False, action="store_true",
-                    help="Whether to back up data.")
+def arg_parse():
+    parser = argparse.ArgumentParser(prog='optimizer')
+    parser.add_argument("-lb", "--load_breakpoint", default=False, action="store_true",
+                        help="Continue from where the last optimization was aborted.")
+    parser.add_argument("-d", "--deploy_policy", default=DeployPolicy.single.value,
+                        choices=[k.value for k in list(DeployPolicy)],
+                        help="Indicates whether the multi-node running policy is used.")
+    parser.add_argument("--backup", default=False, action="store_true",
+                        help="Whether to back up data.")
+    args = parser.parse_args()
+    return args
+
 
 if __name__ == '__main__':
-    _args = parser.parse_args()
+    _args = arg_parse()
     main(_args)
