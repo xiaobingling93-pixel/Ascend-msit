@@ -17,9 +17,15 @@ from ms_service_profiler import Profiler, Level
 from .vllm_hooker_base import VLLMHookerBase
 
 
+def prof_add_request(request_id, prompt, *args, **kwargs):
+    # 记录请求进入系统的时间                
+    profiler = Profiler(Level.INFO)
+    profiler.domain("http").res(request_id).event("httpReq") 
+
+
 # generate -> add_request -> schedule -> execute_model
 # 在请求进入引擎时记录时间戳，用于后续计算队列等待时间。
-class EngineRequestTrackerHook(VLLMHookerBase):
+class EngineRequestTrackerHook063(VLLMHookerBase):
     vllm_version = ("0.6.3", "0.6.3")
 
     def init(self):
@@ -28,19 +34,39 @@ class EngineRequestTrackerHook(VLLMHookerBase):
 
         def add_request_maker(ori_func):
             def add_request(this, request_id, prompt, *args, **kwargs):
-                # 记录请求进入系统的时间                
-                profiler = Profiler(Level.INFO)
-                profiler.domain("http").res(request_id).event("httpReq")
+                prof_add_request(request_id, prompt, *args, **kwargs)
                 return ori_func(this, request_id, prompt, *args, **kwargs)
-
             return add_request
 
         self.do_hook([LLMEngine.add_request, AsyncLLMEngine.add_request], add_request_maker)
 
 
+class EngineRequestTrackerHook084(VLLMHookerBase):
+    vllm_version = ("0.8.4", "0.8.4")
+
+    def init(self):
+        from vllm.engine.llm_engine import LLMEngine
+        from vllm.engine.async_llm_engine import AsyncLLMEngine
+
+        def add_request_maker(ori_func):
+            def add_request(this, request_id, prompt, *args, **kwargs):
+                prof_add_request(request_id, prompt, *args, **kwargs)
+                return ori_func(this, request_id, prompt, *args, **kwargs)
+            return add_request
+
+        def add_request_async_maker(ori_func):
+            async def add_request(this, request_id, prompt, *args, **kwargs):
+                prof_add_request(request_id, prompt, *args, **kwargs)
+                return ori_func(this, request_id, prompt, *args, **kwargs)
+            return add_request
+
+        self.do_hook([LLMEngine.add_request], add_request_maker)
+        self.do_hook([AsyncLLMEngine.add_request], add_request_async_maker)
+
+
 # 采集请求返回的数据
 class LLMEngineHook(VLLMHookerBase):
-    vllm_version = ("0.6.3", "0.6.3")
+    vllm_version = ("0.6.3", "0.8.4")
 
     def init(self):
         from vllm.engine.llm_engine import LLMEngine
@@ -64,4 +90,4 @@ class LLMEngineHook(VLLMHookerBase):
         self.do_hook([LLMEngine.validate_output], validate_output_maker)
 
 
-request_hookers = [EngineRequestTrackerHook, LLMEngineHook]
+request_hookers = [EngineRequestTrackerHook063, EngineRequestTrackerHook084, LLMEngineHook]
