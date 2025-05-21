@@ -40,6 +40,7 @@ from modelevalstate.config.config import AnalyzeTool, BenchMarkConfig, MindieCon
     DeployPolicy, map_param_with_value, MODEL_EVAL_STATE_CONFIG_PATH, modelevalstate_config_path, \
     CUSTOM_OUTPUT, custom_output
 from modelevalstate.config.config import default_support_field, PsoOptions, PerformanceIndex, OptimizerConfigField
+from modelevalstate.inference.constant import IS_SLEEP_FLAG
 from modelevalstate.optimizer.analyze_profiler import analyze as analyze_profiler
 from modelevalstate.optimizer.global_best_custom import CustomGlobalBestPSO
 from modelevalstate.optimizer.store import DataStorage
@@ -875,7 +876,7 @@ def main(args: argparse.Namespace):
             logger.info(f"{server_address} support method {rpc.system.listMethods()}")
             rpc_clients.append(rpc)
     # 单机benchmark
-    time_sleep = os.getenv(IS_SLEEP_FLAG, "False").lower().strip == "true"
+    time_sleep = os.getenv(IS_SLEEP_FLAG, "False").lower().strip() == "true"
     if time_sleep:
         benchmark = BenchMark(settings.benchmark, bak_path=bak_path)
     else:
