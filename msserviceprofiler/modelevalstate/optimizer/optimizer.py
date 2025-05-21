@@ -36,7 +36,7 @@ import psutil
 from loguru import logger
 
 from modelevalstate.common import get_train_sub_path
-from modelevalstate.config.config import AnalyzeTool, BenchMarkConfig, MindieConfig, settings, BenchMarkPolicy, \
+from modelevalstate.config.config import AnalyzeTool, BenchMarkConfig, MindieConfig, settings, \
     DeployPolicy, map_param_with_value, MODEL_EVAL_STATE_CONFIG_PATH, modelevalstate_config_path, \
     CUSTOM_OUTPUT, custom_output
 from modelevalstate.config.config import default_support_field, PsoOptions, PerformanceIndex, OptimizerConfigField
@@ -875,14 +875,12 @@ def main(args: argparse.Namespace):
             logger.info(f"{server_address} support method {rpc.system.listMethods()}")
             rpc_clients.append(rpc)
     # 单机benchmark
-    if args.benchmark_policy == BenchMarkPolicy.benchmark.value and args.deploy_policy == DeployPolicy.single.value:
+    time_sleep = os.getenv(IS_SLEEP_FLAG, "False").lower().strip == "true"
+    if time_sleep:
         benchmark = BenchMark(settings.benchmark, bak_path=bak_path)
-    # profiler benchmark, profiler只能采集主节点，因此多机情况下，也是运行单个机器的实例，处理数据。
-    elif args.benchmark_policy == BenchMarkPolicy.profiler_benchmark.value:
-        benchmark = ProfilerBenchmark(settings.benchmark, bak_path=bak_path, analyze_tool=AnalyzeTool.profiler)
     else:
         # 默认 自定义单机
-        benchmark = BenchMark(settings.benchmark, bak_path=bak_path)
+        benchmark = ProfilerBenchmark(settings.benchmark, bak_path=bak_path, analyze_tool=AnalyzeTool.profiler)
     # 存储结果，只在主节点存储结果
     data_storage = DataStorage(settings.data_storage)
     # 初始化调度模块，支持单机和多机。
@@ -907,9 +905,6 @@ def main(args: argparse.Namespace):
 
 
 parser = argparse.ArgumentParser(prog='optimizer')
-parser.add_argument("-b", "--benchmark_policy", default=BenchMarkPolicy.profiler_benchmark.value,
-                    choices=[k.value for k in list(BenchMarkPolicy)],
-                    help="Whether to use custom performance indicators or mindie performance indicators.")
 parser.add_argument("-lb", "--load_breakpoint", default=False, action="store_true",
                     help="Continue from where the last optimization was aborted.")
 parser.add_argument("-d", "--deploy_policy", default=DeployPolicy.single.value,

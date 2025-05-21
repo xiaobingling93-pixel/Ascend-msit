@@ -135,7 +135,7 @@ class BenchMarkConfig(BaseModel):
 
 class DataStorageConfig(BaseModel):
     store_dir: Path = Field(
-        default_factory=lambda: Path(os.getcwd()).joinpath("result/store").resolve(),
+        default_factory=lambda: custom_output.joinpath("result/store").resolve(),
         validate_default=True
     )
 
