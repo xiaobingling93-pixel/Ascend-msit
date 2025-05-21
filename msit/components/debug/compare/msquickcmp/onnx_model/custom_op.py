@@ -116,7 +116,7 @@ def get_deformable_conv2d_inputs_from_npu_dump(npu_dump_path):
     return inputs_map
 
 
-def remove_deformable_conv2d_and_add_inputs(g:OnnxGraph, npu_dump_path):
+def remove_deformable_conv2d_and_add_inputs(g: OnnxGraph, npu_dump_path):
     extend_inpus_map = get_deformable_conv2d_inputs_from_npu_dump(npu_dump_path=npu_dump_path)
     inputs_map = {}
 
@@ -172,7 +172,7 @@ def get_batch_multi_class_nms_inputs_from_npu_dump(npu_dump_path):
     return inputs_map
 
 
-def remove_batch_multi_class_nms_and_add_inputs(g:OnnxGraph, npu_dump_path):
+def remove_batch_multi_class_nms_and_add_inputs(g: OnnxGraph, npu_dump_path):
     extend_inpus_map = get_batch_multi_class_nms_inputs_from_npu_dump(npu_dump_path)
     inputs_map = {}
 
@@ -239,7 +239,7 @@ def get_roi_extractor_inputs_from_npu_dump(npu_dump_path):
     return inputs_map
 
 
-def remove_roi_extractor_and_add_inputs(g:OnnxGraph, npu_dump_path):
+def remove_roi_extractor_and_add_inputs(g: OnnxGraph, npu_dump_path):
     extend_inpus_map = get_roi_extractor_inputs_from_npu_dump(npu_dump_path)
     inputs_map = {}
 

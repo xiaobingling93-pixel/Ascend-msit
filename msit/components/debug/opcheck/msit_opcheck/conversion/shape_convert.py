@@ -757,13 +757,13 @@ format_transformation_map = {
         "FRACTAL_ZN_RNN": nd_to_fractal_z
     },
     "NC1HWC0": {
-        "NHWC" : nc1hwc0_to_nhwc,
+        "NHWC": nc1hwc0_to_nhwc,
         "NCHW": nc1hwc0_to_nchw,
         "HWCN": nc1hwc0_to_hwcn
 
     },
     "FRACTAL_NZ": {
-        "ND" : fractal_nz_to_nd,
+        "ND": fractal_nz_to_nd,
         "NCHW": fractal_nz_to_nchw,
         "NHWC": fractal_nz_to_nhwc
     },

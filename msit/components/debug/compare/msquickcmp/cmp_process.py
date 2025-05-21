@@ -436,7 +436,7 @@ def run_om_model_compare(args, use_cli):
 def _get_model_output_node_name_list(model_with_inputs_session, origin_model):
     net_output_node_name_list = [item.name for item in model_with_inputs_session.get_outputs()]
     node_output_show_list = []
-    for node_name in net_output_node_name_list :
+    for node_name in net_output_node_name_list:
         pre_node = _find_previous_node(origin_model.graph, node_name)
         if pre_node is None:
             return None

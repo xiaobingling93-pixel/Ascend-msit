@@ -134,7 +134,7 @@ class CompareDataATB(CompareDataParse):
         parse_level = 0
         for index in reversed(range(len(path_list))):
             if any([path_list[index].startswith(x) for x in GLOBAL_HISTORY_AIT_DUMP_PATH_LIST]):
-                ait_dump_path = os.sep.join(path_list[0 : index + 1])
+                ait_dump_path = os.sep.join(path_list[0: index + 1])
                 break
             parse_level += 1
             if parse_level > max_parse_level:

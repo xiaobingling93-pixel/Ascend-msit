@@ -20,7 +20,7 @@ import torch
 from components.utils.file_open_check import ms_open
 
 
-def dump_statistics(feat, feat_path:str, module_name, dump_type) -> None:
+def dump_statistics(feat, feat_path: str, module_name, dump_type) -> None:
     #提取dump_type_name作为字符串
     #示例：<bound method Module.type of LayerNorm((4,), eps=1e-05, elementwise_affine=True)>，提取结果为：LayerNorm
     dump_type_name = str(dump_type).split('of ')[-1].split('(')[0]

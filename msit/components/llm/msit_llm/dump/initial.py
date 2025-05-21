@@ -34,6 +34,38 @@ from msit_llm.common.constant import ATB_HOME_PATH, ATB_SAVE_TENSOR_TIME, ATB_SA
     ATB_SAVE_SYMLINK
 
 
+def run_pipeline(lib_atb_path):
+    nm_process = subprocess.run(
+        ['nm', '-D', lib_atb_path],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    grep1_process = subprocess.run(
+        ['grep', 'Probe'],
+        input=nm_process.stdout,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    
+    grep2_process = subprocess.run(
+        ['grep', 'cxx11'],
+        input=grep1_process.stdout,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    
+    total_output = (
+        nm_process.stderr + 
+        grep1_process.stderr + 
+        grep2_process.stderr + 
+        grep2_process.stdout
+    ).decode('utf-8', errors='ignore')
+    result_code = grep2_process.returncode
+    
+    return result_code, total_output
+
+
 def is_use_cxx11():
     atb_home_path = os.environ.get(ATB_HOME_PATH, "")
     if not atb_home_path or not os.path.exists(atb_home_path):
@@ -43,7 +75,7 @@ def is_use_cxx11():
     if not os.path.exists(lib_atb_path):
         raise OSError(f"{lib_atb_path} not exists, please make sure atb is compiled correctly")
 
-    result_code, abi_result = subprocess.getstatusoutput(f"nm -D {lib_atb_path} | grep Probe | grep cxx11")
+    result_code, abi_result = run_pipeline(lib_atb_path)
     if result_code == 1 and len(abi_result) == 0:  # Execute succesfully but not found
         return False
     elif result_code != 0:

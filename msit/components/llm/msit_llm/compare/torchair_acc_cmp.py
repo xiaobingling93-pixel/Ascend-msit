@@ -317,7 +317,7 @@ def get_all_ops_from_fusion_op(op_name, graph_map_dict, ge_dump_data):
             logger.debug(f"Failed parsing ge op name: {cur_op_name}.Compare manually if required.")
             break
         all_ops.append(cur_op_name)
-        op_name = op_name[len(cur_op_name) :]
+        op_name = op_name[len(cur_op_name):]
     return all_ops
 
 
@@ -496,7 +496,7 @@ def gather_fused_op_data(fused_op_name, op_map, fused_ge_dump_data, ge_dump_data
         gathered_ops.append(cur_op_name)
         gathered_inputs.extend(op_inputs)
         gatherd_input_pathes.extend(input_pathes)
-        fused_op_name = fused_op_name[len(cur_op_name) :]
+        fused_op_name = fused_op_name[len(cur_op_name):]
 
     filtered_input_names, filtered_inputs, filtered_input_pathes = [], [], []
     for input_name, inputs, input_path in zip(gathered_input_names, gathered_inputs, gatherd_input_pathes):

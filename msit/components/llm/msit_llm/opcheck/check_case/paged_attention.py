@@ -64,13 +64,13 @@ class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
         de_scale1_fp32, de_scale2_fp32, offset1, offset2 = fp32_input
         if is_k:
             if has_bias:
-                int32_b = int32_b + offset1[i * head_dim : (i + 1) * head_dim]
-            fp32_b = int32_b.type(torch.float32) * de_scale1_fp32[i * head_dim : (i + 1) * head_dim]
+                int32_b = int32_b + offset1[i * head_dim: (i + 1) * head_dim]
+            fp32_b = int32_b.type(torch.float32) * de_scale1_fp32[i * head_dim: (i + 1) * head_dim]
             fp32_b = torch.permute(fp32_b, (0, 2, 1))
         else:
             if has_bias:
-                int32_b = int32_b + offset2[i * head_dim : (i + 1) * head_dim]
-            fp32_b = int32_b.type(torch.float32) * de_scale2_fp32[i * head_dim : (i + 1) * head_dim]
+                int32_b = int32_b + offset2[i * head_dim: (i + 1) * head_dim]
+            fp32_b = int32_b.type(torch.float32) * de_scale2_fp32[i * head_dim: (i + 1) * head_dim]
         return fp32_b
 
     def get_quant_param(self, quant_type, has_quant_offset):
@@ -105,7 +105,7 @@ class OpcheckPagedAttentionAttentionOperation(operation_test.OperationTest):
         group_head = head_num // kv_head_num
         score = None
         for i in range(kv_head_num):
-            fp32_a = a[i * group_head : (i + 1) * group_head, :, :].type(torch.float32)
+            fp32_a = a[i * group_head: (i + 1) * group_head, :, :].type(torch.float32)
             if is_int8_flag:
                 fp32_b = OpcheckPagedAttentionAttentionOperation.get_fp32_b(i, b, fp32_input, is_k, has_bias)
                 group_score = torch.matmul(fp32_a, fp32_b).type(torch.float16)

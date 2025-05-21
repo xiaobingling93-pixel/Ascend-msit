@@ -68,10 +68,10 @@ class AtcErrParser:
             info = matcher.group()
             left = info.find('[')
             right = info.find(',', left)
-            op_name = info[left + 1 : right]
+            op_name = info[left + 1: right]
             left = info.find('[', right)
             right = info.find(']', left)
-            op_type = info[left + 1 : right]
+            op_type = info[left + 1: right]
             op_infos[op_name] = op_type
         return op_infos
 
@@ -86,7 +86,7 @@ class AtcErrParser:
             info = matcher.group()
             left = info.find('[')
             right = info.find(']', left)
-            op_type = info[left + 1 : right]
+            op_type = info[left + 1: right]
             op_infos.add(op_type)
         return op_infos
 
@@ -101,10 +101,10 @@ class AtcErrParser:
             info = matcher.group()
             left = info.find('[')
             right = info.find(']', left)
-            op_name = info[left + 1 : right]
+            op_name = info[left + 1: right]
             left = info.find('[', right)
             right = info.find(']', left)
-            op_type = info[left + 1 : right]
+            op_type = info[left + 1: right]
             op_infos[op_name] = op_type
         return op_infos
 
@@ -119,9 +119,9 @@ class AtcErrParser:
             info = matcher.group()
             left = info.find('[')
             right = info.find(',', left)
-            op_name = info[left + 1 : right]
+            op_name = info[left + 1: right]
             left = info.find('[', right)
             right = info.find(']', left)
-            op_type = info[left + 1 : right]
+            op_type = info[left + 1: right]
             op_infos[op_name] = op_type
         return op_infos

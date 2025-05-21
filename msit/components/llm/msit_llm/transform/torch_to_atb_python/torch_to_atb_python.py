@@ -612,7 +612,7 @@ class ATBModelFromTorch(ATBModel):
         self.operations += [
             Operation(
                 op_type="Reduce",
-                op_param={"reduceType":"REDUCE_SUM", "axis":[1]},
+                op_param={"reduceType": "REDUCE_SUM", "axis": [1]},
                 inputs=[module_name + ".intermediate_router_weights_topk"],
                 outputs=[module_name + ".intermediate_router_weights_topk_sumed0"],
                 op_name=module_name + ".norm_sum",
@@ -638,7 +638,7 @@ class ATBModelFromTorch(ATBModel):
         self.operations += [
             Operation(
                 op_type="MoeInitRouting",
-                op_param={"topkNum":self.topk, "expertNum":self.num_experts},
+                op_param={"topkNum": self.topk, "expertNum": self.num_experts},
                 inputs=[module_name.split("block_sparse_moe")[0] + "post_attention_layernorm.out", 
                         module_name + ".intermediate_selected_experts"],
                 outputs=[module_name + ".intermediate_sorted_hidden_states", 

@@ -79,7 +79,7 @@ class TransformQuantCppLayerFunction:
             node_name = temp_atb_param_nodes[param_name].pop(0)
             if len(temp_atb_param_nodes[param_name]) == 0:
                 temp_atb_param_nodes.pop(param_name)
-            print_spelling(self.all_tokens[cur_id : cur_id + 3], info="current 3 tokens: ")
+            print_spelling(self.all_tokens[cur_id: cur_id + 3], info="current 3 tokens: ")
 
             if self.enable_sparse and linear_count == 0 and cur_token_spelling == "LinearParam":
                 self.update_for_sparse_linear_param(cur_id)
@@ -109,7 +109,7 @@ class TransformQuantCppLayerFunction:
         while cur_id < self.all_token_len:
             cur_token_spelling = self.all_tokens[cur_id].spelling
             if cur_token_spelling == "atb" and self.all_tokens[cur_id + 2].spelling == "Node":
-                print_spelling(self.all_tokens[cur_id : cur_id + 5])
+                print_spelling(self.all_tokens[cur_id: cur_id + 5])
                 if self.all_tokens[cur_id + 3].spelling == "&":
                     atb_node = self.all_tokens[cur_id + 4]
                     cur_id += 4
@@ -118,7 +118,7 @@ class TransformQuantCppLayerFunction:
                     cur_id += 3
                 atb_nodes.append(atb_node.spelling)
             if cur_token_spelling in atb_nodes and self.all_tokens[cur_id + 2].spelling == "operation":
-                print_spelling(self.all_tokens[cur_id - 3 : cur_id + 3])
+                print_spelling(self.all_tokens[cur_id - 3: cur_id + 3])
                 if self.all_tokens[cur_id - 1].spelling == "&":
                     atb_node_params[cur_token_spelling] = self.all_tokens[cur_id - 3].spelling
                     atb_param_nodes.setdefault(self.all_tokens[cur_id - 3].spelling, []).append(cur_token_spelling)
@@ -136,7 +136,7 @@ class TransformQuantCppLayerFunction:
         while cur_id < self.all_token_len:
             cur_token_spelling = self.all_tokens[cur_id].spelling
             if cur_token_spelling in atb_parameters and cur_token_spelling not in atb_param_types:
-                print_spelling(self.all_tokens[cur_id - 3 : cur_id + 3])
+                print_spelling(self.all_tokens[cur_id - 3: cur_id + 3])
                 atb_param_types[cur_token_spelling] = self.all_tokens[cur_id - 1].spelling
             cur_id += 1
         return atb_param_types
@@ -301,7 +301,7 @@ class TransformQuantCppLayerFunction:
         print_update_info(insert_contents, insert_start, insert_end, cur_id)
         self.updates.append((insert_start, insert_end, insert_contents))
 
-        print_spelling(self.all_tokens[cur_id : cur_id + 3], info=f"param_name: {param_name}, current 3 tokens: ")
+        print_spelling(self.all_tokens[cur_id: cur_id + 3], info=f"param_name: {param_name}, current 3 tokens: ")
         cur_id = self.seek_till_name(cur_id, param_name)
         insert_start = self.all_tokens[cur_id].extent.start.offset
         insert_end = self.all_tokens[cur_id].extent.end.offset

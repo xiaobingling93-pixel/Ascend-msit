@@ -38,7 +38,7 @@ SOC_VERSION = (100, 101, 102, 103, 104, 200, 201, 202, 203)
 
 @dataclass
 class NPUSocInfo:
-    soc_name:str = ""
+    soc_name: str = ""
     soc_version: int = -1
     need_nz: bool = False
 

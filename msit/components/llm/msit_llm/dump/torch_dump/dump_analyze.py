@@ -20,7 +20,7 @@ from components.utils.file_open_check import ms_open
 from msit_llm.common.constant import get_ait_dump_path
 
 
-def dump_analyze(feat, feat_path:str, module_name, dump_type, dump_path) -> None:
+def dump_analyze(feat, feat_path: str, module_name, dump_type, dump_path) -> None:
     #提取dump_type_name作为字符串
     dump_type_name = str(dump_type).split('of ')[-1].split('(')[0]
 

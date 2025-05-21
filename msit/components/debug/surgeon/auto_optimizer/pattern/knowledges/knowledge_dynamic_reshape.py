@@ -124,7 +124,7 @@ class KnowledgeDynamicReshape(KnowledgeBase):
                 pos = line.find('=')
                 if pos == -1:
                     break
-                input_shape_range = line[pos + 1 :].replace(' ', '')
+                input_shape_range = line[pos + 1:].replace(' ', '')
                 if input_shape_range.startswith('\''):
                     input_shape_range = input_shape_range[1:]
                 if input_shape_range.endswith('\''):

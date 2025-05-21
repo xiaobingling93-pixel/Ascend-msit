@@ -16,13 +16,13 @@ from unittest import mock
 from unittest import mock, TestCase
 
 from components.llm.msit_llm.dump.initial import is_use_cxx11, read_cpu_profiling_data, \
-    split_cpu_profiling_data, clear_dump_task
+    split_cpu_profiling_data, clear_dump_task, run_pipeline
 
 
 class TestIsUseCxx11(TestCase):
     @mock.patch('os.environ.get', return_value="/path/to/atb/home")
     @mock.patch('os.path.exists', side_effect=[True, True])
-    @mock.patch('subprocess.getstatusoutput', return_value=(0, "some output containing Probe and cxx11"))
+    @mock.patch('components.llm.msit_llm.dump.initial.run_pipeline', return_value=(0, "some output containing Probe and cxx11"))
     def test_is_use_cxx11_success(self, mock_subproc, mock_exists, mock_env):
         result = is_use_cxx11()
         self.assertTrue(result)
@@ -49,7 +49,7 @@ class TestIsUseCxx11(TestCase):
 
     @mock.patch('os.environ.get', return_value="/path/to/atb/home")
     @mock.patch('os.path.exists', side_effect=[True, True])
-    @mock.patch('subprocess.getstatusoutput', return_value=(1, ""))
+    @mock.patch('components.llm.msit_llm.dump.initial.run_pipeline', return_value=(1, ""))
     def test_is_use_cxx11_not_found(self, mock_subproc, mock_exists, mock_env):
         result = is_use_cxx11()
         self.assertFalse(result)
