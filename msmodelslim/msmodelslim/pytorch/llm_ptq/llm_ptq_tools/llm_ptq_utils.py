@@ -183,8 +183,6 @@ class QuantModelJsonDescription:
 
     def change_fa_quant_type(self, use_fa_quant):        
         if use_fa_quant:
-            if self.model_quant_type != QuantType.W8A8:
-                raise ValueError("FA quantization is only applicable in the W8A8 quantization scenario")
             self.quant_model_description[QuantModelJsonDescription.fa_quant_type_name] = QuantType.FAQuant
 
     def change_weight_type(self, weight_name, weight_quant_type):
