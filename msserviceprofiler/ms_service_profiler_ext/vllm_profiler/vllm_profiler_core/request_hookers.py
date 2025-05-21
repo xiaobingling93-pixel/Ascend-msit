@@ -50,7 +50,8 @@ class EngineRequestTrackerHook084(VLLMHookerBase):
 
         def add_request_maker(ori_func):
             def add_request(this, request_id, prompt, *args, **kwargs):
-                return prof_add_request(request_id, prompt, *args, **kwargs)
+                prof_add_request(request_id, prompt, *args, **kwargs)
+                return ori_func(this, request_id, prompt, *args, **kwargs)
             return add_request
 
         def add_request_async_maker(ori_func):
