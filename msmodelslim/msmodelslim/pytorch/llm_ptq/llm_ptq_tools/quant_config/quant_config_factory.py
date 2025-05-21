@@ -7,6 +7,7 @@ from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config.quant_config_classes
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config.quant_config_classes import KVQuantConfig
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config.quant_config_classes import FAQuantConfig
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config.quant_config_classes import SimulateTPConfig
+from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config.quant_config_classes import TimestepQuantConfig
 
 
 class QuantConfigFactory:
@@ -21,6 +22,7 @@ class QuantConfigFactory:
         'kv': KVQuantConfig,
         'fa_quant': FAQuantConfig,
         'simulate_tp': SimulateTPConfig,
+        'timestep_quant': TimestepQuantConfig,
     }
 
     @classmethod

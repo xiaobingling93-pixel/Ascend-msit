@@ -9,6 +9,7 @@ from msmodelslim.pytorch.lowbit.quant_modules import LinearQuantizer as LowBitLi
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_funcs import fake_quantize_save
 
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.layer_config_manager import LayerConfigManager
+from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.timestep.quantizer import LinearQuantizerTimestep
 from msmodelslim.pytorch.llm_sparsequant.sparsequant_modules import LinearSparseQuantizer
 from msmodelslim.pytorch.llm_ptq.anti_outlier.graph_utils import NormBias
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_modules import LinearQuantizer, LinearNf4Quantizer
@@ -190,7 +191,8 @@ class ComplexQuantifier:
                 yield name + '.weight_offset', model_quant_type, weight_offset.cpu()
 
         # W4A16/W8A16 需要提供 weight_scale、weight_offset
-        if model_quant_type in [QuantType.W8A16, QuantType.W4A16, QuantType.W8A8_DYNAMIC, QuantType.W8A8]:
+        if model_quant_type in [QuantType.W8A16, QuantType.W4A16, QuantType.W8A8_DYNAMIC, QuantType.W8A8,
+                                QuantType.W8A8_TIMESTEP]:
             yield name + '.weight_scale', model_quant_type, weight_scale.cpu()
             yield name + '.weight_offset', model_quant_type, weight_offset.cpu()
 
@@ -215,6 +217,45 @@ class ComplexQuantifier:
             yield name + '.quant_bias', model_quant_type, quant_bias.cpu().to(torch.int32)
             yield name + '.deq_scale', model_quant_type, deq_scale.cpu()
 
+        if model_quant_type in [QuantType.W8A8_TIMESTEP]:
+            # fix for fake quantize
+            module.quant_weight.int_weight_tensor = quant_weight
+            ori_device = quant_weight.device
+            tgt_device = 'npu' if torch.cuda.is_available() else 'cpu'
+            quant_weight = quant_weight.to(tgt_device)
+            weight_scale = weight_scale.to(tgt_device)
+
+            def get_act_quant_param(quant_weight, input_scale, input_offset):
+                input_scale = input_scale.to(device=quant_weight.device)
+                input_offset = input_offset.to(device=quant_weight.device)
+                deq_scale = deqscale_process(input_scale, weight_scale).to(torch.float32)
+                quant_weight = quant_weight.to(torch.float32)
+                input_offset = input_offset.to(torch.float32)
+                correction = (quant_weight.sum(dim=1) * input_offset).cpu()
+                fp_bias = change_bias(fp_weight, module)
+                quant_bias = torch.round(fp_bias / deq_scale - correction)
+                deq_scale = deqscale2int64_by_dtype(deq_scale,
+                                                    self.torch_dtype == torch.bfloat16)
+                return quant_bias, deq_scale
+
+            input_scale_timestep, input_offset_timestep = module.quant_input.get_timestep_scale_offset_dict()
+            quant_bias_timestep = []
+            deq_scale_timestep = []
+            for input_scale, input_offset in zip(input_scale_timestep, input_offset_timestep):
+                quant_bias, deq_scale = get_act_quant_param(quant_weight, input_scale, input_offset)
+                quant_bias_timestep.append(quant_bias)
+                deq_scale_timestep.append(deq_scale)
+            quant_bias_timestep = torch.stack(quant_bias_timestep)
+            deq_scale_timestep = torch.stack(deq_scale_timestep)
+
+            quant_weight = quant_weight.to(ori_device)
+            weight_scale = weight_scale.to(ori_device)
+
+            yield name + '.input_scale', model_quant_type, input_scale_timestep.cpu()
+            yield name + '.input_offset', model_quant_type, input_offset_timestep.cpu()
+            yield name + '.quant_bias', model_quant_type, quant_bias_timestep.cpu().to(torch.int32)
+            yield name + '.deq_scale', model_quant_type, deq_scale_timestep.cpu()
+
     def concat_simulate_linear(self, name, module, quant_param):
         if name in self.rollback_names:
             return
@@ -231,6 +272,11 @@ class ComplexQuantifier:
     def get_param_from_quantizer(self, module):
         quant_weight = None
         fp_weight, device, weight_scale, weight_offset, round_opt = _get_module_quant_input(module)
+        if isinstance(module, LinearQuantizerTimestep):
+            quant_weight, _ = fake_quantize_save(fp_weight, weight_scale, weight_offset, bit=module.cfg.w_bit,
+                                                 round_opt=round_opt, device=device)
+            module.set_quant_weight(quant_weight)
+
         if isinstance(module, LinearQuantizer):
             quant_weight, _ = fake_quantize_save(fp_weight, weight_scale, weight_offset, bit=module.cfg.w_bit,
                                                  round_opt=round_opt, device=device)

@@ -73,6 +73,9 @@ from msmodelslim.pytorch.llm_ptq.accelerate_adapter.hook_adapter import (Prepare
                                                                          clear_unused_module)
 from msmodelslim.pytorch.llm_ptq.accelerate_adapter.utils import judge_model_with_accelerate
 
+import msmodelslim.pytorch.llm_ptq.llm_ptq_tools.timestep.timestep_utils as timestep_utils
+from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.timestep.quantizer import LinearQuantizerTimestep
+
 HF_HOOK = "_hf_hook"
 STATE_DICT_COPY_DIR = "copy"
 ALLOWED_MIX_TYPES = {"w8a8", "w8a16", "w8a8_dynamic", "float", "w4a8_dynamic"}
@@ -438,7 +441,13 @@ class Calibrator(object):
         elif self.calib_data:
             enable_tensor_dump = False  # 模型规模较大的时候，dump_tensor非常消耗计算、内存和存储空间，默认关闭
             try:
-                self.act_states = get_features(model, self.calib_data[:5], "features.npy", enable_tensor_dump)
+                if getattr(self.cfg, 'use_timestep_quant', False):
+                    if 'args' not in self.calib_data[0]:
+                        raise ValueError('Timestep calib data error: "arg" not in calib_data[0]')
+                    calib_data = [x['args'] for x in self.calib_data]
+                else:
+                    calib_data = self.calib_data
+                self.act_states = get_features(model, calib_data[:5], "features.npy", enable_tensor_dump)
             except Exception as e:
                 raise Exception("Please check the model and calibration data, "
                                 "ensure that your model can run with `model(*(calib_data[0]))`.", e) from e
@@ -768,6 +777,8 @@ class Calibrator(object):
                         quant_mod = LowBitLinearQuantizer(cfg=layer_cfg, logger=self.logger, name=name)
                     elif layer_cfg.w_method in QuantType.NF4:
                         quant_mod = LinearNf4Quantizer(cfg=layer_cfg, logger=self.logger)
+                    elif getattr(self.cfg, 'use_timestep_quant', False):
+                        quant_mod = LinearQuantizerTimestep(cfg=layer_cfg, logger=self.logger)
                     elif layer_cfg.model_quant_type is not QuantType.W8A8S:
                         quant_mod = LinearQuantizer(cfg=layer_cfg, logger=self.logger)
                     else:
@@ -921,7 +932,10 @@ class Calibrator(object):
         if self.calib_data:
             if self.cfg.calib_mode == 0:
                 with torch.no_grad():
-                    self.run_calib_mode()
+                    if getattr(self.cfg, 'use_timestep_quant', False):
+                        timestep_utils.run_calib_timestep(self.model, self.calib_data, self.cfg)
+                    else:
+                        self.run_calib_mode()
             elif self.cfg.calib_mode == 1:
                 try:
                     layer_wise_calib(self.model, self.all_tensors, self.cfg.device)
