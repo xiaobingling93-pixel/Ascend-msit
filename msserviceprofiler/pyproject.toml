@@ -2,11 +2,8 @@
 name = "msserviceprofiler"
 version = "1.1.0"
 description = ""
-authors = ["wangdengkai2@huawei.com"]
 readme = "README.md"
-packages = [
-    {include = "modelevalstate"}
-]
+
 
 [tool.poetry.dependencies]
 python = "^3.8"
