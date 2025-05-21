@@ -267,8 +267,7 @@ class NetCompare(object):
         return process.returncode, result, header
 
     def _process_result_one_line(self, fp_write, fp_read, npu_file_name, golden_file_name, result):
-        with ms_open(fp_write, 'w') as f:
-            writer = csv.writer(f)
+        writer = csv.writer(fp_write)
         # write header to file
         table_header_info = next(fp_read)
         header_list = table_header_info.strip().split(',')
@@ -324,8 +323,7 @@ class NetCompare(object):
 
 
     def _process_result_to_csv(self, fp_write, csv_info):
-        with ms_open(fp_write, 'w') as f:
-            writer = csv.writer(f)
+        writer = csv.writer(fp_write)
         if csv_info.header:
             header_base_info = [
                 'Index', 'OpType', 'NPUDump', 'DataType', 'Address',
