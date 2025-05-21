@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import time
 
 import torch
-import torch_npu
 import yaml
 
-from msprechecker.prechecker.register import PrecheckerBase
-from msprechecker.prechecker.utils import logger
+from msprechecker.prechecker.register import PrecheckerBase, show_check_result, CheckResult
+from msprechecker.prechecker.utils import logger, SimpleProgressBar
 from msprechecker.prechecker.hardware_capacity.time_analyze import TimeAnalyze
 
 
@@ -49,16 +49,14 @@ class CPUChecker(PrecheckerBase):
         torch.set_num_threads(cpu_ids)
 
         output = {}
-        for cpu_id in range(cpu_ids):
+        for cpu_id in SimpleProgressBar(range(cpu_ids)):
             # 创建事件对象，用于记录运算的开始和结束时间
-            start_event = torch_npu.npu.Event(enable_timing=True)
-            end_event = torch_npu.npu.Event(enable_timing=True)
-
-            start_event.record()
+            
+            start_time = time.time()
             self.cpu_matmul(cpu_id)
-            end_event.record()
+            end_time = time.time()
+            cpu_time = (end_time - start_time) * 1000
 
-            cpu_time = start_event.elapsed_time(end_event)
             output[cpu_id] = cpu_time
         return output
 
@@ -69,13 +67,11 @@ class CPUChecker(PrecheckerBase):
         slow_cpu, slow_time, max_ratio, is_problem = cpu_analyze.time_analyze()
 
         if is_problem:
-            logger.info(
-                f"The CPU: {slow_cpu} may have performance issues, its calculation time is {slow_time}ms, "
-                f"the relative difference from the average calculation time is {round(max_ratio * 100)}%. "
-                f"It is recommended to check and optimize the CPU performance on the server."
-            )
+            action = f"检查cpu {slow_cpu} 状态"
+            reason = f"cpu计算时长 {slow_time}ms 大于平均时长的 {round(max_ratio * 100)}%"
+            show_check_result("hardware", "cpu_checker", CheckResult.ERROR, action=action, reason=reason)
         else:
-            logger.info(f"CPUs are working well, no performance issues found.")
+            show_check_result("hardware", "cpu_checker", CheckResult.OK)
 
 
 cpu_checker = CPUChecker()
