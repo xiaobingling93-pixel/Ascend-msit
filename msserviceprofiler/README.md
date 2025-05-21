@@ -23,6 +23,9 @@ msServiceProfiler 是一款基于昇腾平台，支持MindIE Service框架和vLL
 ### ️[vLLM服务化性能采集工具](docs/vLLM服务化性能采集工具.md)
 基于Ascend-vLLM，提供性能数据采集能力，结合msServiceProfiler的数据解析与可视化能力，可以vLLM服务化推理调试调优。
 
+### ️[服务化自动调优工具](docs/服务化自动调优工具.md)
+基于profiling数据采集，提供服务化参数自动调优能力，可以对服务化的参数以及测试工具的参数进行调优。
+
 
 ## 安装指南
 目前工具支持源码下载，脚本调用。
