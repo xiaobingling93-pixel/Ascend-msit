@@ -65,7 +65,7 @@ class BasePathConstraint(BaseConstraint):
         st = None
         # does not support file descriptor
         if not isinstance(path, (str, os.PathLike)):
-            raise TypeError(f"'path' must be str or os.PathLike. Got {type(path).__name__} instead")
+            return st
         
         try:
             st = os.stat(path, follow_symlinks=False)

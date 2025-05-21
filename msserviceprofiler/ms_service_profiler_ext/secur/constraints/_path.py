@@ -116,7 +116,7 @@ class IsConsistentToCurrentUser(BasePathConstraint):
 class IsSizeReasonable(BasePathConstraint):
     description = "reasonable on its size"
     
-    def __init__(self, *, size_limit=None, require_confirm=None, description=None):
+    def __init__(self, *, size_limit=None, require_confirm=True, description=None):
         super().__init__(description=description)
         self.size_limit = size_limit
         self.require_confirm = require_confirm
@@ -133,14 +133,10 @@ class IsSizeReasonable(BasePathConstraint):
 
     def _check_size(self, path, file_size):
         if self.size_limit is None:
-            file_size_config = get_file_size_config()
-            ext_size_mapping = file_size_config['ext_mapping']
+            from ..utils.constants import EXT_SIZE_MAPPING
             
-            if self.require_confirm is None:
-                self.require_confirm = file_size_config['require_confirm']
-
             ext = os.path.splitext(path)[1]
-            self.size_limit = ext_size_mapping.get(ext, max(ext_size_mapping.values()))
+            self.size_limit = EXT_SIZE_MAPPING.get(ext, max(EXT_SIZE_MAPPING.values()))
 
         is_reasonable = file_size < self.size_limit
 
