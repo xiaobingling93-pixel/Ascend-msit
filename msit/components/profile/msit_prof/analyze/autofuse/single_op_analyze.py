@@ -72,7 +72,7 @@ class SingleOpAnalyzer:
         hbms = []
         if not data_type or not data_shape:
             logger.debug("data_type or data_shape is None.")
-            return 0
+            return hbms
       
         data_type = data_type.split(";")
         data_shape = data_shape.split(";")

@@ -66,7 +66,7 @@ class TestSingleOpAnalyzer(unittest.TestCase):
         for case in test_cases:
             with self.subTest(input=case):
                 result = self.analyzer.calculate_hbms(case[0], case[1])
-                self.assertEqual(result, 0)        
+                self.assertEqual(result, [])        
 
     def test_calculate_total_hbm_list_input(self):
         test_cases = [

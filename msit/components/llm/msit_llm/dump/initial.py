@@ -36,20 +36,20 @@ from msit_llm.common.constant import ATB_HOME_PATH, ATB_SAVE_TENSOR_TIME, ATB_SA
 
 def run_pipeline(lib_atb_path):
     nm_process = subprocess.run(
-        ['nm', '-D', lib_atb_path],
+        ['/usr/bin/nm', '-D', lib_atb_path],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
 
     grep1_process = subprocess.run(
-        ['grep', 'Probe'],
+        ['/usr/bin/grep', 'Probe'],
         input=nm_process.stdout,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
     
     grep2_process = subprocess.run(
-        ['grep', 'cxx11'],
+        ['/usr/bin/grep', 'cxx11'],
         input=grep1_process.stdout,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
