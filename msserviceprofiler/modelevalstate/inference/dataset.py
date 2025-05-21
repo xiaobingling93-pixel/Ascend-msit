@@ -25,11 +25,12 @@ from sklearn.preprocessing import OneHotEncoder, LabelEncoder
 from msserviceprofiler.modelevalstate.inference.constant import DTYPE_CATEGORY, ALL_HIDDEN_ACT, ALL_MODEL_TYPE, \
     ALL_QUANTIZE, \
     ALL_KV_QUANT_TYPE, ALL_GROUP_SIZE, ALL_REDUCE_QUANT_TYPE, ALL_BATCH_STAGE
-from msserviceprofiler.modelevalstate.inference.data_format_v1 import BatchField, RequestField, ModelOpField, ModelStruct, ModelConfig, \
-    MindieConfig, \
+from msserviceprofiler.modelevalstate.inference.data_format_v1 import BatchField, RequestField, \
+    ModelOpField, ModelStruct, ModelConfig, MindieConfig, \
     EnvField, HardWare, BATCH_FIELD, REQUEST_FIELD, MODEL_OP_FIELD, MODEL_STRUCT_FIELD, MODEL_CONFIG_FIELD, \
     MINDIE_FIELD, ENV_FIELD, HARDWARE_FIELD
-from msserviceprofiler.modelevalstate.inference.utils import PreprocessTool, TOTAL_OUTPUT_LENGTH, TOTAL_SEQ_LENGTH, TOTAL_PREFILL_TOKEN
+from msserviceprofiler.modelevalstate.inference.utils import PreprocessTool, TOTAL_OUTPUT_LENGTH, TOTAL_SEQ_LENGTH, \
+    TOTAL_PREFILL_TOKEN
 
 
 @dataclass

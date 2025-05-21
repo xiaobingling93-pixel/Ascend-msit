@@ -39,8 +39,10 @@ from msserviceprofiler.modelevalstate.inference.data_format_v1 import (
     ENV_FIELD,
     HARDWARE_FIELD,
 )
-from msserviceprofiler.modelevalstate.inference.dataset import CustomOneHotEncoder, CustomLabelEncoder, preset_category_data
-from msserviceprofiler.modelevalstate.inference.utils import PreprocessTool, TOTAL_OUTPUT_LENGTH, TOTAL_SEQ_LENGTH, TOTAL_PREFILL_TOKEN
+from msserviceprofiler.modelevalstate.inference.dataset import CustomOneHotEncoder, CustomLabelEncoder, \
+    preset_category_data
+from msserviceprofiler.modelevalstate.inference.utils import PreprocessTool, TOTAL_OUTPUT_LENGTH, \
+    TOTAL_SEQ_LENGTH, TOTAL_PREFILL_TOKEN
 
 matplotlib.use("Agg")
 

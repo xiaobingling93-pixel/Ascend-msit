@@ -17,7 +17,8 @@ from collections import OrderedDict
 
 import numpy as np
 
-from msserviceprofiler.modelevalstate.inference.constant import ALL_OP, DTYPE_CATEGORY, OP_EXECUTE_DELTA_FIELD, ALL_OP_PARAM_TYPE
+from msserviceprofiler.modelevalstate.inference.constant import ALL_OP, DTYPE_CATEGORY, \
+    OP_EXECUTE_DELTA_FIELD, ALL_OP_PARAM_TYPE
 
 
 def get_bins_and_label(field, interval=20, number=51, start=0, end=float("inf")):

@@ -20,8 +20,8 @@ from typing import Dict, Optional, Tuple, List, Union
 
 from loguru import logger
 
-from msserviceprofiler.modelevalstate.inference.data_format_v1 import EnvField, HardWare, MindieConfig, ModelConfig, ModelOpField, \
-    ModelStruct, \
+from msserviceprofiler.modelevalstate.inference.data_format_v1 import EnvField, HardWare, MindieConfig, \
+    ModelConfig, ModelOpField,ModelStruct, \
     ENV_FIELD, HARDWARE_FIELD, MINDIE_FIELD, MODEL_CONFIG_FIELD, MODEL_STRUCT_FIELD, MODEL_OP_FIELD, BATCH_SIZE, \
     MAX_SEQ_LEN
 

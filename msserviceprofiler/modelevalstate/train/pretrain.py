@@ -24,7 +24,8 @@ from sklearn.model_selection import train_test_split
 
 from msserviceprofiler.modelevalstate.analysis import AnalysisState
 from msserviceprofiler.modelevalstate.common import _DECODE, _PREFILL, State
-from msserviceprofiler.modelevalstate.common import computer_speed_with_second, get_train_sub_path, update_global_coefficient
+from msserviceprofiler.modelevalstate.common import computer_speed_with_second, get_train_sub_path, \
+    update_global_coefficient
 
 try:
     from msserviceprofiler.modelevalstate.data_feature.dataset_with_modin import MyDataSetWithModin as MyDataSet

@@ -29,7 +29,8 @@ from msserviceprofiler.modelevalstate.inference.data_format_v1 import (
     ENV_FIELD,
     HARDWARE_FIELD,
 )
-from msserviceprofiler.modelevalstate.inference.dataset import TOTAL_OUTPUT_LENGTH, TOTAL_SEQ_LENGTH, TOTAL_PREFILL_TOKEN
+from msserviceprofiler.modelevalstate.inference.dataset import TOTAL_OUTPUT_LENGTH, \
+    TOTAL_SEQ_LENGTH, TOTAL_PREFILL_TOKEN
 
 logger.info(f'swifter version {getattr(swifter, "__version__")}')
 

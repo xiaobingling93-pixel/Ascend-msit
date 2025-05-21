@@ -39,7 +39,8 @@ from msserviceprofiler.modelevalstate.common import get_train_sub_path
 from msserviceprofiler.modelevalstate.config.config import AnalyzeTool, BenchMarkConfig, MindieConfig, settings, \
     DeployPolicy, map_param_with_value, MODEL_EVAL_STATE_CONFIG_PATH, modelevalstate_config_path, \
     CUSTOM_OUTPUT, custom_output
-from msserviceprofiler.modelevalstate.config.config import default_support_field, PsoOptions, PerformanceIndex, OptimizerConfigField
+from msserviceprofiler.modelevalstate.config.config import default_support_field, PsoOptions, \
+    PerformanceIndex, OptimizerConfigField
 from msserviceprofiler.modelevalstate.inference.constant import IS_SLEEP_FLAG
 from msserviceprofiler.modelevalstate.optimizer.analyze_profiler import analyze as analyze_profiler
 from msserviceprofiler.modelevalstate.optimizer.global_best_custom import CustomGlobalBestPSO

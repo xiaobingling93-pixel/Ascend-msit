@@ -40,7 +40,8 @@ from xgboost import DMatrix
 
 from msserviceprofiler.modelevalstate.config.config import settings
 from msserviceprofiler.modelevalstate.inference.data_format_v1 import BatchField, RequestField, ConfigPath
-from msserviceprofiler.modelevalstate.inference.dataset import InputData, DataProcessor, CustomLabelEncoder, preset_category_data
+from msserviceprofiler.modelevalstate.inference.dataset import InputData, DataProcessor, \
+    CustomLabelEncoder, preset_category_data
 from msserviceprofiler.modelevalstate.inference.file_reader import FileHanlder, StaticFile
 
 sub_thread = None
