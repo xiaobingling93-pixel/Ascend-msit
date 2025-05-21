@@ -16,6 +16,7 @@ import time
 from ms_service_profiler import Profiler, Level
 from .vllm_hooker_base import VLLMHookerBase
 
+
 def prof_add_request(this, request_id, prompt, *args, **kwargs):
     # 记录请求进入系统的时间                
     profiler = Profiler(Level.INFO)
@@ -25,7 +26,7 @@ def prof_add_request(this, request_id, prompt, *args, **kwargs):
 
 # generate -> add_request -> schedule -> execute_model
 # 在请求进入引擎时记录时间戳，用于后续计算队列等待时间。
-class EngineRequestTrackerHook_063(VLLMHookerBase):
+class EngineRequestTrackerHook063(VLLMHookerBase):
     vllm_version = ("0.6.3", "0.6.3")
 
     def init(self):
@@ -40,7 +41,7 @@ class EngineRequestTrackerHook_063(VLLMHookerBase):
         self.do_hook([LLMEngine.add_request, AsyncLLMEngine.add_request], add_request_maker)
 
 
-class EngineRequestTrackerHook_084(VLLMHookerBase):
+class EngineRequestTrackerHook084(VLLMHookerBase):
     vllm_version = ("0.8.4", "0.8.4")
 
     def init(self):
@@ -87,4 +88,4 @@ class LLMEngineHook(VLLMHookerBase):
         self.do_hook([LLMEngine.validate_output], validate_output_maker)
 
 
-request_hookers = [EngineRequestTrackerHook_063, EngineRequestTrackerHook_084, LLMEngineHook]
+request_hookers = [EngineRequestTrackerHook063, EngineRequestTrackerHook084, LLMEngineHook]
