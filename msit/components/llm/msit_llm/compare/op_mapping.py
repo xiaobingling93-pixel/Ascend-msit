@@ -27,9 +27,9 @@ ATB_TORCH_BUILT_IN_OP_OUTPUT_MAPPING = {
 
 ATB_TORCH_CUSTOM_OP_OUTPUT_MAPPING = {
     "CommonLayer_outtensor0": ["GLMBlock_output_0", "BloomBlock_output_0"],
-    "MlpGateLayerV2":["BloomMLP", "MLP"],
-    "RmsNormOperation":["RMSNorm"],
-    "SelfAttentionOperation":["CoreAttention"],
+    "MlpGateLayerV2": ["BloomMLP", "MLP"],
+    "RmsNormOperation": ["RMSNorm"],
+    "SelfAttentionOperation": ["CoreAttention"],
 }
 
 
@@ -44,8 +44,8 @@ LAYER_OP_MAPPING_DICT = {
     'wordembedding': is_word_embedding,
     re.compile(r"^RmsNormOperation_\d+$"): 'root.model.norm',
     'lmhead': 'lm_head',
-    'layernormoperation_35':'embeddings_layernorm',
-    'layernormoperation_66':'ln_f'
+    'layernormoperation_35': 'embeddings_layernorm',
+    'layernormoperation_66': 'ln_f'
 }
 
 

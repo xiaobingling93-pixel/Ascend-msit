@@ -200,7 +200,7 @@ class KnowledgeSplitLargeKernelConv(KnowledgeBase):
             _16s = [16] * (ksize // 16) + ([ksize % 16] if ksize % 16 else [])
             num = (len(_16s) - 1) // (self.threshold // 16) + 1
             each = ((len(_16s) - 1) // num) + 1
-            ksizes = [sum(_16s[i : i + each]) for i in range(0, len(_16s), each)]
+            ksizes = [sum(_16s[i: i + each]) for i in range(0, len(_16s), each)]
             indices = list(accumulate([0, *ksizes[:-1]]))
             kslices = [
                 [*slc, (i, i + s)] 

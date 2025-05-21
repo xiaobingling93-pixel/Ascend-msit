@@ -88,8 +88,8 @@ class OpcheckReshapeAndCacheOperation(operation_test.OperationTest):
             token_key = token_key.reshape(num_heads * head_size)
             token_v = token_v.reshape(num_heads * head_size)
             for k in range(num_heads * head_size // 16):
-                key_expect_nz[block_index][k][block_offset][:] = token_key[k * 16 : k * 16 + 16]
-                value_expect_nz[block_index][k][block_offset][:] = token_v[k * 16 : k * 16 + 16]
+                key_expect_nz[block_index][k][block_offset][:] = token_key[k * 16: k * 16 + 16]
+                value_expect_nz[block_index][k][block_offset][:] = token_v[k * 16: k * 16 + 16]
         return [key_expect_nz, value_expect_nz]
 
     def golden_calc(self, in_tensors):

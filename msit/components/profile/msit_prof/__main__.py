@@ -74,9 +74,7 @@ def get_args():
         " which defaults to the directory where the app is located",
     )
     parser.add_argument(
-        "--model-execution",
-        default="on",
-        choices=["on", "off"],
+        "--model-execution", default="on", choices=["on", "off"],
         help="Control ge model execution performance data collection switch",
     )
     parser.add_argument(

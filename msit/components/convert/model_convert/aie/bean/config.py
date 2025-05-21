@@ -19,6 +19,6 @@ from dataclasses import dataclass
 @dataclass
 class ConvertConfig:
     """model convert config params"""
-    model:  str = ''
+    model: str = ''
     output: str = ''
     soc_version: str = ''

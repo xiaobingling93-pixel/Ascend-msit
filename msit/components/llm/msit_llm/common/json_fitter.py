@@ -173,7 +173,7 @@ def atb_json_to_onnx_json(atb_json_dict, target_level, shape_contents):
             atb_shape_to_onnx_shape(onnx_json_dict["graph"]["valueInfo"], input_names, shape_info.get("inputs", []))
             atb_shape_to_onnx_shape(onnx_json_dict["graph"]["valueInfo"], output_names, shape_info.get("outputs", []))
             
-    value_info = {shape_info.get("name"):shape_info for shape_info in onnx_json_dict["graph"].get("valueInfo", [])}
+    value_info = {shape_info.get("name"): shape_info for shape_info in onnx_json_dict["graph"].get("valueInfo", [])}
 
     onnx_json_dict["graph"]["input"] = []
     for in_tensor_name in atb_json_dict["inTensors"]:

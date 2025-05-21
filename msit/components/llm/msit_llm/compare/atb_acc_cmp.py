@@ -221,7 +221,7 @@ def get_paths(path_dir, split_pattern):
     return out_paths
 
 
-def pair_built_in_op(g_nodes, m_nodes, op_mapping, my_root_node:TreeNode, callback=None):
+def pair_built_in_op(g_nodes, m_nodes, op_mapping, my_root_node: TreeNode, callback=None):
     compared_result = []
     for atb_op_type, torch_op_type in op_mapping.items():
         atb_nodes = [m_node for m_node in m_nodes if m_node.op_type == atb_op_type]
