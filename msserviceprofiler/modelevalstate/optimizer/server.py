@@ -25,8 +25,8 @@ from xmlrpc.server import SimpleXMLRPCRequestHandler
 import numpy as np
 from loguru import logger
 
-from modelevalstate.optimizer.optimizer import Simulator, remove_file
-from modelevalstate.config.config import settings, map_param_with_value
+from msserviceprofiler.modelevalstate.optimizer.optimizer import Simulator, remove_file
+from msserviceprofiler.modelevalstate.config.config import settings, map_param_with_value
 
 
 def get_file(target_path, parent_name: str = "", save_current_path: bool = False):

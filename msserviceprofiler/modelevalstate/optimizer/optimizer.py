@@ -35,15 +35,15 @@ import pandas as pd
 import psutil
 from loguru import logger
 
-from modelevalstate.common import get_train_sub_path
-from modelevalstate.config.config import AnalyzeTool, BenchMarkConfig, MindieConfig, settings, \
+from msserviceprofiler.modelevalstate.common import get_train_sub_path
+from msserviceprofiler.modelevalstate.config.config import AnalyzeTool, BenchMarkConfig, MindieConfig, settings, \
     DeployPolicy, map_param_with_value, MODEL_EVAL_STATE_CONFIG_PATH, modelevalstate_config_path, \
     CUSTOM_OUTPUT, custom_output
-from modelevalstate.config.config import default_support_field, PsoOptions, PerformanceIndex, OptimizerConfigField
-from modelevalstate.inference.constant import IS_SLEEP_FLAG
-from modelevalstate.optimizer.analyze_profiler import analyze as analyze_profiler
-from modelevalstate.optimizer.global_best_custom import CustomGlobalBestPSO
-from modelevalstate.optimizer.store import DataStorage
+from msserviceprofiler.modelevalstate.config.config import default_support_field, PsoOptions, PerformanceIndex, OptimizerConfigField
+from msserviceprofiler.modelevalstate.inference.constant import IS_SLEEP_FLAG
+from msserviceprofiler.modelevalstate.optimizer.analyze_profiler import analyze as analyze_profiler
+from msserviceprofiler.modelevalstate.optimizer.global_best_custom import CustomGlobalBestPSO
+from msserviceprofiler.modelevalstate.optimizer.store import DataStorage
 
 _analyze_mapping = {
     AnalyzeTool.profiler.value: analyze_profiler

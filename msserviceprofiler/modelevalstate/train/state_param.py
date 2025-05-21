@@ -7,8 +7,8 @@
 from pathlib import Path
 from typing import Dict
 from dataclasses import dataclass, field
-from modelevalstate.common import StateType
-from modelevalstate.inference.constant import OpAlgorithm
+from msserviceprofiler.modelevalstate.common import StateType
+from msserviceprofiler.modelevalstate.inference.constant import OpAlgorithm
 
 
 @dataclass

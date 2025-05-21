@@ -30,8 +30,8 @@ from matplotlib import pyplot as plt
 from pandas import DataFrame
 from sklearn.model_selection import train_test_split
 
-from modelevalstate.inference.constant import OpAlgorithm
-from modelevalstate.inference.data_format_v1 import (
+from msserviceprofiler.modelevalstate.inference.constant import OpAlgorithm
+from msserviceprofiler.modelevalstate.inference.data_format_v1 import (
     MODEL_OP_FIELD,
     MODEL_STRUCT_FIELD,
     MODEL_CONFIG_FIELD,
@@ -39,8 +39,8 @@ from modelevalstate.inference.data_format_v1 import (
     ENV_FIELD,
     HARDWARE_FIELD,
 )
-from modelevalstate.inference.dataset import CustomOneHotEncoder, CustomLabelEncoder, preset_category_data
-from modelevalstate.inference.utils import PreprocessTool, TOTAL_OUTPUT_LENGTH, TOTAL_SEQ_LENGTH, TOTAL_PREFILL_TOKEN
+from msserviceprofiler.modelevalstate.inference.dataset import CustomOneHotEncoder, CustomLabelEncoder, preset_category_data
+from msserviceprofiler.modelevalstate.inference.utils import PreprocessTool, TOTAL_OUTPUT_LENGTH, TOTAL_SEQ_LENGTH, TOTAL_PREFILL_TOKEN
 
 matplotlib.use("Agg")
 

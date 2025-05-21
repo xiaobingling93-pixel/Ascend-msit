@@ -75,5 +75,3 @@ class Patch2rc1:
         logger.info("The patch is installed successfully.")
 
 
-if __name__ == '__main__':
-    Patch2rc1.patch()

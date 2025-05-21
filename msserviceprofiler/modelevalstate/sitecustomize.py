@@ -47,7 +47,7 @@ def dispatch(target_env):
     target_flag = os.getenv(target_env) or os.getenv(target_env.lower())
     if target_flag and (target_flag.lower() == "true" or target_flag.lower() != "false"):
         logger.info(f"{target_env}: {target_flag}")
-        from modelevalstate.patch import enable_patch
+        from msserviceprofiler.modelevalstate.patch import enable_patch
         if enable_patch(target_env):
             logger.info("The collected patch is successfully installed.")
     else:

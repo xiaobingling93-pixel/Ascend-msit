@@ -15,7 +15,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from loguru import logger
 
-from modelevalstate.common import State, my_std
+from msserviceprofiler.modelevalstate.common import State, my_std
 
 
 @dataclass

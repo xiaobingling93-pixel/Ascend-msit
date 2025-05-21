@@ -19,7 +19,7 @@ from pathlib import Path
 
 import numpy as np
 
-from modelevalstate.config.config import settings
+from msserviceprofiler.modelevalstate.config.config import settings
 
 
 class BatchStage:

@@ -20,7 +20,7 @@ from typing import Optional, List, Tuple
 import pandas as pd
 from loguru import logger
 
-from modelevalstate.config.config import (
+from msserviceprofiler.modelevalstate.config.config import (
     BenchMarkConfig,
     DataStorageConfig,
     RUN_TIME,

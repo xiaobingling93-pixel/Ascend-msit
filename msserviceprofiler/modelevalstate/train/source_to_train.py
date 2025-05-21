@@ -25,7 +25,7 @@ from typing import Dict, List, Tuple, Any
 import pandas as pd
 from loguru import logger
 
-from modelevalstate.train.pretrain import pretrain
+from msserviceprofiler.modelevalstate.train.pretrain import pretrain
 
 
 def fetch_rids_from_db(db_path):

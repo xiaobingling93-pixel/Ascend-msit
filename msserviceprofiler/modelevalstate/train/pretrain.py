@@ -22,25 +22,25 @@ from pandas import DataFrame
 from sklearn.metrics import r2_score, mean_absolute_percentage_error
 from sklearn.model_selection import train_test_split
 
-from modelevalstate.analysis import AnalysisState
-from modelevalstate.common import _DECODE, _PREFILL, State
-from modelevalstate.common import computer_speed_with_second, get_train_sub_path, update_global_coefficient
+from msserviceprofiler.modelevalstate.analysis import AnalysisState
+from msserviceprofiler.modelevalstate.common import _DECODE, _PREFILL, State
+from msserviceprofiler.modelevalstate.common import computer_speed_with_second, get_train_sub_path, update_global_coefficient
 
 try:
-    from modelevalstate.data_feature.dataset_with_modin import MyDataSetWithModin as MyDataSet
+    from msserviceprofiler.modelevalstate.data_feature.dataset_with_modin import MyDataSetWithModin as MyDataSet
 except ModuleNotFoundError:
     try:
-        from modelevalstate.data_feature.dataset_with_swifter import MyDataSetWithSwifter as MyDataSet
+        from msserviceprofiler.modelevalstate.data_feature.dataset_with_swifter import MyDataSetWithSwifter as MyDataSet
     except ModuleNotFoundError:
-        from modelevalstate.data_feature.dataset import MyDataSet
-from modelevalstate.data_feature.dataset import CustomOneHotEncoder, CustomLabelEncoder, \
+        from msserviceprofiler.modelevalstate.data_feature.dataset import MyDataSet
+from msserviceprofiler.modelevalstate.data_feature.dataset import CustomOneHotEncoder, CustomLabelEncoder, \
     preset_category_data, DecodeDataSet
-from modelevalstate.data_feature.v1 import FileReader
-from modelevalstate.inference.common import HistInfo, model_op_size, OP_EXPECTED_FIELD_MAPPING, \
+from msserviceprofiler.modelevalstate.data_feature.v1 import FileReader
+from msserviceprofiler.modelevalstate.inference.common import HistInfo, model_op_size, OP_EXPECTED_FIELD_MAPPING, \
     OP_SCALE_HIST_FIELD_MAPPING
-from modelevalstate.inference.constant import OpAlgorithm
-from modelevalstate.model.xgb_state_model import StateXgbModel
-from modelevalstate.train.state_param import StateParam
+from msserviceprofiler.modelevalstate.inference.constant import OpAlgorithm
+from msserviceprofiler.modelevalstate.model.xgb_state_model import StateXgbModel
+from msserviceprofiler.modelevalstate.train.state_param import StateParam
 
 
 @dataclass

@@ -20,7 +20,7 @@ import sys
 from loguru import logger
 from packaging import version
 
-from modelevalstate.inference.simulate import Simulate, ServiceField
+from msserviceprofiler.modelevalstate.inference.simulate import Simulate, ServiceField
 
 
 def generate_token(self, input_metadata):

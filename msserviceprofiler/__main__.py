@@ -15,10 +15,10 @@
 import argparse
 from pathlib import Path
 
-from modelevalstate.config.config import DeployPolicy
+from msserviceprofiler.modelevalstate.config.config import DeployPolicy
 
-import modelevalstate.optimizer.optimizer as optimizer
-import modelevalstate.train.source_to_train as train
+import msserviceprofiler.modelevalstate.optimizer.optimizer as optimizer
+import msserviceprofiler.modelevalstate.train.source_to_train as train
 
 
 def main():

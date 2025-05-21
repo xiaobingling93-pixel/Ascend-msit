@@ -18,7 +18,7 @@ import os
 
 from loguru import logger
 
-from modelevalstate.inference.simulate import Simulate, ServiceField
+from msserviceprofiler.modelevalstate.inference.simulate import Simulate, ServiceField
 
 MODEL_EVAL_STATE_COLLECT = "MODEL_EVAL_STATE_COLLECT"
 MODEL_EVAL_STATE_SIMULATE = "MODEL_EVAL_STATE_SIMULATE"

@@ -24,7 +24,7 @@ from loguru import logger
 from matplotlib import pyplot as plt
 from sklearn.metrics import mean_squared_error as MSE
 
-from modelevalstate.data_feature.dataset import MyDataSet
+from msserviceprofiler.modelevalstate.data_feature.dataset import MyDataSet
 
 
 class StateXgbModel:

@@ -22,8 +22,8 @@ from warnings import warn
 
 import pandas as pd
 
-from modelevalstate.inference.common import get_bins_and_label
-from modelevalstate.inference.file_reader import StaticFile
+from msserviceprofiler.modelevalstate.inference.common import get_bins_and_label
+from msserviceprofiler.modelevalstate.inference.file_reader import StaticFile
 
 HARDWARE_FIELD = ("cpu_count", "cpu_mem", "soc_name", "npu_mem")
 HardWare = namedtuple("HardWare", HARDWARE_FIELD, defaults=[0, 0, "Ascend910B3", 0])

@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "modelevalstate"
+name = "msserviceprofiler"
 version = "1.1.0"
 description = ""
 authors = ["wangdengkai2@huawei.com"]
@@ -22,7 +22,7 @@ modin = { version = "^0.32.0", extras = ["all"], optional = true }
 [tool.poetry.extras]
 speed = ["swifter", "modin"]
 [tool.poetry.scripts]
-msServiceProfiler="modelevalstate.__main__:main"
+msServiceProfiler="msserviceprofiler.__main__:main"
 
 [build-system]
 requires = ["poetry-core"]

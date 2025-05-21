@@ -27,12 +27,12 @@ from typing import Optional
 import numpy as np
 import torch
 
-from modelevalstate.config.config import settings
-from modelevalstate.inference.constant import IS_SLEEP_FLAG, BatchStage
-from modelevalstate.inference.data_format_v1 import BatchField, RequestField, ConfigPath
-from modelevalstate.inference.dataset import CustomLabelEncoder, preset_category_data, DataProcessor
-from modelevalstate.inference.file_reader import FileHanlder, StaticFile
-from modelevalstate.inference.state_eval_v1 import predict_v1_with_cache
+from msserviceprofiler.modelevalstate.config.config import settings
+from msserviceprofiler.modelevalstate.inference.constant import IS_SLEEP_FLAG, BatchStage
+from msserviceprofiler.modelevalstate.inference.data_format_v1 import BatchField, RequestField, ConfigPath
+from msserviceprofiler.modelevalstate.inference.dataset import CustomLabelEncoder, preset_category_data, DataProcessor
+from msserviceprofiler.modelevalstate.inference.file_reader import FileHanlder, StaticFile
+from msserviceprofiler.modelevalstate.inference.state_eval_v1 import predict_v1_with_cache
 
 predict_queue = queue.Queue()
 

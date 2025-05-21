@@ -18,13 +18,13 @@ from typing import Tuple
 import numpy as np
 import pandas as pd
 
-from modelevalstate.inference.common import (
+from msserviceprofiler.modelevalstate.inference.common import (
     OP_EXPECTED_FIELD_MAPPING,
     model_op_size,
     HistInfo,
     get_field_bins_count
 )
-from modelevalstate.inference.constant import (
+from msserviceprofiler.modelevalstate.inference.constant import (
     ALL_OP,
     OP_EXECUTE_DELTA_FIELD,
     DTYPE_CATEGORY,

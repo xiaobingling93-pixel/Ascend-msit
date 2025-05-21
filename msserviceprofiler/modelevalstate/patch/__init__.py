@@ -18,7 +18,7 @@ from warnings import warn
 
 from loguru import logger
 
-from modelevalstate.common import get_module_version
+from msserviceprofiler.modelevalstate.common import get_module_version
 
 MINDIE_LLM = "mindie_llm"
 
