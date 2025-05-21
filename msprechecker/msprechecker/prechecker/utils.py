@@ -283,7 +283,7 @@ def get_interface_by_ip(local_ip):
     return None, None
 
 
-def run_shell_command(command, fail_msg=""):
+def run_shell_command(command, fail_msg="", print_error=True):
     import subprocess
     from shutil import which
 
@@ -291,14 +291,16 @@ def run_shell_command(command, fail_msg=""):
     base_command = command_split[0]
     base_command_path = which(base_command)
     if not base_command_path:
-        logger.error(f"{base_command} command not exists" + fail_msg)
+        if print_error:
+            logger.error(f"{base_command} command not exists" + fail_msg)
         return {}
 
     command_split = [base_command_path] + command_split[1:]
     try:
         result = subprocess.run(command_split, capture_output=True, text=True, check=False, shell=False)
     except Exception as err:
-        logger.error(f"Failed calling {base_command}" + fail_msg)
+        if print_error:
+            logger.error(f"Failed calling {base_command}" + fail_msg)
         return {}
     return result
 

@@ -14,12 +14,17 @@
 import os
 
 import torch
-import torch_npu
 import yaml
 
-from msprechecker.prechecker.register import PrecheckerBase
-from msprechecker.prechecker.utils import logger
+from msprechecker.prechecker.register import PrecheckerBase, show_check_result, CheckResult
+from msprechecker.prechecker.utils import logger, SimpleProgressBar
 from msprechecker.prechecker.hardware_capacity.time_analyze import TimeAnalyze
+
+try:
+    import torch_npu
+except ImportError:
+    logger.warning("torch_npu not available, skipping NPUChecker")
+    torch_npu = None
 
 
 class NPUChecker(PrecheckerBase):
@@ -45,9 +50,10 @@ class NPUChecker(PrecheckerBase):
 
     def collect_env(self, **kwargs):
         output = {}
-
+        if torch_npu is None:
+            return output
         device_ids = torch_npu.npu.device_count()
-        for device_id in range(device_ids):
+        for device_id in SimpleProgressBar(range(device_ids)):
             # 创建事件对象，用于记录运算的开始和结束时间
             start_event = torch_npu.npu.Event(enable_timing=True)
             end_event = torch_npu.npu.Event(enable_timing=True)
@@ -64,19 +70,21 @@ class NPUChecker(PrecheckerBase):
         return output
 
     def do_precheck(self, envs: str, **kwargs):
-        time_all = envs
+        if not envs:
+            logger.warning("No NPUs available for hardware checking")
+            return
 
+        time_all = envs
+        
         npu_analyze = TimeAnalyze(time_all)
         slow_rank, slow_time, max_ratio, is_problem = npu_analyze.time_analyze()
 
         if is_problem:
-            logger.info(
-                f"The NPU: {slow_rank} may have performance issues, its calculation time is {slow_time} ms, "
-                f"the relative difference from the average calculation time is {round(max_ratio * 100)}%. "
-                f"It is recommended to check and optimize the NPU performance on the server."
-            )
+            action = f"检查npu {slow_rank} 状态"
+            reason = f"npu计算时长 {slow_time}ms 大于平均时长的 {round(max_ratio * 100)}%"
+            show_check_result("hardware", "npu_checker", CheckResult.ERROR, action=action, reason=reason)
         else:
-            logger.info(f"NPUs are working well, no performance issues found.")
+            show_check_result("hardware", "npu_checker", CheckResult.OK)
 
 
 npu_checker = NPUChecker()
