@@ -17,11 +17,10 @@ from ms_service_profiler import Profiler, Level
 from .vllm_hooker_base import VLLMHookerBase
 
 
-def prof_add_request(this, request_id, prompt, *args, **kwargs):
+def prof_add_request(request_id, prompt, *args, **kwargs):
     # 记录请求进入系统的时间                
     profiler = Profiler(Level.INFO)
-    profiler.domain("http").res(request_id).event("httpReq")
-    return ori_func(this, request_id, prompt, *args, **kwargs)
+    profiler.domain("http").res(request_id).event("httpReq") 
 
 
 # generate -> add_request -> schedule -> execute_model
@@ -35,7 +34,8 @@ class EngineRequestTrackerHook063(VLLMHookerBase):
 
         def add_request_maker(ori_func):
             def add_request(this, request_id, prompt, *args, **kwargs):
-                return prof_add_request(this, request_id, prompt, *args, **kwargs)
+                prof_add_request(request_id, prompt, *args, **kwargs)
+                return ori_func(this, request_id, prompt, *args, **kwargs)
             return add_request
 
         self.do_hook([LLMEngine.add_request, AsyncLLMEngine.add_request], add_request_maker)
@@ -55,7 +55,8 @@ class EngineRequestTrackerHook084(VLLMHookerBase):
 
         def add_request_async_maker(ori_func):
             async def add_request(this, request_id, prompt, *args, **kwargs):
-                return prof_add_request(this, request_id, prompt, *args, **kwargs)
+                prof_add_request(request_id, prompt, *args, **kwargs)
+                return ori_func(this, request_id, prompt, *args, **kwargs)
             return add_request
 
         self.do_hook([LLMEngine.add_request], add_request_maker)
