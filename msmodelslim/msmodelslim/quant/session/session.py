@@ -98,33 +98,49 @@ class SessionConfig(BaseModel):
 def process_session_cfg(session_cfg: SessionConfig, device_id):
     check_flag = True
     anti_cfg = None
-    quant_cfg = QuantConfig(dev_type=session_cfg.device, dev_id=device_id)
+    quant_cfg = None
     save_cfg = None
     processor_config_name_list = session_cfg.processor_cfg_map.keys()
 
-    cur_config = getattr(quant_cfg, '_cur_config')
     for processor_name in processor_config_name_list:
         if processor_name in ANTI_OUTLIER_METHOD_LIST:
             anti_cfg = AntiOutlierConfig(dev_type=session_cfg.device, dev_id=device_id)
             anti_cfg.anti_method = processor_name
         elif processor_name in QUANT_METHOD_LIST:
             if processor_name == FA3:
-                quant_cfg = quant_cfg.fa_quant()
                 if not session_cfg.processor_cfg_map.get(W8A8_DYNAMIC, None):
                     check_flag = False
                     break
-                cur_config.is_dynamic = True
-                cur_config.act_method = \
-                    ACT_METHOD[session_cfg.processor_cfg_map[W8A8_DYNAMIC].cfg.act_method]
-                cur_config.disable_names = session_cfg.processor_cfg_map[W8A8_DYNAMIC].disable_names
+
+                quant_cfg = QuantConfig(
+                    dev_type=session_cfg.device,
+                    dev_id=device_id,
+                    is_dynamic=True,
+                    act_method=ACT_METHOD[session_cfg.processor_cfg_map[W8A8_DYNAMIC].cfg.act_method],
+                    disable_names=session_cfg.processor_cfg_map[W8A8_DYNAMIC].disable_names
+                ).fa_quant()
+
+            elif processor_name == W8A8_TIMESTEP:
+                quant_cfg = QuantConfig(
+                    dev_type=session_cfg.device,
+                    dev_id=device_id,
+                    is_dynamic=False,
+                    act_method=ACT_METHOD[session_cfg.processor_cfg_map[processor_name].cfg.act_method],
+                    disable_names=session_cfg.processor_cfg_map[processor_name].disable_names
+                ).timestep_quant(session_cfg.processor_cfg_map[processor_name].timestep_sep)
+
             else:
-                cur_config.act_method = \
-                    ACT_METHOD[session_cfg.processor_cfg_map[processor_name].cfg.act_method]
-                cur_config.disable_names = session_cfg.processor_cfg_map[processor_name].disable_names
-                if processor_name == W8A8_DYNAMIC:
-                    cur_config.is_dynamic = True
-            modify_quant_param = getattr(quant_cfg, '_modify_quant_param')
-            modify_quant_param()
+                if not session_cfg.processor_cfg_map.get(FA3, None):
+                    is_dynamic = processor_name == W8A8_DYNAMIC
+
+                    quant_cfg = QuantConfig(
+                        dev_type=session_cfg.device,
+                        dev_id=device_id,
+                        is_dynamic=is_dynamic,
+                        act_method=ACT_METHOD[session_cfg.processor_cfg_map[processor_name].cfg.act_method],
+                        disable_names=session_cfg.processor_cfg_map[processor_name].disable_names
+                    )
+
         elif processor_name == SAVE:
             save_cfg = session_cfg.processor_cfg_map[processor_name]
         else:
