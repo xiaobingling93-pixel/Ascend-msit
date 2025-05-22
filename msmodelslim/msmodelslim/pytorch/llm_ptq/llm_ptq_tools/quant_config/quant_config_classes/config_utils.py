@@ -225,6 +225,7 @@ def check_and_generate_config_param(config):
         'is_sparse': config.co_sparse,
         'is_dynamic': config.is_dynamic,
         'is_lowbit': config.is_lowbit,
+        'is_timestep_quant': getattr(config, 'use_timestep_quant', False)
     }
     config.model_quant_type = QuantType.get_quant_type(params)
     WeightQuantMethod.check_quant_type(config.model_quant_type, w_method=config.w_method)

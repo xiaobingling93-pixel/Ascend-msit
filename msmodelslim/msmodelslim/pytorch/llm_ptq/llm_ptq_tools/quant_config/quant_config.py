@@ -187,6 +187,19 @@ class QuantConfig:
         self._modify_quant_param()
         return self
 
+    def timestep_quant(self,
+                       max_dynamic_step: int = None,
+                       ):
+        """
+        时间步量化的初始化
+        """
+        self._cur_config = QuantConfigFactory.get_quant_config('timestep_quant',
+                                                               last_config=self._cur_config,
+                                                               max_dynamic_step=max_dynamic_step,
+                                                               )
+        self._modify_quant_param()
+        return self
+
     def simulate_tp(self,
                     tp_size,
                     enable_communication_quant=True,

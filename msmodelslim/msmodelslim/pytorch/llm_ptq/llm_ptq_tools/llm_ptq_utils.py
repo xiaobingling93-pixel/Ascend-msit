@@ -29,6 +29,8 @@ class QuantType(str, Enum):
 
     W4A8_DYNAMIC = "W4A8_DYNAMIC"  # W4A8静态量化与per-token动态量化混合量化
 
+    W8A8_TIMESTEP = "W8A8_TIMESTEP"  # 分时间步量化
+
     @staticmethod
     def get_quant_type(params):
         w_bit = params['w_bit']
@@ -37,6 +39,9 @@ class QuantType(str, Enum):
         is_sparse = params['is_sparse']
         is_dynamic = params['is_dynamic']
         is_lowbit = params['is_lowbit']
+
+        if w_bit == 8 and a_bit == 8 and params['is_timestep_quant']:
+            return QuantType.W8A8_TIMESTEP
         
         if is_dynamic:
             return QuantType.get_dynamic_quant_type(w_bit, a_bit)
