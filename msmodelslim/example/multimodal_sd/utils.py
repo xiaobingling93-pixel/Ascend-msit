@@ -11,6 +11,8 @@ import torch.nn as nn
 
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.timestep.manager import TimestepManager
 
+MAX_RECURSION_DEPTH = 20
+
 
 class InputCapture:
     """Handles capturing and storing function inputs and outputs."""
@@ -197,14 +199,17 @@ def get_disable_layer_names(model: nn.Module,
     return disable_layer_names
 
 
-def to_device(data, device):
+def to_device(data, device, depth=0):
     """ recursive function to move data to the specified device """
+    if depth > MAX_RECURSION_DEPTH:
+        raise RecursionError(f"Maximum recursion depth {MAX_RECURSION_DEPTH} exceeded")
+
     if isinstance(data, dict):
-        return {k: to_device(v, device) for k, v in data.items()}
+        return {k: to_device(v, device, depth=depth + 1) for k, v in data.items()}
     elif isinstance(data, list):
-        return [to_device(item, device) for item in data]
+        return [to_device(item, device, depth=depth + 1) for item in data]
     elif isinstance(data, tuple):
-        return tuple(to_device(item, device) for item in data)
+        return tuple(to_device(item, device, depth=depth + 1) for item in data)
     elif isinstance(data, torch.Tensor):
         return data.to(device)
     else:
