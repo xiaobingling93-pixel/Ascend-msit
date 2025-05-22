@@ -121,7 +121,21 @@ class QKVQuantizer:
 
 class FAQuantizer:
     def __init__(self, config, logger):
-        check_type(config, PretrainedConfig, param_name="config")
+        def check_config(config):
+            # 检查必须存在的属性
+            required_attrs = ["num_attention_heads", "hidden_size", "num_key_value_heads"]
+            for attr in required_attrs:
+                if not hasattr(config, attr):
+                    raise ValueError(f"FAQuantizer needs attributes: '{attr}'")
+            
+            # 检查关键参数类型和合法性
+            check_type(config.num_attention_heads, int, "num_attention_heads in config")
+            check_type(config.hidden_size, int, "hidden_size in config")
+            check_type(config.num_key_value_heads, int, "num_key_value_heads in config")
+
+
+        check_config(config)
+            
         check_type(logger, logging.Logger, param_name="logger")
 
         self.tp_size = None
@@ -322,7 +336,8 @@ def export_fa_quant_params(module: torch.nn.Module, name: str) -> Tuple[dict, ..
 
 
 def is_attn_module_and_then_check_quantizer(module: torch.nn.Module, module_name: str) -> bool:
-    if "Attention" not in module.__class__.__name__:
+    # flux有Attention类,hunyuan的attn是在MMSingleStreamBlock, MMDoubleStreamBlock中
+    if all(x not in module.__class__.__name__ for x in ["Attention", "MMSingleStreamBlock", "MMDoubleStreamBlock"]):
         return False
     if hasattr(module, "fa_quantizer") and isinstance(module.fa_quantizer, FAQuantizer):
         return True
@@ -537,7 +552,7 @@ def install_fa_quantizer(
     skip_layers = skip_layers or []
 
     for name, module in model.named_modules():
-        if "Attention" in module.__class__.__name__:
+        if any(x in module.__class__.__name__ for x in ["Attention", "MMSingleStreamBlock", "MMDoubleStreamBlock"]):
             # 检查是否需要跳过该层
             if any(skip_name in name for skip_name in skip_layers):
                 logger.info(f"Skipping FAQuantizer installation for module {name}")
