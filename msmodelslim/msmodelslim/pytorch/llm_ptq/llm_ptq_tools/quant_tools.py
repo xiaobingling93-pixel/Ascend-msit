@@ -114,10 +114,7 @@ class Calibrator(object):
         self.use_kvcache_quant = cfg.use_kvcache_quant
         self.norm_class_name = cfg.norm_class_name
 
-        if model.dtype != model.config.torch_dtype:
-            self.logger.warning(f'The model dtype {model.dtype} is not consistent with the model.config.torch_dtype '
-                                f'{model.config.torch_dtype}. The model will be regarded as {model.config.torch_dtype}'
-                                f' type in subsequent process.')
+        self.model_torch_dtype = self._init_model_torch_dtype(model)
 
         # kv_cache量化参数应存于量化对象内，目前暂时特殊处理
         self.kv_cache_quant_params = defaultdict(list)
@@ -867,6 +864,17 @@ class Calibrator(object):
                 setattr(mod, 'original_forward', mod.forward)
                 setattr(mod, 'forward', new_forward.__get__(mod, mod.__class__))
 
+    def _init_model_torch_dtype(self, model):
+        if hasattr(model.config, 'torch_dtype'):
+            if model.dtype != model.config.torch_dtype:
+                self.logger.warning(f'The model dtype {model.dtype} is not consistent with the ' + \
+                                    f'model.config.torch_dtype {model.config.torch_dtype}. ' + \
+                                    f'The model will be regarded as {model.config.torch_dtype}'
+                                    f' type in subsequent process.')
+            return model.config.torch_dtype
+        else:
+            return model.dtype
+
     def _save(self, output_path, safetensors_name, json_name, save_type, part_file_size):
         saver = SaverFactory.create(save_type,
                                     output_dir=output_path,
@@ -878,7 +886,7 @@ class Calibrator(object):
         # quantifier 应基于量化方法予以抽象，当前仅实现了与保存相关的逻辑
         quantifier = ComplexQuantifier(cfg=self.cfg,
                                        rollback_names=self.rollback_names,
-                                       torch_dtype=self.model.config.torch_dtype,
+                                       torch_dtype=self.model_torch_dtype,
                                        layer_cfg_manager=self.layer_cfg_manager)
         self._save_weights_of_model(quantifier, saver)
 
