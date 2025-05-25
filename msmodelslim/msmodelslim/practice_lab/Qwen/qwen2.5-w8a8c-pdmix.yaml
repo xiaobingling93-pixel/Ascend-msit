@@ -1,0 +1,35 @@
+api-version: v1.0.0
+metadata:
+  config_id: qwen2.5-w8a8c-pdmix
+  score: 80
+  verified_model_types:
+    - Qwen2.5-72B
+  label:
+    w_bit: 8
+    a_bit: 8
+    is_sparse: False
+    kv_cache: True
+spec:
+  tokenizer_cfg:
+    use_fast: False
+    legacy: False
+  model_cfg:
+    low_cpu_mem_usage: True
+  anti_cfg:
+    anti_method: m6
+    disable_anti_names:
+      - layers
+    flex_config:
+      alpha: 0.6
+      beta: 0.3
+  calib_cfg:
+    w_bit: 8
+    a_bit: 8
+    mm_tensor: False
+    act_method: 3
+    disable_names: []
+  calib_file: ../../calib_lab/boolq.jsonl
+  anti_file: ../../calib_lab/qwen2.5_w8a8_pdmix_anti_prompt.jsonl
+  calib_save_params:
+    save_type:
+      - 'safe_tensor'

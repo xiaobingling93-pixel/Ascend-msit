@@ -1,0 +1,28 @@
+api-version: v1.0.0
+metadata:
+  config_id: qwen2.5-sparse
+  score: 80
+  verified_model_types:
+    - Qwen2.5-Coder-7B
+  label:
+    w_bit: 4
+    a_bit: 8
+    is_sparse: True
+    kv_cache: False
+spec:
+  tokenizer_cfg:
+    use_fast: False
+    legacy: False
+  model_cfg:
+    low_cpu_mem_usage: True
+  calib_cfg:
+    w_bit: 4
+    a_bit: 8
+    mm_tensor: False
+    co_sparse: True
+    use_sigma: True
+    sigma_factor: 3.0
+  calib_file: ../../calib_lab/humaneval_x.jsonl
+  calib_save_params:
+    save_type:
+      - 'safe_tensor'
