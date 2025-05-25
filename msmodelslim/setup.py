@@ -45,12 +45,17 @@ setup(
             '*.h',
             '*.py',
             '*.so',
-        ]
+        ],
+        'msmodelslim': ['practice_lab/**/*.yaml', 'calib_lab/*'],
     },
     data_files=[('', ['requirements.txt'])],
     license='Apache-2.0',
     keywords='msmodelslim',
     python_requires='>=3.7',
     install_requires=required,
-
+    entry_points={
+        'console_scripts': [
+            'msmodelslim=msmodelslim.cli.__main__:main'
+        ]
+    },
 )

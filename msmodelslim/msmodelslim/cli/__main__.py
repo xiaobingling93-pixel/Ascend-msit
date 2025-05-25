@@ -1,0 +1,52 @@
+# Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+import argparse
+
+from msmodelslim.cli.naive_quant.naive_quant import main as quant_main
+from msmodelslim.infra.practice_manager import SUPPRORTED_QUANT_TYPES
+from msmodelslim.utils.safe_utils import StringArgumentValidator, MAX_KEY_LENGTH, cmd_bool
+
+FAQ_HOME = "gitee repo: Ascend/msit/msmodelslim, wiki"
+MIND_STUDIO_LOGO = "[Powered by MindStudio]"
+
+
+def main():
+    parser = argparse.ArgumentParser(prog='msmodelslim',
+                                     formatter_class=argparse.RawDescriptionHelpFormatter,
+                                     description=f"MsModelSlim(MindStudio Model-Quantization Tools), "
+                                                 f"{MIND_STUDIO_LOGO}.\n"
+                                                 "Providing functions such as model quantization and compression "
+                                                 "based on Ascend.\n"
+                                                 f"For any issue, refer FAQ first: {FAQ_HOME}")
+    subparsers = parser.add_subparsers(dest='command', help='Available commands')
+
+    # Quant command
+    quant_parser = subparsers.add_parser('quant', help='Model quantization')
+    quant_parser.add_argument('--model_type', required=True,
+                              help="Type of model to quantize (e.g. 'LLaMa', 'Qwen')")
+    quant_parser.add_argument('--model_path', required=True, type=str,
+                              help="Path to the original model",
+                              validator=StringArgumentValidator(min_length=1, max_length=MAX_KEY_LENGTH))
+    quant_parser.add_argument('--save_path', required=True, type=str,
+                              help="Path to save quantized model",
+                              validator=StringArgumentValidator(min_length=1, max_length=MAX_KEY_LENGTH))
+    quant_parser.add_argument('--device', default='npu', choices=['npu', 'cpu'],
+                              help="Target device type for quantization")
+    quant_parser.add_argument('--config_path', type=str,
+                              help="Explicit path to quantization config file",
+                              validator=StringArgumentValidator(min_length=1, max_length=MAX_KEY_LENGTH))
+    quant_parser.add_argument('--quant_type', choices=SUPPRORTED_QUANT_TYPES,
+                              help="Type of quantization to apply")
+    quant_parser.add_argument('--trust_remote_code', type=cmd_bool, default=False,
+                              help="Trust custom code. Please ensure the security of the loaded custom code file.")
+
+    args = parser.parse_args()
+
+    if args.command == 'quant':
+        quant_main(args)
+    else:
+        # 可扩展其他组件
+        parser.print_help()
+
+
+if __name__ == '__main__':
+    main()
