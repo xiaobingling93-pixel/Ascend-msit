@@ -12,12 +12,12 @@
 
 ## 已验证量化模型
 表中模型链接为对应权重地址。
-| 模型 | 支持量化 |
-|-----------|-----------|
-| [SD3-Medium](https://huggingface.co/stabilityai/stable-diffusion-3-medium) | W8A8静态量化 |
-| [Open-Sora-Plan v1.2](https://huggingface.co/LanguageBind/Open-Sora-Plan-v1.2.0) | W8A8静态量化 |
-| [FLUX.1-dev](https://huggingface.co/black-forest-labs/FLUX.1-dev/tree/main) | W8A8静态量化，W8A8分时间步量化，FA3+W8A8动态量化 |
-| [HunyuanVideo](https://huggingface.co/tencent/HunyuanVideo) | W8A8静态量化，W8A8分时间步量化，FA3+W8A8动态量化 |
+| 模型 | 支持量化 | 权重链接
+|-----------|-----------|---------|
+| SD3-Medium | W8A8静态量化 | [link](https://huggingface.co/stabilityai/stable-diffusion-3-medium)
+| Open-Sora-Plan v1.2 | W8A8静态量化 | [link](https://huggingface.co/LanguageBind/Open-Sora-Plan-v1.2.0)
+| FLUX.1-dev | W8A8静态量化，W8A8分时间步量化，FA3+W8A8动态量化 | [link](https://huggingface.co/black-forest-labs/FLUX.1-dev/tree/main)
+| HunyuanVideo | W8A8静态量化，W8A8分时间步量化，FA3+W8A8动态量化 | [link](https://huggingface.co/tencent/HunyuanVideo)
 
 ## 环境配置
 - 具体环境配置请参考[使用说明](../../README.md)
@@ -26,12 +26,12 @@
 - SD3-Medium依赖于diffusers库
   - pip install -U diffusers
 - Open-Sora-Plan v1.2相关环境配置参考[MindIE/open_sora_planv1_2](https://modelers.cn/models/MindIE/open_sora_planv1_2)
-  - pip install -r requirements.txt
+  - 参考 [open_sora_planv1_2 reamde](https://modelers.cn/models/MindIE/open_sora_planv1_2) 安装浮点模型的环境依赖
   - pip install huggingface_hub==0.25.2
 - Flux.1-dev相关环境配置参考[MindIE/FLUX.1-dev](https://modelers.cn/models/MindIE/FLUX.1-dev)
-  - pip install -r requirements.txt
+  - 参考 [Flux reamde](https://modelers.cn/models/MindIE/FLUX.1-dev) 安装浮点模型的环境依赖
 - HunyuanVideo相关环境配置参考[MindIE/hunyuan_video](https://modelers.cn/models/MindIE/hunyuan_video)
-  - pip install -r requirements.txt
+  - 参考 [HunyuanVideo reamde](https://modelers.cn/models/MindIE/hunyuan_video) 安装浮点模型的环境依赖
 
 ## 使用案例
 使用量化前，需要加载模型和校准数据，其中加载模型依赖于diffusers库（如SD3）或多模态生成模型[魔乐社区](https://modelers.cn/models/)推理工程仓（如Open-Sora-Plan v1.2、Flux.1-dev、HunyuanVideo）
@@ -41,7 +41,7 @@
 
 
 ### W8A8静态量化
-当前仅支持对多模态生成模型pipeline的transformer部分进行W8A8静态量化
+当前仅支持对多模态生成模型pipeline的transformer部分进行W8A8静态量化。
 
 
 #### W8A8校准数据Dump
@@ -84,8 +84,8 @@ dumper_manager.save('/path/of/dumped/calib_data.pth')
 # 导入模型库
 from diffusers import StableDiffusion3Pipeline
 import torch
-from msmodelslim.quant.session.session import quant_model, SessionConfig
-from msmodelslim.quant.session.session import W8A8ProcessorConfig, W8A8QuantConfig, SaveProcessorConfig
+from msmodelslim.quant import quant_model, SessionConfig
+from msmodelslim.quant import W8A8ProcessorConfig, W8A8QuantConfig, SaveProcessorConfig
 
 
 # 加载完整pipeline
@@ -134,8 +134,8 @@ Open-Sora-Plan v1.2的推理量化依赖于推理工程仓：[MindIE/open_sora_p
 量化示例代码如下：
 ```python
 # 开头添加import
-from msmodelslim.quant.session.session import quant_model, SessionConfig
-from msmodelslim.quant.session.session import W8A8ProcessorConfig, W8A8QuantConfig, SaveProcessorConfig
+from msmodelslim.quant import quant_model, SessionConfig
+from msmodelslim.quant import W8A8ProcessorConfig, W8A8QuantConfig, SaveProcessorConfig
 from example.multimodal_sd.utils import get_disable_layer_names
 
 if __name__ == '__main__':
@@ -186,7 +186,7 @@ if __name__ == '__main__':
 
 ### FLUX 时间步量化
 
-**重要**: 在模型pipeline的去噪循环中，需要在每个timestep开始时调用`TimestepManager.set_timestep_idx()`来设置当前的时间步。
+**注意**: 在模型pipeline的去噪循环中，需要在每个timestep开始时调用`TimestepManager.set_timestep_idx()`来设置当前的时间步。
 
 ```python
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.timestep.manager import TimestepManager
@@ -210,8 +210,8 @@ for step_id, t in enumerate(timesteps):
 import os
 import torch
 
-from msmodelslim.quant.session.session import quant_model, SessionConfig
-from msmodelslim.quant.session.session import W8A8TimeStepProcessorConfig, W8A8TimeStepQuantConfig, SaveProcessorConfig
+from msmodelslim.quant import quant_model, SessionConfig
+from msmodelslim.quant import W8A8TimeStepProcessorConfig, W8A8TimeStepQuantConfig, SaveProcessorConfig
 from example.multimodal_sd.utils import get_disable_layer_names, get_rank, DumperManager
 
 DUMP_CALIB_FOLDER = './results/quant/cache'  # 用于存放校准数据的文件夹
@@ -316,8 +316,8 @@ python /the/absolut/path/of/example/multimodal_sd/Flux/inference_flux.py \
 import os
 import torch
 
-from msmodelslim.quant.session.session import quant_model, SessionConfig
-from msmodelslim.quant.session.session import FA3ProcessorConfig, W8A8DynamicQuantConfig, W8A8DynamicProcessorConfig, SaveProcessorConfig
+from msmodelslim.quant import quant_model, SessionConfig
+from msmodelslim.quant import FA3ProcessorConfig, W8A8DynamicQuantConfig, W8A8DynamicProcessorConfig, SaveProcessorConfig
 from example.multimodal_sd.utils import get_disable_layer_names, get_rank, DumperManager
 
 DUMP_CALIB_FOLDER = './results/quant/cache'  # 用于存放校准数据的文件夹
@@ -383,6 +383,8 @@ session_cfg.model_validate(session_cfg)
 # 量化模型
 quant_model(model, session_cfg)
 ```
+
+#### FAQuantizer 插入位置
 
 在FLUX的layers/attention_processor.py文件中插入fa3量化
 ```python
@@ -487,6 +489,8 @@ class FluxAttnProcessor2_0:
         ....
 ```
 
+#### 量化启动脚本
+
 示例的启动命令可参考：
 
 ```shell
@@ -514,7 +518,7 @@ python /the/absolut/path/of/example/multimodal_sd/Flux/inference_flux.py \
 
 ### HunyuanVideo 时间步量化
 
-**重要**: 在模型pipeline的去噪循环中，需要在每个timestep开始时调用`TimestepManager.set_timestep_idx()`来设置当前的时间步。
+**注意**: 在模型pipeline的去噪循环中，需要在每个timestep开始时调用`TimestepManager.set_timestep_idx()`来设置当前的时间步。
 
 ```python
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.timestep.manager import TimestepManager
@@ -537,8 +541,8 @@ for step_id, t in enumerate(timesteps):
 import os
 import torch
 
-from msmodelslim.quant.session.session import quant_model, SessionConfig
-from msmodelslim.quant.session.session import W8A8TimeStepProcessorConfig, W8A8TimeStepQuantConfig, SaveProcessorConfig
+from msmodelslim.quant import quant_model, SessionConfig
+from msmodelslim.quant import W8A8TimeStepProcessorConfig, W8A8TimeStepQuantConfig, SaveProcessorConfig
 from example.multimodal_sd.utils import get_disable_layer_names, get_rank, DumperManager
 
 DUMP_CALIB_FOLDER = './results/quant/cache'  # 用于存放校准数据的文件夹
@@ -655,8 +659,8 @@ torchrun --nproc_per_node=8 /the/absolut/path/of/example/multimodal_sd/HunYuanVi
 import os
 import torch
 
-from msmodelslim.quant.session.session import quant_model, SessionConfig
-from msmodelslim.quant.session.session import FA3ProcessorConfig, W8A8DynamicQuantConfig, W8A8DynamicProcessorConfig, SaveProcessorConfig
+from msmodelslim.quant import quant_model, SessionConfig
+from msmodelslim.quant import FA3ProcessorConfig, W8A8DynamicQuantConfig, W8A8DynamicProcessorConfig, SaveProcessorConfig
 from example.multimodal_sd.utils import get_disable_layer_names, get_rank, DumperManager
 
 DUMP_CALIB_FOLDER = './results/quant/cache'  # 用于存放校准数据的文件夹
@@ -725,6 +729,8 @@ session_cfg.model_validate(session_cfg)
 # 量化模型
 quant_model(model, session_cfg)
 ```
+
+#### FAQuantizer 插入位置
 
 在hunyuan_video的/modules/models.py文件中插入fa3量化
 ```python
@@ -849,6 +855,8 @@ class MMSingleStreamBlock(nn.Module):
         # attention computation start
         if not self.hybrid_seq_parallel_attn:
 ```
+
+#### 量化启动脚本
 
 示例的启动命令可参考：
 
