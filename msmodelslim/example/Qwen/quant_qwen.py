@@ -127,7 +127,7 @@ def parse_arguments():
     parser.add_argument('--trust_remote_code', type=cmd_bool, default=False)
     parser.add_argument('--layer_count', type=int, default=0)
     parser.add_argument('--mindie_format', action="store_true", help="Compatible with quantization formats \
-                        supported by before B050 version of MindIE")
+                        supported by before 2.1.RC1 version of MindIE")
     return parser.parse_args()
 
 
