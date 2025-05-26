@@ -76,14 +76,14 @@
 ## 比对结果分析
 ### 比对结果判定
 - 精度指标
-  | 误差对比算法                | 阈值   |
+  | 误差对比算法                | 精度正常的参考标准   |
   | ------------------------- | ------ |
-  | CosineSimilarity          | <0.99  |
-  | RelativeEuclideanDistance | >0.05  |
-  | KullbackLeiblerDivergence | >0.005 |
-  | RootMeanSquareError       | >1.0   |
-  | MeanRelativeError         | >1.0   |
-任意一项超出阈值即为精度异常。
+  | CosineSimilarity          | > 0.99  |
+  | RelativeEuclideanDistance | < 0.05  |
+  | KullbackLeiblerDivergence | < 0.005 |
+  | RootMeanSquareError       | < 1.0   |
+  | MeanRelativeError         | < 1.0   |
+
 - **模型精度达标与否**首要的是看整网的输出结果是否精度达标，如果输出精度达标，则即使中间节点精度存在异常（**包括算子溢出**），也无需处理，否则需要逐个排查问题节点。
 - 由于存在前置算子精度影响后续算子的问题，可以开启单算子比对(-single True)功能，一次排查所有问题单算子，屏蔽前置算子影响。 
 
