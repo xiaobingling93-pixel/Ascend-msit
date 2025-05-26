@@ -3,6 +3,7 @@ import argparse
 import functools
 import json
 import copy
+import os
 from unittest.mock import patch
 
 import torch
@@ -16,6 +17,7 @@ from convert_fp8_to_bf16 import auto_convert_model_fp8_to_bf16, OpsType
 from add_safetensors import add_safetensors
 
 from ascend_utils.common.security import get_valid_read_path, get_write_directory, check_number
+from ascend_utils.common.security import json_safe_load, json_safe_dump
 from msmodelslim.tools.copy_config_files import copy_config_files, modify_config_json
 from msmodelslim.pytorch.llm_ptq.anti_outlier import AntiOutlierConfig, AntiOutlier
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
@@ -72,6 +74,28 @@ def get_calib_dataset_batch(model_tokenizer, calib_list, batch_size, max_len=512
         calib_dataset.append(
             [value.to(device) for key, value in inputs.data.items() if isinstance(value, torch.Tensor)])
     return calib_dataset
+
+
+def remove_module_entries(save_path, json_filename="quant_model_description_w8a8_dynamic.json"):
+    """
+    移除JSON文件中键包含"module"的条目
+    
+    参数:
+    save_path (str): 输入JSON文件路径，json_filename (str): 输入JSON文件名称
+    
+    """
+    json_file_path = os.path.join(save_path, json_filename)
+    # 读取JSON文件
+    description_data = json_safe_load(json_file_path)
+    # 过滤掉键中包含"module"的条目
+    filtered_data = {
+        key: value 
+        for key, value in description_data.items() 
+        if "norm.module." not in key  
+        # 检查键中是否包含"norm.module."字符串
+    }
+    # 写回更新后的JSON文件（如需保留原始文件，可改为写入新文件） 
+    json_safe_dump(filtered_data, json_file_path, indent=4)
 
 
 def main():
@@ -192,7 +216,10 @@ def main():
                     safetensors_name="quant_model_weight_w8a8_dynamic.safetensors",
                     save_type=["safe_tensor"],
                     part_file_size=4)
-
+    # 适配mindie删除description里的module字段
+    if args.mindie_format:
+        remove_module_entries(save_path)
+    
     custom_hooks = {
         'config.json': functools.partial(modify_config_json, custom_hook=custom_hook)
     }
