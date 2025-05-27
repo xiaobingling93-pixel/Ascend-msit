@@ -93,7 +93,7 @@ pip3 install sympy==1.11.1
 pip3 install transformers==4.43.0 # 参考ChatGLM2-6B仓chatglm2-6b/config.json里的相关版本要求
 ```
 
-3. 新建模型的quant.py量化脚本，编辑quant.py文件，根据实际的量化场景导入样例代码，参考加粗字体信息提示，并根据实际情况进行修改。
+3. 新建模型的quant.py量化脚本，编辑quant.py文件，根据实际的量化场景导入样例代码，并根据实际情况进行修改。
 
     - W8A8 per_channel量化场景导入的样例代码如下，kvcache、lowbit算法以及per_token算法量化场景导入的代码样例请参考[w8a8量化场景](量化及稀疏量化场景导入代码样例.md)。
 
