@@ -11,7 +11,7 @@ msmodelslim quant [ARGS]
 ```
 例如，使用一键量化功能量化 Qwen2.5-7B-Instruct 模型，量化方式采用 w8a8 ，则量化命令如下：
 ``` bash
-msmodelslim quant --model_path {模型路径} --save_path {保存路径} --device npu --model_type Qwen2.5-7B-Instruct --quant_type w8a8 --trust_remote_code
+msmodelslim quant --model_path {模型路径} --save_path {保存路径} --device npu --model_type Qwen2.5-7B-Instruct --quant_type w8a8 --trust_remote_code True
 ```
 
 
