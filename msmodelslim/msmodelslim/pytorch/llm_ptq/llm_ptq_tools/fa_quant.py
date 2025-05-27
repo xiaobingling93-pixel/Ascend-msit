@@ -122,17 +122,20 @@ class QKVQuantizer:
 class FAQuantizer:
     def __init__(self, config, logger):
         def check_config(config):
-            # 检查必须存在的属性
-            required_attrs = ["num_attention_heads", "hidden_size", "num_key_value_heads"]
+            required_attrs = ["num_attention_heads", "hidden_size"]
             for attr in required_attrs:
                 if not hasattr(config, attr):
-                    raise ValueError(f"FAQuantizer needs attributes: '{attr}'")
+                    raise AttributeError(f"FAQuantizer's config needs attributes: '{attr}'")
             
-            # 检查关键参数类型和合法性
             check_type(config.num_attention_heads, int, "num_attention_heads in config")
             check_type(config.hidden_size, int, "hidden_size in config")
-            check_type(config.num_key_value_heads, int, "num_key_value_heads in config")
-
+            
+            # 如果不存在num_key_value_heads，则设置为num_attention_heads的值
+            if not hasattr(config, "num_key_value_heads"):
+                config.num_key_value_heads = config.num_attention_heads
+                logger.warning("Failed to obtain `num_key_value_heads`, assuming Multi-head Attention by default.")
+            else:
+                check_type(config.num_key_value_heads, int, "num_key_value_heads in config")
 
         check_config(config)
             
@@ -247,18 +250,23 @@ class FAQuantizer:
             v_offset.to(device="cpu", dtype=torch.int8)
         )
 
-    def _set_head_params(self, config):
-        try:
-            num_head = config.num_attention_heads
-            hidden_size = config.hidden_size
-            head_dim = hidden_size // num_head
-        except AttributeError as e:
-            self.logger.warning("Failed to obtain attention head parameters. Please manually set them")
-        try:
-            num_key_value_heads = config.num_key_value_heads
-        except AttributeError as e:
-            self.logger.warning("Failed to obtain `num_key_value_heads`, assuming Multi-head Attention by default.")
-            num_key_value_heads = num_head
+    def _set_head_params(self, config):  
+        num_head = config.num_attention_heads
+        hidden_size = config.hidden_size
+        
+        if num_head == 0:
+            raise ValueError("`num_attention_heads` cannot be zero.")
+        head_dim = hidden_size // num_head
+        
+        num_key_value_heads = config.num_key_value_heads
+        
+        # if GQA（num_key_value_heads != num_head）
+        if num_key_value_heads != num_head:
+            self.logger.info(
+                f"Using Grouped Query Attention (GQA): "
+                f"num_key_value_heads={num_key_value_heads}, num_head={num_head}"
+            )
+        
         self.set_head_params(num_head, head_dim, num_key_value_heads)
 
 
