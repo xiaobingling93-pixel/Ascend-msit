@@ -40,62 +40,61 @@
 - HunyuanVideo推理工程仓[MindIE/hunyuan_video](https://modelers.cn/models/MindIE/hunyuan_video)
 
 
-### W8A8静态量化
-当前仅支持对多模态生成模型pipeline的transformer部分进行W8A8静态量化。
+### SD3-Medium W8A8静态量化
 
+当前仅支持对sd3模型的transformer部分进行W8A8静态量化。
 
-#### W8A8校准数据Dump
+#### 量化启动脚本
+校准数据Dump和量化的示例代码如下：
 
-多模态生成量化针对pipeline中的transformer组件进行量化，需要提前 dump 针对 transformer 的校准数据。
-
-示例代码如下：
-```python
-from example.multimodal_sd.utils import DumperManager
-
-def load_pipeline():
-  """ load pipeline code """
-  pass
-
-pipeline = load_pipeline(...) # 加载模型
-
-model = pipeline.transformer # 取transformer部分
-
-# 添加 hook 用于dump model的forward输入
-dumper_manager = DumperManager(model, capture_mode='args') # capture_mode 在时间步量化中需要设置为'timestep'
-
-# 执行浮点模型推理
-pipeline(
-    prompt="A photo of an astronaut riding a horse on mars",
-    num_inference_steps=20,
-    ...
-)
-
-# 保存校准数据
-dumper_manager.save('/path/of/dumped/calib_data.pth')
-```
-
-#### SD3-Medium
-
-**校准数据的dump生成请参考[W8A8校准数据Dump](#W8A8校准数据Dump)。**
-
-
-量化的示例代码如下：
 ```python
 # 导入模型库
-from diffusers import StableDiffusion3Pipeline
+import os
 import torch
+from diffusers import StableDiffusion3Pipeline
+
 from msmodelslim.quant import quant_model, SessionConfig
 from msmodelslim.quant import W8A8ProcessorConfig, W8A8QuantConfig, SaveProcessorConfig
+from example.multimodal_sd.utils import get_disable_layer_names, get_rank, DumperManager
+
+DUMP_CALIB_FOLDER = './results/quant/cache'  # 用于存放校准数据的文件夹
+SAFE_TENSOR_FOLDER = './results/quant/safe_tensor'  # 用于存放量化模型的文件夹
+
+dump_data_path = os.path.join(DUMP_CALIB_FOLDER, f'calib_data_{get_rank()}.pth')
+safe_tensor_path = os.path.join(SAFE_TENSOR_FOLDER, f'rank_{get_rank()}.safetensors')
 
 
-# 加载完整pipeline
-pipeline = StableDiffusion3Pipeline.from_pretrained("/path/to/stable-diffusion-3-medium-diffusers", torch_dtype=torch.float16).to('npu')
+############################ 加载模型 ############################
+def load_t2v_checkpoint(model_path):
+    pipeline = StableDiffusion3Pipeline.from_pretrained(model_path, torch_dtype=torch.float16).to('npu')
+    return pipeline
 
-# 取量化transformer部分
+
+pipeline = load_t2v_checkpoint("/path/to/stable-diffusion-3-medium-diffusers")  # 加载模型
+
 model = pipeline.transformer
 
-# 加载校准数据
-calib_dataset = torch.load("/path/to/calib_data.pth", map_location='npu')
+############################ dump 校准数据 ############################
+if not os.path.exists(dump_data_path):  # 检查校准数据是否已存在，不存在则dump
+    # 添加forward hook用于dump model的forward输入
+    dumper_manager = DumperManager(model, capture_mode='args')
+
+    # 执行浮点模型推理
+    
+    pipe(
+        prompts=["A photo of an astronaut riding a horse on mars"],
+        negative_prompts=[""],
+        width=args.width,
+        height=args.height,
+        num_inference_steps=args.infer_steps,
+        ...
+    )
+    # 保存校准数据
+    dumper_manager.save(dump_data_path)
+
+############################ 启动量化 ############################
+# 加载校准数据，校准数据需要提前dump生成
+calib_dataset = torch.load(dump_data_path, map_location=f'npu:{os.getenv("RANK", 0)}')
 
 # 量化配置
 session_cfg = SessionConfig(
@@ -107,8 +106,8 @@ session_cfg = SessionConfig(
             disable_names=['context_embedder']
         ),
         "save": SaveProcessorConfig(
-            output_path='/path/to/save',
-            safetensors_name=None,
+            output_path=os.path.dirname(safe_tensor_path),
+            safetensors_name=os.path.basename(safe_tensor_path),
             json_name=None,
             save_type=['safe_tensor'],
             part_file_size=None
@@ -125,63 +124,130 @@ session_cfg.model_validate(session_cfg)
 quant_model(model, session_cfg)
 ```
 
-#### Open-Sora-Plan v1.2
-Open-Sora-Plan v1.2的推理量化依赖于推理工程仓：[MindIE/open_sora_planv1_2](https://modelers.cn/models/MindIE/open_sora_planv1_2)，根据该工程仓完成配置后，在[inference.py](https://modelers.cn/models/MindIE/open_sora_planv1_2/blob/main/inference.py)中指定代码中间添加以下内容即可完成量化和推理，其中校准数据需要提前dump生成。
 
-**校准数据的dump生成可参考[W8A8校准数据Dump](#W8A8校准数据Dump)。**
+示例启动脚本如下：
+```shell
+python /the/absolut/path/of/example/multimodal_sd/SD3/sd3_inference.py \
+    --sd3_model_path "/path/to/stable-diffusion-3-medium-diffusers" \
+    --prompt_path "example/multimodal_sd/SD3/calib_prompts.txt" \
+    --width 1024 \
+    --height 1024 \
+    --infer_steps 28 \
+    --seed 42 \
+    --device "npu" \
+    --save_path "./results/quant/images" \
+    --do_quant \
+    --quant_weight_save_folder "./results/quant/safetensors" \
+    --quant_dump_calib_folder "./results/quant/cache" \
+    --quant_type "w8a8"
+```
 
+### Open-Sora-Plan v1.2 W8A8静态量化
+Open-Sora-Plan v1.2的推理量化依赖于推理工程仓：[MindIE/open_sora_planv1_2](https://modelers.cn/models/MindIE/open_sora_planv1_2)，根据该工程仓完成配置后，使用以下示例代码进行量化。
 
-量化示例代码如下：
+校准数据Dump和量化的示例代码如下：
+
 ```python
-# 开头添加import
+import os
+import torch
+
 from msmodelslim.quant import quant_model, SessionConfig
 from msmodelslim.quant import W8A8ProcessorConfig, W8A8QuantConfig, SaveProcessorConfig
-from example.multimodal_sd.utils import get_disable_layer_names
+from example.multimodal_sd.utils import get_disable_layer_names, get_rank, DumperManager
 
-if __name__ == '__main__':
-    ...
+DUMP_CALIB_FOLDER = './results/quant/cache'  # 用于存放校准数据的文件夹
+SAFE_TENSOR_FOLDER = './results/quant/safe_tensor'  # 用于存放量化模型的文件夹
 
-    pipeline = load_t2v_checkpoint(args.model_path)
-    logger.info('load model')
+dump_data_path = os.path.join(DUMP_CALIB_FOLDER, f'calib_data_{get_rank()}.pth')
+safe_tensor_path = os.path.join(SAFE_TENSOR_FOLDER, f'rank_{get_rank()}.safetensors')
 
-    # -------------------- w8a8 quantization-----------------------------
-    model = pipeline.transformer
 
-    # 加载校准数据，校准数据需要提前dump生成
-    calib_dataset = torch.load('/path/to/calib_data_93_720.pth', map_location=f'npu:{os.getenv('RANK', 0)}')
+############################ 加载模型 ############################
+def load_t2v_checkpoint():
+    pass
 
-    # 量化配置
-    session_cfg = SessionConfig(
-        processor_cfg_map={
-            "w8a8": W8A8ProcessorConfig(
-                cfg=W8A8QuantConfig(
-                    act_method='minmax'
-                ),
-                disable_names=get_disable_layer_names(model, layer_include=None,
-                                                      layer_exclude=('*net.2*', '*adaln_single*'))
-            ),
-            "save": SaveProcessorConfig(
-                output_path='/path/to/save',
-                safetensors_name=None,
-                json_name=None,
-                save_type=['safe_tensor'],
-                part_file_size=None
-            )
-        },
-        calib_data=calib_dataset,
-        device='npu'
+
+pipeline = load_t2v_checkpoint(model_path)  # 加载模型
+
+model = pipeline.transformer
+
+############################ dump 校准数据 ############################
+if not os.path.exists(dump_data_path):  # 检查校准数据是否已存在，不存在则dump
+    # 添加forward hook用于dump model的forward输入
+    dumper_manager = DumperManager(model, capture_mode='args')
+
+    # 执行浮点模型推理
+    run_model_and_save_images(
+        pipeline,
+        ...
     )
+    # 保存校准数据
+    dumper_manager.save(dump_data_path)
 
-    # pydantic库自带的数据类型校验
-    session_cfg.model_validate(session_cfg)
+############################ 启动量化 ############################
+# 加载校准数据，校准数据需要提前dump生成
+calib_dataset = torch.load(dump_data_path, map_location=f'npu:{os.getenv("RANK", 0)}')
 
-    # 量化模型
-    quant_model(model, session_cfg)
-    # -------------------- w8a8 quantization-----------------------------
-    
-    run_model_and_save_images(pipeline)
+# 量化配置
+session_cfg = SessionConfig(
+    processor_cfg_map={
+        "w8a8": W8A8ProcessorConfig(
+            cfg=W8A8QuantConfig(
+                act_method='minmax'
+            ),
+            disable_names=get_disable_layer_names(model, layer_include=None,
+                                                    layer_exclude=('*net.2*', '*adaln_single*'))
+        ),
+        "save": SaveProcessorConfig(
+            output_path=os.path.dirname(safe_tensor_path),
+            safetensors_name=os.path.basename(safe_tensor_path),
+            json_name=None,
+            save_type=['safe_tensor'],
+            part_file_size=None
+        )
+    },
+    calib_data=calib_dataset,
+    device='npu'
+)
 
-    ...
+# pydantic库自带的数据类型校验
+session_cfg.model_validate(session_cfg)
+
+# 量化模型
+quant_model(model, session_cfg)
+
+```
+
+#### 量化启动脚本
+
+我们也提供了完整的量化启动脚本示例：[OpenSoraPlanV1_2/inference.py](OpenSoraPlanV1_2/inference.py)，其启动命令可参考：
+```shell
+export TASK_QUEUE_ENABLE=2
+export HCCL_OP_EXPANSION_MODE="AIV"
+torchrun --nnodes=1 --nproc_per_node 8  --master_port 29503 \
+    /the/absolut/path/of/example/multimodal_sd/OpenSoraPlanV1_2/inference.py \
+    --model_path /path/to/checkpoint-xxx/model_ema \
+    --num_frames 93 \
+    --height 720 \
+    --width 1280 \
+    --cache_dir "../cache_dir" \
+    --text_encoder_name google/mt5-xxl \
+    --text_prompt "example/multimodal_sd/OpenSoraPlanV1_2/calib_prompts.txt" \
+    --ae CausalVAEModel_D4_4x8x8 \
+    --ae_path "/path/to/causalvideovae" \
+    --fps 24 \
+    --guidance_scale 7.5 \
+    --num_sampling_steps 100 \
+    --tile_overlap_factor 0.125 \
+    --max_sequence_length 512 \
+    --dtype bf16 \
+    --use_cfg_parallel \
+    --algorithm "dit_cache" \
+    --save_img_path "./results/quant/images" \
+    --do_quant \
+    --quant_weight_save_folder "./results/quant/safetensors" \
+    --quant_dump_calib_folder "./results/quant/cache" \
+    --quant_type "w8a8"
 ```
 
 ### FLUX 时间步量化
@@ -291,7 +357,7 @@ python /the/absolut/path/of/example/multimodal_sd/Flux/inference_flux.py \
     --save_path "./results/quant/img" \
     --device_id 0 \
     --device "npu" \
-    --prompt_path "./prompts.txt" \
+    --prompt_path "example/multimodal_sd/Flux/calib_prompts.txt" \
     --width 1024 \
     --height 1024 \
     --infer_steps 50 \
@@ -500,7 +566,7 @@ python /the/absolut/path/of/example/multimodal_sd/Flux/inference_flux.py \
     --save_path "./results/quant/img" \
     --device_id 0 \
     --device "npu" \
-    --prompt_path "./prompts.txt" \
+    --prompt_path "example/multimodal_sd/Flux/calib_prompts.txt" \
     --width 1024 \
     --height 1024 \
     --infer_steps 50 \
@@ -635,7 +701,7 @@ torchrun --nproc_per_node=8 /the/absolut/path/of/example/multimodal_sd/HunYuanVi
     --video-size 720 1280 \
     --video-length 129 \
     --infer-steps 50 \
-    --prompt "A cat walks on the grass, realistic style." \
+    --prompt "example/multimodal_sd/HunYuanVideo/calib_prompts.txt" \
     --seed 42 \
     --flow-reverse \
     --ulysses-degree 8 \
@@ -877,7 +943,7 @@ torchrun --nproc_per_node=8 /the/absolut/path/of/example/multimodal_sd/HunYuanVi
     --video-size 720 1280 \
     --video-length 129 \
     --infer-steps 50 \
-    --prompt "A cat walks on the grass, realistic style." \
+    --prompt "example/multimodal_sd/HunYuanVideo/calib_prompts.txt" \
     --seed 42 \
     --flow-reverse \
     --ulysses-degree 8 \
