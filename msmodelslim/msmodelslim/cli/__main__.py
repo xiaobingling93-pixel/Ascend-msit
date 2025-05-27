@@ -3,7 +3,7 @@ import argparse
 
 from msmodelslim.cli.naive_quant.naive_quant import main as quant_main
 from msmodelslim.infra.practice_manager import SUPPRORTED_QUANT_TYPES
-from msmodelslim.utils.safe_utils import StringArgumentValidator, MAX_KEY_LENGTH, cmd_bool
+from msmodelslim.utils.safe_utils import cmd_bool
 
 FAQ_HOME = "gitee repo: Ascend/msit/msmodelslim, wiki"
 MIND_STUDIO_LOGO = "[Powered by MindStudio]"
@@ -24,16 +24,13 @@ def main():
     quant_parser.add_argument('--model_type', required=True,
                               help="Type of model to quantize (e.g. 'LLaMa', 'Qwen')")
     quant_parser.add_argument('--model_path', required=True, type=str,
-                              help="Path to the original model",
-                              validator=StringArgumentValidator(min_length=1, max_length=MAX_KEY_LENGTH))
+                              help="Path to the original model")
     quant_parser.add_argument('--save_path', required=True, type=str,
-                              help="Path to save quantized model",
-                              validator=StringArgumentValidator(min_length=1, max_length=MAX_KEY_LENGTH))
+                              help="Path to save quantized model")
     quant_parser.add_argument('--device', default='npu', choices=['npu', 'cpu'],
                               help="Target device type for quantization")
     quant_parser.add_argument('--config_path', type=str,
-                              help="Explicit path to quantization config file",
-                              validator=StringArgumentValidator(min_length=1, max_length=MAX_KEY_LENGTH))
+                              help="Explicit path to quantization config file")
     quant_parser.add_argument('--quant_type', choices=SUPPRORTED_QUANT_TYPES,
                               help="Type of quantization to apply")
     quant_parser.add_argument('--trust_remote_code', type=cmd_bool, default=False,
