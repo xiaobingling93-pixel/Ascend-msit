@@ -2,7 +2,7 @@
 ## SessionConfig
 
 ### 功能说明
-量化会话配置类，用于配置量化相关的参数和校准数据、运行设备。
+量化会话配置类，用于配置量化相关的参数、校准数据以及运行设备。
 
 ### 类原型
 ```python
@@ -17,7 +17,7 @@ class SessionConfig(BaseModel):
 | ------ | ------ | ------ | ------ |
 | processor_cfg_map | 输入 | 量化处理器配置映射图 | 必选。<br>数据类型：字典。默认为{}，使用量化功能时，至少应配置一个量化处理器（如W8A8ProcessorConfig），不可单独配置保存处理器（SaveProcessorConfig）。<br>每个键、值对应一个量化处理器名称和量化处理器配置类，当前可选量化处理器名称: ['w8a8', 'w8a8_dynamic', 'w8a8_timestep', 'fa3', 'save']，与可选量化处理器配置[W8A8ProcessorConfig, W8A8DynamicProcessorConfig, W8A8TimeStepProcessorConfig, FA3ProcessorConfig, SaveProcessorConfig]一一对应，其中'fa3'需要搭配'w8a8_dynamic'一起使用。|
 | calib_data | 输入 | 异常值抑制和量化校准数据 | 可选。<br>数据类型：列表。默认值为None，为Data-Free场景，Label-Free场景必须输入。多模态生成模型量化场景中，需要提前dump校准数据并加载后传入作为calib_data。|
-| device | 输入 | 量化过程运行设备 | 可选。<br>数据类型：str。默认值为'cpu'，可选值：['cpu', 'npu']|
+| device | 输入 | 量化过程运行设备 | 可选。<br>数据类型：str。默认值为'cpu'，可选值：['cpu', 'npu']。|
 
 ### 调用示例
 ```python
@@ -61,7 +61,7 @@ class W8A8ProcessorConfig(BaseModel):
 | 参数名| 输入/返回值 | 含义 | 使用限制 |
 | ------ | ------ | ------ | ------ |
 | cfg | 输入 | w8a8量化配置 | 必选。<br>数据类型：W8A8QuantConfig，w8a8量化配置类。|
-| disable_names | 输入 | 回退层 | 必选。<br>数据类型：列表。列表中每个元素为回退层名称|
+| disable_names | 输入 | 回退层 | 必选。<br>数据类型：列表。列表中每个元素为回退层名称。|
 
 ### 调用示例
 ```python
@@ -116,7 +116,7 @@ class W8A8DynamicProcessorConfig(BaseModel):
 | 参数名| 输入/返回值 | 含义 | 使用限制 |
 | ------ | ------ | ------ | ------ |
 | cfg | 输入 | w8a8动态量化配置 | 必选。<br>数据类型：W8A8DynamicQuantConfig，w8a8动态量化配置类。|
-| disable_names | 输入 | 回退层 | 必选。<br>数据类型：列表。列表中每个元素为回退层名称|
+| disable_names | 输入 | 回退层 | 必选。<br>数据类型：列表。列表中每个元素为回退层名称。|
 
 ### 调用示例
 ```python
@@ -172,7 +172,7 @@ class W8A8TimeStepProcessorConfig(BaseModel):
 | 参数名| 输入/返回值 | 含义 | 使用限制 |
 | ------ | ------ | ------ | ------ |
 | cfg | 输入 | w8a8时间步量化配置 | 必选。<br>数据类型：W8A8TimeStepQuantConfig，w8a8时间步量化配置类。|
-| disable_names | 输入 | 回退层 | 必选。<br>数据类型：列表。列表中每个元素为回退层名称|
+| disable_names | 输入 | 回退层 | 必选。<br>数据类型：列表。列表中每个元素为回退层名称。|
 | timestep_sep | 输入 | 时间步量化的动静态量化分割阈值 | 必选。<br>数据类型：整数。通常设置为多模态生成模型视图生成中总推理时间步的一半。|
 
 ### 调用示例
@@ -223,9 +223,6 @@ FA3量化处理器配置类，用于配置FA3量化处理器相关的参数。
 class FA3ProcessorConfig(BaseModel):
     pass
 ```
-
-### 参数说明
-暂无参数。
 
 ### 调用示例
 ```python

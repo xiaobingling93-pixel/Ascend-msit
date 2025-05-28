@@ -12,7 +12,7 @@ quant_model(model: nn.Module, session_cfg: SessionConfig)
 | 参数名 | 输入/返回值 | 含义 | 使用限制 |
 | ------ | ---------- | ---- | -------- |
 | model | 输入 | 多模态生成模型需要量化的部分。 | 必选。<br>数据类型：nn.Module，当前仅支持对多模态生成模型的transformer部分进行量化，加载完整pipeline后，选择pipeline.transformer作为model。|
-| session_cfg | 输入 | 量化会话配置类，用于配置量化相关的参数和校准数据、运行设备。 | 必选。<br>数据类型：SessionConfig。|
+| session_cfg | 输入 | 量化会话配置类，用于配置量化相关的参数、校准数据以及运行设备。| 必选。<br>数据类型：SessionConfig。|
 
 ### 调用示例
 
