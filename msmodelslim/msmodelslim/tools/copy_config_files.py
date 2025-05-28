@@ -61,7 +61,7 @@ FILE_HOOKS = {
 DEFAULT_FILE_HOOKS = copy_json
 
 
-def copy_config_files(input_path, output_path, quant_config, mindie_format, custom_hooks=None):
+def copy_config_files(input_path, output_path, quant_config, mindie_format = None, custom_hooks=None):
     """
     复制模型配置文件
     @param input_path: 源目录

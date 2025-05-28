@@ -111,7 +111,6 @@ class SafeGenerator:
             f"quant_model_description_{quantize_type.lower()}.json")
         quant_description_data = json_safe_load(dest_quant_description_filepath, check_user_stat=False)
         data['torch_dtype'] = str(torch_dtype).split(".")[1]
-        data['quantize'] = quantize_type
         if kwargs is not None:
             quantization_config = {
                 # 当is_lowbit为True，open_outlier为False时，group_size生效
@@ -141,10 +140,15 @@ class SafeGenerator:
             if hasattr(kwargs, 'use_reduce_quant') and kwargs.get("use_reduce_quant"):
                 quantization_config.update({"reduce_quant_type": "per_channel"})
             quant_description_data.update(quantization_config)
-            data['quantization_config'] = quant_description_data
 
         dest_config_filepath = os.path.join(dest_dir, 'config.json')
         json_safe_dump(data, dest_config_filepath, 4)
+        os.remove(dest_quant_description_filepath)
+        new_dest_quant_description_filepath = os.path.join(dest_dir, f"quant_model_description.json")
+        new_dest_quant_description_filepath = get_valid_write_path(new_dest_quant_description_filepath, \
+                                                                    is_dir=False)
+        json_safe_dump(quant_description_data, new_dest_quant_description_filepath, 4)
+
 
     @staticmethod
     def load_jsonl(dataset_path, key_name='inputs_pretokenized'):
