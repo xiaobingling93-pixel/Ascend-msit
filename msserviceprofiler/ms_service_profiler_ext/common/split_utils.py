@@ -83,10 +83,9 @@ def get_name_list(service_type):
 
 
 
-def preprocess_framework_df(framework_df, service_type):
+def preprocess_framework_df(framework_df):
     try:
-        NAME_LIST = get_name_list(service_type)
-        framework_df = framework_df[framework_df['name'].isin(NAME_LIST)]
+        framework_df = framework_df[framework_df['name'].isin(NAME_LIST_MINDIE)]
         framework_df = framework_df[CSV_COLUMNS]
         framework_df = framework_df.rename(columns=RENAMED_COLUMNS)
     except KeyError as e:

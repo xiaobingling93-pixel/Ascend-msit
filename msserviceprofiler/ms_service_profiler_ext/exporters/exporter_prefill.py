@@ -38,7 +38,7 @@ class ExporterPrefill(ExporterBase):
         if df is None:
             logger.error("The data is empty, please check")
             return
-        framework_df = preprocess_framework_df(df, service_type)
+        framework_df = preprocess_framework_df(df)
         if framework_df is None:
             return
         filter_df = get_filter_df(framework_df, 'Prefill')
