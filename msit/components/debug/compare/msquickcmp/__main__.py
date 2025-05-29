@@ -88,7 +88,7 @@ class CompareCommand(BaseCommand):
             '-o',
             '--output',
             dest="out_path",
-            default='',
+            default='./',
             type=check_output_path_legality,
             help='The output path')
         parser.add_argument(
