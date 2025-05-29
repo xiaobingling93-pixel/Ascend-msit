@@ -136,6 +136,8 @@ class SoftmaxDumpOutput:
 
     def __call__(self, inputs, **kwargs):
         out = self.torch_softmax(inputs, **kwargs) # torch.Size([64, 10001, 10001])
+        if self.num_attention_heads == 0:
+            raise ValueError("Num attention heads can not be zero.")
         cur_layer = self.head_num // self.num_attention_heads
         cur_head = self.head_num % self.num_attention_heads
         logger.info(f"The {cur_layer}-th layer {cur_head}-th head attention score has been obtained")

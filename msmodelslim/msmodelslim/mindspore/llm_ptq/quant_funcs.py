@@ -63,7 +63,11 @@ def linear_quantization_params(
     x_max = P.maximum(x_max, P.zeros_like(x_max))
 
     n = 2 ** bit - 1
-    scale = (x_max - x_min) / n
+    try:
+        scale = (x_max - x_min) / n
+    except ZeroDivisionError as ex:
+        logging.error('bit can not be zero. %s', str(ex))
+        raise ex
     scale = P.maximum(scale, eps)
     zero_point = -1 * x_min / scale
     zero_point = zero_point.round()

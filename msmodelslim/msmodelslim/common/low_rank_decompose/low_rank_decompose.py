@@ -16,7 +16,11 @@ RankMethods = namedtuple('RankMethods', ['VBMF'])('vbmf')
 def make_divisible(inputs, divisor=64, min_value=None, limit_round_down=0.9):
     if min_value is None:
         min_value = divisor
-    outputs = max(min_value, int(inputs + divisor / 2) // divisor * divisor)
+    try:
+        outputs = max(min_value, int(inputs + divisor / 2) // divisor * divisor)
+    except ZeroDivisionError as ex:
+        logging.error('divisor can not be zero. %s', str(ex))
+        raise ex
     # Make sure that round down does not go down by more than 10%.
     if outputs < limit_round_down * inputs:
         outputs += divisor

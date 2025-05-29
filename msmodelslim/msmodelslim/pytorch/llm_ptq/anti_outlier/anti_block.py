@@ -572,6 +572,8 @@ class QuantQwen2VLDecoderLayer(nn.Module):
         position_embeddings = kwargs.pop("position_embeddings")
         residual = hidden_states
         hidden_states = self.input_layernorm(hidden_states)
+        if self.cfg.hidden_size == 0:
+            raise ValueError("hidden_size can not be zero in model config.")
         if self.cac_migrate_attn:
             msmodelslim_logger.info(f'current block is QuantQwen2VLDecoderLayer, layername:{self.layername}')
             weight_list = torch.cat([self.self_attn.q_proj.weight,
@@ -836,7 +838,8 @@ class QuantInternLM2DecoderLayer(nn.Module):
 
         residual = hidden_states
         hidden_states = self.attention_norm(hidden_states)
-
+        if self.cfg.num_attention_heads == 0 or self.cfg.num_key_value_heads == 0:
+            raise ValueError("num_attention_heads or num_key_value_heads can not be zero in model config.")
         if self.cac_migrate_attn:
             msmodelslim_logger.info(f'current block is InternLM2DecoderLayer, layername:{self.layername}')
             weight_list = torch.cat([self.attention.wqkv.weight])
@@ -967,7 +970,8 @@ class QuantInternVisionEncoderLayer(nn.Module):
 
             if self.attn.qkv.bias is not None:
                 self.attn.qkv.bias.data += shift @ self.attn.qkv.weight.data.T
-                
+            if self.cfg.num_attention_heads == 0:
+                raise ValueError("num_attention_heads can not be zero in model config.")
             head_dim = self.cfg.hidden_size // self.cfg.num_attention_heads
             # calculate scale
             weight_list = torch.cat([self.attn.qkv.weight])

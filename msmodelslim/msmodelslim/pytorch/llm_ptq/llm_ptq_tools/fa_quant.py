@@ -58,7 +58,8 @@ class QKVQuantizer:
             self.is_record = False
 
         batch_size, num_head, seq_len, head_dim = samples.shape
-
+        if tp_size == 0:
+            raise ZeroDivisionError("tp size can not be zero")
         if not _SUPPORT_RECALL_WINDOW:
             num_head_per_device = self.num_head // tp_size
             samples = samples.contiguous().view(tp_size * num_head_per_device, -1)
