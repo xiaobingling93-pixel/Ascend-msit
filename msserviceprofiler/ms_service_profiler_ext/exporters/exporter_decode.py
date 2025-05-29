@@ -33,16 +33,17 @@ class ExporterDecode(ExporterBase):
         batch_size = cls.args.decode_batch_size
         batch_num = cls.args.decode_number
         rid = cls.args.decode_rid
+        service_type = cls.args.service_type
         df = data.get('tx_data_df')
         if df is None:
             logger.error("The data is empty, please check")
             return
-        framework_df = preprocess_framework_df(df)
+        framework_df = preprocess_framework_df(df, service_type)
         if framework_df is None:
             return
         filter_df = get_filter_df(framework_df, 'Decode')
         add_all_time_df = get_batch_all_time(filter_df, 'Decode')
-        framework_df = process_exporter(add_all_time_df, batch_size, batch_num, rid, 'Decode')
+        framework_df = process_exporter(add_all_time_df, batch_size, batch_num, rid, 'Decode', service_type)
         if log_level == 'debug':
             save_dataframe_to_csv(add_all_time_df, output, "decode1.csv")
             save_dataframe_to_csv(framework_df, output, f"decode_{batch_num}.csv")

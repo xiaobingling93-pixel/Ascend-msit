@@ -50,11 +50,14 @@ SYNC_EVENT_PAIRS = [
 FILTER_LIST = ['deserializeExecuteRequestsForInfer', 'deserializeExecuteResponse', 'convertTensorBatchToBackend', 
                'processPythonExecResult', 'forward', 'sample', 'setInferBuffer', 'grpcWriteToSlave']
 
-NAME_LIST = ['httpReq', 'encode', 'preprocessBatch', 'batchFrameworkProcessing', 'serializeExcueteMessage',
+NAME_LIST_MINDIE = ['httpReq', 'encode', 'preprocessBatch', 'batchFrameworkProcessing', 'serializeExcueteMessage',
              'deserializeExecuteRequestsForInfer', 'convertTensorBatchToBackend', 'getInputMetadata',
              'preprocess', 'forward', 'sample', 'postprocess', 'generateOutput', 'prepareInputs', 'operatorExecute',
              'processPythonExecResult', 'deserializeExecuteResponse', 'saveoutAndContinueBatching', 'continueBatching',
              'setInferBuffer', 'grpcWriteToSlave', 'receiveInfer', 'handleTaskExecution', 'decodeEnd', 'httpRes']
+
+NAME_LIST_VLLM = ['httpReq', 'encode', 'batchFrameworkProcessing', 'serializeExcueteMessage',
+             'preprocess', 'forward', 'sample', 'deserializeExecuteResponse', 'httpRes']
 
 FULL_BATCH = ['serializeExcueteMessage', 'deserializeExecuteRequestsForInfer', 'convertTensorBatchToBackend', 
               'getInputMetadata', 'preprocess', 'forward', 'sample', 'postprocess']
@@ -70,9 +73,19 @@ RENAMED_COLUMNS = {
         'during_time': 'during_time(microsecond)'
     }
 
+def get_name_list(service_type):
+    if service_type == 'mindie':
+        name_list = NAME_LIST_MINDIE
+    else:
+        name_list = NAME_LIST_VLLM
 
-def preprocess_framework_df(framework_df):
+    return name_list
+
+
+
+def preprocess_framework_df(framework_df, service_type):
     try:
+        NAME_LIST = get_name_list(service_type)
         framework_df = framework_df[framework_df['name'].isin(NAME_LIST)]
         framework_df = framework_df[CSV_COLUMNS]
         framework_df = framework_df.rename(columns=RENAMED_COLUMNS)
@@ -133,8 +146,9 @@ def get_last_half_batch(framework_df, generate_index, pid, tid):
     return result
 
 
-def get_full_batch(group, framework_df):
+def get_full_batch(group, framework_df, service_type):
     result = pd.DataFrame()
+    NAME_LIST = get_name_list(service_type)
     start_index = NAME_LIST.index('batchFrameworkProcessing')
     end_index = NAME_LIST.index('saveoutAndContinueBatching')
     batch_start_index = group[group['name'] == 'batchFrameworkProcessing'].index[0]
@@ -151,20 +165,32 @@ def get_full_batch(group, framework_df):
         index = framework_df[(framework_df.index > index) & 
                     (framework_df['name'] == name)].index[0]
         index_list.append(index)
-    if framework_df.query('name == "generateOutput" and index > @index').empty:
-        logger.warning(f"no generateOutput line, skip this batch")
-        return pd.DataFrame()
-    generate_row = framework_df[(framework_df.index > index) & 
-                    (framework_df['name'] == 'generateOutput')].iloc[0]
-    generate_pid, generate_tid = generate_row['pid'], generate_row['tid']
-    generate_index = framework_df[(framework_df.index > index) & 
-                    (framework_df['name'] == 'generateOutput')].index[0]
-    concat_list.append(generate_index)
+    if service_type == 'mindie':
+        if framework_df.query('name == "generateOutput" and index > @index').empty:
+            logger.warning(f"no generateOutput line, skip this batch")
+            return pd.DataFrame()
+        generate_row = framework_df[(framework_df.index > index) &
+                        (framework_df['name'] == 'generateOutput')].iloc[0]
+        the_pid, the_tid = generate_row['pid'], generate_row['tid']
+        the_index = framework_df[(framework_df.index > index) &
+                        (framework_df['name'] == 'generateOutput')].index[0]
+        concat_list.append(the_index)
+    else:
+        if framework_df.query('name == "forward" and index > @index').empty:
+            logger.warning(f"no forward line, skip this batch")
+            return pd.DataFrame()
+        generate_row = framework_df[(framework_df.index > index) &
+                        (framework_df['name'] == 'forward')].iloc[0]
+        the_pid, the_tid = generate_row['pid'], generate_row['tid']
+        the_index = framework_df[(framework_df.index > index) &
+                        (framework_df['name'] == 'forward')].index[0]
+        concat_list.append(the_index)
+
 
     # 找到前半部分的字段
-    result_pre = get_pre_half_batch(FULL_BATCH, index_list, framework_df, generate_pid, generate_tid)
+    result_pre = get_pre_half_batch(FULL_BATCH, index_list, framework_df, the_pid, the_tid)
     # 拼接后半部分字段
-    result_last = get_last_half_batch(framework_df, generate_index, generate_pid, generate_tid)
+    result_last = get_last_half_batch(framework_df, the_index, the_pid, the_tid)
     if result_last.empty or result_pre.empty:
         return pd.DataFrame()
     group = group.drop(group[group['name'].isin(NAME_LIST[start_index: end_index])].index)
@@ -173,7 +199,7 @@ def get_full_batch(group, framework_df):
     return result
 
 
-def get_groups(framework_df, batch_size, rid, name):
+def get_groups(framework_df, batch_size, rid, name, service_type):
     result_df = []
     
     groups = framework_df.groupby((framework_df['name'] == 'batchFrameworkProcessing').cumsum())
@@ -191,7 +217,7 @@ def get_groups(framework_df, batch_size, rid, name):
 
         if name == 'Prefill' and not is_valid_prefill(batch_group, rid, framework_df):
             continue
-        result = get_full_batch(group, framework_df)
+        result = get_full_batch(group, framework_df, service_type)
 
         if not result.empty:
             result_df.append(result) 
@@ -491,9 +517,9 @@ def get_batch_concat_df(filter_df, framework_df, cacl_num, rid, name):
     return concat_df
 
 
-def process_exporter(framework_df, batch_size, batch_num, rid, name):
+def process_exporter(framework_df, batch_size, batch_num, rid, name, service_type):
     # 划分组
-    result_df = get_groups(framework_df, batch_size, rid, name)
+    result_df = get_groups(framework_df, batch_size, rid, name, service_type)
     len_result_df = len(result_df)
 
     if len(result_df) == 0:

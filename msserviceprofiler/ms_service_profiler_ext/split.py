@@ -72,6 +72,10 @@ def arg_parse():
         '--decode-rid', type=int, default=-1,
         help='The rid for Decode batch to split'
     )
+    parser.add_argument(
+        '--service-type', type=str, default='mindie',
+        help='The service type to split'
+    )
     
     args = parser.parse_args()
     return args
