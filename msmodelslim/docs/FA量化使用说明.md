@@ -1,17 +1,15 @@
-## fa3量化 
+# fa3量化 
 
 **Flash Attention 3（FA）**，在KV-Cache的基础上增强了在硬件设备上的利用率，提升了整体在推理场景中的计算效率，以低精度的数据格式完成更快的处理和更少的内存占用。
 
-### 前提条件
+## 前提条件
 
 前提条件参考[大模型量化的前提条件](../msmodelslim/pytorch/llm_ptq/README.md#前提条件)
 
-说明：仅Atlas 800I A2推理产品支持fa3量化功能。目前FA3量化功能仅验证了Llama3.1-70B和Qwen2.5-72B。
+说明：仅Atlas 800I A2推理产品支持fa3量化功能。当前 FA3 量化功能已完成对大语言模型 Llama3.1-70B、Qwen2.5-72B 和多模态模型 Flux.1-dev、HunyuanVideo 的验证。
 
+## 大语言模型fa3量化关键步骤说明如下：
 ### 功能实现流程
-
-关键步骤说明如下：
-
 #### 1.修改modeling文件：
 
 （1）找到对应版本的modeling文件：
@@ -562,3 +560,7 @@ for layer_index in disable_idx_lst:
 ```python
 fa_quant(fa_amp=5)
 ```
+
+## 多模态模型fa3量化关键步骤说明如下：
+
+请参考[多模态生成模型量化](../example/multimodal_sd/README.md#flux-fa3-量化)中 Flux fa3 量化与HunyuanVideo fa3 量化。
