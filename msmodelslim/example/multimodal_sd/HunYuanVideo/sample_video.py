@@ -197,7 +197,7 @@ def main():
                     save_videos_grid(sample, video_path, fps=24)
                     logger.info(f'Sample save to: {video_path}')
 
-    # quantitation
+    # quantization
     if args.do_quant:
         # do quant
         do_multimodal_quant(
