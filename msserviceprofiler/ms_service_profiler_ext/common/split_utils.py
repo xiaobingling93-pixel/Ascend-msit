@@ -170,26 +170,26 @@ def get_full_batch(group, framework_df, service_type):
             return pd.DataFrame()
         generate_row = framework_df[(framework_df.index > index) &
                         (framework_df['name'] == 'generateOutput')].iloc[0]
-        the_pid, the_tid = generate_row['pid'], generate_row['tid']
-        the_index = framework_df[(framework_df.index > index) &
+        key_pid, key_tid = generate_row['pid'], generate_row['tid']
+        key_index = framework_df[(framework_df.index > index) &
                         (framework_df['name'] == 'generateOutput')].index[0]
-        concat_list.append(the_index)
+        concat_list.append(key_index)
     else:
         if framework_df.query('name == "forward" and index > @index').empty:
             logger.warning(f"no forward line, skip this batch")
             return pd.DataFrame()
         generate_row = framework_df[(framework_df.index > index) &
                         (framework_df['name'] == 'forward')].iloc[0]
-        the_pid, the_tid = generate_row['pid'], generate_row['tid']
-        the_index = framework_df[(framework_df.index > index) &
+        key_pid, key_tid = generate_row['pid'], generate_row['tid']
+        key_index = framework_df[(framework_df.index > index) &
                         (framework_df['name'] == 'forward')].index[0]
-        concat_list.append(the_index)
+        concat_list.append(key_index)
 
 
     # 找到前半部分的字段
-    result_pre = get_pre_half_batch(FULL_BATCH, index_list, framework_df, the_pid, the_tid)
+    result_pre = get_pre_half_batch(FULL_BATCH, index_list, framework_df, key_pid, key_tid)
     # 拼接后半部分字段
-    result_last = get_last_half_batch(framework_df, the_index, the_pid, the_tid)
+    result_last = get_last_half_batch(framework_df, key_index, key_pid, key_tid)
     if result_last.empty or result_pre.empty:
         return pd.DataFrame()
     group = group.drop(group[group['name'].isin(NAME_LIST[start_index: end_index])].index)
