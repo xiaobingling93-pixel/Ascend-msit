@@ -43,7 +43,11 @@ def find_closest_aspect_ratio(aspect_ratio, target_ratios, width, height, image_
 
 def dynamic_preprocess(image, min_num=1, max_num=12, image_size=448, use_thumbnail=False):
     orig_width, orig_height = image.size
-    aspect_ratio = orig_width / orig_height
+    try:
+        aspect_ratio = orig_width / orig_height
+    except ZeroDivisionError as ex:
+        logging.error('orig_height can not be zero. %s', str(ex))
+        raise ex
 
     # calculate the existing image aspect ratio
     target_ratios = set()

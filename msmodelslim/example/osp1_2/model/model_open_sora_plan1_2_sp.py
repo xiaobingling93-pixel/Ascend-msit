@@ -161,6 +161,8 @@ class OpenSoraPipelineV1x2(OpenSoraPipeline):
         # 5. Prepare latents.
         latent_channels = self.transformer.config.in_channels
         world_size = hccl_info.world_size if torch_npu is not None else NCCL_INFO.world_size
+        if world_size == 0:
+            raise ZeroDivisionError("world_size can not be zero")
         latents = self.prepare_latents(
             batch_size * num_images_per_prompt,
             latent_channels,
@@ -242,6 +244,8 @@ class OpenSoraPipelineV1x2(OpenSoraPipeline):
                 # compute previous image: x_t -> x_t-1
                 latents = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs, return_dict=False)[0]
                 # call the callback, if provided
+                if callback_steps == 0 or self.scheduler.order == 0:
+                    raise ZeroDivisionError("callback_steps or scheduler order attr cannot be zero.")
                 if i == len(timesteps) - 1 or ((i + 1) > num_warmup_steps and (i + 1) % self.scheduler.order == 0):
                     progress_bar.update()
                     if callback is not None and i % callback_steps == 0:
@@ -274,7 +278,11 @@ class OpenSoraPipelineV1x2(OpenSoraPipeline):
     @staticmethod
     def split_sequence(sequence, local_rank, world_size):
         old_shape = sequence.shape
-        x = sequence.shape[2] // world_size
+        try:
+            x = sequence.shape[2] // world_size
+        except ZeroDivisionError as ex:
+            logging.error('world_size can not be zero. %s', str(ex))
+            raise ex
         sequence = rearrange(sequence.view((*old_shape[:3], -1)), 'b c (n x) s -> b c n x s', n=world_size,
                              x=x).contiguous()
         sequence = sequence[:, :, local_rank, :, :]

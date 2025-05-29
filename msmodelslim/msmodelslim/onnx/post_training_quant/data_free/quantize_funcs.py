@@ -22,7 +22,8 @@ def get_quant_param(
     eps = 1e-8
     q_max = 2 ** (bit - 1) - 1
     q_min = -2 ** (bit - 1)
-
+    if (q_max - q_min) == 0:
+        raise ValueError("Quantization bit can not be 1, please check.")
     if sym:  # symmetric quantization
         q_min = -q_max
         max_val_pos = np.maximum(-x_min, x_max)
@@ -57,6 +58,8 @@ def linear_quantize(data: np.ndarray,
     """
 
     # reshape scale and zeropoint for convolutional weights and activation
+    if np.any(scale == 0):
+        raise ValueError("scale contains zero values. Please check quantization parameters.")
     if len(data.shape) == 4:
         scale = scale.reshape((-1, 1, 1, 1))
     # reshape scale and zeropoint for linear weights

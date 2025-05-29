@@ -51,6 +51,8 @@ def _get_all_batch_(data_list, batch_size):
     data_size = len(data_list)
     if data_size < batch_size:
         raise ValueError("The number of calibrated images is smaller than the batch size, please add some pictures.")
+    if batch_size == 0:
+        raise ValueError("Batch size can not be zero.")
     for batch_start in range(0, data_size // batch_size * batch_size, batch_size):
         per_batch_data = data_list[batch_start: batch_start + batch_size]
         per_batch_data = np.array(per_batch_data)

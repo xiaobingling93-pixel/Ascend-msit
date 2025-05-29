@@ -8,7 +8,11 @@ from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_funcs import simulate_tp
 
 def get_scale(amax, num_bits):
     max_bound = 2 ** (num_bits - 1) - 1
-    scale = amax / max_bound
+    try:
+        scale = amax / max_bound
+    except ZeroDivisionError as ex:
+        logging.error('max_bound can not be zero. %s', str(ex))
+        raise ex
     scale = scale.squeeze()
     return scale
 

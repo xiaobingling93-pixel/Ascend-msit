@@ -682,6 +682,8 @@ class PrecisionTest:
             val_df = load_csv_by_task_name(task_name, self.dataset_path)
             correct = 0
             task_len = val_df.shape[0]
+            if task_len == 0:
+                raise ValueError(f"dateset {task_name} is empty, please check.")
             for i in range(math.ceil(task_len / self.batch_size)):
                 q_num = self.batch_size if (i + 1) * self.batch_size <= task_len else task_len - i * self.batch_size
                 name = task_name
@@ -784,6 +786,8 @@ class PrecisionTest:
             dev_df, val_df = load_csv_by_task_name(task_name, self.dataset_path)
             correct = 0
             task_len = val_df.shape[0]
+            if task_len == 0:
+                raise ValueError(f"dateset {task_name} is empty, please check.")
             for i in range(math.ceil(task_len / self.batch_size)):
                 q_num = self.batch_size if (i + 1) * self.batch_size <= task_len else task_len - i * self.batch_size
                 prompt_ends = []

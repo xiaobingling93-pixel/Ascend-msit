@@ -108,6 +108,8 @@ class DepthScaleNetwork:
         self.prune(prune_multiple)
 
     def prune(self, prune_multiple: int):
+        if prune_multiple == 0:
+            raise ZeroDivisionError("The prune_multiple can not be zero.")
         for repeat_operator_list in self.repeat_operators:
             all_count = len(repeat_operator_list)
             ori_enable_count = len(list(filter(lambda x: x.enable, repeat_operator_list)))

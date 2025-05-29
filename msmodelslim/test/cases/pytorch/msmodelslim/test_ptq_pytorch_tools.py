@@ -82,6 +82,8 @@ def test_pytorch_ptq_given_model_then_pass(generate_model):
     calib.export_quant_onnx(ONNX_MODEL, "./", ["input.1"])
     set_file_stat(ONNX_QUANT_MODEL_PATH, stat_mode="440")
     offset_list, scale_list, quant_weight_dict = get_onnx_params()
+    if scale_list[0] == 0 or scale_list[2] == 0:
+        raise ValueError("scale can not be zero, please check.")
     # conv
     assert input_offset.get(CONV2_NAME).item() == offset_list[0]
     assert round(input_scale.get(CONV2_NAME).item(), 5) == round(1 / scale_list[0], 5)
