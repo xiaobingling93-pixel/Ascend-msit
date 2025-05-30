@@ -326,7 +326,9 @@ def postprocess_framework_df(framework_df, post_event_pairs, name, service_type)
             post_event_pairs.append(('deserializeExecuteResponse', 'AllTime'))
     else:
         key_names_vllm = NAME_LIST_VLLM[2:-1]
-        post_event_pairs = [(key_names_vllm[i], key_names_vllm[i+1]) for i in range(len(key_names_vllm)-1)]
+        key_event_pairs = [(key_names_vllm[i], key_names_vllm[i+1]) for i in range(len(key_names_vllm)-1)]
+        for pair in key_event_pairs:
+            post_event_pairs.append(pair)
 
 
     
