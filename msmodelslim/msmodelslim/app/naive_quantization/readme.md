@@ -18,7 +18,7 @@ msmodelslim quant --model_path {模型路径} --save_path {保存路径} --devic
 ## 接口说明
 ``` bash
 #全局调用命令行
-msmodelslim quant --model_path {模型路径} --save_path {量化权重保存路径} --device {量化设备} --model_type {模型名称} --config_path {指定配置路径} --quant_type {量化类型}
+msmodelslim quant --model_path {模型路径} --save_path {量化权重保存路径} --device {量化设备} --model_type {模型名称} --config_path {指定配置路径} --quant_type {量化类型} --trust_remote_code {是否信任自定义代码}
 ```
 |参数名称|解释|是否可选| 范围                                                                                    |
 |--------|--------|--------|---------------------------------------------------------------------------------------|
