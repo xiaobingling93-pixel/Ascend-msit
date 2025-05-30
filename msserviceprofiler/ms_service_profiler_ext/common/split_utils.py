@@ -165,25 +165,18 @@ def get_full_batch(group, framework_df, service_type):
                     (framework_df['name'] == name)].index[0]
         index_list.append(index)
     if service_type == 'mindie':
-        if framework_df.query('name == "generateOutput" and index > @index').empty:
-            logger.warning(f"no generateOutput line, skip this batch")
-            return pd.DataFrame()
-        generate_row = framework_df[(framework_df.index > index) &
-                        (framework_df['name'] == 'generateOutput')].iloc[0]
-        key_pid, key_tid = generate_row['pid'], generate_row['tid']
-        key_index = framework_df[(framework_df.index > index) &
-                        (framework_df['name'] == 'generateOutput')].index[0]
-        concat_list.append(key_index)
+        key_name = 'generateOutput'
     else:
-        if framework_df.query('name == "forward" and index > @index').empty:
-            logger.warning(f"no forward line, skip this batch")
-            return pd.DataFrame()
-        generate_row = framework_df[(framework_df.index > index) &
-                        (framework_df['name'] == 'forward')].iloc[0]
-        key_pid, key_tid = generate_row['pid'], generate_row['tid']
-        key_index = framework_df[(framework_df.index > index) &
-                        (framework_df['name'] == 'forward')].index[0]
-        concat_list.append(key_index)
+        key_name = 'forward'
+    if framework_df.query(f'name == {key_name} and index > @index').empty:
+        logger.warning(f"no {key_name} line, skip this batch")
+        return pd.DataFrame()
+    key_row = framework_df[(framework_df.index > index) &
+                    (framework_df['name'] == key_name)].iloc[0]
+    key_pid, key_tid = key_row['pid'], key_row['tid']
+    key_index = framework_df[(framework_df.index > index) &
+                    (framework_df['name'] == key_name)].index[0]
+    concat_list.append(key_index)
 
 
     # 找到前半部分的字段
@@ -311,7 +304,7 @@ def get_post_event_df(post_event_pairs, framework_df, name):
     return new_df
 
 
-def postprocess_framework_df(framework_df, post_event_pairs, name):
+def postprocess_framework_df(framework_df, post_event_pairs, name, service_type):
     if framework_df.empty:
         logger.warning(f'{name}: df is empty')
         return framework_df
@@ -320,16 +313,22 @@ def postprocess_framework_df(framework_df, post_event_pairs, name):
     framework_df.loc[framework_df['name'] == 'AllTime', ['start_time(microsecond)', 'end_time(microsecond)']] = \
         framework_df.loc[framework_df['name'] == 'AllTime', ['end_time(microsecond)', 'start_time(microsecond)']].values
 
-    if name == 'Prefill':
-        if 'continueBatching' not in framework_df['name'].values:
-            post_event_pairs.append(('deserializeExecuteResponse', 'httpRes'))
-            if 'httpRes' not in framework_df['name'].values:
-                post_event_pairs.append(('deserializeExecuteResponse', 'AllTime'))
-    new_rows = []
-    if 'preprocessBatch' not in framework_df['name'].values:
-        post_event_pairs.append(('batchFrameworkProcessing', 'serializeExcueteMessage'))
-    if 'continueBatching' not in framework_df['name'].values and name == 'Decode':
-        post_event_pairs.append(('deserializeExecuteResponse', 'AllTime'))
+    if service_type == 'mindie':
+        if name == 'Prefill':
+            if 'continueBatching' not in framework_df['name'].values:
+                post_event_pairs.append(('deserializeExecuteResponse', 'httpRes'))
+                if 'httpRes' not in framework_df['name'].values:
+                    post_event_pairs.append(('deserializeExecuteResponse', 'AllTime'))
+        new_rows = []
+        if 'preprocessBatch' not in framework_df['name'].values:
+            post_event_pairs.append(('batchFrameworkProcessing', 'serializeExcueteMessage'))
+        if 'continueBatching' not in framework_df['name'].values and name == 'Decode':
+            post_event_pairs.append(('deserializeExecuteResponse', 'AllTime'))
+    else:
+        key_names_vllm = NAME_LIST_VLLM[2:-1]
+        post_event_pairs = [(key_names_vllm[i], key_names_vllm[i+1]) for i in range(len(key_names_vllm)-1)]
+
+
     
     post_df = get_post_event_df(post_event_pairs, framework_df, name)
     framework_df = pd.concat([framework_df, post_df], ignore_index=True)
@@ -484,7 +483,7 @@ def get_batch_all_time(framework_df, name):
     return result_df
 
 
-def get_batch_concat_df(filter_df, framework_df, cacl_num, rid, name):
+def get_batch_concat_df(filter_df, framework_df, cacl_num, rid, name, service_type):
     concat_df = pd.DataFrame()
     empty_row = pd.DataFrame(index=[0])
     for i in range(cacl_num):
@@ -506,7 +505,7 @@ def get_batch_concat_df(filter_df, framework_df, cacl_num, rid, name):
                 ('continueBatching', 'AllTime'),
             ]
         cur_df = cur_df.sort_values(by='start_time(microsecond)')
-        cur_df = postprocess_framework_df(cur_df, post_event_pairs, name)
+        cur_df = postprocess_framework_df(cur_df, post_event_pairs, name, service_type)
 
         if cur_df.equals(pd.DataFrame()):
             logger.debug(f'{name}: cur_df is empty, continue')
@@ -528,5 +527,5 @@ def process_exporter(framework_df, batch_size, batch_num, rid, name, service_typ
     
     cacl_num = len_result_df if len_result_df <= batch_num else batch_num
     cacl_num = min(cacl_num, MAX_BATCH_NUMBER)
-    concat_df = get_batch_concat_df(result_df, framework_df, cacl_num, rid, name)
+    concat_df = get_batch_concat_df(result_df, framework_df, cacl_num, rid, name, service_type)
     return concat_df
