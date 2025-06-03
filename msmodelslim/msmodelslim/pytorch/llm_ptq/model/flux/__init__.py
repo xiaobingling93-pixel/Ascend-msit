@@ -13,10 +13,9 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-__all__ = ['ModelAdapter', 'ModelAdapterRegistry']
 
-from .base import ModelAdapter, ModelAdapterRegistry
-from .deepseek_v2 import DeepseekV2Adapter
-from .hunyuan import HunyuanLargeAdapter
-from .qwen3 import Qwen3Adapter
+__all__ = ['FluxAdapter']
+
 from .flux import FluxAdapter
+
+
