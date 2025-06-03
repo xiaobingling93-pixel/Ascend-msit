@@ -46,7 +46,7 @@ class TestUtilsFuctions(unittest.TestCase):
     
     def test_get_batch_framework_sample(self):
         framework_df = pd.DataFrame({
-            'name': ['sample', 'prepareInputs'],
+            'name': ['forward', 'prepareInputs'],
             'start_time(microsecond)': ['100', '200'],
             'during_time(microsecond)': ['2000', '3000'],
             'pid': [40, 40],
@@ -56,7 +56,7 @@ class TestUtilsFuctions(unittest.TestCase):
 
         result = get_batch_framework(framework_df, name)
         self.assertEqual(result.shape[0], 2)
-        self.assertEqual(result['name'].values.tolist(), ['prepareInputs', 'sample'])
+        self.assertEqual(result['name'].values.tolist(), ['forward', 'prepareInputs'])
 
         framework_df = pd.DataFrame({
             'name': ['other'],

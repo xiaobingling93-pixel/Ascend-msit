@@ -82,7 +82,7 @@ class TestExporterPrefillFunction(unittest.TestCase):
             log_level='debug',
             prefill_batch_size=4,
             prefill_number=1,
-            prefill_rid=-1,
+            prefill_rid='-1',
         )
         try: 
             os.makedirs(args.output_path, exist_ok=True)

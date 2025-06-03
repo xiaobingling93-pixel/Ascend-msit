@@ -46,21 +46,21 @@ class TestSplitFuctions(unittest.TestCase):
         self.__class__.mocker = value
 
     def test_add_exporters_with_prefill(self):
-        args = Namespace(prefill_batch_size=4, decode_batch_size=0, prefill_rid=-1, decode_rid=-1)
+        args = Namespace(prefill_batch_size=4, decode_batch_size=0, prefill_rid='-1', decode_rid='-1')
         exporters = add_exporters(args)
 
         self.assertEqual(len(exporters), 1)
         self.assertIsInstance(exporters[0], ExporterPrefill)
 
     def test_add_exporters_with_decode(self):
-        args = Namespace(prefill_batch_size=0, decode_batch_size=10, prefill_rid=-1, decode_rid=-1)
+        args = Namespace(prefill_batch_size=0, decode_batch_size=10, prefill_rid='-1', decode_rid='-1')
         exporters = add_exporters(args)
 
         self.assertEqual(len(exporters), 1)
         self.assertIsInstance(exporters[0], ExporterDecode)
 
     def test_add_exporters_with_both(self):
-        args = Namespace(prefill_batch_size=4, decode_batch_size=10, prefill_rid=-1, decode_rid=-1)
+        args = Namespace(prefill_batch_size=4, decode_batch_size=10, prefill_rid='-1', decode_rid='-1')
         exporters = add_exporters(args)
 
         self.assertEqual(len(exporters), 2)
