@@ -97,7 +97,7 @@ def preprocess_framework_df(framework_df):
 def is_valid_prefill(batch_group, rid, framework_df):
     batch_row = batch_group.iloc[0]
     cur_rid = batch_row['rid_list'][0]
-    if rid != -1:
+    if rid != '-1':
         cur_rid = rid
 
     target_encode = framework_df[(framework_df['rid'] == str(cur_rid)) & 
@@ -214,7 +214,7 @@ def get_groups(framework_df, batch_size, rid, name, service_type):
     
     groups = framework_df.groupby((framework_df['name'] == 'BatchSchedule').cumsum())
     for _, group in groups:
-        if rid != -1:
+        if rid != '-1':
             batch_group = group[(group['name'] == 'BatchSchedule') &
                                 (group['batch_type'] == name)]
             batch_group = batch_group[batch_group['rid_list'].apply(lambda x: rid in x)]
