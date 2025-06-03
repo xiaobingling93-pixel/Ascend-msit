@@ -31,6 +31,14 @@ def main():
     parser_train = subparsers.add_parser("train", help="train help")
     parser_train.add_argument("-i", "--input", default=None, type=Path, required=True)
     parser_train.add_argument("-o", "--output", default=Path("output"), type=Path)
+    parser_train.add_argument(
+        "-t", 
+        "--type", 
+        type=str, 
+        choices=["vllm", "mindie"], 
+        default="mindie",
+        help="Specify the type, either 'vllm' or 'mindie' (default: mindie)"
+    )
     # 创建 optimizer 子命令解析器
     parser_optimizer = subparsers.add_parser("optimizer", help="optimizer help")
     parser_optimizer.add_argument("-lb", "--load_breakpoint", default=False, action="store_true",
