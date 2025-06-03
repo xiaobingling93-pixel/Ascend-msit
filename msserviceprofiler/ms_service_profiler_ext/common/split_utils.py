@@ -512,7 +512,7 @@ def get_batch_concat_df(filter_df, framework_df, cacl_num, rid, name, service_ty
     empty_row = pd.DataFrame(index=[0])
     for i in range(cacl_num):
         cur_rid = filter_df[i].iloc[0]['rid_list'][0]
-        if rid != -1:
+        if rid != '-1':
             cur_rid = rid
         cur_df = get_batch_framework(filter_df[i], name)
         if cur_df.equals(pd.DataFrame()):
