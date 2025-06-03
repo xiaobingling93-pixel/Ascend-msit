@@ -145,19 +145,26 @@ def get_last_half_batch(framework_df, generate_index, pid, tid):
 
 
 def get_full_batch_vllm(group, framework_df):
-    batch_start_index = group[group['name'] == 'BatchSchedule'].index[0]
-    concat_list = [batch_start_index]
-    preprocess_row = framework_df[(framework_df.index > batch_start_index) &
-                                (framework_df['name'] == 'preprocess')].iloc[0]
-    preprocess_pid, preprocess_tid = preprocess_row['pid'], preprocess_row['tid']
-    preprocess_index = framework_df[(framework_df.index > batch_start_index) &
-                                  (framework_df['name'] == 'preprocess')].index[0]
-    forward_index = framework_df[(framework_df.index > batch_start_index) &
-                                  (framework_df['name'] == 'forward') &
-                                  (framework_df['pid'] == preprocess_pid) &
-                                  (framework_df['tid'] == preprocess_tid)].index[0]
+    result = pd.DataFrame()
+    try:
+        batch_start_index = group[group['name'] == 'BatchSchedule'].index[0]
+        all_time_index = group[group['name'] == 'AllTime'].index[0]
+        concat_list = [batch_start_index, all_time_index]
+        preprocess_row = framework_df[(framework_df.index > batch_start_index) &
+                                    (framework_df['name'] == 'preprocess')].iloc[0]
+        preprocess_pid, preprocess_tid = preprocess_row['pid'], preprocess_row['tid']
+        preprocess_index = framework_df[(framework_df.index > batch_start_index) &
+                                      (framework_df['name'] == 'preprocess')].index[0]
+        forward_index = framework_df[(framework_df.index > batch_start_index) &
+                                      (framework_df['name'] == 'forward') &
+                                      (framework_df['pid'] == preprocess_pid) &
+                                      (framework_df['tid'] == preprocess_tid)].index[0]
+    except IndexError:
+        logger.warning("no match line, skip this batch")
+        return result
     concat_list.extend([preprocess_index, forward_index])
-    result = pd.concat([framework_df.loc[concat_list]])
+    result = pd.concat([result, framework_df.loc[concat_list]])
+    result = result.sort_values(by='start_time(microsecond)').reset_index(drop=True)
     return result
 
 def get_full_batch(group, framework_df, service_type):
@@ -342,6 +349,7 @@ def postprocess_framework_df(framework_df, post_event_pairs, name, service_type)
         key_event_pairs = [(key_names_vllm[i], key_names_vllm[i+1]) for i in range(len(key_names_vllm)-1)]
         for pair in key_event_pairs:
             post_event_pairs.append(pair)
+        post_event_pairs.append(('forward', 'AllTime'))
 
 
     
@@ -364,6 +372,7 @@ def postprocess_framework_df(framework_df, post_event_pairs, name, service_type)
     all_time_rows = framework_df[framework_df['name'] == 'AllTime']
     framework_df = framework_df[framework_df['name'] != 'AllTime']
     framework_df = pd.concat([framework_df, all_time_rows], ignore_index=True)
+    framework_df.drop_duplicates(subset='name', inplace=True)
     return framework_df
 
 
@@ -390,8 +399,8 @@ def get_batch_framework(framework_df, name):
     if 'generateOutput' in grouped_df.groups:
         generate_output_pid = grouped_df.get_group('generateOutput')['pid'].iloc[0]
         generate_output_tid = grouped_df.get_group('generateOutput')['tid'].iloc[0]
-    elif 'sample' in grouped_df.groups:
-        sample_group = grouped_df.get_group('sample')
+    elif 'forward' in grouped_df.groups:
+        sample_group = grouped_df.get_group('forward')
         last_sample_row = sample_group.tail(1)
         generate_output_pid = last_sample_row['pid'].values[0]
         generate_output_tid = last_sample_row['tid'].values[0]
