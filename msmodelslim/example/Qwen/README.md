@@ -4,6 +4,7 @@
 - 千问（qwen）语言大模型是阿里巴巴集团推出的大型语言模型，具备强大的自然语言处理能力，能够理解和生成文本，应用于智能客服、内容生成、问答系统等多个场景，助力企业智能化升级。
 
 #### Qwen模型当前已验证的量化方法
+- W4A8 Dynamic 量化：Qwen3-32B
 - W8A8量化：Qwen-7B，Qwen-14B，Qwen1.5-14B，Qwen1.5-32B，Qwen2-7B，Qwen2-72B，Qwen2.5-7B，Qwen2.5-14B，Qwen2.5-32B，QwQ-32B
 - W8A16量化：QWen-72B，Qwen1.5-72B，Qwen1.5-110B，Qwen2-72B
 - 稀疏量化：Qwen1.5-14B，Qwen2-7B，Qwen2-72B，Qwen2.5-7B，Qwen2.5-14B，QwenCode2.5-7B, QwQ-32B
@@ -27,6 +28,8 @@
 - [Qwen2.5-14B-Instruct](https://huggingface.co/Qwen/Qwen2.5-14B-Instruct/tree/main)
 - [Qwen2.5-32B-Instruct](https://huggingface.co/Qwen/Qwen2.5-32B-Instruct/tree/main)
 - [Qwen2.5-72B-Instruct](https://huggingface.co/Qwen/Qwen2.5-72B-Instruct/tree/main)
+##### Qwen3
+- [Qwen3-32B](https://huggingface.co/Qwen/Qwen3-32B/tree/main)
 ##### QWQ
 - [QwQ-32B](https://modelscope.cn/models/Qwen/QwQ-32B)
 
@@ -58,6 +61,7 @@
 | fraction | 模型权重稀疏量化过程中被保护的异常值占比  |0.01| 取值范围[0.01,0.1]|
 | use_sigma | 是否启动sigma功能 | False|True: 开启sigma功能；<br>False: 不开启sigma功能。 |
 | is_lowbit | 是否开启lowbit量化功能 | False|(1) 当w_bit=4，a_bit=8时，为大模型稀疏量化场景，表示开启lowbit稀疏量化功能。<br>(2) 其他场景为大模型量化场景，会开启量化自动精度调优功能。<br>当前量化自动精度调优框架支持W8A8，W8A16量化。|
+| w_sym | 权重量化是否对称 | True | True: 使用对称量化；<br>False: 使用非对称量化。 |
 | part_file_size | 量化权重文件大小 | 无限制 | 单个量化权重文件大小不超过xGB。|
 | use_kvcache_quant | 是否使用kvcache量化功能 | False | True: 使用kvcache量化功能；<br>False: 不使用kvcache量化功能。|
 | is_dynamic | 是否使用per-token动态量化功能 | False | True: 使用per-token动态量化；<br>False: 不使用per-token动态量化。 |
@@ -76,7 +80,8 @@
 | use_reduce_quant | 权重量化是否是lccl all reduce量化 | False | 用于MindIE推理的标识 |
 | tp_size | 模拟多卡量化时的卡数 | 1 | 数据取值范围为[1,2,4,8,16]，默认值为1，不启用模拟多卡量化。<br>设置为2、4、8,16时，对于通信层的linear会进行模拟多卡，每张卡使用不同的scale和offset进行量化 |
 | trust_remote_code | 是否信任自定义代码 | False | 指定`trust_remote_code=True`让修改后的自定义代码文件能够正确的被加载。(请确保加载的自定义代码文件的安全性) |
-| mindie_format | 非多模态模型量化后的权重配置文件是否兼容MindIE现有版本 | False | 开启`mindie_format`时保存的量化权重格式能够兼容MindIE 2.1.RC1前版本。|
+| mindie_format | 非多模态模型量化后的权重配置文件是否兼容MindIE现有版本 | False | 开启`mindie_format`时保存的量化权重格式能够兼容MindIE迭代四B050前版本。|
+| w_method | 权重量化方法 | MinMax | 可选值：['MinMax', 'GPTQ', 'HQQ', 'NF'] |
 
 - 更多参数配置要求，请参考量化过程中配置的参数 [QuantConfig](https://gitee.com/ascend/msit/blob/dev/msmodelslim/docs/Python-API接口说明/大模型压缩接口/大模型量化接口/PyTorch/QuantConfig.md)
   以及量化参数配置类 [Calibrator](https://gitee.com/ascend/msit/blob/dev/msmodelslim/docs/Python-API接口说明/大模型压缩接口/大模型量化接口/PyTorch/Calibrator.md)
@@ -169,6 +174,28 @@
   --disable_threshold 1 \
   --pdmix True \
   --trust_remote_code True
+  ```
+
+#### 5. Qwen3 系列
+##### Qwen3-32b W4A8 Dynamic 量化
+  ```shell
+  python quant_qwen.py \
+            --model_path {浮点权重路径} \
+            --save_directory {量化权重路径} \
+            --device_type npu \
+            --model_type qwen3 \
+            --calib_file None \
+            --anti_method m6 \
+            --anti_calib_file ./calib_data/mix_dataset.json \
+            --w_bit 4 \
+            --a_bit 8 \
+            --is_lowbit True \
+            --open_outlier False \
+            --group_size 256 \
+            --is_dynamic True \
+            --trust_remote_code True \
+            --mindie_format \
+            --w_method HQQ
   ```
 
 #### QWQ 系列

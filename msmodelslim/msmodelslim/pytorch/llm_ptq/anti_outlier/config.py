@@ -63,9 +63,9 @@ class AntiOutlierConfig:
         if self.anti_method == "m5":
             self.ch_align = False
 
-        if self.anti_method != AntiMethods.M3 and self.w_bit != 8:
+        if self.anti_method != AntiMethods.M3 and self.w_bit not in [4, 8]:
             # 如果anti_method是非m3的情况下，anti outlier只能使用再w8a8的场景下
-            raise ValueError(f"w_bit must be 8, but got {self.w_bit}, please check it")
+            raise ValueError(f"w_bit must be 8 or 4, but got {self.w_bit}, please check it")
         elif self.anti_method == AntiMethods.M3 and self.w_bit not in [4, 8]:
             # 如果anti_method是m3的情况下，anti outlier可以用在w4a16和w8a16基于Minmax的data-free量化
             raise ValueError(f"w_bit must be 4 or 8 (anti_method='m3'), but got {self.w_bit}, please check it")
