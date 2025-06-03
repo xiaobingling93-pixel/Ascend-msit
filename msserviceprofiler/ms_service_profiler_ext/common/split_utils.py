@@ -384,7 +384,7 @@ def get_filter_rule_df(framework_df):
                                     (framework_df['name'].isin(FILTER_LIST))].index
         framework_df = framework_df.drop(rows_to_drop)
     
-    # 删除 'name' 为 'encode'、'httpReq'、'Decode'、'httpRes' 的行
+    # 删除 'name' 为 'encode'、'httpReq'、'decode'、'httpRes' 的行
     framework_df = framework_df.drop(framework_df[framework_df['name'].isin(HTTP_LIST)].index)
     return framework_df
 
