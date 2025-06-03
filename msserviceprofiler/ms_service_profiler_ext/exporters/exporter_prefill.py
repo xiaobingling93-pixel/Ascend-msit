@@ -45,9 +45,9 @@ class ExporterPrefill(ExporterBase):
             service_type = 'vllm'
         if framework_df is None:
             return
-        filter_df = get_filter_df(framework_df, 'prefill')
-        add_all_time_df = get_batch_all_time(filter_df, 'prefill')
-        framework_df = process_exporter(add_all_time_df, batch_size, batch_num, rid, 'prefill', service_type)
+        filter_df = get_filter_df(framework_df, 'Prefill')
+        add_all_time_df = get_batch_all_time(filter_df, 'Prefill')
+        framework_df = process_exporter(add_all_time_df, batch_size, batch_num, rid, 'Prefill', service_type)
         if log_level == 'debug':
             save_dataframe_to_csv(add_all_time_df, output, "prefill1.csv")
             save_dataframe_to_csv(framework_df, output, f"prefill_{batch_num}.csv")

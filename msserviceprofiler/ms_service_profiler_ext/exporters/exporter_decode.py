@@ -45,9 +45,9 @@ class ExporterDecode(ExporterBase):
             service_type = 'vllm'
         if framework_df is None:
             return
-        filter_df = get_filter_df(framework_df, 'decode')
-        add_all_time_df = get_batch_all_time(filter_df, 'decode')
-        framework_df = process_exporter(add_all_time_df, batch_size, batch_num, rid, 'decode', service_type)
+        filter_df = get_filter_df(framework_df, 'Decode')
+        add_all_time_df = get_batch_all_time(filter_df, 'Decode')
+        framework_df = process_exporter(add_all_time_df, batch_size, batch_num, rid, 'Decode', service_type)
         if log_level == 'debug':
             save_dataframe_to_csv(add_all_time_df, output, "decode1.csv")
             save_dataframe_to_csv(framework_df, output, f"decode_{batch_num}.csv")
