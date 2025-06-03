@@ -225,7 +225,7 @@ def get_groups(framework_df, batch_size, rid, name, service_type):
         if batch_group.empty:
             continue
 
-        if name == 'prefill' and not is_valid_prefill(batch_group, rid, framework_df):
+        if name == 'Prefill' and not is_valid_prefill(batch_group, rid, framework_df):
             continue
         result = get_full_batch(group, framework_df, service_type)
 
@@ -332,7 +332,7 @@ def postprocess_framework_df(framework_df, post_event_pairs, name, service_type)
         framework_df.loc[framework_df['name'] == 'AllTime', ['end_time(microsecond)', 'start_time(microsecond)']].values
 
     if service_type == 'mindie':
-        if name == 'prefill':
+        if name == 'Prefill':
             if 'continueBatching' not in framework_df['name'].values:
                 post_event_pairs.append(('deserializeExecuteResponse', 'httpRes'))
                 if 'httpRes' not in framework_df['name'].values:
@@ -357,7 +357,7 @@ def postprocess_framework_df(framework_df, post_event_pairs, name, service_type)
     framework_df = pd.concat([framework_df, post_df], ignore_index=True)
     framework_df = framework_df.sort_values(by=['start_time(microsecond)']).reset_index(drop=True)
     framework_df = framework_df[framework_df['name'] != 'handleTaskExecution']  # 删除 'handleTaskExecution' 行
-    if name == 'decode':
+    if name == 'Decode':
         framework_df = framework_df.drop(framework_df[framework_df['name'].isin(HTTP_LIST)].index)
     framework_df['during_time(microsecond)'] = framework_df['during_time(microsecond)'] / 1000
     
@@ -384,13 +384,13 @@ def get_filter_rule_df(framework_df):
                                     (framework_df['name'].isin(FILTER_LIST))].index
         framework_df = framework_df.drop(rows_to_drop)
     
-    # 删除 'name' 为 'encode'、'httpReq'、'decode'、'httpRes' 的行
+    # 删除 'name' 为 'encode'、'httpReq'、'Decode'、'httpRes' 的行
     framework_df = framework_df.drop(framework_df[framework_df['name'].isin(HTTP_LIST)].index)
     return framework_df
 
 
 def get_batch_framework(framework_df, name):
-    if name == 'prefill':
+    if name == 'Prefill':
         framework_df = get_filter_rule_df(framework_df)
     framework_df = get_event_pair_df(framework_df, name)
 
@@ -426,7 +426,7 @@ def get_filter_df(framework_df, name):
     """
     从第一条httpReq开始
     """
-    if name == 'prefill':
+    if name == 'Prefill':
         filter_name = 'httpReq'
     else:
         filter_name = 'batchFrameworkProcessing'
@@ -461,7 +461,7 @@ def get_statistics_data(framework_df, filter_name, name):
     framework_df.insert(4, 'mean', framework_df.pop('mean'))
     framework_df.insert(5, 'std', framework_df.pop('std'))
     framework_df = framework_df.rename(columns={'during_time(microsecond)': 'during_time(millisecond)'})
-    if name == 'decode':
+    if name == 'Decode':
         framework_df = framework_df.iloc[:, :10]
     else:
         framework_df = framework_df.iloc[:, :11]
@@ -517,7 +517,7 @@ def get_batch_concat_df(filter_df, framework_df, cacl_num, rid, name, service_ty
         cur_df = get_batch_framework(filter_df[i], name)
         if cur_df.equals(pd.DataFrame()):
             continue
-        if name == 'prefill':
+        if name == 'Prefill':
             http_df = framework_df[(framework_df['rid'] == str(cur_rid)) & (framework_df['name'].isin(HTTP_LIST))]
             cur_df = pd.concat([cur_df, http_df], ignore_index=True)
             post_event_pairs = [
