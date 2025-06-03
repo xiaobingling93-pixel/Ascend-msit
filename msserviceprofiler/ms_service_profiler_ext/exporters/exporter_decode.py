@@ -51,7 +51,7 @@ class ExporterDecode(ExporterBase):
         if log_level == 'debug':
             save_dataframe_to_csv(add_all_time_df, output, "decode1.csv")
             save_dataframe_to_csv(framework_df, output, f"decode_{batch_num}.csv")
-        framework_df = get_statistics_data(framework_df, 'BatchSchedule', 'Decode')
+        framework_df = get_statistics_data(framework_df, 'batchFrameworkProcessing', 'Decode')
         if not framework_df.empty:
             save_dataframe_to_csv(framework_df, output, "decode.csv")
         logger.info("Export decode data successfully.")

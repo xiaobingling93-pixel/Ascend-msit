@@ -30,7 +30,7 @@ class TestExporterDecodeFunction(unittest.TestCase):
         }
     
     def mock_data(self):
-        name_list = ['encode', 'httpReq', 'BatchSchedule', 'serializeExcueteMessage',
+        name_list = ['encode', 'httpReq', 'batchFrameworkProcessing', 'serializeExcueteMessage',
                     'setInferBuffer', 'grpcWriteToSlave', 'deserializeExecuteRequestsForInfer', 
                     'convertTensorBatchToBackend', 'getInputMetadata', 'preprocess', 'forward', 
                     'sample', 'postprocess', 'generateOutput', 'processPythonExecResult', 
@@ -51,7 +51,7 @@ class TestExporterDecodeFunction(unittest.TestCase):
         data['batch_size'] = [None] * len_data
         data['rid_list'] = [None] * len_data
         data['token_id_list'] = [['1234', '5678']] * len_data
-        batch_indices = np.where(np.array(data['name']) == 'BatchSchedule')[0]
+        batch_indices = np.where(np.array(data['name']) == 'batchFrameworkProcessing')[0]
         rid_list = []
         for i in batch_indices:
             data['batch_type'][i] = 'Decode'
@@ -62,8 +62,8 @@ class TestExporterDecodeFunction(unittest.TestCase):
 
         serialize_indices = np.where(np.array(data['name']) == 'serializeExcueteMessage')[0]
         for i in serialize_indices:
-            # 找到前一个 BatchSchedule 的 end_time
-            previous_batch_index = np.where(np.array(data['name'])[:i] == 'BatchSchedule')[0]
+            # 找到前一个 batchFrameworkProcessing 的 end_time
+            previous_batch_index = np.where(np.array(data['name'])[:i] == 'batchFrameworkProcessing')[0]
             if len(previous_batch_index) > 0:
                 previous_end_time = data['end_time'][previous_batch_index[-1]]
                 # 确保 start_time 与前一个 end_time 之间的差值小于 100000
