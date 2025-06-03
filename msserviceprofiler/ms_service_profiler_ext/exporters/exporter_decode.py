@@ -33,12 +33,17 @@ class ExporterDecode(ExporterBase):
         batch_size = cls.args.decode_batch_size
         batch_num = cls.args.decode_number
         rid = cls.args.decode_rid
-        service_type = cls.args.service_type
+        vllm_name_len = 9
         df = data.get('tx_data_df')
         if df is None:
             logger.error("The data is empty, please check")
             return
-        framework_df = preprocess_framework_df(df, service_type)
+        name_set = set(list(df['name']))
+        if len(name_set) > vllm_name_len:
+            service_type = 'mindie'
+        else:
+            service_type = 'vllm'
+        framework_df = preprocess_framework_df(df)
         if framework_df is None:
             return
         filter_df = get_filter_df(framework_df, 'Decode')
