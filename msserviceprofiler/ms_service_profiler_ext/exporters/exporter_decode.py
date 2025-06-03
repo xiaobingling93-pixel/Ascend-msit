@@ -33,17 +33,16 @@ class ExporterDecode(ExporterBase):
         batch_size = cls.args.decode_batch_size
         batch_num = cls.args.decode_number
         rid = cls.args.decode_rid
-        vllm_name_len = 9
         df = data.get('tx_data_df')
         if df is None:
             logger.error("The data is empty, please check")
             return
-        name_set = set(list(df['name']))
-        if len(name_set) > vllm_name_len:
+        framework_df = preprocess_framework_df(df)
+        name_set = set(list(framework_df['name']))
+        if 'deserializeExecuteResponse' in name_set:
             service_type = 'mindie'
         else:
             service_type = 'vllm'
-        framework_df = preprocess_framework_df(df)
         if framework_df is None:
             return
         filter_df = get_filter_df(framework_df, 'Decode')
@@ -52,7 +51,7 @@ class ExporterDecode(ExporterBase):
         if log_level == 'debug':
             save_dataframe_to_csv(add_all_time_df, output, "decode1.csv")
             save_dataframe_to_csv(framework_df, output, f"decode_{batch_num}.csv")
-        framework_df = get_statistics_data(framework_df, 'batchFrameworkProcessing', 'Decode')
+        framework_df = get_statistics_data(framework_df, 'BatchSchedule', 'Decode')
         if not framework_df.empty:
             save_dataframe_to_csv(framework_df, output, "decode.csv")
         logger.info("Export decode data successfully.")

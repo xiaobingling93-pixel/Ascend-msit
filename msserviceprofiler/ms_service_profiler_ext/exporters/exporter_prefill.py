@@ -33,17 +33,16 @@ class ExporterPrefill(ExporterBase):
         batch_size = cls.args.prefill_batch_size
         batch_num = cls.args.prefill_number
         rid = cls.args.prefill_rid
-        vllm_name_len = 9
         df = data.get('tx_data_df')
         if df is None:
             logger.error("The data is empty, please check")
             return
-        name_set = set(list(df['name']))
-        if len(name_set) > vllm_name_len:
+        framework_df = preprocess_framework_df(df)
+        name_set = set(list(framework_df['name']))
+        if 'deserializeExecuteResponse' in name_set:
             service_type = 'mindie'
         else:
             service_type = 'vllm'
-        framework_df = preprocess_framework_df(df)
         if framework_df is None:
             return
         filter_df = get_filter_df(framework_df, 'Prefill')

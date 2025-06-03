@@ -19,7 +19,7 @@ from .constants import MAX_BATCH_NUMBER
 
 
 EVENT_PAIRS = [
-    ('batchFrameworkProcessing', 'preprocessBatch'),
+    ('BatchSchedule', 'preprocessBatch'),
     ('preprocessBatch', 'serializeExcueteMessage'),
     ('serializeExcueteMessage', 'deserializeExecuteRequestsForInfer'),
     ('grpcWriteToSlave', 'deserializeExecuteRequestsForInfer'),
@@ -50,14 +50,13 @@ SYNC_EVENT_PAIRS = [
 FILTER_LIST = ['deserializeExecuteRequestsForInfer', 'deserializeExecuteResponse', 'convertTensorBatchToBackend', 
                'processPythonExecResult', 'forward', 'sample', 'setInferBuffer', 'grpcWriteToSlave']
 
-NAME_LIST_MINDIE = ['httpReq', 'encode', 'preprocessBatch', 'batchFrameworkProcessing', 'serializeExcueteMessage',
+NAME_LIST_MINDIE = ['httpReq', 'encode', 'preprocessBatch', 'BatchSchedule', 'serializeExcueteMessage',
              'deserializeExecuteRequestsForInfer', 'convertTensorBatchToBackend', 'getInputMetadata',
              'preprocess', 'forward', 'sample', 'postprocess', 'generateOutput', 'prepareInputs', 'operatorExecute',
              'processPythonExecResult', 'deserializeExecuteResponse', 'saveoutAndContinueBatching', 'continueBatching',
              'setInferBuffer', 'grpcWriteToSlave', 'receiveInfer', 'handleTaskExecution', 'decodeEnd', 'httpRes']
 
-NAME_LIST_VLLM = ['httpReq', 'encode', 'batchFrameworkProcessing', 'serializeExcueteMessage',
-             'preprocess', 'forward', 'sample', 'deserializeExecuteResponse', 'httpRes']
+NAME_LIST_VLLM = ['httpReq', 'encode', 'BatchSchedule', 'preprocess', 'forward', 'httpRes']
 
 FULL_BATCH = ['serializeExcueteMessage', 'deserializeExecuteRequestsForInfer', 'convertTensorBatchToBackend', 
               'getInputMetadata', 'preprocess', 'forward', 'sample', 'postprocess']
@@ -145,44 +144,56 @@ def get_last_half_batch(framework_df, generate_index, pid, tid):
     return result
 
 
+def get_full_batch_vllm(group, framework_df):
+    batch_start_index = group[group['name'] == 'BatchSchedule'].index[0]
+    concat_list = [batch_start_index]
+    preprocess_row = framework_df[(framework_df.index > batch_start_index) &
+                                (framework_df['name'] == 'preprocess')].iloc[0]
+    preprocess_pid, preprocess_tid = preprocess_row['pid'], preprocess_row['tid']
+    preprocess_index = framework_df[(framework_df.index > batch_start_index) &
+                                  (framework_df['name'] == 'preprocess')].index[0]
+    forward_index = framework_df[(framework_df.index > batch_start_index) &
+                                  (framework_df['name'] == 'forward') &
+                                  (framework_df['pid'] == preprocess_pid) &
+                                  (framework_df['tid'] == preprocess_tid)].index[0]
+    concat_list.extend([preprocess_index, forward_index])
+    result = pd.concat([framework_df.loc[concat_list]])
+    return result
+
 def get_full_batch(group, framework_df, service_type):
-    result = pd.DataFrame()
+    if service_type == 'vllm':
+        return get_full_batch_vllm(group, framework_df, service_type)
+
     NAME_LIST = get_name_list(service_type)
-    start_index = NAME_LIST.index('batchFrameworkProcessing')
+    start_index = NAME_LIST.index('BatchSchedule')
     end_index = NAME_LIST.index('saveoutAndContinueBatching')
-    batch_start_index = group[group['name'] == 'batchFrameworkProcessing'].index[0]
+    batch_start_index = group[group['name'] == 'BatchSchedule'].index[0]
     concat_list = [batch_start_index]
     index_list = []
     index = batch_start_index
-
     # 找到generator_row
     for name in FULL_BATCH:
         query = f"index > @index and name =='{name}'"
         if framework_df.query(query).empty:
             logger.warning(f"no named {name} line, skip this batch")
             return pd.DataFrame()
-        index = framework_df[(framework_df.index > index) & 
-                    (framework_df['name'] == name)].index[0]
+        index = framework_df[(framework_df.index > index) &
+                             (framework_df['name'] == name)].index[0]
         index_list.append(index)
-    if service_type == 'mindie':
-        key_name = 'generateOutput'
-    else:
-        key_name = 'forward'
-    if framework_df.query(f'name == {key_name} and index > @index').empty:
-        logger.warning(f"no {key_name} line, skip this batch")
+    if framework_df.query('name == "generateOutput" and index > @index').empty:
+        logger.warning(f"no generateOutput line, skip this batch")
         return pd.DataFrame()
-    key_row = framework_df[(framework_df.index > index) &
-                    (framework_df['name'] == key_name)].iloc[0]
-    key_pid, key_tid = key_row['pid'], key_row['tid']
-    key_index = framework_df[(framework_df.index > index) &
-                    (framework_df['name'] == key_name)].index[0]
-    concat_list.append(key_index)
-
+    generate_row = framework_df[(framework_df.index > index) &
+                                (framework_df['name'] == 'generateOutput')].iloc[0]
+    generate_pid, generate_tid = generate_row['pid'], generate_row['tid']
+    generate_index = framework_df[(framework_df.index > index) &
+                                  (framework_df['name'] == 'generateOutput')].index[0]
+    concat_list.append(generate_index)
 
     # 找到前半部分的字段
-    result_pre = get_pre_half_batch(FULL_BATCH, index_list, framework_df, key_pid, key_tid)
+    result_pre = get_pre_half_batch(FULL_BATCH, index_list, framework_df, generate_pid, generate_tid)
     # 拼接后半部分字段
-    result_last = get_last_half_batch(framework_df, key_index, key_pid, key_tid)
+    result_last = get_last_half_batch(framework_df, generate_index, generate_pid, generate_tid)
     if result_last.empty or result_pre.empty:
         return pd.DataFrame()
     group = group.drop(group[group['name'].isin(NAME_LIST[start_index: end_index])].index)
@@ -194,14 +205,14 @@ def get_full_batch(group, framework_df, service_type):
 def get_groups(framework_df, batch_size, rid, name, service_type):
     result_df = []
     
-    groups = framework_df.groupby((framework_df['name'] == 'batchFrameworkProcessing').cumsum())
+    groups = framework_df.groupby((framework_df['name'] == 'BatchSchedule').cumsum())
     for _, group in groups:
         if rid != -1:
-            batch_group = group[(group['name'] == 'batchFrameworkProcessing') &
+            batch_group = group[(group['name'] == 'BatchSchedule') &
                                 (group['batch_type'] == name)]
             batch_group = batch_group[batch_group['rid_list'].apply(lambda x: rid in x)]
         elif batch_size > 0:
-            batch_group = group[(group['name'] == 'batchFrameworkProcessing') &
+            batch_group = group[(group['name'] == 'BatchSchedule') &
                                 (group['batch_type'] == name) &
                                 (group['batch_size'] == str(batch_size))]
         if batch_group.empty:
@@ -321,7 +332,7 @@ def postprocess_framework_df(framework_df, post_event_pairs, name, service_type)
                     post_event_pairs.append(('deserializeExecuteResponse', 'AllTime'))
         new_rows = []
         if 'preprocessBatch' not in framework_df['name'].values:
-            post_event_pairs.append(('batchFrameworkProcessing', 'serializeExcueteMessage'))
+            post_event_pairs.append(('BatchSchedule', 'serializeExcueteMessage'))
         if 'continueBatching' not in framework_df['name'].values and name == 'Decode':
             post_event_pairs.append(('deserializeExecuteResponse', 'AllTime'))
     else:
@@ -407,7 +418,7 @@ def get_filter_df(framework_df, name):
     if name == 'Prefill':
         filter_name = 'httpReq'
     else:
-        filter_name = 'batchFrameworkProcessing'
+        filter_name = 'BatchSchedule'
     first_batch_schedule_index = 0
     try:
         first_batch_schedule_index = framework_df[framework_df['name'] == filter_name].index[0]
@@ -448,16 +459,16 @@ def get_statistics_data(framework_df, filter_name, name):
 
 def get_batch_all_time(framework_df, name):
     new_rows = []
-    batch_rows = framework_df[framework_df['name'] == 'batchFrameworkProcessing']
+    batch_rows = framework_df[framework_df['name'] == 'BatchSchedule']
     pids = batch_rows['pid'].unique()
     for pid in pids:
-        current_events = framework_df[(framework_df['name'] == 'batchFrameworkProcessing') & 
+        current_events = framework_df[(framework_df['name'] == 'BatchSchedule') & 
                                     (framework_df['pid'] == pid)].copy()
 
         len_current = len(current_events)
 
         if len_current < 2:
-            logger.warning(f"{name}: The length of batchFrameworkProcessing is less two")
+            logger.warning(f"{name}: The length of BatchSchedule is less two")
             return framework_df
         
         # 补充插入AllTime行
@@ -499,7 +510,7 @@ def get_batch_concat_df(filter_df, framework_df, cacl_num, rid, name, service_ty
             http_df = framework_df[(framework_df['rid'] == str(cur_rid)) & (framework_df['name'].isin(HTTP_LIST))]
             cur_df = pd.concat([cur_df, http_df], ignore_index=True)
             post_event_pairs = [
-                ('encode', 'batchFrameworkProcessing'),
+                ('encode', 'BatchSchedule'),
                 ('continueBatching', 'httpRes'),
             ]
         else:
@@ -523,8 +534,8 @@ def process_exporter(framework_df, batch_size, batch_num, rid, name, service_typ
     len_result_df = len(result_df)
 
     if len(result_df) == 0:
-        logger.warning(f'{name}: no batchFrameworkProcessing with batch_size {batch_size}')
-        logger.warning(f'{name}: no batchFrameworkProcessing with rid {rid}')
+        logger.warning(f'{name}: no BatchSchedule with batch_size {batch_size}')
+        logger.warning(f'{name}: no BatchSchedule with rid {rid}')
         return pd.DataFrame()
     
     cacl_num = len_result_df if len_result_df <= batch_num else batch_num
