@@ -336,7 +336,9 @@ def postprocess_framework_df(framework_df, post_event_pairs, name, service_type)
         if 'continueBatching' not in framework_df['name'].values and name == 'Decode':
             post_event_pairs.append(('deserializeExecuteResponse', 'AllTime'))
     else:
-        key_names_vllm = NAME_LIST_VLLM[2:-1]
+        start_index = NAME_LIST_VLLM.index('BatchSchedule')
+        end_index = NAME_LIST_VLLM.index('httpRes')
+        key_names_vllm = NAME_LIST_VLLM[start_index:end_index]
         key_event_pairs = [(key_names_vllm[i], key_names_vllm[i+1]) for i in range(len(key_names_vllm)-1)]
         for pair in key_event_pairs:
             post_event_pairs.append(pair)
