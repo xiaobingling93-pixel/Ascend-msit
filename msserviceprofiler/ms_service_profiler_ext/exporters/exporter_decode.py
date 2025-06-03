@@ -38,16 +38,11 @@ class ExporterDecode(ExporterBase):
             logger.error("The data is empty, please check")
             return
         framework_df = preprocess_framework_df(df)
-        name_set = set(list(framework_df['name']))
-        if 'deserializeExecuteResponse' in name_set:
-            service_type = 'mindie'
-        else:
-            service_type = 'vllm'
         if framework_df is None:
             return
         filter_df = get_filter_df(framework_df, 'Decode')
         add_all_time_df = get_batch_all_time(filter_df, 'Decode')
-        framework_df = process_exporter(add_all_time_df, batch_size, batch_num, rid, 'Decode', service_type)
+        framework_df = process_exporter(add_all_time_df, batch_size, batch_num, rid, 'Decode')
         if log_level == 'debug':
             save_dataframe_to_csv(add_all_time_df, output, "decode1.csv")
             save_dataframe_to_csv(framework_df, output, f"decode_{batch_num}.csv")

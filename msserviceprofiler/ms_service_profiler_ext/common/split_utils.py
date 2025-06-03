@@ -72,6 +72,7 @@ RENAMED_COLUMNS = {
         'during_time': 'during_time(microsecond)'
     }
 
+
 def get_name_list(service_type):
     if service_type == 'mindie':
         name_list = NAME_LIST_MINDIE
@@ -167,13 +168,15 @@ def get_full_batch_vllm(group, framework_df):
     result = result.sort_values(by='start_time(microsecond)').reset_index(drop=True)
     return result
 
-def get_full_batch(group, framework_df, service_type):
+
+def get_full_batch(group, framework_df):
+    service_type = get_service_type(framework_df)
     if service_type == 'vllm':
         return get_full_batch_vllm(group, framework_df)
 
-    NAME_LIST = get_name_list(service_type)
-    start_index = NAME_LIST.index('batchFrameworkProcessing')
-    end_index = NAME_LIST.index('saveoutAndContinueBatching')
+    name_list = get_name_list(service_type)
+    start_index = name_list.index('batchFrameworkProcessing')
+    end_index = name_list.index('saveoutAndContinueBatching')
     batch_start_index = group[group['name'] == 'batchFrameworkProcessing'].index[0]
     concat_list = [batch_start_index]
     index_list = []
@@ -203,13 +206,13 @@ def get_full_batch(group, framework_df, service_type):
     result_last = get_last_half_batch(framework_df, generate_index, generate_pid, generate_tid)
     if result_last.empty or result_pre.empty:
         return pd.DataFrame()
-    group = group.drop(group[group['name'].isin(NAME_LIST[start_index: end_index])].index)
+    group = group.drop(group[group['name'].isin(name_list[start_index: end_index])].index)
     result = pd.concat([framework_df.loc[concat_list], result_pre, result_last, group])
     result = result.sort_values(by='start_time(microsecond)').reset_index(drop=True)
     return result
 
 
-def get_groups(framework_df, batch_size, rid, name, service_type):
+def get_groups(framework_df, batch_size, rid, name):
     result_df = []
     
     groups = framework_df.groupby((framework_df['name'] == 'batchFrameworkProcessing').cumsum())
@@ -217,6 +220,7 @@ def get_groups(framework_df, batch_size, rid, name, service_type):
         if rid != '-1':
             batch_group = group[(group['name'] == 'batchFrameworkProcessing') &
                                 (group['batch_type'] == name)]
+            batch_group.loc[:, 'rid_list'] = batch_group['rid_list'].apply(lambda x: [str(i) for i in x])
             batch_group = batch_group[batch_group['rid_list'].apply(lambda x: rid in x)]
         elif batch_size > 0:
             batch_group = group[(group['name'] == 'batchFrameworkProcessing') &
@@ -227,7 +231,7 @@ def get_groups(framework_df, batch_size, rid, name, service_type):
 
         if name == 'Prefill' and not is_valid_prefill(batch_group, rid, framework_df):
             continue
-        result = get_full_batch(group, framework_df, service_type)
+        result = get_full_batch(group, framework_df)
 
         if not result.empty:
             result_df.append(result) 
@@ -322,7 +326,9 @@ def get_post_event_df(post_event_pairs, framework_df, name):
     return new_df
 
 
-def postprocess_framework_df(framework_df, post_event_pairs, name, service_type):
+def postprocess_framework_df(framework_df, post_event_pairs, name):
+    service_type = get_service_type(framework_df)
+
     if framework_df.empty:
         logger.warning(f'{name}: df is empty')
         return framework_df
@@ -346,7 +352,7 @@ def postprocess_framework_df(framework_df, post_event_pairs, name, service_type)
         start_index = NAME_LIST_VLLM.index('batchFrameworkProcessing')
         end_index = NAME_LIST_VLLM.index('httpRes')
         key_names_vllm = NAME_LIST_VLLM[start_index:end_index]
-        key_event_pairs = [(key_names_vllm[i], key_names_vllm[i+1]) for i in range(len(key_names_vllm)-1)]
+        key_event_pairs = [(key_names_vllm[i], key_names_vllm[i + 1]) for i in range(len(key_names_vllm) - 1)]
         for pair in key_event_pairs:
             post_event_pairs.append(pair)
         post_event_pairs.append(('forward', 'AllTime'))
@@ -507,7 +513,7 @@ def get_batch_all_time(framework_df, name):
     return result_df
 
 
-def get_batch_concat_df(filter_df, framework_df, cacl_num, rid, name, service_type):
+def get_batch_concat_df(filter_df, framework_df, cacl_num, rid, name):
     concat_df = pd.DataFrame()
     empty_row = pd.DataFrame(index=[0])
     for i in range(cacl_num):
@@ -529,7 +535,7 @@ def get_batch_concat_df(filter_df, framework_df, cacl_num, rid, name, service_ty
                 ('continueBatching', 'AllTime'),
             ]
         cur_df = cur_df.sort_values(by='start_time(microsecond)')
-        cur_df = postprocess_framework_df(cur_df, post_event_pairs, name, service_type)
+        cur_df = postprocess_framework_df(cur_df, post_event_pairs, name)
 
         if cur_df.equals(pd.DataFrame()):
             logger.debug(f'{name}: cur_df is empty, continue')
@@ -539,9 +545,9 @@ def get_batch_concat_df(filter_df, framework_df, cacl_num, rid, name, service_ty
     return concat_df
 
 
-def process_exporter(framework_df, batch_size, batch_num, rid, name, service_type):
+def process_exporter(framework_df, batch_size, batch_num, rid, name):
     # 划分组
-    result_df = get_groups(framework_df, batch_size, rid, name, service_type)
+    result_df = get_groups(framework_df, batch_size, rid, name)
     len_result_df = len(result_df)
 
     if len(result_df) == 0:
@@ -551,5 +557,14 @@ def process_exporter(framework_df, batch_size, batch_num, rid, name, service_typ
     
     cacl_num = len_result_df if len_result_df <= batch_num else batch_num
     cacl_num = min(cacl_num, MAX_BATCH_NUMBER)
-    concat_df = get_batch_concat_df(result_df, framework_df, cacl_num, rid, name, service_type)
+    concat_df = get_batch_concat_df(result_df, framework_df, cacl_num, rid, name)
     return concat_df
+
+
+def get_service_type(framework_df):
+    name_set = set(list(framework_df['name']))
+    if 'deserializeExecuteResponse' in name_set:
+        service_type = 'mindie'
+    else:
+        service_type = 'vllm'
+    return service_type
