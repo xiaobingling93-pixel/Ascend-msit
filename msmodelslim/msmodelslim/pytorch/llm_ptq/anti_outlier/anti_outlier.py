@@ -1,6 +1,7 @@
 #  Copyright (c) Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
 from __future__ import absolute_import, division, print_function
 
+import copy
 import os
 import gc
 import stat
@@ -85,6 +86,9 @@ SCALE_MIN_LLM = 1e-5
 SCALE_MIN_SD3 = 1e-3
 
 SD3_CONTEXT_EMBEDDER = "context_embedder"
+SD3_TRANSFORMER = 'SD3Transformer2DModel'
+FLUX_TRANSFORMER = 'FluxTransformer2DModel'
+HUNYUANVIDEO_TRANSFORMER = 'HYVideoDiffusionTransformer'
 
 _PREDEFINED_FUSIONS = {
     tuple(): ("context_embedder",)
@@ -188,8 +192,14 @@ class AntiOutlier(object):
             raise ImportError("CANN Toolkit version not match msmodelslim version, `m6` flex smooth not usable.")
 
         self.is_context_embedder_model = False
-        if SD3_CONTEXT_EMBEDDER + ".weight" in model.state_dict().keys():
+        if SD3_CONTEXT_EMBEDDER + ".weight" in model.state_dict().keys() and \
+                model.__class__.__name__ == SD3_TRANSFORMER:
             self.is_context_embedder_model = True
+
+        # 多模态生成模型
+        self.is_multimodal_generative_model = False
+        if model.__class__.__name__ in (FLUX_TRANSFORMER, HUNYUANVIDEO_TRANSFORMER):
+            self.is_multimodal_generative_model = True
 
         if self.cfg.device == "cpu":
             same_device = self.cfg.device == model.device.type
@@ -367,11 +377,18 @@ class AntiOutlier(object):
 
         for i in tqdm(range(len(self.calib_data))):
             inputs = self.calib_data[i]
-            if not self.is_context_embedder_model:
+
+            if self.is_context_embedder_model or self.is_multimodal_generative_model:
+                # 多模态生成模型特殊处理
+                if isinstance(inputs, list):
+                    self.model(*inputs)
+                elif isinstance(inputs, dict):
+                    self.model(**inputs)
+                else:
+                    raise TypeError(f"Unsupported input type for multimodal generative model: {type(inputs)}")
+            else:
                 input_dict = self.trans_to_dict(inputs)
                 self.model(**input_dict)
-            else:
-                self.model(**inputs)
 
         for name in act_stats:
             stat_dict = act_stats[name]
@@ -413,7 +430,7 @@ class AntiOutlier(object):
         check_type(self.model.config, (PretrainedConfig, OrderedDict_CHECK), param_name="model.config")
 
         num_attention_heads = None
-        key_attention_heads = ["num_attention_heads", "n_head", "num_heads"]
+        key_attention_heads = ["num_attention_heads", "n_head", "num_heads", "heads_num"]
         for key in key_attention_heads:
             if hasattr(self.model.config, key):
                 num_attention_heads = getattr(self.model.config, key)
@@ -482,6 +499,24 @@ class AntiOutlier(object):
                     remove_hook_from_module(mod)
                 _set_module(model, name, quant_mod)
                 del mod
+
+    def attach_norm_to_linear_modules(self, norm_module, linear_modules, linear_names):
+        if attach_op is not None and norm_module is not None and isinstance(norm_module, Multiplier):
+            for i, _ in enumerate(linear_modules):
+                attach_op(self.model, copy.deepcopy(norm_module), [linear_modules[i]], [linear_names[i]])
+
+    def check_all_names_not_disable_anti(self, names):
+        """
+        Check if all names in the list are not in the disable_anti set.
+
+        Args:
+            names (list): List of names to check.
+
+        Returns:
+            bool: True if all names are not in the disable_anti set, False otherwise.
+        """
+        disable_anti_set = set(self.cfg.disable_anti_names)
+        return all(name not in disable_anti_set for name in names)
 
     def _process(self):
         if is_model_multimodal(self.model):
@@ -567,29 +602,33 @@ class AntiOutlier(object):
                 elif self.cfg.anti_method == 'm2':
                     os_ln_fcs(self.cfg, norm_module, linear_modules, stats, os_k=self.cfg.os_k)
                 elif self.cfg.anti_method == 'm3':
-                    weight_aware(self.cfg, norm_module, linear_modules, stats)
+                    if self.check_all_names_not_disable_anti(linear_names):
+                        weight_aware(self.cfg, norm_module, linear_modules, stats)
+                        self.attach_norm_to_linear_modules(norm_module, linear_modules, linear_names)
+
                 elif self.cfg.anti_method == 'm4':
                     if 'scale_min' in inspect.signature(iter_smooth).parameters:
                         smooth_kwargs.update({"scale_min": scale_min})
                     if 'check_group_fusions' not in inspect.signature(iter_smooth).parameters:
                         smooth_kwargs.pop("check_group_fusions", None)
-                    iter_smooth(
-                        self.cfg,
-                        norm_module,
-                        linear_modules,
-                        stats,
-                        **smooth_kwargs
-                        )
-                    if attach_op is not None and Multiplier is not None and isinstance(norm_module, Multiplier):
-                        attach_op(self.model, norm_module, linear_modules, linear_names)
-                elif self.cfg.anti_method == 'm6':
-                    disable_anti_set = set(self.cfg.disable_anti_names)
-                    smooth_kwargs.update(self.cfg.flex_config)
-                    if all(linear_name not in disable_anti_set for linear_name in linear_names):
-                        flex_smooth(
-                            self.cfg, 
+                    if self.check_all_names_not_disable_anti(linear_names):
+                        iter_smooth(
+                            self.cfg,
                             norm_module,
-                            linear_modules, 
-                            stats, 
+                            linear_modules,
+                            stats,
+                            **smooth_kwargs
+                            )
+                        self.attach_norm_to_linear_modules(norm_module, linear_modules, linear_names)
+
+                elif self.cfg.anti_method == 'm6':
+                    smooth_kwargs.update(self.cfg.flex_config)
+                    if self.check_all_names_not_disable_anti(linear_names):
+                        flex_smooth(
+                            self.cfg,
+                            norm_module,
+                            linear_modules,
+                            stats,
                             **smooth_kwargs
                         )
+                        self.attach_norm_to_linear_modules(norm_module, linear_modules, linear_names)

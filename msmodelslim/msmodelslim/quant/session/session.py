@@ -22,17 +22,21 @@ from msmodelslim import logger
 from msmodelslim.pytorch.llm_ptq.anti_outlier import AntiOutlierConfig, AntiOutlier
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import QuantConfig, Calibrator
 
+M3 = 'm3'
 M4 = 'm4'
+M6 = 'm6'
 W8A8 = 'w8a8'
 FA3 = 'fa3'
 W8A8_DYNAMIC = 'w8a8_dynamic'
 W8A8_TIMESTEP = 'w8a8_timestep'
 
-ANTI_OUTLIER_METHOD_LIST = [M4]
+ANTI_OUTLIER_METHOD_LIST = [M3, M4, M6]
 QUANT_METHOD_LIST = [W8A8, FA3, W8A8_DYNAMIC, W8A8_TIMESTEP]
 SAVE = 'save'
 
 SD3_TRANSFORMER = 'SD3Transformer2DModel'
+FLUX_TRANSFORMER = 'FluxTransformer2DModel'
+HUNYUANVIDEO_TRANSFORMER = 'HYVideoDiffusionTransformer'
 
 ACT_METHOD = {'minmax': 1, 'histogram': 2, 'mix': 3}
 
@@ -45,8 +49,13 @@ class M4ProcessorConfig(BaseModel):
     pass
 
 
+class M6Config(BaseModel):
+    alpha: float = None
+    beta: float = None
+
+
 class M6ProcessorConfig(BaseModel):
-    pass
+    cfg: M6Config
 
 
 class W8A8QuantConfig(BaseModel):
@@ -106,6 +115,21 @@ def process_session_cfg(session_cfg: SessionConfig, device_id):
         if processor_name in ANTI_OUTLIER_METHOD_LIST:
             anti_cfg = AntiOutlierConfig(dev_type=session_cfg.device, dev_id=device_id)
             anti_cfg.anti_method = processor_name
+
+            if anti_cfg.anti_method == M6:
+                flex_config = {'alpha': session_cfg.processor_cfg_map[anti_cfg.anti_method].cfg.alpha,
+                               'beta': session_cfg.processor_cfg_map[anti_cfg.anti_method].cfg.beta}
+                anti_cfg.flex_config = anti_cfg.setup_flex_config(flex_config)
+
+            # 将量化方法中的回退层添加入异常值抑制回退
+            disable_quant_add_anti = next(
+                (session_cfg.processor_cfg_map[key].disable_names for key in session_cfg.processor_cfg_map if
+                 key in QUANT_METHOD_LIST), None)
+            if disable_quant_add_anti:
+                if not hasattr(anti_cfg, 'disable_anti_names') or anti_cfg.disable_anti_names is None:
+                    anti_cfg.disable_anti_names = []
+                anti_cfg.disable_anti_names.extend(disable_quant_add_anti)
+
         elif processor_name in QUANT_METHOD_LIST:
             if processor_name == FA3:
                 if not session_cfg.processor_cfg_map.get(W8A8_DYNAMIC, None):
@@ -116,6 +140,7 @@ def process_session_cfg(session_cfg: SessionConfig, device_id):
                     dev_type=session_cfg.device,
                     dev_id=device_id,
                     is_dynamic=True,
+                    mm_tensor=False,
                     act_method=ACT_METHOD[session_cfg.processor_cfg_map[W8A8_DYNAMIC].cfg.act_method],
                     disable_names=session_cfg.processor_cfg_map[W8A8_DYNAMIC].disable_names
                 ).fa_quant()
@@ -125,6 +150,7 @@ def process_session_cfg(session_cfg: SessionConfig, device_id):
                     dev_type=session_cfg.device,
                     dev_id=device_id,
                     is_dynamic=False,
+                    mm_tensor=False,
                     act_method=ACT_METHOD[session_cfg.processor_cfg_map[processor_name].cfg.act_method],
                     disable_names=session_cfg.processor_cfg_map[processor_name].disable_names
                 ).timestep_quant(session_cfg.processor_cfg_map[processor_name].timestep_sep)
@@ -137,6 +163,7 @@ def process_session_cfg(session_cfg: SessionConfig, device_id):
                         dev_type=session_cfg.device,
                         dev_id=device_id,
                         is_dynamic=is_dynamic,
+                        mm_tensor=False,
                         act_method=ACT_METHOD[session_cfg.processor_cfg_map[processor_name].cfg.act_method],
                         disable_names=session_cfg.processor_cfg_map[processor_name].disable_names
                     )
@@ -155,7 +182,7 @@ def quant_model(model: nn.Module, session_cfg: SessionConfig):
     calib_data = session_cfg.calib_data
     if anti_cfg:
         norm_class_name = None
-        if model.__class__.__name__ == SD3_TRANSFORMER:
+        if model.__class__.__name__ in (SD3_TRANSFORMER, FLUX_TRANSFORMER, HUNYUANVIDEO_TRANSFORMER):
             norm_class_name = 'layernorm'
         anti_outlier = AntiOutlier(model, calib_data, anti_cfg, norm_class_name=norm_class_name)
         anti_outlier.process()

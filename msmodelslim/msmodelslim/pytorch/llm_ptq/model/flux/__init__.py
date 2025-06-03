@@ -1,5 +1,5 @@
 #  -*- coding: utf-8 -*-
-#  Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
+#  Copyright Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 #  #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.

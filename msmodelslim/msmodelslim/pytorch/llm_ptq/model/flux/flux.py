@@ -19,13 +19,16 @@ class FluxAdapter(ModelAdapter):
                                  norm_class: Optional[List[Type[nn.Module]]] = None):
         norm_linear = {}
         double_layer_num = self.model.config.num_layers
+        if not isinstance(double_layer_num, int):
+            raise TypeError("num_layers must be an integer.")
+        if double_layer_num < 1 or double_layer_num > 999:
+            raise ValueError("num_layers must be in the range 1 to 999.")
 
         for layer in range(double_layer_num):
             input_layernorm = str(layer) + 'qkv_anti'
             q_proj = 'transformer_blocks.' + str(layer) + '.attn.to_q'
             k_proj = 'transformer_blocks.' + str(layer) + '.attn.to_k'
             v_proj = 'transformer_blocks.' + str(layer) + '.attn.to_v'
-
             norm_linear[input_layernorm] = [q_proj, k_proj, v_proj]
 
             input_layernorm = str(layer) + 'qkv_context_anti'
@@ -61,5 +64,5 @@ class FluxAdapter(ModelAdapter):
         # 针对该模型进行m4量化时，需要对特定层开启偏移
         if cfg.anti_method == 'm4':
             kwargs['is_shift'] = False
-            kwargs['alpha'] = 0.5
+            kwargs['alpha'] = cfg.alpha
         return args, kwargs
