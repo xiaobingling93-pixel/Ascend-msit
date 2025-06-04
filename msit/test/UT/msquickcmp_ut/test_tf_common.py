@@ -38,14 +38,22 @@ class MockTensorFlow:
     Session = MagicMock()
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def import_tf_common():
-    original_modules = sys.modules.copy()
+    backup = {}
+    for mod in ['tensorflow', 'msquickcmp.common']:
+        if mod in sys.modules:
+            backup[mod] = sys.modules[mod]
+            
     sys.modules['tensorflow'] = MockTensorFlow
     from msquickcmp.common import tf_common
     yield tf_common
-    sys.modules = original_modules
-
+    
+    for mod, module_obj in backup.items():
+        sys.modules[mod] = module_obj
+    for mod in ['tensorflow', 'msquickcmp.common']:
+        if mod not in backup and mod in sys.modules:
+            del sys.modules[mod]
 
 @pytest.fixture(scope="module", autouse=True)
 def setup_teardown():

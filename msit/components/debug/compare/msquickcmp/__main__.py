@@ -377,7 +377,7 @@ class DumpCommand(BaseCommand):
 
     def handle(self, args):
         output_path = "./" if args.out_path == '' else args.out_path
-        if not is_enough_disk_space_left(output_path, logger=logger):
+        if not is_enough_disk_space_left(output_path):
             raise OSError("Please make sure that the remaining disk space in the dump path is greater than 2 GB")
         if args.exec:
             from components.debug.compare.msquickcmp.dump.mietorch.dump_config import DumpConfig

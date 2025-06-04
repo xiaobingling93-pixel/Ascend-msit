@@ -178,7 +178,7 @@ class DumpCommand(BaseCommand):
             logger.warning("Please ensure that your execution command is secure.")
             init_dump_task(args)
             # 有的大模型推理任务启动后，输入对话时有提示符，使用subprocess拉起子进程无法显示提示符
-            if not is_enough_disk_space_left(args.output, logger=logger):
+            if not is_enough_disk_space_left(args.output):
                 raise OSError("Please make sure that the remaining disk space in the dump path is greater than 2 GB")
             cmds = args.exec.split()
             cmds = filter_cmd(cmds)

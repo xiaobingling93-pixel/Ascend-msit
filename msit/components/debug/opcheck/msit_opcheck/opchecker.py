@@ -14,17 +14,16 @@
 
 import os
 import datetime
-import subprocess
 from pathlib import Path
 import shutil
 
-from components.utils.util import filter_cmd
 from components.debug.common import logger
 from components.utils.security_check import check_write_directory
 from components.debug.compare.msquickcmp.common.args_check import check_input_path_legality
 from msit_opcheck.case_manager import CaseManager
 from msit_opcheck.graph_parser import get_all_opinfo, get_ge_graph_name, OpInfo
 from msit_opcheck.utils import NAMEDTUPLE_PRECISION_MODE
+from msit_opcheck.util.file_read import convert_ge_dump_file_to_npy
 
 
 class OpChecker:
@@ -40,7 +39,6 @@ class OpChecker:
         self.output_path = args.output
         self.cases_info = {}  # 放算子对应信息
 
-        self.msaccucmp_path = self.get_msaccucmp_path()
         self.ge_json_path = None
         self.origin_dump_path = None
         self.dump_data_path = None
@@ -49,25 +47,6 @@ class OpChecker:
         self.precision_metric = ['abs', 'cos_sim', 'kl']
         self.precision_mode = NAMEDTUPLE_PRECISION_MODE.keep_origin_dtype
         self.timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_%H%M%S")
-    
-    @staticmethod
-    def get_msaccucmp_path():
-        cann_path = os.environ.get('ASCEND_TOOLKIT_HOME', "/usr/local/Ascend/ascend-toolkit/latest")
-        msaccucmp_path = os.path.join(cann_path, "tools", "operator_cmp", "compare", "msaccucmp.py")
-        msaccucmp_path = check_input_path_legality(msaccucmp_path)
-        return msaccucmp_path
-
-    @staticmethod
-    def execute_convert_npy_command(command):
-        try:
-            command = filter_cmd(command)
-            result = subprocess.run(command, shell=False, capture_output=True, text=True)
-            if result.returncode == 0:
-                return result.stdout.strip()
-            else:
-                return f"Error while converting bin data to npy: {result.stderr.strip()}"
-        except Exception as e:
-            return f"Error while converting bin data to npy: {e}"
 
     def check_input_path_argument(self, input_path):
         # 检查特定的子目录是否存在
@@ -133,13 +112,6 @@ class OpChecker:
                 )
             new_dump_path = os.path.join(new_dump_path, sub_dirs[0])
         self.dump_data_path = check_input_path_legality(new_dump_path)
-
-    def convert_all_bin_file_to_npy_data(self, input_path, npy_path, msaccucmp_path):
-        # convert all bin file to npy file
-        command = ["python", msaccucmp_path, "convert", "-d", input_path, "-out", npy_path]
-        return_msg = self.execute_convert_npy_command(command)
-        if "Error while converting bin data to npy:" in return_msg:
-            raise RuntimeError("Execute msaccucmp convert failed, Please check CANN Environment.")
 
     def clear_tmp_file(self, remove_dir=False):
         if remove_dir:
@@ -209,7 +181,7 @@ class OpChecker:
             self.update_dump_data_path(new_dump_path)
 
             # 1.转化为npy  将所有bin文件转换成npy文件，存放在{output_path}/tmp下
-            self.convert_all_bin_file_to_npy_data(self.dump_data_path, self.npy_path, self.msaccucmp_path)
+            convert_ge_dump_file_to_npy(self.dump_data_path, self.npy_path)
             # 
             result_csv_path = os.path.join(self.output_path, f"opcheck_result_{self.timestamp}.xlsx")
             case_manager = CaseManager(self.precision_metric, result_csv_path)

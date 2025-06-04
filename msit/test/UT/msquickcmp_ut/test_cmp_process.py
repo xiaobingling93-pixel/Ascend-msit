@@ -22,9 +22,12 @@ import openpyxl
 import pytest
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def import_cmp_process():
-    original_modules = sys.modules.copy()
+    backup = {}
+    for mod in ['acl', 'msquickcmp.cmp_process']:
+        if mod in sys.modules:
+            backup[mod] = sys.modules[mod]
     mock_acl = MagicMock()
     sys.modules['acl'] = mock_acl
     from msquickcmp.cmp_process import csv_sum, _get_model_output_node_name_list, \
@@ -35,7 +38,12 @@ def import_cmp_process():
         "_find_previous_node": _find_previous_node
     }
     yield functions
-    sys.modules = original_modules
+    
+    for mod, module_obj in backup.items():
+        sys.modules[mod] = module_obj
+    for mod in ['acl', 'msquickcmp.cmp_process']:
+        if mod not in backup and mod in sys.modules:
+            del sys.modules[mod]
 
 
 @pytest.fixture(scope="function")
@@ -86,14 +94,22 @@ def test_csv_sum_given_path_when_valid_then_pass(import_cmp_process, generate_fa
 
 class TestProcessIsNpuAndIsPrecisionErrorOps(unittest.TestCase):
     def setUp(self):
-        self.original_modules = sys.modules.copy()
+        self.backup = {}
+        for mod in ['acl', 'msquickcmp.cmp_process']:
+            if mod in sys.modules:
+                self.backup[mod] = sys.modules[mod]
         mock_acl = MagicMock()
         sys.modules['acl'] = mock_acl
         from msquickcmp.cmp_process import _process_is_npu_and_is_precision_error_ops
         self._process_is_npu_and_is_precision_error_ops = _process_is_npu_and_is_precision_error_ops
 
     def tearDown(self):
-        sys.modules = self.original_modules
+        for mod, module_obj in self.backup.items():
+            sys.modules[mod] = module_obj
+        for mod in ['acl', 'msquickcmp.cmp_process']:
+            if mod not in self.backup and mod in sys.modules:
+                del sys.modules[mod]
+
 
     def test_process_function(self):
         self.header = ["GroundTruth", "OpType", "CosineSimilarity", 
@@ -141,14 +157,21 @@ class TestProcessIsNpuAndIsPrecisionErrorOps(unittest.TestCase):
 
 class TestIsRowPrecisionError(unittest.TestCase):
     def setUp(self):
-        self.original_modules = sys.modules.copy()
+        self.backup = {}
+        for mod in ['acl', 'msquickcmp.cmp_process']:
+            if mod in sys.modules:
+                self.backup[mod] = sys.modules[mod]
         mock_acl = MagicMock()
         sys.modules['acl'] = mock_acl
         from msquickcmp.cmp_process import _is_row_precision_error
         self._is_row_precision_error = _is_row_precision_error
 
     def tearDown(self):
-        sys.modules = self.original_modules
+        for mod, module_obj in self.backup.items():
+            sys.modules[mod] = module_obj
+        for mod in ['acl', 'msquickcmp.cmp_process']:
+            if mod not in self.backup and mod in sys.modules:
+                del sys.modules[mod]
 
     def test_below_thresholds(self):
         # All metrics are below the threshold
@@ -188,14 +211,21 @@ class TestIsRowPrecisionError(unittest.TestCase):
         
 class TestIsOutputNodeError(unittest.TestCase):
     def setUp(self):
-        self.original_modules = sys.modules.copy()
+        self.backup = {}
+        for mod in ['acl', 'msquickcmp.cmp_process']:
+            if mod in sys.modules:
+                self.backup[mod] = sys.modules[mod]
         mock_acl = MagicMock()
         sys.modules['acl'] = mock_acl
         from msquickcmp.cmp_process import _is_output_node
         self._is_output_node = _is_output_node
 
     def tearDown(self):
-        sys.modules = self.original_modules
+        for mod, module_obj in self.backup.items():
+            sys.modules[mod] = module_obj
+        for mod in ['acl', 'msquickcmp.cmp_process']:
+            if mod not in self.backup and mod in sys.modules:
+                del sys.modules[mod]
     
     def test__is_output_node(self):
         node_output_name_list = []

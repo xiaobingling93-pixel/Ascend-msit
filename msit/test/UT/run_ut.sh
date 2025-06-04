@@ -46,12 +46,13 @@ init_msit_env() {
     export PYTHONPATH=${COMPONENTS_DIR}/benchmark:${PYTHONPATH}
     export PYTHONPATH=${COMPONENTS_DIR}/convert:${PYTHONPATH}
     export PYTHONPATH=${COMPONENTS_DIR}/debug/compare:${PYTHONPATH}
+    export PYTHONPATH=${COMPONENTS_DIR}/debug/opcheck:${PYTHONPATH}
+    export PYTHONPATH=${COMPONENTS_DIR}/debug/surgeon:${PYTHONPATH}
+    export PYTHONPATH=${COMPONENTS_DIR}/expert_load_balancing:${PYTHONPATH}
     export PYTHONPATH=${COMPONENTS_DIR}/graph:${PYTHONPATH}
     export PYTHONPATH=${COMPONENTS_DIR}/llm:${PYTHONPATH}
     export PYTHONPATH=${COMPONENTS_DIR}/profile:${PYTHONPATH}
     export PYTHONPATH=${COMPONENTS_DIR}/tensor_view:${PYTHONPATH}
-    export PYTHONPATH=${COMPONENTS_DIR}/debug/surgeon:${PYTHONPATH}
-    export PYTHONPATH=${COMPONENTS_DIR}/expert_load_balancing:${PYTHONPATH}
 }
 
 run_single_module_ut() {

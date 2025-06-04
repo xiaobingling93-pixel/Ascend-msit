@@ -69,16 +69,12 @@ class TestMakedirs(unittest.TestCase):
         ms_makedirs(target_dir)
         assert os.path.exists(target_dir)
 
-    def test_makedirs_invalid(self) -> None:
+    @patch('components.utils.log.logger.warning')
+    def test_makedirs_invalid(self, mock_logger) -> None:
         target_dir = os.path.join(self.dp_invalid.name, "d1")
         if not PathChecker().is_safe_parent_dir().check(os.path.join(self.dp_invalid.name, "d1")):
-            with self.assertRaises(OSError):
-                ms_makedirs(target_dir)
-
-        target_dir = os.path.join(self.dp_invalid.name, "d2/d3/d4")
-        if not PathChecker().is_safe_parent_dir().check(os.path.join(self.dp_invalid.name, "d2")):
-            with self.assertRaises(OSError):
-                ms_makedirs(target_dir)
+            ms_makedirs(target_dir)
+            mock_logger.assert_called_once_with(f"Output parent directory path {target_dir} is not safe.")
 
     def tearDown(self) -> None:
         self.dp.cleanup()
@@ -209,10 +205,9 @@ def test_find_existing_path_given_nonexistent_path_when_depth_exceeded_then_rais
 
 
 def test_is_enough_disk_space_left_given_insufficient_space_when_called_then_returns_false():
-    logger_mock = Mock()
     dump_path = "/path/to/check"
     with patch('shutil.disk_usage', return_value=Mock(free=MIN_DUMP_DISK_SPACE - 1)):
-        result = is_enough_disk_space_left(dump_path, logger_mock)
+        result = is_enough_disk_space_left(dump_path)
         assert result is False
 
 def test_check_dict_character_given_long_key_when_called_then_raises_value_error():

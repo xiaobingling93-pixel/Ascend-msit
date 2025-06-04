@@ -25,6 +25,8 @@ LOG_LEVELS = {
     "critical": logging.CRITICAL
 }
 
+LOG_LEVELS_LOWER = [ii.lower() for ii in LOG_LEVELS.keys()]
+
 
 def set_log_level(level="info"):
     if level.lower() in LOG_LEVELS:
