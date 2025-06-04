@@ -36,6 +36,7 @@ class LayerConfigManager:
         cfg_copy = copy.deepcopy(cfg)
         cfg_copy.w_bit = 8
         cfg_copy.a_bit = 8
+        cfg_copy.is_dynamic = False
         check_and_generate_config_param(cfg_copy)
         return cfg_copy
 

@@ -76,6 +76,9 @@ from msmodelslim.pytorch.llm_ptq.accelerate_adapter.utils import judge_model_wit
 import msmodelslim.pytorch.llm_ptq.llm_ptq_tools.timestep.timestep_utils as timestep_utils
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.timestep.quantizer import LinearQuantizerTimestep
 
+from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.flat_quant import flat_quant_train
+from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.flat_quant import FlatQuantConfig
+
 HF_HOOK = "_hf_hook"
 STATE_DICT_COPY_DIR = "copy"
 ALLOWED_MIX_TYPES = {"w8a8", "w8a16", "w8a8_dynamic", "float", "w4a8_dynamic"}
@@ -198,7 +201,7 @@ class Calibrator(object):
             }
 
         # for int8 quantization, we will convert the cfg to w8a8, w8a16, w8a8_dynamic if not in cfg_store
-        if cfg.w_bit == 8:
+        if cfg.w_bit == 8 or (cfg.w_bit == 4 and cfg.a_bit == 4):
             if 'w8a8' not in self.cfg_store:
                 try:
                     new_cfg = LayerConfigManager.convert_to_w8a8(cfg)
@@ -229,9 +232,12 @@ class Calibrator(object):
                 self.all_tensors = None
 
         try:
-            self.model = self.quantize(model)
-            if self.calib_data:
-                self.enable_quant()
+            if self.cfg.model_quant_type == QuantType.W4A4_DYNAMIC:
+                self.model = model
+            else:
+                self.model = self.quantize(model)
+                if self.calib_data:
+                    self.enable_quant()
         except Exception as e:
             raise Exception("Please check the model and configuration.", e) from e
         self.logger.info("Quantizer initialized successful!")
@@ -922,6 +928,10 @@ class Calibrator(object):
         ret = fp_weight, device, scale, offset, round_opt
         return ret
 
+    def _run_training_mode(self):
+        args = FlatQuantConfig()
+        flat_quant_train(self.model, self.calib_data, self.layer_cfg_manager.layer_cfg, args, self.logger)
+
     def _run(self, calib_amp=5, int_infer=False):
         if not isinstance(calib_amp, int) or calib_amp < 1:
             raise TypeError("`calib_amp` should be an integer greater than 0 and not exceeding the "
@@ -930,7 +940,11 @@ class Calibrator(object):
         self.logger.info("Calibration start!")
         self.model.eval()
         if self.calib_data:
-            if self.cfg.calib_mode == 0:
+            if self.cfg.model_quant_type == QuantType.W4A4_DYNAMIC:
+                with torch.enable_grad():
+                    self._run_training_mode()
+                return
+            elif self.cfg.calib_mode == 0:
                 with torch.no_grad():
                     if getattr(self.cfg, 'use_timestep_quant', False):
                         timestep_utils.run_calib_timestep(self.model, self.calib_data, self.cfg)

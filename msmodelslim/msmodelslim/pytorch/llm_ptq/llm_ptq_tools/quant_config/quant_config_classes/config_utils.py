@@ -89,8 +89,8 @@ def check_dynamic_config(config):
     if config.is_dynamic:
         if config.w_bit not in [4, 8]:
             raise ValueError("w_bit must be 4 or 8 when running dynamic quantization.")
-        if config.a_bit != 8:
-            raise ValueError("a_bit must be 8 when running dynamic quantization.")
+        if config.a_bit == 16:
+            raise ValueError("a_bit must be 4 or 8 when running dynamic quantization.")
 
 
 def check_sparse_config(config):
@@ -177,6 +177,18 @@ def check_and_set_w4a8_dynamic_config(config):
             config.do_msd = False
 
 
+def check_w4a4_dynamic_config(config):
+    if config.w_bit == 4 and config.a_bit == 4:
+        if not config.is_dynamic:
+            raise ValueError("W4A4 should be used with dynamic quantization")
+        if config.w_method != 'MinMax':
+            raise ValueError("W4A4 should be used with w_method='MinMax'")
+        if not config.w_sym:
+            raise ValueError("W4A4 should be used with w_sym=True")
+        if not config.disable_last_linear:
+            raise ValueError("W4A4 should be used with disable_last_linear=True")
+
+
 def check_and_generate_config_param(config):
     """
     所有config的校验都置于该函数，便于给所有BaseConfig类调用
@@ -217,7 +229,7 @@ def check_and_generate_config_param(config):
     is_w4a8s = is_w4a8_sparse(config)
     if not is_w4a8s:
         check_and_set_w4a8_dynamic_config(config)
-
+    check_w4a4_dynamic_config(config)
     params = {
         'w_bit': config.w_bit,
         'a_bit': config.a_bit,
