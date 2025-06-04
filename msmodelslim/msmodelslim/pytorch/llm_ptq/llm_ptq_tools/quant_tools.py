@@ -888,15 +888,8 @@ class Calibrator(object):
             return model.dtype
 
     def _save(self, output_path, safetensors_name, json_name, save_type, part_file_size):
-        saver = SaverFactory.create(save_type,
-                                    output_dir=output_path,
-                                    cfg=self.cfg,
-                                    safetensors_name=safetensors_name,
-                                    json_name=json_name,
-                                    part_file_size=part_file_size,
-                                    group_size=self.cfg.group_size)
-
         # quantifier 应基于量化方法予以抽象，当前仅实现了与保存相关的逻辑
+
         # numpy 和 safetensor type 默认不支持 pack
         if isinstance(save_type, list):
             if SAVE_TYPE_ASCENDV1 in save_type:
@@ -909,11 +902,21 @@ class Calibrator(object):
                 is_new_version = False
         else:
             is_new_version = True if save_type in [SAVE_TYPE_ASCENDV1] else False
+
+        saver = SaverFactory.create(save_type,
+                                    output_dir=output_path,
+                                    cfg=self.cfg,
+                                    safetensors_name=safetensors_name,
+                                    json_name=json_name,
+                                    part_file_size=part_file_size,
+                                    group_size=self.cfg.group_size)
+
+
         quantifier = ComplexQuantifier(cfg=self.cfg,
                                        rollback_names=self.rollback_names,
                                        torch_dtype=self.model_torch_dtype,
                                        layer_cfg_manager=self.layer_cfg_manager,
-                                       is_new_versoin=is_new_version)
+                                       is_new_version=is_new_version)
         self._save_weights_of_model(quantifier, saver)
 
     def _save_weights_of_model(self, quantifier, saver):

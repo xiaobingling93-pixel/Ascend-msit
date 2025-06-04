@@ -1,4 +1,6 @@
 # Copyright Huawei Technologies Co., Ltd. 2025. All rights reserved.
+from typing import TYPE_CHECKING
+
 import torch
 import numpy as np
 
@@ -19,7 +21,6 @@ from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.fa_quant import (
     is_attn_module_and_then_check_quantizer
 )
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.simulate_tp import ParallelLinearCol
-
 
 def deqscale_process(input_scale, scale):
     deq_scale = input_scale * scale
@@ -61,7 +62,7 @@ def _get_module_quant_input(module):
     round_opt = False if isinstance(module, LowBitLinearQuantizer) else module.quant_weight.round_opt
 
     if hasattr(module.quant_weight, 'weight_scale_second') and \
-       hasattr(module.quant_weight, 'weight_offset_second'):
+            hasattr(module.quant_weight, 'weight_offset_second'):
         weight_scale_second = module.quant_weight.weight_scale_second
         weight_offset_second = module.quant_weight.weight_offset_second
         scale_second = weight_scale_second.cpu() if weight_scale_second is not None else None
@@ -102,15 +103,15 @@ def generate_weight_of_nf_module(name, module):
 
 
 class ComplexQuantifier:
-    def __init__(self, cfg, rollback_names, torch_dtype, layer_cfg_manager, is_new_versoin=False):
+    def __init__(self, cfg, rollback_names, torch_dtype, layer_cfg_manager, is_new_version=False):
         self.cfg = cfg
         self.rollback_names = rollback_names
         self.torch_dtype = torch_dtype
         self.layer_cfg_manager: LayerConfigManager = layer_cfg_manager
 
         self.skip_module_names = set()
-        
-        self.is_new_versoin = is_new_versoin                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
+
+        self.is_new_version = is_new_version
 
     def generate_weight_of_module(self, name: str, module: torch.nn.Module):
         if name in self.skip_module_names:
@@ -127,7 +128,7 @@ class ComplexQuantifier:
         elif isinstance(module, NormBias):
             yield from self.generate_weight_of_norm_module(name, module, model_quant_type)
         elif isinstance(module, LlamaRMSNormBias):
-            yield from generate_weight_of_rms_norm_module(name, module, model_quant_type, self.is_new_versoin)
+            yield from generate_weight_of_rms_norm_module(name, module, model_quant_type, self.is_new_version)
         # 处理Linear、以及附属scale、offset等params
         elif isinstance(module, (LinearQuantizer, LinearSparseQuantizer, LowBitLinearQuantizer)):
             yield from self.generate_weight_of_linear_module(name, module, model_quant_type)
@@ -159,7 +160,7 @@ class ComplexQuantifier:
         anti_norm_bias: torch.Tensor = module.bias
         yield name + '.weight', QuantType.FLOAT, anti_norm_weight.clone().cpu()
         yield name + '.bias', QuantType.FLOAT, anti_norm_bias.clone().cpu()
-        if not self.is_new_versoin:
+        if not self.is_new_version:
             yield name + '.module.weight', model_quant_type, anti_norm_weight.clone().cpu()
             yield name + '.module.bias', model_quant_type, anti_norm_bias.clone().cpu()
 
@@ -171,6 +172,9 @@ class ComplexQuantifier:
         if quant_weight is None:
             return
 
+        is_new_version_w8a8_pdmix = self.is_new_version and model_quant_type == QuantType.W8A8 and self.cfg.pdmix
+        model_quant_type = QuantType.W8A8_MIX if is_new_version_w8a8_pdmix else model_quant_type
+
         # 各种量化均需要提供 weight
         quant_weight: torch.Tensor = quant_weight.to(device=fp_weight.device)
         save_quant_weight = quant_weight.cpu().to(torch.int8)
@@ -179,7 +183,9 @@ class ComplexQuantifier:
             yield name + '.bias', QuantType.FLOAT, module.bias
 
         # W4A8_DYNAMIC 有两种量化模式，一种分阶段量化（将浮点先量化成int8，然后再量化成 int4），一种直接量化（将浮点直接量化成 int4）
-        if model_quant_type in [QuantType.W4A8_DYNAMIC]:
+        if model_quant_type in [
+            QuantType.W4A8_DYNAMIC
+        ]:
             is_scale_list = isinstance(weight_scale, list) and len(weight_scale) == 2
             is_offset_list = isinstance(weight_offset, list) and len(weight_offset) == 2
             if is_scale_list and is_offset_list:
@@ -195,13 +201,23 @@ class ComplexQuantifier:
                 yield name + '.weight_offset', model_quant_type, weight_offset.cpu()
 
         # W4A16/W8A16 需要提供 weight_scale、weight_offset
-        if model_quant_type in [QuantType.W8A16, QuantType.W4A16, QuantType.W8A8_DYNAMIC, QuantType.W8A8,
-                                QuantType.W8A8_TIMESTEP]:
+        if model_quant_type in [
+            QuantType.W8A16,
+            QuantType.W4A16,
+            QuantType.W8A8_DYNAMIC,
+            QuantType.W8A8,
+            QuantType.W8A8_TIMESTEP,
+            QuantType.W8A8_MIX
+        ]:
             yield name + '.weight_scale', model_quant_type, weight_scale.cpu()
             yield name + '.weight_offset', model_quant_type, weight_offset.cpu()
 
         # W8A8/W8A8S 需要提供 deq_scale、quant_bias、input_scale、input_offset
-        if model_quant_type in [QuantType.W8A8, QuantType.W8A8S]:
+        if model_quant_type in [
+            QuantType.W8A8,
+            QuantType.W8A8S,
+            QuantType.W8A8_MIX
+        ]:
             input_scale = module.quant_input.input_scale
             input_offset = module.quant_input.input_offset
             yield name + '.input_scale', model_quant_type, input_scale.cpu()
@@ -221,7 +237,9 @@ class ComplexQuantifier:
             yield name + '.quant_bias', model_quant_type, quant_bias.cpu().to(torch.int32)
             yield name + '.deq_scale', model_quant_type, deq_scale.cpu()
 
-        if model_quant_type in [QuantType.W8A8_TIMESTEP]:
+        if model_quant_type in [
+            QuantType.W8A8_TIMESTEP
+        ]:
             # fix for fake quantize
             module.quant_weight.int_weight_tensor = quant_weight
             ori_device = quant_weight.device
@@ -298,19 +316,19 @@ class ComplexQuantifier:
                 bit = 8
             else:
                 bit = module.cfg.w_bit
-            
+
             is_scale_list = isinstance(weight_scale, list) and len(weight_scale) == 2
             is_offset_list = isinstance(weight_offset, list) and len(weight_offset) == 2
             if is_scale_list and is_offset_list:
                 # w4a8 分阶段量化，因此需要两次fake_quantize_save得到量化后的权重
                 first_quant_weight, _ = fake_quantize_save(fp_weight, weight_scale[0], weight_offset[0], bit=8,
-                                                          round_opt=round_opt, device=module.weight.device)
+                                                           round_opt=round_opt, device=module.weight.device)
                 quant_weight, _ = fake_quantize_save(first_quant_weight, weight_scale[1], weight_offset[1], bit=4,
-                                                            round_opt=round_opt, device=module.weight.device,
-                                                            group_size=module.cfg.group_size)
+                                                     round_opt=round_opt, device=module.weight.device,
+                                                     group_size=module.cfg.group_size)
             else:
                 quant_weight, _ = fake_quantize_save(fp_weight, weight_scale, weight_offset, bit=bit,
-                                                 round_opt=round_opt, device=module.weight.device,
-                                                 group_size=module.cfg.group_size)
+                                                     round_opt=round_opt, device=module.weight.device,
+                                                     group_size=module.cfg.group_size)
         res = quant_weight, fp_weight, weight_scale, weight_offset
         return res

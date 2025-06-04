@@ -230,3 +230,6 @@ def check_and_generate_config_param(config):
     config.model_quant_type = QuantType.get_quant_type(params)
     WeightQuantMethod.check_quant_type(config.model_quant_type, w_method=config.w_method)
     config.w_hessian, config.hqq = WeightQuantMethod.get_wmethod_config(config.w_method)
+
+    if hasattr(config, 'pdmix') and config.pdmix and config.model_quant_type != QuantType.W8A8:
+        raise ValueError("You specific pdmix flag in QuantConfig, but the model_quant_type is not W8A8")
