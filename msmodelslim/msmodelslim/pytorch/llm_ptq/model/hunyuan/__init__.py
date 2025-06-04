@@ -14,8 +14,9 @@
 #  limitations under the License.
 
 
-__all__ = ['HunyuanLargeAdapter']
+__all__ = ['HunyuanLargeAdapter', 'HunyuanVideoAdapter']
 
 from .hunyuan_large import HunyuanLargeAdapter
+from .hunyuan_video import HunyuanVideoAdapter
 
 

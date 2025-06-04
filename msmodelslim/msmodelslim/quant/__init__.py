@@ -16,7 +16,10 @@
 __all__ = [
     "quant_model",
     "SessionConfig",
+    "M3ProcessorConfig",
     "M4ProcessorConfig",
+    "M6Config",
+    "M6ProcessorConfig",
     "W8A8QuantConfig",
     "W8A8ProcessorConfig",
     "FA3ProcessorConfig",
@@ -30,4 +33,4 @@ __all__ = [
 from msmodelslim.quant.session.session import quant_model, SessionConfig
 from msmodelslim.quant.session.session import M4ProcessorConfig, W8A8QuantConfig, W8A8ProcessorConfig, \
 FA3ProcessorConfig, W8A8DynamicQuantConfig, W8A8DynamicProcessorConfig, W8A8TimeStepQuantConfig, \
-W8A8TimeStepProcessorConfig, SaveProcessorConfig
+W8A8TimeStepProcessorConfig, SaveProcessorConfig, M3ProcessorConfig, M6ProcessorConfig, M6Config

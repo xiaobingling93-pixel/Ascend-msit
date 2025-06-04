@@ -1,5 +1,5 @@
 #  -*- coding: utf-8 -*-
-#  Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
+#  Copyright Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 #  #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -13,10 +13,9 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-__all__ = ['ModelAdapter', 'ModelAdapterRegistry']
 
-from .base import ModelAdapter, ModelAdapterRegistry
-from .deepseek_v2 import DeepseekV2Adapter
-from .hunyuan import HunyuanLargeAdapter, HunyuanVideoAdapter
-from .qwen3 import Qwen3Adapter
+__all__ = ['FluxAdapter']
+
 from .flux import FluxAdapter
+
+

@@ -144,9 +144,9 @@ class NormBias(nn.Module):
     def __init__(self, module):
         super().__init__()
         self.module = module
-        self.weight = nn.Parameter(copy.deepcopy(module.weight))
         if not hasattr(module, "weight"):
             raise AttributeError(f"norm_class {module.__class__.__name__} don't have weight variable.")
+        self.weight = nn.Parameter(copy.deepcopy(module.weight))
         hidden_size = module.weight.size(0)
         self.bias = nn.Parameter(torch.zeros(hidden_size).to(module.weight.device))
 
