@@ -30,6 +30,7 @@
 - [Qwen2.5-72B-Instruct](https://huggingface.co/Qwen/Qwen2.5-72B-Instruct/tree/main)
 ##### Qwen3
 - [Qwen3-32B](https://huggingface.co/Qwen/Qwen3-32B/tree/main)
+- [Qwen3-14B](https://huggingface.co/Qwen/Qwen3-14B/tree/main)
 ##### QWQ
 - [QwQ-32B](https://modelscope.cn/models/Qwen/QwQ-32B)
 
@@ -196,6 +197,22 @@
             --trust_remote_code True \
             --mindie_format \
             --w_method HQQ
+  ```
+
+##### Qwen3-32B W8A8量化
+
+该模型的量化支持已经集成至[一键量化](https://gitee.com/ascend/msit/blob/master/msmodelslim/msmodelslim/app/naive_quantization/readme.md)。
+
+  ```shell
+  msmodelslim quant --model_path {浮点权重路径} --save_path {W8A8量化权重路径} --device_type npu --model_type Qwen3-14B --quant_type w8a8 --trust_remote_code True
+  ```
+
+##### Qwen3-14B W8A8量化
+
+该模型的量化支持已经集成至[一键量化](https://gitee.com/ascend/msit/blob/master/msmodelslim/msmodelslim/app/naive_quantization/readme.md)。
+
+  ```shell
+  msmodelslim quant --model_path {浮点权重路径} --save_path {W8A8量化权重路径} --device_type npu --model_type Qwen3-32B --quant_type w8a8 --trust_remote_code True
   ```
 
 #### QWQ 系列

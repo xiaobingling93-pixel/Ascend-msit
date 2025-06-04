@@ -22,6 +22,7 @@ from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.fa_quant import (
 )
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.simulate_tp import ParallelLinearCol
 
+
 def deqscale_process(input_scale, scale):
     deq_scale = input_scale * scale
     if deq_scale.ndim > 1:
