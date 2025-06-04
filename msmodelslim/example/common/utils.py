@@ -116,8 +116,12 @@ class SafeGenerator:
         data = json_safe_load(src_config_filepath, check_user_stat=False)
         dest_dir = get_valid_write_path(dest_dir, is_dir=True)
 
-        dest_quant_description_filepath = os.path.join(dest_dir, \
-            f"quant_model_description_{quantize_type.lower()}.json")
+        if args.mindie_format:
+            dest_quant_description_filepath = os.path.join(dest_dir, \
+                f"quant_model_description_{quantize_type.lower()}.json")
+        else:
+            dest_quant_description_filepath = os.path.join(dest_dir, \
+                f"quant_model_description.json")
         dest_quant_description_filepath = get_valid_write_path(dest_quant_description_filepath, is_dir=False)
         quant_description_data = json_safe_load(dest_quant_description_filepath, check_user_stat=False)
         
@@ -159,12 +163,6 @@ class SafeGenerator:
         dest_config_filepath = os.path.join(dest_dir, 'config.json')
         json_safe_dump(data, dest_config_filepath, 4)
 
-        if not args.mindie_format:
-            os.remove(dest_quant_description_filepath)
-            new_dest_quant_description_filepath = os.path.join(dest_dir, f"quant_model_description.json")
-            new_dest_quant_description_filepath = get_valid_write_path(new_dest_quant_description_filepath, \
-                                                                        is_dir=False)
-            json_safe_dump(quant_description_data, new_dest_quant_description_filepath, 4)
 
     @staticmethod
     def load_jsonl(dataset_path, key_name='inputs_pretokenized'):
