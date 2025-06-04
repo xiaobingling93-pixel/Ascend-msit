@@ -54,6 +54,7 @@ class QuantConfig:
                  is_dynamic: bool = False,
                  group_size: int = 64,
                  percdamp: float = 0.01,
+                 pdmix: bool = False,
                  ):
         """
         Args:
@@ -87,7 +88,7 @@ class QuantConfig:
                              is_lowbit=is_lowbit, do_smooth=do_smooth, use_sigma=use_sigma,
                              sigma_factor=sigma_factor, disable_last_linear=disable_last_linear,
                              use_kvcache_quant=use_kvcache_quant, open_outlier=open_outlier, is_dynamic=is_dynamic,
-                             group_size=group_size, percdamp=percdamp)
+                             group_size=group_size, percdamp=percdamp, pdmix=pdmix)
         self._modify_quant_param()
 
     def weight_quant(self,

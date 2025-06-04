@@ -478,3 +478,7 @@ class TestQuantConfig:
             is_dynamic=True
         )
         assert compare_config_parameters(old_usage, new_usage) is False
+
+    def test_pdmix_flag_should_raise_error_when_given_non_w8a8_param(self):
+        with pytest.raises(ValueError):
+            QuantConfig(a_bit=8, w_bit=4, is_lowbit=True, pdmix=True)

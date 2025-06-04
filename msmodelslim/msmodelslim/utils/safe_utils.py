@@ -109,6 +109,10 @@ class SafeGenerator:
         dest_dir = get_valid_write_path(dest_dir, is_dir=True)
         dest_quant_description_filepath = os.path.join(dest_dir, \
             f"quant_model_description_{quantize_type.lower()}.json")
+        
+        if not os.path.exists(dest_quant_description_filepath):
+            dest_quant_description_filepath = os.path.join(dest_dir, "quant_model_description.json")
+        
         quant_description_data = json_safe_load(dest_quant_description_filepath, check_user_stat=False)
         data['torch_dtype'] = str(torch_dtype).split(".")[1]
         if kwargs is not None:

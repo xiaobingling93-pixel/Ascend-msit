@@ -24,13 +24,12 @@ class QuantType(str, Enum):
     W8A8SC = "W8A8SC"  # 稀疏量化压缩后的权重
     FLOAT = "FLOAT"  # 浮点
     KV8 = "C8"  # kvcache量化，kvcache为8bit
-    FAQuant = "FAQuant" # flashattention量化为8bit
+    FAQuant = "FAQuant"  # flashattention量化为8bit
     NF4 = "NF4"  # Normal Float 4-Bit量化
     W8A8_DYNAMIC = "W8A8_DYNAMIC"  # W8A8静态量化与per-token动态量化混合量化
-
     W4A8_DYNAMIC = "W4A8_DYNAMIC"  # W4A8静态量化与per-token动态量化混合量化
-
     W8A8_TIMESTEP = "W8A8_TIMESTEP"  # 分时间步量化
+    W8A8_MIX = "W8A8_MIX"  # W8A8 Per-tensor/Per-token 参数混合导出
     W4A4_DYNAMIC = "W4A4_DYNAMIC"  # w4a4静态量化与flatquant的per-token动态量化混合量化
     W4A4_FLATQUANT_DYNAMIC = "W4A4_FLATQUANT_DYNAMIC"  # w4a4静态量化与flatquant的per-token动态量化混合量化
 
@@ -45,7 +44,7 @@ class QuantType(str, Enum):
 
         if w_bit == 8 and a_bit == 8 and params['is_timestep_quant']:
             return QuantType.W8A8_TIMESTEP
-        
+
         if is_dynamic:
             return QuantType.get_dynamic_quant_type(w_bit, a_bit)
         if is_sparse:
@@ -66,8 +65,17 @@ class QuantType(str, Enum):
 
     @staticmethod
     def is_value_in_enum(quant_type_value):
-        return quant_type_value in ["UNKNOWN", "W8A16", "W4A16", "W8A8", "W8A8S", 
-                                    "W8A8SC", "FLOAT", "W8A8_DYNAMIC", "NF4"]
+        return quant_type_value in [
+            "UNKNOWN",
+            "W8A16",
+            "W4A16",
+            "W8A8",
+            "W8A8S",
+            "W8A8SC",
+            "FLOAT",
+            "W8A8_DYNAMIC",
+            "NF4"
+        ]
 
     @staticmethod
     def check_instance_of_enum(instance):
@@ -76,8 +84,13 @@ class QuantType(str, Enum):
 
     @staticmethod
     def check_datafree_quant_type(quant_type_value):
-        if quant_type_value not in [QuantType.W8A16, QuantType.W4A16, 
-                                    QuantType.W8A8_DYNAMIC, QuantType.NF4, QuantType.W4A8_DYNAMIC]:
+        if quant_type_value not in [
+            QuantType.W8A16,
+            QuantType.W4A16,
+            QuantType.W8A8_DYNAMIC,
+            QuantType.NF4,
+            QuantType.W4A8_DYNAMIC
+        ]:
             raise ValueError(f"QuantType.{quant_type_value} does not support \
                              Data-Free, please check your QuantConfig.")
 
@@ -191,7 +204,6 @@ class QuantModelJsonDescription:
         if set(json_keys) != set(safetensor_keys):
             raise ValueError("quant_model_json_description and quant_model_safetensor do not match.")
 
-    
     @staticmethod
     def check_version_format(version_name=None):
         """
@@ -201,12 +213,11 @@ class QuantModelJsonDescription:
         """
         if version_name is None:
             return
-        
+
         import re
         pattern = r'^[1-9]\d*\.\d+\.\d+$'
         if not bool(re.fullmatch(pattern, version_name)):
             raise ValueError(f'version_name format must be x.x.x, current is {version_name}')
-
 
     def change_version_name(self, version_name=None):
         """
@@ -217,13 +228,12 @@ class QuantModelJsonDescription:
         if version_name is None:
             return
         self.quant_model_description[QuantModelJsonDescription.version_type_name] = version_name
-    
+
     def change_group_size(self, group_size=0):
         if group_size <= 0:
             group_size = 0
         self.quant_model_description[QuantModelJsonDescription.group_size_name] = group_size
 
-    
     def change_model_type(self, model_quant_type):
         QuantType.check_instance_of_enum(model_quant_type)
         self.quant_model_description[QuantModelJsonDescription.model_quant_type_name] = model_quant_type
@@ -233,7 +243,7 @@ class QuantModelJsonDescription:
             self.quant_model_description[QuantModelJsonDescription.kv_cache_type_name] = QuantType.KV8
             self.quant_model_description[QuantModelJsonDescription.kv_quant_type_name] = QuantType.KV8
 
-    def change_fa_quant_type(self, use_fa_quant):        
+    def change_fa_quant_type(self, use_fa_quant):
         if use_fa_quant:
             self.quant_model_description[QuantModelJsonDescription.fa_quant_type_name] = QuantType.FAQuant
 

@@ -36,13 +36,15 @@ msmodelslim quant --model_path {模型路径} --save_path {量化权重保存路
 2. 命令行参数"--quant_type"支持：w4a8, w4a16, w8a8, w8a8s, w8a8c8, w8a16。
 
 ### Qwen系列
-|模型名称|支持的量化类型|
-|--------|--------|
-|Qwen2.5-7B-Instruct|w8a8|
-|Qwen2.5-32B-Instruct|w8a8|
-|Qwen2.5-72B-Instruct|w8a8c8|
-|Qwen2.5-Coder-7B-Instruct|w8a8s|
-|Qwen-QwQ-32B|w8a8, w8a8s|
+| 模型名称                      |支持的量化类型|
+|---------------------------|----|
+| Qwen2.5-7B-Instruct       |w8a8|
+| Qwen2.5-32B-Instruct      |w8a8|
+| Qwen2.5-72B-Instruct      |w8a8c8|
+| Qwen2.5-Coder-7B-Instruct |w8a8s|
+| Qwen-QwQ-32B              |w8a8, w8a8s|
+| Qwen3-32B                 |w8a8|
+| Qwen3-14B                 |w8a8|
 
 ### LLaMa系列
 （待更新）
