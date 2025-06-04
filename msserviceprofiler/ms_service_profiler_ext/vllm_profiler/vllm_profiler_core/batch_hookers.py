@@ -30,8 +30,8 @@ def queue_profiler(before_queue, after_queue, queue_name):
     for seq_group in less_queue:
         rid_list.append(seq_group.request_id)
     if len(rid_list) > 0:
-        Profiler(Level.INFO).domain("BatchSchedule").res(rid_list).metric("QueueSize", len(after_queue)).\
-            metric_scope(queue_name).event("Dequeue")
+        prof = Profiler(Level.INFO).domain("BatchSchedule").res(rid_list)
+        prof.metric("QueueSize", len(after_queue)).metric_scope(queue_name).event("Dequeue")
 
     # 队列元素增加
     add_queue = compare_deques(after_queue, before_queue)
@@ -39,8 +39,8 @@ def queue_profiler(before_queue, after_queue, queue_name):
     for seq_group in add_queue:
         rid_list.append(seq_group.request_id)
     if len(rid_list) > 0:
-        Profiler(Level.INFO).domain("BatchSchedule").res(rid_list).metric("QueueSize", len(after_queue)).\
-            metric_scope(queue_name).event("Enqueue")
+        prof = Profiler(Level.INFO).domain("BatchSchedule").res(rid_list)
+        prof.metric("QueueSize", len(after_queue)).metric_scope(queue_name).event("Enqueue")
 
 
 class SchedulerHook(VLLMHookerBase):
