@@ -23,6 +23,7 @@ import time
 import re
 from collections import namedtuple
 
+
 _RUN_MODES = ["precheck", "dump", "compare", "distribute_compare"]
 RUN_MODES = namedtuple("RUN_MODES", _RUN_MODES)(*_RUN_MODES)
 _CHECKER_TYPES = ["basic", "hccl", "model", "hardware", "all"]

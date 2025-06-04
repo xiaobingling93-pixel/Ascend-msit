@@ -11,13 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import os
 import typing
 from collections import namedtuple
 
-import yaml
-
-from msprechecker.prechecker.utils import get_dict_value_by_pos, logger, get_npu_info
+from msprechecker.prechecker.utils import get_dict_value_by_pos, logger
 
 """
 Yaml 配置模板：
@@ -71,41 +68,6 @@ DOMAIN = namedtuple("DOMAIN", _DOMAIN)(*_DOMAIN)
 _CONFIG = ["name", "value", "reason", "suggestions", "condition", "suggested", "not_suggested"]
 CONFIG = namedtuple("CONFIG", _CONFIG)(*_CONFIG)
 NOT_EMPTY_VALUE = "非空值"
-
-
-def get_default_suggestions():
-    preset_yaml_checkers_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "preset_yaml_checkers")
-    preset_yamls = os.listdir(preset_yaml_checkers_path) if os.path.exists(preset_yaml_checkers_path) else []
-
-    inner_npu_type = get_npu_info(to_inner_type=True)  # Value like A2 A3
-    suggestion_file_name = "default_config.yaml"
-    for ii in preset_yamls:
-        if inner_npu_type and inner_npu_type in ii:  # Need to condider other conditions, currently NPU_TYPE only
-            suggestion_file_name = ii
-            break
-    suggestion_file = os.path.join(preset_yaml_checkers_path, suggestion_file_name)
-    logger.info(f"Using preset yaml file: {suggestion_file}, current npu_type: {inner_npu_type}")
-    
-    with open(suggestion_file, "r") as ff:
-        suggestion_content = yaml.safe_load(ff)
-    return suggestion_content
-
-
-def update_to_default_suggestions(domain, additional_checks_yaml):
-    if not additional_checks_yaml or domain not in additional_checks_yaml:
-        return
-
-    GLOBAL_DEFAULT_CONFIG.setdefault(domain, [])
-    sub_config = GLOBAL_DEFAULT_CONFIG[domain]
-    suggestions_dict = {ii[CONFIG.name]: ii for ii in sub_config}
-    for ii in additional_checks_yaml.pop(domain):  # pop out for only apply once
-        cur_key = ii.get(CONFIG.name, None)
-        if cur_key in suggestions_dict:
-            suggestions_dict[cur_key].clear()
-            suggestions_dict[cur_key].update(ii)
-        else:
-            sub_config.append(ii)
-            suggestions_dict[cur_key] = ii
 
 
 def is_condition_met(env_info, suggestion_condition):
@@ -210,6 +172,3 @@ def suggestion_rule_checker(current_configs, suggestion_rule, env_info, domain, 
 
     show_check_result(domain, check_item, CheckResult.OK)
     return (CheckResult.OK, None, None)
-
-
-GLOBAL_DEFAULT_CONFIG = get_default_suggestions()

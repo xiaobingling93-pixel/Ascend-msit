@@ -25,6 +25,8 @@ from msprechecker.prechecker.utils import str_ignore_case, logger, set_log_level
 from msprechecker.prechecker.utils import LOG_LEVELS, RUN_MODES, CHECKER_TYPES
 from msprechecker.prechecker.utils import MIES_INSTALL_PATH, MINDIE_SERVICE_DEFAULT_PATH, RANKTABLEFILE
 from msprechecker.prechecker.utils import deep_compare_dict, get_next_dict_item
+from msprechecker.core.collectors.basic_collector import BasicCollector
+from msprechecker.core.reporters.basic_reporter import BasicReporter
 
 
 LOG_LEVELS_LOWER = [ii.lower() for ii in LOG_LEVELS.keys()]
@@ -290,6 +292,7 @@ def sub_parser_distribute_compare(subparsers):
         "-port",
         "--master_port",
         default=None,
+        type=int,
         help="master port, required if MIES_INSTALL_PATH not available or master_port already occupied by others",
     )
     parser.add_argument(
@@ -323,6 +326,9 @@ def main():
 
     # init
     set_log_level(getattr(args, "log_level", "info"))
+
+    info = BasicCollector(args).collect()
+    BasicReporter().report(info)
 
     # run
     if hasattr(args, "func"):

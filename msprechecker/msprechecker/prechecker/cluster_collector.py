@@ -12,11 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import time
+import socket
 from collections import namedtuple
 
 import torch
 from msprechecker.prechecker.utils import parse_mindie_server_config, read_csv_or_json, logger
 from msprechecker.prechecker.utils import get_local_to_master_ip, get_interface_by_ip
+from msprechecker.prechecker.register import show_check_result, CheckResult
 
 _DISTIBUT_ENVS = ["ranktable_map", "master_ip", "master_port", "local_ip", "rank", "interface", "world_size"]
 DISTIBUT_ENVS = namedtuple("DISTIBUT_ENVS", _DISTIBUT_ENVS)(*_DISTIBUT_ENVS)
@@ -94,6 +97,7 @@ def init_global_distribute_env(ranktable_file=None, service_config_path=None, ma
     GLOBAL_DISTRIBUTE_ENV[DISTIBUT_ENVS.master_port] = master_port
     GLOBAL_DISTRIBUTE_ENV[DISTIBUT_ENVS.world_size] = len(ranktable_map)
     GLOBAL_DISTRIBUTE_ENV[DISTIBUT_ENVS.rank] = ranktable_map.get(local_ip, -1)
+    GLOBAL_DISTRIBUTE_ENV[DISTIBUT_ENVS.ranktable_map] = ranktable_map
 
     logger.info(f"GLOBAL_DISTRIBUTE_ENV: {GLOBAL_DISTRIBUTE_ENV}")
 
@@ -116,8 +120,33 @@ class DistributeCollector:
     @staticmethod
     def _may_use_global_value(key, value=None):
         return GLOBAL_DISTRIBUTE_ENV[key] if not value and key in GLOBAL_DISTRIBUTE_ENV else value
+    
+    @staticmethod
+    def _get_all_ips():
+        if "ranktable_map" in GLOBAL_DISTRIBUTE_ENV:
+            return list(GLOBAL_DISTRIBUTE_ENV["ranktable_map"].keys())
+        
+        ranktable_file = os.getenv('RANK_TABLE_FILE') or os.getenv('RANKTABLEFILE')
+        if ranktable_file and os.path.exists(ranktable_file):
+            ranktable = read_csv_or_json(ranktable_file)
+            ranktable_map = {serv.get("server_id", None): rank 
+                             for rank, serv in enumerate(ranktable.get("server_list", []))}
+            return list(ranktable_map.keys())
+        
+        return []
 
     def gather(self, contents):
+        if not all([isinstance(self.world_size, int), 
+                   isinstance(self.rank, int),
+                   self.master_ip,
+                   self.master_port]):
+            logger.error("Missing required parameters for distributed gathering")
+            return None
+        
+        if not self._check_connectivity():
+            logger.error("Network connectivity check failed. Skip gathering.")
+            return None
+
         if not self.is_dist_group_inited:
             if not isinstance(self.world_size, int) or not isinstance(self.rank, int):
                 logger.error(f"world_size and rank not set. Got world_size={self.world_size}, rank={self.rank}")
@@ -160,6 +189,85 @@ class DistributeCollector:
 
         torch.distributed.destroy_process_group()
         return result if self.rank == 0 else None
+
+    def _check_connectivity(self):
+        all_ips = self._get_all_ips()
+        if not all_ips:
+            logger.warning("No valid IPs found for connectivity check")
+            return False
+            
+        if self.local_ip not in all_ips:
+            logger.error(f"Current IP {self.local_ip} not in cluster IPs: {all_ips}")
+            return False
+            
+        if self.rank == 0:
+            server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+            
+            try:
+                server_socket.bind((self.local_ip, self.master_port))
+                server_socket.listen(self.world_size - 1)
+                logger.info(f"Master started temporary server on {self.local_ip}:{self.master_port}")
+                
+                connected_ips = set()
+                start_time = time.time()
+                timeout = 30
+                
+                while len(connected_ips) < len(all_ips) - 1 and time.time() - start_time < timeout:
+                    try:
+                        server_socket.settimeout(5)
+                        client_sock, (client_ip, _) = server_socket.accept()
+
+                        if client_ip in all_ips:
+                            logger.info(f"Connected to cluster node: {client_ip}")
+                            connected_ips.add(client_ip)
+                        else:
+                            logger.warning(f"Rejected connection from unauthorized IP: {client_ip}")
+                            
+                        client_sock.close()
+                    except socket.timeout:
+                        continue
+      
+                missing_ips = set(all_ips) - {self.local_ip} - connected_ips
+                if missing_ips:
+                    show_check_result(
+                        "Cluster", "Connectivity", CheckResult.ERROR,
+                        action="请检查防火墙状态（sudo systemctl status firewalld）、交换机的 acl 配置以及端口安全策略是否合适",
+                        reason=f"以下节点未连接: {', '.join(missing_ips)}"
+                    )
+                    return False
+                    
+                return True
+                                          
+            except OSError as e:
+                show_check_result(
+                    "Cluster", "Connectivity", CheckResult.ERROR,
+                    action="请检查防火墙状态（sudo systemctl status firewalld）、交换机的 acl 配置以及端口安全策略是否合适。或者通过 `-port` 更换端口",
+                    reason=f"防火墙可能阻止了端口，或者端口已被使用，错误信息: {str(e)}"
+                )
+                return False
+            finally:
+                server_socket.close()
+                
+        else:
+            for attempt in range(3):
+                try:
+                    with socket.create_connection(
+                        (self.master_ip, self.master_port), 
+                        timeout=10
+                    ) as sock:
+                        logger.info(f"Successfully connected to master {self.master_ip}:{self.master_port}")
+                        return True
+                except (ConnectionRefusedError, socket.timeout, socket.gaierror) as e:
+                    logger.warning(f"Connection attempt {attempt+1}/3 failed: {str(e)}")
+                    time.sleep(2)
+            
+            show_check_result(
+                "Cluster", "Connectivity", CheckResult.ERROR,
+                action="请检查防火墙状态（sudo systemctl status firewalld）、交换机的 acl 配置以及端口安全策略是否合适",
+                reason=f"无法连接到主节点 {self.master_ip}:{self.master_port}"
+            )
+            return False
 
 
 def distribute_collector(contents, master_ip=None, master_port=None, rank=None, world_size=None):
