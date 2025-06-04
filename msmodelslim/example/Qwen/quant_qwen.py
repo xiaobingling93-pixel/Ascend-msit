@@ -68,6 +68,28 @@ def auto_layer_select(model, disable_names, disable_threshold, select_layer_data
     return layer_selector.select_layers_by_threshold(disable_threshold)
 
 
+def get_select_anti_dataset(tokenizer, mixed_dataset, device="npu"):
+    """用于离群值抑制的校准集"""
+    anti_data = []
+    for prpt_ans in mixed_dataset:
+        calib_dataset = []
+        calib_list = [prpt_ans["prompt"]]
+        max_len = 0
+        for calib_data in calib_list:
+            inputs = tokenizer(calib_data, return_tensors='pt')
+            calib_dataset.append(inputs.data['input_ids'].to(device))
+            max_len = max(max_len, inputs.data['input_ids'].size(1)) 
+        for i, data in enumerate(calib_dataset):
+            calib_dataset[i] = F.pad(data, (0, max_len - data.size(1)), value=0)
+        anti_data.append(torch.cat(calib_dataset))
+    
+    anti_dataset = []
+    for data in anti_data:
+        anti_dataset.append([data])
+    
+    return anti_dataset
+
+
 def parse_arguments():
     parser = ArgumentParser()
     parser.add_argument('--model_path', type=str, help="model and tokenizer path")
@@ -116,8 +138,8 @@ def parse_arguments():
     parser.add_argument('--model_name', type=str, default=None,
                         validator=StringArgumentValidator(min_length=1, max_length=MAX_KEY_LENGTH, allow_none=True))
     parser.add_argument('--model_type', type=str, default='qwen2',
-                        choices=['qwen1', 'qwen1.5', 'qwen2', 'qwen2.5'],
-                        help='Specify the type of qwen model (choices: qwen1, qwen1.5, qwen2, qwen2.5)')
+                        choices=['qwen1', 'qwen1.5', 'qwen2', 'qwen2.5', 'qwen3'],
+                        help='Specify the type of qwen model (choices: qwen1, qwen1.5, qwen2, qwen2.5, qwen3)')
     parser.add_argument('--anti_calib_file', type=str, default=None,
                        help='Path to anti-calibration data file (.json or .jsonl)')
     parser.add_argument('--disable_threshold', type=float, default=0,
@@ -127,7 +149,10 @@ def parse_arguments():
     parser.add_argument('--trust_remote_code', type=cmd_bool, default=False)
     parser.add_argument('--layer_count', type=int, default=0)
     parser.add_argument('--mindie_format', action="store_true", help="Compatible with quantization formats \
-                        supported by before 2.1.RC1 version of MindIE")
+                        supported by before B050 version of MindIE")
+    parser.add_argument('--w_method', type=str, default='MinMax',
+                        choices=['MinMax', 'GPTQ', 'HQQ', 'NF'],
+                        help='Specify the type of weight quantization method (choices: MinMax, GPTQ, HQQ, NF)')
     return parser.parse_args()
 
 
@@ -201,6 +226,7 @@ class Quantifier:
             use_kvcache_quant=args.use_kvcache_quant,
             is_dynamic=args.is_dynamic,
             disable_last_linear=args.disable_last_linear,
+            w_method=args.w_method
         )
 
         if args.use_fa_quant:
@@ -251,7 +277,7 @@ if __name__ == '__main__':
     checker = SafeGenerator()
     rank: int = int(os.getenv("RANK", "0"))
 
-    model_path = get_valid_read_path(args.model_path, is_dir=True, check_user_stat=True)
+    model_path = get_valid_read_path(args.model_path, is_dir=True, check_user_stat=False)
     save_directory = get_write_directory(args.save_directory, write_mode=0o750)
 
     num_layers = checker.get_config_from_pretrained(
@@ -269,10 +295,23 @@ if __name__ == '__main__':
     elif args.anti_method == 'm6':
         keys = ['.o_proj']
         anti_disable_names = ["model.layers.{}.self_attn.o_proj".format(i) for i in range(num_layers)]
-        anti_outlier_config_val = AntiOutlierConfig(anti_method=args.anti_method,
-                                                    dev_type=args.device_type,
-                                                    disable_anti_names=anti_disable_names, \
-                                                    flex_config={'alpha': 0.6, 'beta': 0.3})
+        if args.model_type == 'qwen3':
+            anti_outlier_config_val = AntiOutlierConfig(
+                a_bit=args.a_bit,
+                w_bit=args.w_bit,
+                w_sym=args.w_sym,
+                anti_method=args.anti_method,
+                dev_type=args.device_type,
+                disable_anti_names=anti_disable_names,
+                flex_config={'alpha': 0.4, 'beta': 0.325}
+            )
+        else:
+            anti_outlier_config_val = AntiOutlierConfig(
+                anti_method=args.anti_method,
+                dev_type=args.device_type,
+                disable_anti_names=anti_disable_names,
+                flex_config={'alpha': 0.6, 'beta': 0.3}
+            )
     elif args.anti_method:
         anti_outlier_config_val = AntiOutlierConfig(anti_method=args.anti_method,
                                                     dev_type=args.device_type)
@@ -292,6 +331,8 @@ if __name__ == '__main__':
 
 
     tokenized_calib_data = []
+    if args.calib_file.lower() == 'none':
+        args.calib_file = None
     calib_file = args.calib_file
     if calib_file:
         calib_file = get_valid_read_path(calib_file)
@@ -308,9 +349,15 @@ if __name__ == '__main__':
     tokenized_ant_calib_data = tokenized_calib_data
     if args.anti_calib_file:
         args.anti_calib_file = get_valid_read_path(args.anti_calib_file)
-        ant_calib_texts = checker.load_jsonl(args.anti_calib_file)
-        if ant_calib_texts is not None:
-            tokenized_ant_calib_data = quantifier.get_batch_tokenized_data(ant_calib_texts)
+        if args.model_type == "qwen3":
+            anti_calib_file_path = args.anti_calib_file
+            with open(anti_calib_file_path, 'r') as f:
+                anti_promt = json.load(f)
+            tokenized_ant_calib_data = get_select_anti_dataset(quantifier.tokenizer, anti_promt, args.device_type)
+        else:
+            ant_calib_texts = checker.load_jsonl(args.anti_calib_file)
+            if ant_calib_texts is not None:
+                tokenized_ant_calib_data = quantifier.get_batch_tokenized_data(ant_calib_texts)
     
     if isinstance(args.disable_threshold, float) and args.disable_threshold > 0:
         quantifier.create_quant_config(num_layers, tokenized_ant_calib_data)
