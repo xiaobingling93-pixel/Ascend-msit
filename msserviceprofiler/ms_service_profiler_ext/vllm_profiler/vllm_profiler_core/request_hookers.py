@@ -81,6 +81,39 @@ class LLMEngineHook(VLLMHookerBase):
     def init(self):
         from vllm.engine.llm_engine import LLMEngine
 
+        def add_processed_request_maker(ori_func):
+            def _add_processed_request(this, request_id, *args, **kwargs):
+                ori_func(this, request_id, *args, **kwargs)
+                Profiler(Level.INFO).domain("Request").res(request_id).metric_inc("WAITING", 1).event("ReqState")
+
+            return _add_processed_request
+
+        def process_model_outputs_maker(ori_func):
+            def process_model_outputs(this, ctx, request_id=None, *args, **kwargs):
+                if len(ctx.output_queue) == 0:
+                    return ori_func(this, ctx, request_id, *args, **kwargs)
+
+                request_id_list = []
+                outputs, metadata_list, scheduler_outputs, _, _, _, skip = ctx.output_queue[0]
+                for ii, (sch_seq_group, meta) in enumerate(zip(scheduler_outputs.scheduled_seq_groups, metadata_list)):
+                    if ii in skip:
+                        continue
+                    seq_group, seq_request_id = sch_seq_group.seq_group, meta.request_id
+                    request_id_list.append(seq_request_id)
+                    if seq_group.is_finished() and len(seq_group.seqs) > 0:
+                        cur_seq = seq_group.seqs[0]
+                        profiler_recv = Profiler(Level.INFO).domain("Request").res(seq_request_id)
+                        profiler_reply = Profiler(Level.INFO).domain("Request").res(seq_request_id)
+                        profiler_recv.metric("recvTokenSize", cur_seq.get_prompt_len()).event("httpRes")
+                        profiler_reply.metric("replyTokenSize", cur_seq.get_output_len()).event("httpRes")
+
+                prof = Profiler(Level.INFO).domain("Request").res(request_id_list)
+                ret = ori_func(this, ctx, request_id, *args, **kwargs)
+                prof.event("DecodeEnd")
+                return ret
+
+            return process_model_outputs
+
         def validate_output_maker(ori_func):
             def validate_output(output, output_type):
                 profiler_recv = Profiler(Level.INFO).domain("Request").res(request_id)
@@ -95,6 +128,8 @@ class LLMEngineHook(VLLMHookerBase):
 
             return validate_output
 
+        self.do_hook([getattr(LLMEngine, "_add_processed_request")], add_processed_request_maker)
+        self.do_hook([getattr(LLMEngine, "_process_model_outputs")], process_model_outputs_maker)
         self.do_hook([LLMEngine.validate_output], validate_output_maker)
 
 

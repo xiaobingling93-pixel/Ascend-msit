@@ -19,7 +19,7 @@ GLOBAL_FORWARD_PROF = []
 
 
 class ExecutorBaseExecuteModelHook(VLLMHookerBase):
-    vllm_version = ("0.6.3", "0.8.4")
+    vllm_version = ("0.8.4", "0.8.4")
 
     def init(self):
         from vllm.executor.executor_base import ExecutorBase
@@ -104,33 +104,6 @@ class ModelRunnerExecuteHook(VLLMHookerBase):
         self.do_hook([ModelRunner.execute_model], execute_model_maker)
 
 
-class ModelRunnerBaseExecuteModelHook(VLLMHookerBase):
-    vllm_version = ("0.6.3", "0.8.4")
-
-    def __init__(self):
-        super().__init__()
-        self.is_forward_first_run = True
-
-    def init(self):
-        from vllm.worker.model_runner_base import ModelRunnerBase
-
-        def execute_model_maker(ori_func):
-            def execute_model(this, model_input, *args, **kwargs):
-                ret = ori_func(this, model_input, *args, **kwargs)
-                if self.is_forward_first_run:
-                    self.is_forward_first_run = False
-                    return ret
-
-                request_id_list = [request_id for request_id, _ in model_input.request_ids_to_seq_ids.items()]
-                prof = Profiler(Level.INFO).domain("ModelExecute")
-                prof.res(request_id_list).event("Forward")
-                return ret
-
-            return execute_model
-
-        self.do_hook([ModelRunnerBase.execute_model], execute_model_maker)
-
-
 class ModelForwardHook(VLLMHookerBase):
     vllm_version = ("0.6.3", "0.8.4")
 
@@ -158,8 +131,8 @@ class ModelForwardHook(VLLMHookerBase):
         self.do_hook([CommonAttentionState.begin_forward], begin_forward_maker)
 
 
-class SamplerForwardHook(VLLMHookerBase):
-    vllm_version = ("0.6.3", "0.8.4")
+class SetForwardContextHook(VLLMHookerBase):
+    vllm_version = ("0.8.4", "0.8.4")
 
     def init(self):
         from vllm import forward_context
@@ -188,5 +161,5 @@ model_hookers = [
     ModelRunnerExecuteHook,
     ModelRunnerBaseExecuteModelHook,
     ModelForwardHook,
-    SamplerForwardHook,
+    SetForwardContextHook,
 ]
