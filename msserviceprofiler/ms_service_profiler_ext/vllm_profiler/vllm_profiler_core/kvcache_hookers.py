@@ -15,15 +15,14 @@ from ms_service_profiler import Profiler, Level
 
 from .vllm_hooker_base import VLLMHookerBase
 
-
 class KVCacheManagerHook(VLLMHookerBase):
     vllm_version = ("0.6.3", "0.8.4")
-    
+
     def init(self):
         from vllm.core.block_manager import SelfAttnBlockSpaceManager
         from vllm.engine.llm_engine import LLMEngine
         self.request_dict = {}
-        
+
         def allocate_maker(ori_func):
             def allocate(this, seq_group, *args, **kwargs):
                 profiler = Profiler(Level.INFO)
@@ -42,8 +41,11 @@ class KVCacheManagerHook(VLLMHookerBase):
                         request_id = k
                         break
                 new_cows = ori_func(this, seq, num_lookahead_slots, *args, **kwargs)
+                num_blocks = len(getattr(this.block_tables.get(seq.seq_id), "_blocks", []))
                 profiler.domain("KVCache").res(request_id).metric(
                     "deviceBlock", len(this.block_tables)).event("AppendSlot")
+                # This is called for every decoder process, recording current blocks
+                profiler.domain("KVCache").res(request_id).metric("deviceBlock", num_blocks).event("blocks")
                 return new_cows
             return append_slots
 
@@ -82,9 +84,11 @@ class KVCacheManagerHook(VLLMHookerBase):
             def get_stats(this, *args, **kwargs):
                 profiler = Profiler(Level.INFO)
                 stats = ori_func(this, *args, **kwargs)
+                num_free_gpu = sum(scheduler.block_manager.get_num_free_gpu_blocks() for scheduler in this.scheduler)
                 profiler.domain("KVCache").attr(
                     "cpuHitCache", stats.cpu_cache_usage_sys).attr(
                     "hitCache", stats.gpu_cache_usage_sys).event("GetCacheHitRate")
+                profiler.domain("KVCache").attr("deviceFreeBlock", num_free_gpu).event("GetCacheHitRate")
                 return stats
             return get_stats
 
@@ -94,7 +98,6 @@ class KVCacheManagerHook(VLLMHookerBase):
         self.do_hook([SelfAttnBlockSpaceManager.swap_out], swap_out_maker)
         self.do_hook([SelfAttnBlockSpaceManager.free], free_maker)
         self.do_hook([LLMEngine._get_stats], get_stats_maker)
-        
-        
+
+
 kvcache_hookers = [KVCacheManagerHook]
-        

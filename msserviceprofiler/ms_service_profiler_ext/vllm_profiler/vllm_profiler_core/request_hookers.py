@@ -11,16 +11,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
 import time
 
 from ms_service_profiler import Profiler, Level
 from .vllm_hooker_base import VLLMHookerBase
 
+try:
+    GLOBAL_HOST_NAME = os.uname().nodename
+except Exception as ee:
+    GLOBAL_HOST_NAME = "localhost"
+GLOBAL_FORWARD_PROF = []
 
 def prof_add_request(request_id, prompt, *args, **kwargs):
-    # 记录请求进入系统的时间                
-    profiler = Profiler(Level.INFO)
-    profiler.domain("http").res(request_id).event("httpReq") 
+    # 记录请求进入系统的时间
+    # profiler = Profiler(Level.INFO)
+    Profiler(Level.INFO).domain("Request").res(request_id).attr("hostname", GLOBAL_HOST_NAME).event("httpReq")
+    Profiler(Level.INFO).domain("Request").res(request_id).event("encode")
 
 
 # generate -> add_request -> schedule -> execute_model
@@ -73,16 +80,14 @@ class LLMEngineHook(VLLMHookerBase):
 
         def validate_output_maker(ori_func):
             def validate_output(output, output_type):
-                profiler_recv = Profiler(Level.INFO)
-                profiler_reply = Profiler(Level.INFO)
+                profiler_recv = Profiler(Level.INFO).domain("Request").res(request_id)
+                profiler_reply = Profiler(Level.INFO).domain("Request").res(request_id)
                 if output.finished is True:
                     request_id = output.request_id
                     input_token_size = len(output.prompt_token_ids)
                     output_token_size = len(output.outputs[0].token_ids)
-                    profiler_recv.domain("http").res(request_id).metric(
-                        "recvTokenSize", input_token_size).event("httpRes")
-                    profiler_reply.domain("http").res(request_id).metric(
-                        "replyTokenSize", output_token_size).event("httpRes")
+                    profiler_recv.metric("recvTokenSize", input_token_size).event("httpRes")
+                    profiler_reply.metric("replyTokenSize", output_token_size).event("httpRes")
                 return ori_func(output, output_type)
 
             return validate_output
