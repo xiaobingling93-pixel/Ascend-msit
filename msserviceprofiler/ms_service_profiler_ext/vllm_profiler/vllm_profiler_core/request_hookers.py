@@ -81,13 +81,6 @@ class LLMEngineHook(VLLMHookerBase):
     def init(self):
         from vllm.engine.llm_engine import LLMEngine
 
-        def add_processed_request_maker(ori_func):
-            def _add_processed_request(this, request_id, *args, **kwargs):
-                ori_func(this, request_id, *args, **kwargs)
-                Profiler(Level.INFO).domain("Request").res(request_id).metric_inc("WAITING", 1).event("ReqState")
-
-            return _add_processed_request
-
         def process_model_outputs_maker(ori_func):
             def process_model_outputs(this, ctx, request_id=None, *args, **kwargs):
                 if len(ctx.output_queue) == 0:
@@ -128,7 +121,6 @@ class LLMEngineHook(VLLMHookerBase):
 
             return validate_output
 
-        self.do_hook([getattr(LLMEngine, "_add_processed_request")], add_processed_request_maker)
         self.do_hook([getattr(LLMEngine, "_process_model_outputs")], process_model_outputs_maker)
         self.do_hook([LLMEngine.validate_output], validate_output_maker)
 

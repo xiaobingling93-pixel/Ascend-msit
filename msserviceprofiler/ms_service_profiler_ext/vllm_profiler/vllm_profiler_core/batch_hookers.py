@@ -220,4 +220,20 @@ class SchedulerHook(VLLMHookerBase):
         self.do_hook([Scheduler._add_seq_group_to_swapped], add_seq_group_to_swapped_maker)
 
 
-batch_hookers = [SchedulerHook]
+class LLMEngineHook(VLLMHookerBase):
+    vllm_version = ("0.6.3", "0.8.4")
+
+    def init(self):
+        from vllm.engine.llm_engine import LLMEngine
+
+        def add_processed_request_maker(ori_func):
+            def _add_processed_request(this, request_id, *args, **kwargs):
+                ori_func(this, request_id, *args, **kwargs)
+                Profiler(Level.INFO).domain("Request").res(request_id).metric_inc("WAITING", 1).event("ReqState")
+
+            return _add_processed_request
+
+        self.do_hook([getattr(LLMEngine, "_add_processed_request")], add_processed_request_maker)
+
+
+batch_hookers = [SchedulerHook, LLMEngineHook]
