@@ -139,7 +139,6 @@ class FAQuantizer:
                 check_type(config.num_key_value_heads, int, "num_key_value_heads in config")
 
         check_config(config)
-            
         check_type(logger, logging.Logger, param_name="logger")
 
         self.tp_size = None
@@ -166,12 +165,6 @@ class FAQuantizer:
         if not self.is_calib and not self.dequant_infer:
             return states_tensor
 
-        expected_types = {"q", "k", "v"}
-        if self.processed_types != expected_types:
-            missing = expected_types - self.processed_types
-            raise RuntimeError(f"Missing qkv types:{missing}. "
-                               f"Please ensure all {expected_types} are processed.")
-
         if TensorType(qkv) == TensorType.Q:
             scale, offset = self.q_observer.get_scale_offset(
                 states_tensor=states_tensor,
@@ -197,6 +190,12 @@ class FAQuantizer:
             values_string = ", ".join(TensorType.get_values())
             raise ValueError(f"Unsupported current TensorType. "
                              f"Please confirm if the parameter is in `{values_string}`")
+
+        expected_types = {"q", "k", "v"}
+        if self.processed_types != expected_types:
+            missing = expected_types - self.processed_types
+            raise RuntimeError(f"Missing qkv types:{missing}. "
+                               f"Please ensure all {expected_types} are processed.")
 
         # only observe the quant params, not quantize and dequantize the tensor
         return states_tensor
