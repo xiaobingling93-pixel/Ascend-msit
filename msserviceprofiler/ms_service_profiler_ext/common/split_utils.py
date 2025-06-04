@@ -327,11 +327,11 @@ def get_post_event_df(post_event_pairs, framework_df, name):
 
 
 def postprocess_framework_df(framework_df, post_event_pairs, name):
-    service_type = get_service_type(framework_df)
-
     if framework_df.empty:
         logger.warning(f'{name}: df is empty')
         return framework_df
+
+    service_type = get_service_type(framework_df)
     
     # 更新AllTime行
     framework_df.loc[framework_df['name'] == 'AllTime', ['start_time(microsecond)', 'end_time(microsecond)']] = \
