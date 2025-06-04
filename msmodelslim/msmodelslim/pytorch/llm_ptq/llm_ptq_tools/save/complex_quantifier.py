@@ -19,6 +19,11 @@ from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.fa_quant import (
     is_attn_module_and_then_check_quantizer
 )
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.simulate_tp import ParallelLinearCol
+from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.flat_quant.components import (
+    FakeQuantizedLinear, 
+    FlatNormWrapper, 
+    asym_quant
+)
 
 
 def deqscale_process(input_scale, scale):
@@ -131,9 +136,50 @@ class ComplexQuantifier:
         # 处理Linear、以及附属scale、offset等params
         elif isinstance(module, (LinearQuantizer, LinearSparseQuantizer, LowBitLinearQuantizer)):
             yield from self.generate_weight_of_linear_module(name, module, model_quant_type)
+        elif isinstance(module, FakeQuantizedLinear):
+            yield from self.generate_weight_of_flat_linear_module(name, module, model_quant_type)
+        elif isinstance(module, FlatNormWrapper):
+            weight = module.norm.weight
+            yield name + '.weight', QuantType.FLOAT, weight.cpu()
         else:
             for key, param in module.named_parameters(name, recurse=False):
                 yield key, QuantType.FLOAT, param
+    
+    def generate_weight_of_flat_linear_module(self, name, module, model_quant_type):
+        weight_scale, weight_offset = module.weight_quantizer.get_scale_zero(module.weight)
+        quant_weight = asym_quant(module.weight, weight_scale, weight_offset, module.weight_quantizer.bits, True)[0]
+        yield name + '.weight', model_quant_type, quant_weight.cpu().to(torch.int8)
+        if hasattr(module, 'bias') and module.bias is not None:
+            yield name + '.bias', QuantType.FLOAT, module.bias
+        if model_quant_type == QuantType.W8A8_DYNAMIC or model_quant_type == QuantType.W4A4_DYNAMIC:
+            yield name + '.weight_scale', model_quant_type, weight_scale.cpu()
+            yield name + '.weight_offset', model_quant_type, weight_offset.cpu()
+            clip_ratio = module.act_quantizer.get_clip_ratio()
+            if clip_ratio is not None:
+                yield name + '.clip_ratio', QuantType.W4A4_FLATQUANT_DYNAMIC, clip_ratio.cpu()
+        elif model_quant_type == QuantType.W8A8:
+            input_scale, input_offset = module.act_quantizer.get_scale_zero(None)
+            yield name + '.input_scale', model_quant_type, input_scale.cpu()
+            yield name + '.input_offset', model_quant_type, input_offset.cpu()
+
+            input_scale = input_scale.to(device=quant_weight.device)
+            input_offset = input_offset.to(device=quant_weight.device)
+            deq_scale = deqscale_process(input_scale, weight_scale).to(torch.float32)
+            quant_weight = quant_weight.to(torch.float32)
+            input_offset = input_offset.to(torch.float32)
+            correction = (quant_weight.sum(dim=1) * input_offset).cpu()
+            fp_bias = change_bias(module.weight, module)
+            quant_bias = torch.round(fp_bias / deq_scale - correction)
+            deq_scale = deqscale2int64_by_dtype(deq_scale,
+                                                self.torch_dtype == torch.bfloat16)
+
+            yield name + '.quant_bias', model_quant_type, quant_bias.cpu().to(torch.int32)
+            yield name + '.deq_scale', model_quant_type, deq_scale.cpu()
+        if model_quant_type == QuantType.W4A4_DYNAMIC:
+            if hasattr(module, "save_trans") and module.save_trans is not None:
+                save_trans = module.save_trans.get_save_params()
+                for key, param in save_trans.items():
+                    yield name + "." + key, QuantType.W4A4_FLATQUANT_DYNAMIC, param.cpu()
 
     def generate_weight_of_tp_module(self, name, module, model_quant_type):
         quant_param, _ = module.get_quant_param()

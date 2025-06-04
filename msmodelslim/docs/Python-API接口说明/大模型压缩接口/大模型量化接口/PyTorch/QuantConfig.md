@@ -11,16 +11,16 @@ QuantConfig(a_bit=8, w_bit=8, disable_names=None, dev_type='cpu', dev_id=None, a
 ### 参数说明
 | 参数名| 输入/返回值 | 含义 | 使用限制 |
 | ------ | ------ | ------ | ------ |
-| a_bit | 输入 | 激活值量化bit。| 可选。<br>数据类型：int。<br>可选值为8和16，默认为8。<br>大模型量化场景下，可配置为8或16。per_group的场景下需配置为8或16（a_bit=8 当前仅在 w4a8 量化中使用）。is_dynamic参数配置为True，使用per-token动态量化场景下，需配置为8。<br>大模型稀疏量化场景下，需配置为8。 |
+| a_bit | 输入 | 激活值量化bit。| 可选。<br>数据类型：int。<br>可选值为4，8和16，默认为8。<br>大模型量化场景下，可配置为4，8或16。per_group的场景下需配置为8或16（a_bit=8 当前仅在 w4a8 量化中使用）。is_dynamic参数配置为True，使用per-token动态量化场景下，需配置为4或8。<br>大模型稀疏量化场景下，需配置为8。 <br>w4a4场景仅支持per-token动态量化，该场景目前仅支持Qwen3系列稠密模型，并且不建议使用异常值抑制功能。|
 | w_bit | 输入 | 权重量化bit。| 可选。<br>数据类型：int。<br> 可选值为4和8，默认为8。<br>大模型量化场景下，可配置为4或8。is_dynamic参数配置为True，使用per-token动态量化场景下，需配置为4或8。<br>大模型稀疏量化场景下，需配置为4。 |
 | disable_names | 输入 | 权需排除量化的节点名称，即手动回退的量化层名称。<br>如精度太差，推荐回退量化敏感层，如分类层、输入层、检测head层等。| 可选。<br>数据类型：object。 |
 | dev_type | 输入 | device类型。| 可选。<br>数据类型：object。<br>可选值：['cpu', 'npu']，默认为'cpu'。 |
 | dev_id | 输入 | Device ID。| 可选。<br>数据类型：int。<br>默认值为None。<br>仅在“dev_type”配置为“npu”时生效。“dev_id”指定的Device ID优先级高于环境变量配置的Device ID。 |
 | act_method | 输入 | 激活值量化方法。| 可选。<br>数据类型：int。可选值如下所示，默认为1。<br>(1) 1代表Label-Free场景的min-max量化方式。<br>(2) 2代表Label-Free场景的histogram量化方式。<br>(3) 3代表Label-Free场景的自动混合量化方式，LLM大模型场景下推荐使用。<br>说明：开启lowbit稀疏量化功能时，不支持选择值3。|
 | pr | 输入 | 量化选择概率。| 可选。<br>数据类型：float。取值范围：[0,1]。<br>默认值：1.0，建议取值1.0。|
-| w_sym | 输入 | 权重量化是否为对称量化。| 可选。<br>数据类型：bool。默认为True。<br>W8A8和W4A8_DYNAMIC场景仅支持配置为True。|
+| w_sym | 输入 | 权重量化是否为对称量化。| 可选。<br>数据类型：bool。默认为True。<br>W8A8和W4A8_DYNAMIC场景仅支持配置为True。<br>不适用于w4a4场景。|
 | mm_tensor | 输入 | 选择进行per-channel量化或per-tensor量化。| 可选。<br>数据类型：bool。默认为True。<br>True: per-tensor量化。<br>False: per-channel量化，建议选择该量化方式。|
-| w_method | 输入 | 选权重量化策略。| 可选。<br>数据类型：str。默认为'MinMax'，可选值：'MinMax','GPTQ','HQQ','NF'。<br>MinMax、HQQ和NF支持Data-Free。<br>GPTQ不支持Data-Free。<br>NF不支持per-tensor,per-channel,per-group,low_bit,通信量化，kvcache量化，antioutlier混合使用|
+| w_method | 输入 | 选权重量化策略。| 可选。<br>数据类型：str。默认为'MinMax'，可选值：'MinMax','GPTQ','HQQ','NF'。<br>MinMax、HQQ和NF支持Data-Free。<br>GPTQ不支持Data-Free。<br>NF不支持per-tensor,per-channel,per-group,low_bit,通信量化，kvcache量化，antioutlier混合使用。|
 | co_sparse | 输入 | 是否开启稀疏量化功能。| 可选。<br>数据类型：bool。默认值：False，不开启稀疏量化。<br>大模型稀疏量化场景下，优先使用lowbit稀疏量化功能，开启lowbit稀疏量化后，co_sparse参数自动失效。|
 | fraction | 输入 | 模型权重稀疏量化过程中被保护的异常值占比。| 可选。<br>数据类型：float。取值范围[0.01,0.1]。默认值为0.01。|
 | nonuniform | 输入 | 是否在稀疏量化中采用非均匀量化。| 可选。<br>数据类型：bool。默认值为False。|
@@ -32,7 +32,7 @@ QuantConfig(a_bit=8, w_bit=8, disable_names=None, dev_type='cpu', dev_id=None, a
 | use_kvcache_quant | 输入 | 是是否使用kvcache量化功能。|可选。<br>数据类型：bool。<br>默认为False。<br>True：使用kvcache量化功能。False：不使用kvcache量化功能。<br>说明:将此参数设置为true并配置表1 量化配置表里的kv_quant参数后，方可使用kvcache量化功能。 |
 | is_dynamic | 输入 | 是否使用per-token动态量化功能。|可选。<br>数据类型：bool。<br>默认为False。<br>True：使用per-token动态量化。False：不使用per-token动态量化。|
 | open_outlier | 输入 | 是否开启权重异常值划分。|可选。<br>数据类型：bool。<br>默认为True。<br>True：开启权重异常值划分。False：关闭权重异常值划分。<br>说明：(1)仅在lowbit设置为True时生效。(2)per_group量化场景下，需协同设置is_lowbit为True，open_outlier为False。|
-| group_size | 输入 | per_group量化中group的大小。|可选。<br>数据类型：int。<br>默认值为64，支持配置为32,64,128,256。<br>说明:仅适用于per_group量化场景，需协同设置is_lowbit为True，open_outlier为False。|
+| group_size | 输入 | per_group量化中group的大小。|可选。<br>数据类型：int。<br>默认值为64，支持配置为32,64,128,256。<br>说明:仅适用于per_group量化场景，需协同设置is_lowbit为True，open_outlier为False。<br>不适用于w4a4场景。|
 | percdamp | 输入 | GPTQ算法的矩阵正定偏置系数，用于保障计算过程的稳定性。当GPTQ运行出现非正定矩阵导致的报错时，可以适当增大该参数。|可选。<br>数据类型：float。<br>取值范围为[0,1]，默认值为0.01。<br>说明:仅适用于w_method为GPTQ算法的情况。|
 
 
