@@ -83,8 +83,9 @@ class SchedulerHook(VLLMHookerBase):
         def abort_seq_group_maker(ori_func):
             def abort_seq_group(this, request_id, *args, **kwargs):
                 prof = Profiler(Level.INFO).domain("BatchSchedule").res(request_id)
-                prof.metric_inc('FINISHED_ABORTED', 1).event("ReqState")
+                prof.metric_inc("FINISHED_ABORTED", 1).event("ReqState")
                 ori_func(this, request_id, *args, **kwargs)
+
             return abort_seq_group
 
         self.do_hook([Scheduler.abort_seq_group], abort_seq_group_maker)
@@ -92,8 +93,9 @@ class SchedulerHook(VLLMHookerBase):
         def allocate_and_set_running_maker(ori_func):
             def _allocate_and_set_running(this, seq_group, *args, **kwargs):
                 prof = Profiler(Level.INFO).domain("BatchSchedule").res(seq_group.request_id)
-                prof.metric_inc('RUNNING', 1).metric_inc('WAITING', -1).event("ReqState")
+                prof.metric_inc("RUNNING", 1).metric_inc("WAITING", -1).event("ReqState")
                 ori_func(this, seq_group, *args, **kwargs)
+
             return _allocate_and_set_running
 
         self.do_hook([Scheduler._allocate_and_set_running], allocate_and_set_running_maker)
@@ -103,8 +105,9 @@ class SchedulerHook(VLLMHookerBase):
                 seqs = seq_group.get_seqs(status=SequenceStatus.RUNNING)
                 if len(seqs) != 1:
                     prof = Profiler(Level.INFO).domain("BatchSchedule").res(seq_group.request_id)
-                    prof.metric_inc('RUNNING', -1).metric_inc('WAITING', 1).event("ReqState")
+                    prof.metric_inc("RUNNING", -1).metric_inc("WAITING", 1).event("ReqState")
                 ori_func(this, seq_group, *args, **kwargs)
+
             return _preempt_by_recompute
 
         self.do_hook([Scheduler._preempt_by_recompute], preempt_by_recompute_maker)
@@ -112,8 +115,9 @@ class SchedulerHook(VLLMHookerBase):
         def swap_in_maker(ori_func):
             def _swap_in(this, seq_group, *args, **kwargs):
                 prof = Profiler(Level.INFO).domain("BatchSchedule").res(seq_group.request_id)
-                prof.metric_inc('RUNNING', 1).metric_inc('SWAPPED', -1).event("ReqState")
+                prof.metric_inc("RUNNING", 1).metric_inc("SWAPPED", -1).event("ReqState")
                 ori_func(this, seq_group, *args, **kwargs)
+
             return _swap_in
 
         self.do_hook([Scheduler._swap_in], swap_in_maker)
@@ -122,8 +126,9 @@ class SchedulerHook(VLLMHookerBase):
             def _swap_out(this, seq_group, *args, **kwargs):
                 if this.block_manager.can_swap_out(seq_group):
                     prof = Profiler(Level.INFO).domain("BatchSchedule").res(seq_group.request_id)
-                    prof.metric_inc('RUNNING', -1).metric_inc('SWAPPED', 1).event("ReqState")
+                    prof.metric_inc("RUNNING", -1).metric_inc("SWAPPED", 1).event("ReqState")
                 ori_func(this, seq_group, *args, **kwargs)
+
             return _swap_out
 
         self.do_hook([Scheduler._swap_out], swap_out_maker)
@@ -133,7 +138,7 @@ class SchedulerHook(VLLMHookerBase):
                 before_running_queue = this.running
                 for seq_group in this.running:
                     prof = Profiler(Level.INFO).domain("BatchSchedule").res(seq_group.request_id)
-                    prof.metric_inc('RUNNING', -1).metric_inc('FINISHED', 1).event("ReqState")
+                    prof.metric_inc("RUNNING", -1).metric_inc("FINISHED", 1).event("ReqState")
                 ori_func(this, *args, **kwargs)
                 queue_profiler(before_running_queue, this.running, "running")
 
@@ -145,7 +150,7 @@ class SchedulerHook(VLLMHookerBase):
             def _add_seq_group_to_running(this, seq_group, *args, **kwargs):
                 ori_func(this, seq_group, *args, **kwargs)
                 prof = Profiler(Level.INFO).domain("BatchSchedule").res([seq_group.request_id])
-                prof.metric("QueueSize", len(this.running)).metric_scope('running').event("Enqueue")
+                prof.metric("QueueSize", len(this.running)).metric_scope("running").event("Enqueue")
 
             return _add_seq_group_to_running
 
@@ -198,7 +203,7 @@ class SchedulerHook(VLLMHookerBase):
             def add_seq_group(this, seq_group, *args, **kwargs):
                 ori_func(this, seq_group, *args, **kwargs)
                 prof = Profiler(Level.INFO).domain("BatchSchedule").res([seq_group.request_id])
-                prof.metric("QueueSize", len(this.waiting)).metric_scope('waiting').event("Enqueue")
+                prof.metric("QueueSize", len(this.waiting)).metric_scope("waiting").event("Enqueue")
 
             return add_seq_group
 
@@ -208,7 +213,7 @@ class SchedulerHook(VLLMHookerBase):
             def _add_seq_group_to_swapped(this, seq_group, *args, **kwargs):
                 ori_func(this, seq_group, *args, **kwargs)
                 prof = Profiler(Level.INFO).domain("BatchSchedule").res([seq_group.request_id])
-                prof.metric("QueueSize", len(this.swapped)).metric_scope('swapped').event("Enqueue")
+                prof.metric("QueueSize", len(this.swapped)).metric_scope("swapped").event("Enqueue")
 
             return _add_seq_group_to_swapped
 
@@ -224,10 +229,9 @@ class LLMEngineHook(VLLMHookerBase):
         def add_processed_request_maker(ori_func):
             def _add_processed_request(this, request_id, *args, **kwargs):
                 ori_func(this, request_id, *args, **kwargs)
-                Profiler(Level.INFO).domain("Request").res(request_id).metric_inc('WAITING', 1).event("ReqState")
+                Profiler(Level.INFO).domain("Request").res(request_id).metric_inc("WAITING", 1).event("ReqState")
 
             return _add_processed_request
-
 
         def process_model_outputs_maker(ori_func):
             def process_model_outputs(this, ctx, request_id=None, *args, **kwargs):
@@ -253,6 +257,7 @@ class LLMEngineHook(VLLMHookerBase):
                 ret = ori_func(this, ctx, request_id, *args, **kwargs)
                 prof.event("DecodeEnd")
                 return ret
+
             return process_model_outputs
 
         self.do_hook([getattr(LLMEngine, "_add_processed_request")], add_processed_request_maker)

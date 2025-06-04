@@ -177,8 +177,16 @@ class SamplerForwardHook(VLLMHookerBase):
                     yield
                 if prof is not None:
                     prof.span_end()
+
             return set_forward_context
 
         self.do_hook([forward_context.set_forward_context], set_forward_context_maker)
 
-model_hookers = [ExecutorBaseExecuteModelHook, ModelRunnerExecuteHook, ModelRunnerBaseExecuteModelHook, ModelForwardHook, SamplerForwardHook]
+
+model_hookers = [
+    ExecutorBaseExecuteModelHook,
+    ModelRunnerExecuteHook,
+    ModelRunnerBaseExecuteModelHook,
+    ModelForwardHook,
+    SamplerForwardHook,
+]
