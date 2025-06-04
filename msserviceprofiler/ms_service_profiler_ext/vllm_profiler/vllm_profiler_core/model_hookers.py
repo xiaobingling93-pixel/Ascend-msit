@@ -156,10 +156,4 @@ class SetForwardContextHook(VLLMHookerBase):
         self.do_hook([forward_context.set_forward_context], set_forward_context_maker)
 
 
-model_hookers = [
-    ExecutorBaseExecuteModelHook,
-    ModelRunnerExecuteHook,
-    ModelRunnerBaseExecuteModelHook,
-    ModelForwardHook,
-    SetForwardContextHook,
-]
+model_hookers = [ExecutorBaseExecuteModelHook, ModelRunnerExecuteHook, ModelForwardHook, SetForwardContextHook]
