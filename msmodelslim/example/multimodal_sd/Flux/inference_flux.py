@@ -32,7 +32,7 @@ from FLUX1dev import get_local_rank, get_world_size, initialize_torch_distribute
 from FLUX1dev.utils import check_prompts_valid, check_param_valid, check_dir_safety, check_file_safety
 
 from msmodelslim.quant import quant_model, SessionConfig, FA3ProcessorConfig, W8A8DynamicQuantConfig, \
-    W8A8DynamicProcessorConfig
+    W8A8DynamicProcessorConfig, M3ProcessorConfig, M4ProcessorConfig, M6ProcessorConfig, M6Config
 from msmodelslim.quant import W8A8TimeStepProcessorConfig, W8A8TimeStepQuantConfig, \
     SaveProcessorConfig
 from msmodelslim import logger
@@ -190,7 +190,9 @@ def parse_arguments():
                         help="specify device type")
 
     parser.add_argument("--do_quant", action="store_true")
-    parser.add_argument("--quant_type", choices=["w8a8_timestep", "w8a8_dynamic_fa3"], default="w8a8_timestep", )
+    parser.add_argument("--quant_type", choices=["w8a8_timestep", "w8a8_dynamic_fa3", "w8a8_dynamic"],
+                        default="w8a8_timestep")
+    parser.add_argument("--anti_method", choices=["m3", "m4", "m6"], default=None)
     parser.add_argument("--quant_weight_save_folder", type=str)
     parser.add_argument("--quant_dump_calib_folder", type=str)
     parser.add_argument("--data_split_num", type=int, default=1)
@@ -447,12 +449,54 @@ def do_multimodal_quant(args, model, infer_func, infer_args, infer_kwargs):
         )
         return _cfg
 
+    def get_w8a8_dynamic_cfg():
+        processor_cfg_map = {
+            "w8a8_dynamic": W8A8DynamicProcessorConfig(
+                cfg=W8A8DynamicQuantConfig(
+                    act_method='minmax'
+                ),
+                disable_names=get_disable_layer_names(
+                    model,
+                    layer_include='*',
+                    layer_exclude='*net.2*',
+                ),
+            ),
+            "save": SaveProcessorConfig(
+                output_path=os.path.dirname(safe_tensor_path),
+                safetensors_name=os.path.basename(safe_tensor_path),
+                json_name=None,
+                save_type=['safe_tensor'],
+                part_file_size=None
+            )
+        }
+        if args.anti_method == 'm3':
+            processor_cfg_map['m3'] = M3ProcessorConfig()
+        elif args.anti_method == 'm4':
+            processor_cfg_map['m4'] = M4ProcessorConfig()
+        elif args.anti_method == 'm6':
+            processor_cfg_map['m6'] = M6ProcessorConfig(
+                cfg=M6Config(
+                    alpha=0.8,
+                    beta=0.2
+                )
+            )
+
+        _cfg = SessionConfig(
+            processor_cfg_map=processor_cfg_map,
+            calib_data=calib_dataset,
+            device='npu'
+        )
+        return _cfg
+
     if 'timestep' in args.quant_type:
         session_cfg = get_timestep_cfg()
     elif 'fa3' in args.quant_type:
         session_cfg = get_fa3_cfg()
+    elif args.quant_type == 'w8a8_dynamic':
+        model.config.model_type = 'flux'
+        session_cfg = get_w8a8_dynamic_cfg()
     else:
-        raise ValueError("quant_type must be timestep or fa3")
+        raise ValueError("quant_type must be timestep or fa3 or w8a8_dynamic")
 
     # pydantic库自带的数据类型校验
     session_cfg.model_validate(session_cfg)

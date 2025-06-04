@@ -16,8 +16,8 @@
 |-----------|-----------|---------|
 | SD3-Medium | W8A8静态量化 | [link](https://huggingface.co/stabilityai/stable-diffusion-3-medium)
 | Open-Sora-Plan v1.2 | W8A8静态量化 | [link](https://huggingface.co/LanguageBind/Open-Sora-Plan-v1.2.0)
-| FLUX.1-dev | W8A8静态量化，W8A8分时间步量化，FA3+W8A8动态量化 | [link](https://huggingface.co/black-forest-labs/FLUX.1-dev/tree/main)
-| HunyuanVideo | W8A8静态量化，W8A8分时间步量化，FA3+W8A8动态量化 | [link](https://huggingface.co/tencent/HunyuanVideo)
+| FLUX.1-dev | W8A8静态量化，W8A8分时间步量化，FA3+W8A8动态量化，异常值抑制+W8A8动态量化 | [link](https://huggingface.co/black-forest-labs/FLUX.1-dev/tree/main)
+| HunyuanVideo | W8A8静态量化，W8A8分时间步量化，FA3+W8A8动态量化，异常值抑制+W8A8动态量化 | [link](https://huggingface.co/tencent/HunyuanVideo)
 
 ## 环境配置
 - 具体环境配置请参考[使用说明](../../README.md)
@@ -581,6 +581,114 @@ python /the/absolut/path/of/example/multimodal_sd/Flux/inference_flux.py \
     --quant_type "w8a8_dynamic_fa3"
 ```
 
+### Flux 异常值抑制量化
+
+校准数据Dump和量化的示例代码如下：
+
+```python
+
+import os
+import torch
+
+from msmodelslim.quant import quant_model, SessionConfig
+from msmodelslim.quant import M3ProcessorConfig, M4ProcessorConfig, M6ProcessorConfig, W8A8DynamicQuantConfig, \
+    W8A8DynamicProcessorConfig, SaveProcessorConfig
+from example.multimodal_sd.utils import get_disable_layer_names, get_rank, DumperManager
+
+DUMP_CALIB_FOLDER = './results/quant/cache'  # 用于存放校准数据的文件夹
+SAFE_TENSOR_FOLDER = './results/quant/safe_tensor'  # 用于存放量化模型的文件夹
+
+dump_data_path = os.path.join(DUMP_CALIB_FOLDER, f'calib_data_{get_rank()}.pth')
+safe_tensor_path = os.path.join(SAFE_TENSOR_FOLDER, f'rank_{get_rank()}.safetensors')
+
+
+############################ 加载模型 ############################
+def load_pipeline():
+    pass
+
+
+pipeline = load_pipeline(...)  # 加载模型
+
+model = pipeline.transformer
+
+############################ dump 校准数据 ############################
+if not os.path.exists(dump_data_path):  # 检查校准数据是否已存在，不存在则dump
+    # 添加forward hook用于dump model的forward输入
+    dumper_manager = DumperManager(model, capture_mode='args')
+
+    # 执行浮点模型推理
+    pipeline(
+        prompt="A photo of an astronaut riding a horse on mars",
+        num_inference_steps=50,
+        ...
+    )
+    # 保存校准数据
+    dumper_manager.save(dump_data_path)
+
+############################ 启动量化 ############################
+# 加载校准数据
+calib_dataset = torch.load(dump_data_path, map_location=f'npu:{get_rank()}')
+
+# 量化配置
+session_cfg = SessionConfig(
+    processor_cfg_map={
+    "m4": M4ProcessorConfig(),
+    "w8a8_dynamic": W8A8DynamicProcessorConfig(
+        cfg=W8A8DynamicQuantConfig(
+            act_method='minmax'
+        ),
+        disable_names=get_disable_layer_names(
+            model,
+            layer_include='*',
+            layer_exclude='*net.2*',
+        ),
+
+    ),
+    "save": SaveProcessorConfig(
+        output_path=os.path.dirname(safe_tensor_path),
+        safetensors_name=os.path.basename(safe_tensor_path),
+        json_name=None,
+        save_type=['safe_tensor'],
+        part_file_size=None
+    )
+},
+calib_data=calib_dataset,
+device='npu'
+)
+
+# pydantic库自带的数据类型校验
+session_cfg.model_validate(session_cfg)
+
+# 量化模型
+quant_model(model, session_cfg)
+```
+
+#### 量化启动脚本
+
+示例的启动命令可参考：
+
+```shell
+# do quant
+python /the/absolut/path/of/example/multimodal_sd/Flux/inference_flux.py \
+    --path ${model_path} \
+    --save_path "./results/quant/img" \
+    --device_id 0 \
+    --device "npu" \
+    --prompt_path "example/multimodal_sd/Flux/calib_prompts.txt" \
+    --width 1024 \
+    --height 1024 \
+    --infer_steps 50 \
+    --seed 42 \
+    --use_cache \
+    --device_type "A2-64g" \
+    --batch_size 1 \
+    --max_num_prompt 0 \
+    --do_quant \
+    --quant_weight_save_folder "./results/quant/safetensors" \
+    --quant_dump_calib_folder "./results/quant/cache" \
+    --quant_type "w8a8_dynamic" \
+    --anti_method "m4"
+```
 
 ### HunyuanVideo 时间步量化
 
@@ -957,3 +1065,119 @@ torchrun --nproc_per_node=8 /the/absolut/path/of/example/multimodal_sd/HunYuanVi
     --quant_type "w8a8_dynamic_fa3"
 ```
 
+### HunyuanVideo 异常值抑制量化
+
+校准数据Dump和量化的示例代码如下：
+
+```python
+
+import os
+import torch
+
+from msmodelslim.quant import quant_model, SessionConfig
+from msmodelslim.quant import M3ProcessorConfig, M4ProcessorConfig, M6ProcessorConfig, W8A8DynamicQuantConfig, \
+  W8A8DynamicProcessorConfig, SaveProcessorConfig
+from example.multimodal_sd.utils import get_disable_layer_names, get_rank, DumperManager
+
+DUMP_CALIB_FOLDER = './results/quant/cache'  # 用于存放校准数据的文件夹
+SAFE_TENSOR_FOLDER = './results/quant/safe_tensor'  # 用于存放量化模型的文件夹
+
+dump_data_path = os.path.join(DUMP_CALIB_FOLDER, f'calib_data_{get_rank()}.pth')
+safe_tensor_path = os.path.join(SAFE_TENSOR_FOLDER, f'rank_{get_rank()}.safetensors')
+
+
+############################ 加载模型 ############################
+def load_pipeline():
+    pass
+
+
+pipeline = load_pipeline(...)  # 加载模型
+
+model = pipeline.transformer
+
+############################ dump 校准数据 ############################
+if not os.path.exists(dump_data_path):  # 检查校准数据是否已存在，不存在则dump
+    # 添加forward hook用于dump model的forward输入
+    dumper_manager = DumperManager(model, capture_mode='args')
+
+    # 执行浮点模型推理
+    pipeline(
+        prompt="A photo of an astronaut riding a horse on mars",
+        num_inference_steps=50,
+        ...
+    )
+    # 保存校准数据
+    dumper_manager.save(dump_data_path)
+
+############################ 启动量化 ############################
+# 加载校准数据
+calib_dataset = torch.load(dump_data_path, map_location=f'npu:{get_rank()}')
+
+# 量化配置
+session_cfg = SessionConfig(
+    processor_cfg_map={
+        "m4": M4ProcessorConfig(), 
+        "w8a8_dynamic": W8A8DynamicProcessorConfig(
+            cfg = W8A8DynamicQuantConfig(
+                act_method = 'minmax'
+            ),
+            disable_names=get_disable_layer_names(
+                model, 
+                layer_include=['*double_blocks*', '*single_blocks*'],
+                layer_exclude=['*img_mod*', '*modulation*', '*fc2*'],
+            ),
+        ),
+        "save": SaveProcessorConfig(
+            output_path=os.path.dirname(safe_tensor_path),
+            safetensors_name=os.path.basename(safe_tensor_path),
+            save_type=["safe_tensor"],
+            json_name=None,
+            part_file_size=None,
+        )
+    },
+    calib_data=calib_dataset,
+    device = "npu",
+)
+
+# pydantic库自带的数据类型校验
+session_cfg.model_validate(session_cfg)
+
+# 量化模型
+quant_model(model, session_cfg)
+```
+
+#### 量化启动脚本
+
+示例的启动命令可参考：
+
+```shell
+
+export PYTORCH_NPU_ALLOC_CONF="expandable_segments:True"
+export TASK_QUEUE_ENABLE=2
+export CPU_AFFINITY_CONF=1
+export TOKENIZERS_PARALLELISM=false
+export ALGO=0
+torchrun --nproc_per_node=8 /the/absolut/path/of/example/multimodal_sd/HunYuanVideo/sample_video.py \
+    --model-base HunyuanVideo \
+    --dit-weight HunyuanVideo/hunyuan-video-t2v-720p/transformers/mp_rank_00_model_states.pt \
+    --vae-path HunyuanVideo/hunyuan-video-t2v-720p/vae \
+    --text-encoder-path HunyuanVideo/text_encoder \
+    --text-encoder-2-path HunyuanVideo/clip-vit-large-patch14 \
+    --model-resolution "720p" \
+    --video-size 720 1280 \
+    --video-length 129 \
+    --infer-steps 50 \
+    --prompt "example/multimodal_sd/HunYuanVideo/calib_prompts.txt" \
+    --seed 42 \
+    --flow-reverse \
+    --ulysses-degree 8 \
+    --ring-degree 1 \
+    --vae-parallel \
+    --num-videos 1 \
+    --save-path ./results \
+    --do_quant \
+    --quant_weight_save_folder "./results/quant/safetensors" \
+    --quant_dump_calib_folder "./results/quant/cache" \
+    --quant_type "w8a8_dynamic" \
+    --anti_method "m4"
+```

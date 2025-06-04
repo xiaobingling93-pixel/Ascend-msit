@@ -230,3 +230,94 @@ from msmodelslim.quant.session.session import FA3ProcessorConfig
 
 fa3_processor_cfg = FA3ProcessorConfig()
 ```
+
+## M3ProcessorConfig
+
+### 功能说明
+异常值抑制M3算法处理器配置类，用于配置M3异常值抑制处理器相关的参数。
+
+### 类原型
+```python
+class M3ProcessorConfig(BaseModel):
+    pass
+```
+
+### 调用示例
+```python
+from msmodelslim.quant.session.session import M3ProcessorConfig
+
+m3_processor_cfg = M3ProcessorConfig()
+```
+
+## M4ProcessorConfig
+
+### 功能说明
+异常值抑制M4算法处理器配置类，用于配置M4异常值抑制处理器相关的参数。
+
+### 类原型
+```python
+class M4ProcessorConfig(BaseModel):
+    pass
+```
+
+### 调用示例
+```python
+from msmodelslim.quant.session.session import M4ProcessorConfig
+
+m4_processor_cfg = M4ProcessorConfig()
+```
+
+## M6Config
+
+### 功能说明
+异常值抑制M6算法参数配置类，用于配置M6异常值抑制相关的参数。
+
+### 类原型
+```python
+class M6Config(BaseModel):
+    alpha: float = None
+    beta: float = None
+```
+
+### 参数说明
+| 参数名| 输入/返回值 | 含义 | 使用限制 |
+| ------ | ------ | ------ | ------ |
+| alpha | 输入 | 控制算法的平滑程度 | 可选。<br>数据类型：float。取值范围为 [0, 1]，默认值 None |
+| beta | 输入 | 控制算法的平滑程度 | 可选。<br>数据类型：float。取值范围为 [0, 1]，默认值 None |
+
+
+### 调用示例
+```python
+from msmodelslim.quant.session.session import M6Config
+
+m6_cfg = M6Config(alpha=0.8, beta=0.2)
+```
+
+## M6ProcessorConfig
+
+### 功能说明
+异常值抑制M6算法处理器配置类，用于配置M6量化处理器相关的参数。
+
+### 类原型
+```python
+class M6ProcessorConfig(BaseModel):
+    cfg: M6Config
+```
+
+### 参数说明
+| 参数名| 输入/返回值 | 含义 | 使用限制 |
+| ------ | ------ | ------ | ------ |
+| cfg | 输入 | M6异常值抑制配置 | 必选。<br>数据类型：M6Config，M6异常值抑制配置类。|
+
+
+### 调用示例
+```python
+from msmodelslim.quant.session.session import M6ProcessorConfig, M6Config
+
+m6_processor_cfg = M6ProcessorConfig(
+    cfg=M6Config(
+        alpha=0.8,
+        beta=0.2
+    )
+)
+```
