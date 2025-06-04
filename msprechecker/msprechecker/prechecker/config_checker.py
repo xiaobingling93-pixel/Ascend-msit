@@ -13,13 +13,16 @@
 # limitations under the License.
 
 import os
+
 from msprechecker.prechecker.register import PrecheckerBase
-from msprechecker.prechecker.utils import logger, get_npu_info, get_global_env_info
 from msprechecker.prechecker.utils import parse_mindie_server_config, parse_ranktable_file
 from msprechecker.prechecker.utils import get_model_path_from_mindie_config, get_mindie_server_config
 from msprechecker.prechecker.utils import is_deepseek_model, read_csv_or_json
-from msprechecker.prechecker.suggestions import GLOBAL_DEFAULT_CONFIG, DOMAIN, NOT_EMPTY_VALUE
-from msprechecker.prechecker.suggestions import update_to_default_suggestions, suggestion_rule_checker
+from msprechecker.prechecker.suggestions import DOMAIN, NOT_EMPTY_VALUE
+from msprechecker.core.utils import check_file_permission
+from msprechecker.prechecker.register import show_check_result, CheckResult
+from msprechecker.core.utils.version import Version
+from msprechecker.prechecker.utils import logger
 
 
 class ConfigCheckerBase(PrecheckerBase):
@@ -38,15 +41,8 @@ class ConfigCheckerBase(PrecheckerBase):
     def do_precheck(self, current_config, additional_checks=None, **kwargs):
         if not current_config:
             return
-        update_to_default_suggestions(self.domain, additional_checks)
 
-        env_info = get_global_env_info()
-        env_info["NPU_TYPE"] = get_npu_info(to_inner_type=True)  # Value like A2 A3
-        current_config.update(env_info)  # Also update env values into config
-        for suggestion_rule in GLOBAL_DEFAULT_CONFIG.get(self.domain, []):
-            result, suggestion_value, current_value = suggestion_rule_checker(
-                current_config, suggestion_rule, env_info, domain=self.domain, action_func=self.action
-            )
+        check_file_permission(self.config_path, domain="config", checker_name="file_perm")
 
 
 class MindieConfigChecker(ConfigCheckerBase):
@@ -96,10 +92,47 @@ class ModelConfigChecker(ConfigCheckerBase):
         model_name, model_config = current_config.get("model_name", None), current_config.get("model_config", None)
         if not model_name or not model_config:
             return
+        
+        # torch_dtype check
+        torch_dtype = model_config.get("torch_dtype")
+        if torch_dtype is not None and torch_dtype != "float16":
+            show_check_result(
+                "ModelConfig",
+                "torch_dtype",
+                CheckResult.ERROR,
+                action="请将 torch_dtype 设置为 float16",
+                reason=f"当前 torch_dtype 为 {torch_dtype}，推荐为 float16",
+            )
+
+        # transformers_version check
+        model_transformers_version = model_config.get("transformers_version")
+        if model_transformers_version:
+            try:
+                import transformers
+                current_transformers_version = transformers.__version__
+            except ImportError:
+                show_check_result(
+                    "ModelConfig",
+                    "transformers_version",
+                    CheckResult.ERROR,
+                    action="请升级 transformers 库",
+                    reason=f"模型要求 transformers>={model_transformers_version}，当前未安装",
+                )
+                return
+            if Version(model_transformers_version) > Version(current_transformers_version):
+                show_check_result(
+                    "ModelConfig",
+                    "transformers_version",
+                    CheckResult.ERROR,
+                    action="请升级 transformers 库",
+                    reason=f"模型要求 transformers>={model_transformers_version}，当前为 {current_transformers_version}",
+                )
+
         if not is_deepseek_model(model_name):
             return
 
         super().do_precheck(current_config=model_config, additional_checks=additional_checks, **kwargs)
+
 
 
 class UserConfigChecker(ConfigCheckerBase):
