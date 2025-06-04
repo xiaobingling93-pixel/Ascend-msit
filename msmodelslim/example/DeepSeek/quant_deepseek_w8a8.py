@@ -42,6 +42,8 @@ def parse_args():
     parser.add_argument('--fa_quant', action="store_true", help="Enable fa quant")
     parser.add_argument('--mindie_format', action="store_true", help="Compatible with quantization formats \
                         supported by before 2.1.RC1 version of MindIE")
+    parser.add_argument('--dynamic', action='store_true', help="Dynamic Quantization")
+    parser.add_argument('--disable_anti', anti='store_true', help="No AntiOutlier")
     return parser.parse_args()
 
 
@@ -116,8 +118,7 @@ def main():
     check_number(batch_size, int, 1, 16, "batch_size")
 
     safe_generator = SafeGenerator()
- 
-    config = safe_generator.get_config_from_pretrained(model_path=model_path, 
+    config = safe_generator.get_config_from_pretrained(model_path=model_path,
                                                        trust_remote_code=True)
     num_layer = config.num_hidden_layers
     if args.layer_count < 0 or args.layer_count > num_layer:
@@ -166,14 +167,15 @@ def main():
     anti_dataset = get_calib_dataset_batch(tokenizer, anti_prompt, batch_size, model.device)
     dataset_calib = get_calib_dataset_batch(tokenizer, calib_prompt, batch_size, model.device)
 
-    with torch.no_grad():
-        anti_config = AntiOutlierConfig(w_bit=8,
-                                        a_bit=8,
-                                        anti_method='m4',
-                                        dev_type='npu',
-                                        dev_id=model.device.index)
-        anti_outlier = AntiOutlier(model, calib_data=anti_dataset, cfg=anti_config)
-        anti_outlier.process()
+    if not args.disable_anti:
+        with torch.no_grad():
+            anti_config = AntiOutlierConfig(w_bit=8,
+                                            a_bit=8,
+                                            anti_method='m4',
+                                            dev_type='npu',
+                                            dev_id=model.device.index)
+            anti_outlier = AntiOutlier(model, calib_data=anti_dataset, cfg=anti_config)
+            anti_outlier.process()
     pbar.update(1)
 
     disable_names = []
@@ -201,6 +203,7 @@ def main():
         pr=1.0,
         w_sym=True,
         mm_tensor=False,
+        is_dynamic=args.dynamic
     )
 
     if args.fa_quant:
