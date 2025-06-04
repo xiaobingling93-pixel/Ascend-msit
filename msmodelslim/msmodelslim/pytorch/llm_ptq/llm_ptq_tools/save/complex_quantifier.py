@@ -108,6 +108,55 @@ def generate_weight_of_nf_module(name, module):
         yield name + '.bias', QuantType.NF4, module.bias
 
 
+def _pack_int4(weight) -> torch.Tensor:
+    """
+    Pack int4 weight to int8 weight
+    @param weight: torch.Tensor, int4 weight
+    @return: torch.Tensor, int8 weight
+    """
+    weight = weight.to(torch.int8)
+    e = 0  # number of experts
+    if len(weight.shape) == 2:
+        k, n = weight.shape
+    elif len(weight.shape) == 3:
+        e, k, n = weight.shape
+    n_new = n // 2 + n % 2
+
+    if n_new != n // 2:
+        raise AssertionError("n dimension should be even")
+    
+    weight = weight.reshape(-1, 2)
+    weight0 = weight[:, :1]
+    weight1 = weight[:, 1:]
+
+    weight1_4 = torch.bitwise_left_shift(weight1, 4)
+    weight2_4 = weight0 & 0b00001111
+
+    weight_add = torch.bitwise_or(weight1_4, weight2_4)
+    if e == 0:
+        weight_res = weight_add.reshape(k, n_new)
+    else:
+        weight_res = weight_add.reshape(e, k, n_new)
+    return weight_res
+
+
+def _w4a16_pack_int4(save_quant_weight, trans_flag):
+    """
+    Pack int4 weight to int8 weight
+    @param save_quant_weight: torch.Tensor, int4 weight
+    @param trans_flag: bool, whether to transpose the weight
+    @return: torch.Tensor, int8 weight
+    """
+
+    # per group 不推荐 Transpose，per channel 推荐 Transpose
+    weight_in_k_n = save_quant_weight.transpose(-1, -2).contiguous()
+    weight_trans = weight_in_k_n if not trans_flag else weight_in_k_n.transpose(-1, -2).contiguous()
+    save_quant_weight = _pack_int4(weight=weight_trans)
+    if not trans_flag:
+        save_quant_weight = save_quant_weight.transpose(-1, -2).contiguous()
+    return save_quant_weight
+
+
 class ComplexQuantifier:
     def __init__(self, cfg, rollback_names, torch_dtype, layer_cfg_manager, is_new_version=False):
         self.cfg = cfg
@@ -225,6 +274,12 @@ class ComplexQuantifier:
         # 各种量化均需要提供 weight
         quant_weight: torch.Tensor = quant_weight.to(device=fp_weight.device)
         save_quant_weight = quant_weight.cpu().to(torch.int8)
+
+        if self.is_new_version and model_quant_type in [QuantType.W4A16]:
+            # w4a16 量化当前没走分阶段量化，因此 weight_scale 不是一个 list
+            trans_flag = weight_scale.shape[-1] == 1
+            save_quant_weight = _w4a16_pack_int4(save_quant_weight, trans_flag)
+
         yield name + '.weight', model_quant_type, save_quant_weight
         if hasattr(module, 'bias') and module.bias is not None:
             yield name + '.bias', QuantType.FLOAT, module.bias
