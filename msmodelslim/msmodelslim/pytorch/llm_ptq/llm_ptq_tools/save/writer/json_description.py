@@ -22,7 +22,7 @@ from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.save.writer.base import BaseWrite
 class JsonDescriptionWriter(BaseWriter):
 
     def __init__(self, logger, model_quant_type, json_name=None, save_directory: str = '.',
-                 use_kvcache_quant=False, use_fa_quant=False):
+                 use_kvcache_quant=False, use_fa_quant=False, version_name=None, group_size=0):
         super().__init__(logger)
 
         self.save_dir = save_directory
@@ -30,7 +30,9 @@ class JsonDescriptionWriter(BaseWriter):
         self.quant_model_json_description = QuantModelJsonDescription(
             model_quant_type,
             use_kvcache_quant,
-            use_fa_quant
+            use_fa_quant,
+            version_name=version_name,
+            group_size=group_size
         )
 
     def _write(self, key: str, value: str) -> None:

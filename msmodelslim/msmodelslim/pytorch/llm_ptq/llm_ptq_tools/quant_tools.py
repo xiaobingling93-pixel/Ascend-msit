@@ -53,6 +53,7 @@ from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.llm_ptq_utils import (
     SAVE_TYPE_LIST,
     SAVE_TYPE_NUMPY,
     SAVE_TYPE_SAFE_TENSOR,
+    SAVE_TYPE_ASCENDV1
 )
 
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.fa_quant import (
@@ -549,10 +550,10 @@ class Calibrator(object):
             if len(save_type) == 1:
                 raise ValueError("W4A8_DYNAMIC quantization does not support saving to numpy format, "
                                  "please check it.")
-            elif SAVE_TYPE_SAFE_TENSOR in save_type:
+            else:
                 self.logger.error("W4A8_DYNAMIC quantization does not support saving to numpy format, "
-                                  f"defaulting to `{SAVE_TYPE_SAFE_TENSOR}` type.")
-                save_type = [SAVE_TYPE_SAFE_TENSOR]
+                                  f"removing `{SAVE_TYPE_NUMPY}` from `save_type`.")
+                save_type.remove(SAVE_TYPE_NUMPY)
         if part_file_size is not None:
             check_int(part_file_size, min_value=1)
 
@@ -892,13 +893,27 @@ class Calibrator(object):
                                     cfg=self.cfg,
                                     safetensors_name=safetensors_name,
                                     json_name=json_name,
-                                    part_file_size=part_file_size)
+                                    part_file_size=part_file_size,
+                                    group_size=self.cfg.group_size)
 
         # quantifier 应基于量化方法予以抽象，当前仅实现了与保存相关的逻辑
+        # numpy 和 safetensor type 默认不支持 pack
+        if isinstance(save_type, list):
+            if SAVE_TYPE_ASCENDV1 in save_type:
+                save_type = [SAVE_TYPE_ASCENDV1]
+                is_new_version = True
+                self.logger.warning(f"{SAVE_TYPE_ASCENDV1} is new version, {SAVE_TYPE_NUMPY} "
+                                    f"and {SAVE_TYPE_SAFE_TENSOR} "
+                                    f"will be ignored, only {SAVE_TYPE_ASCENDV1} will be saved.")
+            else:
+                is_new_version = False
+        else:
+            is_new_version = True if save_type in [SAVE_TYPE_ASCENDV1] else False
         quantifier = ComplexQuantifier(cfg=self.cfg,
                                        rollback_names=self.rollback_names,
                                        torch_dtype=self.model_torch_dtype,
-                                       layer_cfg_manager=self.layer_cfg_manager)
+                                       layer_cfg_manager=self.layer_cfg_manager,
+                                       is_new_versoin=is_new_version)
         self._save_weights_of_model(quantifier, saver)
 
     def _save_weights_of_model(self, quantifier, saver):

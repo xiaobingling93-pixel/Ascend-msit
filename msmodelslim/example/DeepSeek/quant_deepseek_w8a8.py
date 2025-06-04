@@ -21,7 +21,7 @@ sys.path.append(parent_directory)
 from ascend_utils.common.security import get_valid_read_path, get_write_directory, check_number
 from ascend_utils.common.security import json_safe_load, json_safe_dump
 from example.common.utils import SafeGenerator
-from msmodelslim.tools.copy_config_files import copy_config_files, modify_config_json
+from msmodelslim.tools.copy_config_files import copy_config_files, modify_config_json, copy_json
 from msmodelslim.pytorch.llm_ptq.anti_outlier import AntiOutlierConfig, AntiOutlier
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
 from msmodelslim.tools.logger import set_logger_level
@@ -223,7 +223,8 @@ def main():
         remove_module_entries(save_path)
     
     custom_hooks = {
-        'config.json': functools.partial(modify_config_json, custom_hook=custom_hook)
+        'config.json': functools.partial(modify_config_json, custom_hook=custom_hook) \
+                        if args.mindie_format else copy_json
     }
     copy_config_files(input_path=model_path, output_path=save_path, quant_config=quant_config,
                       mindie_format=args.mindie_format, custom_hooks=custom_hooks)

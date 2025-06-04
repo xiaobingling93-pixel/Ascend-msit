@@ -11,7 +11,8 @@ from msmodelslim import logger
 
 SAVE_TYPE_NUMPY = "numpy"
 SAVE_TYPE_SAFE_TENSOR = "safe_tensor"
-SAVE_TYPE_LIST = [SAVE_TYPE_NUMPY, SAVE_TYPE_SAFE_TENSOR]
+SAVE_TYPE_ASCENDV1 = "ascendV1"
+SAVE_TYPE_LIST = [SAVE_TYPE_NUMPY, SAVE_TYPE_SAFE_TENSOR, SAVE_TYPE_ASCENDV1]
 
 
 class QuantType(str, Enum):
@@ -91,9 +92,16 @@ class QuantModelJsonDescription:
     model_quant_type_name = "model_quant_type"
     kv_cache_type_name = "kv_cache_type"
     fa_quant_type_name = "fa_quant_type"
+    version_type_name = "version"
+    group_size_name = "group_size"
+    kv_quant_type_name = "kv_quant_type"
 
-    def __init__(self, model_quant_type, use_kvcache_quant=False, use_fa_quant=False):
+    def __init__(self, model_quant_type, use_kvcache_quant=False, use_fa_quant=False, version_name=None, group_size=0):
         self.quant_model_description = {}
+
+        self.check_version_format(version_name)
+        self.change_version_name(version_name)
+
         QuantType.check_instance_of_enum(model_quant_type)
         self.model_quant_type = model_quant_type
         self.change_model_type(model_quant_type)
@@ -101,6 +109,7 @@ class QuantModelJsonDescription:
             raise ValueError("KV-cache and FA cannot be quantized at the same time!")
         self.change_kvcache_type(use_kvcache_quant)
         self.change_fa_quant_type(use_fa_quant)
+        self.change_group_size(group_size)
 
     @staticmethod
     def check_description(quant_model_json_description=None, quant_model_json_description_path=None):
@@ -178,6 +187,39 @@ class QuantModelJsonDescription:
         if set(json_keys) != set(safetensor_keys):
             raise ValueError("quant_model_json_description and quant_model_safetensor do not match.")
 
+    
+    @staticmethod
+    def check_version_format(version_name=None):
+        """
+        校验version_name格式是否为x.x.x
+        @param version_name: str, version_name
+        @return: None
+        """
+        if version_name is None:
+            return
+        
+        import re
+        pattern = r'^[1-9]\d*\.\d+\.\d+$'
+        if not bool(re.fullmatch(pattern, version_name)):
+            raise ValueError(f'version_name format must be x.x.x, current is {version_name}')
+
+
+    def change_version_name(self, version_name=None):
+        """
+        修改version_name
+        @param version_name: str, version_name
+        @return: None
+        """
+        if version_name is None:
+            return
+        self.quant_model_description[QuantModelJsonDescription.version_type_name] = version_name
+    
+    def change_group_size(self, group_size=0):
+        if group_size <= 0:
+            group_size = 0
+        self.quant_model_description[QuantModelJsonDescription.group_size_name] = group_size
+
+    
     def change_model_type(self, model_quant_type):
         QuantType.check_instance_of_enum(model_quant_type)
         self.quant_model_description[QuantModelJsonDescription.model_quant_type_name] = model_quant_type
@@ -185,6 +227,7 @@ class QuantModelJsonDescription:
     def change_kvcache_type(self, use_kvcache_quant):
         if use_kvcache_quant:
             self.quant_model_description[QuantModelJsonDescription.kv_cache_type_name] = QuantType.KV8
+            self.quant_model_description[QuantModelJsonDescription.kv_quant_type_name] = QuantType.KV8
 
     def change_fa_quant_type(self, use_fa_quant):        
         if use_fa_quant:
