@@ -774,6 +774,9 @@ class Calibrator(object):
                     # every linear layer will have a standalone config
                     layer_cfg = self.layer_cfg_manager.get_layer_config(name)
 
+                    if layer_cfg.model_quant_type == QuantType.FLOAT:
+                        continue
+
                     if layer_cfg.is_lowbit:
                         quant_mod = LowBitLinearQuantizer(cfg=layer_cfg, logger=self.logger, name=name)
                     elif layer_cfg.w_method in QuantType.NF4:
