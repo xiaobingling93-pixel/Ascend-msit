@@ -21,6 +21,7 @@ import shutil
 
 from components.utils.file_open_check import FileStat
 from components.utils.constants import PATH_WHITE_LIST_REGEX
+from components.utils.log import logger
 
 
 STR_WHITE_LIST_REGEX = re.compile(r"[^_A-Za-z0-9\"'><=\[\])(,}{: /.~-]")
@@ -209,7 +210,7 @@ def find_existing_path(path, depth):
         raise ValueError("Output path was not valied.")
 
 
-def is_enough_disk_space_left(dump_path, logger, required_space=MIN_DUMP_DISK_SPACE, max_path_depth=200):
+def is_enough_disk_space_left(dump_path, required_space=MIN_DUMP_DISK_SPACE, max_path_depth=200):
     dump_path = os.path.abspath(dump_path)
     existing_path = None
     try:
@@ -246,7 +247,7 @@ def _check_parent_dir_safe(dir_path):
     root_path = get_root(dir_path)
 
     if not PathChecker().is_safe_parent_dir().check(str(root_path)):
-        raise OSError(f"Output parent directory path {root_path} is not safe.")
+        logger.warning(f"Output parent directory path {root_path} is not safe.")
 
 
 def ms_makedirs(dir_path, **kwargs):
@@ -261,6 +262,19 @@ def check_positive_integer(value):
     return ivalue
 
 
+def check_input_path_legality(value):
+    if not value:
+        return value
+    input_path = value
+    try:
+        file_stat = FileStat(input_path)
+    except Exception as err:
+        raise argparse.ArgumentTypeError("input path:%r is illegal, Please check." % input_path) from err
+    if not file_stat.is_basically_legal('read', strict_permission=True):
+        raise argparse.ArgumentTypeError("The current user cannot read the input path: %r." % input_path)
+    return input_path
+
+
 def check_output_path_legality(value):
     if not value:
         return value
@@ -269,7 +283,7 @@ def check_output_path_legality(value):
         file_stat = FileStat(path_value)
     except Exception as err:
         raise argparse.ArgumentTypeError("Output path is illegal, please check.") from err
-    if not file_stat.is_basically_legal("write"):
+    if not file_stat.is_basically_legal("write", strict_permission=False):
         raise argparse.ArgumentTypeError("The current output path does not have right write permission, please check.")
     return path_value
 
