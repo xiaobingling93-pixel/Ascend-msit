@@ -50,11 +50,13 @@ SYNC_EVENT_PAIRS = [
 FILTER_LIST = ['deserializeExecuteRequestsForInfer', 'deserializeExecuteResponse', 'convertTensorBatchToBackend', 
                'processPythonExecResult', 'forward', 'sample', 'setInferBuffer', 'grpcWriteToSlave']
 
-NAME_LIST = ['httpReq', 'encode', 'preprocessBatch', 'batchFrameworkProcessing', 'serializeExcueteMessage',
+NAME_LIST_MINDIE = ['httpReq', 'encode', 'preprocessBatch', 'batchFrameworkProcessing', 'serializeExcueteMessage',
              'deserializeExecuteRequestsForInfer', 'convertTensorBatchToBackend', 'getInputMetadata',
              'preprocess', 'forward', 'sample', 'postprocess', 'generateOutput', 'prepareInputs', 'operatorExecute',
              'processPythonExecResult', 'deserializeExecuteResponse', 'saveoutAndContinueBatching', 'continueBatching',
              'setInferBuffer', 'grpcWriteToSlave', 'receiveInfer', 'handleTaskExecution', 'decodeEnd', 'httpRes']
+
+NAME_LIST_VLLM = ['httpReq', 'encode', 'batchFrameworkProcessing', 'preprocess', 'forward', 'httpRes']
 
 FULL_BATCH = ['serializeExcueteMessage', 'deserializeExecuteRequestsForInfer', 'convertTensorBatchToBackend', 
               'getInputMetadata', 'preprocess', 'forward', 'sample', 'postprocess']
@@ -71,9 +73,19 @@ RENAMED_COLUMNS = {
     }
 
 
+def get_name_list(service_type):
+    if service_type == 'mindie':
+        name_list = NAME_LIST_MINDIE
+    else:
+        name_list = NAME_LIST_VLLM
+
+    return name_list
+
+
+
 def preprocess_framework_df(framework_df):
     try:
-        framework_df = framework_df[framework_df['name'].isin(NAME_LIST)]
+        framework_df = framework_df[framework_df['name'].isin(NAME_LIST_MINDIE)]
         framework_df = framework_df[CSV_COLUMNS]
         framework_df = framework_df.rename(columns=RENAMED_COLUMNS)
     except KeyError as e:
@@ -86,7 +98,7 @@ def preprocess_framework_df(framework_df):
 def is_valid_prefill(batch_group, rid, framework_df):
     batch_row = batch_group.iloc[0]
     cur_rid = batch_row['rid_list'][0]
-    if rid != -1:
+    if rid != '-1':
         cur_rid = rid
 
     target_encode = framework_df[(framework_df['rid'] == str(cur_rid)) & 
@@ -133,32 +145,59 @@ def get_last_half_batch(framework_df, generate_index, pid, tid):
     return result
 
 
-def get_full_batch(group, framework_df):
+def get_full_batch_vllm(group, framework_df):
     result = pd.DataFrame()
-    start_index = NAME_LIST.index('batchFrameworkProcessing')
-    end_index = NAME_LIST.index('saveoutAndContinueBatching')
+    try:
+        batch_start_index = group[group['name'] == 'batchFrameworkProcessing'].index[0]
+        all_time_index = group[group['name'] == 'AllTime'].index[0]
+        concat_list = [batch_start_index, all_time_index]
+        preprocess_row = framework_df[(framework_df.index > batch_start_index) &
+                                    (framework_df['name'] == 'preprocess')].iloc[0]
+        preprocess_pid, preprocess_tid = preprocess_row['pid'], preprocess_row['tid']
+        preprocess_index = framework_df[(framework_df.index > batch_start_index) &
+                                      (framework_df['name'] == 'preprocess')].index[0]
+        forward_index = framework_df[(framework_df.index > batch_start_index) &
+                                      (framework_df['name'] == 'forward') &
+                                      (framework_df['pid'] == preprocess_pid) &
+                                      (framework_df['tid'] == preprocess_tid)].index[0]
+    except IndexError:
+        logger.warning("no match line, skip this batch")
+        return result
+    concat_list.extend([preprocess_index, forward_index])
+    result = pd.concat([result, framework_df.loc[concat_list]])
+    result = result.sort_values(by='start_time(microsecond)').reset_index(drop=True)
+    return result
+
+
+def get_full_batch(group, framework_df):
+    service_type = get_service_type(framework_df)
+    if service_type == 'vllm':
+        return get_full_batch_vllm(group, framework_df)
+
+    name_list = get_name_list(service_type)
+    start_index = name_list.index('batchFrameworkProcessing')
+    end_index = name_list.index('saveoutAndContinueBatching')
     batch_start_index = group[group['name'] == 'batchFrameworkProcessing'].index[0]
     concat_list = [batch_start_index]
     index_list = []
     index = batch_start_index
-
     # 找到generator_row
     for name in FULL_BATCH:
         query = f"index > @index and name =='{name}'"
         if framework_df.query(query).empty:
             logger.warning(f"no named {name} line, skip this batch")
             return pd.DataFrame()
-        index = framework_df[(framework_df.index > index) & 
-                    (framework_df['name'] == name)].index[0]
+        index = framework_df[(framework_df.index > index) &
+                             (framework_df['name'] == name)].index[0]
         index_list.append(index)
     if framework_df.query('name == "generateOutput" and index > @index').empty:
         logger.warning(f"no generateOutput line, skip this batch")
         return pd.DataFrame()
-    generate_row = framework_df[(framework_df.index > index) & 
-                    (framework_df['name'] == 'generateOutput')].iloc[0]
+    generate_row = framework_df[(framework_df.index > index) &
+                                (framework_df['name'] == 'generateOutput')].iloc[0]
     generate_pid, generate_tid = generate_row['pid'], generate_row['tid']
-    generate_index = framework_df[(framework_df.index > index) & 
-                    (framework_df['name'] == 'generateOutput')].index[0]
+    generate_index = framework_df[(framework_df.index > index) &
+                                  (framework_df['name'] == 'generateOutput')].index[0]
     concat_list.append(generate_index)
 
     # 找到前半部分的字段
@@ -167,7 +206,7 @@ def get_full_batch(group, framework_df):
     result_last = get_last_half_batch(framework_df, generate_index, generate_pid, generate_tid)
     if result_last.empty or result_pre.empty:
         return pd.DataFrame()
-    group = group.drop(group[group['name'].isin(NAME_LIST[start_index: end_index])].index)
+    group = group.drop(group[group['name'].isin(name_list[start_index: end_index])].index)
     result = pd.concat([framework_df.loc[concat_list], result_pre, result_last, group])
     result = result.sort_values(by='start_time(microsecond)').reset_index(drop=True)
     return result
@@ -178,9 +217,10 @@ def get_groups(framework_df, batch_size, rid, name):
     
     groups = framework_df.groupby((framework_df['name'] == 'batchFrameworkProcessing').cumsum())
     for _, group in groups:
-        if rid != -1:
+        if rid != '-1':
             batch_group = group[(group['name'] == 'batchFrameworkProcessing') &
                                 (group['batch_type'] == name)]
+            batch_group.loc[:, 'rid_list'] = batch_group['rid_list'].apply(lambda x: [str(i) for i in x])
             batch_group = batch_group[batch_group['rid_list'].apply(lambda x: rid in x)]
         elif batch_size > 0:
             batch_group = group[(group['name'] == 'batchFrameworkProcessing') &
@@ -290,21 +330,34 @@ def postprocess_framework_df(framework_df, post_event_pairs, name):
     if framework_df.empty:
         logger.warning(f'{name}: df is empty')
         return framework_df
+
+    service_type = get_service_type(framework_df)
     
     # 更新AllTime行
     framework_df.loc[framework_df['name'] == 'AllTime', ['start_time(microsecond)', 'end_time(microsecond)']] = \
         framework_df.loc[framework_df['name'] == 'AllTime', ['end_time(microsecond)', 'start_time(microsecond)']].values
 
-    if name == 'Prefill':
-        if 'continueBatching' not in framework_df['name'].values:
-            post_event_pairs.append(('deserializeExecuteResponse', 'httpRes'))
-            if 'httpRes' not in framework_df['name'].values:
-                post_event_pairs.append(('deserializeExecuteResponse', 'AllTime'))
-    new_rows = []
-    if 'preprocessBatch' not in framework_df['name'].values:
-        post_event_pairs.append(('batchFrameworkProcessing', 'serializeExcueteMessage'))
-    if 'continueBatching' not in framework_df['name'].values and name == 'Decode':
-        post_event_pairs.append(('deserializeExecuteResponse', 'AllTime'))
+    if service_type == 'mindie':
+        if name == 'Prefill':
+            if 'continueBatching' not in framework_df['name'].values:
+                post_event_pairs.append(('deserializeExecuteResponse', 'httpRes'))
+                if 'httpRes' not in framework_df['name'].values:
+                    post_event_pairs.append(('deserializeExecuteResponse', 'AllTime'))
+        new_rows = []
+        if 'preprocessBatch' not in framework_df['name'].values:
+            post_event_pairs.append(('batchFrameworkProcessing', 'serializeExcueteMessage'))
+        if 'continueBatching' not in framework_df['name'].values and name == 'Decode':
+            post_event_pairs.append(('deserializeExecuteResponse', 'AllTime'))
+    elif service_type == 'vllm':
+        start_index = NAME_LIST_VLLM.index('batchFrameworkProcessing')
+        end_index = NAME_LIST_VLLM.index('httpRes')
+        key_names_vllm = NAME_LIST_VLLM[start_index:end_index]
+        key_event_pairs = [(key_names_vllm[i], key_names_vllm[i + 1]) for i in range(len(key_names_vllm) - 1)]
+        for pair in key_event_pairs:
+            post_event_pairs.append(pair)
+        post_event_pairs.append(('forward', 'AllTime'))
+
+
     
     post_df = get_post_event_df(post_event_pairs, framework_df, name)
     framework_df = pd.concat([framework_df, post_df], ignore_index=True)
@@ -325,6 +378,7 @@ def postprocess_framework_df(framework_df, post_event_pairs, name):
     all_time_rows = framework_df[framework_df['name'] == 'AllTime']
     framework_df = framework_df[framework_df['name'] != 'AllTime']
     framework_df = pd.concat([framework_df, all_time_rows], ignore_index=True)
+    framework_df.drop_duplicates(subset='name', inplace=True)
     return framework_df
 
 
@@ -351,8 +405,8 @@ def get_batch_framework(framework_df, name):
     if 'generateOutput' in grouped_df.groups:
         generate_output_pid = grouped_df.get_group('generateOutput')['pid'].iloc[0]
         generate_output_tid = grouped_df.get_group('generateOutput')['tid'].iloc[0]
-    elif 'sample' in grouped_df.groups:
-        sample_group = grouped_df.get_group('sample')
+    elif 'forward' in grouped_df.groups:
+        sample_group = grouped_df.get_group('forward')
         last_sample_row = sample_group.tail(1)
         generate_output_pid = last_sample_row['pid'].values[0]
         generate_output_tid = last_sample_row['tid'].values[0]
@@ -464,7 +518,7 @@ def get_batch_concat_df(filter_df, framework_df, cacl_num, rid, name):
     empty_row = pd.DataFrame(index=[0])
     for i in range(cacl_num):
         cur_rid = filter_df[i].iloc[0]['rid_list'][0]
-        if rid != -1:
+        if rid != '-1':
             cur_rid = rid
         cur_df = get_batch_framework(filter_df[i], name)
         if cur_df.equals(pd.DataFrame()):
@@ -505,3 +559,12 @@ def process_exporter(framework_df, batch_size, batch_num, rid, name):
     cacl_num = min(cacl_num, MAX_BATCH_NUMBER)
     concat_df = get_batch_concat_df(result_df, framework_df, cacl_num, rid, name)
     return concat_df
+
+
+def get_service_type(framework_df):
+    name_set = set(list(framework_df['name']))
+    if 'deserializeExecuteResponse' in name_set:
+        service_type = 'mindie'
+    else:
+        service_type = 'vllm'
+    return service_type
