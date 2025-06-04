@@ -17,6 +17,7 @@ from .vllm_hooker_base import VLLMHookerBase
 
 GLOBAL_FORWARD_PROF = []
 
+
 class ExecutorBaseExecuteModelHook(VLLMHookerBase):
     vllm_version = ("0.6.3", "0.8.4")
 
@@ -55,6 +56,7 @@ class ExecutorBaseExecuteModelHook(VLLMHookerBase):
 
         self.do_hook([ExecutorBase.execute_model], execute_model_maker)
         self.do_hook([DistributedExecutorBase.execute_model], execute_model_maker)
+
 
 class ModelRunnerExecuteHook(VLLMHookerBase):
     vllm_version = ("0.6.3", "0.8.4")

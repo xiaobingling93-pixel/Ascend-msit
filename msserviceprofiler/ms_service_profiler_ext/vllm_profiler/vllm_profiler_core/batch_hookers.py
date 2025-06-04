@@ -66,10 +66,10 @@ class SchedulerHook(VLLMHookerBase):
                 prof.attr("batch_type", "Prefill" if is_prefill else "Decode")
 
                 rid_list = []
-                for seq_group_metadata in seq_group_metadata_list:
-                    if isinstance(seq_group_metadata, SequenceGroupMetadata):
-                        iter_size = iter_size_map.get(seq_group_metadata.request_id, seq_group_metadata.token_chunk_size)
-                        data = {"rid": seq_group_metadata.request_id, "iter_size": iter_size}
+                for metadata in seq_group_metadata_list:
+                    if isinstance(metadata, SequenceGroupMetadata):
+                        iter_size = iter_size_map.get(metadata.request_id, metadata.token_chunk_size)
+                        data = {"rid": metadata.request_id, "iter_size": iter_size}
                         rid_list.append(data)
                 prof.res(rid_list)
                 prof.span_end()
@@ -82,7 +82,8 @@ class SchedulerHook(VLLMHookerBase):
 
         def abort_seq_group_maker(ori_func):
             def abort_seq_group(this, request_id, *args, **kwargs):
-                Profiler(Level.INFO).domain("BatchSchedule").res(request_id).metric_inc('FINISHED_ABORTED', 1).event("ReqState")
+                prof = Profiler(Level.INFO).domain("BatchSchedule").res(request_id)
+                prof.metric_inc('FINISHED_ABORTED', 1).event("ReqState")
                 ori_func(this, request_id, *args, **kwargs)
             return abort_seq_group
 
@@ -90,8 +91,8 @@ class SchedulerHook(VLLMHookerBase):
 
         def allocate_and_set_running_maker(ori_func):
             def _allocate_and_set_running(this, seq_group, *args, **kwargs):
-                Profiler(Level.INFO).domain("BatchSchedule").res(seq_group.request_id).metric_inc('RUNNING', 1).\
-                    metric_inc('WAITING', -1).event("ReqState")
+                prof = Profiler(Level.INFO).domain("BatchSchedule").res(seq_group.request_id)
+                prof.metric_inc('RUNNING', 1).metric_inc('WAITING', -1).event("ReqState")
                 ori_func(this, seq_group, *args, **kwargs)
             return _allocate_and_set_running
 
@@ -101,8 +102,8 @@ class SchedulerHook(VLLMHookerBase):
             def _preempt_by_recompute(this, seq_group, *args, **kwargs):
                 seqs = seq_group.get_seqs(status=SequenceStatus.RUNNING)
                 if len(seqs) != 1:
-                    Profiler(Level.INFO).domain("BatchSchedule").res(seq_group.request_id).metric_inc('RUNNING', -1).\
-                        metric_inc('WAITING', 1).event("ReqState")
+                    prof = Profiler(Level.INFO).domain("BatchSchedule").res(seq_group.request_id)
+                    prof.metric_inc('RUNNING', -1).metric_inc('WAITING', 1).event("ReqState")
                 ori_func(this, seq_group, *args, **kwargs)
             return _preempt_by_recompute
 
@@ -110,8 +111,8 @@ class SchedulerHook(VLLMHookerBase):
 
         def swap_in_maker(ori_func):
             def _swap_in(this, seq_group, *args, **kwargs):
-                Profiler(Level.INFO).domain("BatchSchedule").res(seq_group.request_id).metric_inc('RUNNING', 1).\
-                    metric_inc('SWAPPED', -1).event("ReqState")
+                prof = Profiler(Level.INFO).domain("BatchSchedule").res(seq_group.request_id)
+                prof.metric_inc('RUNNING', 1).metric_inc('SWAPPED', -1).event("ReqState")
                 ori_func(this, seq_group, *args, **kwargs)
             return _swap_in
 
@@ -120,8 +121,8 @@ class SchedulerHook(VLLMHookerBase):
         def swap_out_maker(ori_func):
             def _swap_out(this, seq_group, *args, **kwargs):
                 if this.block_manager.can_swap_out(seq_group):
-                    Profiler(Level.INFO).domain("BatchSchedule").res(seq_group.request_id).metric_inc('RUNNING', -1).\
-                        metric_inc('SWAPPED', 1).event("ReqState")
+                    prof = Profiler(Level.INFO).domain("BatchSchedule").res(seq_group.request_id)
+                    prof.metric_inc('RUNNING', -1).metric_inc('SWAPPED', 1).event("ReqState")
                 ori_func(this, seq_group, *args, **kwargs)
             return _swap_out
 
@@ -131,8 +132,8 @@ class SchedulerHook(VLLMHookerBase):
             def free_finished_seq_groups(this, *args, **kwargs):
                 before_running_queue = this.running
                 for seq_group in this.running:
-                    Profiler(Level.INFO).domain("BatchSchedule").res(seq_group.request_id).metric_inc('RUNNING', -1).\
-                        metric_inc('FINISHED', 1).event("ReqState")
+                    prof = Profiler(Level.INFO).domain("BatchSchedule").res(seq_group.request_id)
+                    prof.metric_inc('RUNNING', -1).metric_inc('FINISHED', 1).event("ReqState")
                 ori_func(this, *args, **kwargs)
                 queue_profiler(before_running_queue, this.running, "running")
 
@@ -143,8 +144,8 @@ class SchedulerHook(VLLMHookerBase):
         def add_seq_group_to_running_maker(ori_func):
             def _add_seq_group_to_running(this, seq_group, *args, **kwargs):
                 ori_func(this, seq_group, *args, **kwargs)
-                Profiler(Level.INFO).domain("BatchSchedule").res([seq_group.request_id]).metric("QueueSize", len(this.running)).\
-                    metric_scope('running').event("Enqueue")
+                prof = Profiler(Level.INFO).domain("BatchSchedule").res([seq_group.request_id])
+                prof.metric("QueueSize", len(this.running)).metric_scope('running').event("Enqueue")
 
             return _add_seq_group_to_running
 
@@ -196,8 +197,8 @@ class SchedulerHook(VLLMHookerBase):
         def add_seq_group_maker(ori_func):
             def add_seq_group(this, seq_group, *args, **kwargs):
                 ori_func(this, seq_group, *args, **kwargs)
-                Profiler(Level.INFO).domain("BatchSchedule").res([seq_group.request_id]).metric("QueueSize", len(this.waiting)).\
-                    metric_scope('waiting').event("Enqueue")
+                prof = Profiler(Level.INFO).domain("BatchSchedule").res([seq_group.request_id])
+                prof.metric("QueueSize", len(this.waiting)).metric_scope('waiting').event("Enqueue")
 
             return add_seq_group
 
@@ -206,8 +207,8 @@ class SchedulerHook(VLLMHookerBase):
         def add_seq_group_to_swapped_maker(ori_func):
             def _add_seq_group_to_swapped(this, seq_group, *args, **kwargs):
                 ori_func(this, seq_group, *args, **kwargs)
-                Profiler(Level.INFO).domain("BatchSchedule").res([seq_group.request_id]).metric("QueueSize", len(this.swapped)).\
-                    metric_scope('swapped').event("Enqueue")
+                prof = Profiler(Level.INFO).domain("BatchSchedule").res([seq_group.request_id])
+                prof.metric("QueueSize", len(this.swapped)).metric_scope('swapped').event("Enqueue")
 
             return _add_seq_group_to_swapped
 
@@ -254,8 +255,8 @@ class LLMEngineHook(VLLMHookerBase):
                 return ret
             return process_model_outputs
 
-        self.do_hook([LLMEngine._add_processed_request], add_processed_request_maker)
-        self.do_hook([LLMEngine._process_model_outputs], process_model_outputs_maker)
+        self.do_hook([getattr(LLMEngine, "_add_processed_request")], add_processed_request_maker)
+        self.do_hook([getattr(LLMEngine, "_process_model_outputs")], process_model_outputs_maker)
 
 
 batch_hookers = [SchedulerHook, LLMEngineHook]

@@ -43,7 +43,6 @@ class VLLMHookerBase:
             def replace_func(ori_func, pname):
                 @functools.wraps(ori_func)
                 def wrapper(*args, **kwargs):
-                    print(f">>>> {ori_func = }")
                     if pname is not None and self.get_parents_name(ori_func) != pname:
                         return ori_func(*args, **kwargs)
                     return profiler_func(*args, **kwargs)

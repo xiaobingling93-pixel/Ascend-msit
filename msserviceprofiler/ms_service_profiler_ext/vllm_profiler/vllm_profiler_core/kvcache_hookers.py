@@ -15,6 +15,7 @@ from ms_service_profiler import Profiler, Level
 
 from .vllm_hooker_base import VLLMHookerBase
 
+
 class KVCacheManagerHook(VLLMHookerBase):
     vllm_version = ("0.6.3", "0.8.4")
 

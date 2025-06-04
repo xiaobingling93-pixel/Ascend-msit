@@ -23,9 +23,9 @@ except Exception as ee:
     GLOBAL_HOST_NAME = "localhost"
 GLOBAL_FORWARD_PROF = []
 
+
 def prof_add_request(request_id, prompt, *args, **kwargs):
     # 记录请求进入系统的时间
-    # profiler = Profiler(Level.INFO)
     Profiler(Level.INFO).domain("Request").res(request_id).attr("hostname", GLOBAL_HOST_NAME).event("httpReq")
     Profiler(Level.INFO).domain("Request").res(request_id).event("encode")
 
