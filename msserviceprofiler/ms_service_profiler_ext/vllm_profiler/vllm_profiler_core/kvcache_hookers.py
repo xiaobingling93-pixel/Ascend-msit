@@ -29,8 +29,8 @@ class KVCacheManagerHook(VLLMHookerBase):
                 profiler = Profiler(Level.INFO)
                 ori_func(this, seq_group, *args, **kwargs)
                 self.request_dict[seq_group.request_id] = seq_group.seqs
-                profiler.domain("KVCache").res(seq_group.request_id).metric(
-                    "deviceBlock", len(this.block_tables)).event("Allocate")
+                prof = profiler.domain("KVCache").res(seq_group.request_id)
+                prof.metric("deviceBlock", len(this.block_tables)).event("Allocate")
             return allocate
 
         def append_slots_maker(ori_func):
@@ -43,8 +43,8 @@ class KVCacheManagerHook(VLLMHookerBase):
                         break
                 new_cows = ori_func(this, seq, num_lookahead_slots, *args, **kwargs)
                 num_blocks = len(getattr(this.block_tables.get(seq.seq_id), "_blocks", []))
-                profiler.domain("KVCache").res(request_id).metric(
-                    "deviceBlock", len(this.block_tables)).event("AppendSlot")
+                prof = profiler.domain("KVCache").res(request_id)
+                prof.metric("deviceBlock", len(this.block_tables)).event("AppendSlot")
                 # This is called for every decoder process, recording current blocks
                 profiler.domain("KVCache").res(request_id).metric("deviceBlock", num_blocks).event("blocks")
                 return new_cows
@@ -54,8 +54,8 @@ class KVCacheManagerHook(VLLMHookerBase):
             def swap_in(this, seq_group, *args, **kwargs):
                 profiler = Profiler(Level.INFO)
                 res = ori_func(this, seq_group, *args, **kwargs)
-                profiler.domain("KVCache").res(seq_group.request_id).attr(
-                    "swap", "swap_in").metric("deviceBlock", len(this.block_tables)).event("SwapIn")
+                prof = profiler.domain("KVCache").res(seq_group.request_id)
+                prof.attr("swap", "swap_in").metric("deviceBlock", len(this.block_tables)).event("SwapIn")
                 return res
             return swap_in
 
@@ -63,8 +63,8 @@ class KVCacheManagerHook(VLLMHookerBase):
             def swap_out(this, seq_group, *args, **kwargs):
                 profiler = Profiler(Level.INFO)
                 res = ori_func(this, seq_group, *args, **kwargs)
-                profiler.domain("KVCache").res(seq_group.request_id).attr(
-                    "swap", "swap_out").metric("deviceBlock", len(this.block_tables)).event("SwapOut")
+                prof = profiler.domain("KVCache").res(seq_group.request_id)
+                prof.attr("swap", "swap_out").metric("deviceBlock", len(this.block_tables)).event("SwapOut")
                 return res
             return swap_out
 
@@ -77,8 +77,7 @@ class KVCacheManagerHook(VLLMHookerBase):
                         request_id = k
                         break
                 ori_func(this, seq, *args, **kwargs)
-                profiler.domain("KVCache").res(request_id).metric(
-                    "deviceBlock", len(this.block_tables)).event("Free")
+                profiler.domain("KVCache").res(request_id).metric("deviceBlock", len(this.block_tables)).event("Free")
             return free
 
         def get_stats_maker(ori_func):
@@ -86,9 +85,8 @@ class KVCacheManagerHook(VLLMHookerBase):
                 profiler = Profiler(Level.INFO)
                 stats = ori_func(this, *args, **kwargs)
                 num_free_gpu = sum(scheduler.block_manager.get_num_free_gpu_blocks() for scheduler in this.scheduler)
-                profiler.domain("KVCache").attr(
-                    "cpuHitCache", stats.cpu_cache_usage_sys).attr(
-                    "hitCache", stats.gpu_cache_usage_sys).event("GetCacheHitRate")
+                profiler.domain("KVCache").attr("cpuHitCache", stats.cpu_cache_usage_sys)
+                profiler.attr("hitCache", stats.gpu_cache_usage_sys).event("GetCacheHitRate")
                 profiler.domain("KVCache").attr("deviceFreeBlock", num_free_gpu).event("GetCacheHitRate")
                 return stats
             return get_stats
