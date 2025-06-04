@@ -348,7 +348,7 @@ def postprocess_framework_df(framework_df, post_event_pairs, name):
             post_event_pairs.append(('batchFrameworkProcessing', 'serializeExcueteMessage'))
         if 'continueBatching' not in framework_df['name'].values and name == 'Decode':
             post_event_pairs.append(('deserializeExecuteResponse', 'AllTime'))
-    else:
+    elif service_type == 'vllm':
         start_index = NAME_LIST_VLLM.index('batchFrameworkProcessing')
         end_index = NAME_LIST_VLLM.index('httpRes')
         key_names_vllm = NAME_LIST_VLLM[start_index:end_index]
