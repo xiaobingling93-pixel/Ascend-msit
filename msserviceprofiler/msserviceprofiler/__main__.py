@@ -15,7 +15,7 @@
 import argparse
 from pathlib import Path
 
-from msserviceprofiler.modelevalstate.config.config import DeployPolicy
+from msserviceprofiler.modelevalstate.config.config import DeployPolicy, BenchMarkPolicy
 
 import msserviceprofiler.modelevalstate.optimizer.optimizer as optimizer
 import msserviceprofiler.modelevalstate.train.source_to_train as train
@@ -48,6 +48,9 @@ def main():
                         help="Indicates whether the multi-node running policy is used.")
     parser_optimizer.add_argument("--backup", default=False, action="store_true",
                         help="Whether to back up data.")
+    parser_optimizer.add_argument("-b", "--benchmark_policy", default=BenchMarkPolicy.benchmark.value,
+                        choices=[k.value for k in list(BenchMarkPolicy)],
+                        help="Whether to use custom performance indicators.")
     # 解析命令行参数
     args = parser.parse_args()
 
