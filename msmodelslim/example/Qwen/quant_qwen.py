@@ -269,7 +269,10 @@ class Quantifier:
 
         calibrator = Calibrator(self.model, self.quant_config, calib_data=tokenized_data, disable_level=disable_level)
         calibrator.run()
-        calibrator.save(save_path, save_type=["safe_tensor"], part_file_size=part_file_size)
+        if self.args.mindie_format:
+            calibrator.save(save_path, save_type=["safe_tensor"], part_file_size=part_file_size)
+        else:
+            calibrator.save(save_path, save_type=["ascendV1"], part_file_size=part_file_size)
 
     
 if __name__ == '__main__':
@@ -336,16 +339,36 @@ if __name__ == '__main__':
     calib_file = args.calib_file
     if calib_file:
         calib_file = get_valid_read_path(calib_file)
-        calib_texts = checker.load_jsonl(calib_file)
+        if calib_file.endswith('.jsonl'):
+            calib_texts = checker.load_jsonl(calib_file)
+            if calib_texts is not None:
+                tokenized_calib_data = quantifier.get_tokenized_data(
+                    calib_texts,
+                    input_ids_name=args.input_ids_name,
+                    attention_mask_name=args.attention_mask_name
+                )
+        elif calib_file.endswith('.json'):
+            def get_calib_dataset(tokenizer, mixed_dataset, device='npu'):
+                """用于量化的校准集"""
+                dataset_calib = []
+                for prpt_ans in mixed_dataset:
+                    calib_list = [prpt_ans["prompt"]]
+                    calib_dataset = []
+                    for calib_data in calib_list:
+                        inputs = tokenizer(calib_data, return_tensors='pt').to(device)
+                        calib_dataset.append([inputs.data['input_ids']])
+                    dataset_calib += calib_dataset
+
+                return dataset_calib
+            with open(calib_file, 'r') as f:
+                calib_promt = json.load(f)
+            tokenized_calib_data = get_calib_dataset(quantifier.tokenizer, calib_promt, args.device_type)
+        else:
+            raise ValueError("Unsupported calibration file format: {}".format(calib_file))
     else:
         calib_texts = args.calib_texts
 
-    if calib_texts is not None:
-        tokenized_calib_data = quantifier.get_tokenized_data(
-            calib_texts,
-            input_ids_name=args.input_ids_name,
-            attention_mask_name=args.attention_mask_name
-        )
+    
     tokenized_ant_calib_data = tokenized_calib_data
     if args.anti_calib_file:
         args.anti_calib_file = get_valid_read_path(args.anti_calib_file)

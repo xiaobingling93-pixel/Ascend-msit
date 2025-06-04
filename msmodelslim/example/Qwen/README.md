@@ -176,6 +176,24 @@
   --trust_remote_code True
   ```
 
+##### Qwen2.5-72B-Instruct W4A16 量化
+当传入 mindie_format 参数时，量化权重不会进行 int4 打包成 int8 的操作，当不传入 mindie_format 参数时，量化权重进行将 int4 打包成 int8，减少存储空间，加速模型推理时加载时间。
+  ```shell
+  python quant_qwen.py \
+            --model_path {浮点权重路径} \
+            --save_directory {量化权重路径} \
+            --device_type npu \
+            --calib_file ./calib_data/mix_dataset.json \
+            --w_bit 4 \
+            --a_bit 16 \
+            --is_lowbit True \
+            --open_outlier False \
+            --group_size 128 \
+            --anti_method m3 \
+            --trust_remote_code True \
+            --mindie_format  #可选参数
+  ```
+
 #### 5. Qwen3 系列
 ##### Qwen3-32b W4A8 Dynamic 量化
   ```shell
