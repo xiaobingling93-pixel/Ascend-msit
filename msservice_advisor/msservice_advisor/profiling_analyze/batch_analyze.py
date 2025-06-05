@@ -104,29 +104,33 @@ def find_best_by_curve_fit(summary_fit_data, process_name):
     points.append(max_batch_size * 10)
     targets.append(0.00001)
 
-    popt, pcov = curve_fit(func_curv, points, targets, maxfev=10000)
-    logger.info(f"{process_name} 函数拟合后参数：{popt}")
+    try:
+        popt, pcov = curve_fit(func_curv, points, targets, maxfev=10000)
+        logger.info(f"{process_name} 函数拟合后参数：{popt}")
 
-    # 或者使用数值优化（通用方法，适用于任何模型）
-    def negative_func(x):
-        return -func_curv(x, *popt)  # 最小化负函数即最大化原函数
+        # 或者使用数值优化（通用方法，适用于任何模型）
+        def negative_func(x):
+            return -func_curv(x, *popt)  # 最小化负函数即最大化原函数
 
-    best_predicted = minimize(negative_func, x0=max_batch_size, bounds=[(0, max_batch_size * 2)])
-    aggressive_predicted = minimize(negative_func, x0=max_batch_size, bounds=[(0, max_batch_size * 5)])
-    logger.info(f"{process_name} 搜索范围 2 倍当前最大batchsize. 结果是: {best_predicted.x[0]} {best_predicted}")
-    logger.info(
-        f"{process_name} 搜索范围 5 倍当前最大batchsize. 结果是:  {aggressive_predicted.x[0]} {aggressive_predicted}"
-    )
+        best_predicted = minimize(negative_func, x0=max_batch_size, bounds=[(0, max_batch_size * 2)])
+        aggressive_predicted = minimize(negative_func, x0=max_batch_size, bounds=[(0, max_batch_size * 5)])
+        logger.info(f"{process_name} 搜索范围 2 倍当前最大batchsize. 结果是: {best_predicted.x[0]} {best_predicted}")
+        logger.info(
+            f"{process_name} 搜索范围 5 倍当前最大batchsize. 结果是:  {aggressive_predicted.x[0]} {aggressive_predicted}"
+        )
 
-    result = {
-        "best_batch_size": int(best_predicted.x[0]),
-        "max_batch_size": max_batch_size,
-        "points": points,
-        "targets": targets,
-        "popt": popt,
-        "process_name": process_name,
-        "func_curv": func_curv
-    }
+        result = {
+            "best_batch_size": int(best_predicted.x[0]),
+            "max_batch_size": max_batch_size,
+            "points": points,
+            "targets": targets,
+            "popt": popt,
+            "process_name": process_name,
+            "func_curv": func_curv
+        }
+    except Exception as error:
+        logger.warning(f"{process_name} 拟合失败：{error}")
+        return None
 
     return result
 
@@ -213,22 +217,27 @@ def find_best_batch_size(config, benchmark, output_log, profiling_params):
         )
     if len(prefill_to_fit) > 1:
         best_prefill_result = find_best_by_curve_fit(prefill_to_fit, "prefill")
-        results.append(best_prefill_result)
-        answer(
-            suggesion_type=SUGGESTION_TYPES.config,
-            suggesion_item="maxPrefillBatchSize",
-            action=f"set to {best_prefill_result['best_batch_size']}",
-            reason="经过当前不同batch的时延数据，通过函数拟合分析，建议最优batchsize",
-        )
+        if best_prefill_result:
+            results.append(best_prefill_result)
+            answer(
+                suggesion_type=SUGGESTION_TYPES.config,
+                suggesion_item="maxPrefillBatchSize",
+                action=f"set to {best_prefill_result['best_batch_size']}",
+                reason="经过当前不同batch的时延数据，通过函数拟合分析，建议最优batchsize",
+            )
     if len(decode_to_fit) > 1:
         best_decode_result = find_best_by_curve_fit(decode_to_fit, "decode")
-        results.append(best_decode_result)
-        answer(
-            suggesion_type=SUGGESTION_TYPES.config,
-            suggesion_item="maxBatchSize",
-            action=f"set to {max(best_decode_result['best_batch_size'], best_prefill_result['best_batch_size'])}",
-            reason="经过当前不同batch的时延数据，通过函数拟合分析，建议最优batchsize",
-        )
-    if len(results) == 0:
-        return
-    get_predict_image(results)
+        if best_decode_result:
+            results.append(best_decode_result)
+            answer(
+                suggesion_type=SUGGESTION_TYPES.config,
+                suggesion_item="maxBatchSize",
+                action=f"set to {max(best_decode_result['best_batch_size'], best_prefill_result['best_batch_size'])}",
+                reason="经过当前不同batch的时延数据，通过函数拟合分析，建议最优batchsize",
+            )
+    try:
+        if len(results) == 0:
+            return
+        get_predict_image(results)
+    except Exception as error:
+        logger.warning(f"图像生成失败: {error}")
