@@ -14,6 +14,7 @@
 import sys
 import unittest
 from dataclasses import dataclass
+from collections import namedtuple
 from unittest.mock import MagicMock, patch, call
 
 
@@ -43,6 +44,9 @@ class FakeLLMEngine:
     def add_request(self, request_id, prompt):
         pass
 
+    def _process_model_outputs(self, ctx=None, request_id=None):
+        pass
+
 
 # 模拟 AsyncLLMEngine 类
 class FakeAsyncLLMEngine:
@@ -52,7 +56,7 @@ class FakeAsyncLLMEngine:
 
 # 导入被测试的类
 from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.request_hookers import (
-    Profiler, Level
+    Profiler, Level, GLOBAL_HOST_NAME
 )
 
 
@@ -86,7 +90,7 @@ class TestVLLMHookers(unittest.TestCase):
         self.fake_llm_engine.add_request(self.fake_request_id, self.fake_prompt)
 
         # 验证 Profiler 调用
-        expected_call = call(Level.INFO).domain("Request").res(self.fake_request_id).event("httpReq")
+        expected_call = call(Level.INFO).domain("Request").res(self.fake_request_id).attr("hostname", GLOBAL_HOST_NAME).event("httpReq")
         mock_profiler.assert_has_calls([expected_call])
 
     def test_engine_request_tracker_hook_084(self, mock_profiler):
@@ -103,17 +107,17 @@ class TestVLLMHookers(unittest.TestCase):
         self.fake_llm_engine.add_request(self.fake_request_id, self.fake_prompt)
 
         # 验证 Profiler 调用
-        expected_call = call(Level.INFO).domain("Request").res(self.fake_request_id).event("httpReq")
+        expected_call = call(Level.INFO).domain("Request").res(self.fake_request_id).attr("hostname", GLOBAL_HOST_NAME).event("httpReq")
         mock_profiler.assert_has_calls([expected_call])
 
-    def test_llm_engine_hook(self, mock_profiler):
+    def test_llm_engine_hook_063(self, mock_profiler):
         # 导入被测试的类
         from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.request_hookers import (
-            LLMEngineHook
+            LLMEngineHook063
         )
 
         # 初始化 LLMEngineHook
-        llm_engine_hook = LLMEngineHook()
+        llm_engine_hook = LLMEngineHook063()
         llm_engine_hook.init()
 
         # 调用 validate_output 方法

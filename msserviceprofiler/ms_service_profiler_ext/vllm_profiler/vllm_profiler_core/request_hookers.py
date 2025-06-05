@@ -75,8 +75,8 @@ class EngineRequestTrackerHook084(VLLMHookerBase):
 
 
 # 采集请求返回的数据
-class LLMEngineHook(VLLMHookerBase):
-    vllm_version = ("0.6.3", "0.8.4")
+class LLMEngineHook084(VLLMHookerBase):
+    vllm_version = ("0.8.4", "0.8.4")
 
     def init(self):
         from vllm.engine.llm_engine import LLMEngine
@@ -107,22 +107,30 @@ class LLMEngineHook(VLLMHookerBase):
 
             return process_model_outputs
 
+        self.do_hook([getattr(LLMEngine, "_process_model_outputs")], process_model_outputs_maker)
+
+
+class LLMEngineHook063(VLLMHookerBase):
+    vllm_version = ("0.6.3", "0.6.3")
+
+    def init(self):
+        from vllm.engine.llm_engine import LLMEngine
+
         def validate_output_maker(ori_func):
             def validate_output(output, output_type):
-                profiler_recv = Profiler(Level.INFO).domain("Request").res(request_id)
-                profiler_reply = Profiler(Level.INFO).domain("Request").res(request_id)
+                profiler_recv = Profiler(Level.INFO).domain("Request")
+                profiler_reply = Profiler(Level.INFO).domain("Request")
                 if output.finished is True:
                     request_id = output.request_id
                     input_token_size = len(output.prompt_token_ids)
                     output_token_size = len(output.outputs[0].token_ids)
-                    profiler_recv.metric("recvTokenSize", input_token_size).event("httpRes")
-                    profiler_reply.metric("replyTokenSize", output_token_size).event("httpRes")
+                    profiler_recv.res(request_id).metric("recvTokenSize", input_token_size).event("httpRes")
+                    profiler_reply.res(request_id).metric("replyTokenSize", output_token_size).event("httpRes")
                 return ori_func(output, output_type)
 
             return validate_output
 
-        self.do_hook([getattr(LLMEngine, "_process_model_outputs")], process_model_outputs_maker)
         self.do_hook([LLMEngine.validate_output], validate_output_maker)
 
 
-request_hookers = [EngineRequestTrackerHook063, EngineRequestTrackerHook084, LLMEngineHook]
+request_hookers = [EngineRequestTrackerHook063, EngineRequestTrackerHook084, LLMEngineHook063, LLMEngineHook084]

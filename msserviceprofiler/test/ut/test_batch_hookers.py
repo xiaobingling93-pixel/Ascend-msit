@@ -54,10 +54,10 @@ class FakeScheduler:
         scheduler_outputs = self.sequence_group_list
         allow_async_output_proc = self.sequence_group_list
         return seq_group_metadata_list, scheduler_outputs, allow_async_output_proc
-    
+
     def add_seq_group(self, seq_group):
         pass
-    
+
     def abort_seq_group(self, request_id):
         pass
 
@@ -126,7 +126,7 @@ class TestSchedulerHook(unittest.TestCase):
         # 初始化 Hook 实例
         self.scheduler_hook = SchedulerHook()
         self.llm_engine_hook = LLMEngineHook()
-        
+
         # 调用 init 方法，其中的do_hook会将被测试的_maker函数与Fake类中的函数关联起来
         self.scheduler_hook.init()
         self.llm_engine_hook.init()
@@ -208,7 +208,7 @@ class TestSchedulerHook(unittest.TestCase):
     # 校验Profiler.res中的request list正确
     def test_add_seq_group_to_running_maker(self, mock_profiler):
         self.fake_scheduler._add_seq_group_to_running(self.fake_seq_group)
-        
+
         # 校验Profiler方法链式调用正确
         expected_call = call(Level.INFO).domain("BatchSchedule").res([self.fake_request_id]).metric(
             "QueueSize", len(self.fake_scheduler.running)).metric_scope('running').event("Enqueue")
@@ -227,9 +227,9 @@ class TestSchedulerHook(unittest.TestCase):
 
         # 校验Profiler方法链式调用正确
         expected_call = call(Level.INFO).domain("BatchSchedule").res([self.fake_request_id]).metric(
-            "QueueSize", len(self.fake_scheduler.swapped)).metric_scope('waiting').event("Enqueue")
+            "QueueSize", len(self.fake_scheduler.swapped)).metric_scope('swapped').event("Enqueue")
         mock_profiler.assert_has_calls([expected_call])
-        mock_profiler(Level.INFO).res.assert_called_with([self.fake_request_id])
+        mock_profiler(Level.INFO).domain("BatchSchedule").res.assert_called_with([self.fake_request_id])
 
     # 校验队列打点函数queue_profiler正确调用
     @patch('ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.batch_hookers.queue_profiler')
@@ -246,11 +246,11 @@ class TestSchedulerHook(unittest.TestCase):
     def test_schedule_chunked_prefill_maker(self, mock_queue_profiler, mock_profiler):
         self.fake_scheduler._schedule_chunked_prefill()
         mock_queue_profiler.assert_called()
-    
+
     # 测试LLMEngineHook中_maker函数
     def test_add_processed_request_maker(self, mock_profiler):
         self.fake_llm_engine._add_processed_request(self.fake_request_id)
-        mock_profiler(Level.INFO).res.assert_called_with(self.fake_request_id)
+        mock_profiler(Level.INFO).domain("Request").res.assert_called_with(self.fake_request_id)
 
     def test_queue_profiler(self, mock_profiler):
         # 测试seq1出队时的打点
@@ -261,5 +261,5 @@ class TestSchedulerHook(unittest.TestCase):
         queue_profiler(before_queue, after_queue, "test_queue")
 
         # 验证 Profiler 正确调用且参数正确
-        mock_profiler(Level.INFO).res.assert_called_once()
-        mock_profiler(Level.INFO).res.call_args[0][0] == 1
+        mock_profiler(Level.INFO).domain("BatchSchedule").res.assert_called_once()
+        mock_profiler(Level.INFO).domain("BatchSchedule").res.call_args[0][0] == 1
