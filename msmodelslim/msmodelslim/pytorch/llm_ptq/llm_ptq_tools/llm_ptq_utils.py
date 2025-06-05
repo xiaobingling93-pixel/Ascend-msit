@@ -145,6 +145,10 @@ class QuantModelJsonDescription:
         if not isinstance(json_description, dict):
             raise TypeError("quant_model_json_description must be a dict.")
         for weight_name, weight_type in json_description.items():
+            if weight_name in [QuantModelJsonDescription.version_type_name,
+                               QuantModelJsonDescription.group_size_name,
+                               QuantModelJsonDescription.kv_quant_type_name]:
+                continue
             if not isinstance(weight_name, str):
                 raise TypeError("weight name in quant_model_json_description must be str.")
             if not QuantType.is_value_in_enum(weight_type):
@@ -199,9 +203,8 @@ class QuantModelJsonDescription:
             quant_model_safetensor, quant_model_safetensor_path)
         json_keys = list(json_description.keys())
         safetensor_keys = list(safetensor_weight.keys())
-        json_keys = json_keys[1:]
         # safetensor保存后，读取出来的key顺序和保存时的有区别
-        if set(json_keys) != set(safetensor_keys):
+        if not set(safetensor_keys) <= set(json_keys):
             raise ValueError("quant_model_json_description and quant_model_safetensor do not match.")
 
     @staticmethod
