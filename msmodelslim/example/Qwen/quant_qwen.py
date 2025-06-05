@@ -196,7 +196,7 @@ class Quantifier:
         args = self.args
         disable_names = args.disable_names
         # Check if disable_names is provided, if not and a_bit is 8, generate disable_names
-        if not disable_names and args.a_bit == 8:
+        if not disable_names and args.a_bit in [8, 16]:
             if args.disable_threshold > 0:
                 disable_names = get_down_proj_disable_names(num_layers)
             elif args.model_type == 'qwen1':
