@@ -45,8 +45,7 @@ class ExecutorBaseExecuteModelHook(VLLMHookerBase):
                 prof.attr("batch_size", len(execute_model_req.seq_group_metadata_list))
 
                 preprocess_prof = Profiler(Level.INFO).domain("ModelExecute").res(request_id_list)
-                preprocess_prof.span_start("preprocess")
-                preprocess_prof.span_end()
+                preprocess_prof.event("preprocess")
 
                 ret = ori_func(this, execute_model_req, *args, **kwargs)
                 prof.span_end()
