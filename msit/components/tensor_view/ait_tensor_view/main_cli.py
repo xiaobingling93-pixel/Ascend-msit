@@ -19,7 +19,7 @@ from ait_tensor_view.operation import SliceOperation, PermuteOperation
 from ait_tensor_view.handler import handle_tensor_view
 from components.utils.parser import BaseCommand
 from components.utils.file_open_check import FileStat
-from components.llm.msit_llm.common.utils import load_file_to_read_common_check_for_cli
+from components.utils.util import load_file_to_read_common_check_for_cli
 
 
 def check_output_path_legality(value):

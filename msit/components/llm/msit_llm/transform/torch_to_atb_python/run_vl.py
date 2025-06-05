@@ -23,7 +23,8 @@ from transformers.modeling_outputs import CausalLMOutputWithPast
 
 from msit_llm.transform.torch_to_atb_python import ATBModel
 from msit_llm.transform.utils import load_model_dict
-from msit_llm.common.utils import load_file_to_read_common_check_for_cli, check_input_path_legality
+from msit_llm.common.utils import check_input_path_legality
+from components.utils.utils import load_file_to_read_common_check_for_cli
 from msit_llm.common.log import logger
 from atb_model_placeholder import Model
 

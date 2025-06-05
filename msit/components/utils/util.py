@@ -15,6 +15,7 @@
 import re
 import os
 import pickle
+import argparse
 
 from components.utils.constants import TENSOR_MAX_SIZE, EXT_SIZE_MAPPING, PATH_WHITE_LIST_REGEX
 from components.utils.log import logger
@@ -160,3 +161,11 @@ def filter_cmd(paras):
                 f'The command contains invalid characters. Only the "{whitelist_pattern}" pattern is allowed.'
             )
     return filtered
+
+
+def load_file_to_read_common_check_for_cli(value, exts=None):
+    try:
+        value = load_file_to_read_common_check(value, exts)
+    except Exception as e:
+        raise argparse.ArgumentTypeError("%r" % value) from e
+    return value
