@@ -112,8 +112,10 @@ class QuantModelJsonDescription:
     version_type_name = "version"
     group_size_name = "group_size"
     kv_quant_type_name = "kv_quant_type"
+    reduce_quant_type_name = "reduce_quant_type"
 
-    def __init__(self, model_quant_type, use_kvcache_quant=False, use_fa_quant=False, version_name=None, group_size=0):
+    def __init__(self, model_quant_type, use_kvcache_quant=False, use_fa_quant=False, version_name=None, group_size=0,
+                 enable_communication_quant=False):
         self.quant_model_description = {}
 
         self.check_version_format(version_name)
@@ -127,6 +129,7 @@ class QuantModelJsonDescription:
         self.change_kvcache_type(use_kvcache_quant)
         self.change_fa_quant_type(use_fa_quant)
         self.change_group_size(group_size)
+        self.change_reduce_quant_type(enable_communication_quant)
 
     @staticmethod
     def check_description(quant_model_json_description=None, quant_model_json_description_path=None):
@@ -145,9 +148,15 @@ class QuantModelJsonDescription:
         if not isinstance(json_description, dict):
             raise TypeError("quant_model_json_description must be a dict.")
         for weight_name, weight_type in json_description.items():
-            if weight_name in [QuantModelJsonDescription.version_type_name,
-                               QuantModelJsonDescription.group_size_name,
-                               QuantModelJsonDescription.kv_quant_type_name]:
+            if weight_name in [
+                QuantModelJsonDescription.model_quant_type_name,
+                QuantModelJsonDescription.version_type_name,
+                QuantModelJsonDescription.group_size_name,
+                QuantModelJsonDescription.kv_quant_type_name,
+                QuantModelJsonDescription.kv_cache_type_name,
+                QuantModelJsonDescription.fa_quant_type_name,
+                QuantModelJsonDescription.reduce_quant_type_name,
+            ]:
                 continue
             if not isinstance(weight_name, str):
                 raise TypeError("weight name in quant_model_json_description must be str.")
@@ -249,6 +258,10 @@ class QuantModelJsonDescription:
     def change_fa_quant_type(self, use_fa_quant):
         if use_fa_quant:
             self.quant_model_description[QuantModelJsonDescription.fa_quant_type_name] = QuantType.FAQuant
+
+    def change_reduce_quant_type(self, enable_communication_quant):
+        if enable_communication_quant:
+            self.quant_model_description[QuantModelJsonDescription.reduce_quant_type_name] = "per_channel"
 
     def change_weight_type(self, weight_name, weight_quant_type):
         QuantType.check_instance_of_enum(weight_quant_type)

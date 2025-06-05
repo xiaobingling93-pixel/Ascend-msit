@@ -918,8 +918,9 @@ class Calibrator(object):
                                     safetensors_name=safetensors_name,
                                     json_name=json_name,
                                     part_file_size=part_file_size,
-                                    group_size=self.cfg.group_size)
-
+                                    group_size=self.cfg.group_size if hasattr(self.cfg, 'group_size') else 0,
+                                    enable_communication_quant=self.cfg.enable_communication_quant
+                                    if hasattr(self.cfg, 'enable_communication_quant') else False)
 
         quantifier = ComplexQuantifier(cfg=self.cfg,
                                        rollback_names=self.rollback_names,
