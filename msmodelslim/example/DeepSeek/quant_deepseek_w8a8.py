@@ -43,7 +43,7 @@ def parse_args():
     parser.add_argument('--mindie_format', action="store_true", help="Compatible with quantization formats \
                         supported by before 2.1.RC1 version of MindIE")
     parser.add_argument('--dynamic', action='store_true', help="Dynamic Quantization")
-    parser.add_argument('--disable_anti', anti='store_true', help="No AntiOutlier")
+    parser.add_argument('--disable_anti', action='store_true', help="No AntiOutlier")
     return parser.parse_args()
 
 
