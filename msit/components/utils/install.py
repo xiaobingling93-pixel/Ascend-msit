@@ -120,8 +120,8 @@ INSTALL_INFO_MAP = [
         "pkg-path": "graph",
     },
     {
-        "arg-name": "expert-load-balancing",
-        "pkg-name": "msit-expert-load-balancing",
+        "arg-name": "elb",
+        "pkg-name": "msit-elb",
         "pkg-path": "expert_load_balancing"
     },
         

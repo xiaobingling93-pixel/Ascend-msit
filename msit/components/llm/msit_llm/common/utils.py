@@ -239,14 +239,6 @@ def load_file_to_read_common_check(path: str, exts=None):
     return path
 
 
-def load_file_to_read_common_check_for_cli(value, exts=None):
-    try:
-        value = load_file_to_read_common_check(value, exts)
-    except Exception as e:
-        raise argparse.ArgumentTypeError("%r" % value) from e
-    return value
-
-
 def check_device_integer_range_valid(device_id):
     if device_id < DEVICE_NUM_MIN or device_id > DEVICE_NUM_MAX:
         raise argparse.ArgumentTypeError("device id: {} is invalid. valid value range is [{}, {}]".format(
