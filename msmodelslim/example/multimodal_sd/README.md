@@ -20,21 +20,22 @@
 | HunyuanVideo | W8A8静态量化，W8A8分时间步量化，FA3+W8A8动态量化，异常值抑制+W8A8动态量化 | [link](https://huggingface.co/tencent/HunyuanVideo)
 
 ## 环境配置
+- 配套CANN版本请选择8.2.RC1及之后的版本
 - 具体环境配置请参考[使用说明](../../README.md)
 - 当前多模态生成模型统一接口依赖于pydantic库
   - pip install pydantic
 - SD3-Medium依赖于diffusers库
   - pip install -U diffusers
 - Open-Sora-Plan v1.2相关环境配置参考[MindIE/open_sora_planv1_2](https://modelers.cn/models/MindIE/open_sora_planv1_2)
-  - 参考 [open_sora_planv1_2 reamde](https://modelers.cn/models/MindIE/open_sora_planv1_2) 安装浮点模型的环境依赖
+  - 参考 [open_sora_planv1_2 reamde](https://modelers.cn/models/MindIE/open_sora_planv1_2) 安装浮点模型的环境依赖，并确保浮点推理能正常运行
   - pip install huggingface_hub==0.25.2
 - Flux.1-dev相关环境配置参考[MindIE/FLUX.1-dev](https://modelers.cn/models/MindIE/FLUX.1-dev)
-  - 参考 [Flux reamde](https://modelers.cn/models/MindIE/FLUX.1-dev) 安装浮点模型的环境依赖
+  - 参考 [Flux reamde](https://modelers.cn/models/MindIE/FLUX.1-dev) 安装浮点模型的环境依赖，并确保浮点推理能正常运行
 - HunyuanVideo相关环境配置参考[MindIE/hunyuan_video](https://modelers.cn/models/MindIE/hunyuan_video)
-  - 参考 [HunyuanVideo reamde](https://modelers.cn/models/MindIE/hunyuan_video) 安装浮点模型的环境依赖
+  - 参考 [HunyuanVideo reamde](https://modelers.cn/models/MindIE/hunyuan_video) 安装浮点模型的环境依赖，并确保浮点推理能正常运行
 
 ## 使用案例
-使用量化前，需要加载模型和校准数据，其中加载模型依赖于diffusers库（如SD3）或多模态生成模型[魔乐社区](https://modelers.cn/models/)推理工程仓（如Open-Sora-Plan v1.2、Flux.1-dev、HunyuanVideo）
+使用量化前，需要加载模型和校准数据，其中加载模型依赖于diffusers库（如SD3）或多模态生成模型[魔乐社区](https://modelers.cn/models/)推理工程仓（如Open-Sora-Plan v1.2、Flux.1-dev、HunyuanVideo），请先确保依据推理工程仓可以正常进行浮点推理。
 - Open-Sora-Plan v1.2推理工程仓：[MindIE/open_sora_planv1_2](https://modelers.cn/models/MindIE/open_sora_planv1_2)
 - Flux.1-dev推理工程仓：[MindIE/FLUX.1-dev](https://modelers.cn/models/MindIE/FLUX.1-dev)
 - HunyuanVideo推理工程仓[MindIE/hunyuan_video](https://modelers.cn/models/MindIE/hunyuan_video)
@@ -125,7 +126,7 @@ quant_model(model, session_cfg)
 ```
 
 
-示例启动脚本如下：
+示例启动脚本如下(请提前确保calib_prompts.txt权限不大于'0o640')：
 ```shell
 python /the/absolut/path/of/example/multimodal_sd/SD3/sd3_inference.py \
     --sd3_model_path "/path/to/stable-diffusion-3-medium-diffusers" \
@@ -220,8 +221,11 @@ quant_model(model, session_cfg)
 
 #### 量化启动脚本
 
-我们也提供了完整的量化启动脚本示例：[OpenSoraPlanV1_2/inference.py](OpenSoraPlanV1_2/inference.py)，其启动命令可参考：
+我们也提供了完整的量化启动脚本示例：[OpenSoraPlanV1_2/inference.py](OpenSoraPlanV1_2/inference.py)，其启动命令可参考(请提前确保calib_prompts.txt权限不大于'0o640')：
 ```shell
+# 根据使用卡数进行配置多卡环境变量和nproc_per_node，以下使用8卡为例
+export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+export PYTORCH_NPU_ALLOC_CONF=expandable_segments:False
 export TASK_QUEUE_ENABLE=2
 export HCCL_OP_EXPANSION_MODE="AIV"
 torchrun --nnodes=1 --nproc_per_node 8  --master_port 29503 \
@@ -266,7 +270,18 @@ for step_id, t in enumerate(timesteps):
     model_output = pipeline(...)
     ...
 ```
-
+例如在FLUX.1-dev/FLUX1dev/pipeline/pipeline_flux.py的FluxPipeline类的__call__函数中，添加如下代码：
+```python
+with self.progress_bar(total=num_inference_steps) as progreess_bar:
+    for i,t in enumerate(timesteps):
+        if self.interrupt:
+            continue
+        # -----------新增代码-----------
+        from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.timestep.manager import TimestepManager
+        TimestepManager.set_timestep_idx(i)
+        # -----------新增代码-----------
+        timestep = t.expand(latents.shape[0]).to(latents.dtype)
+```
 
 #### 量化启动脚本
 
@@ -348,7 +363,7 @@ session_cfg.model_validate(session_cfg)
 quant_model(model, session_cfg)
 ```
 
-示例的启动命令可参考：
+示例的启动命令可参考(请提前确保calib_prompts.txt权限不大于'0o640')：
 
 ```shell
 # do quant
@@ -452,7 +467,7 @@ quant_model(model, session_cfg)
 
 #### FAQuantizer 插入位置
 
-在FLUX的layers/attention_processor.py文件中插入fa3量化
+在FLUX.1-dev/FLUX1dev/layers/attention_processor.py文件中插入fa3量化，请备份attention_processor.py文件，后续进行浮点推理或其他方式量化时恢复attention_processor.py文件。
 ```python
 # 1 实例化FAQuantizer类
 @maybe_allow_in_graph
@@ -557,7 +572,7 @@ class FluxAttnProcessor2_0:
 
 #### 量化启动脚本
 
-示例的启动命令可参考：
+示例的启动命令可参考(请提前确保calib_prompts.txt权限不大于'0o640')：
 
 ```shell
 # do quant
@@ -665,7 +680,7 @@ quant_model(model, session_cfg)
 
 #### 量化启动脚本
 
-示例的启动命令可参考：
+示例的启动命令可参考(请提前确保calib_prompts.txt权限不大于'0o640')：
 
 ```shell
 # do quant
@@ -705,6 +720,22 @@ for step_id, t in enumerate(timesteps):
 
     model_output = pipeline(...)
     ...
+```
+例如在hunyuan_video/hyvideo/diffusion/pipelines/pipeline_hunyuan_video.py的HunyuanVideoPipeline类的__call__函数中，添加如下代码：
+```python
+with self.progress_bar(total=num_inference_steps) as progreess_bar:
+    for i,t in enumerate(timesteps):
+        if self.interrupt:
+            continue
+        # -----------新增代码-----------
+        from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.timestep.manager import TimestepManager
+        TimestepManager.set_timestep_idx(i)
+        # -----------新增代码-----------
+        latent_model_input = (
+            torch.cat([latents] * 2)
+            if self.do_classifier_free_guidance
+            else latents
+        )
 ```
 
 #### 量化启动脚本
@@ -790,7 +821,7 @@ with torch.autocast(device_type='cuda', dtype=torch.bfloat16, enabled=True):
 ```
 
 
-示例的启动命令可参考：
+示例的启动命令可参考(请提前确保calib_prompts.txt权限不大于'0o640')：
 
 ```shell
 export PYTORCH_NPU_ALLOC_CONF="expandable_segments:True"
@@ -906,9 +937,9 @@ quant_model(model, session_cfg)
 
 #### FAQuantizer 插入位置
 
-在hunyuan_video的/modules/models.py文件中插入fa3量化
+在hunyuan_video/hyvideo/modules/models.py文件中插入fa3量化，请备份models.py文件，后续进行浮点推理或其他方式量化时恢复models.py文件。
 ```python
-# 在导入出添加
+# 在导入处添加
 from hyvideo.utils.parallel_mgr import get_sequence_parallel_world_size
 
 # 1
@@ -1032,7 +1063,7 @@ class MMSingleStreamBlock(nn.Module):
 
 #### 量化启动脚本
 
-示例的启动命令可参考：
+示例的启动命令可参考(请提前确保calib_prompts.txt权限不大于'0o640')：
 
 ```shell
 
@@ -1148,7 +1179,7 @@ quant_model(model, session_cfg)
 
 #### 量化启动脚本
 
-示例的启动命令可参考：
+示例的启动命令可参考(请提前确保calib_prompts.txt权限不大于'0o640')：
 
 ```shell
 
