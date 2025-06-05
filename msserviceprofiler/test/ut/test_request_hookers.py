@@ -55,18 +55,16 @@ class FakeAsyncLLMEngine:
 
 
 # 导入被测试的类
-from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.request_hookers import (
-    Profiler, Level, GLOBAL_HOST_NAME
-)
+from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.request_hookers import Profiler, Level, GLOBAL_HOST_NAME
 
 
-@patch('ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.request_hookers.Profiler')
+@patch("ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.request_hookers.Profiler")
 class TestVLLMHookers(unittest.TestCase):
 
     def setUp(self):
         # 将模拟的类和模块注入 sys.modules
-        sys.modules['vllm.engine.llm_engine'] = MagicMock(LLMEngine=FakeLLMEngine)
-        sys.modules['vllm.engine.async_llm_engine'] = MagicMock(AsyncLLMEngine=FakeAsyncLLMEngine)
+        sys.modules["vllm.engine.llm_engine"] = MagicMock(LLMEngine=FakeLLMEngine)
+        sys.modules["vllm.engine.async_llm_engine"] = MagicMock(AsyncLLMEngine=FakeAsyncLLMEngine)
 
         # 初始化测试的Fake实例
         self.fake_llm_engine = FakeLLMEngine()
@@ -78,9 +76,7 @@ class TestVLLMHookers(unittest.TestCase):
 
     def test_engine_request_tracker_hook_063(self, mock_profiler):
         # 导入被测试的类
-        from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.request_hookers import (
-            EngineRequestTrackerHook063
-        )
+        from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.request_hookers import EngineRequestTrackerHook063
 
         # 初始化 EngineRequestTrackerHook
         engine_request_tracker_hook = EngineRequestTrackerHook063()
@@ -90,14 +86,18 @@ class TestVLLMHookers(unittest.TestCase):
         self.fake_llm_engine.add_request(self.fake_request_id, self.fake_prompt)
 
         # 验证 Profiler 调用
-        expected_call = call(Level.INFO).domain("Request").res(self.fake_request_id).attr("hostname", GLOBAL_HOST_NAME).event("httpReq")
+        expected_call = (
+            call(Level.INFO)
+            .domain("Request")
+            .res(self.fake_request_id)
+            .attr("hostname", GLOBAL_HOST_NAME)
+            .event("httpReq")
+        )
         mock_profiler.assert_has_calls([expected_call])
 
     def test_engine_request_tracker_hook_084(self, mock_profiler):
         # 导入被测试的类
-        from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.request_hookers import (
-            EngineRequestTrackerHook084
-        )
+        from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.request_hookers import EngineRequestTrackerHook084
 
         # 初始化 EngineRequestTrackerHook
         engine_request_tracker_hook = EngineRequestTrackerHook084()
@@ -107,14 +107,18 @@ class TestVLLMHookers(unittest.TestCase):
         self.fake_llm_engine.add_request(self.fake_request_id, self.fake_prompt)
 
         # 验证 Profiler 调用
-        expected_call = call(Level.INFO).domain("Request").res(self.fake_request_id).attr("hostname", GLOBAL_HOST_NAME).event("httpReq")
+        expected_call = (
+            call(Level.INFO)
+            .domain("Request")
+            .res(self.fake_request_id)
+            .attr("hostname", GLOBAL_HOST_NAME)
+            .event("httpReq")
+        )
         mock_profiler.assert_has_calls([expected_call])
 
     def test_llm_engine_hook_063(self, mock_profiler):
         # 导入被测试的类
-        from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.request_hookers import (
-            LLMEngineHook063
-        )
+        from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.request_hookers import LLMEngineHook063
 
         # 初始化 LLMEngineHook
         llm_engine_hook = LLMEngineHook063()
@@ -124,9 +128,7 @@ class TestVLLMHookers(unittest.TestCase):
         self.fake_llm_engine.validate_output(self.fake_output, self.fake_output_type)
 
         # 验证 Profiler 调用
-        expected_call_1 = call(Level.INFO).domain("Request").res("123").metric(
-            "recvTokenSize", 5).event("httpRes")
-        expected_call_2 = call(Level.INFO).domain("Request").res("123").metric(
-            "replyTokenSize", 3).event("httpRes")
+        expected_call_1 = call(Level.INFO).domain("Request").res("123").metric("recvTokenSize", 5).event("httpRes")
+        expected_call_2 = call(Level.INFO).domain("Request").res("123").metric("replyTokenSize", 3).event("httpRes")
         mock_profiler.assert_has_calls([expected_call_1])
         mock_profiler.assert_has_calls([expected_call_2])
