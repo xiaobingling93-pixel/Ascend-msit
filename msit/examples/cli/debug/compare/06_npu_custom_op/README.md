@@ -3,7 +3,7 @@
 
 ## 介绍
 
-某些昇腾模型，存在NPU自定义算子，比如 [Retinanet](https://gitee.com/ascend/ModelZoo-PyTorch/tree/master/ACL_PyTorch/contrib/cv/detection/Retinanet)，存在BatchMultiClassNMS后处理算子，该算子无法在onnxruntime上运行，导致该模型无法使用msit debug compare功能进行精度比对。添加--custom-op参数，指定onnx模型中自定义算子类型名称。
+某些昇腾模型，存在NPU自定义算子，比如 [Retinanet](https://gitee.com/ascend/ModelZoo-PyTorch/tree/master/ACL_PyTorch/contrib/cv/detection/Retinanet)，存在BatchMultiClassNMS后处理算子，该算子无法在onnxruntime上运行，导致该模型无法使用msit debug compare功能进行精度比对。这时可以通过添加--custom-op参数，指定自定义算子类型名称，工具会将这些算子进行删除使其能够正常推理并获取dump数据。
 
 ## 使用场景约束
 

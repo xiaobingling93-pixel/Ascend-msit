@@ -1,7 +1,7 @@
 # Caffe Dump
 
 ## 介绍
-Caffe dump
+支持指定caffe模型进行tensor数据dump。
 
 ## 使用示例一
 - caffe环境安装请参考：[msit一体化工具使用指南](https://gitee.com/ascend/msit/blob/master/msit/docs/install/README.md)

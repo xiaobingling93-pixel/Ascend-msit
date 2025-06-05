@@ -1,7 +1,7 @@
 # Saved model compare
 
 ## 介绍
-Saved model compare
+支持save_model格式的标杆模型和om模型进行精度比对。
 
 ## 使用示例
 - 1、saved_model compare  命令示例，**其中路径需使用绝对路径**

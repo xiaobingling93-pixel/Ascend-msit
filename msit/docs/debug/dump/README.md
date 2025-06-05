@@ -1,6 +1,6 @@
 # msit debug dump功能使用指南
 ## 简介
-- 提供了传统小模型场景下dump功能，适用于 TensorFlow、TensorFlow2.0、ONNX、Caffe、MindIE-Torch模型，用户只需要输入原始模型对应的离线模型和输入。输入的 bin 文件需要符合模型的输入要求（支持模型多输入）。
+- 提供了传统小模型场景下tensor数据dump功能，辅助进行模型定位debug。适用于 TensorFlow、TensorFlow2.0、ONNX、Caffe、MindIE-Torch模型，用户只需要通过参数指定原始模型对应的离线模型和模型输入文件。模型输入的 bin 文件需要符合模型的输入要求（支持模型多输入）。
 
 
 ## 工具安装
@@ -62,7 +62,7 @@ dump功能可以直接通过msit命令行形式启动精度对比。启动方式
 | -m，--model           | 模型文件 [.pb与saved_model，.onnx，.prototxt] 路径，分别对应 TF, ONNX, Caffe。<br/>其中.pb为TF1.15.5版本模型文件，saved_model为TF2.6.5版本模型文件                                                                                                                                                                | 否  |
 | -w，--weight               | -w 为权重文件，当模型为caffe模型时，该参数为必选参数                                                                                                                                                                                                                                                    | 否  |
 | -i，--input                | 模型的输入数据路径，默认根据模型的input随机生成，多个输入以逗号分隔，例如：/home/input\_0.bin,/home/input\_1.bin,/home/input\_2.npy。注意：使用aipp模型时该输入为om模型的输入,且支持自动将npy文件转为bin文件                                                                                                                                       | 否  |
-| -c，--cann-path            | CANN包安装完后路径，默认会从从系统环境变量`ASCEND_TOOLKIT_HOME`中获取`CANN` 包路径，如果不存在则默认为 `/usr/local/Ascend/ascend-toolkit/latest`                                                                                                                                                                     | 否  |
+| -c，--cann-path            | CANN包安装完后路径，默认会从系统环境变量`ASCEND_TOOLKIT_HOME`中获取`CANN` 包路径，如果不存在则默认为 `/usr/local/Ascend/ascend-toolkit/latest`                                                                                                                                                                     | 否  |
 | -o，--output               | 输出文件路径，默认为当前路径                                                                                                                                                                                                                                                                    | 否  |
 | -is，--input-shape         | 模型输入的shape信息，默认为空，例如"input_name1:1,224,224,3;input_name2:3,300",节点中间使用英文分号隔开。input_name必须是转换前的网络模型中的节点名称                                                                                                                                                                          | 否  |
 | -d，--device               | 指定运行设备 [0,255]，可选参数，默认0                                                                                                                                                                                                                                                           | 否  |
@@ -79,8 +79,6 @@ dump功能可以直接通过msit命令行形式启动精度对比。启动方式
 
 ### 使用场景
 
-请移步[dump使用示例](../../../examples/cli/debug/dump/)
-
 | 使用示例                                                                                           | 使用场景                      |
 |------------------------------------------------------------------------------------------------|---------------------------|
 | [01_basic_usage](../../../examples/cli/debug/dump/01_basic_usage)                              | 基础示例，运行onnx模型dump         |
@@ -93,4 +91,4 @@ dump功能可以直接通过msit命令行形式启动精度对比。启动方式
 
 ### 查看Dump数据
 
-读取、转换和保存 bin 数据的接口可以参考[API-读取和保存接口](./API-读取和保存接口.md)
+读取、转换和保存 bin 数据的接口可以参考[API-读取和保存接口](../../llm/API-读取和保存接口.md)

@@ -1,7 +1,7 @@
 # Saved model dump
 
 ## 介绍
-Saved model dump
+支持对使用Tensorflow框架保存下来的save_model格式模型进行tensor数据dump。
 
 ## 使用示例
 - 1、saved_model npu dump  命令示例，**其中路径需使用绝对路径**

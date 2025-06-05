@@ -1,5 +1,8 @@
 # MindIE Torch场景-整网算子数据dump
 
+## 介绍
+支持对经过MindIE Torch编译优化后的模型进行tensor数据dump。
+
 ## 1. 相关依赖
 
 - CANN（8.0RC3及以上）
@@ -123,9 +126,9 @@
 | --output | 指定Dump数据输出路径，默认为当前路径                                 | 否   | 
 | -opname, --operation-name | 需要Dump的算子，默认为 all，表示会对模型中所有 op 进行 Dump，其中元素为MindIE Torch算子类型，若设置 operation-name，只会 Dump 指定的 op                                | 否   | 
 
-### 3.2 CPU/GPU数据Dump
+### 3.2 标杆数据Dump
 
-- CPU/GPU数据Dump请参考[CPU/GPU数据Dump](../../../../../docs/llm/工具-Pytorch场景数据dump.md)
+- 精度比对的标杆数据一般选取的是Torch单算子模式下推理数据，具体Dump流程请参考[PyTorch 场景的精度数据采集](../../../../../docs/llm/工具-Pytorch场景数据dump.md)
 
 ## 注意
 
