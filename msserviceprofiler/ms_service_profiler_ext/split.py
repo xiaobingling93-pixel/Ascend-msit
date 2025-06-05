@@ -26,6 +26,8 @@ from ms_service_profiler_ext.exporters.exporter_decode import ExporterDecode
 
 
 def add_exporters(args):
+    if not hasattr(args, 'format'):
+        args.format = 'csv'
     exporter_cls = []
     exporters = []
     if args.prefill_batch_size > 0 or args.prefill_rid != '-1':
@@ -93,7 +95,7 @@ def main():
     Path(args.output_path).mkdir(parents=True, exist_ok=True)
 
     # 解析数据并导出
-    parse(args.input_path, custom_plugins, exporters)
+    parse(args.input_path, custom_plugins, exporters, args=args)
 
 
 if __name__ == '__main__':

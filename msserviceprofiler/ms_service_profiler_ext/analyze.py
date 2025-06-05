@@ -78,7 +78,7 @@ def main():
     create_sqlite_db(args.output_path)
 
     # 解析数据并导出
-    parse(args.input_path, custom_plugins, exporters)
+    parse(args.input_path, custom_plugins, exporters, args=args)
 
 
 if __name__ == '__main__':
