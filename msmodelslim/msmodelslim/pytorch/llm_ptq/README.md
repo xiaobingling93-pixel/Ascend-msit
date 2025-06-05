@@ -255,6 +255,28 @@ python3 quant.py
 ```
 > 注意：当使用 w4a8_dynamic 量化类型时，json 描述文件中会多生成一个 model_quant_type_second 和 kv_cache_type_second 的 key 和对应的量化类型 W4A8_DYNAMIC。
 
+- ascendV1格式
+当[save_type](/msmodelslim/docs/Python-API接口说明/大模型压缩接口/大模型量化接口/PyTorch/save().md)设置为['ascendV1']时，量化权重会保存为safetensors文件和json描述文件。其中，safetensors文件与上述使用safetensors格式时的保持一致。
+
+> 注意：当使用 w4a16 量化类型时，默认会对权重进行pack。
+
+- json描述文件从quant_model_description_{qunt_type}.json改为quant_model_description.json，并新增了一个version参数。
+```
+# llama模型稀疏量化生成的json描述文件部分内容
+{
+  "version": "1.0.0",                                        # 标注现有的权重格式保存版本
+  "model_quant_type": "W8A8S",                               # 整体量化类型为稀疏量化
+  "model.embed_tokens.weight": "FLOAT",                      # 来自原始浮点模型的embed_tokens权重
+  "model.layers.0.self_attn.q_proj.weight": "W8A8S",         # 量化新增的第0层self_attn.q_proj的quant_weight
+  "model.layers.0.self_attn.q_proj.input_scale": "W8A8S",    # 量化新增的第0层self_attn.q_proj的input_scale
+  "model.layers.0.self_attn.q_proj.input_offset": "W8A8S",   # 量化新增的第0层self_attn.q_proj的input_offset
+  "model.layers.0.self_attn.q_proj.quant_bias": "W8A8S",     # 量化新增的第0层self_attn.q_proj的quant_bias
+  "model.layers.0.self_attn.q_proj.deq_scale": "W8A8S",      # 量化新增的第0层self_attn.q_proj的deq_scale
+  "model.layers.0.self_attn.k_proj.weight": "W8A8S",         # 量化新增的第0层self_attn.k_proj的quant_weight
+ ...
+}
+```
+
 ### 精度保持策略
 
 在量化权重生成后，可以使用伪量化模型进行推理，检验伪量化精度是否正常。伪量化是指通过torch，通过浮点运算完成量化模型运算逻辑，运算过程中的数据和真实量化的数据差异只在算子精度上，同时可以规避接入推理框架时引入的精度误差。如果伪量化精度不满足预期，真实量化结果也将无法满足预期。在调用Calibrator.run()方法后，构建Calibrator时传入的model会被替换为伪量化模型，可以直接调用进行前向推理，用来测试对话效果。如果伪量化结果不理想，可先使用[精度定位方法](#精度定位方法)进行定位，再可以参考以下手段进行调优。一般来说，W8A16的精度调优较为容易，W8A8和稀疏量化的精度调优相对复杂。
