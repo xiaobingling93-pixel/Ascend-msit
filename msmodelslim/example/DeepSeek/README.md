@@ -97,6 +97,7 @@
 | ------------ | -------------- | ------ | ------------------------- |
 | disable_anti | 关闭异常值抑制 | 不开启 | 可选参数；<br/>开启即指定 |
 | dynamic      | 指定动态量化   | 不开启 | 可选参数；<br/>开启即指定 |
+| quant_mtp      | 指定mtp量化  | none  | 可选参数；<br>none: 不保存mtp权重；<br>float: 保存mtp浮点权重；<br>mix: 保存mtp混合量化权重。|   
 
 注：在量化脚本里面通过transformers库对模型进行加载时，调用`from_pretrained`函数时会指定`trust_remote_code=True`让修改后的modeling文件能够正确的被加载。(请确保加载的modeling文件的安全性)
 
@@ -205,6 +206,11 @@ python3 quant_deepseek_w8a8.py --model_path {浮点权重路径} --save_path {W8
 # 如果需要异常值抑制，可以使用
 python3 quant_deepseek_w8a8.py --model_path {浮点权重路径} --save_path {W8A8量化权重路径} --dynamic
 ```
+##### DeepSeek-R1 w8a8 混合量化 + mtp 量化
+- 生成DeepSeek-V3/R1模型 w8a8 mtp 量化权重
+  ```shell
+  python3 quant_deepseek_w8a8.py --model_path {浮点权重路径} --save_path {W8A8量化权重路径} --batch_size 4 --quant_mtp mix
+  ```
 
 ##### DeepSeek-V3/R1量化QA
 
