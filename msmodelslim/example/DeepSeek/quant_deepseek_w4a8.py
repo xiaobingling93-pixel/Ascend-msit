@@ -211,10 +211,12 @@ def main():
         quant_model_description_json_name = "quant_model_description_w8a8_dynamic.json"
     else:
         quant_model_description_json_name = "quant_model_description.json"
+    
+    save_type = "safe_tensor" if args.mindie_format else "ascendV1"
     calibrator.save(save_path,
                     json_name=quant_model_description_json_name,
                     safetensors_name="quant_model_weight_w8a8_dynamic.safetensors",
-                    save_type=["safe_tensor"],
+                    save_type=[save_type],
                     part_file_size=4)
     # 适配mindie删除description里的module字段
     if args.mindie_format:

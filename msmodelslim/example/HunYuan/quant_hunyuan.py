@@ -150,7 +150,8 @@ class Quantifier:
             mix_cfg=mix_cfg
         )
         calibrator.run()
-        calibrator.save(save_path, save_type=["safe_tensor"], part_file_size=part_file_size)
+        save_type = "safe_tensor" if args.mindie_format else "ascendV1"
+        calibrator.save(save_path, save_type=[save_type], part_file_size=part_file_size)
 
 
 if __name__ == '__main__':

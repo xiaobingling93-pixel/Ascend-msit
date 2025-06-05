@@ -271,7 +271,8 @@ class Quantifier:
 
         calibrator = Calibrator(self.model, self.quant_config, calib_data=tokenized_data, disable_level=disable_level)
         calibrator.run()
-        calibrator.save(save_path, save_type=["safe_tensor"], part_file_size=part_file_size)
+        save_type = "safe_tensor" if args.mindie_format else "ascendV1"
+        calibrator.save(save_path, save_type=[save_type], part_file_size=part_file_size)
 
 
 def get_anti_dataset(tokenizer, calib_list, device_type):
