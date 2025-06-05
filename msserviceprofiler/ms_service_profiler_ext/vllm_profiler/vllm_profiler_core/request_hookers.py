@@ -17,16 +17,12 @@ import time
 from ms_service_profiler import Profiler, Level
 from .vllm_hooker_base import VLLMHookerBase
 
-try:
-    GLOBAL_HOST_NAME = os.uname().nodename
-except Exception as ee:
-    GLOBAL_HOST_NAME = "localhost"
 GLOBAL_FORWARD_PROF = []
 
 
 def prof_add_request(request_id, prompt, *args, **kwargs):
     # 记录请求进入系统的时间
-    Profiler(Level.INFO).domain("Request").res(request_id).attr("hostname", GLOBAL_HOST_NAME).event("httpReq")
+    Profiler(Level.INFO).domain("Request").res(request_id).event("httpReq")
     Profiler(Level.INFO).domain("Request").res(request_id).event("encode")
 
 

@@ -55,7 +55,7 @@ class FakeAsyncLLMEngine:
 
 
 # 导入被测试的类
-from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.request_hookers import Profiler, Level, GLOBAL_HOST_NAME
+from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.request_hookers import Profiler, Level
 
 
 @patch("ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.request_hookers.Profiler")
@@ -86,13 +86,7 @@ class TestVLLMHookers(unittest.TestCase):
         self.fake_llm_engine.add_request(self.fake_request_id, self.fake_prompt)
 
         # 验证 Profiler 调用
-        expected_call = (
-            call(Level.INFO)
-            .domain("Request")
-            .res(self.fake_request_id)
-            .attr("hostname", GLOBAL_HOST_NAME)
-            .event("httpReq")
-        )
+        expected_call = call(Level.INFO).domain("Request").res(self.fake_request_id).event("httpReq")
         mock_profiler.assert_has_calls([expected_call])
 
     def test_engine_request_tracker_hook_084(self, mock_profiler):
@@ -107,13 +101,7 @@ class TestVLLMHookers(unittest.TestCase):
         self.fake_llm_engine.add_request(self.fake_request_id, self.fake_prompt)
 
         # 验证 Profiler 调用
-        expected_call = (
-            call(Level.INFO)
-            .domain("Request")
-            .res(self.fake_request_id)
-            .attr("hostname", GLOBAL_HOST_NAME)
-            .event("httpReq")
-        )
+        expected_call = call(Level.INFO).domain("Request").res(self.fake_request_id).event("httpReq")
         mock_profiler.assert_has_calls([expected_call])
 
     def test_llm_engine_hook_063(self, mock_profiler):
