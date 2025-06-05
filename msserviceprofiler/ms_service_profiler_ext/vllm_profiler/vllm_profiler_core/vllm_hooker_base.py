@@ -46,6 +46,7 @@ class VLLMHookerBase:
                     if pname is not None and self.get_parents_name(ori_func) != pname:
                         return ori_func(*args, **kwargs)
                     return profiler_func(*args, **kwargs)
+
                 return wrapper
 
             HookHelper(ori_func, replace_func(ori_func, pname)).replace()

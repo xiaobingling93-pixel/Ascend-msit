@@ -117,7 +117,7 @@ class TestParamValidation(unittest.TestCase):
     def test_is_consistent_to_current_user(self):
         test_func = self.create_func_with_constraints(Path.is_consistent_to_current_user())
         with mock.patch(
-            "os.stat", 
+            "os.stat",
             return_value=os.stat_result([0] * 4 + [os.getuid() + 1] + [0] * 5)
         ):
             self.assertRaises(InvalidParameterError, test_func, self.random_path)
@@ -162,8 +162,8 @@ class TestParamValidation(unittest.TestCase):
     def test_nested_if_else_constraint(self):
         test_func = self.create_func_with_constraints(
             where(
-                Path.is_file() & Path.is_readable(), 
-                Path.is_file(), 
+                Path.is_file() & Path.is_readable(),
+                Path.is_file(),
                 Path.is_dir() & Path.is_writable()
             )
         )
@@ -184,12 +184,12 @@ class TestParamValidation(unittest.TestCase):
 
     def test_user_defined_function_constraint_not_valid(self):
         self.assertRaises(
-            ValueError, 
-            self.create_func_with_constraints(lambda val, another_val: True), 
+            ValueError,
+            self.create_func_with_constraints(lambda val, another_val: True),
             3
         )
         self.assertRaises(
-            TypeError, 
-            self.create_func_with_constraints(lambda val: "non bool"), 
+            TypeError,
+            self.create_func_with_constraints(lambda val: "non bool"),
             3
         )

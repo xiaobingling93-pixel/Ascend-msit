@@ -14,6 +14,7 @@
 import sys
 import unittest
 from unittest.mock import MagicMock, patch, call
+from collections import namedtuple
 
 
 # 模拟 SequenceGroupMetadata 类
@@ -32,27 +33,30 @@ class FakeSequence:
 # 模拟 SelfAttnBlockSpaceManager 类
 class FakeSelfAttnBlockSpaceManager:
     def __init__(self):
-        self.block_tables = [1, 2, 3]  # 模拟 block_tables
+        self.block_tables = {0: [1, 2, 3]}  # 模拟 block_tables
 
     def allocate(self, seq_group):
-        self.block_tables = [1]
+        self.block_tables = {0: [1]}
         pass
 
     def append_slots(self, seq, num_lookahead_slots):
-        self.block_tables = [2]
+        self.block_tables = {0: [2]}
         return 1  # 模拟 new_cows
 
     def swap_in(self, seq_group):
-        self.block_tables = [1, 2]
+        self.block_tables = {0: [1, 2]}
         return True  # 模拟 swap_in 结果
 
     def swap_out(self, seq_group):
-        self.block_tables = [1]
+        self.block_tables = {0: [1]}
         return True  # 模拟 swap_out 结果
 
     def free(self, seq):
-        self.block_tables = []
+        self.block_tables = {}
         pass
+
+    def get_num_free_gpu_blocks(self):
+        return 1
 
 
 # 模拟 Stats 类
@@ -66,30 +70,30 @@ class FakeStats:
 class FakeLLMEngine:
     def __init__(self):
         self.stats = FakeStats()
+        self.scheduler = [namedtuple("scheduler", ["block_manager"])(FakeSelfAttnBlockSpaceManager())]
 
     def _get_stats(self):
         return self.stats
 
 
 # 导入被测试的类
-from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.kvcache_hookers import (
-    Profiler, Level
-)
+from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.kvcache_hookers import Profiler, Level
 
 
-@patch('ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.kvcache_hookers.Profiler')
+@patch("ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.kvcache_hookers.Profiler")
 class TestKVCacheManagerHook(unittest.TestCase):
 
     def setUp(self):
         # 将模拟的类和模块注入 sys.modules
-        sys.modules['vllm.core.block_manager'] = MagicMock(SelfAttnBlockSpaceManager=FakeSelfAttnBlockSpaceManager)
-        sys.modules['vllm.engine.llm_engine'] = MagicMock(LLMEngine=FakeLLMEngine)
+        sys.modules["vllm.core.block_manager"] = MagicMock(SelfAttnBlockSpaceManager=FakeSelfAttnBlockSpaceManager)
+        sys.modules["vllm.engine.llm_engine"] = MagicMock(LLMEngine=FakeLLMEngine)
 
         # 导入被测试的类
         from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.kvcache_hookers import KVCacheManagerHook
+
         # 初始化 Hook 实例
         self.kvcache_hook = KVCacheManagerHook()
-        
+
         # 调用 init 方法，定义hook函数
         self.kvcache_hook.init()
 
@@ -106,35 +110,62 @@ class TestKVCacheManagerHook(unittest.TestCase):
 
     def test_allocate_maker(self, mock_profiler):
         self.fake_block_manager.allocate(self.fake_seq_group)
-        expected_call = call(Level.INFO).domain("KVCache").res(0).metric(
-            "deviceBlock", len(self.fake_block_manager.block_tables)).event("Allocate")
+        expected_call = (
+            call(Level.INFO)
+            .domain("KVCache")
+            .res(0)
+            .metric("deviceBlock", len(self.fake_block_manager.block_tables))
+            .event("Allocate")
+        )
         mock_profiler.assert_has_calls([expected_call])
 
     def test_append_slots_maker(self, mock_profiler):
         new_cows = self.fake_block_manager.append_slots(self.fake_seq, 1)
         self.assertEqual(new_cows, 1)
-        expected_call = call(Level.INFO).domain("KVCache").res(0).metric(
-            "deviceBlock", len(self.fake_block_manager.block_tables)).event("AppendSlot")
+        expected_call = (
+            call(Level.INFO)
+            .domain("KVCache")
+            .res(0)
+            .metric("deviceBlock", len(self.fake_block_manager.block_tables))
+            .event("AppendSlot")
+        )
         mock_profiler.assert_has_calls([expected_call])
 
     def test_swap_in_maker(self, mock_profiler):
         res = self.fake_block_manager.swap_in(self.fake_seq_group)
         self.assertTrue(res)
-        expected_call = call(Level.INFO).domain("KVCache").res(0).attr("swap", "swap_in").metric(
-            "deviceBlock", len(self.fake_block_manager.block_tables)).event("SwapIn")
+        expected_call = (
+            call(Level.INFO)
+            .domain("KVCache")
+            .res(0)
+            .attr("swap", "swap_in")
+            .metric("deviceBlock", len(self.fake_block_manager.block_tables))
+            .event("SwapIn")
+        )
         mock_profiler.assert_has_calls([expected_call])
 
     def test_swap_out_maker(self, mock_profiler):
         res = self.fake_block_manager.swap_out(self.fake_seq_group)
         self.assertTrue(res)
-        expected_call = call(Level.INFO).domain("KVCache").res(0).attr("swap", "swap_out").metric(
-            "deviceBlock", len(self.fake_block_manager.block_tables)).event("SwapOut")
+        expected_call = (
+            call(Level.INFO)
+            .domain("KVCache")
+            .res(0)
+            .attr("swap", "swap_out")
+            .metric("deviceBlock", len(self.fake_block_manager.block_tables))
+            .event("SwapOut")
+        )
         mock_profiler.assert_has_calls([expected_call])
 
     def test_free_maker(self, mock_profiler):
         self.fake_block_manager.free(self.fake_seq)
-        expected_call = call(Level.INFO).domain("KVCache").res(0).metric(
-            "deviceBlock", len(self.fake_block_manager.block_tables)).event("Free")
+        expected_call = (
+            call(Level.INFO)
+            .domain("KVCache")
+            .res(0)
+            .metric("deviceBlock", len(self.fake_block_manager.block_tables))
+            .event("Free")
+        )
         mock_profiler.assert_has_calls([expected_call])
 
     def test_get_stats_maker(self, mock_profiler):

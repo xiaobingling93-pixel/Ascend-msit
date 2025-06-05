@@ -25,69 +25,81 @@ from ms_service_profiler_ext.exporters.exporter_prefill import ExporterPrefill
 
 class TestExporterPrefillFunction(unittest.TestCase):
     def setUp(self):
-        self.data = {
-            'tx_data_df': self.mock_data()
-        }
-    
+        self.data = {"tx_data_df": self.mock_data()}
+
     def mock_data(self):
-        name_list = ['encode', 'httpReq', 'batchFrameworkProcessing', 'serializeExcueteMessage',
-                    'setInferBuffer', 'grpcWriteToSlave', 'deserializeExecuteRequestsForInfer', 
-                    'convertTensorBatchToBackend', 'getInputMetadata', 'preprocess', 'forward', 
-                    'sample', 'postprocess', 'generateOutput', 'processPythonExecResult', 
-                    'deserializeExecuteResponse', 'httpRes']
+        name_list = [
+            "encode",
+            "httpReq",
+            "batchFrameworkProcessing",
+            "serializeExcueteMessage",
+            "setInferBuffer",
+            "grpcWriteToSlave",
+            "deserializeExecuteRequestsForInfer",
+            "convertTensorBatchToBackend",
+            "getInputMetadata",
+            "preprocess",
+            "forward",
+            "sample",
+            "postprocess",
+            "generateOutput",
+            "processPythonExecResult",
+            "deserializeExecuteResponse",
+            "httpRes",
+        ]
         data = {
-            'name': name_list * 3,
+            "name": name_list * 3,
         }
-        len_data = len(data['name'])
-        data['during_time'] = np.random.rand(len_data) * 1000
-        data['pid'] = ['40'] * len_data
-        data['tid'] = ['100'] * len_data
-        data['start_time'] = np.arange(len_data) * 1000
-        data['end_time'] = np.arange(len_data) * 1000 + 50
-        data['start_datetime'] = ['123'] * len_data
-        data['end_datetime'] = ['123'] * len_data
-        data['batch_type'] = [''] * len_data
-        data['rid'] = [''] * len_data
-        data['batch_size'] = [None] * len_data
-        data['rid_list'] = [None] * len_data
-        data['token_id_list'] = [['1234', '5678']] * len_data
-        batch_indices = np.where(np.array(data['name']) == 'batchFrameworkProcessing')[0]
+        len_data = len(data["name"])
+        data["during_time"] = np.random.rand(len_data) * 1000
+        data["pid"] = ["40"] * len_data
+        data["tid"] = ["100"] * len_data
+        data["start_time"] = np.arange(len_data) * 1000
+        data["end_time"] = np.arange(len_data) * 1000 + 50
+        data["start_datetime"] = ["123"] * len_data
+        data["end_datetime"] = ["123"] * len_data
+        data["batch_type"] = [""] * len_data
+        data["rid"] = [""] * len_data
+        data["batch_size"] = [None] * len_data
+        data["rid_list"] = [None] * len_data
+        data["token_id_list"] = [["1234", "5678"]] * len_data
+        batch_indices = np.where(np.array(data["name"]) == "batchFrameworkProcessing")[0]
         rid_list = []
         for i in batch_indices:
-            data['batch_type'][i] = 'Prefill'
-            data['batch_size'][i] = '4'
-            data['rid'][i] = str(i + 1)  # 递增的 rid 值
+            data["batch_type"][i] = "Prefill"
+            data["batch_size"][i] = "4"
+            data["rid"][i] = str(i + 1)  # 递增的 rid 值
             rid_list.append(str(i + 1))
-            data['rid_list'][i] = [str(i + 1)]
-        http_req_indices = np.where(np.array(data['name']) == 'httpReq')[0]
+            data["rid_list"][i] = [str(i + 1)]
+        http_req_indices = np.where(np.array(data["name"]) == "httpReq")[0]
         cur = 0
         for i in http_req_indices:
-            data['rid'][i] = rid_list[cur]
+            data["rid"][i] = rid_list[cur]
             cur += 1
 
-        serialize_indices = np.where(np.array(data['name']) == 'serializeExcueteMessage')[0]
+        serialize_indices = np.where(np.array(data["name"]) == "serializeExcueteMessage")[0]
         for i in serialize_indices:
             # 找到前一个 batchFrameworkProcessing 的 end_time
-            previous_batch_index = np.where(np.array(data['name'])[:i] == 'batchFrameworkProcessing')[0]
+            previous_batch_index = np.where(np.array(data["name"])[:i] == "batchFrameworkProcessing")[0]
             if len(previous_batch_index) > 0:
-                previous_end_time = data['end_time'][previous_batch_index[-1]]
+                previous_end_time = data["end_time"][previous_batch_index[-1]]
                 # 确保 start_time 与前一个 end_time 之间的差值小于 100000
-                data['start_time'][i] = min(data['start_time'][i], previous_end_time + 100000)
+                data["start_time"][i] = min(data["start_time"][i], previous_end_time + 100000)
         df = pd.DataFrame(data)
         return df
 
     def test_exporter_prefill(self):
         args = Namespace(
-            output_path=os.path.join(os.getcwd(), 'output'),
-            log_level='debug',
+            output_path=os.path.join(os.getcwd(), "output"),
+            log_level="debug",
             prefill_batch_size=4,
             prefill_number=1,
-            prefill_rid='-1',
+            prefill_rid="-1",
         )
-        try: 
+        try:
             os.makedirs(args.output_path, exist_ok=True)
             os.chmod(args.output_path, 0o740)
-            file_path = Path(args.output_path, 'prefill.csv')
+            file_path = Path(args.output_path, "prefill.csv")
             ExporterPrefill.initialize(args)
             ExporterPrefill.export(self.data)
             self.assertTrue(file_path.is_file())

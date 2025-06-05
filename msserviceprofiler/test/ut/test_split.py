@@ -46,21 +46,21 @@ class TestSplitFuctions(unittest.TestCase):
         self.__class__.mocker = value
 
     def test_add_exporters_with_prefill(self):
-        args = Namespace(prefill_batch_size=4, decode_batch_size=0, prefill_rid='-1', decode_rid='-1')
+        args = Namespace(prefill_batch_size=4, decode_batch_size=0, prefill_rid="-1", decode_rid="-1")
         exporters = add_exporters(args)
 
         self.assertEqual(len(exporters), 1)
         self.assertIsInstance(exporters[0], ExporterPrefill)
 
     def test_add_exporters_with_decode(self):
-        args = Namespace(prefill_batch_size=0, decode_batch_size=10, prefill_rid='-1', decode_rid='-1')
+        args = Namespace(prefill_batch_size=0, decode_batch_size=10, prefill_rid="-1", decode_rid="-1")
         exporters = add_exporters(args)
 
         self.assertEqual(len(exporters), 1)
         self.assertIsInstance(exporters[0], ExporterDecode)
 
     def test_add_exporters_with_both(self):
-        args = Namespace(prefill_batch_size=4, decode_batch_size=10, prefill_rid='-1', decode_rid='-1')
+        args = Namespace(prefill_batch_size=4, decode_batch_size=10, prefill_rid="-1", decode_rid="-1")
         exporters = add_exporters(args)
 
         self.assertEqual(len(exporters), 2)
@@ -69,25 +69,21 @@ class TestSplitFuctions(unittest.TestCase):
 
     def test_main(self):
         main()
-    
+
     @pytest.fixture(autouse=True)
     def _inject_mocker(self, mocker):
         self.mocker = mocker
-        self.mock_args = Namespace(
-            input_path='/fake/input',
-            output_path='/fake/output',
-            log_level='info'
-        )
+        self.mock_args = Namespace(input_path="/fake/input", output_path="/fake/output", log_level="info")
 
         # 2. 配置全局mock
-        mocker.patch('argparse.ArgumentParser.parse_args', return_value=self.mock_args)
-        mocker.patch('ms_service_profiler.utils.log.set_log_level')
-        mocker.patch('ms_service_profiler.parse.preprocess_prof_folders')
-        mocker.patch('ms_service_profiler_ext.split.add_exporters', return_value=['ExporterPrefill', 'ExporterDecode'])
-        mocker.patch.object(Path, 'mkdir')
-        mocker.patch('os.path.exists', return_value=True)
-        mocker.patch('ms_service_profiler.parse.find_file_in_dir', return_value=True)
-        mocker.patch('os.makedirs')
+        mocker.patch("argparse.ArgumentParser.parse_args", return_value=self.mock_args)
+        mocker.patch("ms_service_profiler.utils.log.set_log_level")
+        mocker.patch("ms_service_profiler.parse.preprocess_prof_folders")
+        mocker.patch("ms_service_profiler_ext.split.add_exporters", return_value=["ExporterPrefill", "ExporterDecode"])
+        mocker.patch.object(Path, "mkdir")
+        mocker.patch("os.path.exists", return_value=True)
+        mocker.patch("ms_service_profiler.parse.find_file_in_dir", return_value=True)
+        mocker.patch("os.makedirs")
 
         yield
         self.mocker = None

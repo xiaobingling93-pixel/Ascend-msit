@@ -17,8 +17,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.model_hookers import ModelRunnerExecuteHook, \
-    ModelForwardHook
+from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.model_hookers import (
+    ModelRunnerExecuteHook,
+    ModelForwardHook,
+)
 
 
 def test_execute_init():
@@ -27,11 +29,11 @@ def test_execute_init():
 
     vllm_work_model_runner = MagicMock(ModelRunner=fake_model_runner)
 
-    sys.modules['vllm.worker.model_runner'] = vllm_work_model_runner
+    sys.modules["vllm.worker.model_runner"] = vllm_work_model_runner
 
     hooker = ModelRunnerExecuteHook()
 
-    with patch.object(hooker, 'do_hook') as mock_do_hook:
+    with patch.object(hooker, "do_hook") as mock_do_hook:
         hooker.init()
 
         mock_do_hook.assert_called_once()
@@ -50,7 +52,7 @@ def test_execute_model_maker():
     mock_model_input.input_tokens.shape = [5, 0]
 
     hooker = ModelRunnerExecuteHook()
-    with patch.object(hooker, 'do_hook') as mock_do_hook:
+    with patch.object(hooker, "do_hook") as mock_do_hook:
         hooker.init()
 
         mock_do_hook.assert_called_once()
@@ -74,11 +76,11 @@ def test_forward_init():
 
     vllm_attention_backends_utils = MagicMock(CommonAttentionState=fake_common_attention_state)
 
-    sys.modules['vllm.attention.backends.utils'] = vllm_attention_backends_utils
+    sys.modules["vllm.attention.backends.utils"] = vllm_attention_backends_utils
 
     hooker = ModelForwardHook()
 
-    with patch.object(hooker, 'do_hook') as mock_do_hook:
+    with patch.object(hooker, "do_hook") as mock_do_hook:
         hooker.init()
 
         mock_do_hook.assert_called_once()
@@ -95,7 +97,7 @@ def test_begin_forward_maker():
     mock_model_input.request_ids_to_seq_ids.item.return_value = [("req1", "seq1")]
 
     hooker = ModelForwardHook()
-    with patch.object(hooker, 'do_hook') as mock_do_hook:
+    with patch.object(hooker, "do_hook") as mock_do_hook:
         hooker.init()
 
         mock_do_hook.assert_called_once()
