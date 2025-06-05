@@ -158,40 +158,40 @@ class TestSchedulerHook(unittest.TestCase):
         self.fake_scheduler.abort_seq_group(self.fake_request_id)
 
         # 校验Profiler方法链式调用正确
-        expected_call = call(Level.INFO).domain("BatchSchedule").res(self.fake_request_id).metric_inc(
-            'FINISHED_ABORTED', 1).event("ReqState")
+        expected_call = call(Level.INFO).domain("BatchSchedule").res(self.fake_request_id)
+        expected_call = expected_call.metric_inc('FINISHED_ABORTED', 1).event("ReqState")
         mock_profiler.assert_has_calls([expected_call])
 
     def test_allocate_and_set_running_maker(self, mock_profiler):
         self.fake_scheduler._allocate_and_set_running(self.fake_seq_group)
 
         # 校验Profiler方法链式调用正确
-        expected_call = call(Level.INFO).domain("BatchSchedule").res(self.fake_request_id).metric_inc(
-            'RUNNING', 1).metric_inc('WAITING', -1).event("ReqState")
+        expected_call = call(Level.INFO).domain("BatchSchedule").res(self.fake_request_id)
+        expected_call = expected_call.metric_inc('RUNNING', 1).metric_inc('WAITING', -1).event("ReqState")
         mock_profiler.assert_has_calls([expected_call])
 
     def test_preempt_by_recompute_maker(self, mock_profiler):
         self.fake_scheduler._preempt_by_recompute(self.fake_seq_group)
 
         # 校验Profiler方法链式调用正确
-        expected_call = call(Level.INFO).domain("BatchSchedule").res(self.fake_request_id).metric_inc(
-            'RUNNING', -1).metric_inc('WAITING', 1).event("ReqState")
+        expected_call = call(Level.INFO).domain("BatchSchedule").res(self.fake_request_id)
+        expected_call = expected_call.metric_inc('RUNNING', -1).metric_inc('WAITING', 1).event("ReqState")
         mock_profiler.assert_has_calls([expected_call])
 
     def test_swap_in_maker(self, mock_profiler):
         self.fake_scheduler._swap_in(self.fake_seq_group)
 
         # 校验Profiler方法链式调用正确
-        expected_call = call(Level.INFO).domain("BatchSchedule").res(self.fake_request_id).metric_inc(
-            'RUNNING', 1).metric_inc('SWAPPED', -1).event("ReqState")
+        expected_call = call(Level.INFO).domain("BatchSchedule").res(self.fake_request_id)
+        expected_call = expected_call.metric_inc('RUNNING', 1).metric_inc('SWAPPED', -1).event("ReqState")
         mock_profiler.assert_has_calls([expected_call])
 
     def test_swap_out_maker(self, mock_profiler):
         self.fake_scheduler._swap_out(self.fake_seq_group)
 
         # 校验Profiler方法链式调用正确
-        expected_call = call(Level.INFO).domain("BatchSchedule").res(self.fake_request_id).metric_inc(
-            'RUNNING', -1).metric_inc('SWAPPED', 1).event("ReqState")
+        expected_call = call(Level.INFO).domain("BatchSchedule").res(self.fake_request_id)
+        expected_call = expected_call.metric_inc('RUNNING', -1).metric_inc('SWAPPED', 1).event("ReqState")
         mock_profiler.assert_has_calls([expected_call])
 
     def test_free_finished_seq_groups_maker(self, mock_profiler):
@@ -201,8 +201,8 @@ class TestSchedulerHook(unittest.TestCase):
         self.fake_scheduler.free_finished_seq_groups()
 
         # 校验Profiler方法链式调用正确
-        expected_call = call(Level.INFO).domain("BatchSchedule").res(self.fake_request_id).metric_inc(
-            'RUNNING', -1).metric_inc('FINISHED', 1).event("ReqState")
+        expected_call = call(Level.INFO).domain("BatchSchedule").res(self.fake_request_id)
+        expected_call = expected_call.metric_inc('RUNNING', -1).metric_inc('FINISHED', 1).event("ReqState")
         mock_profiler.assert_has_calls([expected_call])
 
     # 校验Profiler.res中的request list正确
@@ -210,24 +210,27 @@ class TestSchedulerHook(unittest.TestCase):
         self.fake_scheduler._add_seq_group_to_running(self.fake_seq_group)
 
         # 校验Profiler方法链式调用正确
-        expected_call = call(Level.INFO).domain("BatchSchedule").res([self.fake_request_id]).metric(
-            "QueueSize", len(self.fake_scheduler.running)).metric_scope('running').event("Enqueue")
+        expected_call = call(Level.INFO).domain("BatchSchedule").res([self.fake_request_id])
+        expected_call = expected_call.metric("QueueSize", len(self.fake_scheduler.running)).metric_scope('running')
+        expected_call = expected_call.event("Enqueue")
         mock_profiler.assert_has_calls([expected_call])
 
     def test_add_seq_group_maker(self, mock_profiler):
         self.fake_scheduler.add_seq_group(self.fake_seq_group)
 
         # 校验Profiler方法链式调用正确
-        expected_call = call(Level.INFO).domain("BatchSchedule").res([self.fake_request_id]).metric(
-            "QueueSize", len(self.fake_scheduler.waiting)).metric_scope('waiting').event("Enqueue")
+        expected_call = call(Level.INFO).domain("BatchSchedule").res([self.fake_request_id])
+        expected_call = expected_call.metric("QueueSize", len(self.fake_scheduler.waiting)).metric_scope('waiting')
+        expected_call = expected_call.event("Enqueue")
         mock_profiler.assert_has_calls([expected_call])
 
     def test_add_seq_group_to_swapped_maker(self, mock_profiler):
         self.fake_scheduler._add_seq_group_to_swapped(self.fake_seq_group)
 
         # 校验Profiler方法链式调用正确
-        expected_call = call(Level.INFO).domain("BatchSchedule").res([self.fake_request_id]).metric(
-            "QueueSize", len(self.fake_scheduler.swapped)).metric_scope('swapped').event("Enqueue")
+        expected_call = call(Level.INFO).domain("BatchSchedule").res([self.fake_request_id])
+        expected_call = expected_call.metric("QueueSize", len(self.fake_scheduler.swapped)).metric_scope('swapped')
+        expected_call = expected_call.event("Enqueue")
         mock_profiler.assert_has_calls([expected_call])
         mock_profiler(Level.INFO).domain("BatchSchedule").res.assert_called_with([self.fake_request_id])
 
