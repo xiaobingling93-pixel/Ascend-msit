@@ -39,8 +39,8 @@ def check_csv_content(output_path, csv_file_name, expected_csv_columns, numeric_
 
 def check_kvcache_csv_content(output_path, csv_file_name):
     expected_csv_columns = [
-        'domain', 'rid', 'start_time(microsecond)', 'end_time(microsecond)',
-        'name', 'device_kvcache_left', 'during_time(microsecond)'
+        'domain', 'rid', 'timestamp(ms)',
+        'name', 'device_kvcache_left'
     ]
     csv_file = os.path.join(output_path, csv_file_name)
     # 检查文件是否存在
@@ -76,8 +76,8 @@ def check_batch_csv_content(output_path, csv_file_name):
     csv_file = os.path.join(output_path, csv_file_name)
     assert os.path.exists(csv_file)
     assert os.path.isfile(csv_file)
-    expected_header = ['name', 'res_list', 'start_time(microsecond)', 'end_time(microsecond)', 'batch_size', \
-                       'batch_type', 'during_time(microsecond)']
+    expected_header = ['name', 'res_list', 'start_time(ms)', 'end_time(ms)', 'batch_size', \
+                       'batch_type', 'during_time(ms)']
     df = pd.read_csv(csv_file)
     # 检查列名是否正确
     check_column_actual(df.columns.tolist(), expected_header, context='batch.csv')
@@ -103,8 +103,8 @@ def check_request_csv_content(output_path, csv_file_name):
     assert os.path.exists(csv_file)
     assert os.path.isfile(csv_file)
     df = pd.read_csv(csv_file)
-    expected_header = ['http_rid', 'start_time_httpReq(microsecond)', 'recv_token_size', 'reply_token_size', \
-                       'execution_time(microsecond)', 'queue_wait_time(microsecond)']
+    expected_header = ['http_rid', 'start_time_httpReq(ms)', 'recv_token_size', 'reply_token_size', \
+                       'execution_time(ms)', 'queue_wait_time(ms)']
     check_column_actual(df.columns.tolist(), expected_header, context='request.csv')
 
     def is_whole_number(n):
@@ -129,8 +129,8 @@ def check_request_csv_content(output_path, csv_file_name):
 
 def check_pullkvcache_csv_content(csv_file):
     expected_csv_columns = [
-        'domain', 'rank', 'rid', 'block_tables', 'batch_seq_len', 'during_time(microsecond)', \
-        'start_datetime', 'end_datetime', 'start_time(microsecond)', 'end_time(microsecond)',
+        'domain', 'rank', 'rid', 'block_tables', 'batch_seq_len', 'during_time(ms)', \
+        'start_datetime(ms)', 'end_datetime(ms)', 'start_time(ms)', 'end_time(ms)',
     ]
     # 检查文件是否存在
     assert os.path.exists(csv_file)
