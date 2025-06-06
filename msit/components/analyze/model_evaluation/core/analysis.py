@@ -131,7 +131,7 @@ class Analyze:
         try:
             opp: Opp = Opp.load_opp(self._config.soc_type, self._out_path)
         except RuntimeError as e:
-            logger.error(f'load opp data failed, err:{e}')
+            logger.warning(f'load opp data failed, err:{e}')
             return
 
         for ori_op_info in ori_op_infos:
