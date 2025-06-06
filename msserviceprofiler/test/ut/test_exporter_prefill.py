@@ -164,6 +164,7 @@ class TestExporterPrefillFunction(unittest.TestCase):
             output_path=os.path.join(os.getcwd(), "output"),
             log_level="debug",
             prefill_batch_size=4,
+            prefill_number=1,
             prefill_rid="3",
         )
         try:
