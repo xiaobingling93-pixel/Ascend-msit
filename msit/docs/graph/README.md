@@ -69,7 +69,7 @@ graph stat:
 例如图的文件名为`ge_onnx_00449_graph_101_Build.pbtxt`，以节点`MatMul_1/v2`为中心，向前后各扩散3层，执行命令：
 
 ```bash
-msit graph extract --input=ge_onnx_00449_graph_101_Build.pbtxt --center-node "MatMul_1/v2" --layer_number 3
+msit graph extract --input=ge_onnx_00449_graph_101_Build.pbtxt --center-node "MatMul_1/v2" --layer-number 3
 ```
 
 输入该命令后，工具执行如下任务：
@@ -98,7 +98,7 @@ msit graph extract --input=ge_onnx_00449_graph_101_Build.pbtxt --center-node "Ma
 
 在[默认方式](#默认方式)中提到的，叶子节点会跟随其直连的骨干节点一起被dump到抽取的图中。
 如果不希望此行为发生，可以通过`--without-leaves`选项来杜绝叶子节点被dump到抽取图中。
-从[抽取示意图](#抽取示意图)来看，指定了该选项后，只有蓝色和绿色节点会被抽取出来。
+从[抽取示意图](image/extract.PNG)来看，指定了该选项后，只有蓝色和绿色节点会被抽取出来。
 
 #### 中止抽取
 
@@ -144,7 +144,7 @@ msit graph fuse --source ge_onnx_00449_graph_101_Build.pbtxt --profile op_summar
 ```
 
 其中，--profile 为profiling文件，获取方式参考：[离线推理场景性能分析](https://www.hiascend.com/document/detail/zh/canncommercial/80RC3/devaids/devtools/profiling/atlasprofiling_16_0005.html)， 
---max-nodes为“重复结构”允许包含的最大节点数，由于当前计算方式考虑了图中所以可能性，该方式时间复杂度高，因此当前仅支持配置max-nodes<=10。
+--max-nodes为“重复结构”允许包含的最大节点数，由于当前计算方式考虑了图中所以可能性，该方式时间复杂度高，因此当前仅支持配置`--max-nodes`<=10。
 命令执行结束后，会生成一个名为 fuse_duration_{timestamp}的csv文件，其表头如下所示：
 
 |Subgraph         | Count             | Root Nodes Index                                  |Task Sum Duration(us)| Total Duration(us)    |
@@ -213,7 +213,7 @@ msit graph inspect -i ./test_pbgraph.pbtxt -t dshape -o ./output
 |参数名|参数作用|是否必选|
 |-----|-----|-----|
 |--type, -t|指定具体的扫描类别，目前仅支持“动态 shape”（dshape）。|是|
-|--output, -o|输出目录，当前输出表头为 Graph_Name, Node_Name, Input, Output，默认是 “./”。|否|
+|--output, -o|输出目录，当前输出表头为 Graph_Name, Node_Name, Input, Output的csv文件，默认是 “./”。|否|
 
 ## 免责声明
 
