@@ -170,7 +170,7 @@ class TestExporterPrefillFunction(unittest.TestCase):
         try:
             os.makedirs(args.output_path, exist_ok=True)
             os.chmod(args.output_path, 0o740)
-            file_path = Path(args.output_path, "prefill_mindie.csv")
+            file_path = Path(args.output_path, "prefill.csv")
             ExporterPrefill.initialize(args)
             ExporterPrefill.export(self.data_mindie)
             self.assertTrue(file_path.is_file())
@@ -180,7 +180,7 @@ class TestExporterPrefillFunction(unittest.TestCase):
         try:
             os.makedirs(args.output_path, exist_ok=True)
             os.chmod(args.output_path, 0o740)
-            file_path = Path(args.output_path, "prefill_vllm.csv")
+            file_path = Path(args.output_path, "prefill.csv")
             ExporterPrefill.initialize(args)
             ExporterPrefill.export(self.data_vllm)
             self.assertTrue(file_path.is_file())

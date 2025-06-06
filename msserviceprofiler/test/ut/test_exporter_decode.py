@@ -170,7 +170,7 @@ class TestExporterDecodeFunction(unittest.TestCase):
         try:
             os.makedirs(args.output_path, exist_ok=True)
             os.chmod(args.output_path, 0o740)
-            file_path = Path(args.output_path, "decode_vllm.csv")
+            file_path = Path(args.output_path, "decode.csv")
             ExporterDecode.initialize(args)
             ExporterDecode.export(self.data_vllm)
             self.assertTrue(file_path.is_file())
