@@ -233,7 +233,7 @@ class Calibrator(object):
                 self.all_tensors = None
 
         try:
-            if self.cfg.model_quant_type == QuantType.W4A4_DYNAMIC:
+            if self.cfg.model_quant_type == QuantType.W4A4_FLATQUANT_DYNAMIC:
                 self.model = model
             else:
                 self.model = self.quantize(model)
@@ -961,7 +961,7 @@ class Calibrator(object):
         self.logger.info("Calibration start!")
         self.model.eval()
         if self.calib_data:
-            if self.cfg.model_quant_type == QuantType.W4A4_DYNAMIC:
+            if self.cfg.model_quant_type == QuantType.W4A4_FLATQUANT_DYNAMIC:
                 with torch.enable_grad():
                     self._run_training_mode()
                 return

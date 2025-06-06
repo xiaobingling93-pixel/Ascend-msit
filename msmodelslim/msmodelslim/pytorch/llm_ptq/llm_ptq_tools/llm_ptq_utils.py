@@ -30,7 +30,6 @@ class QuantType(str, Enum):
     W4A8_DYNAMIC = "W4A8_DYNAMIC"  # W4A8静态量化与per-token动态量化混合量化
     W8A8_TIMESTEP = "W8A8_TIMESTEP"  # 分时间步量化
     W8A8_MIX = "W8A8_MIX"  # W8A8 Per-tensor/Per-token 参数混合导出
-    W4A4_DYNAMIC = "W4A4_DYNAMIC"  # w4a4静态量化与flatquant的per-token动态量化混合量化
     W4A4_FLATQUANT_DYNAMIC = "W4A4_FLATQUANT_DYNAMIC"  # w4a4静态量化与flatquant的per-token动态量化混合量化
 
     @staticmethod
@@ -101,7 +100,7 @@ class QuantType(str, Enum):
         if w_bit == 4 and a_bit == 8:
             return QuantType.W4A8_DYNAMIC
         if w_bit == 4 and a_bit == 4:
-            return QuantType.W4A4_DYNAMIC
+            return QuantType.W4A4_FLATQUANT_DYNAMIC
         return QuantType.UNKNOWN
 
 
