@@ -157,6 +157,40 @@ def _w4a16_pack_int4(save_quant_weight, trans_flag):
     return save_quant_weight
 
 
+def _w4a8_pack_int4(save_quant_weight):
+    """
+    Pack int4 weight to int8 weight
+    @param save_quant_weight: torch.Tensor, int4 weight
+    @return: torch.Tensor, int8 weight
+    """
+    weight = save_quant_weight.transpose(-1, -2).contiguous()
+    packed_weight_tensor = _pack_int4(weight)
+    packed_weight_tensor = packed_weight_tensor.transpose(-1, -2).contiguous()
+    return packed_weight_tensor
+
+
+def process_scale(name, bias, tp_num):
+    """
+    Pack int4 weight to int8 weight
+    @param name: 输入tensor名
+    @param bias: sum 前bias
+    @param tp_num: 推理时tp数
+    @return: bias, fp32格式gmm算子所需的偏置量
+    """
+    if 'up_proj' in name or 'gate_proj' in name:
+        up_bias = bias
+        up_bias = up_bias.sum(dim=1, keepdim=True)
+        bias = up_bias
+
+    elif 'down_proj' in name:
+        pre_shape = bias.shape[0]
+        sum_shape = bias.shape[1] // tp_num
+        down_bias = bias.reshape(-1, sum_shape)
+        down_bias = down_bias.sum(dim=1, keepdim=True)
+        bias = down_bias.reshape(pre_shape, -1)
+    return bias
+
+
 class ComplexQuantifier:
     def __init__(self, cfg, rollback_names, torch_dtype, layer_cfg_manager, is_new_version=False):
         self.cfg = cfg
@@ -274,11 +308,21 @@ class ComplexQuantifier:
         # 各种量化均需要提供 weight
         quant_weight: torch.Tensor = quant_weight.to(device=fp_weight.device)
         save_quant_weight = quant_weight.cpu().to(torch.int8)
+        ori_shape = save_quant_weight.shape
 
         if self.is_new_version and model_quant_type in [QuantType.W4A16]:
             # w4a16 量化当前没走分阶段量化，因此 weight_scale 不是一个 list
             trans_flag = weight_scale.shape[-1] == 1
             save_quant_weight = _w4a16_pack_int4(save_quant_weight, trans_flag)
+        
+        if self.is_new_version and model_quant_type in [QuantType.W4A8_DYNAMIC]:
+            weight = save_quant_weight.reshape(-1, module.cfg.group_size).to(torch.float32)
+            second_scale = weight_scale[1].reshape(-1, 1)
+            first_deq_weight = (weight * second_scale).reshape(ori_shape)
+            second_deq_weight = first_deq_weight * weight_scale[0]
+            bias = 8 * second_deq_weight
+            scale_bias = process_scale(name, bias, 16)
+            save_quant_weight = _w4a8_pack_int4(save_quant_weight)
 
         yield name + '.weight', model_quant_type, save_quant_weight
         if hasattr(module, 'bias') and module.bias is not None:
@@ -293,11 +337,13 @@ class ComplexQuantifier:
             if is_scale_list and is_offset_list:
                 yield name + '.weight_scale', model_quant_type, weight_scale[0].cpu()
                 yield name + '.weight_offset', model_quant_type, weight_offset[0].cpu()
-                ori_shape = save_quant_weight.shape
+
                 weight_scale[1] = weight_scale[1].reshape(ori_shape[0], -1)
                 weight_offset[1] = weight_offset[1].reshape(ori_shape[0], -1)
                 yield name + '.weight_scale_second', model_quant_type, weight_scale[1].cpu()
                 yield name + '.weight_offset_second', model_quant_type, weight_offset[1].cpu()
+                if self.is_new_version:
+                    yield name + '.scale_bias', model_quant_type, scale_bias.cpu()
             else:
                 yield name + '.weight_scale', model_quant_type, weight_scale.cpu()
                 yield name + '.weight_offset', model_quant_type, weight_offset.cpu()
