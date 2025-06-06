@@ -46,6 +46,12 @@
   python quant_qwen2_5vl.py  --model_path {浮点权重路径} --calib_images {校准图片路径}  --save_directory {量化权重保存路径} --w_bit 8 --a_bit 8 --device_type npu --trust_remote_code True --anti_method m4
   ```
 
+#### 1.3 Qwen2.5-VL W4A8量化 异常值抑制算法使用m4
+生成Qwen2.5-VL模型量化权重，使用4bit per-group量化权重，8bit per-token量化激活值，AntiOutlier异常值抑制使用m4算法配置，在NPU上进行运算。
+  ```shell
+  python quant_qwen2_5vl.py  --model_path {浮点权重路径} --calib_images {校准图片路径}  --save_directory {量化权重保存路径} --w_bit 4 --a_bit 8 --act_method 1 --device_type npu --trust_remote_code True --anti_method m4 --open_outlier False --is_dynamic True --is_lowbit True --group_size 256
+  ```
+
 ## 量化脚本说明
 
 - 量化权重统一使用[quant_qwen2_5vl.py](./quant_qwen2_5vl.py)脚本生成，以下进行一些关键量化参数的说明。
@@ -63,6 +69,11 @@
 | part_file_size | 量化权重文件大小 | 默认为None，无限制 | 单个量化权重文件大小不超过xGB。|
 | trust_remote_code | 是否信任自定义代码 | False | 指定`trust_remote_code=True`让修改后的自定义代码文件能够正确的被加载。请确保加载的自定义代码文件的安全性|
 | anti_method | 异常值抑制算法 | m2 | 选择的异常值抑制算法，当前大语言模型支持异常值抑制算法m1~m6，当前Qwen2.5-VL支持m2，m4。|
+| act_method | 激活值量化方法 | 2 | (1) 1代表Label-Free场景的min-max量化方式。 <br>(2) 2代表Label-Free场景的histogram量化方式。 <br>(3) 3代表Label-Free场景的自动混合量化方式，LLM大模型场景下推荐使用。 |
+| open_outlier | 是否开启权重异常值划分 | True | 可以配置为True或者False。 <br>设置为True时开启权重异常值划分，反之则关闭。|
+| is_dynamic | 是否使用动态量化，即w8a8中的activation动态生成 | False | 可以配置为True或者False。 <br>设置为True时使用动态量化，反之则不使用。|
+| is_lowbit | 是否使用稀疏量化的low bit算法 | False | 可以配置为True或者False。 <br>设置为True时使用稀疏量化的low bit算法，反之则不使用。 <br>在`w4a8_dynamic per-group`量化场景下需要设置为True。|
+| group_size | per-group量化的分组数量 | 64 | <br>设置为64，128，256，512。 <br>在`w4a8_dynamic per-group`量化场景下仅支持256。|
 
 - 更多参数配置要求，请参考量化过程中配置的参数 [QuantConfig](../../docs/Python-API接口说明/大模型压缩接口/大模型量化接口/PyTorch/QuantConfig.md)
   以及量化参数配置类 [Calibrator](../../docs/Python-API接口说明/大模型压缩接口/大模型量化接口/PyTorch/Calibrator.md)

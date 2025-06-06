@@ -448,9 +448,12 @@ class ComplexQuantifier:
             module.set_quant_weight(quant_weight)
 
         if isinstance(module, LinearQuantizer):
+            max_bound = -1
+            if module.quant_weight.is_sym:
+                max_bound = 2**(module.cfg.w_bit - 1) - 1
             quant_weight, _ = fake_quantize_save(fp_weight, weight_scale, weight_offset, bit=module.cfg.w_bit,
                                                  round_opt=round_opt, device=device,
-                                                 max_bound=127 if module.quant_weight.is_sym else -1)
+                                                 max_bound=max_bound)
         if isinstance(module, LinearSparseQuantizer):
             _, _, quant_weight, _ = quant_one_weight_by_outliers(
                 fp_weight, powerquant=self.cfg.nonuniform, fraction=self.cfg.fraction, num_bits=self.cfg.w_bit,
