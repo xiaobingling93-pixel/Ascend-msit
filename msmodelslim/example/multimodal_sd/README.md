@@ -225,7 +225,7 @@ quant_model(model, session_cfg)
 ```shell
 # 根据使用卡数进行配置多卡环境变量和nproc_per_node，以下使用8卡为例
 export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
-export PYTORCH_NPU_ALLOC_CONF=expandable_segments:False
+export PYTORCH_NPU_ALLOC_CONF="expandable_segments:False"
 export TASK_QUEUE_ENABLE=2
 export HCCL_OP_EXPANSION_MODE="AIV"
 torchrun --nnodes=1 --nproc_per_node 8  --master_port 29503 \
@@ -824,7 +824,9 @@ with torch.autocast(device_type='cuda', dtype=torch.bfloat16, enabled=True):
 示例的启动命令可参考(请提前确保calib_prompts.txt权限不大于'0o640')：
 
 ```shell
-export PYTORCH_NPU_ALLOC_CONF="expandable_segments:True"
+# 根据使用卡数进行配置多卡环境变量和nproc_per_node，以下使用8卡为例
+export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+export PYTORCH_NPU_ALLOC_CONF="expandable_segments:False"
 export TASK_QUEUE_ENABLE=2
 export CPU_AFFINITY_CONF=1
 export TOKENIZERS_PARALLELISM=false
@@ -1066,8 +1068,9 @@ class MMSingleStreamBlock(nn.Module):
 示例的启动命令可参考(请提前确保calib_prompts.txt权限不大于'0o640')：
 
 ```shell
-
-export PYTORCH_NPU_ALLOC_CONF="expandable_segments:True"
+# 根据使用卡数进行配置多卡环境变量和nproc_per_node，以下使用8卡为例
+export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+export PYTORCH_NPU_ALLOC_CONF="expandable_segments:False"
 export TASK_QUEUE_ENABLE=2
 export CPU_AFFINITY_CONF=1
 export TOKENIZERS_PARALLELISM=false
@@ -1182,8 +1185,9 @@ quant_model(model, session_cfg)
 示例的启动命令可参考(请提前确保calib_prompts.txt权限不大于'0o640')：
 
 ```shell
-
-export PYTORCH_NPU_ALLOC_CONF="expandable_segments:True"
+# 根据使用卡数进行配置多卡环境变量和nproc_per_node，以下使用8卡为例
+export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+export PYTORCH_NPU_ALLOC_CONF="expandable_segments:False"
 export TASK_QUEUE_ENABLE=2
 export CPU_AFFINITY_CONF=1
 export TOKENIZERS_PARALLELISM=false
