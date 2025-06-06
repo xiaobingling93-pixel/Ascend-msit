@@ -7,7 +7,8 @@
 
 ## 工具安装
 
-- 工具安装请见 [msit一体化工具使用指南](../../docs/install/README.md)
+- msit 工具安装请见 [msit一体化工具使用指南](../../docs/install/README.md)
+- 安装好 msit 之后执行 msit install analyze 安装 analyze 组件
 
 
 ## 工具使用
@@ -24,9 +25,9 @@ OPTIONS参数说明如下：
 |----------------| ------------------------------------------------------------ | -------- |
 | -gm, --golden-model | 标杆模型输入路径，支持onnx、caffe、tensorflow模型            | 是       |
 | -o, --output   | 输出路径，在该路径下会生成分析结果**result.csv**             | 是       |
-| --framework    | 模型类型，和[atc](https://www.hiascend.com/document/detail/zh/canncommercial/63RC1/inferapplicationdev/atctool/atctool_000041.html)参数一致，0：caffe，3：tensorflow，5：onnx | 否       |
+| --framework    | 模型类型，和[atc](https://www.hiascend.com/document/detail/zh/canncommercial/800/devaids/devtools/atc/atlasatc_16_0005.html)参数一致，0：caffe，3：tensorflow，5：onnx | 否       |
 | -w, --weight   | 权重文件，输入模型是caffe时，需要传入该文件                  | 否       |
-| -soc, --soc-version | 芯片类型，不指定则会通过[acl](https://www.hiascend.com/document/detail/zh/canncommercial/63RC1/inferapplicationdev/aclpythondevg/aclpythondevg_01_0008.html)接口获取 | 否       |
+| -soc, --soc-version | 芯片类型，不指定则会通过acl接口获取 | 否       |
 | -h, --help | 命令行参数帮助信息 | 否       |
 
 
@@ -38,14 +39,7 @@ OPTIONS参数说明如下：
 msit analyze -gm /tmp/test.onnx -o /tmp/out
 ```
 
-```shell
-2023-05-11 11:23:25,824 INFO : convert model to json, please wait...
-2023-05-11 11:23:28,210 INFO : convert model to json finished.
-2023-05-11 11:23:29,997 INFO : try to convert model to om, please wait...
-2023-05-11 11:23:35,127 INFO : try to convert model to om finished.
-2023-05-11 11:23:36,321 INFO : analysis result has bean writted in /tmp/result.csv
-2023-05-11 11:23:36,321 INFO : analyze model finished.
-```
+执行完成之后会在最后一行打印 analyze model finished。
 
 输出结果在result.csv，会记录模型中每个算子的信息和支持情况，结果如下：
 
