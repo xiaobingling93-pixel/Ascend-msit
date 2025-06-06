@@ -30,6 +30,11 @@ if __name__ == '__main__':
     parser.add_argument('--device_type', type=str, choices=[CPU, NPU], default=CPU)
     parser.add_argument('--trust_remote_code', type=cmd_bool, default=False)
     parser.add_argument('--anti_method', type=str, choices=['m2', 'm4'], default='m2')
+    parser.add_argument('--act_method', type=int, default=2)
+    parser.add_argument('--open_outlier', type=cmd_bool, default=True)
+    parser.add_argument('--is_dynamic', type=cmd_bool, default=False)
+    parser.add_argument('--is_lowbit', type=cmd_bool, default=False)
+    parser.add_argument('--group_size', type=int, choices=[64, 128, 256, 512], default=64)
     args = parser.parse_args()
 
     # check args
@@ -118,8 +123,12 @@ if __name__ == '__main__':
         disable_names=disable_names,
         dev_type=args.device_type,
         dev_id=model.device.index,
-        act_method=2,
+        act_method=args.act_method,
         mm_tensor=False,
+        open_outlier=args.open_outlier,
+        is_dynamic=args.is_dynamic,
+        is_lowbit=args.is_lowbit,
+        group_size=args.group_size
     )
     calibrator = Calibrator(model, quant_config, calib_data=calib_data, disable_level='L0')
     calibrator.run()
