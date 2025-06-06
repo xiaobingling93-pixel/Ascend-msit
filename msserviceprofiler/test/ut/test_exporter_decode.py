@@ -153,6 +153,7 @@ class TestExporterDecodeFunction(unittest.TestCase):
         args = Namespace(
             output_path=os.path.join(os.getcwd(), "output"),
             log_level="debug",
+            decode_batch_size=100,
             decode_rid="3",
         )
         try:
