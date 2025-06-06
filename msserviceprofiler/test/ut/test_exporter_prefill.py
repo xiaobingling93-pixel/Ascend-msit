@@ -162,6 +162,7 @@ class TestExporterPrefillFunction(unittest.TestCase):
     def test_exporter_prefill_rid(self):
         args = Namespace(
             output_path=os.path.join(os.getcwd(), "output"),
+            log_level="debug",
             prefill_rid="3",
         )
         try:
