@@ -13,6 +13,8 @@ from tqdm import tqdm
 
 from convert_fp8_to_bf16 import auto_convert_model_fp8_to_bf16, OpsType
 from add_safetensors import add_safetensors
+from mtp_quant_module import warp_mtp_model, post_process_mtp_quant
+
 
 current_directory = os.path.dirname(os.path.abspath(__file__))
 parent_directory = os.path.abspath(os.path.join(current_directory, '..', ".."))
@@ -44,13 +46,20 @@ def parse_args():
                         supported by before 2.1.RC1 version of MindIE")
     parser.add_argument('--dynamic', action='store_true', help="Dynamic Quantization")
     parser.add_argument('--disable_anti', action='store_true', help="No AntiOutlier")
+    parser.add_argument('--quant_mtp', type=str, choices=['mix', 'float', 'none'], default='none', \
+                            help="Quantization mode: 'mix(w8a8 mix quant)' , or \
+                            'float(save float mtp weight)' (default: %(default)s)")
     return parser.parse_args()
 
 
-def custom_hook(model_config):
-    model_config["mla_quantize"] = "w8a8"
-    model_config["quantize"] = "w8a8_dynamic"
-    model_config["model_type"] = "deepseekv2"
+def create_custom_hook(quant_mtp):
+    def custom_hook(model_config):
+        model_config["mla_quantize"] = "w8a8"
+        if quant_mtp == 'mix':
+            model_config["mtp_quantize"] = "w8a8_dynamic"
+        model_config["quantize"] = "w8a8_dynamic"
+        model_config["model_type"] = "deepseekv2"
+    return custom_hook
 
 
 def get_calib_dataset_batch(model_tokenizer, calib_list, batch_size, device="npu"):
@@ -128,6 +137,11 @@ def main():
         )
     # Set layer count to 0 means use all layers, otherwise it will only use the first layer_count layers
     config.num_hidden_layers = args.layer_count if args.layer_count != 0 else config.num_hidden_layers
+
+    # mtp量化需要加载61层
+    if args.quant_mtp == "mix":
+        config.num_hidden_layers = config.num_hidden_layers + 1
+
     # Set model type to deepseekv2 because we only support deepseekv2 now,
     # but v3's architecture is same as v2 without mtp layers so that we can reuse
     config.model_type = "deepseekv2"
@@ -151,6 +165,9 @@ def main():
                                                      },
                                                      torch_dtype="auto",
                                                      attn_implementation='eager')
+    # mtp量化封装原模型为mtp model
+    if args.quant_mtp == "mix":
+        model = warp_mtp_model(config, model, model_path)
 
     auto_convert_model_fp8_to_bf16(model, model_path, OpsType.get_ops_type(args.from_bf16, args.from_fp8))
 
@@ -192,6 +209,8 @@ def main():
         for ids in disable_attn_layers:
             if ids < num_layer:
                 disable_names.append("model.layers." + str(ids) + ".self_attn")
+    if args.quant_mtp == "mix":
+        disable_names.append("lm_head")
 
     quant_config = QuantConfig(
         a_bit=8,
@@ -226,16 +245,20 @@ def main():
     # 适配mindie删除description里的module字段
     if args.mindie_format:
         remove_module_entries(save_path)
+    if args.quant_mtp == "mix":
+        post_process_mtp_quant(save_path)
     
+    custom_hook_instance = create_custom_hook(args.quant_mtp)
     custom_hooks = {
-        'config.json': functools.partial(modify_config_json, custom_hook=custom_hook) \
+        'config.json': functools.partial(modify_config_json, custom_hook=custom_hook_instance) \
                         if args.mindie_format else copy_json
     }
     copy_config_files(input_path=model_path, output_path=save_path, quant_config=quant_config,
                       mindie_format=args.mindie_format, custom_hooks=custom_hooks)
     pbar.update(1)
-    add_safetensors(org_paths=model_path, target_dir=save_path, safetensors_prefix="mtp_float",
-                    max_file_size_gb=5, prefix="model.layers.61.")
+    if args.quant_mtp == "float":
+        add_safetensors(org_paths=model_path, target_dir=save_path, safetensors_prefix="mtp_float",
+                        max_file_size_gb=5, prefix="model.layers.61.")
     pbar.update(1)
 
 
