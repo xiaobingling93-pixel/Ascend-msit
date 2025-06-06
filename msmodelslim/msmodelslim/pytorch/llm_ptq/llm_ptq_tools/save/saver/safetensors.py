@@ -19,6 +19,7 @@ class SafetensorsSaverConfig:
     model_quant_type: str
     use_kvcache_quant: bool = False
     use_fa_quant: bool = False
+    enable_communication_quant: bool = False
 
     safetensors_name: Optional[str] = 'quant_model_weight.safetensors'
     json_name: Optional[str] = 'quant_model_description.json'

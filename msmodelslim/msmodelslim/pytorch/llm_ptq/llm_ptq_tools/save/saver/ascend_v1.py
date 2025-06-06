@@ -64,4 +64,5 @@ class AscendV1Saver(SafetensorsSaver):
                                                  use_kvcache_quant=cfg.use_kvcache_quant,
                                                  use_fa_quant=cfg.use_fa_quant,
                                                  version_name=self.version_name_,
-                                                 group_size=cfg.group_size)
+                                                 group_size=cfg.group_size,
+                                                 enable_communication_quant=cfg.enable_communication_quant)

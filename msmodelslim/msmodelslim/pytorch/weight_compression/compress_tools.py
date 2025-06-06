@@ -10,14 +10,13 @@ from tqdm import tqdm
 from safetensors.torch import save_file
 
 from ascend_utils.common.security import get_valid_read_path, get_valid_write_path, get_write_directory, \
-                SafeWriteUmask, MAX_READ_FILE_SIZE_512G, safe_delete_path_if_exists, check_type, json_safe_dump
+    SafeWriteUmask, MAX_READ_FILE_SIZE_512G, safe_delete_path_if_exists, check_type, json_safe_dump
 from msmodelslim import logger
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.llm_ptq_utils import QuantModelJsonDescription, QuantType
 from .compress_config import CompressConfig
 from .compress_utils import compress_weight_fun
 from .compress_utils import pseudo_sparse
 from .compress_utils import transform_nd2nz
-
 
 SUPPORT_DTYPE = [np.int8, np.int64]
 
@@ -64,10 +63,32 @@ class Compressor:
                 f"quant_model_weight_{compress_model_description.model_quant_type.lower()}.safetensors"
         if not isinstance(json_name, str) or not json_name.endswith('.json'):
             self.logger.warning("Invalid `json_name` provided. Reverting `json_name` to default.")
-            json_name = f"quant_model_description_{compress_model_description.model_quant_type.lower()}.json"
+            if self.quant_model_description.get(QuantModelJsonDescription.version_type_name, '0.0.0') == '0.0.0':
+                json_name = f"quant_model_description_{compress_model_description.model_quant_type.lower()}.json"
+            else:
+                json_name = f'quant_model_description.json'
+
+        compress_model_description.change_version_name(
+            self.quant_model_description.get(QuantModelJsonDescription.version_type_name))
+        compress_model_description.change_kvcache_type(
+            self.quant_model_description.get(QuantModelJsonDescription.kv_quant_type_name))
+        compress_model_description.change_fa_quant_type(
+            self.quant_model_description.get(QuantModelJsonDescription.fa_quant_type_name))
+        compress_model_description.change_group_size(
+            self.quant_model_description.get(QuantModelJsonDescription.group_size_name, 0))
+        compress_model_description.change_reduce_quant_type(
+            self.quant_model_description.get(QuantModelJsonDescription.reduce_quant_type_name))
 
         for key, value in self.quant_model_description.items():
-            if key == QuantModelJsonDescription.model_quant_type_name:
+            if key in [
+                QuantModelJsonDescription.model_quant_type_name,
+                QuantModelJsonDescription.version_type_name,
+                QuantModelJsonDescription.group_size_name,
+                QuantModelJsonDescription.kv_quant_type_name,
+                QuantModelJsonDescription.kv_cache_type_name,
+                QuantModelJsonDescription.fa_quant_type_name,
+                QuantModelJsonDescription.reduce_quant_type_name,
+            ]:
                 continue
             if value == 'W8A8S' and key.endswith('.weight'):
                 key_short = '.'.join(key.split('.')[:-1])
