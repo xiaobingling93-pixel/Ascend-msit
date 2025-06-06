@@ -16,6 +16,9 @@ import os
 
 from msprechecker.core.utils.perm import FilePerm
 from msprechecker.prechecker.register import show_check_result, CheckResult
+from msprechecker.core.utils.macro_expander import MacroExpander
+from msprechecker.core.utils.compiler import Compiler
+from msprechecker.core.utils.result import Result, ResultStatus
 
 
 def check_file_permission(filepath, domain="config", checker_name="file_perm"):

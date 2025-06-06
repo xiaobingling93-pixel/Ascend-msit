@@ -63,7 +63,7 @@ mindie_config_json:
           reason: "早期版本不建议指定"
 """
 
-_DOMAIN = ["environment_variables", "mindie_config", "ranktable", "model_config", "user_config"]
+_DOMAIN = ["environment_variables", "mindie_config", "ranktable", "model_config", "user_config", "mindie_env"]
 DOMAIN = namedtuple("DOMAIN", _DOMAIN)(*_DOMAIN)
 _CONFIG = ["name", "value", "reason", "suggestions", "condition", "suggested", "not_suggested"]
 CONFIG = namedtuple("CONFIG", _CONFIG)(*_CONFIG)
