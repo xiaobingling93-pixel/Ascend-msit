@@ -1,7 +1,7 @@
 import unittest
 import torch
 
-from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.save.complex_quantifier import _pack_int4, _w4a16_pack_int4
+from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.save.complex_quantifier import _pack_int4, _w4a16_pack_int4, process_scale
 
 
 class TestComplexQuantifier(unittest.TestCase):
@@ -132,6 +132,72 @@ class TestComplexQuantifier(unittest.TestCase):
             [-87, -53, -19, 15]
         ], dtype=torch.int8)
         assert torch.equal(result, expected), f"Expected {expected}, but got {result}"
+
+        # ================== 测试 _w4a8_pack_int4 函数 ==================
+    def test_w4a8_pack_int4_2d(self):
+        """Test _w4a8_pack_int4 with 2D tensor"""
+        weight = torch.tensor([
+            [1, 2, 3, 4],
+            [5, 6, 7, 8]
+        ], dtype=torch.int8)
+        
+        # 手动计算预期结果：转置最后两维（即全部转置）
+        transposed = weight.transpose(-1, -2)  # (2,4) -> (4,2)
+        packed = _pack_int4(transposed)       # (4,2) -> (4,1)
+        expected = packed.transpose(-1, -2)   # (4,1) -> (1,4)
+        
+        result = _w4a8_pack_int4(weight)
+        self.assertEqual(result.shape, expected.shape)
+        self.assertTrue(torch.equal(result, expected))
+
+    def test_w4a8_pack_int4_3d(self):
+        """Test _w4a8_pack_int4 with 3D tensor (含专家维度)"""
+        weight = torch.tensor([
+            [[1, 2, 3, 4], [5, 6, 7, 8]],  # 专家1，形状 (2,4)
+            [[9, 10, 11, 12], [13, 14, 15, 16]]  # 专家2，形状 (2,4)
+        ], dtype=torch.int8)  # 形状 (2,2,4)
+        
+        # 手动计算预期结果
+        transposed = weight.transpose(-1, -2)  # (2,2,4) -> (2,4,2)
+        packed = _pack_int4(transposed)       # (2,4,2) -> (2,4,1)
+        expected = packed.transpose(-1, -2)   # (2,4,1) -> (2,1,4)
+        
+        result = _w4a8_pack_int4(weight)
+        self.assertEqual(result.shape, expected.shape)
+        
+        # 验证每个专家的结果
+        for i in range(weight.shape[0]):
+            self.assertTrue(torch.equal(result[i], expected[i]))
+        # ================== 测试 process_scale 函数 ==================
+    def test_process_scale_up_proj(self):
+        """Test process_scale for up_proj/gate_proj (sum dim=1)"""
+        name = "up_proj.weight"
+        tp_num = 16
+        test_bias = torch.tensor([[0.4, 0.8], [1.2, 1.6]], dtype=torch.float32)
+        bias = process_scale(name, test_bias, tp_num)
+
+        expected = torch.tensor([[1.2], [2.8]], dtype=torch.float32)
+        self.assertTrue(torch.allclose(bias, expected, atol=1e-6))
+
+    def test_process_scale_down_proj(self):
+        """Test process_scale for down_proj (sum across tp_num groups)"""
+        name = "down_proj.weight"
+        tp_num = 1
+        test_bias = torch.tensor([[0.4, 0.8], [1.2, 1.6]], dtype=torch.float32)
+        bias = process_scale(name, test_bias, tp_num)
+        
+        expected = torch.tensor([[1.2], [2.8]], dtype=torch.float32)
+        self.assertTrue(torch.allclose(bias, expected, atol=1e-6))
+    
+    def test_process_scale_down_proj_2(self):
+        """Test process_scale for down_proj (sum across tp_num groups)"""
+        name = "down_proj.weight"
+        test_bias = torch.tensor([[0.4, 0.8], [1.2, 1.6]], dtype=torch.float32)
+        tp_num = 2
+        bias = process_scale(name, test_bias, tp_num)
+        
+        expected = torch.tensor([[0.4, 0.8], [1.2, 1.6]], dtype=torch.float32)
+        self.assertTrue(torch.allclose(bias, expected, atol=1e-6))
 
 
 if __name__ == '__main__':
