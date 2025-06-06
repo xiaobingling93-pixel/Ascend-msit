@@ -15,6 +15,8 @@ import os
 import sys
 import glob
 import re
+import shutil
+from pathlib import Path
 
 import json
 import pandas as pd
@@ -22,13 +24,13 @@ import torch
 
 from c2lb import lb_and_intra_layer_affinity_redundancy_deploy
 from c2lb_dynamic import lb_redundancy_deploy_for_dynamic
-from speculative_moe import speculative_moe_algo_multi_process
-from speculative_moe_a3 import speculative_moe_algo_multi_process_a3
 from c2lb_a3 import lb_and_intra_layer_affinity_redundancy_deploy_a3
 from components.utils.log import logger
 from components.utils.file_open_check import ms_open
+from components.expert_load_balancing.elb.preprocessing import process_speculative_moe
 from components.expert_load_balancing.elb.constant import PREFILL, DECODE, DECODE_FILE_NAME, \
-                        PREFILL_FILE_NAME, ALGORITHM_C2LB, ALGORITHM_SPECULATIVE_MOE, ALGORITHM_DYNAMIC_C2LB, A2, A3
+                        PREFILL_FILE_NAME, ALGORITHM_C2LB, ALGORITHM_DYNAMIC_C2LB, A2, A3, \
+                        ALGORITHM_SPECULATIVE_MOE_LEVEL_1, ALGORITHM_SPECULATIVE_MOE_LEVEL_2
 
 
 def load_expert_popularity_csv(csv_file_path):
@@ -78,24 +80,6 @@ def load_expert_popularity_csv(csv_file_path):
     
     return decode_info, prefill_info
 
-
-def get_csv_path(csv_file_path, file_name):
-    """
-    从指定目录得到decode_info.csv和prefill_info.csv文件路径。
-    
-    参数:
-    - csv_file_path: 包含CSV文件的目录路径。
-    
-    返回:
-    - decode_df: decode_info.csv 的内容，若文件不存在或读取失败则为 None。
-    - prefill_df: prefill_info.csv 的内容，若文件不存在或读取失败则为 None。
-    """
-    file_path = os.path.join(csv_file_path, file_name)
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"The file {file_path} does not exist."
-                                f"Check whether the output path in the input parameter -o is correct.")
-
-    return file_path
 
 
 def merge_csv_columns(csv_path, pattern_prefix):
@@ -262,37 +246,6 @@ def save_dataframes(prefill_final_df, decode_final_df, output_dir):
         decode_final_df.to_csv(os.path.join(output_dir, 'decode_info.csv'), index=False)
 
 
-def get_csv_dimensions(input_csv_path):
-    """
-    读取CSV文件并返回其行数（第0维）和列数（第1维）。
-
-    参数:
-        input_csv_path (str): CSV文件路径。
-
-    返回:
-        tuple: (行数, 列数) 的元组，失败时返回 (None, None)。
-    """
-    dimensions = (None, None)
-    try:
-        df = pd.read_csv(input_csv_path)
-        if df.empty:
-            raise ValueError(f"文件包含空数据 {input_csv_path}")
-        row_count = df.shape[0]  # 第0维（行数）58
-        col_count = df.shape[1]  # 第1维（列数）256
-        dimensions = (row_count, col_count)
-        
-        logger.info(f"Successfully read: {input_csv_path}.")
-        logger.info(f"The input file: Number of row={row_count}, Number of columns={col_count}.")
-        
-    except pd.errors.EmptyDataError as e:
-        raise ValueError(f"文件无有效数据 {input_csv_path}") from e
-    except pd.errors.ParserError as e:
-        raise ValueError(f"CSV格式解析失败 {input_csv_path}") from e
-    except Exception as e:
-        raise RuntimeError(f"未知错误") from e
-    
-    return dimensions
-
 
 def process_c2lb(args, output_dir):
     """Process C2LB algorithm and save results based on available data files.
@@ -343,52 +296,6 @@ def process_c2lb(args, output_dir):
         raise FileNotFoundError("No valid decode/prefill data found in", output_dir)
     
 
-def process_speculative_moe(args, file_names, output_dir):
-    """
-    处理 Speculative MOE 算法，根据传入的 file_names 动态处理以下场景：
-    - 只有 decode_info.csv 时: 处理 decode 数据。
-    - 只有 prefill_info.csv 时: 处理 prefill 数据。
-    - 两者都存在时: 同时处理 decode 和 prefill 数据。
-
-    参数:
-        args (Namespace): 包含算法参数的对象。
-        file_names (list): 需要处理的 CSV 文件名列表（例如 ["decode_info.csv", "prefill_info.csv"]）。
-        output_dir (str): 输出结果的目录路径。
-    """
-    logger.info("Generating Files with the Speculative Moe Algorithm for Static Scenarios")
-    input_output_map = {
-        "decode_info.csv": "decode_global_deployment.json",
-        "prefill_info.csv": "prefill_global_deployment.json"
-    }   
-
-    for input_file in file_names:
-        if input_file not in input_output_map:
-            logger.warning(f"忽略不支持的文件 {input_file}")
-            continue
-
-        input_csv_path = get_csv_path(output_dir, input_file)
-        dimensions = get_csv_dimensions(input_csv_path)
-        output_file_name = input_output_map[input_file]
-        output_path = os.path.join(output_dir, output_file_name)
-        num_layer = dimensions[0]
-        num_original_expert = dimensions[1]
-        try:
-            results = speculative_moe_algo_multi_process(
-                args.num_npus,
-                args.num_nodes,
-                num_layer,
-                num_original_expert,
-                args.num_redundancy_expert,
-                input_csv_path,
-            )
-            dump_tables(output_path, results, args.num_npus)
-            logger.info(f"Speculative MOE processing is complete: {input_file} -> {output_file_name}.")
-        except FileNotFoundError as e:
-            raise FileNotFoundError(f"The input file does not exist {input_csv_path}.") from e
-        except Exception as e:
-            raise FileNotFoundError(f"An exception occurred while processing {input_file}: {str(e)}.") from e
-
-
 def process_dynamic_c2lb(args, output_dir):
     """Process dynamic C2LB algorithm and save results based on available data files.
     
@@ -434,52 +341,6 @@ def process_dynamic_c2lb(args, output_dir):
 
     if decode_df is None and prefill_df is None:
         raise FileNotFoundError(f"No valid decode/prefill data found in {output_dir}")
-
-
-def process_speculative_moe_a3(args, file_names, output_dir):
-    """
-    处理 Speculative MOE A3算法，根据传入的 file_names 动态处理以下场景：
-    - 只有 decode_info.csv 时: 处理 decode 数据。
-    - 只有 prefill_info.csv 时: 处理 prefill 数据。
-    - 两者都存在时: 同时处理 decode 和 prefill 数据。
-
-    参数:
-        args (Namespace): 包含算法参数的对象。
-        file_names (list): 需要处理的 CSV 文件名列表（例如 ["decode_info.csv", "prefill_info.csv"]）。
-        output_dir (str): 输出结果的目录路径。
-    """
-    logger.info("Generating Files with the Speculative Moe A3 Algorithm for Static Scenarios")
-    input_output_map = {
-        "decode_info.csv": "decode_global_deployment.json",
-        "prefill_info.csv": "prefill_global_deployment.json"
-    }   
-
-    for input_file in file_names:
-        if input_file not in input_output_map:
-            logger.warning(f"Ignore unsupported files {input_file}.")
-            continue
-
-        input_csv_path = get_csv_path(output_dir, input_file)
-        dimensions = get_csv_dimensions(input_csv_path)
-        output_file_name = input_output_map[input_file]
-        output_path = os.path.join(output_dir, output_file_name)
-        num_layer = dimensions[0]
-        num_original_expert = dimensions[1]
-        try:
-            results = speculative_moe_algo_multi_process_a3(
-                args.num_npus,
-                args.num_nodes,
-                num_layer,
-                num_original_expert,
-                args.num_redundancy_expert,
-                input_csv_path,
-            )
-            dump_tables_a3(output_path, results, args.num_npus, args.share_expert_devices)
-            logger.info(f"Speculative MOE A3 processing is complete: {input_file} -> {output_file_name}.")
-        except FileNotFoundError as e:
-            raise FileNotFoundError(f"The input file does not exist {input_csv_path}.") from e
-        except Exception as e:
-            raise FileNotFoundError(f"An exception occurred while processing {input_file}: {str(e)}.") from e
 
 
 def process_c2lb_a3(args, output_dir):
@@ -555,13 +416,10 @@ def check_file_type(folder_path):
     return file_types, prefill_count, decode_count
 
 
-def select_algorithm(args, file_names):
+def select_algorithm(args):
     # 静态场景下 A2 c2lb 算法
     if args.algorithm == ALGORITHM_C2LB and args.device_type == A2:
         process_c2lb(args, output_dir=args.output_dir)
-    # 静态场景下 A2 speculative_moe 算法
-    elif args.algorithm == ALGORITHM_SPECULATIVE_MOE and args.device_type == A2:
-        process_speculative_moe(args, file_names=file_names, output_dir=args.output_dir)
     # 动态场景下 A2 c2lb 算法
     elif args.algorithm == ALGORITHM_DYNAMIC_C2LB and args.device_type == A2:
         process_dynamic_c2lb(args, output_dir=args.output_dir)
@@ -571,41 +429,201 @@ def select_algorithm(args, file_names):
             process_c2lb_a3(args, output_dir=args.output_dir)
         else:
             raise ValueError("Input incorrect share expert devices parameters.")
-    # 静态场景下 A3 speculative_moe 算法
-    elif args.algorithm == ALGORITHM_SPECULATIVE_MOE and args.device_type == A3:
-        process_speculative_moe_a3(args, file_names=file_names, output_dir=args.output_dir)
+    # 静态场景下 speculative_moe 算法
+    elif args.algorithm == ALGORITHM_SPECULATIVE_MOE_LEVEL_1 or args.algorithm == ALGORITHM_SPECULATIVE_MOE_LEVEL_2:
+        process_speculative_moe(args)
     else:
         raise ValueError("Please enter valid parameters")
+
+
+def is_file_readable(file_path):
+    """尝试读取CSV文件以判断是否损坏"""
+    try:
+        pd.read_csv(file_path)
+        return True
+    except Exception as e:
+        logger.warning(f"File {file_path} unable to read: {e}")
+        return False
+
+
+def copy_file(main_file, bak_file, target_file):
+    if is_file_readable(main_file):
+        logger.debug(f"copy: {main_file} -> {target_file}")
+        shutil.copy(main_file, target_file)
+    elif os.path.exists(bak_file) and is_file_readable(bak_file):
+        logger.debug(f"The original file is damaged, use the backup file: {bak_file} -> {target_file}")
+        shutil.copy(bak_file, target_file)
+    else:
+        raise RuntimeError("The backup files are corrupted or do not exist!")
+
+
+def copy_files_with_recovery(src_dir, dest_dir):
+    # 创建目标目录
+    os.makedirs(dest_dir, exist_ok=True)
+
+    # 获取所有 decode_*.csv 和 prefill_*.csv 文件
+    decode_files = [f for f in os.listdir(src_dir) if re.match(r"decode_\d+\.csv", f)]
+    prefill_files = [f for f in os.listdir(src_dir) if re.match(r"prefill_\d+\.csv", f)]
+
+    # 排序
+    decode_files.sort(key=extract_number)
+    prefill_files.sort(key=extract_number)
+
+    def process_files(file_list, file_type):
+        for file in file_list:
+            n = extract_number(file)
+            main_file = os.path.join(src_dir, file)
+            bak_file = os.path.join(src_dir, f"{file_type}_{n}_bak.csv")
+            target_file = os.path.join(dest_dir, f"{file_type}_{n}.csv")
+
+            topk_file = os.path.join(src_dir, f"{file_type}_topk_{n}.csv")
+            topk_bak_file = os.path.join(src_dir, f"{file_type}_topk_{n}_bak.csv")
+            topk_target_file = os.path.join(dest_dir, f"{file_type}_topk_{n}.csv")
+
+            if os.path.exists(main_file) and os.path.exists(bak_file):
+                copy_file(main_file, bak_file, target_file)
+            if os.path.exists(topk_file) and os.path.exists(topk_bak_file):
+                copy_file(topk_file, topk_bak_file, topk_target_file)
+
+    logger.debug("=== dealing decode_* file ===")
+    process_files(decode_files, "decode")
+
+    logger.debug("\n=== dealing prefill_* file ===")
+    process_files(prefill_files, "prefill")
+
+    # 复制 JSON 文件
+    json_files = [f for f in os.listdir(src_dir) if f.endswith('.json')]
+    if len(json_files) == 0:
+        raise FileNotFoundError("dict has no JSON file")
+    for jf in json_files:
+        json_file = os.path.join(src_dir, jf)
+        dest_json = os.path.join(dest_dir, jf)
+        shutil.copy(json_file, dest_json)
+
+
+def check_dump_file_version(csv_path):
+    # 新版本的dump
+    csv_new_path = None
+    if os.path.isfile(os.path.join(csv_path, "model_gen_config.json")):
+        last_folder_name = Path(csv_path).resolve().name
+        new_folder_name = f"{last_folder_name}_selected"
+        parent_dir = Path(csv_path).resolve().parent 
+        csv_new_path = parent_dir / new_folder_name
+        copy_files_with_recovery(csv_path, csv_new_path)
+        return csv_new_path
+    return csv_new_path
+
+
+def extract_number(filename):
+    """从 decode_n.csv 或 prefill_n.csv 提取 n 的值用于排序"""
+    match = re.match(r"(decode|prefill)_(\d+)\.csv", filename)
+    if match:
+        return int(match.group(2))
+    return None
+
+
+def process_files_by_type(src_dir, file_type, output_path):
+    # Step 1: 获取符合条件的 CSV 文件并排序
+    files = [f for f in os.listdir(src_dir) if re.match(rf"^{file_type}_\d+\.csv$", f)]
+    files.sort(key=extract_number)
+    if not files:
+        logger.info(f"No CSV files were found starting with {file_type}_")
+        return
+
+    # Step 2: 统计每份文件的行数
+    file_row_counts = {}
+    dfs = {}
+
+    for file in files:
+        file_path = os.path.join(src_dir, file)
+        try:
+            df = pd.read_csv(file_path, header=None)
+            file_row_counts[file] = len(df)
+            dfs[file] = df
+        except Exception as e:
+            logger.warning(f"Unable to read file {file}:{e}")
+            continue
+
+    if not file_row_counts:
+        raise ValueError(f"Did not successfully read any valid csv files")
+    min_row_count = min(file_row_counts.values())
+
+    # Step 3: 读取 JSON 获取 num_moe_layers
+    json_path = os.path.join(src_dir, "model_gen_config.json")
+    if not os.path.exists(json_path):
+        raise FileNotFoundError(f"File model_gen_config.json not found:{json_path}")
+
+    with ms_open(json_path, 'r', encoding='utf-8') as f:
+        config = json.load(f)
+
+    num_moe_layers = config.get("num_moe_layers")
+    if num_moe_layers is None:
+        raise KeyError("The num_moe_layers field is missing in the JSON file")
+
+    logger.info(f"[{file_type}] num_moe_layers = {num_moe_layers} Minimum number of rows = {min_row_count}")
+
+    # Step 4: 对每个文件提取对应的行范围
+    usable_row_count = (min_row_count // num_moe_layers) * num_moe_layers
+    start_idx = usable_row_count - num_moe_layers
+    end_idx = min_row_count
+
+    expert_data = []
+
+    for idx, file in enumerate(files):
+        df = dfs[file]
+        selected_data = df.iloc[start_idx:end_idx].reset_index(drop=True)
+        num_cols = selected_data.shape[1]
+        selected_data.columns = [f"expert_{idx * num_cols + i}" for i in range(num_cols)]
+        expert_data.append(selected_data)
+
+    # Step 5: 合并所有文件的选中行（横向拼接）
+    merged_df = pd.concat(expert_data, axis=1)
+
+    output_file = f"{file_type}_info.csv"
+    output_path = os.path.join(output_path, output_file)
+    merged_df.to_csv(output_path, index=False, header=True)
+
+    logger.info(f"Merge completed, results saved to:{output_path}")
 
 
 def load_balancing(args):
     """
     Main function to perform load balancing based on the specified algorithm.
     """
-    # Check the file types in the input path
-    file_types, prefill_count, decode_count = check_file_type(args.expert_popularity_csv_load_path)
+    csv_new_path = check_dump_file_version(args.expert_popularity_csv_load_path)
+    if csv_new_path:
+        # 新版本dump数据，需要专门适配c2lb算法
+        if args.algorithm == ALGORITHM_DYNAMIC_C2LB or args.algorithm == ALGORITHM_C2LB:
+            process_files_by_type(csv_new_path, "decode", args.output_dir)
+            process_files_by_type(csv_new_path, "prefill", args.output_dir)
 
-    # Print the file types and their count
-    logger.info(f"Detected file types: {', '.join(file_types)}")
-    logger.info(f"Total 'prefill' files: {prefill_count}")
-    logger.info(f"Total 'decode' files: {decode_count}")
+        select_algorithm(args)
+    else:
+        #  旧版本dump数据，无需处理
+        # Check the file types in the input path
+        file_types, prefill_count, decode_count = check_file_type(args.expert_popularity_csv_load_path)
 
-    # Merge CSV columns for prefill and decode
-    prefill_final_df = None   
-    decode_final_df = None
-    if PREFILL in file_types:
-        prefill_final_df = merge_csv_columns(args.expert_popularity_csv_load_path, PREFILL)
-    if DECODE in file_types:
-        decode_final_df = merge_csv_columns(args.expert_popularity_csv_load_path, DECODE)
-    
-     # Save merged dataframes to CSV files if they are not empty
-    save_dataframes(prefill_final_df, decode_final_df, args.output_dir)
+        # Print the file types and their count
+        logger.info(f"Detected file types: {', '.join(file_types)}")
+        logger.info(f"Total 'prefill' files: {prefill_count}")
+        logger.info(f"Total 'decode' files: {decode_count}")
 
-    # Define file names for further processing
-    file_names = []
-    if PREFILL in file_types:
-        file_names.append("prefill_info.csv")
-    if DECODE in file_types:
-        file_names.append("decode_info.csv")
+        # Merge CSV columns for prefill and decode
+        prefill_final_df = None   
+        decode_final_df = None
+        if PREFILL in file_types:
+            prefill_final_df = merge_csv_columns(args.expert_popularity_csv_load_path, PREFILL)
+        if DECODE in file_types:
+            decode_final_df = merge_csv_columns(args.expert_popularity_csv_load_path, DECODE)
+        
+        # Save merged dataframes to CSV files if they are not empty
+        save_dataframes(prefill_final_df, decode_final_df, args.output_dir)
 
-    select_algorithm(args, file_names)
+        # Define file names for further processing
+        file_names = []
+        if PREFILL in file_types:
+            file_names.append("prefill_info.csv")
+        if DECODE in file_types:
+            file_names.append("decode_info.csv")
+
+        select_algorithm(args)
