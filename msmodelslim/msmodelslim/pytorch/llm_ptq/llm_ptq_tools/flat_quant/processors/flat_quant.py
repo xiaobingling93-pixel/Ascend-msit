@@ -350,7 +350,7 @@ def get_trainable_parameters(model, base_lr=3e-5):
 
 
 def convert_config(quant_config, flat_quant_config, model):
-    if quant_config.model_quant_type == QuantType.W4A4_DYNAMIC:
+    if quant_config.model_quant_type == QuantType.W4A4_FLATQUANT_DYNAMIC:
         return flat_quant_config, FlatQuantQuantizerMapVisitor(model, flat_quant_config)
     elif quant_config.model_quant_type == QuantType.W8A8_DYNAMIC or quant_config.model_quant_type == QuantType.W8A8:
         config = FlatQuantQuantizerConfig(w_bits=quant_config.w_bit,

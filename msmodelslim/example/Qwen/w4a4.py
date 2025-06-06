@@ -51,7 +51,7 @@ def parse_args():
 
 
 def custom_hook(model_config):
-    model_config["quantize"] = "w4a4_dynamic"
+    model_config["quantize"] = "w4a4_flatquant_dynamic"
 
 
 def get_calib_dataset_batch(model_tokenizer, calib_list, batch_size, device="npu"):
@@ -137,12 +137,12 @@ def main():
     calibrator.run()
 
     if args.mindie_format:
-        quant_model_description_json_name = "quant_model_description_w4a4_dynamic.json"
+        quant_model_description_json_name = "quant_model_description_w4a4_flatquant_dynamic.json"
     else:
         quant_model_description_json_name = "quant_model_description.json"
     calibrator.save(save_path,
                     json_name=quant_model_description_json_name,
-                    safetensors_name="quant_model_weight_w4a4_dynamic.safetensors",
+                    safetensors_name="quant_model_weight_w4a4_flatquant_dynamic.safetensors",
                     save_type=["safe_tensor"],
                     part_file_size=4)
 

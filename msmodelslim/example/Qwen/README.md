@@ -224,7 +224,10 @@
   ```shell
   msmodelslim quant --model_path {浮点权重路径} --save_path {W8A8量化权重路径} --device_type npu --model_type Qwen3-14B --quant_type w8a8 --trust_remote_code True
   ```
-
+##### Qwen3-32b W4A4 Flatquant Dynamic量化 
+  ```shell
+  python3 w4a4.py --model_path {浮点权重路径} --save_directory {w4a4量化权重路径} --calib_file ../common/wiki.jsonl
+  ```
 ##### Qwen3-14B W8A8量化
 
 该模型的量化支持已经集成至[一键量化](https://gitee.com/ascend/msit/blob/master/msmodelslim/msmodelslim/app/naive_quantization/readme.md)。
@@ -241,10 +244,4 @@
 ##### QwQ-32b 稀疏量化 
   ```shell
   python3 quant_qwen.py --model_path {浮点权重路径} --save_directory {W8A8s量化权重路径} --calib_file ../common/cn_en.jsonl --w_bit 4 --a_bit 8 --device_type npu --fraction 0.011 --use_sigma True --is_lowbit True
-  ```
-
-#### Qwen3 系列
-##### Qwen3-32b w4a4 flatquant dynamic量化 
-  ```shell
-  python3 w4a4.py --model_path {浮点权重路径} --save_directory {w4a4量化权重路径} --calib_file ../common/wiki.jsonl
   ```

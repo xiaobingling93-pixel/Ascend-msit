@@ -202,7 +202,7 @@ class ComplexQuantifier:
         yield name + '.weight', model_quant_type, quant_weight.cpu().to(torch.int8)
         if hasattr(module, 'bias') and module.bias is not None:
             yield name + '.bias', QuantType.FLOAT, module.bias
-        if model_quant_type == QuantType.W8A8_DYNAMIC or model_quant_type == QuantType.W4A4_DYNAMIC:
+        if model_quant_type == QuantType.W8A8_DYNAMIC or model_quant_type == QuantType.W4A4_FLATQUANT_DYNAMIC:
             yield name + '.weight_scale', model_quant_type, weight_scale.cpu()
             yield name + '.weight_offset', model_quant_type, weight_offset.cpu()
             clip_ratio = module.act_quantizer.get_clip_ratio()
@@ -226,7 +226,7 @@ class ComplexQuantifier:
 
             yield name + '.quant_bias', model_quant_type, quant_bias.cpu().to(torch.int32)
             yield name + '.deq_scale', model_quant_type, deq_scale.cpu()
-        if model_quant_type == QuantType.W4A4_DYNAMIC:
+        if model_quant_type == QuantType.W4A4_FLATQUANT_DYNAMIC:
             if hasattr(module, "save_trans") and module.save_trans is not None:
                 save_trans = module.save_trans.get_save_params()
                 for key, param in save_trans.items():
