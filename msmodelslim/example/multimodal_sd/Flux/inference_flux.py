@@ -22,6 +22,7 @@ import time
 
 import torch
 import torch_npu
+from torch_npu.contrib import transfer_to_npu
 from torch import nn
 
 from tqdm import tqdm

@@ -62,7 +62,7 @@ MOE模型支持W8A8_per-token量化场景、W8A16 per-channel量化场景和W8A1
 
 5. 调用生成的量化校准对象的run()方法对原始模型进行量化。
 
-6. 调用生成的量化校准对象的save()接口保存量化后的模型，包括模型量化权重和模型相关参数，用于后续量化模型的部署任务，，具体请参见MindIE的[“加速库支持模型列表”](https://www.hiascend.com/document/detail/zh/mindie/20RC1/modellist/mindie_modellist_0001.html)章节中已适配量化的模型。
+6. 调用生成的量化校准对象的save()接口保存量化后的模型，包括模型量化权重和模型相关参数，用于后续量化模型的部署任务，具体请参见MindIE的[“加速库支持模型列表”](https://www.hiascend.com/document/detail/zh/mindie/20RC1/modellist/mindie_modellist_0001.html)章节中已适配量化的模型。
 
 ### 量化步骤（以ChatGLM2-6B为例）
 
