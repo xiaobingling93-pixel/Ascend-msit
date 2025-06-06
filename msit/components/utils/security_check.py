@@ -275,6 +275,13 @@ def check_input_path_legality(value):
     return input_path
 
 
+def check_positive_or_zero_integer(value):
+    ivalue = int(value)
+    if ivalue <= 0 or ivalue > 1e6:
+        raise ValueError("%s is an invalid positive int value" % value)
+    return ivalue
+
+
 def check_output_path_legality(value):
     if not value:
         return value

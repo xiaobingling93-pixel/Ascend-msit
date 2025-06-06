@@ -19,7 +19,7 @@ import subprocess
 from components.utils.parser import BaseCommand
 from components.utils.log import logger
 from components.debug.compare.msquickcmp.common.args_check import check_output_path_legality, check_input_path_legality
-from components.utils.security_check import check_positive_integer
+from components.utils.security_check import check_positive_integer, check_positive_or_zero_integer
 
 
 class ExpertLoadBalanceCommmand(BaseCommand):
@@ -46,7 +46,7 @@ class ExpertLoadBalanceCommmand(BaseCommand):
             '--num-redundant-expert',
             '-nre',
             dest="num_redundancy_expert",
-            type=check_positive_integer,
+            type=check_positive_or_zero_integer,
             required=False,
             default=64,
             help="Number of redundant experts.")
@@ -55,7 +55,7 @@ class ExpertLoadBalanceCommmand(BaseCommand):
             '--num-share-expert-devices',
             '-nsed',
             dest="share_expert_devices",
-            type=check_positive_integer,
+            type=check_positive_or_zero_integer,
             required=False,
             default=0,
             help="Number of shared experts.")
@@ -84,10 +84,10 @@ class ExpertLoadBalanceCommmand(BaseCommand):
             dest="algorithm",
             type=str,
             required=False,
-            default="1",
-            choices=['0', '1', '2'],
-            help="algorithm type. 0代表计算通信负载均衡算法(C2LB), 1代表speculative moe interface algorithm，"
-                    "2 代表生成动态场景下的C2LB算法，生成初始配置文件。")
+            default="3",
+            choices=['0', '1', '2', '3'],
+            help="algorithm type. 0代表计算通信负载均衡算法(C2LB), 1代表speculative moe level 1算法,"
+                    "2 代表生成动态场景下的C2LB算法，生成初始配置文件, 3代表增强型的speculative moe level 2算法")
         
         parser.add_argument(
             '--device-type',
