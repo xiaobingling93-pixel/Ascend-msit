@@ -90,8 +90,6 @@ class KVCacheManagerHook(VLLMHookerBase):
             def get_stats(this, *args, **kwargs):
                 profiler = Profiler(Level.INFO)
                 stats = ori_func(this, *args, **kwargs)
-                print(f"{this.scheduler[0] = }")
-                # print(f"{this.scheduler[0].scheduler.block_manager = }")
                 num_free_gpu = sum(scheduler.block_manager.get_num_free_gpu_blocks() for scheduler in this.scheduler)
                 profiler.domain("KVCache").attr("cpuHitCache", stats.cpu_cache_usage_sys)
                 profiler.attr("hitCache", stats.gpu_cache_usage_sys).event("GetCacheHitRate")
