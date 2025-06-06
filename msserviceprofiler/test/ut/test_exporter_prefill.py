@@ -128,14 +128,6 @@ class TestExporterPrefillFunction(unittest.TestCase):
             data["rid"][i] = rid_list[cur]
             cur += 1
 
-        serialize_indices = np.where(np.array(data["name"]) == "preprocess")[0]
-        for i in serialize_indices:
-            # 找到前一个 batchFrameworkProcessing 的 end_time
-            previous_batch_index = np.where(np.array(data["name"])[:i] == "batchFrameworkProcessing")[0]
-            if len(previous_batch_index) > 0:
-                previous_end_time = data["end_time"][previous_batch_index[-1]]
-                # 确保 start_time 与前一个 end_time 之间的差值小于 100000
-                data["start_time"][i] = min(data["start_time"][i], previous_end_time + 100000)
         df = pd.DataFrame(data)
         return df
 
@@ -146,6 +138,31 @@ class TestExporterPrefillFunction(unittest.TestCase):
             prefill_batch_size=4,
             prefill_number=1,
             prefill_rid="-1",
+        )
+        try:
+            os.makedirs(args.output_path, exist_ok=True)
+            os.chmod(args.output_path, 0o740)
+            file_path = Path(args.output_path, "prefill_mindie.csv")
+            ExporterPrefill.initialize(args)
+            ExporterPrefill.export(self.data_mindie)
+            self.assertTrue(file_path.is_file())
+        finally:
+            shutil.rmtree(args.output_path)
+
+        try:
+            os.makedirs(args.output_path, exist_ok=True)
+            os.chmod(args.output_path, 0o740)
+            file_path = Path(args.output_path, "prefill_vllm.csv")
+            ExporterPrefill.initialize(args)
+            ExporterPrefill.export(self.data_vllm)
+            self.assertTrue(file_path.is_file())
+        finally:
+            shutil.rmtree(args.output_path)
+
+    def test_exporter_prefill_rid(self):
+        args = Namespace(
+            output_path=os.path.join(os.getcwd(), "output"),
+            prefill_rid="3",
         )
         try:
             os.makedirs(args.output_path, exist_ok=True)
