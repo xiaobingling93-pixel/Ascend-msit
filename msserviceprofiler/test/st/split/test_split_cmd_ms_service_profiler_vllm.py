@@ -46,7 +46,7 @@ class TestSplitVllmCmd(TestCase):
     ST_DATA_PATH = os.getenv("MS_SERVICE_PROFILER",
                              "/data/ms_service_profiler")
     INPUT_PATH = os.path.join(ST_DATA_PATH, "input/split/vllm_latest")
-    OUTPUT_PATH_ANALYZE = os.path.join(ST_DATA_PATH, "output/analyze")
+    OUTPUT_PATH_ANALYZE_FOR_SPLIT = os.path.join(ST_DATA_PATH, "output/analyze_for_split")
     OUTPUT_PATH = os.path.join(ST_DATA_PATH, "output/split")
     OUTPUT_PATH_P = os.path.join(ST_DATA_PATH, "output/split_p")
     OUTPUT_PATH_D = os.path.join(ST_DATA_PATH, "output/split_d")
@@ -68,7 +68,7 @@ class TestSplitVllmCmd(TestCase):
 
 
     def setUp(self):
-        os.makedirs(self.OUTPUT_PATH_ANALYZE, mode=0o750, exist_ok=True)
+        os.makedirs(self.OUTPUT_PATH_ANALYZE_FOR_SPLIT, mode=0o750, exist_ok=True)
         os.makedirs(self.OUTPUT_PATH, mode=0o750, exist_ok=True)
         os.makedirs(self.OUTPUT_PATH_P, mode=0o750, exist_ok=True)
         os.makedirs(self.OUTPUT_PATH_D, mode=0o750, exist_ok=True)
@@ -78,19 +78,19 @@ class TestSplitVllmCmd(TestCase):
         cmd = [
             "python", self.ANALYZE_PROFILER,
             "--input-path", self.INPUT_PATH,
-            "--output-path", self.OUTPUT_PATH_ANALYZE
+            "--output-path", self.OUTPUT_PATH_ANALYZE_FOR_SPLIT
         ]
-        if execute_cmd(cmd) != self.COMMAND_SUCCESS or not os.path.exists(self.OUTPUT_PATH_ANALYZE):
+        if execute_cmd(cmd) != self.COMMAND_SUCCESS or not os.path.exists(self.OUTPUT_PATH_ANALYZE_FOR_SPLIT):
             self.assertFalse(
                 True, msg="enable ms service profiler analyze task failed.")
 
-        request_data = pd.read_csv(os.path.join(self.OUTPUT_PATH_ANALYZE, 'request.csv'))
+        request_data = pd.read_csv(os.path.join(self.OUTPUT_PATH_ANALYZE_FOR_SPLIT, 'request.csv'))
         self.RID = request_data.loc[0, 'http_rid']
 
 
 
     def tearDown(self):
-        shutil.rmtree(self.OUTPUT_PATH_ANALYZE)
+        shutil.rmtree(self.OUTPUT_PATH_ANALYZE_FOR_SPLIT)
         shutil.rmtree(self.OUTPUT_PATH)
         shutil.rmtree(self.OUTPUT_PATH_P)
         shutil.rmtree(self.OUTPUT_PATH_D)
