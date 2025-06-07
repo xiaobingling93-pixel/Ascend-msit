@@ -76,7 +76,7 @@ class TestSplitVllmCmd(TestCase):
         os.makedirs(self.OUTPUT_PATH_RID_P, mode=0o750, exist_ok=True)
         os.makedirs(self.OUTPUT_PATH_RID_D, mode=0o750, exist_ok=True)
         cmd = [
-            "python", self.SPLIT_PROFILER,
+            "python", self.ANALYZE_PROFILER,
             "--input-path", self.INPUT_PATH,
             "--output-path", self.OUTPUT_PATH_ANALYZE
         ]
