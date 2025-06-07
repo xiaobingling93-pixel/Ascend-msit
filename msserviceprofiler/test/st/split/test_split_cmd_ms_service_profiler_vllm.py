@@ -85,7 +85,7 @@ class TestSplitVllmCmd(TestCase):
                 True, msg="enable ms service profiler analyze task failed.")
 
         request_data = pd.read_csv(os.path.join(self.OUTPUT_PATH_ANALYZE_FOR_SPLIT, 'request.csv'))
-        self.RID = request_data.loc[0, 'http_rid']
+        self.rid = request_data.loc[0, 'http_rid']
 
 
 
@@ -106,7 +106,7 @@ class TestSplitVllmCmd(TestCase):
             except Exception as e:
                 self.fail(f"{task_name}: 检查 {csv_file_name} 时发生异常: {e}")
 
-    def test_split_vllm_Prefill_DeCode(self):
+    def test_split_vllm_prefill_decode(self):
         # PD竞争 根据batch_size拆解 校验输出文件及内容
         cmd = [
             "python", self.SPLIT_PROFILER,
@@ -124,7 +124,7 @@ class TestSplitVllmCmd(TestCase):
         self.check_split_task("test_split_vllm_prefill_decode", self.OUTPUT_PATH, self.PREFILL_CSV)
         self.check_split_task("test_split_vllm_decode_prefill", self.OUTPUT_PATH, self.DECODE_CSV)
 
-    def test_split_vllm_Prefill(self):
+    def test_split_vllm_prefill(self):
         # PD竞争 根据batch_size拆解 校验输出文件及内容
         cmd = [
             "python", self.SPLIT_PROFILER,
@@ -138,7 +138,7 @@ class TestSplitVllmCmd(TestCase):
 
         self.check_split_task("test_split_vllm_prefill", self.OUTPUT_PATH_P, self.PREFILL_CSV)
 
-    def test_split_vllm_Decode(self):
+    def test_split_vllm_decode(self):
         # PD竞争 根据batch_size拆解 校验输出文件及内容
         cmd = [
             "python", self.SPLIT_PROFILER,
@@ -152,14 +152,14 @@ class TestSplitVllmCmd(TestCase):
 
         self.check_split_task("test_split_vllm_decode", self.OUTPUT_PATH_D, self.DECODE_CSV)
 
-    def test_split_vllm_Prefill_DeCode_RID(self):
+    def test_split_vllm_prefill_decode_rid(self):
         # PD竞争 根据batch_size拆解 校验输出文件及内容
         cmd = [
             "python", self.SPLIT_PROFILER,
             "--input-path", self.INPUT_PATH,
             "--output-path", self.OUTPUT_PATH_RID,
-            "--prefill-rid", self.RID,
-            "--decode-rid", self.RID
+            "--prefill-rid", self.rid,
+            "--decode-rid", self.rid
         ]
         if execute_cmd(cmd) != self.COMMAND_SUCCESS or not os.path.exists(self.OUTPUT_PATH_RID):
             self.assertFalse(
@@ -168,13 +168,13 @@ class TestSplitVllmCmd(TestCase):
         self.check_split_task("test_split_vllm_prefill_decode_rid", self.OUTPUT_PATH_RID, self.PREFILL_CSV)
         self.check_split_task("test_split_vllm_decode_prefill_rid", self.OUTPUT_PATH_RID, self.DECODE_CSV)
 
-    def test_split_vllm_Prefill_RID(self):
+    def test_split_vllm_prefill_rid(self):
         # PD竞争 根据batch_size拆解 校验输出文件及内容
         cmd = [
             "python", self.SPLIT_PROFILER,
             "--input-path", self.INPUT_PATH,
             "--output-path", self.OUTPUT_PATH_RID_P,
-            "--prefill-rid", self.RID,
+            "--prefill-rid", self.rid,
         ]
         if execute_cmd(cmd) != self.COMMAND_SUCCESS or not os.path.exists(self.OUTPUT_PATH_RID_P):
             self.assertFalse(
@@ -182,13 +182,13 @@ class TestSplitVllmCmd(TestCase):
 
         self.check_split_task("test_split_vllm_prefill_rid", self.OUTPUT_PATH_RID_P, self.PREFILL_CSV)
 
-    def test_split_vllm_Decode_RID(self):
+    def test_split_vllm_decode_rid(self):
         # PD竞争 根据batch_size拆解 校验输出文件及内容
         cmd = [
             "python", self.SPLIT_PROFILER,
             "--input-path", self.INPUT_PATH,
             "--output-path", self.OUTPUT_PATH_RID_D,
-            "--decode-rid", self.RID,
+            "--decode-rid", self.rid,
         ]
         if execute_cmd(cmd) != self.COMMAND_SUCCESS or not os.path.exists(self.OUTPUT_PATH_RID_D):
             self.assertFalse(
