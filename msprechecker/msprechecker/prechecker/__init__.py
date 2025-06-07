@@ -21,6 +21,7 @@ from msprechecker.prechecker.config_checker import (
     ranktable_checker,
     model_config_checker,
     user_config_checker,
+    mindie_env_checker
 )
 from msprechecker.prechecker.env_checker import env_checker
 from msprechecker.prechecker.system_checker import system_checker
@@ -38,6 +39,7 @@ CHECKERS = {
         mindie_config_checker,
         ranktable_checker,
         user_config_checker,
+        mindie_env_checker
     ],
     CHECKER_TYPES.hccl: [hccl_checker],
     CHECKER_TYPES.model: [model_config_checker, model_size_checker, model_sha256_collecter],

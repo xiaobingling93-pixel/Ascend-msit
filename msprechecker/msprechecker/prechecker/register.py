@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 from enum import Enum
 from collections import namedtuple
 from msprechecker.prechecker.utils import logger
@@ -87,7 +88,20 @@ class PrecheckerBase:
     __checker_name__ = "undefined"
 
     def __init__(self):
-        pass
+        self.logger = self._init_logger()
+
+    @staticmethod
+    def _init_logger():
+        local_logger = logging.getLogger(__name__)
+        local_logger.setLevel(logging.INFO)
+        local_logger.propagate = False
+
+        if not local_logger.handlers:
+            stream_handler = logging.StreamHandler()
+            formatter = logging.Formatter("%(message)s")
+            stream_handler.setFormatter(formatter)
+            local_logger.addHandler(stream_handler)
+        return local_logger
 
     @classmethod
     def name(cls):
