@@ -144,7 +144,7 @@ class TestSplitVllmCmd(TestCase):
             "python", self.SPLIT_PROFILER,
             "--input-path", self.INPUT_PATH,
             "--output-path", self.OUTPUT_PATH_D,
-            "--prefill-batch-size", self.DECODE_BATCH_SIZE,
+            "--decode-batch-size", self.DECODE_BATCH_SIZE,
         ]
         if execute_cmd(cmd) != self.COMMAND_SUCCESS or not os.path.exists(self.OUTPUT_PATH_D):
             self.assertFalse(
@@ -174,7 +174,7 @@ class TestSplitVllmCmd(TestCase):
             "python", self.SPLIT_PROFILER,
             "--input-path", self.INPUT_PATH,
             "--output-path", self.OUTPUT_PATH_RID_P,
-            "--prefill-batch-size", self.PREFILL_BATCH_SIZE,
+            "--prefill-rid", self.RID,
         ]
         if execute_cmd(cmd) != self.COMMAND_SUCCESS or not os.path.exists(self.OUTPUT_PATH_RID_P):
             self.assertFalse(
@@ -188,7 +188,7 @@ class TestSplitVllmCmd(TestCase):
             "python", self.SPLIT_PROFILER,
             "--input-path", self.INPUT_PATH,
             "--output-path", self.OUTPUT_PATH_RID_D,
-            "--prefill-batch-size", self.DECODE_BATCH_SIZE,
+            "--decode-rid", self.RID,
         ]
         if execute_cmd(cmd) != self.COMMAND_SUCCESS or not os.path.exists(self.OUTPUT_PATH_RID_D):
             self.assertFalse(
