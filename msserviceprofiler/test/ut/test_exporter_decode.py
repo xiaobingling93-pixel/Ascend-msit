@@ -25,9 +25,10 @@ from ms_service_profiler_ext.exporters.exporter_decode import ExporterDecode
 
 class TestExporterDecodeFunction(unittest.TestCase):
     def setUp(self):
-        self.data = {"tx_data_df": self.mock_data()}
+        self.data_mindie = {"tx_data_df": self.mock_data_mindie()}
+        self.data_vllm = {"tx_data_df": self.mock_data_vllm()}
 
-    def mock_data(self):
+    def mock_data_mindie(self):
         name_list = [
             "encode",
             "httpReq",
@@ -83,6 +84,43 @@ class TestExporterDecodeFunction(unittest.TestCase):
         df = pd.DataFrame(data)
         return df
 
+    def mock_data_vllm(self):
+        name_list = [
+            "encode",
+            "httpReq",
+            "batchFrameworkProcessing",
+            "preprocess",
+            "forward",
+            "httpRes"
+        ]
+        data = {
+            "name": name_list * 3,
+        }
+        len_data = len(data["name"])
+        data["during_time"] = np.random.rand(len_data) * 1000
+        data["pid"] = ["40"] * len_data
+        data["tid"] = ["100"] * len_data
+        data["start_time"] = np.arange(len_data) * 1000
+        data["end_time"] = np.arange(len_data) * 1000 + 50
+        data["start_datetime"] = ["123"] * len_data
+        data["end_datetime"] = ["123"] * len_data
+        data["batch_type"] = [""] * len_data
+        data["rid"] = [""] * len_data
+        data["batch_size"] = [None] * len_data
+        data["rid_list"] = [None] * len_data
+        data["token_id_list"] = [["1234", "5678"]] * len_data
+        batch_indices = np.where(np.array(data["name"]) == "batchFrameworkProcessing")[0]
+        rid_list = []
+        for i in batch_indices:
+            data["batch_type"][i] = "Decode"
+            data["batch_size"][i] = "100"
+            data["rid"][i] = str(i + 1)  # 递增的 rid 值
+            rid_list.append(str(i + 1))
+            data["rid_list"][i] = [str(i + 1)]
+
+        df = pd.DataFrame(data)
+        return df
+
     def test_exporter_decode(self):
         args = Namespace(
             output_path=os.path.join(os.getcwd(), "output"),
@@ -96,7 +134,45 @@ class TestExporterDecodeFunction(unittest.TestCase):
             os.chmod(args.output_path, 0o740)
             file_path = Path(args.output_path, "decode.csv")
             ExporterDecode.initialize(args)
-            ExporterDecode.export(self.data)
+            ExporterDecode.export(self.data_mindie)
+            self.assertTrue(file_path.is_file())
+        finally:
+            shutil.rmtree(args.output_path)
+
+        try:
+            os.makedirs(args.output_path, exist_ok=True)
+            os.chmod(args.output_path, 0o740)
+            file_path = Path(args.output_path, "decode.csv")
+            ExporterDecode.initialize(args)
+            ExporterDecode.export(self.data_vllm)
+            self.assertTrue(file_path.is_file())
+        finally:
+            shutil.rmtree(args.output_path)
+
+    def test_exporter_decode_rid(self):
+        args = Namespace(
+            output_path=os.path.join(os.getcwd(), "output"),
+            log_level="debug",
+            decode_batch_size=100,
+            decode_number=2,
+            decode_rid="3",
+        )
+        try:
+            os.makedirs(args.output_path, exist_ok=True)
+            os.chmod(args.output_path, 0o740)
+            file_path = Path(args.output_path, "decode.csv")
+            ExporterDecode.initialize(args)
+            ExporterDecode.export(self.data_mindie)
+            self.assertTrue(file_path.is_file())
+        finally:
+            shutil.rmtree(args.output_path)
+
+        try:
+            os.makedirs(args.output_path, exist_ok=True)
+            os.chmod(args.output_path, 0o740)
+            file_path = Path(args.output_path, "decode.csv")
+            ExporterDecode.initialize(args)
+            ExporterDecode.export(self.data_vllm)
             self.assertTrue(file_path.is_file())
         finally:
             shutil.rmtree(args.output_path)
