@@ -30,9 +30,6 @@ class TestErrorCheck(TestCase):
         with self.assertRaises(OSError):
             handles_so_dir()
     
-    # If ASCEND_TOOLKIT_HOME is not set, `handles_so_dir()` will raise error if so is not found,
-    # or, it will not raise anything if so is founded under the default directory
-    
     def test_handles_exec_should_raise_when_subcommand_empty(self):
         self.args.exec = ""
         
@@ -52,12 +49,6 @@ class TestErrorCheck(TestCase):
         
         self.assertEqual(os.environ["ATB_CHECK_TYPE"], "1")
         
-    # Currently, check type only supports overflow
-    # there may be other features in the future
-    # if so, add the test here. 
-    # E.g.
-    # def test_handles_check_type_should_2_when_specify_memleak(self):
-    # self.args.type = ["memleak"]
     
     def test_handles_output_dir_should_equal_current_dir_when_empty_output_dir(self):
         self.args.output = ""
@@ -83,11 +74,7 @@ class TestErrorCheck(TestCase):
         
     def test_handles_exit_flag_should_0_when_not_specify(self):
         self.args.exit = False
-        
         handles_exit_flag(self.args)
         
         self.assertEqual(os.environ["ATB_EXIT"], "0")
         
-
-if __name__ == "__main__":
-    unittest.main()

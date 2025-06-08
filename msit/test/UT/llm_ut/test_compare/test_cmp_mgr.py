@@ -1,102 +1,190 @@
-# Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-import unittest
+import pytest
+import torch
 from unittest.mock import patch
 
-from components.llm.msit_llm.compare.cmp_mgr import CompareMgr
+from msit_llm.common.log import logger
+from msit_llm.compare.cmp_mgr import CompareMgr
 
 
-class TestFilterTensorPaths(unittest.TestCase):
-    # 基础测试数据
-    QKV_PATHS = [
-        "0_Attention/0_QKVLinearSplitPack/after/outtensor0.bin",
-        "0_Attention/0_QKVLinearSplitPack/after/outtensor1.bin",
-        "0_Attention/0_QKVLinearSplitPack/after/outtensor2.bin",
-        "0_Attention/1_RotaryPositionEmbedding/before/intensor0.bin"
+@pytest.fixture()
+def mock_logger():
+    with patch.object(logger, 'error') as mock_error, patch.object(logger, 'debug') as mock_debug:
+        yield mock_error, mock_debug
+
+
+def test_filter_rope_my_tensor_paths_valid(mock_logger):
+    mock_error, mock_debug = mock_logger
+    my_tensor_paths = [
+        'path/intensor4.bin',
+        'path/intensor5.bin',
+        'path/intensor3.bin',
+        'path/intensor2.bin',
+        'path/intensor1.bin'
     ]
-    
-    QKV_SPLIT_PATHS = [
-        "0_Attention/0_QKVLinearSplitPack/1_SplitOperation/after/outtensor0.bin",
-        "0_Attention/0_QKVLinearSplitPack/1_SplitOperation/after/outtensor1.bin",
-        "0_Attention/0_QKVLinearSplitPack/1_SplitOperation/after/outtensor2.bin"
+    seqlen_path, valid_paths = CompareMgr._filter_rope_my_tensor_paths(my_tensor_paths)
+    assert seqlen_path == 'path/intensor4.bin'
+    assert valid_paths == [
+        'path/intensor2.bin',
+        'path/intensor3.bin'
     ]
-
-    def test_qkv_mode(self):
-        """验证标准qkv模式的路径过滤逻辑"""
-        test_cases = [
-            # (golden_paths, my_paths, 预期结果)
-            (
-                ["root.model.layers.0.self_attn.q_proj/output.pth"],
-                [self.QKV_PATHS[0], "other.bin"],
-                [self.QKV_PATHS[0]]
-            ),
-            (
-                ["root.model.layers.5.self_attn.k_proj/output.pth"],
-                [self.QKV_PATHS[1], "unrelated.bin"],
-                [self.QKV_PATHS[1]]
-            ),
-            (
-                [
-                    "root.model.layers.9.self_attn.v_proj/output.pth",
-                    "root.model.layers.9.self_attn.q_proj/output.pth"
-                ],
-                [self.QKV_PATHS[2], self.QKV_PATHS[3]],
-                [self.QKV_PATHS[2], self.QKV_PATHS[3]] 
-            ),
-            (
-                ["invalid_path.pth"],
-                self.QKV_PATHS,
-                self.QKV_PATHS 
-            )
-        ]
-        
-        for golden, my, expected in test_cases:
-            with self.subTest(golden=golden, my=my):
-                result = CompareMgr.filter_tensor_paths(golden, my, 'qkv')
-                self.assertCountEqual(result, expected)  # 顺序无关的集合比较
+    mock_error.assert_not_called()
+    mock_debug.assert_not_called()
 
 
-    def test_qkv_split_mode(self):
-        """验证split模式的特殊处理逻辑"""
-        test_cases = [
-            (
-                ["root.model.layers.3.self_attn.q_proj/output.pth"],
-                [self.QKV_SPLIT_PATHS[0], "noise.bin"],
-                [self.QKV_SPLIT_PATHS[0]]
-            ),
-            (
-                [
-                    "root.model.layers.0.self_attn.k_proj/output.pth",
-                    "root.model.layers.0.self_attn.v_proj/output.pth"
-                ],
-                self.QKV_SPLIT_PATHS,
-                self.QKV_SPLIT_PATHS[1:] 
-            ),
-            (
-                [],
-                ["any_path.bin"],
-                ["any_path.bin"] 
-            )
-        ]
-        
-        for golden, my, expected in test_cases:
-            with self.subTest(golden=golden, my=my):
-                result = CompareMgr.filter_tensor_paths(golden, my, 'qkv_split')
-                self.assertCountEqual(result, expected)
+def test_filter_rope_my_tensor_paths_when_invalid_file_numbers(mock_logger):
+    mock_error, mock_debug = mock_logger
+    my_tensor_paths = [
+        'path/intensor4.bin',
+        'path/intensor5.bin'
+    ]
+    seqlen_path, valid_paths = CompareMgr._filter_rope_my_tensor_paths(my_tensor_paths)
+    assert valid_paths == my_tensor_paths
+    mock_debug.assert_called_once_with(f"Expected 5 tensors for RopeOperation but found {len(my_tensor_paths)}.")
+    mock_error.assert_not_called()
 
-    def test_invalid_path_prefix(self):
-        """验证非法path_prefix的异常抛出"""
-        with self.assertRaisesRegex(ValueError, "Unsupported path_prefix: invalid"):
-            CompareMgr.filter_tensor_paths([], [], 'invalid')
+
+def test_filter_rope_my_tensor_paths_when_invalid_file(mock_logger):
+    mock_error, mock_debug = mock_logger
+    my_tensor_paths = [
+        'path/intensor4.bin',
+        'path/intensor5.bin',
+        'path/intensor6.bin',
+        'path/intensor2.bin',
+        'path/intensor1.bin'
+    ]
+    seqlen_path, valid_paths = CompareMgr._filter_rope_my_tensor_paths(my_tensor_paths)
+    assert valid_paths == my_tensor_paths
+    mock_debug.assert_called_once()
+    mock_error.assert_not_called()
+
+
+def test_get_rope_type_when_given_intensor2(mock_logger):
+    mock_error, mock_debug = mock_logger
+    tensor_path = 'path/intensor2.bin'
+    rope_type = CompareMgr._get_rope_type(tensor_path)
+    assert rope_type == 0
+    mock_error.assert_not_called()
+    mock_debug.assert_not_called()
+
+
+def test_get_rope_type_when_given_intensor3(mock_logger):
+    mock_error, mock_debug = mock_logger
+    tensor_path = 'path/intensor3.bin'
+    rope_type = CompareMgr._get_rope_type(tensor_path)
+    assert rope_type == 1
+    mock_error.assert_not_called()
+    mock_debug.assert_not_called()
+
+
+def test_get_rope_type_when_invalid(mock_logger):
+    mock_error, mock_debug = mock_logger
+    tensor_path = 'path/intensor1.bin'
+    rope_type = CompareMgr._get_rope_type(tensor_path)
+    assert rope_type == -1
+    mock_debug.assert_called_once_with(f"Failed to get rope_type from {tensor_path}.")
+    mock_error.assert_not_called()
+
+
+def test_slice_tensor_by_seq_len_4d_valid(mock_logger):
+    mock_error, mock_debug = mock_logger
+    tensor = torch.randn(1, 3, 5, 4)
+    golden_tensor_datas = [tensor]
+    seq_len = 3
+    rope_type = 0
+
+    sliced_tensor = CompareMgr._slice_tensor_by_seq_len(golden_tensor_datas, seq_len, rope_type)
+    expected_sliced_tensor = tensor[:, :, seq_len - 1, :].squeeze(0)
+    assert torch.equal(sliced_tensor[0], expected_sliced_tensor)
+    mock_error.assert_not_called()
+    mock_debug.assert_not_called()
+
+
+def test_slice_tensor_by_seq_len_3d_valid(mock_logger):
+    mock_error, mock_debug = mock_logger
+    tensor = torch.randn(4, 3, 2)
+    golden_tensor_datas = [tensor]
+    seq_len = 2
+    rope_type = 1
+
+    sliced_tensor = CompareMgr._slice_tensor_by_seq_len(golden_tensor_datas, seq_len, rope_type)
+    expected_sliced_tensor = tensor[seq_len - 1, :, rope_type].unsqueeze(0)
+    assert torch.equal(sliced_tensor[0], expected_sliced_tensor)
+    mock_error.assert_not_called()
+    mock_debug.assert_not_called()
+
+
+def test_slice_tensor_by_seq_len_4d_with_invalid_seq_len(mock_logger):
+    mock_error, mock_debug = mock_logger
+    tensor = torch.randn(1, 3, 5, 4)
+    golden_tensor_datas = [tensor]
+    seq_len = 6
+    rope_type = 0
+
+    sliced_tensor = CompareMgr._slice_tensor_by_seq_len(golden_tensor_datas, seq_len, rope_type)
+    assert sliced_tensor == golden_tensor_datas
+    mock_error.assert_called_once_with(f"seqLen is out of bounds for tensor with shape {tensor.shape}")
+    mock_debug.assert_not_called()
+
+
+def test_slice_tensor_by_seq_len_3d_with_invalid_seq_len(mock_logger):
+    mock_error, mock_debug = mock_logger
+    tensor = torch.randn(1, 3, 5, 4)
+    golden_tensor_datas = [tensor]
+    seq_len = None
+    rope_type = 0
+
+    sliced_tensor = CompareMgr._slice_tensor_by_seq_len(golden_tensor_datas, seq_len, rope_type)
+    assert sliced_tensor == golden_tensor_datas
+    mock_debug.assert_called_once_with("seq_len is None, skipping slicing.")
+    mock_error.assert_not_called()
+
+
+def test_slice_tensor_by_seq_len_with_invalid_dim(mock_logger):
+    mock_error, mock_debug = mock_logger
+    tensor = torch.randn(1, 3, 5, 6, 7)
+    golden_tensor_datas = [tensor]
+    seq_len = 2
+    rope_type = 0
+
+    sliced_tensor = CompareMgr._slice_tensor_by_seq_len(golden_tensor_datas, seq_len, rope_type)
+    assert sliced_tensor == golden_tensor_datas
+    mock_debug.assert_called_once_with(f"Unsupported tensor with dimensions {tensor.ndimension()}. Expected 3 or 4 "
+                                       f"dimensions.")
+    mock_error.assert_not_called()
+
+
+def test_remove_adjacent_repeated_columns_valid(mock_logger):
+    mock_error, mock_debug = mock_logger
+    tensor = torch.tensor([[1, 1, 2, 2]], dtype=torch.float16)
+    my_tensor_datas = [tensor]
+
+    res_tensor_datas = CompareMgr._remove_adjacent_repeated_columns(my_tensor_datas)
+    expected_tensor_datas = torch.tensor([[1, 2]], dtype=torch.float16)
+    assert torch.equal(res_tensor_datas[0], expected_tensor_datas)
+    mock_error.assert_not_called()
+    mock_debug.assert_not_called()
+
+
+def test_remove_adjacent_repeated_columns_with_invalid_tensor(mock_logger):
+    mock_error, mock_debug = mock_logger
+    tensor = torch.tensor([[1, 1, 2, 3]], dtype=torch.float16)
+    my_tensor_datas = [tensor]
+
+    res_tensor_datas = CompareMgr._remove_adjacent_repeated_columns(my_tensor_datas)
+    assert res_tensor_datas == my_tensor_datas
+    mock_error.assert_not_called()
+    mock_debug.assert_called_once_with(f"There are no adjacent repeated columns in the tensor {my_tensor_datas}.")
+
+
+def test_remove_adjacent_repeated_columns_with_invalid_shape(mock_logger):
+    mock_error, mock_debug = mock_logger
+    tensor = torch.tensor([[1, 1, 2, 3, 5]], dtype=torch.float16)
+    my_tensor_datas = [tensor]
+
+    res_tensor_datas = CompareMgr._remove_adjacent_repeated_columns(my_tensor_datas)
+    assert res_tensor_datas == my_tensor_datas
+    mock_error.assert_not_called()
+    mock_debug.assert_called_once_with(f"Unexpected tensor shape {tensor.shape} to check whether has adjacent "
+                                       f"repeated columns.")
+
+
