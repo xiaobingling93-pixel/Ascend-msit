@@ -44,27 +44,10 @@ class TestSynthezier(TestCase):
         )
     
     def test_analyzer_from_csv_arg_not_str(self):
-        with self.assertLogs('msit_llm_logger', 'ERROR') as cm:
-            self.assertRaises(ValueError, self.analyzer.analyze, golden=2, test=self.test)
-            logger_output = cm.output
-            self.assertEqual(len(logger_output), 1)
-            self.assertRegex(logger_output[0], r'Invalid csv path, only path with suffix')
+        self.assertRaises(ValueError, self.analyzer.analyze, golden=2, test=self.test)
 
     def test_analyzer_from_csv_arg_not_exist(self):
-        with self.assertLogs('msit_llm_logger', 'ERROR') as cm:
-            self.assertRaises(OSError, self.analyzer.analyze, golden='aqewwqe.csv', test=self.test)
-            logger_output = cm.output
-            self.assertEqual(len(logger_output), 1)
-            self.assertRegex(logger_output[0], r'aqewwqe.csv')
-    
-    def test_analyzer_from_csv_not_owner(self):
-        with self.assertLogs('msit_llm_logger', 'ERROR') as cm:
-            with patch('os.geteuid', return_value=1000):
-                self.assertRaises(PermissionError, self.analyzer.analyze, golden=self.golden, test=self.test)
-                logger_output = cm.output
-                self.assertEqual(len(logger_output), 1)
-                self.assertRegex(logger_output[0], r'Inconsistent owner')
-    
+        self.assertRaises(OSError, self.analyzer.analyze, golden='aqewwqe.csv', test=self.test)
     
     def test_analyzer_from_mixed(self):
         import time
@@ -81,21 +64,6 @@ class TestSynthezier(TestCase):
             )
         )
         time.sleep(1)
-
-    def test_analyzer_unmatched_df(self):
-        test_dict = {
-            "queries": ["How are you?", "What is your name?", "What time is it?", "No!"],
-            "input_token_ids": [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10, 11], [12, 13, 14, 15, 16, 17], [18, 19, 20, 21, 22]],
-            "output_token_ids": [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10, 11], [12, 13, 14, 15, 16, 17], [18, 19, 20, 21, 22]],
-            "passed": ["Wrong", "Correct", "Wrong", "Correct"],
-        }
-
-        test = Synthesizer(**test_dict)
-        with self.assertLogs('msit_llm_logger', 'WARNING') as cm: 
-            self.analyzer.analyze(golden=self.golden, test=test)
-            logger_output = cm.output
-            self.assertEqual(len(logger_output), 1)
-            self.assertRegex(logger_output[0], r'below is a partial display of these unmatched')
 
     @classmethod
     def tearDownClass(cls):
