@@ -20,6 +20,7 @@ import pytest
 
 import ms_service_profiler_ext.analyze
 from ms_service_profiler.exporters.factory import ExporterFactory
+from ms_service_profiler.exporters.exporter_batch import ExporterBatchData
 from ms_service_profiler.utils.log import set_logger
 from ms_service_profiler_ext.analyze import add_summary_exporter, main
 from ms_service_profiler_ext.exporters.exporter_summary import ExporterSummary
@@ -72,7 +73,7 @@ class TestMainFunction:
             main()
 
     def test_main_applies_summary_exporter_decorator(self):
-        original_exporters = ["exporter1", "exporter2"]
+        original_exporters = [ExporterBatchData]
         self.mocker.patch(
             "ms_service_profiler.exporters.factory.ExporterFactory.create_exporters", return_value=original_exporters
         )
@@ -91,7 +92,7 @@ class TestMainFunction:
     @pytest.fixture(autouse=True)
     def _inject_mocker(self, mocker):
         self.mocker = mocker
-        self.mock_args = Namespace(input_path="/fake/input", output_path="/fake/output", log_level="info")
+        self.mock_args = Namespace(input_path="/fake/input", output_path="/fake/output", log_level="info", format="csv")
 
         # 2. 配置全局mock
         mocker.patch("argparse.ArgumentParser.parse_args", return_value=self.mock_args)

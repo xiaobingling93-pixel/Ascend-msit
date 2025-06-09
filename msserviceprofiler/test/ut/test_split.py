@@ -73,13 +73,13 @@ class TestSplitFuctions(unittest.TestCase):
     @pytest.fixture(autouse=True)
     def _inject_mocker(self, mocker):
         self.mocker = mocker
-        self.mock_args = Namespace(input_path="/fake/input", output_path="/fake/output", log_level="info")
+        self.mock_args = Namespace(input_path="/fake/input", output_path="/fake/output", log_level="info", format="csv")
 
         # 2. 配置全局mock
         mocker.patch("argparse.ArgumentParser.parse_args", return_value=self.mock_args)
         mocker.patch("ms_service_profiler.utils.log.set_log_level")
         mocker.patch("ms_service_profiler.parse.preprocess_prof_folders")
-        mocker.patch("ms_service_profiler_ext.split.add_exporters", return_value=["ExporterPrefill", "ExporterDecode"])
+        mocker.patch("ms_service_profiler_ext.split.add_exporters", return_value=[ExporterPrefill, ExporterDecode])
         mocker.patch.object(Path, "mkdir")
         mocker.patch("os.path.exists", return_value=True)
         mocker.patch("ms_service_profiler.parse.find_file_in_dir", return_value=True)
