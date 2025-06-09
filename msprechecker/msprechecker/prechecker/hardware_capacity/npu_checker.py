@@ -13,24 +13,19 @@
 # limitations under the License.
 import os
 
-import torch
 import yaml
 
 from msprechecker.prechecker.register import PrecheckerBase, show_check_result, CheckResult
 from msprechecker.prechecker.utils import logger, SimpleProgressBar
 from msprechecker.prechecker.hardware_capacity.time_analyze import TimeAnalyze
 
-try:
-    import torch_npu
-except ImportError:
-    logger.warning("torch_npu not available, skipping NPUChecker")
-    torch_npu = None
-
 
 class NPUChecker(PrecheckerBase):
 
     @classmethod
     def npu_matmul(cls, npu_id):
+        import torch
+
         # 读取矩阵参数
         env_check_dir = os.path.dirname(__file__)
         yaml_file = os.path.join(env_check_dir, "matmul_shape.yaml")
@@ -49,6 +44,12 @@ class NPUChecker(PrecheckerBase):
             torch.addbmm(mat_c, mat_a, mat_b)
 
     def collect_env(self, **kwargs):
+        try:
+            import torch_npu
+        except ImportError:
+            logger.warning("torch_npu not available, skipping NPUChecker")
+            torch_npu = None
+
         output = {}
         if torch_npu is None:
             return output

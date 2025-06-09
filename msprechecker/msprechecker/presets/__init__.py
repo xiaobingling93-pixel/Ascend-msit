@@ -51,8 +51,8 @@ def get_default_rule(rule_type: str) -> Dict:
         if arch not in ARCH_MAPPING:
             raise ValueError(f"Unsupported architecture: {arch}")
 
-        if arch == "x86" and len(NPU_DEVICES) != 16:
-            raise ValueError(f"Unsupported type: 800I-A2 x86 but {len(NPU_DEVICES)} chips")
+        if arch == "x86_64" and len(NPU_DEVICES) != 16:
+            raise ValueError(f"Unsupported type: 800I-A2 x86_64 but {len(NPU_DEVICES)} chips")
 
         arch_dir = ARCH_MAPPING[arch]
         rule_path = os.path.join(cur_dir, npu_type, arch_dir, rule_file)

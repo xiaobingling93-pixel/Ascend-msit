@@ -234,7 +234,7 @@ class K8SCheckerBase(ConfigCheckerBase):
                         actual=actual_value,
                         expected=expected_value,
                         status=ResultStatus(check_status, severity),
-                        reason=reason,
+                        reason=reason
                     )
                 )
 

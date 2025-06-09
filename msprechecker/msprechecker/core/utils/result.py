@@ -32,7 +32,7 @@ class ResultStatus:
     CYAN = '\033[96m'
     RESET = '\033[0m'
 
-    def __init__(self, passed: bool, severity: Severity):
+    def __init__(self, passed, severity):
         self._passed = passed
         self._severity = severity
 
@@ -50,7 +50,7 @@ class ResultStatus:
             else:
                 status = "[RECOMMEND]"
                 color = self.CYAN
-        return f"{color}{status}{self.RESET}"
+        return "{}{}{}".format(color, status, self.RESET)
 
     def __bool__(self):
         return self._passed
@@ -66,8 +66,8 @@ class ResultStatus:
 
 @dataclass(frozen=True)
 class Result:
-    key: str | None
-    actual: str | None
-    expected: str | None
+    key: str
+    actual: str
+    expected: str
     status: ResultStatus
-    reason: str | None
+    reason: str
