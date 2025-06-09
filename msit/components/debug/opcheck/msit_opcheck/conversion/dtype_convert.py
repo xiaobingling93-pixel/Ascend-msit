@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import tensorflow
 import numpy
 import torch
 
@@ -31,6 +30,7 @@ def bfloat16_conversion(container):
     Convert bfloat16 string to numpy dtype
     """
     # noinspection PyUnresolvedReferences
+    import tensorflow
     return [dtype if dtype != "bfloat16" else tensorflow.bfloat16.as_numpy_dtype for dtype in container]
 
 

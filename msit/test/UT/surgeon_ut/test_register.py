@@ -35,16 +35,3 @@ class TestRegister(unittest.TestCase):
         register = Register(os.path.join(os.getcwd(), "hello"))
         ret = register.import_modules()
         self.assertEqual(True, ret)
-
-
-def test_suite():
-    suite = unittest.TestSuite()
-
-    suite.addTest(TestRegister("test_register"))
-    suite.addTest(TestRegister("test_register_invalid_path"))
-
-    return suite
-
-
-if __name__ == "__main__":
-    unittest.main()
