@@ -8,7 +8,7 @@
 
 **前提**：暂不支持动态shape模型，运行过程中可能出现无法加载npy文件的情况，请添加`--onnx-fusion-switch False`以解决。
 **注意**：
-- 使用时请勿关闭`--dump``.
+- 使用时请勿设置`--dump 为False`，默认为True.
 - 不要开启`--custom-op`
 - 不要开启`--locat`
 执行命令如下：

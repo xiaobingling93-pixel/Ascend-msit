@@ -1,7 +1,7 @@
 # Caffe 一键式精度比对
 
-## 介绍
-Caffe 一键式精度比对
+## 介绍  
+支持标杆模型为Caffe的一键式精度比对。
 
 ## 使用示例一
 - caffe环境安装请参考：[msit一体化工具使用指南](https://gitee.com/ascend/msit/blob/master/msit/docs/install/README.md)
@@ -20,7 +20,7 @@ Caffe 一键式精度比对
   ```sh
   atc --model=caffe_demo.prototxt --weight=caffe_demo.caffemodel --framework=0 --soc_version=<soc_version> --output=caffe_demo
   ```
-- 注：执行量化原始模型（GPU/CPU） vs 量化离线模型 （**关闭融合规则**）（NPU） 。由于ATC工具的模型转换操作默认开启了算子融合功能，故为了排除融合后算子无法直接进行精度比对，模型转换先关闭算子融合,配置方法参见：[如何关闭/开启融合规则](https://www.hiascend.com/document/detail/zh/canncommercial/63RC1/reference/graphubfusionref/graphubfusionref_000003.html)
+- 注：执行量化原始模型（GPU/CPU） vs 量化离线模型 （**关闭融合规则**）（NPU） 。由于ATC工具的模型转换操作默认开启了算子融合功能，故为了排除融合后算子无法直接进行精度比对，模型转换先关闭算子融合，配置方法参见：[如何关闭/开启融合规则](https://www.hiascend.com/document/detail/zh/canncommercial/81RC1/developmentguide/graph/graphubfusionref/atlasrr_30_0003.html#ZH-CN_TOPIC_0000002263813281__section15766181519012)
   ```sh
   atc --model=resnet50_deploy_model.prototxt --weight=resnet50_deploy_weights.caffemodel --framework=0   \
   --output=caffe_resnet50_off --soc_version=<soc_version>  --fusion_switch_file=fusion_switch.cfg
@@ -57,7 +57,7 @@ Caffe 一键式精度比对
   # [INFO] None operator with accuracy issue reported
   ```
 - **输出目录结构** 参考 [01_basic_usage](../01_basic_usage/README.md)，其中 caffe 模型 dump 数据位于 `{output_path}/{timestamp}/dump_data/caffe/`
-- **比对结果** 位于 `{output_path}/{timestamp}/result_{timestamp}.csv` 中，比对结果的含义与基础精度比对工具完全相同，其中每个字段的含义可参考 [CANN商用版/比对步骤（推理场景）](https://www.hiascend.com/document/detail/zh/canncommercial/60RC1/devtools/auxiliarydevtool/atlasaccuracy_16_0039.html)
+- **比对结果** 位于 `{output_path}/{timestamp}/result_{timestamp}.csv` 中，比对结果的含义与基础精度比对工具完全相同，其中每个字段的含义可参考 [完整比对结果参数说明](https://www.hiascend.com/document/detail/zh/canncommercial/81RC1/devaids/devtools/modelaccuracy/atlasaccuracy_16_0064.html)
 
 
 ## 使用示例二

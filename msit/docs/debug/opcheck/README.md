@@ -20,7 +20,7 @@ pip install torch==1.11.0
 ### 输入数据
 使用`msit debug dump -m /home/HwHiAiUser/prouce_data/resnet_offical_saved_model -dp npu -is "模型的输入shape" -c /usr/local/Ascend/ascend-toolkit/latest -o /home/HwHiAiUser/result/test` dump模型推理过程的tensor数据
 - `msit debug dump`相关参数使用参考[saved_model dump功能使用参考](../../../examples/cli/debug/dump/06_saved_model/README.md)
-- tensor信息会生成在落盘路径的指定output_path目录下，具体路径是 {output_path}/{timestamp}/{input_name-input_shape} 
+- tensor数据会生成在-o参数指定的路径下
 
 ### 使用入口
 预检功能可以直接通过msit命令行形式启动精度对比。启动方式如下：
@@ -32,8 +32,8 @@ msit debug opcheck -i /home/HwHiAiUser/result/test/{timestamp} -o /home/HwHiAiUs
 ### 参数说明
 | 参数名                      | 描述                                                         | 是否必选 |
 | --------------------------- | ------------------------------------------------------------ | -------- |
-| --input, -i                 | tensor数据路径，为文件夹，由msit debug dump 落盘，示例：{output_path}/{timestamp} | 是       |
-| --output, -o                | 输出文件的保存路径，默认为当前路径，为文件夹，示例：xx/xxx/xx                | 否       |
+| --input, -i                 | 由msit debug dump 命令落盘的tensor数据文件夹，示例：{output_path}/{timestamp} | 是       |
+| --output, -o                | 精度预检结果的保存路径，默认为当前路径               | 否       |
 | --help, -h              | 命令行参数帮助信息| 否       |
 
 ### 输出结果说明
