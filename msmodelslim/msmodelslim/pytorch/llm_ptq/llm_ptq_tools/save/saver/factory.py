@@ -1,12 +1,13 @@
 # Copyright Huawei Technologies Co., Ltd. 2025. All rights reserved.
+
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.llm_ptq_utils import SAVE_TYPE_SAFE_TENSOR, \
-    SAVE_TYPE_NUMPY, SAVE_TYPE_ASCENDV1
+    SAVE_TYPE_NUMPY, SAVE_TYPE_ASCENDV1, QuantType
+from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.save.saver.ascend_v1 \
+    import AscendV1SaverConfig, AscendV1Saver
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.save.saver.base import BaseSaver
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.save.saver.multi import MultiSaver
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.save.saver.npy import NpySaverConfig, NpySaver
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.save.saver.safetensors import SafetensorsSaverConfig, SafetensorsSaver
-from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.save.saver.ascend_v1 \
-    import AscendV1SaverConfig, AscendV1Saver
 
 
 class SaverFactory:
@@ -45,8 +46,11 @@ class SaverFactory:
         group_size = kwargs['group_size']
         enable_communication_quant = kwargs['enable_communication_quant']
 
+        model_quant_type = QuantType.W8A8_MIX \
+            if cfg.model_quant_type == QuantType.W8A8 and cfg.pdmix else cfg.model_quant_type
+
         return AscendV1SaverConfig(output_dir=output_dir,
-                                   model_quant_type=cfg.model_quant_type,
+                                   model_quant_type=model_quant_type,
                                    use_kvcache_quant=cfg.use_kvcache_quant,
                                    use_fa_quant=cfg.use_fa_quant,
                                    safetensors_name=safetensors_name,
