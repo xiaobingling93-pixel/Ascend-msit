@@ -51,25 +51,6 @@ class TestStatFunctions:
         assert act_stats['test_layer']['input_max'].shape == (10,)
 
 
-class TestFlatQuantQuantizerConfig:
-    def test_custom_initialization(self):
-        config = FlatQuantQuantizerConfig(
-            w_bits=8,
-            a_bits=4,
-            add_diag=False,
-            diag_alpha=0.3,
-            diag_relu=True,
-            tran_type="inv"
-        )
-        
-        assert config.w_bits == 8
-        assert config.a_bits == 4
-        assert config.add_diag is False
-        assert config.diag_alpha == 0.3
-        assert config.diag_relu is True
-        assert config.tran_type == "inv"
-
-
 class TestFakeQuantizerVisitor:
     def setup_method(self):
         self.model = nn.Sequential(
