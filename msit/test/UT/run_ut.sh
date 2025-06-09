@@ -16,7 +16,7 @@
 CUR_DIR=$(dirname $(readlink -f $0))
 COMPONENTS_DIR=${CUR_DIR}/../../components
 TOP_DIR=${COMPONENTS_DIR}/..
-ALL_VALID_TEST_MODULE=(benchmark convert graph profile tensor_view utils llm)
+ALL_VALID_TEST_MODULE=(benchmark convert graph profile tensor_view utils llm debug)
 
 
 install_packages() {
