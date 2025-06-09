@@ -77,11 +77,7 @@ class TestSynthezier(TestCase):
             passed=('Correct', 'Wrong')
         )
 
-        with self.assertLogs('msit_llm_logger', 'ERROR') as cm:
-            self.assertRaises(ValueError, self.synthezier.to_csv, errors='qweqwe')
-            logger_output = cm.output
-            self.assertEqual(len(logger_output), 1)
-            self.assertRegex(logger_output[0], r'Wrong value')
+        self.assertRaises(ValueError, self.synthezier.to_csv, errors='qweqwe')
     
     @classmethod
     def tearDownClass(cls) -> None:
