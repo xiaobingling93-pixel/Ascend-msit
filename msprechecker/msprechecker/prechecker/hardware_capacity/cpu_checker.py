@@ -14,7 +14,6 @@
 import os
 import time
 
-import torch
 import yaml
 
 from msprechecker.prechecker.register import PrecheckerBase, show_check_result, CheckResult
@@ -27,6 +26,7 @@ class CPUChecker(PrecheckerBase):
 
     @classmethod
     def cpu_matmul(cls, cpu_id):
+        import torch
         # 读取矩阵参数
         env_check_dir = os.path.dirname(__file__)
         yaml_file = os.path.join(env_check_dir, "matmul_shape.yaml")
@@ -45,6 +45,8 @@ class CPUChecker(PrecheckerBase):
             torch.addbmm(mat_c, mat_a, mat_b)
 
     def collect_env(self, **kwargs):
+        import torch
+
         cpu_ids = os.cpu_count()
         torch.set_num_threads(cpu_ids)
 

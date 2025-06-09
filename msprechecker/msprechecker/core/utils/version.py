@@ -14,7 +14,11 @@
 
 import re
 from functools import total_ordering
-from importlib.metadata import version, PackageNotFoundError
+
+try:
+    from importlib.metadata import version, PackageNotFoundError
+except ImportError:
+    from importlib_metadata import version, PackageNotFoundError
 
 
 @total_ordering
@@ -92,7 +96,7 @@ class Version:
         m = Version._regex.match(version_str)
         if not m:
             if version_str not in ("transformers",):
-                raise ValueError(f"Invalid version string: {version_str}")
+                raise ValueError("Invalid version string: {}".format(version_str))
             try:
                 version_str = version(version_str)
             except PackageNotFoundError:
