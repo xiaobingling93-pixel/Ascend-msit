@@ -20,12 +20,11 @@ import json
 import glob
 import argparse
 import torch
-import torch_npu
 
 from msit_llm.common.tool import read_atb_data
 from msit_llm.common.log import logger
 from components.utils.cmp_algorithm import CMP_ALG_MAP, CUSTOM_ALG_MAP
-from msit_llm.opcheck.opchecker import NAMEDTUPLE_PRECISION_METRIC, NAMEDTUPLE_PRECISION_MODE
+from msit_llm.common.utils import NAMEDTUPLE_PRECISION_METRIC, NAMEDTUPLE_PRECISION_MODE
 
 FLOAT_EPSILON = torch.finfo(torch.float).eps
 
