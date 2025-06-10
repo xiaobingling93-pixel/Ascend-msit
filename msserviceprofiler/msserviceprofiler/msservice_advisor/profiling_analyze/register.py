@@ -14,7 +14,7 @@
 
 from msserviceprofiler.msservice_advisor.profiling_analyze.utils import SUGGESTION_TYPES
 
-# 创建一个全局的注册表，注册为分析函数
+# Global register list for analysers
 REGISTRY = {}
 
 ANSWERS = dict(env=dict(), config=dict())
@@ -31,7 +31,7 @@ def register_analyze(analyze_name=None):
 
 
 def cached():
-    # 缓存函数结果，反正所有输入都是一样的
+    # cache input, as they may be the same
     cache = {}
 
     def decorator(func):
