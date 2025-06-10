@@ -15,8 +15,6 @@
 import argparse
 from pathlib import Path
 
-from msserviceprofiler.modelevalstate.config.config import DeployPolicy, BenchMarkPolicy
-
 
 def main():
     from msserviceprofiler.ms_service_profiler_ext import compare, split, analyze
