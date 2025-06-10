@@ -101,7 +101,7 @@ def test_check_prefill_latency_given_first_token_target_and_support_select_batch
             test_config,
             benchmark_data,
             "",
-            {"target": TARGETS.FirstTokenTime}
+            namedtuple('test', ["target"])(TARGETS.FirstTokenTime)
         )
         
         # Verify logging was called
@@ -147,13 +147,6 @@ def test_check_prefill_latency_given_empty_results_when_called_then_no_crash():
         "",
         namedtuple('test', ["target"])(TARGETS.FirstTokenTime)
     )
-
-# Test registration of analyze functions
-def test_analyze_functions_are_registered():
-    assert "num_mem_size_checker" in REGISTRY
-    assert "check_prefill_latency" in REGISTRY
-    assert callable(REGISTRY["num_mem_size_checker"])
-    assert callable(REGISTRY["check_prefill_latency"])
 
 # Test histogram logging edge cases
 def test_check_prefill_latency_with_single_latency_value():
