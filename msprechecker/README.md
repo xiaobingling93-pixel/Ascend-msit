@@ -1,31 +1,28 @@
 # MS Prechecker
-  - [MS Prechecker](#ms-prechecker)
-  	- [基本功能](#基本功能)
-  	- [安装性能预检工具](#安装性能预检工具)
-  	- [常见报错处理](#常见报错处理)
-  - [单机预检](#单机预检)
-  	- [单机预检快速使用](#单机预检快速使用)
-  	- [结果字段介绍](#结果字段介绍)
-  	- [非 K8S 部署时的一键配置环境变量](#非-k8s-部署时的一键配置环境变量)
-  - [落盘和比对](#落盘和比对)
-  	- [落盘快速使用](#落盘快速使用)
-  	- [落盘文件介绍](#落盘文件介绍)
-  	- [比对快速使用](#比对快速使用)
-  	- [比对结果说明](#比对结果说明)
-  - [多机环境比对](#多机环境比对)
-  	- [多机环境比对快速使用](#多机环境比对快速使用)
-  	- [运行结果](#运行结果)
-  - [自定义检查项配置](#自定义检查项配置)
-  	- [自定义检查项配置使用说明](#自定义检查项配置使用说明)
-  	- [Yaml 文件的基本形式](#yaml-文件的基本形式)
-  	- [name 字段](#name-字段)
-  	- [value 字段](#value-字段)
-  - [参数列表](#参数列表)
-  	- [通用参数](#通用参数)
-  	- [precheck 参数](#precheck-参数)
-  	- [dump 参数](#dump-参数)
-  	- [compare 参数](#compare-参数)
-  	- [distribute_compare 参数](#distributecompare-参数)
+- [MS Prechecker](#ms-prechecker)
+  - [基本功能](#基本功能)
+  - [安装性能预检工具](#安装性能预检工具)
+  - [常见报错处理](#常见报错处理)
+- [单机预检](#单机预检)
+  - [单机预检快速使用](#单机预检快速使用)
+- [落盘和比对](#落盘和比对)
+  - [落盘快速使用](#落盘快速使用)
+  - [落盘文件介绍](#落盘文件介绍)
+  - [比对快速使用](#比对快速使用)
+  - [比对结果说明](#比对结果说明)
+- [多机环境比对](#多机环境比对)
+  - [多机环境比对快速使用](#多机环境比对快速使用)
+  - [运行结果](#运行结果)
+- [自定义检查项配置](#自定义检查项配置)
+  - [自定义检查项配置使用说明](#自定义检查项配置使用说明)
+    - [字段引用](#字段引用)
+    - [版本引用](#版本引用)
+- [参数列表](#参数列表)
+  - [通用参数](#通用参数)
+  - [precheck 参数](#precheck-参数)
+  - [dump 参数](#dump-参数)
+  - [compare 参数](#compare-参数)
+  - [distribute\_compare 参数](#distribute_compare-参数)
 ***
 
 ## 基本功能
@@ -35,7 +32,7 @@
   - **多机环境预检**， 用于检测用户服务器不同节点之间环境变量的差异性，助力用户快速部署多节点通信环境
   - **环境要求**：
     - 当前硬件限定 Atlas 800I A2/ 800I A3 / 800T A2，主机或者 docker 内环境
-    - Python 版本要求 >= 3.8
+    - Python 版本要求 >= 3.7
 ## 安装性能预检工具
   - **以下方式选择一种即可**
   - **PyPI 安装（推荐）**
@@ -60,8 +57,7 @@
     - 在能够访问网络的机器上，访问 [PyPI 官方源](https://pypi.org/project/msprechecker/#files)
     - 左侧点击 `Download files`，随后点击 `Built Distribution` 下方链接进行下载，如下图所示：
 
-      ![image](./pics/download.png)
-      ![image](./pics/download_1.png)
+      ![image](./pics/image.png)
     - 下载完成后，上传到服务器中
     - 假设 wheel 包存放路径为 `whl_path`，输入下列命令进行安装
       ```bash
@@ -82,195 +78,19 @@
 
 # 单机预检
 ## 单机预检快速使用
-  - 非 K8S 时检查环境变量、MindIE `config.json`、模型配置、hccl、CPU/NPU 硬件等
-    ```bash
+  - 默认进行环境变量、系统配置的校验
+    ```sh
     msprechecker precheck
     ```
-  - K8S 部署时指定 user_config.json 检查
+    随后会在终端出现打屏信息，如果有环境变量的检查项，则在当前目录下生成配置建议环境变量的 `msprechecker_env.sh` 文件
+  - K8S 部署时指定 user_config.json 检查和 mindie_env.json 的检查
     ```sh
-    msprechecker precheck -user user_config.json
+    msprechecker precheck -user user_config.json --mindie_env_config_path mindie_env.json
     ```
-  - 随后会在终端出现打屏信息，如果有环境变量的检查项，则在当前目录下生成配置建议环境变量的 `msprechecker_env.sh` 文件
-## 结果字段介绍
-  - 以下是打屏信息中，部分字段的详细解释，如果已经熟练使用工具，可跳过
-
-  <!-- 示例一 -->
-
-  <!-- 背景 -->
-
-  <div style="background:rgba(223, 223, 223, 0.07);    padding: 1.5rem;    border-radius: 8px;    margin: 1rem 0; font-size: 1rem;">
-
-  <!-- 问题 -->
-
-  <details>
-  <summary> 示例一</summary>
-
-  <!-- 展开背景 -->
-
-  <div style="background:rgba(112, 69, 69, 0.32); padding: 1.5rem;    border-radius: 8px;    margin: 1rem 0;">
-
-  当终端出现如下信息 <a id="示例一"></a>
-
-  ```bash
-  - env [NOK] CPU_AFFINITY_CONF
-    * export CPU_AFFINITY_CONF=2
-    * 开启CPU细粒度绑核，可以优化算子下发。
-  ```
-
-  第一行，为环境变量介绍，`env` 是 `environment` 的缩写，表明为环境变量相关。`CPU_AFFINITY_CONF` 为具体环境变量名称，`[NOK]` 表示该环境变量并没有被正确配置，要么没有配置，要么错误配置。
-  第二行，为修改操作，为了正确配置这个环境变量已提高推理性能，用户需要 `export CPU_AFFINITY_CONF=2`
-  第三行，为修改原因，`export CPU_AFFINITY_CONF=2` 的作用是开启CPU细粒度绑核，可以优化算子下发。
-
-  </div>
-  </details>
-  </div>
-
-  <!-- 示例二-->
-
-  <!-- 背景 -->
-
-  <div style="background:rgba(223, 223, 223, 0.07);    padding: 1.5rem;    border-radius: 8px;    margin: 1rem 0; font-size: 1rem;">
-
-  <!-- 问题 -->
-
-  <details>
-  <summary> 示例二 </summary>
-
-  <!-- 展开背景 -->
-
-  <div style="background:rgba(255, 255, 255, 0.33); padding: 1.5rem;    border-radius: 8px;    margin: 1rem 0;">
-
-  当终端出现如下信息
-
-  ```bash
-  - env [OK] MINDIE_LOG_LEVEL
-  ```
-
-  表明当前环境中，环境变量 `MINDIE_LOG_LEVEL` 的设置没有问题，不会影响性能或已是最优配置
-
-  </div>
-  </details>
-  </div>
-
-  <!-- 示例三-->
-
-  <!-- 背景 -->
-
-  <div style="background:rgba(223, 223, 223, 0.07);    padding: 1.5rem;    border-radius: 8px;    margin: 1rem 0; font-size: 1rem;">
-
-  <!-- 问题 -->
-
-  <details>
-  <summary> 示例三 </summary>
-
-  <!-- 展开背景 -->
-
-  <div style="background:rgba(255, 255, 255, 0.33); padding: 1.5rem;    border-radius: 8px;    margin: 1rem 0;">
-
-  当终端出现如下信息 <a id="示例三"></a>
-
-  ```bash
-  - env [使能环境变量配置：source /msprechecker_env.sh]
-  - env [恢复环境变量配置：source /msprechecker_env.sh 0]
-  ```
-
-  表明，如果您想要一键将环境变量配置为最优，在终端中输入 `source /msprechecker_env.sh` 即可；如果修改之后，想要回滚到最初的环境变量，在终端中输入 `source /msprechecker_env.sh 0` 即可
-
-  <div style="background: #f0f8ff;   border-left: 4px solid #2196f3;   padding: 12px 20px;   margin: 16px 0;   border-radius: 4px;">
-
-  <div style="color: #2196f3;     font-weight: 600;     margin-bottom: 8px;"> Note </div>
-
-  如果您只在终端中运行 `msprechecker` ，工具 **并不会** 自动修改当前环境变量。如需修改，您必须在终端 `source` 工具生成的环境变量 shell 脚本方可修改。
-  在使用环境变量 shell 脚本进行环境变量回滚时，只会回退到工具生成改文件之前，不会储存多次记录。如，用户先执行性能预检工具，然后自己 source 了 CANN，atb 等其他组件的 set_env.sh，之后回滚时，只会回滚到执行性能预检工具前的状态。因此强烈建议用户，在其他环境配置结束后，再执行性能预检工具。
-
-  </div>
-
-  </div>
-  </details>
-  </div>
-
-  <!-- 示例四-->
-
-  <!-- 背景 -->
-
-  <div style="background:rgba(223, 223, 223, 0.07);    padding: 1.5rem;    border-radius: 8px;    margin: 1rem 0; font-size: 1rem;">
-
-  <!-- 问题 -->
-
-  <details>
-  <summary> 示例四 </summary>
-
-  <!-- 展开背景 -->
-
-  <div style="background:rgba(255, 255, 255, 0.33); padding: 1.5rem;    border-radius: 8px;    margin: 1rem 0;">
-  当终端出现如下信息
-
-  ```bash
-  - env [None env related needs to save] ENV FILE
-  ```
-
-  表明当前环境变量配置已经是最优，工具没有任何更优的设置，因此 **不会** 生成环境变量修改脚本
-
-  </div>
-  </details>
-  </div>
-
-  <!-- 示例五-->
-
-  <!-- 背景 -->
-
-  <div style="background:rgba(223, 223, 223, 0.07);    padding: 1.5rem;    border-radius: 8px;    margin: 1rem 0; font-size: 1rem;">
-
-  <!-- 问题 -->
-
-  <details>
-  <summary> 示例五 </summary>
-  <!-- 展开背景 -->
-
-  <div style="background:rgba(255, 255, 255, 0.33); padding: 1.5rem;    border-radius: 8px;    margin: 1rem 0;">
-
-  当终端出现如下信息
-
-  ```bash
-  - system [NOK] 驱动版本
-    * 升级到 24.1.0 以上
-    * 建议升级到最新的版本的驱动，性能会有提升
-  ```
-
-  表明是 **系统** 相关配置可能会影响性能，每行介绍的逻辑请参考 [示例一](#示例一)
-
-  </div>
-  </details>
-  </div>
-
-## 非 K8S 部署时的一键配置环境变量
-  - 环境变量 shell 脚本 **只会** 修改环境变量，并不会修改系统配置。因此 `system` 相关字段不会改变，只会改变 `env` 相关字段
-  - 在执行预检结束后，终端会提示如何一键修改环境变量，更详细的介绍请参考 [示例三](#示例三)。只需要在终端输入
+  - 双机 DS hccl 检查和 model 检查
     ```sh
-    # msprechecker_env.sh 为默认保存路径，可通过 --save_env 指定其他保存路径
-    source msprechecker_env.sh
+    msprechecker precheck -ch model hccl
     ```
-    即可一键配置环境变量到性能最优推荐，终端会出现 `ENABLE=1`
-  - 再次运行预检工具，检测环境变量是否配置成功。如终端打屏信息中，所有 `env` 字样的字段均为绿色 `[OK]`，则证明配置成功。示例如下：
-    ```sh
-    $ msprechecker
-    - env [OK] CPU_AFFINITY_CONF
-    - env [OK] NPU_MEMORY_FRACTION
-    - env [OK] TASK_QUEUE_ENABLE
-    - env [OK] HCCL_OP_EXPANSION_MODE
-    - env [OK] HCCL_DETERMINISTIC
-    - env [OK] HCCL_RDMA_PCIE_DIRECT_POST_NOSTRICT
-    - env [OK] MINDIE_LOG_LEVEL
-    - env [OK] ASCEND_GLOBAL_LOG_LEVEL
-    - env [OK] ASCEND_LAUNCH_BLOCKING
-    - env [OK] ATB_WORKSPACE_MEM_ALLOC_ALG_TYPE
-    - env [OK] ATB_WORKSPACE_MEM_ALLOC_GLOBAL
-    - env [OK] PYTORCH_NPU_ALLOC_CONF
-    - env [None env related needs to save] ENV FILE
-    # 以下内容省略
-    ```
-  - **回滚环境变量** 执行 `source msprechecker_env.sh 0`，终端会出现 `ENABLE=0` 字样。随后再次运行预检工具，打屏信息与最初一致
-***
 
 # 落盘和比对
 ## 落盘快速使用
@@ -377,62 +197,64 @@
 
 # 自定义检查项配置
 ## 自定义检查项配置使用说明
-  - precheck / dump / distribute_compare 支持指定自定义的 yaml 检查项，将在默认检查项基础上覆盖自定义内容，通过参数 `-add, --additional_checks_yaml` 指定
-    ```sh
-    msprechecker precheck -add foo.yaml
-    ```
-## Yaml 文件的基本形式
-  - 预检工具除了提供内置的环境变量检测之外，还可以自定义配置用户需要检测的环境变量
-  - YAML内容可分为五类：
-    1. `environment_variables`：环境变量基线
-    2. `mindie_config`：服务化配置基线
-    3. `ranktable`：ranktable基线
-    4. `model_config`：模型配置基线
-    5. `user_config`：启动配置基线
-  - 五类配置中任何一类下均支持以下7种属性描述词，其中 4~7 为拓展配置，用于说明 value 在不同场景下的取值 reason：
-    1. `name`：字段名
-    2. `value`：基线取值
-    3. `reason`：原因提示
-    4. `suggestions`：场景描述部分
-    5. `condition`：建议（或不建议）的具体场景
-    6. `suggested`：建议场景部分
-    7. `not_suggested`：不建议场景部分
-## name 字段
-  - 支持字典值的嵌套，用于确定待配置的配置变量名，每向下一级就增加一个冒号，如 `features:experimental:enabled`
-  - 在ranktable、user_config基线配置中，由于`server_list`等为列表，因此也支持以 `0` 数字作为一个级别，如 `BackendConfig:ModelDeployConfig:ModelConfig:0:tp`，对应的user_config配置文件如下（注意列表顺序用`0、1、2...`表示）：
-    ```py
-    BackendConfig" : {
-    "interNodeTLSEnabled" : false,
-    "ModelDeployConfig" :
-        {
-            "truncation" : false,
-            "ModelConfig" : [
-                {
-                    "tp": 1,
-    ...
-    }]}}
-    ```
-## value 字段
-  - 一般value直接配置值，如 `value: 'localhost'` 或 `value: false`
-  - 如有特殊需要也可以用计算符号配合比较符号进行限制或赋值，value中支持的表达式包括：
-    - 支持的计算符号：`"+", "-", "\*", "/", "//"`
-    - 支持的比较符号：`'>=', '<=', '!=', '=', '>', '<'`
-  - 另外，`=`开头可以接上自定义的规则，如
-    - `value: = 1+1`
-    - `value: = 1 + server_list:0:device:0:rank_id`(通过与其他name的value计算来确定取值)
-    - `value: = =1`(与`value: 1`效果相同)
-    - `value: = >1`
-    - `value: = >=1`
-  - value 还支持分号 `;` 对多个表达式进行分割，如 `value: = 1 + server_list:0:device:0:rank_id ; < 5` 代表 `value` 在等于 `server_list:0:device:0:rank_id` 的前提下，还需要满足 `value < 5`
-  - value也可以为空，为空时仅检查该配置项存在性
-  - value也支持列表形式：
-    ```
-    value:
-    - 2
-    - 3
-    - >9
-    ```
-***
+在进行 precheck 预检时，支持自定义配置校验项。目前仅支持 `user_config.json` 和 `mindie_env.json` 的配置校验，后续开放环境变量的自定义校验。
+假设需要校验 `a.b` 的值是否符合要求，那么自定义配置语法如下
+```sh
+a:
+  b:
+    expected:
+      type: eq
+      value: 1 + 2
+    reason: a.b 的值应该等于 3
+    severity: high
+```
+上述配置表示，`a.b` 的值应该等于 3，其严重程度为 high，如果该字段不符合预期，会显示 `[NOK]`
+
+目前，
+- `type` 支持：`eq`, `lt`, `le`, `gt`, `ge`, `ne` 或者 `==`, `<`, `<=`, `>`, `>=`, `!=`
+- `value` 支持：`+`, `-`, `*`, `/`, `//`, `**`, `()`，还支持字段引用 `${}`, 版本符号 `Version{}` 以及权限符号 `FilePerm{}`
+- `reason` 支持任意字符串
+- `severity` 支持：`low`, `medium`, `high`，不填写默认 `high`。其中，`low` 显示为 `[RECOMMAND]`；`medium` 显示为 `[WARNING]`；`high` 显示为 `[NOK]`
+
+### 字段引用
+对于比较嵌套较深的配置文件，遇到不同字段相互关联的场景时，创建校验规则是一个挑战。预检工具支持 **字段引用** 语法，允许用户通过 `${}` 的语法来引用其他位置的字段值。比如，有如下配置文件
+```json
+{
+  "a": {
+    "b": "value of b",
+    "c": "value of c"
+  }
+}
+```
+如果希望 `a.b` 的值和 `a.c` 的值相等，则校验规则如下：
+```yaml
+a:
+  b:
+    expected:
+      type: eq
+      value: ${.c}
+    reason: a.b 的值等于 a.c
+    severity: high
+  c:
+  expected:
+      type: eq
+      value: ${a.b}
+    reason: a.c 的值等于 a.b
+    severity: high
+```
+其中 `${.c}` 是相对引用, `${a.b}` 是绝对引用；对于大型嵌套的配置文件尤其好用。
+
+### 版本引用
+如果校验涉及到版本比较，比如低于多少版本时会导致有问题，可以使用版本引用。比如 `transformers_version` 版本需要大于 `4.33`，则可以写为
+```yaml
+transformers_version:
+  expected:
+    type: gt
+    value: Version{4.33}
+  reason: xx
+  severity: xx
+```
+内置了 `Version` 的比较规则，目前是 `8.0.0 > 8.0.rc2 > 8.0.rc1 > 8.0.rc1.b020`。对于 T 版本暂不支持校验，因为 T 版本没有规律
 
 # 参数列表
   - 子功能包括 `precheck` / `dump` / `compare` / `distribute_compare`
@@ -442,7 +264,8 @@
   | ------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------- |
   | -ch {...}, --checkers {...}     | *字符串列表值，可选值 basic,hccl,model,hardware,all，指定检查项，可指定多个，all 表示全部        | 否，默认值 basic                            |
   | -service, --service_config_path | 字符串值，MINDIE service 路径或 config json 文件路径，优先级高于环境变量的 MIES_INSTALL_PATH 值 | 否，默认使用环境变量的 MIES_INSTALL_PATH 值 |
-  | -user, --user_config_path       | 字符串值，json 文件，k8s user config 文件，不指定则不检查                                       | 否，默认 None                               |
+  | -user, --user_config_path       | 字符串值，json 文件，k8s user_config.json 文件，不指定则不检查                                    | 否，默认 None                               |
+  | --mindie_env_config_path        | 字符串值，json 文件，k8s mindie_env.json 文件，不指定则不检查                                     | 否，默认 None                               |
   | -ranktable, --ranktable_file    | 字符串值，json 文件，手动指定 ranktable 文件，优先级高于环境变量的 RANKFILETABLE                | 否，默认使用环境变量的 RANKFILETABLE 值     |
   | -blocknum, --sha256_blocknum    | int 值，计算模型权重 sha256sum 值时的采样块数，值越大采样越多，计算速度越慢                     | 否，默认 1000                               |
   | -add, --additional_checks_yaml  | 字符串值，yaml 文件，额外的自定义配置项，指定后将覆盖默认检查项中的值                           | 否，默认 None                               |

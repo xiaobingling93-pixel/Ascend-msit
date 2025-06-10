@@ -34,7 +34,10 @@ class BaseReporter(ABC):
         return local_logger
     
     def print_title(self, title: str, fillchar):
-        cols, _ = os.get_terminal_size()
+        try:
+            cols, _ = os.get_terminal_size()
+        except OSError:
+            cols = 80
         self.logger.info(f" {title} ".center(cols, fillchar))
     
     @abstractmethod
