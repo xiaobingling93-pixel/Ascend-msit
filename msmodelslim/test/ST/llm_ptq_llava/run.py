@@ -1,3 +1,20 @@
+#  Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
+#  #
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#  #
+#  http://www.apache.org/licenses/LICENSE-2.0
+#  #
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
+"""
+导入相关依赖
+"""
 from transformers import AutoProcessor, LlavaForConditionalGeneration
 import torch
 from PIL import Image
@@ -8,6 +25,14 @@ from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
 from msmodelslim.pytorch.llm_ptq.anti_outlier import AntiOutlier, AntiOutlierConfig
 
 
+torch.npu.set_compile_mode(jit_compile=False)
+option = {}
+option["NPU_FUZZY_COMPILE_BLACKLIST"] = "ReduceProd"
+torch.npu.set_option(option)
+
+"""
+导入相关模型
+"""
 LOAD_PATH = f"{os.environ['PROJECT_PATH']}/resource/llm_ptq/llava-v15-7b-hf/"
 processor = AutoProcessor.from_pretrained(LOAD_PATH, pad_token="<pad>")
  
@@ -29,7 +54,11 @@ for i in images_list[:1]:
  
  
 disable_names = []
- 
+
+"""
+对于linear算子中的激活值如果有表示范围过大，或者"尖刺"的异常值过多，
+需要使用anti outlier功能，使用方法如下
+"""
 anti_config = AntiOutlierConfig(
     a_bit=8,
     w_bit=8,
