@@ -716,7 +716,3 @@ class TestStr2Bool(BastCheckTestCase):
         for input_str in invalid_strings:
             with self.assertRaises(argparse.ArgumentTypeError):
                 str2bool(input_str)
-
-
-if __name__ == '__main__':
-    unittest.main()

@@ -27,7 +27,6 @@ import stat
 import subprocess
 import time
 
-import acl
 import onnxruntime
 import pandas as pd
 from auto_optimizer import OnnxGraph
@@ -52,6 +51,12 @@ from components.utils.file_open_check import ms_open, sanitize_csv_value
 from components.utils.check.rule import Rule
 from components.utils.util import load_file_to_read_common_check, filter_cmd
 from components.utils.constants import TENSOR_MAX_SIZE
+
+try:
+    import acl
+except ImportError:
+    acl = None
+    utils.logger.error("Please verify that the CANN environment is properly configured.")
 
 WRITE_MODES = stat.S_IWUSR | stat.S_IRUSR
 READ_WRITE_FLAGS = os.O_RDWR | os.O_CREAT

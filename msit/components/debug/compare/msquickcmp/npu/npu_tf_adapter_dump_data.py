@@ -22,18 +22,33 @@ import glob
 import os
 import shutil
 
-import npu_device
 import numpy as np
-import tensorflow as tf
 
 from msquickcmp.atc import atc_utils
 from msquickcmp.common import utils, tf_common
-from tensorflow.core.protobuf.rewriter_config_pb2 import RewriterConfig
 
 from components.utils.util import load_file_to_read_common_check
 from components.debug.compare.msquickcmp.common.tf_common import load_file_to_read_common_check_with_walk
 from components.utils.check.rule import Rule
 
+try:
+    import tensorflow as tf
+    from tensorflow.core.protobuf.rewriter_config_pb2 import RewriterConfig
+except ImportError:
+    tf = None
+    utils.logger.error("TensorFlow is not installed.")
+
+try:
+    import npu_device
+except ImportError:
+    npu_device = None
+    utils.logger.error("npu_device is not installed.")
+
+try:
+    import acl
+except ImportError:
+    acl = None
+    utils.logger.error("Please verify that the CANN environment is properly configured.")
 
 
 class NpuTfAdapterDumpData(object):
