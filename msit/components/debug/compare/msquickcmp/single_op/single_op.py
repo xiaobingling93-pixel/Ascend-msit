@@ -15,7 +15,6 @@
 
 import os
 import subprocess
-import acl
 
 from auto_optimizer import OnnxGraph
 from auto_optimizer.graph_refactor.onnx import OnnxPlaceHolder, OnnxInitializer
@@ -25,6 +24,12 @@ from components.utils.util import filter_cmd
 from msquickcmp.common.utils import AccuracyCompareException
 from components.utils.security_check import ms_makedirs
 NPU_ID_INFO_LENGTH = 3
+
+try:
+    import acl
+except ImportError:
+    acl = None
+    utils.logger.error("Please verify that the CANN environment is properly configured.")
 
 
 def check_single_op_is_valid(single_op, dump, custom_op, locat):

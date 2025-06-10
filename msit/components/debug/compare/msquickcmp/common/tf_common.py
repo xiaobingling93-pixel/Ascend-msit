@@ -20,12 +20,17 @@ This class mainly involves tf common function.
 import os
 import subprocess
 import numpy as np
-import tensorflow as tf
 
 from msquickcmp.common import utils
 from msquickcmp.common.utils import AccuracyCompareException
 from components.utils.util import load_file_to_read_common_check, filter_cmd
 from components.utils.check.rule import Rule
+
+try:
+    import tensorflow as tf
+except ImportError:
+    tf = None
+    utils.logger.error("TensorFlow is not installed.")
 
 DTYPE_MAP = {
     tf.float16: np.float16,
