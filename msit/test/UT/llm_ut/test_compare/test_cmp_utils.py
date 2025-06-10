@@ -20,6 +20,8 @@ import unittest
 from unittest.mock import patch, MagicMock
 
 import pytest
+import tempfile
+import shutil
 import numpy as np
 import pandas as pd
 import torch
@@ -33,7 +35,10 @@ from msit_llm.common.constant import (TOKEN_ID, DATA_ID, GOLDEN_DATA_PATH, MY_DA
                                       CSV_GOLDEN_HEADER, GLOBAL_HISTORY_AIT_DUMP_PATH_LIST)
 from msit_llm.compare.cmp_utils import (fill_row_data, load_as_torch_tensor,
                                          set_tensor_basic_info_in_row_data, compare_data, 
-                                         read_data, save_compare_reault_to_csv)
+                                         read_data, save_compare_reault_to_csv, align_tensors,
+                                         read_csv_statistics, read_bin_statictics, convert_dict_values_to_fp32,
+                                         compare_data_statistics, fill_row_data_statistics,
+                                         save_statistics_compare_reault_to_csv, save_compare_reault_to_xlsx)
 
 
 @pytest.fixture(scope='module', autouse=True)
@@ -219,3 +224,244 @@ class TestFunctions(unittest.TestCase):
                 self.assertEqual(result_path, "mocked_path")
                 mock_makedirs.assert_called_once_with(output_path, exist_ok=True)
                 self.assertEqual(len(gathered_row_data), 2) 
+
+
+class TestAlignTensors(unittest.TestCase):
+    def test_align_tensors_same_shape(self):
+        """Test when tensors already have the same shape"""
+        tensor1 = torch.randn(3, 4)
+        tensor2 = torch.randn(3, 4)
+        result1, result2 = align_tensors(tensor1, tensor2)
+        self.assertEqual(result1.shape, tensor1.shape)
+        self.assertEqual(result2.shape, tensor2.shape)
+
+    def test_align_tensors_dim0(self):
+        """Test alignment along dimension 0"""
+        tensor1 = torch.randn(6, 4)  # Larger in dim0
+        tensor2 = torch.randn(3, 4)  # Smaller in dim0
+        result1, result2 = align_tensors(tensor1, tensor2)
+        self.assertEqual(result1.shape, (6, 4))
+        self.assertEqual(result2.shape, (6, 4))
+    
+    def test_align_tensors_dim1(self):
+        """Test alignment along dimension 1"""
+        tensor1 = torch.randn(3, 8)  # Larger in dim1
+        tensor2 = torch.randn(3, 4)  # Smaller in dim1
+        result1, result2 = align_tensors(tensor1, tensor2, dim=1)
+        self.assertEqual(result1.shape, (3, 8))
+        self.assertEqual(result2.shape, (3, 8))
+
+    def test_align_tensors_multiple_dims(self):
+        """Test alignment with higher dimensional tensors"""
+        tensor1 = torch.randn(2, 6, 3)  # Larger in dim1
+        tensor2 = torch.randn(2, 2, 3)  # Smaller in dim1
+        result1, result2 = align_tensors(tensor1, tensor2, dim=1)
+        self.assertEqual(result1.shape, (2, 6, 3))
+        self.assertEqual(result2.shape, (2, 6, 3))
+
+    def test_align_tensors_non_integer_multiple(self):
+        """Test when tensors cannot be aligned due to non-integer multiple"""
+        tensor1 = torch.randn(5, 4)  # Not divisible by 3
+        tensor2 = torch.randn(3, 4)
+        with self.assertRaises(ValueError):
+            align_tensors(tensor1, tensor2)
+
+
+class TestReadCSVStatistics(unittest.TestCase):
+    def setUp(self):
+        # Create a temporary directory for test files
+        self.test_dir = tempfile.mkdtemp()
+        
+    def tearDown(self):
+        # Clean up the temporary directory
+        for root, dirs, files in os.walk(self.test_dir, topdown=False):
+            for name in files:
+                os.remove(os.path.join(root, name))
+            for name in dirs:
+                os.rmdir(os.path.join(root, name))
+        os.rmdir(self.test_dir)
+    
+    def test_normal_case_with_output_row(self):
+        """Test normal case with a valid Output row"""
+        test_data = """InputOutput,Data1,Data2
+Input,value1,value2
+Output,value3,value4
+Input,value5,value6"""
+        
+        test_file = os.path.join(self.test_dir, "test.csv")
+        with open(test_file, 'w') as f:
+            f.write(test_data)
+        print(test_data)   
+        expected = {'InputOutput': 'Output', 'Data1': 'value3', 'Data2': 'value4'}
+        result = read_csv_statistics(test_file)
+        self.assertEqual(result, expected)
+    
+
+class TestReadBinStatistics(unittest.TestCase):
+
+    def setUp(self):
+        # Create a temporary directory for test files
+        self.test_dir = tempfile.mkdtemp()
+        
+    def tearDown(self):
+        # Clean up the temporary directory
+        for root, dirs, files in os.walk(self.test_dir, topdown=False):
+            for name in files:
+                os.remove(os.path.join(root, name))
+            for name in dirs:
+                os.rmdir(os.path.join(root, name))
+        os.rmdir(self.test_dir)
+
+    def test_read_complete_file(self):
+        """Test reading a complete file with all required fields and end marker"""
+        test_file = os.path.join(self.test_dir, "complete.bin")
+        content = """dims=1,2,3
+max=10.5
+min=0.1
+mean=5.0
+l2norm=7.2
+$End=1
+"""
+        with open(test_file, 'w') as f:
+            f.write(content)
+            
+        result = read_bin_statictics(test_file)
+        expected = {
+            'dims': '1,2,3',
+            'max': '10.5',
+            'min': '0.1',
+            'mean': '5.0',
+            'l2norm': '7.2'
+        }
+        self.assertEqual(result, expected)
+
+
+class TestConvertDictValuesToFP32(unittest.TestCase):
+    def setUp(self):
+        self.key_list = ['value', "value1"]
+        self.sample_dict = {
+            'value': 42,
+            'value1': 'not_a_number' 
+        }
+
+    def test_normal_conversion(self):
+        """Test normal conversion of valid values to float32"""
+        result = convert_dict_values_to_fp32(self.key_list, self.sample_dict)
+        self.assertEqual(len(result), 2)
+        self.assertIsInstance(result['value'], np.float32)
+
+
+        
+class TestFillRowDataStatistics(unittest.TestCase):
+    def setUp(self):
+        # Create a basic data info mock
+        self.data_info = MagicMock()
+        self.data_info.golden_data_path = "/path/to/golden"
+        self.data_info.my_data_path = "/path/to/my"
+        self.data_info.to_dict.return_value = {
+            TOKEN_ID: "test_token",
+            DATA_ID: "test_data"
+        }
+
+    def test_my_file_not_exists(self):
+        """Test when my file doesn't exist"""
+        with patch('os.path.isfile', side_effect=[True, False]):
+            result = fill_row_data_statistics(self.data_info)
+            self.assertEqual(result[CMP_FAIL_REASON], f"my_data_path: {self.data_info.my_data_path} is not a file.")
+
+    def test_both_files_not_exist(self):
+        """Test when both files don't exist"""
+        with patch('os.path.isfile', return_value=False):
+            result = fill_row_data_statistics(self.data_info)
+            self.assertEqual(result[CMP_FAIL_REASON], f"golden_data_path: {self.data_info.golden_data_path} is not a file.")
+
+
+class TestSaveStatisticsCompareResultToCsv(unittest.TestCase):
+    def setUp(self):
+        # Create a temporary directory for test outputs
+        self.test_dir = tempfile.mkdtemp()
+        self.sample_data = [
+            {'token_id': '1', 'data_id': 'A', 'cmp_fail_reason': None},
+            {'token_id': '2', 'data_id': 'B', 'cmp_fail_reason': 'Mismatch'},
+            {'token_id': '3', 'data_id': 'C', 'cmp_fail_reason': None}
+        ]
+        self.columns = ['token_id', 'data_id', 'cmp_fail_reason']
+
+    def tearDown(self):
+        # Clean up the temporary directory
+        for root, dirs, files in os.walk(self.test_dir, topdown=False):
+            for name in files:
+                os.remove(os.path.join(root, name))
+            for name in dirs:
+                os.rmdir(os.path.join(root, name))
+        os.rmdir(self.test_dir)
+
+    def test_successful_save_with_filtering(self):
+        """Test that the function correctly saves data and filters out failed comparisons."""
+        output_path = save_statistics_compare_reault_to_csv(
+            self.sample_data, 
+            output_path=self.test_dir,
+            columns=self.columns
+        )
+        
+        # Verify file was created
+        self.assertTrue(os.path.exists(output_path))
+        
+        # Verify content
+        df = pd.read_csv(output_path)
+        self.assertEqual(len(df), 2)  # Should filter out the failed comparison
+        self.assertListEqual(df['token_id'].tolist(), [1, 3]) 
+
+    
+class TestSaveCompareResultToXlsx(unittest.TestCase):
+    def setUp(self):
+        # Create a temporary directory
+        self.test_dir = tempfile.mkdtemp()
+        self.columns = ["token_id", "data_id", "golden_dtype", "my_dtype", "cmp_fail_reason"]
+        
+        # Sample data for testing
+        self.sample_data = [
+            {
+                "token_id": "token1",
+                "data_id": "data1",
+                "golden_dtype": "torch.float32",
+                "my_dtype": "torch.float32",
+                "cmp_fail_reason": ""
+            },
+            {
+                "token_id": "token2",
+                "data_id": "data2",
+                "golden_dtype": "torch.int8",
+                "my_dtype": "torch.float32",
+                "cmp_fail_reason": ""
+            },
+            {
+                "token_id": "token3",
+                "data_id": "data3",
+                "golden_dtype": "torch.float32",
+                "my_dtype": "torch.float32",
+                "cmp_fail_reason": "data shape doesn't match."
+            }
+        ]
+
+    def tearDown(self):
+        # Remove the directory after the test
+        shutil.rmtree(self.test_dir)
+
+    def test_save_compare_result_success(self):
+        """Test successful saving of comparison results"""
+        sheet_names = ["layer"]
+        output_path = save_compare_reault_to_xlsx([self.sample_data], sheet_names, self.test_dir, self.columns)
+        
+        # Verify file was created
+        self.assertTrue(os.path.exists(output_path))
+        
+        # Verify content
+        df = pd.read_excel(output_path, sheet_name="layer")
+        self.assertEqual(len(df), 3)  # Should filter out int8 mismatch and shape mismatch
+
+    def test_directory_creation_failure(self):
+        """Test handling of directory creation failure"""
+        with patch('os.makedirs', side_effect=OSError("Permission denied")):
+            with self.assertRaises(OSError):
+                save_compare_reault_to_xlsx([self.sample_data], ["layer"], "/invalid/path", self.columns)
