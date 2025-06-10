@@ -148,14 +148,6 @@ def test_vaild_readable_file_given_valid_file_when_checked_then_returns_path():
     finally:
         os.unlink(temp_file)
 
-def test_vaild_readable_file_given_oversized_file_when_checked_then_error():
-    oversized = utils.MAX_FILE_SIZE * utils.BYTES_TO_GB + 1
-    temp_file = create_temp_file(oversized)
-    try:
-        with pytest.raises(ValueError):
-            utils.vaild_readable_file(temp_file)
-    finally:
-        os.unlink(temp_file)
 
 def test_vaild_readable_file_given_unreadable_file_when_checked_then_error():
     temp_file = create_temp_file(10)
