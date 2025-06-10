@@ -55,6 +55,7 @@ class QuantConfig:
                  group_size: int = 64,
                  percdamp: float = 0.01,
                  pdmix: bool = False,
+                 **kwargs,
                  ):
         """
         Args:
