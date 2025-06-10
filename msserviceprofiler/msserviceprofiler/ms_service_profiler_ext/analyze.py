@@ -16,16 +16,12 @@ import os
 import argparse
 from pathlib import Path
 
-from ms_service_profiler.parse import parse, preprocess_prof_folders
-from ms_service_profiler.exporters.factory import ExporterFactory
-from ms_service_profiler.exporters.utils import check_input_path_valid, check_output_path_valid, create_sqlite_db
-from ms_service_profiler.plugins import custom_plugins
-from ms_service_profiler.utils.log import set_log_level
-
-from ms_service_profiler_ext.exporters.exporter_summary import ExporterSummary
+from ms_service_profiler.exporters.utils import check_input_path_valid, check_output_path_valid
 
 
 def add_summary_exporter(func):
+    from ms_service_profiler_ext.exporters.exporter_summary import ExporterSummary
+
     def wrapper(args):
         default_exporters = func(args)
 
@@ -61,6 +57,12 @@ def arg_parse(subparsers):
 
 
 def main(args):
+    from ms_service_profiler.parse import parse, preprocess_prof_folders
+    from ms_service_profiler.plugins import custom_plugins
+    from ms_service_profiler.utils.log import set_log_level
+    from ms_service_profiler.exporters.factory import ExporterFactory
+    from ms_service_profiler.exporters.utils import create_sqlite_db
+
     # 初始化日志等级
     set_log_level(args.log_level)
 

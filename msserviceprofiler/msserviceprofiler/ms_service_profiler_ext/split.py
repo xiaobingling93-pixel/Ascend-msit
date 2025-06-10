@@ -16,16 +16,13 @@ import argparse
 from pathlib import Path
 import pandas as pd
 
-from ms_service_profiler.parse import parse, preprocess_prof_folders
 from ms_service_profiler.exporters.utils import check_input_path_valid, check_output_path_valid
-from ms_service_profiler.utils.log import set_log_level
-from ms_service_profiler.plugins import custom_plugins
-
-from ms_service_profiler_ext.exporters.exporter_prefill import ExporterPrefill
-from ms_service_profiler_ext.exporters.exporter_decode import ExporterDecode
 
 
 def add_exporters(args):
+    from ms_service_profiler_ext.exporters.exporter_prefill import ExporterPrefill
+    from ms_service_profiler_ext.exporters.exporter_decode import ExporterDecode
+
     if not hasattr(args, 'format'):
         args.format = 'csv'
     exporter_cls = []
@@ -73,6 +70,10 @@ def arg_parse(subparsers):
 
 
 def main(args):
+    from ms_service_profiler.parse import parse, preprocess_prof_folders
+    from ms_service_profiler.utils.log import set_log_level
+    from ms_service_profiler.plugins import custom_plugins
+
     # 初始化日志等级
     set_log_level(args.log_level)
 

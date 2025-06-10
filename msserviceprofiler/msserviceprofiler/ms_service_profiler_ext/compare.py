@@ -23,19 +23,15 @@ from contextlib import contextmanager
 
 import pandas as pd
 
-from msserviceprofiler.ms_service_profiler_ext.compare_tools import CSVComparator, DBComparator
-from msserviceprofiler.ms_service_profiler_ext.compare_tools.collector import FileCollector
 from msserviceprofiler.ms_service_profiler_ext.common.sec import list_dir_common_check
-
 from ms_service_profiler.exporters.utils import check_output_path_valid
-from ms_service_profiler.utils.log import set_log_level, logger
-from ms_service_profiler.utils.file_open_check import ms_open
 
 
 @contextmanager
 def connect_db(db_path):
-    connection = None
-    
+    from msserviceprofiler.ms_service_profiler_ext.compare_tools import CSVComparator, DBComparator
+
+    connection = None    
     try:
         connection = sqlite3.connect(db_path)
         yield connection
@@ -105,6 +101,10 @@ def arg_parse(subparsers):
 
 
 def main(args):
+    from ms_service_profiler.utils.log import set_log_level, logger
+    from ms_service_profiler.utils.file_open_check import ms_open
+    from msserviceprofiler.ms_service_profiler_ext.compare_tools.collector import FileCollector
+
     set_log_level(args.log_level)
     
     result_prefix = os.path.join(args.output_path, 'compare_result')
