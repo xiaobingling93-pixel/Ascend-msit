@@ -13,6 +13,7 @@
 # limitations under the License.
 import os
 import sys
+import unittest
 from unittest.mock import patch, MagicMock
 
 import pytest
@@ -174,3 +175,61 @@ def test_load_file_to_read_common_check_with_walk_given_valid_model_path_when_ch
 
     model_path = "test_dir"
     tf_common.load_file_to_read_common_check_with_walk(model_path)
+
+
+
+class TestCheckTFVersion(unittest.TestCase):
+
+    def setUp(self):
+        self.original_tensorflow = sys.modules.get("tensorflow", None)
+        sys.modules["tensorflow"] = MockTensorFlow()
+
+        from components.debug.compare.msquickcmp.common import tf_common
+        self.tf_common = tf_common
+
+    def tearDown(self):
+        if self.original_tensorflow is None:
+            del sys.modules["tensorflow"]
+        else:
+            sys.modules["tensorflow"] = self.original_tensorflow
+
+    def test_version_match(self):
+        self.tf_common.tf.__version__ = "2.10.0"
+        self.assertTrue(self.tf_common.check_tf_version("2"))
+
+    def test_version_not_match(self):
+        self.tf_common.tf.__version__ = "1.15.0"
+        self.assertFalse(self.tf_common.check_tf_version("2"))
+
+
+class TestGetInputsTensor(unittest.TestCase):
+
+    @patch("components.debug.compare.msquickcmp.common.tf_common.utils")
+    def test_get_inputs_tensor(self, mock_utils):
+        mock_utils.parse_input_shape.return_value = ["input_tensor"]
+        mock_utils.logger = MagicMock()
+        mock_utils.check_input_name_in_model = MagicMock()
+        mock_graph = MagicMock()
+
+        mock_op1 = MagicMock()
+        mock_op1.name = "input_tensor"
+        mock_op1.type = "Placeholder"
+
+        mock_op2 = MagicMock()
+        mock_op2.name = "other_tensor"
+        mock_op2.type = "NotPlaceholder"
+        mock_graph.get_operations.return_value = [mock_op1, mock_op2]
+        mock_tensor = MagicMock()
+        mock_graph.get_tensor_by_name.return_value = mock_tensor
+
+        with patch("components.debug.compare.msquickcmp.common.tf_common.verify_and_adapt_dynamic_shape") as mock_verify:
+            mock_verify.return_value = "mock_adapted_tensor"
+            from components.debug.compare.msquickcmp.common.tf_common import get_inputs_tensor
+            result = get_inputs_tensor(mock_graph, "shape_string")
+
+            mock_utils.parse_input_shape.assert_called_once_with("shape_string")
+            mock_utils.check_input_name_in_model.assert_called_once()
+            mock_graph.get_tensor_by_name.assert_called_once_with("input_tensor:0")
+            mock_verify.assert_called_once()
+
+            self.assertEqual(result, ["mock_adapted_tensor"])
