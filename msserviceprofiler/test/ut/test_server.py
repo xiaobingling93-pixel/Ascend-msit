@@ -3,9 +3,15 @@ import tempfile
 import os
 from pathlib import Path
 import numpy as np
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch, MagicMock, create_autospec
 from msserviceprofiler.modelevalstate.optimizer.server import get_file, RemoteScheduler, main
 
+# Mock the settings module
+mock_settings = Mock()
+mock_settings.mindie = "/path/to/mindie"
+mock_settings.target_field = ["field1", "field2", "field3"]
+@patch('msserviceprofiler.modelevalstate.optimizer.server.settings', mock_settings)
+@patch('msserviceprofiler.modelevalstate.optimizer.server.map_param_with_value')
 class TestGetFile(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.mkdtemp()
@@ -24,43 +30,46 @@ class TestGetFile(unittest.TestCase):
         import shutil
         shutil.rmtree(self.temp_dir)
 
-    def test_file_not_found(self):
+    def test_file_not_found(self, mock_map_param):
         with self.assertRaises(FileNotFoundError):
             get_file("non_existent_path")
 
-    def test_single_file(self):
+    def test_single_file(self, mock_map_param):
         result = get_file(self.test_file)
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0][0], "test.txt")
 
-    def test_directory(self):
+    def test_directory(self, mock_map_param):
         result = get_file(self.temp_dir)
         self.assertEqual(len(result), 2)  # Should find both files
 
-    def test_with_parent_name(self):
+    def test_with_parent_name(self, mock_map_param):
         result = get_file(self.test_file, parent_name="parent")
         self.assertEqual(result[0][0], "parent/test.txt")
 
-    def test_save_current_path(self):
+    def test_save_current_path(self, mock_map_param):
         result = get_file(self.nested_dir, save_current_path=True)
         self.assertTrue(any("nested/nested.txt" in file_info[0] for file_info in result))
 
+@patch('msserviceprofiler.modelevalstate.optimizer.server.settings', mock_settings)
+@patch('msserviceprofiler.modelevalstate.optimizer.server.map_param_with_value')
 class TestRemoteScheduler(unittest.TestCase):
     def setUp(self):
         self.scheduler = RemoteScheduler()
 
-    def test_init(self):
+    def test_init(self, mock_map_param):
         self.assertIsNone(self.scheduler.simulator)
 
     @patch('msserviceprofiler.modelevalstate.optimizer.server.Simulator')
-    def test_run_simulator(self, mock_simulator):
+    def test_run_simulator(self, mock_simulator, mock_map_param):
+        mock_map_param.return_value = [1, 2, 3]
         params = np.array([1, 2, 3])
         self.scheduler.run_simulator(params)
-        mock_simulator.assert_called_once()
+        mock_simulator.assert_called_once_with(mock_settings.mindie)
         self.assertIsNotNone(self.scheduler.simulator)
 
     @patch('msserviceprofiler.modelevalstate.optimizer.server.time.sleep')
-    def test_check_success(self, mock_sleep):
+    def test_check_success(self, mock_sleep, mock_map_param):
         # Test when simulator is None
         self.assertIsNone(self.scheduler.check_success())
 
@@ -75,7 +84,7 @@ class TestRemoteScheduler(unittest.TestCase):
         with self.assertRaises(Exception):
             self.scheduler.check_success()
 
-    def test_stop_simulator(self):
+    def test_stop_simulator(self, mock_map_param):
         # Test when simulator is None
         self.scheduler.stop_simulator()
 
@@ -84,7 +93,7 @@ class TestRemoteScheduler(unittest.TestCase):
         self.scheduler.stop_simulator(del_log=True)
         self.scheduler.simulator.stop.assert_called_once_with(True)
 
-    def test_process_poll(self):
+    def test_process_poll(self, mock_map_param):
         # Test when simulator is None
         self.assertIsNone(self.scheduler.process_poll())
 
@@ -93,23 +102,29 @@ class TestRemoteScheduler(unittest.TestCase):
         self.scheduler.simulator.process.poll.return_value = 0
         self.assertEqual(self.scheduler.process_poll(), 0)
 
+@patch('msserviceprofiler.modelevalstate.optimizer.server.settings', mock_settings)
+@patch('msserviceprofiler.modelevalstate.optimizer.server.map_param_with_value')
 class TestMain(unittest.TestCase):
     @patch('msserviceprofiler.modelevalstate.optimizer.server.SimpleXMLRPCServer')
-    def test_main_server_setup(self, mock_server):
+    def test_main_server_setup(self, mock_server, mock_map_param):
         # Mock server instance
         mock_server_instance = MagicMock()
         mock_server.return_value.__enter__.return_value = mock_server_instance
 
-        # Test normal server start
-        main('localhost', 8000)
+        # Mock remove_file function
+        mock_remove_file = Mock()
+        with patch('msserviceprofiler.modelevalstate.optimizer.server.remove_file', mock_remove_file):
+            # Test normal server start
+            main('localhost', 8000)
 
         # Verify server setup
         mock_server_instance.register_introspection_functions.assert_called_once()
         mock_server_instance.register_function.assert_any_call(get_file)
+        mock_server_instance.register_function.assert_any_call(mock_remove_file)
         mock_server_instance.serve_forever.assert_called_once()
 
     @patch('msserviceprofiler.modelevalstate.optimizer.server.SimpleXMLRPCServer')
-    def test_main_keyboard_interrupt(self, mock_server):
+    def test_main_keyboard_interrupt(self, mock_server, mock_map_param):
         # Mock server to raise KeyboardInterrupt
         mock_server_instance = MagicMock()
         mock_server_instance.serve_forever.side_effect = KeyboardInterrupt()
