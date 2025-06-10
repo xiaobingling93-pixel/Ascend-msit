@@ -1,5 +1,6 @@
 import pytest
 import numpy as np
+from collections import namedtuple
 from unittest.mock import patch, MagicMock
 
 from msserviceprofiler.msservice_advisor.profiling_analyze import base_analyze
@@ -129,7 +130,7 @@ def test_check_prefill_latency_given_throughput_target_and_support_select_batch_
         test_config,
         benchmark_data,
         "",
-        {"target": TARGETS.Throughput}
+        namedtuple('test', ["target"])(TARGETS.Throughput)
     )
     
     assert ("set to True", "开启 supportSelectBatch 可降低首 Throughput 时延") in \
@@ -144,7 +145,7 @@ def test_check_prefill_latency_given_empty_results_when_called_then_no_crash():
         test_config,
         benchmark_data,
         "",
-        {"target": TARGETS.FirstTokenTime}
+        namedtuple('test', ["target"])(TARGETS.FirstTokenTime)
     )
 
 # Test registration of analyze functions
@@ -174,7 +175,7 @@ def test_check_prefill_latency_with_single_latency_value():
             test_config,
             benchmark_data,
             "",
-            {"target": TARGETS.FirstTokenTime}
+            namedtuple('test', ["target"])(TARGETS.FirstTokenTime)
         )
         
         # Should still log histogram info
@@ -200,5 +201,5 @@ def test_check_prefill_latency_with_missing_latency_values():
         test_config,
         benchmark_data,
         "",
-        {"target": TARGETS.FirstTokenTime}
+        namedtuple('test', ["target"])(TARGETS.FirstTokenTime)
     )
