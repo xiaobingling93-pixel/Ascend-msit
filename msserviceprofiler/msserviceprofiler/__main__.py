@@ -22,7 +22,10 @@ def main():
     from msserviceprofiler.modelevalstate.train import source_to_train
     from msserviceprofiler.modelevalstate.optimizer import optimizer
     
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, description="msserviceprofiler command line tool")
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        description="[MindStudio] msserviceprofiler command line tool"
+    )
     subparsers = parser.add_subparsers(help="sub-command help")
 
     source_to_train.arg_parse(subparsers)
