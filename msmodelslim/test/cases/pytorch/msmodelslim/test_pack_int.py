@@ -1,7 +1,7 @@
 import unittest
 import torch
 
-from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.save.complex_quantifier import _pack_int4, _w4a16_pack_int4, process_scale
+from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.save.complex_quantifier import _pack_int4, _w4a16_pack_int4, _w4a8_pack_int4, process_scale
 
 
 class TestComplexQuantifier(unittest.TestCase):
