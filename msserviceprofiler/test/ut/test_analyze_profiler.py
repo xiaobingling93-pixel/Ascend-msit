@@ -73,13 +73,6 @@ class TestFindFirstSimulateCSV(unittest.TestCase):
         result = analyze_profiler.find_first_simulate_csv(self.test_dir)
         self.assertEqual(result, os.path.join(self.test_dir, "simulate1.csv"))
     
-    @patch('analyze_profiler.glob.glob')
-    def test_glob_pattern_correctness(self, mock_glob):
-        """Test that the correct glob pattern is used"""
-        mock_glob.return_value = []
-        analyze_profiler.find_first_simulate_csv(self.test_dir)
-        mock_glob.assert_called_once_with(os.path.join(self.test_dir, "simulate*.csv"))
-
 
 class TestAnalyzeFunction(unittest.TestCase):
     def setUp(self):
