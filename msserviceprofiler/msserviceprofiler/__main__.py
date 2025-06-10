@@ -22,7 +22,7 @@ def main():
     from msserviceprofiler.ms_service_profiler_ext import compare, split, analyze
     from msserviceprofiler.msservice_advisor import advisor
     from msserviceprofiler.modelevalstate.train import source_to_train
-    from import msserviceprofiler.modelevalstate.optimizer import optimizer
+    from msserviceprofiler.modelevalstate.optimizer import optimizer
     
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, description="msserviceprofiler command line tool")
     subparsers = parser.add_subparsers(help="sub-command help")
