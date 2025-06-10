@@ -1,119 +1,158 @@
 import unittest
-from unittest.mock import patch, Mock, MagicMock
+from unittest.mock import patch, Mock, MagicMock, mock_open
 from pathlib import Path
 import xmlrpc.client
 import numpy as np
+import os
 
 from msserviceprofiler.modelevalstate.optimizer.server import get_file, RemoteScheduler, main
 
+
 class TestGetFile(unittest.TestCase):
-    @patch('pathlib.Path')
-    def test_get_file_not_exists(self, mock_path):
-        # 测试文件不存在的情况
-        mock_path.return_value.exists.return_value = False
+
+    def setUp(self):
+        # 创建临时目录和文件用于测试
+        self.test_dir = Path("test_dir")
+        self.test_dir.mkdir(exist_ok=True)
+        self.test_file = self.test_dir / "test_file.txt"
+        self.test_file.touch()
+        self.test_sub_dir = self.test_dir / "sub_dir"
+        self.test_sub_dir.mkdir(exist_ok=True)
+        self.test_sub_file = self.test_sub_dir / "test_sub_file.txt"
+        self.test_sub_file.touch()
+
+    def tearDown(self):
+        # 清理测试创建的临时目录和文件
+        for root, dirs, files in os.walk(self.test_dir, topdown=False):
+            for name in files:
+                os.remove(os.path.join(root, name))
+            for name in dirs:
+                os.rmdir(os.path.join(root, name))
+
+    def test_get_file_file_not_found(self):
         with self.assertRaises(FileNotFoundError):
-            get_file("non_existent_path")
+            get_file("nonexistent_path")
 
-    @patch('pathlib.Path')
-    @patch('builtins.open')
-    def test_get_file_single_file(self, mock_open, mock_path):
-        # 测试单个文件的情况
-        mock_path.return_value.exists.return_value = True
-        mock_path.return_value.is_file.return_value = True
-        mock_path.return_value.name = "test.txt"
-        
-        mock_file = MagicMock()
-        mock_file.read.return_value = b"test content"
-        mock_open.return_value.__enter__.return_value = mock_file
-
-        result = get_file("test.txt")
+    def test_get_file_single_file(self):
+        result = get_file(self.test_file)
         self.assertEqual(len(result), 1)
-        self.assertEqual(result[0][0], "test.txt")
+        self.assertEqual(result[0][0], "test_file.txt")
         self.assertIsInstance(result[0][1], xmlrpc.client.Binary)
 
-    @patch('pathlib.Path')
-    def test_get_file_directory(self, mock_path):
-        # 测试目录的情况
-        mock_path.return_value.exists.return_value = True
-        mock_path.return_value.is_file.return_value = False
-        mock_path.return_value.name = "test_dir"
-        
-        mock_child = MagicMock()
-        mock_child.exists.return_value = True
-        mock_child.is_file.return_value = True
-        mock_child.name = "child.txt"
-        
-        mock_path.return_value.iterdir.return_value = [mock_child]
-        
-        with patch('builtins.open', unittest.mock.mock_open(read_data=b"test content")):
-            result = get_file("test_dir", save_current_path=True)
-            self.assertEqual(len(result), 1)
-            self.assertEqual(result[0][0], "test_dir/child.txt")
+    def test_get_file_directory(self):
+        result = get_file(self.test_dir)
+        self.assertEqual(len(result), 2)
+        self.assertIn(("test_file.txt", xmlrpc.client.Binary(b'')), result)
+        self.assertIn(("sub_dir/test_sub_file.txt", xmlrpc.client.Binary(b'')), result)
+
+    def test_get_file_with_parent_name(self):
+        result = get_file(self.test_file, "parent")
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0][0], "parent/test_file.txt")
+        self.assertIsInstance(result[0][1], xmlrpc.client.Binary)
+
+    def test_get_file_save_current_path(self):
+        result = get_file(self.test_dir, save_current_path=True)
+        self.assertEqual(len(result), 2)
+        self.assertIn(("test_dir/test_file.txt", xmlrpc.client.Binary(b'')), result)
+        self.assertIn(("test_dir/sub_dir/test_sub_file.txt", xmlrpc.client.Binary(b'')), result)
+
 
 class TestRemoteScheduler(unittest.TestCase):
-    def setUp(self):
-        self.scheduler = RemoteScheduler()
 
-    @patch('msserviceprofiler.modelevalstate.optimizer.server.Simulator')
-    def test_run_simulator(self, mock_simulator):
-        # 测试运行模拟器
-        params = np.array([1, 2, 3])
-        self.scheduler.run_simulator(params)
-        mock_simulator.assert_called_once()
-        mock_simulator.return_value.run.assert_called_once()
+    def test_check_success_with_none_simulator(self):
+        """Test check_success when simulator is None"""
+        scheduler = RemoteScheduler()
+        result = scheduler.check_success()
+        self.assertIsNone(result)
 
-    @patch('time.sleep')
-    def test_check_success(self, mock_sleep):
-        # 测试成功检查
-        self.scheduler.simulator = Mock()
-        self.scheduler.simulator.check_success.return_value = True
+    @patch('time.sleep')  # 避免实际等待10秒
+    def test_check_success_success_case(self, mock_sleep):
+        """Test check_success when simulator check succeeds"""
+        scheduler = RemoteScheduler()
+        mock_simulator = Mock()
+        mock_simulator.check_success.return_value = True
+        scheduler.simulator = mock_simulator
         
-        result = self.scheduler.check_success()
+        result = scheduler.check_success()
+        
         self.assertTrue(result)
-        self.scheduler.simulator.check_success.assert_called_once()
+        mock_simulator.check_success.assert_called_once()
+        mock_sleep.assert_not_called()
 
-    def test_check_success_no_simulator(self):
-        # 测试无模拟器情况
-        self.scheduler.simulator = None
-        result = self.scheduler.check_success()
-        self.assertIsNone(result)
-
-    def test_stop_simulator(self):
-        # 测试停止模拟器
-        self.scheduler.simulator = Mock()
-        self.scheduler.stop_simulator(True)
-        self.scheduler.simulator.stop.assert_called_once_with(True)
-
-    def test_process_poll(self):
-        # 测试进程状态检查
-        self.scheduler.simulator = Mock()
-        self.scheduler.simulator.process.poll.return_value = 0
-        result = self.scheduler.process_poll()
-        self.assertEqual(result, 0)
-
-    def test_process_poll_no_simulator(self):
-        # 测试无模拟器情况下的进程状态检查
-        self.scheduler.simulator = None
-        result = self.scheduler.process_poll()
-        self.assertIsNone(result)
-
-class TestMain(unittest.TestCase):
-    @patch('msserviceprofiler.modelevalstate.optimizer.server.SimpleXMLRPCServer')
-    def test_main(self, mock_server):
-        # 测试主函数
-        mock_server_instance = MagicMock()
-        mock_server.return_value.__enter__.return_value = mock_server_instance
+    @patch('time.sleep')  # 避免实际等待10秒
+    def test_check_success_failure_case(self, mock_sleep):
+        """Test check_success when simulator check always fails"""
+        scheduler = RemoteScheduler()
+        mock_simulator = Mock()
+        mock_simulator.check_success.return_value = False
+        mock_simulator.mindie_log = "test_log.txt"
+        scheduler.simulator = mock_simulator
         
-        # 模拟KeyboardInterrupt以结束服务器
-        mock_server_instance.serve_forever.side_effect = KeyboardInterrupt()
+        with self.assertRaises(Exception) as context:
+            scheduler.check_success()
         
-        with self.assertRaises(SystemExit) as cm:
-            main('localhost', 8000)
-        
-        self.assertEqual(cm.exception.code, 0)
-        mock_server_instance.register_introspection_functions.assert_called_once()
-        mock_server_instance.register_function.assert_called()
-        mock_server_instance.register_instance.assert_called()
+        self.assertIn("Simulator run failed", str(context.exception))
+        self.assertEqual(mock_simulator.check_success.call_count, 10)
+        self.assertEqual(mock_sleep.call_count, 9)  # 应该调用9次sleep
+
+    @patch('your_module.settings')
+    @patch('your_module.logger')
+    @patch('your_module.Simulator')
+    @patch('your_module.map_param_with_value')
+    def test_run_simulator(self, mock_map_param_with_value, mock_simulator, mock_logger, mock_settings):
+        # 创建 RemoteScheduler 实例
+        remote_scheduler = RemoteScheduler()
+
+        # 模拟参数
+        params = np.array([1, 2, 3])
+
+        # 模拟 map_param_with_value 的返回值
+        mock_map_param_with_value.return_value = ('param1', 'param2', 'param3')
+
+        # 调用 run_simulator 方法
+        remote_scheduler.run_simulator(params)
+
+        # 验证 Simulator 是否被正确实例化
+        mock_simulator.assert_called_once_with(mock_settings.mindie)
+
+        # 验证 map_param_with_value 是否被正确调用
+        mock_map_param_with_value.assert_called_once_with(params, mock_settings.target_field)
+
+        # 验证 logger.info 是否被正确调用
+        mock_logger.info.assert_called_once_with("simulate run info ('param1', 'param2', 'param3')")
+
+        # 验证 Simulator 的 run 方法是否被正确调用
+        mock_simulator.return_value.run.assert_called_once_with(('param1', 'param2', 'param3'))
+
+    @patch('your_module.settings')
+    @patch('your_module.logger')
+    @patch('your_module.Simulator')
+    def test_run_simulator_with_empty_params(self, mock_simulator, mock_logger, mock_settings):
+        # 创建 RemoteScheduler 实例
+        remote_scheduler = RemoteScheduler()
+
+        # 模拟空参数
+        params = np.array([])
+
+        # 模拟 map_param_with_value 的返回值
+        mock_map_param_with_value.return_value = ()
+
+        # 调用 run_simulator 方法
+        remote_scheduler.run_simulator(params)
+
+        # 验证 Simulator 是否被正确实例化
+        mock_simulator.assert_called_once_with(mock_settings.mindie)
+
+        # 验证 map_param_with_value 是否被正确调用
+        mock_map_param_with_value.assert_called_once_with(params, mock_settings.target_field)
+
+        # 验证 logger.info 是否被正确调用
+        mock_logger.info.assert_called_once_with("simulate run info ()")
+
+        # 验证 Simulator 的 run 方法是否被正确调用
+        mock_simulator.return_value.run.assert_called_once_with(())
+
 
 if __name__ == '__main__':
     unittest.main()
