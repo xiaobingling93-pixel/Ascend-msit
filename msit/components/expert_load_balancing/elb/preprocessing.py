@@ -101,7 +101,7 @@ def convert(data):
         return data.item()  # 转为 Python 原生 int/float
     elif isinstance(data, np.ndarray):
         return data.tolist()  # 如果是 numpy array，转 list
-    raise TypeError(f"Object of type {type(o)} is not JSON serializable")
+    raise TypeError(f"Object of type {type(data)} is not JSON serializable")
 
 
 def generate_json(data, new_args):
