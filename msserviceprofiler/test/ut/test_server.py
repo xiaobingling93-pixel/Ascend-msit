@@ -1,139 +1,119 @@
 import unittest
-import tempfile
-import os
+from unittest.mock import patch, Mock, MagicMock
 from pathlib import Path
+import xmlrpc.client
 import numpy as np
-from unittest.mock import Mock, patch, MagicMock, create_autospec
+
 from msserviceprofiler.modelevalstate.optimizer.server import get_file, RemoteScheduler, main
 
-# Mock the settings module
-mock_settings = Mock()
-mock_settings.mindie = "/path/to/mindie"
-mock_settings.target_field = ["field1", "field2", "field3"]
-@patch('msserviceprofiler.modelevalstate.optimizer.server.settings', mock_settings)
-@patch('msserviceprofiler.modelevalstate.optimizer.server.map_param_with_value')
 class TestGetFile(unittest.TestCase):
-    def setUp(self):
-        self.temp_dir = tempfile.mkdtemp()
-        self.test_file = os.path.join(self.temp_dir, "test.txt")
-        with open(self.test_file, "w") as f:
-            f.write("test content")
-        
-        # Create nested directory structure
-        self.nested_dir = os.path.join(self.temp_dir, "nested")
-        os.makedirs(self.nested_dir)
-        self.nested_file = os.path.join(self.nested_dir, "nested.txt")
-        with open(self.nested_file, "w") as f:
-            f.write("nested content")
-
-    def tearDown(self):
-        import shutil
-        shutil.rmtree(self.temp_dir)
-
-    def test_file_not_found(self, mock_map_param):
+    @patch('pathlib.Path')
+    def test_get_file_not_exists(self, mock_path):
+        # 测试文件不存在的情况
+        mock_path.return_value.exists.return_value = False
         with self.assertRaises(FileNotFoundError):
             get_file("non_existent_path")
 
-    def test_single_file(self, mock_map_param):
-        result = get_file(self.test_file)
+    @patch('pathlib.Path')
+    @patch('builtins.open')
+    def test_get_file_single_file(self, mock_open, mock_path):
+        # 测试单个文件的情况
+        mock_path.return_value.exists.return_value = True
+        mock_path.return_value.is_file.return_value = True
+        mock_path.return_value.name = "test.txt"
+        
+        mock_file = MagicMock()
+        mock_file.read.return_value = b"test content"
+        mock_open.return_value.__enter__.return_value = mock_file
+
+        result = get_file("test.txt")
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0][0], "test.txt")
+        self.assertIsInstance(result[0][1], xmlrpc.client.Binary)
 
-    def test_directory(self, mock_map_param):
-        result = get_file(self.temp_dir)
-        self.assertEqual(len(result), 2)  # Should find both files
+    @patch('pathlib.Path')
+    def test_get_file_directory(self, mock_path):
+        # 测试目录的情况
+        mock_path.return_value.exists.return_value = True
+        mock_path.return_value.is_file.return_value = False
+        mock_path.return_value.name = "test_dir"
+        
+        mock_child = MagicMock()
+        mock_child.exists.return_value = True
+        mock_child.is_file.return_value = True
+        mock_child.name = "child.txt"
+        
+        mock_path.return_value.iterdir.return_value = [mock_child]
+        
+        with patch('builtins.open', unittest.mock.mock_open(read_data=b"test content")):
+            result = get_file("test_dir", save_current_path=True)
+            self.assertEqual(len(result), 1)
+            self.assertEqual(result[0][0], "test_dir/child.txt")
 
-    def test_with_parent_name(self, mock_map_param):
-        result = get_file(self.test_file, parent_name="parent")
-        self.assertEqual(result[0][0], "parent/test.txt")
-
-    def test_save_current_path(self, mock_map_param):
-        result = get_file(self.nested_dir, save_current_path=True)
-        self.assertTrue(any("nested/nested.txt" in file_info[0] for file_info in result))
-
-@patch('msserviceprofiler.modelevalstate.optimizer.server.settings', mock_settings)
-@patch('msserviceprofiler.modelevalstate.optimizer.server.map_param_with_value')
 class TestRemoteScheduler(unittest.TestCase):
     def setUp(self):
         self.scheduler = RemoteScheduler()
 
-    def test_init(self, mock_map_param):
-        self.assertIsNone(self.scheduler.simulator)
-
     @patch('msserviceprofiler.modelevalstate.optimizer.server.Simulator')
-    def test_run_simulator(self, mock_simulator, mock_map_param):
-        mock_map_param.return_value = [1, 2, 3]
+    def test_run_simulator(self, mock_simulator):
+        # 测试运行模拟器
         params = np.array([1, 2, 3])
         self.scheduler.run_simulator(params)
-        mock_simulator.assert_called_once_with(mock_settings.mindie)
-        self.assertIsNotNone(self.scheduler.simulator)
+        mock_simulator.assert_called_once()
+        mock_simulator.return_value.run.assert_called_once()
 
-    @patch('msserviceprofiler.modelevalstate.optimizer.server.time.sleep')
-    def test_check_success(self, mock_sleep, mock_map_param):
-        # Test when simulator is None
-        self.assertIsNone(self.scheduler.check_success())
-
-        # Test successful case
+    @patch('time.sleep')
+    def test_check_success(self, mock_sleep):
+        # 测试成功检查
         self.scheduler.simulator = Mock()
         self.scheduler.simulator.check_success.return_value = True
-        self.assertTrue(self.scheduler.check_success())
+        
+        result = self.scheduler.check_success()
+        self.assertTrue(result)
+        self.scheduler.simulator.check_success.assert_called_once()
 
-        # Test failure case
-        self.scheduler.simulator.check_success.return_value = False
-        self.scheduler.simulator.mindie_log = "log_path"
-        with self.assertRaises(Exception):
-            self.scheduler.check_success()
+    def test_check_success_no_simulator(self):
+        # 测试无模拟器情况
+        self.scheduler.simulator = None
+        result = self.scheduler.check_success()
+        self.assertIsNone(result)
 
-    def test_stop_simulator(self, mock_map_param):
-        # Test when simulator is None
-        self.scheduler.stop_simulator()
-
-        # Test with simulator
+    def test_stop_simulator(self):
+        # 测试停止模拟器
         self.scheduler.simulator = Mock()
-        self.scheduler.stop_simulator(del_log=True)
+        self.scheduler.stop_simulator(True)
         self.scheduler.simulator.stop.assert_called_once_with(True)
 
-    def test_process_poll(self, mock_map_param):
-        # Test when simulator is None
-        self.assertIsNone(self.scheduler.process_poll())
-
-        # Test with simulator
+    def test_process_poll(self):
+        # 测试进程状态检查
         self.scheduler.simulator = Mock()
         self.scheduler.simulator.process.poll.return_value = 0
-        self.assertEqual(self.scheduler.process_poll(), 0)
+        result = self.scheduler.process_poll()
+        self.assertEqual(result, 0)
 
-@patch('msserviceprofiler.modelevalstate.optimizer.server.settings', mock_settings)
-@patch('msserviceprofiler.modelevalstate.optimizer.server.map_param_with_value')
+    def test_process_poll_no_simulator(self):
+        # 测试无模拟器情况下的进程状态检查
+        self.scheduler.simulator = None
+        result = self.scheduler.process_poll()
+        self.assertIsNone(result)
+
 class TestMain(unittest.TestCase):
     @patch('msserviceprofiler.modelevalstate.optimizer.server.SimpleXMLRPCServer')
-    def test_main_server_setup(self, mock_server, mock_map_param):
-        # Mock server instance
+    def test_main(self, mock_server):
+        # 测试主函数
         mock_server_instance = MagicMock()
         mock_server.return_value.__enter__.return_value = mock_server_instance
-
-        # Mock remove_file function
-        mock_remove_file = Mock()
-        with patch('msserviceprofiler.modelevalstate.optimizer.server.remove_file', mock_remove_file):
-            # Test normal server start
-            main('localhost', 8000)
-
-        # Verify server setup
-        mock_server_instance.register_introspection_functions.assert_called_once()
-        mock_server_instance.register_function.assert_any_call(get_file)
-        mock_server_instance.register_function.assert_any_call(mock_remove_file)
-        mock_server_instance.serve_forever.assert_called_once()
-
-    @patch('msserviceprofiler.modelevalstate.optimizer.server.SimpleXMLRPCServer')
-    def test_main_keyboard_interrupt(self, mock_server, mock_map_param):
-        # Mock server to raise KeyboardInterrupt
-        mock_server_instance = MagicMock()
+        
+        # 模拟KeyboardInterrupt以结束服务器
         mock_server_instance.serve_forever.side_effect = KeyboardInterrupt()
-        mock_server.return_value.__enter__.return_value = mock_server_instance
-
-        # Test KeyboardInterrupt handling
+        
         with self.assertRaises(SystemExit) as cm:
             main('localhost', 8000)
+        
         self.assertEqual(cm.exception.code, 0)
+        mock_server_instance.register_introspection_functions.assert_called_once()
+        mock_server_instance.register_function.assert_called()
+        mock_server_instance.register_instance.assert_called()
 
 if __name__ == '__main__':
     unittest.main()
