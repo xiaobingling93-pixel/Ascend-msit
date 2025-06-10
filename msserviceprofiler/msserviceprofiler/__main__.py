@@ -17,21 +17,25 @@ from pathlib import Path
 
 from msserviceprofiler.modelevalstate.config.config import DeployPolicy, BenchMarkPolicy
 
-import msserviceprofiler.modelevalstate.optimizer.optimizer as optimizer
-import msserviceprofiler.modelevalstate.train.source_to_train as train
+
+_RUN_MODES = ["train", "optimizer", "advisor"]
+RUN_MODES = namedtuple("RUN_MODES", _RUN_MODES)(*_RUN_MODES)
+COMMON_ARGS = []
+
+def run_train(args, **kwargs):
+    from msserviceprofiler.modelevalstate.train import source_to_train
+    source_to_train.main(args)
 
 
-def main():
-    parser = argparse.ArgumentParser(description="msserviceprofiler command line tool")
+def sub_parser_train(subparsers):
+    parser = subparsers.add_parser(
+        RUN_MODES.train, formatter_class=argparse.ArgumentDefaultsHelpFormatter, help="train for auto optimize"
+    )
 
-    # 创建子命令解析器
-    subparsers = parser.add_subparsers(dest="command", help="sub-command help")
-
-    # 创建 train 子命令解析器
-    parser_train = subparsers.add_parser("train", help="train help")
-    parser_train.add_argument("-i", "--input", default=None, type=Path, required=True)
-    parser_train.add_argument("-o", "--output", default=Path("output"), type=Path)
-    parser_train.add_argument(
+    parser = subparsers.add_parser("train", help="train help")
+    parser.add_argument("-i", "--input", default=None, type=Path, required=True)
+    parser.add_argument("-o", "--output", default=Path("output"), type=Path)
+    parser.add_argument(
         "-t", 
         "--type", 
         type=str, 
@@ -39,26 +43,70 @@ def main():
         default="mindie",
         help="Specify the type, either 'vllm' or 'mindie' (default: mindie)"
     )
-    # 创建 optimizer 子命令解析器
-    parser_optimizer = subparsers.add_parser("optimizer", help="optimizer help")
-    parser_optimizer.add_argument("-lb", "--load_breakpoint", default=False, action="store_true",
+    for ii in COMMON_ARGS:
+        parser.add_argument(*ii.get("args", []), **ii.get("kwargs", {}))
+    parser.set_defaults(func=run_train)
+
+
+def run_optimizer(args, **kwargs):
+    from import msserviceprofiler.modelevalstate.optimizer import optimizer
+    optimizer.main(args)
+
+
+def sub_parser_optimizer(subparsers):
+    parser = subparsers.add_parser(
+        RUN_MODES.optimizer, formatter_class=argparse.ArgumentDefaultsHelpFormatter, help="optimize for performance"
+    )
+
+    parser.add_argument("-lb", "--load_breakpoint", action="store_true",
                         help="Continue from where the last optimization was aborted.")
-    parser_optimizer.add_argument("-d", "--deploy_policy", default=DeployPolicy.single.value,
+    parser.add_argument("-d", "--deploy_policy", default=DeployPolicy.single.value,
                         choices=[k.value for k in list(DeployPolicy)],
                         help="Indicates whether the multi-node running policy is used.")
-    parser_optimizer.add_argument("--backup", default=False, action="store_true",
+    parser.add_argument("--backup", default=False, action="store_true",
                         help="Whether to back up data.")
-    parser_optimizer.add_argument("-b", "--benchmark_policy", default=BenchMarkPolicy.benchmark.value,
+    parser.add_argument("-b", "--benchmark_policy", default=BenchMarkPolicy.benchmark.value,
                         choices=[k.value for k in list(BenchMarkPolicy)],
                         help="Whether to use custom performance indicators.")
-    # 解析命令行参数
-    args = parser.parse_args()
+    for ii in COMMON_ARGS:
+        parser.add_argument(*ii.get("args", []), **ii.get("kwargs", {}))
+    parser.set_defaults(func=run_optimizer)
 
-    # 根据子命令执行相应的操作
-    if args.command == "train":
-        train.main(args)
-    elif args.command == "optimizer":
-        optimizer.main(args)
+
+def run_advisor(args, **kwargs):
+    from import msserviceprofiler.modelevalstate.optimizer import optimizer
+    optimizer.main(args)
+
+
+def sub_parser_advisor(subparsers):
+    parser = subparsers.add_parser(
+        RUN_MODES.advisor, formatter_class=argparse.ArgumentDefaultsHelpFormatter, help="advisor for performance"
+    )
+
+    parser.add_argument("-lb", "--load_breakpoint", action="store_true",
+                        help="Continue from where the last optimization was aborted.")
+    parser.add_argument("-d", "--deploy_policy", default=DeployPolicy.single.value,
+                        choices=[k.value for k in list(DeployPolicy)],
+                        help="Indicates whether the multi-node running policy is used.")
+    parser.add_argument("--backup", default=False, action="store_true",
+                        help="Whether to back up data.")
+    parser.add_argument("-b", "--benchmark_policy", default=BenchMarkPolicy.benchmark.value,
+                        choices=[k.value for k in list(BenchMarkPolicy)],
+                        help="Whether to use custom performance indicators.")
+    for ii in COMMON_ARGS:
+        parser.add_argument(*ii.get("args", []), **ii.get("kwargs", {}))
+    parser.set_defaults(func=run_optimizer)
+
+def main():
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, description="msserviceprofiler command line tool")
+    subparsers = parser.add_subparsers(help="sub-command help")
+    sub_parser_train(subparsers)
+    sub_parser_optimizer(subparsers)
+    args, _ = parser.parse_known_args()
+
+    # run
+    if hasattr(args, "func"):
+        args.func(args=args, **vars(args))
     else:
         parser.print_help()
 
