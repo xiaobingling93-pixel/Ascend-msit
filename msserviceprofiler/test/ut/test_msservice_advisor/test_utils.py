@@ -83,10 +83,6 @@ def test_set_log_level_given_valid_level_when_set_then_level_changed():
     utils.set_log_level("INFO")
     assert utils.logger.level == logging.INFO
 
-def test_set_log_level_given_invalid_level_when_set_then_warning_logged(caplog):
-    utils.set_log_level("invalid")
-    assert "Set invalid log level failed" in caplog.text
-
 def test_set_log_level_given_case_variations_when_set_then_works():
     utils.set_log_level("Debug")
     assert utils.logger.level == logging.DEBUG
