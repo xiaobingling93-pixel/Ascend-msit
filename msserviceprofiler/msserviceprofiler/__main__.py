@@ -20,7 +20,7 @@ from msserviceprofiler.modelevalstate.config.config import DeployPolicy, BenchMa
 
 def main():
     from msserviceprofiler.ms_service_profiler_ext import compare, split, analyze
-    from msserviceprofiler.msservice_advisor import __main__ as advisor
+    from msserviceprofiler.msservice_advisor import advisor
     from msserviceprofiler.modelevalstate.train import source_to_train
     from import msserviceprofiler.modelevalstate.optimizer import optimizer
     
