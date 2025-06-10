@@ -19,8 +19,8 @@ from collections import namedtuple
 from glob import glob
 from dataclasses import dataclass
 
-from msservice_advisor.profiling_analyze.utils import TARGETS, LOG_LEVELS, SUGGESTION_TYPES
-from msservice_advisor.profiling_analyze.utils import str_ignore_case, logger, set_log_level
+from msserviceprofiler.msservice_advisor.profiling_analyze.utils import TARGETS, LOG_LEVELS, SUGGESTION_TYPES
+from msserviceprofiler.msservice_advisor.profiling_analyze.utils import str_ignore_case, logger, set_log_level
 
 # {"21559056a7ff44c88a891ecbb537c431": "0", ...}
 REQ_TO_DATA_MAP_PATTERN = "req_to_data_map.json"
@@ -164,8 +164,8 @@ def parse_mindie_server_config(service_config_path):
 
 
 def analyze(mindie_service_config, benchmark_instance, mindie_server_log_path, params: ProfilingParameters):
-    import msservice_advisor.profiling_analyze
-    from msservice_advisor.profiling_analyze.register import REGISTRY, ANSWERS
+    import msserviceprofiler.msservice_advisor.profiling_analyze
+    from msserviceprofiler.msservice_advisor.profiling_analyze.register import REGISTRY, ANSWERS
 
     logger.info("")
     logger.info("<think>")
@@ -201,17 +201,14 @@ def check_positive_integer(value):
     return value
 
 
-""" arg_parse """
-
-
-def arg_parse(argv):
-    import argparse
-
+def arg_parse(subparsers):
     mindie_service_path = os.getenv(MIES_INSTALL_PATH, MINDIE_SERVICE_DEFAULT_PATH)
 
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = subparsers.add_parser(
+        "advisor", formatter_class=argparse.ArgumentDefaultsHelpFormatter, help="advisor for performance"
+    )
     parser.add_argument(
-        "-i", "--instance_path", type=str, default="instance", help="benchamrk instance output directory", required=True
+        "-i", "--instance_path", type=str, default="instance", help="benchamrk instance output directory"
     )
     parser.add_argument(
         "-s", "--service_config_path", type=str, default=mindie_service_path, help="service config json path"
@@ -232,52 +229,20 @@ def arg_parse(argv):
         choices=PERF_METRICS,
         help="profiling key target metrics",
     )
-    parser.add_argument("--log_level", "-l", default="info", choices=LOG_LEVELS_LOWER, help="specify log level.")
-
-    parser.add_argument(
-        "--show",
-        action='store_true',
-        help="control to show the plot",
-    )
-
     parser.add_argument(
         "-in", "--input_token_num", type=check_positive_integer, default=0, help="input token number"
     )
-
     parser.add_argument(
         "-out", "--output_token_num", type=check_positive_integer, default=0, help="output token number"
     )
-
-    parser.add_argument(
-        "-tp", "--tp", type=check_positive_integer, default=0, help="tp"
-    )
-
-    return parser.parse_known_args(argv)[0]
+    parser.add_argument("-tp", "--tp", type=check_positive_integer, default=0, help="tp")
+    parser.add_argument("--log_level", "-l", default="info", choices=LOG_LEVELS_LOWER, help="specify log level.")
+    parser.set_defaults(func=main)
 
 
-def main():
-    import sys
-    try:
-        import matplotlib.pyplot as plt
-    except ImportError as e:
-        logger.warning(f"Failed to import matplotlib.pyplot, cannot create a fit curve plot: {e}")
-        plt = None
-        
-    args = arg_parse(sys.argv)
+def main(args):
     profiling_params = ProfilingParameters.extract_from_args(args)
     set_log_level(args.log_level)
     benchmark_instance = parse_benchmark_instance(args.instance_path)
     mindie_service_config, mindie_server_log_path = parse_mindie_server_config(args.service_config_path)
     analyze(mindie_service_config, benchmark_instance, mindie_server_log_path, profiling_params)
-    
-    if not args.show:
-        return
-    if plt is None:
-        logger.error("Failed to import matplotlib.pyplot, can not show the plot.")
-        return
-    plt.show()
-    plt.close()
-        
-
-if __name__ == "__main__":
-    main()

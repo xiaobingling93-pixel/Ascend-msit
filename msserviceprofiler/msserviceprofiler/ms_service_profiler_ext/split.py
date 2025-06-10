@@ -41,47 +41,38 @@ def add_exporters(args):
     return exporters
 
 
-def arg_parse():
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, 
-                                     description='MS Server Profiler Split')
+def arg_parse(subparsers):
+    parser = subparsers.add_parser(
+        "split", formatter_class=argparse.ArgumentDefaultsHelpFormatter, help="MS Server Profiler Split"
+    )
     parser.add_argument(
-        '--input-path', required=True, type=check_input_path_valid, 
-        help='Path to the folder containing profile data.')
+        '--input-path', required=True, type=check_input_path_valid, help='Path to the folder containing profile data.'
+    )
     parser.add_argument(
-        '--output-path', type=check_output_path_valid, default=os.path.join(os.getcwd(), 'output'),
+        '--output-path',
+        type=check_output_path_valid,
+        default=os.path.join(os.getcwd(), 'output'),
         help='Output file path to save results.')
     parser.add_argument(
-        '--log-level', type=str, default='info',
+        '--log-level',
+        type=str,
+        default='info',
         choices=['debug', 'info', 'warning', 'error', 'fatal', 'critical'],
         help='Log level to print')
+    parser.add_argument('--prefill-batch-size', type=int, default=0, help='Batch size for Prefill data.')
+    parser.add_argument('--decode-batch-size', type=int, default=0, help='Batch size for Decode data.')
     parser.add_argument(
-        '--prefill-batch-size', type=int, default=0,
-        help='Batch size for Prefill data.')
-    parser.add_argument(
-        '--decode-batch-size', type=int, default=0,
-        help='Batch size for Decode data.')
-    parser.add_argument(
-        '--prefill-number', type=int, default=1,
-        help='The number of Prefill batch to calc statistical data')
-    parser.add_argument(
-        '--decode-number', type=int, default=1,
-        help='The number of Decode batch to calc statistical data')
-    parser.add_argument(
-       '--prefill-rid', type=str, default='-1',
-       help='The rid for Prefill batch to split' 
+        '--prefill-number', type=int, default=1, help='The number of Prefill batch to calc statistical data'
     )
     parser.add_argument(
-        '--decode-rid', type=str, default='-1',
-        help='The rid for Decode batch to split'
+        '--decode-number', type=int, default=1, help='The number of Decode batch to calc statistical data'
     )
-    
-    args = parser.parse_args()
-    return args
+    parser.add_argument('--prefill-rid', type=str, default='-1', help='The rid for Prefill batch to split')
+    parser.add_argument('--decode-rid', type=str, default='-1', help='The rid for Decode batch to split')
+    parser.set_defaults(func=main)
 
 
-def main():
-    args = arg_parse()
-
+def main(args):
     # 初始化日志等级
     set_log_level(args.log_level)
 
@@ -96,7 +87,3 @@ def main():
 
     # 解析数据并导出
     parse(args.input_path, custom_plugins, exporters, args=args)
-
-
-if __name__ == '__main__':
-    main()

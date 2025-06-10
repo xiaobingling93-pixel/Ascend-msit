@@ -18,4 +18,4 @@ __all__ = [
     "batch_analyze",
 ]
 
-from msservice_advisor.profiling_analyze import base_analyze, npu_memory_analyze, batch_analyze
+from msserviceprofiler.msservice_advisor.profiling_analyze import base_analyze, npu_memory_analyze, batch_analyze

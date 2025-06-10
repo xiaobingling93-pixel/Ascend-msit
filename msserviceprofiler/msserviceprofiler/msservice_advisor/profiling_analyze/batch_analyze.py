@@ -15,8 +15,8 @@
 import random
 import numpy as np
 
-from msservice_advisor.profiling_analyze.register import register_analyze, cached, answer
-from msservice_advisor.profiling_analyze.utils import TARGETS, SUGGESTION_TYPES, logger
+from msserviceprofiler.msservice_advisor.profiling_analyze.register import register_analyze, cached, answer
+from msserviceprofiler.msservice_advisor.profiling_analyze.utils import TARGETS, SUGGESTION_TYPES, logger
 try:
     import matplotlib.pyplot as plt
 except ImportError as e:

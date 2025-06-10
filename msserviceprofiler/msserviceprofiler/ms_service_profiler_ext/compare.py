@@ -23,9 +23,9 @@ from contextlib import contextmanager
 
 import pandas as pd
 
-from ms_service_profiler_ext.compare_tools import CSVComparator, DBComparator
-from ms_service_profiler_ext.compare_tools.collector import FileCollector
-from ms_service_profiler_ext.common.sec import list_dir_common_check
+from msserviceprofiler.ms_service_profiler_ext.compare_tools import CSVComparator, DBComparator
+from msserviceprofiler.ms_service_profiler_ext.compare_tools.collector import FileCollector
+from msserviceprofiler.ms_service_profiler_ext.common.sec import list_dir_common_check
 
 from ms_service_profiler.exporters.utils import check_output_path_valid
 from ms_service_profiler.utils.log import set_log_level, logger
@@ -47,28 +47,6 @@ def connect_db(db_path):
     finally:
         if connection:
             connection.close()
-
-
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="MS Server Profiler Compare Tool")
-
-    parser.add_argument("input_path", type=list_dir_common_check, help="Directory containing analyzed results")
-    parser.add_argument("golden_path", type=list_dir_common_check, help="Directory containing analyzed results")
-    parser.add_argument(
-        "--output-path",
-        type=check_output_path_valid,
-        default=os.path.join(os.getcwd(), 'compare_result'),
-        help="Output Directory after comparing."
-    )
-    parser.add_argument(
-        '--log-level',
-        type=str,
-        default='info',
-        choices=['debug', 'info', 'warning', 'error', 'fatal', 'critical'],
-        help='Log level to print.'
-    )
-
-    return parser.parse_args()
 
 
 def process_file_pairs(file_pairs, db_conn, excel_writer):
@@ -104,8 +82,29 @@ def process_files(file_pairs, output_db, output_excel):
     )
 
 
-def main():
-    args = parse_args()
+def arg_parse(subparsers):
+    parser = subparsers.add_parser(
+        "compare", formatter_class=argparse.ArgumentDefaultsHelpFormatter, help="MS Server Profiler Compare Tool"
+    )
+    parser.add_argument("input_path", type=list_dir_common_check, help="Directory containing analyzed results")
+    parser.add_argument("golden_path", type=list_dir_common_check, help="Directory containing analyzed results")
+    parser.add_argument(
+        "--output-path",
+        type=check_output_path_valid,
+        default=os.path.join(os.getcwd(), 'compare_result'),
+        help="Output Directory after comparing."
+    )
+    parser.add_argument(
+        '--log-level',
+        type=str,
+        default='info',
+        choices=['debug', 'info', 'warning', 'error', 'fatal', 'critical'],
+        help='Log level to print.'
+    )
+    parser.set_defaults(func=main)
+
+
+def main(args):
     set_log_level(args.log_level)
     
     result_prefix = os.path.join(args.output_path, 'compare_result')
@@ -125,7 +124,3 @@ def main():
     
     logger.info("Comparing finished successfully, the results stored under %r", args.output_path)
     logger.info("\nWhat's Next?\n\tYou may use the `grafana` to have a better visualization of the comparison results")
-
-
-if __name__ == '__main__':
-    main()

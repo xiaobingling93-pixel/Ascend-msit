@@ -19,7 +19,7 @@ from typing import List, Tuple, Set
 
 from ms_service_profiler.utils.log import logger
 
-from ms_service_profiler_ext.common.sec import read_file_common_check
+from ..common.sec import read_file_common_check
 
 
 class FileCollector(object):

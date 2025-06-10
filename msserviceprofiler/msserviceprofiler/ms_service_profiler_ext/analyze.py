@@ -36,13 +36,13 @@ def add_summary_exporter(func):
     return wrapper
 
 
-def main():
-    parser = argparse.ArgumentParser(description='MS Server Profiler Analyze')
+def arg_parse(subparsers):
+    parser = subparsers.add_parser(
+        "analyze", formatter_class=argparse.ArgumentDefaultsHelpFormatter, help="MS Server Profiler Analyze"
+    )
     parser.add_argument(
-        '--input-path',
-        required=True,
-        type=check_input_path_valid,
-        help='Path to the folder containing profile data.')
+        '--input-path', required=True, type=check_input_path_valid, help='Path to the folder containing profile data.'
+    )
     parser.add_argument(
         '--output-path',
         type=check_output_path_valid,
@@ -55,14 +55,12 @@ def main():
         choices=['debug', 'info', 'warning', 'error', 'fatal', 'critical'],
         help='Log level to print.')
     parser.add_argument(
-        '--format',
-        nargs='+',
-        default=['json', 'csv', 'db'],
-        choices=['json', 'csv', 'db'],
-        help='Format to save.')
+        '--format', nargs='+', default=['json', 'csv', 'db'], choices=['json', 'csv', 'db'], help='Format to save.'
+    )
+    parser.set_defaults(func=main)
 
-    args = parser.parse_args()
 
+def main(args):
     # 初始化日志等级
     set_log_level(args.log_level)
 
@@ -79,7 +77,3 @@ def main():
 
     # 解析数据并导出
     parse(args.input_path, custom_plugins, exporters, args=args)
-
-
-if __name__ == '__main__':
-    main()

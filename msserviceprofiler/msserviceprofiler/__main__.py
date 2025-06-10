@@ -18,90 +18,23 @@ from pathlib import Path
 from msserviceprofiler.modelevalstate.config.config import DeployPolicy, BenchMarkPolicy
 
 
-_RUN_MODES = ["train", "optimizer", "advisor"]
-RUN_MODES = namedtuple("RUN_MODES", _RUN_MODES)(*_RUN_MODES)
-COMMON_ARGS = []
-
-def run_train(args, **kwargs):
-    from msserviceprofiler.modelevalstate.train import source_to_train
-    source_to_train.main(args)
-
-
-def sub_parser_train(subparsers):
-    parser = subparsers.add_parser(
-        RUN_MODES.train, formatter_class=argparse.ArgumentDefaultsHelpFormatter, help="train for auto optimize"
-    )
-
-    parser = subparsers.add_parser("train", help="train help")
-    parser.add_argument("-i", "--input", default=None, type=Path, required=True)
-    parser.add_argument("-o", "--output", default=Path("output"), type=Path)
-    parser.add_argument(
-        "-t", 
-        "--type", 
-        type=str, 
-        choices=["vllm", "mindie"], 
-        default="mindie",
-        help="Specify the type, either 'vllm' or 'mindie' (default: mindie)"
-    )
-    for ii in COMMON_ARGS:
-        parser.add_argument(*ii.get("args", []), **ii.get("kwargs", {}))
-    parser.set_defaults(func=run_train)
-
-
-def run_optimizer(args, **kwargs):
-    from import msserviceprofiler.modelevalstate.optimizer import optimizer
-    optimizer.main(args)
-
-
-def sub_parser_optimizer(subparsers):
-    parser = subparsers.add_parser(
-        RUN_MODES.optimizer, formatter_class=argparse.ArgumentDefaultsHelpFormatter, help="optimize for performance"
-    )
-
-    parser.add_argument("-lb", "--load_breakpoint", action="store_true",
-                        help="Continue from where the last optimization was aborted.")
-    parser.add_argument("-d", "--deploy_policy", default=DeployPolicy.single.value,
-                        choices=[k.value for k in list(DeployPolicy)],
-                        help="Indicates whether the multi-node running policy is used.")
-    parser.add_argument("--backup", default=False, action="store_true",
-                        help="Whether to back up data.")
-    parser.add_argument("-b", "--benchmark_policy", default=BenchMarkPolicy.benchmark.value,
-                        choices=[k.value for k in list(BenchMarkPolicy)],
-                        help="Whether to use custom performance indicators.")
-    for ii in COMMON_ARGS:
-        parser.add_argument(*ii.get("args", []), **ii.get("kwargs", {}))
-    parser.set_defaults(func=run_optimizer)
-
-
-def run_advisor(args, **kwargs):
-    from import msserviceprofiler.modelevalstate.optimizer import optimizer
-    optimizer.main(args)
-
-
-def sub_parser_advisor(subparsers):
-    parser = subparsers.add_parser(
-        RUN_MODES.advisor, formatter_class=argparse.ArgumentDefaultsHelpFormatter, help="advisor for performance"
-    )
-
-    parser.add_argument("-lb", "--load_breakpoint", action="store_true",
-                        help="Continue from where the last optimization was aborted.")
-    parser.add_argument("-d", "--deploy_policy", default=DeployPolicy.single.value,
-                        choices=[k.value for k in list(DeployPolicy)],
-                        help="Indicates whether the multi-node running policy is used.")
-    parser.add_argument("--backup", default=False, action="store_true",
-                        help="Whether to back up data.")
-    parser.add_argument("-b", "--benchmark_policy", default=BenchMarkPolicy.benchmark.value,
-                        choices=[k.value for k in list(BenchMarkPolicy)],
-                        help="Whether to use custom performance indicators.")
-    for ii in COMMON_ARGS:
-        parser.add_argument(*ii.get("args", []), **ii.get("kwargs", {}))
-    parser.set_defaults(func=run_optimizer)
-
 def main():
+    from msserviceprofiler.ms_service_profiler_ext import compare, split, analyze
+    from msserviceprofiler.msservice_advisor import __main__ as advisor
+    from msserviceprofiler.modelevalstate.train import source_to_train
+    from import msserviceprofiler.modelevalstate.optimizer import optimizer
+    
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, description="msserviceprofiler command line tool")
     subparsers = parser.add_subparsers(help="sub-command help")
-    sub_parser_train(subparsers)
-    sub_parser_optimizer(subparsers)
+
+    source_to_train.arg_parse(subparsers)
+    optimizer.arg_parse(subparsers)
+
+    advisor.arg_parse(subparsers)
+
+    analyze.arg_parse(subparsers)
+    split.arg_parse(subparsers)
+    compare.arg_parse(subparsers)
     args, _ = parser.parse_known_args()
 
     # run

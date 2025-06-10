@@ -18,9 +18,9 @@ import os
 import re
 import subprocess
 
-from msservice_advisor.profiling_analyze.register import register_analyze, answer
-from msservice_advisor.profiling_analyze.utils import logger, SUGGESTION_TYPES, BYTES_TO_GB
-from msservice_advisor.profiling_analyze.utils import vaild_readable_directory, vaild_readable_file, get_directory_size
+from msserviceprofiler.msservice_advisor.profiling_analyze.register import register_analyze, answer, get_directory_size
+from msserviceprofiler.msservice_advisor.profiling_analyze.utils import logger, SUGGESTION_TYPES, BYTES_TO_GB
+from msserviceprofiler.msservice_advisor.profiling_analyze.utils import vaild_readable_directory, vaild_readable_file
 
 
 def get_benchmark_token_num(benchmark, info_name):
