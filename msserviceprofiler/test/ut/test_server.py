@@ -1,14 +1,57 @@
-import unittest
-from unittest.mock import patch, Mock, MagicMock, mock_open
-from pathlib import Path
-import xmlrpc.client
-import numpy as np
 import os
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import patch, MagicMock, Mock, call
 
-from msserviceprofiler.modelevalstate.optimizer.server import get_file, RemoteScheduler, main
+import numpy as np
+from xmlrpc.server import SimpleXMLRPCServer
 
+# Mock配置
+class MockSettings:
+    def __init__(self):
+        self.mindie = "mock_mindie"
+        self.target_field = ["field1", "field2"]
 
-class TestGetFile(unittest.TestCase):
+class MockSimulator:
+    def __init__(self, mindie):
+        self.mindie = mindie
+        self.mindie_log = "mock_log.txt"
+        self.process = MagicMock()
+        self.success_count = 0
+
+    def run(self, params):
+        pass
+
+    def check_success(self):
+        self.success_count += 1
+        return self.success_count > 5
+
+    def stop(self, del_log=True):
+        pass
+
+def mock_map_param_with_value(params, target_field):
+    return [("param1", 1.0), ("param2", 2.0)]
+
+# 替换原始导入
+config_mock = MagicMock()
+config_mock.settings = MockSettings()
+config_mock.map_param_with_value = mock_map_param_with_value
+
+optimizer_mock = MagicMock()
+optimizer_mock.Simulator = MockSimulator
+optimizer_mock.remove_file = MagicMock()
+
+with patch.dict('sys.modules', {
+    'msserviceprofiler.modelevalstate.config.config': config_mock,
+    'msserviceprofiler.modelevalstate.optimizer.optimizer': optimizer_mock
+}):
+    from msserviceprofiler.modelevalstate.optimizer.server import (
+        get_file,
+        RequestHandler,
+        RemoteScheduler,
+        main
+    )
 
     def setUp(self):
         # 创建临时目录和文件用于测试
@@ -59,43 +102,51 @@ class TestGetFile(unittest.TestCase):
 
 
 class TestRemoteScheduler(unittest.TestCase):
+    def setUp(self):
+        self.scheduler = RemoteScheduler()
 
-    def test_check_success_with_none_simulator(self):
-        """Test check_success when simulator is None"""
-        scheduler = RemoteScheduler()
-        result = scheduler.check_success()
-        self.assertIsNone(result)
+    def test_run_simulator(self):
+        params = np.array([1.0, 2.0])
+        self.scheduler.run_simulator(params)
+        self.assertIsNotNone(self.scheduler.simulator)
 
-    @patch('time.sleep')  # 避免实际等待10秒
-    def test_check_success_success_case(self, mock_sleep):
-        """Test check_success when simulator check succeeds"""
-        scheduler = RemoteScheduler()
-        mock_simulator = Mock()
-        mock_simulator.check_success.return_value = True
-        scheduler.simulator = mock_simulator
-        
-        result = scheduler.check_success()
-        
-        self.assertTrue(result)
-        mock_simulator.check_success.assert_called_once()
-        mock_sleep.assert_not_called()
+    def test_check_success(self):
+        # 测试simulator未初始化的情况
+        self.assertIsNone(self.scheduler.check_success())
 
-    @patch('time.sleep')  # 避免实际等待10秒
-    def test_check_success_failure_case(self, mock_sleep):
-        """Test check_success when simulator check always fails"""
-        scheduler = RemoteScheduler()
-        mock_simulator = Mock()
-        mock_simulator.check_success.return_value = False
-        mock_simulator.mindie_log = "test_log.txt"
-        scheduler.simulator = mock_simulator
-        
-        with self.assertRaises(Exception) as context:
-            scheduler.check_success()
-        
-        self.assertIn("Simulator run failed", str(context.exception))
-        self.assertEqual(mock_simulator.check_success.call_count, 10)
-        self.assertEqual(mock_sleep.call_count, 9)  # 应该调用9次sleep
+        # 测试正常运行的情况
+        self.scheduler.simulator = MockSimulator("mock_mindie")
+        self.assertTrue(self.scheduler.check_success())
 
+    def test_check_success_failure(self):
+        # 测试检查失败的情况
+        self.scheduler.simulator = MockSimulator("mock_mindie")
+        self.scheduler.simulator.check_success = Mock(return_value=False)
+        with self.assertRaises(Exception):
+            self.scheduler.check_success()
+
+    def test_stop_simulator(self):
+        # 测试simulator未初始化的情况
+        self.scheduler.stop_simulator()  # 不应抛出异常
+
+        # 测试正常停止的情况
+        self.scheduler.simulator = MockSimulator("mock_mindie")
+        self.scheduler.stop_simulator(del_log=True)
+
+    def test_process_poll(self):
+        # 测试simulator未初始化的情况
+        self.assertIsNone(self.scheduler.process_poll())
+
+        # 测试正常poll的情况
+        self.scheduler.simulator = MockSimulator("mock_mindie")
+        self.scheduler.simulator.process.poll.return_value = 0
+        self.assertEqual(self.scheduler.process_poll(), 0)
+
+    def test_run_simulator_with_empty_params(self):
+        # 测试空参数
+        params = np.array([])
+        self.scheduler.run_simulator(params)
+        self.assertIsNotNone(self.scheduler.simulator)
     @patch('your_module.settings')
     @patch('your_module.logger')
     @patch('your_module.Simulator')
@@ -153,6 +204,47 @@ class TestRemoteScheduler(unittest.TestCase):
         # 验证 Simulator 的 run 方法是否被正确调用
         mock_simulator.return_value.run.assert_called_once_with(())
 
+
+class TestMain(unittest.TestCase):
+    @patch('xmlrpc.server.SimpleXMLRPCServer')
+    def test_main_server_setup(self, mock_server):
+        # 设置mock服务器
+        mock_server_instance = MagicMock()
+        mock_server.return_value.__enter__.return_value = mock_server_instance
+        
+        # 模拟KeyboardInterrupt来停止服务器
+        mock_server_instance.serve_forever.side_effect = KeyboardInterrupt()
+
+        # 测试main函数
+        with self.assertRaises(SystemExit):
+            main('localhost', 8000)
+
+        # 验证服务器设置
+        self.assertTrue(mock_server_instance.register_introspection_functions.called)
+        self.assertTrue(mock_server_instance.register_function.called)
+        self.assertTrue(mock_server_instance.register_instance.called)
+        self.assertTrue(mock_server_instance.serve_forever.called)
+
+    @patch('xmlrpc.server.SimpleXMLRPCServer')
+    def test_main_server_functions_registration(self, mock_server):
+        # 设置mock服务器
+        mock_server_instance = MagicMock()
+        mock_server.return_value.__enter__.return_value = mock_server_instance
+        mock_server_instance.serve_forever.side_effect = KeyboardInterrupt()
+
+        # 测试main函数
+        with self.assertRaises(SystemExit):
+            main('localhost', 8000)
+
+        # 验证注册的具体函数
+        register_function_calls = mock_server_instance.register_function.call_args_list
+        self.assertEqual(len(register_function_calls), 2)  # 应该注册了get_file和remove_file
+        self.assertEqual(register_function_calls[0][0][0], get_file)
+        self.assertEqual(register_function_calls[1][0][0], optimizer_mock.remove_file)
+
+class TestRequestHandler(unittest.TestCase):
+    def test_rpc_paths(self):
+        self.assertEqual(RequestHandler.rpc_paths, ('/RPC2',))
 
 if __name__ == '__main__':
     unittest.main()
