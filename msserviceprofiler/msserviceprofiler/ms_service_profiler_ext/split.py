@@ -20,8 +20,8 @@ from ms_service_profiler.exporters.utils import check_input_path_valid, check_ou
 
 
 def add_exporters(args):
-    from ms_service_profiler_ext.exporters.exporter_prefill import ExporterPrefill
-    from ms_service_profiler_ext.exporters.exporter_decode import ExporterDecode
+    from msserviceprofiler.ms_service_profiler_ext.exporters.exporter_prefill import ExporterPrefill
+    from msserviceprofiler.ms_service_profiler_ext.exporters.exporter_decode import ExporterDecode
 
     if not hasattr(args, 'format'):
         args.format = 'csv'

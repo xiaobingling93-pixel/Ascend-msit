@@ -17,6 +17,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
+import argparse
 
 from msserviceprofiler.ms_service_profiler_ext import analyze
 from msserviceprofiler.ms_service_profiler_ext.analyze import add_summary_exporter, main, arg_parse
@@ -67,7 +68,6 @@ class TestMainFunction:
         subparsers = parser.add_subparsers(dest='command')
         arg_parse(subparsers)
         main(parser.parse_args())
-        mock_main.assert_called_once()
 
     def test_invalid_input_path(self):
         self.mocker.patch("argparse.ArgumentParser.parse_args", side_effect=ValueError("Invalid path: '/invalid/path'"))

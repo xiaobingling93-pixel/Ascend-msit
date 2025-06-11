@@ -19,6 +19,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+import argparse
 
 from msserviceprofiler.ms_service_profiler_ext.split import add_exporters, main, arg_parse
 from msserviceprofiler.ms_service_profiler_ext.exporters.exporter_prefill import ExporterPrefill

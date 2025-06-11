@@ -36,6 +36,10 @@ class FakeSelfAttnBlockSpaceManager:
     def __init__(self):
         self.block_tables = {0: [1, 2, 3]}  # 模拟 block_tables
 
+    @staticmethod
+    def get_num_free_gpu_blocks():
+        return 1
+
     def allocate(self, seq_group):
         self.block_tables = {0: [1]}
         pass
@@ -55,10 +59,6 @@ class FakeSelfAttnBlockSpaceManager:
     def free(self, seq):
         self.block_tables = {}
         pass
-
-    @staticmethod
-    def get_num_free_gpu_blocks():
-        return 1
 
 
 # 模拟 Stats 类
