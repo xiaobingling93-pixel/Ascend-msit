@@ -24,6 +24,7 @@ from msserviceprofiler.ms_service_profiler_ext.common.split_utils import (
     get_filter_rule_df,
 )
 
+
 class TestUtilsFuctions(unittest.TestCase):
     def test_preprocess_framework_df_with_no_name(self):
         data = {

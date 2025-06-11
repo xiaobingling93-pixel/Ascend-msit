@@ -16,15 +16,15 @@ from argparse import Namespace
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import pytest
 import argparse
+import pytest
 
-from msserviceprofiler.ms_service_profiler_ext import analyze
-from msserviceprofiler.ms_service_profiler_ext.analyze import add_summary_exporter, main, arg_parse
-from msserviceprofiler.ms_service_profiler_ext.exporters.exporter_summary import ExporterSummary
 from ms_service_profiler.exporters.factory import ExporterFactory
 from ms_service_profiler.exporters.exporter_batch import ExporterBatchData
 from ms_service_profiler.utils.log import set_logger
+from msserviceprofiler.ms_service_profiler_ext import analyze
+from msserviceprofiler.ms_service_profiler_ext.analyze import add_summary_exporter, main, arg_parse
+from msserviceprofiler.ms_service_profiler_ext.exporters.exporter_summary import ExporterSummary
 
 
 class TestMainFunction:
