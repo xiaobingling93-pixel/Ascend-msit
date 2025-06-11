@@ -15,7 +15,7 @@ import unittest
 import sys
 from unittest.mock import MagicMock, patch, call
 from collections import deque
-from msserviceprofiler.ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.batch_hookers import (
+from msserviceprofiler.vllm_profiler.vllm_profiler_core.batch_hookers import (
     Profiler, queue_profiler, Level
 )
 

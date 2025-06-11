@@ -17,7 +17,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from msserviceprofiler.ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.model_hookers import (
+from msserviceprofiler.vllm_profiler.vllm_profiler_core.model_hookers import (
     ModelRunnerExecuteHook,
     ModelForwardHook,
 )

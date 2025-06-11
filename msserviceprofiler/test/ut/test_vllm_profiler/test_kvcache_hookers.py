@@ -15,7 +15,7 @@ import sys
 import unittest
 from unittest.mock import MagicMock, patch, call
 from collections import namedtuple
-from msserviceprofiler.ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.kvcache_hookers import Profiler, Level
+from msserviceprofiler.vllm_profiler.vllm_profiler_core.kvcache_hookers import Profiler, Level
 
 
 # 模拟 SequenceGroupMetadata 类
