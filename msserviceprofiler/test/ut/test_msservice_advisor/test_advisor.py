@@ -84,13 +84,36 @@ def test_read_json():
 @patch.object(advisor, 'read_csv')
 @patch.object(advisor, 'read_json')
 def test_read_csv_or_json_dispatches_correctly(mock_read_json, mock_read_csv):
-    advisor.read_csv_or_json("file.csv")
-    mock_read_csv.assert_called()
-    
-    advisor.read_csv_or_json("file.json")
-    mock_read_json.assert_called()
-    
-    assert advisor.read_csv_or_json("file.txt") is None
+    # Mock the file path and extension checking
+    with patch('os.path.exists', return_value=True):
+        # Test CSV file
+        advisor.read_csv_or_json("file.csv")
+        mock_read_csv.assert_called_once_with("file.csv")
+        mock_read_json.assert_not_called()
+        
+        # Reset mocks for next test
+        mock_read_csv.reset_mock()
+        mock_read_json.reset_mock()
+        
+        # Test JSON file
+        advisor.read_csv_or_json("file.json")
+        mock_read_json.assert_called_once_with("file.json")
+        mock_read_csv.assert_not_called()
+        
+        # Reset mocks for next test
+        mock_read_csv.reset_mock()
+        mock_read_json.reset_mock()
+        
+        # Test unknown extension
+        assert advisor.read_csv_or_json("file.txt") is None
+        mock_read_csv.assert_not_called()
+        mock_read_json.assert_not_called()
+        
+        # Test non-existent file
+        with patch('os.path.exists', return_value=False):
+            assert advisor.read_csv_or_json("nonexistent.csv") is None
+            mock_read_csv.assert_not_called()
+            mock_read_json.assert_not_called()
 
 # Test parse_benchmark_instance
 @patch.object(advisor, 'get_latest_matching_file')
