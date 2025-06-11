@@ -21,7 +21,19 @@ DATA_TYPE_MAP = {
     "DT_FLOAT": "float32",
     "DT_FLOAT16": "float16",
     "DT_DOUBLE": "float64",
-    "DT_BOOL": "bool"
+    "DT_BOOL": "bool",
+    "DT_INT8": "int8",
+    "DT_INT16": "int16",
+    "DT_INT32": "int32",
+    "DT_INT64": "int64",
+    "DT_UINT1": "uint1",
+    "DT_UINT8": "uint8",
+    "DT_UINT16": "uint16",
+    "DT_UINT32": "uint32",
+    "DT_UINT64": "uint64",
+    "DT_COMPLEX32": "complex32",
+    "DT_COMPLEX64": "complex64",
+    "DT_COMPLEX128": "complex128",
 }
 
 

@@ -15,8 +15,6 @@
 import tensorflow as tf
 
 from msit_opcheck.operation_test import OperationTest
-from msit_opcheck.conversion.shape_convert import transform
-from msit_opcheck.conversion.shape_convert import format_transformation_map
 
 
 class TileDOperation(OperationTest):
