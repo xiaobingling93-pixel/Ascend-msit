@@ -40,7 +40,7 @@ def main():
 
     # run
     if hasattr(args, "func"):
-        args.func(args=args, **vars(args))
+        args.func(args=args)
     else:
         parser.print_help()
 
