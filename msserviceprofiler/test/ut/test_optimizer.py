@@ -1,4 +1,5 @@
 import os
+import psutil
 import shutil
 import tempfile
 import unittest
@@ -8,6 +9,107 @@ from unittest.mock import patch, MagicMock, Mock, call
 import numpy as np
 import pandas as pd
 from loguru import logger
+
+class TestKillChildren(unittest.TestCase):
+    @patch('psutil.Process')
+    @patch('logger.error')
+    def test_kill_children(self, mock_logger, mock_process):
+        mock_child = MagicMock()
+        mock_child.is_running.return_value = True
+        mock_child.send_signal.return_value = None
+        mock_child.wait.return_value = None
+        mock_child.pid = 1234
+
+        kill_children([mock_child])
+
+        mock_child.send_signal.assert_called_once_with(9)
+        mock_child.wait.assert_called_once_with(10)
+        mock_logger.assert_not_called()
+
+        # 测试进程仍在运行的情况
+        mock_child.is_running.return_value = True
+        kill_children([mock_child])
+        mock_logger.assert_called_once_with("Failed to kill the 1234 process.")
+
+class TestKillProcess(unittest.TestCase):
+    @patch('psutil.process_iter')
+    @patch('TestKillChildren.kill_children')
+    def test_kill_process(self, mock_kill_children, mock_process_iter):
+        mock_proc = MagicMock()
+        mock_proc.info = {"name": "test_process"}
+        mock_process_iter.return_value = [mock_proc]
+
+        kill_process("test_process")
+
+        mock_kill_children.assert_called()
+
+class TestRemoveFile(unittest.TestCase):
+    @patch('os.path.exists')
+    @patch('os.remove')
+    @patch('shutil.rmtree')
+    @patch('pathlib.Path.iterdir')
+    @patch('pathlib.Path.is_file')
+    @patch('pathlib.Path.unlink')
+    def test_remove_file(self, mock_unlink, mock_is_file, mock_iterdir, mock_rmtree, mock_exists):
+        mock_exists.return_value = True
+        mock_is_file.return_value = True
+
+        remove_file("test_path")
+
+        mock_unlink.assert_called_once()
+
+        # 测试目录情况
+        mock_is_file.return_value = False
+        mock_iterdir.return_value = [MagicMock()]
+        remove_file("test_path")
+        mock_rmtree.assert_called_once()
+
+class TestBackup(unittest.TestCase):
+    @patch('shutil.copytree')
+    @patch('shutil.copy')
+    @patch('pathlib.Path.joinpath')
+    @patch('pathlib.Path.exists')
+    @patch('pathlib.Path.is_file')
+    @patch('pathlib.Path.mkdir')
+    def test_backup(self, mock_mkdir, mock_is_file, mock_exists, mock_joinpath, mock_copy, mock_copytree):
+        mock_exists.return_value = True
+        mock_is_file.return_value = True
+        mock_joinpath.return_value = MagicMock()
+
+        backup("target_path", "bak_path")
+
+        mock_copy.assert_called_once()
+
+        # 测试目录情况
+        mock_is_file.return_value = False
+        mock_copytree.assert_called_once()
+
+class TestCloseFileFp(unittest.TestCase):
+    @patch('os.close')
+    @patch('builtins.hasattr')
+    def test_close_file_fp(self, mock_hasattr, mock_os_close):
+        mock_file_fp = MagicMock()
+        mock_hasattr.return_value = True
+
+        close_file_fp(mock_file_fp)
+
+        mock_file_fp.close.assert_called_once()
+
+        # 测试文件描述符情况
+        mock_hasattr.return_value = False
+        close_file_fp(1234)
+        mock_os_close.assert_called_once_with(1234)
+
+class TestClearingResidualProcess(unittest.TestCase):
+    @patch('TestKillProcess.kill_process')
+    @patch('MindieConfig')
+    def test_clearing_residual_process(self, mock_mindie_config, mock_kill_process):
+        mock_mindie_config.return_value.process_name = "test_process"
+
+        clearing_residual_process()
+
+        mock_kill_process.assert_called_once_with("test_process")
+
 
 # Mock配置
 class MockSettings:
