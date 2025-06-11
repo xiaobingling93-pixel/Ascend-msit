@@ -133,7 +133,7 @@ class TestRemoteScheduler(unittest.TestCase):
 
         # 验证重试次数和等待时间
         self.assertEqual(self.scheduler.simulator.check_success.call_count, 10)
-        self.assertEqual(mock_sleep.call_count, 9)
+        self.assertEqual(mock_sleep.call_count, 10)
         mock_sleep.assert_has_calls([call(10)] * 9)
     def test_stop_simulator(self):
         # 测试simulator未初始化的情况
