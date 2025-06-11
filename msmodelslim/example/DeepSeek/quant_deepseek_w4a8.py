@@ -19,7 +19,7 @@ from mtp_quant_module import warp_mtp_model, post_process_mtp_quant
 
 from ascend_utils.common.security import get_valid_read_path, get_write_directory, check_number
 from ascend_utils.common.security import json_safe_load, json_safe_dump
-from msmodelslim.tools.copy_config_files import copy_config_files, modify_config_json, copy_json
+from msmodelslim.tools.copy_config_files import copy_config_files, modify_config_json, modify_vllm_config_json
 from msmodelslim.pytorch.llm_ptq.anti_outlier import AntiOutlierConfig, AntiOutlier
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
 from msmodelslim.tools.logger import set_logger_level
@@ -37,7 +37,7 @@ def parse_args():
     parser.add_argument('--batch_size', type=int, default=1, help="Batch size for anti and calibration")
     parser.add_argument('--from_fp8', action='store_true', help="Origin model is of fp8")
     parser.add_argument('--from_bf16', action='store_true', help="Origin model is of bf16")
-    parser.add_argument('--mindie_format', action="store_true", help="Compatible with quantization formats \
+    parser.add_argument('--mindie_format', action='store_true', help="Compatible with quantization formats \
                         supported by before 2.1.RC1 version of MindIE")
     parser.add_argument('--quant_mtp', type=str, choices=['mix', 'float', 'none'], default='none', \
                             help="Quantization mode: 'mix(w8a8 mix quant)' , or \
@@ -45,14 +45,17 @@ def parse_args():
     return parser.parse_args()
 
 
-def create_custom_hook(quant_mtp):
+def create_custom_hook(quant_mtp, mindie_format):
     def custom_hook(model_config):
         model_config["mla_quantize"] = "w8a8"
         if quant_mtp == 'mix':
             model_config["mtp_quantize"] = "w8a8_dynamic"
         model_config["quantize"] = "w8a8_dynamic"
         model_config["moe_quantize"] = "w4a8_dynamic"
-        model_config["model_type"] = "deepseekv2"
+        if mindie_format:
+            model_config["model_type"] = "deepseekv2"
+        else:
+            model_config["model_type"] = "deepseek_v3"
     return custom_hook
 
 
@@ -244,10 +247,11 @@ def main():
     if args.quant_mtp == "mix":
         post_process_mtp_quant(save_path)
     
-    custom_hook_instance = create_custom_hook(args.quant_mtp)
+    custom_hook_instance = create_custom_hook(args.quant_mtp, args.mindie_format)
     custom_hooks = {
         'config.json': functools.partial(modify_config_json, custom_hook=custom_hook_instance) \
-                        if args.mindie_format else copy_json
+                        if args.mindie_format \
+                        else functools.partial(modify_vllm_config_json, custom_hook=custom_hook_instance)
     }
     copy_config_files(input_path=model_path, output_path=save_path, quant_config=w4a8_pertoken_config,
                       mindie_format=args.mindie_format, custom_hooks=custom_hooks)
