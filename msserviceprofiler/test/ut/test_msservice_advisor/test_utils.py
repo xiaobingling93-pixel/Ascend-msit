@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import pytest
 import os
 import logging
 from pathlib import Path
@@ -19,6 +18,7 @@ from unittest.mock import patch, MagicMock
 from collections import namedtuple
 import tempfile
 import shutil
+import pytest
 
 from msserviceprofiler.msservice_advisor.profiling_analyze import utils
 
@@ -33,15 +33,6 @@ def create_temp_file(size_bytes, content=None):
         temp_file.write(b"0" * size_bytes)
     temp_file.close()
     return temp_file.name
-
-
-def create_temp_dir_with_files(file_count, file_size=1):
-    """Create a temporary directory with specified number of files"""
-    temp_dir = tempfile.mkdtemp()
-    for i in range(file_count):
-        with open(os.path.join(temp_dir, f"file_{i}.txt"), "w") as f:
-            f.write("0" * file_size)
-    return temp_dir
 
 
 # Test str_ignore_case
@@ -89,14 +80,14 @@ def test_walk_dict_given_mixed_structure_when_walked_then_yields_all_items():
 
 
 def test_walk_dict_given_empty_structure_when_walked_then_no_yield():
-    assert list(utils.walk_dict({})) == []
-    assert list(utils.walk_dict([])) == []
-    assert list(utils.walk_dict(())) == []
+    assert not list(utils.walk_dict({}))
+    assert not list(utils.walk_dict([]))
+    assert not list(utils.walk_dict(()))
 
 
 def test_walk_dict_given_non_dict_when_walked_then_no_yield():
-    assert list(utils.walk_dict("string")) == []
-    assert list(utils.walk_dict(123)) == []
+    assert not list(utils.walk_dict("string"))
+    assert not list(utils.walk_dict(123))
 
 
 # Test set_log_level
@@ -196,7 +187,12 @@ def test_get_directory_size_given_empty_dir_when_calculated_then_zero():
 
 
 def test_get_directory_size_given_dir_with_files_when_calculated_then_correct():
-    temp_dir = create_temp_dir_with_files(3, 1024)  # 3 files of 1KB each
+    """Create a temporary directory with specified number of files. 3 files of 1KB each"""
+    temp_dir = tempfile.mkdtemp()
+    for i in range(3):
+        with open(os.path.join(temp_dir, f"file_{i}.txt"), "w") as f:
+            f.write("0" * 1024)
+
     try:
         size = utils.get_directory_size(temp_dir)
         expected = (3 * 1024) / utils.BYTES_TO_GB

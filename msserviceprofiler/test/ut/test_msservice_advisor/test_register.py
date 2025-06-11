@@ -11,8 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import pytest
 from unittest.mock import patch, MagicMock
+
+import pytest
 
 from msserviceprofiler.msservice_advisor.profiling_analyze.register import (
     register_analyze,
@@ -141,8 +142,7 @@ def test_register_and_answer_integration():
         answer("env", "memory", "increase", "system needs more RAM")
         return True
 
-    check_memory()
-
+    assert check_memory()
     assert "memory_check" in REGISTRY
     assert "memory" in ANSWERS["env"]
     assert ("increase", "system needs more RAM") in ANSWERS["env"]["memory"]

@@ -10,11 +10,12 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
-# limitations under the License.
-import pytest
-import numpy as np
+# limitations under the License.zn
 from collections import namedtuple
 from unittest.mock import patch, MagicMock
+
+import pytest
+import numpy as np
 
 from msserviceprofiler.msservice_advisor.profiling_analyze import base_analyze
 from msserviceprofiler.msservice_advisor.profiling_analyze.register import REGISTRY, ANSWERS

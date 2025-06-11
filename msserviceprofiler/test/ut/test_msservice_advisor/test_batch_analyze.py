@@ -11,10 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import pytest
-import numpy as np
 from unittest.mock import patch, MagicMock, call
 import random
+import pytest
+import numpy as np
 
 # Import the module to test with proper error handling
 from msserviceprofiler.msservice_advisor.profiling_analyze import batch_analyze
