@@ -20,7 +20,7 @@ from ms_service_profiler.exporters.utils import check_input_path_valid, check_ou
 
 
 def add_summary_exporter(func):
-    from ms_service_profiler_ext.exporters.exporter_summary import ExporterSummary
+    from msserviceprofiler.ms_service_profiler_ext.exporters.exporter_summary import ExporterSummary
 
     def wrapper(args):
         default_exporters = func(args)

@@ -17,7 +17,7 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 import pandas as pd
-from msserviceprofiler.ms_service_profiler_ext.compare import connect_db, main
+from msserviceprofiler.ms_service_profiler_ext.compare import connect_db, main, arg_parse
 from msserviceprofiler.ms_service_profiler_ext.compare_tools import CSVComparator
 from msserviceprofiler.ms_service_profiler_ext.compare import connect_db, process_files
 from msserviceprofiler.ms_service_profiler_ext.common.csv_fields import ServiceCSVFields
@@ -107,11 +107,14 @@ def test_main_given_valid_args_when_run_then_success(tmp_path):
     csv_a.chmod(0o640)
     csv_b.chmod(0o640)
 
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(dest='command')
     args = [str(input_a), str(input_b), "--output-path", str(tmp_path), "--log-level", "info"]
 
     # Act
     with patch("sys.argv", ["compare.py"] + args):
-        main()
+        # Add our advisor subparser
+        main(arg_parse(subparsers).parse_args())
 
     # Assert
     assert (tmp_path / "compare_result.xlsx").exists()

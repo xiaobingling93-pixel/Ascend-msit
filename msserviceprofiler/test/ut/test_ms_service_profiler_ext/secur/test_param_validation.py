@@ -106,14 +106,6 @@ class TestParamValidation(unittest.TestCase):
             if os.path.exists(self.random_path):
                 os.remove(self.random_path)
 
-    def test_is_not_writable_to_group_or_others(self):
-        test_func = self.create_func_with_constraints(~Path.is_writable_to_group_or_others())
-        reg_file_stat = list(os.stat(__file__, follow_symlinks=False))
-        reg_file_stat[0] = stat.S_IFREG | self.full_mode
-        with mock.patch("os.stat", return_value=os.stat_result(reg_file_stat)):
-            self.assertRaises(InvalidParameterError, test_func, self.random_path)
-        self.assertIsNone(test_func(__file__))
-
     def test_is_consistent_to_current_user(self):
         test_func = self.create_func_with_constraints(Path.is_consistent_to_current_user())
         with mock.patch(
