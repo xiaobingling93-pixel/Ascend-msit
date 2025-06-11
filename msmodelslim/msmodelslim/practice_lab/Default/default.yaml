@@ -17,7 +17,7 @@ spec:
   calib_cfg:
     w_bit: 8
     a_bit: 8
-    mm_tensor: False.
+    mm_tensor: False
   calib_file: ../../calib_lab/boolq.jsonl
   calib_save_params:
     save_type:

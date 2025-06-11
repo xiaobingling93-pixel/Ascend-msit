@@ -22,7 +22,7 @@ def main():
     # Quant command
     quant_parser = subparsers.add_parser('quant', help='Model quantization')
     quant_parser.add_argument('--model_type', required=True,
-                              help="Type of model to quantize (e.g. 'LLaMa', 'Qwen')")
+                              help="Type of model to quantize (e.g. 'Qwen2.5-7B-Instruct', 'Qwen-QwQ-32B')")
     quant_parser.add_argument('--model_path', required=True, type=str,
                               help="Path to the original model")
     quant_parser.add_argument('--save_path', required=True, type=str,
@@ -34,7 +34,8 @@ def main():
     quant_parser.add_argument('--quant_type', choices=SUPPRORTED_QUANT_TYPES,
                               help="Type of quantization to apply")
     quant_parser.add_argument('--trust_remote_code', type=cmd_bool, default=False,
-                              help="Trust custom code. Please ensure the security of the loaded custom code file.")
+                              help="Trust custom code (bool type, must be True or False). "
+                              "Please ensure the security of the loaded custom code file.")
 
     args = parser.parse_args()
 
