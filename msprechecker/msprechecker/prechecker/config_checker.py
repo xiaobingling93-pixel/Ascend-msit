@@ -17,7 +17,7 @@ from collections import defaultdict
 
 import yaml
 
-from msprechecker.prechecker.register import PrecheckerBase, show_check_result, CheckResult
+from msprechecker.prechecker.register import PrecheckerBase, show_check_result, CheckResult, check_file_permission
 from msprechecker.prechecker.utils import (
     parse_mindie_server_config,
     parse_ranktable_file,
@@ -26,9 +26,10 @@ from msprechecker.prechecker.utils import (
     is_deepseek_model,
     read_csv_or_json,
     logger,
+    
 )
 from msprechecker.prechecker.suggestions import DOMAIN, NOT_EMPTY_VALUE
-from msprechecker.core.utils import check_file_permission, ResultStatus
+from msprechecker.core.utils import ResultStatus
 from msprechecker.core.utils.version import Version
 from msprechecker.presets import get_default_rule
 from msprechecker.core.utils.result import Result, Severity

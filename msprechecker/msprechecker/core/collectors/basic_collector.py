@@ -12,17 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import importlib
 import platform
 from .sys_collector import AscendInfoCollector
 
-try:
-    # Python 3.8+
-    from importlib.metadata import version, PackageNotFoundError
-except ImportError:
-    # For Python <3.8
-    from importlib_metadata import version, PackageNotFoundError
-
+from ..utils.version import get_pkg_version
 from .base import BaseCollector
 
 
@@ -30,26 +23,13 @@ class BasicCollector(BaseCollector):
     def __init__(self, args) -> None:
         self.args = args
 
-    @staticmethod
-    def get_pkg_version(pkg_name):
-        try:
-            return version(pkg_name)
-        except PackageNotFoundError:
-            return "not installed"
-        except Exception:
-            try:
-                return importlib.import_module(pkg_name).__version__
-            except Exception:
-                return "not installed"
-
-
     def collect(self) -> dict:
         # Platform info
         platform_info = f"{platform.platform()} -- Python {platform.python_version()}"
-        transformers_ver = BasicCollector.get_pkg_version("transformers")
-        torch_ver = BasicCollector.get_pkg_version("torch")
-        torch_npu_ver = BasicCollector.get_pkg_version("torch_npu")
-        platform_info += f", torch {torch_ver} torch_npu {torch_npu_ver}, transformers {transformers_ver}"
+        transformers_ver = get_pkg_version("transformers")
+        torch_ver = get_pkg_version("torch")
+        torch_npu_ver = get_pkg_version("torch_npu")
+        platform_info += f", torch {torch_ver}, torch_npu {torch_npu_ver}, transformers {transformers_ver}"
 
         # Ascend info (toolkit, mindie, atb, atb-models)
         ascend_info = AscendInfoCollector().collect() or {}

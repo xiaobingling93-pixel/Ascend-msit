@@ -14,8 +14,13 @@
 
 import os
 
-from msprechecker.core.utils.perm import FilePerm
-from msprechecker.core.utils.macro_expander import MacroExpander
-from msprechecker.core.utils.compiler import Compiler
-from msprechecker.core.utils.result import Result, ResultStatus
-from msprechecker.core.utils.file_utils import read_file_lines
+
+def read_file_lines(path):
+    if not path or not os.path.isfile(path):
+        return None
+
+    try:
+        with open(path) as f:
+            return f.readlines()
+    except Exception:
+        return None
