@@ -20,7 +20,7 @@ from unittest.mock import patch
 
 import pytest
 
-from msserviceprofiler.ms_service_profiler_ext.split import add_exporters, main
+from msserviceprofiler.ms_service_profiler_ext.split import add_exporters, main, arg_parse
 from msserviceprofiler.ms_service_profiler_ext.exporters.exporter_prefill import ExporterPrefill
 from msserviceprofiler.ms_service_profiler_ext.exporters.exporter_decode import ExporterDecode
 
@@ -68,7 +68,10 @@ class TestSplitFuctions(unittest.TestCase):
         self.assertIsInstance(exporters[1], ExporterDecode)
 
     def test_main(self):
-        main()
+        parser = argparse.ArgumentParser()
+        subparsers = parser.add_subparsers(dest='command')
+        arg_parse(subparsers)
+        main(parser.parse_args())
 
     @pytest.fixture(autouse=True)
     def _inject_mocker(self, mocker):

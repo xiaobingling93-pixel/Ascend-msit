@@ -19,7 +19,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from msserviceprofiler.ms_service_profiler_ext import analyze
-from msserviceprofiler.ms_service_profiler_ext.analyze import add_summary_exporter, main
+from msserviceprofiler.ms_service_profiler_ext.analyze import add_summary_exporter, main, arg_parse
 from msserviceprofiler.ms_service_profiler_ext.exporters.exporter_summary import ExporterSummary
 from ms_service_profiler.exporters.factory import ExporterFactory
 from ms_service_profiler.exporters.exporter_batch import ExporterBatchData
@@ -61,16 +61,22 @@ class TestMainFunction:
 
     def test_command_line_interface(self):
         mock_main = self.mocker.patch("msserviceprofiler.ms_service_profiler_ext.analyze.main")
-        self.mocker.patch("sys.argv", ["script_name", "--input-path", "/fake/input"])
+        self.mocker.patch("sys.argv", ["script_name", "analyze", "--input-path", "/fake/input"])
 
-        analyze.main()
+        parser = argparse.ArgumentParser()
+        subparsers = parser.add_subparsers(dest='command')
+        arg_parse(subparsers)
+        main(parser.parse_args())
         mock_main.assert_called_once()
 
     def test_invalid_input_path(self):
         self.mocker.patch("argparse.ArgumentParser.parse_args", side_effect=ValueError("Invalid path: '/invalid/path'"))
 
+        parser = argparse.ArgumentParser()
+        subparsers = parser.add_subparsers(dest='command')
+        arg_parse(subparsers)
         with pytest.raises(ValueError, match=r"Invalid path.*"):
-            main()
+            main(parser.parse_args())
 
     def test_main_applies_summary_exporter_decorator(self):
         original_exporters = [ExporterBatchData]
@@ -80,7 +86,10 @@ class TestMainFunction:
 
         spy_add_summary = self.mocker.spy(analyze, "add_summary_exporter")
 
-        main()
+        parser = argparse.ArgumentParser()
+        subparsers = parser.add_subparsers(dest='command')
+        arg_parse(subparsers)
+        main(parser.parse_args())
 
         spy_add_summary.assert_called_once_with(ExporterFactory.create_exporters)
 

@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import os
+import argparse
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
@@ -109,12 +110,13 @@ def test_main_given_valid_args_when_run_then_success(tmp_path):
 
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest='command')
+    arg_parse(subparsers)
     args = [str(input_a), str(input_b), "--output-path", str(tmp_path), "--log-level", "info"]
 
     # Act
-    with patch("sys.argv", ["compare.py"] + args):
+    with patch("sys.argv", ["", "compare"] + args):
         # Add our advisor subparser
-        main(arg_parse(subparsers).parse_args())
+        main(parser.parse_args())
 
     # Assert
     assert (tmp_path / "compare_result.xlsx").exists()

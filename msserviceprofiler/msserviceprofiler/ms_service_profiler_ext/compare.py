@@ -29,8 +29,6 @@ from msserviceprofiler.ms_service_profiler_ext.common.sec import list_dir_common
 
 @contextmanager
 def connect_db(db_path):
-    from msserviceprofiler.ms_service_profiler_ext.compare_tools import CSVComparator, DBComparator
-
     connection = None    
     try:
         connection = sqlite3.connect(db_path)
@@ -46,10 +44,10 @@ def connect_db(db_path):
 
 
 def process_file_pairs(file_pairs, db_conn, excel_writer):
-    comparators = {
-        '.csv': CSVComparator,
-        '.db': DBComparator
-    }
+    from ms_service_profiler.utils.log import logger
+    from msserviceprofiler.ms_service_profiler_ext.compare_tools import CSVComparator, DBComparator
+
+    comparators = {'.csv': CSVComparator, '.db': DBComparator}
 
     for file_a, file_b in file_pairs:
         ext = Path(file_a).suffix.lower()
