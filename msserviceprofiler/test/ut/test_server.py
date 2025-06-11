@@ -1,17 +1,31 @@
+# Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch, MagicMock, Mock, call
-
-import numpy as np
 from xmlrpc.server import SimpleXMLRPCServer
+import numpy as np
 
-# Mock配置
+
 class MockSettings:
     def __init__(self):
         self.mindie = "mock_mindie"
         self.target_field = ["field1", "field2"]
+
 
 class MockSimulator:
     def __init__(self, mindie):
@@ -22,11 +36,13 @@ class MockSimulator:
     def run(self, params):
         pass
 
+    @classmethod
     def check_success(self):
         return True
 
     def stop(self, del_log=True):
         pass
+
 
 def mock_map_param_with_value(params, target_field):
     return [("param1", 1.0), ("param2", 2.0)]
@@ -117,6 +133,7 @@ class TestRemoteScheduler(unittest.TestCase):
         self.scheduler.simulator = MockSimulator("mock_mindie")
         self.assertTrue(self.scheduler.check_success())
         mock_sleep.assert_not_called()
+
     @patch('time.sleep')
     def test_check_success_failure(self, mock_sleep):
         # 准备一个总是失败的simulator
@@ -135,6 +152,7 @@ class TestRemoteScheduler(unittest.TestCase):
         self.assertEqual(self.scheduler.simulator.check_success.call_count, 10)
         self.assertEqual(mock_sleep.call_count, 10)
         mock_sleep.assert_has_calls([call(10)] * 9)
+
     def test_stop_simulator(self):
         # 测试simulator未初始化的情况
         self.scheduler.stop_simulator()  # 不应抛出异常

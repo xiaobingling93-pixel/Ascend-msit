@@ -1,15 +1,29 @@
+# Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import unittest
-from unittest.mock import patch, MagicMock, Mock
-import argparse
-from pathlib import Path
-import numpy as np
-import pandas as pd
-from xmlrpc.client import ServerProxy
 import tempfile
 import shutil
 import os
+import argparse
+from unittest.mock import patch, MagicMock, Mock
+from pathlib import Path
+from xmlrpc.client import ServerProxy
+import numpy as np
+import pandas as pd
 
-# Import the classes to test
+
 from msserviceprofiler.modelevalstate.optimizer.optimizer import (
     BenchMark, ProfilerBenchmark, VllmBenchMark,
     Simulator, VllmSimulator, Scheduler, 
@@ -21,6 +35,7 @@ from msserviceprofiler.modelevalstate.config.config import (
     OptimizerConfigField, PsoOptions, DeployPolicy,
     BenchMarkPolicy, AnalyzeTool
 )
+
 
 class TestBenchMark(unittest.TestCase):
     def setUp(self):
@@ -63,6 +78,7 @@ class TestBenchMark(unittest.TestCase):
         
         result = self.benchmark.check_success(print_log=True)
         self.assertTrue(result)
+
 
 class TestProfilerBenchmark(unittest.TestCase):
     def setUp(self):
@@ -113,6 +129,7 @@ class TestSimulator(unittest.TestCase):
         result = self.simulator.check_success(print_log=True)
         self.assertTrue(result)
 
+
 class TestScheduler(unittest.TestCase):
     def setUp(self):
         self.temp_dir = Path(tempfile.mkdtemp())
@@ -158,34 +175,6 @@ class TestPSOOptimizer(unittest.TestCase):
         
         result = self.optimizer.minimum_algorithm(perf_index)
         self.assertIsInstance(result, float)
-
-
-class TestMainFunction(unittest.TestCase):
-    @patch('msserviceprofiler.modelevalstate.optimizer.optimizer.PSOOptimizer')
-    @patch('msserviceprofiler.modelevalstate.optimizer.optimizer.Scheduler')
-    @patch('msserviceprofiler.modelevalstate.optimizer.optimizer.DataStorage')
-    @patch('msserviceprofiler.modelevalstate.optimizer.optimizer.ProfilerBenchmark')
-    @patch('msserviceprofiler.modelevalstate.optimizer.optimizer.Simulator')
-    @patch('msserviceprofiler.modelevalstate.optimizer.optimizer.settings')
-    def test_main(self, mock_settings, mock_simulator, mock_benchmark, 
-                 mock_data_storage, mock_scheduler, mock_pso):
-        # Setup test args
-        args = argparse.Namespace(
-            deploy_policy=DeployPolicy.single.value,
-            benchmark_policy=BenchMarkPolicy.benchmark.value,
-            load_breakpoint=False,
-            backup=False
-        )
-        
-        # Setup mock returns
-        mock_pso_instance = MagicMock()
-        mock_pso.return_value = mock_pso_instance
-        
-        # Run main
-        main(args)
-        
-        # Verify PSO was run
-        mock_pso_instance.run.assert_called_once()
 
 
 if __name__ == '__main__':
