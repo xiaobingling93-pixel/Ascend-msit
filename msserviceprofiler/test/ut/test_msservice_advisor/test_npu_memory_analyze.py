@@ -3,6 +3,7 @@ import json
 import math
 import pytest
 import pathlib
+import subprocess
 from collections import namedtuple
 from unittest.mock import patch, MagicMock, mock_open
 
