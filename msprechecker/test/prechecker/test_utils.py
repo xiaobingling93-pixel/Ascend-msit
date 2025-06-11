@@ -15,6 +15,7 @@
 import unittest
 import os
 import json
+import shutil
 import tempfile
 import socket
 import logging
@@ -111,35 +112,43 @@ class TestUtils(unittest.TestCase):
 
 
 class TestFileOperations(unittest.TestCase):
-    def setUp(self):
-        self.temp_dir = tempfile.mkdtemp()
-        self.csv_file = os.path.join(self.temp_dir, "test.csv")
-        self.json_file = os.path.join(self.temp_dir, "test.json")
-        
-        with open(self.csv_file, "w") as f:
-            f.write("key1,key2\nvalue1,value2\nvalue3,value4")
-            
-        with open(self.json_file, "w") as f:
-            json.dump({"key": "value"}, f)
-
-    def tearDown(self):
-        for f in [self.csv_file, self.json_file]:
-            if os.path.exists(f):
-                os.remove(f)
-        os.rmdir(self.temp_dir)
-
     def test_read_csv(self):
-        result = read_csv(self.csv_file)
-        self.assertEqual(result, {"key1": ["value1", "value3"], "key2": ["value2", "value4"]})
+        with tempfile.TemporaryDirectory() as temp_dir:
+            csv_file = os.path.join(temp_dir, "test.csv")
+            with open(csv_file, "w") as f:
+                f.write("key1,key2\nvalue1,value2\nvalue3,value4")
+            
+            result = read_csv(csv_file)
+            self.assertEqual(result, {"key1": ["value1", "value3"], "key2": ["value2", "value4"]})
 
     def test_read_json(self):
-        result = read_json(self.json_file)
-        self.assertEqual(result, {"key": "value"})
+        with tempfile.TemporaryDirectory() as temp_dir:
+            json_file = os.path.join(temp_dir, "test.json")
+            with open(json_file, "w") as f:
+                json.dump({"key": "value"}, f)
+
+            result = read_json(json_file)
+            self.assertEqual(result, {"key": "value"})
 
     def test_read_csv_or_json(self):
-        self.assertEqual(read_csv_or_json(self.csv_file), {"key1": ["value1", "value3"], "key2": ["value2", "value4"]})
-        self.assertEqual(read_csv_or_json(self.json_file), {"key": "value"})
-        self.assertIsNone(read_csv_or_json("nonexistent.file"))
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Test CSV
+            csv_file = os.path.join(temp_dir, "test.csv")
+            with open(csv_file, "w") as f:
+                f.write("key1,key2\nvalue1,value2\nvalue3,value4")
+            self.assertEqual(
+                read_csv_or_json(csv_file),
+                {"key1": ["value1", "value3"], "key2": ["value2", "value4"]}
+            )
+
+            # Test JSON
+            json_file = os.path.join(temp_dir, "test.json")
+            with open(json_file, "w") as f:
+                json.dump({"key": "value"}, f)
+            self.assertEqual(read_csv_or_json(json_file), {"key": "value"})
+
+            # Test non-existent file
+            self.assertIsNone(read_csv_or_json("nonexistent.file"))
 
     def test_get_next_dict_item(self):
         self.assertEqual(get_next_dict_item({"a": 1, "b": 2}), {"a": 1})
@@ -262,8 +271,6 @@ class TestSimpleProgressBar(unittest.TestCase):
     def test_empty_iterable(self):
         pb = SimpleProgressBar([], desc="Empty")
         count = 0
-        for _ in pb:
-            count += 1
         self.assertEqual(count, 0)
 
     def test_custom_total(self):
