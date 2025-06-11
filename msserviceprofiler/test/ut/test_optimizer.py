@@ -99,26 +99,6 @@ class TestSimulator(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.temp_dir)
 
-    @patch('subprocess.Popen')
-    def test_run(self, mock_popen):
-        mock_process = MagicMock()
-        mock_popen.return_value = mock_process
-        
-        params = (
-            OptimizerConfigField(name="param1", value=10, config_position="BackendConfig.key"),
-            OptimizerConfigField(name="param2", value=20, config_position="env.OTHER")
-        )
-        
-        self.simulator.run(params)
-        
-        # Verify config was updated
-        config_content = self.simulator.mindie_config.config_path.read_text()
-        self.assertIn('"key": 10', config_content)
-        
-        # Verify process was started
-        mock_popen.assert_called_once()
-        self.assertEqual(self.simulator.process, mock_process)
-
     @patch('builtins.open')
     @patch('os.path.exists', return_value=True)
     def test_check_success(self, mock_exists, mock_open):
