@@ -37,6 +37,7 @@ D_BOUNDS = {
 
 
 def _reduce_x_get_axis(op_info):
+    axis = []
     for attr in op_info['attr']:
         if attr['key'] == 'axes':
             axis = attr['value']['list']['i']

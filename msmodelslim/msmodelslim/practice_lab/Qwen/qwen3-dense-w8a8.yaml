@@ -1,6 +1,6 @@
 api-version: v1.0.0
 metadata:
-  config_id: qwen2-w8a8
+  config_id: qwen3-dense-w8a8
   score: 90
   verified_model_types:
     - Qwen3-32B

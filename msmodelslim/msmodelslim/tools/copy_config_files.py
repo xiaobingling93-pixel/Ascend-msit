@@ -14,7 +14,7 @@ def copy_json(src_path: str, dst_path: str, quant_config, mindie_format: bool):
 
 def modify_config_json(src_path: str, dst_path: str, quant_config, mindie_format: bool, custom_hook=None):
     """
-    复制config.json
+    复制及修改 mindie config.json
     @param src_path: 源目录
     @param dst_path: 目标目录
     @param quant_config: 量化配置
@@ -44,6 +44,21 @@ def modify_config_json(src_path: str, dst_path: str, quant_config, mindie_format
     else:
         json_safe_dump(quantization_config, dest_quant_description_filepath, indent=4)
 
+    if custom_hook:
+        custom_hook(model_config)
+
+    json_safe_dump(model_config, dst_path, indent=4)
+
+
+def modify_vllm_config_json(src_path: str, dst_path: str, quant_config, mindie_format: bool, custom_hook=None):
+    """
+    复制及修改vllm config.json
+    @param src_path: 源目录
+    @param dst_path: 目标目录
+    @param quant_config: 量化配置
+    @param custom_hook: 自定义修改 custom_hook(model_config: dict)
+    """
+    model_config = json_safe_load(src_path)
     if custom_hook:
         custom_hook(model_config)
 

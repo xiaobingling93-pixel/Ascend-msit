@@ -215,6 +215,7 @@ class TestNetworkFunctions(unittest.TestCase):
 
 class TestVersion(unittest.TestCase):
     def test_version_comparison(self):
+        # Test proper use of assertGreater/assertLess instead of assertTrue
         version1 = "1.0.0"
         version2 = "2.0.0"
         self.assertLess(version1, version2)

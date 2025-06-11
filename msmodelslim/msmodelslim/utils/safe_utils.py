@@ -9,6 +9,7 @@ from typing import Any, Dict, Union
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig
 from ascend_utils.common.security import json_safe_load, json_safe_dump
 from ascend_utils.common.security.path import get_valid_read_path, get_valid_write_path
+from msmodelslim import logger
 
 
 MAX_KEY_LENGTH = 256
@@ -100,6 +101,7 @@ class SafeGenerator:
                 src_filepath = os.path.join(model_dir, filename)
                 dest_filepath = os.path.join(dest_dir, filename)
                 shutil.copyfile(src_filepath, dest_filepath)
+                logger.info("Save %r success!", filename)
 
     @staticmethod
     def modify_config(model_dir, dest_dir, torch_dtype, quantize_type, **kwargs):
@@ -147,11 +149,13 @@ class SafeGenerator:
 
         dest_config_filepath = os.path.join(dest_dir, 'config.json')
         json_safe_dump(data, dest_config_filepath, 4)
+        logger.info("Save 'config.json' success!")
         os.remove(dest_quant_description_filepath)
         new_dest_quant_description_filepath = os.path.join(dest_dir, f"quant_model_description.json")
         new_dest_quant_description_filepath = get_valid_write_path(new_dest_quant_description_filepath, \
                                                                     is_dir=False)
         json_safe_dump(quant_description_data, new_dest_quant_description_filepath, 4)
+        logger.info("Save 'quant_model_description.json' success!")
 
 
     @staticmethod

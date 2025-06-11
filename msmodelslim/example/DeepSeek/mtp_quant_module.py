@@ -240,7 +240,7 @@ def warp_mtp_model(config, base_model, model_path):
 def post_process_mtp_quant(model_path):
     safetensor_to_check = set()
     # 加载description json
-    desc_file = find_file_with_pattern(model_path, "quant_model_description_*.json")
+    desc_file = find_file_with_pattern(model_path, "quant_model_description*.json")
     description_data = json_safe_load(desc_file)
     new_state_dict = {}
     for key, value in description_data.items():

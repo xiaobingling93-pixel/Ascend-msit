@@ -15,50 +15,32 @@
 import argparse
 from pathlib import Path
 
-from msserviceprofiler.modelevalstate.config.config import DeployPolicy, BenchMarkPolicy
-
-import msserviceprofiler.modelevalstate.optimizer.optimizer as optimizer
-import msserviceprofiler.modelevalstate.train.source_to_train as train
-
 
 def main():
-    parser = argparse.ArgumentParser(description="msserviceprofiler command line tool")
-
-    # 创建子命令解析器
-    subparsers = parser.add_subparsers(dest="command", help="sub-command help")
-
-    # 创建 train 子命令解析器
-    parser_train = subparsers.add_parser("train", help="train help")
-    parser_train.add_argument("-i", "--input", default=None, type=Path, required=True)
-    parser_train.add_argument("-o", "--output", default=Path("output"), type=Path)
-    parser_train.add_argument(
-        "-t", 
-        "--type", 
-        type=str, 
-        choices=["vllm", "mindie"], 
-        default="mindie",
-        help="Specify the type, either 'vllm' or 'mindie' (default: mindie)"
+    from msserviceprofiler.ms_service_profiler_ext import compare, split, analyze
+    from msserviceprofiler.msservice_advisor import advisor
+    from msserviceprofiler.modelevalstate.train import source_to_train
+    from msserviceprofiler.modelevalstate.optimizer import optimizer
+    
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        description="[MindStudio] msserviceprofiler command line tool"
     )
-    # 创建 optimizer 子命令解析器
-    parser_optimizer = subparsers.add_parser("optimizer", help="optimizer help")
-    parser_optimizer.add_argument("-lb", "--load_breakpoint", default=False, action="store_true",
-                        help="Continue from where the last optimization was aborted.")
-    parser_optimizer.add_argument("-d", "--deploy_policy", default=DeployPolicy.single.value,
-                        choices=[k.value for k in list(DeployPolicy)],
-                        help="Indicates whether the multi-node running policy is used.")
-    parser_optimizer.add_argument("--backup", default=False, action="store_true",
-                        help="Whether to back up data.")
-    parser_optimizer.add_argument("-b", "--benchmark_policy", default=BenchMarkPolicy.benchmark.value,
-                        choices=[k.value for k in list(BenchMarkPolicy)],
-                        help="Whether to use custom performance indicators.")
-    # 解析命令行参数
-    args = parser.parse_args()
+    subparsers = parser.add_subparsers(help="sub-command help")
 
-    # 根据子命令执行相应的操作
-    if args.command == "train":
-        train.main(args)
-    elif args.command == "optimizer":
-        optimizer.main(args)
+    source_to_train.arg_parse(subparsers)
+    optimizer.arg_parse(subparsers)
+
+    advisor.arg_parse(subparsers)
+
+    analyze.arg_parse(subparsers)
+    split.arg_parse(subparsers)
+    compare.arg_parse(subparsers)
+    args, _ = parser.parse_known_args()
+
+    # run
+    if hasattr(args, "func"):
+        args.func(args=args, **vars(args))
     else:
         parser.print_help()
 

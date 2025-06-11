@@ -18,6 +18,7 @@ import tempfile
 import logging 
 import re
 import pytest
+from pathlib import Path
 from unittest.mock import patch, mock_open, MagicMock, call
 
 import torch
@@ -40,7 +41,8 @@ with patch.dict("sys.modules", {
     from components.expert_load_balancing.elb.load_balancing import save_matrix_to_json, dump_tables, \
     load_expert_popularity_csv, merge_csv_columns, check_file_type, \
     save_dataframes, process_c2lb, process_dynamic_c2lb, load_balancing, process_c2lb_a3, \
-    select_algorithm, load_balancing
+    select_algorithm, load_balancing, is_file_readable, copy_file, copy_files_with_recovery, \
+    extract_number, process_files_by_type
 
 
 class TestSaveMatrixToJson(unittest.TestCase):
@@ -1014,6 +1016,7 @@ class TestSelectAlgorithm(unittest.TestCase):
 
 
 class TestLoadBalancing:
+
     """测试负载均衡主函数 load_balancing 的类"""
 
     @pytest.fixture
@@ -1112,3 +1115,291 @@ class TestLoadBalancing:
 
         mock_save.assert_called_once_with(None, None, "/fake/output")
         mock_select.assert_called_once_with(mock_args)
+
+
+class TestIsFileReadable:
+    """测试文件可读性检测函数的测试套件"""
+    
+    def test_valid_csv(self, tmp_path):
+        """测试可读取的有效CSV文件"""
+        # 创建临时CSV文件
+        file_path = tmp_path / "valid.csv"
+        file_path.write_text("id,name\n1,Alice\n2,Bob")
+        
+        assert is_file_readable(str(file_path)) is True
+    
+    @pytest.mark.parametrize("exception,error_msg", [
+        (pd.errors.ParserError, "Error tokenizing data"),
+        (FileNotFoundError, "[Errno 2] No such file"),
+        (PermissionError, "[Errno 13] Permission denied"),
+        (MemoryError, "Not enough memory"),
+        (Exception, "Unexpected error")
+    ])
+    def test_read_errors(self, exception, error_msg):
+        """测试各种读取错误场景"""
+        test_file = "problem.csv"
+        
+        with patch('pandas.read_csv') as mock_read, \
+             patch('components.expert_load_balancing.elb.load_balancing.logger') as mock_logger:  # 替换为实际模块名
+            
+            # 配置模拟对象
+            mock_read.side_effect = exception(error_msg)
+            
+            # 执行测试
+            result = is_file_readable(test_file)
+            
+            # 验证结果
+            assert result is False
+            mock_logger.warning.assert_called_once_with(
+                f"File {test_file} unable to read: {error_msg}"
+            )
+
+
+class TestCopyFile:
+    """测试文件拷贝函数的测试套件"""
+    
+    # 模拟文件路径
+    MAIN_FILE = "/data/main.csv"
+    BAK_FILE = "/data/backup.csv"
+    TARGET_FILE = "/output/result.csv"
+    
+    @patch('components.expert_load_balancing.elb.load_balancing.is_file_readable')  
+    @patch('components.expert_load_balancing.elb.load_balancing.logger')
+    @patch('shutil.copy')
+    def test_main_file_readable(self, mock_copy, mock_logger, mock_is_readable):
+        """测试主文件可读的情况"""
+        # 设置模拟返回值
+        mock_is_readable.side_effect = lambda f: f == self.MAIN_FILE
+        
+        # 执行测试
+        copy_file(self.MAIN_FILE, self.BAK_FILE, self.TARGET_FILE)
+        
+        # 验证行为
+        mock_copy.assert_called_once_with(self.MAIN_FILE, self.TARGET_FILE)
+        mock_logger.debug.assert_called_once_with(f"copy: {self.MAIN_FILE} -> {self.TARGET_FILE}")
+
+    @patch('components.expert_load_balancing.elb.load_balancing.is_file_readable')  
+    @patch('components.expert_load_balancing.elb.load_balancing.logger')
+    @patch('shutil.copy')
+    @patch('os.path.exists', return_value=True)
+    def test_backup_file_used(self, mock_exists, mock_copy, mock_logger, mock_is_readable):
+        """测试主文件不可读但备份文件可用的情况"""
+        # 主文件不可读，备份文件可读
+        mock_is_readable.side_effect = lambda f: f == self.BAK_FILE
+        
+        # 执行测试
+        copy_file(self.MAIN_FILE, self.BAK_FILE, self.TARGET_FILE)
+        
+        # 验证行为
+        mock_copy.assert_called_once_with(self.BAK_FILE, self.TARGET_FILE)
+        mock_logger.debug.assert_called_once_with(
+            f"The original file is damaged, use the backup file: {self.BAK_FILE} -> {self.TARGET_FILE}"
+        )
+        mock_exists.assert_called_once_with(self.BAK_FILE)
+
+    @patch('components.expert_load_balancing.elb.load_balancing.is_file_readable')  
+    @patch('components.expert_load_balancing.elb.load_balancing.logger')
+    @patch('shutil.copy')
+    @patch('os.path.exists', return_value=False)
+    def test_no_valid_files_exist(self, mock_exists, mock_copy, mock_logger, mock_is_readable):
+        """测试主文件和备份文件都不可用的情况"""
+        # 两个文件都不可读
+        mock_is_readable.return_value = False
+        
+        # 验证抛出异常
+        with pytest.raises(RuntimeError) as excinfo:
+            copy_file(self.MAIN_FILE, self.BAK_FILE, self.TARGET_FILE)
+        
+        # 验证错误信息
+        assert "The backup files are corrupted or do not exist!" in str(excinfo.value)
+        
+        # 验证没有发生复制操作
+        mock_copy.assert_not_called()
+        mock_exists.assert_called_with(self.BAK_FILE)
+
+
+class TestCopyFilesWithRecovery:
+    """测试文件恢复复制功能的测试套件"""
+    
+    # 基本文件结构
+    BASE_SRC_DIR = "/test/source"
+    BASE_DEST_DIR = "/test/destination"
+    
+    # 测试文件集合
+    DECODE_FILES = ["decode_1.csv", "decode_5.csv", "decode_10.csv"]
+    PREFILL_FILES = ["prefill_2.csv", "prefill_7.csv"]
+    TOPK_FILES = [
+        "decode_topk_1.csv", "decode_topk_5.csv", "decode_topk_10.csv",
+        "prefill_topk_2.csv", "prefill_topk_7.csv"
+    ]
+    BAK_FILES = [
+        "decode_1_bak.csv", "decode_5_bak.csv", "decode_10_bak.csv",
+        "prefill_2_bak.csv", "prefill_7_bak.csv",
+        "decode_topk_1_bak.csv", "decode_topk_10_bak.csv",
+        "prefill_topk_2_bak.csv", "prefill_topk_7_bak.csv"
+    ]
+    JSON_FILES = ["config.json", "meta_data.json"]
+    
+    @pytest.fixture
+    def mock_file_system(self):
+        """模拟文件系统环境"""
+        with patch("os.makedirs") as self.mock_makedirs, \
+             patch("os.listdir") as self.mock_listdir, \
+             patch("os.path.exists") as self.mock_exists, \
+             patch("shutil.copy") as self.mock_shutil_copy, \
+             patch("components.expert_load_balancing.elb.load_balancing.copy_file") as self.mock_copy_file, \
+             patch("components.expert_load_balancing.elb.load_balancing.logger") as self.mock_logger:
+            
+            # 默认设置 - 所有文件都存在
+            self.mock_exists.side_effect = lambda path: True
+            yield
+
+    def setup_files(self, 
+                  decode_files=DECODE_FILES, 
+                  prefill_files=PREFILL_FILES, 
+                  topk_files=TOPK_FILES,
+                  bak_files=BAK_FILES,
+                  json_files=JSON_FILES):
+        """设置模拟的文件列表"""
+        all_files = decode_files + prefill_files + topk_files + bak_files + json_files
+        self.mock_listdir.return_value = all_files
+
+    @pytest.mark.parametrize("file_type", ["decode", "prefill"])
+    def test_file_sorting(self, file_type, mock_file_system):
+        """测试文件排序逻辑是否正确"""
+        # 乱序文件列表
+        files = [f"{file_type}_10.csv", f"{file_type}_2.csv", f"{file_type}_5.csv"]
+        self.setup_files(
+            decode_files=files if file_type == "decode" else [],
+            prefill_files=files if file_type == "prefill" else [],
+        )
+        
+        copy_files_with_recovery(self.BASE_SRC_DIR, self.BASE_DEST_DIR)
+        
+        # 验证调用顺序是按数字排序的
+        calls = self.mock_copy_file.call_args_list
+        numbers = [int(re.search(rf"{file_type}_(\d+).csv", call[0][2])).group(1) 
+                  for call in calls if call[0][2].startswith(f"{file_type}_")]
+        
+        assert numbers == sorted(numbers), "文件未按数字顺序处理"
+
+    def test_successful_recovery(self, mock_file_system):
+        """测试成功恢复所有文件"""
+        self.setup_files()
+        copy_files_with_recovery(self.BASE_SRC_DIR, self.BASE_DEST_DIR)
+        
+        # 验证目录创建
+        self.mock_makedirs.assert_called_once_with(self.BASE_DEST_DIR, exist_ok=True)
+        
+        # 验证文件复制调用次数
+        expected_calls = len(self.DECODE_FILES + self.PREFILL_FILES + self.TOPK_FILES)
+        assert self.mock_copy_file.call_count == expected_calls
+        
+        # 验证JSON文件复制
+        assert self.mock_shutil_copy.call_count == len(self.JSON_FILES)
+        
+        # 验证日志输出
+        self.mock_logger.debug.assert_any_call("=== dealing decode_* file ===")
+        self.mock_logger.debug.assert_any_call("\n=== dealing prefill_* file ===")
+
+
+    def test_no_json_files(self, mock_file_system):
+        """测试没有JSON文件的情况"""
+        self.setup_files(json_files=[])
+        
+        with pytest.raises(FileNotFoundError) as excinfo:
+            copy_files_with_recovery(self.BASE_SRC_DIR, self.BASE_DEST_DIR)
+        assert "dict has no JSON file" in str(excinfo.value)
+
+
+
+class TestExtractNumber:
+    """测试提取文件名数字的函数"""
+
+    @pytest.mark.parametrize("filename, expected", [
+        # 基本格式测试
+        ("decode_123.csv", 123),
+        ("prefill_456.csv", 456),
+        ("decode_0.csv", 0),  # 边界值0
+        
+        # 多种数字格式测试
+        ("decode_1000000.csv", 1000000),  # 大数字
+        ("prefill_00042.csv", 42),  # 前导零
+        ("decode_2147483647.csv", 2147483647),  # int32最大正值
+        ("prefill_4294967295.csv", 4294967295),  # uint32最大值
+        
+        # 边界情况测试
+        ("", None),  # 空文件名
+        ("decode_.csv", None),  # 缺少数字
+        ("decode_no_number.csv", None),  # 没有数字
+        ("prefill.csv", None),  # 只有前缀
+        ("12345.csv", None),  # 只有数字
+        ("decode_123.bak.csv", None),  # 中间扩展名
+        ("bak_decode_123.csv", None),  # 前缀错误
+        
+        # 数字边界测试
+        ("decode_-123.csv", None),  # 负数
+        ("prefill_123.45.csv", None),  # 浮点数
+        
+        # 国际化测试
+        ("decode_123测试.csv", None),  # 文件名包含非ASCII字符
+        ("解码_123.csv", None),  # 中文前缀
+        ("prefill_абвгд.csv", None),  # 西里尔字母
+    ])
+    def test_extract_number(self, filename, expected):
+        """测试各种文件名格式的数字提取"""
+        result = extract_number(filename)
+        assert result == expected
+
+
+class TestProcessFilesByType:
+
+    @patch("os.listdir", return_value=["decode_1.csv", "decode_2.csv", "prefill_1.csv"])
+    @patch("os.path.exists", return_value=True)
+    @patch("pandas.read_csv")
+    @patch("json.load", return_value={"num_moe_layers": 4})
+    @patch("pandas.DataFrame.to_csv")
+    @patch("components.expert_load_balancing.elb.load_balancing.logger")
+    @patch("components.expert_load_balancing.elb.load_balancing.ms_open", create=True)  # 使用 create=True 以防 ms_open 未定义
+    def test_normal_processing(self, mock_ms_open, mock_logger, mock_to_csv, mock_json, 
+                              mock_read_csv, mock_exists, mock_listdir):
+        """测试正常处理流程"""
+        # 设置测试环境
+        src_dir = "/data/source"
+        output_path = "/data/output"
+        file_type = "decode"
+        
+        # 创建实际的DataFrame
+        df1 = pd.DataFrame({
+            'a': np.arange(20),
+            'b': np.arange(20) + 10
+        })
+        
+        df2 = pd.DataFrame({
+            'c': np.arange(25),
+            'd': np.arange(25) + 20
+        })
+        
+        # 配置read_csv返回不同的DataFrame
+        mock_read_csv.side_effect = [df1, df2]
+        
+        # 模拟ms_open和文件内容
+        mock_file = MagicMock()
+        mock_ms_open.return_value.__enter__.return_value = mock_file
+        
+        # 执行测试
+        process_files_by_type(src_dir, file_type, output_path)
+        
+        # 验证JSON文件是否正确打开
+        json_path = f"{src_dir}/model_gen_config.json"
+        mock_ms_open.assert_called_once_with(json_path, 'r', encoding='utf-8')
+        
+        # 验证文件读取次数
+        assert mock_read_csv.call_count == 2
+        mock_logger.info.assert_any_call(f"[{file_type}] num_moe_layers = 4 Minimum number of rows = 20")
+        mock_logger.info.assert_any_call(f"Merge completed, results saved to:{output_path}/decode_info.csv")
+        
+        # 验证输出是否正确保存
+        assert mock_to_csv.call_count == 1
+        output_arg = mock_to_csv.call_args[0][0]
+        assert output_arg == f"{output_path}/decode_info.csv"
