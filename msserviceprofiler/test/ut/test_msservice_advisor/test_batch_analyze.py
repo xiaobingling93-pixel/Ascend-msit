@@ -154,7 +154,7 @@ def test_get_predict_image_success(mock_dependencies):
     }]
     
     # Call the function
-    batch_analyze。get_predict_image(results)
+    batch_analyze.get_predict_image(results)
 
 @patch.object(batch_analyze, 'plt', None)
 def test_get_predict_image_without_matplotlib_does_nothing():
