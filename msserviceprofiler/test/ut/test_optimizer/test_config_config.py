@@ -1,0 +1,110 @@
+import unittest
+import numpy as np
+from copy import deepcopy
+from msserviceprofiler.modelevalstate.config.config import map_param_with_value
+
+
+class OptimizerConfigField:
+    def __init__(self, name: str, config_position: str, dtype: str, 
+                 min=None, max=None, dtype_param=None, value=None):
+        self.name = name
+        self.config_position = config_position
+        self.dtype = dtype
+        self.min = min
+        self.max = max
+        self.dtype_param = dtype_param
+        self.value = value
+
+class TestMapParamWithValueRealFields(unittest.TestCase):
+    def setUp(self):
+
+        self.default_support_field = [
+            OptimizerConfigField(name="max_batch_size", 
+                               config_position="BackendConfig.ScheduleConfig.maxBatchSize", 
+                               min=25, max=300, dtype="int"),
+            OptimizerConfigField(name="max_prefill_batch_size",
+                               config_position="BackendConfig.ScheduleConfig.maxPrefillBatchSize", 
+                               min=1, max=25, dtype="int"),
+            OptimizerConfigField(name="prefill_time_ms_per_req",
+                               config_position="BackendConfig.ScheduleConfig.prefillTimeMsPerReq", 
+                               max=1000, dtype="int"),
+            OptimizerConfigField(name="decode_time_ms_per_req",
+                               config_position="BackendConfig.ScheduleConfig.decodeTimeMsPerReq", 
+                               max=1000, dtype="int"),
+            OptimizerConfigField(name="support_select_batch",
+                               config_position="BackendConfig.ScheduleConfig.supportSelectBatch", 
+                               max=1, dtype="bool"),
+            OptimizerConfigField(name="max_prefill_token",
+                               config_position="BackendConfig.ScheduleConfig.maxPrefillTokens", 
+                               min=4096, max=409600, dtype="int"),
+            OptimizerConfigField(name="max_queue_deloy_microseconds",
+                               config_position="BackendConfig.ScheduleConfig.maxQueueDelayMicroseconds", 
+                               min=500, max=1000000, dtype="int"),
+            OptimizerConfigField(name="prefill_policy_type",
+                               config_position="BackendConfig.ScheduleConfig.prefillPolicyType", 
+                               min=0, max=1, dtype="enum", dtype_param=[0, 1, 3]),
+            OptimizerConfigField(name="decode_policy_type",
+                               config_position="BackendConfig.ScheduleConfig.decodePolicyType", 
+                               min=0, max=1, dtype="enum", dtype_param=[0, 1, 3]),
+            OptimizerConfigField(name="max_preempt_count",
+                               config_position="BackendConfig.ScheduleConfig.maxPreemptCount", 
+                               min=0, max=1, dtype="ratio", dtype_param="max_batch_size")
+        ]
+
+    def test_int_type_with_min_max(self):
+        # 测试 int 类型（带 min/max 约束）
+        params = np.array([26.7, 12.3, 999.9, 500.0, 0.6, 40960.0, 750000.0])
+        result = map_param_with_value(params, self.default_support_field[:7])
+        
+        # 验证字段值是否符合预期
+        self.assertEqual(result[0].value, 26) 
+        self.assertEqual(result[1].value, 12)  
+        self.assertEqual(result[2].value, 999)  
+        self.assertEqual(result[3].value, 500)   
+        self.assertEqual(result[4].value, True)  
+        self.assertEqual(result[5].value, 40960) 
+        self.assertEqual(result[6].value, 750000) 
+
+    def test_enum_type_mapping(self):
+        # 测试 enum 类型的分段映射
+        params = np.array([0.0, 0.3, 0.6, 1.0])
+        enum_fields = [
+            self.default_support_field[7],  # prefill_policy_type (enum [0,1,3])
+            self.default_support_field[8]   # decode_policy_type (enum [0,1,3])
+        ]
+        result = map_param_with_value(params, enum_fields)
+        
+        # 验证 enum 分段逻辑
+        self.assertEqual(result[0].value, 0) 
+        self.assertEqual(result[1].value, 0)
+
+
+    def test_ratio_type_dependency(self):
+        # 测试 ratio 类型（依赖 max_batch_size）
+        params = np.array([0.5])
+        print(params)
+        ratio_field = self.default_support_field[9]  # max_preempt_count (ratio)
+        
+        # 手动设置依赖字段的值
+        max_batch_size_field = OptimizerConfigField(
+            name="max_batch_size", config_position="BackendConfig.ScheduleConfig.maxBatchSize", dtype="int", value=100,   
+        )
+        
+        result = map_param_with_value(params, [max_batch_size_field])
+        self.assertEqual(result[0].value, 0)  
+
+    def test_edge_cases(self):
+        # 测试边界条件
+        params = np.array([24.9, 0.0, 0.0, 0.0, 0.4, 4095.9, 499.9, -1.0, 2.0, 1.1])
+        result = map_param_with_value(params, self.default_support_field)
+        
+        # 验证边界处理
+        self.assertEqual(result[0].value, 24)   # max_batch_size (min=25, 24.9 → 25)
+        self.assertEqual(result[1].value, 0)    # max_prefill_batch_size (min=1, 0.0 → 0)
+        self.assertEqual(result[4].value, False) # support_select_batch (0.4 < 0.5 → False)
+        self.assertEqual(result[5].value, 4095) # max_prefill_token (min=4096, 4095.9 → 4096)
+        self.assertEqual(result[6].value, 499)  # max_queue_delay (min=500, 499.9 → 500)
+        self.assertEqual(result[7].value, 0)    # prefill_policy_type (enum, -1.0 → 第一个选项 0)
+
+if __name__ == "__main__":
+    unittest.main()
