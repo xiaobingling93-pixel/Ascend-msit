@@ -34,6 +34,7 @@ from msserviceprofiler.modelevalstate.model.xgb_state_model import StateXgbModel
 from msserviceprofiler.modelevalstate.data_feature.dataset import preset_category_data
 from msserviceprofiler.modelevalstate.data_feature.dataset import CustomLabelEncoder
 
+
 class TestPretrainModel(unittest.TestCase):
     def setUp(self):
         # 创建临时目录
