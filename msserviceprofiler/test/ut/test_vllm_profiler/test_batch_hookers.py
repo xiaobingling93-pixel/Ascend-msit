@@ -114,7 +114,7 @@ class TestSchedulerHook(unittest.TestCase):
         )
 
         # 导入被测试的类
-        from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.batch_hookers import SchedulerHook, LLMEngineHook
+        from msserviceprofiler.vllm_profiler.vllm_profiler_core.batch_hookers import SchedulerHook, LLMEngineHook
 
         # 初始化 Hook 实例
         self.scheduler_hook = SchedulerHook()
