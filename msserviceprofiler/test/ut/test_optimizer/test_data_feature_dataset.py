@@ -76,10 +76,10 @@ class TestMyDataSet(unittest.TestCase):
     @patch('msserviceprofiler.modelevalstate.data_feature.dataset.PreprocessTool.generate_data')
     def test_convert_batch_info(self, mock_generate):
         """测试批次信息转换"""
-        mock_generate.return_value = ([1,2], ["col1","col2"])
-        result = MyDataSet.convert_batch_info("[[1,2]]", "['idx1','idx2']")
-        self.assertTrue(isinstance(result, pd.DataFrame))
-        self.assertEqual(list(result.columns), ["col1","col2"])
+        mock_generate.return_value = ([1, 2], ["col1", "col2"])
+        result = MyDataSet.convert_batch_info("[[1, 2]]", "['idx1', 'idx2']")
+        self.assertIsInstance(result, pd.DataFrame)
+        self.assertEqual(list(result.columns), ["col1", "col2"])
 
     @patch('msserviceprofiler.modelevalstate.data_feature.dataset.plt.savefig')
     @patch('msserviceprofiler.modelevalstate.data_feature.dataset.sns.scatterplot')
@@ -87,8 +87,8 @@ class TestMyDataSet(unittest.TestCase):
         """测试test_analysis_batch_feature"""
         ds = MyDataSet()
         ds.load_data = pd.DataFrame({
-            "batch_size": (1,2,3),
-            "other_col": ("a","b","c")
+            "batch_size": (1, 2, 3),
+            "other_col": ("a", "b", "c")
         })
         ds.sub_columns = [["batch_size"]]
         ds.analysis_batch_feature(self.test_dir)
@@ -99,7 +99,7 @@ class TestMyDataSet(unittest.TestCase):
         """测试特征和标签维度不匹配的情况"""
         ds = MyDataSet()
         with patch.object(ds, 'preprocess_dispatch', 
-                        return_value=(pd.DataFrame(), pd.DataFrame([1,2]))):
+                        return_value=(pd.DataFrame(), pd.DataFrame([1, 2]))):
             with self.assertRaises(AttributeError):
                 ds.construct_data(self.sample_data)
 

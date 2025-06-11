@@ -14,19 +14,7 @@
 import unittest
 from copy import deepcopy
 import numpy as np
-from msserviceprofiler.modelevalstate.config.config import map_param_with_value
-
-
-class OptimizerConfigField:
-    def __init__(self, name: str, config_position: str, dtype: str, 
-                 min = None, max = None, dtype_param = None, value = None):
-        self.name = name
-        self.config_position = config_position
-        self.dtype = dtype
-        self.min = min
-        self.max = max
-        self.dtype_param = dtype_param
-        self.value = value
+from msserviceprofiler.modelevalstate.config.config import map_param_with_value, OptimizerConfigField
 
 
 class TestMapParamWithValueRealFields(unittest.TestCase):
@@ -75,7 +63,7 @@ class TestMapParamWithValueRealFields(unittest.TestCase):
         self.assertEqual(result[1].value, 12)  
         self.assertEqual(result[2].value, 999)  
         self.assertEqual(result[3].value, 500)   
-        self.assertEqual(result[4].value, True)  
+        self.assertTrue(result[4].value)  
         self.assertEqual(result[5].value, 40960) 
         self.assertEqual(result[6].value, 750000) 
 
@@ -96,7 +84,6 @@ class TestMapParamWithValueRealFields(unittest.TestCase):
     def test_ratio_type_dependency(self):
         # 测试 ratio 类型（依赖 max_batch_size）
         params = np.array([0.5])
-        print(params)
         ratio_field = self.default_support_field[9]  # max_preempt_count (ratio)
         
         # 手动设置依赖字段的值
@@ -113,12 +100,12 @@ class TestMapParamWithValueRealFields(unittest.TestCase):
         result = map_param_with_value(params, self.default_support_field)
         
         # 验证边界处理
-        self.assertEqual(result[0].value, 24)   # max_batch_size (min=25, 24.9 → 25)
-        self.assertEqual(result[1].value, 0)    # max_prefill_batch_size (min=1, 0.0 → 0)
-        self.assertEqual(result[4].value, False) # support_select_batch (0.4 < 0.5 → False)
-        self.assertEqual(result[5].value, 4095) # max_prefill_token (min=4096, 4095.9 → 4096)
-        self.assertEqual(result[6].value, 499)  # max_queue_delay (min=500, 499.9 → 500)
-        self.assertEqual(result[7].value, 0)    # prefill_policy_type (enum, -1.0 → 第一个选项 0)
+        self.assertEqual(result[0].value, 24)  
+        self.assertEqual(result[1].value, 0)   
+        self.assertFalse(result[4].value) 
+        self.assertEqual(result[5].value, 4095) 
+        self.assertEqual(result[6].value, 499)  
+        self.assertEqual(result[7].value, 0)   
 
 if __name__ == "__main__":
     unittest.main()

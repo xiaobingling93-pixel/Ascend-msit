@@ -138,6 +138,7 @@ class TestPreprocessTool(unittest.TestCase):
         with self.assertRaises(ValueError):
             PreprocessTool.generate_data_with_request_info_by_df(row, column)
 
+
 class TestGenerateDataWithRequestInfo(unittest.TestCase):
     def setUp(self):
         self.OUTPUT_LENGTH_FIELD = "output_length"
@@ -153,7 +154,8 @@ class TestGenerateDataWithRequestInfo(unittest.TestCase):
         column = (self.OUTPUT_LENGTH_FIELD, "input_length", "need_blocks")
 
         # 模拟get_field_bins_count的返回值
-        with patch('msserviceprofiler.modelevalstate.inference.common.get_field_bins_count') as mock_get_field_bins_count:
+        with patch('msserviceprofiler.modelevalstate.inference.common.get_field_bins_count') as \
+            mock_get_field_bins_count:
             mock_get_field_bins_count.side_effect = [
                 [0, 2, 1],  # 对于input_length的返回值
                 [1, 0, 1],  # 对于need_blocks的返回值
