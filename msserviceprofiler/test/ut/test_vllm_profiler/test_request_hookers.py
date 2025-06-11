@@ -55,7 +55,7 @@ class FakeAsyncLLMEngine:
         pass
 
 
-@patch("ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.request_hookers.Profiler")
+@patch("msserviceprofiler.vllm_profiler.vllm_profiler_core.request_hookers.Profiler")
 class TestVLLMHookers(unittest.TestCase):
 
     def setUp(self):
@@ -73,7 +73,7 @@ class TestVLLMHookers(unittest.TestCase):
 
     def test_engine_request_tracker_hook_063(self, mock_profiler):
         # 导入被测试的类
-        from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.request_hookers import EngineRequestTrackerHook063
+        from msserviceprofiler.vllm_profiler.vllm_profiler_core.request_hookers import EngineRequestTrackerHook063
 
         # 初始化 EngineRequestTrackerHook
         engine_request_tracker_hook = EngineRequestTrackerHook063()
@@ -88,7 +88,7 @@ class TestVLLMHookers(unittest.TestCase):
 
     def test_engine_request_tracker_hook_084(self, mock_profiler):
         # 导入被测试的类
-        from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.request_hookers import EngineRequestTrackerHook084
+        from msserviceprofiler.vllm_profiler.vllm_profiler_core.request_hookers import EngineRequestTrackerHook084
 
         # 初始化 EngineRequestTrackerHook
         engine_request_tracker_hook = EngineRequestTrackerHook084()
@@ -103,7 +103,7 @@ class TestVLLMHookers(unittest.TestCase):
 
     def test_llm_engine_hook_063(self, mock_profiler):
         # 导入被测试的类
-        from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.request_hookers import LLMEngineHook063
+        from msserviceprofiler.vllm_profiler.vllm_profiler_core.request_hookers import LLMEngineHook063
 
         # 初始化 LLMEngineHook
         llm_engine_hook = LLMEngineHook063()

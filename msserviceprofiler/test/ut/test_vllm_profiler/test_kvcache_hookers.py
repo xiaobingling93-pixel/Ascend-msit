@@ -78,7 +78,7 @@ class FakeLLMEngine:
         return self.stats
 
 
-@patch("ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.kvcache_hookers.Profiler")
+@patch("msserviceprofiler.vllm_profiler.vllm_profiler_core.kvcache_hookers.Profiler")
 class TestKVCacheManagerHook(unittest.TestCase):
 
     def setUp(self):
@@ -87,7 +87,7 @@ class TestKVCacheManagerHook(unittest.TestCase):
         sys.modules["vllm.engine.llm_engine"] = MagicMock(LLMEngine=FakeLLMEngine)
 
         # 导入被测试的类
-        from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.kvcache_hookers import KVCacheManagerHook
+        from msserviceprofiler.vllm_profiler.vllm_profiler_core.kvcache_hookers import KVCacheManagerHook
 
         # 初始化 Hook 实例
         self.kvcache_hook = KVCacheManagerHook()
