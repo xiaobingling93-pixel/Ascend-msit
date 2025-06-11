@@ -14,11 +14,12 @@
 import os
 import json
 import math
-import pytest
 import pathlib
 import subprocess
 from collections import namedtuple
 from unittest.mock import patch, MagicMock, mock_open
+
+import pytest
 
 # Import the module to test with proper error handling
 from msserviceprofiler.msservice_advisor.profiling_analyze import npu_memory_analyze

@@ -11,12 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import pytest
 import os
 import json
-from unittest.mock import patch, MagicMock, mock_open
 import argparse
+from unittest.mock import patch, MagicMock, mock_open
 from dataclasses import asdict
+import pytest
 
 from msserviceprofiler.msservice_advisor import advisor
 from msserviceprofiler.msservice_advisor.profiling_analyze.utils import TARGETS, SUGGESTION_TYPES, logger
