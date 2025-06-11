@@ -141,17 +141,17 @@ class TestPreprocessTool(unittest.TestCase):
 
 class TestGenerateDataWithRequestInfo(unittest.TestCase):
     def setUp(self):
-        self.OUTPUT_LENGTH_FIELD = "output_length"
-        self.TOTAL_OUTPUT_LENGTH = "total_output_length"
+        self.output_length_field = "output_length"
+        self.total_output_length = "total_output_length"
 
     def test_generate_data_with_request_info_normal_case(self):
         # 准备测试数据
         row = (
-            MagicMock(**{self.OUTPUT_LENGTH_FIELD: 5}),
-            MagicMock(**{self.OUTPUT_LENGTH_FIELD: 15}),
-            MagicMock(**{self.OUTPUT_LENGTH_FIELD: 25})
+            MagicMock(**{self.output_length_field: 5}),
+            MagicMock(**{self.output_length_field: 15}),
+            MagicMock(**{self.output_length_field: 25})
         )
-        column = (self.OUTPUT_LENGTH_FIELD, "input_length", "need_blocks")
+        column = (self.output_length_field, "input_length", "need_blocks")
 
         # 模拟get_field_bins_count的返回值
         with patch('msserviceprofiler.modelevalstate.inference.common.get_field_bins_count') as \
@@ -164,7 +164,7 @@ class TestGenerateDataWithRequestInfo(unittest.TestCase):
 
             # 调用方法
             expected_new_index = (
-                self.TOTAL_OUTPUT_LENGTH,
+                self.total_output_length,
                 "input_length_0-80", "input_length_80-160", "input_length_160-240",
                 "need_blocks_0-1", "need_blocks_1-2", "need_blocks_2-3"
             )
@@ -176,7 +176,7 @@ class TestGenerateDataWithRequestInfo(unittest.TestCase):
     def test_generate_data_with_request_info_empty_row(self):
         # 测试空row的情况
         row = ()
-        column = (self.OUTPUT_LENGTH_FIELD, "input_length", "need_blocks")
+        column = (self.output_length_field, "input_length", "need_blocks")
 
         # 预期行为：返回空的元组
         result = PreprocessTool.generate_data_with_request_info(row, column)
@@ -185,9 +185,9 @@ class TestGenerateDataWithRequestInfo(unittest.TestCase):
     def test_generate_data_with_request_info_empty_column(self):
         # 测试空column的情况
         row = (
-            MagicMock(**{self.OUTPUT_LENGTH_FIELD: 5}),
-            MagicMock(**{self.OUTPUT_LENGTH_FIELD: 15}),
-            MagicMock(**{self.OUTPUT_LENGTH_FIELD: 25})
+            MagicMock(**{self.output_length_field: 5}),
+            MagicMock(**{self.output_length_field: 15}),
+            MagicMock(**{self.output_length_field: 25})
         )
         column = ()
 
