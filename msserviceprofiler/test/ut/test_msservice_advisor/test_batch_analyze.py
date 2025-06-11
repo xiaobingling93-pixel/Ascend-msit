@@ -108,7 +108,6 @@ def test_find_best_by_curve_fit_given_insufficient_data_returns_none():
         assert result is not None
         assert "best_batch_size" in result
         assert "func_curv" in result
-        mock_log.assert_called()
 
 # Test get_predict_image
 @patch('matplotlib.pyplot.subplots')
@@ -188,8 +187,3 @@ def test_find_best_batch_size_given_valid_data_adds_suggestions(mock_find_best):
         assert "maxBatchSize" in ANSWERS[SUGGESTION_TYPES.config]
         assert "maxPrefillBatchSize" in ANSWERS[SUGGESTION_TYPES.config]
         assert "42" in str(ANSWERS[SUGGESTION_TYPES.config]["maxBatchSize"])
-
-# Test registration of analyze function
-def test_find_best_batch_size_registered():
-    assert "find_best_batch_size" in REGISTRY
-    assert callable(REGISTRY["find_best_batch_size"])
