@@ -197,28 +197,139 @@ def test_main_integration(mock_log_level, mock_analyze, mock_parse_config, mock_
     mock_parse_config.assert_called_with("config.json")
     mock_analyze.assert_called()
 
-# Test environment variable handling
-def test_mindie_service_path_from_environment():
-    test_path = "/custom/path"
+# Test arg_parse
+def test_arg_parse_with_actual_parsing():
+    # Create actual parser and subparsers
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(dest='command')
+    
+    # Add our advisor subparser
+    advisor.arg_parse(subparsers)
+    
+    # Test with minimal required arguments
+    args = parser.parse_args([
+        'advisor',
+        '-i', 'test_instance',
+        '-s', 'test_config.json',
+        '-t', 'ttft',
+        '-m', 'average',
+        '-in', '100',
+        '-out', '50',
+        '-tp', '2',
+        '-l', 'debug'
+    ])
+    
+    assert args.instance_path == 'test_instance'
+    assert args.service_config_path == 'test_config.json'
+    assert args.target == 'ttft'
+    assert args.target_metrics == 'average'
+    assert args.input_token_num == 100
+    assert args.output_token_num == 50
+    assert args.tp == 2
+    assert args.log_level == 'debug'
+    assert args.func == advisor.main
+
+def test_arg_parse_default_values():
+    # Create actual parser and subparsers
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(dest='command')
+    
+    # Add our advisor subparser
+    advisor.arg_parse(subparsers)
+    
+    # Test with minimal arguments (using defaults)
+    args = parser.parse_args([
+        'advisor',
+        '-i', 'test_instance'
+    ])
+    
+    assert args.instance_path == 'test_instance'
+    assert args.service_config_path == advisor.MINDIE_SERVICE_DEFAULT_PATH
+    assert args.target == 'ttft'
+    assert args.target_metrics == 'average'
+    assert args.input_token_num == 0
+    assert args.output_token_num == 0
+    assert args.tp == 0
+    assert args.log_level == 'info'
+
+def test_arg_parse_with_environment_variable():
+    # Set environment variable
+    test_path = "/custom/mindie/path"
     os.environ[advisor.MIES_INSTALL_PATH] = test_path
     
-    subparsers = MagicMock()
-    advisor.arg_parse(subparsers)
-    
-    parser = subparsers.add_parser.return_value
-    # Check that the default value comes from environment
-    for call in parser.add_argument.call_args_list:
-        if call[1].dest == 'service_config_path':
-            assert call[1]['default'] == test_path
-            break
+    try:
+        # Create actual parser and subparsers
+        parser = argparse.ArgumentParser()
+        subparsers = parser.add_subparsers(dest='command')
+        
+        # Add our advisor subparser
+        advisor.arg_parse(subparsers)
+        
+        # Test with minimal arguments
+        args = parser.parse_args([
+            'advisor',
+            '-i', 'test_instance'
+        ])
+        
+        assert args.service_config_path == test_path
+    finally:
+        # Clean up environment
+        if advisor.MIES_INSTALL_PATH in os.environ:
+            del os.environ[advisor.MIES_INSTALL_PATH]
 
-def test_mindie_service_path_default_when_no_env():
-    subparsers = MagicMock()
+def test_arg_parse_target_choices():
+    # Create actual parser and subparsers
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(dest='command')
+    
+    # Add our advisor subparser
     advisor.arg_parse(subparsers)
     
-    parser = subparsers.add_parser.return_value
-    # Check that the default value is used when no env var
-    for call in parser.add_argument.call_args_list:
-        if call[1]['dest'] == 'service_config_path':
-            assert call[1]['default'] == advisor.MINDIE_SERVICE_DEFAULT_PATH
-            break
+    # Test all valid target choices
+    for target in advisor.TARGETS_MAP.keys():
+        args = parser.parse_args([
+            'advisor',
+            '-i', 'test_instance',
+            '-t', target
+        ])
+        assert args.target == target
+
+def test_arg_parse_target_metrics_choices():
+    # Create actual parser and subparsers
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(dest='command')
+    
+    # Add our advisor subparser
+    advisor.arg_parse(subparsers)
+    
+    # Test all valid metrics choices
+    for metric in advisor.PERF_METRICS:
+        args = parser.parse_args([
+            'advisor',
+            '-i', 'test_instance',
+            '-m', metric
+        ])
+        assert args.target_metrics == metric
+
+def test_arg_parse_invalid_positive_integer():
+    # Create actual parser and subparsers
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(dest='command')
+    
+    # Add our advisor subparser
+    advisor.arg_parse(subparsers)
+    
+    # Test invalid integer values
+    with pytest.raises(SystemExit):
+        parser.parse_args([
+            'advisor',
+            '-i', 'test_instance',
+            '-in', '-1'  # Negative number
+        ])
+    
+    with pytest.raises(SystemExit):
+        parser.parse_args([
+            'advisor',
+            '-i', 'test_instance',
+            '-tp', 'abc'  # Not a number
+        ])
