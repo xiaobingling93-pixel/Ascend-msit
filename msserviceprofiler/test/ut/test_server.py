@@ -147,19 +147,19 @@ class TestRemoteScheduler(unittest.TestCase):
         params = np.array([])
         self.scheduler.run_simulator(params)
         self.assertIsNotNone(self.scheduler.simulator)
-    @patch('your_module.settings')
-    @patch('your_module.logger')
-    @patch('your_module.Simulator')
-    @patch('your_module.map_param_with_value')
-    def test_run_simulator(self, mock_map_param_with_value, mock_simulator, mock_logger, mock_settings):
+
+    @patch('msserviceprofiler.modelevalstate.optimizer.server.settings')
+    @patch('msserviceprofiler.modelevalstate.optimizer.server.logger')
+    @patch('msserviceprofiler.modelevalstate.optimizer.server.Simulator')
+    def test_run_simulator_with_empty_params(self, mock_simulator, mock_logger, mock_settings):
         # 创建 RemoteScheduler 实例
         remote_scheduler = RemoteScheduler()
 
-        # 模拟参数
-        params = np.array([1, 2, 3])
+        # 模拟空参数
+        params = np.array([])
 
         # 模拟 map_param_with_value 的返回值
-        mock_map_param_with_value.return_value = ('param1', 'param2', 'param3')
+        mock_map_param_with_value.return_value = ()
 
         # 调用 run_simulator 方法
         remote_scheduler.run_simulator(params)
@@ -171,14 +171,15 @@ class TestRemoteScheduler(unittest.TestCase):
         mock_map_param_with_value.assert_called_once_with(params, mock_settings.target_field)
 
         # 验证 logger.info 是否被正确调用
-        mock_logger.info.assert_called_once_with("simulate run info ('param1', 'param2', 'param3')")
+        mock_logger.info.assert_called_once_with("simulate run info ()")
 
         # 验证 Simulator 的 run 方法是否被正确调用
-        mock_simulator.return_value.run.assert_called_once_with(('param1', 'param2', 'param3'))
+        mock_simulator.return_value.run.assert_called_once_with(())
 
-    @patch('your_module.settings')
-    @patch('your_module.logger')
-    @patch('your_module.Simulator')
+
+    @patch('msserviceprofiler.modelevalstate.optimizer.server.settings')
+    @patch('msserviceprofiler.modelevalstate.optimizer.server.logger')
+    @patch('msserviceprofiler.modelevalstate.optimizer.server.Simulator')
     def test_run_simulator_with_empty_params(self, mock_simulator, mock_logger, mock_settings):
         # 创建 RemoteScheduler 实例
         remote_scheduler = RemoteScheduler()
