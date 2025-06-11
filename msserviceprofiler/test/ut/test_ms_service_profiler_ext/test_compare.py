@@ -17,12 +17,10 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 import pandas as pd
-from msserviceprofiler.ms_service_profiler_ext.compare import connect_db, main, set_log_level, logger
+from msserviceprofiler.ms_service_profiler_ext.compare import connect_db, main
 from msserviceprofiler.ms_service_profiler_ext.compare_tools import CSVComparator
 from msserviceprofiler.ms_service_profiler_ext.compare import connect_db, process_files
 from msserviceprofiler.ms_service_profiler_ext.common.csv_fields import ServiceCSVFields
-
-logger.warning = MagicMock()
 
 
 def build_test_data_df(value_list):
@@ -118,26 +116,3 @@ def test_main_given_valid_args_when_run_then_success(tmp_path):
     # Assert
     assert (tmp_path / "compare_result.xlsx").exists()
     assert (tmp_path / "compare_result.db").exists()
-
-
-# Test cases for set_log_level
-def test_set_log_level_given_valid_level_when_set_then_success():
-    # Arrange
-    log_level = "info"
-
-    # Act
-    set_log_level(log_level)
-
-    # Assert
-    import logging
-
-    assert logger.level == logging.INFO
-
-
-# Test invalid cases for set_log_level
-def test_set_log_level_given_invalid_level_when_set_then_raise_error():
-    # Arrange
-    log_level = "invalid_level"
-
-    # Act
-    set_log_level(log_level)
