@@ -33,12 +33,12 @@ class MockSimulator:
         self.mindie_log = "mock_log.txt"
         self.process = MagicMock()
 
-    def run(self, params):
-        pass
-
-    @classmethod
+    @staticmethod
     def check_success(self):
         return True
+
+    def run(self, params):
+        pass
 
     def stop(self, del_log=True):
         pass

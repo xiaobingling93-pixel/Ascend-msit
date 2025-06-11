@@ -25,6 +25,7 @@ class MockDataStorageConfig:
     def __init__(self, store_dir):
         self.store_dir = Path(store_dir)
 
+
 class MockPerformanceIndex:
     def __init__(self, qps=0.0, latency_avg=0.0, latency_p50=0.0, latency_p90=0.0, latency_p99=0.0):
         self._data = {
