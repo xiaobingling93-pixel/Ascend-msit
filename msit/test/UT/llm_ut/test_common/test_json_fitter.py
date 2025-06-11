@@ -16,6 +16,8 @@ import unittest
 import base64
 from unittest.mock import patch
 import onnx
+import pandas as pd
+from io import StringIO
 
 from msit_llm.common.json_fitter import atb_node_to_plain_node, atb_json_dict_node_parse, \
     atb_param_to_onnx_attribute, atb_param_to_onnx_attribute, parse_onnx_attr_from_atb_node_dict, \
@@ -613,3 +615,115 @@ class TestAtbFunctions(unittest.TestCase):
         ]
 
         self.assertEqual(value_info, expected_value_info)
+
+
+class TestCsvToContent:
+    """测试CSV内容转换函数"""
+    
+    # 基本CSV内容
+    BASE_CSV = """OpName|InDType|InShape|OutDType|OutShape
+conv1|float32|1,224,224,3|float32|1,112,112,32
+pool1|float32|1,112,112,32|float32|1,56,56,32
+dense1|float32|1,56,56,32;float32|1,100352|float32|1,512
+"""
+    
+    @patch("pandas.read_csv")
+    @patch("msit_llm.common.json_fitter.Rule")
+    @patch("msit_llm.common.json_fitter.load_file_to_read_common_check")
+    def test_conversion(self, mock_load, mock_rule, mock_read_csv):
+        mock_load.return_value = "/path/to/op_info.csv"
+        mock_rule.return_value.check.return_value = True
+        
+        mock_read_csv.return_value = pd.read_csv(
+            StringIO(self.BASE_CSV), 
+            sep="|", 
+            dtype=str
+        )
+        
+        # 执行测试
+        result = csv_to_content("dummy_path")
+        
+        # 验证结果
+        assert result == {}
+        
+
+
+class TestAtbToOnnxJson:
+    """测试ATB JSON到ONNX JSON的转换函数"""
+    
+    # 基础ATB JSON结构
+    BASE_ATB_JSON = {
+        "inTensors": ["input_tensor"],
+        "outTensors": ["output_tensor"],
+        "nodes": [
+            {"type": "Conv", "name": "conv1", "inputs": ["input_tensor"], "outputs": ["conv_output"]},
+            {"type": "Relu", "name": "relu1", "inputs": ["conv_output"], "outputs": ["output_tensor"]}
+        ]
+    }
+    
+    # 基础形状信息
+    BASE_SHAPE_CONTENTS = {
+        "conv1": {
+            "inputs": [{"type": "float32", "shape": ["1", "224", "224", "3"]}],
+            "outputs": [{"type": "float32", "shape": ["1", "112", "112", "32"]}]
+        },
+        "relu1": {
+            "inputs": [{"type": "float32", "shape": ["1", "112", "112", "32"]}],
+            "outputs": [{"type": "float32", "shape": ["1", "112", "112", "32"]}]
+        }
+    }
+    
+    def mock_atb_json_dict_node_parse(atb_json_dict, target_level):
+        """模拟节点解析函数"""
+        return atb_json_dict["nodes"]
+    
+    def mock_atb_node_to_onnx_node(node):
+        """模拟节点转换函数"""
+        # 简化转换：保持相同结构但添加ONNX所需字段
+        return {
+            "name": node["name"],
+            "op_type": node["type"],
+            "input": node.get("inputs", []),
+            "output": node.get("outputs", [])
+        }
+    
+    def mock_atb_shape_to_onnx_shape(value_info_list, names, shape_info_list):
+        """模拟形状转换函数"""
+        for name, shape_info in zip(names, shape_info_list):
+            value_info_list.append({
+                "name": name,
+                "type": shape_info["type"],
+                "shape": shape_info["shape"]
+            })
+    
+    @patch("msit_llm.common.json_fitter.atb_shape_to_onnx_shape", side_effect=mock_atb_shape_to_onnx_shape)
+    @patch("msit_llm.common.json_fitter.atb_node_to_onnx_node", side_effect=mock_atb_node_to_onnx_node)
+    @patch("msit_llm.common.json_fitter.atb_json_dict_node_parse", side_effect=mock_atb_json_dict_node_parse)
+    def test_basic_conversion(self, mock_node_parse, mock_node_convert, mock_shape_convert):
+        """测试基本转换功能"""
+        # 执行测试
+        result = atb_json_to_onnx_json(
+            atb_json_dict=self.BASE_ATB_JSON, 
+            target_level="level1", 
+            shape_contents=self.BASE_SHAPE_CONTENTS
+        )
+        
+        # 验证结果结构
+        assert "graph" in result
+        assert "node" in result["graph"]
+        assert len(result["graph"]["node"]) == 2
+        
+        # 验证输入输出
+        assert len(result["graph"]["input"]) == 1
+        assert result["graph"]["input"][0]["name"] == "input_tensor"
+        assert len(result["graph"]["output"]) == 1
+        assert result["graph"]["output"][0]["name"] == "output_tensor"
+        
+        # 验证valueInfo
+        assert "valueInfo" in result["graph"]
+        assert len(result["graph"]["valueInfo"]) == 4  # 2节点的输入输出
+        
+        # 验证辅助函数调用
+        mock_node_parse.assert_called_once_with(self.BASE_ATB_JSON, "level1")
+        assert mock_node_convert.call_count == 2
+        assert mock_shape_convert.call_count == 4  # 每个节点调用两次（输入和输出）

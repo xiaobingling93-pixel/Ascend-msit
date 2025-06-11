@@ -1,4 +1,6 @@
 import pytest
+import unittest
+from unittest.mock import MagicMock, patch
 
 import msit_llm.dump.torch_dump.topo as topo
 from msit_llm.compare.cmp_op_match import OpMatchMap, MatchLocation
@@ -6,7 +8,9 @@ from msit_llm.dump.torch_dump.topo import TreeNode
 from msit_llm.compare.cmp_op_match import policy_enhanced_name_match, policy_layer_type_cnt_match, \
                                             policy_name_full_match, policy_output, \
                                             policy_layer_special_match, policy_rope_operator_match, \
-                                            policy_module_match
+                                            policy_module_match, OpMatchMgr, policy_qwen_match
+from msit_llm.dump.torch_dump.topo import TreeNode
+from msit_llm.compare.op_mapping import QWEN_OP_MAPPING
 
 
 @pytest.fixture
@@ -243,3 +247,158 @@ def test_policy_module_match(patch_min_layer_number):
     assert len(matches) == len(expected_matches)
     for match, expected in zip(matches, expected_matches):
         assert match == expected
+
+
+class TestOpMatchMgrInit(unittest.TestCase):
+    def setUp(self):
+        # Common mock args setup
+        self.args = MagicMock()
+        self.args.cmp_level = None
+        self.args.stats = False
+
+    def test_init_with_cmp_level_layer(self):
+        """Test initialization with cmp_level='layer'"""
+        self.args.cmp_level = "layer"
+        mgr = OpMatchMgr(self.args)
+        
+        self.assertEqual(len(mgr.selected_policies), 1)
+        self.assertEqual(mgr.selected_policies[0], mgr.op_match_policies_layer)
+        self.assertFalse(mgr.cmp_all)
+    
+    def test_init_with_cmp_level_module(self):
+        """Test initialization with cmp_level='module'"""
+        self.args.cmp_level = "module"
+        mgr = OpMatchMgr(self.args)
+        
+        self.assertEqual(len(mgr.selected_policies), 1)
+        self.assertEqual(mgr.selected_policies[0], mgr.op_match_policies_module)
+        self.assertFalse(mgr.cmp_all)
+
+    def test_init_with_cmp_level_api(self):
+        """Test initialization with cmp_level='api'"""
+        self.args.cmp_level = "api"
+        mgr = OpMatchMgr(self.args)
+        
+        self.assertEqual(len(mgr.selected_policies), 1)
+        self.assertEqual(mgr.selected_policies[0], mgr.op_match_policies)
+        self.assertFalse(mgr.cmp_all)
+
+    def test_init_with_cmp_level_logits(self):
+        """Test initialization with cmp_level='logits'"""
+        self.args.cmp_level = "logits"
+        mgr = OpMatchMgr(self.args)
+        
+        self.assertEqual(len(mgr.selected_policies), 1)
+        self.assertEqual(mgr.selected_policies[0], mgr.op_match_policies)
+        self.assertFalse(mgr.cmp_all)
+
+    def test_init_with_stats_true(self):
+        """Test initialization with stats=True"""
+        self.args.stats = True
+        mgr = OpMatchMgr(self.args)
+        
+        self.assertEqual(len(mgr.selected_policies), 1)
+        self.assertEqual(mgr.selected_policies[0], mgr.op_match_policies)
+        self.assertFalse(mgr.cmp_all)
+
+    def test_init_with_no_special_args(self):
+        """Test initialization with no special args (cmp_all case)"""
+        mgr = OpMatchMgr(self.args)
+        
+        self.assertEqual(len(mgr.selected_policies), 3)
+        self.assertEqual(mgr.selected_policies[0], mgr.op_match_policies_layer)
+        self.assertEqual(mgr.selected_policies[1], mgr.op_match_policies_module)
+        self.assertEqual(mgr.selected_policies[2], mgr.op_match_policies)
+        self.assertTrue(mgr.cmp_all)
+
+    def test_policy_lists_initialized(self):
+        """Test that all policy lists are properly initialized"""
+        mgr = OpMatchMgr(self.args)
+        
+        self.assertTrue(hasattr(mgr, 'op_match_policies'))
+        self.assertTrue(hasattr(mgr, 'op_match_policies_layer'))
+        self.assertTrue(hasattr(mgr, 'op_match_policies_module'))
+        self.assertIsInstance(mgr.op_match_policies, list)
+        self.assertIsInstance(mgr.op_match_policies_layer, list)
+        self.assertIsInstance(mgr.op_match_policies_module, list)
+
+
+class TestPolicyQwenMatch(unittest.TestCase):
+    def setUp(self):
+        # Create mock TreeNode objects
+        self.mock_golden_root = MagicMock(spec=TreeNode)
+        self.mock_my_root = MagicMock(spec=TreeNode)
+        self.mock_match_map = MagicMock()
+        
+        # Setup default return values
+        self.mock_golden_root.get_all_nodes.return_value = []
+        self.mock_my_root.get_all_nodes.return_value = []
+        self.mock_golden_root.get_layer_node_type.return_value = "golden_layer"
+        self.mock_my_root.get_layer_node_type.return_value = "my_layer"
+        self.mock_golden_root.get_layer_node.return_value = []
+        self.mock_my_root.get_layer_node.return_value = []
+
+    def test_empty_inputs(self):
+        """Test with empty input trees"""
+        policy_qwen_match(self.mock_golden_root, self.mock_my_root, self.mock_match_map)
+        self.mock_match_map.add_score.assert_not_called()
+
+    def test_basic_matching(self):
+        """Test basic matching scenario with one matching pair"""
+        # Setup test data
+        golden_node = MagicMock()
+        golden_node.tensor_path = "golden/path/to/op"
+        my_node = MagicMock()
+        my_node.tensor_path = "my/path/to/qkv"
+        
+        # Mock layer nodes
+        golden_layer_node = MagicMock()
+        golden_layer_node.get_next_level_nodes.return_value = [golden_node]
+        my_layer_node = MagicMock()
+        my_layer_node.get_next_level_nodes.return_value = [my_node]
+        
+        # Configure mocks
+        self.mock_golden_root.get_all_nodes.return_value = [golden_node]
+        self.mock_my_root.get_all_nodes.return_value = [my_node]
+        self.mock_golden_root.get_layer_node.return_value = [golden_layer_node]
+        self.mock_my_root.get_layer_node.return_value = [my_layer_node]
+        
+        # Setup QWEN_OP_MAPPING for test
+        with patch.dict('msit_llm.compare.op_mapping.QWEN_OP_MAPPING', 
+                       {'qkv': ['op']}, clear=True):
+            policy_qwen_match(self.mock_golden_root, self.mock_my_root, self.mock_match_map)
+        
+        # Verify match was called
+        self.mock_match_map.add_score.assert_called_once()
+
+
+    def test_multiple_matches(self):
+        """Test scenario with multiple matching pairs"""
+        # Create test nodes
+        golden_nodes = [MagicMock() for _ in range(3)]
+        for i, node in enumerate(golden_nodes):
+            node.tensor_path = f"golden/path/op_{i}"
+        
+        my_nodes = [MagicMock() for _ in range(3)]
+        for i, node in enumerate(my_nodes):
+            node.tensor_path = f"my/path/qkv_{i}"
+        
+        # Mock layer nodes
+        golden_layer_node = MagicMock()
+        golden_layer_node.get_next_level_nodes.return_value = golden_nodes
+        my_layer_node = MagicMock()
+        my_layer_node.get_next_level_nodes.return_value = my_nodes
+        
+        # Configure mocks
+        self.mock_golden_root.get_all_nodes.return_value = golden_nodes
+        self.mock_my_root.get_all_nodes.return_value = my_nodes
+        self.mock_golden_root.get_layer_node.return_value = [golden_layer_node]
+        self.mock_my_root.get_layer_node.return_value = [my_layer_node]
+        
+        # Setup QWEN_OP_MAPPING for test
+        with patch.dict('msit_llm.compare.op_mapping.QWEN_OP_MAPPING', 
+                       {'qkv': ['op']}, clear=True):
+            policy_qwen_match(self.mock_golden_root, self.mock_my_root, self.mock_match_map)
+        
+        # Verify matches were called
+        self.assertEqual(self.mock_match_map.add_score.call_count, 9)
