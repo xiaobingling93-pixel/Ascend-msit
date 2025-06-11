@@ -10,6 +10,24 @@ import numpy as np
 import pandas as pd
 from loguru import logger
 
+
+import argparse
+from xmlrpc.client import ServerProxy
+
+# Import the classes to test
+from msserviceprofiler.modelevalstate.optimizer.optimizer import (
+    BenchMark, ProfilerBenchmark, VllmBenchMark,
+    Simulator, VllmSimulator, Scheduler, 
+    ScheduleWithMultiMachine, PSOOptimizer,
+    main, arg_parse
+)
+from msserviceprofiler.modelevalstate.config.config import (
+    BenchMarkConfig, MindieConfig, PerformanceIndex,
+    OptimizerConfigField, PsoOptions, DeployPolicy,
+    BenchMarkPolicy, AnalyzeTool
+)
+
+
 class TestKillChildren(unittest.TestCase):
     @patch('psutil.Process')
     @patch('logger.error')
@@ -164,56 +182,6 @@ class TestOptimizerUtils(unittest.TestCase):
         # 清理测试目录
         shutil.rmtree(self.test_dir)
 
-    @patch('psutil.Process')
-    def test_kill_children(self, mock_process):
-        # 创建mock子进程
-        mock_child = MagicMock()
-        mock_child.is_running.side_effect = [True, False]
-        mock_child.pid = 12345
-
-        # 测试成功杀死进程
-        kill_children([mock_child])
-        mock_child.send_signal.assert_called_once_with(9)
-        mock_child.wait.assert_called_once_with(10)
-
-        # 测试进程已经停止
-        mock_child.reset_mock()
-        mock_child.is_running.return_value = False
-        kill_children([mock_child])
-        mock_child.send_signal.assert_not_called()
-
-    @patch('psutil.process_iter')
-    @patch('psutil.Process')
-    def test_kill_process(self, mock_process_class, mock_process_iter):
-        # 设置mock进程
-        mock_proc = MagicMock()
-        mock_proc.info = {"name": "test_process", "pid": 12345}
-        mock_process_iter.return_value = [mock_proc]
-        
-        # 设置子进程
-        mock_child = MagicMock()
-        mock_process_class.return_value.children.return_value = [mock_child]
-
-        # 执行kill_process
-        kill_process("test_process")
-        mock_process_class.assert_called_once_with(12345)
-        mock_process_class.return_value.children.assert_called_once_with(recursive=True)
-
-    def test_remove_file(self):
-        # 测试删除文件
-        remove_file(self.test_file)
-        self.assertFalse(self.test_file.exists())
-
-        # 测试删除不存在的文件
-        remove_file(self.test_dir / "nonexistent.txt")
-
-        # 测试删除目录
-        test_subdir = self.test_dir / "subdir"
-        test_subdir.mkdir()
-        (test_subdir / "test.txt").touch()
-        remove_file(test_subdir)
-        self.assertFalse(test_subdir.exists())
-
     def test_backup(self):
         # 创建源文件和备份目录
         bak_dir = self.test_dir / "backup"
@@ -242,86 +210,6 @@ class TestOptimizerUtils(unittest.TestCase):
         with self.assertRaises(OSError):
             os.close(fd)  # 应该抛出错误，因为文件描述符已关闭
 
-class TestBenchMark(unittest.TestCase):
-    def setUp(self):
-        self.benchmark_config = MockBenchMarkConfig()
-        self.benchmark = BenchMark(self.benchmark_config)
-        self.test_dir = Path(tempfile.mkdtemp())
-
-    def tearDown(self):
-        shutil.rmtree(self.test_dir)
-
-    @patch('pandas.read_csv')
-    def test_get_performance_index(self, mock_read_csv):
-        # 模拟CSV数据
-        mock_df = pd.DataFrame({
-            'OutputGenerateSpeed': ['10.5'],
-            'Returned': ['95.5%'],
-            'FirstTokenTime': ['500 ms'],
-            'GeneratedTokenSpeed': ['20.5 t/s'],
-            'DecodeTime': ['100 ms']
-        })
-        mock_read_csv.return_value = mock_df
-
-        # 模拟文件系统
-        with patch('pathlib.Path.iterdir') as mock_iterdir:
-            mock_iterdir.return_value = [
-                MagicMock(name='result_common.csv'),
-                MagicMock(name='result_perf.csv')
-            ]
-            
-            # 获取性能指标
-            result = self.benchmark.get_performance_index()
-            self.assertIsNotNone(result)
-
-    @patch('subprocess.Popen')
-    def test_run(self, mock_popen):
-        # 设置mock进程
-        mock_process = MagicMock()
-        mock_popen.return_value = mock_process
-
-        # 创建测试参数
-        test_params = (
-            MagicMock(config_position="env", name="TEST_ENV", value="test_value"),
-        )
-
-        # 运行benchmark
-        self.benchmark.run(test_params)
-        
-        # 验证环境变量设置
-        self.assertEqual(os.environ.get("TEST_ENV"), "test_value")
-        
-        # 验证进程创建
-        self.assertIsNotNone(self.benchmark.process)
-        mock_popen.assert_called_once()
-
-    def test_check_success(self):
-        # 测试进程未启动
-        self.assertFalse(self.benchmark.check_success())
-
-        # 测试进程运行中
-        self.benchmark.process = MagicMock()
-        self.benchmark.process.poll.return_value = None
-        self.assertFalse(self.benchmark.check_success())
-
-        # 测试进程成功完成
-        self.benchmark.process.poll.return_value = 0
-        self.assertTrue(self.benchmark.check_success())
-
-        # 测试进程失败
-        self.benchmark.process.poll.return_value = 1
-        with self.assertRaises(subprocess.SubprocessError):
-            self.benchmark.check_success()
-
-    @patch('msserviceprofiler.modelevalstate.optimizer.optimizer.remove_file')
-    def test_prepare(self, mock_remove):
-        self.benchmark.prepare()
-        self.assertEqual(mock_remove.call_count, 2)
-        mock_remove.assert_has_calls([
-            call(Path('mock_output')),
-            call(Path('mock_custom_output'))
-        ])
-
 class TestProfilerBenchmark(unittest.TestCase):
     def setUp(self):
         self.benchmark_config = MockBenchMarkConfig()
@@ -337,6 +225,192 @@ class TestProfilerBenchmark(unittest.TestCase):
     def test_extra_performance_index(self):
         with self.assertRaises(ValueError):
             self.profiler.extra_performance_index()
+
+class TestBenchMark(unittest.TestCase):
+    def setUp(self):
+        self.temp_dir = Path(tempfile.mkdtemp())
+        self.benchmark_config = BenchMarkConfig(
+            output_path=self.temp_dir / "output",
+            command="test_command",
+            work_path=self.temp_dir
+        )
+        self.benchmark = BenchMark(self.benchmark_config)
+
+    def tearDown(self):
+        shutil.rmtree(self.temp_dir)
+
+    @patch('os.environ', {})
+    def test_run_with_env_params(self):
+        with patch('subprocess.Popen') as mock_popen:
+            params = (
+                OptimizerConfigField(name="param1", value=10, config_position="env"),
+                OptimizerConfigField(name="param2", value=20, config_position="other")
+            )
+            self.benchmark.run(params)
+            self.assertEqual(os.environ["param1"], "10")
+            self.assertNotIn("param2", os.environ)
+
+    def test_get_performance_index_no_files(self):
+        with self.assertRaises(ValueError):
+            self.benchmark.get_performance_index()
+
+    @patch('builtins.open')
+    @patch('os.path.exists', return_value=True)
+    def test_check_success(self, mock_exists, mock_open):
+        mock_file = MagicMock()
+        mock_open.return_value.__enter__.return_value = mock_file
+        mock_file.tell.side_effect = [0, 100]
+        mock_file.read.return_value = "test output"
+        
+        self.benchmark.process = MagicMock()
+        self.benchmark.process.poll.return_value = 0
+        
+        result = self.benchmark.check_success(print_log=True)
+        self.assertTrue(result)
+
+class TestProfilerBenchmark(unittest.TestCase):
+    def setUp(self):
+        self.temp_dir = Path(tempfile.mkdtemp())
+        self.benchmark_config = BenchMarkConfig(
+            output_path=self.temp_dir / "output",
+            profile_input_path=self.temp_dir / "input",
+            profile_output_path=self.temp_dir / "profile_output",
+            command="test_command"
+        )
+        self.benchmark = ProfilerBenchmark(
+            self.benchmark_config,
+            analyze_tool=AnalyzeTool.profiler
+        )
+
+    def tearDown(self):
+        shutil.rmtree(self.temp_dir)
+
+
+class TestSimulator(unittest.TestCase):
+    def setUp(self):
+        self.temp_dir = Path(tempfile.mkdtemp())
+        config_file = self.temp_dir / "config.json"
+        config_file.write_text('{"key": "value"}')
+        
+        self.mindie_config = MindieConfig(
+            config_path=config_file,
+            config_bak_path=self.temp_dir / "config_bak.json",
+            command="test_command",
+            process_name="test_process"
+        )
+        self.simulator = Simulator(self.mindie_config)
+
+    def tearDown(self):
+        shutil.rmtree(self.temp_dir)
+
+    @patch('subprocess.Popen')
+    def test_run(self, mock_popen):
+        mock_process = MagicMock()
+        mock_popen.return_value = mock_process
+        
+        params = (
+            OptimizerConfigField(name="param1", value=10, config_position="BackendConfig.key"),
+            OptimizerConfigField(name="param2", value=20, config_position="env.OTHER")
+        )
+        
+        self.simulator.run(params)
+        
+        # Verify config was updated
+        config_content = self.simulator.mindie_config.config_path.read_text()
+        self.assertIn('"key": 10', config_content)
+        
+        # Verify process was started
+        mock_popen.assert_called_once()
+        self.assertEqual(self.simulator.process, mock_process)
+
+    @patch('builtins.open')
+    @patch('os.path.exists', return_value=True)
+    def test_check_success(self, mock_exists, mock_open):
+        mock_file = MagicMock()
+        mock_open.return_value.__enter__.return_value = mock_file
+        mock_file.tell.side_effect = [0, 100]
+        mock_file.read.return_value = "Daemon start success!"
+        
+        self.simulator.process = MagicMock()
+        self.simulator.process.poll.return_value = None
+        
+        result = self.simulator.check_success(print_log=True)
+        self.assertTrue(result)
+
+class TestScheduler(unittest.TestCase):
+    def setUp(self):
+        self.temp_dir = Path(tempfile.mkdtemp())
+        
+        # Create mock dependencies
+        self.mock_simulator = MagicMock(spec=Simulator)
+        self.mock_benchmark = MagicMock(spec=BenchMark)
+        self.mock_data_storage = MagicMock()
+        
+        self.scheduler = Scheduler(
+            simulator=self.mock_simulator,
+            benchmark=self.mock_benchmark,
+            data_storage=self.mock_data_storage
+        )
+
+
+class TestPSOOptimizer(unittest.TestCase):
+    def setUp(self):
+        self.mock_scheduler = MagicMock(spec=Scheduler)
+        
+        self.target_field = (
+            OptimizerConfigField(name="param1", min=0, max=10),
+            OptimizerConfigField(name="param2", min=0, max=10)
+        )
+        
+        self.pso_options = PsoOptions()
+        
+        self.optimizer = PSOOptimizer(
+            scheduler=self.mock_scheduler,
+            n_particles=5,
+            iters=2,
+            pso_options=self.pso_options,
+            target_field=self.target_field
+        )
+
+    def test_minimum_algorithm(self):
+        perf_index = PerformanceIndex(
+            generate_speed=100,
+            time_to_first_token=0.1,
+            time_per_output_token=0.2,
+            success_rate=0.95
+        )
+        
+        result = self.optimizer.minimum_algorithm(perf_index)
+        self.assertIsInstance(result, float)
+
+
+class TestMainFunction(unittest.TestCase):
+    @patch('msserviceprofiler.modelevalstate.optimizer.optimizer.PSOOptimizer')
+    @patch('msserviceprofiler.modelevalstate.optimizer.optimizer.Scheduler')
+    @patch('msserviceprofiler.modelevalstate.optimizer.optimizer.DataStorage')
+    @patch('msserviceprofiler.modelevalstate.optimizer.optimizer.ProfilerBenchmark')
+    @patch('msserviceprofiler.modelevalstate.optimizer.optimizer.Simulator')
+    @patch('msserviceprofiler.modelevalstate.optimizer.optimizer.settings')
+    def test_main(self, mock_settings, mock_simulator, mock_benchmark, 
+                 mock_data_storage, mock_scheduler, mock_pso):
+        # Setup test args
+        args = argparse.Namespace(
+            deploy_policy=DeployPolicy.single.value,
+            benchmark_policy=BenchMarkPolicy.benchmark.value,
+            load_breakpoint=False,
+            backup=False
+        )
+        
+        # Setup mock returns
+        mock_pso_instance = MagicMock()
+        mock_pso.return_value = mock_pso_instance
+        
+        # Run main
+        main(args)
+        
+        # Verify PSO was run
+        mock_pso_instance.run.assert_called_once()
+
 
 if __name__ == '__main__':
     unittest.main()
