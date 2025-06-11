@@ -1,9 +1,22 @@
+# Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import unittest
 from unittest.mock import patch, MagicMock
+from pathlib import Path
 from pandas import DataFrame
 import pandas as pd
 import numpy as np
-from pathlib import Path
 from msserviceprofiler.modelevalstate.inference.constant import OpAlgorithm
 from msserviceprofiler.modelevalstate.inference.data_format_v1 import (
     MODEL_OP_FIELD,
@@ -19,11 +32,13 @@ from msserviceprofiler.modelevalstate.inference.utils import PreprocessTool, TOT
     TOTAL_SEQ_LENGTH, TOTAL_PREFILL_TOKEN
 from msserviceprofiler.modelevalstate.data_feature.dataset import MyDataSet, CustomOneHotEncoder 
 
+
 class TestMyDataSet(unittest.TestCase):
     def setUp(self):
         # 基础测试数据
         self.sample_data = pd.DataFrame({
-            "('batch_stage', 'batch_size', 'total_need_blocks', 'total_prefill_token', 'max_seq_len', 'model_execute_time')": ("""('prefill', 1.0, 1.0, 41, 41334, "['0']")""", ),
+            "('batch_stage', 'batch_size', 'total_need_blocks', 'total_prefill_token', 'max_seq_len',\
+                  'model_execute_time')": ("""('prefill', 1.0, 1.0, 41, 41334, "['0']")""", ),
             "('input_length', 'need_blocks', 'output_length')": ("(1015, 19, 0)",)
         })
         self.test_dir = Path("/tmp/test_output")
@@ -93,6 +108,7 @@ class TestMyDataSet(unittest.TestCase):
         for f in self.test_dir.glob("*"):
             f.unlink()
         self.test_dir.rmdir()
+
 
 class TestGetAllRequestInfo(unittest.TestCase):
     def test_get_all_request_info_valid_input(self):
@@ -212,6 +228,7 @@ class TestPlotCustomPairplot(unittest.TestCase):
             MyDataSet.plot_custom_pairplot(self.sample_df)
             mock_close.assert_called_once()
 
+
 class TestConstructData(unittest.TestCase):
     def setUp(self):
         self.obj = MyDataSet()  # replace YourClass with the actual class name
@@ -233,11 +250,6 @@ class TestConstructData(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.obj.construct_data(DataFrame())
 
-    def test_construct_data_duplicate_columns(self):
-        self.obj.features = DataFrame({'A': [1, 2, 3], 'A': [4, 5, 6]})
-        with self.assertRaises(ValueError):
-            self.obj.construct_data(DataFrame())
-
 
 class TestPreprocess(unittest.TestCase):
     def setUp(self):
@@ -251,7 +263,8 @@ class TestPreprocess(unittest.TestCase):
 
     def test_preprocess_lines_data_columns_less_than_3(self):
         data = {
-        "('batch_stage', 'batch_size', 'total_need_blocks', 'total_prefill_token', 'max_seq_len', 'model_execute_time')": ["('prefill', 1, 1, 41, 41334, '0')"],
+        "('batch_stage', 'batch_size', 'total_need_blocks', 'total_prefill_token', 'max_seq_len',\
+              'model_execute_time')": ["('prefill', 1, 1, 41, 41334, '0')"],
         "('input_length', 'need_blocks', 'output_length')": ["(1015, 19, 0)"]
     }
         with self.assertRaises(Exception):

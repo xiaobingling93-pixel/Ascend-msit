@@ -1,3 +1,16 @@
+# Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import unittest
 from unittest.mock import patch, MagicMock, call
 import pandas as pd
@@ -16,23 +29,25 @@ from msserviceprofiler.modelevalstate.inference.dataset import TOTAL_OUTPUT_LENG
     TOTAL_SEQ_LENGTH, TOTAL_PREFILL_TOKEN
 from msserviceprofiler.modelevalstate.data_feature.dataset_with_swifter import MyDataSetWithSwifter  
 
+
 class TestMyDataSetWithSwifter(unittest.TestCase):
     def setUp(self):
         # 创建测试数据
         self.sample_data = pd.DataFrame({
-            "batch_field": ["[[1,2],[3,4]]"]*3,
-            "request_field": ["[[5,6],[7,8]]"]*3,
-            "op_field": ["[[9,10]]"]*3,
+            "batch_field": ["[[1,2],[3,4]]"] * 3,
+            "request_field": ["[[5,6],[7,8]]"] * 3,
+            "op_field": ["[[9,10]]"] * 3,
             "model_execute_time": [0.1, 0.2, 0.3]
         })
         self.dataset = MyDataSetWithSwifter()
 
     @patch('msserviceprofiler.modelevalstate.data_feature.dataset_with_swifter.logger.info')
-    @patch('msserviceprofiler.modelevalstate.data_feature.dataset_with_swifter.MyDataSetWithSwifter.proprocess_with_swifter')
+    @patch('msserviceprofiler.modelevalstate.data_feature.dataset_with_swifter.MyDataSetWithSwifter.\
+           proprocess_with_swifter')
     def test_preprocess_dispatch_success(self, mock_process, mock_logger):
         """测试swifter预处理成功路径"""
-        expected_features = pd.DataFrame({'feat': [1,2,3]})
-        expected_labels = pd.DataFrame({'label': [0.1,0.2,0.3]})
+        expected_features = pd.DataFrame({'feat': [1, 2, 3]})
+        expected_labels = pd.DataFrame({'label': [0.1, 0.2, 0.3]})
         mock_process.return_value = (expected_features, expected_labels)
         
         # 调用测试方法
