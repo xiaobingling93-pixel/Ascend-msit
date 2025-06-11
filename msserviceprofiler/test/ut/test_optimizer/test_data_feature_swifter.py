@@ -42,9 +42,8 @@ class TestMyDataSetWithSwifter(unittest.TestCase):
         self.dataset = MyDataSetWithSwifter()
 
     @patch('msserviceprofiler.modelevalstate.data_feature.dataset_with_swifter.logger.info')
-    @patch(
-        'msserviceprofiler.modelevalstate.data_feature.dataset_with_swifter.MyDataSetWithSwifter.proprocess_with_swifter'
-        )
+    @patch('msserviceprofiler.modelevalstate.data_feature.dataset_with_swifter.MyDataSetWithSwifter.'\
+           'proprocess_with_swifter')
     def test_preprocess_dispatch_success(self, mock_process, mock_logger):
         """测试swifter预处理成功路径"""
         expected_features = pd.DataFrame({'feat': [1, 2, 3]})
@@ -60,9 +59,8 @@ class TestMyDataSetWithSwifter(unittest.TestCase):
         self.assertEqual(result, (expected_features, expected_labels))
 
     @patch('msserviceprofiler.modelevalstate.data_feature.dataset_with_swifter.logger.error')
-    @patch(
-        'msserviceprofiler.modelevalstate.data_feature.dataset_with_swifter.MyDataSetWithSwifter.proprocess_with_swifter'
-        )
+    @patch('msserviceprofiler.modelevalstate.data_feature.dataset_with_swifter.MyDataSetWithSwifter.'\
+        'proprocess_with_swifter')
     @patch('msserviceprofiler.modelevalstate.data_feature.dataset_with_swifter.MyDataSet.preprocess_dispatch')
     def test_preprocess_dispatch_fallback(self, mock_parent, mock_process, mock_logger):
         """测试swifter失败时回退到父类实现"""
@@ -88,9 +86,8 @@ class TestMyDataSetWithSwifter(unittest.TestCase):
             self.dataset.proprocess_with_swifter(pd.DataFrame())
 
     @patch('msserviceprofiler.modelevalstate.data_feature.dataset_with_swifter.logger.info')
-    @patch(
-        'msserviceprofiler.modelevalstate.data_feature.dataset_with_swifter.MyDataSetWithSwifter.proprocess_with_swifter'
-        )
+    @patch('msserviceprofiler.modelevalstate.data_feature.dataset_with_swifter.MyDataSetWithSwifter.'\
+           'proprocess_with_swifter')
     def test_preprocess_dispatch_none_input(self, mock_process, mock_logger):
         """测试None输入直接回退父类"""
         mock_parent_return = MagicMock()
