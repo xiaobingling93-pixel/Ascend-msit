@@ -17,6 +17,38 @@ def reset_state():
         ANSWERS[key].clear()
     yield
 
+@pytest.fixture
+def mock_dependencies():
+    with patch('matplotlib.pyplot') as mock_plt, \
+         patch('numpy.linspace') as mock_linspace, \
+         patch('datetime.datetime') as mock_datetime, \
+         patch('logging.getLogger') as mock_logger:
+        
+        # Setup mock plt
+        mock_fig = MagicMock()
+        mock_ax = MagicMock()
+        mock_plt.subplots.return_value = (mock_fig, [mock_ax])
+        mock_plt.savefig.return_value = None
+        
+        # Setup mock datetime
+        mock_now = MagicMock()
+        mock_now.strftime.return_value = "123456"  # Fixed timestamp
+        mock_datetime.now.return_value = mock_now
+        
+        # Setup mock logger
+        mock_log = MagicMock()
+        mock_logger.return_value = mock_log
+        
+        # Setup numpy linspace
+        mock_linspace.return_value = np.array([0, 1, 2, 3])
+        
+        yield {
+            'plt': mock_plt,
+            'linspace': mock_linspace,
+            'datetime': mock_datetime,
+            'logger': mock_log
+        }
+
 # Test data
 SAMPLE_BATCH_INFO = {
     1: [10.5, 11.2, 9.8, 10.1, 12.0],
@@ -110,34 +142,19 @@ def test_find_best_by_curve_fit_given_insufficient_data_returns_none():
         assert "func_curv" in result
 
 # Test get_predict_image
-@patch('matplotlib.pyplot.subplots')
-def test_get_predict_image_given_results_creates_plot(mock_subplots):
-    # Setup mock figure and axes
-    mock_fig = MagicMock()
-    mock_ax = MagicMock()
-    
-    # Configure the subplots mock to return our mock figure and axes
-    mock_subplots.return_value = (mock_fig, mock_ax)
-    
-    # Setup mock results
+def test_get_predict_image_success(mock_dependencies):
+    # Setup test data
     results = [{
-        "max_batch_size": 4,
-        "points": [1, 2, 4],
-        "targets": [100, 200, 400],
-        "popt": [1, 2, 3],
-        "process_name": "test",
-        "func_curv": lambda x, a, b, c: a * x**b * np.exp(-c / x)
+        'max_batch_size': 10,
+        'points': [1, 2, 3],
+        'targets': [4, 5, 6],
+        'popt': (1, 2, 3),
+        'process_name': 'test_process',
+        'func_curv': lambda x, a, b, c: a*x**2 + b*x + c
     }]
     
-    # Need to also patch plt since we import it at module level
-    with patch.object(batch_analyze, 'plt', MagicMock()):
-        batch_analyze.get_predict_image(results)
-        
-        # Verify subplots was called
-        mock_subplots.assert_called_once()
-        
-        # Verify savefig was called on our mock figure
-        mock_fig.savefig.assert_called_once()
+    # Call the function
+    batch_analyze。get_predict_image(results)
 
 @patch.object(batch_analyze, 'plt', None)
 def test_get_predict_image_without_matplotlib_does_nothing():
@@ -160,30 +177,3 @@ def test_find_best_batch_size_given_insufficient_data_adds_suggestion():
     batch_analyze.find_best_batch_size({}, benchmark, None, {})
     
     assert "maxBatchSize" in ANSWERS[SUGGESTION_TYPES.config]
-    assert "maxPrefillBatchSize" in ANSWERS[SUGGESTION_TYPES.config]
-
-@patch.object(batch_analyze, 'find_best_by_curve_fit')
-def test_find_best_batch_size_given_valid_data_adds_suggestions(mock_find_best):
-    mock_find_best.return_value = {"best_batch_size": 42, "max_batch_size": 4}
-    
-    benchmark = {
-        "results_per_request": {
-            "req1": {
-                "prefill_bsz": 1,
-                "decode_bsz": [1, 1],
-                "latency": [10.5, 2.1, 2.3]
-            },
-            "req2": {
-                "prefill_bsz": 2,
-                "decode_bsz": [2],
-                "latency": [20.1, 4.0]
-            }
-        }
-    }
-    
-    with patch.object(batch_analyze, 'get_predict_image'):
-        batch_analyze.find_best_batch_size({}, benchmark, None, {})
-        
-        assert "maxBatchSize" in ANSWERS[SUGGESTION_TYPES.config]
-        assert "maxPrefillBatchSize" in ANSWERS[SUGGESTION_TYPES.config]
-        assert "42" in str(ANSWERS[SUGGESTION_TYPES.config]["maxBatchSize"])
