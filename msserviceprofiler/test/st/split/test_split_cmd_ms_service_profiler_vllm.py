@@ -17,8 +17,8 @@ import shutil
 from unittest import TestCase
 import ast
 import pandas as pd
-from ...st.utils import execute_cmd, check_column_actual, check_no_empty_lines_before_first_line
-from ...st.utils import check_no_empty_lines_between_first_last_line, check_during_time
+from st.utils import execute_cmd, check_column_actual, check_no_empty_lines_before_first_line
+from st.utils import check_no_empty_lines_between_first_last_line, check_during_time
 
 
 def check_split_csv_content(output_path, csv_file_name):

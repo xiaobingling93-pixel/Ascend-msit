@@ -79,6 +79,8 @@ def run_st(module_choice):
 
 
 if __name__ == "__main__":
+    sys.path.append(os.path.abspath(os.path.dirname(__file__)))
+
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
     if '--module' in sys.argv:
         module_index = sys.argv.index("--module") + 1

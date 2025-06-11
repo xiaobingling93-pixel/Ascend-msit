@@ -17,7 +17,7 @@ import shutil
 from pathlib import Path
 from unittest import TestCase
 
-from ...st.utils import execute_cmd
+from st.utils import execute_cmd
 
 
 class TestCompareCmd(TestCase):

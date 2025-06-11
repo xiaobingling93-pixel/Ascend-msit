@@ -21,7 +21,7 @@ import ast
 import pytest
 import pandas as pd
 from jsonschema import validate, ValidationError
-from ...st.utils import execute_cmd, check_column_actual, check_row
+from st.utils import execute_cmd, check_column_actual, check_row
 
 
 def check_csv_content(output_path, csv_file_name, expected_csv_columns, numeric_columns):
