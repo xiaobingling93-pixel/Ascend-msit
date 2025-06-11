@@ -41,8 +41,6 @@ class TestUtilsFuctions(unittest.TestCase):
         framework_df = pd.DataFrame()
         post_event_pairs = []
         name = 'Prefill'
-
-        # 调用你的函数
         result = postprocess_framework_df(framework_df, post_event_pairs, name)
 
         # 验证结果
