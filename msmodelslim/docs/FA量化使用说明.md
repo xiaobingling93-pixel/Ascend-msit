@@ -256,18 +256,10 @@ from transformers.models.qwen2.configuration_qwen2 import Qwen2Config
 ```
 
 2. 新建模型的量化脚本quant.py，
-编辑quant.py文件，根据实际的量化场景导入[样例代码](#量化脚本npu)，参考注释，并根据实际情况进行修改。
-
-注意：
-- 需要将msmodelslim文件夹下的[precision_tool文件夹](../precision_tool/precision_tool.py)复制一份出来，和量化脚本`quant.py`放置于同一目录下，再将待测试数据集放入precision_tool文件夹中，具体操作见：[Precision Tool 使用方法说明及数据集下载链接](https://gitee.com/ascend/msit/tree/master/msmodelslim/precision_tool)  
-- fa3量化目前仅支持W8A8 per_channel量化场景和lowbit算法，W8A8 per_channel量化场景导入的样例见下文[FA3精度调优处](#fa3精度调优)，lowbit算法的代码样例请参考[w8a8_lowbit量化场景](../msmodelslim/pytorch/llm_ptq/量化及稀疏量化场景导入代码样例.md#w8a8_lowbit算法量化场景)。
+此处可以参考：[量化脚本（NPU）](#量化脚本npu)
 
 
 3. 启动模型量化任务，并在指定的输出目录获取模型量化参数，量化后权重文件的介绍请参见[量化后权重文件](#量化后权重文件)，若使用MindIE进行后续的推理部署任务，请保存为safetensors格式，具体请参见[大语言模型列表](https://www.hiascend.com/document/detail/zh/mindie/10RC3/whatismindie/mindie_what_0003.html)章节中已适配量化的模型。
-
-```python
-python3 quant.py
-```
 
 ###  量化后权重文件
 
@@ -295,7 +287,7 @@ python3 quant.py
 - **safetensors格式**
 
 当save_type设置为['safe_tensor']时，量化权重会保存为safetensors文件和json描述文件。
-  
+
 - safetensors中储存格式为字典，包含量化权重和量化不修改的浮点权重。其中量化权重的key值为各层Linear的名字加上对应权重的名字，module.weight和module.bias对应anti_fp_norm.npy，weight对应quant_weight.npy，quant_bias对应quant_bias.npy等以此类推。例如Qwen2.5-7B模型的model.layers.0.self_attn.q_proj.deq_scale对应npy格式权重中deq_scale.npy中的model.layers.0.self_attn.q_proj;
 
 ```python
@@ -347,118 +339,12 @@ python3 quant.py
 ###  FA3精度调优
 
 #### 量化脚本（NPU）
-```python
-"""
-1、导入相关依赖
-"""
-import json
-import torch
-import torch_npu # 如果需要使用npu进行量化
-from transformers import AutoTokenizer, AutoModelForCausalLM
-from modelslim.pytorch.llm_ptq.anti_outlier import AntiOutlierConfig, AntiOutlier
-from modelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
-from precision_tool.precision_tool import PrecisionTest # precision_tool用于伪量化测精度
+当前 FA 量化脚本和命令可以参考 example 的相关内容。跳转链接见下表：
 
-SEQ_LEN_OUT = 100
-batch_size = 1
-
-# 如果使用npu进行量化需开启二进制编译，避免在线编译算子
-torch.npu.set_compile_mode(jit_compile=False)
-option = {}
-option["NPU_FUZZY_COMPILE_BLACKLIST"] = "ReduceProd"
-torch.npu.set_option(option)
-
-"""
-2、导入相关模型
-"""
-model_path = '/data/model_path' # 原始浮点模型路径
-
-# 这里以8卡32G机器为例，6卡量化。
-model = AutoModelForCausalLM.from_pretrained(
-        pretrained_model_name_or_path=model_path,
-        torch_dtype=torch.bfloat16, 
-        trust_remote_code=True,
-        local_files_only=True,
-        device_map="auto",
-        max_memory={0:"28GiB",1:"28GiB",2:"28GiB",3:"28GiB",4:"28GiB",5:"28GiB",6:"0GiB",7:"0GiB"}
-    ).eval()
-
-tokenizer = AutoTokenizer.from_pretrained(
-    pretrained_model_name_or_path=model_path, 
-    trust_remote_code=True,
-    local_files_only=True,
-    device_map="auto",
-)
-tokenizer.pad_token = tokenizer.eos_token
-
-"""
-数据集测原始模型浮点精度（此示例中选择的是boolq）
-"""
-precision_test = PrecisionTest(model, tokenizer, "boolq", batch_size, "npu")
-precision_test.test()
-
-"""
-3、获取校准数据
-"""
-def get_calib_dataset(tokenizer, calib_list, device=model.device):
-    calib_dataset = []
-    for calib_data in calib_list:
-        inputs = tokenizer(calib_data, return_tensors='pt')
-        calib_dataset.append([
-            inputs.data['input_ids'].to(device),
-            inputs.data['attention_mask'].to(device)
-        ])
-             
-    return calib_dataset
-
-entry = "/path/to/calib_dataset" # 此示例中校准数据选取50条左右boolq数据
-with open(entry, 'r') as file:
-    calib_set = json.load(file)
-dataset_calib = get_calib_dataset(tokenizer, calib_set)
-"""
-4、离群值抑制AntiOutlier(w8a8)
-"""
-anti_config = AntiOutlierConfig(anti_method="m3", dev_type="npu", dev_id=model.device.index)
-anti_outlier = AntiOutlier(model, calib_data=dataset_calib, cfg=anti_config)
-anti_outlier.process()
-
-"""
-5、回退层设置
-"""
-"""
-因为一些量化后的网络层对精度影响太大了，所以需要让这些网络层使用浮点权重进行计算， disable_names中为需要进行回退的网络层。
-"""
-disable_names = []
-num_layers = 80
-disable_idx_lst = list(range(num_layers))
-for layer_index in disable_idx_lst:
-    down_proj_name = "model.layers.{}.mlp.down_proj".format(layer_index)
-    disable_names.append(down_proj_name)
-"""
-6、执行PTQ量化校准 + 存储量化参数用于部署
-"""
-quant_config = QuantConfig(
-    a_bit=8,
-    w_bit=8,
-    disable_names=disable_names,
-    dev_type='npu',
-    dev_id=model.device.index,
-    act_method=3,
-    pr=1.0,
-    w_sym=True,
-    mm_tensor=False
-).fa_quant(fa_amp=0) #调用fa_quant之后默认开启FA量化，fa_amp可设置自动回退层数
-
-calibrator = Calibrator(model, quant_config, calib_data=dataset_calib, disable_level='L5')  # disable_level: 自动回退n个linear
-calibrator.run()  # 执行PTQ量化校准
-calibrator.save('/save/path', save_type=["safe_tensor", "numpy"]) # "safe_tensor"对应safetensors格式权重，"numpy"对应npy格式权重
-
-"""
-数据集测伪量化模型精度（此示例中选择的是boolq）
-"""
-precision_test = PrecisionTest(model, tokenizer, "boolq", batch_size, "npu")
-precision_test.test()
-```
+| 脚本文件                                          | 参考资料                                                     |
+| ------------------------------------------------- | ------------------------------------------------------------ |
+| [quant_qwen.py](../example/Qwen/quant_qwen.py)    | [Qwen2.5-72B 支持Attention量化](../example/Qwen/README.md#qwen25-72b-支持attention量化) |
+| [quant_llama.py](../example/Llama/quant_llama.py) | [Llama3.1-70B W8A8量化搭配Attention量化](../example/Llama/README.md#llama31-70b-w8a8量化搭配attention量化) |
 
 #### 本文仅给出FA3场景下Llama3.1-70B和Qwen2.5-72B的量化推荐配置，可按实际情况进行参数调整，详见[精度调优策略](./w8a8精度调优策略.md) 。
 
