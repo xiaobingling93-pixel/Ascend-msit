@@ -57,9 +57,9 @@ class TestSplitVllmCmd(TestCase):
     DECODE_CSV = "decode.csv"
     COMMAND_SUCCESS = 0
     ANALYZE_PROFILER = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")),
-                                  "ms_service_profiler_ext/analyze.py")
+                                  "msserviceprofiler/__main__.py")
     SPLIT_PROFILER = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")),
-                                  "ms_service_profiler_ext/split.py")
+                                  "msserviceprofiler/__main__.py")
     COMMON_BATCH_SIZE = '1'
     PREFILL_BATCH_SIZE = '2'
     DECODE_BATCH_SIZE = '8'
@@ -76,7 +76,7 @@ class TestSplitVllmCmd(TestCase):
         os.makedirs(self.OUTPUT_PATH_RID_P, mode=0o750, exist_ok=True)
         os.makedirs(self.OUTPUT_PATH_RID_D, mode=0o750, exist_ok=True)
         cmd = [
-            "python", self.ANALYZE_PROFILER,
+            "python", self.ANALYZE_PROFILER, "analyze",
             "--input-path", self.INPUT_PATH,
             "--output-path", self.OUTPUT_PATH_ANALYZE_FOR_SPLIT
         ]
@@ -109,7 +109,7 @@ class TestSplitVllmCmd(TestCase):
     def test_split_vllm_prefill_decode(self):
         # PD竞争 根据batch_size拆解 校验输出文件及内容
         cmd = [
-            "python", self.SPLIT_PROFILER,
+            "python", self.SPLIT_PROFILER, "split",
             "--input-path", self.INPUT_PATH,
             "--output-path", self.OUTPUT_PATH,
             "--prefill-batch-size", self.COMMON_BATCH_SIZE,
@@ -127,7 +127,7 @@ class TestSplitVllmCmd(TestCase):
     def test_split_vllm_prefill(self):
         # PD竞争 根据batch_size拆解 校验输出文件及内容
         cmd = [
-            "python", self.SPLIT_PROFILER,
+            "python", self.SPLIT_PROFILER, "split",
             "--input-path", self.INPUT_PATH,
             "--output-path", self.OUTPUT_PATH_P,
             "--prefill-batch-size", self.PREFILL_BATCH_SIZE,
@@ -141,7 +141,7 @@ class TestSplitVllmCmd(TestCase):
     def test_split_vllm_decode(self):
         # PD竞争 根据batch_size拆解 校验输出文件及内容
         cmd = [
-            "python", self.SPLIT_PROFILER,
+            "python", self.SPLIT_PROFILER, "split",
             "--input-path", self.INPUT_PATH,
             "--output-path", self.OUTPUT_PATH_D,
             "--decode-batch-size", self.DECODE_BATCH_SIZE,
@@ -155,7 +155,7 @@ class TestSplitVllmCmd(TestCase):
     def test_split_vllm_prefill_decode_rid(self):
         # PD竞争 根据batch_size拆解 校验输出文件及内容
         cmd = [
-            "python", self.SPLIT_PROFILER,
+            "python", self.SPLIT_PROFILER, "split",
             "--input-path", self.INPUT_PATH,
             "--output-path", self.OUTPUT_PATH_RID,
             "--prefill-rid", self.rid,
@@ -171,7 +171,7 @@ class TestSplitVllmCmd(TestCase):
     def test_split_vllm_prefill_rid(self):
         # PD竞争 根据batch_size拆解 校验输出文件及内容
         cmd = [
-            "python", self.SPLIT_PROFILER,
+            "python", self.SPLIT_PROFILER, "split",
             "--input-path", self.INPUT_PATH,
             "--output-path", self.OUTPUT_PATH_RID_P,
             "--prefill-rid", self.rid,
@@ -185,7 +185,7 @@ class TestSplitVllmCmd(TestCase):
     def test_split_vllm_decode_rid(self):
         # PD竞争 根据batch_size拆解 校验输出文件及内容
         cmd = [
-            "python", self.SPLIT_PROFILER,
+            "python", self.SPLIT_PROFILER, "split",
             "--input-path", self.INPUT_PATH,
             "--output-path", self.OUTPUT_PATH_RID_D,
             "--decode-rid", self.rid,

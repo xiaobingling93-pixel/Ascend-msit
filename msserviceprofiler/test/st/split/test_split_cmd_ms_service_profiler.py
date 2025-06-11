@@ -53,7 +53,7 @@ class TestAnalyzeCmd(TestCase):
     DECODE_CSV = "decode.csv"
     COMMAND_SUCCESS = 0
     SPLIT_PROFILER = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")),
-                                    "ms_service_profiler_ext/split.py")
+                                    "msserviceprofiler/__main__.py")
     COMMON_BATCH_SIZE = '1'
     PREFILL_BATCH_SIZE = '2'
     DECODE_BATCH_SIZE = '16'
@@ -77,7 +77,7 @@ class TestAnalyzeCmd(TestCase):
     def test_split_by_batch_size(self):
         # PD竞争 根据batch_size拆解 校验输出文件及内容
         cmd = [
-            "python", self.SPLIT_PROFILER,
+            "python", self.SPLIT_PROFILER, "split",
             "--input-path", self.INPUT_PATH,
             "--output-path", self.OUTPUT_PATH,
             "--prefill-batch-size", self.COMMON_BATCH_SIZE,
@@ -93,7 +93,7 @@ class TestAnalyzeCmd(TestCase):
     def test_split_by_rid(self):
         # PD竞争 根据rid拆解 校验输出文件及内容
         cmd = [
-            "python", self.SPLIT_PROFILER,
+            "python", self.SPLIT_PROFILER, "split",
             "--input-path", self.INPUT_PATH,
             "--output-path", self.OUTPUT_PATH,
             "--prefill-rid", self.COMMON_RID,
@@ -108,7 +108,7 @@ class TestAnalyzeCmd(TestCase):
 
     def test_split_data_in_p_node_by_batch_size(self):
         # PD分离 P 节点根据batch_size拆解 校验输出文件及内容
-        cmd = ["python", self.SPLIT_PROFILER, 
+        cmd = ["python", self.SPLIT_PROFILER, "split",
                "--input-path", self.PREFILL_INPUT_PATH,
                "--output-path", self.OUTPUT_PATH,
                "--prefill-batch-size", self.PREFILL_BATCH_SIZE]
@@ -119,7 +119,7 @@ class TestAnalyzeCmd(TestCase):
 
     def test_split_data_in_p_node_by_rid(self):
         # PD分离 P 节点根据rid拆解 校验输出文件及内容
-        cmd = ["python", self.SPLIT_PROFILER, 
+        cmd = ["python", self.SPLIT_PROFILER, "split",
                "--input-path", self.PREFILL_INPUT_PATH,
                "--output-path", self.OUTPUT_PATH,
                "--prefill-rid", self.PREFILL_RID]
@@ -130,7 +130,7 @@ class TestAnalyzeCmd(TestCase):
 
     def test_split_data_in_d_node_by_batch_size(self):
         # PD分离 P 节点根据batch_size拆解 校验输出文件及内容
-        cmd = ["python", self.SPLIT_PROFILER, 
+        cmd = ["python", self.SPLIT_PROFILER, "split",
                "--input-path", self.DECODE_INPUT_PATH,
                "--output-path", self.OUTPUT_PATH,
                "--decode-batch-size", self.DECODE_BATCH_SIZE]
@@ -141,7 +141,7 @@ class TestAnalyzeCmd(TestCase):
 
     def test_split_data_in_d_node_by_rid(self):
         # PD分离 P 节点根据rid拆解 校验输出文件及内容
-        cmd = ["python", self.SPLIT_PROFILER, 
+        cmd = ["python", self.SPLIT_PROFILER, "split",
                "--input-path", self.DECODE_INPUT_PATH,
                "--output-path", self.OUTPUT_PATH,
                "--decode-rid", self.DECODE_RID]

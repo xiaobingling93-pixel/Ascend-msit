@@ -28,9 +28,9 @@ class TestCompareCmd(TestCase):
     COMPARE_OUTPUT_PATH = os.path.join(ST_DATA_PATH, "output/compare")
     COMMAND_SUCCESS = 0
     ANALYZE_SCRIPT = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")),
-                                    "ms_service_profiler_ext/analyze.py")
+                                    "msserviceprofiler/__main__.py")
     COMPARE_SCRIPT = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")),
-                                    "ms_service_profiler_ext/compare.py")
+                                    "msserviceprofiler/__main__.py")
 
     def setUp(self):
         os.makedirs(self.ANALYZE_OUTPUT_PATH, mode=0o750, exist_ok=True)
@@ -43,7 +43,7 @@ class TestCompareCmd(TestCase):
     def test_compare_ms_service_profiler_data(self):
         # 校验msserviceprofiler打点采集数据解析功能是否正常解析，校验输出文件及内容
         analyze_cmd = [
-            "python", self.ANALYZE_SCRIPT,
+            "python", self.ANALYZE_SCRIPT, "analyze",
             "--input-path", self.INPUT_PATH,
             "--output-path", self.ANALYZE_OUTPUT_PATH
         ]
@@ -53,7 +53,7 @@ class TestCompareCmd(TestCase):
             return
         
         compare_cmd = [
-            "python", self.COMPARE_SCRIPT,
+            "python", self.COMPARE_SCRIPT, "compare",
             self.ANALYZE_OUTPUT_PATH,
             self.ANALYZE_OUTPUT_PATH,
             "--output-path", self.COMPARE_OUTPUT_PATH
