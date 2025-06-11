@@ -16,7 +16,7 @@ import unittest
 from unittest.mock import patch
 import numpy as np
 import pandas as pd
-from ms_service_profiler_ext.exporters.exporter_summary import (
+from msserviceprofiler.ms_service_profiler_ext.exporters.exporter_summary import (
     is_contained_valid_iter_info,
     process_batch_record,
     calculate_statistics,
@@ -29,7 +29,9 @@ from ms_service_profiler_ext.exporters.exporter_summary import (
     save_dataframe_to_csv,
     calculate_batch_metrics,
 )
-from ms_service_profiler_ext.common.csv_fields import RequestCSVFields, BatchCSVFields, ServiceCSVFields
+from msserviceprofiler.ms_service_profiler_ext.common.csv_fields import (
+    RequestCSVFields, BatchCSVFields, ServiceCSVFields
+)
 
 
 class TestExporterSummaryFunctions(unittest.TestCase):
@@ -342,7 +344,3 @@ class TestExporterSummaryFunctions(unittest.TestCase):
         self.assertIn(prefill_key, self.sample_batch_map)
         self.assertIn(decode_key, self.sample_batch_map)
         self.assertIn(prefill_key_2, self.sample_batch_map)
-
-
-if __name__ == "__main__":
-    unittest.main()

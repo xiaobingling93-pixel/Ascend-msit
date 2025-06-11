@@ -17,9 +17,12 @@ from unittest.mock import patch
 import pandas as pd
 import numpy as np
 
-from ms_service_profiler_ext.common.split_utils import preprocess_framework_df, postprocess_framework_df
-from ms_service_profiler_ext.common.split_utils import get_batch_framework, get_filter_rule_df
-
+from msserviceprofiler.ms_service_profiler_ext.common.split_utils import (
+    preprocess_framework_df,
+    postprocess_framework_df,
+    get_batch_framework,
+    get_filter_rule_df,
+)
 
 class TestUtilsFuctions(unittest.TestCase):
     def test_preprocess_framework_df_with_no_name(self):

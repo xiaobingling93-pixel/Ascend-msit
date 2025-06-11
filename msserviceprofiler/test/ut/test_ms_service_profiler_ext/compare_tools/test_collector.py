@@ -20,8 +20,8 @@ import shutil
 import unittest
 from unittest import mock
 
-from ms_service_profiler_ext.compare_tools.collector import FileCollector
-from ms_service_profiler_ext.common.csv_fields import BatchCSVFields, RequestCSVFields
+from msserviceprofiler.ms_service_profiler_ext.compare_tools.collector import FileCollector
+from msserviceprofiler.ms_service_profiler_ext.common.csv_fields import BatchCSVFields, RequestCSVFields
 
 
 class TestFileCollector(unittest.TestCase):
@@ -117,7 +117,3 @@ class TestFileCollector(unittest.TestCase):
 
         if os.path.isdir(self.dir_path_b):
             shutil.rmtree(self.dir_path_b)
-
-
-if __name__ == '__main__':
-    unittest.main(verbosity=2)

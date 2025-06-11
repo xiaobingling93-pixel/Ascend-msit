@@ -18,12 +18,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
-import ms_service_profiler_ext.analyze
+from msserviceprofiler.ms_service_profiler_ext import analyze
+from msserviceprofiler.ms_service_profiler_ext.analyze import add_summary_exporter, main
+from msserviceprofiler.ms_service_profiler_ext.exporters.exporter_summary import ExporterSummary
 from ms_service_profiler.exporters.factory import ExporterFactory
 from ms_service_profiler.exporters.exporter_batch import ExporterBatchData
 from ms_service_profiler.utils.log import set_logger
-from ms_service_profiler_ext.analyze import add_summary_exporter, main
-from ms_service_profiler_ext.exporters.exporter_summary import ExporterSummary
 
 
 class TestMainFunction:
@@ -60,10 +60,10 @@ class TestMainFunction:
         mock_initialize.assert_called_once_with(args)
 
     def test_command_line_interface(self):
-        mock_main = self.mocker.patch("ms_service_profiler_ext.analyze.main")
+        mock_main = self.mocker.patch("ms_service_profiler.ms_service_profiler_ext.analyze.main")
         self.mocker.patch("sys.argv", ["script_name", "--input-path", "/fake/input"])
 
-        ms_service_profiler_ext.analyze.main()
+        analyze.main()
         mock_main.assert_called_once()
 
     def test_invalid_input_path(self):
@@ -78,7 +78,7 @@ class TestMainFunction:
             "ms_service_profiler.exporters.factory.ExporterFactory.create_exporters", return_value=original_exporters
         )
 
-        spy_add_summary = self.mocker.spy(ms_service_profiler_ext.analyze, "add_summary_exporter")
+        spy_add_summary = self.mocker.spy(analyze, "add_summary_exporter")
 
         main()
 

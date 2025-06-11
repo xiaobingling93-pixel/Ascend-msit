@@ -19,7 +19,7 @@ import random
 import unittest
 from unittest import mock
 
-from ms_service_profiler_ext.secur import validate_params, Path, InvalidParameterError, where
+from msserviceprofiler.ms_service_profiler_ext.secur import validate_params, Path, InvalidParameterError, where
 
 
 class TestParamValidation(unittest.TestCase):

@@ -20,9 +20,9 @@ from unittest.mock import patch
 
 import pytest
 
-from ms_service_profiler_ext.split import add_exporters, main
-from ms_service_profiler_ext.exporters.exporter_prefill import ExporterPrefill
-from ms_service_profiler_ext.exporters.exporter_decode import ExporterDecode
+from msserviceprofiler.ms_service_profiler_ext.split import add_exporters, main
+from msserviceprofiler.ms_service_profiler_ext.exporters.exporter_prefill import ExporterPrefill
+from msserviceprofiler.ms_service_profiler_ext.exporters.exporter_decode import ExporterDecode
 
 
 class TestSplitFuctions(unittest.TestCase):

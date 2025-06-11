@@ -17,10 +17,10 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 import pandas as pd
-from ms_service_profiler_ext.compare import connect_db, main, set_log_level, logger
-from ms_service_profiler_ext.compare_tools import CSVComparator
-from ms_service_profiler_ext.compare import connect_db, process_files
-from ms_service_profiler_ext.common.csv_fields import ServiceCSVFields
+from msserviceprofiler.ms_service_profiler_ext.compare import connect_db, main, set_log_level, logger
+from msserviceprofiler.ms_service_profiler_ext.compare_tools import CSVComparator
+from msserviceprofiler.ms_service_profiler_ext.compare import connect_db, process_files
+from msserviceprofiler.ms_service_profiler_ext.common.csv_fields import ServiceCSVFields
 
 logger.warning = MagicMock()
 

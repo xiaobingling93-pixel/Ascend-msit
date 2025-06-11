@@ -19,7 +19,7 @@ import shutil
 import unittest
 from unittest import mock
 
-from ms_service_profiler_ext.common.sec import (
+from msserviceprofiler.ms_service_profiler_ext.common.sec import (
     list_dir_common_check, traverse_dir_common_check,
     read_file_common_check, execute_file_common_check
 )
@@ -118,7 +118,3 @@ class TestSec(unittest.TestCase):
         
     def tearDown(self):
         self.mock_os_access.stop()
-
-        
-if __name__ == "__main__":
-    unittest.main(verbosity=2)

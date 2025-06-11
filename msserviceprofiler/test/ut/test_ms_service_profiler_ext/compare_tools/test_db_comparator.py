@@ -18,7 +18,7 @@ import sqlite3
 import unittest
 import tempfile
 
-from ms_service_profiler_ext.compare_tools.db_comparator import DBComparator
+from msserviceprofiler.ms_service_profiler_ext.compare_tools.db_comparator import DBComparator
 
 
 class TestDBComparatorIntegration(unittest.TestCase):
@@ -92,7 +92,3 @@ class TestDBComparatorIntegration(unittest.TestCase):
                 ]
             )
             conn.commit()
-
-
-if __name__ == '__main__':
-    unittest.main(verbosity=2)

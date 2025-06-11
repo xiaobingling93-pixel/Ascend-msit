@@ -16,7 +16,7 @@ import unittest
 from unittest.mock import patch
 import pandas as pd
 
-from ms_service_profiler_ext.common.utils import confirmation_interaction
+from msserviceprofiler.ms_service_profiler_ext.common.utils import confirmation_interaction
 
 
 class TestUtilsFuctions(unittest.TestCase):

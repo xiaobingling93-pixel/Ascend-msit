@@ -16,7 +16,7 @@ import unittest
 from dataclasses import dataclass
 from collections import namedtuple
 from unittest.mock import MagicMock, patch, call
-from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.request_hookers import Profiler, Level
+from msserviceprofiler.ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.request_hookers import Profiler, Level
 
 
 # 模拟 RequestOutput 类
