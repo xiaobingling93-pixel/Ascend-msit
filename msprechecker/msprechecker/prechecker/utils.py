@@ -192,7 +192,11 @@ def read_csv(file_path):
 
 def read_json(file_path):
     with open(file_path) as ff:
-        result = json.load(ff)
+        try:
+            result = json.load(ff)
+        except json.JSONDecodeError:
+            logger.warning(f"Failed to read json: {file_path!r}")
+            result = {}
     return result
 
 

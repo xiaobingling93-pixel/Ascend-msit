@@ -12,12 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import platform
 from glob import glob
 from concurrent import futures
-from msprechecker.prechecker.register import register_checker, GroupPrechecker, PrecheckerBase
-from msprechecker.prechecker.register import show_check_result, record, CONTENT_PARTS, CheckResult
+from msprechecker.prechecker.register import GroupPrechecker, PrecheckerBase
+from msprechecker.prechecker.register import show_check_result, CheckResult
 from msprechecker.prechecker.utils import logger
 from msprechecker.prechecker.utils import parse_ranktable_file, run_shell_command, get_interface_by_ip
 
@@ -28,7 +26,6 @@ NPU_DEVICES = [int(ii.split("davinci")[-1]) for ii in _DAVINCI_DEVICES if str.is
 def run_hccl_command(command_formatter):
     from shutil import which
 
-    multi_server_results = {}
     if not which("hccn_tool"):
         return []  # Just return if hccn_tool command not exists. It's common if in docker.
 
