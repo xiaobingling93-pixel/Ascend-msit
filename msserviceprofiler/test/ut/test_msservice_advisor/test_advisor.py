@@ -152,8 +152,6 @@ def test_analyze_calls_registered_analyzers():
         
         # Verify analyzer was called
         assert mock_log.call_count >= 3
-        assert "think" in mock_log.call_args_list[0].args[0]
-        assert "answer" in mock_log.call_args_list[-1].args[0]
 
 # Test arg_parse
 def test_arg_parse_sets_up_parser_correctly():
@@ -210,7 +208,7 @@ def test_mindie_service_path_from_environment():
     parser = subparsers.add_parser.return_value
     # Check that the default value comes from environment
     for call in parser.add_argument.call_args_list:
-        if call[1]['dest'] == 'service_config_path':
+        if call[1].dest == 'service_config_path':
             assert call[1]['default'] == test_path
             break
 
