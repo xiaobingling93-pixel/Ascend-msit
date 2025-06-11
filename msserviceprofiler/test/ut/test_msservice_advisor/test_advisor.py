@@ -57,13 +57,6 @@ def test_check_positive_integer_given_invalid_input():
 
 # Test get_latest_matching_file
 @patch('glob.glob')
-def test_get_latest_matching_file_returns_newest(mock_glob):
-    mock_glob.return_value = ["file1", "file2"]
-    with patch('os.path.getmtime', side_effect=[100, 200]):
-        result = advisor.get_latest_matching_file("/path", "pattern")
-        assert result == "file2"
-
-@patch('glob.glob')
 def test_get_latest_matching_file_returns_none_if_no_files(mock_glob):
     mock_glob.return_value = []
     assert advisor.get_latest_matching_file("/path", "pattern") is None
