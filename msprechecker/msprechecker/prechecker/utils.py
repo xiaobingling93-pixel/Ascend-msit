@@ -334,6 +334,8 @@ def get_global_env_info():
 
 def get_npu_info(to_inner_type=False):
     result = run_shell_command("lspci", fail_msg=", will skip getting npu info.")
+    if not result:
+        return None
     npu_type = None
     for line in result.stdout.splitlines():
         if "accelerators" in line:

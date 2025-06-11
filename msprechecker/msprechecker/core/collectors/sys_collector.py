@@ -15,26 +15,14 @@
 import os
 
 from .base import BaseCollector, ParallelCollector
+from ..utils.file_utils import read_file_lines
 
 
-class FileVersionCollector(BaseCollector):
-    @staticmethod
-    def read_file_lines(path):
-        if not path or not os.path.isfile(path):
-            return None
-
-        try:
-            with open(path) as f:
-                return f.readlines()
-        except Exception:
-            return None
-
-
-class DriverVersionCollector(FileVersionCollector):
+class DriverVersionCollector(BaseCollector):
     version_file = '/usr/local/Ascend/driver/version.info'
 
     def collect(self):
-        lines = self.read_file_lines(self.version_file)
+        lines = read_file_lines(self.version_file)
         if not lines:
             return {"version": None}
         for line in lines:
@@ -43,14 +31,14 @@ class DriverVersionCollector(FileVersionCollector):
         return {"version": None}
 
 
-class ToolkitVersionCollector(FileVersionCollector):
+class ToolkitVersionCollector(BaseCollector):
     default_home = '/usr/local/Ascend/ascend-toolkit/latest'
 
     def collect(self):
         toolkit_info = {"version": None, "time": None}
         toolkit_home = os.getenv("ASCEND_TOOLKIT_HOME") or self.default_home
         version_file = os.path.join(toolkit_home, "version.cfg")
-        lines = self.read_file_lines(version_file)
+        lines = read_file_lines(version_file)
         if lines:
             for line in lines:
                 if "=" in line or ":" in line:
@@ -59,7 +47,7 @@ class ToolkitVersionCollector(FileVersionCollector):
                         toolkit_info["version"] = parts[-1].strip("]\n ")
                         break
         compiler_version_file = os.path.join(toolkit_home, "compiler", "version.info")
-        lines = self.read_file_lines(compiler_version_file)
+        lines = read_file_lines(compiler_version_file)
         if lines:
             for line in lines:
                 if "timestamp=" in line:
@@ -68,14 +56,14 @@ class ToolkitVersionCollector(FileVersionCollector):
         return toolkit_info
 
 
-class MindIEVersionCollector(FileVersionCollector):
+class MindIEVersionCollector(BaseCollector):
     default_home = '/usr/local/Ascend/mindie/latest/mindie-llm'
 
     def collect(self):
         mindie_info = {"version": None}
         mindie_home = os.getenv("MINDIE_LLM_HOME_PATH") or self.default_home
         version_file = os.path.join(mindie_home, "..", "version.info")
-        lines = self.read_file_lines(version_file)
+        lines = read_file_lines(version_file)
         if lines:
             for line in lines:
                 if "mindie" in line and ':' in line:
@@ -85,7 +73,7 @@ class MindIEVersionCollector(FileVersionCollector):
         return mindie_info
 
 
-class ATBVersionCollector(FileVersionCollector):
+class ATBVersionCollector(BaseCollector):
     default_home = '/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_0'
     desired_columns = ["version", "branch", "commit"]
 
@@ -93,7 +81,7 @@ class ATBVersionCollector(FileVersionCollector):
         atb_info = {col: None for col in self.desired_columns}
         atb_home = os.getenv("ATB_HOME_PATH") or self.default_home
         version_file = os.path.join(atb_home, "..", "..", "version.info")
-        lines = self.read_file_lines(version_file)
+        lines = read_file_lines(version_file)
         if lines:
             for line in lines:
                 for col in self.desired_columns:
@@ -103,7 +91,7 @@ class ATBVersionCollector(FileVersionCollector):
         return atb_info
 
 
-class ATBSpeedVersionCollector(FileVersionCollector):
+class ATBSpeedVersionCollector(BaseCollector):
     default_home = '/usr/local/Ascend/atb-models'
     desired_columns = ["version", "branch", "commit", "time"]
 
@@ -111,7 +99,7 @@ class ATBSpeedVersionCollector(FileVersionCollector):
         atb_speed_info = {col: None for col in self.desired_columns}
         atb_speed_home = os.getenv("ATB_SPEED_HOME_PATH") or self.default_home
         version_file = os.path.join(atb_speed_home, "version.info")
-        lines = self.read_file_lines(version_file)
+        lines = read_file_lines(version_file)
         if lines:
             for line in lines:
                 for col in self.desired_columns:
@@ -124,11 +112,10 @@ class ATBSpeedVersionCollector(FileVersionCollector):
 class AscendInfoCollector(ParallelCollector):
     """Collects all Ascend component versions in parallel."""
     def __init__(self):
-        super().__init__()
-        self.sub_collectors = {
+        super().__init__({
             "toolkit": ToolkitVersionCollector(),
             "atb": ATBVersionCollector(),
             "mindie": MindIEVersionCollector(),
             "atb-models": ATBSpeedVersionCollector(),
             "driver": DriverVersionCollector(),
-        }
+        })

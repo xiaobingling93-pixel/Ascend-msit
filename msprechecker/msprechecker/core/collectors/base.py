@@ -65,7 +65,7 @@ class ConfigCollector(BaseCollector):
 class ParallelCollector(BaseCollector):
     """Base class for parallel sub-collectors."""
 
-    def __init__(self, sub_collectors=None):
+    def __init__(self, sub_collectors):
         self.sub_collectors = sub_collectors
 
     def collect(self):

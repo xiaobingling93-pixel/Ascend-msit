@@ -15,7 +15,8 @@
 import logging
 from enum import Enum
 from collections import namedtuple
-from msprechecker.prechecker.utils import logger
+
+from msprechecker.core.utils.perm import FilePerm
 
 # 创建一个全局的注册表，注册为分析函数
 REGISTRY = {}
@@ -140,3 +141,27 @@ class GroupPrechecker(PrecheckerBase):
     def do_precheck(self, group_envs, **kwargs):
         for sub in self.sub_checkers:
             sub.do_precheck(group_envs.get(sub.name()))
+
+
+def check_file_permission(filepath, domain="config", checker_name="file_perm"):
+    try:
+        perm = FilePerm(oct(os.stat(filepath).st_mode & 0o777))
+        if perm > FilePerm(0o640):
+            show_check_result(
+                domain,
+                checker_name,
+                CheckResult.ERROR,
+                action=f"请修改 {filepath} 权限为小于 640 (如 chmod 640 {filepath})",
+                reason=f"当前权限为 {perm}，出于安全考虑，配置文件的权限应该不能超过 0o640",
+            )
+            return False
+    except Exception as e:
+        show_check_result(
+            domain,
+            checker_name,
+            CheckResult.ERROR,
+            action=f"无法检查 {filepath} 权限",
+            reason=str(e),
+        )
+        return False
+    return True
