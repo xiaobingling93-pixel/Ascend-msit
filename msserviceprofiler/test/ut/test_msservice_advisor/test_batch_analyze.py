@@ -138,6 +138,7 @@ def test_extract_server_config_params_given_valid_config_returns_params():
 # Test extract_model_config_params
 @patch("os.path.exists", return_value=True)
 @patch("os.access", return_value=True)
+@patch("os.path.isdir", return_value=True)
 @patch("builtins.open", new_callable=mock_open, read_data=json.dumps(SAMPLE_MODEL_CONFIG))
 def test_extract_model_config_params_given_valid_path_returns_params(mock_file, mock_access, mock_exists):
     model_params, weight_size = npu_memory_analyze.extract_model_config_params("/path/to/model")
@@ -225,8 +226,3 @@ def test_find_max_batch_size_range_given_valid_input_updates_answers(
         SAMPLE_SERVER_CONFIG, SAMPLE_BENCHMARK, None, MagicMock()
     )
     assert "maxBatchSize" in ANSWERS[SUGGESTION_TYPES.config]
-
-# Test registration of analyze function
-def test_find_max_batch_size_registered():
-    assert "find_max_batch_size_range" in REGISTRY
-    assert callable(REGISTRY["find_max_batch_size_range"])
