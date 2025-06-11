@@ -16,7 +16,7 @@ import os
 import json
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 from msprechecker.prechecker.config_checker import (
     MindieConfigChecker,
@@ -25,9 +25,6 @@ from msprechecker.prechecker.config_checker import (
     UserConfigChecker,
     MindIEEnvChecker,
     CheckResult,
-    Result,
-    ResultStatus,
-    Severity
 )
 from msprechecker.prechecker.utils import MINDIE_SERVICE_DEFAULT_PATH
 
@@ -50,7 +47,7 @@ class TestMindieConfigChecker(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             random_path = os.path.join(temp_dir, "random_path")
             with open(random_path, "w") as f:
-                json.dump({"ServerConfig": {"httpsEnabled" : True}}, f)
+                json.dump({"ServerConfig": {"httpsEnabled": True}}, f)
 
             self.assertIsNone(self.checker.collect_env(random_path))
             self.assertEqual(self.checker.config_path, os.path.join(random_path, "conf", "config.json"))
@@ -58,7 +55,7 @@ class TestMindieConfigChecker(unittest.TestCase):
     def test_collect_env_4(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             random_path = os.path.join(temp_dir, "random_path.json")
-            data = {"ServerConfig": {"httpsEnabled" : True}}
+            data = {"ServerConfig": {"httpsEnabled": True}}
             with open(random_path, "w") as f:
                 json.dump(data, f)
 
@@ -71,7 +68,7 @@ class TestMindieConfigChecker(unittest.TestCase):
     def test_do_precheck_2(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             random_path = os.path.join(temp_dir, "random_path.json")
-            data = {"ServerConfig": {"httpsEnabled" : True}}
+            data = {"ServerConfig": {"httpsEnabled": True}}
             with open(random_path, "w") as f:
                 json.dump(data, f)
 
@@ -130,13 +127,14 @@ class TestModelConfigChecker(unittest.TestCase):
     def setUp(self):
         self.checker = ModelConfigChecker()
 
-    def test_collect_env_no_mindie_config(self):
-        with patch('msprechecker.prechecker.config_checker.get_model_path_from_mindie_config') as mock_get_model:
-            mock_get_model.return_value = (None, None)
-            result = self.checker.collect_env()
-            self.assertIsNone(result)
+    @patch('msprechecker.prechecker.config_checker.get_model_path_from_mindie_config')
+    def test_collect_env_no_mindie_config(self, mock_get_model):
+        mock_get_model.return_value = (None, None)
+        result = self.checker.collect_env()
+        self.assertIsNone(result)
 
-    def test_collect_env_with_valid_config(self):
+    @patch('msprechecker.prechecker.config_checker.get_model_path_from_mindie_config')
+    def test_collect_env_with_valid_config(self, mock_get_model):
         with tempfile.TemporaryDirectory() as temp_dir:
             # Create nested temp dir for model weights
             with tempfile.TemporaryDirectory(dir=temp_dir) as model_weight_path:
@@ -145,14 +143,13 @@ class TestModelConfigChecker(unittest.TestCase):
                 with open(config_path, 'w') as f:
                     json.dump(config_data, f)
                 
-                with patch('msprechecker.prechecker.config_checker.get_model_path_from_mindie_config') as mock_get_model:
-                    mock_get_model.return_value = ("test_model", model_weight_path)
-                    result = self.checker.collect_env()
-                    
-                    self.assertIsNotNone(result)
-                    self.assertEqual(result["model_name"], "test_model")
-                    self.assertEqual(result["model_config"], config_data)
-                    self.assertEqual(self.checker.config_path, config_path)
+                mock_get_model.return_value = ("test_model", model_weight_path)
+                result = self.checker.collect_env()
+                
+                self.assertIsNotNone(result)
+                self.assertEqual(result["model_name"], "test_model")
+                self.assertEqual(result["model_config"], config_data)
+                self.assertEqual(self.checker.config_path, config_path)
 
     def test_do_precheck_no_config(self):
         with patch('msprechecker.prechecker.config_checker.show_check_result') as mock_show:
@@ -183,20 +180,23 @@ class TestModelConfigChecker(unittest.TestCase):
             self.checker.do_precheck(config)
             mock_show.assert_not_called()
 
-    def test_do_precheck_outdated_transformers(self):
+    @patch('msprechecker.prechecker.config_checker.show_check_result')
+    def test_do_precheck_outdated_transformers(self, mock_show):
         config = {
             "model_name": "test_model",
             "model_config": {"transformers_version": "99.99.0"}
         }
         
-        with patch('msprechecker.prechecker.config_checker.show_check_result') as mock_show:
-            with patch('transformers.__version__', "4.28.0"):
-                self.checker.do_precheck(config)
-                mock_show.assert_called_once()
-                args, _ = mock_show.call_args
-                self.assertEqual(args[0], "ModelConfig")
-                self.assertEqual(args[1], "transformers_version")
-                self.assertEqual(args[2], CheckResult.ERROR)
+        mock_transformers = MagicMock()
+        mock_transformers.__version__ = "4.28.0"
+        
+        with patch.dict('sys.modules', {'transformers': mock_transformers}):
+            self.checker.do_precheck(config)
+            mock_show.assert_called_once()
+            args, _ = mock_show.call_args
+            self.assertEqual(args[0], "ModelConfig")
+            self.assertEqual(args[1], "transformers_version")
+            self.assertEqual(args[2], CheckResult.ERROR)
 
     def test_do_precheck_missing_transformers(self):
         config = {
@@ -237,31 +237,31 @@ class TestModelConfigChecker(unittest.TestCase):
                 self.checker.do_precheck(config)
                 mock_show.assert_not_called()
 
-    def test_collect_env_missing_config_file(self):
+    @patch('msprechecker.prechecker.config_checker.get_model_path_from_mindie_config')
+    def test_collect_env_missing_config_file(self, mock_get_model):
         with tempfile.TemporaryDirectory() as temp_dir:
             with tempfile.TemporaryDirectory(dir=temp_dir) as model_weight_path:
-                with patch('msprechecker.prechecker.config_checker.get_model_path_from_mindie_config') as mock_get_model:
-                    mock_get_model.return_value = ("test_model", model_weight_path)
-                    result = self.checker.collect_env()
-                    
-                    self.assertIsNotNone(result)
-                    self.assertEqual(result["model_name"], "test_model")
-                    self.assertEqual(result["model_config"], {})
+                mock_get_model.return_value = ("test_model", model_weight_path)
+                result = self.checker.collect_env()
+                
+                self.assertIsNotNone(result)
+                self.assertEqual(result["model_name"], "test_model")
+                self.assertEqual(result["model_config"], {})
 
-    def test_collect_env_invalid_config_file(self):
+    @patch('msprechecker.prechecker.config_checker.get_model_path_from_mindie_config')
+    def test_collect_env_invalid_config_file(self, mock_get_model):
         with tempfile.TemporaryDirectory() as temp_dir:
             with tempfile.TemporaryDirectory(dir=temp_dir) as model_weight_path:
                 config_path = os.path.join(model_weight_path, "config.json")
                 with open(config_path, 'w') as f:
                     f.write("invalid json")
                 
-                with patch('msprechecker.prechecker.config_checker.get_model_path_from_mindie_config') as mock_get_model:
-                    mock_get_model.return_value = ("test_model", model_weight_path)
-                    result = self.checker.collect_env()
-                    
-                    self.assertIsNotNone(result)
-                    self.assertEqual(result["model_name"], "test_model")
-                    self.assertEqual(result["model_config"], {})
+                mock_get_model.return_value = ("test_model", model_weight_path)
+                result = self.checker.collect_env()
+                
+                self.assertIsNotNone(result)
+                self.assertEqual(result["model_name"], "test_model")
+                self.assertEqual(result["model_config"], {})
 
 
 class TestUserConfigChecker(unittest.TestCase):

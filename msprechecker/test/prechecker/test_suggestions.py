@@ -72,7 +72,7 @@ class TestValueSuggestionChecker(unittest.TestCase):
     def test_is_value_met_suggestions_with_empty_suggestions(self):
         current_value = "some_value"
         suggested_values = []
-        result = is_value_met_suggestions(current_value, suggested_values, self.current_configs)
+        is_value_met_suggestions(current_value, suggested_values, self.current_configs)
         self.assertIsNotNone(current_value)
 
     @patch("msprechecker.prechecker.match_special_value.is_value_met_special_suggestions")
