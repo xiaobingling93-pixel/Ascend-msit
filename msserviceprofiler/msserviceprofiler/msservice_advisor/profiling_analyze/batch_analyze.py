@@ -225,14 +225,19 @@ def find_best_batch_size(config, benchmark, output_log, profiling_params):
                 action=f"set to {best_prefill_result['best_batch_size']}",
                 reason="经过当前不同batch的时延数据，通过函数拟合分析，建议最优batchsize",
             )
+    else:
+        best_prefill_result = None
+
     if len(decode_to_fit) > 1:
         best_decode_result = find_best_by_curve_fit(decode_to_fit, "decode")
         if best_decode_result:
+            value = best_decode_result['best_batch_size']
+            value = max(value, best_prefill_result['best_batch_size']) if best_prefill_result else value
             results.append(best_decode_result)
             answer(
                 suggesion_type=SUGGESTION_TYPES.config,
                 suggesion_item="maxBatchSize",
-                action=f"set to {max(best_decode_result['best_batch_size'], best_prefill_result['best_batch_size'])}",
+                action=f"set to {value}",
                 reason="经过当前不同batch的时延数据，通过函数拟合分析，建议最优batchsize",
             )
     try:
