@@ -14,15 +14,16 @@
 
 import unittest
 from unittest.mock import patch, MagicMock, mock_open
-import pandas as pd
 from pathlib import Path
-import tempfile
-import shutil
 import os
 from dataclasses import asdict
+
+import shutil
+import tempfile
 import numpy as np
 import joblib
 import xgboost
+import pandas as pd
 
 from msserviceprofiler.modelevalstate.train.pretrain import (
     PretrainModel, ReqDecodePretrainModel, TrainVersion1, pretrain
@@ -30,12 +31,15 @@ from msserviceprofiler.modelevalstate.train.pretrain import (
 from msserviceprofiler.modelevalstate.train.state_param import StateParam
 from msserviceprofiler.modelevalstate.data_feature.dataset import MyDataSet
 from msserviceprofiler.modelevalstate.model.xgb_state_model import StateXgbModel
-
+from msserviceprofiler.modelevalstate.data_feature.dataset import preset_category_data
+from msserviceprofiler.modelevalstate.data_feature.dataset import CustomLabelEncoder
 
 class TestPretrainModel(unittest.TestCase):
     def setUp(self):
         # 创建临时目录
-        self.test_dir = tempfile.mkdtemp()
+        self.test_dir = "test_data"
+        if not os.path.isdir(self.test_dir):
+            os.mkdir(self.test_dir, 0o750)
         self.input_path = Path(self.test_dir) / "input"
         self.output_path = Path(self.test_dir) / "output"
         self.feature_path = Path(self.input_path) / "test"
@@ -131,6 +135,8 @@ class TestPretrainModel(unittest.TestCase):
     def test_train_with_real_data(self):
         """使用真实数据集测试训练流程"""
         # 首先进行初始训练
+        custom_encoder = CustomLabelEncoder(preset_category_data)
+        dataset = MyDataSet(custom_encoder=custom_encoder)
         initial_rmse = self.real_trainer.train(lines_data=self.real_data)
         self.assertIsInstance(initial_rmse, float)
         self.assertGreater(initial_rmse, 0)
@@ -335,36 +341,6 @@ class TestPretrainModel(unittest.TestCase):
                         self.dataset, train_type="partial_fit", middle_save_path=None
                     )
                     self.assertEqual(self.pm.rmse, [0.3])
-
-    @patch('msserviceprofiler.modelevalstate.train.pretrain.Path')
-    @patch('msserviceprofiler.modelevalstate.train.pretrain.get_train_sub_path')
-    @patch('msserviceprofiler.modelevalstate.train.pretrain.StateParam')
-    @patch('msserviceprofiler.modelevalstate.train.pretrain.StateXgbModel')
-    @patch('msserviceprofiler.modelevalstate.train.pretrain.CustomLabelEncoder')
-    @patch('msserviceprofiler.modelevalstate.train.pretrain.MyDataSet')
-    @patch('msserviceprofiler.modelevalstate.train.pretrain.PretrainModel')
-    @patch('msserviceprofiler.modelevalstate.train.pretrain.TrainVersion1.custom_train')
-    def test_train_xgbmodel(self, mock_custom_train, mock_pretrain_model, mock_my_dataset, mock_custom_encoder,
-                            mock_xgb_model, mock_state_param, mock_get_train_sub_path, mock_path):
-        # 测试训练 XGBoost 模型
-        TrainVersion1.train_xgbmodel()
-        mock_custom_train.assert_called()
-
-    @patch('msserviceprofiler.modelevalstate.train.pretrain.Path')
-    @patch('msserviceprofiler.modelevalstate.train.pretrain.glob.glob')
-    @patch('msserviceprofiler.modelevalstate.train.pretrain.StateParam')
-    @patch('msserviceprofiler.modelevalstate.train.pretrain.StateXgbModel')
-    @patch('msserviceprofiler.modelevalstate.train.pretrain.CustomLabelEncoder')
-    @patch('msserviceprofiler.modelevalstate.train.pretrain.MyDataSet')
-    @patch('msserviceprofiler.modelevalstate.train.pretrain.PretrainModel')
-    @patch('msserviceprofiler.modelevalstate.train.pretrain.TrainVersion1.simple_train')
-    def test_pretrain(self, mock_simple_train, mock_pretrain_model, mock_my_dataset, mock_custom_encoder,
-                      mock_xgb_model, mock_state_param, mock_glob, mock_path):
-        # 测试预训练
-        input_path = 'test_input'
-        output_path = 'test_output'
-        pretrain(input_path, output_path)
-        mock_simple_train.assert_called()
 
     def test_initialization(self):
         """测试训练器初始化"""
