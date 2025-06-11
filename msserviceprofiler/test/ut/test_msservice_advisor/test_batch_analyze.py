@@ -140,7 +140,7 @@ def test_extract_server_config_params_given_valid_config_returns_params():
 @patch("os.access", return_value=True)
 @patch("os.path.isdir", return_value=True)
 @patch("builtins.open", new_callable=mock_open, read_data=json.dumps(SAMPLE_MODEL_CONFIG))
-def test_extract_model_config_params_given_valid_path_returns_params(mock_file, mock_access, mock_exists):
+def test_extract_model_config_params_given_valid_path_returns_params(mock_file, mock_access, mock_isdir, mock_exists):
     model_params, weight_size = npu_memory_analyze.extract_model_config_params("/path/to/model")
     assert model_params["num_hidden_layers"] == 32
     assert isinstance(weight_size, float)
