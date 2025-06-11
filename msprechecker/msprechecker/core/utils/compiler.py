@@ -84,7 +84,7 @@ class Compiler:
         if isinstance(expr, list):
             return [cls.compile(ex) for ex in expr]
         elif isinstance(expr, dict):
-            return {k: cls.compile(ex) for k, ex in expr}
+            return {k: cls.compile(ex) for k, ex in expr.items()}
         elif isinstance(expr, str):
             return cls._compile(expr)
         else:

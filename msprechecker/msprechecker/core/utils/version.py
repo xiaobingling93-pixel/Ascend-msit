@@ -21,6 +21,19 @@ except ImportError:
     from importlib_metadata import version, PackageNotFoundError
 
 
+def get_pkg_version(pkg_name):
+    try:
+        version_str = version(pkg_name)
+    except PackageNotFoundError:
+        try:
+            from importlib import import_module
+            version_str = import_module(pkg_name).__version__
+        except Exception:
+            version_str = None
+
+    return version_str
+
+
 @total_ordering
 class Version:
     _regex = re.compile(
@@ -95,13 +108,11 @@ class Version:
     def _parse_version_str(version_str):
         m = Version._regex.match(version_str)
         if not m:
-            if version_str not in ("transformers",):
+            ver = get_pkg_version(version_str)
+            if not ver:
                 raise ValueError("Invalid version string: {}".format(version_str))
-            try:
-                version_str = version(version_str)
-            except PackageNotFoundError:
-                version_str = "0.0.0"
-            return Version._parse_version_str(version_str)
+
+            return Version._parse_version_str(ver)
         return m
     
     @staticmethod
@@ -114,7 +125,7 @@ class Version:
         return (
             self._major,
             self._minor,
-            self._patch if self._patch is not None else -1,
-            self._rc if self._rc is not None else -1,
-            self._beta if self._beta is not None else -1
+            self._patch if self._patch is not None else 0,
+            self._rc if self._rc is not None else float("inf"),
+            self._beta if self._beta is not None else float("inf")
         )
