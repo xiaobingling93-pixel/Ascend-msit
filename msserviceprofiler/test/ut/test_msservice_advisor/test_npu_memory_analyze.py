@@ -230,3 +230,106 @@ def test_find_max_batch_size_range_given_valid_input_updates_answers(
         SAMPLE_SERVER_CONFIG, SAMPLE_BENCHMARK, None, MagicMock()
     )
     assert "maxBatchSize" in ANSWERS[SUGGESTION_TYPES.config]
+
+# Test check_vaild_smi_output
+def test_check_vaild_smi_output_given_valid_output_returns_header_and_colmap():
+    sample_output = """
+    NPU ID    Chip Logic ID    Some Other Column
+    --------------------------------------------
+    0         1000             Value1
+    1         1001             Value2
+    """
+    header_line, col_map = npu_memory_analyze.check_vaild_smi_output(sample_output)
+    assert "NPU ID" in header_line
+    assert col_map["NPU ID"] == 0
+    assert col_map["Chip Logic ID"] == 1
+
+def test_check_vaild_smi_output_given_missing_columns_raises_error():
+    with pytest.raises(ValueError, match="Missing required column"):
+        npu_memory_analyze.check_vaild_smi_output("NPU ID    Wrong Column")
+
+def test_check_vaild_smi_output_given_empty_output_raises_error():
+    with pytest.raises(ValueError, match="Header line not found"):
+        npu_memory_analyze.check_vaild_smi_output("")
+
+# Test get_npu_ids_map
+@patch('subprocess.check_output')
+def test_get_npu_ids_map_given_valid_output_returns_mapping(mock_subprocess):
+    mock_output = """
+    NPU ID    Chip Logic ID    Some Other Column
+    --------------------------------------------
+    0         1000             Value1
+    1         1001             Value2
+    2         1002             Value3
+    """
+    mock_subprocess.return_value = mock_output
+    
+    result = npu_memory_analyze.get_npu_ids_map()
+    assert result == {1000: 0, 1001: 1, 1002: 2}
+    mock_subprocess.assert_called_with(['npu-smi', 'info', '-m'], text=True, stderr=subprocess.STDOUT)
+
+@patch('subprocess.check_output')
+def test_get_npu_ids_map_given_command_failure_raises_error(mock_subprocess):
+    mock_subprocess.side_effect = subprocess.CalledProcessError(1, 'cmd')
+    with pytest.raises(RuntimeError):
+        npu_memory_analyze.get_npu_ids_map()
+
+# Test cal_available_gm_memory
+def test_cal_available_gm_memory_given_valid_values_returns_correct_memory():
+    result = npu_memory_analyze.cal_available_gm_memory(32768, 50)  # 50% of 32GB
+    assert result == 16.0  # (32768 * 0.5) / 1024
+
+def test_cal_available_gm_memory_given_none_values_returns_zero():
+    assert npu_memory_analyze.cal_available_gm_memory(None, 50) == 0
+    assert npu_memory_analyze.cal_available_gm_memory(32768, None) == 0
+
+# Test cal_npu_gm_memory
+@patch('subprocess.check_output')
+def test_cal_npu_gm_memory_given_valid_output_returns_memory(mock_subprocess):
+    mock_output = """
+    Some Header
+    M Capacity(MB) : 32768
+    M Usage Rate(%) : 25
+    Other Lines
+    """
+    mock_subprocess.return_value = mock_output
+    
+    result = npu_memory_analyze.cal_npu_gm_memory(0)
+    assert result == 24.0  # 32768 * 0.75 / 1024
+
+@patch('subprocess.check_output')
+def test_cal_npu_gm_memory_given_missing_values_returns_zero(mock_subprocess):
+    mock_subprocess.return_value = "Invalid Output"
+    result = npu_memory_analyze.cal_npu_gm_memory(0)
+    assert result == 0
+
+@patch('subprocess.check_output')
+def test_cal_npu_gm_memory_given_command_failure_returns_zero(mock_subprocess):
+    mock_subprocess.side_effect = subprocess.CalledProcessError(1, 'cmd')
+    with patch.object(npu_memory_analyze.logger, 'warning') as mock_log:
+        result = npu_memory_analyze.cal_npu_gm_memory(0)
+        assert result == 0
+        mock_log.assert_called()
+
+# Test get_available_npu_memory
+@patch.object(npu_memory_analyze, 'get_npu_ids_map')
+@patch.object(npu_memory_analyze, 'cal_npu_gm_memory')
+def test_get_available_npu_memory_given_valid_input_returns_min_memory(mock_cal, mock_map):
+    mock_map.return_value = {1000: 0, 1001: 1}
+    mock_cal.side_effect = [16.0, 24.0]  # Different memory for different NPUs
+    
+    result = npu_memory_analyze.get_available_npu_memory([1000, 1001])
+    assert result == 16.0  # Should return the minimum
+
+@patch.object(npu_memory_analyze, 'get_npu_ids_map')
+def test_get_available_npu_memory_given_empty_map_raises_error(mock_map):
+    mock_map.return_value = {}
+    with pytest.raises(Exception, match="parse npu-smi info -m failed"):
+        npu_memory_analyze.get_available_npu_memory([1000, 1001])
+
+@patch.object(npu_memory_analyze, 'get_npu_ids_map')
+def test_get_available_npu_memory_given_missing_device_uses_zero(mock_map):
+    mock_map.return_value = {1000: 0}
+    with patch.object(npu_memory_analyze, 'cal_npu_gm_memory', return_value=16.0):
+        result = npu_memory_analyze.get_available_npu_memory([1000, 9999])  # 9999 not in map
+        assert result == 16.0
