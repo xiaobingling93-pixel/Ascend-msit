@@ -2,7 +2,8 @@ import os
 import json
 import math
 import pytest
-from pathlib import Path
+import pathlib
+from collections import namedtuple
 from unittest.mock import patch, MagicMock, mock_open
 
 # Import the module to test with proper error handling
@@ -140,7 +141,8 @@ def test_extract_server_config_params_given_valid_config_returns_params():
 @patch("os.path.exists", return_value=True)
 @patch("os.access", return_value=True)
 @patch("os.path.isdir", return_value=True)
-@patch("Path.exists", return_value=True)
+@patch("pathlib.Path.exists", return_value=True)
+@patch("pathlib.Path.stat", return_value=namedtuple('stat', ["st_size"])(1024))
 @patch("builtins.open", new_callable=mock_open, read_data=json.dumps(SAMPLE_MODEL_CONFIG))
 def test_extract_model_config_params_given_valid_path_returns_params(*mocks):
     model_params, weight_size = npu_memory_analyze.extract_model_config_params("/path/to/model")
