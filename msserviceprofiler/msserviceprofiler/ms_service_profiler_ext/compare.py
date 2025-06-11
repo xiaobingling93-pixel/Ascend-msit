@@ -23,8 +23,8 @@ from contextlib import contextmanager
 
 import pandas as pd
 
-from msserviceprofiler.ms_service_profiler_ext.common.sec import list_dir_common_check
 from ms_service_profiler.exporters.utils import check_output_path_valid
+from msserviceprofiler.ms_service_profiler_ext.common.sec import list_dir_common_check
 
 
 @contextmanager

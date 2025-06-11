@@ -15,6 +15,7 @@ import sys
 import unittest
 from unittest.mock import MagicMock, patch, call
 from collections import namedtuple
+from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.kvcache_hookers import Profiler, Level
 
 
 # 模拟 SequenceGroupMetadata 类
@@ -55,7 +56,8 @@ class FakeSelfAttnBlockSpaceManager:
         self.block_tables = {}
         pass
 
-    def get_num_free_gpu_blocks(self):
+    @staticmethod
+    def get_num_free_gpu_blocks():
         return 1
 
 
@@ -74,10 +76,6 @@ class FakeLLMEngine:
 
     def _get_stats(self):
         return self.stats
-
-
-# 导入被测试的类
-from ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.kvcache_hookers import Profiler, Level
 
 
 @patch("ms_service_profiler_ext.vllm_profiler.vllm_profiler_core.kvcache_hookers.Profiler")
