@@ -958,6 +958,15 @@ class TestVllmSimulatorRun:
 
 
 class TestScheduleWithMultiMachine:
+    @staticmethod
+    def test_back_up_with_bak_path(schedule_with_multi_machine):
+        # 测试当bak_path存在时的情况
+        schedule_with_multi_machine.back_up()
+        # 验证bak_path是否被正确设置
+        assert schedule_with_multi_machine.simulator.bak_path == schedule_with_multi_machine.bak_path.joinpath("1")
+        assert schedule_with_multi_machine.benchmark.bak_path == schedule_with_multi_machine.bak_path.joinpath("1")
+        for rpc in schedule_with_multi_machine.rpc_clients:
+            assert rpc.simulator.bak_path == schedule_with_multi_machine.bak_path.joinpath("1")
 
     @pytest.fixture
     def schedule_with_multi_machine(self, tmpdir):
@@ -971,16 +980,6 @@ class TestScheduleWithMultiMachine:
         for rpc in schedule.rpc_clients:
             rpc.simulator = MagicMock()
         return schedule
-
-    @staticmethod
-    def test_back_up_with_bak_path(schedule_with_multi_machine):
-        # 测试当bak_path存在时的情况
-        schedule_with_multi_machine.back_up()
-        # 验证bak_path是否被正确设置
-        assert schedule_with_multi_machine.simulator.bak_path == schedule_with_multi_machine.bak_path.joinpath("1")
-        assert schedule_with_multi_machine.benchmark.bak_path == schedule_with_multi_machine.bak_path.joinpath("1")
-        for rpc in schedule_with_multi_machine.rpc_clients:
-            assert rpc.simulator.bak_path == schedule_with_multi_machine.bak_path.joinpath("1")
 
 
 class TestScheduleWithMultiMachineMonitoringStatus:
