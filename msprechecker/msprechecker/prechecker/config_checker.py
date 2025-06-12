@@ -26,7 +26,6 @@ from msprechecker.prechecker.utils import (
     is_deepseek_model,
     read_csv_or_json,
     logger,
-    
 )
 from msprechecker.prechecker.suggestions import DOMAIN, NOT_EMPTY_VALUE
 from msprechecker.core.utils import ResultStatus
@@ -333,7 +332,7 @@ class UserConfigChecker(K8SCheckerBase):
         return read_csv_or_json(user_config_path) if user_config_path and os.path.exists(user_config_path) else {}
 
 
-class MindiEEnvChecker(K8SCheckerBase):
+class MindIEEnvChecker(K8SCheckerBase):
     __checker_name__ = "MindIEEnv"
     output_title = "MindIE Env"
     rule_type = "env"
@@ -350,4 +349,4 @@ mindie_config_checker = MindieConfigChecker()
 ranktable_checker = RankTableChecker()
 model_config_checker = ModelConfigChecker()
 user_config_checker = UserConfigChecker()
-mindie_env_checker = MindiEEnvChecker()
+mindie_env_checker = MindIEEnvChecker()

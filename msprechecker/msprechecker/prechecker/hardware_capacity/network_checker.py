@@ -136,28 +136,27 @@ class NetworkChecker(PrecheckerBase):
 
             if ping_time == self.ERROR_VALUE:
                 show_check_result(
-                "hardware",
-                "network_checker",
-                CheckResult.ERROR,
-                action=f"检查本机到服务器 {server_ip} 的连接状态",
-                reason=f"本机到对端卡的 ping 结果存在失败",
+                    "hardware",
+                    "network_checker",
+                    CheckResult.ERROR,
+                    action=f"检查本机到服务器 {server_ip} 的连接状态",
+                    reason=f"本机到对端卡的 ping 结果存在失败",
                 )
 
-            if ping_time > ping_avg * 1.5:
+            elif ping_time > ping_avg * 1.5:
                 show_check_result(
-                "hardware",
-                "network_checker",
-                CheckResult.ERROR,
-                action=f"检查本机到服务器 {server_ip} 的连接状态",
-                reason=f"本机到对端卡的 ping 时间为 {ping_time} ms 超过平均时间50%",
+                    "hardware",
+                    "network_checker",
+                    CheckResult.ERROR,
+                    action=f"检查本机到服务器 {server_ip} 的连接状态",
+                    reason=f"本机到对端卡的 ping 时间为 {ping_time} ms 超过平均时间50%",
                 )
             
             else:
                 show_check_result(
-                "hardware",
-                f"network_checker 本机到服务器{server_ip}的时间为{ping_time} ms",
-                CheckResult.OK,
+                    "hardware",
+                    f"network_checker 本机到服务器{server_ip}的时间为{ping_time} ms",
+                    CheckResult.OK,
                 )
 
-
-network_checker = NetworkChecker()
+network_checker_instance = NetworkChecker()

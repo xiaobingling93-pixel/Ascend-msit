@@ -21,7 +21,7 @@ import ast
 import pytest
 import pandas as pd
 from jsonschema import validate, ValidationError
-from ...st.utils import execute_cmd, check_column_actual, check_row
+from st.utils import execute_cmd, check_column_actual, check_row
 
 
 def check_csv_content(output_path, csv_file_name, expected_csv_columns, numeric_columns):
@@ -284,8 +284,8 @@ def check_chrome_tracing_content_valid(output_path, file_name):
 class TestAnalyzeCmd(TestCase):
     ST_DATA_PATH = os.getenv("MS_SERVICE_PROFILER",
                              "/data/ms_service_profiler")
-    INPUT_PATH = os.path.join(ST_DATA_PATH, "input/analyze/0211-1226")
-    INPUT_PATH_PD_SEPARATE = os.path.join(ST_DATA_PATH, "input/analyze/pullkv_0212")
+    INPUT_PATH = os.path.join(ST_DATA_PATH, "input/analyze/latest_PD_competition")
+    INPUT_PATH_PD_SEPARATE = os.path.join(ST_DATA_PATH, "input/analyze/latest_PD_split")
     OUTPUT_PATH = os.path.join(ST_DATA_PATH, "output/analyze")
     REQUEST_SUM_CSV = "request_summary.csv"
     BATCH_SUM_CSV = "batch_summary.csv"
@@ -297,7 +297,7 @@ class TestAnalyzeCmd(TestCase):
     CHROME_TRACE = "chrome_tracing.json"
     COMMAND_SUCCESS = 0
     ANALYZE_PROFILER = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")),
-                                    "ms_service_profiler_ext/analyze.py")
+                                    "msserviceprofiler/__main__.py")
 
     def setUp(self):
         os.makedirs(self.OUTPUT_PATH, mode=0o750, exist_ok=True)
@@ -308,7 +308,7 @@ class TestAnalyzeCmd(TestCase):
     def test_analyze_ms_service_profiler_data(self):
         # 校验msserviceprofiler打点采集数据解析功能是否正常解析，校验输出文件及内容
         cmd = [
-            "python", self.ANALYZE_PROFILER,
+            "python", self.ANALYZE_PROFILER, "analyze",
             "--input-path", self.INPUT_PATH,
             "--output-path", self.OUTPUT_PATH
         ]
@@ -383,7 +383,7 @@ class TestAnalyzeCmd(TestCase):
 
     def test_parse_data_in_pd_separate(self):
         # 校验msserviceprofiler打点PD分离数据解析功能是否正常解析，校验输出文件及内容
-        cmd = ["python", self.ANALYZE_PROFILER, "--input-path", self.INPUT_PATH_PD_SEPARATE, \
+        cmd = ["python", self.ANALYZE_PROFILER, "analyze", "--input-path", self.INPUT_PATH_PD_SEPARATE, \
                "--output-path", self.OUTPUT_PATH]
         if execute_cmd(cmd) != self.COMMAND_SUCCESS or not os.path.exists(self.OUTPUT_PATH):
             self.assertFalse(True, msg="enable ms service profiler analyze task failed.")
