@@ -175,6 +175,7 @@ class TestMaxOutputLen:
         ServiceField.req_id_and_max_decode_length = {}
         SimulateVllm.req_id_to_max_token_by_sequence = {}
 
+
 class TestCurOutputLen:
     # 测试用例1: 当req_id在req_to_output_len字典中找到时
     @staticmethod
