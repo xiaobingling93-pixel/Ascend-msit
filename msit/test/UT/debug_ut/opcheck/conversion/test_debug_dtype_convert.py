@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
 from unittest import TestCase
 from unittest.mock import MagicMock
 
@@ -22,16 +21,6 @@ from en_dtypes import float8_e8m0, float4_e2m1, float4_e1m2
 import ml_dtypes
 from ml_dtypes import int4, float8_e5m2, float8_e4m3fn, bfloat16
 import numpy as np
-
-try:
-    import tensorflow
-    is_tensorflow_existent = True
-except ImportError:
-    is_tensorflow_existent = False
-    mock_tensorflow = MagicMock()
-    mock_tensorflow.bfloat16.as_numpy_dtype = 'np_bfloat16'
-    sys.modules['tensorflow'] = mock_tensorflow
-    import tensorflow
 import torch
 
 from msit_opcheck.conversion.dtype_convert import (
@@ -44,18 +33,12 @@ from msit_opcheck.conversion.dtype_convert import (
     numpy_float8_e8m0,
     numpy_float4_e2m1,
     numpy_float4_e1m2,
-    bfloat16_conversion,
     bfloat16_conversion_v2,
     numpy_to_torch_tensor
 )
 
 
 class TestDtypeConvert(TestCase):
-    @classmethod
-    def tearDownClass(cls):
-        if not is_tensorflow_existent:
-            del sys.modules['tensorflow']
-
     def test_data_type_map(self):
         target_map = {
             "DT_FLOAT": "float32",
@@ -99,9 +82,6 @@ class TestDtypeConvert(TestCase):
 
         setattr(ml_dtypes, 'int4', ori_int4)
         self.assertEqual(int4, numpy_int4())
-
-    def test_numpy_bfloat16(self):
-        self.assertEqual(tensorflow.bfloat16.as_numpy_dtype, numpy_bfloat16())
 
     def test_numpy_float8_e5m2(self):
         ori_float8_e5m2 = getattr(ml_dtypes, 'float8_e5m2')
@@ -158,21 +138,14 @@ class TestDtypeConvert(TestCase):
         setattr(en_dtypes, 'float4_e1m2', ori_float4_e1m2)
         self.assertEqual(float4_e1m2, numpy_float4_e1m2())
 
-    def test_bfloat16_conversion(self):
-        container = ["float16", "bfloat16", "float32"]
-        target = ["float16", tensorflow.bfloat16.as_numpy_dtype, "float32"]
-        ret = bfloat16_conversion(container)
-        self.assertEqual(ret, target)
-
     def test_bfloat16_conversion_v2(self):
         container = (
-            float, "bfloat16", "int4", "float8_e5m2",
+            float, "int4", "float8_e5m2",
             "float8_e4m3fn", "float8_e8m0", "dtype",
             "float4_e2m1", "float4_e1m2"
         )
         target = [
-            float, tensorflow.bfloat16.as_numpy_dtype,
-            int4, float8_e5m2, float8_e4m3fn,
+            float, int4, float8_e5m2, float8_e4m3fn,
             float8_e8m0, "dtype", float4_e2m1, float4_e1m2
         ]
         ret = bfloat16_conversion_v2(container)
