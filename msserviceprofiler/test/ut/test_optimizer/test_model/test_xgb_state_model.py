@@ -105,7 +105,7 @@ class TestStateXgbModel():
     @patch('msserviceprofiler.modelevalstate.model.xgb_state_model.plt.subplots')
     @patch('builtins.open', MagicMock())
     @patch('msserviceprofiler.modelevalstate.model.xgb_state_model.xgboost.plot_importance')
-    def test_plot_feature_importance(mock_subplots, mock_savefig, tmp_path):
+    def test_plot_feature_importance(mock_plot, mock_subplots, mock_savefig, mock_close, mock_show, tmp_path):
         # 设置mock模型
         mock_model = MagicMock()
         mock_model.get_score.return_value = {'feature1': 1.0, 'feature2': 0.5}
@@ -251,7 +251,7 @@ class TestStateXgbModel():
         mock_ylabel.assert_called_once_with("value")
         mock_legend.assert_called_once()
         # 修复文件名中的空格问题
-        mock_savefig.assert_called_once_with(tmp_path.joinpath("predict_value_and_test_value_on_train_model.png"))
+        mock_savefig.assert_called_once_with(tmp_path.joinpath("predict value and test value on train model.png"))
         mock_close.assert_called_once()
         mock_show.assert_not_called()
 
