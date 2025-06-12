@@ -137,6 +137,7 @@ class TestMaxOutputLen:
         ServiceField.req_id_and_max_decode_length = {}
         SimulateVllm.req_id_to_max_token_by_sequence = {}
 
+    @staticmethod
     def test_get_max_output_len_from_json(self):
         # 模拟json文件中的数据
         ServiceField.req_id_and_max_decode_length = {0: 100, 1: 200, 2: 300}
@@ -144,6 +145,7 @@ class TestMaxOutputLen:
         assert SimulateVllm.get_max_output_len(1) == 200
         assert SimulateVllm.get_max_output_len(2) == 300
 
+    @staticmethod
     def test_get_max_output_len_from_int_conversion(self):
         # 模拟json文件中的数据
         ServiceField.req_id_and_max_decode_length = {0: 100, 1: 200, 2: 300}
@@ -151,11 +153,13 @@ class TestMaxOutputLen:
         assert SimulateVllm.get_max_output_len('1') == 200
         assert SimulateVllm.get_max_output_len('2') == 300
 
+    @staticmethod
     def test_get_max_output_len_from_cache(self):
         # 模拟缓存中的数据
         SimulateVllm.req_id_to_max_token_by_sequence = {'cmpl-7d6e773db843411985fba579778e81ea-0': 400}
         assert SimulateVllm.get_max_output_len('cmpl-7d6e773db843411985fba579778e81ea-0') == 400
 
+    @staticmethod
     def test_get_max_output_len_from_sequence_length(self):
         # 模拟序列长度的数据
         ServiceField.req_id_and_max_decode_length = {0: 100, 1: 200, 2: 300}
@@ -163,9 +167,9 @@ class TestMaxOutputLen:
         assert SimulateVllm.get_max_output_len('cmpl-7d6e773db843411985fba579778e81ea-1') == 200
         assert SimulateVllm.get_max_output_len('cmpl-7d6e773db843411985fba579778e81ea-2') == 300
 
+    @staticmethod
     def test_get_max_output_len_from_sequence_length_str(self):
         # 模拟序列长度的数据
-        print(SimulateVllm.req_id_to_max_token_by_sequence)
         ServiceField.req_id_and_max_decode_length = {'0': 100, '1': 200, '2': 300}
         assert SimulateVllm.get_max_output_len('cmpl-7d6e773db843411985fba579778e81ea-0') == 100
         assert SimulateVllm.get_max_output_len('cmpl-7d6e773db843411985fba579778e81ea-1') == 200
@@ -174,18 +178,21 @@ class TestMaxOutputLen:
 
 class TestCurOutputLen:
     # 测试用例1: 当req_id在req_to_output_len字典中找到时
+    @staticmethod
     def test_get_cur_output_len_found(self):
         SimulateVllm.req_to_output_len = {1: 10, '2': 20}
         assert SimulateVllm.get_cur_output_len(1) == 10
         assert SimulateVllm.get_cur_output_len('2') == 20
 
     # 测试用例2: 当req_id不在req_to_output_len字典中，但可以转换为整数并在字典中找到时
+    @staticmethod
     def test_get_cur_output_len_found_after_conversion(self):
         SimulateVllm.req_to_output_len = {1: 10, '2': 20}
         assert SimulateVllm.get_cur_output_len('1') == 10
         assert SimulateVllm.get_cur_output_len('2') == 20
 
     # 测试用例3: 当req_id不在req_to_output_len字典中，且无法转换为整数时
+    @staticmethod
     def test_get_cur_output_len_not_found(self):
         SimulateVllm.req_to_output_len = {1: 10, '2': 20}
         assert SimulateVllm.get_cur_output_len('3') is None
@@ -224,6 +231,7 @@ class TestSimulateVllmUpdateToken:
         sampling_output.outputs[2].samples[0].logprobs = {88089: type('Logprob', (), {})()}
         return model_input, sampling_output
 
+    @staticmethod
     def test_update_token_with_cur_out_len_less_than_max_out_len(self, setup):
         model_input, sampling_output = setup
 
@@ -239,6 +247,7 @@ class TestSimulateVllmUpdateToken:
         assert sampling_output.outputs[1].samples[0].output_token == 38107
         assert sampling_output.outputs[2].samples[0].output_token == 88089
 
+    @staticmethod
     def test_update_token_with_cur_out_len_greater_than_max_out_len_minus_one(self, setup):
         model_input, sampling_output = setup
 

@@ -20,8 +20,8 @@ from msserviceprofiler.modelevalstate.data_feature.v1 import FileReader
 
 def generate_data(fp):
     header = """world_size,request_rate,concurrency,prefill_batchsize,decode_batchsize,select_batch,"""\
-        """prefillTimeMsPerReq,decodeTimeMsPerReq,line,batch_num,"('codellama_34b',)","('llama3_70b',)","('llama3_8b',"""\
-            """)","('qwen1.5_14b',)","('qwen1.5_72b',)","('decode',)","('prefill',)"
+        """prefillTimeMsPerReq,decodeTimeMsPerReq,line,batch_num,"('codellama_34b',)","('llama3_70b',)","('"""\
+            """llama3_8b',)","('qwen1.5_14b',)","('qwen1.5_72b',)","('decode',)","('prefill',)"
             """
     fp.write(header)
     fp.write("\n")
