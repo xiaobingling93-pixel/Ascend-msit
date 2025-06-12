@@ -100,13 +100,12 @@ class MockBooster:
     def __init__(self, *args, **kwargs):
         self.feature_names = None
 
-    def load_model(self, model_path):
-        pass
-
     @staticmethod
     def predict(*args, **kwargs):
         return np.array([66666])
-
+    
+    def load_model(self, model_path):
+        pass
 
 @patch("xgboost.Booster", MockBooster)
 def predict_with_model(lines_data: DataFrame,

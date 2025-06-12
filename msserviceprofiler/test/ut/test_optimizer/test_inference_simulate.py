@@ -88,6 +88,7 @@ class TestFileLogger:
     def file_path(self):
         return Path("test.log")
 
+
 class TestSimulate:
     @staticmethod
     def test_generate_random_token_shape(plugin_object):
@@ -218,7 +219,7 @@ class TestSimulateUpdateToken:
 
         return plugin_object, input_metadata, cached_ids, sampling_output
 
-# Mocking external dependencies
+
 class MockFileHandler:
     def __init__(self):
         pass
