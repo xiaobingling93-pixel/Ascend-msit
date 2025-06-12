@@ -18,9 +18,87 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from msserviceprofiler.vllm_profiler.vllm_profiler_core.model_hookers import (
+    ExecutorBaseExecuteModelHook,
     ModelRunnerExecuteHook,
     ModelForwardHook,
+    SetForwardContextHook,
+    GLOBAL_FORWARD_PROF,
 )
+
+
+def test_executor_base_init():
+    fake_executor_base = MagicMock()
+    fake_executor_base.execute_model = MagicMock()
+    fake_dist_executor_base = MagicMock()
+    fake_dist_executor_base.execute_model = MagicMock()
+
+    vllm_executor_executor_base = MagicMock(
+        ExecutorBase=fake_executor_base,
+        DistributedExecutorBase=fake_dist_executor_base
+    )
+
+    sys.modules["vllm.executor.executor_base"] = vllm_executor_executor_base
+
+    hooker = ExecutorBaseExecuteModelHook()
+
+    with patch.object(hooker, "do_hook") as mock_do_hook:
+        hooker.init()
+
+        assert mock_do_hook.call_count == 2
+        # Check first call for ExecutorBase
+        hook_points1, profiler_func_maker1 = mock_do_hook.call_args_list[0][0]
+        assert hook_points1 == [fake_executor_base.execute_model]
+        assert callable(profiler_func_maker1)
+        
+        # Check second call for DistributedExecutorBase
+        hook_points2, profiler_func_maker2 = mock_do_hook.call_args_list[1][0]
+        assert hook_points2 == [fake_dist_executor_base.execute_model]
+        assert callable(profiler_func_maker2)
+
+
+def test_executor_base_execute_model_maker():
+    mock_ori_func = MagicMock(return_value="Result")
+
+    mock_this = MagicMock()
+    mock_execute_model_req = MagicMock()
+    
+    # Setup mock sequence group metadata
+    mock_seq_metadata1 = MagicMock()
+    mock_seq_metadata1.request_id = "req1"
+    mock_seq_metadata1.is_prompt = True
+    mock_seq_data1 = MagicMock()
+    mock_seq_data1.get_len.return_value = 10
+    mock_seq_data1.prompt_token_ids = [1, 2, 3]
+    mock_seq_metadata1.seq_data = {"seq1": mock_seq_data1}
+    
+    mock_seq_metadata2 = MagicMock()
+    mock_seq_metadata2.request_id = "req2"
+    mock_seq_metadata2.is_prompt = False
+    mock_seq_data2 = MagicMock()
+    mock_seq_data2.get_len.return_value = 5
+    mock_seq_data2.prompt_token_ids = [1, 2]
+    mock_seq_metadata2.seq_data = {"seq2": mock_seq_data2}
+    
+    mock_execute_model_req.seq_group_metadata_list = [mock_seq_metadata1, mock_seq_metadata2]
+
+    hooker = ExecutorBaseExecuteModelHook()
+    with patch.object(hooker, "do_hook") as mock_do_hook:
+        hooker.init()
+
+        mock_do_hook.assert_called()
+        _, execute_model_maker = mock_do_hook.call_args_list[0][0]
+        execute_model = execute_model_maker(mock_ori_func)
+
+        # Mock Profiler methods
+        with patch('ms_service_profiler.Profiler') as mock_profiler:
+            mock_profiler_instance = MagicMock()
+            mock_profiler.return_value = mock_profiler_instance
+            
+            result = execute_model(mock_this, mock_execute_model_req)
+
+            # Verify original function was called
+            mock_ori_func.assert_called_once()
+            assert result == "Result"
 
 
 def test_execute_init():
@@ -113,3 +191,36 @@ def test_begin_forward_maker():
         # 第二次执行，进入profiler逻辑
         result = begin_forward(mock_this, mock_model_input)
         assert result == "SecondResult"
+
+
+def test_set_forward_context_init():
+    sys.modules["vllm"] = MagicMock(forward_context=MagicMock())
+    
+    hooker = SetForwardContextHook()
+    with patch.object(hooker, "do_hook") as mock_do_hook:
+        hooker.init()
+        
+        mock_do_hook.assert_called_once()
+        hook_point, context_maker = mock_do_hook.call_args[0]
+        assert hook_point == [sys.modules["vllm"].forward_context.set_forward_context]
+        assert callable(context_maker)
+
+
+def test_set_forward_context_maker():
+    # 准备全局变量
+    global GLOBAL_FORWARD_PROF
+    GLOBAL_FORWARD_PROF = [MagicMock()]
+    
+    mock_ori_context = MagicMock()
+    mock_ori_context.return_value.__enter__.return_value = None
+    mock_ori_context.return_value.__exit__.return_value = None
+    
+    hooker = SetForwardContextHook()
+    with patch.object(hooker, "do_hook") as mock_do_hook:
+        hooker.init()
+        context_maker = mock_do_hook.call_args[0][1](mock_ori_context)
+        
+        # 调用context manager
+        with context_maker() as ctx:
+            # 验证原始context被调用
+            mock_ori_context.assert_called_once()
