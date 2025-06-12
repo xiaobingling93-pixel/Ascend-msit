@@ -13,9 +13,6 @@
 # limitations under the License.
 import argparse
 
-from msprof.msprof_process import msprof_process
-from msprof.args_adapter import MsProfArgsAdapter
-
 
 def check_positive_integer(value):
     ivalue = int(value)
@@ -119,6 +116,8 @@ def get_args():
 
 
 if __name__ == "__main__":
+    from msprof.msprof_process import msprof_process
+    from msprof.args_adapter import MsProfArgsAdapter
     args = get_args()
 
     args = MsProfArgsAdapter(
