@@ -16,7 +16,7 @@ import os
 import stat
 
 import unittest
-from test.resources.sample_net_torch import TestOnnxQuantModel
+from resources.sample_net_torch import TestOnnxQuantModel
 import torch
 import pytest
 

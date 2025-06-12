@@ -14,7 +14,7 @@ import atheris
 
 with atheris.instrument_imports():
     from msmodelslim.pytorch.low_rank_decompose import Decompose
-    from test.resources.sample_net_torch import LrdSampleNetwork
+    from resources.sample_net_torch import LrdSampleNetwork
 
 
 @atheris.instrument_func

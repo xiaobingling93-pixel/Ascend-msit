@@ -15,7 +15,7 @@ import numpy as np
 import torch
 
 with atheris.instrument_imports():
-    from test.resources.sample_net_torch import TestOnnxQuantModel
+    from resources.sample_net_torch import TestOnnxQuantModel
     from msmodelslim import logger
     from msmodelslim.pytorch.quant.ptq_tools import QuantConfig
     try:

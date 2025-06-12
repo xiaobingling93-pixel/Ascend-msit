@@ -19,7 +19,7 @@ import sympy as _
 from onnxruntime import quantization as _
 
 with atheris.instrument_imports():
-    from test.resources.sample_net_torch import TestOnnxQuantModel
+    from resources.sample_net_torch import TestOnnxQuantModel
     from msmodelslim.onnx.post_training_quant import QuantConfig, run_quantize
     from msmodelslim import logger
 
