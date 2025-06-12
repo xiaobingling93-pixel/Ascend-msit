@@ -1,11 +1,34 @@
-from unittest.mock import patch
+import sys
+from unittest.mock import patch, MagicMock
 
 import pytest
 import pandas as pd
 
-from msit_llm.opcheck.case_manager import CaseManager
-from msit_llm.opcheck.check_case import OP_NAME_DICT
-from msit_llm.opcheck.opchecker import NAMEDTUPLE_PRECISION_METRIC
+
+@pytest.fixture(scope="function")
+def import_case_manager_module():
+    backup = {}
+    for mod in ['torch_npu']:
+        if mod in sys.modules:
+            backup[mod] = sys.modules[mod]
+    mock_torch_npu = MagicMock()
+    sys.modules['torch_npu'] = mock_torch_npu
+    from msit_llm.opcheck.case_manager import CaseManager
+    from msit_llm.opcheck.check_case import OP_NAME_DICT
+    from msit_llm.common.utils import NAMEDTUPLE_PRECISION_METRIC
+
+    functions = {
+        "CaseManager": CaseManager,
+        "OP_NAME_DICT": OP_NAME_DICT,
+        "NAMEDTUPLE_PRECISION_METRIC": NAMEDTUPLE_PRECISION_METRIC
+    }
+    yield functions
+    
+    for mod, module_obj in backup.items():
+        sys.modules[mod] = module_obj
+    for mod in ['torch_npu']:
+        if mod not in backup and mod in sys.modules:
+            del sys.modules[mod]
 
 
 # Mocking necessary imports and functions
@@ -76,7 +99,9 @@ def mock_dependencies():
                     yield
 
 
-def test_init_given_parameters_when_valid():
+def test_init_given_parameters_when_valid(import_case_manager_module):
+    CaseManager = import_case_manager_module['CaseManager']
+    NAMEDTUPLE_PRECISION_METRIC = import_case_manager_module['NAMEDTUPLE_PRECISION_METRIC']
     cm = CaseManager(precision_metric=[NAMEDTUPLE_PRECISION_METRIC.abs], rerun=True, optimization_identify=True,
                      output_path='./test_output')
     assert cm.precision_metric == [NAMEDTUPLE_PRECISION_METRIC.abs]
@@ -91,7 +116,9 @@ def test_init_given_parameters_when_valid():
     ([], [])
 ])
 def test_excute_case_given_case_queue(case_queue_items, expected_result_queue_items,
-                                      mock_dependencies):
+                                      mock_dependencies, import_case_manager_module):
+    CaseManager = import_case_manager_module['CaseManager']
+    OP_NAME_DICT = import_case_manager_module['OP_NAME_DICT']
     case_queue = MockQueue()
     result_queue = MockQueue()
     for item in case_queue_items:
@@ -111,7 +138,10 @@ def test_excute_case_given_case_queue(case_queue_items, expected_result_queue_it
       'fail_reason': '', 'optimization_closed': ''}, {},
      {'out_tensor_id': '1', 'precision_standard': 'NaN', 'rel_precision_rate(%)': 'NaN', 'max_rel_error': 'NaN'})
 ])
-def test_update_single_op_result_given_valid_op_info(op_info, res_detail, expected_result, mock_dependencies):
+def test_update_single_op_result_given_valid_op_info(op_info, res_detail, expected_result, mock_dependencies, 
+                                                     import_case_manager_module):
+    CaseManager = import_case_manager_module['CaseManager']
+    NAMEDTUPLE_PRECISION_METRIC = import_case_manager_module['NAMEDTUPLE_PRECISION_METRIC']
     cm = CaseManager(precision_metric=[NAMEDTUPLE_PRECISION_METRIC.abs])
     updated_op_info = cm._update_single_op_result(op_info, '1', res_detail)
     for key, value in expected_result.items():
@@ -123,7 +153,10 @@ def test_update_single_op_result_given_valid_op_info(op_info, res_detail, expect
     ("invalid_op", False),
     ("nonexistent_op", False)
 ])
-def test_add_case_given_case_info_when_op_name_exists(op_name, expected_result):
+def test_add_case_given_case_info_when_op_name_exists(op_name, expected_result, import_case_manager_module):
+    CaseManager = import_case_manager_module['CaseManager']
+    OP_NAME_DICT = import_case_manager_module['OP_NAME_DICT']
+    NAMEDTUPLE_PRECISION_METRIC = import_case_manager_module['NAMEDTUPLE_PRECISION_METRIC']
     cm = CaseManager(precision_metric=[], rerun=False, optimization_identify=False, output_path='./')
     case_info = {'op_name': op_name}
 
@@ -145,7 +178,9 @@ def test_add_case_given_case_info_when_op_name_exists(op_name, expected_result):
     (2, True, 'debug', ['custom_alg'])
 ])
 def test_excute_cases_given_valid_cases(num_processes, rerun, log_level, custom_algorithms,
-                                        mock_dependencies):
+                                        mock_dependencies, import_case_manager_module):
+    CaseManager = import_case_manager_module['CaseManager']
+    OP_NAME_DICT = import_case_manager_module['OP_NAME_DICT']
     cm = CaseManager(precision_metric=[], rerun=rerun, optimization_identify=False, output_path='./')
     case_info = {'op_name': 'valid_op'}
     cm.add_case(case_info)
@@ -167,7 +202,8 @@ def test_excute_cases_given_valid_cases(num_processes, rerun, log_level, custom_
     ([], 0)
 ])
 def test_write_op_result_to_csv_given_valid_results(results, expected_call_count,
-                                                    mock_dependencies):
+                                                    mock_dependencies, import_case_manager_module):
+    CaseManager = import_case_manager_module['CaseManager']
     cm = CaseManager(precision_metric=[], rerun=False, optimization_identify=False, output_path='./test_output.xlsx')
 
     with patch('pandas.DataFrame.to_excel') as mock_to_excel:
