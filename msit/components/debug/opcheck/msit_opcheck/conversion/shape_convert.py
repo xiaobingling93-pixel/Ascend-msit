@@ -419,7 +419,7 @@ def to_nc1hwc0(data: np.ndarray, ori_format: str, target_shape: Union[List, Tupl
     ori_shape = data.shape
     if len(ori_shape) > 4:
         raise RuntimeError("Please check original format and original shape: NC1HWC0 transformer doesn't support"
-                           f"{len(ori_shape)}D shape")
+                           f" {len(ori_shape)}D shape")
     c0 = determine_c0(data.dtype.name, target_shape)
     n, c, h, w = 1, 1, 1, 1
     transpose_axis = []
