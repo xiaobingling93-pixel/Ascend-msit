@@ -162,4 +162,4 @@ def test_subelements_contain_non_integer():
     """测试子列表包含非整数的情况"""
     with pytest.raises(ValueError) as context:
         QuantConfig(input_shape=[[1, "a"], [3, 4]])
-    assert "Element in input_shape_items is invalid. Should be all int." in str(context.value)
+    assert "Element in input_shape_item is invalid. Should be all int." in str(context.value)
