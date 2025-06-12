@@ -29,15 +29,6 @@ from msserviceprofiler.modelevalstate.inference.simulate import Simulate, predic
 
 
 class TestFileLogger:
-
-    @pytest.fixture
-    def logger(self):
-        return FileLogger(Path(settings.benchmark.custom_collect_output_path).joinpath(f"simulate_{os.getpid()}.csv"))
-
-    @pytest.fixture
-    def file_path(self):
-        return Path("test.log")
-
     @staticmethod
     def test_open_file_with_path(logger, file_path):
         logger.file_path = file_path
@@ -89,17 +80,15 @@ class TestFileLogger:
         mock_file.write.assert_any_call("\n")
         mock_file.flush.assert_called_once()
 
+    @pytest.fixture
+    def logger(self):
+        return FileLogger(Path(settings.benchmark.custom_collect_output_path).joinpath(f"simulate_{os.getpid()}.csv"))
+    
+    @pytest.fixture
+    def file_path(self):
+        return Path("test.log")
 
 class TestSimulate:
-
-    @pytest.fixture
-    def plugin_object(self):
-        class PluginObject:
-            def __init__(self):
-                self.eos_token_id = 10000  # 假设的eos_token_id
-
-        return PluginObject()
-
     @staticmethod
     def test_generate_random_token_shape(plugin_object):
         shape = (2, 3)
@@ -128,6 +117,14 @@ class TestSimulate:
         result = Simulate.generate_random_token(plugin_object, shape, max_value)
         assert result.size == np.prod(shape), "The size of the generated array does not match the product of the shape."
 
+    @pytest.fixture
+    def plugin_object(self):
+        class PluginObject:
+            def __init__(self):
+                self.eos_token_id = 10000  # 假设的eos_token_id
+
+        return PluginObject()
+
 
 def test_generate_logits():
     device = "cpu"
@@ -150,26 +147,6 @@ def test_generate_logits():
 
 
 class TestSimulateUpdateToken:
-
-    @pytest.fixture
-    def setup(self):
-        # 创建模拟对象
-        plugin_object = MagicMock()
-        plugin_object.input_manager.cache.output_len_count = np.full((3, 1), 1, dtype=np.int32)
-        plugin_object.eos_token_id = 50256
-        plugin_object.model_wrapper.config.vocab_size = 50256
-
-        input_metadata = MagicMock()
-        input_metadata.batch_request_ids = np.array([0])
-
-        cached_ids = 0
-
-        sampling_output = MagicMock()
-        sampling_output.token_ids = np.array([50256])
-        sampling_output.top_token_ids = np.zeros((1, 0), dtype=np.int32)
-
-        return plugin_object, input_metadata, cached_ids, sampling_output
-
     @staticmethod
     def test_update_token_with_eos_token(setup):
         plugin_object, input_metadata, cached_ids, sampling_output = setup
@@ -222,6 +199,24 @@ class TestSimulateUpdateToken:
         assert sampling_output.token_ids[0] == plugin_object.eos_token_id
         assert sampling_output.top_token_ids.size == 0
 
+    @pytest.fixture
+    def setup(self):
+        # 创建模拟对象
+        plugin_object = MagicMock()
+        plugin_object.input_manager.cache.output_len_count = np.full((3, 1), 1, dtype=np.int32)
+        plugin_object.eos_token_id = 50256
+        plugin_object.model_wrapper.config.vocab_size = 50256
+
+        input_metadata = MagicMock()
+        input_metadata.batch_request_ids = np.array([0])
+
+        cached_ids = 0
+
+        sampling_output = MagicMock()
+        sampling_output.token_ids = np.array([50256])
+        sampling_output.top_token_ids = np.zeros((1, 0), dtype=np.int32)
+
+        return plugin_object, input_metadata, cached_ids, sampling_output
 
 # Mocking external dependencies
 class MockFileHandler:

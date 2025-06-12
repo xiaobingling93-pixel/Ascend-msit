@@ -103,7 +103,8 @@ class MockBooster:
     def load_model(self, model_path):
         pass
 
-    def predict(self, *args, **kwargs):
+    @staticmethod
+    def predict(*args, **kwargs):
         return np.array([66666])
 
 
@@ -222,7 +223,6 @@ def test_state_eval(tmpdir):
     fl = FileReader(file_paths, num_lines=1000)
     process_num = 1
     run_case(process_num, save_result_path, fl, predict_with_model, {
-                        "xgb_model_path": xgb_model_path,
                         "ohe_path": ohe_path,
                         "train_field": train_field,
                         "dataset_type": DataProcessor
