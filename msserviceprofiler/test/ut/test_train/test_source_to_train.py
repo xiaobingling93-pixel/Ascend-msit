@@ -176,7 +176,7 @@ class TestSourceToTrain(unittest.TestCase):
         # 测试关闭连接
         db_conn.close()
 
-    @patch("msserviceprofiler.modelevalstate.train.source_to_train.pretrain")
+    @patch("msserviceprofiler.modelevalstate.train.pretrain.pretrain")
     def test_source_to_model_mindie(self, mock_pretrain):
         """测试Mindie数据预处理流程"""
         # 执行数据处理
@@ -191,7 +191,7 @@ class TestSourceToTrain(unittest.TestCase):
             if pid_dir.is_dir():
                 self.assertTrue((pid_dir / "feature.csv").exists())
 
-    @patch("msserviceprofiler.modelevalstate.train.source_to_train.pretrain")
+    @patch("msserviceprofiler.modelevalstate.train.pretrain.pretrain")
     @patch("msserviceprofiler.modelevalstate.train.source_to_train.process_execution_data_vllm")
     def test_source_to_model_vllm(self, patch_pretrain, patch_process_execution_data_vllm):
         """测试vLLM数据预处理流程"""
