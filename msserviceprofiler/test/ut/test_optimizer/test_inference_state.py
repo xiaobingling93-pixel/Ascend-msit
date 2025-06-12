@@ -107,6 +107,7 @@ class MockBooster:
     def load_model(self, model_path):
         pass
 
+
 @patch("xgboost.Booster", MockBooster)
 def predict_with_model(lines_data: DataFrame,
                        xgb_model_path: Optional[Path] = None,
