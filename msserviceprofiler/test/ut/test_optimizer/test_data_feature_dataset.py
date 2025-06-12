@@ -272,6 +272,7 @@ class TestPreprocess(unittest.TestCase):
         with self.assertRaises(Exception):
             self.preprocessor.preprocess(data)
 
+
 @pytest.fixture
 def feature_csv(tmpdir):
     _feature_file = Path(tmpdir).joinpath("feature.csv")
@@ -286,6 +287,7 @@ def feature_csv(tmpdir):
     yield _feature_file
     _feature_file.unlink()
 
+
 def test_dataset_function(feature_csv, tmpdir):
     base_path = Path(tmpdir)
     df = pd.read_csv(feature_csv)
@@ -298,9 +300,10 @@ def test_dataset_function(feature_csv, tmpdir):
     my_data_set.analysis_origin_request_hist(df, middle_save_path=_middle_path)
     my_data_set.save(base_path)
     my_data_set.plt_data(df, middle_save_path=_middle_path)
-    assert my_data_set.features.shape == (2,160)
-    assert my_data_set.labels.shape == (2,1)
+    assert my_data_set.features.shape == (2, 160)
+    assert my_data_set.labels.shape == (2, 1)
     shutil.rmtree(_middle_path)
+
 
 @pytest.fixture
 def all_feature_csv(tmpdir):
@@ -337,10 +340,11 @@ def all_feature_csv(tmpdir):
              ''' True, 128256, None, {'group_size': 0, 'kv_quant_type': None, 'reduce_quant_type': None})"'''
         _txt_6 = '''"(128, 2560, 1, 5, -1, 8192, 50, 200)"'''
         _txt_7 = '''"(0, 0, 1, 0, 0.5, 0, 0, 0, 0, 1)"'''
-        _txt_8 ='''"(256, 2026542, 'xxx', 7864)"'''
+        _txt_8 = '''"(256, 2026542, 'xxx', 7864)"'''
         f.write(f"{_txt},{_txt_2},{_txt_3},{_txt_4},{_txt_5},{_txt_6},{_txt_7},{_txt_8}")
     yield _feature_file
     _feature_file.unlink()
+
 
 def test_dataset_function_with_all_feature(all_feature_csv, tmpdir):
     df = pd.read_csv(all_feature_csv)
@@ -348,8 +352,8 @@ def test_dataset_function_with_all_feature(all_feature_csv, tmpdir):
     custom_label_encoder.fit()
     my_data_set = MyDataSet(predict_field="model_execute_time", custom_encoder=custom_label_encoder)
     my_data_set.construct_data(df)
-    assert my_data_set.features.shape == (1,902)
-    assert my_data_set.labels.shape == (1,1)
+    assert my_data_set.features.shape == (1, 902)
+    assert my_data_set.labels.shape == (1, 1)
 
 if __name__ == "__main__":
     unittest.main()
