@@ -57,10 +57,7 @@ class TestProfilerBenchmark(unittest.TestCase):
 
     def tearDown(self):
         if hasattr(self.benchmark, 'profiler_process') and self.benchmark.profiler_process:
-            try:
-                self.benchmark.profiler_process.kill()
-            except:
-                pass
+            self.benchmark.profiler_process.kill()
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_initialization(self):
@@ -194,25 +191,7 @@ class TestProfilerBenchmark(unittest.TestCase):
                     {self.benchmark.analyze_tool: mock_analyze_tool}):
             with self.assertRaises(ValueError) as context:
                 self.benchmark.extra_performance_index("dummy_path")
-            
             self.assertIn("Not Support", str(context.exception))
-        @patch.object(ProfilerBenchmark, 'start_profiler')
-        @patch.object(ProfilerBenchmark, 'check_profiler')
-        @patch.object(ProfilerBenchmark, 'extra_performance_index')
-        def test_get_performance_index(self, mock_extra, mock_check, mock_start):
-            mock_check.return_value = True
-            expected_result = PerformanceIndex(
-                generate_speed=10.0,
-                time_to_first_token=1.0,
-                time_per_output_token=0.1,
-                success_rate=1.0
-            )
-            mock_extra.return_value = expected_result
-            
-            result = self.benchmark.get_performance_index()
-            self.assertEqual(result, expected_result)
-            mock_start.assert_called_once()
-            mock_check.assert_called()
 
     def test_backup_calls(self):
         # 设置备份路径
@@ -298,9 +277,9 @@ class TestSimulator(unittest.TestCase):
 
     @patch('builtins.open')
     @patch('os.path.exists', return_value=True)
-    def test_check_success(self, mock_exists, mock_open):
+    def test_check_success(self, mock_exists, mock_open_func):
         mock_file = MagicMock()
-        mock_open.return_value.__enter__.return_value = mock_file
+        mock_open_func.return_value.__enter__.return_value = mock_file
         mock_file.tell.side_effect = [0, 100]
         mock_file.read.return_value = "Daemon start success!"
         
@@ -385,8 +364,9 @@ class TestKillChildren:
 # 测试 remove_file 函数
 class TestRemoveFile:
     """测试 remove_file 函数的各种场景"""
+    @classmethod
     @pytest.fixture
-    def setup_test_files(self, tmp_path):
+    def setup_test_files(cls, tmp_path):
         """创建测试用的临时文件和目录结构"""
         # 创建测试文件
         test_file = tmp_path / "test_file.txt"
@@ -406,7 +386,8 @@ class TestRemoveFile:
         
         return tmp_path
 
-    def test_remove_single_file(self, setup_test_files):
+    @classmethod
+    def test_remove_single_file(cls, setup_test_files):
         """测试删除单个文件"""
         test_file = setup_test_files / "test_file.txt"
         assert test_file.exists()
@@ -414,7 +395,8 @@ class TestRemoveFile:
         remove_file(test_file)
         assert not test_file.exists()
 
-    def test_remove_nonexistent_path(self, setup_test_files):
+    @classmethod
+    def test_remove_nonexistent_path(cls, setup_test_files):
         """测试删除不存在的路径"""
         non_existent = setup_test_files / "does_not_exist"
         assert not non_existent.exists()
@@ -422,7 +404,15 @@ class TestRemoveFile:
         # 应该不会抛出异常
         remove_file(non_existent)
 
-    def test_remove_string_path(self, setup_test_files):
+    @classmethod
+    def test_remove_empty_path(cls):
+        """测试传入空路径"""
+        # 应该不会抛出异常
+        remove_file(None)
+        remove_file("")
+
+    @classmethod
+    def test_remove_string_path(cls, setup_test_files):
         """测试传入字符串路径"""
         test_file = setup_test_files / "test_file.txt"
         assert test_file.exists()
@@ -430,14 +420,9 @@ class TestRemoveFile:
         remove_file(str(test_file))
         assert not test_file.exists()
 
-    def test_remove_empty_path(self):
-        """测试传入空路径"""
-        # 应该不会抛出异常
-        remove_file(None)
-        remove_file("")
-
+    @classmethod
     @patch('shutil.rmtree')
-    def test_remove_dir_failure(self, mock_rmtree, setup_test_files):
+    def test_remove_dir_failure(cls, mock_rmtree, setup_test_files):
         """测试删除目录时出现异常的情况"""
         test_dir = setup_test_files / "test_dir"
         
@@ -448,7 +433,8 @@ class TestRemoveFile:
         remove_file(test_dir)
         assert mock_rmtree.call_count >= 1
 
-    def test_remove_symlink(self, setup_test_files):
+    @classmethod
+    def test_remove_symlink(cls, setup_test_files):
         """测试删除符号链接"""
         test_file = setup_test_files / "test_file.txt"
         symlink = setup_test_files / "symlink.txt"
@@ -464,7 +450,8 @@ class TestRemoveFile:
             # 某些系统或环境可能不支持创建符号链接
             pytest.skip("当前系统不支持符号链接")
 
-    def test_remove_broken_symlink(self, setup_test_files):
+    @classmethod
+    def test_remove_broken_symlink(cls, setup_test_files):
         """测试删除损坏的符号链接"""
         broken_symlink = setup_test_files / "broken_link.txt"
         
@@ -481,9 +468,9 @@ class TestRemoveFile:
 
 class TestBackup:
     """测试 backup 函数的各种场景"""
-
+    @classmethod
     @pytest.fixture
-    def setup_test_dirs(self, tmp_path):
+    def setup_test_dirs(cls, tmp_path):
         """创建测试用的临时目录结构"""
         # 源目录结构
         src_dir = tmp_path / "source"
@@ -500,7 +487,8 @@ class TestBackup:
 
         return src_dir, bak_dir
 
-    def test_backup_file(self, setup_test_dirs):
+    @classmethod
+    def test_backup_file(cls, setup_test_dirs):
         """测试备份单个文件"""
         src, bak = setup_test_dirs
         src_file = src / "file1.txt"
@@ -511,7 +499,8 @@ class TestBackup:
         assert bak_file.exists()
         assert bak_file.read_text() == "content1"
 
-    def test_backup_directory(self, setup_test_dirs):
+    @classmethod
+    def test_backup_directory(cls, setup_test_dirs):
         """测试备份整个目录"""
         src, bak = setup_test_dirs
         
@@ -521,7 +510,8 @@ class TestBackup:
         assert bak_subdir.exists()
         assert (bak_subdir / "file3.txt").read_text() == "content3"
 
-    def test_backup_with_class_name(self, setup_test_dirs):
+    @classmethod
+    def test_backup_with_class_name(cls, setup_test_dirs):
         """测试带class_name参数的备份"""
         src, bak = setup_test_dirs
         src_file = src / "file1.txt"
@@ -531,7 +521,8 @@ class TestBackup:
         bak_file = bak / "test_class" / "file1.txt"
         assert bak_file.exists()
 
-    def test_backup_existing_file_no_overwrite(self, setup_test_dirs):
+    @classmethod
+    def test_backup_existing_file_no_overwrite(cls, setup_test_dirs):
         """测试已存在文件不重复备份"""
         src, bak = setup_test_dirs
         src_file = src / "file1.txt"
@@ -544,7 +535,8 @@ class TestBackup:
         bak_file = bak / "file1.txt"
         assert bak_file.exists()
 
-    def test_backup_nonexistent_source(self, setup_test_dirs):
+    @classmethod
+    def test_backup_nonexistent_source(cls, setup_test_dirs):
         """测试源不存在的情况"""
         src, bak = setup_test_dirs
         non_existent = src / "not_exists.txt"
@@ -552,8 +544,9 @@ class TestBackup:
         backup(non_existent, bak)  # 不应报错
         assert not (bak / "not_exists.txt").exists()
 
+    @classmethod
     @patch('shutil.copy')
-    def test_backup_file_permission_error(self, mock_copy, setup_test_dirs):
+    def test_backup_file_permission_error(cls, mock_copy, setup_test_dirs):
         """测试文件备份时的权限错误"""
         src, bak = setup_test_dirs
         src_file = src / "file1.txt"
@@ -563,8 +556,9 @@ class TestBackup:
         with pytest.raises(PermissionError):
             backup(src_file, bak)
 
+    @classmethod
     @patch('shutil.copytree')
-    def test_backup_dir_permission_error(self, mock_copytree, setup_test_dirs):
+    def test_backup_dir_permission_error(cls, mock_copytree, setup_test_dirs):
         """测试目录备份时的权限错误"""
         src, bak = setup_test_dirs
         
@@ -573,12 +567,14 @@ class TestBackup:
         with pytest.raises(PermissionError):
             backup(src, bak)
 
-    def test_backup_empty_parameters(self):
+    @classmethod
+    def test_backup_empty_parameters(cls):
         """测试空参数"""
         backup(None, None)  # 不应报错
         backup("", "")  # 不应报错
 
-    def test_backup_existing_dir_with_class_name(self, setup_test_dirs):
+    @classmethod
+    def test_backup_existing_dir_with_class_name(cls, setup_test_dirs):
         """测试目标目录已存在且带class_name的情况"""
         src, bak = setup_test_dirs
         class_name = "test_class"
@@ -691,6 +687,153 @@ class TestClearingResidualProcess(unittest.TestCase):
         
         # 只验证kill_process被调用即可
         mock_kill.assert_called_once()
+
+
+class TestBenchMark(unittest.TestCase):
+    def setUp(self):
+        self.temp_dir = Path(tempfile.mkdtemp())
+        self.benchmark_config = BenchMarkConfig(
+            output_path=self.temp_dir / "output",
+            command="test_command",
+            work_path=self.temp_dir
+        )
+        self.benchmark = BenchMark(self.benchmark_config)
+
+    def tearDown(self):
+        shutil.rmtree(self.temp_dir)
+
+    @patch('os.environ', {})
+    def test_run_with_env_params(self):
+        with patch('subprocess.Popen') as mock_popen:
+            params = (
+                OptimizerConfigField(name="param1", value=10, config_position="env"),
+                OptimizerConfigField(name="param2", value=20, config_position="other")
+            )
+            self.benchmark.run(params)
+            self.assertEqual(os.environ["param1"], "10")
+            self.assertNotIn("param2", os.environ)
+
+    def test_get_performance_index_no_files(self):
+        with self.assertRaises(ValueError):
+            self.benchmark.get_performance_index()
+
+    @patch('builtins.open')
+    @patch('os.path.exists', return_value=True)
+    def test_check_success(self, mock_exists, mock_open_func):
+        mock_file = MagicMock()
+        mock_open_func.return_value.__enter__.return_value = mock_file
+        mock_file.tell.side_effect = [0, 100]
+        mock_file.read.return_value = "test output"
+        
+        self.benchmark.process = MagicMock()
+        self.benchmark.process.poll.return_value = 0
+        
+        result = self.benchmark.check_success(print_log=True)
+        self.assertTrue(result)
+
+    @patch('subprocess.Popen')
+    def test_run_basic(self, mock_popen):
+        mock_process = MagicMock()
+        mock_popen.return_value = mock_process
+        
+        params = ()
+        self.benchmark.run(params)
+        
+        mock_popen.assert_called_once()
+        self.assertEqual(self.benchmark.process, mock_process)
+        self.assertIsNotNone(self.benchmark.run_log)
+        self.assertEqual(self.benchmark.run_log_offset, 0)
+
+    @patch('os.path.exists', return_value=True)
+    @patch('builtins.open', new_callable=mock_open)
+    def test_stop_with_del_log(self, mock_file, mock_exists):
+        self.benchmark.process = MagicMock()
+        self.benchmark.process.poll.return_value = None
+        self.benchmark.run_log = str(self.temp_dir / "test_log.txt")
+        self.benchmark.run_log_fp = 123
+        
+        with patch('shutil.rmtree') as mock_rmtree:
+            self.benchmark.stop(del_log=True)
+            
+            self.benchmark.process.kill.assert_called_once()
+            mock_rmtree.assert_not_called()  # Only checks that backup wasn't called with del_log=True
+
+    def test_get_performance_index_with_common_file(self):
+        output_path = Path(self.benchmark_config.output_path)
+        output_path.mkdir(parents=True, exist_ok=True)
+        
+        # Create common CSV file
+        common_data = {
+            "OutputGenerateSpeed": ["100 tokens/s"],
+            "Returned": ["99.9%"],
+        }
+        pd.DataFrame(common_data).to_csv(output_path / "result_common.csv", index=False)
+        
+        # Create perf CSV file
+        perf_data = {
+            "FirstTokenTime": ["50 ms"],
+            "GeneratedTokenSpeed": ["200 tokens/s"],
+            "DecodeTime": ["5 ms"],  # Fixed typo: DecodeTime instead of DecodeTime
+        }
+        pd.DataFrame(perf_data).to_csv(output_path / "result_perf.csv", index=False)
+        
+        result = self.benchmark.get_performance_index()
+        
+        self.assertEqual(result.generate_speed, 100)  # Uses common_generate_speed
+        self.assertAlmostEqual(result.time_to_first_token, 0.05)
+        self.assertAlmostEqual(result.time_per_output_token, 0.005)
+        self.assertAlmostEqual(result.success_rate, 0.999)
+
+    def test_get_performance_index_with_only_common_file(self):
+        output_path = Path(self.benchmark_config.output_path)
+        output_path.mkdir(parents=True, exist_ok=True)
+        
+        # Create only common CSV file
+        common_data = {
+            "OutputGenerateSpeed": ["100 tokens/s"],
+            "Returned": ["99.9%"],
+        }
+        pd.DataFrame(common_data).to_csv(output_path / "result_common.csv", index=False)
+        
+        with self.assertRaises(ValueError) as context:
+            self.benchmark.get_performance_index()
+        self.assertIn("Not Found first_token_time", str(context.exception))
+
+    def test_get_performance_index_with_perf_file(self):
+        output_path = Path(self.benchmark_config.output_path)
+        output_path.mkdir(parents=True, exist_ok=True)
+        
+        # Create test CSV file
+        test_data = {
+            "FirstTokenTime": ["50 ms"],
+            "GeneratedTokenSpeed": ["200 tokens/s"],
+            "DecodeTime": ["5 ms"],
+        }
+        df = pd.DataFrame(test_data)
+        df.to_csv(output_path / "result_perf.csv", index=False)
+        
+        self.benchmark.throughput_type = "perf"
+        result = self.benchmark.get_performance_index()
+        
+        self.assertEqual(result.generate_speed, 200)
+        self.assertEqual(result.time_to_first_token, 0.05)
+        self.assertEqual(result.time_per_output_token, 0.005)
+
+    @patch('os.path.exists', return_value=True)
+    def test_check_success_process_not_finished(self, mock_exists):
+        self.benchmark.process = MagicMock()
+        self.benchmark.process.poll.return_value = None
+        
+        result = self.benchmark.check_success()
+        self.assertFalse(result)
+
+    @patch('os.path.exists', return_value=True)
+    def test_check_success_process_failed(self, mock_exists):
+        self.benchmark.process = MagicMock()
+        self.benchmark.process.poll.return_value = 1
+        
+        with self.assertRaises(subprocess.SubprocessError):
+            self.benchmark.check_success()
 
 
 if __name__ == '__main__':
