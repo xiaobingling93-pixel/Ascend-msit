@@ -4,7 +4,7 @@ import pytest
 import torch
 
 from msmodelslim.pytorch.llm_ptq.anti_outlier import AntiOutlier, AntiOutlierConfig
-from test.resources.fake_llama.fake_llama import get_fake_llama_model_and_tokenizer
+from resources.fake_llama.fake_llama import get_fake_llama_model_and_tokenizer
 
 
 KEY_INPUT_IDS = "input_ids"

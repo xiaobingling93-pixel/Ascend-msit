@@ -155,7 +155,7 @@ class TestUtilityFunctions:
     def test_convert_config_w4a4_dynamic(self):
         model = nn.Linear(128, 64)
         quant_config = Mock()
-        quant_config.model_quant_type = QuantType.W4A4_DYNAMIC
+        quant_config.model_quant_type = QuantType.W4A4_FLATQUANT_DYNAMIC
         flat_quant_config = FlatQuantQuantizerConfig()
         
         config, visitor = convert_config(quant_config, flat_quant_config, model)
@@ -218,7 +218,7 @@ class TestUtilityFunctions:
         model_bridge.model = model
         
         layer_map = {'test_layer': Mock()}
-        layer_map['test_layer'].model_quant_type = QuantType.W4A4_DYNAMIC
+        layer_map['test_layer'].model_quant_type = QuantType.W4A4_FLATQUANT_DYNAMIC
         flat_quant_config = FlatQuantQuantizerConfig()
         
         with patch('msmodelslim.pytorch.llm_ptq.llm_ptq_tools.flat_quant.processors.flat_quant.QuantizerMapper') as mock_mapper_class:
@@ -248,7 +248,7 @@ class TestUtilityFunctions:
         model_bridge.get_structure_pairs.return_value = pairs_dict
         
         quant_config1 = Mock()
-        quant_config1.model_quant_type = QuantType.W4A4_DYNAMIC
+        quant_config1.model_quant_type = QuantType.W4A4_FLATQUANT_DYNAMIC
         quant_config2 = Mock()
         quant_config2.model_quant_type = QuantType.W8A8_DYNAMIC
         

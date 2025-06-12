@@ -2,10 +2,10 @@
 import os 
 import stat 
 
-from test.resources.sample_net_prune import TorchPrunedModel
-from test.resources.sample_net_prune import TorchOriModel
-from test.resources.sample_net_prune import MsPrunedModel
-from test.resources.sample_net_prune import MsOriModel
+from resources.sample_net_prune import TorchPrunedModel
+from resources.sample_net_prune import TorchOriModel
+from resources.sample_net_prune import MsPrunedModel
+from resources.sample_net_prune import MsOriModel
 
 import pytest 
 import torch 

@@ -1,6 +1,6 @@
 # Copyright Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
 
-from test.resources.sample_net_mindspore import TestNetMindSpore
+from resources.sample_net_mindspore import TestNetMindSpore
 
 import mindspore as ms 
 import numpy as np
