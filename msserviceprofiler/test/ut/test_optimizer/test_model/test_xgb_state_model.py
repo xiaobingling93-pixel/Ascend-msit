@@ -105,7 +105,7 @@ class TestStateXgbModel():
     @patch('msserviceprofiler.modelevalstate.model.xgb_state_model.plt.subplots')
     @patch('builtins.open', MagicMock())
     @patch('msserviceprofiler.modelevalstate.model.xgb_state_model.xgboost.plot_importance')
-    def test_plot_feature_importance(mock_plot, mock_subplots, mock_savefig, mock_close, mock_show, tmp_path):
+    def test_plot_feature_importance(mock_subplots, mock_savefig, tmp_path):
         # 设置mock模型
         mock_model = MagicMock()
         mock_model.get_score.return_value = {'feature1': 1.0, 'feature2': 0.5}
