@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
 from unittest.mock import patch, MagicMock
 from pathlib import Path
 
+import pytest
 import numpy as np
 import xgboost
 
