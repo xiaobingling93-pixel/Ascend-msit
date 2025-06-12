@@ -34,16 +34,17 @@ class TestMindieConfigChecker(unittest.TestCase):
         self.checker = MindieConfigChecker()
 
     @patch.dict("os.environ", {}, clear=True)
-    def test_collect_env_1(self):
+    @patch("os.stat", side_effect=OSError)
+    def test_collect_env_with_no_env_vars_and_no_default_config(self, _):
         self.assertIsNone(self.checker.collect_env())
         self.assertEqual(self.checker.config_path, os.path.join(MINDIE_SERVICE_DEFAULT_PATH, "conf", "config.json"))
 
     @patch.dict("os.environ", {"MIES_INSTALL_PATH": "/random/path"}, clear=True)
-    def test_collect_env_2(self):
+    def test_collect_env_with_mies_install_path_env_var(self):
         self.assertIsNone(self.checker.collect_env())
         self.assertEqual(self.checker.config_path, os.path.join("/random/path", "conf", "config.json"))
 
-    def test_collect_env_3(self):
+    def test_collect_env_with_directory_path_creates_default_config_path(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             random_path = os.path.join(temp_dir, "random_path")
             with open(random_path, "w") as f:
@@ -52,7 +53,7 @@ class TestMindieConfigChecker(unittest.TestCase):
             self.assertIsNone(self.checker.collect_env(random_path))
             self.assertEqual(self.checker.config_path, os.path.join(random_path, "conf", "config.json"))
     
-    def test_collect_env_4(self):
+    def test_collect_env_with_json_file_path_returns_config_data(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             random_path = os.path.join(temp_dir, "random_path.json")
             data = {"ServerConfig": {"httpsEnabled": True}}
@@ -62,10 +63,10 @@ class TestMindieConfigChecker(unittest.TestCase):
             self.assertEqual(self.checker.collect_env(random_path), data)
             self.assertEqual(self.checker.config_path, random_path)
 
-    def test_do_precheck_1(self):
+    def test_do_precheck_with_none_config_returns_none(self):
         self.assertIsNone(self.checker.do_precheck(None))
 
-    def test_do_precheck_2(self):
+    def test_do_precheck_with_valid_config_returns_none(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             random_path = os.path.join(temp_dir, "random_path.json")
             data = {"ServerConfig": {"httpsEnabled": True}}

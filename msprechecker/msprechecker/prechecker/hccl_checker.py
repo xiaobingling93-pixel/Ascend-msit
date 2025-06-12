@@ -243,4 +243,4 @@ class HCCLChecker(GroupPrechecker):
         ]
 
 
-hccl_checker = HCCLChecker()
+hccl_checker_instance = HCCLChecker()

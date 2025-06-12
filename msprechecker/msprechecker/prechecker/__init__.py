@@ -24,26 +24,26 @@ from msprechecker.prechecker.config_checker import (
     mindie_env_checker
 )
 from msprechecker.prechecker.env_checker import env_checker
-from msprechecker.prechecker.system_checker import system_checker
-from msprechecker.prechecker.hccl_checker import hccl_checker
+from msprechecker.prechecker.system_checker import system_checker_instance
+from msprechecker.prechecker.hccl_checker import hccl_checker_instance
 from msprechecker.prechecker.model_checker import model_size_checker, model_sha256_collecter
 from msprechecker.prechecker.utils import CHECKER_TYPES
 from msprechecker.prechecker.hardware_capacity.cpu_checker import cpu_checker
 from msprechecker.prechecker.hardware_capacity.npu_checker import npu_checker
-from msprechecker.prechecker.hardware_capacity.network_checker import network_checker
+from msprechecker.prechecker.hardware_capacity.network_checker import network_checker_instance
 
 CHECKERS = {
     CHECKER_TYPES.basic: [
-        system_checker,
+        system_checker_instance,
         env_checker,
         mindie_config_checker,
         ranktable_checker,
         user_config_checker,
         mindie_env_checker
     ],
-    CHECKER_TYPES.hccl: [hccl_checker],
+    CHECKER_TYPES.hccl: [hccl_checker_instance],
     CHECKER_TYPES.model: [model_config_checker, model_size_checker, model_sha256_collecter],
-    CHECKER_TYPES.hardware: [cpu_checker, npu_checker, network_checker]
+    CHECKER_TYPES.hardware: [cpu_checker, npu_checker, network_checker_instance]
 }
 
 CHECKERS[CHECKER_TYPES.all] = []
