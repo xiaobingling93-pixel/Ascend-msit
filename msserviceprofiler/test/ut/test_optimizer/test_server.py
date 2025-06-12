@@ -17,6 +17,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch, MagicMock, Mock, call
+import xmlrpc
 from xmlrpc.server import SimpleXMLRPCServer
 import numpy as np
 
@@ -34,7 +35,7 @@ class MockSimulator:
         self.process = MagicMock()
 
     @staticmethod
-    def check_success(self):
+    def check_success():
         return True
 
     def run(self, params):
@@ -67,52 +68,53 @@ with patch.dict('sys.modules', {
         main
     )
 
-    def setUp(self):
-        # 创建临时目录和文件用于测试
-        self.test_dir = Path("test_dir")
-        self.test_dir.mkdir(exist_ok=True)
-        self.test_file = self.test_dir / "test_file.txt"
-        self.test_file.touch()
-        self.test_sub_dir = self.test_dir / "sub_dir"
-        self.test_sub_dir.mkdir(exist_ok=True)
-        self.test_sub_file = self.test_sub_dir / "test_sub_file.txt"
-        self.test_sub_file.touch()
+    class TestGetFile(unittest.TestCase):
+        def setUp(self):
+            # 创建临时目录和文件用于测试
+            self.test_dir = Path("test_dir")
+            self.test_dir.mkdir(exist_ok=True)
+            self.test_file = self.test_dir / "test_file.txt"
+            self.test_file.touch()
+            self.test_sub_dir = self.test_dir / "sub_dir"
+            self.test_sub_dir.mkdir(exist_ok=True)
+            self.test_sub_file = self.test_sub_dir / "test_sub_file.txt"
+            self.test_sub_file.touch()
 
-    def tearDown(self):
-        # 清理测试创建的临时目录和文件
-        for root, dirs, files in os.walk(self.test_dir, topdown=False):
-            for name in files:
-                os.remove(os.path.join(root, name))
-            for name in dirs:
-                os.rmdir(os.path.join(root, name))
+        def tearDown(self):
+            # 清理测试创建的临时目录和文件
+            for root, dirs, files in os.walk(self.test_dir, topdown=False):
+                for name in files:
+                    os.remove(os.path.join(root, name))
+                for name in dirs:
+                    os.rmdir(os.path.join(root, name))
 
-    def test_get_file_file_not_found(self):
-        with self.assertRaises(FileNotFoundError):
-            get_file("nonexistent_path")
+        def test_get_file_file_not_found(self):
+            with self.assertRaises(FileNotFoundError):
+                get_file("nonexistent_path")
 
-    def test_get_file_single_file(self):
-        result = get_file(self.test_file)
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0][0], "test_file.txt")
-        self.assertIsInstance(result[0][1], xmlrpc.client.Binary)
+        def test_get_file_single_file(self):
+            result = get_file(self.test_file)
+            self.assertEqual(len(result), 1)
+            self.assertEqual(result[0][0], "test_file.txt")
+            self.assertIsInstance(result[0][1], xmlrpc.client.Binary)
 
-    def test_get_file_directory(self):
-        result = get_file(self.test_dir)
-        self.assertEqual(len(result), 2)
-        self.assertIn(("test_file.txt", xmlrpc.client.Binary(b'')), result)
-        self.assertIn(("sub_dir/test_sub_file.txt", xmlrpc.client.Binary(b'')), result)
+        def test_get_file_directory(self):
+            result = get_file(self.test_dir)
+            self.assertEqual(len(result), 2)
+            self.assertIn(("test_file.txt", xmlrpc.client.Binary(b'')), result)
+            self.assertIn(("sub_dir/test_sub_file.txt", xmlrpc.client.Binary(b'')), result)
 
-    def test_get_file_with_parent_name(self):
-        result = get_file(self.test_file, "parent")
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0][0], "parent/test_file.txt")
-        self.assertIsInstance(result[0][1], xmlrpc.client.Binary)
+        def test_get_file_with_parent_name(self):
+            result = get_file(self.test_file, "parent")
+            self.assertEqual(len(result), 1)
+            self.assertEqual(result[0][0], "parent/test_file.txt")
+            self.assertIsInstance(result[0][1], xmlrpc.client.Binary)
 
-    def test_get_file_save_current_path(self):
-        result = get_file(self.test_dir, save_current_path=True)
-        self.assertEqual(len(result), 2)
-        self.assertIn(("test_dir/test_file.txt", xmlrpc.client.Binary(b'')), result)
-        self.assertIn(("test_dir/sub_dir/test_sub_file.txt", xmlrpc.client.Binary(b'')), result)
+        def test_get_file_save_current_path(self):
+            result = get_file(self.test_dir, save_current_path=True)
+            self.assertEqual(len(result), 2)
+            self.assertIn(("test_dir/test_file.txt", xmlrpc.client.Binary(b'')), result)
+            self.assertIn(("test_dir/sub_dir/test_sub_file.txt", xmlrpc.client.Binary(b'')), result)
 
 
 class TestRemoteScheduler(unittest.TestCase):
