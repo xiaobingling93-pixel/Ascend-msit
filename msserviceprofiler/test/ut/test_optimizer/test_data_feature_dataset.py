@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import unittest
+import shutil
 from unittest.mock import patch, MagicMock
 from pathlib import Path
 from pandas import DataFrame
+import pytest
 import pandas as pd
 import numpy as np
 from msserviceprofiler.modelevalstate.inference.constant import OpAlgorithm
@@ -270,6 +272,84 @@ class TestPreprocess(unittest.TestCase):
         with self.assertRaises(Exception):
             self.preprocessor.preprocess(data)
 
+@pytest.fixture
+def feature_csv(tmpdir):
+    _feature_file = Path(tmpdir).joinpath("feature.csv")
+    with open(_feature_file, "w") as f:
+        f.write("""
+"('batch_stage', 'batch_size', 'total_need_blocks', 'total_prefill_token', 'max_seq_len',"""\
+                """ 'model_execute_time')","('input_length', 'need_blocks', 'output_length')"
+"('prefill', 1, '16', '2048', '2048', '307133.19778442377')","(('2048', '16', '0'),)"
+"('prefill', 3, '48', '6144', '2048', '764642.9538726807')","(('2048', '16', '0'), ('2048', '16', '0'),"""\
+     """ ('2048', '16', '0'))"
+""")
+    yield _feature_file
+    _feature_file.unlink()
+
+def test_dataset_function(feature_csv, tmpdir):
+    base_path = Path(tmpdir)
+    df = pd.read_csv(feature_csv)
+    custom_label_encoder = CustomLabelEncoder(preset_category_data)
+    custom_label_encoder.fit()
+    my_data_set = MyDataSet(predict_field="model_execute_time", custom_encoder=custom_label_encoder)
+    _middle_path = base_path.joinpath("analysis_feature")
+    _middle_path.mkdir()
+    my_data_set.construct_data(df, middle_save_path=_middle_path)
+    my_data_set.analysis_origin_request_hist(df, middle_save_path=_middle_path)
+    my_data_set.save(base_path)
+    my_data_set.plt_data(df, middle_save_path=_middle_path)
+    assert my_data_set.features.shape == (2,160)
+    assert my_data_set.labels.shape == (2,1)
+    shutil.rmtree(_middle_path)
+
+@pytest.fixture
+def all_feature_csv(tmpdir):
+    _feature_file = Path(tmpdir).joinpath("feature.csv")
+    with open(_feature_file, "w") as f:
+        _txt = '''"('batch_stage', 'batch_size', 'total_need_blocks', 'total_prefill_token', 'max_seq_len','''\
+             ''' 'model_execute_time')"'''
+        _txt_2 = '''"('input_length', 'need_blocks', 'output_length')"'''
+        _txt_3 = '''"('op_name', 'call_count', 'input_count', 'input_dtype', 'input_shape', 'output_count','''\
+             ''' 'output_dtype', 'output_shape', 'host_setup_time', 'host_execute_time', 'kernel_execute_time','''\
+                 ''' 'aic_cube_fops', 'aiv_vector_fops')"'''
+        _txt_4 = '''"('total_param_num', 'total_param_size', 'embed_tokens_param_size_rate','''\
+             ''' 'self_attn_param_size_rate', 'mlp_param_size_rate', 'input_layernorm_param_size_rate','''\
+                 ''' 'post_attention_layernorm_param_size_rate', 'norm_param_size_rate', 'lm_head_param_size_rate')"'''
+        _txt_5 = '''"('architectures', 'hidden_act', 'initializer_range', 'intermediate_size','''\
+             ''' 'max_position_embeddings', 'model_type', 'num_attention_heads', 'num_hidden_layers', 'tie_word_'''\
+                '''embeddings', 'torch_dtype', 'use_cache', 'vocab_size', 'quantize', 'quantization_config')"'''
+        _txt_6 = '''"('cache_block_size', 'mindie__max_seq_len', 'world_size', 'cpu_mem_size', 'npu_mem_size','''\
+             ''' 'max_prefill_tokens', 'max_prefill_batch_size', 'max_batch_size')"'''
+        _txt_7 = '''"('atb_llm_razor_attention_enable', 'atb_llm_razor_attention_rope','''\
+             ''' 'bind_cpu', 'mies_use_mb_swapper', 'mies_pecompute_threshold', 'mies_tokenizer_sliding'''\
+                '''_window_size', 'atb_llm_lcoc_enable', 'lccl_deterministic', 'hccl_deterministic','''\
+                     ''' 'atb_matmul_shuffle_k_enable')"'''
+        _txt_8 = '''"('cpu_count', 'cpu_mem', 'soc_name', 'npu_mem')"'''
+        f.write(f"{_txt},{_txt_2},{_txt_3},{_txt_4},{_txt_5},{_txt_6},{_txt_7},{_txt_8}")
+        f.write("\n")
+        _txt = '''"('prefill', 1, '11.0', '1396.0', '1396.0', '639593.0')"'''
+        _txt_2 = '''"(('1396.0', '11', '0'),)"'''
+        _txt_3 = '''"(('LinearOperation', '32', '2', 'float16;float16', '1396,4096;6144,4096', '1', 'float16','''\
+             ''' '1396,6144', '158.13848484848492', '343.5108080808081', '296.228', '75587665920.0', '0.0'), )"'''
+        _txt_4 = '''"('195', '8030265344', '0.06542008881344383', '0.16713984189860415', '0.7019873359741374','''\
+             ''' '1.632225018541056e-05', '1.632225018541056e-05', '5.1007031829408e-07', '0.06541957874312553')"'''
+        _txt_5 = '''"(('LlamaForCausalLM',), 'silu', 0.02, 14336, 8192, 'llama', 32, 32, False, 'float16','''\
+             ''' True, 128256, None, {'group_size': 0, 'kv_quant_type': None, 'reduce_quant_type': None})"'''
+        _txt_6 = '''"(128, 2560, 1, 5, -1, 8192, 50, 200)"'''
+        _txt_7 = '''"(0, 0, 1, 0, 0.5, 0, 0, 0, 0, 1)"'''
+        _txt_8 ='''"(256, 2026542, 'xxx', 7864)"'''
+        f.write(f"{_txt},{_txt_2},{_txt_3},{_txt_4},{_txt_5},{_txt_6},{_txt_7},{_txt_8}")
+    yield _feature_file
+    _feature_file.unlink()
+
+def test_dataset_function_with_all_feature(all_feature_csv, tmpdir):
+    df = pd.read_csv(all_feature_csv)
+    custom_label_encoder = CustomLabelEncoder(preset_category_data)
+    custom_label_encoder.fit()
+    my_data_set = MyDataSet(predict_field="model_execute_time", custom_encoder=custom_label_encoder)
+    my_data_set.construct_data(df)
+    assert my_data_set.features.shape == (1,902)
+    assert my_data_set.labels.shape == (1,1)
 
 if __name__ == "__main__":
     unittest.main()
