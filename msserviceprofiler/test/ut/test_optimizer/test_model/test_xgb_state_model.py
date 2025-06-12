@@ -13,8 +13,8 @@
 # limitations under the License.
 
 import pytest
-from pathlib import Path
 from unittest.mock import patch, MagicMock
+from pathlib import Path
 
 import numpy as np
 import xgboost
@@ -44,22 +44,26 @@ def tmp_path(tmpdir):
 
 # Test Cases
 class TestStateXgbModel():
-    def test_init_without_save_path(self):
+    @staticmethod
+    def test_init_without_save_path():
         with pytest.raises(ValueError, match="save_model_path can't be empty"):
             StateXgbModel(save_model=True, save_model_path=None)
 
-    def test_init_with_save_path(self, tmp_path):  # 修复了属性名错误
+    @staticmethod
+    def test_init_with_save_path(tmp_path):  # 修复了属性名错误
         model = StateXgbModel(save_model=True, save_model_path=tmp_path)
         assert model.save_model_path == tmp_path  # 修复了属性名拼写错误
 
-    def test_init_without_train_visualization(self):
+    @staticmethod
+    def test_init_without_train_visualization():
         model = StateXgbModel(save_model=False)
         assert model.show_test_data_prediction is False
         assert model.show_feature_importance is False
 
+    @staticmethod
     @patch('msserviceprofiler.modelevalstate.model.xgb_state_model.xgboost.Booster')
     @patch('msserviceprofiler.modelevalstate.model.xgb_state_model.xgboost.DMatrix')
-    def test_predict(self, mock_dmatrix, mock_booster, tmp_path):
+    def test_predict(mock_dmatrix, mock_booster, tmp_path):
         # 创建模拟的Booster实例
         mock_model = MagicMock()
         mock_model.feature_names = ['f1', 'f2', 'f3']
@@ -94,13 +98,14 @@ class TestStateXgbModel():
         mock_dmatrix.assert_called_once_with(test_data, feature_names=['f1', 'f2', 'f3'])
         mock_model.predict.assert_called_once_with(mock_dmatrix_instance)
 
+    @staticmethod
     @patch('msserviceprofiler.modelevalstate.model.xgb_state_model.plt.show')
     @patch('msserviceprofiler.modelevalstate.model.xgb_state_model.plt.close')
     @patch('msserviceprofiler.modelevalstate.model.xgb_state_model.plt.savefig')
     @patch('msserviceprofiler.modelevalstate.model.xgb_state_model.plt.subplots')
     @patch('builtins.open', MagicMock())
     @patch('msserviceprofiler.modelevalstate.model.xgb_state_model.xgboost.plot_importance')
-    def test_plot_feature_importance(self, mock_plot, mock_subplots, mock_savefig, mock_close, mock_show, tmp_path):
+    def test_plot_feature_importance(mock_plot, mock_subplots, mock_savefig, mock_close, mock_show, tmp_path):
         # 设置mock模型
         mock_model = MagicMock()
         mock_model.get_score.return_value = {'feature1': 1.0, 'feature2': 0.5}
@@ -123,11 +128,12 @@ class TestStateXgbModel():
         with pytest.raises(AttributeError):
             plot_feature_importance(mock_model, save_path=None)
 
+    @staticmethod
     @patch('msserviceprofiler.modelevalstate.model.xgb_state_model.xgboost.train')
     @patch('msserviceprofiler.modelevalstate.model.xgb_state_model.xgboost.DMatrix')
     @patch('msserviceprofiler.modelevalstate.model.xgb_state_model.plot_feature_importance')
     @patch('msserviceprofiler.modelevalstate.model.xgb_state_model.plot_pred_and_test')
-    def test_train_with_visualization(self, mock_plot_pred, mock_plot_feat, mock_dmatrix, mock_train, mock_dataset,
+    def test_train_with_visualization(mock_plot_pred, mock_plot_feat, mock_dmatrix, mock_train, mock_dataset,
                                       tmp_path):
         # 设置mock返回
         mock_model = MagicMock(spec=xgboost.Booster)
@@ -157,11 +163,12 @@ class TestStateXgbModel():
         # 验证保存方法被调用
         mock_model.save_model.assert_called_once()
 
+    @staticmethod
     @patch('msserviceprofiler.modelevalstate.model.xgb_state_model.xgboost.train')
     @patch('msserviceprofiler.modelevalstate.model.xgb_state_model.xgboost.DMatrix')
     @patch('msserviceprofiler.modelevalstate.model.xgb_state_model.plot_feature_importance')
     @patch('msserviceprofiler.modelevalstate.model.xgb_state_model.plot_pred_and_test')
-    def test_train_without_visualization(self, mock_plot_pred, mock_plot_feat, mock_dmatrix, mock_train, mock_dataset,
+    def test_train_without_visualization(mock_plot_pred, mock_plot_feat, mock_dmatrix, mock_train, mock_dataset,
                                          tmp_path):
         # 设置mock返回
         mock_model = MagicMock(spec=xgboost.Booster)
@@ -191,9 +198,10 @@ class TestStateXgbModel():
         # 验证保存方法被调用
         mock_model.save_model.assert_called_once()
 
+    @staticmethod
     @patch('msserviceprofiler.modelevalstate.model.xgb_state_model.xgboost.train')
     @patch('msserviceprofiler.modelevalstate.model.xgb_state_model.xgboost.DMatrix')
-    def test_train_without_save(self, mock_dmatrix, mock_train, mock_dataset):
+    def test_train_without_save(mock_dmatrix, mock_train, mock_dataset):
         # 设置mock返回
         mock_model = MagicMock(spec=xgboost.Booster)
         mock_model.predict.return_value = np.random.rand(20)
@@ -213,6 +221,7 @@ class TestStateXgbModel():
         # 验证没有调用保存方法
         mock_model.save_model.assert_not_called()
 
+    @staticmethod
     @patch('msserviceprofiler.modelevalstate.model.xgb_state_model.plt.show')
     @patch('msserviceprofiler.modelevalstate.model.xgb_state_model.plt.close')
     @patch('msserviceprofiler.modelevalstate.model.xgb_state_model.plt.savefig')
@@ -222,7 +231,7 @@ class TestStateXgbModel():
     @patch('msserviceprofiler.modelevalstate.model.xgb_state_model.plt.xlabel')
     @patch('msserviceprofiler.modelevalstate.model.xgb_state_model.plt.ylabel')
     @patch('msserviceprofiler.modelevalstate.model.xgb_state_model.plt.legend')
-    def test_plot_pred_and_test(self, mock_legend, mock_ylabel, mock_xlabel, mock_title, mock_scatter, mock_figure,
+    def test_plot_pred_and_test(mock_legend, mock_ylabel, mock_xlabel, mock_title, mock_scatter, mock_figure,
                                 mock_savefig, mock_close, mock_show, tmp_path):
         # 创建模拟数据
         pred = np.array([0.1, 0.2, 0.3, 0.4])
@@ -241,7 +250,8 @@ class TestStateXgbModel():
         mock_xlabel.assert_called_once_with("index")
         mock_ylabel.assert_called_once_with("value")
         mock_legend.assert_called_once()
-        mock_savefig.assert_called_once_with(tmp_path.joinpath("predict value and test value on train model.png"))
+        # 修复文件名中的空格问题
+        mock_savefig.assert_called_once_with(tmp_path.joinpath("predict_value_and_test_value_on_train_model.png"))
         mock_close.assert_called_once()
         mock_show.assert_not_called()
 
