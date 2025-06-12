@@ -16,7 +16,9 @@ from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.flat_quant.models.model_utils imp
     get_module_by_name,
     set_module_by_name,
     TransformerStructurePairVisitor,
-    RunnerStopExecution
+    RunnerStopExecution,
+    clone_module_hooks,
+    remove_after_substring
 )
 
 
@@ -179,3 +181,60 @@ class TestComplexScenarios:
         updated_module = get_module_by_name(model, "transformer.layers.0.attention.query")
         assert updated_module == new_query
         assert updated_module.in_features == 256 
+
+def test_structure_pair_str_repr_and_contain():
+    class DummyPair(StructurePair):
+        _name = "dummy"
+    pair = DummyPair("src", ["a", "b"], "prefix")
+    assert str(pair) == pair.name
+    assert repr(pair) == pair.name
+    assert pair.contain("a") is True
+    assert pair.contain("c") is False
+
+def test_structure_pair_init_type_error():
+    class DummyPair(StructurePair):
+        _name = "dummy"
+    with pytest.raises(ValueError):
+        DummyPair(123, ["a"], "prefix")
+    with pytest.raises(ValueError):
+        DummyPair("src", "notalist", "prefix")
+
+def test_model_structure_bridge_register_type_error():
+    bridge = ModelStructureBridge(Mock())
+    with pytest.raises(TypeError):
+        bridge.register_structure_pair("not_a_pair")
+
+def test_model_structure_bridge_get_layers_and_index():
+    bridge = ModelStructureBridge(Mock())
+    bridge._layers_name = "layers"
+    assert bridge.get_layers() == "layers"
+    assert bridge.get_layer_by_index(2) == "layers.2"
+
+def test_model_structure_bridge_analyze_structure_not_implemented():
+    bridge = ModelStructureBridge(Mock())
+    with pytest.raises(NotImplementedError):
+        bridge.analyze_structure()
+
+def test_clone_module_hooks_typeerror_and_attributeerror():
+    class DummyModule:
+        def __init__(self):
+            self._forward_hooks = {1: lambda *a, **k: None}
+        def register_forward_hook(self, fn):
+            raise TypeError()
+    src = DummyModule()
+    tgt = DummyModule()
+    # TypeError should be silently ignored
+    clone_module_hooks(src, tgt)
+    # AttributeError should be silently ignored
+    src2 = DummyModule()
+    delattr(src2, '_forward_hooks')
+    clone_module_hooks(src2, tgt)
+
+def test_remove_after_substring():
+    s = "abcdeabc"
+    assert remove_after_substring(s, "cd") == "abcd"
+    assert remove_after_substring(s, "xyz") == s
+
+def test_runner_stop_execution_exception():
+    with pytest.raises(RunnerStopExecution):
+        raise RunnerStopExecution() 

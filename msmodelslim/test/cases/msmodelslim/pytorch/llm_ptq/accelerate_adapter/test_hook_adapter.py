@@ -145,7 +145,7 @@ def test_prepare_weight_can_manage_new_submodule_with_post_recurse(clear_offload
     for _, module in model.named_modules():
         if isinstance(module, nn.Linear):
             with PrepareWeight(module, post_recurse=True):
-                module.sub_module = nn.RMSNorm(128, device=module.weight.device)
+                module.sub_module = nn.LayerNorm(128, device=module.weight.device)
                 module.sub_module.weight.data = torch.ones([128, 128], device=module.weight.device)
                 move_update_weight_hook_if_need(module, module, as_submodule=True)
 

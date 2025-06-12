@@ -159,4 +159,4 @@ class NetworkChecker(PrecheckerBase):
                     CheckResult.OK,
                 )
 
-network_checker = NetworkChecker()
+network_checker_instance = NetworkChecker()

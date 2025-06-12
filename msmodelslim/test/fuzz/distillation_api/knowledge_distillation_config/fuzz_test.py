@@ -17,10 +17,10 @@ import logging
 import os
 from random import choice
 from test.fuzz.common.utils import random_change_dict_value
-from test.resources.sample_net_mindspore import MsStudentModel
-from test.resources.sample_net_mindspore import MsTeacherModel
-from test.resources.sample_net_torch import TorchStudentModel
-from test.resources.sample_net_torch import TorchTeacherModel
+from resources.sample_net_mindspore import MsStudentModel
+from resources.sample_net_mindspore import MsTeacherModel
+from resources.sample_net_torch import TorchStudentModel
+from resources.sample_net_torch import TorchTeacherModel
 import atheris
 import atheris.instrument_bytecode
 

@@ -33,7 +33,77 @@ DATA_TYPE_MAP = {
     "DT_UINT64": "uint64",
     "DT_COMPLEX32": "complex32",
     "DT_COMPLEX64": "complex64",
-    "DT_COMPLEX128": "complex128",
+    "DT_COMPLEX128": "complex128"
+}
+
+
+def numpy_int4():
+    try:
+        from ml_dtypes import int4
+        return int4
+    except ImportError as e:
+        raise RuntimeError("ml_dtypes is needed to support int4 dtype!!! "
+                           "Please install with `pip3 install ml_dtypes`.") from e
+
+
+def numpy_bfloat16():
+    import tensorflow
+    return tensorflow.bfloat16.as_numpy_dtype
+
+
+def numpy_float8_e5m2():
+    try:
+        from ml_dtypes import float8_e5m2
+        return float8_e5m2
+    except ImportError as e:
+        raise RuntimeError("ml_dtypes is needed to support float8_e5m2 dtype!!! "
+                           "Please install with `pip3 install ml_dtypes`.") from e
+
+
+def numpy_float8_e4m3fn():
+    try:
+        from ml_dtypes import float8_e4m3fn
+        return float8_e4m3fn
+    except ImportError as e:
+        raise RuntimeError("ml_dtypes is needed to support float8_e4m3fn dtype!!! "
+                           "Please install with `pip3 install ml_dtypes`.") from e
+
+
+def numpy_float8_e8m0():
+    try:
+        from en_dtypes import float8_e8m0
+        return float8_e8m0
+    except ImportError as e:
+        raise RuntimeError("en_dtypes is needed to support float8_e8m0 dtype!!! "
+                           "Please install with `pip3 install en_dtypes`.") from e
+
+
+def numpy_float4_e2m1():
+    try:
+        from en_dtypes import float4_e2m1
+        return float4_e2m1
+    except ImportError as e:
+        raise RuntimeError("en_dtypes is needed to support float4_e2m1 dtype!!! "
+                           "Please install with `pip3 install en_dtypes`.") from e
+
+
+def numpy_float4_e1m2():
+    try:
+        from en_dtypes import float4_e1m2
+        return float4_e1m2
+    except ImportError as e:
+        raise RuntimeError("en_dtypes is needed to support float4_e1m2 dtype!!! "
+                           "Please install with `pip3 install en_dtypes`.") from e
+
+
+DTYPE_CONVERSION_MAP = {
+    "int4": numpy_int4,
+    "bfloat16": numpy_bfloat16,
+    "float8_e5m2": numpy_float8_e5m2,
+    "float8_e4m3fn": numpy_float8_e4m3fn,
+    "float8_e8m0": numpy_float8_e8m0,
+    "float4_e2m1": numpy_float4_e2m1,
+    "float4_e1m2": numpy_float4_e1m2
 }
 
 
@@ -54,10 +124,8 @@ def bfloat16_conversion_v2(container):
     special_dtypes = ("bfloat16", "int4", "float8_e5m2", "float8_e4m3fn", "float8_e8m0", "float4_e2m1", "float4_e1m2")
     for sd in special_dtypes:
         for idx, dtype in enumerate(ret):
-            if not isinstance(dtype, str):
-                continue
             if sd == dtype:
-                ret[idx] = eval(f"numpy_{sd}()")
+                ret[idx] = DTYPE_CONVERSION_MAP.get(sd)()
     return ret
 
 

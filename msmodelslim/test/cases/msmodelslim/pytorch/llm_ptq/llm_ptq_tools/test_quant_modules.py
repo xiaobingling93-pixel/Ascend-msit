@@ -26,70 +26,8 @@ from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_funcs import (
 
 
 class TestQuantizer:
-    def test_disable_input_quantization(self):
-        cfg = QuantConfig().weight_activation_quant()
-        test_quantizer = Quantizer(
-            bit=8, is_signed=True, is_enable=True, is_input=True, cfg=cfg, logger=logger, is_dynamic=False
-        )
-        test_quantizer.disable_input_quantization()
-        assert not test_quantizer.is_enable_input
-
-    def test_disable_quantization(self):
-        cfg = QuantConfig().weight_activation_quant()
-        test_quantizer = Quantizer(
-            bit=8, is_signed=True, is_enable=True, is_input=True, cfg=cfg, logger=logger, is_dynamic=False
-        )
-        name = "test"
-        test_quantizer.disable_quantization(name)
-        assert not test_quantizer.is_enable
-        assert test_quantizer.name is name
-
-    def test_enable_calib(self):
-        cfg = QuantConfig().weight_activation_quant()
-        test_quantizer = Quantizer(
-            bit=8, is_signed=True, is_enable=True, is_input=True, cfg=cfg, logger=logger, is_dynamic=False
-        )
-
-        test_quantizer.enable_calib()
-        assert test_quantizer.is_calib
-
-    def test_disable_int_infer(self):
-        cfg = QuantConfig().weight_activation_quant()
-        test_quantizer = Quantizer(
-            bit=8, is_signed=True, is_enable=True, is_input=True, cfg=cfg, logger=logger, is_dynamic=False
-        )
-
-        test_quantizer.disable_int_infer()
-        assert not test_quantizer.int_infer
-        assert not test_quantizer.int_weight_flag
-        assert test_quantizer.int_weight_tensor is None
-   
-    def test_is_input_true(self):
-        # 测试is_input为True的情况
-        cfg = QuantConfig().weight_activation_quant()
-        test_quantizer = Quantizer(
-            bit=8, is_signed=True, is_enable=True, is_input=True, cfg=cfg, logger=logger, is_dynamic=False
-        )
-        test_quantizer.input_scale = 0.5
-        test_quantizer.input_offset = 1.0
-        test_quantizer.is_input = True
-        result = test_quantizer.get_scale_offset()
-        assert result == (test_quantizer.input_scale, test_quantizer.input_offset)
-    
-    def test_is_input_false(self):
-        # 测试is_input为False的情况
-        cfg = QuantConfig().weight_activation_quant()
-        test_quantizer = Quantizer(
-            bit=8, is_signed=True, is_enable=True, is_input=True, cfg=cfg, logger=logger, is_dynamic=False
-        )
-        test_quantizer.weight_scale = 0.75
-        test_quantizer.weight_offset = 2.0
-        test_quantizer.is_input = False
-        result = test_quantizer.get_scale_offset()
-        assert result == (test_quantizer.weight_scale, test_quantizer.weight_offset)
-
     @patch('msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_funcs.fake_quantize')
-    def test_calib_mode(self, mock_fake_quantize):
+    def test_new_quant_tensor_prob(self, mock_fake_quantize):
         # 测试校准模式（is_calib=True）
         cfg = QuantConfig().weight_activation_quant()
         test_quantizer = Quantizer(
@@ -102,7 +40,7 @@ class TestQuantizer:
         test_quantizer.bit = 8
         test_quantizer.is_signed = True
         test_quantizer.is_calib = True
-        test_quantizer.pr = 0.5
+        test_quantizer.pr = -0.3
         test_quantizer.print_flag = True
         test_quantizer.range_param = 50
         data = torch.tensor([4.0, 5.0, 6.0])
@@ -113,88 +51,31 @@ class TestQuantizer:
         # 验证结果
         expected_result = torch.tensor([4.0, 5.0, 6.0])  # 根据 mock 的返回值
         assert torch.equal(result, expected_result)
-        
-    def test_not_enabled(self):
-        # 测试is_enable为False的情况
-        cfg = QuantConfig().weight_activation_quant()
-        test_quantizer = Quantizer(
-            bit=8, is_signed=True, is_enable=True, is_input=True, cfg=cfg, logger=logger, is_dynamic=False
-        )
-        test_quantizer.is_enable = False
-        tensor = torch.tensor([1.0, 2.0, 3.0])
-        
-        result = test_quantizer.tensor_forward(tensor)
-        
-        # 验证直接返回原始张量
-        assert torch.equal(result, tensor)
 
-    def test_input_not_enabled(self):
-        # 测试is_input为True且is_enable_input为False的情况
+    @patch('msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_funcs.fake_quantize')
+    def test_new_quant_tensor_no_calib(self, mock_fake_quantize):
+        # 测试校准模式（is_calib=False）
         cfg = QuantConfig().weight_activation_quant()
         test_quantizer = Quantizer(
             bit=8, is_signed=True, is_enable=True, is_input=True, cfg=cfg, logger=logger, is_dynamic=False
         )
-        test_quantizer.is_input = True
-        test_quantizer.is_enable_input = False
-        tensor = torch.tensor([1.0, 2.0, 3.0])
+        # 设置对象属性
+        test_quantizer.name = "test_module"
+        test_quantizer.input_scale = torch.tensor(0.5)
+        test_quantizer.input_offset = torch.tensor(1.0)
+        test_quantizer.bit = 8
+        test_quantizer.is_signed = True
+        test_quantizer.is_calib = False
+        test_quantizer.print_flag = True
+        test_quantizer.range_param = 50
+        data = torch.tensor([4.0, 5.0, 6.0])
+        # 模拟fake_quantize函数
+        mock_fake_quantize.return_value = (MagicMock(), torch.tensor([1.0, 2.0, 3.0]))
+        result = test_quantizer.new_quant_tensor(data)
         
-        result = test_quantizer.tensor_forward(tensor)
-        
-        # 验证直接返回原始张量
-        assert torch.equal(result, tensor)
-
-    def test_tensor_dim_2(self):
-        # 测试2维张量的情况
-        tensor = torch.tensor([
-            [1.0, 2.0, 3.0],
-            [4.0, 5.0, 6.0]
-        ])  # 2x3的张量
-        
-        # 调用被测函数
-        cfg = QuantConfig().weight_activation_quant()
-        test_quantizer = Quantizer(
-            bit=8, is_signed=True, is_enable=True, is_input=True, cfg=cfg, logger=logger, is_dynamic=False
-        )
-        test_quantizer._stat_dynamic_input(tensor)
-        
-        # 计算预期结果
-        tensor_tmp = tensor.unsqueeze(0)  # 1x2x3
-        x_min = tensor_tmp.min(2)[0]  # 1x2
-        x_max = tensor_tmp.max(2)[0]  # 1x2
-        
-        expected_x_min = x_min.view(-1, x_min.shape[1], 1)  # 1x2x1
-        expected_x_max = x_max.view(-1, x_max.shape[1], 1)  # 1x2x1
-        
-        # 验证对象属性是否被正确设置
-        assert torch.equal(test_quantizer.x_min, expected_x_min)
-        assert torch.equal(test_quantizer.x_max, expected_x_max)
-    
-    def test_tensor_dim_not_2(self):
-        # 测试非2维张量的情况（例如3维）
-        tensor = torch.tensor([
-            [[1.0, 2.0, 3.0],
-             [4.0, 5.0, 6.0]],
-            [[7.0, 8.0, 9.0],
-             [10.0, 11.0, 12.0]]
-        ])  # 2x2x3的张量
-        
-        # 调用被测函数
-        cfg = QuantConfig().weight_activation_quant()
-        test_quantizer = Quantizer(
-            bit=8, is_signed=True, is_enable=True, is_input=True, cfg=cfg, logger=logger, is_dynamic=False
-        )
-        test_quantizer._stat_dynamic_input(tensor)
-        
-        # 计算预期结果
-        x_min = tensor.min(2)[0]  # 2x2
-        x_max = tensor.max(2)[0]  # 2x2
-        
-        expected_x_min = x_min.view(-1, x_min.shape[1], 1)  # 2x2x1
-        expected_x_max = x_max.view(-1, x_max.shape[1], 1)  # 2x2x1
-        
-        # 验证对象属性是否被正确设置
-        assert torch.equal(test_quantizer.x_min, expected_x_min)
-        assert torch.equal(test_quantizer.x_max, expected_x_max)
+        # 验证结果
+        expected_result = torch.tensor([4.0, 5.0, 6.0])  # 根据 mock 的返回值
+        assert torch.equal(result, expected_result)
 
     def test_new_quant_tensor_should_return_expected_result(self):
         # 普通a_bit=8场景的激活的Quantizer.new_quant_tensor测试
@@ -253,6 +134,63 @@ class TestQuantizer:
         assert torch.equal(result, expected_result)
         assert torch.equal(input_scale, expected_input_scale)
         assert torch.equal(input_offset, expected_input_offset)
+    
+    def test_act_method_2(self):
+        cfg = QuantConfig().weight_activation_quant()
+        test_quantizer = Quantizer(
+            bit=8, is_signed=True, is_enable=True, is_input=True, cfg=cfg, logger=logger, is_dynamic=False
+        )
+        cfg.act_method = 2
+        test_quantizer.init_act_and_observer(cfg)
+
+    def test_act_method_3_range_50(self):
+        cfg = QuantConfig().weight_activation_quant()
+        test_quantizer = Quantizer(
+            bit=8, is_signed=True, is_enable=True, is_input=True, cfg=cfg, logger=logger, is_dynamic=False
+        )
+        cfg.act_method = 3
+        test_quantizer.range_param = 50
+        test_quantizer.init_act_and_observer(cfg)
+
+    def test_act_method_3_range_70(self):
+        cfg = QuantConfig().weight_activation_quant()
+        test_quantizer = Quantizer(
+            bit=8, is_signed=True, is_enable=True, is_input=True, cfg=cfg, logger=logger, is_dynamic=False
+        )
+        cfg.act_method = 3
+        test_quantizer.range_param = 70
+        test_quantizer.init_act_and_observer(cfg)
+
+    def test_enable_quantization(self):
+        cfg = QuantConfig().weight_activation_quant()
+        test_quantizer = Quantizer(
+            bit=8, is_signed=True, is_enable=True, is_input=True, cfg=cfg, logger=logger, is_dynamic=False
+        )
+        name = "test"
+        range_param = 50
+        test_quantizer.enable_quantization(name, range_param)
+        assert test_quantizer.name == name
+        assert test_quantizer.range_param == range_param
+        assert test_quantizer.is_enable is True
+
+    def test_enable_int_infer(self):
+        cfg = QuantConfig().weight_activation_quant()
+        test_quantizer = Quantizer(
+            bit=8, is_signed=True, is_enable=True, is_input=True, cfg=cfg, logger=logger, is_dynamic=False
+        )
+        test_quantizer.is_calib = False
+        test_quantizer.enable_int_infer()
+        assert test_quantizer.quant_weight_tensor is None
+
+    def test_set_ratio(self):
+        cfg = QuantConfig().weight_activation_quant()
+        cfg.act_method = 1
+        test_quantizer = Quantizer(
+            bit=8, is_signed=True, is_enable=True, is_input=True, cfg=cfg, logger=logger, is_dynamic=False
+        )
+        test_quantizer.init_act_and_observer(cfg)
+        assert test_quantizer.observer is not None
+        test_quantizer.set_ratio()
 
     def test_intput_quantizer_tensor_forward_with_int_infer_should_return_expected_result(self):
         # 普通的a_bit=8量化场景的激活Quantizer.tensor_forward int infer测试

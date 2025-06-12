@@ -5,7 +5,7 @@ import os
 import sys
 import shutil
 
-from test.resources.sample_net_mindspore import MsSparseModel
+from resources.sample_net_mindspore import MsSparseModel
 
 import numpy as np
 import mindspore as ms
