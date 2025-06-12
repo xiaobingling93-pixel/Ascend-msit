@@ -17,7 +17,7 @@ from msserviceprofiler.modelevalstate.inference.file_reader import FileHanlder
 
 class TestFileHandler:
     @staticmethod
-    def test_load_static_data(self, static_file):
+    def test_load_static_data(static_file):
         fh = FileHanlder(static_file)
         fh.load_static_data()
         assert fh.hardware
