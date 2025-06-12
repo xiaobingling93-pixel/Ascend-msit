@@ -1,3 +1,17 @@
+# -*- coding: utf-8 -*-
+# Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import os
 import threading
 import time
@@ -24,6 +38,7 @@ class TestFileLogger:
     def file_path(self):
         return Path("test.log")
 
+    @staticmethod
     def test_open_file_with_path(self, logger, file_path):
         logger.file_path = file_path
         logger.mode = 'w'
@@ -32,6 +47,7 @@ class TestFileLogger:
         assert logger.fout.closed is False
         logger.fout.close()
 
+    @staticmethod
     def test_open_file_with_string(self, logger, file_path):
         logger.file_path = str(file_path)
         logger.mode = 'w'
@@ -40,17 +56,20 @@ class TestFileLogger:
         assert logger.fout.closed is False
         logger.fout.close()
 
+    @staticmethod
     def test_open_file_with_invalid_path(self, logger):
         logger.file_path = None
         logger.mode = 'w'
         with pytest.raises(TypeError):
             logger.open_file()
 
+    @staticmethod
     def test_open_file_with_invalid_mode(self, logger, file_path):
         logger.file_path = file_path
         logger.mode = 'x'
         logger.open_file()
 
+    @staticmethod
     def test_write_with_none_fout(self, logger, file_path):
         logger.fout = None
         logger.lock = threading.Lock()
@@ -58,6 +77,7 @@ class TestFileLogger:
         logger.write(message)
         # Since fout is None, no exception should be raised and nothing to assert
 
+    @staticmethod
     def test_write_with_not_none_fout(self, logger, file_path):
         mock_file = MagicMock()
         logger.fout = mock_file
@@ -80,24 +100,28 @@ class TestSimulate:
 
         return PluginObject()
 
+    @staticmethod
     def test_generate_random_token_shape(self, plugin_object):
         shape = (2, 3)
         max_value = 32000
         result = Simulate.generate_random_token(plugin_object, shape, max_value)
         assert result.shape == shape, "Generated array shape does not match the expected shape."
 
+    @staticmethod
     def test_generate_random_token_eos_token_replacement(self, plugin_object):
         shape = (2, 3)
         max_value = 32000
         result = Simulate.generate_random_token(plugin_object, shape, max_value)
         assert plugin_object.eos_token_id not in result, "eos_token_id should be replaced in the generated array."
 
+    @staticmethod
     def test_generate_random_token_value_range(self, plugin_object):
         shape = (2, 3)
         max_value = 32000
         result = Simulate.generate_random_token(plugin_object, shape, max_value)
         assert result.min() >= 0 and result.max() <= max_value, "Generated array values are out of the expected range."
 
+    @staticmethod
     def test_generate_random_token_no_replacement_needed(self, plugin_object):
         shape = (2, 3)
         max_value = 32000
@@ -146,6 +170,7 @@ class TestSimulateUpdateToken:
 
         return plugin_object, input_metadata, cached_ids, sampling_output
 
+    @staticmethod
     def test_update_token_with_eos_token(self, setup):
         plugin_object, input_metadata, cached_ids, sampling_output = setup
         ServiceField.req_id_and_max_decode_length = {0: 10}
@@ -155,6 +180,7 @@ class TestSimulateUpdateToken:
         assert sampling_output.token_ids[0].item() != plugin_object.eos_token_id
         assert sampling_output.top_token_ids.size == 0
 
+    @staticmethod
     def test_update_token_with_top_token(self, setup):
         plugin_object, input_metadata, cached_ids, sampling_output = setup
         ServiceField.req_id_and_max_decode_length = {0: 10}
@@ -164,6 +190,7 @@ class TestSimulateUpdateToken:
         assert sampling_output.token_ids[0].item() != plugin_object.eos_token_id
         assert sampling_output.top_token_ids[0].item() != plugin_object.eos_token_id
 
+    @staticmethod
     def test_update_token_with_max_length_reached(self, setup):
         plugin_object, input_metadata, cached_ids, sampling_output = setup
         ServiceField.req_id_and_max_decode_length = {0: 1}
@@ -172,7 +199,8 @@ class TestSimulateUpdateToken:
 
         assert sampling_output.token_ids[0] == plugin_object.eos_token_id
         assert sampling_output.top_token_ids.size == 0
-
+    
+    @staticmethod
     def test_update_token_with_max_length_reached_with_top_token(self, setup):
         plugin_object, input_metadata, cached_ids, sampling_output = setup
         ServiceField.req_id_and_max_decode_length = {0: 1}
@@ -183,6 +211,7 @@ class TestSimulateUpdateToken:
         assert sampling_output.token_ids[0] == plugin_object.eos_token_id
         assert sampling_output.top_token_ids[0].item() == plugin_object.eos_token_id
 
+    @staticmethod
     def test_update_token_with_no_request_id(self, setup):
         plugin_object, input_metadata, cached_ids, sampling_output = setup
         ServiceField.req_id_and_max_decode_length = {}
@@ -243,7 +272,8 @@ def predict_setup():
 
 # Test cases
 def test_predict_with_sleep(predict_setup, monkeypatch):
-    monkeypatch.setattr("msserviceprofiler.modelevalstate.inference.simulate.predict_v1_with_cache", lambda *args, **kwargs: (-1, 300000))
+    monkeypatch.setattr("msserviceprofiler.modelevalstate.inference.simulate.predict_v1_with_cache", \
+                        lambda *args, **kwargs: (-1, 300000))
     assert len(Simulate.predict_cache) == 0
     st = time.perf_counter()
     os.environ[IS_SLEEP_FLAG] = "true"

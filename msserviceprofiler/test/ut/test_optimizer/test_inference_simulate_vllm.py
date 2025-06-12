@@ -1,3 +1,17 @@
+# -*- coding: utf-8 -*-
+# Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 from collections import defaultdict
 from unittest.mock import MagicMock
 
@@ -11,6 +25,7 @@ from msserviceprofiler.modelevalstate.inference.simulate_vllm import SimulateVll
 
 
 class TestGenerateFeatures:
+    @staticmethod
     def test_generate_features_no_input(self):
         class ModelInput:
             is_prompt = None
@@ -20,6 +35,7 @@ class TestGenerateFeatures:
         assert batch_field is None
         assert request_field is None
 
+    @staticmethod
     def test_generate_features_prompt_no_block_tables(self):
         class ModelInput:
             is_prompt = True
@@ -66,6 +82,7 @@ class TestGenerateFeatures:
         assert request_field[2].need_blocks == 0
         assert request_field[2].output_length == 3
 
+    @staticmethod
     def test_generate_features_decode_with_block_tables(self):
         class ModelInput:
             is_prompt = False
@@ -240,6 +257,7 @@ class TestSimulateVllmUpdateToken:
         assert 38107 not in sampling_output.outputs[1].samples[0].logprobs
         assert 88089 not in sampling_output.outputs[2].samples[0].logprobs
 
+    @staticmethod
     def test_update_token_with_none_max_out_len(self, setup):
         model_input, sampling_output = setup
 
@@ -253,6 +271,7 @@ class TestSimulateVllmUpdateToken:
         assert sampling_output.outputs[1].samples[0].output_token == 38107
         assert sampling_output.outputs[2].samples[0].output_token == 88089
 
+    @staticmethod
     def test_update_token_with_none_cur_out_len(self, setup):
         model_input, sampling_output = setup
 
