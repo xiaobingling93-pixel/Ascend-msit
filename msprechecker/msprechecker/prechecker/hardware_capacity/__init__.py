@@ -17,6 +17,6 @@ __all__ = ["hardware_checkers"]
 
 from msprechecker.prechecker.hardware_capacity.cpu_checker import cpu_checker
 from msprechecker.prechecker.hardware_capacity.npu_checker import npu_checker
-from msprechecker.prechecker.hardware_capacity.network_checker import network_checker
+from msprechecker.prechecker.hardware_capacity.network_checker import network_checker_instance
 
-hardware_checkers = [cpu_checker, npu_checker, network_checker]
+hardware_checkers = [cpu_checker, npu_checker, network_checker_instance]

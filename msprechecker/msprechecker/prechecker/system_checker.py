@@ -373,4 +373,4 @@ class SystemChecker(GroupPrechecker):
         ]
 
 
-system_checker = SystemChecker()
+system_checker_instance = SystemChecker()
