@@ -15,5 +15,6 @@
 CALCULATING_OPS = ["+", "-", "*", "/", "//"]
 COMPARING_OPS = ['>=', '<=', '!=', '=', '>', '<']
 
+
 def is_value_met_special_suggestions(input_value, condition, config):
     return False

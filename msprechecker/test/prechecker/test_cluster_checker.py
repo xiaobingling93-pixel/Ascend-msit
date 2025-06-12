@@ -28,8 +28,14 @@ class TestDistributeCollector(unittest.TestCase):
         self.distribute_collector = distribute_collector
         self.init_global_distribute_env = init_global_distribute_env
 
-        self.get_local_to_master_ip_patch = patch("msprechecker.prechecker.cluster_collector.get_local_to_master_ip", return_value="1.2.3.4")
-        self.get_interface_by_ip_patch = patch("msprechecker.prechecker.cluster_collector.get_interface_by_ip", return_value=("e123dasdp", "1.2.3.4"))
+        self.get_local_to_master_ip_patch = patch(
+            "msprechecker.prechecker.cluster_collector.get_local_to_master_ip",
+            return_value="1.2.3.4"
+        )
+        self.get_interface_by_ip_patch = patch(
+            "msprechecker.prechecker.cluster_collector.get_interface_by_ip",
+            return_value=("e123dasdp", "1.2.3.4")
+        )
         self.get_local_to_master_ip_patch.start()
         self.get_interface_by_ip_patch.start()
 

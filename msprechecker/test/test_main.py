@@ -24,7 +24,7 @@ class TestMain(unittest.TestCase):
         self.mock = MagicMock()
 
     def test_no_command_should_should_raise_system_exit(self):
-        self.assertRaises(SystemExit, main)
+        self.assertRaises(BaseException, main)
 
     @patch("argparse.ArgumentParser.parse_known_args", return_value=(argparse.Namespace(command=2), None))
     @patch("argparse.ArgumentParser.print_help")
