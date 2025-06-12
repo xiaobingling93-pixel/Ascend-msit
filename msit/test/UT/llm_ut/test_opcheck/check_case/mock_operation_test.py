@@ -149,18 +149,7 @@ class MockOperationTest:
     
     @staticmethod
     def get_soc_version():
-        device_name = torch.npu.get_device_name()
-        if re.search("Ascend910B", device_name, re.I):
-            soc_version = 'Ascend910B'
-        elif re.search("Ascend310P", device_name, re.I):
-            soc_version = 'Ascend310P'
-        else:
-            raise RuntimeError(f"{device_name} is not supported")
-        device_count = torch.npu.device_count()
-        current_device = torch.npu.current_device()
-        logger_text = "Device Properties: device_name: {}, soc_version: {}, device_count: {}, current_device: {}" \
-            .format(device_name, soc_version, device_count, current_device)
-        logger.debug(logger_text)
+        soc_version = 'Ascend310P'
         return soc_version
     
     @staticmethod

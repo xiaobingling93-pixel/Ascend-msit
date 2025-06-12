@@ -18,7 +18,7 @@ import shutil
 import os
 import argparse
 import subprocess
-from unittest.mock import patch, MagicMock, Mock
+from unittest.mock import patch, MagicMock, mock_open
 from pathlib import Path
 from xmlrpc.client import ServerProxy
 import numpy as np
@@ -38,15 +38,6 @@ from msserviceprofiler.modelevalstate.config.config import (
     BenchMarkPolicy, AnalyzeTool
 )
 
-
-import time
-import unittest
-from pathlib import Path
-import tempfile
-import shutil
-import os
-import subprocess
-from unittest.mock import patch, MagicMock, mock_open
 
 class TestProfilerBenchmark(unittest.TestCase):
     def setUp(self):
@@ -323,7 +314,6 @@ class TestSimulator(unittest.TestCase):
 class TestScheduler(unittest.TestCase):
     def setUp(self):
         self.temp_dir = Path(tempfile.mkdtemp())
-
         self.mock_simulator = MagicMock(spec=Simulator)
         self.mock_benchmark = MagicMock(spec=BenchMark)
         self.mock_data_storage = MagicMock()

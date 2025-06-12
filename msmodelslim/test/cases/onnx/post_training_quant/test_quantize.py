@@ -6,8 +6,8 @@ import os
 import shutil
 import stat 
 
-from test.resources.sample_net_torch import TestOnnxQuantModel
-from test.resources.sample_net_torch import TestAscendQuantModel
+from resources.sample_net_torch import TestOnnxQuantModel
+from resources.sample_net_torch import TestAscendQuantModel
 
 import torch 
 import numpy as np 

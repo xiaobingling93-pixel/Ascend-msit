@@ -17,7 +17,7 @@ import atheris
 
 @atheris.instrument_func
 def fuzz_test(input_bytes):
-    import test.resources.sample_net_prune as sample_net
+    import resources.sample_net_prune as sample_net
     from msmodelslim.common.prune.transformer_prune.prune_model import PruneConfig
     from msmodelslim.common.prune.transformer_prune.prune_model import prune_model_weight
 

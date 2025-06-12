@@ -1,6 +1,6 @@
 import os
 import shutil
-from test.resources.sample_net_torch import ThreeLinearTorchModel_for_Sparse
+from resources.sample_net_torch import ThreeLinearTorchModel_for_Sparse
 import torch
 
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator as SparseQuantCalibrator

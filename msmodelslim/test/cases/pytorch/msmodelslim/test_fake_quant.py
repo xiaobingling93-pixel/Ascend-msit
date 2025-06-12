@@ -1,7 +1,7 @@
 import os
 import json
 import shutil
-from test.resources.sample_net_torch import TwoLinearTorchModel, GroupLinearTorchModel
+from resources.sample_net_torch import TwoLinearTorchModel, GroupLinearTorchModel
 import torch
 from safetensors.torch import load_file
 

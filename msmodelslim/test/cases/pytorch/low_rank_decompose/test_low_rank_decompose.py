@@ -1,6 +1,6 @@
 # Copyright Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
 
-from test.resources.sample_net_torch import LrdSampleNetwork
+from resources.sample_net_torch import LrdSampleNetwork
 import numpy as np
 import torch
 

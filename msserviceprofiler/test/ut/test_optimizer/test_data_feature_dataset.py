@@ -41,7 +41,7 @@ class TestMyDataSet(unittest.TestCase):
                   'model_execute_time')": ("""('prefill', 1.0, 1.0, 41, 41334, "['0']")""", ),
             "('input_length', 'need_blocks', 'output_length')": ("(1015, 19, 0)",)
         })
-        self.test_dir = Path("/tmp/test_output")
+        self.test_dir = Path("/tmp/test_output_1")
         self.test_dir.mkdir(exist_ok=True)
 
     def test_init_defaults(self):
@@ -161,7 +161,7 @@ class TestPlotCustomPairplot(unittest.TestCase):
             'other_column': np.random.rand(50)
         }
         cls.sample_df = DataFrame(data)
-        cls.temp_dir = Path("test_output")
+        cls.temp_dir = Path("test_output_1")
         cls.temp_dir.mkdir(exist_ok=True)
     
     @classmethod
