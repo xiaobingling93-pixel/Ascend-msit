@@ -35,7 +35,7 @@ from msserviceprofiler.modelevalstate.optimizer.optimizer import (
 from msserviceprofiler.modelevalstate.config.config import (
     BenchMarkConfig, MindieConfig, PerformanceIndex,
     OptimizerConfigField, PsoOptions, DeployPolicy,
-    BenchMarkPolicy, AnalyzeTool
+    BenchMarkPolicy, AnalyzeTool, settings, default_support_field
 )
 
 
@@ -870,6 +870,188 @@ class TestBenchMark(unittest.TestCase):
         with self.assertRaises(subprocess.SubprocessError):
             self.benchmark.check_success()
 
+def test_stop_process_killed_successfully():
+    simulator = VllmSimulator(settings.simulator)
+    simulator.process = MagicMock()
+    simulator.process.poll.return_value = None
+    simulator.process.kill.return_value = None
+    simulator.process.wait.return_value = None
+    simulator.process.send_signal.return_value = None
+    simulator.stop()
+    # No exception should be raised
+
+def test_stop_process_kill_timeout():
+    simulator = VllmSimulator(settings.simulator)
+    simulator.process = MagicMock()
+    simulator.process.poll.return_value = None
+    simulator.process.kill.return_value = None
+    simulator.process.wait.side_effect = subprocess.TimeoutExpired(cmd="test", timeout=10)
+    simulator.process.send_signal.return_value = None
+    simulator.stop()
+
+def test_stop_process_kill_failed():
+    simulator = VllmSimulator(settings.simulator)
+    simulator.process = MagicMock()
+    simulator.process.poll.return_value = None
+    simulator.process.kill.return_value = None
+    simulator.process.wait.return_value = None
+    simulator.process.send_signal.return_value = None
+    simulator.stop()
+
+
+class TestVllmSimulator:
+
+    @pytest.fixture
+    def pre_simulator(self):
+        simulator = VllmSimulator(settings.simulator)
+        simulator.mindie_log = "mock_log_file.log"
+        simulator.mindie_log_offset = 0
+        simulator.process = MagicMock()
+        return simulator
+
+    @patch("builtins.open", new_callable=MagicMock)
+    def test_check_success_with_success_message(self, mock_open, pre_simulator):
+        # Mock the file read to return a success message
+        mock_open.return_value.__enter__.return_value.read.return_value = "Application startup complete."
+        assert pre_simulator.check_success() is True
+
+    @patch("builtins.open", new_callable=MagicMock)
+    def test_check_success_with_process_finished(self, mock_open, pre_simulator):
+        # Mock the file read to return no success message and the process to be finished
+        mock_open.return_value.__enter__.return_value.read.return_value = "Some other message"
+        pre_simulator.process.poll.return_value = 0
+        pre_simulator.process.returncode = 1
+        with pytest.raises(subprocess.SubprocessError):
+            pre_simulator.check_success()
+
+    @patch("builtins.open", new_callable=MagicMock)
+    def test_check_success_with_process_not_finished(self, mock_open, pre_simulator):
+        # Mock the file read to return no success message and the process to not be finished
+        mock_open.return_value.__enter__.return_value.read.return_value = "Some other message"
+        pre_simulator.process.poll.return_value = None
+        assert pre_simulator.check_success() is False
+
+
+
+class TestVllmSimulatorRun:
+    @pytest.fixture
+    def pre_simulator(self):
+        return VllmSimulator(settings.simulator)
+
+    @patch.object(VllmSimulator, 'check_env')
+    @patch.object(VllmSimulator, 'start_server')
+    def test_run_success(self, mock_start_server, mock_check_env, pre_simulator):
+        # Arrange
+        run_params = (OptimizerConfigField(),)
+        mock_check_env.return_value = None
+        mock_start_server.return_value = None
+
+        # Act
+        pre_simulator.run(run_params)
+
+        # Assert
+        mock_check_env.assert_called_once()
+        mock_start_server.assert_called_once_with(run_params)
+
+
+class TestScheduleWithMultiMachine:
+
+    @pytest.fixture
+    def schedule_with_multi_machine(self, tmpdir):
+        # 创建一个ScheduleWithMultiMachine的实例
+        schedule = ScheduleWithMultiMachine([MagicMock()], MagicMock(), MagicMock(), MagicMock(),
+                                            bak_path=Path(tmpdir))
+        # 模拟需要的属性和方法
+        schedule.simulator = MagicMock()
+        schedule.benchmark = MagicMock()
+        schedule.rpc_clients = [MagicMock(), MagicMock()]
+        for rpc in schedule.rpc_clients:
+            rpc.simulator = MagicMock()
+        return schedule
+
+    def test_back_up_with_bak_path(self, schedule_with_multi_machine):
+        # 测试当bak_path存在时的情况
+        schedule_with_multi_machine.back_up()
+        # 验证bak_path是否被正确设置
+        assert schedule_with_multi_machine.simulator.bak_path == schedule_with_multi_machine.bak_path.joinpath("1")
+        assert schedule_with_multi_machine.benchmark.bak_path == schedule_with_multi_machine.bak_path.joinpath("1")
+        for rpc in schedule_with_multi_machine.rpc_clients:
+            assert rpc.simulator.bak_path == schedule_with_multi_machine.bak_path.joinpath("1")
+
+class TestScheduleWithMultiMachineMonitoringStatus:
+
+    @pytest.fixture
+    def schedule_with_multi_machine(self, tmpdir):
+        schedule = ScheduleWithMultiMachine([MagicMock()], MagicMock(), MagicMock(), MagicMock(),
+                                            bak_path=Path(tmpdir))
+        schedule.simulator = MagicMock()
+        schedule.simulator.process = MagicMock()
+        schedule.rpc_clients = [MagicMock() for _ in range(3)]
+        schedule.benchmark = MagicMock()
+        schedule.stop_target_server = MagicMock()
+        return schedule
+
+    @patch('time.sleep', return_value=None)
+    def test_monitoring_status_all_poll_none(self, mock_sleep, schedule_with_multi_machine):
+        schedule_with_multi_machine.simulator.process.poll.return_value = None
+        for rpc in schedule_with_multi_machine.rpc_clients:
+            rpc.process_poll.return_value = None
+        schedule_with_multi_machine.benchmark.check_success.return_value = True
+
+        schedule_with_multi_machine.monitoring_status()
+
+        assert mock_sleep.call_count == 0
+
+    @patch('time.sleep', return_value=None)
+    def test_monitoring_status_some_poll_not_none(self, mock_sleep, schedule_with_multi_machine):
+        schedule_with_multi_machine.simulator.process.poll.return_value = None
+        schedule_with_multi_machine.rpc_clients[0].process_poll.return_value = 0
+        schedule_with_multi_machine.rpc_clients[1].process_poll.return_value = None
+        schedule_with_multi_machine.rpc_clients[2].process_poll.return_value = 1
+        schedule_with_multi_machine.benchmark.check_success.return_value = False
+
+        with pytest.raises(subprocess.SubprocessError):
+            schedule_with_multi_machine.monitoring_status()
+
+        assert mock_sleep.call_count == 0
+
+def test_run_simulate(tmpdir):
+    # 创建一个ScheduleWithMultiMachine实例
+    schedule = ScheduleWithMultiMachine([MagicMock()], MagicMock(), MagicMock(), MagicMock(),
+                                        bak_path=Path(tmpdir))
+    schedule.simulator = MagicMock()
+    schedule.simulator.process = MagicMock()
+    schedule.benchmark = MagicMock()
+    schedule.benchmark.prepare.return_value = True
+    schedule.stop_target_server = MagicMock()
+    schedule.run = MagicMock()
+    schedule.rpc_clients[0].process_poll.return_value = 0
+    schedule.rpc_clients[0].check_success.return_value = True
+    schedule.rpc_clients[0].run_simulator.return_value = True
+    schedule.wait_simulate = MagicMock()
+    schedule.simulate_run_info = []
+    # 创建模拟参数
+    params = np.array([1.3] * len(default_support_field))
+
+    # 模拟map_param_with_value方法的返回值
+    # 调用run_simulate方法
+    schedule.run_simulate(params, default_support_field)
+    schedule.rpc_clients[0].check_success.assert_called_once()
+
+
+@patch("msserviceprofiler.modelevalstate.optimizer.optimizer.PSOOptimizer")
+@patch("msserviceprofiler.modelevalstate.optimizer.optimizer.Simulator")
+def test_main(simulator, psooptimizer):
+    args = MagicMock()
+    args.benchmark_policy = BenchMarkPolicy.benchmark.value
+    args.deploy_policy = DeployPolicy.single.value
+    args.backup = False
+    args.load_breakpoint = False
+
+    # 调用被测试的方法
+    main(args)
+    simulator.assert_called_once()
+    psooptimizer.assert_called_once() 
 
 if __name__ == '__main__':
     unittest.main()
