@@ -1,3 +1,16 @@
+# Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import os
 import time
 from pathlib import Path
@@ -6,12 +19,13 @@ import pandas as pd
 import numpy as np
 import pytest
 
-from msserviceprofiler.modelevalstate.config.config import OptimizerConfigField, settings, default_support_field, PerformanceIndex
+from msserviceprofiler.modelevalstate.config.config import OptimizerConfigField, settings, \
+    default_support_field, PerformanceIndex
 from msserviceprofiler.modelevalstate.optimizer.optimizer import BenchMark, Simulator
 from msserviceprofiler.modelevalstate.optimizer.optimizer import PSOOptimizer
 
-class TestBenchMark:
 
+class TestBenchMark:
     @pytest.fixture
     def benchmark(self):
         benchmark = BenchMark(MagicMock())
@@ -91,7 +105,8 @@ class TestBenchMark:
 
 
 class TestOptimizerBenchmark:
-    def test_run(self):
+    @staticmethod
+    def test_run():
         # 创建模拟对象
         mock_benchmark_config = MagicMock()
         mock_benchmark_config.work_path = os.getcwd()
@@ -119,18 +134,20 @@ class TestOptimizerBenchmark:
 
 
 class TestSimulate:
-
-    def test_set_config_dict(self):
+    @staticmethod
+    def test_set_config_dict():
         origin_config = {"a": {"b": {"c": 3}}}
         Simulator.set_config(origin_config, "a.b.c", 4)
         assert origin_config["a"]["b"]["c"] == 4
 
-    def test_set_config_list(self):
+    @staticmethod
+    def test_set_config_list():
         origin_config = {"a": {"b": [{"c": 3}]}}
         Simulator.set_config(origin_config, "a.b.0.c", 4)
         assert origin_config["a"]["b"][0]["c"] == 4
 
-    def test_set_config_new_key(self):
+    @staticmethod
+    def test_set_config_new_key():
         origin_config = {"a": {"b": [{"c": 3}]}}
         Simulator.set_config(origin_config, "a.b.0.d", 4)
         assert origin_config["a"]["b"][0]["d"] == 4
@@ -224,9 +241,9 @@ def test_op_func_exception():
 
 
 class MockField:
-    def __init__(self, min, max):
-        self.min = min
-        self.max = max
+    def __init__(self, min_value, max_value):
+        self.min = min_value
+        self.max = max_value
 
 
 class TestPSOOptimizer:
@@ -235,19 +252,22 @@ class TestPSOOptimizer:
     def optimizer(self):
         return PSOOptimizer(MagicMock(), target_field=default_support_field)
 
-    def test_constructing_bounds_empty_target_field(self, optimizer):
+    @staticmethod
+    def test_constructing_bounds_empty_target_field(optimizer):
         optimizer.target_field = []
         min_bounds, max_bounds = optimizer.constructing_bounds()
         assert min_bounds == ()
         assert max_bounds == ()
 
-    def test_constructing_bounds_single_target_field(self, optimizer):
+    @staticmethod
+    def test_constructing_bounds_single_target_field(optimizer):
         optimizer.target_field = [MockField(min=0, max=10)]
         min_bounds, max_bounds = optimizer.constructing_bounds()
         assert min_bounds == (0,)
         assert max_bounds == (10,)
 
-    def test_constructing_bounds_multiple_target_fields(self, optimizer):
+    @staticmethod
+    def test_constructing_bounds_multiple_target_fields(optimizer):
         optimizer.target_field = [MockField(min=0, max=10), MockField(min=20, max=30)]
         min_bounds, max_bounds = optimizer.constructing_bounds()
         assert min_bounds == (0, 20)
