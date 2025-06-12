@@ -117,3 +117,45 @@ class TestVLLMHookers(unittest.TestCase):
         expected_call_2 = call(Level.INFO).domain("Request").res("123").metric("replyTokenSize", 3).event("httpRes")
         mock_profiler.assert_has_calls([expected_call_1])
         mock_profiler.assert_has_calls([expected_call_2])
+
+    def test_llm_engine_hook_084(self, mock_profiler):
+        # 导入被测试的类
+        from msserviceprofiler.vllm_profiler.vllm_profiler_core.request_hookers import LLMEngineHook084
+
+        # 模拟必要的类和结构
+        FakeScheduledSeqGroup = namedtuple('ScheduledSeqGroup', ['seq_group'])
+        FakeSeqGroup = namedtuple('SeqGroup', ['is_finished', 'seqs'])
+        FakeSequence = namedtuple('Sequence', ['get_prompt_len', 'get_output_len'])
+        
+        # 创建测试数据
+        fake_seq = FakeSequence(get_prompt_len=lambda: 5, get_output_len=lambda: 3)
+        fake_seq_group = FakeSeqGroup(is_finished=lambda: True, seqs=[fake_seq])
+        fake_scheduled_seq_group = FakeScheduledSeqGroup(seq_group=fake_seq_group)
+        
+        fake_metadata = MagicMock(request_id="123")
+        fake_scheduler_outputs = MagicMock(scheduled_seq_groups=[fake_scheduled_seq_group])
+        
+        # 模拟 Context 对象
+        fake_ctx = MagicMock()
+        fake_ctx.output_queue = [(None, [fake_metadata], fake_scheduler_outputs, None, None, None, [])]
+        
+        # 初始化 LLMEngineHook084
+        llm_engine_hook = LLMEngineHook084()
+        llm_engine_hook.init()
+
+        # 调用 _process_model_outputs 方法
+        self.fake_llm_engine._process_model_outputs(fake_ctx, request_id="123")
+
+        # 验证 Profiler 调用
+        expected_calls = [
+            call(Level.INFO).domain("Request").res("123"),
+            call(Level.INFO).domain("Request").res("123"),
+            call(Level.INFO).domain("Request").res("123"),
+            call(Level.INFO).domain("Request").res(["123"]).event("DecodeEnd"),
+            call(Level.INFO).domain("Request").res("123").metric("recvTokenSize", 5).event("httpRes"),
+            call(Level.INFO).domain("Request").res("123").metric("replyTokenSize", 3).event("httpRes")
+        ]
+        
+        # 检查所有预期的调用
+        for expected_call in expected_calls:
+            mock_profiler.assert_has_calls([expected_call], any_order=True)
