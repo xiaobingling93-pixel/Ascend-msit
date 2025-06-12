@@ -14,9 +14,15 @@ class TimestepManager:
     @classmethod
     def set_timestep_idx(cls, t_idx: int) -> None:
         """Set the current timestep index."""
+        if not isinstance(t_idx, int):
+            raise ValueError("Timestep index must be an integer.")
+
+        if t_idx < 0:
+            raise ValueError("Timestep index must be non-negative.")
+
         current = cls._timestep_var.get()
         if current is not None and current == t_idx:
-            logger.debug("Warning: Setting same timestep value consecutively: %r", t_idx)
+            logger.warning("Warning: Setting same timestep value consecutively: %r", t_idx)
         cls._timestep_var.set(t_idx)
         logger.debug("Timestep index set to: %r", t_idx)
 
@@ -25,7 +31,7 @@ class TimestepManager:
         """Get the current timestep index."""
         t_idx = cls._timestep_var.get()
         if t_idx is None:
-            logger.debug("Warning: Timestep index not set. Call set_timestep_idx() before each timestep.")
+            logger.warning("Warning: Timestep index not set. Call set_timestep_idx() before each timestep.")
         return t_idx
 
 
