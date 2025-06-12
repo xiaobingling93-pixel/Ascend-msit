@@ -5,18 +5,19 @@ from copy import deepcopy
 from pathlib import Path
 from multiprocessing import Pool
 from typing import Optional, List, Callable, Dict
+from unittest.mock import patch, MagicMock
 from pandas import DataFrame
 
-from unittest.mock import patch, MagicMock
 import numpy as np
 import pandas as pd
 from msserviceprofiler.modelevalstate.data_feature.v1 import FileReader, BATCH_FIELD
 from msserviceprofiler.modelevalstate.inference.state_eval_v1 import XGBStateEvaluate, predict_v1, CachePredict
-from msserviceprofiler.modelevalstate.inference.dataset import CustomOneHotEncoder, CustomLabelEncoder, InputData, preset_category_data, \
-    DataProcessor
-from msserviceprofiler.modelevalstate.inference.data_format_v1 import ConfigPath, ModelOpField, ModelStruct, ModelConfig, MindieConfig, \
-    EnvField, HardWare, RequestField, BatchField
-from msserviceprofiler.modelevalstate.inference.data_format_v1 import REQUEST_FIELD, MODEL_OP_FIELD, MODEL_STRUCT_FIELD, MODEL_CONFIG_FIELD, MINDIE_FIELD, ENV_FIELD, HARDWARE_FIELD
+from msserviceprofiler.modelevalstate.inference.dataset import CustomOneHotEncoder, CustomLabelEncoder, InputData,\
+    preset_category_data, DataProcessor
+from msserviceprofiler.modelevalstate.inference.data_format_v1 import ConfigPath, ModelOpField, ModelStruct, \
+    ModelConfig, MindieConfig, EnvField, HardWare, RequestField, BatchField
+from msserviceprofiler.modelevalstate.inference.data_format_v1 import REQUEST_FIELD, MODEL_OP_FIELD, \
+    MODEL_STRUCT_FIELD, MODEL_CONFIG_FIELD, MINDIE_FIELD, ENV_FIELD, HARDWARE_FIELD
 from msserviceprofiler.modelevalstate.train.pretrain import NodeInfo, PretrainModel
 from msserviceprofiler.modelevalstate.analysis import AnalysisState
 
@@ -108,11 +109,10 @@ class MockBooster:
 
 @patch("xgboost.Booster", MockBooster)
 def predict_with_model(lines_data: DataFrame,
-                       save_path: Optional[Path] = None,
                        xgb_model_path: Optional[Path] = None,
                        ohe_path: Optional[Path] = None,
                        train_field="model_execute_time",
-                       dataset_type: DataProcessor  = DataProcessor):
+                       dataset_type: DataProcessor = DataProcessor):
     # 转换格式为接口需要格式
     origin_data: List[NodeInfo] = []
     predict_data: List[NodeInfo] = []
@@ -125,10 +125,11 @@ def predict_with_model(lines_data: DataFrame,
     xgb_state_eval = XGBStateEvaluate(
         xgb_model_path=Path(xgb_model_path),
         dataprocessor=data_processor)
-    for ind, row in lines_data.iterrows():
-        batch_field, request_field, model_op_field,model_struct_field, model_config_field, mindie_field, env_field, hardware_field = None, None, None, None, None, None, None, None
+    for _, row in lines_data.iterrows():
+        batch_field, request_field, model_op_field, model_struct_field, model_config_field, mindie_field, env_field, \
+            hardware_field = None, None, None, None, None, None, None, None
         for i, _cur_columns in enumerate(lines_data.columns):
-            _cur_columns=eval(_cur_columns)
+            _cur_columns = eval(_cur_columns)
             if _cur_columns == BATCH_FIELD:
                 # 获取真实结果
                 batch_data = eval(row[i])
@@ -169,9 +170,6 @@ def predict_with_model(lines_data: DataFrame,
         else:
             setattr(_cur_node, train_field, _ud)
         predict_data.append(_cur_node)
-    # 绘制结果图
-    all_Up, all_Ud = PretrainModel.get_up_ud(tuple(predict_data), train_field)
-    origin_Up, origin_Ud = PretrainModel.get_up_ud(tuple(origin_data), train_field)
 
 
 def run_case(process_num: int, save_result_path: Path, fl: FileReader, call_func: Callable, kwargs: Dict):
@@ -222,7 +220,6 @@ def test_state_eval(tmpdir):
     save_result_path.mkdir(exist_ok=True, parents=True)
 
     fl = FileReader(file_paths, num_lines=1000)
-    # process_num = cpu_count() - 2
     process_num = 1
     run_case(process_num, save_result_path, fl, predict_with_model, {
                         "xgb_model_path": xgb_model_path,
