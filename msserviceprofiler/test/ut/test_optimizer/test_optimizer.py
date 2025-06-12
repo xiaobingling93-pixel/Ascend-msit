@@ -275,6 +275,21 @@ class TestSimulator(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.temp_dir)
 
+    def test_init_with_missing_config(self):
+        with self.assertRaises(FileNotFoundError):
+            Simulator(MindieConfig(
+                config_path=Path("/nonexistent/config.json"),
+                config_bak_path=self.temp_dir / "config_bak.json",
+                command="test_command",
+                process_name="test_process"
+            ))
+
+    def test_init_creates_backup_config(self):
+        backup_path = self.temp_dir / "config_bak.json"
+        backup_path.unlink()  # Remove backup file
+        Simulator(self.mindie_config)  # Should recreate backup
+        self.assertTrue(backup_path.exists())
+
     @patch('builtins.open')
     @patch('os.path.exists', return_value=True)
     def test_check_success(self, mock_exists, mock_open_func):
@@ -289,19 +304,71 @@ class TestSimulator(unittest.TestCase):
         result = self.simulator.check_success(print_log=True)
         self.assertTrue(result)
 
+    def test_check_success_failure(self):
+        with patch('builtins.open', mock_open(read_data="Failure message")):
+            self.simulator.process = MagicMock()
+            self.simulator.process.poll.return_value = 1
+            
+            with self.assertRaises(subprocess.SubprocessError):
+                self.simulator.check_success()
 
-class TestScheduler(unittest.TestCase):
-    def setUp(self):
-        self.temp_dir = Path(tempfile.mkdtemp())
-        self.mock_simulator = MagicMock(spec=Simulator)
-        self.mock_benchmark = MagicMock(spec=BenchMark)
-        self.mock_data_storage = MagicMock()
-        
-        self.scheduler = Scheduler(
-            simulator=self.mock_simulator,
-            benchmark=self.mock_benchmark,
-            data_storage=self.mock_data_storage
+    def test_get_new_config(self):
+        test_config = {"a": 1, "b": {"c": 2}}
+        params = (
+            OptimizerConfigField(name="param1", value=10, config_position="b.c"),
+            OptimizerConfigField(name="param2", value=20, config_position="nonexistent")
         )
+        result = Simulator.get_new_config(test_config, params)
+        self.assertEqual(result["b"]["c"], 10)
+        self.assertEqual(result["a"], 1)
+
+    def test_set_config(self):
+        test_config = {"a": 1, "b": {"c": 2}}
+        Simulator.set_config(test_config, "b.c", 10)
+        self.assertEqual(test_config["b"]["c"], 10)
+
+    @patch('psutil.process_iter')
+    def test_check_env(self, mock_process_iter):
+        # Setup mock process
+        mock_proc = MagicMock()
+        mock_proc.info = {"name": "test_process", "pid": 123}
+        mock_process_iter.return_value = [mock_proc]
+        
+        # Mock kill_process
+        with patch('msserviceprofiler.modelevalstate.optimizer.optimizer.kill_process') as mock_kill:
+            self.simulator.check_env()
+            mock_kill.assert_called_once_with("test_process")
+
+    @patch.object(Simulator, 'update_config')
+    @patch.object(Simulator, 'check_env')
+    @patch.object(Simulator, 'start_server')
+    def test_run(self, mock_start, mock_check, mock_update):
+        params = (
+            OptimizerConfigField(name="param1", value=10, config_position="BackendConfig.key"),
+        )
+        self.simulator.run(params)
+        
+        mock_update.assert_called_once_with(params)
+        mock_check.assert_called_once()
+        mock_start.assert_called_once_with(params)
+
+    @patch('psutil.Process')
+    @patch('msserviceprofiler.modelevalstate.optimizer.optimizer.kill_process')
+    @patch('msserviceprofiler.modelevalstate.optimizer.optimizer.kill_children')
+    def test_stop(self, mock_kill_children, mock_kill_process, mock_process):
+        # Setup running process
+        self.simulator.process = MagicMock()
+        self.simulator.process.pid = 123
+        self.simulator.process.poll.return_value = None
+        
+        # Setup process children
+        mock_proc = MagicMock()
+        mock_process.return_value.children.return_value = [MagicMock()]
+        
+        self.simulator.stop()
+        
+        self.simulator.process.kill.assert_called_once()
+        mock_kill_process.assert_called_once_with("test_process")
 
 
 class TestPSOOptimizer(unittest.TestCase):
