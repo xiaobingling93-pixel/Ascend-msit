@@ -194,7 +194,9 @@ def static_file():
     """0.002862761932334355,3.727034644783649e-06,0.030114439929851883""")
         with open(sf.model_decode_op_path, "w") as f:
             f.write(
-                "batch_size,max_seq_len,op_name,call_count,input_count,input_dtype,input_shape,output_count,output_dtype,output_shape,host_setup_time,host_execute_time,kernel_execute_time,aic_cube_fops,aiv_vector_fops")
+                "batch_size,max_seq_len,op_name,call_count,input_count,input_dtype,input_shape,output_count,"\
+                    "output_dtype,output_shape,host_setup_time,host_execute_time,kernel_execute_time,aic_cube_fops,"\
+                        "aiv_vector_fops")
             f.write("\n")
             f.write("""1,5,RmsNormOperation,6,5,float16;float16;float16;float16;int8,"1,7168;7168;7168;1;1",1,"""\
                     """int8,"1,7168",12.446767676767674,14.622525252525259,4.713,0.0,108480.0
@@ -212,8 +214,8 @@ def static_file():
                     """8.658484848484846,11.53181818181819,7.253,0.0,985408.0
 1,4,ElewiseOperation,15,2,float16;float16,"6144,7168;6144,7168",1,float16,"6144,7168",10.84767676767677,"""\
     """13.54727272727273,207.83,0.0,66295808.0
-1,4,ActivationOperation,3,1,float16,"6144,2304",1,float16,"6144,1152",10.441616161616162,13.294949494949494,28.269,0.0,"""\
-    """67324800.0""")
+1,4,ActivationOperation,3,1,float16,"6144,2304",1,float16,"6144,1152",10.441616161616162,13.294949494949494,"""\
+    """28.269,0.0,67324800.0""")
 
         yield sf
         sf.hardware_path.unlink()

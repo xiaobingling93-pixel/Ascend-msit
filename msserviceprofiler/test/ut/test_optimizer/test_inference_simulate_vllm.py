@@ -132,11 +132,6 @@ class TestGenerateFeatures:
 
 # 在每个测试用例之前运行，确保环境是干净的
 class TestMaxOutputLen:
-    @pytest.fixture(autouse=True)
-    def setup(self):
-        ServiceField.req_id_and_max_decode_length = {}
-        SimulateVllm.req_id_to_max_token_by_sequence = {}
-
     @staticmethod
     def test_get_max_output_len_from_json(self):
         # 模拟json文件中的数据
@@ -175,6 +170,10 @@ class TestMaxOutputLen:
         assert SimulateVllm.get_max_output_len('cmpl-7d6e773db843411985fba579778e81ea-1') == 200
         assert SimulateVllm.get_max_output_len('cmpl-7d6e773db843411985fba579778e81ea-2') == 300
 
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        ServiceField.req_id_and_max_decode_length = {}
+        SimulateVllm.req_id_to_max_token_by_sequence = {}
 
 class TestCurOutputLen:
     # 测试用例1: 当req_id在req_to_output_len字典中找到时
@@ -201,36 +200,6 @@ class TestCurOutputLen:
 
 
 class TestSimulateVllmUpdateToken:
-
-    @pytest.fixture(autouse=True)
-    def setup(self):
-        # Setup mock objects
-        # Mocking static methods
-        SimulateVllm.get_max_output_len = MagicMock()
-        SimulateVllm.get_cur_output_len = MagicMock()
-
-        # Mocking static attributes
-        SimulateVllm.req_to_stop_token_ids = defaultdict(list)
-        model_input = MagicMock()
-        model_input.request_ids_to_seq_ids = {'0': [0], '1': [1], '2': [2], '3': [3]}
-        sampling_output = MagicMock()
-        sampling_output.outputs = [type('CompletionSequenceGroupOutput', (), {})(),
-                                   type('CompletionSequenceGroupOutput', (), {})(),
-                                   type('CompletionSequenceGroupOutput', (), {})()]
-        sampling_output.outputs[0].samples = [type('SequenceOutput', (), {})()]
-        sampling_output.outputs[0].samples[0].output_token = 46310
-        sampling_output.outputs[0].samples[0].parent_seq_id = 0
-        sampling_output.outputs[0].samples[0].logprobs = {46310: type('Logprob', (), {})()}
-        sampling_output.outputs[1].samples = [type('SequenceOutput', (), {})()]
-        sampling_output.outputs[1].samples[0].output_token = 38107
-        sampling_output.outputs[1].samples[0].parent_seq_id = 1
-        sampling_output.outputs[1].samples[0].logprobs = {38107: type('Logprob', (), {})()}
-        sampling_output.outputs[2].samples = [type('SequenceOutput', (), {})()]
-        sampling_output.outputs[2].samples[0].output_token = 88089
-        sampling_output.outputs[2].samples[0].parent_seq_id = 2
-        sampling_output.outputs[2].samples[0].logprobs = {88089: type('Logprob', (), {})()}
-        return model_input, sampling_output
-
     @staticmethod
     def test_update_token_with_cur_out_len_less_than_max_out_len(self, setup):
         model_input, sampling_output = setup
@@ -293,3 +262,32 @@ class TestSimulateVllmUpdateToken:
         assert sampling_output.outputs[0].samples[0].output_token == 46310
         assert sampling_output.outputs[1].samples[0].output_token == 38107
         assert sampling_output.outputs[2].samples[0].output_token == 88089
+
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        # Setup mock objects
+        # Mocking static methods
+        SimulateVllm.get_max_output_len = MagicMock()
+        SimulateVllm.get_cur_output_len = MagicMock()
+
+        # Mocking static attributes
+        SimulateVllm.req_to_stop_token_ids = defaultdict(list)
+        model_input = MagicMock()
+        model_input.request_ids_to_seq_ids = {'0': [0], '1': [1], '2': [2], '3': [3]}
+        sampling_output = MagicMock()
+        sampling_output.outputs = [type('CompletionSequenceGroupOutput', (), {})(),
+                                   type('CompletionSequenceGroupOutput', (), {})(),
+                                   type('CompletionSequenceGroupOutput', (), {})()]
+        sampling_output.outputs[0].samples = [type('SequenceOutput', (), {})()]
+        sampling_output.outputs[0].samples[0].output_token = 46310
+        sampling_output.outputs[0].samples[0].parent_seq_id = 0
+        sampling_output.outputs[0].samples[0].logprobs = {46310: type('Logprob', (), {})()}
+        sampling_output.outputs[1].samples = [type('SequenceOutput', (), {})()]
+        sampling_output.outputs[1].samples[0].output_token = 38107
+        sampling_output.outputs[1].samples[0].parent_seq_id = 1
+        sampling_output.outputs[1].samples[0].logprobs = {38107: type('Logprob', (), {})()}
+        sampling_output.outputs[2].samples = [type('SequenceOutput', (), {})()]
+        sampling_output.outputs[2].samples[0].output_token = 88089
+        sampling_output.outputs[2].samples[0].parent_seq_id = 2
+        sampling_output.outputs[2].samples[0].logprobs = {88089: type('Logprob', (), {})()}
+        return model_input, sampling_output
