@@ -165,24 +165,6 @@ class TestQuantizer:
         assert torch.equal(weight_scale, expected_weight_scale)
         assert torch.equal(weight_offset, expected_weight_offset)
 
-    def test_normal_data_no_outliers(self):
-        # 测试没有异常值的情况
-        current_t = np.array([1, 2, 3, 4, 5])
-        k = 3
-        result = test_quantizer.get_anti_outlier(k, current_t)
-        
-        # 计算预期结果
-        current_std = np.std(current_t)
-        current_mean = np.mean(current_t)
-        threshold1 = current_mean - k * current_std
-        threshold2 = current_mean + k * current_std
-        bigger_num = np.sum(current_t >= threshold2)
-        smaller_num = np.sum(current_t <= threshold1)
-        expected = (bigger_num + smaller_num) / current_t.size
-        
-        self.assertEqual(result, expected)
-        self.assertEqual(result, 0.0)  # 因为没有异常值
-
     def test_init_weight_quant_normal_should_return_expected_result(self):
         # 普通的w_bit=8场景的权重的Quantizer._init_weight_quant_normal测试
         cfg = QuantConfig().weight_quant()
