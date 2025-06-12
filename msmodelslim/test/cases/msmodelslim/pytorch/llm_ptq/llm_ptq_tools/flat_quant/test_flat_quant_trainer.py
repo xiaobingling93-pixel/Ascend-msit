@@ -1,5 +1,17 @@
-# -*- coding: utf-8 -*-
-# Copyright Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
+#  -*- coding: utf-8 -*-
+#  Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
+#  #
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#  #
+#  http://www.apache.org/licenses/LICENSE-2.0
+#  #
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
 
 import pytest
 import torch
@@ -7,6 +19,8 @@ import torch.nn as nn
 from unittest.mock import Mock, patch, MagicMock
 from dataclasses import dataclass
 from typing import List, Dict, Any
+import types
+from contextlib import nullcontext
 
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.flat_quant.trainer import (
     TrainingConfig,
@@ -391,4 +405,154 @@ class TestFlatQuantTrainFunction:
         
         mock_trainer_class.assert_called_once_with(model, args, logger)
         mock_trainer.train.assert_called_once_with(calib_data, layer_map)
+
+
+@patch('msmodelslim.pytorch.llm_ptq.llm_ptq_tools.flat_quant.trainer.npu_available', True)
+@patch('msmodelslim.pytorch.llm_ptq.llm_ptq_tools.flat_quant.trainer.torch')
+def test_empty_cache_npu(mock_torch):
+    from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.flat_quant.trainer import empty_cache
+    empty_cache()
+    mock_torch.npu.empty_cache.assert_called_once()
+
+@patch('msmodelslim.pytorch.llm_ptq.llm_ptq_tools.flat_quant.trainer.npu_available', False)
+@patch('msmodelslim.pytorch.llm_ptq.llm_ptq_tools.flat_quant.trainer.torch')
+def test_empty_cache_cuda(mock_torch):
+    from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.flat_quant.trainer import empty_cache
+    empty_cache()
+    mock_torch.cuda.empty_cache.assert_called_once()
+
+@patch('msmodelslim.pytorch.llm_ptq.llm_ptq_tools.flat_quant.trainer.npu_available', False)
+def test_get_device_str_cuda():
+    from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.flat_quant.trainer import get_device_str
+    assert get_device_str(0) == 'cuda:0'
+    assert get_device_str('cuda:1') == 'cuda:1'
+    assert get_device_str('cpu') == 'cuda:cpu'
+
+@patch('msmodelslim.pytorch.llm_ptq.llm_ptq_tools.flat_quant.trainer.npu_available', True)
+def test_get_device_str_npu():
+    from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.flat_quant.trainer import get_device_str
+    assert get_device_str(0) == 'npu:0'
+    assert get_device_str('npu:1') == 'npu:1'
+    assert get_device_str('cpu') == 'npu:cpu'
+
+def test_convert_outputs_to_inputs_basic():
+    outs = [torch.tensor([1,2]), torch.tensor([3,4])]
+    result = convert_outputs_to_inputs(outs)
+    assert result == [[outs[0]], [outs[1]]]
+
+@patch('msmodelslim.pytorch.llm_ptq.llm_ptq_tools.flat_quant.trainer.get_model_bridge')
+@patch('msmodelslim.pytorch.llm_ptq.llm_ptq_tools.flat_quant.trainer.get_module_by_name')
+def test_run_calibration_tuple_list_dict(mock_get_module, mock_get_bridge):
+    from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.flat_quant.trainer import ModelAdapter
+    class DummyModel(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.device = torch.device('cpu')
+            self.layers = torch.nn.ModuleList([torch.nn.Linear(2,2)])
+        def forward(self, *args, **kwargs):
+            return torch.ones(2,2)
+        def tie_weights(self):
+            pass
+    mock_get_bridge.return_value.get_layers.return_value = 'layers'
+    mock_get_module.return_value = [torch.nn.Linear(2,2)]
+    args = MockArgs()
+    adapter = ModelAdapter(DummyModel(), args)
+    # tuple
+    adapter._run_calibration((torch.ones(2,2),))
+    # list
+    adapter._run_calibration([torch.ones(2,2)])
+    # dict
+    adapter._run_calibration({'x': torch.ones(2,2)})
+
+@patch('msmodelslim.pytorch.llm_ptq.llm_ptq_tools.flat_quant.trainer.dispatch_model')
+def test_finalize_model_dispatch_and_eval_mode(mock_dispatch):
+    from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.flat_quant.trainer import ModelAdapter
+    class DummyQuant:
+        def to_eval_mode(self):
+            self.eval_called = True
+    class DummyModel:
+        def __init__(self):
+            self.tie_called = False
+            self.hf_device_map = {'a': 'b'}
+            self.device = 'cpu'
+        def tie_weights(self):
+            self.tie_called = True
+    args = MockArgs()
+    adapter = ModelAdapter.__new__(ModelAdapter)
+    adapter.model = DummyModel()
+    adapter.args = args
+    adapter.model_bridge = MagicMock()
+    adapter.layers = []
+    adapter.num_layers = 0
+    adapter.default_device = 'cpu'
+    quant = DummyQuant()
+    adapter.finalize_model(quant)
+    assert hasattr(quant, 'eval_called')
+    mock_dispatch.assert_called_once()
+
+@patch('torch.optim.AdamW')
+@patch('torch.optim.lr_scheduler.CosineAnnealingLR')
+@patch('torch.optim.lr_scheduler.LinearLR')
+@patch('torch.optim.lr_scheduler.ChainedScheduler')
+def test_setup_optimizer_with_and_without_warmup(mock_chain, mock_linear, mock_cosine, mock_adam):
+    config = Mock()
+    config.epochs = 2
+    config.flat_lr = 1e-3
+    config.warmup = True
+    trainer = LayerTrainer(config)
+    trainable_params = [torch.nn.Parameter(torch.randn(2,2))]
+    data_info = {'nsamples': 2}
+    trainer.setup_optimizer(trainable_params, data_info)
+    config.warmup = False
+    trainer.setup_optimizer(trainable_params, data_info)
+    assert mock_chain.called and mock_linear.called and mock_cosine.called and mock_adam.called
+
+@patch('msmodelslim.pytorch.llm_ptq.llm_ptq_tools.flat_quant.trainer.get_trainable_parameters')
+def test_train_layer_with_training_and_quant_by_quant(mock_get_params):
+    config = Mock()
+    config.epochs = 1
+    config.flat_lr = 1e-3
+    config.warmup = False
+    config.quant_by_quant = True
+    config.traincast = lambda: nullcontext()
+    trainer = LayerTrainer(config)
+    param = torch.nn.Parameter(torch.randn(2,2, requires_grad=True))
+    layer = torch.nn.Linear(2,2)
+    mock_get_params.return_value = ([param], [param], True)
+    training_data = LayerTrainingData(
+        layer=layer,
+        layer_inputs=[(torch.ones(2,2),)],
+        fp_outs=[torch.ones(2,2)],
+        data_info={'nsamples': 1, 'layer_kwargs_list': [{}]},
+        device=torch.device('cpu'),
+        layer_idx=0
+    )
+    logger = Mock()
+    result = trainer.train_layer(training_data, logger)
+    assert isinstance(result, list)
+
+def test_extract_fp_outputs_tensor_and_kwargs():
+    layer = torch.nn.Linear(2,2)
+    layer_inputs = [(torch.ones(2,2),)]
+    data_info = {'nsamples': 1, 'layer_kwargs_list': [{}]}
+    device = torch.device('cpu')
+    outs = LayerTrainer.extract_fp_outputs(layer, layer_inputs, data_info, device)
+    assert isinstance(outs, list)
+    assert outs[0].shape[0] == 2
+
+    # test with kwargs, avoid multiple values for 'x'
+    def forward(self, *args, **kwargs):
+        # Accept both positional and keyword arguments
+        if args:
+            return args[0], 0
+        elif 'x' in kwargs:
+            return kwargs['x'], 0
+        else:
+            raise ValueError("No input provided")
+    layer.forward = types.MethodType(forward, layer)
+    layer_inputs = [(torch.ones(2,2),)]
+    data_info = {'nsamples': 1, 'layer_kwargs_list': [{'x': torch.ones(2,2)}]}
+    outs = LayerTrainer.extract_fp_outputs(layer, layer_inputs, data_info, device)
+    assert isinstance(outs, list)
+    assert outs[0].shape[0] == 2
 

@@ -50,6 +50,18 @@ class TestStatFunctions:
         assert 'input_max' in act_stats['test_layer']
         assert act_stats['test_layer']['input_max'].shape == (10,)
 
+    def test_stat_input_hook_non_tuple(self):
+        act_stats = {'test_layer': {}}
+        x = torch.randn(2, 10)
+        stat_input_hook(None, x, None, 'test_layer', act_stats)
+        assert 'input_max' in act_stats['test_layer']
+
+    def test_stat_tensor_update_min(self):
+        act_stats = {'test_layer': {'input_max': torch.ones(10) * 10}}
+        x = torch.ones(2, 10)
+        stat_tensor(act_stats, 'test_layer', x)
+        assert torch.all(act_stats['test_layer']['input_max'] <= 10)
+
 
 class TestFakeQuantizerVisitor:
     def setup_method(self):
@@ -98,6 +110,49 @@ class TestFakeQuantizerVisitor:
         mock_quantizer.to_eval_mode.assert_called_once()
         mock_quantizer.fake_quant_weight.assert_not_called()
 
+    def test_remove_forward_hook_no_prefix(self):
+        model = nn.Sequential(nn.Linear(10, 10))
+        config = FakeQuantizedLinearConfig(w_bits=8, a_bits=8)
+        visitor = FakeQuantizerVisitor(model, config)
+        linear = nn.Linear(10, 10)
+        visitor.register_forward_hook(linear, 'foo')
+        visitor.remove_forward_hook()  # no prefix, should remove all
+        # hooks dict still has key, but hook is removed
+        assert 'foo' in visitor.hooks
+
+    def test_mode_transitions_with_prefix(self):
+        model = nn.Sequential(nn.Linear(10, 10))
+        config = FakeQuantizedLinearConfig(w_bits=8, a_bits=8)
+        visitor = FakeQuantizerVisitor(model, config)
+        mock_quantizer = Mock()
+        visitor.quantizer_dict['foo'] = mock_quantizer
+        visitor.quantizer_dict['bar'] = mock_quantizer
+        visitor.to_org_mode(prefix='foo')
+        visitor.to_calib_mode(prefix='foo')
+        visitor.to_eval_mode(prefix='foo', quant_weight=True)
+        visitor.fake_quant_weight(prefix='foo')
+        assert mock_quantizer.to_org_mode.called
+        assert mock_quantizer.to_calib_mode.called
+        assert mock_quantizer.to_eval_mode.called
+        assert mock_quantizer.fake_quant_weight.called
+
+    def test_visit_linear_pair_basic(self):
+        class DummyLinear(nn.Linear):
+            def __init__(self):
+                super().__init__(10, 10)
+            def set_trans(self, **kwargs):
+                self.trans_set = True
+            def forward(self, x):
+                return super().forward(x)
+        model = nn.Sequential()
+        model.foo = DummyLinear()
+        config = FakeQuantizedLinearConfig(w_bits=8, a_bits=8)
+        visitor = FakeQuantizerVisitor(model, config)
+        pair = Mock()
+        pair.target_modules = ['foo']
+        visitor._visit_linear_pair(pair)
+        assert 'foo' in visitor.quantizer_dict
+
 
 class TestFlatQuantQuantizerMapVisitor:
     def setup_method(self):
@@ -138,6 +193,82 @@ class TestFlatQuantQuantizerMapVisitor:
         mock_norm.to_eval_mode.assert_called_once()
         mock_trans.to_eval_mode.assert_called_once()
 
+    def test_flat_quant_quantizer_map_visitor_private_methods(self):
+        # _init_diag_scale, _reparameterize_act_diag_scale, _visit_norm_linear_pair
+        class DummyNorm(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.weight = nn.Parameter(torch.ones(4))
+            def set_trans(self, **kwargs):
+                self.trans_set = True
+        class DummyLinear(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.weight = nn.Parameter(torch.ones(4, 4))
+            def set_trans(self, **kwargs):
+                self.trans_set = True
+        model = nn.Sequential()
+        model.norm = DummyNorm()
+        model.linear = DummyLinear()
+        config = FlatQuantQuantizerConfig(w_bits=8, a_bits=8)
+        visitor = FlatQuantQuantizerMapVisitor(model, config)
+        # _visit_norm_linear_pair
+        pair = Mock()
+        pair.source_modules = 'norm'
+        pair.target_modules = ['linear']
+        visitor._visit_norm_linear_pair(pair)
+        assert 'norm' in visitor.norm_dict
+        # _init_diag_scale
+        class DummyDiagTrans:
+            def __init__(self):
+                self.diag_scale = nn.Parameter(torch.ones(4))
+        class DummyTrans:
+            def __init__(self):
+                self.diag_trans = DummyDiagTrans()
+        visitor.decompose_trans_dict = {pair: DummyTrans()}
+        visitor.act_stats = {'linear': {'input_max': torch.ones(4)}}
+        visitor._init_diag_scale()
+        # _reparameterize_act_diag_scale
+        trans = DummyTrans()
+        trans.diag_trans.diag_scale = nn.Parameter(torch.ones(4))
+        model.linear.weight = nn.Parameter(torch.ones(4, 4))
+        pair.source_modules = 'linear'
+        visitor.model = model
+        visitor._reparameterize_act_diag_scale(trans, pair)
+
+    def test_flat_quant_quantizer_map_visitor_norm_dict_decompose_trans_dict(self):
+        model = nn.Sequential()
+        model.add_module('foo', nn.Linear(10, 10))
+        model.add_module('bar', nn.Linear(10, 10))
+        config = FlatQuantQuantizerConfig(w_bits=8, a_bits=8)
+        visitor = FlatQuantQuantizerMapVisitor(model, config)
+        mock_norm = Mock()
+        visitor.norm_dict['foo'] = mock_norm
+        mock_pair = Mock()
+        mock_pair.source_modules = 'foo'
+        mock_pair.target_modules = ['bar']
+        mock_pair.__str__ = lambda self=mock_pair: 'foo'
+
+        # 用 DummyTrans 替换 mock_trans，保证 diag_trans.diag_scale 是 nn.Parameter
+        class DummyDiagTrans:
+            def __init__(self, size):
+                self.diag_scale = nn.Parameter(torch.ones(size))
+        class DummyTrans:
+            def __init__(self, size):
+                self.diag_trans = DummyDiagTrans(size)
+                self.to_eval_mode = Mock()
+        size = 10
+        visitor.decompose_trans_dict[mock_pair] = DummyTrans(size)
+        visitor.act_stats['bar'] = {'input_max': torch.ones(size)}
+
+        visitor.to_org_mode()
+        visitor.to_calib_mode()
+        visitor.to_eval_mode()
+        assert mock_norm.to_org_mode.called
+        assert mock_norm.to_calib_mode.called
+        assert mock_norm.to_eval_mode.called
+        assert visitor.decompose_trans_dict[mock_pair].to_eval_mode.called
+
 
 class TestUtilityFunctions:
     def test_get_n_set_parameters_byname(self):
@@ -155,7 +286,7 @@ class TestUtilityFunctions:
     def test_convert_config_w4a4_dynamic(self):
         model = nn.Linear(128, 64)
         quant_config = Mock()
-        quant_config.model_quant_type = QuantType.W4A4_DYNAMIC
+        quant_config.model_quant_type = QuantType.W4A4_FLATQUANT_DYNAMIC
         flat_quant_config = FlatQuantQuantizerConfig()
         
         config, visitor = convert_config(quant_config, flat_quant_config, model)
@@ -218,7 +349,7 @@ class TestUtilityFunctions:
         model_bridge.model = model
         
         layer_map = {'test_layer': Mock()}
-        layer_map['test_layer'].model_quant_type = QuantType.W4A4_DYNAMIC
+        layer_map['test_layer'].model_quant_type = QuantType.W4A4_FLATQUANT_DYNAMIC
         flat_quant_config = FlatQuantQuantizerConfig()
         
         with patch('msmodelslim.pytorch.llm_ptq.llm_ptq_tools.flat_quant.processors.flat_quant.QuantizerMapper') as mock_mapper_class:
@@ -248,7 +379,7 @@ class TestUtilityFunctions:
         model_bridge.get_structure_pairs.return_value = pairs_dict
         
         quant_config1 = Mock()
-        quant_config1.model_quant_type = QuantType.W4A4_DYNAMIC
+        quant_config1.model_quant_type = QuantType.W4A4_FLATQUANT_DYNAMIC
         quant_config2 = Mock()
         quant_config2.model_quant_type = QuantType.W8A8_DYNAMIC
         
@@ -260,4 +391,80 @@ class TestUtilityFunctions:
         flat_quant_config = FlatQuantQuantizerConfig()
         
         with pytest.raises(ValueError, match="Find different quant type"):
-            quantize_model(model_bridge, layer_map, flat_quant_config) 
+            quantize_model(model_bridge, layer_map, flat_quant_config)
+
+    def test_get_trainable_parameters_all_empty(self):
+        class Dummy(nn.Module):
+            def named_parameters(self):
+                return []
+        model = Dummy()
+        params, trainable_params, need_train = get_trainable_parameters(model)
+        assert need_train is False
+        assert isinstance(params, dict)
+        assert isinstance(trainable_params, list)
+
+    def test_convert_config_w4a4_flatquant_dynamic(self):
+        model = nn.Linear(10, 10)
+        quant_config = Mock()
+        quant_config.model_quant_type = QuantType.W4A4_FLATQUANT_DYNAMIC
+        flat_quant_config = FlatQuantQuantizerConfig()
+        config, visitor = convert_config(quant_config, flat_quant_config, model)
+        assert config == flat_quant_config
+        assert isinstance(visitor, FlatQuantQuantizerMapVisitor)
+
+    def test_convert_config_w8a8_per_tensor(self):
+        model = nn.Linear(10, 10)
+        quant_config = Mock()
+        quant_config.model_quant_type = QuantType.W8A8
+        quant_config.w_bit = 8
+        quant_config.a_bit = 8
+        quant_config.w_sym = True
+        quant_config.a_sym = True
+        quant_config.is_dynamic = False
+        flat_quant_config = FlatQuantQuantizerConfig()
+        config, visitor = convert_config(quant_config, flat_quant_config, model)
+        assert isinstance(config, FlatQuantQuantizerConfig)
+        assert isinstance(visitor, FakeQuantizerVisitor)
+        assert config.a_groupsize == -1
+        assert config.a_per_tensor is True
+
+    def test_quantize_model_empty_pairs(self):
+        model_bridge = Mock()
+        model_bridge.get_structure_pairs.return_value = {
+            'AttnNormLinearPair': [],
+            'AttnLinearLinearPair': [],
+            'MLPNormLinearPair': [],
+            'MLPLinearLinearPair': []
+        }
+        layer_map = {}
+        flat_quant_config = FlatQuantQuantizerConfig()
+        with patch('msmodelslim.pytorch.llm_ptq.llm_ptq_tools.flat_quant.processors.flat_quant.QuantizerMapper') as mock_mapper_class:
+            mock_mapper = Mock()
+            mock_mapper_class.return_value = mock_mapper
+            result = quantize_model(model_bridge, layer_map, flat_quant_config)
+            mock_mapper.apply_quantizer.assert_called_once()
+            assert result == mock_mapper
+
+    def test_quantize_model_quant_visitor_none(self):
+        model_bridge = Mock()
+        mock_pair = Mock()
+        mock_pair.contain.return_value = True
+        mock_pair.name = "test_pair"
+        mock_pair.accept = Mock()
+        pairs_dict = {
+            'AttnNormLinearPair': [mock_pair],
+            'AttnLinearLinearPair': [],
+            'MLPNormLinearPair': [],
+            'MLPLinearLinearPair': []
+        }
+        model_bridge.get_structure_pairs.return_value = pairs_dict
+        model_bridge.model = Mock()
+        layer_map = {'test_layer': Mock()}
+        layer_map['test_layer'].model_quant_type = QuantType.FLOAT
+        flat_quant_config = FlatQuantQuantizerConfig()
+        with patch('msmodelslim.pytorch.llm_ptq.llm_ptq_tools.flat_quant.processors.flat_quant.QuantizerMapper') as mock_mapper_class:
+            mock_mapper = Mock()
+            mock_mapper_class.return_value = mock_mapper
+            result = quantize_model(model_bridge, layer_map, flat_quant_config)
+            mock_mapper.apply_quantizer.assert_called_once()
+            assert result == mock_mapper
