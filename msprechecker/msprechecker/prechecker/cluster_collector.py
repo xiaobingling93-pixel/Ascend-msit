@@ -29,13 +29,6 @@ DEFAULT_MASTER_PORT = 29400
 MAX_SENDING_LEN = 40960
 
 
-def get_rank_id_in_ranktable_by_ip(local_ip, rank_table):
-    for rank_id, server_config in enumerate(rank_table.get("server_list", [])):
-        if local_ip == server_config.get("server_id", None):
-            return rank_id
-    return None
-
-
 def init_global_distribute_env(ranktable_file=None, service_config_path=None, master_ip=None):
     global GLOBAL_DISTRIBUTE_ENV
     global GLOBAL_LOCAL_IP

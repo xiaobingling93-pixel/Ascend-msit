@@ -212,15 +212,18 @@ class TestNetworkFunctions(unittest.TestCase):
         result = get_local_to_master_ip()
         self.assertEqual(result, "192.168.1.1")
 
-    @patch('psutil.net_if_addrs')
-    def test_get_interface_by_ip(self, mock_if_addrs):
-        mock_if_addrs.return_value = {
-            'eth0': [MagicMock(family=socket.AF_INET, address='192.168.1.1')],
-            'lo': [MagicMock(family=socket.AF_INET, address='127.0.0.1')]
-        }
-        interface, ip = get_interface_by_ip('192.168.1.1')
-        self.assertEqual(interface, 'eth0')
-        self.assertEqual(ip, '192.168.1.1')
+
+    def test_get_interface_by_ip(self):
+        psutil_mock = MagicMock()
+
+        with patch.dict("sys.modules", {"psutil": psutil_mock}):
+            psutil_mock.net_if_addrs.return_value = {
+                'eth0': [MagicMock(family=socket.AF_INET, address='192.168.1.1')],
+                'lo': [MagicMock(family=socket.AF_INET, address='127.0.0.1')]
+            }
+            interface, ip = get_interface_by_ip('192.168.1.1')
+            self.assertEqual(interface, 'eth0')
+            self.assertEqual(ip, '192.168.1.1')
 
 
 class TestVersion(unittest.TestCase):

@@ -15,12 +15,11 @@
 import os
 import glob
 import hashlib
-from concurrent.futures import ThreadPoolExecutor
 
 from msprechecker.prechecker.register import PrecheckerBase, show_check_result, CheckResult
 from msprechecker.prechecker.utils import logger, get_model_path_from_mindie_config
-from msprechecker.prechecker.utils import SimpleProgressBar, is_deepseek_model
-from msprechecker.prechecker.utils import SimpleProgressBar, is_deepseek_model, get_next_dict_item
+from msprechecker.prechecker.utils import is_deepseek_model
+from msprechecker.prechecker.utils import is_deepseek_model, get_next_dict_item
 
 DEEPSEEK_R1_FP8_WEIGHT_SIZE = 674720176952
 DEEPSEEK_R1_FP16_WEIGHT_SIZE = 1368985513488
