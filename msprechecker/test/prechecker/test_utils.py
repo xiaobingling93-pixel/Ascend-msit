@@ -194,8 +194,9 @@ class TestSystemInfoCollect(unittest.TestCase):
         result = get_global_env_info()
         self.assertEqual(result, {'ASCEND_TEST': 'value'})
 
+    @patch('shutil.which', return_value=True)
     @patch('subprocess.run')
-    def test_get_npu_info(self, mock_run):
+    def test_get_npu_info(self, mock_run, _):
         mock_run.return_value = MagicMock(stdout="Device d802 found in accelerators", stderr="", returncode=0)
         self.assertEqual(get_npu_info(), "d802")
         self.assertEqual(get_npu_info(to_inner_type=True), "A2")

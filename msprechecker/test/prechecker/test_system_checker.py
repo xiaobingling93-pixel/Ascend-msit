@@ -143,8 +143,9 @@ class TestDriverVersionChecker(unittest.TestCase):
 
 
 class TestVirtualMachineChecker(unittest.TestCase):
+    @patch('os.access', return_value=True)
     @patch('os.path.exists')
-    def test_collect_env(self, mock_exists):
+    def test_collect_env(self, mock_exists, _):
         mock_exists.return_value = True
         
         # Test VM case
@@ -191,8 +192,9 @@ class TestVirtualMachineChecker(unittest.TestCase):
 
 
 class TestTransparentHugepageChecker(unittest.TestCase):
+    @patch('os.access', return_value=True)
     @patch('os.path.exists')
-    def test_collect_env(self, mock_exists):
+    def test_collect_env(self, mock_exists, _):
         mock_exists.return_value = True
         
         # Test enabled case
