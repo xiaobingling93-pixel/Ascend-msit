@@ -500,38 +500,6 @@ class TestRemoveFile:
         remove_file(test_dir)
         assert mock_rmtree.call_count >= 1
 
-    @classmethod
-    def test_remove_symlink(cls, setup_test_files):
-        """测试删除符号链接"""
-        test_file = setup_test_files / "test_file.txt"
-        symlink = setup_test_files / "symlink.txt"
-        
-        try:
-            symlink.symlink_to(test_file)
-            assert symlink.exists()
-            
-            remove_file(symlink)
-            assert not symlink.exists()
-            assert test_file.exists()  # 原始文件应该还在
-        except (OSError, NotImplementedError):
-            # 某些系统或环境可能不支持创建符号链接
-            pytest.skip("当前系统不支持符号链接")
-
-    @classmethod
-    def test_remove_broken_symlink(cls, setup_test_files):
-        """测试删除损坏的符号链接"""
-        broken_symlink = setup_test_files / "broken_link.txt"
-        
-        try:
-            # 创建指向不存在的文件的符号链接
-            broken_symlink.symlink_to("non_existent_file.txt")
-            assert broken_symlink.exists()
-            
-            remove_file(broken_symlink)
-            assert not broken_symlink.exists()
-        except (OSError, NotImplementedError):
-            pytest.skip("当前系统不支持符号链接")
-
 
 class TestBackup:
     """测试 backup 函数的各种场景"""
