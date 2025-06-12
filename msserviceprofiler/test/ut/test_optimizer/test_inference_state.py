@@ -1,0 +1,212 @@
+# !/usr/bin/python3.7
+# -*- coding: utf-8 -*-
+# Copyright (c) Huawei Technologies Co., Ltd. 2024-2025. All rights reserved.
+from copy import deepcopy
+from pathlib import Path
+from multiprocessing import Pool
+from typing import Optional, List, Callable, Dict
+from pandas import DataFrame
+
+from unittest.mock import patch, MagicMock
+import numpy as np
+import pandas as pd
+from msserviceprofiler.modelevalstate.data_feature.v1 import FileReader, BATCH_FIELD
+from msserviceprofiler.modelevalstate.inference.state_eval_v1 import XGBStateEvaluate, predict_v1, CachePredict
+from msserviceprofiler.modelevalstate.inference.dataset import CustomOneHotEncoder, CustomLabelEncoder, InputData, preset_category_data, \
+    DataProcessor
+from msserviceprofiler.modelevalstate.inference.data_format_v1 import ConfigPath, ModelOpField, ModelStruct, ModelConfig, MindieConfig, \
+    EnvField, HardWare, RequestField, BatchField
+from msserviceprofiler.modelevalstate.inference.data_format_v1 import REQUEST_FIELD, MODEL_OP_FIELD, MODEL_STRUCT_FIELD, MODEL_CONFIG_FIELD, MINDIE_FIELD, ENV_FIELD, HARDWARE_FIELD
+from msserviceprofiler.modelevalstate.train.pretrain import NodeInfo, PretrainModel
+from msserviceprofiler.modelevalstate.analysis import AnalysisState
+
+
+def test_update_new_data_none(tmpdir):
+    cache_predict = CachePredict(Path(tmpdir))
+    cache_predict.update([1, 2, 3], 1.0)
+    assert cache_predict.new_data.equals(pd.DataFrame([1, 2, 3]).T)
+    assert cache_predict.new_label.equals(pd.Series([1.0], name=cache_predict.label_name))
+
+
+def test_update_data_none(tmpdir):
+    cache_predict = CachePredict(Path(tmpdir))
+    cache_predict.new_data = pd.DataFrame([1, 2, 3]).T
+    cache_predict.new_label = pd.Series([1.0], name=cache_predict.label_name)
+    cache_predict.update([4, 5, 6], 2.0)
+    assert cache_predict.new_data.equals(pd.DataFrame([[1, 2, 3], [4, 5, 6]]))
+    assert cache_predict.new_label.equals(pd.Series([1.0, 2.0], name=cache_predict.label_name))
+    cache_predict.save()
+    assert cache_predict.output.exists()
+
+
+def test_update_data_exists(tmpdir):
+    cache_predict = CachePredict(Path(tmpdir))
+    cache_predict.data = pd.DataFrame([1, 2, 3]).T
+    cache_predict.label = pd.Series([1.0], name=cache_predict.label_name)
+    cache_predict.update([1, 2, 3], 1.0)
+    assert cache_predict.data.equals(pd.DataFrame([1, 2, 3]).T)
+    assert cache_predict.label.equals(pd.Series([1.0], name=cache_predict.label_name))
+
+
+@patch('msserviceprofiler.modelevalstate.inference.state_eval_v1.DataProcessor')
+@patch('msserviceprofiler.modelevalstate.inference.state_eval_v1.XGBStateEvaluate')
+def test_predict_v1(mock_data_processor, mock_xgb_state_evaluate, tmpdir, static_file):
+    mock_data_processor.return_value = MagicMock()
+    mock_xgb_state_evaluate.return_value = MagicMock()
+
+    # Create the necessary objects
+    batch_info = BatchField("decode", 20, 20.0, 580.0, 29.0)
+    request_info = (
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+    )
+    config_path = ConfigPath(
+        Path(fr"{tmpdir}\xgb_model.ubj"),
+        Path(fr"{tmpdir}\ohe"),
+        static_file.base_path,
+        Path(fr"{tmpdir}\req_and_decode_file.json"),
+        Path(fr"{tmpdir}\cache_data"),
+
+    )
+
+    # Call the method under test
+    predict_v1(batch_info, request_info, config_path)
+
+    # Assert that the necessary methods were called
+    mock_data_processor.assert_called()
+    mock_xgb_state_evaluate.assert_called()
+
+
+class MockBooster:
+    def __init__(self, *args, **kwargs):
+        self.feature_names = None
+
+    def load_model(self, model_path):
+        pass
+
+    def predict(self, *args, **kwargs):
+        return np.array([66666])
+
+
+@patch("xgboost.Booster", MockBooster)
+def predict_with_model(lines_data: DataFrame,
+                       save_path: Optional[Path] = None,
+                       xgb_model_path: Optional[Path] = None,
+                       ohe_path: Optional[Path] = None,
+                       train_field="model_execute_time",
+                       dataset_type: DataProcessor  = DataProcessor):
+    # 转换格式为接口需要格式
+    origin_data: List[NodeInfo] = []
+    predict_data: List[NodeInfo] = []
+    custom_encoder = CustomOneHotEncoder(preset_category_data,
+                                         save_dir=ohe_path)
+    custom_encoder.fit(load=True)
+    custom_encoder = CustomLabelEncoder(preset_category_data, save_dir=ohe_path)
+    custom_encoder.fit()
+    data_processor = dataset_type(custom_encoder)
+    xgb_state_eval = XGBStateEvaluate(
+        xgb_model_path=Path(xgb_model_path),
+        dataprocessor=data_processor)
+    for ind, row in lines_data.iterrows():
+        batch_field, request_field, model_op_field,model_struct_field, model_config_field, mindie_field, env_field, hardware_field = None, None, None, None, None, None, None, None
+        for i, _cur_columns in enumerate(lines_data.columns):
+            _cur_columns=eval(_cur_columns)
+            if _cur_columns == BATCH_FIELD:
+                # 获取真实结果
+                batch_data = eval(row[i])
+                batch_field = BatchField(*batch_data[:-1])
+                _cur_node = NodeInfo(batch_field.batch_stage, batch_field.batch_size)
+                setattr(_cur_node, train_field, float(batch_data[-1]))
+                origin_data.append(_cur_node)
+            elif _cur_columns == REQUEST_FIELD:
+                request_field = tuple([RequestField(*[int(float(j)) for j in _req]) for _req in eval(row[i])])
+            elif _cur_columns == MODEL_OP_FIELD:
+                model_op_field = tuple([ModelOpField(*_op) for _op in eval(row[i])])
+            elif _cur_columns == MODEL_STRUCT_FIELD:
+                model_struct_field = ModelStruct(*eval(row[i]))
+            elif _cur_columns == MODEL_CONFIG_FIELD:
+                model_config_field = ModelConfig(*eval(row[i]))
+            elif _cur_columns == MINDIE_FIELD:
+                mindie_field = MindieConfig(*eval(row[i]))
+            elif _cur_columns == ENV_FIELD:
+                env_field = EnvField(*eval(row[i]))
+            elif _cur_columns == HARDWARE_FIELD:
+                hardware_field = HardWare(*eval(row[i]))
+
+        input_data = InputData(
+            batch_field=batch_field,
+            request_field=request_field,
+            model_op_field=model_op_field,
+            model_struct_field=model_struct_field,
+            model_config_field=model_config_field,
+            mindie_field=mindie_field,
+            env_field=env_field,
+            hardware_field=hardware_field
+        )
+        # 使用模型进行预测
+        _up, _ud = xgb_state_eval.predict(input_data)
+        _cur_node = deepcopy(_cur_node)
+        if _up != -1:
+            setattr(_cur_node, train_field, _up)
+        else:
+            setattr(_cur_node, train_field, _ud)
+        predict_data.append(_cur_node)
+    # 绘制结果图
+    all_Up, all_Ud = PretrainModel.get_up_ud(tuple(predict_data), train_field)
+    origin_Up, origin_Ud = PretrainModel.get_up_ud(tuple(origin_data), train_field)
+    AnalysisState.plot_input_velocity_with_predict(origin_Up, all_Up, "batch_prefill",
+                                                   f"origin predict Up {train_field} std velocity", "batch_prefill",
+                                                   "velocity", save_path=save_path)
+    AnalysisState.plot_input_velocity_with_predict(origin_Ud, all_Ud, "batch_decode",
+                                                   f"origin predict Ud {train_field} std velocity", "batch_decode",
+                                                   "velocity", save_path=save_path)
+    all_Up, all_Ud = PretrainModel.get_decode_and_prefill_time(tuple(predict_data), train_field)
+    origin_Up, origin_Ud = PretrainModel.get_decode_and_prefill_time(tuple(origin_data), train_field)
+    AnalysisState.plot_input_velocity_with_predict(origin_Up, all_Up, "batch_prefill",
+                                                   f"origin predict Up {train_field} std time", "batch_prefill",
+                                                   "time", save_path=save_path)
+    AnalysisState.plot_input_velocity_with_predict(origin_Ud, all_Ud, "batch_decode",
+                                                   f"origin predict Ud {train_field} std time", "batch_decode",
+                                                   "time", save_path=save_path)
+
+
+def run_case(process_num: int, save_result_path: Path, fl: FileReader, call_func: Callable, kwargs: Dict):
+    count = 1
+    with Pool(process_num) as p:
+        while True:
+            try:
+                # 读取数据
+                lines = fl.read_lines()
+                # 增量拟合
+                save_path = save_result_path.joinpath(str(count))
+                save_path.mkdir(exist_ok=True, parents=True)
+                if process_num == 1:
+                    call_func(lines, save_path, **kwargs)
+                else:
+                    p.apply_async(call_func, args=(lines, save_path), kwds=kwargs)
+                count += 1
+            except StopIteration:
+                break
+        p.close()
+        p.join()
+
+
+
