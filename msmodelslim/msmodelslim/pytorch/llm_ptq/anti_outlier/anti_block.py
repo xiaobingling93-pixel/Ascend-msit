@@ -304,6 +304,7 @@ class LlavaQuantDecoder(nn.Module):
 
         residual = hidden_states
         hidden_states = self.input_layernorm(hidden_states)
+        hidden_states_device = hidden_states.device
         if self.cac_migrate_attn:
             msmodelslim_logger.info("current block is LlavaQuantDecoder , layername:`{}` ".format(self.layername))
             weight_list = torch.cat([self.self_attn.q_proj.weight,
@@ -353,7 +354,7 @@ class LlavaQuantDecoder(nn.Module):
             self.self_attn.q_proj.weight.data *= best_scale
             self.self_attn.k_proj.weight.data *= best_scale
             self.self_attn.v_proj.weight.data *= best_scale
-            self.input_layernorm.weight.data = self.input_layernorm.weight.data.to('npu')
+            self.input_layernorm.weight.data = self.input_layernorm.weight.data.to(hidden_states_device)
             self.input_layernorm.weight.data /= best_scale
             self.cac_migrate_attn = False
 
@@ -609,7 +610,7 @@ class QuantQwen2VLDecoderLayer(nn.Module):
             self.self_attn.q_proj.weight.data *= best_scale
             self.self_attn.k_proj.weight.data *= best_scale
             self.self_attn.v_proj.weight.data *= best_scale
-            self.input_layernorm.weight.data = self.input_layernorm.weight.data.to('npu')
+            self.input_layernorm.weight.data = self.input_layernorm.weight.data.to(hidden_states.device)
             self.input_layernorm.weight.data /= best_scale
             self.cac_migrate_attn = False
         # Self Attention

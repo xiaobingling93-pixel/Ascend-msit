@@ -16,8 +16,8 @@ try:
     from torch.tensor import Tensor
 except ModuleNotFoundError as ee:
     from torch import Tensor
-from test.resources.sample_net_torch import TorchTeacherModel
-from test.resources.sample_net_torch import TorchStudentModel
+from resources.sample_net_torch import TorchTeacherModel
+from resources.sample_net_torch import TorchStudentModel
 import pytest
 
 from msmodelslim.common.knowledge_distill.knowledge_distill import KnowledgeDistillConfig

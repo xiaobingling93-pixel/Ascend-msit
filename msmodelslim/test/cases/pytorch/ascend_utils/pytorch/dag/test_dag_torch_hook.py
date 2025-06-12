@@ -11,7 +11,7 @@ from ascend_utils.core.dag.dag import DirectedAcyclicGraph
 from ascend_utils.core.dag.dag_node import DagNode
 from ascend_utils.pytorch.dag.dag_torch_hook import DagTorchHook
 
-from test.resources.sample_net_torch import LrdSampleNetwork
+from resources.sample_net_torch import LrdSampleNetwork
 
 
 class FakeModuleAA(torch.nn.Module):

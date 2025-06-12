@@ -40,8 +40,9 @@ class QuantType(str, Enum):
         is_sparse = params['is_sparse']
         is_dynamic = params['is_dynamic']
         is_lowbit = params['is_lowbit']
+        is_timestep_quant = hasattr(params, 'is_timestep_quant') and params['is_timestep_quant']
 
-        if w_bit == 8 and a_bit == 8 and params['is_timestep_quant']:
+        if w_bit == 8 and a_bit == 8 and is_timestep_quant:
             return QuantType.W8A8_TIMESTEP
 
         if is_dynamic:

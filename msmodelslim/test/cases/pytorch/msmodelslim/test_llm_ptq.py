@@ -1,6 +1,6 @@
 import os
 import shutil
-from test.resources.sample_net_torch import TwoLinearTorchModel, GroupLinearTorchModel, AttentionTorchModel, MOEModel, \
+from resources.sample_net_torch import TwoLinearTorchModel, GroupLinearTorchModel, AttentionTorchModel, MOEModel, \
     ThreeLinearTorchModel_for_Sparse, AttentionTorchSophonModel
 import torch
 
