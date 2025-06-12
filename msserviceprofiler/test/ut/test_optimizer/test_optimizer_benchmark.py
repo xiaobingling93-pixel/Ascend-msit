@@ -261,14 +261,14 @@ class TestPSOOptimizer:
 
     @staticmethod
     def test_constructing_bounds_single_target_field(optimizer):
-        optimizer.target_field = [MockField(min=0, max=10)]
+        optimizer.target_field = [MockField(min_value=0, max_value=10)]
         min_bounds, max_bounds = optimizer.constructing_bounds()
         assert min_bounds == (0,)
         assert max_bounds == (10,)
 
     @staticmethod
     def test_constructing_bounds_multiple_target_fields(optimizer):
-        optimizer.target_field = [MockField(min=0, max=10), MockField(min=20, max=30)]
+        optimizer.target_field = [MockField(min_value=0, max_value=10), MockField(min_value=20, max_value=30)]
         min_bounds, max_bounds = optimizer.constructing_bounds()
         assert min_bounds == (0, 20)
         assert max_bounds == (10, 30)
