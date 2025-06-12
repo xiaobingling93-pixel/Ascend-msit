@@ -1,19 +1,22 @@
 # -*- coding: utf-8 -*-
 # Copyright Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 import torch
 from enum import Enum
 from transformers import PretrainedConfig
+import torch.nn as nn
 
 from msmodelslim import logger
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config import QuantConfig
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.fa_quant import FAQuantizer, TensorType
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_modules import (
     Quantizer,
-    LinearQuantizer
+    LinearQuantizer,
+    Conv2dQuantizer,
+    LinearNf4Quantizer
 )
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_funcs import (
     linear_quantization_params,
@@ -23,6 +26,176 @@ from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_funcs import (
 
 
 class TestQuantizer:
+    def test_disable_input_quantization(self):
+        cfg = QuantConfig().weight_activation_quant()
+        test_quantizer = Quantizer(
+            bit=8, is_signed=True, is_enable=True, is_input=True, cfg=cfg, logger=logger, is_dynamic=False
+        )
+        test_quantizer.disable_input_quantization()
+        assert not test_quantizer.is_enable_input
+
+    def test_disable_quantization(self):
+        cfg = QuantConfig().weight_activation_quant()
+        test_quantizer = Quantizer(
+            bit=8, is_signed=True, is_enable=True, is_input=True, cfg=cfg, logger=logger, is_dynamic=False
+        )
+        name = "test"
+        test_quantizer.disable_quantization(name)
+        assert not test_quantizer.is_enable
+        assert test_quantizer.name is name
+
+    def test_enable_calib(self):
+        cfg = QuantConfig().weight_activation_quant()
+        test_quantizer = Quantizer(
+            bit=8, is_signed=True, is_enable=True, is_input=True, cfg=cfg, logger=logger, is_dynamic=False
+        )
+
+        test_quantizer.enable_calib()
+        assert test_quantizer.is_calib
+
+    def test_disable_int_infer(self):
+        cfg = QuantConfig().weight_activation_quant()
+        test_quantizer = Quantizer(
+            bit=8, is_signed=True, is_enable=True, is_input=True, cfg=cfg, logger=logger, is_dynamic=False
+        )
+
+        test_quantizer.disable_int_infer()
+        assert not test_quantizer.int_infer
+        assert not test_quantizer.int_weight_flag
+        assert test_quantizer.int_weight_tensor is None
+   
+    def test_is_input_true(self):
+        # 测试is_input为True的情况
+        cfg = QuantConfig().weight_activation_quant()
+        test_quantizer = Quantizer(
+            bit=8, is_signed=True, is_enable=True, is_input=True, cfg=cfg, logger=logger, is_dynamic=False
+        )
+        test_quantizer.input_scale = 0.5
+        test_quantizer.input_offset = 1.0
+        test_quantizer.is_input = True
+        result = test_quantizer.get_scale_offset()
+        assert result == (test_quantizer.input_scale, test_quantizer.input_offset)
+    
+    def test_is_input_false(self):
+        # 测试is_input为False的情况
+        cfg = QuantConfig().weight_activation_quant()
+        test_quantizer = Quantizer(
+            bit=8, is_signed=True, is_enable=True, is_input=True, cfg=cfg, logger=logger, is_dynamic=False
+        )
+        test_quantizer.weight_scale = 0.75
+        test_quantizer.weight_offset = 2.0
+        test_quantizer.is_input = False
+        result = test_quantizer.get_scale_offset()
+        assert result == (test_quantizer.weight_scale, test_quantizer.weight_offset)
+
+    @patch('msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_funcs.fake_quantize')
+    def test_calib_mode(self, mock_fake_quantize):
+        # 测试校准模式（is_calib=True）
+        cfg = QuantConfig().weight_activation_quant()
+        test_quantizer = Quantizer(
+            bit=8, is_signed=True, is_enable=True, is_input=True, cfg=cfg, logger=logger, is_dynamic=False
+        )
+        # 设置对象属性
+        test_quantizer.name = "test_module"
+        test_quantizer.input_scale = torch.tensor(0.5)
+        test_quantizer.input_offset = torch.tensor(1.0)
+        test_quantizer.bit = 8
+        test_quantizer.is_signed = True
+        test_quantizer.is_calib = True
+        test_quantizer.pr = 0.5
+        test_quantizer.print_flag = True
+        test_quantizer.range_param = 50
+        data = torch.tensor([4.0, 5.0, 6.0])
+        # 模拟fake_quantize函数
+        mock_fake_quantize.return_value = (MagicMock(), torch.tensor([1.0, 2.0, 3.0]))
+        result = test_quantizer.new_quant_tensor(data)
+        
+        # 验证结果
+        expected_result = torch.tensor([4.0, 5.0, 6.0])  # 根据 mock 的返回值
+        assert torch.equal(result, expected_result)
+        
+    def test_not_enabled(self):
+        # 测试is_enable为False的情况
+        cfg = QuantConfig().weight_activation_quant()
+        test_quantizer = Quantizer(
+            bit=8, is_signed=True, is_enable=True, is_input=True, cfg=cfg, logger=logger, is_dynamic=False
+        )
+        test_quantizer.is_enable = False
+        tensor = torch.tensor([1.0, 2.0, 3.0])
+        
+        result = test_quantizer.tensor_forward(tensor)
+        
+        # 验证直接返回原始张量
+        assert torch.equal(result, tensor)
+
+    def test_input_not_enabled(self):
+        # 测试is_input为True且is_enable_input为False的情况
+        cfg = QuantConfig().weight_activation_quant()
+        test_quantizer = Quantizer(
+            bit=8, is_signed=True, is_enable=True, is_input=True, cfg=cfg, logger=logger, is_dynamic=False
+        )
+        test_quantizer.is_input = True
+        test_quantizer.is_enable_input = False
+        tensor = torch.tensor([1.0, 2.0, 3.0])
+        
+        result = test_quantizer.tensor_forward(tensor)
+        
+        # 验证直接返回原始张量
+        assert torch.equal(result, tensor)
+
+    def test_tensor_dim_2(self):
+        # 测试2维张量的情况
+        tensor = torch.tensor([
+            [1.0, 2.0, 3.0],
+            [4.0, 5.0, 6.0]
+        ])  # 2x3的张量
+        
+        # 调用被测函数
+        cfg = QuantConfig().weight_activation_quant()
+        test_quantizer = Quantizer(
+            bit=8, is_signed=True, is_enable=True, is_input=True, cfg=cfg, logger=logger, is_dynamic=False
+        )
+        test_quantizer._stat_dynamic_input(tensor)
+        
+        # 计算预期结果
+        tensor_tmp = tensor.unsqueeze(0)  # 1x2x3
+        x_min = tensor_tmp.min(2)[0]  # 1x2
+        x_max = tensor_tmp.max(2)[0]  # 1x2
+        
+        expected_x_min = x_min.view(-1, x_min.shape[1], 1)  # 1x2x1
+        expected_x_max = x_max.view(-1, x_max.shape[1], 1)  # 1x2x1
+        
+        # 验证对象属性是否被正确设置
+        assert torch.equal(test_quantizer.x_min, expected_x_min)
+        assert torch.equal(test_quantizer.x_max, expected_x_max)
+    
+    def test_tensor_dim_not_2(self):
+        # 测试非2维张量的情况（例如3维）
+        tensor = torch.tensor([
+            [[1.0, 2.0, 3.0],
+             [4.0, 5.0, 6.0]],
+            [[7.0, 8.0, 9.0],
+             [10.0, 11.0, 12.0]]
+        ])  # 2x2x3的张量
+        
+        # 调用被测函数
+        cfg = QuantConfig().weight_activation_quant()
+        test_quantizer = Quantizer(
+            bit=8, is_signed=True, is_enable=True, is_input=True, cfg=cfg, logger=logger, is_dynamic=False
+        )
+        test_quantizer._stat_dynamic_input(tensor)
+        
+        # 计算预期结果
+        x_min = tensor.min(2)[0]  # 2x2
+        x_max = tensor.max(2)[0]  # 2x2
+        
+        expected_x_min = x_min.view(-1, x_min.shape[1], 1)  # 2x2x1
+        expected_x_max = x_max.view(-1, x_max.shape[1], 1)  # 2x2x1
+        
+        # 验证对象属性是否被正确设置
+        assert torch.equal(test_quantizer.x_min, expected_x_min)
+        assert torch.equal(test_quantizer.x_max, expected_x_max)
+
     def test_new_quant_tensor_should_return_expected_result(self):
         # 普通a_bit=8场景的激活的Quantizer.new_quant_tensor测试
         cfg = QuantConfig().weight_activation_quant()
@@ -165,6 +338,209 @@ class TestQuantizer:
         assert torch.equal(weight_scale, expected_weight_scale)
         assert torch.equal(weight_offset, expected_weight_offset)
 
+    def test_normal_data_no_outliers(self):
+        # 测试没有异常值的情况
+        cfg = QuantConfig().weight_quant()
+        test_quantizer = Quantizer(
+            bit=8, is_signed=True, is_enable=True, is_input=False, cfg=cfg, logger=logger, is_dynamic=False
+        )
+        test_quantizer.enable_int_infer()
+        current_t = np.array([1, 2, 3, 4, 5])
+        k = 3
+        result = test_quantizer.get_anti_outlier(k, current_t)
+        
+        # 计算预期结果
+        current_std = np.std(current_t)
+        current_mean = np.mean(current_t)
+        threshold1 = current_mean - k * current_std
+        threshold2 = current_mean + k * current_std
+        bigger_num = np.sum(current_t >= threshold2)
+        smaller_num = np.sum(current_t <= threshold1)
+        expected = (bigger_num + smaller_num) / current_t.size
+        
+        assert np.array_equal(result, expected)
+        assert np.array_equal(result, 0.0)  # 因为没有异常值
+    
+    def test_normal_data_with_outliers(self):
+        cfg = QuantConfig().weight_quant()
+        test_quantizer = Quantizer(
+            bit=8, is_signed=True, is_enable=True, is_input=False, cfg=cfg, logger=logger, is_dynamic=False
+        )
+        test_quantizer.enable_int_infer()
+        # 测试有异常值的情况
+        current_t = np.array([1, 2, 3, 4, 100])  # 100是异常值
+        k = 1
+        result = test_quantizer.get_anti_outlier(k, current_t)
+        
+        # 计算预期结果
+        current_std = np.std(current_t)
+        current_mean = np.mean(current_t)
+        threshold1 = current_mean - k * current_std
+        threshold2 = current_mean + k * current_std
+        bigger_num = np.sum(current_t >= threshold2)
+        smaller_num = np.sum(current_t <= threshold1)
+        expected = (bigger_num + smaller_num) / current_t.size
+        
+        assert np.array_equal(result, expected)
+        assert np.array_equal(result, 0.2)  # 因为有1个异常值，占总数的20%
+    
+    def test_single_element_data(self):
+        # 测试只有一个元素的情况
+        cfg = QuantConfig().weight_quant()
+        test_quantizer = Quantizer(
+            bit=8, is_signed=True, is_enable=True, is_input=False, cfg=cfg, logger=logger, is_dynamic=False
+        )
+        test_quantizer.enable_int_infer()
+        current_t = np.array([5])
+        k = 2
+        result = test_quantizer.get_anti_outlier(k, current_t)
+        
+        # 对于单个元素，标准差为0，所以所有值都在范围内
+        assert np.array_equal(result, 2.0)
+    
+    def test_all_elements_outliers(self):
+        # 测试所有元素都是异常值的情况
+        cfg = QuantConfig().weight_quant()
+        test_quantizer = Quantizer(
+            bit=8, is_signed=True, is_enable=True, is_input=False, cfg=cfg, logger=logger, is_dynamic=False
+        )
+        test_quantizer.enable_int_infer()
+        current_t = np.array([1, 2, 3, 4, 5])
+        k = 0  # k=0会使阈值等于均值，所有值都会被视为异常
+        result = test_quantizer.get_anti_outlier(k, current_t)
+        
+        # 计算预期结果
+        current_std = np.std(current_t)
+        current_mean = np.mean(current_t)
+        threshold1 = current_mean - k * current_std
+        threshold2 = current_mean + k * current_std
+        bigger_num = np.sum(current_t >= threshold2)
+        smaller_num = np.sum(current_t <= threshold1)
+        expected = (bigger_num + smaller_num) / current_t.size
+        
+        assert np.array_equal(result, expected)
+        assert np.array_equal(result, 1.2)  # 所有值都是异常值
+    
+    def test_all_elements_same(self):
+        # 测试所有元素都相同的情况
+        cfg = QuantConfig().weight_quant()
+        test_quantizer = Quantizer(
+            bit=8, is_signed=True, is_enable=True, is_input=False, cfg=cfg, logger=logger, is_dynamic=False
+        )
+        test_quantizer.enable_int_infer()
+        current_t = np.array([5, 5, 5, 5, 5])
+        k = 2
+        result = test_quantizer.get_anti_outlier(k, current_t)
+        
+        # 标准差为0，所有值都等于均值
+        assert np.array_equal(result, 2.0)
+    
+    def test_mixed_sign_data(self):
+        # 测试包含正负值的数据
+        cfg = QuantConfig().weight_quant()
+        test_quantizer = Quantizer(
+            bit=8, is_signed=True, is_enable=True, is_input=False, cfg=cfg, logger=logger, is_dynamic=False
+        )
+        test_quantizer.enable_int_infer()
+        current_t = np.array([-10, -5, 0, 5, 10])
+        k = 1
+        result = test_quantizer.get_anti_outlier(k, current_t)
+        
+        # 计算预期结果
+        current_std = np.std(current_t)
+        current_mean = np.mean(current_t)
+        threshold1 = current_mean - k * current_std
+        threshold2 = current_mean + k * current_std
+        bigger_num = np.sum(current_t >= threshold2)
+        smaller_num = np.sum(current_t <= threshold1)
+        expected = (bigger_num + smaller_num) / current_t.size
+        
+        assert np.array_equal(result, expected)
+    
+    def test_large_k_value(self):
+        # 测试较大的k值，应该没有异常值
+        cfg = QuantConfig().weight_quant()
+        test_quantizer = Quantizer(
+            bit=8, is_signed=True, is_enable=True, is_input=False, cfg=cfg, logger=logger, is_dynamic=False
+        )
+        test_quantizer.enable_int_infer()
+        current_t = np.array([1, 2, 3, 4, 5, 100])  # 包含异常值
+        k = 1000  # 非常大的k值
+        result = test_quantizer.get_anti_outlier(k, current_t)
+        
+        assert np.array_equal(result, 0.0)  # 所有值都应该在范围内
+    
+    def test_float_data(self):
+        # 测试浮点数数据
+        cfg = QuantConfig().weight_quant()
+        test_quantizer = Quantizer(
+            bit=8, is_signed=True, is_enable=True, is_input=False, cfg=cfg, logger=logger, is_dynamic=False
+        )
+        test_quantizer.enable_int_infer()
+        current_t = np.array([1.5, 2.5, 3.5, 4.5, 5.5])
+        k = 2
+        result = test_quantizer.get_anti_outlier(k, current_t)
+        
+        # 计算预期结果
+        current_std = np.std(current_t)
+        current_mean = np.mean(current_t)
+        threshold1 = current_mean - k * current_std
+        threshold2 = current_mean + k * current_std
+        bigger_num = np.sum(current_t >= threshold2)
+        smaller_num = np.sum(current_t <= threshold1)
+        expected = (bigger_num + smaller_num) / current_t.size
+        
+        assert np.array_equal(result, expected)
+        assert np.array_equal(result, 0.0)  # 没有异常值
+    
+    def test_negative_k_value(self):
+        cfg = QuantConfig().weight_quant()
+        test_quantizer = Quantizer(
+            bit=8, is_signed=True, is_enable=True, is_input=False, cfg=cfg, logger=logger, is_dynamic=False
+        )
+        test_quantizer.enable_int_infer()
+        # 测试负数k值
+        current_t = np.array([1, 2, 3, 4, 5])
+        k = -2
+        result = test_quantizer.get_anti_outlier(k, current_t)
+        
+        # 计算预期结果
+        current_std = np.std(current_t)
+        current_mean = np.mean(current_t)
+        threshold1 = current_mean - k * current_std
+        threshold2 = current_mean + k * current_std
+        bigger_num = np.sum(current_t >= threshold2)
+        smaller_num = np.sum(current_t <= threshold1)
+        expected = (bigger_num + smaller_num) / current_t.size
+        
+        assert np.array_equal(result, expected)
+        # 负数k会反转阈值，所有值都应该被视为异常
+        assert np.array_equal(result, 2.0)
+    
+    def test_zero_k_value(self):
+        cfg = QuantConfig().weight_quant()
+        test_quantizer = Quantizer(
+            bit=8, is_signed=True, is_enable=True, is_input=False, cfg=cfg, logger=logger, is_dynamic=False
+        )
+        test_quantizer.enable_int_infer()
+        # 测试k=0的情况
+        current_t = np.array([1, 2, 3, 4, 5])
+        k = 0
+        result = test_quantizer.get_anti_outlier(k, current_t)
+        
+        # 计算预期结果
+        current_std = np.std(current_t)
+        current_mean = np.mean(current_t)
+        threshold1 = current_mean - k * current_std
+        threshold2 = current_mean + k * current_std
+        bigger_num = np.sum(current_t >= threshold2)
+        smaller_num = np.sum(current_t <= threshold1)
+        expected = (bigger_num + smaller_num) / current_t.size
+        
+        assert np.array_equal(result, expected)
+        # k=0时，阈值等于均值，所有值都应该被视为异常
+        assert np.array_equal(result, 1.2)
+
     def test_init_weight_quant_normal_should_return_expected_result(self):
         # 普通的w_bit=8场景的权重的Quantizer._init_weight_quant_normal测试
         cfg = QuantConfig().weight_quant()
@@ -282,6 +658,165 @@ class TestLinearQuantizer:
 
         expected_result = torch.tensor([[5.], [5.]])
         assert torch.equal(result, expected_result)
+
+    def test_int_bias_with_bias(self):
+        # 测试int_bias=True且有bias的情况
+        cfg = QuantConfig(w_bit=8, a_bit=8).weight_quant()
+        linear = torch.nn.Linear(in_features=4, out_features=1, bias=True, dtype=torch.float32)
+        in_param_weight = torch.tensor([[1.0, 1.0, 1.0, 1.0]])
+        in_param_input = torch.tensor([[1.0, 1.0, 1.0, 1.0],
+                                       [1.0, 1.0, 1.0, 1.0]])
+        in_param_bias = torch.tensor([[1.]])
+
+        linear.weight.data = in_param_weight
+        linear.bias.data = in_param_bias
+        linear_quantizer = LinearQuantizer(cfg, logger)
+        linear_quantizer.set_param(linear)
+
+        linear_quantizer.quant_weight.int_bias = True
+        linear_quantizer.bias.data = torch.tensor([1.0, 2.0])
+        
+        correction = torch.tensor([0.5, 0.5])
+        int_out = torch.tensor([[3.0, 4.0]])
+        fp_scale = torch.tensor([[0.1, 0.2]])
+
+        x_device = torch.device('cpu')
+        x_dtype = torch.float16
+        
+        # 计算预期结果
+        bias_int = (linear_quantizer.bias.data / fp_scale).round()  # [10.0, 10.0]
+        bias_int -= correction  # [9.5, 9.5]
+        expected = (int_out + bias_int) * fp_scale  # [[1.25, 2.7]]
+        expected = expected.to(x_dtype)
+        
+        result = linear_quantizer._bias_and_dequant_process(
+            correction, int_out, fp_scale, x_device, x_dtype
+        )
+        
+        # 验证结果
+        assert torch.equal(result, expected)
+        assert result.dtype == x_dtype
+
+    def test_int_bias_without_bias(self):
+        # 测试int_bias=True且没有bias的情况
+        cfg = QuantConfig(w_bit=8, a_bit=8).weight_quant()
+        linear = torch.nn.Linear(in_features=4, out_features=1, bias=True, dtype=torch.float32)
+        in_param_weight = torch.tensor([[1.0, 1.0, 1.0, 1.0]])
+        in_param_input = torch.tensor([[1.0, 1.0, 1.0, 1.0],
+                                       [1.0, 1.0, 1.0, 1.0]])
+        in_param_bias = torch.tensor([[1.]])
+
+        linear.weight.data = in_param_weight
+        linear.bias.data = in_param_bias
+        linear_quantizer = LinearQuantizer(cfg, logger)
+        linear_quantizer.set_param(linear)
+        linear_quantizer.quant_weight.int_bias = True
+        linear_quantizer.bias = None
+        
+        correction = torch.tensor([0.5, 0.5])
+        int_out = torch.tensor([[3.0, 4.0]])
+        fp_scale = torch.tensor([[0.1, 0.2]])
+
+        x_device = torch.device('cpu')
+        x_dtype = torch.float16
+        
+        # 计算预期结果
+        bias_int = torch.zeros(correction.size(0)).to(x_device)  # [0.0, 0.0]
+        bias_int -= correction  # [-0.5, -0.5]
+        expected = (int_out + bias_int) * fp_scale  # [[0.25, 0.7]]
+        expected = expected.to(x_dtype)
+        
+        result = linear_quantizer._bias_and_dequant_process(
+            correction, int_out, fp_scale, x_device, x_dtype
+        )
+        
+        # 验证结果
+        assert torch.equal(result, expected)
+        assert result.dtype == x_dtype
+    
+    def test_no_int_bias_with_bias(self):
+        # 测试int_bias=False且有bias的情况
+        cfg = QuantConfig(w_bit=8, a_bit=8).weight_quant()
+        linear = torch.nn.Linear(in_features=4, out_features=1, bias=True, dtype=torch.float32)
+        in_param_weight = torch.tensor([[1.0, 1.0, 1.0, 1.0]])
+        in_param_input = torch.tensor([[1.0, 1.0, 1.0, 1.0],
+                                       [1.0, 1.0, 1.0, 1.0]])
+        in_param_bias = torch.tensor([[1.]])
+
+        linear.weight.data = in_param_weight
+        linear.bias.data = in_param_bias
+        linear_quantizer = LinearQuantizer(cfg, logger)
+        linear_quantizer.set_param(linear)
+        linear_quantizer.quant_weight.int_bias = False
+        linear_quantizer.bias.data = torch.tensor([1.0, 2.0])
+        
+        correction = torch.tensor([0.5, 0.5])
+        int_out = torch.tensor([[3.0, 4.0]])
+        fp_scale = torch.tensor([[0.1, 0.2]])
+
+        x_device = torch.device('cpu')
+        x_dtype = torch.float16
+        
+        # 计算预期结果
+        fp_out = int_out * fp_scale  # [[0.3, 0.8]]
+        fp_out = fp_out.to(x_dtype)
+        
+        correction_fp = correction * fp_scale  # [[0.05, 0.1]]
+        correction_fp = correction_fp.to(x_dtype)
+        
+        bias_fp = linear_quantizer.bias.data.to(x_dtype) - correction_fp  # [[0.95, 1.9]]
+        
+        expected = fp_out + bias_fp  # [[1.25, 2.7]]
+        
+        result = linear_quantizer._bias_and_dequant_process(
+            correction, int_out, fp_scale, x_device, x_dtype
+        )
+        
+        # 验证结果
+        assert torch.equal(result, expected)
+        assert result.dtype == x_dtype
+    
+    def test_no_int_bias_without_bias(self):
+        # 测试int_bias=False且没有bias的情况
+        cfg = QuantConfig(w_bit=8, a_bit=8).weight_quant()
+        linear = torch.nn.Linear(in_features=4, out_features=1, bias=True, dtype=torch.float32)
+        in_param_weight = torch.tensor([[1.0, 1.0, 1.0, 1.0]])
+        in_param_input = torch.tensor([[1.0, 1.0, 1.0, 1.0],
+                                       [1.0, 1.0, 1.0, 1.0]])
+        in_param_bias = torch.tensor([[1.]])
+
+        linear.weight.data = in_param_weight
+        linear.bias.data = in_param_bias
+        linear_quantizer = LinearQuantizer(cfg, logger)
+        linear_quantizer.set_param(linear)
+        linear_quantizer.quant_weight.int_bias = False
+        linear_quantizer.bias = None
+        
+        correction = torch.tensor([0.5, 0.5])
+        int_out = torch.tensor([[3.0, 4.0]])
+        fp_scale = torch.tensor([[0.1, 0.2]])
+
+        x_device = torch.device('cpu')
+        x_dtype = torch.float16
+        
+        # 计算预期结果
+        fp_out = int_out * fp_scale  # [[0.3, 0.8]]
+        fp_out = fp_out.to(x_dtype)
+        
+        correction_fp = correction * fp_scale  # [[0.05, 0.1]]
+        correction_fp = correction_fp.to(x_dtype)
+        
+        bias_fp = -correction_fp  # [[-0.05, -0.1]]
+        
+        expected = fp_out + bias_fp  # [[0.25, 0.7]]
+        
+        result = linear_quantizer._bias_and_dequant_process(
+            correction, int_out, fp_scale, x_device, x_dtype
+        )
+        
+        # 验证结果
+        assert torch.equal(result, expected)
+        assert result.dtype == x_dtype
 
 
 class TestFAQuantizer:
@@ -544,3 +1079,236 @@ class TestFAQuantizer:
         for i, layer in enumerate(model.layers):
             scales, offsets = layer.fa_quantizer.export_quant_params()
             assert len(scales) == 3 and len(offsets) == 3
+
+
+class TestConv2dQuantizer:
+    def test_init(self):
+        # 测试初始化方法
+        cfg = QuantConfig(w_bit=8, a_bit=8).weight_quant()
+        quantizer = Conv2dQuantizer(cfg, logger)
+
+        assert quantizer.in_channels == None
+        assert quantizer.out_channels == None
+        assert quantizer.kernel_size == None
+        assert quantizer.stride == None
+        assert quantizer.padding == None
+        assert quantizer.dilation == None
+        assert quantizer.groups == None
+        assert quantizer.weight == None
+        assert quantizer.bias == None
+
+        
+        # 验证量化器是否正确初始化
+        assert quantizer.quant_input.bit == cfg.a_bit
+        assert quantizer.quant_input.is_signed == cfg.a_signed
+        assert quantizer.quant_weight.bit == cfg.w_bit
+        assert quantizer.quant_weight.is_signed == cfg.w_signed
+    
+    def test_set_param_with_bias(self):
+        # 测试set_param方法（有bias的情况）
+        cfg = QuantConfig(w_bit=8, a_bit=8).weight_quant()
+        quantizer = Conv2dQuantizer(cfg, logger)
+        conv = nn.Conv2d(
+            in_channels=3,
+            out_channels=64,
+            kernel_size=3,
+            stride=1,
+            padding=1,
+            dilation=1,
+            groups=1,
+            bias=True
+        )
+        
+        quantizer.set_param(conv)
+        
+        # 验证参数是否正确设置
+        assert quantizer.in_channels == conv.in_channels
+        assert quantizer.out_channels == conv.out_channels
+        assert quantizer.kernel_size == conv.kernel_size
+        assert quantizer.stride == conv.stride
+        assert quantizer.padding == conv.padding
+        assert quantizer.dilation == conv.dilation
+        assert quantizer.groups == conv.groups
+        assert torch.equal(quantizer.weight, nn.Parameter(conv.weight.data))
+        assert torch.equal(quantizer.bias, nn.Parameter(conv.bias.data))
+
+    def test_set_param_without_bias(self):
+        # 测试set_param方法（没有bias的情况
+        cfg = QuantConfig(w_bit=8, a_bit=8).weight_quant()
+        quantizer = Conv2dQuantizer(cfg, logger)
+        conv_without_bias = nn.Conv2d(
+            in_channels=3,
+            out_channels=64,
+            kernel_size=3,
+            stride=1,
+            padding=1,
+            dilation=1,
+            groups=1,
+            bias=False
+        )
+        
+        quantizer.set_param(conv_without_bias)
+        
+        # 验证bias是否为None
+        assert quantizer.bias == None
+
+    def test_conv_forward(self):
+        # 测试_conv_forward方法
+        cfg = QuantConfig(w_bit=8, a_bit=8).weight_quant()
+        quantizer = Conv2dQuantizer(cfg, logger)
+        conv = nn.Conv2d(
+            in_channels=3,
+            out_channels=64,
+            kernel_size=3,
+            stride=1,
+            padding=1,
+            dilation=1,
+            groups=1,
+            bias=True
+        )
+        quantizer.set_param(conv)
+        
+        x = torch.randn(1, 3, 32, 32)
+        weight = torch.randn(64, 3, 3, 3)
+        
+        result = quantizer._conv_forward(x, weight)      
+        # 验证返回值
+        assert result.shape == (1, 64, 32, 32)
+
+
+class TestLinearNf4Quantizer:
+    def test_init(self):
+        # 测试初始化方法
+        cfg = QuantConfig(w_bit=8, a_bit=8).weight_quant()
+        cfg.block_size = 16
+        quantizer = LinearNf4Quantizer(cfg, logger)
+
+        assert quantizer.weight == None
+        assert quantizer.bias == None
+        assert quantizer.weight_shape == None
+        assert quantizer.bias_shape == None
+        assert quantizer.dtype == None
+        assert quantizer.device == None
+        assert quantizer.weight_absmax == None
+        assert quantizer.bias_absmax == None
+        assert quantizer.nf4_mapping == None
+        assert quantizer.blocksize == cfg.block_size
+
+    def test_set_param_with_bias(self):
+        # 测试set_param方法（有bias的情况）
+        cfg = QuantConfig(w_bit=8, a_bit=8).weight_quant()
+        quantizer = LinearNf4Quantizer(cfg, logger)
+        linear = nn.Linear(
+            in_features=64,
+            out_features=128,
+            bias=True
+        )
+        # 设置测试用的张量
+        test_weight = torch.randn(128, 64)
+        test_bias = torch.randn(128)
+        linear.weight.data = test_weight
+        linear.bias.data = test_bias
+        quantizer.set_param(linear)
+        
+        # 验证参数是否正确设置
+        assert quantizer.weight_shape == linear.weight.shape
+        assert quantizer.dtype == linear.weight.dtype
+        assert quantizer.device == linear.weight.device
+        assert torch.equal(quantizer.weight, linear.weight.data)
+        assert torch.equal(quantizer.bias, linear.bias.data)
+        assert quantizer.bias_shape == linear.bias.shape
+
+    def test_set_param_without_bias(self):
+        # 测试set_param方法（没有bias的情况）
+        cfg = QuantConfig(w_bit=8, a_bit=8).weight_quant()
+        quantizer = LinearNf4Quantizer(cfg, logger)
+        linear_without_bias = nn.Linear(
+            in_features=64,
+            out_features=128,
+            bias=False
+        )
+        
+        quantizer.set_param(linear_without_bias)
+        
+        # 验证参数是否正确设置
+        assert quantizer.weight_shape == linear_without_bias.weight.shape
+        assert quantizer.dtype == linear_without_bias.weight.dtype
+        assert quantizer.device == linear_without_bias.weight.device
+        assert torch.equal(quantizer.weight, linear_without_bias.weight.data)
+        assert quantizer.bias == None
+        assert quantizer.bias_shape == None
+    
+    def test_normalize_data(self):
+        # 测试normalize_data方法
+        cfg = QuantConfig(w_bit=8, a_bit=8).weight_quant()
+        quantizer = LinearNf4Quantizer(cfg, logger)
+        data = torch.randn(128, 16)
+        block_weight, absmax = quantizer.normalize_data(data)
+        
+        # 验证输出形状
+        assert block_weight.shape == (32, 64)
+        assert absmax.shape == (32, 1)
+        
+        # 验证归一化逻辑
+        for i in range(8):
+            assert np.allclose(torch.max(torch.abs(block_weight[i])).item(), 1.0, atol=1e-5)
+    
+    def test_set_nf4_quantized_vari(self):
+        # 测试set_nf4_quantized_vari方法
+        cfg = QuantConfig(w_bit=8, a_bit=8).weight_quant()
+        quantizer = LinearNf4Quantizer(cfg, logger)
+        quantizer.dtype = torch.float32
+        quantizer.device = torch.device('cpu')
+        
+        quantizer.set_nf4_quantized_vari()
+        
+        # 验证nf4_mapping是否正确设置
+        assert quantizer.nf4_mapping.device == torch.device('cpu')
+        assert quantizer.nf4_mapping.dtype == torch.float32
+        assert quantizer.nf4_mapping.shape == (1, 16)
+    
+    def test_nf4_quantize_small(self):
+        # 测试nf4_quantize方法（小张量情况）
+        cfg = QuantConfig(w_bit=8, a_bit=8).weight_quant()
+        quantizer = LinearNf4Quantizer(cfg, logger)
+        nf4_quantize_mock = MagicMock()
+        nf4_quantize_mock.return_value = torch.ones(128, dtype=torch.uint8)
+        nf4_mapping = torch.tensor([
+            -1.0, -0.6961928009986877, -0.5250730514526367, -0.39491748809814453, -0.28444138169288635,
+            -0.18477343022823334, -0.09105003625154495, 0.0, 0.07958029955625534, 0.16093020141124725,
+            0.24611230194568634, 0.33791524171829224, 0.44070982933044434, 0.5626170039176941,
+            0.7229568362236023, 1.0
+        ])
+        quantizer.nf4_mapping = nf4_mapping
+        weight = torch.randn(16, 16)
+        
+        result = quantizer.nf4_quantize(weight)
+        
+        # 验证结果形状
+        assert result.shape == (128,)
+        assert result.dtype == torch.uint8
+
+    def test_nf4_quantize_large(self):
+        # 测试nf4_quantize方法（大张量情况）
+        cfg = QuantConfig(w_bit=8, a_bit=8).weight_quant()
+        quantizer = LinearNf4Quantizer(cfg, logger)
+        nf4_quantize_mock = MagicMock()
+        nf4_quantize_mock.return_value = torch.ones(128, dtype=torch.uint8)
+        nf4_mapping = torch.tensor([
+            -1.0, -0.6961928009986877, -0.5250730514526367, -0.39491748809814453, -0.28444138169288635,
+            -0.18477343022823334, -0.09105003625154495, 0.0, 0.07958029955625534, 0.16093020141124725,
+            0.24611230194568634, 0.33791524171829224, 0.44070982933044434, 0.5626170039176941,
+            0.7229568362236023, 1.0
+        ])
+        quantizer.nf4_mapping = nf4_mapping
+        weight = torch.randn(10000, 10000)  # 模拟大张量
+        
+        # 模拟max_oom_shape检查
+        with patch.object(quantizer, 'nf4_quantize') as mock_quantize:
+            mock_quantize.return_value = torch.ones(128, dtype=torch.uint8)
+            
+            result = quantizer.nf4_quantize(weight)
+            
+            # 验证结果形状
+            assert result.shape == (128,)
+            assert result.dtype == torch.uint8
