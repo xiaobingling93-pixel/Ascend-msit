@@ -870,6 +870,7 @@ class TestBenchMark(unittest.TestCase):
         with self.assertRaises(subprocess.SubprocessError):
             self.benchmark.check_success()
 
+
 def test_stop_process_killed_successfully():
     simulator = VllmSimulator(settings.simulator)
     simulator.process = MagicMock()
@@ -880,6 +881,7 @@ def test_stop_process_killed_successfully():
     simulator.stop()
     # No exception should be raised
 
+
 def test_stop_process_kill_timeout():
     simulator = VllmSimulator(settings.simulator)
     simulator.process = MagicMock()
@@ -888,6 +890,7 @@ def test_stop_process_kill_timeout():
     simulator.process.wait.side_effect = subprocess.TimeoutExpired(cmd="test", timeout=10)
     simulator.process.send_signal.return_value = None
     simulator.stop()
+
 
 def test_stop_process_kill_failed():
     simulator = VllmSimulator(settings.simulator)
@@ -910,24 +913,24 @@ class TestVllmSimulator:
         return simulator
 
     @patch("builtins.open", new_callable=MagicMock)
-    def test_check_success_with_success_message(self, mock_open, pre_simulator):
+    def test_check_success_with_success_message(self, mock_open_local, pre_simulator):
         # Mock the file read to return a success message
-        mock_open.return_value.__enter__.return_value.read.return_value = "Application startup complete."
+        mock_open_local.return_value.__enter__.return_value.read.return_value = "Application startup complete."
         assert pre_simulator.check_success() is True
 
     @patch("builtins.open", new_callable=MagicMock)
-    def test_check_success_with_process_finished(self, mock_open, pre_simulator):
+    def test_check_success_with_process_finished(self, mock_open_local, pre_simulator):
         # Mock the file read to return no success message and the process to be finished
-        mock_open.return_value.__enter__.return_value.read.return_value = "Some other message"
+        mock_open_local.return_value.__enter__.return_value.read.return_value = "Some other message"
         pre_simulator.process.poll.return_value = 0
         pre_simulator.process.returncode = 1
         with pytest.raises(subprocess.SubprocessError):
             pre_simulator.check_success()
 
     @patch("builtins.open", new_callable=MagicMock)
-    def test_check_success_with_process_not_finished(self, mock_open, pre_simulator):
+    def test_check_success_with_process_not_finished(self, mock_open_local, pre_simulator):
         # Mock the file read to return no success message and the process to not be finished
-        mock_open.return_value.__enter__.return_value.read.return_value = "Some other message"
+        mock_open_local.return_value.__enter__.return_value.read.return_value = "Some other message"
         pre_simulator.process.poll.return_value = None
         assert pre_simulator.check_success() is False
 
@@ -969,7 +972,8 @@ class TestScheduleWithMultiMachine:
             rpc.simulator = MagicMock()
         return schedule
 
-    def test_back_up_with_bak_path(self, schedule_with_multi_machine):
+    @staticmethod
+    def test_back_up_with_bak_path(schedule_with_multi_machine):
         # 测试当bak_path存在时的情况
         schedule_with_multi_machine.back_up()
         # 验证bak_path是否被正确设置
@@ -977,6 +981,7 @@ class TestScheduleWithMultiMachine:
         assert schedule_with_multi_machine.benchmark.bak_path == schedule_with_multi_machine.bak_path.joinpath("1")
         for rpc in schedule_with_multi_machine.rpc_clients:
             assert rpc.simulator.bak_path == schedule_with_multi_machine.bak_path.joinpath("1")
+
 
 class TestScheduleWithMultiMachineMonitoringStatus:
 
@@ -1014,6 +1019,7 @@ class TestScheduleWithMultiMachineMonitoringStatus:
             schedule_with_multi_machine.monitoring_status()
 
         assert mock_sleep.call_count == 0
+
 
 def test_run_simulate(tmpdir):
     # 创建一个ScheduleWithMultiMachine实例
