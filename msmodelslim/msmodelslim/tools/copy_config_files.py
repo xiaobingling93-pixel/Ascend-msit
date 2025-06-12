@@ -35,8 +35,8 @@ def modify_config_json(src_path: str, dst_path: str, quant_config, mindie_format
 
     quantization_config.update({
         'kv_quant_type': "C8" if quant_config.use_kvcache_quant else None,
-        'use_fa_quant': "FAQuant" if quant_config.use_fa_quant else None,
-        'group_size': quant_config.group_size
+        'fa_quant_type': "FAQuant" if quant_config.use_fa_quant else None,
+        'group_size': quant_config.group_size if quant_config.group_size > 0 else 0,
     })
     
     if mindie_format:
