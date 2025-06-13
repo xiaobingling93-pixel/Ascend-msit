@@ -1,7 +1,7 @@
 ## set_node_reserved_ratio
 
 ### 功能说明 
-PrunneTorch类方法，配置模型剪枝过程中算子节点保留的参数比例。
+PruneTorch类方法，配置模型剪枝过程中算子节点保留的参数比例。
 
 ### 函数原型
 ```python

@@ -1,7 +1,7 @@
 ## RARopeCompressConfig
 
 ### 功能说明 
-RoPE编码的模型进行长序列压缩时，配置induction head和echoing head的保留比例，保留的部分不需压缩，仅需压缩未保留部分。
+RoPE编码的模型进行长序列压缩时，配置Induction Head和Echoing Head的保留比例，保留的部分不需压缩，仅需压缩未保留部分。
 
 ### 函数原型
 ```python
