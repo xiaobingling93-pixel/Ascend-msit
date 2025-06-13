@@ -2,6 +2,12 @@
 
 msit llm dump 工具主要通过在推理脚本内添加 dump 接口启动推理的方式采集精度数据。
 
+#### 工具安装
+
+需要安装msit工具，软件安装见 [msit工具安装](../install/README.md)。
+
+安装好msit后需要安装msit中的 llm 组件，执行 msit install llm。
+
 #### 版本要求
 
 若使用transformers 的 AutoModelForCausalLM 类加载预训练模型，请确保 transformers>=4.43.2（或官方给出的依赖版本）。
@@ -65,37 +71,38 @@ register_hook(model, config, hook_type=”dump_data”)
 
 ### 2.1 快速上手
 
-这个示例定义了一个 nn.Module 类型的简单网络，在进行数据采集时使用原型函数 DumpConfig 传入 dump_path 参数、 token_range 参数和 seed 参数。
+这个示例调用了transformers库的Llama-2-7b模型，在进行数据采集时使用原型函数 DumpConfig 传入 dump_path 参数、 token_range 参数和 seed 参数。是需要在模型推理前配置好工具数据采集接口并开启数据dump即可，实际使用场景可根据自己的模型进行调整。
 
 ```python
-# 根据需要import包
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from transformers import AutoTokenizer, LlamaForCausalLM
 
+"""
+下面两行是需要添加的
+"""
 # 导入工具的数据采集接口
 from msit_llm import DumpConfig, register_hook
 
 # 在模型推理开始前实例化DumpConfig
 config = DumpConfig(dump_path='./torch_dump/', token_range=[0,1,2,3], seed=2345)
 
-# 加载网络
+# 从这里开始可以使用自己的模型配置代码
 tokenizer = AutoTokenizer.from_pretrained("/home/data/Llama-2-7b-hf", trust_remote_code=True)
-model = LlamaForCausalLM.from_pretrained("/home/data/Llama-2-7b-hf", trust_remote_code=True).to('npu') # 初始化模型实例model
+model = LlamaForCausalLM.from_pretrained("/home/data/Llama-2-7b-hf", trust_remote_code=True).to('npu')
 
 if __name__ == "__main__":
-    # 开启数据 dump
+    # 在推理前开启数据 dump
     register_hook(model, config)
-    # 开启模型推理
+
+    # 下面可以替换为自己的推理代码
     with torch.no_grad():
         inputs = tokenizer(
                     "What's deep learning?",
                     return_tensors="pt", 
                     truncation=True, 
                     max_length=10).to('npu')
-        
-        # delete token_type_ids
         if 'token_type_ids' in inputs:
             del inputs['token_type_ids']
 
