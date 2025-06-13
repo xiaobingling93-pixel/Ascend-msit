@@ -15,6 +15,9 @@ from add_safetensors import find_file_with_pattern, get_weight_map
 from ascend_utils.common.security import json_safe_load, json_safe_dump
 
 
+READ_ONLY_PERMISSION = 0o400
+READ_WRITE_PERMISSION = 0o600
+
 
 def remove_zero_and_shift(matrix):
     n, m = matrix.shape
@@ -269,6 +272,6 @@ def post_process_mtp_quant(model_path):
             for name in f.keys():
                 new_name = name.replace('mtp_decoder', 'model.layers.61').replace('mtp_layer', 'model.layers.61')
                 tensors[new_name] = f.get_tensor(name)
-        ori_mask = os.umask(0o377)
+        os.chmod(tensor_path, READ_WRITE_PERMISSION, follow_symlinks=False)
         save_file(tensors, tensor_path)
-        os.umask(ori_mask)
+        os.chmod(tensor_path, READ_ONLY_PERMISSION, follow_symlinks=False)
