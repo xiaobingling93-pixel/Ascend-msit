@@ -52,8 +52,9 @@ def parse_args():
     return parser.parse_args()
 
 
-def create_custom_hook(quant_mtp, mindie_format):
+def create_custom_hook(quant_mtp, mindie_format, fa_quant):
     def custom_hook(model_config):
+        # mindie暂不支持ascendV1格式，临时适配，后续在ascendV1移除
         model_config["mla_quantize"] = "w8a8"
         if quant_mtp == 'mix':
             model_config["mtp_quantize"] = "w8a8_dynamic"
@@ -62,6 +63,12 @@ def create_custom_hook(quant_mtp, mindie_format):
             model_config["model_type"] = "deepseekv2"
         else:
             model_config["model_type"] = "deepseek_v3"
+
+        if fa_quant:
+            if 'quantization_config' not in model_config:
+                model_config['quantization_config'] = {}
+            model_config['quantization_config']['fa_quant_type'] = 'FAKQuant'
+
     return custom_hook
 
 
@@ -251,7 +258,7 @@ def main():
     if args.quant_mtp == "mix":
         post_process_mtp_quant(save_path)
     
-    custom_hook_instance = create_custom_hook(args.quant_mtp, args.mindie_format)
+    custom_hook_instance = create_custom_hook(args.quant_mtp, args.mindie_format, args.fa_quant)
     custom_hooks = {
         'config.json': functools.partial(modify_config_json, custom_hook=custom_hook_instance) \
                         if args.mindie_format \
