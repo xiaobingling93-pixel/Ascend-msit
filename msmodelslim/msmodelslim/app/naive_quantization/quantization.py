@@ -125,13 +125,15 @@ class Quantization:
         if tmp is not None:
             anti_cfg = AntiOutlierConfig(dev_type=device_type, **tmp)
 
+        use_fa_quant = bool(config_task.specific.calib_cfg.pop('use_fa_quant', False))
+        fa_amp = config_task.specific.calib_cfg.pop('fa_amp', 0)
+        
         anti_params = config_task.specific.anti_params
         calib_cfg = QuantConfig(dev_type=device_type, **config_task.specific.calib_cfg)
+        if use_fa_quant:
+            calib_cfg = calib_cfg.fa_quant(fa_amp)
         calib_params = config_task.specific.calib_params
         calib_save_params = config_task.specific.calib_save_params
-        use_fa_quant = bool(config_task.specific.calib_cfg.get('use_fa_quant', False))
-        if use_fa_quant:
-            calib_cfg = calib_cfg.fa_quant(fa_amp=config_task.specific.calib_cfg.get('fa_amp', 0))
 
         pbar = tqdm(total=5, position=0, desc="Total Process")
 
