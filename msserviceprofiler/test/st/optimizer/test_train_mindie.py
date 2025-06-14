@@ -44,7 +44,6 @@ def check_request_json_content(json_path):
                 result = True
         return result
     except Exception as e:
-        print(f"Error checking JSON content: {e}")
         return False
 
 
