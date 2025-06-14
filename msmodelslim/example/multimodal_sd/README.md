@@ -43,7 +43,7 @@
 
 ### SD3-Medium W8A8静态量化
 
-当前仅支持对sd3模型的transformer部分进行W8A8静态量化。
+当前仅支持对SD3模型的transformer部分进行W8A8静态量化。
 
 #### 量化启动脚本
 校准数据Dump和量化的示例代码如下：

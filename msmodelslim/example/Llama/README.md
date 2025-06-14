@@ -142,7 +142,7 @@
   ```shell
   python3 quant_llama.py --model_path {浮点权重路径} --save_directory {W8A8量化权重路径} --calib_file ../common/boolq.jsonl --w_bit 8 --a_bit 8 --device_type npu --disable_level L5 --anti_method m4 --act_method 3 --use_fa_quant True --trust_remote_code True
   ```
-##### Llama3.1-70B W8A8-pdmix量化(prefill阶段 w8a8动态量化, decode阶段 w8a8量化) 搭配 KV cache int8量化
+##### Llama3.1-70B W8A8-pdmix量化(prefill阶段 W8A8动态量化, decode阶段 W8A8量化) 搭配 KV cache int8量化
   ```shell
   python3 quant_llama.py --model_path {浮点权重路径} \
   --save_directory {W8A8-pdmix量化权重路径} \

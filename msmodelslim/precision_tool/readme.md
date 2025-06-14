@@ -108,4 +108,4 @@ https://huggingface.co/datasets/truthfulqa/truthful_qa
 ```
 2. 将数据集放到与 precision_tool.py 同一个路径下，如图所示：  
 ![精度测试数据集目录示意图](../images/精度测试数据集目录示意图.png)  
-3. 如果测试 human-eval，则需要安装 https://github.com/openai/human-eval 
+3. 如果测试 humaneval，则需要安装 https://github.com/openai/human-eval 

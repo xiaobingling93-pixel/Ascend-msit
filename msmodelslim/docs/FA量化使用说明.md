@@ -217,7 +217,7 @@ from transformers.models.qwen2.configuration_qwen2 import Qwen2Config
     ...
     // 其他未修改的代码部分
     ...
-
+}
 ```
 **注意**：在量化脚本里面通过transformers库对模型进行加载时，调用`from_pretrained`函数时一定要指定`trust_remote_code=True`让修改后的modeling文件能够正确的被加载。(请确保加载的modeling文件的安全性)
 
@@ -225,7 +225,7 @@ from transformers.models.qwen2.configuration_qwen2 import Qwen2Config
 
 `config = QuantConfig().fa_quant()`
 
-在QuantConfig初始化中完成核心参数`(w_bit，a_bit，disable_names，disable_last_linear，dev_type，dev_id)`的配置后，如果需要使用FA量化的新特性，通过调用QuantConfig的`fa_quant` 函数完成配置。
+在QuantConfig初始化中完成核心参数`(w_bit, a_bit, disable_names, disable_last_linear, dev_type, dev_id)`的配置后，如果需要使用FA量化的新特性，通过调用QuantConfig的`fa_quant` 函数完成配置。
 
 具体的参数说明如下：
 

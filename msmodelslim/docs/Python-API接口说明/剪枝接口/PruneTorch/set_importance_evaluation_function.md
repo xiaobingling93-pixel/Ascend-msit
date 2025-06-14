@@ -1,7 +1,7 @@
 ## set_importance_evaluation_function
 
 ### 功能说明 
-PrunneTorch类方法，配置剪枝过程中用户自定义的重要性评估函数。用户未自定义时，默认是L1正则作为重要性。
+PruneTorch类方法，配置剪枝过程中用户自定义的重要性评估函数。用户未自定义时，默认是L1正则作为重要性。
 
 ### 函数原型
 ```python

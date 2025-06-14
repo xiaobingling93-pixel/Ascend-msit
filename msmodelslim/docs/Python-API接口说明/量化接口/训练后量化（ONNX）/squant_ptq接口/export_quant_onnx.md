@@ -13,7 +13,7 @@ export_quant_onnx(save_path, fuse_add=True, use_external=False)
 | ------ | ------ | ------ | ------ |
 | save_path | 输入 | 量化模型的存放路径。| 必选。<br>数据类型：String。|
 | fuse_add | 输入 | 导出的量化模型是否融合量化bias。| 可选。<br>数据类型：bool。<br>默认为True。|
-| use_external | 输入 | 是否需要使用额外数据存储模型。若模型保存体积过大（>2GB)，则需开启该参数使用额外数据存储模型。| 可选。<br>数据类型：bool。<br>默认为False。|
+| use_external | 输入 | 是否需要使用额外数据存储模型。若模型保存体积过大(>2GB)，则需开启该参数使用额外数据存储模型。| 可选。<br>数据类型：bool。<br>默认为False。|
 
 
 ### 调用示例

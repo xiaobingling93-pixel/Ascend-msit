@@ -17,6 +17,6 @@ Compressor(model, cfg)
 ### 调用示例
 ```python
 from msmodelslim.pytorch.sparse.sparse_tools import SparseConfig, Compressor
-sparse_config = SparseConfig(method=’magnitude’, sparse_ratio=0.5)
+sparse_config = SparseConfig(method='magnitude', sparse_ratio=0.5)
 prune_compressor = Compressor(model, sparse_config)   # model 是一个pytorch定义的nn.Module模型
 ```

@@ -39,7 +39,7 @@ mix_cfg = {
     "*q_proj": "float",  # fnmatch通配符，匹配成功
     "model.layers.[012].mlp.down_proj": "w8a8_dynamic",  # fnmatch通配符，匹配成功012，但因为0、1已经被匹配，所以这里只有2。
     "model.layers.[!456789].mlp.down_proj": "w8a16",  # fnmatch通配符，匹配成功0123。同理因为0、1、2已经被匹配，所以这里只有3。
-    "Model.layers.4.mlp.down_proj": "w8a8_dynamic",  # fnmatch会区分大小写，所以此处未匹配成功。按照默认QuantConfig处理为w8a8
+    "model.layers.4.mlp.down_proj": "w8a8_dynamic",  # fnmatch会区分大小写，所以此处未匹配成功。按照默认QuantConfig处理为w8a8
     "model.layers.5.mlp.down_proj": "w8a16"  # 会被下面的disable_names先匹配，不会实际生效
 }
 ```
