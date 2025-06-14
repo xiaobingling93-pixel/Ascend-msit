@@ -221,7 +221,7 @@ python3 quant.py
 
 - safetensors格式
 当[save_type](/msmodelslim/docs/Python-API接口说明/大模型压缩接口/大模型量化接口/PyTorch/save().md)设置为['safe_tensor']时，量化权重会保存为safetensors文件和json描述文件。
-**说明**：当用户设置的[part_file_size](/msmodelslim/docs/Python-API接口说明/大模型压缩接口/大模型量化接口/PyTorch/save().md)值大于0时，会使能PyTorch框架的分片保存功能。msModelSlim工具会统计遍历到的权重文件的大小，若权重文件的大小大于part_file_size值，则将统计到的权重作为一个part，然后重新进行统计。统计完成后，将各个权重分片保存，并生成权重引索文件（xxx.safetensors.index.json）。权重和引索的名称可参照开源模型的权重，例如xxx-0000x-of-0000x.safetensors，当part数大于99999时，权重和引索的名称将会被命名为xxx-x-of-x.safetensors。
+**说明**：当用户设置的[part_file_size](/msmodelslim/docs/Python-API接口说明/大模型压缩接口/大模型量化接口/PyTorch/save().md)值大于0时，会使能PyTorch框架的分片保存功能。msModelSlim工具会统计遍历到的权重文件的大小，若权重文件的大小大于part_file_size值，则将统计到的权重作为一个part，然后重新进行统计。统计完成后，将各个权重分片保存，并生成权重索引文件（xxx.safetensors.index.json）。权重和索引的名称可参照开源模型的权重，例如xxx-0000x-of-0000x.safetensors，当part数大于99999时，权重和索引的名称将会被命名为xxx-x-of-x.safetensors。
 
     - safetensors中储存格式为字典，包含量化权重和量化不修改的浮点权重。其中量化权重的key值为各层Linear的名字加上对应权重的名字，module.weight和module.bias对应anti_fp_norm.npy，weight对应quant_weight.npy，quant_bias对应quant_bias.npy等以此类推。例如ChatGLM2-6B模型的transformer.encoder.layers.0.self_attention.query_key_value.deq_scale对应npy格式权重中deq_scale.npy中的transformer.encoder.layers.0.self_attention.query_key_value。
 ```
@@ -296,7 +296,7 @@ python3 quant.py
 
 2. 适当增加回退层。某些模型中的部分Linear层对精度的影响比较显著。例如ChatGlm2-6B模型W8A8量化时的layers.0.mlp.dense_4h_to_h层，依据调优经验以及相关论文数据，模型靠前和靠后的decoder layer、各个decoder layer的mlp down层对精度的影响一般较大，可以优先考虑回退这些层。如果回退效果不理想的话，可以尝试较为激进的回退策略，例如回退掉所1/4或者1/2的Linear层，直到完全回退成浮点模型，模型的精度也完全回退成浮点模型的精度。退回越多，精度越高，性能越差。
 
-3. 使用混合量化功能。在一些场景下，如果对一些层的精度要求没有那么高，同时希望提高性能，那么对些模型模型中的部分敏感Linear层、如Qwen模型里的down层，可以不回退到浮点，而是用混合量化的方式将其量化为更高精度的数据类型，例如w8a16或w8a8_dynamic。这样做可以在尽量保持整体INT8性能的同时，降低对话出现乱码或胡言乱语的风险。
+3. 使用混合量化功能。在一些场景下，如果对一些层的精度要求没有那么高，同时希望提高性能，那么对一些模型中的部分敏感Linear层、如Qwen模型里的down层，可以不回退到浮点，而是用混合量化的方式将其量化为更高精度的数据类型，例如w8a16或w8a8_dynamic。这样做可以在尽量保持整体INT8性能的同时，降低对话出现乱码或胡言乱语的风险。
 
 #### 数据集精度部分掉点，对话正常
 

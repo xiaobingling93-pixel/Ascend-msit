@@ -9,14 +9,14 @@
   ```py
   from msmodelslim.pytorch.sparse import sparse_model_width
 
-model = sparse_model_width(model, optimizer, steps_per_epoch=100, epoches_each_stage=[10, 20, -1])
+model = sparse_model_width(model, optimizer, steps_per_epoch=100, epochs_each_stage=[10, 20, -1])
   ```
 ## 接口说明
   - **sparse_model_width** 提供对外接口
   - 参数 **model** 初始化后的 PyTorch 模型
   - 参数 **optimizer** 初始化后的 PyTorch 优化器 optimizer
   - 参数 **steps_per_epoch** 数据集单个 epoch 需要的迭代数，int 值，一般为数据集按照 batch 划分之后的长度 `len(train_loader)`
-  - 参数 **epoches_each_stage** 稀疏化每个阶段的 epoch 数量，列表值，如 `[10, 20, -1]` 表示分 3 个阶段
+  - 参数 **epochs_each_stage** 稀疏化每个阶段的 epoch 数量，列表值，如 `[10, 20, -1]` 表示分 3 个阶段
     - 第 1 个阶段，从原模型裁剪为 `1/4` 的初始模型开始训练 10 个 epoch
     - 第 2 个阶段将初始模型扩增 2 倍，训练 20 个 epoch
     - 第 3 个阶段 epoch 数量 `-1` 表示训练直到总的 epoch 结束，初始模型扩增为 4 倍，恢复为原模型大小训练
@@ -50,7 +50,7 @@ model = nn.Sequential(
 optimizer = apex.optimizers.NpuFusedSGD(model.parameters(), lr=0.1)
 
 steps_per_epoch, epochs_each_stage = 10, [2, 3, 1]
-oring_model_params = count_parameters(model)  # 10826
+original_model_params = count_parameters(model)  # 10826
 model, optimizer = apex.amp.initialize(model, optimizer, opt_level="O2", combine_grad=False)
 
 # 添加宽度稀疏化训练方式
@@ -76,14 +76,14 @@ for _ in range(steps_per_epoch * sum(epochs_each_stage)):
   ```py
   from msmodelslim.pytorch.sparse import sparse_model_depth
 
-model = sparse_model_depth(model, optimizer, steps_per_epoch=100, epoches_each_stage=[10, 20, -1])
+model = sparse_model_depth(model, optimizer, steps_per_epoch=100, epochs_each_stage=[10, 20, -1])
   ```
 ## 接口说明
   - **sparse_model_depth** 提供对外接口
   - 参数 **model** 初始化后的 PyTorch 模型
   - 参数 **optimizer** 初始化后的 PyTorch 优化器 optimizer
   - 参数 **steps_per_epoch** 数据集单个 epoch 需要的迭代数，int 值，一般为数据集按照 batch 划分之后的长度 `len(train_loader)`
-  - 参数 **epoches_each_stage** 稀疏化每个阶段的 epoch 数量，列表值，如 `[10, 20, -1]` 表示分 3 个阶段
+  - 参数 **epochs_each_stage** 稀疏化每个阶段的 epoch 数量，列表值，如 `[10, 20, -1]` 表示分 3 个阶段
     - 第 1 个阶段，从原模型裁剪为 `1/4` 的初始模型开始训练 10 个 epoch
     - 第 2 个阶段将初始模型扩增 2 倍，训练 20 个 epoch
     - 第 3 个阶段 epoch 数量 `-1` 表示训练直到总的 epoch 结束，初始模型扩增为 4 倍，恢复为原模型大小训练

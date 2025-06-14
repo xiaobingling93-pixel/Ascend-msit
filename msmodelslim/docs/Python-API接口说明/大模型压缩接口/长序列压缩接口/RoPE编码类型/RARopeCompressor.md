@@ -13,7 +13,7 @@ RARopeCompressor(model, tokenizer, cfg)
 | ------ | ------ | ------ | ------ |
 | model | 输入 | 当前支持的模型。| 必选。<br>模型类型：PyTorch模型。 |
 | tokenizer | 输入 | 用于加载预训练模型的tokenizer。| 必选。<br>类型：AutoTokenizer。 |
-| cfg | 输入 | RACompressConfig的配置。| 必选。<br>配置类：RACompressConfig。 |
+| cfg | 输入 | RARopeCompressConfig的配置。| 必选。<br>配置类：RARopeCompressConfig。 |
 
 
 ### 调用示例

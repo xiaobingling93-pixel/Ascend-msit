@@ -1,7 +1,7 @@
 ## CalibratorAdapter
 
 ### 功能说明
-针对Mindspeed-LLM模型的量化参数配置类，继承自Calibrator，对外接口与Calibrator一致, 不支持cpu执行量化。
+针对MindSpeed-LLM模型的量化参数配置类，继承自Calibrator，对外接口与Calibrator一致, 不支持cpu执行量化。
 
 ### 继承关系
 CalibratorAdapter继承自Calibrator类，保持了与Calibrator相同的外部接口，包括：

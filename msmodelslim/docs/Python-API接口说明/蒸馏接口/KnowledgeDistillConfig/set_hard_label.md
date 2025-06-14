@@ -12,7 +12,7 @@ set_hard_label(weight, index)
 | 参数名| 输入/返回值 | 含义 | 使用限制 |
 | ------ | ------ | ------ | ------ |
 | weight | 输入 | hard loss 的权重。| 必选。<br>数据类型：float。<br>建议取值0-1之间。 |
-| index | 输入 | 初student模型output的索引值(index)。当student模型有多个output时，由index决定哪个output来计算loss。<br>仅MindSpore模型需要配置，通常为0。| 必选。<br>数据类型：int。 |
+| index | 输入 | student模型output的索引值(index)。当student模型有多个output时，由index决定哪个output来计算loss。<br>仅MindSpore模型需要配置，通常为0。| 必选。<br>数据类型：int。 |
 
 
 ### 调用示例
