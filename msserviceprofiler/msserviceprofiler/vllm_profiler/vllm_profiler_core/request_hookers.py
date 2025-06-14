@@ -87,11 +87,17 @@ class LLMEngineHook084(VLLMHookerBase):
                 request_id_list = []
                 outputs, metadata_list, scheduler_outputs, _, _, _, skip = ctx.output_queue[0]
                 for ii, (sch_seq_group, meta) in enumerate(zip(scheduler_outputs.scheduled_seq_groups, metadata_list)):
+                    seq_group, seq_request_id = sch_seq_group.seq_group, meta.request_id
+                    request_id_list.append(seq_request_id)
+                prof = Profiler(Level.INFO).domain("Request").res(request_id_list)
+                ret = ori_func(this, ctx, request_id, *args, **kwargs)
+                prof.event("DecodeEnd")
+
+                for ii, (sch_seq_group, meta) in enumerate(zip(scheduler_outputs.scheduled_seq_groups, metadata_list)):
                     if ii in skip:
                         continue
 
                     seq_group, seq_request_id = sch_seq_group.seq_group, meta.request_id
-                    request_id_list.append(seq_request_id)
                     is_finished, max_tokens = False, seq_group.sampling_params.max_tokens
                     if seq_group.is_finished():
                         is_finished = meta.request_id not in global_request_is_finished  # Already recored if in
