@@ -77,34 +77,21 @@ class LLMEngineHook084(VLLMHookerBase):
     def init(self):
         from vllm.engine.llm_engine import LLMEngine
 
-        global_request_is_finished = set()
-
         def process_model_outputs_maker(ori_func):
             def process_model_outputs(this, ctx, request_id=None, *args, **kwargs):
                 if len(ctx.output_queue) == 0:
                     return ori_func(this, ctx, request_id, *args, **kwargs)
+                outputs, metadata_list, scheduler_outputs, _, _, _, skip = ctx.output_queue[0]
+                ret = ori_func(this, ctx, request_id, *args, **kwargs)
 
                 request_id_list = []
-                outputs, metadata_list, scheduler_outputs, _, _, _, skip = ctx.output_queue[0]
-                for ii, (sch_seq_group, meta) in enumerate(zip(scheduler_outputs.scheduled_seq_groups, metadata_list)):
-                    seq_group, seq_request_id = sch_seq_group.seq_group, meta.request_id
-                    request_id_list.append(seq_request_id)
-                prof = Profiler(Level.INFO).domain("Request").res(request_id_list)
-                ret = ori_func(this, ctx, request_id, *args, **kwargs)
-                prof.event("DecodeEnd")
-
                 for ii, (sch_seq_group, meta) in enumerate(zip(scheduler_outputs.scheduled_seq_groups, metadata_list)):
                     if ii in skip:
                         continue
 
                     seq_group, seq_request_id = sch_seq_group.seq_group, meta.request_id
-                    is_finished, max_tokens = False, seq_group.sampling_params.max_tokens
-                    if seq_group.is_finished():
-                        is_finished = meta.request_id not in global_request_is_finished  # Already recored if in
-                    elif len(seq_group.seqs) > 0 and seq_group.seqs[0].get_output_len() == max_tokens:
-                        is_finished = True  # sometimes max_tokens reached but is_finished() is always False
-                    
-                    if is_finished and len(seq_group.seqs) > 0:
+                    request_id_list.append(seq_request_id)
+                    if seq_group.is_finished() and len(seq_group.seqs) > 0:
                         global_request_is_finished.add(meta.request_id)
                         cur_seq = seq_group.seqs[0]
                         profiler_recv = Profiler(Level.INFO).domain("Request").res(seq_request_id)
