@@ -96,7 +96,7 @@ class LLMEngineHook084(VLLMHookerBase):
                     if seq_group.is_finished():
                         is_finished = meta.request_id not in global_request_is_finished  # Already recored if in
                     elif len(seq_group.seqs) > 0 and seq_group.seqs[0].get_output_len() == max_tokens:
-                        is_finished = True
+                        is_finished = True  # sometimes max_tokens reached but is_finished() is always False
                     
                     if is_finished and len(seq_group.seqs) > 0:
                         global_request_is_finished.add(meta.request_id)
