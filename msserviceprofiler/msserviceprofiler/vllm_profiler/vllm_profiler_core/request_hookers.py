@@ -92,7 +92,6 @@ class LLMEngineHook084(VLLMHookerBase):
                     seq_group, seq_request_id = sch_seq_group.seq_group, meta.request_id
                     request_id_list.append(seq_request_id)
                     if seq_group.is_finished() and len(seq_group.seqs) > 0:
-                        global_request_is_finished.add(meta.request_id)
                         cur_seq = seq_group.seqs[0]
                         profiler_recv = Profiler(Level.INFO).domain("Request").res(seq_request_id)
                         profiler_reply = Profiler(Level.INFO).domain("Request").res(seq_request_id)
