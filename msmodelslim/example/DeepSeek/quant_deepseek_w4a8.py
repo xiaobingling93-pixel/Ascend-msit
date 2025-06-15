@@ -109,6 +109,23 @@ def remove_module_entries(save_path, json_filename="quant_model_description_w8a8
     json_safe_dump(filtered_data, json_file_path, indent=4)
 
 
+def update_quant_type(save_path, json_filename):
+    """
+    更新量化类型为 W8A8_DYNAMIC
+    
+    参数:
+    save_path (str): 输出JSON文件路径
+    json_filename (str): 输入JSON文件名称
+    
+    返回值:
+    None
+    """
+    json_file_path = os.path.join(save_path, json_filename)
+    description_data = json_safe_load(json_file_path)
+    description_data["model_quant_type"] = "W8A8_DYNAMIC"
+    json_safe_dump(description_data, json_file_path, indent=4)
+
+
 def main():
     args = parse_args()
     set_logger_level("info")
@@ -241,6 +258,8 @@ def main():
                     safetensors_name="quant_model_weight_w8a8_dynamic.safetensors",
                     save_type=[save_type],
                     part_file_size=4)
+    # w4a8 混合量化中 MindIE 要求 description 中的 model_quant_type 为 W8A8_DYNAMIC
+    update_quant_type(save_path, quant_model_description_json_name)
     # 适配mindie删除description里的module字段
     if args.mindie_format:
         remove_module_entries(save_path)
