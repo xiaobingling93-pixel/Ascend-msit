@@ -88,6 +88,7 @@ class TestNetworkChecker(unittest.TestCase):
         result = self.checker.collect_env()
         self.assertEqual(result, {"192.168.1.1": 1.23, "192.168.1.2": "error"})
 
+    @patch.dict("sys.modules", {"psutil": MagicMock()})
     @patch('msprechecker.prechecker.hardware_capacity.network_checker.parse_ranktable_file')
     @patch('msprechecker.prechecker.hardware_capacity.network_checker.run_shell_command')
     def test_collect_env_k8s_success(self, mock_run_shell, mock_parse):
