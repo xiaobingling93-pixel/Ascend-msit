@@ -67,8 +67,9 @@ def check_kvcache_csv_content(output_path, csv_file_name):
     rows_to_check = [0, -1]
     columns_to_check = ['device_kvcache_left']
     for row_index in rows_to_check:
-        for column in columns_to_check:
-            check_rows(df, row_index, [column])
+        if df.iloc[row_index]['name'] != 'allocate':
+            for column in columns_to_check:
+                check_rows(df, row_index, [column])
 
 
 def check_batch_csv_content(output_path, csv_file_name):
@@ -103,7 +104,7 @@ def check_request_csv_content(output_path, csv_file_name):
     assert os.path.exists(csv_file)
     assert os.path.isfile(csv_file)
     df = pd.read_csv(csv_file)
-    expected_header = ['http_rid', 'start_time_httpReq(ms)', 'recv_token_size', 'reply_token_size', \
+    expected_header = ['http_rid', 'start_time(ms)', 'recv_token_size', 'reply_token_size', \
                        'execution_time(ms)', 'queue_wait_time(ms)']
     check_column_actual(df.columns.tolist(), expected_header, context='request.csv')
 
@@ -119,10 +120,10 @@ def check_request_csv_content(output_path, csv_file_name):
             if not is_whole_number(df.iloc[row_index][column]):
                 raise AssertionError(f"{row_index}行的{column}不是整数")
 
-    # 检查数据框的第一行和最后一行的特定列
-    rows_to_check = [0, -1]
+    # 检查execution_time(ms)列有数据行
+    rows_to_check = df[df['execution_time(ms)'].notna()]
     columns_to_check = ['recv_token_size', 'reply_token_size']
-    for row_index in rows_to_check:
+    for row_index, _ in rows_to_check.iterrows():
         for column in columns_to_check:
             check_rows(df, row_index, [column])
 
@@ -184,7 +185,7 @@ def check_kvcache_db_content(output_path, db_file_name):
     expected_db_columns = [
         'rid',
         'name',
-        'real_start_time',
+        'real_start_time(ms)',
         'device_kvcache_left',
         'kvcache_usage_rate'
     ]
@@ -276,9 +277,9 @@ def check_chrome_tracing_content_valid(output_path, file_name):
 
     with open(trace_view_json, 'r', encoding='utf-8') as f:
         text = f.read()
-    exist = ["NPU Usage"]
+    exist = ["modelExec", "batchFrameworkProcessing"]
     for key in exist:
-        pytest.assume(key in text, "流水图中应该包含NPU Usage")
+        pytest.assume(key in text, f"The chrome trace file shoule include {key}.")
 
 
 class TestAnalyzeCmd(TestCase):

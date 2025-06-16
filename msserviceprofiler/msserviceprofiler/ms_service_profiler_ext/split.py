@@ -77,9 +77,6 @@ def main(args):
     # 初始化日志等级
     set_log_level(args.log_level)
 
-    # msprof预处理
-    preprocess_prof_folders(args.input_path)
-
     # 初始化Exporter
     exporters = add_exporters(args)
 
