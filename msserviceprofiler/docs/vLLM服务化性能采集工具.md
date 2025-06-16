@@ -118,9 +118,11 @@ curl -X POST http://${docker_ip}:8080/generate \
 #### 3. 查看采集结果
 请求发送结束后，可在`${logs_prof}`路径下，查看落盘的性能原始数据。
 
-调用`msprof --export=on --output=${logs_prof}/PROF_xxx_xxx_xxx`命令行可初步解析该目录下所有的落盘数据，生成msproftx.db文件
+使能cann包环境变量后，
+调用`msServiceProfiler analyze --input-path=${input_path} --output-path=${output_path}`命令行可初步解析该目录下所有的落盘数据，
+生成kvcache.csv、batch.csv、request.csv、chrome_tracing.json和profiler.db等文件。
 
-**注意**：使用msprof解析需要替换CANN 8.1.RC1及以上版本，建议在vLLM容器外解析，不要破坏容器环境。
+**注意**：使用解析命令需要替换CANN 8.1.RC1及以上版本，建议在vLLM容器外解析，不要破坏容器环境。
 
 ## 结果说明
 ### 1. 执行推理处理时间数据
