@@ -30,7 +30,7 @@ msServiceProfiler 是一款基于昇腾平台，支持MindIE Service框架和vLL
 
 ### ️[服务化专家建议工具](docs/服务化专家建议工具.md)
 
-基于msServiceProfiler工具采集的性能数据，提供服务化参数自动寻优能力，可以对服务化的参数以及测试工具的参数进行寻优。
+基于benchmark 输出结果以及 service 的 config.json 配置，提供分析分析提高 TFTT / Throughput 等的优化点能力。
 
 
 ## 安装指南
