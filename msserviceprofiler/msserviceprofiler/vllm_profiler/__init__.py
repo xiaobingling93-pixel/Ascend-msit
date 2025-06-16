@@ -27,5 +27,5 @@ elif vllm_version and Version(vllm_version) > Version("0.6.2"):
 else:
     import logging
 
-    loggging.error(f"Not supported vllm version {vllm_version}")
+    logging.error(f"Not supported vllm version {vllm_version}")
 
