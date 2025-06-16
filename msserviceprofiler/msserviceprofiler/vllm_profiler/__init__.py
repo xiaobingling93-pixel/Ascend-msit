@@ -16,7 +16,7 @@ from packaging.version import Version
 
 try:
     vllm_version = version("vllm")
-except PackageNotFoundError as ee:
+except Exception as ee:
     vllm_version = None
 
 
