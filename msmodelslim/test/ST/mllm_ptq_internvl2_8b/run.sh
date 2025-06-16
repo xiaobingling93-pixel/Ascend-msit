@@ -17,7 +17,7 @@ MSMODELSIM_SOURCE_DIR=${MSMODELSIM_SOURCE_DIR:-"$PROJECT_PATH/resource/msit/msmo
 export PYTHONPATH=${MSMODELSIM_SOURCE_DIR}:$PYTHONPATH
 python run.py
 
-if [ $? -eq 0]
+if [ $? -eq 0 ]
 then
     echo mllm_ptq_internvl2_8b: Success
 else

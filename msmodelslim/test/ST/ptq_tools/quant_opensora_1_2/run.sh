@@ -12,15 +12,15 @@ rm -rf $PROJECT_PATH/output/ptq-tools/*
 torchrun --nproc_per_node=1 run.py \
     $PROJECT_PATH/resource/multi_modal/opensora_project/sample-dsp.py \
     --num-frames 68 \
-    --images-size 480 640 \
+    --image-size 480 640 \
     --layernorm-kernel False \
     --flash-attn True \
     --sequence_parallel_size 1 \
     --prompt "A beautiful waterfall" \
     --save-dir $PROJECT_PATH/output/ptq-tools/samples/ \
-    --samples-name a_beautiful_waterfall_dsp4
+    --sample-name a_beautiful_waterfall_dsp4
 
-if [ $? -eq 0]
+if [ $? -eq 0 ]
 then
     echo quant_opensora_1_2: Success
 else

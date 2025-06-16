@@ -159,7 +159,7 @@ def main():
 
     calibrator = Calibrator(model, q_config, calib_data=calib_dataset[:1])
     calibrator.run()
-    calibrator.export_quant_safetensors(f"{os.environ['PROJECT_PATH']}/output/ptq-tools/quant_opensora_1_2")
+    calibrator.export_quant_safetensor(f"{os.environ['PROJECT_PATH']}/output/ptq-tools/quant_opensora_1_2")
 
 if __name__ == "__main__":
     main()

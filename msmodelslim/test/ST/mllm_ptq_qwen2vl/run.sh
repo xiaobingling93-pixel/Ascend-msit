@@ -14,7 +14,7 @@ pip install transformers==4.46.0
 rm -rf $PROJECT_PATH/output/mllm_ptq_qwen2vl
 python run.py
 
-if [ $? -eq 0]
+if [ $? -eq 0 ]
 then
     echo mllm_ptq_qwen2vl: Success
 else

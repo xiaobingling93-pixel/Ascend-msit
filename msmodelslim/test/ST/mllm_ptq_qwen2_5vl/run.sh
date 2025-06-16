@@ -14,7 +14,7 @@ pip install transformers==4.49.0
 rm -rf $PROJECT_PATH/output/mllm_ptq_qwen2_5vl_m2
 python run.py --anti_method m2 --save_directory $PROJECT_PATH/output/mllm_ptq_qwen2_5vl_m2
 
-if [ $? -eq 0]
+if [ $? -eq 0 ]
 then
     echo mllm_ptq_qwen2_5vl_m2: Success
 else
@@ -27,7 +27,7 @@ rm -rf $PROJECT_PATH/output/mllm_ptq_qwen2_5vl_m2
 rm -rf $PROJECT_PATH/output/mllm_ptq_qwen2_5vl_m4
 python run.py --anti_method m4 --save_directory $PROJECT_PATH/output/mllm_ptq_qwen2_5vl_m4
 
-if [ $? -eq 0]
+if [ $? -eq 0 ]
 then
     echo mllm_ptq_qwen2_5vl_m4: Success
 else
