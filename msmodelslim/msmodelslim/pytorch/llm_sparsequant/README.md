@@ -360,7 +360,7 @@ def get_calib_dataset(tokenizer, calib_list):
     calib_dataset = []
     for calib_data in calib_list:
         inputs = tokenizer(calib_data, return_tensors='np', padding=True) 
-        calib_dataset.append([inputs.data['input_ids_name']])
+        calib_dataset.append([inputs.data['input_ids']])
     return calib_dataset
 dataset_calib = get_calib_dataset(tokenizer, calib_list)  #校准数据获取
 

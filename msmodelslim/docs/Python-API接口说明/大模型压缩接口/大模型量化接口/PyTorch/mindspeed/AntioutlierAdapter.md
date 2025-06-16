@@ -23,7 +23,7 @@ from msmodelslim.pytorch.llm_ptq.anti_outlier import AntiOutlierConfig
 from msmodelslim.pytorch.mindspeed_adapter import ModelAdapter, AntiOutlierAdapter, CalibratorAdapter
 model = ModelAdapter(model)
 anti_config = AntiOutlierConfig(anti_method="m5", dev_type='npu')
-anti_outlier = AntiOutlier(model, calib_data=dataset_calib, cfg=anti_config)
+anti_outlier = AntiOutlierAdapter(model, calib_data=dataset_calib, cfg=anti_config)
 anti_outlier.process() 
 calibrator = CalibratorAdapter(model, quant_config, calib_data=dataset_calib, disable_level='L0') 
 calibrator.run(int_infer=False) 

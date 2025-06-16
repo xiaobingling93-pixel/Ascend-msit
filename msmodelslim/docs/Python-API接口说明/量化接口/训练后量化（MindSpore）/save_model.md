@@ -22,6 +22,6 @@ save_model(file_name, quantized_model, *input_data, file_format='AIR')
 from msmodelslim.mindspore.quant.ptq_quant.save_model import save_model
 file_name = "./save_model"
 input_data = ms.Tensor(np.random.uniform(size=[1, 3, 224, 224]), dtype=mstype.float32)
-calibrate_model = quantize_model(config_file, model, input_data）
-save_model(file_name, calibrate_model, input_data, file_format="MINDIR"))
+calibrate_model = quantize_model(config_file, model, input_data)
+save_model(file_name, calibrate_model, input_data, file_format="MINDIR")
 ```

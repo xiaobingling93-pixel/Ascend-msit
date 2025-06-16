@@ -222,7 +222,7 @@ python3 quant_deepseek_w8a8.py --model_path {浮点权重路径} --save_path {W8
   object has no attribute 'get';
 - A：说明输入的的权重中缺少metadata字段，需安装更新transformers版本（>=4.48.2）
 - Q：报错 Unknown quantization type， got fp8 - supported types
-  are：['awq', 'bitsandbytes_4bit', 'bitsandbytes_8bit', 'gptq', 'aqlm', 'quanto', 'eetq', 'hqq', 'fbgemm_fp8']
+  are:['awq', 'bitsandbytes_4bit', 'bitsandbytes_8bit', 'gptq', 'aqlm', 'quanto', 'eetq', 'hqq', 'fbgemm_fp8']
 - A: 由于当前Transformers不支持FP8量化格式加载，需要将权重文件夹中config.json中的以下字段删除：
 - ![img_1.png](img_1.png)
 - Q: 量化后保存的 description 文件中多出了 61 层的信息，且量化类型为 float

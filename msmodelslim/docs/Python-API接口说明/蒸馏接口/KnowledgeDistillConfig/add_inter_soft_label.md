@@ -23,7 +23,7 @@ add_inter_soft_label(config)
 ```python
 from msmodelslim.common.knowledge_distill.knowledge_distill import KnowledgeDistillConfig
 distill_config = KnowledgeDistillConfig()
-distill_config.set_hard_label (0.5, 0) \
+distill_config.set_hard_label(0.5, 0) \
   .add_inter_soft_label({
                     "t_module": "uniter.encoder.encoder.blocks.11.output",
                     "s_module": "uniter.encoder.encoder.blocks.5.output",
@@ -31,7 +31,8 @@ distill_config.set_hard_label (0.5, 0) \
                     "s_output_idx": 0,
                     "loss_func": [{"func_name": "KDCrossEntropy",
                                    "func_weight": 1,
-                                   "temperature": 1,  
+                                   "temperature": 1,},
+                    ],
                     "shape": [2048]
   })
 ```

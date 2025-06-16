@@ -2,11 +2,11 @@
 # 使用说明
 msModelslim权重格式与开源工具AutoAWQ、AutoGPTQ的格式存在差异，因此本文的目的是提供一份指南，用于将msModelslim量化后的权重转换为与如上的开源工具格式一致的权重，以实现qwen2-7b W4A16转换后的权重能直接以hugingface形式加载权重。
 本指南仅支持如下配置的权重转换：  
-W4A16 + pergroup + AWQ  
-W4A16 + pergroup + GPTQ  
-W4A16 + perchannel + GPTQ  
-W8A16 + pergroup + GPTQ  
-W8A16 + perchannel + GPTQ
+W4A16 + per_group + AWQ  
+W4A16 + per_group + GPTQ  
+W4A16 + per_channel + GPTQ  
+W8A16 + per_group + GPTQ  
+W8A16 + per_channel + GPTQ
 
 使用平台：  
 msModelSlim量化：NPU  
@@ -31,11 +31,11 @@ anti_outlier.process()
 ```
 
 b.QuantConfig配置
-perchannel和pergroup的参数配置是有差异的。  
-1)pergroup需要配置这三个参数：is_lowbit=True, open_outlier=False, group_size=128。  
-2)perchannel场景下，如下的三个参数不需要配置，注释掉：is_lowbit=True, open_outlier=False, group_size=128。  
-3)如果是AutoGPTQ需要更改w_method为='GPTQ', 另外开启GPTQ跑量化时间相对较长。  
-如下为AutoAWQ的pergroup配置：
+per_channel和per_group的参数配置是有差异的。  
+(1)per_group需要配置这三个参数：is_lowbit=True, open_outlier=False, group_size=128。  
+(2)per_channel场景下，如下的三个参数不需要配置，注释掉：is_lowbit=True, open_outlier=False, group_size=128。  
+(3)如果是AutoGPTQ需要更改w_method为='GPTQ', 另外开启GPTQ跑量化时间相对较长。  
+如下为AutoAWQ的per_group配置：
 
 ```python
 quant_config = QuantConfig(
@@ -47,7 +47,7 @@ quant_config = QuantConfig(
     dev_id=0,                       
     w_sym=True,                    # 对称量化
     w_method='MinMax',             # 权重量化策略
-    is_lowbit=True,                # 如下为pergroup场景下的设置，如果是per-channel量化注释掉如下三个参数
+    is_lowbit=True,                # 如下为per_group场景下的设置，如果是per-channel量化注释掉如下三个参数
     open_outlier=False,
     group_size=128                 
 )
@@ -188,7 +188,7 @@ for idx, item in enumerate(res):
 
 ## 3.2量化
 msModelSlim转换为AutoGPTQ权重格式进行推理和AutoAWQ同理，首先去阅读AutoGPTQ的readme.md(链接如上第3.1节)，参考量化的示例，修改相关配置参数，然后进行量化，最后生成量化权重文件。  
-修改的配置包括路径和BaseQuantizeConfig接口，在BaseQuantizeConfig接口中，bits为量化的权重位数，对应msModelSlim中的w_bit；pergroup场景下，group_size设置的值与msModelSlim一致，在perchannel场景下，group_size设置为-1。
+修改的配置包括路径和BaseQuantizeConfig接口，在BaseQuantizeConfig接口中，bits为量化的权重位数，对应msModelSlim中的w_bit；per_group场景下，group_size设置的值与msModelSlim一致，在per_channel场景下，group_size设置为-1。
 
 ## 3.3推理
 将经过msModelslim量化以及经过转换脚本转换后的res.safetensors文件传入GPU生成的量化权重目录，替换掉之前的量化权重文件，文件名保持一致，其他文件不需要修改。
