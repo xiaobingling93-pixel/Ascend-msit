@@ -40,9 +40,9 @@ def seed_everything(seed=0) -> None:
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--model_path', type=str, help="The path of float model and tokenizer"),
-    parser.add_argument('--save_path', type=str, help="The path to save quant model"),
+    parser.add_argument('--save_directory', type=str, help="The path to save quant model"),
     parser.add_argument('--layer_count', type=int, default=0, help="Layer count when loading model")
-    parser.add_argument('--calib_dataset', type=str, default="../common/wiki.jsonl",
+    parser.add_argument('--calib_file', type=str, default="../common/wiki.jsonl",
                         help="The calib data for calibration")
     parser.add_argument('--batch_size', type=int, default=4, help="Batch size for anti and calibration")
     parser.add_argument('--mindie_format', action="store_true", help="Compatible with quantization formats \
@@ -64,6 +64,16 @@ def get_calib_dataset_batch(model_tokenizer, calib_list, batch_size, device="npu
     return calib_dataset
 
 
+def pre_check_files(path):
+    """
+    预先检查模型路径的json和py文件权限配置是否符合要求
+    """
+    for file in os.listdir(path):
+        if not (file.endswith('.json') or file.endswith('.py')):
+            continue
+        _ = get_valid_read_path(os.path.join(path, file), extensions=['.json', '.py'])
+
+
 def main():
     args = parse_args()
     set_logger_level("info")
@@ -72,7 +82,8 @@ def main():
     model_path = args.model_path
     batch_size = args.batch_size
 
-    save_path = get_write_directory(args.save_path, write_mode=0o750)
+    save_directory = get_write_directory(args.save_directory, write_mode=0o750)
+    pre_check_files(model_path)
     check_number(batch_size, int, 1, 16, "batch_size")
 
     safe_generator = SafeGenerator()
@@ -104,7 +115,7 @@ def main():
                                                      torch_dtype="auto",
                                                      attn_implementation='eager')
 
-    calib_dataset_path = get_valid_read_path(args.calib_dataset, "jsonl", is_dir=False)
+    calib_dataset_path = get_valid_read_path(args.calib_file, "jsonl", is_dir=False)
     calib_prompt = []
     with open(calib_dataset_path, "r", encoding="utf-8") as file:
         lines = file.readlines()
@@ -140,7 +151,7 @@ def main():
         quant_model_description_json_name = "quant_model_description_w4a4_flatquant_dynamic.json"
     else:
         quant_model_description_json_name = "quant_model_description.json"
-    calibrator.save(save_path,
+    calibrator.save(save_directory,
                     json_name=quant_model_description_json_name,
                     safetensors_name="quant_model_weight_w4a4_flatquant_dynamic.safetensors",
                     save_type=["safe_tensor"],
@@ -149,7 +160,7 @@ def main():
     custom_hooks = {
         'config.json': functools.partial(modify_config_json, custom_hook=custom_hook)
     }
-    copy_config_files(input_path=model_path, output_path=save_path, quant_config=quant_config,
+    copy_config_files(input_path=model_path, output_path=save_directory, quant_config=quant_config,
                       mindie_format=args.mindie_format, custom_hooks=custom_hooks)
 
 
