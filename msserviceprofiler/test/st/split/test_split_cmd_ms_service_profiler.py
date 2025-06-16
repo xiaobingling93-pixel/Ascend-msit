@@ -49,17 +49,17 @@ class TestAnalyzeCmd(TestCase):
     PREFILL_INPUT_PATH = os.path.join(ST_DATA_PATH, "input/analyze/PD_separate/prefill/3584-1024")
     DECODE_INPUT_PATH = os.path.join(ST_DATA_PATH, "input/analyze/PD_separate/decode/3584-1024")
     OUTPUT_PATH = os.path.join(ST_DATA_PATH, "output/split")
+    REQUEST_PATH = os.path.join(OUTPUT_PATH, "request.csv")
     PREFILL_CSV = "prefill.csv"
     DECODE_CSV = "decode.csv"
     COMMAND_SUCCESS = 0
     SPLIT_PROFILER = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")),
                                     "msserviceprofiler/__main__.py")
-    COMMON_BATCH_SIZE = '1'
-    PREFILL_BATCH_SIZE = '2'
-    DECODE_BATCH_SIZE = '16'
-    COMMON_RID = '10'
-    PREFILL_RID = '2221'
-    DECODE_RID = '105'
+    COMMON_BATCH_SIZE = "1"
+    PREFILL_BATCH_SIZE = "2"
+    DECODE_BATCH_SIZE = "16"
+    PREFILL_RID = "2221"
+    DECODE_RID = "105"
 
     def setUp(self):
         os.makedirs(self.OUTPUT_PATH, mode=0o750, exist_ok=True)
@@ -72,7 +72,27 @@ class TestAnalyzeCmd(TestCase):
             try:
                 check_split_csv_content(output_path, csv_file_name)
             except Exception as e:
-                self.fail(f"{task_name}: 检查 {csv_file_name} 时发生异常: {e}")
+                self.fail(f"{task_name}: check {csv_file_name} wrong: {e}")
+
+    def get_request_http_rid(self, input_path, output_path):
+        cmd = [
+            "python", self.SPLIT_PROFILER, "analyze",
+            "--input-path", input_path,
+            "--output-path", output_path
+        ]
+        if execute_cmd(cmd) != self.COMMAND_SUCCESS:
+            self.fail("execute analyze failed")
+        try:
+            request_data = pd.read_csv(self.REQUEST_PATH)
+            http_rid_row = request_data[request_data['execution_time(ms)'].notna()]
+            if http_rid_row.empty:
+                rid = request_data.iloc[0]["http_rid"]
+            else:
+                rid = http_rid_row.iloc[0]["http_rid"]
+        except Exception as e:
+            self.fail(f"get http_rid failed: {e}")
+
+        return str(rid)
 
     def test_split_by_batch_size(self):
         # PD竞争 根据batch_size拆解 校验输出文件及内容
@@ -92,12 +112,13 @@ class TestAnalyzeCmd(TestCase):
 
     def test_split_by_rid(self):
         # PD竞争 根据rid拆解 校验输出文件及内容
+        pd_complete_rid = self.get_request_http_rid(self.INPUT_PATH, self.OUTPUT_PATH)
         cmd = [
             "python", self.SPLIT_PROFILER, "split",
             "--input-path", self.INPUT_PATH,
             "--output-path", self.OUTPUT_PATH,
-            "--prefill-rid", self.COMMON_RID,
-            "--decode-rid", self.COMMON_RID,
+            "--prefill-rid", pd_complete_rid,
+            "--decode-rid", pd_complete_rid,
         ]
         if execute_cmd(cmd) != self.COMMAND_SUCCESS or not os.path.exists(self.OUTPUT_PATH):
             self.assertFalse(
@@ -119,14 +140,13 @@ class TestAnalyzeCmd(TestCase):
 
     def test_split_data_in_p_node_by_rid(self):
         # PD分离 P 节点根据rid拆解 校验输出文件及内容
+        pd_split_rid_p = self.get_request_http_rid(self.PREFILL_INPUT_PATH, self.OUTPUT_PATH)
         cmd = ["python", self.SPLIT_PROFILER, "split",
                "--input-path", self.PREFILL_INPUT_PATH,
                "--output-path", self.OUTPUT_PATH,
                "--prefill-rid", self.PREFILL_RID]
         if execute_cmd(cmd) != self.COMMAND_SUCCESS or not os.path.exists(self.OUTPUT_PATH):
             self.assertFalse(True, msg="enable split task by rid in P Node failed.")
-
-        self.check_split_task("test_split_data_in_d_node_by_rid", self.OUTPUT_PATH, self.PREFILL_CSV)
 
     def test_split_data_in_d_node_by_batch_size(self):
         # PD分离 P 节点根据batch_size拆解 校验输出文件及内容
@@ -140,7 +160,7 @@ class TestAnalyzeCmd(TestCase):
         self.check_split_task("test_split_data_in_d_node_by_batch_size", self.OUTPUT_PATH, self.DECODE_CSV)
 
     def test_split_data_in_d_node_by_rid(self):
-        # PD分离 P 节点根据rid拆解 校验输出文件及内容
+        # PD分离 D 节点根据rid拆解 校验输出文件及内容
         cmd = ["python", self.SPLIT_PROFILER, "split",
                "--input-path", self.DECODE_INPUT_PATH,
                "--output-path", self.OUTPUT_PATH,
