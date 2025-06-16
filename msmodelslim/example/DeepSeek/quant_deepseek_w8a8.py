@@ -61,8 +61,6 @@ def create_custom_hook(quant_mtp, mindie_format, fa_quant):
         model_config["quantize"] = "w8a8_dynamic"
         if mindie_format:
             model_config["model_type"] = "deepseekv2"
-        else:
-            model_config["model_type"] = "deepseek_v3"
 
         if fa_quant:
             if 'quantization_config' not in model_config:
