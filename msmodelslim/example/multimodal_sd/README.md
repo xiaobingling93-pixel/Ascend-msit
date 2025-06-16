@@ -46,6 +46,23 @@
 当前仅支持对sd3模型的transformer部分进行W8A8静态量化。
 
 #### 量化启动脚本
+我们也提供了完整的量化启动脚本示例：[SD3/sd3_inference.py](SD3/sd3_inference.py)，其启动命令可参考(请提前确保calib_prompts.txt权限不大于'0o640')：
+```shell
+python /the/absolut/path/of/example/multimodal_sd/SD3/sd3_inference.py \
+    --sd3_model_path "/path/to/stable-diffusion-3-medium-diffusers" \
+    --prompt_path "example/multimodal_sd/SD3/calib_prompts.txt" \
+    --width 1024 \
+    --height 1024 \
+    --infer_steps 28 \
+    --seed 42 \
+    --device "npu" \
+    --save_path "./results/quant/images" \
+    --do_quant \
+    --quant_weight_save_folder "./results/quant/safetensors" \
+    --quant_dump_calib_folder "./results/quant/cache" \
+    --quant_type "w8a8"
+```
+
 校准数据Dump和量化的示例代码如下：
 
 ```python
@@ -126,25 +143,45 @@ quant_model(model, session_cfg)
 ```
 
 
-示例启动脚本如下(请提前确保calib_prompts.txt权限不大于'0o640')：
+
+
+### Open-Sora-Plan v1.2 W8A8静态量化
+Open-Sora-Plan v1.2的推理量化依赖于推理工程仓：[MindIE/open_sora_planv1_2](https://modelers.cn/models/MindIE/open_sora_planv1_2)，根据该工程仓完成配置后，使用以下示例代码进行量化。
+
+#### 量化启动脚本
+
+我们也提供了完整的量化启动脚本示例：[OpenSoraPlanV1_2/inference.py](OpenSoraPlanV1_2/inference.py)，其启动命令可参考(请提前确保calib_prompts.txt权限不大于'0o640')：
 ```shell
-python /the/absolut/path/of/example/multimodal_sd/SD3/sd3_inference.py \
-    --sd3_model_path "/path/to/stable-diffusion-3-medium-diffusers" \
-    --prompt_path "example/multimodal_sd/SD3/calib_prompts.txt" \
-    --width 1024 \
-    --height 1024 \
-    --infer_steps 28 \
-    --seed 42 \
-    --device "npu" \
-    --save_path "./results/quant/images" \
+# 根据使用卡数进行配置多卡环境变量和nproc_per_node，以下使用8卡为例
+export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+export PYTORCH_NPU_ALLOC_CONF="expandable_segments:False"
+export TASK_QUEUE_ENABLE=2
+export HCCL_OP_EXPANSION_MODE="AIV"
+torchrun --nnodes=1 --nproc_per_node 8  --master_port 29503 \
+    /the/absolut/path/of/example/multimodal_sd/OpenSoraPlanV1_2/inference.py \
+    --model_path /path/to/checkpoint-xxx/model_ema \
+    --num_frames 93 \
+    --height 720 \
+    --width 1280 \
+    --cache_dir "../cache_dir" \
+    --text_encoder_name google/mt5-xxl \
+    --text_prompt "example/multimodal_sd/OpenSoraPlanV1_2/calib_prompts.txt" \
+    --ae CausalVAEModel_D4_4x8x8 \
+    --ae_path "/path/to/causalvideovae" \
+    --fps 24 \
+    --guidance_scale 7.5 \
+    --num_sampling_steps 100 \
+    --tile_overlap_factor 0.125 \
+    --max_sequence_length 512 \
+    --dtype bf16 \
+    --use_cfg_parallel \
+    --algorithm "dit_cache" \
+    --save_img_path "./results/quant/images" \
     --do_quant \
     --quant_weight_save_folder "./results/quant/safetensors" \
     --quant_dump_calib_folder "./results/quant/cache" \
     --quant_type "w8a8"
 ```
-
-### Open-Sora-Plan v1.2 W8A8静态量化
-Open-Sora-Plan v1.2的推理量化依赖于推理工程仓：[MindIE/open_sora_planv1_2](https://modelers.cn/models/MindIE/open_sora_planv1_2)，根据该工程仓完成配置后，使用以下示例代码进行量化。
 
 校准数据Dump和量化的示例代码如下：
 
@@ -219,40 +256,7 @@ quant_model(model, session_cfg)
 
 ```
 
-#### 量化启动脚本
 
-我们也提供了完整的量化启动脚本示例：[OpenSoraPlanV1_2/inference.py](OpenSoraPlanV1_2/inference.py)，其启动命令可参考(请提前确保calib_prompts.txt权限不大于'0o640')：
-```shell
-# 根据使用卡数进行配置多卡环境变量和nproc_per_node，以下使用8卡为例
-export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
-export PYTORCH_NPU_ALLOC_CONF="expandable_segments:False"
-export TASK_QUEUE_ENABLE=2
-export HCCL_OP_EXPANSION_MODE="AIV"
-torchrun --nnodes=1 --nproc_per_node 8  --master_port 29503 \
-    /the/absolut/path/of/example/multimodal_sd/OpenSoraPlanV1_2/inference.py \
-    --model_path /path/to/checkpoint-xxx/model_ema \
-    --num_frames 93 \
-    --height 720 \
-    --width 1280 \
-    --cache_dir "../cache_dir" \
-    --text_encoder_name google/mt5-xxl \
-    --text_prompt "example/multimodal_sd/OpenSoraPlanV1_2/calib_prompts.txt" \
-    --ae CausalVAEModel_D4_4x8x8 \
-    --ae_path "/path/to/causalvideovae" \
-    --fps 24 \
-    --guidance_scale 7.5 \
-    --num_sampling_steps 100 \
-    --tile_overlap_factor 0.125 \
-    --max_sequence_length 512 \
-    --dtype bf16 \
-    --use_cfg_parallel \
-    --algorithm "dit_cache" \
-    --save_img_path "./results/quant/images" \
-    --do_quant \
-    --quant_weight_save_folder "./results/quant/safetensors" \
-    --quant_dump_calib_folder "./results/quant/cache" \
-    --quant_type "w8a8"
-```
 
 ### FLUX 时间步量化
 
@@ -390,6 +394,32 @@ python /the/absolut/path/of/example/multimodal_sd/Flux/inference_flux.py \
 
 ### Flux fa3 量化
 
+#### 量化启动脚本
+我们也提供了完整的量化启动脚本示例：[Flux/inference_flux.py](Flux/inference_flux.py)，其启动命令可参考(请提前确保calib_prompts.txt权限不大于'0o640')：
+
+```shell
+# do quant
+python /the/absolut/path/of/example/multimodal_sd/Flux/inference_flux.py \
+    --path ${model_path} \
+    --save_path "./results/quant/img" \
+    --device_id 0 \
+    --device "npu" \
+    --prompt_path "example/multimodal_sd/Flux/calib_prompts.txt" \
+    --width 1024 \
+    --height 1024 \
+    --infer_steps 50 \
+    --seed 42 \
+    --use_cache \
+    --device_type "A2-64g" \
+    --batch_size 1 \
+    --max_num_prompt 0 \
+    --do_quant \
+    --quant_weight_save_folder "./results/quant/safetensors" \
+    --quant_dump_calib_folder "./results/quant/cache" \
+    --quant_type "w8a8_dynamic_fa3"
+```
+
+
 校准数据Dump和量化的示例代码如下：
 
 ```python
@@ -465,114 +495,12 @@ session_cfg.model_validate(session_cfg)
 quant_model(model, session_cfg)
 ```
 
-#### FAQuantizer 插入位置
 
-在FLUX.1-dev/FLUX1dev/layers/attention_processor.py文件中插入fa3量化，请备份attention_processor.py文件，后续进行浮点推理或其他方式量化时恢复attention_processor.py文件。
-```python
-# 1 实例化FAQuantizer类
-@maybe_allow_in_graph
-class Attention(nn.Module):
-    def __init__(self,...) 
-        ...
-         
-        if processor is None:
-            processor = (
-                AttnProcessor2_0() if hasattr(F, "scaled_dot_product_attention") and self.scale_qk else AttnProcessor()
-            )
-        self.set_processor(processor)
 
-        # --------------------fa3-----------------------------
-        from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.fa_quant import FAQuantizer 
-        from msmodelslim import logger 
-
-        from types import SimpleNamespace
-
-        if is_tp == False:
-            sp_size = 1
-        else:
-            import torch.distributed as dist
-
-            sp_size = dist.get_world_size()
-
-        # 创建配置字典
-        config_dict = {
-            'num_attention_heads': self.heads // sp_size, 
-            'hidden_size': self.inner_dim,
-            'num_key_value_heads': self.heads // sp_size,
-            }
-
-        # 转换为 SimpleNamespace 对象
-        config = SimpleNamespace(**config_dict)
-        self.fa_quantizer = FAQuantizer(config, logger=logger)
-        # --------------------fa3-----------------------------
-
-# 2 通过调用FAQuantizer的quant函数，对Q、K、V矩阵进行量化
-class FluxSingleAttnProcessor2_0:
-    r"""
-    Processor for implementing scaled dot-product attention (enabled by default if you're using PyTorch 2.0).
-    """
-
-    def __init__(self):
-        if not hasattr(F, "scaled_dot_product_attention"):
-            raise ImportError("AttnProcessor2_0 requires PyTorch 2.0, to use it, please upgrade PyTorch to 2.0.")
-
-    def __call__(self,...)
-        ...
-        # Apply RoPE if needed
-        if image_rotary_emb is not None:
-            query = apply_rotary_emb_mindspeed(query, image_rotary_emb)
-            key = apply_rotary_emb_mindspeed(key, image_rotary_emb)
-
-        # --------------------fa3-----------------------------
-        query = attn.fa_quantizer.quant(query, qkv="q")
-        key = attn.fa_quantizer.quant(key, qkv="k")
-        value = attn.fa_quantizer.quant(value, qkv="v")
-        # --------------------fa3-----------------------------
-
-        # the output of sdp = (batch, num_heads, seq_len, head_dim)
-        hidden_states = apply_fa(query, key, value, attention_mask)
-        hidden_states = hidden_states.to(query.dtype)
-        B, S, H = hidden_states.shape
-
-        ....
-
-# 3 通过调用FAQuantizer的quant函数，对Q、K、V矩阵进行量化
-class FluxAttnProcessor2_0:
-    """Attention processor used typically in processing the SD3-like self-attention projections."""
-
-    def __init__(self):
-        if not hasattr(F, "scaled_dot_product_attention"):
-            raise ImportError("FluxAttnProcessor2_0 requires PyTorch 2.0, to use it, please upgrade PyTorch to 2.0.")
-
-    def __call__(
-        self,
-        ...)
-
-        ...
-
-        # attention
-        query = torch.cat([encoder_hidden_states_query_proj, query], dim=1)
-        key = torch.cat([encoder_hidden_states_key_proj, key], dim=1)
-        value = torch.cat([encoder_hidden_states_value_proj, value], dim=1)
-
-        if image_rotary_emb is not None:
-            query = apply_rotary_emb_mindspeed(query, image_rotary_emb)
-            key = apply_rotary_emb_mindspeed(key, image_rotary_emb)
-
-        # --------------------fa3-----------------------------
-        query = attn.fa_quantizer.quant(query, qkv="q")
-        key = attn.fa_quantizer.quant(key, qkv="k")
-        value = attn.fa_quantizer.quant(value, qkv="v")
-        # --------------------fa3-----------------------------        
-    
-        hidden_states = apply_fa(query, key, value, attention_mask)
-        hidden_states = hidden_states.to(query.dtype)
-        ....
-```
-
+### Flux 异常值抑制量化
 #### 量化启动脚本
 
-示例的启动命令可参考(请提前确保calib_prompts.txt权限不大于'0o640')：
+我们也提供了完整的量化启动脚本示例：[Flux/inference_flux.py](Flux/inference_flux.py)，其启动命令可参考(请提前确保calib_prompts.txt权限不大于'0o640')：
 
 ```shell
 # do quant
@@ -593,10 +521,9 @@ python /the/absolut/path/of/example/multimodal_sd/Flux/inference_flux.py \
     --do_quant \
     --quant_weight_save_folder "./results/quant/safetensors" \
     --quant_dump_calib_folder "./results/quant/cache" \
-    --quant_type "w8a8_dynamic_fa3"
+    --quant_type "w8a8_dynamic" \
+    --anti_method "m4"
 ```
-
-### Flux 异常值抑制量化
 
 校准数据Dump和量化的示例代码如下：
 
@@ -678,32 +605,7 @@ session_cfg.model_validate(session_cfg)
 quant_model(model, session_cfg)
 ```
 
-#### 量化启动脚本
 
-示例的启动命令可参考(请提前确保calib_prompts.txt权限不大于'0o640')：
-
-```shell
-# do quant
-python /the/absolut/path/of/example/multimodal_sd/Flux/inference_flux.py \
-    --path ${model_path} \
-    --save_path "./results/quant/img" \
-    --device_id 0 \
-    --device "npu" \
-    --prompt_path "example/multimodal_sd/Flux/calib_prompts.txt" \
-    --width 1024 \
-    --height 1024 \
-    --infer_steps 50 \
-    --seed 42 \
-    --use_cache \
-    --device_type "A2-64g" \
-    --batch_size 1 \
-    --max_num_prompt 0 \
-    --do_quant \
-    --quant_weight_save_folder "./results/quant/safetensors" \
-    --quant_dump_calib_folder "./results/quant/cache" \
-    --quant_type "w8a8_dynamic" \
-    --anti_method "m4"
-```
 
 ### HunyuanVideo 时间步量化
 
@@ -859,6 +761,41 @@ torchrun --nproc_per_node=8 /the/absolut/path/of/example/multimodal_sd/HunYuanVi
 
 ### HunyuanVideo fa3 量化
 
+#### 量化启动脚本
+我们也提供了完整的量化启动脚本示例：[HunYuanVideo/sample_video.py](HunYuanVideo/sample_video.py)，其启动命令可参考(请提前确保calib_prompts.txt权限不大于'0o640')：
+
+```shell
+# 根据使用卡数进行配置多卡环境变量和nproc_per_node，以下使用8卡为例
+export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+export PYTORCH_NPU_ALLOC_CONF="expandable_segments:False"
+export TASK_QUEUE_ENABLE=2
+export CPU_AFFINITY_CONF=1
+export TOKENIZERS_PARALLELISM=false
+export ALGO=0
+torchrun --nproc_per_node=8 /the/absolut/path/of/example/multimodal_sd/HunYuanVideo/sample_video.py \
+    --model-base HunyuanVideo \
+    --dit-weight HunyuanVideo/hunyuan-video-t2v-720p/transformers/mp_rank_00_model_states.pt \
+    --vae-path HunyuanVideo/hunyuan-video-t2v-720p/vae \
+    --text-encoder-path HunyuanVideo/text_encoder \
+    --text-encoder-2-path HunyuanVideo/clip-vit-large-patch14 \
+    --model-resolution "720p" \
+    --video-size 720 1280 \
+    --video-length 129 \
+    --infer-steps 50 \
+    --prompt "example/multimodal_sd/HunYuanVideo/calib_prompts.txt" \
+    --seed 42 \
+    --flow-reverse \
+    --ulysses-degree 8 \
+    --ring-degree 1 \
+    --vae-parallel \
+    --num-videos 1 \
+    --save-path ./results \
+    --do_quant \
+    --quant_weight_save_folder "./results/quant/safetensors" \
+    --quant_dump_calib_folder "./results/quant/cache" \
+    --quant_type "w8a8_dynamic_fa3"
+```
+
 校准数据Dump和量化的示例代码如下：
 
 ```python
@@ -937,135 +874,12 @@ session_cfg.model_validate(session_cfg)
 quant_model(model, session_cfg)
 ```
 
-#### FAQuantizer 插入位置
 
-在hunyuan_video/hyvideo/modules/models.py文件中插入fa3量化，请备份models.py文件，后续进行浮点推理或其他方式量化时恢复models.py文件。
-```python
-# 在导入处添加
-from hyvideo.utils.parallel_mgr import get_sequence_parallel_world_size
 
-# 1
-class MMDoubleStreamBlock(nn.Module):
-    def __init__(self,...) 
-        ...
-         
-        self.txt_mlp = MLP(
-            hidden_size,
-            mlp_hidden_dim,
-            act_layer=get_activation_layer(mlp_act_type),
-            bias=True,
-            **factory_kwargs,
-        )
-        self.hybrid_seq_parallel_attn = None
-
-        # ATTENTION_CACHE PARAMETER
-        self.cache = None
-
-        # --------------------fa3-----------------------------
-        from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.fa_quant import FAQuantizer 
-        from msmodelslim import logger 
-        from types import SimpleNamespace
-
-        sp_size = get_sequence_parallel_world_size()
-
-        # 创建配置字典
-        config_dict = {
-            'num_attention_heads': self.heads_num // sp_size, 
-            'hidden_size': hidden_size // sp_size,
-            'num_key_value_heads': self.heads_num // sp_size,
-            }
-
-        # 转换为 SimpleNamespace 对象
-        config = SimpleNamespace(**config_dict)
-        self.fa_quantizer = FAQuantizer(config, logger=logger)
-        # --------------------fa3-----------------------------
-
-    ...    
-    def double_forward(
-        self,...)
-        
-        ...
-
-        # Run actual attention.
-        q = torch.cat((img_q, txt_q), dim=1)
-        k = torch.cat((img_k, txt_k), dim=1)
-        v = torch.cat((img_v, txt_v), dim=1)
-        assert (
-            cu_seqlens_q.shape[0] == 2 * img.shape[0] + 1
-        ), f"cu_seqlens_q.shape:{cu_seqlens_q.shape}, img.shape[0]:{img.shape[0]}"
-        
-        # --------------------fa3-----------------------------
-        q = self.fa_quantizer.quant(q, qkv="q")
-        k = self.fa_quantizer.quant(k, qkv="k")
-        v = self.fa_quantizer.quant(v, qkv="v")
-        # --------------------fa3-----------------------------
-
-        # attention computation start
-        if not self.hybrid_seq_parallel_attn:
-
-# 2
-class MMSingleStreamBlock(nn.Module):
-    def __init__(self,...) 
-        ...
-         
-        self.modulation = ModulateDiT(
-            hidden_size,
-            factor=3,
-            act_layer=get_activation_layer("silu"),
-            **factory_kwargs,
-        )
-        self.hybrid_seq_parallel_attn = None
-
-        # ATTENTION_CACHE PARAMETER
-        self.cache = None
-
-        # --------------------fa3-----------------------------
-        from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.fa_quant import FAQuantizer 
-        from msmodelslim import logger 
-        from types import SimpleNamespace
-
-        sp_size = get_sequence_parallel_world_size()
-
-        # 创建配置字典
-        config_dict = {
-            'num_attention_heads': self.heads_num // sp_size, 
-            'hidden_size': self.hidden_size // sp_size,
-            'num_key_value_heads': self.heads_num // sp_size,
-            }
-
-        # 转换为 SimpleNamespace 对象
-        config = SimpleNamespace(**config_dict)
-        self.fa_quantizer = FAQuantizer(config, logger=logger)
-        # --------------------fa3-----------------------------
-    
-    def enable_deterministic(self):
-        self.deterministic = True
-
-    ...    
-    
-    def single_forward(
-        self,...)
-        
-        ...
-
-        # Compute attention.
-        assert (
-            cu_seqlens_q.shape[0] == 2 * x.shape[0] + 1
-        ), f"cu_seqlens_q.shape:{cu_seqlens_q.shape}, x.shape[0]:{x.shape[0]}"
-        
-        # --------------------fa3-----------------------------
-        q = self.fa_quantizer.quant(q, qkv="q")
-        k = self.fa_quantizer.quant(k, qkv="k")
-        v = self.fa_quantizer.quant(v, qkv="v")
-        # --------------------fa3-----------------------------
-
-        # attention computation start
-        if not self.hybrid_seq_parallel_attn:
-```
-
+### HunyuanVideo 异常值抑制量化
 #### 量化启动脚本
 
-示例的启动命令可参考(请提前确保calib_prompts.txt权限不大于'0o640')：
+我们也提供了完整的量化启动脚本示例：[HunYuanVideo/sample_video.py](HunYuanVideo/sample_video.py)，其启动命令可参考(请提前确保calib_prompts.txt权限不大于'0o640')：
 
 ```shell
 # 根据使用卡数进行配置多卡环境变量和nproc_per_node，以下使用8卡为例
@@ -1096,10 +910,9 @@ torchrun --nproc_per_node=8 /the/absolut/path/of/example/multimodal_sd/HunYuanVi
     --do_quant \
     --quant_weight_save_folder "./results/quant/safetensors" \
     --quant_dump_calib_folder "./results/quant/cache" \
-    --quant_type "w8a8_dynamic_fa3"
+    --quant_type "w8a8_dynamic" \
+    --anti_method "m4"
 ```
-
-### HunyuanVideo 异常值抑制量化
 
 校准数据Dump和量化的示例代码如下：
 
@@ -1180,39 +993,4 @@ session_cfg.model_validate(session_cfg)
 quant_model(model, session_cfg)
 ```
 
-#### 量化启动脚本
 
-示例的启动命令可参考(请提前确保calib_prompts.txt权限不大于'0o640')：
-
-```shell
-# 根据使用卡数进行配置多卡环境变量和nproc_per_node，以下使用8卡为例
-export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
-export PYTORCH_NPU_ALLOC_CONF="expandable_segments:False"
-export TASK_QUEUE_ENABLE=2
-export CPU_AFFINITY_CONF=1
-export TOKENIZERS_PARALLELISM=false
-export ALGO=0
-torchrun --nproc_per_node=8 /the/absolut/path/of/example/multimodal_sd/HunYuanVideo/sample_video.py \
-    --model-base HunyuanVideo \
-    --dit-weight HunyuanVideo/hunyuan-video-t2v-720p/transformers/mp_rank_00_model_states.pt \
-    --vae-path HunyuanVideo/hunyuan-video-t2v-720p/vae \
-    --text-encoder-path HunyuanVideo/text_encoder \
-    --text-encoder-2-path HunyuanVideo/clip-vit-large-patch14 \
-    --model-resolution "720p" \
-    --video-size 720 1280 \
-    --video-length 129 \
-    --infer-steps 50 \
-    --prompt "example/multimodal_sd/HunYuanVideo/calib_prompts.txt" \
-    --seed 42 \
-    --flow-reverse \
-    --ulysses-degree 8 \
-    --ring-degree 1 \
-    --vae-parallel \
-    --num-videos 1 \
-    --save-path ./results \
-    --do_quant \
-    --quant_weight_save_folder "./results/quant/safetensors" \
-    --quant_dump_calib_folder "./results/quant/cache" \
-    --quant_type "w8a8_dynamic" \
-    --anti_method "m4"
-```
