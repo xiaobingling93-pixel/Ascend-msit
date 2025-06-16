@@ -40,13 +40,10 @@ class TestGetCatDim(unittest.TestCase):
 
 
 class TestGetMultiTensorPaths(unittest.TestCase):
-    @staticmethod
-    def abspath_side_effect(x):
-        return x 
 
     @patch('os.path.exists')
     @patch('os.listdir')
-    @patch('os.path.abspath', side_effect=abspath_side_effect)
+    @patch('os.path.abspath', side_effect=lambda x: x)
     def test_file_exists(self, mock_abspath, mock_listdir, mock_exists):
         mock_listdir.return_value = ['0_npu_pid', '1_npu_pid']
         mock_exists.return_value = True
@@ -63,7 +60,7 @@ class TestGetMultiTensorPaths(unittest.TestCase):
 
     @patch('os.path.exists')
     @patch('os.listdir')
-    @patch('os.path.abspath', side_effect=abspath_side_effect)
+    @patch('os.path.abspath', side_effect=lambda x: x)
     def test_file_not_exists(self, mock_abspath, mock_listdir, mock_exists):
         # Test when file does not exist
         mock_listdir.return_value = ['0_npu_pid', '1_npu_pid']
