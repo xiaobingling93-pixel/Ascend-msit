@@ -81,12 +81,14 @@ class LLMEngineHook084(VLLMHookerBase):
             def process_model_outputs(this, ctx, request_id=None, *args, **kwargs):
                 if len(ctx.output_queue) == 0:
                     return ori_func(this, ctx, request_id, *args, **kwargs)
+                outputs, metadata_list, scheduler_outputs, _, _, _, skip = ctx.output_queue[0]
+                ret = ori_func(this, ctx, request_id, *args, **kwargs)
 
                 request_id_list = []
-                outputs, metadata_list, scheduler_outputs, _, _, _, skip = ctx.output_queue[0]
                 for ii, (sch_seq_group, meta) in enumerate(zip(scheduler_outputs.scheduled_seq_groups, metadata_list)):
                     if ii in skip:
                         continue
+
                     seq_group, seq_request_id = sch_seq_group.seq_group, meta.request_id
                     request_id_list.append(seq_request_id)
                     if seq_group.is_finished() and len(seq_group.seqs) > 0:
