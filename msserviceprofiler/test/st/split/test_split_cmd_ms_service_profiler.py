@@ -140,7 +140,6 @@ class TestAnalyzeCmd(TestCase):
 
     def test_split_data_in_p_node_by_rid(self):
         # PD分离 P 节点根据rid拆解 校验输出文件及内容
-        pd_split_rid_p = self.get_request_http_rid(self.PREFILL_INPUT_PATH, self.OUTPUT_PATH)
         cmd = ["python", self.SPLIT_PROFILER, "split",
                "--input-path", self.PREFILL_INPUT_PATH,
                "--output-path", self.OUTPUT_PATH,
