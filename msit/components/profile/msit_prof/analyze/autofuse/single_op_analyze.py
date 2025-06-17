@@ -73,13 +73,15 @@ class SingleOpAnalyzer:
         if not data_type or not data_shape:
             logger.debug("data_type or data_shape is None.")
             return hbms
-      
         data_type = data_type.split(";")
         data_shape = data_shape.split(";")
         for dt, ds in zip(data_type, data_shape):
-            shape_list = list(map(int, ds.strip('"').split(',')))
-            size = reduce(lambda x, y: x * y, shape_list, 1)
-            hbms.append(float(size * OP_TYPE_TO_BYTE[dt] / KB_DIVISOR))
+            if ds in ["", '"']:
+                hbms.append(0.0)
+            else:
+                shape_list = list(map(int, ds.strip('"').split(',')))
+                size = reduce(lambda x, y: x * y, shape_list, 1)
+                hbms.append(float(size * OP_TYPE_TO_BYTE[dt] / KB_DIVISOR))
         return hbms
 
     @staticmethod
@@ -262,10 +264,15 @@ class SingleOpAnalyzer:
                         fuse_node_name, 
                         origin_op_hbms_save
             )
+            # 原算子一个都找不到的去情况
             if origin_op_df.empty:
                 analyze_result["Origin Durations(us)"].append(np.nan)
                 analyze_result["Time Ratio"].append(np.nan)
                 analyze_result["Time Difference"].append(np.nan)
+                analyze_result["Fused HBMs(KB)"].append(np.nan)
+                analyze_result["HBMs Ratio"].append(np.nan)
+                analyze_result["HBMs Difference"].append(np.nan)
+            # 原算子一部分能找到，一部分找不到的情况
             if not_found_op_list:
                 analyze_result["Time Ratio"][-1] = np.nan
                 analyze_result["Time Difference"][-1] = np.nan
