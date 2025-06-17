@@ -23,7 +23,7 @@ class TimeAnalyze:
     def time_analyze(self):
         if not self.run_time:
             logger.error("Running time is undefined.")
-            return None
+            return ()
 
         time_list = list(self.run_time.values())
 

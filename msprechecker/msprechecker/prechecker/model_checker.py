@@ -35,6 +35,25 @@ def get_file_sizes(file_path_regex):
     return result_dict
 
 
+def update_hash256(sha256_hash, file_path, total_size, num_blocks, block_size):
+    block_size = min(block_size, total_size)
+
+    with open(file_path, "rb") as f:
+        if num_blocks <= 0 or total_size <= block_size * num_blocks:
+            for chunk in iter(lambda: f.read(block_size), b""):
+                sha256_hash.update(chunk)
+        else:
+            step = max(1, total_size // num_blocks)
+            test_positions = list(range(0, total_size, step)) + [max(0, total_size - block_size)]
+
+            for pos in test_positions:
+                if 0 <= pos < total_size:
+                    f.seek(pos, 0)
+                    chunk = f.read(block_size)
+                    if chunk:
+                        sha256_hash.update(chunk)
+
+
 def get_file_sha256s(file_path_regex, block_size=4096, num_blocks=1000):
     files = glob.glob(file_path_regex)
     result_dict = {}
@@ -42,29 +61,14 @@ def get_file_sha256s(file_path_regex, block_size=4096, num_blocks=1000):
     for file_path in files:
         file_name = os.path.basename(file_path)
         total_size = os.path.getsize(file_path)
+        
+        sha256_hash = hashlib.sha256()
 
         if total_size == 0:
-            result_dict[file_name] = {"sha256sum": hashlib.sha256().hexdigest()}
+            result_dict[file_name] = {"sha256sum": sha256_hash.hexdigest()}
             continue
 
-        sha256_hash = hashlib.sha256()
-        block_size = min(block_size, total_size)
-
-        with open(file_path, "rb") as ff:
-            if num_blocks <= 0 or total_size <= block_size * num_blocks:
-                for byte_block in iter(lambda: ff.read(block_size), b""):
-                    sha256_hash.update(byte_block)
-            else:
-                step = max(1, total_size // num_blocks)
-                test_positions = list(range(0, total_size, step)) + [max(0, total_size - block_size)]
-
-                for pos in test_positions:
-                    if 0 <= pos < total_size:
-                        ff.seek(pos, 0)
-                        byte_block = ff.read(block_size)
-                        if byte_block:
-                            sha256_hash.update(byte_block)
-
+        update_hash256(sha256_hash, file_path, total_size, num_blocks, block_size)
         result_dict[file_name] = {"sha256sum": sha256_hash.hexdigest()}
 
     return result_dict
@@ -88,12 +92,12 @@ class ModelSizeChecker(PrecheckerBase):
         logger.debug(f"ModelSizeChecker model_weight_size={get_next_dict_item(model_weight_size)}")
         return {"model_name": model_name, "model_json_size": model_json_size, "model_weight_size": model_weight_size}
 
-    def do_precheck(self, model_config, **kwargs):
-        if not model_config:
+    def do_precheck(self, envs, **kwargs):
+        if not envs:
             return
 
-        model_name = model_config.get("model_name", None)
-        model_weight_size = model_config.get("model_weight_size", None)
+        model_name = envs.get("model_name", None)
+        model_weight_size = envs.get("model_weight_size", None)
         if not is_deepseek_model(model_name) or not model_weight_size:
             return
 
@@ -138,7 +142,7 @@ class ModelSha256Collecter(PrecheckerBase):
             "model_weight_sha256": model_weight_sha256,
         }
 
-    def do_precheck(self, model_config, **kwargs):
+    def do_precheck(self, envs, **kwargs):
         logger.warning("Precheck with modelsha256 checker is meaningless. Will skip it")
         return
 

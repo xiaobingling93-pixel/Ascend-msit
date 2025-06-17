@@ -100,22 +100,22 @@ class KernelReleaseChecker(PrecheckerBase):
         kernel_release_split = kernel_release.split(".")
         if len(kernel_release_split) < 2:
             logger.warning(f"failed parsing kernel release version: {kernel_release}")
-            return None
+            return ()
 
         major_version, minor_version = str_to_digit(kernel_release_split[0]), str_to_digit(kernel_release_split[1])
         if major_version is None or minor_version is None:
             logger.warning(f"failed parsing kernel release version: {kernel_release}")
-            return None
-        return (major_version, minor_version)
+            return ()
+        return major_version, minor_version
 
-    def do_precheck(self, release_version, **kwargs):
-        if release_version is None:
+    def do_precheck(self, envs, **kwargs):
+        if envs is None:
             return
         target_major_version, target_minor_version = 5, 10
         target_version = ".".join([str(ii) for ii in [target_major_version, target_minor_version]])
         logger.debug(f"kernel_release suggested is {target_version}")
 
-        major_version, minor_version = release_version
+        major_version, minor_version = envs
 
         answer_kwargs = dict(
             domain="system",
@@ -160,16 +160,16 @@ class DriverVersionChecker(PrecheckerBase):
             return None
         return dict(major_version=major_version, minor_version=minor_version, mini_version=mini_version)
 
-    def do_precheck(self, driver_version, **kwargs):
-        if driver_version is None:
+    def do_precheck(self, envs, **kwargs):
+        if envs is None:
             return
         target_major_version, target_minor_version, target_mini_version = 24, 1, 0
         target_version = ".".join([str(ii) for ii in [target_major_version, target_minor_version, target_mini_version]])
         logger.debug(f"suggested is {target_version}")
 
-        major_version = driver_version.get("major_version")
-        minor_version = driver_version.get("minor_version")
-        mini_version = driver_version.get("mini_version")
+        major_version = envs.get("major_version")
+        minor_version = envs.get("minor_version")
+        mini_version = envs.get("mini_version")
 
         answer_kwargs = dict(
             domain="system",
@@ -210,10 +210,10 @@ class VirtualMachineChecker(PrecheckerBase):
         record(f"1000 是否虚拟机：{'是' if is_virtual_machine else '否'}", part=CONTENT_PARTS.sys)
         return is_virtual_machine
 
-    def do_precheck(self, is_virtual_machine, **kwargs):
-        if is_virtual_machine is None:
+    def do_precheck(self, envs, **kwargs):
+        if envs is None:
             return
-        if is_virtual_machine:
+        if envs:
             vmware_action = (
                 "启用 CPU/MMU Virtualization（ESXi 高级设置）、禁用 CPU 限制（cpuid.coresPerSocket 配置为物理核心数）"
             )
@@ -251,10 +251,10 @@ class TransparentHugepageChecker(PrecheckerBase):
         self.additional_msg = additional_msg
         return is_transparent_hugepage_enable
 
-    def do_precheck(self, is_transparent_hugepage_enable, **kwargs):
-        if is_transparent_hugepage_enable is None:
+    def do_precheck(self, envs, **kwargs):
+        if envs is None:
             return
-        if not is_transparent_hugepage_enable:
+        if not envs:
             show_check_result(
                 "system",
                 "透明大页",
@@ -326,12 +326,12 @@ class CpuHighPerformanceChecker(PrecheckerBase):
             is_high_performance_on=is_high_performance_on
         )
 
-    def do_precheck(self, cpu_info, **kwargs):
-        if cpu_info is None:
+    def do_precheck(self, envs, **kwargs):
+        if envs is None:
             return
-        cpu_count = cpu_info.get("cpu_count")
-        performance_count = cpu_info.get("performance_count")
-        is_high_performance_on = cpu_info.get("is_high_performance_on")
+        cpu_count = envs.get("cpu_count")
+        performance_count = envs.get("performance_count")
+        is_high_performance_on = envs.get("is_high_performance_on")
         
         if is_high_performance_on:
             show_check_result(

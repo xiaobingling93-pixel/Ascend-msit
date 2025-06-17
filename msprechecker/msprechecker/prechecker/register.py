@@ -139,9 +139,9 @@ class GroupPrechecker(PrecheckerBase):
             group_envs.update({sub.name(): sub.collect_env(**kwargs)})
         return group_envs
 
-    def do_precheck(self, group_envs, **kwargs):
+    def do_precheck(self, envs, **kwargs):
         for sub in self.sub_checkers:
-            sub.do_precheck(group_envs.get(sub.name()))
+            sub.do_precheck(envs.get(sub.name()))
 
 
 def check_file_permission(filepath, domain="config", checker_name="file_perm"):

@@ -11,10 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import typing
-from collections import namedtuple
 
-from msprechecker.prechecker.utils import get_dict_value_by_pos, logger
 
 """
 Yaml 配置模板：
@@ -63,6 +60,12 @@ mindie_config_json:
           reason: "早期版本不建议指定"
 """
 
+
+import typing
+from collections import namedtuple
+
+from msprechecker.prechecker.utils import get_dict_value_by_pos, logger
+
 _DOMAIN = ["environment_variables", "mindie_config", "ranktable", "model_config", "user_config", "mindie_env"]
 DOMAIN = namedtuple("DOMAIN", _DOMAIN)(*_DOMAIN)
 _CONFIG = ["name", "value", "reason", "suggestions", "condition", "suggested", "not_suggested"]
@@ -103,25 +106,7 @@ def is_value_met_suggestions(current_value, suggested_values, current_configs):
     return False
 
 
-def suggestion_rule_checker(current_configs, suggestion_rule, env_info, domain, action_func=None):
-    from msprechecker.prechecker.register import show_check_result, CheckResult
-
-    if not suggestion_rule:
-        return (CheckResult.OK, None, None)
-    suggestions = []
-
-    check_item = suggestion_rule.get(CONFIG.name)
-    if CONFIG.suggestions in suggestion_rule:
-        suggestions = suggestion_rule[CONFIG.suggestions]
-    else:
-        cur = {CONFIG.value: suggestion_rule[CONFIG.value]} if CONFIG.value in suggestion_rule else {}
-        cur.update({CONFIG.suggested: {CONFIG.reason: suggestion_rule.get(CONFIG.reason, "")}})
-        suggestions.append(cur)
-    logger.debug(f"suggestion_rule_checker: suggestions = {suggestions}")
-
-    suggest_value_list = []  # (value, reason) 优先级从前到后，在前面的优先级高
-    not_suggest_value_dict = {}  # value： reason
-
+def handle_suggestion(suggestions, suggest_list, not_suggest_dict, env_info, domain):
     for suggestion in suggestions:
         if CONFIG.value in suggestion:
             suggestion_value = suggestion.get(CONFIG.value, None)
@@ -140,13 +125,34 @@ def suggestion_rule_checker(current_configs, suggestion_rule, env_info, domain, 
             suggestion_reason = cur_suggested.get(CONFIG.reason, suggestion_reason)
 
             if suggestion_condition is None or is_condition_met(env_info, suggestion_condition):
-                suggest_value_list.append((value_list, suggestion_reason))
+                suggest_list.append((value_list, suggestion_reason))
         if CONFIG.not_suggested in suggestion:
             cur_not_suggested = suggestion.get(CONFIG.not_suggested, {})
             not_suggestion_version_list = cur_not_suggested.get(CONFIG.condition, not_suggestion_version_list)
             not_suggestion_reason = cur_not_suggested.get(CONFIG.reason, not_suggestion_reason)
             if not_suggestion_version_list is None or is_condition_met(env_info, not_suggestion_version_list):
-                not_suggest_value_dict.update({x: not_suggestion_reason for x in suggestion_value})
+                not_suggest_dict.update({x: not_suggestion_reason for x in suggestion_value})
+
+
+def suggestion_rule_checker(current_configs, suggestion_rule, env_info, domain, action_func=None):
+    from msprechecker.prechecker.register import show_check_result, CheckResult
+
+    if not suggestion_rule:
+        return (CheckResult.OK, None, None)
+    suggestions = []
+
+    check_item = suggestion_rule.get(CONFIG.name)
+    if CONFIG.suggestions in suggestion_rule:
+        suggestions = suggestion_rule[CONFIG.suggestions]
+    else:
+        cur = {CONFIG.value: suggestion_rule[CONFIG.value]} if CONFIG.value in suggestion_rule else {}
+        cur.update({CONFIG.suggested: {CONFIG.reason: suggestion_rule.get(CONFIG.reason, "")}})
+        suggestions.append(cur)
+    logger.debug(f"suggestion_rule_checker: suggestions = {suggestions}")
+
+    suggest_value_list = []  # (value, reason) 优先级从前到后，在前面的优先级高
+    not_suggest_value_dict = {}  # value： reason
+    handle_suggestion(suggestions, suggest_value_list, not_suggest_value_dict, env_info, domain)
 
     current_value = get_dict_value_by_pos(current_configs, check_item)
     if isinstance(current_value, typing.Hashable) and current_value in not_suggest_value_dict:

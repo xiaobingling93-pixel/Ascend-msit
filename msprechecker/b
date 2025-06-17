@@ -1,0 +1,30 @@
+{
+  "System": {
+    "SystemInfo": {
+      "cpu_model_name": "Intel(R) Core(TM) i7-8700 CPU @ 3.20GHz",
+      "cpu_num": "12",
+      "page_size": 4096,
+      "ascend_toolkit_version": "",
+      "mindie_version": ""
+    },
+    "KernelRelease": [
+      6,
+      6
+    ],
+    "DriverVersion": null,
+    "VirtualMachine": true,
+    "TransparentHugepage": false,
+    "CpuHighPerformance": {
+      "cpu_count": 12,
+      "performance_count": 0,
+      "is_high_performance_on": true
+    }
+  },
+  "Env": {
+    "ASCEND_ASCEND_ASCEND": "0"
+  },
+  "MindieConfig": null,
+  "RankTable": null,
+  "UserConfig": {},
+  "MindIEEnv": {}
+}

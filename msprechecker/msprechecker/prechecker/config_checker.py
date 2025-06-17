@@ -47,12 +47,12 @@ class ConfigCheckerBase(PrecheckerBase):
         else:
             return f"配置文件 {self.config_path} 中修改 {env_key}={env_value}"
 
-    def do_precheck(self, current_config, additional_checks=None, **kwargs):
+    def do_precheck(self, envs, additional_checks=None, **kwargs):
         if not self.config_path:
             return
 
-        if not current_config:
-           logger.error(f"Read config failed: {self.config_path!r}")
+        if not envs:
+            logger.error(f"Read config failed: {self.config_path!r}")
 
         check_file_permission(self.config_path, domain="config", checker_name="file_perm")
 
