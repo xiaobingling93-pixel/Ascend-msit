@@ -13,19 +13,3 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-CONFIG_FILE_MAX_SIZE = 1 * 1024 * 1024 # work for .ini config file
-TEXT_FILE_MAX_SIZE = 5 * 1024 * 1024 * 1024 # work for txt, csv, py
-JSON_FILE_MAX_SIZE = 1024 * 1024 * 1024
-DB_MAX_SIZE = 50 * 1024 * 1024 * 1024
-LOG_FILE_MAX_SIZE = 5 * 1024 * 1024
-
-
-EXT_SIZE_MAPPING = {
-    '.db': DB_MAX_SIZE,
-    ".ini": CONFIG_FILE_MAX_SIZE,
-    '.csv': TEXT_FILE_MAX_SIZE,
-    '.txt': TEXT_FILE_MAX_SIZE,
-    '.json': JSON_FILE_MAX_SIZE,
-    '.log': LOG_FILE_MAX_SIZE
-}

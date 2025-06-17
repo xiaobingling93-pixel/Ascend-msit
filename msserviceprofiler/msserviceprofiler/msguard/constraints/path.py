@@ -18,37 +18,58 @@ import os
 import stat
 
 from .base import BasePathConstraint
-from ..utils import get_file_size_config
+
+
+class IsNameTooLong(BasePathConstraint):
+    def __init__(self, *, description="long name"):
+        super().__init__(description=description)
+
+    def _is_satisfied_by(self, path):
+        try:
+            os.stat(path)
+        except OSError as e:
+            if getattr(e, 'winerror', None) == 206:
+                return True
+            if getattr(e, 'errno', None) == 36:
+                return True
+            if "too long" in str(e).lower():
+                return True
+
+        return False
 
 
 class Exists(BasePathConstraint):
-    description = "an existing path"
+    def __init__(self, *, description="an existing path"):
+        super().__init__(description=description)
 
-    def is_satisfied_by(self, path):
+    def _is_satisfied_by(self, path):
         return self._get_path_stat(path) is not None
 
 
 class IsFile(BasePathConstraint):
-    description = "a regular file"
+    def __init__(self, *, description="a regular file"):
+        super().__init__(description=description)
 
-    def is_satisfied_by(self, path):
+    def _is_satisfied_by(self, path):
         stat_result = self._get_path_stat(path)
         return stat_result is not None and stat.S_ISREG(stat_result.st_mode)
 
 
 class IsDir(BasePathConstraint):
-    description = "a directory"
+    def __init__(self, *, description="a directory"):
+        super().__init__(description=description)
 
-    def is_satisfied_by(self, path):
+    def _is_satisfied_by(self, path):
         stat_result = self._get_path_stat(path)
         return stat_result is not None and stat.S_ISDIR(stat_result.st_mode)
 
 
 class HasSoftLink(BasePathConstraint):
     """Check if path contains a soft link; if path does not exist, raise FileNotFoundError."""
-    description = "a soft link"
+    def __init__(self, *, description="a soft link"):
+        super().__init__(description=description)
 
-    def is_satisfied_by(self, path):
+    def _is_satisfied_by(self, path):
         norm_path = os.path.normpath(os.path.abspath(path))
         components = norm_path.split(os.sep)
 
@@ -71,30 +92,44 @@ class HasSoftLink(BasePathConstraint):
 
 
 class IsReadable(BasePathConstraint):
-    description = "a readable path"
+    def __init__(self, *, description="a readable path"):
+        super().__init__(description=description)
 
-    def is_satisfied_by(self, path):
+    def _is_satisfied_by(self, path):
         return os.access(path, os.R_OK)
 
 
 class IsWritable(BasePathConstraint):
-    description = "a writable path"
+    def __init__(self, *, description="a writable path"):
+        super().__init__(description=description)
 
-    def is_satisfied_by(self, path):
+    def _is_satisfied_by(self, path):
         return os.access(path, os.W_OK)
 
 
-class IsExecutable(BasePathConstraint):
-    description = "an executable path"
+class HasWritableParentDir(BasePathConstraint):
+    def __init__(self, *, description="a writable parent directory"):
+        super().__init__(description=description)
 
-    def is_satisfied_by(self, path):
+    def _is_satisfied_by(self, path):
+        path = os.path.abspath(path)
+        dir_name = os.path.dirname(path)
+        return os.access(dir_name, os.W_OK)
+
+
+class IsExecutable(BasePathConstraint):
+    def __init__(self, *, description="an executable path"):
+        super().__init__(description=description)
+
+    def _is_satisfied_by(self, path):
         return os.access(path, os.X_OK)
 
 
 class IsWritableToGroupOrOthers(BasePathConstraint):
-    description = "writable to group or others"
+    def __init__(self, *, description="writable to group or others"):
+        super().__init__(description=description)
 
-    def is_satisfied_by(self, path):
+    def _is_satisfied_by(self, path):
         stat_result = self._get_path_stat(path)
         if stat_result is None:
             raise FileNotFoundError(f"The path {path!r} does not exist or cannot be accessed.")
@@ -103,9 +138,10 @@ class IsWritableToGroupOrOthers(BasePathConstraint):
 
 
 class IsConsistentToCurrentUser(BasePathConstraint):
-    description = "consistent with the current user"
+    def __init__(self, *, description="consistent with the current user"):
+        super().__init__(description=description)
 
-    def is_satisfied_by(self, path):
+    def _is_satisfied_by(self, path):
         stat_result = self._get_path_stat(path)
         if stat_result is None:
             raise FileNotFoundError(f"The path {path!r} does not exist or cannot be accessed.")
@@ -114,14 +150,12 @@ class IsConsistentToCurrentUser(BasePathConstraint):
 
 
 class IsSizeReasonable(BasePathConstraint):
-    description = "reasonable on its size"
-    
-    def __init__(self, *, size_limit=None, require_confirm=True, description=None):
+    def __init__(self, *, size_limit=None, require_confirm=True, description="reasonable on its size"):
         super().__init__(description=description)
         self.size_limit = size_limit
         self.require_confirm = require_confirm
 
-    def is_satisfied_by(self, path):
+    def _is_satisfied_by(self, path):
         stat_result = self._get_path_stat(path)
         if stat_result is None:
             raise FileNotFoundError(f"The path {path!r} does not exist or cannot be accessed.")
@@ -134,7 +168,7 @@ class IsSizeReasonable(BasePathConstraint):
     def _check_size(self, path, file_size):
         if self.size_limit is None:
             from ..utils.constants import EXT_SIZE_MAPPING
-            
+
             ext = os.path.splitext(path)[1]
             self.size_limit = EXT_SIZE_MAPPING.get(ext, max(EXT_SIZE_MAPPING.values()))
 
