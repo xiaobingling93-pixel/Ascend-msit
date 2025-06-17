@@ -48,22 +48,6 @@ class TestDumpCommand(unittest.TestCase):
         with self.assertRaises(OSError):
             DumpCommand("dump", "help").handle(args)
 
-class TestCompareCommand(unittest.TestCase):
-    @patch(f"{MODULE_PATH}.set_log_level")
-    @patch(f"components.utils.cmp_algorithm.register_custom_compare_algorithm")
-    @patch(f"msit_llm.compare.torchair_acc_cmp.get_torchair_ge_graph_path", return_value=None)
-    @patch(f"msit_llm.compare.atb_acc_cmp.acc_compare", return_value=True)
-    @patch(f"msit_llm.compare.cmp_mgr.CompareMgr")
-    def test_handle_acc_compare(self, mock_mgr, mock_acc_compare, mock_get_graph, mock_register, mock_set_log):
-        from msit_llm.__main__ import CompareCommand
-        args = argparse.Namespace(
-            golden_path="golden", my_path="my", cmp_level=None, output=".", mapping_file="",
-            custom_algorithms=None, log_level="info", weight=False, stats=False
-        )
-        CompareCommand("compare", "help").handle(args)
-        mock_set_log.assert_called_once_with("info")
-        mock_acc_compare.assert_called_once()
-
     @patch(f"{MODULE_PATH}.set_log_level")
     @patch(f"components.utils.cmp_algorithm.register_custom_compare_algorithm")
     @patch(f"msit_llm.compare.torchair_acc_cmp.get_torchair_ge_graph_path", return_value="some_path")
@@ -80,9 +64,8 @@ class TestCompareCommand(unittest.TestCase):
     @patch(f"{MODULE_PATH}.set_log_level")
     @patch(f"components.utils.cmp_algorithm.register_custom_compare_algorithm")
     @patch(f"msit_llm.compare.torchair_acc_cmp.get_torchair_ge_graph_path", return_value=None)
-    @patch(f"msit_llm.compare.atb_acc_cmp.acc_compare", return_value=False)
     @patch(f"msit_llm.compare.cmp_mgr.CompareMgr")
-    def test_handle_compare_mgr(self, mock_mgr, mock_acc_compare, mock_get_graph, mock_register, mock_set_log):
+    def test_handle_compare_mgr(self, mock_mgr, mock_get_graph, mock_register, mock_set_log):
         from msit_llm.__main__ import CompareCommand
         mock_mgr_instance = MagicMock()
         mock_mgr.return_value = mock_mgr_instance

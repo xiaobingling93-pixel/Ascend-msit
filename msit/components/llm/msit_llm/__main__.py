@@ -280,11 +280,11 @@ class CompareCommand(BaseCommand):
 
             acc_compare(args.golden_path, args.my_path, args.output, torchair_ge_graph_path)
         else:
-            from msit_llm.compare.atb_acc_cmp import acc_compare
+            from msit_llm.compare.atb_acc_cmp import compare_file
             from msit_llm.compare.cmp_mgr import CompareMgr
-            comared = acc_compare(os.path.abspath(args.golden_path), os.path.abspath(args.my_path),
-                        args.output, args.mapping_file, args.cmp_level)
-            if not comared:
+            if os.path.isfile(args.golden_path) and os.path.isfile(args.my_path):
+                compare_file(os.path.abspath(args.golden_path), os.path.abspath(args.my_path))
+            else:
                 cmp_mgr_instance = CompareMgr(os.path.abspath(args.golden_path), os.path.abspath(args.my_path), args)
                 if cmp_mgr_instance.is_parsed_cmp_path():
                     cmp_mgr_instance.compare(args.output)

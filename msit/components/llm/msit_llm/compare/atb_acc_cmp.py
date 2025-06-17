@@ -29,87 +29,11 @@ from components.utils.file_open_check import ms_open
 from components.utils.constants import TENSOR_MAX_SIZE
 
 
-def acc_compare(golden_path, my_path, output_path=".", mapping_file_path=".", cmp_level="layer"):
-    if os.path.isdir(golden_path):
-        golden_tensor_path = os.path.join(golden_path, "golden_tensor")
-        golden_topo_flag, golden_topo_json_path = is_model_topo_exist(golden_path, cmp_level)
-        my_topo_flag, my_topo_json_path = is_model_topo_exist(my_path, cmp_level)
-        torch_model_topo_file = os.path.join(golden_path, ".." if cmp_level == "layer" else "", "model_tree.json")
-        if os.path.isdir(golden_tensor_path):
-            # 存在golden_tensor路径，走手动映射比对逻辑
-            logger.info("Manual mapping comparing starts! Comparing manual dump tensors and ATB tensors...")
-            compare_metadata(golden_tensor_path, output_path)
-        elif os.path.exists(torch_model_topo_file):
-            # 存在torch_model_topo_file路径，走torch模型和加速库模型比对逻辑
-            logger.info("Automatic mapping comparison starts! Comparing torch tensors and ATB tensors...")
-            return False
-        elif golden_topo_flag and my_topo_flag:
-            # 存在ATB模型的拓扑信息，走加速库模型间的比对逻辑
-            return False
-        else:
-            logger.warn("Unsupported comparison type, please refer to README")
-            return False
-    elif os.path.isfile(golden_path) and os.path.isfile(my_path):
-        res = compare_file(golden_path, my_path)
-        logger.info("Compared results: %s", res)
-    else:
-        logger.error("The golden_path and my_path must both be directory or file.")
-        return False
-    return True
-
-
-def is_model_topo_exist(golden_path, cmp_level="layer"):
-    # 判断用户输入路径的msit_dump目录下是否包括/model路径，即是否包括模型拓扑信息
-    absolute_path = os.path.abspath(golden_path)
-    model_dir_path = os.path.join(absolute_path, '../../../' if cmp_level == "layer" else '../../', 'model')
-    model_dir_path = os.path.normpath(model_dir_path)
-    if not os.path.isdir(model_dir_path):
-        msg = f"Cannot find {model_dir_path}, please check! Use msit llm dump if needed."
-        logger.info(msg)
-        return False, ""
-    # 搜索/model目录下的所有文件，查找JSON文件
-    for root, _, files in os.walk(model_dir_path):
-        for file in files:
-            if file.endswith('.json'):
-                json_file_path = os.path.join(root, file)
-                return True, json_file_path
-    # 如果没有找到json文件，返回False和空字符串
-    msg = f"Cannot find model topo json in {model_dir_path}, please check! Use msit llm dump if needed."
-    logger.info(msg)
-    return False, ""
-
-
 def compare_file(golden_path, my_path):
     golden_data = read_data(golden_path)
     my_data = read_data(my_path)
-    return compare_data(golden_data, my_data)
-
-
-# 手动映射比对能力
-def compare_metadata(golden_path, output_path="."):
-    golden_meta_path = os.path.join(golden_path, "metadata.json")
-
-    golden_meta_path = load_file_to_read_common_check(golden_meta_path)
-    with ms_open(golden_meta_path, "r", max_size=TENSOR_MAX_SIZE) as file:
-        golden_meta = json.load(file)
-
-    gathered_row_data = fill_in_data(golden_meta)
-    return save_compare_reault_to_csv(gathered_row_data, output_path)
-
-
-def fill_in_data(golden_meta):
-    gathered_row_data = []
-    for data_id, golden_info in tqdm(golden_meta.items(), total=len(golden_meta)):
-        for token_id, path_list in golden_info.items():
-
-            # 读取映射关系json文件中的tensor路径
-            if not isinstance(path_list, (list, tuple)) or len(path_list) < 2:
-                logger.warning(f"Invalid data in golden metadata.json, data_id: {data_id}, token_id: {token_id}")
-                continue
-            data_info = BasicDataInfo(path_list[0], path_list[1], token_id, data_id)
-            row_data = fill_row_data(data_info)
-            gathered_row_data.append(row_data)
-    return gathered_row_data
+    res = compare_data(golden_data, my_data)
+    logger.info("Compared results: %s", res)
 
 
 def traverse_tree(node: dict, path, traverse_type='torch', node_id=''):
