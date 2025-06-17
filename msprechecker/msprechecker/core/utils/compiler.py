@@ -91,21 +91,7 @@ class Compiler:
             return expr
 
     @classmethod
-    def _convert_tokens_to_rpn(cls, tokens):
-        # Handle single token (NUMBER, INT, FLOAT, VERSION)
-        if len(tokens) == 1:
-            typ, val = tokens[0]
-            return [val]
-
-        # Handle Version (should be single token)
-        if any(t[0] == 'VERSION' for t in tokens):
-            if len(tokens) != 1:
-                raise SyntaxError("Version expressions must be a single token.")
-            return [tokens[0][1]]
-
-        # Handle expressions with INT/FLOAT and OPs
-        output = []
-        stack = []
+    def _handle_tokens(cls, tokens, output, stack):
         i = 0
         while i < len(tokens):
             typ, val = tokens[i]
@@ -135,6 +121,24 @@ class Compiler:
                         output.append(stack.pop())
                     stack.append(op)
             i += 1
+
+    @classmethod
+    def _convert_tokens_to_rpn(cls, tokens):
+        # Handle single token (NUMBER, INT, FLOAT, VERSION)
+        if len(tokens) == 1:
+            _, val = tokens[0]
+            return [val]
+
+        # Handle Version (should be single token)
+        if any(t[0] == 'VERSION' for t in tokens):
+            if len(tokens) != 1:
+                raise SyntaxError("Version expressions must be a single token.")
+            return [tokens[0][1]]
+
+        # Handle expressions with INT/FLOAT and OPs
+        output = []
+        stack = []
+        cls._handle_tokens(tokens, output, stack)
 
         while stack:
             if stack[-1] in ('(', ')'):

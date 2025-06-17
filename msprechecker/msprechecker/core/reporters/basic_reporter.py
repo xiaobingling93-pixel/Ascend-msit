@@ -16,8 +16,8 @@ from .base import BaseReporter
 
 
 class BasicReporter(BaseReporter):
-    def report(self, info_dict):
+    def report(self, check_results):
         self.print_title("MindStudio Prechecker Tool", "=")
-        for key, value in info_dict.items():
+        for key, value in check_results.items():
             self.logger.info(f"{key}: {value}")
         self.print_title("", "-")

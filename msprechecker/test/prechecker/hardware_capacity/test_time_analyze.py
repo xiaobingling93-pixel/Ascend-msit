@@ -41,7 +41,7 @@ class TestTimeAnalyze(unittest.TestCase):
     def test_time_analyze_normal_case(self):
         analyzer = TimeAnalyze(self.test_run_time)
         result = analyzer.time_analyze()
-        
+
         self.assertIsNotNone(result)
         self.assertEqual(len(result), 4)
         self.assertEqual(result[0], "task4")
@@ -52,7 +52,7 @@ class TestTimeAnalyze(unittest.TestCase):
     def test_time_analyze_extreme_case(self):
         analyzer = TimeAnalyze(self.extreme_run_time)
         result = analyzer.time_analyze()
-        
+
         self.assertIsNotNone(result)
         self.assertEqual(result[0], "task2")
         self.assertAlmostEqual(result[1], 100.0)
@@ -61,7 +61,7 @@ class TestTimeAnalyze(unittest.TestCase):
 
     def test_time_analyze_empty_input(self):
         analyzer = TimeAnalyze(self.empty_run_time)
-        self.assertIsNone(analyzer.time_analyze())
+        self.assertEqual(analyzer.time_analyze(), ())
 
     def test_time_analyze_zero_values(self):
         analyzer = TimeAnalyze(self.zero_run_time)
@@ -73,21 +73,21 @@ class TestTimeAnalyze(unittest.TestCase):
             temp_file = os.path.join(temp_dir, "test_data.txt")
             with open(temp_file, 'w') as f:
                 f.write("test data")
-            
+
             # This part is just to demonstrate temp file usage
             # In real case, you might want to read data from this file
             analyzer = TimeAnalyze(self.test_run_time)
             result = analyzer.time_analyze()
-            
+
             self.assertIsNotNone(result)
             self.assertTrue(os.path.exists(temp_file))
-        
+
         self.assertFalse(os.path.exists(temp_file))
 
     @patch.object(logger, 'error')
     def test_time_analyze_logging(self, mock_logger):
         analyzer = TimeAnalyze({})
-        self.assertIsNone(analyzer.time_analyze())
+        self.assertEqual(analyzer.time_analyze(), ())
         mock_logger.assert_called_once_with("Running time is undefined.")
 
 

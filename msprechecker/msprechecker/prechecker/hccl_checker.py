@@ -54,8 +54,8 @@ class HcclIfnameChecker(PrecheckerBase):
         logger.debug(f"ifnames = {ifnames}")
         return ifnames
 
-    def do_precheck(self, ifnames, **kwargs):
-        if not ifnames:
+    def do_precheck(self, envs, **kwargs):
+        if not envs:
             show_check_result(
                 "hccl",
                 "lldp Ifname",
@@ -64,16 +64,16 @@ class HcclIfnameChecker(PrecheckerBase):
                 reason="当前没有 hccn_tool 命令或执行失败",
             )
             return
-        if not all(len(ii) > 0 for ii in ifnames):
+        if not all(len(ii) > 0 for ii in envs):
             show_check_result(
                 "hccl",
                 "lldp Ifname",
                 CheckResult.ERROR,
                 action=f"检查服务器上 NPU 对应的交换机连接，如果是光纤直连，忽略该条",
-                reason=f"HCCL Ifname 存在空值 {ifnames}",
+                reason=f"HCCL Ifname 存在空值 {envs}",
             )
         else:
-            show_check_result("hccl", f"lldp Ifname: {ifnames}", CheckResult.OK)
+            show_check_result("hccl", f"lldp Ifname: {envs}", CheckResult.OK)
 
 
 class HcclLinkChecker(PrecheckerBase):
@@ -93,8 +93,8 @@ class HcclLinkChecker(PrecheckerBase):
         logger.debug(f"link_status = {link_status}")
         return link_status
 
-    def do_precheck(self, link_status, **kwargs):
-        if not link_status:
+    def do_precheck(self, envs, **kwargs):
+        if not envs:
             show_check_result(
                 "hccl",
                 "lldp Ifname",
@@ -103,16 +103,16 @@ class HcclLinkChecker(PrecheckerBase):
                 reason="当前没有 hccn_tool 命令或执行失败",
             )
             return
-        if not all(ii == "UP" for ii in link_status):
+        if not all(ii == "UP" for ii in envs):
             show_check_result(
                 "hccl",
                 "link",
                 CheckResult.ERROR,
                 action=f"检查服务器上 NPU 连接情况",
-                reason=f"HCCL link 存在 down 值 {link_status}",
+                reason=f"HCCL link 存在 down 值 {envs}",
             )
         else:
-            show_check_result("hccl", f"link: {link_status}", CheckResult.OK)
+            show_check_result("hccl", f"link: {envs}", CheckResult.OK)
 
 
 class HcclTlsSwitchChecker(PrecheckerBase):
@@ -132,8 +132,8 @@ class HcclTlsSwitchChecker(PrecheckerBase):
         logger.debug(f"tls_switch = {tls_switch}")
         return tls_switch
 
-    def do_precheck(self, tls_switch, **kwargs):
-        if not tls_switch:
+    def do_precheck(self, envs, **kwargs):
+        if not envs:
             show_check_result(
                 "hccl",
                 "tls switch",
@@ -142,7 +142,7 @@ class HcclTlsSwitchChecker(PrecheckerBase):
                 reason="当前没有 hccn_tool 命令或执行失败",
             )
             return
-        if not all(ii == "0" for ii in tls_switch):
+        if not all(ii == "0" for ii in envs):
             show_check_result(
                 "hccl",
                 "tls switch",
@@ -151,7 +151,7 @@ class HcclTlsSwitchChecker(PrecheckerBase):
                 reason=f"HCCL tls 打开可能影响多机连接",
             )
         else:
-            show_check_result("hccl", f"tls_switch: {tls_switch}", CheckResult.OK)
+            show_check_result("hccl", f"tls_switch: {envs}", CheckResult.OK)
 
 
 class HcclPingChecker(PrecheckerBase):
@@ -198,8 +198,8 @@ class HcclPingChecker(PrecheckerBase):
             multi_server_results = {self.local_ip: local_results}
         return multi_server_results  # {server_ip: {server_device_ip: [cur device 0, cur device 1, ...]}}
 
-    def do_precheck(self, multi_server_results, **kwargs):
-        if not multi_server_results:
+    def do_precheck(self, envs, **kwargs):
+        if not envs:
             show_check_result(
                 "hccl",
                 "ping",
@@ -208,7 +208,7 @@ class HcclPingChecker(PrecheckerBase):
                 reason="当前没有 hccn_tool 命令或执行失败",
             )
             return
-        for server_ip, device_connect_result in multi_server_results.items():
+        for server_ip, device_connect_result in envs.items():
             if server_ip == self.local_ip:
                 continue
             is_connect_server_pass = True
