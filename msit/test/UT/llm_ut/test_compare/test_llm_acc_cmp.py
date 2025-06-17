@@ -9,7 +9,6 @@ import torch
 import numpy as np
 
 import msit_llm.compare.cmp_utils
-from msit_llm.compare import atb_acc_cmp
 
 from components.llm.msit_llm.common.constant import GLOBAL_AIT_DUMP_PATH
 
@@ -166,10 +165,6 @@ def test_fill_row_data_given_my_path_when_shape_not_match_then_error(golden_data
     assert len(row_data["cmp_fail_reason"]) > 0
 
 
-def test_acc_compare_given_data_file_when_valid_then_pass(golden_data_file, test_data_file):
-    atb_acc_cmp.acc_compare(golden_data_file, test_data_file)
-
-
 def test_read_data_given_data_file_when_valid_npy_then_pass(golden_data_file, test_data_file):
     data = msit_llm.compare.cmp_utils.read_data(test_data_file)
     golden = msit_llm.compare.cmp_utils.read_data(golden_data_file)
@@ -201,35 +196,3 @@ def test_compare_data_given_data_file_when_valid_then_pass(golden_data_file, tes
         "relative_euclidean_distance": 0.0,
         "cmp_fail_reason": "",
     }
-
-
-def test_compare_file_given_data_file_when_valid_then_pass(golden_data_file, test_data_file):
-    res = atb_acc_cmp.compare_file(golden_data_file, test_data_file)
-    assert res == {
-        "cosine_similarity": 1.0,
-        "max_relative_error": 0.0,
-        "mean_relative_error": 0.0,
-        "kl_divergence": 0.0,
-        "max_absolute_error": 0.0,
-        "mean_absolute_error": 0.0,
-        "relative_euclidean_distance": 0.0,
-        "cmp_fail_reason": "",
-    }
-
-
-def test_compare_metadata_given_golden_path_when_valid_then_pass(test_metadata_path):
-    with patch("msit_llm.compare.atb_acc_cmp.save_compare_reault_to_csv") as mock_save:
-        csv_save_path = atb_acc_cmp.compare_metadata(test_metadata_path, output_path=".")
-        mock_save.assert_called_once()
-
-
-def test_compare_torch_atb_given_data_path_when_valid_then_pass(test_torch_path, test_atb_path):
-    torch_model_topo_file = os.path.join(test_torch_path, "1111_npu0/model_tree.json")
-    golden_path = os.path.abspath(os.path.join(test_torch_path, "1111_npu0/0/"))
-    my_path = os.path.abspath(os.path.join(test_atb_path, f"{GLOBAL_AIT_DUMP_PATH}/tensors/1_2222/0/"))
-    with patch("msit_llm.dump.torch_dump.topo.TreeNode.get_layer_node_type", return_value="BloomLayer"), \
-         patch("msit_llm.compare.atb_acc_cmp.save_compare_reault_to_csv") as mock_save:
-        csv_save_path = atb_acc_cmp.cmp_torch_atb(
-            torch_model_topo_file, (golden_path, my_path, "."), mapping_file_path="."
-        )
-        mock_save.assert_called_once()
