@@ -5,7 +5,7 @@
 
 #### Qwen模型当前已验证的量化方法
 - W4A8 Dynamic 量化：Qwen3-32B
-- W8A8量化：Qwen-7B，Qwen-14B，Qwen1.5-14B，Qwen1.5-32B，Qwen2-7B，Qwen2-72B，Qwen2.5-7B，Qwen2.5-14B，Qwen2.5-32B，QwQ-32B
+- W8A8量化：Qwen-7B，Qwen-14B，Qwen1.5-14B，Qwen1.5-32B，Qwen2-7B，Qwen2-72B，Qwen2.5-7B，Qwen2.5-14B，Qwen2.5-32B，Qwen3-14B，Qwen3-32B，QwQ-32B
 - W8A16量化：QWen-72B，Qwen1.5-72B，Qwen1.5-110B，Qwen2-72B
 - 稀疏量化：Qwen1.5-14B，Qwen2-7B，Qwen2-72B，Qwen2.5-7B，Qwen2.5-14B，QwenCode2.5-7B, QwQ-32B
 - KV cache量化：Qwen2-72B
@@ -221,7 +221,7 @@
 该模型的量化支持已经集成至[一键量化](https://gitee.com/ascend/msit/blob/master/msmodelslim/msmodelslim/app/naive_quantization/readme.md)。
 
   ```shell
-  msmodelslim quant --model_path {浮点权重路径} --save_path {W8A8量化权重路径} --device_type npu --model_type Qwen3-14B --quant_type w8a8 --trust_remote_code True
+  msmodelslim quant --model_path {浮点权重路径} --save_path {W8A8量化权重路径} --device npu --model_type Qwen3-32B --quant_type w8a8 --trust_remote_code True
   ```
 ##### Qwen3-32b W4A4 Flatquant Dynamic量化 
   ```shell
@@ -232,7 +232,7 @@
 该模型的量化支持已经集成至[一键量化](https://gitee.com/ascend/msit/blob/master/msmodelslim/msmodelslim/app/naive_quantization/readme.md)。
 
   ```shell
-  msmodelslim quant --model_path {浮点权重路径} --save_path {W8A8量化权重路径} --device_type npu --model_type Qwen3-32B --quant_type w8a8 --trust_remote_code True
+  msmodelslim quant --model_path {浮点权重路径} --save_path {W8A8量化权重路径} --device npu --model_type Qwen3-14B --quant_type w8a8 --trust_remote_code True
   ```
 
 #### QWQ 系列
