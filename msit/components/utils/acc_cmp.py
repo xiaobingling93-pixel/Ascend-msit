@@ -14,10 +14,9 @@
 
 import os
 import sys
-import re
-from collections import OrderedDict
 
 import numpy as np
+import torch
 
 from components.utils.log import logger
 from components.utils.check.string_checker import StringChecker
@@ -29,6 +28,8 @@ GLOBAL_TENSOR_CONVERTER = None
 
 
 def default_tensor_converter(tensor):
+    if not isinstance(tensor, torch.Tensor):
+        raise TypeError(f"Expected a torch.Tensor, but got {type(tensor).__name__}")
     return tensor.data.reshape(tensor.shape)
 
 

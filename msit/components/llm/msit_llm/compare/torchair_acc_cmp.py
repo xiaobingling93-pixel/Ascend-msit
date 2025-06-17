@@ -33,10 +33,6 @@ GLOBAL_TENSOR_CONVERTER = None
 MAX_TOKEN_LEN = 12
 
 
-def default_tensor_converter(tensor):
-    return tensor.data.reshape(tensor.shape)
-
-
 def get_torchair_ge_graph_path(my_path):
     if not os.path.isdir(my_path):
         return None

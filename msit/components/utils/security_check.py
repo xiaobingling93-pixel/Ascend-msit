@@ -22,6 +22,7 @@ import shutil
 from components.utils.file_open_check import FileStat
 from components.utils.constants import PATH_WHITE_LIST_REGEX
 from components.utils.log import logger
+from components.utils.util import safe_int
 
 
 STR_WHITE_LIST_REGEX = re.compile(r"[^_A-Za-z0-9\"'><=\[\])(,}{: /.~-]")
@@ -256,7 +257,7 @@ def ms_makedirs(dir_path, **kwargs):
 
 
 def check_positive_integer(value):
-    ivalue = int(value)
+    ivalue = safe_int(value)
     if ivalue < 0 or ivalue > 1e6:
         raise ValueError("%s is an invalid positive int value" % value)
     return ivalue
@@ -276,7 +277,7 @@ def check_input_path_legality(value):
 
 
 def check_positive_or_zero_integer(value):
-    ivalue = int(value)
+    ivalue = safe_int(value)
     if ivalue <= 0 or ivalue > 1e6:
         raise ValueError("%s is an invalid positive int value" % value)
     return ivalue

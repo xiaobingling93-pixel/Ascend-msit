@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import argparse
+from components.utils.util import safe_int
 
 
 def check_positive_integer(value):
-    ivalue = int(value)
+    ivalue = safe_int(value)
     if ivalue <= 0:
         raise argparse.ArgumentTypeError("%s is an invalid positive int value" % value)
     return ivalue
@@ -31,7 +32,7 @@ def check_batchsize_valid(value):
 
 
 def check_nonnegative_integer(value):
-    ivalue = int(value)
+    ivalue = safe_int(value)
     if ivalue < 0:
         raise argparse.ArgumentTypeError("%s is an invalid nonnegative int value" % value)
     return ivalue
@@ -42,7 +43,7 @@ def check_device_range_valid(value):
     min_value = 0
     max_value = 255
     if ',' in value:
-        ilist = [int(v) for v in value.split(',')]
+        ilist = [safe_int(v) for v in value.split(',')]
         for ivalue in ilist:
             if ivalue < min_value or ivalue > max_value:
                 raise argparse.ArgumentTypeError(
@@ -53,7 +54,7 @@ def check_device_range_valid(value):
         return ilist
     else:
         # default as single int value
-        ivalue = int(value)
+        ivalue = safe_int(value)
         if ivalue < min_value or ivalue > max_value:
             raise argparse.ArgumentTypeError(
                 "device:{} is invalid. valid value range is [{}, {}]".format(ivalue, min_value, max_value)

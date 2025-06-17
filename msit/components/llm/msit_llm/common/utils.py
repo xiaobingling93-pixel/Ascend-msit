@@ -19,7 +19,7 @@ import re
 from collections import namedtuple
 
 from components.utils.constants import PATH_WHITE_LIST_REGEX
-from components.utils.util import check_file_size_based_on_ext, check_file_ext
+from components.utils.util import check_file_size_based_on_ext, check_file_ext, safe_int
 from components.utils.file_open_check import FileStat
 from msit_llm.common.constant import MAX_DATA_SIZE
 from components.utils.check.rule import Rule
@@ -50,28 +50,28 @@ def str2bool(v):
 
 
 def check_positive_integer(value):
-    ivalue = int(value)
+    ivalue = safe_int(value)
     if ivalue < 0 or ivalue > 2:
         raise argparse.ArgumentTypeError("%s is an invalid int value" % value)
     return ivalue
 
 
 def check_dump_time_integer(value):
-    ivalue = int(value)
+    ivalue = safe_int(value)
     if ivalue < 0 or ivalue > 3:
         raise argparse.ArgumentTypeError("%s is an invalid int value" % value)
     return ivalue
 
 
 def check_device_integer(value):
-    ivalue = int(value)
+    ivalue = safe_int(value)
     if ivalue < 0:
         raise argparse.ArgumentTypeError("%s is an invalid int value" % value)
     return ivalue
 
 
 def check_process_integer(value):
-    ivalue = int(value)
+    ivalue = safe_int(value)
     if ivalue < 1 or ivalue > 8:
         raise argparse.ArgumentTypeError("%s is an invalid int value. The number of processes should be 1~8." % value)
     return ivalue

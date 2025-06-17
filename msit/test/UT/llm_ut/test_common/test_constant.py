@@ -25,13 +25,21 @@ from msit_llm.common.constant import get_visible_device, get_global_device, get_
 class TestDeviceRelatedFunctions(unittest.TestCase):
     @patch.dict(os.environ, {"ASCEND_VISIBLE_DEVICES": "0", "CUDA_VISIBLE_DEVICES": "1"})
     def test_get_visible_device(self):
-        device_type = "ASCEND_VISIBLE_DEVICES"
-        result = get_visible_device(device_type)
+        envionment_name = "ASCEND_VISIBLE_DEVICES"
+        result = get_visible_device(envionment_name)
         self.assertEqual(result, 0)
 
-        device_type = "CUDA_VISIBLE_DEVICES"
-        result = get_visible_device(device_type)
+        envionment_name = "CUDA_VISIBLE_DEVICES"
+        result = get_visible_device(envionment_name)
         self.assertEqual(result, 1)
+
+    @patch.dict(os.environ, {"ASCEND_VISIBLE_DEVICES": "abc"})
+    def test_get_visible_device_when_value_is_invalid(self):
+        envionment_name = "ASCEND_VISIBLE_DEVICES"
+        with self.assertRaises(ValueError) as context:
+            get_visible_device(envionment_name)
+        
+        assert "The value of the variable ASCEND_VISIBLE_DEVICES is not valid" in str(context.exception)
 
 
 class TestAitDumpPathFunction(unittest.TestCase):
