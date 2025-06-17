@@ -16,7 +16,7 @@
 import inspect
 import functools
 
-from .constraints import InvalidParameterError, make_constraint
+from ..constraints import InvalidParameterError, make_constraint
 
 
 def validate_parameter_constraint(parameter_constraint, params, caller_name):
@@ -28,16 +28,11 @@ def validate_parameter_constraint(parameter_constraint, params, caller_name):
 
         if constraint == "no_validation":
             continue
-        
+
         # support func | \ & constraint, constraint | \ & func
         constraint = make_constraint(constraint)
-
         if not constraint.is_satisfied_by(param_val):
-            raise InvalidParameterError(
-                f"The parameter '\033[0;31m{param_name!r}\033[0m' of '\033[0;31m{caller_name!r}\033[0m' "
-                f"must satisfy the following requirement:\n\t \033[0;33m{constraint}\033[0m.\n"
-                f"Got \033[0;31m{param_val!r}\033[0m instead."
-            )
+            raise InvalidParameterError(param_name, caller_name, constraint, param_val)
 
 
 def validate_params(parameter_constraint):
@@ -65,3 +60,4 @@ def validate_params(parameter_constraint):
         return wrapper
 
     return decorator
+

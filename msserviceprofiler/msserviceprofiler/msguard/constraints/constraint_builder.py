@@ -11,18 +11,16 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
+
 # limitations under the License.
 
-import os
-from dataclasses import dataclass
-
-from .logic import FunctionConstraint, IfElseConstraint
-from ._path import (
-    IsFile, Exists, IsDir, HasSoftLink, IsReadable, 
-    IsWritable, IsExecutable, IsWritableToGroupOrOthers, 
+from .path import (
+    IsNameTooLong, IsFile, Exists, IsDir, HasSoftLink, IsReadable, 
+    IsWritable, IsExecutable, IsWritableToGroupOrOthers, HasWritableParentDir,
     IsConsistentToCurrentUser, IsSizeReasonable
 )
-from .base import BaseConstraint
+from ..constraints.base import BaseConstraint
+from ..constraints.logic import FunctionConstraint, IfElseConstraint
 
 
 class PathConstraintBuilder:
@@ -35,11 +33,15 @@ class PathConstraintBuilder:
         is_size_reasonable
     """
     @staticmethod
+    def is_name_too_long():
+        return IsNameTooLong()
+        
+    @staticmethod
     def is_file(): 
         return IsFile()
     
     @staticmethod
-    def file_exists(): 
+    def exists(): 
         return Exists()
     
     @staticmethod
@@ -57,6 +59,10 @@ class PathConstraintBuilder:
     @staticmethod
     def is_writable(): 
         return IsWritable()
+    
+    @staticmethod
+    def has_writable_parent_dir():
+        return HasWritableParentDir()
     
     @staticmethod
     def is_executable(): 
@@ -96,25 +102,4 @@ def where(condition, if_constraint, else_constraint, *, description=None):
         make_constraint(if_constraint),
         make_constraint(else_constraint),
         description=description
-    )
-
-
-@dataclass(frozen=True)
-class Rule:
-    read_file_common_check: BaseConstraint = where(
-        os.getuid() == 0, 
-        Path.is_file(),
-        Path.is_file() & ~Path.has_soft_link() & 
-        Path.is_readable() & ~Path.is_writable_to_group_or_others() & 
-        Path.is_consistent_to_current_user() & Path.is_size_reasonable(),
-        description="current user is root"
-    )
-
-    exec_file_common_check: BaseConstraint = where(
-        os.getuid() == 0, 
-        Path.is_file(),
-        Path.is_file() & ~Path.has_soft_link() & 
-        Path.is_writable() & ~Path.is_writable_to_group_or_others() & 
-        Path.is_consistent_to_current_user() & Path.is_size_reasonable(),
-        description="current user is root"
     )

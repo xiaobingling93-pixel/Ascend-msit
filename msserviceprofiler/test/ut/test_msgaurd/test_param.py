@@ -19,7 +19,7 @@ import random
 import unittest
 from unittest import mock
 
-from msserviceprofiler.ms_service_profiler_ext.secur import validate_params, Path, InvalidParameterError, where
+from msserviceprofiler.msguard import validate_params, Path, InvalidParameterError, where
 
 
 class TestParamValidation(unittest.TestCase):
@@ -40,8 +40,8 @@ class TestParamValidation(unittest.TestCase):
     def setUp(self):
         self.random_path = "".join(random.choices("abcdefghijklmnopqrstuvwxyz", k=8))
 
-    def test_file_exists(self):
-        test_func = self.create_func_with_constraints(Path.file_exists())
+    def test_exists(self):
+        test_func = self.create_func_with_constraints(Path.exists())
         self.assertRaises(InvalidParameterError, test_func, self.random_path)
         self.assertIsNone(test_func(__file__))
 
