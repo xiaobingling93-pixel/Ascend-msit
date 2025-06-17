@@ -28,14 +28,23 @@ msServiceProfiler 是一款基于昇腾平台，支持MindIE Service框架和vLL
 
 基于msServiceProfiler工具采集的性能数据，提供服务化参数自动寻优能力，可以对服务化的参数以及测试工具的参数进行寻优。
 
+### ️[服务化专家建议工具](docs/服务化专家建议工具.md)
+
+基于benchmark 输出结果以及 service 的 config.json 配置，提供分析分析提高 TFTT / Throughput 等的优化点能力。
+
+
 ## 安装指南
 
-目前工具支持源码下载，脚本调用。
-
-#### 源码下载
+目前工具支持pip装包后调用和源码下载，脚本调用两种方式。
+#### pip 安装 msserviceprofiler
+```shell
+pip install -U msserviceprofiler
+```
+#### 或通过源码方式使用 msserviceprofiler
 
 ```shell
 git clone https://gitee.com/ascend/msit.git
+export PYTHONPATH=$PWD/msit/msserviceprofiler/:$PYTHONPATH
 ```
 
 ## 支持与帮助
