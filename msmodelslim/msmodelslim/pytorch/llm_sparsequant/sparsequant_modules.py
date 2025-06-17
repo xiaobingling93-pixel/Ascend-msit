@@ -133,4 +133,6 @@ class LinearSparseQuantizer(nn.Module):
     def cal_bias_int(self, fp_scale):
         if fp_scale != 0:
             bias_int = (self.bias.data / fp_scale).round()
+        else:
+            raise ValueError("dequant scale is 0, please check your quant config.")
         return bias_int
