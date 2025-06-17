@@ -169,3 +169,15 @@ def load_file_to_read_common_check_for_cli(value, exts=None):
     except Exception as e:
         raise argparse.ArgumentTypeError("%r" % value) from e
     return value
+
+
+def safe_int(str_value, log_print_variable_name=None):
+    try:
+        int_value = int(str_value)
+    except ValueError as e:
+        if log_print_variable_name:  # 报错信息中将变量名称进行打印，适用于环境变量场景
+            raise ValueError(f"The value of the variable {log_print_variable_name} is not valid, "
+                            "what we need is a value that can be convert to int.") from e
+        raise ValueError(f"The value {str_value} is not valid, "
+                          "what we need is a value that can be convert to int.") from e
+    return int_value

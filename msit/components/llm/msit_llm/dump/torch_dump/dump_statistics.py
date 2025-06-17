@@ -18,6 +18,7 @@ import csv
 
 import torch
 from components.utils.file_open_check import ms_open
+from components.utils.util import safe_int
 
 
 def dump_statistics(feat, feat_path: str, module_name, dump_type) -> None:
@@ -30,7 +31,7 @@ def dump_statistics(feat, feat_path: str, module_name, dump_type) -> None:
     input_output = "Input" if re.match(r"(input)(?:_(\d+))?", dump_data_name) else "Output"
     index = 0 
     if len(dump_data_name.split('_')) > 1:
-        index = int(dump_data_name.split('_')[-1])
+        index = safe_int(dump_data_name.split('_')[-1])
     
     #定义csv文件名
     output_csv_path = os.path.join(os.path.dirname(feat_path), 'statistics.csv')

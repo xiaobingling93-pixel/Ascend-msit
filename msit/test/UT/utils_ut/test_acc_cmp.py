@@ -18,6 +18,7 @@ from unittest.mock import patch, MagicMock, mock_open
 
 import pytest
 import numpy as np
+import torch
 
 from components.utils.acc_cmp import (
     set_msaccucmp_path_from_cann,
@@ -143,8 +144,12 @@ def test_parse_torchair_dump_data_given_non_npz_and_uninitialized_when_set_path_
 
 
 def test_default_tensor_converter_given_tensor_when_any_then_returns_reshaped_tensor():
-    mock_tensor = MagicMock()
-    mock_tensor.data = np.array([1, 2, 3])
-    mock_tensor.shape = (3,)
-    reshaped_tensor = default_tensor_converter(mock_tensor)
-    assert (reshaped_tensor == np.array([1, 2, 3])).all()
+    test_tensor = torch.tensor([1, 2, 3])
+    reshaped_tensor = default_tensor_converter(test_tensor)
+    assert reshaped_tensor.shape == test_tensor.shape
+
+
+def test_default_tensor_converter_given_list_when_any_then_raise_error():
+    with pytest.raises(TypeError) as exc_info:
+        reshaped_tensor = default_tensor_converter([1,2,3])
+    assert "Expected a torch.Tensor, but got list" == str(exc_info.value)

@@ -16,10 +16,13 @@ import datetime
 import torch
 
 from components.utils.cmp_algorithm import CMP_ALG_MAP
+from components.utils.util import safe_int
 
 
-def get_visible_device(device_type):
-    return int(os.environ.get(device_type, "0").split(",")[0])
+def get_visible_device(envionment_name):
+    device_str_id = os.environ.get(envionment_name, "0").split(",")[0]
+    device_id = safe_int(device_str_id, envionment_name)
+    return device_id
 
 
 def get_global_device():
@@ -176,12 +179,13 @@ CSV_STATISTICS_HEADER = [
 
 def get_timestamp_sync():
     max_timestamp = int(datetime.datetime.now(tz=datetime.timezone.utc).strftime("%s"))
-
-    world_size = int(os.environ.get("LOCAL_WORLD_SIZE", "1"))
+    str_world_size = os.environ.get("LOCAL_WORLD_SIZE", "1")
+    world_size = safe_int(str_world_size, "LOCAL_WORLD_SIZE")
     if world_size < 2:
         return max_timestamp
-
-    rank = int(os.environ.get("LOCAL_RANK", "0"))
+    
+    str_rank = os.environ.get("LOCAL_RANK", "0")
+    rank = safe_int(str_rank, "LOCAL_RANK")
     max_timestamp = torch.tensor(max_timestamp)
     if not torch.distributed.is_initialized():
         torch.distributed.init_process_group(backend=GLOBAL_DIST_BACKEND, rank=rank, world_size=world_size)
