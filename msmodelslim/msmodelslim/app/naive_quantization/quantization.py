@@ -53,22 +53,8 @@ def get_padding_data(tokenizer, calib_list, device_type):
     return [torch.cat(new_calib_dataset)]
 
 
-def get_batch_tokenized_data(model_tokenizer, calib_list, batch_size, max_len=512, device="npu"):
+def get_batch_tokenized_data(model_tokenizer, calib_list, batch_size, device="npu"):
     calib_dataset = []
-
-    def truncate_strings(strings: List[str], max_len=max_len) -> List[str]:
-        result = []
-        for s in strings:
-            current = s
-            while True:
-                chunk = current[:max_len]
-                result.append(chunk)
-                current = current[max_len:]
-                if not current:
-                    break
-        return result
-
-    calib_list = truncate_strings(calib_list)
     calib_list = [calib_list[i:i + batch_size] for i in range(0, len(calib_list), batch_size)]
     for calib_data in calib_list:
         tmp = get_padding_data(model_tokenizer, calib_data, device)
