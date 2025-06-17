@@ -14,6 +14,3 @@ from .function_utils import (
     get_inverse,
     set_require_grad_all
 )
-from .utils import (
-    to_device
-)
