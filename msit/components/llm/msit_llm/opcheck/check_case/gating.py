@@ -20,8 +20,8 @@ from msit_llm.opcheck import operation_test
 class OpcheckGatingOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
         topk = in_tensors[0]
-        topk_expert_num = self.op_param.get("topkExpertNum", 0) # 每个token选择多少个专家
-        cum_sum_num = self.op_param.get("cumSumNum", 0) # 一共有多少个专家
+        topk_expert_num = self.op_param.get("topkExpertNum", 1) # 每个token选择多少个专家
+        cum_sum_num = self.op_param.get("cumSumNum", 1) # 一共有多少个专家
 
         expert_bin_count = torch.zeros(cum_sum_num, dtype=torch.int32)
         for i in range(topk.shape[0]):

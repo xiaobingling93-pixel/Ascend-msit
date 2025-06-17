@@ -24,6 +24,7 @@ from msit_llm.common.log import logger
 from msit_llm.common.utils import check_input_path_legality, check_data_file_size, load_file_to_read_common_check
 from components.utils.file_open_check import ms_open
 from components.utils.constants import TENSOR_MAX_SIZE
+from components.utils.util import safe_int
 
 
 class TensorBinFile:
@@ -60,32 +61,35 @@ class TensorBinFile:
 
         begin_offset = 0
         for i, byte in enumerate(file_data):
-            if byte == ord("\n"):
-                line = file_data[begin_offset: i].decode("utf-8")
-                begin_offset = i + 1
-                fields = line.split("=")
-                attr_name = fields[0]
-                attr_value = fields[1]
-                if attr_name == ATTR_END:
-                    self.obj_buffer = file_data[i + 1:]
-                    break
-                elif attr_name.startswith("$"):
-                    self._parse_system_attr(attr_name, attr_value)
-                else:
-                    self._parse_user_attr(attr_name, attr_value)
+            if byte != ord("\n"):
+                continue
+            line = file_data[begin_offset: i].decode("utf-8")
+            begin_offset = i + 1
+            fields = line.split("=")
+            if len(fields) != 2:
+                raise ValueError("Unsupported tensorbin file, we need data format is 'attr_name=attr_value'.")
+            attr_name = fields[0]
+            attr_value = fields[1]
+            if attr_name == ATTR_END:
+                self.obj_buffer = file_data[i + 1:]
+                break
+            elif attr_name.startswith("$"):
+                self._parse_system_attr(attr_name, attr_value)
+            else:
+                self._parse_user_attr(attr_name, attr_value)
 
     def _parse_system_attr(self, attr_name, attr_value):
         if attr_name == ATTR_OBJECT_LENGTH:
-            self.obj_len = int(attr_value)
+            self.obj_len = safe_int(attr_value)
 
     def _parse_user_attr(self, attr_name, attr_value):
         if attr_name == "dtype":
-            self.dtype = int(attr_value)
+            self.dtype = safe_int(attr_value)
         elif attr_name == "format":
-            self.format = int(attr_value)
+            self.format = safe_int(attr_value)
         elif attr_name == "dims":
             self.dims = attr_value.split(",")
-            self.dims = [int(dim) for dim in self.dims]
+            self.dims = [safe_int(dim) for dim in self.dims]
 
 
 def read_atb_data(file_path):

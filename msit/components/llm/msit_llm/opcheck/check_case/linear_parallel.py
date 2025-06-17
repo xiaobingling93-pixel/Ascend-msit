@@ -133,7 +133,7 @@ class OpcheckLinearParallelOperation(operation_test.OperationTest):
     def golden_calc(self, in_tensors):
         backend = self.op_param.get('backend', "hccl")
         rank = self.op_param.get('rank', 0)
-        rank_size = self.op_param.get("rankSize", 0)
+        rank_size = self.op_param.get("rankSize", 1)
 
         if backend != "lcoc":
             golden_result = self.all_reduce(in_tensors, rank_size)

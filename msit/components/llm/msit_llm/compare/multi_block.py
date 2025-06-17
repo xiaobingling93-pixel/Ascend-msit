@@ -36,6 +36,9 @@ def multi_block_cmp(atb_nodes, torch_nodes, my_root_node, atb_tensor_path, torch
             tensor_sub_dir=os.path.join("after", "outtensor0.bin"))
         torch_node_tensor_path, torch_tensor_datas = get_multi_tensor_paths(torch_tensor_path, torch_node_tensor_path,
             tensor_sub_dir="output.pth")
+        # 存在torch数据或者atb数据不存在，跳过当前比对
+        if not atb_tensor_datas or not torch_tensor_datas:
+            continue
         # 2. concat tensor_datas
         dim_atb = get_cat_dim(atb_tensor_datas, torch_tensor_datas)
         dim_torch = get_cat_dim(torch_tensor_datas, atb_tensor_datas)
