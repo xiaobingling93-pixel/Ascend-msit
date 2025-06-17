@@ -61,12 +61,7 @@ with patch.dict('sys.modules', {
     'msserviceprofiler.modelevalstate.config.config': config_mock,
     'msserviceprofiler.modelevalstate.optimizer.optimizer': optimizer_mock
 }):
-    from msserviceprofiler.modelevalstate.optimizer.server import (
-        get_file,
-        RequestHandler,
-        RemoteScheduler,
-        main
-    )
+    from msserviceprofiler.modelevalstate.optimizer.server import get_file, RequestHandler, RemoteScheduler
 
     class TestGetFile(unittest.TestCase):
         def setUp(self):
@@ -182,7 +177,3 @@ class TestRemoteScheduler(unittest.TestCase):
 class TestRequestHandler(unittest.TestCase):
     def test_rpc_paths(self):
         self.assertEqual(RequestHandler.rpc_paths, ('/RPC2',))
-
-
-if __name__ == '__main__':
-    unittest.main()
