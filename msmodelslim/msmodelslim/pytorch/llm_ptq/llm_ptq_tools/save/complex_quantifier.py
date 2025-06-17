@@ -179,14 +179,14 @@ def process_scale(name, bias, tp_num):
     """
     if 'up_proj' in name or 'gate_proj' in name:
         up_bias = bias
-        up_bias = up_bias.sum(dim=1, keepdim=True)
+        up_bias = 8 * up_bias.sum(dim=1, keepdim=True)
         bias = up_bias
 
     elif 'down_proj' in name:
         pre_shape = bias.shape[0]
         sum_shape = bias.shape[1] // tp_num
         down_bias = bias.reshape(-1, sum_shape)
-        down_bias = down_bias.sum(dim=1, keepdim=True)
+        down_bias = 8 * down_bias.sum(dim=1, keepdim=True)
         bias = down_bias.reshape(pre_shape, -1)
     return bias
 
@@ -317,10 +317,10 @@ class ComplexQuantifier:
         
         if self.is_new_version and model_quant_type in [QuantType.W4A8_DYNAMIC]:
             weight = save_quant_weight.reshape(-1, module.cfg.group_size).to(torch.float32)
-            second_scale = weight_scale[1].reshape(-1, 1)
+            second_scale = weight_scale[1].to(torch.bfloat16).reshape(-1, 1)
             first_deq_weight = (weight * second_scale).reshape(ori_shape)
-            second_deq_weight = first_deq_weight * weight_scale[0]
-            bias = 8 * second_deq_weight
+            second_deq_weight = first_deq_weight * weight_scale[0].to(torch.bfloat16)
+            bias = second_deq_weight
             scale_bias = process_scale(name, bias, 16)
             save_quant_weight = _w4a8_pack_int4(save_quant_weight)
 
