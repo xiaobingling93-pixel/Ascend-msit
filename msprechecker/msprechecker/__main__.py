@@ -17,14 +17,12 @@ import json
 import time
 import argparse
 import tempfile
-from collections import namedtuple
-from glob import glob
 
 from msprechecker.prechecker import CHECKERS, CHECKER_INFOS_STR
-from msprechecker.prechecker.utils import str_ignore_case, logger, set_log_level
+from msprechecker.prechecker.utils import logger, set_log_level
 from msprechecker.prechecker.utils import LOG_LEVELS, RUN_MODES, CHECKER_TYPES
 from msprechecker.prechecker.utils import MIES_INSTALL_PATH, MINDIE_SERVICE_DEFAULT_PATH, RANKTABLEFILE
-from msprechecker.prechecker.utils import deep_compare_dict, get_next_dict_item
+from msprechecker.prechecker.utils import deep_compare_dict
 from msprechecker.core.collectors.basic_collector import BasicCollector
 from msprechecker.core.reporters.basic_reporter import BasicReporter
 
@@ -195,48 +193,6 @@ def run_precheck(
         logger.warning("本工具提供的为经验建议，实际效果与具体的环境/场景有关，建议以实测为准")
 
 
-def run_distribute_compare(
-    ranktable_file=None,
-    service_config_path=None,
-    master_ip=None,
-    master_port=None,
-    local_rank=None,
-    world_size=None,
-    checkers=(CHECKER_TYPES.basic,),
-    **kwargs,
-):
-    from msprechecker.prechecker import cluster_collector
-
-    dump_env = run_env_dump(
-        dump_file_path=None, service_config_path=service_config_path, checkers=checkers, ranktable_file=ranktable_file
-    )
-    dump_env_json_str = json.dumps(dump_env)
-
-    cluster_collector.init_global_distribute_env(
-        ranktable_file=ranktable_file, service_config_path=service_config_path, master_ip=master_ip
-    )
-    dump_env_json_str_dict = cluster_collector.distribute_collector(
-        dump_env_json_str, master_ip=master_ip, master_port=master_port, rank=local_rank, world_size=world_size
-    )
-    logger.debug(dump_env_json_str_dict)
-
-    if dump_env_json_str_dict is None:
-        logger.info("Not master node, skip comparing")
-        return
-
-    env_ips = []
-    env_infos = []
-    for ip, dump_env_json_str in dump_env_json_str_dict.items():
-        env_ips.append(ip)
-        env_infos.append(json.loads(dump_env_json_str))
-
-    skip_keys = [".Env.MIES_CONTAINER_IP", ".Env.ASCEND_CUSTOM_OPP_PATH"]
-    has_diff = deep_compare_dict(env_infos, env_ips, skip_keys=skip_keys)
-    if not has_diff:
-        logger.info("No difference found")
-    logger.info("== compare end ==")
-
-
 def sub_parser_precheck(subparsers):
     ranktable_file = os.getenv(RANKTABLEFILE, None)
 
@@ -279,45 +235,6 @@ def sub_parser_compare(subparsers):
     parser.set_defaults(func=run_compare)
 
 
-def sub_parser_distribute_compare(subparsers):
-    # Multi-machine
-    parser = subparsers.add_parser(
-        RUN_MODES.distribute_compare,
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        help="compare distribute envs",
-    )
-    parser.add_argument(
-        "-ip",
-        "--master_ip",
-        default=None,
-        help="master ip, required if RANKTABLEFILE not available or using different value",
-    )
-    parser.add_argument(
-        "-port",
-        "--master_port",
-        default=None,
-        type=int,
-        help="master port, required if MIES_INSTALL_PATH not available or master_port already occupied by others",
-    )
-    parser.add_argument(
-        "-rank",
-        "--local_rank",
-        type=int,
-        default=None,
-        help="local rank, required if RANKTABLEFILE not available or using different value",
-    )
-    parser.add_argument(
-        "-size",
-        "--world_size",
-        type=int,
-        default=None,
-        help="world size, required if RANKTABLEFILE not available or using different value",
-    )
-    for ii in DUMP_COMMON_ARGS + COMMON_ARGS:
-        parser.add_argument(*ii.get("args", []), **ii.get("kwargs", {}))
-    parser.set_defaults(func=run_distribute_compare)
-
-
 def main():
     # args
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -325,7 +242,6 @@ def main():
     sub_parser_precheck(subparsers)
     sub_parser_dump(subparsers)
     sub_parser_compare(subparsers)
-    sub_parser_distribute_compare(subparsers)
     args, _ = parser.parse_known_args()
 
     # init

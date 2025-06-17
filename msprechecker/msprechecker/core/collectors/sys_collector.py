@@ -41,7 +41,7 @@ class ToolkitVersionCollector(BaseCollector):
         lines = read_file_lines(version_file)
         if lines:
             for line in lines:
-                if "=" in line or ":" in line:
+                if "=" in line and ":" in line:
                     parts = line.replace("=", ":").split(":")
                     if len(parts) > 1:
                         toolkit_info["version"] = parts[-1].strip("]\n ")

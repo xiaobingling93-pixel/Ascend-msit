@@ -16,7 +16,7 @@ import argparse
 import unittest
 from unittest.mock import patch, MagicMock
 
-from msprechecker.__main__ import main, run_precheck, run_env_dump, run_distribute_compare, run_compare
+from msprechecker.__main__ import main, run_precheck, run_env_dump, run_compare
 
 
 class TestMain(unittest.TestCase):
@@ -52,9 +52,3 @@ class TestMain(unittest.TestCase):
         with patch("argparse.ArgumentParser.parse_known_args",
                    return_value=(argparse.Namespace(func=run_compare), None)):
             self.assertIsNone(main())
-    
-    def test_distribute_compare_command_should_call_run_distribute_compare(self):
-        with patch("argparse.ArgumentParser.parse_known_args",
-                   return_value=(argparse.Namespace(func=run_distribute_compare), None)):
-            with patch.dict("sys.modules", {"torch": self.mock, "psutil": self.mock}):
-                self.assertIsNone(main())
