@@ -104,7 +104,6 @@ def find_best_by_curve_fit(summary_fit_data, process_name):
 
     points.append(max_batch_size * 10)
     targets.append(0.00001)
-    logger.debug(f"find_best_by_curve_fit points={points}, targets={targets}")
 
     try:
         popt, pcov = curve_fit(func_curv, points, targets, maxfev=10000)
