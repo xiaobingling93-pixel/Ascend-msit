@@ -181,6 +181,18 @@ def get_predict_image(results):
     plt.savefig(png_name)
 
 
+def divide_fit_and_print(summary):
+    if len(summary) == 0:
+        return [], 0, []
+
+    summary.sort(key=lambda x: x["BSZ"])
+    best_bs = max(
+        summary, key=lambda xx: sum(xx["FIT_DATA"]) / len(xx["FIT_DATA"]) if len(xx["FIT_DATA"]) > 0 else 0
+    )
+    to_fit = [dict(BSZ=x["BSZ"], FIT_DATA=x.pop("FIT_DATA")) for x in summary]
+    return to_fit, best_bs, summary
+
+
 @register_analyze()
 def find_best_batch_size(mindie_service_config, benchmark, output_log, profiling_params):
     if "results_per_request" not in benchmark:
@@ -188,23 +200,19 @@ def find_best_batch_size(mindie_service_config, benchmark, output_log, profiling
 
     results = []
     prefill_summary, decode_summary = read_batch_and_latency(benchmark.get("results_per_request", {}))
+    decode_len, prefill_len = len(decode_to_fit), len(prefill_to_fit)
+    if decode_len == 0 and prefill_len == 0:
+        logger.warning(f"instance data not available, decode_len={decode_len}, prefill_len={prefill_len}")
+        return
 
-    def divide_fit_and_print(summary):
-        summary.sort(key=lambda x: x["BSZ"])
-        to_fit = [dict(BSZ=x["BSZ"], FIT_DATA=x["FIT_DATA"]) for x in summary]
-        return to_fit, summary
-
-    prefill_to_fit, prefill_to_print = divide_fit_and_print(list(prefill_summary.values()))
-    decode_to_fit, decode_to_print = divide_fit_and_print(list(decode_summary.values()))
+    prefill_to_fit, prefill_cur_best_bs, prefill_to_print = divide_fit_and_print(list(prefill_summary.values()))
+    decode_to_fit, decode_cur_best_bs, decode_to_print = divide_fit_and_print(list(decode_summary.values()))
 
     logger.debug("==decode==")
     print_list(decode_to_print)
     logger.debug("==prefill==")
     print_list(prefill_to_print)
-    decode_len, prefill_len = len(decode_to_fit), len(prefill_to_fit)
-    if decode_len == 0 and prefill_len == 0:
-        logger.warning(f"instance data not available, decode_len={decode_len}, prefill_len={prefill_len}")
-        return
+    logger.debug(f"Max value from instance: prefill_cur_max_bs={prefill_cur_max_bs}, decode_cur_max_bs={decode_cur_max_bs}")
 
     if decode_len <= 1:
         answer(
@@ -213,7 +221,6 @@ def find_best_batch_size(mindie_service_config, benchmark, output_log, profiling
             action="无法给出建议数据",
             reason=f"decode batch 样本量 {decode_len} 太小，需要增大 batch size 重新获取 instance 数据",
         )
-
     if prefill_len <= 1:
         answer(
             suggesion_type=SUGGESTION_TYPES.config,
@@ -222,10 +229,6 @@ def find_best_batch_size(mindie_service_config, benchmark, output_log, profiling
             reason=f"prefill batch 样本量 {prefill_len} 太小，需要增大 batch size 重新获取 instance 数据",
         )
 
-    decode_cur_best_bs = max([ii["BSZ"] for ii in decode_to_fit], key=lambda xx: mean(xx["FIT_DATA"]))
-    prefill_cur_best_bs = max([ii["BSZ"] for ii in prefill_to_fit], key=lambda xx: mean(xx["FIT_DATA"]))
-    logger.debug(f"Max value from instance: prefill_cur_max_bs={prefill_cur_max_bs}, decode_cur_max_bs={decode_cur_max_bs}")
-    
     prefill_cur_config = get_dict_value_by_pos(
         mindie_service_config, "BackendConfig:ScheduleConfig:maxPrefillBatchSize"
     ) or 1
