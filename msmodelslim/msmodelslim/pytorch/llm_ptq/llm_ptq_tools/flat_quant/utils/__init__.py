@@ -3,8 +3,7 @@ __all__ = [
     'get_init_scale',
     'get_decompose_dim',
     'get_inverse',
-    'set_require_grad_all',
-    'to_device'
+    'set_require_grad_all'
 ]
 
 
