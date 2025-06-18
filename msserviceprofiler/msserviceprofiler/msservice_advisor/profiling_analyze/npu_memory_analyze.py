@@ -40,6 +40,10 @@ def extract_token_num(benchmark, input_params):
     input_token_num = 0
     try:
         input_token_num = get_benchmark_token_num(benchmark, 'InputTokens')
+    except Exception as e:
+        logger.warning(f"Failed extracting input_token_num request input info from benchmark failed due to {e}, "
+            "please check or try to specifying the input length.")
+
         avg_token_num = get_benchmark_token_num(benchmark, 'GeneratedTokens')
     except Exception as e:
         logger.warning(f"Extract request input info from benchmark failed due to {e}, "
@@ -56,8 +60,8 @@ def extract_token_num(benchmark, input_params):
 
 
 def get_schedule_config_info(backend_config, output_token_num):
-    schedule_config = backend_config.get('ScheduleConfig')
-    cache_block_sizes = schedule_config.get('cacheBlockSize')
+    schedule_config = backend_config.get('ScheduleConfig', {})
+    cache_block_sizes = schedule_config.get('cacheBlockSize', {})
 
     if not cache_block_sizes:
         raise Exception("mindie-server config.json missing 'cacheBlockSize'.")
@@ -83,7 +87,7 @@ def get_model_config_info(model_configs, tp, npu_device_ids):
     return tp, model_weight_path
 
 
-def extract_server_config_params(server_config, args):
+def extract_server_config_params(server_config, output_token_num, tp):
     """
         获取mindie-server config.json中的参数信息
         output_token_num: 请求输出长度。优先从用户输入中获取; 用户未输入等于conf中的maxIterTimes。
@@ -97,15 +101,15 @@ def extract_server_config_params(server_config, args):
     output_token_num = args.output_token_num
     tp = args.tp
 
-    backend_config = server_config.get('BackendConfig')
+    backend_config = server_config.get('BackendConfig', {})
     output_token_num, cache_block_sizes = get_schedule_config_info(backend_config, output_token_num)
 
-    npu_device_ids = backend_config.get('npuDeviceIds')[0]
+    npu_device_ids = backend_config.get('npuDeviceIds', [[]])[0]
     if not npu_device_ids or len(npu_device_ids) == 0:
         raise Exception("mindie-server config.json missing 'npuDeviceIds'.")
     logger.info(f"npu_device_ids: {npu_device_ids}")
 
-    model_configs = backend_config.get('ModelDeployConfig').get('ModelConfig')[0]
+    model_configs = backend_config.get('ModelDeployConfig', {}).get('ModelConfig', [[]])[0]
     tp, model_weight_path = get_model_config_info(model_configs, tp, npu_device_ids)
 
     return dict(
@@ -409,11 +413,19 @@ def find_max_batch_size_range(server_config, benchmark, output_log, input_params
     # get input token number and average output token num
     input_token_num, avg_token_num = extract_token_num(benchmark, input_params)
 
+    if not server_config:
+        logger.warning(f"service_config_path is required calculating model weight size and others. Skipping now")
+        return
+
     # get server info from server config.json
     try:
-        server_params = extract_server_config_params(server_config, input_params)
+        server_params = extract_server_config_params(server_config, input_params.output_token_num, input_params.tp)
     except Exception as e:
-        logger.warning(f"Skip npu memory analyze due to {e}, please check mindie-server config permission or content.")
+        logger.warning(f"Skip npu memory analyze due to {e}, please check mindie-server config content.")
+        return
+    
+    if "model_weight_path" not in server_config:
+        logger.warning(f"model_weight_path not found in content of service_config_path. Skipping now")
         return
     
     # get model info from model config.json
