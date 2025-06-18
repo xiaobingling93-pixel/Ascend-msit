@@ -191,7 +191,7 @@ def find_best_batch_size(config, benchmark, output_log, profiling_params):
 
     def divide_fit_and_print(summary):
         summary.sort(key=lambda x: x["BSZ"])
-        to_fit = [dict(BSZ=x["BSZ"], FIT_DATA=x.pop("FIT_DATA")) for x in summary]
+        to_fit = [dict(BSZ=x["BSZ"], FIT_DATA=x["FIT_DATA"]) for x in summary]
         return to_fit, summary
 
     prefill_to_fit, prefill_to_print = divide_fit_and_print(list(prefill_summary.values()))
