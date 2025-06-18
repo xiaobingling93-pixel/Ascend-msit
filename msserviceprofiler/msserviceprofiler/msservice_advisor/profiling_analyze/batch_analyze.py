@@ -256,7 +256,9 @@ def find_best_batch_size(mindie_service_config, benchmark, output_log, profiling
     if decode_len > 1:
         best_decode_result = find_best_by_curve_fit(decode_to_fit, "decode")
         suggest_value = max(
-            best_decode_result.get('best_batch_size', -1), best_prefill_result.get('best_batch_size', -1), decode_cur_best_bs
+            best_decode_result.get('best_batch_size', -1),
+            best_prefill_result.get('best_batch_size', -1),
+            decode_cur_best_bs,
         )
         max_batch_size_by_npu_mem = GLOBAL_DATA.get("maxBatchSize", {})
         if "min" in max_batch_size_by_npu_mem:
