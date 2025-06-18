@@ -180,6 +180,28 @@ def get_predict_image(results):
     plt.savefig(png_name)
 
 
+def writer_to_answer(target_item, action_item, reason_item):
+    answer(
+        suggesion_type=SUGGESTION_TYPES.config,
+        suggesion_item=target_item,
+        action=action_item,
+        reason=reason_item,
+    )
+
+
+def print_logs(decode_to_print, prefill_to_print):
+    logger.info("==decode==")
+    print_list(decode_to_print)
+    logger.info("==prefill==")
+    print_list(prefill_to_print)
+
+
+def divide_fit_and_print(summary):
+    summary.sort(key=lambda x: x["BSZ"])
+    to_fit = [dict(BSZ=x["BSZ"], FIT_DATA=x.pop("FIT_DATA")) for x in summary]
+    return to_fit, summary
+
+    
 @register_analyze()
 def find_best_batch_size(config, benchmark, output_log, profiling_params):
     if "results_per_request" not in benchmark:
@@ -188,44 +210,22 @@ def find_best_batch_size(config, benchmark, output_log, profiling_params):
     results = []
     prefill_summary, decode_summary = read_batch_and_latency(benchmark.get("results_per_request", {}))
 
-    def divide_fit_and_print(summary):
-        summary.sort(key=lambda x: x["BSZ"])
-        to_fit = [dict(BSZ=x["BSZ"], FIT_DATA=x.pop("FIT_DATA")) for x in summary]
-        return to_fit, summary
-
     prefill_to_fit, prefill_to_print = divide_fit_and_print(list(prefill_summary.values()))
     decode_to_fit, decode_to_print = divide_fit_and_print(list(decode_summary.values()))
-
-    logger.info("==decode==")
-    print_list(decode_to_print)
-    logger.info("==prefill==")
-    print_list(prefill_to_print)
+    print_logs(decode_to_print, prefill_to_print)
 
     if len(decode_to_fit) <= 1:
-        answer(
-            suggesion_type=SUGGESTION_TYPES.config,
-            suggesion_item="maxBatchSize",
-            action="set bigger",
-            reason="目前batch样本太小，建议调大点试试",
-        )
+        writer_to_answer("maxBatchSize", "set bigger", "目前batch样本太小，建议调大点试试")
 
     if len(prefill_to_fit) <= 1:
-        answer(
-            suggesion_type=SUGGESTION_TYPES.config,
-            suggesion_item="maxPrefillBatchSize",
-            action="set bigger",
-            reason="目前batch样本太小，建议调大点试试",
-        )
+        writer_to_answer("maxPrefillBatchSize", "set bigger", "目前batch样本太小，建议调大点试试")
+
     if len(prefill_to_fit) > 1:
         best_prefill_result = find_best_by_curve_fit(prefill_to_fit, "prefill")
         if best_prefill_result:
             results.append(best_prefill_result)
-            answer(
-                suggesion_type=SUGGESTION_TYPES.config,
-                suggesion_item="maxPrefillBatchSize",
-                action=f"set to {best_prefill_result['best_batch_size']}",
-                reason="经过当前不同batch的时延数据，通过函数拟合分析，建议最优batchsize",
-            )
+            writer_to_answer("maxPrefillBatchSize", f"set to {best_prefill_result['best_batch_size']}",
+                "经过当前不同batch的时延数据，通过函数拟合分析，建议最优batchsize")
     else:
         best_prefill_result = None
 
@@ -235,12 +235,9 @@ def find_best_batch_size(config, benchmark, output_log, profiling_params):
             value = best_decode_result['best_batch_size']
             value = max(value, best_prefill_result['best_batch_size']) if best_prefill_result else value
             results.append(best_decode_result)
-            answer(
-                suggesion_type=SUGGESTION_TYPES.config,
-                suggesion_item="maxBatchSize",
-                action=f"set to {value}",
-                reason="经过当前不同batch的时延数据，通过函数拟合分析，建议最优batchsize",
-            )
+            writer_to_answer("maxBatchSize", f"set to {value}",
+                "经过当前不同batch的时延数据，通过函数拟合分析，建议最优batchsize")
+
     try:
         if len(results) == 0:
             return

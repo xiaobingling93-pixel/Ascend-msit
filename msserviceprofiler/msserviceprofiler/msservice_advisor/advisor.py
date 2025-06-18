@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from msserviceprofiler.msservice_advisor.profiling_analyze.utils import TARGETS, LOG_LEVELS, SUGGESTION_TYPES
 from msserviceprofiler.msservice_advisor.profiling_analyze.utils import str_ignore_case, logger, set_log_level
 
-# {"21559056a7ff44c88a891ecbb537c431": "0", ...}
+# 文件格式，字典："21559056a7ff44c88a891ecbb537c431"："0", ...
 REQ_TO_DATA_MAP_PATTERN = "req_to_data_map.json"
 
 # FirstTokenTime,DecodeTime,LastDecodeTime,...
@@ -37,8 +37,8 @@ PERF_METRICS_MAP = {str_ignore_case(ii): ii for ii in PERF_METRICS}
 # ...,50,DeepSeek-R1,0.9336 ms,2.789 req/s,...
 RESULT_COMMON_PATTERN = "result_common_*.csv"
 
-# {"7": {"input_len": 213, "output_len": 12, "prefill_bsz": 15, "decode_bsz": [20, ...],
-#        "req_latency": 2348332643508911, "latency": [798.7475395202637, ...], "queue_latency": [445314, ...], ... }
+# 文件格式，字典："7" -> "input_len"：213, "output_len"：12, "prefill_bsz"：15, "decode_bsz"：[20, ...],
+# 文件格式，字典： "req_latency"：2348332643508911, "latency"：[798.7475395202637, ...], "queue_latency"：[445314, ...], ... 
 RESULTS_PER_REQUEST_PATTERN = "results_per_request_*.json"
 
 MIES_INSTALL_PATH = "MIES_INSTALL_PATH"
@@ -70,9 +70,6 @@ class ProfilingParameters:
             output_token_num=args.output_token_num,
             tp=args.tp
         )
-
-
-""" parse_benchmark_instance """
 
 
 def get_latest_matching_file(instance_path, pattern):
@@ -136,9 +133,6 @@ def parse_benchmark_instance(instance_path):
     )
 
 
-""" parse_mindie_server_config """
-
-
 def parse_mindie_server_config(service_config_path):
     logger.debug("\nmindie_service_config:")
     if service_config_path.endswith(".json"):  # config.json directly
@@ -161,9 +155,6 @@ def parse_mindie_server_config(service_config_path):
     return mindie_service_config, mindie_server_log_path
 
 
-""" analyze """
-
-
 def analyze(mindie_service_config, benchmark_instance, mindie_server_log_path, params: ProfilingParameters):
     import msserviceprofiler.msservice_advisor.profiling_analyze
     from msserviceprofiler.msservice_advisor.profiling_analyze.register import REGISTRY, ANSWERS
@@ -176,7 +167,7 @@ def analyze(mindie_service_config, benchmark_instance, mindie_server_log_path, p
     logger.info("</think>")
 
     logger.info("")
-    logger.info("<answer>")
+    logger.info("<advice>")
     for suggesion_type in SUGGESTION_TYPES:
         for name, items in ANSWERS.get(suggesion_type, dict()).items():
             for action, reason in items:
@@ -184,10 +175,7 @@ def analyze(mindie_service_config, benchmark_instance, mindie_server_log_path, p
                 logger.info(f"[action] {action}")
                 logger.info(f"[reason] {reason}")
                 logger.info("")
-    logger.info("</answer>")
-
-
-""" check_positive_integer """
+    logger.info("</advice>")
 
 
 def check_positive_integer(value):

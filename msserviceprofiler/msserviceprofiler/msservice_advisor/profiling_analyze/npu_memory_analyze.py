@@ -63,7 +63,7 @@ def get_schedule_config_info(backend_config, output_token_num):
         raise Exception("mindie-server config.json missing 'cacheBlockSize'.")
 
     if output_token_num == 0:
-        output_token_num = int(schedule_config.get('maxIterTimes', 0))
+        output_token_num = int(schedule_config.get('maxIterTimes'))
 
     logger.info(f"output_token_num: {output_token_num}, cache_block_sizes: {cache_block_sizes}")
     return output_token_num, cache_block_sizes
@@ -315,6 +315,10 @@ def cal_total_block_num(npu_mem_size, server_params, model_params):
         torch_dtype: Cache类型
         num_key_value_heads: kv键值头数
     """
+    if npu_mem_size <= 0:
+        raise Exception("Available npu memory size is 0. "
+            "You need to stop mindie-server process or choose other available npu devices.")
+
     tp = server_params['tp'] # tp checked before cannot be 0
     cache_block_sizes = server_params['cache_block_sizes']
 
