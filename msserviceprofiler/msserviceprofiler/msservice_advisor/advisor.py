@@ -78,6 +78,7 @@ def get_latest_matching_file(instance_path, pattern):
 
 
 def read_csv(file_path):
+    logger.info(f"Reading file: {file_path}")
     result = {}
     with open(file_path, mode="r", newline="", encoding="utf-8") as ff:
         for row in csv.DictReader(ff):
@@ -87,6 +88,7 @@ def read_csv(file_path):
 
 
 def read_json(file_path):
+    logger.info(f"Reading file: {file_path}")
     with open(file_path) as ff:
         result = json.load(ff)
     return result
@@ -172,7 +174,7 @@ def analyze(mindie_service_config, benchmark_instance, mindie_server_log_path, p
         for name, items in ANSWERS.get(suggesion_type, dict()).items():
             for action, reason in items:
                 logger.info(f"[{suggesion_type}] {name}")
-                logger.info(f"[action] {action}")
+                logger.info(f"[advise] {action}")
                 logger.info(f"[reason] {reason}")
                 logger.info("")
     logger.info("</advice>")
@@ -194,13 +196,13 @@ def arg_parse(subparsers):
     mindie_service_path = os.getenv(MIES_INSTALL_PATH, MINDIE_SERVICE_DEFAULT_PATH)
 
     parser = subparsers.add_parser(
-        "advisor", formatter_class=argparse.ArgumentDefaultsHelpFormatter, help="advisor for performance"
+        "advisor", formatter_class=argparse.ArgumentDefaultsHelpFormatter, help="advisor for MindIE performance"
     )
     parser.add_argument(
         "-i", "--instance_path", type=str, default="instance", help="benchamrk instance output directory"
     )
     parser.add_argument(
-        "-s", "--service_config_path", type=str, default=mindie_service_path, help="service config json path"
+        "-s", "--service_config_path", type=str, default=mindie_service_path, help="MindIE service config json path"
     )
     parser.add_argument(
         "-t",

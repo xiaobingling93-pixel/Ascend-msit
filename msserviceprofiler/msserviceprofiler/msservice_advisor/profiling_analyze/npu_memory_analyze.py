@@ -18,46 +18,40 @@ import os
 import re
 import subprocess
 
-from msserviceprofiler.msservice_advisor.profiling_analyze.register import register_analyze, answer
+from msserviceprofiler.msservice_advisor.profiling_analyze.register import register_analyze, answer, GLOBAL_DATA
 from msserviceprofiler.msservice_advisor.profiling_analyze.utils import logger, SUGGESTION_TYPES, BYTES_TO_GB
 from msserviceprofiler.msservice_advisor.profiling_analyze.utils import vaild_readable_directory, vaild_readable_file
 from msserviceprofiler.msservice_advisor.profiling_analyze.utils import get_directory_size
 
 
 def get_benchmark_token_num(benchmark, info_name):
-    token_num = benchmark.get("result_perf").get(info_name).get('average')
+    token_num = benchmark.get("result_perf", {}).get(info_name, {}).get('average', "0")
     return int(float(token_num))
 
 
 def extract_token_num(benchmark, input_params):
     """
-        获取请求输入参数：
-        input_token_num: 输入长度。优先从用户输入中获取; 用户未输入从benchmark中获取。
-        avg_token_num: 平均输出长度。优先从benchmark中获取; 未获取到则与用户输入相等。
+    获取请求输入参数：
+    input_token_num: 输入长度。优先从用户输入中获取; 用户未输入从benchmark中获取
+    avg_token_num: 平均输出长度。优先从benchmark中获取; 未获取到则与用户输入相等
     """
     # get from benchmark
-    avg_token_num = 0
-    input_token_num = 0
-    try:
-        input_token_num = get_benchmark_token_num(benchmark, 'InputTokens')
-        avg_token_num = get_benchmark_token_num(benchmark, 'GeneratedTokens')
-    except Exception as e:
-        logger.warning(f"Extract request input info from benchmark failed due to {e}, "
-            "please check or try to specifying the input length.")
-
-    # get from user input
-    if input_params.input_token_num > 0:
-        input_token_num = input_params.input_token_num
-    if input_params.output_token_num > 0:
-        avg_token_num = input_params.output_token_num
-
+    input_token_num = input_params.input_token_num
+    avg_token_num = input_params.output_token_num
+    input_token_num = get_benchmark_token_num(benchmark, 'InputTokens') if input_token_num <= 0 else input_token_num
+    avg_token_num = get_benchmark_token_num(benchmark, 'GeneratedTokens') if avg_token_num <= 0 else avg_token_num
     logger.info(f"input_token_num: {input_token_num}, avg_output_token_num: {avg_token_num}")
+
+    if input_token_num <= 0:
+        logger.warning(f"input_token_num not provided and failed extracting from benchmark. Skipping now")
+    if avg_token_num <= 0:
+        logger.warning(f"output_token_num not provided and failed extracting from benchmark. Skipping now")
     return input_token_num, avg_token_num
 
 
 def get_schedule_config_info(backend_config, output_token_num):
-    schedule_config = backend_config.get('ScheduleConfig')
-    cache_block_sizes = schedule_config.get('cacheBlockSize')
+    schedule_config = backend_config.get('ScheduleConfig', {})
+    cache_block_sizes = schedule_config.get('cacheBlockSize', {})
 
     if not cache_block_sizes:
         raise Exception("mindie-server config.json missing 'cacheBlockSize'.")
@@ -83,7 +77,7 @@ def get_model_config_info(model_configs, tp, npu_device_ids):
     return tp, model_weight_path
 
 
-def extract_server_config_params(server_config, args):
+def extract_server_config_params(server_config, output_token_num, tp):
     """
         获取mindie-server config.json中的参数信息
         output_token_num: 请求输出长度。优先从用户输入中获取; 用户未输入等于conf中的maxIterTimes。
@@ -94,18 +88,15 @@ def extract_server_config_params(server_config, args):
         npu_mem_size: 单卡预留给kvcache的显存, 单位GB, 从conf中的npuMemSize获取。获取为-1则需要重新计算显存大小。
         sp: Sequence Parallelism策略, 对Sequence进行切分, 从conf中的sp获取, 若未配置默认为1。
     """
-    output_token_num = args.output_token_num
-    tp = args.tp
-
-    backend_config = server_config.get('BackendConfig')
+    backend_config = server_config.get('BackendConfig', {})
     output_token_num, cache_block_sizes = get_schedule_config_info(backend_config, output_token_num)
 
-    npu_device_ids = backend_config.get('npuDeviceIds')[0]
+    npu_device_ids = backend_config.get('npuDeviceIds', [[]])[0]
     if not npu_device_ids or len(npu_device_ids) == 0:
         raise Exception("mindie-server config.json missing 'npuDeviceIds'.")
     logger.info(f"npu_device_ids: {npu_device_ids}")
 
-    model_configs = backend_config.get('ModelDeployConfig').get('ModelConfig')[0]
+    model_configs = backend_config.get('ModelDeployConfig', {}).get('ModelConfig', [[]])[0]
     tp, model_weight_path = get_model_config_info(model_configs, tp, npu_device_ids)
 
     return dict(
@@ -222,9 +213,7 @@ def cal_npu_gm_memory(npu_id):
     """
     try:
         cmd = ['npu-smi', 'info', '-i', str(npu_id), '-t', 'usages']
-        output = subprocess.check_output(
-            cmd, text=True, stderr=subprocess.STDOUT
-        )
+        output = subprocess.check_output(cmd, text=True, stderr=subprocess.STDOUT)
 
         gm_capacity = None
         gm_usage = None
@@ -265,7 +254,7 @@ def get_available_npu_memory(npu_device_ids):
         pre_npu_memory = cal_npu_gm_memory(npu_id)
         available_npu_memory = min(available_npu_memory, pre_npu_memory)
     
-    logger.info(f"available_npu_memory: {available_npu_memory}")
+    logger.debug(f"available_npu_memory: {available_npu_memory}")
     return available_npu_memory
 
 
@@ -276,29 +265,33 @@ def cal_npu_mem_size(server_params, model_weight_size):
         Floor[(单卡可用显存 - 权重/NPU卡数) * 系数]
     """
     # get from mindie server config, GB
-    npu_mem_size = server_params['npu_mem_size']
-    if npu_mem_size >= 0:
-        logger.info(f"npu_mem_size: {npu_mem_size}GB")
+    npu_mem_size = server_params.get('npu_mem_size', -1)
+    if npu_mem_size > 0:
+        logger.info(f"npu_mem_size got from server_params: {npu_mem_size}GB")
         return npu_mem_size
+    if 'npu_device_ids' not in server_params:
+        logger.error(f"npu_device_ids not found in server_params={server_params}")
+        return 0
+
+    npu_device_ids = server_params['npu_device_ids']
+    if not isinstance(npu_device_ids, (list, tuple)) or len(npu_device_ids) == 0:
+        logger.error(f"Empty or invalid npu_device_ids in server_params={server_params}")
+        return 0
+    npu_num = len(npu_device_ids)
 
     # calulate npu available memory size
-    npu_available_mem = get_available_npu_memory(server_params['npu_device_ids'])
-
-    npu_num = len(server_params['npu_device_ids'])
-    if npu_num == 0:
-        raise ValueError(f"used npu number cannot be 0")
-
+    npu_available_mem = get_available_npu_memory(npu_device_ids)
     fixed_coefficent = 0.8
     npu_mem_size = (npu_available_mem - model_weight_size / npu_num) * fixed_coefficent
     npu_mem_size = max(math.floor(npu_mem_size), 0)
 
-    logger.info(f"npu_memory_size: {npu_mem_size}GB")
+    logger.info(f"Free npu_memory_size for KV cache calculated by npu_device_ids={npu_device_ids}: {npu_mem_size}GB")
     return npu_mem_size
 
 
 def get_model_param(model_params, param_name):
     param_value = model_params.get(param_name, 0)
-    logger.info(f"{param_name}: {param_value}")
+    logger.debug(f"{param_name}: {param_value}")
     return param_value
 
 
@@ -332,7 +325,7 @@ def cal_total_block_num(npu_mem_size, server_params, model_params):
     attention_size = hidden_size / tp
     num_key_value_heads = model_params.get('num_key_value_heads')
     if num_key_value_heads:
-        logger.info(f"num_key_value_heads:{num_key_value_heads}")
+        logger.debug(f"num_key_value_heads:{num_key_value_heads}")
 
         # for GQA or MLA model, attention_size is num_key_value_heads plus attention_head_size
         if num_attention_heads <= 0:
@@ -365,12 +358,12 @@ def cal_block_nums(
     input_block_num = math.ceil(input_tokens / cache_block_size)
     output_block_num = math.ceil(output_tokens / cache_block_size)
     avg_block_num = math.ceil(avg_tokens / cache_block_size)
-
-    return (
-        input_block_num + output_block_num, # max
-        input_block_num, # min
-        input_block_num + avg_block_num # avg
+    logger.debug(
+        f"input_block_num: {input_block_num}, output_block_num: {output_block_num}, avg_block_num: {avg_block_num}"
     )
+
+    # max, min, avg
+    return input_block_num + output_block_num, input_block_num, input_block_num + avg_block_num
 
 
 def cal_max_batch_size_range(
@@ -413,11 +406,19 @@ def find_max_batch_size_range(server_config, benchmark, output_log, input_params
     # get input token number and average output token num
     input_token_num, avg_token_num = extract_token_num(benchmark, input_params)
 
+    if not server_config:
+        logger.warning(f"service_config_path is required calculating model weight size and others. Skipping now")
+        return
+
     # get server info from server config.json
     try:
-        server_params = extract_server_config_params(server_config, input_params)
+        server_params = extract_server_config_params(server_config, input_params.output_token_num, input_params.tp)
     except Exception as e:
-        logger.warning(f"Skip npu memory analyze due to {e}, please check mindie-server config permission or content.")
+        logger.warning(f"Skip npu memory analyze due to {e}, please check mindie-server config content.")
+        return
+    
+    if "model_weight_path" not in server_params:
+        logger.warning(f"model_weight_path not found in content of service_config_path. Skipping now")
         return
     
     # get model info from model config.json
@@ -431,7 +432,7 @@ def find_max_batch_size_range(server_config, benchmark, output_log, input_params
     try:
         npu_mem_size = cal_npu_mem_size(server_params, model_weight_size)
         total_block_num = cal_total_block_num(npu_mem_size, server_params, model_params)
-        logger.info(f"total_block_num:{total_block_num}")
+        logger.debug(f"total_block_num:{total_block_num}")
     except Exception as e:
         logger.warning(f"Skip npu memory analyze due to npu memory calculation failed. {e}")
         return
@@ -447,3 +448,4 @@ def find_max_batch_size_range(server_config, benchmark, output_log, input_params
     logger.info(f"max_batch_size:{max_batch}  min_batch_size:{min_batch}  avg_batch_size:{avg_batch}")
 
     write_to_answer(min_batch, max_batch, avg_batch)
+    GLOBAL_DATA["maxBatchSize"] = {"min": min_batch, "max": max_batch, "avg": avg_batch}

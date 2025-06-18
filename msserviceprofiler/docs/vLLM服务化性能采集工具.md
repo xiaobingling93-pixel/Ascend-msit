@@ -38,7 +38,7 @@
   {
     "enable": 1,
     "prof_dir": "vllm_prof",
-    "profiler_level": "INFO"，
+    "profiler_level": "INFO",
     "host_system_usage_freq": -1,
     "npu_memory_usage_freq": -1,
     "acl_task_time": 0,
