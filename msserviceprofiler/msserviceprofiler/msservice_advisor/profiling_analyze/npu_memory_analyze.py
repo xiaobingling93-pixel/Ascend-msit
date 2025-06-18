@@ -18,7 +18,7 @@ import os
 import re
 import subprocess
 
-from msserviceprofiler.msservice_advisor.profiling_analyze.register import register_analyze, answer
+from msserviceprofiler.msservice_advisor.profiling_analyze.register import register_analyze, answer, GLOBAL_DATA
 from msserviceprofiler.msservice_advisor.profiling_analyze.utils import logger, SUGGESTION_TYPES, BYTES_TO_GB
 from msserviceprofiler.msservice_advisor.profiling_analyze.utils import vaild_readable_directory, vaild_readable_file
 from msserviceprofiler.msservice_advisor.profiling_analyze.utils import get_directory_size
@@ -444,3 +444,4 @@ def find_max_batch_size_range(server_config, benchmark, output_log, input_params
     logger.info(f"max_batch_size:{max_batch}  min_batch_size:{min_batch}  avg_batch_size:{avg_batch}")
 
     write_to_answer(min_batch, max_batch, avg_batch)
+    GLOBAL_DATA["maxBatchSize"] = {"min": min_batch, "max": max_batch, "avg": avg_batch}

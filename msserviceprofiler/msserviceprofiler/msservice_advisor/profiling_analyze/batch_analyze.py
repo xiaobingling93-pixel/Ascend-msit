@@ -16,6 +16,7 @@ import random
 import numpy as np
 
 from msserviceprofiler.msservice_advisor.profiling_analyze.register import register_analyze, cached, answer
+from msserviceprofiler.msservice_advisor.profiling_analyze.register import GLOBAL_DATA
 from msserviceprofiler.msservice_advisor.profiling_analyze.utils import TARGETS, SUGGESTION_TYPES, logger
 try:
     import matplotlib.pyplot as plt
@@ -196,27 +197,31 @@ def find_best_batch_size(config, benchmark, output_log, profiling_params):
     prefill_to_fit, prefill_to_print = divide_fit_and_print(list(prefill_summary.values()))
     decode_to_fit, decode_to_print = divide_fit_and_print(list(decode_summary.values()))
 
-    logger.info("==decode==")
+    logger.debug("==decode==")
     print_list(decode_to_print)
-    logger.info("==prefill==")
+    logger.debug("==prefill==")
     print_list(prefill_to_print)
+    decode_len, prefill_len = len(decode_to_fit), len(prefill_to_fit)
+    # if decode_len == 0 and prefill_len == 0:
+    #     logger.warning(f"instance data not available, decode_len={decode_len}, prefill_len={prefill_len}")
+    #     return
 
-    if len(decode_to_fit) <= 1:
+    if decode_len <= 1:
         answer(
             suggesion_type=SUGGESTION_TYPES.config,
             suggesion_item="maxBatchSize",
-            action="set bigger",
-            reason="目前batch样本太小，建议调大点试试",
+            action="无法给出建议数据",
+            reason=f"decode batch 样本量 {decode_len} 太小，需要增大 batch size 重新获取 instance 数据",
         )
 
-    if len(prefill_to_fit) <= 1:
+    if prefill_len <= 1:
         answer(
             suggesion_type=SUGGESTION_TYPES.config,
             suggesion_item="maxPrefillBatchSize",
-            action="set bigger",
-            reason="目前batch样本太小，建议调大点试试",
+            action="无法给出建议数据",
+            reason=f"prefill batch 样本量 {prefill_len} 太小，需要增大 batch size 重新获取 instance 数据",
         )
-    if len(prefill_to_fit) > 1:
+    if prefill_len > 1:
         best_prefill_result = find_best_by_curve_fit(prefill_to_fit, "prefill")
         if best_prefill_result:
             results.append(best_prefill_result)
@@ -229,7 +234,7 @@ def find_best_batch_size(config, benchmark, output_log, profiling_params):
     else:
         best_prefill_result = None
 
-    if len(decode_to_fit) > 1:
+    if decode_len > 1:
         best_decode_result = find_best_by_curve_fit(decode_to_fit, "decode")
         if best_decode_result:
             value = best_decode_result['best_batch_size']
