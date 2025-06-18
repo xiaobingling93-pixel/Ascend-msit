@@ -19,6 +19,7 @@ REGISTRY = {}
 
 ANSWERS = dict(env=dict(), config=dict())
 ANSWERS = {ii: {} for ii in SUGGESTION_TYPES}
+GLOBAL_DATA = {}
 
 
 def register_analyze(analyze_name=None):

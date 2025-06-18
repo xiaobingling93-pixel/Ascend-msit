@@ -37,6 +37,22 @@ def str_ignore_case(value):
     return value.lower().replace("_", "").replace("-", "")
 
 
+def get_dict_value_by_pos(dict_value, target_pos):
+    cur = dict_value
+    for kk in target_pos.split(":"):
+        if not cur:
+            cur = None
+            break
+        if isinstance(cur, list) and str.isdigit(kk):
+            cur = cur[int(kk)]
+        elif kk in cur:
+            cur = cur[kk]
+        else:
+            cur = None
+            break
+    return cur
+
+
 def walk_dict(data, parent_key=""):
     if isinstance(data, dict):
         for key, value in data.items():
