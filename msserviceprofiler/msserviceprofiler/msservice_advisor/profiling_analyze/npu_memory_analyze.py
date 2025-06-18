@@ -321,7 +321,7 @@ def cal_total_block_num(npu_mem_size, server_params, model_params):
     attention_size = hidden_size / tp
     num_key_value_heads = model_params.get('num_key_value_heads')
     if num_key_value_heads:
-        logger.info(f"num_key_value_heads:{num_key_value_heads}")
+        logger.debug(f"num_key_value_heads:{num_key_value_heads}")
 
         # for GQA or MLA model, attention_size is num_key_value_heads plus attention_head_size
         if num_attention_heads <= 0:
@@ -428,7 +428,7 @@ def find_max_batch_size_range(server_config, benchmark, output_log, input_params
     try:
         npu_mem_size = cal_npu_mem_size(server_params, model_weight_size)
         total_block_num = cal_total_block_num(npu_mem_size, server_params, model_params)
-        logger.info(f"total_block_num:{total_block_num}")
+        logger.debug(f"total_block_num:{total_block_num}")
     except Exception as e:
         logger.warning(f"Skip npu memory analyze due to npu memory calculation failed. {e}")
         return
