@@ -88,9 +88,6 @@ def extract_server_config_params(server_config, output_token_num, tp):
         npu_mem_size: 单卡预留给kvcache的显存, 单位GB, 从conf中的npuMemSize获取。获取为-1则需要重新计算显存大小。
         sp: Sequence Parallelism策略, 对Sequence进行切分, 从conf中的sp获取, 若未配置默认为1。
     """
-    output_token_num = args.output_token_num
-    tp = args.tp
-
     backend_config = server_config.get('BackendConfig', {})
     output_token_num, cache_block_sizes = get_schedule_config_info(backend_config, output_token_num)
 
@@ -414,7 +411,7 @@ def find_max_batch_size_range(server_config, benchmark, output_log, input_params
         logger.warning(f"Skip npu memory analyze due to {e}, please check mindie-server config content.")
         return
     
-    if "model_weight_path" not in server_config:
+    if "model_weight_path" not in server_params:
         logger.warning(f"model_weight_path not found in content of service_config_path. Skipping now")
         return
     
