@@ -213,9 +213,7 @@ def cal_npu_gm_memory(npu_id):
     """
     try:
         cmd = ['npu-smi', 'info', '-i', str(npu_id), '-t', 'usages']
-        output = subprocess.check_output(
-            cmd, text=True, stderr=subprocess.STDOUT
-        )
+        output = subprocess.check_output(cmd, text=True, stderr=subprocess.STDOUT)
 
         gm_capacity = None
         gm_usage = None
@@ -256,7 +254,7 @@ def get_available_npu_memory(npu_device_ids):
         pre_npu_memory = cal_npu_gm_memory(npu_id)
         available_npu_memory = min(available_npu_memory, pre_npu_memory)
     
-    logger.info(f"available_npu_memory: {available_npu_memory}")
+    logger.debug(f"available_npu_memory: {available_npu_memory}")
     return available_npu_memory
 
 
@@ -287,13 +285,13 @@ def cal_npu_mem_size(server_params, model_weight_size):
     npu_mem_size = (npu_available_mem - model_weight_size / npu_num) * fixed_coefficent
     npu_mem_size = max(math.floor(npu_mem_size), 0)
 
-    logger.info(f"npu_memory_size calculated by npu_device_ids={npu_device_ids}: {npu_mem_size}GB")
+    logger.info(f"Free npu_memory_size for KV cache calculated by npu_device_ids={npu_device_ids}: {npu_mem_size}GB")
     return npu_mem_size
 
 
 def get_model_param(model_params, param_name):
     param_value = model_params.get(param_name, 0)
-    logger.info(f"{param_name}: {param_value}")
+    logger.debug(f"{param_name}: {param_value}")
     return param_value
 
 
@@ -356,12 +354,12 @@ def cal_block_nums(
     input_block_num = math.ceil(input_tokens / cache_block_size)
     output_block_num = math.ceil(output_tokens / cache_block_size)
     avg_block_num = math.ceil(avg_tokens / cache_block_size)
-
-    return (
-        input_block_num + output_block_num, # max
-        input_block_num, # min
-        input_block_num + avg_block_num # avg
+    logger.debug(
+        f"input_block_num: {input_block_num}, output_block_num: {output_block_num}, avg_block_num: {avg_block_num}"
     )
+
+    # max, min, avg
+    return input_block_num + output_block_num, input_block_num, input_block_num + avg_block_num
 
 
 def cal_max_batch_size_range(
