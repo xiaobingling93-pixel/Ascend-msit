@@ -131,7 +131,7 @@ def find_best_by_curve_fit(summary_fit_data, process_name):
         }
     except Exception as error:
         logger.warning(f"{process_name} 拟合失败：{error}")
-        return None
+        return {}
 
     return result
 
@@ -182,7 +182,7 @@ def get_predict_image(results):
 
 
 @register_analyze()
-def find_best_batch_size(config, benchmark, output_log, profiling_params):
+def find_best_batch_size(mindie_service_config, benchmark, output_log, profiling_params):
     if "results_per_request" not in benchmark:
         return
 
@@ -202,9 +202,9 @@ def find_best_batch_size(config, benchmark, output_log, profiling_params):
     logger.debug("==prefill==")
     print_list(prefill_to_print)
     decode_len, prefill_len = len(decode_to_fit), len(prefill_to_fit)
-    # if decode_len == 0 and prefill_len == 0:
-    #     logger.warning(f"instance data not available, decode_len={decode_len}, prefill_len={prefill_len}")
-    #     return
+    if decode_len == 0 and prefill_len == 0:
+        logger.warning(f"instance data not available, decode_len={decode_len}, prefill_len={prefill_len}")
+        return
 
     if decode_len <= 1:
         answer(
@@ -221,29 +221,42 @@ def find_best_batch_size(config, benchmark, output_log, profiling_params):
             action="无法给出建议数据",
             reason=f"prefill batch 样本量 {prefill_len} 太小，需要增大 batch size 重新获取 instance 数据",
         )
+
+    decode_cur_best_bs = max([ii["BSZ"] for ii in decode_to_fit], key=lambda xx: mean(xx["FIT_DATA"]))
+    prefill_cur_best_bs = max([ii["BSZ"] for ii in prefill_to_fit], key=lambda xx: mean(xx["FIT_DATA"]))
+    logger.debug(f"Max value from instance: prefill_cur_max_bs={prefill_cur_max_bs}, decode_cur_max_bs={decode_cur_max_bs}")
+    
+    prefill_cur_config = get_dict_value_by_pos(
+        mindie_service_config, "BackendConfig:ScheduleConfig:maxPrefillBatchSize"
+    ) or 1
+    decode_cur_config = get_dict_value_by_pos(mindie_service_config, "BackendConfig:ScheduleConfig:maxBatchSize") or 1
+    logger.debug(f"Config value: prefill_cur_config={prefill_cur_config}, decode_cur_config={decode_cur_config}")
+
     if prefill_len > 1:
         best_prefill_result = find_best_by_curve_fit(prefill_to_fit, "prefill")
-        if best_prefill_result:
+        suggest_value = max(best_prefill_result.get('best_batch_size', -1), prefill_cur_best_bs)
+        if suggest_value != prefill_cur_config:
             results.append(best_prefill_result)
             answer(
                 suggesion_type=SUGGESTION_TYPES.config,
                 suggesion_item="maxPrefillBatchSize",
-                action=f"set to {best_prefill_result['best_batch_size']}",
+                action=f"尝试将原值 {prefill_cur_config} 设置为 {suggest_value}",
                 reason="经过当前不同batch的时延数据，通过函数拟合分析，建议最优batchsize",
             )
     else:
-        best_prefill_result = None
+        best_prefill_result = {}
 
     if decode_len > 1:
         best_decode_result = find_best_by_curve_fit(decode_to_fit, "decode")
-        if best_decode_result:
-            value = best_decode_result['best_batch_size']
-            value = max(value, best_prefill_result['best_batch_size']) if best_prefill_result else value
+        suggest_value = max(
+            best_decode_result.get('best_batch_size', -1), best_prefill_result.get('best_batch_size', -1), decode_cur_best_bs
+        )
+        if suggest_value != decode_cur_config:
             results.append(best_decode_result)
             answer(
                 suggesion_type=SUGGESTION_TYPES.config,
                 suggesion_item="maxBatchSize",
-                action=f"set to {value}",
+                action=f"尝试将原值 {decode_cur_config} 设置为 {suggest_value}",
                 reason="经过当前不同batch的时延数据，通过函数拟合分析，建议最优batchsize",
             )
     try:
