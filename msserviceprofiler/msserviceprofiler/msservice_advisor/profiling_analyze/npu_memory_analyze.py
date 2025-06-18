@@ -271,15 +271,15 @@ def cal_npu_mem_size(server_params, model_weight_size):
     if npu_mem_size > 0:
         logger.info(f"npu_mem_size got from server_params: {npu_mem_size}GB")
         return npu_mem_size
-    if 'npu_device_ids' not in server_params or not isinstance(npu_device_ids, (list, tuple)):
-        logger.error(f"Not found or invalid npu_device_ids in server_params={server_params}")
+    if 'npu_device_ids' not in server_params:
+        logger.error(f"npu_device_ids not found in server_params={server_params}")
         return 0
 
     npu_device_ids = server_params['npu_device_ids']
-    npu_num = len(npu_device_ids)
-    if npu_num == 0:
-        logger.error(f"Empty npu_device_ids in server_params={server_params}")
+    if not isinstance(npu_device_ids, (list, tuple)) or len(npu_device_ids) == 0:
+        logger.error(f"Empty or invalid npu_device_ids in server_params={server_params}")
         return 0
+    npu_num = len(npu_device_ids)
 
     # calulate npu available memory size
     npu_available_mem = get_available_npu_memory(npu_device_ids)
