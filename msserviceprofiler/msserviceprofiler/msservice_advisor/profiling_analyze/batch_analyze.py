@@ -18,6 +18,8 @@ import numpy as np
 from msserviceprofiler.msservice_advisor.profiling_analyze.register import register_analyze, cached, answer
 from msserviceprofiler.msservice_advisor.profiling_analyze.register import GLOBAL_DATA
 from msserviceprofiler.msservice_advisor.profiling_analyze.utils import TARGETS, SUGGESTION_TYPES, logger
+from msserviceprofiler.msservice_advisor.profiling_analyze.utils import get_dict_value_by_pos
+
 try:
     import matplotlib.pyplot as plt
 except ImportError as e:
