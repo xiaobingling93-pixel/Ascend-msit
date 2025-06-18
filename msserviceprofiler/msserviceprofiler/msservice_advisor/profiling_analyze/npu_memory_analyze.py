@@ -25,37 +25,27 @@ from msserviceprofiler.msservice_advisor.profiling_analyze.utils import get_dire
 
 
 def get_benchmark_token_num(benchmark, info_name):
-    token_num = benchmark.get("result_perf").get(info_name).get('average')
+    token_num = benchmark.get("result_perf", {}).get(info_name, {}).get('average', "0")
     return int(float(token_num))
 
 
 def extract_token_num(benchmark, input_params):
     """
-        获取请求输入参数：
-        input_token_num: 输入长度。优先从用户输入中获取; 用户未输入从benchmark中获取。
-        avg_token_num: 平均输出长度。优先从benchmark中获取; 未获取到则与用户输入相等。
+    获取请求输入参数：
+    input_token_num: 输入长度。优先从用户输入中获取; 用户未输入从benchmark中获取
+    avg_token_num: 平均输出长度。优先从benchmark中获取; 未获取到则与用户输入相等
     """
     # get from benchmark
-    avg_token_num = 0
-    input_token_num = 0
-    try:
-        input_token_num = get_benchmark_token_num(benchmark, 'InputTokens')
-    except Exception as e:
-        logger.warning(f"Failed extracting input_token_num request input info from benchmark failed due to {e}, "
-            "please check or try to specifying the input length.")
-
-        avg_token_num = get_benchmark_token_num(benchmark, 'GeneratedTokens')
-    except Exception as e:
-        logger.warning(f"Extract request input info from benchmark failed due to {e}, "
-            "please check or try to specifying the input length.")
-
-    # get from user input
-    if input_params.input_token_num > 0:
-        input_token_num = input_params.input_token_num
-    if input_params.output_token_num > 0:
-        avg_token_num = input_params.output_token_num
-
+    input_token_num = input_params.input_token_num
+    avg_token_num = input_params.output_token_num
+    input_token_num = get_benchmark_token_num(benchmark, 'InputTokens') if input_token_num <= 0 else input_token_num
+    avg_token_num = get_benchmark_token_num(benchmark, 'GeneratedTokens') if avg_token_num <= 0 else avg_token_num
     logger.info(f"input_token_num: {input_token_num}, avg_output_token_num: {avg_token_num}")
+
+    if input_token_num <= 0:
+        logger.warning(f"input_token_num not provided and failed extracting from benchmark. Skipping now")
+    if avg_token_num <= 0:
+        logger.warning(f"output_token_num not provided and failed extracting from benchmark. Skipping now")
     return input_token_num, avg_token_num
 
 
