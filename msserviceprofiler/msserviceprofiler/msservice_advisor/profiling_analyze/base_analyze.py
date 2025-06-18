@@ -15,22 +15,7 @@
 import numpy as np
 from msserviceprofiler.msservice_advisor.profiling_analyze.register import register_analyze, cached, answer
 from msserviceprofiler.msservice_advisor.profiling_analyze.utils import TARGETS, SUGGESTION_TYPES, logger
-
-
-def get_dict_value_by_pos(dict_value, target_pos):
-    cur = dict_value
-    for kk in target_pos.split(":"):
-        if not cur:
-            cur = None
-            break
-        if isinstance(cur, list) and str.isdigit(kk):
-            cur = cur[int(kk)]
-        elif kk in cur:
-            cur = cur[kk]
-        else:
-            cur = None
-            break
-    return cur
+from msserviceprofiler.msservice_advisor.profiling_analyze.utils import get_dict_value_by_pos
 
 
 @register_analyze()
