@@ -47,7 +47,7 @@ def summary_batch_info(batch_info):
 
 def print_list(array):
     for item in array:
-        logger.info(item)
+        logger.debug(item)
 
 
 @cached()
@@ -149,7 +149,7 @@ def get_predict_image(results):
     len_result = len(results)
     if len_result <= 3:
         fig, axes = plt.subplots(1, len_result, figsize=(10 * len_result, 6))
-        axes = [axes] if not isinstance(axes, list) else axes
+        axes = [axes] if not isinstance(axes, (np.ndarray, list)) else axes
     else:
         num_rows = len_result // 3 + (len_result % 3 > 0)
         fig, axes = plt.subplots(num_rows, 3, figsize=(10 * 3, 6 * num_rows))
