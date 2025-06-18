@@ -183,6 +183,10 @@ class LinearQuantizerTimestep(LinearQuantizer):
         if self.quant_weight.int_infer and (not self.quant_weight.is_calib):
             return self.reshape_x_to_blc(self._int_infer_forward)(x)
         else:
+            if not self.quant_weight.is_calib:
+                # when is_calib is False, do fake quantization
+                self.quant_input.apply_timestep_quant_settings(device=x.device)
+
             if self.quant_input.w_hessian:  # gptq
                 weight = self.quant_weight(self.weight, y=x.clone())
             else:
