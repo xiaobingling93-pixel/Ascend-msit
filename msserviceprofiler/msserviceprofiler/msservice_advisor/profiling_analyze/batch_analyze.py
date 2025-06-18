@@ -190,7 +190,7 @@ def divide_fit_and_print(summary):
     summary.sort(key=lambda x: x["BSZ"])
     best_bs = max(
         summary, key=lambda xx: sum(xx["FIT_DATA"]) / len(xx["FIT_DATA"]) if len(xx["FIT_DATA"]) > 0 else 0
-    )
+    )["BSZ"]
     to_fit = [dict(BSZ=x["BSZ"], FIT_DATA=x.pop("FIT_DATA")) for x in summary]
     return to_fit, best_bs, summary
 
@@ -235,19 +235,19 @@ def find_best_batch_size(mindie_service_config, benchmark, output_log, profiling
 
     prefill_cur_config = get_dict_value_by_pos(
         mindie_service_config, "BackendConfig:ScheduleConfig:maxPrefillBatchSize"
-    ) or 1
-    decode_cur_config = get_dict_value_by_pos(mindie_service_config, "BackendConfig:ScheduleConfig:maxBatchSize") or 1
+    )
+    decode_cur_config = get_dict_value_by_pos(mindie_service_config, "BackendConfig:ScheduleConfig:maxBatchSize")
     logger.debug(f"Config value: prefill_cur_config={prefill_cur_config}, decode_cur_config={decode_cur_config}")
 
     if prefill_len > 1:
         best_prefill_result = find_best_by_curve_fit(prefill_to_fit, "prefill")
         suggest_value = max(best_prefill_result.get('best_batch_size', -1), prefill_cur_best_bs)
-        if suggest_value != prefill_cur_config:
+        if (prefill_cur_config and suggest_value != prefill_cur_config) or suggest_value:
             results.append(best_prefill_result)
             answer(
                 suggesion_type=SUGGESTION_TYPES.config,
                 suggesion_item="maxPrefillBatchSize",
-                action=f"尝试将原值 {prefill_cur_config} 设置为 {suggest_value}",
+                action=f"尝试设置为 {suggest_value}，原值{prefill_cur_config or '未获取到'}",
                 reason="经过当前不同batch的时延数据，通过函数拟合分析，建议最优batchsize",
             )
     else:
@@ -258,12 +258,12 @@ def find_best_batch_size(mindie_service_config, benchmark, output_log, profiling
         suggest_value = max(
             best_decode_result.get('best_batch_size', -1), best_prefill_result.get('best_batch_size', -1), decode_cur_best_bs
         )
-        if suggest_value != decode_cur_config:
+        if (decode_cur_config and suggest_value != decode_cur_config) or suggest_value:
             results.append(best_decode_result)
             answer(
                 suggesion_type=SUGGESTION_TYPES.config,
                 suggesion_item="maxBatchSize",
-                action=f"尝试将原值 {decode_cur_config} 设置为 {suggest_value}",
+                action=f"尝试设置为 {suggest_value}，原值{decode_cur_config or '未获取到'}",
                 reason="经过当前不同batch的时延数据，通过函数拟合分析，建议最优batchsize",
             )
     try:
