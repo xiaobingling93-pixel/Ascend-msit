@@ -25,7 +25,7 @@ class NaiveEntrance:
                 model_type=args.model_type,
                 config_path=args.config_path,
                 quant_type=args.quant_type,
-                device_type=args.device,
+                device=args.device,
                 model_path=args.model_path,
                 save_path=args.save_path,
                 trust_remote_code=args.trust_remote_code
