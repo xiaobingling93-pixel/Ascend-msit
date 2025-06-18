@@ -267,10 +267,12 @@ def cal_npu_mem_size(server_params, model_weight_size):
         Floor[(单卡可用显存 - 权重/NPU卡数) * 系数]
     """
     # get from mindie server config, GB
-    npu_mem_size = server_params['npu_mem_size']
-    if npu_mem_size >= 0:
-        logger.info(f"npu_mem_size: {npu_mem_size}GB")
+    npu_mem_size = server_params.get('npu_mem_size', -1)
+    if npu_mem_size > 0:
+        logger.info(f"npu_mem_size got from server_params: {npu_mem_size}GB")
         return npu_mem_size
+    if 'npu_device_ids' not in server_params:
+        return 0
 
     # calulate npu available memory size
     npu_available_mem = get_available_npu_memory(server_params['npu_device_ids'])
@@ -283,7 +285,7 @@ def cal_npu_mem_size(server_params, model_weight_size):
     npu_mem_size = (npu_available_mem - model_weight_size / npu_num) * fixed_coefficent
     npu_mem_size = max(math.floor(npu_mem_size), 0)
 
-    logger.info(f"npu_memory_size: {npu_mem_size}GB")
+    logger.info(f"npu_memory_size calculated by npu_device_ids={npu_device_ids}: {npu_mem_size}GB")
     return npu_mem_size
 
 
