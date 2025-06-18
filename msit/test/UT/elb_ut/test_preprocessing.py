@@ -35,8 +35,9 @@ with patch.dict("sys.modules", {
     from components.expert_load_balancing.elb.preprocessing import get_csv_dimensions, get_csv_path, AppArgs, \
             check_input, numerical_sort_key, parse_ep_file, convert, generate_json, has_prefill_decode, \
             refresh_dependent_args, get_csv_path, get_csv_dimensions, process_speculative_moe, \
-            process_prefill_or_decode, get_dynamic_expert_hot_from_csv
-
+            process_prefill_or_decode, get_dynamic_expert_hot_from_csv, validate_args
+    
+from components.expert_load_balancing.elb.constant import SUPPORTED_COMBINATIONS
 
 class TestGetCSVDimensions(unittest.TestCase):
     def setUp(self):
@@ -876,4 +877,50 @@ def test_get_dynamic_expert_hot_from_csv():
         )
         assert dynamic_hot.shape[0] == 2
         assert dynamic_hot.shape[1] == 256
+
+
+class TestValidateArgs:
+    class Args:
+        def __init__(self, device_type, algorithm):
+            self.device_type = device_type
+            self.algorithm = algorithm
+
+    @pytest.fixture
+    def supported_device(self):
+        """返回一个支持的设备类型"""
+        return next(iter(SUPPORTED_COMBINATIONS.keys()))
+
+    @pytest.fixture
+    def unsupported_device(self):
+        """返回一个不支持的设备类型"""
+        return "unsupported_device"
+
+    @pytest.fixture
+    def supported_algorithm(self, supported_device):
+        """返回支持的算法"""
+        return SUPPORTED_COMBINATIONS[supported_device]
+
+    @pytest.fixture
+    def unsupported_algorithm(self):
+        """返回不支持的算法"""
+        return "unsupported_algorithm"
+
+    def test_valid_args(self, supported_device, supported_algorithm):
+        """测试支持的设备和算法组合"""
+        args = self.Args("a2", "1")
+        validate_args(args)
+
+    def test_unsupported_device(self, unsupported_device, supported_algorithm):
+        """测试不支持的设备类型"""
+        args = self.Args(unsupported_device, supported_algorithm)
+        with pytest.raises(ValueError) as excinfo:
+            validate_args(args)
+        assert f"device '{unsupported_device}' is not supported." in str(excinfo.value)
+
+    def test_unsupported_algorithm(self, supported_device, unsupported_algorithm):
+        """测试不支持的算法"""
+        args = self.Args(supported_device, unsupported_algorithm)
+        with pytest.raises(ValueError) as excinfo:
+            validate_args(args)
+        assert f"device '{supported_device}' does not support algorithm '{unsupported_algorithm}'." in str(excinfo.value)
 

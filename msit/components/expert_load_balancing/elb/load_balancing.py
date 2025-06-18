@@ -30,7 +30,7 @@ from components.utils.file_open_check import ms_open
 from components.expert_load_balancing.elb.preprocessing import process_speculative_moe
 from components.expert_load_balancing.elb.constant import PREFILL, DECODE, DECODE_FILE_NAME, \
                         PREFILL_FILE_NAME, ALGORITHM_C2LB, ALGORITHM_DYNAMIC_C2LB, A2, A3, \
-                        ALGORITHM_SPECULATIVE_MOE_LEVEL_1, ALGORITHM_SPECULATIVE_MOE_LEVEL_2
+                        SPECULATIVE_MOE_ALGORITHM
 
 
 def load_expert_popularity_csv(csv_file_path):
@@ -430,7 +430,7 @@ def select_algorithm(args):
         else:
             raise ValueError("Input incorrect share expert devices parameters.")
     # 静态场景下 speculative_moe 算法
-    elif args.algorithm == ALGORITHM_SPECULATIVE_MOE_LEVEL_1 or args.algorithm == ALGORITHM_SPECULATIVE_MOE_LEVEL_2:
+    elif args.algorithm in SPECULATIVE_MOE_ALGORITHM:
         process_speculative_moe(args)
     else:
         raise ValueError("Please enter valid parameters")
