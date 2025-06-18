@@ -200,7 +200,7 @@ def find_best_batch_size(mindie_service_config, benchmark, output_log, profiling
 
     results = []
     prefill_summary, decode_summary = read_batch_and_latency(benchmark.get("results_per_request", {}))
-    decode_len, prefill_len = len(decode_to_fit), len(prefill_to_fit)
+    decode_len, prefill_len = len(prefill_summary), len(decode_summary)
     if decode_len == 0 and prefill_len == 0:
         logger.warning(f"instance data not available, decode_len={decode_len}, prefill_len={prefill_len}")
         return
