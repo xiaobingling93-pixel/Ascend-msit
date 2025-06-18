@@ -68,7 +68,7 @@ class TestToolkitVersionCollector(unittest.TestCase):
     @patch('msprechecker.core.collectors.sys_collector.read_file_lines')
     def test_collect_with_default_home(self, mock_read):
         mock_read.side_effect = [
-            ["[Version]\n", "version=1.2.3\n"],  # version.cfg content
+            ["[Version]\n", "version=:1.2.3\n"],  # version.cfg content
             ["timestamp=2025-01-01"]             # version.info content
         ]
         result = self.collector.collect()
@@ -77,7 +77,7 @@ class TestToolkitVersionCollector(unittest.TestCase):
     @patch('msprechecker.core.collectors.sys_collector.read_file_lines')
     def test_collect_with_custom_home(self, mock_read):
         mock_read.side_effect = [
-            ["[Version]\n", "version=2.3.4\n"],
+            ["[Version]\n", "version=:2.3.4\n"],
             ["timestamp=2025-02-02"]
         ]
         result = self.collector.collect()
@@ -86,7 +86,7 @@ class TestToolkitVersionCollector(unittest.TestCase):
     @patch('msprechecker.core.collectors.sys_collector.read_file_lines')
     def test_collect_version_only(self, mock_read):
         mock_read.side_effect = [
-            ["[Version]\n", "version=1.2.3\n"],
+            ["version=[:1.2.3]"],
             []  # Empty compiler version file
         ]
         result = self.collector.collect()

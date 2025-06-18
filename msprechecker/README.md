@@ -3,16 +3,13 @@
   - [基本功能](#基本功能)
   - [安装性能预检工具](#安装性能预检工具)
   - [常见报错处理](#常见报错处理)
-- [单机预检](#单机预检)
-  - [单机预检快速使用](#单机预检快速使用)
+- [预检](#预检)
+  - [预检快速使用](#预检快速使用)
 - [落盘和比对](#落盘和比对)
   - [落盘快速使用](#落盘快速使用)
   - [落盘文件介绍](#落盘文件介绍)
   - [比对快速使用](#比对快速使用)
   - [比对结果说明](#比对结果说明)
-- [多机环境比对](#多机环境比对)
-  - [多机环境比对快速使用](#多机环境比对快速使用)
-  - [运行结果](#运行结果)
 - [自定义检查项配置](#自定义检查项配置)
   - [自定义检查项配置使用说明](#自定义检查项配置使用说明)
     - [字段引用](#字段引用)
@@ -22,14 +19,12 @@
   - [precheck 参数](#precheck-参数)
   - [dump 参数](#dump-参数)
   - [compare 参数](#compare-参数)
-  - [distribute\_compare 参数](#distribute_compare-参数)
 ***
 
 ## 基本功能
-  - **单机预检**，用于检测用户当前推理环境中，影响推理性能的环境变量有没有被设置，提升推理性能的环境变量有没有被开启，当前支持两种部署场景的检查：
+  - **预检**，用于检测用户当前推理环境中，影响推理性能的环境变量有没有被设置，提升推理性能的环境变量有没有被开启，当前支持两种部署场景的检查：
     - K8S 部署时的 `user_config.json` 检查
     - 非 K8S 时的环境变量、MindIE `config.json`、模型配置、hccl 等检查
-  - **多机环境预检**， 用于检测用户服务器不同节点之间环境变量的差异性，助力用户快速部署多节点通信环境
   - **环境要求**：
     - 当前硬件限定 Atlas 800I A2/ 800I A3 / 800T A2，主机或者 docker 内环境
     - Python 版本要求 >= 3.7
@@ -76,8 +71,8 @@
   - 安装时报错 `Could not find a version that satisfies the requirement setuptools`，python 环境本身问题，建议源码方式使用工具
 ***
 
-# 单机预检
-## 单机预检快速使用
+# 预检
+## 预检快速使用
   - 默认进行环境变量、系统配置的校验
     ```sh
     msprechecker precheck
@@ -148,53 +143,6 @@
     表明环境变量 `CPU_AFFINITY_CONF` 在四个文件 `b`, `c`, `d`, `e` 中存在差异。其中 `b` 文件中，该环境变量的值为 `None`，即没有设置该环境变量；而 `c`, `d`, `e` 均设置为 2
 ***
 
-# 多机环境比对
-## 多机环境比对快速使用
-  - 在多机环境的 **每台机器** 上分别运行
-    ```bash
-    msprechecker distribute_compare
-    ```
-    其中，`distribute_compare` 表明使用多机环境比对功能。主节点运行之后，会进行同步状态，等待子节点返回结果
-  - **多机环境**：master 节点等信息默认通过 ranktable 文件获取，也可手动指定，以下方式中任选一种
-    - 环境变量 `RANKFILETABLE` 已正确配置，则可以直接使用
-    - 或通过参数 `--rankfiletable, -ranktable` 指定 rank file table 的路径
-    - 如果没有 ranktable 文件，则可以手动配置 `master` 节点和 `LOCAL_RANK` 信息，以双机场景为例，`master` 节点运行：
-      ```sh
-      msprechecker distribute_compare -ip 12.34.56.78 -port 10000 -rank 0 -size 2
-      ```
-      `slaver` 节点运行：
-      ```sh
-      msprechecker distribute_compare -ip 12.34.56.78 -port 10000 -rank 1 -size 2
-      ```
-      - `-ip` 是 `--master_ip` 的缩写，代表 `master` 节点的IP地址
-      - `-port` 代表节点间通信的端口
-      - `-rank` 是 `--local_rank` 的缩写, 代表不同节点的 `rank` 值
-      - `-size` 是 `--world_size` 的缩写, 代表节点的个数
-  - **端口**：工具默认使用服务化 `config.json` 的 `port` 作为通信端口，如果每找到 `config.json` 则使用 pytorch 的默认通信端口 `29400`，如以上端口已被占用，需要通过 `--port` 更换端口
-## 运行结果
-  - 如果不同服务器间环境配置没有差异，则会在终端出现如下打屏信息：
-    ```bash
-    msprechecker_logger - INFO - local_ip: 12.34.56.78., interface: abcd123qwe
-    msprechecker_logger - INFO - DistributeCollector: master_ip=12.34.56.78, master_port=1025, rank=0, world_size=2
-    msprechecker_logger - INFO - No difference found
-    msprechecker_logger - INFO - == compare end ==
-    ```
-  - 如果不同服务器环境配置存在差异，则会在终端展示差异项。比如，展示内容为：
-    ```bash
-    - key .Env.ASDOPS_LOG_TO_FILE diffs
-      * 12.34.56.78:
-        1
-      * 12.34.56.79:
-        0
-    - key .Env.LCCL_PARALLEL diffs
-      * 12.34.56.78:
-        type <str> : 0
-      * 12.34.56.79:
-        type <NoneType> : None
-    ```
-    表明环境变量 `ASDOPS_LOG_TO_FILE` 和 `LCCL_PARALLEL` 在`master` 节点 `12.34.56.78` 和 `slaver` 节点 `12.34.56.79` 之间存在差异
-***
-
 # 自定义检查项配置
 ## 自定义检查项配置使用说明
 在进行 precheck 预检时，支持自定义配置校验项。目前仅支持 `user_config.json` 和 `mindie_env.json` 的配置校验，后续开放环境变量的自定义校验。
@@ -257,7 +205,7 @@ transformers_version:
 内置了 `Version` 的比较规则，目前是 `8.0.0 > 8.0.rc2 > 8.0.rc1 > 8.0.rc1.b020`。对于 T 版本暂不支持校验，因为 T 版本没有规律
 
 # 参数列表
-  - 子功能包括 `precheck` / `dump` / `compare` / `distribute_compare`
+  - 子功能包括 `precheck` / `dump` / `compare`
   - 通过 `msprechecker -h` 获取子功能列表，以及 `msprechecker {子功能} -h` 获取对应子功能的参数列表
 ## 通用参数
   | 参数名                          | 参数描述                                                                                        | 是否必选                                    |
@@ -291,11 +239,4 @@ transformers_version:
   | --------------------------- | -------------------------------------------------------- | -------------- |
   | dump_file_paths             | **位置参数**，字符串列表值，指定 dump 的多份数据         | 是，且应为多个 |
   | -l {...}, --log_level {...} | 日志级别，可选值 debug,info,warning,error,fatal,critical | 否，默认 info  |
-## distribute_compare 参数
-  | 参数名               | 参数描述                                                            | 是否必选                                                                                            |
-  | -------------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-  | -ip, --master_ip     | 字符串值，指定 master 节点的 IP 地址                                | 否，默认为 None，如果 ranktable_file 没有指定，且环境变量 RANKTABLEFILE 没有配置，则为必选          |
-  | -port, --master_port | 字符串值，指定 master 节点的通信端口，如 port 已被占用，则需要指定  | 否，默认为 None，如果 service_config_path 没有指定，且环境变量 MIES_INSTALL_PATH 没有配置，则为必选 |
-  | -rank, --local_rank  | int 值，指定本机的 rank，master 节点为 0，其他节点为 1 ~ world_size | 否，默认为 None，如果 ranktable_file 没有指定，且环境变量 RANKTABLEFILE 没有配置，则为必选          |
-  | -size, --world_size  | int 值，当前多机环境的服务器数量，即 world_size                     | 否，默认为 None，如果 ranktable_file 没有指定，且环境变量 RANKTABLEFILE 没有配置，则为必选          |
 ***
