@@ -27,6 +27,9 @@ from speculative_moe import ExpSolver, ExpILPSolver, second_optim, all_to_all_al
 from components.utils.file_open_check import ms_open
 from components.utils.security_check import ms_makedirs
 from components.utils.log import logger
+from components.expert_load_balancing.elb.constant import A2, A3, SUPPORTED_COMBINATIONS, \
+                        ALGORITHM_SPECULATIVE_MOE_LEVEL_1, ALGORITHM_SPECULATIVE_MOE_LEVEL_2, \
+                        ALGORITHM_SPECULATIVE_MOE_LEVEL_1_MIXED, ALGORITHM_SPECULATIVE_MOE_LEVEL_2_MIXED
 
 
 class AppArgs:
@@ -60,11 +63,24 @@ class AppArgs:
         self.enhanced = False
         self.black_box_annealing = False
         self.all2all_balance = False
+        self.n_shared_experts = 1
+        self.mixed_shared_expert = False
 
 
 def check_input(new_args):
     if (new_args.redundant_experts + new_args.n_experts) % new_args.n_devices != 0:
         raise ValueError("The sum of origin expert and redundant expert must be a positive multiple of devices.")
+
+
+def validate_args(new_args):
+    supported_algorithms = SUPPORTED_COMBINATIONS.get(new_args.device_type)
+    if supported_algorithms is None:
+        raise ValueError(f"device '{new_args.device_type}' is not supported.")
+
+    if new_args.algorithm not in supported_algorithms:
+        raise ValueError(
+            f"device '{new_args.device_type}' does not support algorithm '{new_args.algorithm}'."
+        )
 
 
 def numerical_sort_key(filename):
@@ -170,18 +186,39 @@ def refresh_dependent_args(new_args):
                 else:
                     new_args.n_share_expert_devices_files = 0
             new_args.num_stages = 8
-            if new_args.algorithm == "3" and new_args.device_type == "a2":
+            if new_args.algorithm == ALGORITHM_SPECULATIVE_MOE_LEVEL_2 and \
+                new_args.device_type == A2:
                 new_args.enhanced = True
                 new_args.black_box_annealing = True
                 new_args.all2all_balance = True
-            elif new_args.algorithm == "3" and new_args.device_type == "a3":
+            elif new_args.algorithm == ALGORITHM_SPECULATIVE_MOE_LEVEL_2 and \
+                new_args.device_type == A3:
                 new_args.enhanced = True
                 new_args.black_box_annealing = True
                 new_args.all2all_balance = False
-            elif new_args.algorithm == "1":
+            elif new_args.algorithm == ALGORITHM_SPECULATIVE_MOE_LEVEL_1:
                 new_args.enhanced = False
                 new_args.black_box_annealing = False
                 new_args.all2all_balance = False
+            
+            elif new_args.algorithm == ALGORITHM_SPECULATIVE_MOE_LEVEL_1_MIXED and \
+                new_args.device_type == A2:
+                new_args.enhanced = False
+                new_args.black_box_annealing = False
+                new_args.all2all_balance = False
+                new_args.n_experts += new_args.n_shared_experts
+                new_args.redundant_experts += new_args.n_devices - 1
+                new_args.mixed_shared_expert = True
+
+            elif new_args.algorithm == ALGORITHM_SPECULATIVE_MOE_LEVEL_2_MIXED and \
+                new_args.device_type == A2:
+                new_args.enhanced = True
+                new_args.black_box_annealing = True
+                new_args.all2all_balance = True
+                new_args.n_experts += new_args.n_shared_experts
+                new_args.redundant_experts += new_args.n_devices - 1
+                new_args.mixed_shared_expert = True
+
     # 旧版本的输入文件
     # num_stages为1，
     # 四种场景的配置 a2和a3 × base和enhance
@@ -265,6 +302,8 @@ def get_dynamic_expert_hot_from_csv(
         collection_interval=16,
         topk_info=False,
         n_devices=-1,
+        mse=False,
+        n_shared_experts=1,
 ):
     def get_expert_id(layer, idx):
         if isinstance(eplb_map, dict):  # 处理已解析好的 map
@@ -309,6 +348,11 @@ def get_dynamic_expert_hot_from_csv(
         for k in range(data.shape[2]):
             expert_id = get_expert_id(j, k)
             dynamic_expert_hot[j, expert_id, :] += data[:, j, k]
+
+    if mse:
+        shared_expert_hotness = dynamic_expert_hot[:, :-n_shared_experts].sum(1) / 8
+        for j in range(1, n_shared_experts + 1):
+            dynamic_expert_hot[:, -j] = shared_expert_hotness
 
     # 如果需要 topk 信息
     if topk_info:
@@ -363,6 +407,7 @@ def process_speculative_moe(args):
     }
     filtered_args = {k: v for k, v in vars(args).items() if k in valid_keys}
     new_args = AppArgs(**filtered_args)
+    validate_args(new_args)
     new_args = refresh_dependent_args(new_args)
     check_input(new_args)
     # 如果是旧版本的情况需要传入层数和专家数，且需要将文件夹拆分为decode或者prefill
@@ -402,7 +447,9 @@ def process_prefill_or_decode(new_args):
         n_selected_expert=new_args.n_selected_expert,
         collection_interval=new_args.collection_interval,
         topk_info=new_args.all2all_balance,
-        n_devices=new_args.n_devices
+        n_devices=new_args.n_devices,
+        mse=new_args.mixed_shared_expert,
+        n_shared_experts=new_args.n_shared_experts
     )
     progress_bar.update(1)  # Step 1 
     model = ExpSolver(expert_hotness, new_args, shared_status)

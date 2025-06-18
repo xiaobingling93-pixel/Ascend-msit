@@ -85,9 +85,11 @@ class ExpertLoadBalanceCommmand(BaseCommand):
             type=str,
             required=False,
             default="3",
-            choices=['0', '1', '2', '3'],
+            choices=['0', '1', '2', '3', '4', '5'],
             help="algorithm type. 0代表计算通信负载均衡算法(C2LB), 1代表speculative moe level 1算法,"
-                    "2 代表生成动态场景下的C2LB算法，生成初始配置文件, 3代表增强型的speculative moe level 2算法")
+                    "2 代表生成动态场景下的C2LB算法生成初始配置文件, 3代表增强型的speculative moe level 2算法,"
+                    "4 代表speculative moe level 1混置算法, 5 代表speculative moe level 2 混置算法。")
+
         
         parser.add_argument(
             '--device-type',
