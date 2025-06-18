@@ -212,7 +212,9 @@ def find_best_batch_size(mindie_service_config, benchmark, output_log, profiling
     print_list(decode_to_print)
     logger.debug("==prefill==")
     print_list(prefill_to_print)
-    logger.debug(f"Max value from instance: prefill_cur_max_bs={prefill_cur_max_bs}, decode_cur_max_bs={decode_cur_max_bs}")
+    logger.debug(
+        f"Best value from instance: prefill_cur_best_bs={prefill_cur_best_bs}, decode_cur_best_bs={decode_cur_best_bs}"
+    )
 
     if decode_len <= 1:
         answer(
