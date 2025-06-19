@@ -94,13 +94,16 @@ class ModelSizeChecker(PrecheckerBase):
         return "{:.2f}G".format(src_size / 1024 / 1024 / 1024)
 
     def collect_env(self, mindie_service_path=None, **kwargs):
-        model_name, model_weight_path = get_model_path_from_mindie_config(mindie_service_path=mindie_service_path)
-
-        if not model_name or not model_weight_path:
+        weight_dir = kwargs.get("weight_dir")
+        model_name = "deepseek"
+        if not weight_dir:
+            model_name, weight_dir = get_model_path_from_mindie_config(mindie_service_path=mindie_service_path)
+        
+        if not model_name or not weight_dir:
             return None
 
-        model_json_size = get_file_sizes(os.path.join(model_weight_path, "*.json"))
-        model_weight_size = get_file_sizes(os.path.join(model_weight_path, "*.safetensors"))
+        model_json_size = get_file_sizes(os.path.join(weight_dir, "*.json"))
+        model_weight_size = get_file_sizes(os.path.join(weight_dir, "*.safetensors"))
         logger.debug(f"ModelSizeChecker model_weight_size={get_next_dict_item(model_weight_size)}")
         return {"model_name": model_name, "model_json_size": model_json_size, "model_weight_size": model_weight_size}
 

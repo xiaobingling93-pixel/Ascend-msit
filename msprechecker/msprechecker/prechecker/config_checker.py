@@ -52,7 +52,8 @@ class ConfigCheckerBase(PrecheckerBase):
             return
 
         if not envs:
-            logger.error(f"Read config failed: {self.config_path!r}")
+            logger.warning(f"Read config failed: {self.config_path!r}")
+            return
 
         check_file_permission(self.config_path, domain="config", checker_name="file_perm")
 
@@ -86,10 +87,15 @@ class ModelConfigChecker(ConfigCheckerBase):
         super().__init__(domain=DOMAIN.model_config)
 
     def collect_env(self, mindie_service_path=None, **kwargs):
-        model_name, model_weight_path = get_model_path_from_mindie_config(mindie_service_path=mindie_service_path)
-        if not model_name or not model_weight_path:
+        weight_dir = kwargs.get("weight_dir")
+        model_name = "deepseek"
+        if not weight_dir:
+            model_name, weight_dir = get_model_path_from_mindie_config(mindie_service_path=mindie_service_path)
+
+        if not model_name or not weight_dir:
             return None
-        model_config_path = os.path.join(model_weight_path, "config.json")
+
+        model_config_path = os.path.join(weight_dir, "config.json")
         model_config = read_csv_or_json(model_config_path) if os.path.exists(model_config_path) else {}
         self.config_path = model_config_path
         logger.debug(f"ModelConfigCollecter model_name={model_name} model_config={model_config}")

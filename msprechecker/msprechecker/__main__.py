@@ -67,6 +67,13 @@ DUMP_COMMON_ARGS = [
         kwargs=dict(default=RANKTABLE_FILE, help="HCCL rank table file path."),
     ),
     dict(
+        args=["--weight_dir"],
+        kwargs=dict(
+            type=str,
+            help="Specify the model weight directory for model checks.",
+        ),
+    ),
+    dict(
         args=["-blocknum", "--sha256_blocknum"],
         kwargs=dict(
             default=1000,
