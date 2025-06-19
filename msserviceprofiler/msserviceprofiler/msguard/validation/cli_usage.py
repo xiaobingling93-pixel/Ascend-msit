@@ -20,8 +20,8 @@ from ..constraints import BaseConstraint, InvalidParameterError
 from .decorator_usage import validate_params
 
 
-def validate_arg(constraint: BaseConstraint, silent=True):
-    """Usage: parser.add_argument("xx", type=validate_arg(xxx))
+def validate_args(constraint: BaseConstraint, silent=True):
+    """Usage: parser.add_argument("xx", type=validate_args(xxx))
     pass the `wrapper` to argparse, pass `arg` to `arg_check`and catch the error msg
     """
     @validate_params({"arg": constraint}) # any checks
