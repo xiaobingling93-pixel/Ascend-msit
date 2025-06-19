@@ -87,7 +87,7 @@ class TimestepQuantMixin:
     def update_config(self, max_dynamic_step: int):
         self.cfg.max_dynamic_step = max_dynamic_step
 
-    def get_timestep_scale_offset_dict(self, ret_dict=False):
+    def get_timestep_scale_offset_dict(self):
         """
         导出所有已记录的时间步 scale/offset
         """
@@ -95,13 +95,7 @@ class TimestepQuantMixin:
         scale_tensor = torch.stack([self._timestep_scales[t].cpu() for t in t_list])
         offset_tensor = torch.stack([self._timestep_offsets[t].cpu() for t in t_list])
 
-        if ret_dict:
-            return {
-                'input_scale': scale_tensor,
-                'input_offset': offset_tensor
-            }
-        else:
-            return scale_tensor, offset_tensor
+        return scale_tensor, offset_tensor
 
     def update_timestep_scale_offset_from_dict(self, state_dict):
         """
