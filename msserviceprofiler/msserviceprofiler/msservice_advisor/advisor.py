@@ -13,15 +13,14 @@
 # limitations under the License.
 
 import os
-import json
-import csv
 import argparse
 from collections import namedtuple
-from glob import glob
 from dataclasses import dataclass
 
 from msserviceprofiler.msservice_advisor.profiling_analyze.utils import TARGETS, LOG_LEVELS, SUGGESTION_TYPES
 from msserviceprofiler.msservice_advisor.profiling_analyze.utils import str_ignore_case, logger, set_log_level
+from msserviceprofiler.msservice_advisor.profiling_analyze.utils import get_latest_matching_file, read_csv_or_json
+
 
 # 文件格式，字典："21559056a7ff44c88a891ecbb537c431"："0", ...
 REQ_TO_DATA_MAP_PATTERN = "req_to_data_map.json"
@@ -72,37 +71,7 @@ class ProfilingParameters:
         )
 
 
-def get_latest_matching_file(instance_path, pattern):
-    files = glob(os.path.join(instance_path, pattern))
-    return max(files, key=os.path.getmtime) if files else None
-
-
-def read_csv(file_path):
-    logger.info(f"Reading file: {file_path}")
-    result = {}
-    with open(file_path, mode="r", newline="", encoding="utf-8") as ff:
-        for row in csv.DictReader(ff):
-            for kk, vv in row.items():
-                result.setdefault(kk, []).append(vv)
-    return result
-
-
-def read_json(file_path):
-    logger.info(f"Reading file: {file_path}")
-    with open(file_path) as ff:
-        result = json.load(ff)
-    return result
-
-
-def read_csv_or_json(file_path):
-    logger.debug(f"read_csv_or_json {file_path = }")
-    if not file_path or not os.path.exists(file_path):
-        return None
-    if file_path.endswith(".json"):
-        return read_json(file_path)
-    if file_path.endswith(".csv"):
-        return read_csv(file_path)
-    return None
+""" parse_benchmark_instance """
 
 
 def get_next_dict_item(dict_value):
@@ -110,6 +79,10 @@ def get_next_dict_item(dict_value):
 
 
 def parse_benchmark_instance(instance_path):
+    if not os.path.isdir(instance_path) or not os.access(instance_path, os.R_OK | os.X_OK):
+        logger.warning(f"instance_path not provided or not accessible, will skip related analyse.")
+        return {}
+
     logger.debug("\nreq_to_data_map:")
     req_to_data_map = read_csv_or_json(get_latest_matching_file(instance_path, REQ_TO_DATA_MAP_PATTERN))
     logger.debug(f"req_to_data_map: {get_next_dict_item(req_to_data_map) if req_to_data_map else None}")
@@ -164,7 +137,7 @@ def analyze(mindie_service_config, benchmark_instance, mindie_server_log_path, p
     logger.info("")
     logger.info("<think>")
     for name, analyzer in REGISTRY.items():
-        logger.info(name)
+        logger.info(f"[{name}]")
         analyzer(mindie_service_config, benchmark_instance, mindie_server_log_path, params)
     logger.info("</think>")
 
@@ -174,7 +147,7 @@ def analyze(mindie_service_config, benchmark_instance, mindie_server_log_path, p
         for name, items in ANSWERS.get(suggesion_type, dict()).items():
             for action, reason in items:
                 logger.info(f"[{suggesion_type}] {name}")
-                logger.info(f"[action] {action}")
+                logger.info(f"[advice] {action}")
                 logger.info(f"[reason] {reason}")
                 logger.info("")
     logger.info("</advice>")

@@ -12,9 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import json
+import csv
 from pathlib import Path
 import logging
 from collections import namedtuple
+from glob import glob
+from msserviceprofiler.msguard.security.io import open_s
 
 TARGETS = namedtuple("TARGETS", ["FirstTokenTime", "Throughput"])("FirstTokenTime", "Throughput")
 _SUGGESTION_TYPES = ["env", "system", "config"]
@@ -128,3 +132,51 @@ def get_directory_size(path):
                 total_size += os.path.getsize(fp)
 
     return total_size / BYTES_TO_GB
+
+
+def get_latest_matching_file(instance_path, pattern):
+    files = glob(os.path.join(instance_path, pattern))
+    return max(files, key=os.path.getmtime) if files else None
+
+
+def read_csv(file_path):
+    logger.info(f"Reading file: {file_path}")
+    result = {}
+    with open_s(file_path, mode="r", newline="", encoding="utf-8") as ff:
+        for row in csv.DictReader(ff):
+            for kk, vv in row.items():
+                result.setdefault(kk, []).append(vv)
+    return result
+
+
+def read_json(file_path):
+    logger.info(f"Reading file: {file_path}")
+    with open_s(file_path) as ff:
+        result = json.load(ff)
+    return result
+
+
+def read_csv_or_json(file_path):
+    if not file_path or not os.path.exists(file_path):
+        return None
+    if file_path.endswith(".json"):
+        return read_json(file_path)
+    if file_path.endswith(".csv"):
+        return read_csv(file_path)
+    return None
+
+
+class UmaskWrapper:
+    """Write with preset umask
+    >>> with UmaskWrapper():
+    >>>     ...
+    """
+
+    def __init__(self, umask=0o027):
+        self.umask, self.ori_umask = umask, None
+
+    def __enter__(self):
+        self.ori_umask = os.umask(self.umask)
+
+    def __exit__(self, exc_type=None, exc_val=None, exc_tb=None):
+        os.umask(self.ori_umask)

@@ -18,7 +18,7 @@ import numpy as np
 from msserviceprofiler.msservice_advisor.profiling_analyze.register import register_analyze, cached, answer
 from msserviceprofiler.msservice_advisor.profiling_analyze.register import GLOBAL_DATA
 from msserviceprofiler.msservice_advisor.profiling_analyze.utils import TARGETS, SUGGESTION_TYPES, logger
-from msserviceprofiler.msservice_advisor.profiling_analyze.utils import get_dict_value_by_pos
+from msserviceprofiler.msservice_advisor.profiling_analyze.utils import get_dict_value_by_pos, UmaskWrapper
 
 try:
     import matplotlib.pyplot as plt
@@ -165,11 +165,11 @@ def get_predict_image(results):
             logger.info("func_curv is None")
             return
         # 开始画图
-        x_values = np.linspace(0, max_batch_size * 5, 300)
+        x_values = np.linspace(1, max_batch_size * 5, 300)
 
         # 绘制模型预测均值和置信区间
         ax.plot(x_values, func_curv(x_values, *popt), label=f"Model Prediction", color="blue")
-        ax.scatter(points, targets, c="green", s=100, edgecolor="black", label="Existing Data Points")
+        ax.scatter(points[:-1], targets[:-1], c="green", s=100, edgecolor="black", label="Existing Data Points")
 
         ax.set_title(f"Curve Fit Optimization({process_name})")
         ax.set_xlabel("Batch Size")
@@ -180,7 +180,8 @@ def get_predict_image(results):
 
     png_name = f"func_curv_{timestamp}.png"
     logger.info(f"拟合画图路径：{png_name}")
-    plt.savefig(png_name)
+    with UmaskWrapper(umask=0o137):
+        plt.savefig(png_name)
 
 
 def divide_fit_and_print(summary):
@@ -189,7 +190,7 @@ def divide_fit_and_print(summary):
 
     summary.sort(key=lambda x: x["BSZ"])
     best_bs = max(
-        summary, key=lambda xx: sum(xx["FIT_DATA"]) / len(xx["FIT_DATA"]) if len(xx["FIT_DATA"]) > 0 else 0
+        summary, key=lambda xx: (sum(xx["FIT_DATA"]) / len(xx["FIT_DATA"])) if len(xx["FIT_DATA"]) > 0 else 0
     )["BSZ"]
     to_fit = [dict(BSZ=x["BSZ"], FIT_DATA=x.pop("FIT_DATA")) for x in summary]
     return to_fit, best_bs, summary

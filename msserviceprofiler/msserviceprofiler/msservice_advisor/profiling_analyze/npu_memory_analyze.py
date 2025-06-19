@@ -21,7 +21,7 @@ import subprocess
 from msserviceprofiler.msservice_advisor.profiling_analyze.register import register_analyze, answer, GLOBAL_DATA
 from msserviceprofiler.msservice_advisor.profiling_analyze.utils import logger, SUGGESTION_TYPES, BYTES_TO_GB
 from msserviceprofiler.msservice_advisor.profiling_analyze.utils import vaild_readable_directory, vaild_readable_file
-from msserviceprofiler.msservice_advisor.profiling_analyze.utils import get_directory_size
+from msserviceprofiler.msservice_advisor.profiling_analyze.utils import get_directory_size, read_csv_or_json
 
 
 def get_benchmark_token_num(benchmark, info_name):
@@ -123,8 +123,7 @@ def extract_model_config_params(model_weight_path):
     logger.info(f"model config path: {model_config_file}")
 
     # get model config.json
-    with open(model_config_file, 'r') as f:
-        model_params = json.load(f)
+    model_params = read_csv_or_json(model_config_file)
 
     # caculate model weight size
     model_weight_size = get_directory_size(model_weight_path)
