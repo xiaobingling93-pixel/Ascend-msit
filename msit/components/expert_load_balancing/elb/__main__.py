@@ -46,7 +46,7 @@ class ExpertLoadBalanceCommmand(BaseCommand):
             '--num-redundant-expert',
             '-nre',
             dest="num_redundancy_expert",
-            type=check_positive_or_zero_integer,
+            type=check_positive_integer,
             required=False,
             default=64,
             help="Number of redundant experts.")
@@ -55,7 +55,7 @@ class ExpertLoadBalanceCommmand(BaseCommand):
             '--num-share-expert-devices',
             '-nsed',
             dest="share_expert_devices",
-            type=check_positive_or_zero_integer,
+            type=check_positive_integer,
             required=False,
             default=0,
             help="Number of shared experts.")
@@ -64,7 +64,7 @@ class ExpertLoadBalanceCommmand(BaseCommand):
             '--num-nodes',
             '-nd',
             dest="num_nodes",
-            type=check_positive_integer,
+            type=check_positive_or_zero_integer,
             required=False,
             default=8,
             help="Number of nodes.")
@@ -73,7 +73,7 @@ class ExpertLoadBalanceCommmand(BaseCommand):
             '--num-npus',
             '-nn',
             dest="num_npus",
-            type=check_positive_integer,
+            type=check_positive_or_zero_integer,
             required=False,
             default=64,
             help="Number of npu.")
