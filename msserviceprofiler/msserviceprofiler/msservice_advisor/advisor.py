@@ -173,7 +173,7 @@ def analyze(mindie_service_config, benchmark_instance, mindie_server_log_path, p
     logger.info("")
     logger.info("<think>")
     for name, analyzer in REGISTRY.items():
-        logger.info(name)
+        logger.info(f"[{name}]")
         analyzer(mindie_service_config, benchmark_instance, mindie_server_log_path, params)
     logger.info("</think>")
 
