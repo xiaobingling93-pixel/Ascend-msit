@@ -15,6 +15,7 @@ import os
 from pathlib import Path
 import logging
 from collections import namedtuple
+from glob import glob
 from msserviceprofiler.msguard.security.io import open_s
 
 TARGETS = namedtuple("TARGETS", ["FirstTokenTime", "Throughput"])("FirstTokenTime", "Throughput")

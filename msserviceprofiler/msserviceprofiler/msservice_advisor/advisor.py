@@ -17,7 +17,6 @@ import json
 import csv
 import argparse
 from collections import namedtuple
-from glob import glob
 from dataclasses import dataclass
 
 from msserviceprofiler.msservice_advisor.profiling_analyze.utils import TARGETS, LOG_LEVELS, SUGGESTION_TYPES
