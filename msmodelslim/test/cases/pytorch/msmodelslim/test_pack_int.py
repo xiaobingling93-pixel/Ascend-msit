@@ -176,7 +176,7 @@ class TestComplexQuantifier(unittest.TestCase):
         test_bias = torch.tensor([[0.4, 0.8], [1.2, 1.6]], dtype=torch.float32)
         bias = process_scale(name, test_bias, tp_num)
 
-        expected = torch.tensor([[1.2], [2.8]], dtype=torch.float32)
+        expected = torch.tensor([[9.6], [22.4]], dtype=torch.float32)
         self.assertTrue(torch.allclose(bias, expected, atol=1e-6))
 
     def test_process_scale_down_proj(self):
@@ -186,7 +186,7 @@ class TestComplexQuantifier(unittest.TestCase):
         test_bias = torch.tensor([[0.4, 0.8], [1.2, 1.6]], dtype=torch.float32)
         bias = process_scale(name, test_bias, tp_num)
         
-        expected = torch.tensor([[1.2], [2.8]], dtype=torch.float32)
+        expected = torch.tensor([[9.6], [22.4]], dtype=torch.float32)
         self.assertTrue(torch.allclose(bias, expected, atol=1e-6))
     
     def test_process_scale_down_proj_2(self):
@@ -196,7 +196,7 @@ class TestComplexQuantifier(unittest.TestCase):
         tp_num = 2
         bias = process_scale(name, test_bias, tp_num)
         
-        expected = torch.tensor([[0.4, 0.8], [1.2, 1.6]], dtype=torch.float32)
+        expected = torch.tensor([[3.2, 6.4], [9.6, 12.8]], dtype=torch.float32)
         self.assertTrue(torch.allclose(bias, expected, atol=1e-6))
 
 
