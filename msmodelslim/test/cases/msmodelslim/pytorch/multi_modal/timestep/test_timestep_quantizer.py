@@ -109,18 +109,12 @@ class TestTimestepQuantMixin(unittest.TestCase):
         self.module._timestep_offsets[2] = torch.ones(1) * 0.2
         
         # Get values as tensors
-        scale_tensor, offset_tensor = self.module.get_timestep_scale_offset_dict(ret_dict=False)
+        scale_tensor, offset_tensor = self.module.get_timestep_scale_offset_dict()
         self.assertEqual(scale_tensor.shape, (2, 1))
         self.assertEqual(offset_tensor.shape, (2, 1))
         self.assertTrue(torch.equal(scale_tensor, torch.tensor([[1.0], [2.0]])))
         self.assertTrue(torch.equal(offset_tensor, torch.tensor([[0.1], [0.2]])))
-        
-        # Get values as dict
-        result_dict = self.module.get_timestep_scale_offset_dict(ret_dict=True)
-        self.assertIn('input_scale', result_dict)
-        self.assertIn('input_offset', result_dict)
-        self.assertTrue(torch.equal(result_dict['input_scale'], torch.tensor([[1.0], [2.0]])))
-        self.assertTrue(torch.equal(result_dict['input_offset'], torch.tensor([[0.1], [0.2]])))
+
     
     def test_update_timestep_scale_offset_from_dict(self):
         """Test updating timestep scale and offset from dictionary."""
