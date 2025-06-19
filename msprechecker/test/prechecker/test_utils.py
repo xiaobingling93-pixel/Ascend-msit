@@ -22,7 +22,6 @@ import logging
 from unittest.mock import patch, mock_open, MagicMock
 
 from msprechecker.prechecker.utils import (
-    str_ignore_case,
     str_to_digit,
     is_deepseek_model,
     walk_dict,
@@ -30,8 +29,6 @@ from msprechecker.prechecker.utils import (
     get_dict_value_by_pos,
     set_log_level,
     set_logger,
-    errno,
-    is_port_in_use,
     read_csv,
     read_json,
     read_csv_or_json,
@@ -41,7 +38,6 @@ from msprechecker.prechecker.utils import (
     run_shell_command,
     get_global_env_info,
     get_npu_info,
-    get_local_to_master_ip,
     get_interface_by_ip,
     SimpleProgressBar
 )
@@ -51,10 +47,6 @@ class TestUtils(unittest.TestCase):
     def setUp(self):
         self.logger = logging.getLogger("msprechecker_logger")
         self.logger.handlers = []
-
-    def test_str_ignore_case(self):
-        self.assertEqual(str_ignore_case("TEST_STRING-123"), "teststring123")
-        self.assertEqual(str_ignore_case("Another_Test-Case"), "anothertestcase")
 
     def test_str_to_digit(self):
         self.assertEqual(str_to_digit("123"), 123)
@@ -95,20 +87,6 @@ class TestUtils(unittest.TestCase):
         set_logger(test_logger)
         self.assertEqual(len(test_logger.handlers), 1)
         self.assertFalse(test_logger.propagate)
-
-    def test_is_port_in_use(self):
-        with patch('socket.socket.bind') as mock_bind:
-            mock_bind.side_effect = OSError(errno.EADDRINUSE, "Address in use")
-            self.assertTrue(is_port_in_use(8080))
-            
-            mock_bind.side_effect = None
-            self.assertFalse(is_port_in_use(8080))
-
-        with self.assertRaises(TypeError):
-            is_port_in_use("not_a_number")
-            
-        with self.assertRaises(ValueError):
-            is_port_in_use(0)
 
 
 class TestFileOperations(unittest.TestCase):
@@ -206,13 +184,6 @@ class TestSystemInfoCollect(unittest.TestCase):
 
 
 class TestNetworkFunctions(unittest.TestCase):
-    @patch('socket.socket')
-    def test_get_local_to_master_ip(self, mock_socket):
-        mock_socket.return_value.getsockname.return_value = ['192.168.1.1', 12345]
-        result = get_local_to_master_ip()
-        self.assertEqual(result, "192.168.1.1")
-
-
     def test_get_interface_by_ip(self):
         psutil_mock = MagicMock()
 
