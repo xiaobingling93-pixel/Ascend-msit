@@ -92,10 +92,10 @@ class W8A8TimeStepProcessorConfig(BaseModel):
 
 class SaveProcessorConfig(BaseModel):
     output_path: str
-    safetensors_name: Any = None
-    json_name: Any = None
+    safetensors_name: Optional[str] = None
+    json_name: Optional[str] = None
     save_type: list = ['safe_tensor']
-    part_file_size: Any = None
+    part_file_size: Optional[int] = None
 
 
 class SessionConfig(BaseModel):

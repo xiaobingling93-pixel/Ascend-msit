@@ -15,9 +15,9 @@ class SessionConfig(BaseModel):
 ### 参数说明
 | 参数名| 输入/返回值 | 含义 | 使用限制 |
 | ------ | ------ | ------ | ------ |
-| processor_cfg_map | 输入 | 量化处理器配置映射图 | 必选。<br>数据类型：字典。默认为{}，使用量化功能时，至少应配置一个量化处理器（如W8A8ProcessorConfig），不可单独配置保存处理器（SaveProcessorConfig）。<br>每个键、值对应一个量化处理器名称和量化处理器配置类，当前可选量化处理器名称: ['w8a8', 'w8a8_dynamic', 'w8a8_timestep', 'fa3', 'save']，与可选量化处理器配置[W8A8ProcessorConfig, W8A8DynamicProcessorConfig, W8A8TimeStepProcessorConfig, FA3ProcessorConfig, SaveProcessorConfig]一一对应，其中'fa3'需要搭配'w8a8_dynamic'一起使用。|
+| processor_cfg_map | 输入 | 量化处理器配置映射图 | 必选。<br>数据类型：字典。默认为{}，使用量化功能时，至少应配置一个量化处理器（如W8A8ProcessorConfig），不可单独配置保存处理器（SaveProcessorConfig）。<br>每个键、值对应一个量化处理器名称和量化处理器配置类，当前可选量化处理器名称: ['m3', 'm4', 'm6', 'w8a8', 'w8a8_dynamic', 'w8a8_timestep', 'fa3', 'save']，与可选量化处理器配置[M3ProcessorConfig, M4ProcessorConfig, M6ProcessorConfig, W8A8ProcessorConfig, W8A8DynamicProcessorConfig, W8A8TimeStepProcessorConfig, FA3ProcessorConfig, SaveProcessorConfig]一一对应，其中'fa3'需要搭配'w8a8_dynamic'一起使用。|
 | calib_data | 输入 | 异常值抑制和量化校准数据 | 可选。<br>数据类型：列表。默认值为None，为Data-Free场景，Label-Free场景必须输入。多模态生成模型量化场景中，需要提前dump校准数据并加载后传入作为calib_data。|
-| device | 输入 | 量化过程运行设备 | 可选。<br>数据类型：str。默认值为'cpu'，可选值：['cpu', 'npu']。|
+| device | 输入 | 量化过程运行设备 | 可选。<br>数据类型：字符串。默认值为'cpu'，可选值：['cpu', 'npu']。|
 
 ### 调用示例
 ```python
@@ -229,6 +229,43 @@ class FA3ProcessorConfig(BaseModel):
 from msmodelslim.quant.session.session import FA3ProcessorConfig
 
 fa3_processor_cfg = FA3ProcessorConfig()
+```
+
+## SaveProcessorConfig
+
+### 功能说明
+量化保存处理器配置类，用于配置量化保存处理器相关的参数。
+
+### 类原型
+```python
+class SaveProcessorConfig(BaseModel):
+    output_path: str
+    safetensors_name: Optional[str] = None
+    json_name: Optional[str] = None
+    save_type: list = ['safe_tensor']
+    part_file_size: Optional[int] = None
+```
+
+### 参数说明
+| 参数名| 输入/返回值 | 含义 | 使用限制 |
+| ------ | ------ | ------ | ------ |
+| output_path | 输入 | 量化保存路径 | 必选。<br>数据类型：字符串。无默认值。|
+| safetensors_name | 输入 | 量化权重safetensors命名 | 可选。<br>数据类型：字符串。默认值为None，根据量化类型生成，例如quant_model_weight_w8a8.safetensors。|
+| json_name | 输入 | 量化权重描述文件json命名 | 可选。<br>数据类型：字符串。默认值None，根据量化类型生成，例如quant_model_description_w8a8.json。|
+| save_type | 输入 | 量化权重保存格式 | 可选。<br>数据类型：列表，元素为字符串。默认值['safe_tensor']，多模态生成模型量化场景下默认采用safetensors格式。|
+| part_file_size | 输入 | 保存成safetensors权重文件时，进行分片保存时，每个部分的大小，单位为GB| 可选。<br>数据类型：整型。默认值为None，不启用分片保存的功能。否则将会按照用户设置值进行分片，实际保存的权重可能略大于设置的值。|
+
+### 调用示例
+```python
+from msmodelslim.quant.session.session import SaveProcessorConfig
+
+save_processor_cfg = SaveProcessorConfig(
+    output_path="./",
+    safetensors_name=None,
+    json_name=None,
+    save_type=['safe_tensor'],
+    part_file_size=None
+)
 ```
 
 ## M3ProcessorConfig
