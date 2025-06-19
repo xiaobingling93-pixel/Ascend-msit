@@ -81,7 +81,11 @@ def get_next_dict_item(dict_value):
     return dict([next(iter(dict_value.items()))])
 
 
-def you(instance_path):
+def parse_benchmark_instance(instance_path):
+    if not os.path.isdir(instance_path) or not os.access(instance_path, os.R_OK | os.X_OK):
+        logger.warning(f"instance_path not provided or not accessible, will skip related analyse.")
+        return {}
+
     logger.debug("\nreq_to_data_map:")
     req_to_data_map = read_csv_or_json(get_latest_matching_file(instance_path, REQ_TO_DATA_MAP_PATTERN))
     logger.debug(f"req_to_data_map: {get_next_dict_item(req_to_data_map) if req_to_data_map else None}")

@@ -15,6 +15,7 @@ import os
 from pathlib import Path
 import logging
 from collections import namedtuple
+from msserviceprofiler.msguard.security.io import open_s
 
 TARGETS = namedtuple("TARGETS", ["FirstTokenTime", "Throughput"])("FirstTokenTime", "Throughput")
 _SUGGESTION_TYPES = ["env", "system", "config"]
@@ -138,7 +139,7 @@ def get_latest_matching_file(instance_path, pattern):
 def read_csv(file_path):
     logger.info(f"Reading file: {file_path}")
     result = {}
-    with open(file_path, mode="r", newline="", encoding="utf-8") as ff:
+    with open_s(file_path, mode="r", newline="", encoding="utf-8") as ff:
         for row in csv.DictReader(ff):
             for kk, vv in row.items():
                 result.setdefault(kk, []).append(vv)
@@ -147,7 +148,7 @@ def read_csv(file_path):
 
 def read_json(file_path):
     logger.info(f"Reading file: {file_path}")
-    with open(file_path) as ff:
+    with open_s(file_path) as ff:
         result = json.load(ff)
     return result
 
