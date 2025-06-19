@@ -49,6 +49,7 @@ def parse_args(namespace=None):
     parser.add_argument("--quant_dump_calib_folder", type=str)
     parser.add_argument("--data_split_num", type=int, default=1)
     parser.add_argument("--data_split_id", type=int, default=0)
+    parser.add_argument("--do_save_video", action="store_true", help="whether to save video output")
 
     args = parser.parse_args(namespace=namespace)
     args = sanity_check_args(args)
@@ -214,9 +215,10 @@ def main():
             )
         )
 
-        # run fake quant
-        sample(save_path=os.path.join(args.save_path, 'calib_quant'),
-               desc='Run fake quant using calib data')
+        if args.do_save_video:
+            # run fake quant
+            sample(save_path=os.path.join(args.save_path, 'calib_quant'),
+                desc='Run fake quant using calib data')
 
     else:
         raise ValueError("Please --do_quant to True")

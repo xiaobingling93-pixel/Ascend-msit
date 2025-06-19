@@ -17,7 +17,7 @@ def parse_args(namespace=None):
     parser = argparse.ArgumentParser(description="SD3 inference script")
 
     parser.add_argument("--sd3_model_path", type=str, required=True, help='Ckpt path of sd3 model')
-    parser.add_argument("--prompt_path", type=str, default="./prompts.txt", help="input prompt text path")
+    parser.add_argument("--prompt_path", type=str, default="./calib_prompts.txt", help="input prompt text path")
     parser.add_argument("--width", type=int, default=1024, help='Image size width')
     parser.add_argument("--height", type=int, default=1024, help='Image size height')
     parser.add_argument("--infer_steps", type=int, default=28, help="Inference steps")
@@ -29,6 +29,7 @@ def parse_args(namespace=None):
     parser.add_argument("--quant_type", choices=["w8a8"], default="w8a8", )
     parser.add_argument("--quant_weight_save_folder", type=str)
     parser.add_argument("--quant_dump_calib_folder", type=str)
+    parser.add_argument("--do_save_img", action="store_true", help="whether to save image output")
 
     args = parser.parse_args(namespace=namespace)
 
@@ -87,9 +88,10 @@ def inference(args):
             )
         )
 
-        # run fake quant
-        inference_func(save_path=os.path.join(args.save_path, 'calib_quant'),
-                       desc='Run fake quant using calib data')
+        if args.do_save_img:
+            # run fake quant
+            inference_func(save_path=os.path.join(args.save_path, 'calib_quant'),
+                           desc='Run fake quant using calib data')
 
     else:
         raise ValueError("Please --do_quant to True")

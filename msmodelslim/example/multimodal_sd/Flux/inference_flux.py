@@ -170,11 +170,11 @@ class PromptLoader:
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--path", type=str, default="./flux", help="Path to the flux model directory")
+    parser.add_argument("--path", type=str, required=True, help="Path to the flux model directory")
     parser.add_argument("--save_path", type=str, default="./res", help="ouput image path")
     parser.add_argument("--device_id", type=int, default=0, help="NPU device id")
     parser.add_argument("--device", choices=["npu", "cpu"], default="npu", help="NPU")
-    parser.add_argument("--prompt_path", type=str, default="./prompts.txt", help="input prompt text path")
+    parser.add_argument("--prompt_path", type=str, default="./calib_prompts.txt", help="input prompt text path")
     parser.add_argument("--prompt_type", choices=["plain", "parti", "hpsv2"], default="plain",
                         help="specify infer prompt type")
     parser.add_argument("--num_images_per_prompt", type=int, default=1,
@@ -198,6 +198,7 @@ def parse_arguments():
     parser.add_argument("--quant_dump_calib_folder", type=str)
     parser.add_argument("--data_split_num", type=int, default=1)
     parser.add_argument("--data_split_id", type=int, default=0)
+    parser.add_argument("--do_save_img", action="store_true", help="whether to save image output")
     return parser.parse_args()
 
 
@@ -355,11 +356,10 @@ def infer(args):
                 desc='Dump calib data by float model inference'
             )
         )
-
-        # run fake quant
-        sample(save_path=os.path.join(args.save_path, 'calib_quant'),
-               desc='Run fake quant using calib data')
-
+        if args.do_save_img:
+            # run fake quant
+            sample(save_path=os.path.join(args.save_path, 'calib_quant'),
+                desc='Run fake quant using calib data')
     else:
         raise ValueError("Please --do_quant to True")
 
