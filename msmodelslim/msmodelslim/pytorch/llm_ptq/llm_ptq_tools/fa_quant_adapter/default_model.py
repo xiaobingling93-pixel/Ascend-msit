@@ -163,10 +163,10 @@ def deepseekv2_mla_forward_adapter(original_forward):
             attn_weights = attn_weights + attention_mask
 
         # upcast attention to fp32
-        attn_weights = nn.functional.softmax(
+        attn_weights = torch.nn.functional.softmax(
             attn_weights, dim=-1, dtype=torch.float32
         ).to(q_pe.dtype)
-        attn_weights = nn.functional.dropout(
+        attn_weights = torch.nn.functional.dropout(
             attn_weights, p=self.attention_dropout, training=self.training
         )
         attn_output = torch.einsum('bhql,blc->bhqc', attn_weights, compressed_kv)

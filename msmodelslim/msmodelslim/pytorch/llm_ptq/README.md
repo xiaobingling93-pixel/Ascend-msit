@@ -257,11 +257,10 @@ python3 quant.py
 > 注意：当使用 w4a8_dynamic 量化类型时，json 描述文件中会多生成一个 model_quant_type_second 和 kv_cache_type_second 的 key 和对应的量化类型 W4A8_DYNAMIC。
 
 - ascendV1格式
-当[save_type](/msmodelslim/docs/Python-API接口说明/大模型压缩接口/大模型量化接口/PyTorch/save().md)设置为['ascendV1']时，量化权重会保存为safetensors文件和json描述文件。其中，safetensors文件与上述使用safetensors格式时的保持一致。
+<br>当[save_type](/msmodelslim/docs/Python-API接口说明/大模型压缩接口/大模型量化接口/PyTorch/save().md)['ascendV1']时，量化权重会保存为safetensors文件和json描述文件。其中，safetensors文件会跟设置的格式不同而有所区别，当设置为['ascendV1']并开启异常值抑制时不会导出*norm.module.bias/weight，而设置为['safe_tensor']时则会导出。json描述文件名从quant_model_description_{quant_type}.json改为quant_model_description.json，并新增了一个version参数。
 
-> 注意：当使用 w4a16 量化类型时，默认会对权重进行pack。
+> 注意：当使用w4a16量化类型时，默认会对权重进行pack。
 
-- json描述文件从quant_model_description_{qunt_type}.json改为quant_model_description.json，并新增了一个version参数。
 ```
 # llama模型稀疏量化生成的json描述文件部分内容
 {
