@@ -18,7 +18,7 @@ import numpy as np
 from msserviceprofiler.msservice_advisor.profiling_analyze.register import register_analyze, cached, answer
 from msserviceprofiler.msservice_advisor.profiling_analyze.register import GLOBAL_DATA
 from msserviceprofiler.msservice_advisor.profiling_analyze.utils import TARGETS, SUGGESTION_TYPES, logger
-from msserviceprofiler.msservice_advisor.profiling_analyze.utils import get_dict_value_by_pos
+from msserviceprofiler.msservice_advisor.profiling_analyze.utils import get_dict_value_by_pos, UmaskWrapper
 
 try:
     import matplotlib.pyplot as plt
@@ -180,7 +180,8 @@ def get_predict_image(results):
 
     png_name = f"func_curv_{timestamp}.png"
     logger.info(f"拟合画图路径：{png_name}")
-    plt.savefig(png_name)
+    with UmaskWrapper(umask=0o137):
+        plt.savefig(png_name)
 
 
 def divide_fit_and_print(summary):

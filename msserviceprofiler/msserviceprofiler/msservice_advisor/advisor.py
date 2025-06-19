@@ -22,6 +22,8 @@ from dataclasses import dataclass
 
 from msserviceprofiler.msservice_advisor.profiling_analyze.utils import TARGETS, LOG_LEVELS, SUGGESTION_TYPES
 from msserviceprofiler.msservice_advisor.profiling_analyze.utils import str_ignore_case, logger, set_log_level
+from msserviceprofiler.msservice_advisor.profiling_analyze.utils import get_latest_matching_file, read_csv_or_json
+
 
 # {"21559056a7ff44c88a891ecbb537c431": "0", ...}
 REQ_TO_DATA_MAP_PATTERN = "req_to_data_map.json"
@@ -75,44 +77,11 @@ class ProfilingParameters:
 """ parse_benchmark_instance """
 
 
-def get_latest_matching_file(instance_path, pattern):
-    files = glob(os.path.join(instance_path, pattern))
-    return max(files, key=os.path.getmtime) if files else None
-
-
-def read_csv(file_path):
-    logger.info(f"Reading file: {file_path}")
-    result = {}
-    with open(file_path, mode="r", newline="", encoding="utf-8") as ff:
-        for row in csv.DictReader(ff):
-            for kk, vv in row.items():
-                result.setdefault(kk, []).append(vv)
-    return result
-
-
-def read_json(file_path):
-    logger.info(f"Reading file: {file_path}")
-    with open(file_path) as ff:
-        result = json.load(ff)
-    return result
-
-
-def read_csv_or_json(file_path):
-    logger.debug(f"read_csv_or_json {file_path = }")
-    if not file_path or not os.path.exists(file_path):
-        return None
-    if file_path.endswith(".json"):
-        return read_json(file_path)
-    if file_path.endswith(".csv"):
-        return read_csv(file_path)
-    return None
-
-
 def get_next_dict_item(dict_value):
     return dict([next(iter(dict_value.items()))])
 
 
-def parse_benchmark_instance(instance_path):
+def you(instance_path):
     logger.debug("\nreq_to_data_map:")
     req_to_data_map = read_csv_or_json(get_latest_matching_file(instance_path, REQ_TO_DATA_MAP_PATTERN))
     logger.debug(f"req_to_data_map: {get_next_dict_item(req_to_data_map) if req_to_data_map else None}")
