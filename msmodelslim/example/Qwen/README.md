@@ -7,6 +7,7 @@
 - W4A8 Dynamic 量化：Qwen3-32B
 - W8A8量化：Qwen-7B，Qwen-14B，Qwen1.5-14B，Qwen1.5-32B，Qwen2-7B，Qwen2-72B，Qwen2.5-7B，Qwen2.5-14B，Qwen2.5-32B，Qwen3-14B，Qwen3-32B，QwQ-32B
 - W8A16量化：QWen-72B，Qwen1.5-72B，Qwen1.5-110B，Qwen2-72B
+- W4A4 Flatquant Dynamic量化：Qwen3-32B
 - 稀疏量化：Qwen1.5-14B，Qwen2-7B，Qwen2-72B，Qwen2.5-7B，Qwen2.5-14B，QwenCode2.5-7B, QwQ-32B
 - KV cache量化：Qwen2-72B
 - Attention 量化：Qwen2.5-72B
@@ -86,6 +87,16 @@
 
 - 更多参数配置要求，请参考量化过程中配置的参数 [QuantConfig](https://gitee.com/ascend/msit/blob/dev/msmodelslim/docs/Python-API接口说明/大模型压缩接口/大模型量化接口/PyTorch/QuantConfig.md)
   以及量化参数配置类 [Calibrator](https://gitee.com/ascend/msit/blob/dev/msmodelslim/docs/Python-API接口说明/大模型压缩接口/大模型量化接口/PyTorch/Calibrator.md)
+
+#### W4A4 Flatquant Dynamic量化专用参数说明 (w4a4.py)
+| 参数名 | 含义 | 默认值 | 使用方法 | 
+| ------ | ---- | --- | -------- | 
+| model_path | 浮点权重路径 | 无默认值 | 必选参数；<br>输入Qwen权重目录路径。 |
+| save_directory | 量化权重路径 | 无默认值 | 必选参数；<br>输出量化结果目录路径。 |
+| layer_count | 加载模型时的层数 | 0 | 默认值为0表示量化模型所有层；<br>用于调试，实际量化的层数，当设置为N时，将从第0层开始量化到第N-1层（如设置为5，则量化0,1,2,3,4这5层）。<br>取值范围：[0, 模型总层数]。 |
+| calib_file | 量化校准数据文件 | ../common/wiki.jsonl | 用于校准的数据文件路径，支持.jsonl格式文件。<br>文件中每行应包含'inputs_pretokenized'字段。 |
+| batch_size | 校准时的批处理大小 | 4 | 生成量化校准数据时使用的batch size。<br>取值范围：[1, 16] |
+| mindie_format | 非多模态模型量化后的权重配置文件是否兼容MindIE现有版本 | False | 开启`mindie_format`时保存的量化权重格式能够兼容MindIE迭代四B050前版本。|
 
 ### 使用案例
 - 请将{浮点权重路径}和{量化权重路径}替换为用户实际路径。
