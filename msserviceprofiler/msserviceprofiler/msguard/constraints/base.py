@@ -72,7 +72,7 @@ class BaseConstraint(ABC):
         return ret
 
     @abstractmethod
-    def _is_satisfied_by(self, val):
+    def _is_satisfied_by(self, path):
         pass
     
 

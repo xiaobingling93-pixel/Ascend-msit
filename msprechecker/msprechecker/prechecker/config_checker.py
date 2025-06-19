@@ -95,13 +95,13 @@ class ModelConfigChecker(ConfigCheckerBase):
         logger.debug(f"ModelConfigCollecter model_name={model_name} model_config={model_config}")
         return {"model_name": model_name, "model_config": model_config}
 
-    def do_precheck(self, current_config, additional_checks=None, **kwargs):
-        super().do_precheck(current_config, additional_checks, **kwargs)
+    def do_precheck(self, env, additional_checks=None, **kwargs):
+        super().do_precheck(env, additional_checks, **kwargs)
 
-        if not current_config:
+        if not env:
             return
 
-        model_name, model_config = current_config.get("model_name"), current_config.get("model_config")
+        model_name, model_config = env.get("model_name"), env.get("model_config")
         if not model_name or not model_config:
             return
         torch_dtype = model_config.get("torch_dtype")
@@ -194,10 +194,10 @@ class K8SCheckerBase(ConfigCheckerBase):
         else:
             raise ValueError(f"Unsupported expected type: {type(expected_info).__name__}")
 
-    def do_precheck(self, current_config, additional_checks=None, **kwargs):
-        super().do_precheck(current_config, additional_checks, **kwargs)
+    def do_precheck(self, env, additional_checks=None, **kwargs):
+        super().do_precheck(env, additional_checks, **kwargs)
 
-        if not current_config:
+        if not env:
             return
 
         log_level = kwargs.get("log_level", "error")
@@ -216,7 +216,7 @@ class K8SCheckerBase(ConfigCheckerBase):
         expected_nodes = {}
         self.extract_expected_nodes(expected_nodes, default_rule)
         config_nodes = {}
-        self.flatten_dict_leaves(config_nodes, current_config)
+        self.flatten_dict_leaves(config_nodes, env)
         res = []
         for config_key, rule_node in expected_nodes.items():
             if "expected" not in rule_node:

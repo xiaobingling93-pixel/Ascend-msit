@@ -35,23 +35,35 @@ def get_file_sizes(file_path_regex):
     return result_dict
 
 
+def _should_hash_entire_file(num_blocks, total_size, block_size):
+    return num_blocks <= 0 or total_size <= block_size * num_blocks
+
+
+def _hash_file_sequentially(sha256_hash, file, block_size):
+    for chunk in iter(lambda: file.read(block_size), b""):
+        sha256_hash.update(chunk)
+
+
+def _hash_file_sampled(sha256_hash, file, total_size, num_blocks, block_size):
+    step = max(1, total_size // num_blocks)
+    test_positions = list(range(0, total_size, step)) + [max(0, total_size - block_size)]
+    
+    for pos in test_positions:
+        if 0 <= pos < total_size:
+            file.seek(pos, 0)
+            chunk = file.read(block_size)
+            if chunk:
+                sha256_hash.update(chunk)
+
+
 def update_hash256(sha256_hash, file_path, total_size, num_blocks, block_size):
     block_size = min(block_size, total_size)
-
-    with open(file_path, "rb") as f:
-        if num_blocks <= 0 or total_size <= block_size * num_blocks:
-            for chunk in iter(lambda: f.read(block_size), b""):
-                sha256_hash.update(chunk)
+    
+    with open(file_path, "rb") as file:
+        if _should_hash_entire_file(num_blocks, total_size, block_size):
+            _hash_file_sequentially(sha256_hash, file, block_size)
         else:
-            step = max(1, total_size // num_blocks)
-            test_positions = list(range(0, total_size, step)) + [max(0, total_size - block_size)]
-
-            for pos in test_positions:
-                if 0 <= pos < total_size:
-                    f.seek(pos, 0)
-                    chunk = f.read(block_size)
-                    if chunk:
-                        sha256_hash.update(chunk)
+            _hash_file_sampled(sha256_hash, file, total_size, num_blocks, block_size)
 
 
 def get_file_sha256s(file_path_regex, block_size=4096, num_blocks=1000):
