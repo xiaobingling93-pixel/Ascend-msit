@@ -17,7 +17,7 @@ import os
 from collections import deque
 
 from .exception import WalkLimitError
-from ..validation.decorator_usage import validate_params
+from ..validation import validate_params
 from ..constraints import Rule, where
 from ..utils.constants import DEFAULT_FILE_MODE, DEFAULT_MAX_FILES, DEFAULT_MAX_DEPTHS, VALID_OPEN_MODES
 
