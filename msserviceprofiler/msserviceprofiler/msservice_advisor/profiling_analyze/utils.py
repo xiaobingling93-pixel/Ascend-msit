@@ -115,7 +115,7 @@ def vaild_readable_file(path):
     file_size = path.stat().st_size
     if file_size > MAX_FILE_SIZE * BYTES_TO_GB:
         raise ValueError(f"path '{path}' cannot exceed {MAX_FILE_SIZE}GB.")
-    return path
+    return str(path)
 
 
 def get_directory_size(path):
