@@ -76,11 +76,11 @@ class FakeQuantizedLinear(nn.Module):
                                                 in_size=linear.weight.shape[1], 
                                                 out_size=linear.weight.shape[0], 
                                                 perchannel=True, 
-                                                sym=not(config.w_asym), 
+                                                sym=not (config.w_asym), 
                                                 lwc=config.lwc
                                                 )
         self.act_quantizer = ActivationQuantizer(bits=config.a_bits, 
-                                                 sym=not(config.a_asym), 
+                                                 sym=not (config.a_asym), 
                                                  lac=config.lac, 
                                                  groupsize=config.a_groupsize,
                                                  per_tensor=config.a_per_tensor)
@@ -109,12 +109,9 @@ class FakeQuantizedLinear(nn.Module):
         """Switch to calibration mode for collecting statistics."""
         self._mode = ForwardMode.CALIB
    
-    def reparameterize(self, quant_weight=False):
+    def reparameterize(self):
         """
         Reparameterize quantizers by converting learnable parameters to fixed buffers.
-        
-        Args:
-            quant_weight (bool): Whether to quantize weights (unused in base implementation)
         """
         self.weight_quantizer.reparameterize()
         self.act_quantizer.reparameterize()
