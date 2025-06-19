@@ -189,7 +189,7 @@ def divide_fit_and_print(summary):
 
     summary.sort(key=lambda x: x["BSZ"])
     best_bs = max(
-        summary, key=lambda xx: sum((xx["FIT_DATA"]) / len(xx["FIT_DATA"])) if len(xx["FIT_DATA"]) > 0 else 0
+        summary, key=lambda xx: (sum(xx["FIT_DATA"]) / len(xx["FIT_DATA"])) if len(xx["FIT_DATA"]) > 0 else 0
     )["BSZ"]
     to_fit = [dict(BSZ=x["BSZ"], FIT_DATA=x.pop("FIT_DATA")) for x in summary]
     return to_fit, best_bs, summary
