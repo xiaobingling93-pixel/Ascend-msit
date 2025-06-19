@@ -187,16 +187,11 @@ class HcclPingChecker(PrecheckerBase):
                     continue
                 logger.debug(f"HcclPingChecker server_ip={server_ip}, device_ip={device_ip}")
                 results = run_hccl_command("hccn_tool -i {device_id} -ping -g address " + device_ip)
-                bool_results = [any("0.00% packet loss" in ii for ii in result) for result in results]
+                bool_results = [not any("100.00% packet loss" in ii for ii in result) for result in results]
                 if bool_results:
                     multi_server_results.setdefault(server_ip, {}).update({device_ip: bool_results})
         logger.debug(f"ping results = {multi_server_results}")
-
-        if multi_server_results:
-            # Also add local device results and assume pass for later checking
-            local_results = {device_ip: [True] * len(NPU_DEVICES) for device_ip in device_ips}
-            multi_server_results = {self.local_ip: local_results}
-        return multi_server_results  # {server_ip: {server_device_ip: [cur device 0, cur device 1, ...]}}
+        return multi_server_results
 
     def do_precheck(self, envs, **kwargs):
         if not envs:
@@ -212,7 +207,7 @@ class HcclPingChecker(PrecheckerBase):
             if server_ip == self.local_ip:
                 continue
             is_connect_server_pass = True
-            for device_id, (device_ip, connect_result) in enumerate(device_connect_result.items()):
+            for device_id, (_, connect_result) in enumerate(device_connect_result.items()):
                 if all(connect_result):
                     # 路由器连接，所有卡间都能 ping 通
                     continue

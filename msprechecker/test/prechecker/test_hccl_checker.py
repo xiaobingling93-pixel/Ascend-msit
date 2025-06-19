@@ -184,14 +184,14 @@ class TestHcclPingChecker(unittest.TestCase):
             ]
         }"""
         ranktable_file = self.create_test_ranktable(ranktable_content)
-        
+
         mock_parse.return_value = json.loads(ranktable_content)
         mock_get_interface.return_value = ("eth0", "192.168.1.1")
         mock_run_hccl.return_value = [["0.00% packet loss"]]
-        
+
         result = self.checker.collect_env(ranktable_file=ranktable_file)
         self.assertIsNotNone(result)
-        self.assertIn("192.168.1.1", result)
+        self.assertIn("192.168.1.2", result)
 
     @patch('msprechecker.prechecker.hccl_checker.parse_ranktable_file')
     def test_collect_env_no_ranktable(self, mock_parse):
