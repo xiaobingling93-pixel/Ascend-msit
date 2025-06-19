@@ -151,10 +151,11 @@ def main():
         quant_model_description_json_name = "quant_model_description_w4a4_flatquant_dynamic.json"
     else:
         quant_model_description_json_name = "quant_model_description.json"
+    save_type = "safe_tensor" if args.mindie_format else "ascendV1"
     calibrator.save(save_directory,
                     json_name=quant_model_description_json_name,
                     safetensors_name="quant_model_weight_w4a4_flatquant_dynamic.safetensors",
-                    save_type=["safe_tensor"],
+                    save_type=[save_type],
                     part_file_size=4)
 
     custom_hooks = {

@@ -266,6 +266,11 @@ python3 quant.py
 {
   "version": "1.0.0",                                        # 标注现有的权重格式保存版本
   "model_quant_type": "W8A8S",                               # 整体量化类型为稀疏量化
+  "kv_cache_type": "C8",                                     # 对KVCache的量化
+  "fa_quant_type": "FAQuant",                                # FA3量化类型，其他模型FA3量化都为FAQUant，但是DeepSeek为FAKQuank
+  "group_size": "256",                                       # per_group量化时的分组数量
+  "kv_quant_type": "C8",                                     # 对KV的量化类型
+  "reduce_quant_type": "per_channel",                        # 通信量化类型
   "model.embed_tokens.weight": "FLOAT",                      # 来自原始浮点模型的embed_tokens权重
   "model.layers.0.self_attn.q_proj.weight": "W8A8S",         # 量化新增的第0层self_attn.q_proj的quant_weight
   "model.layers.0.self_attn.q_proj.input_scale": "W8A8S",    # 量化新增的第0层self_attn.q_proj的input_scale

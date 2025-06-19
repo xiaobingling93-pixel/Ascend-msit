@@ -225,7 +225,7 @@ def test_check_vaild_smi_output_given_missing_columns_raises_error():
 
 
 def test_check_vaild_smi_output_given_empty_output_raises_error():
-    with pytest.raises(ValueError, match="Header line not found"):
+    with pytest.raises(ValueError, match="npu-smi info -m output error"):
         npu_memory_analyze.check_vaild_smi_output("")
 
 

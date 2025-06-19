@@ -87,7 +87,7 @@ class TimestepQuantMixin:
     def update_config(self, max_dynamic_step: int):
         self.cfg.max_dynamic_step = max_dynamic_step
 
-    def get_timestep_scale_offset_dict(self, ret_dict=False):
+    def get_timestep_scale_offset_dict(self):
         """
         导出所有已记录的时间步 scale/offset
         """
@@ -95,13 +95,7 @@ class TimestepQuantMixin:
         scale_tensor = torch.stack([self._timestep_scales[t].cpu() for t in t_list])
         offset_tensor = torch.stack([self._timestep_offsets[t].cpu() for t in t_list])
 
-        if ret_dict:
-            return {
-                'input_scale': scale_tensor,
-                'input_offset': offset_tensor
-            }
-        else:
-            return scale_tensor, offset_tensor
+        return scale_tensor, offset_tensor
 
     def update_timestep_scale_offset_from_dict(self, state_dict):
         """
@@ -183,6 +177,10 @@ class LinearQuantizerTimestep(LinearQuantizer):
         if self.quant_weight.int_infer and (not self.quant_weight.is_calib):
             return self.reshape_x_to_blc(self._int_infer_forward)(x)
         else:
+            if not self.quant_weight.is_calib:
+                # when is_calib is False, do fake quantization
+                self.quant_input.apply_timestep_quant_settings(device=x.device)
+
             if self.quant_input.w_hessian:  # gptq
                 weight = self.quant_weight(self.weight, y=x.clone())
             else:
