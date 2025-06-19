@@ -152,7 +152,7 @@ def analyze(mindie_service_config, benchmark_instance, mindie_server_log_path, p
         for name, items in ANSWERS.get(suggesion_type, dict()).items():
             for action, reason in items:
                 logger.info(f"[{suggesion_type}] {name}")
-                logger.info(f"[advise] {action}")
+                logger.info(f"[advice] {action}")
                 logger.info(f"[reason] {reason}")
                 logger.info("")
     logger.info("</answer>")

@@ -36,20 +36,18 @@ class VLLMHookerBase:
     def init(self):
         pass
 
+    def replace_func(ori_func, pname, profiler_func):
+        @functools.wraps(ori_func)
+        def wrapper(*args, **kwargs):
+            if pname is not None and self.get_parents_name(ori_func) != pname:
+                return ori_func(*args, **kwargs)
+            return profiler_func(*args, **kwargs)
+        return wrapper
+        
     def do_hook(self, hook_points, profiler_func_maker, pname=None):
         for ori_func in hook_points:
             profiler_func = profiler_func_maker(ori_func)
-
-            def replace_func(ori_func, pname):
-                @functools.wraps(ori_func)
-                def wrapper(*args, **kwargs):
-                    if pname is not None and self.get_parents_name(ori_func) != pname:
-                        return ori_func(*args, **kwargs)
-                    return profiler_func(*args, **kwargs)
-
-                return wrapper
-
-            HookHelper(ori_func, replace_func(ori_func, pname)).replace()
+            HookHelper(ori_func, replace_func(ori_func, pname, profiler_func)).replace()
 
     def support_version(self, version):
         if hasattr(self, "vllm_version"):
