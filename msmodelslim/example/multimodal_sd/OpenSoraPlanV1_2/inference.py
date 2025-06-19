@@ -207,8 +207,7 @@ if __name__ == "__main__":
     sys.path.append(example_base_dir)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_path", type=str, default='LanguageBind/Open-Sora-Plan-v1.0.0')
-    parser.add_argument("--version", type=str, default=None, choices=[None, '65x512x512', '65x256x256', '17x256x256'])
+    parser.add_argument("--model_path", type=str, required=True, help='Ckpt path of Open-Sora-Plan V1.2 model')
     parser.add_argument("--num_frames", type=int, default=93)
     parser.add_argument("--height", type=int, default=720)
     parser.add_argument("--width", type=int, default=1280)
@@ -234,6 +233,7 @@ if __name__ == "__main__":
     parser.add_argument("--quant_type", choices=["w8a8"], default="w8a8", )
     parser.add_argument("--quant_weight_save_folder", type=str)
     parser.add_argument("--quant_dump_calib_folder", type=str)
+    parser.add_argument("--do_save_video", action="store_true", help="whether to save video output")
 
     args = parser.parse_args()
 
@@ -299,21 +299,16 @@ if __name__ == "__main__":
                 save_path=os.path.join(args.save_img_path, 'calib_fp'),
             )
         )
-
-        # run fake quant
-        run_model_and_save_images(
-            pipeline,
-            args,
-            save_path=os.path.join(args.save_img_path, 'calib_quant')
-        )
+        if args.do_save_video:
+            # run fake quant
+            run_model_and_save_images(
+                pipeline,
+                args,
+                save_path=os.path.join(args.save_img_path, 'calib_quant')
+            )
 
     else:
-        # run float inference
-        run_model_and_save_images(
-            pipeline,
-            args,
-            save_path=args.save_img_path
-        )
+        raise ValueError("Please --do_quant to True")
 
     if world_size > 0:
         finalize_parallel_env()
