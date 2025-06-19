@@ -13,8 +13,6 @@
 # limitations under the License.
 
 import os
-import json
-import csv
 import argparse
 from collections import namedtuple
 from dataclasses import dataclass
