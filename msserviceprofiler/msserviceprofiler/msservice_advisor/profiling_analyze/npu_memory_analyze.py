@@ -57,7 +57,7 @@ def get_schedule_config_info(backend_config, output_token_num):
         raise Exception("mindie-server config.json missing 'cacheBlockSize'.")
 
     if output_token_num == 0:
-        output_token_num = int(schedule_config.get('maxIterTimes'))
+        output_token_num = int(schedule_config['maxIterTimes']) # 未取到则打断
 
     logger.info(f"output_token_num: {output_token_num}, cache_block_sizes: {cache_block_sizes}")
     return output_token_num, cache_block_sizes
@@ -142,7 +142,7 @@ def check_vaild_smi_output(output):
             header_line = stripped_line
             break
     if not header_line:
-        raise ValueError("Header line not found.")
+        raise ValueError("npu-smi info -m output error.")
     
     # parse column indices
     headers = re.split(r'\s{2,}', header_line)
@@ -396,7 +396,7 @@ def write_to_answer(min_batch, max_batch, avg_batch):
     answer(
         suggesion_type=SUGGESTION_TYPES.config,
         suggesion_item="maxBatchSize",
-        action=f"set to range [{min_batch}, {max_batch}], average is {avg_batch}",
+        action=f"取值范围为 [{min_batch}, {max_batch}]，平均值为 {avg_batch}",
         reason="经过对当前显存信息的计算，建议将maxBatchSize的值设置为average大小，并逐渐向范围最大值调整，以占满整个显存",
     )
 
