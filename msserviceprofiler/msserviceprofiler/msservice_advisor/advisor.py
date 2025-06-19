@@ -115,6 +115,9 @@ def parse_mindie_server_config(service_config_path):
     else:  # mindie service path
         mindie_service_path = service_config_path
         service_config_path = os.path.join(service_config_path, "conf", "config.json")
+    if not os.path.isfile(mindie_service_path) or not os.access(mindie_service_path, os.R_OK):
+        logger.warning(f"mindie_service_path not provided or not accessible, will skip related analyse.")
+        return {}, None
     logger.info(f"mindie_service_path: {mindie_service_path}, service_config_path: {service_config_path}")
     mindie_service_config = read_csv_or_json(service_config_path)
     
