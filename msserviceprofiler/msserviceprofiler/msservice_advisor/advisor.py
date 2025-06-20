@@ -172,13 +172,13 @@ def arg_parse(subparsers):
     mindie_service_path = os.getenv(MIES_INSTALL_PATH, MINDIE_SERVICE_DEFAULT_PATH)
 
     parser = subparsers.add_parser(
-        "advisor", formatter_class=argparse.ArgumentDefaultsHelpFormatter, help="advisor for MindIE performance"
+        "advisor", formatter_class=argparse.ArgumentDefaultsHelpFormatter, help="advisor for MindIE Service performance"
     )
     parser.add_argument(
         "-i", "--instance_path", type=str, default="instance", help="benchamrk instance output directory"
     )
     parser.add_argument(
-        "-s", "--service_config_path", type=str, default=mindie_service_path, help="MindIE service config json path"
+        "-s", "--service_config_path", type=str, default=mindie_service_path, help="MindIE Service config json path"
     )
     parser.add_argument(
         "-t",
