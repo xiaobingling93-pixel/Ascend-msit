@@ -64,7 +64,7 @@ class TestTrainCmd(TestCase):
 
     def test_compare_ms_service_profiler_data(self):
         train_cmd = [
-            "msServiceProfiler", "train",
+            "msserviceprofiler", "train",
             "-i", self.INPUT_PATH,
             "-o", self.TRAIN_OUTPUT_PATH,
             "-t", "vllm"
