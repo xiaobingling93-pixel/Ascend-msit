@@ -115,7 +115,7 @@ def parse_mindie_server_config(service_config_path):
     else:  # mindie service path
         mindie_service_path = service_config_path
         service_config_path = os.path.join(service_config_path, "conf", "config.json")
-    if not os.path.isfile(mindie_service_path) or not os.access(mindie_service_path, os.R_OK):
+    if not os.path.isfile(service_config_path) or not os.access(service_config_path, os.R_OK):
         logger.warning(f"mindie_service_path not provided or not accessible, will skip related analyse.")
         return {}, None
     logger.info(f"mindie_service_path: {mindie_service_path}, service_config_path: {service_config_path}")
@@ -172,13 +172,13 @@ def arg_parse(subparsers):
     mindie_service_path = os.getenv(MIES_INSTALL_PATH, MINDIE_SERVICE_DEFAULT_PATH)
 
     parser = subparsers.add_parser(
-        "advisor", formatter_class=argparse.ArgumentDefaultsHelpFormatter, help="advisor for MindIE performance"
+        "advisor", formatter_class=argparse.ArgumentDefaultsHelpFormatter, help="advisor for MindIE Service performance"
     )
     parser.add_argument(
         "-i", "--instance_path", type=str, default="instance", help="benchamrk instance output directory"
     )
     parser.add_argument(
-        "-s", "--service_config_path", type=str, default=mindie_service_path, help="MindIE service config json path"
+        "-s", "--service_config_path", type=str, default=mindie_service_path, help="MindIE Service config json path"
     )
     parser.add_argument(
         "-t",
