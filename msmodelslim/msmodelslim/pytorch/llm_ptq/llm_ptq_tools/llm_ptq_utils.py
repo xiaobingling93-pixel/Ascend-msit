@@ -242,8 +242,9 @@ class QuantModelJsonDescription:
         self.quant_model_description[QuantModelJsonDescription.version_type_name] = version_name
 
     def change_group_size(self, group_size=0):
-        if group_size <= 0:
-            group_size = 0
+        # 如果version_name为空，或者group_size小于等于0，则不修改group_size
+        if self.quant_model_description.get(QuantModelJsonDescription.version_type_name) is None or group_size <= 0:
+            return
         self.quant_model_description[QuantModelJsonDescription.group_size_name] = group_size
 
     def change_model_type(self, model_quant_type):
