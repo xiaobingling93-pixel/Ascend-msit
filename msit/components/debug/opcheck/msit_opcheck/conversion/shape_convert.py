@@ -592,7 +592,7 @@ def nc1hwc0_to_nchw(data: np.ndarray, ori_format: str, target_shape: Union[List,
     w_from = shape_from[3]
     c0_from = shape_from[4]
     c1_mul_c0 = c1_from * c0_from
-    c_pad = None if c1_mul_c0 == target_shape[-1] else target_shape[-1] - c1_mul_c0
+    c_pad = None if c1_mul_c0 == target_shape[1] else target_shape[1] - c1_mul_c0
 
     reshape_data = data.reshape(n_from, c1_from, h_from, w_from, c0_from)
     tmp_input_tensor = np.transpose(reshape_data, axes=(0, 1, 4, 2, 3))
@@ -608,7 +608,7 @@ def nc1hwc0_to_hwcn(data: np.ndarray, ori_format: str, target_shape: Union[List,
     w_from = shape_from[3]
     c0_from = shape_from[4]
     c1_mul_c0 = c1_from * c0_from
-    c_pad = None if c1_mul_c0 == target_shape[-1] else target_shape[-1] - c1_mul_c0
+    c_pad = None if c1_mul_c0 == target_shape[-2] else target_shape[-2] - c1_mul_c0
 
     reshape_data = data.reshape(n_from, c1_from, h_from, w_from, c0_from)
     tmp_input_tensor = np.transpose(reshape_data, axes=(2, 3, 1, 4, 0))
