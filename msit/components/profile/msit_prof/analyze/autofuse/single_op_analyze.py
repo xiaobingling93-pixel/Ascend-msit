@@ -236,6 +236,9 @@ class SingleOpAnalyzer:
         return origin_op_duration_sum, origin_op_hbms, origin_op_hbms_sum, origin_op_hbms_save, not_found_op_list
 
     def save_analyze_result(self, analyze_result):
+        if not analyze_result:
+            logger.warning("No fusion ops were found, the result was not saved.")
+            return
         result_df = pd.DataFrame(analyze_result)
         analyze_result_path = os.path.join(self.output_path, "profile_analysis.csv")
         sort_df = result_df.sort_values(by="Time Difference", ascending=True, na_position='last')
