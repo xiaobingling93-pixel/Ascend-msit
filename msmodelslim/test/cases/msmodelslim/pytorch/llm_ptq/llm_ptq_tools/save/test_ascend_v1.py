@@ -290,6 +290,7 @@ class TestFormatCompatibility(unittest.TestCase):
         self.assertIn('version', ascend_json)
         self.assertEqual(ascend_json['version'], '1.0.0')
         self.assertNotIn('version', safe_json)
+        self.assertNotIn('group_size', safe_json)
         
         # Verify common fields
         self.assertIn('model_quant_type', ascend_json)
@@ -301,9 +302,7 @@ class TestFormatCompatibility(unittest.TestCase):
         self.assertEqual(ascend_json['test_tensor'], safe_json['test_tensor'])
 
         self.assertIn('group_size', ascend_json)
-        self.assertIn('group_size', safe_json)
         self.assertEqual(ascend_json['group_size'], 128)
-        self.assertEqual(safe_json['group_size'], 0)
 
     def test_factory_format_selection_should_use_correct_defaults(self):
         """Test that factory creates savers with correct default configurations"""
@@ -377,9 +376,9 @@ class TestFormatCompatibility(unittest.TestCase):
         self.assertIn('version', ascend_json)
         self.assertEqual(ascend_json['version'], '1.0.0')
         self.assertNotIn('version', safe_json)
+        self.assertNotIn('group_size', safe_json)
         
         # Verify common fields
-        self.assertEqual(safe_json['group_size'], 0)
         self.assertEqual(ascend_json['group_size'], 128)
         
         self.assertIn('kv_quant_type', safe_json)
@@ -444,9 +443,10 @@ class TestFormatCompatibility(unittest.TestCase):
         self.assertIn('version', ascend_json)
         self.assertEqual(ascend_json['version'], '1.0.0')
         self.assertNotIn('version', safe_json)
+        self.assertNotIn('group_size', safe_json)
         
         # Verify common fields
-        self.assertEqual(safe_json['group_size'], 0)
+        self.assertIn('group_size', ascend_json)
         self.assertEqual(ascend_json['group_size'], 128)
         
         self.assertIn('fa_quant_type', safe_json)
@@ -510,9 +510,10 @@ class TestFormatCompatibility(unittest.TestCase):
         self.assertEqual(ascend_json['reduce_quant_type'], 'per_channel')
         
         self.assertNotIn('version', safe_json)
+        self.assertNotIn('group_size', safe_json)
         
         # Verify common fields
-        self.assertEqual(safe_json['group_size'], 0)
+        self.assertIn('group_size', ascend_json)
         self.assertEqual(ascend_json['group_size'], 128)
         
         # Verify basic fields
