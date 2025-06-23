@@ -97,6 +97,7 @@
 | calib_file | 量化校准数据文件 | ../common/wiki.jsonl | 用于校准的数据文件路径，支持.jsonl格式文件。<br>文件中每行应包含'inputs_pretokenized'字段。 |
 | batch_size | 校准时的批处理大小 | 4 | 生成量化校准数据时使用的batch size。<br>取值范围：[1, 16] |
 | mindie_format | 非多模态模型量化后的权重配置文件是否兼容MindIE现有版本 | False | 开启`mindie_format`时保存的量化权重格式能够兼容MindIE迭代四B050前版本。|
+| trust_remote_code | 是否信任自定义代码 | False | 指定`trust_remote_code=True`使修改后的自定义代码文件能够正确的被加载。(请确保加载的自定义代码文件的安全性) |
 
 ### 使用案例
 - 请将{浮点权重路径}和{量化权重路径}替换为用户实际路径。
@@ -236,7 +237,7 @@
   ```
 ##### Qwen3-32b W4A4 Flatquant Dynamic量化 
   ```shell
-  python3 w4a4.py --model_path {浮点权重路径} --save_directory {w4a4量化权重路径} --calib_file ../common/wiki.jsonl
+  python3 w4a4.py --model_path {浮点权重路径} --save_directory {w4a4量化权重路径} --calib_file ../common/wiki.jsonl --trust_remote_code True
   ```
 ##### Qwen3-14B W8A8量化
 
