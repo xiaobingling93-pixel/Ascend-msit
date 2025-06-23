@@ -21,6 +21,7 @@ from opensora.models.causalvideovae.model.causal_vae.parallel_layers import (
     register_vae_decode, parallel_full_model_warp)
 from utils.file_utils import standardize_path
 
+from ascend_utils.common.security.pytorch import safe_torch_load
 from ascend_utils.common.security import get_write_directory, get_valid_read_path
 from msmodelslim.quant import quant_model, SessionConfig
 from msmodelslim.quant import W8A8ProcessorConfig, W8A8QuantConfig, SaveProcessorConfig
@@ -163,7 +164,7 @@ def do_multimodal_quant(args, model, infer_func, infer_args, infer_kwargs):
 
     # ***************************** 启动量化 *****************************
     # 加载校准数据
-    calib_dataset = torch.load(dump_data_path, map_location=f'npu:{get_rank()}')
+    calib_dataset = safe_torch_load(dump_data_path, map_location=f'npu:{get_rank()}')
 
     def get_w8a8_cfg():
         _cfg = SessionConfig(
