@@ -32,6 +32,7 @@ from FLUX1dev import FluxPipeline
 from FLUX1dev import get_local_rank, get_world_size, initialize_torch_distributed
 from FLUX1dev.utils import check_prompts_valid, check_param_valid, check_dir_safety, check_file_safety
 
+from ascend_utils.common.security import get_write_directory, get_valid_write_path
 from msmodelslim.quant import quant_model, SessionConfig, FA3ProcessorConfig, W8A8DynamicQuantConfig, \
     W8A8DynamicProcessorConfig, M3ProcessorConfig, M4ProcessorConfig, M6ProcessorConfig, M6Config
 from msmodelslim.quant import W8A8TimeStepProcessorConfig, W8A8TimeStepQuantConfig, \
@@ -199,7 +200,14 @@ def parse_arguments():
     parser.add_argument("--data_split_num", type=int, default=1)
     parser.add_argument("--data_split_id", type=int, default=0)
     parser.add_argument("--do_save_img", action="store_true", help="whether to save image output")
-    return parser.parse_args()
+
+    args = parser.parse_args()
+
+    # check args
+    get_write_directory(args.save_path)
+    get_write_directory(args.quant_weight_save_folder)
+    get_write_directory(args.quant_dump_calib_folder)
+    return args
 
 
 def infer(args):

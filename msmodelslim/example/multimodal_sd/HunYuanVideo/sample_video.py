@@ -19,6 +19,7 @@ from hyvideo.config import (
 from hyvideo.inference import HunyuanVideoSampler
 from mindiesd import CacheConfig, CacheAgent
 
+from ascend_utils.common.security import get_write_directory
 from msmodelslim.quant import quant_model, SessionConfig, FA3ProcessorConfig, W8A8DynamicQuantConfig, \
     W8A8DynamicProcessorConfig, M3ProcessorConfig, M4ProcessorConfig, M6ProcessorConfig, M6Config
 from msmodelslim.quant import W8A8TimeStepProcessorConfig, W8A8TimeStepQuantConfig, \
@@ -54,6 +55,9 @@ def parse_args(namespace=None):
     args = parser.parse_args(namespace=namespace)
     args = sanity_check_args(args)
 
+    # check args
+    get_write_directory(args.quant_weight_save_folder)
+    get_write_directory(args.quant_dump_calib_folder)
     return args
 
 

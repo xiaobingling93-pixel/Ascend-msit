@@ -27,6 +27,7 @@ def search_restep(pipeline, args):
         raise ValueError(f'args.num_frames: {args.sample_method} not supported. Only support 29 frames.')
 
     get_write_directory(args.save_dir)
+    get_write_directory(args.videos_path)
 
     # set restep search config
     from msmodelslim.pytorch.multi_modal.sampling_optimization import ReStepSearchConfig, ReStepAdaptor

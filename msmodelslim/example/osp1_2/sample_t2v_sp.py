@@ -219,6 +219,7 @@ if __name__ == "__main__":
     vae.vae_scale_factor = ae_stride_config[args.ae]
 
     args.cache_dir = get_write_directory(args.cache_dir)
+    args.text_encoder_name = get_valid_read_path(args.text_encoder_name, is_dir=True)
     text_encoder = MT5EncoderModel.from_pretrained(args.text_encoder_name, 
                                                    cache_dir=args.cache_dir,
                                                    low_cpu_mem_usage=True, 

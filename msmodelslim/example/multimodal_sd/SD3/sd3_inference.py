@@ -9,6 +9,7 @@ from diffusers import StableDiffusion3Pipeline
 from torch import nn
 from tqdm import tqdm
 
+from ascend_utils.common.security import get_valid_read_path, get_write_directory
 from msmodelslim.quant import quant_model, SessionConfig
 from msmodelslim.quant import W8A8ProcessorConfig, W8A8QuantConfig, SaveProcessorConfig
 
@@ -33,6 +34,11 @@ def parse_args(namespace=None):
 
     args = parser.parse_args(namespace=namespace)
 
+    get_valid_read_path(args.sd3_model_path, is_dir=True)
+    get_valid_read_path(args.prompt_path, is_dir=False)
+    get_write_directory(args.save_path)
+    get_write_directory(args.quant_weight_save_folder)
+    get_write_directory(args.quant_dump_calib_folder)
     return args
 
 
