@@ -144,6 +144,11 @@ class PromptLoader:
                 if max_num_prompts and i == max_num_prompts:
                     break
 
+                if len(line) < 2:
+                    raise ValueError(
+                        f"Invalid line {line}. The line must have at least 2 fields, "
+                        f"but only {len(line)} field(s) found.")
+
                 prompt = line[0]
                 catagory = line[1]
                 if catagory not in self.catagories:
