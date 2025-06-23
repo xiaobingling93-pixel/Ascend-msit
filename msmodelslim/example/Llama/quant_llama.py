@@ -229,6 +229,7 @@ class Quantifier:
             use_kvcache_quant=args.use_kvcache_quant,
             is_dynamic=args.is_dynamic,
             disable_last_linear=args.disable_last_linear,
+            pdmix=args.pdmix,
         )
 
         if args.use_fa_quant:
