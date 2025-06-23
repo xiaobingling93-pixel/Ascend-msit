@@ -17,7 +17,7 @@ parent_directory = os.path.abspath(os.path.join(current_directory, '..', ".."))
 sys.path.append(parent_directory)
 
 from ascend_utils.common.security import get_valid_read_path, get_write_directory, check_number
-from example.common.utils import SafeGenerator
+from example.common.utils import SafeGenerator, cmd_bool
 from msmodelslim.tools.copy_config_files import copy_config_files, modify_config_json
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
 from msmodelslim.tools.logger import set_logger_level
@@ -47,6 +47,7 @@ def parse_args():
     parser.add_argument('--batch_size', type=int, default=4, help="Batch size for anti and calibration")
     parser.add_argument('--mindie_format', action="store_true", help="Compatible with quantization formats \
                         supported by before 2.1.RC1 version of MindIE")
+    parser.add_argument('--trust_remote_code', type=cmd_bool, default=False)
     return parser.parse_args()
 
 
@@ -89,7 +90,7 @@ def main():
     safe_generator = SafeGenerator()
  
     config = safe_generator.get_config_from_pretrained(model_path=model_path, 
-                                                       trust_remote_code=True)
+                                                       trust_remote_code=args.trust_remote_code)
     num_layer = config.num_hidden_layers
     if args.layer_count < 0 or args.layer_count > num_layer:
         raise ValueError(
@@ -104,13 +105,13 @@ def main():
 
     tokenizer = safe_generator.get_tokenizer_from_pretrained(model_path=model_path,
                                                              config=config,
-                                                             trust_remote_code=True,
+                                                             trust_remote_code=args.trust_remote_code,
                                                              use_fast=True,
                                                              add_eos_token=True)
 
     model = safe_generator.get_model_from_pretrained(model_path=model_path,
                                                      config=config,
-                                                     trust_remote_code=True,
+                                                     trust_remote_code=args.trust_remote_code,
                                                      device_map="auto",
                                                      torch_dtype="auto",
                                                      attn_implementation='eager')
