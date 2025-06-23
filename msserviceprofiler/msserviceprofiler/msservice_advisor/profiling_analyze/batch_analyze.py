@@ -254,7 +254,7 @@ def find_best_batch_size(mindie_service_config, benchmark, output_log, profiling
         logger.warning(f"instance data not available, decode_len={decode_len}, prefill_len={prefill_len}")
         return
 
-    np.sethai
+    np.seterr(invalid="ignore", divide="ignore", over="ignore")  # ignore all warning printing
     prefill_to_fit, prefill_cur_best_bs, prefill_to_print = divide_fit_and_print(list(prefill_summary.values()))
     decode_to_fit, decode_cur_best_bs, decode_to_print = divide_fit_and_print(list(decode_summary.values()))
     print_log_info(decode_to_print, prefill_to_print, prefill_cur_best_bs, decode_cur_best_bs)
@@ -291,3 +291,5 @@ def find_best_batch_size(mindie_service_config, benchmark, output_log, profiling
         get_predict_image(results)
     except Exception as error:
         logger.warning(f"图像生成失败: {error}")
+    finally:
+        np.seterr(invalid="warn", divide="warn", over="warn")  # set back to warn
