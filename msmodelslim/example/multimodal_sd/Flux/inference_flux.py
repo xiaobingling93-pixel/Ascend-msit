@@ -32,7 +32,7 @@ from FLUX1dev import FluxPipeline
 from FLUX1dev import get_local_rank, get_world_size, initialize_torch_distributed
 from FLUX1dev.utils import check_prompts_valid, check_param_valid, check_dir_safety, check_file_safety
 
-from ascend_utils.common.security import get_write_directory, get_valid_write_path
+from ascend_utils.common.security import get_write_directory, get_valid_write_path, json_safe_load, json_safe_dump
 from msmodelslim.quant import quant_model, SessionConfig, FA3ProcessorConfig, W8A8DynamicQuantConfig, \
     W8A8DynamicProcessorConfig, M3ProcessorConfig, M4ProcessorConfig, M6ProcessorConfig, M6Config
 from msmodelslim.quant import W8A8TimeStepProcessorConfig, W8A8TimeStepQuantConfig, \
@@ -158,8 +158,7 @@ class PromptLoader:
                 self.prompts.append((prompt, catagory_id))
 
     def load_prompts_hpsv2(self, file_path, max_num_prompts: int):
-        with os.fdopen(os.open(file_path, os.O_RDONLY), "r") as file:
-            all_prompts = json.load(file)
+        all_prompts = json_safe_load(file_path)
         count = 0
         for style, prompts in all_prompts.items():
             for prompt in prompts:
@@ -353,8 +352,7 @@ def infer(args):
         if os.path.exists(args.info_file_save_path):
             os.remove(args.info_file_save_path)
 
-        with os.fdopen(os.open(args.info_file_save_path, os.O_RDWR | os.O_CREAT, 0o640), "w") as f:
-            json.dump(image_info, f)
+        json_safe_dump(image_info, args.info_file_save_path)
         image_time_count = len(prompt_loader) - 3
 
     if args.do_quant:
