@@ -5,7 +5,7 @@
 
 ### 函数原型
 ```python
-QuantConfig(a_bit=8, w_bit=8, disable_names=None, dev_type='cpu', dev_id=None, act_method=1, pr=1.0, w_sym=True, mm_tensor=True, w_method='MinMax', co_sparse=False, fraction=0.01, nonuniform=False, is_lowbit =False, do_smooth=False, use_sigma=False, sigma_factor=3, disable_last_linear：bool=True, use_kvcache_quant=False, is_dynamic=False, open_outlier=True, group_size=64, percdamp=0.01)
+QuantConfig(a_bit=8, w_bit=8, disable_names=None, dev_type='cpu', dev_id=None, act_method=1, pr=1.0, w_sym=True, mm_tensor=True, w_method='MinMax', co_sparse=False, fraction=0.01, nonuniform=False, is_lowbit =False, do_smooth=False, use_sigma=False, sigma_factor=3, disable_last_linear：bool=True, use_kvcache_quant=False, is_dynamic=False, open_outlier=True, group_size=64, percdamp=0.01, pdmix=False)
 ```
 
 ### 参数说明
@@ -34,6 +34,7 @@ QuantConfig(a_bit=8, w_bit=8, disable_names=None, dev_type='cpu', dev_id=None, a
 | open_outlier | 输入 | 是否开启权重异常值划分。|可选。<br>数据类型：bool。<br>默认为True。<br>True：开启权重异常值划分。False：关闭权重异常值划分。<br>说明：(1)仅在lowbit设置为True时生效。(2)per_group量化场景下，需协同设置is_lowbit为True，open_outlier为False。|
 | group_size | 输入 | per_group量化中group的大小。|可选。<br>数据类型：int。<br>默认值为64，支持配置为32,64,128,256。<br>说明:仅适用于per_group量化场景，需协同设置is_lowbit为True，open_outlier为False。<br>不适用于w4a4场景。|
 | percdamp | 输入 | GPTQ算法的矩阵正定偏置系数，用于保障计算过程的稳定性。当GPTQ运行出现非正定矩阵导致的报错时，可以适当增大该参数。|可选。<br>数据类型：float。<br>取值范围为[0,1]，默认值为0.01。<br>说明:仅适用于w_method为GPTQ算法的情况。|
+| pdmix | 输入 | 是否同时提供动态量化参数和静态量化参数。|可选。<br>数据类型：bool。<br>默认为False。<br>True：同时生成动态量化参数和静态量化参数。False：仅生成单一类型的量化参数。<br>说明：设置为True时，会同时提供动态量化参数和静态量化参数，便于在推理时根据实际需求选择使用哪种参数类型。设置is_dynamic=True时，不支持此功能。|
 
 
 ### 调用示例一
