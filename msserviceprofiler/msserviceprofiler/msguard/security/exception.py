@@ -18,5 +18,9 @@ class CSVInjectionError(Exception):
     pass
 
 
+class PickleInjectionError(Exception):
+    pass
+
+
 class WalkLimitError(Exception):
     pass

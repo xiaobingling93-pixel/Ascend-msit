@@ -14,10 +14,22 @@
 # limitations under the License.
 
 __all__ = [
-    "checkoutput_s", "is_safe_csv_value", "sanitize_cmd", "sanitize_csv_value",
-    "run_s", "popen_s", "open_s", "walk_s"
+    "is_safe_csv_value", "sanitize_csv_value",
+    "sanitize_cmd", "run_s", "popen_s", "checkoutput_s",
+    "pickle_load_s", "pickle_loads_s",
+    "open_s", "walk_s",
+    "update_env_s",
+    "CSVInjectionError", "PickleInjectionError", "WalkLimitError"
 ]
 
 
-from .injection import checkoutput_s, is_safe_csv_value, sanitize_cmd, sanitize_csv_value, run_s, popen_s
+from .injection import (
+    is_safe_csv_value, sanitize_csv_value,
+    sanitize_cmd, run_s, popen_s, checkoutput_s,
+    pickle_load_s, pickle_loads_s
+)
 from .io import open_s, walk_s
+from .hijack import update_env_s
+from .exception import (
+    CSVInjectionError, PickleInjectionError, WalkLimitError
+)

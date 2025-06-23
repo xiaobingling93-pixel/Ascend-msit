@@ -13,12 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import re
 import shlex
-import shutil
+import pickle
+import inspect
 import subprocess
+from io import BytesIO
 
-from .exception import CSVInjectionError
+from .io import open_s
+from .exception import CSVInjectionError, PickleInjectionError
 
 
 CSV_INJECTION_PATTERN = re.compile(r'^[＋－＝％＠\+\-=%@]|;[＋－＝％＠\+\-=%@]')
@@ -28,7 +32,7 @@ CSV_INJECTION_PATTERN = re.compile(r'^[＋－＝％＠\+\-=%@]|;[＋－＝％＠
 def is_safe_csv_value(value: str) -> bool:
     if not isinstance(value, str):
         return True
-    
+
     try:
         float(value)
     except ValueError:
@@ -51,15 +55,12 @@ def sanitize_csv_value(value: str, errors: str = 'strict') -> str:
 def sanitize_cmd(cmd) -> str:
     if not cmd:
         raise ValueError(f"Invalid command: {cmd!r}")
-    
+
     if isinstance(cmd, str):
         cmd = shlex.split(cmd)
     elif not isinstance(cmd, list):
-        raise TypeError
-    
-    if not shutil.which(cmd[0]):
-        raise FileNotFoundError
-    
+        raise TypeError(f"Expected 'cmd' to be str or list, got {type(cmd).__name__} instead.")
+
     return cmd
 
 
@@ -76,3 +77,61 @@ def popen_s(cmd, **kwargs) -> subprocess.CompletedProcess:
 def checkoutput_s(cmd, **kwargs):
     cmd = sanitize_cmd(cmd)
     return subprocess.check_output(cmd, shell=False, **kwargs)
+
+
+# pickle injection
+class SafeUnpickler(pickle.Unpickler):
+    def __init__(self, file, call_back_fn=None, *, fix_imports=True,
+                 encoding="ASCII", errors="strict"):
+        if call_back_fn is not None:
+            self._validate_callback(call_back_fn)
+        super().__init__(file, fix_imports=fix_imports,
+                         encoding=encoding, errors=errors)
+        self.call_back_fn = call_back_fn if call_back_fn else self.default_safe_callback
+
+    @staticmethod
+    def _validate_callback(call_back_fn) -> None:
+        if not callable(call_back_fn):
+            raise TypeError("Callback function must be callable")
+        
+        sig = inspect.signature(call_back_fn)
+        if len(sig.parameters) != 2:
+            raise ValueError("Callback must accept exactly 2 parameters (module_name, global_name)")
+    
+    @staticmethod
+    def default_safe_callback(module: str, name: str) -> bool:    
+        safe_combinations = {
+            'builtins': {'int', 'float', 'str', 'list', 'tuple', 'dict', 'set', 'frozenset', 'bool'},
+            'collections': {'OrderedDict', 'defaultdict', 'deque'},
+            'datetime': {'date', 'datetime', 'time', 'timedelta', 'timezone'},
+            'numpy': {'ndarray', 'dtype', 'float64', 'int64'},
+            'pandas': {'DataFrame', 'Series', 'Index'},
+            'math': {'inf', 'nan'},
+        }
+        
+        base_module = module.split('.')[0]
+        allowed_names = safe_combinations.get(base_module, set())
+        return name in allowed_names
+
+    def find_class(self, module_name, global_name):
+        try:
+            if not self.call_back_fn(module_name, global_name):
+                raise PickleInjectionError(f"Attempting to load a malicious object: {module_name}.{global_name}.")
+
+            return super().find_class(module_name, global_name)
+        except PickleInjectionError:
+            raise
+        except Exception as e:
+            raise RuntimeError(f"Security verification failed for {module_name}.{global_name}") from e
+
+
+def pickle_load_s(file, *, fn=None):
+    if isinstance(file, (str, bytes, os.PathLike)):
+        with open_s(file, 'rb') as f:
+            return SafeUnpickler(f, call_back_fn=fn).load()
+
+    return SafeUnpickler(file, call_back_fn=fn).load()
+
+
+def pickle_loads_s(data, *, fn=None):
+    return pickle_load_s(BytesIO(data), fn=fn)

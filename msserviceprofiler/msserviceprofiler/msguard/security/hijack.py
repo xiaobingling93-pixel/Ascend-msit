@@ -25,12 +25,12 @@ from ..constraints import Rule
 def update_env_s(env_var: str, path: str, prepend: bool = True) -> None:
     if not isinstance(env_var, str):
         raise TypeError("Environment variable name must be str")
-    
+
     if not os.path.isabs(path):
         raise ValueError(f"Relative paths are not allowed: {path}")
 
     current_value = os.environ.get(env_var)
-    
+
     if current_value:
         parts = [p for p in current_value.split(os.pathsep)]
         if prepend:
@@ -40,5 +40,5 @@ def update_env_s(env_var: str, path: str, prepend: bool = True) -> None:
         new_value = os.pathsep.join(parts)
     else:
         new_value = path
-    
+
     os.environ[env_var] = new_value
