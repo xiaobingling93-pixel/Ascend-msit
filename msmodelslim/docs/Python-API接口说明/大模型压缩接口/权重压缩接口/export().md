@@ -14,8 +14,8 @@ compressor.export(arr, path, dtype=numpy.int8)
 | 参数名| 输入/返回值 | 含义 | 使用限制 |
 | ------ | ------ | ------ | ------ |
 | arr | 输入 |compressor.run函数的返回结果。| 必选。<br>数据类型：dict。 |
-| path | 输入 |	压缩结果的保存路径。| 必选。<br>数据类型：String。 |
-| dtype | 输入 |压缩结果的保存格式。| 可选。<br>数据类型：numpy.int。<br>默认值：numpy.int8。 |
+| path | 输入 |	压缩结果的保存路径。| 必选。<br>数据类型：str。 |
+| dtype | 输入 |压缩结果的保存格式。| 可选。<br>数据类型：numpy.dtype。<br>默认值：numpy.int8。 |
 ### 调用示例
 - 使用weight_path参数进行权重压缩。
 ```python

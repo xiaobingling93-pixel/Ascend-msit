@@ -38,7 +38,7 @@ with self.progress_bar(total=num_inference_steps) as progreess_bar:
 
 ```shell
 # do quant
-python /the/absolut/path/of/example/multimodal_sd/Flux/inference_flux.py \
+python /the/absolute/path/of/example/multimodal_sd/Flux/inference_flux.py \
     --path ${model_path} \
     --save_path "./results/quant/img" \
     --device_id 0 \
@@ -146,7 +146,7 @@ quant_model(model, session_cfg)
 
 ```shell
 # do quant
-python /the/absolut/path/of/example/multimodal_sd/Flux/inference_flux.py \
+python /the/absolute/path/of/example/multimodal_sd/Flux/inference_flux.py \
     --path ${model_path} \
     --save_path "./results/quant/img" \
     --device_id 0 \
@@ -251,7 +251,7 @@ quant_model(model, session_cfg)
 
 ```shell
 # do quant
-python /the/absolut/path/of/example/multimodal_sd/Flux/inference_flux.py \
+python /the/absolute/path/of/example/multimodal_sd/Flux/inference_flux.py \
     --path ${model_path} \
     --save_path "./results/quant/img" \
     --device_id 0 \
