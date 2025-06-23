@@ -23,7 +23,6 @@ modin = { version = "^0.32.0", extras = ["all"], optional = true }
 speed = ["swifter", "modin"]
 [tool.poetry.scripts]
 msserviceprofiler="msserviceprofiler.__main__:main"
-msServiceProfiler="msserviceprofiler.__main__:main"
 
 [build-system]
 requires = ["poetry-core"]
