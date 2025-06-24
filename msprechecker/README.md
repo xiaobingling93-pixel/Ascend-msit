@@ -1,8 +1,8 @@
 # MS Prechecker
 - [MS Prechecker](#ms-prechecker)
-  - [基本功能](#基本功能)
-  - [安装性能预检工具](#安装性能预检工具)
-  - [常见报错处理](#常见报错处理)
+- [基本功能](#基本功能)
+- [环境要求](#环境要求)
+- [安装性能预检工具](#安装性能预检工具)
 - [预检](#预检)
   - [预检快速使用](#预检快速使用)
 - [落盘和比对](#落盘和比对)
@@ -16,38 +16,35 @@
     - [版本引用](#版本引用)
 - [参数列表](#参数列表)
   - [通用参数](#通用参数)
-  - [precheck 参数](#precheck-参数)
-  - [dump 参数](#dump-参数)
+  - [precheck 额外参数](#precheck-额外参数)
+  - [dump 额外参数](#dump-额外参数)
   - [compare 参数](#compare-参数)
-***
 
-## 基本功能
-  - **预检**，用于检测用户当前推理环境中，影响推理性能的环境变量有没有被设置，提升推理性能的环境变量有没有被开启，当前支持两种部署场景的检查：
-    - K8S 部署时的 `user_config.json` 检查
-    - 非 K8S 时的环境变量、MindIE `config.json`、模型配置、hccl 等检查
-  - **环境要求**：
-    - 当前硬件限定 Atlas 800I A2/ 800I A3 / 800T A2，主机或者 docker 内环境
-    - Python 版本要求 >= 3.7
-## 安装性能预检工具
-  - **以下方式选择一种即可**
+# 基本功能
+  预检工具旨在帮助用户快速部署服务，快速复现基线，快速定位问题的工具。能提供推理前预检，推理中落盘和推理后比对的功能。
+  - [**预检**](#预检快速使用)：检测各种可能会影响服务部署或者性能的组件，包括但不限于：
+    - 通用检查：检测 CPU 高性能是否开启，透明大页状态，是否为虚拟机，内核版本或昇腾驱动版本是否过低等
+    - PD 混部场景：检测环境变量，检测部署服务的 config.json 字段是否合理，检测均通过百分百可以部署成功
+    - PD 分离场景：检测 `user_config.json` 和 `mindie_env.json` 字段是否合理，检测均通过百分百可以部署成功
+    - 模型权重检查：检测权重数量、权重哈希、以及 config.json 中的 `transformers_version` 字段是否小于当前机器的 `transformers` 版本
+    - 网络检查：根据 `rank table`，检测各机器芯片之间的连通性，检测各机器相互之间能否 ping 通等
+  - [**落盘**](#落盘和比对)：收集各种环境结果并保存到指定路径中，包括但不限于：
+    - `env`：环境变量信息
+    - `conf`：配置文件字段全量收集，如 `user_config.json` 等
+    - `sys`：系统信息收集，如内核版本等
+  - [**比对**](#落盘和比对)：根据不同机器落盘结果进行比对，便于快速发现差异点
+
+# 环境要求
+  - Python 版本要求 >= 3.7
+  - 第三方依赖包括：`psutil`, `pyyaml` 和 `importlib_metadata`
+  - 相关检测项支持：`800I A2`, `800I A3` 和 `G8600`
+
+# 安装性能预检工具
+**以下方式选择一种即可**
   - **PyPI 安装（推荐）**
     ```sh
     pip install msprechecker
     ```
-  - **源码使用**
-    - 性能预检工具的源码已开源，位于开源网站 gitee 的 [msIT](https://gitee.com/ascend/msit/tree/master/msit) 仓内
-      - git 获取 `git clone https://gitee.com/ascend/msit.git`
-      - 或通过主页的 `克隆/下载` 下载 zip 压缩包，然后解压
-    - 源码使用
-      ```sh
-      git clone https://gitee.com/ascend/msit.git
-      # 安装依赖
-      pip install -r msit.master/msprechecker/requirements.txt
-      # 将项目源码加入到 python 环境变量
-      export PYTHONPATH=$PWD/msit/msprechecker:$PYTHONPATH
-      # 验证是否可用
-      python -m msprechecker --help
-      ```
   - **离线安装**
     - 在能够访问网络的机器上，访问 [PyPI 官方源](https://pypi.org/project/msprechecker/#files)
     - 左侧点击 `Download files`，随后点击 `Built Distribution` 下方链接进行下载，如下图所示：
@@ -59,17 +56,6 @@
       pip install whl_path
       ```
     - 终端输入 `msprechecker` 校验是否安装成功
-## 常见报错处理
-  - 如果当前用户不是 root，在安装时可能会出现如下 **警告字样**：
-    ```bash
-    WARNING: The script msprechecker is installed in '$HOME/.local/bin' which is not on PATH.
-    ```
-    这 **并不** 代表安装失败，但是直接使用 `msprechecker` 来运行工具时，会报错。解决方案（二选一即可）：
-
-    - 将 `$HOME/.local/bin` 添加到 `PATH` 中，随后可以直接在终端使用
-    - 改为在终端输入 `python3 -m msprechecker` 使用工具
-  - 安装时报错 `Could not find a version that satisfies the requirement setuptools`，python 环境本身问题，建议源码方式使用工具
-***
 
 # 预检
 ## 预检快速使用
@@ -82,9 +68,17 @@
     ```sh
     msprechecker precheck -user user_config.json --mindie_env_config_path mindie_env.json
     ```
-  - 双机 DS hccl 检查和 model 检查
+  - 双机 DS model 检查
     ```sh
-    msprechecker precheck -ch model hccl
+    msprechecker precheck -ch model --weight_dir <权重路径>
+    ```
+  - 双机 DS hccl 检查
+    ```sh
+    msprechecker precheck -ch hccl --ranktable <rank table 路径>
+    ```
+  - cpu 和 npu 检查
+    ```sh
+    msprechecker precheck -ch hardware
     ```
 
 # 落盘和比对
@@ -92,20 +86,11 @@
   - 推理过程中，如果出现 **异常** 或者 ​**性能不及预期**​，可以使用 ​**落盘** 功能​，将环境相关信息进行落盘，方便后续比对。推理结束后，性能预检工具支持比对推理中落盘的环境变量和配置项，帮助快速发现可能影响性能的差异点，实现问题快速定位
   - 使用落盘功能只需在终端中输入
     ```bash
-    msprechecker dump
+    msprechecker dump -d abc
+    # msprechecker_logger - INFO - dump file saved to: abc
     ```
-    其中 `dump` 表明我们使用落盘功能。随后会在终端出现打屏信息
+    其中 `dump` 表明我们使用落盘功能。通过 `--dump_file_path` 或缩写 `-d` 参数指定自定义落盘文件路径。运行结束后会在当前目录下落盘环境变量信息文件 `abc`
 
-    ```bash
-    msprechecker_logger - INFO - dump file saved to: /tmp/msprechecker_dump_20250316_094536.json
-    ```
-    文件默认落盘在 `/tmp` 下
-  - **落盘路径修改**，通过 `--dump_file_path` 或缩写 `-d` 参数指定自定义落盘文件路径
-    ```bash
-    msprechecker dump -d dump
-    # msprechecker_logger - INFO - dump file saved to: dump
-    ```
-    运行结束后会在当前目录下落盘环境变量信息文件 `dump`
 ## 落盘文件介绍
   - 落盘文件内容结构如下：
 
@@ -208,6 +193,8 @@ transformers_version:
   - 子功能包括 `precheck` / `dump` / `compare`
   - 通过 `msprechecker -h` 获取子功能列表，以及 `msprechecker {子功能} -h` 获取对应子功能的参数列表
 ## 通用参数
+<a id="1"></a>
+以下通用参数适用于 `msprechecker precheck` 和 `msprechecker dump`，不适用于 `msprechecker compare`
   | 参数名                          | 参数描述                                                                                        | 是否必选                                    |
   | ------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------- |
   | -ch {...}, --checkers {...}     | *字符串列表值，可选值 basic,hccl,model,hardware,all，指定检查项，可指定多个，all 表示全部        | 否，默认值 basic                            |
@@ -215,6 +202,7 @@ transformers_version:
   | -user, --user_config_path       | 字符串值，json 文件，k8s user_config.json 文件，不指定则不检查                                    | 否，默认 None                               |
   | --mindie_env_config_path        | 字符串值，json 文件，k8s mindie_env.json 文件，不指定则不检查                                     | 否，默认 None                               |
   | -ranktable, --ranktable_file    | 字符串值，json 文件，手动指定 ranktable 文件，优先级高于环境变量的 RANKFILETABLE                | 否，默认使用环境变量的 RANKFILETABLE 值     |
+  | --weight_dir   |  模型权重目录路径        | 否，默认使用 config.json 中的 `modelWeightPath` 字段路径   |
   | -blocknum, --sha256_blocknum    | int 值，计算模型权重 sha256sum 值时的采样块数，值越大采样越多，计算速度越慢                     | 否，默认 1000                               |
   | -add, --additional_checks_yaml  | 字符串值，yaml 文件，额外的自定义配置项，指定后将覆盖默认检查项中的值                           | 否，默认 None                               |
   | -l {...}, --log_level {...}     | 日志级别，可选值 debug,info,warning,error,fatal,critical                                        | 否，默认 info                               |
@@ -224,19 +212,16 @@ transformers_version:
   - `model` 表示检查或比对模型大小以及 sha256sum 值
   - `hardware` 表示检查 CPU / NPU 计算能力，以及网络连接状态
   - `all` 表示检查全部
-## precheck 参数
+## precheck 额外参数
   | 参数名         | 参数描述                                             | 是否必选                       |
   | -------------- | ---------------------------------------------------- | ------------------------------ |
   | -s, --save_env | 字符串值，指定环境变量需要优化时，输出的 sh 文件路径 | 否，默认为 msprechecker_env.sh |
-## dump 参数
+## dump 额外参数
   | 参数名               | 参数描述                           | 是否必选                                            |
   | -------------------- | ---------------------------------- | --------------------------------------------------- |
   | -d, --dump_file_path | 字符串值，指定 dump 数据的保存路径 | 否，默认为 /tmp/msprechecker_dump_{time_stamp}.json |
 ## compare 参数
-  - **compare 功能不支持通用参数**
-
   | 参数名                      | 参数描述                                                 | 是否必选       |
   | --------------------------- | -------------------------------------------------------- | -------------- |
   | dump_file_paths             | **位置参数**，字符串列表值，指定 dump 的多份数据         | 是，且应为多个 |
   | -l {...}, --log_level {...} | 日志级别，可选值 debug,info,warning,error,fatal,critical | 否，默认 info  |
-***
