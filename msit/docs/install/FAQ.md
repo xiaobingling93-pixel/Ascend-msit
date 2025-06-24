@@ -49,7 +49,7 @@ pip3 install YYY
 
 ## 4、Q：使用./install.sh，报错：/usr/bin/env: ‘bash\r’: No such file or directory。 
 
-![No such file or directory](https://foruda.gitee.com/images/1686645345634951894/08f7e806_8913618.png "屏幕截图")
+![No such file or directory](./No_such_file.png "屏幕截图")
 
 **A：** 这并不是文件报错，常见原因是因为代码在本地编译器中被默认更换了格式，在pycharm编辑器右下角将.sh文件格式由CRLF改为LF。
 ![CRLF改为LF](https://foruda.gitee.com/images/1686645370968699210/f44f04b3_8913618.png "屏幕截图")
@@ -64,7 +64,7 @@ echo $ASCEND_HOME_PATH
 
 ## 6、Q: 之前安装msit能够使用，后续环境上的依赖包被其他人或者其他工具破坏了，使用msit时提示“pkg_resources.VersionConflict:XXXXX”怎么办？
 
-![输入图片说明](https://foruda.gitee.com/images/1686886830863530517/53f5816a_9570626.png "屏幕截图")
+![输入图片说明](./VersionConflict.png "屏幕截图")
 
 **A:** 说明msit的依赖包版本可能被升级到了不匹配版本，只需要重新安装下msit即可，即重新在msit/msit目录中，执行
 ```
