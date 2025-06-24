@@ -103,7 +103,7 @@ w8a8_quant_cfg = W8A8QuantConfig(
 ## W8A8DynamicProcessorConfig
 
 ### 功能说明
-w8a8动态量化处理器配置类，用于配置w8a8动态量化处理器相关的参数。
+W8A8动态量化处理器配置类，用于配置W8A8动态量化处理器相关的参数。
 
 ### 类原型
 ```python
@@ -115,7 +115,7 @@ class W8A8DynamicProcessorConfig(BaseModel):
 ### 参数说明
 | 参数名| 输入/返回值 | 含义 | 使用限制 |
 | ------ | ------ | ------ | ------ |
-| cfg | 输入 | w8a8动态量化配置 | 必选。<br>数据类型：W8A8DynamicQuantConfig，w8a8动态量化配置类。|
+| cfg | 输入 | W8A8动态量化配置 | 必选。<br>数据类型：W8A8DynamicQuantConfig，W8A8动态量化配置类。|
 | disable_names | 输入 | 回退层 | 必选。<br>数据类型：列表。列表中每个元素为回退层名称。|
 
 ### 调用示例
@@ -133,7 +133,7 @@ w8a8dynamic_processor_cfg = W8A8DynamicProcessorConfig(
 ## W8A8DynamicQuantConfig
 
 ### 功能说明
-w8a8动态量化配置类，用于配置w8a8动态量化相关的参数。
+W8A8动态量化配置类，用于配置W8A8动态量化相关的参数。
 
 ### 类原型
 ```python

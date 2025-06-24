@@ -20,7 +20,7 @@ class WeightActivationQuantConfig(BaseConfig):
         """
         Args:
             last_config: 上一个config，基于该config进行修改
-            act_method: activation量化的的方式
+            act_method: activation量化的方式
             pr: 量化的一个概率参数，非1时量化生成的参数带有随机性
             is_dynamic: 是否使用动态量化，即w8a8中的activation动态生成
         """

@@ -23,6 +23,57 @@
 
 constexpr int NUMBER_12 = 12;
 
+/**
+ * @brief Write data to file with security check
+ * @param filePath The path of the file to write
+ * @param data The data to write
+ * @param count The number of elements to write
+ * @return SUCCESS if write successfully, FAILED otherwise
+ */
+template<typename T>
+int WriteDataToFile(const char* filePath, const T* data, size_t count) {
+  // Check if input file path is valid
+  if (filePath == nullptr) {
+    std::cout << "Error: file path is null." << std::endl;
+    return FAILED;
+  }
+
+  // Check if input data is valid
+  if (data == nullptr) {
+    std::cout << "Error: input data is null." << std::endl;
+    return FAILED;
+  }
+
+  // Check if count is valid
+  if (count == 0) {
+    std::cout << "Error: count cannot be 0." << std::endl;
+    return FAILED;
+  }
+
+  if (!File::CheckFileBeforeCreateOrWrite(filePath, true)) {
+    return FAILED;
+  }
+  
+  FILE* fp = fopen(filePath, "w+");
+  if (fp == nullptr) {
+    std::cout << "Error: open file failed." << std::endl;
+    return FAILED;
+  }
+  
+  bool success = true;
+  if (fwrite(data, sizeof(T), count, fp) != count) {
+    std::cout << "Error: write file failed." << std::endl;
+    success = false;
+  }
+  
+  if (fclose(fp) != 0) {
+    std::cout << "Error: close file failed." << std::endl;
+    success = false;
+  }
+  
+  return success ? SUCCESS : FAILED;
+}
+
 int RunCompressGraph(ge::Session *session, uint8_t* data, vector<int64_t> &shape, vector<int64_t> &compressParameters,
                          vector<string> paths){
   uint32_t compressFc_graph_id = 1;
@@ -62,26 +113,32 @@ int RunCompressGraph(ge::Session *session, uint8_t* data, vector<int64_t> &shape
   constexpr uint8_t OUTPUT_WEIGHT_PATH_INDEX = 0;
   constexpr uint8_t INDEX_PATH_INDEX = 1;
   constexpr uint8_t COMPRESS_INFO_PATH_INDEX = 2;
-  if (!File::CheckFileBeforeCreateOrWrite(paths[OUTPUT_WEIGHT_PATH_INDEX].c_str(), true)) {
-    return FAILED;
-  }
-  FILE *fp1 = fopen(paths[OUTPUT_WEIGHT_PATH_INDEX].c_str(), "w+");
-  fwrite(output_mm[0].GetData(), sizeof(int8_t), infoData[2], fp1);
-  fclose(fp1);
+  
+  // Write output weight to file
+  int outputWeightSize = infoData[2];
+  ret = WriteDataToFile<int8_t>(
+    paths[OUTPUT_WEIGHT_PATH_INDEX].c_str(),
+    reinterpret_cast<int8_t*>(output_mm[OUTPUT_WEIGHT_PATH_INDEX].GetData()),
+    outputWeightSize
+  );
+  if (ret != SUCCESS) return FAILED;
 
-  if (!File::CheckFileBeforeCreateOrWrite(paths[INDEX_PATH_INDEX].c_str(), true)) {
-    return FAILED;
-  }
-  FILE *fp2 = fopen(paths[INDEX_PATH_INDEX].c_str(), "w+");
-  fwrite(output_mm[1].GetData(), sizeof(uint8_t), output_mm[1].GetSize(), fp2);
-  fclose(fp2);
+  // Write index to file
+  ret = WriteDataToFile<uint8_t>(
+    paths[INDEX_PATH_INDEX].c_str(),
+    reinterpret_cast<uint8_t*>(output_mm[INDEX_PATH_INDEX].GetData()),
+    output_mm[1].GetSize()
+  );
+  if (ret != SUCCESS) return FAILED;
 
-  if (!File::CheckFileBeforeCreateOrWrite(paths[COMPRESS_INFO_PATH_INDEX].c_str(), true)) {
-    return FAILED;
-  }
-  FILE *fp3 = fopen(paths[COMPRESS_INFO_PATH_INDEX].c_str(), "w+");
-  fwrite(output_mm[2].GetData(), sizeof(uint32_t), 3, fp3);
-  fclose(fp3);
+  // Write compress info to file
+  int compressInfoSize = 3;
+  ret = WriteDataToFile<uint32_t>(
+    paths[COMPRESS_INFO_PATH_INDEX].c_str(),
+    reinterpret_cast<uint32_t*>(output_mm[COMPRESS_INFO_PATH_INDEX].GetData()),
+    compressInfoSize
+  );
+  if (ret != SUCCESS) return FAILED;
   
   return SUCCESS;
 }

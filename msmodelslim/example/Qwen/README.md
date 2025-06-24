@@ -174,7 +174,7 @@
   ```shell
   python3 quant_qwen.py --model_path {浮点权重路径} --save_directory {W4A8量化权重路径} --calib_file ../common/humaneval_x.jsonl --w_bit 4 --a_bit 8 --device_type cpu --fraction 0.02 --co_sparse True  --use_sigma True --is_lowbit False --trust_remote_code True
   ```
-##### Qwen2.5-72b W8A8-pdmix量化(prefill阶段 w8a8动态量化, decode阶段 w8a8量化) 搭配 KV cache int8量化
+##### Qwen2.5-72b W8A8-pdmix量化(prefill阶段 W8A8动态量化, decode阶段 W8A8量化) 搭配 KV cache int8量化
   ```shell
   python3 quant_qwen.py --model_path {浮点权重路径} \
   --save_directory {W8A8-pdmix量化权重路径} \

@@ -84,7 +84,7 @@ model = AutoModelForCausalLM.from_pretrained(
 ra = RACompressor(model, config) 
 ra.get_alibi_windows(save_path)
 ```
-执行以下命令，启动长序列压缩任务，并在“baichuan 2-13b”文件夹的路径下获取.pt文件。
+执行以下命令，启动长序列压缩任务，并在“baichuan2-13b”文件夹的路径下获取.pt文件。
 python3 run.py
 .pt文件可用于后续的推理部署任务，具体请参见MindIE的[“加速库支持模型列表”](https://www.hiascend.com/document/detail/zh/mindie/20RC1/modellist/mindie_modellist_0001.html)章节中已适配量化的模型。
 

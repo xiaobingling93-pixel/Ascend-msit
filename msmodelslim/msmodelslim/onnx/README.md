@@ -110,7 +110,7 @@ python3 yolov5m_quant.py
 
 为了进一步降低量化精度损失，Data-Free模式下集成了多种精度保持方式，具体如下：
 
-方式一（推荐）：如果量化精度不达标，可使用精度保持策略来恢复精度。工具内集成了多种精度保持策略，对权重的量化参数和取证方式进行优化，可在keep_acc参数中配置优化策略恢复精度。当sigma参数配置为0时，即开启activation min-max量化，不建议同时使用keep_acc参数配置的优化策略。keep_acc的配置示例如下：
+方式一（推荐）：如果量化精度不达标，可使用精度保持策略来恢复精度。工具内集成了多种精度保持策略，对权重的量化参数和取整方式进行优化，可在keep_acc参数中配置优化策略恢复精度。当sigma参数配置为0时，即开启activation min-max量化，不建议同时使用keep_acc参数配置的优化策略。keep_acc的配置示例如下：
 ```
 config = QuantConfig(quant_mode=0,
                      keep_acc={'admm': [False, 1000], 'easy_quant': [True, 1000], 'round_opt': False}

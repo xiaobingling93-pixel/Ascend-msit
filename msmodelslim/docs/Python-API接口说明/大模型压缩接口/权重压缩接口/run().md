@@ -21,7 +21,7 @@ compress_result_weight, compress_result_index, compress_result_info = compressor
 ```python
 from msmodeslim.pytorch.weight_compression import CompressConfig, Compressor
 compress_config = CompressConfig(do_pseudo_sparse=False, sparse_ratio=1, is_debug=True, compress_disable_layers=None, record_detail_root=save_root)
-weight_save_path = './quant_weight.npy'  # 根据实际情况修改带压缩的权重文件路径
+weight_save_path = './quant_weight.npy'  # 根据实际情况修改待压缩的权重文件路径
 compressor = Compressor(compress_config, weight_path)
 compress_result_weight, compress_result_index, compress_result_info = compressor.run() 
 ```
