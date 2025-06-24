@@ -150,12 +150,6 @@ class SafeGenerator:
         dest_config_filepath = os.path.join(dest_dir, 'config.json')
         json_safe_dump(data, dest_config_filepath, 4)
         logger.info("Save 'config.json' success!")
-        os.remove(dest_quant_description_filepath)
-        new_dest_quant_description_filepath = os.path.join(dest_dir, f"quant_model_description.json")
-        new_dest_quant_description_filepath = get_valid_write_path(new_dest_quant_description_filepath, \
-                                                                    is_dir=False)
-        json_safe_dump(quant_description_data, new_dest_quant_description_filepath, 4)
-        logger.info("Save 'quant_model_description.json' success!")
 
 
     @staticmethod
