@@ -48,7 +48,7 @@ export CPU_AFFINITY_CONF=1
 export TOKENIZERS_PARALLELISM=false
 export ALGO=0
 
-torchrun --nproc_per_node=8 /the/absolut/path/of/example/multimodal_sd/HunYuanVideo/sample_video.py \
+torchrun --nproc_per_node=8 /the/absolute/path/of/example/multimodal_sd/HunYuanVideo/sample_video.py \
     --model-base HunyuanVideo \
     --dit-weight HunyuanVideo/hunyuan-video-t2v-720p/transformers/mp_rank_00_model_states.pt \
     --vae-path HunyuanVideo/hunyuan-video-t2v-720p/vae \
@@ -168,7 +168,7 @@ export TASK_QUEUE_ENABLE=2
 export CPU_AFFINITY_CONF=1
 export TOKENIZERS_PARALLELISM=false
 export ALGO=0
-torchrun --nproc_per_node=8 /the/absolut/path/of/example/multimodal_sd/HunYuanVideo/sample_video.py \
+torchrun --nproc_per_node=8 /the/absolute/path/of/example/multimodal_sd/HunYuanVideo/sample_video.py \
     --model-base HunyuanVideo \
     --dit-weight HunyuanVideo/hunyuan-video-t2v-720p/transformers/mp_rank_00_model_states.pt \
     --vae-path HunyuanVideo/hunyuan-video-t2v-720p/vae \
@@ -286,7 +286,7 @@ export TASK_QUEUE_ENABLE=2
 export CPU_AFFINITY_CONF=1
 export TOKENIZERS_PARALLELISM=false
 export ALGO=0
-torchrun --nproc_per_node=8 /the/absolut/path/of/example/multimodal_sd/HunYuanVideo/sample_video.py \
+torchrun --nproc_per_node=8 /the/absolute/path/of/example/multimodal_sd/HunYuanVideo/sample_video.py \
     --model-base HunyuanVideo \
     --dit-weight HunyuanVideo/hunyuan-video-t2v-720p/transformers/mp_rank_00_model_states.pt \
     --vae-path HunyuanVideo/hunyuan-video-t2v-720p/vae \

@@ -220,7 +220,7 @@ python3 quant_deepseek_w8a8.py --model_path {浮点权重路径} --save_path {W8
 - ![img.png](img.png)
 - Q：modeling_utils.py报错 if metadata.get("format") not in ["pt", "tf", "flax", "mix"]: AttributeError: "NoneType"
   object has no attribute 'get';
-- A：说明输入的的权重中缺少metadata字段，需安装更新transformers版本（>=4.48.2）
+- A：说明输入的权重中缺少metadata字段，需安装更新transformers版本（>=4.48.2）
 - Q：报错 Unknown quantization type， got fp8 - supported types
   are:['awq', 'bitsandbytes_4bit', 'bitsandbytes_8bit', 'gptq', 'aqlm', 'quanto', 'eetq', 'hqq', 'fbgemm_fp8']
 - A: 由于当前Transformers不支持FP8量化格式加载，需要将权重文件夹中config.json中的以下字段删除：

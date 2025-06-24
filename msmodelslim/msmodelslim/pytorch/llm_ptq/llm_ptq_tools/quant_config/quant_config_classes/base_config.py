@@ -42,7 +42,7 @@ class BaseConfig:
         Args:
             w_bit: 量化的weight bit位数
             a_bit: 量化的activation bit位数
-            act_method: activation量化的的方式
+            act_method: activation量化的方式
             w_method: weight量化的方式
             disable_names: 指定量化回退层的名称
             pr: 量化的一个概率参数，非1时量化生成的参数带有随机性

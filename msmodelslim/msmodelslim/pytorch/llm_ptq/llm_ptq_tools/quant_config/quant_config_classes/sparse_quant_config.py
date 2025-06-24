@@ -24,7 +24,7 @@ class SparseQuantConfig(BaseConfig):
         """
         Args:
             last_config: 上一个config，基于该config进行修改
-            act_method: activation量化的的方式
+            act_method: activation量化的方式
             fraction: 稀疏量化的调优参数
             nonuniform: 稀疏量化中默认为非均匀量化，决定权重是否均匀量化。建议采用False
             is_lowbit: 是否使用稀疏量化的low bit算法
