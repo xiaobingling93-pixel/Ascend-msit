@@ -11,7 +11,7 @@ sys.path.append(parent_directory)
 
 from ascend_utils.common.security.path import get_valid_write_path, get_valid_read_path, get_write_directory
 from example.common.utils import SafeGenerator, ArgumentParser, StringArgumentValidator, MAX_KEY_LENGTH, \
-    MAX_JSON_LENGTH, cmd_bool
+    MAX_JSON_LENGTH, cmd_bool, parse_tokenizer_args
 from msmodelslim.pytorch.llm_ptq.anti_outlier import AntiOutlier, AntiOutlierConfig
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.layer_select import LayerSelector
@@ -318,7 +318,10 @@ if __name__ == '__main__':
         anti_outlier_config_val = AntiOutlierConfig(anti_method=args.anti_method,
                                                     dev_type=args.device_type)
 
-    tokenizer_args = json.loads(args.tokenizer_args)
+    tokenizer_args = parse_tokenizer_args(
+        args.tokenizer_args, 
+        default={}
+    )
     if tokenizer_args == {} and args.model_type == 'qwen1':
         tokenizer_args = {
             "padding_side": "left",
