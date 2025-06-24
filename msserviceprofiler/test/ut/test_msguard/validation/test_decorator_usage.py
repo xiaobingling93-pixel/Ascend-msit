@@ -19,10 +19,10 @@ import random
 import unittest
 from unittest import mock
 
-from msserviceprofiler.msguard import validate_params, Path, InvalidParameterError, where
+from msguard import validate_params, Path, InvalidParameterError, where
 
 
-class TestParamValidation(unittest.TestCase):
+class TestDecoratorUsage(unittest.TestCase):
     @staticmethod
     def create_func_with_constraints(constraints):
         @validate_params({"a": constraints})

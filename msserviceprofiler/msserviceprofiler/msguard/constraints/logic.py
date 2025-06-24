@@ -44,7 +44,7 @@ class AndConstraint(BaseConstraint):
         self.constraints = constraints
 
     def __str__(self):
-        return " and ".join(f"{c}" for c in self.constraints)
+        return "\nand ".join(f"{c}" for c in self.constraints)
 
     def _is_satisfied_by(self, val):
         return all(c.is_satisfied_by(val) for c in self.constraints)
@@ -56,7 +56,7 @@ class OrConstraint(BaseConstraint):
         self.constraints = constraints
         
     def __str__(self):
-        return " or ".join(f"{c}" for c in self.constraints)
+        return "\nor ".join(f"{c}" for c in self.constraints)
 
     def _is_satisfied_by(self, val):
         return any(c.is_satisfied_by(val) for c in self.constraints)

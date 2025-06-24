@@ -71,9 +71,6 @@ class ProfilingParameters:
         )
 
 
-""" parse_benchmark_instance """
-
-
 def get_next_dict_item(dict_value):
     return dict([next(iter(dict_value.items()))])
 

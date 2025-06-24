@@ -38,4 +38,3 @@ def validate_args(constraint: BaseConstraint, silent=True):
             raise
 
     return wrapper
-

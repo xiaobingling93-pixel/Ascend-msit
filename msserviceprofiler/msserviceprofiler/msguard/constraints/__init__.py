@@ -26,3 +26,4 @@ from .base import BaseConstraint
 from .constraint_builder import Path, make_constraint, where
 from .rule import Rule
 from .exception import InvalidParameterError
+
