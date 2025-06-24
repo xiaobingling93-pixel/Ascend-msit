@@ -209,9 +209,9 @@ def parse_arguments():
     args = parser.parse_args()
 
     # check args
-    get_write_directory(args.save_path)
-    get_write_directory(args.quant_weight_save_folder)
-    get_write_directory(args.quant_dump_calib_folder)
+    args.save_path = get_write_directory(args.save_path)
+    args.quant_weight_save_folder = get_write_directory(args.quant_weight_save_folder)
+    args.quant_dump_calib_folder = get_write_directory(args.quant_dump_calib_folder)
     return args
 
 

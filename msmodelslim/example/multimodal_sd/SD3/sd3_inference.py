@@ -35,11 +35,11 @@ def parse_args(namespace=None):
 
     args = parser.parse_args(namespace=namespace)
 
-    get_valid_read_path(args.sd3_model_path, is_dir=True)
-    get_valid_read_path(args.prompt_path, is_dir=False)
-    get_write_directory(args.save_path)
-    get_write_directory(args.quant_weight_save_folder)
-    get_write_directory(args.quant_dump_calib_folder)
+    args.sd3_model_path = get_valid_read_path(args.sd3_model_path, is_dir=True)
+    args.prompt_path = get_valid_read_path(args.prompt_path, is_dir=False)
+    args.save_path = get_write_directory(args.save_path)
+    args.quant_weight_save_folder = get_write_directory(args.quant_weight_save_folder)
+    args.quant_dump_calib_folder = get_write_directory(args.quant_dump_calib_folder)
     return args
 
 

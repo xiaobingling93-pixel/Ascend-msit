@@ -20,7 +20,7 @@ from hyvideo.inference import HunyuanVideoSampler
 from mindiesd import CacheConfig, CacheAgent
 
 from ascend_utils.common.security.pytorch import safe_torch_load
-from ascend_utils.common.security import get_write_directory
+from ascend_utils.common.security import get_write_directory, get_valid_read_path
 from msmodelslim.quant import quant_model, SessionConfig, FA3ProcessorConfig, W8A8DynamicQuantConfig, \
     W8A8DynamicProcessorConfig, M3ProcessorConfig, M4ProcessorConfig, M6ProcessorConfig, M6Config
 from msmodelslim.quant import W8A8TimeStepProcessorConfig, W8A8TimeStepQuantConfig, \
@@ -57,19 +57,9 @@ def parse_args(namespace=None):
     args = sanity_check_args(args)
 
     # check args
-    get_write_directory(args.quant_weight_save_folder)
-    get_write_directory(args.quant_dump_calib_folder)
+    args.quant_weight_save_folder = get_write_directory(args.quant_weight_save_folder)
+    args.quant_dump_calib_folder = get_write_directory(args.quant_dump_calib_folder)
     return args
-
-
-def load_prompts(prompt):
-    if prompt.endswith('txt'):
-        with open(prompt, 'r') as file:
-            text_prompt = file.readlines()
-            prompts = [line.strip() for line in text_prompt]
-    else:
-        prompts = [prompt]
-    return prompts
 
 
 def main():
@@ -91,6 +81,7 @@ def main():
     # Get the updated args
     args = hunyuan_video_sampler.args
     if args.prompt.endswith('txt'):
+        args.prompt = get_valid_read_path(args.prompt)
         with open(args.prompt, 'r') as file:
             text_prompt = file.readlines()
             prompts = [line.strip() for line in text_prompt]
