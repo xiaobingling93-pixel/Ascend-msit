@@ -60,7 +60,7 @@ class QuantConfig:
         Args:
             w_bit: 量化的weight bit位数
             a_bit: 量化的activation bit位数
-            act_method: activation量化的的方式
+            act_method: activation量化的方式
             w_method: weight量化的方式
             disable_names: 指定量化回退层的名称
             pr: 量化的一个概率参数，非1时量化生成的参数带有随机性
@@ -125,7 +125,7 @@ class QuantConfig:
         权重量化+激活量化的参数初始化, 即 W8A8
 
         Args:
-            act_method: activation量化的的方式
+            act_method: activation量化的方式
             pr: 量化的一个概率参数，非1时量化生成的参数带有随机性
             is_dynamic: 是否使用动态量化，即w8a8中的activation动态生成
         """
@@ -146,7 +146,7 @@ class QuantConfig:
         稀疏量化的参数初始化
 
         Args:
-            act_method: activation量化的的方式
+            act_method: activation量化的方式
             fraction: 稀疏量化的调优参数
             nonuniform: 稀疏量化中默认为非均匀量化，决定权重是否均匀量化。建议采用False
             is_lowbit: 是否使用稀疏量化的low bit算法

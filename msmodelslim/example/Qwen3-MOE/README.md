@@ -34,6 +34,7 @@
 | calib_dataset | 量化校准数据集路径   | ./calib_prompt_50.json | 可选参数；<br>量化校准集路径。             |
 | batch_size     | 输入batch size | 4  | 可选参数；<br>生成量化校准数据时使用的batch size。batch size越大，校准速度越快，但也要求更多的显存和内存，如资源受限，请降低batch size。  |
 | mindie_format | 是否开启旧的权重配置文件保存格式 | False | 开启`mindie_format`时保存的量化权重格式能够兼容MindIE 2.1.RC1及之前的版本。 |
+| trust_remote_code | 是否信任自定义代码 | False | 指定`trust_remote_code=True`使修改后的自定义代码文件能够正确的被加载。(请确保加载的自定义代码文件的安全性) |
 
 
 注：在量化脚本里面通过transformers库对模型进行加载时，调用`from_pretrained`函数时会指定`trust_remote_code=True`让修改后的modeling文件能够正确的被加载。(请确保加载的modeling文件的安全性)
@@ -56,7 +57,7 @@
 ##### Qwen3-30B-A3B w8a8 混合量化(Attention:w8a8量化，MoE:w8a8 dynamic量化)
 - 生成Qwen3-30B-A3B模型 w8a8 混合量化权重
   ```shell
-  python3 quant_qwen_moe_w8a8.py --model_path {浮点权重路径} --save_path {W8A8量化权重路径}
+  python3 quant_qwen_moe_w8a8.py --model_path {浮点权重路径} --save_path {W8A8量化权重路径} --trust_remote_code True
   ```
 
 #### Qwen3-235B-A22B
@@ -64,6 +65,6 @@
 ##### Qwen3-235B-A22B w8a8 混合量化(Attention:w8a8量化，MoE:w8a8 dynamic量化)
 - 生成Qwen3-235B-A22B模型 w8a8 混合量化权重
   ```shell
-  python3 quant_qwen_moe_w8a8.py --model_path {浮点权重路径} --save_path {W8A8量化权重路径}
+  python3 quant_qwen_moe_w8a8.py --model_path {浮点权重路径} --save_path {W8A8量化权重路径} --trust_remote_code True
   ```
 
