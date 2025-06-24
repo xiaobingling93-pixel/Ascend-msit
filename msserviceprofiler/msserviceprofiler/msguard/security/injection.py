@@ -90,15 +90,6 @@ class SafeUnpickler(pickle.Unpickler):
         self.call_back_fn = call_back_fn if call_back_fn else self.default_safe_callback
 
     @staticmethod
-    def _validate_callback(call_back_fn) -> None:
-        if not callable(call_back_fn):
-            raise TypeError("Callback function must be callable")
-        
-        sig = inspect.signature(call_back_fn)
-        if len(sig.parameters) != 2:
-            raise ValueError("Callback must accept exactly 2 parameters (module_name, global_name)")
-    
-    @staticmethod
     def default_safe_callback(module: str, name: str) -> bool:    
         safe_combinations = {
             'builtins': {'int', 'float', 'str', 'list', 'tuple', 'dict', 'set', 'frozenset', 'bool'},
@@ -112,6 +103,15 @@ class SafeUnpickler(pickle.Unpickler):
         base_module = module.split('.')[0]
         allowed_names = safe_combinations.get(base_module, set())
         return name in allowed_names
+    
+    @staticmethod
+    def _validate_callback(call_back_fn) -> None:
+        if not callable(call_back_fn):
+            raise TypeError("Callback function must be callable")
+        
+        sig = inspect.signature(call_back_fn)
+        if len(sig.parameters) != 2:
+            raise ValueError("Callback must accept exactly 2 parameters (module_name, global_name)")
 
     def find_class(self, module_name, global_name):
         try:

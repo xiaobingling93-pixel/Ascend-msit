@@ -1,27 +1,3 @@
-"""
-CSV注入测试用例表
-测试方法名	测试目的	输入参数	预期输出	成功/失败说明
-test_is_safe_csv_value_with_numeric_string	验证数字字符串安全性	"123.45"	True	纯数字字符串应被视为安全
-test_is_safe_csv_value_with_safe_string	验证普通文本安全性	"normal text"	True	不含特殊字符的文本应被视为安全
-test_is_safe_csv_value_with_unsafe_prefix	验证危险前缀字符串	"=cmd"	False	以=开头的字符串可能包含CSV注入代码
-test_is_safe_csv_value_with_unsafe_infix	验证包含特殊字符的字符串	"text;=cmd"	False	包含;=的字符串可能包含CSV注入代码
-test_is_safe_csv_value_with_non_string	验证非字符串类型	123	True	非字符串类型应被视为安全
-test_sanitize_csv_value_with_safe_string	验证安全字符串处理	("safe", "strict")	"safe"	安全字符串在strict模式下应原样返回
-test_sanitize_csv_value_with_unsafe_string_strict	验证严格模式处理	("=cmd", "strict")	抛出CSVInjectionError	strict模式下危险字符串应抛出异常
-test_sanitize_csv_value_with_unsafe_string_ignore	验证忽略模式处理	("=cmd", "ignore")	"=cmd"	ignore模式下应原样返回危险字符串
-test_sanitize_csv_value_with_unsafe_string_replace	验证替换模式处理	("=cmd", "replace")	"'=cmd"	replace模式下应为危险字符串添加转义前缀
-
-命令注入测试用例表
-测试方法名	测试目的	输入参数	预期输出	成功/失败说明
-test_sanitize_cmd_with_string	验证字符串命令处理	"ls -l"	["ls", "-l"]	字符串命令应被正确分割为列表
-test_sanitize_cmd_with_list	验证列表命令处理	["ls", "-l"]	["ls", "-l"]	列表命令应原样返回
-test_sanitize_cmd_with_empty_string	验证空字符串处理	""	抛出ValueError	空字符串命令应抛出异常
-test_sanitize_cmd_with_invalid_type	验证非法类型处理	123	抛出TypeError	非字符串/列表类型应抛出异常
-test_run_s_with_valid_command	验证有效命令执行	"echo test"	非None返回值	有效命令应成功执行并返回结果
-test_popen_s_with_valid_command	验证Popen执行	"echo test"	非None返回值	有效命令应返回Popen对象
-test_checkoutput_s_with_valid_command	验证命令输出捕获	"echo test"	b"test\n"	应正确返回命令输出字节串
-"""
-
 # -*- coding: utf-8 -*-
 # Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
 #
@@ -137,12 +113,18 @@ class TestCommandInjection(unittest.TestCase):
 
 class TestPickleInjection(unittest.TestCase):
     class DangerPerson:
+        def __init__(self):
+            self.name = 'echo "This is a malicious command"'
+
         def __reduce__(self):
-            return (os.system, ('echo "This is a malicious command"',))
+            return (os.system, (self.name,))
     
     class NicePerson:
+        def __init__(self):
+            self.name = 2
+
         def __reduce__(self):
-            return (int, ('2',))
+            return (int, (self.name,))
 
     def setUp(self):
         # 创建临时测试数据
@@ -223,7 +205,7 @@ class TestPickleInjection(unittest.TestCase):
             file_path = os.path.join(temp_dir, "malicious.pickle")
             with open(file_path, "wb") as f:
                 pickle.dump(self.DangerPerson(), f)
-            
+
             with self.assertRaises(PickleInjectionError,
                                   msg="应检测到包含系统命令的恶意pickle文件"):
                 pickle_load_s(file_path)

@@ -26,11 +26,11 @@ class TestWalkS(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             sub_dir = os.path.join(temp_dir, "subdir")
             os.mkdir(sub_dir)
-            
+
             file1 = os.path.join(temp_dir, "file1.txt")
             with open(file1, 'w') as f:
                 f.write("test")
-                
+
             file2 = os.path.join(sub_dir, "file2.txt")
             with open(file2, 'w') as f:
                 f.write("test")
@@ -55,7 +55,7 @@ class TestWalkS(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             sub_dir = os.path.join(temp_dir, "subdir")
             os.mkdir(sub_dir)
-            
+
             with self.assertRaises(WalkLimitError, msg="扫描深度超过限制时应抛出异常"):
                 list(walk_s(temp_dir, max_depths=0))
 
@@ -72,7 +72,7 @@ class TestOpenS(unittest.TestCase):
         """测试以读模式打开有效文件时，应返回可读的文件对象"""
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
             temp_file_path = temp_file.name
-            
+
         try:
             with open_s(temp_file_path, 'r') as f:
                 self.assertTrue(hasattr(f, 'read'), "文件对象应具有read方法")
@@ -83,7 +83,7 @@ class TestOpenS(unittest.TestCase):
         """测试以写模式打开有效文件时，应返回可写的文件对象"""
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
             temp_file_path = temp_file.name
-            
+
         try:
             with open_s(temp_file_path, 'w') as f:
                 self.assertTrue(hasattr(f, 'write'), "文件对象应具有write方法")
@@ -109,7 +109,7 @@ class TestOpenS(unittest.TestCase):
         """测试使用无效模式时，应抛出ValueError异常"""
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
             temp_file_path = temp_file.name
-            
+
         try:
             with self.assertRaises(ValueError, msg="无效文件模式时应抛出异常"):
                 open_s(temp_file_path, 'invalid')
@@ -120,7 +120,7 @@ class TestOpenS(unittest.TestCase):
         """测试以独占模式打开已存在文件时，应抛出异常"""
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
             temp_file_path = temp_file.name
-            
+
         try:
             with self.assertRaises(Exception, msg="独占模式打开已存在文件时应抛出异常"):
                 open_s(temp_file_path, 'x')
