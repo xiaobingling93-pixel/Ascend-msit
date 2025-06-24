@@ -21,7 +21,7 @@ parent_directory = os.path.abspath(os.path.join(current_directory, '..', ".."))
 sys.path.append(parent_directory)
 
 from ascend_utils.common.security import get_valid_read_path, get_write_directory, check_number
-from ascend_utils.common.security import json_safe_load, json_safe_dump
+from ascend_utils.common.security import json_safe_load, json_safe_dump, get_valid_write_path
 from example.common.utils import SafeGenerator
 from msmodelslim.tools.copy_config_files import copy_config_files, modify_config_json, modify_vllm_config_json
 from msmodelslim.pytorch.llm_ptq.anti_outlier import AntiOutlierConfig, AntiOutlier
@@ -120,6 +120,24 @@ def remove_module_entries(save_path, json_filename="quant_model_description_w8a8
     }
     # 写回更新后的JSON文件（如需保留原始文件，可改为写入新文件） 
     json_safe_dump(filtered_data, json_file_path, indent=4)
+
+
+def update_quant_type(save_path, json_filename):
+    """
+    更新量化类型为 W8A8_DYNAMIC
+    
+    参数:
+    save_path (str): 输出JSON文件路径
+    json_filename (str): 输入JSON文件名称
+    
+    返回值:
+    None
+    """
+    dest_quant_description_filepath = os.path.join(save_path, json_filename)
+    dest_quant_description_filepath = get_valid_write_path(dest_quant_description_filepath, is_dir=False)
+    quant_description_data = json_safe_load(dest_quant_description_filepath, check_user_stat=False)
+    quant_description_data['model_quant_type'] = "W8A8_DYNAMIC"
+    json_safe_dump(quant_description_data, dest_quant_description_filepath, indent=4)
 
 
 def main():
@@ -250,6 +268,9 @@ def main():
                     safetensors_name="quant_model_weight_w8a8_dynamic.safetensors",
                     save_type=[save_type],
                     part_file_size=4)
+    # w8a8 混合量化中 MindIE 要求 description 中的 model_quant_type 为 W8A8_DYNAMIC
+    update_quant_type(save_path, quant_model_description_json_name)
+    
     # 适配mindie删除description里的module字段
     if args.mindie_format:
         remove_module_entries(save_path)
