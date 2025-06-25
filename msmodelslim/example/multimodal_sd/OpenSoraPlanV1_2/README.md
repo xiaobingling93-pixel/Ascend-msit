@@ -16,7 +16,7 @@ export PYTORCH_NPU_ALLOC_CONF="expandable_segments:False"
 export TASK_QUEUE_ENABLE=2
 export HCCL_OP_EXPANSION_MODE="AIV"
 torchrun --nnodes=1 --nproc_per_node 8  --master_port 29503 \
-    /the/absolut/path/of/example/multimodal_sd/OpenSoraPlanV1_2/inference.py \
+    /the/absolute/path/of/example/multimodal_sd/OpenSoraPlanV1_2/inference.py \
     --model_path /path/to/checkpoint-xxx/model_ema \
     --num_frames 93 \
     --height 720 \

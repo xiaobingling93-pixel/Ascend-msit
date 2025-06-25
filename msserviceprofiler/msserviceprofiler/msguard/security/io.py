@@ -39,22 +39,22 @@ def walk_s(
     while queue:
         current_dir, current_depth = queue.pop()
 
-        if file_scanned > max_files:
-            raise WalkLimitError(f"Limit exceeded: {file_scanned} / {max_files}")
-
         if current_depth > max_depths:
             raise WalkLimitError(f"Limit exceeded: {current_depth} / {max_depths}")
 
         for it in os.scandir(current_dir):
+            file_scanned += 1
+            if file_scanned > max_files:
+                raise WalkLimitError(f"Limit exceeded: {file_scanned} / {max_files}")
+
             if it.is_dir(follow_symlinks=False):
                 if dir_rule is None or dir_rule.is_satisfied_by(it.path):
                     yield it.path
                     queue.append((it.path, current_depth + 1))
+
             elif it.is_file(follow_symlinks=False):
                 if file_rule is None or file_rule.is_satisfied_by(it.path):
                     yield it.path
-
-            file_scanned += 1
 
 
 def open_s(path, mode='r', **kwargs):

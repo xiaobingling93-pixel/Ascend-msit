@@ -8,7 +8,7 @@
 
 我们提供了完整的量化启动脚本示例：[SD3/sd3_inference.py](./sd3_inference.py)，其启动命令可参考(请提前确保calib_prompts.txt权限不大于'0o640')：
 ```shell
-python /the/absolut/path/of/example/multimodal_sd/SD3/sd3_inference.py \
+python /the/absolute/path/of/example/multimodal_sd/SD3/sd3_inference.py \
     --sd3_model_path "/path/to/stable-diffusion-3-medium-diffusers" \
     --prompt_path "example/multimodal_sd/SD3/calib_prompts.txt" \
     --width 1024 \

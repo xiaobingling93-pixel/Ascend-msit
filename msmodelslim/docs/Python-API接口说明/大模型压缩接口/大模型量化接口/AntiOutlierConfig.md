@@ -17,7 +17,7 @@ AntiOutlierConfig(w_bit=8, a_bit=8, anti_method="m2", dev_type="cpu", dev_id=Non
 | disable_anti_names | 输入 | 指定某些层不进行异常值抑制。| 可选。<br>数据类型：list。<br>默认为[]。<br>仅在anti_method设置为m6时生效，仅支持传入o层。 |
 | flex_config | 输入 | m6方式下的配置文件。| 可选。<br>数据类型：dict。<br>仅在 anti_method 设置为 m6 时生效。包含两个配置项：alpha 和 beta，均为 float 类型，取值范围为 [0, 1]，默认值为 None。用于控制算法的平滑程度。如果 alpha 和 beta 均指定为具体数值，则直接使用这些值；如果任一值未指定（为 None），算法将自动进行寻优以计算最优的 alpha 和 beta 值，用于异常值抑制。|
 | dev_type | 输入 | device类型。| 可选。<br>数据类型：object。<br>可选值：['cpu', 'npu']，默认为'cpu'。 |
-| dev_id | 输入 | DEVICE ID。| 可选。<br>数据类型：int。<br>默认值为None。<br>仅在“dev_type”配置为“npu”时生效。“dev_id”指定的Device ID优先级高于环境变量配置的Device ID。 |
+| dev_id | 输入 | Device ID。| 可选。<br>数据类型：int。<br>默认值为None。<br>仅在“dev_type”配置为“npu”时生效。“dev_id”指定的Device ID优先级高于环境变量配置的Device ID。 |
 | w_sym | 输入 | 权重是否对称量化。| 可选。<br>数据类型：bool。<br>默认为True。<br>anti_method设置为m3时，可以选择为False，需与QuantConfig中的w_sym参数设置一致。 |
 
 ### 调用示例

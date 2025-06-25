@@ -35,18 +35,20 @@ class InvalidParameterError(Exception):
         """Build the complete error message with colors and formatting"""
         c = self._COLORS
 
+        indent = ' ' * 4
         message_parts = [
             f"{c['RED']}Parameter validation failed at{c['RESET']}",
             f"{c['CYAN']}Where:{c['RESET']}",
-            f"  Function: {c['YELLOW']}{self.caller_name}{c['RESET']}",
-            f"  Parameter: {c['YELLOW']}{self.parameter_name}{c['RESET']}",
-            f"  Received value: {c['RED']}{self.parameter_value!r}{c['RESET']}",
+            f"{indent}Function: {c['YELLOW']}{self.caller_name}{c['RESET']}",
+            f"{indent}Parameter: {c['YELLOW']}{self.parameter_name}{c['RESET']}",
+            f"{indent}Received value: {c['RED']}{self.parameter_value!r}{c['RESET']}",
             "",
             f"{c['CYAN']}Requirement:{c['RESET']}",
-            f"  {self.constraint}",
+            f"{indent}{self.constraint}",
             "",
             f"{c['CYAN']}Hint:{c['RESET']}",
-            f"  Check the last 'F' and make sure it is valid"
+            f"{indent}Check the last '{c['RED']}[F]{c['RESET']}' and "
+            f"make sure {c['RED']}{self.parameter_value!r}{c['RESET']} is valid"
         ]
 
         return "\n".join(message_parts)

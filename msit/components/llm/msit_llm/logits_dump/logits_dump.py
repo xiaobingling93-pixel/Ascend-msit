@@ -88,7 +88,7 @@ def build_bad_case_list(bad_case_csv_path):
             raise RuntimeError("When the 'key' column is of character type, "
                                "only the HumanEval and HumanEvalX datasets are supported.")
     elif isinstance(key_list[0], int):
-        logger.info("Build BoolQ/Ceval/mmlu/gsm8k/needlebench dataset bad case list")
+        logger.info("Build BoolQ/mmlu/gsm8k/needlebench dataset bad case list")
         bad_case_list = build_others_bad_case_list(key_list)
     else:
         raise TypeError("The values in the key column must be strings with the prefix for"

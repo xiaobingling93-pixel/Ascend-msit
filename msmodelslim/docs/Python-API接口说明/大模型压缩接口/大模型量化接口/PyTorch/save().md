@@ -26,7 +26,7 @@ calibrator.save(output_path, safetensors_name=None, json_name=None, save_type=No
 <br>该参数支持设置为“numpy”，“safe_tensor”或“ascendV1”三种格式。用户需按照模型权重保存的实际情况进行选择：
 <br>（1）设置为“numpy”时，仅导出npy格式的量化权重文件。`注意：量化类型为W4A8_DYNAMIC时，设置“numpy”格式保存会报错。`
 <br>（2）设置为“safe_tensor”时，仅导出safetensors的量化权重文件和json描述文件。safetensors权重文件包含浮点、量化权重，量化层使用的量化权重和未量化层使用的原始浮点权重。json描述文件包含模型的所有module，并标明该module的量化或浮点类型，例如FLOAT、W8A8、W8A16。
-<br>（3）设置为“ascendV1”时，模型权重与使用safe_tesnor导出时的保持一致，但config.json和quant_model_description_{quant_type}.json会有略微改动。`注意：量化类型为 W4A16 时，默认会对权重进行pack。`配置文件的改动说明如下：config.json文件内容跟浮点权重保持一致；同时quant_model_description_{quant_type}.json文件名变为quant_model_description.json，并新增了一个verison说明。
+<br>（3）设置为“ascendV1”时，模型权重与使用safe_tensor导出时的保持一致，但config.json和quant_model_description_{quant_type}.json会有略微改动。`注意：量化类型为 W4A16 时，默认会对权重进行pack。`配置文件的改动说明如下：config.json文件内容跟浮点权重保持一致；同时quant_model_description_{quant_type}.json文件名变为quant_model_description.json，并新增了一个version说明。
 
 ### 调用示例
 根据实际需求，在QuantConfig初始化中完成所有参数的配置。

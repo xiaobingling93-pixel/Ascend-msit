@@ -57,4 +57,4 @@ spec:
   calib_file: ../../calib_lab/humaneval_x.jsonl
   calib_save_params:
     save_type:
-      - 'safe_tensor'
+      - 'ascendV1'

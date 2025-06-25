@@ -39,14 +39,14 @@ CalibrationData.set_sample_size(sample_size=sample_size)
 ### set_batch_size
 ```python
 # 设置batch数量，可选。
-# 输入batch_size，数据类型为INT，取值范围大于0，默认为1
+# 输入batch_size，数据类型为int，取值范围大于0，默认为1
 CalibrationData.set_batch_size(batch_size=batch_size)
 ```
 
 ### set_shuffle_seed
 ```python
 # 设置随机种子，在同一设备上可用于复现相同结果，可选。
-# 输入shuffle_seed，数据类型为INT，默认为0
+# 输入shuffle_seed，数据类型为int，默认为0
 CalibrationData.set_shuffle_seed(shuffle_seed=shuffle_seed)
 ```
 
