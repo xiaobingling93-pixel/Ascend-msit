@@ -157,6 +157,8 @@ with torch.autocast(device_type='cuda', dtype=torch.bfloat16, enabled=True):
 ### 量化命令和示例代码
 
 #### 量化启动命令
+**注意：** 
+Atlas 800I A2(8*64G)推理设备：支持4卡量化、6卡量化、8卡量化。
 
 我们提供了完整的量化启动脚本示例：[HunYuanVideo/sample_video.py](HunYuanVideo/sample_video.py)，其启动命令可参考(请提前确保calib_prompts.txt权限不大于'0o640')：
 
