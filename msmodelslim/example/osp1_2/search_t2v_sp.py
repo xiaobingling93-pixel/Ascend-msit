@@ -36,6 +36,7 @@ def search_restep(pipeline, args):
         save_dir=args.save_dir,
         neighbour_type=args.neighbour_type,
         monte_carlo_iters=args.monte_carlo_iters,
+        num_sampling_steps=args.num_sampling_steps,
     )
 
     # create ReStepAdaptor

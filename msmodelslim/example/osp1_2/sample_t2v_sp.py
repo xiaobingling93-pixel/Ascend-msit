@@ -111,6 +111,7 @@ def run_model_and_save_images(pipeline, model_path):
                           timesteps=timesteps_set
                           ).images
 
+        os.umask(0o037)
         vid_name = (f'{args.sample_method}_{index}_{checkpoint_name}'
                     f'_gs{args.guidance_scale}_s{args.num_sampling_steps}.{ext}')
         if hccl_info.rank <= 0:
@@ -141,14 +142,15 @@ def run_model_and_save_images(pipeline, model_path):
             save_path = get_valid_write_path(save_path, is_dir=False)
             return save_path
 
+        output_path = get_file_name()
+
         if args.num_frames == 1:
-            save_image(video_grids / 255.0, get_file_name(),
+            save_image(video_grids / 255.0, output_path,
                        nrow=math.ceil(math.sqrt(len(video_grids))), normalize=True, value_range=(0, 1))
         else:
             video_grids = save_video_grid(video_grids)
-            imageio.mimwrite(get_file_name(), video_grids, fps=args.fps, quality=6)
+            imageio.mimwrite(output_path, video_grids, fps=args.fps, quality=6)
 
-        output_path = get_file_name()
         logger.info('concat video file saved at: %s', output_path)
 
 
