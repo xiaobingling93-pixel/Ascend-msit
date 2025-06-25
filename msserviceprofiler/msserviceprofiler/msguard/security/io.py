@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import os
+import pandas as pd
 from collections import deque
 
 from .exception import WalkLimitError
@@ -98,3 +99,11 @@ def open_s(path, mode='r', **kwargs):
 
     fd = get_fd(path, flags)
     return os.fdopen(fd, mode, **kwargs)
+
+
+@validate_params({"path": Rule.input_file_read})
+def read_csv_s(path, **kwargs):
+    try:
+        return pd.read_csv(path, **kwargs)
+    except Exception as e:
+        raise ValueError(f"Failed to read csv: {str(e)}")
