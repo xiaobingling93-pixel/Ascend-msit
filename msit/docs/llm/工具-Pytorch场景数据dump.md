@@ -48,7 +48,7 @@ DumpConfig(dump_path=None, token_range=None, seed=None)
 | device_id   | 指定要dump的device id 。 | 数据类型：int，默认为None 表示不限制 device。如指定 device_id=1，将跳过其他 device 的 dump。 | 否       |
 | dump_last_logits | 是否需要Dump 模型最后的输出logits。 | 数据类型： bool，默认为False，当开启后，仅 Dump 模型最后输出的 logits，模型中间layer 不会再输出。 可参考 [《logits精度比对》](加速库场景-输出Token的logits精度比对.md) | 否 |
 | mode | 设置dump的模式。 | 可以选择dump api 还是 module，默认是module，也可以传入数组['api', 'module']，表示两种都dump。| 否 | 7.0.0b530 |
-| dump_weight | 设置是否需要dump权重。 | 数据类型：bool，默认是False，不dump。[dump落盘位置](#dump-落盘位置) | 否 | 7.0.0b530 |
+| dump_weight | 设置是否需要dump权重。 | 数据类型：bool，默认是False，不dump。| 否 | 7.0.0b530 |
 | layer_name | 指定需要dump的layer名字。 | 数据类型：str，可以通过该参数控制dump 的权重和tensor。支持 * 表示匹配0或多个随意字符，不支持其他的模式匹配。 | 否 | 7.0.0b530 |
 | seed | 设定启动确定性计算的种子。 | 数据类型：int，可以通过该参数确定是否要启动确定性计算，输入的值表示固定随机性的种子值。 | 否 | 7.0.0rc730 |
 | dump_statistics_mode | 设置统计量Dump模式。 | 数据类型： int，默认为0，不进行统计量dump。当dump_statistics_mode=1时，只dump统计量；当dump_statistics_mode=2时，同时dump统计量和tensor。| 否 | 7.0.0rc1230 |
