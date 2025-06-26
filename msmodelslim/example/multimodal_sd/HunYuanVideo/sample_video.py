@@ -49,8 +49,6 @@ def parse_args(namespace=None):
     parser.add_argument("--anti_method", choices=["m3", "m4", "m6"], default=None)
     parser.add_argument("--quant_weight_save_folder", type=str)
     parser.add_argument("--quant_dump_calib_folder", type=str)
-    parser.add_argument("--data_split_num", type=int, default=1)
-    parser.add_argument("--data_split_id", type=int, default=0)
     parser.add_argument("--do_save_video", action="store_true", help="whether to save video output")
 
     args = parser.parse_args(namespace=namespace)
