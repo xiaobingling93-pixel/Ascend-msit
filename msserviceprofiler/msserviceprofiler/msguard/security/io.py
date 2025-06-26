@@ -14,8 +14,8 @@
 # limitations under the License.
 
 import os
-import pandas as pd
 from collections import deque
+import pandas as pd
 
 from .exception import WalkLimitError
 from ..validation import validate_params
@@ -106,4 +106,4 @@ def read_csv_s(path, **kwargs):
     try:
         return pd.read_csv(path, **kwargs)
     except Exception as e:
-        raise ValueError(f"Failed to read csv: {str(e)}")
+        raise ValueError(f"Failed to read csv %r." % path) from e
