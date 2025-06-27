@@ -17,6 +17,8 @@ import argparse
 from pathlib import Path
 
 from ms_service_profiler.exporters.utils import check_input_path_valid, check_output_path_valid
+from msserviceprofiler.msguard.validation.cli_usage import validate_args
+from msserviceprofiler.msguard.constraints.path import IsReadable
 
 
 def add_summary_exporter(func):
@@ -37,7 +39,7 @@ def arg_parse(subparsers):
         "analyze", formatter_class=argparse.ArgumentDefaultsHelpFormatter, help="MS Server Profiler Analyze"
     )
     parser.add_argument(
-        '--input-path', required=True, type=check_input_path_valid, help='Path to the folder containing profile data.'
+        '--input-path', required=True, type=validate_args(constraint=IsReadable()), help='Path to the folder containing profile data.'
     )
     parser.add_argument(
         '--output-path',
