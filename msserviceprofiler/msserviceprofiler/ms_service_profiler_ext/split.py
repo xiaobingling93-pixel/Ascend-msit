@@ -16,7 +16,6 @@ import argparse
 from pathlib import Path
 import pandas as pd
 
-from ms_service_profiler.exporters.utils import check_input_path_valid, check_output_path_valid
 from msserviceprofiler.msguard import validate_args, Rule
 
 
