@@ -22,9 +22,11 @@ swifter = { version = "^1.4.0", extras = ["groupby"], optional = true }
 modin = { version = "^0.32.0", extras = ["all"], optional = true }
 
 [tool.poetry.extras]
-_train_common = ["filelock", "pydantic", "pydantic-settings", "pyswarms", "xgboost", "seaborn", "matplotlib", "scikit-learn"]
-train = _train_common
-speed = _train_common + ["swifter", "modin"]
+train = ["filelock", "pydantic", "pydantic-settings", "pyswarms", "xgboost", "seaborn", "matplotlib", "scikit-learn"]
+speed = [
+    "filelock", "pydantic", "pydantic-settings", "pyswarms", "xgboost", "seaborn", "matplotlib", "scikit-learn",
+    "swifter", "modin"
+]
 
 [tool.poetry.scripts]
 msserviceprofiler = "msserviceprofiler.__main__:main"
