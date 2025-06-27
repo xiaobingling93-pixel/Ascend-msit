@@ -26,7 +26,7 @@ modin = { version = "^0.32.0", extras = ["all"], optional = true }
 
 [tool.poetry.extras]
 train = ["filelock", "pydantic", "pydantic-settings", "pyswarms", "xgboost", "seaborn", "matplotlib", "scikit-learn"]
-speed = ["filelock", "pydantic", "pydantic-settings", "pyswarms", "xgboost", "seaborn", "matplotlib", "scikit-learn", "swifter", "modin"]
+speed = [{ include = "train" }, "swifter", "modin"]
 [tool.poetry.scripts]
 msserviceprofiler="msserviceprofiler.__main__:main"
 
