@@ -34,10 +34,7 @@ msit profile msprof --application "msit benchmark -om *.om --device 0" --output 
             └── timeline # 通过时间轴呈现性能数据
 
 ```
-summary 和 timeline中的文件因命令行参数的选择而不同，请依据[使用场景](#使用场景)查看每个文件的具体含义。
-- 采集AI任务运行性能数据相关[summary文件和timeline文件介绍](https://gitee.com/ascend/msit/tree/master/msit/examples/cli/profile/02_collect_ai_task_data)
-- 采集昇腾AI处理器系统数据相关[summary文件和timeline文件介绍](https://gitee.com/ascend/msit/tree/master/msit/examples/cli/profile/03_collect_ascend_ai_processor_data)
-summary文件夹下的文件可以用Excel等软件打开，timeline下的json文件可以在chrome浏览器下用[tracing](chrome://tracing)打开。
+summary 和 timeline中的文件因命令行参数的选择而不同，详情请见[msprof工具使用](https://www.hiascend.com/document/detail/zh/canncommercial/81RC1/devaids/opdev/optool/atlasopdev_16_00851.html)
 
 
 #### 参数说明

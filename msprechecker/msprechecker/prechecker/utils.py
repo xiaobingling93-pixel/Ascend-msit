@@ -23,6 +23,8 @@ import time
 import re
 from collections import namedtuple
 
+from msguard.security import open_s
+
 
 _RUN_MODES = ["precheck", "dump", "compare", "distribute_compare"]
 RUN_MODES = namedtuple("RUN_MODES", _RUN_MODES)(*_RUN_MODES)
@@ -53,23 +55,6 @@ def str_to_digit(input_str, default_value=None):
 
 def is_deepseek_model(model_name):
     return "deepseek" in model_name.lower().replace(" ", "").replace("-", "").replace("_", "")
-
-
-def walk_dict(data, parent_key=""):
-    if isinstance(data, dict):
-        for key, value in data.items():
-            if not isinstance(value, (dict, tuple, list)):
-                yield key, value, parent_key
-            else:
-                new_key = f"{parent_key}.{key}" if parent_key else key
-                yield from walk_dict(value, new_key)
-    elif isinstance(data, (tuple, list)):
-        for index, item in enumerate(data):
-            if not isinstance(item, (dict, tuple, list)):
-                yield index, item, parent_key
-            else:
-                new_key = f"{parent_key}.{index}" if parent_key else index
-                yield from walk_dict(item, new_key)
 
 
 def same(array):
@@ -162,7 +147,7 @@ def get_version_info(mindie_service_path):
         return {}
 
     version_info = {}
-    with open(version_path) as f:
+    with open_s(version_path) as f:
         for line in f:
             line_split = line.split(":")
             key, value = line_split[0], line_split[-1]
@@ -177,7 +162,7 @@ set_logger(logger)
 
 def read_csv(file_path):
     result = {}
-    with open(file_path, mode="r", newline="", encoding="utf-8") as ff:
+    with open_s(file_path, mode="r", newline="", encoding="utf-8") as ff:
         for row in csv.DictReader(ff):
             for kk, vv in row.items():
                 result.setdefault(kk, []).append(vv)
@@ -185,7 +170,7 @@ def read_csv(file_path):
 
 
 def read_json(file_path):
-    with open(file_path) as ff:
+    with open_s(file_path) as ff:
         try:
             result = json.load(ff)
         except json.JSONDecodeError:
