@@ -15,9 +15,9 @@
 from pathlib import Path
 
 import pandas as pd
-from ms_service_profiler.utils.log import logger
 
 from .base import BaseComparator
+from ..common.utils import logger
 from ..common.csv_fields import BaseCSVFields, ServiceCSVFields
 
 
