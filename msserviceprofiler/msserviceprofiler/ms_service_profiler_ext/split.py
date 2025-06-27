@@ -43,7 +43,10 @@ def arg_parse(subparsers):
         "split", formatter_class=argparse.ArgumentDefaultsHelpFormatter, help="MS Server Profiler Split"
     )
     parser.add_argument(
-        '--input-path', required=True, type=validate_args(Rule.input_dir_traverse), help='Path to the folder containing profile data.'
+        '--input-path',
+        required=True,
+        type=validate_args(Rule.input_dir_traverse),
+        help='Path to the folder containing profile data.',
     )
     parser.add_argument(
         '--output-path',
