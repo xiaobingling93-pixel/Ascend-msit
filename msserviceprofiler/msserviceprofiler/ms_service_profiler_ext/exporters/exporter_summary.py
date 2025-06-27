@@ -43,13 +43,13 @@ def process_each_record(req_map, batch_map, record):
 def process_batch_record(batch_map, record):
     batch_type = record.get('batch_type')
     rid_tuple = str(record.get('rid_list'))
+    batch_size = 0
+    during_time = 0.0
     try:
         batch_size = int(record.get('batch_size', 0))
         during_time = float(record.get('during_time', 0)) / 1000
-    except (TypeError, ValueError) as e:
+    except Exception as e:
         logger.warning(f"Invaid record data: {e}")
-        batch_size = 0
-        during_time = 0.0
 
     # 构建batch_map
     if batch_type == 'Prefill':
