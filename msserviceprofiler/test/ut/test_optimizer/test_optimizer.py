@@ -29,12 +29,12 @@ from msserviceprofiler.modelevalstate.optimizer.optimizer import (
     BenchMark, ProfilerBenchmark, VllmBenchMark, Scheduler,
     ScheduleWithMultiMachine, PSOOptimizer,
     main, arg_parse, remove_file, backup,
-    close_file_fp, clearing_residual_process
+    close_file_fp,
 )
 from msserviceprofiler.modelevalstate.optimizer.simulator import Simulator, VllmSimulator
 from msserviceprofiler.modelevalstate.optimizer.utils import kill_process, kill_children
 from msserviceprofiler.modelevalstate.config.config import (
-    BenchMarkConfig, MindieConfig, PerformanceIndex,
+    BenchMarkConfig, MindieConfig, PerformanceIndex, clearing_residual_process,
     OptimizerConfigField, PsoOptions, DeployPolicy,
     BenchMarkPolicy, AnalyzeTool, settings, default_support_field
 )
