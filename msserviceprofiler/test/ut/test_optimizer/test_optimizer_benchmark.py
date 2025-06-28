@@ -21,7 +21,8 @@ import pytest
 
 from msserviceprofiler.modelevalstate.config.config import OptimizerConfigField, settings, \
     default_support_field, PerformanceIndex
-from msserviceprofiler.modelevalstate.optimizer.optimizer import BenchMark, Simulator
+from msserviceprofiler.modelevalstate.optimizer.optimizer import BenchMark
+from msserviceprofiler.modelevalstate.optimizer.simulator import Simulator
 from msserviceprofiler.modelevalstate.optimizer.optimizer import PSOOptimizer
 
 

@@ -28,7 +28,7 @@ import pytest
 from msserviceprofiler.modelevalstate.optimizer.optimizer import (
     BenchMark, ProfilerBenchmark, VllmBenchMark, Scheduler,
     ScheduleWithMultiMachine, PSOOptimizer,
-    main, arg_parse, kill_children, remove_file, backup, ,
+    main, arg_parse, kill_children, remove_file, backup,
     close_file_fp, clearing_residual_process
 )
 from msserviceprofiler.modelevalstate.optimizer.simulator import Simulator, VllmSimulator
