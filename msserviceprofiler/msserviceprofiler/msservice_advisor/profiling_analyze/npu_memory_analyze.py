@@ -77,7 +77,7 @@ def get_model_config_info(model_configs, tp, npu_device_ids):
     return tp, model_weight_path
 
 
-def extract_server_config_params(server_config, output_token_num, tp):
+def extract_server_config_params(server_config, output_token_num, tp=1):
     """
         获取mindie-server config.json中的参数信息
         output_token_num: 请求输出长度。优先从用户输入中获取; 用户未输入等于conf中的maxIterTimes。

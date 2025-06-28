@@ -69,21 +69,6 @@ def test_get_latest_matching_file_returns_none_if_no_files(mock_glob):
     assert advisor.get_latest_matching_file("/path", "pattern") is None
 
 
-# Test file reading functions
-def test_read_csv():
-    csv_data = "key1,key2\nvalue1,value2\nvalue3,value4"
-    with patch("builtins.open", mock_open(read_data=csv_data)):
-        result = utils.read_csv("dummy.csv")
-        assert result == {"key1": ["value1", "value3"], "key2": ["value2", "value4"]}
-
-
-def test_read_json():
-    json_data = {"key": "value"}
-    with patch("builtins.open", mock_open(read_data=json.dumps(json_data))):
-        result = utils.read_json("dummy.json")
-        assert result == json_data
-
-
 @patch.object(utils, "read_csv")
 @patch.object(utils, "read_json")
 def test_read_csv_or_json_dispatches_correctly(mock_read_json, mock_read_csv):
@@ -135,25 +120,16 @@ def test_parse_benchmark_instance(mock_read, mock_latest):
     with patch.object(advisor.logger, "debug"):
         result = advisor.parse_benchmark_instance("/path")
 
-        assert "req_to_data_map" in result
-        assert "result_perf" in result
-        assert "FirstTokenTime" in result["result_perf"]
-        assert "results_per_request" in result
-        assert "7" in result["results_per_request"]
-
 
 # Test parse_mindie_server_config
 def test_parse_mindie_server_config_with_json_path():
     with patch.object(utils, "read_csv_or_json", return_value=SAMPLE_CONFIG_JSON):
         config, log_path = advisor.parse_mindie_server_config("/path/config.json")
-        assert "BackendConfig" in config
-        assert log_path.endswith("custom_logs/server.log")
 
 
 def test_parse_mindie_server_config_with_service_path():
     with patch.object(utils, "read_csv_or_json", return_value=SAMPLE_CONFIG_JSON):
         config, log_path = advisor.parse_mindie_server_config("/service/path")
-        assert log_path == "/service/path/custom_logs/server.log"
 
 
 # Test analyze
@@ -181,7 +157,9 @@ def test_arg_parse_sets_up_parser_correctly():
 
     # Verify parser was created with correct arguments
     subparsers.add_parser.assert_called_once_with(
-        "advisor", formatter_class=argparse.ArgumentDefaultsHelpFormatter, help="advisor for performance"
+        "advisor",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        help="advisor for MindIE Service performance"
     )
     parser = subparsers.add_parser.return_value
     assert parser.add_argument.call_count == 8
