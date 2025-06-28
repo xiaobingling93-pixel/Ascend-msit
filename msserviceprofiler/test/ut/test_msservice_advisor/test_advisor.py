@@ -20,6 +20,7 @@ import pytest
 
 from msserviceprofiler.msservice_advisor import advisor
 from msserviceprofiler.msservice_advisor.profiling_analyze.utils import TARGETS, SUGGESTION_TYPES, logger
+from msserviceprofiler.msservice_advisor.profiling_analyze import utils
 
 
 # Test fixtures
@@ -72,24 +73,24 @@ def test_get_latest_matching_file_returns_none_if_no_files(mock_glob):
 def test_read_csv():
     csv_data = "key1,key2\nvalue1,value2\nvalue3,value4"
     with patch("builtins.open", mock_open(read_data=csv_data)):
-        result = advisor.read_csv("dummy.csv")
+        result = utils.read_csv("dummy.csv")
         assert result == {"key1": ["value1", "value3"], "key2": ["value2", "value4"]}
 
 
 def test_read_json():
     json_data = {"key": "value"}
     with patch("builtins.open", mock_open(read_data=json.dumps(json_data))):
-        result = advisor.read_json("dummy.json")
+        result = utils.read_json("dummy.json")
         assert result == json_data
 
 
-@patch.object(advisor, "read_csv")
-@patch.object(advisor, "read_json")
+@patch.object(utils, "read_csv")
+@patch.object(utils, "read_json")
 def test_read_csv_or_json_dispatches_correctly(mock_read_json, mock_read_csv):
     # Mock the file path and extension checking
     with patch("os.path.exists", return_value=True):
         # Test CSV file
-        advisor.read_csv_or_json("file.csv")
+        utils.read_csv_or_json("file.csv")
         mock_read_csv.assert_called_once_with("file.csv")
         mock_read_json.assert_not_called()
 
@@ -98,7 +99,7 @@ def test_read_csv_or_json_dispatches_correctly(mock_read_json, mock_read_csv):
         mock_read_json.reset_mock()
 
         # Test JSON file
-        advisor.read_csv_or_json("file.json")
+        utils.read_csv_or_json("file.json")
         mock_read_json.assert_called_once_with("file.json")
         mock_read_csv.assert_not_called()
 
@@ -107,20 +108,20 @@ def test_read_csv_or_json_dispatches_correctly(mock_read_json, mock_read_csv):
         mock_read_json.reset_mock()
 
         # Test unknown extension
-        assert advisor.read_csv_or_json("file.txt") is None
+        assert utils.read_csv_or_json("file.txt") is None
         mock_read_csv.assert_not_called()
         mock_read_json.assert_not_called()
 
         # Test non-existent file
         with patch("os.path.exists", return_value=False):
-            assert advisor.read_csv_or_json("nonexistent.csv") is None
+            assert utils.read_csv_or_json("nonexistent.csv") is None
             mock_read_csv.assert_not_called()
             mock_read_json.assert_not_called()
 
 
 # Test parse_benchmark_instance
 @patch.object(advisor, "get_latest_matching_file")
-@patch.object(advisor, "read_csv_or_json")
+@patch.object(utils, "read_csv_or_json")
 def test_parse_benchmark_instance(mock_read, mock_latest):
     # Setup mock returns
     mock_latest.side_effect = ["req_map.json", "result_perf.csv", "result_common.csv", "results_per_request.json"]
@@ -143,14 +144,14 @@ def test_parse_benchmark_instance(mock_read, mock_latest):
 
 # Test parse_mindie_server_config
 def test_parse_mindie_server_config_with_json_path():
-    with patch.object(advisor, "read_csv_or_json", return_value=SAMPLE_CONFIG_JSON):
+    with patch.object(utils, "read_csv_or_json", return_value=SAMPLE_CONFIG_JSON):
         config, log_path = advisor.parse_mindie_server_config("/path/config.json")
         assert "BackendConfig" in config
         assert log_path.endswith("custom_logs/server.log")
 
 
 def test_parse_mindie_server_config_with_service_path():
-    with patch.object(advisor, "read_csv_or_json", return_value=SAMPLE_CONFIG_JSON):
+    with patch.object(utils, "read_csv_or_json", return_value=SAMPLE_CONFIG_JSON):
         config, log_path = advisor.parse_mindie_server_config("/service/path")
         assert log_path == "/service/path/custom_logs/server.log"
 
