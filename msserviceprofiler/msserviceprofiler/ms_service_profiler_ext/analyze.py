@@ -44,7 +44,7 @@ def arg_parse(subparsers):
     )
     parser.add_argument(
         '--output-path',
-        type=validate_args(Rule.output_path_write),
+        type=validate_args(Rule.output_dir),
         default=os.path.join(os.getcwd(), 'output'),
         help='Output file path to save results.')
     parser.add_argument(
