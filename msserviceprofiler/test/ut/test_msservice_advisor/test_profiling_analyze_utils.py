@@ -127,7 +127,7 @@ def test_vaild_readable_file_given_valid_file_when_checked_then_returns_path():
     temp_file = create_temp_file(10)
     try:
         result = utils.vaild_readable_file(temp_file)
-        assert isinstance(result, Path)
+        assert isinstance(result, str)
     finally:
         os.unlink(temp_file)
 
