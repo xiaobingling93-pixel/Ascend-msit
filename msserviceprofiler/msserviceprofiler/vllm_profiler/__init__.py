@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
+import sys
 from importlib.metadata import version
 from packaging.version import Version
 
@@ -19,13 +21,20 @@ try:
 except Exception as ee:
     vllm_version = None
 
+# 修改导入系统行为
+old_import = __import__
 
-if vllm_version and Version(vllm_version) > Version("0.8.3"):
-    import msserviceprofiler.vllm_profiler.vllm_profiler_0_8_4
-elif vllm_version and Version(vllm_version) > Version("0.6.2"):
-    import msserviceprofiler.vllm_profiler.vllm_profiler_0_6_3
-else:
-    import logging
+def custom_import(name, *args, **kwargs):
+    print(f">>>> {name = }")
+    if name == 'vllm_profiler'
+        if vllm_version and Version(vllm_version) > Version("0.8.3"):
+            name = f'msserviceprofiler.vllm_profiler.vllm_profiler_0_8_4'
+        elif vllm_version and Version(vllm_version) > Version("0.6.2"):
+            import msserviceprofiler.vllm_profiler.vllm_profiler_0_6_3
+        else:
+            import logging
 
-    logging.error(f"Not supported vllm version {vllm_version}")
+            logging.error(f"Not supported vllm version {vllm_version}")
+    return old_import(name, *args, **kwargs)
 
+__import__ = custom_import
