@@ -17,7 +17,7 @@ import unittest
 from unittest.mock import MagicMock, patch, call
 from collections import deque
 import msserviceprofiler
-sys.path.insert(0, os.path.join(msserviceprofiler.__path__[0], "vllm_profiler"))
+sys.path.insert(0, os.path.join(msserviceprofiler.__path__[0], "vllm_profiler"))  # skip importing from __init__
 from vllm_profiler_core.batch_hookers import Profiler, queue_profiler, Level
 
 

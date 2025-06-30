@@ -11,12 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
 import sys
 import traceback
 import unittest
 from unittest.mock import MagicMock, patch
 from packaging.version import Version
-from msserviceprofiler.vllm_profiler.vllm_profiler_core.vllm_hooker_base import VLLMHookerBase
+import msserviceprofiler
+sys.path.insert(0, os.path.join(msserviceprofiler.__path__[0], "vllm_profiler"))  # skip importing from __init__
+from vllm_profiler_core.vllm_hooker_base import VLLMHookerBase
 
 
 class TestVLLMHookerBase(unittest.TestCase):

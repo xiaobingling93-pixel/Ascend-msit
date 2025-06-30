@@ -11,12 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
 import sys
 import unittest
 from dataclasses import dataclass
 from collections import namedtuple
 from unittest.mock import MagicMock, patch, call
-from msserviceprofiler.vllm_profiler.vllm_profiler_core.request_hookers import Profiler, Level
+import msserviceprofiler
+sys.path.insert(0, os.path.join(msserviceprofiler.__path__[0], "vllm_profiler"))  # skip importing from __init__
+from vllm_profiler_core.request_hookers import Profiler, Level
 
 
 # 模拟 RequestOutput 类
@@ -55,7 +58,7 @@ class FakeAsyncLLMEngine:
         pass
 
 
-@patch("msserviceprofiler.vllm_profiler.vllm_profiler_core.request_hookers.Profiler")
+@patch("vllm_profiler_core.request_hookers.Profiler")
 class TestVLLMHookers(unittest.TestCase):
 
     def setUp(self):
@@ -73,7 +76,7 @@ class TestVLLMHookers(unittest.TestCase):
 
     def test_engine_request_tracker_hook_063(self, mock_profiler):
         # 导入被测试的类
-        from msserviceprofiler.vllm_profiler.vllm_profiler_core.request_hookers import EngineRequestTrackerHook063
+        from vllm_profiler_core.request_hookers import EngineRequestTrackerHook063
 
         # 初始化 EngineRequestTrackerHook
         engine_request_tracker_hook = EngineRequestTrackerHook063()
@@ -88,7 +91,7 @@ class TestVLLMHookers(unittest.TestCase):
 
     def test_engine_request_tracker_hook_084(self, mock_profiler):
         # 导入被测试的类
-        from msserviceprofiler.vllm_profiler.vllm_profiler_core.request_hookers import EngineRequestTrackerHook084
+        from vllm_profiler_core.request_hookers import EngineRequestTrackerHook084
 
         # 初始化 EngineRequestTrackerHook
         engine_request_tracker_hook = EngineRequestTrackerHook084()
@@ -103,7 +106,7 @@ class TestVLLMHookers(unittest.TestCase):
 
     def test_llm_engine_hook_063(self, mock_profiler):
         # 导入被测试的类
-        from msserviceprofiler.vllm_profiler.vllm_profiler_core.request_hookers import LLMEngineHook063
+        from vllm_profiler_core.request_hookers import LLMEngineHook063
 
         # 初始化 LLMEngineHook
         llm_engine_hook = LLMEngineHook063()
@@ -120,7 +123,7 @@ class TestVLLMHookers(unittest.TestCase):
 
     def test_llm_engine_hook_084(self, mock_profiler):
         # 导入被测试的类
-        from msserviceprofiler.vllm_profiler.vllm_profiler_core.request_hookers import LLMEngineHook084
+        from vllm_profiler_core.request_hookers import LLMEngineHook084
 
         # 模拟必要的类和结构
         FakeScheduledSeqGroup = namedtuple('ScheduledSeqGroup', ['seq_group'])
