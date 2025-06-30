@@ -15,9 +15,9 @@ import unittest
 import sys
 from unittest.mock import MagicMock, patch, call
 from collections import deque
-from msserviceprofiler.vllm_profiler.vllm_profiler_core.batch_hookers import (
-    Profiler, queue_profiler, Level
-)
+import msserviceprofiler
+sys.path.insert(0, os.path.join(msserviceprofiler.__path__[0], "vllm_profiler"))
+from vllm_profiler_core.batch_hookers import Profiler, queue_profiler, Level
 
 
 # 模拟 SequenceStatus 类
@@ -102,7 +102,7 @@ class FakeLLMEngine:
 
 
 # 测试hook类
-@patch("msserviceprofiler.vllm_profiler.vllm_profiler_core.batch_hookers.Profiler")
+@patch("vllm_profiler_core.batch_hookers.Profiler")
 class TestSchedulerHook(unittest.TestCase):
 
     def setUp(self):
@@ -227,17 +227,17 @@ class TestSchedulerHook(unittest.TestCase):
         mock_profiler(Level.INFO).domain("BatchSchedule").res.assert_called_with([self.fake_request_id])
 
     # 校验队列打点函数queue_profiler正确调用
-    @patch("msserviceprofiler.vllm_profiler.vllm_profiler_core.batch_hookers.queue_profiler")
+    @patch("vllm_profiler_core.batch_hookers.queue_profiler")
     def test_schedule_priority_preemption_maker(self, mock_queue_profiler, mock_profiler):
         self.fake_scheduler._schedule_priority_preemption(self.fake_budget)
         mock_queue_profiler.assert_called()
 
-    @patch("msserviceprofiler.vllm_profiler.vllm_profiler_core.batch_hookers.queue_profiler")
+    @patch("vllm_profiler_core.batch_hookers.queue_profiler")
     def test_schedule_default_maker(self, mock_queue_profiler, mock_profiler):
         self.fake_scheduler._schedule_default()
         mock_queue_profiler.assert_called()
 
-    @patch("msserviceprofiler.vllm_profiler.vllm_profiler_core.batch_hookers.queue_profiler")
+    @patch("vllm_profiler_core.batch_hookers.queue_profiler")
     def test_schedule_chunked_prefill_maker(self, mock_queue_profiler, mock_profiler):
         self.fake_scheduler._schedule_chunked_prefill()
         mock_queue_profiler.assert_called()
