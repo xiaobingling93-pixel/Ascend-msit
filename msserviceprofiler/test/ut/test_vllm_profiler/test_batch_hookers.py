@@ -11,8 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import unittest
+import os
 import sys
+import unittest
 from unittest.mock import MagicMock, patch, call
 from collections import deque
 import msserviceprofiler
@@ -114,7 +115,7 @@ class TestSchedulerHook(unittest.TestCase):
         )
 
         # 导入被测试的类
-        from msserviceprofiler.vllm_profiler.vllm_profiler_core.batch_hookers import SchedulerHook, LLMEngineHook
+        from vllm_profiler_core.batch_hookers import SchedulerHook, LLMEngineHook
 
         # 初始化 Hook 实例
         self.scheduler_hook = SchedulerHook()
