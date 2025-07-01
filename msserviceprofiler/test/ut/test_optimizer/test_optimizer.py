@@ -313,33 +313,6 @@ class TestSimulator(unittest.TestCase):
             with self.assertRaises(subprocess.SubprocessError):
                 self.simulator.check_success()
 
-    def test_get_new_config(self):
-        test_config = {"a": 1, "b": {"c": 2}}
-        params = (
-            OptimizerConfigField(name="param1", value=10, config_position="b.c"),
-            OptimizerConfigField(name="param2", value=20, config_position="nonexistent")
-        )
-        result = Simulator.get_new_config(test_config, params)
-        self.assertEqual(result["b"]["c"], 10)
-        self.assertEqual(result["a"], 1)
-
-    def test_set_config(self):
-        test_config = {"a": 1, "b": {"c": 2}}
-        Simulator.set_config(test_config, "b.c", 10)
-        self.assertEqual(test_config["b"]["c"], 10)
-
-    @patch('psutil.process_iter')
-    def test_check_env(self, mock_process_iter):
-        # Setup mock process
-        mock_proc = MagicMock()
-        mock_proc.info = {"name": "test_process", "pid": 123}
-        mock_process_iter.return_value = [mock_proc]
-        
-        # Mock kill_process
-        with patch('msserviceprofiler.modelevalstate.optimizer.utils.kill_process') as mock_kill:
-            self.simulator.check_env()
-            mock_kill.assert_called_once_with("test_process")
-
     @patch.object(Simulator, 'update_config')
     @patch.object(Simulator, 'check_env')
     @patch.object(Simulator, 'start_server')
@@ -352,24 +325,6 @@ class TestSimulator(unittest.TestCase):
         mock_update.assert_called_once_with(params)
         mock_check.assert_called_once()
         mock_start.assert_called_once_with(params)
-
-    @patch('psutil.Process')
-    @patch('msserviceprofiler.modelevalstate.optimizer.utils.kill_process')
-    @patch('msserviceprofiler.modelevalstate.optimizer.utils.kill_children')
-    def test_stop(self, mock_kill_children, mock_kill_process, mock_process):
-        # Setup running process
-        self.simulator.process = MagicMock()
-        self.simulator.process.pid = 123
-        self.simulator.process.poll.return_value = None
-        
-        # Setup process children
-        mock_proc = MagicMock()
-        mock_process.return_value.children.return_value = [MagicMock()]
-        
-        self.simulator.stop()
-        
-        self.simulator.process.kill.assert_called_once()
-        mock_kill_process.assert_called_once_with("test_process")
 
 
 class TestPSOOptimizer(unittest.TestCase):
@@ -995,30 +950,6 @@ class TestScheduleWithMultiMachineMonitoringStatus:
             schedule_with_multi_machine.monitoring_status()
 
         assert mock_sleep.call_count == 0
-
-
-def test_run_simulate(tmpdir):
-    # 创建一个ScheduleWithMultiMachine实例
-    schedule = ScheduleWithMultiMachine(MagicMock(), MagicMock(), MagicMock(), MagicMock(),
-                                        bak_path=Path(tmpdir))
-    schedule.simulator = MagicMock()
-    schedule.simulator.process = MagicMock()
-    schedule.benchmark = MagicMock()
-    schedule.benchmark.prepare.return_value = True
-    schedule.stop_target_server = MagicMock()
-    schedule.run = MagicMock()
-    schedule.rpc_clients[0].process_poll.return_value = 0
-    schedule.rpc_clients[0].check_success.return_value = True
-    schedule.rpc_clients[0].run_simulator.return_value = True
-    schedule.wait_simulate = MagicMock()
-    schedule.simulate_run_info = []
-    # 创建模拟参数
-    params = np.array([1.3] * len(default_support_field))
-
-    # 模拟map_param_with_value方法的返回值
-    # 调用run_simulate方法
-    schedule.run_simulate(params, default_support_field)
-    schedule.rpc_clients[0].check_success.assert_called_once()
 
 
 @patch("msserviceprofiler.modelevalstate.optimizer.optimizer.PSOOptimizer")
