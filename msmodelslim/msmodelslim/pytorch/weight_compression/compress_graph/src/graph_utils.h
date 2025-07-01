@@ -21,19 +21,18 @@
 #include "ge_api.h"
 #include "all_ops.h"
 
-#define FAILED (-1)
-#define SUCCESS 0
-
 using namespace ge;
-using std::vector;
-using std::string;
 
-int CheckShape(vector<int64_t> &shape);
+namespace GraphUtils {
+constexpr int FAILED = -1;
+constexpr int SUCCESS = 0;
 
-void GetDataSizeFromShape(vector<int64_t> shape, int64_t &size);
+int CheckShape(std::vector<int64_t> &shape);
 
-bool GetDataFromBin(string input_path, vector<int64_t> shapes, uint8_t** data, int data_type_size);
+void GetDataSizeFromShape(std::vector<int64_t> shape, int64_t &size);
 
-int32_t BuildCompressFcGraph(Graph &graph, uint8_t* data, vector<int64_t> &shape, vector<int64_t> &compressParameters);
+bool GetDataFromBin(std::string input_path, std::vector<int64_t> shapes, uint8_t** data, int data_type_size);
 
+int32_t BuildCompressFcGraph(Graph &graph, uint8_t* data, std::vector<int64_t> &shape, std::vector<int64_t> &compressParameters);
+}
 #endif // DAVINCI_GRAPH_UTILS_H

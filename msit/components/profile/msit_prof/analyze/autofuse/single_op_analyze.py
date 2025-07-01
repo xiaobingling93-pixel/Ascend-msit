@@ -76,7 +76,7 @@ class SingleOpAnalyzer:
         data_type = data_type.split(";")
         data_shape = data_shape.split(";")
         for dt, ds in zip(data_type, data_shape):
-            if ds in ["", '"']:
+            if not isinstance(ds, str) or ds.strip(' "\'') == '':
                 hbms.append(0.0)
             else:
                 shape_list = list(map(int, ds.strip('"').split(',')))

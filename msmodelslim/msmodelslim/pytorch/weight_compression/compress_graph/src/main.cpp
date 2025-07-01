@@ -28,7 +28,7 @@ constexpr int NUMBER_12 = 12;
  * @param filePath The path of the file to write
  * @param data The data to write
  * @param count The number of elements to write
- * @return SUCCESS if write successfully, FAILED otherwise
+ * @return GraphUtils::SUCCESS if write successfully, GraphUtils::FAILED otherwise
  */
 template <typename T>
 int WriteDataToFile(const char *filePath, const T *data, size_t count)
@@ -36,29 +36,29 @@ int WriteDataToFile(const char *filePath, const T *data, size_t count)
     // Check if input file path is valid
     if (filePath == nullptr) {
         std::cout << "Error: file path is null." << std::endl;
-        return FAILED;
+        return GraphUtils::FAILED;
     }
 
     // Check if input data is valid
     if (data == nullptr) {
         std::cout << "Error: input data is null." << std::endl;
-        return FAILED;
+        return GraphUtils::FAILED;
     }
 
     // Check if count is valid
     if (count == 0) {
         std::cout << "Error: count cannot be 0." << std::endl;
-        return FAILED;
+        return GraphUtils::FAILED;
     }
 
     if (!File::CheckFileBeforeCreateOrWrite(filePath, true)) {
-        return FAILED;
+        return GraphUtils::FAILED;
     }
 
     FILE *fp = fopen(filePath, "w+");
     if (fp == nullptr) {
         std::cout << "Error: open file failed." << std::endl;
-        return FAILED;
+        return GraphUtils::FAILED;
     }
 
     bool success = true;
@@ -72,43 +72,43 @@ int WriteDataToFile(const char *filePath, const T *data, size_t count)
         success = false;
     }
 
-    return success ? SUCCESS : FAILED;
+    return success ? GraphUtils::SUCCESS : GraphUtils::FAILED;
 }
 
-int RunCompressGraph(ge::Session *session, uint8_t *data, vector<int64_t> &shape, vector<int64_t> &compressParameters,
-                     vector<string> paths)
+static int RunCompressGraph(ge::Session *session, uint8_t *data, vector<int64_t> &shape, vector<int64_t> &compressParameters,
+    vector<string> paths)
 {
     uint32_t compressFc_graph_id = 1;
     Graph compressFcGraph("compressFc Graph");
     // Build graph
-    int ret = BuildCompressFcGraph(compressFcGraph, data, shape, compressParameters);
-    if (ret != SUCCESS) {
+    int ret = GraphUtils::BuildCompressFcGraph(compressFcGraph, data, shape, compressParameters);
+    if (ret != GraphUtils::SUCCESS) {
         std::cout << "Generate compressFc Graph failed." << std::endl;
-        return FAILED;
+        return GraphUtils::FAILED;
     }
 
     // Add graph
     ret = session->AddGraph(compressFc_graph_id, compressFcGraph);
-    if (ret != SUCCESS) {
+    if (ret != GraphUtils::SUCCESS) {
         std::cout << "Session add compressFc Graph failed." << std::endl;
-        return FAILED;
+        return GraphUtils::FAILED;
     }
     std::cout << "Session add compressFc Graph success." << std::endl;
 
     std::vector<Tensor> input_mm;
     std::vector<Tensor> output_mm;
     ret = session->RunGraph(compressFc_graph_id, input_mm, output_mm);
-    if (ret != SUCCESS) {
+    if (ret != GraphUtils::SUCCESS) {
         std::cout << "Session run compressFc graph failed." << std::endl;
-        return FAILED;
+        return GraphUtils::FAILED;
     }
     if (output_mm.empty()) {
         std::cout << "Error: output_mm is empty!" << std::endl;
-        return FAILED;
+        return GraphUtils::FAILED;
     }
     if (output_mm.size() <= 2) {
         std::cout << "Error: output_mm size is too small (expected >= 3, got " << output_mm.size() << ")!" << std::endl;
-        return FAILED;
+        return GraphUtils::FAILED;
     }
     auto infoData = reinterpret_cast<uint32_t *>(output_mm[2].GetData());
 
@@ -121,38 +121,40 @@ int RunCompressGraph(ge::Session *session, uint8_t *data, vector<int64_t> &shape
     ret = WriteDataToFile<int8_t>(paths[OUTPUT_WEIGHT_PATH_INDEX].c_str(),
                                   reinterpret_cast<int8_t *>(output_mm[OUTPUT_WEIGHT_PATH_INDEX].GetData()),
                                   outputWeightSize);
-    if (ret != SUCCESS)
-        return FAILED;
+    if (ret != GraphUtils::SUCCESS) {
+        return GraphUtils::FAILED;
+    }
 
     // Write index to file
     ret = WriteDataToFile<uint8_t>(paths[INDEX_PATH_INDEX].c_str(),
                                    reinterpret_cast<uint8_t *>(output_mm[INDEX_PATH_INDEX].GetData()),
                                    output_mm[1].GetSize());
-    if (ret != SUCCESS)
-        return FAILED;
+    if (ret != GraphUtils::SUCCESS) {
+        return GraphUtils::FAILED;
+    }
 
     // Write compress info to file
     int compressInfoSize = 3;
     ret = WriteDataToFile<uint32_t>(paths[COMPRESS_INFO_PATH_INDEX].c_str(),
                                     reinterpret_cast<uint32_t *>(output_mm[COMPRESS_INFO_PATH_INDEX].GetData()),
                                     compressInfoSize);
-    if (ret != SUCCESS) {
-        return FAILED;
+    if (ret != GraphUtils::SUCCESS) {
+        return GraphUtils::FAILED;
     }
 
-    return SUCCESS;
+    return GraphUtils::SUCCESS;
 }
 
-int RunSession(uint8_t *data, vector<int64_t> &shape, vector<string> paths, vector<int64_t> &compressParameters)
+static int RunSession(uint8_t *data, vector<int64_t> &shape, vector<string> paths, vector<int64_t> &compressParameters)
 {
     // System init
     std::map<AscendString, AscendString> config = {
         {"ge.exec.deviceId", "0"}, {"ge.graphRunMode", "0"}, {"ge.exec.precision_mode", "allow_fp32_to_fp16"}};
 
     Status ret = ge::GEInitialize(config);
-    if (ret != SUCCESS) {
+    if (ret != GraphUtils::SUCCESS) {
         std::cout << "GE initialize failed.\n";
-        return FAILED;
+        return GraphUtils::FAILED;
     }
     std::cout << "Initialize ge success." << std::endl;
 
@@ -161,7 +163,7 @@ int RunSession(uint8_t *data, vector<int64_t> &shape, vector<string> paths, vect
     ge::Session *session = new Session(options);
     if (session == nullptr) {
         std::cout << "Create session failed." << std::endl;
-        return FAILED;
+        return GraphUtils::FAILED;
     }
     std::cout << "Create session success." << std::endl;
 
@@ -173,15 +175,15 @@ int RunSession(uint8_t *data, vector<int64_t> &shape, vector<string> paths, vect
 
     // system finalize
     ret = ge::GEFinalize();
-    if (ret != SUCCESS) {
+    if (ret != GraphUtils::SUCCESS) {
         std::cout << "Finalize ge failed." << std::endl;
-        return FAILED;
+        return GraphUtils::FAILED;
     }
     std::cout << "Finalize ge success." << std::endl;
-    return SUCCESS;
+    return GraphUtils::SUCCESS;
 }
 
-bool CheckInputsStollValid(int argc, char *argv[])
+static bool CheckInputsStollValid(int argc, char *argv[])
 {
     if (argc != NUMBER_12) {
         std::cout << "Please check your input params count is 11." << std::endl;
@@ -212,7 +214,7 @@ bool CheckInputsStollValid(int argc, char *argv[])
 int main(int argc, char *argv[])
 {
     if (!CheckInputsStollValid(argc, argv)) {
-        return FAILED;
+        return GraphUtils::FAILED;
     }
 
     const int64_t dimK = std::stoll(argv[1]);
@@ -229,12 +231,12 @@ int main(int argc, char *argv[])
 
     vector<string> paths = {outputWeightPath, indexPath, compressInfoPath};
     vector<int64_t> inputWeightShape = {dimK, dimN, 16, 32};
-    if (CheckShape(inputWeightShape) == FAILED) {
+    if (GraphUtils::CheckShape(inputWeightShape) == GraphUtils::FAILED) {
         std::cout << "Invalid shape. Please check your input dimK(" << dimK << ") dimN(" << dimN << ")." << std::endl;
     }
     uint8_t *data = nullptr;
     int64_t compress_size = 1;
-    GetDataSizeFromShape(inputWeightShape, compress_size);
+    GraphUtils::GetDataSizeFromShape(inputWeightShape, compress_size);
     int64_t tileNumN = (inputWeightShape[1] + 8 - 1) / 8;
     int64_t tileNumK = (inputWeightShape[0] + 8 - 1) / 8;
     int64_t indexBaseSize = isTight ? 8 : 2;
@@ -255,26 +257,26 @@ int main(int argc, char *argv[])
     vector<int64_t> compressParameters = {compress_size, index_size, isTight, 4, 2, 64, k_value,
                                           n_value, 1, compressType, isTiling};
     try {
-        if (!GetDataFromBin(inputWeightPath, inputWeightShape, &data, sizeof(int8_t))) {
+        if (!GraphUtils::GetDataFromBin(inputWeightPath, inputWeightShape, &data, sizeof(int8_t))) {
             delete[] data;
             data = nullptr;
             std::cout << "read file failed.\n";
-            return FAILED;
+            return GraphUtils::FAILED;
         }
 
         int ret = RunSession(data, inputWeightShape, paths, compressParameters);
         delete[] data;
         data = nullptr;
 
-        if (ret != SUCCESS) {
+        if (ret != GraphUtils::SUCCESS) {
             std::cout << "run session failed.\n";
-            return FAILED;
+            return GraphUtils::FAILED;
         }
     } catch (const std::exception &e) {
         delete[] data;
         data = nullptr;
         std::cout << "read file or run session failed.\n";
-        return FAILED;
+        return GraphUtils::FAILED;
     }
-    return SUCCESS;
+    return GraphUtils::SUCCESS;
 }
