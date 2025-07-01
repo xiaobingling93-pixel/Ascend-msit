@@ -987,7 +987,7 @@ class TestScheduleWithMultiMachineMonitoringStatus:
 
     @pytest.fixture
     def schedule_with_multi_machine(self, tmpdir):
-        schedule = ScheduleWithMultiMachine([MagicMock()], MagicMock(), MagicMock(), MagicMock(),
+        schedule = ScheduleWithMultiMachine(MagicMock(), MagicMock(), MagicMock(), MagicMock(),
                                             bak_path=Path(tmpdir))
         schedule.simulator = MagicMock()
         schedule.simulator.process = MagicMock()
@@ -1058,6 +1058,3 @@ def test_main(simulator, psooptimizer):
     main(args)
     simulator.assert_called_once()
     psooptimizer.assert_called_once() 
-
-if __name__ == '__main__':
-    unittest.main()
