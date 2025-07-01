@@ -48,7 +48,7 @@ def test_update_data_exists(tmpdir):
     assert cache_predict.data.equals(pd.DataFrame([1, 2, 3]).T)
     assert cache_predict.label.equals(pd.Series([1.0], name=cache_predict.label_name))
 
-qq
+
 class MockBooster:
     def __init__(self, *args, **kwargs):
         self.feature_names = None
