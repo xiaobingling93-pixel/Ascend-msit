@@ -93,6 +93,32 @@ class TestPatchManager(unittest.TestCase):
         result = check_flag(str(target_file), str(patch_file))
         self.assertFalse(result, "补丁内容在目标文件中完全匹配时，预期返回False(表示已存在)但实际返回了True")
 
+    # 重构 add_patch 测试
+    @patch("os.open")
+    @patch("os.fdopen")
+    @patch("msserviceprofiler.modelevalstate.patch.patch_manager.logger.info")
+    def test_add_patch_success(self, mock_info, mock_fdopen, mock_os_open):
+        """测试成功添加补丁"""
+        # 模拟文件和权限设置
+        mock_os_open.return_value = 123
+        mock_file = MagicMock()
+        mock_fdopen.return_value.__enter__.return_value = mock_file
+
+        # 设置补丁文件内容
+        patch_data = ["line1\n", "line2\n"]
+
+        # 使用更可靠的模拟方式
+        with patch("builtins.open", mock_open(read_data="".join(patch_data))):
+            add_patch("target.txt", "patch.txt")
+
+        # 验证写入操作
+        expected_calls = [call("line1\n"), call("line2\n")]
+        self.assertEqual(mock_file.write.call_args_list, expected_calls)
+
+        # 验证权限和打开方式
+        mock_os_open.assert_called_with("target.txt", os.O_WRONLY | os.O_CREAT, ANY)
+        mock_info.assert_called_once_with("The patch is installed successfully.")
+
     def test_patch_already_applied(self):
         """测试补丁已经存在的情况"""
         # 创建目标文件并写入补丁内容
@@ -156,6 +182,34 @@ class TestPatchManager(unittest.TestCase):
 
             # 验证文件内容已被修改
             new_content = target_file.read_text(encoding="utf-8")
+
+    def test_patch_target_file_not_found(self):
+        """测试目标文件不存在的情况"""
+        # 设置模块路径
+        self.mock_mindie_llm.__path__ = [str(self.temp_dir)]
+
+        # 创建所需目录但不创建目标文件
+        plugin_dir = self.temp_dir / "text_generator" / "plugins"
+        plugin_dir.mkdir(parents=True, exist_ok=True)
+
+        # 创建补丁文件（存在）
+        patch_file = self.temp_dir / "plugin_manager_patch.patch"
+        patch_file.touch()
+
+        # 明确确保目标文件不存在
+        target_file = plugin_dir / "plugin_manager.py"
+        self.assertFalse(target_file.exists(), "目标文件不应该存在")
+
+        with patch("msserviceprofiler.modelevalstate.patch.patch_manager._patch_dir", self.temp_dir):
+            # 模拟版本检查
+            with patch("msserviceprofiler.modelevalstate.patch.patch_manager.Patch2rc1.check_version",
+                       return_value=True):
+                # 验证抛出FileNotFoundError
+                with self.assertRaises(FileNotFoundError) as context:
+                    Patch2rc1.patch()
+
+                # 验证异常消息包含文件路径
+                self.assertIn("plugin_manager.py", str(context.exception))
 
     # 测试版本检查
     def test_check_version_valid(self):

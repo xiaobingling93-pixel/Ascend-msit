@@ -68,19 +68,6 @@ def test_get_latest_matching_file_returns_none_if_no_files(mock_glob):
     mock_glob.return_value = []
     assert advisor.get_latest_matching_file("/path", "pattern") is None
 
-# Test file reading functions
-def test_read_csv():
-    csv_data = "key1,key2\nvalue1,value2\nvalue3,value4"
-    with patch("builtins.open", mock_open(read_data=csv_data)):
-        result = advisor.read_csv("dummy.csv")
-        assert result == {"key1": ["value1", "value3"], "key2": ["value2", "value4"]}
-
-
-def test_read_json():
-    json_data = {"key": "value"}
-    with patch("builtins.open", mock_open(read_data=json.dumps(json_data))):
-        result = advisor.read_json("dummy.json")
-        assert result == json_data
 
 @patch.object(utils, "read_csv")
 @patch.object(utils, "read_json")

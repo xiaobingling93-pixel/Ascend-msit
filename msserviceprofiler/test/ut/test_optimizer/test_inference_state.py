@@ -50,6 +50,52 @@ def test_update_data_exists(tmpdir):
     assert cache_predict.label.equals(pd.Series([1.0], name=cache_predict.label_name))
 
 
+@patch('msserviceprofiler.modelevalstate.inference.state_eval_v1.DataProcessor')
+@patch('msserviceprofiler.modelevalstate.inference.state_eval_v1.XGBStateEvaluate')
+def test_predict_v1(mock_data_processor, mock_xgb_state_evaluate, tmpdir, static_file):
+    mock_data_processor.return_value = MagicMock()
+    mock_xgb_state_evaluate.return_value = MagicMock()
+
+    # Create the necessary objects
+    batch_info = BatchField("decode", 20, 20.0, 580.0, 29.0)
+    request_info = (
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+    )
+    config_path = ConfigPath(
+        Path(fr"{tmpdir}\xgb_model.ubj"),
+        static_file.base_path,
+        Path(fr"{tmpdir}\req_and_decode_file.json"),
+        Path(fr"{tmpdir}\cache_data"),
+
+    )
+
+    # Call the method under test
+    predict_v1(batch_info, request_info, config_path)
+
+    # Assert that the necessary methods were called
+    mock_data_processor.assert_called()
+    mock_xgb_state_evaluate.assert_called()
+
+
 class MockBooster:
     def __init__(self, *args, **kwargs):
         self.feature_names = None

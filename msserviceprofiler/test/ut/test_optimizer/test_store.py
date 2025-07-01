@@ -93,6 +93,16 @@ class TestDataStorage(TestCase):
         result = DataStorage.load_history_position(self.test_dir)
         self.assertIsNone(result)
 
+    def test_load_history_position_with_data(self):
+        data1 = self.test_dir / "data_storage_001.csv"
+        data2 = self.test_dir / "data_storage_002.csv"
+        
+        pd.DataFrame({'col1': [1, 2], 'col2': [3, 4]}).to_csv(data1, index=False)
+        pd.DataFrame({'col1': [5, 6], 'col2': [7, 8]}).to_csv(data2, index=False)
+
+        result = DataStorage.load_history_position(self.test_dir)
+        self.assertEqual(len(result), 4)
+
     def test_save_new_file(self):
         perf_index = MockPerformanceIndex(
             qps=100.0,
@@ -157,6 +167,17 @@ class TestDataStorage(TestCase):
         df = pd.read_csv(self.storage.save_file)
         self.assertIn("extra_field", df.columns)
         self.assertEqual(df["extra_field"].iloc[0], "extra_value")
+
+    def test_load_history_with_non_csv_files(self):
+        # 创建一些非CSV文件和CSV文件混合的测试数据
+        data_csv = self.test_dir / "data_storage_001.csv"
+        non_csv = self.test_dir / "data_storage_002.txt"
+        
+        pd.DataFrame({'col1': [1, 2]}).to_csv(data_csv, index=False)
+        non_csv.write_text("some text")
+
+        result = DataStorage.load_history_position(self.test_dir)
+        self.assertEqual(len(result), 2)  # 应该只加载CSV文件中的数据
 
     def test_save_with_invalid_benchmark_params(self):
         perf_index = MockPerformanceIndex(qps=100.0)

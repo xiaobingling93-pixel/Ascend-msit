@@ -40,6 +40,70 @@ class TestBenchMark:
         with pytest.raises(ValueError, match="Not Found common_generate_speed or perf_generate_token_speed."):
             benchmark.get_performance_index()
 
+    @patch("pathlib.Path.iterdir")
+    def test_get_performance_index_no_result_perf(self, mock_iterdir, benchmark):
+        mock_file_common = MagicMock()
+        mock_file_common.name = "result_common_20250517031241120.csv"
+        mock_iterdir.return_value = [mock_file_common, ]
+        df_common = pd.DataFrame({
+            "OutputGenerateSpeed": ["1995.7208 token/s"],
+            "Returned": ["3000( 100.0% )"],
+        })
+        with patch("pandas.read_csv", side_effect=[df_common, ]):
+            with pytest.raises(ValueError, match="Not Found first_token_time."):
+                benchmark.get_performance_index()
+
+    @patch("pathlib.Path.iterdir")
+    def test_get_performance_index_success(self, mock_iterdir, benchmark):
+        mock_file_common = MagicMock()
+        mock_file_common.name = "result_common_20250517031241120.csv"
+        mock_file_perf = MagicMock()
+        mock_file_perf.name = "result_perf_20250517041302288.csv"
+        mock_iterdir.return_value = [mock_file_common, mock_file_perf]
+
+        df_common = pd.DataFrame({
+            "OutputGenerateSpeed": ["1995.7208 token/s"],
+            "Returned": ["3000( 100.0% )"],
+        })
+        df_perf = pd.DataFrame({
+            "FirstTokenTime": ["572.8072 ms"],
+            "GeneratedTokenSpeed": ["7.5371 token/s"],
+            "DecodeTime": ["127.9866 ms"],
+        })
+
+        with patch("pandas.read_csv", side_effect=[df_common, df_perf]):
+            result = benchmark.get_performance_index()
+            assert isinstance(result, PerformanceIndex)
+            assert result.generate_speed == 1995.7208
+            assert result.time_to_first_token == 0.5728072
+            assert result.time_per_output_token == 0.1279866
+            assert result.success_rate == 1
+
+    @patch("pathlib.Path.iterdir")
+    def test_get_performance_index_failure(self, mock_iterdir, benchmark):
+        mock_file_common = MagicMock(name="result_common")
+        mock_file_common.name = "result_common"
+        mock_file_perf = MagicMock(name="result_perf")
+        mock_file_perf.name = "result_perf"
+        mock_iterdir.return_value = [mock_file_common, mock_file_perf]
+
+        df_common = pd.DataFrame({
+            "OutputGenerateSpeed": ["1995.7208 token/s"],
+            "Returned": ["3000( 56.0% )"],
+        })
+        df_perf = pd.DataFrame({
+            "FirstTokenTime": ["572.8072 ms"],
+            "GeneratedTokenSpeed": ["7.5371 token/s"],
+            "DecodeTime": ["127.9866 ms"],
+        })
+        with patch("pandas.read_csv", side_effect=[df_common, df_perf]):
+            result = benchmark.get_performance_index()
+            assert isinstance(result, PerformanceIndex)
+            assert result.generate_speed == 1995.7208
+            assert result.time_to_first_token == 0.5728072
+            assert result.time_per_output_token == 0.1279866
+            assert result.success_rate == 0.56
+
 
 class TestOptimizerBenchmark:
     @staticmethod
