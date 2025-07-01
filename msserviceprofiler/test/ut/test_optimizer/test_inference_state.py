@@ -1,6 +1,7 @@
 # !/usr/bin/python3.7
 # -*- coding: utf-8 -*-
 # Copyright (c) Huawei Technologies Co., Ltd. 2024-2025. All rights reserved.
+import os
 from copy import deepcopy
 from pathlib import Path
 from multiprocessing import Pool
