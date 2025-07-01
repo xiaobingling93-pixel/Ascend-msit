@@ -97,7 +97,3 @@ class TestMyDataSetWithSwifter(unittest.TestCase):
             mock_parent.assert_called_once_with(None)
             self.assertEqual(result, mock_parent_return)
             mock_process.assert_not_called()
-
-
-if __name__ == "__main__":
-    unittest.main()

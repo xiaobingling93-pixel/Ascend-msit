@@ -225,5 +225,3 @@ def test_state_eval(tmpdir):
                         "train_field": train_field,
                         "dataset_type": DataProcessor
                     })
-
-

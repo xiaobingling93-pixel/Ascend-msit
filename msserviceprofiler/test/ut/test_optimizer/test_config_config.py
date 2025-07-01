@@ -106,6 +106,3 @@ class TestMapParamWithValueRealFields(unittest.TestCase):
         self.assertEqual(result[5].value, 4095) 
         self.assertEqual(result[6].value, 499)  
         self.assertEqual(result[7].value, 0)   
-
-if __name__ == "__main__":
-    unittest.main()
