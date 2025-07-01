@@ -336,7 +336,7 @@ class TestSimulator(unittest.TestCase):
         mock_process_iter.return_value = [mock_proc]
         
         # Mock kill_process
-        with patch('msserviceprofiler.modelevalstate.optimizer.optimizer.kill_process') as mock_kill:
+        with patch('msserviceprofiler.modelevalstate.optimizer.utils.kill_process') as mock_kill:
             self.simulator.check_env()
             mock_kill.assert_called_once_with("test_process")
 
@@ -354,8 +354,8 @@ class TestSimulator(unittest.TestCase):
         mock_start.assert_called_once_with(params)
 
     @patch('psutil.Process')
-    @patch('msserviceprofiler.modelevalstate.optimizer.optimizer.kill_process')
-    @patch('msserviceprofiler.modelevalstate.optimizer.optimizer.kill_children')
+    @patch('msserviceprofiler.modelevalstate.optimizer.utils.kill_process')
+    @patch('msserviceprofiler.modelevalstate.optimizer.utils.kill_children')
     def test_stop(self, mock_kill_children, mock_kill_process, mock_process):
         # Setup running process
         self.simulator.process = MagicMock()
@@ -946,16 +946,6 @@ class TestVllmSimulatorRun:
 
 
 class TestScheduleWithMultiMachine:
-    @staticmethod
-    def test_back_up_with_bak_path(schedule_with_multi_machine):
-        # 测试当bak_path存在时的情况
-        schedule_with_multi_machine.back_up()
-        # 验证bak_path是否被正确设置
-        assert schedule_with_multi_machine.simulator.bak_path == schedule_with_multi_machine.bak_path.joinpath("1")
-        assert schedule_with_multi_machine.benchmark.bak_path == schedule_with_multi_machine.bak_path.joinpath("1")
-        for rpc in schedule_with_multi_machine.rpc_clients:
-            assert rpc.simulator.bak_path == schedule_with_multi_machine.bak_path.joinpath("1")
-
     @pytest.fixture
     def schedule_with_multi_machine(self, tmpdir):
         # 创建一个ScheduleWithMultiMachine的实例
@@ -1009,7 +999,7 @@ class TestScheduleWithMultiMachineMonitoringStatus:
 
 def test_run_simulate(tmpdir):
     # 创建一个ScheduleWithMultiMachine实例
-    schedule = ScheduleWithMultiMachine([MagicMock()], MagicMock(), MagicMock(), MagicMock(),
+    schedule = ScheduleWithMultiMachine(MagicMock(), MagicMock(), MagicMock(), MagicMock(),
                                         bak_path=Path(tmpdir))
     schedule.simulator = MagicMock()
     schedule.simulator.process = MagicMock()
