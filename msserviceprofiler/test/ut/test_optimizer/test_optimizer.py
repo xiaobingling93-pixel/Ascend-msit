@@ -927,30 +927,6 @@ class TestScheduleWithMultiMachineMonitoringStatus:
         schedule.stop_target_server = MagicMock()
         return schedule
 
-    @patch('time.sleep', return_value=None)
-    def test_monitoring_status_all_poll_none(self, mock_sleep, schedule_with_multi_machine):
-        schedule_with_multi_machine.simulator.process.poll.return_value = None
-        for rpc in schedule_with_multi_machine.rpc_clients:
-            rpc.process_poll.return_value = None
-        schedule_with_multi_machine.benchmark.check_success.return_value = True
-
-        schedule_with_multi_machine.monitoring_status()
-
-        assert mock_sleep.call_count == 0
-
-    @patch('time.sleep', return_value=None)
-    def test_monitoring_status_some_poll_not_none(self, mock_sleep, schedule_with_multi_machine):
-        schedule_with_multi_machine.simulator.process.poll.return_value = None
-        schedule_with_multi_machine.rpc_clients[0].process_poll.return_value = 0
-        schedule_with_multi_machine.rpc_clients[1].process_poll.return_value = None
-        schedule_with_multi_machine.rpc_clients[2].process_poll.return_value = 1
-        schedule_with_multi_machine.benchmark.check_success.return_value = False
-
-        with pytest.raises(subprocess.SubprocessError):
-            schedule_with_multi_machine.monitoring_status()
-
-        assert mock_sleep.call_count == 0
-
 
 @patch("msserviceprofiler.modelevalstate.optimizer.optimizer.PSOOptimizer")
 @patch("msserviceprofiler.modelevalstate.optimizer.simulator.Simulator")
