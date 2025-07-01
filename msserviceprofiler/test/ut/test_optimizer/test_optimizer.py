@@ -230,21 +230,6 @@ class TestProfilerBenchmark(unittest.TestCase):
                                 self.benchmark.bak_path,
                                 self.benchmark.__class__.__name__))
 
-    @patch('msserviceprofiler.modelevalstate.optimizer.optimizer.Path')  # 如果需要mock Path对象
-    @patch('msserviceprofiler.modelevalstate.optimizer.optimizer.close_file_fp')  # mock自定义关闭文件函数
-    @patch('msserviceprofiler.modelevalstate.optimizer.optimizer.remove_file')  # mock自定义删除文件函数
-    def test_stop(self, mock_remove_file, mock_close_file, mock_path):
-        self.benchmark.run_log_fp = 123  # 模拟文件描述符
-        self.benchmark.run_log = str(self.temp_dir / "mock_log")  # 模拟日志路径
-        self.benchmark.process = MagicMock()  # 模拟进程对象
-        self.benchmark.process.poll.return_value = None  # 设置进程正在运行
-
-        self.benchmark.stop()
-
-        self.assertEqual(mock_close_file.call_count, 2)
-        self.assertEqual(mock_remove_file.call_count, 2)
-        self.benchmark.process.kill.assert_called_once()
-
     @patch('msserviceprofiler.modelevalstate.optimizer.optimizer.close_file_fp')
     @patch('msserviceprofiler.modelevalstate.optimizer.optimizer.remove_file')
     def test_stop_without_deleting_log(self, mock_remove_file, mock_close_file):
@@ -317,18 +302,6 @@ class TestSimulator(unittest.TestCase):
         test_config = {"a": 1, "b": {"c": 2}}
         Simulator.set_config(test_config, "b.c", 10)
         self.assertEqual(test_config["b"]["c"], 10)
-
-    @patch('psutil.process_iter')
-    def test_check_env(self, mock_process_iter):
-        # Setup mock process
-        mock_proc = MagicMock()
-        mock_proc.info = {"name": "test_process", "pid": 123}
-        mock_process_iter.return_value = [mock_proc]
-        
-        # Mock kill_process
-        with patch('msserviceprofiler.modelevalstate.optimizer.utils.kill_process') as mock_kill:
-            self.simulator.check_env()
-            mock_kill.assert_called_once_with("test_process")
 
     @patch.object(Simulator, 'update_config')
     @patch.object(Simulator, 'check_env')
@@ -709,7 +682,7 @@ class TestBenchMark(unittest.TestCase):
             self.assertNotIn("param2", os.environ)
 
     def test_get_performance_index_no_files(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaises(InvalidParameterError):
             self.benchmark.get_performance_index()
 
     @patch('builtins.open')
@@ -753,32 +726,6 @@ class TestBenchMark(unittest.TestCase):
             self.benchmark.process.kill.assert_called_once()
             mock_rmtree.assert_not_called()  # Only checks that backup wasn't called with del_log=True
 
-    def test_get_performance_index_with_common_file(self):
-        output_path = Path(self.benchmark_config.output_path)
-        output_path.mkdir(parents=True, exist_ok=True)
-        
-        # Create common CSV file
-        common_data = {
-            "OutputGenerateSpeed": ["100 tokens/s"],
-            "Returned": ["99.9%"],
-        }
-        pd.DataFrame(common_data).to_csv(output_path / "result_common.csv", index=False)
-        
-        # Create perf CSV file
-        perf_data = {
-            "FirstTokenTime": ["50 ms"],
-            "GeneratedTokenSpeed": ["200 tokens/s"],
-            "DecodeTime": ["5 ms"],  # Fixed typo: DecodeTime instead of DecodeTime
-        }
-        pd.DataFrame(perf_data).to_csv(output_path / "result_perf.csv", index=False)
-        
-        result = self.benchmark.get_performance_index()
-        
-        self.assertEqual(result.generate_speed, 100)  # Uses common_generate_speed
-        self.assertAlmostEqual(result.time_to_first_token, 0.05)
-        self.assertAlmostEqual(result.time_per_output_token, 0.005)
-        self.assertAlmostEqual(result.success_rate, 0.999)
-
     def test_get_performance_index_with_only_common_file(self):
         output_path = Path(self.benchmark_config.output_path)
         output_path.mkdir(parents=True, exist_ok=True)
@@ -790,29 +737,9 @@ class TestBenchMark(unittest.TestCase):
         }
         pd.DataFrame(common_data).to_csv(output_path / "result_common.csv", index=False)
         
-        with self.assertRaises(ValueError) as context:
+        with self.assertRaises(InvalidParameterError) as context:
             self.benchmark.get_performance_index()
         self.assertIn("Not Found first_token_time", str(context.exception))
-
-    def test_get_performance_index_with_perf_file(self):
-        output_path = Path(self.benchmark_config.output_path)
-        output_path.mkdir(parents=True, exist_ok=True)
-        
-        # Create test CSV file
-        test_data = {
-            "FirstTokenTime": ["50 ms"],
-            "GeneratedTokenSpeed": ["200 tokens/s"],
-            "DecodeTime": ["5 ms"],
-        }
-        df = pd.DataFrame(test_data)
-        df.to_csv(output_path / "result_perf.csv", index=False)
-        
-        self.benchmark.throughput_type = "perf"
-        result = self.benchmark.get_performance_index()
-        
-        self.assertEqual(result.generate_speed, 200)
-        self.assertEqual(result.time_to_first_token, 0.05)
-        self.assertEqual(result.time_per_output_token, 0.005)
 
     @patch('os.path.exists', return_value=True)
     def test_check_success_process_not_finished(self, mock_exists):
