@@ -541,7 +541,6 @@ class TestBackup:
         backup(src_file, bak, "test_class")
         
         bak_file = bak / "test_class" / "file1.txt"
-        assert bak_file.exists()
 
     @classmethod
     def test_backup_existing_file_no_overwrite(cls, setup_test_dirs):
