@@ -313,10 +313,32 @@ class TestSimulator(unittest.TestCase):
             with self.assertRaises(subprocess.SubprocessError):
                 self.simulator.check_success()
 
+    def test_get_new_config(self):
+        test_config = {"a": 1, "b": {"c": 2}}
+        params = (
+            OptimizerConfigField(name="param1", value=10, config_position="b.c"),
+            OptimizerConfigField(name="param2", value=20, config_position="nonexistent")
+        )
+        result = Simulator.get_new_config(test_config, params)
+        self.assertEqual(result["b"]["c"], 10)
+        self.assertEqual(result["a"], 1)
+
     def test_set_config(self):
         test_config = {"a": 1, "b": {"c": 2}}
         Simulator.set_config(test_config, "b.c", 10)
         self.assertEqual(test_config["b"]["c"], 10)
+
+    @patch('psutil.process_iter')
+    def test_check_env(self, mock_process_iter):
+        # Setup mock process
+        mock_proc = MagicMock()
+        mock_proc.info = {"name": "test_process", "pid": 123}
+        mock_process_iter.return_value = [mock_proc]
+        
+        # Mock kill_process
+        with patch('msserviceprofiler.modelevalstate.optimizer.optimizer.kill_process') as mock_kill:
+            self.simulator.check_env()
+            mock_kill.assert_called_once_with("test_process")
 
     @patch.object(Simulator, 'update_config')
     @patch.object(Simulator, 'check_env')
@@ -330,6 +352,24 @@ class TestSimulator(unittest.TestCase):
         mock_update.assert_called_once_with(params)
         mock_check.assert_called_once()
         mock_start.assert_called_once_with(params)
+
+    @patch('psutil.Process')
+    @patch('msserviceprofiler.modelevalstate.optimizer.optimizer.kill_process')
+    @patch('msserviceprofiler.modelevalstate.optimizer.optimizer.kill_children')
+    def test_stop(self, mock_kill_children, mock_kill_process, mock_process):
+        # Setup running process
+        self.simulator.process = MagicMock()
+        self.simulator.process.pid = 123
+        self.simulator.process.poll.return_value = None
+        
+        # Setup process children
+        mock_proc = MagicMock()
+        mock_process.return_value.children.return_value = [MagicMock()]
+        
+        self.simulator.stop()
+        
+        self.simulator.process.kill.assert_called_once()
+        mock_kill_process.assert_called_once_with("test_process")
 
 
 class TestPSOOptimizer(unittest.TestCase):
@@ -541,6 +581,29 @@ class TestBackup:
         backup("", "")  # 不应报错
 
     @classmethod
+    @patch('shutil.copy')
+    def test_backup_file_permission_error(cls, mock_copy, setup_test_dirs):
+        """测试文件备份时的权限错误"""
+        src, bak = setup_test_dirs
+        src_file = src / "file1.txt"
+        
+        mock_copy.side_effect = PermissionError("模拟权限错误")
+        
+        with pytest.raises(PermissionError):
+            backup(src_file, bak)
+
+    @classmethod
+    @patch('shutil.copytree')
+    def test_backup_dir_permission_error(cls, mock_copytree, setup_test_dirs):
+        """测试目录备份时的权限错误"""
+        src, bak = setup_test_dirs
+        
+        mock_copytree.side_effect = PermissionError("模拟权限错误")
+        
+        with pytest.raises(PermissionError):
+            backup(src, bak)
+
+    @classmethod
     def test_backup_existing_dir_with_class_name(cls, setup_test_dirs):
         """测试目标目录已存在且带class_name的情况"""
         src, bak = setup_test_dirs
@@ -735,6 +798,67 @@ class TestBenchMark(unittest.TestCase):
         with self.assertRaises(subprocess.SubprocessError):
             self.benchmark.check_success()
 
+    def test_get_performance_index_with_common_file(self):
+        output_path = Path(self.benchmark_config.output_path)
+        output_path.mkdir(parents=True, exist_ok=True)
+        
+        # Create common CSV file
+        common_data = {
+            "OutputGenerateSpeed": ["100 tokens/s"],
+            "Returned": ["99.9%"],
+        }
+        pd.DataFrame(common_data).to_csv(output_path / "result_common.csv", index=False)
+        
+        # Create perf CSV file
+        perf_data = {
+            "FirstTokenTime": ["50 ms"],
+            "GeneratedTokenSpeed": ["200 tokens/s"],
+            "DecodeTime": ["5 ms"],  # Fixed typo: DecodeTime instead of DecodeTime
+        }
+        pd.DataFrame(perf_data).to_csv(output_path / "result_perf.csv", index=False)
+        
+        result = self.benchmark.get_performance_index()
+        
+        self.assertEqual(result.generate_speed, 100)  # Uses common_generate_speed
+        self.assertAlmostEqual(result.time_to_first_token, 0.05)
+        self.assertAlmostEqual(result.time_per_output_token, 0.005)
+        self.assertAlmostEqual(result.success_rate, 0.999)
+
+    def test_get_performance_index_with_only_common_file(self):
+        output_path = Path(self.benchmark_config.output_path)
+        output_path.mkdir(parents=True, exist_ok=True)
+        
+        # Create only common CSV file
+        common_data = {
+            "OutputGenerateSpeed": ["100 tokens/s"],
+            "Returned": ["99.9%"],
+        }
+        pd.DataFrame(common_data).to_csv(output_path / "result_common.csv", index=False)
+        
+        with self.assertRaises(ValueError) as context:
+            self.benchmark.get_performance_index()
+        self.assertIn("Not Found first_token_time", str(context.exception))
+
+    def test_get_performance_index_with_perf_file(self):
+        output_path = Path(self.benchmark_config.output_path)
+        output_path.mkdir(parents=True, exist_ok=True)
+        
+        # Create test CSV file
+        test_data = {
+            "FirstTokenTime": ["50 ms"],
+            "GeneratedTokenSpeed": ["200 tokens/s"],
+            "DecodeTime": ["5 ms"],
+        }
+        df = pd.DataFrame(test_data)
+        df.to_csv(output_path / "result_perf.csv", index=False)
+        
+        self.benchmark.throughput_type = "perf"
+        result = self.benchmark.get_performance_index()
+        
+        self.assertEqual(result.generate_speed, 200)
+        self.assertEqual(result.time_to_first_token, 0.05)
+        self.assertEqual(result.time_per_output_token, 0.005)
+
 
 def test_stop_process_killed_successfully():
     simulator = VllmSimulator(settings.simulator)
@@ -800,7 +924,6 @@ class TestVllmSimulator:
         assert pre_simulator.check_success() is False
 
 
-
 class TestVllmSimulatorRun:
     @pytest.fixture
     def pre_simulator(self):
@@ -823,6 +946,16 @@ class TestVllmSimulatorRun:
 
 
 class TestScheduleWithMultiMachine:
+    @staticmethod
+    def test_back_up_with_bak_path(schedule_with_multi_machine):
+        # 测试当bak_path存在时的情况
+        schedule_with_multi_machine.back_up()
+        # 验证bak_path是否被正确设置
+        assert schedule_with_multi_machine.simulator.bak_path == schedule_with_multi_machine.bak_path.joinpath("1")
+        assert schedule_with_multi_machine.benchmark.bak_path == schedule_with_multi_machine.bak_path.joinpath("1")
+        for rpc in schedule_with_multi_machine.rpc_clients:
+            assert rpc.simulator.bak_path == schedule_with_multi_machine.bak_path.joinpath("1")
+
     @pytest.fixture
     def schedule_with_multi_machine(self, tmpdir):
         # 创建一个ScheduleWithMultiMachine的实例
@@ -838,7 +971,6 @@ class TestScheduleWithMultiMachine:
 
 
 class TestScheduleWithMultiMachineMonitoringStatus:
-
     @pytest.fixture
     def schedule_with_multi_machine(self, tmpdir):
         schedule = ScheduleWithMultiMachine(MagicMock(), MagicMock(), MagicMock(), MagicMock(),
@@ -849,6 +981,54 @@ class TestScheduleWithMultiMachineMonitoringStatus:
         schedule.benchmark = MagicMock()
         schedule.stop_target_server = MagicMock()
         return schedule
+
+    @patch('time.sleep', return_value=None)
+    def test_monitoring_status_all_poll_none(self, mock_sleep, schedule_with_multi_machine):
+        schedule_with_multi_machine.simulator.process.poll.return_value = None
+        for rpc in schedule_with_multi_machine.rpc_clients:
+            rpc.process_poll.return_value = None
+        schedule_with_multi_machine.benchmark.check_success.return_value = True
+
+        schedule_with_multi_machine.monitoring_status()
+
+        assert mock_sleep.call_count == 0
+
+    @patch('time.sleep', return_value=None)
+    def test_monitoring_status_some_poll_not_none(self, mock_sleep, schedule_with_multi_machine):
+        schedule_with_multi_machine.simulator.process.poll.return_value = None
+        schedule_with_multi_machine.rpc_clients[0].process_poll.return_value = 0
+        schedule_with_multi_machine.rpc_clients[1].process_poll.return_value = None
+        schedule_with_multi_machine.rpc_clients[2].process_poll.return_value = 1
+        schedule_with_multi_machine.benchmark.check_success.return_value = False
+
+        with pytest.raises(subprocess.SubprocessError):
+            schedule_with_multi_machine.monitoring_status()
+
+        assert mock_sleep.call_count == 0
+
+
+def test_run_simulate(tmpdir):
+    # 创建一个ScheduleWithMultiMachine实例
+    schedule = ScheduleWithMultiMachine([MagicMock()], MagicMock(), MagicMock(), MagicMock(),
+                                        bak_path=Path(tmpdir))
+    schedule.simulator = MagicMock()
+    schedule.simulator.process = MagicMock()
+    schedule.benchmark = MagicMock()
+    schedule.benchmark.prepare.return_value = True
+    schedule.stop_target_server = MagicMock()
+    schedule.run = MagicMock()
+    schedule.rpc_clients[0].process_poll.return_value = 0
+    schedule.rpc_clients[0].check_success.return_value = True
+    schedule.rpc_clients[0].run_simulator.return_value = True
+    schedule.wait_simulate = MagicMock()
+    schedule.simulate_run_info = []
+    # 创建模拟参数
+    params = np.array([1.3] * len(default_support_field))
+
+    # 模拟map_param_with_value方法的返回值
+    # 调用run_simulate方法
+    schedule.run_simulate(params, default_support_field)
+    schedule.rpc_clients[0].check_success.assert_called_once()
 
 
 @patch("msserviceprofiler.modelevalstate.optimizer.optimizer.PSOOptimizer")
