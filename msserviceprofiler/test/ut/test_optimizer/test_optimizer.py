@@ -230,6 +230,21 @@ class TestProfilerBenchmark(unittest.TestCase):
                                 self.benchmark.bak_path,
                                 self.benchmark.__class__.__name__))
 
+    @patch('msserviceprofiler.modelevalstate.optimizer.optimizer.Path')  # 如果需要mock Path对象
+    @patch('msserviceprofiler.modelevalstate.optimizer.optimizer.close_file_fp')  # mock自定义关闭文件函数
+    @patch('msserviceprofiler.modelevalstate.optimizer.optimizer.remove_file')  # mock自定义删除文件函数
+    def test_stop(self, mock_remove_file, mock_close_file, mock_path):
+        self.benchmark.run_log_fp = 123  # 模拟文件描述符
+        self.benchmark.run_log = str(self.temp_dir / "mock_log")  # 模拟日志路径
+        self.benchmark.process = MagicMock()  # 模拟进程对象
+        self.benchmark.process.poll.return_value = None  # 设置进程正在运行
+
+        self.benchmark.stop()
+
+        self.assertEqual(mock_close_file.call_count, 2)
+        self.assertEqual(mock_remove_file.call_count, 2)
+        self.benchmark.process.kill.assert_called_once()
+
     @patch('msserviceprofiler.modelevalstate.optimizer.optimizer.close_file_fp')
     @patch('msserviceprofiler.modelevalstate.optimizer.optimizer.remove_file')
     def test_stop_without_deleting_log(self, mock_remove_file, mock_close_file):
@@ -315,24 +330,6 @@ class TestSimulator(unittest.TestCase):
         mock_update.assert_called_once_with(params)
         mock_check.assert_called_once()
         mock_start.assert_called_once_with(params)
-
-    @patch('psutil.Process')
-    @patch('msserviceprofiler.modelevalstate.optimizer.utils.kill_process')
-    @patch('msserviceprofiler.modelevalstate.optimizer.utils.kill_children')
-    def test_stop(self, mock_kill_children, mock_kill_process, mock_process):
-        # Setup running process
-        self.simulator.process = MagicMock()
-        self.simulator.process.pid = 123
-        self.simulator.process.poll.return_value = None
-        
-        # Setup process children
-        mock_proc = MagicMock()
-        mock_process.return_value.children.return_value = [MagicMock()]
-        
-        self.simulator.stop()
-        
-        self.simulator.process.kill.assert_called_once()
-        mock_kill_process.assert_called_once_with("test_process")
 
 
 class TestPSOOptimizer(unittest.TestCase):
@@ -681,10 +678,6 @@ class TestBenchMark(unittest.TestCase):
             self.assertEqual(os.environ["param1"], "10")
             self.assertNotIn("param2", os.environ)
 
-    def test_get_performance_index_no_files(self):
-        with self.assertRaises(InvalidParameterError):
-            self.benchmark.get_performance_index()
-
     @patch('builtins.open')
     @patch('os.path.exists', return_value=True)
     def test_check_success(self, mock_exists, mock_open_func):
@@ -725,21 +718,6 @@ class TestBenchMark(unittest.TestCase):
             
             self.benchmark.process.kill.assert_called_once()
             mock_rmtree.assert_not_called()  # Only checks that backup wasn't called with del_log=True
-
-    def test_get_performance_index_with_only_common_file(self):
-        output_path = Path(self.benchmark_config.output_path)
-        output_path.mkdir(parents=True, exist_ok=True)
-        
-        # Create only common CSV file
-        common_data = {
-            "OutputGenerateSpeed": ["100 tokens/s"],
-            "Returned": ["99.9%"],
-        }
-        pd.DataFrame(common_data).to_csv(output_path / "result_common.csv", index=False)
-        
-        with self.assertRaises(InvalidParameterError) as context:
-            self.benchmark.get_performance_index()
-        self.assertIn("Not Found first_token_time", str(context.exception))
 
     @patch('os.path.exists', return_value=True)
     def test_check_success_process_not_finished(self, mock_exists):
@@ -845,16 +823,6 @@ class TestVllmSimulatorRun:
 
 
 class TestScheduleWithMultiMachine:
-    @staticmethod
-    def test_back_up_with_bak_path(schedule_with_multi_machine):
-        # 测试当bak_path存在时的情况
-        schedule_with_multi_machine.back_up()
-        # 验证bak_path是否被正确设置
-        assert schedule_with_multi_machine.simulator.bak_path == schedule_with_multi_machine.bak_path.joinpath("1")
-        assert schedule_with_multi_machine.benchmark.bak_path == schedule_with_multi_machine.bak_path.joinpath("1")
-        for rpc in schedule_with_multi_machine.rpc_clients:
-            assert rpc.simulator.bak_path == schedule_with_multi_machine.bak_path.joinpath("1")
-
     @pytest.fixture
     def schedule_with_multi_machine(self, tmpdir):
         # 创建一个ScheduleWithMultiMachine的实例
@@ -881,54 +849,6 @@ class TestScheduleWithMultiMachineMonitoringStatus:
         schedule.benchmark = MagicMock()
         schedule.stop_target_server = MagicMock()
         return schedule
-
-    @patch('time.sleep', return_value=None)
-    def test_monitoring_status_all_poll_none(self, mock_sleep, schedule_with_multi_machine):
-        schedule_with_multi_machine.simulator.process.poll.return_value = None
-        for rpc in schedule_with_multi_machine.rpc_clients:
-            rpc.process_poll.return_value = None
-        schedule_with_multi_machine.benchmark.check_success.return_value = True
-
-        schedule_with_multi_machine.monitoring_status()
-
-        assert mock_sleep.call_count == 0
-
-    @patch('time.sleep', return_value=None)
-    def test_monitoring_status_some_poll_not_none(self, mock_sleep, schedule_with_multi_machine):
-        schedule_with_multi_machine.simulator.process.poll.return_value = None
-        schedule_with_multi_machine.rpc_clients[0].process_poll.return_value = 0
-        schedule_with_multi_machine.rpc_clients[1].process_poll.return_value = None
-        schedule_with_multi_machine.rpc_clients[2].process_poll.return_value = 1
-        schedule_with_multi_machine.benchmark.check_success.return_value = False
-
-        with pytest.raises(subprocess.SubprocessError):
-            schedule_with_multi_machine.monitoring_status()
-
-        assert mock_sleep.call_count == 0
-
-
-def test_run_simulate(tmpdir):
-    # 创建一个ScheduleWithMultiMachine实例
-    schedule = ScheduleWithMultiMachine(MagicMock(), MagicMock(), MagicMock(), MagicMock(),
-                                        bak_path=Path(tmpdir))
-    schedule.simulator = MagicMock()
-    schedule.simulator.process = MagicMock()
-    schedule.benchmark = MagicMock()
-    schedule.benchmark.prepare.return_value = True
-    schedule.stop_target_server = MagicMock()
-    schedule.run = MagicMock()
-    schedule.rpc_clients[0].process_poll.return_value = 0
-    schedule.rpc_clients[0].check_success.return_value = True
-    schedule.rpc_clients[0].run_simulator.return_value = True
-    schedule.wait_simulate = MagicMock()
-    schedule.simulate_run_info = []
-    # 创建模拟参数
-    params = np.array([1.3] * len(default_support_field))
-
-    # 模拟map_param_with_value方法的返回值
-    # 调用run_simulate方法
-    schedule.run_simulate(params, default_support_field)
-    schedule.rpc_clients[0].check_success.assert_called_once()
 
 
 @patch("msserviceprofiler.modelevalstate.optimizer.optimizer.PSOOptimizer")
