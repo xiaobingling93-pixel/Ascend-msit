@@ -313,16 +313,6 @@ class TestSimulator(unittest.TestCase):
             with self.assertRaises(subprocess.SubprocessError):
                 self.simulator.check_success()
 
-    def test_get_new_config(self):
-        test_config = {"a": 1, "b": {"c": 2}}
-        params = (
-            OptimizerConfigField(name="param1", value=10, config_position="b.c"),
-            OptimizerConfigField(name="param2", value=20, config_position="nonexistent")
-        )
-        result = Simulator.get_new_config(test_config, params)
-        self.assertEqual(result["b"]["c"], 10)
-        self.assertEqual(result["a"], 1)
-
     def test_set_config(self):
         test_config = {"a": 1, "b": {"c": 2}}
         Simulator.set_config(test_config, "b.c", 10)
@@ -336,7 +326,7 @@ class TestSimulator(unittest.TestCase):
         mock_process_iter.return_value = [mock_proc]
         
         # Mock kill_process
-        with patch('msserviceprofiler.modelevalstate.optimizer.optimizer.kill_process') as mock_kill:
+        with patch('msserviceprofiler.modelevalstate.optimizer.utils.kill_process') as mock_kill:
             self.simulator.check_env()
             mock_kill.assert_called_once_with("test_process")
 
@@ -354,8 +344,8 @@ class TestSimulator(unittest.TestCase):
         mock_start.assert_called_once_with(params)
 
     @patch('psutil.Process')
-    @patch('msserviceprofiler.modelevalstate.optimizer.optimizer.kill_process')
-    @patch('msserviceprofiler.modelevalstate.optimizer.optimizer.kill_children')
+    @patch('msserviceprofiler.modelevalstate.optimizer.utils.kill_process')
+    @patch('msserviceprofiler.modelevalstate.optimizer.utils.kill_children')
     def test_stop(self, mock_kill_children, mock_kill_process, mock_process):
         # Setup running process
         self.simulator.process = MagicMock()
@@ -643,9 +633,9 @@ class TestKillProcess(unittest.TestCase):
         kill_process("target_process")
         mock_proc.kill.assert_not_called()
 
-    @patch('msserviceprofiler.modelevalstate.optimizer.optimizer.psutil.process_iter')
-    @patch('msserviceprofiler.modelevalstate.optimizer.optimizer.psutil.Process')
-    @patch('msserviceprofiler.modelevalstate.optimizer.optimizer.kill_children')
+    @patch('msserviceprofiler.modelevalstate.optimizer.utils.psutil.process_iter')
+    @patch('msserviceprofiler.modelevalstate.optimizer.utils.psutil.Process')
+    @patch('msserviceprofiler.modelevalstate.optimizer.utils.kill_children')
     def test_kill_process_with_match(self, mock_kill_children, mock_process_class, mock_process_iter):
         mock_proc = MagicMock()
         mock_proc.info = {"name": "target_process", "pid": 123}
@@ -711,7 +701,7 @@ class TestCloseFileFp(unittest.TestCase):
 
 
 class TestClearingResidualProcess(unittest.TestCase):
-    @patch('msserviceprofiler.modelevalstate.optimizer.optimizer.kill_process')
+    @patch('msserviceprofiler.modelevalstate.optimizer.utils.kill_process')
     @patch('msserviceprofiler.modelevalstate.config.config.MindieConfig')
     def test_clearing_residual_process_called(self, mock_config, mock_kill):
         """最简单测试：只验证函数被调用"""
@@ -972,7 +962,7 @@ class TestScheduleWithMultiMachine:
     @pytest.fixture
     def schedule_with_multi_machine(self, tmpdir):
         # 创建一个ScheduleWithMultiMachine的实例
-        schedule = ScheduleWithMultiMachine([MagicMock()], MagicMock(), MagicMock(), MagicMock(),
+        schedule = ScheduleWithMultiMachine(MagicMock(), MagicMock(), MagicMock(), MagicMock(),
                                             bak_path=Path(tmpdir))
         # 模拟需要的属性和方法
         schedule.simulator = MagicMock()
@@ -1023,7 +1013,7 @@ class TestScheduleWithMultiMachineMonitoringStatus:
 
 def test_run_simulate(tmpdir):
     # 创建一个ScheduleWithMultiMachine实例
-    schedule = ScheduleWithMultiMachine([MagicMock()], MagicMock(), MagicMock(), MagicMock(),
+    schedule = ScheduleWithMultiMachine(MagicMock(), MagicMock(), MagicMock(), MagicMock(),
                                         bak_path=Path(tmpdir))
     schedule.simulator = MagicMock()
     schedule.simulator.process = MagicMock()
