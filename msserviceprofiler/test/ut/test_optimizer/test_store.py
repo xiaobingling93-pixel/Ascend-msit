@@ -168,15 +168,6 @@ class TestDataStorage(TestCase):
         self.assertIn("extra_field", df.columns)
         self.assertEqual(df["extra_field"].iloc[0], "extra_value")
 
-    def test_save_with_invalid_benchmark_params(self):
-        perf_index = MockPerformanceIndex(qps=100.0)
-        params = ()
-        # 测试不完整的命令行参数
-        bench_config = MockBenchMarkConfig(command="python bench.py --incomplete-param")
-        
-        self.storage.save(perf_index, params, bench_config)
-        self.assertTrue(self.storage.save_file.exists())
-
     def test_load_history_with_non_csv_files(self):
         # 创建一些非CSV文件和CSV文件混合的测试数据
         data_csv = self.test_dir / "data_storage_001.csv"
@@ -187,3 +178,12 @@ class TestDataStorage(TestCase):
 
         result = DataStorage.load_history_position(self.test_dir)
         self.assertEqual(len(result), 2)  # 应该只加载CSV文件中的数据
+
+    def test_save_with_invalid_benchmark_params(self):
+        perf_index = MockPerformanceIndex(qps=100.0)
+        params = ()
+        # 测试不完整的命令行参数
+        bench_config = MockBenchMarkConfig(command="python bench.py --incomplete-param")
+        
+        self.storage.save(perf_index, params, bench_config)
+        self.assertTrue(self.storage.save_file.exists())

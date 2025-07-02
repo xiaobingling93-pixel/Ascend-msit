@@ -354,6 +354,3 @@ def test_dataset_function_with_all_feature(all_feature_csv, tmpdir):
     my_data_set.construct_data(df)
     assert my_data_set.features.shape == (1, 902)
     assert my_data_set.labels.shape == (1, 1)
-
-if __name__ == "__main__":
-    unittest.main()

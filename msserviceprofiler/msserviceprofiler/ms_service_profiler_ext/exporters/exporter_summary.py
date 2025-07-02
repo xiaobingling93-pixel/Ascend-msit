@@ -41,6 +41,9 @@ def process_each_record(req_map, batch_map, record):
 
 
 def process_batch_record(batch_map, record):
+    if "batch_type" not in record or "rid_list" not in record:
+        return
+
     batch_type = record.get('batch_type')
     rid_tuple = str(record.get('rid_list'))
     batch_size = 0

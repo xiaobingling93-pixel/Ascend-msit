@@ -14,8 +14,8 @@
 # limitations under the License.
 
 import pandas as pd
-from ms_service_profiler.utils.log import logger
 from .constants import MAX_BATCH_NUMBER
+from .utils import logger
 
 
 EVENT_PAIRS = [

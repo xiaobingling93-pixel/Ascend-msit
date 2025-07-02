@@ -16,7 +16,7 @@ import argparse
 from pathlib import Path
 import pandas as pd
 
-from ms_service_profiler.exporters.utils import check_input_path_valid, check_output_path_valid
+from msserviceprofiler.msguard import validate_args, Rule
 
 
 def add_exporters(args):
@@ -43,11 +43,14 @@ def arg_parse(subparsers):
         "split", formatter_class=argparse.ArgumentDefaultsHelpFormatter, help="MS Server Profiler Split"
     )
     parser.add_argument(
-        '--input-path', required=True, type=check_input_path_valid, help='Path to the folder containing profile data.'
+        '--input-path',
+        required=True,
+        type=validate_args(Rule.input_dir_traverse),
+        help='Path to the folder containing profile data.',
     )
     parser.add_argument(
         '--output-path',
-        type=check_output_path_valid,
+        type=validate_args(Rule.output_dir),
         default=os.path.join(os.getcwd(), 'output'),
         help='Output file path to save results.')
     parser.add_argument(

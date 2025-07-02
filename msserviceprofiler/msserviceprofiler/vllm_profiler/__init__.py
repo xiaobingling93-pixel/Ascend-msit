@@ -28,4 +28,3 @@ else:
     import logging
 
     logging.error(f"Not supported vllm version {vllm_version}")
-

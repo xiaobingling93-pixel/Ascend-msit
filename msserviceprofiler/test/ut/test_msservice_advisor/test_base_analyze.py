@@ -54,12 +54,12 @@ def test_get_dict_value_by_pos_given_list_index_when_called_then_returns_value()
     assert base_analyze.get_dict_value_by_pos(test_data, "list:0:item") == "value"
 
 
-# Test num_mem_size_checker
-def test_num_mem_size_checker_given_valid_config_when_npu_mem_size_not_minus1_then_adds_answer():
+# Test npu_mem_size_checker
+def test_npu_mem_size_checker_given_valid_config_when_npu_mem_size_not_minus1_then_adds_answer():
     test_config = {"BackendConfig": {"ModelDeployConfig": {"ModelConfig": [{"npuMemSize": 1024}]}}}
 
     with patch.object(base_analyze.logger, "info") as mock_log:
-        base_analyze.num_mem_size_checker(
+        base_analyze.npu_mem_size_checker(
             test_config, {}, "", {}  # benchmark_instance  # mindie_server_log_path  # profiling_params
         )
 
@@ -70,10 +70,10 @@ def test_num_mem_size_checker_given_valid_config_when_npu_mem_size_not_minus1_th
         ) in ANSWERS[SUGGESTION_TYPES.config]["npuMemSize"]
 
 
-def test_num_mem_size_checker_given_npu_mem_size_minus1_when_called_then_no_action():
+def test_npu_mem_size_checker_given_npu_mem_size_minus1_when_called_then_no_action():
     test_config = {"BackendConfig": {"ModelDeployConfig": {"ModelConfig": [{"npuMemSize": -1}]}}}
 
-    base_analyze.num_mem_size_checker(test_config, {}, "", {})
+    base_analyze.npu_mem_size_checker(test_config, {}, "", {})
 
     assert "npuMemSize" not in ANSWERS[SUGGESTION_TYPES.config]
 

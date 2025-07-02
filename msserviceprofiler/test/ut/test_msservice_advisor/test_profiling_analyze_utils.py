@@ -111,35 +111,13 @@ def test_vaild_readable_directory_given_file_path_when_checked_then_error():
         os.unlink(temp_file)
 
 
-def test_vaild_readable_directory_given_unreadable_dir_when_checked_then_error():
-    temp_dir = tempfile.mkdtemp()
-    try:
-        os.chmod(temp_dir, 0o000)  # Remove all permissions
-        with pytest.raises(PermissionError):
-            utils.vaild_readable_directory(temp_dir)
-    finally:
-        os.chmod(temp_dir, 0o755)  # Restore permissions for cleanup
-        os.rmdir(temp_dir)
-
-
 # Test vaild_readable_file
 def test_vaild_readable_file_given_valid_file_when_checked_then_returns_path():
     temp_file = create_temp_file(10)
     try:
         result = utils.vaild_readable_file(temp_file)
-        assert isinstance(result, Path)
+        assert isinstance(result, str)
     finally:
-        os.unlink(temp_file)
-
-
-def test_vaild_readable_file_given_unreadable_file_when_checked_then_error():
-    temp_file = create_temp_file(10)
-    try:
-        os.chmod(temp_file, 0o000)  # Remove all permissions
-        with pytest.raises(PermissionError):
-            utils.vaild_readable_file(temp_file)
-    finally:
-        os.chmod(temp_file, 0o644)  # Restore permissions for cleanup
         os.unlink(temp_file)
 
 

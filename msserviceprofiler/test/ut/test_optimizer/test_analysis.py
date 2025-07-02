@@ -243,7 +243,3 @@ class TestAnalysisState(unittest.TestCase):
         self.assertEqual(mean[0], 1.0)
         self.assertEqual(pos_sigma[0], 1.0)
         self.assertEqual(neg_sigma[0], 1.0)
-
-
-if __name__ == '__main__':
-    unittest.main()

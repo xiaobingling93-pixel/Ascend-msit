@@ -23,7 +23,7 @@ from contextlib import contextmanager
 
 import pandas as pd
 
-from ms_service_profiler.exporters.utils import check_output_path_valid
+from msserviceprofiler.msguard import validate_args, Rule
 from msserviceprofiler.ms_service_profiler_ext.common.sec import list_dir_common_check
 
 
@@ -84,7 +84,7 @@ def arg_parse(subparsers):
     parser.add_argument("golden_path", type=list_dir_common_check, help="Directory containing analyzed results")
     parser.add_argument(
         "--output-path",
-        type=check_output_path_valid,
+        type=validate_args(Rule.output_dir),
         default=os.path.join(os.getcwd(), 'compare_result'),
         help="Output Directory after comparing."
     )

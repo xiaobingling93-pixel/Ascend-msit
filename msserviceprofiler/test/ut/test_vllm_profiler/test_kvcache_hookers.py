@@ -11,11 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
 import sys
 import unittest
+import pkgutil
 from unittest.mock import MagicMock, patch, call
 from collections import namedtuple
-from msserviceprofiler.vllm_profiler.vllm_profiler_core.kvcache_hookers import Profiler, Level
+
+# skip importing from __init__
+sys.path.append(os.path.join(os.path.dirname(pkgutil.get_loader("msserviceprofiler").path), "vllm_profiler"))
+from vllm_profiler_core.kvcache_hookers import Profiler, Level
 
 
 # 模拟 SequenceGroupMetadata 类
@@ -78,7 +83,7 @@ class FakeLLMEngine:
         return self.stats
 
 
-@patch("msserviceprofiler.vllm_profiler.vllm_profiler_core.kvcache_hookers.Profiler")
+@patch("vllm_profiler_core.kvcache_hookers.Profiler")
 class TestKVCacheManagerHook(unittest.TestCase):
 
     def setUp(self):
@@ -87,7 +92,7 @@ class TestKVCacheManagerHook(unittest.TestCase):
         sys.modules["vllm.engine.llm_engine"] = MagicMock(LLMEngine=FakeLLMEngine)
 
         # 导入被测试的类
-        from msserviceprofiler.vllm_profiler.vllm_profiler_core.kvcache_hookers import KVCacheManagerHook
+        from vllm_profiler_core.kvcache_hookers import KVCacheManagerHook
 
         # 初始化 Hook 实例
         self.kvcache_hook = KVCacheManagerHook()

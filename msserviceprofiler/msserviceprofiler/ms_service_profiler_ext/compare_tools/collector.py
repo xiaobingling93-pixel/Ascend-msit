@@ -17,8 +17,7 @@ import os
 import re
 from typing import List, Tuple, Set
 
-from ms_service_profiler.utils.log import logger
-
+from ..common.utils import logger
 from ..common.sec import read_file_common_check
 
 

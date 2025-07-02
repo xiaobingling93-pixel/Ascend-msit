@@ -92,6 +92,6 @@ class BasePathConstraint(BaseConstraint):
         
         try:
             st = os.stat(path, follow_symlinks=False)
-        except OSError:
+        except (OSError, ValueError):
             pass
         return st

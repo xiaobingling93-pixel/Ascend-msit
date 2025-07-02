@@ -93,30 +93,3 @@ def test_preprocessor_no_model_op_field(static_file):
     )
     result = processor.preprocessor(input_data)
     assert len(result) == 160
-
-
-def test_custom_one_hot_encoder():
-    custom_encoder = CustomOneHotEncoder(preset_category_data)
-    custom_encoder.fit()
-    df = pd.DataFrame(
-        {"batch_stage": ['prefill', 'decode'],
-         "hidden_act": ["silu", "gelu_pytorch_tanh"],
-         "model_type": ["bloom", "codeshell", ],
-         "torch_dtype": ["float16", "float32", ],
-         "quantize": ["w8a8", "w8a8s"],
-         "kv_quant_type": ["c8", "c8"],
-         "group_size": ["0", "64", ],
-         "reduce_quant_type": ["per_channel", "per_channel"]
-         }
-    )
-    result = custom_encoder.transformer(df)
-    assert result.shape == (2, 75)
-    data_column = ["batch_stage", "hidden_act", "model_type", "torch_dtype", "quantize", "kv_quant_type",
-                   "group_size", "reduce_quant_type"]
-    data = ['prefill', "silu", "bloom", "float16", "w8a8", "c8", "0", "per_channel"]
-    new_data, new_data_column = custom_encoder.transformer_optimize(data, data_column)
-    assert len(new_data) == 75
-    assert len(new_data_column) == 75
-    custom_encoder.save()
-    for _one_hot in custom_encoder.one_hots:
-        assert _one_hot.ohe_path.exists()

@@ -27,7 +27,7 @@
 
 # 使用方式
 ## 在 vLLM 中导入采集工具接口
-- 输入 `pip show vllm`，查看 vllm 安装路径，可能为 `Location` 或 `Editable project location` 路径，记为 `${vllm_install_path}`
+- 输入 `pip show vllm`，查看 vllm 安装路径，如果存在 `Editable project location` 路径则使用 `Editable project location`，否则为 `Location` 路径 ，记为 `${vllm_install_path}`，
 - 在 `${vllm_install_path}/vllm/__init__.py` 文件中添加如下代码：
   ```
   import msserviceprofiler.vllm_profiler

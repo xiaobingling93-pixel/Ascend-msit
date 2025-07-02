@@ -11,13 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import os
 import sys
+import pkgutil
 from unittest.mock import MagicMock, patch
 
 import pytest
-
-from msserviceprofiler.vllm_profiler.vllm_profiler_core.model_hookers import (
+# skip importing from __init__
+sys.path.append(os.path.join(os.path.dirname(pkgutil.get_loader("msserviceprofiler").path), "vllm_profiler"))
+from vllm_profiler_core.model_hookers import (
     ExecutorBaseExecuteModelHook,
     ModelRunnerExecuteHook,
     ModelForwardHook,

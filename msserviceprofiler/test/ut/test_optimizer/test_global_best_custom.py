@@ -106,6 +106,3 @@ class TestCustomGlobalBestPSO(unittest.TestCase):
         optimizer.swarm.current_cost = np.array([])
         optimizer.computer_next_pos()
         self.assertEqual(optimizer.swarm.position.shape, (3, 2))
-
-if __name__ == '__main__':
-    unittest.main()

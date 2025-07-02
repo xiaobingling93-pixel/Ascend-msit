@@ -230,6 +230,3 @@ class TestGenerateDataWithRequestInfo(unittest.TestCase):
         input_index = ("op_name", "call_count", "execute_delta")
         result = PreprocessTool.get_all_op_execute_delta_ratio(input_data, input_index, field="execute_delta")
         self.assertEqual(result, {'op1': [0.6666666666666666, 0.6666666666666666], 'op2': [0.3333333333333333]})
-
-if __name__ == "__main__":
-    unittest.main()

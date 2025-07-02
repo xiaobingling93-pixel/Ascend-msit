@@ -11,13 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import unittest
+import os
 import sys
+import unittest
+import pkgutil
 from unittest.mock import MagicMock, patch, call
 from collections import deque
-from msserviceprofiler.vllm_profiler.vllm_profiler_core.batch_hookers import (
-    Profiler, queue_profiler, Level
-)
+# skip importing from __init__
+sys.path.append(os.path.join(os.path.dirname(pkgutil.get_loader("msserviceprofiler").path), "vllm_profiler"))
+from vllm_profiler_core.batch_hookers import Profiler, queue_profiler, Level
 
 
 # 模拟 SequenceStatus 类
@@ -102,7 +104,7 @@ class FakeLLMEngine:
 
 
 # 测试hook类
-@patch("msserviceprofiler.vllm_profiler.vllm_profiler_core.batch_hookers.Profiler")
+@patch("vllm_profiler_core.batch_hookers.Profiler")
 class TestSchedulerHook(unittest.TestCase):
 
     def setUp(self):
@@ -114,7 +116,7 @@ class TestSchedulerHook(unittest.TestCase):
         )
 
         # 导入被测试的类
-        from msserviceprofiler.vllm_profiler.vllm_profiler_core.batch_hookers import SchedulerHook, LLMEngineHook
+        from vllm_profiler_core.batch_hookers import SchedulerHook, LLMEngineHook
 
         # 初始化 Hook 实例
         self.scheduler_hook = SchedulerHook()
@@ -227,17 +229,17 @@ class TestSchedulerHook(unittest.TestCase):
         mock_profiler(Level.INFO).domain("BatchSchedule").res.assert_called_with([self.fake_request_id])
 
     # 校验队列打点函数queue_profiler正确调用
-    @patch("msserviceprofiler.vllm_profiler.vllm_profiler_core.batch_hookers.queue_profiler")
+    @patch("vllm_profiler_core.batch_hookers.queue_profiler")
     def test_schedule_priority_preemption_maker(self, mock_queue_profiler, mock_profiler):
         self.fake_scheduler._schedule_priority_preemption(self.fake_budget)
         mock_queue_profiler.assert_called()
 
-    @patch("msserviceprofiler.vllm_profiler.vllm_profiler_core.batch_hookers.queue_profiler")
+    @patch("vllm_profiler_core.batch_hookers.queue_profiler")
     def test_schedule_default_maker(self, mock_queue_profiler, mock_profiler):
         self.fake_scheduler._schedule_default()
         mock_queue_profiler.assert_called()
 
-    @patch("msserviceprofiler.vllm_profiler.vllm_profiler_core.batch_hookers.queue_profiler")
+    @patch("vllm_profiler_core.batch_hookers.queue_profiler")
     def test_schedule_chunked_prefill_maker(self, mock_queue_profiler, mock_profiler):
         self.fake_scheduler._schedule_chunked_prefill()
         mock_queue_profiler.assert_called()

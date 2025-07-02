@@ -1,6 +1,7 @@
 # !/usr/bin/python3.7
 # -*- coding: utf-8 -*-
 # Copyright (c) Huawei Technologies Co., Ltd. 2024-2025. All rights reserved.
+import os
 from copy import deepcopy
 from pathlib import Path
 from multiprocessing import Pool
@@ -210,6 +211,7 @@ def test_state_eval(tmpdir):
 "('prefill', 3, '48', '6144', '2048', '758097.1717834473')","(('2048', '16', '0'), ('2048', '16', '0'), ('2048', '16', '0'))"
 "('prefill', 2, '32', '4096', '2048', '539136.8865966797')","(('2048', '16', '0'), ('2048', '16', '0'))"
 """)
+    os.chmod(_file_name, 0o0640)
     file_paths = [_file_name]
     base_path = _tmpdir.joinpath("train")
     xgb_model_path = base_path.joinpath("bak/base/xgb_model.ubj")
@@ -223,5 +225,3 @@ def test_state_eval(tmpdir):
                         "train_field": train_field,
                         "dataset_type": DataProcessor
                     })
-
-
