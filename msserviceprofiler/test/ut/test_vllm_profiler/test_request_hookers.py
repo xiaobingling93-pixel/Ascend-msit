@@ -19,10 +19,7 @@ from dataclasses import dataclass
 from collections import namedtuple
 from unittest.mock import MagicMock, patch, call
 # skip importing from __init__
-try:
-    sys.path.append(os.path.join(os.path.dirname(pkgutil.get_loader("msserviceprofiler").path), "vllm_profiler"))
-except:
-    pass
+sys.path.append(os.path.join(os.path.dirname(pkgutil.get_loader("msserviceprofiler").path), "vllm_profiler"))
 from vllm_profiler_core.request_hookers import Profiler, Level
 
 
