@@ -14,11 +14,12 @@
 import os
 import sys
 import unittest
+import pkgutil
 from dataclasses import dataclass
 from collections import namedtuple
 from unittest.mock import MagicMock, patch, call
-import msserviceprofiler
-sys.path.insert(0, os.path.join(msserviceprofiler.__path__[0], "vllm_profiler"))  # skip importing from __init__
+# skip importing from __init__
+sys.path.append(os.path.join(os.path.dirname(pkgutil.get_loader("msserviceprofiler").path), "vllm_profiler"))
 from vllm_profiler_core.request_hookers import Profiler, Level
 
 
