@@ -19,7 +19,10 @@ import pkgutil
 from unittest.mock import MagicMock, patch
 from packaging.version import Version
 # skip importing from __init__
-sys.path.append(os.path.join(os.path.dirname(pkgutil.get_loader("msserviceprofiler").path), "vllm_profiler"))
+try:
+    sys.path.append(os.path.join(os.path.dirname(pkgutil.get_loader("msserviceprofiler").path), "vllm_profiler"))
+except:
+    pass
 from vllm_profiler_core.vllm_hooker_base import VLLMHookerBase
 
 

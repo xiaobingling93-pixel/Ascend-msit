@@ -19,7 +19,10 @@ from unittest.mock import MagicMock, patch, call
 from collections import namedtuple
 
 # skip importing from __init__
-sys.path.append(os.path.join(os.path.dirname(pkgutil.get_loader("msserviceprofiler").path), "vllm_profiler"))
+try:
+    sys.path.append(os.path.join(os.path.dirname(pkgutil.get_loader("msserviceprofiler").path), "vllm_profiler"))
+except:
+    pass
 from vllm_profiler_core.kvcache_hookers import Profiler, Level
 
 
