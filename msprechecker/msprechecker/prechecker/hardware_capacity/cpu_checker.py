@@ -67,6 +67,7 @@ class CPUChecker(PrecheckerBase):
         time_all = envs
 
         cpu_analyze = TimeAnalyze(time_all)
+        cpu_analyze.RATIO_THRESHOLD = 0.5
         slow_cpu, slow_time, max_ratio, is_problem = cpu_analyze.time_analyze()
 
         if is_problem:
