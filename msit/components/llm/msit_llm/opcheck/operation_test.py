@@ -355,8 +355,6 @@ class OperationTest(unittest.TestCase):
         device_name = torch.npu.get_device_name()
         if re.search("Ascend910B", device_name, re.I):
             soc_version = 'Ascend910B'
-        elif re.search("Ascend910D", device_name, re.I):
-            soc_version = 'Ascend910B'
         elif re.search("Ascend310P", device_name, re.I):
             soc_version = 'Ascend310P'
         else:
