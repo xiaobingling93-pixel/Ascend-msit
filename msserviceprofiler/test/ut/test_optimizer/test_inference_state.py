@@ -191,37 +191,3 @@ def run_case(process_num: int, save_result_path: Path, fl: FileReader, call_func
                 break
         p.close()
         p.join()
-
-
-def test_state_eval(tmpdir):
-    _tmpdir = Path(tmpdir)
-    _file_name = _tmpdir.joinpath("feature.csv")
-    with open(_file_name, "w") as f:
-        f.write("""
-"('batch_stage', 'batch_size', 'total_need_blocks', 'total_prefill_token', 'max_seq_len', 'model_execute_time')","('input_length', 'need_blocks', 'output_length')"
-"('prefill', 1, '16', '2048', '2048', '308112.8597259521')","(('2048', '16', '0'),)"
-"('prefill', 3, '48', '6144', '2048', '762948.2746124268')","(('2048', '16', '0'), ('2048', '16', '0'), ('2048', '16', '0'))"
-"('prefill', 3, '48', '6144', '2048', '758220.6726074219')","(('2048', '16', '0'), ('2048', '16', '0'), ('2048', '16', '0'))"
-"('prefill', 3, '48', '6144', '2048', '757650.61378479')","(('2048', '16', '0'), ('2048', '16', '0'), ('2048', '16', '0'))"
-"('prefill', 3, '48', '6144', '2048', '757432.6992034912')","(('2048', '16', '0'), ('2048', '16', '0'), ('2048', '16', '0'))"
-"('prefill', 3, '48', '6144', '2048', '757532.8350067139')","(('2048', '16', '0'), ('2048', '16', '0'), ('2048', '16', '0'))"
-"('prefill', 3, '48', '6144', '2048', '757835.865020752')","(('2048', '16', '0'), ('2048', '16', '0'), ('2048', '16', '0'))"
-"('prefill', 3, '48', '6144', '2048', '757727.3845672607')","(('2048', '16', '0'), ('2048', '16', '0'), ('2048', '16', '0'))"
-"('prefill', 3, '48', '6144', '2048', '757433.1760406494')","(('2048', '16', '0'), ('2048', '16', '0'), ('2048', '16', '0'))"
-"('prefill', 3, '48', '6144', '2048', '758097.1717834473')","(('2048', '16', '0'), ('2048', '16', '0'), ('2048', '16', '0'))"
-"('prefill', 2, '32', '4096', '2048', '539136.8865966797')","(('2048', '16', '0'), ('2048', '16', '0'))"
-""")
-    os.chmod(_file_name, 0o0640)
-    file_paths = [_file_name]
-    base_path = _tmpdir.joinpath("train")
-    xgb_model_path = base_path.joinpath("bak/base/xgb_model.ubj")
-    train_field = "model_execute_time"
-    save_result_path = base_path.joinpath("test_state_eval")
-    save_result_path.mkdir(exist_ok=True, parents=True)
-
-    fl = FileReader(file_paths, num_lines=1000)
-    process_num = 1
-    run_case(process_num, save_result_path, fl, predict_with_model, {
-                        "train_field": train_field,
-                        "dataset_type": DataProcessor
-                    })

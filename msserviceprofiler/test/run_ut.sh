@@ -24,7 +24,7 @@ run_test_python() {
   python3 --version
   #pip3 install pytest "pandas>=2.2"
   export PYTHONPATH=${TOP_DIR}:${PYTHONPATH}
-  python3 -m coverage run --branch --source ${TOP_DIR}/'ms_service_profiler_ext' -m pytest ${TEST_DIR}/ut
+  python3 -m coverage run --branch --source ${TOP_DIR}/'msserviceprofiler' -m pytest ${TEST_DIR}/ut
 
   if [ $? -ne 0 ]; then
     echo "UT Failure"
