@@ -22,6 +22,7 @@ from msprechecker.core.collectors.sys_collector import (
     ATBVersionCollector,
     ATBSpeedVersionCollector,
     AscendInfoCollector,
+    OPPKernelVersionCollector
 )
 
 
@@ -261,43 +262,49 @@ class TestAscendInfoCollector(unittest.TestCase):
     @patch.object(MindIEVersionCollector, 'collect')
     @patch.object(ATBVersionCollector, 'collect')
     @patch.object(ATBSpeedVersionCollector, 'collect')
-    def test_collect_all_components(self, mock_atb_speed, mock_atb, mock_mindie, 
+    def test_collect_all_components(self, mock_atb_speed, mock_atb, mock_mindie,
                                    mock_toolkit, mock_driver):
-        mock_driver.return_value = {"version": "1.2.3"}
-        mock_toolkit.return_value = {"version": "2.3.4", "time": "2025-01-01"}
-        mock_mindie.return_value = {"version": "3.4.5"}
-        mock_atb.return_value = {"version": "4.5.6", "branch": "main", "commit": "abc123"}
-        mock_atb_speed.return_value = {"version": "5.6.7", "time": "2025-02-02"}
+        with patch.object(OPPKernelVersionCollector, 'collect') as mock_opp_kernel:
+            mock_driver.return_value = {"version": "1.2.3"}
+            mock_toolkit.return_value = {"version": "2.3.4", "time": "2025-01-01"}
+            mock_mindie.return_value = {"version": "3.4.5"}
+            mock_opp_kernel.return_value = {"version": "2.3.4", "time": "2025-01-01"}
+            mock_atb.return_value = {"version": "4.5.6", "branch": "main", "commit": "abc123"}
+            mock_atb_speed.return_value = {"version": "5.6.7", "time": "2025-02-02"}
 
-        result = self.collector.collect()
-        
-        self.assertEqual(result, {
-            "driver": {"version": "1.2.3"},
-            "toolkit": {"version": "2.3.4", "time": "2025-01-01"},
-            "mindie": {"version": "3.4.5"},
-            "atb": {"version": "4.5.6", "branch": "main", "commit": "abc123"},
-            "atb-models": {"version": "5.6.7", "time": "2025-02-02"}
-        })
+            result = self.collector.collect()
+
+            self.assertEqual(result, {
+                "driver": {"version": "1.2.3"},
+                "toolkit": {"version": "2.3.4", "time": "2025-01-01"},
+                "opp_kernel": {"version": "2.3.4", "time": "2025-01-01"},
+                "mindie": {"version": "3.4.5"},
+                "atb": {"version": "4.5.6", "branch": "main", "commit": "abc123"},
+                "atb-models": {"version": "5.6.7", "time": "2025-02-02"}
+            })
 
     @patch.object(DriverVersionCollector, 'collect')
     @patch.object(ToolkitVersionCollector, 'collect')
     @patch.object(MindIEVersionCollector, 'collect')
     @patch.object(ATBVersionCollector, 'collect')
     @patch.object(ATBSpeedVersionCollector, 'collect')
-    def test_collect_some_missing(self, mock_atb_speed, mock_atb, mock_mindie, 
+    def test_collect_some_missing(self, mock_atb_speed, mock_atb, mock_mindie,
                                 mock_toolkit, mock_driver):
-        mock_driver.return_value = {"version": None}
-        mock_toolkit.return_value = {"version": "2.3.4", "time": None}
-        mock_mindie.return_value = {"version": None}
-        mock_atb.return_value = {"version": None, "branch": None, "commit": None}
-        mock_atb_speed.return_value = {"version": None, "time": None}
+        with patch.object(OPPKernelVersionCollector, 'collect') as mock_opp_kernel:
+            mock_driver.return_value = {"version": None}
+            mock_toolkit.return_value = {"version": "2.3.4", "time": None}
+            mock_opp_kernel.return_value = {"version": "2.3.4", "time": None}
+            mock_mindie.return_value = {"version": None}
+            mock_atb.return_value = {"version": None, "branch": None, "commit": None}
+            mock_atb_speed.return_value = {"version": None, "time": None}
 
-        result = self.collector.collect()
-        
-        self.assertEqual(result, {
-            "driver": {"version": None},
-            "toolkit": {"version": "2.3.4", "time": None},
-            "mindie": {"version": None},
-            "atb": {"version": None, "branch": None, "commit": None},
-            "atb-models": {"version": None, "time": None}
-        })
+            result = self.collector.collect()
+
+            self.assertEqual(result, {
+                "driver": {"version": None},
+                "toolkit": {"version": "2.3.4", "time": None},
+                "opp_kernel": {"version": "2.3.4", "time": None},
+                "mindie": {"version": None},
+                "atb": {"version": None, "branch": None, "commit": None},
+                "atb-models": {"version": None, "time": None}
+            })

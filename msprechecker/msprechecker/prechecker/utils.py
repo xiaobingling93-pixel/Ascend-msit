@@ -411,6 +411,8 @@ class SimpleProgressBar:
         else:
             remaining_time = 0
 
+        trailing_space = " " * 4 # invisible but better for progress bar
         self.logger.info(
-            f"\r{self.desc} |{bar}| {percent:.1f}% [{self.current}/{self.total}] ETA: {remaining_time:.1f}s"
+            f"\r{self.desc} |{bar}| {percent:.1f}% [{self.current}/{self.total}] "
+            f"ETA: {remaining_time:.1f}s{trailing_space}"
         )

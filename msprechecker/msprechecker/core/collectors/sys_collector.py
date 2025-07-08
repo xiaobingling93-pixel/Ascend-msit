@@ -56,6 +56,23 @@ class ToolkitVersionCollector(BaseCollector):
         return toolkit_info
 
 
+class OPPKernelVersionCollector(BaseCollector):
+    default_home = '/usr/local/Ascend/ascend-toolkit/latest'
+
+    def collect(self):
+        opp_kernel_info = {"version": None, "time": None}
+        toolkit_home = os.getenv("ASCEND_TOOLKIT_HOME") or self.default_home
+        version_file = os.path.join(toolkit_home, "opp_kernel", "version.info")
+        lines = read_file_lines(version_file)
+        if lines:
+            for line in lines:
+                if "version_dir=" in line:
+                    opp_kernel_info["version"] = line.split("=", 1)[-1].strip()
+                elif "timestamp=" in line:
+                    opp_kernel_info["time"] = line.split("=", 1)[-1].strip()
+        return opp_kernel_info
+
+
 class MindIEVersionCollector(BaseCollector):
     default_home = '/usr/local/Ascend/mindie/latest/mindie-llm'
 
@@ -114,6 +131,7 @@ class AscendInfoCollector(ParallelCollector):
     def __init__(self):
         super().__init__({
             "toolkit": ToolkitVersionCollector(),
+            "opp_kernel": OPPKernelVersionCollector(),
             "atb": ATBVersionCollector(),
             "mindie": MindIEVersionCollector(),
             "atb-models": ATBSpeedVersionCollector(),
