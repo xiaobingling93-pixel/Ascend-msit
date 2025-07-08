@@ -14,7 +14,7 @@
 
 import subprocess
 import os
-import re
+import pandas as pd
 import logging
 import pytest
 
