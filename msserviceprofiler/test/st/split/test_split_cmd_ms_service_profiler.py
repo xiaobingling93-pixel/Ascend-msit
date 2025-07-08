@@ -17,29 +17,7 @@ import shutil
 from unittest import TestCase
 import ast
 import pandas as pd
-from st.utils import execute_cmd, check_column_actual, check_no_empty_lines_before_first_line
-from st.utils import check_no_empty_lines_between_first_last_line, check_during_time
-
-
-def check_split_csv_content(output_path, csv_file_name):
-    # 校验该路径下是否正确生成csv文件，以及文件内容
-    csv_file = os.path.join(output_path, csv_file_name)
-    assert os.path.exists(csv_file)
-    task_name = os.path.splitext(csv_file_name)[0]
-    expected_header = ['name', 'during_time(millisecond)', 'max', 'min', 'mean', 'std', \
-                       'pid', 'tid', 'start_time(microsecond)', 'end_time(microsecond)']
-    if task_name == 'prefill':
-        expected_header.append('rid')
-    df = pd.read_csv(csv_file)
-    # 检查列名是否正确
-    result = check_column_actual(df.columns.tolist(), expected_header, context=csv_file_name)
-    assert result, f"{csv_file_name} check column failed"
-    # 检查是否存在空行
-    check_no_empty_lines_before_first_line(df, context=csv_file_name)
-    check_no_empty_lines_between_first_last_line(df, context=csv_file_name)
-    # 检查执行时间是否正确
-    result = check_during_time(df, context=csv_file_name)
-    assert result, f"{csv_file_name} check during time failed"
+from st.utils import execute_cmd, check_split_csv_content
    
 
 class TestAnalyzeCmd(TestCase):
