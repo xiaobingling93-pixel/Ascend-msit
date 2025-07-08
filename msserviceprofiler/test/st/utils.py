@@ -88,7 +88,7 @@ def check_no_empty_lines_between_first_last_line(dataframe, context=""):
 
 def check_during_time(dataframe, context=""):
     # 检查所需列是否存在于数据框中
-    required_columns = ['end_time(microsecond)', 'start_time(microsecond)', 'during_time(millisecond)']
+    required_columns = ['end_time(ms)', 'start_time(ms)', 'during_time(ms)']
     for col in required_columns:
         if col not in dataframe.columns:
             logging.error(f"The column {col} not found in {context}.")
@@ -96,11 +96,11 @@ def check_during_time(dataframe, context=""):
 
     # 检查during_time是否正确
     for index, row in dataframe.iloc[:-1].iterrows():
-        end_time = row['end_time(microsecond)']
-        start_time = row['start_time(microsecond)']
-        during_time = row['during_time(millisecond)']
+        end_time = row['end_time(ms)']
+        start_time = row['start_time(ms)']
+        during_time = row['during_time(ms)']
         # 计算 end_time - start_time 与 during_time 的差值
-        diff = abs((end_time - start_time) / 1000 - during_time)
+        diff = abs((end_time - start_time) - during_time)
         if diff > 1:
             logging.error(f"In row {index} of {context}, the during_time is not correct.")
             return False
