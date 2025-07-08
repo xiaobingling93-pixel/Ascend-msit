@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import pandas as pd
-from .constants import MAX_BATCH_NUMBER
+from .constants import MAX_BATCH_NUMBER, US_PER_MS
 from .utils import logger
 
 
@@ -343,7 +343,6 @@ def postprocess_framework_df(framework_df, post_event_pairs, name):
                 post_event_pairs.append(('deserializeExecuteResponse', 'httpRes'))
                 if 'httpRes' not in framework_df['name'].values:
                     post_event_pairs.append(('deserializeExecuteResponse', 'AllTime'))
-        new_rows = []
         if 'preprocessBatch' not in framework_df['name'].values:
             post_event_pairs.append(('batchFrameworkProcessing', 'serializeExcueteMessage'))
         if 'continueBatching' not in framework_df['name'].values and name == 'Decode':
@@ -357,16 +356,14 @@ def postprocess_framework_df(framework_df, post_event_pairs, name):
             post_event_pairs.append(pair)
         post_event_pairs.append(('forward', 'AllTime'))
 
-
-    
     post_df = get_post_event_df(post_event_pairs, framework_df, name)
     framework_df = pd.concat([framework_df, post_df], ignore_index=True)
     framework_df = framework_df.sort_values(by=['start_time(microsecond)']).reset_index(drop=True)
     framework_df = framework_df[framework_df['name'] != 'handleTaskExecution']  # 删除 'handleTaskExecution' 行
     if name == 'Decode':
         framework_df = framework_df.drop(framework_df[framework_df['name'].isin(HTTP_LIST)].index)
-    framework_df['during_time(microsecond)'] = framework_df['during_time(microsecond)'] / 1000
-    
+    framework_df['during_time(microsecond)'] = framework_df['during_time(microsecond)'] / US_PER_MS
+
     if 'prepareInputs' in framework_df['name'].values and 'operatorExecute' in framework_df['name'].values:
         delete_list = ['preprocess', 'forward', 'Between-getInputMetadata-preprocess', 
                        'Between-preprocess-forward', 'Between-forward-sample']
@@ -449,6 +446,7 @@ def get_statistics_data(framework_df, filter_name, name):
     if framework_df.empty:
         logger.warning(f"{name}: The dataframe is empty, no csv file create")
         return framework_df
+    framework_df = get_rename_dataframe(framework_df)
     batch = framework_df[framework_df['name'] == filter_name]
     if len(batch) == 1:
         start_index = framework_df[framework_df['name'] == filter_name].index[-1]
@@ -456,22 +454,39 @@ def get_statistics_data(framework_df, filter_name, name):
     else:
         start_index = framework_df[framework_df['name'] == filter_name].index[-2]
         end_index = framework_df[framework_df['name'] == filter_name].index[-1] - 1
-    framework_df['max'] = framework_df.groupby('name')['during_time(microsecond)'].transform('max')
-    framework_df['min'] = framework_df.groupby('name')['during_time(microsecond)'].transform('min')
-    framework_df['mean'] = framework_df.groupby('name')['during_time(microsecond)'].transform('mean')
-    framework_df['std'] = framework_df.groupby('name')['during_time(microsecond)'].transform('std')
+    framework_df['max'] = framework_df.groupby('name')['during_time(ms)'].transform('max')
+    framework_df['min'] = framework_df.groupby('name')['during_time(ms)'].transform('min')
+    framework_df['mean'] = framework_df.groupby('name')['during_time(ms)'].transform('mean')
+    framework_df['std'] = framework_df.groupby('name')['during_time(ms)'].transform('std')
     # 标准差为0时显示0
     framework_df['std'] = framework_df['std'].fillna(0)
     framework_df.insert(2, 'max', framework_df.pop('max'))
     framework_df.insert(3, 'min', framework_df.pop('min'))
     framework_df.insert(4, 'mean', framework_df.pop('mean'))
     framework_df.insert(5, 'std', framework_df.pop('std'))
-    framework_df = framework_df.rename(columns={'during_time(microsecond)': 'during_time(millisecond)'})
     if name == 'Decode':
         framework_df = framework_df.iloc[:, :10]
     else:
         framework_df = framework_df.iloc[:, :11]
     return framework_df[start_index: end_index]
+
+
+def get_rename_dataframe(framework_df):
+    rename_cols = {
+        'start_time(microsecond)': 'start_time(ms)',
+        'end_time(microsecond)': 'end_time(ms)',
+        'during_time(microsecond)': 'during_time(ms)',
+    }
+
+    for col in rename_cols.keys():
+        if col not in framework_df.columns:
+            logger.warning(f"The column {col} not in dataframe")
+            return framework_df
+
+    framework_df = framework_df.rename(columns=rename_cols)
+    framework_df['start_time(ms)'] = framework_df['start_time(ms)'] // US_PER_MS
+    framework_df['end_time(ms)'] = framework_df['end_time(ms)'] // US_PER_MS
+    return framework_df
 
 
 def get_batch_all_time(framework_df, name):
