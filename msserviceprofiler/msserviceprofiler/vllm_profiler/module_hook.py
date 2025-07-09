@@ -12,6 +12,36 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union, Iterable
 _HOOK_REGISTRY: Dict[str, List['HookHelper']] = {}
 _registry_lock = threading.Lock()
 
+LOG_LEVELS = {
+    "debug": logging.DEBUG,
+    "info": logging.INFO,
+    "warning": logging.WARNING,
+    "error": logging.ERROR,
+    "fatal": logging.FATAL,
+    "critical": logging.CRITICAL,
+}
+
+
+def set_log_level(level="info"):
+    if level.lower() in LOG_LEVELS:
+        logger.setLevel(LOG_LEVELS.get(level.lower()))
+    else:
+        logger.warning("Set %s log level failed.", level)
+
+
+def set_logger(logger):
+    logger.propagate = False
+    logger.setLevel(logging.INFO)
+    if not logger.handlers:
+        stream_handler = logging.StreamHandler()
+        formatter = logging.Formatter("%(asctime)s - %(process)s - %(name)s - %(levelname)s - %(message)s")
+        stream_handler.setFormatter(formatter)
+        logger.addHandler(stream_handler)
+
+
+logger = logging.getLogger("vllmProfiler")
+set_logger(logger)
+
 class HookHelper:
     def __init__(
         self,
@@ -25,9 +55,11 @@ class HookHelper:
         self.location = location
         self.attr_name = attr_name
         self._orig_descriptor = self._get_original_descriptor()
-        logging.debug("Created HookHelper for %s.%s", 
-                      location.__name__ if hasattr(location, '__name__') else type(location).__name__, 
-                      attr_name)
+        logger.debug("Created HookHelper for %s.%s", self._get_location_name(location), attr_name)
+    
+    @staticmethod
+    def _get_location_name(location: str) -> str:
+        return location.__name__ if hasattr(location, '__name__') else type(location).__name__
 
     @staticmethod
     def _get_descriptor_type(obj: Any) -> Optional[type]:
@@ -58,9 +90,7 @@ class HookHelper:
             setattr(self.location, self.attr_name, classmethod(self.new_func))
         else:
             setattr(self.location, self.attr_name, self.new_func)
-        logging.info("Replaced function: %s.%s", 
-                     self.location.__name__ if hasattr(self.location, '__name__') else type(self.location).__name__, 
-                     self.attr_name)
+        logger.debug("Replaced function: %s.%s", self._get_location_name(self.location), self.attr_name)
 
     def recover(self) -> None:
         """恢复原始函数，正确处理类方法和静态方法"""
@@ -70,16 +100,14 @@ class HookHelper:
             setattr(self.location, self.attr_name, classmethod(self.original_func))
         else:
             setattr(self.location, self.attr_name, self.original_func)
-        logging.info("Recovered function: %s.%s", 
-                     self.location.__name__ if hasattr(self.location, '__name__') else type(self.location).__name__, 
-                     self.attr_name)
+        logger.debug("Recovered function: %s.%s", self._get_location_name(self.location), self.attr_name)
 
 def _import_target_module(module_path: str) -> Optional[ModuleType]:
     """安全导入目标模块"""
     try:
         return importlib.import_module(module_path)
     except ImportError as e:
-        logging.error("Module import failed for %s: %s", module_path, e)
+        logger.error("Module import failed for %s: %s", module_path, e)
         return None
 
 def _resolve_target_function(
@@ -109,7 +137,7 @@ def _resolve_target_function(
                 submodule = importlib.import_module(submodule_path)
                 current = submodule
             except ImportError:
-                logging.error("Attribute %s not found in %s", part, function_path)
+                logger.error("Attribute %s not found in %s", part, function_path)
                 return None
                 
     return None
@@ -123,6 +151,7 @@ def _create_wrapper(
     @functools.wraps(original_func)
     def wrapper(*args, **kwargs):
         # 调用栈过滤
+        logger.debug(f"calling {original_func}")
         if caller_filter:
             frame = sys._getframe(1)
             if frame.f_code.co_name != caller_filter:
@@ -131,7 +160,7 @@ def _create_wrapper(
         try:
             return user_func(original_func, *args, **kwargs)
         except Exception as e:
-            logging.error("Hook function error: %s", e, exc_info=True)
+            logger.error("Hook function error: %s", e, exc_info=True)
             return original_func(*args, **kwargs)
             
     return wrapper
@@ -146,14 +175,14 @@ def _check_version_compatibility(
         current_ver = Version(current_version)
 
         if min_version and current_ver < Version(min_version):
-            logging.info("Skipping hooks: Current version %s < %s", current_version, min_version)
+            logger.info("Skipping hooks: Current version %s < %s", current_version, min_version)
             return False
         if max_version and current_ver > Version(max_version):
-            logging.info("Skipping hooks: Current version %s > %s", current_version, max_version)
+            logger.info("Skipping hooks: Current version %s > %s", current_version, max_version)
             return False
         return True
     except ImportError:
-        logging.warning("VLLM version check failed - proceeding with hooks")
+        logger.warning("VLLM version check failed - proceeding with hooks")
         return True
 
 def _install_hook(
@@ -165,13 +194,13 @@ def _install_hook(
     """安装单个钩子"""
     module = _import_target_module(module_path)
     if not module:
-        logging.error("Module not found: %s", module_path)
+        logger.error("Module not found: %s", module_path)
         return None
 
     # 解析目标函数
     target_info = _resolve_target_function(module, function_path)
     if target_info is None:
-        logging.error("Function not found: %s in module %s", function_path, module_path)
+        logger.error("Function not found: %s in module %s", function_path, module_path)
         return None
         
     original_func, location, attr_name = target_info
@@ -182,16 +211,14 @@ def _install_hook(
     try:
         helper = HookHelper(original_func, wrapper, location, attr_name)
         helper.replace()
-        logging.info("Hook installed: %s.%s", module_path, function_path)
+        logger.info("Hook installed: %s.%s", module_path, function_path)
         return helper
     except Exception as e:
-        logging.error("Hook installation failed for %s.%s: %s", module_path, function_path, e)
+        logger.error("Hook installation failed for %s.%s: %s", module_path, function_path, e)
         return None
 
-HookPoint = Union[Tuple[str, str], List[Tuple[str, str]]]
-
 def vllm_hook(
-    hook_points: HookPoint,
+    hook_points: Union[Tuple[str, str], List[Tuple[str, str]]],
     caller_filter: Optional[str] = None,
     min_version: Optional[str] = None,
     max_version: Optional[str] = None
@@ -208,7 +235,7 @@ def vllm_hook(
     def decorator(user_func: Callable) -> Callable:
         # 版本检查
         if (min_version or max_version) and not _check_version_compatibility(min_version, max_version):
-            logging.info("Skipping hooks due to version incompatibility")
+            logger.info("Skipping hooks due to version incompatibility")
             return user_func
             
         helpers = []
@@ -238,11 +265,11 @@ def recover_hooks_for(func: Callable) -> None:
     for helper in helpers:
         try:
             helper.recover()
-            logging.info("Hook recovered: %s.%s", 
+            logger.info("Hook recovered: %s.%s", 
                          helper.location.__name__ if hasattr(helper.location, '__name__') else type(helper.location).__name__, 
                          helper.attr_name)
         except Exception as e:
-            logging.error("Hook recovery failed: %s", e)
+            logger.error("Hook recovery failed: %s", e)
 
 def recover_all_hooks() -> None:
     """恢复所有已注册的钩子"""
@@ -255,8 +282,8 @@ def recover_all_hooks() -> None:
     for helper in all_helpers:
         try:
             helper.recover()
-            logging.info("Hook recovered: %s.%s", 
+            logger.info("Hook recovered: %s.%s", 
                          helper.location.__name__ if hasattr(helper.location, '__name__') else type(helper.location).__name__, 
                          helper.attr_name)
         except Exception as e:
-            logging.error("Hook recovery failed: %s", e)
+            logger.error("Hook recovery failed: %s", e)
