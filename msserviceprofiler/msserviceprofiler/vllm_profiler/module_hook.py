@@ -151,13 +151,14 @@ def _create_wrapper(
     @functools.wraps(original_func)
     def wrapper(*args, **kwargs):
         # 调用栈过滤
-        logger.debug(f"calling {original_func}")
         if caller_filter:
             frame = sys._getframe(1)
             if frame.f_code.co_name != caller_filter:
+                logger.debug(f"calling {original_func}")
                 return original_func(*args, **kwargs)
         
         try:
+            logger.debug(f"calling user_func for {original_func}")
             return user_func(original_func, *args, **kwargs)
         except Exception as e:
             logger.error("Hook function error: %s", e, exc_info=True)

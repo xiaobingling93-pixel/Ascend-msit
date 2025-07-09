@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 from ms_service_profiler import Profiler, Level
-from .module_hook import vllm_hook, recover_hooks_for
+from .module_hook import vllm_hook
 import threading
 
 # 线程安全的全局状态
@@ -119,11 +119,3 @@ def set_forward_context(original_func, *args, **kwargs):
         yield
     if prof is not None:
         prof.span_end()
-
-
-def cleanup_hooks():
-    """清理所有钩子（测试/退出时使用）"""
-    recover_hooks_for(handle_execute_model)
-    recover_hooks_for(execute_model)
-    recover_hooks_for(begin_forward)
-    recover_hooks_for(set_forward_context)
