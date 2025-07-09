@@ -21,11 +21,14 @@ def _get_state() -> HookState:
         _thread_local.hook_state = HookState()
     return _thread_local.hook_state
 
+# 使用元组形式定义钩子点
+EXECUTE_MODEL_HOOKS = [
+    ("vllm.executor.executor_base", "ExecutorBase.execute_model"),
+    ("vllm.executor.executor_base", "DistributedExecutorBase.execute_model")
+]
+
 @vllm_hook(
-    hook_points=[
-        "vllm.executor.executor_base.ExecutorBase.execute_model",
-        "vllm.executor.executor_base.DistributedExecutorBase.execute_model"
-    ],
+    hook_points=EXECUTE_MODEL_HOOKS,
     min_version="0.8.4"
 )
 def handle_execute_model(original_func, this, execute_model_req, *args, **kwargs):
@@ -67,10 +70,13 @@ def handle_execute_model(original_func, this, execute_model_req, *args, **kwargs
     ).event("preprocess")
     
     # 执行原始函数并记录耗时
-    return original_func(this, execute_model_req, *args, **kwargs)
+    with prof.span("modelExec"):
+        return original_func(this, execute_model_req, *args, **kwargs)
+
+MODEL_RUNNER_HOOK = ("vllm.worker.model_runner", "ModelRunner.execute_model")
 
 @vllm_hook(
-    hook_points="vllm.worker.model_runner.ModelRunner.execute_model",
+    hook_points=MODEL_RUNNER_HOOK,
     min_version="0.6.3"
 )
 def execute_model(original_func, this, model_input, kv_caches, *args, **kwargs):
@@ -101,14 +107,17 @@ def execute_model(original_func, this, model_input, kv_caches, *args, **kwargs):
     prof.attr("batch_size", model_input.input_tokens.shape[0])
     
     # 执行原始函数并记录耗时
-    return original_func(this, model_input, kv_caches, *args, **kwargs)
+    with prof.span("modelExec"):
+        return original_func(this, model_input, kv_caches, *args, **kwargs)
+
+ATTENTION_HOOK = ("vllm.attention.backends.utils", "CommonAttentionState.begin_forward")
 
 @vllm_hook(
-    hook_points="vllm.attention.backends.utils.CommonAttentionState.begin_forward",
+    hook_points=ATTENTION_HOOK,
     min_version="0.6.3"
 )
 def begin_forward(original_func, this, model_input, *args, **kwargs):
-    """前向开始钩子 - 类方法处理优化"""
+    """前向开始钩子"""
     state = _get_state()
     result = original_func(this, model_input, *args, **kwargs)
     
@@ -123,8 +132,10 @@ def begin_forward(original_func, this, model_input, *args, **kwargs):
     
     return result
 
+FORWARD_CONTEXT_HOOK = ("vllm.forward_context", "set_forward_context")
+
 @vllm_hook(
-    hook_points="vllm.forward_context.set_forward_context",
+    hook_points=FORWARD_CONTEXT_HOOK,
     min_version="0.8.4"
 )
 @contextmanager
@@ -137,7 +148,8 @@ def set_forward_context(original_func, *args, **kwargs):
     # 执行原始上下文管理器
     with original_func(*args, **kwargs):
         if prof:
-            yield
+            with prof.span("forward"):
+                yield
         else:
             yield
 
