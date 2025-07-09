@@ -13,3 +13,5 @@
 # limitations under the License.
 from importlib.metadata import version
 from packaging.version import Version
+
+from .vllm_v0 import batch_hookers, kvcache_hookers, model_hookers, request_hookers
