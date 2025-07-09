@@ -2,6 +2,7 @@ import os
 import pytest
 import sys
 import importlib
+import pkgutil
 import threading
 from types import ModuleType
 from unittest.mock import patch, MagicMock
