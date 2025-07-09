@@ -9,7 +9,7 @@ from unittest.mock import patch, MagicMock
 from packaging.version import Version
 
 sys.path.append(os.path.join(os.path.dirname(pkgutil.get_loader("msserviceprofiler").path), "vllm_profiler"))
-from vllm_profiler.module_hook import (
+from module_hook import (
     HookHelper,
     _import_target_module,
     _resolve_target_function,
