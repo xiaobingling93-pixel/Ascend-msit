@@ -211,7 +211,7 @@ def _install_hook(
     try:
         helper = HookHelper(original_func, wrapper, location, attr_name)
         helper.replace()
-        logger.info("Hook installed: %s.%s", module_path, function_path)
+        logger.debug("Hook installed: %s.%s", module_path, function_path)
         return helper
     except Exception as e:
         logger.error("Hook installation failed for %s.%s: %s", module_path, function_path, e)
@@ -249,8 +249,7 @@ def vllm_hook(
         # 注册钩子以便后续恢复
         if helpers:
             with _registry_lock:
-                key = f"{user_func.__module__}.{user_func.__name__}"
-                _HOOK_REGISTRY.setdefault(key, []).extend(helpers)
+                _HOOK_REGISTRY.setdefault(f"{user_func.__module__}.{user_func.__name__}", []).extend(helpers)
                 
         return user_func
         
@@ -265,7 +264,7 @@ def recover_hooks_for(func: Callable) -> None:
     for helper in helpers:
         try:
             helper.recover()
-            logger.info("Hook recovered: %s.%s", 
+            logger.debug("Hook recovered: %s.%s", 
                          helper.location.__name__ if hasattr(helper.location, '__name__') else type(helper.location).__name__, 
                          helper.attr_name)
         except Exception as e:
@@ -282,7 +281,7 @@ def recover_all_hooks() -> None:
     for helper in all_helpers:
         try:
             helper.recover()
-            logger.info("Hook recovered: %s.%s", 
+            logger.debug("Hook recovered: %s.%s", 
                          helper.location.__name__ if hasattr(helper.location, '__name__') else type(helper.location).__name__, 
                          helper.attr_name)
         except Exception as e:

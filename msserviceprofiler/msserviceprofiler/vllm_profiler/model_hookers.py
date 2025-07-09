@@ -51,7 +51,7 @@ def handle_execute_model(original_func, this, execute_model_req, *args, **kwargs
     preprocess_prof = Profiler(Level.INFO).domain("ModelExecute").res(request_id_list)
     preprocess_prof.event("preprocess")
 
-    ret = ori_func(this, execute_model_req, *args, **kwargs)
+    ret = original_func(this, execute_model_req, *args, **kwargs)
     prof.span_end()
     return ret
 
@@ -67,7 +67,7 @@ def execute_model(original_func, this, model_input, kv_caches, *args, **kwargs):
     prof = Profiler(Level.INFO).domain("ModelExecute")
     prof.span_start("modelExec")
 
-    ret = ori_func(this, model_input, kv_caches, *args, **kwargs)
+    ret = original_func(this, model_input, kv_caches, *args, **kwargs)
 
     is_prefill = model_input.attn_metadata.prefill_metadata
 
