@@ -13,7 +13,7 @@
 # limitations under the License.
 from collections import Counter
 from ms_service_profiler import Profiler, Level
-from .module_hook import vllm_hook
+from ..module_hook import vllm_hook
 
 
 def compare_deques(queue1, queue2):

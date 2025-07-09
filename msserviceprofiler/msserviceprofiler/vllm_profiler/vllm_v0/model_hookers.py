@@ -1,7 +1,7 @@
+import threading
 from contextlib import contextmanager
 from ms_service_profiler import Profiler, Level
-from .module_hook import vllm_hook
-import threading
+from ..module_hook import vllm_hook
 
 
 # 线程安全的全局状态

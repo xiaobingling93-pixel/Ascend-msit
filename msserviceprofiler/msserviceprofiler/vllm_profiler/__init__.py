@@ -13,18 +13,3 @@
 # limitations under the License.
 from importlib.metadata import version
 from packaging.version import Version
-
-try:
-    vllm_version = version("vllm")
-except Exception as ee:
-    vllm_version = None
-
-
-if vllm_version and Version(vllm_version) > Version("0.8.3"):
-    import msserviceprofiler.vllm_profiler.vllm_profiler_0_8_4
-elif vllm_version and Version(vllm_version) > Version("0.6.2"):
-    import msserviceprofiler.vllm_profiler.vllm_profiler_0_6_3
-else:
-    import logging
-
-    logging.error(f"Not supported vllm version {vllm_version}")

@@ -15,7 +15,7 @@ import os
 import time
 
 from ms_service_profiler import Profiler, Level
-from .module_hook import vllm_hook
+from ..module_hook import vllm_hook
 
 
 def prof_add_request(request_id, prompt, *args, **kwargs):

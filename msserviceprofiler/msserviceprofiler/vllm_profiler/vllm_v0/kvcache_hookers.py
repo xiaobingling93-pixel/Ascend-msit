@@ -13,7 +13,7 @@
 # limitations under the License.
 from ms_service_profiler import Profiler, Level
 
-from .module_hook import vllm_hook
+from ..module_hook import vllm_hook
 
 GLOBAL_REQUEST_DICT = {}
 
