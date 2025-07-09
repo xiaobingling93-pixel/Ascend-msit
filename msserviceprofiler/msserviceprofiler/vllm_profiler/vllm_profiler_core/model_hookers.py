@@ -11,148 +11,157 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+from contextlib import contextmanager
 from ms_service_profiler import Profiler, Level
-from .vllm_hooker_base import VLLMHookerBase
+from .module_hook import vllm_hook, recover_hooks_for
+import threading
 
-GLOBAL_FORWARD_PROF = []
-
-
-class ExecutorBaseExecuteModelHook(VLLMHookerBase):
-    vllm_version = ("0.8.4", "0.8.4")
-
-    def init(self):
-        from vllm.executor.executor_base import ExecutorBase
-        from vllm.executor.executor_base import DistributedExecutorBase
-
-        def execute_model_maker(ori_func):
-            def execute_model(this, execute_model_req, *args, **kwargs):
-                prof = Profiler(Level.INFO).domain("ModelExecute")
-                is_prefill, request_id_list, request_id_with_iter_list = False, [], []
-                for seq_metadata in execute_model_req.seq_group_metadata_list:
-                    if len(seq_metadata.seq_data) > 0:
-                        cur_seq_data = list(seq_metadata.seq_data.values())[0]
-                        iter_size = cur_seq_data.get_len() - len(cur_seq_data.prompt_token_ids)
-                    else:
-                        iter_size = 0
-                    request_id_list.append({"rid": seq_metadata.request_id})
-                    request_id_with_iter_list.append({"rid": seq_metadata.request_id, "iter_size": iter_size})
-                    is_prefill = is_prefill or seq_metadata.is_prompt
-
-                prof.res(request_id_with_iter_list)
-                prof.attr("batch_type", "Prefill" if is_prefill else "Decode")
-                prof.span_start("modelExec")
-                prof.attr("batch_size", len(execute_model_req.seq_group_metadata_list))
-
-                preprocess_prof = Profiler(Level.INFO).domain("ModelExecute").res(request_id_list)
-                preprocess_prof.event("preprocess")
-
-                ret = ori_func(this, execute_model_req, *args, **kwargs)
-                prof.span_end()
-                return ret
-
-            return execute_model
-
-        self.do_hook([ExecutorBase.execute_model], execute_model_maker)
-        self.do_hook([DistributedExecutorBase.execute_model], execute_model_maker)
-
-
-class ModelRunnerExecuteHook(VLLMHookerBase):
-    vllm_version = ("0.6.3", "0.8.4")
+# 线程安全的全局状态
+class HookState:
+    __slots__ = ('forward_profiler', 'execute_model_first_run', 'begin_forward_first_run')
 
     def __init__(self):
-        super().__init__()
-        self.is_model_first_run = True
+        self.forward_profiler = None
+        self.execute_model_first_run = True
+        self.begin_forward_first_run = True
 
-    def init(self):
-        from vllm.worker.model_runner import ModelRunner
+# 线程本地存储
+_thread_local = threading.local()
 
-        def execute_model_maker(ori_func):
-            def execute_model(this, model_input, kv_caches, *args, **kwargs):
-                if self.is_model_first_run:
-                    self.is_model_first_run = False
-                    return ori_func(this, model_input, kv_caches, *args, **kwargs)
+def _get_state() -> HookState:
+    """获取线程本地状态"""
+    if not hasattr(_thread_local, 'hook_state'):
+        _thread_local.hook_state = HookState()
+    return _thread_local.hook_state
 
-                prof = Profiler(Level.INFO).domain("ModelExecute")
-                prof.span_start("modelExec")
+@vllm_hook(
+    hook_points=[
+        "vllm.executor.executor_base.ExecutorBase.execute_model",
+        "vllm.executor.executor_base.DistributedExecutorBase.execute_model"
+    ],
+    min_version="0.8.4"
+)
+def handle_execute_model(original_func, this, execute_model_req, *args, **kwargs):
+    """处理执行模型钩子"""
+    state = _get_state()
 
-                ret = ori_func(this, model_input, kv_caches, *args, **kwargs)
+    # 跳过首次执行（初始化阶段）
+    if state.execute_model_first_run:
+        state.execute_model_first_run = False
+        return original_func(this, execute_model_req, *args, **kwargs)
 
-                is_prefill = model_input.attn_metadata.prefill_metadata
+    # 准备性能分析
+    prof = Profiler(Level.INFO).domain("ModelExecute")
+    is_prefill = False
+    request_data = []
 
-                request_id_list = []
+    for seq_metadata in execute_model_req.seq_group_metadata_list:
+        if seq_metadata.seq_data:
+            seq = next(iter(seq_metadata.seq_data.values()))
+            iter_size = seq.get_len() - len(seq.prompt_token_ids)
+        else:
+            iter_size = 0
 
-                for request_id, _ in model_input.request_ids_to_seq_ids.items():
-                    request_id_list.append({"rid": request_id})
+        request_data.append({
+            "rid": seq_metadata.request_id,
+            "iter_size": iter_size
+        })
 
-                prof.res(request_id_list)
+        is_prefill = is_prefill or seq_metadata.is_prompt
 
-                if is_prefill:
-                    prof.attr("batch_type", "Prefill")
-                else:
-                    prof.attr("batch_type", "Decode")
+    # 设置分析器属性
+    prof.res(request_data)
+    prof.attr("batch_type", "Prefill" if is_prefill else "Decode")
+    prof.attr("batch_size", len(execute_model_req.seq_group_metadata_list))
 
-                batch_size = model_input.input_tokens.shape[0]
-                prof.attr("batch_size", batch_size)
+    # 记录预处理事件
+    Profiler(Level.INFO).domain("ModelExecute").res(
+        [{"rid": md.request_id} for md in execute_model_req.seq_group_metadata_list]
+    ).event("preprocess")
 
-                prof.span_end()
-                return ret
+    # 执行原始函数并记录耗时
+    with prof.span("modelExec"):
+        return original_func(this, execute_model_req, *args, **kwargs)
 
-            return execute_model
+@vllm_hook(
+    hook_points="vllm.worker.model_runner.ModelRunner.execute_model",
+    min_version="0.6.3"
+)
+def execute_model(original_func, this, model_input, kv_caches, *args, **kwargs):
+    """模型执行钩子"""
+    state = _get_state()
 
-        self.do_hook([ModelRunner.execute_model], execute_model_maker)
+    if state.execute_model_first_run:
+        state.execute_model_first_run = False
+        return original_func(this, model_input, kv_caches, *args, **kwargs)
 
+    prof = Profiler(Level.INFO).domain("ModelExecute")
 
-class ModelForwardHook(VLLMHookerBase):
-    vllm_version = ("0.6.3", "0.8.4")
+    # 收集请求信息
+    request_ids = [
+        {"rid": rid}
+        for rid in model_input.request_ids_to_seq_ids.keys()
+    ]
 
-    def __init__(self):
-        super().__init__()
-        self.is_forward_first_run = True
+    # 确定批次类型
+    is_prefill = hasattr(model_input.attn_metadata, 'prefill_metadata') and \
+                 model_input.attn_metadata.prefill_metadata is not None
 
-    def init(self):
-        from vllm.attention.backends.utils import CommonAttentionState
+    batch_type = "Prefill" if is_prefill else "Decode"
 
-        def begin_forward_maker(ori_func):
-            def begin_forward(this, model_input, *args, **kwargs):
-                ret = ori_func(this, model_input, *args, **kwargs)
-                if self.is_forward_first_run:
-                    self.is_forward_first_run = False
-                    return ret
+    # 设置分析器属性
+    prof.res(request_ids)
+    prof.attr("batch_type", batch_type)
+    prof.attr("batch_size", model_input.input_tokens.shape[0])
 
-                request_id_list = [{"rid": request_id} for request_id, _ in model_input.request_ids_to_seq_ids.items()]
-                prof = Profiler(Level.INFO).domain("ModelExecute").res(request_id_list)
-                GLOBAL_FORWARD_PROF.append(prof)
-                return ret
+    # 执行原始函数并记录耗时
+    with prof.span("modelExec"):
+        return original_func(this, model_input, kv_caches, *args, **kwargs)
 
-            return begin_forward
+@vllm_hook(
+    hook_points="vllm.attention.backends.utils.CommonAttentionState.begin_forward",
+    min_version="0.6.3"
+)
+def begin_forward(original_func, this, model_input, *args, **kwargs):
+    """前向开始钩子"""
+    state = _get_state()
+    result = original_func(this, model_input, *args, **kwargs)
 
-        self.do_hook([CommonAttentionState.begin_forward], begin_forward_maker)
+    if state.begin_forward_first_run:
+        state.begin_forward_first_run = False
+        return result
 
+    # 创建新的性能分析器
+    state.forward_profiler = Profiler(Level.INFO).domain("ModelExecute").res(
+        [{"rid": rid} for rid in model_input.request_ids_to_seq_ids.keys()]
+    )
 
-class SetForwardContextHook(VLLMHookerBase):
-    vllm_version = ("0.8.4", "0.8.4")
+    return result
 
-    def init(self):
-        from vllm import forward_context
-        from contextlib import contextmanager
+@vllm_hook(
+    hook_points="vllm.forward_context.set_forward_context",
+    min_version="0.8.4"
+)
+@contextmanager
+def set_forward_context(original_func, *args, **kwargs):
+    """前向上下文钩子"""
+    state = _get_state()
+    prof = state.forward_profiler
+    state.forward_profiler = None  # 重置状态
 
-        def set_forward_context_maker(ori_func):
-            @contextmanager
-            def set_forward_context(*args, **kwargs):
-                if len(GLOBAL_FORWARD_PROF) > 0:
-                    prof = GLOBAL_FORWARD_PROF.pop(0)
-                    prof.span_start("forward")
-                else:
-                    prof = None
-                with ori_func(*args, **kwargs):
-                    yield
-                if prof is not None:
-                    prof.span_end()
+    # 执行原始上下文管理器
+    with original_func(*args, **kwargs):
+        if prof:
+            with prof.span("forward"):
+                yield
+        else:
+            yield
 
-            return set_forward_context
-
-        self.do_hook([forward_context.set_forward_context], set_forward_context_maker)
-
+def cleanup_hooks():
+    """清理所有钩子（测试/退出时使用）"""
+    recover_hooks_for(handle_execute_model)
+    recover_hooks_for(execute_model)
+    recover_hooks_for(begin_forward)
+    recover_hooks_for(set_forward_context)
 
 model_hookers = [ExecutorBaseExecuteModelHook, ModelRunnerExecuteHook, ModelForwardHook, SetForwardContextHook]
