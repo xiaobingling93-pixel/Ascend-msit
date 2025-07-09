@@ -150,10 +150,10 @@ def _check_version_compatibility(min_version: Optional[str], max_version: Option
         current_ver = Version(current_version)
 
         if min_version and current_ver < Version(min_version):
-            logger.info("Skipping hooks: Current version %s < %s", current_version, min_version)
+            logger.debug("Skipping hooks: Current version %s < %s", current_version, min_version)
             return False
         if max_version and current_ver > Version(max_version):
-            logger.info("Skipping hooks: Current version %s > %s", current_version, max_version)
+            logger.debug("Skipping hooks: Current version %s > %s", current_version, max_version)
             return False
         return True
     except ImportError:

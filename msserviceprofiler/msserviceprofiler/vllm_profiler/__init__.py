@@ -11,8 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from importlib.metadata import version
-from packaging.version import Version
-
-from .vllm_v0 import batch_hookers, kvcache_hookers, model_hookers, request_hookers
+import os
 from .utils import logger, set_log_level
+
+if os.environ.get('VLLM_USE_V1', '0') == "0":
+    from .vllm_v0 import batch_hookers, kvcache_hookers, model_hookers, request_hookers
+else:
+    logger.error("vLLM V1 interface is not supported yet")
