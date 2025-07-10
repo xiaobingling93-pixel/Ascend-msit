@@ -147,8 +147,8 @@ class VLLMHookerBase(ABC):
     def do_hook(self, hook_points, profiler_func_maker, pname=None):
         """执行实际的hook操作"""
         for ori_func in hook_points:
-            lambda ori_func: lambda *args, **kwargs: hook_func(ori_func, *args, **kwargs)
-            HookHelper(ori_func, self.replace_func(ori_func, pname, profiler_func_maker)).replace()
+            profiler_func = profiler_func_maker(ori_func)
+            HookHelper(ori_func, self.replace_func(ori_func, pname, profiler_func)).replace()
             logger.debug(f"replacing {ori_func}")
 
     def support_version(self, version):
