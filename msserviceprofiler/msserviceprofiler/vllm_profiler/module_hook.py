@@ -134,6 +134,7 @@ class VLLMHookerBase(ABC):
         pass
 
     def replace_func(self, ori_func, pname, profiler_func):
+        """创建替换函数"""
         @functools.wraps(ori_func)
         def wrapper(*args, **kwargs):
             if pname is not None and self.get_parents_name(ori_func) != pname:
@@ -144,8 +145,9 @@ class VLLMHookerBase(ABC):
         return wrapper
 
     def do_hook(self, hook_points, profiler_func_maker, pname=None):
+        """执行实际的hook操作"""
         for ori_func in hook_points:
-            profiler_func = profiler_func_maker(ori_func)
+            lambda ori_func: lambda *args, **kwargs: hook_func(ori_func, *args, **kwargs)
             HookHelper(ori_func, self.replace_func(ori_func, pname, profiler_func)).replace()
             logger.debug(f"replacing {ori_func}")
 
@@ -185,8 +187,11 @@ def vllm_hook(
             def init(self):
                 hook_list = [hook_points] if isinstance(hook_points, tuple) else hook_points
                 points = [import_object_from_string(import_path, func_path) for import_path, func_path in hook_list]
-                self.do_hook(points, hook_func, caller_filter)
-
+                self.do_hook(
+                    hook_points=points,
+                    profiler_func_maker=lambda ori_func: lambda *args, **kwargs: hook_func(ori_func, *args, **kwargs),
+                    pname=caller_filter,
+                )
         hooker = AutoHooker()
         hooker.register()
         return hook_func
