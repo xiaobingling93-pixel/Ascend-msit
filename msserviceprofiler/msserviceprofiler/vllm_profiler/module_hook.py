@@ -209,7 +209,7 @@ def apply_hooks(version: str = None):
         if hooker.support_version(version):
             try:
                 hooker.init()
-                logger.debug(f"Applied hooker: {hooker.__class__.__name__}, domain={domain}")
+                logger.debug(f"Applied hooker: {hooker.__class__.__name__}")
             except Exception as e:
                 logger.error(f"Failed to apply hooker: {str(e)}")
         else:
