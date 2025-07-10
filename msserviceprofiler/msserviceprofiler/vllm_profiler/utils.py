@@ -1,4 +1,4 @@
-# Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
+vllm# Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,14 +31,14 @@ def set_log_level(level="info"):
         logger.warning("Set %s log level failed.", level)
 
 
-def set_logger(logger):
-    logger.propagate = False
-    logger.setLevel(logging.INFO)
-    if not logger.handlers:
+def set_logger(new_logger):
+    new_logger.propagate = False
+    new_logger.setLevel(logging.INFO)
+    if not new_logger.handlers:
         stream_handler = logging.StreamHandler()
         formatter = logging.Formatter("%(asctime)s - %(process)s - %(name)s - %(levelname)s - %(message)s")
         stream_handler.setFormatter(formatter)
-        logger.addHandler(stream_handler)
+        new_logger.addHandler(stream_handler)
 
 
 logger = logging.getLogger("vllmProfiler")
