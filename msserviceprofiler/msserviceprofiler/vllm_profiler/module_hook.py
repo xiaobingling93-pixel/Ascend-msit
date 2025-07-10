@@ -138,31 +138,18 @@ class VLLMHookerBase(ABC):
         """初始化hook点，子类必须实现"""
         pass
 
-    def do_hook(self, hook_points, hook_func, pname=None):
-        """执行实际的hook操作"""
-        for ori_func in hook_points:
-            if ori_func is None:
-                continue
-            # 创建替换函数时直接使用 hook_func
-            def replacement(*args, **kwargs):
-                return hook_func(ori_func, *args, **kwargs)
-
-            # 应用调用者过滤
-            wrapped = self.wrap_with_caller_filter(ori_func, replacement, pname)
-            HookHelper(ori_func, wrapped).replace()
-
-    def wrap_with_caller_filter(self, ori_func, replacement, pname=None):
-        """包装替换函数，添加调用者过滤"""
-        if pname is None:
-            return replacement
-
+    def replace_func(self, ori_func, pname, profiler_func):
         @functools.wraps(ori_func)
         def wrapper(*args, **kwargs):
-            if get_parents_name(ori_func) != pname:
+            if pname is not None and self.get_parents_name(ori_func) != pname:
                 return ori_func(*args, **kwargs)
-            return replacement(*args, **kwargs)
-
+            return profiler_func(*args, **kwargs)
         return wrapper
+
+    def do_hook(self, hook_points, profiler_func_maker, pname=None):
+        for ori_func in hook_points:
+            profiler_func = profiler_func_maker(ori_func)
+            HookHelper(ori_func, self.replace_func(ori_func, pname, profiler_func)).replace()
 
     def support_version(self, version):
         """检查当前版本是否支持"""
