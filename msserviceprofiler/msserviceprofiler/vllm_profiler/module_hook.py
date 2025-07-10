@@ -12,257 +12,212 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import sys
+import traceback
 import importlib
 import inspect
+import logging
 import functools
-import threading
+from abc import ABC, abstractmethod
 from packaging.version import Version
-from types import ModuleType
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union, Iterable
+from typing import Union, Tuple, List, Optional, Callable, Dict, Any
 from .utils import logger
 
-# 全局钩子注册表（线程安全）
-_HOOK_REGISTRY: Dict[str, List["HookHelper"]] = {}
-_registry_lock = threading.Lock()
+# 全局注册表存储所有hookers
+HOOK_REGISTRY = []
 
+def import_object_from_string(import_path: str, module_path: str) -> Any:
+    """
+    根据点分隔的路径导入对象（模块、类、函数等）
+    支持多级嵌套属性，如 "module.submodule.ClassName.method_name"
+    """
+    parts = import_path.split('.')
+    module_path = '.'.join(parts[:-1])
+    attribute_name = parts[-1]
 
-class HookHelper:
-    def __init__(self, original_func: Callable, new_func: Callable, location: Any, attr_name: str):
-        self.original_func = original_func
-        self.new_func = new_func
-        self.location = location
-        self.attr_name = attr_name
-        self._orig_descriptor = self._get_original_descriptor()
-        logger.debug("Created HookHelper for %s.%s", self._get_location_name(location), attr_name)
-
-    @staticmethod
-    def _get_location_name(location: str) -> str:
-        return location.__name__ if hasattr(location, "__name__") else type(location).__name__
-
-    @staticmethod
-    def _get_descriptor_type(obj: Any) -> Optional[type]:
-        """获取描述符类型（类方法/静态方法）"""
-        if isinstance(obj, staticmethod):
-            return staticmethod
-        if isinstance(obj, classmethod):
-            return classmethod
-        return None
-
-    def _get_original_descriptor(self) -> Optional[type]:
-        """获取原始描述符类型"""
-        if not inspect.isclass(self.location):
-            return None
-
-        try:
-            # 使用安全方法获取属性
-            attr = getattr(self.location, self.attr_name)
-            return self._get_descriptor_type(attr)
-        except AttributeError:
-            return None
-
-    def replace(self) -> None:
-        """替换原始函数，正确处理类方法和静态方法"""
-        if self._orig_descriptor is staticmethod:
-            setattr(self.location, self.attr_name, staticmethod(self.new_func))
-        elif self._orig_descriptor is classmethod:
-            setattr(self.location, self.attr_name, classmethod(self.new_func))
-        else:
-            setattr(self.location, self.attr_name, self.new_func)
-        logger.debug("Replaced function: %s.%s", self._get_location_name(self.location), self.attr_name)
-
-    def recover(self) -> None:
-        """恢复原始函数，正确处理类方法和静态方法"""
-        if self._orig_descriptor is staticmethod:
-            setattr(self.location, self.attr_name, staticmethod(self.original_func))
-        elif self._orig_descriptor is classmethod:
-            setattr(self.location, self.attr_name, classmethod(self.original_func))
-        else:
-            setattr(self.location, self.attr_name, self.original_func)
-        logger.debug("Recovered function: %s.%s", self._get_location_name(self.location), self.attr_name)
-
-
-def _import_target_module(module_path: str) -> Optional[ModuleType]:
-    """安全导入目标模块"""
     try:
-        return importlib.import_module(module_path)
+        module = importlib.import_module(import_path)
     except ImportError as e:
         logger.error("Module import failed for %s: %s", module_path, e)
         return None
 
-
-def _resolve_target_function(module: ModuleType, function_path: str) -> Optional[Tuple[Callable, Any, str]]:
-    """解析目标函数，支持嵌套属性和类方法"""
-    parts = function_path.split(".")
     current = module
+    for part in module_path.split("."):
+        current = getattr(current, part, None)
+        if current is None:
+            logger.error("Module {current} doesn't has attribute {part}")
+            return None
+    return current
 
-    # 遍历路径直到最后一个属性
-    for i, part in enumerate(parts):
-        try:
-            # 尝试获取当前属性
-            attr = getattr(current, part)
 
-            # 如果是最后一个部分，直接返回
-            if i == len(parts) - 1:
-                return attr, current, part
+class HookHelper:
+    """辅助类，用于函数替换操作"""
+    def __init__(self, ori_function_define, new_function):
+        self.new_function = new_function
+        self.ori_function = None
+        self.location = None
+        self.attr_name = None
 
-            # 否则继续深入
-            current = attr
-        except AttributeError:
-            # 尝试导入子模块（对于嵌套模块情况）
-            submodule_path = f"{current.__name__}.{part}" if hasattr(current, "__name__") else part
+        if ori_function_define is None:
+            return
+
+        if inspect.isfunction(ori_function_define) or inspect.ismethod(ori_function_define):
+            self.ori_function = ori_function_define
+            self.location, self.attr_name = self.get_location(self.ori_function)
+        elif callable(ori_function_define):
+            self.ori_function = ori_function_define.__call__
+            self.location, self.attr_name = self.get_location(self.ori_function)
+
+        if not all((self.ori_function, self.location, self.attr_name, self.new_function)):
+            warn_msg = f"{ori_function_define} replace failed."
+            logging.error(warn_msg)
+            raise ValueError(warn_msg)
+
+    @staticmethod
+    def get_location(function_ins):
+        if not hasattr(function_ins, "__module__"):
+            warning_msg = f"function {str(function_ins)} has no __module__."
+            logging.error(warning_msg)
+            raise ValueError(warning_msg)
+
+        module = importlib.import_module(function_ins.__module__)
+        qualified_name = function_ins.__qualname__.split(".")
+        classes = qualified_name[:-1]
+        attr_name = qualified_name[-1]
+        location = module
+
+        for class_name in classes:
+            location = getattr(location, class_name, None)
+            if location is None:
+                break
+
+        if location is None:
+            warning_msg = f"{'.'.join(classes)} does not exist"
+            logging.error(warning_msg)
+            raise ValueError(warning_msg)
+
+        return location, attr_name
+
+    def replace(self):
+        if all((self.ori_function, self.location, self.attr_name, self.new_function)):
+            setattr(self.location, self.attr_name, self._get_method(self.new_function))
+
+    def recover(self):
+        if all((self.ori_function, self.location, self.attr_name, self.new_function)):
+            setattr(self.location, self.attr_name, self._get_method(self.ori_function))
+
+    def _get_method(self, func):
+        if inspect.isclass(self.location):
             try:
-                submodule = importlib.import_module(submodule_path)
-                current = submodule
-            except ImportError:
-                logger.error("Attribute %s not found in %s", part, function_path)
-                return None
-
-    return None
-
-
-def _create_wrapper(original_func: Callable, user_func: Callable, caller_filter: Optional[str]) -> Callable:
-    """创建安全的包装函数"""
-
-    @functools.wraps(original_func)
-    def wrapper(*args, **kwargs):
-        # 调用栈过滤
-        if caller_filter:
-            frame = sys._getframe(1)
-            if frame.f_code.co_name != caller_filter:
-                logger.debug(f"calling {original_func}")
-                return original_func(*args, **kwargs)
-
-        try:
-            logger.debug(f"calling user_func for {original_func}")
-            return user_func(original_func, *args, **kwargs)
-        except Exception as e:
-            logger.error("Hook function error: %s", e, exc_info=True)
-            return original_func(*args, **kwargs)
-
-    return wrapper
+                func_cls_name = inspect.getattr_static(self.location, self.attr_name).__class__.__name__
+                if func_cls_name in ("staticmethod", "classmethod"):
+                    return staticmethod(func)
+            except AttributeError:
+                pass
+        return func
 
 
-def _check_version_compatibility(min_version: Optional[str], max_version: Optional[str]) -> bool:
-    """检查版本兼容性"""
+def get_parents_name(ori_func, index=1):
+    """获取调用栈中的父级函数名"""
+    gen = traceback.walk_stack(None)
     try:
-        from vllm import __version__ as current_version
+        for _ in range(index + 1):
+            f = next(gen)
+        return f[0].f_code.co_name
+    except StopIteration:
+        return None
 
-        current_ver = Version(current_version)
 
-        if min_version and current_ver < Version(min_version):
-            logger.debug("Skipping hooks: Current version %s < %s", current_version, min_version)
+class VLLMHookerBase(ABC):
+    """Hooker基类，提供核心功能"""
+    def __init__(self):
+        self.hooks = []
+        self.vllm_version = (None, None)  # (min_version, max_version)
+
+    @abstractmethod
+    def init(self):
+        """初始化hook点，子类必须实现"""
+        pass
+
+    def do_hook(self, hook_points, hook_func, pname=None):
+        """执行实际的hook操作"""
+        for ori_func in hook_points:
+            if ori_func is None:
+                continue
+            # 创建替换函数时直接使用 hook_func
+            def replacement(*args, **kwargs):
+                return hook_func(ori_func, *args, **kwargs)
+
+            # 应用调用者过滤
+            wrapped = self.wrap_with_caller_filter(ori_func, replacement, pname)
+            HookHelper(ori_func, wrapped).replace()
+
+    def wrap_with_caller_filter(self, ori_func, replacement, pname=None):
+        """包装替换函数，添加调用者过滤"""
+        if pname is None:
+            return replacement
+
+        @functools.wraps(ori_func)
+        def wrapper(*args, **kwargs):
+            if get_parents_name(ori_func) != pname:
+                return ori_func(*args, **kwargs)
+            return replacement(*args, **kwargs)
+
+        return wrapper
+
+    def support_version(self, version):
+        """检查当前版本是否支持"""
+        min_version = self.vllm_version[0]
+        max_version = self.vllm_version[1]
+
+        if min_version is not None and Version(min_version) > Version(version):
             return False
-        if max_version and current_ver > Version(max_version):
-            logger.debug("Skipping hooks: Current version %s > %s", current_version, max_version)
+        if max_version is not None and Version(max_version) < Version(version):
             return False
         return True
-    except ImportError:
-        logger.warning("VLLM version check failed - proceeding with hooks")
-        return True
 
-
-def _install_hook(
-    module_path: str, function_path: str, user_func: Callable, caller_filter: Optional[str]
-) -> Optional[HookHelper]:
-    """安装单个钩子"""
-    module = _import_target_module(module_path)
-    if not module:
-        logger.error("Module not found: %s", module_path)
-        return None
-
-    # 解析目标函数
-    target_info = _resolve_target_function(module, function_path)
-    if target_info is None:
-        logger.error("Function not found: %s in module %s", function_path, module_path)
-        return None
-
-    original_func, location, attr_name = target_info
-
-    # 创建安全的包装器
-    wrapper = _create_wrapper(original_func, user_func, caller_filter)
-
-    try:
-        helper = HookHelper(original_func, wrapper, location, attr_name)
-        helper.replace()
-        logger.debug("Hook installed: %s.%s", module_path, function_path)
-        return helper
-    except Exception as e:
-        logger.error("Hook installation failed for %s.%s: %s", module_path, function_path, e)
-        return None
+    def register(self):
+        """注册hooker到全局注册表"""
+        HOOK_REGISTRY.append(self)
 
 
 def vllm_hook(
     hook_points: Union[Tuple[str, str], List[Tuple[str, str]]],
-    caller_filter: Optional[str] = None,
     min_version: Optional[str] = None,
     max_version: Optional[str] = None,
+    caller_filter: Optional[str] = None
 ) -> Callable:
-    """主装饰器函数，支持元组形式钩子点"""
-    # 标准化钩子点
-    if isinstance(hook_points, tuple):
-        targets = [hook_points]
-    elif isinstance(hook_points, list) and all(isinstance(hp, tuple) for hp in hook_points):
-        targets = hook_points
-    else:
-        raise TypeError("hook_points must be a tuple (module_path, function_path) or list of tuples")
+    """
+    装饰器工厂函数，用于简化hooker创建
+    :param hook_points: hook点列表，格式为(模块名, 属性路径)
+    :param min_version: 支持的最小版本
+    :param max_version: 支持的最大版本
+    :param caller_filter: 调用者过滤条件
+    """
+    def decorator(hook_func):
+        class AutoHooker(VLLMHookerBase):
+            vllm_version = (min_version, max_version)
 
-    def decorator(user_func: Callable) -> Callable:
-        # 版本检查
-        if (min_version or max_version) and not _check_version_compatibility(min_version, max_version):
-            logger.info("Skipping hooks due to version incompatibility")
-            return user_func
+            def init(self):
+                hook_list = [hook_points] if isinstance(hook_points, tuple) else hook_points
+                points = [import_object_from_string(import_path, func_path) for import_path, func_path in hook_list]
+                self.do_hook(points, hook_func, caller_filter)
 
-        helpers = []
-
-        # 安装所有钩子
-        for module_path, function_path in targets:
-            helper = _install_hook(module_path, function_path, user_func, caller_filter)
-            if helper:
-                helpers.append(helper)
-
-        # 注册钩子以便后续恢复
-        if helpers:
-            with _registry_lock:
-                _HOOK_REGISTRY.setdefault(f"{user_func.__module__}.{user_func.__name__}", []).extend(helpers)
-
-        return user_func
+        hooker = AutoHooker()
+        hooker.register()
+        return hook_func
 
     return decorator
 
 
-def recover_hooks_for(func: Callable) -> None:
-    """恢复特定函数的所有钩子"""
-    key = f"{func.__module__}.{func.__name__}"
-    with _registry_lock:
-        helpers = _HOOK_REGISTRY.pop(key, [])
-
-    for helper in helpers:
-        try:
-            helper.recover()
-            logger.debug(
-                "Hook recovered: %s.%s",
-                helper.location.__name__ if hasattr(helper.location, "__name__") else type(helper.location).__name__,
-                helper.attr_name,
-            )
-        except Exception as e:
-            logger.error("Hook recovery failed: %s", e)
-
-
-def recover_all_hooks() -> None:
-    """恢复所有已注册的钩子"""
-    with _registry_lock:
-        all_helpers = []
-        for helpers in _HOOK_REGISTRY.values():
-            all_helpers.extend(helpers)
-        _HOOK_REGISTRY.clear()
-
-    for helper in all_helpers:
-        try:
-            helper.recover()
-            logger.debug(
-                "Hook recovered: %s.%s",
-                helper.location.__name__ if hasattr(helper.location, "__name__") else type(helper.location).__name__,
-                helper.attr_name,
-            )
-        except Exception as e:
-            logger.error("Hook recovery failed: %s", e)
+def apply_hooks(version: str = None):
+    """应用所有注册的hookers"""
+    if version is None:
+        import vllm
+        version = vllm.__version__
+    for hooker in HOOK_REGISTRY:
+        if hooker.support_version(version):
+            try:
+                hooker.init()
+                logging.info(f"Applied hooker: {hooker.__class__.__name__}")
+            except Exception as e:
+                logging.error(f"Failed to apply hooker: {str(e)}")
