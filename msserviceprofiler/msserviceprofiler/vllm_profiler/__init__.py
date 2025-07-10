@@ -11,20 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from importlib.metadata import version
-from packaging.version import Version
+import os
+from .utils import logger, set_log_level
+from .module_hook import apply_hooks
 
-try:
-    vllm_version = version("vllm")
-except Exception as ee:
-    vllm_version = None
-
-
-if vllm_version and Version(vllm_version) > Version("0.8.3"):
-    import msserviceprofiler.vllm_profiler.vllm_profiler_0_8_4
-elif vllm_version and Version(vllm_version) > Version("0.6.2"):
-    import msserviceprofiler.vllm_profiler.vllm_profiler_0_6_3
+if os.environ.get('VLLM_USE_V1', '0') == "0":
+    from .vllm_v0 import batch_hookers, kvcache_hookers, model_hookers, request_hookers
+    apply_hooks()  # 应用所有hookers
 else:
-    import logging
-
-    logging.error(f"Not supported vllm version {vllm_version}")
+    logger.error("vLLM V1 interface is not supported yet")
