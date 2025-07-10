@@ -29,14 +29,10 @@ def import_object_from_string(import_path: str, module_path: str) -> Any:
     根据点分隔的路径导入对象（模块、类、函数等）
     支持多级嵌套属性，如 "module.submodule.ClassName.method_name"
     """
-    parts = import_path.split('.')
-    module_path = '.'.join(parts[:-1])
-    attribute_name = parts[-1]
-
     try:
         module = importlib.import_module(import_path)
     except ImportError as e:
-        logger.error("Module import failed for %s: %s", module_path, e)
+        logger.error(f"Module import failed for %s: %s", module_path, e)
         return None
 
     current = module
