@@ -15,7 +15,6 @@ import sys
 import traceback
 import importlib
 import inspect
-import logging
 import functools
 from abc import ABC, abstractmethod
 from packaging.version import Version
@@ -69,14 +68,14 @@ class HookHelper:
 
         if not all((self.ori_function, self.location, self.attr_name, self.new_function)):
             warn_msg = f"{ori_function_define} replace failed."
-            logging.error(warn_msg)
+            logger.error(warn_msg)
             raise ValueError(warn_msg)
 
     @staticmethod
     def get_location(function_ins):
         if not hasattr(function_ins, "__module__"):
             warning_msg = f"function {str(function_ins)} has no __module__."
-            logging.error(warning_msg)
+            logger.error(warning_msg)
             raise ValueError(warning_msg)
 
         module = importlib.import_module(function_ins.__module__)
@@ -92,7 +91,7 @@ class HookHelper:
 
         if location is None:
             warning_msg = f"{'.'.join(classes)} does not exist"
-            logging.error(warning_msg)
+            logger.error(warning_msg)
             raise ValueError(warning_msg)
 
         return location, attr_name
@@ -142,7 +141,9 @@ class VLLMHookerBase(ABC):
         @functools.wraps(ori_func)
         def wrapper(*args, **kwargs):
             if pname is not None and self.get_parents_name(ori_func) != pname:
+                logger.debug(f"calling {ori_func}")
                 return ori_func(*args, **kwargs)
+            logger.debug(f"calling profiler_func for {ori_func}")
             return profiler_func(*args, **kwargs)
         return wrapper
 
@@ -150,6 +151,7 @@ class VLLMHookerBase(ABC):
         for ori_func in hook_points:
             profiler_func = profiler_func_maker(ori_func)
             HookHelper(ori_func, self.replace_func(ori_func, pname, profiler_func)).replace()
+            logger.debug(f"replacing {ori_func}")
 
     def support_version(self, version):
         """检查当前版本是否支持"""
@@ -205,6 +207,6 @@ def apply_hooks(version: str = None):
         if hooker.support_version(version):
             try:
                 hooker.init()
-                logging.info(f"Applied hooker: {hooker.__class__.__name__}")
+                logger.debug(f"Applied hooker: {hooker.__class__.__name__}")
             except Exception as e:
-                logging.error(f"Failed to apply hooker: {str(e)}")
+                logger.error(f"Failed to apply hooker: {str(e)}")
