@@ -22,6 +22,7 @@ swifter = { version = "^1.4.0", extras = ["groupby"], optional = true }
 modin = { version = "^0.32.0", extras = ["all"], optional = true }
 
 [tool.poetry.extras]
+real = ["filelock", "pydantic", "pydantic-settings", "pyswarms"]
 train = ["filelock", "pydantic", "pydantic-settings", "pyswarms", "xgboost", "seaborn", "matplotlib", "scikit-learn"]
 speed = [
     "filelock", "pydantic", "pydantic-settings", "pyswarms", "xgboost", "seaborn", "matplotlib", "scikit-learn",
