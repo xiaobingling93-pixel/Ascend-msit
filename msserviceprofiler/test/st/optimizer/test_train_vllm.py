@@ -19,13 +19,14 @@ from pathlib import Path
 from unittest import TestCase
 
 from st.utils import execute_cmd
+from msserviceprofiler.msguard.security import open_s
 
 
 def check_request_json_content(json_path):
     # 校验请求对应轮次数有没有正确生成
     try:
         # 读取JSON文件
-        with open(json_path, 'r', encoding='utf-8') as f:
+        with open_s(json_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
         # 检查JSON文件中是否有10个键值对
         if len(data) != 10:

@@ -16,19 +16,16 @@ import unittest
 import tempfile
 import shutil
 import os
-import argparse
 import subprocess
 from unittest.mock import patch, MagicMock, mock_open
 from pathlib import Path
-from xmlrpc.client import ServerProxy
-import numpy as np
 import pandas as pd
 import pytest
 
 from msserviceprofiler.modelevalstate.optimizer.optimizer import (
-    BenchMark, ProfilerBenchmark, VllmBenchMark, Scheduler,
+    BenchMark, ProfilerBenchmark, Scheduler,
     ScheduleWithMultiMachine, PSOOptimizer,
-    main, arg_parse, remove_file, backup,
+    main, remove_file, backup,
     close_file_fp,
 )
 from msserviceprofiler.modelevalstate.optimizer.simulator import Simulator, VllmSimulator
@@ -36,7 +33,7 @@ from msserviceprofiler.modelevalstate.optimizer.utils import kill_process, kill_
 from msserviceprofiler.modelevalstate.config.config import (
     BenchMarkConfig, MindieConfig, PerformanceIndex, clearing_residual_process,
     OptimizerConfigField, PsoOptions, DeployPolicy,
-    BenchMarkPolicy, AnalyzeTool, settings, default_support_field
+    BenchMarkPolicy, AnalyzeTool, settings
 )
 
 
@@ -291,7 +288,7 @@ class TestSimulator(unittest.TestCase):
         Simulator(self.mindie_config)  # Should recreate backup
         self.assertTrue(backup_path.exists())
 
-    @patch('builtins.open')
+    @patch('msserviceprofiler.modelevalstate.optimizer.simulator.open_s')
     @patch('os.path.exists', return_value=True)
     def test_check_success(self, mock_exists, mock_open_func):
         mock_file = MagicMock()
@@ -306,7 +303,10 @@ class TestSimulator(unittest.TestCase):
         self.assertTrue(result)
 
     def test_check_success_failure(self):
-        with patch('builtins.open', mock_open(read_data="Failure message")):
+        with patch(
+            'msserviceprofiler.modelevalstate.optimizer.simulator.open_s',
+            mock_open(read_data="Failure message")
+        ):
             self.simulator.process = MagicMock()
             self.simulator.process.poll.return_value = 1
             
@@ -648,7 +648,7 @@ class TestCloseFileFp(unittest.TestCase):
             close_file_fp(test_fd)
             mock_os_close.assert_called_once_with(test_fd)
 
-    @patch('builtins.open', unittest.mock.mock_open())
+    @patch('msserviceprofiler.modelevalstate.optimizer.simulator.open_s', unittest.mock.mock_open())
     def test_close_file_fp_with_real_file_object(self):
         """测试真实文件对象"""
         with open('test.txt', 'w') as real_file:
@@ -696,7 +696,7 @@ class TestBenchMark(unittest.TestCase):
             self.assertEqual(os.environ["param1"], "10")
             self.assertNotIn("param2", os.environ)
 
-    @patch('builtins.open')
+    @patch('msserviceprofiler.modelevalstate.optimizer.simulator.open_s')
     @patch('os.path.exists', return_value=True)
     def test_check_success(self, mock_exists, mock_open_func):
         mock_file = MagicMock()
@@ -724,7 +724,7 @@ class TestBenchMark(unittest.TestCase):
         self.assertEqual(self.benchmark.run_log_offset, 0)
 
     @patch('os.path.exists', return_value=True)
-    @patch('builtins.open', new_callable=mock_open)
+    @patch('msserviceprofiler.modelevalstate.optimizer.simulator.open_s', new_callable=mock_open)
     def test_stop_with_del_log(self, mock_file, mock_exists):
         self.benchmark.process = MagicMock()
         self.benchmark.process.poll.return_value = None
@@ -856,13 +856,13 @@ class TestVllmSimulator:
         simulator.process = MagicMock()
         return simulator
 
-    @patch("builtins.open", new_callable=MagicMock)
+    @patch("msserviceprofiler.modelevalstate.optimizer.simulator.open_s", new_callable=MagicMock)
     def test_check_success_with_success_message(self, mock_open_local, pre_simulator):
         # Mock the file read to return a success message
         mock_open_local.return_value.__enter__.return_value.read.return_value = "Application startup complete."
         assert pre_simulator.check_success() is True
 
-    @patch("builtins.open", new_callable=MagicMock)
+    @patch("msserviceprofiler.modelevalstate.optimizer.simulator.open_s", new_callable=MagicMock)
     def test_check_success_with_process_finished(self, mock_open_local, pre_simulator):
         # Mock the file read to return no success message and the process to be finished
         mock_open_local.return_value.__enter__.return_value.read.return_value = "Some other message"
@@ -871,7 +871,7 @@ class TestVllmSimulator:
         with pytest.raises(subprocess.SubprocessError):
             pre_simulator.check_success()
 
-    @patch("builtins.open", new_callable=MagicMock)
+    @patch("msserviceprofiler.modelevalstate.optimizer.simulator.open_s", new_callable=MagicMock)
     def test_check_success_with_process_not_finished(self, mock_open_local, pre_simulator):
         # Mock the file read to return no success message and the process to not be finished
         mock_open_local.return_value.__enter__.return_value.read.return_value = "Some other message"

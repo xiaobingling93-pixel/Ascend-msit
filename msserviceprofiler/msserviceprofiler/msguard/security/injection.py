@@ -15,14 +15,13 @@
 
 import os
 import re
-import shlex
 import pickle
 import inspect
-import subprocess
 from io import BytesIO
 
 from .io import open_s
 from .exception import CSVInjectionError, PickleInjectionError
+from ..utils.constants import TYPE_ERROR_MSG
 
 
 CSV_INJECTION_PATTERN = re.compile(r'^[＋－＝％＠\+\-=%@]|;[＋－＝％＠\+\-=%@]')
@@ -41,42 +40,15 @@ def is_safe_csv_value(value: str) -> bool:
     return True
 
 
-def sanitize_csv_value(value: str, errors: str = 'strict') -> str:
-    if errors == 'ignore' or is_safe_csv_value(value):
+def sanitize_csv_value(value: str, *, replace=False) -> str:
+    if is_safe_csv_value(value):
         return value
-    elif errors == 'replace':
+    
+    if replace:
         return "'" + value
-    else:
-        err_msg = f'Malicious value is not allowed to be written into the csv: {value}'
-        raise CSVInjectionError(err_msg)
 
-
-# command injection
-def sanitize_cmd(cmd) -> str:
-    if not cmd:
-        raise ValueError(f"Invalid command: {cmd!r}")
-
-    if isinstance(cmd, str):
-        cmd = shlex.split(cmd)
-    elif not isinstance(cmd, list):
-        raise TypeError(f"Expected 'cmd' to be str or list, got {type(cmd).__name__} instead.")
-
-    return cmd
-
-
-def run_s(cmd, **kwargs) -> subprocess.CompletedProcess:
-    cmd = sanitize_cmd(cmd)
-    return subprocess.run(cmd, shell=False, **kwargs)
-
-
-def popen_s(cmd, **kwargs) -> subprocess.CompletedProcess:
-    cmd = sanitize_cmd(cmd)
-    return subprocess.Popen(cmd, shell=False, **kwargs)
-
-
-def checkoutput_s(cmd, **kwargs):
-    cmd = sanitize_cmd(cmd)
-    return subprocess.check_output(cmd, shell=False, **kwargs)
+    err_msg = f'Malicious value is not allowed to be written into the CSV: {value}'
+    raise CSVInjectionError(err_msg)
 
 
 # pickle injection
@@ -107,7 +79,9 @@ class SafeUnpickler(pickle.Unpickler):
     @staticmethod
     def _validate_callback(call_back_fn) -> None:
         if not callable(call_back_fn):
-            raise TypeError("Callback function must be callable")
+            raise TypeError(
+                TYPE_ERROR_MSG.format('call_back_fn', 'callable', type(call_back_fn).__name__)
+            )
         
         sig = inspect.signature(call_back_fn)
         if len(sig.parameters) != 2:

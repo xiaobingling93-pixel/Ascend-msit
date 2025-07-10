@@ -20,6 +20,7 @@ import unittest
 from unittest import mock
 
 from msserviceprofiler.msguard import validate_params, Path, InvalidParameterError, where
+from msserviceprofiler.msguard.security import open_s
 
 
 class TestDecoratorUsage(unittest.TestCase):
@@ -72,7 +73,7 @@ class TestDecoratorUsage(unittest.TestCase):
         test_func = self.create_func_with_constraints(Path.is_readable())
         not_readable_mode = self.full_mode ^ stat.S_IRUSR ^ stat.S_IRGRP ^ stat.S_IROTH
         try:
-            with open(self.random_path, "w") as f:
+            with open_s(self.random_path, "w") as f:
                 pass
             os.chmod(self.random_path, not_readable_mode)
             self.assertRaises(InvalidParameterError, test_func, self.random_path)
@@ -85,7 +86,7 @@ class TestDecoratorUsage(unittest.TestCase):
         test_func = self.create_func_with_constraints(Path.is_writable())
         not_writable_mode = self.full_mode ^ stat.S_IWUSR ^ stat.S_IWGRP ^ stat.S_IWOTH
         try:
-            with open(self.random_path, "w") as f:
+            with open_s(self.random_path, "w") as f:
                 pass
             os.chmod(self.random_path, not_writable_mode)
             self.assertRaises(InvalidParameterError, test_func, self.random_path)
@@ -98,7 +99,7 @@ class TestDecoratorUsage(unittest.TestCase):
         test_func = self.create_func_with_constraints(Path.is_executable())
         not_executable_mode = self.full_mode ^ stat.S_IXUSR ^ stat.S_IXGRP ^ stat.S_IXOTH
         try:
-            with open(self.random_path, "w") as f:
+            with open_s(self.random_path, "w") as f:
                 pass
             os.chmod(self.random_path, not_executable_mode)
             self.assertRaises(InvalidParameterError, test_func, self.random_path)

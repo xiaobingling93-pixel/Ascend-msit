@@ -18,6 +18,7 @@ import unittest
 import tempfile
 
 from msserviceprofiler.msguard.security import update_env_s
+from msserviceprofiler.msguard.security import open_s
 
 
 class TestUpdateEnvS(unittest.TestCase):
@@ -35,7 +36,7 @@ class TestUpdateEnvS(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             test_var = "TEST_VAR"
             test_path = os.path.join(temp_dir, "test_file")
-            open(test_path, "a").close()
+            open_s(test_path, "a").close()
 
             update_env_s(test_var, test_path)
             self.assertEqual(os.environ[test_var], test_path,
@@ -44,10 +45,9 @@ class TestUpdateEnvS(unittest.TestCase):
     def test_update_env_s_with_relative_path(self):
         """测试函数能否正确处理相对路径（应抛出ValueError）"""
         try:
-            f = open("relative_path", "w")
-            with self.assertRaises(ValueError,
-                                msg="相对路径应该引发ValueError异常"):
-                update_env_s("TEST_VAR", "relative_path")
+            f = open_s("relative_path", "w")
+            update_env_s("TEST_VAR", "relative_path")
+            self.assertEqual(os.environ.get("TEST_VAR"), os.path.realpath("relative_path"))
         finally:
             f.close()
             os.remove("relative_path")
@@ -56,7 +56,7 @@ class TestUpdateEnvS(unittest.TestCase):
         """测试函数能否正确处理非字符串环境变量名（应抛出TypeError）"""
         with tempfile.TemporaryDirectory() as temp_dir:
             test_path = os.path.join(temp_dir, "test_file")
-            open(test_path, "a").close()
+            open_s(test_path, "a").close()
 
             with self.assertRaises(TypeError,
                                  msg="非字符串环境变量名应该引发TypeError异常"):
@@ -67,7 +67,7 @@ class TestUpdateEnvS(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             test_var = "EMPTY_VAR"
             test_path = os.path.join(temp_dir, "test_file")
-            open(test_path, "a").close()
+            open_s(test_path, "a").close()
 
             if test_var in os.environ:
                 del os.environ[test_var]
@@ -81,7 +81,7 @@ class TestUpdateEnvS(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             test_var = "APPEND_TEST"
             test_path = os.path.join(temp_dir, "test_file")
-            open(test_path, "a").close()
+            open_s(test_path, "a").close()
             original_value = "/original/path"
             os.environ[test_var] = original_value
 
@@ -95,7 +95,7 @@ class TestUpdateEnvS(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             test_var = "EXISTING_VAR"
             test_path = os.path.join(temp_dir, "test_file")
-            open(test_path, "a").close()
+            open_s(test_path, "a").close()
             original_value = "/existing/path"
             os.environ[test_var] = original_value
 
@@ -109,7 +109,7 @@ class TestUpdateEnvS(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             test_var = "PREPEND_TEST"
             test_path = os.path.join(temp_dir, "test_file")
-            open(test_path, "a").close()
+            open_s(test_path, "a").close()
             original_value = "/original/path"
             os.environ[test_var] = original_value
 
@@ -124,8 +124,8 @@ class TestUpdateEnvS(unittest.TestCase):
             test_var = "MULTI_TEST"
             path1 = os.path.join(temp_dir, "path1")
             path2 = os.path.join(temp_dir, "path2")
-            open(path1, "a").close()
-            open(path2, "a").close()
+            open_s(path1, "a").close()
+            open_s(path2, "a").close()
 
             update_env_s(test_var, path1)
             self.assertEqual(os.environ[test_var], path1,

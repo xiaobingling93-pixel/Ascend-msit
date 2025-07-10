@@ -21,7 +21,8 @@ import unittest
 from unittest import mock
 
 from msserviceprofiler.ms_service_profiler_ext.compare_tools.collector import FileCollector
-from msserviceprofiler.ms_service_profiler_ext.common.csv_fields import BatchCSVFields, RequestCSVFields
+from msserviceprofiler.ms_service_profiler_ext.common.csv_fields import BatchCSVFields
+from msserviceprofiler.msguard.security import open_s
 
 
 class TestFileCollector(unittest.TestCase):
@@ -90,7 +91,7 @@ class TestFileCollector(unittest.TestCase):
             self.assertRaises(RuntimeError, self.collector.collect_pairs, self.dir_path_a, self.dir_path_b)
 
     def test_collect_pairs_but_contains_inconsistent_files(self):
-        with open(os.path.join(self.dir_path_a, BatchCSVFields.PATH_NAME), 'w'):
+        with open_s(os.path.join(self.dir_path_a, BatchCSVFields.PATH_NAME), 'w'):
             self.collector.collect_pairs(self.dir_path_a, self.dir_path_b)
 
     def test_collect_pairs_but_contains_undesired_file_types(self):
@@ -102,7 +103,7 @@ class TestFileCollector(unittest.TestCase):
         self.collector.collect_pairs(self.dir_path_a, self.dir_path_b)
 
     def test_collect_pairs_but_contains_large_files(self):
-        with open(os.path.join(self.dir_path_a, BatchCSVFields.PATH_NAME), 'w'):
+        with open_s(os.path.join(self.dir_path_a, BatchCSVFields.PATH_NAME), 'w'):
             def large_file_side_effect(path: str):
                 if path == os.path.join(self.dir_path_a, BatchCSVFields.PATH_NAME):
                     return os.stat_result([stat.S_IFREG | 0o640, 0, 0, 0, 0, 0, 30 * 1024 * 1024 * 1024, 0, 0, 0])

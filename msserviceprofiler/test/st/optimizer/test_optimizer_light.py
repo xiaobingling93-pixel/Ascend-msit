@@ -16,10 +16,11 @@ import os
 import shutil
 import glob
 from unittest import TestCase
+from msserviceprofiler.msguard.security import open_s
 
 
 def check_csv_no_empty_start(csv_file):
-    with open(csv_file, 'r', encoding='utf-8') as f:
+    with open_s(csv_file, 'r', encoding='utf-8') as f:
         next(f)  # 跳过标题行（第一行）
 
         for _, line in enumerate(f, start=2):  # 从第2行开始检查（数据行）

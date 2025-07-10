@@ -16,6 +16,7 @@
 import inspect
 
 from .base import BaseConstraint
+from ..utils.constants import TYPE_ERROR_MSG
 
 
 class FunctionConstraint(BaseConstraint):
@@ -34,7 +35,9 @@ class FunctionConstraint(BaseConstraint):
         result = self.func(val)
 
         if not isinstance(result, bool):
-            raise TypeError("The function must return a boolean value.")
+            raise TypeError(
+                TYPE_ERROR_MSG.format('result', 'bool', type(result).__name__)
+            )
         return result
 
 
@@ -82,7 +85,9 @@ class IfElseConstraint(BaseConstraint):
         elif isinstance(condition, BaseConstraint):
             self.condition = condition
         else:
-            raise TypeError(f"'condition' must be bool or BaseConstraint. Got {type(condition).__name__} instead")
+            raise TypeError(
+                TYPE_ERROR_MSG.format('condition', 'bool or BaseConstraint', type(condition).__name__)
+            )
 
         self.if_constraint = if_constraint
         self.else_constraint = else_constraint

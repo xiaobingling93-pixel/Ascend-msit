@@ -25,14 +25,14 @@ class TestWalkS(unittest.TestCase):
         """测试给定有效目录且无规则限制时，应返回所有文件和目录"""
         with tempfile.TemporaryDirectory() as temp_dir:
             sub_dir = os.path.join(temp_dir, "subdir")
-            os.mkdir(sub_dir)
+            os.mkdir(sub_dir, 0o750)
 
             file1 = os.path.join(temp_dir, "file1.txt")
-            with open(file1, 'w') as f:
+            with open_s(file1, 'w') as f:
                 f.write("test")
 
             file2 = os.path.join(sub_dir, "file2.txt")
-            with open(file2, 'w') as f:
+            with open_s(file2, 'w') as f:
                 f.write("test")
 
             result = list(walk_s(temp_dir, dir_rule=None, file_rule=None))
@@ -44,7 +44,7 @@ class TestWalkS(unittest.TestCase):
         """测试当扫描文件数超过max_files时，应抛出WalkLimitError异常"""
         with tempfile.TemporaryDirectory() as temp_dir:
             for i in range(3):
-                with open(os.path.join(temp_dir, f"file{i}.txt"), 'w') as f:
+                with open_s(os.path.join(temp_dir, f"file{i}.txt"), 'w') as f:
                     f.write("test")
 
             with self.assertRaises(WalkLimitError, msg="文件数超过限制时应抛出异常"):
@@ -54,7 +54,7 @@ class TestWalkS(unittest.TestCase):
         """测试当扫描深度超过max_depths时，应抛出WalkLimitError异常"""
         with tempfile.TemporaryDirectory() as temp_dir:
             sub_dir = os.path.join(temp_dir, "subdir")
-            os.mkdir(sub_dir)
+            os.mkdir(sub_dir, 0o750)
 
             with self.assertRaises(WalkLimitError, msg="扫描深度超过限制时应抛出异常"):
                 list(walk_s(temp_dir, max_depths=0))
