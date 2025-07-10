@@ -212,14 +212,15 @@ def apply_hooks(version: str = None, domains=None):
         import vllm
         version = vllm.__version__
     logger.debug(f"apply_hooks all domains={DOMAINS}")
-    for domain, hooker in HOOK_REGISTRY.items():
-        if domains and domain not in domains:
-            continue
-        if hooker.support_version(version):
-            try:
-                hooker.init()
-                logger.debug(f"Applied hooker: {hooker.__class__.__name__}, domain={domain}")
-            except Exception as e:
-                logger.error(f"Failed to apply hooker: {str(e)}")
-        else:
-            logger.debug(f"Skipping hooker: {hooker.__class__.__name__} for version not matched")
+    for domain, hookers in HOOK_REGISTRY.items():
+        for hooker in hookers:
+            if domains and domain not in domains:
+                continue
+            if hooker.support_version(version):
+                try:
+                    hooker.init()
+                    logger.debug(f"Applied hooker: {hooker.__class__.__name__}, domain={domain}")
+                except Exception as e:
+                    logger.error(f"Failed to apply hooker: {str(e)}")
+            else:
+                logger.debug(f"Skipping hooker: {hooker.__class__.__name__} for version not matched")
