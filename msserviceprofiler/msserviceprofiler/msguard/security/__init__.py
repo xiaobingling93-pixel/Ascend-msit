@@ -15,9 +15,8 @@
 
 __all__ = [
     "is_safe_csv_value", "sanitize_csv_value",
-    "sanitize_cmd", "run_s", "popen_s", "checkoutput_s",
     "pickle_load_s", "pickle_loads_s",
-    "open_s", "walk_s",
+    "open_s", "walk_s", 'mkdir_s', 'touch_s',
     "update_env_s",
     "CSVInjectionError", "PickleInjectionError", "WalkLimitError"
 ]
@@ -25,10 +24,9 @@ __all__ = [
 
 from .injection import (
     is_safe_csv_value, sanitize_csv_value,
-    sanitize_cmd, run_s, popen_s, checkoutput_s,
     pickle_load_s, pickle_loads_s
 )
-from .io import open_s, walk_s
+from .io import open_s, walk_s, mkdir_s, touch_s
 from .hijack import update_env_s
 from .exception import (
     CSVInjectionError, PickleInjectionError, WalkLimitError

@@ -17,20 +17,16 @@ import os
 import unittest
 import tempfile
 import pickle
-from unittest.mock import patch, MagicMock
 
 from msserviceprofiler.msguard import InvalidParameterError
 from msserviceprofiler.msguard.security import (
     is_safe_csv_value,
     sanitize_csv_value,
     CSVInjectionError,
-    sanitize_cmd,
-    run_s,
-    popen_s,
-    checkoutput_s,
     PickleInjectionError,
     pickle_load_s,
     pickle_loads_s,
+    open_s
 )
 
 
@@ -56,59 +52,17 @@ class TestCSVInjection(unittest.TestCase):
                        "非字符串类型应该被认为是安全的")
 
     def test_sanitize_csv_value_with_safe_string(self):
-        self.assertEqual(sanitize_csv_value("safe", "strict"), "safe", 
-                         "安全字符串在strict模式下应该原样返回")
+        self.assertEqual(sanitize_csv_value("safe"), "safe", 
+                         "安全字符串应该原样返回")
 
     def test_sanitize_csv_value_with_unsafe_string_strict(self):
         with self.assertRaises(CSVInjectionError, 
-                              msg="strict模式下不安全字符串应该抛出CSVInjectionError"):
-            sanitize_csv_value("=cmd", "strict")
-
-    def test_sanitize_csv_value_with_unsafe_string_ignore(self):
-        self.assertEqual(sanitize_csv_value("=cmd", "ignore"), "=cmd", 
-                         "ignore模式下不安全字符串应该原样返回")
+                              msg="replace False 下不安全字符串应该抛出CSVInjectionError"):
+            sanitize_csv_value("=cmd", replace=False)
 
     def test_sanitize_csv_value_with_unsafe_string_replace(self):
-        self.assertEqual(sanitize_csv_value("=cmd", "replace"), "'=cmd", 
+        self.assertEqual(sanitize_csv_value("=cmd", replace=True), "'=cmd", 
                          "replace模式下不安全字符串应该被转义")
-
-
-class TestCommandInjection(unittest.TestCase):
-    def test_sanitize_cmd_with_string(self):
-        self.assertEqual(sanitize_cmd("ls -l"), ["ls", "-l"], 
-                         "字符串命令应该被正确分割成列表")
-
-    def test_sanitize_cmd_with_list(self):
-        self.assertEqual(sanitize_cmd(["ls", "-l"]), ["ls", "-l"], 
-                         "列表命令应该原样返回")
-
-    def test_sanitize_cmd_with_empty_string(self):
-        with self.assertRaises(ValueError, 
-                              msg="空字符串命令应该抛出ValueError"):
-            sanitize_cmd("")
-
-    def test_sanitize_cmd_with_invalid_type(self):
-        with self.assertRaises(TypeError, 
-                              msg="非字符串/列表类型应该抛出TypeError"):
-            sanitize_cmd(123)
-
-    @patch('subprocess.run')
-    def test_run_s_with_valid_command(self, mock_run):
-        mock_run.return_value = MagicMock(returncode=0)
-        result = run_s("echo test")
-        self.assertIsNotNone(result, "有效命令应该成功执行并返回结果")
-
-    @patch('subprocess.Popen')
-    def test_popen_s_with_valid_command(self, mock_popen):
-        mock_popen.return_value = MagicMock()
-        result = popen_s("echo test")
-        self.assertIsNotNone(result, "有效命令应该成功执行并返回Popen对象")
-
-    @patch('subprocess.check_output')
-    def test_checkoutput_s_with_valid_command(self, mock_checkoutput):
-        mock_checkoutput.return_value = b"test\n"
-        result = checkoutput_s("echo test")
-        self.assertEqual(result, b"test\n", "有效命令应该返回正确的输出")
 
 
 class TestPickleInjection(unittest.TestCase):
@@ -148,7 +102,7 @@ class TestPickleInjection(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmpdir:
             test_file = os.path.join(tmpdir, "test.pkl")
-            with open(test_file, "wb") as f:
+            with open_s(test_file, "wb") as f:
                 f.write(self.safe_data)
 
             result = pickle_load_s(test_file, fn=custom_callback)
@@ -161,7 +115,7 @@ class TestPickleInjection(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmpdir:
             test_file = os.path.join(tmpdir, "test.pkl")
-            with open(test_file, "wb") as f:
+            with open_s(test_file, "wb") as f:
                 f.write(self.safe_data)
 
             with self.assertRaises(PickleInjectionError, msg="自定义回调拒绝所有类型时应报错"):
@@ -171,10 +125,10 @@ class TestPickleInjection(unittest.TestCase):
         """测试直接传递文件句柄"""
         with tempfile.TemporaryDirectory() as tmpdir:
             test_file = os.path.join(tmpdir, "test.pkl")
-            with open(test_file, "wb") as f:
+            with open_s(test_file, "wb") as f:
                 f.write(self.safe_data)
 
-            with open(test_file, "rb") as f:
+            with open_s(test_file, "rb") as f:
                 result = pickle_load_s(f)
                 self.assertEqual(result, 2, "应能正确处理文件句柄输入")
 
@@ -194,7 +148,7 @@ class TestPickleInjection(unittest.TestCase):
         """测试无效回调函数应报TypeError"""
         with tempfile.TemporaryDirectory() as tmpdir:
             test_file = os.path.join(tmpdir, "test.pkl")
-            with open(test_file, "wb") as f:
+            with open_s(test_file, "wb") as f:
                 f.write(self.safe_data)
 
             with self.assertRaises(TypeError, msg="非可调用对象作为回调应触发错误"):
@@ -203,7 +157,7 @@ class TestPickleInjection(unittest.TestCase):
     def test_pickle_load_s_with_malicious_poc(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             file_path = os.path.join(temp_dir, "malicious.pickle")
-            with open(file_path, "wb") as f:
+            with open_s(file_path, "wb") as f:
                 pickle.dump(self.DangerPerson(), f)
 
             with self.assertRaises(PickleInjectionError,

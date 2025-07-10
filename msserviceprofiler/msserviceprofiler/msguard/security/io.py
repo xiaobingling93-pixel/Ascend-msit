@@ -15,7 +15,6 @@
 
 import os
 from collections import deque
-import pandas as pd
 
 from .exception import WalkLimitError
 from ..validation import validate_params
@@ -101,9 +100,39 @@ def open_s(path, mode='r', **kwargs):
     return os.fdopen(fd, mode, **kwargs)
 
 
-@validate_params({"path": Rule.input_file_read})
-def read_csv_s(path, **kwargs):
-    try:
-        return pd.read_csv(path, **kwargs)
-    except Exception as e:
-        raise ValueError(f"Failed to read csv %r." % path) from e
+def touch_s(path, mode=0o640, exist_ok=True):
+    if not path:
+        raise ValueError("Cannot create a file with empty name")
+
+    if exist_ok:
+        try:
+            os.utime(path, None)
+        except OSError:
+            pass
+        else:
+            return
+    flags = os.O_CREAT | os.O_WRONLY
+    if not exist_ok:
+        flags |= os.O_EXCL
+    fd = os.open(path, flags, mode)
+    os.close(fd)
+
+
+def mkdir_s(path, mode=0o750, exist_ok=True):
+    if not path:
+        raise ValueError("Cannot create a directory with empty name")
+
+    real_path = os.path.realpath(path)
+    components = real_path.split(os.sep)
+
+    current = os.path.sep
+    for part in components[1:]:
+        if not part:
+            continue
+
+        current = os.path.join(current, part)
+        try:
+            os.mkdir(current, mode)
+        except OSError:
+            if not exist_ok:
+                raise

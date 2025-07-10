@@ -15,19 +15,38 @@
 
 import os
 
-from ..validation import validate_params
-from ..constraints import Rule
+from ..utils.constants import TYPE_ERROR_MSG
 
 
-@validate_params(
-    {"path": Rule.input_file_exec}
-)
 def update_env_s(env_var: str, path: str, prepend: bool = True) -> None:
+    """
+    Add a path to an environment variable for searching.
+
+    Parameters
+    ----------
+    env_var : str
+        The name of the environment variable to modify.
+    path : str
+        The directory path to add to the environment variable.
+    prepend : bool, optional
+        If True, add the path to the beginning of the variable. If False, add to the end.
+        Default is True.
+
+    Raises
+    ------
+    TypeError
+        If `env_var` is not a string.
+
+    Notes
+    -----
+    If the environment variable does not exist, it will be created with the given path.
+    If `path` is not absolute, it will be converted to an absolute path.
+    """
     if not isinstance(env_var, str):
-        raise TypeError("Environment variable name must be str")
+        raise TypeError(TYPE_ERROR_MSG.format('env_var', 'str', type(env_var).__name__))
 
     if not os.path.isabs(path):
-        raise ValueError(f"Relative paths are not allowed: {path}")
+        path = os.path.realpath(path)
 
     current_value = os.environ.get(env_var)
 

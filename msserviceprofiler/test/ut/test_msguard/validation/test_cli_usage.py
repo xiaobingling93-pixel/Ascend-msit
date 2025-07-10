@@ -98,6 +98,7 @@ class TestValidateArgs(unittest.TestCase):
     def test_validate_args_given_non_root_user_when_output_path_overwrite_constraint_then_raise_error(self):
         """当非root用户尝试覆盖文件且不符合output_path_overwrite约束时，应抛出ArgumentTypeError"""
         with tempfile.NamedTemporaryFile() as tmp_file:
+            os.chmod(tmp_file.name, 0o777)
             validator = validate_args(Rule.output_path_overwrite)
             with self.assertRaises(argparse.ArgumentTypeError):
                 validator(tmp_file.name)  # 非root用户不可覆盖，预期抛出异常
@@ -117,15 +118,16 @@ class TestValidateArgs(unittest.TestCase):
 
     @patch('os.getuid', return_value=0)
     def test_validate_args_given_root_user_when_output_dir_constraint_then_no_exception(self, mock_getuid):
-        """当root用户尝试创建目录且符合output_dir约束时，不应抛出异常"""
+        """root用户只会校验目录是否存在，不应抛出异常"""
         with tempfile.TemporaryDirectory() as tmp_dir:
             validator = validate_args(Rule.output_dir)
             validator(tmp_dir)  # root用户可创建目录，预期不会抛出异常
 
     @unittest.skipIf(os.geteuid() == 0, "root用户可以创建任何目录")
     def test_validate_args_given_non_root_user_when_output_dir_constraint_then_raise_error(self):
-        """当非root用户尝试创建目录且不符合output_dir约束时，应抛出ArgumentTypeError"""
+        """非root用户会校验软链接、权限等其他问题，应抛出ArgumentTypeError"""
         with tempfile.TemporaryDirectory() as tmp_dir:
+            os.chmod(tmp_dir, 0o777)
             validator = validate_args(Rule.output_dir)
             with self.assertRaises(argparse.ArgumentTypeError):
                 validator(tmp_dir)  # 非root用户不可创建目录，预期抛出异常

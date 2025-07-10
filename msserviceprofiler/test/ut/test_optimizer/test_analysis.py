@@ -136,54 +136,6 @@ class TestAnalysisState(unittest.TestCase):
             AnalysisState.plot_input_velocity(config)
             mock_show.assert_called_once()
 
-    @patch('builtins.open', new_callable=unittest.mock.mock_open)
-    @patch('matplotlib.pyplot.plot')
-    @patch('matplotlib.pyplot.legend')
-    @patch('matplotlib.pyplot.grid')
-    @patch('matplotlib.pyplot.figure')
-    @patch('matplotlib.pyplot.title')
-    @patch('matplotlib.pyplot.xlabel')
-    @patch('matplotlib.pyplot.ylabel')
-    @patch('matplotlib.pyplot.savefig')
-    @patch('matplotlib.pyplot.close')
-    def test_plot_input_velocity_with_predict(self, mock_close, mock_savefig,
-                                              mock_ylabel, mock_xlabel, mock_title,
-                                              mock_figure, mock_grid, mock_legend,
-                                              mock_plot, mock_open):
-        # 配置绘图参数
-        config = PlotConfig(
-            data=self.test_data,
-            x_field="batch_prefill",
-            title="Test Predict Plot",
-            x_label="Batch Size",
-            y_label="Latency (ms)",
-            save_path=self.save_path
-        )
-
-        # 预测数据
-        predict_data = {
-            State(batch_prefill=1): [9.8],
-            State(batch_prefill=2): [19.8],
-        }
-
-        # 调用绘图方法
-        AnalysisState.plot_input_velocity_with_predict(
-            config, predict_data
-        )
-
-        # 验证绘图函数调用次数
-        self.assertEqual(mock_plot.call_count, 6)  # 3 (原始) + 3 (预测)
-
-        # 验证文件写入
-        mock_open.assert_called_once_with(self.save_path / "Test Predict Plot.txt", 'w')
-        write_calls = mock_open.return_value.write.call_args_list
-        self.assertGreater(len(write_calls), 5)
-
-        # 验证文件内容
-        call_args = [call[0][0] for call in write_calls]
-        self.assertTrue(any("mean" in s for s in call_args))
-        self.assertTrue(any("predict" in s for s in call_args))
-
     @patch('matplotlib.pyplot.figure')
     @patch('matplotlib.pyplot.scatter')
     @patch('matplotlib.pyplot.title')

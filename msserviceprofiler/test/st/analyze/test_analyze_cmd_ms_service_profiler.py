@@ -22,6 +22,7 @@ import pytest
 import pandas as pd
 from jsonschema import validate, ValidationError
 from st.utils import execute_cmd, check_column_actual, check_row
+from msserviceprofiler.msguard.security import open_s
 
 
 def check_csv_content(output_path, csv_file_name, expected_csv_columns, numeric_columns):
@@ -266,7 +267,7 @@ def check_chrome_tracing_valid(output_path, file_name):
         "required": ["traceEvents"],  # 必需字段
         "additionalProperties": False  # 防止额外字段
     }
-    with open(trace_view_json) as f:
+    with open_s(trace_view_json) as f:
         data = json.load(f)
 
     validate(instance=data, schema=schema)
@@ -275,7 +276,7 @@ def check_chrome_tracing_valid(output_path, file_name):
 def check_chrome_tracing_content_valid(output_path, file_name):
     trace_view_json = os.path.join(output_path, file_name)
 
-    with open(trace_view_json, 'r', encoding='utf-8') as f:
+    with open_s(trace_view_json, 'r', encoding='utf-8') as f:
         text = f.read()
     exist = ["modelExec", "batchFrameworkProcessing"]
     for key in exist:

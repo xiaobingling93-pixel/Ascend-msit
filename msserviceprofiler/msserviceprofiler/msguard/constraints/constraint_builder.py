@@ -21,6 +21,7 @@ from .path import (
 )
 from ..constraints.base import BaseConstraint
 from ..constraints.logic import FunctionConstraint, IfElseConstraint
+from ..utils.constants import TYPE_ERROR_MSG
 
 
 class PathConstraintBuilder:
@@ -92,7 +93,7 @@ def make_constraint(constraint, description=None):
         return FunctionConstraint(constraint, description)
 
     raise TypeError(
-        f"Expected a BaseConstraint instance or a callable, but got {type(constraint).__name__}."
+        TYPE_ERROR_MSG.format('constraint', 'BaseContraint or Callable', type(constraint).__name__)
     )
 
 
