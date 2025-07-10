@@ -16,13 +16,15 @@ import traceback
 import importlib
 import inspect
 import functools
+from collections import namedtuple
 from abc import ABC, abstractmethod
 from packaging.version import Version
 from typing import Union, Tuple, List, Optional, Callable, Dict, Any
 from .utils import logger
 
 # 全局注册表存储所有hookers
-HOOK_REGISTRY = []
+HOOK_REGISTRY = {}
+DOMAINS = namedtuple('domains', ["default"])("default")
 
 def import_object_from_string(import_path: str, module_path: str) -> Any:
     """
@@ -162,15 +164,20 @@ class VLLMHookerBase(ABC):
             return False
         return True
 
-    def register(self):
+    def register(self, domain=DOMAINS.default):
         """注册hooker到全局注册表"""
-        HOOK_REGISTRY.append(self)
+        global DOMAINS
+        HOOK_REGISTRY.setdefault(domain, []).append(self)
+        if domain not in DOMAINS:
+            current = list(DOMAINS) + [domain]
+            DOMAINS = namedtuple('domains', DOMAINS)(*DOMAINS)
 
 
 def vllm_hook(
     hook_points: Union[Tuple[str, str], List[Tuple[str, str]]],
     min_version: Optional[str] = None,
     max_version: Optional[str] = None,
+    domain: str = DOMAINS.default,
     caller_filter: Optional[str] = None
 ) -> Callable:
     """
@@ -193,21 +200,26 @@ def vllm_hook(
                     pname=caller_filter,
                 )
         hooker = AutoHooker()
-        hooker.register()
+        hooker.register(domain)
         return hook_func
 
     return decorator
 
 
-def apply_hooks(version: str = None):
+def apply_hooks(version: str = None, domains=None):
     """应用所有注册的hookers"""
     if version is None:
         import vllm
         version = vllm.__version__
-    for hooker in HOOK_REGISTRY:
+    logger.debug(f"apply_hooks all domains={DOMAINS}")
+    for domain, hooker in HOOK_REGISTRY.items():
+        if domains and domain not in domains:
+            continue
         if hooker.support_version(version):
             try:
                 hooker.init()
-                logger.debug(f"Applied hooker: {hooker.__class__.__name__}")
+                logger.debug(f"Applied hooker: {hooker.__class__.__name__}, domain={domain}")
             except Exception as e:
                 logger.error(f"Failed to apply hooker: {str(e)}")
+        else:
+            logger.debug(f"Skipping hooker: {hooker.__class__.__name__} for version not matched")

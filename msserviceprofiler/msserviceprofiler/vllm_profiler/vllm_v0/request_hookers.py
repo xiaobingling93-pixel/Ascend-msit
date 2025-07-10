@@ -33,25 +33,26 @@ def prof_add_request(request_id, prompt, *args, **kwargs):
     ],
     min_version="0.6.3",
     max_version="0.6.3",
+    domain="request",
 )
 def add_request_063(original_func, this, request_id, prompt, *args, **kwargs):
     prof_add_request(request_id, prompt, *args, **kwargs)
     return original_func(this, request_id, prompt, *args, **kwargs)
 
 
-@vllm_hook(hook_points=("vllm.engine.llm_engine", "LLMEngine.add_request"), min_version="0.8.4")
+@vllm_hook(("vllm.engine.llm_engine", "LLMEngine.add_request"), min_version="0.8.4", domain="request")
 def add_request_084(original_func, this, request_id, prompt, *args, **kwargs):
     prof_add_request(request_id, prompt, *args, **kwargs)
     return original_func(this, request_id, prompt, *args, **kwargs)
 
 
-@vllm_hook(hook_points=("vllm.engine.async_llm_engine", "AsyncLLMEngine.add_request"), min_version="0.8.4")
+@vllm_hook(("vllm.engine.async_llm_engine", "AsyncLLMEngine.add_request"), min_version="0.8.4", domain="request")
 async def add_request_async(original_func, this, request_id, prompt, *args, **kwargs):
     prof_add_request(request_id, prompt, *args, **kwargs)
     return original_func(this, request_id, prompt, *args, **kwargs)
 
 
-@vllm_hook(hook_points=("vllm.engine.llm_engine", "LLMEngine._process_model_outputs"), min_version="0.8.4")
+@vllm_hook(("vllm.engine.llm_engine", "LLMEngine._process_model_outputs"), min_version="0.8.4", domain="request")
 def process_model_outputs(original_func, this, ctx, request_id=None, *args, **kwargs):
     if len(ctx.output_queue) == 0:
         return original_func(this, ctx, request_id, *args, **kwargs)
@@ -77,7 +78,9 @@ def process_model_outputs(original_func, this, ctx, request_id=None, *args, **kw
     return ret
 
 
-@vllm_hook(("vllm.engine.llm_engine", "LLMEngine.validate_output"), min_version="0.6.3", max_version="0.6.3")
+@vllm_hook(
+    ("vllm.engine.llm_engine", "LLMEngine.validate_output"), min_version="0.6.3", max_version="0.6.3", domain="request"
+)
 def validate_output(original_func, this, output, output_type):
     profiler_recv = Profiler(Level.INFO).domain("Request")
     profiler_reply = Profiler(Level.INFO).domain("Request")

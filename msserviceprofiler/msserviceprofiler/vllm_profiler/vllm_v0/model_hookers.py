@@ -31,6 +31,7 @@ def _get_state() -> HookState:
         ("vllm.executor.executor_base", "DistributedExecutorBase.execute_model"),
     ],
     min_version="0.8.4",
+    domain="model",
 )
 def handle_execute_model(original_func, this, execute_model_req, *args, **kwargs):
     """处理执行模型钩子"""
@@ -59,7 +60,7 @@ def handle_execute_model(original_func, this, execute_model_req, *args, **kwargs
     return ret
 
 
-@vllm_hook(hook_points=("vllm.worker.model_runner", "ModelRunner.execute_model"), min_version="0.6.3")
+@vllm_hook(("vllm.worker.model_runner", "ModelRunner.execute_model"), min_version="0.6.3", domain="model")
 def execute_model(original_func, this, model_input, kv_caches, *args, **kwargs):
     """模型执行钩子"""
     state = _get_state()
@@ -93,7 +94,9 @@ def execute_model(original_func, this, model_input, kv_caches, *args, **kwargs):
     return ret
 
 
-@vllm_hook(hook_points=("vllm.attention.backends.utils", "CommonAttentionState.begin_forward"), min_version="0.6.3")
+@vllm_hook(
+    ("vllm.attention.backends.utils", "CommonAttentionState.begin_forward"), min_version="0.6.3", domain="model"
+)
 def begin_forward(original_func, this, model_input, *args, **kwargs):
     """前向开始钩子"""
     state = _get_state()
@@ -108,7 +111,7 @@ def begin_forward(original_func, this, model_input, *args, **kwargs):
     return result
 
 
-@vllm_hook(hook_points=("vllm.forward_context", "set_forward_context"), min_version="0.8.4")
+@vllm_hook(("vllm.forward_context", "set_forward_context"), min_version="0.8.4", domain="model")
 @contextmanager
 def set_forward_context(original_func, *args, **kwargs):
     """前向上下文钩子"""
