@@ -1,6 +1,6 @@
 
 # 使用说明
-msModelslim权重格式与开源工具AutoAWQ、AutoGPTQ的格式存在差异，因此本文的目的是提供一份指南，用于将msModelslim量化后的权重转换为与如上的开源工具格式一致的权重，以实现qwen2-7b W4A16转换后的权重能直接以hugingface形式加载权重。
+msModelSlim权重格式与开源工具AutoAWQ、AutoGPTQ的格式存在差异，因此本文的目的是提供一份指南，用于将msModelSlim量化后的权重转换为与如上的开源工具格式一致的权重，以实现qwen2-7b W4A16转换后的权重能直接以huggingface形式加载权重。
 本指南仅支持如下配置的权重转换：  
 W4A16 + per_group + AWQ  
 W4A16 + per_group + GPTQ  
@@ -15,12 +15,12 @@ AutoAWQ：GPU
 AutoGPTQ：GPU
 
 
-# 1.msModelslim量化
+# 1.msModelSlim量化
 环境准备如下：  
 [大模型量化工具使用前的开发环境的部署](https://gitee.com/ascend/msit/tree/master/msmodelslim)  
 [大模型量化工具依赖安装](https://gitee.com/ascend/msit/tree/master/msmodelslim/msmodelslim/pytorch/llm_ptq)  
 
-## 1.1 msModelslim量化
+## 1.1 msModelSlim量化
 量化脚本跟正常的量化脚本一样，可以参考：[w8a8精度调优策略](https://gitee.com/ascend/msit/blob/master/msmodelslim/docs/w8a8%E7%B2%BE%E5%BA%A6%E8%B0%83%E4%BC%98%E7%AD%96%E7%95%A5.md) 。
 本文以W4A16量化方式示例进行说明。需要注意的地方有三处:  
 a.在离群值抑制配置（AntiOutlierConfig）中，a_bit和w_bit应根据量化方式进行设置。当anti_method被设置为"m3"时，代表使用AWQ算法；而对于GPTQ算法，则不需要使用离群值抑制模块，此时可以将相关配置注释掉。
@@ -63,7 +63,7 @@ calibrator.save(output_path, safetensors_name=None, json_name=None, save_type=No
 ## 1.2 转换脚本使用
 转换脚本路径位于：https://gitee.com/ascend/msit/blob/master/msmodelslim/example/ms_to_vllm.py
 
-经过上一步1.1使用msModelslim对权重进行量化，生成quant_model_description_w4a16.json和quant_model_weight_w4a16.safetensors，再使用转换脚本ms_to_vllm.py进行权重格式转换，生成转换后的safetensors文件，用法如下：
+经过上一步1.1使用msModelSlim对权重进行量化，生成quant_model_description_w4a16.json和quant_model_weight_w4a16.safetensors，再使用转换脚本ms_to_vllm.py进行权重格式转换，生成转换后的safetensors文件，用法如下：
 ```python 
 命令：
 python ms_to_vllm.py --model {weighted_safetensors_path} --json {weighted_json_path} --save_path  {converted_safetensors_path}  --w_bit {weight_bit}   --target_tool  {target_convert_tool}
@@ -191,7 +191,7 @@ msModelSlim转换为AutoGPTQ权重格式进行推理和AutoAWQ同理，首先去
 修改的配置包括路径和BaseQuantizeConfig接口，在BaseQuantizeConfig接口中，bits为量化的权重位数，对应msModelSlim中的w_bit；per_group场景下，group_size设置的值与msModelSlim一致，在per_channel场景下，group_size设置为-1。
 
 ## 3.3推理
-将经过msModelslim量化以及经过转换脚本转换后的res.safetensors文件传入GPU生成的量化权重目录，替换掉之前的量化权重文件，文件名保持一致，其他文件不需要修改。
+将经过msModelSlim量化以及经过转换脚本转换后的res.safetensors文件传入GPU生成的量化权重目录，替换掉之前的量化权重文件，文件名保持一致，其他文件不需要修改。
 推理脚本示例如下：
 ```python
 from transformers import AutoTokenizer, TextGenerationPipeline

@@ -18,7 +18,7 @@ prune_compressor.compress(dataset)
 import torch
 import torch_npu
 from msmodelslim.pytorch.sparse.sparse_tools import SparseConfig, Compressor
-sparse_config = SparseConfig(method=’magnitude’, sparse_ratio=0.5)
+sparse_config = SparseConfig(method='magnitude', sparse_ratio=0.5)
 # model 是一个pytorch定义的nn.Module模型，以一个简单神经网络模型为例
 class TwoLayerNet(torch.nn.Module):
     def __init__(self, D_in, H, D_out):

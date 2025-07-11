@@ -287,7 +287,7 @@ python3 quant.py
 在量化权重生成后，可以使用伪量化模型进行推理，检验伪量化精度是否正常。伪量化是指通过torch，通过浮点运算完成量化模型运算逻辑，运算过程中的数据和真实量化的数据差异只在算子精度上，同时可以规避接入推理框架时引入的精度误差。如果伪量化精度不满足预期，真实量化结果也将无法满足预期。在调用Calibrator.run()方法后，构建Calibrator时传入的model会被替换为伪量化模型，可以直接调用进行前向推理，用来测试对话效果。如果伪量化结果不理想，可先使用[精度定位方法](#精度定位方法)进行定位，再可以参考以下手段进行调优。一般来说，W8A16的精度调优较为容易，W8A8和稀疏量化的精度调优相对复杂。
 
 #### 精度定位方法
-（1）将safetensors文件和json描述文件上传至[FakeQuantizeCalibrator接口](/msmodelslim/docs/Python-API接口说明/大模型压缩接口/大模型量化接口/FakeQuantizerCalibrator.md)，构建FakeQuantizeCalibrator时传入的model会被替换为伪量化模型，可以直接调用进行前向推理，测试对话效果，并调用精度测试接口测试量化后模型权重的精度情况。
+（1）将safetensors文件和json描述文件上传至[FakeQuantizeCalibrator接口](/msmodelslim/docs/Python-API接口说明/大模型压缩接口/大模型量化接口/FakeQuantizeCalibrator.md)，构建FakeQuantizeCalibrator时传入的model会被替换为伪量化模型，可以直接调用进行前向推理，测试对话效果，并调用精度测试接口测试量化后模型权重的精度情况。
 
 - 说明：支持W8A8（per_channel）、W8A16 per-channel（MinMax、GPTQ、HQQ）场景。
 
@@ -298,7 +298,7 @@ python3 quant.py
 
 1. 对于label free校准场景，确认浮点模型使用torch npu推理是否正常。量化校准依赖浮点模型推理，如果浮点推理异常，量化校准时获取到的数据分布信息不对，校准结果自然不对。
 
-2. 适当增加回退层。某些模型中的部分Linear层对精度的影响比较显著。例如ChatGlm2-6B模型W8A8量化时的layers.0.mlp.dense_4h_to_h层，依据调优经验以及相关论文数据，模型靠前和靠后的decoder layer、各个decoder layer的mlp down层对精度的影响一般较大，可以优先考虑回退这些层。如果回退效果不理想的话，可以尝试较为激进的回退策略，例如回退掉所1/4或者1/2的Linear层，直到完全回退成浮点模型，模型的精度也完全回退成浮点模型的精度。退回越多，精度越高，性能越差。
+2. 适当增加回退层。某些模型中的部分Linear层对精度的影响比较显著。例如ChatGlm2-6B模型W8A8量化时的layers.0.mlp.dense_4h_to_h层，依据调优经验以及相关论文数据，模型靠前和靠后的decoder layer、各个decoder layer的mlp down层对精度的影响一般较大，可以优先考虑回退这些层。如果回退效果不理想的话，可以尝试较为激进的回退策略，例如回退掉1/4或者1/2的Linear层，直到完全回退成浮点模型，模型的精度也完全回退成浮点模型的精度。回退越多，精度越高，性能越差。
 
 3. 使用混合量化功能。在一些场景下，如果对一些层的精度要求没有那么高，同时希望提高性能，那么对一些模型中的部分敏感Linear层、如Qwen模型里的down层，可以不回退到浮点，而是用混合量化的方式将其量化为更高精度的数据类型，例如w8a16或w8a8_dynamic。这样做可以在尽量保持整体INT8性能的同时，降低对话出现乱码或胡言乱语的风险。
 

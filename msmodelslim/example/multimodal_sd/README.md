@@ -27,12 +27,12 @@
 - SD3-Medium依赖于diffusers库
   - pip install -U diffusers
 - Open-Sora-Plan v1.2相关环境配置参考[MindIE/open_sora_planv1_2](https://modelers.cn/models/MindIE/open_sora_planv1_2)
-  - 参考 [open_sora_planv1_2 reamde](https://modelers.cn/models/MindIE/open_sora_planv1_2) 安装浮点模型的环境依赖，并确保浮点推理能正常运行
+  - 参考 [open_sora_planv1_2 readme](https://modelers.cn/models/MindIE/open_sora_planv1_2) 安装浮点模型的环境依赖，并确保浮点推理能正常运行
   - pip install huggingface_hub==0.25.2
 - Flux.1-dev相关环境配置参考[MindIE/FLUX.1-dev](https://modelers.cn/models/MindIE/FLUX.1-dev)
-  - 参考 [Flux reamde](https://modelers.cn/models/MindIE/FLUX.1-dev) 安装浮点模型的环境依赖，并确保浮点推理能正常运行
+  - 参考 [Flux readme](https://modelers.cn/models/MindIE/FLUX.1-dev) 安装浮点模型的环境依赖，并确保浮点推理能正常运行
 - HunyuanVideo相关环境配置参考[MindIE/hunyuan_video](https://modelers.cn/models/MindIE/hunyuan_video)
-  - 参考 [HunyuanVideo reamde](https://modelers.cn/models/MindIE/hunyuan_video) 安装浮点模型的环境依赖，并确保浮点推理能正常运行
+  - 参考 [HunyuanVideo readme](https://modelers.cn/models/MindIE/hunyuan_video) 安装浮点模型的环境依赖，并确保浮点推理能正常运行
 
 ## 使用案例
 使用量化前，需要加载模型和校准数据，其中加载模型依赖于diffusers库（如SD3-Medium）或多模态生成模型[魔乐社区](https://modelers.cn/models/)推理工程仓（如Open-Sora-Plan v1.2、Flux.1-dev、HunyuanVideo），请先确保依据推理工程仓可以正常进行浮点推理。

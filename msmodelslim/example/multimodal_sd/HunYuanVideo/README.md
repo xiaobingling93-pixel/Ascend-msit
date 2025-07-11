@@ -18,7 +18,7 @@ for step_id, t in enumerate(timesteps):
 ```
 例如在hunyuan_video/hyvideo/diffusion/pipelines/pipeline_hunyuan_video.py的HunyuanVideoPipeline类的__call__函数中，添加如下代码：
 ```python
-with self.progress_bar(total=num_inference_steps) as progreess_bar:
+with self.progress_bar(total=num_inference_steps) as progress_bar:
     for i,t in enumerate(timesteps):
         if self.interrupt:
             continue

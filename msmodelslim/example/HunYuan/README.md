@@ -1,9 +1,9 @@
-# HunYuan 量化案例
+# Hunyuan 量化案例
 
 ## 模型介绍
 - [Tencent-Hunyuan-Large](https://github.com/Tencent/Tencent-Hunyuan-Large) 目前业界开源的基于 Transformer 的最大 MoE 模型，拥有 3890 亿个参数、520 亿个活跃参数，且其具备高质量合成数据增强训练、KV 缓存压缩、专家特定学习率缩放、长上下文处理能力强（预训练模型支持 256K 文本序列，Instruct 模型支持 128K）。
 
-#### HunYuan 模型当前已验证的量化方法
+#### Hunyuan 模型当前已验证的量化方法
 - W8A8混合量化：Tencent-Hunyuan-Large
  
 #### 此模型仓已适配的模型版本
@@ -15,7 +15,7 @@
 
 ## 量化权重生成
 
-- 量化权重可使用 [quant_hunyuan.py](./quant_hunyuan.py) 脚本生成，以下提供HunYuan模型量化权重生成快速启动命令。
+- 量化权重可使用 [quant_hunyuan.py](./quant_hunyuan.py) 脚本生成，以下提供Hunyuan模型量化权重生成快速启动命令。
 
 #### quant_hunyuan.py 量化参数说明
 | 参数名 | 含义 | 默认值 | 使用方法 | 

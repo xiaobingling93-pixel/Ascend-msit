@@ -35,7 +35,7 @@ from msmodelslim.mindspore.quant.ptq_quant.create_config import create_quant_con
 from msmodelslim.mindspore.quant.ptq_quant.save_model import save_model
 ```
 
-4. （可选）调整日志输出等级，启动调优任务后，将打屏显示量化调优的日志信息。
+4. （可选）调整日志输出等级，启动调优任务后，将打印显示量化调优的日志信息。
 ```
 import logging
 logging.getLogger().setLevel(logging.INFO)    #请根据实际情况进行配置

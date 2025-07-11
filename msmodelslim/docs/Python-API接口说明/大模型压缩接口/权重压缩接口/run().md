@@ -19,9 +19,9 @@ compress_result_weight, compress_result_index, compress_result_info = compressor
 ### 调用示例
 - 使用weight_path参数进行权重压缩。
 ```python
-from msmodeslim.pytorch.weight_compression import CompressConfig, Compressor
+from msmodelslim.pytorch.weight_compression import CompressConfig, Compressor
 compress_config = CompressConfig(do_pseudo_sparse=False, sparse_ratio=1, is_debug=True, compress_disable_layers=None, record_detail_root=save_root)
 weight_save_path = './quant_weight.npy'  # 根据实际情况修改待压缩的权重文件路径
-compressor = Compressor(compress_config, weight_path)
+compressor = Compressor(compress_config, weight_path=weight_save_path)
 compress_result_weight, compress_result_index, compress_result_info = compressor.run() 
 ```

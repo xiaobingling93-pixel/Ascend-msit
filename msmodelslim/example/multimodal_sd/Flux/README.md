@@ -1,6 +1,6 @@
 # FLUX 量化使用说明
 
-FLUX的推理量化依赖于Flux.1-dev推理工程仓：[MindIE/FLUX.1-dev](https://modelers.cn/models/MindIE/FLUX.1-dev)，根据该工程仓完成配置后，使用以下示例代码进行量化。
+FLUX的推理量化依赖于FLUX.1-dev推理工程仓：[MindIE/FLUX.1-dev](https://modelers.cn/models/MindIE/FLUX.1-dev)，根据该工程仓完成配置后，使用以下示例代码进行量化。
 
 ## FLUX 时间步量化
 
@@ -20,7 +20,7 @@ for step_id, t in enumerate(timesteps):
 ```
 例如在FLUX.1-dev/FLUX1dev/pipeline/pipeline_flux.py的FluxPipeline类的__call__函数中，添加如下代码：
 ```python
-with self.progress_bar(total=num_inference_steps) as progreess_bar:
+with self.progress_bar(total=num_inference_steps) as progress_bar:
     for i,t in enumerate(timesteps):
         if self.interrupt:
             continue
@@ -136,7 +136,7 @@ session_cfg.model_validate(session_cfg)
 quant_model(model, session_cfg)
 ```
 
-## Flux fa3 量化
+## FLUX FA3 量化
 
 ### 量化命令和示例代码
 
@@ -241,7 +241,7 @@ session_cfg.model_validate(session_cfg)
 quant_model(model, session_cfg)
 ```
 
-## Flux 异常值抑制量化
+## FLUX 异常值抑制量化
 
 ### 量化命令和示例代码
 
