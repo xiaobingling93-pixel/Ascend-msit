@@ -15,7 +15,7 @@ msModelSlim工具提供了基于重要性评估的模型剪枝调优API，用户
 from msmodelslim.pytorch.prune.prune_torch import PruneTorch
 ```
 
-3. （可选）调整日志输出等级，启动调优任务后，将打屏显示设置级别的日志信息。[日志级别说明](../../../docs/Python-API接口说明/公共接口.md#参数说明)
+3. （可选）调整日志输出等级，启动调优任务后，将打印显示设置级别的日志信息。[日志级别说明](../../../docs/Python-API接口说明/公共接口.md#参数说明)
 ```
 from msmodelslim import set_logger_level
 set_logger_level("info")        #根据实际情况配置

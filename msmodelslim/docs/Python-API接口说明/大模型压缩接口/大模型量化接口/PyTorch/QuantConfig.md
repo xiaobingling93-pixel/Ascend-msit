@@ -5,7 +5,7 @@
 
 ### 函数原型
 ```python
-QuantConfig(a_bit=8, w_bit=8, disable_names=None, dev_type='cpu', dev_id=None, act_method=1, pr=1.0, w_sym=True, mm_tensor=True, w_method='MinMax', co_sparse=False, fraction=0.01, nonuniform=False, is_lowbit =False, do_smooth=False, use_sigma=False, sigma_factor=3, disable_last_linear：bool=True, use_kvcache_quant=False, is_dynamic=False, open_outlier=True, group_size=64, percdamp=0.01, pdmix=False)
+QuantConfig(a_bit=8, w_bit=8, disable_names=None, dev_type='cpu', dev_id=None, act_method=1, pr=1.0, w_sym=True, mm_tensor=True, w_method='MinMax', co_sparse=False, fraction=0.01, nonuniform=False, is_lowbit =False, do_smooth=False, use_sigma=False, sigma_factor=3, disable_last_linear: bool=True, use_kvcache_quant=False, is_dynamic=False, open_outlier=True, group_size=64, percdamp=0.01, pdmix=False)
 ```
 
 ### 参数说明

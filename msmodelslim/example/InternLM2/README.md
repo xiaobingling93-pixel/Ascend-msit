@@ -1,16 +1,16 @@
 # InternLM2 量化案例
 
 ## 模型介绍
-- InternLM开源了InternLM系列的多个基础模型和为实际场景量身定制的聊天模型。此代码仓中实现了一套基于NPU硬件的Internlm推理模型。配合加速库使用，旨在NPU上获得极致的推理性能。
+- InternLM开源了InternLM系列的多个基础模型和为实际场景量身定制的聊天模型。此代码仓中实现了一套基于NPU硬件的InternLM推理模型。配合加速库使用，旨在NPU上获得极致的推理性能。
 
-#### Internlm2 模型当前已验证的量化方法
-- W8A8量化：Internlm2-20B
-- W8A16量化：Internlm2-20B
-- KV cache量化：Internlm2-20B
+#### InternLM2 模型当前已验证的量化方法
+- W8A8量化：InternLM2-20B
+- W8A16量化：InternLM2-20B
+- KV cache量化：InternLM2-20B
 
 
 #### 此模型仓已适配的模型版本
-- [Internlm2-20B](https://huggingface.co/internlm/internlm2-chat-20b/tree/main)
+- [InternLM2-20B](https://huggingface.co/internlm/internlm2-chat-20b/tree/main)
 
 ## 环境配置
 
@@ -18,7 +18,7 @@
 
 ## 量化权重生成
 
-- 量化权重统一使用[quant_internlm2.py](./quant_internlm2.py)脚本生成，以下提供internlm2模型量化权重生成快速启动命令。
+- 量化权重统一使用[quant_internlm2.py](./quant_internlm2.py)脚本生成，以下提供InternLM2模型量化权重生成快速启动命令。
 
 
 #### 量化参数说明
@@ -73,17 +73,17 @@
   ```
 - 若加载自定义模型，调用`from_pretrained`函数时要指定`trust_remote_code=True`让修改后的自定义代码文件能够正确的被加载。(请确保加载的自定义代码文件的安全性)
 
-#### Internlm2-20B 
+#### InternLM2-20B 
 
-##### Internlm2-20B W8A8量化
+##### InternLM2-20B W8A8量化
   ```shell
   python3 quant_internlm2.py --model_path {浮点权重路径} --save_directory {W8A8量化权重路径} --w_bit 8 --a_bit 8 --device_type npu --trust_remote_code True
   ```
-##### Internlm2-20B W8A16量化
+##### InternLM2-20B W8A16量化
   ```shell
   python3 quant_internlm2.py --model_path {浮点权重路径} --save_directory {W8A16量化权重路径} --w_bit 8 --a_bit 16 --device_type npu --anti_method m1 --trust_remote_code True
   ```
-##### Internlm2-20B KV Cache W8A8量化
+##### InternLM2-20B KV Cache W8A8量化
   ```shell
   python3 quant_internlm2.py --model_path {浮点权重路径} --save_directory {W8A8C8量化权重路径} --w_bit 8 --a_bit 8 --device_type npu --use_kvcache_quant True --disable_level L5 --trust_remote_code True
   ```

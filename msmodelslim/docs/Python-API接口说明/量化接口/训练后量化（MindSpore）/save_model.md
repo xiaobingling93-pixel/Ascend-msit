@@ -13,7 +13,7 @@ save_model(file_name, quantized_model, *input_data, file_format='AIR')
 | ------ | ------ | ------ | ------ |
 | file_name | 输入 | 模型存放路径和文件名。必选。| 数据类型：string。 |
 | quantized_model | 输入 | 通过quantize_model接口生成的量化后的模型。必选。| 数据类型：MindSpore模型。 |
-| input_data | 输入 | 用户网络输入数据。必选。| 数据类型：MindSpore的Tensor。需要与MindSpore模型的input保持一致。 |
+| input_data | 输入 | 用户网络输入数据。必选。| 数据类型：MindSpore的Tensor。需要与MindSpore模型的输入保持一致。 |
 | file_format | 输入 | 离线模型的格式。必选。| 可选值：AIR和MINDIR。默认值为AIR。 |
 
 

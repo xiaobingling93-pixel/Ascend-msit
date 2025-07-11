@@ -6,7 +6,7 @@
 #### Qwen模型当前已验证的量化方法
 - W4A8 Dynamic 量化：Qwen3-32B
 - W8A8量化：Qwen-7B，Qwen-14B，Qwen1.5-14B，Qwen1.5-32B，Qwen2-7B，Qwen2-72B，Qwen2.5-7B，Qwen2.5-14B，Qwen2.5-32B，Qwen3-14B，Qwen3-32B，QwQ-32B
-- W8A16量化：QWen-72B，Qwen1.5-72B，Qwen1.5-110B，Qwen2-72B
+- W8A16量化：Qwen-72B，Qwen1.5-72B，Qwen1.5-110B，Qwen2-72B
 - W4A4 Flatquant Dynamic量化：Qwen3-32B
 - 稀疏量化：Qwen1.5-14B，Qwen2-7B，Qwen2-72B，Qwen2.5-7B，Qwen2.5-14B，QwenCode2.5-7B，QwQ-32B，Qwen3-8B，Qwen3-14B，Qwen3-32B
 - KV cache量化：Qwen2-72B
@@ -16,7 +16,7 @@
 ##### Qwen
 - [Qwen-7B](https://huggingface.co/Qwen/Qwen-7B/tree/main)
 - [Qwen-14B](https://huggingface.co/Qwen/Qwen-14B/tree/main)
-- [QWen-72B](https://huggingface.co/Qwen/Qwen-72B/tree/main)
+- [Qwen-72B](https://huggingface.co/Qwen/Qwen-72B/tree/main)
 ##### Qwen1.5
 - [Qwen1.5-14B](https://huggingface.co/Qwen/Qwen1.5-14B/tree/main)
 - [Qwen1.5-32B](https://huggingface.co/Qwen/Qwen1.5-32B/tree/main)
@@ -33,7 +33,7 @@
 - [Qwen3-32B](https://huggingface.co/Qwen/Qwen3-32B/tree/main)
 - [Qwen3-14B](https://huggingface.co/Qwen/Qwen3-14B/tree/main)
 - [Qwen3-8B](https://huggingface.co/Qwen/Qwen3-8B/tree/main)
-##### QWQ
+##### QwQ
 - [QwQ-32B](https://modelscope.cn/models/Qwen/QwQ-32B)
 
 ## 环境配置
@@ -42,7 +42,7 @@
 
 ## 量化权重生成
 
-- 量化权重统一使用[quant_qwen.py.py](./quant_qwen.py)脚本生成，以下提供Qwen模型量化权重生成快速启动命令。
+- 量化权重统一使用[quant_qwen.py](./quant_qwen.py)脚本生成，以下提供Qwen模型量化权重生成快速启动命令。
 
 
 #### 量化参数说明
@@ -161,7 +161,7 @@
   export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
   export PYTORCH_NPU_ALLOC_CONF=expandable_segments:False
 
-  python3 quant_qwen.py --model_path {浮点权重路径} --save_directory {W8A16量化权重路径} --calib_file ../common/boolq.jsonl --w_bit 8 --a_bit 8 --device_type npu   --use_kvcache_quant True --trust_remote_code True
+  python3 quant_qwen.py --model_path {浮点权重路径} --save_directory {W8A8量化权重路径} --calib_file ../common/boolq.jsonl --w_bit 8 --a_bit 8 --device_type npu   --use_kvcache_quant True --trust_remote_code True
   ```
 
 #### 4. Qwen2.5系列
@@ -276,7 +276,7 @@
   msmodelslim quant --model_path {浮点权重路径} --save_path {W8A8量化权重路径} --device npu --model_type Qwen3-8B --quant_type w8a8s --trust_remote_code True
   ```
 
-#### QWQ 系列
+#### QwQ 系列
 ##### QwQ-32b W8A8量化
   ```shell
   python3 quant_qwen.py --model_path {浮点权重路径} --save_directory {W8A8量化权重路径} --calib_file ../common/boolq.jsonl --w_bit 8 --a_bit 8 --device_type npu --anti_method m1

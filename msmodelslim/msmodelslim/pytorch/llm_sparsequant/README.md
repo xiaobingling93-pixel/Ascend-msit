@@ -9,7 +9,7 @@
 |----------|-------|
 | ChatGLM2-6B | PyTorch |  
 | LLaMA2-7B | PyTorch |  
-| LLaMa-13B | PyTorch |  
+| LLaMA-13B | PyTorch |  
 
 ### 前提条件
 
@@ -207,7 +207,7 @@ python3 sparse_quant.py
 ```
 cd build
 ```
-用户参考稀疏量化步骤对ChatGLM2-6B为进行稀疏量化之后，在指定的输出目录“chatglm2”文件夹得到模型稀疏量化后的参数，目录示例如下：
+用户参考稀疏量化步骤对ChatGLM2-6B进行稀疏量化之后，在指定的输出目录“chatglm2”文件夹得到模型稀疏量化后的参数，目录示例如下：
 ```
 ├── deq_scale.npy
 ├── input_offset.npy

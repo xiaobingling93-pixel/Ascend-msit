@@ -5,7 +5,7 @@
 
 ### 函数原型
 ```python
-Calibrator(cfg: quantconfig, model, model_ckpt, calib_data=None)
+Calibrator(cfg: QuantConfig, model, model_ckpt, calib_data=None)
 ```
 
 ### 参数说明

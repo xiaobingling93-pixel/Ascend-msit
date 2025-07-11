@@ -6,10 +6,10 @@
 cd usr/local/lib/python3.7/site-packages/msmodelslim/pytorch/weight_compression/compress_graph/
 ```
 - 编译weight_compression组件 `sudo bash build.sh {CANN包安装路径}/ascend-toolkit/latest`
-- 上一步编译操作会得到bulid文件夹，给build文件夹相关权限 `chmod -R 550 build`
+- 上一步编译操作会得到build文件夹，给build文件夹相关权限 `chmod -R 550 build`
 
 ## 导入工具
-from msmodeslim.pytorch.weight_compression import CompressConfig, Compressor
+from msmodelslim.pytorch.weight_compression import CompressConfig, Compressor
 
 ## 设置压缩工具配置
 由于压缩工具调用的压缩函数已将大部分配置参数固定，因此在工具层面无需设置很多参数。

@@ -3,7 +3,7 @@
 ## 模型介绍
 - [GPT-NeoX-20B](https://github.com/EleutherAI/gpt-neox)是一个 200 亿参数的自回归语言模型，在 Pile 数据集上训练。它的架构类似于 GPT-3，并且与 GPT-J-6B 的架构几乎相同。其训练数据集包含大量英语文本，反映了该模型的通用性质。
 
-#### GPT-Neox模型当前已验证的量化方法
+#### GPT-NeoX模型当前已验证的量化方法
 - W8A8量化：GPT-NeoX-20B
  
 #### 此模型仓已适配的模型版本

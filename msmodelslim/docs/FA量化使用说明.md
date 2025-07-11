@@ -1,14 +1,14 @@
-# fa3量化 
+# FA3量化 
 
-**Flash Attention 3（FA）**，在KV-Cache的基础上增强了在硬件设备上的利用率，提升了整体在推理场景中的计算效率，以低精度的数据格式完成更快的处理和更少的内存占用。
+**Flash Attention 3（FA3）**，在KV-Cache的基础上增强了在硬件设备上的利用率，提升了整体在推理场景中的计算效率，以低精度的数据格式完成更快的处理和更少的内存占用。
 
 ## 前提条件
 
 前提条件参考[大模型量化的前提条件](../msmodelslim/pytorch/llm_ptq/README.md#前提条件)
 
-说明：仅Atlas 800I A2推理产品支持fa3量化功能。当前 FA3 量化功能已完成对大语言模型 Llama3.1-70B、Qwen2.5-72B 和多模态模型 Flux.1-dev、HunyuanVideo 的验证。
+说明：仅Atlas 800I A2推理产品支持FA3量化功能。当前 FA3 量化功能已完成对大语言模型 Llama3.1-70B、Qwen2.5-72B 和多模态模型 Flux.1-dev、HunyuanVideo 的验证。
 
-## 大语言模型fa3量化关键步骤说明如下：
+## 大语言模型FA3量化关键步骤说明如下：
 ### 功能实现流程
 #### 1.修改modeling文件：
 
@@ -271,8 +271,8 @@ from transformers.models.qwen2.configuration_qwen2 import Qwen2Config
 
 ├── anti_fp_norm.npy  #Qwen模型已启用离群抑制功能，具体操作请参见使用离群值抑制功能，将会生成此文件。antioutlier算法生成浮点权重中的norm层权重文件，用于量化层的input和post norm的权重适配
 ├── deq_scale.npy    #W8A8量化的量化参数权重文件，Tensor数据类型为int64，deq_scale已针对量化算子进行数据类型转换，可直接适配算子。在量化BF16模型情况下，数据类型不会转换为int64，仍然为float32
-├── fa_quant_offset.npy    #fa3量化的激活值量化偏移值参数文件，Tensor数据类型为bfoat16或float16
-├── fa_quant_scale.npy   #fa3量化的激活值量化缩放因子参数文件，Tensor数据类型为bfoat16或float16
+├── fa_quant_offset.npy    #FA3量化的激活值量化偏移值参数文件，Tensor数据类型为bfloat16或float16
+├── fa_quant_scale.npy   #FA3量化的激活值量化缩放因子参数文件，Tensor数据类型为bfloat16或float16
 ├── input_offset.npy  #W8A8量化的激活值量化偏移值权重文件，Tensor数据类型为float32
 ├── input_scale.npy   #W8A8量化的激活值量化缩放因子权重文件，Tensor数据类型为float32
 ├── quant_bias.npy   #W8A8量化的量化参数权重文件，Tensor数据类型为int32，quant_bias已考虑原始浮点模型linear层的bias值
@@ -312,12 +312,12 @@ from transformers.models.qwen2.configuration_qwen2 import Qwen2Config
 ```
 
 
-- json描述文件中储存的量化权重的总体类型model_quant_type，是否启用fa3量化fa_quant_type，和其中各个权重的类型，来自原始浮点权重则为FLOAT，来自W8A8量化则为W8A8。
+- json描述文件中储存的量化权重的总体类型model_quant_type，是否启用FA3量化fa_quant_type，和其中各个权重的类型，来自原始浮点权重则为FLOAT，来自W8A8量化则为W8A8。
 
 ```python
 {
-  "model_quant_type": "W8A8",                                # 整体量化类型为w8a8量化
-  "fa_quant_type": "FAQuant",								                 # 量化过程开启了fa3量化
+  "model_quant_type": "W8A8",                                # 整体量化类型为W8A8量化
+  "fa_quant_type": "FAQuant",								                 # 量化过程开启了FA3量化
   "model.embed_tokens.weight": "FLOAT",                      # 来自原始浮点模型的embed_tokens权重
   "model.layers.0.self_attn.q_proj.weight": "W8A8",          # 量化新增的第0层self_attn.q_proj的quant_weight
   "model.layers.0.self_attn.q_proj.input_scale": "W8A8",     # 量化新增的第0层self_attn.q_proj的input_scale
@@ -447,6 +447,6 @@ for layer_index in disable_idx_lst:
 fa_quant(fa_amp=5)
 ```
 
-## 多模态模型fa3量化关键步骤说明如下：
+## 多模态模FA3量化关键步骤说明如下：
 
-请参考[多模态生成模型量化](../example/multimodal_sd/README.md#flux-fa3-量化)中 Flux fa3 量化与HunyuanVideo fa3 量化。
+请参考[多模态生成模型量化](../example/multimodal_sd/README.md#flux-fa3-量化)中 Flux FA3 量化与HunyuanVideo FA3 量化。

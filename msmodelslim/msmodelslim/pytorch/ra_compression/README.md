@@ -3,7 +3,7 @@
 
 Alibi编码是一种位置编码方法，与RazorAttention结合使用，通过Alibi编码来识别哪些注意力头对位置信息更为敏感，从而决定哪些头可以被压缩。Alibi编码并不直接在网络中加入显式的位置编码，而是通过在query-key注意力分数上施加一个与距离成比例的偏置实现位置信息的建模。
 
-KV Cache的管理需考虑batch, seqlen, num_heads和head_size这四个维度，其中seqlen维度通常是压缩的重点，因为随着序列长度的增加，KV Cache的内存占用会迅速增长。传统的压缩方法可能会忽略不同注意力头（heads）之间的差异，而RazorAttention加速技术则提供了一种更细粒度的内存压缩方法，针对使用Alibi编码的模型进行优化，可以更有效地识别哪些注意力头对于位置信息更为敏感，并据此调整压缩策略。RazorAttention加速技术支持全量加速和增量加速：
+KV Cache的管理需考虑batch, seq_len, num_heads和head_size这四个维度，其中seq_len维度通常是压缩的重点，因为随着序列长度的增加，KV Cache的内存占用会迅速增长。传统的压缩方法可能会忽略不同注意力头（heads）之间的差异，而RazorAttention加速技术则提供了一种更细粒度的内存压缩方法，针对使用Alibi编码的模型进行优化，可以更有效地识别哪些注意力头对于位置信息更为敏感，并据此调整压缩策略。RazorAttention加速技术支持全量加速和增量加速：
 
 全量加速：压缩后的KV Cache可直接用于模型推理，实现全量加速。
 

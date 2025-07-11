@@ -22,7 +22,7 @@ Compressor(config: CompressConfig, weight_path=None, weight=None, quant_model_de
 ```python
 from modeslim.pytorch.weight_compression import CompressConfig, Compressor
 compress_config = CompressConfig(do_pseudo_sparse=False, sparse_ratio=1, is_debug=True, compress_disable_layers=None, record_detail_root="./", multiprocess_num=1)
-weight_save_path = './quant_weight.npy'  # 根据实际情况修改带压缩的权重文件路径
+weight_save_path = './quant_weight.npy'  # 根据实际情况修改待压缩的权重文件路径
 compressor = Compressor(config=compress_config, weight_path=weight_save_path)
 ```
 
@@ -36,7 +36,7 @@ from msmodelslim.pytorch.weight_compression import CompressConfig, Compressor
 weight_path = "./quant_model_weight_w8a8s.safetensors"       # 待压缩权重文件的路径
 json_path = "./quant_model_description_w8a8s.json"          # 待压缩权重文件的描述文件的路径
 # 使用CompressConfig接口，配置压缩参数，并返回配置实例
-compress_config = CompressConfig(do_pseudo_sparse=False, sparse_ratio=1, is_debug=True, compress_disable_layer=None, record_detail_root="./", multiprocess_num=1)
+compress_config = CompressConfig(do_pseudo_sparse=False, sparse_ratio=1, is_debug=True, compress_disable_layers=None, record_detail_root="./", multiprocess_num=1)
 sparse_weight = load_file(weight_path)
 with open(json_path, 'r') as f:
     quant_model_description = json.load(f)

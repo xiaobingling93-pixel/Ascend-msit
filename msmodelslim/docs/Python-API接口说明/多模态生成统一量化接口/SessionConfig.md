@@ -48,7 +48,7 @@ session_config = SessionConfig(
 ## W8A8ProcessorConfig
 
 ### 功能说明
-w8a8量化处理器配置类，用于配置w8a8量化处理器相关的参数。
+W8A8量化处理器配置类，用于配置W8A8量化处理器相关的参数。
 
 ### 类原型
 ```python
@@ -60,7 +60,7 @@ class W8A8ProcessorConfig(BaseModel):
 ### 参数说明
 | 参数名| 输入/返回值 | 含义 | 使用限制 |
 | ------ | ------ | ------ | ------ |
-| cfg | 输入 | w8a8量化配置 | 必选。<br>数据类型：W8A8QuantConfig，w8a8量化配置类。|
+| cfg | 输入 | W8A8量化配置 | 必选。<br>数据类型：W8A8QuantConfig，W8A8量化配置类。|
 | disable_names | 输入 | 回退层 | 必选。<br>数据类型：列表。列表中每个元素为回退层名称。|
 
 ### 调用示例
@@ -78,7 +78,7 @@ w8a8_processor_cfg = W8A8ProcessorConfig(
 ## W8A8QuantConfig
 
 ### 功能说明
-w8a8量化配置类，用于配置w8a8量化相关的参数。
+W8A8量化配置类，用于配置W8A8量化相关的参数。
 
 ### 类原型
 ```python
@@ -158,7 +158,7 @@ w8a8dynamic_quant_cfg = W8A8DynamicQuantConfig(
 ## W8A8TimeStepProcessorConfig
 
 ### 功能说明
-w8a8时间步量化处理器配置类，用于配置w8a8时间步量化处理器相关的参数。
+W8A8时间步量化处理器配置类，用于配置W8A8时间步量化处理器相关的参数。
 
 ### 类原型
 ```python
@@ -171,7 +171,7 @@ class W8A8TimeStepProcessorConfig(BaseModel):
 ### 参数说明
 | 参数名| 输入/返回值 | 含义 | 使用限制 |
 | ------ | ------ | ------ | ------ |
-| cfg | 输入 | w8a8时间步量化配置 | 必选。<br>数据类型：W8A8TimeStepQuantConfig，w8a8时间步量化配置类。|
+| cfg | 输入 | W8A8时间步量化配置 | 必选。<br>数据类型：W8A8TimeStepQuantConfig，W8A8时间步量化配置类。|
 | disable_names | 输入 | 回退层 | 必选。<br>数据类型：列表。列表中每个元素为回退层名称。|
 | timestep_sep | 输入 | 时间步量化的动静态量化分割阈值 | 必选。<br>数据类型：整数。通常设置为多模态生成模型视图生成中总推理时间步的一半。|
 
@@ -191,7 +191,7 @@ w8a8timestep_processor_cfg = W8A8TimeStepProcessorConfig(
 ## W8A8TimeStepQuantConfig
 
 ### 功能说明
-w8a8时间步量化配置类，用于配置w8a8时间步量化相关的参数。
+W8A8时间步量化配置类，用于配置W8A8时间步量化相关的参数。
 
 ### 类原型
 ```python
