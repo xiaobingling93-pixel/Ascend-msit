@@ -354,14 +354,13 @@ def get_dynamic_expert_hot_from_csv(
         for j in range(1, n_shared_experts + 1):
             dynamic_expert_hot[:, -j] = shared_expert_hotness
 
-    # 如果需要 topk 信息
-
     topk_files = sorted([
         os.path.join(root_folder, f)
         for f in all_files
         if "topk" in f and f.endswith(".csv")
     ], key=numerical_sort_key)
 
+    # 如果需要 topk 信息
     if topk_info and topk_files:
         topk_data_list = [np.loadtxt(f, delimiter=",", dtype=np.float32) for f in topk_files]
         min_topk_size = min(min(len(k) for k in topk_data_list), min_size)
