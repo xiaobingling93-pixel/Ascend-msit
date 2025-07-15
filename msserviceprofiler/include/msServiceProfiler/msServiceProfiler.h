@@ -20,6 +20,14 @@
 
 #include "Profiler.h"
 
+#define ProfLevel0 msServiceProfiler::L0
+#define ProfLevel1 msServiceProfiler::L1
+#define ProfLevel2 msServiceProfiler::L2
+
+#define ProfilerL0 msServiceProfiler::Profiler<msServiceProfiler::L0>
+#define ProfilerL1 msServiceProfiler::Profiler<msServiceProfiler::L1>
+#define ProfilerL2 msServiceProfiler::Profiler<msServiceProfiler::L2>
+
 #define SERVER_PROFILER
 #define PRIVATE_MACRO_VAR_ARGS_IMPL_COUNT(_1, _2, N, ...) N
 #define PRIVATE_MACRO_VAR_ARGS_IMPL(args) PRIVATE_MACRO_VAR_ARGS_IMPL_COUNT args
