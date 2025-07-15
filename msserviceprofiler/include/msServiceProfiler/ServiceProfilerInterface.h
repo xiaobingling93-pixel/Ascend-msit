@@ -41,7 +41,7 @@ MS_SERVICE_PROFILER_API void StartServerProfiler();
 MS_SERVICE_PROFILER_API void StopServerProfiler();
 MS_SERVICE_PROFILER_API bool IsEnable(uint32_t level);
 MS_SERVICE_PROFILER_API bool IsValidDomain(const char *domainName);
-MS_SERVICE_PROFILER_API bool AddMetaInfo(const char *key, const char *value);
+MS_SERVICE_PROFILER_API void AddMetaInfo(const char *key, const char *value);
 }
 
 namespace msServiceProfilerCompatible {
@@ -130,14 +130,14 @@ namespace msServiceProfilerCompatible {
         {
             char *ascendHomePathPtr = getenv("ASCEND_HOME_PATH");
             if (ascendHomePathPtr == nullptr) {
-                printf("Get ASCEND_HOME_PATH failed. Please check that the CANN package is installed. \n"
-                        "Run 'Source set_env.sh' in the CANN installation path. \n");
+                printf("Get ASCEND_HOME_PATH failed. Please check that the CANN package is installed.\n"
+                        "Run 'source set_env.sh' in the CANN installation path.\n");
                 return;
             }
             std::string ascendHomePath(ascendHomePathPtr);
             if (ascendHomePath.empty()) {
-                printf("Get ASCEND_HOME_PATH failed. Please check that the CANN package is installed. \n"
-                        "Run 'Source set_env.sh' in the CANN installation path. \n");
+                printf("Get ASCEND_HOME_PATH failed. Please check that the CANN package is installed.\n"
+                        "Run 'source set_env.sh' in the CANN installation path.\n");
                 return;
             }
             char ascendHomeRealPath[PATH_MAX + 1] = {0};
@@ -146,13 +146,11 @@ namespace msServiceProfilerCompatible {
                 return;
             }
             std::string soName = std::string(ascendHomeRealPath) + "/lib64/libms_service_profiler.so";
-
             struct stat fileStat;
-            if (stat(soName.c_str(), &fileStat) != 0 || (fileStat.st_mode & S_IRUSR) == 0) {
+            if ((stat(soName.c_str(), &fileStat) != 0) || (fileStat.st_mode & S_IRUSR) == 0) {
                 printf("File not readable: %s", soName.c_str());
                 return;
             }
-
             auto handle = dlopen(soName.c_str(), RTLD_LAZY);
             if (handle) {
                 ptrIsEnable_ = (decltype(IsEnable)*)dlsym(handle, "IsEnable");
@@ -162,7 +160,7 @@ namespace msServiceProfilerCompatible {
                 ptrMarkEvent_ = (decltype(MarkEvent)*)dlsym(handle, "MarkEvent");
                 ptrStartServerProfiler_ = (decltype(StartServerProfiler)*)dlsym(handle, "StartServerProfiler");
                 ptrStopServerProfiler_ = (decltype(StopServerProfiler)*)dlsym(handle, "StopServerProfiler");
-                ptrIsValidDomain_ =  (decltype(IsValidDomain)*)dlsym(handle, "IsValidDomain");
+                ptrIsValidDomain_ = (decltype(IsValidDomain)*)dlsym(handle, "IsValidDomain");
                 ptrAddMetaInfo_ = (decltype(AddMetaInfo)*)dlsym(handle, "AddMetaInfo");
             }
         };
