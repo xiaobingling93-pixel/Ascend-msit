@@ -41,7 +41,7 @@ def import_object_from_string(import_path: str, module_path: str) -> Any:
     for part in module_path.split("."):
         current = getattr(current, part, None)
         if current is None:
-            logger.error("Module {current} doesn't has attribute {part}")
+            logger.error(f"Module {current} doesn't has attribute {part}")
             return None
     return current
 
@@ -210,7 +210,6 @@ def apply_hooks(version: str = None):
         if hooker.support_version(version):
             try:
                 hooker.init()
-                logger.debug(f"Applied hooker: {hooker.__class__.__name__}")
             except Exception as e:
                 logger.error(f"Failed to apply hooker: {str(e)}")
         else:
