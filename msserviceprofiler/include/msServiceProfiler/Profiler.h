@@ -260,7 +260,6 @@ namespace msServiceProfiler {
         Profiler(Profiler &obj)
             : autoEnd_(obj.autoEnd_), spanHandle_(obj.spanHandle_), msg_(std::move(obj.msg_)),
                 domainAllow_(obj.domainAllow_)
-
         {
             obj.autoEnd_ = false;
         }
@@ -346,6 +345,7 @@ namespace msServiceProfiler {
                     .CallMarkEvent(this->GetMsg().c_str());
             }
         }
+
     public:
         MS_SERVICE_PROFILER_HIDDEN inline void AddMetaInfo(const char *key, const char *value)
         {
