@@ -18,7 +18,6 @@ from ..module_hook import vllm_hook
 @vllm_hook(("vllm.v1.core.kv_cache_manager", "KVCacheManager.allocate_slots"), min_version="0.9.1")
 def allocate_slots(original_func, this, request, *args, **kwargs):
     ret = original_func(this, request, *args, **kwargs)
-    prof = Profiler(Level.INFO).domain("KVCache").res(request.request_id)
-    prof.metric("deviceBlock", len(this.block_tables)).event("Allocate")
+    Profiler(Level.INFO).domain("KVCache").res(request.request_id).event("Allocate")
     print(f">>>> {this.usage()}")
     return ret
