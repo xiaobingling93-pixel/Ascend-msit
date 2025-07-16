@@ -43,7 +43,7 @@ def handle_execute_model(original_func, this, scheduler_output, *args, **kwargs)
     """处理执行模型钩子"""
     state = _get_state()
     for scheduled_new_req in scheduler_output.scheduled_new_reqs:
-        state.request_id_prompt_token_len[scheduled_new_req.req_id] = len(scheduled_new_req.prompt_token_ids)
+        state.request_id_to_prompt_token_len[scheduled_new_req.req_id] = len(scheduled_new_req.prompt_token_ids)
 
     prof = Profiler(Level.INFO).domain("ModelExecute")
     request_id_list, request_id_with_iter_list = [], []
@@ -54,7 +54,7 @@ def handle_execute_model(original_func, this, scheduler_output, *args, **kwargs)
         state.request_id_to_iter_size[request_id] = iter_size
 
     if request_id in scheduler_output.finished_request_ids:
-        state.request_id_prompt_token_len.pop(request_id, None)
+        state.request_id_to_prompt_token_len.pop(request_id, None)
         state.request_id_to_iter_size.pop(request_id, None)
 
     prof.res(request_id_with_iter_list)
