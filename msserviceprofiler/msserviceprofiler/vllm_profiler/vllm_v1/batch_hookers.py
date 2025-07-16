@@ -60,7 +60,7 @@ def schedule(original_func, this, *args, **kwargs):
             state.request_id_to_prompt_token_len.pop(request_id, None)
             state.request_id_to_iter_size.pop(request_id, None)
         
-    is_prefill = any(state.request_id_to_iter_size.values() == 0)
+    is_prefill = any(val == 0 for val in state.request_id_to_iter_size.values())
     prof.attr("batch_type", "Prefill" if is_prefill else "Decode")
 
     prof.res(request_id_with_iter_list)

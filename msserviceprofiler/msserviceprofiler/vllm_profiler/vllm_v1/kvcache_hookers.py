@@ -14,3 +14,12 @@
 from collections import Counter
 from ms_service_profiler import Profiler, Level
 from ..module_hook import vllm_hook
+
+@vllm_hook(("vllm.v1.core.kv_cache_manager", "KVCacheManager.allocate_slots"), min_version="0.9.1")
+def allocate_slots(original_func, this, request, *args, **kwargs):
+    ret = original_func(this, request, *args, **kwargs)
+    num_blocks = this.block_pool.get_num_free_blocks()
+    prof = Profiler(Level.INFO).domain("KVCache").res(request.request_id)
+    prof.metric("deviceBlock", num_blocks).event("Allocate")
+    prof.domain("KVCache").res(request.request_id).metric("deviceBlock", num_blocks).event("blocks")
+    return ret
