@@ -45,7 +45,6 @@ def execute_model(original_func, this, scheduler_output, *args, **kwargs):
     for scheduled_new_req in scheduler_output.scheduled_new_reqs:
         state.request_id_to_prompt_token_len[scheduled_new_req.req_id] = len(scheduled_new_req.prompt_token_ids)
 
-    prof = Profiler(Level.INFO).domain("ModelExecute")
     request_id_list, request_id_with_iter_list = [], []
     for request_id, num_scheduled_token in scheduler_output.num_scheduled_tokens.items():
         request_id_list.append({"rid": request_id})
@@ -64,18 +63,21 @@ def execute_model(original_func, this, scheduler_output, *args, **kwargs):
             continue
         is_prefill |= (scheduled_cached_req.num_computed_tokens <= state.request_id_to_prompt_token_len[request_id])
 
-    prof.res(request_id_with_iter_list)
-    prof.attr("batch_type", "Prefill" if is_prefill else "Decode")  # [TODO] for v1, prefill is combined with decode
-    prof.span_start("modelExec")
-    prof.attr("batch_size", scheduler_output.total_num_scheduled_tokens)
+    if request_id_list:
+        prof = Profiler(Level.INFO).domain("ModelExecute")
+        prof.res(request_id_with_iter_list)
+        prof.attr("batch_type", "Prefill" if is_prefill else "Decode")  # [TODO] for v1, prefill is combined with decode
+        prof.span_start("modelExec")
+        prof.attr("batch_size", scheduler_output.total_num_scheduled_tokens)
 
-    preprocess_prof = Profiler(Level.INFO).domain("ModelExecute").res(request_id_list)
-    preprocess_prof.event("preprocess")
-    forward_prof = Profiler(Level.INFO).domain("ModelExecute").res(request_id_list)
-    state.forward_profiler = forward_prof
+        preprocess_prof = Profiler(Level.INFO).domain("ModelExecute").res(request_id_list)
+        preprocess_prof.event("preprocess")
+        forward_prof = Profiler(Level.INFO).domain("ModelExecute").res(request_id_list)
+        state.forward_profiler = forward_prof
 
     ret = original_func(this, scheduler_output, *args, **kwargs)
-    prof.span_end()
+    if request_id_list:
+        prof.span_end()
     return ret
 
 
