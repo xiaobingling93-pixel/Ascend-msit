@@ -144,7 +144,7 @@ class VLLMHookerBase(ABC):
             if pname is not None and self.get_parents_name(ori_func) != pname:
                 logger.debug(f"calling {ori_func}")
                 return ori_func(*args, **kwargs)
-            logger.debug(f"calling profiler_func for {ori_func}")
+            logger.debug(f"calling profiler_func={self.applied_hook_func_name} for {ori_func}")
             return profiler_func(*args, **kwargs)
         return wrapper
 

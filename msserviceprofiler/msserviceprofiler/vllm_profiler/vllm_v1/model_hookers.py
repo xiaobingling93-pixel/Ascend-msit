@@ -18,9 +18,7 @@ from ..module_hook import vllm_hook
 
 
 # 线程安全的全局状态
-class HookState:
-    __slots__ = ("forward_profiler", "execute_model_first_run", "begin_forward_first_run")
-
+class HookState:cp ms_service_profiler
     def __init__(self):
         self.forward_profiler = []
         self.execute_model_first_run = True
@@ -43,11 +41,11 @@ def _get_state() -> HookState:
 @vllm_hook(hook_points=("vllm.v1.executor.abstract", "Executor.execute_model"), min_version="0.9.1")
 def handle_execute_model(original_func, this, scheduler_output, *args, **kwargs):
     """处理执行模型钩子"""
+    state = _get_state()
     for scheduled_new_req in scheduler_output.scheduled_new_reqs:
         state.request_id_prompt_token_len[scheduled_new_req.req_id] = len(scheduled_new_req.prompt_token_ids)
 
     prof = Profiler(Level.INFO).domain("ModelExecute")
-    state = _get_state()
     request_id_list, request_id_with_iter_list = [], []
     for request_id, num_scheduled_token in scheduler_output.num_scheduled_tokens.items():
         request_id_list.append({"rid": request_id})
