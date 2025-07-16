@@ -3,10 +3,10 @@
 
 ## [1.1.3] - 2025-07-16
 ### 新增
-- 新增轻量化安装方式
+- 新增寻优工具轻量化安装方式
 
 ### 变更
 - 寻优工具不再通过sh脚本配置服务化以及benchmark参数，而是在config.json/vllm_config.json中通过参数配置
 
 ### 修复
-- 修复mindie中会生成max_prefill_batch_size为0的种子导致服务拉起失败
+- 修复寻优工具在mindie服务寻优中会生成max_prefill_batch_size为0的种子导致服务拉起失败
