@@ -11,16 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import os
-from .utils import logger, set_log_level
-from .module_hook import apply_hooks
+from collections import Counter
+from ms_service_profiler import Profiler, Level
+from ..module_hook import vllm_hook
 
-set_log_level("info")
-if os.environ.get('VLLM_USE_V1', '0') == "0":
-    from .vllm_v0 import batch_hookers, kvcache_hookers, model_hookers, request_hookers
-    apply_hooks()  # 应用所有hookers
-elif os.environ.get('VLLM_USE_V1', '0') == "1":
-    from .vllm_v0 import batch_hookers, kvcache_hookers, model_hookers, request_hookers
-    apply_hooks()  # 应用所有hookers
-else:
-    logger.error(f"unknown vLLM interface version: VLLM_USE_V1={VLLM_USE_V1}")
+
+@vllm_hook(("vllm.v1.engine.processor", "Processor.process_input"), min_version="0.9.1")
+def process_input(original_func, this, request_id, *args, **kwargs):
+    ret = original_func(this, request_id, *args, **kwargs)
+    Profiler(Level.INFO).domain("BatchSchedule").res(request_id).metric_inc("WAITING", 1).event("ReqState")
+    return ret
