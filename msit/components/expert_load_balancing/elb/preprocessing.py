@@ -348,6 +348,10 @@ def get_dynamic_expert_hot_from_csv(
         for k in range(data.shape[2]):
             expert_id = get_expert_id(j, k)
             dynamic_expert_hot[j, expert_id, :] += data[:, j, k]
+    
+    if "prefill" in all_files[0]:
+        logger.info("caculate expert 0 hot in prefill")
+        dynamic_expert_hot[:, 0] = np.mean(dynamic_expert_hot)
 
     if mse:
         shared_expert_hotness = dynamic_expert_hot[:, :-n_shared_experts].sum(1) / 8
