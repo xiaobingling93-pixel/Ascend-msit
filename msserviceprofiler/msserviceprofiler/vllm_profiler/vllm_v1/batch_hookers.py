@@ -16,8 +16,8 @@ from ms_service_profiler import Profiler, Level
 from ..module_hook import vllm_hook
 
 
-@vllm_hook(("vllm.v1.engine.processor", "Processor.process_input"), min_version="0.9.1")
-def process_input(original_func, this, request_id, *args, **kwargs):
+@vllm_hook(("vllm.v1.engine.processor", "Processor.process_inputs"), min_version="0.9.1")
+def process_inputs(original_func, this, request_id, *args, **kwargs):
     ret = original_func(this, request_id, *args, **kwargs)
     Profiler(Level.INFO).domain("BatchSchedule").res(request_id).metric_inc("WAITING", 1).event("ReqState")
     return ret
