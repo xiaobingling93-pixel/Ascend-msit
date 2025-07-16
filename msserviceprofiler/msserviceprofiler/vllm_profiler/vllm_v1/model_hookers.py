@@ -53,9 +53,9 @@ def handle_execute_model(original_func, this, scheduler_output, *args, **kwargs)
         request_id_with_iter_list.append({"rid": request_id, "iter_size": iter_size})
         state.request_id_to_iter_size[request_id] = iter_size
 
-    if request_id in scheduler_output.finished_req_ids:
-        state.request_id_to_prompt_token_len.pop(request_id, None)
-        state.request_id_to_iter_size.pop(request_id, None)
+        if request_id in scheduler_output.finished_req_ids:
+            state.request_id_to_prompt_token_len.pop(request_id, None)
+            state.request_id_to_iter_size.pop(request_id, None)
 
     prof.res(request_id_with_iter_list)
     # prof.attr("batch_type", "Prefill" if is_prefill else "Decode")  # [TODO] for v1, prefill is combined with decode
