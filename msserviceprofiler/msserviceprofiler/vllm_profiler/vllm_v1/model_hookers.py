@@ -50,7 +50,7 @@ def handle_execute_model(original_func, this, scheduler_output, *args, **kwargs)
     for request_id, num_scheduled_token in scheduler_output.num_scheduled_tokens.items():
         request_id_list.append({"rid": request_id})
         iter_size = state.request_id_to_iter_size.get(request_id, -1) + 1  # start from 0
-        request_id_with_iter_list.append({"rid": seq_metadata.request_id, "iter_size": iter_size})
+        request_id_with_iter_list.append({"rid": request_id, "iter_size": iter_size})
         state.request_id_to_iter_size[request_id] = iter_size
 
     if request_id in scheduler_output.finished_request_ids:
