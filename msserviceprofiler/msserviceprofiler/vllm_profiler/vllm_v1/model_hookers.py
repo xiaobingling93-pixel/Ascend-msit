@@ -20,7 +20,7 @@ from ..module_hook import vllm_hook
 # 线程安全的全局状态
 class HookState:
     def __init__(self):
-        self.forward_profiler = []
+        self.forward_profiler = None
         self.execute_model_first_run = True
         self.begin_forward_first_run = True
         self.request_id_to_prompt_token_len = {}
@@ -39,7 +39,7 @@ def _get_state() -> HookState:
 
 
 @vllm_hook(hook_points=("vllm.v1.executor.abstract", "Executor.execute_model"), min_version="0.9.1")
-def handle_execute_model(original_func, this, scheduler_output, *args, **kwargs):
+def execute_model(original_func, this, scheduler_output, *args, **kwargs):
     """处理执行模型钩子"""
     state = _get_state()
     for scheduled_new_req in scheduler_output.scheduled_new_reqs:
@@ -65,7 +65,7 @@ def handle_execute_model(original_func, this, scheduler_output, *args, **kwargs)
     preprocess_prof = Profiler(Level.INFO).domain("ModelExecute").res(request_id_list)
     preprocess_prof.event("preprocess")
     forward_prof = Profiler(Level.INFO).domain("ModelExecute").res(request_id_list)
-    state.forward_profiler.append(forward_prof)
+    state.forward_profiler = forward_prof
 
     ret = original_func(this, scheduler_output, *args, **kwargs)
     prof.span_end()
@@ -77,12 +77,11 @@ def handle_execute_model(original_func, this, scheduler_output, *args, **kwargs)
 def set_forward_context(original_func, *args, **kwargs):
     """前向上下文钩子"""
     state = _get_state()
-    if len(state.forward_profiler) > 0:
-        prof = state.forward_profiler.pop(0)
-        prof.span_start("forward")
-    else:
-        prof = None
+    if state.forward_profiler is not None:
+        state.forward_profiler.span_start("forward")
+
     with original_func(*args, **kwargs):
         yield
-    if prof is not None:
-        prof.span_end()
+    if state.forward_profiler is not None:
+        state.forward_profiler.span_end()
+        state.forward_profiler = None

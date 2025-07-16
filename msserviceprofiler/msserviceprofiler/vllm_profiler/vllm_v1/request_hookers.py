@@ -19,7 +19,7 @@ from ..module_hook import vllm_hook
 
 
 @vllm_hook(("vllm.engine.async_llm_engine", "AsyncLLMEngine.add_request"), min_version="0.9.1")
-async def add_request_async_091(original_func, this, request_id, prompt, *args, **kwargs):
+async def add_request_async(original_func, this, request_id, prompt, *args, **kwargs):
     Profiler(Level.INFO).domain("Request").res(request_id).event("httpReq")
     Profiler(Level.INFO).domain("Request").res(request_id).event("encode")
     return await original_func(this, request_id, prompt, *args, **kwargs)
@@ -39,10 +39,9 @@ def process_outputs(original_func, this, engine_core_outputs, *args, **kwargs):
             reply_token_size = (request_state.stats.num_generation_tokens if request_state.stats else None)
             request_id_list.append(request_id)
 
-            profiler_recv = Profiler(Level.INFO).domain("Request").res(request_id_list)
-            profiler_reply = Profiler(Level.INFO).domain("Request").res(request_id_list)
-            profiler_recv.metric("recvTokenSize", recv_token_size).event("httpRes")
-            profiler_reply.metric("replyTokenSize", reply_token_size).event("httpRes")
+            profiler_recv_reply = Profiler(Level.INFO).domain("Request").res(request_id_list)
+            profiler_recv_reply.metric("recvTokenSize", recv_token_size).metric("replyTokenSize", reply_token_size)
+            profiler_recv_reply.event("httpRes")
     ret = original_func(this, engine_core_outputs, *args, **kwargs)
     prof = Profiler(Level.INFO).domain("Request").res(request_id_list)
     prof.event("DecodeEnd")
