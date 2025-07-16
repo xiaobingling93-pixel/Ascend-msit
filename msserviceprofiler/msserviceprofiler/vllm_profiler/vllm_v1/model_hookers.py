@@ -57,8 +57,15 @@ def execute_model(original_func, this, scheduler_output, *args, **kwargs):
             state.request_id_to_prompt_token_len.pop(request_id, None)
             state.request_id_to_iter_size.pop(request_id, None)
 
+    is_prefill = False
+    for scheduled_cached_req in scheduler_output.scheduled_cached_reqs:
+        request_id = scheduled_cached_req.req_id
+        if request_id not in state.request_id_to_prompt_token_len:
+            continue
+        is_prefill |= (scheduled_cached_req.num_computed_tokens <= state.request_id_to_prompt_token_len[request_id])
+
     prof.res(request_id_with_iter_list)
-    # prof.attr("batch_type", "Prefill" if is_prefill else "Decode")  # [TODO] for v1, prefill is combined with decode
+    prof.attr("batch_type", "Prefill" if is_prefill else "Decode")  # [TODO] for v1, prefill is combined with decode
     prof.span_start("modelExec")
     prof.attr("batch_size", scheduler_output.total_num_scheduled_tokens)
 
