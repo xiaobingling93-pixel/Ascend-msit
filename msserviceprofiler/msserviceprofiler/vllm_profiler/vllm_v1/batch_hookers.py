@@ -39,7 +39,7 @@ def process_inputs(original_func, this, request_id, *args, **kwargs):
     Profiler(Level.INFO).domain("BatchSchedule").res(request_id).metric_inc("WAITING", 1).event("ReqState")
     return ret
 
-@vllm_hook(("vllm.v1.sched.core.scheduler", "Scheduler.schedule"), min_version="0.9.1")
+@vllm_hook(("vllm.v1.core.sched.scheduler", "Scheduler.schedule"), min_version="0.9.1")
 def schedule(original_func, this, *args, **kwargs):
     # from vllm.sequence import SequenceGroupMetadata
     state = _get_state()
@@ -59,6 +59,9 @@ def schedule(original_func, this, *args, **kwargs):
         if request_id in scheduler_output.finished_req_ids:
             state.request_id_to_prompt_token_len.pop(request_id, None)
             state.request_id_to_iter_size.pop(request_id, None)
+        
+    is_prefill = any(state.request_id_to_iter_size.values() == 0)
+    prof.attr("batch_type", "Prefill" if is_prefill else "Decode")
 
     prof.res(request_id_with_iter_list)
     prof.span_end()
