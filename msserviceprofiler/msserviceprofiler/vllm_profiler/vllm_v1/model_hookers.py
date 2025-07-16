@@ -67,7 +67,7 @@ def handle_execute_model(original_func, this, scheduler_output, *args, **kwargs)
     forward_prof = Profiler(Level.INFO).domain("ModelExecute").res(request_id_list)
     state.forward_profiler.append(forward_prof)
 
-    ret = original_func(this, execute_model_req, *args, **kwargs)
+    ret = original_func(this, scheduler_output, *args, **kwargs)
     prof.span_end()
     return ret
 
