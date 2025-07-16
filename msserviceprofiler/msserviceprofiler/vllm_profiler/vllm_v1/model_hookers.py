@@ -18,7 +18,7 @@ from ..module_hook import vllm_hook
 
 
 # 线程安全的全局状态
-class HookState:cp ms_service_profiler
+class HookState:
     def __init__(self):
         self.forward_profiler = []
         self.execute_model_first_run = True
