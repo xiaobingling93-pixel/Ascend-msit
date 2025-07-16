@@ -34,12 +34,13 @@ def process_outputs(original_func, this, engine_core_outputs, *args, **kwargs):
     for engine_core_output in engine_core_outputs:
         request_id = engine_core_output.request_id
         request_state = this.request_states.get(request_id)
+        request_id_list.append(request_id)
         if request_state and engine_core_output.finish_reason is not None:
             recv_token_size = len(request_state.prompt_token_ids)
             reply_token_size = (request_state.stats.num_generation_tokens if request_state.stats else None)
-            request_id_list.append(request_id)
+            
 
-            profiler_recv_reply = Profiler(Level.INFO).domain("Request").res(request_id_list)
+            profiler_recv_reply = Profiler(Level.INFO).domain("Request").res(request_id)
             profiler_recv_reply.metric("recvTokenSize", recv_token_size).metric("replyTokenSize", reply_token_size)
             profiler_recv_reply.event("httpRes")
     ret = original_func(this, engine_core_outputs, *args, **kwargs)
