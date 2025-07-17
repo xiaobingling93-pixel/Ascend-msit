@@ -12,11 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from ms_service_profiler.exporters.base import ExporterBase
-from ms_service_profiler.exporters.utils import save_dataframe_to_csv
 from ms_service_profiler.utils.log import logger
 
-from ..common.split_utils import get_batch_all_time, process_exporter, get_filter_df
-from ..common.split_utils import get_statistics_data, preprocess_framework_df
 
 
 class ExporterPrefill(ExporterBase):
@@ -30,21 +27,21 @@ class ExporterPrefill(ExporterBase):
     def export(cls, data) -> None:
         output = cls.args.output_path
         log_level = cls.args.log_level
-        batch_size = cls.args.prefill_batch_size
-        batch_num = cls.args.prefill_number
-        rid = cls.args.prefill_rid
+        cls.args.batch_size = cls.args.prefill_batch_size
+        cls.args.batch_num = cls.args.prefill_number
+        cls.args.rid = cls.args.prefill_rid
         df = data.get('tx_data_df')
         if df is None:
             logger.error("The data is empty, please check")
             return
         framework_df = preprocess_framework_df(df)
-        if framework_df is None:
+        if framework_df.empty:
             return
         filter_df = get_filter_df(framework_df, 'Prefill')
         add_all_time_df = get_batch_all_time(filter_df, 'Prefill')
         framework_df = process_exporter(add_all_time_df, batch_size, batch_num, rid, 'Prefill')
         if log_level == 'debug':
-            save_dataframe_to_csv(add_all_time_df, output, "prefill1.csv")
+            save_dataframe_to_csv(add_all_time_df, output, "prefill_detail.csv")
             save_dataframe_to_csv(framework_df, output, f"prefill_{batch_num}.csv")
         framework_df = get_statistics_data(framework_df, 'httpReq', 'Prefill')
         if not framework_df.empty:

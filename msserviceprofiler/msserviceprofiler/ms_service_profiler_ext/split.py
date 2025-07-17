@@ -23,13 +23,13 @@ def add_exporters(args):
     from msserviceprofiler.ms_service_profiler_ext.exporters.exporter_prefill import ExporterPrefill
     from msserviceprofiler.ms_service_profiler_ext.exporters.exporter_decode import ExporterDecode
 
-    if not hasattr(args, 'format'):
-        args.format = 'csv'
+    if not hasattr(args, "format"):
+        args.format = "csv"
     exporter_cls = []
     exporters = []
-    if args.prefill_batch_size > 0 or args.prefill_rid != '-1':
+    if args.prefill_batch_size > 0 or args.prefill_rid != "-1":
         exporter_cls.append(ExporterPrefill)
-    if args.decode_batch_size > 0 or args.decode_rid != '-1':
+    if args.decode_batch_size > 0 or args.decode_rid != "-1":
         exporter_cls.append(ExporterDecode)
     for cls in exporter_cls:
         exporter = cls()
@@ -46,39 +46,51 @@ def check_string_valid(s, max_length=256):
     return s
 
 
+def check_positive_integer(value):
+    try:
+        value = int(value)
+    except Exception as e:
+        raise ValueError(f"'{value}' cannot convert to a positive integer.") from e
+    
+    if value < 0:
+        raise ValueError(f"'{value}' is not a positive integer.")
+    
+    return value
+
+
 def arg_parse(subparsers):
     parser = subparsers.add_parser(
         "split", formatter_class=argparse.ArgumentDefaultsHelpFormatter, help="MS Server Profiler Split"
     )
     parser.add_argument(
-        '--input-path',
+        "--input-path",
         required=True,
         type=validate_args(Rule.input_dir_traverse),
-        help='Path to the folder containing profile data.',
+        help="Path to the folder containing profile data.",
     )
     parser.add_argument(
-        '--output-path',
+        "--output-path",
         type=validate_args(Rule.output_dir),
-        default=os.path.join(os.getcwd(), 'output'),
-        help='Output file path to save results.')
+        default=os.path.join(os.getcwd(), "output"),
+        help="Output file path to save results.")
     parser.add_argument(
-        '--log-level',
+        "--log-level",
         type=str,
-        default='info',
-        choices=['debug', 'info', 'warning', 'error', 'fatal', 'critical'],
-        help='Log level to print')
-    parser.add_argument('--prefill-batch-size', type=int, default=0, help='Batch size for Prefill data.')
-    parser.add_argument('--decode-batch-size', type=int, default=0, help='Batch size for Decode data.')
+        default="info",
+        choices=["debug", "info", "warning", "error", "fatal", "critical"],
+        help="Log level to print")
+    parser.add_argument("--prefill-batch-size", type=check_positive_integer, default=0, help="Batch size for Prefill data.")
+    parser.add_argument("--decode-batch-size", type=check_positive_integer, default=0, help="Batch size for Decode data.")
     parser.add_argument(
-        '--prefill-number', type=int, default=1, help='The number of Prefill batch to calc statistical data'
+        "--prefill-number", type=check_positive_integer, default=1, help="The number of Prefill batch to calc statistical data."
     )
     parser.add_argument(
-        '--decode-number', type=int, default=1, help='The number of Decode batch to calc statistical data'
+        "--decode-number", type=check_positive_integer, default=1, help="The number of Decode batch to calc statistical data."
     )
-    parser.add_argument('--prefill-rid', type=lambda x: check_string_valid(x, max_length=100),
-                        default='-1', help='The rid for Prefill batch to split')
-    parser.add_argument('--decode-rid', type=lambda x: check_string_valid(x, max_length=100),
-                        default='-1', help='The rid for Decode batch to split')
+    parser.add_argument("--prefill-rid", type=lambda x: check_string_valid(x, max_length=100),
+                        default="-1", help="The rid for Prefill batch to split")
+    parser.add_argument("--decode-rid", type=lambda x: check_string_valid(x, max_length=100),
+                        default="-1", help="The rid for Decode batch to split")
     parser.set_defaults(func=main)
 
 
