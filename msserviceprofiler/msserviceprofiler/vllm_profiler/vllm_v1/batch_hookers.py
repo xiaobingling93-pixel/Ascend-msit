@@ -51,9 +51,6 @@ def schedule(original_func, this, *args, **kwargs):
     before_running_queue = this.running
     before_waiting_queue = this.waiting
     scheduler_output = original_func(this, *args, **kwargs)
-    queue_profiler(before_running_queue, this.running, "running")
-    queue_profiler(before_waiting_queue, this.waiting, "waiting")
-
 
     for scheduled_new_req in scheduler_output.scheduled_new_reqs:
         state.request_id_to_prompt_token_len[scheduled_new_req.req_id] = len(scheduled_new_req.prompt_token_ids)
@@ -68,6 +65,13 @@ def schedule(original_func, this, *args, **kwargs):
         if request_id in scheduler_output.finished_req_ids:
             state.request_id_to_prompt_token_len.pop(request_id, None)
             state.request_id_to_iter_size.pop(request_id, None)
+    
+    if not request_id_list:
+        return scheduler_output
+
+    queue_profiler(before_running_queue, this.running, "running")
+    queue_profiler(before_waiting_queue, this.waiting, "waiting")
+    prof.res(request_id_with_iter_list)
     
     # 新的请求从WAITING -> RUNNING
     for scheduled_new_req in scheduler_output.scheduled_new_reqs:
@@ -96,7 +100,6 @@ def schedule(original_func, this, *args, **kwargs):
     # TODO prefill的判断逻辑需要根据整个batch来看是prefill还是decode还是mix
     prof.attr("batch_type", "Prefill" if is_prefill else "Decode")
 
-    prof.res(request_id_with_iter_list)
     prof.span_end()
 
     return scheduler_output
