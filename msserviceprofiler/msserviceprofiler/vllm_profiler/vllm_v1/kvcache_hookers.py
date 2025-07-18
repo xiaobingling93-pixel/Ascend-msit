@@ -26,6 +26,14 @@ def allocate_slots(original_func, this, request, *args, **kwargs):
     return ret
 
 
+@vllm_hook(("vllm.v1.core.kv_cache_manager", "KVCacheManager.free"), min_version="0.9.1")
+def free(original_func, this, request, *args, **kwargs):
+    ret = original_func(this, request, *args, **kwargs)
+    num_blocks = this.block_pool.get_num_free_blocks()
+    profiler.domain("KVCache").res(request.request_id).metric("deviceBlock", num_blocks).event("Free")
+    return ret
+
+
 @vllm_hook(("vllm.v1.core.kv_cache_manager", "KVCacheManager.get_computed_blocks"), min_version="0.9.1")
 def get_computed_blocks(original_func, this, request, *args, **kwargs):
     ret = original_func(this, request, *args, **kwargs)
@@ -36,12 +44,3 @@ def get_computed_blocks(original_func, this, request, *args, **kwargs):
         prof.attr("hitCache", cur_hit_rate).event("GetCacheHitRate")
     return ret
 
-
-def get_stats(original_func, this, *args, **kwargs):
-    profiler = Profiler(Level.INFO)
-    stats = original_func(this, *args, **kwargs)
-    num_free_gpu = sum(scheduler.block_manager.get_num_free_gpu_blocks() for scheduler in this.scheduler)
-    profiler.domain("KVCache").attr("cpuHitCache", stats.cpu_cache_usage_sys)
-    profiler.attr("hitCache", stats.gpu_cache_usage_sys).event("GetCacheHitRate")
-    profiler.domain("KVCache").attr("deviceFreeBlock", num_free_gpu).event("GetCacheHitRate")
-    return stats
