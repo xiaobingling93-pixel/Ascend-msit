@@ -57,11 +57,11 @@ def execute_model(original_func, this, scheduler_output, *args, **kwargs):
             state.request_id_to_iter_size.pop(request_id, None)
 
     is_prefill = False
-    for scheduled_cached_req in scheduler_output.scheduled_cached_reqs:
-        request_id = scheduled_cached_req.req_id
+    for scheduled_req in scheduler_output.scheduled_cached_reqs + scheduler_output.scheduled_new_reqs:
+        request_id = scheduled_req.req_id
         if request_id not in state.request_id_to_prompt_token_len:
             continue
-        is_prefill |= (scheduled_cached_req.num_computed_tokens <= state.request_id_to_prompt_token_len[request_id])
+        is_prefill |= (scheduled_req.num_computed_tokens < state.request_id_to_prompt_token_len[request_id])
 
     if request_id_list:
         prof = Profiler(Level.INFO).domain("ModelExecute")
