@@ -72,21 +72,24 @@ def schedule(original_func, this, *args, **kwargs):
     # 新的请求从WAITING -> RUNNING
     for scheduled_new_req in scheduler_output.scheduled_new_reqs:
         prof.res(scheduled_new_req.req_id)
-        state.running.add(state.waiting.pop(scheduled_new_req.req_id))
+        state.running.add(scheduled_new_req.req_id)
+        state.waiting.remove(scheduled_new_req.req_id)
         prof.metric_inc("RUNNING", 1).metric_inc("WAITING", -1).event("ReqState")
     
     # PREEMPTED请求从WAITING -> RUNNING
     for scheduled_cached_req in scheduler_output.scheduled_cached_reqs:
         if scheduled_cached_req.req_id not in state.running and scheduled_cached_req.req_id in state.waiting:
             prof.res(scheduled_cached_req.req_id)
-            state.running.add(state.waiting.pop(scheduled_new_req.req_id))
+            state.running.add(scheduled_new_req.req_id)
+            state.waiting.remove(scheduled_new_req.req_id)
             prof.metric_inc("RUNNING", 1).metric_inc("WAITING", -1).event("ReqState")
     
     # running的请求被抢占从RUNNING -> WAITING
     for request_id in state.running:
         if request_id in this.waiting:
             prof.res(scheduled_cached_req.req_id)
-            state.waiting.add(state.running.pop(scheduled_new_req.req_id))
+            state.waiting.add(scheduled_new_req.req_id)
+            state.running.remove(scheduled_new_req.req_id)
             prof.metric_inc("RUNNING", -1).metric_inc("WAITING", 1).event("ReqState") 
         
     is_prefill = any(val == 0 for val in state.request_id_to_iter_size.values())
