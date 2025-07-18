@@ -15,6 +15,7 @@ from collections import Counter
 from ms_service_profiler import Profiler, Level
 from ..module_hook import vllm_hook
 
+
 @vllm_hook(("vllm.v1.core.kv_cache_manager", "KVCacheManager.allocate_slots"), min_version="0.9.1")
 def allocate_slots(original_func, this, request, *args, **kwargs):
     ret = original_func(this, request, *args, **kwargs)
@@ -34,3 +35,13 @@ def get_computed_blocks(original_func, this, request, *args, **kwargs):
         prof = Profiler(Level.INFO).domain("KVCache").res(request.request_id)
         prof.attr("hitCache", cur_hit_rate).event("GetCacheHitRate")
     return ret
+
+
+def get_stats(original_func, this, *args, **kwargs):
+    profiler = Profiler(Level.INFO)
+    stats = original_func(this, *args, **kwargs)
+    num_free_gpu = sum(scheduler.block_manager.get_num_free_gpu_blocks() for scheduler in this.scheduler)
+    profiler.domain("KVCache").attr("cpuHitCache", stats.cpu_cache_usage_sys)
+    profiler.attr("hitCache", stats.gpu_cache_usage_sys).event("GetCacheHitRate")
+    profiler.domain("KVCache").attr("deviceFreeBlock", num_free_gpu).event("GetCacheHitRate")
+    return stats
