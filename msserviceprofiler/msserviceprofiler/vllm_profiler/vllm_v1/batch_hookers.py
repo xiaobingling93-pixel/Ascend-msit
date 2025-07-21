@@ -16,6 +16,7 @@ from collections import Counter
 from ms_service_profiler import Profiler, Level
 from ..module_hook import vllm_hook
 from ..vllm_v0.batch_hookers import queue_profiler
+from ..utils import logger
 
 class HookState:
     def __init__(self):
@@ -51,6 +52,7 @@ def schedule(original_func, this, *args, **kwargs):
     before_running_queue = this.running
     before_waiting_queue = this.waiting
     scheduler_output = original_func(this, *args, **kwargs)
+    prof.span_end()
 
     for scheduled_new_req in scheduler_output.scheduled_new_reqs:
         state.request_id_to_prompt_token_len[scheduled_new_req.req_id] = len(scheduled_new_req.prompt_token_ids)
@@ -95,12 +97,11 @@ def schedule(original_func, this, *args, **kwargs):
             state.waiting.add(scheduled_new_req.req_id)
             state.running.remove(scheduled_new_req.req_id)
             prof.metric_inc("RUNNING", -1).metric_inc("WAITING", 1).event("ReqState") 
-        
+    
+    logger.debug(f" state.request_id_to_iter_size: {state.request_id_to_iter_size}")
     is_prefill = any(val == 0 for val in state.request_id_to_iter_size.values())
     # TODO prefill的判断逻辑需要根据整个batch来看是prefill还是decode还是mix
     prof.attr("batch_type", "Prefill" if is_prefill else "Decode")
-
-    prof.span_end()
 
     return scheduler_output
 
@@ -123,4 +124,5 @@ def add_request(original_func, this, request, *args, **kwargs):
     state = _get_state()
     state.waiting.add(request.request_id)
     prof = Profiler(Level.INFO).domain("BatchSchedule").res(request.request_id)
+    prof.metric_inc("WAITING", 1).event("ReqState") 
     prof.metric("QueueSize", len(this.waiting)).metric_scope("queue_type", "WAITING").event("Enqueue")
