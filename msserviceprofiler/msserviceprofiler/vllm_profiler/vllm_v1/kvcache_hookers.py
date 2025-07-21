@@ -15,6 +15,7 @@ from collections import Counter
 from ms_service_profiler import Profiler, Level
 from ..module_hook import vllm_hook
 
+
 @vllm_hook(("vllm.v1.core.kv_cache_manager", "KVCacheManager.allocate_slots"), min_version="0.9.1")
 def allocate_slots(original_func, this, request, *args, **kwargs):
     ret = original_func(this, request, *args, **kwargs)
@@ -23,3 +24,23 @@ def allocate_slots(original_func, this, request, *args, **kwargs):
     prof.metric("deviceBlock", num_blocks).event("Allocate")
     prof.domain("KVCache").res(request.request_id).metric("deviceBlock", num_blocks).event("blocks")
     return ret
+
+
+@vllm_hook(("vllm.v1.core.kv_cache_manager", "KVCacheManager.free"), min_version="0.9.1")
+def free(original_func, this, request, *args, **kwargs):
+    ret = original_func(this, request, *args, **kwargs)
+    num_blocks = this.block_pool.get_num_free_blocks()
+    profiler.domain("KVCache").res(request.request_id).metric("deviceBlock", num_blocks).event("Free")
+    return ret
+
+
+@vllm_hook(("vllm.v1.core.kv_cache_manager", "KVCacheManager.get_computed_blocks"), min_version="0.9.1")
+def get_computed_blocks(original_func, this, request, *args, **kwargs):
+    ret = original_func(this, request, *args, **kwargs)
+    if len(ret) > 1:
+        num_new_computed_tokens = ret[1]
+        cur_hit_rate = num_new_computed_tokens / request.num_tokens
+        prof = Profiler(Level.INFO).domain("KVCache").res(request.request_id)
+        prof.attr("hitCache", cur_hit_rate).event("GetCacheHitRate")
+    return ret
+
