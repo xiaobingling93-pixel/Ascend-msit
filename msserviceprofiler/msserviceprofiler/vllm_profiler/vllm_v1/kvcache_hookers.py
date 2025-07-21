@@ -30,7 +30,7 @@ def allocate_slots(original_func, this, request, *args, **kwargs):
 def free(original_func, this, request, *args, **kwargs):
     ret = original_func(this, request, *args, **kwargs)
     num_blocks = this.block_pool.get_num_free_blocks()
-    profiler.domain("KVCache").res(request.request_id).metric("deviceBlock", num_blocks).event("Free")
+    Profiler.domain("KVCache").res(request.request_id).metric("deviceBlock", num_blocks).event("Free")
     return ret
 
 
