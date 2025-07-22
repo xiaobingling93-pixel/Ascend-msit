@@ -15,8 +15,35 @@ import threading
 from collections import Counter
 from ms_service_profiler import Profiler, Level
 from ..module_hook import vllm_hook
-from ..vllm_v0.batch_hookers import queue_profiler
 from ..utils import logger
+
+
+def compare_deques(queue1, queue2):
+    counter1 = Counter(queue1)
+    counter2 = Counter(queue2)
+    diff = counter1 - counter2
+    return diff
+
+
+def queue_profiler(before_queue, after_queue, queue_name):
+    # 队列元素减少
+    less_queue = compare_deques(before_queue, after_queue)
+    rid_list = []
+    for seq_group in less_queue: # V1 note: SequenceGroup == Request
+        rid_list.append(seq_group.request_id)
+    if len(rid_list) > 0:
+        prof = Profiler(Level.INFO).domain("BatchSchedule").res(rid_list)
+        prof.metric("QueueSize", len(after_queue)).metric_scope("QueueName", queue_name).event("Dequeue")
+
+    # 队列元素增加
+    add_queue = compare_deques(after_queue, before_queue)
+    rid_list.clear()
+    for seq_group in add_queue: # V1 note: SequenceGroup == Request
+        rid_list.append(seq_group.request_id)
+    if len(rid_list) > 0:
+        prof = Profiler(Level.INFO).domain("BatchSchedule").res(rid_list)
+        prof.metric("QueueSize", len(after_queue)).metric_scope("QueueName", queue_name).event("Enqueue")
+
 
 class HookState:
     def __init__(self):
@@ -131,5 +158,6 @@ def add_request(original_func, this, request, *args, **kwargs):
     state.waiting.add(request.request_id)
     logger.debug(f">>> [queue-waiting][add_request]: {len(state.waiting)}, [queue-running]: {len(state.running)}")
     prof = Profiler(Level.INFO).domain("BatchSchedule").res(request.request_id)
-    prof.metric_inc("WAITING", 1).event("ReqState") 
-    prof.metric("QueueSize", len(this.waiting)).metric_scope("queue_type", "WAITING").event("Enqueue")
+    prof.metric_inc("WAITING", 1).event("ReqState")
+    prof_queue = Profiler(Level.INFO).domain("BatchSchedule").res(request.request_id)
+    prof_queue.metric("QueueSize", len(this.waiting)).metric_scope("queue_type", "WAITING").event("Enqueue")

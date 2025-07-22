@@ -44,4 +44,3 @@ def get_computed_blocks(original_func, this, request, *args, **kwargs):
         prof = Profiler(Level.INFO).domain("KVCache").res(request.request_id)
         prof.attr("hitCache", cur_hit_rate).event("GetCacheHitRate")
     return ret
-
