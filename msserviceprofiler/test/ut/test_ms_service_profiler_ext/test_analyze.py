@@ -106,7 +106,6 @@ class TestMainFunction:
         # 2. 配置全局mock
         mocker.patch("argparse.ArgumentParser.parse_args", return_value=self.mock_args)
         mocker.patch("ms_service_profiler.utils.log.set_log_level")
-        mocker.patch("ms_service_profiler.parse.preprocess_prof_folders")
         mocker.patch("ms_service_profiler.exporters.factory.ExporterFactory.create_exporters", return_value=[])
         mocker.patch.object(Path, "mkdir")
         mocker.patch("ms_service_profiler.exporters.utils.create_sqlite_db")
