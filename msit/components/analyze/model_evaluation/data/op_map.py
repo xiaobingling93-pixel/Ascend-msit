@@ -31,7 +31,7 @@ class OpMap:
     @classmethod
     def load_op_map(cls, framework) -> 'OpMap':
         cur_dir: str = os.path.dirname(os.path.realpath(__file__))
-        sub_path: str = os.path.join(cur_dir, 'op_map')
+        sub_path: str = os.path.join(cur_dir, 'map_conf')
         if not os.path.isdir(sub_path):
             raise RuntimeError(f'{sub_path} is not dir.')
 
