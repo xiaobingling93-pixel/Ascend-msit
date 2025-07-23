@@ -80,9 +80,9 @@ def execute_model(original_func, this, scheduler_output, *args, **kwargs):
 
     ret = original_func(this, scheduler_output, *args, **kwargs)
     if request_id_list:
-        prof.span_end()
         state.postprocess_profiler.span_end()
         state.postprocess_profiler = None
+        prof.span_end()
     return ret
 
 
