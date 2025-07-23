@@ -148,10 +148,9 @@ def free_request(original_func, this, request, *args, **kwargs):
         prof.metric_inc("WAITING", -1).metric_inc(request.status.name, 1).event("ReqState")
         state.waiting.remove(request.request_id)
     logger.debug(f">>> [queue-waiting][free_request]: {len(state.waiting)}, [queue-running]: {len(state.running)}")
-    
 
 
-@vllm_hook(("vllm.v1.core.sched.scheduler", "Scheduler.add_request"), min_version="0.6.3")
+@vllm_hook(("vllm.v1.core.sched.scheduler", "Scheduler.add_request"), min_version="0.9.1")
 def add_request(original_func, this, request, *args, **kwargs):
     original_func(this, request, *args, **kwargs)
     state = _get_state()

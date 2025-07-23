@@ -20,7 +20,10 @@ from ..module_hook import vllm_hook
 # 线程安全的全局状态
 class HookState:
     def __init__(self):
-        self.forward_profiler = None
+        self.preprocess_profiler = FakeProfiler()
+        self.forward_profiler = FakeProfiler()
+        self.postprocess_profiler = FakeProfiler()
+        self.postprocess_profiler = None
         self.execute_model_first_run = True
         self.begin_forward_first_run = True
         self.request_id_to_prompt_token_len = {}
@@ -70,22 +73,27 @@ def execute_model(original_func, this, scheduler_output, *args, **kwargs):
         prof.span_start("modelExec")
         prof.attr("batch_size", scheduler_output.total_num_scheduled_tokens)
 
-        preprocess_prof = Profiler(Level.INFO).domain("ModelExecute").res(request_id_list)
-        preprocess_prof.event("preprocess")
-        forward_prof = Profiler(Level.INFO).domain("ModelExecute").res(request_id_list)
-        state.forward_profiler = forward_prof
+        state.preprocess_profiler = Profiler(Level.INFO).domain("ModelExecute").res(request_id_list)
+        state.preprocess_profiler.span_start("preprocess")
+        state.forward_profiler = Profiler(Level.INFO).domain("ModelExecute").res(request_id_list)
+        state.postprocess_profiler = Profiler(Level.INFO).domain("ModelExecute").res(request_id_list)
 
     ret = original_func(this, scheduler_output, *args, **kwargs)
     if request_id_list:
         prof.span_end()
+        state.postprocess_profiler.span_end()
+        state.postprocess_profiler = None
     return ret
 
 
-@vllm_hook(("vllm.forward_context", "set_forward_context"), min_version="0.8.4")
+@vllm_hook(("vllm.forward_context", "set_forward_context"), min_version="0.9.1")
 @contextmanager
 def set_forward_context(original_func, *args, **kwargs):
     """前向上下文钩子"""
     state = _get_state()
+    if state.preprocess_profiler is not None:
+        state.preprocess_profiler.span_end()
+        state.preprocess_profiler = None
     if state.forward_profiler is not None:
         state.forward_profiler.span_start("forward")
 
@@ -94,3 +102,5 @@ def set_forward_context(original_func, *args, **kwargs):
     if state.forward_profiler is not None:
         state.forward_profiler.span_end()
         state.forward_profiler = None
+    if state.postprocess_profiler is not None:
+        state.postprocess_profiler.span_start("postprocess")
