@@ -138,9 +138,15 @@ class BaseFrameworkProcessor:
         len_result_df = len(result_df)
 
         if len_result_df == 0:
-            logger.warning("%s: no %s with batch_size %d" % (name, cls.batch_start_name, cls.args.batch_size))
-            logger.warning("%s: no %s with rid %r" % (name, cls.batch_start_name, cls.args.rid))
-            return pd.DataFrame()
+            if cls.args.batch_size > 0:
+                size_recommend = cls._get_batch_size_recommend(framework_df, name)
+                logger.warning("%s: no %s with batch_size %d" % (name, cls.batch_start_name, cls.args.batch_size))
+                if not size_recommend:
+                    logger.warning("no %s data, please check." % name)
+                else:
+                    logger.warning("%s: recommend batch_size from data %s" % (name, ', '.join(map(str, size_recommend))))
+            elif cls.args.rid != "-1":
+                logger.warning("%s: no %s with rid %r" % (name, cls.batch_start_name, cls.args.rid))
         
         calc_num = min(len_result_df, cls.args.batch_num, MAX_BATCH_NUMBER)
         concat_df = cls._get_concat_df(result_df, framework_df, calc_num, name)
@@ -303,7 +309,7 @@ class BaseFrameworkProcessor:
             cur_df = pd.concat([filter_dfs[i], add_df], ignore_index=True)
             
             # 3. 与AllTime行的计算逻辑
-            # cur_df = cls._postprocess_framework_df(cur_df, name)
+            cur_df = cls._postprocess_framework_df(cur_df, name)
 
             concat_df = pd.concat([concat_df, empty_row, cur_df], ignore_index=True)
         return concat_df
@@ -337,5 +343,36 @@ class BaseFrameworkProcessor:
 
         return new_df
     
-    # @classmethod
-    # def _postprocess_framework_df(cls, framework_df, name):
+    @classmethod
+    def _postprocess_framework_df(cls, framework_df, name):
+        if name == "Prefill":
+            post_event = framework_df[framework_df["name"].isin([cls.all_time_name, cls.http_end_name])]
+        else:
+            filter_df = framework_df[(framework_df["name"] != cls.all_time_name) &
+                                     (~framework_df["name"].str.startswith("Between-"))]
+            if filter_df.empty:
+                return pd.DataFrame()
+            
+            last_row = filter_df.iloc[[-1]]
+            post_event = pd.concat([
+                framework_df[framework_df["name"] == cls.all_time_name],
+                last_row
+            ])
+        new_rows = cls._calc_during_time(post_event)
+
+        framework_df = pd.concat([framework_df, new_rows], ignore_index=True)
+        framework_df = framework_df.sort_values(by="start_time(ms)")
+        
+        return framework_df
+
+    @classmethod   
+    def _get_batch_size_recommend(cls, framework_df, name):
+        batch_df = framework_df[(framework_df["name"] == cls.batch_start_name) &
+                                (framework_df["batch_type"] == name)]
+        if batch_df.empty:
+            return None
+        batch_size = batch_df["batch_size"].unique()
+        if len(batch_size) == 0:
+            logger.warning(f"{name}: The batch_size is empty")
+            return None
+        return batch_size

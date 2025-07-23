@@ -46,7 +46,7 @@ def check_string_valid(s, max_length=256):
     return s
 
 
-def check_positive_integer(value):
+def check_non_negative_integer(value):
     try:
         value = int(value)
     except Exception as e:
@@ -79,17 +79,22 @@ def arg_parse(subparsers):
         default="info",
         choices=["debug", "info", "warning", "error", "fatal", "critical"],
         help="Log level to print")
-    parser.add_argument("--prefill-batch-size", type=check_positive_integer, default=0, help="Batch size for Prefill data.")
-    parser.add_argument("--decode-batch-size", type=check_positive_integer, default=0, help="Batch size for Decode data.")
-    parser.add_argument(
-        "--prefill-number", type=check_positive_integer, default=1, help="The number of Prefill batch to calc statistical data."
+    
+    prefill_group = parser.add_argument_group("Prefill Parameters")
+    prefill_group.add_argument("--prefill-batch-size", type=check_non_negative_integer, default=0, help="Batch size for Prefill data.")
+    prefill_group.add_argument(
+        "--prefill-number", type=check_non_negative_integer, default=1, help="The number of Prefill batch to calc statistical data"
     )
-    parser.add_argument(
-        "--decode-number", type=check_positive_integer, default=1, help="The number of Decode batch to calc statistical data."
-    )
-    parser.add_argument("--prefill-rid", type=lambda x: check_string_valid(x, max_length=100),
+    prefill_group.add_argument("--prefill-rid", type=lambda x: check_string_valid(x, max_length=100),
                         default="-1", help="The rid for Prefill batch to split")
-    parser.add_argument("--decode-rid", type=lambda x: check_string_valid(x, max_length=100),
+
+    # 创建Decode参数组
+    decode_group = parser.add_argument_group("Decode Parameters")
+    decode_group.add_argument("--decode-batch-size", type=check_non_negative_integer, default=0, help="Batch size for Decode data.")
+    decode_group.add_argument(
+        "--decode-number", type=check_non_negative_integer, default=1, help="The number of Decode batch to calc statistical data"
+    )
+    decode_group.add_argument("--decode-rid", type=lambda x: check_string_valid(x, max_length=100),
                         default="-1", help="The rid for Decode batch to split")
     parser.set_defaults(func=main)
 
