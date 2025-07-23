@@ -142,10 +142,10 @@ def free_request(original_func, this, request, *args, **kwargs):
     state = _get_state()
     prof = Profiler(Level.INFO).domain("BatchSchedule").res(request.request_id)
     if request.request_id in state.running:
-        prof.metric_inc("RUNNING", -1).metric_inc(request.status.name, 1).event("ReqState")
+        prof.metric_inc("RUNNING", -1).metric_inc("FINISHED", 1).event("ReqState")
         state.running.remove(request.request_id)
     elif request.request_id in state.waiting:
-        prof.metric_inc("WAITING", -1).metric_inc(request.status.name, 1).event("ReqState")
+        prof.metric_inc("WAITING", -1).metric_inc("FINISHED", 1).event("ReqState")
         state.waiting.remove(request.request_id)
     logger.debug(f">>> [queue-waiting][free_request]: {len(state.waiting)}, [queue-running]: {len(state.running)}")
     
