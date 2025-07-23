@@ -20,9 +20,9 @@ from ..module_hook import vllm_hook
 # 线程安全的全局状态
 class HookState:
     def __init__(self):
-        self.preprocess_profiler = FakeProfiler()
-        self.forward_profiler = FakeProfiler()
-        self.postprocess_profiler = FakeProfiler()
+        self.preprocess_profiler = None
+        self.forward_profiler = None
+        self.postprocess_profiler = None
         self.postprocess_profiler = None
         self.execute_model_first_run = True
         self.begin_forward_first_run = True
