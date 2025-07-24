@@ -82,7 +82,6 @@ class TestSplitFuctions(unittest.TestCase):
         # 2. 配置全局mock
         mocker.patch("argparse.ArgumentParser.parse_args", return_value=self.mock_args)
         mocker.patch("ms_service_profiler.utils.log.set_log_level")
-        mocker.patch("ms_service_profiler.parse.preprocess_prof_folders")
         mocker.patch(
             "msserviceprofiler.ms_service_profiler_ext.split.add_exporters",
             return_value=[ExporterPrefill, ExporterDecode]

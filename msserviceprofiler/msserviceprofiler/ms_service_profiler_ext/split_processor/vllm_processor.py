@@ -12,11 +12,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import unittest
-from unittest.mock import patch
-import pandas as pd
-import numpy as np
+
+from .base_processor import BaseFrameworkProcessor
 
 
-class TestUtilsFuctions(unittest.TestCase):
-    pass
+class VllmProcessor(BaseFrameworkProcessor):
+    batch_start_name = "batchFrameworkProcessing"
+    batch_end_name = "forward"
+    http_start_name = "httpReq"
+    http_end_name = "httpRes"
+    key_name = "forward"
+    all_time_name = "AllTime"
+    http_list = ["httpReq", "encode", "decodeEnd", "httpRes"]
+    name_list = [batch_start_name, "preprocess", batch_end_name]
+    filter_list = [http_start_name, http_end_name, all_time_name]
+    name_list = name_list + http_list
+
+    @classmethod
+    def initialize(cls, args):
+        cls.args = args

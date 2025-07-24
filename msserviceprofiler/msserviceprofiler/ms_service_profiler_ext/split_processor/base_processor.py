@@ -13,24 +13,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pandas as pd
 from abc import abstractmethod
-from ..common.constants import MAX_BATCH_NUMBER, US_PER_MS
+import pandas as pd
+from ms_service_profiler.exporters.utils import save_dataframe_to_csv
+
+from ..common.constants import MAX_BATCH_NUMBER
 from ..common.utils import logger
 from ..common.split_utils import CSV_COLUMNS, RENAMED_COLUMNS, get_statistics_data
 
-from ms_service_profiler.exporters.utils import save_dataframe_to_csv
+
+
 
 class BaseFrameworkProcessor:
-    batch_start_name = "batchFrameworkProcessing"
-    batch_end_name = "saveoutAndContinueBatching"
-    http_start_name = "httpReq"
-    http_end_name = "httpRes"
-    key_name = "forward"
-    all_time_name = "AllTime"
+    batch_start_name = "batch_start"
+    batch_end_name = "batch_end"
+    http_start_name = "http_start"
+    http_end_name = "http_end"
+    key_name = "key"
+    all_time_name = "all_time"
     name_list = [batch_start_name, http_start_name, batch_end_name]
-    http_list = ["encode", "httpReq", "decodeEnd", "httpRes"]
-    # 记录不计算中间时间的事件(异步, 时间掩盖)
+    http_list = [http_start_name, http_end_name]
+    # 记录不计算中间时间的事件(异步, 时间掩盖)或无需计算
     filter_list = [http_end_name, all_time_name]
 
     @classmethod
@@ -50,8 +53,8 @@ class BaseFrameworkProcessor:
         if cls.args.log_level == "debug":
             save_dataframe_to_csv(add_all_time_df, cls.args.output_path, f"{lower_name}_detail.csv")
             save_dataframe_to_csv(framework_df, cls.args.output_path, f"{lower_name}_{cls.args.batch_num}.csv")
-
-        framework_df = get_statistics_data(framework_df, cls.http_start_name, name)
+        filter_name = cls.http_start_name if name == "Prefill" else cls.batch_start_name
+        framework_df = get_statistics_data(framework_df, filter_name, name)
         if not framework_df.empty:
             save_dataframe_to_csv(framework_df, cls.args.output_path, f"{lower_name}.csv")
 
@@ -63,19 +66,6 @@ class BaseFrameworkProcessor:
         except KeyError as e:
             logger.warning(f"Field '{e.args[0]}' not found in datasource.")
             return pd.DataFrame()
-        
-        time_columns = {
-            "during_time": lambda x: x / US_PER_MS,
-            "start_time": lambda x: x // US_PER_MS,
-            "end_time": lambda x: x // US_PER_MS
-        }
-
-        # 批量转换时间单位
-        for col, func in time_columns.items():
-            if col in framework_df.columns:
-                framework_df[col] = func(framework_df[col])
-            else:
-                logger.warning(f"Column '{col}' not found for time conversion.")
 
         framework_df = framework_df.rename(columns=RENAMED_COLUMNS)
         
@@ -115,7 +105,6 @@ class BaseFrameworkProcessor:
 
                 all_time_row = {
                     "name": cls.all_time_name,
-                    # "start_time(ms)": current_row["start_time(ms)"] + 2,
                     "start_time(ms)": current_row["start_time(ms)"],
                     "end_time(ms)": next_row["start_time(ms)"],
                     "during_time(ms)": during_time,
@@ -141,12 +130,14 @@ class BaseFrameworkProcessor:
             if cls.args.batch_size > 0:
                 size_recommend = cls._get_batch_size_recommend(framework_df, name)
                 logger.warning("%s: no %s with batch_size %d" % (name, cls.batch_start_name, cls.args.batch_size))
-                if not size_recommend:
+                if size_recommend[0] == -1:
                     logger.warning("no %s data, please check." % name)
                 else:
-                    logger.warning("%s: recommend batch_size from data %s" % (name, ', '.join(map(str, size_recommend))))
+                    logger.warning("%s: recommend batch_size from data %s" % (name, 
+                                    ', '.join(map(str, size_recommend))))
             elif cls.args.rid != "-1":
                 logger.warning("%s: no %s with rid %r" % (name, cls.batch_start_name, cls.args.rid))
+            return pd.DataFrame()
         
         calc_num = min(len_result_df, cls.args.batch_num, MAX_BATCH_NUMBER)
         concat_df = cls._get_concat_df(result_df, framework_df, calc_num, name)
@@ -216,31 +207,30 @@ class BaseFrameworkProcessor:
         # group里一定存在cls.batch_start_name
         batch_start_index = group[group["name"] == cls.batch_start_name].index[0]
         
-        concat_list = [batch_start_index, all_time_index]
+        concat_list = [all_time_index]
         index = batch_start_index
-        full_batch = cls.name_list[start_index: end_index]
+        full_batch = cls.name_list[start_index: end_index + 1]
 
         # 找到key_row
         for name in cls.name_list[start_index: key_index]:
-            mask = (framework_df.index > index) & (framework_df["name"] == name)
+            mask = (framework_df.index >= index) & (framework_df["name"] == name)
             if not mask.any():
-                logger.warning(f"no named {name} line, skip this batch")
-                return pd.DataFrame()
+                continue
             index = framework_df[mask].index[0]
 
         key_pid, key_tid, key_index = cls._get_key_info(framework_df, index)
         if key_pid is None:
+            logger.warning(f"no named {cls.key_name} line, skip this batch")
             return pd.DataFrame()
 
         # 获取完整的batch
         result_index = cls._get_batch_index(full_batch, batch_start_index, framework_df, key_pid, key_tid)
         if result_index.empty:
             return pd.DataFrame()
-        # group = group.drop(group[group["name"].isin(cls.name_list[start_index: end_index])].index)
         framework_df.loc[framework_df["name"] == cls.all_time_name, ["start_time(ms)", "end_time(ms)"]] = \
             framework_df.loc[framework_df["name"] == cls.all_time_name, ["end_time(ms)", "start_time(ms)"]].values
         result = pd.concat([framework_df.loc[concat_list], result_index])
-        result = result.sort_values(by="start_time(ms)").reset_index(drop=True)
+        result = result.sort_values(by=["start_time(ms)", "name"], ascending=[True, False]).reset_index(drop=True)
         return result
     
     @classmethod
@@ -259,7 +249,7 @@ class BaseFrameworkProcessor:
         # 从总表中获取完整的一个batch
         df_list = []
         current_index = start_index
-        index_mask = framework_df.index > start_index
+        index_mask = framework_df.index >= start_index
         for name in full_batch:
             name_mask = framework_df["name"] == name
             pid_mask = framework_df["pid"] == key_pid
@@ -272,7 +262,7 @@ class BaseFrameworkProcessor:
             ]
             index = None
             for condition in conditions:
-                mask = condition()
+                mask = condition
                 if mask.any():
                     index = framework_df[mask].index[0]
                     break
@@ -296,17 +286,20 @@ class BaseFrameworkProcessor:
         empty_row = pd.DataFrame(index=[0])
         for i in range(calc_num):
             # 1. 确认需要计算中间时间的事件, filter 名单中的事件跳过 (异步，时间掩盖)
-            filter_df = filter_dfs[i][~filter_dfs[i]["name"].isin(cls.filter_list)]
+            filter_df = filter_dfs[i]
             cur_rid = filter_df.iloc[0]["rid_list"][0]
             if cls.args.rid != "-1":
                 cur_rid = cls.args.rid
             if name == "Prefill":
-                http_df = framework_df[(framework_df["rid"] == str(cur_rid)) & (framework_df["name"].isin(cls.http_list))]
+                http_df = framework_df[(framework_df["rid"] == str(cur_rid)) & 
+                                       (framework_df["name"].isin(cls.http_list))]
                 filter_df = pd.concat([filter_df, http_df], ignore_index=True)
+                filter_df = filter_df.drop_duplicates(subset="name")
                 filter_df = filter_df.sort_values(by="start_time(ms)")
+            filter_df_ = filter_df[~filter_df["name"].isin(cls.filter_list)]
             # 2. 当前行与下一行计算during_time
-            add_df = cls._calc_during_time(filter_df)
-            cur_df = pd.concat([filter_dfs[i], add_df], ignore_index=True)
+            add_df = cls._calc_during_time(filter_df_)
+            cur_df = pd.concat([filter_df, add_df], ignore_index=True)
             
             # 3. 与AllTime行的计算逻辑
             cur_df = cls._postprocess_framework_df(cur_df, name)
@@ -346,7 +339,10 @@ class BaseFrameworkProcessor:
     @classmethod
     def _postprocess_framework_df(cls, framework_df, name):
         if name == "Prefill":
-            post_event = framework_df[framework_df["name"].isin([cls.all_time_name, cls.http_end_name])]
+            post_event = pd.concat([
+                framework_df[framework_df["name"] == cls.http_end_name],
+                framework_df[framework_df["name"] == cls.all_time_name]
+            ])
         else:
             filter_df = framework_df[(framework_df["name"] != cls.all_time_name) &
                                      (~framework_df["name"].str.startswith("Between-"))]
@@ -355,13 +351,16 @@ class BaseFrameworkProcessor:
             
             last_row = filter_df.iloc[[-1]]
             post_event = pd.concat([
-                framework_df[framework_df["name"] == cls.all_time_name],
-                last_row
+                last_row,
+                framework_df[framework_df["name"] == cls.all_time_name]
             ])
+        framework_df = framework_df.sort_values(by="start_time(ms)")
         new_rows = cls._calc_during_time(post_event)
 
         framework_df = pd.concat([framework_df, new_rows], ignore_index=True)
-        framework_df = framework_df.sort_values(by="start_time(ms)")
+        all_time_row = framework_df[framework_df["name"] == cls.all_time_name]
+        non_all_time_row = framework_df[framework_df["name"] != cls.all_time_name]
+        framework_df = pd.concat([non_all_time_row, all_time_row], ignore_index=True)
         
         return framework_df
 
@@ -370,9 +369,9 @@ class BaseFrameworkProcessor:
         batch_df = framework_df[(framework_df["name"] == cls.batch_start_name) &
                                 (framework_df["batch_type"] == name)]
         if batch_df.empty:
-            return None
+            return [-1]
         batch_size = batch_df["batch_size"].unique()
         if len(batch_size) == 0:
             logger.warning(f"{name}: The batch_size is empty")
-            return None
+            return [-1]
         return batch_size

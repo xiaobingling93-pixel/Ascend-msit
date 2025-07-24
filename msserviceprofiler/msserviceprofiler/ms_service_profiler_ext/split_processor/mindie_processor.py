@@ -15,7 +15,41 @@
 
 from .base_processor import BaseFrameworkProcessor
 
+
 class MindIEProcessor(BaseFrameworkProcessor):
-    name_list = []
-    http_list = []
-    filter_list = []
+    batch_start_name = "batchFrameworkProcessing"
+    batch_end_name = "continueBatching"
+    http_start_name = "httpReq"
+    http_end_name = "httpRes"
+    key_name = "forward"
+    all_time_name = "AllTime"
+    http_list = ["httpReq", "encode", "decodeEnd", "httpRes"]
+    name_list = [batch_start_name, "preprocessBatch", "serializeExcueteMessage", "deserializeExecuteRequestsForInfer", 
+                 "convertTensorBatchToBackend", "getInputMetadata", "preprocess", "forward", "sample", "postprocess",
+                 "generateOutput", "processPythonExecResult", "deserializeExecuteResponse", 
+                 "saveoutAndContinueBatching", batch_end_name]
+    filter_list = [http_start_name, http_end_name, all_time_name]
+    name_list = name_list + http_list
+
+    @classmethod
+    def initialize(cls, args):
+        cls.args = args
+
+
+class MindIEProcessorV2(BaseFrameworkProcessor):
+    batch_start_name = "BatchSchedule"
+    batch_end_name = "deserializeResponses"
+    http_start_name = "httpReq"
+    http_end_name = "httpRes"
+    key_name = "forward"
+    all_time_name = "AllTime"
+    http_list = ["httpReq", "encode", "httpRes"]
+    name_list = [batch_start_name, "SerializeRequests", "DeserializeRequests", 
+                "GetInputMetadata", "preprocess", "forward", "sample", "postprocess", 
+                "GenerateOutput", "SerializeResponses", batch_end_name]
+    filter_list = [http_start_name, http_end_name, all_time_name]
+    name_list = name_list + http_list
+
+    @classmethod
+    def initialize(cls, args):
+        cls.args = args

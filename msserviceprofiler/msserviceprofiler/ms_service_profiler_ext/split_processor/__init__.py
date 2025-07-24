@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,9 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .base_processor import BaseFrameworkProcessor
+__all__ = ["MindIEProcessor", "VllmProcessor", "MindIEProcessorV2"]
 
-class VllmV0Processor(BaseFrameworkProcessor):
-    name_list = []
-    http_list = []
-    filter_list = []
+from .mindie_processor import MindIEProcessor, MindIEProcessorV2
+from .vllm_processor import VllmProcessor
