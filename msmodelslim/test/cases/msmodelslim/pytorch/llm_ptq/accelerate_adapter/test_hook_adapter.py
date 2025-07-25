@@ -67,12 +67,21 @@ def get_fake_dispatched_llama_model(
     config = LlamaConfig.from_json_file(config_path)
     model = LlamaForCausalLM(config)
     device_map = ALL_CPU_DEVICE_MAP if device_map is None else device_map
-    dispatch_model(model,
-                   device_map=device_map,
-                   main_device=main_device,
-                   state_dict=model.state_dict(),
-                   offload_dir=OFFLOAD_DIR
-                   )
+    # 1. 保存原始 umask
+    original_umask = os.umask(0)  # 临时设为 0 并获取原始值
+    try:
+        # 2. 设置目标 umask（0o026 对应权限 640）
+        os.umask(0o026)
+        dispatch_model(
+            model,
+            device_map=device_map,
+            main_device=main_device,
+            state_dict=model.state_dict(),
+            offload_dir=OFFLOAD_DIR
+        )
+    finally:
+        # 4. 无论是否出错，都恢复原始 umask
+        os.umask(original_umask)
     return model
 
 
@@ -142,23 +151,27 @@ def test_prepare_weight_can_manage_new_submodule_with_post_recurse(clear_offload
     replace_device_align_hook_if_needed(model)
     assert any([value.device.type == 'meta' for _, value in model.state_dict().items()])
 
-    for _, module in model.named_modules():
-        if isinstance(module, nn.Linear):
-            with PrepareWeight(module, post_recurse=True):
-                module.sub_module = nn.LayerNorm(128, device=module.weight.device)
-                module.sub_module.weight.data = torch.ones([128, 128], device=module.weight.device)
-                move_update_weight_hook_if_need(module, module, as_submodule=True)
+    original_umask = os.umask(0)
+    try:
+        os.umask(0o026)
+        for _, module in model.named_modules():
+            if isinstance(module, nn.Linear):
+                with PrepareWeight(module, post_recurse=True):
+                    module.sub_module = nn.LayerNorm(128, device=module.weight.device)
+                    module.sub_module.weight.data = torch.ones([128, 128], device=module.weight.device)
+                    move_update_weight_hook_if_need(module, module, as_submodule=True)
 
-            # new submodule should have same device type with module
-            if module.weight.device.type == 'meta':
-                assert module.sub_module.weight.device.type == 'meta'
+                # new submodule should have same device type with module
+                if module.weight.device.type == 'meta':
+                    assert module.sub_module.weight.device.type == 'meta'
 
-            # new submodule can be load correctly
-            with PrepareWeight(module):
-                assert module.weight.device.type != 'meta'
-                assert module.sub_module.weight.device.type == module.weight.device.type
-                assert torch.equal(torch.ones([128, 128]), module.sub_module.weight)
-
+                # new submodule can be load correctly
+                with PrepareWeight(module):
+                    assert module.weight.device.type != 'meta'
+                    assert module.sub_module.weight.device.type == module.weight.device.type
+                    assert torch.equal(torch.ones([128, 128]), module.sub_module.weight)
+    finally:
+        os.umask(original_umask)
 
 @torch.no_grad()
 def test_prepare_weight_can_manage_new_parameters_automatic(clear_offload_dir):
@@ -166,18 +179,23 @@ def test_prepare_weight_can_manage_new_parameters_automatic(clear_offload_dir):
     replace_device_align_hook_if_needed(model)
     assert any([value.device.type == 'meta' for _, value in model.state_dict().items()])
 
-    for _, module in model.named_modules():
-        if isinstance(module, nn.Linear):
-            with PrepareWeight(module):
-                assert not any([value.device.type == 'meta' for _, value in module.state_dict().items()])
-                module.new_param = nn.Parameter(torch.tensor([1.0]))
+    original_umask = os.umask(0)
+    try:
+        os.umask(0o026)
+        for _, module in model.named_modules():
+            if isinstance(module, nn.Linear):
+                with PrepareWeight(module):
+                    assert not any([value.device.type == 'meta' for _, value in module.state_dict().items()])
+                    module.new_param = nn.Parameter(torch.tensor([1.0]))
 
-            # new param should have same device type with module
-            if module.weight.device.type == 'meta':
-                assert module.new_param.device.type == 'meta'
+                # new param should have same device type with module
+                if module.weight.device.type == 'meta':
+                    assert module.new_param.device.type == 'meta'
 
-            # new param can be load correctly
-            with PrepareWeight(module):
-                assert module.new_param.device.type != 'meta'
-                assert module.new_param.device.type == module.weight.device.type
-                assert torch.equal(torch.tensor([1.0]), module.new_param)
+                # new param can be load correctly
+                with PrepareWeight(module):
+                    assert module.new_param.device.type != 'meta'
+                    assert module.new_param.device.type == module.weight.device.type
+                    assert torch.equal(torch.tensor([1.0]), module.new_param)
+    finally:
+        os.umask(original_umask)

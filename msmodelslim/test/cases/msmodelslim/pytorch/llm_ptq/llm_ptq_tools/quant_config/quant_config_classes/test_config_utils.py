@@ -17,5 +17,5 @@ class TestConfigUtils:
     def test_check_and_generate_config_param_should_raise_error_when_error_wbit_value(self):
         old_quant_config = OldQuantConfig()
         old_quant_config.w_bit = 1
-        with pytest.raises(ValueError):
-            check_and_generate_config_param(old_quant_config)
+        check_and_generate_config_param(old_quant_config)
+        assert old_quant_config.model_quant_type == "UNKNOWN"

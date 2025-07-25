@@ -19,6 +19,7 @@ from typing import Optional
 from unittest.mock import MagicMock, patch
 import torch.nn as nn
 from pydantic import BaseModel
+from importlib import import_module
 
 # Mocking imports from msmodelslim package
 class MockAntiOutlierConfig(BaseModel):
@@ -73,39 +74,88 @@ class MockCalibrator:
     def save(self, output_path, safetensors_name=None, json_name=None, save_type=None, part_file_size=None):
         pass
 
-# 1. 先 mock 父模块 'msmodelslim.pytorch.llm_ptq'
-llm_ptq_mock = MagicMock()
-sys.modules['msmodelslim.pytorch.llm_ptq'] = llm_ptq_mock
-
-# 2. 再 mock 子模块 'anti_outlier' 和 'llm_ptq_tools'
-llm_ptq_mock.anti_outlier = MagicMock(
-    AntiOutlierConfig=MockAntiOutlierConfig,
-    AntiOutlier=MagicMock(spec=MockAntiOutlier)
-)
-llm_ptq_mock.llm_ptq_tools = MagicMock(
-    QuantConfig=MockQuantConfig,
-    Calibrator=MagicMock(spec=MockCalibrator)
-)
-
-# 3. 最后 mock 更深层模块（如果需要）
-llm_ptq_mock.anti_outlier.anti_utils = MagicMock()
-
-# 4. 在 mock 完成后导入被测代码
-with patch.dict('sys.modules', {
-    'msmodelslim.pytorch.llm_ptq': llm_ptq_mock,
-    'msmodelslim.pytorch.llm_ptq.anti_outlier': llm_ptq_mock.anti_outlier,
-    'msmodelslim.pytorch.llm_ptq.llm_ptq_tools': llm_ptq_mock.llm_ptq_tools,
-}):
-    from msmodelslim.quant.session.session import (
-        process_session_cfg, quant_model, SessionConfig,
-        M3ProcessorConfig, M4ProcessorConfig, M6Config, M6ProcessorConfig, W8A8QuantConfig, W8A8ProcessorConfig,
-        FA3ProcessorConfig, W8A8DynamicQuantConfig, W8A8DynamicProcessorConfig, W8A8TimeStepQuantConfig, 
-        W8A8TimeStepProcessorConfig, SaveProcessorConfig,
-        M3, M4, M6, W8A8, FA3, W8A8_DYNAMIC, W8A8_TIMESTEP, SAVE
-    )
-
 
 class TestMultiModal_SD_Quant_Session(unittest.TestCase):
+
+    def setUp(self):
+        # 1.备份模块
+        self._original_module = {}
+        self.modules_to_backup = [
+            'msmodelslim.pytorch.llm_ptq',
+            'msmodelslim.pytorch.llm_ptq.llm_ptq_tools',
+            'msmodelslim.pytorch.llm_ptq.anti_outlier',
+            'msmodelslim.pytorch.llm_ptq.anti_outlier.anti_utils',
+        ]
+
+        # 备份原始模块（如果存在）
+        for module in self.modules_to_backup:
+            if module in sys.modules:
+                self._original_module[module] = sys.modules[module]
+            else:
+                self._original_module[module] = None
+
+        # 2.mock模块
+        # 父模块
+        self.llm_ptq_mock = MagicMock()
+        sys.modules['msmodelslim.pytorch.llm_ptq'] = self.llm_ptq_mock
+        # 子模块 'anti_outlier'
+        self.llm_ptq_mock.anti_outlier = MagicMock(
+            AntiOutlierConfig=MockAntiOutlierConfig,
+            AntiOutlier=MagicMock(spec=MockAntiOutlier)
+        )
+        # 子模块 'llm_ptq_tools'
+        self.llm_ptq_mock.llm_ptq_tools = MagicMock(
+            QuantConfig=MockQuantConfig,
+            Calibrator=MagicMock(spec=MockCalibrator)
+        )
+
+        # 深层模块 'anti_utils'
+        self.llm_ptq_mock.anti_outlier.anti_utils = MagicMock()
+
+        # 3.替换 sys.modules
+        sys.modules['msmodelslim.pytorch.llm_ptq'] = self.llm_ptq_mock
+        sys.modules['msmodelslim.pytorch.llm_ptq.llm_ptq_tools'] = self.llm_ptq_mock.llm_ptq_tools
+        sys.modules['msmodelslim.pytorch.llm_ptq.anti_outlier'] = self.llm_ptq_mock.anti_outlier
+        sys.modules['msmodelslim.pytorch.llm_ptq.anti_outlier.anti_utils'] = (
+            self.llm_ptq_mock.anti_outlier.anti_utils
+        )
+
+        global llm_ptq_mock
+        llm_ptq_mock = self.llm_ptq_mock
+
+        self.seesion_module = import_module('msmodelslim.quant.session.session')
+        global_vars = [
+            'process_session_cfg', 'quant_model', 'SessionConfig',
+            'M3ProcessorConfig', 'M4ProcessorConfig', 'M6Config', 'M6ProcessorConfig', 'W8A8QuantConfig',
+            'W8A8ProcessorConfig', 'FA3ProcessorConfig', 'W8A8DynamicQuantConfig', 'W8A8DynamicProcessorConfig',
+            'W8A8TimeStepQuantConfig', 'W8A8TimeStepProcessorConfig', 'SaveProcessorConfig',
+            'M3', 'M4', 'M6', 'W8A8', 'FA3', 'W8A8_DYNAMIC', 'W8A8_TIMESTEP', 'SAVE'
+        ]
+        for var in global_vars:
+            globals()[var] = getattr(self.seesion_module, var)
+
+    def tearDown(self):
+        # 恢复 sys.modules
+        for module in self.modules_to_backup:
+            if self._original_module[module] is not None:
+                sys.modules[module] = self._original_module[module]
+            else:
+                del sys.modules[module]
+        
+        # 清理测试导入的模块
+        if 'msmodelslim.quant.session.session' in sys.modules:
+            del sys.modules['msmodelslim.quant.session.session']
+
+        # 清理全局变量
+        global_vars = [
+            'process_session_cfg', 'quant_model', 'SessionConfig',
+            'M3ProcessorConfig', 'M4ProcessorConfig', 'M6Config', 'M6ProcessorConfig', 'W8A8QuantConfig',
+            'W8A8ProcessorConfig', 'FA3ProcessorConfig', 'W8A8DynamicQuantConfig', 'W8A8DynamicProcessorConfig',
+            'W8A8TimeStepQuantConfig', 'W8A8TimeStepProcessorConfig', 'SaveProcessorConfig',
+            'M3', 'M4', 'M6', 'W8A8', 'FA3', 'W8A8_DYNAMIC', 'W8A8_TIMESTEP', 'SAVE'
+        ]
+        for var in global_vars:
+            globals()[var] = None
 
     def test_process_session_cfg_with_m3_anti_outlier(self):
         # Arrange

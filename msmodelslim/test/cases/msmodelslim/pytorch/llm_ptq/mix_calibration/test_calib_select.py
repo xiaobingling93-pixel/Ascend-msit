@@ -53,60 +53,68 @@ def tmp_path():
             ]
         }
 
-        with open(f"{tmp}/test_config.json", "w") as f:
-            json.dump(config, f)
+        # 1. 保存原始 umask
+        original_umask = os.umask(0)  # 临时设为 0 并获取原始值
+        try:
+            # 2. 设置目标 umask（0o027 对应权限 640）
+            os.umask(0o027)
+            with open(f"{tmp}/test_config.json", "w") as f:
+                json.dump(config, f)
 
-        # 创建临时数据目录
-        os.mkdir(os.path.join(tmp, "boolq"))
-        os.mkdir(os.path.join(tmp, "ceval_5_shot"))
-        os.mkdir(os.path.join(tmp, "ceval_5_shot", "val"))
-        os.mkdir(os.path.join(tmp, "ceval_5_shot", "dev"))
-        os.open(os.path.join(tmp, "ceval_5_shot", "dev", "test_subject_dev.csv"), os.O_CREAT, 0o644)
-        os.open(os.path.join(tmp, "ceval_5_shot", "val", "test_subject_val.csv"), os.O_CREAT, 0o644)
-        os.mkdir(os.path.join(tmp, "gsm8k"))
-        os.mkdir(os.path.join(tmp, "mmlu"))
-        os.mkdir(os.path.join(tmp, "mmlu", "val"))
-        os.mkdir(os.path.join(tmp, "mmlu", "dev"))
+            # 创建临时数据目录
+            os.mkdir(os.path.join(tmp, "boolq"))
+            os.mkdir(os.path.join(tmp, "ceval_5_shot"))
+            os.mkdir(os.path.join(tmp, "ceval_5_shot", "val"))
+            os.mkdir(os.path.join(tmp, "ceval_5_shot", "dev"))
+            os.open(os.path.join(tmp, "ceval_5_shot", "dev", "test_subject_dev.csv"), os.O_CREAT, 0o644)
+            os.open(os.path.join(tmp, "ceval_5_shot", "val", "test_subject_val.csv"), os.O_CREAT, 0o644)
+            os.mkdir(os.path.join(tmp, "gsm8k"))
+            os.mkdir(os.path.join(tmp, "mmlu"))
+            os.mkdir(os.path.join(tmp, "mmlu", "val"))
+            os.mkdir(os.path.join(tmp, "mmlu", "dev"))
 
-        # 创建示例数据文件
-        with open(os.path.join(tmp, "boolq", "boolq.jsonl"), "w") as f:
-            f.write(json.dumps({
-                "title": "Test Title",
-                "question": "Is this a test?",
-                "passage": "This is a test passage",
-                "answer": True
-            }) + "\n")
+            # 创建示例数据文件
+            with open(os.path.join(tmp, "boolq", "boolq.jsonl"), "w") as f:
+                f.write(json.dumps({
+                    "title": "Test Title",
+                    "question": "Is this a test?",
+                    "passage": "This is a test passage",
+                    "answer": True
+                }) + "\n")
 
-        # 创建ceval测试数据
-        subject_map = {}
-        with open(os.path.join(tmp, "ceval_5_shot", "subject_mapping.json"), "w") as f:
-            json.dump(subject_map, f)
+            # 创建ceval测试数据
+            subject_map = {}
+            with open(os.path.join(tmp, "ceval_5_shot", "subject_mapping.json"), "w") as f:
+                json.dump(subject_map, f)
 
-        dev_data = [
-            ["Q1", "A", "B", "C", "D", "A"],
-            ["Q2", "A", "B", "C", "D", "A"]
-        ]
-        val_data = [
-            ["Q1", "A", "B", "C", "D", "A"],
-            ["Q2", "A", "B", "C", "D", "A"]
-        ]
+            dev_data = [
+                ["Q1", "A", "B", "C", "D", "A"],
+                ["Q2", "A", "B", "C", "D", "A"]
+            ]
+            val_data = [
+                ["Q1", "A", "B", "C", "D", "A"],
+                ["Q2", "A", "B", "C", "D", "A"]
+            ]
 
-        pd.DataFrame(dev_data).to_csv(os.path.join(tmp, "ceval_5_shot", "dev", "test_subject_dev.csv"), header=False,
-                                      index=False)
-        pd.DataFrame(val_data).to_csv(os.path.join(tmp, "ceval_5_shot", "val", "test_subject_val.csv"), header=False,
-                                      index=False)
+            pd.DataFrame(dev_data).to_csv(os.path.join(tmp, "ceval_5_shot", "dev", "test_subject_dev.csv"), header=False,
+                                        index=False)
+            pd.DataFrame(val_data).to_csv(os.path.join(tmp, "ceval_5_shot", "val", "test_subject_val.csv"), header=False,
+                                        index=False)
 
-        # 创建mmlu测试数据
-        subject_map = {"mmlu_all_sets": []}
-        with open(os.path.join(tmp, "mmlu", "subject_mapping.json"), "w") as f:
-            json.dump(subject_map, f)
+            # 创建mmlu测试数据
+            subject_map = {"mmlu_all_sets": []}
+            with open(os.path.join(tmp, "mmlu", "subject_mapping.json"), "w") as f:
+                json.dump(subject_map, f)
 
-        # 创建gsm8k测试数据
-        with open(os.path.join(tmp, "gsm8k", "GSM8K.jsonl"), "w") as f:
-            f.write(json.dumps({
-                "question": "What is 2 + 2?",
-                "answer": "4"
-            }) + "\n")
+            # 创建gsm8k测试数据
+            with open(os.path.join(tmp, "gsm8k", "GSM8K.jsonl"), "w") as f:
+                f.write(json.dumps({
+                    "question": "What is 2 + 2?",
+                    "answer": "The answer is <<2+2=4>>4#### 4"
+                }) + "\n")
+        finally:
+            # 4. 无论是否出错，都恢复原始 umask
+            os.umask(original_umask)
 
         yield tmp
 
@@ -190,7 +198,7 @@ class TestCalibrationData:
         assert "ceval_5_shot" in calib.handlers
 
     def test_mixed_dataset_generation(self, tmp_path, mock_tokenizer):
-        save_path = str(os.path.join(tmp_path, "..", "output.json"))
+        save_path = str(os.path.join(tmp_path, "output.json"))
         calib = CalibrationData(
             config_path=str(os.path.join(tmp_path, "test_config.json")),
             tokenizer=mock_tokenizer,

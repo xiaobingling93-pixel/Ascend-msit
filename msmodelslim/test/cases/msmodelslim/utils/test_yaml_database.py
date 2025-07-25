@@ -14,6 +14,7 @@
 # limitations under the License.
 
 
+import os
 import pytest
 from pathlib import Path
 import yaml
@@ -30,32 +31,42 @@ class TestYamlDatabase:
         self.test_dir = Path(tempfile.mkdtemp())
         self.valid_config_dir = self.test_dir / "valid_configs"
         self.valid_config_dir.mkdir()
-        
-        # 创建有效的 YAML 文件
-        config1 = self.valid_config_dir / "config1.yaml"
-        config1.write_text("""
-        name: Test Config 1
-        version: 1.0
-        settings:
-          param1: value1
-          param2: 42
-        """)
-        
-        config2 = self.valid_config_dir / "config2.yaml"
-        config2.write_text("""
-        - item1
-        - item2
-        - item3
-        """)
-        
-        # 创建空 YAML 文件
-        empty_config = self.valid_config_dir / "empty.yaml"
-        empty_config.write_text("")
-        
-        # 创建无效目录（文件）
-        self.invalid_dir = self.test_dir / "invalid_dir"
-        self.invalid_dir.write_text("This is not a directory")
-        
+
+        # 1. 保存原始 umask
+        original_umask = os.umask(0)  # 临时设为 0 并获取原始值
+        try:
+            # 2. 设置目标 umask（0o026 对应权限 640）
+            os.umask(0o026)
+
+            # 创建有效的 YAML 文件
+            config1 = self.valid_config_dir / "config1.yaml"
+            config1.write_text("""
+            name: Test Config 1
+            version: 1.0
+            settings:
+              param1: value1
+              param2: 42
+            """)
+
+            config2 = self.valid_config_dir / "config2.yaml"
+            config2.write_text("""
+            - item1
+            - item2
+            - item3
+            """)
+
+            # 创建空 YAML 文件
+            empty_config = self.valid_config_dir / "empty.yaml"
+            empty_config.write_text("")
+
+            # 创建无效目录（文件）
+            self.invalid_dir = self.test_dir / "invalid_dir"
+            self.invalid_dir.write_text("This is not a directory")
+
+        finally:
+            # 4. 无论是否出错，都恢复原始 umask
+            os.umask(original_umask)
+
         yield  # 测试执行
         
         # 清理

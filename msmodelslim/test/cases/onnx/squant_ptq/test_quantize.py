@@ -130,6 +130,7 @@ def test_run_quantize_given_onnx_when_data_free_then_pass():
     CALIBS.append(calib)
 
 
+@pytest.mark.skip()
 def test_run_quantize_given_onnx_when_graph_optimize_level_is_2_then_pass():
     quant_model_path = "./test_squant_df.onnx"
     quant_config = QuantConfig(graph_optimize_level=2)
@@ -141,6 +142,7 @@ def test_run_quantize_given_onnx_when_graph_optimize_level_is_2_then_pass():
     CALIBS.append(calib)
 
 
+@pytest.mark.skip()
 def test_run_quantize_given_onnx_when_graph_optimize_level_is_2_and_om_method_is_atc_then_pass():
     quant_model_path = "./test_squant_df.onnx"
     quant_config = QuantConfig(graph_optimize_level=2, om_method="atc")

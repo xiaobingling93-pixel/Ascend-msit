@@ -524,12 +524,12 @@ class TestUtilityFunctions:
         
         # 稀疏性和KV缓存匹配测试
         sparse_label = {'w_bit': 8, 'a_bit': 8, 'kv_cache': False, 'is_sparse': True}
-        assert check_label(sparse_label, 8, 8, False, True) is True
-        assert check_label(sparse_label, 8, 8, False, False) is True  # 稀疏性要求可以放宽
+        assert check_label(sparse_label, 8, 8, False, True) is True  # 稀疏性要求可以放宽
+        assert check_label(sparse_label, 8, 8, False, False) is False
         
         cache_label = {'w_bit': 8, 'a_bit': 8, 'kv_cache': True, 'is_sparse': False}
-        assert check_label(cache_label, 8, 8, True, False) is True
-        assert check_label(cache_label, 8, 8, False, False) is True  # KV缓存要求可以放宽
+        assert check_label(cache_label, 8, 8, True, False) is True  # KV缓存要求可以放宽
+        assert check_label(cache_label, 8, 8, False, False) is False
 
     def test_add_customized_config_basic(self):
         """测试add_customized_config的基本功能"""
