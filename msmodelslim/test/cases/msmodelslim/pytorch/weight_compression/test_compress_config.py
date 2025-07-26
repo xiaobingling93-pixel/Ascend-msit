@@ -97,5 +97,5 @@ class TestCompressConfig:
 
     def test_arg_multiprocess_num_with_exceeded_cpu_num(self):
         with patch('multiprocessing.cpu_count', return_value=64):
-            config = CompressConfig(multiprocess_num=128)
+            config = CompressConfig(multiprocess_num=9999)
             assert config.multiprocess_num == 1

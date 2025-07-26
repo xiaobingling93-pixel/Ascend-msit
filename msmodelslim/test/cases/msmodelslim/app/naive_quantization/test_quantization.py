@@ -7,43 +7,49 @@ quantization.py 模块的单元测试
 使用 pytest 框架和 mock 技术来隔离外部依赖。
 """
 
-import os
-import sys
-import functools
-from unittest.mock import Mock, patch, MagicMock, call
+from unittest.mock import Mock, patch, call
 import pytest
 
-# Mock所有复杂的外部依赖
-sys.modules['torch'] = Mock()
-sys.modules['torch.nn'] = Mock()
-sys.modules['torch.nn.functional'] = Mock()
-sys.modules['tqdm'] = Mock()
-sys.modules['ascend_utils'] = Mock()
-sys.modules['ascend_utils.common'] = Mock()
-sys.modules['ascend_utils.common.security'] = Mock()
-sys.modules['msmodelslim.tools'] = Mock()
-sys.modules['msmodelslim.tools.copy_config_files'] = Mock()
-sys.modules['msmodelslim.tools.logger'] = Mock()
-sys.modules['msmodelslim.tools.convert_fp8_to_bf16'] = Mock()
-sys.modules['msmodelslim.tools.add_safetensors'] = Mock()
-sys.modules['msmodelslim.pytorch'] = Mock()
-sys.modules['msmodelslim.pytorch.llm_ptq'] = Mock()
-sys.modules['msmodelslim.pytorch.llm_ptq.anti_outlier'] = Mock()
-sys.modules['msmodelslim.pytorch.llm_ptq.llm_ptq_tools'] = Mock()
-sys.modules['msmodelslim.utils'] = Mock()
-sys.modules['msmodelslim.utils.safe_utils'] = Mock()
 
-# 创建mock torch模块和F功能
-mock_torch = Mock()
-mock_torch.tensor = Mock()
-mock_torch.cat = Mock()
-mock_torch.float16 = "float16"
-mock_torch.float32 = "float32"
-mock_torch.npu = Mock()
-sys.modules['torch'] = mock_torch
+@pytest.fixture(scope="function", autouse=True)
+def isolate_torch_modules(mocker):
+    """
+    每个测试函数执行前，mock torch 相关模块；执行后自动恢复。
+    """
+    mock_torch = Mock()
+    mock_torch.tensor = Mock()
+    mock_torch.cat = Mock()
+    mock_torch.float16 = "float16"
+    mock_torch.float32 = "float32"
+    mock_torch.npu = Mock()
 
-mock_F = Mock()
-sys.modules['torch.nn.functional'] = mock_F
+    mock_F = Mock()
+
+    # 使用 mocker.patch.dict 确保退出时还原
+    mocker.patch.dict("sys.modules", {
+        "torch": mock_torch,
+        "torch.nn": Mock(),
+        "torch.nn.functional": mock_F,
+        "tqdm": Mock(),
+        "ascend_utils": Mock(),
+        "ascend_utils.common": Mock(),
+        "ascend_utils.common.security": Mock(),
+        "msmodelslim.tools": Mock(),
+        "msmodelslim.tools.logger": Mock(),
+        "msmodelslim.tools.copy_config_files": Mock(),
+        "msmodelslim.tools.convert_fp8_to_bf16": Mock(),
+        "msmodelslim.tools.add_safetensors": Mock(),
+        "msmodelslim.pytorch": Mock(),
+        "msmodelslim.pytorch.llm_ptq": Mock(),
+        "msmodelslim.pytorch.llm_ptq.anti_outlier": Mock(),
+        "msmodelslim.pytorch.llm_ptq.anti_outlier.anti_utils": Mock(),
+        "msmodelslim.pytorch.llm_ptq.llm_ptq_tools": Mock(),
+        "msmodelslim.utils": Mock(),
+        "msmodelslim.utils.safe_utils": Mock(),
+    })
+    yield  # 测试函数执行点
+    # 退出后自动撤销 patch，无需手动恢复
+
 
 # 模拟数据结构
 class MockMetadata:
@@ -79,30 +85,23 @@ class MockConfigTask:
         self.specific = specific
         self.customized_config = customized_config
 
-# 现在导入被测试的模块
-from msmodelslim.app.naive_quantization.quantization import (
-    HookRegistry,
-    custom_hook,
-    get_padding_data,
-    get_batch_tokenized_data,
-    get_tokenized_data,
-    convert_model,
-    add_safetensors_func,
-    Quantization
-)
-
 
 class TestHookRegistry:
     """测试钩子注册器类"""
 
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        from msmodelslim.app.naive_quantization.quantization import HookRegistry
+        self.HookRegistry = HookRegistry
+
     def test_init(self):
         """测试初始化方法"""
-        hook_registry = HookRegistry()
+        hook_registry = self.HookRegistry()
         assert hook_registry.functions == {}
 
     def test_register_single_function(self):
         """测试注册单个函数"""
-        hook_registry = HookRegistry()
+        hook_registry = self.HookRegistry()
         test_func = lambda x: x * 2
         
         hook_registry.register("test_hook", "test_function", test_func)
@@ -113,7 +112,7 @@ class TestHookRegistry:
 
     def test_register_multiple_functions_same_hook(self):
         """测试在同一个钩子下注册多个函数"""
-        hook_registry = HookRegistry()
+        hook_registry = self.HookRegistry()
         func1 = lambda x: x * 2
         func2 = lambda x: x + 1
         
@@ -126,7 +125,7 @@ class TestHookRegistry:
 
     def test_register_multiple_hooks(self):
         """测试注册多个不同的钩子"""
-        hook_registry = HookRegistry()
+        hook_registry = self.HookRegistry()
         func1 = lambda x: x * 2
         func2 = lambda x: x + 1
         
@@ -140,7 +139,7 @@ class TestHookRegistry:
 
     def test_get_existing_function(self):
         """测试获取已存在的函数"""
-        hook_registry = HookRegistry()
+        hook_registry = self.HookRegistry()
         test_func = lambda x: x * 2
         hook_registry.register("test_hook", "test_function", test_func)
         
@@ -149,13 +148,13 @@ class TestHookRegistry:
 
     def test_get_nonexistent_hook(self):
         """测试获取不存在的钩子"""
-        hook_registry = HookRegistry()
+        hook_registry = self.HookRegistry()
         result = hook_registry.get("nonexistent_hook", "test_function")
         assert result is None
 
     def test_get_nonexistent_function(self):
         """测试获取存在钩子但不存在的函数"""
-        hook_registry = HookRegistry()
+        hook_registry = self.HookRegistry()
         hook_registry.register("test_hook", "existing_function", lambda x: x)
         
         result = hook_registry.get("test_hook", "nonexistent_function")
@@ -165,10 +164,16 @@ class TestHookRegistry:
 class TestCustomHook:
     """测试自定义钩子函数"""
 
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        from msmodelslim.app.naive_quantization.quantization import custom_hook
+        self.custom_hook = custom_hook
+
+
     def test_custom_hook_modifies_config(self):
         """测试自定义钩子正确修改模型配置"""
         model_config = {}
-        custom_hook(model_config)
+        self.custom_hook(model_config)
         
         assert model_config["mla_quantize"] == "w8a8"
         assert model_config["quantize"] == "w8a8_dynamic"
@@ -182,7 +187,7 @@ class TestCustomHook:
             "quantize": "old_value",
             "existing_key": "should_remain"
         }
-        custom_hook(model_config)
+        self.custom_hook(model_config)
         
         assert model_config["mla_quantize"] == "w8a8"
         assert model_config["quantize"] == "w8a8_dynamic"
@@ -193,6 +198,11 @@ class TestCustomHook:
 
 class TestGetPaddingData:
     """测试数据填充函数"""
+
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        from msmodelslim.app.naive_quantization.quantization import get_padding_data
+        self.get_padding_data = get_padding_data
 
     def test_get_padding_data_single_sequence(self):
         """测试单个序列的数据填充"""
@@ -216,7 +226,7 @@ class TestGetPaddingData:
             calib_list = ["test sentence"]
             device_type = "cpu"
             
-            result = get_padding_data(mock_tokenizer, calib_list, device_type)
+            result = self.get_padding_data(mock_tokenizer, calib_list, device_type)
             
             # 验证tokenizer调用
             mock_tokenizer.assert_called_once_with("test sentence", return_tensors='pt', add_special_tokens=False)
@@ -268,7 +278,7 @@ class TestGetPaddingData:
             calib_list = ["short", "longer sentence"]
             device_type = "cpu"
             
-            result = get_padding_data(mock_tokenizer, calib_list, device_type)
+            result = self.get_padding_data(mock_tokenizer, calib_list, device_type)
             
             # 验证tokenizer调用次数
             assert mock_tokenizer.call_count == 2
@@ -288,6 +298,11 @@ class TestGetPaddingData:
 
 class TestGetBatchTokenizedData:
     """测试批量tokenized数据函数"""
+    
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        from msmodelslim.app.naive_quantization.quantization import get_batch_tokenized_data
+        self.get_batch_tokenized_data = get_batch_tokenized_data
 
     @patch('msmodelslim.app.naive_quantization.quantization.get_padding_data')
     def test_get_batch_tokenized_data_single_batch(self, mock_get_padding_data):
@@ -297,10 +312,9 @@ class TestGetBatchTokenizedData:
         
         calib_list = ["sentence1", "sentence2"]
         batch_size = 2
-        max_len = 10
         device = "cpu"
         
-        result = get_batch_tokenized_data(mock_tokenizer, calib_list, batch_size, max_len, device)
+        result = self.get_batch_tokenized_data(mock_tokenizer, calib_list, batch_size, device)
         
         # 验证get_padding_data被调用
         mock_get_padding_data.assert_called_once_with(mock_tokenizer, calib_list, device)
@@ -315,10 +329,9 @@ class TestGetBatchTokenizedData:
         
         calib_list = ["sent1", "sent2", "sent3"]
         batch_size = 2
-        max_len = 10
         device = "cpu"
         
-        result = get_batch_tokenized_data(mock_tokenizer, calib_list, batch_size, max_len, device)
+        result = self.get_batch_tokenized_data(mock_tokenizer, calib_list, batch_size, device)
         
         # 验证get_padding_data被调用两次（两个批次）
         assert mock_get_padding_data.call_count == 2
@@ -332,37 +345,15 @@ class TestGetBatchTokenizedData:
         
         assert result == [["batch1_data"], ["batch2_data"]]
 
-    @patch('msmodelslim.app.naive_quantization.quantization.get_padding_data')
-    def test_get_batch_tokenized_data_long_strings_truncation(self, mock_get_padding_data):
-        """测试长字符串截断功能"""
-        mock_tokenizer = Mock()
-        mock_get_padding_data.side_effect = [["batch1"], ["batch2"], ["batch3"]]
-        
-        # 创建一个长字符串，会被截断成多个部分
-        long_string = "a" * 25  # 长度25，max_len=10，会被分成3部分
-        calib_list = [long_string]
-        batch_size = 1
-        max_len = 10
-        device = "cpu"
-        
-        result = get_batch_tokenized_data(mock_tokenizer, calib_list, batch_size, max_len, device)
-        
-        # 验证get_padding_data被调用3次（字符串被截断为3部分）
-        assert mock_get_padding_data.call_count == 3
-        
-        # 验证截断后的字符串
-        expected_calls = [
-            call(mock_tokenizer, ["aaaaaaaaaa"], device),    # 前10个字符
-            call(mock_tokenizer, ["aaaaaaaaaa"], device),    # 中间10个字符
-            call(mock_tokenizer, ["aaaaa"], device)          # 最后5个字符
-        ]
-        mock_get_padding_data.assert_has_calls(expected_calls)
-        
-        assert result == [["batch1"], ["batch2"], ["batch3"]]
-
 
 class TestGetTokenizedData:
     """测试tokenized数据函数"""
+
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        from msmodelslim.app.naive_quantization.quantization import get_tokenized_data
+        self.get_tokenized_data = get_tokenized_data
+
 
     def test_get_tokenized_data_default_names(self):
         """测试使用默认参数名的tokenized数据处理"""
@@ -383,7 +374,7 @@ class TestGetTokenizedData:
         
         calib_list = ["test sentence 1", "test sentence 2"]
         
-        result = get_tokenized_data(mock_tokenizer, calib_list, mock_device)
+        result = self.get_tokenized_data(mock_tokenizer, calib_list, mock_device)
         
         # 验证tokenizer调用次数
         assert mock_tokenizer.call_count == 2
@@ -426,7 +417,7 @@ class TestGetTokenizedData:
         
         calib_list = ["test sentence"]
         
-        result = get_tokenized_data(
+        result = self.get_tokenized_data(
             mock_tokenizer, 
             calib_list, 
             mock_device,
@@ -448,6 +439,11 @@ class TestGetTokenizedData:
 class TestConvertModel:
     """测试模型转换函数"""
 
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        from msmodelslim.app.naive_quantization.quantization import convert_model
+        self.convert_model = convert_model
+
     @patch('msmodelslim.app.naive_quantization.quantization.auto_convert_model_fp8_to_bf16')
     @patch('msmodelslim.app.naive_quantization.quantization.OpsType')
     def test_convert_model(self, mock_ops_type, mock_auto_convert):
@@ -458,7 +454,7 @@ class TestConvertModel:
         mock_ops_type.AUTO = "AUTO"
         
         # 调用被测试函数
-        result = convert_model(mock_model, model_path)
+        result = self.convert_model(mock_model, model_path)
         
         # 验证auto_convert_model_fp8_to_bf16被正确调用
         mock_auto_convert.assert_called_once_with(mock_model, model_path, "AUTO")
@@ -470,6 +466,11 @@ class TestConvertModel:
 class TestAddSafetensorsFunc:
     """测试添加safetensors函数"""
 
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        from msmodelslim.app.naive_quantization.quantization import add_safetensors_func
+        self.add_safetensors_func = add_safetensors_func
+
     @patch('msmodelslim.app.naive_quantization.quantization.add_safetensors')
     def test_add_safetensors_func(self, mock_add_safetensors):
         """测试添加safetensors功能"""
@@ -477,7 +478,7 @@ class TestAddSafetensorsFunc:
         save_path = "/path/to/save"
         
         # 调用被测试函数
-        add_safetensors_func(model_path, save_path)
+        self.add_safetensors_func(model_path, save_path)
         
         # 验证add_safetensors被正确调用
         mock_add_safetensors.assert_called_once_with(
@@ -492,13 +493,19 @@ class TestAddSafetensorsFunc:
 class TestQuantization:
     """测试主要的Quantization类"""
 
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        from msmodelslim.app.naive_quantization.quantization import Quantization, HookRegistry
+        self.Quantization = Quantization
+        self.HookRegistry = HookRegistry
+
     def test_init(self):
         """测试Quantization类的初始化"""
-        quantization = Quantization()
+        quantization = self.Quantization()
         
         # 验证hook_registry被正确初始化
         assert hasattr(quantization, 'hook_registry')
-        assert isinstance(quantization.hook_registry, HookRegistry)
+        assert isinstance(quantization.hook_registry, self.HookRegistry)
         
         # 验证钩子函数被正确注册
         convert_dtype_func = quantization.hook_registry.get("convert_dtype", "deepseekv2")
@@ -562,7 +569,7 @@ class TestQuantization:
             customized_config=None  # 设置为None
         )
         
-        quantization = Quantization()
+        quantization = self.Quantization()
         
         # 验证会抛出ValueError
         with pytest.raises(ValueError, match="Required parameters are missing"):
@@ -615,7 +622,7 @@ class TestQuantization:
         
         mock_safe_generator.load_jsonl.return_value = ["test_data"]
         
-        quantization = Quantization()
+        quantization = self.Quantization()
         
         with patch.object(quantization.hook_registry, 'get') as mock_get_hook:
             mock_get_hook.return_value = None  # 返回None表示没有注册的钩子

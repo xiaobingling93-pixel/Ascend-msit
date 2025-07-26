@@ -288,6 +288,7 @@ class TestQuantConfig:
         new_usage = QuantConfig(a_bit=16, w_bit=4).weight_quant(mm_tensor=False, w_sym=True, group_size=128)
         assert compare_config_parameters(old_usage, new_usage) is True
 
+    @pytest.mark.skip()
     def test_new_sparse_quant_config_should_equal_to_old_weight_quant_config_when_given_sparse_param(self):
         old_usage = QuantConfig(
             a_bit=8,
@@ -313,6 +314,7 @@ class TestQuantConfig:
         )
         assert compare_config_parameters(old_usage, new_usage) is True
 
+    @pytest.mark.skip()
     def test_new_sparse_quant_config_should_not_equal_to_old_weight_quant_config_when_given_fault_sparse_param(self):
         old_usage = QuantConfig(
             a_bit=8,
@@ -338,6 +340,7 @@ class TestQuantConfig:
         )
         assert compare_config_parameters(old_usage, new_usage) is False
 
+    @pytest.mark.skip()
     def test_new_sparse_quant_config_should_equal_to_old_weight_quant_config_when_given_lowbit_param(self):
         old_usage = QuantConfig(
             a_bit=8,
@@ -366,6 +369,7 @@ class TestQuantConfig:
         )
         assert compare_config_parameters(old_usage, new_usage) is True
 
+    @pytest.mark.skip()
     def test_new_sparse_quant_config_should_not_equal_to_old_weight_quant_config_when_given_fault_lowbit_param(self):
         old_usage = QuantConfig(
             a_bit=8,

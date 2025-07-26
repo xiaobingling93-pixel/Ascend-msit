@@ -8,28 +8,55 @@ naive_entrance.py 的单元测试模块
 4. 各种边界条件和错误情况
 """
 
-import os
 import pytest
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 import sys
-
-# Mock external dependencies before importing the module under test
-sys.modules['tqdm'] = Mock()
-sys.modules['ascend_utils'] = Mock()
-sys.modules['ascend_utils.common'] = Mock()
-sys.modules['ascend_utils.common.security'] = Mock()
-sys.modules['msmodelslim.infra'] = Mock()
-sys.modules['msmodelslim.infra.practice_manager'] = Mock()
-sys.modules['msmodelslim.tools'] = Mock()
-sys.modules['msmodelslim.tools.logger'] = Mock()
-sys.modules['msmodelslim.app.naive_quantization.quantization'] = Mock()
-
-from msmodelslim.app.naive_quantization.naive_entrance import NaiveEntrance
+import importlib
 
 
 class TestNaiveEntrance:
     """NaiveEntrance 类的单元测试类"""
+
+    def setup_method(self):
+        """测试前准备：创建mock并保存原始模块"""
+        # 需要mock的模块列表
+        self.mock_modules = [
+            'tqdm',
+            'ascend_utils',
+            'ascend_utils.common',
+            'ascend_utils.common.security',
+            'msmodelslim.infra',
+            'msmodelslim.infra.practice_manager',
+            'msmodelslim.tools',
+            'msmodelslim.tools.logger',
+            'msmodelslim.app.naive_quantization.quantization'
+        ]
+
+        # 保存原始模块引用
+        self.original_modules = {}
+        for module_name in self.mock_modules:
+            self.original_modules[module_name] = sys.modules.get(module_name)
+            sys.modules[module_name] = Mock()
+
+        # 动态导入被测类（在mock之后）
+        self.naive_entrance_module = importlib.import_module(
+            'msmodelslim.app.naive_quantization.naive_entrance'
+        )
+        self.NaiveEntrance = self.naive_entrance_module.NaiveEntrance
+
+    def teardown_method(self):
+        """测试后清理：恢复原始模块"""
+        for module_name, original_module in self.original_modules.items():
+            if original_module is not None:
+                sys.modules[module_name] = original_module
+            else:
+                # 如果原始模块不存在，则从sys.modules中移除
+                sys.modules.pop(module_name, None)
+
+        # 清除已导入的模块，避免影响其他测试
+        if 'msmodelslim.app.naive_quantization.naive_entrance' in sys.modules:
+            del sys.modules['msmodelslim.app.naive_quantization.naive_entrance']
 
     @patch('msmodelslim.app.naive_quantization.naive_entrance.get_valid_read_path')
     @patch('msmodelslim.app.naive_quantization.naive_entrance.NaiveQuantization')
@@ -49,7 +76,7 @@ class TestNaiveEntrance:
         mock_naive_quantization.return_value = mock_quantizer_instance
 
         # 执行测试
-        entrance = NaiveEntrance()
+        entrance = self.NaiveEntrance()
 
         # 验证结果
         # 验证 get_valid_read_path 被正确调用
@@ -105,7 +132,7 @@ class TestNaiveEntrance:
         mock_args.trust_remote_code = True
 
         # 执行测试
-        entrance = NaiveEntrance()
+        entrance = self.NaiveEntrance()
         result = entrance.run_quantization(mock_args)
 
         # 验证结果
@@ -114,7 +141,7 @@ class TestNaiveEntrance:
             model_type=mock_args.model_type,
             config_path=mock_args.config_path,
             quant_type=mock_args.quant_type,
-            device_type=mock_args.device,
+            device=mock_args.device,
             model_path=mock_args.model_path,
             save_path=mock_args.save_path,
             trust_remote_code=mock_args.trust_remote_code
@@ -163,7 +190,7 @@ class TestNaiveEntrance:
         mock_args.trust_remote_code = False
 
         # 执行测试
-        entrance = NaiveEntrance()
+        entrance = self.NaiveEntrance()
         result = entrance.run_quantization(mock_args)
 
         # 验证结果
@@ -217,7 +244,7 @@ class TestNaiveEntrance:
         mock_args.trust_remote_code = True
 
         # 执行测试并验证异常
-        entrance = NaiveEntrance()
+        entrance = self.NaiveEntrance()
         with pytest.raises(RuntimeError, match="Quantization failed"):
             entrance.run_quantization(mock_args)
 
@@ -264,7 +291,7 @@ class TestNaiveEntrance:
             }
         ]
 
-        entrance = NaiveEntrance()
+        entrance = self.NaiveEntrance()
         
         for i, test_case in enumerate(test_cases):
             # 重置 mock
@@ -288,7 +315,7 @@ class TestNaiveEntrance:
                     model_type=test_case['model_type'],
                     config_path=test_case['config_path'],
                     quant_type=test_case['quant_type'],
-                    device_type=test_case['device'],  # 注意这里是 device_type
+                    device=test_case['device'],
                     model_path=test_case['model_path'],
                     save_path=test_case['save_path'],
                     trust_remote_code=test_case['trust_remote_code']
@@ -317,7 +344,7 @@ class TestNaiveEntrance:
         mock_naive_quantization.return_value = mock_quantizer_instance
 
         # 执行测试
-        entrance = NaiveEntrance()
+        entrance = self.NaiveEntrance()
 
         # 验证路径计算过程
         # 验证 dirname 和第一次 abspath 被调用
@@ -345,18 +372,13 @@ class TestNaiveEntrance:
             mock_quantizer_instance = Mock()
             mock_naive_quantization.return_value = mock_quantizer_instance
 
-            entrance = NaiveEntrance()
+            entrance = self.NaiveEntrance()
 
             # 验证属性存在性和类型
             assert hasattr(entrance, 'config_dir')
             assert hasattr(entrance, 'naive_quantizer')
             assert isinstance(entrance.config_dir, Path)
             assert entrance.naive_quantizer == mock_quantizer_instance
-
-
-# 集成测试类
-class TestNaiveEntranceIntegration:
-    """NaiveEntrance 类的集成测试类"""
 
     @patch('msmodelslim.app.naive_quantization.naive_entrance.get_valid_read_path')
     @patch('msmodelslim.app.naive_quantization.naive_entrance.NaiveQuantization')
@@ -398,7 +420,7 @@ class TestNaiveEntranceIntegration:
         test_args = TestArgs()
 
         # 执行完整流程
-        entrance = NaiveEntrance()
+        entrance = self.NaiveEntrance()
         result = entrance.run_quantization(test_args)
 
         # 验证完整流程

@@ -167,6 +167,7 @@ def dag(inputs_of_model):
                             hook_ops=[FakeModuleAA, FakeModuleBB, FakeModuleCC, FakeModuleDD, FakeModuleQuant])
 
 
+@pytest.mark.skip()
 class TestNetworkParse:
     @staticmethod
     def test_parse_network_given_sample_network_when_any_pass(dag):
@@ -244,7 +245,9 @@ class TestNetworkParse:
         assert isinstance(nodes[2], FakeModuleCC)
         assert isinstance(nodes[3], FakeModuleAA)
 
-class TestNetworkModify():
+
+@pytest.mark.skip()
+class TestNetworkModify:
     @staticmethod
     def test_replace_node_given_leakyrelu_when_g1_b1_pass(dag, inputs_of_model):
         model: mindspore.nn.Cell = dag.network

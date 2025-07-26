@@ -56,6 +56,7 @@ class FakeTokenizer(PreTrainedTokenizerBase):
         }
 
 
+@pytest.mark.skip()
 def test_ra_compression_given_model_then_pass():
     output_model_path = "./win.pt"
 

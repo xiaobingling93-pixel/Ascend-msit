@@ -203,7 +203,7 @@ class TestFormatCompatibility(unittest.TestCase):
         # AscendV1 configuration
         self.ascend_config = AscendV1SaverConfig(
             **self.base_saver_config,
-            safetensors_name='safe.safetensors',
+            safetensors_name='safe_v1.safetensors',
             model_quant_type=QuantType.W8A8,
             group_size=128,
             use_kvcache_quant=False,
@@ -332,7 +332,7 @@ class TestFormatCompatibility(unittest.TestCase):
         """Test KV cache format differences while maintaining compatibility"""
         self.ascend_config = AscendV1SaverConfig(
             **self.base_saver_config,
-            safetensors_name='safe.safetensors',
+            safetensors_name='safe_v1.safetensors',
             model_quant_type=QuantType.KV8,
             group_size=128,
             use_kvcache_quant=True,
@@ -399,7 +399,7 @@ class TestFormatCompatibility(unittest.TestCase):
         """Test FA format differences while maintaining compatibility"""
         self.ascend_config = AscendV1SaverConfig(
             **self.base_saver_config,
-            safetensors_name='safe.safetensors',
+            safetensors_name='safe_v1.safetensors',
             model_quant_type=QuantType.FAQuant,
             group_size=128,
             use_kvcache_quant=False,
@@ -463,7 +463,7 @@ class TestFormatCompatibility(unittest.TestCase):
         """Test communication format differences while maintaining compatibility"""
         self.ascend_config = AscendV1SaverConfig(
             **self.base_saver_config,
-            safetensors_name='safe.safetensors',
+            safetensors_name='safe_v1.safetensors',
             model_quant_type=QuantType.W8A8,
             group_size=128,
             use_kvcache_quant=False,

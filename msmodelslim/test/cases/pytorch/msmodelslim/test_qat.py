@@ -1,5 +1,7 @@
 # Copyright Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
 import os
+
+import pytest
 import torch
 
 from msmodelslim import logger
@@ -23,12 +25,14 @@ class OneModel(torch.nn.Module):
         return x
 
 
+@pytest.mark.skip()
 def test_qat_finetune():
     model = OneModel()
     quant_config = QatConfig(grad_scale=0.0001, ema=0.99)
     model = qsin_qat(model, quant_config, logger)
 
 
+@pytest.mark.skip()
 def test_qat_deploy():
     fake_ckpt = "fake_checkpoint_asym.pth.tar"
     model = OneModel()

@@ -13,7 +13,6 @@ class FakeQwen25Creator:
 
     config = Qwen2_5_VLConfig.from_pretrained(os.path.join(os.path.dirname(__file__), "config.json"))
     vision_config = config.vision_config
-    text_config = config.text_config
 
     @classmethod
     def get_block(cls):
@@ -28,5 +27,5 @@ class FakeQwen25Creator:
         """
         获取一个随机的、非常小的Qwen2.5VLDecoderLayer，用于验证工具中某些流程的正确性
         """
-        layer = Qwen2_5_VLDecoderLayer(config=cls.config.text_config, layer_idx=0)
+        layer = Qwen2_5_VLDecoderLayer(config=cls.config, layer_idx=0)
         return layer
