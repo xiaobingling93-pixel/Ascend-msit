@@ -1,20 +1,23 @@
 # Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 from abc import ABC, abstractmethod
-from typing import Optional, List, Generator
+from pathlib import Path
+from typing import Generator
+
+from msmodelslim.app.base.quant_config import BaseQuantConfig
 
 
-class NaiveQuantizationInterface(ABC):
+class PracticeManagerInterface(ABC):
     @abstractmethod
-    def get_task_by_name(self, model_type, config_id: str) -> Optional[dict]:
+    def get_config_by_id(self, model_pedigree, config_id: str) -> BaseQuantConfig:
         """Get configuration by ID"""
-        pass
+        raise NotImplementedError
 
     @abstractmethod
-    def get_task_by_path(self, config_path: str) -> Optional[dict]:
+    def get_config_by_path(self, config_path: Path) -> BaseQuantConfig:
         """Get configuration by path"""
-        pass
-    
+        raise NotImplementedError
+
     @abstractmethod
-    def iter_task(self, model_type) -> Generator[dict, None, None]:
+    def iter_config(self, model_pedigree) -> Generator[BaseQuantConfig, None, None]:
         """Iterate configurations by priority"""
-        pass
+        raise NotImplementedError

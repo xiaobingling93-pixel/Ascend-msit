@@ -1,12 +1,27 @@
 # Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 import argparse
+from pathlib import Path
 
-from msmodelslim.cli.naive_quant.naive_quant import main as quant_main
-from msmodelslim.infra.practice_manager import SUPPRORTED_QUANT_TYPES
+from msmodelslim.app import QuantType, DeviceType
+from msmodelslim.cli.naive_quantization.__main__ import main as quant_main
 from msmodelslim.utils.safe_utils import cmd_bool
 
 FAQ_HOME = "gitee repo: Ascend/msit/msmodelslim, wiki"
 MIND_STUDIO_LOGO = "[Powered by MindStudio]"
+
+
+def cmd_path(cmd_arg):
+    path = Path(cmd_arg)
+    if not path.exists():
+        raise argparse.ArgumentTypeError(f"Invalid path: {path}. Path does not exist.")
+    return path
+
+
+def cmd_new_path(cmd_arg):
+    path = Path(cmd_arg)
+    if not path.parent.exists():
+        raise argparse.ArgumentTypeError(f"Invalid path: {path}. Parent path does not exist.")
+    return path
 
 
 def main():
@@ -23,19 +38,19 @@ def main():
     quant_parser = subparsers.add_parser('quant', help='Model quantization')
     quant_parser.add_argument('--model_type', required=True,
                               help="Type of model to quantize (e.g. 'Qwen2.5-7B-Instruct', 'Qwen-QwQ-32B')")
-    quant_parser.add_argument('--model_path', required=True, type=str,
+    quant_parser.add_argument('--model_path', required=True, type=cmd_path,
                               help="Path to the original model")
-    quant_parser.add_argument('--save_path', required=True, type=str,
+    quant_parser.add_argument('--save_path', required=True, type=cmd_new_path,
                               help="Path to save quantized model")
-    quant_parser.add_argument('--device', default='npu', choices=['npu', 'cpu'],
+    quant_parser.add_argument('--device', type=DeviceType, default=DeviceType.NPU, choices=DeviceType,
                               help="Target device type for quantization")
-    quant_parser.add_argument('--config_path', type=str,
+    quant_parser.add_argument('--config_path', type=cmd_path,
                               help="Explicit path to quantization config file")
-    quant_parser.add_argument('--quant_type', choices=SUPPRORTED_QUANT_TYPES,
+    quant_parser.add_argument('--quant_type', type=QuantType, choices=QuantType,
                               help="Type of quantization to apply")
     quant_parser.add_argument('--trust_remote_code', type=cmd_bool, default=False,
                               help="Trust custom code (bool type, must be True or False). "
-                              "Please ensure the security of the loaded custom code file.")
+                                   "Please ensure the security of the loaded custom code file.")
 
     args = parser.parse_args()
 

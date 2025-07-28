@@ -1,0 +1,33 @@
+# Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+from typing import Type, TypeVar, Optional
+
+model_map = {}
+
+T = TypeVar('T')
+
+
+class ModelFactory:
+    @staticmethod
+    def register(model_name: str):
+        def decorator(cls) -> Type:
+            if model_name in model_map:
+                raise ValueError(f"Model {model_name} already registered")
+            if not isinstance(cls, type):
+                raise ValueError(f"object {cls} is not a class")
+
+            model_map[model_name] = cls
+            return cls
+
+        return decorator
+
+    @staticmethod
+    def create(model_name: str, interface: Optional[Type[T]] = None) -> Type[T]:
+        if model_name not in model_map:
+            if 'default' in model_map:
+                model_name = 'default'
+            else:
+                raise ValueError(f"Model {model_name} not found")
+        cls = model_map[model_name]
+        if interface is not None and not issubclass(cls, interface):
+            raise ValueError(f"Model {model_name} not implements {interface.__name__}")
+        return cls
