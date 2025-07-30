@@ -210,9 +210,9 @@ def test_arg_parse_with_actual_parsing():
         [
             "advisor",
             "-i",
-            "test_instance",
+            f"{os.getcwd()}",
             "-s",
-            "test_config.json",
+            f"{os.getcwd()}",
             "-t",
             "ttft",
             "-m",
@@ -228,8 +228,8 @@ def test_arg_parse_with_actual_parsing():
         ]
     )
 
-    assert args.instance_path == "test_instance"
-    assert args.service_config_path == "test_config.json"
+    assert args.instance_path == f"{os.getcwd()}"
+    assert args.service_config_path == f"{os.getcwd()}"
     assert args.target == "ttft"
     assert args.target_metrics == "average"
     assert args.input_token_num == 100
@@ -248,10 +248,10 @@ def test_arg_parse_default_values():
     advisor.arg_parse(subparsers)
 
     # Test with minimal arguments (using defaults)
-    args = parser.parse_args(["advisor", "-i", "test_instance"])
+    args = parser.parse_args(["advisor", "-i", f"{os.getcwd()}", "-s", f"{os.getcwd()}"])
 
-    assert args.instance_path == "test_instance"
-    assert args.service_config_path == advisor.MINDIE_SERVICE_DEFAULT_PATH
+    assert args.instance_path == f"{os.getcwd()}"
+    assert args.service_config_path == f"{os.getcwd()}"
     assert args.target == "ttft"
     assert args.target_metrics == "average"
     assert args.input_token_num == 0
@@ -262,7 +262,7 @@ def test_arg_parse_default_values():
 
 def test_arg_parse_with_environment_variable():
     # Set environment variable
-    test_path = "/custom/mindie/path"
+    test_path = f"{os.getcwd()}"
     os.environ[advisor.MIES_INSTALL_PATH] = test_path
 
     try:
@@ -274,7 +274,7 @@ def test_arg_parse_with_environment_variable():
         advisor.arg_parse(subparsers)
 
         # Test with minimal arguments
-        args = parser.parse_args(["advisor", "-i", "test_instance"])
+        args = parser.parse_args(["advisor", "-i", f"{os.getcwd()}"])
 
         assert args.service_config_path == test_path
     finally:
@@ -284,6 +284,7 @@ def test_arg_parse_with_environment_variable():
 
 
 def test_arg_parse_target_choices():
+    os.environ[advisor.MIES_INSTALL_PATH] = f"{os.getcwd()}"
     # Create actual parser and subparsers
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command")
@@ -293,11 +294,12 @@ def test_arg_parse_target_choices():
 
     # Test all valid target choices
     for target in advisor.TARGETS_MAP.keys():
-        args = parser.parse_args(["advisor", "-i", "test_instance", "-t", target])
+        args = parser.parse_args(["advisor", "-i", f"{os.getcwd()}", "-t", target])
         assert args.target == target
 
 
 def test_arg_parse_target_metrics_choices():
+    os.environ[advisor.MIES_INSTALL_PATH] = f"{os.getcwd()}"
     # Create actual parser and subparsers
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command")
@@ -307,7 +309,7 @@ def test_arg_parse_target_metrics_choices():
 
     # Test all valid metrics choices
     for metric in advisor.PERF_METRICS:
-        args = parser.parse_args(["advisor", "-i", "test_instance", "-m", metric])
+        args = parser.parse_args(["advisor", "-i", f"{os.getcwd()}", "-m", metric])
         assert args.target_metrics == metric
 
 
