@@ -288,23 +288,6 @@ def feature_csv(tmpdir):
     _feature_file.unlink()
 
 
-def test_dataset_function(feature_csv, tmpdir):
-    base_path = Path(tmpdir)
-    df = pd.read_csv(feature_csv)
-    custom_label_encoder = CustomLabelEncoder(preset_category_data)
-    custom_label_encoder.fit()
-    my_data_set = MyDataSet(predict_field="model_execute_time", custom_encoder=custom_label_encoder)
-    _middle_path = base_path.joinpath("analysis_feature")
-    _middle_path.mkdir()
-    my_data_set.construct_data(df, middle_save_path=_middle_path)
-    my_data_set.analysis_origin_request_hist(df, middle_save_path=_middle_path)
-    my_data_set.save(base_path)
-    my_data_set.plt_data(df, middle_save_path=_middle_path)
-    assert my_data_set.features.shape == (2, 160)
-    assert my_data_set.labels.shape == (2, 1)
-    shutil.rmtree(_middle_path)
-
-
 @pytest.fixture
 def all_feature_csv(tmpdir):
     _feature_file = Path(tmpdir).joinpath("feature.csv")

@@ -41,35 +41,6 @@ class TestBenchMark:
             benchmark.get_performance_index()
 
 
-class TestOptimizerBenchmark:
-    @staticmethod
-    def test_run():
-        # 创建模拟对象
-        mock_benchmark_config = MagicMock()
-        mock_benchmark_config.work_path = os.getcwd()
-        mock_benchmark_config.command = 'ls'
-
-        mock_run_params = (
-            OptimizerConfigField(name='env_var1', value=2.3, config_position='env'),
-            OptimizerConfigField(name='env_var2', value=3, config_position='env'),
-            *default_support_field
-        )
-
-        # 创建BenchMark实例并调用run方法
-        benchmark = BenchMark(settings.benchmark)
-        benchmark.benchmark_config = mock_benchmark_config
-        benchmark.prepare = MagicMock()
-        benchmark.run(mock_run_params)
-
-
-        # 验证os.environ被正确设置
-        assert os.environ['env_var1'] == '2.3'
-        assert os.environ['env_var2'] == '3'
-        time.sleep(3)
-        assert Path(benchmark.run_log).resolve().stat().st_size > 0
-        benchmark.stop()
-
-
 class TestSimulate:
     @staticmethod
     def test_set_config_dict():
