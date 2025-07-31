@@ -131,10 +131,17 @@ def test_get_valid_write_path_given_valid_when_any_then_pass():
     # WARNING: root:... exists. The original file will be overwritten.
 
 
-def test_get_valid_write_path_given_invalid_when_any_then_value_error():
+def test_get_valid_write_path_when_directory_not_exists():
     with pytest.raises(ValueError):
         # ValueError: The file writen directory ... doesn't exist.
         security.get_valid_write_path('not_exists/README.md', extensions='.md')
+
+
+@pytest.mark.skipif(
+    os.geteuid() == 0,  # 直接判断：如果是 root 用户（UID=0）
+    reason="root 用户跳过此用例"
+)
+def test_get_valid_write_path_when_no_write_permission():
     with pytest.raises(ValueError):
         # ValueError: Current user doesn't have writen permission to the file writen directory ....
         security.get_valid_write_path(USER_NOT_PERMITTED_WRITE_FILE)

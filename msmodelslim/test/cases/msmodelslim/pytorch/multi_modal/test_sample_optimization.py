@@ -10,6 +10,8 @@ import torch
 import torch.nn as nn
 from dataclasses import dataclass
 import types
+import pytest
+import importlib
 from unittest.mock import patch, Mock
 
 from ascend_utils.common.security import get_write_directory
@@ -207,11 +209,29 @@ class DummyArgs:
     device: str = "cuda:0" if torch.cuda.is_available() else "cpu"
 
 
+# 辅助函数：检查torch_npu是否可导入
+def is_torch_npu_available():
+    try:
+        importlib.import_module('torch_npu')
+        return True  # 导入成功，返回True
+    except ImportError:
+        return False  # 导入失败，返回False
+
+
 class TestSampleOptimization(unittest.TestCase):
     """Test class for sample optimization pipeline."""
 
     @classmethod
     def setUpClass(cls):
+        # 1. 尝试导入真实的torch_npu
+        cls.mock_used_torch_npu = False  # 标记是否使用了mock
+        try:
+            import torch_npu
+            # 导入成功：使用真实模块，无需mock
+        except ImportError:
+            # 导入失败：使用mock
+            cls.mock_used_torch_npu = True
+
         # 保存原始模块引用，用于后续恢复
         cls.original_modules = {}
         # 定义需要模拟的模块
@@ -220,6 +240,16 @@ class TestSampleOptimization(unittest.TestCase):
             'opensora.sample': Mock(),
             'opensora.sample.pipeline_opensora_sp': Mock(),
         }
+        if cls.mock_used_torch_npu:
+            # 为'torch_npu'配置__spec__和方法返回值
+            torch_npu_spec = types.ModuleType(name='torch_npu')
+            cls.mock_modules.update({
+                'torch_npu': Mock(
+                    __spec__=torch_npu_spec,  # 直接在Mock参数中设置__spec__
+                    npu_init=Mock(return_value=True),  # 模拟方法调用返回True
+                    __version__='2.1.0'  # 模拟属性
+                )
+            })
 
         # 应用所有模拟并保存原始模块
         for module_name, mock_module in cls.mock_modules.items():
@@ -451,6 +481,10 @@ class TestSampleOptimization(unittest.TestCase):
             if "WORLD_SIZE" in os.environ:
                 del os.environ["WORLD_SIZE"]
 
+    @pytest.mark.skipif(
+        not is_torch_npu_available(),  # 条件：如果torch_npu不可用则跳过
+        reason="torch_npu 导入失败，跳过此用例"
+    )
     @patch('msmodelslim.pytorch.multi_modal.sampling_optimization.adaptor.AYSOptimizer')
     def test_search_method(self, mock_optimizer):
         """Test that the search method returns the expected schedule."""
