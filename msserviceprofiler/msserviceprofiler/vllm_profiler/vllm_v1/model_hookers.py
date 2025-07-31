@@ -20,10 +20,7 @@ from ..module_hook import vllm_hook
 # 线程安全的全局状态
 class HookState:
     def __init__(self):
-        self.preprocess_profiler = None
         self.forward_profiler = None
-        self.postprocess_profiler = None
-        self.postprocess_profiler = None
         self.execute_model_first_run = True
         self.begin_forward_first_run = True
         self.request_id_to_prompt_token_len = {}
@@ -41,13 +38,7 @@ def _get_state() -> HookState:
     return _thread_local.hook_state
 
 
-@vllm_hook(hook_points=("vllm.v1.executor.abstract", "Executor.execute_model"), min_version="0.9.1")
-def execute_model(original_func, this, scheduler_output, *args, **kwargs):
-    """处理执行模型钩子"""
-    state = _get_state()
-    for scheduled_new_req in scheduler_output.scheduled_new_reqs:
-        state.request_id_to_prompt_token_len[scheduled_new_req.req_id] = len(scheduled_new_req.prompt_token_ids)
-
+def _extract_request_id_from_scheduler_output(scheduler_output, state):
     request_id_list, request_id_with_iter_list = [], []
     for request_id, num_scheduled_token in scheduler_output.num_scheduled_tokens.items():
         request_id_list.append({"rid": request_id})
@@ -58,6 +49,45 @@ def execute_model(original_func, this, scheduler_output, *args, **kwargs):
         if request_id in scheduler_output.finished_req_ids:
             state.request_id_to_prompt_token_len.pop(request_id, None)
             state.request_id_to_iter_size.pop(request_id, None)
+    return request_id_list,request_id_with_iter_list
+
+
+
+@vllm_hook(hook_points=("vllm_ascend.worker.model_runner_v1", "NPUModelRunner._update_states"), min_version="0.9.1")
+def update_states(original_func, this, scheduler_output, *args, **kwargs):
+    """处理执行模型钩子"""
+    state = _get_state()
+    request_id_list, request_id_with_iter_list = _extract_request_id_from_scheduler_output(scheduler_output, state)
+    prof = Profiler(Level.INFO).domain("ModelExecute").res(request_id_with_iter_list)
+    prof.span_start("processRequestState")
+    original_func(this, scheduler_output, *args, **kwargs)
+    prof.span_end()
+
+
+@vllm_hook(hook_points=("vllm.vllm.model_executor.layers.logits_processpr", "LogitsProcessor.forward"), min_version="0.9.1")
+def compute_logits(original_func, this, *args, **kwargs):
+    """处理执行模型钩子"""
+    prof = Profiler(Level.INFO).domain("ModelExecute").span_start("computing_logits")
+    original_func(this, *args, **kwargs)
+    prof.span_end()
+
+
+@vllm_hook(hook_points=("vllm.vllm.v1.sampler", "Sampler.forward"), min_version="0.9.1")
+def sampler_forward(original_func, this, *args, **kwargs):
+    """处理执行模型钩子"""
+    prof = Profiler(Level.INFO).domain("ModelExecute").span_start("sampling")
+    original_func(this, *args, **kwargs)
+    prof.span_end()
+
+
+@vllm_hook(hook_points=("vllm.v1.executor.abstract", "Executor.execute_model"), min_version="0.9.1")
+def execute_model(original_func, this, scheduler_output, *args, **kwargs):
+    """处理执行模型钩子"""
+    state = _get_state()
+    for scheduled_new_req in scheduler_output.scheduled_new_reqs:
+        state.request_id_to_prompt_token_len[scheduled_new_req.req_id] = len(scheduled_new_req.prompt_token_ids)
+
+    request_id_list, request_id_with_iter_list = _extract_request_id_from_scheduler_output(scheduler_output, state)
 
     is_prefill = False
     for scheduled_req in scheduler_output.scheduled_cached_reqs + scheduler_output.scheduled_new_reqs:
@@ -73,15 +103,10 @@ def execute_model(original_func, this, scheduler_output, *args, **kwargs):
         prof.span_start("modelExec")
         prof.attr("batch_size", scheduler_output.total_num_scheduled_tokens)
 
-        state.preprocess_profiler = Profiler(Level.INFO).domain("ModelExecute").res(request_id_list)
-        state.preprocess_profiler.span_start("preprocess")
         state.forward_profiler = Profiler(Level.INFO).domain("ModelExecute").res(request_id_list)
-        state.postprocess_profiler = Profiler(Level.INFO).domain("ModelExecute").res(request_id_list)
 
     ret = original_func(this, scheduler_output, *args, **kwargs)
     if request_id_list:
-        state.postprocess_profiler.span_end()
-        state.postprocess_profiler = None
         prof.span_end()
     return ret
 
@@ -91,9 +116,6 @@ def execute_model(original_func, this, scheduler_output, *args, **kwargs):
 def set_forward_context(original_func, *args, **kwargs):
     """前向上下文钩子"""
     state = _get_state()
-    if state.preprocess_profiler is not None:
-        state.preprocess_profiler.span_end()
-        state.preprocess_profiler = None
     if state.forward_profiler is not None:
         state.forward_profiler.span_start("forward")
 
@@ -102,5 +124,3 @@ def set_forward_context(original_func, *args, **kwargs):
     if state.forward_profiler is not None:
         state.forward_profiler.span_end()
         state.forward_profiler = None
-    if state.postprocess_profiler is not None:
-        state.postprocess_profiler.span_start("postprocess")
