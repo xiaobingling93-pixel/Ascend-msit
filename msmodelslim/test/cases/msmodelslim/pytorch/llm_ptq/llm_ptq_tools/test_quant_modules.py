@@ -8,6 +8,7 @@ import torch
 from enum import Enum
 from transformers import PretrainedConfig
 import torch.nn as nn
+import numpy as np
 
 from msmodelslim import logger
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.quant_config import QuantConfig
@@ -535,8 +536,8 @@ class TestLinearQuantizer:
     def test_forward_should_return_expected_result(self):
         # 普通的w8a16场景的LinearQuantizer.forward测试
         cfg = QuantConfig(w_bit=8, a_bit=16).weight_quant()
-        linear = torch.nn.Linear(in_features=4, out_features=4, bias=False, dtype=torch.float32)
-        in_param_weight = torch.tensor([[1.0, 1.0, 1.0, 1.0]])
+        linear = torch.nn.Linear(in_features=4, out_features=2, bias=False, dtype=torch.float32)
+        in_param_weight = torch.tensor([[1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0]])
         in_param_input = torch.tensor([[1.0, 1.0, 1.0, 1.0]])
 
         linear.weight.data = in_param_weight
@@ -545,14 +546,14 @@ class TestLinearQuantizer:
 
         result = linear_quantizer(in_param_input)
 
-        expected_result = torch.tensor([[4.]])
+        expected_result = torch.tensor([[4., 4.]])
         assert torch.equal(result, expected_result)
 
     def test_forward_with_int_infer_should_return_expected_result(self):
         # 普通的w8a8场景的LinearQuantizer.forward的int_infer测试
         cfg = QuantConfig(w_bit=8, a_bit=8).weight_quant()
-        linear = torch.nn.Linear(in_features=4, out_features=1, bias=False, dtype=torch.float32)
-        in_param_weight = torch.tensor([[1.0, 1.0, 1.0, 1.0]])
+        linear = torch.nn.Linear(in_features=4, out_features=2, bias=False, dtype=torch.float32)
+        in_param_weight = torch.tensor([[1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0]])
         in_param_input = torch.tensor([[1.0, 1.0, 1.0, 1.0],
                                        [1.0, 1.0, 1.0, 1.0]])
 
@@ -568,17 +569,17 @@ class TestLinearQuantizer:
         linear_quantizer.quant_weight.enable_int_infer()
         result = linear_quantizer(in_param_input)
 
-        expected_result = torch.tensor([[4.], [4.]])
+        expected_result = torch.tensor([[4., 4.], [4., 4.]])
         assert torch.equal(result, expected_result)
 
     def test_forward_with_int_infer_and_int_bias_should_return_expected_result(self):
         # 普通的w8a8场景的带int bias的LinearQuantizer.forward的int_infer测试
         cfg = QuantConfig(w_bit=8, a_bit=8).weight_quant()
-        linear = torch.nn.Linear(in_features=4, out_features=1, bias=True, dtype=torch.float32)
-        in_param_weight = torch.tensor([[1.0, 1.0, 1.0, 1.0]])
+        linear = torch.nn.Linear(in_features=4, out_features=2, bias=True, dtype=torch.float32)
+        in_param_weight = torch.tensor([[1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0]])
         in_param_input = torch.tensor([[1.0, 1.0, 1.0, 1.0],
                                        [1.0, 1.0, 1.0, 1.0]])
-        in_param_bias = torch.tensor([[1.]])
+        in_param_bias = torch.tensor([[1., 1.]])
 
         linear.weight.data = in_param_weight
         linear.bias.data = in_param_bias
@@ -594,7 +595,7 @@ class TestLinearQuantizer:
         linear_quantizer.quant_weight.int_bias = True
         result = linear_quantizer(in_param_input)
 
-        expected_result = torch.tensor([[5.], [5.]])
+        expected_result = torch.tensor([[5., 5.], [5., 5.]])
         assert torch.equal(result, expected_result)
 
     def test_int_bias_with_bias(self):
@@ -828,6 +829,8 @@ class TestFAQuantizer:
         assert self.fa_quantizer.processed_types == expected_values
 
     def test_fa_quantizer_forward_with_calib(self):
+        # 设置前置条件
+        self.fa_quantizer.processed_types = {"q", "k", "v"}
         # 测试启用校准时的前向传播
         self.fa_quantizer.enable_calibration()
         assert self.fa_quantizer.is_calib is True
@@ -858,6 +861,8 @@ class TestFAQuantizer:
         assert self.fa_quantizer.v_observer._max_values is not None
 
     def test_fa_quantizer_forward_with_quant(self):
+        # 设置前置条件
+        self.fa_quantizer.processed_types = {"q", "k", "v"}
         # 测试启用量化后的前向传播
         self.fa_quantizer.enable_calibration()
         
@@ -898,6 +903,8 @@ class TestFAQuantizer:
         assert len(scales) == 3 and len(offsets) == 3
 
     def test_fa_quantizer_int_infer(self):
+        # 设置前置条件
+        self.fa_quantizer.processed_types = {"q", "k", "v"}
         # 测试整数推理模式,校准设置
         self.fa_quantizer.enable_calibration()
         for observer in [self.fa_quantizer.q_observer, \

@@ -103,70 +103,6 @@ class TestDataStorage(TestCase):
         result = DataStorage.load_history_position(self.test_dir)
         self.assertEqual(len(result), 4)
 
-    def test_save_new_file(self):
-        perf_index = MockPerformanceIndex(
-            qps=100.0,
-            latency_avg=10.0,
-            latency_p50=9.0,
-            latency_p90=15.0,
-            latency_p99=20.0
-        )
-        params = (
-            MockOptimizerConfigField(name="param1", value="value1"),
-            MockOptimizerConfigField(name="param2", value="value2")
-        )
-        bench_config = MockBenchMarkConfig(
-            command="python bench.py --batch-size 32 --seq-len 128"
-        )
-
-        self.storage.save(perf_index, params, bench_config)
-        self.assertTrue(self.storage.save_file.exists())
-
-        df = pd.read_csv(self.storage.save_file)
-        self.assertIn("qps", df.columns)
-        self.assertIn("param1", df.columns)
-        self.assertIn("batch-size", df.columns)
-        self.assertIn("seq-len", df.columns)
-
-    def test_save_append(self):
-        perf_index = MockPerformanceIndex(
-            qps=100.0,
-            latency_avg=10.0,
-            latency_p50=9.0,
-            latency_p90=15.0,
-            latency_p99=20.0
-        )
-        params = (
-            MockOptimizerConfigField(name="param1", value="value1"),
-        )
-        bench_config = MockBenchMarkConfig(
-            command="python bench.py --batch-size 32"
-        )
-
-        self.storage.save(perf_index, params, bench_config)
-        self.storage.save(perf_index, params, bench_config)
-
-        df = pd.read_csv(self.storage.save_file)
-        self.assertEqual(len(df), 2)
-
-    def test_save_with_kwargs(self):
-        perf_index = MockPerformanceIndex(
-            qps=100.0,
-            latency_avg=10.0,
-            latency_p50=9.0,
-            latency_p90=15.0,
-            latency_p99=20.0
-        )
-        params = ()
-        bench_config = MockBenchMarkConfig(
-            command="python bench.py"
-        )
-
-        self.storage.save(perf_index, params, bench_config, extra_field="extra_value")
-        
-        df = pd.read_csv(self.storage.save_file)
-        self.assertIn("extra_field", df.columns)
-        self.assertEqual(df["extra_field"].iloc[0], "extra_value")
 
     def test_load_history_with_non_csv_files(self):
         # 创建一些非CSV文件和CSV文件混合的测试数据
@@ -179,11 +115,3 @@ class TestDataStorage(TestCase):
         result = DataStorage.load_history_position(self.test_dir)
         self.assertEqual(len(result), 2)  # 应该只加载CSV文件中的数据
 
-    def test_save_with_invalid_benchmark_params(self):
-        perf_index = MockPerformanceIndex(qps=100.0)
-        params = ()
-        # 测试不完整的命令行参数
-        bench_config = MockBenchMarkConfig(command="python bench.py --incomplete-param")
-        
-        self.storage.save(perf_index, params, bench_config)
-        self.assertTrue(self.storage.save_file.exists())

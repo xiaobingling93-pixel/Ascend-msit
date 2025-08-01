@@ -37,7 +37,7 @@ msit_sub_task_entry_points = [
 
 setup(
     name='msit-convert',
-    version='8.0.0',
+    version='8.1.0',
     description='model convert tool',
     url=config.get('URL', 'msit_url'),
     packages=find_packages(),

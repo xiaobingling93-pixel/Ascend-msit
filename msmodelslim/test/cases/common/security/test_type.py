@@ -136,4 +136,4 @@ def test_check_dict_character_given_invalid_when_any_then_error():
         security.check_dict_character({'aa': {'bb': '/asfd\\'}}, param_name="test")
     with pytest.raises(ValueError):
         # ValueError: test contains invalid characters.
-        security.check_dict_character({'aa': {'bb': ['vv', '*']}}, param_name="test")
+        security.check_dict_character({'aa': {'bb': ['vv', '$']}}, param_name="test")

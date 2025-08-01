@@ -1,6 +1,7 @@
 # Copyright Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 
 import os
+import sys
 import unittest
 import shutil
 import tempfile
@@ -9,11 +10,12 @@ import torch
 import torch.nn as nn
 from dataclasses import dataclass
 import types
-from unittest.mock import patch
+import pytest
+import importlib
+from unittest.mock import patch, Mock
 
 from ascend_utils.common.security import get_write_directory
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.timestep.manager import TimestepManager
-from msmodelslim.pytorch.multi_modal.sampling_optimization import ReStepSearchConfig, ReStepAdaptor
 
 # Configure logging
 logging.basicConfig(
@@ -207,11 +209,61 @@ class DummyArgs:
     device: str = "cuda:0" if torch.cuda.is_available() else "cpu"
 
 
+# 辅助函数：检查torch_npu是否可导入
+def is_torch_npu_available():
+    try:
+        importlib.import_module('torch_npu')
+        return True  # 导入成功，返回True
+    except ImportError:
+        return False  # 导入失败，返回False
+
+
 class TestSampleOptimization(unittest.TestCase):
     """Test class for sample optimization pipeline."""
 
     @classmethod
     def setUpClass(cls):
+        # 1. 尝试导入真实的torch_npu
+        cls.mock_used_torch_npu = False  # 标记是否使用了mock
+        try:
+            import torch_npu
+            # 导入成功：使用真实模块，无需mock
+        except ImportError:
+            # 导入失败：使用mock
+            cls.mock_used_torch_npu = True
+
+        # 保存原始模块引用，用于后续恢复
+        cls.original_modules = {}
+        # 定义需要模拟的模块
+        cls.mock_modules = {
+            'opensora': Mock(),
+            'opensora.sample': Mock(),
+            'opensora.sample.pipeline_opensora_sp': Mock(),
+        }
+        if cls.mock_used_torch_npu:
+            # 为'torch_npu'配置__spec__和方法返回值
+            torch_npu_spec = types.ModuleType(name='torch_npu')
+            cls.mock_modules.update({
+                'torch_npu': Mock(
+                    __spec__=torch_npu_spec,  # 直接在Mock参数中设置__spec__
+                    npu_init=Mock(return_value=True),  # 模拟方法调用返回True
+                    __version__='2.1.0'  # 模拟属性
+                )
+            })
+
+        # 应用所有模拟并保存原始模块
+        for module_name, mock_module in cls.mock_modules.items():
+            cls.original_modules[module_name] = sys.modules.get(module_name)
+            sys.modules[module_name] = mock_module
+
+        # 重置所有mock
+        for mock_module in cls.mock_modules.values():
+            mock_module.reset_mock()
+
+        from msmodelslim.pytorch.multi_modal.sampling_optimization import ReStepSearchConfig, ReStepAdaptor
+        cls.ReStepSearchConfig = ReStepSearchConfig
+        cls.ReStepAdaptor = ReStepAdaptor
+
         """Set up test environment once before all tests."""
         cls.device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
@@ -248,6 +300,14 @@ class TestSampleOptimization(unittest.TestCase):
 
         # Reset timestep manager
         TimestepManager._timestep_var.set(None)
+
+        # 恢复原始模块，避免影响其他测试
+        for module_name, original_module in cls.original_modules.items():
+            if original_module is not None:
+                sys.modules[module_name] = original_module
+            else:
+                # 如果原始模块不存在，则从sys.modules中移除
+                del sys.modules[module_name]
 
     def setUp(self):
         """Set up test environment before each test."""
@@ -341,7 +401,7 @@ class TestSampleOptimization(unittest.TestCase):
     def test_restep_adaptor_initialization(self):
         """Test that the ReStepAdaptor can be properly initialized."""
         # Create a configuration
-        config = ReStepSearchConfig(
+        config = self.ReStepSearchConfig(
             videos_path=self.videos_path,
             save_dir=self.save_dir,
             neighbour_type=self.test_config["neighbour_type"],
@@ -355,7 +415,7 @@ class TestSampleOptimization(unittest.TestCase):
 
         try:
             # Initialize the adaptor
-            adaptor = ReStepAdaptor(self.pipeline, config)
+            adaptor = self.ReStepAdaptor(self.pipeline, config)
 
             # Override video paths for testing
             adaptor.videos_paths = [os.path.join(self.videos_path, f"dummy_video_{i}.mp4") for i in range(5)]
@@ -375,7 +435,7 @@ class TestSampleOptimization(unittest.TestCase):
     def test_restep_adaptor_search(self):
         """Test that the ReStepAdaptor search method returns expected results."""
         # Create a configuration
-        config = ReStepSearchConfig(
+        config = self.ReStepSearchConfig(
             videos_path=self.videos_path,
             save_dir=self.save_dir,
             neighbour_type=self.test_config["neighbour_type"],
@@ -389,7 +449,7 @@ class TestSampleOptimization(unittest.TestCase):
 
         try:
             # Initialize the adaptor
-            adaptor = ReStepAdaptor(self.pipeline, config)
+            adaptor = self.ReStepAdaptor(self.pipeline, config)
 
             # Override video paths for testing
             adaptor.videos_paths = [os.path.join(self.videos_path, f"dummy_video_{i}.mp4") for i in range(5)]
@@ -421,6 +481,10 @@ class TestSampleOptimization(unittest.TestCase):
             if "WORLD_SIZE" in os.environ:
                 del os.environ["WORLD_SIZE"]
 
+    @pytest.mark.skipif(
+        not is_torch_npu_available(),  # 条件：如果torch_npu不可用则跳过
+        reason="torch_npu 导入失败，跳过此用例"
+    )
     @patch('msmodelslim.pytorch.multi_modal.sampling_optimization.adaptor.AYSOptimizer')
     def test_search_method(self, mock_optimizer):
         """Test that the search method returns the expected schedule."""
@@ -430,7 +494,7 @@ class TestSampleOptimization(unittest.TestCase):
         mock_optimizer_instance.optimize.return_value = expected_schedule
 
         # Create a configuration for testing
-        config = ReStepSearchConfig(
+        config = self.ReStepSearchConfig(
             videos_path=self.videos_path,
             save_dir=self.save_dir,
             neighbour_type="uniform",
@@ -450,7 +514,7 @@ class TestSampleOptimization(unittest.TestCase):
             )
 
             # Override video paths for testing
-            adaptor = ReStepAdaptor(pipeline, config)
+            adaptor = self.ReStepAdaptor(pipeline, config)
             adaptor.videos_paths = [os.path.join(self.videos_path, f"dummy_video_{i}.mp4") for i in range(5)]
 
             # Mock the dump_json method to avoid file I/O
@@ -486,7 +550,7 @@ class TestSampleOptimization(unittest.TestCase):
                                     mock_torch_seed, mock_torch_cuda_seed, mock_torch_cuda_seed_all):
         """Test that seed_everything sets all random seeds correctly."""
         # Create a configuration for testing
-        config = ReStepSearchConfig(
+        config = self.ReStepSearchConfig(
             videos_path=self.videos_path,
             save_dir=self.save_dir,
         )
@@ -498,7 +562,7 @@ class TestSampleOptimization(unittest.TestCase):
         try:
             # Create the pipeline and adaptor
             pipeline = DummyPipeline(device=self.device)
-            adaptor = ReStepAdaptor(pipeline, config)
+            adaptor = self.ReStepAdaptor(pipeline, config)
 
             # Override video paths for testing
             adaptor.videos_paths = [os.path.join(self.videos_path, f"dummy_video_{i}.mp4") for i in range(5)]

@@ -64,6 +64,7 @@ def ms_ori_weight_path():
 
 
 class TestPruneModelWeight(object):
+    @pytest.mark.filterwarnings("ignore:TypedStorage is deprecated:UserWarning")
     def test_prune_model_weight_given_valid_when_pytorch_then_pass(self, torch_ori_weight_path, torch_pruned_model,
                                                                    prune_config):
         prune_model_weight(torch_pruned_model, prune_config, torch_ori_weight_path)

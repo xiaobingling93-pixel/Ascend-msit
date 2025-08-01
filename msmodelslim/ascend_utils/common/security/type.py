@@ -7,7 +7,7 @@ from typing import Mapping
 from msmodelslim import OLD_PACKAGE_NAME, NEW_PACKAGE_NAME
 
 
-STR_WHITE_LIST_REGEX = re.compile(r"[^_A-Za-z0-9\"'><=\[\])(,}{: /.~-]")
+STR_WHITE_LIST_REGEX = re.compile(r"[^_A-Za-z0-9\"'><=\[\])(,}{: /.*~-]")
 
 
 def type_to_str(value_type):

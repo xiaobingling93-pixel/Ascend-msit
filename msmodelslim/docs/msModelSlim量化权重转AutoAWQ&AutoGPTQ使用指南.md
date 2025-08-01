@@ -96,12 +96,11 @@ from transformers import AutoTokenizer
 from datasets import load_dataset
 import torch
 
-
-model_path = 'qwen2_7b_instruct'            # 浮点模型权重路径
-quant_path = 'quant_qwen2_7b_awq_4_g128'    # 浮点模型经过量化后的保存路径
+model_path = 'qwen2_7b_instruct'  # 浮点模型权重路径
+quant_path = 'quant_qwen2_7b_awq_4_g128'  # 浮点模型经过量化后的保存路径
 
 # q_group_size和 msModelSlim量化的group_size对应，保持一致
-quant_config = { "zero_point": True, "q_group_size": 128, "w_bit": 4, "version": "GEMM" }    
+quant_config = {"zero_point": True, "q_group_size": 128, "w_bit": 4, "version": "GEMM"}
 
 # Load model
 model = AutoAWQForCausalLM.from_pretrained(
@@ -115,9 +114,8 @@ data = load_dataset("json", data_files='./val.jsonl')['train']
 
 calib_data = [text for text in data["text"] if text.strip() != '' and len(text.split(' ')) > 20]
 
-
 # Quantize
-model.quantize(tokenizer, quant_config=quant_config, calib_data=calib_data)
+model.quantize(tokenizer, )
 
 # Save quantized model
 model.save_quantized(quant_path)

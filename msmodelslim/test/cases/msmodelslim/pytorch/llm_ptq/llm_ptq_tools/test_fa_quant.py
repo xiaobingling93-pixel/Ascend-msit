@@ -9,10 +9,13 @@ from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.fa_quant import (
     TensorType,
     FAQuantizer,
     is_attn_module_and_then_check_quantizer,
-    ForwardFactory,
     install_fa_quantizer,
+)
+from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.fa_quant_adapter import (
+    ForwardFactory,
     AttentionType
 )
+
 from msmodelslim import logger
 
 # Fixtures for common test objects
@@ -118,7 +121,7 @@ def test_install_fa_quantizer_given_model_when_called_then_installs_quantizers(m
             return "original_result"
     
     # 准备测试数据
-    model = MagicMock()
+    model = MagicMock(spec=nn.Module)
     attn_module = TestAttention()
     model.named_modules.return_value = [("attn", attn_module)]
     mock_config.model_type = "test_model"
@@ -133,7 +136,7 @@ def test_install_fa_quantizer_given_model_when_called_then_installs_quantizers(m
         return wrapped
     
     # 使用真实FAQuantizer类进行测试
-    with patch.dict('msmodelslim.pytorch.llm_ptq.llm_ptq_tools.fa_quant.ForwardFactory._forward_adapters',
+    with patch.dict('msmodelslim.pytorch.llm_ptq.llm_ptq_tools.fa_quant_adapter.ForwardFactory._forward_adapters',
                   {('test_model', 'mha'): real_adapter}), \
          patch('msmodelslim.pytorch.llm_ptq.llm_ptq_tools.fa_quant.FAQuantizer') as mock_quantizer_class:
         
@@ -145,7 +148,7 @@ def test_install_fa_quantizer_given_model_when_called_then_installs_quantizers(m
         install_fa_quantizer(model, mock_config, mock_logger)
         
         # 验证点1: 检查是否调用了FAQuantizer构造函数
-        mock_quantizer_class.assert_called_once_with(mock_config, mock_logger)
+        mock_quantizer_class.assert_called_once_with(mock_config, logger=mock_logger)
         
         # 验证点2: 检查quantizer实例是否被正确附加
         assert hasattr(attn_module, 'fa_quantizer')
@@ -156,12 +159,12 @@ def test_install_fa_quantizer_given_model_when_called_then_installs_quantizers(m
         assert attn_module.forward() == "adapted_original_result"
         
         # 修正的验证点4: 检查正确的日志记录
-        expected_log = "Successfully installed FAQuantizer for module attn with attention type mha"
+        expected_log = "Successfully installed FAQuantizer for module attn"
         mock_logger.info.assert_called_once_with(expected_log)
         mock_logger.warning.assert_not_called()  # 确保没有警告日志
 
 def test_install_fa_quantizer_should_warn_when_already_installed(mock_config, mock_logger):
-    model = MagicMock()
+    model = MagicMock(spec=nn.Module)
     attn_module = MagicMock()
     attn_module.fa_quantizer = MagicMock()
     attn_module.__class__.__name__ = "Attention"
@@ -205,10 +208,10 @@ def _test_install_fa_quantizer_for_class(class_name, mock_config, mock_logger):
     else:
         attn_module = module_classes[class_name]()
     
-    model = MagicMock()
+    model = MagicMock(spec=nn.Module)
     model.named_modules.return_value = [("attn", attn_module)]
     
-    with patch('msmodelslim.pytorch.llm_ptq.llm_ptq_tools.fa_quant.ForwardFactory.get_forward_adapter') as mock_adapter:
+    with patch('msmodelslim.pytorch.llm_ptq.llm_ptq_tools.fa_quant_adapter.ForwardFactory.get_forward_adapter') as mock_adapter:
         mock_adapter.return_value = lambda x: x
         install_fa_quantizer(model, mock_config, mock_logger)
         

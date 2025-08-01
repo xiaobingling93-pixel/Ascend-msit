@@ -20,8 +20,6 @@ from unittest.mock import patch, MagicMock
 
 import torch
 
-sys.modules['msmodelslim.pytorch.llm_ptq.anti_outlier.anti_utils'] = MagicMock()
-
 from msmodelslim.pytorch.llm_ptq.anti_outlier.anti_block import (
     QuantQwen2VLVisionBlock,
     QuantQwen2VLDecoderLayer,
@@ -51,7 +49,7 @@ def mock_migration(*args, **kwargs):
 class TestAntiBlock(unittest.TestCase):
 
     def setUp(self):
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cpu")
         self.batch_size = 2
         self.seq_length = 10
 
