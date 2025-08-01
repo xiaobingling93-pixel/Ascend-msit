@@ -180,10 +180,8 @@ def refresh_dependent_args(new_args):
                 new_args.collection_interval = config["collection_Interval"]
             if "num_of_selected_expert" in config:
                 new_args.n_selected_expert = config["num_of_selected_expert"][0]
-            if "num_dangling_shared_experts" in config and config["enable_dangling_shared_expert"]:
-                    new_args.n_share_expert_devices_files = config["num_dangling_shared_experts"]
-            else:
-                new_args.n_share_expert_devices_files = 0
+            if "num_dangling_shared_experts" in config:
+                new_args.n_share_expert_devices_files = max(config["num_dangling_shared_experts"], 0)
             new_args.num_stages = 8
             if new_args.algorithm == ALGORITHM_SPECULATIVE_MOE_LEVEL_2 and \
                 new_args.device_type == A2:
