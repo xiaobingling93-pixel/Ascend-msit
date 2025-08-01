@@ -281,10 +281,10 @@ class TestParseEpFile:
         
         # 模拟文件打开和读取
         with patch("components.expert_load_balancing.elb.preprocessing.ms_open", mock_open(read_data=file_content)) as mock_open_func:
-            result = parse_ep_file("path/to/ep.json", max_size=JSON_FILE_MAX_SIZE)
+            result = parse_ep_file("path/to/ep.json")
             
             # 验证文件打开
-            mock_open_func.assert_called_once_with("path/to/ep.json")
+            mock_open_func.assert_called_once_with("path/to/ep.json", max_size=JSON_FILE_MAX_SIZE)
             
             # 验证解析结果
             assert result == {
