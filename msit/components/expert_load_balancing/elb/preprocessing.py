@@ -25,6 +25,7 @@ from tqdm import tqdm
 
 from speculative_moe import ExpSolver, ExpILPSolver, second_optim, all_to_all_algorithm_multi_process
 from components.utils.file_open_check import ms_open
+from components.utils.constants import JSON_FILE_MAX_SIZE
 from components.utils.security_check import ms_makedirs
 from components.utils.log import logger
 from components.expert_load_balancing.elb.constant import A2, A3, SUPPORTED_COMBINATIONS, \
@@ -91,7 +92,7 @@ def numerical_sort_key(filename):
 def parse_ep_file(ep_file_path, ep_file=None, n_share_expert_devices=0):
     experts_table = {}
     if ep_file is None:
-        with ms_open(ep_file_path) as handle:
+        with ms_open(ep_file_path, max_size=JSON_FILE_MAX_SIZE) as handle:
             ep_file = json.load(handle)
 
     layer_count = ep_file["moe_layer_count"]
@@ -180,11 +181,8 @@ def refresh_dependent_args(new_args):
                 new_args.collection_interval = config["collection_Interval"]
             if "num_of_selected_expert" in config:
                 new_args.n_selected_expert = config["num_of_selected_expert"][0]
-            if "enable_dangling_shared_expert" in config and "num_dangling_shared_experts" in config:
-                if config["enable_dangling_shared_expert"]:
-                    new_args.n_share_expert_devices_files = config["num_dangling_shared_experts"]
-                else:
-                    new_args.n_share_expert_devices_files = 0
+            if "num_dangling_shared_experts" in config:
+                new_args.n_share_expert_devices_files = max(config["num_dangling_shared_experts"], 0)
             new_args.num_stages = 8
             if new_args.algorithm == ALGORITHM_SPECULATIVE_MOE_LEVEL_2 and \
                 new_args.device_type == A2:
