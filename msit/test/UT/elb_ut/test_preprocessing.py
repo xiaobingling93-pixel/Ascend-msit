@@ -38,6 +38,7 @@ with patch.dict("sys.modules", {
             process_prefill_or_decode, get_dynamic_expert_hot_from_csv, validate_args
     
 from components.expert_load_balancing.elb.constant import SUPPORTED_COMBINATIONS
+from components.utils.constants import JSON_FILE_MAX_SIZE
 
 class TestGetCSVDimensions(unittest.TestCase):
     def setUp(self):
@@ -280,7 +281,7 @@ class TestParseEpFile:
         
         # 模拟文件打开和读取
         with patch("components.expert_load_balancing.elb.preprocessing.ms_open", mock_open(read_data=file_content)) as mock_open_func:
-            result = parse_ep_file("path/to/ep.json")
+            result = parse_ep_file("path/to/ep.json", max_size=JSON_FILE_MAX_SIZE)
             
             # 验证文件打开
             mock_open_func.assert_called_once_with("path/to/ep.json")
