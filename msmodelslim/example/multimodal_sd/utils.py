@@ -3,14 +3,14 @@
 import functools
 import inspect
 import fnmatch
-from typing import List, Dict, Any, Optional, Union, Callable, Tuple
+from typing import List, Dict, Any, Union, Callable, Tuple
 import contextvars
 
 import torch
 import torch.nn as nn
 
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.timestep.manager import TimestepManager
-from msmodelslim.tools.logger import logger
+from msmodelslim.utils.logger import logger
 
 MAX_RECURSION_DEPTH = 20
 

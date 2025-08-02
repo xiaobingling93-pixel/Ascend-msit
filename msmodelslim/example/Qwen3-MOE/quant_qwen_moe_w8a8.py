@@ -4,11 +4,9 @@ import sys
 import argparse
 import functools
 import json
-from unittest.mock import patch
 
 import torch
 import torch_npu
-from torch_npu.contrib import transfer_to_npu
 
 current_directory = os.path.dirname(os.path.abspath(__file__))
 parent_directory = os.path.abspath(os.path.join(current_directory, '..', ".."))
@@ -20,7 +18,7 @@ from example.common.utils import SafeGenerator, cmd_bool
 from msmodelslim.tools.copy_config_files import copy_config_files, modify_config_json
 from msmodelslim.pytorch.llm_ptq.anti_outlier import AntiOutlierConfig, AntiOutlier
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
-from msmodelslim.tools.logger import set_logger_level
+from msmodelslim.utils.logger import set_logger_level
 
 
 def parse_args():

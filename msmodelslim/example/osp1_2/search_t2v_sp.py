@@ -2,7 +2,6 @@
 # Note: This file is copied and modified from Open-Sora-Plan repo v1.2: opensora.sample.sample_t2v_sp
 
 import os
-import logging
 import gc
 from typing import List
 
@@ -14,7 +13,7 @@ from opensora.npu_config import npu_config
 from example.common.security.path import json_safe_dump, get_write_directory, safe_delete_path_if_exists
 from example.osp1_2.model.scheduler import EulerAncestralDiscreteSchedulerExample
 from example.osp1_2.build_pipeline import get_args, build_pipeline
-from msmodelslim.tools.logger import logger
+from msmodelslim.utils.logger import logger
 
 
 def search_restep(pipeline, args):

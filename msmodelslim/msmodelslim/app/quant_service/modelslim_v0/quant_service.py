@@ -9,8 +9,8 @@ import torch.nn.functional as F
 from ascend_utils.common.security import safe_copy_file
 from msmodelslim.pytorch.llm_ptq.anti_outlier import AntiOutlier, AntiOutlierConfig
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
-from msmodelslim.tools import logger as msmodelslim_logger
-from msmodelslim.tools.logger import set_logger_level
+from msmodelslim.utils import logger as msmodelslim_logger
+from msmodelslim.utils.logger import set_logger_level
 from .quant_config import ModelslimV0QuantConfig
 from ..base import BaseQuantService
 from ..dataset_interface import DatasetLoaderInterface

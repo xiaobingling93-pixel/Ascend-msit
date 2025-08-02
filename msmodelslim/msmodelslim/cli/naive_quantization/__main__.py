@@ -14,16 +14,16 @@ from msmodelslim.infra.practice_manager import PracticeManager
 
 def get_practice_dir():
     cur_dir = os.path.dirname(os.path.abspath(__file__))
-    practice_lab_dir = os.path.abspath(os.path.join(cur_dir, '../../practice_lab'))
-    practice_lab_dir = get_valid_read_path(practice_lab_dir, is_dir=True)
-    return Path(practice_lab_dir)
+    lab_practice_dir = os.path.abspath(os.path.join(cur_dir, '../../lab_practice'))
+    lab_practice_dir = get_valid_read_path(lab_practice_dir, is_dir=True)
+    return Path(lab_practice_dir)
 
 
 def get_dataset_dir():
     cur_dir = os.path.dirname(os.path.abspath(__file__))
-    calib_lab_dir = os.path.abspath(os.path.join(cur_dir, '../../calib_lab'))
-    calib_lab_dir = get_valid_read_path(calib_lab_dir, is_dir=True)
-    return Path(calib_lab_dir)
+    lab_calib_dir = os.path.abspath(os.path.join(cur_dir, '../../lab_calib'))
+    lab_calib_dir = get_valid_read_path(lab_calib_dir, is_dir=True)
+    return Path(lab_calib_dir)
 
 
 def main(args):

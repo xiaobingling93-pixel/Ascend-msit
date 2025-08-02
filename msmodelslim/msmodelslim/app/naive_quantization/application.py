@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Callable, Optional, Type
 
 from msmodelslim.app.base import QuantType
-from msmodelslim.tools import logger as msmodelslim_logger
+from ...utils import logger as msmodelslim_logger
 from .practice_interface import PracticeManagerInterface
 from ..base import BaseQuantConfig, BaseModel, DeviceType
 from ..quant_service import BaseQuantService

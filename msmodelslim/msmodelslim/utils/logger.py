@@ -1,7 +1,12 @@
 # -*- coding: utf-8 -*-
 # Copyright Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
-from functools import wraps
 import logging
+from functools import wraps
+from logging import Logger
+
+from typing_extensions import Union
+
+from msmodelslim.utils.exception import SchemaValidateError
 
 
 class MsgConst:
@@ -9,27 +14,6 @@ class MsgConst:
     Class for log messages const
     """
     SPECIAL_CHAR = ["\n", "\r", "\u007F", "\b", "\f", "\t", "\u000B", "%08", "%0a", "%0b", "%0c", "%0d", "%7f"]
-
-
-def get_logger():
-    amc_logger = logging.getLogger("msmodelslim-logger")
-    amc_logger.propagate = False
-    amc_logger.setLevel(logging.INFO)
-    if not amc_logger.handlers:
-        stream_handler = logging.StreamHandler()
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        stream_handler.setFormatter(formatter)
-        amc_logger.addHandler(stream_handler)
-    return amc_logger
-
-logger = get_logger()
-
-
-logger_critical = logger.critical
-logger_debug = logger.debug
-logger_error = logger.error
-logger_info = logger.info
-logger_warning = logger.warning
 
 
 def filter_special_chars(func):
@@ -43,37 +27,36 @@ def filter_special_chars(func):
     return func_level
 
 
-@filter_special_chars
-def critical_filter(msg, *args):
-    logger_critical(msg, *args)
+def filter_logger(l: Logger):
+    setattr(l, 'critical', filter_special_chars(l.critical))
+    setattr(l, 'debug', filter_special_chars(l.debug))
+    setattr(l, 'error', filter_special_chars(l.error))
+    setattr(l, 'info', filter_special_chars(l.info))
+    setattr(l, 'warning', filter_special_chars(l.warning))
 
 
-@filter_special_chars
-def debug_filter(msg, *args):
-    logger_debug(msg, *args)
+def get_logger(name: str = ''):
+    if not name:
+        return get_root_logger()
+    l = logging.getLogger(name)
+    filter_logger(l)
+    return l
 
 
-@filter_special_chars
-def error_filter(msg, *args):
-    logger_error(msg, *args)
+def get_root_logger():
+    root_logger = logging.getLogger(__name__.split('.')[0])
+    root_logger.propagate = False
+    root_logger.setLevel(logging.INFO)
+    filter_logger(root_logger)
+    if not root_logger.handlers:
+        stream_handler = logging.StreamHandler()
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        stream_handler.setFormatter(formatter)
+        root_logger.addHandler(stream_handler)
+    return root_logger
 
 
-@filter_special_chars
-def info_filter(msg, *args):
-    logger_info(msg, *args)
-
-
-@filter_special_chars
-def warning_filter(msg, *args):
-    logger_warning(msg, *args)
-
-
-setattr(logger, 'critical', critical_filter)
-setattr(logger, 'debug', debug_filter)
-setattr(logger, 'error', error_filter)
-setattr(logger, 'info', info_filter)
-setattr(logger, 'warning', warning_filter)
-
+logger = get_root_logger()
 
 LOG_LEVEL = {
     "notset": logging.NOTSET,
@@ -95,10 +78,24 @@ LOGGER_FUNC = {
     "critical": lambda msg: logger.critical(msg),
 }
 
+LOGGER_LEVEL_FUNC_MAP = {
+    "debug": 'debug',
+    "info": 'info',
+    "warn": 'warning',
+    "warning": 'warning',
+    "error": 'error',
+    "critical": 'critical',
+}
+
+
+def get_logger_func(level: str, cur_logger: Logger = logger):
+    return getattr(cur_logger, LOGGER_LEVEL_FUNC_MAP.get(level.lower()))
+
 
 def set_logger_level(level="info"):
     if not isinstance(level, str):
-        raise TypeError("level must be str.")
+        raise SchemaValidateError(f"level must be str, not {type(level)}",
+                                  action='Please make sure log level is a string')
     if level.lower() in LOG_LEVEL:
         logger.setLevel(LOG_LEVEL.get(level.lower()))
     else:
@@ -127,3 +124,13 @@ def progress_bar(iterable, desc: str = None, total: int = -1, interval: int = 1)
     logging.StreamHandler.terminator = prev_terminator
     logger.info("")
 
+
+def logger_setter(l: Union[str, Logger] = logger):
+    if isinstance(l, str):
+        l = get_logger(l)
+
+    def decorator(cls):
+        cls.logger = l
+        return cls
+
+    return decorator

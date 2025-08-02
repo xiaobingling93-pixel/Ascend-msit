@@ -5,7 +5,6 @@ import os
 import math
 import argparse
 import gc
-import json
 
 import torch
 import torch.distributed as dist
@@ -19,7 +18,7 @@ from diffusers.schedulers import (DDIMScheduler, DDPMScheduler, PNDMScheduler,
                                   DEISMultistepScheduler, KDPM2AncestralDiscreteScheduler)
 from diffusers.schedulers.scheduling_dpmsolver_singlestep import DPMSolverSinglestepScheduler
 
-from transformers import T5EncoderModel, T5Tokenizer, AutoTokenizer, MT5EncoderModel
+from transformers import T5Tokenizer, MT5EncoderModel
 
 from opensora.acceleration.parallel_states import initialize_sequence_parallel_state, hccl_info
 from opensora.models.causalvideovae import ae_stride_config, CausalVAEModelWrapper
@@ -30,7 +29,7 @@ from opensora.npu_config import npu_config
 
 from example.common.security.path import get_write_directory, get_valid_write_path, get_valid_read_path, json_safe_load
 from example.osp1_2.model.model_open_sora_plan1_2_sp import OpenSoraPipelineV1x2
-from msmodelslim.tools.logger import logger
+from msmodelslim.utils.logger import logger
 
 
 def load_t2v_checkpoint(model_path):
@@ -303,7 +302,7 @@ if __name__ == "__main__":
     torch.npu.empty_cache()
 
     if cache_config is not None:
-        from msmodelslim.pytorch.multi_modal.dit_cache import DitCacheAdaptor, DitCacheSearchConfig
+        from msmodelslim.pytorch.multi_modal.dit_cache import DitCacheAdaptor
 
         # add adaptor to add cache func to the dit blocks
         adaptor = DitCacheAdaptor(pipeline)
