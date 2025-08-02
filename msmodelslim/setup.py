@@ -63,6 +63,9 @@ setup(
     entry_points={
         'console_scripts': [
             'msmodelslim=msmodelslim.cli.__main__:main'
+        ],
+        "msmodelslim.quant_service.plugins": [
+            "modelslim_v0=msmodelslim.app.quant_service.modelslim_v0:ModelslimV0QuantService",
         ]
     },
 )

@@ -4,9 +4,9 @@ import os
 from pathlib import Path
 
 from msmodelslim import set_logger_level
-from msmodelslim.app.base import BaseModel
+from msmodelslim.app.base import BaseModelAdapter
 from msmodelslim.app.naive_quantization import NaiveQuantizationApplication
-from msmodelslim.app.quant_service import ModelslimV0QuantService
+from msmodelslim.app.quant_service.proxy import QuantServiceProxy
 from msmodelslim.infra.dataset_loader import FileDatasetLoader
 from msmodelslim.infra.practice_manager import PracticeManager
 from msmodelslim.model import ModelFactory
@@ -35,12 +35,20 @@ def main(args):
     practice_manager = PracticeManager(official_config_dir=config_dir)
     dataset_dir = get_dataset_dir()
     dataset_loader = FileDatasetLoader(dataset_dir)
-    quant_service = ModelslimV0QuantService(dataset_loader)
-    model_factory = functools.partial(ModelFactory.create, interface=BaseModel)
+    quant_service = QuantServiceProxy(dataset_loader)
+    model_factory = functools.partial(ModelFactory.create, interface=BaseModelAdapter)
 
     app = NaiveQuantizationApplication(
         practice_manager=practice_manager,
         quant_service=quant_service,
-        model_factory=model_factory)
-    app.quant(model_type=args.model_type, model_path=args.model_path, save_path=args.save_path, device=args.device,
-              quant_type=args.quant_type)
+        model_factory=model_factory
+    )
+
+    app.quant(
+        model_type=args.model_type,
+        model_path=args.model_path,
+        save_path=args.save_path,
+        device=args.device,
+        quant_type=args.quant_type,
+        config_path=args.config_path,
+    )

@@ -1,6 +1,6 @@
 # Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
-__all__ = ['DeviceType', 'QuantType', 'BaseModel', 'Metadata', 'BaseQuantConfig']
+__all__ = ['DeviceType', 'QuantType', 'BaseModelAdapter', 'Metadata', 'BaseQuantConfig']
 
 from .const import DeviceType, QuantType
-from .model import BaseModel
+from .model import BaseModelAdapter
 from .quant_config import BaseQuantConfig, Metadata

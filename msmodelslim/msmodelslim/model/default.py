@@ -6,7 +6,7 @@ import torch
 from transformers import PreTrainedTokenizerBase, PreTrainedModel, PretrainedConfig
 
 from msmodelslim.app.base.const import DeviceType
-from msmodelslim.app.base.model import BaseModel
+from msmodelslim.app.base.model import BaseModelAdapter
 from msmodelslim.utils.exception import InvalidModelError, SchemaValidateError
 from msmodelslim.utils.exception_decorator import exception_handler
 from msmodelslim.utils.logging import logger_setter
@@ -16,7 +16,7 @@ from .factory import ModelFactory
 
 @ModelFactory.register("default")
 @logger_setter()
-class DefaultModel(BaseModel):
+class DefaultModelAdapter(BaseModelAdapter):
     @exception_handler('Using default model',
                        err_cls=Exception,
                        ms_err_cls=InvalidModelError,
