@@ -13,10 +13,10 @@
 # limitations under the License.
 import os
 import argparse
-from pathlib import Path
 import re
 
-from msserviceprofiler.msguard import validate_args, Rule, mkdir_s
+from msserviceprofiler.msguard import validate_args, Rule
+from msserviceprofiler.msguard.security.io import mkdir_s
 
 
 def add_exporters(args):

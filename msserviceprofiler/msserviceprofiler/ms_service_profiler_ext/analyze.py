@@ -14,9 +14,9 @@
 
 import os
 import argparse
-from pathlib import Path
 
 from msserviceprofiler.msguard import validate_args, Rule
+from msserviceprofiler.msguard.security.io import mkdir_s
 
 
 def add_summary_exporter(func):
@@ -74,7 +74,9 @@ def main(args):
     exporters = wrapped_create_exporters(args)
 
     # 创建output目录
-    Path(args.output_path).mkdir(parents=True, exist_ok=True)
+    mkdir_s(args.output_path)
+    if not Rule.output_dir._is_satisfied_by(args.output_path):
+        raise argparse.ArgumentTypeError(f"Output path is not valid: {args.output_path!r}")
     create_sqlite_db(args.output_path)
 
     # 解析数据并导出

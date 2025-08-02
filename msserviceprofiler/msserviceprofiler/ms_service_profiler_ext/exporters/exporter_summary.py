@@ -21,6 +21,8 @@ from ms_service_profiler.exporters.base import ExporterBase
 from ms_service_profiler.utils.log import logger
 
 from ..common.csv_fields import RequestCSVFields, BatchCSVFields, ServiceCSVFields
+from ..common.constants import US_PER_MS
+from msserviceprofiler.msguard.security.io import mkdir_s, open_s
 
 
 def is_contained_valid_iter_info(rid_list, token_id_list):
@@ -47,12 +49,14 @@ def process_batch_record(batch_map, record):
     batch_type = record.get('batch_type')
     rid_tuple = str(record.get('rid_list'))
     batch_size = 0
-    during_time = 0.0
-    try:
-        batch_size = int(record.get('batch_size', 0))
-        during_time = float(record.get('during_time', 0)) / 1000
-    except Exception as e:
-        logger.warning(f"Invaid record data: {e}")
+    during_time = 0
+
+    raw_batch_size = record.get('batch_size')
+    if raw_batch_size and str(raw_batch_size).isdigit():
+        batch_size = int(raw_batch_size)
+    raw_during_time = record.get('during_time')
+    if raw_during_time and str(raw_during_time).isdigit():
+        during_time = float(raw_during_time) / US_PER_MS
 
     # 构建batch_map
     if batch_type == 'Prefill':
@@ -281,7 +285,7 @@ def get_non_first_token_latency(req_data):
     for i in range(1, len(sorted_tokens)):
         current_token_time = sorted_tokens[i][1]
         previous_token_time = sorted_tokens[i - 1][1]
-        latency = round((current_token_time - previous_token_time) / 1000, 4)
+        latency = round((current_token_time - previous_token_time) / US_PER_MS, 4)
         subsequent_token_latency.append(latency)
     return subsequent_token_latency
 
@@ -293,15 +297,15 @@ def gen_result_record(req_id, req_data):
     # 从字典中取出数据
     record = {
         "req_id": req_id,
-        "first_token_latency": round(req_data["first_token_latency"] / 1000, 4),
-        "exec_time": round(req_data["exec_time"] / 1000, 4),
+        "first_token_latency": round(req_data["first_token_latency"] / US_PER_MS, 4),
+        "exec_time": round(req_data["exec_time"] / US_PER_MS, 4),
         "input_token_num": input_token_num,
         "generated_token_num": generated_token_num
     }
 
     # 检查 httpReq_start 和 httpRes_end 的有效性
     if req_data["httpReq_start"] is not None and req_data["httpRes_end"] is not None:
-        total_time = (req_data["httpRes_end"] - req_data["httpReq_start"]) / 1000
+        total_time = (req_data["httpRes_end"] - req_data["httpReq_start"]) / US_PER_MS
         record["total_time"] = round(total_time, 4)
     else:
         record["total_time"] = 0.0  # 无效数据
@@ -372,19 +376,21 @@ def save_dataframe_to_csv(map_data, output, file_name, include_stats=1):
         return
 
     output_path = Path(output)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
+    mkdir_s(output)
     file_path = output_path / file_name
 
     # 将map_data转换为DataFrame
     df = convert_map_to_dataframe(map_data, include_stats)
 
     # 保存到csv
-    df.to_csv(file_path, index=False)
-
-    os.chmod(file_path, 0o640)
+    with open_s(file_path, "w") as f:
+        df.to_csv(f, index=False)
+        logger.info(f"Write to {file_name} success.")
 
 
 def convert_map_to_dataframe(map_data, include_stats):
+    if isinstance(map_data, pd.DataFrame):
+        return map_data
     data = []
     for metric, values in map_data.items():
         if include_stats == 1:
@@ -402,6 +408,65 @@ def convert_map_to_dataframe(map_data, include_stats):
             row = {ServiceCSVFields.METRIC: metric, ServiceCSVFields.VALUE: value}
         data.append(row)
     return pd.DataFrame(data)
+
+
+def drop_all_zero_rows(status, include_stats=1):
+    status = convert_map_to_dataframe(status, include_stats)
+    status = status.loc[status.drop(columns='Metric').any(axis=1)]
+    return status
+
+
+def get_new_ttft_wait_time(data):
+    ttft_df = data.get('req_ttft_df', pd.DataFrame())
+    que_wait_df = data.get('req_que_wait_df', pd.DataFrame())
+    if ttft_df.empty or que_wait_df.empty:
+        return {}
+    ttft_df.loc[:, 'ttft'] = ttft_df['ttft'].div(US_PER_MS)
+    que_wait_df.loc[:, 'que_wait_time'] = que_wait_df['que_wait_time'].div(US_PER_MS)
+    ttdf_list = ttft_df['ttft'].to_list() 
+    que_wait_list = que_wait_df['que_wait_time'].to_list()
+    return {
+        RequestCSVFields.FIRST_TOKEN_LATENCY: calculate_statistics(ttdf_list),
+        RequestCSVFields.WAITING_TIME: calculate_statistics(que_wait_list)
+    }
+
+
+def is_invaild_rid(rid):
+    return ',' in rid or '{' in rid or ':' in rid
+
+
+def get_new_total_time(all_data_df):
+    req_group_df = all_data_df.groupby('rid')
+    total_times = []
+    for rid, pre_req_data in req_group_df:
+        rid = str(rid)
+        if rid == '' or is_invaild_rid(rid):
+            continue
+        start_time = -1
+        end_time = -1
+
+        # 获取httpReq
+        http_req_df = pre_req_data[pre_req_data['name'] == 'httpReq']
+        if not http_req_df.empty:
+            first_row = http_req_df.iloc[0]
+            start_time = first_row.get('start_time', 0)
+
+        # 获取 httpRes
+        # 由于存在httpRes提前被调用，导致请求结束时间过早的情况，所以当前取httpRes和DecodeEnd中最晚一个点作为请求结束时间
+        # mindIE重构后，取最后一个sendResponse的结束时间
+        http_res_df = pre_req_data[pre_req_data['name'].isin(['httpRes', 'DecodeEnd', 'sendResponse'])]
+        if not http_res_df.empty:
+            last_row = http_res_df.iloc[-1]
+            end_time = last_row.get("end_time", 0)
+
+        # 计算 execution_time
+        if start_time != -1 and end_time != -1:
+            total_time = (end_time - start_time) / US_PER_MS
+            total_times.append(total_time)
+    
+    if not total_times:
+        return {}
+    return {RequestCSVFields.TOTAL_TIME: calculate_statistics(total_times)}
 
 
 class ExporterSummary(ExporterBase):
@@ -424,17 +489,28 @@ class ExporterSummary(ExporterBase):
     @classmethod
     def export(cls, data) -> None:
         all_data_df = data.get('tx_data_df')
+        output = cls.args.output_path
 
         if all_data_df is None:
             logger.warning("The data is empty, please check")
             return
 
+        all_data_df = all_data_df[all_data_df['domain'] != 'KVCache']
+
         # 调用计算首Token时延的函数
         req_status, batch_status, total_map = gen_exporter_results(all_data_df)
-        output = cls.args.output_path
+        
+        total_time_dict = get_new_total_time(all_data_df)
+        if total_time_dict:
+            req_status.update(total_time_dict)
+        ttft_wait_time = get_new_ttft_wait_time(data)
+        if ttft_wait_time:
+            req_status.update(ttft_wait_time)
+
+        batch_status = drop_all_zero_rows(batch_status)
+        req_status = drop_all_zero_rows(req_status)
 
         # 格式化存入csv
         save_dataframe_to_csv(req_status, output, RequestCSVFields.PATH_NAME)
         save_dataframe_to_csv(batch_status, output, BatchCSVFields.PATH_NAME)
         save_dataframe_to_csv(total_map, output, ServiceCSVFields.PATH_NAME, include_stats=0)
-

@@ -22,8 +22,6 @@ from ..common.utils import logger
 from ..common.split_utils import CSV_COLUMNS, RENAMED_COLUMNS, get_statistics_data
 
 
-
-
 class BaseFrameworkProcessor:
     batch_start_name = "batch_start"
     batch_end_name = "batch_end"

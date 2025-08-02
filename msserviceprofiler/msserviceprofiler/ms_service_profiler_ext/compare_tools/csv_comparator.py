@@ -53,8 +53,7 @@ class CSVComparator(BaseComparator):
 
                 # 计算百分比相对差值（避免除以零错误）
                 rel_diff = abs_diff / df_merged[f'{col}_a'].replace(0, pd.NA) * 100
-                with pd.option_context('future.no_silent_downcasting', True):
-                    rel_diff = rel_diff.fillna(0)  # 将 NaN 替换为 0
+                rel_diff = rel_diff.fillna(0)  # 将 NaN 替换为 0
 
                 # 合并为字符串格式
                 df_merged[f'{col}_diff'] = abs_diff.round(2).astype(str) + '|' + rel_diff.round(2).astype(str) + '%'
