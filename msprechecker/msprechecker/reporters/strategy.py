@@ -46,17 +46,17 @@ class ErrorDisplayStrategy(ABC):
             stream_handler.setFormatter(formatter)
             local_logger.addHandler(stream_handler)
         return local_logger
-    
+
+    @abstractmethod
+    def display(self, error_handler: ErrorHandler):
+        pass
+
     def _print_title(self, title: str, fillchar="="):
         cols, _ = shutil.get_terminal_size()
         self.logger.info(f" {title} ".center(cols, fillchar))
 
     def _print_success(self):
         self.logger.error('\033[92mAll checks passed\033[0m')
-
-    @abstractmethod
-    def display(self, error_handler: ErrorHandler):
-        pass
 
 
 class CollectErrorDisplay(ErrorDisplayStrategy):
@@ -128,20 +128,29 @@ class ConfigErrorDisplay(ErrorDisplayStrategy):
             if isinstance(lineno, float):
                 lineno = "?"
 
-            line = " " * start_col + f'{self.COLOR_RESET}"{path}": {value.actual}{self.COLOR_RESET}'
-            self.logger.error(f"{self.COLOR_RED}{lineno:>{max_lineno}}:{self.COLOR_RESET} {line} {severity}")
-            indent = max_lineno + 2 + start_col + 1
-            width = len(path)
-            self.logger.error(f"{' ' * indent}{self.COLOR_RED}{'^' * width}{self.COLOR_RESET}")
-            guess = ' ' * (max_lineno + 2 + start_col) + f'{self.COLOR_MAGENTA}"{path}": {expected}{self.COLOR_RESET} <--- {reason}'
-            self.logger.error("%s", guess)
+            line_prefix = " " * start_col
+            actual_line = f'{self.COLOR_RESET}"{path}": {value.actual}{self.COLOR_RESET}'
+            self.logger.error(
+                f"{self.COLOR_RED}{lineno:>{max_lineno}}:{self.COLOR_RESET} {line_prefix}{actual_line} {severity}"
+            )
+
+            caret_indent = max_lineno + 2 + start_col + 1
+            caret_line = " " * caret_indent + f"{self.COLOR_RED}{'^' * len(path)}{self.COLOR_RESET}"
+            self.logger.error(caret_line)
+
+            suggestion_indent = max_lineno + 2 + start_col
+            suggestion_line = (
+                " " * suggestion_indent +
+                f'{self.COLOR_MAGENTA}"{path}": {expected}{self.COLOR_RESET} <--- {reason}'
+            )
+            self.logger.error("%s", suggestion_line)
 
 
 class EnvCheckErrorDisplayDecorator(ErrorDisplayStrategy):
     """Decorator for special handling of env errors."""
     def __init__(self, decorated_strategy: ErrorDisplayStrategy):
+        super().__init__()
         self.decorated = decorated_strategy
-        self.logger = self.decorated.logger
 
     @staticmethod
     def _generate_env_script(error_handler):

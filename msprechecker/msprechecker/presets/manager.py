@@ -47,11 +47,11 @@ class RuleManager:
         self._arch = platform.machine().lower()
 
     @staticmethod
-    def create_rule(type, value, reason="", severity=ErrorSeverity.ERR_HIGH):
+    def create_rule(type_, value, reason="", severity=ErrorSeverity.ERR_HIGH):
         return {
             "expected":
                 {
-                    "type": type,
+                    "type": type_,
                     "value": value
                 },
             "reason": reason,
@@ -90,12 +90,21 @@ class RuleManager:
             if self._npu_type == NpuType.TP_A2:
                 arch_dir = self.ARCH_MAPPING.get(self._arch)
                 if not arch_dir:
-                    global_logger.warning("Unsupported architecture: %s. Using '%s' as a fall back", self._arch, NpuType.TP_A2.display)
+                    global_logger.warning(
+                        "Unsupported architecture: %s. Using '%s' as a fall back",
+                        self._arch,
+                        NpuType.TP_A2.display
+                    )
                     arch_dir = "arm"   
                 rule_path = os.path.join(cur_dir, "A2", arch_dir, rule_file)
 
                 if self._arch == "x86_64" and self._npu_count != 16:
-                    global_logger.warning("Unsupported type: %s x86_64 but %s chips (expected 16 chips). Use '%s' as a fall back", NpuType.TP_A2.display, self._npu_count, NpuType.TP_A3)
+                    global_logger.warning(
+                        "Unsupported type: %s x86_64 but %s chips (expected 16 chips). Use '%s' as a fall back",
+                        NpuType.TP_A2.display,
+                        self._npu_count,
+                        NpuType.TP_A3
+                    )
                     rule_path = os.path.join(cur_dir, "A3", rule_file)
             else:  # A3 or default to A3
                 rule_path = os.path.join(cur_dir, "A3", rule_file)
