@@ -61,7 +61,8 @@ class WeightCollector(BaseCollector):
 
     def _get_tensor_files(self, tensor_suffix):
         tensor_files = [
-            path for path in walk_s(self.weight_dir)
+            path 
+            for path in walk_s(self.weight_dir)
             if os.path.isfile(path) and path.endswith(tensor_suffix)
         ]
         if not tensor_files:
@@ -82,7 +83,12 @@ class WeightCollector(BaseCollector):
             try:
                 result = future.result()
             except Exception as e:
-                self.error_handler.add_error(__file__, '_process_futures', 82, f"计算文件 sha256 哈希失败: {tensor_file}", reason=str(e))
+                self.error_handler.add_error(
+                    __file__,
+                    '_process_futures', 82,
+                    f"计算文件 sha256 哈希失败: {tensor_file}",
+                    reason=str(e)
+                )
                 result = "Unknown"
             results[tensor_id] = result
         return results

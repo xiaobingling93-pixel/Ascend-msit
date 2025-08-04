@@ -36,7 +36,7 @@ class HCCLCollector(BaseCollector):
         "tls": re.compile(r"tls switch\[(\d)\]", re.IGNORECASE)
     }
 
-    def __init__(self, error_handler = None):
+    def __init__(self, error_handler=None):
         super().__init__(error_handler)
         self.error_handler.type = "hccl"
 

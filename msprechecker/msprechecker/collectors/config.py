@@ -151,18 +151,18 @@ class ConfigCollector(BaseCollector):
 
 
 class UserConfigCollector(ConfigCollector):
-    def __init__(self, error_handler=None, *, config_path = None):
+    def __init__(self, error_handler=None, *, config_path=None):
         super().__init__(error_handler, config_path=config_path)
         self.error_handler.type = "user config"
 
 
 class MindIEEnvCollector(ConfigCollector):
-    def __init__(self, error_handler=None, *, config_path = None):
+    def __init__(self, error_handler=None, *, config_path=None):
         super().__init__(error_handler, config_path=config_path)
         self.error_handler.type = "mindie env"
 
 
 class ModelConfigCollector(ConfigCollector):
-    def __init__(self, error_handler=None, *, config_path = None):
+    def __init__(self, error_handler=None, *, config_path=None):
         super().__init__(error_handler, config_path=config_path)
         self.error_handler.type = "model config"
