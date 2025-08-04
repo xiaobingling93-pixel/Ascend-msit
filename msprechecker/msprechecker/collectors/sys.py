@@ -58,7 +58,7 @@ class LscpuCollector(BaseCollector):
                 
                 # 如果是主键或者对应字段还未设置
                 if (key in self.PRIMARY_KEYS or 
-                    not found_primary_info[target_field]):
+                    not found_primary_info.get(target_field, False)):
                     info[target_field] = value
                     
                     # 标记主键是否已找到
@@ -70,7 +70,7 @@ class LscpuCollector(BaseCollector):
     def _collect_data(self):
         try:
             output = subprocess.check_output(
-                ['lscpu'], 
+                ['/usr/bin/lscpu'], 
                 stderr=subprocess.DEVNULL, 
                 text=True
             )
@@ -311,7 +311,7 @@ class SysCollector(BaseCollector):
         MemoryInfoCollector()
     ]
 
-    def __init__(self, error_handler = None):
+    def __init__(self, error_handler=None):
         super().__init__(error_handler)
         self.error_handler.type = "system"
 

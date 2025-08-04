@@ -23,7 +23,10 @@ __all__ = [
     'is_in_container', 'singleton',
     'global_logger',
     'Traverser',
-    'get_handler', 'ErrorSeverity', 'ErrorType', 'CollectError', 'BaseError', 'CheckError', 'ErrorHandler', 'CollectErrorHandler', 'CheckErrorHandler', 'ConfigErrorHandler', 'CompareErrorHandler'
+    'get_handler', 
+    'ErrorSeverity', 'ErrorType', 
+    'CollectError', 'BaseError', 'CheckError', 
+    'ErrorHandler', 'CollectErrorHandler', 'CheckErrorHandler', 'ConfigErrorHandler', 'CompareErrorHandler'
 ]
 
 from .version import Version, get_pkg_version
@@ -35,4 +38,9 @@ from .progress_bar import SimpleProgressBar
 from .helper import is_in_container, singleton
 from .log import global_logger
 from .traverser import Traverser
-from .errors import get_handler, ErrorSeverity, ErrorType, CollectError, BaseError, CheckError, ErrorHandler, CollectErrorHandler, CheckErrorHandler, ConfigErrorHandler, CompareErrorHandler
+from .errors import (
+    get_handler, 
+    ErrorSeverity, ErrorType, 
+    CollectError, BaseError, CheckError, 
+    ErrorHandler, CollectErrorHandler, CheckErrorHandler, ConfigErrorHandler, CompareErrorHandler
+)

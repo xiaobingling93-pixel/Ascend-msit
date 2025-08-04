@@ -55,6 +55,10 @@ class BaseStressCollector(BaseCollector):
 
         return batch_size, seq_len, hidden_size, intermediate_size
 
+    @abstractmethod
+    def _get_free_memory(self, device):
+        pass
+
     def _matmul_stress_test(self, device_type, device_id):
         check_type = f"{device_type}_check"
         device_pos = f"{device_type}:{device_id}"
@@ -94,7 +98,3 @@ class BaseStressCollector(BaseCollector):
             return False
         
         return True
-
-    @abstractmethod
-    def _get_free_memory(self, device):
-        pass

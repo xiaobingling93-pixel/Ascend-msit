@@ -31,16 +31,16 @@ class ANSIColoredFormatter(logging.Formatter):
 
 
 def get_logger():
-    global_logger = logging.getLogger("msprechecker")
-    global_logger.propagate = False
-    global_logger.setLevel(logging.DEBUG)
-    if not global_logger.handlers:
+    logger = logging.getLogger("msprechecker")
+    logger.propagate = False
+    logger.setLevel(logging.DEBUG)
+    if not logger.handlers:
         stream_handler = logging.StreamHandler()
         formatter = ANSIColoredFormatter("%(message)s")
         stream_handler.setFormatter(formatter)
-        global_logger.addHandler(stream_handler)
+        logger.addHandler(stream_handler)
 
-    return global_logger
+    return logger
 
 
 global_logger = get_logger()
