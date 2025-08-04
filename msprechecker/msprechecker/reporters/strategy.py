@@ -66,11 +66,12 @@ class CollectErrorDisplay(ErrorDisplayStrategy):
 
         if not error_handler.errors:
             self._print_success()
+            return
 
         for error in error_handler:
             self._print_title(f"{error.filename}({error.lineno}){error.function}()")
             self.logger.info(
-                f"%s {self.COLOR_YELLOW}%s. Details are below:{self.COLOR_RESET}\n%s",
+                f"%s {self.COLOR_YELLOW}%s{self.COLOR_RESET}. %s",
                 error.severity,
                 error.what,
                 error.reason
@@ -84,6 +85,7 @@ class CheckErrorDisplay(ErrorDisplayStrategy):
 
         if not error_handler.errors:
             self._print_success()
+            return
 
         for error in error_handler:
             self.logger.error(f"\033[96m-- {error.path}\033[0m {error.severity}")
@@ -102,6 +104,7 @@ class ConfigErrorDisplay(ErrorDisplayStrategy):
 
         if not error_handler.errors:
             self._print_success()
+            return
 
         lineno_mapping = dict()
         max_lineno = 0
@@ -193,6 +196,9 @@ class EnvCheckErrorDisplayDecorator(ErrorDisplayStrategy):
 
     def display(self, error_handler):
         self.decorated.display(error_handler)
+        if not error_handler.errors:
+            return
+
         script_content = self._generate_env_script(error_handler)
 
         with open('./msprechecker_env.sh', 'w') as f:
