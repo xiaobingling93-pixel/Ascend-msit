@@ -23,31 +23,50 @@ def setup_dump_parser(subparsers):
     dump_parser = subparsers.add_parser(
         "dump",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        description=dedent('''\
-            DUMP - Collect and save the current environment, system, and configuration context.
-
-            This command gathers environment variables, system information, configuration files,
-            and network topology, then saves them to a specified output file for later comparison.
-        '''),
+        description=_get_dump_description(),
         usage='msprechecker dump [EXTRA OPTIONS] [--output-path <PATH>]',
-        epilog=dedent('''\
-            Example:
-              msprechecker dump                                                                           # Default saved to current dir 'msprechecker_dumped.json'
-              msprechecker dump --output-path /output/path                                                # Save snapshots to custom path: '/output/path'
-              msprechecker dump --user-config-path user_config.json --mindie-env-path mindie_env.json     # Dump extra PD disaggregation configuration files
-        '''),
+        epilog=_get_dump_epilog(),
         help="Dump the current context for later comparison",
     )
 
     add_legacy_argument(dump_parser, True)
+    _add_dump_arguments(dump_parser)
+    _add_extra_options(dump_parser)
 
+    return dump_parser
+
+
+def _get_dump_description():
+    return dedent('''\
+        DUMP - Collect and save the current environment, system, and configuration context.
+
+        This command gathers environment variables, system information, configuration files,
+        and network topology, then saves them to a specified output file for later comparison.
+    ''')
+
+
+def _get_dump_epilog():
+    return dedent('''\
+        Example:
+          msprechecker dump                                                                           # Default saved to current dir 'msprechecker_dumped.json'
+          msprechecker dump --output-path /output/path                                                # Save snapshots to custom path: '/output/path'
+          msprechecker dump --user-config-path user_config.json --mindie-env-path mindie_env.json     # Dump extra PD disaggregation configuration files
+    ''')
+
+
+def _add_dump_arguments(dump_parser):
     dump_parser.add_argument(
         "--output-path",
         metavar="",
         default="./msprechecker_dumped.json",
-        help="Path to save the dumped context (JSON format) Default: './msprechecker_dumped.json'."
+        help=(
+            "Path to save the dumped context (JSON format). "
+            "Default: './msprechecker_dumped.json'."
+        )
     )
 
+
+def _add_extra_options(dump_parser):
     extra_group = dump_parser.add_argument_group("Extra Options")
     extra_group.add_argument(
         "--filter",
@@ -84,7 +103,9 @@ def setup_dump_parser(subparsers):
         metavar="",
         choices=[32, 64, 128, 256],
         type=int,
-        help="Specify the chunk size (in MB) for calculating sha256sum of model tensors. Only tensors will be checksummed if this option is set. Supported values: 32, 64, 128, 256."
+        help=(
+            "Specify the chunk size (in MB) for calculating sha256sum of model tensors. "
+            "Only tensors will be checksummed if this option is set. "
+            "Supported values: 32, 64, 128, 256."
+        )
     )
-
-    return dump_parser

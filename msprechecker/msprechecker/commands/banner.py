@@ -95,11 +95,12 @@ class AscendInfoSection(InfoSection):
 
 
 class BannerPresenter:
+    PYTHON_INFO_PACKAGES = ['msprechecker', 'torch', 'torch_npu', 'transformers']
+
     def __init__(self, *, sections=None):
-        PYTHON_INFO_PACKAGES = ['msprechecker', 'torch', 'torch_npu', 'transformers']
         self.sections = sections or [
             PlatformInfoSection(),
-            PythonInfoSection(PYTHON_INFO_PACKAGES),
+            PythonInfoSection(self.PYTHON_INFO_PACKAGES),
             CpuInfoSection(),
             NpuInfoSection(),
             AscendInfoSection()
@@ -109,14 +110,12 @@ class BannerPresenter:
         self.sections.append(section)
     
     def print_banner(self):
+        cols, _ = shutil.get_terminal_size()
+
         title = "MindStudio Prechecker Tool"
-        self._print_title(title)
+        global_logger.info(f" {title} ".center(cols, "="))
 
         for section in self.sections:
             global_logger.info(section.get_info())
-        
-        self._print_title('-', '-')
 
-    def _print_title(self, title: str, fillchar="="):
-        cols, _ = shutil.get_terminal_size()
-        global_logger.info(f" {title} ".center(cols, fillchar))
+        global_logger.info("-" * cols)

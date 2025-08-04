@@ -163,8 +163,11 @@ class DumpStrategy(CommandStrategy):
                 args.output_path
             )
             global_logger.info(
-                "What's Next?\n\tYou may now use 'msprechecker compare' to compare two or more dumped files for discrepancies"
+                "What's Next?\n\t"
+                "You may now use 'msprechecker compare' to compare two or more dumped files for discrepancies!"
             )
+        
+        return 0
     
     @staticmethod
     def _display_collect_warning(error_handler):
@@ -182,13 +185,13 @@ class CompareStrategy(CommandStrategy):
         if len(args.dumped_path) < 2:
             global_logger.error("You need two or more files to compare!")
             return 1
-        
+
         path_to_data = CompareStrategy._load_dumped_files(args.dumped_path)
         reporter = Reporter()
 
         comparator = Comparator()
         reporter.report(comparator.compare(path_to_data))
-
+        return 0
 
     @staticmethod
     def _load_dumped_files(file_paths):

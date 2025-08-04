@@ -13,7 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__all__ = ['setup_precheck_parser', 'setup_compare_parser', 'setup_dump_parser', 'Coordinator']
+__all__ = [
+    'setup_precheck_parser',
+    'setup_compare_parser',
+    'setup_dump_parser',
+    'Coordinator'
+]
 
 
 from .precheck import setup_precheck_parser
