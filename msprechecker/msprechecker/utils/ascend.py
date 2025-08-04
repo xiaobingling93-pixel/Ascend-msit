@@ -63,7 +63,7 @@ def get_npu_count():
 
 def get_npu_type():
     try:
-        output = subprocess.check_output(['lspci'], stderr=subprocess.DEVNULL, text=True)
+        output = subprocess.check_output(['/usr/bin/lspci'], stderr=subprocess.DEVNULL, text=True)
     except Exception:
         return None, None
 
@@ -162,7 +162,7 @@ class A3RankTableParser(RankTableParser):
 
 
 def get_rank_table_parser() -> RankTableParser:
-    NPU_TYPE_TO_RARSER = {
+    npu_type_to_parser = {
         NpuType.TP_A2: A2RankTableParser,
         NpuType.TP_A3: A3RankTableParser
     }
@@ -172,8 +172,11 @@ def get_rank_table_parser() -> RankTableParser:
         npu_type = NpuType.TP_A2
         global_logger.warning("Auto-detect npu device failed, set to '%s' as a fall back", npu_type.display)
     
-    elif npu_type not in NPU_TYPE_TO_RARSER:
+    elif npu_type not in npu_type_to_parser:
         npu_type = NpuType.TP_A2
-        global_logger.warning("No appropriate rank table parser found for current npu type (%s), using 'A2' format instead.", npu_type.display)
+        global_logger.warning(
+            "No appropriate rank table parser found for current npu type (%s), using 'A2' format instead.", 
+            npu_type.display
+        )
 
-    return NPU_TYPE_TO_RARSER[npu_type]
+    return npu_type_to_parser.get(npu_type)
