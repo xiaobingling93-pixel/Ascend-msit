@@ -17,7 +17,7 @@ from ..base import NodeChecker
 
 
 class UserConfigChecker(NodeChecker):
-    def __init__(self, *, error_handler = None, rule_manager = None):
+    def __init__(self, *, error_handler=None, rule_manager=None):
         super().__init__(error_handler=error_handler, rule_manager=rule_manager)
         self.error_handler.type = "user config"
 

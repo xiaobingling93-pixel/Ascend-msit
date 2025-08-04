@@ -18,7 +18,7 @@ from ...utils import get_pkg_version
 
 
 class ModelConfigChecker(NodeChecker):
-    def __init__(self, *, error_handler = None, rule_manager = None):
+    def __init__(self, *, error_handler=None, rule_manager=None):
         super().__init__(error_handler=error_handler, rule_manager=rule_manager)
         self.error_handler.type = "model config"
 
@@ -27,13 +27,13 @@ class ModelConfigChecker(NodeChecker):
 
         return {
             "torch_dtype": self.rule_manager.create_rule(
-                type='eq',
+                type_='eq',
                 value='float16',
                 reason='部分模型的算子可能不支持 bfloat16, 请确保当前模型算子支持 bfloat16',
                 severity='low'
             ),
             'transformers_version': self.rule_manager.create_rule(
-                type='le',
+                type_='le',
                 value=cur_transformers_version,
                 reason=f'当前机器的 "transformers" 的版本（{cur_transformers_version}）如果小于配置文件要求版本，会导致服务启动失败',
                 severity='high'
