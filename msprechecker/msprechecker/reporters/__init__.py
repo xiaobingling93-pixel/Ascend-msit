@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,10 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
+from ..utils import singleton
+from .strategy import ErrorDisplayStrategyFactory
 
-from msprechecker.core.utils.perm import FilePerm
-from msprechecker.core.utils.macro_expander import MacroExpander
-from msprechecker.core.utils.compiler import Compiler
-from msprechecker.core.utils.result import Result, ResultStatus
-from msprechecker.core.utils.file_utils import read_file_lines
+
+@singleton
+class Reporter:
+    def __init__(self):
+        self._factory = ErrorDisplayStrategyFactory()
+
+    def report(self, error_handler):
+        display_strategy = self._factory.get_strategy(error_handler)
+        display_strategy.display(error_handler)

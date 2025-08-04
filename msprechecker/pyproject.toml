@@ -4,13 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "msprechecker"
-version = "0.0.7"
+version = "0.1.0"
 description = "MindStudio Prechecker"
 readme = "README.md"
 license = {text = "Apache-2.0"}
 keywords = ["ms", "prechecker"]
 classifiers = [
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -21,14 +22,14 @@ classifiers = [
 dependencies = [
     "pyyaml",
     "psutil",
-    "msguard",
-    "importlib_metadata; python_version == '3.7'"
+    "importlib_metadata; python_version == '3.7'",
+    "msguard"
 ]
 
 requires-python = ">=3.7"
 
 [project.scripts]
-msprechecker = "msprechecker.__main__:main"
+msprechecker = "msprechecker.cli:main"
 
 [project.urls]
 source = "https://gitee.com/ascend/msit/tree/master/msprechecker"
