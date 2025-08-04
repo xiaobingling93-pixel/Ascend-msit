@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 from pathlib import Path
 
 import numpy as np
@@ -20,9 +19,9 @@ import pandas as pd
 from ms_service_profiler.exporters.base import ExporterBase
 from ms_service_profiler.utils.log import logger
 
+from msserviceprofiler.msguard.security.io import mkdir_s, open_s
 from ..common.csv_fields import RequestCSVFields, BatchCSVFields, ServiceCSVFields
 from ..common.constants import US_PER_MS
-from msserviceprofiler.msguard.security.io import mkdir_s, open_s
 
 
 def is_contained_valid_iter_info(rid_list, token_id_list):
@@ -460,7 +459,7 @@ def get_new_total_time(all_data_df):
             end_time = last_row.get("end_time", 0)
 
         # 计算 execution_time
-        if start_time != -1 and end_time != -1:
+        if start_time != -1 and end_time != -1 and end_time > start_time:
             total_time = (end_time - start_time) / US_PER_MS
             total_times.append(total_time)
     

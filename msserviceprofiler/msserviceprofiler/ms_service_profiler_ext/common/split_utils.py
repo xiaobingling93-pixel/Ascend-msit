@@ -25,6 +25,9 @@ RENAMED_COLUMNS = {
         "during_time": "during_time(ms)"
     }
 
+PREFILL_NAME = "Prefill"
+DECODE_NAME = "Decode"
+
 
 def get_statistics_data(framework_df, filter_name, name):
     if framework_df.empty:
@@ -44,7 +47,11 @@ def get_statistics_data(framework_df, filter_name, name):
         else:
             logger.warning(f"Column '{col}' not found for time conversion.")
 
-    filter_indices = framework_df[framework_df["name"] == filter_name].index
+    mask = framework_df["name"] == filter_name
+    if not mask.any():
+        logger.warning(f"'{filter_name}' not found in the dataframe.")
+        return framework_df
+    filter_indices = framework_df[mask].index
     if len(filter_indices) == 1:
         start_index = filter_indices[-1]
         end_index = None
@@ -65,7 +72,7 @@ def get_statistics_data(framework_df, filter_name, name):
     for idx, stat in enumerate(stats, start=2):
         framework_df.insert(idx, stat, framework_df.pop(stat))
     
-    col_limit = 10 if name == "Decode" else 11
+    col_limit = 10 if name == DECODE_NAME else 11
     framework_df = framework_df.iloc[:, :col_limit]
 
     return framework_df[start_index: end_index]
@@ -74,7 +81,7 @@ def get_statistics_data(framework_df, filter_name, name):
 def get_service_type(framework_df):
     from ..split_processor import VllmProcessor, MindIEProcessor, MindIEProcessorV2
     result_service = MindIEProcessor()
-    name_set = set(list(framework_df['name']))
+    name_set = set(list(framework_df["name"]))
     if "deserializeExecuteResponse" not in name_set:
         if "SerializeRequests" in name_set:
             result_service = MindIEProcessorV2()
