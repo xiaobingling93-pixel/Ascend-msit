@@ -72,6 +72,7 @@ def sampler_forward(original_func, this, *args, **kwargs):
     prof.span_end()
     return ret
 
+
 @vllm_hook(
     hook_points=[
         ("vllm.v1.executor.abstract", "Executor.execute_model"),
