@@ -145,7 +145,7 @@ class ErrorHandler(ABC):
         self._type = another_type
     
     @abstractmethod
-    def add_error(self, *args, **kwargs) -> None:
+    def add_error(self, reason: str, severity: ErrorSeverity, **context) -> None:
         """add error to handler"""
 
     def empty(self) -> bool:

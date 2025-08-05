@@ -104,7 +104,7 @@ def _add_extra_options(dump_parser):
         choices=[32, 64, 128, 256],
         type=int,
         help=(
-            "Specify the chunk size (in MB) for calculating sha256sum of model tensors. "
+            "Specify the chunk size (in KB) for calculating sha256sum of model tensors. "
             "Only tensors will be checksummed if this option is set. "
             "Supported values: 32, 64, 128, 256."
         )

@@ -69,11 +69,17 @@ class CollectErrorDisplay(ErrorDisplayStrategy):
             return
 
         for error in error_handler:
-            self._print_title(f"{error.filename}({error.lineno}){error.function}()")
+            context = error.context
+            filename = context.filename
+            lineno = context.lineno
+            function = context.function
+            what = context.what
+
+            self._print_title(f"{filename}({lineno}){function}()")
             self.logger.info(
                 f"%s {self.COLOR_YELLOW}%s{self.COLOR_RESET}. %s",
                 error.severity,
-                error.what,
+                what,
                 error.reason
             )
 
@@ -88,11 +94,16 @@ class CheckErrorDisplay(ErrorDisplayStrategy):
             return
 
         for error in error_handler:
-            self.logger.error(f"\033[96m-- {error.path}\033[0m {error.severity}")
+            context = error.context
+            path = context.path
+            actual = context.actual
+            expected = context.expected
+
+            self.logger.error(f"\033[96m-- {path}\033[0m {error.severity}")
             self.logger.error(
-                f"    - \033[1;91m{error.actual}\033[0m "
+                f"    - \033[1;91m{actual}\033[0m "
                 f"\033[1;97m->\033[0m "
-                f"\033[1;92m{error.expected}\033[0m "
+                f"\033[1;92m{expected}\033[0m "
                 f"\033[38;5;247m<-- {error.reason}\033[0m"
             )
 
@@ -110,11 +121,15 @@ class ConfigErrorDisplay(ErrorDisplayStrategy):
         max_lineno = 0
 
         for error in error_handler:
-            lineno_mapping.update(error.context_lines)
-            lineno_mapping[error.lineno] = error
+            context = error.context
+            context_lines = context.context_lines
+            lineno = context.lineno
 
-            if isinstance(error.lineno, int):
-                max_lineno = max(max_lineno, len(str(error.lineno)))
+            lineno_mapping.update(context_lines)
+            lineno_mapping[lineno] = error
+
+            if isinstance(lineno, int):
+                max_lineno = max(max_lineno, len(str(lineno)))
 
         for lineno in sorted(lineno_mapping):
             value = lineno_mapping[lineno]
@@ -122,9 +137,11 @@ class ConfigErrorDisplay(ErrorDisplayStrategy):
                 self.logger.error(f"{self.COLOR_GRAY}{lineno:>{max_lineno}}: %s{self.COLOR_RESET}", value)
                 continue
 
-            path = value.path
-            expected = value.expected
-            start_col = value.start_col
+            context = value.context
+            path = context.path
+            expected = context.expected
+            actual = context.actual
+            start_col = context.start_col
             severity = value.severity
             reason = value.reason
 
@@ -132,7 +149,7 @@ class ConfigErrorDisplay(ErrorDisplayStrategy):
                 lineno = "?"
 
             line_prefix = " " * start_col
-            actual_line = f'{self.COLOR_RESET}"{path}": {value.actual}{self.COLOR_RESET}'
+            actual_line = f'{self.COLOR_RESET}"{path}": {actual}{self.COLOR_RESET}'
             self.logger.error(
                 f"{self.COLOR_RED}{lineno:>{max_lineno}}:{self.COLOR_RESET} {line_prefix}{actual_line} {severity}"
             )
@@ -160,10 +177,11 @@ class EnvCheckErrorDisplayDecorator(ErrorDisplayStrategy):
         activate_cmds = []
         deactivate_cmds = []
         for error in error_handler:
-            var = error.path
+            context = error.context
+            var = context.path
+            expected = context.expected
+            actual = context.actual
             reason = error.reason
-            expected = error.expected
-            actual = error.actual
 
             if expected is None:
                 activate_cmds.append(f"unset {var} # {reason}")

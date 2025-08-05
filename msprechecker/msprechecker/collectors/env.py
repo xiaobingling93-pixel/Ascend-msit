@@ -37,8 +37,8 @@ class EnvCollector(BaseCollector):
             self.error_handler.add_error(
                 filename=__file__,
                 function="_collect_data",
-                lineno=34,
-                what="使用 'os.environ' 失败",
+                lineno=35,
+                what="使用 'os.environ' 获取环境信息失败",
                 reason=str(e)
             )
             env_items = {}

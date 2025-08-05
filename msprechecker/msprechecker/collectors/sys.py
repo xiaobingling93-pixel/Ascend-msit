@@ -76,8 +76,10 @@ class LscpuCollector(BaseCollector):
             )
         except Exception as e:
             self.error_handler.add_error(
-                __file__, '_collect_data', 81,
-                what="执行命令失败：lscpu",
+                filename=__file__,
+                function='_collect_data',
+                lineno=72,
+                what="执行命令失败：'/usr/bin/lscpu'",
                 reason=str(e)
             )
             return {}
@@ -95,7 +97,9 @@ class VirtualMachineCollector(BaseCollector):
             return self._parse_content()
         except Exception as e:
             self.error_handler.add_error(
-                __file__, '_collect_data', 96,
+                filename=__file__,
+                function='_collect_data',
+                lineno=97,
                 what=f"打开文件失败：{self.CPU_INFO_PATH}",
                 reason=str(e)
             )
@@ -262,7 +266,9 @@ class KernelInfoCollector(BaseCollector):
                 content = f.read()
         except Exception as e:
             self.error_handler.add_error(
-                __file__, '_collect_data', 266,
+                filename=__file__,
+                function='_collect_data',
+                lineno=265,
                 what=f"打开文件失败：{self.TRANSPARENT_HUGEPAGE_PATH!r}",
                 reason=str(e)
             )
@@ -284,7 +290,9 @@ class MemoryInfoCollector(BaseCollector):
             mem_info['page_size'] = os.sysconf("SC_PAGESIZE")
         except Exception as e:
             self.error_handler.add_error(
-                __file__, '_collect_data', 289,
+                filename=__file__,
+                function='_collect_data',
+                lineno=289,
                 what="获取 PAGESIZE 失败：os.sysconf('SC_PAGESIZE')",
                 reason=str(e)
             )
@@ -294,7 +302,9 @@ class MemoryInfoCollector(BaseCollector):
                 mem_info['overcommit_memory'] = f.read().strip()
         except Exception as e:
             self.error_handler.add_error(
-                __file__, '_collect_data', 298,
+                filename=__file__,
+                function='_collect_data',
+                lineno=301,
                 what=f"打开文件失败：{self.OVERCOMMIT_MEMORY_PATH!r}",
                 reason=str(e)
             )

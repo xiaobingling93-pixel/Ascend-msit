@@ -63,7 +63,9 @@ class HCCLCollector(BaseCollector):
         if not shutil.which('hccn_tool'):
             working_place = "宿主机" if not is_in_container() else "容器"
             self.error_handler.add_error(
-                __file__, '_collect_data', 59,
+                filename=__file__,
+                function='_collect_data',
+                lineno=63,
                 what=f"{working_place}上没有找到 'hccn_tool' 命令",
                 reason="[Errno 2] No such file or directory: 'hccn_tool'"
             )

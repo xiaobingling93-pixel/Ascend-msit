@@ -44,16 +44,20 @@ class WeightCollector(BaseCollector):
     def _validate_inputs(self):
         if self.weight_dir is None:
             self.error_handler.add_error(
-                __file__, '_validate_inputs', 44,
-                "未传入权重目录",
+                filename=__file__,
+                function='_validate_inputs',
+                lineno=45,
+                what="未传入权重目录",
                 reason=f"未传入权重目录前不应该调用 'WeightCollector'"
             )
             return False
         valid_sizes = [size * 1024 for size in [32, 64, 128, 256]]
         if self.chunk_size not in valid_sizes:
             self.error_handler.add_error(
-                __file__, '_validate_inputs', 51,
-                "'chunk_size' 不符合要求",
+                filename=__file__,
+                function='_validate_inputs',
+                lineno=55,
+                what="'chunk_size' 不符合要求",
                 reason=f"'chunk_size' 需要为 {valid_sizes}"
             )
             return False
@@ -67,8 +71,10 @@ class WeightCollector(BaseCollector):
         ]
         if not tensor_files:
             self.error_handler.add_error(
-                __file__, '_get_tensor_files', 62,
-                "权重目录下没有找到符合条件的权重路径",
+                filename=__file__,
+                function='_get_tensor_files',
+                lineno=67,
+                what="权重目录下没有找到符合条件的权重路径",
                 reason=f"工具只会收集 {tensor_suffix!r} 结尾的权重路径，且符合安全要求"
             )
         return tensor_files
@@ -84,9 +90,10 @@ class WeightCollector(BaseCollector):
                 result = future.result()
             except Exception as e:
                 self.error_handler.add_error(
-                    __file__,
-                    '_process_futures', 82,
-                    f"计算文件 sha256 哈希失败: {tensor_file}",
+                    filename=__file__,
+                    function='_process_futures',
+                    lineno=82,
+                    what=f"计算文件 sha256 哈希失败: {tensor_file!r}",
                     reason=str(e)
                 )
                 result = "Unknown"
