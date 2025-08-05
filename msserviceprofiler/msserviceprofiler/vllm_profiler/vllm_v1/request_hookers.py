@@ -40,7 +40,9 @@ def process_outputs(original_func, this, engine_core_outputs, *args, **kwargs):
             reply_token_size = (request_state.stats.num_generation_tokens if request_state.stats else None)
             
             profiler = Profiler(Level.INFO).domain("Request").res(request_id)
-            profiler = profiler.metric_scope("recvTokenSize", recv_token_size).metric_scope("replyTokenSize", reply_token_size)
+            profiler = profiler.\
+                metric_scope("recvTokenSize", recv_token_size).\
+                metric_scope("replyTokenSize", reply_token_size)
             profiler.event("httpRes")
 
     ret = original_func(this, engine_core_outputs, *args, **kwargs)

@@ -107,7 +107,8 @@ def schedule(original_func, this, *args, **kwargs):
         state.running.add(scheduled_new_req.req_id)
         if scheduled_new_req.req_id in state.waiting:
             state.waiting.remove(scheduled_new_req.req_id)
-        logger.debug(f">>> [queue-waiting][WAITING -> RUNNING]: {len(state.waiting)}, [queue-running]: {len(state.running)}")
+        logger.debug(f">>> [queue-waiting][WAITING -> RUNNING]: {len(state.waiting)}, "
+                     f"[queue-running]: {len(state.running)}")
         queue_prof.metric_inc("RUNNING", 1).metric_inc("WAITING", -1).event("ReqState")
 
     # PREEMPTED请求从WAITING -> RUNNING
@@ -117,7 +118,8 @@ def schedule(original_func, this, *args, **kwargs):
             state.running.add(scheduled_new_req.req_id)
             if scheduled_new_req.req_id in state.waiting:
                 state.waiting.remove(scheduled_new_req.req_id)
-            logger.debug(f">>> [queue-waiting][PREEMPTED -> RUNNING]: {len(state.waiting)}, [queue-running]: {len(state.running)}")
+            logger.debug(f">>> [queue-waiting][PREEMPTED -> RUNNING]: {len(state.waiting)}, "
+                         f"[queue-running]: {len(state.running)}")
             queue_prof.metric_inc("RUNNING", 1).metric_inc("WAITING", -1).event("ReqState")
 
     # running的请求被抢占从RUNNING -> WAITING
@@ -127,12 +129,13 @@ def schedule(original_func, this, *args, **kwargs):
             state.waiting.add(scheduled_new_req.req_id)
             if scheduled_new_req.req_id in state.running:
                 state.running.remove(scheduled_new_req.req_id)
-            logger.debug(f">>> [queue-waiting][RUNNING -> WAITING]: {len(state.waiting)}, [queue-running]: {len(state.running)}")
+            logger.debug(f">>> [queue-waiting][RUNNING -> WAITING]: {len(state.waiting)}, "
+                         f"[queue-running]: {len(state.running)}")
             queue_prof.metric_inc("RUNNING", -1).metric_inc("WAITING", 1).event("ReqState")
 
     logger.debug(f" state.request_id_to_iter_size: {state.request_id_to_iter_size}")
     is_prefill = any(val == 0 for val in state.request_id_to_iter_size.values())
-    # TODO prefill的判断逻辑需要根据整个batch来看是prefill还是decode还是mix
+    
     prof.attr("batch_type", "Prefill" if is_prefill else "Decode")
     prof.span_end()
 

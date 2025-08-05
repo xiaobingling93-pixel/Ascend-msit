@@ -38,21 +38,9 @@ def _get_state() -> HookState:
     return _thread_local.hook_state
 
 
-@vllm_hook(
-    hook_points=[
-        ("vllm.v1.executor.abstract", "Executor.execute_model"),
-        ("vllm.v1.executor.multiproc_executor", "MultiprocExecutor.execute_model")
-    ],
-    min_version="0.9.1",
-)
-def execute_model(original_func, this, scheduler_output, *args, **kwargs):
-    """处理执行模型钩子"""
-    state = _get_state()
-    for scheduled_new_req in scheduler_output.scheduled_new_reqs:
-        state.request_id_to_prompt_token_len[scheduled_new_req.req_id] = len(scheduled_new_req.prompt_token_ids)
-
+def _extract_request_id_from_scheduler_output(scheduler_output, state):
     request_id_list, request_id_with_iter_list = [], []
-    for request_id, num_scheduled_token in scheduler_output.num_scheduled_tokens.items():
+    for request_id, _ in scheduler_output.num_scheduled_tokens.items():
         request_id_list.append({"rid": request_id})
         iter_size = state.request_id_to_iter_size.get(request_id, -1) + 1  # start from 0
         request_id_with_iter_list.append({"rid": request_id, "iter_size": iter_size})
@@ -61,21 +49,24 @@ def execute_model(original_func, this, scheduler_output, *args, **kwargs):
         if request_id in scheduler_output.finished_req_ids:
             state.request_id_to_prompt_token_len.pop(request_id, None)
             state.request_id_to_iter_size.pop(request_id, None)
-    return request_id_list,request_id_with_iter_list
+    return request_id_list, request_id_with_iter_list
 
 
 @vllm_hook(hook_points=("vllm_ascend.worker.model_runner_v1", "NPUModelRunner._update_states"), min_version="0.9.1")
 def update_states(original_func, this, scheduler_output, *args, **kwargs):
     """处理执行模型钩子"""
     state = _get_state()
-    request_id_list, request_id_with_iter_list = _extract_request_id_from_scheduler_output(scheduler_output, state)
+    _, request_id_with_iter_list = _extract_request_id_from_scheduler_output(scheduler_output, state)
     prof = Profiler(Level.INFO).domain("ModelExecute").res(request_id_with_iter_list)
     prof.span_start("processRequestState")
     original_func(this, scheduler_output, *args, **kwargs)
     prof.span_end()
 
 
-@vllm_hook(hook_points=("vllm.model_executor.layers.logits_processpr", "LogitsProcessor.forward"), min_version="0.9.1")
+@vllm_hook(
+        hook_points=("vllm.model_executor.layers.logits_processpr", "LogitsProcessor.forward"), 
+        min_version="0.9.1"
+)
 def compute_logits(original_func, this, *args, **kwargs):
     """处理执行模型钩子"""
     prof = Profiler(Level.INFO).domain("ModelExecute").span_start("computing_logits")
@@ -91,7 +82,13 @@ def sampler_forward(original_func, this, *args, **kwargs):
     prof.span_end()
 
 
-@vllm_hook(hook_points=("vllm.v1.executor.abstract", "Executor.execute_model"), min_version="0.9.1")
+@vllm_hook(
+    hook_points=[
+        ("vllm.v1.executor.abstract", "Executor.execute_model"),
+        ("vllm.v1.executor.multiproc_executor", "MultiprocExecutor.execute_model")
+    ],
+    min_version="0.9.1",
+)
 def execute_model(original_func, this, scheduler_output, *args, **kwargs):
     """处理执行模型钩子"""
     state = _get_state()
