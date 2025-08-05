@@ -38,7 +38,19 @@ def _get_state() -> HookState:
     return _thread_local.hook_state
 
 
-def _extract_request_id_from_scheduler_output(scheduler_output, state):
+@vllm_hook(
+    hook_points=[
+        ("vllm.v1.executor.abstract", "Executor.execute_model"),
+        ("vllm.v1.executor.multiproc_executor", "MultiprocExecutor.execute_model")
+    ],
+    min_version="0.9.1",
+)
+def execute_model(original_func, this, scheduler_output, *args, **kwargs):
+    """处理执行模型钩子"""
+    state = _get_state()
+    for scheduled_new_req in scheduler_output.scheduled_new_reqs:
+        state.request_id_to_prompt_token_len[scheduled_new_req.req_id] = len(scheduled_new_req.prompt_token_ids)
+
     request_id_list, request_id_with_iter_list = [], []
     for request_id, num_scheduled_token in scheduler_output.num_scheduled_tokens.items():
         request_id_list.append({"rid": request_id})
@@ -115,11 +127,10 @@ def execute_model(original_func, this, scheduler_output, *args, **kwargs):
 def set_forward_context(original_func, *args, **kwargs):
     """前向上下文钩子"""
     state = _get_state()
-    if state.forward_profiler is not None:
-        state.forward_profiler.span_start("forward")
-
+    prof = Profiler(Level.INFO).domain("ModelExecute") if state.forward_profiler is None else state.forward_profiler
+    prof.span_start("forward")
     with original_func(*args, **kwargs):
         yield
+    prof.span_end()
     if state.forward_profiler is not None:
-        state.forward_profiler.span_end()
         state.forward_profiler = None
