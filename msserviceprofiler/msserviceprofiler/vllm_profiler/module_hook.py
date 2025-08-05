@@ -39,9 +39,10 @@ def import_object_from_string(import_path: str, module_path: str) -> Any:
 
     current = module
     for part in module_path.split("."):
+        prev = current  # For log
         current = getattr(current, part, None)
         if current is None:
-            logger.error("Module {current} doesn't has attribute {part}")
+            logger.error(f"Module {prev} doesn't has attribute {part}")
             return None
     return current
 
@@ -126,9 +127,10 @@ def get_parents_name(ori_func, index=1):
 
 class VLLMHookerBase(ABC):
     """Hooker基类，提供核心功能"""
+    vllm_version = (None, None)  # (min_version, max_version)
+
     def __init__(self):
-        self.hooks = []
-        self.vllm_version = (None, None)  # (min_version, max_version)
+        self.hooks = []    
 
     @abstractmethod
     def init(self):
@@ -142,16 +144,18 @@ class VLLMHookerBase(ABC):
             if pname is not None and self.get_parents_name(ori_func) != pname:
                 logger.debug(f"calling {ori_func}")
                 return ori_func(*args, **kwargs)
-            logger.debug(f"calling profiler_func for {ori_func}")
+            logger.debug(f"calling profiler_func={self.applied_hook_func_name} for {ori_func}")
             return profiler_func(*args, **kwargs)
         return wrapper
 
     def do_hook(self, hook_points, profiler_func_maker, pname=None):
         """执行实际的hook操作"""
         for ori_func in hook_points:
+            if ori_func is None:
+                continue
             profiler_func = profiler_func_maker(ori_func)
             HookHelper(ori_func, self.replace_func(ori_func, pname, profiler_func)).replace()
-            logger.debug(f"replacing {ori_func}")
+            logger.debug(f"replacing {ori_func} with {self.applied_hook_func_name}")
 
     def support_version(self, version):
         """检查当前版本是否支持"""
@@ -159,8 +163,10 @@ class VLLMHookerBase(ABC):
         max_version = self.vllm_version[1]
 
         if min_version is not None and Version(min_version) > Version(version):
+            logger.debug(f"min_version={min_version} is less than version={version}, skip")
             return False
         if max_version is not None and Version(max_version) < Version(version):
+            logger.debug(f"max_version={max_version} is larger than version={version}, skip")
             return False
         return True
 
@@ -183,8 +189,10 @@ def vllm_hook(
     :param caller_filter: 调用者过滤条件
     """
     def decorator(hook_func):
+        logger.debug(f"Handling {hook_func}")
         class AutoHooker(VLLMHookerBase):
             vllm_version = (min_version, max_version)
+            applied_hook_func_name = getattr(hook_func, "__name__", str(hook_func))
 
             def init(self):
                 hook_list = [hook_points] if isinstance(hook_points, tuple) else hook_points
@@ -210,7 +218,6 @@ def apply_hooks(version: str = None):
         if hooker.support_version(version):
             try:
                 hooker.init()
-                logger.debug(f"Applied hooker: {hooker.__class__.__name__}")
             except Exception as e:
                 logger.error(f"Failed to apply hooker: {str(e)}")
         else:
