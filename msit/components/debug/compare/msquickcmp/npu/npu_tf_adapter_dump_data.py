@@ -34,21 +34,21 @@ from components.utils.check.rule import Rule
 try:
     import tensorflow as tf
     from tensorflow.core.protobuf.rewriter_config_pb2 import RewriterConfig
-except ImportError:
+except ImportError as e:
     utils.logger.error("TensorFlow is not installed.")
-    raise ImportError
+    raise ImportError from e
 
 try:
     import npu_device
-except ImportError:
+except ImportError as e:
     utils.logger.error("npu_device is not installed.")
-    raise ImportError
+    raise ImportError from e
 
 try:
     import acl
-except ImportError:
+except ImportError as e:
     utils.logger.error("Please verify that the CANN environment is properly configured.")
-    raise ImportError
+    raise ImportError from e
 
 
 class NpuTfAdapterDumpData(object):
