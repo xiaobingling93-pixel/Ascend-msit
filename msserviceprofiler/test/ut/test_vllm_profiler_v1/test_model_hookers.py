@@ -36,6 +36,10 @@ class ProfilerMock:
         self._calls.append(('span_end',))
         return self
 
+    def event(self, event_name):
+        self._calls.append(('event', event_name))
+        return self
+
     @property
     def calls(self):
         return self._calls
