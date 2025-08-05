@@ -10,6 +10,7 @@ Level = namedtuple("Level", ["INFO"])("INFO")
 class ProfilerMock:
     def __init__(self, *args):
         self._calls = []
+        self._spans = {}
 
     def domain(self, name):
         self._calls.append(('domain', name))
@@ -19,21 +20,26 @@ class ProfilerMock:
         self._calls.append(('res', res_id))
         return self
 
-    def metric(self, name, value):
-        self._calls.append(('metric', name, value))
-        return self
-
     def attr(self, name, value):
         self._calls.append(('attr', name, value))
         return self
 
-    def event(self, event_name):
-        self._calls.append(('event', event_name))
+    def span_start(self, name):
+        self._calls.append(('span_start', name))
+        self._spans[name] = True
+        return self
+
+    def span_end(self):
+        self._calls.append(('span_end',))
         return self
 
     @property
     def calls(self):
         return self._calls
+
+    @property
+    def active_spans(self):
+        return self._spans
 
 sys.modules['ms_service_profiler'] = MagicMock()
 sys.modules['ms_service_profiler'].Profiler = ProfilerMock
