@@ -15,8 +15,13 @@ import os
 from .utils import logger, set_log_level
 from .module_hook import apply_hooks
 
-if os.environ.get('VLLM_USE_V1', '0') == "0":
+set_log_level("info")  # Default is info, put here for user changes
+VLLM_USE_V1 = os.environ.get('VLLM_USE_V1', '0')
+if VLLM_USE_V1 == "0":
     from .vllm_v0 import batch_hookers, kvcache_hookers, model_hookers, request_hookers
     apply_hooks()  # 应用所有hookers
+elif VLLM_USE_V1 == "1":
+    from .vllm_v1 import batch_hookers, kvcache_hookers, model_hookers, request_hookers
+    apply_hooks()  # 应用所有hookers
 else:
-    logger.error("vLLM V1 interface is not supported yet")
+    logger.error(f"unknown vLLM interface version: VLLM_USE_V1={VLLM_USE_V1}")
