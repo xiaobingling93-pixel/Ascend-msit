@@ -52,7 +52,6 @@ def _extract_request_id_from_scheduler_output(scheduler_output, state):
     return request_id_list,request_id_with_iter_list
 
 
-
 @vllm_hook(hook_points=("vllm_ascend.worker.model_runner_v1", "NPUModelRunner._update_states"), min_version="0.9.1")
 def update_states(original_func, this, scheduler_output, *args, **kwargs):
     """处理执行模型钩子"""
