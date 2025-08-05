@@ -16,10 +16,11 @@ from .utils import logger, set_log_level
 from .module_hook import apply_hooks
 
 set_log_level("info")  # Default is info, put here for user changes
-if os.environ.get('VLLM_USE_V1', '0') == "0":
+VLLM_USE_V1 = os.environ.get('VLLM_USE_V1', '0')
+if VLLM_USE_V1 == "0":
     from .vllm_v0 import batch_hookers, kvcache_hookers, model_hookers, request_hookers
     apply_hooks()  # 应用所有hookers
-elif os.environ.get('VLLM_USE_V1', '0') == "1":
+elif VLLM_USE_V1 == "1":
     from .vllm_v1 import batch_hookers, kvcache_hookers, model_hookers, request_hookers
     apply_hooks()  # 应用所有hookers
 else:

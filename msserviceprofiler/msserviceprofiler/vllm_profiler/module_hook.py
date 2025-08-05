@@ -31,6 +31,10 @@ def import_object_from_string(import_path: str, module_path: str) -> Any:
     根据点分隔的路径导入对象（模块、类、函数等）
     支持多级嵌套属性，如 "module.submodule.ClassName.method_name"
     """
+    if not import_path:
+        logger.error(f"Module import_path is empty")
+        return None
+
     try:
         module = importlib.import_module(import_path)
     except ImportError as e:
@@ -128,9 +132,10 @@ def get_parents_name(ori_func, index=1):
 class VLLMHookerBase(ABC):
     """Hooker基类，提供核心功能"""
     vllm_version = (None, None)  # (min_version, max_version)
+    applied_hook_func_name = ""
 
     def __init__(self):
-        self.hooks = []    
+        self.hooks = []
 
     @abstractmethod
     def init(self):
@@ -141,7 +146,7 @@ class VLLMHookerBase(ABC):
         """创建替换函数"""
         @functools.wraps(ori_func)
         def wrapper(*args, **kwargs):
-            if pname is not None and self.get_parents_name(ori_func) != pname:
+            if pname is not None and get_parents_name(ori_func) != pname:
                 logger.debug(f"calling {ori_func}")
                 return ori_func(*args, **kwargs)
             logger.debug(f"calling profiler_func={self.applied_hook_func_name} for {ori_func}")
@@ -154,7 +159,9 @@ class VLLMHookerBase(ABC):
             if ori_func is None:
                 continue
             profiler_func = profiler_func_maker(ori_func)
-            HookHelper(ori_func, self.replace_func(ori_func, pname, profiler_func)).replace()
+            cur_hook = HookHelper(ori_func, self.replace_func(ori_func, pname, profiler_func))
+            cur_hook.replace()
+            self.hooks.append(cur_hook)
             logger.debug(f"replacing {ori_func} with {self.applied_hook_func_name}")
 
     def support_version(self, version):
