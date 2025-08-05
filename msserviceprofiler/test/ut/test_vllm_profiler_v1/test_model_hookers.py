@@ -40,6 +40,18 @@ class ProfilerMock:
         self._calls.append(('event', event_name))
         return self
 
+    def metric(self, name, value):
+        self.calls.append(('metric', name, value))
+        return self
+
+    def metric_scope(self, name, value):
+        self.calls.append(('metric_scope', name, value))
+        return self
+
+    def metric_inc(self, name, value):
+        self.calls.append(('metric_inc', name, value))
+        return self
+
     @property
     def calls(self):
         return self._calls
