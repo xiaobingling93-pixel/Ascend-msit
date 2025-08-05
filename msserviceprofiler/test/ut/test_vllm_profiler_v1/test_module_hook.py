@@ -7,7 +7,7 @@ from packaging.version import Version
 import pytest
 
 os.environ['VLLM_USE_V1'] = '-1'
-from msserviceprofiler.vllm_profiler import (
+from msserviceprofiler.vllm_profiler.module_hook import (
     import_object_from_string,
     HookHelper,
     VLLMHookerBase,
