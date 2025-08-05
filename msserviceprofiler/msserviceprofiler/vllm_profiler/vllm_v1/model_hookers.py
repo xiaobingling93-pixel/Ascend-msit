@@ -64,7 +64,7 @@ def update_states(original_func, this, scheduler_output, *args, **kwargs):
 
 
 @vllm_hook(
-        hook_points=("vllm.model_executor.layers.logits_processpr", "LogitsProcessor.forward"), 
+        hook_points=("vllm.model_executor.layers.logits_processor", "LogitsProcessor.forward"), 
         min_version="0.9.1"
 )
 def compute_logits(original_func, this, *args, **kwargs):
@@ -74,10 +74,10 @@ def compute_logits(original_func, this, *args, **kwargs):
     prof.span_end()
 
 
-@vllm_hook(hook_points=("vllm.v1.sampler", "Sampler.forward"), min_version="0.9.1")
+@vllm_hook(hook_points=("vllm.v1.sample.sampler", "Sampler.forward"), min_version="0.9.1")
 def sampler_forward(original_func, this, *args, **kwargs):
     """处理执行模型钩子"""
-    prof = Profiler(Level.INFO).domain("ModelExecute").span_start("sampling")
+    prof = Profiler(Level.INFO).domain("ModelExecute").span_start("sample")
     original_func(this, *args, **kwargs)
     prof.span_end()
 
