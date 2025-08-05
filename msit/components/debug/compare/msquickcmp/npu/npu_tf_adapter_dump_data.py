@@ -35,20 +35,20 @@ try:
     import tensorflow as tf
     from tensorflow.core.protobuf.rewriter_config_pb2 import RewriterConfig
 except ImportError:
-    tf = None
     utils.logger.error("TensorFlow is not installed.")
+    raise ImportError
 
 try:
     import npu_device
 except ImportError:
-    npu_device = None
     utils.logger.error("npu_device is not installed.")
+    raise ImportError
 
 try:
     import acl
 except ImportError:
-    acl = None
     utils.logger.error("Please verify that the CANN environment is properly configured.")
+    raise ImportError
 
 
 class NpuTfAdapterDumpData(object):
