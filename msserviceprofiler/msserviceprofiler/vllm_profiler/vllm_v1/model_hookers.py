@@ -20,10 +20,7 @@ from ..module_hook import vllm_hook
 # 线程安全的全局状态
 class HookState:
     def __init__(self):
-        self.preprocess_profiler = None
         self.forward_profiler = None
-        self.postprocess_profiler = None
-        self.postprocess_profiler = None
         self.execute_model_first_run = True
         self.begin_forward_first_run = True
         self.request_id_to_prompt_token_len = {}
@@ -41,7 +38,13 @@ def _get_state() -> HookState:
     return _thread_local.hook_state
 
 
-@vllm_hook(hook_points=("vllm.v1.executor.abstract", "Executor.execute_model"), min_version="0.9.1")
+@vllm_hook(
+    hook_points=[
+        ("vllm.v1.executor.abstract", "Executor.execute_model"),
+        ("vllm.v1.executor.multiproc_executor", "MultiprocExecutor.execute_model")
+    ],
+    min_version="0.9.1",
+)
 def execute_model(original_func, this, scheduler_output, *args, **kwargs):
     """处理执行模型钩子"""
     state = _get_state()
@@ -73,15 +76,10 @@ def execute_model(original_func, this, scheduler_output, *args, **kwargs):
         prof.span_start("modelExec")
         prof.attr("batch_size", scheduler_output.total_num_scheduled_tokens)
 
-        state.preprocess_profiler = Profiler(Level.INFO).domain("ModelExecute").res(request_id_list)
-        state.preprocess_profiler.span_start("preprocess")
         state.forward_profiler = Profiler(Level.INFO).domain("ModelExecute").res(request_id_list)
-        state.postprocess_profiler = Profiler(Level.INFO).domain("ModelExecute").res(request_id_list)
 
     ret = original_func(this, scheduler_output, *args, **kwargs)
     if request_id_list:
-        state.postprocess_profiler.span_end()
-        state.postprocess_profiler = None
         prof.span_end()
     return ret
 
@@ -94,13 +92,10 @@ def set_forward_context(original_func, *args, **kwargs):
     if state.preprocess_profiler is not None:
         state.preprocess_profiler.span_end()
         state.preprocess_profiler = None
-    if state.forward_profiler is not None:
-        state.forward_profiler.span_start("forward")
-
+    prof = Profiler(Level.INFO).domain("ModelExecute") if state.forward_profiler is None else state.forward_profiler
+    prof.span_start("forward")
     with original_func(*args, **kwargs):
         yield
+    prof.span_end()
     if state.forward_profiler is not None:
-        state.forward_profiler.span_end()
         state.forward_profiler = None
-    if state.postprocess_profiler is not None:
-        state.postprocess_profiler.span_start("postprocess")
