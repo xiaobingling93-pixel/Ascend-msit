@@ -150,8 +150,10 @@ class AscendCollector(BaseCollector):
             )
         except Exception as e:
             self.error_handler.add_error(
-                __file__, '_get_component_version', 141,
-                what=f"尝试处理文件失败：{file_path!r}",
                 reason=str(e),
+                filename=__file__,
+                function="_get_component_version",
+                lineno=145,
+                what=f"尝试处理文件失败：{file_path!r}"
             )
         return result

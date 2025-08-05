@@ -25,9 +25,11 @@ class NPUStressCollector(BaseStressCollector):
             import torch_npu
         except ImportError as e:
             self.error_handler.add_error(
-                __file__, '__init__', 22,
-                "当前环境没有安装 torch_npu",
-                str(e)
+                filename=__file__,
+                function='__init__',
+                lineno=25,
+                what="当前环境没有安装 torch_npu",
+                reason=str(e)
             )
             self.torch_npu = None
         else:
@@ -63,8 +65,10 @@ class NPUStressCollector(BaseStressCollector):
             return total_memory - used_memory
         else:
             self.error_handler.add_error(
-                __file__, '_get_free_memory', 60,
-                f"尝试获取 device '{device}' 上剩余的内存失败",
-                "'self.torch.npu.is_available()' 返回了 False"
+                filename=__file__,
+                function='_get_free_memory',
+                lineno=62,
+                what=f"尝试获取 device '{device}' 上剩余的内存失败",
+                reason="'self.torch.npu.is_available()' 返回了 False"
             )
             return 0

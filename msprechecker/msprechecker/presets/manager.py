@@ -66,7 +66,13 @@ class RuleManager:
         # 2. 获取用户自定义规则（如果有）
         custom_rules = self._get_custom_rules()
         
-        rules.update(custom_rules)
+        # 3. 更新每个规则
+        for rule_type, rule in custom_rules.items():
+            if rule_type not in rules:
+                rules[rule_type] = rule
+            else:
+                rules[rule_type].update(rule)
+
         return rules
     
     def _get_builtin_rules(self, scene: str):

@@ -132,7 +132,9 @@ class ConfigCollector(BaseCollector):
                 return self._parse_file_structure(config_file)
         except Exception as error:
             self.error_handler.add_error(
-                __file__, '_read_file_lines_and_depth', 131,
+                filename=__file__,
+                function='_read_file_lines_and_depth',
+                lineno=131,
                 what=f"尝试打开文件失败: {self.config_path!r}",
                 reason=str(error)
             )
@@ -143,7 +145,9 @@ class ConfigCollector(BaseCollector):
             return json.loads('\n'.join(file_lines)) if file_lines else {}
         except Exception as error:
             self.error_handler.add_error(
-                __file__, '_parse_json_content', 143,
+                filename=__file__,
+                function='_parse_json_content',
+                lineno=143,
                 what=f"尝试用 Json 格式解析文件失败: {self.config_path!r}",
                 reason=str(error)
             )

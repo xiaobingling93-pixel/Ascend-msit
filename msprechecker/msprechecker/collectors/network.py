@@ -55,7 +55,9 @@ class PingCollector(BaseCollector):
     def _check_ping_command(self):
         if shutil.which("ping") is None:
             self.error_handler.add_error(
-                __file__, '_collect_data', 37,
+                filename=__file__,
+                function='_check_ping_command',
+                lineno=56,
                 what="当前环境没有 'ping' 命令",
                 reason="需要使用 'ping' 命令来进行多机的连通性检测"
             )
@@ -65,7 +67,9 @@ class PingCollector(BaseCollector):
     def _check_rank_table_file(self):
         if not self.rank_table_file:
             self.error_handler.add_error(
-                __file__, '_collect_data', 45,
+                filename=__file__,
+                function='_collect_data',
+                lineno=45,
                 what="未传入 'rank table'",
                 reason="需要使用 'rank table' 获取所有机器 IP"
             )
@@ -76,7 +80,9 @@ class PingCollector(BaseCollector):
         _, current_ip = get_current_ip_and_addr()
         if not current_ip:
             self.error_handler.add_error(
-                __file__, '_get_current_ip', 78,
+                filename=__file__,
+                function='_get_current_ip',
+                lineno=81,
                 what="获取当前机器 IP 失败",
                 reason="需要获取当前 IP 从而获取其他机器的 device ip"
             )
@@ -88,7 +94,9 @@ class PingCollector(BaseCollector):
             parser = self.rank_table_parser(self.rank_table_file)
         except Exception as e:
             self.error_handler.add_error(
-                __file__, '_parse_rank_table', 87,
+                filename=__file__,
+                function='_parse_rank_table',
+                lineno=94,
                 what="尝试读取传入的 'rank table' 失败",
                 reason=str(e)
             )
@@ -97,16 +105,20 @@ class PingCollector(BaseCollector):
             ip_to_rank_id = parser.parse()
         except Exception as e:
             self.error_handler.add_error(
-                __file__, '_parse_rank_table', 96,
+                filename=__file__,
+                function='_parse_rank_table',
+                lineno=105,
                 what="尝试解析传入的 'rank table' 失败",
                 reason=str(e)
             )
             return {}
         if not ip_to_rank_id:
             self.error_handler.add_error(
-                __file__, '_parse_rank_table', 104,
+                filename=__file__,
+                function='_parse_rank_table',
+                lineno=115,
                 what="传入的 'rank table' 没有解析出任何信息",
-                reason="请检查 'rank table' 是否负责格式规范"
+                reason="请检查 'rank table' 是否符合格式规范"
             )
             return {}
         return ip_to_rank_id

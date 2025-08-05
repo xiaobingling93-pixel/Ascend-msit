@@ -29,9 +29,11 @@ class BaseStressCollector(BaseCollector):
             import torch
         except ImportError as e:
             self.error_handler.add_error(
-                __file__, '__init__', 26,
-                "当前环境没有安装 torch",
-                str(e)
+                reason=str(e),
+                filename=__file__,
+                function='__init__',
+                lineno=29,
+                what="当前环境没有安装 torch",
             )
             self.torch = None
         else:
@@ -91,9 +93,12 @@ class BaseStressCollector(BaseCollector):
 
         if not has_enough_mem:
             self.error_handler.add_error(
-                __file__, '_matmul_stress_test', 107,
-                "内存不足，无法进行压测",
-                f"需要 {total_required / 1024 ** 2:.2f}MB, 可用 {free_memory / 1024 ** 2:.2f}MB (已预留 20%)"
+                reason=f"需要 {total_required / 1024 ** 2:.2f}MB, 可用 {free_memory / 1024 ** 2:.2f}MB (已预留 20%)",
+                severity="high",
+                filename=__file__,
+                function="_check_memory_for_matmul",
+                lineno=94,
+                what="内存不足，无法进行压测"
             )
             return False
         

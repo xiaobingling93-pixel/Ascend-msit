@@ -107,6 +107,12 @@ def _warn_checkers(args):
             "model is triggered by '--weight-dir', and hardware is triggered by '--hardware'. "
             "This API is maintained for backward compatibility."
         )
+        args.hardware = "hardware" in args.checkers
+        if "model" in args.checkers and not getattr(args, "weight_dir", None):
+            global_logger.warning(
+                "UsageWarning: Set '-ch model' or '-ch all' without providing '--weight-dir' " \
+                "will not take affect"
+            )
 
 
 def _warn_service_config_path(args):
@@ -124,7 +130,7 @@ def _warn_mindie_env_config_path(args):
             "DeprecationWarning: The '--mindie_env_config_path' argument is deprecated. "
             "Please use '--mindie-env-path' instead."
         )
-        args.mindie_env_config_path = args.mies_config_path
+        args.mindie_env_path = args.mindie_env_config_path
 
 
 def _warn_ranktable_file(args):
