@@ -89,9 +89,6 @@ def execute_model(original_func, this, scheduler_output, *args, **kwargs):
 def set_forward_context(original_func, *args, **kwargs):
     """前向上下文钩子"""
     state = _get_state()
-    if state.preprocess_profiler is not None:
-        state.preprocess_profiler.span_end()
-        state.preprocess_profiler = None
     prof = Profiler(Level.INFO).domain("ModelExecute") if state.forward_profiler is None else state.forward_profiler
     prof.span_start("forward")
     with original_func(*args, **kwargs):
