@@ -24,6 +24,7 @@ from contextlib import contextmanager
 import pandas as pd
 
 from msserviceprofiler.msguard import validate_args, Rule
+from msserviceprofiler.msguard.security.io import mkdir_s
 from msserviceprofiler.ms_service_profiler_ext.common.sec import list_dir_common_check
 
 
@@ -84,7 +85,7 @@ def arg_parse(subparsers):
     parser.add_argument("golden_path", type=list_dir_common_check, help="Directory containing analyzed results")
     parser.add_argument(
         "--output-path",
-        type=validate_args(Rule.output_dir),
+        type=str,
         default=os.path.join(os.getcwd(), 'compare_result'),
         help="Output Directory after comparing."
     )
@@ -104,6 +105,10 @@ def main(args):
     from msserviceprofiler.ms_service_profiler_ext.compare_tools.collector import FileCollector
 
     set_log_level(args.log_level)
+    
+    mkdir_s(args.output_path)
+    if not Rule.output_dir._is_satisfied_by(args.output_path):
+        raise argparse.ArgumentTypeError(f"Output path is not valid: {args.output_path!r}")
     
     result_prefix = os.path.join(args.output_path, 'compare_result')
     file_collector = FileCollector(

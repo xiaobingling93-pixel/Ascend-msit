@@ -65,13 +65,16 @@ class TestExporterDecodeFunction(unittest.TestCase):
         data["rid_list"] = [None] * len_data
         data["token_id_list"] = [["1234", "5678"]] * len_data
         batch_indices = np.where(np.array(data["name"]) == "batchFrameworkProcessing")[0]
-        rid_list = []
-        for i in batch_indices:
-            data["batch_type"][i] = "Decode"
-            data["batch_size"][i] = "100"
-            data["rid"][i] = str(i + 1)  # 递增的 rid 值
-            rid_list.append(str(i + 1))
-            data["rid_list"][i] = [str(i + 1)]
+        forward_indices = np.where(np.array(data["name"]) == "forward")[0]
+        for i, num in enumerate(batch_indices):
+            data["batch_type"][num] = "Decode"
+            data["batch_size"][num] = "100"
+            data["rid"][num] = str(i + 1)  # 递增的 rid 值
+            data["rid_list"][num] = [str(i + 1)]
+
+        for i, num in enumerate(forward_indices):
+            data["rid"][num] = str(i + 1)
+            data["rid_list"][num] = [str(i + 1)]
 
         serialize_indices = np.where(np.array(data["name"]) == "serializeExcueteMessage")[0]
         for i in serialize_indices:
@@ -110,13 +113,16 @@ class TestExporterDecodeFunction(unittest.TestCase):
         data["rid_list"] = [None] * len_data
         data["token_id_list"] = [["1234", "5678"]] * len_data
         batch_indices = np.where(np.array(data["name"]) == "batchFrameworkProcessing")[0]
-        rid_list = []
-        for i in batch_indices:
-            data["batch_type"][i] = "Decode"
-            data["batch_size"][i] = "100"
-            data["rid"][i] = str(i + 1)  # 递增的 rid 值
-            rid_list.append(str(i + 1))
-            data["rid_list"][i] = [str(i + 1)]
+        forward_indices = np.where(np.array(data["name"]) == "forward")[0]
+        for i, num in enumerate(batch_indices):
+            data["batch_type"][num] = "Decode"
+            data["batch_size"][num] = "100"
+            data["rid"][num] = str(i + 1)  # 递增的 rid 值
+            data["rid_list"][num] = [str(i + 1)]
+
+        for i, num in enumerate(forward_indices):
+            data["rid"][num] = str(i + 1)
+            data["rid_list"][num] = [str(i + 1)]
 
         df = pd.DataFrame(data)
         return df
@@ -155,7 +161,7 @@ class TestExporterDecodeFunction(unittest.TestCase):
             log_level="debug",
             decode_batch_size=100,
             decode_number=2,
-            decode_rid="3",
+            decode_rid="1",
         )
         try:
             os.makedirs(args.output_path, exist_ok=True)

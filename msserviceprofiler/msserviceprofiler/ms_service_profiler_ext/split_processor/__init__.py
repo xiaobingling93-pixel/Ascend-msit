@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,11 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import unittest
-from unittest.mock import patch
-import pandas as pd
-import numpy as np
 
+__all__ = ["MindIEProcessor", "VllmProcessor", "MindIEProcessorV2"]
 
-class TestUtilsFuctions(unittest.TestCase):
-    pass
+from .mindie_processor import MindIEProcessor, MindIEProcessorV2
+from .vllm_processor import VllmProcessor

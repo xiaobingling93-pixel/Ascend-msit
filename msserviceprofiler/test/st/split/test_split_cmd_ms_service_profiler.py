@@ -22,9 +22,9 @@ from st.utils import execute_cmd, check_split_csv_content
 class TestAnalyzeCmd(TestCase):
     ST_DATA_PATH = os.getenv("MS_SERVICE_PROFILER",
                              "/data/ms_service_profiler")
-    INPUT_PATH = os.path.join(ST_DATA_PATH, "input/analyze/0506-1422")
-    PREFILL_INPUT_PATH = os.path.join(ST_DATA_PATH, "input/analyze/PD_separate/prefill/3584-1024")
-    DECODE_INPUT_PATH = os.path.join(ST_DATA_PATH, "input/analyze/PD_separate/decode/3584-1024")
+    INPUT_PATH = os.path.join(ST_DATA_PATH, "input/split/MindIE_latest_PD_complete")
+    PREFILL_INPUT_PATH = os.path.join(ST_DATA_PATH, "input/split/MindIE_latest_PD_split/p")
+    DECODE_INPUT_PATH = os.path.join(ST_DATA_PATH, "input/split/MindIE_latest_PD_split/d")
     OUTPUT_PATH = os.path.join(ST_DATA_PATH, "output/split")
     REQUEST_PATH = os.path.join(OUTPUT_PATH, "request.csv")
     PREFILL_CSV = "prefill.csv"
@@ -33,10 +33,8 @@ class TestAnalyzeCmd(TestCase):
     SPLIT_PROFILER = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")),
                                     "msserviceprofiler/__main__.py")
     COMMON_BATCH_SIZE = "1"
-    PREFILL_BATCH_SIZE = "2"
-    DECODE_BATCH_SIZE = "16"
-    PREFILL_RID = "2221"
-    DECODE_RID = "105"
+    PREFILL_RID = "2728857197956474597"
+    DECODE_RID = "2728857197956474597"
 
     def setUp(self):
         os.makedirs(self.OUTPUT_PATH, mode=0o750, exist_ok=True)
@@ -109,7 +107,7 @@ class TestAnalyzeCmd(TestCase):
         cmd = ["python", self.SPLIT_PROFILER, "split",
                "--input-path", self.PREFILL_INPUT_PATH,
                "--output-path", self.OUTPUT_PATH,
-               "--prefill-batch-size", self.PREFILL_BATCH_SIZE]
+               "--prefill-batch-size", self.COMMON_BATCH_SIZE]
         if execute_cmd(cmd) != self.COMMAND_SUCCESS or not os.path.exists(self.OUTPUT_PATH):
             self.assertFalse(True, msg="enable split task by batch size in P Node failed.")
 
@@ -129,7 +127,7 @@ class TestAnalyzeCmd(TestCase):
         cmd = ["python", self.SPLIT_PROFILER, "split",
                "--input-path", self.DECODE_INPUT_PATH,
                "--output-path", self.OUTPUT_PATH,
-               "--decode-batch-size", self.DECODE_BATCH_SIZE]
+               "--decode-batch-size", self.COMMON_BATCH_SIZE]
         if execute_cmd(cmd) != self.COMMAND_SUCCESS or not os.path.exists(self.OUTPUT_PATH):
             self.assertFalse(True, msg="enable split task by batch size in D Node failed.")
 

@@ -65,18 +65,23 @@ class TestExporterPrefillFunction(unittest.TestCase):
         data["rid_list"] = [None] * len_data
         data["token_id_list"] = [["1234", "5678"]] * len_data
         batch_indices = np.where(np.array(data["name"]) == "batchFrameworkProcessing")[0]
+        forward_indices = np.where(np.array(data["name"]) == "forward")[0]
         rid_list = []
-        for i in batch_indices:
-            data["batch_type"][i] = "Prefill"
-            data["batch_size"][i] = "4"
-            data["rid"][i] = str(i + 1)  # 递增的 rid 值
+        for i, num in enumerate(batch_indices):
+            data["batch_type"][num] = "Prefill"
+            data["batch_size"][num] = "4"
+            data["rid"][num] = str(i + 1)  # 递增的 rid 值
             rid_list.append(str(i + 1))
-            data["rid_list"][i] = [str(i + 1)]
+            data["rid_list"][num] = [str(i + 1)]
         http_req_indices = np.where(np.array(data["name"]) == "httpReq")[0]
         cur = 0
         for i in http_req_indices:
             data["rid"][i] = rid_list[cur]
             cur += 1
+
+        for i, num in enumerate(forward_indices):
+            data["rid"][num] = str(i + 1)
+            data["rid_list"][num] = [str(i + 1)]
 
         serialize_indices = np.where(np.array(data["name"]) == "serializeExcueteMessage")[0]
         for i in serialize_indices:
@@ -115,17 +120,22 @@ class TestExporterPrefillFunction(unittest.TestCase):
         data["rid_list"] = [None] * len_data
         data["token_id_list"] = [["1234", "5678"]] * len_data
         batch_indices = np.where(np.array(data["name"]) == "batchFrameworkProcessing")[0]
+        forward_indices = np.where(np.array(data["name"]) == "forward")[0]
         rid_list = []
-        for i in batch_indices:
-            data["batch_type"][i] = "Prefill"
-            data["batch_size"][i] = "4"
-            data["rid"][i] = str(i + 1)  # 递增的 rid 值
+        for i, num in enumerate(batch_indices):
+            data["batch_type"][num] = "Prefill"
+            data["batch_size"][num] = "4"
+            data["rid"][num] = str(i + 1)  # 递增的 rid 值
             rid_list.append(str(i + 1))
-            data["rid_list"][i] = [str(i + 1)]
+            data["rid_list"][num] = [str(i + 1)]
+
+        for i, num in enumerate(forward_indices):
+            data["rid"][num] = str(i + 1)
+            data["rid_list"][num] = [str(i + 1)]
         http_req_indices = np.where(np.array(data["name"]) == "httpReq")[0]
         cur = 0
-        for i in http_req_indices:
-            data["rid"][i] = rid_list[cur]
+        for _, num in enumerate(http_req_indices):
+            data["rid"][num] = rid_list[cur]
             cur += 1
 
         df = pd.DataFrame(data)
@@ -165,7 +175,7 @@ class TestExporterPrefillFunction(unittest.TestCase):
             log_level="debug",
             prefill_batch_size=4,
             prefill_number=1,
-            prefill_rid="3",
+            prefill_rid="1",
         )
         try:
             os.makedirs(args.output_path, exist_ok=True)

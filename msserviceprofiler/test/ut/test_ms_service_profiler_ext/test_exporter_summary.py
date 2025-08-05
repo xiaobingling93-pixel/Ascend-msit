@@ -206,14 +206,12 @@ class TestExporterSummaryFunctions(unittest.TestCase):
         self.assertIn("1002", self.sample_req_map, "Request records should be processed.")
 
     @patch("pandas.DataFrame.to_csv")
-    @patch("os.chmod")
-    def test_save_dataframe_to_csv(self, mock_chmod, mock_to_csv):
+    def test_save_dataframe_to_csv(self, mock_to_csv):
         map_data = {"latency": {"avg": 15.5, "max": 30, "min": 5, "p50": 15, "p90": 27, "p99": 29}}
         output = "/tmp/test_output"
         file_name = "test.csv"
         save_dataframe_to_csv(map_data, output, file_name)
         mock_to_csv.assert_called_once()
-        mock_chmod.assert_called_once()
 
     def test_process_req_record(self):
         http_req_record = {"name": "httpReq", "rid": "0", "start_time": 1739276837290586.5}

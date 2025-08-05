@@ -13,23 +13,23 @@
 # limitations under the License.
 import os
 import argparse
-from pathlib import Path
 import re
 
 from msserviceprofiler.msguard import validate_args, Rule
+from msserviceprofiler.msguard.security.io import mkdir_s
 
 
 def add_exporters(args):
     from msserviceprofiler.ms_service_profiler_ext.exporters.exporter_prefill import ExporterPrefill
     from msserviceprofiler.ms_service_profiler_ext.exporters.exporter_decode import ExporterDecode
 
-    if not hasattr(args, 'format'):
-        args.format = 'csv'
+    if not hasattr(args, "format"):
+        args.format = "csv"
     exporter_cls = []
     exporters = []
-    if args.prefill_batch_size > 0 or args.prefill_rid != '-1':
+    if args.prefill_batch_size > 0 or args.prefill_rid != "-1":
         exporter_cls.append(ExporterPrefill)
-    if args.decode_batch_size > 0 or args.decode_rid != '-1':
+    if args.decode_batch_size > 0 or args.decode_rid != "-1":
         exporter_cls.append(ExporterDecode)
     for cls in exporter_cls:
         exporter = cls()
@@ -46,39 +46,66 @@ def check_string_valid(s, max_length=256):
     return s
 
 
+def check_non_negative_integer(value):
+    try:
+        value = int(value)
+    except Exception as e:
+        raise ValueError(f"'{value}' cannot convert to a positive integer.") from e
+    
+    if value < 0:
+        raise ValueError(f"'{value}' is not a positive integer.")
+    
+    return value
+
+
 def arg_parse(subparsers):
     parser = subparsers.add_parser(
         "split", formatter_class=argparse.ArgumentDefaultsHelpFormatter, help="MS Server Profiler Split"
     )
     parser.add_argument(
-        '--input-path',
+        "--input-path",
         required=True,
         type=validate_args(Rule.input_dir_traverse),
-        help='Path to the folder containing profile data.',
+        help="Path to the folder containing profile data.",
     )
     parser.add_argument(
-        '--output-path',
-        type=validate_args(Rule.output_dir),
-        default=os.path.join(os.getcwd(), 'output'),
-        help='Output file path to save results.')
-    parser.add_argument(
-        '--log-level',
+        "--output-path",
         type=str,
-        default='info',
-        choices=['debug', 'info', 'warning', 'error', 'fatal', 'critical'],
-        help='Log level to print')
-    parser.add_argument('--prefill-batch-size', type=int, default=0, help='Batch size for Prefill data.')
-    parser.add_argument('--decode-batch-size', type=int, default=0, help='Batch size for Decode data.')
+        default=os.path.join(os.getcwd(), "output"),
+        help="Output file path to save results.")
     parser.add_argument(
-        '--prefill-number', type=int, default=1, help='The number of Prefill batch to calc statistical data'
+        "--log-level",
+        type=str,
+        default="info",
+        choices=["debug", "info", "warning", "error", "fatal", "critical"],
+        help="Log level to print")
+    
+    prefill_group = parser.add_argument_group("Prefill Parameters")
+    prefill_group.add_argument(
+        "--prefill-batch-size", type=check_non_negative_integer, default=0, help="Batch size for Prefill data."
     )
-    parser.add_argument(
-        '--decode-number', type=int, default=1, help='The number of Decode batch to calc statistical data'
+    prefill_group.add_argument(
+        "--prefill-number", type=check_non_negative_integer, 
+        default=1, help="The number of Prefill batch to calc statistical data"
     )
-    parser.add_argument('--prefill-rid', type=lambda x: check_string_valid(x, max_length=100),
-                        default='-1', help='The rid for Prefill batch to split')
-    parser.add_argument('--decode-rid', type=lambda x: check_string_valid(x, max_length=100),
-                        default='-1', help='The rid for Decode batch to split')
+    prefill_group.add_argument(
+        "--prefill-rid", type=lambda x: check_string_valid(x, max_length=100),
+        default="-1", help="The rid for Prefill batch to split"
+    )
+
+    # 创建Decode参数组
+    decode_group = parser.add_argument_group("Decode Parameters")
+    decode_group.add_argument(
+        "--decode-batch-size", type=check_non_negative_integer, default=0, help="Batch size for Decode data."
+    )
+    decode_group.add_argument(
+        "--decode-number", type=check_non_negative_integer, 
+        default=1, help="The number of Decode batch to calc statistical data"
+    )
+    decode_group.add_argument(
+        "--decode-rid", type=lambda x: check_string_valid(x, max_length=100),
+        default="-1", help="The rid for Decode batch to split"
+    )
     parser.set_defaults(func=main)
 
 
@@ -93,8 +120,10 @@ def main(args):
     # 初始化Exporter
     exporters = add_exporters(args)
 
-    # 创建output目录
-    Path(args.output_path).mkdir(parents=True, exist_ok=True, mode=0o750)
+    # 检查output目录
+    mkdir_s(args.output_path)
+    if not Rule.output_dir._is_satisfied_by(args.output_path):
+        raise argparse.ArgumentTypeError(f"Output path is not valid: {args.output_path!r}")
 
     # 解析数据并导出
     parse(args.input_path, custom_plugins, exporters, args=args)

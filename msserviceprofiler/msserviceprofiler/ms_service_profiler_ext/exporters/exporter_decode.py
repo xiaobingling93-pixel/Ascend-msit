@@ -12,11 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from ms_service_profiler.exporters.base import ExporterBase
-from ms_service_profiler.exporters.utils import save_dataframe_to_csv
-from ms_service_profiler.utils.log import logger
 
-from ..common.split_utils import get_batch_all_time, process_exporter, get_filter_df
-from ..common.split_utils import get_statistics_data, preprocess_framework_df
+from ..common.utils import logger
+from ..common.split_utils import get_service_type
 
 
 class ExporterDecode(ExporterBase):
@@ -28,25 +26,14 @@ class ExporterDecode(ExporterBase):
  
     @classmethod
     def export(cls, data) -> None:
-        output = cls.args.output_path
-        log_level = cls.args.log_level
-        batch_size = cls.args.decode_batch_size
-        batch_num = cls.args.decode_number
-        rid = cls.args.decode_rid
+        cls.args.batch_size = cls.args.decode_batch_size
+        cls.args.batch_num = cls.args.decode_number
+        cls.args.rid = cls.args.decode_rid
         df = data.get('tx_data_df')
         if df is None:
             logger.error("The data is empty, please check")
             return
-        framework_df = preprocess_framework_df(df)
-        if framework_df is None:
-            return
-        filter_df = get_filter_df(framework_df, 'Decode')
-        add_all_time_df = get_batch_all_time(filter_df, 'Decode')
-        framework_df = process_exporter(add_all_time_df, batch_size, batch_num, rid, 'Decode')
-        if log_level == 'debug':
-            save_dataframe_to_csv(add_all_time_df, output, "decode1.csv")
-            save_dataframe_to_csv(framework_df, output, f"decode_{batch_num}.csv")
-        framework_df = get_statistics_data(framework_df, 'batchFrameworkProcessing', 'Decode')
-        if not framework_df.empty:
-            save_dataframe_to_csv(framework_df, output, "decode.csv")
+        processor = get_service_type(df)
+        processor.initialize(cls.args)
+        processor.run_split(df, "Decode")
         logger.info("Export decode data successfully.")
