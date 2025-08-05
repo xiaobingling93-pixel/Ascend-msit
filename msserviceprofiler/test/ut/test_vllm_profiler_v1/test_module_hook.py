@@ -50,7 +50,7 @@ def test_import_object_from_string_given_empty_path_when_importing_then_returns_
     assert result is None
 
 # Test cases for HookHelper
-    class SampleClass:
+class SampleClass:
     @staticmethod
     def static_method():
         return "original static"
