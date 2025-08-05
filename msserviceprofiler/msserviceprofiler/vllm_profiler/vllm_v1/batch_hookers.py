@@ -93,40 +93,43 @@ def schedule(original_func, this, *args, **kwargs):
         if request_id in scheduler_output.finished_req_ids:
             state.request_id_to_prompt_token_len.pop(request_id, None)
             state.request_id_to_iter_size.pop(request_id, None)
-    
+
     if not request_id_list:
         return scheduler_output
 
     queue_profiler(before_running_queue, this.running, "running")
     queue_profiler(before_waiting_queue, this.waiting, "waiting")
     prof.res(request_id_with_iter_list)
-    
+
     # 新的请求从WAITING -> RUNNING
     for scheduled_new_req in scheduler_output.scheduled_new_reqs:
         queue_prof = Profiler(Level.INFO).domain("BatchSchedule").res(scheduled_new_req.req_id)
         state.running.add(scheduled_new_req.req_id)
-        state.waiting.remove(scheduled_new_req.req_id)
+        if scheduled_new_req.req_id in state.waiting:
+            state.waiting.remove(scheduled_new_req.req_id)
         logger.debug(f">>> [queue-waiting][WAITING -> RUNNING]: {len(state.waiting)}, [queue-running]: {len(state.running)}")
         queue_prof.metric_inc("RUNNING", 1).metric_inc("WAITING", -1).event("ReqState")
-    
+
     # PREEMPTED请求从WAITING -> RUNNING
     for scheduled_cached_req in scheduler_output.scheduled_cached_reqs:
         if scheduled_cached_req.req_id not in state.running and scheduled_cached_req.req_id in state.waiting:
             queue_prof = Profiler(Level.INFO).domain("BatchSchedule").res(scheduled_cached_req.req_id)
             state.running.add(scheduled_new_req.req_id)
-            state.waiting.remove(scheduled_new_req.req_id)
+            if scheduled_new_req.req_id in state.waiting:
+                state.waiting.remove(scheduled_new_req.req_id)
             logger.debug(f">>> [queue-waiting][PREEMPTED -> RUNNING]: {len(state.waiting)}, [queue-running]: {len(state.running)}")
             queue_prof.metric_inc("RUNNING", 1).metric_inc("WAITING", -1).event("ReqState")
-    
+
     # running的请求被抢占从RUNNING -> WAITING
     for request_id in state.running:
         if request_id in this.waiting:
             queue_prof = Profiler(Level.INFO).domain("BatchSchedule").res(request_id)
             state.waiting.add(scheduled_new_req.req_id)
-            state.running.remove(scheduled_new_req.req_id)
+            if scheduled_new_req.req_id in state.running:
+                state.running.remove(scheduled_new_req.req_id)
             logger.debug(f">>> [queue-waiting][RUNNING -> WAITING]: {len(state.waiting)}, [queue-running]: {len(state.running)}")
-            queue_prof.metric_inc("RUNNING", -1).metric_inc("WAITING", 1).event("ReqState") 
-    
+            queue_prof.metric_inc("RUNNING", -1).metric_inc("WAITING", 1).event("ReqState")
+
     logger.debug(f" state.request_id_to_iter_size: {state.request_id_to_iter_size}")
     is_prefill = any(val == 0 for val in state.request_id_to_iter_size.values())
     # TODO prefill的判断逻辑需要根据整个batch来看是prefill还是decode还是mix
