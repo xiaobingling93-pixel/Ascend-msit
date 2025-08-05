@@ -197,6 +197,7 @@ def vllm_hook(
     """
     def decorator(hook_func):
         logger.debug(f"Handling {hook_func}")
+        
         class AutoHooker(VLLMHookerBase):
             vllm_version = (min_version, max_version)
             applied_hook_func_name = getattr(hook_func, "__name__", str(hook_func))

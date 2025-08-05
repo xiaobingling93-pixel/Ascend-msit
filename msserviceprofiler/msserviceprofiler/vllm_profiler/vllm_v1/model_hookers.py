@@ -52,17 +52,6 @@ def _extract_request_id_from_scheduler_output(scheduler_output, state):
     return request_id_list, request_id_with_iter_list
 
 
-@vllm_hook(hook_points=("vllm_ascend.worker.model_runner_v1", "NPUModelRunner._update_states"), min_version="0.9.1")
-def update_states(original_func, this, scheduler_output, *args, **kwargs):
-    """处理执行模型钩子"""
-    state = _get_state()
-    _, request_id_with_iter_list = _extract_request_id_from_scheduler_output(scheduler_output, state)
-    prof = Profiler(Level.INFO).domain("ModelExecute").res(request_id_with_iter_list)
-    prof.span_start("processRequestState")
-    original_func(this, scheduler_output, *args, **kwargs)
-    prof.span_end()
-
-
 @vllm_hook(
         hook_points=("vllm.model_executor.layers.logits_processor", "LogitsProcessor.forward"), 
         min_version="0.9.1"
@@ -70,17 +59,18 @@ def update_states(original_func, this, scheduler_output, *args, **kwargs):
 def compute_logits(original_func, this, *args, **kwargs):
     """处理执行模型钩子"""
     prof = Profiler(Level.INFO).domain("ModelExecute").span_start("computing_logits")
-    original_func(this, *args, **kwargs)
+    ret = original_func(this, *args, **kwargs)
     prof.span_end()
+    return ret
 
 
 @vllm_hook(hook_points=("vllm.v1.sample.sampler", "Sampler.forward"), min_version="0.9.1")
 def sampler_forward(original_func, this, *args, **kwargs):
     """处理执行模型钩子"""
     prof = Profiler(Level.INFO).domain("ModelExecute").span_start("sample")
-    original_func(this, *args, **kwargs)
+    ret = original_func(this, *args, **kwargs)
     prof.span_end()
-
+    return ret
 
 @vllm_hook(
     hook_points=[
