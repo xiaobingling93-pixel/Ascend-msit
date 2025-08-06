@@ -21,6 +21,7 @@ from pydantic import BaseModel
 from msmodelslim import logger
 from msmodelslim.pytorch.llm_ptq.anti_outlier import AntiOutlierConfig, AntiOutlier
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import QuantConfig, Calibrator
+from msmodelslim.utils.exception import SchemaValidateError
 
 M3 = 'm3'
 M4 = 'm4'
@@ -173,7 +174,8 @@ def process_session_cfg(session_cfg: SessionConfig, device_id):
         else:
             check_flag = False
     if not check_flag:
-        raise ValueError("The processor_cfg_map in session_config is not supported, please check.")
+        raise SchemaValidateError("The processor_cfg_map in session_config is not supported",
+                                  action="Please check session_config.")
     return anti_cfg, quant_cfg, save_cfg
 
 

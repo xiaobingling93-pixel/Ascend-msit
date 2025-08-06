@@ -32,9 +32,12 @@ msmodelslim quant --model_path {模型路径} --save_path {量化权重保存路
 
 注意：
 
-1. 最佳实践库中的配置文件放在 `msit/msmodelslim/msmodelslim/practice_lab` 中。
+1. 最佳实践库中的配置文件放在 `msit/msmodelslim/practice_lab` 中。
 2. 若最佳实践库中未搜寻到最佳配置，系统则会向用户询问是否采用默认配置，即使用 `practice_lab/Default/default.yaml` 实施量化。
 
+| 环境变量|解释|是否可选|范围|
+|--------|--------|--------|--------|
+|MSMODELSLIM_LOG_LEVEL|打印同级及以上日志|可选|INFO(默认),DEBUG|
 ## 支持的模型
 
 注意：

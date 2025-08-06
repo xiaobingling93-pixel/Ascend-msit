@@ -22,8 +22,10 @@ from msmodelslim.core.base.processor import BaseProcessor
 from msmodelslim.core.base.protocol import ProcessRequest
 from msmodelslim.core.base.runner import BaseRunner
 from msmodelslim.core.runner.generated_schedule import ProcessUnit, generated_schedule
+from msmodelslim.utils.logger import logger_setter
 
 
+@logger_setter(__name__)
 class LegacyProcessUnit(ProcessUnit):
     def __init__(self, processor: BaseProcessor, input_datas: Optional[List[Any]] = None):
         super().__init__(processor, input_datas)
@@ -36,6 +38,7 @@ class LegacyProcessUnit(ProcessUnit):
             return [_legacy_visit_func(self.processor.model)]
 
 
+@logger_setter(__name__)
 class LegacyRunner(BaseRunner):
     def __init__(self, model: nn.Module):
         super().__init__()
@@ -49,7 +52,7 @@ class LegacyRunner(BaseRunner):
             self.process_unit.insert(0, LegacyProcessUnit(processor, input_datas))
 
     def run(self):
-        generated_schedule(self.process_unit)
+        generated_schedule(self.process_unit, logger=self.logger)
 
 
 def _legacy_forward_func(model: torch.nn.Module,

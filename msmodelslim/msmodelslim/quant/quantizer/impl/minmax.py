@@ -22,6 +22,8 @@ import msmodelslim.quant.ir as qir
 from msmodelslim.core import fake_quantize, quantize, dequantize, calculate_qparam
 from msmodelslim.core.QAL import QABCRegistry, QDType, QStorage, QParam, QScope
 from msmodelslim.quant.observer import MsMinMaxObserver, MinMaxObserverConfig
+from msmodelslim.utils.exception import SpecError, SchemaValidateError
+from msmodelslim.utils.logger import logger_setter
 from ..base import AutoActQuantizer, AutoWeightQuantizer, QConfig
 
 
@@ -32,6 +34,7 @@ from ..base import AutoActQuantizer, AutoWeightQuantizer, QConfig
     ],
     abc_type=AutoActQuantizer
 )
+@logger_setter(__name__)
 class ActPerTensorMinmax(AutoActQuantizer):
 
     def __init__(self, config: QConfig):
@@ -55,7 +58,7 @@ class ActPerTensorMinmax(AutoActQuantizer):
 
     def get_q_param(self) -> QParam:
         if self.q_param is None:
-            raise RuntimeError("No q_param was set, please call forward first")
+            raise SpecError("No q_param was set", action="Please call forward first")
         return self.q_param
 
 
@@ -66,6 +69,7 @@ class ActPerTensorMinmax(AutoActQuantizer):
     ],
     abc_type=AutoActQuantizer
 )
+@logger_setter(__name__)
 class ActPerTokenMinmax(AutoActQuantizer):
 
     def __init__(self, config: QConfig):
@@ -92,7 +96,7 @@ class ActPerTokenMinmax(AutoActQuantizer):
 
     def get_q_param(self) -> QParam:
         if self.q_param is None:
-            raise RuntimeError("No q_param was set, please call forward first")
+            raise SpecError("No q_param was set", action="please call forward first")
         return self.q_param
 
 
@@ -102,6 +106,7 @@ class ActPerTokenMinmax(AutoActQuantizer):
     ],
     abc_type=AutoWeightQuantizer
 )
+@logger_setter(__name__)
 class WeightPerChannelMinmax(AutoWeightQuantizer):
     def __init__(self, config: QConfig):
         super().__init__()
@@ -115,7 +120,7 @@ class WeightPerChannelMinmax(AutoWeightQuantizer):
 
     def forward(self, x: Optional[torch.Tensor] = None) -> torch.Tensor:
         if self.weight is None:
-            raise RuntimeError("No weight was set, please call init_weight first")
+            raise SpecError("No weight was set", action="please call init_weight first")
         self.minmax_observer.update(self.weight.T.value)
         min_val, max_val = self.minmax_observer.get_min_max()
         self.w_q_param = calculate_qparam(
@@ -135,12 +140,12 @@ class WeightPerChannelMinmax(AutoWeightQuantizer):
 
     def get_q_storage(self) -> QStorage:
         if self.w_q_storage is None:
-            raise RuntimeError("No q_storage was set, please call forward first")
+            raise SpecError("No q_storage was set", action="Please call forward first")
         return self.w_q_storage
 
     def get_q_param(self) -> QParam:
         if self.w_q_param is None:
-            raise RuntimeError("No q_param was set, please call forward first")
+            raise SpecError("No q_param was set", action="Please call forward first")
         return self.w_q_param
 
 
@@ -150,16 +155,19 @@ class WeightPerChannelMinmax(AutoWeightQuantizer):
     ],
     abc_type=AutoWeightQuantizer
 )
+@logger_setter(__name__)
 class WeightPerGroupMinmax(AutoWeightQuantizer):
 
     def __init__(self, config: QConfig):
         super().__init__()
 
         if config.ext is None or "group_size" not in config.ext:
-            raise ValueError("\"group_size\" is needed in config.ext field")
+            raise SchemaValidateError("\"group_size\" is needed in config.ext field",
+                                      action="Please make sure group_size in config.ext")
 
         if not isinstance(config.ext.get("group_size"), int) or config.ext.get("group_size") <= 0:
-            raise ValueError("\"group_size\" must be a positive integer")
+            raise SchemaValidateError("\"group_size\" must be a positive integer",
+                                      action="Please make sure group_size is a positive integer")
 
         minmax_config = MinMaxObserverConfig(dim=0, keepdim=False)
         self.config = config
@@ -172,9 +180,10 @@ class WeightPerGroupMinmax(AutoWeightQuantizer):
 
     def forward(self, x: Optional[torch.Tensor] = None) -> torch.Tensor:
         if self.weight is None:
-            raise RuntimeError("No weight was set, please call init_weight first")
+            raise SpecError("No weight was set", action="Please call init_weight first")
         if self.weight.value.shape[-1] % self.group_size != 0:
-            raise RuntimeError("The last dimension of weight must be divisible by group_size")
+            raise SpecError("The last dimension of weight must be divisible by group_size",
+                            action="Please make sure the last dimension of weight can be divisible by group_size")
         grouped_w = self.weight.value.reshape(-1, self.group_size)
         self.minmax_observer.update(grouped_w)
         min_val, max_val = self.minmax_observer.get_min_max()
@@ -198,5 +207,5 @@ class WeightPerGroupMinmax(AutoWeightQuantizer):
 
     def get_q_param(self) -> QParam:
         if self.w_q_param is None:
-            raise RuntimeError("No q_param was set, please call forward first")
+            raise SpecError("No q_param was set", action="Please call forward first")
         return self.w_q_param

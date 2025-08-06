@@ -18,6 +18,7 @@ import torch
 from msmodelslim.core.QAL import QStorage
 from msmodelslim.core.QAL.qbase import QDType, QScope, QParam, QScheme
 from msmodelslim.core.QAL.qregistry import QFuncRegistry
+from msmodelslim.utils.exception import SchemaValidateError
 
 
 @QFuncRegistry.register(dispatch_key=(QDType.INT8, QScope.PER_TOKEN, False), api_name="calculate_qparam")
@@ -138,7 +139,8 @@ def int8_dequantize(tensor: QStorage, q_param: QParam) -> QStorage:
 def int8_per_group_quantize(tensor: QStorage, q_param: QParam) -> QStorage:
     group_size = q_param.ext.get("group_size", -1)
     if group_size < 0:
-        raise ValueError(f"group quantize group_size must be greater than 0 but got group_size = {group_size}")
+        raise SchemaValidateError(f"group quantize group_size must be greater than 0 but got group_size = {group_size}",
+                                  action=f"Please make sure group_size is greater than 0")
     org_shape = tensor.value.shape
     tensor.value = tensor.value.reshape(-1, group_size)  # reshape for per_group
     tensor = int8_quantize(tensor, q_param)
@@ -151,7 +153,8 @@ def int8_per_group_quantize(tensor: QStorage, q_param: QParam) -> QStorage:
 def int8_per_group_dequantize(tensor: QStorage, q_param: QParam) -> QStorage:
     group_size = q_param.ext.get("group_size", -1)
     if group_size < 0:
-        raise ValueError(f"group quantize group_size must be greater than 0 but got group_size = {group_size}")
+        raise SchemaValidateError(f"group quantize group_size must be greater than 0 but got group_size = {group_size}",
+                                  action=f"Please make sure group_size is greater than 0")
     org_shape = tensor.value.shape
     tensor.value = tensor.value.reshape(-1, group_size)  # reshape for per_group
     tensor = int8_dequantize(tensor, q_param)

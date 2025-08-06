@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing_extensions import Self
 
 from msmodelslim.app.base.quant_config import BaseQuantConfig
+from msmodelslim.utils.exception import SchemaValidateError
 
 
 @dataclass
@@ -39,7 +40,8 @@ class ModelslimV0QuantConfig(BaseQuantConfig):
 def load_specific_config(yaml_spec: object) -> QuantSpec:
     """Load specific configuration from YAML spec"""
     if not isinstance(yaml_spec, dict):
-        raise ValueError("task spec must be dict")
+        raise SchemaValidateError("task spec must be dict",
+                                  action='Please make sure the task spec is a dictionary')
 
     config = QuantSpec()
     config.anti_cfg = yaml_spec.get('anti_cfg', None)

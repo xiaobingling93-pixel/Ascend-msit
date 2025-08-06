@@ -28,6 +28,7 @@ from msmodelslim.quant.quantizer.impl.minmax import (
     WeightPerGroupMinmax,
     WeightPerChannelMinmax
 )
+from msmodelslim.utils.exception import SchemaValidateError
 
 
 def to_qconfig(q_scheme: QScheme, method: str) -> QConfig:
@@ -223,7 +224,7 @@ class TestWeightPerGroupMinmax:
         """测试group_size参数验证"""
         config = copy.deepcopy(self.config)
         config.ext = None
-        with pytest.raises(ValueError, match='"group_size" is needed'):
+        with pytest.raises(SchemaValidateError, match='"group_size" is needed'):
             WeightPerGroupMinmax(config)
 
     def test_init_weight_then_forward(self):

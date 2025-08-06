@@ -4,10 +4,17 @@ from pathlib import Path
 
 from msmodelslim.app import QuantType, DeviceType
 from msmodelslim.cli.naive_quantization.__main__ import main as quant_main
-from msmodelslim.utils.safe_utils import cmd_bool
 
 FAQ_HOME = "gitee repo: Ascend/msit/msmodelslim, wiki"
 MIND_STUDIO_LOGO = "[Powered by MindStudio]"
+
+
+def cmd_bool(cmd_arg):
+    if cmd_arg == "True":
+        return True
+    elif cmd_arg == "False":
+        return False
+    raise argparse.ArgumentTypeError(f"{cmd_arg} should be True or False")
 
 
 def cmd_path(cmd_arg):

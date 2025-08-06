@@ -7,10 +7,6 @@ class ModelslimError(Exception):
     code = 0
     default_message = 'modelslim error'
 
-    @classmethod
-    def create_exception(cls, name: str, code: int, default_message: str = '') -> Type[Self]:
-        return type(name, (cls,), {"code": code, "message": default_message})
-
     def __init__(self, *args, action=''):
         super().__init__(*args)
         self.action = action
@@ -23,6 +19,10 @@ class ModelslimError(Exception):
         if self.action:
             desc += f"\nTIP: {self.action}"
         return desc
+
+    @classmethod
+    def create_exception(cls, name: str, code: int, default_message: str = '') -> Type[Self]:
+        return type(name, (cls,), {"code": code, "message": default_message})
 
 
 # EnvironmentError

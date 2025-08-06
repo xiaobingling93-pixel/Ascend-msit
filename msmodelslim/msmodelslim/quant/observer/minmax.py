@@ -20,6 +20,8 @@ import torch
 from pydantic import BaseModel
 from torch import distributed as dist, nn
 
+from msmodelslim.utils.exception import SpecError
+
 
 class MinMaxObserverConfig(BaseModel):
     dim: Union[int, List[int]] = []
@@ -48,7 +50,8 @@ class MsMinMaxObserver(nn.Module):
 
         if sync and group:
             if not dist.is_initialized():
-                raise RuntimeError("MinMaxStrategy's update_with_group requires distributed enabled")
+                raise SpecError("MinMaxStrategy's update_with_group requires distributed enabled",
+                                action='Please make sure enable distributed')
 
             dist.all_reduce(self.min_val, op=dist.ReduceOp.MIN, group=group)
             dist.all_reduce(self.max_val, op=dist.ReduceOp.MAX, group=group)
@@ -59,8 +62,8 @@ class MsMinMaxObserver(nn.Module):
 
     def get_min_max(self) -> Tuple[torch.Tensor, torch.Tensor]:
         if self.min_val is None or self.max_val is None:
-            raise RuntimeError(
+            raise SpecError(
                 "Trying to get stats but no any update_stats invoked,"
-                "maybe you are quantifying a moe expert, but this expert has never been activated."
-                "Please check your model and quant config.")
+                "maybe you are quantifying a moe expert, but this expert has never been activated.",
+                action="Please check your model and quant config.")
         return self.min_val, self.max_val

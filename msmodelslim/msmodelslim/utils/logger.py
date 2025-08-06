@@ -27,20 +27,20 @@ def filter_special_chars(func):
     return func_level
 
 
-def filter_logger(l: Logger):
-    setattr(l, 'critical', filter_special_chars(l.critical))
-    setattr(l, 'debug', filter_special_chars(l.debug))
-    setattr(l, 'error', filter_special_chars(l.error))
-    setattr(l, 'info', filter_special_chars(l.info))
-    setattr(l, 'warning', filter_special_chars(l.warning))
+def filter_logger(cur_logger: Logger):
+    setattr(cur_logger, 'critical', filter_special_chars(cur_logger.critical))
+    setattr(cur_logger, 'debug', filter_special_chars(cur_logger.debug))
+    setattr(cur_logger, 'error', filter_special_chars(cur_logger.error))
+    setattr(cur_logger, 'info', filter_special_chars(cur_logger.info))
+    setattr(cur_logger, 'warning', filter_special_chars(cur_logger.warning))
 
 
 def get_logger(name: str = ''):
     if not name:
         return get_root_logger()
-    l = logging.getLogger(name)
-    filter_logger(l)
-    return l
+    cur_logger = logging.getLogger(name)
+    filter_logger(cur_logger)
+    return cur_logger
 
 
 def get_root_logger():
@@ -125,12 +125,12 @@ def progress_bar(iterable, desc: str = None, total: int = -1, interval: int = 1)
     logger.info("")
 
 
-def logger_setter(l: Union[str, Logger] = logger):
-    if isinstance(l, str):
-        l = get_logger(l)
+def logger_setter(cur_logger: Union[str, Logger] = logger):
+    if isinstance(cur_logger, str):
+        cur_logger = get_logger(cur_logger)
 
     def decorator(cls):
-        cls.logger = l
+        cls.logger = cur_logger
         return cls
 
     return decorator

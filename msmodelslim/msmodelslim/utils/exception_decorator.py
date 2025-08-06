@@ -4,9 +4,8 @@ from logging import Logger
 
 from typing_extensions import Type, Union
 
-from msmodelslim.utils.exception import UnexpectedError, ModelslimError
-
 from msmodelslim.utils.config import msmodelslim_config
+from msmodelslim.utils.exception import UnexpectedError, ModelslimError
 from msmodelslim.utils.logger import get_logger
 
 ACTION_REPORT = f'Please report this issue to the msModelSlim developers.' \
@@ -25,9 +24,9 @@ def exception_handler(err_cls: Type[Exception], ms_err_cls: Type[ModelslimError]
             except err_cls as e:
                 if not keyword or keyword in str(e):
                     raise ms_err_cls(message if message else str(e), action=action) from e
-                raise UnexpectedError(action=ACTION_REPORT) from e
-            except Exception as e:
-                raise UnexpectedError(action=ACTION_REPORT) from e
+                raise
+            except Exception:
+                raise
 
         return wrapper
 

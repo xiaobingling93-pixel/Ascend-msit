@@ -21,8 +21,11 @@ from msmodelslim.core.base.processor import BaseProcessor
 from msmodelslim.core.base.protocol import ProcessRequest, BatchProcessRequest
 from msmodelslim.core.base.runner import BaseRunner
 from msmodelslim.core.runner.generated_schedule import generated_schedule, ProcessUnit
+from msmodelslim.utils.exception import InvalidModelError
+from msmodelslim.utils.logger import logger_setter
 
 
+@logger_setter(__name__)
 class LayerWiseProcessUnit(ProcessUnit):
     def __init__(self, processor: BaseProcessor, input_datas: Optional[List[Any]] = None):
         super().__init__(processor, input_datas)
@@ -48,6 +51,7 @@ class LayerProcessHook(BaseProcessor):
         self.process_func = func
 
 
+@logger_setter(__name__)
 class LayerWiseRunner(BaseRunner):
 
     def __init__(self, model: nn.Module):
@@ -62,7 +66,7 @@ class LayerWiseRunner(BaseRunner):
             self.process_unit.insert(0, LayerWiseProcessUnit(processor, input_datas))
 
     def run(self):
-        generated_schedule(self.process_unit)
+        generated_schedule(self.process_unit, logger=self.logger)
 
 
 class _TransformersForwardBreak(Exception):
@@ -125,7 +129,7 @@ def _transformers_generated_forward_func(model: torch.nn.Module,
             hook.remove()
 
     if first_block_input is None:
-        raise ValueError("Can't get first block input, please check the model and input")
+        raise InvalidModelError("Can't get first block input.", action="Please check the model and input")
 
     # 循环处理每个transformer block
     current_inputs = first_block_input

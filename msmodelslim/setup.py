@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import os
-
 from configparser import ConfigParser
 
 from setuptools import setup, find_packages
@@ -25,14 +24,14 @@ abs_path = os.path.dirname(os.path.realpath(__file__))
 with open(os.path.join(abs_path, "requirements.txt")) as f:
     required = f.read().splitlines()
 
-
 setup(
     name='msmodelslim',
     version='7.0.0c912',
     description='msModelSlim, MindStudio ModelSlim Tools',
     long_description_content_type='text/markdown',
     url=config.get('URL', 'repository_url'),
-    packages=find_packages(exclude=['precision_tool', 'security', ]) + ['msmodelslim.config', 'msmodelslim.lab_calib', 'msmodelslim.lab_practice'],
+    packages=find_packages(exclude=['precision_tool', 'security', ]) + ['msmodelslim.config', 'msmodelslim.lab_calib',
+                                                                        'msmodelslim.lab_practice'],
     package_dir={
         'msmodelslim': 'msmodelslim',
         'msmodelslim.config': 'config',
@@ -53,7 +52,7 @@ setup(
             '*.so',
         ],
         'msmodelslim.config': ['*'],
-        'msmodelslim.lab_calib': ['*'], 
+        'msmodelslim.lab_calib': ['*'],
         'msmodelslim.lab_practice': ['**'],
     },
     data_files=[('', ['requirements.txt'])],

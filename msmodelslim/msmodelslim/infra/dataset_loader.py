@@ -2,9 +2,10 @@
 from pathlib import Path
 from typing import List
 
-from ascend_utils.common.security import get_valid_read_path
 from msmodelslim.app.quant_service.dataset_interface import DatasetLoaderInterface
-from msmodelslim.utils.safe_utils import SafeGenerator
+from msmodelslim.utils.exception import InvalidDatasetError, SchemaValidateError
+from msmodelslim.utils.security import get_valid_read_path
+from msmodelslim.utils.security.model import SafeGenerator
 
 
 class FileDatasetLoader(DatasetLoaderInterface):
@@ -13,7 +14,12 @@ class FileDatasetLoader(DatasetLoaderInterface):
 
     def get_dataset_by_name(self, dataset_id: str) -> List[str]:
         if not isinstance(dataset_id, str):
-            raise ValueError(f'dataset_id must be a str')
+            raise SchemaValidateError(f'dataset_id must be a str',
+                                      action='Please make sure the dataset_id is a string')
         anti_path = self.dir / dataset_id
         get_valid_read_path(str(anti_path), "jsonl")
-        return SafeGenerator.load_jsonl(anti_path)
+        try:
+            return SafeGenerator.load_jsonl(anti_path)
+        except Exception as e:
+            raise InvalidDatasetError(f'Failed to load dataset {dataset_id}',
+                                      action='Please check the dataset path') from e

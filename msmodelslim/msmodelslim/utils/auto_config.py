@@ -36,7 +36,7 @@ class BaseAutoConfig(BaseModel, Generic[T]):
 
         if BaseAutoConfig in cls.__bases__:
             cls._registry: Dict[str, Type[T]] = {}
-            logger.info(f"[Utils] Create registry for {cls.__name__}")
+            logger.debug(f"[Utils] Create registry for {cls.__name__}")
             return super().__pydantic_init_subclass__(**kwargs)
 
         cls._registry[cls.model_fields['type'].default] = cls
