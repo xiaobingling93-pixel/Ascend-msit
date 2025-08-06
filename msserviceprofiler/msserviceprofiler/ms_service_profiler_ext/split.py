@@ -41,7 +41,7 @@ def add_exporters(args):
 def check_string_valid(s, max_length=256):
     if len(s) > max_length:
         raise argparse.ArgumentTypeError("String length exceeds %d characters: %r" % (max_length, s))
-    if not re.match(r"^[a-zA-Z0-9_./-]+$", s):
+    if not re.match(r"^[a-zA-Z0-9_-]+$", s):
         raise argparse.ArgumentTypeError("Unsafe string: %r" % s)
     return s
 
