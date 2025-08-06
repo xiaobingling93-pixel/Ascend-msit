@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 import numpy as np
 import pandas as pd
 from msserviceprofiler.ms_service_profiler_ext.exporters.exporter_summary import (
@@ -28,6 +28,9 @@ from msserviceprofiler.ms_service_profiler_ext.exporters.exporter_summary import
     process_each_record,
     save_dataframe_to_csv,
     calculate_batch_metrics,
+    get_new_total_time,
+    get_new_ttft_wait_time,
+    ExporterSummary
 )
 from msserviceprofiler.ms_service_profiler_ext.common.csv_fields import (
     RequestCSVFields, BatchCSVFields, ServiceCSVFields
@@ -342,3 +345,156 @@ class TestExporterSummaryFunctions(unittest.TestCase):
         self.assertIn(prefill_key, self.sample_batch_map)
         self.assertIn(decode_key, self.sample_batch_map)
         self.assertIn(prefill_key_2, self.sample_batch_map)
+
+
+class TestGenExporterResults(unittest.TestCase):
+    @patch('msserviceprofiler.ms_service_profiler_ext.exporters.exporter_summary.process_each_record')
+    @patch('msserviceprofiler.ms_service_profiler_ext.exporters.exporter_summary.calculate_request_metrics')
+    @patch('msserviceprofiler.ms_service_profiler_ext.exporters.exporter_summary.calculate_statistics')
+    @patch('msserviceprofiler.ms_service_profiler_ext.exporters.exporter_summary.calculate_batch_metrics')
+    def test_gen_exporter_results(self, mock_calculate_batch_metrics, mock_calculate_statistics, mock_calculate_request_metrics, mock_process_each_record):
+        # 创建一个模拟的DataFrame
+        all_data_df = pd.DataFrame({
+            'column1': [1, 2, 3],
+            'column2': ['a', 'b', 'c']
+        })
+
+        # 设置模拟函数的返回值
+        mock_calculate_request_metrics.return_value = ({}, {})
+        mock_calculate_statistics.return_value = {}
+        mock_calculate_batch_metrics.return_value = {}
+
+        # 调用函数
+        gen_exporter_results(all_data_df)
+
+        # 验证函数是否被正确调用
+        mock_process_each_record.assert_called()
+        mock_calculate_request_metrics.assert_called()
+        mock_calculate_statistics.assert_called()
+        mock_calculate_batch_metrics.assert_called()
+
+
+class TestGetNewTotalTime(unittest.TestCase):
+    @patch('msserviceprofiler.ms_service_profiler_ext.exporters.exporter_summary.is_invaild_rid')
+    def test_empty_rid(self, mock_is_invaild_rid):
+        mock_is_invaild_rid.return_value = False
+        all_data_df = pd.DataFrame({
+            'rid': [''],
+            'name': ['httpReq'],
+            'start_time': [100],
+            'end_time': [200]
+        })
+        result = get_new_total_time(all_data_df)
+        self.assertEqual(result, {})
+
+    @patch('msserviceprofiler.ms_service_profiler_ext.exporters.exporter_summary.is_invaild_rid')
+    def test_invalid_rid(self, mock_is_invaild_rid):
+        mock_is_invaild_rid.return_value = True
+        all_data_df = pd.DataFrame({
+            'rid': ['123'],
+            'name': ['httpReq'],
+            'start_time': [100],
+            'end_time': [200]
+        })
+        result = get_new_total_time(all_data_df)
+        self.assertEqual(result, {})
+
+    def test_no_httpReq(self):
+        all_data_df = pd.DataFrame({
+            'rid': ['123'],
+            'name': ['httpRes'],
+            'start_time': [100],
+            'end_time': [200]
+        })
+        result = get_new_total_time(all_data_df)
+        self.assertEqual(result, {})
+
+    def test_no_httpRes(self):
+        all_data_df = pd.DataFrame({
+            'rid': ['123'],
+            'name': ['httpReq'],
+            'start_time': [100],
+            'end_time': [200]
+        })
+        result = get_new_total_time(all_data_df)
+        self.assertEqual(result, {})
+
+    def test_valid_data(self):
+        all_data_df = pd.DataFrame({
+            'rid': ['123', '123'],
+            'name': ['httpReq', 'httpRes'],
+            'start_time': [100, 150],
+            'end_time': [200, 250]
+        })
+        result = get_new_total_time(all_data_df)
+        self.assertEqual(result, {RequestCSVFields.TOTAL_TIME: calculate_statistics([0.15])})
+
+
+class TestGetNewTtftWaitTime(unittest.TestCase):
+    
+    def test_empty_data(self):
+        # 测试当数据为空时的情况
+        result = get_new_ttft_wait_time({})
+        self.assertEqual(result, {})
+        
+    def test_empty_ttft_df(self):
+        # 测试当ttft_df为空时的情况
+        data = {'req_que_wait_df': pd.DataFrame({'que_wait_time': [1000, 2000]})}
+        result = get_new_ttft_wait_time(data)
+        self.assertEqual(result, {})
+        
+    def test_empty_que_wait_df(self):
+        # 测试当que_wait_df为空时的情况
+        data = {'req_ttft_df': pd.DataFrame({'ttft': [1000, 2000]})}
+        result = get_new_ttft_wait_time(data)
+        self.assertEqual(result, {})
+        
+    def test_valid_data(self):
+        # 测试当数据有效时的情况
+        data = {
+            'req_ttft_df': pd.DataFrame({'ttft': [1000, 2000]}),
+            'req_que_wait_df': pd.DataFrame({'que_wait_time': [1000, 2000]})
+        }
+        result = get_new_ttft_wait_time(data)
+        expected_result = {
+            RequestCSVFields.FIRST_TOKEN_LATENCY: {
+                'avg': 1.5,
+                'max': 2,
+                'min': 1,
+                'p50': 1.5,
+                'p90': 1.9,
+                'p99': 1.99
+            },
+            RequestCSVFields.WAITING_TIME: {
+                'avg': 1.5,
+                'max': 2,
+                'min': 1,
+                'p50': 1.5,
+                'p90': 1.9,
+                'p99': 1.99
+            }
+        }
+        self.assertEqual(result, expected_result)
+
+
+class TestExport(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.args = MagicMock()
+        cls.args.output_path = '/path/to/output'
+
+    @patch('msserviceprofiler.ms_service_profiler_ext.exporters.exporter_summary.logger')
+    def test_export_empty_data(self, mock_logger):
+        # 测试当data为空时的情况
+        ExporterSummary.initialize(self.args)
+        result = ExporterSummary.export({})
+        mock_logger.warning.assert_called_once_with("The data is empty, please check")
+        self.assertIsNone(result)
+
+    @patch('msserviceprofiler.ms_service_profiler_ext.exporters.exporter_summary.logger')
+    def test_export_empty_df(self, mock_logger):
+        # 测试当all_data_df为空时的情况
+        ExporterSummary.initialize(self.args)
+        result = ExporterSummary.export({'tx_data_df': None})
+        mock_logger.warning.assert_called_once_with("The data is empty, please check")
+        self.assertIsNone(result)

@@ -21,7 +21,10 @@ from unittest.mock import patch
 import argparse
 import pytest
 
-from msserviceprofiler.ms_service_profiler_ext.split import add_exporters, main, arg_parse
+from msserviceprofiler.ms_service_profiler_ext.split import (
+    add_exporters, main, arg_parse, 
+    check_string_valid, check_non_negative_integer
+)
 from msserviceprofiler.ms_service_profiler_ext.exporters.exporter_prefill import ExporterPrefill
 from msserviceprofiler.ms_service_profiler_ext.exporters.exporter_decode import ExporterDecode
 
@@ -94,3 +97,70 @@ class TestSplitFuctions(unittest.TestCase):
         yield
         self.mocker = None
         self.mock_args = None
+
+
+class TestCheckStringValid(unittest.TestCase):
+    def test_valid_string(self):
+        # 测试一个有效的字符串
+        result = check_string_valid("valid_string123")
+        self.assertEqual(result, "valid_string123")
+
+    def test_string_exceeds_max_length(self):
+        # 测试一个超过最大长度的字符串
+        long_string = "a" * 257
+        with self.assertRaises(argparse.ArgumentTypeError):
+            check_string_valid(long_string)
+
+    def test_string_with_unsafe_characters(self):
+        # 测试一个包含不安全字符的字符串
+        unsafe_string = "invalid@string"
+        with self.assertRaises(argparse.ArgumentTypeError):
+            check_string_valid(unsafe_string)
+
+    def test_empty_string(self):
+        # 测试一个空字符串
+        with self.assertRaises(argparse.ArgumentTypeError):
+            check_string_valid("")
+
+    def test_string_with_spaces(self):
+        # 测试一个包含空格的字符串
+        with self.assertRaises(argparse.ArgumentTypeError):
+            check_string_valid("string with spaces")
+
+    def test_string_with_special_characters(self):
+        # 测试一个包含特殊字符的字符串
+        with self.assertRaises(argparse.ArgumentTypeError):
+            check_string_valid("string!with@special#characters")
+
+
+class TestCheckNonNegativeInteger(unittest.TestCase):
+    
+    def test_positive_integer(self):
+        """测试正整数输入"""
+        self.assertEqual(check_non_negative_integer(5), 5)
+    
+    def test_zero(self):
+        """测试零输入"""
+        self.assertEqual(check_non_negative_integer(0), 0)
+    
+    def test_negative_integer(self):
+        """测试负整数输入，应抛出异常"""
+        with self.assertRaises(ValueError) as context:
+            check_non_negative_integer(-1)
+        self.assertEqual(str(context.exception), "'-1' is not a positive integer.")
+    
+    def test_string_input(self):
+        """测试字符串输入，应抛出异常"""
+        with self.assertRaises(ValueError) as context:
+            check_non_negative_integer("abc")
+        self.assertEqual(str(context.exception), "'abc' cannot convert to a positive integer.")
+    
+    def test_string_representation_of_integer(self):
+        """测试整数的字符串表示输入"""
+        self.assertEqual(check_non_negative_integer("10"), 10)
+    
+    def test_string_representation_of_negative_integer(self):
+        """测试负整数的字符串表示输入，应抛出异常"""
+        with self.assertRaises(ValueError) as context:
+            check_non_negative_integer("-5")
+        self.assertEqual(str(context.exception), "'-5' is not a positive integer.")
