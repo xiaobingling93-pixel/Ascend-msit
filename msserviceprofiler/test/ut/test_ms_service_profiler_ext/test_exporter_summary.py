@@ -352,7 +352,9 @@ class TestGenExporterResults(unittest.TestCase):
     @patch('msserviceprofiler.ms_service_profiler_ext.exporters.exporter_summary.calculate_request_metrics')
     @patch('msserviceprofiler.ms_service_profiler_ext.exporters.exporter_summary.calculate_statistics')
     @patch('msserviceprofiler.ms_service_profiler_ext.exporters.exporter_summary.calculate_batch_metrics')
-    def test_gen_exporter_results(self, mock_calculate_batch_metrics, mock_calculate_statistics, mock_calculate_request_metrics, mock_process_each_record):
+    def test_gen_exporter_results(self, mock_calculate_batch_metrics, mock_calculate_statistics,
+                                   mock_calculate_request_metrics, mock_process_each_record):
+                                  
         # 创建一个模拟的DataFrame
         all_data_df = pd.DataFrame({
             'column1': [1, 2, 3],
@@ -399,7 +401,7 @@ class TestGetNewTotalTime(unittest.TestCase):
         result = get_new_total_time(all_data_df)
         self.assertEqual(result, {})
 
-    def test_no_httpReq(self):
+    def test_no_httpreq(self):
         all_data_df = pd.DataFrame({
             'rid': ['123'],
             'name': ['httpRes'],
@@ -409,7 +411,7 @@ class TestGetNewTotalTime(unittest.TestCase):
         result = get_new_total_time(all_data_df)
         self.assertEqual(result, {})
 
-    def test_no_httpRes(self):
+    def test_no_httpres(self):
         all_data_df = pd.DataFrame({
             'rid': ['123'],
             'name': ['httpReq'],

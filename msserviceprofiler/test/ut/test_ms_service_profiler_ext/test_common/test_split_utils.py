@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import pytest
+
 import unittest
 import pandas as pd
 from msserviceprofiler.ms_service_profiler_ext.common.split_utils import (
@@ -38,8 +38,10 @@ class TestGetStatisticsData(unittest.TestCase):
             "pid": [1, 2, 3, 4],
             "tid": [1, 2, 3, 4],
             "rid": [1, 2, 3, 4],
-            "start_datetime": ["2025-01-01 00:00:00", "2025-01-01 00:00:01", "2025-01-01 00:00:02", "2025-01-01 00:00:03"],
-            "end_datetime": ["2025-01-01 00:00:01", "2025-01-01 00:00:02", "2025-01-01 00:00:03", "2025-01-01 00:00:04"],
+            "start_datetime": ["2025-01-01 00:00:00", "2025-01-01 00:00:01", 
+                               "2025-01-01 00:00:02", "2025-01-01 00:00:03"],
+            "end_datetime": ["2025-01-01 00:00:01", "2025-01-01 00:00:02", 
+                             "2025-01-01 00:00:03", "2025-01-01 00:00:04"],
             "batch_type": ["batch", "batch", "batch", "batch"],
             "batch_size": [1, 2, 3, 4],
             "rid_list": [[1], [2], [3], [4]],
@@ -69,23 +71,23 @@ class TestGetStatisticsData(unittest.TestCase):
 
 
 class TestServiceType(unittest.TestCase):
-    def test_get_service_type_with_deserializeExecuteResponse(self):
+    def test_get_service_type_with_deserialize(self):
         """测试包含deserializeExecuteResponse的情况"""
         data = {
             "name": ["deserializeExecuteResponse", "other_function"]
         }
         framework_df = pd.DataFrame(data)
         result = get_service_type(framework_df)
-        self.assertTrue(isinstance(result, MindIEProcessor))
+        self.assertIsInstance(result, MindIEProcessor)
 
-    def test_get_service_type_with_SerializeRequests(self):
+    def test_get_service_type_with_serialize_requests(self):
         """测试包含SerializeRequests但不包含deserializeExecuteResponse的情况"""
         data = {
             "name": ["SerializeRequests", "other_function"]
         }
         framework_df = pd.DataFrame(data)
         result = get_service_type(framework_df)
-        self.assertTrue(isinstance(result, MindIEProcessorV2))
+        self.assertIsInstance(result, MindIEProcessorV2)
 
     def test_get_service_type_with_neither(self):
         """测试既不包含deserializeExecuteResponse也不包含SerializeRequests的情况"""
@@ -94,4 +96,4 @@ class TestServiceType(unittest.TestCase):
         }
         framework_df = pd.DataFrame(data)
         result = get_service_type(framework_df)
-        self.assertTrue(isinstance(result, VllmProcessor))
+        self.assertIsInstance(result, VllmProcessor)

@@ -13,8 +13,8 @@
 # limitations under the License.
 
 import unittest
-import pandas as pd
 from unittest.mock import patch
+import pandas as pd
 from msserviceprofiler.ms_service_profiler_ext.split_processor.base_processor import (
     BaseFrameworkProcessor
 )
