@@ -44,6 +44,28 @@ class BenchmarkCommand:
                 "--RequestRate", "$REQUESTRATE",
                 "--WarmupSize", self.benchmark_command_config.warmup_size,
                 "--Tokenizer", self.benchmark_command_config.tokenizer]
+
+
+class AisbenchCommandConfig(BaseModel):
+    models: str = ""
+    datasets: str = ""
+    mode: str = ""
+    num_prompts: str = ""
+ 
+ 
+class AisbenchCommand:
+    def __init__(self, aisbench_command_config: AisbenchCommandConfig):
+        self.process = shutil.which("ais_bench")
+        self.aisbench_command_config = aisbench_command_config
+ 
+    @property
+    def command(self):
+        return [self.process,
+                "--models", self.aisbench_command_config.models,
+                "--datasets", self.aisbench_command_config.datasets,
+                "--mode", self.aisbench_command_config.mode,
+                "--num-prompts", self.aisbench_command_config.num_prompts,
+                "--debug"]
  
  
 class VllmBenchmarkCommandConfig(BaseModel):
@@ -75,7 +97,7 @@ class VllmBenchmarkCommand:
                 "--dataset-name", self.benchmark_command_config.dataset_name,
                 "--dataset-path", self.benchmark_command_config.dataset_path,
                 "--num-prompts", self.benchmark_command_config.num_prompts,
-                "--max-concurrency", "$MAXCONCURRENCY",
+                "--max-concurrency", "$CONCURRENCY",
                 "--request-rate", "$REQUESTRATE",
                 "--result-dir", "$MODEL_EVAL_STATE_VLLM_CUSTOM_OUTPUT",
                 "--save-result"]
@@ -102,6 +124,7 @@ class VllmCommandConfig(BaseModel):
     port: str = "6379"
     model: str = ""
     served_model_name: str = ""
+    others: str = ""
  
  
 class VllmCommand:
@@ -111,10 +134,13 @@ class VllmCommand:
  
     @property
     def command(self):
-        return [self.process, "serve",
+        cmd = [self.process, "serve",
                 self.command_config.model,
                 "--served-model-name", self.command_config.served_model_name,
                 "--host", self.command_config.host,
                 "--port", self.command_config.port,
                 "--max-num-batched-tokens", "$MAX_NUM_BATCHED_TOKENS",
                 "--max-num-seqs", "$MAX_NUM_SEQS"]
+        if self.command_config.others:
+            cmd.extend(self.command_config.others.split())
+        return cmd
