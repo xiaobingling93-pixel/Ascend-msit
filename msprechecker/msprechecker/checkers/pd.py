@@ -16,11 +16,6 @@
 from .base import NodeChecker
 
 
-class AscendChecker(NodeChecker):
-    def __init__(self, *, error_handler=None, rule_manager=None):
-        super().__init__(error_handler=error_handler, rule_manager=rule_manager)
-        self.error_handler.type = "ascend"
-
+class PDChecker(NodeChecker):
     def _get_rules(self):
-        self.rule_manager.scene = "default"
-        return self.rule_manager.get_rules().get('ascend')
+        return self.rule_manager.get_rules()

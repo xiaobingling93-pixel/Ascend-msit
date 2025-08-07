@@ -23,4 +23,5 @@ class SysChecker(NodeChecker):
         self.error_handler.type = "system"
 
     def _get_rules(self):
-        return self.rule_manager.get_rules('default').get('sys')
+        self.rule_manager.scene = "default"
+        return self.rule_manager.get_rules().get('sys')

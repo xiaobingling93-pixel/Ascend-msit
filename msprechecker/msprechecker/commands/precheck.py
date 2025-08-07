@@ -64,6 +64,12 @@ def setup_precheck_parser(subparsers):
 def _add_pd_disagg_args(parser):
     group = parser.add_argument_group("PD Disaggregation Options")
     group.add_argument(
+        "--scene",
+        metavar="",
+        choices=["pd_disaggregation", 'pd_disaggregation_single_container'],
+        help="Specify different deploy scene. Supports: pd_disaggregation, pd_disaggregation_single_container."
+    )
+    group.add_argument(
         "--user-config-path",
         metavar="",
         help="Path to the 'user_config.json' file for Kubernetes-based deployments."
@@ -72,6 +78,11 @@ def _add_pd_disagg_args(parser):
         "--mindie-env-path",
         metavar="",
         help="Path to the 'mindie_env.json' file for Kubernetes-based deployments."
+    )
+    group.add_argument(
+        "--config-parent-dir",
+        metavar="",
+        help="Path to the parent directory for Kubernetes-based deployments"
     )
 
 

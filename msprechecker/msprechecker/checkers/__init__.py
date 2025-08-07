@@ -17,7 +17,8 @@ __all__ = [
     'BaseChecker', 'NodeChecker',
     'EnvChecker', 'SysChecker', 'AscendChecker', 'HCCLChecker',
     'UserConfigChecker', 'MindIEEnvChecker', 'ModelConfigChecker',
-    'StressChecker'
+    'StressChecker',
+    'PDChecker'
 ]
 
 from .base import BaseChecker, NodeChecker
@@ -25,5 +26,6 @@ from .env import EnvChecker
 from .sys import SysChecker
 from .ascend import AscendChecker
 from .hccl import HCCLChecker
-from .config import UserConfigChecker, MindIEEnvChecker, ModelConfigChecker
+from .config import UserConfigChecker, MindIEEnvChecker, ModelConfigChecker, MIESConfigChecker
 from .stress import StressChecker
+from .pd import PDChecker

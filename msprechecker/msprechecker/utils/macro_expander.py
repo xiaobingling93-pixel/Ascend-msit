@@ -25,7 +25,7 @@ class ExpandError(Exception):
 
 class MacroExpander:
     DOT = "."
-    VAR_REGEX = re.compile(r"\$\{([\w_.\[\]]+?)\}")
+    VAR_REGEX = re.compile(r"\$\{([\w_.\[\]/]+?)\}")
 
     @classmethod
     def expand(cls, expr, context, visited_path):

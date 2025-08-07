@@ -186,12 +186,12 @@ class EnvCheckErrorDisplayDecorator(ErrorDisplayStrategy):
             if expected is None:
                 activate_cmds.append(f"unset {var} # {reason}")
             else:
-                activate_cmds.append(f"export {var}={expected} # {reason}")
+                activate_cmds.append(f'export {var}="{expected}" # {reason}')
 
             if actual == "missing":
                 deactivate_cmds.append(f"unset {var}")
             else:
-                deactivate_cmds.append(f"export {var}={actual}")
+                deactivate_cmds.append(f'export {var}="{actual}"')
 
         script = (
             "#!/bin/bash\n"

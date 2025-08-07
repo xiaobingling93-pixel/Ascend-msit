@@ -20,6 +20,7 @@ __all__ = [
     'SysCollector', 'LscpuCollector',
     'AscendCollector',
     'ConfigCollector', 'UserConfigCollector', 'MindIEEnvCollector', 'ModelConfigCollector',
+    'MIESConfigCollector',
     'PingCollector',
     'HCCLCollector',
     "CPUStressCollector", "NPUStressCollector", "BaseStressCollector",
@@ -30,7 +31,10 @@ from .base import BaseCollector, CollectResult
 from .env import EnvCollector
 from .sys import SysCollector, LscpuCollector
 from .ascend import AscendCollector
-from .config import ConfigCollector, UserConfigCollector, MindIEEnvCollector, ModelConfigCollector
+from .config import (
+    ConfigCollector, UserConfigCollector, MindIEEnvCollector, ModelConfigCollector,
+    MIESConfigCollector
+)
 from .hccl import HCCLCollector
 from .network import PingCollector
 from .hardware import CPUStressCollector, NPUStressCollector, BaseStressCollector

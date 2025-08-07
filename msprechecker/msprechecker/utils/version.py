@@ -63,7 +63,7 @@ class Version:
 
     def __lt__(self, other):
         return self.cmp_tuple() < self._other_version(other)
-    
+
     @property
     def major(self):
         return self._major
@@ -94,10 +94,10 @@ class Version:
             return Version._parse_version_str(ver)
 
         raise ValueError("Invalid version string: {}".format(version_str))
-    
+
     @staticmethod
     def _other_version(other):
-        return other.cmp_tuple() if isinstance(other, Version) else Version(other).cmp_tuple()
+        return other.cmp_tuple() if isinstance(other, Version) else False
 
     def cmp_tuple(self):
         return (
