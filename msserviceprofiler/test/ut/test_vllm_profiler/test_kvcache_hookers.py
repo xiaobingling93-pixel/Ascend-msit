@@ -22,17 +22,17 @@ from .fake_ms_service_profiler import Profiler, Level
 
 # Setup environment
 os.environ["VLLM_USE_V1"] = "-1"
-from msserviceprofiler.vllm_profiler.vllm_v1 import kvcache_hookers
 original = sys.modules.get("ms_service_profiler", None)
-#sys.modules["ms_service_profiler"] = MagicMock()
-#sys.modules["ms_service_profiler"].Profiler = Profiler
-#sys.modules["ms_service_profiler"].Level = Level
+sys.modules["ms_service_profiler"] = MagicMock()
+sys.modules["ms_service_profiler"].Profiler = Profiler
+sys.modules["ms_service_profiler"].Level = Level
 Request = namedtuple("Request", ["request_id", "num_tokens"])
 
+from msserviceprofiler.vllm_profiler.vllm_v1 import kvcache_hookers
 
 @pytest.fixture
-def restore_ms_service_profiler_modeul():
-    yiled
+def restore_ms_service_profiler_modeul(autouse=True, scope="module"):
+    yield
     if original is not None:
         sys.modules["ms_service_profiler"] = original
     else:
