@@ -1,0 +1,142 @@
+conf/ms_controller.json:
+  deploy_mode:
+    expected:
+      type: eq
+      value: "pd_disaggregation_single_container"
+    reason: "单机PD分离场景下，deploy_mode应该是pd_disaggregation_single_container"
+    severity: high
+  tls_config:
+    request_coordinator_tls_enable:
+      expected:
+        type: eq
+        value: false
+      reason: "如果确实配置了安全证书，建议开启为true，此条校验为提示"
+      severity: low
+    request_server_tls_enable:
+      expected:
+        type: eq
+        value: false
+      reason: "如果确实配置了安全证书，建议开启为true，此条校验为提示"
+      severity: low
+    http_server_tls_enable:
+      expected:
+        type: eq
+        value: false
+      reason: "如果确实配置了安全证书，建议开启为true，此条校验为提示"
+      severity: low
+    cluster_tls_enable:
+      expected:
+        type: eq
+        value: false
+      reason: "如果确实配置了安全证书，建议开启为true，此条校验为提示"
+      severity: low
+    etcd_server_tls_enable:
+      expected:
+        type: eq
+        value: false
+      reason: "如果确实配置了安全证书，建议开启为true，此条校验为提示"
+      severity: low
+
+conf/ms_coordinator.json:
+  digs_scheduler_config:
+    deploy_mode:
+      expected:
+        type: eq
+        value: "pd_disaggregation_single_container"
+      reason: "单机PD分离场景下，deploy_mode应该是pd_disaggregation_single_container"
+      severity: high
+  tls_config:
+    controller_server_tls_enable:
+      expected:
+        type: eq
+        value: false
+      reason: "如果确实配置了安全证书，建议开启为true，此条校验为提示"
+      severity: low
+    request_server_tls_enable:
+      expected:
+        type: eq
+        value: false
+      reason: "如果确实配置了安全证书，建议开启为true，此条校验为提示"
+      severity: low
+    mindie_client_tls_enable:
+      expected:
+        type: eq
+        value: false
+      reason: "如果确实配置了安全证书，建议开启为true，此条校验为提示"
+      severity: low
+    mindie_mangment_tls_enable:
+      expected:
+        type: eq
+        value: false
+      reason: "如果确实配置了安全证书，建议开启为true，此条校验为提示"
+      severity: low
+
+conf/config.json:
+  ServerConfig:
+    httpsEnabled:
+      expected:
+        type: eq
+        value: false
+      reason: "如果确实配置了安全证书，建议开启为true，此条校验为提示"
+      severity: low
+    inferMode:
+      expected:
+        type: eq
+        value: "dmi"
+      reason: "单机PD分离场景下，inferMode应该是dmi"
+      severity: high
+    interCommTLSEnabled:
+      expected:
+        type: eq
+        value: false
+      reason: "如果确实配置了安全证书，建议开启为true，此条校验为提示"
+      severity: low
+  BackendConfig:
+    interNodeTLSEnabled:
+      expected:
+        type: eq
+        value: false
+      reason: "如果确实配置了安全证书，建议开启为true，此条校验为提示"
+      severity: low
+    ModelDeployConfig:
+      ModelConfig:
+        - worldSize:
+            expected:
+              type: range
+              value: [1, 16]
+            reason: "Atlas 800I A3服务器上，单机PD分离场景下，worldSize取值范围为1到16"
+            severity: high
+          tp:
+            expected:
+              type: eq
+              value: ${conf/config.json.BackendConfig.ModelDeployConfig.ModelConfig[0].worldSize}
+            reason: "单机PD分离场景下，tp需要等于worldSize"
+            severity: high
+
+deployment/mindie_service_single_container_base_A3.yaml:
+  - null
+  - spec:
+      replicas:
+        expected:
+          type: eq
+          value: 1
+        reason: "表示拉起的pod数，单机PD分离中P和D的server实例在同pod中，该值需要等于1"
+        severity: high
+      template:
+        spec:
+          containers[0]:
+            resources:
+              requests:
+                huawei.com/Ascend910:
+                  expected:
+                    type: range
+                    value: ["${conf/config.json.BackendConfig.ModelDeployConfig.ModelConfig[0].worldSize}", 16]
+                  reason: "Atlas 800I A3环境上，单机PD分离场景下，huawei.com/Ascend910应该大于等于worldSize且小于等于16"
+                  severity: high
+              limits:
+                huawei.com/Ascend910:
+                  expected:
+                    type: range
+                    value: ["${conf/config.json.BackendConfig.ModelDeployConfig.ModelConfig[0].worldSize}", 16]
+                  reason: "Atlas 800I A3环境上，单机PD分离场景下，huawei.com/Ascend910应该大于等于worldSize且小于等于16"
+                  severity: high
