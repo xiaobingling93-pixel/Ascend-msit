@@ -18,11 +18,12 @@ from collections import namedtuple
 from unittest.mock import patch, MagicMock, call
 import pytest
 
-from msserviceprofiler.vllm_profiler.vllm_v1 import kvcache_hookers
 from .fake_ms_service_profiler import Profiler, Level
 
 # Setup environment
 os.environ["VLLM_USE_V1"] = "-1"
+from msserviceprofiler.vllm_profiler.vllm_v1 import kvcache_hookers
+
 sys.modules["ms_service_profiler"] = MagicMock()
 sys.modules["ms_service_profiler"].Profiler = Profiler
 sys.modules["ms_service_profiler"].Level = Level
