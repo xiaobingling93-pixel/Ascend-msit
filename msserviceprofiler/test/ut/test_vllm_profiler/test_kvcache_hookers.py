@@ -22,11 +22,11 @@ from msserviceprofiler.vllm_profiler.vllm_v1 import kvcache_hookers
 from .fake_ms_service_profiler import Profiler, Level
 
 # Setup environment
-os.environ['VLLM_USE_V1'] = '-1'
-sys.modules['ms_service_profiler'] = MagicMock()
-sys.modules['ms_service_profiler'].Profiler = Profiler
-sys.modules['ms_service_profiler'].Level = Level
-Request = namedtuple('Request', ['request_id', 'num_tokens'])
+os.environ["VLLM_USE_V1"] = "-1"
+sys.modules["ms_service_profiler"] = MagicMock()
+sys.modules["ms_service_profiler"].Profiler = Profiler
+sys.modules["ms_service_profiler"].Level = Level
+Request = namedtuple("Request", ["request_id", "num_tokens"])
 
 
 @pytest.fixture(autouse=True)
@@ -47,9 +47,9 @@ def test_allocate_slots_given_valid_request_when_called_then_log_allocation():
     assert result == "result"
     assert len(Profiler.instance_calls) == 1
     calls = Profiler.instance_calls[0]
-    assert ('res', 'req1') in calls
-    assert ('metric', 'deviceBlock', 42) in calls
-    assert ('event', 'Allocate') in calls
+    assert ("res", "req1") in calls
+    assert ("metric", "deviceBlock", 42) in calls
+    assert ("event", "Allocate") in calls
 
 
 def test_free_given_valid_request_when_called_then_log_free():
@@ -64,9 +64,9 @@ def test_free_given_valid_request_when_called_then_log_free():
     assert result == "result"
     assert len(Profiler.instance_calls) == 1
     calls = Profiler.instance_calls[0]
-    assert ('res', 'req2') in calls
-    assert ('metric', 'deviceBlock', 50) in calls
-    assert ('event', 'Free') in calls
+    assert ("res", "req2") in calls
+    assert ("metric", "deviceBlock", 50) in calls
+    assert ("event", "Free") in calls
 
 
 def test_get_computed_blocks_given_cache_hit_when_condition_met_then_log_hit_rate():
@@ -80,9 +80,9 @@ def test_get_computed_blocks_given_cache_hit_when_condition_met_then_log_hit_rat
     assert result == (["block1", "block2"], 8)
     assert len(Profiler.instance_calls) == 1
     calls = Profiler.instance_calls[0]
-    assert ('res', 'req3') in calls
-    assert ('attr', 'hitCache', 0.8) in calls  # 8/10 = 0.8
-    assert ('event', 'GetCacheHitRate') in calls
+    assert ("res", "req3") in calls
+    assert ("attr", "hitCache", 0.8) in calls  # 8/10 = 0.8
+    assert ("event", "GetCacheHitRate") in calls
 
 
 def test_get_computed_blocks_given_insufficient_blocks_when_called_then_no_logging():
@@ -132,4 +132,4 @@ def test_get_computed_blocks_given_no_new_tokens_when_called_then_log_zero_hit_r
     assert result == (["block1", "block2"], 0)
     assert len(Profiler.instance_calls) == 1
     calls = Profiler.instance_calls[0]
-    assert ('attr', 'hitCache', 0.0) in calls  # 0/10 = 0.0
+    assert ("attr", "hitCache", 0.0) in calls  # 0/10 = 0.0
