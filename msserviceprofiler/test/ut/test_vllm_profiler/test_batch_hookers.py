@@ -25,9 +25,9 @@ from .fake_ms_service_profiler import Profiler, Level
 os.environ["VLLM_USE_V1"] = "-1"
 from msserviceprofiler.vllm_profiler.vllm_v1 import batch_hookers
 original = sys.modules.get("ms_service_profiler", None)
-sys.modules["ms_service_profiler"] = MagicMock()
-sys.modules["ms_service_profiler"].Profiler = Profiler
-sys.modules["ms_service_profiler"].Level = Level
+#sys.modules["ms_service_profiler"] = MagicMock()
+#sys.modules["ms_service_profiler"].Profiler = Profiler
+#sys.modules["ms_service_profiler"].Level = Level
 
 
 # Test helpers
