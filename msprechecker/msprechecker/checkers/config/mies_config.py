@@ -12,3 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from ..base import NodeChecker
+
+
+class MIESConfigChecker(NodeChecker):
+    def __init__(self, *, error_handler=None, rule_manager=None):
+        super().__init__(error_handler=error_handler, rule_manager=rule_manager)
+        self.error_handler.type = "mies config"
+
+    def _get_rules(self):
+        self.rule_manager.scene = "mix"
+        return self.rule_manager.get_rules()['mies_config']

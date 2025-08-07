@@ -19,7 +19,11 @@ import platform
 import yaml
 from msguard.security import open_s
 
-from ..utils import get_npu_count, get_npu_type, global_logger, NpuType, ErrorSeverity, singleton
+from ..utils import (
+    NpuType, ErrorSeverity,
+    get_npu_count, get_npu_type, singleton,
+    global_logger
+)
 
 
 @singleton
@@ -29,6 +33,9 @@ class RuleManager:
     SCENE_MAPPING = {
         "user_config": "config_check_dsr1_pd.yaml",
         "mindie_env": "env_check_dsr1_pd.yaml",
+        "pd_disaggregation": "config_check_pd.yaml",
+        "pd_disaggregation_single_container": "config_check_pd_single_container.yaml",
+        "mix": "pd_mix_check.yaml",
         "default": "default.yaml",
     }
     
@@ -37,8 +44,10 @@ class RuleManager:
         "aarch64": "arm"
     }
     
-    def __init__(self, custom_rule_path):
+    def __init__(self, *, scene=None, custom_rule_path=None):
+        self.scene = scene
         self.custom_rule_path = custom_rule_path
+
         self._npu_type, _ = get_npu_type()
         if not self._npu_type:
             self._npu_type = NpuType.TP_A2
@@ -58,10 +67,9 @@ class RuleManager:
             "severity": severity
         }
 
-    
-    def get_rules(self, scene: str):
+    def get_rules(self):
         # 1. 获取内置规则
-        rules = self._get_builtin_rules(scene)
+        rules = self._get_builtin_rules()
         
         # 2. 获取用户自定义规则（如果有）
         custom_rules = self._get_custom_rules()
@@ -75,21 +83,21 @@ class RuleManager:
 
         return rules
     
-    def _get_builtin_rules(self, scene: str):
+    def _get_builtin_rules(self):
         """获取指定场景的内置规则"""
-        if not scene:
+        if not self.scene:
             return {}
 
-        if scene not in self.SCENE_MAPPING:
+        if self.scene not in self.SCENE_MAPPING:
             raise ValueError(
-                f"Expected 'scene' to be {', '.join(self.SCENE_MAPPING)}. Got {scene} instead."
+                f"Expected 'scene' to be {', '.join(self.SCENE_MAPPING)}. Got {self.scene} instead."
             )
         
-        rule_file = self.SCENE_MAPPING[scene]
+        rule_file = self.SCENE_MAPPING[self.scene]
         cur_dir = os.path.dirname(__file__)
         
         # 特殊处理default场景
-        if scene == "default":
+        if self.scene == "default":
             rule_path = os.path.join(cur_dir, rule_file)
         else:
             # 根据NPU类型和架构获取正确的规则路径
@@ -116,7 +124,7 @@ class RuleManager:
                 rule_path = os.path.join(cur_dir, "A3", rule_file)
         
         with open_s(rule_path, 'r', encoding='utf-8') as f:
-            return yaml.safe_load(f)    
+            return yaml.safe_load(f)
     
     def _get_custom_rules(self):
         """获取用户自定义规则，如果没有则返回空字典"""

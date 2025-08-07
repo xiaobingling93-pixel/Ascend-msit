@@ -62,7 +62,42 @@ class NodeChecker(BaseChecker):
     def _validate_expected(self, node: dict, path: str, visited_nodes: dict):
         expect = node['expected']
         actual = visited_nodes.get(path)
+        reason = node.get('reason', '暂无原因')
+        severity = node.get('severity', "high")
+
+        if expect is None:
+            self.error_handler.add_error(
+                path=path,
+                actual=actual,
+                expected="-",
+                reason=reason,
+                severity="medium"
+            )
+            return
+
+        while 'if' in expect:
+            condition = expect['if']
+            try:
+                condition = MacroExpander.expand(condition, path, visited_nodes)
+                condition_result = Evaluator.evaluate(condition)
+            except ExpandError as e:
+                self.error_handler.add_error(
+                    path=path,
+                    actual=actual,
+                    expected=expect['if'],
+                    reason=f"条件表达式展开失败: {str(e)}",
+                    severity=severity
+                )
+                return
+            
+            # 根据条件结果选择then或else分支
+            expect = expect['then'] if condition_result else expect['else']
+            if expect is None:
+                return
+
+        # 处理选定的预期节点
         expected_value = expect['value']
+        expected_type = expect['type']
 
         try:
             expanded_value = MacroExpander.expand(expected_value, path, visited_nodes)
@@ -72,14 +107,12 @@ class NodeChecker(BaseChecker):
                 actual=actual,
                 expected=expected_value,
                 reason=str(e),
-                severity="high"
+                severity=severity
             )
             return
 
-        validator = get_validator(expect['type'])
+        validator = get_validator(expected_type)
         evaluated_value = Evaluator.evaluate(expanded_value)
-        reason = node.get('reason', '暂无原因')
-        severity = node.get('severity', "high")
 
         if not validator.validate(actual, evaluated_value):
             self.error_handler.add_error(
@@ -94,19 +127,32 @@ class NodeChecker(BaseChecker):
         for k, v in node.items():
             new_path = k if not path else f"{path}.{k}"
             if new_path not in visited_nodes:
-                self._handle_missing_key(v, new_path)
+                self._handle_missing_key(v, new_path, visited_nodes)
                 continue
             queue.append((v, new_path))
 
-    def _handle_missing_key(self, node, path):
+    def _handle_missing_key(self, node, path, visited_nodes):
         expected = node.get('expected', {})
+
+        if expected is None:
+            self.error_handler.add_error(
+                path=path,
+                actual="missing",
+                expected="-",
+                reason=node.get('reason', '这个字段应该存在'),
+                severity="medium"
+            )
+            return
+        
         expected_type = expected.get('type', "")
-        expected_value = expected.get('value', "")
+        expected_value = Evaluator.evaluate(
+            MacroExpander.expand(expected.get('value', "存在"), path, visited_nodes)
+        )
         if not (expected_type == 'eq' and expected_value is None):
             self.error_handler.add_error(
                 path=path,
                 actual='missing',
-                expected=node.get('expected', {}).get('value', '存在'),
+                expected=expected_value,
                 reason=node.get('reason', '这个字段应该存在'),
                 severity=node.get('severity', 'high')
             )
@@ -115,6 +161,6 @@ class NodeChecker(BaseChecker):
         for i, v in enumerate(node):
             new_path = f"[{i}]" if not path else f"{path}[{i}]"
             if new_path not in visited_nodes:
-                self._handle_missing_key(v, new_path)
+                self._handle_missing_key(v, new_path, visited_nodes)
                 continue
             queue.append((v, new_path))

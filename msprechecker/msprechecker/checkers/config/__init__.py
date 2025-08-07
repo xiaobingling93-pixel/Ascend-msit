@@ -16,10 +16,11 @@
 __all__ = [
     'UserConfigChecker',
     'MindIEEnvChecker',
-    'ModelConfigChecker'
+    'ModelConfigChecker',
+    'MIESConfigChecker'
 ]
 
 from .user_config import UserConfigChecker
 from .mindie_env import MindIEEnvChecker
 from .model_config import ModelConfigChecker
-
+from .mies_config import MIESConfigChecker

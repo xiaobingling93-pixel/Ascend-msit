@@ -29,6 +29,8 @@ def _lazy_register_validators():
         GEValidator, LEValidator, NEValidator
     )
     from .enum import EnumValidator
+    from .path import PathValidator
+    from .docker import DockerValidator
 
     aliases = {
         "range": RangeValidator,
@@ -39,6 +41,8 @@ def _lazy_register_validators():
         "ge": GEValidator, ">=": GEValidator,
         "le": LEValidator, "<=": LEValidator,
         "ne": NEValidator, "!=": NEValidator,
+        "path": PathValidator,
+        "docker": DockerValidator
     }
 
     for key, cls in aliases.items():

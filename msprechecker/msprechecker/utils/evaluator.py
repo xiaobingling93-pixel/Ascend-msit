@@ -21,25 +21,43 @@ from .version import Version
 
 class Evaluator:
     OPS = {
-        '+': (1, operator.add),
-        '-': (1, operator.sub),
-        '*': (2, operator.mul),
-        '/': (2, operator.truediv),
-        '//': (2, operator.floordiv),
-        '%': (2, operator.mod),
-        '**': (3, operator.pow)
+         # 算术运算符
+        '**': (5, operator.pow),
+        '*': (4, operator.mul),
+        '/': (4, operator.truediv),
+        '//': (4, operator.floordiv),
+        '%': (4, operator.mod),
+
+        '+': (3, operator.add),
+        '-': (3, operator.sub),
+        
+        # 比较运算符
+        '==': (2, operator.eq),
+        '!=': (2, operator.ne),
+        '>': (2, operator.gt),
+        '<': (2, operator.lt),
+        '>=': (2, operator.ge),
+        '<=': (2, operator.le),
+
+        # 逻辑运算符
+        'not': (6, operator.not_),
+        'and': (1, operator.and_),
+        'or': (0, operator.or_)
     }
 
     _TOKEN_REGEX = re.compile(
-        r'(?P<FUNC>float|int|Version)\((?P<FUNC_ARG>[^()]*?)\)'    # Function calls
-        r'|(?P<OP>\*\*|//|[+\-*/%()])'                                      # Operators3
-        r'|(?P<NUMBER>\d+([.]\d*)?)'                                        # Integer or decimal number
-        r'|(?P<SKIP>[ \t]+)'                                                # Whitespace
+        r'(?P<NUMBER>-?\d+(\.\d*)?)'
+        r'|(?P<OP>==|!=|>=|<=|\*\*|//|>|<|\b(?:and|or|not)\b|[+\-*/%()])'
+        r'|(?P<FUNC>float|int|str|Version)\((?P<FUNC_ARG>[^()]*?)\)'
+        r'|(?P<STR>(?:\'|\")[^\'\"]+?(?:\'|\"))'
+        r'|(?P<NONE>\bNone\b)'
+        r'|(?P<SKIP>\s+)'
     )
     
     _FUNC_MAP = {
         'float': float,
         'int': int,
+        'str': str,
         'Version': Version
     }
 
@@ -49,7 +67,7 @@ class Evaluator:
         has_number = False
         has_int_or_float = False
         has_version = False
-        has_op = False
+
         for mo in Evaluator._TOKEN_REGEX.finditer(expr):
             kind = mo.lastgroup
             value = mo.group()
@@ -68,11 +86,14 @@ class Evaluator:
                 has_number = True
                 tokens.append(('NUMBER', value))
             elif kind == 'OP':
-                has_op = True
                 tokens.append(('OP', value))
+            elif kind == 'STR':
+                tokens.append(('STR', value))
+            elif kind == 'NONE':
+                tokens.append(('NONE', value))
 
         # Constraint checks
-        version_conflict = has_version and (has_int_or_float or has_op or has_number)
+        version_conflict = has_version and (has_int_or_float or has_number)
         if version_conflict:
             raise SyntaxError("Expression cannot contain VERSION with INT/FLOAT/NUMBER/OP tokens.")
 
@@ -91,12 +112,9 @@ class Evaluator:
 
     @classmethod
     def _handle_tokens(cls, tokens, output, stack):
-        i = 0
-        while i < len(tokens):
-            typ, val = tokens[i]
-            if typ in ('INT', 'FLOAT'):
-                output.append(val)
-            elif typ == "NUMBER":
+        for token in tokens:
+            typ, val = token
+            if typ == "NUMBER":
                 output.append(float(val) if '.' in val else int(val))
             elif typ == 'OP':
                 if val == '(':
@@ -107,19 +125,16 @@ class Evaluator:
                     if not stack:
                         raise ValueError("Mismatched parentheses in expression")
                     stack.pop()
+                elif val == "not":
+                    stack.append(val)
                 else:
                     op = val
-                    # Handle multi-char ops
-                    if op in ('*', '/') and i + 1 < len(tokens) and tokens[i + 1][1] in ('*', '/'):
-                        op += tokens[i + 1][1]
-                        i += 1
-                    if op not in cls.OPS:
-                        raise ValueError(f"Unsupported operator: {op}")
                     prec = cls.OPS[op][0]
                     while stack and stack[-1] in cls.OPS and cls.OPS[stack[-1]][0] >= prec:
                         output.append(stack.pop())
                     stack.append(op)
-            i += 1
+            else:
+                output.append(val)
 
     @classmethod
     def _convert_tokens_to_rpn(cls, tokens):
@@ -127,12 +142,6 @@ class Evaluator:
         if len(tokens) == 1:
             _, val = tokens[0]
             return [val]
-
-        # Handle Version (should be single token)
-        if any(t[0] == 'VERSION' for t in tokens):
-            if len(tokens) != 1:
-                raise SyntaxError("Version expressions must be a single token.")
-            return [tokens[0][1]]
 
         # Handle expressions with INT/FLOAT and OPs
         output = []
@@ -154,10 +163,15 @@ class Evaluator:
         for token in rpn:
             if isinstance(token, (int, float, Version)):
                 stack.append(token)
+            elif token == "not":
+                a = stack.pop()
+                stack.append(cls.OPS[token][1](a))
             elif token in cls.OPS:
                 b = stack.pop()
                 a = stack.pop()
                 stack.append(cls.OPS[token][1](a, b))
+            elif isinstance(token, (str)):
+                stack.append(token)
             else:
                 raise ValueError(f"Unknown token in RPN: {token}")
         if len(stack) != 1:
@@ -176,6 +190,6 @@ class Evaluator:
         try:
             result = cls._evaluate_rpn(rpn)
         except Exception:
-            return expr
+            result = expr
 
         return result

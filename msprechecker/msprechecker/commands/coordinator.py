@@ -17,6 +17,7 @@ import os
 import json
 import argparse
 
+import yaml
 from msguard.security import open_s
 
 from .base import CommandType
@@ -31,12 +32,14 @@ from ..collectors import (
     EnvCollector, SysCollector, ConfigCollector,
     AscendCollector, HCCLCollector, PingCollector,
     WeightCollector, CPUStressCollector, NPUStressCollector,
-    UserConfigCollector, MindIEEnvCollector, ModelConfigCollector
+    UserConfigCollector, MindIEEnvCollector, ModelConfigCollector,
+    MIESConfigCollector
 )
 from ..checkers import (
     UserConfigChecker, MindIEEnvChecker, 
     ModelConfigChecker, EnvChecker, SysChecker,
-    AscendChecker, HCCLChecker, StressChecker
+    AscendChecker, HCCLChecker, StressChecker,
+    PDChecker, MIESConfigChecker
 )
 from ..comparators import Comparator
 from ..reporters import Reporter
@@ -51,7 +54,7 @@ class CollectorFactory:
             AscendCollector(),
             HCCLCollector(),
         ]
-        
+
         if getattr(args, "hardware", False):
             collectors.extend((CPUStressCollector(), NPUStressCollector()))
 
@@ -85,7 +88,8 @@ class CheckerFactory:
         NPUStressCollector: StressChecker,
         UserConfigCollector: UserConfigChecker,
         MindIEEnvCollector: MindIEEnvChecker,
-        ModelConfigCollector: ModelConfigChecker
+        ModelConfigCollector: ModelConfigChecker,
+        MIESConfigCollector: MIESConfigChecker,
     }
     
     @classmethod
@@ -103,11 +107,49 @@ class CheckerFactory:
 
 class PrecheckStrategy(CommandStrategy):
     @staticmethod
-    def execute(args: argparse.Namespace) -> int:
-        rule_manager = RuleManager(args.custom_config_path)
+    def execute_single_container(args):
+        rule_manager = RuleManager(
+            scene=args.scene,
+            custom_rule_path=args.custom_config_path
+        )
         reporter = Reporter()
+
+        paths_to_find = rule_manager.get_rules().keys()
+        
+        collect_data = {}
+        for path in paths_to_find:
+            if os.path.isabs(path):
+                global_logger.warning("unsafe, key should not be abspath: {path!r}")
+                continue
+            full_path = os.path.join(args.config_parent_dir, path)
+            load_fn = json.load if full_path.endswith(".json") else lambda f: list(yaml.safe_load_all(f))
+            try:
+                with open_s(full_path) as f:
+                    data = load_fn(f)
+            except Exception as e:
+                global_logger.error("missing file: %r", full_path)
+                return
+
+            collect_data[path] = data
+        
+        checker = PDChecker(rule_manager=rule_manager)
+        reporter.report(checker.check(collect_data))
+
+    @staticmethod
+    def execute(args: argparse.Namespace) -> int:
+        rule_manager = RuleManager(
+            scene=args.scene,
+            custom_rule_path=args.custom_config_path
+        )
+        reporter = Reporter()
+
+        if args.scene:
+            return PrecheckStrategy.execute_single_container(args)
         
         collectors = CollectorFactory.create(args)
+        if args.mies_config_path:
+            collectors = [EnvCollector(), MIESConfigCollector(config_path=args.mies_config_path)]
+
         for collector in collectors:
             collect_result = collector.collect()
             if not collect_result.error_handler.empty():
@@ -172,10 +214,11 @@ class DumpStrategy(CommandStrategy):
     @staticmethod
     def _display_collect_warning(error_handler):
         for error in error_handler:
+            context = error.context
             global_logger.warning(
                 "Error occured while collecting '%s': %s", 
                 error_handler.type, 
-                error.what
+                context.what
             )
 
 
@@ -231,6 +274,13 @@ class Coordinator:
         """Execute the appropriate action based on command"""
         args = parser.parse_args()
         show_legacy_warnings(args)
+
+        if getattr(args, "scene", None) and not getattr(args, "config_parent_dir", None):
+            global_logger.error(
+                "Passing 'args.scene' without providing 'args.config_parent_dir' "
+                "will not take any affect!"
+            )
+            return 1
         
         cmd = getattr(args, 'command', None)
         if not cmd:

@@ -22,4 +22,5 @@ class EnvChecker(NodeChecker):
         self.error_handler.type = "env"
 
     def _get_rules(self):
-        return self.rule_manager.get_rules('default').get('env')
+        self.rule_manager.scene = "mix"
+        return self.rule_manager.get_rules()['env']
