@@ -18,13 +18,12 @@ import threading
 from collections import namedtuple, deque, Counter
 from unittest.mock import patch, MagicMock, call
 import pytest
+import ms_service_profiler
 
 from .fake_ms_service_profiler import Profiler, Level
 
 # Setup environment
 os.environ["VLLM_USE_V1"] = "-1"
-original = sys.modules.get("ms_service_profiler", None)
-sys.modules["ms_service_profiler"] = MagicMock()
 sys.modules["ms_service_profiler"].Profiler = Profiler
 sys.modules["ms_service_profiler"].Level = Level
 
