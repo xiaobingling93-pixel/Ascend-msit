@@ -17,11 +17,10 @@ import sys
 import threading
 from collections import namedtuple, deque, Counter
 from unittest.mock import patch, MagicMock, call
-
 import pytest
 
-from .fake_ms_service_profiler import Profiler, Level
 from msserviceprofiler.vllm_profiler.vllm_v1 import batch_hookers
+from .fake_ms_service_profiler import Profiler, Level
 
 # Setup environment
 os.environ['VLLM_USE_V1'] = '-1'
@@ -75,15 +74,15 @@ def create_request(request_id, token_count=10):
 # compare_deques tests
 @pytest.mark.parametrize("q1, q2, expected", [
     # Normal cases
-    ([1, 2, 3], [2, 3, 4], Counter({1 : 1})),
-    ([1, 1, 2], [1, 2], Counter({1 : 1})),
+    ([1, 2, 3], [2, 3, 4], Counter({1: 1})),
+    ([1, 1, 2], [1, 2], Counter({1: 1})),
     # Empty cases
     ([], [1, 2], Counter()),
-    ([1, 2], [], Counter({1 : 1, 2 : 1})),
+    ([1, 2], [], Counter({1: 1, 2: 1})),
     # Identical cases
     ([1, 2], [1, 2], Counter()),
     # Duplicates
-    ([1, 1, 1], [1], Counter({1 : 2})),
+    ([1, 1, 1], [1], Counter({1: 2})),
 ])
 
 

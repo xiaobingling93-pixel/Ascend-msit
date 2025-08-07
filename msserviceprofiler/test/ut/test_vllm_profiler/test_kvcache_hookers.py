@@ -16,11 +16,10 @@ import sys
 import os
 from collections import namedtuple
 from unittest.mock import patch, MagicMock, call
-
 import pytest
 
-from .fake_ms_service_profiler import Profiler, Level
 from msserviceprofiler.vllm_profiler.vllm_v1 import kvcache_hookers
+from .fake_ms_service_profiler import Profiler, Level
 
 # Setup environment
 os.environ['VLLM_USE_V1'] = '-1'
@@ -28,6 +27,7 @@ sys.modules['ms_service_profiler'] = MagicMock()
 sys.modules['ms_service_profiler'].Profiler = Profiler
 sys.modules['ms_service_profiler'].Level = Level
 Request = namedtuple('Request', ['request_id', 'num_tokens'])
+
 
 @pytest.fixture(autouse=True)
 def reset_profiler():
