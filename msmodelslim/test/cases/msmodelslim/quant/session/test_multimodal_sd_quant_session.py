@@ -21,6 +21,9 @@ import torch.nn as nn
 from pydantic import BaseModel
 from importlib import import_module
 
+from msmodelslim.utils.exception import SchemaValidateError
+
+
 # Mocking imports from msmodelslim package
 class MockAntiOutlierConfig(BaseModel):
     dev_type: str
@@ -314,9 +317,9 @@ class TestMultiModal_SD_Quant_Session(unittest.TestCase):
         session_cfg = SessionConfig(processor_cfg_map=processor_cfg_map, device='npu')
 
         # Act & Assert
-        with self.assertRaises(ValueError) as context:
+        with self.assertRaises(SchemaValidateError) as context:
             process_session_cfg(session_cfg, device_id=0)
-        self.assertTrue("The processor_cfg_map in session_config is not supported, please check." in str(context.exception))
+        self.assertTrue("The processor_cfg_map in session_config is not supported" in str(context.exception))
 
     def test_quant_model_with_anti_outlier_and_quantization(self):
         # Arrange

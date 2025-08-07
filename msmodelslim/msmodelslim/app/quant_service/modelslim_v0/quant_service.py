@@ -6,11 +6,11 @@ from typing import Optional
 import torch
 import torch.nn.functional as F
 
-from ascend_utils.common.security import safe_copy_file
 from msmodelslim.pytorch.llm_ptq.anti_outlier import AntiOutlier, AntiOutlierConfig
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
-from msmodelslim.tools import logger as msmodelslim_logger
-from msmodelslim.tools.logger import set_logger_level
+from msmodelslim.utils.exception import SchemaValidateError
+from msmodelslim.utils.logger import logger_setter
+from msmodelslim.utils.security import safe_copy_file
 from .quant_config import ModelslimV0QuantConfig
 from ..base import BaseQuantService
 from ..dataset_interface import DatasetLoaderInterface
@@ -78,25 +78,26 @@ def copy_files(input_path, output_path):
         os.chmod(dest_file, int("600", 8))
 
 
+@logger_setter('msmodelslim.app.quant_service.modelslim_v0')
 class ModelslimV0QuantService(BaseQuantService):
-    logger = msmodelslim_logger.get_logger()
-
     def __init__(self, dataset_loader: DatasetLoaderInterface):
         super().__init__(dataset_loader)
 
     def quantize(self, model: BaseModel, quant_config: BaseQuantConfig, save_path: Optional[Path] = None):
         if not isinstance(model, BaseModel):
-            raise ValueError("model must be a BaseModelAdapter")
+            raise SchemaValidateError("model must be a BaseModelAdapter",
+                                      action='Please make sure the model is a BaseModelAdapter')
         if not isinstance(quant_config, BaseQuantConfig):
-            raise ValueError("task must be a BaseTask")
+            raise SchemaValidateError("task must be a BaseTask",
+                                      action='Please make sure the task is a BaseTask')
         if save_path is not None and not isinstance(save_path, Path):
-            raise ValueError("save_path must be a Path or None")
+            raise SchemaValidateError("save_path must be a Path or None",
+                                      action='Please make sure the save_path is a Path or None')
 
         return self.quant_process(model, ModelslimV0QuantConfig.from_base(quant_config), save_path)
 
     def quant_process(self, model: BaseModel, quant_config: ModelslimV0QuantConfig, save_path: Optional[Path]):
         # init
-        set_logger_level("info")
         if model.device == DeviceType.NPU:
             # 如果使用npu进行量化需开启二进制编译，避免在线编译算子
             torch.npu.set_compile_mode(jit_compile=False)

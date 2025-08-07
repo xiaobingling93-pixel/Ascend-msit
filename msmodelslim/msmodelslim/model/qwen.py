@@ -1,23 +1,19 @@
 # Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
-from pathlib import Path
 
 from transformers import PreTrainedTokenizerBase
 
-from msmodelslim.app.base.const import DeviceType
-from msmodelslim.utils.safe_utils import SafeGenerator
+from msmodelslim.utils.security.model import SafeGenerator
 from .default import DefaultModel
 from .factory import ModelFactory
+from ..utils.logger import logger_setter
 
 
 @ModelFactory.register("Qwen2.5-7B-Instruct")
 @ModelFactory.register("Qwen2.5-32B-Instruct")
 @ModelFactory.register("Qwen2.5-72B-Instruct")
 @ModelFactory.register("Qwen2.5-Coder-7B-Instruct")
+@logger_setter(f'msmodelslim.model.qwen2_5')
 class Qwen25ModelAdapter(DefaultModel):
-    def __init__(self, model_type, ori_path: Path, device: DeviceType = DeviceType.NPU,
-                 trust_remote_code: bool = False):
-        super().__init__(model_type, ori_path, device, trust_remote_code)
-    
     def _get_model_pedigree(self) -> str:
         return 'qwen2_5'
 
@@ -35,12 +31,14 @@ class Qwen25ModelAdapter(DefaultModel):
 @ModelFactory.register("Qwen3-8B")
 @ModelFactory.register("Qwen3-14B")
 @ModelFactory.register("Qwen3-32B")
+@logger_setter(f'msmodelslim.model.qwen3')
 class Qwen3ModelAdapter(DefaultModel):
     def _get_model_pedigree(self) -> str:
         return 'qwen3'
 
 
 @ModelFactory.register("Qwen-QwQ-32B")
+@logger_setter(f'msmodelslim.model.qwq')
 class QwqModelAdapter(DefaultModel):
     def _get_model_pedigree(self) -> str:
         return 'qwq'

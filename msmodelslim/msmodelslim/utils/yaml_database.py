@@ -1,9 +1,13 @@
 # Copyright Huawei Technologies Co., Ltd. 2025. All rights reserved.
 from pathlib import Path
 
-from ascend_utils.common.security import yaml_safe_dump
-from ascend_utils.common.security.path import get_write_directory, get_valid_read_path, \
-    yaml_safe_load
+from msmodelslim.utils.exception import SchemaValidateError, SecurityError, UnsupportedError
+from msmodelslim.utils.security import (
+    yaml_safe_dump,
+    yaml_safe_load,
+    get_write_directory,
+    get_valid_read_path,
+)
 
 
 class YamlDatabase:
@@ -22,21 +26,25 @@ class YamlDatabase:
     def __getitem__(self, item):
         """Load value from a YAML file"""
         if not isinstance(item, str):
-            raise TypeError(f"yaml database key must be a string, but got {type(item)}")
+            raise SchemaValidateError(f"yaml database key must be a string, but got {type(item)}",
+                                      action='Please make sure the key is a string')
 
         try:
             value_file = self.config_dir / f"{item}.yaml"
             return yaml_safe_load(str(value_file))
         except FileNotFoundError as e:
-            raise KeyError(f"yaml database key {item} not found") from e
+            raise UnsupportedError(f"yaml database key {item} not found",
+                                   action='Please check the yaml database') from e
 
     def __setitem__(self, key, value):
         """Save value to a YAML file"""
         if self.read_only:
-            raise ValueError(f"yaml database {self.config_dir} is read-only")
+            raise SecurityError(f"yaml database {self.config_dir} is read-only",
+                                action='Writing operation is forbidden')
 
         if not isinstance(key, str):
-            raise TypeError(f"yaml database key must be a string, but got {type(key)}")
+            raise SchemaValidateError(f"yaml database key must be a string, but got {type(key)}",
+                                      action='Please make sure the key is a string')
 
         value_file = self.config_dir / f"{key}.yaml"
         yaml_safe_dump(value, str(value_file))

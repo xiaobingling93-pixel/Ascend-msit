@@ -19,6 +19,7 @@ import logging
 from typing import Type, Callable, Tuple, Any, Dict, Optional, List
 
 from msmodelslim import logger
+from msmodelslim.utils.exception import ToDoError, UnsupportedError
 
 
 class QAPI:
@@ -87,8 +88,8 @@ class QFuncRegistry:
             func_signature = signature if signature is not None else tuple(inspect.signature(func).parameters.keys())
 
             if actual_api_name in cls._registered_api:
-                raise RuntimeError(
-                    f"API '{actual_api_name}' is already registered. Please avoid duplicate registration."
+                raise ToDoError(
+                    f"API '{actual_api_name}' is already registered.", action="Please avoid duplicate registration."
                 )
 
             cls._registered_api[actual_api_name] = QAPI(actual_api_name, dispatch_key, func_signature)
@@ -118,9 +119,9 @@ class QFuncRegistry:
         def decorator(func: Callable) -> Callable:
             # 如果API还没有注册，报错
             if api_name not in cls._registered_api:
-                raise RuntimeError(
-                    f"API '{api_name}' is not registered. "
-                    f"Please register the API first using QFuncRegistry.register_api."
+                raise ToDoError(
+                    f"API '{api_name}' is not registered. ",
+                    action=f"Please register the API first using QFuncRegistry.register_api."
                 )
 
             # 检查函数签名与QAPI声明的signature是否兼容
@@ -128,17 +129,17 @@ class QFuncRegistry:
             func_signature = tuple(inspect.signature(func).parameters.keys())
 
             if func_signature != qapi.signature:
-                raise ValueError(
+                raise ToDoError(
                     f"Function signature mismatch: "
                     f"API \"{api_name}\" has signature {qapi.signature}, "
-                    f"but registered func has signature {func_signature},"
+                    f"but registered func has signature {func_signature},", action="Please check function signature."
                 )
 
             # 添加实现到对应的QAPI中
             cls._registered_api[api_name].add_impl(func, dispatch_key)
 
             logger.debug(
-                "[Core] Register API implementation %r for %r with dispatch key: %r", 
+                "[Core] Register API implementation %r for %r with dispatch key: %r",
                 func.__name__, api_name, dispatch_key)
 
             return func
@@ -167,8 +168,9 @@ class QFuncRegistry:
             
         """
         if api_name not in cls._registered_api:
-            raise NotImplementedError(
-                f"API '{api_name}' is not registered, available APIs: {list(cls._registered_api.keys())}")
+            raise UnsupportedError(
+                f"API '{api_name}' is not registered, available APIs: {list(cls._registered_api.keys())}",
+                action=f"Please choose one in {list(cls._registered_api.keys())}")
 
         qapi = cls._registered_api[api_name]
 
@@ -179,8 +181,9 @@ class QFuncRegistry:
                 f"%s",
                 "\n".join(f"- {item}" for item in list(qapi.impl_map.keys())))
 
-            raise NotImplementedError(
-                f"No implementation found for function '{api_name}' with dispatch key: {dispatch_key}")
+            raise UnsupportedError(
+                f"No implementation found for function '{api_name}' with dispatch key: {dispatch_key}",
+                action=f"Please chose one in {list(qapi.impl_map.keys())}")
 
         impl_func = qapi.impl_map[dispatch_key]
         return impl_func(*args, **kwargs)
@@ -214,7 +217,8 @@ class QABCRegistry:
 
         def decorator(wrapp_cls: Type) -> Type:
             if wrapp_cls in cls._registered_abc:
-                raise RuntimeError(f"ABC {wrapp_cls} is already registered")
+                raise ToDoError(f"ABC {wrapp_cls} is already registered",
+                                action=f"Please remove one")
             cls._registered_abc[wrapp_cls] = QABC(abc_class=wrapp_cls, dispatch_key=dispatch_key)
             logger.debug("[Core] Register ABC %r with dispatch key: %r", wrapp_cls, dispatch_key)
             return wrapp_cls
@@ -232,13 +236,15 @@ class QABCRegistry:
 
         def decorator(wrapp_cls: Type) -> Type:
             if abc_class not in cls._registered_abc:
-                raise RuntimeError(f"ABC {abc_class} is not registered")
+                raise ToDoError(f"ABC {abc_class} is not registered.",
+                                action=f"Please register {abc_class} first.")
             abc = cls._registered_abc[abc_class]
             if not issubclass(wrapp_cls, abc.abc_class):
-                raise RuntimeError(f"Class {wrapp_cls.__name__} is not a subclass of {abc.abc_class}")
+                raise ToDoError(f"Class {wrapp_cls.__name__} is not a subclass of {abc.abc_class}",
+                                action=f"Please make sure {wrapp_cls.__name__} is a subclass of {abc.abc_class}")
             abc.add_impl(wrapp_cls, dispatch_key)
             logger.debug(
-                "[Core] Register ABC implementation %r for %r with dispatch key: %r", 
+                "[Core] Register ABC implementation %r for %r with dispatch key: %r",
                 wrapp_cls.__name__, abc_class, dispatch_key)
             return wrapp_cls
 
@@ -255,14 +261,16 @@ class QABCRegistry:
 
         def decorator(wrapp_cls: Type) -> Type:
             if abc_type not in cls._registered_abc:
-                raise RuntimeError(f"ABC {abc_type} is not registered")
+                raise ToDoError(f"ABC {abc_type} is not registered",
+                                action=f"Please register {abc_type} first")
             abc = cls._registered_abc[abc_type]
             if not issubclass(wrapp_cls, abc.abc_class):
-                raise RuntimeError(f"Class {wrapp_cls.__name__} is not a subclass of {abc_type}")
+                raise ToDoError(f"Class {wrapp_cls.__name__} is not a subclass of {abc_type}",
+                                action=f"Please make sure {wrapp_cls.__name__} is a subclass of {abc_type}")
             for key in dispatch_key:
                 abc.add_impl(wrapp_cls, key)
                 logger.debug(
-                    "[Core] Register ABC implementation %r for %r with dispatch key: %r", 
+                    "[Core] Register ABC implementation %r for %r with dispatch key: %r",
                     wrapp_cls.__name__, abc_type, key)
             return wrapp_cls
 
@@ -277,8 +285,9 @@ class QABCRegistry:
                ) -> Any:
 
         if abc_type not in cls._registered_abc:
-            raise NotImplementedError(
-                f"ABC {abc_type} is not registered, available ABCs: {list(cls._registered_abc.keys())}")
+            raise UnsupportedError(
+                f"ABC {abc_type} is not registered, available ABCs: {list(cls._registered_abc.keys())}",
+                action=f"Please choose one in {list(cls._registered_abc.keys())}")
 
         abc = cls._registered_abc[abc_type]
 
@@ -288,8 +297,9 @@ class QABCRegistry:
                 f"available dispatch keys are:\n"
                 f"%s",
                 "\n".join(f"- {item}" for item in list(abc.impl_map.keys())))
-            raise NotImplementedError(
-                f"No implementation found for ABC {abc_type} with dispatch key: {dispatch_key}"
+            raise UnsupportedError(
+                f"No implementation found for ABC {abc_type} with dispatch key: {dispatch_key}",
+                action=f"Please choose one in {list(abc.impl_map.keys())}"
             )
 
         return abc.impl_map[dispatch_key](*args, **kwargs)

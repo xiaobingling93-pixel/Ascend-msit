@@ -7,7 +7,7 @@ import argparse
 import torch
 import torch.distributed as dist
 import torch_npu
-from transformers import T5EncoderModel, T5Tokenizer, AutoTokenizer, MT5EncoderModel
+from transformers import T5Tokenizer, MT5EncoderModel
 from diffusers.schedulers import (DDIMScheduler, DDPMScheduler, PNDMScheduler,
                                   EulerDiscreteScheduler, DPMSolverMultistepScheduler,
                                   HeunDiscreteScheduler, EulerAncestralDiscreteScheduler,
@@ -17,12 +17,12 @@ from diffusers.schedulers.scheduling_dpmsolver_singlestep import DPMSolverSingle
 from opensora.models.causalvideovae import ae_stride_config, CausalVAEModelWrapper
 from opensora.models.diffusion.opensora.modeling_opensora import OpenSoraT2V
 from opensora.npu_config import npu_config
-from opensora.acceleration.parallel_states import initialize_sequence_parallel_state, get_sequence_parallel_state
+from opensora.acceleration.parallel_states import initialize_sequence_parallel_state
 from opensora.sample.pipeline_opensora_sp import OpenSoraPipeline
 
 from example.common.security.path import get_valid_read_path, get_write_directory
 from example.osp1_2.model.model_open_sora_plan1_2_sp import OpenSoraPipelineV1x2
-from msmodelslim.tools.logger import logger
+from msmodelslim.utils.logger import logger
 
 
 def get_args():

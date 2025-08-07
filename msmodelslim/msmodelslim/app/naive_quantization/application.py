@@ -4,7 +4,9 @@ from pathlib import Path
 from typing import Callable, Optional, Type
 
 from msmodelslim.app.base import QuantType
-from msmodelslim.tools import logger as msmodelslim_logger
+from msmodelslim.utils.exception import SchemaValidateError
+from msmodelslim.utils.exception_decorator import exception_catcher
+from msmodelslim.utils.logger import logger_setter, get_logger
 from .practice_interface import PracticeManagerInterface
 from ..base import BaseQuantConfig, BaseModel, DeviceType
 from ..quant_service import BaseQuantService
@@ -12,10 +14,11 @@ from ..quant_service import BaseQuantService
 DEFAULT_PEDIGREE = 'default'
 DEFAULT_CONFIG_ID = 'default'
 
+logger = get_logger('msmodelslim.app.naive_quantization')
 
+
+@logger_setter(logger)
 class NaiveQuantizationApplication:
-    logger = msmodelslim_logger.get_logger()
-
     def __init__(self,
                  practice_manager: PracticeManagerInterface,
                  quant_service: BaseQuantService,
@@ -88,6 +91,7 @@ class NaiveQuantizationApplication:
 
         return self.get_default_practice(prompt=f"No matching configuration found for model_type={model_type}.")
 
+    @exception_catcher(logger=logger)
     def quant(self,
               model_type: str,
               model_path: Path,
@@ -108,21 +112,21 @@ class NaiveQuantizationApplication:
             trust_remote_code: bool, whether to trust the remote code
         """
         if not isinstance(model_type, str):
-            raise ValueError(f"model_type must be a string, but got {type(model_type)}")
+            raise SchemaValidateError(f"model_type must be a string, but got {type(model_type)}")
         if not isinstance(model_path, Path):
-            raise ValueError(f"model_path must be a Path, but got {type(model_path)}")
+            raise SchemaValidateError(f"model_path must be a Path, but got {type(model_path)}")
         if not isinstance(save_path, Path):
-            raise ValueError(f"save_path must be a Path, but got {type(save_path)}")
+            raise SchemaValidateError(f"save_path must be a Path, but got {type(save_path)}")
         if not isinstance(device, DeviceType):
-            raise ValueError(f"device must be a DeviceType")
+            raise SchemaValidateError(f"device must be a DeviceType")
         if not ((quant_type is None) ^ (config_path is None)):
-            raise ValueError(f"quant_type and config_path only one can be provided")
+            raise SchemaValidateError(f"quant_type and config_path only one can be provided")
         if quant_type is not None and not isinstance(quant_type, QuantType):
-            raise ValueError(f"quant_type must be a QuantType")
+            raise SchemaValidateError(f"quant_type must be a QuantType")
         if config_path is not None and not isinstance(config_path, Path):
-            raise ValueError(f"config_path must be a Path, but got {type(config_path)}")
+            raise SchemaValidateError(f"config_path must be a Path, but got {type(config_path)}")
         if not isinstance(trust_remote_code, bool):
-            raise ValueError(f"trust_remote_code must be a bool")
+            raise SchemaValidateError(f"trust_remote_code must be a bool")
 
         self.logger.info(f'quantization with following parameters:')
         self.logger.info(f"model_type: {model_type}")

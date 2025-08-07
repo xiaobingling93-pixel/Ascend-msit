@@ -22,6 +22,7 @@ from msmodelslim.core import dequantize, fake_quantize
 from msmodelslim.core.QAL import QABCRegistry
 from msmodelslim.core.QAL import QScope
 from msmodelslim.quant.ir import AutoFakeQuantLinear
+from msmodelslim.utils.logger import logger_setter
 from .const import (
     int8_per_token_asym,
     int8_per_token_sym,
@@ -38,6 +39,7 @@ from .const import (
     ],
     abc_type=AutoFakeQuantLinear
 )
+@logger_setter('msmodelslim.quant.ir.w8a8_static')
 class W8A8StaticFakeQuantLinear(AutoFakeQuantLinear):
     """
     W8A8 静态量化方式的伪量化IR。
@@ -84,6 +86,7 @@ class W8A8StaticFakeQuantLinear(AutoFakeQuantLinear):
     ],
     abc_type=AutoFakeQuantLinear
 )
+@logger_setter('msmodelslim.quant.ir.w8a8_dynamic')
 class W8A8DynamicFakeQuantLinear(AutoFakeQuantLinear):
 
     def __init__(

@@ -7,12 +7,18 @@ from transformers import PreTrainedTokenizerBase, PreTrainedModel, PretrainedCon
 
 from msmodelslim.app.base.const import DeviceType
 from msmodelslim.app.base.model import BaseModel
-from msmodelslim.utils.safe_utils import SafeGenerator
+from msmodelslim.utils.exception import InvalidModelError, SchemaValidateError
+from msmodelslim.utils.exception_decorator import exception_handler
+from msmodelslim.utils.logger import logger_setter
+from msmodelslim.utils.security.model import SafeGenerator
 from .factory import ModelFactory
 
 
 @ModelFactory.register("default")
+@logger_setter(__name__)
 class DefaultModel(BaseModel):
+    @exception_handler(Exception, InvalidModelError,
+                       action='Please check the model name')
     def __init__(self,
                  model_type: str,
                  ori_path: Path,
@@ -23,7 +29,8 @@ class DefaultModel(BaseModel):
     def _get_model_pedigree(self) -> str:
         model_type = re.match(r'^[a-zA-Z]+', self.type)
         if model_type is None:
-            raise ValueError(f"Invalid model_name: {self.type}.")
+            raise SchemaValidateError(f"Invalid model_name: {self.type}.",
+                                      action='Please check the model name')
         return model_type.group().lower()
 
     def _load_config(self) -> PretrainedConfig:

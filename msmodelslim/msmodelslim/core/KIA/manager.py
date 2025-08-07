@@ -21,6 +21,7 @@ from typing import Optional, Dict
 from packaging import version
 
 from msmodelslim import logger
+from msmodelslim.utils.exception import VersionError
 
 
 @dataclass
@@ -101,10 +102,11 @@ class KIAManager:
                 # Runtime Check
 
                 if kia_version < version.parse(min_version) or kia_version > version.parse(max_version):
-                    raise RuntimeError(
+                    raise VersionError(
                         f"Trying to invoke function {func_name}, "
                         f"which requires KIA version {min_version}-{max_version}, "
-                        f"but the current KIA version is {cls.get_version()}"
+                        f"but the current KIA version is {cls.get_version()}",
+                        action=f"Please upgrade CANN to {min_version}-{max_version}"
                     )
 
                 return func(*args, **kwargs)

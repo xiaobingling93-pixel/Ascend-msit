@@ -1,13 +1,9 @@
 # Copyright Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 
 import os
-import logging
-import shutil
-import time
 from datetime import datetime, timezone
 
-from functools import wraps
-from typing import Union, Optional
+from typing import Optional
 from dataclasses import dataclass
 
 import imageio
@@ -16,7 +12,7 @@ import torch.nn as nn
 import torch.distributed as dist
 
 import ascend_utils.common.security.path as path_checker
-from msmodelslim.tools.logger import logger as logger_root
+from msmodelslim.utils.logger import logger as logger_root
 
 from . import dit_cache_searcher
 

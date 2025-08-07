@@ -1,17 +1,20 @@
 #  Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 
 import abc
+from logging import Logger
 from typing import Optional, List, Any, Generator
 
 import torch
 from torch import distributed as dist
 from torch.utils.data import DataLoader, DistributedSampler
 
-from msmodelslim import logger
+from msmodelslim import logger as msmodelslim_logger
 from msmodelslim.core.base.processor import BaseProcessor
 from msmodelslim.core.base.protocol import BatchProcessRequest, ProcessRequest
+from msmodelslim.utils.logger import logger_setter
 
 
+@logger_setter(msmodelslim_logger)
 class ProcessUnit:
 
     def __init__(self, processor: BaseProcessor, input_datas: Optional[List[Any]] = None):
@@ -46,7 +49,7 @@ class ProcessUnit:
                                             [(request.args, request.kwargs,) for request in requests],
                                             [None for _ in requests])
 
-        logger.info(f"[Runner] Run processor {self.processor} for \"{batch_request.name}\"")
+        self.logger.info(f"[Runner] Run processor {self.processor} for \"{batch_request.name}\"")
 
         self.processor.preprocess(batch_request)
         self.processor.process(batch_request)
@@ -56,7 +59,7 @@ class ProcessUnit:
 
 
 @torch.no_grad()
-def generated_schedule(process_unit: List[ProcessUnit]):
+def generated_schedule(process_unit: List[ProcessUnit], logger: Logger = msmodelslim_logger):
     """
     使用生成式前向函数运行模型。
     

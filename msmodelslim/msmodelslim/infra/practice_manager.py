@@ -3,18 +3,17 @@ from abc import ABC
 from pathlib import Path
 from typing import Dict, Generator, Optional
 
-import yaml
-
-from ascend_utils.common.security import get_valid_read_path, yaml_safe_load
 from msmodelslim.app.base import Metadata, BaseQuantConfig
 from msmodelslim.app.naive_quantization import PracticeManagerInterface as nqpm
-from msmodelslim.utils.safe_utils import SafeGenerator
+from msmodelslim.utils.exception import SchemaValidateError, SecurityError, UnsupportedError
+from msmodelslim.utils.security import get_valid_read_path, yaml_safe_load
 from msmodelslim.utils.yaml_database import YamlDatabase
 
 
 def convert_dict_to_quant_config(d: object) -> BaseQuantConfig:
     if not isinstance(d, dict):
-        raise ValueError(f'quant config must be a dict')
+        raise SchemaValidateError(f'quant config must be a dict',
+                                  action='Please make sure the quant config is a dictionary')
 
     return BaseQuantConfig(
         apiversion=d.get('apiversion', 'Unknown'),
@@ -50,12 +49,14 @@ class PracticeManager(nqpm, ABC):
         elif model_pedigree in self.official_databases and config_id in self.official_databases[model_pedigree]:
             value = self.official_databases[model_pedigree][config_id]
         else:
-            raise ValueError(f"Practice {config_id} of ModelType {model_pedigree} not found")
+            raise UnsupportedError(f"Practice {config_id} of ModelType {model_pedigree} not found",
+                                   action='Please check the practice id and model type')
 
         quant_config = convert_dict_to_quant_config(value)
 
         if config_id != quant_config.metadata.config_id:
-            raise ValueError(f"name {config_id} not match config_id {quant_config.metadata.config_id}")
+            raise SecurityError(f"name {config_id} not match config_id {quant_config.metadata.config_id}",
+                                action='Please make sure the practice is not tampered')
         return quant_config
 
     def get_config_by_path(self, config_path: Path) -> BaseQuantConfig:
@@ -71,7 +72,8 @@ class PracticeManager(nqpm, ABC):
                 tasks.append(convert_dict_to_quant_config(value))
 
         if not tasks:
-            raise ValueError(f"Model type {model_pedigree} not found in practice repository")
+            raise UnsupportedError(f"Model type {model_pedigree} not found in practice repository",
+                                   action='Please check the model type')
 
         tasks.sort(key=lambda x: (-x.metadata.score, x.metadata.config_id))
         for task in tasks:

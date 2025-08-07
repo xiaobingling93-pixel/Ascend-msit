@@ -7,7 +7,7 @@ import shutil
 import stat
 import json
 from ascend_utils.common.security.type import check_dict_character, check_type
-from msmodelslim.tools.logger import LOGGER_FUNC
+from msmodelslim.utils.logger import LOGGER_FUNC
 from msmodelslim import logger
 
 

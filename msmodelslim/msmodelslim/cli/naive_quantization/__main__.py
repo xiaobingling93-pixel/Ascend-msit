@@ -3,27 +3,31 @@ import functools
 import os
 from pathlib import Path
 
-from ascend_utils.common.security.path import get_valid_read_path
+from msmodelslim import set_logger_level
 from msmodelslim.app.base import BaseModel
-from msmodelslim.model import ModelFactory
-from msmodelslim.app.quant_service import ModelslimV0QuantService
 from msmodelslim.app.naive_quantization import NaiveQuantizationApplication
+from msmodelslim.app.quant_service import ModelslimV0QuantService
 from msmodelslim.infra.dataset_loader import FileDatasetLoader
 from msmodelslim.infra.practice_manager import PracticeManager
+from msmodelslim.model import ModelFactory
+from msmodelslim.utils.config import msmodelslim_config
+from msmodelslim.utils.security.path import get_valid_read_path
+
+set_logger_level(msmodelslim_config.env_vars.log_level)
 
 
 def get_practice_dir():
     cur_dir = os.path.dirname(os.path.abspath(__file__))
-    practice_lab_dir = os.path.abspath(os.path.join(cur_dir, '../../practice_lab'))
-    practice_lab_dir = get_valid_read_path(practice_lab_dir, is_dir=True)
-    return Path(practice_lab_dir)
+    lab_practice_dir = os.path.abspath(os.path.join(cur_dir, '../../lab_practice'))
+    lab_practice_dir = get_valid_read_path(lab_practice_dir, is_dir=True)
+    return Path(lab_practice_dir)
 
 
 def get_dataset_dir():
     cur_dir = os.path.dirname(os.path.abspath(__file__))
-    calib_lab_dir = os.path.abspath(os.path.join(cur_dir, '../../calib_lab'))
-    calib_lab_dir = get_valid_read_path(calib_lab_dir, is_dir=True)
-    return Path(calib_lab_dir)
+    lab_calib_dir = os.path.abspath(os.path.join(cur_dir, '../../lab_calib'))
+    lab_calib_dir = get_valid_read_path(lab_calib_dir, is_dir=True)
+    return Path(lab_calib_dir)
 
 
 def main(args):
@@ -39,4 +43,4 @@ def main(args):
         quant_service=quant_service,
         model_factory=model_factory)
     app.quant(model_type=args.model_type, model_path=args.model_path, save_path=args.save_path, device=args.device,
-            quant_type=args.quant_type)
+              quant_type=args.quant_type)

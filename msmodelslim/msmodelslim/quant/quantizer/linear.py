@@ -23,6 +23,7 @@ from torch import nn
 
 from msmodelslim.core import QDType, QStorage
 from msmodelslim.quant.ir import AutoFakeQuantLinear
+from msmodelslim.utils.logger import logger_setter
 from .base import AutoActQuantizer, AutoWeightQuantizer, QConfig
 
 
@@ -31,6 +32,7 @@ class LinearQConfig(BaseModel):
     weight: QConfig
 
 
+@logger_setter(__name__)
 class LinearQuantizer(nn.Module):
 
     @validate_call(config=dict(arbitrary_types_allowed=True))

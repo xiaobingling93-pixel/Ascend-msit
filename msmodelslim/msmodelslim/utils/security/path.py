@@ -1,15 +1,17 @@
-# Copyright Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+# Copyright Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
 
-import re
+import json
 import os
-import sys
+import re
 import shutil
 import stat
-import json
-from example.common.security.type import check_dict_character, check_type
-from msmodelslim.utils.logger import LOGGER_FUNC
-from msmodelslim import logger
+import sys
+from logging import Logger
 
+from msmodelslim import logger as msmodelslim_logger
+from msmodelslim.utils.exception import SecurityError
+from msmodelslim.utils.logger import get_logger_func
+from msmodelslim.utils.validation.type import check_dict_character, check_type
 
 PATH_WHITE_LIST_REGEX = re.compile(r"[^_A-Za-z0-9/.-]")
 MAX_READ_FILE_SIZE_4G = 4294967296  # 4G, 4 * 1024 * 1024 * 1024
@@ -37,25 +39,34 @@ def is_endswith_extensions(path, extensions):
 def get_valid_path(path, extensions=None):
     check_type(path, str, "path")
     if not path or len(path) == 0:
-        raise ValueError("The value of the path cannot be empty.")
+        raise SecurityError("The value of the path cannot be empty.", action='Please make sure the path is not empty.')
 
     if PATH_WHITE_LIST_REGEX.search(path):  # Check special char
-        raise ValueError("Input path contains invalid characters.")  # Not printing out the path value for invalid char
+        # Not printing out the path value for invalid char
+        raise SecurityError("Input path contains invalid characters.",
+                            action='Please make sure the path contains only valid characters [_A-Za-z0-9/.-]')
     if os.path.islink(os.path.abspath(path)):  # when checking link, get rid of the "/" at the path tail if any
-        raise ValueError("The value of the path cannot be soft link: {}.".format(path))
+        raise SecurityError("The value of the path cannot be soft link: {}.".format(path),
+                            action='Please make sure the path is not a soft link.')
 
     real_path = os.path.realpath(path)
 
     file_name = os.path.split(real_path)[1]
     if len(file_name) > 255:
-        raise ValueError("The length of filename should be less than 256.")
+        raise SecurityError(f"The length of filename should be less than 256.",
+                            action='Please make sure the filename is not longer than 256 characters.')
     if len(real_path) > 4096:
-        raise ValueError("The length of file path should be less than 4096.")
+        raise SecurityError("The length of file path should be less than 4096.",
+                            action='Please make sure the file path is not longer than 4096 characters.')
 
     if real_path != path and PATH_WHITE_LIST_REGEX.search(real_path):  # Check special char again
-        raise ValueError("Input path contains invalid characters.")  # Not printing out the path value for invalid char
+        # Not printing out the path value for invalid char
+        raise SecurityError("Input path contains invalid characters.",
+                            action='Please make sure the path contains only valid characters [_A-Za-z0-9/.-]')
     if extensions and not is_endswith_extensions(path, extensions):  # Check whether the file name endswith extension
-        raise ValueError("The filename {} doesn't endswith \"{}\".".format(path, extensions))
+        raise SecurityError("The filename {} doesn't endswith \"{}\".".format(path, extensions),
+                            action='Please make sure the filename ends with one of the following extensions: {}'.format(
+                                extensions))
 
     return real_path
 
@@ -64,62 +75,73 @@ def is_belong_to_user_or_group(file_stat):
     return file_stat.st_uid == os.getuid() or file_stat.st_gid in os.getgroups()
 
 
-def check_others_not_writable(path):
+def check_others_not_writable(path, logger: Logger = msmodelslim_logger):
     dir_stat = os.stat(path)
     is_writable = (
-        bool(dir_stat.st_mode & stat.S_IWGRP) or  # 组可写
-        bool(dir_stat.st_mode & stat.S_IWOTH)     # 其他用户可写
+            bool(dir_stat.st_mode & stat.S_IWGRP) or  # 组可写
+            bool(dir_stat.st_mode & stat.S_IWOTH)  # 其他用户可写
     )
     if is_writable:
         logger.warning("The file path %r may be insecure because it can be written by others.", path)
 
 
-def check_path_owner_consistent(path):
+def check_path_owner_consistent(path, logger: Logger = msmodelslim_logger):
     file_owner = os.stat(path).st_uid
     if file_owner != os.getuid() and os.getuid() != 0:
         logger.warning("The file path %r may be insecure because is does not belong to you.", path)
 
 
-def check_dirpath_before_read(path):
+def check_dirpath_before_read(path, logger: Logger = msmodelslim_logger):
     path = os.path.realpath(path)
     dirpath = os.path.dirname(path)
-    check_others_not_writable(dirpath)
-    check_path_owner_consistent(dirpath)
+    check_others_not_writable(dirpath, logger=logger)
+    check_path_owner_consistent(dirpath, logger=logger)
 
 
-def get_valid_read_path(path, extensions=None, size_max=MAX_READ_FILE_SIZE_4G, check_user_stat=True, is_dir=False):
-    check_dirpath_before_read(path)
+def get_valid_read_path(path, extensions=None, size_max=MAX_READ_FILE_SIZE_4G, check_user_stat=True, is_dir=False,
+                        logger: Logger = msmodelslim_logger):
+    check_dirpath_before_read(path, logger=logger)
     real_path = get_valid_path(path, extensions)
     if not is_dir and not os.path.isfile(real_path):
-        raise ValueError("The path {} doesn't exist or not a file.".format(path))
+        raise SecurityError("The path {} doesn't exist or not a file.".format(path),
+                            action='Please make sure the path exists and is a file.')
     if is_dir and not os.path.isdir(real_path):
-        raise ValueError("The path {} doesn't exist or not a directory.".format(path))
+        raise SecurityError("The path {} doesn't exist or not a directory.".format(path),
+                            action='Please make sure the path exists and is a directory.')
 
     file_stat = os.stat(real_path)
     if check_user_stat and not sys.platform.startswith("win") and not is_belong_to_user_or_group(file_stat):
-        raise ValueError("The file {} doesn't belong to the current user or group.".format(path))
+        raise SecurityError("The file {} doesn't belong to the current user or group.".format(path),
+                            action='Please make sure the file belongs to the current user or group.')
     if check_user_stat and os.stat(path).st_mode & READ_FILE_NOT_PERMITTED_STAT > 0:
-        raise ValueError("The file {} is group writable, or is others writable.".format(path))
+        raise SecurityError("The file {} is group writable, or is others writable.".format(path),
+                            action='Please make sure the file is not group writable or others writable.')
     if not os.access(real_path, os.R_OK) or file_stat.st_mode & stat.S_IRUSR == 0:  # At least been 400
-        raise ValueError("Current user doesn't have read permission to the file {}.".format(path))
+        raise SecurityError("Current user doesn't have read permission to the file {}.".format(path),
+                            action='Please make sure the current user has read permission to the file.')
     if not is_dir and size_max > 0 and file_stat.st_size > size_max:
-        raise ValueError("The file {} exceeds size limitation of {}.".format(path, size_max))
+        raise SecurityError("The file {} exceeds size limitation of {}.".format(path, size_max),
+                            action='Please make sure the file size is less than the size limitation.')
     return real_path
 
 
 def check_write_directory(dir_name, check_user_stat=True):
     real_dir_name = get_valid_path(dir_name)
     if not os.path.isdir(real_dir_name):
-        raise ValueError("The file writen directory {} doesn't exist.".format(dir_name))
+        raise SecurityError("The file writen directory {} doesn't exist.".format(dir_name),
+                            action='Please make sure the file writen directory exists.')
 
     file_stat = os.stat(real_dir_name)
     if check_user_stat and not sys.platform.startswith("win") and not is_belong_to_user_or_group(file_stat):
-        raise ValueError("The file writen directory {} doesn't belong to the current user or group.".format(dir_name))
+        raise SecurityError(
+            "The file writen directory {} doesn't belong to the current user or group.".format(dir_name),
+            action='Please make sure the file writen directory belongs to the current user or group.')
     if not os.access(real_dir_name, os.W_OK):
-        raise ValueError("Current user doesn't have writen permission to file writen directory {}.".format(dir_name))
+        raise SecurityError("Current user doesn't have writen permission to file writen directory {}.".format(dir_name),
+                            'Please make sure the current user has writen permission to the file writen directory.')
 
 
-def get_write_directory(dir_name, write_mode=0o750):
+def get_write_directory(dir_name, write_mode=0o750, logger: Logger = msmodelslim_logger):
     real_dir_name = get_valid_path(dir_name)
     if os.path.exists(real_dir_name):
         logger.info("write directory exists, write file to directory %r", dir_name)
@@ -129,30 +151,34 @@ def get_write_directory(dir_name, write_mode=0o750):
     return real_dir_name
 
 
-def get_valid_write_path(path, extensions=None, check_user_stat=True, is_dir=False, warn_exists=True):
+def get_valid_write_path(path, extensions=None, check_user_stat=True, is_dir=False, warn_exists=True,
+                         logger: Logger = msmodelslim_logger):
     real_path = get_valid_path(path, extensions)
     real_path_dir = real_path if is_dir else os.path.dirname(real_path)
     check_write_directory(real_path_dir, check_user_stat=check_user_stat)
 
     if not is_dir and os.path.exists(real_path):
         if os.path.isdir(real_path):
-            raise ValueError("The file {} exist and is a directory.".format(path))
+            raise SecurityError("The file {} exist and is a directory.".format(path),
+                                action='Please make sure the file is not a directory.')
         if check_user_stat and os.stat(real_path).st_uid != os.getuid():  # Has to be exactly belonging to current user
-            raise ValueError("The file {} doesn't belong to the current user.".format(path))
+            raise SecurityError("The file {} doesn't belong to the current user.".format(path),
+                                action='Please make sure the file belongs to the current user.')
         if check_user_stat and os.stat(real_path).st_mode & WRITE_FILE_NOT_PERMITTED_STAT > 0:
-            raise ValueError("The file {} permission for others is not 0, or is group writable.".format(path))
+            raise SecurityError("The file {} permission for others is not 0, or is group writable.".format(path),
+                                action='Please make sure the file permission for others is 0, or is group writable.')
         if not os.access(real_path, os.W_OK):
-            raise ValueError("The file {} exist and not writable.".format(path))
+            raise SecurityError("The file {} exist and not writable.".format(path),
+                                action='Please make sure the file is writable.')
         if warn_exists:
             logger.warning("%r already exist. The original file will be overwritten.", path)
     return real_path
 
 
 def yaml_safe_load(
-    path, extensions=("yml", "yaml"), size_max=MAX_READ_FILE_SIZE_4G, key_max_len=512, check_user_stat=True
+        path, extensions=("yml", "yaml"), size_max=MAX_READ_FILE_SIZE_4G, key_max_len=512, check_user_stat=True
 ):
     import yaml
-
     path = get_valid_read_path(path, extensions, size_max, check_user_stat)
     with open(path) as yaml_file:
         raw_dict = yaml.safe_load(yaml_file)
@@ -171,7 +197,6 @@ def json_safe_load(path, extensions="json", size_max=MAX_READ_FILE_SIZE_4G, key_
 
 def yaml_safe_dump(obj, path, extensions=("yml", "yaml"), check_user_stat=True):
     import yaml
-
     check_dict_character(obj)
     write_path = get_valid_write_path(path, extensions, check_user_stat)
 
@@ -193,18 +218,18 @@ def json_safe_dump(obj, path, indent=None, extensions="json", check_user_stat=Tr
 def file_safe_write(obj, path, extensions=None, check_user_stat=True):
     """File write with trunc, the original file will be overwritten if exists."""
     if not isinstance(obj, str):
-        raise TypeError("obj must be str.")
+        raise SecurityError(f"obj must be str, not {type(obj)}", action='Please make sure the obj is a string.')
     write_path = get_valid_write_path(path, extensions, check_user_stat)
     default_mode = stat.S_IWUSR | stat.S_IRUSR  # 600
     with os.fdopen(os.open(write_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, mode=default_mode), "w") as file:
         file.write(obj)
 
 
-def safe_delete_path_if_exists(path, logger_level="info"):
+def safe_delete_path_if_exists(path, logger_level="info", logger: Logger = msmodelslim_logger):
     if os.path.exists(path):
         is_dir = os.path.isdir(path)
         path = get_valid_write_path(path, check_user_stat=False, is_dir=is_dir, warn_exists=False)  # Check if writable
-        logger_func = LOGGER_FUNC[logger_level]
+        logger_func = get_logger_func(logger_level, logger)
         if os.path.isfile(path):
             logger_func(f"File '{path}' exists and will be deleted.")
             os.remove(path)
@@ -240,6 +265,7 @@ class SafeWriteUmask:
     >>> with SafeWriteUmask(), open(..., "w") as ...:
     >>>     ...
     """
+
     def __init__(self, func=None, umask=0o027):
         self.func = func
         self.umask = umask

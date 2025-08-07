@@ -20,6 +20,7 @@ from pydantic import ValidationError
 
 from msmodelslim.quant.quantizer.base import QConfig
 from msmodelslim.quant.quantizer.linear import LinearQConfig, LinearQuantizer
+from msmodelslim.utils.exception import SpecError
 
 
 class TestLinearQConfig:
@@ -97,7 +98,7 @@ class TestLinearQuantizer:
     def test_forward_without_setup(self):
         """测试forward方法在未setup时"""
         quantizer = LinearQuantizer(self.config)
-        with pytest.raises(RuntimeError):
+        with pytest.raises(SpecError):
             quantizer(torch.randn(10, 10))
 
     def test_deploy_success_with_valid_config(self):
