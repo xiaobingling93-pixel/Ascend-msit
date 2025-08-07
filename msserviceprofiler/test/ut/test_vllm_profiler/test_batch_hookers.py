@@ -36,15 +36,6 @@ SchedulerOutput = namedtuple(
 )
 
 
-@pytest.fixture
-def restore_ms_service_profiler_modeul(autouse=True, scope="module"):
-    yield
-    if original is not None:
-        sys.modules["ms_service_profiler"] = original
-    else:
-        sys.modules.pop("ms_service_profiler")
-
-
 # Reset profiler before each test
 @pytest.fixture(autouse=True, scope="function")
 def reset_profiler():

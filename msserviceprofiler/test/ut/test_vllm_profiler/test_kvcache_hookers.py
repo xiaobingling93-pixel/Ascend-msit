@@ -30,14 +30,6 @@ Request = namedtuple("Request", ["request_id", "num_tokens"])
 
 from msserviceprofiler.vllm_profiler.vllm_v1 import kvcache_hookers
 
-@pytest.fixture
-def restore_ms_service_profiler_modeul(autouse=True, scope="module"):
-    yield
-    if original is not None:
-        sys.modules["ms_service_profiler"] = original
-    else:
-        sys.modules.pop("ms_service_profiler")
-
 
 @pytest.fixture(autouse=True)
 def reset_profiler():
