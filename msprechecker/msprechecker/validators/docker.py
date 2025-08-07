@@ -37,3 +37,4 @@ class DockerValidator(BaseValidator):
                 return False
 
             return True
+        return False

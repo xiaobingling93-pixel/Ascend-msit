@@ -15,9 +15,9 @@
 
 import os
 import json
-import yaml
 import argparse
 
+import yaml
 from msguard.security import open_s
 
 from .base import CommandType
@@ -214,10 +214,11 @@ class DumpStrategy(CommandStrategy):
     @staticmethod
     def _display_collect_warning(error_handler):
         for error in error_handler:
+            context = error.context
             global_logger.warning(
                 "Error occured while collecting '%s': %s", 
                 error_handler.type, 
-                error.what
+                context.what
             )
 
 

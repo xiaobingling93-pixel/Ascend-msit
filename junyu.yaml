@@ -1,7 +1,0 @@
-env:
-  RANK_TABLE_PATH:
-    expected:
-      type: path
-      value: exists
-    reason: ""
-    severity: "high"

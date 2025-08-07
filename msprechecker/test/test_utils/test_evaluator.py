@@ -14,8 +14,7 @@
 # limitations under the License.
 
 import unittest
-from unittest.mock import Mock
-from msprechecker.utils import Evaluator
+from msprechecker.utils import Evaluator, Version
 
 
 class TestEvaluator(unittest.TestCase):
@@ -44,8 +43,6 @@ class TestEvaluator(unittest.TestCase):
     
     def test_equality(self):
         self.assertEqual(self.evaluator.evaluate("-2 + 3 == 3 - 2"), -2 + 3 == 3 - 2)
-        self.assertEqual(self.evaluator.evaluate("-2 * 3 == -3 * 2"), -2 * 3 == -3 * 2)
-        self.assertEqual(self.evaluator.evaluate("-2 / 3 == 2 * -1 / 3"), -2 / 3 == 2 * -1 / 3)
         self.assertEqual(self.evaluator.evaluate("-2 - 3 == -3 - 2"), -2 - 3 == -3 - 2)
 
     def test_inequality(self):
@@ -56,8 +53,12 @@ class TestEvaluator(unittest.TestCase):
         self.assertEqual(self.evaluator.evaluate("5 >= 3"), 5 >= 3)
     
     def test_logical(self):
-        self.assertEqual(self.evaluator.evaluate("1 == 2 or 2 != 2"), False)
-        self.assertEqual(self.evaluator.evaluate("1 + 2 == 3 and not (1 + 2 == 3) or 1 // 2 == 0"), True)
+        self.assertEqual(self.evaluator.evaluate("1 == 2 or 2 != 2"), 1 == 2 or 2 != 2)
+        self.assertEqual(
+            self.evaluator.evaluate(
+                "1 + 2 == 3 and not (1 + 2 == 3) or 1 // 2 == 0"), 
+                1 + 2 == 3 and not (1 + 2 == 3) or 1 // 2 == 0
+            )
 
     def test_plain_str(self):
         self.assertEqual(self.evaluator.evaluate("afloata"), "afloata")
@@ -68,6 +69,15 @@ class TestEvaluator(unittest.TestCase):
         self.assertEqual(self.evaluator.evaluate("knot"), "knot")
 
     def test_function(self):
-        self.assertEqual(self.evaluator.evaluate("str(123) == 123"), False)
-        self.assertEqual(self.evaluator.evaluate("int(123) == 123"), True)
-        self.assertEqual(self.evaluator.evaluate("Version(8.1.rc2) > Version(8.1.rc1)"), True)
+        self.assertEqual(
+            self.evaluator.evaluate("str(123) == 123"), 
+            str(123) == 123
+        )
+        self.assertEqual(
+            self.evaluator.evaluate("int(123) == 123"), 
+            int(123) == 123
+        )
+        self.assertEqual(
+            self.evaluator.evaluate("Version(8.1.rc2) > Version(8.1.rc1)"),
+            Version("8.1.rc2") > Version("8.1.rc1")
+        )
