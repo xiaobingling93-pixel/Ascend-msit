@@ -14,6 +14,7 @@
 
 from collections import namedtuple
 
+
 # Revised ProfilerMock that properly tracks instance calls
 class Profiler:
     instance_calls = []
@@ -21,6 +22,10 @@ class Profiler:
     def __init__(self, level=None):
         self.calls = []
         Profiler.instance_calls.append(self.calls)
+    
+    @classmethod
+    def reset(cls):
+        cls.instance_calls = []
 
     def domain(self, name):
         self.calls.append(('domain', name))
@@ -58,9 +63,6 @@ class Profiler:
         self.calls.append(('attr', name, value))
         return self
 
-    @classmethod
-    def reset(cls):
-        cls.instance_calls = []
 
 # Create fake modules in sys.modules
 Level = namedtuple("Level", ["INFO"])("INFO")

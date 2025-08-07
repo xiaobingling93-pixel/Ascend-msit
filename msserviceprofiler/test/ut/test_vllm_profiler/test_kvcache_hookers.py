@@ -19,28 +19,22 @@ from unittest.mock import patch, MagicMock, call
 
 import pytest
 
+from .fake_ms_service_profiler import Profiler, Level
+from msserviceprofiler.vllm_profiler.vllm_v1 import kvcache_hookers
+
 # Setup environment
 os.environ['VLLM_USE_V1'] = '-1'
 sys.modules['ms_service_profiler'] = MagicMock()
-from .fake_ms_service_profiler import Profiler, Level
 sys.modules['ms_service_profiler'].Profiler = Profiler
 sys.modules['ms_service_profiler'].Level = Level
+Request = namedtuple('Request', ['request_id', 'num_tokens'])
 
-# Import module after mocks
-from msserviceprofiler.vllm_profiler.vllm_v1 import kvcache_hookers
-
-# Reset profiler before each test
 @pytest.fixture(autouse=True)
 def reset_profiler():
     Profiler.reset()
     yield
 
-# Test helpers
-Request = namedtuple('Request', ['request_id', 'num_tokens'])
 
-# -----------------------------------------------------------
-# allocate_slots tests
-# -----------------------------------------------------------
 def test_allocate_slots_given_valid_request_when_called_then_log_allocation():
     mock_this = MagicMock()
     mock_this.block_pool.get_num_free_blocks.return_value = 42
@@ -57,9 +51,7 @@ def test_allocate_slots_given_valid_request_when_called_then_log_allocation():
     assert ('metric', 'deviceBlock', 42) in calls
     assert ('event', 'Allocate') in calls
 
-# -----------------------------------------------------------
-# free tests
-# -----------------------------------------------------------
+
 def test_free_given_valid_request_when_called_then_log_free():
     mock_this = MagicMock()
     mock_this.block_pool.get_num_free_blocks.return_value = 50
@@ -76,9 +68,7 @@ def test_free_given_valid_request_when_called_then_log_free():
     assert ('metric', 'deviceBlock', 50) in calls
     assert ('event', 'Free') in calls
 
-# -----------------------------------------------------------
-# get_computed_blocks tests
-# -----------------------------------------------------------
+
 def test_get_computed_blocks_given_cache_hit_when_condition_met_then_log_hit_rate():
     mock_this = MagicMock()
     request = Request(request_id="req3", num_tokens=10)
@@ -94,6 +84,7 @@ def test_get_computed_blocks_given_cache_hit_when_condition_met_then_log_hit_rat
     assert ('attr', 'hitCache', 0.8) in calls  # 8/10 = 0.8
     assert ('event', 'GetCacheHitRate') in calls
 
+
 def test_get_computed_blocks_given_insufficient_blocks_when_called_then_no_logging():
     mock_this = MagicMock()
     request = Request(request_id="req4", num_tokens=10)
@@ -104,6 +95,7 @@ def test_get_computed_blocks_given_insufficient_blocks_when_called_then_no_loggi
     mock_original.assert_called_with(mock_this, request)
     assert result == (["block1"],)
     assert len(Profiler.instance_calls) == 0
+
 
 def test_get_computed_blocks_given_zero_tokens_when_called_then_no_logging():
     mock_this = MagicMock()
@@ -116,6 +108,7 @@ def test_get_computed_blocks_given_zero_tokens_when_called_then_no_logging():
     assert result == (["block1", "block2"], 0)
     assert len(Profiler.instance_calls) == 0
 
+
 def test_get_computed_blocks_given_negative_tokens_when_called_then_no_logging():
     mock_this = MagicMock()
     request = Request(request_id="req6", num_tokens=-5)
@@ -126,6 +119,7 @@ def test_get_computed_blocks_given_negative_tokens_when_called_then_no_logging()
     mock_original.assert_called_with(mock_this, request)
     assert result == (["block1", "block2"], 3)
     assert len(Profiler.instance_calls) == 0
+
 
 def test_get_computed_blocks_given_no_new_tokens_when_called_then_log_zero_hit_rate():
     mock_this = MagicMock()

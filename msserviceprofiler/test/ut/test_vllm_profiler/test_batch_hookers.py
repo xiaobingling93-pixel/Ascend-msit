@@ -21,6 +21,7 @@ from unittest.mock import patch, MagicMock, call
 import pytest
 
 from .fake_ms_service_profiler import Profiler, Level
+from msserviceprofiler.vllm_profiler.vllm_v1 import batch_hookers
 
 # Setup environment
 os.environ['VLLM_USE_V1'] = '-1'
@@ -28,15 +29,6 @@ sys.modules['ms_service_profiler'] = MagicMock()
 sys.modules['ms_service_profiler'].Profiler = Profiler
 sys.modules['ms_service_profiler'].Level = Level
 
-# Import module after mocks
-from msserviceprofiler.vllm_profiler.vllm_v1 import batch_hookers
-
-# Reset profiler before each test
-@pytest.fixture(autouse=True, scope="function")
-def reset_profiler():
-    Profiler.reset()
-    yield
-    Profiler.reset()
 
 # Test helpers
 SequenceGroup = namedtuple('SequenceGroup', ['request_id', 'prompt_token_ids'])
@@ -47,6 +39,15 @@ SchedulerOutput = namedtuple('SchedulerOutput', [
     'finished_req_ids'
 ])
 
+
+# Reset profiler before each test
+@pytest.fixture(autouse=True, scope="function")
+def reset_profiler():
+    Profiler.reset()
+    yield
+    Profiler.reset()
+
+
 @pytest.fixture
 def hook_state():
     state = batch_hookers.HookState()
@@ -55,6 +56,7 @@ def hook_state():
     state.request_id_to_prompt_token_len = {}
     state.request_id_to_iter_size = {}
     return state
+
 
 @pytest.fixture
 def mock_scheduler(hook_state):
@@ -65,34 +67,34 @@ def mock_scheduler(hook_state):
     with patch.object(batch_hookers, '_get_state', return_value=hook_state):
         yield sched
 
-def create_request(request_id, token_count=10):
-    return MagicMock(request_id=request_id, req_id=request_id, prompt_token_ids=[0]*token_count)
 
-# -----------------------------------------------------------
+def create_request(request_id, token_count=10):
+    return MagicMock(request_id=request_id, req_id=request_id, prompt_token_ids=[0] * token_count)
+
+
 # compare_deques tests
-# -----------------------------------------------------------
 @pytest.mark.parametrize("q1, q2, expected", [
     # Normal cases
-    ([1,2,3], [2,3,4], Counter({1:1})),
-    ([1,1,2], [1,2], Counter({1:1})),
+    ([1, 2, 3], [2, 3, 4], Counter({1 : 1})),
+    ([1, 1, 2], [1, 2], Counter({1 : 1})),
     # Empty cases
-    ([], [1,2], Counter()),
-    ([1,2], [], Counter({1:1, 2:1})),
+    ([], [1, 2], Counter()),
+    ([1, 2], [], Counter({1 : 1, 2 : 1})),
     # Identical cases
-    ([1,2], [1,2], Counter()),
+    ([1, 2], [1, 2], Counter()),
     # Duplicates
-    ([1,1,1], [1], Counter({1:2})),
+    ([1, 1, 1], [1], Counter({1 : 2})),
 ])
+
+
 def test_compare_deques_given_two_deques_when_difference_exists_then_return_counter_diff(q1, q2, expected):
     result = batch_hookers.compare_deques(deque(q1), deque(q2))
     assert result == expected
 
-# -----------------------------------------------------------
-# queue_profiler tests
-# -----------------------------------------------------------
+
 def test_queue_profiler_given_enqueue_when_queue_changes_then_log_enqueue_event():
-    before = deque([SequenceGroup('req1', (1,2,3))])
-    after = deque([SequenceGroup('req1', (1,2,3)), SequenceGroup('req2', (4,5))])
+    before = deque([SequenceGroup('req1', (1, 2, 3))])
+    after = deque([SequenceGroup('req1', (1, 2, 3)), SequenceGroup('req2', (4, 5))])
 
     batch_hookers.queue_profiler(before, after, "test_queue")
 
@@ -104,8 +106,8 @@ def test_queue_profiler_given_enqueue_when_queue_changes_then_log_enqueue_event(
 
 
 def test_queue_profiler_given_dequeue_when_queue_changes_then_log_dequeue_event():
-    before = deque([SequenceGroup('req1', (1,)), SequenceGroup('req2', (2,))])
-    after = deque([SequenceGroup('req2', (2,))])
+    before = deque([SequenceGroup('req1', (1, )), SequenceGroup('req2', (2,))])
+    after = deque([SequenceGroup('req2', (2, ))])
 
     batch_hookers.queue_profiler(before, after, "test_queue")
 
@@ -114,16 +116,15 @@ def test_queue_profiler_given_dequeue_when_queue_changes_then_log_dequeue_event(
     assert ('res', ['req1']) in [call[:2] for call in calls]
     assert any(call[0] == 'event' and call[1] == "Dequeue" for call in calls)
 
+
 def test_queue_profiler_given_no_changes_when_queues_identical_then_no_events_logged():
-    before = deque([SequenceGroup('req1', (1,))])
-    after = deque([SequenceGroup('req1', (1,))])
+    before = deque([SequenceGroup('req1', (1, ))])
+    after = deque([SequenceGroup('req1', (1, ))])
 
     batch_hookers.queue_profiler(before, after, "test_queue")
     assert len(Profiler.instance_calls) == 0
 
-# -----------------------------------------------------------
-# _get_state tests
-# -----------------------------------------------------------
+
 def test_get_state_given_first_call_when_no_existing_state_then_create_new_state():
     if hasattr(batch_hookers._thread_local, 'hook_state'):
         del batch_hookers._thread_local.hook_state
@@ -132,14 +133,13 @@ def test_get_state_given_first_call_when_no_existing_state_then_create_new_state
     assert isinstance(state, batch_hookers.HookState)
     assert state == batch_hookers._thread_local.hook_state
 
+
 def test_get_state_given_existing_state_when_called_then_return_same_instance():
     original_state = batch_hookers.HookState()
     batch_hookers._thread_local.hook_state = original_state
     assert batch_hookers._get_state() is original_state
 
-# -----------------------------------------------------------
-# process_inputs tests
-# -----------------------------------------------------------
+
 def test_process_inputs_given_valid_request_when_called_then_log_event():
     mock_original = MagicMock(return_value="result")
     mock_this = MagicMock()
@@ -151,12 +151,10 @@ def test_process_inputs_given_valid_request_when_called_then_log_event():
     assert len(Profiler.instance_calls) == 1
     assert Profiler.instance_calls[0][-1] == ('event', 'ReqState')
 
-# -----------------------------------------------------------
-# schedule tests (MAIN FUNCTIONALITY)
-# -----------------------------------------------------------
+
 def test_schedule_given_new_requests_when_processing_then_update_state_and_log(hook_state, mock_scheduler):
     req1, req2 = create_request("req1", 5), create_request("req2", 3)
-    mock_scheduler.running = deque([SequenceGroup("req1", (1,2,3)), SequenceGroup("req2", (4,5))])
+    mock_scheduler.running = deque([SequenceGroup("req1", (1, 2, 3)), SequenceGroup("req2", (4, 5))])
 
     scheduler_output = SchedulerOutput(
         scheduled_new_reqs=[req1, req2],
@@ -178,6 +176,7 @@ def test_schedule_given_new_requests_when_processing_then_update_state_and_log(h
     assert "req1" in hook_state.running
     assert "req2" in hook_state.running
 
+
 def test_schedule_given_finished_requests_when_processing_then_clean_state(hook_state, mock_scheduler):
     hook_state.request_id_to_prompt_token_len = {"req1": 10, "req2": 20}
     hook_state.request_id_to_iter_size = {"req1": 3, "req2": 5}
@@ -195,6 +194,7 @@ def test_schedule_given_finished_requests_when_processing_then_clean_state(hook_
 
     assert "req2" not in hook_state.request_id_to_prompt_token_len
     assert "req2" not in hook_state.request_id_to_iter_size
+
 
 def test_schedule_given_prefill_batch_when_iter_size_zero_then_set_batch_type(hook_state, mock_scheduler):
     hook_state.request_id_to_iter_size = {"req1": 0, "req2": 1}
@@ -219,6 +219,7 @@ def test_schedule_given_prefill_batch_when_iter_size_zero_then_set_batch_type(ho
     assert span_calls is not None
     assert ('attr', 'batch_type', 'Prefill') in span_calls
 
+
 def test_schedule_given_no_requests_when_processing_then_early_return(hook_state, mock_scheduler):
     scheduler_output = SchedulerOutput(
         scheduled_new_reqs=[],
@@ -236,9 +237,7 @@ def test_schedule_given_no_requests_when_processing_then_early_return(hook_state
     assert any(["BatchSchedule" in call for calls in Profiler.instance_calls for call in calls])
     assert not any(["QueueSize" in call for calls in Profiler.instance_calls for call in calls])
 
-# -----------------------------------------------------------
-# free_request tests
-# -----------------------------------------------------------
+
 def test_free_request_given_running_request_when_freed_then_transition_state(hook_state):
     hook_state.running.add("req1")
     request = create_request("req1")
@@ -251,6 +250,7 @@ def test_free_request_given_running_request_when_freed_then_transition_state(hoo
     assert any([call[0] == 'metric_inc' and call[1] == 'RUNNING' and call[2] == -1
                for calls in Profiler.instance_calls for call in calls])
 
+
 def test_free_request_given_waiting_request_when_freed_then_transition_state(hook_state):
     hook_state.waiting.add("req1")
     request = create_request("req1")
@@ -262,6 +262,7 @@ def test_free_request_given_waiting_request_when_freed_then_transition_state(hoo
     assert any([call[0] == 'metric_inc' and call[1] == 'WAITING' and call[2] == -1
                for calls in Profiler.instance_calls for call in calls])
 
+
 def test_free_request_given_unknown_request_when_freed_then_no_state_change(hook_state):
     request = create_request("req1")
 
@@ -272,12 +273,10 @@ def test_free_request_given_unknown_request_when_freed_then_no_state_change(hook
     assert len(Profiler.instance_calls) == 1
     assert Profiler.instance_calls[0][-1] == ('res', 'req1')
 
-# -----------------------------------------------------------
-# add_request tests
-# -----------------------------------------------------------
+
 def test_add_request_given_new_request_when_added_then_update_state_and_log(hook_state):
     scheduler = MagicMock()
-    scheduler.waiting = deque([SequenceGroup("req1", [1,2,3])])
+    scheduler.waiting = deque([SequenceGroup("req1", [1, 2, 3])])
     request = create_request("req1")
 
     with patch.object(batch_hookers, '_get_state', return_value=hook_state):
