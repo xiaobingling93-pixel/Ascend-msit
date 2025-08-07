@@ -24,7 +24,7 @@ from .fake_ms_service_profiler import Profiler, Level
 # Setup environment
 os.environ["VLLM_USE_V1"] = "-1"
 from msserviceprofiler.vllm_profiler.vllm_v1 import batch_hookers
-
+original = sys.modules.get("ms_service_profiler", None)
 sys.modules["ms_service_profiler"] = MagicMock()
 sys.modules["ms_service_profiler"].Profiler = Profiler
 sys.modules["ms_service_profiler"].Level = Level
@@ -35,6 +35,15 @@ SequenceGroup = namedtuple("SequenceGroup", ["request_id", "prompt_token_ids"])
 SchedulerOutput = namedtuple(
     "SchedulerOutput", ["scheduled_new_reqs", "scheduled_cached_reqs", "num_scheduled_tokens", "finished_req_ids"]
 )
+
+
+@pytest.fixture
+def restore_ms_service_profiler_modeul():
+    yiled
+    if original is not None:
+        sys.modules["ms_service_profiler"] = original
+    else:
+        sys.modules.pop("ms_service_profiler")
 
 
 # Reset profiler before each test
