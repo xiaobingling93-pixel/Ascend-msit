@@ -32,7 +32,7 @@ def queue_profiler(before_queue, after_queue, queue_name):
     for seq_group in less_queue: # V1 note: SequenceGroup == Request
         rid_list.append(seq_group.request_id)
     if len(rid_list) > 0:
-        prof = Profiler(Level.INFO).domain("BatchSchedule").res(rid_list)
+        prof = Profiler(Level.INFO).domain("BatchSchedule").res(rid_list[:])
         prof.metric("QueueSize", len(after_queue)).metric_scope("QueueName", queue_name).event("Dequeue")
 
     # 队列元素增加
