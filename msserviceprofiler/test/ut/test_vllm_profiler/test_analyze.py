@@ -12,21 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest.mock import patch, MagicMock, AsyncMock
 import sys
 import os
-import pytest
-import logging
 from collections import namedtuple
+from unittest.mock import patch, MagicMock, AsyncMock
+import pytest
 
 from .fake_ms_service_profiler import Profiler, Level
 
 sys.modules["ms_service_profiler"].Profiler = Profiler
 sys.modules["ms_service_profiler"].Level = Level
-logger = logging.getLogger("vllmProfiler")
 os.environ["VLLM_USE_V1"] = "-1"
 
 from msserviceprofiler.vllm_profiler.vllm_v1 import request_hookers
+
 
 @pytest.fixture(autouse=True)
 def reset_profiler():
@@ -118,7 +117,7 @@ def test_process_outputs_given_finished_request_when_called_then_httpRes_logged_
     assert decode_calls == [("domain", "Request"), ("res", ["req_finished"]), ("event", "DecodeEnd")]
 
 
-def test_process_outputs_given_unfinished_request_when_called_then_httpRes_not_logged():
+def test_process_outputs_given_unfinished_request_when_httpRes_not_logged():
     # Setup
     mock_output, _ = create_mock_output("req_unfinished", finished=False)
     mock_this = MagicMock(request_states={})
@@ -133,7 +132,7 @@ def test_process_outputs_given_unfinished_request_when_called_then_httpRes_not_l
     assert decode_calls[-1] == ("event", "DecodeEnd")
 
 
-def test_process_outputs_given_missing_request_state_when_called_then_httpRes_not_logged():
+def test_process_outputs_given_missing_request_state_when_httpRes_not_logged():
     # Setup
     mock_output, _ = create_mock_output("req_missing_state")
     mock_this = MagicMock(request_states={})  # No state for request
@@ -147,7 +146,7 @@ def test_process_outputs_given_missing_request_state_when_called_then_httpRes_no
     assert Profiler.instance_calls[0][-1] == ("event", "DecodeEnd")
 
 
-def test_process_outputs_given_missing_stats_when_called_then_httpRes_logged_with_none_reply_tokens():
+def test_process_outputs_given_missing_stats_when_none_reply_tokens():
     # Setup
     mock_output, mock_state = create_mock_output("req_no_stats", has_stats=False)
     mock_this = MagicMock(request_states={"req_no_stats": mock_state})
@@ -162,7 +161,7 @@ def test_process_outputs_given_missing_stats_when_called_then_httpRes_logged_wit
     assert metrics == [("recvTokenSize", 3), ("replyTokenSize", None)]  # Missing stats
 
 
-def test_process_outputs_given_multiple_requests_when_called_then_correct_events_logged():
+def test_process_outputs_given_multiple_requests_then_events_logged():
     # Setup
     finished1, state1 = create_mock_output("req_finished1")
     finished2, state2 = create_mock_output("req_finished2")
@@ -191,7 +190,7 @@ def test_process_outputs_given_multiple_requests_when_called_then_correct_events
     assert set(decode_end_res) == {"req_finished1", "req_unfinished", "req_finished2"}
 
 
-def test_process_outputs_given_original_function_arguments_when_called_then_arguments_passed_correctly():
+def test_process_outputs_given_arguments_then_correctly():
     # Setup
     mock_output, mock_state = create_mock_output("req_args_test")
     mock_this = MagicMock(request_states={"req_args_test": mock_state})

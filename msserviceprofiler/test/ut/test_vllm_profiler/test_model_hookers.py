@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
-from unittest.mock import patch, MagicMock, call
 import sys
 import os
 import threading
 import contextlib
 from collections import namedtuple
+from unittest.mock import patch, MagicMock, call
 
+import pytest
 import ms_service_profiler
 
 # Setup environment
@@ -61,9 +61,6 @@ def create_request(request_id, token_count=10, computed_tokens=0):
     return Request(req_id=request_id, prompt_token_ids=[0] * token_count, num_computed_tokens=computed_tokens)
 
 
-# -----------------------------------------------------------
-# _get_state tests
-# -----------------------------------------------------------
 def test_get_state_given_first_call_when_no_existing_state_then_create_new_state():
     if hasattr(model_hookers._thread_local, "hook_state"):
         del model_hookers._thread_local.hook_state
@@ -79,9 +76,6 @@ def test_get_state_given_existing_state_when_called_then_return_same_instance():
     assert model_hookers._get_state() is original_state
 
 
-# -----------------------------------------------------------
-# _extract_request_id_from_scheduler_output tests
-# -----------------------------------------------------------
 def test_extract_request_ids_given_new_request_when_processing_then_update_iter_size():
     state = model_hookers.HookState()
     scheduler_output = MagicMock(num_scheduled_tokens={"req1": 5, "req2": 3}, finished_req_ids=["req3"])
@@ -123,9 +117,6 @@ def test_extract_request_ids_given_finished_request_when_processing_then_clean_s
     assert "req3" not in state.request_id_to_iter_size
 
 
-# -----------------------------------------------------------
-# compute_logits tests
-# -----------------------------------------------------------
 def test_compute_logits_given_valid_input_when_called_then_profile_span():
     mock_original = MagicMock(return_value="logits")
     mock_this = MagicMock()
@@ -140,9 +131,6 @@ def test_compute_logits_given_valid_input_when_called_then_profile_span():
     assert "span_end" in calls
 
 
-# -----------------------------------------------------------
-# sampler_forward tests
-# -----------------------------------------------------------
 def test_sampler_forward_given_valid_input_when_called_then_profile_span():
     mock_original = MagicMock(return_value="samples")
     mock_this = MagicMock()
@@ -157,9 +145,6 @@ def test_sampler_forward_given_valid_input_when_called_then_profile_span():
     assert "span_end" in calls
 
 
-# -----------------------------------------------------------
-# execute_model tests (MAIN FUNCTIONALITY)
-# -----------------------------------------------------------
 def test_execute_model_given_new_requests_when_processing_then_update_state_and_profile():
     state = model_hookers.HookState()
     req1 = create_request("req1", token_count=5)
@@ -262,9 +247,6 @@ def test_execute_model_given_no_requests_when_processing_then_no_profiling():
     assert state.forward_profiler is None
 
 
-# -----------------------------------------------------------
-# set_forward_context tests
-# -----------------------------------------------------------
 def test_set_forward_context_given_no_forward_profiler_when_used_then_create_new_profiler():
     state = model_hookers.HookState()
     mock_original = MagicMock()
@@ -308,9 +290,6 @@ def test_set_forward_context_given_context_manager_when_used_then_call_original(
     mock_context.__exit__.assert_called_once()
 
 
-# -----------------------------------------------------------
-# HookState tests
-# -----------------------------------------------------------
 def test_hook_state_initialization():
     state = model_hookers.HookState()
     assert state.forward_profiler is None
