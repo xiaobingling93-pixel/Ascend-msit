@@ -622,8 +622,13 @@ def execute_command(cmd, info_need=True):
         logger.info('Execute command:%s' % " ".join(cmd))
     process = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     ais_bench_logs = ""
-    while process.poll() is None:
-        ais_bench_logs += process.stdout.readline().decode()
+    try:
+        while process.poll() is None:
+            line = process.stdout.readline()
+            if line:  # 检查line是否为空，避免解码和追加是的潜在错误
+                ais_bench_logs += line.decode()
+    finally:
+        process.stdout.close()
     if process.returncode != 0:
         logger.error('Failed to execute command:%s' % " ".join(cmd))
         logger.error(f'\nerror log:\n {ais_bench_logs}')

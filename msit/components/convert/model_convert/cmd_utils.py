@@ -84,10 +84,13 @@ def execute_cmd(cmd: list):
     cmd = filter_cmd(cmd)
     logger.info("%s start converting now", cmd[0].upper())
     result = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    while result.poll() is None:
-        line = result.stdout.readline()
-        if line:
-            line = line.strip()
-            logger.info(line.decode('utf-8'))
+    try:
+        while result.poll() is None:
+            line = result.stdout.readline()
+            if line:
+                line = line.strip()
+                logger.info(line.decode('utf-8'))
+    finally:
+        result.stdout.close()
     logger.info("%s convert success", cmd[0].upper())
     return result.returncode

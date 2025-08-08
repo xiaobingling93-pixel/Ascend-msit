@@ -15,6 +15,7 @@
 
 import os
 import subprocess
+import shutil
 
 from auto_optimizer import OnnxGraph
 from auto_optimizer.graph_refactor.onnx import OnnxPlaceHolder, OnnxInitializer
@@ -92,7 +93,9 @@ def generate_single_op_dir(out_path):
     """
     single_op_dir = os.path.join(out_path, 'single_op')
     if os.path.exists(single_op_dir):
-        os.rmdir(single_op_dir)
+        utils.logger.warning(f"The file path: {single_op_dir} found to exist, "
+                             f"the existing path will be deleted and then recreated.")
+        shutil.rmtree(single_op_dir)
     ms_makedirs(single_op_dir)
     return single_op_dir
 

@@ -172,25 +172,28 @@ class TfSaveModelDumpData(DumpData):
 
         op_names = parse_ops_name_from_om_json(tf_json_path)
         sess = tf.compat.v1.keras.backend.get_session()
-        tag_set = {tf.compat.v1.saved_model.tag_constants.SERVING} if self.tag_set == "" else self.tag_set
-        if os.path.isdir(self.model_path):
-            load_file_to_read_common_check_with_walk(self.model_path)
-        else:
-            load_file_to_read_common_check(self.model_path)
-        _ = tf.compat.v1.saved_model.load(sess, tag_set, self.model_path)
-        if not self.inputs_data:
-            raise ValueError("inputs_data is empty")
-        feed_dict = {
-            sess.graph.get_tensor_by_name(input_name + ":0"): input_data
-            for input_name, input_data in self.inputs_data.items()
-        }
-        output_tensors = []
-        operations = sess.graph.get_operations()
-        for op_name in op_names:
-            if self._is_op_exists(op_name, operations):
-                output_tensors.extend(sess.graph.get_operation_by_name(op_name).outputs)
+        try:
+            tag_set = {tf.compat.v1.saved_model.tag_constants.SERVING} if self.tag_set == "" else self.tag_set
+            if os.path.isdir(self.model_path):
+                load_file_to_read_common_check_with_walk(self.model_path)
+            else:
+                load_file_to_read_common_check(self.model_path)
+            _ = tf.compat.v1.saved_model.load(sess, tag_set, self.model_path)
+            if not self.inputs_data:
+                raise ValueError("inputs_data is empty")
+            feed_dict = {
+                sess.graph.get_tensor_by_name(input_name + ":0"): input_data
+                for input_name, input_data in self.inputs_data.items()
+            }
+            output_tensors = []
+            operations = sess.graph.get_operations()
+            for op_name in op_names:
+                if self._is_op_exists(op_name, operations):
+                    output_tensors.extend(sess.graph.get_operation_by_name(op_name).outputs)
 
-        out = sess.run(output_tensors, feed_dict)
+            out = sess.run(output_tensors, feed_dict)
+        finally:
+            sess.close()
         self._save_dump_data(out, output_tensors)
         utils.logger.info("Dump tf data success, data saved in: %s", self.dump_data_tf)
 
