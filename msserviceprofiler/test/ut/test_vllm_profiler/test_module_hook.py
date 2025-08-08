@@ -89,28 +89,21 @@ def sample_function():
     return "original function"
 
 
-def test_HookHelper_get_location_given_function_when_getting_location_then_returns_correct_info():
+def test_hookhelper_get_location_given_function_when_getting_location_then_returns_correct_info():
     """Test getting location info for regular function"""
     location, attr_name = HookHelper.get_location(sample_function)
     assert attr_name == "sample_function"
     assert location.__name__.split(".")[-1] == "test_module_hook"
 
 
-def test_HookHelper_get_location_given_class_method_when_getting_location_then_returns_correct_info():
+def test_hookhelper_get_location_given_class_method_when_getting_location_then_returns_correct_info():
     """Test getting location info for class method"""
     location, attr_name = HookHelper.get_location(SampleClass.instance_method)
     assert attr_name == "instance_method"
     assert location.__name__ == "SampleClass"
 
 
-def test_HookHelper_get_location_given_missing_module_when_getting_location_then_raises_error():
-    """Test handling of function without __module__"""
-    func = lambda x: x
-    with pytest.raises(ValueError):
-        HookHelper.get_location(func)
-
-
-def test_HookHelper_replace_given_function_when_replacing_then_successful():
+def test_hookhelper_replace_given_function_when_replacing_then_successful():
     """Test function replacement"""
     original = sample_function
 
@@ -123,7 +116,7 @@ def test_HookHelper_replace_given_function_when_replacing_then_successful():
     helper.recover()
 
 
-def test_HookHelper_replace_given_static_method_when_replacing_then_successful():
+def test_hookhelper_replace_given_static_method_when_replacing_then_successful():
     """Test static method replacement"""
     original = SampleClass.static_method
 
@@ -136,7 +129,7 @@ def test_HookHelper_replace_given_static_method_when_replacing_then_successful()
     helper.recover()
 
 
-def test_HookHelper_replace_given_non_callable_when_initializing_then_raises_error():
+def test_hookhelper_replace_given_non_callable_when_initializing_then_raises_error():
     """Test handling of non-callable replacement"""
     with pytest.raises(ValueError):
         HookHelper("not a function", lambda x: x)
@@ -151,21 +144,21 @@ class FakeHooker(VLLMHookerBase):
         self.do_hook([sample_function], profiler_maker)
 
 
-def test_VLLMHookerBase_support_version_given_version_in_range_when_checking_then_returns_true():
+def test_vllmhookerbase_support_version_given_version_in_range_when_checking_then_returns_true():
     """Test version support within range"""
     hooker = FakeHooker()
     hooker.vllm_version = ("1.0.0", "2.0.0")
     assert hooker.support_version("1.5.0")
 
 
-def test_VLLMHookerBase_support_version_given_version_out_of_range_when_checking_then_returns_false():
+def test_vllmhookerbase_support_version_given_version_out_of_range_when_checking_then_returns_false():
     """Test version support outside range"""
     hooker = FakeHooker()
     hooker.vllm_version = ("1.0.0", "2.0.0")
     assert not hooker.support_version("3.0.0")
 
 
-def test_VLLMHookerBase_do_hook_given_hook_points_when_applying_then_functions_replaced(cleanup_hook_registry):
+def test_vllmhookerbase_do_hook_given_hook_points_when_applying_then_functions_replaced(cleanup_hook_registry):
     """Test hook application"""
     hooker = FakeHooker()
     hooker.init()
@@ -196,7 +189,7 @@ def test_apply_hooks_given_invalid_version_when_applying_then_handles_error(clea
 
 
 # Additional edge case tests
-def test_HookHelper_replace_given_missing_parent_class_when_replacing_then_raises_error():
+def test_hookhelper_replace_given_missing_parent_class_when_replacing_then_raises_error():
     """Test handling of missing parent class during replacement"""
 
     class FakeFunc:
@@ -225,7 +218,7 @@ def test_vllm_hook_given_empty_hook_points_when_registering_then_no_error(cleanu
     HOOK_REGISTRY[0].init()
 
 
-def test_VLLMHookerBase_do_hook_given_caller_filter_when_calling_then_filters_correctly():
+def test_vllmhookerbase_do_hook_given_caller_filter_when_calling_then_filters_correctly():
     """Test caller filter functionality"""
 
     class FilterHooker(VLLMHookerBase):

@@ -89,7 +89,7 @@ def test_process_outputs_given_empty_outputs_when_called_then_no_events_and_orig
     assert len(Profiler.instance_calls) == 0
 
 
-def test_process_outputs_given_finished_request_when_called_then_httpRes_logged_with_metrics():
+def test_process_outputs_given_finished_request_when_called_then_httpres_logged_with_metrics():
     # Setup
     original_func = MagicMock(return_value="result")
     mock_output, mock_state = create_mock_output("req_finished")
@@ -117,7 +117,7 @@ def test_process_outputs_given_finished_request_when_called_then_httpRes_logged_
     assert decode_calls == [("domain", "Request"), ("res", ["req_finished"]), ("event", "DecodeEnd")]
 
 
-def test_process_outputs_given_unfinished_request_when_httpRes_not_logged():
+def test_process_outputs_given_unfinished_request_when_httpres_not_logged():
     # Setup
     mock_output, _ = create_mock_output("req_unfinished", finished=False)
     mock_this = MagicMock(request_states={})
@@ -132,7 +132,7 @@ def test_process_outputs_given_unfinished_request_when_httpRes_not_logged():
     assert decode_calls[-1] == ("event", "DecodeEnd")
 
 
-def test_process_outputs_given_missing_request_state_when_httpRes_not_logged():
+def test_process_outputs_given_missing_request_state_when_httpres_not_logged():
     # Setup
     mock_output, _ = create_mock_output("req_missing_state")
     mock_this = MagicMock(request_states={})  # No state for request
