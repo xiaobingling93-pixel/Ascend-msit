@@ -23,8 +23,26 @@ from msit_opcheck.constants import FLOAT16
 
 class LogicalOrOperation(OperationTest):
     def golden_calc(self, in_tensors):
+        # 校验输入张量列表长度
+        if len(in_tensors) < 2:
+            raise ValueError("Insufficient input tensors, at least 2 input tensors are required")
+            
         x1, x2 = in_tensors[:2]
-        out_type = DATA_TYPE_MAP[self.op_param['output_desc'][0]['dtype']]
+        
+        # 校验op_param字典结构
+        if not isinstance(self.op_param, dict) or 'output_desc' not in self.op_param:
+            raise ValueError("Invalid op_param format")
+        if not isinstance(self.op_param['output_desc'], list) or len(self.op_param['output_desc']) == 0:
+            raise ValueError("Invalid output_desc format")
+        if not isinstance(self.op_param['output_desc'][0], dict) or 'dtype' not in self.op_param['output_desc'][0]:
+            raise ValueError("Invalid output_desc[0] format")
+            
+        # 校验dtype是否在数据类型映射表中
+        dtype = self.op_param['output_desc'][0]['dtype']
+        if dtype not in DATA_TYPE_MAP:
+            raise ValueError(f"Unsupported data type: {dtype}")
+            
+        out_type = DATA_TYPE_MAP[dtype]
         shape_list = broadcast_to_maxshape([x1.shape, x2.shape])
         x1 = x1.astype(FLOAT16)
         x2 = x2.astype(FLOAT16)
