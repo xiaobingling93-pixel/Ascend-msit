@@ -59,6 +59,7 @@ ACCRACY_COMPARISON_EXTRACT_ERROR = 19
 ACCRACY_COMPARISON_FETCH_DATA_ERROR = 20
 ACCURACY_COMPARISON_ATC_RUN_ERROR = 21
 ACCURACY_COMPARISON_INVALID_RIGHT_ERROR = 22
+ACCURACY_COMPARISON_INDEX_OUT_OF_BOUNDS_ERROR = 23
 MODEL_TYPE = ['.onnx', '.pb', '.om', '.prototxt', '.txt']
 DIM_PATTERN = r"^(-?[0-9]{1,100})(,-?[0-9]{1,100}){0,100}"
 DYNAMIC_DIM_PATTERN = r"^([0-9-~]+)(,-?[0-9-~]+){0,3}"
@@ -670,6 +671,9 @@ def handle_ground_truth_files(om_parser, npu_dump_data_path, golden_dump_data_pa
         for root, _, files in os.walk(golden_dump_data_path):
             for file_name in files:
                 first_dot_index = file_name.find(DOT)
+                if first_dot_index == -1:
+                    logger.warning("file name in golden dump data path found it does not contain '.', skip copy.")
+                    continue
                 current_op_name = BATCH_SCENARIO_OP_NAME.format(file_name[:first_dot_index], batch_index)
                 dst_file_name = current_op_name + file_name[first_dot_index:]
                 shutil.copy(os.path.join(root, file_name), os.path.join(root, dst_file_name))

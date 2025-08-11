@@ -168,6 +168,9 @@ def get_inputs_tensor(global_graph, input_shape_str):
 def get_inputs_data(inputs_tensor, input_paths):
     inputs_map = {}
     input_path = input_paths.split(",")
+    if len(input_path) != len(inputs_tensor):
+        utils.logger.error("lengths of input_path and input_tensor unequal, please check.")
+        raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INDEX_OUT_OF_BOUNDS_ERROR)
     for index, tensor in enumerate(inputs_tensor):
         try:
             if Rule.input_file().check(input_path[index], will_raise=True):

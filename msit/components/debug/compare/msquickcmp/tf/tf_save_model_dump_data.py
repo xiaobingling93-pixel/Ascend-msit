@@ -138,6 +138,9 @@ class TfSaveModelDumpData(DumpData):
             input_files = sorted(os.listdir(self.input), key=lambda x: int(x[-5]))
             input_bin_data = [np.fromfile(os.path.join(self.input, input_bin_file), dtype=np.float32)
                               for input_bin_file in input_files]
+            if len(input_files) != len(self.input_shape_list):
+                utils.logger.error("numbers of files in input path and input_shape_list unequal, please check.")
+                raise utils.AccuracyCompareException(utils.ACCURACY_COMPARISON_INDEX_OUT_OF_BOUNDS_ERROR)
             for index, bin_data in enumerate(input_bin_data):
                 bin_data = bin_data.reshape(self.input_shape_list[index][1])
                 self.inputs_data[self.input_shape_list[index][0]] = bin_data

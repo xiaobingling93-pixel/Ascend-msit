@@ -316,6 +316,9 @@ class OnnxDumpData(DumpData):
         for bin_file in os.listdir(npu_dump_data_path):
             if bin_file.startswith("Aipp"):
                 aipp_input.append(os.path.join(npu_dump_data_path, bin_file))
+        if len(aipp_input) != len(inputs_tensor_info):
+            utils.logger.error("lengths of aipp_input and input_tensor_info unequal, please check.")
+            raise utils.AccuracyCompareException(utils.ACCURACY_COMPARISON_INDEX_OUT_OF_BOUNDS_ERROR)
         for i, tensor_info in enumerate(inputs_tensor_info):
             convert_bin_file_to_npy(aipp_input[i], os.path.join(self.out_path, "input"), self.cann_path)
             aipp_output_path = os.path.join(self.out_path, "input", aipp_input[i].rsplit("/", 1)[1]) + ".output.0.npy"
