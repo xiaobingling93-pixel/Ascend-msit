@@ -21,6 +21,9 @@ from msit_opcheck.golden_funcs.mat_mul import matmul
 class BatchMatMulOperation(OperationTest):
     def golden_calc(self, in_tensors):
         # input & params
+        # 校验输入张量列表的长度，至少需要2个输入
+        if len(in_tensors) < 2:
+            raise ValueError("Insufficient input tensors, at least 2 input tensors are required")
         x1 = in_tensors[0]
         x2 = in_tensors[1]
         out_dtype = DATA_TYPE_MAP[self.op_param['output_desc'][0]['dtype']]

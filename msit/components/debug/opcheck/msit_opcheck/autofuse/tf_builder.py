@@ -179,74 +179,89 @@ class TensorFlowGraphBuilder:
     def list_placeholders(self):
         return [tensor for tensor in self.graph.as_graph_def().node if tensor.op == 'Placeholder']
 
+    def _get_input_node(self, node_info, index=0):
+        """安全获取输入节点"""
+        if not node_info.get("inputs") or index >= len(node_info["inputs"]):
+            raise ValueError(f"Invalid input index {index} for node {node_info['name']}")
+        input_name = node_info["inputs"][index]
+        if input_name not in self.nodes:
+            raise ValueError(f"Input node {input_name} not found for node {node_info['name']}")
+        return self.nodes[input_name]["output"]
+
     def _build_identity_node(self, node_info):
-        input_node = self.nodes[node_info["inputs"][0]]["output"]
+        input_node = self._get_input_node(node_info)
         return tf.identity(input_node, name=node_info["name"])
 
     def _build_output_node(self, node_info):
-        input_node = self.nodes[node_info["inputs"][0]]["output"]
+        input_node = self._get_input_node(node_info)
         self.output_nodes.append(node_info["name"])
         return tf.identity(input_node, name=node_info["name"])
 
     def _build_broadcast_node(self, node_info):
-        input_node = self.nodes[node_info["inputs"][0]]["output"]
-        repeats = node_info["attributes"]["repeats"]
+        input_node = self._get_input_node(node_info)
+        repeats = node_info["attributes"].get("repeats")
+        if not repeats:
+            raise ValueError(f"Missing repeats attribute for broadcast node {node_info['name']}")
         return tf.broadcast_to(input_node, repeats, name=node_info["name"])
 
     def _build_mul_node(self, node_info):
-        input_node1 = self.nodes[node_info["inputs"][0]]["output"]
-        input_node2 = self.nodes[node_info["inputs"][1]]["output"]
+        input_node1 = self._get_input_node(node_info, 0)
+        input_node2 = self._get_input_node(node_info, 1)
         return tf.multiply(input_node1, input_node2, name=node_info["name"])
 
     def _build_add_node(self, node_info):
-        input_node1 = self.nodes[node_info["inputs"][0]]["output"]
-        input_node2 = self.nodes[node_info["inputs"][1]]["output"]
+        input_node1 = self._get_input_node(node_info, 0)
+        input_node2 = self._get_input_node(node_info, 1)
         return tf.add(input_node1, input_node2, name=node_info["name"])
 
     def _build_abs_node(self, node_info):
-        input_node = self.nodes[node_info["inputs"][0]]["output"]
+        input_node = self._get_input_node(node_info)
         return tf.math.abs(input_node, name=node_info["name"])
 
     def _build_relu_node(self, node_info):
-        input_node = self.nodes[node_info["inputs"][0]]["output"]
+        input_node = self._get_input_node(node_info)
         return tf.nn.relu(input_node, name=node_info["name"])
 
     def _build_div_node(self, node_info):
-        input_node1 = self.nodes[node_info["inputs"][0]]["output"]
-        input_node2 = self.nodes[node_info["inputs"][1]]["output"]
+        input_node1 = self._get_input_node(node_info, 0)
+        input_node2 = self._get_input_node(node_info, 1)
         return tf.math.divide(input_node1, input_node2, name=node_info["name"])
 
     def _build_cast_node(self, node_info):
-        input_node = self.nodes[node_info["inputs"][0]]["output"]
-        dtype = node_info["attributes"]["dtype"]
+        input_node = self._get_input_node(node_info)
+        dtype = node_info["attributes"].get("dtype")
+        if not dtype:
+            raise ValueError(f"Missing dtype attribute for cast node {node_info['name']}")
         return tf.cast(input_node, dtype=dtype, name=node_info["name"])
 
     def _build_sign_node(self, node_info):
-        input_node = self.nodes[node_info["inputs"][0]]["output"]
+        input_node = self._get_input_node(node_info)
         return tf.sign(input_node, name=node_info["name"])
 
     def _build_exp_node(self, node_info):
-        input_node = self.nodes[node_info["inputs"][0]]["output"]
+        input_node = self._get_input_node(node_info)
         return tf.math.exp(input_node, name=node_info["name"])
 
     def _build_reduce_mean_node(self, node_info):
-        input_node = self.nodes[node_info["inputs"][0]]["output"]
+        input_node = self._get_input_node(node_info)
         axis = node_info["attributes"].get("axis", -1)  # 默认最后一维
         keepdims = node_info["attributes"].get("keepdims", True)
         return tf.reduce_mean(input_node, axis=axis, keepdims=keepdims, name=node_info["name"])
 
     def _build_rsqt_node(self, node_info):
-        input_node = self.nodes[node_info["inputs"][0]]["output"]
+        input_node = self._get_input_node(node_info)
         return tf.math.rsqrt(input_node, name=node_info["name"])
 
     def _build_sigmoid_node(self, node_info):
-        input_node = self.nodes[node_info["inputs"][0]]["output"]
+        input_node = self._get_input_node(node_info)
         return tf.nn.sigmoid(input_node, name=node_info["name"])
 
     def _build_sum_mode(self, node_info):
-        input_node = self.nodes[node_info["inputs"][0]]["output"]
+        input_node = self._get_input_node(node_info)
         input_shape = input_node.shape.as_list()
-        output_shape = node_info["attributes"]["repeats"]
+        output_shape = node_info["attributes"].get("repeats")
+        if not output_shape:
+            raise ValueError(f"Missing repeats attribute for sum node {node_info['name']}")
         axis = self._compute_diff_axes(input_shape, output_shape)
         return tf.reduce_sum(input_node, name=node_info["name"], axis=axis)
 
