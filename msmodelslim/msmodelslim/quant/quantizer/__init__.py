@@ -18,6 +18,8 @@ __all__ = [
     "ActPerTensorMinmax",
     "WeightPerChannelMinmax",
     "WeightPerGroupMinmax",
+    "WeightPerChannelSsz",
 ]
 
 from .impl.minmax import ActPerTokenMinmax, ActPerTensorMinmax, WeightPerChannelMinmax, WeightPerGroupMinmax
+from .impl.ssz import WeightPerChannelSsz
