@@ -174,8 +174,7 @@ class TfSaveModelDumpData(DumpData):
         from components.debug.compare.msquickcmp.common.tf_common import load_file_to_read_common_check_with_walk
 
         op_names = parse_ops_name_from_om_json(tf_json_path)
-        sess = tf.compat.v1.keras.backend.get_session()
-        try:
+        with tf.compat.v1.keras.backend.get_session() as sess:
             tag_set = {tf.compat.v1.saved_model.tag_constants.SERVING} if self.tag_set == "" else self.tag_set
             if os.path.isdir(self.model_path):
                 load_file_to_read_common_check_with_walk(self.model_path)
@@ -195,8 +194,6 @@ class TfSaveModelDumpData(DumpData):
                     output_tensors.extend(sess.graph.get_operation_by_name(op_name).outputs)
 
             out = sess.run(output_tensors, feed_dict)
-        finally:
-            sess.close()
         self._save_dump_data(out, output_tensors)
         utils.logger.info("Dump tf data success, data saved in: %s", self.dump_data_tf)
 
