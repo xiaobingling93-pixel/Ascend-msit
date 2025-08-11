@@ -140,11 +140,11 @@ class ModelslimV0QuantService(BaseQuantService):
         # quantization
         self.logger.info(f"==========QUANTIZATION: CALIBRATION==========")
         self.logger.debug(f"calibration config: {quant_config.spec.calib_cfg}")
+        use_fa_quant = bool(quant_config.spec.calib_cfg.pop('use_fa_quant', False))
+        fa_amp = quant_config.spec.calib_cfg.pop('fa_amp', 0)
         calib_cfg = QuantConfig(dev_type=model.device.value, **quant_config.spec.calib_cfg)
-
-        use_fa_quant = bool(quant_config.spec.calib_cfg.get('use_fa_quant', False))
         if use_fa_quant:
-            calib_cfg = calib_cfg.fa_quant(fa_amp=quant_config.spec.calib_cfg.get('fa_amp', 0))
+            calib_cfg = calib_cfg.fa_quant(fa_amp=fa_amp)
 
         calibrator = Calibrator(
             model=model.model,
