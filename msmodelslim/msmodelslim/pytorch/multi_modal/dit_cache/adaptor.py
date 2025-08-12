@@ -12,7 +12,7 @@ import torch.nn as nn
 import torch.distributed as dist
 
 import ascend_utils.common.security.path as path_checker
-from msmodelslim.utils.logger import logger as logger_root
+from msmodelslim.utils.logging import logger as logger_root
 
 from . import dit_cache_searcher
 

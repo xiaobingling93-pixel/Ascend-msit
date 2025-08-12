@@ -22,7 +22,7 @@ from opensora.sample.pipeline_opensora_sp import OpenSoraPipeline
 
 from example.common.security.path import get_valid_read_path, get_write_directory
 from example.osp1_2.model.model_open_sora_plan1_2_sp import OpenSoraPipelineV1x2
-from msmodelslim.utils.logger import logger
+from msmodelslim.utils.logging import logger
 
 
 def get_args():

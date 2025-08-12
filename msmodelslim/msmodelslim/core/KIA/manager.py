@@ -20,8 +20,8 @@ from typing import Optional, Dict
 
 from packaging import version
 
-from msmodelslim import logger
 from msmodelslim.utils.exception import VersionError
+from msmodelslim.utils.logging import get_logger
 
 
 @dataclass
@@ -47,7 +47,7 @@ class KIAManager:
         try:
             cls.KIA_MODULE = importlib.import_module("..impl.kia_main", __name__)
         except ImportError as e:
-            logger.warning(
+            get_logger().warning(
                 f"[Core] Load KIA module failed, please check if the kia_impl package is installed, "
                 f"exception info : {e}")
 
@@ -68,8 +68,9 @@ class KIAManager:
         kia_version = version.parse(cls.get_version())
         for func_name, mark in cls.MARKED_FUNC.items():
             if kia_version < version.parse(mark.min_version) or kia_version > version.parse(mark.max_version):
-                logger.warning(f"Function {func_name} requires KIA version {mark.min_version}-{mark.max_version}, "
-                               f"but the current KIA version is {cls.get_version()}")
+                get_logger().warning(
+                    f"Function {func_name} requires KIA version {mark.min_version}-{mark.max_version}, "
+                    f"but the current KIA version is {cls.get_version()}")
 
     @classmethod
     def mark_require_version(cls, min_version: str, max_version: str = MAX_VERSION):

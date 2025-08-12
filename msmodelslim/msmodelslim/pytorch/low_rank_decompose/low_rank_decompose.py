@@ -16,7 +16,7 @@ from msmodelslim.common.low_rank_decompose import (
 )
 from msmodelslim.common.low_rank_decompose import export
 from msmodelslim import logger
-from msmodelslim.utils.logger import progress_bar
+from msmodelslim.utils.logging import progress_bar
 
 
 def weight_as_numpy(weight):

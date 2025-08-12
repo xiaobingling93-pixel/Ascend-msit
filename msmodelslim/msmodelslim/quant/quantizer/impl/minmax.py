@@ -23,7 +23,7 @@ from msmodelslim.core import fake_quantize, quantize, dequantize, calculate_qpar
 from msmodelslim.core.QAL import QABCRegistry, QDType, QStorage, QParam, QScope
 from msmodelslim.quant.observer import MsMinMaxObserver, MinMaxObserverConfig
 from msmodelslim.utils.exception import SpecError, SchemaValidateError
-from msmodelslim.utils.logger import logger_setter
+from msmodelslim.utils.logging import logger_setter
 from ..base import AutoActQuantizer, AutoWeightQuantizer, QConfig
 
 
@@ -34,7 +34,7 @@ from ..base import AutoActQuantizer, AutoWeightQuantizer, QConfig
     ],
     abc_type=AutoActQuantizer
 )
-@logger_setter(__name__)
+@logger_setter()
 class ActPerTensorMinmax(AutoActQuantizer):
 
     def __init__(self, config: QConfig):
@@ -69,7 +69,7 @@ class ActPerTensorMinmax(AutoActQuantizer):
     ],
     abc_type=AutoActQuantizer
 )
-@logger_setter(__name__)
+@logger_setter()
 class ActPerTokenMinmax(AutoActQuantizer):
 
     def __init__(self, config: QConfig):
@@ -106,7 +106,7 @@ class ActPerTokenMinmax(AutoActQuantizer):
     ],
     abc_type=AutoWeightQuantizer
 )
-@logger_setter(__name__)
+@logger_setter()
 class WeightPerChannelMinmax(AutoWeightQuantizer):
     def __init__(self, config: QConfig):
         super().__init__()
@@ -155,7 +155,7 @@ class WeightPerChannelMinmax(AutoWeightQuantizer):
     ],
     abc_type=AutoWeightQuantizer
 )
-@logger_setter(__name__)
+@logger_setter()
 class WeightPerGroupMinmax(AutoWeightQuantizer):
 
     def __init__(self, config: QConfig):

@@ -6,11 +6,9 @@ import re
 import shutil
 import stat
 import sys
-from logging import Logger
 
-from msmodelslim import logger as msmodelslim_logger
 from msmodelslim.utils.exception import SecurityError
-from msmodelslim.utils.logger import get_logger_func
+from msmodelslim.utils.logging import get_logger, LOGGER_FUNC
 from msmodelslim.utils.validation.type import check_dict_character, check_type
 
 PATH_WHITE_LIST_REGEX = re.compile(r"[^_A-Za-z0-9/.-]")
@@ -75,32 +73,31 @@ def is_belong_to_user_or_group(file_stat):
     return file_stat.st_uid == os.getuid() or file_stat.st_gid in os.getgroups()
 
 
-def check_others_not_writable(path, logger: Logger = msmodelslim_logger):
+def check_others_not_writable(path):
     dir_stat = os.stat(path)
     is_writable = (
             bool(dir_stat.st_mode & stat.S_IWGRP) or  # 组可写
             bool(dir_stat.st_mode & stat.S_IWOTH)  # 其他用户可写
     )
     if is_writable:
-        logger.warning("The file path %r may be insecure because it can be written by others.", path)
+        get_logger().warning("The file path %r may be insecure because it can be written by others.", path)
 
 
-def check_path_owner_consistent(path, logger: Logger = msmodelslim_logger):
+def check_path_owner_consistent(path):
     file_owner = os.stat(path).st_uid
     if file_owner != os.getuid() and os.getuid() != 0:
-        logger.warning("The file path %r may be insecure because is does not belong to you.", path)
+        get_logger().warning("The file path %r may be insecure because is does not belong to you.", path)
 
 
-def check_dirpath_before_read(path, logger: Logger = msmodelslim_logger):
+def check_dirpath_before_read(path):
     path = os.path.realpath(path)
     dirpath = os.path.dirname(path)
-    check_others_not_writable(dirpath, logger=logger)
-    check_path_owner_consistent(dirpath, logger=logger)
+    check_others_not_writable(dirpath)
+    check_path_owner_consistent(dirpath)
 
 
-def get_valid_read_path(path, extensions=None, size_max=MAX_READ_FILE_SIZE_4G, check_user_stat=True, is_dir=False,
-                        logger: Logger = msmodelslim_logger):
-    check_dirpath_before_read(path, logger=logger)
+def get_valid_read_path(path, extensions=None, size_max=MAX_READ_FILE_SIZE_4G, check_user_stat=True, is_dir=False):
+    check_dirpath_before_read(path)
     real_path = get_valid_path(path, extensions)
     if not is_dir and not os.path.isfile(real_path):
         raise SecurityError("The path {} doesn't exist or not a file.".format(path),
@@ -141,18 +138,17 @@ def check_write_directory(dir_name, check_user_stat=True):
                             'Please make sure the current user has writen permission to the file writen directory.')
 
 
-def get_write_directory(dir_name, write_mode=0o750, logger: Logger = msmodelslim_logger):
+def get_write_directory(dir_name, write_mode=0o750):
     real_dir_name = get_valid_path(dir_name)
     if os.path.exists(real_dir_name):
-        logger.info("write directory exists, write file to directory %r", dir_name)
+        get_logger().info("write directory exists, write file to directory %r", dir_name)
     else:
-        logger.warning("write directory not exists, creating directory %r", dir_name)
+        get_logger().warning("write directory not exists, creating directory %r", dir_name)
         os.makedirs(name=real_dir_name, mode=write_mode, exist_ok=True)
     return real_dir_name
 
 
-def get_valid_write_path(path, extensions=None, check_user_stat=True, is_dir=False, warn_exists=True,
-                         logger: Logger = msmodelslim_logger):
+def get_valid_write_path(path, extensions=None, check_user_stat=True, is_dir=False, warn_exists=True):
     real_path = get_valid_path(path, extensions)
     real_path_dir = real_path if is_dir else os.path.dirname(real_path)
     check_write_directory(real_path_dir, check_user_stat=check_user_stat)
@@ -171,7 +167,7 @@ def get_valid_write_path(path, extensions=None, check_user_stat=True, is_dir=Fal
             raise SecurityError("The file {} exist and not writable.".format(path),
                                 action='Please make sure the file is writable.')
         if warn_exists:
-            logger.warning("%r already exist. The original file will be overwritten.", path)
+            get_logger().warning("%r already exist. The original file will be overwritten.", path)
     return real_path
 
 
@@ -225,11 +221,11 @@ def file_safe_write(obj, path, extensions=None, check_user_stat=True):
         file.write(obj)
 
 
-def safe_delete_path_if_exists(path, logger_level="info", logger: Logger = msmodelslim_logger):
+def safe_delete_path_if_exists(path, logger_level="info"):
     if os.path.exists(path):
         is_dir = os.path.isdir(path)
         path = get_valid_write_path(path, check_user_stat=False, is_dir=is_dir, warn_exists=False)  # Check if writable
-        logger_func = get_logger_func(logger_level, logger)
+        logger_func = LOGGER_FUNC[logger_level]
         if os.path.isfile(path):
             logger_func(f"File '{path}' exists and will be deleted.")
             os.remove(path)

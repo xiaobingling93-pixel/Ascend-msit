@@ -29,7 +29,7 @@ from opensora.npu_config import npu_config
 
 from example.common.security.path import get_write_directory, get_valid_write_path, get_valid_read_path, json_safe_load
 from example.osp1_2.model.model_open_sora_plan1_2_sp import OpenSoraPipelineV1x2
-from msmodelslim.utils.logger import logger
+from msmodelslim.utils.logging import logger
 
 
 def load_t2v_checkpoint(model_path):

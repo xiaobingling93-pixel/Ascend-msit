@@ -6,7 +6,7 @@ from typing import Callable, Optional, Type
 from msmodelslim.app.base import QuantType
 from msmodelslim.utils.exception import SchemaValidateError
 from msmodelslim.utils.exception_decorator import exception_catcher
-from msmodelslim.utils.logger import logger_setter, get_logger
+from msmodelslim.utils.logging import logger_setter, get_logger
 from .practice_interface import PracticeManagerInterface
 from ..base import BaseQuantConfig, BaseModel, DeviceType
 from ..quant_service import BaseQuantService
@@ -14,10 +14,8 @@ from ..quant_service import BaseQuantService
 DEFAULT_PEDIGREE = 'default'
 DEFAULT_CONFIG_ID = 'default'
 
-logger = get_logger('msmodelslim.app.naive_quantization')
 
-
-@logger_setter(logger)
+@logger_setter('msmodelslim.app.naive_quantization')
 class NaiveQuantizationApplication:
     def __init__(self,
                  practice_manager: PracticeManagerInterface,
@@ -63,7 +61,7 @@ class NaiveQuantizationApplication:
             config = self.practice_manager.get_config_by_path(config_path)
             if config is None:
                 raise ValueError(f"Configuration not found at {config_path}")
-            self.logger.info(f"Naive Quant apply config_path: {config_path}")
+            get_logger().info(f"Naive Quant apply config_path: {config_path}")
             return config
 
         # Handle quant_type matching
@@ -86,12 +84,12 @@ class NaiveQuantizationApplication:
             if not self.check_label(config.metadata.label, w_bit, a_bit, use_kv_cache, is_sparse):
                 continue
 
-            self.logger.info(f"Naive Quant apply config_id: {config.metadata.config_id}")
+            get_logger().info(f"Naive Quant apply config_id: {config.metadata.config_id}")
             return config
 
         return self.get_default_practice(prompt=f"No matching configuration found for model_type={model_type}.")
 
-    @exception_catcher(logger=logger)
+    @exception_catcher
     def quant(self,
               model_type: str,
               model_path: Path,
@@ -128,16 +126,16 @@ class NaiveQuantizationApplication:
         if not isinstance(trust_remote_code, bool):
             raise SchemaValidateError(f"trust_remote_code must be a bool")
 
-        self.logger.info(f'quantization with following parameters:')
-        self.logger.info(f"model_type: {model_type}")
-        self.logger.info(f"model_path: {model_path}")
-        self.logger.info(f"save_path: {save_path}")
-        self.logger.info(f"device: {device}")
+        get_logger().info(f'quantization with following parameters:')
+        get_logger().info(f"model_type: {model_type}")
+        get_logger().info(f"model_path: {model_path}")
+        get_logger().info(f"save_path: {save_path}")
+        get_logger().info(f"device: {device}")
         if quant_type is not None:
-            self.logger.info(f"quant_type: {quant_type}")
+            get_logger().info(f"quant_type: {quant_type}")
         if config_path is not None:
-            self.logger.info(f"config_path: {config_path}")
-        self.logger.info(f"trust_remote_code: {trust_remote_code}")
+            get_logger().info(f"config_path: {config_path}")
+        get_logger().info(f"trust_remote_code: {trust_remote_code}")
 
         self._quant(model_type, model_path, save_path, device, quant_type, config_path, trust_remote_code)
 
@@ -151,23 +149,23 @@ class NaiveQuantizationApplication:
             config_path: Optional[Path] = None,
             trust_remote_code: bool = False
     ):
-        self.logger.info(f"===========LOAD MODEL===========")
+        get_logger().info(f"===========LOAD MODEL===========")
         model = self.model_factory(model_type)(
             model_type=model_type,
             ori_path=model_path,
             device=device,
             trust_remote_code=trust_remote_code)
-        self.logger.info(f"Load model {model_type} from {model_path} to {device} success.")
+        get_logger().info(f"Load model {model_type} from {model_path} to {device} success.")
 
-        self.logger.info(f"===========GET BEST PRACTICE===========")
+        get_logger().info(f"===========GET BEST PRACTICE===========")
         quant_config = self.get_best_practice(
             model_type=model.type,
             model_pedigree=model.pedigree,
             quant_type=quant_type,
             config_path=config_path
         )
-        self.logger.info(f"Get best practice {quant_config.metadata.config_id} success.")
+        get_logger().info(f"Get best practice {quant_config.metadata.config_id} success.")
 
-        self.logger.info(f"===========QUANTIZE MODEL===========")
+        get_logger().info(f"===========QUANTIZE MODEL===========")
         self.quant_service.quantize(model=model, quant_config=quant_config, save_path=save_path)
-        self.logger.info(f"===========SUCCESS===========")
+        get_logger().info(f"===========SUCCESS===========")

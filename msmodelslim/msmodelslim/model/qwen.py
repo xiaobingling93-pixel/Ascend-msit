@@ -5,14 +5,14 @@ from transformers import PreTrainedTokenizerBase
 from msmodelslim.utils.security.model import SafeGenerator
 from .default import DefaultModel
 from .factory import ModelFactory
-from ..utils.logger import logger_setter
+from ..utils.logging import logger_setter
 
 
 @ModelFactory.register("Qwen2.5-7B-Instruct")
 @ModelFactory.register("Qwen2.5-32B-Instruct")
 @ModelFactory.register("Qwen2.5-72B-Instruct")
 @ModelFactory.register("Qwen2.5-Coder-7B-Instruct")
-@logger_setter(f'msmodelslim.model.qwen2_5')
+@logger_setter(subfix='qwen2_5')
 class Qwen25ModelAdapter(DefaultModel):
     def _get_model_pedigree(self) -> str:
         return 'qwen2_5'
@@ -31,14 +31,14 @@ class Qwen25ModelAdapter(DefaultModel):
 @ModelFactory.register("Qwen3-8B")
 @ModelFactory.register("Qwen3-14B")
 @ModelFactory.register("Qwen3-32B")
-@logger_setter(f'msmodelslim.model.qwen3')
+@logger_setter(subfix='qwen3')
 class Qwen3ModelAdapter(DefaultModel):
     def _get_model_pedigree(self) -> str:
         return 'qwen3'
 
 
 @ModelFactory.register("Qwen-QwQ-32B")
-@logger_setter(f'msmodelslim.model.qwq')
+@logger_setter(subfix='qwq')
 class QwqModelAdapter(DefaultModel):
     def _get_model_pedigree(self) -> str:
         return 'qwq'

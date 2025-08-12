@@ -2,7 +2,7 @@
 # Copyright Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
 __all__ = ['set_logger_level']
 
-from msmodelslim.utils.logger import logger, set_logger_level
+from msmodelslim.utils.logging import logger, set_logger_level
 from msmodelslim.utils.torch import patch_torch
 
 patch_torch()
