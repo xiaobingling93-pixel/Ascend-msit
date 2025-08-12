@@ -18,6 +18,7 @@ import sys
 import numpy as np
 
 from msquickcmp.common import utils
+from msquickcmp.common.utils import AccuracyCompareException
 from components.utils.security_check import ms_makedirs
 from components.utils.util import load_file_to_read_common_check
 
@@ -34,7 +35,11 @@ def convert_bin_dump_data_to_npy(npu_dump_data_path, npu_net_output_data_path, c
     """
     common_path = os.path.commonprefix([npu_dump_data_path, npu_net_output_data_path])
     npu_dump_data_path_diff = os.path.relpath(npu_dump_data_path, common_path)
-    time_stamp_file_path = npu_dump_data_path_diff.split(os.path.sep)[1]
+    try:
+        time_stamp_file_path = npu_dump_data_path_diff.split(os.path.sep)[1]
+    except IndexError as e:
+        utils.logger.error("npu_dump_data_path_diff cannot be split by path separators.")
+        raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INDEX_OUT_OF_BOUNDS_ERROR) from e
     convert_dir_path = npu_dump_data_path.replace(time_stamp_file_path, time_stamp_file_path + '_bin2npy')
     convert_dir_path = os.path.normpath(convert_dir_path)
     if not os.path.exists(convert_dir_path):

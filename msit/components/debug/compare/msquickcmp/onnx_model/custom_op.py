@@ -164,6 +164,9 @@ def get_batch_multi_class_nms_inputs_from_npu_dump(npu_dump_path):
                 raise
 
             op_name_info = op_name.split('_')
+            if len(op_name_info) < 2:
+                utils.logger.error(f"{op_name} cannot split by '_', please check.")
+                raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INDEX_OUT_OF_BOUNDS_ERROR)
             op_name = op_name_info[0] + '_' + op_name_info[1]
 
             inputs_map_key = op_name + ("_%s" % index)

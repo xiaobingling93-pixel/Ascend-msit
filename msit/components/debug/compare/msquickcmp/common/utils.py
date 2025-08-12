@@ -59,6 +59,7 @@ ACCRACY_COMPARISON_EXTRACT_ERROR = 19
 ACCRACY_COMPARISON_FETCH_DATA_ERROR = 20
 ACCURACY_COMPARISON_ATC_RUN_ERROR = 21
 ACCURACY_COMPARISON_INVALID_RIGHT_ERROR = 22
+ACCURACY_COMPARISON_INDEX_OUT_OF_BOUNDS_ERROR = 23
 MODEL_TYPE = ['.onnx', '.pb', '.om', '.prototxt', '.txt']
 DIM_PATTERN = r"^(-?[0-9]{1,100})(,-?[0-9]{1,100}){0,100}"
 DYNAMIC_DIM_PATTERN = r"^([0-9-~]+)(,-?[0-9-~]+){0,3}"
@@ -622,8 +623,13 @@ def execute_command(cmd, info_need=True):
         logger.info('Execute command:%s' % " ".join(cmd))
     process = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     ais_bench_logs = ""
-    while process.poll() is None:
-        ais_bench_logs += process.stdout.readline().decode()
+    try:
+        while process.poll() is None:
+            line = process.stdout.readline()
+            if line:  # 检查line是否为空，避免解码和追加是的潜在错误
+                ais_bench_logs += line.decode()
+    finally:
+        process.stdout.close()
     if process.returncode != 0:
         logger.error('Failed to execute command:%s' % " ".join(cmd))
         logger.error(f'\nerror log:\n {ais_bench_logs}')
@@ -665,6 +671,9 @@ def handle_ground_truth_files(om_parser, npu_dump_data_path, golden_dump_data_pa
         for root, _, files in os.walk(golden_dump_data_path):
             for file_name in files:
                 first_dot_index = file_name.find(DOT)
+                if first_dot_index == -1:
+                    logger.warning("file name in golden dump data path found it does not contain '.', skip copy.")
+                    continue
                 current_op_name = BATCH_SCENARIO_OP_NAME.format(file_name[:first_dot_index], batch_index)
                 dst_file_name = current_op_name + file_name[first_dot_index:]
                 shutil.copy(os.path.join(root, file_name), os.path.join(root, dst_file_name))
