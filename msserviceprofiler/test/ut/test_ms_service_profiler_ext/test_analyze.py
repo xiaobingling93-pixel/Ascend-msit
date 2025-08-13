@@ -110,7 +110,6 @@ class TestMainFunction:
         mocker.patch.object(Path, "mkdir")
         mocker.patch("ms_service_profiler.exporters.utils.create_sqlite_db")
         mocker.patch("os.path.exists", return_value=True)
-        mocker.patch("ms_service_profiler.parse.find_file_in_dir", return_value=True)
         mocker.patch("os.makedirs")
         mocker.patch("sqlite3.connect")
 
