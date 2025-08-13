@@ -293,8 +293,12 @@ class VllmSimulator(Simulator):
             subprocess.run([pkill_path, "-15", "vllm"])
         else:
             logger.error("pkill not found in path")
+            
+    def update_cmd(self):
+        self.command = self.VllmCommand(self.vllm_config.vllm_command).command
 
     def run(self, run_params: Tuple[OptimizerConfigField]):
+        self.update_cmd()
         logger.info(f'start run in simulator. run params: {run_params}')
         # 启动mindie仿真
         try:
