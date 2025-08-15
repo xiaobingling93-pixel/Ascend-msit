@@ -13,14 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ..base import NodeChecker
+from .base import BaseChecker
 
 
-class UserConfigChecker(NodeChecker):
-    def __init__(self, *, error_handler=None, rule_manager=None):
-        super().__init__(error_handler=error_handler, rule_manager=rule_manager)
-        self.error_handler.type = "user config"
+class PingChecker(BaseChecker):
+    def check(self, results):
+        success_pattern = "3 received, 0% packet loss"
 
-    def _get_rules(self):
-        self.rule_manager.scene = "user_config"
-        return self.rule_manager.get_rules()
+        for host, ping_result in results.items():
+            if success_pattern not in ping_result:
+                self.error_handler.add_error(
+                    path=f'当前机器 -x-> {host}', expected=success_pattern, actual=ping_result,
+                    reason=f'当前机器 ping 主机 {host} 失败，请检查 rank table',
+                    severity="high"
+                )
+    
+        return self.error_handler

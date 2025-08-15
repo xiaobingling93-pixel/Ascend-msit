@@ -25,7 +25,8 @@ from .base import BaseChecker, NodeChecker
 from .env import EnvChecker
 from .sys import SysChecker
 from .ascend import AscendChecker
-from .hccl import HCCLChecker
+from .hccl import HCCLChecker, TlsChecker, LinkChecker, VnicChecker
 from .config import UserConfigChecker, MindIEEnvChecker, ModelConfigChecker, MIESConfigChecker
 from .stress import StressChecker
 from .pd import PDChecker
+from .network import PingChecker

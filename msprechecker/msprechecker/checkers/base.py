@@ -25,7 +25,7 @@ from ..validators import get_validator
 class BaseChecker(ABC):
     def __init__(self, *, error_handler: ErrorHandler = None, rule_manager: RuleManager = None):
         self.error_handler = error_handler or get_handler(ErrorType.ERR_CHECK)
-        self.rule_manager = rule_manager or RuleManager("")
+        self.rule_manager = rule_manager or RuleManager()
 
     @abstractmethod
     def check(self, result: Dict) -> CheckError:
@@ -67,11 +67,8 @@ class NodeChecker(BaseChecker):
 
         if expect is None:
             self.error_handler.add_error(
-                path=path,
-                actual=actual,
-                expected="-",
-                reason=reason,
-                severity="medium"
+                path=path, actual=actual, expected="-",
+                reason=reason, severity="medium"
             )
             return
 
@@ -82,10 +79,8 @@ class NodeChecker(BaseChecker):
                 condition_result = Evaluator.evaluate(condition)
             except ExpandError as e:
                 self.error_handler.add_error(
-                    path=path,
-                    actual=actual,
-                    expected=expect['if'],
-                    reason=f"条件表达式展开失败: {str(e)}",
+                    path=path, actual=actual,
+                    expected=expect['if'], reason=f"条件表达式展开失败: {str(e)}",
                     severity=severity
                 )
                 return
@@ -103,10 +98,8 @@ class NodeChecker(BaseChecker):
             expanded_value = MacroExpander.expand(expected_value, path, visited_nodes)
         except ExpandError as e:
             self.error_handler.add_error(
-                path=path,
-                actual=actual,
-                expected=expected_value,
-                reason=str(e),
+                path=path, actual=actual,
+                expected=expected_value, reason=str(e),
                 severity=severity
             )
             return
@@ -116,11 +109,8 @@ class NodeChecker(BaseChecker):
 
         if not validator.validate(actual, evaluated_value):
             self.error_handler.add_error(
-                path=path,
-                expected=evaluated_value,
-                actual=actual,
-                reason=reason,
-                severity=severity
+                path=path, expected=evaluated_value, actual=actual,
+                reason=reason, severity=severity
             )
 
     def _validate_dict(self, node: dict, path: str, queue: deque, visited_nodes: dict):
@@ -136,10 +126,8 @@ class NodeChecker(BaseChecker):
 
         if expected is None:
             self.error_handler.add_error(
-                path=path,
-                actual="missing",
-                expected="-",
-                reason=node.get('reason', '这个字段应该存在'),
+                path=path, actual="missing",
+                expected="-", reason=node.get('reason', '这个字段应该存在'),
                 severity="medium"
             )
             return
@@ -150,10 +138,8 @@ class NodeChecker(BaseChecker):
         )
         if not (expected_type == 'eq' and expected_value is None):
             self.error_handler.add_error(
-                path=path,
-                actual='missing',
-                expected=expected_value,
-                reason=node.get('reason', '这个字段应该存在'),
+                path=path, actual='missing',
+                expected=expected_value, reason=node.get('reason', '这个字段应该存在'),
                 severity=node.get('severity', 'high')
             )
 

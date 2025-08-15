@@ -22,4 +22,5 @@ class MindIEEnvChecker(NodeChecker):
         self.error_handler.type = "mindie env"
 
     def _get_rules(self):
-        return self.rule_manager.get_rules('mindie_env')
+        self.rule_manager.scene = "mindie_env"
+        return self.rule_manager.get_rules()

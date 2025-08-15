@@ -16,6 +16,7 @@
 import os
 import json
 import argparse
+from typing import List
 
 import yaml
 from msguard.security import open_s
@@ -29,52 +30,95 @@ from ..presets import RuleManager
 from .base import CommandStrategy, CommandType
 from ..utils import CheckErrorHandler, ConfigErrorHandler, global_logger
 from ..collectors import (
-    EnvCollector, SysCollector, ConfigCollector,
+    BaseCollector, EnvCollector, SysCollector, ConfigCollector,
     AscendCollector, HCCLCollector, PingCollector,
     WeightCollector, CPUStressCollector, NPUStressCollector,
     UserConfigCollector, MindIEEnvCollector, ModelConfigCollector,
-    MIESConfigCollector
+    MIESConfigCollector, TlsCollector, VnicCollector, LinkCollector
 )
 from ..checkers import (
     UserConfigChecker, MindIEEnvChecker, 
     ModelConfigChecker, EnvChecker, SysChecker,
     AscendChecker, HCCLChecker, StressChecker,
-    PDChecker, MIESConfigChecker
+    PDChecker, MIESConfigChecker, TlsChecker,
+    VnicChecker, LinkChecker, PingChecker
 )
 from ..comparators import Comparator
 from ..reporters import Reporter
+from ..utils import FrameworkType, ParserRegistry
 
 
 class CollectorFactory:
     @staticmethod
     def create(args: argparse.Namespace):
-        collectors = [
-            EnvCollector(filter_env=getattr(args, 'filter', False)),
+        default_collectors = [
+            EnvCollector(filter_env=args.filter),
             SysCollector(),
-            AscendCollector(),
-            HCCLCollector(),
-        ]
+            AscendCollector()
+        ] # all scenes applies
+        special_collectors = CollectorFactory.dispatch_collectors_by_scene(args)
+        extra_collectors = CollectorFactory.dispatch_extra_collectors(args)
 
-        if getattr(args, "hardware", False):
-            collectors.extend((CPUStressCollector(), NPUStressCollector()))
+        return default_collectors + special_collectors + extra_collectors
 
-        if getattr(args, "user_config_path", None):
-            collectors.append(UserConfigCollector(config_path=args.user_config_path))
+    @staticmethod
+    def dispatch_collectors_by_scene(args: argparse.Namespace) -> List[BaseCollector]:
+        collectors = []
 
-        if getattr(args, "mindie_env_path", None):
-            collectors.append(MindIEEnvCollector(config_path=args.mindie_env_path))
+        # 大 EP
+        if getattr(args, "user_config_path", None) or getattr(args, "mindie_env_path", None):
+            if getattr(args, "user_config_path", None):
+                collectors.append(UserConfigCollector(config_path=args.user_config_path))
+            if getattr(args, "mindie_env_path", None):
+                collectors.append(MindIEEnvCollector(config_path=args.mindie_env_path))
 
-        if getattr(args, 'rank_table_path', None):
-            collectors.append(PingCollector(rank_table_file=args.rank_table_path))
+            return collectors
+        
+        # # PD Disaggregation (single container)
+        # if getattr(args, "scene", None) and "pd_disaggregation" in args.scene and getattr(args, "config_parent_dir", None):
+        #     return collectors
+        
+        # PD Mix
+        if getattr(args, "--mies-config-path", None):
+            collectors.append(MIESConfigCollector(config_path=args.mies_config_path))
+            return collectors
+    
+    @staticmethod
+    def dispatch_extra_collector(args: argparse.Namespace) -> List[BaseCollector]:
+        collectors = []
+
+        if getattr(args, "rank_table_path", None):
+            if getattr(args, 'scene', None):
+                global_logger.warning(
+                    "Passing '--rank-table-path' without providing '--scene', "
+                    "msprechecker cannot determine the exact framework type of the rank table. "
+                    "Will use 'mindie' as the default framework."
+                )
+                args.scene = FrameworkType.TP_MINDIE
+            elif args.scene not in (typ.value for typ in FrameworkType):
+                global_logger.warning(
+                    "Expected '--scene' to be 'mindie' or 'vllm'. Got %r instead. "
+                    "msprechecker cannot determine the exact framework type of the rank table. "
+                    "Will use 'mindie' as the default framework."
+                )
+                args.scene = FrameworkType.TP_MINDIE
+            
+            framework_type = FrameworkType(args.scene)
+            rank_table_parser = ParserRegistry.get(framework_type)() # create parser instance
+            rank_table = rank_table_parser.parse(args.rank_table_path)
+
+            collectors.extend(
+                PingCollector(rank_table=rank_table), TlsCollector(),
+                HCCLCollector(rank_table=rank_table), LinkCollector(),
+                VnicCollector()
+            )
 
         if getattr(args, "weight_dir", None):
             model_config_path = os.path.join(args.weight_dir, "config.json")
             collectors.append(ModelConfigCollector(config_path=model_config_path))
-
-            if args.command == CommandType.CMD_DUMP and getattr(args, 'chunk_size', None):
-                collectors.append(WeightCollector(weight_dir=args.weight_dir, chunk_size=args.chunk_size * 1024))
-
-        return collectors
+        
+        if getattr(args, "hardware", False):
+            collectors.extend((CPUStressCollector(), NPUStressCollector()))
 
 
 class CheckerFactory:
@@ -90,6 +134,10 @@ class CheckerFactory:
         MindIEEnvCollector: MindIEEnvChecker,
         ModelConfigCollector: ModelConfigChecker,
         MIESConfigCollector: MIESConfigChecker,
+        TlsCollector: TlsChecker,
+        VnicCollector: VnicChecker,
+        LinkCollector: LinkChecker,
+        PingCollector: PingChecker
     }
     
     @classmethod
@@ -107,7 +155,7 @@ class CheckerFactory:
 
 class PrecheckStrategy(CommandStrategy):
     @staticmethod
-    def execute_single_container(args):
+    def execute_pd_disagg(args):
         rule_manager = RuleManager(
             scene=args.scene,
             custom_rule_path=args.custom_config_path
@@ -137,19 +185,16 @@ class PrecheckStrategy(CommandStrategy):
 
     @staticmethod
     def execute(args: argparse.Namespace) -> int:
+        if "single_disaggregation" in args.scene:
+            return PrecheckStrategy.execute_pd_disagg(args)
+        
         rule_manager = RuleManager(
             scene=args.scene,
             custom_rule_path=args.custom_config_path
         )
         reporter = Reporter()
 
-        if args.scene:
-            return PrecheckStrategy.execute_single_container(args)
-        
         collectors = CollectorFactory.create(args)
-        if args.mies_config_path:
-            collectors = [EnvCollector(), MIESConfigCollector(config_path=args.mies_config_path)]
-
         for collector in collectors:
             collect_result = collector.collect()
             if not collect_result.error_handler.empty():
@@ -162,10 +207,8 @@ class PrecheckStrategy(CommandStrategy):
             if isinstance(collector, ConfigCollector):
                 data, file_lines, key_mapping, context_hierarchy = collect_result.data
                 error_handler = ConfigErrorHandler(
-                    args.severity_level, 
-                    file_lines, 
-                    key_mapping, 
-                    context_hierarchy
+                    args.severity_level, file_lines, 
+                    key_mapping, context_hierarchy
                 )
             
             checker = CheckerFactory.create(collector.__class__)(
@@ -275,10 +318,11 @@ class Coordinator:
         args = parser.parse_args()
         show_legacy_warnings(args)
 
-        if getattr(args, "scene", None) and not getattr(args, "config_parent_dir", None):
+        if getattr(args, "scene", None) and \
+           (not getattr(args, "config_parent_dir", None) and not getattr(args, "rank_table_path", None)):
             global_logger.error(
-                "Passing 'args.scene' without providing 'args.config_parent_dir' "
-                "will not take any affect!"
+                "Passing '--scene' without providing '--config-parent-dir' "
+                "or '--rank-table-path' will not take any affect!"
             )
             return 1
         

@@ -13,56 +13,104 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .base import NodeChecker
+from .base import NodeChecker, BaseChecker
 from ..utils import get_npu_count
 
 
-class HCCLChecker(NodeChecker):
-    def __init__(self, *, error_handler=None, rule_manager=None):
-        super().__init__(error_handler=error_handler, rule_manager=rule_manager)
-        self.error_handler.type = "hccl"
+class LinkChecker(BaseChecker):
+    def check(self, results):
+        """
+        check if results are full of 'link status: UP'
+        """
+        if not results:
+            raise ValueError(f"Expected 'result' not empty. Got '{results}'")
 
-    def _get_rules(self):
-        npu_count = get_npu_count()
+        success_pattern = "link status: UP"
+        for device_id, result in enumerate(results):
+            if success_pattern not in result:
+                self.error_handler.add_error(
+                    path=f'Device ID: {device_id}',
+                    actual=result, expected="link status: UP",
+                    reason='当前机器的网卡 LINK 状态应该要全为 "UP"',
+                    severity="high"
+                )
+        return self.error_handler
+ 
 
-        if not npu_count:
-            return {}
+class VnicChecker(BaseChecker):
+    def check(self, results):
+        """
+        check if results are full of 'vnic link status: UP' and 'ipaddr: xxx'
+        """
+        if not results:
+            raise ValueError(f"Expected 'result' not empty. Got '{results}'")
 
-        return {
-            'gateway': self.rule_manager.create_rule(
-                'ne',
-                ['null' for _ in range(npu_count)],
-                '当前的机器的 RoCE 网卡默认网关需要配置，如果是光纤直连请忽略此项',
-                'low'
-            ),
-            'ip': self.rule_manager.create_rule(
-                'ne',
-                ['null' for _ in range(npu_count)],
-                '当前机器的 RoCE 网卡 IP 需要配置在同一网段',
-                'high'
-            ),
-            'link': self.rule_manager.create_rule(
-                'eq',
-                ['UP' for _ in range(npu_count)],
-                '当前机器的网卡 LINK 状态应该为全 "UP"',
-                'high'
-            ),
-            'net_health': self.rule_manager.create_rule(
-                'eq',
-                ['Success' for _ in range(npu_count)],
-                '当前机器的 RoCE 网卡与配置对端 IP 连通应该都为 "Success"',
-                'low'
-            ),
-            'netdetect': self.rule_manager.create_rule(
-                'ne',
-                ['null' for _ in range(npu_count)],
-                '当前机器的 RoCE 网卡对端 IP 需要配置',
-                'low'
-            ),
-            'tls': self.rule_manager.create_rule(
-                'eq',
-                ['0' for _ in range(npu_count)],
-                '当前机器的 TLS 证书需要被使能，需要在 root 用户下执行该项检测',
-                'low'
-            )
-        }
+        for device_id, result in enumerate(results):
+            fields = result.strip().split("\n")
+            if not len(fields) == 3:
+                self.error_handler.add_error(
+                    path=f'Device ID: {device_id}',
+                    actual=result, reason='要有 link status, ipaddr 和 netmask',
+                    severity="high"
+                )
+                continue
+
+            if fields[0] != "vnic link status: UP" or not fields[1].startswith("vnic ipaddr:"):
+                self.error_handler.add_error(
+                    path=f'Device ID: {device_id}',
+                    actual=result, reason='如果是 A3 机器，板内的 VNIC IP 需要配置，且连接状态为 UP',
+                    severity="high"
+                )
+        return self.error_handler
+
+
+class TlsChecker(BaseChecker):
+    def check(self, results):
+        """
+        check if results are full of 'dev_id:x, tls switch[0]'
+        """
+        if not results:
+            return # no certificates regarding as passed
+        
+        tls_switch_pattern = "tls switch["
+        for device_id, result in enumerate(results):
+            if tls_switch_pattern not in result:
+                self.error_handler.add_error(
+                    path=f'Device ID: {device_id}', actual=result,
+                    reason=f'没有找到 {tls_switch_pattern!r} 字样',
+                    severity="medium"
+                )
+                continue
+
+            tls_switch_idx = result.index(tls_switch_pattern)
+            switch_state = result[tls_switch_idx + len(tls_switch_pattern)]
+            if switch_state != '0':
+                self.error_handler.add_error(
+                    path=f'Device ID: {device_id}', expected='0', actual=result,
+                    reason='当前机器的 TLS 证书需要被使能，注意需要在 root 用户下执行该项检测',
+                    severity="medium"
+                )
+        return self.error_handler
+
+
+class HCCLChecker(BaseChecker):
+    def check(self, results):
+        """
+        check if results are full of [[{'3 received, 0.00% packet loss'}, ...]]'
+        """
+        if not results:
+            raise ValueError(f"Expected 'result' not empty. Got '{results}'")
+
+        success_pattern = "3 received, 0.00% packet loss"
+        for device_id, ping_results in enumerate(results):
+            for info in ping_results:
+                result = info.get('result', '')
+                rank_id = info.get('rank_id', 'Unknown')
+                if not success_pattern in result:
+                    self.error_handler.add_error(
+                        path=f'Device ID: {device_id} -x-> Rank ID: {rank_id}', 
+                        expected=success_pattern, actual=result,
+                        reason=f'Ping 第 {rank_id} 个 rank 的 device 失败',
+                        severity="high"
+                    )
+        return self.error_handler
