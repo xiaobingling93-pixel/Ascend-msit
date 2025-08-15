@@ -44,8 +44,7 @@ def setup_precheck_parser(subparsers):
     precheck_parser = subparsers.add_parser(
         CommandType.CMD_PRECHECK.value,
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        description=desc,
-        usage='msprechecker precheck [OPTIONS]',
+        description=desc, usage='msprechecker precheck [OPTIONS]',
         epilog=epilog,
         help="Run comprehensive system validation for different PD deployment scenarios"
     )
@@ -64,24 +63,21 @@ def setup_precheck_parser(subparsers):
 def _add_pd_disagg_args(parser):
     group = parser.add_argument_group("PD Disaggregation Options")
     group.add_argument(
-        "--scene",
-        metavar="",
+        "--scene", metavar="",
         choices=["pd_disaggregation", 'pd_disaggregation_single_container', 'mindie', 'vllm'],
-        help="Specify different deploy scene. Supports: pd_disaggregation, pd_disaggregation_single_container, mindie, vllm."
+        help="Specify different deploy scene. Supports: pd_disaggregation, " \
+        "pd_disaggregation_single_container, mindie, vllm."
     )
     group.add_argument(
-        "--user-config-path",
-        metavar="",
+        "--user-config-path", metavar="",
         help="Path to the 'user_config.json' file for Kubernetes-based deployments."
     )
     group.add_argument(
-        "--mindie-env-path",
-        metavar="",
+        "--mindie-env-path", metavar="",
         help="Path to the 'mindie_env.json' file for Kubernetes-based deployments."
     )
     group.add_argument(
-        "--config-parent-dir",
-        metavar="",
+        "--config-parent-dir", metavar="",
         help="Path to the parent directory for Kubernetes-based deployments"
     )
 
@@ -90,8 +86,7 @@ def _add_pd_mix_args(parser):
     group = parser.add_argument_group("PD Mixed Mode Options")
     group.add_argument(
         "--mies-config-path",
-        metavar="",
-        help="Path to the 'config.json' file for daemon-based deployments."
+        metavar="", help="Path to the 'config.json' file for daemon-based deployments."
     )
 
 
@@ -99,16 +94,14 @@ def _add_network_args(parser):
     group = parser.add_argument_group("Network Options")
     group.add_argument(
         "--rank-table-path",
-        metavar="",
-        help="Path to the rank table file. Supports both A2 and A3 formats."
+        metavar="", help="Path to the rank table file. Supports both A2 and A3 formats."
     )
 
 
 def _add_model_args(parser):
     group = parser.add_argument_group("Model Options")
     group.add_argument(
-        "--weight-dir",
-        metavar="",
+        "--weight-dir", metavar="",
         help="Directory path containing model weights."
     )
 
@@ -116,37 +109,29 @@ def _add_model_args(parser):
 def _add_stress_test_args(parser):
     group = parser.add_argument_group("Stress Test Options")
     group.add_argument(
-        "--hardware",
-        action="store_true",
-        default=False,
-        help="Enable hardware stress testing. Default: False."
+        "--hardware", action="store_true",
+        default=False, help="Enable hardware stress testing. Default: False."
     )
     group.add_argument(
-        "--threshold",
-        type=int,
-        choices=range(0, 101),
-        default=20,
-        metavar="0-100",
-        help="Set the failure threshold percentage (0-100). Default: 20."
+        "--threshold", type=int,
+        choices=range(0, 101), default=20,
+        metavar="0-100", help="Set the failure threshold percentage (0-100). Default: 20."
     )
 
 
 def _add_custom_validation_args(parser):
     group = parser.add_argument_group("Custom Validation Options")
     group.add_argument(
-        "--custom-config-path",
-        metavar="",
+        "--custom-config-path", metavar="",
         help="Path to a custom validation rules configuration file."
     )
     group.add_argument(
-        "-l", "--severity-level",
-        metavar="",
+        "-l", "--severity-level", metavar="",
         choices=[
             ErrorSeverity.ERR_LOW,
             ErrorSeverity.ERR_MEDIUM,
             ErrorSeverity.ERR_HIGH
-        ],
-        default=ErrorSeverity.ERR_LOW,
-        type=ErrorSeverity,
+        ], default=ErrorSeverity.ERR_LOW,
+        type=ErrorSeverity, 
         help="Report only issues with the specified severity level or higher. Default: low."
     )

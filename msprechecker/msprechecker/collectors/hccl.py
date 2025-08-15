@@ -130,11 +130,17 @@ class HCCLCollector(BaseCollector):
         npu_count = get_npu_count()
         max_workers = min(npu_count * 8, os.cpu_count() or 1) # each device has maximum concurrency 8
 
+        all_devices = (
+            device_info 
+            for device_info_list in self.rank_table.host_to_devices.values() 
+            for device_info in device_info_list
+        )
+
+        futures = {}
         with ThreadPoolExecutor(max_workers) as executor:
             futures = {
                 executor.submit(self._run_cmd, device_id, device_info.device_ip): (device_id, device_info.rank_id)
-                for device_info_list in self.rank_table.host_to_devices.values()
-                for device_info in device_info_list
+                for device_info in all_devices
                 for device_id in range(npu_count)
             }
 

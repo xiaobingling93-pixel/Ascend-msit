@@ -122,6 +122,7 @@ def get_conn_mode():
     
     return None
 
+
 # --- rank table ---
 class FrameworkType(Enum):
     TP_MINDIE = "mindie"
@@ -264,6 +265,7 @@ class MindIEParser(JsonParser):
                 )
 
         return host_to_devices
+
 
 @ParserRegistry.register(FrameworkType.TP_VLLM)
 class VLLMParser(JsonParser):

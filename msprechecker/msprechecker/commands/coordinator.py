@@ -52,7 +52,7 @@ class CollectorFactory:
     @staticmethod
     def create(args: argparse.Namespace):
         default_collectors = [
-            EnvCollector(filter_env=args.filter),
+            EnvCollector(filter_env=getattr(args, 'filter', False)),
             SysCollector(),
             AscendCollector()
         ] # all scenes applies
@@ -72,23 +72,20 @@ class CollectorFactory:
             if getattr(args, "mindie_env_path", None):
                 collectors.append(MindIEEnvCollector(config_path=args.mindie_env_path))
 
-            return collectors
-        
-        # # PD Disaggregation (single container)
-        # if getattr(args, "scene", None) and "pd_disaggregation" in args.scene and getattr(args, "config_parent_dir", None):
-        #     return collectors
-        
+        # PD Disaggregation (single container)
+  
         # PD Mix
-        if getattr(args, "--mies-config-path", None):
+        elif getattr(args, "--mies-config-path", None):
             collectors.append(MIESConfigCollector(config_path=args.mies_config_path))
-            return collectors
+        
+        return collectors
     
     @staticmethod
-    def dispatch_extra_collector(args: argparse.Namespace) -> List[BaseCollector]:
+    def dispatch_extra_collectors(args: argparse.Namespace) -> List[BaseCollector]:
         collectors = []
 
         if getattr(args, "rank_table_path", None):
-            if getattr(args, 'scene', None):
+            if not getattr(args, 'scene', None):
                 global_logger.warning(
                     "Passing '--rank-table-path' without providing '--scene', "
                     "msprechecker cannot determine the exact framework type of the rank table. "
@@ -107,11 +104,11 @@ class CollectorFactory:
             rank_table_parser = ParserRegistry.get(framework_type)() # create parser instance
             rank_table = rank_table_parser.parse(args.rank_table_path)
 
-            collectors.extend(
+            collectors.extend((
                 PingCollector(rank_table=rank_table), TlsCollector(),
                 HCCLCollector(rank_table=rank_table), LinkCollector(),
                 VnicCollector()
-            )
+            ))
 
         if getattr(args, "weight_dir", None):
             model_config_path = os.path.join(args.weight_dir, "config.json")
@@ -119,6 +116,8 @@ class CollectorFactory:
         
         if getattr(args, "hardware", False):
             collectors.extend((CPUStressCollector(), NPUStressCollector()))
+
+        return collectors
 
 
 class CheckerFactory:
@@ -185,11 +184,10 @@ class PrecheckStrategy(CommandStrategy):
 
     @staticmethod
     def execute(args: argparse.Namespace) -> int:
-        if "single_disaggregation" in args.scene:
+        if args.scene and "single_disaggregation" in args.scene:
             return PrecheckStrategy.execute_pd_disagg(args)
         
         rule_manager = RuleManager(
-            scene=args.scene,
             custom_rule_path=args.custom_config_path
         )
         reporter = Reporter()

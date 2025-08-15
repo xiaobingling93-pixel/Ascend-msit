@@ -70,7 +70,7 @@ class TlsChecker(BaseChecker):
         check if results are full of 'dev_id:x, tls switch[0]'
         """
         if not results:
-            return # no certificates regarding as passed
+            return self.error_handler # no certificates regarding as passed
         
         tls_switch_pattern = "tls switch["
         for device_id, result in enumerate(results):
@@ -90,6 +90,7 @@ class TlsChecker(BaseChecker):
                     reason='当前机器的 TLS 证书需要被使能，注意需要在 root 用户下执行该项检测',
                     severity="medium"
                 )
+
         return self.error_handler
 
 
@@ -106,7 +107,7 @@ class HCCLChecker(BaseChecker):
             for info in ping_results:
                 result = info.get('result', '')
                 rank_id = info.get('rank_id', 'Unknown')
-                if not success_pattern in result:
+                if success_pattern not in result:
                     self.error_handler.add_error(
                         path=f'Device ID: {device_id} -x-> Rank ID: {rank_id}', 
                         expected=success_pattern, actual=result,
