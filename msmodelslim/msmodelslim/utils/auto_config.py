@@ -19,7 +19,7 @@ from typing import Type, Dict, TypeVar, ClassVar, Any, Generic, Optional, Union
 from pydantic import BaseModel, ConfigDict
 from pydantic_core import PydanticCustomError
 
-from msmodelslim import logger
+from msmodelslim.utils.logging import get_logger
 
 T = TypeVar('T', bound='BaseModel')
 
@@ -36,7 +36,7 @@ class BaseAutoConfig(BaseModel, Generic[T]):
 
         if BaseAutoConfig in cls.__bases__:
             cls._registry: Dict[str, Type[T]] = {}
-            logger.debug(f"[Utils] Create registry for {cls.__name__}")
+            get_logger().debug(f"[Utils] Create registry for {cls.__name__}")
             return super().__pydantic_init_subclass__(**kwargs)
 
         cls._registry[cls.model_fields['type'].default] = cls

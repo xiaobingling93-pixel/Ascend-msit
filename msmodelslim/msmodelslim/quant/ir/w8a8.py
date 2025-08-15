@@ -22,7 +22,7 @@ from msmodelslim.core import dequantize, fake_quantize
 from msmodelslim.core.QAL import QABCRegistry
 from msmodelslim.core.QAL import QScope
 from msmodelslim.quant.ir import AutoFakeQuantLinear
-from msmodelslim.utils.logger import logger_setter
+from msmodelslim.utils.logging import logger_setter
 from .const import (
     int8_per_token_asym,
     int8_per_token_sym,

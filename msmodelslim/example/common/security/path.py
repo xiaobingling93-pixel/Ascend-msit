@@ -7,7 +7,7 @@ import shutil
 import stat
 import json
 from example.common.security.type import check_dict_character, check_type
-from msmodelslim.utils.logger import LOGGER_FUNC
+from msmodelslim.utils.logging import LOGGER_FUNC
 from msmodelslim import logger
 
 

@@ -22,7 +22,7 @@ class ModelslimError(Exception):
 
     @classmethod
     def create_exception(cls, name: str, code: int, default_message: str = '') -> Type[Self]:
-        return type(name, (cls,), {"code": code, "message": default_message})
+        return type(name, (cls,), {"code": code, "default_message": default_message})
 
 
 # EnvironmentError

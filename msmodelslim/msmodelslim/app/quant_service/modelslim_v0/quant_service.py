@@ -9,7 +9,7 @@ import torch.nn.functional as F
 from msmodelslim.pytorch.llm_ptq.anti_outlier import AntiOutlier, AntiOutlierConfig
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
 from msmodelslim.utils.exception import SchemaValidateError
-from msmodelslim.utils.logger import logger_setter
+from msmodelslim.utils.logging import logger_setter, get_logger
 from msmodelslim.utils.security import safe_copy_file
 from .quant_config import ModelslimV0QuantConfig
 from ..base import BaseQuantService
@@ -103,7 +103,7 @@ class ModelslimV0QuantService(BaseQuantService):
             torch.npu.set_compile_mode(jit_compile=False)
 
         # handle dataset
-        self.logger.info(f"==========QUANTIZATION: Prepare Dataset==========")
+        get_logger().info(f"==========QUANTIZATION: Prepare Dataset==========")
         anti_dataset = quant_config.spec.anti_dataset
         calib_dataset = quant_config.spec.calib_dataset
         batch_size = quant_config.spec.batch_size
@@ -111,23 +111,23 @@ class ModelslimV0QuantService(BaseQuantService):
         calib_data = None
 
         if calib_dataset is not None:
-            self.logger.info(f"prepare calib_data from {calib_dataset}")
+            get_logger().info(f"prepare calib_data from {calib_dataset}")
             dataset = self.dataset_loader.get_dataset_by_name(calib_dataset)
             calib_data = get_tokenized_data(model.tokenizer, dataset, device=model.device.value)
-            self.logger.info(f"prepare calib_data success")
+            get_logger().info(f"prepare calib_data success")
 
         anti_data = calib_data
 
         if anti_dataset is not None:
-            self.logger.info(f"prepare anti_data from {anti_dataset}")
+            get_logger().info(f"prepare anti_data from {anti_dataset}")
             dataset = self.dataset_loader.get_dataset_by_name(anti_dataset)
             anti_data = get_batch_tokenized_data(model.tokenizer, dataset, batch_size, device=model.device.value)
-            self.logger.info(f"prepare anti_data success")
+            get_logger().info(f"prepare anti_data success")
 
         # anti outlier
         if quant_config.spec.anti_cfg is not None:
-            self.logger.info(f"==========QUANTIZATION: ANTI OUTLIER==========")
-            self.logger.debug(f"anti outlier config: {quant_config.spec.anti_cfg}")
+            get_logger().info(f"==========QUANTIZATION: ANTI OUTLIER==========")
+            get_logger().debug(f"anti outlier config: {quant_config.spec.anti_cfg}")
             anti_cfg = AntiOutlierConfig(dev_type=model.device.value, **quant_config.spec.anti_cfg)
             anti_outlier = AntiOutlier(
                 model=model.model,
@@ -135,11 +135,12 @@ class ModelslimV0QuantService(BaseQuantService):
                 cfg=anti_cfg,
                 **quant_config.spec.anti_params)
             anti_outlier.process()
-            self.logger.info(f"anti outlier success")
+            get_logger().info(f"anti outlier success")
 
         # quantization
-        self.logger.info(f"==========QUANTIZATION: CALIBRATION==========")
-        self.logger.debug(f"calibration config: {quant_config.spec.calib_cfg}")
+        get_logger().info(f"==========QUANTIZATION: CALIBRATION==========")
+        get_logger().debug(f"calibration config: {quant_config.spec.calib_cfg}")
+
         use_fa_quant = bool(quant_config.spec.calib_cfg.pop('use_fa_quant', False))
         fa_amp = quant_config.spec.calib_cfg.pop('fa_amp', 0)
         calib_cfg = QuantConfig(dev_type=model.device.value, **quant_config.spec.calib_cfg)
@@ -152,16 +153,16 @@ class ModelslimV0QuantService(BaseQuantService):
             calib_data=calib_data,
             **quant_config.spec.calib_params)
         calibrator.run()
-        self.logger.info(f"calibration success")
+        get_logger().info(f"calibration success")
 
         # persist stage
         if not save_path:
-            self.logger.warning(f"save_path is not provided, skip persist")
-            self.logger.info(f"==========QUANTIZATION: END==========")
+            get_logger().warning(f"save_path is not provided, skip persist")
+            get_logger().info(f"==========QUANTIZATION: END==========")
             return
 
         # persist
-        self.logger.info(f"==========QUANTIZATION: PERSIST==========")
+        get_logger().info(f"==========QUANTIZATION: PERSIST==========")
         calibrator.save(
             output_path=str(save_path),
             json_name='quant_model_description.json',
@@ -173,4 +174,4 @@ class ModelslimV0QuantService(BaseQuantService):
         # copy .json and .py files
         copy_files(str(model.ori), str(model.path))
 
-        self.logger.info(f"==========QUANTIZATION: END==========")
+        get_logger().info(f"==========QUANTIZATION: END==========")

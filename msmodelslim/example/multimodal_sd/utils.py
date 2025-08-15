@@ -10,7 +10,7 @@ import torch
 import torch.nn as nn
 
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.timestep.manager import TimestepManager
-from msmodelslim.utils.logger import logger
+from msmodelslim.utils.logging import logger
 
 MAX_RECURSION_DEPTH = 20
 

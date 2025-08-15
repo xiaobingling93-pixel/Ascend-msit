@@ -18,7 +18,7 @@ import inspect
 import logging
 from typing import Type, Callable, Tuple, Any, Dict, Optional, List
 
-from msmodelslim import logger
+from msmodelslim.utils.logging import get_logger
 from msmodelslim.utils.exception import ToDoError, UnsupportedError
 
 
@@ -42,7 +42,7 @@ class QAPI:
         
         """
         if dispatch_key in self.impl_map:
-            logger.warning(
+            get_logger().warning(
                 f"[Core] Overwriting existing implementation for {self.func_name} with dispatch key: {dispatch_key}")
 
         self.impl_map[dispatch_key] = impl
@@ -94,7 +94,7 @@ class QFuncRegistry:
 
             cls._registered_api[actual_api_name] = QAPI(actual_api_name, dispatch_key, func_signature)
 
-            logger.debug("[Core] Register API %r with dispatch key: %r", actual_api_name, dispatch_key)
+            get_logger().debug("[Core] Register API %r with dispatch key: %r", actual_api_name, dispatch_key)
 
             return func
 
@@ -138,7 +138,7 @@ class QFuncRegistry:
             # 添加实现到对应的QAPI中
             cls._registered_api[api_name].add_impl(func, dispatch_key)
 
-            logger.debug(
+            get_logger().debug(
                 "[Core] Register API implementation %r for %r with dispatch key: %r",
                 func.__name__, api_name, dispatch_key)
 
@@ -175,7 +175,7 @@ class QFuncRegistry:
         qapi = cls._registered_api[api_name]
 
         if dispatch_key not in qapi.impl_map:
-            logger.error(
+            get_logger().error(
                 f"[Core] No implementation found for API {api_name} with dispatch key: {dispatch_key},\n"
                 f"available dispatch keys are:\n"
                 f"%s",
@@ -220,7 +220,7 @@ class QABCRegistry:
                 raise ToDoError(f"ABC {wrapp_cls} is already registered",
                                 action=f"Please remove one")
             cls._registered_abc[wrapp_cls] = QABC(abc_class=wrapp_cls, dispatch_key=dispatch_key)
-            logger.debug("[Core] Register ABC %r with dispatch key: %r", wrapp_cls, dispatch_key)
+            get_logger().debug("[Core] Register ABC %r with dispatch key: %r", wrapp_cls, dispatch_key)
             return wrapp_cls
 
         return decorator
@@ -243,7 +243,7 @@ class QABCRegistry:
                 raise ToDoError(f"Class {wrapp_cls.__name__} is not a subclass of {abc.abc_class}",
                                 action=f"Please make sure {wrapp_cls.__name__} is a subclass of {abc.abc_class}")
             abc.add_impl(wrapp_cls, dispatch_key)
-            logger.debug(
+            get_logger().debug(
                 "[Core] Register ABC implementation %r for %r with dispatch key: %r",
                 wrapp_cls.__name__, abc_class, dispatch_key)
             return wrapp_cls
@@ -269,7 +269,7 @@ class QABCRegistry:
                                 action=f"Please make sure {wrapp_cls.__name__} is a subclass of {abc_type}")
             for key in dispatch_key:
                 abc.add_impl(wrapp_cls, key)
-                logger.debug(
+                get_logger().debug(
                     "[Core] Register ABC implementation %r for %r with dispatch key: %r",
                     wrapp_cls.__name__, abc_type, key)
             return wrapp_cls
@@ -292,7 +292,7 @@ class QABCRegistry:
         abc = cls._registered_abc[abc_type]
 
         if dispatch_key not in abc.impl_map:
-            logger.error(
+            get_logger().error(
                 f"[Core] No implementation found for ABC {abc_type} with dispatch key: {dispatch_key},\n"
                 f"available dispatch keys are:\n"
                 f"%s",

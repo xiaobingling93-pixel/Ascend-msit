@@ -18,7 +18,7 @@ from typing import Dict, Optional, List, Any
 import torch.nn as nn
 from pydantic import BaseModel
 
-from msmodelslim import logger
+from msmodelslim.utils.logging import get_logger
 from msmodelslim.pytorch.llm_ptq.anti_outlier import AntiOutlierConfig, AntiOutlier
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import QuantConfig, Calibrator
 from msmodelslim.utils.exception import SchemaValidateError
@@ -195,4 +195,4 @@ def quant_model(model: nn.Module, session_cfg: SessionConfig):
         calibrator.save(output_path=save_cfg.output_path, safetensors_name=save_cfg.safetensors_name, \
                     json_name=save_cfg.json_name, save_type=save_cfg.save_type, part_file_size=save_cfg.part_file_size)
     else:
-        logger.warning("The save config is None, the quantized model will not be saved.")
+        get_logger().warning("The save config is None, the quantized model will not be saved.")

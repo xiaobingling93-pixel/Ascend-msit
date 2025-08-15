@@ -12,7 +12,6 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from logging import Logger
 from typing import List, Optional
 
 from torch import nn
@@ -22,7 +21,7 @@ from msmodelslim.core.base.protocol import BatchProcessRequest
 from msmodelslim.quant.processor.base import AutoSessionProcessor, AutoProcessorConfig
 from msmodelslim.quant.quantizer.linear import LinearQuantizer, LinearQConfig
 from msmodelslim.utils.config_map import ConfigSet
-from msmodelslim.utils.logger import logger as msmodelslim_logger, logger_setter
+from msmodelslim.utils.logging import get_logger, logger_setter
 
 
 class LinearProcessorConfig(AutoProcessorConfig):
@@ -32,16 +31,16 @@ class LinearProcessorConfig(AutoProcessorConfig):
     exclude: List[str] = []
 
 
-def _warning_unmatched_pattern(name: str, config_set: ConfigSet, logger: Logger = msmodelslim_logger) -> None:
+def _warning_unmatched_pattern(name: str, config_set: ConfigSet) -> None:
     unmatched_keys = config_set.unmatched_keys()
     unmatched_keys = list(filter(lambda x: x != "*", unmatched_keys))
     if unmatched_keys:
-        logger.warning(
+        get_logger().warning(
             f"These {name} patterns are not matched any module, please ensure this is as expected: {unmatched_keys}")
 
 
 @QABCRegistry.register(dispatch_key=LinearProcessorConfig, abc_class=AutoSessionProcessor)
-@logger_setter(__name__)
+@logger_setter()
 class LinearQuantProcessor(AutoSessionProcessor):
     def __init__(
             self,
@@ -61,8 +60,8 @@ class LinearQuantProcessor(AutoSessionProcessor):
         return True
 
     def post_run(self) -> None:
-        _warning_unmatched_pattern("include", self.include, logger=self.logger)
-        _warning_unmatched_pattern("exclude", self.exclude, logger=self.logger)
+        _warning_unmatched_pattern("include", self.include)
+        _warning_unmatched_pattern("exclude", self.exclude)
 
     def preprocess(self, request: BatchProcessRequest) -> None:
         self._install_quantizer(request.name, request.module)

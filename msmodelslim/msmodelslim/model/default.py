@@ -9,16 +9,18 @@ from msmodelslim.app.base.const import DeviceType
 from msmodelslim.app.base.model import BaseModel
 from msmodelslim.utils.exception import InvalidModelError, SchemaValidateError
 from msmodelslim.utils.exception_decorator import exception_handler
-from msmodelslim.utils.logger import logger_setter
+from msmodelslim.utils.logging import logger_setter
 from msmodelslim.utils.security.model import SafeGenerator
 from .factory import ModelFactory
 
 
 @ModelFactory.register("default")
-@logger_setter(__name__)
+@logger_setter()
 class DefaultModel(BaseModel):
-    @exception_handler(Exception, InvalidModelError,
-                       action='Please check the model name')
+    @exception_handler('Using default model',
+                       err_cls=Exception,
+                       ms_err_cls=InvalidModelError,
+                       action='Please check the model type')
     def __init__(self,
                  model_type: str,
                  ori_path: Path,
