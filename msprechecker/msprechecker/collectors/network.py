@@ -13,22 +13,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import re
 import shlex
 import shutil
 import subprocess
 
+from msguard import Rule
+
 from .base import BaseCollector
-from ..utils import get_current_ip_and_addr
 
 
 class PingCollector(BaseCollector):
     def __init__(self, error_handler=None, *, rank_table=None):
         super().__init__(error_handler)
         self.rank_table = rank_table
-        
+
         ping_cmd = "/usr/bin/ping"
-        self._ping_cmd = ping_cmd + " -c 3 -q -W 2 {}" if shutil.which(ping_cmd) else None
+        if not Rule.input_file_exec.is_satisfied_by(ping_cmd):
+            self._ping_cmd = None
+        else:
+            self._ping_cmd = ping_cmd + " -c 3 -q -W 2 {}"
 
     def _collect_data(self):
         result = {}
@@ -36,7 +39,7 @@ class PingCollector(BaseCollector):
         if not self._ping_cmd:
             self.error_handler.add_error(
                 filename=__file__, function='_collect_data',
-                lineno=34, what="当前环境没有 'ping' 命令",
+                lineno=36, what="当前环境没有 'ping' 命令或者权限不符合要求",
                 reason="需要使用 'ping' 命令来进行多机的连通性检测"
             )
             return result
@@ -45,21 +48,11 @@ class PingCollector(BaseCollector):
         if not host_to_devices:
             self.error_handler.add_error(
                 filename=__file__, function='_collect_data',
-                lineno=45, what="传入的 'rank table' 没有解析出任何信息",
+                lineno=47, what="传入的 'rank table' 没有解析出任何信息",
                 reason="请检查 'rank table' 是否符合格式规范"
             )
             return result
 
-        _, cur_ip = get_current_ip_and_addr()
-        if not cur_ip:
-            self.error_handler.add_error(
-                filename=__file__, function='get_current_ip_and_addr',
-                lineno=55, what="获取当前机器 IP 失败",
-                reason="需要获取当前 IP 从而获取其他机器的 ip"
-            )
-            return result
-        
-        result = {}
         for host in host_to_devices:
             try:
                 output = subprocess.check_output(
@@ -69,7 +62,7 @@ class PingCollector(BaseCollector):
             except Exception as e:
                 self.error_handler.add_error(
                     filename=__file__, function='subprocess.check_output',
-                    lineno=55, what=f"执行命令失败：{self._ping_cmd.format(host)}",
+                    lineno=56, what=f"执行命令失败：{self._ping_cmd.format(host)}",
                     reason=str(e)
                 )
                 output = ""

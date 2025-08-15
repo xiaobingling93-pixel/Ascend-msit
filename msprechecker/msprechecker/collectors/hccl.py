@@ -14,15 +14,16 @@
 # limitations under the License.
 
 import os
-import re
 import shlex
 import shutil
 import subprocess
 from abc import abstractmethod
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from msguard import Rule
+
 from .base import BaseCollector
-from ..utils import get_npu_count, is_in_container, get_conn_mode, get_current_ip_and_addr
+from ..utils import get_npu_count, is_in_container
 
     
 HCCN_TOOL_CMD = "/usr/local/Ascend/driver/tools/hccn_tool"
@@ -51,13 +52,13 @@ class HCCNCollector(BaseCollector):
         return output
 
     def _collect_data(self):
-        if not shutil.which(HCCN_TOOL_CMD):
+        if not Rule.input_file_exec.is_satisfied_by(HCCN_TOOL_CMD):
             working_place = "宿主机" if not is_in_container() else "容器"
             self.error_handler.add_error(
                 filename=__file__,
-                function='_collect_data', lineno=63,
-                what=f"{working_place}上没有找到 'hccn_tool' 命令",
-                reason=f"[Errno 2] No such file or directory: '{HCCN_TOOL_CMD}'"
+                function='_collect_data', lineno=55,
+                what=f"{working_place}上没有找到 'hccn_tool' 命令或者权限不符合要求",
+                reason=f"{working_place}上没有找到 'hccn_tool' 命令或者权限不符合要求"
             )
             return {}
 
@@ -111,8 +112,7 @@ class HCCLCollector(BaseCollector):
                 shlex.split(cmd), stderr=subprocess.DEVNULL, text=True
             )
         except Exception as e:
-            if not output:
-                output = "100% packet loss"
+            output = "100% packet loss"
 
         return output
 

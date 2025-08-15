@@ -92,14 +92,7 @@ class CollectorFactory:
                     "Will use 'mindie' as the default framework."
                 )
                 args.scene = FrameworkType.TP_MINDIE
-            elif args.scene not in (typ.value for typ in FrameworkType):
-                global_logger.warning(
-                    "Expected '--scene' to be 'mindie' or 'vllm'. Got %r instead. "
-                    "msprechecker cannot determine the exact framework type of the rank table. "
-                    "Will use 'mindie' as the default framework."
-                )
-                args.scene = FrameworkType.TP_MINDIE
-            
+
             framework_type = FrameworkType(args.scene)
             rank_table_parser = ParserRegistry.get(framework_type)() # create parser instance
             rank_table = rank_table_parser.parse(args.rank_table_path)
@@ -184,7 +177,7 @@ class PrecheckStrategy(CommandStrategy):
 
     @staticmethod
     def execute(args: argparse.Namespace) -> int:
-        if args.scene and "single_disaggregation" in args.scene:
+        if args.scene and "pd_disaggregation" in args.scene:
             return PrecheckStrategy.execute_pd_disagg(args)
         
         rule_manager = RuleManager(
