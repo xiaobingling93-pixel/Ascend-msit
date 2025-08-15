@@ -15,7 +15,7 @@
 
 __all__ = [
     'Version', 'get_pkg_version',
-    'get_npu_count', 'get_npu_type', 'RankTableParser', 'get_conn_mode', 'get_rank_table_parser', 'NpuType',
+    'get_npu_count', 'get_npu_type', 'RankTableParser', 'get_conn_mode', 'NpuType',
     'get_current_ip_and_addr',
     "MacroExpander", "ExpandError",
     'Evaluator',
@@ -30,7 +30,7 @@ __all__ = [
 ]
 
 from .version import Version, get_pkg_version
-from .ascend import get_npu_count, get_npu_type, get_conn_mode, get_rank_table_parser, NpuType
+from .ascend import get_npu_count, get_npu_type, get_conn_mode, NpuType, ParserRegistry, FrameworkType
 from .network import get_current_ip_and_addr
 from .macro_expander import MacroExpander, ExpandError
 from .evaluator import Evaluator

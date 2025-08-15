@@ -35,7 +35,7 @@ from .config import (
     ConfigCollector, UserConfigCollector, MindIEEnvCollector, ModelConfigCollector,
     MIESConfigCollector
 )
-from .hccl import HCCLCollector
+from .hccl import HCCLCollector, TlsCollector, VnicCollector, LinkCollector
 from .network import PingCollector
 from .hardware import CPUStressCollector, NPUStressCollector, BaseStressCollector
 from .weight import WeightCollector

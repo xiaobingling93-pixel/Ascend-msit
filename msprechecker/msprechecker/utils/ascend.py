@@ -22,6 +22,8 @@ import itertools
 import subprocess
 from enum import Enum
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from typing import Dict, List, Type
 
 from msguard.security import open_s
 from .log import global_logger
@@ -121,62 +123,206 @@ def get_conn_mode():
     return None
 
 
-class RankTableParser(ABC):
-    def __init__(self, rank_table):
-        if isinstance(rank_table, str):
-            self.rank_table = self.load(rank_table)
-        elif isinstance(rank_table, dict):
-            self.rank_table = rank_table
-        else:
-            raise TypeError(f"'rank_table' expected to be str or dict. Got {type(rank_table).__name__} instead.")
-
-    @staticmethod
-    def load(rank_table_path: str):
-        with open_s(rank_table_path) as f:
-            return json.load(f)
-
-    @abstractmethod
-    def parse(self):
-        pass
+# --- rank table ---
+class FrameworkType(Enum):
+    TP_MINDIE = "mindie"
+    TP_VLLM = "vllm"
 
 
-class A2RankTableParser(RankTableParser):
-    def parse(self):
-        ip_to_rank_id = {}
-        for server in self.rank_table.get("server_list", []):
-            server_id = server["server_id"]
-            rank_id_to_device_ip = {}
-            ip_to_rank_id[server_id] = rank_id_to_device_ip
-
-            for device in server.get("device", []):
-                rank_id = device.get("rank_id")
-                device_ip = device.get("device_ip")
-                rank_id_to_device_ip[rank_id] = device_ip
-
-        return ip_to_rank_id
+@dataclass
+class DeviceInfo:
+    device_ip: str
+    device_id: int
+    rank_id: int
 
 
-class A3RankTableParser(RankTableParser):
-    def parse(self):
-        pass
+@dataclass
+class RankTable:
+    host_to_devices: Dict[str, List[DeviceInfo]]
+    server_count: int
+    version: str
 
 
-def get_rank_table_parser() -> RankTableParser:
-    npu_type_to_parser = {
-        NpuType.TP_A2: A2RankTableParser,
-        NpuType.TP_A3: A3RankTableParser
-    }
+class ParserRegistry:
+    """Rank Table Parser Registry. Dynamically register and get rank table parser."""
+    _registry = {}
 
-    npu_type, _ = get_npu_type()
-    if not npu_type:
-        npu_type = NpuType.TP_A2
-        global_logger.warning("Auto-detect npu device failed, set to '%s' as a fall back", npu_type.display)
+    @classmethod
+    def register(cls, framework: FrameworkType):
+        """Register a parser using decorator. Example usage: @ParserRegistry.register(xx)"""
+        def wrapper(parser_cls):
+            cls._registry[framework] = parser_cls
+            return parser_cls
+        return wrapper
     
-    elif npu_type not in npu_type_to_parser:
-        npu_type = NpuType.TP_A2
-        global_logger.warning(
-            "No appropriate rank table parser found for current npu type (%s), using 'A2' format instead.", 
-            npu_type.display
+    @classmethod
+    def get(cls, framework: FrameworkType) -> Type['RankTableParser']:
+        """Get a RankTableParser"""
+        if framework not in cls._registry:
+            raise ValueError(f"Not registered framework: {framework}. Registered framework: {set(cls._registry)}")
+        
+        return cls._registry[framework]
+
+
+class RankTableParser(ABC):
+    def __init__(self):
+        single_address = "(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]|[0-9])"
+        self._ip_pattern = re.compile(
+            rf"\b{single_address}(?:\.{single_address}){{3}}\b"
         )
 
-    return npu_type_to_parser.get(npu_type)
+    @abstractmethod
+    def parse(self, rank_table_path: str) -> RankTable:
+        pass
+
+
+class JsonParser(RankTableParser):
+    @staticmethod
+    def _load_json(path: str):
+        try:
+            with open_s(path, 'r', encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            global_logger.warning("Error occured while loading json data: %s", e)
+            return {}
+    
+    @abstractmethod
+    def _parse_devices(self, data: dict) -> Dict[str, DeviceInfo]:
+        pass
+
+    def parse(self, rank_table_path: str):
+        data = self._load_json(rank_table_path)
+        if not data:
+            return RankTable([], 0, "'")
+
+        server_count = data.get('server_count')
+
+        if not server_count or not server_count.isdigit():
+            global_logger.warning("Expected 'server_count' to be a digit str. Got %r instead.", server_count)
+            server_count = "0"
+        else:
+            server_count = int(server_count)
+            
+        version = data.get('version', "1.0")
+        host_to_devices = self._parse_devices(data)
+
+        return RankTable(
+            host_to_devices=host_to_devices,
+            server_count=server_count,
+            version=version
+        )
+
+
+@ParserRegistry.register(FrameworkType.TP_MINDIE)
+class MindIEParser(JsonParser):
+    def _parse_devices(self, data: dict) -> Dict[str, DeviceInfo]:
+        host_to_devices = {}
+
+        for server_info in data.get('server_list', {}):
+            host_ip = server_info.get('server_id', "")
+            if not self._ip_pattern.match(host_ip):
+                global_logger.warning(
+                    "Invalid 'server_id' from rank table: %r", host_ip
+                )
+                continue
+
+            if host_ip not in host_to_devices:
+                host_to_devices[host_ip] = []
+            
+            for device_info in server_info.get('device', {}):
+                device_ip = device_info.get('device_ip')
+                if not device_ip or not self._ip_pattern.match(device_ip):
+                    global_logger.warning(
+                        "Invalid 'device_ip' for 'server_id' %r from rank table: %r",
+                        device_ip, host_ip
+                    )
+                    continue
+                
+                device_id = device_info.get('device_id')
+                if not device_id or not device_id.isdigit():
+                    global_logger.warning(
+                        "Expected 'device_id' for 'server_id' %r to be a digit str. Got %r instead.",
+                        device_id, host_ip
+                    )
+                    continue
+                device_id = int(device_id)
+
+                rank_id = device_info.get('rank_id')
+                if not rank_id or not rank_id.isdigit():
+                    global_logger.warning(
+                        "Expected 'rank_id' for host %r to be a digit str. Got %r instead.",
+                        rank_id, host_ip
+                    )
+                    continue
+                rank_id = int(rank_id)
+
+                host_to_devices[host_ip].append(
+                    DeviceInfo(
+                        device_ip=device_ip,
+                        device_id=device_id,
+                        rank_id=rank_id
+                    )
+                )
+
+        return host_to_devices
+
+
+@ParserRegistry.register(FrameworkType.TP_VLLM)
+class VLLMParser(JsonParser):
+    def _parse_devices(self, data: dict) -> Dict[str, DeviceInfo]:
+        host_to_devices = {}
+
+        for device_list_name in ("prefill_device_list", "decode_device_list"):
+            if device_list_name not in data:
+                global_logger.warning(
+                    "Expected %r in rank table, but not found.",
+                    device_list_name
+                )
+                continue
+            
+            for device_info in data[device_list_name]:
+                host_ip = device_info.get('server_id')
+                if not host_ip or not self._ip_pattern.match(host_ip):
+                    global_logger.warning(
+                        "Invalid host_ip from rank table: %r", host_ip
+                    )
+                    continue
+                
+                if host_ip not in host_to_devices:
+                    host_to_devices[host_ip] = []
+
+                device_ip = device_info.get('device_ip')
+                if not device_ip or not self._ip_pattern.match(device_ip):
+                    global_logger.warning(
+                        "Invalid 'device_ip' for 'server_id' %r from rank table: %r",
+                        device_ip, host_ip
+                    )
+                    continue
+        
+                device_id = device_info.get('device_id')
+                if not device_id or not device_id.isdigit():
+                    global_logger.warning(
+                        "Expected 'device_id' for 'server_id' %r to be a digit str. Got %r instead.",
+                        device_id, host_ip
+                    )
+                    continue
+
+                device_id = int(device_id)
+                rank_id = device_info.get('cluster_id')
+                if not rank_id or not rank_id.isdigit():
+                    global_logger.warning(
+                        "Expected 'cluster_id' for host %r to be a digit str. Got %r instead.",
+                        rank_id, host_ip
+                    )
+                    continue
+
+                rank_id = int(rank_id) - 1 # vllm cluster_id starts from 1
+                host_to_devices[host_ip].append(
+                    DeviceInfo(
+                        device_ip=device_ip,
+                        device_id=device_id,
+                        rank_id=rank_id
+                    )
+                )
+
+        return host_to_devices

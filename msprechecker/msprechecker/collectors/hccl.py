@@ -14,74 +14,141 @@
 # limitations under the License.
 
 import os
-import re
 import shlex
 import shutil
 import subprocess
-from concurrent.futures import ThreadPoolExecutor
+from abc import abstractmethod
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+from msguard import Rule
 
 from .base import BaseCollector
-from ..utils import get_npu_count, is_in_container, get_conn_mode
+from ..utils import get_npu_count, is_in_container
+
+    
+HCCN_TOOL_CMD = "/usr/local/Ascend/driver/tools/hccn_tool"
 
 
-class HCCLCollector(BaseCollector):
-    COMMON_CMD_TEMPLATE = "hccn_tool -i {device} {option} -g"
-    HCCN_OPTIONS_TO_REGEX = {
-        "ip": re.compile(r"ipaddr:([\d.]+)", re.IGNORECASE),
-        "netdetect": re.compile(r"netdetect address:\s*([\d.]+)", re.IGNORECASE),
-        "net_health": re.compile(r"net health status:\s*([\w ]+)", re.IGNORECASE),
-        "gateway": re.compile(r"gateway:\s*([\d.]+)", re.IGNORECASE),
-        "lldp": re.compile(r"Ifname: ([\w/:.]+)", re.IGNORECASE),
-        "link": re.compile(r"link status: (\w+)", re.IGNORECASE),
-        "tls": re.compile(r"tls switch\[(\d)\]", re.IGNORECASE)
-    }
+class HCCNCollector(BaseCollector):
+    CMD_NAME = ""
 
     def __init__(self, error_handler=None):
         super().__init__(error_handler)
-        self.error_handler.type = "hccl"
+        self.npu_count = get_npu_count()
 
-    def _run_hccn_cmd(self, option: str, device: int):
-        """
-        Run hccn_tool command for a specific option and device, and extract result using regex.
-        """
-        regex = self.HCCN_OPTIONS_TO_REGEX[option]
-        command = self.COMMON_CMD_TEMPLATE.format(device=device, option="-" + option)
+    @abstractmethod
+    def _generate_cmd(self):
+        pass
+
+    def _run_cmd(self, cmd: str):
+        output = None
         try:
             output = subprocess.check_output(
-                shlex.split(command), stderr=subprocess.STDOUT, text=True, timeout=2
+                shlex.split(cmd), stderr=subprocess.DEVNULL, text=True
             )
         except Exception:
-            return None
+            output = "100% packet loss"
 
-        match = regex.search(output)
-        return match.group(1) if match else None
+        return output
 
     def _collect_data(self):
-        """
-        Collect HCCL related data for all NPUs and options.
-        """
-        if not shutil.which('hccn_tool'):
+        if not Rule.input_file_exec.is_satisfied_by(HCCN_TOOL_CMD):
             working_place = "宿主机" if not is_in_container() else "容器"
             self.error_handler.add_error(
                 filename=__file__,
-                function='_collect_data',
-                lineno=63,
+                function='_collect_data', lineno=55,
+                what=f"{working_place}上没有找到 'hccn_tool' 命令或者权限不符合要求",
+                reason=f"{working_place}上没有找到 'hccn_tool' 命令或者权限不符合要求"
+            )
+            return {}
+
+        cmds = list(self._generate_cmd())
+        max_workers = min(len(cmds), os.cpu_count() or 1)
+
+        with ThreadPoolExecutor(max_workers) as executor:
+            futures = [executor.submit(self._run_cmd, cmd) for cmd in cmds]
+
+        return [future.result() for future in futures]
+
+
+class VnicCollector(HCCNCollector):
+    CMD_NAME = "vnic"
+
+    def _generate_cmd(self):
+        for device_id in range(self.npu_count):
+            yield f"{HCCN_TOOL_CMD} -i {device_id} -{self.CMD_NAME} -g"
+
+
+class LinkCollector(HCCNCollector):
+    CMD_NAME = "link"
+
+    def _generate_cmd(self):
+        for device_id in range(self.npu_count):
+            yield f"{HCCN_TOOL_CMD} -i {device_id} -{self.CMD_NAME} -g"
+
+
+class TlsCollector(HCCNCollector):
+    CMD_NAME = "tls"
+
+    def _generate_cmd(self):
+        for device_id in range(self.npu_count):
+            yield f"{HCCN_TOOL_CMD} -i {device_id} -{self.CMD_NAME} -g"
+
+
+class HCCLCollector(BaseCollector):
+    CMD_NAME = "ping"
+
+    def __init__(self, error_handler=None, *, rank_table=None):
+        super().__init__(error_handler)
+        self.rank_table = rank_table
+    
+    def _run_cmd(self, device_id: int, device_ip: str):
+        option = "-hccs_ping" if device_ip.startswith("192.") else "-ping"
+        cmd = f"{HCCN_TOOL_CMD} -i {device_id} {option} -g address {device_ip}"
+
+        output = None
+        try:
+            output = subprocess.check_output(
+                shlex.split(cmd), stderr=subprocess.DEVNULL, text=True
+            )
+        except Exception as e:
+            output = "100% packet loss"
+
+        return output
+
+    def _collect_data(self):
+        if not shutil.which(HCCN_TOOL_CMD):
+            working_place = "宿主机" if not is_in_container() else "容器"
+            self.error_handler.add_error(
+                filename=__file__,
+                function='_collect_data', lineno=63,
                 what=f"{working_place}上没有找到 'hccn_tool' 命令",
-                reason="[Errno 2] No such file or directory: 'hccn_tool'"
+                reason=f"[Errno 2] No such file or directory: '{HCCN_TOOL_CMD}'"
             )
             return {}
 
         npu_count = get_npu_count()
-        max_workers = min(npu_count * len(self.HCCN_OPTIONS_TO_REGEX), os.cpu_count() or 1)
+        max_workers = min(npu_count * 8, os.cpu_count() or 1) # each device has maximum concurrency 8
 
-        metric = {}
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            for option in self.HCCN_OPTIONS_TO_REGEX:
-                futures = [
-                    executor.submit(self._run_hccn_cmd, option, device)
-                    for device in range(npu_count)
-                ]
-                metric[option] = [future.result() for future in futures]
+        all_devices = (
+            device_info 
+            for device_info_list in self.rank_table.host_to_devices.values() 
+            for device_info in device_info_list
+        )
 
-        metric['conn'] = get_conn_mode()
-        return metric
+        futures = {}
+        with ThreadPoolExecutor(max_workers) as executor:
+            futures = {
+                executor.submit(self._run_cmd, device_id, device_info.device_ip): (device_id, device_info.rank_id)
+                for device_info in all_devices
+                for device_id in range(npu_count)
+            }
+
+        results = [[] for _ in range(npu_count)]
+        for future in as_completed(futures):
+            device_id, rank_id = futures[future]
+            results[device_id].append(
+                {"rank_id": rank_id, "result": future.result()}
+            )
+
+        return results
