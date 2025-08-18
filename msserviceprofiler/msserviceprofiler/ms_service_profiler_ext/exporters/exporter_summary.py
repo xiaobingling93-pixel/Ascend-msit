@@ -24,6 +24,9 @@ from ..common.csv_fields import RequestCSVFields, BatchCSVFields, ServiceCSVFiel
 from ..common.constants import US_PER_MS
 
 
+METRIC_COLUMN = "Metric"
+
+
 def is_contained_valid_iter_info(rid_list, token_id_list):
     if rid_list is None or token_id_list is None or len(rid_list) != len(token_id_list):
         return False
@@ -100,8 +103,8 @@ def process_req_record(req_map, record):
             'req_waiting_time': 0.0,
             'req_pending_time': 0.0,
             'is_complete': False,
-            'generated_token_num': None,
-            'input_token_num': None,
+            'generated_token_num': 0,
+            'input_token_num': 0,
             'exec_time': 0.0,
             'first_token_latency': 0.0,
         }
@@ -184,9 +187,9 @@ def process_rid_token_list(req_map, rid_list, token_id_list, record):
         # 首Token时延
         if cur_iter == 0:
             if req_map[req_rid].get('first_token_latency') is None:
-                req_map[req_rid]['first_token_latency'] = record.get('during_time')
+                req_map[req_rid]['first_token_latency'] = record.get('during_time', 0)
             else:
-                req_map[req_rid]['first_token_latency'] += record.get('during_time')
+                req_map[req_rid]['first_token_latency'] += record.get('during_time', 0)
 
 
 def gen_exporter_results(all_data_df):
@@ -341,8 +344,8 @@ def calculate_request_metrics(req_map):
         req_view.append(record)
 
         # 更新总体维度数据
-        total_map[ServiceCSVFields.TOTAL_INPUT_TOKEN_NUM] += req_data["input_token_num"]
-        total_map[ServiceCSVFields.TOTAL_GENERATED_TOKEN_NUM] += req_data["generated_token_num"]
+        total_map[ServiceCSVFields.TOTAL_INPUT_TOKEN_NUM] += req_data.get("input_token_num", 0)
+        total_map[ServiceCSVFields.TOTAL_GENERATED_TOKEN_NUM] += req_data.get("generated_token_num", 0)
 
         # 更新第一个和最后一个请求的时间
         current_start_time = req_data["httpReq_start"]
@@ -409,9 +412,14 @@ def convert_map_to_dataframe(map_data, include_stats):
     return pd.DataFrame(data)
 
 
-def drop_all_zero_rows(status, include_stats=1):
+def drop_all_zero_rows(status, drop_rows, include_stats=1):
     status = convert_map_to_dataframe(status, include_stats)
-    status = status.loc[status.drop(columns='Metric').any(axis=1)]
+    # 筛选出 Metric 列值在 drop_rows 中的行
+    mask_in_drop_rows = status[METRIC_COLUMN].isin(drop_rows)
+    value_columns = status.columns.drop(METRIC_COLUMN)
+    mask_all_zero = (status[value_columns] == 0).all(axis=1)
+    # 综合条件：在 drop_rows 中 且 其他列全为 0 → 删除
+    status = status.loc[~(mask_in_drop_rows & mask_all_zero)]
     return status
 
 
@@ -422,8 +430,8 @@ def get_new_ttft_wait_time(data):
         return {}
     ttft_df.loc[:, 'ttft'] = ttft_df['ttft'].div(US_PER_MS)
     que_wait_df.loc[:, 'que_wait_time'] = que_wait_df['que_wait_time'].div(US_PER_MS)
-    ttdf_list = ttft_df['ttft'].to_list() 
-    que_wait_list = que_wait_df['que_wait_time'].to_list()
+    ttdf_list = ttft_df['ttft'].fillna(0).to_list() 
+    que_wait_list = que_wait_df['que_wait_time'].fillna(0).to_list()
     return {
         RequestCSVFields.FIRST_TOKEN_LATENCY: calculate_statistics(ttdf_list),
         RequestCSVFields.WAITING_TIME: calculate_statistics(que_wait_list)
@@ -506,8 +514,10 @@ class ExporterSummary(ExporterBase):
         if ttft_wait_time:
             req_status.update(ttft_wait_time)
 
-        batch_status = drop_all_zero_rows(batch_status)
-        req_status = drop_all_zero_rows(req_status)
+        batch_status = drop_all_zero_rows(batch_status, 
+                                          [BatchCSVFields.PREFILL_EXEC_TIME, BatchCSVFields.DECODE_EXEC_TIME])
+
+        req_status = drop_all_zero_rows(req_status, [RequestCSVFields.EXEC_TIME])
 
         # 格式化存入csv
         save_dataframe_to_csv(req_status, output, RequestCSVFields.PATH_NAME)
