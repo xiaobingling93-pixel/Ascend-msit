@@ -13,12 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .base import NodeChecker, BaseChecker
-from ..utils import get_npu_count
+from .base import BaseChecker
 
 
 class LinkChecker(BaseChecker):
-    def check(self, results):
+    def _check(self, results):
         """
         check if results are full of 'link status: UP'
         """
@@ -34,11 +33,10 @@ class LinkChecker(BaseChecker):
                     reason='当前机器的网卡 LINK 状态应该要全为 "UP"',
                     severity="high"
                 )
-        return self.error_handler
  
 
 class VnicChecker(BaseChecker):
-    def check(self, results):
+    def _check(self, results):
         """
         check if results are full of 'vnic link status: UP' and 'ipaddr: xxx'
         """
@@ -61,26 +59,20 @@ class VnicChecker(BaseChecker):
                     actual=result, reason='如果是 A3 机器，板内的 VNIC IP 需要配置，且连接状态为 UP',
                     severity="high"
                 )
-        return self.error_handler
 
 
 class TlsChecker(BaseChecker):
-    def check(self, results):
+    def _check(self, results):
         """
         check if results are full of 'dev_id:x, tls switch[0]'
         """
         if not results:
-            return self.error_handler # no certificates regarding as passed
+            return
         
         tls_switch_pattern = "tls switch["
         for device_id, result in enumerate(results):
             if tls_switch_pattern not in result:
-                self.error_handler.add_error(
-                    path=f'Device ID: {device_id}', actual=result,
-                    reason=f'没有找到 {tls_switch_pattern!r} 字样',
-                    severity="medium"
-                )
-                continue
+                continue # no certificates regarding as passed
 
             tls_switch_idx = result.index(tls_switch_pattern)
             switch_state = result[tls_switch_idx + len(tls_switch_pattern)]
@@ -91,11 +83,9 @@ class TlsChecker(BaseChecker):
                     severity="medium"
                 )
 
-        return self.error_handler
-
 
 class HCCLChecker(BaseChecker):
-    def check(self, results):
+    def _check(self, results):
         """
         check if results are full of [[{'3 received, 0.00% packet loss'}, ...]]'
         """
@@ -114,4 +104,3 @@ class HCCLChecker(BaseChecker):
                         reason=f'Ping 第 {rank_id} 个 rank 的 device 失败',
                         severity="high"
                     )
-        return self.error_handler

@@ -17,7 +17,7 @@ from .base import BaseChecker
 
 
 class PingChecker(BaseChecker):
-    def check(self, results):
+    def _check(self, results):
         success_pattern = "3 received, 0% packet loss"
 
         for host, ping_result in results.items():
@@ -27,5 +27,3 @@ class PingChecker(BaseChecker):
                     reason=f'当前机器 ping 主机 {host} 失败，请检查 rank table',
                     severity="high"
                 )
-    
-        return self.error_handler

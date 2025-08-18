@@ -18,6 +18,8 @@ import shutil
 import logging
 from abc import ABC, abstractmethod
 
+from msguard.security import open_s
+
 from ..utils import ErrorHandler, CollectErrorHandler, ConfigErrorHandler, CheckErrorHandler, CompareErrorHandler
 
 
@@ -219,7 +221,7 @@ class EnvCheckErrorDisplayDecorator(ErrorDisplayStrategy):
 
         script_content = self._generate_env_script(error_handler)
 
-        with open('./msprechecker_env.sh', 'w') as f:
+        with open_s('./msprechecker_env.sh', 'w') as f:
             f.write(script_content)
 
         self.logger.info(

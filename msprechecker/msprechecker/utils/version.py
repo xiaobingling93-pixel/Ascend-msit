@@ -97,7 +97,10 @@ class Version:
 
     @staticmethod
     def _other_version(other):
-        return other.cmp_tuple() if isinstance(other, Version) else False
+        if isinstance(other, Version):
+            return other.cmp_tuple()
+
+        return Version(other).cmp_tuple()
 
     def cmp_tuple(self):
         return (

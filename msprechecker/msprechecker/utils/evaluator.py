@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import re
+import ast
 import operator
 from typing import Any
 
@@ -88,7 +89,7 @@ class Evaluator:
             elif kind == 'OP':
                 tokens.append(('OP', value))
             elif kind == 'STR':
-                tokens.append(('STR', value))
+                tokens.append(('STR', ast.literal_eval(value)))
             elif kind == 'NONE':
                 tokens.append(('NONE', value))
 

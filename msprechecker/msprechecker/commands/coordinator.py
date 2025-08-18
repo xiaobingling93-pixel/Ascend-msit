@@ -24,11 +24,11 @@ from msguard.security import open_s
 from .base import CommandType
 from .legacy import show_legacy_warnings
 from .banner import BannerPresenter
-from ..collectors import ConfigCollector
+from ..collectors import ConfigCollector, CollectResult
 from ..reporters import Reporter
 from ..presets import RuleManager
 from .base import CommandStrategy, CommandType
-from ..utils import CheckErrorHandler, ConfigErrorHandler, global_logger
+from ..utils import CheckErrorHandler, ConfigErrorHandler, global_logger, singleton
 from ..collectors import (
     BaseCollector, EnvCollector, SysCollector, ConfigCollector,
     AscendCollector, HCCLCollector, PingCollector,
@@ -113,36 +113,77 @@ class CollectorFactory:
         return collectors
 
 
+@singleton
 class CheckerFactory:
-    """Checker工厂类"""
-    _registry = {
-        EnvCollector: EnvChecker,
-        SysCollector: SysChecker,
-        AscendCollector: AscendChecker,
-        HCCLCollector: HCCLChecker,
-        CPUStressCollector: StressChecker,
-        NPUStressCollector: StressChecker,
-        UserConfigCollector: UserConfigChecker,
-        MindIEEnvCollector: MindIEEnvChecker,
-        ModelConfigCollector: ModelConfigChecker,
-        MIESConfigCollector: MIESConfigChecker,
-        TlsCollector: TlsChecker,
-        VnicCollector: VnicChecker,
-        LinkCollector: LinkChecker,
-        PingCollector: PingChecker
-    }
+    def __init__(self):
+        self._registry = {}
+        self._init()
+
+    @staticmethod
+    def default_param_extractor(args, collect_result):
+        return {
+            "rule_manager": RuleManager(custom_rule_path=args.custom_config_path),
+            "error_handler": CheckErrorHandler(severity=args.severity_level)
+        }
+
+    @staticmethod
+    def config_param_extractor(args, collect_result):
+        data, file_lines, key_mapping, context_hierarchy = collect_result.data
+        return {
+            "rule_manager": RuleManager(custom_rule_path=args.custom_config_path),
+            "error_handler": ConfigErrorHandler(
+                    args.severity_level, file_lines, 
+                    key_mapping, context_hierarchy
+                )
+        }
     
-    @classmethod
-    def register(cls, collector_class, checker_class) -> None:
-        cls._registry[collector_class] = checker_class
+    @staticmethod
+    def stress_param_extractor(args, collect_result):
+        return {
+            "rule_manager": RuleManager(custom_rule_path=args.custom_config_path),
+            "error_handler": CheckErrorHandler(severity=args.severity_level),
+            "threshold": getattr(args, 'threshold', None)
+        }
     
-    @classmethod
-    def create(cls, collector_class):
-        """根据collector类型创建对应的checker"""
-        if collector_class not in cls._registry:
-            raise KeyError(f"No checker registered for collector: {collector_class.__name__}")
-        
-        return cls._registry[collector_class]
+    def register(self, collector_class, checker_cls, param_extractor=None) -> None:
+        param_extractor = param_extractor or self.default_param_extractor
+        self._registry[collector_class] = (checker_cls, param_extractor)
+    
+    def create(self, collector_cls, args, collect_result):
+        if collector_cls not in self._registry:
+            raise KeyError(f"No checker registered for collector: {collector_cls.__name__}")
+    
+        checker_cls, param_extractor = self._registry[collector_cls]
+        params = param_extractor(args, collect_result)
+        return checker_cls(**params)
+
+    def _init(self):
+        self.register(EnvCollector, EnvChecker)
+        self.register(SysCollector, SysChecker)
+        self.register(AscendCollector, AscendChecker)
+        self.register(HCCLCollector, HCCLChecker)
+        self.register(
+            CPUStressCollector, StressChecker, self.stress_param_extractor
+        )
+        self.register(
+            NPUStressCollector, StressChecker, self.stress_param_extractor
+        )
+        self.register(
+            UserConfigCollector, UserConfigChecker, self.config_param_extractor
+        )
+        self.register(
+            MindIEEnvCollector, MindIEEnvChecker, self.config_param_extractor
+        )
+        self.register(
+            ModelConfigCollector, ModelConfigChecker, self.config_param_extractor
+        )
+        self.register(
+            MIESConfigCollector, MIESConfigChecker, self.config_param_extractor
+        )
+        self.register(TlsCollector, TlsChecker)
+        self.register(VnicCollector, VnicChecker)
+        self.register(LinkCollector, LinkChecker)
+        self.register(PingCollector, PingChecker)
 
 
 class PrecheckStrategy(CommandStrategy):
@@ -172,41 +213,26 @@ class PrecheckStrategy(CommandStrategy):
 
             collect_data[path] = data
         
-        checker = PDChecker(rule_manager=rule_manager)
-        reporter.report(checker.check(collect_data))
+        error_handler = CheckErrorHandler(severity=args.severity_level, type_="PD Disaggregation")
+        collect_result = CollectResult(collect_data, error_handler)
+        checker = PDChecker(rule_manager=rule_manager, error_handler=error_handler)
+        check_result = checker.check(collect_result)
+        reporter.report(check_result)
 
     @staticmethod
     def execute(args: argparse.Namespace) -> int:
         if args.scene and "pd_disaggregation" in args.scene:
             return PrecheckStrategy.execute_pd_disagg(args)
-        
-        rule_manager = RuleManager(
-            custom_rule_path=args.custom_config_path
-        )
-        reporter = Reporter()
 
+        reporter = Reporter()
         collectors = CollectorFactory.create(args)
+        checker_factory = CheckerFactory()
+
         for collector in collectors:
-            collect_result = collector.collect()
-            if not collect_result.error_handler.empty():
-                reporter.report(collect_result.error_handler)
-                continue
-            
-            data = collect_result.data
-            error_handler = CheckErrorHandler(severity=args.severity_level)
-            
-            if isinstance(collector, ConfigCollector):
-                data, file_lines, key_mapping, context_hierarchy = collect_result.data
-                error_handler = ConfigErrorHandler(
-                    args.severity_level, file_lines, 
-                    key_mapping, context_hierarchy
-                )
-            
-            checker = CheckerFactory.create(collector.__class__)(
-                rule_manager=rule_manager, 
-                error_handler=error_handler
-            )
-            reporter.report(checker.check(data))
+            collect_result = collector.collect()   
+            checker = checker_factory.create(collector.__class__, args, collect_result)
+            check_result = checker.check(collect_result)
+            reporter.report(check_result)
 
         return 0
 
