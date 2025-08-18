@@ -23,7 +23,7 @@ from msmodelslim.core import fake_quantize, quantize, dequantize, calculate_qpar
 from msmodelslim.core.QAL import QABCRegistry, QDType, QStorage, QParam, QScope
 from msmodelslim.quant.observer import MsMinMaxObserver, MinMaxObserverConfig
 from msmodelslim.utils.exception import SpecError
-from msmodelslim.utils.logger import logger_setter
+from msmodelslim.utils.logging import logger_setter
 from ..base import AutoWeightQuantizer, QConfig
 
 
