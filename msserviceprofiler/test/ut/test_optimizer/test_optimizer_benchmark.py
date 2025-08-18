@@ -35,8 +35,10 @@ class TestBenchMark:
         return benchmark
 
     @patch("pathlib.Path.iterdir")
-    def test_get_performance_index_no_result_common(self, mock_iterdir, benchmark):
+    @patch("msserviceprofiler.modelevalstate.config.custom_command.shutil.which")
+    def test_get_performance_index_no_result_common(self, mock_iterdir, mock_which, benchmark):
         mock_iterdir.return_value = []
+        mock_which.return_value = 'benchmark'
         with pytest.raises(ValueError, match="Not Found common_generate_speed or perf_generate_token_speed."):
             benchmark.get_performance_index()
 

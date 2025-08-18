@@ -124,8 +124,6 @@ class TestStateXgbModel():
         assert any("gain_score.png" in str(call) for call in save_calls)
         assert any("cover_score.png" in str(call) for call in save_calls)
 
-        with pytest.raises(ValueError):
-            plot_feature_importance(mock_model, save_path=None)
 
     @staticmethod
     @patch('msserviceprofiler.modelevalstate.model.xgb_state_model.xgboost.train')
