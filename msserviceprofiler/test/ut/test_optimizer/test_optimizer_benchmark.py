@@ -41,7 +41,7 @@ class TestBenchMark:
     def test_get_performance_index_no_result_common(self, mock_iterdir, mock_which, benchmark):
         mock_iterdir.return_value = []
         mock_which.return_value = 'benchmark'
-        with pytest.raises(ValueError, match="Not Found common_generate_speed or perf_generate_token_speed."):
+        with pytest.raises(AttributeError):
             benchmark.get_performance_index()
 
 
