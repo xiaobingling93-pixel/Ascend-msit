@@ -124,8 +124,7 @@ class TestStateXgbModel():
         assert any("gain_score.png" in str(call) for call in save_calls)
         assert any("cover_score.png" in str(call) for call in save_calls)
 
-        # Test without save path - 应该触发AttributeError
-        with pytest.raises(AttributeError):
+        with pytest.raises(ValueError):
             plot_feature_importance(mock_model, save_path=None)
 
     @staticmethod
