@@ -130,6 +130,8 @@ msprechecker precheck --hardware --threshold <threshold> --weight-dir <weight-di
 # 落盘
 推理过程中，如果出现 **异常** 或者 ​**性能不及预期**​，可以使用 ​**落盘** 功能​，将环境相关信息进行落盘，方便后续比对。推理结束后，性能预检工具支持比对推理中落盘的环境变量和配置项，帮助快速发现可能影响性能的差异点，实现问题快速定位
 
+> 注意：目前落盘功能不具备落盘多机 PD 分离、单机 PD 分离配置文件的能力
+
 使用落盘功能只需在终端中输入 `msprechecker dump --output-path <output-path>`，其中 `<output-path>` 为用户指定的输出路径；如不指定，则默认保存在当前目录下，名为 `./msprechecker_dumped.json`。示例如下：
 ```bash
 $ msprechecker dump
@@ -175,7 +177,6 @@ msprechecker compare baseline.json dumpoed.json
 ```
 
 # 自定义检查项配置
-## 自定义检查项配置使用说明
 在进行预检时，工具支持自定义配置校验项。用户可以传入自定义的规则 yaml 文件，通过 `--custom-config-path` 参数传递给工具从而完成自定义校验。
 
 假设需要校验 `a.b` 的值是否符合要求，那么自定义配置语法如下
@@ -196,7 +197,9 @@ a:
 - `reason` 支持任意字符串
 - `severity` 支持：`low`, `medium`, `high`，不填写默认 `high`。其中，`low` 显示为 `[RECOMMEND]`；`medium` 显示为 `[WARNING]`；`high` 显示为 `[NOK]`
 
-## 字段引用
+> 注意：目前自定义配置文件只支持用户自定义配置环境变量相关校验，其他的校验项暂未开放
+
+# 字段引用
 对于比较嵌套较深的配置文件，遇到不同字段相互关联的场景时，创建校验规则是一个挑战。预检工具支持 **字段引用** 语法，允许用户通过 `${}` 的语法来引用其他位置的字段值。比如，有如下配置文件
 ```json
 {

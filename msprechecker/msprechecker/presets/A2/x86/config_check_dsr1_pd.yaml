@@ -177,7 +177,7 @@ mindie_server_prefill_config:
       expected:
         type: eq
         value: false
-      reason: "A3场景下P节点multiNodesInferEnabled应该是false"
+      reason: "G8600场景下P节点multiNodesInferEnabled应该是false"
       severity: high
     ModelDeployConfig:
       maxSeqLen:

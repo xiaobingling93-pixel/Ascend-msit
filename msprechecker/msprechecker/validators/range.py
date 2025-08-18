@@ -38,8 +38,6 @@ class RangeValidator(BaseValidator):
 
         if lower_bound > upper_bound:
             raise ValueError(f"Lower bound must be less than or equal to upper bound, got {expected_value}")
-        if lower_bound == upper_bound:
-            raise ValueError(f"Lower bound must not be equal to upper bound, got {expected_value}")
 
         left = lower_bound <= actual_value if left_inclusive else lower_bound < actual_value
         right = actual_value <= upper_bound if right_inclusive else actual_value < upper_bound

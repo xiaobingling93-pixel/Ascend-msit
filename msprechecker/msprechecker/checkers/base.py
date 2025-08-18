@@ -18,8 +18,12 @@ from collections import deque
 from typing import Dict
 
 from ..presets import RuleManager
-from ..utils import Traverser, MacroExpander, ExpandError, Evaluator, get_handler, ErrorType, CheckError, ErrorHandler
+from ..utils import (
+    Traverser, MacroExpander, ExpandError, Evaluator,
+    get_handler, ErrorType, BaseError, ErrorHandler
+)
 from ..validators import get_validator
+from ..collectors import CollectResult
 
 
 class BaseChecker(ABC):
@@ -28,8 +32,18 @@ class BaseChecker(ABC):
         self.rule_manager = rule_manager or RuleManager()
 
     @abstractmethod
-    def check(self, result: Dict) -> CheckError:
+    def _check(self, results):
         pass
+
+    def check(self, collect_result: CollectResult) -> BaseError:
+        if not collect_result.error_handler.empty():
+            return collect_result.error_handler
+
+        results = collect_result.data
+        results = results[0] if isinstance(results, tuple) else results 
+        self._check(results)
+
+        return self.error_handler
 
 
 class NodeChecker(BaseChecker):
@@ -37,8 +51,8 @@ class NodeChecker(BaseChecker):
     def _get_rules(self):
         pass
     
-    def check(self, result: Dict) -> ErrorHandler:
-        visited_nodes = Traverser.traverse(result)
+    def _check(self, results) -> ErrorHandler:
+        visited_nodes = Traverser.traverse(results)
         rules = self._get_rules()
         self._validate_nodes(rules, visited_nodes)
         return self.error_handler

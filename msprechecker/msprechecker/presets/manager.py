@@ -74,12 +74,13 @@ class RuleManager:
         # 2. 获取用户自定义规则（如果有）
         custom_rules = self._get_custom_rules()
         
-        # 3. 更新每个规则
-        for rule_type, rule in custom_rules.items():
-            if rule_type not in rules:
-                rules[rule_type] = rule
+        # 3. 更新 env 规则
+        if 'env' in custom_rules:
+            custom_env_rules = custom_rules['env']
+            if 'env' not in rules:
+                rules['env'] = custom_env_rules
             else:
-                rules[rule_type].update(rule)
+                rules['env'].update(custom_env_rules)
 
         return rules
     
@@ -117,7 +118,7 @@ class RuleManager:
                         "Unsupported type: %s x86_64 but %s chips (expected 16 chips). Use '%s' as a fall back",
                         NpuType.TP_A2.display,
                         self._npu_count,
-                        NpuType.TP_A3
+                        NpuType.TP_A3.display
                     )
                     rule_path = os.path.join(cur_dir, "A3", rule_file)
             else:  # A3 or default to A3
@@ -135,5 +136,5 @@ class RuleManager:
             with open_s(self.custom_rule_path, 'r', encoding='utf-8') as f:
                 return yaml.safe_load(f) or {}
         except Exception as e:
-            global_logger.warning("'--custom-rule-path' passed an insecure path, skipped\n%s", e)
+            global_logger.warning("'--custom-config-path' passed an insecure path, skipped\n%s", e)
             return {}
