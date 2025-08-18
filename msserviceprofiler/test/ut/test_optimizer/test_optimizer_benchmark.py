@@ -28,7 +28,9 @@ from msserviceprofiler.modelevalstate.optimizer.optimizer import PSOOptimizer
 
 class TestBenchMark:
     @pytest.fixture
-    def benchmark(self):
+    @patch("msserviceprofiler.modelevalstate.config.custom_command.shutil.which")
+    def benchmark(self, mock_which):
+        mock_which.return_value = 'benchmark'
         benchmark = BenchMark(MagicMock())
         benchmark.throughput_type = "common"
         benchmark.benchmark_config.output_path = Path("./result")
