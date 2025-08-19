@@ -8,29 +8,33 @@
 ## 版本支持情况
   |  配套CANN版本   | vLLM V0 | vLLM V1 |
   |:-------:|:----:|:----:|
-  | 8.0.RC3 |  v0.6.3   | / |
-  | 8.1.RC1 |  v0.8.4   | / |
-  | 8.1.RC1 |  v0.8.5.RC1  | / |
-  | 8.2.RC1 |  v0.9.1.RC1  | v0.9.1.RC1 |
   | 8.2.RC1 |  v0.9.1.RC2  | v0.9.1.RC2 |
+  | 8.2.RC1 |  v0.9.1.RC1  | v0.9.1.RC1 |
+  | 8.1.RC1 |  v0.8.5.RC1  | / |
+  | 8.1.RC1 |  v0.8.4   | / |
+  | 8.0.RC3 |  v0.6.3   | / |
 
 ## 环境准备
 - 根据不同版本需求，参考 [Ascend-vLLM 准备推理环境](https://support.huaweicloud.com/bestpractice-modelarts/modelarts_llm_infer_91203.html)，或 [vLLM Ascend installation](https://vllm-ascend.readthedocs.io/en/latest/installation.html) 成功启动推理服务
-- **通过源码方式使用 msserviceprofiler**
+- **通过源码方式使用 msserviceprofiler（推荐）**
   ```sh
   git clone https://gitee.com/ascend/msit.git
   export PYTHONPATH=$PWD/msit/msserviceprofiler/:$PYTHONPATH
   ```
+- **pip 安装 msserviceprofiler（目前仅支持v0.8.5.RC1及之前的版本）**
+  ```sh
+  pip install -U msserviceprofiler
+  ```
 ***
 
 # 使用方式
-## 在 vLLM 中导入采集工具接口
+## 1. 在 vLLM 中导入采集工具接口
 - 输入 `pip show vllm`，查看 vllm 安装路径，如果存在 `Editable project location` 路径则使用 `Editable project location`，否则为 `Location` 路径 ，记为 `${vllm_install_path}`，
-- 在 `${vllm_install_path}/vllm/__init__.py` 文件中**所有其他模块导入的最后**添加如下代码：
+- 在 `${vllm_install_path}/vllm/__init__.py` 文件中所有其他模块导入的最后添加如下代码：
   ```
   import msserviceprofiler.vllm_profiler
   ```
-## 准备性能采集配置文件
+## 2. 准备性能采集配置文件
 - 在任意路径下创建使能采集配置 json 文件，如 `ms_service_profiler_config.json`，并指定其中的采集落盘路径 `"prof_dir"`，此处指定为 `vllm_prof`
   ```
   {
@@ -63,21 +67,21 @@
   |   kernel_filter   | 对性能数据进行过滤，配置该参数可自定义采集配置的kernel性能数据，例如传入“matmul”会落盘所有kernel数据中name字段包含matmul的性能数据。str类型，区分大小写，多个不同的筛选目标用“；”隔开，默认为空，表示落盘所有数据。<br/>仅当acl_task_time参数值为2时生效。                                                                                                                                                                                                                |   否   |
   |   timelimit   | 设置服务化性能数据采集的时长，配置该参数后，采集进程将在运行指定的时间后自动停止，取值范围为0~7200的整数，单位s，默认值0（表示不限制采集时间）                                                                                                                                                                                                                                                                                             |   否   |
   |   domain   | 设置采集指定domain域下的性能数据，减少采集数据量。输入参数为字符串格式，英文分号作为分隔符，区分大小写，例如："Request; KVCache"。<br/>默认为空，表示采集当前所有domain域内性能数据。 <br/>当前已有domain域为：Request、KVCache、ModelExecute、BatchSchedule、Communication。 <br/>说明：<br/>若指定domain域不全，采集数据不满足解析输出件生成时，会有告警提示                                                                                                                                         |   否   |
-## 采集数据
-- **指定 SERVICE_PROF_CONFIG_PATH 为采集文件配置路径**
+## 3. 采集数据
+- 指定 `SERVICE_PROF_CONFIG_PATH` 为采集文件配置路径
   ```sh
   export SERVICE_PROF_CONFIG_PATH=ms_service_profiler_config.json
   ```
-- **服务端启动 vLLM 服务，以 `Qwen/Qwen-3B` 为例，使用时以实际启动方式为准**
+- 服务端启动 vLLM 服务，以 `Qwen/Qwen-3B` 为例，使用时以实际启动方式为准
   ```sh
   python3 -m vllm.entrypoints.openai.api_server --model Qwen/Qwen-3B --max-model-len=4096 --trust-remote-code
   ```
-- **客户端发送请求，以curl命令为例，使用时以实际请求的发送形式为准**
+- 客户端发送请求，以curl命令为例，使用时以实际请求的发送形式为准
   ```sh
   curl -X POST http://${docker_ip}:8080/generate -H "Content-Type: application/json" \
   -d '{"prompt": "hello", "max_tokens": 100, "temperature": 0}'
   ```
-## 查看采集结果
+## 4. 查看采集结果
 - 请求发送结束后，可在配置文件中 `"prof_dir"` 指定的路径下，查看落盘的性能原始数据，其中包含了 db 格式的数据库落盘文件
 - **执行推理处理时间数据**
 
@@ -101,7 +105,7 @@
   | Allocate        | 表示请求分配kvcache block字段        | domain：表示当前为kvcache相关信息, rid: 请求ID, deviceBlock: 分配的block数量           |
   | AppendSlot      | 表示请求过程中新增内存进行缓存的字段 | domain：表示当前为kvcache相关信息, rid: 请求ID, deviceBlock: 追加的block数量           |
   | Free            | 请求过程中释放的缓存字段             | domain：表示当前为kvcache相关信息, rid: 请求ID, deviceBlock: 释放的block数量           |
-  | GetCacheHitRate | 请求过程中缓存的命中率               | domain：表示当前为kvcache相关信息, cpuHitCache: cpu缓存命中率, hitCache: gpu缓存命中率 |
+  | GetCacheHitRate | 请求过程中缓存的命中率               | domain：表示当前为kvcache相关信息, cpuHitCache: cpu缓存命中率, hitCache: npu缓存命中率 |
 
 - **request 数据**
 
@@ -109,7 +113,7 @@
   | ------- | ------------ | ------------------------------------------------------------------------------------------------------------------ |
   | httpReq | 表示请求到达 | domain：表示当前为http请求相关信息, rid: 请求ID                                                                    |
   | httpRes | 表示请求返回 | domain：表示当前为http请求相关信息, rid: 请求ID, recvTokenSize：表示请求输入长度, replyTokenSize：表示请求输出长度 |
-## 数据解析
+## 5. 数据解析
 - 需要使用 CANN toolkit 中的 `ms_service_profiler` 工具，详细结果参照 CANN 手册
 - 调用方式，如落盘路径为 `vllm_prof`
   ```sh
