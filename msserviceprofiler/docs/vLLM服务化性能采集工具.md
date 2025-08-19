@@ -5,20 +5,18 @@
   - 请求状态变化
   - KV Cache 等存储资源消耗情况
   - 组 batch 以及模型执行过程记录
-## 版本配套关系
-  | vLLM 服务化性能采集工具 |  CANN   | vLLM |
-  |:-------------:|:-------:|:----:|
-  |     当前版本      | 8.0.RC3 |  v0.6.3   |
-  |     当前版本      | 8.1.RC1 |  v0.8.4   | 
-  |     当前版本      | 8.1.RC1 |  v0.8.5.RC1   |
+## 版本支持情况
+  |  配套CANN版本   | vLLM V0 | vLLM V1 |
+  |:-------:|:----:|:----:|
+  | 8.0.RC3 |  v0.6.3   | / |
+  | 8.1.RC1 |  v0.8.4   | / |
+  | 8.1.RC1 |  v0.8.5.RC1  | / |
+  | 8.2.RC1 |  v0.9.1.RC1  | v0.9.1.RC1 |
+  | 8.2.RC1 |  v0.9.1.RC2  | v0.9.1.RC2 |
 
 ## 环境准备
 - 根据不同版本需求，参考 [Ascend-vLLM 准备推理环境](https://support.huaweicloud.com/bestpractice-modelarts/modelarts_llm_infer_91203.html)，或 [vLLM Ascend installation](https://vllm-ascend.readthedocs.io/en/latest/installation.html) 成功启动推理服务
-- **pip 安装 msserviceprofiler**
-  ```sh
-  pip install -U msserviceprofiler
-  ```
-- **或通过源码方式使用 msserviceprofiler**
+- **通过源码方式使用 msserviceprofiler**
   ```sh
   git clone https://gitee.com/ascend/msit.git
   export PYTHONPATH=$PWD/msit/msserviceprofiler/:$PYTHONPATH
@@ -28,7 +26,7 @@
 # 使用方式
 ## 在 vLLM 中导入采集工具接口
 - 输入 `pip show vllm`，查看 vllm 安装路径，如果存在 `Editable project location` 路径则使用 `Editable project location`，否则为 `Location` 路径 ，记为 `${vllm_install_path}`，
-- 在 `${vllm_install_path}/vllm/__init__.py` 文件中添加如下代码：
+- 在 `${vllm_install_path}/vllm/__init__.py` 文件中**所有其他模块导入的最后**添加如下代码：
   ```
   import msserviceprofiler.vllm_profiler
   ```
@@ -74,7 +72,7 @@
   ```sh
   python3 -m vllm.entrypoints.openai.api_server --model Qwen/Qwen-3B --max-model-len=4096 --trust-remote-code
   ```
-- **客户端发送请求**
+- **客户端发送请求，以curl命令为例，使用时以实际请求的发送形式为准**
   ```sh
   curl -X POST http://${docker_ip}:8080/generate -H "Content-Type: application/json" \
   -d '{"prompt": "hello", "max_tokens": 100, "temperature": 0}'
@@ -92,7 +90,7 @@
 
   | 字段             | 含义                 | 内容说明                                                                                                                           |
   | ---------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-  | Enqueue, Dequeue | 表示请求入队、出队   | rid: 请求ID, QueueSize：当前队列大小, scope：队列名称，通常含有waiting、running队列                                                |
+  | Enqueue, Dequeue | 表示请求入队、出队   | rid: 请求ID, QueueSize：当前队列大小, scope：队列名称，通常含有WAITING、RUNNING队列                                                |
   | BatchSchedule    | 表示调度信息         | rid: 当前调度batch中的请求ID列表, QueueSize：当前队列大小, iter_size:当前迭代返回token长度                                         |
   | ReqState         | 表示请求状态变化信息 | rid: 请求ID, WAITING+ 等待 / RUNNING+ 执行 / FINISHED+ 结束：请求状态名，值为1表示当前状态，值为-1表示前一状态，值为+1表示后一状态 |
 
