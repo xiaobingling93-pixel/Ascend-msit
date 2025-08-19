@@ -121,8 +121,19 @@ class CheckerFactory:
 
     @staticmethod
     def default_param_extractor(args, collect_result):
+        framework = None
+        if args.scene and "," in args.scene:
+            parts = args.scene.split(",")
+            if len(parts) != 2:
+                global_logger.error("Invalid scene format!")
+                return
+            framework = parts[0].strip()
+            scene = parts[1].strip()
         return {
-            "rule_manager": RuleManager(custom_rule_path=args.custom_config_path),
+            "rule_manager": RuleManager(
+                scene=scene,
+                framework=framework,
+                custom_rule_path=args.custom_config_path),
             "error_handler": CheckErrorHandler(severity=args.severity_level)
         }
 
@@ -335,14 +346,6 @@ class Coordinator:
         args = parser.parse_args()
         show_legacy_warnings(args)
 
-        if getattr(args, "scene", None) and \
-           (not getattr(args, "config_parent_dir", None) and not getattr(args, "rank_table_path", None)):
-            global_logger.error(
-                "Passing '--scene' without providing '--config-parent-dir' "
-                "or '--rank-table-path' will not take any affect!"
-            )
-            return 1
-        
         cmd = getattr(args, 'command', None)
         if not cmd:
             BannerPresenter().print_banner()
