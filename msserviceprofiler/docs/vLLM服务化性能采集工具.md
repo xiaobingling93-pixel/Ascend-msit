@@ -68,15 +68,15 @@
   |   timelimit   | 设置服务化性能数据采集的时长，配置该参数后，采集进程将在运行指定的时间后自动停止，取值范围为0~7200的整数，单位s，默认值0（表示不限制采集时间）                                                                                                                                                                                                                                                                                             |   否   |
   |   domain   | 设置采集指定domain域下的性能数据，减少采集数据量。输入参数为字符串格式，英文分号作为分隔符，区分大小写，例如："Request; KVCache"。<br/>默认为空，表示采集当前所有domain域内性能数据。 <br/>当前已有domain域为：Request、KVCache、ModelExecute、BatchSchedule、Communication。 <br/>说明：<br/>若指定domain域不全，采集数据不满足解析输出件生成时，会有告警提示                                                                                                                                         |   否   |
 ## 3. 采集数据
-- 指定 `SERVICE_PROF_CONFIG_PATH` 为采集文件配置路径
+1. 指定 `SERVICE_PROF_CONFIG_PATH` 为采集文件配置路径
   ```sh
   export SERVICE_PROF_CONFIG_PATH=ms_service_profiler_config.json
   ```
-- 服务端启动 vLLM 服务，以 `Qwen/Qwen-3B` 为例，使用时以实际启动方式为准
+2. 服务端启动 vLLM 服务，以 `Qwen/Qwen-3B` 为例，使用时以实际启动方式为准
   ```sh
   python3 -m vllm.entrypoints.openai.api_server --model Qwen/Qwen-3B --max-model-len=4096 --trust-remote-code
   ```
-- 客户端发送请求，以curl命令为例，使用时以实际请求的发送形式为准
+3. 客户端发送请求，以curl命令为例，使用时以实际请求的发送形式为准
   ```sh
   curl -X POST http://${docker_ip}:8080/generate -H "Content-Type: application/json" \
   -d '{"prompt": "hello", "max_tokens": 100, "temperature": 0}'
