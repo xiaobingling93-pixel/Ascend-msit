@@ -76,8 +76,8 @@ def schedule(original_func, this, *args, **kwargs):
     state = _get_state()
     prof = Profiler(Level.INFO).domain("BatchSchedule").span_start("batchFrameworkProcessing")
 
-    before_running_queue = this.running
-    before_waiting_queue = this.waiting
+    before_running_queue = this.running.copy()
+    before_waiting_queue = this.waiting.copy()
     scheduler_output = original_func(this, *args, **kwargs)
 
     for scheduled_new_req in scheduler_output.scheduled_new_reqs:
@@ -97,8 +97,8 @@ def schedule(original_func, this, *args, **kwargs):
     if not request_id_list:
         return scheduler_output
 
-    queue_profiler(before_running_queue, this.running, "running")
-    queue_profiler(before_waiting_queue, this.waiting, "waiting")
+    queue_profiler(before_running_queue, this.running, "RUNNING")
+    queue_profiler(before_waiting_queue, this.waiting, "WAITING")
     prof.res(request_id_with_iter_list)
 
     # 新的请求从WAITING -> RUNNING
@@ -165,4 +165,4 @@ def add_request(original_func, this, request, *args, **kwargs):
     prof = Profiler(Level.INFO).domain("BatchSchedule").res(request.request_id)
     prof.metric_inc("WAITING", 1).event("ReqState")
     prof_queue = Profiler(Level.INFO).domain("BatchSchedule").res(request.request_id)
-    prof_queue.metric("QueueSize", len(this.waiting)).metric_scope("queue_type", "WAITING").event("Enqueue")
+    prof_queue.metric("QueueSize", len(this.waiting)).metric_scope("QueueName", "WAITING").event("Enqueue")
