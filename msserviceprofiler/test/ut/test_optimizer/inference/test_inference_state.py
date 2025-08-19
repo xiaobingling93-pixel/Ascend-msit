@@ -247,7 +247,7 @@ def test_predict_v1_with_cache(mock_input_data, mock_xgb_state_eval, tmpdir, sta
 class TestCachePredict(unittest.TestCase):
     @patch('pathlib.Path.exists')
     @patch('builtins.open', new_callable=unittest.mock.mock_open)
-    def test_dataLoader_with_data(self, mock_open, mock_exists):
+    def test_dataloader_with_data(self, mock_open, mock_exists):
         # 测试当data不为None时的情况
         data = pd.DataFrame({
             'label': [1, 2, 3],
