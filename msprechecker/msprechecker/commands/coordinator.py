@@ -75,7 +75,7 @@ class CollectorFactory:
         # PD Disaggregation (single container)
   
         # PD Mix
-        elif getattr(args, "--mies-config-path", None):
+        elif getattr(args, "mies_config_path", None):
             collectors.append(MIESConfigCollector(config_path=args.mies_config_path))
         
         return collectors
