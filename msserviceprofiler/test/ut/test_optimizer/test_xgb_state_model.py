@@ -140,7 +140,7 @@ class TestStateXgbModel():
         mock_model.save_model = MagicMock()  # 添加保存方法
 
         mock_train.return_value = mock_model
-        mock_dmatrix.return_value = MagicMock(spec=xgboost.DMatrix)
+        mock_dmatrix.return_value = MagicMock()
 
         # 模拟模型
         model = StateXgbModel(
@@ -175,7 +175,7 @@ class TestStateXgbModel():
         mock_model.save_model = MagicMock()  # 添加保存方法
 
         mock_train.return_value = mock_model
-        mock_dmatrix.return_value = MagicMock(spec=xgboost.DMatrix)
+        mock_dmatrix.return_value = MagicMock()
 
         # 模拟模型
         model = StateXgbModel(
@@ -205,7 +205,7 @@ class TestStateXgbModel():
         mock_model.save_model = MagicMock()  # 添加保存方法
 
         mock_train.return_value = mock_model
-        mock_dmatrix.return_value = MagicMock(spec=xgboost.DMatrix)
+        mock_dmatrix.return_value = MagicMock()
 
         model = StateXgbModel(
             save_model=False
