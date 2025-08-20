@@ -147,7 +147,9 @@ class CheckerFactory:
     @staticmethod
     def default_param_extractor(args, collect_result):
         return {
-            "rule_manager": RuleManager(scene=args.scene, framework=args.framework, custom_rule_path=args.custom_config_path),
+            "rule_manager": RuleManager(
+                scene=args.scene, framework=args.framework, custom_rule_path=args.custom_config_path
+            ),
             "error_handler": CheckErrorHandler(severity=args.severity_level),
         }
 
@@ -241,7 +243,7 @@ class PrecheckStrategy(CommandStrategy):
         else:
             args.framework = args.scene
             args.scene = "default"
-        
+
         reporter = Reporter()
         collectors = CollectorFactory.create(args)
         checker_factory = CheckerFactory()
