@@ -45,16 +45,16 @@ class DefaultModelAdapter(BaseModelAdapter):
             legacy=False,
             trust_remote_code=trust_remote_code)
 
-    def _load_model(self, device: DeviceType = DeviceType.NPU, trust_remote_code: bool = False) -> PreTrainedModel:
-        device_map = 'cpu' if device is DeviceType.CPU else 'auto'
-        dtype = self.config.torch_dtype if device is DeviceType.NPU else torch.float32
+    def _load_model(self, device_map=None, torch_dtype=None) -> PreTrainedModel:
+        device_map = device_map if device_map is not None else self._device_map
+        dtype = torch_dtype if torch_dtype is not None else self._torch_dtype
 
         return SafeGenerator.get_model_from_pretrained(
             model_path=str(self.ori),
             device_map=device_map,
             torch_dtype=dtype,
             low_cpu_mem_usage=True,
-            trust_remote_code=trust_remote_code)
+            trust_remote_code=self._trust_remote_code)
 
     def _load_hook(self) -> None:
         pass

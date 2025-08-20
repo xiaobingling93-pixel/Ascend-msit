@@ -7,9 +7,9 @@ import torch
 from torch import distributed as dist
 from torch.utils.data import DataLoader, DistributedSampler
 
-from msmodelslim.utils.logging import get_logger
 from msmodelslim.core.base.processor import BaseProcessor
 from msmodelslim.core.base.protocol import BatchProcessRequest, ProcessRequest
+from msmodelslim.utils.logging import get_logger
 
 
 class ProcessUnit:
@@ -19,6 +19,9 @@ class ProcessUnit:
         self.input_datas = input_datas
         self.generators = self.build_generators()
         self.batch_outputs = [None for _ in self.generators]
+
+    def __repr__(self):
+        return self.processor.__repr__()
 
     @staticmethod
     def _create_dataloader(dataset, rank, world_size, batch_size):
@@ -51,6 +54,7 @@ class ProcessUnit:
         self.processor.preprocess(batch_request)
         self.processor.process(batch_request)
         self.processor.postprocess(batch_request)
+
         self.batch_outputs = batch_request.outputs
         return True
 
@@ -68,7 +72,7 @@ def generated_schedule(process_unit: List[ProcessUnit]):
         process_unit: 处理单元列表，每个元素包含一个处理器和可选的输入数据
     """
 
-    get_logger().info(f"[Runner] Scheduler {len(process_unit)} unit")
+    get_logger().info(f"[Runner] Scheduler {len(process_unit)} unit: {process_unit}")
 
     unit_list = [unit for unit in process_unit]
 
