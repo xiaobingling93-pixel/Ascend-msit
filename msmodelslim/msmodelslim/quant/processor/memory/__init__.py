@@ -1,3 +1,5 @@
+#  -*- coding: utf-8 -*-.
+
 #  -*- coding: utf-8 -*-
 #  Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
 #  #
@@ -12,18 +14,3 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-
-__all__ = [
-    "AutoProcessorConfig",
-    "LinearProcessorConfig",
-    "LinearQuantProcessor",
-    "LoadProcessorConfig",
-    "LoadProcessor",
-    "GroupProcessorConfig",
-    "GroupProcessor",
-]
-
-from .base import AutoProcessorConfig
-from .container.group import GroupProcessorConfig, GroupProcessor
-from .memory.load import LoadProcessorConfig, LoadProcessor
-from .quant.linear import LinearProcessorConfig, LinearQuantProcessor
