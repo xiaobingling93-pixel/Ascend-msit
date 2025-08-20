@@ -22,7 +22,7 @@ class AscendChecker(NodeChecker):
         self.error_handler.type = "ascend"
 
     def _get_rules(self):
-        if self.rule_manager.framework=="vllm":
-            return self.rule_manager.get_rules()
+        if self.rule_manager.framework == "vllm":
+            return self.rule_manager.get_rules("ascend")
         self.rule_manager.scene = "default"
-        return self.rule_manager.get_rules().get('ascend')
+        return self.rule_manager.get_rules().get("ascend")

@@ -23,7 +23,7 @@ class SysChecker(NodeChecker):
         self.error_handler.type = "system"
 
     def _get_rules(self):
-        if self.rule_manager.framework=="vllm":
-            return self.rule_manager.get_rules()
+        if self.rule_manager.framework == "vllm":
+            return self.rule_manager.get_rules("sys")
         self.rule_manager.scene = "default"
-        return self.rule_manager.get_rules().get('sys')
+        return self.rule_manager.get_rules().get("sys")

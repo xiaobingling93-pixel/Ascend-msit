@@ -22,7 +22,7 @@ class EnvChecker(NodeChecker):
         self.error_handler.type = "env"
 
     def _get_rules(self):
-        if self.rule_manager.framework=="vllm":
-            return self.rule_manager.get_rules()
+        if self.rule_manager.framework == "vllm":
+            return self.rule_manager.get_rules()["env"]
         self.rule_manager.scene = "mix"
-        return self.rule_manager.get_rules()['env']
+        return self.rule_manager.get_rules()["env"]
