@@ -114,7 +114,7 @@ class CollectorFactory:
                 )
                 args.scene = FrameworkType.TP_MINDIE
 
-            framework_type = FrameworkType(args.scene)
+            framework_type = FrameworkType(args.framework)
             rank_table_parser = ParserRegistry.get(framework_type)()  # create parser instance
             rank_table = rank_table_parser.parse(args.rank_table_path)
 
@@ -146,20 +146,8 @@ class CheckerFactory:
 
     @staticmethod
     def default_param_extractor(args, collect_result):
-        framework = None
-        scene = None
-        if args.scene:
-            if "," in args.scene:
-                parts = args.scene.split(",", 1)
-                if len(parts) != 2 or not all(parts):
-                    global_logger.error("Invalid scene format! Use 'franework,scene'")
-                    return None
-                framework = parts[0].strip()
-                scene = parts[1].strip()
-            else:
-                scene = args.scene
         return {
-            "rule_manager": RuleManager(scene=scene, framework=framework, custom_rule_path=args.custom_config_path),
+            "rule_manager": RuleManager(scene=args.scene, framework=args.framework, custom_rule_path=args.custom_config_path),
             "error_handler": CheckErrorHandler(severity=args.severity_level),
         }
 
@@ -243,6 +231,17 @@ class PrecheckStrategy(CommandStrategy):
         if args.scene and "pd_disaggregation" in args.scene:
             return PrecheckStrategy.execute_pd_disagg(args)
 
+        if "," in args.scene:
+            parts = args.scene.split(",", 1)
+            if len(parts) != 2 or not all(parts):
+                global_logger.error("Invalid scene format! Use 'franework,scene'")
+                return None
+            args.framework = parts[0].strip()
+            args.scene = parts[1].strip()
+        else:
+            args.framework = args.scene
+            args.scene = "default"
+        
         reporter = Reporter()
         collectors = CollectorFactory.create(args)
         checker_factory = CheckerFactory()

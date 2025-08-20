@@ -36,7 +36,7 @@ class RuleManager:
         "pd_disaggregation": "config_check_pd.yaml",
         "pd_disaggregation_single_container": "config_check_pd_single_container.yaml",
         "mix": "pd_mix_check.yaml",
-        "ep": "ep_env.yaml",
+        "ep": "ep_default.yaml",
         "default": "default.yaml",
     }
     
@@ -96,11 +96,6 @@ class RuleManager:
         if not self.scene:
             return {}
 
-        if self.scene not in self.SCENE_MAPPING:
-            raise ValueError(
-                f"Expected 'scene' to be {', '.join(self.SCENE_MAPPING)}. Got {self.scene} instead."
-            )
-        
         rule_file = self.SCENE_MAPPING[self.scene]
         cur_dir = os.path.dirname(__file__)
 
@@ -118,6 +113,11 @@ class RuleManager:
             with open_s(rule_path, 'r', encoding='utf-8') as f:
                 return yaml.safe_load(f)
         
+        if self.scene not in self.SCENE_MAPPING:
+            raise ValueError(
+                f"Expected 'scene' to be {', '.join(self.SCENE_MAPPING)}. Got {self.scene} instead."
+            )
+
         # 特殊处理default场景
         if self.scene == "default":
             rule_path = os.path.join(cur_dir, rule_file)
