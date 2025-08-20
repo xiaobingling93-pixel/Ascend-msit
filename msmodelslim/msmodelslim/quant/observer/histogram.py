@@ -163,16 +163,24 @@ class HistogramObserver(TorchHistogramObserver):
             )
         
         if x.isnan().any():
-            raise SpecError(
-                "Input tensor contains NaN values",
-                action="Please check if the input data contains NaN values"
-            )
+            get_logger().warning("[HistogramObserver] NaN values detected in input tensor, these values have been filtered out.")
+            mask = ~x.isnan()
+            x = x[mask]
+            if x.numel() == 0:
+                raise SpecError(
+                    "Input tensor is empty",
+                    action="Please check if the input tensor is empty"
+                )
         
         if x.isinf().any():
-            raise SpecError(
-                "Input tensor contains infinite values",
-                action="Please check if the input data contains infinite values"
-            )
+            get_logger().warning("[HistogramObserver] Infinite values detected in input tensor, these values have been filtered out.")
+            mask = ~x.isinf()
+            x = x[mask]
+            if x.numel() == 0:
+                raise SpecError(
+                    "Input tensor is empty",
+                    action="Please check if the input tensor is empty"
+                )
 
         # 更新直方图
         x_min, x_max = torch.aminmax(x)
@@ -305,7 +313,7 @@ class HistogramObserver(TorchHistogramObserver):
         3.计算KL散度。
         KL = sum(p_i * log(p_i / q_i)), p为真实分布，q为量化分布。
         """
-        eps = self.eps.to(self.histogram.device)
+        eps = torch.tensor(torch.finfo(self.histogram.dtype).eps).to(self.histogram.device)
         bin_width = (self.max_val.item()/ self.bins - self.min_val.item()/ self.bins) 
 
         # 计算真实分布
@@ -340,12 +348,12 @@ class HistogramObserver(TorchHistogramObserver):
         # 计算每个bin_fakequant对应的bin_true数量
         fake_quant_dist = torch.bincount(fake_quantized_dist, minlength=self.bins)
         # 进行平均
-        fake_quant_dict = fake_quant_dict / (fake_quant_dist + eps)
+        fake_quant_dict = fake_quant_dict / fake_quant_dist.clamp(min=eps) 
         bin_indices = fake_quantized_dist.long()  # 确保索引为整数类型
         candidate_dist.add_(fake_quant_dict[bin_indices])
         
         # 计算KL散度
-        kl_div = torch.sum(true_dist * torch.log((true_dist+eps) / (candidate_dist+eps)))
+        kl_div = torch.sum(true_dist * torch.log(true_dist.clamp(min=eps) / candidate_dist.clamp(min=eps)))
         return kl_div.item()
 
     def _compute_l2_error(self, next_start_bin: int, next_end_bin: int):

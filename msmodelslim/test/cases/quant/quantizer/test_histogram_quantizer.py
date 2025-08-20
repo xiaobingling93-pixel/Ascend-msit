@@ -140,14 +140,14 @@ class TestHistogramObserver:
         with pytest.raises(SpecError, match="Input must be a valid torch.Tensor"):
             observer.update([1, 2, 3])
         
-        # 测试包含inf的输入
-        x = torch.tensor([[1.0, float('inf')], [3.0, 4.0]])
-        with pytest.raises(SpecError, match="Input tensor contains infinite values"):
+        # 测试只包含inf的输入
+        x = torch.tensor([float('inf'), float('-inf')])
+        with pytest.raises(SpecError, match="Input tensor is empty"):
             observer.update(x)
         
-        # 测试包含nan的输入
-        x = torch.tensor([[1.0, float('nan')], [3.0, 4.0]])
-        with pytest.raises(SpecError, match="Input tensor contains NaN values"):
+        # 测试只包含nan的输入
+        x = torch.tensor([float('nan'), float('nan')])
+        with pytest.raises(SpecError, match="Input tensor is empty"):
             observer.update(x)
 
     def test_get_clip_bounds_before_update(self):
