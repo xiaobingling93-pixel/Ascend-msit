@@ -66,6 +66,7 @@ setup(
         ],
         "msmodelslim.quant_service.plugins": [
             "modelslim_v0=msmodelslim.app.quant_service.modelslim_v0:ModelslimV0QuantService",
+            "modelslim_v1=msmodelslim.app.quant_service.modelslim_v1:ModelslimV1QuantService",
         ]
     },
 )

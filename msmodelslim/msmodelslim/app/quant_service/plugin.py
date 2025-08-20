@@ -5,6 +5,7 @@ from importlib.metadata import entry_points
 from typing import Dict, Type
 
 from msmodelslim.app.quant_service import BaseQuantService
+from msmodelslim.utils.exception import EnvError
 from msmodelslim.utils.logging import get_logger
 
 _QUANT_SERVICE_PLUGINS: Dict[str, Type[BaseQuantService]] = {}
@@ -32,10 +33,12 @@ def load_plugins() -> Dict[str, Type[BaseQuantService]]:
 def load_quant_service_cls(backend_name: str) -> Type[BaseQuantService]:
     # 首先检查请求的后端是否在失败列表中
     if backend_name in _FAILED_PLUGINS:
-        raise ValueError(f"Quant service plugin for backend '{backend_name}' failed to load:\n{_FAILED_PLUGINS[backend_name]}")
-    
+        raise EnvError(
+            f"Quant service plugin for backend '{backend_name}' failed to load:\n{_FAILED_PLUGINS[backend_name]}")
+
     if backend_name not in _QUANT_SERVICE_PLUGINS:
         available_backends = list(_QUANT_SERVICE_PLUGINS.keys())
-        raise ValueError(f"No quant service plugin found for backend '{backend_name}'. Available backends: {available_backends}")
-    
+        raise EnvError(
+            f"No quant service plugin found for backend '{backend_name}'. Available backends: {available_backends}")
+
     return _QUANT_SERVICE_PLUGINS[backend_name]
