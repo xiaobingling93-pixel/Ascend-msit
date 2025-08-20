@@ -317,3 +317,20 @@ def safe_int_env(var_name, default):
     except (ValueError, TypeError) as e:
         logger.warning("Failed to convert '%r' for %r, using default %r. Error: %r" % (value, var_name, default, e))
         return default
+
+
+def check_specified_rank_id(value):
+    if value is None:
+        return value
+    if not str.isdigit(value):
+        raise argparse.ArgumentTypeError(f"rank id:{value} is illegal. Please check.")
+    return int(value)
+
+
+def get_rank_id_from_torchair_data(dir_name: str):
+    rank_id = -1
+    rank_index = dir_name.rfind('rank')
+    if dir_name.startswith('worldsize') and rank_index != -1 and str.isdigit(dir_name[rank_index + 4:]):
+        rank_id = int(dir_name[rank_index + 4:])
+
+    return rank_id

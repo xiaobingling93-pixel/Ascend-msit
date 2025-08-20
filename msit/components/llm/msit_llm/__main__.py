@@ -1,4 +1,4 @@
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# Copyright (c) 2023-2025 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,21 +16,26 @@
 import os
 import subprocess
 
+from components.utils.constants import TENSOR_MAX_SIZE
+from components.utils.file_open_check import ms_open
 from components.utils.parser import BaseCommand
 from components.utils.security_check import is_enough_disk_space_left
-from components.utils.file_open_check import ms_open
-from components.utils.constants import TENSOR_MAX_SIZE
+from components.utils.util import filter_cmd
+from msit_llm.common.log import logger, set_log_level, LOG_LEVELS
+from msit_llm.common.utils import (
+    str2bool, check_positive_integer, check_device_integer, safe_string,
+    check_ids_string, check_number_list, check_output_path_legality,
+    check_input_path_legality, check_process_integer, check_dump_time_integer,
+    check_data_can_convert_to_int, check_specified_rank_id, check_l1_norm,
+    load_file_to_read_common_check, check_cosine_similarity, check_kl_divergence,
+    check_token_range, NAMEDTUPLE_PRECISION_METRIC, NAMEDTUPLE_PRECISION_MODE,
+    get_rank_id_from_torchair_data
+)
 from msit_llm.dump.initial import init_dump_task, clear_dump_task
 from msit_llm.errcheck.process import process_error_check
-from msit_llm.common.utils import str2bool, check_positive_integer, check_device_integer, safe_string, \
-    check_ids_string, check_number_list, check_output_path_legality, check_input_path_legality, check_process_integer, \
-    check_dump_time_integer, check_data_can_convert_to_int, load_file_to_read_common_check, \
-    check_cosine_similarity, check_kl_divergence, check_l1_norm, \
-    check_device_range_valid, check_token_range, NAMEDTUPLE_PRECISION_METRIC, NAMEDTUPLE_PRECISION_MODE
-from msit_llm.bc_analyze import Synthesizer, Analyzer
-from msit_llm.common.log import logger, set_log_level, LOG_LEVELS
+from msit_llm.bc_analyze import Analyzer
+
 from msit_llm.badcase_analyze.bad_case_analyze import BadCaseAnalyzer
-from components.utils.util import filter_cmd
 
 
 LOG_LEVELS_LOWER = [ii.lower() for ii in LOG_LEVELS.keys()]
@@ -149,7 +154,7 @@ class DumpCommand(BaseCommand):
             type=check_device_integer,
             default=None,
             help='Specify a single device ID for dumping data, will skip other devices.')
-        
+
         parser.add_argument(
             '-seed',
             required=False,
@@ -248,12 +253,21 @@ class CompareCommand(BaseCommand):
             '-w',
             action='store_true',
             help='Compare float weights and dequant weights, if True, do nothing if False')
-        
+
         parser.add_argument(
             '--stats',
             '-st',
             action='store_true',
             help='Compare statistics, If set, will execute compare_statistics function')
+
+        parser.add_argument(
+            '--rank',
+            '-r',
+            dest="rank_id",
+            required=False,
+            type=check_specified_rank_id,
+            default=None,
+            help='rank id. It supports integer or None.')
 
     def handle(self, args, **kwargs):
 
@@ -277,8 +291,16 @@ class CompareCommand(BaseCommand):
 
         elif torchair_ge_graph_path is not None:
             from msit_llm.compare.torchair_acc_cmp import acc_compare
-
-            acc_compare(args.golden_path, args.my_path, args.output, torchair_ge_graph_path)
+            rank_info_existed = False
+            if os.path.isdir(args.my_path):
+                for entry in os.listdir(args.my_path):
+                    if get_rank_id_from_torchair_data(entry) != -1:
+                        rank_info_existed = True
+                        break
+            if not rank_info_existed and args.rank_id is not None:
+                logger.warning('The directory structure of torchair data is old, '
+                               'the rank parameter will not take effect.')
+            acc_compare(args.golden_path, args.my_path, args.output, args.rank_id, rank_info_existed)
         else:
             from msit_llm.compare.atb_acc_cmp import compare_file
             from msit_llm.compare.cmp_mgr import CompareMgr
@@ -401,7 +423,7 @@ class OpcheckCommand(BaseCommand):
             from msit_llm.opcheck.opchecker import OpChecker
         except ImportError as e:
             raise ImportError("Import msit_llm opchecker error") from e
-        
+
         op = OpChecker()
         logger.info("===================Opcheck start====================")
         op.start_test(args)
@@ -424,7 +446,7 @@ class ErrCheck(BaseCommand):
         parser.add_argument(
             '--type',
             dest="type",
-            nargs='+', # one or more
+            nargs='+',  # one or more
             choices=['overflow'],
             default=['overflow'],
             help="Types that perform different error detection tasks. "
@@ -559,7 +581,7 @@ class BCAnalyze(BaseCommand):
             '-g',
             dest="golden",
             required=True,
-            type=load_file_to_read_common_check, # 文件判断在里面
+            type=load_file_to_read_common_check,  # 文件判断在里面
             help="Golden result to compare with. It must be a valid csv path")
 
         parser.add_argument(
@@ -567,7 +589,7 @@ class BCAnalyze(BaseCommand):
             '-t',
             dest="test",
             required=True,
-            type=load_file_to_read_common_check, # 文件判断在里面
+            type=load_file_to_read_common_check,  # 文件判断在里面
             help="Test result to compare with the golden. It must be a valid csv path")
 
         parser.add_argument("-l", "--log-level", default="info", choices=LOG_LEVELS_LOWER, help="specify log level")
@@ -575,8 +597,7 @@ class BCAnalyze(BaseCommand):
     def handle(self, args, **kwargs) -> None:
         set_log_level(args.log_level)
 
-        Analyzer.analyze(golden=args.golden, test=args.test) # 后缀名判断在这里
-
+        Analyzer.analyze(golden=args.golden, test=args.test)  # 后缀名判断在这里
 
 
 class BadCaseAnalyze(BaseCommand):
@@ -586,7 +607,7 @@ class BadCaseAnalyze(BaseCommand):
             '-gp',
             dest="golden_path",
             required=True,
-            type=load_file_to_read_common_check, 
+            type=load_file_to_read_common_check,
             help="Golden result to compare with. It must be a valid csv path")
 
         parser.add_argument(
@@ -594,14 +615,14 @@ class BadCaseAnalyze(BaseCommand):
             '-mp',
             dest="my_path",
             required=True,
-            type=load_file_to_read_common_check, 
+            type=load_file_to_read_common_check,
             help="My result to compare with the golden. It must be a valid csv path")
 
         parser.add_argument("-l", "--log-level", default="info", choices=LOG_LEVELS_LOWER, help="specify log level")
 
     def handle(self, args, **kwargs) -> None:
         set_log_level(args.log_level)
-        BadCaseAnalyzer.analyze(golden_csv_path=args.golden_path, test_csv_path=args.my_path) 
+        BadCaseAnalyzer.analyze(golden_csv_path=args.golden_path, test_csv_path=args.my_path)
 
 
 class LogitsDump(BaseCommand):
@@ -611,7 +632,7 @@ class LogitsDump(BaseCommand):
             '-e',
             dest="exec",
             required=True,
-            type=safe_string, 
+            type=safe_string,
             help="Test cmd for modeltest. It must be a valid cmd")
 
         parser.add_argument(
@@ -648,7 +669,7 @@ class LogitsCompare(BaseCommand):
             '-gp',
             dest="golden_path",
             required=True,
-            type=check_input_path_legality, 
+            type=check_input_path_legality,
             help="Golden result to compare with. It must be a valid folder path")
 
         parser.add_argument(
@@ -656,7 +677,7 @@ class LogitsCompare(BaseCommand):
             '-mp',
             dest="my_path",
             required=True,
-            type=check_input_path_legality, 
+            type=check_input_path_legality,
             help="My result to compare with the golden. It must be a valid folder path")
 
         parser.add_argument(
