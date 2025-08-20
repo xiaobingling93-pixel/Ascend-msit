@@ -1,5 +1,5 @@
 #  -*- coding: utf-8 -*-
-#  Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
+#  Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
 #  #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -14,20 +14,8 @@
 #  limitations under the License.
 
 __all__ = [
-    "AutoProcessorConfig",
-    "LinearProcessorConfig",
-    "LinearQuantProcessor",
+    "M4Processor",
     "M4ProcessorConfig",
-    "M4Processor"
-    "LinearQuantProcessor",
-    "LoadProcessorConfig",
-    "LoadProcessor",
-    "GroupProcessorConfig",
-    "GroupProcessor",
 ]
 
-from .anti_outlier.iter_smooth import M4ProcessorConfig, M4Processor
-from .base import AutoProcessorConfig
-from .container.group import GroupProcessorConfig, GroupProcessor
-from .memory.load import LoadProcessorConfig, LoadProcessor
-from .quant.linear import LinearProcessorConfig, LinearQuantProcessor
+from .iter_smooth import M4ProcessorConfig, M4Processor
