@@ -102,13 +102,13 @@ class TorchDAGAdapter(object):
 
     def add_mhsa_norm_linears(self, mhsa_linear, mhsa_o, mhsa_ln, interval):
         start, end = interval[0], interval[1]
-        inter_linears = self.node_list[start + 1 : end]
+        inter_linears = self.node_list[start + 1: end]
         if len(inter_linears) <= 4:
-            mhsa_linear.append([node.name_in_network for node in self.node_list[start + 1 : end - 1]])
+            mhsa_linear.append([node.name_in_network for node in self.node_list[start + 1: end - 1]])
             mhsa_o.append(self.node_list[end - 1].name_in_network)
             mhsa_ln.append(self.node_list[start].name_in_network)
         else:
-            mhsa_linear.append([node.name_in_network for node in self.node_list[start + 1 : start + 4]])
+            mhsa_linear.append([node.name_in_network for node in self.node_list[start + 1: start + 4]])
             mhsa_o.append(self.node_list[start + 4].name_in_network)
             mhsa_ln.append(self.node_list[start].name_in_network)
 
@@ -262,13 +262,13 @@ class TorchDAGAdapter(object):
         for i in range(num_norm - 1):
             start = norm_positions[i]
             end = norm_positions[i + 1]
-            interval_linears = [node.name_in_network for node in self.node_list[start + 1 : end - 1]]
+            interval_linears = [node.name_in_network for node in self.node_list[start + 1: end - 1]]
             norm_node = self.node_list[start].name_in_network
             
             if len(interval_linears) <= 4:
                 norm_linear_subgraph[norm_node].extend(interval_linears)
             else:
-                qkv_linears = [node.name_in_network for node in self.node_list[start + 1 : start + 4]]
+                qkv_linears = [node.name_in_network for node in self.node_list[start + 1: start + 4]]
                 norm_linear_subgraph[norm_node].extend(qkv_linears)
         return norm_linear_subgraph
 
@@ -285,7 +285,7 @@ class TorchDAGAdapter(object):
         for i in range(num_norm - 1):
             start = norm_positions[i]
             end = norm_positions[i + 1]
-            interval_linears = [node.name_in_network for node in self.node_list[start + 1 : end - 1]]
+            interval_linears = [node.name_in_network for node in self.node_list[start + 1: end - 1]]
             # 选取attention block的两个norm class偶数区间（区间0,2...）内的qkv linear，并去除q linear
             if i % 2 == 0:
                 if len(interval_linears) == 1:
