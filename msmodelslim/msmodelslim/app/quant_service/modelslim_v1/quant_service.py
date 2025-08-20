@@ -15,16 +15,16 @@
 
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Literal
 
 import torch
 import torch.nn.functional as F
 
 from ascend_utils.common.security import safe_copy_file
+from msmodelslim.app.base.const import PipelineType
 from msmodelslim.app.quant_service.base import BaseModelAdapter, BaseQuantConfig, BaseQuantService
 from msmodelslim.app.quant_service.dataset_interface import DatasetLoaderInterface
 from msmodelslim.utils.logging import get_logger
-from msmodelslim.utils.logging import set_logger_level
 from .api import process_model
 from .quant_config import ModelslimV1QuantConfig
 
@@ -108,18 +108,30 @@ class ModelslimV1QuantService(BaseQuantService):
 
     def quant_process(self, model: BaseModelAdapter, quant_config: ModelslimV1QuantConfig, save_path: Optional[Path]):
 
-        set_logger_level("info")
+        # 选择 pipeline
+        pipeline_type = self._setup_pipeline(model, quant_config)
+
+        # 在 layer_wise 流程下，先将模型设置为在 CPU 加载，降低初始显存占用
+        if pipeline_type == PipelineType.LAYER_WISE:
+            self._set_model_load_to_cpu_if_need_laye_wise_schedule(model)
 
         get_logger().info(f"==========QUANTIZATION: Prepare Dataset==========")
         dataset = self.dataset_loader.get_dataset_by_name(quant_config.spec.dataset)
-        calib_data = get_tokenized_data(model.tokenizer, dataset, device=model.device.value)
+        calib_data = get_tokenized_data(model.tokenizer, dataset, device=model.model.device)
 
         for save_cfg in quant_config.spec.save:
             save_cfg.set_save_directory(save_path)
 
         final_process_cfg = quant_config.spec.process + quant_config.spec.save
 
-        process_model(model.model, final_process_cfg, calib_data)
+        process_model(model=model.model,
+                      process_cfgs=final_process_cfg,
+                      pipeline=pipeline_type,
+                      execution_device="npu:0",
+                      offload_device="meta",
+                      calib_data=calib_data,
+                      adapter=model,
+                      )
 
         model.persisted(save_path)
 
@@ -127,3 +139,33 @@ class ModelslimV1QuantService(BaseQuantService):
 
         get_logger().info(f"quantized model: \n {model.model}")
         get_logger().info(f"==========QUANTIZATION: END==========")
+
+    def _setup_pipeline(self, model: BaseModelAdapter, quant_config: ModelslimV1QuantConfig) -> Literal[
+        PipelineType.MODEL_WISE, PipelineType.LAYER_WISE]:
+        """根据模型和配置确定使用的pipeline类型。
+
+        Args:
+            model: 模型适配器
+            quant_config: 量化配置
+
+        Returns:
+            Literal['model_wise', 'layer_wise']: 确定的pipeline类型
+        """
+        if quant_config.spec.pipeline == PipelineType.MODEL_WISE:
+            get_logger().info("Model-wise pipeline detected, using model-wise pipeline.")
+            return PipelineType.MODEL_WISE
+
+        if quant_config.spec.pipeline == PipelineType.AUTO and not model.support_layer_wise_schedule():
+            get_logger().info("Model does not support layer-wise schedule, using model-wise pipeline.")
+            return PipelineType.MODEL_WISE
+
+        get_logger().info("Layer-wise pipeline detected, using layer-wise pipeline.")
+        return PipelineType.LAYER_WISE
+
+    def _set_model_load_to_cpu_if_need_laye_wise_schedule(self, model: BaseModelAdapter) -> None:
+        try:
+            model.set_loading_options(device_map='cpu')
+            get_logger().info("Layer-wise pipeline detected: force model initial loading on CPU.")
+        except Exception as err:
+            # 忽略非关键失败，保持后续流程可继续
+            get_logger().warning(f"Failed to set model loading options to CPU for layer-wise pipeline: {err}")

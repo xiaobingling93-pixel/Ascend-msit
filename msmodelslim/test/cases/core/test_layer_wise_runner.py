@@ -23,11 +23,10 @@ import torch.nn as nn
 
 from msmodelslim.core.base.processor import BaseProcessor
 from msmodelslim.core.base.protocol import ProcessRequest, BatchProcessRequest
-from msmodelslim.core.runner.layer_wise_runner import (
-    LayerWiseRunner,
-    LayerWiseProcessUnit,
-    _generated_decoder_layer_visit_func,
-    _transformers_generated_forward_func
+from msmodelslim.core.runner.generated_runner import GeneratedRunner
+from msmodelslim.core.runner.layer_wise_forward import (
+    generated_decoder_layer_visit_func,
+    transformers_generated_forward_func
 )
 
 
@@ -94,14 +93,11 @@ class TestLayerWiseRunner(unittest.TestCase):
         """测试前的准备工作"""
         self.model = SimpleModel()
         self.complex_model = ComplexModel()
-        self.runner = LayerWiseRunner(self.model)
+        self.runner = GeneratedRunner(self.model,
+                                      generated_forward_func=transformers_generated_forward_func,
+                                      generated_visit_func=generated_decoder_layer_visit_func
+                                      )
         self.processor = DummyProcessor(self.model)
-
-    def test_add_processor(self):
-        """测试添加处理器的功能"""
-        self.runner.add_processor(self.processor)
-        self.assertEqual(len(self.runner.process_unit), 1)
-        self.assertIsInstance(self.runner.process_unit[0], LayerWiseProcessUnit)
 
     @patch('torch.distributed.get_rank')
     @patch('torch.distributed.get_world_size')
@@ -128,7 +124,7 @@ class TestLayerWiseRunner(unittest.TestCase):
         mock_get_world_size.return_value = 1
 
         # 获取生成器
-        generator = _generated_decoder_layer_visit_func(self.model)
+        generator = generated_decoder_layer_visit_func(self.model)
 
         # 获取第一个请求
         request = next(generator)
@@ -151,7 +147,7 @@ class TestLayerWiseRunner(unittest.TestCase):
         input_data = torch.randn(5, 10)
 
         # 获取生成器
-        generator = _transformers_generated_forward_func(self.model, input_data)
+        generator = transformers_generated_forward_func(self.model, input_data)
 
         # 获取第一个请求
         request = next(generator)
@@ -171,7 +167,10 @@ class TestLayerWiseRunner(unittest.TestCase):
         mock_get_world_size.return_value = 1
 
         # 创建一个新的runner，使用复杂模型
-        complex_runner = LayerWiseRunner(self.complex_model)
+        complex_runner = GeneratedRunner(self.complex_model,
+                                         generated_forward_func=transformers_generated_forward_func,
+                                         generated_visit_func=generated_decoder_layer_visit_func
+                                         )
 
         # 创建多个处理器
         processor1 = DummyProcessor(self.complex_model, "processor1")
@@ -238,7 +237,9 @@ class TestLayerWiseRunner(unittest.TestCase):
         mock_get_world_size.return_value = 1
 
         # 创建一个新的runner，使用复杂模型
-        complex_runner = LayerWiseRunner(self.complex_model)
+        complex_runner = GeneratedRunner(self.complex_model,
+                                         generated_forward_func=transformers_generated_forward_func,
+                                         generated_visit_func=generated_decoder_layer_visit_func)
 
         # 创建多个处理器
         processor1 = DummyProcessor(self.complex_model, "processor1")

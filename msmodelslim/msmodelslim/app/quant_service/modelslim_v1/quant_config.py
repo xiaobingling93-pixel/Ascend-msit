@@ -14,21 +14,22 @@
 #  limitations under the License.
 
 from dataclasses import dataclass
-from typing import Optional
 
 from pydantic import BaseModel, Field
-from typing_extensions import Self
+from typing_extensions import Self, Literal
 
+from msmodelslim.app.base.const import PipelineType
 from msmodelslim.app.base.quant_config import BaseQuantConfig
 from msmodelslim.quant.processor.base import AutoProcessorConfigList
-from .save import AscendV1Config
 from .save.saver import AutoSaverConfigList
 
 
 class ModelslimV1ServiceConfig(BaseModel):
+    pipeline: Literal[PipelineType.AUTO, PipelineType.MODEL_WISE, PipelineType.LAYER_WISE] = Field(
+        default=PipelineType.AUTO)
     process: AutoProcessorConfigList = Field(default_factory=list)
-    save: AutoSaverConfigList = Field(default_factory=lambda: [AscendV1Config()])
-    dataset: Optional[str] = Field(default=None)
+    save: AutoSaverConfigList = Field(default_factory=list)
+    dataset: str = Field(default='mix_calib.jsonl')
 
 
 @dataclass
