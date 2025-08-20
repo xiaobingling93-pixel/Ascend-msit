@@ -7,7 +7,7 @@ from transformers import PreTrainedTokenizerBase, PreTrainedModel, PretrainedCon
 from msmodelslim.app.base.const import DeviceType
 
 
-class BaseModel(ABC):
+class BaseModelAdapter(ABC):
     def __init__(self, model_type: str, ori_path: Path, device: DeviceType = DeviceType.NPU, trust_remote_code=False):
         self._type = model_type
         self._ori_path = ori_path

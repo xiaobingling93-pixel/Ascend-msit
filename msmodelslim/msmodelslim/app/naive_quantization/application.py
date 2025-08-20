@@ -8,7 +8,7 @@ from msmodelslim.utils.exception import SchemaValidateError
 from msmodelslim.utils.exception_decorator import exception_catcher
 from msmodelslim.utils.logging import logger_setter, get_logger
 from .practice_interface import PracticeManagerInterface
-from ..base import BaseQuantConfig, BaseModel, DeviceType
+from ..base import BaseQuantConfig, BaseModelAdapter, DeviceType
 from ..quant_service import BaseQuantService
 
 DEFAULT_PEDIGREE = 'default'
@@ -20,7 +20,7 @@ class NaiveQuantizationApplication:
     def __init__(self,
                  practice_manager: PracticeManagerInterface,
                  quant_service: BaseQuantService,
-                 model_factory: Callable[[str], Type[BaseModel]]):
+                 model_factory: Callable[[str], Type[BaseModelAdapter]]):
         self.practice_manager = practice_manager
         self.quant_service = quant_service
         self.model_factory = model_factory
