@@ -233,7 +233,7 @@ class PrecheckStrategy(CommandStrategy):
         if args.scene and "pd_disaggregation" in args.scene:
             return PrecheckStrategy.execute_pd_disagg(args)
 
-        if "," in args.scene:
+        if args.scene and "," in args.scene:
             parts = args.scene.split(",", 1)
             if len(parts) != 2 or not all(parts):
                 global_logger.error("Invalid scene format! Use 'franework,scene'")

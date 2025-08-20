@@ -13,45 +13,40 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ..base import NodeChecker
+from ..base import BaseChecker
 from ...utils import get_pkg_version
 
 
-class ModelConfigChecker(NodeChecker):
+class ModelConfigChecker(BaseChecker):
     def __init__(self, *, error_handler=None, rule_manager=None):
         super().__init__(error_handler=error_handler, rule_manager=rule_manager)
         self.error_handler.type = "model config"
 
     def _check(self, results):
-        cur_transformers_version = get_pkg_version("transformers")
+        cur_transformers_version = get_pkg_version('transformers')
 
-        if results["torch_dtype"] != "float16":
+        if results['torch_dtype'] != 'float16':
             self.error_handler.add_error(
                 path="torch_dtype",
-                actual=results["torch_dtype"],
-                expected="float16",
-                reason="部分模型的算子可能不支持 bfloat16, 请确保当前模型算子支持 bfloat16",
-                severity="low",
+                actual=results['torch_dtype'],
+                expected='float16',
+                reason='部分模型的算子可能不支持 bfloat16, 请确保当前模型算子支持 bfloat16',
+                severity='low'
             )
-
-        if results["transformers_version"] > cur_transformers_version:
+        if results['transformers_version'] > cur_transformers_version:
             self.error_handler.add_error(
                 path="transformers_version",
-                actual=results["transformers_version"],
+                actual=results['transformers_version'],
                 expected=cur_transformers_version,
-                reason='当前机器的 "transformers" 的版本({cur_transformers_version}) 如果小于配置文件要求版本, 会导致服务启动失败',
-                severity="high",
+                reason=f'当前机器的 "transformers" 的版本（{cur_transformers_version}）如果小于配置文件要求版本，会导致服务启动失败',
+                severity='high'
             )
-
-        if (
-            "deepseek" in results["model_type"]
-            and "deepseek_" not in results["model_type"]
-            and self.rule_manager.framework == "vllm"
-        ):
+        if 'deepseek' in results['model_type'] and \
+           'deepseek_' not in results['model_type'] and self.rule_manager.framework == "vllm":
             self.error_handler.add_error(
                 path="model_type",
-                actual=results["model_type"],
+                actual=results['model_type'],
                 expected="deepseek_xxxx",
-                reason='vllm框架下,DeepSeek 系列模型的"model_type" 需要添加下划线, 如："deepseek_v2", 否则会导致服务部署失败',
-                severity="high",
+                reason=f'vllm 框架下, DeepSeek 系列模型的 "model_type" 需要添加下划线，如："deepseek_v2"，否则会导致服务部署失败',
+                severity='high'
             )
