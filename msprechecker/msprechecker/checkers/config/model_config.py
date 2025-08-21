@@ -41,7 +41,7 @@ class ModelConfigChecker(BaseChecker):
                 reason=f'当前机器的 "transformers" 的版本（{cur_transformers_version}）如果小于配置文件要求版本，会导致服务启动失败',
                 severity='high'
             )
-        if 'deepseek' in results['model_type'] and \
+        if results['model_type'].startswith('deepseek') and \
            'deepseek_' not in results['model_type'] and self.rule_manager.framework == "vllm":
             self.error_handler.add_error(
                 path="model_type",
