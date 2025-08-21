@@ -142,7 +142,9 @@ def test_validate_output_given_finished_true_when_called_then_logs_and_returns()
     )
     result = request_hookers.validate_output(original_func, object(), output, "ot")
     assert result == "val-ok"
-    flat_calls = [item for chain in Profiler.instance_calls for item in chain]
+    flat_calls = [
+        item for chain in Profiler.instance_calls for item in chain
+    ]
     assert ("metric", "recvTokenSize", 3) in flat_calls
     assert ("metric", "replyTokenSize", 2) in flat_calls
 
