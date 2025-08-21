@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+import subprocess
 from .base import NodeChecker
 
 
@@ -28,3 +28,57 @@ class SysChecker(NodeChecker):
             return self.rule_manager.get_rules().get("sys")
         self.rule_manager.scene = "default"
         return self.rule_manager.get_rules().get("sys")
+
+    def _check(self, results) -> None:
+        # 先执行原有的节点检查
+        visited_nodes = Traverser.traverse(results)
+        rules = self._get_rules()
+        self._validate_nodes(rules, visited_nodes)
+        
+        # 在vllm框架下额外检查jemalloc安装
+        if self.rule_manager.framework == "vllm":
+            self._check_jemalloc_installation()
+
+    def _check_jemalloc_installation(self):
+        """检查jemalloc是否通过包管理器安装"""
+        jemalloc_installed = self._is_jemalloc_installed()
+        
+        if not jemalloc_installed:
+            self.error_handler.add_error(
+                path="jemalloc.installation",
+                actual="not installed",
+                expected="installed",
+                reason="jemalloc未通过apt/yum安装，建议安装以提高性能: "
+                       "Ubuntu/Debian: sudo apt-get install libjemalloc-dev, "
+                       "CentOS/RHEL: sudo yum install jemalloc",
+                severity="high"
+            )
+
+    def _is_jemalloc_installed(self) -> bool:
+        """检查jemalloc是否通过包管理器安装"""
+        try:
+            # 检查apt (Debian/Ubuntu)
+            result_apt = subprocess.run(
+                ['dpkg', '-l', 'libjemalloc*'],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+            
+            # 检查yum/dnf (CentOS/RHEL/Fedora)
+            result_yum = subprocess.run(
+                ['rpm', '-qa', 'jemalloc*'],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+            
+            # 如果任一包管理器显示已安装
+            apt_installed = result_apt.returncode == 0 and 'libjemalloc' in result_apt.stdout
+            yum_installed = result_yum.returncode == 0 and result_yum.stdout.strip() != ''
+            
+            return apt_installed or yum_installed
+            
+        except (subprocess.SubprocessError, FileNotFoundError):
+            # 如果命令执行失败（比如在不支持的系统上），返回False
+            return False
