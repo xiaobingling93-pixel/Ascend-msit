@@ -60,29 +60,9 @@ class BaseChecker(ABC):
 
 class NodeChecker(BaseChecker):
     def __init__(self, *, error_handler: ErrorHandler = None, rule_manager: RuleManager = None):
-        self.error_handler = error_handler or get_handler(ErrorType.ERR_CHECK)
-        self.rule_manager = rule_manager or RuleManager()
+        super().__init__(error_handler=error_handler, rule_manager=rule_manager)
         self.max_nesting_depth = 10
 
-    @abstractmethod
-    def _get_rules(self):
-        pass
-    
-    def _check(self, results) -> ErrorHandler:
-        builtin_variables = self._get_builtins()
-        visited_nodes = Traverser.traverse(results)
-        visited_nodes.update(builtin_variables)
-
-        rules = self._get_rules()
-        if 'ref' in rules:
-            ref_section = rules.pop('ref')
-            temporary_variables = self._get_temp_variables(ref_section, visited_nodes)
-            visited_nodes.update(temporary_variables)
-
-        self._validate_nodes(rules, visited_nodes)
-
-        return self.error_handler
-    
     @staticmethod
     def _get_builtins():
         """
@@ -120,36 +100,52 @@ class NodeChecker(BaseChecker):
             scope = ref_item['from']
             variable_name = ref_item['as']
             full_var_name = f'ref.{variable_name}'
+            temporary_variables[full_var_name] = None # default to None, in case ref_item is not found
+
             if scope not in visited_nodes:
-                temporary_variables[full_var_name] = None
                 continue
 
             if not isinstance(visited_nodes[scope], list):
                 temporary_variables[full_var_name] = visited_nodes[scope]
                 continue
 
-            attribute = ref_item.get('select', "")
+            attribute = ref_item.get('select')
             condition = ref_item.get('where', True)
-
             for i, _ in enumerate(visited_nodes[scope]):
                 local_path = f"{scope}[{i}]"
                 processed_condition = MacroExpander.expand(condition, local_path, visited_nodes)
                 condition_result = Evaluator.evaluate(processed_condition)
 
-                if not isinstance(condition_result, bool):
-                    raise WaMLError(f"Failed to evaluate {condition} to boolean.")
-
-                if not condition_result:
+                if condition_result:
                     continue
 
-                if attribute:
-                    processed_attribute = MacroExpander.expand(attribute, local_path, visited_nodes)
+                if attribute is None:
+                    processed_attribute = visited_nodes[local_path]
                 else:
-                    processed_attribute  = visited_nodes[local_path]
+                    processed_attribute = MacroExpander.expand(attribute, local_path, visited_nodes)
 
                 temporary_variables[full_var_name] = Evaluator.evaluate(processed_attribute)
-        
+
         return temporary_variables
+    
+    @abstractmethod
+    def _get_rules(self):
+        pass
+
+    def _check(self, results) -> ErrorHandler:
+        builtin_variables = self._get_builtins()
+        visited_nodes = Traverser.traverse(results)
+        visited_nodes.update(builtin_variables)
+
+        rules = self._get_rules()
+        if 'ref' in rules:
+            ref_section = rules.pop('ref')
+            temporary_variables = self._get_temp_variables(ref_section, visited_nodes)
+            visited_nodes.update(temporary_variables)
+
+        self._validate_nodes(rules, visited_nodes)
+
+        return self.error_handler
 
     def _validate_nodes(self, rules, visited_nodes):
         queue = deque()
@@ -193,7 +189,7 @@ class NodeChecker(BaseChecker):
         elif block_type == BlockType.BLK_COND:
             return self._process_conditional_block(block, path, visited_nodes)
         else:
-            if not "type" in block or not "value" in block:
+            if "type" not in block or "value" not in block:
                 raise WaMLError(f"Unknown block type: {block_type}")
             
             case_block = {"case": block, "reason": "", "severity": "high"}

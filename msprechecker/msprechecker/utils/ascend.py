@@ -332,25 +332,27 @@ model_type = None
 
 
 def update_model_type(args):
-    model_config_path = None
-
+    weight_dir = None
     if getattr(args, 'weight_dir', None):
-        model_config_path = os.path.join(args.weight_dir, "config.json")
+        weight_dir = args.weight_dir
     elif getattr(args, 'mies_config_path', None):
         with open_s(args.mies_config_path) as f:
             data = json.load(f)
         try:
-            model_config_path = data['BackendConfig']['ModelDeployConfig']['ModelConfig'][0]['modelWeightPath']
+            weight_dir = data['BackendConfig']['ModelDeployConfig']['ModelConfig'][0]['modelWeightPath']
         except Exception:
-            model_config_path = None
+            weight_dir = None
+
+    model_config_path = os.path.join(weight_dir, "config.json")
+
+    global model_type
     try:
         with open_s(model_config_path) as f:
             data = json.load(f)
     except Exception:
-        return
-    
-    global model_type
-    model_type = data.get('model_type')
+        model_type = None
+    else:
+        model_type = data.get('model_type')
 
 
 def get_model_type():
