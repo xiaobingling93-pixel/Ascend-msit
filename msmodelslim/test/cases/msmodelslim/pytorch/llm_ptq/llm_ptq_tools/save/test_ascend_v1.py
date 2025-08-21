@@ -1,24 +1,24 @@
+import json
 import os
 import unittest
-import json
 from unittest.mock import MagicMock, patch
+
 import torch
-import numpy as np
 
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.llm_ptq_utils import QuantType, SAVE_TYPE_SAFE_TENSOR, SAVE_TYPE_ASCENDV1
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.save.saver.ascend_v1 import AscendV1SaverConfig, AscendV1Saver
-from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.save.saver.safetensors import SafetensorsSaverConfig, SafetensorsSaver
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.save.saver.factory import SaverFactory
+from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.save.saver.safetensors import SafetensorsSaverConfig, SafetensorsSaver
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.save.writer import (
     BufferedSafetensorsWriter,
     JsonDescriptionWriter,
     SafetensorsWriter
 )
-from safetensors.torch import load_file
 
 
 class TestAscendV1ConfigValidation(unittest.TestCase):
     """Test suite for validating AscendV1SaverConfig functionality"""
+
     def setUp(self):
         self.base_config = {
             'output_dir': './test_output',
@@ -45,7 +45,7 @@ class TestAscendV1ConfigValidation(unittest.TestCase):
         config_dict = self.base_config.copy()
         config_dict['safetensors_name'] = None
         config_dict['json_name'] = None
-        
+
         config = AscendV1SaverConfig(**config_dict)
         self.assertEqual(config.safetensors_name, 'quant_model_weight_w8a8.safetensors')
         self.assertEqual(config.json_name, 'quant_model_description.json')
@@ -64,6 +64,7 @@ class TestAscendV1ConfigValidation(unittest.TestCase):
 
 class TestAscendV1SaverBasics(unittest.TestCase):
     """Test suite for basic AscendV1Saver functionality"""
+
     def setUp(self):
         self.config = AscendV1SaverConfig(
             output_dir='./test_output',
@@ -103,15 +104,16 @@ class TestAscendV1SaverBasics(unittest.TestCase):
         """Test that saving tensor calls both weight and meta writers"""
         saver = AscendV1Saver(self.config)
         tensor = torch.tensor([1, 2, 3])
-        
+
         saver.save('test_tensor', QuantType.W8A8, tensor)
-        
+
         mock_safetensors_write.assert_called_once()
         mock_json_write.assert_called_once()
 
 
 class TestSaverFactoryCreation(unittest.TestCase):
     """Test suite for SaverFactory creation functionality"""
+
     def setUp(self):
         self.factory_kwargs = {
             'output_dir': './test_output',
@@ -128,7 +130,7 @@ class TestSaverFactoryCreation(unittest.TestCase):
             'enable_communication_quant': False,
         }
         os.makedirs('./test_output', exist_ok=True)
-    
+
     def tearDown(self):
         if os.path.exists('./test_output'):
             for file in os.listdir('./test_output'):
@@ -145,16 +147,22 @@ class TestSaverFactoryCreation(unittest.TestCase):
         saver = SaverFactory.create(['ascendV1'], **self.factory_kwargs)
         self.assertIsInstance(saver, AscendV1Saver)
 
+    def test_create_invalid_save_type_will_raise_value_error(self):
+        """Test that factory creates correct instance when using list format"""
+        with self.assertRaises(ValueError):
+            SaverFactory.create([[[[[[[[['ascendV1']]]]]]]]], **self.factory_kwargs)
+
 
 class TestEndToEndSaving(unittest.TestCase):
     """Test suite for end-to-end saving functionality"""
+
     def setUp(self):
         self.test_dir = './test_output'
         os.makedirs(self.test_dir, exist_ok=True)
-        
+
         self.test_tensor = torch.tensor([[1, 2, 3], [4, 5, 6]], dtype=torch.float32)
         self.test_meta = QuantType.W8A8
-        
+
         self.config = AscendV1SaverConfig(
             output_dir=self.test_dir,
             model_quant_type=QuantType.W8A8,
@@ -175,31 +183,32 @@ class TestEndToEndSaving(unittest.TestCase):
     def test_complete_save_process_should_create_all_files(self):
         """Test that complete save process creates all expected files"""
         saver = AscendV1Saver(self.config)
-        
+
         saver.pre_process()
         saver.save('test_tensor', self.test_meta, self.test_tensor)
         saver.post_process()
-        
+
         self.assertTrue(os.path.exists(os.path.join(self.test_dir, 'test.safetensors')))
         self.assertTrue(os.path.exists(os.path.join(self.test_dir, 'test.json')))
 
 
 class TestFormatCompatibility(unittest.TestCase):
     """Test suite for comparing AscendV1 and Safetensors format compatibility"""
+
     def setUp(self):
         self.test_dir = './test_output'
         os.makedirs(self.test_dir, exist_ok=True)
-        
+
         self.test_tensor = torch.tensor([[1, 2, 3], [4, 5, 6]], dtype=torch.float32)
         self.test_meta = QuantType.W8A8
-        
+
         # Base configuration for both formats
         self.base_saver_config = {
             'output_dir': self.test_dir,
             'part_file_size': None,
             'json_name': None,
         }
-        
+
         # AscendV1 configuration
         self.ascend_config = AscendV1SaverConfig(
             **self.base_saver_config,
@@ -210,13 +219,13 @@ class TestFormatCompatibility(unittest.TestCase):
             use_fa_quant=False,
             enable_communication_quant=False,
         )
-        
+
         # Safetensors configuration
         self.safe_config = SafetensorsSaverConfig(
             **self.base_saver_config,
             safetensors_name='safe.safetensors',
             model_quant_type=QuantType.W8A8,
-            use_kvcache_quant=False,    
+            use_kvcache_quant=False,
             use_fa_quant=False,
             enable_communication_quant=False,
         )
@@ -249,7 +258,7 @@ class TestFormatCompatibility(unittest.TestCase):
             self.ascend_config.json_name,
             "quant_model_description.json"
         )
-        
+
         # Verify Safetensors default JSON name
         expected_safe_json_name = f"quant_model_description_{self.safe_config.model_quant_type.lower()}.json"
         self.assertEqual(
@@ -264,34 +273,34 @@ class TestFormatCompatibility(unittest.TestCase):
         ascend_saver.pre_process()
         ascend_saver.save('test_tensor', self.test_meta, self.test_tensor)
         ascend_saver.post_process()
-        
+
         safe_saver = SafetensorsSaver(self.safe_config)
         safe_saver.pre_process()
         safe_saver.save('test_tensor', self.test_meta, self.test_tensor)
         safe_saver.post_process()
-        
+
         # Verify file paths
         ascend_json_path = os.path.join(self.test_dir, "quant_model_description.json")
         safe_json_path = os.path.join(
-            self.test_dir, 
+            self.test_dir,
             f"quant_model_description_{self.safe_config.model_quant_type.lower()}.json"
         )
-        
+
         self.assertTrue(os.path.exists(ascend_json_path))
         self.assertTrue(os.path.exists(safe_json_path))
-        
+
         # Compare contents
         with open(ascend_json_path, 'r') as f:
             ascend_json = json.load(f)
         with open(safe_json_path, 'r') as f:
             safe_json = json.load(f)
-            
+
         # Verify AscendV1-specific fields
         self.assertIn('version', ascend_json)
         self.assertEqual(ascend_json['version'], '1.0.0')
         self.assertNotIn('version', safe_json)
         self.assertNotIn('group_size', safe_json)
-        
+
         # Verify common fields
         self.assertIn('model_quant_type', ascend_json)
         self.assertIn('model_quant_type', safe_json)
@@ -316,7 +325,7 @@ class TestFormatCompatibility(unittest.TestCase):
             ascend_saver.meta_writer.json_name,
             "quant_model_description.json"
         )
-        
+
         # Test Safetensors format
         safe_saver = SaverFactory.create(SAVE_TYPE_SAFE_TENSOR, **{
             **self.factory_kwargs,
@@ -339,7 +348,7 @@ class TestFormatCompatibility(unittest.TestCase):
             use_fa_quant=False,
             enable_communication_quant=False,
         )
-        
+
         self.safe_config = SafetensorsSaverConfig(
             **self.base_saver_config,
             safetensors_name='safe.safetensors',
@@ -354,38 +363,38 @@ class TestFormatCompatibility(unittest.TestCase):
         ascend_saver.pre_process()
         ascend_saver.save('test_tensor', self.test_meta, self.test_tensor)
         ascend_saver.post_process()
-        
+
         safe_saver = SafetensorsSaver(self.safe_config)
         safe_saver.pre_process()
         safe_saver.save('test_tensor', self.test_meta, self.test_tensor)
         safe_saver.post_process()
-        
+
         # Compare contents
         ascend_json_path = os.path.join(self.test_dir, "quant_model_description.json")
         safe_json_path = os.path.join(
-            self.test_dir, 
+            self.test_dir,
             f"quant_model_description_{self.safe_config.model_quant_type.lower()}.json"
         )
-        
+
         with open(ascend_json_path, 'r') as f:
             ascend_json = json.load(f)
         with open(safe_json_path, 'r') as f:
             safe_json = json.load(f)
-            
+
         # Verify format-specific fields
         self.assertIn('version', ascend_json)
         self.assertEqual(ascend_json['version'], '1.0.0')
         self.assertNotIn('version', safe_json)
         self.assertNotIn('group_size', safe_json)
-        
+
         # Verify common fields
         self.assertEqual(ascend_json['group_size'], 128)
-        
+
         self.assertIn('kv_quant_type', safe_json)
         self.assertIn('kv_cache_type', safe_json)
         self.assertIn('kv_quant_type', ascend_json)
         self.assertIn('kv_cache_type', ascend_json)
-        
+
         # Verify KV-specific fields
         self.assertEqual(ascend_json['model_quant_type'], QuantType.KV8)
         self.assertEqual(ascend_json['model_quant_type'], safe_json['model_quant_type'])
@@ -406,7 +415,7 @@ class TestFormatCompatibility(unittest.TestCase):
             use_fa_quant=True,
             enable_communication_quant=False,
         )
-        
+
         self.safe_config = SafetensorsSaverConfig(
             **self.base_saver_config,
             safetensors_name='safe.safetensors',
@@ -421,37 +430,37 @@ class TestFormatCompatibility(unittest.TestCase):
         ascend_saver.pre_process()
         ascend_saver.save('test_tensor', self.test_meta, self.test_tensor)
         ascend_saver.post_process()
-        
+
         safe_saver = SafetensorsSaver(self.safe_config)
         safe_saver.pre_process()
         safe_saver.save('test_tensor', self.test_meta, self.test_tensor)
         safe_saver.post_process()
-        
+
         # Compare contents
         ascend_json_path = os.path.join(self.test_dir, "quant_model_description.json")
         safe_json_path = os.path.join(
-            self.test_dir, 
+            self.test_dir,
             f"quant_model_description_{self.safe_config.model_quant_type.lower()}.json"
         )
-        
+
         with open(ascend_json_path, 'r') as f:
             ascend_json = json.load(f)
         with open(safe_json_path, 'r') as f:
             safe_json = json.load(f)
-            
+
         # Verify format-specific fields
         self.assertIn('version', ascend_json)
         self.assertEqual(ascend_json['version'], '1.0.0')
         self.assertNotIn('version', safe_json)
         self.assertNotIn('group_size', safe_json)
-        
+
         # Verify common fields
         self.assertIn('group_size', ascend_json)
         self.assertEqual(ascend_json['group_size'], 128)
-        
+
         self.assertIn('fa_quant_type', safe_json)
         self.assertIn('fa_quant_type', ascend_json)
-        
+
         # Verify FA-specific fields
         self.assertEqual(ascend_json['model_quant_type'], QuantType.FAQuant)
         self.assertEqual(ascend_json['model_quant_type'], safe_json['model_quant_type'])
@@ -470,7 +479,7 @@ class TestFormatCompatibility(unittest.TestCase):
             use_fa_quant=False,
             enable_communication_quant=True,
         )
-        
+
         self.safe_config = SafetensorsSaverConfig(
             **self.base_saver_config,
             safetensors_name='safe.safetensors',
@@ -485,37 +494,37 @@ class TestFormatCompatibility(unittest.TestCase):
         ascend_saver.pre_process()
         ascend_saver.save('test_tensor', self.test_meta, self.test_tensor)
         ascend_saver.post_process()
-        
+
         safe_saver = SafetensorsSaver(self.safe_config)
         safe_saver.pre_process()
         safe_saver.save('test_tensor', self.test_meta, self.test_tensor)
         safe_saver.post_process()
-        
+
         # Compare contents
         ascend_json_path = os.path.join(self.test_dir, "quant_model_description.json")
         safe_json_path = os.path.join(
-            self.test_dir, 
+            self.test_dir,
             f"quant_model_description_{self.safe_config.model_quant_type.lower()}.json"
         )
-        
+
         with open(ascend_json_path, 'r') as f:
             ascend_json = json.load(f)
         with open(safe_json_path, 'r') as f:
             safe_json = json.load(f)
-            
+
         # Verify format-specific fields
         self.assertIn('version', ascend_json)
         self.assertEqual(ascend_json['version'], '1.0.0')
         self.assertIn('reduce_quant_type', ascend_json)
         self.assertEqual(ascend_json['reduce_quant_type'], 'per_channel')
-        
+
         self.assertNotIn('version', safe_json)
         self.assertNotIn('group_size', safe_json)
-        
+
         # Verify common fields
         self.assertIn('group_size', ascend_json)
         self.assertEqual(ascend_json['group_size'], 128)
-        
+
         # Verify basic fields
         self.assertEqual(ascend_json['model_quant_type'], QuantType.W8A8)
         self.assertEqual(ascend_json['model_quant_type'], safe_json['model_quant_type'])

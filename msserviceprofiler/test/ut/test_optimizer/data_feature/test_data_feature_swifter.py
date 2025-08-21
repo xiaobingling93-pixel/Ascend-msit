@@ -94,4 +94,4 @@ class TestMyDataSetWithSwifter(unittest.TestCase):
     def test_less_than_two_columns(self):
         lines_data = pd.DataFrame({'col1': ['1', '2', '3']})
         result = self.dataset.proprocess_with_swifter(lines_data)
-        self.assertIsNone(result)
+        self.assertEqual(result, (None, None))

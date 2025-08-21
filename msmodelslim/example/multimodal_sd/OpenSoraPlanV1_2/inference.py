@@ -66,7 +66,8 @@ def run_model_and_save_images(pipeline, args, save_path):
         args.text_prompt = [positive_prompt.format(args.text_prompt)]
     if len(args.text_prompt) == 1 and args.text_prompt[0].endswith('txt'):
         args.text_prompt[0] = get_valid_read_path(args.text_prompt[0])
-        text_prompt = open(args.text_prompt[0], 'r').readlines()
+        with open(args.text_prompt[0], 'r') as f:
+            text_prompt = f.readlines()
         args.text_prompt = [positive_prompt.format(i.strip()) for i in text_prompt]
 
     if args.batch_size > 1:

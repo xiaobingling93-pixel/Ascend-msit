@@ -71,5 +71,5 @@ class BaseProcessor:
         for idx, data in enumerate(request.datas):
             args, kwargs = data
             if args or kwargs:
-                output = request.module.forward(*args, **kwargs)
+                output = request.module(*args, **kwargs)
                 request.outputs[idx] = output

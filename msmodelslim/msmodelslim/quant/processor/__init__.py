@@ -14,8 +14,16 @@
 #  limitations under the License.
 
 __all__ = [
+    "AutoProcessorConfig",
     "LinearProcessorConfig",
-    "LinearQuantProcessor"
+    "LinearQuantProcessor",
+    "LoadProcessorConfig",
+    "LoadProcessor",
+    "GroupProcessorConfig",
+    "GroupProcessor",
 ]
 
+from .base import AutoProcessorConfig
+from .container.group import GroupProcessorConfig, GroupProcessor
+from .memory.load import LoadProcessorConfig, LoadProcessor
 from .quant.linear import LinearProcessorConfig, LinearQuantProcessor

@@ -178,6 +178,9 @@ CSV_STATISTICS_HEADER = [
     L2NORM_STAT_RELATIVE_ERROR
 ]
 
+TORCHAIR_FX_DATA_DIRECTORY = 'msit_fx_dump'
+TORCHAIR_GE_DATA_DIRECTORY = 'msit_ge_dump'
+
 
 def get_timestamp_sync():
     max_timestamp = int(datetime.datetime.now(tz=datetime.timezone.utc).strftime("%s"))

@@ -1,5 +1,5 @@
 # Copyright Huawei Technologies Co., Ltd. 2025. All rights reserved.
-
+from ascend_utils.common.security import check_element_type
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.llm_ptq_utils import SAVE_TYPE_SAFE_TENSOR, \
     SAVE_TYPE_NUMPY, SAVE_TYPE_ASCENDV1, QuantType
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.save.saver.ascend_v1 \
@@ -14,6 +14,7 @@ class SaverFactory:
     @staticmethod
     def create(typ, **kwargs) -> BaseSaver:
         if isinstance(typ, list):
+            check_element_type(typ, str)
             if len(typ) == 1:
                 return SaverFactory.create(typ[0], **kwargs)
             return SaverFactory.create_multi_saver(typ, **kwargs)

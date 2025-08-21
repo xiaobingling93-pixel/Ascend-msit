@@ -29,13 +29,13 @@ def test_get_ge_dump_config_given_valid_params_when_called_then_success(
          }):
         dump_path = os.path.dirname(os.path.realpath(__file__))
         config = get_ge_dump_config(
-            dump_path=dump_path, 
+            dump_path=dump_path,
             fusion_switch_file="fusion_switch.cfg",
-            dump_token=[1,2], 
+            dump_token=[1, 2],
             dump_layer=["conv"]
         )
 
-        assert config.dump_config.enable_dump == True
+        assert config.dump_config.enable_dump
         assert config.fusion_config.fusion_switch_file == "fusion_switch.cfg"
         assert config.dump_config.dump_step == "1|2"
         assert config.dump_config.dump_layer == "conv"

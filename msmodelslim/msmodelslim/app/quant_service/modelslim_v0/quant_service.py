@@ -14,7 +14,7 @@ from msmodelslim.utils.security import safe_copy_file
 from .quant_config import ModelslimV0QuantConfig
 from ..base import BaseQuantService
 from ..dataset_interface import DatasetLoaderInterface
-from ...base import DeviceType, BaseModel, BaseQuantConfig
+from ...base import DeviceType, BaseModelAdapter, BaseQuantConfig
 
 
 def get_padding_data(tokenizer, calib_list, device_type):
@@ -80,11 +80,13 @@ def copy_files(input_path, output_path):
 
 @logger_setter('msmodelslim.app.quant_service.modelslim_v0')
 class ModelslimV0QuantService(BaseQuantService):
+    backend_name: str = "modelslim_v0"
+
     def __init__(self, dataset_loader: DatasetLoaderInterface):
         super().__init__(dataset_loader)
 
-    def quantize(self, model: BaseModel, quant_config: BaseQuantConfig, save_path: Optional[Path] = None):
-        if not isinstance(model, BaseModel):
+    def quantize(self, model: BaseModelAdapter, quant_config: BaseQuantConfig, save_path: Optional[Path] = None):
+        if not isinstance(model, BaseModelAdapter):
             raise SchemaValidateError("model must be a BaseModelAdapter",
                                       action='Please make sure the model is a BaseModelAdapter')
         if not isinstance(quant_config, BaseQuantConfig):
@@ -96,7 +98,7 @@ class ModelslimV0QuantService(BaseQuantService):
 
         return self.quant_process(model, ModelslimV0QuantConfig.from_base(quant_config), save_path)
 
-    def quant_process(self, model: BaseModel, quant_config: ModelslimV0QuantConfig, save_path: Optional[Path]):
+    def quant_process(self, model: BaseModelAdapter, quant_config: ModelslimV0QuantConfig, save_path: Optional[Path]):
         # init
         if model.device == DeviceType.NPU:
             # 如果使用npu进行量化需开启二进制编译，避免在线编译算子

@@ -1,4 +1,4 @@
-apiversion: v1.0.0
+apiversion: modelslim_v0
 metadata:
   config_id: qwen3-8b-w8a8s
   score: 90

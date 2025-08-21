@@ -12,10 +12,12 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import List, Optional
+from typing import List, Optional, Literal
 
+from pydantic import Field
 from torch import nn
 
+from msmodelslim.core.QAL import QScope
 from msmodelslim.core.QAL.qregistry import QABCRegistry
 from msmodelslim.core.base.protocol import BatchProcessRequest
 from msmodelslim.quant.processor.base import AutoSessionProcessor, AutoProcessorConfig
@@ -25,10 +27,10 @@ from msmodelslim.utils.logging import get_logger, logger_setter
 
 
 class LinearProcessorConfig(AutoProcessorConfig):
-    type: str = "linear"
-    qconfig: LinearQConfig
-    include: List[str] = []
-    exclude: List[str] = []
+    type: Literal["linear_quant"] = "linear_quant"
+    qconfig: LinearQConfig = Field(description="量化配置")
+    include: List[str] = Field(default_factory=list, description="包含的模块名称")
+    exclude: List[str] = Field(default_factory=list, description="排除的模块名称")
 
 
 def _warning_unmatched_pattern(name: str, config_set: ConfigSet) -> None:
@@ -54,7 +56,7 @@ class LinearQuantProcessor(AutoSessionProcessor):
         self.exclude = ConfigSet(config.exclude) if config.exclude else ConfigSet([])
 
     def is_data_free(self) -> bool:
-        return False
+        return self.config.qconfig.act.scope == QScope.PER_TOKEN
 
     def support_distributed(self) -> bool:
         return True
