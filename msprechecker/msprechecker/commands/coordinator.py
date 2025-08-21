@@ -232,7 +232,9 @@ class PrecheckStrategy(CommandStrategy):
     def execute(args: argparse.Namespace) -> int:
         if args.scene and "pd_disaggregation" in args.scene:
             if not args.config_parent_dir:
-                global_logger.error("Passing '--scene' without providing '--config-parent-dir' will not take any affect!")
+                global_logger.error(
+                    "Passing '--scene' without providing '--config-parent-dir' will not take any affect!"
+                )
             return PrecheckStrategy.execute_pd_disagg(args)
 
         if args.scene and "," in args.scene:

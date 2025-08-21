@@ -60,7 +60,7 @@ class SysChecker(NodeChecker):
         # 先尝试Ubuntu/Debian的apt
         try:
             result_apt = subprocess.run(
-                ['apt', 'list', '--installed', 'libjemalloc*'],
+                ['/usr/bin/apt', 'list', '--installed', 'libjemalloc*'],
                 capture_output=True,
                 text=True,
                 check=False
@@ -73,7 +73,7 @@ class SysChecker(NodeChecker):
         # 再尝试CentOS/RHEL的yum
         try:
             result_yum = subprocess.run(
-                ['yum', 'list', 'installed', 'jemalloc*'],
+                ['/usr/bin/yum', 'list', 'installed', 'jemalloc*'],
                 capture_output=True,
                 text=True,
                 check=False
