@@ -1,3 +1,17 @@
+# Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 import sys
 import threading
@@ -16,16 +30,14 @@ sys.modules["ms_service_profiler"].Level = Level
 from msserviceprofiler.vllm_profiler.vllm_v0 import model_hookers
 
 
-# -------------------------
-# Helpers for fake inputs
-# -------------------------
-
 class FakeSeqData:
     def __init__(self, length, prompt_len):
         self._len = length
         self.prompt_token_ids = [0] * prompt_len
+
     def get_len(self):
         return self._len
+
 
 class FakeSeqMetadata:
     def __init__(self, rid, is_prompt, seq_data):
@@ -33,13 +45,16 @@ class FakeSeqMetadata:
         self.is_prompt = is_prompt
         self.seq_data = seq_data
 
+
 class FakeExecuteModelReq:
     def __init__(self, seq_group_metadata_list):
         self.seq_group_metadata_list = seq_group_metadata_list
 
+
 class FakeAttnMeta:
     def __init__(self, prefill_metadata):
         self.prefill_metadata = prefill_metadata
+
 
 class FakeModelInput:
     def __init__(self, prefill_metadata, req_map, shape0):
@@ -47,6 +62,7 @@ class FakeModelInput:
         self.request_ids_to_seq_ids = req_map
         self.input_tokens = MagicMock()
         self.input_tokens.shape = (shape0, 10)
+
 
 # Reset thread local state between tests
 @pytest.fixture(autouse=True)
@@ -60,13 +76,12 @@ def reset_state():
     Profiler.reset()
 
 
-# -------------------------
-# Tests
-# -------------------------
 
 @pytest.mark.parametrize("seq_data_empty", [False, True])
 @pytest.mark.parametrize("is_prompt_values", [[True, False], [False, False]])
-def test_handle_execute_model_given_metadata_when_various_prompts_then_correct_batch_type(seq_data_empty, is_prompt_values):
+def test_handle_execute_model_given_metadata_when_various_prompts_then_correct_batch_type(
+    seq_data_empty, is_prompt_values
+):
     # Arrange
     seq_list = []
     for idx, is_prompt in enumerate(is_prompt_values):
@@ -152,7 +167,9 @@ def test_set_forward_context_given_profiler_exists_when_enter_then_start_and_end
         @contextlib.contextmanager
         def cm():
             yield
+
         return cm()
+
     import contextlib
 
     with model_hookers.set_forward_context(orig_ctx):
@@ -167,7 +184,9 @@ def test_set_forward_context_given_no_profiler_when_enter_then_no_start_or_end()
         @contextlib.contextmanager
         def cm():
             yield
+
         return cm()
+
     import contextlib
 
     with model_hookers.set_forward_context(orig_ctx):
