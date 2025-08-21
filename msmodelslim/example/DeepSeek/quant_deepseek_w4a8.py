@@ -7,9 +7,7 @@ import sys
 
 import torch
 import torch_npu
-
 from tqdm import tqdm
-
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig
 
 current_directory = os.path.dirname(os.path.abspath(__file__))
@@ -44,7 +42,7 @@ def parse_args():
     parser.add_argument('--mindie_format', action='store_true', help="Compatible with quantization formats \
                         supported by before 2.1.RC1 version of MindIE")
     parser.add_argument('--quant_mtp', type=str, choices=['mix', 'float', 'none'], default='none', \
-                            help="Quantization mode: 'mix(w8a8 mix quant)' , or \
+                        help="Quantization mode: 'mix(w8a8 mix quant)' , or \
                             'float(save float mtp weight)' (default: %(default)s)")
     return parser.parse_args()
 
@@ -58,6 +56,7 @@ def create_custom_hook(quant_mtp, mindie_format):
         model_config["moe_quantize"] = "w4a8_dynamic"
         if mindie_format:
             model_config["model_type"] = "deepseekv2"
+
     return custom_hook
 
 
@@ -78,7 +77,6 @@ def get_calib_dataset_batch(model_tokenizer, calib_list, batch_size, max_len=512
                 if not current:
                     break
         return result
-    
 
     calib_list = truncate_strings(calib_list)
     calib_list = [calib_list[i:i + batch_size] for i in range(0, len(calib_list), batch_size)]
@@ -102,9 +100,9 @@ def remove_module_entries(save_path, json_filename="quant_model_description_w8a8
     description_data = json_safe_load(json_file_path)
     # 过滤掉键中包含"module"的条目
     filtered_data = {
-        key: value 
-        for key, value in description_data.items() 
-        if "norm.module." not in key  
+        key: value
+        for key, value in description_data.items()
+        if "norm.module." not in key
         # 检查键中是否包含"norm.module."字符串
     }
     # 写回更新后的JSON文件（如需保留原始文件，可改为写入新文件） 
@@ -144,7 +142,7 @@ def main():
     anti_path = get_valid_read_path(anti_path, is_dir=False, check_user_stat=False)
     calib_path = get_valid_read_path(calib_path, is_dir=False, check_user_stat=False)
     check_number(batch_size, int, 1, 16, "batch_size")
-    
+
     config = AutoConfig.from_pretrained(pretrained_model_name_or_path=model_path, trust_remote_code=True)
     num_layer = config.num_hidden_layers
     if args.layer_count < 0 or args.layer_count > num_layer:
@@ -158,7 +156,7 @@ def main():
     # mtp量化需要加载61层
     if args.quant_mtp == "mix":
         config.num_hidden_layers = config.num_hidden_layers + 1
-    
+
     if config.num_hidden_layers < 0:
         raise ValueError("model num_hidden_layers is invalid, please check it.")
 
@@ -185,11 +183,13 @@ def main():
                                                  },
                                                  torch_dtype="auto",
                                                  attn_implementation='eager')
+
+    # 内存自动反量化fp8到bf16，如果没有反量化参数则认为是bf16，跳过
+    auto_convert_model_fp8_to_bf16(model, model_path, OpsType.get_ops_type(args.from_bf16, args.from_fp8))
+
     # mtp量化封装原模型为mtp model
     if args.quant_mtp == "mix":
         model = warp_mtp_model(config, model, model_path)
-
-    auto_convert_model_fp8_to_bf16(model, model_path, OpsType.get_ops_type(args.from_bf16, args.from_fp8))
 
     pbar.update(1)
 
@@ -242,9 +242,9 @@ def main():
         "model.layers.[012].mlp.up_proj": "w8a8_dynamic",
         "model.layers.[0-9]*.self_attn.*": "w8a8",
         "model.layers.[0-9]*.mlp.shared_experts.*": "w8a8_dynamic",
-        "model.layers.[0-9]*.mlp.experts.*": "w4a8_dynamic", 
+        "model.layers.[0-9]*.mlp.experts.*": "w4a8_dynamic",
         "mtp_decoder.mlp.shared_experts.*": "w8a8_dynamic",
-        "mtp_decoder.mlp.experts.*": "w8a8_dynamic", 
+        "mtp_decoder.mlp.experts.*": "w8a8_dynamic",
     }
 
     calibrator = Calibrator(model, w4a8_pertoken_config, calib_data=dataset_calib, disable_level="L0", mix_cfg=mix_cfg)
@@ -255,7 +255,7 @@ def main():
         quant_model_description_json_name = "quant_model_description_w8a8_dynamic.json"
     else:
         quant_model_description_json_name = "quant_model_description.json"
-    
+
     save_type = "safe_tensor" if args.mindie_format else "ascendV1"
     calibrator.save(save_path,
                     json_name=quant_model_description_json_name,
@@ -267,12 +267,12 @@ def main():
     # 适配mindie删除description里的module字段
     if args.mindie_format:
         remove_module_entries(save_path)
-    
+
     custom_hook_instance = create_custom_hook(args.quant_mtp, args.mindie_format)
     custom_hooks = {
         'config.json': functools.partial(modify_config_json, custom_hook=custom_hook_instance) \
-                        if args.mindie_format \
-                        else functools.partial(modify_vllm_config_json, custom_hook=custom_hook_instance)
+            if args.mindie_format \
+            else functools.partial(modify_vllm_config_json, custom_hook=custom_hook_instance)
     }
     copy_config_files(input_path=model_path, output_path=save_path, quant_config=w4a8_pertoken_config,
                       mindie_format=args.mindie_format, custom_hooks=custom_hooks)
