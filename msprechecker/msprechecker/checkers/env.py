@@ -15,6 +15,7 @@
 
 import os
 from .base import NodeChecker
+from ..utils import Traverser
 
 
 class EnvChecker(NodeChecker):
