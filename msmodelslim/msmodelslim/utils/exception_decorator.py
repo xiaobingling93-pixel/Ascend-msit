@@ -18,11 +18,11 @@ def exception_handler(*set_args,
                       ms_err_cls: Type[ModelslimError] = ModelslimError,
                       keyword: str = '', action: str = ''):
     """
-    异常知识库构建装饰器，用于将第三方异常的经验和解决方案沉淀到代码中。
+    异常知识库构建装饰器/上下文管理器，用于将第三方异常的经验和解决方案沉淀到代码中。
     
-    该装饰器主要用于构建异常知识库，将已知的第三方异常（如文件不存在、网络超时、权限错误等）
-    转换为msModelSlim自定义异常，并提供针对性的解决建议。通过这种方式，将开发运维过程中
-    积累的异常处理经验固化到代码中，为用户提供更好的错误提示和解决指导。
+    该工具用于构建异常知识库，将已知的第三方异常（如文件不存在、网络超时、权限错误等）
+    转换为msModelSlim自定义异常，并提供针对性的解决建议。既可作为装饰器使用，也可作为
+    上下文管理器使用，行为一致。
     
     Args:
         *set_args: 传递给自定义异常的参数，通常包含具体的错误描述
@@ -32,62 +32,84 @@ def exception_handler(*set_args,
         action: 针对性的解决建议，如"请检查文件路径"、"请检查网络连接"等
     
     Returns:
-        装饰器函数
+        一个既可作为装饰器又可作为上下文管理器的对象
     
     Example:
-        # 文件操作异常知识库
+        # 作为装饰器
         @exception_handler("配置文件不存在", ms_err_cls=ConfigError,
-                          err_cls=FileNotFoundError,
-                          keyword="No such file",
-                          action="请检查配置文件路径是否正确")
+                           err_cls=FileNotFoundError,
+                           keyword="No such file",
+                           action="请检查配置文件路径是否正确")
         def load_config():
-            # 加载配置文件的代码
             pass
         
-        # 权限异常知识库
-        @exception_handler("权限不足", ms_err_cls=SecurityError,
-                          err_cls=PermissionError,
-                          action="请使用管理员权限运行或检查文件权限")
-        def write_output():
-            # 写入输出文件的代码
-            pass
-        
-        # 内存不足异常知识库
-        @exception_handler("内存不足", ms_err_cls=ResourceError,
-                          keyword="out of memory",
-                          action="请减少批处理大小或增加系统内存")
-        def process_large_data():
-            # 处理大数据集的代码
-            pass
+        # 作为上下文管理器
+        with exception_handler("权限不足", ms_err_cls=SecurityError,
+                               err_cls=PermissionError,
+                               action="请使用管理员权限运行或检查文件权限"):
+            write_output()
+
     
     Note:
         - 主要用于构建异常知识库，将运维经验沉淀到代码中
         - 通过精确的异常匹配和针对性的解决建议，提升用户体验
         - 随着项目发展，可以不断丰富异常知识库的内容
         - 建议为每种常见的第三方异常场景都建立相应的知识库条目
+        - 装饰器与上下文两种用法行为一致；若遇到已是 ModelslimError 的异常将直接透传
     """
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            try:
-                return func(*args, **kwargs)
-            except ModelslimError:
-                # 如果已经是msModelSlim异常，直接抛出
-                raise
-            except err_cls as e:
-                # 检查是否包含指定关键字，如果指定了关键字的话
-                if not keyword or keyword in str(e):
-                    # set_args 为空时，确保作为单个参数传入而非按字符拆分
-                    args_to_raise = set_args if set_args else (str(e),)
-                    raise ms_err_cls(*args_to_raise, action=action) from e
-                raise
-            except Exception:
-                # 其他类型的异常直接抛出
-                raise
 
-        return wrapper
+    class _ExceptionHandler:
+        def __init__(self,
+                     set_args_tuple,
+                     err_cls_local: Type[Exception],
+                     ms_err_cls_local: Type[ModelslimError],
+                     keyword_local: str,
+                     action_local: str):
+            self._set_args = set_args_tuple
+            self._err_cls = err_cls_local
+            self._ms_err_cls = ms_err_cls_local
+            self._keyword = keyword_local
+            self._action = action_local
 
-    return decorator
+        def __call__(self, func):
+            @wraps(func)
+            def wrapper(*args, **kwargs):
+                try:
+                    return func(*args, **kwargs)
+                except ModelslimError:
+                    # 已是msModelSlim异常，直接抛出
+                    raise
+                except self._err_cls as e:
+                    # 关键字匹配（若设置）
+                    if not self._keyword or self._keyword in str(e):
+                        args_to_raise = self._set_args if self._set_args else (str(e),)
+                        raise self._ms_err_cls(*args_to_raise, action=self._action) from e
+                    raise
+                except Exception:
+                    # 其他类型的异常直接抛出
+                    raise
+
+            return wrapper
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            if exc is None:
+                return False
+            # 已是msModelSlim异常，透传
+            if isinstance(exc, ModelslimError):
+                return False
+            # 仅处理指定第三方异常
+            if isinstance(exc, self._err_cls):
+                if not self._keyword or self._keyword in str(exc):
+                    args_to_raise = self._set_args if self._set_args else (str(exc),)
+                    # 在上下文管理器中转换并抛出新的msModelSlim异常
+                    raise self._ms_err_cls(*args_to_raise, action=self._action) from exc
+            # 其他异常不处理，交由上层
+            return False
+
+    return _ExceptionHandler(set_args, err_cls, ms_err_cls, keyword, action)
 
 
 def exception_catcher(func):
@@ -130,6 +152,7 @@ def exception_catcher(func):
         - 建议在应用入口、API端点或顶层函数上使用此装饰器
         - 当与exception_handler组合使用时，exception_catcher应该放在最外层
     """
+
     @wraps(func)
     def wrapper(*args, **kwargs):
         try:

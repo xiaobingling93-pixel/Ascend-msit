@@ -185,3 +185,73 @@ def test_exception_catcher_when_exception_occurs_then_preserve_original_context(
     assert exc.value.__cause__ is not None
     assert isinstance(exc.value.__cause__, ValueError)
     assert "原始异常" in str(exc.value.__cause__)
+
+
+def test_exception_handler_context_when_catch_specified_exception_then_convert_to_modelslim_error(
+        exception_decorator_mod):
+    """上下文用法：捕获指定异常并转换为msModelSlim异常"""
+
+    with pytest.raises(ConfigError) as exc:
+        with exception_decorator_mod.exception_handler("配置文件格式错误", ms_err_cls=ConfigError,
+                                                      err_cls=ValueError,
+                                                      action="请检查配置文件格式"):
+            raise ValueError("invalid literal for int() with base 10: 'abc'")
+    assert "配置文件格式错误" in str(exc.value)
+    assert "请检查配置文件格式" in str(exc.value)
+
+
+def test_exception_handler_context_when_keyword_used_then_convert_only_if_matches(exception_decorator_mod):
+    """上下文用法：使用关键字过滤，仅匹配时才转换"""
+
+    # 匹配关键字，转为 ConfigError
+    with pytest.raises(ConfigError):
+        with exception_decorator_mod.exception_handler("文件不存在", ms_err_cls=ConfigError,
+                                                      err_cls=FileNotFoundError,
+                                                      keyword="No such file",
+                                                      action="请检查文件路径"):
+            raise FileNotFoundError("No such file or directory: 'missing.txt'")
+
+    # 不匹配关键字，原异常透传
+    with pytest.raises(FileNotFoundError):
+        with exception_decorator_mod.exception_handler("文件不存在", ms_err_cls=ConfigError,
+                                                      err_cls=FileNotFoundError,
+                                                      keyword="No such file",
+                                                      action="请检查文件路径"):
+            raise FileNotFoundError("Permission denied: 'readonly.txt'")
+
+
+def test_exception_handler_context_when_modelslim_error_occurs_then_pass_through(exception_decorator_mod):
+    """上下文用法：发生 msModelSlim 异常时应透传"""
+
+    with pytest.raises(ConfigError) as exc:
+        with exception_decorator_mod.exception_handler("其他错误", ms_err_cls=ConfigError):
+            raise ConfigError("原始配置错误", action="原始action")
+    assert "原始配置错误" in str(exc.value)
+    assert "原始action" in str(exc.value)
+
+
+def test_exception_handler_context_when_other_exception_occurs_then_pass_through(exception_decorator_mod):
+    """上下文用法：发生其他类型异常时应透传"""
+
+    with pytest.raises(TypeError):
+        with exception_decorator_mod.exception_handler("配置错误", ms_err_cls=ConfigError, err_cls=ValueError):
+            raise TypeError("类型错误")
+
+
+def test_exception_handler_context_when_no_set_args_then_use_original_exception_message(
+        exception_decorator_mod):
+    """上下文用法：未设置自定义消息时应使用原始异常消息"""
+
+    with pytest.raises(ConfigError) as exc:
+        with exception_decorator_mod.exception_handler(err_cls=ValueError, ms_err_cls=ConfigError):
+            raise ValueError("原始错误消息")
+    assert "原始错误消息" in str(exc.value)
+
+
+def test_exception_handler_context_when_use_default_parameters_then_work_correctly(exception_decorator_mod):
+    """上下文用法：使用默认参数应正常工作（Exception -> ModelslimError）"""
+
+    with pytest.raises(ModelslimError) as exc:
+        with exception_decorator_mod.exception_handler():
+            raise Exception("测试异常")
+    assert "测试异常" in str(exc.value)
