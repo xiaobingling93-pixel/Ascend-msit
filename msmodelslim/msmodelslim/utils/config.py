@@ -12,6 +12,7 @@ CONFIG_PATH = '../config/config.ini'
 
 SECTION_URL = 'URL'
 KEY_REPO_URL = 'repository_url'
+KEY_QUESTION_AND_ANSWER_URL = 'question_and_answer_url'
 
 ENV_VAR_LOG_LEVEL = 'MSMODELSLIM_LOG_LEVEL'
 
@@ -20,6 +21,7 @@ VALID_LOG_LEVELS = ['info', 'debug']
 
 class URLs(BaseModel):
     repository: str
+    question_and_answer: str
 
 
 class EnvVars(BaseModel):
@@ -47,13 +49,20 @@ def init_config():
         raise ConfigError(f"Invalid config key: {KEY_REPO_URL}",
                           action=f'Please check the config file {config_path}')
 
+    if not file_config.has_option(SECTION_URL, KEY_QUESTION_AND_ANSWER_URL):
+        raise ConfigError(f"Invalid config key: {KEY_QUESTION_AND_ANSWER_URL}",
+                          action=f'Please check the config file {config_path}')
+
     logger_level = os.getenv(ENV_VAR_LOG_LEVEL, 'INFO').lower()
     if logger_level not in VALID_LOG_LEVELS:
         raise EnvVarError(f"Invalid log level: {logger_level}, must be in {VALID_LOG_LEVELS}",
                           action=f'Please check the environment variable {ENV_VAR_LOG_LEVEL}')
 
     modelslim_config = ModelSlimConfig(
-        urls=URLs(repository=file_config.get(SECTION_URL, KEY_REPO_URL)),
+        urls=URLs(
+            repository=file_config.get(SECTION_URL, KEY_REPO_URL),
+            question_and_answer=file_config.get(SECTION_URL, KEY_QUESTION_AND_ANSWER_URL)
+        ),
         env_vars=EnvVars(log_level=logger_level),
     )
     return modelslim_config
