@@ -146,7 +146,7 @@ class TestPSOOptimizer:
 @patch("msserviceprofiler.modelevalstate.optimizer.optimizer.PSOOptimizer")
 @patch("msserviceprofiler.modelevalstate.optimizer.simulator.Simulator")
 @patch("msserviceprofiler.modelevalstate.config.custom_command.shutil.which")
-def test_main(simulator, psooptimizer, mock_which):
+def test_main(mock_which, simulator, psooptimizer):
     args = MagicMock()
     args.engine = 'mindie'
     args.benchmark_policy = BenchMarkPolicy.benchmark.value
