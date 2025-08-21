@@ -49,14 +49,6 @@ def test_init(tmpdir):
 
 class TestCommunicationForFile:
 
-    @pytest.fixture
-    def comm(self, tmpdir):
-        work_dir = Path(tmpdir)
-        cmd_file = work_dir.joinpath("cmd.txt")
-        res_file = work_dir.joinpath("res.txt")
-        comm = CommunicationForFile(cmd_file, res_file)
-        return comm
-
     @classmethod
     def test_send_command_file_exists(cls, comm):
         comm.send_command("new command")
@@ -161,3 +153,11 @@ class TestCommunicationForFile:
         comm.clear_res()
         assert comm.send_command.call_count == 1
         comm.send_command.assert_called_once_with(CustomCommand.cmd_eof)
+
+    @pytest.fixture
+    def comm(self, tmpdir):
+        work_dir = Path(tmpdir)
+        cmd_file = work_dir.joinpath("cmd.txt")
+        res_file = work_dir.joinpath("res.txt")
+        comm = CommunicationForFile(cmd_file, res_file)
+        return comm

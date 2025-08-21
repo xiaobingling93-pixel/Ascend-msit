@@ -33,6 +33,7 @@ from msserviceprofiler.modelevalstate.optimizer.utils import (
     get_folder_size,
 )
 
+
 # --------------------------
 # Test remove_file
 # --------------------------

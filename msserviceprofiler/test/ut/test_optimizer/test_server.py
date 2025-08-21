@@ -14,9 +14,9 @@
 
 from pathlib import Path
 from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
-from unittest.mock import MagicMock, patch
 from msserviceprofiler.modelevalstate.optimizer.server import Scheduler
 
 from msserviceprofiler.modelevalstate.config.config import (
@@ -234,14 +234,6 @@ def test_get_cmd_param_success():
 
 class TestSchedulerProcessPoll:
 
-    @pytest.fixture
-    def scheduler(self):
-        # 创建Scheduler实例
-        scheduler = Scheduler(settings.communication)
-        scheduler.simulator = MagicMock()
-        scheduler.communication = MagicMock()
-        return scheduler
-
     @classmethod
     def test_process_poll_with_simulator(cls, scheduler):
         # 模拟simulator.process.poll()返回值
@@ -265,6 +257,14 @@ class TestSchedulerProcessPoll:
         # 验证是否正确调用了相关方法
         scheduler.communication.send_command.assert_called_once_with("process_poll 1111111:None")
         scheduler.communication.clear_res.assert_called_once()
+
+    @pytest.fixture
+    def scheduler(self):
+        # 创建Scheduler实例
+        scheduler = Scheduler(settings.communication)
+        scheduler.simulator = MagicMock()
+        scheduler.communication = MagicMock()
+        return scheduler
 
 
 # 测试用例1: 测试当get_cmd_param返回的_cmd为None时，init方法返回False
