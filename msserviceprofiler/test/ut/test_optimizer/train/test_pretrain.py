@@ -121,7 +121,7 @@ class TestPretrainModel(unittest.TestCase):
         self.model.train.return_value = 0.25
 
         # 执行训练
-        rmse = self.trainer.train(lines_data=self.sample_data)
+        self.trainer.train(lines_data=self.sample_data)
 
         # 验证调用
         self.dataset.construct_data.assert_called_once_with(
@@ -131,79 +131,6 @@ class TestPretrainModel(unittest.TestCase):
 
         # 验证结果
         self.assertIn(0.25, self.trainer.rmse)
-
-    #@unittest.skipIf(self.real_data is None, "缺少真实测试数据")
-    '''def test_train_with_real_data(self):
-        """使用真实数据集测试训练流程"""
-        # 首先进行初始训练
-        custom_encoder = CustomLabelEncoder(preset_category_data)
-        dataset = MyDataSet(custom_encoder=custom_encoder)
-        initial_rmse = self.real_trainer.train(lines_data=self.real_data)
-        self.assertIsInstance(initial_rmse, float)
-        self.assertGreater(initial_rmse, 0)
-
-        # 验证模型文件存在
-        model_file = self.state_param.xgb_model_save_model_path
-        self.assertTrue(model_file.exists())
-
-        # 验证特征编码器存在
-        ohe_file = self.state_param.ohe_path
-        self.assertTrue(ohe_file.exists())
-
-        # 验证指标记录
-        self.assertEqual(len(self.real_trainer.rmse), 1)
-
-        # 保存模型状态
-        initial_model = joblib.load(model_file)
-
-        # 使用新的数据集进行增量训练
-        # 创建新的训练数据（复制前50行并稍微修改）
-        new_data = self.real_data.copy().head(50)
-        new_data["model_execute_time"] += np.random.rand(50) * 10 - 5
-        new_rmse = self.real_trainer.partial_train(lines_data=new_data)
-
-        # 验证增量训练后指标更新
-        self.assertEqual(len(self.real_trainer.rmse), 2)
-        self.assertLess(new_rmse, initial_rmse * 1.5)  # 新RMSE不应该比初始值大太多
-
-        # 验证模型已更新（文件大小/修改时间变化）
-        updated_model = joblib.load(model_file)
-        self.assertNotEqual(initial_model.get_params(), updated_model.get_params())'''
-
-    #@unittest.skipIf("real_data" not in dir() or real_data is None, "缺少真实测试数据")
-    '''def test_predict_with_real_data(self):
-        """使用真实数据集测试预测流程"""
-        # 首先进行训练
-        self.real_trainer.train(lines_data=self.real_data)
-
-        # 准备预测数据（使用50条数据）
-        predict_data = self.real_data.head(50)
-
-        # 创建预测结果保存目录
-        results_dir = self.test_dir / "prediction_results"
-        results_dir.mkdir()
-
-        # 执行预测
-        predictions = self.real_trainer.predict(
-            lines_data=predict_data,
-            save_path=results_dir
-        )
-
-        # 验证返回的预测结果
-        self.assertIsInstance(predictions, pd.DataFrame)
-        self.assertEqual(len(predictions), 50)
-        self.assertIn("predict_value", predictions.columns)
-        self.assertIn("real_value", predictions.columns)
-
-        # 验证预测结果文件
-        prediction_file = results_dir / "prediction_data.csv"
-        self.assertTrue(prediction_file.exists())
-        saved_predictions = pd.read_csv(prediction_file)
-        self.assertEqual(len(saved_predictions), 50)
-
-        # 验证可视化文件
-        plot_file = results_dir / "predict_vs_real.png"
-        self.assertTrue(plot_file.exists())'''
 
     def test_get_up_ud(self):
         class Node:
