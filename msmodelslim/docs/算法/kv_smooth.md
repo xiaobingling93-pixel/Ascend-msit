@@ -23,7 +23,7 @@
 
 ##### 原理
 
-- 对写入 KVCache 的 `key_states` 进行平滑；实现方式是把缩放系数 s 融合进 RoPE 之前的 Q/K 投影或归一化权重：
+- 平滑写入 KVCache 的激活值 `key_states` ；实现方式是把缩放系数 s 融合进 RoPE 之前的 Q/K 投影或归一化权重：
     - K' = K / s
     - Q' = Q × s
     - 这样 Q'K'^T = QK^T，注意力打分保持不变的近似，同时 K 的动态范围被压缩，量化更稳健。
@@ -34,10 +34,10 @@
 ##### 实现
 
 - 算法在 `msmodelslim/quant/processor/kv_smooth` 中实现，处理流程分两阶段：
-    1) **监听阶段（preprocess）**：
-        - 通过注入监听器包装 `past_key_values`，在注意力调用 `Cache.update()` 时捕获 `key_states`。
+    1. **观察阶段（preprocess）**：
+        - 通过注入观察器封装 `past_key_values`，在注意力调用 `Cache.update()` 时捕获 `key_states`。
         - 使用观测器在维度 [batch, seq] 上聚合 min/max，得到每层每通道的绝对最大值，作为缩放的统计基准。
-    2) **平滑阶段（postprocess）**：
+    2. **平滑阶段（postprocess）**：
         - 根据统计到的 `|key_states|` 最大值计算缩放向量，按融合方式重写位于 RoPE 之前的相应模块的 `weight`（和可选 `bias`
           ），使 RoPE 之后写入 KVCache 的 key_states 被平滑；同时，query_states 则相应放大：
             - `state-rope-linear`：沿 `Linear → RoPE → KVCache` 的通路，将缩放折叠进 `k_proj`/`q_proj`。
@@ -81,17 +81,17 @@ class KVSmoothFusedInterface(ABC):
 ##### 适配步骤
 
 - **前置要求**：
-    - 注意力前向需通过 kwargs 接受 `past_key_values` 或 `past_key_value` 并在内部调用 `Cache.update()`；否则监听器无法工作。
+    - 注意力前向需通过 kwargs 接受 `past_key_values` 或 `past_key_value` 并在内部调用 `Cache.update()`；否则观察器无法工作。
     - 目标通路符合 `Linear/Norm → RoPE → KVCache` 的结构。
 - **步骤**：
-    1) 模型适配器继承`KVSmoothFusedInterface`接口，并实现所有方法，可参考 `msmodelslim/model/qwen.py`。
-    2) 在 `get_kvsmooth_fused_subgraph()` 中，为每层返回 `KVSmoothFusedUnit`，指定：
+    1. 模型适配器继承`KVSmoothFusedInterface`接口，并实现所有方法，可参考 `msmodelslim/model/qwen.py`。
+    2. 在 `get_kvsmooth_fused_subgraph()` 中，为每层返回 `KVSmoothFusedUnit`，指定：
         - `attention_name`：与 `named_modules()` 一致的完整路径（如 `model.layers.{i}.self_attn`）。
         - `layer_idx`：层索引， 用于 Cache.update()。
         - `fused_from_query_states_name`：RoPE 前 `query_states` 分支上的 `norm` 或 `linear` 子模块名,如 `q_proj`。
         - `fused_from_key_states_name`：RoPE 前 `key_states` 分支上的 `norm` 或 `linear` 子模块名，如 `k_proj`。
         - `fused_type`：融合方式枚举，StateViaRopeToNorm 或 StateViaRopeToLinear。
-    3) 提供模型全局结构信息：`get_head_dim()`、`get_num_key_value_heads()`、`get_num_key_value_groups()`。
+    3. 提供模型全局结构信息：`get_head_dim()`、`get_num_key_value_heads()`、`get_num_key_value_groups()`。
 
 #### 适用范围与局限性
 
@@ -105,7 +105,19 @@ class KVSmoothFusedInterface(ABC):
 
 #### 常见问题排查
 
-- `include/exclude` 未命中：查看日志提示的未匹配模式，核对完整模块名。
-- 头维度信息缺失：适配器需正确提供 `head_dim`、`num_key_value_heads`、`num_key_value_groups`。
-- 注意力不接收 `past_key_values`：调整模型前向签名或适配器，确保 `Cache.update()` 能被调用。
-- 模块名不一致：确认 `q_proj`/`k_proj` 或 `q_norm`/`k_norm` 与实际子模块命名一致。
+1. **回退未命中**
+    - **现象**：日志告警 `are not matched any module`
+    - **解决方案**：核对完整模块名，是否填错 `include` 或 `exclude`
+
+2. **头维度信息缺失**
+    - **现象**：抛出 `UnspportedError`，指明 `get_head_dim`、`get_num_key_value_groups`、`get_num_key_value_heads` 缺失
+    - **解决方案**：对应模型适配器确保实现 `KVSmoothFusedInterface` 接口，否则模型不适用算法
+
+3. **注意力不适用**
+    - **现象**：日志告警 `past_key_values and past_key_value both are None`
+    - **解决方案**：检查 `Transformers` 中的模型文件，确保 `Attention` 层 `forward` 传入 `past_key_values` 和
+      `past_key_value`，否则模型不适用算法
+
+4. **模块名不一致**
+    - **现象**：抛出 `ToDoError`，指明 `has no submodule`
+    - **解决方案**：检查模型适配器，确认 `fused_from_query_states_name` 和 `fused_from_key_states_name` 取值与实际融合子模块命名一致
