@@ -45,9 +45,9 @@ class EnvChecker(NodeChecker):
         
         if not ld_preload:
             self.error_handler.add_error(
-                path="environment.LD_PRELOAD",
-                actual="not set",
-                expected="包含libjemalloc.so",
+                path="LD_PRELOAD",
+                actual="missing",
+                expected="",
                 reason="LD_PRELOAD环境变量未设置，建议设置jemalloc库以提高内存分配性能",
                 severity="medium"
             )
@@ -65,9 +65,9 @@ class EnvChecker(NodeChecker):
         
         if not jemalloc_found:
             self.error_handler.add_error(
-                path="environment.LD_PRELOAD",
+                path="LD_PRELOAD",
                 actual=ld_preload,
-                expected="包含libjemalloc.so",
+                expected=ld_preload,
                 reason="LD_PRELOAD环境变量未包含jemalloc库，建议添加jemalloc库以提高内存分配性能",
                 severity="medium"
             )
