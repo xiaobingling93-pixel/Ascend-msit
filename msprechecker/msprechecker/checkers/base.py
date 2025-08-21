@@ -116,7 +116,7 @@ class NodeChecker(BaseChecker):
                 processed_condition = MacroExpander.expand(condition, local_path, visited_nodes)
                 condition_result = Evaluator.evaluate(processed_condition)
 
-                if condition_result:
+                if not condition_result:
                     continue
 
                 if attribute is None:
