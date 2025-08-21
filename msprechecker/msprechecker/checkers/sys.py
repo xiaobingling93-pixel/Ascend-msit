@@ -46,7 +46,7 @@ class SysChecker(NodeChecker):
         
         if not jemalloc_installed:
             self.error_handler.add_error(
-                path="jemalloc.installation",
+                path="jemalloc",
                 actual="not installed",
                 expected="installed",
                 reason="jemalloc未通过apt/yum安装，建议安装以提高性能: "
