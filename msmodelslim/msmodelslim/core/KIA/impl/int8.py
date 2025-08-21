@@ -45,7 +45,7 @@ def int8_param(
     if not symmetric:
         max_bound = 2 ** 8 - 1 if max_bound is None else max_bound
         # asymmetric quantization
-        scale = (max_val - min_val) / max_bound
+        scale = max_val / max_bound - min_val / max_bound
         scale = torch.max(scale, eps)
         offset = -1 * min_val / scale
         if integral_zero_point:
@@ -113,7 +113,7 @@ def int8_quantize(tensor: QStorage, q_param: QParam) -> QStorage:
         input_tensor = (input_tensor / scale + offset).round_()
     if max_bound:
         input_tensor = input_tensor.clamp_(min=-max_bound, max=max_bound)
-    return tensor.same_like(input_tensor).to(QDType.INT8)
+    return tensor.same_like(input_tensor.clamp_(min=-128, max=127)).to(QDType.INT8)
 
 
 @QFuncRegistry.register(dispatch_key=(QDType.INT8, QDType.INT8, QScope.PER_CHANNEL, True), api_name="dequantize")
