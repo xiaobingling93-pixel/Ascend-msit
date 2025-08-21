@@ -343,6 +343,9 @@ def update_model_type(args):
         except Exception:
             weight_dir = None
 
+    if not weight_dir:
+        return
+
     model_config_path = os.path.join(weight_dir, "config.json")
 
     global model_type
