@@ -13,7 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from .base import NodeChecker
+from ..utils import Traverser
 
 
 class EnvChecker(NodeChecker):
@@ -22,5 +24,50 @@ class EnvChecker(NodeChecker):
         self.error_handler.type = "env"
 
     def _get_rules(self):
+        if self.rule_manager.framework == "vllm":
+            return self.rule_manager.get_rules()["env"]
         self.rule_manager.scene = "mix"
-        return self.rule_manager.get_rules()['env']
+        return self.rule_manager.get_rules()["env"]
+
+    def _check(self, results) -> None:
+        # 先执行原有的节点检查
+        visited_nodes = Traverser.traverse(results)
+        rules = self._get_rules()
+        self._validate_nodes(rules, visited_nodes)
+        
+        # 在vllm框架下额外检查LD_PRELOAD环境变量
+        if self.rule_manager.framework == "vllm":
+            self._check_ld_preload_for_jemalloc()
+
+    def _check_ld_preload_for_jemalloc(self):
+        """检查LD_PRELOAD环境变量是否包含jemalloc库"""
+        ld_preload = os.environ.get('LD_PRELOAD', '')
+        
+        if not ld_preload:
+            self.error_handler.add_error(
+                path="LD_PRELOAD",
+                actual="missing",
+                expected="",
+                reason="LD_PRELOAD环境变量未设置，建议设置jemalloc库以提高内存分配性能",
+                severity="medium"
+            )
+            return
+        
+        # 分割LD_PRELOAD中的库路径
+        libraries = [lib.strip() for lib in ld_preload.split(':') if lib.strip()]
+        
+        # 检查是否包含jemalloc相关的库
+        jemalloc_found = False
+        for lib in libraries:
+            if 'jemalloc' in lib or 'libjemalloc' in lib:
+                jemalloc_found = True
+                break
+        
+        if not jemalloc_found:
+            self.error_handler.add_error(
+                path="LD_PRELOAD",
+                actual=ld_preload,
+                expected=ld_preload,
+                reason="LD_PRELOAD环境变量未包含jemalloc库，建议添加jemalloc库以提高内存分配性能",
+                severity="medium"
+            )
