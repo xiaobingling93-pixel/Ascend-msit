@@ -106,13 +106,13 @@ class CollectorFactory:
         collectors = []
 
         if getattr(args, "rank_table_path", None):
-            if not getattr(args, "scene", None):
+            if not getattr(args, "framework", None):
                 global_logger.warning(
                     "Passing '--rank-table-path' without providing '--scene', "
                     "msprechecker cannot determine the exact framework type of the rank table. "
                     "Will use 'mindie' as the default framework."
                 )
-                args.scene = FrameworkType.TP_MINDIE
+                args.framework = FrameworkType.TP_MINDIE
 
             framework_type = FrameworkType(args.framework)
             rank_table_parser = ParserRegistry.get(framework_type)()  # create parser instance
@@ -231,6 +231,8 @@ class PrecheckStrategy(CommandStrategy):
     @staticmethod
     def execute(args: argparse.Namespace) -> int:
         if args.scene and "pd_disaggregation" in args.scene:
+            if not args.config_parent_dir:
+                global_logger.error("Passing '--scene' without providing '--config-parent-dir' will not take any affect!")
             return PrecheckStrategy.execute_pd_disagg(args)
 
         if args.scene and "," in args.scene:

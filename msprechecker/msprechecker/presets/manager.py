@@ -100,7 +100,7 @@ class RuleManager:
         cur_dir = os.path.dirname(__file__)
 
         # 处理framework的情况
-        if self.framework:
+        if self.framework == "vllm":
             if self.framework not in self.FRAMEWORK_MAPPING:
                 raise ValueError(
                 f"Expected 'scene' to be {', '.join(self.FRAMEWORK_MAPPING)}. Got {self.framework} instead."
