@@ -1,7 +1,7 @@
 conf/ms_controller.json:
   deploy_mode:
     expected:
-      if: "${.deploy_mode} != 'pd_separate'}"
+      if: "${.} != 'pd_separate'"
       then:
         type: eq
         value: "pd_disaggregation"  
@@ -44,7 +44,7 @@ conf/ms_coordinator.json:
   digs_scheduler_config:
     deploy_mode:
       expected:
-        if: "${.deploy_mode} != 'pd_separate'}"
+        if: "${.} != 'pd_separate'}"
         then:
           type: eq
           value: "pd_disaggregation"  
@@ -137,12 +137,69 @@ deployment/mindie_server.yaml:
                   expected:
                     type: eq
                     value: ${conf/config.json.BackendConfig.ModelDeployConfig.ModelConfig[0].worldSize}
-                  reason: "Atlas 800I A2环境上，单机PD分离场景下，huawei.com/Ascend910应该等于mindie-server配置文件config.json中worldSize"
+                  reason: "Atlas 800I A2环境上，多机PD分离场景下，huawei.com/Ascend910应该等于mindie-server配置文件config.json中worldSize"
                   severity: high
               limits:
                 huawei.com/Ascend910:
                   expected:
                     type: eq
                     value: ${conf/config.json.BackendConfig.ModelDeployConfig.ModelConfig[0].worldSize}
-                  reason: "Atlas 800I A2环境上，单机PD分离场景下，huawei.com/Ascend910应该等于mindie-server配置文件config.json中worldSize"
+                  reason: "Atlas 800I A2环境上，多机PD分离场景下，huawei.com/Ascend910应该大等于mindie-server配置文件config.json中worldSize"
                   severity: high
+            env:
+              expected:
+                contains_all:
+                  - case: "${.name} == 'MINDIE_LOG_LEVEL' and (${.value} == 'INFO' or ${.value} == '1')"
+                    suggest: "1"
+                    reason: "MINDIE日志等级建议设置为1或INFO，表示日志级别为info"
+                    severity: low
+                  - case: "${.name} == 'MINDIE_LOG_TO_FILE' and ${.value} == '1'"
+                    suggest: "1"
+                    reason: "建议将MindIE日志写入文件，便于排查问题"
+                    severity: low
+                  - case: "${.name} == 'MINDIE_LOG_TO_STDOUT' and ${.value} == '1'"
+                    suggest: "1"
+                    reason: "建议将MindIE日志打屏，便于通过查看k8s日志查看程序运行状态"
+                    severity: low
+
+deployment/mindie_ms_coordinator.yaml:
+  - spec:
+      template:
+        spec:
+          containers[0]:
+            env:
+              expected:
+                contains_all:
+                  - case: "${.name} == 'MINDIE_LOG_LEVEL' and (${.value} == 'INFO' or ${.value} == '1')"
+                    suggest: "1"
+                    reason: "MINDIE日志等级建议设置为1或INFO，表示日志级别为info"
+                    severity: low
+                  - case: "${.name} == 'MINDIE_LOG_TO_FILE' and ${.value} == '1'"
+                    suggest: "1"
+                    reason: "建议将MindIE日志写入文件，便于排查问题"
+                    severity: low
+                  - case: "${.name} == 'MINDIE_LOG_TO_STDOUT' and ${.value} == '1'"
+                    suggest: "1"
+                    reason: "建议将MindIE日志打屏，便于通过查看k8s日志查看程序运行状态"
+                    severity: low
+
+deployment/mindie_ms_controller.yaml:
+  - spec:
+      template:
+        spec:
+          containers[0]:
+            env:
+              expected:
+                contains_all:
+                  - case: "${.name} == 'MINDIE_LOG_LEVEL' and (${.value} == 'INFO' or ${.value} == '1')"
+                    suggest: "- name: MINDIE_LOG_LEVEL\n  value: '1'"
+                    reason: "MINDIE日志等级建议设置为1或INFO，表示日志级别为info"
+                    severity: low
+                  - case: "${.name} == 'MINDIE_LOG_TO_FILE' and ${.value} == '1'"
+                    suggest: "- name: MINDIE_LOG_TO_FILE\n  value: '1'"
+                    reason: "建议将MindIE日志写入文件，便于排查问题"
+                    severity: low
+                  - case: "${.name} == 'MINDIE_LOG_TO_STDOUT' and ${.value} == '1'"
+                    suggest: "- name: MINDIE_LOG_TO_STDOUT\n  value: '1'"
+                    reason: "建议将MindIE日志打屏，便于通过查看k8s日志查看程序运行状态"
+                    severity: low

@@ -103,6 +103,42 @@ class ActPerTokenMinmax(AutoActQuantizer):
 @QABCRegistry.multi_register(
     dispatch_key=[
         (qir.int8_per_channel_sym, "minmax"),
+        (qir.int8_per_channel_asym, "minmax"),
+    ],
+    abc_type=AutoActQuantizer
+)
+class ActPerChannelMinmax(AutoActQuantizer):
+    def __init__(self, config: QConfig):
+        super().__init__()
+        self.config = config
+        minmax_config = MinMaxObserverConfig(dim=0, keepdim=False)
+        self.minmax_observer = MsMinMaxObserver(minmax_config)
+        self.q_param: Optional[QParam] = None
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x_shape = x.shape
+        x_reshaped = x.reshape(-1, x.shape[-1])
+        self.minmax_observer.reset()
+        self.minmax_observer.update(x_reshaped)
+        min_val, max_val = self.minmax_observer.get_min_max()
+        self.q_param = calculate_qparam(
+            min_val=min_val,
+            max_val=max_val,
+            q_dtype=QDType(self.config.dtype),
+            q_scope=QScope(self.config.scope),
+            symmetric=self.config.symmetric,
+        )
+        return fake_quantize(QStorage(dtype=QDType.FLOAT, value=x), self.q_param).value.reshape(x_shape)
+
+    def get_q_param(self) -> QParam:
+        if self.q_param is None:
+            raise RuntimeError("No q_param was set, please call forward first")
+        return self.q_param
+
+
+@QABCRegistry.multi_register(
+    dispatch_key=[
+        (qir.int8_per_channel_sym, "minmax"),
     ],
     abc_type=AutoWeightQuantizer
 )

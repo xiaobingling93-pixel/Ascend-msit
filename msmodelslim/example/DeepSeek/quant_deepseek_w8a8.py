@@ -1,20 +1,18 @@
 # Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
-import os
-import sys
 import argparse
 import functools
 import json
+import os
+import sys
 from unittest.mock import patch
 
 import torch
 import torch_npu
-
 from tqdm import tqdm
 
 current_directory = os.path.dirname(os.path.abspath(__file__))
 parent_directory = os.path.abspath(os.path.join(current_directory, '..', ".."))
 sys.path.append(parent_directory)
-
 
 from convert_fp8_to_bf16 import auto_convert_model_fp8_to_bf16, OpsType
 from add_safetensors import add_safetensors
@@ -48,7 +46,7 @@ def parse_args():
     parser.add_argument('--dynamic', action='store_true', help="Dynamic Quantization")
     parser.add_argument('--disable_anti', action='store_true', help="No AntiOutlier")
     parser.add_argument('--quant_mtp', type=str, choices=['mix', 'float', 'none'], default='none', \
-                            help="Quantization mode: 'mix(w8a8 mix quant)' , or \
+                        help="Quantization mode: 'mix(w8a8 mix quant)' , or \
                             'float(save float mtp weight)' (default: %(default)s)")
     parser.add_argument('--anti_method', type=str, choices=['m4', 'm6'], default='m4')
     return parser.parse_args()
@@ -67,6 +65,7 @@ def create_custom_hook(quant_mtp, mindie_format, fa_quant):
             if 'quantization_config' not in model_config:
                 model_config['quantization_config'] = {}
             model_config['quantization_config']['fa_quant_type'] = 'FAKQuant'
+
     return custom_hook
 
 
@@ -113,9 +112,9 @@ def remove_module_entries(save_path, json_filename="quant_model_description_w8a8
     description_data = json_safe_load(json_file_path)
     # 过滤掉键中包含"module"的条目
     filtered_data = {
-        key: value 
-        for key, value in description_data.items() 
-        if "norm.module." not in key  
+        key: value
+        for key, value in description_data.items()
+        if "norm.module." not in key
         # 检查键中是否包含"norm.module."字符串
     }
     # 写回更新后的JSON文件（如需保留原始文件，可改为写入新文件） 
@@ -138,8 +137,8 @@ def update_quant_model_description_content(save_path, json_filename):
     quant_description_data = json_safe_load(dest_quant_description_filepath, check_user_stat=False)
     quant_description_data["model_quant_type"] = "W8A8_DYNAMIC"
     if ("version" in quant_description_data.keys()) and \
-                ("fa_quant_type" in quant_description_data.keys()) and \
-                (quant_description_data["fa_quant_type"] == "FAQuant"):
+            ("fa_quant_type" in quant_description_data.keys()) and \
+            (quant_description_data["fa_quant_type"] == "FAQuant"):
         quant_description_data["fa_quant_type"] = "FAKQuant"
     json_safe_dump(quant_description_data, dest_quant_description_filepath, indent=4)
 
@@ -195,11 +194,13 @@ def main():
                                                      },
                                                      torch_dtype="auto",
                                                      attn_implementation='eager')
+
+    # 内存自动反量化fp8到bf16，如果没有反量化参数则认为是bf16，跳过
+    auto_convert_model_fp8_to_bf16(model, model_path, OpsType.get_ops_type(args.from_bf16, args.from_fp8))
+
     # mtp量化封装原模型为mtp model
     if args.quant_mtp == "mix":
         model = warp_mtp_model(config, model, model_path)
-
-    auto_convert_model_fp8_to_bf16(model, model_path, OpsType.get_ops_type(args.from_bf16, args.from_fp8))
 
     pbar.update(1)
 
@@ -276,16 +277,16 @@ def main():
                     part_file_size=4)
     # w8a8 混合量化中 MindIE 要求 description 中的 model_quant_type 为 W8A8_DYNAMIC
     update_quant_model_description_content(save_path, quant_model_description_json_name)
-    
+
     # 适配mindie删除description里的module字段
     if args.mindie_format:
         remove_module_entries(save_path)
-    
+
     custom_hook_instance = create_custom_hook(args.quant_mtp, args.mindie_format, args.fa_quant)
     custom_hooks = {
         'config.json': functools.partial(modify_config_json, custom_hook=custom_hook_instance) \
-                        if args.mindie_format \
-                        else functools.partial(modify_vllm_config_json, custom_hook=custom_hook_instance)
+            if args.mindie_format \
+            else functools.partial(modify_vllm_config_json, custom_hook=custom_hook_instance)
     }
     copy_config_files(input_path=model_path, output_path=save_path, quant_config=quant_config,
                       mindie_format=args.mindie_format, custom_hooks=custom_hooks)
