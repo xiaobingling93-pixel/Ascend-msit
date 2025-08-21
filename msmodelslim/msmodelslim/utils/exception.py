@@ -13,11 +13,24 @@ class ModelslimError(Exception):
 
     def __str__(self):
         message = super().__str__()
-        if not message:
+        if not message or message == "None":
             message = self.default_message
         desc = f"Code: {self.code}, Message: {message}"
         if self.action:
             desc += f"\nTIP: {self.action}"
+        return desc
+
+    def __repr__(self):
+        """重写repr方法，用于日志打印时显示错误类型、错误信息、错误码和解决推荐"""
+        error_type = self.__class__.__name__
+        message = super().__str__()
+        if not message or message == "None":
+            message = self.default_message
+        
+        desc = f"[{error_type}] Code: {self.code}, Message: {message}"
+        if self.action:
+            desc += f", TIP: {self.action}"
+        
         return desc
 
     @classmethod
