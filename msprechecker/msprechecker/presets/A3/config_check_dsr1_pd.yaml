@@ -50,7 +50,7 @@ deploy_config:
   hardware_type:
     expected:
       type: eq
-      value: "800I_A3"
+      value: "'800I_A3'"
     reason: "A3场景应该是800I_A3，在版本配套的config没有hardware_type字段时忽略此检查"
     severity: medium
   mindie_env_path:
