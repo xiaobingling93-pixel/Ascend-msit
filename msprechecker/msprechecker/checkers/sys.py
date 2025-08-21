@@ -57,30 +57,30 @@ class SysChecker(NodeChecker):
 
     def _is_jemalloc_installed(self) -> bool:
         """检查jemalloc是否通过包管理器安装"""
+        # 先尝试Ubuntu/Debian的apt
         try:
-            # 检查apt (Debian/Ubuntu)
             result_apt = subprocess.run(
                 ['apt', 'list', '--installed', 'libjemalloc*'],
                 capture_output=True,
                 text=True,
                 check=False
             )
-            
-            # 检查yum (CentOS/RHEL)
+            if result_apt.returncode == 0 and 'libjemalloc' in result_apt.stdout:
+                return True
+        except (subprocess.SubprocessError, FileNotFoundError):
+            pass
+
+        # 再尝试CentOS/RHEL的yum
+        try:
             result_yum = subprocess.run(
                 ['yum', 'list', 'installed', 'jemalloc*'],
                 capture_output=True,
                 text=True,
                 check=False
             )
-            
-            
-            # 如果任一包管理器显示已安装
-            apt_installed = result_apt.returncode == 0 and 'libjemalloc' in result_apt.stdout
-            yum_installed = result_yum.returncode == 0 and 'jemalloc' in result_yum.stdout
-            
-            return apt_installed or yum_installed
-            
+            if result_yum.returncode == 0 and 'jemalloc' in result_yum.stdout:
+                return True
         except (subprocess.SubprocessError, FileNotFoundError):
-            # 如果命令执行失败（比如在不支持的系统上），返回False
-            return False
+            pass
+
+        return False
