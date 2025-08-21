@@ -71,6 +71,7 @@ class M4Processor(BaseSmoothProcessor):
     def __init__(self, model: nn.Module, config: M4ProcessorConfig, adapter: object, **kwargs):
         super().__init__(model, config, adapter)
         self.config = config
+        self.validate_parameters()
         self.act_stats: Dict[str, Dict[str, torch.Tensor]] = {}
         self.dist_helper = DistHelper(self.model) if dist.is_initialized() else None
         
@@ -88,6 +89,55 @@ class M4Processor(BaseSmoothProcessor):
             self._remove_all_hooks()
         except Exception:
             pass  # 析构时忽略异常
+
+    def validate_parameters(self):
+        """
+        验证所有参数的合法性
+        """
+        # 验证 alpha 参数
+        if not isinstance(self.config.alpha, float) or self.config.alpha <= 0:
+            raise ValueError(f"alpha 必须是大于0的数值，当前值: {self.config.alpha} (类型: {type(self.config.alpha)})")
+
+        # 验证 scale_min 参数
+        if not isinstance(self.config.scale_min, float) or self.config.scale_min <= 0:
+            raise ValueError(f"scale_min 必须是大于0的数值，当前值: {self.config.scale_min} (类型: {type(self.config.scale_min)})")
+
+        # 验证 symmetric 参数
+        if not isinstance(self.config.symmetric, bool):
+            raise ValueError(f"symmetric 必须是布尔类型，当前值: {self.config.symmetric} (类型: {type(self.config.symmetric)})")
+
+        # 验证 enable_subgraph_type 参数
+        if not isinstance(self.config.enable_subgraph_type, list):
+            raise ValueError(
+                f"enable_subgraph_type 必须是列表类型，当前值: {self.config.enable_subgraph_type} (类型: {type(self.config.enable_subgraph_type)})")
+
+        # 验证 enable_subgraph_type 中的元素
+        valid_subgraph_types = ["norm-linear", "linear-linear", "ov", "up-down"]
+        for subgraph_type in self.config.enable_subgraph_type:
+            if not isinstance(subgraph_type, str):
+                raise ValueError(
+                    f"enable_subgraph_type 中的元素必须是字符串类型，当前元素: {subgraph_type} (类型: {type(subgraph_type)})")
+            if subgraph_type not in valid_subgraph_types:
+                raise ValueError(
+                    f"enable_subgraph_type 中的元素必须在 {valid_subgraph_types} 中，当前元素: {subgraph_type}")
+
+        # 验证 include 参数
+        if not isinstance(self.config.include, list):
+            raise ValueError(f"include 必须是列表类型，当前值: {self.config.include} (类型: {type(self.config.include)})")
+
+        # 验证 include 中的元素
+        for item in self.config.include:
+            if not isinstance(item, str):
+                raise ValueError(f"include 中的元素必须是字符串类型，当前元素: {item} (类型: {type(item)})")
+
+        # 验证 exclude 参数
+        if not isinstance(self.config.exclude, list):
+            raise ValueError(f"exclude 必须是列表类型，当前值: {self.config.exclude} (类型: {type(self.config.exclude)})")
+
+        # 验证 exclude 中的元素
+        for item in self.config.exclude:
+            if not isinstance(item, str):
+                raise ValueError(f"exclude 中的元素必须是字符串类型，当前元素: {item} (类型: {type(item)})")
 
     def support_distributed(self) -> bool:
         return True
