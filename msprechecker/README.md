@@ -110,8 +110,8 @@ msprechecker precheck --scene vllm
 ```
 相比默认场景新增校验:
 - 环境相关校验：
-  OpenMP多线程绑核配置性能
-  HCCL通信缓存等
+  - OpenMP多线程绑核配置性能
+  - HCCL通信缓存等
 
 ### PD分离场景
 
@@ -122,10 +122,10 @@ msprechecker precheck --scene vllm,ep
 - 昇腾相关校验：
 - 校验当前机器的昇腾驱动版本是否大于 25.0
 - 环境相关校验：
-  新增PD分离场景相关校验
-  新增libjemalloc.so校验
+  - 新增PD分离场景相关校验
+  - 新增libjemalloc.so校验
 - 系统相关校验
-  新增jemallolc是否安装
+  - 新增jemallolc是否安装
 
 ## 默认场景
 
