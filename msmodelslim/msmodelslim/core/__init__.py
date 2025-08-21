@@ -24,11 +24,12 @@ __all__ = [
     "quantize",
     "dequantize",
     "fake_quantize",
+    "iter_smooth",
 ]
 
 from .KIA import KIAManager
 from .QAL import QDType, QParam, QStorage
-from .api import calculate_qparam, quantize, dequantize, fake_quantize
+from .api import calculate_qparam, quantize, dequantize, fake_quantize, iter_smooth
 
 KIAManager.init_module()
 KIAManager.check_version()

@@ -17,5 +17,7 @@ __all__ = []
 __version__ = "1.0.0"
 
 from . import int8
+from . import iter_smooth
 
 __all__.extend(getattr(int8, "__all__", []))
+__all__.extend(getattr(iter_smooth, "__all__", []))

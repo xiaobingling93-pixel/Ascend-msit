@@ -14,6 +14,7 @@
 #  limitations under the License.
 
 __all__ = [
+    "iter_smooth",
     "calculate_qparam",
     "quantize",
     "dequantize",
@@ -21,3 +22,4 @@ __all__ = [
 ]
 
 from .base_api import calculate_qparam, quantize, dequantize, fake_quantize
+from .kia_api import iter_smooth
