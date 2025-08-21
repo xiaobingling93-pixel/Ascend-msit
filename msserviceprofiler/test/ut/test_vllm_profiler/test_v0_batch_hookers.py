@@ -16,6 +16,7 @@ import os
 import sys
 from collections import deque, Counter
 from unittest.mock import MagicMock
+
 import pytest
 import ms_service_profiler
 

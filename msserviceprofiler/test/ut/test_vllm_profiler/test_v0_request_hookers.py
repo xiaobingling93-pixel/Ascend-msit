@@ -14,10 +14,10 @@
 
 import os
 import sys
-import pytest
 import types
 from unittest.mock import MagicMock
 
+import pytest
 import ms_service_profiler
 from .fake_ms_service_profiler import Profiler, Level
 
@@ -103,7 +103,9 @@ def test_process_model_outputs_given_non_empty_queue_and_finished_seq_when_calle
     ctx = make_ctx([(None, [meta], scheduler_outputs, None, None, None, skip)])
     result = request_hookers.process_model_outputs(original_func, object(), ctx)
     assert result == "res-ok"
-    flat_calls = [item for chain in Profiler.instance_calls for item in chain]
+    flat_calls = [
+        item for chain in Profiler.instance_calls for item in chain
+    ]
     assert ("metric", "recvTokenSize", 10) in flat_calls
     assert ("metric", "replyTokenSize", 5) in flat_calls
     assert ("event", "DecodeEnd") in flat_calls
@@ -121,7 +123,9 @@ def test_process_model_outputs_given_skip_index_when_called_then_skips_token_met
     result = request_hookers.process_model_outputs(original_func, object(), ctx)
     assert result == "res-skip"
     # Should have no metric logs but still DecodeEnd
-    flat_calls = [item for chain in Profiler.instance_calls for item in chain]
+    flat_calls = [
+        item for chain in Profiler.instance_calls for item in chain
+    ]
     assert ("metric", "recvTokenSize", 3) not in flat_calls
     assert ("event", "DecodeEnd") in flat_calls
 
@@ -152,6 +156,8 @@ def test_validate_output_given_finished_false_when_called_then_no_metrics_logged
     )
     result = request_hookers.validate_output(original_func, object(), output, "ot")
     assert result == "no-metrics"
-    flat_calls = [item for chain in Profiler.instance_calls for item in chain]
+    flat_calls = [
+        item for chain in Profiler.instance_calls for item in chain
+    ]
     assert ("metric", "recvTokenSize", 1) not in flat_calls
     assert ("metric", "replyTokenSize", 1) not in flat_calls
