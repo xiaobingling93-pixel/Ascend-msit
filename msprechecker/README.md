@@ -113,7 +113,7 @@ msprechecker precheck --scene vllm
   OpenMP多线程绑核配置性能
   HCCL通信缓存等
 
-### EP分离场景
+### PD分离场景
 
 ```bash
 msprechecker precheck --scene vllm,ep
