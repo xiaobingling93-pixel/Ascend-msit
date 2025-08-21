@@ -2,37 +2,37 @@ env:
   OMP_PROC_BIND:
     expected:
       type: eq
-      value: "false"
+      value: "'false'"
     reason: "OpenMP多线程绑核配置性能"
     severity: low
   OMP_NUM_THREADS:
     expected:
       type: eq
-      value: "10"
+      value: "'10'"
     reason: "OpenMP多线程绑核配置性能"
     severity: low
   PYTORCH_NPU_ALLOC_CONF:
     expected:
       type: eq
-      value: "expandable_segments:True"
+      value: "'expandable_segments:True'"
     reason: "OpenMP多线程绑核配置性能"
     severity: low
   HCCL_BUFFSIZE:
     expected:
       type: eq
-      value: "1024"
+      value: "'1024'"
     reason: "HCCL通信缓存，PD分离场景，P节点设置为512，D节点设置为1024"
     severity: high
   TASK_QUEUE_ENABLE:
     expected:
       type: eq
-      value: "1"
+      value: "'1'"
     reason: "单队列模式"
     severity: low
   VLLM_USE_V1:
     expected:
       type: eq
-      value: "1"
+      value: "'1'"
     reason: "VLLM V1 engine开关，不配置默认走V0"
     severity: high
 
@@ -52,13 +52,13 @@ sys:
   transparent_hugepage:
     expected:
       type: "eq"
-      value: "always"
+      value: "'always'"
     reason: "开启透明大页，吞吐率结果会更加稳定"
     severity: "high"
   release:
     expected:
       type: "ge"
-      value: "Version(5.10)"
+      value: "'Version(5.10)'"
     reason: "升级到 5.10 以上，CPU 下发会加快，可以减少 host bound"
     severity: "high"
 
@@ -67,6 +67,6 @@ ascend:
     version:
       expected:
         type: "ge"
-        value: "Version(24.1)"
+        value: "'Version(24.1)'"
       reason: 升级到最新的驱动可以提升性能
       severity: "high"
