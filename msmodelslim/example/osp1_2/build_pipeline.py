@@ -165,7 +165,8 @@ def build_pipeline(args):
         args.text_prompt = [args.text_prompt]
     if len(args.text_prompt) == 1 and args.text_prompt[0].endswith('txt'):
         args.text_prompt[0] = get_valid_read_path(args.text_prompt[0])
-        text_prompt = open(args.text_prompt[0], 'r').readlines()
+        with open(args.text_prompt[0], 'r') as f:
+            text_prompt = f.readlines()
         args.text_prompt = [i.strip() for i in text_prompt]
 
     full_path = get_valid_read_path(args.model_path, is_dir=True)
