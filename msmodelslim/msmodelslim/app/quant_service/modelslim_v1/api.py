@@ -23,7 +23,7 @@ from msmodelslim.quant.processor.base import AutoSessionProcessor, AutoProcessor
 from msmodelslim.quant.processor.memory.load import LoadProcessorConfig
 from msmodelslim.utils.exception import InvalidDatasetError, UnsupportedError
 from msmodelslim.utils.logging import get_logger
-from ...base.const import PipelineType
+from msmodelslim.app.base.const import PipelineType
 
 
 def process_model(
