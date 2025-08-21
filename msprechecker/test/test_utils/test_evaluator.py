@@ -81,3 +81,7 @@ class TestEvaluator(unittest.TestCase):
             self.evaluator.evaluate("Version(8.1.rc2) > Version(8.1.rc1)"),
             Version("8.1.rc2") > Version("8.1.rc1")
         )
+        self.assertEqual(
+            self.evaluator.evaluate("int(str(123)) == 123"),
+            int(str(123)) == 123
+        )

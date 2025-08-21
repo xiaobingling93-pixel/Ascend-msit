@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import re
-import ast
 import operator
 from typing import Any
 
@@ -46,11 +45,12 @@ class Evaluator:
         'or': (0, operator.or_)
     }
 
+    _FUNC_REGEX = re.compile(r'(?P<FUNC>float|int|str|Version)\((?P<FUNC_ARG>[/\w_.$}{\'-]*?)\)')
+
     _TOKEN_REGEX = re.compile(
         r'(?P<NUMBER>-?\d+(\.\d*)?)'
         r'|(?P<OP>==|!=|>=|<=|\*\*|//|>|<|\b(?:and|or|not)\b|[+\-*/%()])'
-        r'|(?P<FUNC>float|int|str|Version)\((?P<FUNC_ARG>[^()]*?)\)'
-        r'|(?P<STR>(?:\'|\")[^\'\"]+?(?:\'|\"))'
+        r'|(?P<STR>(?:(\'[^\"]*?\')))'
         r'|(?P<NONE>\bNone\b)'
         r'|(?P<SKIP>\s+)'
     )
@@ -63,10 +63,27 @@ class Evaluator:
     }
 
     @staticmethod
+    def _handle_func(mo: re.Match):
+        func_name = mo.group('FUNC')
+        func_arg = mo.group('FUNC_ARG')
+        if isinstance(func_arg, str) and \
+            func_arg.startswith("'") and \
+            func_arg.endswith("'"):
+            func_arg = func_arg.strip("'")
+        
+        repl_value = Evaluator._FUNC_MAP[func_name](func_arg)
+        if isinstance(repl_value, str):
+            return repr(repl_value)
+        
+        return f"{repl_value}"
+
+    @staticmethod
     def _split_tokens(expr: str):
+        for _ in range(5): # max func depth 5
+            expr = Evaluator._FUNC_REGEX.sub(Evaluator._handle_func, expr)
+
         tokens = []
         has_number = False
-        has_int_or_float = False
         has_version = False
 
         for mo in Evaluator._TOKEN_REGEX.finditer(expr):
@@ -75,26 +92,18 @@ class Evaluator:
 
             if kind == 'SKIP':
                 continue
-            elif kind == 'FUNC_ARG':
-                func_name = mo.group('FUNC')
-                func_arg = mo.group('FUNC_ARG')
-                if func_name == 'Version':
-                    has_version = True
-                else:
-                    has_int_or_float = True
-                tokens.append((func_name.upper(), Evaluator._FUNC_MAP[func_name](func_arg)))
             elif kind == 'NUMBER':
                 has_number = True
                 tokens.append(('NUMBER', value))
             elif kind == 'OP':
                 tokens.append(('OP', value))
             elif kind == 'STR':
-                tokens.append(('STR', ast.literal_eval(value)))
+                tokens.append(('STR', value.strip("'")))
             elif kind == 'NONE':
                 tokens.append(('NONE', value))
 
         # Constraint checks
-        version_conflict = has_version and (has_int_or_float or has_number)
+        version_conflict = has_version and has_number
         if version_conflict:
             raise SyntaxError("Expression cannot contain VERSION with INT/FLOAT/NUMBER/OP tokens.")
 
@@ -139,11 +148,6 @@ class Evaluator:
 
     @classmethod
     def _convert_tokens_to_rpn(cls, tokens):
-        # Handle single token (NUMBER, INT, FLOAT, VERSION)
-        if len(tokens) == 1:
-            _, val = tokens[0]
-            return [val]
-
         # Handle expressions with INT/FLOAT and OPs
         output = []
         stack = []
@@ -182,15 +186,11 @@ class Evaluator:
     @classmethod
     def _evaluate(cls, expr: Any):
         tokens = cls._split_tokens(expr)
-        if not tokens or \
-           all(t[0] == 'NUMBER' for t in tokens) or \
-           all(t[0] == 'OP' and t[1] == r"/" for t in tokens): # in case we have a path
+        # in case we have a path
+        if not tokens or all(t[0] == 'OP' and t[1] == r"/" for t in tokens):
             return expr
 
         rpn = cls._convert_tokens_to_rpn(tokens)
-        try:
-            result = cls._evaluate_rpn(rpn)
-        except Exception:
-            result = expr
+        result = cls._evaluate_rpn(rpn)
 
         return result

@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from ..base import NodeChecker
+from ...utils import get_model_type
 
 
 class MIESConfigChecker(NodeChecker):
@@ -22,5 +23,9 @@ class MIESConfigChecker(NodeChecker):
         self.error_handler.type = "mies config"
 
     def _get_rules(self):
-        self.rule_manager.scene = "mix"
+        model_type = get_model_type()
+        if not model_type or "deepseek" not in model_type:
+            self.rule_manager.scene = "pd_mix"
+        else:
+            self.rule_manager.scene = "pd_mix_dsr1"
         return self.rule_manager.get_rules()['mies_config']

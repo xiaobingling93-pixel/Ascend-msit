@@ -42,7 +42,7 @@ class MacroExpander:
     @classmethod
     def _expand_var(cls, match_object: re.Match, context, visited_path):
         path = match_object.group(1)
-        if not path or path.replace(cls.DOT, "") == "":
+        if not path:
             raise ExpandError(path)
 
         full_path = cls._build_full_path(path, context)
@@ -50,24 +50,29 @@ class MacroExpander:
             raise ExpandError(full_path)
 
         val = visited_path[full_path]
+        if val is None:
+            return 'None'
 
         return f"{type(val).__name__}({val})"
 
-
     @classmethod
     def _build_full_path(cls, path: str, context: str) -> str:
+        if path == cls.DOT:
+            return context
+
         if path.startswith(cls.DOT):
-            base_parts = context.split(cls.DOT) if context else []
-            i = 0
-            while i < len(path) and path[i] == cls.DOT:
-                if base_parts:
-                    base_parts.pop()
+            full_path = context + path
+            comps = full_path.split('.')
+        
+            stack = []
+            for comp in comps:
+                if comp:
+                    stack.append(comp)
+                elif not stack:
+                    raise ExpandError(full_path)
                 else:
-                    raise ExpandError(path)
-                i += 1
-            remaining = path[i:]
-            if remaining:
-                base_parts.append(remaining)
-            return cls.DOT.join(base_parts)
-        else:
-            return path
+                    stack.pop()
+
+            return '.'.join(stack)
+
+        return path

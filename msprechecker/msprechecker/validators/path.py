@@ -20,6 +20,9 @@ from .base import BaseValidator
 class PathValidator(BaseValidator):
     @staticmethod
     def validate(actual_value, expected_value) -> bool:
+        if not actual_value:
+            return False
+
         if expected_value == "exists":
             return os.path.exists(actual_value)
         return False

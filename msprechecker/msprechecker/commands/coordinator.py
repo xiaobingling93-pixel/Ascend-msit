@@ -28,7 +28,6 @@ from ..collectors import ConfigCollector, CollectResult
 from ..reporters import Reporter
 from ..presets import RuleManager
 from .base import CommandStrategy, CommandType
-from ..utils import CheckErrorHandler, ConfigErrorHandler, global_logger, singleton
 from ..collectors import (
     BaseCollector, EnvCollector, SysCollector, ConfigCollector,
     AscendCollector, HCCLCollector, PingCollector,
@@ -45,7 +44,10 @@ from ..checkers import (
 )
 from ..comparators import Comparator
 from ..reporters import Reporter
-from ..utils import FrameworkType, ParserRegistry
+from ..utils import (
+    FrameworkType, ParserRegistry, update_model_type,
+    CheckErrorHandler, ConfigErrorHandler, global_logger, singleton
+)
 
 
 class CollectorFactory:
@@ -75,7 +77,7 @@ class CollectorFactory:
         # PD Disaggregation (single container)
   
         # PD Mix
-        elif getattr(args, "--mies-config-path", None):
+        elif getattr(args, "mies_config_path", None):
             collectors.append(MIESConfigCollector(config_path=args.mies_config_path))
         
         return collectors
@@ -199,6 +201,8 @@ class PrecheckStrategy(CommandStrategy):
         
         collect_data = {}
         for path in paths_to_find:
+            if "ref" in path:
+                continue
             if os.path.isabs(path):
                 global_logger.warning("unsafe, key should not be abspath: {path!r}")
                 continue
@@ -333,6 +337,7 @@ class Coordinator:
     def execute(self, parser: argparse.ArgumentParser) -> int:
         """Execute the appropriate action based on command"""
         args = parser.parse_args()
+        update_model_type(args)
         show_legacy_warnings(args)
 
         if getattr(args, "scene", None) and \

@@ -35,7 +35,8 @@ class RuleManager:
         "mindie_env": "env_check_dsr1_pd.yaml",
         "pd_disaggregation": "config_check_pd.yaml",
         "pd_disaggregation_single_container": "config_check_pd_single_container.yaml",
-        "mix": "pd_mix_check.yaml",
+        "pd_mix": "pd_mix_check.yaml",
+        "pd_mix_dsr1": "pd_mix_check_dsr1.yaml",
         "default": "default.yaml",
     }
     

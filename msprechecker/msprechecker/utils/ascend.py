@@ -326,3 +326,32 @@ class VLLMParser(JsonParser):
                 )
 
         return host_to_devices
+
+
+model_type = None
+
+
+def update_model_type(args):
+    model_config_path = None
+
+    if getattr(args, 'weight_dir', None):
+        model_config_path = os.path.join(args.weight_dir, "config.json")
+    elif getattr(args, 'mies_config_path', None):
+        with open_s(args.mies_config_path) as f:
+            data = json.load(f)
+        try:
+            model_config_path = data['BackendConfig']['ModelDeployConfig']['ModelConfig'][0]['modelWeightPath']
+        except Exception:
+            model_config_path = None
+    try:
+        with open_s(model_config_path) as f:
+            data = json.load(f)
+    except Exception:
+        return
+    
+    global model_type
+    model_type = data.get('model_type')
+
+
+def get_model_type():
+    return model_type

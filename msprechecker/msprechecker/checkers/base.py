@@ -15,7 +15,7 @@
 
 from abc import ABC, abstractmethod
 from collections import deque
-from typing import Dict
+from enum import Enum, auto
 
 from ..presets import RuleManager
 from ..utils import (
@@ -24,6 +24,18 @@ from ..utils import (
 )
 from ..validators import get_validator
 from ..collectors import CollectResult
+from ..utils import get_npu_count, get_current_ip_and_addr
+
+
+class WaMLError(Exception):
+    pass
+
+
+class BlockType(Enum):
+    BLK_BASIC = auto()
+    BLK_COND = auto()
+    BLK_SEARCH = auto()
+    BLK_UNKNOWN = auto()
 
 
 class BaseChecker(ABC):
@@ -47,15 +59,97 @@ class BaseChecker(ABC):
 
 
 class NodeChecker(BaseChecker):
+    def __init__(self, *, error_handler: ErrorHandler = None, rule_manager: RuleManager = None):
+        self.error_handler = error_handler or get_handler(ErrorType.ERR_CHECK)
+        self.rule_manager = rule_manager or RuleManager()
+        self.max_nesting_depth = 10
+
     @abstractmethod
     def _get_rules(self):
         pass
     
     def _check(self, results) -> ErrorHandler:
+        builtin_variables = self._get_builtins()
         visited_nodes = Traverser.traverse(results)
+        visited_nodes.update(builtin_variables)
+
         rules = self._get_rules()
+        if 'ref' in rules:
+            ref_section = rules.pop('ref')
+            temporary_variables = self._get_temp_variables(ref_section, visited_nodes)
+            visited_nodes.update(temporary_variables)
+
         self._validate_nodes(rules, visited_nodes)
+
         return self.error_handler
+    
+    @staticmethod
+    def _get_builtins():
+        """
+        This method is used to init builtin variables for yaml to use.
+        
+        For example, yaml can use "${global.cur_ip}" to refer to the current ip.
+        Current supports:
+            cur_ip: current host ip
+            npu_count: number of npu devices
+        """
+        builtins = {
+            "global.cur_ip": get_current_ip_and_addr()[1],
+            "global.npu_count": get_npu_count()
+        }
+
+        return builtins
+
+    @staticmethod
+    def _get_temp_variables(ref_section, visited_nodes):
+        """
+        This method is used to get temp variables from yaml
+        
+        We allow yaml to have a "ref" representing variables for later usage.
+        """
+        temporary_variables = {}
+        if not isinstance(ref_section, list):
+            raise WaMLError("Reference section must be a list of reference definitions")
+
+        for ref_item in ref_section:
+            if 'from' not in ref_item:
+                raise WaMLError("Reference definition must contain 'from' field")
+            if 'as' not in ref_item:
+                raise WaMLError("Reference definition must contain 'as' field for variable naming")
+
+            scope = ref_item['from']
+            variable_name = ref_item['as']
+            full_var_name = f'ref.{variable_name}'
+            if scope not in visited_nodes:
+                temporary_variables[full_var_name] = None
+                continue
+
+            if not isinstance(visited_nodes[scope], list):
+                temporary_variables[full_var_name] = visited_nodes[scope]
+                continue
+
+            attribute = ref_item.get('select', "")
+            condition = ref_item.get('where', True)
+
+            for i, _ in enumerate(visited_nodes[scope]):
+                local_path = f"{scope}[{i}]"
+                processed_condition = MacroExpander.expand(condition, local_path, visited_nodes)
+                condition_result = Evaluator.evaluate(processed_condition)
+
+                if not isinstance(condition_result, bool):
+                    raise WaMLError(f"Failed to evaluate {condition} to boolean.")
+
+                if not condition_result:
+                    continue
+
+                if attribute:
+                    processed_attribute = MacroExpander.expand(attribute, local_path, visited_nodes)
+                else:
+                    processed_attribute  = visited_nodes[local_path]
+
+                temporary_variables[full_var_name] = Evaluator.evaluate(processed_attribute)
+        
+        return temporary_variables
 
     def _validate_nodes(self, rules, visited_nodes):
         queue = deque()
@@ -63,69 +157,145 @@ class NodeChecker(BaseChecker):
 
         while queue:
             node, path = queue.popleft()
-            self._dispatch_node(node, path, queue, visited_nodes)
-
-    def _dispatch_node(self, node, path, queue, visited_nodes):
-        if isinstance(node, dict) and 'expected' in node:
-            self._validate_expected(node, path, visited_nodes)
-        elif isinstance(node, dict):
-            self._validate_dict(node, path, queue, visited_nodes)
-        elif isinstance(node, list):
-            self._validate_list(node, path, queue, visited_nodes)
-
-    def _validate_expected(self, node: dict, path: str, visited_nodes: dict):
-        expect = node['expected']
-        actual = visited_nodes.get(path)
-        reason = node.get('reason', '暂无原因')
-        severity = node.get('severity', "high")
-
-        if expect is None:
-            self.error_handler.add_error(
-                path=path, actual=actual, expected="-",
-                reason=reason, severity="medium"
-            )
-            return
-
-        while 'if' in expect:
-            condition = expect['if']
-            try:
-                condition = MacroExpander.expand(condition, path, visited_nodes)
-                condition_result = Evaluator.evaluate(condition)
-            except ExpandError as e:
-                self.error_handler.add_error(
-                    path=path, actual=actual,
-                    expected=expect['if'], reason=f"条件表达式展开失败: {str(e)}",
-                    severity=severity
-                )
-                return
             
-            # 根据条件结果选择then或else分支
-            expect = expect['then'] if condition_result else expect['else']
-            if expect is None:
-                return
+            if isinstance(node, dict) and 'expected' in node:
+                self._validate_expect(node, path, visited_nodes)
+            elif isinstance(node, dict):
+                self._validate_dict(node, path, queue, visited_nodes)
+            elif isinstance(node, list):
+                self._validate_list(node, path, queue, visited_nodes)
+    
+    def _validate_expect(self, node, path, visited_nodes):
+        self.max_nesting_depth = 10
 
-        # 处理选定的预期节点
-        expected_value = expect['value']
-        expected_type = expect['type']
+        block = node['expected']
+        result, reason, severity, suggest = self._process_block(block, path, visited_nodes)
+        
+        if not result:
+            self.error_handler.add_error(
+                path=path, reason=node.get('reason', reason),
+                severity=node.get('severity', severity),
+                expected=suggest,
+                actual=visited_nodes[path] or "<missing>"
+            )
 
-        try:
+    def _process_block(self, block, path, visited_nodes):
+        if self.max_nesting_depth < 0:
+            raise WaMLError(f"Maximum nesting depth of {self.max_nesting_depth} exceeded")
+
+        self.max_nesting_depth -= 1
+
+        block_type = self._get_block_type(block)        
+        if block_type == BlockType.BLK_BASIC:
+            return self._process_basic_block(block, path, visited_nodes)
+        elif block_type == BlockType.BLK_SEARCH:
+            return self._process_search_block(block, path, visited_nodes)
+        elif block_type == BlockType.BLK_COND:
+            return self._process_conditional_block(block, path, visited_nodes)
+        else:
+            if not "type" in block or not "value" in block:
+                raise WaMLError(f"Unknown block type: {block_type}")
+            
+            case_block = {"case": block, "reason": "", "severity": "high"}
+            return self._process_basic_block(case_block, path, visited_nodes)
+
+    def _get_block_type(self, block):
+        if isinstance(block, dict):
+            if all(keyword in block for keyword in ('case', 'reason')):
+                return BlockType.BLK_BASIC
+
+            if all(keyword in block for keyword in ('if', 'then')):
+                return BlockType.BLK_COND
+
+            if all(keyword in block for keyword in ('contains_all',)):
+                return BlockType.BLK_SEARCH
+
+        return BlockType.BLK_UNKNOWN
+
+    def _process_search_block(self, block, path, visited_nodes):
+        actual = visited_nodes[path]
+
+        if not isinstance(actual, list):
+            raise WaMLError(f"Expected a list for search operation, got {type(actual).__name__}")
+
+        search_items = block['contains_all']
+        if not search_items:
+            return True, "", "", ""  # 空搜索列表视为成功
+
+        results = []
+        for item in search_items:
+            found = False
+            for i, _ in enumerate(visited_nodes[path]):
+                local_path = f"{path}[{i}]"
+                try:
+                    result, reason, severity, suggest = self._process_block(
+                        block=item, path=local_path, visited_nodes=visited_nodes
+                    )
+                except Exception:
+                    result = False
+
+                self.max_nesting_depth += 1
+                if result:  # 只要有一个匹配就成功
+                    found = True
+                    break
+
+            if not found:
+                results.append((
+                    item['reason'], item.get(severity, 'high'),
+                    item.get('suggest', item['case'])
+                ))
+
+        for reason, severity, suggest in results:
+            self.error_handler.add_error(
+                path=path, reason=reason, severity=severity,
+                expected=suggest, actual="<missing>"
+            )
+
+        return True, "", "", "" # 返回 True 外面不需要再 add_error
+
+    def _process_conditional_block(self, block, path, visited_nodes):
+        condition = block['if']
+        expanded_condition = MacroExpander.expand(condition, path, visited_nodes)
+        condition_result = Evaluator.evaluate(expanded_condition)
+
+        next_block = block['then'] if condition_result else block.get('else')
+
+        if next_block is None:
+            return True, "", "", ""  # 默认返回成功
+
+        result = self._process_block(block=next_block, path=path, visited_nodes=visited_nodes)
+        return result
+
+    def _process_basic_block(self, block, path, visited_nodes):
+        case = block['case']
+        reason = block['reason']
+        severity = block.get('severity', 'high')
+
+        actual = visited_nodes[path]
+        if isinstance(case, dict):
+            if 'type' not in case or 'value' not in case:
+                raise WaMLError("Basic block must contain 'type' and 'value' fields if 'case' if a dict type")
+
+            expected_value = case['value']
             expanded_value = MacroExpander.expand(expected_value, path, visited_nodes)
-        except ExpandError as e:
-            self.error_handler.add_error(
-                path=path, actual=actual,
-                expected=expected_value, reason=str(e),
-                severity=severity
-            )
-            return
+            evaluated_value = Evaluator.evaluate(expanded_value)
+            validator = get_validator(case['type'])
+            
+            return validator.validate(actual, evaluated_value), reason, severity, evaluated_value
 
-        validator = get_validator(expected_type)
-        evaluated_value = Evaluator.evaluate(expanded_value)
+        if case == "absent" and actual is not None:
+            return actual is not None, reason, severity, None
+        if case == "present" and actual is None:
+            return actual is None, reason, severity, "-"
+        if case == "alert":
+            return False, reason, "medium", "-"
 
-        if not validator.validate(actual, evaluated_value):
-            self.error_handler.add_error(
-                path=path, expected=evaluated_value, actual=actual,
-                reason=reason, severity=severity
-            )
+        expanded_expr = MacroExpander.expand(case, path, visited_nodes)
+        evaluated_expr = Evaluator.evaluate(expanded_expr)
+        if not evaluated_expr:
+            return evaluated_expr, reason, severity, block.get('suggest', case)
+
+        return True, "", "", ""
 
     def _validate_dict(self, node: dict, path: str, queue: deque, visited_nodes: dict):
         for k, v in node.items():
@@ -136,26 +306,16 @@ class NodeChecker(BaseChecker):
             queue.append((v, new_path))
 
     def _handle_missing_key(self, node, path, visited_nodes):
-        expected = node.get('expected', {})
-
-        if expected is None:
+        if node is None or not isinstance(node, dict) or 'expected' not in node:
             self.error_handler.add_error(
                 path=path, actual="missing",
-                expected="-", reason=node.get('reason', '这个字段应该存在'),
-                severity="medium"
+                expected="-", reason='这个字段应该存在',
+                severity="high"
             )
             return
         
-        expected_type = expected.get('type', "")
-        expected_value = Evaluator.evaluate(
-            MacroExpander.expand(expected.get('value', "存在"), path, visited_nodes)
-        )
-        if not (expected_type == 'eq' and expected_value is None):
-            self.error_handler.add_error(
-                path=path, actual='missing',
-                expected=expected_value, reason=node.get('reason', '这个字段应该存在'),
-                severity=node.get('severity', 'high')
-            )
+        visited_nodes[path] = None
+        self._validate_expect(node, path, visited_nodes)
 
     def _validate_list(self, node: list, path: str, queue: deque, visited_nodes: dict):
         for i, v in enumerate(node):
