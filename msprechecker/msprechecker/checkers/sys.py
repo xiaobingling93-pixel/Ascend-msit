@@ -60,23 +60,24 @@ class SysChecker(NodeChecker):
         try:
             # 检查apt (Debian/Ubuntu)
             result_apt = subprocess.run(
-                ['dpkg', '-l', 'libjemalloc*'],
+                ['apt', 'list', '--installed', 'libjemalloc*'],
                 capture_output=True,
                 text=True,
                 check=False
             )
             
-            # 检查yum/dnf (CentOS/RHEL/Fedora)
+            # 检查yum (CentOS/RHEL)
             result_yum = subprocess.run(
-                ['rpm', '-qa', 'jemalloc*'],
+                ['yum', 'list', 'installed', 'jemalloc*'],
                 capture_output=True,
                 text=True,
                 check=False
             )
+            
             
             # 如果任一包管理器显示已安装
             apt_installed = result_apt.returncode == 0 and 'libjemalloc' in result_apt.stdout
-            yum_installed = result_yum.returncode == 0 and result_yum.stdout.strip() != ''
+            yum_installed = result_yum.returncode == 0 and 'jemalloc' in result_yum.stdout
             
             return apt_installed or yum_installed
             
