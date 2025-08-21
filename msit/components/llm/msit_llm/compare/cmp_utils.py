@@ -21,6 +21,7 @@ import pandas as pd
 import torch
 
 from msit_llm.common.tool import read_atb_data
+from components.utils.file_utils import write_df_to_csv
 from components.utils.util import safe_torch_load
 from msit_llm.common.utils import load_file_to_read_common_check
 from msit_llm.common.constant import (TOKEN_ID, DATA_ID, GOLDEN_DATA_PATH, MY_DATA_PATH,
@@ -56,12 +57,12 @@ class BasicDataInfo:
     def _validate_op_type(op_type):
         if op_type is None:
             return None, None
-        
+
         if isinstance(op_type, (list, tuple)) and len(op_type) == 2:
             return op_type[0], op_type[1]
         else:
             raise ValueError("op_type must be a list or tuple containing two elements")
-    
+
     @classmethod
     def _count(cls):
         cls.count_data_id += 1
@@ -154,7 +155,7 @@ def set_tensor_basic_info_in_row_data(golden_data, my_data):
     return row_data
 
 
-def save_compare_reault_to_csv(gathered_row_data, output_path=".", columns=CSV_GOLDEN_HEADER):
+def save_compare_reault_to_csv(gathered_row_data, output_path=".", columns=CSV_GOLDEN_HEADER, rank_id=-1):
     try:
         ms_makedirs(output_path, exist_ok=True)
     except OSError:
@@ -162,7 +163,10 @@ def save_compare_reault_to_csv(gathered_row_data, output_path=".", columns=CSV_G
         raise
 
     cur_time = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d%H%M%S')
-    csv_save_path = os.path.join(output_path, f"msit_cmp_report_{cur_time}.csv")
+    if rank_id != -1:
+        csv_save_path = os.path.join(output_path, f"msit_cmp_report_rank{rank_id}_{cur_time}.csv")
+    else:
+        csv_save_path = os.path.join(output_path, f"msit_cmp_report_{cur_time}.csv")
     gathered_row_data = list(filter(
                 lambda item: not ("cmp_fail_reason" in item and item["cmp_fail_reason"] == "data shape doesn't match."),
                 gathered_row_data
@@ -176,7 +180,7 @@ def save_compare_reault_to_csv(gathered_row_data, output_path=".", columns=CSV_G
     data_frame = pd.DataFrame(gathered_row_data, columns=columns)
     data_frame.fillna(value="", inplace=True)
     data_frame.dropna(axis=0, how="all", inplace=True)
-    data_frame.to_csv(csv_save_path, index=False)
+    write_df_to_csv(data_frame, csv_save_path)
     logger.info(f"Saved comparing results: {csv_save_path}")
     return csv_save_path
 
@@ -218,7 +222,7 @@ def save_compare_reault_to_xlsx(gathered_row_data_all, sheet_names, output_path=
 
 
 def compare_data(golden_data, my_data):
-    if not hasattr(compare_data, "index"): 
+    if not hasattr(compare_data, "index"):
         compare_data.index = 0
 
     golden_data_dtype = golden_data.dtype
@@ -231,7 +235,7 @@ def compare_data(golden_data, my_data):
         logger.debug(message + "convert it to fp32")
     golden_data_fp32 = golden_data.reshape(-1).float()
     my_data_fp32 = my_data.reshape(-1).float()
-    compare_data.index += 1 
+    compare_data.index += 1
     return compare_tensor(golden_data_fp32, my_data_fp32)
 
 
@@ -247,7 +251,7 @@ def read_data(data_path):
         else:
             logger.error("Unsupported data format %s", data_path)
             raise TypeError("Unsupported data format.")
-    
+
     return data.cpu()
 
 
@@ -346,10 +350,10 @@ def read_bin_statictics(file_path):
         for line in f:
             line = line.strip()
             if not line:
-                continue 
+                continue
             if line.startswith('$End=1'):
                 end_found = True
-                break  
+                break
             if '=' in line:
                 key, value = [item.strip() for item in line.split('=', 1)]
                 data_dict[key] = value
@@ -389,7 +393,7 @@ def convert_dict_values_to_fp32(key_list, data_dict):
                 converted_dict[key] = None
         else:
             logger.error(f"Warning: Key '{key}' not found in the provided dictionary.")
-            converted_dict[key] = None 
+            converted_dict[key] = None
     return converted_dict
 
 

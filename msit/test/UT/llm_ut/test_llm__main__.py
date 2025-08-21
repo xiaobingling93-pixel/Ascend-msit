@@ -1,10 +1,12 @@
-import unittest
-from unittest.mock import patch, MagicMock, call
 import argparse
 import sys
+import unittest
+from unittest.mock import patch, MagicMock
+
 
 # Patch import for all command dependencies
 MODULE_PATH = "msit_llm.__main__"
+
 
 class TestDumpCommand(unittest.TestCase):
     @patch(f"{MODULE_PATH}.set_log_level")
@@ -49,22 +51,22 @@ class TestDumpCommand(unittest.TestCase):
             DumpCommand("dump", "help").handle(args)
 
     @patch(f"{MODULE_PATH}.set_log_level")
-    @patch(f"components.utils.cmp_algorithm.register_custom_compare_algorithm")
-    @patch(f"msit_llm.compare.torchair_acc_cmp.get_torchair_ge_graph_path", return_value="some_path")
-    @patch(f"msit_llm.compare.torchair_acc_cmp.acc_compare")
+    @patch("components.utils.cmp_algorithm.register_custom_compare_algorithm")
+    @patch("msit_llm.compare.torchair_acc_cmp.get_torchair_ge_graph_path", return_value="some_path")
+    @patch("msit_llm.compare.torchair_acc_cmp.acc_compare")
     def test_handle_torchair_ge_graph(self, mock_acc_compare, mock_get_graph, mock_register, mock_set_log):
         from msit_llm.__main__ import CompareCommand
         args = argparse.Namespace(
             golden_path="golden", my_path="my", cmp_level=None, output=".", mapping_file="",
-            custom_algorithms=None, log_level="info", weight=False, stats=False
+            custom_algorithms=None, log_level="info", weight=False, stats=False, rank_id=None
         )
         CompareCommand("compare", "help").handle(args)
         mock_acc_compare.assert_called_once()
 
     @patch(f"{MODULE_PATH}.set_log_level")
-    @patch(f"components.utils.cmp_algorithm.register_custom_compare_algorithm")
-    @patch(f"msit_llm.compare.torchair_acc_cmp.get_torchair_ge_graph_path", return_value=None)
-    @patch(f"msit_llm.compare.cmp_mgr.CompareMgr")
+    @patch("components.utils.cmp_algorithm.register_custom_compare_algorithm")
+    @patch("msit_llm.compare.torchair_acc_cmp.get_torchair_ge_graph_path", return_value=None)
+    @patch("msit_llm.compare.cmp_mgr.CompareMgr")
     def test_handle_compare_mgr(self, mock_mgr, mock_get_graph, mock_register, mock_set_log):
         from msit_llm.__main__ import CompareCommand
         mock_mgr_instance = MagicMock()
@@ -78,9 +80,9 @@ class TestDumpCommand(unittest.TestCase):
         mock_mgr_instance.compare.assert_called_once()
 
     @patch(f"{MODULE_PATH}.set_log_level")
-    @patch(f"components.utils.cmp_algorithm.register_custom_compare_algorithm")
-    @patch(f"msit_llm.compare.torchair_acc_cmp.get_torchair_ge_graph_path", return_value=None)
-    @patch(f"msit_llm.compare.cmp_weight.compare_weight")
+    @patch("components.utils.cmp_algorithm.register_custom_compare_algorithm")
+    @patch("msit_llm.compare.torchair_acc_cmp.get_torchair_ge_graph_path", return_value=None)
+    @patch("msit_llm.compare.cmp_weight.compare_weight")
     def test_handle_weight(self, mock_cmp_weight, mock_get_graph, mock_register, mock_set_log):
         from msit_llm.__main__ import CompareCommand
         args = argparse.Namespace(
@@ -89,6 +91,7 @@ class TestDumpCommand(unittest.TestCase):
         )
         CompareCommand("compare", "help").handle(args)
         mock_cmp_weight.assert_called_once()
+
 
 class TestErrCheck(unittest.TestCase):
     @patch(f"{MODULE_PATH}.set_log_level")
@@ -99,6 +102,7 @@ class TestErrCheck(unittest.TestCase):
         ErrCheck("errcheck", "help").handle(args)
         mock_process.assert_called_once()
 
+
 class TestBCAnalyze(unittest.TestCase):
     @patch(f"{MODULE_PATH}.set_log_level")
     @patch(f"{MODULE_PATH}.Analyzer.analyze")
@@ -107,6 +111,7 @@ class TestBCAnalyze(unittest.TestCase):
         args = argparse.Namespace(golden="golden.csv", test="test.csv", log_level="info")
         BCAnalyze("analyze", "help").handle(args)
         mock_analyze.assert_called_once_with(golden="golden.csv", test="test.csv")
+
 
 class TestBadCaseAnalyze(unittest.TestCase):
     @patch(f"{MODULE_PATH}.set_log_level")
@@ -117,14 +122,16 @@ class TestBadCaseAnalyze(unittest.TestCase):
         BadCaseAnalyze("bcanalyze", "help").handle(args)
         mock_analyze.assert_called_once_with(golden_csv_path="golden.csv", test_csv_path="my.csv")
 
+
 class TestLogitsDump(unittest.TestCase):
     @patch(f"{MODULE_PATH}.set_log_level")
-    @patch(f"msit_llm.logits_dump.logits_dump.LogitsDumper")
+    @patch("msit_llm.logits_dump.logits_dump.LogitsDumper")
     def test_handle(self, mock_dumper, mock_set_log):
         from msit_llm.__main__ import LogitsDump
         args = argparse.Namespace(exec="run", bad_case_result_csv="bad.csv", token_range=1, log_level="info")
         LogitsDump("logitsdump", "help").handle(args)
         mock_dumper.return_value.dump_logits.assert_called_once()
+
 
 class TestLogitsCompare(unittest.TestCase):
     @patch(f"{MODULE_PATH}.set_log_level")
@@ -137,6 +144,7 @@ class TestLogitsCompare(unittest.TestCase):
         )
         LogitsCompare("logitscmp", "help").handle(args)
         mock_cmp.return_value.process_comparsion.assert_called_once()
+
 
 class TestGetCmdInstance(unittest.TestCase):
     def test_instance(self):
@@ -151,6 +159,7 @@ class TestGetCmdInstance(unittest.TestCase):
         sub_commands = getattr(cmd, "sub_commands", None) or getattr(cmd, "sub_cmds", None)
         self.assertIsNone(sub_commands)
 
+
 class TestDumpCommandArgs(unittest.TestCase):
     def test_add_arguments(self):
         from msit_llm.__main__ import DumpCommand
@@ -159,12 +168,14 @@ class TestDumpCommandArgs(unittest.TestCase):
         # 检查parser.add_argument被多次调用
         self.assertTrue(parser.add_argument.call_count > 0)
 
+
 class TestCompareCommandArgs(unittest.TestCase):
     def test_add_arguments(self):
         from msit_llm.__main__ import CompareCommand
         parser = MagicMock()
         CompareCommand("compare", "help").add_arguments(parser)
         self.assertTrue(parser.add_argument.call_count > 0)
+
 
 class TestErrCheckArgs(unittest.TestCase):
     def test_add_arguments(self):
@@ -173,12 +184,14 @@ class TestErrCheckArgs(unittest.TestCase):
         ErrCheck("errcheck", "help").add_arguments(parser)
         self.assertTrue(parser.add_argument.call_count > 0)
 
+
 class TestBCAnalyzeArgs(unittest.TestCase):
     def test_add_arguments(self):
         from msit_llm.__main__ import BCAnalyze
         parser = MagicMock()
         BCAnalyze("analyze", "help").add_arguments(parser)
         self.assertTrue(parser.add_argument.call_count > 0)
+
 
 class TestBadCaseAnalyzeArgs(unittest.TestCase):
     def test_add_arguments(self):
@@ -187,6 +200,7 @@ class TestBadCaseAnalyzeArgs(unittest.TestCase):
         BadCaseAnalyze("bcanalyze", "help").add_arguments(parser)
         self.assertTrue(parser.add_argument.call_count > 0)
 
+
 class TestLogitsDumpArgs(unittest.TestCase):
     def test_add_arguments(self):
         from msit_llm.__main__ import LogitsDump
@@ -194,13 +208,14 @@ class TestLogitsDumpArgs(unittest.TestCase):
         LogitsDump("logitsdump", "help").add_arguments(parser)
         self.assertTrue(parser.add_argument.call_count > 0)
 
+
 class TestLogitsCompareArgs(unittest.TestCase):
     def test_add_arguments(self):
         from msit_llm.__main__ import LogitsCompare
         parser = MagicMock()
         LogitsCompare("logitscmp", "help").add_arguments(parser)
         self.assertTrue(parser.add_argument.call_count > 0)
-        
+
 
 class TestTransformCommand(unittest.TestCase):
     def setUp(self):
@@ -234,7 +249,13 @@ class TestTransformCommand(unittest.TestCase):
     @patch(f"{MODULE_PATH}.logger")
     @patch("msit_llm.transform.utils.get_transform_scenario")
     @patch("msit_llm.transform.utils.SCENARIOS")
-    def test_handle_torch_to_float_python_atb_with_file(self, mock_scenarios, mock_get_scenario, mock_logger, mock_set_log):
+    def test_handle_torch_to_float_python_atb_with_file(
+        self,
+        mock_scenarios,
+        mock_get_scenario,
+        mock_logger,
+        mock_set_log
+    ):
         # 模拟场景
         mock_get_scenario.return_value = MagicMock()
         mock_scenarios.torch_to_float_python_atb = mock_get_scenario.return_value
@@ -253,13 +274,20 @@ class TestTransformCommand(unittest.TestCase):
             )
             from msit_llm.__main__ import Transform
             Transform("transform", "help").handle(args)
-            mock_transform.assert_called_once_with(source_path="src", to_quant=True, quant_disable_names=["name1", "name2"])
+            mock_transform.assert_called_once_with(source_path="src",
+                                                   to_quant=True, quant_disable_names=["name1", "name2"])
 
     @patch(f"{MODULE_PATH}.set_log_level")
     @patch(f"{MODULE_PATH}.logger")
     @patch("msit_llm.transform.utils.get_transform_scenario")
     @patch("msit_llm.transform.utils.SCENARIOS")
-    def test_handle_torch_to_float_python_atb_with_str(self, mock_scenarios, mock_get_scenario, mock_logger, mock_set_log):
+    def test_handle_torch_to_float_python_atb_with_str(
+        self,
+        mock_scenarios,
+        mock_get_scenario,
+        mock_logger,
+        mock_set_log
+    ):
         # 模拟场景
         mock_get_scenario.return_value = MagicMock()
         mock_scenarios.torch_to_float_python_atb = mock_get_scenario.return_value
@@ -272,14 +300,22 @@ class TestTransformCommand(unittest.TestCase):
             )
             from msit_llm.__main__ import Transform
             Transform("transform", "help").handle(args)
-            mock_transform.assert_called_once_with(source_path="src", to_quant=True, quant_disable_names=["name1", "name2"])
+            mock_transform.assert_called_once_with(source_path="src",
+                                                   to_quant=True, quant_disable_names=["name1", "name2"])
 
     @patch(f"{MODULE_PATH}.set_log_level")
     @patch(f"{MODULE_PATH}.logger")
     @patch("msit_llm.transform.utils.get_transform_scenario")
     @patch("msit_llm.transform.utils.SCENARIOS")
     @patch("msit_llm.transform.float_atb_to_quant_atb.transform_quant.transform_quant")
-    def test_handle_float_atb_to_quant_atb(self, mock_transform_quant, mock_scenarios, mock_get_scenario, mock_logger, mock_set_log):
+    def test_handle_float_atb_to_quant_atb(
+        self,
+        mock_transform_quant,
+        mock_scenarios,
+        mock_get_scenario,
+        mock_logger,
+        mock_set_log
+    ):
         mock_get_scenario.return_value = MagicMock()
         mock_scenarios.float_atb_to_quant_atb = mock_get_scenario.return_value
         args = argparse.Namespace(
@@ -294,7 +330,14 @@ class TestTransformCommand(unittest.TestCase):
     @patch("msit_llm.transform.utils.get_transform_scenario")
     @patch("msit_llm.transform.utils.SCENARIOS")
     @patch("msit_llm.transform.torch_to_float_atb.transform_float.transform_report")
-    def test_handle_torch_to_float_atb_analyze(self, mock_transform_report, mock_scenarios, mock_get_scenario, mock_logger, mock_set_log):
+    def test_handle_torch_to_float_atb_analyze(
+        self,
+        mock_transform_report,
+        mock_scenarios,
+        mock_get_scenario,
+        mock_logger,
+        mock_set_log
+    ):
         mock_get_scenario.return_value = MagicMock()
         mock_scenarios.torch_to_float_atb = mock_get_scenario.return_value
         args = argparse.Namespace(
@@ -309,7 +352,14 @@ class TestTransformCommand(unittest.TestCase):
     @patch("msit_llm.transform.utils.get_transform_scenario")
     @patch("msit_llm.transform.utils.SCENARIOS")
     @patch("msit_llm.transform.torch_to_float_atb.transform_float.transform_float")
-    def test_handle_torch_to_float_atb_transform(self, mock_transform_float, mock_scenarios, mock_get_scenario, mock_logger, mock_set_log):
+    def test_handle_torch_to_float_atb_transform(
+        self,
+        mock_transform_float,
+        mock_scenarios,
+        mock_get_scenario,
+        mock_logger,
+        mock_set_log
+    ):
         mock_get_scenario.return_value = MagicMock()
         mock_scenarios.torch_to_float_atb = mock_get_scenario.return_value
         args = argparse.Namespace(
@@ -342,4 +392,3 @@ class TestTransformCommand(unittest.TestCase):
         parser = MagicMock()
         Transform("transform", "help").add_arguments(parser)
         self.assertTrue(parser.add_argument.call_count > 0)
-

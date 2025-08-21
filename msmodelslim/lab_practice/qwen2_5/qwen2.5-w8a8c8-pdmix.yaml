@@ -1,4 +1,4 @@
-apiversion: v1.0.0
+apiversion: modelslim_v0
 metadata:
   config_id: qwen2.5-w8a8c8-pdmix
   score: 80

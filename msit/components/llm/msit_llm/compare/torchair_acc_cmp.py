@@ -1,4 +1,4 @@
-# Copyright (c) 2023-2024 Huawei Technologies Co., Ltd.
+# Copyright (c) 2023-2025 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,27 +13,29 @@
 # limitations under the License.
 
 from collections import OrderedDict
+from multiprocessing import cpu_count, Pool
 import os
-import sys
 import re
 
 import numpy as np
+
 from msit_llm.common.log import logger
-from msit_llm.common.utils import load_file_to_read_common_check
+from msit_llm.common.utils import load_file_to_read_common_check, get_rank_id_from_torchair_data
 from msit_llm.compare.cmp_utils import BasicDataInfo, fill_row_data, save_compare_reault_to_csv
 from components.utils.acc_cmp import parse_torchair_dump_data, set_msaccucmp_path_from_cann
 from components.utils.file_open_check import ms_open
 from components.utils.constants import TENSOR_MAX_SIZE
 
-GE_GRAPH_FILE_PREFIX = "dynamo_original_graph_"
-FUSION_OP_TYPE = "AutomaticBufferFusionOp"
-DUMP_FILE_FILTER_SUFIX = [".txt", ".npy", ".bin"]
+GE_GRAPH_FILE_PREFIX = 'dynamo_original_graph_'
+GE_DUMP_TIME_PATTERN = 'YYYYMMDDHHMMSS'
+FUSION_OP_TYPE = 'AutomaticBufferFusionOp'
+DUMP_FILE_FILTER_SUFIX = ['.txt', '.npy', '.bin']
 IS_MSACCUCMP_PATH_SET = False
 GLOBAL_TENSOR_CONVERTER = None
 MAX_TOKEN_LEN = 12
 
 
-def get_torchair_ge_graph_path(my_path):
+def get_torchair_ge_graph_path(my_path, rank=-1):
     if not os.path.isdir(my_path):
         return None
 
@@ -42,6 +44,8 @@ def get_torchair_ge_graph_path(my_path):
     timestamp_pattern = re.compile(r"(\d+)")
     for cur_path, _, file_names in os.walk(my_path):
         for file_name in file_names:
+            if rank > -1 and f'rank_{rank}_' not in file_name:
+                continue
             if file_name.startswith(GE_GRAPH_FILE_PREFIX) and file_name.endswith(".txt"):
                 match = timestamp_pattern.search(file_name)
                 if match:
@@ -104,17 +108,28 @@ def parse_pbtxt_to_dict(pbtxt_path):
 
 
 def judge_single_or_multi_device(path):
+    def is_time_directory(dir_name):
+        if not os.path.isdir(os.path.join(path, dir_name)):
+            return False
+        return len(dir_name) == len(GE_DUMP_TIME_PATTERN) and str.isdigit(dir_name)
+
     # 获取指定目录下所有文件和文件夹
     entries = os.listdir(path)
     # 过滤出文件夹
     subdirs = [entry for entry in entries if os.path.isdir(os.path.join(path, entry))]
     if len(subdirs) > 1:
         return True
-    else:
-        return False
+
+    time_dirs = [os.path.join(path, entry) for entry in entries if is_time_directory(entry)]
+    if time_dirs:
+        entries = os.listdir(time_dirs[0])
+        subdirs = [entry for entry in entries if os.path.isdir(os.path.join(time_dirs[0], entry))]
+        return len(subdirs) > 1
+
+    return False
 
 
-def gather_data_with_token_id_fx(data_path, token_dirs):
+def gather_data_with_token_id_fx(data_path, token_dirs, rank_info_existed=False):
     for cur_path, dirs, _ in os.walk(data_path):
         if len(dirs) == 0:
             continue
@@ -122,11 +137,22 @@ def gather_data_with_token_id_fx(data_path, token_dirs):
             dirs = sorted(dirs, key=lambda xx: int(xx))
             token_dirs = [os.path.join(cur_path, dir_name) for dir_name in dirs]
             break
-    
+
     if len(token_dirs) == 0:
         token_dirs.append(data_path)  # Just use data_path if found no token like dirs
-    
+
     gathered_files_list = []
+
+    if rank_info_existed:
+        gathered_files = {}
+        for token_dir in token_dirs:
+            cur_token_id = os.path.basename(token_dir)
+            cur_token_id = int(cur_token_id) + 1 if cur_token_id.isdigit() else 0
+            file_names = [os.path.join(token_dir, f) for f in os.listdir(token_dir) if f.endswith(".npy")]
+            gathered_files[cur_token_id] = file_names
+        gathered_files_list.append(gathered_files)
+        return gathered_files_list
+
     dump_dirs = {}
     for token_dir in token_dirs:
         cur_token_id = os.path.basename(token_dir)
@@ -150,13 +176,14 @@ def gather_data_with_token_id_fx(data_path, token_dirs):
     return gathered_files_list
 
 
-def gather_data_with_token_id(data_path, fx=False):
-    is_multi_device = judge_single_or_multi_device(data_path)
+def gather_data_with_token_id(data_path, fx=False, rank_info_existed=False):
     token_dirs = []
     # Detect the deepest dir level where sub dirs are all digits, and regard as tokens level.
     if fx:
-        return gather_data_with_token_id_fx(data_path, token_dirs)
-    
+        return gather_data_with_token_id_fx(data_path, token_dirs, rank_info_existed)
+
+    is_multi_device = False if rank_info_existed else judge_single_or_multi_device(data_path)
+
     for cur_path, dirs, _ in sorted(os.walk(data_path), key=lambda x: x[0]):
         if not dirs:
             token_dirs.append(cur_path)
@@ -247,7 +274,7 @@ def init_ge_dump_data_from_bin_path(ge_dump_path):
     return dump_data_with_token_id_list
 
 
-def init_fx_dump_data_from_path(fx_dump_path):
+def init_fx_dump_data_from_path(fx_dump_path, rank_info_existed=False):
     """
     For data like:
       1/mm-aten.mm.default.INPUT.0.20240125031118787351.npy,
@@ -263,7 +290,7 @@ def init_fx_dump_data_from_path(fx_dump_path):
         'output': ['1/mm-aten.mm.default.OUTPUT.0.20240125031118787351.npy']
       }}}
     """
-    gathered_files_list = gather_data_with_token_id(fx_dump_path, fx=True)
+    gathered_files_list = gather_data_with_token_id(fx_dump_path, fx=True, rank_info_existed=rank_info_existed)
     if not gathered_files_list:
         raise Exception("Cannot get fx dump data, because the gathered_files_list is empty.")
 
@@ -276,7 +303,6 @@ def init_fx_dump_data_from_path(fx_dump_path):
                 if not file_path.endswith("npy"):
                     continue
                 file_name = os.path.basename(file_path)
-                split_name = file_name.split(".")
                 is_input = ".INPUT." in file_name
                 cur_op_name = file_name.split(".INPUT." if is_input else ".OUTPUT.")[0]
                 cur_op_map = cur_dump_data.get(cur_op_name, {})
@@ -320,8 +346,8 @@ def get_all_ops_from_fusion_op(op_name, graph_map_dict, ge_dump_data):
 def compare_ge_with_fx(graph_map, ge_dump_data, fx_dump_data, token_id=0):
     gathered_row_data = []
     graph_map_dict = {
-        graph["op"]["name"]: graph["op"] 
-        for graph in graph_map 
+        graph["op"]["name"]: graph["op"]
+        for graph in graph_map
         if "op" in graph and "name" in graph["op"]
     }
     ge_dump_data = sort_ge_dump_data(ge_dump_data, graph_map)
@@ -567,24 +593,87 @@ def sort_by_timestamp(gathered_row_data):
 
 
 # Main entrance
-def acc_compare(golden_path, my_path, output_path=".", ge_graph_path=None):
-    logger.info(f"[compare_torchair], golden_path: {golden_path}, my_path: {my_path}, ge_graph_path: {ge_graph_path}")
+def acc_compare(golden_path, my_path, output_path='./', rank_id=None, rank_info_existed=False):
     set_msaccucmp_path_from_cann()
 
-    if ge_graph_path is None:
-        ge_graph_path = get_torchair_ge_graph_path(my_path)
+    if not get_torchair_ge_graph_path(my_path):
+        raise Exception("Can not get ge graph, Please check whether the input path contains graph.")
+
+    if rank_info_existed:
+        if rank_id is None:
+            golden_data_ranks = set()
+            my_data_ranks = set()
+
+            for subdir in os.listdir(golden_path):
+                rank_id = get_rank_id_from_torchair_data(subdir)
+                if os.path.isdir(os.path.join(golden_path, subdir)) and rank_id != -1:
+                    golden_data_ranks.add(rank_id)
+
+            for subdir in os.listdir(my_path):
+                rank_id = get_rank_id_from_torchair_data(subdir)
+                if os.path.isdir(os.path.join(my_path, subdir)) and rank_id != -1:
+                    my_data_ranks.add(rank_id)
+
+            compared_ranks = list(golden_data_ranks & my_data_ranks)
+            if not compared_ranks:
+                raise Exception("No common rank data in golden_path and my_path.")
+        else:
+            compared_ranks = [rank_id]
+    else:
+        compared_ranks = [-1]
+
+    args = []
+    for rank_id in compared_ranks:
+        args.append((golden_path, my_path, output_path, rank_id))
+    processes_pool = Pool(min(len(compared_ranks), int(cpu_count() * 1.3)))
+    processes_pool.map(acc_compare_once, args)
+    processes_pool.close()
+    processes_pool.join()
+
+    return output_path
+
+
+def acc_compare_once(*args):
+    dir_of_golden_path, dir_of_my_path, output_path, rank_id = args[0]
+    if rank_id != -1:
+        subdirs = []
+        for subdir in os.listdir(dir_of_golden_path):
+            is_dir = os.path.isdir(os.path.join(dir_of_golden_path, subdir))
+            if is_dir and subdir.startswith('worldsize') and subdir.endswith(f'rank{rank_id}'):
+                subdirs.append(subdir)
+        if not subdirs:
+            raise Exception(f'Can not get golden data in rank {rank_id}')
+        golden_path = os.path.join(dir_of_golden_path, subdirs[-1])
+
+        subdirs = []
+        for subdir in os.listdir(dir_of_my_path):
+            is_dir = os.path.isdir(os.path.join(dir_of_my_path, subdir))
+            if is_dir and subdir.startswith('worldsize') and subdir.endswith(f'rank{rank_id}'):
+                subdirs.append(subdir)
+        if not subdirs:
+            raise Exception(f'Can not get my data in rank {rank_id}')
+        my_path = os.path.join(dir_of_my_path, subdirs[-1])
+    else:
+        golden_path = dir_of_golden_path
+        my_path = dir_of_my_path
+
+    ge_graph_path = get_torchair_ge_graph_path(dir_of_my_path, rank_id)
+
     if not ge_graph_path:
         raise Exception("Can not get ge graph, Please check whether the input path contains graph.")
+
+    logger.info(f"[compare_torchair], golden_path: {golden_path}, my_path: {my_path}, ge_graph_path: {ge_graph_path}")
+
     graph_map_list = []
     for path in ge_graph_path:
         graph_map_list.append(parse_pbtxt_to_dict(path))
 
     my_dump_data_list = init_ge_dump_data_from_bin_path(my_path)
 
-    is_golden_fx = get_torchair_ge_graph_path(golden_path) is None
+    is_golden_fx = get_torchair_ge_graph_path(dir_of_golden_path) is None
     if is_golden_fx:
         logger.info("Comparing GE with FX")
-        golden_dump_data_list = init_fx_dump_data_from_path(golden_path)
+        golden_dump_data_list = init_fx_dump_data_from_path(golden_path, rank_id != -1)
     else:
         logger.info("Comparing GE with GE")
         golden_dump_data_list = init_ge_dump_data_from_bin_path(golden_path)
@@ -609,5 +698,4 @@ def acc_compare(golden_path, my_path, output_path=".", ge_graph_path=None):
                 row_data = compare_ge_with_ge(graph_map, my_dump_data[token_id], golden_dump_data[token_id], token_id)
             gathered_row_data.extend(row_data)
         sorted_gathered_row_data = sort_by_timestamp(gathered_row_data)
-        save_compare_reault_to_csv(sorted_gathered_row_data, output_path)
-    return output_path
+        save_compare_reault_to_csv(sorted_gathered_row_data, output_path, rank_id=rank_id)

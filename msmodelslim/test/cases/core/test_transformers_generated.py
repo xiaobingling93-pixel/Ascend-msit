@@ -21,10 +21,10 @@ import torch
 import torch.nn as nn
 
 from msmodelslim.core.base.protocol import ProcessRequest
-from msmodelslim.core.runner.layer_wise_runner import (
+from msmodelslim.core.runner.layer_wise_forward import (
     _TransformersForwardBreak,
-    _generated_decoder_layer_visit_func,
-    _transformers_generated_forward_func
+    generated_decoder_layer_visit_func,
+    transformers_generated_forward_func
 )
 
 
@@ -68,7 +68,7 @@ class TestTransformersGenerated(unittest.TestCase):
     def test_transformers_generated_visit_func(self):
         """测试transformers_generated_visit_func函数"""
         # 获取生成器
-        generator = _generated_decoder_layer_visit_func(self.model)
+        generator = generated_decoder_layer_visit_func(self.model)
 
         # 获取第一个请求
         request = next(generator)
@@ -85,7 +85,7 @@ class TestTransformersGenerated(unittest.TestCase):
                               "decoder" in module.__class__.__name__.lower()]
 
         # 获取生成器
-        generator = _generated_decoder_layer_visit_func(self.model, transformer_blocks)
+        generator = generated_decoder_layer_visit_func(self.model, transformer_blocks)
 
         # 获取第一个请求
         request = next(generator)
@@ -108,7 +108,7 @@ class TestTransformersGenerated(unittest.TestCase):
         input_data = torch.randn(5, 10)
 
         # 获取生成器
-        generator = _transformers_generated_forward_func(self.model, input_data)
+        generator = transformers_generated_forward_func(self.model, input_data)
 
         # 获取第一个请求
         request = next(generator)
@@ -137,7 +137,7 @@ class TestTransformersGenerated(unittest.TestCase):
         input_data = torch.randn(5, 10)
 
         # 获取生成器
-        generator = _transformers_generated_forward_func(self.model, input_data, transformer_blocks)
+        generator = transformers_generated_forward_func(self.model, input_data)
 
         # 获取第一个请求
         request = next(generator)

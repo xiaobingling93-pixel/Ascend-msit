@@ -13,17 +13,69 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing import Type
+from typing import Any, List, Type, ClassVar, Union, Optional, Set
 
+from pydantic import BaseModel, ConfigDict, BeforeValidator, TypeAdapter, Field
 from torch import nn
+from typing_extensions import Annotated
+from typing_extensions import Self
 
 from msmodelslim.core.QAL.qregistry import QABCRegistry
 from msmodelslim.core.base.processor import BaseProcessor
-from msmodelslim.utils.auto_config import BaseAutoConfig
+from msmodelslim.utils.logging import get_logger
 
 
-class AutoProcessorConfig(BaseAutoConfig):
+class AutoProcessorConfig(BaseModel):
     type: str
+
+    model_config = ConfigDict(extra="forbid")
+
+    _registry: ClassVar[Set[Type[Self]]] = set()
+
+    @classmethod
+    def __pydantic_init_subclass__(cls, **kwargs):
+        if 'type' not in cls.model_fields:
+            raise TypeError(f"Must provide a type field for {cls.__bases__}'s subclass")
+
+        get_logger().debug(f"Add subclass {cls.__name__} to registry")
+
+        cls._registry.add(cls)
+        return super().__pydantic_init_subclass__(**kwargs)
+
+    @classmethod
+    def model_validate(
+            cls,
+            obj: Any,
+            *,
+            strict: Optional[bool] = None,
+            from_attributes: Optional[bool] = None,
+            context: Optional[Any] = None,
+    ) -> Self:
+        union_type = TypeAdapter(Annotated[
+                                     Union[tuple(cls._registry)],
+                                     Field(discriminator='type')
+                                 ])
+        return union_type.validate_python(obj, strict=strict, from_attributes=from_attributes, context=context)
+
+
+def validate_auto_processor_config_list(v: Any) -> List['AutoProcessorConfig']:
+    if isinstance(v, list):
+        validated_configs = []
+        for item in v:
+            if isinstance(item, dict):
+                validated_configs.append(AutoProcessorConfig.model_validate(item))
+            elif isinstance(item, AutoProcessorConfig):
+                validated_configs.append(item)
+            else:
+                raise ValueError(f"Invalid config item type: {type(item)}")
+        return validated_configs
+    raise ValueError("Expected a list of AutoProcessorConfig or dict")
+
+
+AutoProcessorConfigList = Annotated[
+    List[AutoProcessorConfig],
+    BeforeValidator(validate_auto_processor_config_list)
+]
 
 
 @QABCRegistry.register_abc(dispatch_key=Type[AutoProcessorConfig])
@@ -35,8 +87,11 @@ class AutoSessionProcessor(BaseProcessor):
     def __init__(self, model: nn.Module):
         super().__init__(model)
 
+    def __repr__(self):
+        return self.__class__.__name__
+
     @classmethod
-    def from_config(cls, model: nn.Module, config: AutoProcessorConfig, adapter: object, *args, **kwargs):
+    def from_config(cls, model: nn.Module, config: AutoProcessorConfig, adapter: object, *args, **kwargs) -> Self:
         return QABCRegistry.create(
             AutoSessionProcessor,
             type(config),
@@ -48,4 +103,7 @@ class AutoSessionProcessor(BaseProcessor):
         return False
 
     def is_data_free(self) -> bool:
+        return False
+
+    def need_kv_cache(self):
         return False

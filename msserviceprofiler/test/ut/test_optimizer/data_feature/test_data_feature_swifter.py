@@ -90,3 +90,8 @@ class TestMyDataSetWithSwifter(unittest.TestCase):
             mock_parent.assert_called_once_with(None)
             self.assertEqual(result, mock_parent_return)
             mock_process.assert_not_called()
+
+    def test_less_than_two_columns(self):
+        lines_data = pd.DataFrame({'col1': ['1', '2', '3']})
+        result = self.dataset.proprocess_with_swifter(lines_data)
+        self.assertEqual(result, (None, None))

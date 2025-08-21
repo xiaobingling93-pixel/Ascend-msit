@@ -37,6 +37,7 @@ class RuleManager:
         "pd_disaggregation_single_container": "config_check_pd_single_container.yaml",
         "pd_mix": "pd_mix_check.yaml",
         "pd_mix_dsr1": "pd_mix_check_dsr1.yaml",
+        "ep": "ep_default.yaml",
         "default": "default.yaml",
     }
     
@@ -44,9 +45,15 @@ class RuleManager:
         "x86_64": "x86",
         "aarch64": "arm"
     }
+
+
+    FRAMEWORK_MAPPING = {
+        "vllm": "vllm",
+    }
     
-    def __init__(self, *, scene=None, custom_rule_path=None):
+    def __init__(self, *, scene=None, framework=None, custom_rule_path=None):
         self.scene = scene
+        self.framework = framework
         self.custom_rule_path = custom_rule_path
 
         self._npu_type, _ = get_npu_type()
@@ -90,14 +97,28 @@ class RuleManager:
         if not self.scene:
             return {}
 
+        rule_file = self.SCENE_MAPPING[self.scene]
+        cur_dir = os.path.dirname(__file__)
+
+        # 处理framework的情况
+        if self.framework == "vllm":
+            if self.framework not in self.FRAMEWORK_MAPPING:
+                raise ValueError(
+                f"Expected 'scene' to be {', '.join(self.FRAMEWORK_MAPPING)}. Got {self.framework} instead."
+            )
+            # 获取框架目录
+            framework_dir = self.FRAMEWORK_MAPPING.get(self.framework)
+
+            # 构建新路径 <preset><framework><scene>
+            rule_path = os.path.join(cur_dir, framework_dir, rule_file)
+            with open_s(rule_path, 'r', encoding='utf-8') as f:
+                return yaml.safe_load(f)
+        
         if self.scene not in self.SCENE_MAPPING:
             raise ValueError(
                 f"Expected 'scene' to be {', '.join(self.SCENE_MAPPING)}. Got {self.scene} instead."
             )
-        
-        rule_file = self.SCENE_MAPPING[self.scene]
-        cur_dir = os.path.dirname(__file__)
-        
+
         # 特殊处理default场景
         if self.scene == "default":
             rule_path = os.path.join(cur_dir, rule_file)

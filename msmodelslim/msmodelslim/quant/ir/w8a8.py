@@ -64,7 +64,7 @@ class W8A8StaticFakeQuantLinear(AutoFakeQuantLinear):
 
         self.x_q_param = x_q_param
         self.w_q_param = w_q_param
-        self.w_q_storage = w_q
+        self.w_q_storage = w_q.same_like(torch.tensor([1.0], dtype=torch.float32))
 
         self.input_scale = nn.Parameter(x_q_param.ext["scale"], requires_grad=False)
         self.input_offset = nn.Parameter(x_q_param.ext["offset"], requires_grad=False)
@@ -75,7 +75,7 @@ class W8A8StaticFakeQuantLinear(AutoFakeQuantLinear):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x_q_dq = fake_quantize(QStorage(QDType.FLOAT, x), self.x_q_param)
-        weight_q_dq = dequantize(self.w_q_storage.T, self.w_q_param).T
+        weight_q_dq = dequantize(self.w_q_storage.same_like(self.weight).T, self.w_q_param).T
         return F.linear(x_q_dq.value, weight_q_dq.value, self.bias)
 
 
@@ -100,7 +100,7 @@ class W8A8DynamicFakeQuantLinear(AutoFakeQuantLinear):
 
         self.x_q_param = x_q_param
         self.w_q_param = w_q_param
-        self.w_q_storage = w_q
+        self.w_q_storage = w_q.same_like(torch.tensor([1.0], dtype=torch.float32))
 
         self.weight_scale = nn.Parameter(w_q_param.ext["scale"], requires_grad=False)
         self.weight_offset = nn.Parameter(w_q_param.ext["offset"], requires_grad=False)
@@ -114,5 +114,5 @@ class W8A8DynamicFakeQuantLinear(AutoFakeQuantLinear):
         x_token_max = torch.amax(x_reshape, dim=0)
         x_q_param = calculate_qparam(x_token_min, x_token_max, QDType.INT8, QScope.PER_TOKEN, False)
         x_q_dq = fake_quantize(QStorage(QDType.FLOAT, x_reshape), x_q_param)
-        weight_q_dq = dequantize(self.w_q_storage.T, self.w_q_param).T
+        weight_q_dq = dequantize(self.w_q_storage.same_like(self.weight).T, self.w_q_param).T
         return F.linear(x_q_dq.value.reshape(x_shape), weight_q_dq.value, self.bias)

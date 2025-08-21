@@ -1,26 +1,27 @@
 # !/usr/bin/python3.7
 # -*- coding: utf-8 -*-
 # Copyright (c) Huawei Technologies Co., Ltd. 2024-2025. All rights reserved.
-import os
 from copy import deepcopy
 from pathlib import Path
 from multiprocessing import Pool
 from typing import Optional, List, Callable, Dict
-from unittest.mock import patch, MagicMock
+import unittest
+from unittest.mock import patch, MagicMock, Mock
 from pandas import DataFrame
 
 import numpy as np
 import pandas as pd
 from msserviceprofiler.modelevalstate.data_feature.v1 import FileReader, BATCH_FIELD
-from msserviceprofiler.modelevalstate.inference.state_eval_v1 import XGBStateEvaluate, predict_v1, CachePredict
+from msserviceprofiler.modelevalstate.inference.state_eval_v1 import XGBStateEvaluate, predict_v1, CachePredict, \
+    predict_v1_with_cache
 from msserviceprofiler.modelevalstate.inference.dataset import CustomOneHotEncoder, CustomLabelEncoder, InputData,\
     preset_category_data, DataProcessor
 from msserviceprofiler.modelevalstate.inference.data_format_v1 import ConfigPath, ModelOpField, ModelStruct, \
     ModelConfig, MindieConfig, EnvField, HardWare, RequestField, BatchField
 from msserviceprofiler.modelevalstate.inference.data_format_v1 import REQUEST_FIELD, MODEL_OP_FIELD, \
     MODEL_STRUCT_FIELD, MODEL_CONFIG_FIELD, MINDIE_FIELD, ENV_FIELD, HARDWARE_FIELD
-from msserviceprofiler.modelevalstate.train.pretrain import NodeInfo, PretrainModel
-from msserviceprofiler.modelevalstate.analysis import AnalysisState
+from msserviceprofiler.modelevalstate.train.pretrain import NodeInfo
+from msserviceprofiler.modelevalstate.inference.file_reader import FileHanlder, StaticFile
 
 
 def test_update_new_data_none(tmpdir):
@@ -191,3 +192,68 @@ def run_case(process_num: int, save_result_path: Path, fl: FileReader, call_func
                 break
         p.close()
         p.join()
+
+
+@patch('msserviceprofiler.modelevalstate.inference.state_eval_v1.XGBStateEvaluate')
+@patch('msserviceprofiler.modelevalstate.inference.state_eval_v1.InputData')
+def test_predict_v1_with_cache(mock_input_data, mock_xgb_state_eval, tmpdir, static_file):
+    mock_input_data.return_value = MagicMock()
+    mock_xgb_state_eval.return_value = MagicMock()
+    # Arrange
+    batch_info = BatchField("decode", 20, 20.0, 580.0, 29.0)
+    request_info = (
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+        RequestField(29.0, 1, 2),
+    )
+    config_path = ConfigPath(
+        Path(fr"{tmpdir}\xgb_model.ubj"),
+        static_file.base_path,
+        Path(fr"{tmpdir}\req_and_decode_file.json"),
+        Path(fr"{tmpdir}\cache_data"),
+    )
+    static_file = StaticFile(base_path=static_file.base_path)
+    fh = FileHanlder(static_file)
+    fh.load_static_data()
+    custom_encoder = CustomLabelEncoder(preset_category_data)
+    custom_encoder.fit()
+    data_processor = DataProcessor(custom_encoder)
+
+    # Act
+    result = predict_v1_with_cache(batch_info, request_info, config_path, fh, data_processor)
+
+    # Assert
+    mock_input_data.assert_called_once()
+    mock_xgb_state_eval.assert_called_once_with(xgb_model_path=config_path.model_path, dataprocessor=data_processor)
+
+
+class TestCachePredict(unittest.TestCase):
+    @patch('pathlib.Path.exists')
+    @patch('builtins.open', new_callable=unittest.mock.mock_open)
+    def test_dataloader_with_data(self, mock_open, mock_exists):
+        # 测试当data不为None时的情况
+        data = pd.DataFrame({
+            'label': [1, 2, 3],
+            'feature1': [4, 5, 6],
+            'feature2': [7, 8, 9]
+        })
+        loader = CachePredict(data_path=Path(""), data=data, label_name='label')
+        self.assertEqual(loader.label.tolist(), [1, 2, 3])
+        self.assertEqual(loader.data.columns.tolist(), ['feature1', 'feature2'])
