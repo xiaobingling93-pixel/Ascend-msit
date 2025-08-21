@@ -2,7 +2,6 @@
 # Copyright Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
 import inspect
 import logging
-from contextlib import contextmanager
 from functools import wraps
 from logging import Logger
 
@@ -136,73 +135,70 @@ def progress_bar(iterable, desc: str = None, total: int = -1, interval: int = 1)
     logger.info("")
 
 
-def logger_setter(prefix: str = '', subfix: str = ''):
+class LoggerSetter:
     """
-    日志装饰器，用于装饰函数和类。这个装饰器可以为函数或类中的所有方法自动设置日志记录器。
+    日志设置器，支持作为装饰器和上下文管理器使用。
     
-    **函数装饰场景**：
-    当装饰单个函数时，会为该函数获取或创建一个专用的日志记录器，记录器名称格式为：{prefix}[.{subfix}]。
-    在函数执行期间，全局logger会被临时替换为该专用记录器，函数执行完毕后恢复。
+    这个类可以为函数、类或代码块自动设置日志记录器。
     
-    **类装饰场景**：
-    当装饰类时，会遍历类的所有方法（包括普通方法、静态方法和类方法），为每个方法
-    获取或创建日志记录器。每个方法的日志记录器名称格式为：{prefix}[.{subfix}]。
-    在方法执行期间，全局logger会被临时替换为该专用记录器，方法执行完毕后恢复。
+    **装饰器场景**：
+    当作为装饰器使用时，会为被装饰的对象获取或创建一个专用的日志记录器，
+    记录器名称格式为：{prefix}[.{subfix}]。
+    在对象执行期间，全局logger会被临时替换为该专用记录器，执行完毕后恢复。
+    每次调用时都会根据被装饰的对象实时计算日志记录器路径。
+    
+    **上下文管理器场景**：
+    当作为上下文管理器使用时，会为代码块获取或创建一个专用的日志记录器，
+    记录器名称格式为：{prefix}[.{subfix}]。
+    在代码块执行期间，全局logger会被临时替换为该专用记录器，执行完毕后恢复。
+    每次使用时都会重新计算日志记录器路径。
     
     Args:
-        prefix (str, optional): 日志记录器名称的前缀。如果为空，将使用被装饰对象的模块名。
-            默认为空字符串。
-        subfix (str, optional): 日志记录器名称的后缀。如果提供，将添加到前缀后面。
-            默认为空字符串。
+        prefix (str, optional): 日志记录器名称的前缀。默认为空字符串。
+        subfix (str, optional): 日志记录器名称的后缀。默认为空字符串。
             
     Returns:
-        decorator: 装饰器函数，接受函数或类作为参数。
+        LoggerSetter: 日志设置器实例，可以作为装饰器或上下文管理器使用。
         
     Raises:
         ToDoError: 当装饰器应用于不支持的对象类型时抛出。
         
     Examples:
-        >>> # 函数装饰场景
-        >>> @logger_setter(prefix="msmodelslim.utils.logging")
+        >>> # 装饰器场景 - 函数
+        >>> @LoggerSetter(prefix="msmodelslim.utils.logging")
         >>> def my_function():
         >>>     get_logger().info("函数执行中...")  # 使用 msmodelslim.utils.logging 记录器
         >>>     return "结果"
         
-        >>> # 函数装饰场景 - 使用默认模块名
-        >>> @logger_setter()
-        >>> def another_function():
-        >>>     get_logger().info("使用默认日志记录器")  # 使用当前模块名记录器
-        
-        >>> # 类装饰场景 - 为所有方法设置专用记录器
-        >>> @logger_setter(prefix="msmodelslim.utils.logging", subfix="default")
+        >>> # 装饰器场景 - 类
+        >>> @LoggerSetter(prefix="msmodelslim.utils.logging", subfix="default")
         >>> class MyClass:
         >>>     def method1(self):
         >>>         get_logger().info("方法1执行中...")  # 使用 msmodelslim.utils.logging.default 记录器
-        >>>     
-        >>>     @staticmethod
-        >>>     def static_method():
-        >>>         get_logger().info("静态方法执行中...")  # 使用 msmodelslim.utils.logging.default 记录器
-        >>>     
-        >>>     @classmethod
-        >>>     def class_method(cls):
-        >>>         get_logger().info("类方法执行中...")  # 使用 msmodelslim.utils.logging.default 记录器
         
-        >>> # 类装饰场景 - 使用默认模块名
-        >>> @logger_setter()
-        >>> class AnotherClass:
-        >>>     def method(self):
-        >>>         get_logger().info("使用模块名记录器")  # 使用当前模块名 msmodelslim.utils.logging 记录器
+        >>> # 上下文管理器场景 - 指定前缀
+        >>> with LoggerSetter(prefix="msmodelslim.utils.logging"):
+        >>>     get_logger().info("使用自定义记录器")  # 使用 msmodelslim.utils.logging 记录器
+        >>> get_logger().info("恢复原来的记录器")  # 使用原来的记录器
+        
+        >>> # 上下文管理器场景 - 不指定前缀，使用调用模块名
+        >>> with LoggerSetter():
+        >>>     get_logger().info("使用调用模块的记录器")  # 使用当前模块名记录器
+        
+        >>> # 上下文管理器场景 - 指定记录器名称
+        >>> with LoggerSetter(prefix="msmodelslim.utils.logging", subfix="database"):
+        >>>     get_logger().info("数据库操作日志")  # 使用 msmodelslim.utils.logging.database 记录器
     """
 
-    def get_current_logger(obj: Union[Type[Any], Callable]):
-        path = prefix
-        if not path:
-            path = obj.__module__
-        if subfix:
-            path += f'.{subfix}'
-        return get_logger(path)
+    def __init__(self, prefix: str = '', subfix: str = ''):
+        self.prefix = prefix
+        self.subfix = subfix
+        self._original_logger = None
 
-    def decorator(obj: Union[Type[Any], Callable]):
+    def __call__(self, obj: Union[Type[Any], Callable]):
+        """
+        装饰器调用方法，支持装饰函数和类
+        """
         if inspect.isclass(obj):
             # 如果是类，直接遍历类的 __dict__ 来获取用户自定义方法
             for name, member in obj.__dict__.items():
@@ -213,43 +209,148 @@ def logger_setter(prefix: str = '', subfix: str = ''):
                 # 检查是否是静态方法或类方法
                 if isinstance(member, staticmethod):
                     # 对于静态方法，需要保持其静态方法特性
-                    wrapped_func = _apply_logger_context_manager(member.__func__, get_current_logger(obj))
+                    wrapped_func = self._wrap_function_with_logger(member.__func__, self._get_target_logger(obj))
                     setattr(obj, name, staticmethod(wrapped_func))
                 elif isinstance(member, classmethod):
                     # 对于类方法，需要保持其类方法特性
-                    wrapped_func = _apply_logger_context_manager(member.__func__, get_current_logger(obj))
+                    wrapped_func = self._wrap_function_with_logger(member.__func__, self._get_target_logger(obj))
                     setattr(obj, name, classmethod(wrapped_func))
                 elif inspect.isfunction(member):
                     # 普通方法或函数
-                    setattr(obj, name, _apply_logger_context_manager(member, get_current_logger(obj)))
+                    setattr(obj, name, self._wrap_function_with_logger(member, self._get_target_logger(obj)))
             return obj
         elif inspect.isfunction(obj):
-            # 如果是函数，应用logger上下文管理器
-            return _apply_logger_context_manager(obj, get_current_logger(obj))
+            # 如果是函数，包装并设置日志记录器
+            return self._wrap_function_with_logger(obj, self._get_target_logger(obj))
         else:
             raise ToDoError(f'decorator only support function or class, not {type(obj)}',
-                            action='Please make sure apply logger_setter to a function or class')
+                            action='Please make sure apply LoggerSetter to a function or class')
 
-    return decorator
+    def __enter__(self):
+        """上下文管理器进入方法"""
+        global logger
+        self._original_logger = logger
+        logger = self._get_target_logger()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """上下文管理器退出方法"""
+        global logger
+        logger = self._original_logger
+
+    @staticmethod
+    def _wrap_function_with_logger(func: Callable, target_logger: Logger):
+        """为函数包装日志记录器"""
+
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            # 直接管理全局 logger，使用传入的 target_logger
+            global logger
+            original_logger = logger
+            try:
+                logger = target_logger
+                return func(*args, **kwargs)
+            finally:
+                logger = original_logger
+
+        return wrapper
+
+    @staticmethod
+    def _get_calling_module_name():
+        """获取调用模块的名称"""
+        # 获取调用栈，跳过当前方法
+        frame = inspect.currentframe()
+        try:
+            # 跳过内部调用链：_get_calling_module_name -> _get_logger_name -> _get_target_logger -> __enter__
+            for _ in range(4):  # 跳过 _get_calling_module_name, _get_logger_name, _get_target_logger, __enter__
+                frame = frame.f_back
+                if frame is None:
+                    break
+
+            if frame is not None:
+                module_name = frame.f_globals.get('__name__', '')
+                if module_name and module_name != '__main__':
+                    return module_name
+        finally:
+            # 清理 frame 引用以避免循环引用
+            del frame
+
+        # 如果无法获取模块名，返回根日志记录器名
+        return __name__.split('.')[0]
+
+    def _get_logger_name(self, obj: Union[Type[Any], Callable] = None):
+        """获取日志记录器名称"""
+        path = self.prefix
+        if not path:
+            if obj is not None:
+                # 装饰器模式：使用被装饰对象的模块名
+                path = obj.__module__
+            else:
+                # 上下文管理器模式：使用调用模块的名称
+                path = self._get_calling_module_name()
+        if self.subfix:
+            path += f'.{self.subfix}'
+        return path
+
+    def _get_target_logger(self, obj: Union[Type[Any], Callable] = None):
+        """获取目标日志记录器"""
+        # 每次都重新计算日志记录器，不进行缓存
+        logger_name = self._get_logger_name(obj)
+        return get_logger(logger_name)
 
 
-@contextmanager
-def logger_manager(cur_logger: Logger):
-    global logger
-    original_logger = logger
-    try:
-        logger = cur_logger
-        yield
-    finally:
-        logger = original_logger
-
-
-def _apply_logger_context_manager(func: Callable, target_logger: Logger):
-    """为函数应用logger上下文管理器"""
-
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        with logger_manager(target_logger):
-            return func(*args, **kwargs)
-
-    return wrapper
+def logger_setter(prefix: str = '', subfix: str = ''):
+    """
+    日志设置器，支持作为装饰器和上下文管理器使用。
+    
+    这个函数可以为函数、类或代码块自动设置日志记录器。
+    
+    **装饰器场景**：
+    当作为装饰器使用时，会为被装饰的对象获取或创建一个专用的日志记录器，
+    记录器名称格式为：{prefix}[.{subfix}]。
+    在对象执行期间，全局logger会被临时替换为该专用记录器，执行完毕后恢复。
+    每次调用时都会根据被装饰的对象实时计算日志记录器路径。
+    
+    **上下文管理器场景**：
+    当作为上下文管理器使用时，会为代码块获取或创建一个专用的日志记录器，
+    记录器名称格式为：{prefix}[.{subfix}]。
+    在代码块执行期间，全局logger会被临时替换为该专用记录器，执行完毕后恢复。
+    每次使用时都会重新计算日志记录器路径。
+    
+    Args:
+        prefix (str, optional): 日志记录器名称的前缀。默认为空字符串。
+        subfix (str, optional): 日志记录器名称的后缀。默认为空字符串。
+            
+    Returns:
+        LoggerSetter: 日志设置器实例，可以作为装饰器或上下文管理器使用。
+        
+    Raises:
+        ToDoError: 当装饰器应用于不支持的对象类型时抛出。
+        
+    Examples:
+        >>> # 装饰器场景 - 函数
+        >>> @logger_setter(prefix="msmodelslim.utils.logging")
+        >>> def my_function():
+        >>>     get_logger().info("函数执行中...")  # 使用 msmodelslim.utils.logging 记录器
+        >>>     return "结果"
+        
+        >>> # 装饰器场景 - 类
+        >>> @logger_setter(prefix="msmodelslim.utils.logging", subfix="default")
+        >>> class MyClass:
+        >>>     def method1(self):
+        >>>         get_logger().info("方法1执行中...")  # 使用 msmodelslim.utils.logging.default 记录器
+        
+        >>> # 上下文管理器场景 - 指定前缀
+        >>> with logger_setter(prefix="msmodelslim.utils.logging"):
+        >>>     get_logger().info("使用自定义记录器")  # 使用 msmodelslim.utils.logging 记录器
+        >>> get_logger().info("恢复原来的记录器")  # 使用原来的记录器
+        
+        >>> # 上下文管理器场景 - 不指定前缀，使用调用模块名
+        >>> with logger_setter():
+        >>>     get_logger().info("使用调用模块的记录器")  # 使用当前模块名记录器
+        
+        >>> # 上下文管理器场景 - 指定记录器名称
+        >>> with logger_setter(prefix="msmodelslim.utils.logging", subfix="database"):
+        >>>     get_logger().info("数据库操作日志")  # 使用 msmodelslim.utils.logging.database 记录器
+    """
+    return LoggerSetter(prefix, subfix)
