@@ -57,7 +57,8 @@ class TestCommunicationForFile:
         comm = CommunicationForFile(cmd_file, res_file)
         return comm
 
-    def test_send_command_file_exists(self, comm):
+    @classmethod
+    def test_send_command_file_exists(cls, comm):
         comm.send_command("new command")
         with open(comm.cmd_file, 'r') as f:
             assert f.read() == "new command"
@@ -65,7 +66,8 @@ class TestCommunicationForFile:
         with open(comm.cmd_file, 'r') as f:
             assert f.read() == "two command"
 
-    def test_recv_command_file_exists(self, comm):
+    @classmethod
+    def test_recv_command_file_exists(cls, comm):
         assert not comm.res_file.exists()
         assert comm.recv_command() == ''
         with open(comm.res_file, 'w', encoding="utf-8") as f:
@@ -75,7 +77,8 @@ class TestCommunicationForFile:
             f.write("two data")
         assert comm.recv_command() == "two data"
 
-    def test_clear_command_done(self, comm):
+    @classmethod
+    def test_clear_command_done(cls, comm):
         _cmd = "init 11111"
         comm.recv_command = MagicMock(return_value="init 11111:done")
         comm.send_command = MagicMock()
@@ -84,34 +87,38 @@ class TestCommunicationForFile:
         comm.send_command.assert_called_once_with(CustomCommand.cmd_eof)
         comm.clear_res.assert_called_once()
 
-    def test_clear_command_true(self, comm):
+    @classmethod
+    def test_clear_command_true(cls, comm):
         _cmd = "init 11111"
         comm.recv_command = MagicMock(return_value="init 11111:true")
         comm.send_command = MagicMock()
         comm.clear_res = MagicMock()
-        assert comm.clear_command(_cmd) == True
+        assert comm.clear_command(_cmd) is True
         comm.send_command.assert_called_once_with(CustomCommand.cmd_eof)
         comm.clear_res.assert_called_once()
 
-    def test_clear_command_false(self, comm):
+    @classmethod
+    def test_clear_command_false(cls, comm):
         _cmd = "init 11111"
         comm.recv_command = MagicMock(return_value="init 11111:false")
         comm.send_command = MagicMock()
         comm.clear_res = MagicMock()
-        assert comm.clear_command(_cmd) == False
+        assert comm.clear_command(_cmd) is False
         comm.send_command.assert_called_once_with(CustomCommand.cmd_eof)
         comm.clear_res.assert_called_once()
 
-    def test_clear_command_none(self, comm):
+    @classmethod
+    def test_clear_command_none(cls, comm):
         _cmd = "init 11111"
         comm.recv_command = MagicMock(return_value="init 11111:none")
         comm.send_command = MagicMock()
         comm.clear_res = MagicMock()
-        assert comm.clear_command(_cmd) == None
+        assert comm.clear_command(_cmd) is None
         comm.send_command.assert_called_once_with(CustomCommand.cmd_eof)
         comm.clear_res.assert_called_once()
 
-    def test_clear_command_error(self, comm):
+    @classmethod
+    def test_clear_command_error(cls, comm):
         _cmd = "init 11111"
         comm.recv_command = MagicMock(return_value="init 11111:error")
         comm.send_command = MagicMock()
@@ -119,7 +126,8 @@ class TestCommunicationForFile:
         with pytest.raises(ValueError):
             comm.clear_command(_cmd)
 
-    def test_clear_command_timeout(self, comm):
+    @classmethod
+    def test_clear_command_timeout(cls, comm):
         _cmd = "init 11111"
         comm.recv_command = MagicMock(return_value=None)
         comm.send_command = MagicMock()
@@ -127,7 +135,8 @@ class TestCommunicationForFile:
         with pytest.raises(TimeoutError):
             comm.clear_command(_cmd)
 
-    def test_clear_command_other(self, comm):
+    @classmethod
+    def test_clear_command_other(cls, comm):
         comm.recv_command = MagicMock(return_value="init 111111:other")
         comm.send_command = MagicMock()
         comm.clear_res = MagicMock()
@@ -135,7 +144,8 @@ class TestCommunicationForFile:
         comm.send_command.assert_called_once_with(CustomCommand.cmd_eof)
         comm.clear_res.assert_called_once()
 
-    def test_clear_res(self, comm):
+    @classmethod
+    def test_clear_res(cls, comm):
         comm.recv_command = MagicMock()
         comm.send_command = MagicMock()
 

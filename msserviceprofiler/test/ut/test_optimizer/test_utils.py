@@ -24,7 +24,7 @@ from loguru import logger
 
 from msserviceprofiler.msguard import Rule
 from msserviceprofiler.msguard.security import walk_s
-from msserviceprofiler.modelevalstate.optimizer.utils import (  # 替换为实际模块名
+from msserviceprofiler.modelevalstate.optimizer.utils import (
     remove_file,
     kill_children,
     kill_process,

@@ -14,10 +14,17 @@
 
 from pathlib import Path
 from unittest.mock import Mock, patch
-
 import numpy as np
+import pytest
+from unittest.mock import MagicMock, patch
+from msserviceprofiler.modelevalstate.optimizer.server import Scheduler
 
-from msserviceprofiler.modelevalstate.config.config import CommunicationConfig, settings, map_param_with_value, default_support_field
+from msserviceprofiler.modelevalstate.config.config import (
+    CommunicationConfig,
+    settings,
+    map_param_with_value,
+    default_support_field,
+)
 from msserviceprofiler.modelevalstate.optimizer.communication import CommunicationForFile, CustomCommand
 
 
@@ -81,7 +88,7 @@ def test_backup_path_not_exists():
 
 @patch('msserviceprofiler.modelevalstate.optimizer.server.CommunicationForFile')
 @patch('msserviceprofiler.modelevalstate.optimizer.server.Simulator')
-def test_start(MockSimulator, MockCommunicationForFile):
+def test_start(mock_simulator, mock_communication_for_file):
     # Arrange
     settings.target_field = default_support_field
     scheduler = Scheduler(settings.communication)
@@ -225,11 +232,6 @@ def test_get_cmd_param_success():
     assert scheduler.get_cmd_param() == ("cmd1", "123")
 
 
-import pytest
-from unittest.mock import MagicMock, patch
-from msserviceprofiler.modelevalstate.optimizer.server import Scheduler
-
-
 class TestSchedulerProcessPoll:
 
     @pytest.fixture
@@ -240,7 +242,8 @@ class TestSchedulerProcessPoll:
         scheduler.communication = MagicMock()
         return scheduler
 
-    def test_process_poll_with_simulator(self, scheduler):
+    @classmethod
+    def test_process_poll_with_simulator(cls, scheduler):
         # 模拟simulator.process.poll()返回值
         scheduler.simulator.process.poll.return_value = True
         scheduler.cmd.history = "process_poll 1111111"
@@ -252,7 +255,8 @@ class TestSchedulerProcessPoll:
         scheduler.communication.send_command.assert_called_once_with("process_poll 1111111:True")
         scheduler.communication.clear_res.assert_called_once()
 
-    def test_process_poll_without_simulator(self, scheduler):
+    @classmethod
+    def test_process_poll_without_simulator(cls, scheduler):
         # 设置simulator为None
         scheduler.simulator = None
         scheduler.cmd.history = "process_poll 1111111"
@@ -267,7 +271,7 @@ class TestSchedulerProcessPoll:
 def test_init_cmd_none():
     scheduler = Scheduler(settings.communication)
     scheduler.get_cmd_param = MagicMock(return_value=(None, None))
-    assert scheduler.init() == False
+    assert scheduler.init() is False
 
 
 # 测试用例2: 测试当get_cmd_param返回的_cmd为"init"时，init方法返回True
@@ -276,7 +280,7 @@ def test_init_cmd_init():
     scheduler.get_cmd_param = MagicMock(return_value=("init", None))
     scheduler.cmd.history = "init 11111111"
     scheduler.communication = MagicMock()
-    assert scheduler.init() == True
+    assert scheduler.init() is True
     scheduler.communication.send_command.assert_called_once_with("init 11111111:done")
     scheduler.communication.clear_res.assert_called_once()
 
@@ -285,7 +289,7 @@ def test_init_cmd_init():
 def test_init_cmd_not_init():
     scheduler = Scheduler(settings.communication)
     scheduler.get_cmd_param = MagicMock(return_value=("other_command", None))
-    assert scheduler.init() == False
+    assert scheduler.init() is False
 
 
 def test_run_no_cmd():
