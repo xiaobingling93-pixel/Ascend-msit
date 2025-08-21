@@ -36,10 +36,7 @@ class EnvChecker(NodeChecker):
         return self.rule_manager.get_rules()['env']
 
     def _check(self, results) -> None:
-        # 先执行原有的节点检查
-        visited_nodes = Traverser.traverse(results)
-        rules = self._get_rules()
-        self._validate_nodes(rules, visited_nodes)
+        super()._check(results)
         
         # 在vllm框架下额外检查LD_PRELOAD环境变量
         if self.rule_manager.framework == "vllm":
