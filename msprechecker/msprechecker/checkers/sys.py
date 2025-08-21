@@ -15,6 +15,7 @@
 
 import subprocess
 from .base import NodeChecker
+from ..utils import Traverser
 
 
 class SysChecker(NodeChecker):
