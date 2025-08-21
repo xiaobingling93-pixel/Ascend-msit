@@ -30,7 +30,7 @@ def queue_profiler(before_queue, after_queue, queue_name):
     for seq_group in less_queue: # V1 note: SequenceGroup == Request
         rid_list.append(seq_group.request_id)
     if len(rid_list) > 0:
-        prof = Profiler(Level.INFO).domain("BatchSchedule").res(rid_list[:])
+        prof = Profiler(Level.INFO).domain("BatchSchedule").res(rid_list)
         prof.metric("QueueSize", len(after_queue)).metric_scope("QueueName", queue_name).event("Dequeue")
 
     # 队列元素增加
@@ -114,7 +114,7 @@ def swap_out(original_func, this, seq_group, *args, **kwargs):
 
 @vllm_hook(("vllm.core.scheduler", "Scheduler.free_finished_seq_groups"), min_version="0.6.3")
 def free_finished_seq_groups(original_func, this, *args, **kwargs):
-    before_running_queue = this.running.copy()
+    before_running_queue = this.running
     for seq_group in this.running:
         prof = Profiler(Level.INFO).domain("BatchSchedule").res(seq_group.request_id)
         prof.metric_inc("RUNNING", -1).metric_inc("FINISHED", 1).event("ReqState")
@@ -126,13 +126,13 @@ def free_finished_seq_groups(original_func, this, *args, **kwargs):
 def add_seq_group_to_running(original_func, this, seq_group, *args, **kwargs):
     original_func(this, seq_group, *args, **kwargs)
     prof = Profiler(Level.INFO).domain("BatchSchedule").res([seq_group.request_id])
-    prof.metric("QueueSize", len(this.running)).metric_scope("running").event("Enqueue")
+    prof.metric("QueueSize", len(this.running)).metric_scope("QueueName", "running").event("Enqueue")
 
 
 @vllm_hook(("vllm.core.scheduler", "Scheduler._schedule_priority_preemption"), min_version="0.6.3")
 def schedule_priority_preemption(original_func, this, budget, *args, **kwargs):
-    before_waiting_queue = this.waiting.copy()
-    before_running_queue = this.running.copy()
+    before_waiting_queue = this.waiting
+    before_running_queue = this.running
     force_preemption_count = original_func(this, budget, *args, **kwargs)
     queue_profiler(before_waiting_queue, this.waiting, "waiting")
     queue_profiler(before_running_queue, this.running, "running")
@@ -141,9 +141,9 @@ def schedule_priority_preemption(original_func, this, budget, *args, **kwargs):
 
 @vllm_hook(("vllm.core.scheduler", "Scheduler._schedule_default"), min_version="0.6.3")
 def schedule_default(original_func, this, *args, **kwargs):
-    before_swapped_queue = this.swapped.copy()
-    before_running_queue = this.running.copy()
-    before_waiting_queue = this.waiting.copy()
+    before_swapped_queue = this.swapped
+    before_running_queue = this.running
+    before_waiting_queue = this.waiting
     scheduler_outputs = original_func(this, *args, **kwargs)
     queue_profiler(before_swapped_queue, this.swapped, "swapped")
     queue_profiler(before_running_queue, this.running, "running")
@@ -153,9 +153,9 @@ def schedule_default(original_func, this, *args, **kwargs):
 
 @vllm_hook(("vllm.core.scheduler", "Scheduler._schedule_chunked_prefill"), min_version="0.6.3")
 def schedule_chunked_prefill(original_func, this, *args, **kwargs):
-    before_running_queue = this.running.copy()
-    before_waiting_queue = this.waiting.copy()
-    before_swapped_queue = this.swapped.copy()
+    before_running_queue = this.running
+    before_waiting_queue = this.waiting
+    before_swapped_queue = this.swapped
     scheduler_outputs = original_func(this, *args, **kwargs)
     queue_profiler(before_running_queue, this.running, "running")
     queue_profiler(before_waiting_queue, this.waiting, "waiting")
@@ -167,14 +167,14 @@ def schedule_chunked_prefill(original_func, this, *args, **kwargs):
 def add_seq_group(original_func, this, seq_group, *args, **kwargs):
     original_func(this, seq_group, *args, **kwargs)
     prof = Profiler(Level.INFO).domain("BatchSchedule").res([seq_group.request_id])
-    prof.metric("QueueSize", len(this.waiting)).metric_scope("waiting").event("Enqueue")
+    prof.metric("QueueSize", len(this.waiting)).metric_scope("QueueName", "waiting").event("Enqueue")
 
 
 @vllm_hook(("vllm.core.scheduler", "Scheduler._add_seq_group_to_swapped"), min_version="0.6.3")
 def add_seq_group_to_swapped(original_func, this, seq_group, *args, **kwargs):
     original_func(this, seq_group, *args, **kwargs)
     prof = Profiler(Level.INFO).domain("BatchSchedule").res([seq_group.request_id])
-    prof.metric("QueueSize", len(this.swapped)).metric_scope("swapped").event("Enqueue")
+    prof.metric("QueueSize", len(this.swapped)).metric_scope("QueueName", "swapped").event("Enqueue")
 
 
 @vllm_hook(("vllm.engine.llm_engine", "LLMEngine._add_processed_request"), min_version="0.6.3")
