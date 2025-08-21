@@ -181,15 +181,11 @@ def test_op_func_exception():
 
 class MockField:
     def __init__(self, field_min, field_max):
-        self.field_min = field_min
-        self.field_max = field_max
+        self.min = field_min
+        self.max = field_max
 
 
 class TestPSOOptimizer:
-    @pytest.fixture
-    def optimizer(self):
-        return PSOOptimizer(MagicMock(), target_field=default_support_field)
-
     @staticmethod
     def test_constructing_bounds_empty_target_field(optimizer):
         optimizer.target_field = []
@@ -210,6 +206,10 @@ class TestPSOOptimizer:
         min_bounds, max_bounds = optimizer.constructing_bounds()
         assert min_bounds == (0, 20)
         assert max_bounds == (10, 30)
+        
+    @pytest.fixture
+    def optimizer(self):
+        return PSOOptimizer(MagicMock(), target_field=default_support_field)
 
 
 @patch("msserviceprofiler.modelevalstate.optimizer.optimizer.PSOOptimizer")
