@@ -28,7 +28,6 @@ from ..collectors import ConfigCollector, CollectResult
 from ..reporters import Reporter
 from ..presets import RuleManager
 from .base import CommandStrategy, CommandType
-from ..utils import CheckErrorHandler, ConfigErrorHandler, global_logger, singleton
 from ..collectors import (
     BaseCollector,
     EnvCollector,
@@ -66,7 +65,10 @@ from ..checkers import (
 )
 from ..comparators import Comparator
 from ..reporters import Reporter
-from ..utils import FrameworkType, ParserRegistry
+from ..utils import (
+    FrameworkType, ParserRegistry, update_model_type,
+    CheckErrorHandler, ConfigErrorHandler, global_logger, singleton
+)
 
 
 class CollectorFactory:
@@ -208,6 +210,8 @@ class PrecheckStrategy(CommandStrategy):
 
         collect_data = {}
         for path in paths_to_find:
+            if "ref" in path:
+                continue
             if os.path.isabs(path):
                 global_logger.warning("unsafe, key should not be abspath: {path!r}")
                 continue
@@ -353,6 +357,7 @@ class Coordinator:
     def execute(self, parser: argparse.ArgumentParser) -> int:
         """Execute the appropriate action based on command"""
         args = parser.parse_args()
+        update_model_type(args)
         show_legacy_warnings(args)
 
         cmd = getattr(args, "command", None)

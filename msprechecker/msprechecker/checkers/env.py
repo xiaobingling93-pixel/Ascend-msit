@@ -15,6 +15,7 @@
 
 import os
 from .base import NodeChecker
+from ..utils import get_model_type
 from ..utils import Traverser
 
 
@@ -26,14 +27,16 @@ class EnvChecker(NodeChecker):
     def _get_rules(self):
         if self.rule_manager.framework == "vllm":
             return self.rule_manager.get_rules()["env"]
-        self.rule_manager.scene = "mix"
-        return self.rule_manager.get_rules()["env"]
+        
+        model_type = get_model_type()
+        if not model_type or "deepseek" not in model_type:
+            self.rule_manager.scene = "pd_mix"
+        else:
+            self.rule_manager.scene = "pd_mix_dsr1"
+        return self.rule_manager.get_rules()['env']
 
     def _check(self, results) -> None:
-        # 先执行原有的节点检查
-        visited_nodes = Traverser.traverse(results)
-        rules = self._get_rules()
-        self._validate_nodes(rules, visited_nodes)
+        super()._check(results)
         
         # 在vllm框架下额外检查LD_PRELOAD环境变量
         if self.rule_manager.framework == "vllm":

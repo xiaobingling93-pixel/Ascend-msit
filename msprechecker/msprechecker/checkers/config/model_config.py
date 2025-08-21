@@ -37,7 +37,7 @@ class ModelConfigChecker(BaseChecker):
             self.error_handler.add_error(
                 path="transformers_version",
                 actual=results['transformers_version'],
-                expected=cur_transformers_version,
+                expected=repr(cur_transformers_version),
                 reason=f'当前机器的 "transformers" 的版本（{cur_transformers_version}）如果小于配置文件要求版本，会导致服务启动失败',
                 severity='high'
             )

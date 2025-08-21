@@ -235,10 +235,9 @@ class ConfigErrorHandler(ErrorHandler):
     
     def _find_nearest_path(self, path):
         path_pos = bisect.bisect_left(self._sorted_key, path)
-        path = self._sorted_key[path_pos]
         if path_pos == 0:
-            nearest_path = self._sorted_key[path]
-        elif path_pos == len(self._sorted_key) - 1:
+            nearest_path = self._sorted_key[path_pos]
+        elif path_pos == len(self._sorted_key) - 1 or path_pos == len(self._sorted_key):
             nearest_path = self._sorted_key[path_pos - 1]
         else:
             candidate = self._sorted_key[path_pos]

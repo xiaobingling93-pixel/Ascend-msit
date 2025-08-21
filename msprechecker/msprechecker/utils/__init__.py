@@ -30,7 +30,10 @@ __all__ = [
 ]
 
 from .version import Version, get_pkg_version
-from .ascend import get_npu_count, get_npu_type, get_conn_mode, NpuType, ParserRegistry, FrameworkType
+from .ascend import (
+    get_npu_count, get_npu_type, get_conn_mode, NpuType, ParserRegistry, FrameworkType,
+    get_model_type, update_model_type
+)
 from .network import get_current_ip_and_addr
 from .macro_expander import MacroExpander, ExpandError
 from .evaluator import Evaluator

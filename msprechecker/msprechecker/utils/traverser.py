@@ -13,8 +13,6 @@
 # limitations under the License.
 
 from collections import deque
-from .network import get_current_ip_and_addr
-from .ascend import get_npu_count
 
 
 class Traverser:
@@ -26,10 +24,7 @@ class Traverser:
         queue = deque()
         queue.append((data, ""))
 
-        visited_nodes = {
-            "global.cur_ip": get_current_ip_and_addr()[1],
-            "global.npu_count": get_npu_count()
-        }
+        visited_nodes = {}
 
         while queue:
             node, path = queue.popleft()
