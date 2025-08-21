@@ -240,3 +240,20 @@ class AscendV1Saver(AutoSaverProcessor):
     def on_float_module(self, prefix: str, module: nn.Module):
         for name, param in module.named_parameters(recurse=False, prefix=prefix):
             self.write_tensor(name, "FLOAT", param)
+
+    @save_this_rank_only()
+    def on_dynamic_cache(self, prefix: str, module: qir.FakeQuantDynamicCache):
+        prefix_list = prefix.split(".")
+        prefix_no_last = '.'.join(prefix_list[:-1])
+        if "key_states" in prefix_list[-1]:
+            self.write_tensor(prefix_no_last + ".k_proj.kv_cache_scale", "C8", module.kv_cache_scale)
+            self.write_tensor(prefix_no_last + ".k_proj.kv_cache_offset", "C8", module.kv_cache_offset)
+        elif "value_states" in prefix_list[-1]:
+            self.write_tensor(prefix_no_last + ".v_proj.kv_cache_scale", "C8", module.kv_cache_scale)
+            self.write_tensor(prefix_no_last + ".v_proj.kv_cache_offset", "C8", module.kv_cache_offset)
+        else:
+            raise ValueError(f"Unknown dynamic cache prefix: {prefix}")
+        if ValidJsonExt.JSON_APPEND not in self.json_append.keys():
+            self.json_append[ValidJsonExt.JSON_APPEND] = dict()
+        self.json_append[ValidJsonExt.JSON_APPEND]['kv_cache_type'] = "C8"
+        self.json_append[ValidJsonExt.JSON_APPEND]['kv_quant_type'] = "C8"

@@ -21,9 +21,12 @@ __all__ = [
     "LoadProcessor",
     "GroupProcessorConfig",
     "GroupProcessor",
+    "DynamicCacheProcessorConfig",
+    "DynamicCacheQuantProcessor"
 ]
 
 from .base import AutoProcessorConfig
 from .container.group import GroupProcessorConfig, GroupProcessor
 from .memory.load import LoadProcessorConfig, LoadProcessor
 from .quant.linear import LinearProcessorConfig, LinearQuantProcessor
+from .quant.attention import DynamicCacheProcessorConfig, DynamicCacheQuantProcessor
