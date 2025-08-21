@@ -1,5 +1,106 @@
 #  -*- coding: utf-8 -*-
 #  Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
+#  Copyright (c) 2011-2013 NYU
+#  Copyright (c) Microsoft Corporation
+#  Copyright (c) 2014- Facebook, Inc
+#  Copyright (c) 2017 The Android Open Source Project
+#  Copyright Python Software Foundation
+#  Copyright (c) 2018 Alex Rogozhnikov
+#  Copyright (c) 2007-2009 Scientific Computing and Imaging Institute, University of Utah
+#  Copyright (c) 2016, NVIDIA CORPORATION, All rights reserved
+#  Copyright (c) 2017 Microsoft
+#  Copyright (c) Meta Platforms, Inc.
+#  Copyright (c) 2022 Apple Inc.
+#  Copyright (c) 2018-present, Facebook, Inc.
+#  Copyright (c) Facebook Inc. and Microsoft Corporation
+#  Copyright (c) 2005-2017, NumPy Developers. All rights reserved
+#  Copyright (c) 1997 - 2002, Makoto Matsumoto and Takuji Nishimura, All rights reserved
+#  Copyright (c) 2014, The Regents
+#  Copyright (c) 2005-2010 ActiveState Software Inc.
+#  Copyright 2005, Google Inc. All rights reserved
+#  Copyright (c) 2022, Tri Dao
+#  Copyright (c) 2001-2002 Enthought, Inc. 2003-2019, SciPy Developers. All rights reserved
+#  Copyright 2008 Google Inc. All rights reserved
+#  Copyright (c) 2003-2017 Josef Weidendorfer. All rights reserved
+#  Copyright (c) 2014 Matthew Rocklin
+#  Copyright (c) 2016 Microsoft
+#  Copyright (c) 2008 - 2009 NVIDIA Corporation. All rights reserved
+#  Copyright 2010-2014 Rich Geldreich and Tenacious Software LLC
+#  Copyright (c) 2008-2012 The Khronos Group Inc.
+#  Copyright (c) 2016 Facebook Inc.
+#  Copyright 2010-2014 Rich Geldreich and Tenacious Software LLC All Rights Reserved
+#  Copyright (c) 2006, Laurent Montel, <montel@kde.org>
+#  Copyright (c) 2015 Google Inc. All rights reserved
+#  Copyright (c) 2010-2022 by Alex Clark and contributors
+#  Copyright 2015 Google Inc. All Rights Reserved
+#  Copyright (c) 2017 - 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved
+#  Copyright (c) 2011-2012 NEC Laboratories America (Koray Kavukcuoglu)
+#  (c) BNParamType
+#  Copyright 2013-2014 RAD Game
+#  Copyright (c) 2011-2019 Stephan Brumme. All rights reserved
+#  Copyright (c) 2018 MathInf GmbH, Thomas Viehmann
+#  Copyright 2019 Kakao Brain
+#  Copyright (c) 2001-2020 Python Software Foundation All Rights Reserved
+#  Copyright 2004-present Facebook. All Rights Reserved
+#  Copyright (c) 2008-2013 The Khronos Group Inc.
+#  Copyright (c) Microsoft Corporation. All rights reserved
+#  Copyright 2006, Google Inc. All rights reserved
+#  Copyright (c) 2014-2015 The Khronos Group Inc.
+#  Copyright 2015 The TensorFlow Authors. All Rights Reserved
+#  Copyright (c) 2023, Tri Dao
+#  Copyright (c) 2011-2014 Idiap Research Institute
+#  Copyright (c) 2016-present, Facebook Inc. All rights reserved
+#  Copyright (c) Advanced Micro Devices, Inc.
+#  Copyright (c) 2001-2014 Python Software Foundation All Rights Reserved
+#  Copyright (c) Bjorn Fahller
+#  Copyright (c) 1995-2011 by Fredrik Lundh
+#  Copyright (c) Edward Z. Yang <ezyang@mit.edu>
+#  Copyright (c) 2012 Massachusetts Institute of Technology
+#  Copyright (c) 2006 Idiap Research Institute
+#  Copyright (c) 2011-2021, NVIDIA CORPORATION. All rights reserved
+#  Copyright (c) 2008 - 2012 The Khronos Group Inc.
+#  Copyright (c) 2015 Yangqing Jia All rights reserved
+#  Copyright 2023-present Facebook. All Rights Reserved
+#  Copyright 2013 Conrad Steenberg <conrad.steenberg@gmail.com>
+#  Copyright (c) 2008-2015 The Khronos Group Inc.
+#  Copyright (c) 2014-2017 The Regents
+#  Copyright (c) 2006-2010 NEC Laboratories America (Ronan Collobert, Leon Bottou, Iain Melvin, Jason Weston)
+#  Copyright Malte Skarupke 2017
+#  Copyright (c) Meta Platforms, Inc. and affiliates
+#  Copyright (c) 2023, Advanced Micro Devices, Inc.
+#  Copyright (c) 2016- Facebook, Inc
+#  Copyright (c) 1997-2011 by Secret Labs AB
+#  Copyright (c) 2005-2022 NVIDIA Corporation Built
+#  Copyright (c) Facebook, Inc.
+#  Copyright 2019-2020 Kakao Brain
+#  Copyright (c) 2000-2017 Julian Seward. All rights reserved
+#  Copyright (c) 2016-2017, ARM Limited and Contributors
+#  Copyright (c) 2005-2020 Rich Felker
+#  Copyright (c) 2001-2004 Idiap Research Institute (Ronan Collobert, Samy Bengio, Johnny Mariethoz)
+#  Copyright 2016 Facebook
+#  Copyright (c) 2012-2014 Deepmind Technologies
+#  Copyright (c) 2012 Giovanni Garberoglio Interdisciplinary Laboratory
+#  Copyright (c) 2024, Tri Dao
+#  Copyright (c) Donald Stufft and individual contributors. All rights reserved
+#  Copyright (c) 2018, Steven Moshier All rights reserved
+#  Copyright (c) 2015-2016 Advanced Micro Devices, Inc. All rights reserved
+#  Copyright (c) 2017-present, Facebook, Inc.
+#  Copyright (c) 2020-2023, NVIDIA CORPORATION. All rights reserved
+#  Copyright (c) 2017 - 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved
+#  Copyright (c) 2014, 2015, The Regents
+#  Copyright (c) 2013 Eddy Petrisor
+#  Copyright (c) 2010 ActiveState Software Inc.
+#  Copyright (c) 2006 The Android Open Source Project
+#  Copyright (c) 2023 Apple Inc.
+#  Copyright 2015 The Gemmlowp Authors. All Rights Reserved
+#  Copyright (c) 2015-2017 The Khronos Group Inc.
+#  Copyright 2022 Cruise LLC
+#  Copyright (c) Meta Platforms, Inc. and affiliates. All rights reserved
+#  Copyright (c) 2022 Cruise LLC. All rights reserved
+#  Copyright (c) 2016-present, Facebook, Inc.
+#  (c) Copyright John Maddock 2006
+#  Copyright (c) 2014 Indiana University All rights reserved
+#  copyright 2019 The TensorFlow Authors
 #  #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -15,6 +116,7 @@
 
 from typing import List, Optional, Tuple
 from enum import Enum
+from dataclasses import dataclass
 
 import torch
 from pydantic import BaseModel
@@ -29,32 +131,46 @@ from msmodelslim.utils.exception import (
 )
 from msmodelslim.utils.logging import get_logger
 
+
+@dataclass
+class HistogramUpscaleParams:
+    """直方图上采样参数类，用于封装_upscale_histogram函数的参数"""
+    histogram: torch.Tensor
+    orig_min: torch.Tensor
+    orig_max: torch.Tensor
+    update_min: torch.Tensor
+    update_max: torch.Tensor
+    bins: int = 2048
+    upsample_rate: int = 16
+
+
 # this code is modified from torch.ao.quantization.observer.HistogramObserver._upscale_histogram
-def _upscale_histogram(
-        histogram: torch.Tensor,
-        orig_min: torch.Tensor,
-        orig_max: torch.Tensor,
-        update_min: torch.Tensor,
-        update_max: torch.Tensor,
-        bins: int = 2048,
-        upsample_rate: int = 16,
-):
+def _upscale_histogram(params: HistogramUpscaleParams) -> torch.Tensor:
+    """
+    对直方图进行上采样以减少量化误差
+    
+    Args:
+        params: 包含所有上采样参数的HistogramUpscaleParams对象
+        
+    Returns:
+        更新后的直方图张量
+    """
     # this turns the histogram into a more fine-coarsed histogram to reduce
     # bin quantization errors
-    upsample_rate = max(upsample_rate, 1)
-    histogram = histogram.repeat_interleave(upsample_rate) / upsample_rate
-    bin_size = (orig_max - orig_min) / (bins * upsample_rate)
+    upsample_rate = max(params.upsample_rate, 1)
+    histogram = params.histogram.repeat_interleave(upsample_rate) / upsample_rate
+    bin_size = (params.orig_max - params.orig_min) / (params.bins * upsample_rate)
     mid_points_histogram = (
             torch.linspace(
-                orig_min,
-                orig_max,
-                bins * upsample_rate + 1,
-                device=orig_min.device,
+                params.orig_min,
+                params.orig_max,
+                params.bins * upsample_rate + 1,
+                device=params.orig_min.device,
             )[:-1].to(histogram.device)
             + 0.5 * bin_size
     )
     boundaries_new_histogram = torch.linspace(
-        update_min, update_max, bins + 1, device=update_min.device
+        params.update_min, params.update_max, params.bins + 1, device=params.update_min.device
     ).to(histogram.device)
     # this maps the mid-points of the histogram to the new histogram's space
     bucket_assignments = (
@@ -65,11 +181,11 @@ def _upscale_histogram(
     # this is just the old histogram in the new histogram's space
 
     # In case due to numerical issues the values land higher/lower than the maximum/minimum
-    bucket_assignments[bucket_assignments >= bins] = bins - 1
+    bucket_assignments[bucket_assignments >= params.bins] = params.bins - 1
     bucket_assignments[bucket_assignments < 0] = 0
 
     update_histogram = torch.bincount(
-        bucket_assignments, weights=histogram, minlength=bins
+        bucket_assignments, weights=histogram, minlength=params.bins
     )
     return update_histogram
 
@@ -81,8 +197,18 @@ def _merge_histogram(
 ):
     new_min_val = torch.min(torch.stack(min_val_list))
     new_max_val = torch.max(torch.stack(max_val_list))
-    histogram_list = [_upscale_histogram(histogram, min_val, max_val, new_min_val, new_max_val) for
-                      histogram, min_val, max_val in zip(histogram_list, min_val_list, max_val_list)]
+    histogram_list = [
+        _upscale_histogram(
+            HistogramUpscaleParams(
+                histogram=histogram,
+                orig_min=min_val,
+                orig_max=max_val,
+                update_min=new_min_val,
+                update_max=new_max_val
+            )
+        )
+        for histogram, min_val, max_val in zip(histogram_list, min_val_list, max_val_list)
+    ]
     new_histogram = torch.zeros_like(histogram_list[0])
     for histogram in histogram_list:
         new_histogram += histogram
@@ -93,6 +219,7 @@ class SearchMethod(str, Enum):
     """搜索方法枚举类"""
     L2_NORM = "l2_norm"           # L2范数搜索
     KL_DIVERGENCE = "kl_divergence"  # KL散度搜索
+
 
 class HistogramObserverConfig(BaseModel):
     """
@@ -117,7 +244,8 @@ class HistogramObserver(TorchHistogramObserver):
     以便后续计算量化的 scale 和 zero_point。
 
     主要功能说明：
-    基于直方图分布，自动搜索最优的截断区间（clip_min, clip_max），以最小化量化误差    3. 计算量化参数（scale, zero_point），与 MinMaxObserver 类似。
+    基于直方图分布，自动搜索最优的截断区间（clip_min, clip_max），以最小化量化误差    
+    基于clip_min, clip_max计算量化参数（scale, zero_point），与 MinMaxObserver 类似
 
     主要成员变量：
     - config: 直方图观察器配置对象
@@ -163,7 +291,9 @@ class HistogramObserver(TorchHistogramObserver):
             )
         
         if x.isnan().any():
-            get_logger().warning("[HistogramObserver] NaN values detected in input tensor, these values have been filtered out.")
+            get_logger().warning(
+                "[HistogramObserver] NaN values detected in input tensor, these values have been filtered out."
+                )
             mask = ~x.isnan()
             x = x[mask]
             if x.numel() == 0:
@@ -173,7 +303,9 @@ class HistogramObserver(TorchHistogramObserver):
                 )
         
         if x.isinf().any():
-            get_logger().warning("[HistogramObserver] Infinite values detected in input tensor, these values have been filtered out.")
+            get_logger().warning(
+                "[HistogramObserver] Infinite values detected in input tensor, these values have been filtered out."
+                )
             mask = ~x.isinf()
             x = x[mask]
             if x.numel() == 0:
@@ -184,22 +316,26 @@ class HistogramObserver(TorchHistogramObserver):
 
         # 更新直方图
         x_min, x_max = torch.aminmax(x)
-        if x_min == x_max: #torch.histc 不支持min = max的情况，且此时所有值都相同，不需要搜索参数
-            get_logger().warning(f"[HistogramObserver] Input tensor is all the same value: {x_min}, skip search.")
+        if x_min == x_max: 
+            #torch.histc 不支持min = max的情况，且此时所有值都相同，不需要搜索参数
+            get_logger().warning(
+                f"[HistogramObserver] Input tensor is all the same value: {x_min}, skip search."
+                )
             self.clip_min, self.clip_max = x_min, x_max
             return 
         else:
             # torch_npu.histc 不支持bfloat16,转移到cpu
-            dtype_support_list = [torch.float, torch.float32, torch.float16, torch.int64, torch.int32, torch.int16, torch.int8, torch.uint8,]
+            dtype_support_list = [torch.float, torch.float32, torch.float16, torch.int64, 
+                                  torch.int32, torch.int16, torch.int8, torch.uint8]
             device = x.device
-            if x.dtype  in dtype_support_list:
-                self.histogram = self.histogram.to(device=device,dtype=x.dtype)
+            if x.dtype in dtype_support_list:
+                self.histogram = self.histogram.to(device=device, dtype=x.dtype)
                 self.min_val = self.min_val.to(device=device)
                 self.max_val = self.max_val.to(device=device)
                 self.forward(x)
             else:
                 x = x.to(device='cpu')
-                self.histogram = self.histogram.to(device='cpu',dtype=x.dtype)
+                self.histogram = self.histogram.to(device='cpu', dtype=x.dtype)
                 self.min_val = self.min_val.to(device='cpu')
                 self.max_val = self.max_val.to(device='cpu')
                 self.forward(x)
@@ -219,8 +355,8 @@ class HistogramObserver(TorchHistogramObserver):
         #多卡量化 目前尚没有入口
         if sync and group:
             self.forward(x)
-            histogram_list = [torch.zeros(self.histogram.shape) for _ in
-                              range(dist.get_world_size(group))]
+            histogram_list = [torch.zeros(self.histogram.shape) 
+                              for _ in range(dist.get_world_size(group))]
             min_val_list = [torch.zeros(self.min_val.shape) for _ in range(dist.get_world_size(group))]
             max_val_list = [torch.zeros(self.max_val.shape) for _ in range(dist.get_world_size(group))]
             dist.all_gather(histogram_list, self.histogram, group=group)
@@ -260,7 +396,7 @@ class HistogramObserver(TorchHistogramObserver):
         
         # 处理无穷值情况
         finfo_dtype = torch.finfo(self.clip_min.dtype)
-        if torch.isinf(self.clip_min) :
+        if torch.isinf(self.clip_min):
             self.clip_min = torch.tensor(finfo_dtype.min)
         if torch.isinf(self.clip_max):
             self.clip_max = torch.tensor(finfo_dtype.max)
@@ -277,16 +413,14 @@ class HistogramObserver(TorchHistogramObserver):
             
         Returns:
             float: 量化误差值
-            
-        Raises:
-            UnsupportedError: 当使用KL散度但未实现时抛出
         """
         method = self.config.search_method
         
         if method == SearchMethod.L2_NORM:
-            return self._compute_l2_error(start_bin, end_bin)
+            ans = self._compute_l2_error(start_bin, end_bin)
         elif method == SearchMethod.KL_DIVERGENCE:
-            return self._compute_kl_error(start_bin, end_bin)
+            ans = self._compute_kl_error(start_bin, end_bin)
+        return ans
 
 
 
@@ -314,7 +448,7 @@ class HistogramObserver(TorchHistogramObserver):
         KL = sum(p_i * log(p_i / q_i)), p为真实分布，q为量化分布。
         """
         eps = torch.tensor(torch.finfo(self.histogram.dtype).eps).to(self.histogram.device)
-        bin_width = (self.max_val.item()/ self.bins - self.min_val.item()/ self.bins) 
+        bin_width = (self.max_val.item() / self.bins - self.min_val.item() / self.bins) 
 
         # 计算真实分布
         true_dist = self.histogram / self.histogram.sum()
@@ -338,8 +472,8 @@ class HistogramObserver(TorchHistogramObserver):
         fake_quantized_dist = fake_quantize(QStorage(dtype=QDType.FLOAT, value=quant_mid_points), q_param).value
         fake_quantized_dist[:next_start_bin] = quant_min_val
         fake_quantized_dist[next_end_bin:] = quant_max_val
-        fake_quantized_dist = ((fake_quantized_dist-quant_min_val)//bin_width + next_start_bin).clamp(next_start_bin,next_end_bin).int()
-
+        fake_quantized_dist = ((fake_quantized_dist - quant_min_val) // bin_width + next_start_bin)
+        fake_quantized_dist = fake_quantized_dist.clamp(next_start_bin, next_end_bin).int()
         # 计算候选分布
         candidate_dist = torch.zeros_like(self.histogram).float()
         # 将每个quant_dist[i]均匀分配到fake_quantized_dist[i]和fake_quantized_dist[i+1]之间的所有bin
@@ -359,10 +493,37 @@ class HistogramObserver(TorchHistogramObserver):
     def _compute_l2_error(self, next_start_bin: int, next_end_bin: int):
         r"""
         这一段代码来自torch.ao.quantization.observer.HistogramObserver._compute_quantization_error
+        计算L2范数误差
         
-        计算L2范数误差。
+        Args:
+            next_start_bin: 起始bin索引
+            next_end_bin: 结束bin索引
+            
+        Returns:    
+            float: L2范数误差
+
+        算法原理：
+        使用L2范数作为量化误差度量，计算量化前后分布的差异。
+        1.计算目标bin宽度。
+        根据截断区间[next_start_bin, next_end_bin]和目标量化位数dst_nbins，计算量化后的bin宽度dst_bin_width。
+        
+        2.计算源bin到目标bin的映射关系。
+        对于每个源bin，计算其起始位置和结束位置在目标量化空间中的对应位置：
+        - src_bin_begin: 源bin起始位置相对于截断区间起始的偏移
+        - src_bin_end: 源bin结束位置相对于截断区间起始的偏移
+        - dst_bin_of_begin: 源bin起始位置对应的目标bin索引
+        - dst_bin_of_end: 源bin结束位置对应的目标bin索引
+        
+        3.计算L2范数误差。
+        将每个源bin的误差分解为三个部分：
+        - 起始部分：从源bin起始到第一个完整目标bin的误差
+        - 中间部分：完整目标bin覆盖的误差（如果有多个完整bin）
+        - 结束部分：从最后一个完整目标bin到源bin结束的误差
+        
+        每个部分的误差通过_get_norm方法计算，该方法基于密度函数和位置偏移计算L2范数。
+        最终将所有部分的误差累加得到总的L2范数误差。
         """
-        bin_width = (self.max_val.item()/ self.bins - self.min_val.item()/ self.bins) 
+        bin_width = (self.max_val.item() / self.bins - self.min_val.item() / self.bins) 
 
         dst_bin_width = bin_width * (next_end_bin - next_start_bin + 1) / self.dst_nbins
         if dst_bin_width == 0.0:
@@ -411,6 +572,22 @@ class HistogramObserver(TorchHistogramObserver):
 
         return norm.sum().item()
 
+    def _get_norm(
+        self, delta_begin: torch.Tensor, delta_end: torch.Tensor, density: torch.Tensor
+    ) -> torch.Tensor:
+        r"""
+        Compute the norm of the values uniformaly distributed between
+        delta_begin and delta_end.
+        Currently only L2 norm is supported.
+
+        norm = density * (integral_{begin, end} x^2)
+             = density * (end^3 - begin^3) / 3
+        """
+        norm = (
+            delta_end * delta_end * delta_end - delta_begin * delta_begin * delta_begin
+        ) / 3
+        return density * norm
+
     def _non_linear_param_search(self) -> tuple[torch.Tensor, torch.Tensor]:
         r"""
         这一段代码来自torch.ao.quantization.observer.HistogramObserver._non_linear_param_search
@@ -440,9 +617,12 @@ class HistogramObserver(TorchHistogramObserver):
 
             # 直方图为空，不进行搜索
             if total == 0:
-                get_logger().warning("Histogram is empty, skipping search. This may be caused by an empty input tensor or the input tensor's range being too large.")
+                get_logger().warning(
+                    "[HistogramObserver] Histogram is empty, skipping search. "
+                    "This may be caused by an empty input tensor or the input tensor's range being too large."
+                    )
                 return self.min_val, self.max_val
-            cSum = torch.cumsum(self.histogram, dim=0)
+            c_sum = torch.cumsum(self.histogram, dim=0)
 
             stepsize = 1e-5  # granularity
             alpha = 0.0  # lower bound
@@ -457,24 +637,24 @@ class HistogramObserver(TorchHistogramObserver):
                 next_beta = beta - stepsize
 
                 # find the left and right bins between the quantile bounds
-                l = start_bin
-                r = end_bin
-                while l < end_bin and cSum[l] < next_alpha * total:
-                    l = l + 1
-                while r > start_bin and cSum[r] > next_beta * total:
-                    r = r - 1
+                left_bin = start_bin
+                right_bin = end_bin
+                while left_bin < end_bin and c_sum[left_bin] < next_alpha * total:
+                    left_bin = left_bin + 1
+                while right_bin > start_bin and c_sum[right_bin] > next_beta * total:
+                    right_bin = right_bin - 1
 
                 # decide the next move
                 next_start_bin = start_bin
                 next_end_bin = end_bin
-                if (l - start_bin) > (end_bin - r):
+                if (right_bin - start_bin) > (end_bin - left_bin):
                     # move the start bin
-                    next_start_bin = l
-                    alpha = next_alpha
+                    next_end_bin = left_bin
+                    beta = next_beta
                 else:
                     # move the end bin
-                    next_end_bin = r
-                    beta = next_beta
+                    next_start_bin = right_bin
+                    alpha = next_alpha
 
                 if next_start_bin == start_bin and next_end_bin == end_bin:
                     continue
@@ -496,4 +676,4 @@ class HistogramObserver(TorchHistogramObserver):
             raise UnexpectedError(
                 f"Unexpected error during non-linear parameter search: {e}",
                 action="Please check if the histogram data is valid"
-            )
+            ) from e

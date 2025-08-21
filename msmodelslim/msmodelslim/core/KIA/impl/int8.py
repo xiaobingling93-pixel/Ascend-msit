@@ -45,7 +45,7 @@ def int8_param(
     if not symmetric:
         max_bound = 2 ** 8 - 1 if max_bound is None else max_bound
         # asymmetric quantization
-        scale = max_val/ max_bound - min_val/ max_bound
+        scale = max_val / max_bound - min_val / max_bound
         scale = torch.max(scale, eps)
         offset = -1 * min_val / scale
         if integral_zero_point:
