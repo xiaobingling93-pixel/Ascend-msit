@@ -79,7 +79,7 @@ class Qwen25ModelAdapter(DefaultModelAdapter, KVSmoothFusedInterface):
 @ModelFactory.register("Qwen3-14B")
 @ModelFactory.register("Qwen3-32B")
 @logger_setter(subfix='qwen3')
-class Qwen3ModelAdapter(DefaultModelAdapter, IterSmoothInterface):
+class Qwen3ModelAdapter(DefaultModelAdapter, IterSmoothInterface, KVSmoothFusedInterface):
     def get_kvcache_smooth_fused_subgraph(self) -> List[KVSmoothFusedUnit]:
         return [
             KVSmoothFusedUnit(
