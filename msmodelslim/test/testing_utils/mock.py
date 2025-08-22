@@ -18,7 +18,6 @@ import json
 import os
 import stat
 import sys
-from typing import Optional
 
 from unittest.mock import MagicMock
 
@@ -29,7 +28,7 @@ def _mock_json_safe_dump(obj, path, indent=None, extensions="json", check_user_s
         json.dump(obj, json_file, indent=indent)
 
 
-def _mock_get_valid_write_path(path: str, extensions: Optional[str] = None) -> str:
+def _mock_get_valid_write_path(path: str, *args, **kwarg) -> str:
     return path
 
 
@@ -43,7 +42,38 @@ def mock_kia_library():
 
 
 def mock_security_library():
+    sys.modules['msmodelslim.utils.security.path'] = MagicMock()
+    sys.modules['msmodelslim.utils.security.path'].json_safe_dump = _mock_json_safe_dump
+    sys.modules['msmodelslim.utils.security.path'].get_valid_write_path = _mock_get_valid_write_path
+    sys.modules['msmodelslim.utils.security.path'].get_valid_path = _mock_get_valid_write_path
+    sys.modules['msmodelslim.utils.security.path'].get_valid_read_path = _mock_get_valid_write_path
+    sys.modules['msmodelslim.utils.security.path'].get_write_directory = _mock_get_valid_write_path
+
     sys.modules['ascend_utils.common.security.path'] = MagicMock()
     sys.modules['ascend_utils.common.security.path'].json_safe_dump = _mock_json_safe_dump
     sys.modules['ascend_utils.common.security.path'].get_valid_write_path = _mock_get_valid_write_path
     sys.modules['ascend_utils.common.security.path'].get_valid_path = _mock_get_valid_write_path
+    sys.modules['ascend_utils.common.security.path'].get_write_directory = _mock_get_valid_write_path
+
+
+def mock_init_config():
+    """Mock init_config function and related config modules"""
+    # Mock the config module
+    config_mock = MagicMock()
+
+    # Create a mock config object that mimics the structure of ModelSlimConfig
+    mock_config = MagicMock()
+    mock_config.urls.repository = "mocked_url"
+    mock_config.env_vars.log_level = "info"
+
+    # Mock the init_config function to return the mock config
+    config_mock.init_config.return_value = mock_config
+    config_mock.msmodelslim_config = mock_config
+
+    # Mock the config classes
+    config_mock.ModelSlimConfig = MagicMock()
+    config_mock.URLs = MagicMock()
+    config_mock.EnvVars = MagicMock()
+
+    # Register the mock module
+    sys.modules['msmodelslim.utils.config'] = config_mock
