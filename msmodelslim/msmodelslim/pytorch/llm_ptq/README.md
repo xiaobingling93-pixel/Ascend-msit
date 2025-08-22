@@ -15,7 +15,7 @@
 ```
 pip3 install numpy==1.25.2
 pip3 install transformers        #需大于等于4.29.1版本，LLaMA模型需指定安装4.29.1版本
-pip3 install accelerate==0.21.0  #若需要使用NPU多卡并行方式对模型进行量化，需大于等于0.28.0版本
+pip3 install accelerate==1.0.0  #若需要使用NPU多卡并行方式对模型进行量化，需大于等于0.28.0版本
 pip3 install tqdm==4.66.1
 ```
 - （可选）如果需要在大模型量化工具中使用NPU多卡并行的方式对模型进行量化，需关闭NPU设备中的虚拟内存，并手动配置量化将会执行的设备序列环境。
