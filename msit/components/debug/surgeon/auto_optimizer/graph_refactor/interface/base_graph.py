@@ -258,6 +258,8 @@ class BaseGraph(ABC):
             if mode == 'before':
                 raise RuntimeError(f'Can not insert node before {refer_node.name}.')
             name = refer_node.name
+            if name not in self._next_map:
+                raise RuntimeError(f'{name} not in next map.')
             refer_node = self._next_map.get(name)[0]
             refer_index = refer_node.inputs.index(name)
             mode = 'before'
@@ -455,7 +457,7 @@ class BaseGraph(ABC):
                                 prev_next_node_in_id = prev_next_node.get_input_id(in_name)
                                 prev_next_node.inputs[prev_next_node_in_id] = out_name
                             prev_output_id = prev_node.get_output_id(in_name)
-                            if prev_output_id <= len(prev_node.outputs):
+                            if prev_output_id < len(prev_node.outputs):
                                 prev_node.outputs[prev_output_id] = out_name
                             node.outputs.remove(out_name)
             # update prev and next map, outputs of node no long exist

@@ -200,6 +200,8 @@ class TransformRefactor:
             # 在第一个layernorm的第一个节点（add, transpose）之后插入reshape，将layer norm以及后面的attention的inputreshape成2维
             # atc的标准pattern要求输入的shape必须得是2维
             if i == 0:
+                if not ori_shape:
+                    raise RuntimeError(f"origin shape is None.")
                 self.insert_reshape_node(first_node.name, reshape_name, [-1, ori_shape[-1]])
 
             # 在最后一个layer norm的最后一个节点之后插入reshape，将reshape重新reshape原来的shape，否则后面的计算shape会对不上

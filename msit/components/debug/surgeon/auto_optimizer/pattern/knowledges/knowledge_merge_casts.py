@@ -24,6 +24,8 @@ from auto_optimizer.pattern.matcher import MatchResult
 from auto_optimizer.graph_refactor.interface.base_graph import BaseGraph
 from auto_optimizer.graph_refactor.interface.base_node import BaseNode
 
+from components.utils.util import recursion_depth_decorator
+
 
 class MergeCastsPattern(Pattern):
     """ 可进行 Cast 算子合并的子图匹配模式
@@ -86,6 +88,22 @@ class KnowledgeMergeCasts(KnowledgeBase):
         except InferenceError:
             return False
         return True
+    
+    @recursion_depth_decorator("knowledge_merge_casts._merge_cast_tree")
+    def _merge_cast_tree(self, graph: BaseGraph, cast_node: BaseNode, root_output, max_recursion):
+        """ Cast 树型合并递归方法
+        :param graph        : 整图
+        :param cast_node    : cast 节点
+        :param root_output  : 根节点输出
+        :param max_recursion: 递归深度控制
+        """
+        if max_recursion <= 0:
+            return
+        for node in filter(self._is_cast_node, graph.get_next_nodes(cast_node.outputs[0])):
+            self._merge_cast_tree(graph, node, root_output, max_recursion - 1)
+        self._merge_brother_casts(graph, cast_node.outputs[0])
+        self._transfer_cast_to_root(graph, cast_node.outputs[0], root_output)
+        self._remove_parent_cast(graph, cast_node)
 
     def _is_cast_node(self, node: BaseNode) -> bool:
         """ 判断节点是否为 Cast 节点
@@ -218,18 +236,3 @@ class KnowledgeMergeCasts(KnowledgeBase):
                 continue
             if next_node.op_type == 'Cast' and next_node['to'] == output_type:
                 graph.remove(next_node.name)
-
-    def _merge_cast_tree(self, graph: BaseGraph, cast_node: BaseNode, root_output, max_recursion):
-        """ Cast 树型合并递归方法
-        :param graph        : 整图
-        :param cast_node    : cast 节点
-        :param root_output  : 根节点输出
-        :param max_recursion: 递归深度控制
-        """
-        if max_recursion <= 0:
-            return
-        for node in filter(self._is_cast_node, graph.get_next_nodes(cast_node.outputs[0])):
-            self._merge_cast_tree(graph, node, root_output, max_recursion - 1)
-        self._merge_brother_casts(graph, cast_node.outputs[0])
-        self._transfer_cast_to_root(graph, cast_node.outputs[0], root_output)
-        self._remove_parent_cast(graph, cast_node)
