@@ -96,7 +96,7 @@ class ActPerTokenMinmax(AutoActQuantizer):
 
     def get_q_param(self) -> QParam:
         if self.q_param is None:
-            raise SpecError("No q_param was set", action="please call forward first")
+            return QParam(scheme=self.config.to_scheme())
         return self.q_param
 
 
@@ -176,12 +176,12 @@ class WeightPerChannelMinmax(AutoWeightQuantizer):
 
     def get_q_storage(self) -> QStorage:
         if self.w_q_storage is None:
-            raise SpecError("No q_storage was set", action="Please call forward first")
+            _ = self.forward(None)
         return self.w_q_storage
 
     def get_q_param(self) -> QParam:
         if self.w_q_param is None:
-            raise SpecError("No q_param was set", action="Please call forward first")
+            _ = self.forward(None)
         return self.w_q_param
 
 
@@ -239,9 +239,11 @@ class WeightPerGroupMinmax(AutoWeightQuantizer):
         self.bias = bias
 
     def get_q_storage(self) -> QStorage:
+        if self.w_q_storage is None:
+            _ = self.forward(None)
         return self.w_q_storage
 
     def get_q_param(self) -> QParam:
         if self.w_q_param is None:
-            raise SpecError("No q_param was set", action="Please call forward first")
+            _ = self.forward(None)
         return self.w_q_param

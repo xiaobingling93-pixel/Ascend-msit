@@ -12,21 +12,20 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-import copy
 
 import pytest
 import torch
 from pydantic import ValidationError
 
-from msmodelslim.core.QAL.qbase import QStorage, QDType, QScheme, QScope
 from msmodelslim.core import calculate_qparam
+from msmodelslim.core.QAL.qbase import QStorage, QDType, QScheme, QScope
 from msmodelslim.quant import ir as qir
 from msmodelslim.quant.observer.minmax import MsMinMaxObserver
 from msmodelslim.quant.quantizer.base import QConfig
-from msmodelslim.utils.exception import SpecError
 from msmodelslim.quant.quantizer.impl.ssz import (
     WeightPerChannelSsz
 )
+from msmodelslim.utils.exception import SpecError
 
 
 def to_qconfig(q_scheme: QScheme, method: str) -> QConfig:
@@ -87,15 +86,7 @@ class TestWeightPerChannelSsz:
         weight = QStorage(QDType.FLOAT, torch.randn(10, 20))
         with pytest.raises(ValidationError, match="instance of Tensor"):
             quantizer.init_weight(weight, bias="invalid")
-        
-    def test_get_q_storage_and_q_param_before_forward(self):
-        """测试在forward之前获取q_storage和q_param"""
-        quantizer = WeightPerChannelSsz(self.config)
-        with pytest.raises(SpecError, match="No q_storage was set"):
-            quantizer.get_q_storage()
-        with pytest.raises(SpecError, match="No q_param was set"):
-            quantizer.get_q_param()
-    
+
     def test_get_q_storage_and_q_param_after_forward(self):
         """测试在forward之后获取q_storage和q_param"""
         quantizer = WeightPerChannelSsz(self.config)
