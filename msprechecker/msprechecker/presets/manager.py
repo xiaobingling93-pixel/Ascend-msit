@@ -83,15 +83,12 @@ class RuleManager:
         custom_rules = self._get_custom_rules()
         
         # 3. 更新 env 规则
-        if 'env' in custom_rules:
+        if 'env' in custom_rules and 'env' not in rules:
             custom_env_rules = custom_rules['env']
-            if 'env' not in rules:
-                rules['env'] = custom_env_rules
-            else:
-                rules['env'].update(custom_env_rules)
+            rules['env'].update(custom_env_rules)
 
         return rules
-    
+
     def _get_builtin_rules(self):
         """获取指定场景的内置规则"""
         if not self.scene:
