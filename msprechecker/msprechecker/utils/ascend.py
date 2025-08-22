@@ -170,6 +170,8 @@ class RankTableParser(ABC):
         self._ip_pattern = re.compile(
             rf"\b{single_address}(?:\.{single_address}){{3}}\b"
         )
+        self.host_limits = 1000 # max 1000 hosts in rank table
+        self.device_limits_per_host = 32 # max 32 devices per host
 
     @abstractmethod
     def parse(self, rank_table_path: str) -> RankTable:
@@ -218,7 +220,10 @@ class MindIEParser(JsonParser):
     def _parse_devices(self, data: dict) -> Dict[str, DeviceInfo]:
         host_to_devices = {}
 
-        for server_info in data.get('server_list', {}):
+        for host_num, server_info in enumerate(data.get('server_list', {})):
+            if host_num > self.host_limits:
+                raise RuntimeError("Number of hosts found in rank table exceeds the limit")
+
             host_ip = server_info.get('server_id', "")
             if not self._ip_pattern.match(host_ip):
                 global_logger.warning(
@@ -229,7 +234,12 @@ class MindIEParser(JsonParser):
             if host_ip not in host_to_devices:
                 host_to_devices[host_ip] = []
             
-            for device_info in server_info.get('device', {}):
+            for device_num, device_info in enumerate(server_info.get('device', {})):
+                if device_num > self.device_limits_per_host:
+                    raise RuntimeError(
+                        f"Number of devices for host {host_ip!r} found in rank table exceeds the limit"
+                    )
+
                 device_ip = device_info.get('device_ip')
                 if not device_ip or not self._ip_pattern.match(device_ip):
                     global_logger.warning(
@@ -257,11 +267,7 @@ class MindIEParser(JsonParser):
                 rank_id = int(rank_id)
 
                 host_to_devices[host_ip].append(
-                    DeviceInfo(
-                        device_ip=device_ip,
-                        device_id=device_id,
-                        rank_id=rank_id
-                    )
+                    DeviceInfo(device_ip=device_ip, device_id=device_id, rank_id=rank_id)
                 )
 
         return host_to_devices
@@ -275,11 +281,13 @@ class VLLMParser(JsonParser):
         for device_list_name in ("prefill_device_list", "decode_device_list"):
             if device_list_name not in data:
                 global_logger.warning(
-                    "Expected %r in rank table, but not found.",
-                    device_list_name
+                    "Expected %r in rank table, but not found.", device_list_name
                 )
                 continue
-            
+
+            if len(data[device_list_name]) > self.host_limits * self.device_limits_per_host:
+                raise RuntimeError("Number of items found in rank table exceeds the limit")
+
             for device_info in data[device_list_name]:
                 host_ip = device_info.get('server_id')
                 if not host_ip or not self._ip_pattern.match(host_ip):
@@ -290,6 +298,14 @@ class VLLMParser(JsonParser):
                 
                 if host_ip not in host_to_devices:
                     host_to_devices[host_ip] = []
+                
+                if len(host_to_devices) > self.host_limits:
+                    raise RuntimeError("Number of hosts found in rank table exceeds the limit")
+
+                if len(host_to_devices[host_ip]) > self.device_limits_per_host:
+                    raise RuntimeError(
+                        f"Number of devices for host {host_ip!r} found in rank table exceeds the limit"
+                    )
 
                 device_ip = device_info.get('device_ip')
                 if not device_ip or not self._ip_pattern.match(device_ip):
@@ -318,11 +334,7 @@ class VLLMParser(JsonParser):
 
                 rank_id = int(rank_id) - 1 # vllm cluster_id starts from 1
                 host_to_devices[host_ip].append(
-                    DeviceInfo(
-                        device_ip=device_ip,
-                        device_id=device_id,
-                        rank_id=rank_id
-                    )
+                    DeviceInfo(device_ip=device_ip, device_id=device_id, rank_id=rank_id)
                 )
 
         return host_to_devices

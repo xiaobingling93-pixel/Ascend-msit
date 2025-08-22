@@ -59,13 +59,8 @@ class PingCollector(BaseCollector):
                     shlex.split(self._ping_cmd.format(host)),
                     stderr=subprocess.STDOUT, text=True, timeout=5
                 )
-            except Exception as e:
-                self.error_handler.add_error(
-                    filename=__file__, function='subprocess.check_output',
-                    lineno=56, what=f"执行命令失败：{self._ping_cmd.format(host)}",
-                    reason=str(e)
-                )
-                output = ""
+            except Exception:
+                output = "ping failed"
             result[host] = output
 
         return result
