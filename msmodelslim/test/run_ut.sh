@@ -37,6 +37,7 @@ python3 -m coverage run --source=${code_dir} -p -m pytest ${route}/cases/onnx --
 python3 -m coverage run --source=${code_dir} -p -m pytest ${route}/cases/msmodelslim --junitxml="${route}/report/final_msmodelslim.xml" || ret=1
 python3 -m coverage run --source=${code_dir} -p -m pytest ${route}/cases/core --junitxml="${route}/report/final_core.xml" || ret=1
 python3 -m coverage run --source=${code_dir} -p -m pytest ${route}/cases/quant --junitxml="${route}/report/final_quant.xml" || ret=1
+python3 -m coverage run --source=${code_dir} -p -m pytest ${route}/cases/utils --junitxml="${route}/report/final_utils.xml" || ret=1
 python3 -m coverage run --source=${code_dir} -p -m pytest ${route}/smoke --junitxml="${route}/report/final_smoke.xml" || ret=1
 
 python3 -m coverage combine
