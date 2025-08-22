@@ -83,7 +83,7 @@ class RuleManager:
         custom_rules = self._get_custom_rules()
         
         # 3. 更新 env 规则
-        if 'env' in custom_rules and 'env' not in rules:
+        if 'env' in custom_rules and 'env' in rules:
             custom_env_rules = custom_rules['env']
             rules['env'].update(custom_env_rules)
 
