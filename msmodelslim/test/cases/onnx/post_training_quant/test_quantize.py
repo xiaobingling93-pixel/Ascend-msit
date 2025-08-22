@@ -1,18 +1,17 @@
 # -*- coding: utf-8 -*-
 # Copyright Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
-import sys 
-from collections import namedtuple 
-import os 
+import os
 import shutil
-import stat 
+import stat
+import sys
+from collections import namedtuple
 
-from resources.sample_net_torch import TestOnnxQuantModel
+import numpy as np
+import onnx
+import pytest
+import torch
 from resources.sample_net_torch import TestAscendQuantModel
-
-import torch 
-import numpy as np 
-import pytest 
-import onnx 
+from resources.sample_net_torch import TestOnnxQuantModel
 
 from msmodelslim.onnx.post_training_quant import QuantConfig, run_quantize
 from msmodelslim.onnx.post_training_quant.label_free.preprocess_func import preprocess_func_imagenet, \
@@ -20,6 +19,14 @@ from msmodelslim.onnx.post_training_quant.label_free.preprocess_func import prep
 
 fake_acl = namedtuple('acl', ['get_soc_name'])(lambda: "Ascend310P3")
 sys.modules['acl'] = fake_acl
+
+
+@pytest.fixture(autouse=True)
+def set_random_seed():
+    """为所有测试设置随机数种子以确保结果可重复"""
+    torch.manual_seed(0)
+    np.random.seed(0)
+    yield
 
 
 @pytest.fixture()
