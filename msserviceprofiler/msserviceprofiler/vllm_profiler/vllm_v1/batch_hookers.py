@@ -49,8 +49,6 @@ class HookState:
     def __init__(self):
         self.request_id_to_prompt_token_len = {}
         self.request_id_to_iter_size = {}
-        self.running = set()
-        self.waiting = set()
 
 
 # 线程本地存储
@@ -101,37 +99,10 @@ def schedule(original_func, this, *args, **kwargs):
     queue_profiler(before_waiting_queue, this.waiting, "WAITING")
     prof.res(request_id_with_iter_list)
 
-    # 新的请求从WAITING -> RUNNING
-    for scheduled_new_req in scheduler_output.scheduled_new_reqs:
-        queue_prof = Profiler(Level.INFO).domain("BatchSchedule").res(scheduled_new_req.req_id)
-        state.running.add(scheduled_new_req.req_id)
-        if scheduled_new_req.req_id in state.waiting:
-            state.waiting.remove(scheduled_new_req.req_id)
-        logger.debug(f">>> [queue-waiting][WAITING -> RUNNING]: {len(state.waiting)}, "
-                     f"[queue-running]: {len(state.running)}")
-        queue_prof.metric_inc("RUNNING", 1).metric_inc("WAITING", -1).event("ReqState")
-
-    # PREEMPTED请求从WAITING -> RUNNING
-    for scheduled_cached_req in scheduler_output.scheduled_cached_reqs:
-        if scheduled_cached_req.req_id not in state.running and scheduled_cached_req.req_id in state.waiting:
-            queue_prof = Profiler(Level.INFO).domain("BatchSchedule").res(scheduled_cached_req.req_id)
-            state.running.add(scheduled_new_req.req_id)
-            if scheduled_new_req.req_id in state.waiting:
-                state.waiting.remove(scheduled_new_req.req_id)
-            logger.debug(f">>> [queue-waiting][PREEMPTED -> RUNNING]: {len(state.waiting)}, "
-                         f"[queue-running]: {len(state.running)}")
-            queue_prof.metric_inc("RUNNING", 1).metric_inc("WAITING", -1).event("ReqState")
-
-    # running的请求被抢占从RUNNING -> WAITING
-    for request_id in state.running:
-        if request_id in this.waiting:
-            queue_prof = Profiler(Level.INFO).domain("BatchSchedule").res(request_id)
-            state.waiting.add(scheduled_new_req.req_id)
-            if scheduled_new_req.req_id in state.running:
-                state.running.remove(scheduled_new_req.req_id)
-            logger.debug(f">>> [queue-waiting][RUNNING -> WAITING]: {len(state.waiting)}, "
-                         f"[queue-running]: {len(state.running)}")
-            queue_prof.metric_inc("RUNNING", -1).metric_inc("WAITING", 1).event("ReqState")
+    waiting_queue_prof = Profiler(Level.INFO).domain("BatchSchedule")
+    waiting_queue_prof.metric("QueueSize", len(this.waiting)).metric_scope("QueueName", "WAITING").event("Queue")
+    running_queue_prof = Profiler(Level.INFO).domain("BatchSchedule")
+    running_queue_prof.metric("QueueSize", len(this.running)).metric_scope("QueueName", "RUNNING").event("Queue")
 
     logger.debug(f" state.request_id_to_iter_size: {state.request_id_to_iter_size}")
     is_prefill = any(val == 0 for val in state.request_id_to_iter_size.values())
@@ -145,23 +116,13 @@ def schedule(original_func, this, *args, **kwargs):
 @vllm_hook(("vllm.v1.core.sched.scheduler", "Scheduler._free_request"), min_version="0.9.1")
 def free_request(original_func, this, request, *args, **kwargs):
     original_func(this, request, *args, **kwargs)
-    state = _get_state()
     prof = Profiler(Level.INFO).domain("BatchSchedule").res(request.request_id)
-    if request.request_id in state.running:
-        prof.metric_inc("RUNNING", -1).metric_inc("FINISHED", 1).event("ReqState")
-        state.running.remove(request.request_id)
-    elif request.request_id in state.waiting:
-        prof.metric_inc("WAITING", -1).metric_inc("FINISHED", 1).event("ReqState")
-        state.waiting.remove(request.request_id)
-    logger.debug(f">>> [queue-waiting][free_request]: {len(state.waiting)}, [queue-running]: {len(state.running)}")
+    prof.metric_inc("FINISHED", 1).event("ReqState")
 
 
 @vllm_hook(("vllm.v1.core.sched.scheduler", "Scheduler.add_request"), min_version="0.9.1")
 def add_request(original_func, this, request, *args, **kwargs):
     original_func(this, request, *args, **kwargs)
-    state = _get_state()
-    state.waiting.add(request.request_id)
-    logger.debug(f">>> [queue-waiting][add_request]: {len(state.waiting)}, [queue-running]: {len(state.running)}")
     prof = Profiler(Level.INFO).domain("BatchSchedule").res(request.request_id)
     prof.metric_inc("WAITING", 1).event("ReqState")
     prof_queue = Profiler(Level.INFO).domain("BatchSchedule").res(request.request_id)

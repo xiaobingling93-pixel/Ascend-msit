@@ -47,8 +47,6 @@ def reset_profiler():
 @pytest.fixture
 def hook_state():
     state = batch_hookers.HookState()
-    state.running = set()
-    state.waiting = set()
     state.request_id_to_prompt_token_len = {}
     state.request_id_to_iter_size = {}
     return state
@@ -170,8 +168,6 @@ def test_schedule_given_new_requests_when_processing_then_update_state_and_log(h
         "req2": len(req2.prompt_token_ids),
     }
     assert hook_state.request_id_to_iter_size == {"req1": 0, "req2": 0}
-    assert "req1" in hook_state.running
-    assert "req2" in hook_state.running
 
 
 def test_schedule_given_finished_requests_when_processing_then_clean_state(hook_state, mock_scheduler):
@@ -233,17 +229,14 @@ def test_schedule_given_no_requests_when_processing_then_early_return(hook_state
 
 
 def test_free_request_given_running_request_when_freed_then_transition_state(hook_state):
-    hook_state.running.add("req1")
     request = create_request("req1")
 
     with patch.object(batch_hookers, "_get_state", return_value=hook_state):
         batch_hookers.free_request(MagicMock(), MagicMock(), request)
 
-    assert "req1" not in hook_state.running
-    # Verify RUNNING metric
     assert any(
         [
-            call[0] == "metric_inc" and call[1] == "RUNNING" and call[2] == -1
+            call[0] == "metric_inc" and call[1] == "FINISHED" and call[2] == 1
             for calls in Profiler.instance_calls
             for call in calls
         ]
@@ -251,16 +244,14 @@ def test_free_request_given_running_request_when_freed_then_transition_state(hoo
 
 
 def test_free_request_given_waiting_request_when_freed_then_transition_state(hook_state):
-    hook_state.waiting.add("req1")
     request = create_request("req1")
 
     with patch.object(batch_hookers, "_get_state", return_value=hook_state):
         batch_hookers.free_request(MagicMock(), MagicMock(), request)
 
-    assert "req1" not in hook_state.waiting
     assert any(
         [
-            call[0] == "metric_inc" and call[1] == "WAITING" and call[2] == -1
+            call[0] == "metric_inc" and call[1] == "FINISHED" and call[2] == 1
             for calls in Profiler.instance_calls
             for call in calls
         ]
@@ -275,7 +266,13 @@ def test_free_request_given_unknown_request_when_freed_then_no_state_change(hook
 
     # Should still create Profiler event
     assert len(Profiler.instance_calls) == 1
-    assert Profiler.instance_calls[0][-1] == ("res", "req1")
+    calls = Profiler.instance_calls[0]
+    # Verify that res() was called with the request_id
+    assert ("res", "req1") in calls
+    # Verify that event("ReqState") was called
+    assert ("event", "ReqState") in calls
+    # Verify that metric_inc("FINISHED", 1) was called
+    assert ("metric_inc", "FINISHED", 1) in calls
 
 
 def test_add_request_given_new_request_when_added_then_update_state_and_log(hook_state):
@@ -286,8 +283,6 @@ def test_add_request_given_new_request_when_added_then_update_state_and_log(hook
     with patch.object(batch_hookers, "_get_state", return_value=hook_state):
         batch_hookers.add_request(MagicMock(), scheduler, request)
 
-    assert "req1" in hook_state.waiting
-    # Verify WAITING metric
     assert any(
         call[0] == "metric_inc" and call[1] == "WAITING" and call[2] == 1
         for calls in Profiler.instance_calls
