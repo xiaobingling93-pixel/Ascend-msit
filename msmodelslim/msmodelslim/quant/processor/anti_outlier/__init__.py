@@ -14,8 +14,8 @@
 #  limitations under the License.
 
 __all__ = [
-    "M4Processor",
-    "M4ProcessorConfig",
+    "IterSmoothProcessor",
+    "IterSmoothProcessorConfig",
 ]
 
-from .iter_smooth import M4ProcessorConfig, M4Processor
+from .iter_smooth import IterSmoothProcessorConfig, IterSmoothProcessor
