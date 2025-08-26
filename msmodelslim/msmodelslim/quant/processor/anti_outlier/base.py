@@ -55,13 +55,16 @@ class StatKey(str, Enum):
 
 
 class VirtualVModule(nn.Module):
-    """虚拟 V 模块，用于处理 QKV 融合的情况"""
+    """虚拟 V 模块，用于处理 QKV 融合的情况，支持 MHA、MQA 和 GQA 三种结构"""
 
     def __init__(self, qkv_module: nn.Linear, num_attention_heads: int, num_key_value_heads: int):
         super().__init__()
         self.qkv_module = qkv_module
         self.num_attention_heads = num_attention_heads
         self.num_key_value_heads = num_key_value_heads
+
+        # 确定注意力机制类型
+        self.attention_type = self._determine_attention_type()
 
         # 计算 V 部分的权重和偏置
         self._extract_v_weights()
@@ -80,12 +83,8 @@ class VirtualVModule(nn.Module):
         # 计算每个头的维度
         head_dim = qkv_weight.shape[1] // self.num_attention_heads
 
-        # 计算 V 部分的起始和结束索引
-        q_size = self.num_attention_heads * head_dim
-        k_size = self.num_key_value_heads * head_dim
-
-        v_start = q_size + k_size
-        v_end = qkv_weight.shape[0]
+        # 根据注意力类型计算 V 部分的起始和结束索引
+        v_start, v_end = self._get_v_indices(head_dim)
 
         # 更新 V 部分的权重
         with torch.no_grad():
@@ -95,6 +94,45 @@ class VirtualVModule(nn.Module):
             if qkv_bias is not None and self.v_bias is not None:
                 qkv_bias[v_start:v_end] = self.v_bias.data
 
+    def _determine_attention_type(self) -> str:
+        """确定注意力机制类型"""
+        if self.num_key_value_heads == 1:
+            return "MQA"  # Multi-Query Attention
+        elif self.num_key_value_heads == self.num_attention_heads:
+            return "MHA"  # Multi-Head Attention
+        elif (self.num_key_value_heads < self.num_attention_heads and 
+              self.num_attention_heads % self.num_key_value_heads == 0):
+            return "GQA"  # Grouped-Query Attention
+        else:
+            get_logger().warning("InValid attention type, please check.")
+            return "UNKNOWN"
+
+    def _get_v_indices(self, head_dim: int) -> tuple:
+        """根据注意力类型获取 V 部分的索引范围"""
+        if self.attention_type == "MHA":
+            # MHA: QKV 顺序为 [Q, K, V]，每个都有 num_attention_heads 个头
+            q_size = self.num_attention_heads * head_dim
+            k_size = self.num_attention_heads * head_dim
+            v_start = q_size + k_size
+            v_end = q_size + k_size + self.num_attention_heads * head_dim
+
+        elif self.attention_type == "MQA":
+            # MQA: QKV 顺序为 [Q, K, V]，Q 有 num_attention_heads 个头，K/V 只有 1 个头
+            q_size = self.num_attention_heads * head_dim
+            k_size = 1 * head_dim
+            v_start = q_size + k_size
+            v_end = q_size + k_size + 1 * head_dim
+
+        elif self.attention_type == "GQA":  # GQA
+            # GQA: QKV 顺序为 [Q, K, V]，Q 有 num_attention_heads 个头，K/V 有 num_key_value_heads 个头
+            q_size = self.num_attention_heads * head_dim
+            k_size = self.num_key_value_heads * head_dim
+            v_start = q_size + k_size
+            v_end = q_size + k_size + self.num_key_value_heads * head_dim
+        else:
+            raise ValueError(f"Invalid attention type: {self.attention_type}")
+        return v_start, v_end
+
     def _extract_v_weights(self):
         """从 QKV 模块中提取 V 部分的权重和偏置"""
         qkv_weight = self.qkv_module.weight
@@ -103,12 +141,8 @@ class VirtualVModule(nn.Module):
         # 计算每个头的维度
         head_dim = qkv_weight.shape[1] // self.num_attention_heads
 
-        # 计算 V 部分的起始和结束索引
-        # QKV 的顺序通常是: [Q, K, V]
-        q_size = self.num_attention_heads * head_dim
-        k_size = self.num_key_value_heads * head_dim
-        v_start = q_size + k_size
-        v_end = qkv_weight.shape[0]
+        # 根据注意力类型获取 V 部分的索引范围
+        v_start, v_end = self._get_v_indices(head_dim)
 
         # 提取 V 部分的权重
         self.v_weight = nn.Parameter(qkv_weight[v_start:v_end].clone())
