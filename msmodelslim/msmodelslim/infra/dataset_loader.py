@@ -22,4 +22,4 @@ class FileDatasetLoader(DatasetLoaderInterface):
             return SafeGenerator.load_jsonl(anti_path)
         except Exception as e:
             raise InvalidDatasetError(f'Failed to load dataset {dataset_id}',
-                                      action='Please check the dataset path') from e
+                                      action='Please ensure the dataset exists and is valid') from e
