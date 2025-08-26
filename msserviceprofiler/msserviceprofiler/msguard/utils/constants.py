@@ -33,6 +33,5 @@ EXT_SIZE_MAPPING = {
 DEFAULT_MAX_FILES = 10000
 DEFAULT_MAX_DEPTHS = 100
 DEFAULT_FILE_MODE = 0o640
-VALID_OPEN_MODES = {'r', 'w', 'x', 'a', 'b', '+'}
-
-TYPE_ERROR_MSG = "Expected '{}' to be {}. Got {} instead."
+DEFAULT_DIR_MODE = 0o750
+VALID_OPEN_MODES = {'r', 'w', 'x', 'a', 'b', 't', '+'}

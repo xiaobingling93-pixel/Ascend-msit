@@ -29,27 +29,14 @@ class InvalidParameterError(Exception):
         self.constraint = constraint
         self.parameter_value = parameter_value
 
-        super().__init__(self._build_error_message())
+        super().__init__(self.build_error_message())
 
-    def _build_error_message(self):
+    def build_error_message(self):
         """Build the complete error message with colors and formatting"""
-        c = self._COLORS
+        message = f"Parameter validation failed in " \
+                  f"{self._COLORS['CYAN']}function {self.caller_name!r}{self._COLORS['RESET']}: " \
+                  f"{self._COLORS['YELLOW']}expected parameter {self.parameter_name!r} " \
+                  f"{self.constraint}{self._COLORS['RESET']}, " \
+                  f"{self._COLORS['RED']}but receieved {self.parameter_value!r}{self._COLORS['RESET']}"
 
-        indent = ' ' * 4
-        message_parts = [
-            f"{c['RED']}Parameter validation failed at{c['RESET']}",
-            f"{c['CYAN']}Where:{c['RESET']}",
-            f"{indent}Function: {c['YELLOW']}{self.caller_name}{c['RESET']}",
-            f"{indent}Parameter: {c['YELLOW']}{self.parameter_name}{c['RESET']}",
-            f"{indent}Received value: {c['RED']}{self.parameter_value!r}{c['RESET']}",
-            "",
-            f"{c['CYAN']}Requirement:{c['RESET']}",
-            f"{indent}{self.constraint}",
-            "",
-            f"{c['CYAN']}Hint:{c['RESET']}",
-            f"{indent}Check the last '{c['RED']}[F]{c['RESET']}' and "
-            f"make sure {c['RED']}{self.parameter_value!r}{c['RESET']} is valid"
-        ]
-
-        return "\n".join(message_parts)
-
+        return message

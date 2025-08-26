@@ -19,7 +19,10 @@ from collections import deque
 from .exception import WalkLimitError
 from ..validation import validate_params
 from ..constraints import Rule, where
-from ..utils.constants import DEFAULT_FILE_MODE, DEFAULT_MAX_FILES, DEFAULT_MAX_DEPTHS, VALID_OPEN_MODES
+from ..utils.constants import (
+    DEFAULT_FILE_MODE, DEFAULT_MAX_FILES, DEFAULT_MAX_DEPTHS, VALID_OPEN_MODES,
+    DEFAULT_DIR_MODE
+)
 
 
 @validate_params({"root_dir": Rule.input_dir_traverse})
@@ -100,7 +103,7 @@ def open_s(path, mode='r', **kwargs):
     return os.fdopen(fd, mode, **kwargs)
 
 
-def touch_s(path, mode=0o640, exist_ok=True):
+def touch_s(path, mode=DEFAULT_FILE_MODE, exist_ok=True):
     if not path:
         raise ValueError("Cannot create a file with empty name")
 
@@ -118,7 +121,7 @@ def touch_s(path, mode=0o640, exist_ok=True):
     os.close(fd)
 
 
-def mkdir_s(path, mode=0o750, exist_ok=True):
+def mkdir_s(path, mode=DEFAULT_DIR_MODE, exist_ok=True):
     if not path:
         raise ValueError("Cannot create a directory with empty name")
 
@@ -131,8 +134,11 @@ def mkdir_s(path, mode=0o750, exist_ok=True):
             continue
 
         current = os.path.join(current, part)
+        if os.path.isdir(current):
+            continue
+
         try:
             os.mkdir(current, mode)
         except OSError:
-            if not exist_ok:
+            if not exist_ok or not os.path.isdir(path):
                 raise

@@ -13,20 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__all__ = [
-    "BaseConstraint",
-    "InvalidParameterError",
-    "PathConstraint", 'Path', 'Rule',
-    "FunctionConstraint", "AndConstraint", "OrConstraint",
-    "NotConstraint", "IfElseConstraint", "make_constraint",
-    "where"
-]
 
-from .base import BaseConstraint
-from .exception import InvalidParameterError
-from .path import PathConstraint, Path, Rule
-from .logic import (
-    FunctionConstraint, AndConstraint, OrConstraint,
-    NotConstraint, IfElseConstraint, make_constraint,
-    where
-)
+class GlobalConfig:
+    path_check = True
+    logic_check = True
