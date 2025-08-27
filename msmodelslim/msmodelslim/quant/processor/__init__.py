@@ -17,8 +17,8 @@ __all__ = [
     "AutoProcessorConfig",
     "LinearProcessorConfig",
     "LinearQuantProcessor",
-    "M4ProcessorConfig",
-    "M4Processor"
+    "IterSmoothProcessorConfig",
+    "IterSmoothProcessor"
     "LinearQuantProcessor",
     "LoadProcessorConfig",
     "LoadProcessor",
@@ -28,7 +28,7 @@ __all__ = [
     "DynamicCacheQuantProcessor"
 ]
 
-from .anti_outlier.iter_smooth import M4ProcessorConfig, M4Processor
+from .anti_outlier.iter_smooth import IterSmoothProcessorConfig, IterSmoothProcessor
 from .base import AutoProcessorConfig
 from .container.group import GroupProcessorConfig, GroupProcessor
 from .memory.load import LoadProcessorConfig, LoadProcessor
