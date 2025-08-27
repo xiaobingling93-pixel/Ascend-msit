@@ -1,4 +1,5 @@
 # Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+# Copyright 2024-2025 The Alibaba Wan Team Authors. All rights reserved.
 import logging
 import os
 import time
