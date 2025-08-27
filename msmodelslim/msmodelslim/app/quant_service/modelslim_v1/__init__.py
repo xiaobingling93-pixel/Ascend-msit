@@ -17,8 +17,12 @@ __all__ = [
     "process_model",
     "ModelslimV1QuantService",
     "AscendV1Saver",
+    "MultimodalSDModelslimV1QuantService",
+    "MindIEFormatSaver",
 ]
 
 from .api import process_model
 from .quant_service import ModelslimV1QuantService
 from .save.ascendv1 import AscendV1Saver
+from .multimodal_sd_quant_service import MultimodalSDModelslimV1QuantService
+from .save.mindie_format import MindIEFormatSaver

@@ -29,7 +29,7 @@ class BaseModelAdapter(ABC):
 
         # default device_map based on device type
         self._device_map = 'cpu' if device is DeviceType.CPU else 'auto'
-        self._torch_dtype = self._config.torch_dtype if device is DeviceType.NPU else torch.float32
+        self._torch_dtype = self._initialize_torch_dtype()
 
     @property
     def ori(self) -> Path:
@@ -179,3 +179,7 @@ class BaseModelAdapter(ABC):
             generated_visit_func = cast(GeneratedVisitFuncType, generated_decoder_layer_visit_func)
 
         return generated_forward_func, generated_visit_func
+
+    def _initialize_torch_dtype(self):
+        """初始化torch dtype，子类可覆盖实现"""
+        return self._config.torch_dtype if self._device is DeviceType.NPU else torch.float32
