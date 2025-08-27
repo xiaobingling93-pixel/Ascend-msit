@@ -324,26 +324,17 @@ class HistogramObserver(TorchHistogramObserver):
             self.clip_min, self.clip_max = x_min, x_max
             return 
         else:
-            # torch_npu.histc 不支持bfloat16,转移到cpu
+            # torch_npu.histc 不支持bfloat16
             dtype_support_list = [torch.float, torch.float32, torch.float16, torch.int64, 
                                   torch.int32, torch.int16, torch.int8, torch.uint8]
             device = x.device
-            if x.dtype in dtype_support_list:
-                self.histogram = self.histogram.to(device=device, dtype=x.dtype)
-                self.min_val = self.min_val.to(device=device)
-                self.max_val = self.max_val.to(device=device)
-                self.forward(x)
-            else:
-                x = x.to(device='cpu')
-                self.histogram = self.histogram.to(device='cpu', dtype=x.dtype)
-                self.min_val = self.min_val.to(device='cpu')
-                self.max_val = self.max_val.to(device='cpu')
-                self.forward(x)
-                # 将数据从cpu转移回device
-                x = x.to(device=device)
-                self.histogram = self.histogram.to(device=device)
-                self.min_val = self.min_val.to(device=device)
-                self.max_val = self.max_val.to(device=device)
+            if x.dtype not in dtype_support_list:
+                x = x.to(torch.float32)
+            self.histogram = self.histogram.to(device=device, dtype=x.dtype)
+            self.min_val = self.min_val.to(device=device)
+            self.max_val = self.max_val.to(device=device)
+            self.forward(x)
+
             # 非线性参数搜索
             self.clip_min, self.clip_max = self._non_linear_param_search()
             # 在clip范围内，选择最佳的clip_min,clip_max。在bin_width较大时比较有用。
@@ -622,7 +613,7 @@ class HistogramObserver(TorchHistogramObserver):
                     "This may be caused by an empty input tensor or the input tensor's range being too large."
                     )
                 return self.min_val, self.max_val
-            c_sum = torch.cumsum(self.histogram, dim=0)
+            c_sum = torch.cumsum(self.histogram, dim=0).to(device='cpu')
 
             stepsize = 1e-5  # granularity
             alpha = 0.0  # lower bound
