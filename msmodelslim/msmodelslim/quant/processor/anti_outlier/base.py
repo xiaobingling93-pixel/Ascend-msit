@@ -18,12 +18,14 @@ from typing import List, Optional, Dict, Any
 
 import torch
 from torch import nn
+
+from msmodelslim.utils.config_map import ConfigSet
 from msmodelslim.core.QAL.qtypes import SmoothContext
 from msmodelslim.core.base.protocol import BatchProcessRequest
 from msmodelslim.model.adapter_types import AdapterConfig
 from msmodelslim.model.adapter_types import MappingConfig, FusionConfig, SubgraphInfo
 from msmodelslim.quant.processor.base import AutoSessionProcessor, AutoProcessorConfig
-from msmodelslim.utils.config_map import ConfigSet
+from msmodelslim.utils.exception import MisbehaviorError
 from msmodelslim.utils.logging import get_logger
 
 
@@ -226,7 +228,7 @@ class SubgraphProcessor:
         """
         result = []
         if not self.adapter_config:
-            raise ValueError("adapter_config cannot be empty")
+            raise MisbehaviorError("adapter_config cannot be empty")
         result = self._get_adapter_based_subgraph_info()
         return result
 
@@ -345,7 +347,7 @@ class SubgraphProcessor:
         """创建norm-linear子图信息"""
         subgraph_info = self._create_subgraph_info_base(mapping, "norm-linear")
         if subgraph_info is None:
-            raise ValueError(
+            raise MisbehaviorError(
                 "Failed to create norm-linear subgraph info. "
                 "Please check if the required modules exist in the model "
                 "and the mapping configuration is correct."
@@ -369,7 +371,7 @@ class SubgraphProcessor:
 
         subgraph_info = self._create_subgraph_info_base(mapping, "ov", metadata_extra)
         if subgraph_info is None:
-            raise ValueError(
+            raise MisbehaviorError(
                 "Failed to create ov subgraph info. "
                 "Please check if the required modules exist in the model "
                 "and the mapping configuration is correct."
@@ -383,7 +385,7 @@ class SubgraphProcessor:
         """创建up-down子图信息"""
         subgraph_info = self._create_subgraph_info_base(mapping, "up-down")
         if subgraph_info is None:
-            raise ValueError(
+            raise MisbehaviorError(
                 "Failed to create up-down subgraph info. "
                 "Please check if the required modules exist in the model "
                 "and the mapping configuration is correct."
@@ -397,7 +399,7 @@ class SubgraphProcessor:
         """创建linear-linear子图信息"""
         subgraph_info = self._create_subgraph_info_base(mapping, "linear-linear")
         if subgraph_info is None:
-            raise ValueError(
+            raise MisbehaviorError(
                 "Failed to create linear-linear subgraph info. "
                 "Please check if the required modules exist in the model "
                 "and the mapping configuration is correct."
@@ -420,7 +422,7 @@ class BaseSmoothProcessor(AutoSessionProcessor):
             if hasattr(self.model.config, key):
                 num_attention_heads = getattr(self.model.config, key)
         if not num_attention_heads:
-            raise ValueError(
+            raise MisbehaviorError(
                 f"the config of model must have num_attention_heads, n_head or num_heads, \
                                 please check or modify the config file"
             )
@@ -435,7 +437,7 @@ class BaseSmoothProcessor(AutoSessionProcessor):
             num_key_value_heads = self.model.config.num_key_value_heads
 
         if not num_key_value_heads:
-            raise ValueError(
+            raise MisbehaviorError(
                 f"the config of model must have num_key_value_heads, \
                                 please check or modify the config file"
             )
