@@ -121,7 +121,7 @@ class AutoSaverProcessor(AutoSessionProcessor):
         raise NotImplementedError(f"You should implement the on_w8a8_static method for {self.__class__.__name__}")
 
     def on_w8a8_dynamic(self, prefix: str, module: qir.W8A8DynamicFakeQuantLinear):
-        raise NotImplementedError(f"You should implement the on_w4a8_dynamic method for {self.__class__.__name__}")
+        raise NotImplementedError(f"You should implement the on_w8a8_dynamic method for {self.__class__.__name__}")
 
     def on_float_linear(self, prefix: str, module: nn.Linear):
         raise NotImplementedError(f"You should implement the on_linear method for {self.__class__.__name__}")
