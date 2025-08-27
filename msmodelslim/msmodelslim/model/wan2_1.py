@@ -58,6 +58,13 @@ class Wan2Point1Adapter(MultimodalSDModelAdapter, MultimodalSDQuantInference):
                  **kwargs):
         super().__init__(model_type, ori_path, device, trust_remote_code, **kwargs)
 
+    @property
+    def model(self):
+        """
+        The model of the model.
+        """
+        return self._model
+
     def set_model_args(self, override_model_config: object):
         # 覆盖默认参数配置
         self._set_model_args(override_model_config)
@@ -120,7 +127,7 @@ class Wan2Point1Adapter(MultimodalSDModelAdapter, MultimodalSDQuantInference):
 
         self.wan_t2v.model.to('npu')
         # Start sampling
-        for idx in tqdm(range(1), desc='Dump calib data by float model inference'):
+        for _ in tqdm(range(1), desc='Dump calib data by float model inference'):
             # set seed
             torch.manual_seed(args.base_seed)
             torch.npu.manual_seed(args.base_seed)
@@ -247,13 +254,6 @@ class Wan2Point1Adapter(MultimodalSDModelAdapter, MultimodalSDQuantInference):
                 module.to('cpu')
         with amp.autocast(dtype=torch.bfloat16), torch.no_grad(), no_sync():
             process_model_func(model=self.transformer, adapter=self)
-
-    @property
-    def model(self):
-        """
-        The model of the model.
-        """
-        return self._model
 
     def support_layer_wise_schedule(self) -> bool:
         return True
