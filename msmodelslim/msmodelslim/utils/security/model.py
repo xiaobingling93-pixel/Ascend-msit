@@ -6,6 +6,7 @@ import os
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig
 
 from msmodelslim.utils.exception import InvalidModelError
+from msmodelslim.utils.exception_decorator import exception_handler
 from msmodelslim.utils.security import get_valid_read_path
 
 MAX_KEY_LENGTH = 256
@@ -19,38 +20,41 @@ class SafeGenerator:
     @staticmethod
     def get_config_from_pretrained(model_path, **kwargs):
         model_path = get_valid_read_path(model_path, is_dir=True, check_user_stat=False)
-        try:
+        with exception_handler(f'Get config from pretrained failed in {model_path}.',
+                               err_cls=Exception,
+                               ms_err_cls=InvalidModelError,
+                               action=f"Please ensure config files all exist and are valid. "
+                                      f"Otherwise, the transformers version is not compatible with the model."
+                                      f"Before using msModelSlim, please make sure the model load and infer properly.",
+                               ):
             config = AutoConfig.from_pretrained(model_path, local_files_only=True, **kwargs)
-        except Exception as err:
-            raise InvalidModelError('Get config from pretrained failed.',
-                                    action=f"Please check config files in the model path. "
-                                           f"If the file exists, make sure the folder's owner has execute permission."
-                                    ) from err
-        return config
+            return config
 
     @staticmethod
     def get_model_from_pretrained(model_path, **kwargs):
         model_path = get_valid_read_path(model_path, is_dir=True, check_user_stat=False)
-        try:
+        with exception_handler(f'Get model from pretrained failed in {model_path}.',
+                               err_cls=Exception,
+                               ms_err_cls=InvalidModelError,
+                               action=f"Please ensure the model weights files all exist and are valid. "
+                                      f"Otherwise, the transformers version is not compatible with the model."
+                                      f"Before using msModelSlim, please make sure the model load and infer properly.",
+                               ):
             model = AutoModelForCausalLM.from_pretrained(model_path, local_files_only=True, **kwargs)
-        except Exception as err:
-            raise InvalidModelError('Get model from pretrained failed.',
-                                    action=f"Please check model weights files in the model path. "
-                                           f"If the file exists, make sure the folder's owner has execute permission."
-                                    ) from err
-        return model
+            return model
 
     @staticmethod
     def get_tokenizer_from_pretrained(model_path, **kwargs):
         model_path = get_valid_read_path(model_path, is_dir=True, check_user_stat=False)
-        try:
+        with exception_handler(f'Get tokenizer from pretrained failed in {model_path}.',
+                               err_cls=Exception,
+                               ms_err_cls=InvalidModelError,
+                               action=f"Please ensure the tokenizer files all exist and are valid. "
+                                      f"Otherwise, the transformers version is not compatible with the model."
+                                      f"Before using msModelSlim, please make sure the model load and infer properly.",
+                               ):
             tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True, **kwargs)
-        except Exception as err:
-            raise InvalidModelError('Get tokenizer from pretrained failed.',
-                                    action=f"Please check tokenizer files in the model path. "
-                                           f"If the file exists, make sure the folder's owner has execute permission."
-                                    ) from err
-        return tokenizer
+            return tokenizer
 
     @staticmethod
     def load_jsonl(dataset_path, key_name='inputs_pretokenized'):

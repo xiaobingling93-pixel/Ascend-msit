@@ -3,17 +3,13 @@ import functools
 import os
 from pathlib import Path
 
-from msmodelslim import set_logger_level
 from msmodelslim.app.base import BaseModelAdapter
 from msmodelslim.app.naive_quantization import NaiveQuantizationApplication
 from msmodelslim.app.quant_service.proxy import QuantServiceProxy
 from msmodelslim.infra.dataset_loader import FileDatasetLoader
 from msmodelslim.infra.practice_manager import PracticeManager
 from msmodelslim.model import ModelFactory
-from msmodelslim.utils.config import msmodelslim_config
 from msmodelslim.utils.security.path import get_valid_read_path
-
-set_logger_level(msmodelslim_config.env_vars.log_level)
 
 
 def get_practice_dir():

@@ -1,34 +1,19 @@
 # Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 import argparse
-from pathlib import Path
 
+from msmodelslim import set_logger_level
 from msmodelslim.app import QuantType, DeviceType
 from msmodelslim.cli.naive_quantization.__main__ import main as quant_main
+from msmodelslim.utils.config import msmodelslim_config
+from msmodelslim.utils.validation.conversion import (
+    convert_to_readable_dir,
+    convert_to_readable_file,
+    convert_to_writable_dir,
+    convert_to_bool
+)
 
 FAQ_HOME = "gitee repo: Ascend/msit/msmodelslim, wiki"
 MIND_STUDIO_LOGO = "[Powered by MindStudio]"
-
-
-def cmd_bool(cmd_arg):
-    if cmd_arg == "True":
-        return True
-    elif cmd_arg == "False":
-        return False
-    raise argparse.ArgumentTypeError(f"{cmd_arg} should be True or False")
-
-
-def cmd_path(cmd_arg):
-    path = Path(cmd_arg)
-    if not path.exists():
-        raise argparse.ArgumentTypeError(f"Invalid path: {path}. Path does not exist.")
-    return path
-
-
-def cmd_new_path(cmd_arg):
-    path = Path(cmd_arg)
-    if not path.parent.exists():
-        raise argparse.ArgumentTypeError(f"Invalid path: {path}. Parent path does not exist.")
-    return path
 
 
 def main():
@@ -45,17 +30,17 @@ def main():
     quant_parser = subparsers.add_parser('quant', help='Model quantization')
     quant_parser.add_argument('--model_type', required=True,
                               help="Type of model to quantize (e.g. 'Qwen2.5-7B-Instruct', 'Qwen-QwQ-32B')")
-    quant_parser.add_argument('--model_path', required=True, type=cmd_path,
+    quant_parser.add_argument('--model_path', required=True, type=convert_to_readable_dir,
                               help="Path to the original model")
-    quant_parser.add_argument('--save_path', required=True, type=cmd_new_path,
+    quant_parser.add_argument('--save_path', required=True, type=convert_to_writable_dir,
                               help="Path to save quantized model")
     quant_parser.add_argument('--device', type=DeviceType, default=DeviceType.NPU, choices=DeviceType,
                               help="Target device type for quantization")
-    quant_parser.add_argument('--config_path', type=cmd_path,
+    quant_parser.add_argument('--config_path', type=convert_to_readable_file,
                               help="Explicit path to quantization config file")
     quant_parser.add_argument('--quant_type', type=QuantType, choices=QuantType,
                               help="Type of quantization to apply")
-    quant_parser.add_argument('--trust_remote_code', type=cmd_bool, default=False,
+    quant_parser.add_argument('--trust_remote_code', type=convert_to_bool, default=False,
                               help="Trust custom code (bool type, must be True or False). "
                                    "Please ensure the security of the loaded custom code file.")
 
@@ -69,4 +54,5 @@ def main():
 
 
 if __name__ == '__main__':
+    set_logger_level(msmodelslim_config.env_vars.log_level)
     main()
