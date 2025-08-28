@@ -3,10 +3,10 @@
 from typing import List
 
 from transformers import PreTrainedTokenizerBase
-from msmodelslim.model.adapter_types import AdapterConfig, MappingConfig
 from msmodelslim.quant.processor.kv_smooth import KVSmoothFusedInterface, \
     KVSmoothFusedType, KVSmoothFusedUnit
-from msmodelslim.quant.processor.anti_outlier.smooth_interface import IterSmoothInterface
+from msmodelslim.quant.processor.anti_outlier.smooth_interface import IterSmoothInterface, FlexSmoothQuantInterface
+from msmodelslim.core.graph.adapter_types import AdapterConfig, MappingConfig
 from msmodelslim.utils.exception import InvalidModelError
 from msmodelslim.utils.security.model import SafeGenerator
 from .default import DefaultModelAdapter
@@ -79,7 +79,7 @@ class Qwen25ModelAdapter(DefaultModelAdapter, KVSmoothFusedInterface):
 @ModelFactory.register("Qwen3-14B")
 @ModelFactory.register("Qwen3-32B")
 @logger_setter(subfix='qwen3')
-class Qwen3ModelAdapter(DefaultModelAdapter, IterSmoothInterface, KVSmoothFusedInterface):
+class Qwen3ModelAdapter(DefaultModelAdapter, IterSmoothInterface, FlexSmoothQuantInterface, KVSmoothFusedInterface):
     def get_kvcache_smooth_fused_subgraph(self) -> List[KVSmoothFusedUnit]:
         return [
             KVSmoothFusedUnit(

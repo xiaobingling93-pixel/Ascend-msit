@@ -17,7 +17,7 @@ from typing import Type, Tuple
 
 from msmodelslim.core.KIA.manager import KIAManager
 from msmodelslim.core.QAL.qregistry import QFuncRegistry
-from msmodelslim.core.QAL.qtypes import Subgraph, SmoothContext, IterSmoothConfig
+from msmodelslim.core.QAL.qtypes import Subgraph, SmoothContext, IterSmoothConfig, FlexSmoothQuantConfig
 
 
 @KIAManager.mark_require_version(min_version="1.0.0")
@@ -40,5 +40,29 @@ def iter_smooth(subgraph: Subgraph, config: IterSmoothConfig, context: SmoothCon
         
     """
     return QFuncRegistry.dispatch("iter_smooth",
+                                  (type(subgraph), config.version),
+                                  *(subgraph, config, context))
+
+
+@KIAManager.mark_require_version(min_version="1.0.0")
+@QFuncRegistry.register_api(dispatch_key=Tuple[Type[Subgraph], int])
+def flex_smooth_quant(subgraph: Subgraph, config: FlexSmoothQuantConfig, context: SmoothContext) -> None:
+    """
+    使用iter_smooth算法进行异常值抑制
+    
+    Args:
+        subgraph: 应用flex_smooth_quant算法的子图，支持以下类型：
+            NormLinearSubgraph
+            LinearLinearSubgraph
+            OVSubgraph
+            UpDownSubgraph
+        config: FlexSmoothQuant算法配置
+        context: 上下文，用于输入激活的smooth_scale，并记录权重的smooth_scale
+        
+    Returns:
+        None: 无返回值
+        
+    """
+    return QFuncRegistry.dispatch("flex_smooth_quant",
                                   (type(subgraph), config.version),
                                   *(subgraph, config, context))

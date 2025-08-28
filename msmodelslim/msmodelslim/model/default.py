@@ -9,7 +9,7 @@ from transformers import PreTrainedTokenizerBase, PreTrainedModel, PretrainedCon
 
 from msmodelslim.app.base.const import DeviceType
 from msmodelslim.app.base.model import BaseModelAdapter
-from msmodelslim.model.adapter_types import (
+from msmodelslim.core.graph.adapter_types import (
     SUPPORTED_SUBGRAPH_TYPES,
     SubgraphInfo
 )
