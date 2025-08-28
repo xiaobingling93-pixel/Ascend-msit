@@ -25,7 +25,7 @@ from .quant_config import ModelslimV1QuantConfig, ModelslimV1ServiceConfig
 
 
 class DumpConfig(BaseModel):
-    capture_mode: Literal["args", "kwargs", "timestep"] = Field(default="args")
+    capture_mode: Literal["args"] = Field(default="args")
     dump_data_dir: str = Field(default="")
 
 
