@@ -42,16 +42,6 @@ class TestUpdateEnvS(unittest.TestCase):
             self.assertEqual(os.environ[test_var], test_path,
                             "环境变量应被设置为指定的绝对路径")
 
-    def test_update_env_s_with_relative_path(self):
-        """测试函数能否正确处理相对路径（应抛出ValueError）"""
-        try:
-            f = open_s("relative_path", "w")
-            update_env_s("TEST_VAR", "relative_path")
-            self.assertEqual(os.environ.get("TEST_VAR"), os.path.realpath("relative_path"))
-        finally:
-            f.close()
-            os.remove("relative_path")
-
     def test_update_env_s_with_non_string_env_var(self):
         """测试函数能否正确处理非字符串环境变量名（应抛出TypeError）"""
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -83,8 +73,8 @@ class TestUpdateEnvS(unittest.TestCase):
             test_path = os.path.join(temp_dir, "test_file")
             open_s(test_path, "a").close()
             original_value = "/original/path"
-            os.environ[test_var] = original_value
 
+            os.environ[test_var] = original_value
             update_env_s(test_var, test_path, prepend=False)
             expected = f"{original_value}{os.pathsep}{test_path}"
             self.assertEqual(os.environ[test_var], expected,

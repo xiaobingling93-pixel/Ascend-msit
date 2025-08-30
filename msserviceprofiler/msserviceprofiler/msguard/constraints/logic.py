@@ -137,6 +137,7 @@ def make_constraint(constraint, description=None) -> BaseConstraint:
     if isinstance(constraint, bool):
         if description is None:
             raise ValueError("'description' must not be None when 'condition' is bool")
+
         return FunctionConstraint(lambda _: constraint, description)
 
     if callable(constraint):

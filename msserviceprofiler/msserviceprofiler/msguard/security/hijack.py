@@ -21,7 +21,7 @@ from ..constraints import PathConstraint, Rule, InvalidParameterError
 def update_env_s(
         env_var: str,
         path: str,
-        constraint: PathConstraint = Rule.input_file_exec,
+        constraint: PathConstraint = Rule.input_file_read,
         prepend: bool = True
     ) -> None:
     """
@@ -49,7 +49,7 @@ def update_env_s(
     """
     if not isinstance(env_var, str):
         raise TypeError(
-            f"Expected 'env_var' to be str. Got {type(result).__name__} instead."
+            f"Expected 'env_var' to be str. Got {type(env_var).__name__} instead."
         )
 
     abs_path = os.path.abspath(path)

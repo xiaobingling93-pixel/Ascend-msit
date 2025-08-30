@@ -129,10 +129,7 @@ def mkdir_s(path, mode=DEFAULT_DIR_MODE, exist_ok=True):
     components = real_path.split(os.sep)
 
     current = os.path.sep
-    for part in components[1:]:
-        if not part:
-            continue
-
+    for part in components[1:-1]:
         current = os.path.join(current, part)
         if os.path.isdir(current):
             continue
@@ -140,5 +137,11 @@ def mkdir_s(path, mode=DEFAULT_DIR_MODE, exist_ok=True):
         try:
             os.mkdir(current, mode)
         except OSError:
-            if not exist_ok or not os.path.isdir(path):
+            if not exist_ok or not os.path.isdir(current):
                 raise
+
+    try:
+        os.mkdir(real_path, mode)
+    except OSError:
+        if not exist_ok or not os.path.isdir(real_path):
+            raise

@@ -22,25 +22,6 @@ class ConstraintStatus(Enum):
     FAILURE = auto()
     SKIPPED = auto()
     
-    @property
-    def symbol(self):
-        return {
-            ConstraintStatus.SUCCESS: "T",
-            ConstraintStatus.FAILURE: "F",
-            ConstraintStatus.SKIPPED: "S"
-        }[self]
-    
-    @property
-    def color_code(self):
-        return {
-            ConstraintStatus.SUCCESS: "\033[1;32m",
-            ConstraintStatus.FAILURE: "\033[1;31m",
-            ConstraintStatus.SKIPPED: "\033[1;33m"
-        }[self]
-    
-    def colored_symbol(self):
-        return f"{self.color_code}{self.symbol}\033[0m"
-
 
 class BaseConstraint(ABC):
     def __init__(self, *, description=None):
