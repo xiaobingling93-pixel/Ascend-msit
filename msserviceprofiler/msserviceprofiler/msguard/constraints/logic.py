@@ -26,8 +26,8 @@ class LogicConstraint(BaseConstraint):
         pass
 
     def is_satisfied_by(self, val):
-        if not GlobalConfig.logic_check:
-            return True
+        if GlobalConfig.is_custom_set():
+            return GlobalConfig.custom_return
 
         ret = self._is_satisfied_by(val)
         self.status = ConstraintStatus.SUCCESS if ret else ConstraintStatus.FAILURE

@@ -33,8 +33,8 @@ class PathConstraint(BaseConstraint):
         pass
 
     def is_satisfied_by(self, val):
-        if not GlobalConfig.path_check:
-            return True
+        if GlobalConfig.is_custom_set():
+            return GlobalConfig.custom_return
 
         path = os.fspath(val)
         abs_path = os.path.abspath(path) # normalize the path

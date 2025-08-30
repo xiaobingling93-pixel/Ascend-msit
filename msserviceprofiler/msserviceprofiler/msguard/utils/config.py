@@ -15,5 +15,12 @@
 
 
 class GlobalConfig:
-    path_check = True
-    logic_check = True
+    custom_return = None
+
+    @classmethod
+    def is_custom_set(cls):
+        return cls.custom_return is not None
+
+    @classmethod
+    def reset(cls):
+        cls.custom_return = None
