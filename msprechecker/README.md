@@ -295,8 +295,7 @@ a:
 ### PD 分离选项
 | 参数名         | 参数描述                                             | 是否必选                       |
 | -------------- | ---------------------------------------------------- | ------------------------------ |
-| --scene | 支持MindIE 框架下, PD 分离部署场景，支持单机 PD 分离 `pd_disaggregation` 和多机 PD 分离 `pd_disaggregation_single_container`。该参数需要和 `--config-parent-dir` 同时使用 
-            支持VLLM-Ascend 框架下, 单机、多机 PD 场景，PD 混部场景 `vllm` 和PD 分离场景 `vllm,ep`。   | 否 |
+| --scene | 支持MindIE 框架下, PD 分离部署场景，支持单机 PD 分离 `pd_disaggregation` 和多机 PD 分离 `pd_disaggregation_single_container`。该参数需要和 `--config-parent-dir` 同时使用；支持VLLM-Ascend 框架下, 单机、多机 PD 场景，PD 混部场景 `vllm` 和PD 分离场景 `vllm,ep`。   | 否 |
 | --user-config-path | 指定大 EP 场景下的 `user_config.json` 路径。其对应的 Legacy 参数为 `-user, --user_config_path` | 否 |
 | --mindie-env-path | 指定大 EP 场景下的 `mindie_env.json` 路径。其对应的 Legacy 参数为 `--mindie_env_config_path` | 否 |
 | --config-parent-dir | 指定 PD 分离场景下，所有配置文件的父目录，通常名为 `kubernetes_deploy_scripts`。这个参数需要和 `--scene` 一起使用 | 否 |
