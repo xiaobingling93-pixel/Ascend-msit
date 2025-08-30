@@ -14,15 +14,32 @@
 # limitations under the License.
 
 import os
-from dataclasses import dataclass
+import copy
 
-from .base import BaseConstraint
-from .constraint_builder import Path, where
+from .builder import Path
+from ..logic import where
+from ..base import BaseConstraint
 
 
-@dataclass(frozen=True)
+class _RuleDescriptor:
+    def __init__(self, constraint):
+        if not isinstance(constraint, BaseConstraint):
+            raise TypeError("Only children of PathConstraint are allowed to be registered.")
+        self._constraint = constraint
+
+    def __get__(self, instance, owner):
+        return copy.copy(self._constraint)
+
+
 class Rule:
-    input_file_read: BaseConstraint = where(
+    @classmethod
+    def register(cls, scenario: str, constraint: BaseConstraint):
+        setattr(cls, scenario, _RuleDescriptor(constraint))
+
+
+Rule.register(
+    "input_file_read",
+    where(
         os.getuid() == 0,
         Path.is_file(),
         Path.is_file() & ~Path.has_soft_link() &
@@ -30,8 +47,11 @@ class Rule:
         Path.is_consistent_to_current_user() & Path.is_size_reasonable(),
         description="current user is root"
     )
+)
 
-    input_file_exec: BaseConstraint = where(
+Rule.register(
+    "input_file_exec",
+    where(
         os.getuid() == 0,
         Path.is_file(),
         Path.is_file() & ~Path.has_soft_link() &
@@ -39,8 +59,11 @@ class Rule:
         Path.is_consistent_to_current_user() & Path.is_size_reasonable(),
         description="current user is root"
     )
+)
 
-    input_dir_traverse: BaseConstraint = where(
+Rule.register(
+    "input_dir_traverse",
+    where(
         os.getuid() == 0,
         Path.is_dir(),
         Path.is_dir() & ~Path.has_soft_link() & Path.is_readable() &
@@ -48,9 +71,16 @@ class Rule:
         Path.is_consistent_to_current_user(),
         description="current user is root"
     )
+)
 
-    output_path_create: BaseConstraint = ~Path.exists() & ~Path.is_name_too_long()
-    output_path_overwrite: BaseConstraint = where(
+Rule.register(
+    "output_path_create",
+    ~Path.exists() & ~Path.is_name_too_long()
+)
+
+Rule.register(
+    "output_path_overwrite",
+    where(
         os.getuid() == 0,
         Path.is_file(),
         Path.is_file() & ~Path.has_soft_link() &
@@ -58,14 +88,25 @@ class Rule:
         Path.is_consistent_to_current_user(),
         description="current user is root"
     )
-    output_path_write: BaseConstraint = where(
+)
+
+Rule.register(
+    "output_path_write",
+    where(
         Path.exists(),
-        output_path_overwrite,
+        Rule.output_path_overwrite,
         ~Path.is_name_too_long() & Path.has_writable_parent_dir()
     )
-    output_path_append = output_path_overwrite
+)
 
-    output_dir: BaseConstraint = where(
+Rule.register(
+    "output_path_append",
+    Rule.output_path_overwrite
+)
+
+Rule.register(
+    "output_dir",
+    where(
         os.getuid() == 0,
         Path.is_dir(),
         Path.is_dir() & ~Path.has_soft_link() &
@@ -73,4 +114,4 @@ class Rule:
         Path.is_consistent_to_current_user(),
         description="current user is root"
     )
-
+)

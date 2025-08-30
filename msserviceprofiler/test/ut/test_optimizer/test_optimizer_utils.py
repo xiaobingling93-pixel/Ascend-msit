@@ -22,7 +22,7 @@ import psutil
 import pytest
 from loguru import logger
 
-from msserviceprofiler.msguard import Rule
+from msserviceprofiler.msguard import Rule, GlobalConfig
 from msserviceprofiler.msguard.security import walk_s
 from msserviceprofiler.modelevalstate.optimizer.utils import (
     remove_file,
@@ -192,9 +192,9 @@ def test_backup_file_permission_denied(mock_file_read, tmp_path, caplog):
     assert "PermissionError" not in caplog.text  # should be handled silently
 
 
-@patch.object(Rule.input_file_read, 'is_satisfied_by')
-def test_backup_file_rule_not_satisfied(mock_file_read, tmp_path):
-    mock_file_read.return_value = False
+def test_backup_file_rule_not_satisfied(tmp_path):
+    GlobalConfig.custom_return = False
+
     src_file = tmp_path / "src.txt"
     src_file.write_text("data")
     bak_dir = tmp_path / "bak"
@@ -202,6 +202,8 @@ def test_backup_file_rule_not_satisfied(mock_file_read, tmp_path):
     backup(src_file, bak_dir, "TestClass")
     dest_file = bak_dir / "TestClass" / "src.txt"
     assert not dest_file.exists()
+
+    GlobalConfig.reset()
 
 
 @patch.object(Rule.input_dir_traverse, 'is_satisfied_by')
@@ -227,9 +229,9 @@ def test_backup_directory_success(mock_file_read, mock_dir_traverse, tmp_path):
     assert (dest_dir / "sub" / "file2.txt").read_text() == "data2"
 
 
-@patch.object(Rule.input_dir_traverse, 'is_satisfied_by')
-def test_backup_directory_rule_not_satisfied(mock_dir_traverse, tmp_path):
-    mock_dir_traverse.return_value = False
+def test_backup_directory_rule_not_satisfied(tmp_path):
+    GlobalConfig.custom_return = False
+
     src_dir = tmp_path / "src"
     src_dir.mkdir()
     bak_dir = tmp_path / "bak"
@@ -237,6 +239,8 @@ def test_backup_directory_rule_not_satisfied(mock_dir_traverse, tmp_path):
     backup(src_dir, bak_dir, "TestClass")
     dest_dir = bak_dir / "TestClass" / "src"
     assert not dest_dir.exists()
+
+    GlobalConfig.reset()
 
 
 def test_backup_max_depth_reached(caplog, tmp_path):

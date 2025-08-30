@@ -20,21 +20,28 @@ from ..constraints import BaseConstraint, InvalidParameterError
 from .decorator_usage import validate_params
 
 
-def validate_args(constraint: BaseConstraint, silent=True):
-    """Usage: parser.add_argument("xx", type=validate_args(xxx))
+def validate_args(constraint: BaseConstraint, *, fall_back_fn=None):
+    """
+    Usage: parser.add_argument("xx", type=validate_args(xxx))
+
     pass the `wrapper` to argparse, pass `arg` to `arg_check`and catch the error msg
     """
-    @validate_params({"arg": constraint}) # any checks
     def arg_check(arg: str):
+        if not constraint.is_satisfied_by(arg):
+            invalid_param_error = InvalidParameterError(
+                'arg', arg_check.__qualname__,
+                constraint, arg
+            )
+            error_msg = invalid_param_error.build_error_message()
+
+            if not fall_back_fn:
+                raise argparse.ArgumentTypeError(error_msg)
+            
+            fall_back_fn(arg)
         return arg
 
     @wraps(arg_check)
     def wrapper(arg):
-        try:
-            return arg_check(arg)
-        except InvalidParameterError as e:
-            if silent:
-                raise argparse.ArgumentTypeError(str(e))
-            raise
+        return arg_check(arg)
 
     return wrapper

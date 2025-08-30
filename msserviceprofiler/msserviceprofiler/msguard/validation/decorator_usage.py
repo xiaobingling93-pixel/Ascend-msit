@@ -25,12 +25,8 @@ def validate_parameter_constraint(parameter_constraint, params, caller_name):
             continue
 
         constraint = parameter_constraint[param_name]
-
-        if constraint == "no_validation":
-            continue
-
-        # support func | \ & constraint, constraint | \ & func
         constraint = make_constraint(constraint)
+
         if not constraint.is_satisfied_by(param_val):
             raise InvalidParameterError(param_name, caller_name, constraint, param_val)
 
@@ -53,7 +49,7 @@ def validate_params(parameter_constraint):
             params = {k: v for k, v in params.arguments.items() if k not in ignore_params}
 
             validate_parameter_constraint(
-                parameter_constraint, params, caller_name=func.__qualname__
+                parameter_constraint, params, func.__qualname__
             )
 
             return func(*args, **kwargs)
