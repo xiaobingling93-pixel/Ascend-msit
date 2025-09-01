@@ -138,7 +138,8 @@ class AscendV1Saver(AutoSaverProcessor):
     def __init__(self, model: nn.Module, config: AscendV1Config, adapter: object, **kwargs: Dict[str, Any]):
         super().__init__(model, config, adapter, **kwargs)
         self.config = config
-        self.version = "v1.0.0"
+        self.version = "1.0.0"
+        self.model_quant_type = "Unknown"
         self.json_append = dict()
         self.save_directory = self.get_rank_save_directory() if dist.is_initialized() else config.save_directory
         self.json_writer = JsonWriter(config.save_directory, ASCENDV1_DESC_JSON_NAME)
@@ -153,11 +154,11 @@ class AscendV1Saver(AutoSaverProcessor):
 
         super().post_run()
 
-        if ValidJsonExt.JSON_APPEND in self.json_append.keys():
-            json_append = self.config.ext.get(ValidJsonExt.JSON_APPEND)
-            for key, val in json_append.items():
-                self.json_writer.write(key, val)
+        for key, val in self.json_append.items():
+            self.json_writer.write(key, val)
 
+        self.json_writer.write("version", self.version)
+        self.json_writer.write("model_quant_type", self.model_quant_type)
         self.json_writer.close()
         self.safetensors_writer.close()
 
@@ -220,6 +221,7 @@ class AscendV1Saver(AutoSaverProcessor):
             self.write_tensor(prefix + ".input_scale", "W8A8", input_scale.to(torch.float32))
             self.write_tensor(prefix + ".input_offset", "W8A8", input_offset.to(torch.float32))
             self.write_tensor(prefix + ".deq_scale", "W8A8", deq_scale.to(torch.float32))
+            self.model_quant_type = "W8A8"
 
     @save_this_rank_only()
     def on_w8a8_dynamic(self, prefix: str, module: qir.W8A8DynamicFakeQuantLinear):
@@ -231,6 +233,7 @@ class AscendV1Saver(AutoSaverProcessor):
             self.write_tensor(prefix + ".weight_offset", "W8A8_DYNAMIC", weight_offset.to(torch.float32))
             if module.bias is not None:
                 self.write_tensor(prefix + ".bias", "W8A8_DYNAMIC", module.bias.to(torch.float32))
+            self.model_quant_type = "W8A8_DYNAMIC"
 
     @save_this_rank_only()
     def on_float_linear(self, prefix: str, module: nn.Linear):
@@ -253,13 +256,10 @@ class AscendV1Saver(AutoSaverProcessor):
             self.write_tensor(prefix_no_last + ".v_proj.kv_cache_offset", "C8", module.kv_cache_offset)
         else:
             raise ValueError(f"Unknown dynamic cache prefix: {prefix}")
-        if ValidJsonExt.JSON_APPEND not in self.json_append.keys():
-            self.json_append[ValidJsonExt.JSON_APPEND] = dict()
-        self.json_append[ValidJsonExt.JSON_APPEND]['kv_cache_type'] = "C8"
-        self.json_append[ValidJsonExt.JSON_APPEND]['kv_quant_type'] = "C8"
+        self.json_append['kv_cache_type'] = "C8"
+        self.json_append['kv_quant_type'] = "C8"
 
     @save_this_rank_only()
     def on_w16a16s(self, prefix: str, module: qir.W16A16sLinear):
         for name, param in module.named_parameters(recurse=False, prefix=prefix):
             self.write_tensor(name, "W16A16S", param)
-    

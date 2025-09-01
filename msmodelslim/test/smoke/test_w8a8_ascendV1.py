@@ -64,7 +64,9 @@ class TestW8A8AscendV1Quantization(TestW8A8Quantization):
             "2.input_scale": "W8A8",
             "2.input_offset": "W8A8",
             "2.deq_scale": "W8A8",
-            "2.quant_bias": "W8A8"
+            "2.quant_bias": "W8A8",
+            "model_quant_type": "W8A8",
+            "version": "1.0.0",
         }
 
         assert config_data.keys() == expected_config_data.keys()
