@@ -27,7 +27,9 @@ from msmodelslim.utils.exception import SchemaValidateError
 @QFuncRegistry.register(dispatch_key=(QDType.INT8, QScope.PER_CHANNEL, True), api_name="calculate_qparam")
 @QFuncRegistry.register(dispatch_key=(QDType.INT8, QScope.PER_TENSOR, False), api_name="calculate_qparam")
 @QFuncRegistry.register(dispatch_key=(QDType.INT8, QScope.PER_TENSOR, True), api_name="calculate_qparam")
-def int8_param(
+@QFuncRegistry.register(dispatch_key=(QDType.INT4, QScope.PER_CHANNEL, True), api_name="calculate_qparam")
+@QFuncRegistry.register(dispatch_key=(QDType.INT4, QScope.PER_CHANNEL, False), api_name="calculate_qparam")
+def calculate_int_qparam(
         min_val: torch.Tensor,
         max_val: torch.Tensor,
         q_dtype: QDType,
@@ -42,8 +44,15 @@ def int8_param(
     integral_zero_point = kwargs.get("integral_zero_point", True)
     max_bound = kwargs.get("max_bound", None)  # for w4a8   max_bound=119
 
+    if q_dtype == QDType.INT4:
+        quant_bitwidth = 4
+    elif q_dtype == QDType.INT8:
+        quant_bitwidth = 8
+    else:
+        raise TypeError("q_dtype: {} is not in [QDType.INT4, QDType.INT8]".format(q_dtype))
+
     if not symmetric:
-        max_bound = 2 ** 8 - 1 if max_bound is None else max_bound
+        max_bound = 2 ** quant_bitwidth - 1 if max_bound is None else max_bound
         # asymmetric quantization
         scale = max_val / max_bound - min_val / max_bound
         scale = torch.max(scale, eps)
@@ -55,12 +64,12 @@ def int8_param(
                 offset = float(round(offset))
 
         if q_signed:
-            qmin = -1 * (2 ** (8 - 1))
+            qmin = -1 * (2 ** (quant_bitwidth - 1))
             offset += qmin
 
     else:
         # symmetric quantization
-        max_bound = 2 ** (8 - 1) - 1 if max_bound is None else max_bound
+        max_bound = 2 ** (quant_bitwidth - 1) - 1 if max_bound is None else max_bound
         max_val_pos = torch.max(-min_val, max_val)
         scale = max_val_pos / float(max_bound)
         scale = torch.max(scale, eps)
@@ -90,7 +99,7 @@ def int8_per_group_param(
         **kwargs
 ) -> QParam:
     group_size = min_val.shape[-1]
-    q_param = int8_param(min_val, max_val, q_dtype, q_scope, symmetric, **kwargs)
+    q_param = calculate_int_qparam(min_val, max_val, q_dtype, q_scope, symmetric, **kwargs)
     q_param.ext['group_size'] = group_size
     return q_param
 
@@ -101,7 +110,8 @@ def int8_per_group_param(
 @QFuncRegistry.register(dispatch_key=(QDType.FLOAT, QDType.INT8, QScope.PER_TOKEN, True), api_name="quantize")
 @QFuncRegistry.register(dispatch_key=(QDType.FLOAT, QDType.INT8, QScope.PER_TENSOR, False), api_name="quantize")
 @QFuncRegistry.register(dispatch_key=(QDType.FLOAT, QDType.INT8, QScope.PER_TENSOR, True), api_name="quantize")
-def int8_quantize(tensor: QStorage, q_param: QParam) -> QStorage:
+@QFuncRegistry.register(dispatch_key=(QDType.FLOAT, QDType.INT4, QScope.PER_CHANNEL, True), api_name="quantize")
+def int_quantize(tensor: QStorage, q_param: QParam) -> QStorage:
     scale = q_param.ext["scale"]
     offset = q_param.ext["offset"] if "offset" in q_param.ext else torch.zeros_like(scale)
     inplace = q_param.ext.get("inplace", False)
@@ -113,7 +123,20 @@ def int8_quantize(tensor: QStorage, q_param: QParam) -> QStorage:
         input_tensor = (input_tensor / scale + offset).round_()
     if max_bound:
         input_tensor = input_tensor.clamp_(min=-max_bound, max=max_bound)
-    return tensor.same_like(input_tensor.clamp_(min=-128, max=127)).to(QDType.INT8)
+    # int4与int8 input_tensor.clamp_范围不同
+    q_dtype = q_param.scheme.dtype
+    if q_dtype not in [QDType.INT4, QDType.INT8]:
+        raise TypeError("q_param.scheme.dtype: {} is not in [QDType.INT4, QDType.INT8]".format(q_dtype))
+    if q_dtype == QDType.INT4:
+        quant_bitwidth = 4
+    elif q_dtype == QDType.INT8:
+        quant_bitwidth = 8
+
+    max_bound = 2 ** (quant_bitwidth - 1) - 1
+    min_bound = -max_bound - 1
+    input_tensor = input_tensor.clamp_(min=min_bound, max=max_bound)
+
+    return tensor.same_like(input_tensor).to(q_dtype)
 
 
 @QFuncRegistry.register(dispatch_key=(QDType.INT8, QDType.INT8, QScope.PER_CHANNEL, True), api_name="dequantize")
@@ -122,7 +145,8 @@ def int8_quantize(tensor: QStorage, q_param: QParam) -> QStorage:
 @QFuncRegistry.register(dispatch_key=(QDType.INT8, QDType.INT8, QScope.PER_TOKEN, True), api_name="dequantize")
 @QFuncRegistry.register(dispatch_key=(QDType.INT8, QDType.INT8, QScope.PER_TENSOR, False), api_name="dequantize")
 @QFuncRegistry.register(dispatch_key=(QDType.INT8, QDType.INT8, QScope.PER_TENSOR, True), api_name="dequantize")
-def int8_dequantize(tensor: QStorage, q_param: QParam) -> QStorage:
+@QFuncRegistry.register(dispatch_key=(QDType.INT4, QDType.INT4, QScope.PER_CHANNEL, True), api_name="dequantize")
+def int_dequantize(tensor: QStorage, q_param: QParam) -> QStorage:
     scale = q_param.ext["scale"]
     offset = q_param.ext["offset"] if "offset" in q_param.ext else torch.zeros_like(scale)
     inplace = q_param.ext.get("inplace", False)
@@ -143,7 +167,7 @@ def int8_per_group_quantize(tensor: QStorage, q_param: QParam) -> QStorage:
                                   action=f"Please make sure group_size is greater than 0")
     org_shape = tensor.value.shape
     tensor.value = tensor.value.reshape(-1, group_size)  # reshape for per_group
-    tensor = int8_quantize(tensor, q_param)
+    tensor = int_quantize(tensor, q_param)
     tensor.value = tensor.value.reshape(org_shape)  # reshape back
     return tensor
 
@@ -157,6 +181,6 @@ def int8_per_group_dequantize(tensor: QStorage, q_param: QParam) -> QStorage:
                                   action=f"Please make sure group_size is greater than 0")
     org_shape = tensor.value.shape
     tensor.value = tensor.value.reshape(-1, group_size)  # reshape for per_group
-    tensor = int8_dequantize(tensor, q_param)
+    tensor = int_dequantize(tensor, q_param)
     tensor.value = tensor.value.reshape(org_shape)  # reshape back
     return tensor

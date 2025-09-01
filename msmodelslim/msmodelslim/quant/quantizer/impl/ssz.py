@@ -178,7 +178,8 @@ def ssz_calculate_qparam(
 
 @QABCRegistry.multi_register(
     dispatch_key=[
-        (qir.int8_per_channel_sym, "ssz")  # 注册为int8对称per-channel SSZ量化器
+        (qir.int8_per_channel_sym, "ssz"),  # 注册为int8对称per-channel SSZ量化器
+        (qir.int4_per_channel_sym, "ssz")   # 注册int4对称per-channel SSZ量化器
     ],
     abc_type=AutoWeightQuantizer
 )

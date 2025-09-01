@@ -139,6 +139,7 @@ class ActPerChannelMinmax(AutoActQuantizer):
 @QABCRegistry.multi_register(
     dispatch_key=[
         (qir.int8_per_channel_sym, "minmax"),
+        (qir.int4_per_channel_sym, "minmax")
     ],
     abc_type=AutoWeightQuantizer
 )
