@@ -16,7 +16,7 @@
 from dataclasses import dataclass
 
 from pydantic import BaseModel, Field
-from typing_extensions import Self, Literal
+from typing_extensions import Self
 
 from msmodelslim.app.base.const import PipelineType
 from msmodelslim.app.base.quant_config import BaseQuantConfig
@@ -25,8 +25,7 @@ from .save.saver import AutoSaverConfigList
 
 
 class ModelslimV1ServiceConfig(BaseModel):
-    pipeline: Literal[PipelineType.AUTO, PipelineType.MODEL_WISE, PipelineType.LAYER_WISE] = Field(
-        default=PipelineType.AUTO)
+    pipeline: PipelineType = Field(default=PipelineType.AUTO)
     process: AutoProcessorConfigList = Field(default_factory=list)
     save: AutoSaverConfigList = Field(default_factory=list)
     dataset: str = Field(default='mix_calib.jsonl')

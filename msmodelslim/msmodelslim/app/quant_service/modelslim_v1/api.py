@@ -17,13 +17,13 @@ from typing import Optional, List, Any, Literal
 
 from torch import nn as nn
 
+from msmodelslim.app.base.const import PipelineType
 from msmodelslim.core.runner.generated_runner import GeneratedRunner
 from msmodelslim.model.default import BaseModelAdapter
 from msmodelslim.quant.processor.base import AutoSessionProcessor, AutoProcessorConfig
 from msmodelslim.quant.processor.memory.load import LoadProcessorConfig
 from msmodelslim.utils.exception import InvalidDatasetError, UnsupportedError
 from msmodelslim.utils.logging import get_logger
-from msmodelslim.app.base.const import PipelineType
 
 
 def process_model(
