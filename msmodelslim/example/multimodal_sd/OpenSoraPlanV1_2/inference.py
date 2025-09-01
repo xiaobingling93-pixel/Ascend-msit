@@ -21,6 +21,10 @@ from opensora.models.causalvideovae.model.causal_vae.parallel_layers import (
     register_vae_decode, parallel_full_model_warp)
 from utils.file_utils import standardize_path
 
+cur_file_dir = os.path.dirname(os.path.abspath(__file__))
+example_base_dir = os.path.abspath(os.path.join(cur_file_dir, "..", "..", ".."))
+sys.path.append(example_base_dir)
+
 from example.common.security.pytorch import safe_torch_load
 from example.common.security.path import get_write_directory, get_valid_read_path
 from msmodelslim.quant import quant_model, SessionConfig
@@ -206,10 +210,6 @@ def do_multimodal_quant(args, model, infer_func, infer_args, infer_kwargs):
 
 
 if __name__ == "__main__":
-    cur_file_dir = os.path.dirname(os.path.abspath(__file__))
-    example_base_dir = os.path.abspath(os.path.join(cur_file_dir, "..", "..", ".."))
-    sys.path.append(example_base_dir)
-
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_path", type=str, required=True, help='Ckpt path of Open-Sora-Plan V1.2 model')
     parser.add_argument("--num_frames", type=int, default=93)
