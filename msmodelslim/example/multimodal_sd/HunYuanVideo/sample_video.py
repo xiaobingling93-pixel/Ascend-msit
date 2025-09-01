@@ -19,6 +19,10 @@ from hyvideo.config import (
 from hyvideo.inference import HunyuanVideoSampler
 from mindiesd import CacheConfig, CacheAgent
 
+cur_file_dir = os.path.dirname(os.path.abspath(__file__))
+example_base_dir = os.path.abspath(os.path.join(cur_file_dir, "..", "..", ".."))
+sys.path.append(example_base_dir)
+
 from example.common.security.pytorch import safe_torch_load
 from example.common.security.path import get_write_directory, get_valid_read_path
 from msmodelslim.quant import quant_model, SessionConfig, FA3ProcessorConfig, W8A8DynamicQuantConfig, \
@@ -363,8 +367,4 @@ def do_multimodal_quant(args, model, infer_func, infer_args, infer_kwargs):
 
 
 if __name__ == "__main__":
-    cur_file_dir = os.path.dirname(os.path.abspath(__file__))
-    example_base_dir = os.path.abspath(os.path.join(cur_file_dir, "..", "..", ".."))
-    sys.path.append(example_base_dir)
-
     main()

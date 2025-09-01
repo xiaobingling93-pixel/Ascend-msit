@@ -32,6 +32,10 @@ from FLUX1dev import FluxPipeline
 from FLUX1dev import get_local_rank, get_world_size, initialize_torch_distributed
 from FLUX1dev.utils import check_prompts_valid, check_param_valid, check_dir_safety, check_file_safety
 
+cur_file_dir = os.path.dirname(os.path.abspath(__file__))
+example_base_dir = os.path.abspath(os.path.join(cur_file_dir, "..", "..", ".."))
+sys.path.append(example_base_dir)
+
 from example.common.security.pytorch import safe_torch_load
 from example.common.security.path import get_write_directory, get_valid_write_path, json_safe_load, json_safe_dump
 from msmodelslim.quant import quant_model, SessionConfig, FA3ProcessorConfig, W8A8DynamicQuantConfig, \
@@ -373,7 +377,7 @@ def infer(args):
         if args.do_save_img:
             # run fake quant
             sample(save_path=os.path.join(args.save_path, 'calib_quant'),
-                desc='Run fake quant using calib data')
+                   desc='Run fake quant using calib data')
     else:
         raise ValueError("Please --do_quant to True")
 
@@ -521,9 +525,5 @@ def do_multimodal_quant(args, model, infer_func, infer_args, infer_kwargs):
 
 
 if __name__ == "__main__":
-    cur_file_dir = os.path.dirname(os.path.abspath(__file__))
-    example_base_dir = os.path.abspath(os.path.join(cur_file_dir, "..", "..", ".."))
-    sys.path.append(example_base_dir)
-
     inference_args = parse_arguments()
     infer(inference_args)
