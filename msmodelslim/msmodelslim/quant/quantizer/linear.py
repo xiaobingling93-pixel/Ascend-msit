@@ -17,7 +17,7 @@ from typing import Optional
 
 import torch
 import torch.nn.functional as F
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from pydantic import validate_call
 from torch import nn
 
@@ -30,6 +30,8 @@ from .base import AutoActQuantizer, AutoWeightQuantizer, QConfig
 class LinearQConfig(BaseModel):
     act: QConfig
     weight: QConfig
+
+    model_config = ConfigDict(extra="forbid")
 
 
 @logger_setter()

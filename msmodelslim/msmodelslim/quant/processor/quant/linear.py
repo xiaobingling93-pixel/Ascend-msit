@@ -14,7 +14,7 @@
 #  limitations under the License.
 from typing import List, Optional, Literal
 
-from pydantic import Field
+from pydantic import Field, ConfigDict
 from torch import nn
 
 from msmodelslim.core.QAL import QScope
@@ -31,6 +31,8 @@ class LinearProcessorConfig(AutoProcessorConfig):
     qconfig: LinearQConfig = Field(description="量化配置")
     include: List[str] = Field(default_factory=list, description="包含的模块名称")
     exclude: List[str] = Field(default_factory=list, description="排除的模块名称")
+
+    model_config = ConfigDict(extra="forbid")
 
 
 def _warning_unmatched_pattern(name: str, config_set: ConfigSet) -> None:

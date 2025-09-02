@@ -18,7 +18,7 @@ from collections import defaultdict
 import re
 import torch
 from torch import nn
-
+from pydantic import ConfigDict
 from transformers.cache_utils import DynamicCache
 
 from msmodelslim.utils.logging import get_logger, logger_setter
@@ -43,6 +43,8 @@ class DynamicCacheProcessorConfig(AutoProcessorConfig):
     qconfig: QConfig
     include: List[str] = []
     exclude: List[str] = []
+
+    model_config = ConfigDict(extra="forbid")   
 
 
 def _warning_unmatched_pattern(name: str, config_set: ConfigSet) -> None:
