@@ -207,7 +207,7 @@ def unregister_device_alignment_hook(module: Optional[nn.Module], name: Optional
         module: 需要移除 hook 的模块
         name: 模块名称，用于日志输出，默认为None
     """
-    if module is None or not hasattr(module, '_device_alignment_hook_handle'):
+    if module is None or not hasattr(module, '_device_alignment_hooks_registered'):
         return
 
     # 移除 pre-hook（容错处理：防止句柄意外丢失）
