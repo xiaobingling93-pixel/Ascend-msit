@@ -2,6 +2,7 @@
 from typing import Type, TypeVar, Optional
 
 from msmodelslim.utils.exception import ToDoError, UnsupportedError
+from msmodelslim.utils.logging import get_logger
 
 model_map = {}
 
@@ -26,8 +27,12 @@ class ModelFactory:
 
     @staticmethod
     def create(model_name: str, interface: Optional[Type[T]] = None) -> Type[T]:
+        original_model_name = model_name
         if model_name not in model_map:
             if 'default' in model_map:
+                get_logger().warning(f"Model '{original_model_name}' not found in registered models. "
+                              f"Using default model instead. "
+                              f"Registered models: {list(model_map.keys())}")
                 model_name = 'default'
             else:
                 raise UnsupportedError(f"Model {model_name} not found",

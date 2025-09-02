@@ -4,6 +4,7 @@ import inspect
 import logging
 from functools import wraps
 from logging import Logger
+from contextlib import contextmanager
 
 from typing_extensions import Any, Callable, Type, Union
 
@@ -133,6 +134,29 @@ def progress_bar(iterable, desc: str = None, total: int = -1, interval: int = 1)
         yield item
     logging.StreamHandler.terminator = prev_terminator
     logger.info("")
+
+@contextmanager
+def clean_output():
+    """Context manager to temporarily disable log formatting for clean output"""
+    # Get all loggers and their handlers
+    loggers_handlers = []
+
+    # Find all loggers with handlers
+    for name in logging.Logger.manager.loggerDict:
+        logger_obj = logging.getLogger(name)
+        if logger_obj.handlers:
+            for handler in logger_obj.handlers:
+                if hasattr(handler, 'formatter') and handler.formatter:
+                    loggers_handlers.append((handler, handler.formatter))
+                    # Set a minimal formatter
+                    handler.setFormatter(logging.Formatter('%(message)s'))
+
+    try:
+        yield
+    finally:
+        # Restore original formatters
+        for handler, original_formatter in loggers_handlers:
+            handler.setFormatter(original_formatter)
 
 
 class LoggerSetter:
