@@ -221,14 +221,19 @@ class Simulate:
     @staticmethod
     def update_token(plugin_object, input_metadata, cached_ids, sampling_output):
         output_len_count = plugin_object.input_manager.cache.output_len_count[cached_ids]
-        for i, _ in enumerate(sampling_output.token_ids):
+        for i, token_id in enumerate(sampling_output.token_ids):
             _cur_out_len = output_len_count[i]
             if input_metadata.batch_request_ids[i] not in ServiceField.req_id_and_max_decode_length:
                 continue
             _max_out_len = ServiceField.req_id_and_max_decode_length[input_metadata.batch_request_ids[i]]
             if _cur_out_len < (_max_out_len - 1):
-                if sampling_output.token_ids[i] == plugin_object.eos_token_id:
-                    sampling_output.token_ids[i] = np.random.randint(0, plugin_object.model_wrapper.config.vocab_size)
+                if token_id == plugin_object.eos_token_id:
+                    token_id = np.random.randint(0, plugin_object.model_wrapper.config.vocab_size)
+                if sampling_output.top_token_ids.size == 0:
+                    continue
+                if i >= sampling_output.top_token_ids.size:
+                    continue
+
                 if sampling_output.top_token_ids[i].any() and plugin_object.eos_token_id in \
                         sampling_output.top_token_ids[i]:
                     sampling_output.top_token_ids[i] = np.where(
@@ -237,6 +242,10 @@ class Simulate:
                         sampling_output.top_token_ids[i])
             else:
                 sampling_output.token_ids[i] = plugin_object.eos_token_id
+                if sampling_output.top_token_ids.size == 0:
+                    continue
+                if i >= sampling_output.top_token_ids.size:
+                    continue
                 if sampling_output.top_token_ids[i].any():
                     sampling_output.top_token_ids[i] = np.where(
                         sampling_output.top_token_ids[i] != plugin_object.eos_token_id,

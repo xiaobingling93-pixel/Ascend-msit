@@ -1,15 +1,43 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
+# Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 import os
 import shutil
 from loguru import logger
 from pydantic import BaseModel
 from msserviceprofiler.msguard import Rule
- 
- 
+
+
+class AisBenchCommandConfig(BaseModel):
+    models: str = ""
+    datasets: str = ""
+    mode: str = ""
+    num_prompts: str = ""
+    work_dir: str = ""
+
+
+class AisBenchCommand:
+    def __init__(self, aisbench_command_config: AisBenchCommandConfig):
+        self.process = shutil.which("ais_bench")
+        if self.process is None:
+            raise ValueError("Error: The 'ais_bench' executable was not found in the system PATH.")
+        self.aisbench_command_config = aisbench_command_config
+
+    @property
+    def command(self):
+        _cmd = [self.process,
+                "--models", self.aisbench_command_config.models,
+                "--datasets", self.aisbench_command_config.datasets,
+                "--mode", self.aisbench_command_config.mode,
+                "--num-prompts", self.aisbench_command_config.num_prompts,
+                "--work-dir", self.aisbench_command_config.work_dir,
+                "--debug"
+                ]
+        return _cmd
+
+
 class BenchmarkCommandConfig(BaseModel):
     dataset_path: str = ""
-    dataset_type: str = ""
+    dataset_type: str = "gsm8k"
     model_name: str = ""
     model_path: str = ""
     test_type: str = "client"
@@ -18,7 +46,10 @@ class BenchmarkCommandConfig(BaseModel):
     management_http: str = "http://127.0.0.1:1026"
     warmup_size: str = "1"
     tokenizer: str = "True"
- 
+    save_path: str = ""
+    request_num: str = ""
+    request_count: str = ""
+
  
 class BenchmarkCommand:
     def __init__(self, benchmark_command_config: BenchmarkCommandConfig):
@@ -33,7 +64,7 @@ class BenchmarkCommand:
             logger.error("the file of dataset_path is not safe, please check")
             return None
         
-        return [self.process,
+        _cmd = [self.process,
                 "--DatasetPath", self.benchmark_command_config.dataset_path,
                 "--DatasetType", self.benchmark_command_config.dataset_type,
                 "--ModelName", self.benchmark_command_config.model_name,
@@ -45,31 +76,14 @@ class BenchmarkCommand:
                 "--Concurrency", "$CONCURRENCY",
                 "--RequestRate", "$REQUESTRATE",
                 "--WarmupSize", self.benchmark_command_config.warmup_size,
-                "--Tokenizer", self.benchmark_command_config.tokenizer]
-
-
-class AisbenchCommandConfig(BaseModel):
-    models: str = ""
-    datasets: str = ""
-    mode: str = ""
-    num_prompts: str = ""
- 
- 
-class AisbenchCommand:
-    def __init__(self, aisbench_command_config: AisbenchCommandConfig):
-        self.process = shutil.which("ais_bench")
-        if self.process is None:
-            raise ValueError("Error: The 'ais_bench' executable was not found in the system PATH.")
-        self.aisbench_command_config = aisbench_command_config
- 
-    @property
-    def command(self):
-        return [self.process,
-                "--models", self.aisbench_command_config.models,
-                "--datasets", self.aisbench_command_config.datasets,
-                "--mode", self.aisbench_command_config.mode,
-                "--num-prompts", self.aisbench_command_config.num_prompts,
-                "--debug"]
+                "--Tokenizer", self.benchmark_command_config.tokenizer,
+                "--SavePath", self.benchmark_command_config.save_path,
+                ]
+        if self.benchmark_command_config.request_num:
+            _cmd.extend(["--RequestNum", self.benchmark_command_config.request_num])
+        if self.benchmark_command_config.request_count:
+            _cmd.extend(["--RequestCount", self.benchmark_command_config.request_count])
+        return _cmd
  
  
 class VllmBenchmarkCommandConfig(BaseModel):
@@ -82,6 +96,8 @@ class VllmBenchmarkCommandConfig(BaseModel):
     dataset_name: str = ""
     dataset_path: str = ""
     num_prompts: str = ""
+    result_dir: str = ""
+
  
  
 class VllmBenchmarkCommand:

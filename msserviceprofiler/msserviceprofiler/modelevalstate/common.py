@@ -10,11 +10,13 @@ from pathlib import Path
 from typing import Dict
 import shutil
 import pandas as pd
+from loguru import logger
 from msserviceprofiler.msguard import validate_params, Rule
 
 
 _PREFILL = "prefill"
 _DECODE = "decode"
+_KEY_WORD = "H" + "B" + "M"
 
 
 class StateType(Enum):
@@ -127,3 +129,46 @@ def read_csv_s(path, **kwargs):
         return pd.read_csv(path, **kwargs)
     except Exception as e:
         raise ValueError(f"Failed to read csv %r." % path) from e
+
+
+def is_mindie():
+    try:
+        import mindie_llm
+    except ModuleNotFoundError:
+        return False
+    return True
+
+
+def is_vllm():
+    try:
+        import vllm
+    except ModuleNotFoundError:
+        return False
+    return True
+
+
+def ais_bench_exists():
+    try:
+        import ais_bench
+    except ModuleNotFoundError:
+        return False
+    return True
+
+
+def get_npu_total_memory(device_id: int = 0):
+    cmd = ["npu-smi", "info", "-t", "usages", "-i", str(device_id)]
+    memory_key_word = _KEY_WORD + " Capacity(MB)"
+    usage_rate_key_word = _KEY_WORD + " Usage Rate(%)"
+    try:
+        output = subprocess.check_output(cmd)
+        output = output.decode("utf-8")
+        total_memory_line = [line for line in output.splitlines() if memory_key_word in line][0]
+        total_memory_line = total_memory_line.split(":")[1].strip()
+        memory_usage_rate = [line for line in output.splitlines() if usage_rate_key_word in line][0]
+        memory_usage_rate = memory_usage_rate.split(":")[1].strip()
+        memory_line, usage_rate = int(total_memory_line), int(memory_usage_rate)
+        logger.debug(f"cmd: {cmd}, result: {memory_line}, {usage_rate}")
+        return memory_line, usage_rate
+    except Exception as e:
+        raise ValueError(f"Failed to retrieve total video memory. Please check if the video memory query command {cmd} "
+                     f"matches the current parsing code. ") from e
