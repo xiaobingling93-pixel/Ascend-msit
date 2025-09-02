@@ -65,7 +65,7 @@ def _add_pd_disagg_args(parser):
     group.add_argument(
         "--scene", metavar="",
         help="Specify different deploy scene. Supports: pd_disaggregation, " \
-        "pd_disaggregation_single_container, mindie, vllm."
+        "pd_disaggregation_single_container, mindie, vllm, vllm,ep."
     )
     group.add_argument(
         "--user-config-path", metavar="",
