@@ -21,7 +21,6 @@ from io import BytesIO
 
 from .io import open_s
 from .exception import CSVInjectionError, PickleInjectionError
-from ..utils.constants import TYPE_ERROR_MSG
 
 
 CSV_INJECTION_PATTERN = re.compile(r'^[＋－＝％＠\+\-=%@]|;[＋－＝％＠\+\-=%@]')
@@ -80,7 +79,7 @@ class SafeUnpickler(pickle.Unpickler):
     def _validate_callback(call_back_fn) -> None:
         if not callable(call_back_fn):
             raise TypeError(
-                TYPE_ERROR_MSG.format('call_back_fn', 'callable', type(call_back_fn).__name__)
+                f"Expected 'call_back_fn' to be callable. Got {type(call_back_fn).__name__} instead."
             )
         
         sig = inspect.signature(call_back_fn)

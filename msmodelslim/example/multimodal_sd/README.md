@@ -10,6 +10,8 @@
 
 [HunyuanVideo](https://github.com/Tencent-Hunyuan/HunyuanVideo) 是腾讯发布的一种新颖的开源视频基础模型，它在视频生成方面的性能可与领先的闭源模型相媲美，甚至优于领先的闭源模型。
 
+[Wan2.1](https://github.com/Wan-Video/Wan2.1) 是阿里巴巴发布的一套全面且开放的视频基础模型，它突破了视频生成的界限。支持文本到视频(T2V)、图像到视频(I2V)、文本到图像(T2I)等多种生成任务。
+
 ## 已验证量化模型
 表中模型链接为对应权重地址。
 | 模型 | 支持量化 | 权重链接
@@ -18,6 +20,7 @@
 | Open-Sora-Plan v1.2 | W8A8静态量化 | [link](https://huggingface.co/LanguageBind/Open-Sora-Plan-v1.2.0)
 | FLUX.1-dev | W8A8静态量化，W8A8分时间步量化，FA3+W8A8动态量化，异常值抑制+W8A8动态量化 | [link](https://huggingface.co/black-forest-labs/FLUX.1-dev/tree/main)
 | HunyuanVideo | W8A8静态量化，W8A8分时间步量化，FA3+W8A8动态量化，异常值抑制+W8A8动态量化 | [link](https://huggingface.co/tencent/HunyuanVideo)
+| Wan2.1 | W8A8动态量化 | [link](https://huggingface.co/Wan-AI/Wan2.1-T2V-14B)
 
 ## 环境配置
 - 配套CANN版本请选择8.2.RC1及之后的版本
@@ -33,12 +36,15 @@
   - 参考 [Flux readme](https://modelers.cn/models/MindIE/FLUX.1-dev) 安装浮点模型的环境依赖，并确保浮点推理能正常运行
 - HunyuanVideo相关环境配置参考[MindIE/hunyuan_video](https://modelers.cn/models/MindIE/hunyuan_video)
   - 参考 [HunyuanVideo readme](https://modelers.cn/models/MindIE/hunyuan_video) 安装浮点模型的环境依赖，并确保浮点推理能正常运行
+- Wan2.1相关环境配置参考[MindIE/Wan2.1](https://modelers.cn/models/MindIE/Wan2.1)
+  - 参考 [Wan2.1 readme](https://modelers.cn/models/MindIE/Wan2.1/blob/main/README.md) 安装浮点模型的环境依赖，并确保浮点推理能正常运行
 
 ## 使用案例
-使用量化前，需要加载模型和校准数据，其中加载模型依赖于diffusers库（如SD3-Medium）或多模态生成模型[魔乐社区](https://modelers.cn/models/)推理工程仓（如Open-Sora-Plan v1.2、Flux.1-dev、HunyuanVideo），请先确保依据推理工程仓可以正常进行浮点推理。
+使用量化前，需要加载模型和校准数据，其中加载模型依赖于diffusers库（如SD3-Medium）或多模态生成模型[魔乐社区](https://modelers.cn/models/)推理工程仓（如Open-Sora-Plan v1.2、Flux.1-dev、HunyuanVideo、Wan2.1），请先确保依据推理工程仓可以正常进行浮点推理。
 - Open-Sora-Plan v1.2推理工程仓：[MindIE/open_sora_planv1_2](https://modelers.cn/models/MindIE/open_sora_planv1_2)
 - Flux.1-dev推理工程仓：[MindIE/FLUX.1-dev](https://modelers.cn/models/MindIE/FLUX.1-dev)
 - HunyuanVideo推理工程仓[MindIE/hunyuan_video](https://modelers.cn/models/MindIE/hunyuan_video)
+- Wan2.1推理工程仓[MindIE/Wan2.1](https://modelers.cn/models/MindIE/Wan2.1)
 
 
 ### SD3-Medium W8A8静态量化
@@ -56,3 +62,7 @@
 ### HunyuanVideo 时间步量化、FA3量化、异常值抑制量化
 
 请参考[HunyuanVideo 量化使用说明](./HunYuanVideo/README.md)
+
+### Wan2.1 W8A8动态量化
+
+请参考[Wan2.1 量化使用说明](./Wan2_1/README.md)

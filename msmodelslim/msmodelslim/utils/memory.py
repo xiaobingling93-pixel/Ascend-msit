@@ -25,13 +25,14 @@ from msmodelslim.utils.logging import get_logger
 MAX_RECURSION_DEPTH = 10
 
 
-def _align_input_to_module_device(module: Optional[nn.Module], input_data: Any) -> Any:
+def _align_input_to_module_device(module: Optional[nn.Module], input_data: Any, device: Any = None) -> Any:
     """
     将模块的输入数据对齐到模块所在的设备上的内部函数。
 
     参数:
         module: 目标模块
         input_data: 输入数据，通常是 (args, kwargs) 的元组
+        device: 目标设备
 
     返回:
         对齐后的输入数据
@@ -39,12 +40,15 @@ def _align_input_to_module_device(module: Optional[nn.Module], input_data: Any) 
     if module is None or input_data is None:
         return input_data
 
-    # 获取模块所在的设备
-    try:
-        module_device = next(module.parameters()).device
-    except StopIteration:
-        # 如果模块没有参数，返回原始输入
-        return input_data
+    if device:
+        module_device = device
+    else:
+        # 获取模块所在的设备
+        try:
+            module_device = next(module.parameters()).device
+        except StopIteration:
+            # 如果模块没有参数，返回原始输入
+            return input_data
 
     # 统计移动的数据总量
     total_moved_bytes = 0
@@ -121,8 +125,26 @@ def align_input_to_module_device_hook(module: Optional[nn.Module], args: Any, kw
     return aligned_input_data[0], aligned_input_data[1]
 
 
+def offload_data_to_cpu_device_hook(module: Optional[nn.Module], _: Any, output: Any) -> Any:
+    """
+    将模块的输出数据对齐到模块所在的设备上的 hook 函数。
+
+    该函数作为 forward post-hook 使用，在模块 forward 后自动将输出数据移动到 cpu 设备。
+
+    参数:
+        module: 目标模块
+        _: 位置参数（input）
+        output: 位置参数（output）
+
+    返回:
+        对齐后的输入数据
+    """
+    processed_output = _align_input_to_module_device(module, output, torch.device('cpu'))
+    return processed_output
+
+
 def register_device_alignment_hook(module: Optional[nn.Module], with_kwargs: bool = False,
-                                   name: Optional[str] = None) -> Optional[
+                                   name: Optional[str] = None, post_offload: bool = False) -> Optional[
     torch.utils.hooks.RemovableHandle]:
     """
     为模块注册设备对齐 hook。
@@ -134,29 +156,47 @@ def register_device_alignment_hook(module: Optional[nn.Module], with_kwargs: boo
         module: 需要注册 hook 的模块
         with_kwargs: 是否使用kwargs格式的hook，默认为False
         name: 模块名称，用于日志输出，默认为None
+        post_offload: 是否注册post-hook将数据移回CPU，默认为False
 
     返回:
-        hook handle: 注册的 hook 句柄，用于后续移除 hook
+        hook handle: 注册的 hook 句柄字典，用于后续移除 hook
     """
     if module is None:
         return None
 
     # 检查是否已经注册过 hook
-    if hasattr(module, '_device_alignment_hook_registered'):
-        return module._device_alignment_hook_handle
+    if hasattr(module, '_device_alignment_hooks_registered'):
+        return {
+            'pre_hook': module._device_alignment_pre_hook_handle,
+            'post_hook': (
+                module._device_alignment_post_hook_handle
+                if hasattr(module, '_device_alignment_post_hook_handle')
+                else None
+            ),
+        }
 
     # 注册 forward pre-hook
-    hook_handle = module.register_forward_pre_hook(align_input_to_module_device_hook, with_kwargs=with_kwargs)
+    pre_hook_handle = module.register_forward_pre_hook(align_input_to_module_device_hook, with_kwargs=with_kwargs)
+    # 只有当post_offload为True时才注册forward post-hook
+    post_hook_handle = None
+    if post_offload:
+        post_hook_handle = module.register_forward_hook(offload_data_to_cpu_device_hook, with_kwargs=False)
 
-    # 标记已注册 hook
-    module._device_alignment_hook_registered = True
-    module._device_alignment_hook_handle = hook_handle
+    # 保存句柄和注册标记
+    module._device_alignment_hooks_registered = True  # 复数形式标记
+    module._device_alignment_pre_hook_handle = pre_hook_handle  # pre句柄
+    # 仅在post-hook被注册时才保存其句柄
+    if post_hook_handle is not None:
+        module._device_alignment_post_hook_handle = post_hook_handle  # post句柄
 
     # 使用提供的name或模块类名进行日志输出
     module_name = name if name is not None else module.__class__.__name__
-    get_logger().debug("Registered device alignment hook for %r", module_name)
+    get_logger().debug("Registered device alignment hook for %r, post_offload: %s", module_name, post_offload)
 
-    return hook_handle
+    return {
+        'pre_hook': pre_hook_handle,
+        'post_hook': post_hook_handle
+    }
 
 
 def unregister_device_alignment_hook(module: Optional[nn.Module], name: Optional[str] = None) -> None:
@@ -170,12 +210,24 @@ def unregister_device_alignment_hook(module: Optional[nn.Module], name: Optional
     if module is None or not hasattr(module, '_device_alignment_hook_handle'):
         return
 
-    # 移除 hook
-    module._device_alignment_hook_handle.remove()
+    # 移除 pre-hook（容错处理：防止句柄意外丢失）
+    if hasattr(module, '_device_alignment_pre_hook_handle'):
+        try:
+            module._device_alignment_pre_hook_handle.remove()
+        except Exception as e:
+            get_logger().warning(f"Failed to remove pre-hook: {e}")
+        delattr(module, '_device_alignment_pre_hook_handle')
 
-    # 清除标记
-    delattr(module, '_device_alignment_hook_registered')
-    delattr(module, '_device_alignment_hook_handle')
+    # 移除 post-hook（仅当存在时）
+    if hasattr(module, '_device_alignment_post_hook_handle'):
+        try:
+            module._device_alignment_post_hook_handle.remove()
+        except Exception as e:
+            get_logger().warning(f"Failed to remove post-hook: {e}")
+        delattr(module, '_device_alignment_post_hook_handle')
+
+    # 清除注册标记
+    delattr(module, '_device_alignment_hooks_registered')
 
     # 使用提供的name或模块类名进行日志输出
     module_name = name if name is not None else module.__class__.__name__

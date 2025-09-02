@@ -33,6 +33,7 @@ class LoadProcessorConfig(AutoProcessorConfig):
     non_blocking: bool = Field(default=False, description="是否非阻塞加载")
     mode: Literal['load', 'offload'] = Field(default="load", description="加载模式")
     cleanup: bool = Field(default=False, description="是否清理缓存")
+    post_offload: bool = Field(default=False, description="是否offload激活值")
 
 
 @QABCRegistry.register(dispatch_key=LoadProcessorConfig, abc_class=AutoSessionProcessor)
@@ -80,7 +81,8 @@ class LoadProcessor(AutoSessionProcessor):
             ))
 
             if self.config.mode == "load":
-                register_device_alignment_hook(request.module, with_kwargs=True, name=request.name)
+                register_device_alignment_hook(request.module, with_kwargs=True, name=request.name,
+                                               post_offload=self.config.post_offload)
 
             if self.config.mode == "offload":
                 unregister_device_alignment_hook(request.module, name=request.name)

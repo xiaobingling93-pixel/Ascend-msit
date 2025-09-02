@@ -15,10 +15,15 @@
 
 import os
 
-from ..utils.constants import TYPE_ERROR_MSG
+from ..constraints import PathConstraint, Rule, InvalidParameterError
 
 
-def update_env_s(env_var: str, path: str, prepend: bool = True) -> None:
+def update_env_s(
+        env_var: str,
+        path: str,
+        constraint: PathConstraint = Rule.input_file_read,
+        prepend: bool = True
+    ) -> None:
     """
     Add a path to an environment variable for searching.
 
@@ -43,10 +48,13 @@ def update_env_s(env_var: str, path: str, prepend: bool = True) -> None:
     If `path` is not absolute, it will be converted to an absolute path.
     """
     if not isinstance(env_var, str):
-        raise TypeError(TYPE_ERROR_MSG.format('env_var', 'str', type(env_var).__name__))
+        raise TypeError(
+            f"Expected 'env_var' to be str. Got {type(env_var).__name__} instead."
+        )
 
-    if not os.path.isabs(path):
-        path = os.path.realpath(path)
+    abs_path = os.path.abspath(path)
+    if not constraint.is_satisfied_by(abs_path):
+        raise InvalidParameterError("env_var", "update_env_s", constraint, abs_path)
 
     current_value = os.environ.get(env_var)
 

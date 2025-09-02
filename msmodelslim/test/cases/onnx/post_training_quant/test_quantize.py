@@ -26,6 +26,12 @@ def set_random_seed():
     """为所有测试设置随机数种子以确保结果可重复"""
     torch.manual_seed(0)
     np.random.seed(0)
+    try:
+        import torch_npu
+        torch_npu.npu.manual_seed(0)
+        torch_npu.npu.manual_seed_all(0)
+    except Exception:
+        pass
     yield
 
 

@@ -16,14 +16,17 @@
 __all__ = [
     "BaseConstraint",
     "InvalidParameterError",
-    "make_constraint",
-    "where",
-    "Path",
-    "Rule"
+    "PathConstraint", 'Path', 'Rule',
+    "FunctionConstraint", "AndConstraint", "OrConstraint",
+    "NotConstraint", "IfElseConstraint", "make_constraint",
+    "where"
 ]
 
 from .base import BaseConstraint
-from .constraint_builder import Path, make_constraint, where
-from .rule import Rule
 from .exception import InvalidParameterError
-
+from .path import PathConstraint, Path, Rule
+from .logic import (
+    FunctionConstraint, AndConstraint, OrConstraint,
+    NotConstraint, IfElseConstraint, make_constraint,
+    where
+)

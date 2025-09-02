@@ -14,10 +14,13 @@
 # limitations under the License.
 
 import os
+import shutil
 import tempfile
 import unittest
 
-from msserviceprofiler.msguard.security import walk_s, WalkLimitError, open_s
+from msserviceprofiler.msguard.security import (
+    walk_s, WalkLimitError, open_s, touch_s, mkdir_s
+)
 
 
 class TestWalkS(unittest.TestCase):
@@ -126,3 +129,43 @@ class TestOpenS(unittest.TestCase):
                 open_s(temp_file_path, 'x')
         finally:
             os.unlink(temp_file_path)
+
+    def test_touch_s_should_raise_value_error_given_empty_path(self):
+        self.assertRaises(ValueError, touch_s, '')
+
+    def test_touch_s_should_raise_file_exists_error_given_existent_path(self):
+        self.assertRaises(FileExistsError, touch_s, __file__, exist_ok=False)
+        touch_s(__file__, exist_ok=True)
+
+    def test_touch_s_should_create_a_file_with_default_mode_given_non_existent_path(self):
+        file_name = "non-existent-file"
+        touch_s(file_name)
+        self.assertTrue(os.path.exists(file_name))
+        self.assertEqual(os.stat(file_name).st_mode, os.st.S_IFREG | 0o640)
+        os.remove(file_name)
+
+    def test_mkdir_s_should_raise_value_error_given_empty_path(self):
+        self.assertRaises(ValueError, mkdir_s, '')
+
+    def test_mkdir_s_should_raise_file_exists_error_given_existent_path(self):
+        self.assertRaises(FileExistsError, mkdir_s, "..", exist_ok=False)
+        mkdir_s("..", exist_ok=True)
+
+    def test_mkdir_s_should_create_a_dir_with_default_mode_when_non_existent_path(self):
+        parent_dir = "non-existent-parent-dir"
+        child_dir = os.path.join(parent_dir, "non-existent-child-dir")
+        mkdir_s(child_dir)
+
+        self.assertTrue(os.path.exists(parent_dir))
+        self.assertTrue(os.path.exists(child_dir))
+
+        self.assertEqual(os.stat(parent_dir).st_mode, os.st.S_IFDIR | 0o750)
+        self.assertEqual(os.stat(child_dir).st_mode, os.st.S_IFDIR | 0o750)
+        
+        shutil.rmtree(parent_dir)
+
+    def test_mkdir_s_should_raise_xxx_when_providing_existent_file(self):
+        self.assertRaises(FileExistsError, mkdir_s, __file__)
+        self.assertRaises(FileExistsError, mkdir_s, os.path.join(__file__, "random"))
+ 
+

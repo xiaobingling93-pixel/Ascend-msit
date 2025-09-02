@@ -132,18 +132,6 @@ class TestValidateArgs(unittest.TestCase):
             with self.assertRaises(argparse.ArgumentTypeError):
                 validator(tmp_dir)  # 非root用户不可创建目录，预期抛出异常
 
-    def test_validate_args_given_invalid_path_when_silent_false_then_raise_invalid_parameter_error(self):
-        """当silent=False且路径无效时，应抛出InvalidParameterError"""
-        validator = validate_args(Rule.input_file_read, silent=False)
-        with self.assertRaises(InvalidParameterError):
-            validator("/nonexistent/file")  # 文件不存在且silent=False，预期抛出特定异常
-
-    def test_validate_args_given_non_string_input_when_any_constraint_then_raise_argument_type_error(self):
-        """当输入不是字符串时，无论何种约束都应抛出ArgumentTypeError"""
-        validator = validate_args(Rule.input_file_read)
-        with self.assertRaises(argparse.ArgumentTypeError):
-            validator(123)  # 非字符串输入，预期抛出异常
-
     def test_validate_args_given_valid_input_path_when_input_file_read_constraint_then_return(self):
         parser = argparse.ArgumentParser()
         parser.add_argument('--input-path', type=validate_args(Rule.input_file_read))

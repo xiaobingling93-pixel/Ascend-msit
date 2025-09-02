@@ -17,13 +17,13 @@ from typing import Optional, List, Any, Literal
 
 from torch import nn as nn
 
+from msmodelslim.app.base.const import PipelineType
 from msmodelslim.core.runner.generated_runner import GeneratedRunner
 from msmodelslim.model.default import BaseModelAdapter
 from msmodelslim.quant.processor.base import AutoSessionProcessor, AutoProcessorConfig
 from msmodelslim.quant.processor.memory.load import LoadProcessorConfig
 from msmodelslim.utils.exception import InvalidDatasetError, UnsupportedError
 from msmodelslim.utils.logging import get_logger
-from msmodelslim.app.base.const import PipelineType
 
 
 def process_model(
@@ -34,6 +34,7 @@ def process_model(
         adapter: Optional[BaseModelAdapter] = None,
         execution_device: str = "cpu",
         offload_device: str = "cpu",
+        post_offload: bool = False,
 ) -> None:
     model_adapter = adapter
 
@@ -52,7 +53,7 @@ def process_model(
         generated_visit_func = cast(GeneratedVisitFuncType, model_wise_visit_func)
 
     if pipeline == PipelineType.LAYER_WISE:
-        process_cfgs.insert(0, LoadProcessorConfig(device=execution_device, mode="load"))
+        process_cfgs.insert(0, LoadProcessorConfig(device=execution_device, mode="load", post_offload=post_offload))
         process_cfgs.append(LoadProcessorConfig(device=offload_device, mode="offload", cleanup=True))
 
     runner = GeneratedRunner(model, generated_forward_func, generated_visit_func)

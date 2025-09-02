@@ -9,6 +9,10 @@ from diffusers import StableDiffusion3Pipeline
 from torch import nn
 from tqdm import tqdm
 
+cur_file_dir = os.path.dirname(os.path.abspath(__file__))
+example_base_dir = os.path.abspath(os.path.join(cur_file_dir, "..", "..", ".."))
+sys.path.append(example_base_dir)
+
 from example.common.security.pytorch import safe_torch_load
 from example.common.security.path import get_valid_read_path, get_write_directory
 from msmodelslim.quant import quant_model, SessionConfig
@@ -169,10 +173,6 @@ def do_multimodal_quant(args, model, infer_func, infer_args, infer_kwargs):
 
 
 if __name__ == "__main__":
-    cur_file_dir = os.path.dirname(os.path.abspath(__file__))
-    example_base_dir = os.path.abspath(os.path.join(cur_file_dir, "..", "..", ".."))
-    sys.path.append(example_base_dir)
-
     args = parse_args()
     inference(args)
 

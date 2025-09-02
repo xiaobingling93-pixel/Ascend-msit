@@ -15,7 +15,10 @@
 
 __all__ = [
     "AscendV1Saver",
-    "AscendV1Config"
+    "AscendV1Config",
+    "MindIEFormatSaver",
+    "MindIEFormatConfig",
 ]
 
 from .ascendv1 import AscendV1Saver, AscendV1Config
+from .mindie_format import MindIEFormatSaver, MindIEFormatConfig
