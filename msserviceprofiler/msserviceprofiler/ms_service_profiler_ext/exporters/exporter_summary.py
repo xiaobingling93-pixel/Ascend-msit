@@ -32,10 +32,15 @@ def is_contained_valid_iter_info(rid_list, token_id_list):
     检查 rid_list 和 token_id_list 是否为有效且长度相等的 list 或 tuple
     限制输入类型为list或tuple
     """
-    # 检查是否为 None 或者类型是否为list或者tuple
-    if (rid_list is None or token_id_list is None or
-            not isinstance(rid_list, (list, tuple)) or
-            not isinstance(token_id_list, (list, tuple))):
+    # 检查是否为 None
+    if rid_list is None or token_id_list is None:
+        return False
+
+    # 检查类型是否为list或者tuple
+    if not isinstance(rid_list, (list, tuple)):
+        return False
+
+    if not isinstance(token_id_list, (list, tuple)):
         return False
 
     # 检查长度是否相等
