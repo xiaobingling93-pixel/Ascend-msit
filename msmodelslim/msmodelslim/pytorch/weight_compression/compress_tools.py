@@ -32,6 +32,7 @@ class Compressor:
         self.quant_model_description = None
         self.load_weights(weight_path, weight, quant_model_description)
         self.compress_result_weight, self.compress_result_index, self.compress_result_info = {}, {}, {}
+        self.sparse_type = None
 
     @classmethod
     def export(cls, arr, path, dtype=np.int8):
@@ -56,6 +57,10 @@ class Compressor:
             raise ValueError()
         compress_weight = {}
         compress_model_description = QuantModelJsonDescription(QuantType.W8A8SC)
+
+        self.sparse_type = self.quant_model_description.get("model_quant_type", None)
+        if self.sparse_type == QuantType.W16A16S:
+            compress_model_description = QuantModelJsonDescription(QuantType.W16A16SC)
 
         if not isinstance(safetensors_name, str) or not safetensors_name.endswith('.safetensors'):
             self.logger.warning("Invalid `safetensors_name` provided. Reverting `safetensors_name` to default.")
@@ -90,7 +95,7 @@ class Compressor:
                 QuantModelJsonDescription.reduce_quant_type_name,
             ]:
                 continue
-            if value == 'W8A8S' and key.endswith('.weight'):
+            if value == QuantType.W8A8S and key.endswith('.weight'):
                 key_short = '.'.join(key.split('.')[:-1])
                 key_index = key_short + '.index'
                 key_info = key_short + '.info'
@@ -102,6 +107,20 @@ class Compressor:
                 compress_weight[key] = torch.from_numpy(self.compress_result_weight.get(key))
                 compress_weight[key_index] = torch.from_numpy(self.compress_result_index.get(key).astype(np.int8))
                 compress_weight[key_info] = torch.from_numpy(self.compress_result_info.get(key).astype(np.int64))
+            
+            elif value == QuantType.W16A16S and key.endswith('.weight'):
+                key_short = '.'.join(key.split('.')[:-1])
+                key_index = key_short + '.index'
+                key_info = key_short + '.info'
+
+                compress_model_description.change_weight_type(key, QuantType.W16A16SC)
+                compress_model_description.change_weight_type(key_index, QuantType.W16A16SC)
+                compress_model_description.change_weight_type(key_info, QuantType.W16A16SC)
+
+                compress_weight[key] = torch.from_numpy(self.compress_result_weight.get(key))
+                compress_weight[key_index] = torch.from_numpy(self.compress_result_index.get(key).astype(np.int8))
+                compress_weight[key_info] = torch.from_numpy(self.compress_result_info.get(key).astype(np.int64))
+            
             else:
                 compress_model_description.change_weight_type(key, QuantType(value))
                 compress_weight[key] = self.weights.get(key)
@@ -124,6 +143,8 @@ class Compressor:
         self.config.record_detail_root = get_write_directory(self.config.record_detail_root, write_mode=0o750)
         check_type(weight_transpose, bool, param_name="weight_transpose")
 
+        self.sparse_type = self.quant_model_description.get("model_quant_type", None)
+
         ori_total_length = 0
         now_total_length = 0
 
@@ -135,7 +156,8 @@ class Compressor:
             keys_list = []
             for key in self.weights.keys():
                 quant_type = self.quant_model_description.get(key)
-                if key.endswith('.weight') and 'norm' not in key and quant_type == 'W8A8S':
+                if key.endswith('.weight') and 'norm' not in key and \
+                        quant_type in [QuantType.W8A8S, QuantType.W16A16S]:
                     keys_list.append(key)
         else:
             keys_list = sorted(self.weights.keys())
@@ -172,6 +194,12 @@ class Compressor:
 
             n, k = each_weight.shape
 
+            if self.quant_model_description.get(key) == QuantType.W16A16S:
+                each_weight = each_weight.view(np.int8).reshape(n, k * 2)
+                k = k * 2
+                ori_length = ori_length * 2
+                self.logger.debug(f"W16A16S weight shape: {each_weight.shape}, k: {k}, ori_length: {ori_length}")
+
             k0 = 32
             n0 = 16
             each_weight = transform_nd2nz(each_weight, block_size=[n0, k0])  # 矩阵在int8的时候，分型大小就是16 * 32
@@ -187,7 +215,7 @@ class Compressor:
             self.logger.debug("Compressing weight_part {}".format(key_index))
             res = p.apply_async(
                 compress_weight_fun,
-                args=(each_weight, self.config.record_detail_root),
+                args=(each_weight, self.config.record_detail_root, self.sparse_type),
                 callback=update
             )
             result_list.append((save_key, ori_length, res))
