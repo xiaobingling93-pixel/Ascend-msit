@@ -70,6 +70,7 @@ class AutoSaverProcessor(AutoSessionProcessor):
             nn.Linear: self.on_float_linear,
             nn.Module: self.on_float_module,
             qir.FakeQuantDynamicCache: self.on_dynamic_cache,
+            qir.W16A16sLinear: self.on_w16a16s,
         }
 
     def support_distributed(self) -> bool:
@@ -131,3 +132,6 @@ class AutoSaverProcessor(AutoSessionProcessor):
 
     def on_dynamic_cache(self, prefix: str, module: qir.FakeQuantDynamicCache):
         raise NotImplementedError(f"You should implement the on_dynamic_cache method for {self.__class__.__name__}")
+
+    def on_w16a16s(self, prefix: str, module: qir.W16A16sLinear):
+        raise NotImplementedError(f"You should implement the on_w16a16s method for {self.__class__.__name__}")

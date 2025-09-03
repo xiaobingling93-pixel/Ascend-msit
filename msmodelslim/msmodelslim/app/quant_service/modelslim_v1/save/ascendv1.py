@@ -257,3 +257,9 @@ class AscendV1Saver(AutoSaverProcessor):
             self.json_append[ValidJsonExt.JSON_APPEND] = dict()
         self.json_append[ValidJsonExt.JSON_APPEND]['kv_cache_type'] = "C8"
         self.json_append[ValidJsonExt.JSON_APPEND]['kv_quant_type'] = "C8"
+
+    @save_this_rank_only()
+    def on_w16a16s(self, prefix: str, module: qir.W16A16sLinear):
+        for name, param in module.named_parameters(recurse=False, prefix=prefix):
+            self.write_tensor(name, "W16A16S", param)
+    

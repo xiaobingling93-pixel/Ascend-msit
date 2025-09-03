@@ -5,8 +5,13 @@ import os
 import subprocess
 import numpy as np 
 from ascend_utils.common.security import safe_delete_path_if_exists, get_valid_write_path, SafeWriteUmask
+from msmodelslim.pytorch.llm_ptq.llm_ptq_tools.llm_ptq_utils import QuantType
 
- 
+
+HIGH_SPARSE_MODE = 1
+LOW_SPARSE_MODE = 0
+
+
 def pseudo_sparse(arr, ratio):
     mask = np.random.choice([0, 1], size=arr.shape, p=[1 - ratio, ratio])
     arr = arr * mask
@@ -19,7 +24,7 @@ def makedirs(path):
     return path 
 
 
-def compress_weight_fun(weights, record_detail_root='./'):
+def compress_weight_fun(weights, record_detail_root='./', sparse_type=None):
     shape_k, shape_n = weights.shape[:2]
     get_valid_write_path(record_detail_root, is_dir=True)
     write_root = makedirs(os.path.join(record_detail_root, str(os.getpid()), '.tmp'))
@@ -38,8 +43,18 @@ def compress_weight_fun(weights, record_detail_root='./'):
 
         current_dir = os.path.dirname(os.path.abspath(__file__))
         compress_excutor_path = os.path.join(current_dir, 'compress_graph', 'build', 'compress_excutor')
-        command = '{} {} {} 1 1 1 0 0 {} {} {} {}'.format(compress_excutor_path, shape_k, shape_n, 
-                            input_weight_path, compress_output_path, compress_index_path, compress_info_path)
+        # compress_excutor 参数 dimK, dimN, isTight, k_value, n_value, 
+        # compressType, isTiling, inputWeightPath, outputWeightPath, indexPath, compressInfoPath
+        # isTight: 1表示高稀疏模式，0表示低稀疏模式
+        if sparse_type == QuantType.W16A16S:
+            command = '{} {} {} 1 1 1 {} 0 {} {} {} {}'.format(compress_excutor_path, shape_k, shape_n, 
+                    HIGH_SPARSE_MODE, input_weight_path, compress_output_path, compress_index_path, compress_info_path)
+        elif sparse_type == QuantType.W8A8S:
+            command = '{} {} {} 1 1 1 {} 0 {} {} {} {}'.format(compress_excutor_path, shape_k, shape_n, 
+                    LOW_SPARSE_MODE, input_weight_path, compress_output_path, compress_index_path, compress_info_path)
+        else:
+            raise ValueError(f"Invalid sparse type: {sparse_type}")
+
         with SafeWriteUmask(umask=0o077):
             process = subprocess.Popen(command.split(), shell=False, stdout=subprocess.PIPE)
             process.wait(timeout=600)

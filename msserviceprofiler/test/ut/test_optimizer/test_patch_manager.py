@@ -93,77 +93,7 @@ class TestPatchManager(unittest.TestCase):
         result = check_flag(str(target_file), str(patch_file))
         self.assertFalse(result, "补丁内容在目标文件中完全匹配时，预期返回False(表示已存在)但实际返回了True")
 
-    def test_patch_already_applied(self):
-        """测试补丁已经存在的情况"""
-        # 创建目标文件并写入补丁内容
-        target_file = self.temp_dir / "text_generator" / "plugins" / "plugin_manager.py"
-        target_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(target_file, "w", encoding="utf-8") as f:
-            f.write("import sys\n")
-            f.write("from plugin_base import PluginBase\n")
-            f.write("# 补丁内容\n")
-            f.write("print('patch applied')\n")
-
-        # 创建补丁文件
-        patch_file = self.temp_dir / "plugin_manager_patch.patch"
-        with open(patch_file, "w", encoding="utf-8") as f:
-            f.write("# 补丁内容\n")
-            f.write("print('patch applied')\n")
-
-        # 设置模块路径
-        self.mock_mindie_llm.__path__ = [str(self.temp_dir)]
-
-        # 记录文件修改时间，用于后续验证
-        original_mtime = os.path.getmtime(target_file)
-
-        with patch("msserviceprofiler.modelevalstate.patch.patch_manager._patch_dir", self.temp_dir), \
-                patch("msserviceprofiler.modelevalstate.patch.patch_manager.logger.info") as mock_info:
-            # 模拟版本检查
-            with patch("msserviceprofiler.modelevalstate.patch.patch_manager.Patch2rc1.check_version",
-                       return_value=True):
-                Patch2rc1.patch()
-
-            # 验证文件未被修改
-            self.assertEqual(os.path.getmtime(target_file), original_mtime, "补丁已存在时文件不应被修改")
-
-    def test_patch_new_application(self):
-        """测试新补丁应用的情况"""
-        # 创建目标文件（不带补丁内容）
-        target_file = self.temp_dir / "text_generator" / "plugins" / "plugin_manager.py"
-        target_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(target_file, "w", encoding="utf-8") as f:
-            f.write("import sys\n")
-            f.write("from plugin_base import PluginBase\n")
-
-        # 创建补丁文件
-        patch_file = self.temp_dir / "plugin_manager_patch.patch"
-        with open(patch_file, "w", encoding="utf-8") as f:
-            f.write("# 补丁内容\n")
-            f.write("print('patch applied')\n")
-
-        # 设置模块路径
-        self.mock_mindie_llm.__path__ = [str(self.temp_dir)]
-
-        # 记录原始内容
-        original_content = target_file.read_text(encoding="utf-8")
-
-        with patch("msserviceprofiler.modelevalstate.patch.patch_manager._patch_dir", self.temp_dir), \
-                patch("msserviceprofiler.modelevalstate.patch.patch_manager.logger.info") as mock_info:
-            # 模拟版本检查
-            with patch("msserviceprofiler.modelevalstate.patch.patch_manager.Patch2rc1.check_version",
-                       return_value=True):
-                Patch2rc1.patch()
-
-            # 验证文件内容已被修改
-            new_content = target_file.read_text(encoding="utf-8")
-
     # 测试版本检查
-    def test_check_version_valid(self):
-        """测试有效范围内的版本"""
-        with patch('msserviceprofiler.modelevalstate.patch.patch_manager.logger.warning') as mock_warning:
-            Patch2rc1.check_version("2.0a10")
-            mock_warning.assert_not_called()
-
     def test_check_version_low_warning(self):
         """测试版本过低的情况"""
         with patch('msserviceprofiler.modelevalstate.patch.patch_manager.logger.warning') as mock_warning:

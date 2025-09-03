@@ -19,6 +19,7 @@ __all__ = [
     "W8A8StaticFakeQuantLinear",
     "W8A8DynamicFakeQuantLinear",
     "FakeQuantDynamicCache",
+    "W16A16sLinear",
 
     "int8_per_tensor_sym",
     "int8_per_channel_sym",
@@ -34,3 +35,4 @@ from .const import int8_per_tensor_sym, int8_per_channel_sym, int8_per_token_sym
     int8_per_tensor_asym, int8_per_token_asym, int8_per_channel_asym
 from .w8a8 import W8A8DynamicFakeQuantLinear, W8A8StaticFakeQuantLinear
 from .attention import FakeQuantDynamicCache
+from .w16a16s import W16A16sLinear

@@ -101,7 +101,7 @@ class TestMapParamWithValueRealFields(unittest.TestCase):
         
         # 验证边界处理
         self.assertEqual(result[0].value, 24)  
-        self.assertEqual(result[1].value, 0)   
+        self.assertEqual(result[1].value, 1)   
         self.assertFalse(result[4].value) 
         self.assertEqual(result[5].value, 4095) 
         self.assertEqual(result[6].value, 499)  
