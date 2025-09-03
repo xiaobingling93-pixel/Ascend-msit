@@ -82,7 +82,7 @@ class TestFileLogger:
 
     @pytest.fixture
     def logger(self):
-        return FileLogger(Path(settings.benchmark.custom_collect_output_path).joinpath(f"simulate_{os.getpid()}.csv"))
+        return FileLogger(Path(settings.simulator_output).joinpath(f"simulate_{os.getpid()}.csv"))
     
     @pytest.fixture
     def file_path(self):
@@ -155,7 +155,7 @@ class TestSimulateUpdateToken:
 
         Simulate.update_token(plugin_object, input_metadata, cached_ids, sampling_output)
 
-        assert sampling_output.token_ids[0].item() != plugin_object.eos_token_id
+        assert sampling_output.token_ids[0].item() == plugin_object.eos_token_id
         assert sampling_output.top_token_ids.size == 0
 
     @staticmethod
@@ -165,7 +165,7 @@ class TestSimulateUpdateToken:
         sampling_output.top_token_ids = np.array([[50256]])
         Simulate.update_token(plugin_object, input_metadata, cached_ids, sampling_output)
 
-        assert sampling_output.token_ids[0].item() != plugin_object.eos_token_id
+        assert sampling_output.token_ids[0].item() == plugin_object.eos_token_id
         assert sampling_output.top_token_ids[0].item() != plugin_object.eos_token_id
 
     @staticmethod
