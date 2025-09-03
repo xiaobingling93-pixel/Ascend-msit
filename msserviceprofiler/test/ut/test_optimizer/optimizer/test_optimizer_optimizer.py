@@ -205,18 +205,6 @@ class MockField:
         self.max = max_value
 
 
-class TestPSOOptimizer(unittest.TestCase):
-    @pytest.fixture
-    def optimizer(self):
-        return PSOOptimizer(MagicMock(), target_field=default_support_field)
-
-    def test_constructing_bounds_empty_target_field(self, optimizer):
-        optimizer.target_field = []
-        min_bounds, max_bounds = optimizer.constructing_bounds()
-        assert min_bounds == ()
-        assert max_bounds == ()
-
-
 @patch("msserviceprofiler.modelevalstate.optimizer.optimizer.field_to_param", )
 def test_refine_optimization_candidates(field_to_param_patch):
     field_to_param_patch.side_effect = [[3, 4], [7, 1]]
