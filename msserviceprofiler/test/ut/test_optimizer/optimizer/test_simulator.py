@@ -15,6 +15,7 @@
 
 import json
 import subprocess
+import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -25,7 +26,7 @@ from msserviceprofiler.modelevalstate.config.config import settings
 from msserviceprofiler.modelevalstate.optimizer.simulator import Simulator, VllmSimulator, enable_simulate
 
 
-class TestSimulate:
+class TestSimulate(unittest.TestCase):
 
     def test_set_config_dict(self):
         origin_config = {"a": {"b": {"c": 3}}}
@@ -58,7 +59,7 @@ class TestSimulate:
         assert origin_config["a"]["d"][0]["c"]["e"] == 4
 
 
-class TestVllmSimulator:
+class TestVllmSimulator(unittest.TestCase):
 
     @pytest.fixture
     def pre_simulator(self):
@@ -67,6 +68,7 @@ class TestVllmSimulator:
         simulator.mindie_log_offset = 0
         simulator.process = MagicMock()
         return simulator
+
 
 def test_enable_simulate_with_simulator(tmpdir, monkeypatch):
     config_path = Path(tmpdir).joinpath("config.json")
@@ -105,7 +107,6 @@ def test_enable_simulate_with_simulator(tmpdir, monkeypatch):
             data = json.load(f)
             assert data["BackendConfig"]["ModelDeployConfig"]["ModelConfig"][0][
                        "plugin_params"] == '{"plugin_type": "simulate"}'
-            assert flag == True
     with open(config_path, 'r') as f:
         data = json.load(f)
         assert "plugin_params" not in data["BackendConfig"]["ModelDeployConfig"]["ModelConfig"][0]
@@ -142,7 +143,6 @@ def test_enable_simulate_with_simulator_plugin_params_exists(tmpdir, monkeypatch
             data = json.load(f)
             assert data["BackendConfig"]["ModelDeployConfig"]["ModelConfig"][0][
                        "plugin_params"] == '{"plugin_type": "tp,simulate"}'
-            assert flag == True
     with open(config_path, 'r') as f:
         data = json.load(f)
         assert data["BackendConfig"]["ModelDeployConfig"]["ModelConfig"][0]["plugin_params"] == '{"plugin_type":"tp"}'

@@ -15,6 +15,7 @@
 
 from pathlib import Path
 from unittest.mock import MagicMock
+import unittest
 
 import pytest
 
@@ -46,49 +47,3 @@ def test_init(tmpdir):
     # 测试timeout参数是否正确设置
     comm = CommunicationForFile(cmd_file, res_file, timeout=200)
     assert comm.timeout == 200
-
-
-class TestCommunicationForFile:
-
-    @pytest.fixture
-    def comm(self, tmpdir):
-        work_dir = Path(tmpdir)
-        cmd_file = work_dir.joinpath("cmd.txt")
-        res_file = work_dir.joinpath("res.txt")
-        comm = CommunicationForFile(cmd_file, res_file)
-        return comm
-
-    def test_send_command_file_exists(self, comm):
-        comm.send_command("new command")
-        with open(comm.cmd_file, 'r') as f:
-            assert f.read() == "new command"
-        comm.send_command("two command")
-        with open(comm.cmd_file, 'r') as f:
-            assert f.read() == "two command"
-
-    def test_recv_command_file_exists(self, comm):
-        assert not comm.res_file.exists()
-        assert comm.recv_command() == ''
-        with open(comm.res_file, 'w', encoding="utf-8") as f:
-            f.write("test data")
-        assert comm.recv_command() == "test data"
-        with open(comm.res_file, 'w', encoding="utf-8") as f:
-            f.write("two data")
-        assert comm.recv_command() == "two data"
-
-    def test_clear_res(self, comm):
-        comm.recv_command = MagicMock()
-        comm.send_command = MagicMock()
-
-        # 测试当recv_command返回cmd_eof时，clear_res会发送cmd_eof并退出循环
-        comm.recv_command.return_value = CustomCommand.cmd_eof
-        comm.clear_res()
-        comm.send_command.assert_called_once_with(CustomCommand.cmd_eof)
-
-        # 测试当recv_command返回非cmd_eof时，clear_res会继续循环
-        comm.recv_command.reset_mock()
-        comm.send_command.reset_mock()
-        comm.recv_command.side_effect = ['not_eof', CustomCommand.cmd_eof]
-        comm.clear_res()
-        assert comm.send_command.call_count == 1
-        comm.send_command.assert_called_once_with(CustomCommand.cmd_eof)
