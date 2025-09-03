@@ -16,6 +16,9 @@
 __all__ = [
     "IterSmoothProcessor",
     "IterSmoothProcessorConfig",
+    "FlexSmoothQuantProcessor",
+    "FlexSmoothQuantProcessorConfig"
 ]
 
 from .iter_smooth import IterSmoothProcessorConfig, IterSmoothProcessor
+from .flex_smooth_quant import FlexSmoothQuantProcessorConfig, FlexSmoothQuantProcessor

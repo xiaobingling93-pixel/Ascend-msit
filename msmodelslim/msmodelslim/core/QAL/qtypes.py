@@ -15,7 +15,7 @@
 
 
 from dataclasses import dataclass
-from typing import Union, List, Dict, Any
+from typing import Union, List, Dict, Any, Optional
 
 import torch
 from torch import nn as nn
@@ -119,6 +119,7 @@ class SmoothContext:
     version: int
     a_smooth_scale: torch.Tensor
     w_smooth_scale: torch.Tensor
+    tensors: List[torch.Tensor]
     shift: torch.Tensor
     ext: Dict[str, Any]
 
@@ -137,3 +138,19 @@ class IterSmoothConfig:
     alpha: float = 0.9
     shift: bool = False
     scale_min: float = 1e-5
+
+
+@dataclass
+class FlexSmoothQuantConfig:
+    """
+
+    flex_smooth_quant算法的配置项。
+    允许后续扩展配置项，但仅可新增新字段，且不得修改已有字段，
+    version用于指定配置版本号，每次修改后，版本号需要加1。
+
+    """
+
+    version: int = 1
+    alpha: Optional[float] = None
+    beta: Optional[float] = None   
+

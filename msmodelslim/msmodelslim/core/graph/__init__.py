@@ -13,24 +13,31 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+"""
+Graph Module for MsModelSlim
+
+This module provides graph-related utilities and configurations for model processing,
+including subgraph types, adapter configurations, and mapping relationships.
+"""
+
 __all__ = [
-    "KIAManager",
+    # Constants
+    "SUPPORTED_SUBGRAPH_TYPES",
 
-    "QDType",
-    "QParam",
-    "QStorage",
+    # Configuration Classes
+    "MappingConfig",
+    "FusionConfig",
+    "AdapterConfig",
 
-    "calculate_qparam",
-    "quantize",
-    "dequantize",
-    "fake_quantize",
-    "iter_smooth",
-    "flex_smooth_quant",
+    # Information Classes
+    "SubgraphInfo",
 ]
 
-from .KIA import KIAManager
-from .QAL import QDType, QParam, QStorage
-from .api import calculate_qparam, quantize, dequantize, fake_quantize, iter_smooth, flex_smooth_quant
-
-KIAManager.init_module()
-KIAManager.check_version()
+# Import all components from adapter_types module
+from .adapter_types import (
+    SUPPORTED_SUBGRAPH_TYPES,
+    MappingConfig,
+    FusionConfig,
+    AdapterConfig,
+    SubgraphInfo,
+)

@@ -15,6 +15,7 @@
 
 __all__ = [
     "iter_smooth",
+    "flex_smooth_quant",
     "calculate_qparam",
     "quantize",
     "dequantize",
@@ -22,4 +23,4 @@ __all__ = [
 ]
 
 from .base_api import calculate_qparam, quantize, dequantize, fake_quantize
-from .kia_api import iter_smooth
+from .kia_api import iter_smooth, flex_smooth_quant
