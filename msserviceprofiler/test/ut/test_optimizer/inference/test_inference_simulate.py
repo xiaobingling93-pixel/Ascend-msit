@@ -82,7 +82,7 @@ class TestFileLogger:
 
     @pytest.fixture
     def logger(self):
-        return FileLogger(Path(settings.benchmark.custom_collect_output_path).joinpath(f"simulate_{os.getpid()}.csv"))
+        return FileLogger(Path(settings.benchmark.output_path).joinpath(f"simulate_{os.getpid()}.csv"))
     
     @pytest.fixture
     def file_path(self):
