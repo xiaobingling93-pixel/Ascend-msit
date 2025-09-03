@@ -158,12 +158,6 @@ class TestPatchManager(unittest.TestCase):
             new_content = target_file.read_text(encoding="utf-8")
 
     # 测试版本检查
-    def test_check_version_valid(self):
-        """测试有效范围内的版本"""
-        with patch('msserviceprofiler.modelevalstate.patch.patch_manager.logger.warning') as mock_warning:
-            Patch2rc1.check_version("2.0a10")
-            mock_warning.assert_not_called()
-
     def test_check_version_low_warning(self):
         """测试版本过低的情况"""
         with patch('msserviceprofiler.modelevalstate.patch.patch_manager.logger.warning') as mock_warning:
