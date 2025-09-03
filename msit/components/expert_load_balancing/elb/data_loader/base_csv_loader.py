@@ -1,19 +1,7 @@
-# Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Copyright Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 import pandas as pd
 
-from components.expert_load_balancing.elb.data_loader.base_loader import DataType, BaseDataLoader
+from components.expert_load_balancing.elb.data_loader.base_loader import BaseDataLoader
 from components.utils.security_check import get_valid_read_path
 from components.utils.log import logger
 

@@ -1,16 +1,4 @@
-# Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Copyright Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 import os
 import re
 import json
@@ -20,7 +8,6 @@ import numpy as np
 
 from components.expert_load_balancing.elb.data_loader.base_csv_loader import BaseCsvLoader
 from components.utils.file_open_check import ms_open
-from components.utils.security_check import check_int
 
 
 TARGET_JSON_FILE_NAME = "model_gen_config.json"
@@ -29,8 +16,6 @@ TARGET_JSON_FILE_NAME = "model_gen_config.json"
 class MindieCsvSumedLoader(BaseCsvLoader):
     def __init__(self, input_args):
         super().__init__(input_args)
-        self.target_data = None
-        self.prefill_data = None
 
     @staticmethod
     def check_input_path(input_path):
@@ -104,9 +89,6 @@ class MindieCsvSplitedLoader(BaseCsvLoader):
 
     @staticmethod
     def check_input_path(input_path):
-        """
-        用于在工厂类中判断输入路径是否匹配当前loader，返回decode和prefill文件路径的list，不匹配返回空list
-        """
         if not os.path.isdir(input_path):
             return None
         
