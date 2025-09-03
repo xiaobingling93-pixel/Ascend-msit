@@ -50,7 +50,7 @@ class TestExpertLoadBalanceCommandHandle(unittest.TestCase):
         mock_getuid.return_value = 1000
         mock_getpwuid.return_value.pw_name = "testuser"
 
-        with patch.dict('sys.modules', {'elb.load_balancing': MagicMock()}):
+        with patch.dict('sys.modules', {'elb.eplb_runner': MagicMock()}):
             self.command.handle(self.args)
         
         mock_logger.info.assert_any_call("===================load balancing algorithm start====================")
@@ -80,7 +80,7 @@ class TestExpertLoadBalanceCommandHandle(unittest.TestCase):
         mock_stat.return_value.st_mode = 0o777  # 不安全权限
         mock_getuid.return_value = 1000
         mock_getpwuid.return_value.pw_name = "testuser"
-        with patch.dict('sys.modules', {'elb.load_balancing': MagicMock()}):
+        with patch.dict('sys.modules', {'elb.eplb_runner': MagicMock()}):
             self.command.handle(self.args)
 
         mock_logger.warning.assert_called_with(
@@ -103,7 +103,7 @@ class TestExpertLoadBalanceCommandHandle(unittest.TestCase):
             MagicMock(pw_name="otheruser")  # 路径属主
         ]
 
-        with patch.dict('sys.modules', {'elb.load_balancing': MagicMock()}):
+        with patch.dict('sys.modules', {'elb.eplb_runner': MagicMock()}):
             self.command.handle(self.args)
     
         mock_logger.warning.assert_called_with(

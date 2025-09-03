@@ -134,7 +134,7 @@ class ExpertLoadBalanceCommmand(BaseCommand):
 
         sys.path.append(algorithm_path)
         try:
-            from elb.load_balancing import load_balancing
+            from elb.eplb_runner import load_balancing
         except ImportError as e:
             raise Exception("Failed to import load_balancing module") from e
 
