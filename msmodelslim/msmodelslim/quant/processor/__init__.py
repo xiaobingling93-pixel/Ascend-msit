@@ -25,7 +25,9 @@ __all__ = [
     "GroupProcessorConfig",
     "GroupProcessor",
     "DynamicCacheProcessorConfig",
-    "DynamicCacheQuantProcessor"
+    "DynamicCacheQuantProcessor",
+    "FloatSparseProcessorConfig",
+    "FloatSparseProcessor"
 ]
 
 from .anti_outlier.iter_smooth import IterSmoothProcessorConfig, IterSmoothProcessor
@@ -34,3 +36,4 @@ from .container.group import GroupProcessorConfig, GroupProcessor
 from .memory.load import LoadProcessorConfig, LoadProcessor
 from .quant.linear import LinearProcessorConfig, LinearQuantProcessor
 from .quant.attention import DynamicCacheProcessorConfig, DynamicCacheQuantProcessor
+from .sparse.float_sparse import FloatSparseProcessorConfig, FloatSparseProcessor 
