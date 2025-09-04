@@ -1,17 +1,5 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -47,3 +35,119 @@ def test_init(tmpdir):
     # 测试timeout参数是否正确设置
     comm = CommunicationForFile(cmd_file, res_file, timeout=200)
     assert comm.timeout == 200
+
+
+class TestCommunicationForFile:
+    @classmethod
+    def test_send_command_file_exists(cls, comm):
+        comm.send_command("new command")
+        with open(comm.cmd_file, 'r') as f:
+            assert f.read() == "new command"
+        comm.send_command("two command")
+        with open(comm.cmd_file, 'r') as f:
+            assert f.read() == "two command"
+
+    @classmethod
+    def test_recv_command_file_exists(cls, comm):
+        assert not comm.res_file.exists()
+        assert comm.recv_command() == ''
+        with open(comm.res_file, 'w', encoding="utf-8") as f:
+            f.write("test data")
+        assert comm.recv_command() == "test data"
+        with open(comm.res_file, 'w', encoding="utf-8") as f:
+            f.write("two data")
+        assert comm.recv_command() == "two data"
+
+    @classmethod
+    def test_clear_cmd_done(cls, comm):
+        _cmd = "init 11111"
+        comm.recv_command = MagicMock(return_value="init 11111:done")
+        comm.send_command = MagicMock()
+        comm.clear_res = MagicMock()
+        assert comm.clear_command(_cmd) == "done"
+        comm.send_command.assert_called_once_with(CustomCommand.cmd_eof)
+        comm.clear_res.assert_called_once()
+
+    @classmethod
+    def test_clear_cmd_true(cls, comm):
+        _cmd = "init 11111"
+        comm.recv_command = MagicMock(return_value="init 11111:true")
+        comm.send_command = MagicMock()
+        comm.clear_res = MagicMock()
+        assert comm.clear_command(_cmd) is True
+        comm.send_command.assert_called_once_with(CustomCommand.cmd_eof)
+        comm.clear_res.assert_called_once()
+
+    @classmethod
+    def test_clear_cmd_false(cls, comm):
+        _cmd = "init 11111"
+        comm.recv_command = MagicMock(return_value="init 11111:false")
+        comm.send_command = MagicMock()
+        comm.clear_res = MagicMock()
+        assert comm.clear_command(_cmd) is False
+        comm.send_command.assert_called_once_with(CustomCommand.cmd_eof)
+        comm.clear_res.assert_called_once()
+
+    @classmethod
+    def test_clear_cmd_none(cls, comm):
+        _cmd = "init 11111"
+        comm.recv_command = MagicMock(return_value="init 11111:none")
+        comm.send_command = MagicMock()
+        comm.clear_res = MagicMock()
+        assert comm.clear_command(_cmd) is None
+        comm.send_command.assert_called_once_with(CustomCommand.cmd_eof)
+        comm.clear_res.assert_called_once()
+
+    @classmethod
+    def test_clear_cmd_error(cls, comm):
+        _cmd = "init 11111"
+        comm.recv_command = MagicMock(return_value="init 11111:error")
+        comm.send_command = MagicMock()
+        comm.clear_res = MagicMock()
+        with pytest.raises(ValueError):
+            comm.clear_command(_cmd)
+
+    # need 2mins
+    @classmethod
+    def test_clear_cmd_timeout(cls, comm):
+        _cmd = "init 11111"
+        comm.recv_command = MagicMock(return_value=None)
+        comm.send_command = MagicMock()
+        comm.clear_res = MagicMock()
+        with pytest.raises(TimeoutError):
+            comm.clear_command(_cmd)
+
+    @classmethod
+    def test_clear_cmd_other(cls, comm):
+        comm.recv_command = MagicMock(return_value="init 111111:other")
+        comm.send_command = MagicMock()
+        comm.clear_res = MagicMock()
+        assert comm.clear_command("init 111111") == "other"
+        comm.send_command.assert_called_once_with(CustomCommand.cmd_eof)
+        comm.clear_res.assert_called_once()
+
+    @classmethod
+    def test_clear_res(cls, comm):
+        comm.recv_command = MagicMock()
+        comm.send_command = MagicMock()
+
+        # 测试当recv_command返回cmd_eof时，clear_res会发送cmd_eof并退出循环
+        comm.recv_command.return_value = CustomCommand.cmd_eof
+        comm.clear_res()
+        comm.send_command.assert_called_once_with(CustomCommand.cmd_eof)
+
+        # 测试当recv_command返回非cmd_eof时，clear_res会继续循环
+        comm.recv_command.reset_mock()
+        comm.send_command.reset_mock()
+        comm.recv_command.side_effect = ['not_eof', CustomCommand.cmd_eof]
+        comm.clear_res()
+        assert comm.send_command.call_count == 1
+        comm.send_command.assert_called_once_with(CustomCommand.cmd_eof)
+
+    @pytest.fixture(autouse=True)
+    def comm(self, tmpdir):
+        work_dir = Path(tmpdir)
+        cmd_file = work_dir.joinpath("cmd.txt")
+        res_file = work_dir.joinpath("res.txt")
+        comm = CommunicationForFile(cmd_file, res_file)
+        return comm
