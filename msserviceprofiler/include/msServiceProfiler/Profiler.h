@@ -259,7 +259,7 @@ namespace msServiceProfiler {
 
         Profiler(Profiler &obj)
             : autoEnd_(obj.autoEnd_), spanHandle_(obj.spanHandle_), msg_(std::move(obj.msg_)),
-                domainAllow_(obj.domainAllow_)
+            domainAllow_(obj.domainAllow_)
         {
             obj.autoEnd_ = false;
         }
