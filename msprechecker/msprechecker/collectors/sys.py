@@ -121,7 +121,7 @@ class CPUHighPerformanceStrategy(ABC):
     """Abstract base class for CPU high performance detection strategies."""
     @abstractmethod
     def check(self):
-        pass
+        """"""
 
 
 class PsutilStrategy(CPUHighPerformanceStrategy):
@@ -242,7 +242,7 @@ class ScalingGovernorStrategy(CPUHighPerformanceStrategy):
 
 
 class CPUHighPerformanceCollector(BaseCollector):
-    STRATEGIES = [
+    strategies = [
         DmidecodeStrategy(),
         ScalingGovernorStrategy(),
         CpupowerStrategy(),
@@ -250,8 +250,13 @@ class CPUHighPerformanceCollector(BaseCollector):
         LshwStrategy()
     ]
 
+    def __init__(self, error_handler = None, *, strategies=None):
+        super().__init__(error_handler)
+        if strategies:
+            self.strategies = strategies
+
     def _collect_data(self):
-        high_performance = any(strategy.check() for strategy in self.STRATEGIES)
+        high_performance = any(strategy.check() for strategy in self.strategies)
         return {"high_performance": high_performance}
 
 
@@ -313,7 +318,7 @@ class MemoryInfoCollector(BaseCollector):
 
 
 class SysCollector(BaseCollector):
-    SUB_COLLECTORS = [
+    subcollectors = [
         LscpuCollector(),
         VirtualMachineCollector(),
         CPUHighPerformanceCollector(),
@@ -321,16 +326,18 @@ class SysCollector(BaseCollector):
         MemoryInfoCollector()
     ]
 
-    def __init__(self, error_handler=None):
+    def __init__(self, error_handler=None, *, subcollectors=None):
         super().__init__(error_handler)
         self.error_handler.type = "system"
+        if subcollectors:
+            self.subcollectors = subcollectors
 
     def _collect_data(self): 
-        max_workers = min(len(self.SUB_COLLECTORS), os.cpu_count() or 1)
+        max_workers = min(len(self.subcollectors), os.cpu_count() or 1)
         ret = {}
 
         with ThreadPoolExecutor(max_workers) as executor:
-            futures = [executor.submit(collector.collect) for collector in self.SUB_COLLECTORS]
+            futures = [executor.submit(collector.collect) for collector in self.subcollectors]
             for future in as_completed(futures):
                 result = future.result()
                 self.error_handler.extend(result.error_handler)
