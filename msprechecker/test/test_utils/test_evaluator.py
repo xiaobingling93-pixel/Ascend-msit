@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import unittest
-from msprechecker.utils import Evaluator, Version
+from msprechecker.utils import Evaluator
 
 
 class TestEvaluator(unittest.TestCase):
@@ -61,12 +61,12 @@ class TestEvaluator(unittest.TestCase):
             )
 
     def test_plain_str(self):
-        self.assertEqual(self.evaluator.evaluate("afloata"), "afloata")
-        self.assertEqual(self.evaluator.evaluate("ainta"), "ainta")
-        self.assertEqual(self.evaluator.evaluate("aVersiona"), "aVersiona")
-        self.assertEqual(self.evaluator.evaluate("strand"), "strand")
-        self.assertEqual(self.evaluator.evaluate("sour"), "sour")
-        self.assertEqual(self.evaluator.evaluate("knot"), "knot")
+        self.assertEqual(self.evaluator.evaluate("'afloata'"), "afloata")
+        self.assertEqual(self.evaluator.evaluate("'ainta'"), "ainta")
+        self.assertEqual(self.evaluator.evaluate("'aVersiona'"), "aVersiona")
+        self.assertEqual(self.evaluator.evaluate("'strand'"), "strand")
+        self.assertEqual(self.evaluator.evaluate("'sour'"), "sour")
+        self.assertEqual(self.evaluator.evaluate("'knot'"), "knot")
 
     def test_function(self):
         self.assertEqual(
@@ -74,14 +74,14 @@ class TestEvaluator(unittest.TestCase):
             str(123) == 123
         )
         self.assertEqual(
-            self.evaluator.evaluate("int(123) == 123"), 
-            int(123) == 123
-        )
-        self.assertEqual(
-            self.evaluator.evaluate("Version(8.1.rc2) > Version(8.1.rc1)"),
-            Version("8.1.rc2") > Version("8.1.rc1")
+            self.evaluator.evaluate("int(123) == '123'"), 
+            int(123) == '123'
         )
         self.assertEqual(
             self.evaluator.evaluate("int(str(123)) == 123"),
             int(str(123)) == 123
+        )
+        self.assertEqual(
+            self.evaluator.evaluate("str($(MINDIE_USER_HOME_PATH)/Ascend)"),
+            "$(MINDIE_USER_HOME_PATH)/Ascend"
         )
