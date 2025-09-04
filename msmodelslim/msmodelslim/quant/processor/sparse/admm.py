@@ -273,4 +273,6 @@ class AdmmPruner:
     def free(self):
         """释放内存"""
         self.hessian = None
-        torch.npu.empty_cache()
+        # 检查 torch.npu 是否可用，如果可用则清理缓存
+        if hasattr(torch, 'npu'):
+            torch.npu.empty_cache()

@@ -33,6 +33,9 @@ class Compressor:
         self.load_weights(weight_path, weight, quant_model_description)
         self.compress_result_weight, self.compress_result_index, self.compress_result_info = {}, {}, {}
         self.sparse_type = None
+        # 如果 do_pseudo_sparse 为 None，则默认使用 W8A8S 量化类型，适配 w8a8s 的 numpy 格式压缩
+        if self.quant_model_description is None:
+            self.sparse_type = QuantType.W8A8S
 
     @classmethod
     def export(cls, arr, path, dtype=np.int8):
@@ -58,7 +61,10 @@ class Compressor:
         compress_weight = {}
         compress_model_description = QuantModelJsonDescription(QuantType.W8A8SC)
 
-        self.sparse_type = self.quant_model_description.get("model_quant_type", None)
+        # 适配 w8a8s 的 numpy 格式压缩
+        if self.quant_model_description is not None:
+            self.sparse_type = self.quant_model_description.get("model_quant_type", None)
+
         if self.sparse_type == QuantType.W16A16S:
             compress_model_description = QuantModelJsonDescription(QuantType.W16A16SC)
 
@@ -143,7 +149,9 @@ class Compressor:
         self.config.record_detail_root = get_write_directory(self.config.record_detail_root, write_mode=0o750)
         check_type(weight_transpose, bool, param_name="weight_transpose")
 
-        self.sparse_type = self.quant_model_description.get("model_quant_type", None)
+        # 适配 w8a8s 的 numpy 格式压缩
+        if self.quant_model_description is not None:
+            self.sparse_type = self.quant_model_description.get("model_quant_type", None)
 
         ori_total_length = 0
         now_total_length = 0
@@ -194,7 +202,7 @@ class Compressor:
 
             n, k = each_weight.shape
 
-            if self.quant_model_description.get(key) == QuantType.W16A16S:
+            if self.quant_model_description is not None and self.quant_model_description.get(key) == QuantType.W16A16S:
                 each_weight = each_weight.view(np.int8).reshape(n, k * 2)
                 k = k * 2
                 ori_length = ori_length * 2
