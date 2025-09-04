@@ -47,7 +47,7 @@ def DatasetFactory.register(name, dataset)
 - [x] 数据集获取接口
 
 ```python
-DatasetFactory.get_dataset(name)
+def DatasetFactory.get_dataset(name)
 # name：数据集名称
 ```
 
