@@ -101,10 +101,10 @@ class HCCLCollector(BaseCollector):
     def __init__(self, error_handler=None, *, rank_table=None):
         super().__init__(error_handler)
         self.rank_table = rank_table
+        self.option = "-hccs_ping" if getattr(rank_table, 'version', "1.0") == "1.2" else "-ping"
     
     def _run_cmd(self, device_id: int, device_ip: str):
-        option = "-hccs_ping" if device_ip.startswith("192.") else "-ping"
-        cmd = f"{HCCN_TOOL_CMD} -i {device_id} {option} -g address {device_ip}"
+        cmd = f"{HCCN_TOOL_CMD} -i {device_id} {self.option} -g address {device_ip}"
 
         output = None
         try:
