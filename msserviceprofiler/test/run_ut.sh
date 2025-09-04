@@ -33,6 +33,25 @@ run_test_python() {
 
   python3 -m coverage report -m
   python3 -m coverage xml -o ${TEST_DIR}/coverage.xml
+
+  target_percentage=70
+  limit_start_date="2025/9/5"
+  percentage_str=`python3 -m coverage report -m | tail -1 | grep -oE '[0-9]+%' | tail -1`
+  percentage=${percentage_str%\%}
+
+  if [ "$percentage" -lt $target_percentage ]; then
+    echo "====== 百分比 $percentage_str 小于 70% ======"
+    target_timestamp=$(date -d "$limit_start_date" +%s)
+    current_timestamp=$(date +%s)
+
+    if [ "$current_timestamp" -gt "$target_timestamp" ]; then
+      exit 1
+    else
+      echo "当前时间不大于 $limit_start_date, 尚不开启限制"
+    fi
+  else
+    echo ""====== 百分比 $percentage_str 不小于 $target_percentage% ======""
+  fi
 }
 
 run_test() {
