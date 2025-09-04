@@ -43,7 +43,6 @@ def is_contained_valid_iter_info(rid_list, token_id_list):
     if not isinstance(token_id_list, (list, tuple)):
         return False
 
-    # 检查长度是否相等
     return len(rid_list) == len(token_id_list)
 
 
