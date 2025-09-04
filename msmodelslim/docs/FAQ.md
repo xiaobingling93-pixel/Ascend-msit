@@ -22,4 +22,18 @@ sync && echo 3 > /proc/sys/vm/drop_caches
 # 停止所有python进程，部分场景可能需要sudo权限
 pkill python
 ```
-通过上述命令可以清理系统内存资源，此时再运行程序如果成功则问题解决，如果仍然异常退出，则需要升级系统资源。
+
+
+## 2. 为什么安装时提示pydantic版本冲突？
+
+msmodelslim依赖pydantic>=2.0.3，请确保环境中的pydantic版本满足此要求。
+
+### pip安装时的错误信息
+```
+ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.
+check-wheel-contents 0.6.0 requires pydantic~=2.0, but you have pydantic 1.0 which is incompatible.
+```
+
+### 解决方法
+
+请尝试升级或卸载环境中依赖低版本pydantic的软件包。
