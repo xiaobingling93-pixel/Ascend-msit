@@ -1,28 +1,28 @@
-# Iterativate Smooth：离群值抑制算法说明
+# Iterative Smooth：离群值抑制算法说明
 
 ## 背景和作用
 
 - **来源**：华为自研。
-- **概述**：Iterativate Smooth（迭代平滑）是一种用于大语言模型量化过程中抑制激活异常值的算法。该算法通过动态调整权重和激活的缩放因子，在保持模型精度的同时，有效减少量化误差。
-- **核心思想**：Iterativate Smooth算法的核心思想是通过在相邻层之间重新分配量化误差，使得激活值的分布更加均匀，从而减少异常值对量化精度的影响。
+- **概述**：Iterative Smooth（迭代平滑）是一种用于大语言模型量化过程中抑制激活异常值的算法。该算法通过动态调整权重和激活的缩放因子，在保持模型精度的同时，有效减少量化误差。
+- **核心思想**：Iterative Smooth算法的核心思想是通过在相邻层之间重新分配量化误差，使得激活值的分布更加均匀，从而减少异常值对量化精度的影响。
 
 ## 使用方式
 
 ### 作为Processor使用
 
 ```yaml
-- type: "iter_smooth"                    # 固定为 `iter_smooth`，用于指定 Processor
-  alpha: 0.9                             # 浮点数, > 0, 默认 0.9，平衡参数，控制激活和权重的相对重要性
-  scale_min: 1e-5                        # 浮点数, > 0, 默认 1e-5，缩放因子的下界，防止数值过小导致数值不稳定
-  symmetric: False                        # 布尔型，默认为False，是否启用偏移调整
-  enable_subgraph_type:                  # 字符串列表，代表开启的子图类型
+- type: "iter_smooth"                    # 固定为 `iter_smooth`，用于指定 Processor。
+  alpha: 0.9                             # 浮点数, > 0, 默认 0.9，平衡参数，控制激活和权重的相对重要性。
+  scale_min: 1e-5                        # 浮点数, > 0, 默认 1e-5，缩放因子的下界，防止数值过小导致数值不稳定。
+  symmetric: False                        # 布尔型，默认为False，是否启用对称，True为对称，False为非对称。
+  enable_subgraph_type:                  # 字符串列表，代表开启的子图类型。
     - 'norm-linear'
     - 'linear-linear'
     - 'ov'
     - 'up-down'
-  include:                                # 字符串列表，参与平滑的 attention 匹配模式（完整路径，支持 `*` 通配），默认全量
+  include:                                # 字符串列表，参与平滑的 attention 匹配模式（完整路径，支持 `*` 通配），默认全量。
     - "*"
-  exclude:                                # 字符串列表，禁止平滑的 attention 匹配模式（完整路径，支持 `*` 通配），默认为空
+  exclude:                                # 字符串列表，禁止平滑的 attention 匹配模式（完整路径，支持 `*` 通配），默认为空。
     - "*self_attn*"
 ```
 
@@ -33,7 +33,7 @@
 算法使用以下公式计算平滑缩放因子：
 
 ```
-scales = (A_scale^α / W_scale^(1-α)).clamp(min=scale_min)
+scales = (A_scale**α / W_scale**(1-α)).clamp(min=scale_min)
 ```
 
 其中：
