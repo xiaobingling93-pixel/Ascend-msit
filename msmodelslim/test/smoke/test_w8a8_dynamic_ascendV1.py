@@ -62,7 +62,9 @@ class TestW8A8DynamicAscendV1Quantization(TestW8A8DynamicQuantization):
             "2.weight": "W8A8_DYNAMIC",
             "2.weight_scale": "W8A8_DYNAMIC",
             "2.weight_offset": "W8A8_DYNAMIC",
-            "2.bias": "W8A8_DYNAMIC"
+            "2.bias": "W8A8_DYNAMIC",
+            "model_quant_type": "W8A8_DYNAMIC",
+            "version": "1.0.0",
         }
 
         assert config_data.keys() == expected_config_data.keys()
