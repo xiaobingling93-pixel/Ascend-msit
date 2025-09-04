@@ -47,7 +47,7 @@ class FileDatasetLoader(DatasetLoaderInterface):
         try:
             # Load based on file extension
             if dataset_id.endswith('.json'):
-                data = json_safe_load(dataset_path)
+                data = json_safe_load(str(dataset_path))
             else:
                 data = SafeGenerator.load_jsonl(dataset_path)
 

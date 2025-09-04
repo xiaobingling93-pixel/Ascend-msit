@@ -56,7 +56,7 @@ class LayerAnalysisApplication:
         if not isinstance(model_path, Path):
             raise SchemaValidateError(f"model_path must be a Path, but got {type(model_path)}")
         if not isinstance(patterns, list):
-            raise SchemaValidateError(f"patterns must be a list, but got {type(patterns)}")
+            raise SchemaValidateError(f"pattern must be a list, but got {type(patterns)}")
         if not isinstance(device, DeviceType):
             raise SchemaValidateError(f"device must be a DeviceType")
         # Convert enum to string if needed
@@ -82,7 +82,7 @@ class LayerAnalysisApplication:
                 action='Please provide a file with .json or .jsonl extension'
             )
         if not isinstance(topk, int) or topk <= 0:
-            raise SchemaValidateError(f"disable_level must be a integer greater than 0, but got {topk}")
+            raise SchemaValidateError(f"topk must be a integer greater than 0, but got {topk}")
         if not isinstance(trust_remote_code, bool):
             raise SchemaValidateError(f"trust_remote_code must be a bool")
         
@@ -90,7 +90,7 @@ class LayerAnalysisApplication:
         get_logger().info(f'Layer analysis with following parameters:')
         get_logger().info(f"model_type: {model_type}")
         get_logger().info(f"model_path: {model_path}")
-        get_logger().info(f"patterns: {patterns}")
+        get_logger().info(f"pattern: {patterns}")
         get_logger().info(f"device: {device}")
         get_logger().info(f"metrics: {metrics_str}")
         get_logger().info(f"calib_dataset: {calib_dataset}")
