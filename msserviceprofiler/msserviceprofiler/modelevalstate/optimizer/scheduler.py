@@ -20,7 +20,7 @@ from typing import Tuple, Optional
 import numpy as np
 from loguru import logger
 
-from msserviceprofiler.modelevalstate.common import get_train_sub_path
+from msserviceprofiler.modelevalstate.common import get_train_sub_path, is_mindie, is_vllm
 from msserviceprofiler.modelevalstate.config.config import PerformanceIndex, OptimizerConfigField, \
     map_param_with_value, CommunicationConfig
 from msserviceprofiler.modelevalstate.config.base_config import FOLDER_LIMIT_SIZE
@@ -61,7 +61,7 @@ class Scheduler:
         for _ in range(self.wait_time):
             time.sleep(1)
             if self.simulator.check_success():
-                logger.info(f"Successfully started the {self.simulator.process.pid} process.")
+                logger.info(f"Successfully started the {self.simulator.process} process.")
                 return
         raise TimeoutError(self.wait_time)
 
@@ -77,9 +77,10 @@ class Scheduler:
     def monitoring_status(self):
         logger.info("monitor status")
         while True:
-            if self.simulator.process.poll() is not None:
-                raise subprocess.SubprocessError(f"Failed in run simulator. "
-                                                 f"return code: {self.simulator.process.returncode}.")
+            if is_mindie() or is_vllm():
+                if self.simulator.process.poll() is not None:
+                    raise subprocess.SubprocessError(f"Failed in run simulator. "
+                                                    f"return code: {self.simulator.process.returncode}.")
             if self.benchmark.check_success():
                 return
             time.sleep(1)
@@ -160,7 +161,7 @@ class Scheduler:
             time.sleep(1)
             self.performance_index = self.benchmark.get_performance_index()
         except Exception as e:
-            logger.error(f"Failed running. bak path: {self.simulator.bak_path}. eror {e}")
+            logger.error(f"Failed running. bak path: {self.simulator.bak_path}. error {e}")
             self.error_info = e
             self.del_log = False
         return self.performance_index
@@ -218,7 +219,7 @@ class ScheduleWithMultiMachine(Scheduler):
         self.cmd = CustomCommand()
         _cmd = self.cmd.init
         self.communication.send_command(_cmd)
-        self.communication.clear_cmd(_cmd)
+        self.communication.clear_command(_cmd)
 
     def set_back_up_path(self):
         if self.bak_path:
@@ -231,14 +232,14 @@ class ScheduleWithMultiMachine(Scheduler):
                 self.benchmark.bak_path = _cur_bak_path
                 _cmd = f"{self.cmd.backup} params:{_cur_bak_path}"
                 self.communication.send_command(_cmd)
-                self.communication.clear_cmd(_cmd)
+                self.communication.clear_command(_cmd)
 
     def monitoring_status(self):
         logger.info("Start monitoring")
         while True:
             _cmd = self.cmd.process_poll
             self.communication.send_command(_cmd)
-            all_poll = [self.simulator.process.poll(), self.communication.clear_cmd(_cmd)]
+            all_poll = [self.simulator.process.poll(), self.communication.clear_command(_cmd)]
             if any([_i is not None for _i in all_poll]):
                 self.stop_target_server(del_log=False)
                 raise subprocess.SubprocessError(
@@ -252,19 +253,19 @@ class ScheduleWithMultiMachine(Scheduler):
         _cmd = f"{self.cmd.start} params:{params.tolist()}"
         self.cmd.history = _cmd
         self.communication.send_command(_cmd)
-        self.communication.clear_cmd(_cmd)
+        self.communication.clear_command(_cmd)
         self.simulator.run(tuple(self.simulate_run_info))
         self.wait_simulate()
         # wait 其他服务器上的服务成功。
         _cmd = self.cmd.check_success
         self.cmd.history = _cmd
         self.communication.send_command(_cmd)
-        self.communication.clear_cmd(_cmd)
+        self.communication.clear_command(_cmd)
 
     def stop_target_server(self, del_log: bool = True):
         super(ScheduleWithMultiMachine, self).stop_target_server(del_log)
         # wait 其他服务器上的服务成功。
         _cmd = f"{self.cmd.stop} params:{del_log}"
         self.communication.send_command(_cmd)
-        self.communication.clear_cmd(_cmd)
+        self.communication.clear_command(_cmd)
         self.cmd.history = _cmd

@@ -5,7 +5,7 @@ import os
 
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig
 
-from msmodelslim.utils.exception import InvalidModelError
+from msmodelslim.utils.exception import InvalidModelError, InvalidDatasetError
 from msmodelslim.utils.exception_decorator import exception_handler
 from msmodelslim.utils.security import get_valid_read_path
 

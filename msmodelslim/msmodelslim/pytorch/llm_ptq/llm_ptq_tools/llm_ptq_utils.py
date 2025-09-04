@@ -32,6 +32,9 @@ class QuantType(str, Enum):
     W8A8_MIX = "W8A8_MIX"  # W8A8 Per-tensor/Per-token 参数混合导出
     W4A4_FLATQUANT_DYNAMIC = "W4A4_FLATQUANT_DYNAMIC"  # w4a4静态量化与flatquant的per-token动态量化混合量化
 
+    W16A16S = "W16A16S"  # W16A16s稀疏量化
+    W16A16SC = "W16A16SC"  # W16A16s稀疏量化压缩后的权重
+
     @staticmethod
     def get_quant_type(params):
         w_bit = params['w_bit']
@@ -74,7 +77,9 @@ class QuantType(str, Enum):
             "W8A8SC",
             "FLOAT",
             "W8A8_DYNAMIC",
-            "NF4"
+            "NF4",
+            "W16A16S",
+            "W16A16SC"
         ]
 
     @staticmethod
