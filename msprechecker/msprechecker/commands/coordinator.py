@@ -237,7 +237,7 @@ class PrecheckStrategy(CommandStrategy):
         if args.scene and "pd_disaggregation" in args.scene:
             if not args.config_parent_dir:
                 global_logger.error(
-                    "Passing '--scene' without providing '--config-parent-dir' will not take any affect!"
+                    "Passing '--scene' without providing '--config-parent-dir' will not take any effect!"
                 )
             return PrecheckStrategy.execute_pd_disagg(args)
 
