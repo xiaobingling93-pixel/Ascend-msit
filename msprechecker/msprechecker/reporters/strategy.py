@@ -151,7 +151,7 @@ class ConfigErrorDisplay(ErrorDisplayStrategy):
                 lineno = "?"
 
             line_prefix = " " * start_col
-            actual_line = f'{self.COLOR_RESET}"{path}": {actual}{self.COLOR_RESET}'
+            actual_line = f'{self.COLOR_RESET}{json.dumps(path)}: {json.dumps(actual)}{self.COLOR_RESET}'
             self.logger.error(
                 f"{self.COLOR_RED}{lineno:>{max_lineno}}:{self.COLOR_RESET} {line_prefix}{actual_line} {severity}"
             )
@@ -163,7 +163,7 @@ class ConfigErrorDisplay(ErrorDisplayStrategy):
             suggestion_indent = max_lineno + 2 + start_col
             suggestion_line = (
                 " " * suggestion_indent +
-                f'{self.COLOR_MAGENTA}"{path}": {expected}{self.COLOR_RESET} <--- {reason}'
+                f'{self.COLOR_MAGENTA}{json.dumps(path)}: {json.dumps(expected)}{self.COLOR_RESET} <--- {reason}'
             )
             self.logger.error("%s", suggestion_line)
 

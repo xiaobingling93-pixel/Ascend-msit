@@ -17,6 +17,7 @@ import operator
 from typing import Any
 
 from .version import Version
+from .log import global_logger
 
 
 def and_(a, b):
@@ -86,14 +87,21 @@ class Evaluator:
 
     @classmethod
     def _evaluate(cls, expr: Any):
-        expr = Evaluator._evaluate_nesting_func(expr)
+        try:
+            expr = Evaluator._evaluate_nesting_func(expr)
+        except Exception:
+            global_logger.warning("Invalid expression: %s. Skipped", expr)
+            return True
+
         tokens = cls._split_tokens(expr)
         if not tokens:
-            raise SyntaxError(f'Did you mean "{expr!r}"')
+            global_logger.warning("Invalid expression: %s. Did you mean: %r", expr, expr)
+            return False
+
         rpn = cls._convert_tokens_to_rpn(tokens)
         try:
             result = cls._evaluate_rpn(rpn)
-        except (ValueError, TypeError, ZeroDivisionError) as e:
+        except (ValueError, TypeError, ZeroDivisionError):
             return expr
         return result
 
