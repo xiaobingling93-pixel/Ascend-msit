@@ -142,13 +142,16 @@ def run_model_and_save_images(pipeline, args, save_path):
 
 
 def do_multimodal_quant(args, model, infer_func, infer_args, infer_kwargs):
-    from example.multimodal_sd.utils import get_disable_layer_names, get_rank, DumperManager
+    from example.multimodal_sd.utils import get_disable_layer_names, get_rank, DumperManager, get_rank_suffix_file
 
     dump_calib_folder = args.quant_dump_calib_folder  # 用于存放校准数据的文件夹
     safe_tensor_folder = args.quant_weight_save_folder  # 用于存放量化模型的文件夹
 
-    dump_data_path = os.path.join(dump_calib_folder, f'calib_data_{get_rank()}.pth')
-    safe_tensor_path = os.path.join(safe_tensor_folder, f'rank_{get_rank()}.safetensors')
+    rank = get_rank()
+    is_distributed = rank >= 0  # 标记是否为分布式环境
+
+    dump_data_path = os.path.join(dump_calib_folder, get_rank_suffix_file(base_name="calib_data", ext="pth",
+                                                                          is_distributed=is_distributed, rank=rank))
 
     # ***************************** 加载模型 *****************************
     if not isinstance(model, nn.Module):
@@ -169,9 +172,13 @@ def do_multimodal_quant(args, model, infer_func, infer_args, infer_kwargs):
 
     # ***************************** 启动量化 *****************************
     # 加载校准数据
-    calib_dataset = safe_torch_load(dump_data_path, map_location=f'npu:{get_rank()}')
+    calib_dataset = safe_torch_load(dump_data_path, map_location=f'npu:{rank if is_distributed else 0}')
 
     def get_w8a8_cfg():
+        safetensors_name = get_rank_suffix_file(base_name='quant_model_weight_w8a8', ext='safetensors',
+                                                is_distributed=is_distributed, rank=rank)
+        json_name = get_rank_suffix_file(base_name='quant_model_description_w8a8', ext='json',
+                                         is_distributed=is_distributed, rank=rank)
         _cfg = SessionConfig(
             processor_cfg_map={
                 "w8a8": W8A8ProcessorConfig(
@@ -185,9 +192,9 @@ def do_multimodal_quant(args, model, infer_func, infer_args, infer_kwargs):
                     )
                 ),
                 "save": SaveProcessorConfig(
-                    output_path=os.path.dirname(safe_tensor_path),
-                    safetensors_name=os.path.basename(safe_tensor_path),
-                    json_name=None,
+                    output_path=safe_tensor_folder,
+                    safetensors_name=safetensors_name,
+                    json_name=json_name,
                     save_type=['safe_tensor'],
                     part_file_size=None
                 )
