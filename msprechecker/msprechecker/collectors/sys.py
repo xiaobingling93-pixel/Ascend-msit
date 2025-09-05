@@ -250,7 +250,7 @@ class CPUHighPerformanceCollector(BaseCollector):
         LshwStrategy()
     ]
 
-    def __init__(self, error_handler = None, *, strategies=None):
+    def __init__(self, error_handler=None, *, strategies=None):
         super().__init__(error_handler)
         if strategies:
             self.strategies = strategies

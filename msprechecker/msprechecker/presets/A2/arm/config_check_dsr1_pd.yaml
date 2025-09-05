@@ -56,7 +56,7 @@ deploy_config:
   mindie_env_path:
     expected:
       type: eq
-      value: "./conf/mindie_env.json"
+      value: "'./conf/mindie_env.json'"
     reason: "A2场景下默认应该是./conf/mindie_env.json，在版本配套的config没有mindie_env_path字段时忽略此检查"
     severity: low
 
@@ -64,7 +64,7 @@ mindie_ms_controller_config:
   deploy_mode:
     expected:
       type: enum
-      value: ["pd_separate", "pd_disaggregation"]
+      value: ["'pd_separate'", "'pd_disaggregation'"]
     reason: "deploy_mode应该是pd_separate或pd_disaggregation"
     severity: high
   digs_prefill_slo:
@@ -139,7 +139,7 @@ mindie_server_prefill_config:
     inferMode:
       expected:
         type: eq
-        value: "dmi"
+        value: "'dmi'"
       reason: "inferMode在PD分离场景应该是dmi"
       severity: high
     tokenTimeout:
@@ -196,7 +196,7 @@ mindie_server_prefill_config:
         - modelInstanceType:
             expected:
               type: eq
-              value: "Standard"
+              value: "'Standard'"
             reason: "modelInstanceType应该是Standard"
             severity: high
           worldSize:
@@ -232,13 +232,13 @@ mindie_server_prefill_config:
           modelCutPolicy:
             expected:
               type: eq
-              value: "custom"
+              value: "'custom'"
             reason: "modelCutPolicy需要设置为custom"
             severity: high
           plugin_params:
             expected:
               type: eq
-              value: "{\"plugin_type\":\"mtp\",\"num_speculative_tokens\": 1}"
+              value: "'{\"plugin_type\":\"mtp\",\"num_speculative_tokens\": 1}'"
             reason: "MTP特性开关，建议开启，值为\"{\"plugin_type\":\"mtp\",\"num_speculative_tokens\": 1}\""
             severity: low
     ScheduleConfig:
@@ -272,7 +272,7 @@ mindie_server_decode_config:
     inferMode:
       expected:
         type: eq
-        value: "dmi"
+        value: "'dmi'"
       reason: "inferMode在PD分离场景应该是dmi"
       severity: high
     tokenTimeout:
@@ -335,7 +335,7 @@ mindie_server_decode_config:
         - modelInstanceType:
             expected:
               type: eq
-              value: "Standard"
+              value: "'Standard'"
             reason: "modelInstanceType应该是Standard"
             severity: high
           worldSize:
@@ -371,13 +371,13 @@ mindie_server_decode_config:
           modelCutPolicy:
             expected:
               type: eq
-              value: "custom"
+              value: "'custom'"
             reason: "modelCutPolicy需要设置为custom"
             severity: high
           plugin_params:
             expected:
               type: eq
-              value: "{\"plugin_type\":\"mtp\",\"num_speculative_tokens\": 1}"
+              value: "'{\"plugin_type\":\"mtp\",\"num_speculative_tokens\": 1}'"
             reason: "MTP特性开关，建议开启，值为\"{\"plugin_type\":\"mtp\",\"num_speculative_tokens\": 1}\""
             severity: low
           models:

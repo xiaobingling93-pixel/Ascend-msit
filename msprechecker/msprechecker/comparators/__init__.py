@@ -97,9 +97,6 @@ class Comparator:
         }
 
         for collect_type, values in filtered_flat_diff.items():
-            self.error_handler.add_error(
-                key=collect_type,
-                values=values
-            )
+            self.error_handler.add_error(collect_type, values)
                     
         return self.error_handler

@@ -4,7 +4,7 @@ conf/ms_controller.json:
       if: "${.} != 'pd_separate'"
       then:
         type: eq
-        value: "pd_disaggregation"  
+        value: "'pd_disaggregation'"  
       else: null
     reason: "多机PD分离场景下，deploy_mode应该是pd_separate或pd_disaggregation"
     severity: high
@@ -47,7 +47,7 @@ conf/ms_coordinator.json:
         if: "${.} != 'pd_separate'}"
         then:
           type: eq
-          value: "pd_disaggregation"  
+          value: "'pd_disaggregation'"  
         else: null
       reason: "多机PD分离场景下，deploy_mode应该是pd_separate或pd_disaggregation"
       severity: high
@@ -88,7 +88,7 @@ conf/config.json:
     inferMode:
       expected:
         type: eq
-        value: "dmi"
+        value: "'dmi'"
       reason: "PD分离场景下，inferMode应该是dmi"
       severity: high
     interCommTLSEnabled:

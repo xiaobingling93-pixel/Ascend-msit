@@ -58,7 +58,7 @@ sys:
   release:
     expected:
       type: "ge"
-      value: "'Version(5.10)'"
+      value: "Version(5.10)"
     reason: "升级到 5.10 以上，CPU 下发会加快，可以减少 host bound"
     severity: "low"
 
@@ -67,6 +67,6 @@ ascend:
     version:
       expected:
         type: "ge"
-        value: "'Version(24.1)'"
+        value: "Version(24.1)"
       reason: 升级到最新的驱动可以提升性能
       severity: "low"

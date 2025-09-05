@@ -3,7 +3,7 @@ ascend:
     version:
       expected:
         type: "ge"
-        value: "'Version(25.0)'"
+        value: "Version(25.0)"
       reason: VLLM 0.9.1 版本的大 EP 场景如果不升级最新驱动版本，可能会导致 dispatch_combine 等算子调用失败
       severity: "high"
 
@@ -79,6 +79,6 @@ sys:
   release:
     expected:
       type: "ge"
-      value: "'Version(5.10)'"
+      value: "Version(5.10)"
     reason: "升级到 5.10 以上，CPU 下发会加快，可以减少 host bound"
     severity: "low"

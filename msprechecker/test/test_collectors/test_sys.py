@@ -203,13 +203,13 @@ capacity: 1
         self.assertEqual(result.data, {"high_performance": False})
 
     @patch('msprechecker.collectors.sys.open_s', new_callable=mock_open, read_data="performance")
-    def test_scaling_governor_strategy_should_return_true_when_all_cpu_is_performance(self, mock_open):
+    def test_scaling_governor_strategy_should_return_true_when_all_cpu_is_performance(self, mock_open_s):
         collector = CPUHighPerformanceCollector(strategies=[ScalingGovernorStrategy()])
         result = collector.collect()
         self.assertEqual(result.data, {"high_performance": True})
     
     @patch('msprechecker.collectors.sys.open_s', new_callable=mock_open, read_data="不知道")
-    def test_scaling_governor_strategy_should_return_false_when_any_cpu_is_not_performance(self, mock_open):
+    def test_scaling_governor_strategy_should_return_false_when_any_cpu_is_not_performance(self, mock_open_s):
         collector = CPUHighPerformanceCollector(strategies=[ScalingGovernorStrategy()])
         result = collector.collect()
         self.assertEqual(result.data, {"high_performance": False})
@@ -221,8 +221,8 @@ capacity: 1
         self.assertEqual(result.data, {"high_performance": False})
     
     @patch('msprechecker.collectors.sys.open_s', new_callable=mock_open)
-    def test_scaling_governor_strategy_should_return_false_when_open_failed(self, mock_open):
-        mock_open.side_effect = RuntimeError("你错了")
+    def test_scaling_governor_strategy_should_return_false_when_open_failed(self, mock_open_s):
+        mock_open_s.side_effect = RuntimeError("你错了")
         collector = CPUHighPerformanceCollector(strategies=[ScalingGovernorStrategy()])
         result = collector.collect()
         self.assertEqual(result.data, {"high_performance": False})

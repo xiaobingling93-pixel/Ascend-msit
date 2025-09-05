@@ -21,7 +21,7 @@ mies_config:
     inferMode:
       expected:
         type: eq
-        value: "standard"
+        value: "'Standard'"
       reason: "PD混部场景下，inferMode应该是standard"
       severity: high
     interCommTLSEnabled:
@@ -55,7 +55,7 @@ mies_config:
           expected:
             case:
               type: path
-              value: exists
+              value: "'exists'"
             reason: "modelWeightPath需要配置为当前容器中挂载的模型权重路径"
             severity: high
         worldSize:
@@ -109,7 +109,7 @@ env:
       then:
         case:
           type: enum
-          value: ["'1'", "INFO"]
+          value: ["'1'", "'INFO'"]
         reason: "如果配置了MINDIE_LOG_LEVEL，建议设置为1或INFO，表示日志级别为info"
         severity: low
   

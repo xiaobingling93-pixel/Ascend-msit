@@ -23,6 +23,7 @@ def and_(a, b):
     "Same as a and b."
     return a and b
 
+
 def or_(a, b):
     "Same as a or b."
     return a or b
@@ -51,12 +52,12 @@ class Evaluator:
 
     # only cares about int, str and float
     _FUNC_REGEX = re.compile(
-        r'(?P<FUNC>float|int|str)\((?P<FUNC_ARG>[}{)(.-/\$\w\']+)\)'
+        r'(?P<FUNC>float|int|str)\((?P<FUNC_ARG>[}{)(-./\$\w\']+)\)'
     )
 
     _TOKEN_REGEX = re.compile(
         r'Version\((?P<VERSION_ARG>[\w.]+)\)'
-        r'|(?P<STR>\'[^\"]*\')'
+        r'|(?P<STR>\'[^\']+\')'
         r'|(?P<NUMBER>-?\b\d+(\.\d*)?\b)' # add boundary to avoid match numbers in path
         r'| (?P<OP>==|!=|>=|<=|\*\*|//|>|<|and|or|not|[+\-*/%]) ' # add space to avoid match path delimiter /
         r'|(?P<PARENTHESE>[)(])'
@@ -94,7 +95,6 @@ class Evaluator:
             result = cls._evaluate_rpn(rpn)
         except (ValueError, TypeError, ZeroDivisionError) as e:
             return expr
-            raise SyntaxError(f'Invalid expr "{expr}"') from e
         return result
 
     @classmethod
@@ -108,7 +108,7 @@ class Evaluator:
         """
         if depth >= cls.MAX_DEPTH:
             raise RuntimeError(f"Maximum recursion depth {cls.MAX_DEPTH} exceeded")
-        
+
         replacements = dict()
         for mo in cls._FUNC_REGEX.finditer(expr):
             func_name = mo.group('FUNC')
@@ -116,7 +116,7 @@ class Evaluator:
                 raise ValueError(f"Unknown function: {func_name}")
 
             func_arg = mo.group('FUNC_ARG')            
-            func_arg = cls._evaluate_nesting_func(func_arg ,depth + 1)
+            func_arg = cls._evaluate_nesting_func(func_arg, depth + 1)
             if isinstance(func_arg, str) and \
                 func_arg.startswith("'") and \
                 func_arg.endswith("'"):

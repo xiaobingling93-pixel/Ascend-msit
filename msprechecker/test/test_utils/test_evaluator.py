@@ -82,6 +82,6 @@ class TestEvaluator(unittest.TestCase):
             int(str(123)) == 123
         )
         self.assertEqual(
-            self.evaluator.evaluate("str($(MINDIE_USER_HOME_PATH)/Ascend)"),
-            "$(MINDIE_USER_HOME_PATH)/Ascend"
+            self.evaluator.evaluate("str($(MINDIE_USER_HOME_PATH)/Ascend/mindie-service)"),
+            "$(MINDIE_USER_HOME_PATH)/Ascend/mindie-service"
         )
