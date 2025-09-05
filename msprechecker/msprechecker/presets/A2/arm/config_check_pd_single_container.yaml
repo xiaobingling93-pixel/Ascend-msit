@@ -35,7 +35,7 @@ ref.global_host_model_path:
   expected:
     case:
       type: path
-      value: exists
+      value: "'exists'"
     reason: "deployment/mindie_service_single_container.yaml中，model-path挂载的宿主机路径需要存在"
     severity: high
 
@@ -51,7 +51,7 @@ conf/ms_controller.json:
   deploy_mode:
     expected:
       type: eq
-      value: "pd_disaggregation_single_container"
+      value: "'pd_disaggregation_single_container'"
     reason: "单机PD分离场景下，deploy_mode应该是pd_disaggregation_single_container"
     severity: high
   tls_config:
@@ -91,7 +91,7 @@ conf/ms_coordinator.json:
     deploy_mode:
       expected:
         type: eq
-        value: "pd_disaggregation_single_container"
+        value: "'pd_disaggregation_single_container'"
       reason: "单机PD分离场景下，deploy_mode应该是pd_disaggregation_single_container"
       severity: high
   tls_config:
@@ -131,7 +131,7 @@ conf/config.json:
     inferMode:
       expected:
         type: eq
-        value: "dmi"
+        value: "'dmi'"
       reason: "单机PD分离场景下，inferMode应该是dmi"
       severity: high
     interCommTLSEnabled:

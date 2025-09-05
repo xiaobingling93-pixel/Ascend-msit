@@ -166,13 +166,16 @@ class NodeChecker(BaseChecker):
 
         block = node['expected']
         result, reason, severity, suggest = self._process_block(block, path, visited_nodes)
-        
+        actual = visited_nodes[path]
+        if actual is None:
+            actual = "<missing>"
+
         if not result:
             self.error_handler.add_error(
                 path=path, reason=node.get('reason', reason),
                 severity=node.get('severity', severity),
                 expected=suggest,
-                actual=visited_nodes[path] or "<missing>"
+                actual=actual
             )
 
     def _process_block(self, block, path, visited_nodes):

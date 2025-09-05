@@ -251,11 +251,8 @@ class ConfigErrorHandler(ErrorHandler):
 
 
 class CompareErrorHandler(ErrorHandler):
-    def add_error(self, key: str, values: Dict[str, str]):
-        self._errors.append(CompareError(
-            key=key,
-            values=values
-        ))
+    def add_error(self, reason: str, severity: ErrorSeverity, **context):
+        self._errors.append(CompareError(reason, severity))
 
 
 def get_handler(error_type: ErrorType) -> ErrorHandler:
