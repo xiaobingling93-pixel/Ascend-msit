@@ -21,7 +21,7 @@ import torch
 import torch.nn.functional as F
 
 from ascend_utils.common.security import safe_copy_file
-from msmodelslim.app.base.const import PipelineType
+from msmodelslim.app.base.const import PipelineType, DeviceType
 from msmodelslim.app.quant_service.base import BaseModelAdapter, BaseQuantConfig, BaseQuantService
 from msmodelslim.app.quant_service.dataset_interface import DatasetLoaderInterface
 from msmodelslim.utils.logging import get_logger
@@ -107,6 +107,10 @@ class ModelslimV1QuantService(BaseQuantService):
         return self.quant_process(model, ModelslimV1QuantConfig.from_base(quant_config), save_path)
 
     def quant_process(self, model: BaseModelAdapter, quant_config: ModelslimV1QuantConfig, save_path: Optional[Path]):
+
+        if model.device == DeviceType.NPU:
+            # 如果使用npu进行量化需开启二进制编译，避免在线编译算子
+            torch.npu.set_compile_mode(jit_compile=False)
 
         # 选择 pipeline
         pipeline_type = self._setup_pipeline(model, quant_config)
