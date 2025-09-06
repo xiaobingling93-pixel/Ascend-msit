@@ -155,11 +155,14 @@ class DumperManager(nn.Module):
 def get_rank():
     """
     Get the rank of the current process.
+
+    Returns:
+        int: Non-negative rank (in default group) if distributed is initialized; -1 otherwise.
     """
     if torch.distributed.is_initialized():
         return torch.distributed.get_rank()
     else:
-        return 0
+        return -1
 
 
 def get_disable_layer_names(model: nn.Module,
@@ -216,3 +219,21 @@ def to_device(data, device, depth=0):
         return data.to(device)
     else:
         return data
+
+
+def get_rank_suffix_file(base_name, ext, is_distributed, rank):
+    """
+    生成带rank后缀的文件名，分布式环境下添加_rank标识，非分布式环境直接使用基础名称
+
+    参数:
+        base_name (str): 文件名基础部分（不含后缀）
+        ext (str): 文件后缀（不含小数点）
+        is_distributed (bool): 是否为分布式环境
+        rank (int): 当前进程的rank值（分布式环境下有效）
+
+    返回:
+        str: 处理后的完整文件名（含后缀）
+    """
+    if is_distributed:
+        return f"{base_name}_{rank}.{ext}"
+    return f"{base_name}.{ext}"

@@ -80,14 +80,16 @@ import torch
 
 from msmodelslim.quant import quant_model, SessionConfig
 from msmodelslim.quant import W8A8TimeStepProcessorConfig, W8A8TimeStepQuantConfig, SaveProcessorConfig
-from example.multimodal_sd.utils import get_disable_layer_names, get_rank, DumperManager
+from example.multimodal_sd.utils import get_disable_layer_names, get_rank, DumperManager, get_rank_suffix_file
 
 DUMP_CALIB_FOLDER = './results/quant/cache'  # 用于存放校准数据的文件夹
 SAFE_TENSOR_FOLDER = './results/quant/safe_tensor'  # 用于存放量化模型的文件夹
 
-dump_data_path = os.path.join(DUMP_CALIB_FOLDER, f'calib_data_{get_rank()}.pth')
-safe_tensor_path = os.path.join(SAFE_TENSOR_FOLDER, f'rank_{get_rank()}.safetensors')
+rank = get_rank()
+is_distributed = rank >= 0  # 标记是否为分布式环境
 
+dump_data_path = os.path.join(DUMP_CALIB_FOLDER, get_rank_suffix_file(base_name="calib_data", ext="pth",
+                                                                      is_distributed=is_distributed, rank=rank))
 
 ############################ 加载模型 ############################
 def load_pipeline():
@@ -114,8 +116,11 @@ if not os.path.exists(dump_data_path):  # 检查校准数据是否已存在，�
 
 ############################ 启动量化 ############################
 # 加载校准数据
-calib_dataset = torch.load(dump_data_path, map_location=f'npu:{get_rank()}')
-
+calib_dataset = torch.load(dump_data_path, map_location=f'npu:{rank if is_distributed else 0}')
+safetensors_name = get_rank_suffix_file(base_name='quant_model_weight_w8a8_timestep', ext='safetensors',
+                                        is_distributed=is_distributed, rank=rank)
+json_name = get_rank_suffix_file(base_name='quant_model_description_w8a8_timestep', ext='json',
+                                 is_distributed=is_distributed, rank=rank)
 # 量化配置
 session_cfg = SessionConfig(
     processor_cfg_map={
@@ -132,9 +137,9 @@ session_cfg = SessionConfig(
 
         ),
         "save": SaveProcessorConfig(
-            output_path=os.path.dirname(safe_tensor_path),
-            safetensors_name=os.path.basename(safe_tensor_path),
-            json_name=None,
+            output_path=SAFE_TENSOR_FOLDER,
+            safetensors_name=safetensors_name,
+            json_name=json_name,
             save_type=['safe_tensor'],
             part_file_size=None
         )
@@ -203,14 +208,16 @@ import torch
 
 from msmodelslim.quant import quant_model, SessionConfig
 from msmodelslim.quant import FA3ProcessorConfig, W8A8DynamicQuantConfig, W8A8DynamicProcessorConfig, SaveProcessorConfig
-from example.multimodal_sd.utils import get_disable_layer_names, get_rank, DumperManager
+from example.multimodal_sd.utils import get_disable_layer_names, get_rank, DumperManager, get_rank_suffix_file
 
 DUMP_CALIB_FOLDER = './results/quant/cache'  # 用于存放校准数据的文件夹
 SAFE_TENSOR_FOLDER = './results/quant/safe_tensor'  # 用于存放量化模型的文件夹
 
-dump_data_path = os.path.join(DUMP_CALIB_FOLDER, f'calib_data_{get_rank()}.pth')
-safe_tensor_path = os.path.join(SAFE_TENSOR_FOLDER, f'rank_{get_rank()}.safetensors')
+rank = get_rank()
+is_distributed = rank >= 0  # 标记是否为分布式环境
 
+dump_data_path = os.path.join(DUMP_CALIB_FOLDER, get_rank_suffix_file(base_name="calib_data", ext="pth",
+                                                                      is_distributed=is_distributed, rank=rank))
 
 ############################ 加载模型 ############################
 def load_pipeline():
@@ -237,8 +244,11 @@ if not os.path.exists(dump_data_path):  # 检查校准数据是否已存在，�
 
 ############################ 启动量化 ############################
 # 加载校准数据
-calib_dataset = torch.load(dump_data_path, map_location=f'npu:{get_rank()}')
-
+calib_dataset = torch.load(dump_data_path, map_location=f'npu:{rank if is_distributed else 0}')
+safetensors_name = get_rank_suffix_file(base_name='quant_model_weight_w8a8_dynamic', ext='safetensors',
+                                        is_distributed=is_distributed, rank=rank)
+json_name = get_rank_suffix_file(base_name='quant_model_description_w8a8_dynamic', ext='json',
+                                 is_distributed=is_distributed, rank=rank)
 # 量化配置
 session_cfg = SessionConfig(
     processor_cfg_map={
@@ -254,10 +264,10 @@ session_cfg = SessionConfig(
             ),
         ),
         "save": SaveProcessorConfig(
-            output_path=os.path.dirname(safe_tensor_path),
-            safetensors_name=os.path.basename(safe_tensor_path),
+            output_path=SAFE_TENSOR_FOLDER,
+            safetensors_name=safetensors_name,
+            json_name=json_name,
             save_type=["safe_tensor"],
-            json_name=None,
             part_file_size=None,
         )
     },
@@ -323,14 +333,16 @@ import torch
 from msmodelslim.quant import quant_model, SessionConfig
 from msmodelslim.quant import M3ProcessorConfig, M4ProcessorConfig, M6ProcessorConfig, W8A8DynamicQuantConfig, \
   W8A8DynamicProcessorConfig, SaveProcessorConfig
-from example.multimodal_sd.utils import get_disable_layer_names, get_rank, DumperManager
+from example.multimodal_sd.utils import get_disable_layer_names, get_rank, DumperManager, get_rank_suffix_file
 
 DUMP_CALIB_FOLDER = './results/quant/cache'  # 用于存放校准数据的文件夹
 SAFE_TENSOR_FOLDER = './results/quant/safe_tensor'  # 用于存放量化模型的文件夹
 
-dump_data_path = os.path.join(DUMP_CALIB_FOLDER, f'calib_data_{get_rank()}.pth')
-safe_tensor_path = os.path.join(SAFE_TENSOR_FOLDER, f'rank_{get_rank()}.safetensors')
+rank = get_rank()
+is_distributed = rank >= 0  # 标记是否为分布式环境
 
+dump_data_path = os.path.join(DUMP_CALIB_FOLDER, get_rank_suffix_file(base_name="calib_data", ext="pth",
+                                                                      is_distributed=is_distributed, rank=rank))
 
 ############################ 加载模型 ############################
 def load_pipeline():
@@ -357,8 +369,11 @@ if not os.path.exists(dump_data_path):  # 检查校准数据是否已存在，�
 
 ############################ 启动量化 ############################
 # 加载校准数据
-calib_dataset = torch.load(dump_data_path, map_location=f'npu:{get_rank()}')
-
+calib_dataset = torch.load(dump_data_path, map_location=f'npu:{rank if is_distributed else 0}')
+safetensors_name = get_rank_suffix_file(base_name='quant_model_weight_w8a8_dynamic', ext='safetensors',
+                                        is_distributed=is_distributed, rank=rank)
+json_name = get_rank_suffix_file(base_name='quant_model_description_w8a8_dynamic', ext='json',
+                                 is_distributed=is_distributed, rank=rank)
 # 量化配置
 session_cfg = SessionConfig(
     processor_cfg_map={
@@ -374,10 +389,10 @@ session_cfg = SessionConfig(
             ),
         ),
         "save": SaveProcessorConfig(
-            output_path=os.path.dirname(safe_tensor_path),
-            safetensors_name=os.path.basename(safe_tensor_path),
+            output_path=SAFE_TENSOR_FOLDER,
+            safetensors_name=safetensors_name,
+            json_name=json_name,
             save_type=["safe_tensor"],
-            json_name=None,
             part_file_size=None,
         )
     },
