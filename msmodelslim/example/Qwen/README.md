@@ -4,7 +4,6 @@
 - 千问（qwen）语言大模型是阿里巴巴集团推出的大型语言模型，具备强大的自然语言处理能力，能够理解和生成文本，应用于智能客服、内容生成、问答系统等多个场景，助力企业智能化升级。
 
 #### Qwen模型当前已验证的量化方法
-- W4A8 Dynamic 量化：Qwen3-32B
 - W8A8量化：Qwen-7B，Qwen-14B，Qwen1.5-14B，Qwen1.5-32B，Qwen2-7B，Qwen2-72B，Qwen2.5-7B，Qwen2.5-14B，Qwen2.5-32B，Qwen3-14B，Qwen3-32B，QwQ-32B
 - W8A16量化：Qwen-72B，Qwen1.5-72B，Qwen1.5-110B，Qwen2-72B
 - W4A4 Flatquant Dynamic量化：Qwen3-32B
@@ -212,27 +211,6 @@
   ```
 
 #### 5. Qwen3 系列
-##### Qwen3-32b W4A8 Dynamic 量化
-当传入 mindie_format 参数时，量化权重不会将 int4 打包成 int8，当不传入 mindie_format 参数时，量化权重将 int4 打包成 int8，减少存储空间，同时减少模型部署时加载时间。
-  ```shell
-  python quant_qwen.py \
-            --model_path {浮点权重路径} \
-            --save_directory {量化权重路径} \
-            --device_type npu \
-            --model_type qwen3 \
-            --calib_file None \
-            --anti_method m6 \
-            --anti_calib_file ./calib_data/mix_dataset.json \
-            --w_bit 4 \
-            --a_bit 8 \
-            --is_lowbit True \
-            --open_outlier False \
-            --group_size 256 \
-            --is_dynamic True \
-            --trust_remote_code True \
-            --w_method HQQ
-  ```
-
 ##### Qwen3-32B W8A8量化
 
 该模型的量化支持已经集成至[一键量化](https://gitee.com/ascend/msit/blob/master/msmodelslim/msmodelslim/app/naive_quantization/readme.md)。
