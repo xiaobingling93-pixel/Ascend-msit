@@ -129,7 +129,7 @@ class Qwen3ModelAdapter(DefaultModelAdapter, IterSmoothInterface, FlexSmoothQuan
     def get_adapter_config_for_subgraph(self) -> List[AdapterConfig]:
         adapter_config = []
         for layer_idx in range(self.config.num_hidden_layers):
-            # Norm-Linear融合的映射配置1：输入层归一化到QKV投影
+            # Norm-Linear的映射配置1：输入层归一化到QKV投影
             norm_linear_mapping_config1 = MappingConfig(
                 source=f"model.layers.{layer_idx}.input_layernorm",  # 第一个LayerNorm
                 targets=[f"model.layers.{layer_idx}.self_attn.k_proj",
@@ -137,20 +137,20 @@ class Qwen3ModelAdapter(DefaultModelAdapter, IterSmoothInterface, FlexSmoothQuan
                          f"model.layers.{layer_idx}.self_attn.v_proj"]  # 注意力层的QKV投影
             )
 
-            # Norm-Linear融合的映射配置2：后注意力层归一化到MLP投影
+            # Norm-Linear的映射配置2：后注意力层归一化到MLP投影
             norm_linear_mapping_config2 = MappingConfig(
                 source=f"model.layers.{layer_idx}.post_attention_layernorm",  # 第二个LayerNorm
                 targets=[f"model.layers.{layer_idx}.mlp.gate_proj",
                          f"model.layers.{layer_idx}.mlp.up_proj"]  # MLP层的门控和上投影
             )
 
-            # OV融合的映射配置（QKV到输出投影）
+            # OV的映射配置（QKV到输出投影）
             ov_mapping_config = MappingConfig(
                 source=f"model.layers.{layer_idx}.self_attn.v_proj",  # V投影层
                 targets=[f"model.layers.{layer_idx}.self_attn.o_proj"]  # 输出投影层
             )
 
-            # Up-Down融合的映射配置
+            # Up-Down的映射配置
             up_down_mapping_config = MappingConfig(
                 source=f"model.layers.{layer_idx}.mlp.up_proj",  # 上投影层
                 targets=[f"model.layers.{layer_idx}.mlp.down_proj"]  # 下投影层

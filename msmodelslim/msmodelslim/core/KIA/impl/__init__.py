@@ -13,5 +13,5 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from . import iter_smooth, flex_smooth_quant
-from . import int8
+from . import int_quantization
 from . import kia_main

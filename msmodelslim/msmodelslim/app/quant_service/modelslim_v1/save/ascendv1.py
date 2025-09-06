@@ -30,6 +30,7 @@ from msmodelslim.utils.dist import DistHelper
 from .saver import AutoSaverProcessor, AutoSaverBaseConfig
 from .utils.json import JsonWriter
 from .utils.safetensors import SafetensorsWriter, BufferedSafetensorsWriter
+from .utils.pack import w4a8_pack_int4
 
 
 class ValidJsonExt:
@@ -234,6 +235,18 @@ class AscendV1Saver(AutoSaverProcessor):
             if module.bias is not None:
                 self.write_tensor(prefix + ".bias", "W8A8_DYNAMIC", module.bias.to(torch.float32))
             self.model_quant_type = "W8A8_DYNAMIC"
+
+    @save_this_rank_only()
+    def on_w4a8_dynamic(self, prefix: str, module: qir.W4A8DynamicFakeQuantLinear):
+        with torch.device(module.weight.device):
+            weight_scale = module.weight_scale.unsqueeze(-1)
+            weight_offset = module.weight_offset.unsqueeze(-1)
+            self.write_tensor(prefix + ".weight", "W4A8_DYNAMIC", w4a8_pack_int4(module.weight.to(torch.int8)))
+            self.write_tensor(prefix + ".weight_scale", "W4A8_DYNAMIC", weight_scale.to(torch.float32))
+            self.write_tensor(prefix + ".weight_offset", "W4A8_DYNAMIC", weight_offset.to(torch.float32))
+            if module.bias is not None:
+                self.write_tensor(prefix + ".bias", "W4A8_DYNAMIC", module.bias.to(torch.float32))
+            self.model_quant_type = "W4A8_DYNAMIC"
 
     @save_this_rank_only()
     def on_float_linear(self, prefix: str, module: nn.Linear):

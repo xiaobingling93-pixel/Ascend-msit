@@ -67,6 +67,7 @@ class AutoSaverProcessor(AutoSessionProcessor):
         self.process_map: Dict[Type[nn.Module], Callable[[str, nn.Module], None]] = {
             qir.W8A8StaticFakeQuantLinear: self.on_w8a8_static,
             qir.W8A8DynamicFakeQuantLinear: self.on_w8a8_dynamic,
+            qir.W4A8DynamicFakeQuantLinear: self.on_w4a8_dynamic,
             nn.Linear: self.on_float_linear,
             nn.Module: self.on_float_module,
             qir.FakeQuantDynamicCache: self.on_dynamic_cache,
@@ -123,6 +124,9 @@ class AutoSaverProcessor(AutoSessionProcessor):
 
     def on_w8a8_dynamic(self, prefix: str, module: qir.W8A8DynamicFakeQuantLinear):
         raise NotImplementedError(f"You should implement the on_w8a8_dynamic method for {self.__class__.__name__}")
+
+    def on_w4a8_dynamic(self, prefix: str, module: qir.W4A8DynamicFakeQuantLinear):
+        raise NotImplementedError(f"You should implement the on_w4a8_dynamic method for {self.__class__.__name__}")
 
     def on_float_linear(self, prefix: str, module: nn.Linear):
         raise NotImplementedError(f"You should implement the on_linear method for {self.__class__.__name__}")

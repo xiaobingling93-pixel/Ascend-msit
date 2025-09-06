@@ -24,6 +24,7 @@ class QDType(Enum):
     FLOAT = "float"
 
     INT8 = "int8"
+    INT4 = "int4"
 
     PLACEHOLDER = "placeholder"
 
@@ -94,7 +95,7 @@ class QStorage:
         if self.dtype == QDType.FLOAT:
             self.value = self.value.to(_TORCH_FLOAT_TYPE)
 
-        if self.dtype in [QDType.INT8]:
+        if self.dtype in [QDType.INT8, QDType.INT4]:
             self.value = self.value.to(torch.int8)
 
         return self
