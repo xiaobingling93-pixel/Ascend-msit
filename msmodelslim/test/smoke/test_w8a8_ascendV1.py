@@ -53,6 +53,7 @@ class TestW8A8AscendV1Quantization(TestW8A8Quantization):
             config_data = json.load(f)
 
         expected_config_data = {
+            "0.bias": "W8A8",
             "0.weight": "W8A8",
             "0.input_scale": "W8A8",
             "0.input_offset": "W8A8",
@@ -60,6 +61,7 @@ class TestW8A8AscendV1Quantization(TestW8A8Quantization):
             "0.quant_bias": "W8A8",
             "1.weight": "FLOAT",
             "1.bias": "FLOAT",
+            "2.bias": "W8A8",
             "2.weight": "W8A8",
             "2.input_scale": "W8A8",
             "2.input_offset": "W8A8",

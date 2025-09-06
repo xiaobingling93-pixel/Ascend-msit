@@ -33,10 +33,6 @@ from .utils.safetensors import SafetensorsWriter, BufferedSafetensorsWriter
 from .utils.pack import w4a8_pack_int4
 
 
-class ValidJsonExt:
-    JSON_APPEND = "json_append"
-
-
 class AscendV1Config(AutoSaverBaseConfig):
     """
     ascendV1 量化模型保存器配置。该配置用于配置ascendV1量化模型保存器。
@@ -222,6 +218,8 @@ class AscendV1Saver(AutoSaverProcessor):
             self.write_tensor(prefix + ".input_scale", "W8A8", input_scale.to(torch.float32))
             self.write_tensor(prefix + ".input_offset", "W8A8", input_offset.to(torch.float32))
             self.write_tensor(prefix + ".deq_scale", "W8A8", deq_scale.to(torch.float32))
+            if module.bias is not None:
+                self.write_tensor(prefix + ".bias", "W8A8", module.bias.to(torch.float32))
             self.model_quant_type = "W8A8"
 
     @save_this_rank_only()
