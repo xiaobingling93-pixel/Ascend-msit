@@ -332,7 +332,7 @@ def cal_total_block_num(npu_mem_size, server_params, model_params):
             raise ValueError(f'Invaild num_attention_heads.')
         attention_head_size = hidden_size / num_attention_heads / tp
         attention_size = attention_head_size * num_key_value_heads
-    logger.debug(f"attention_size:{attention_size}")
+    logger.debug(f"attention_size: {attention_size}")
 
     denominator = num_hidden_layers * cache_block_sizes * attention_size * torch_dtype_size * 2
     if denominator <= 0:
@@ -407,25 +407,25 @@ def find_max_batch_size_range(server_config, benchmark, input_params):
     input_token_num, avg_token_num = extract_token_num(benchmark, input_params)
 
     if not server_config:
-        logger.warning(f"service_config_path is required calculating model weight size and others. Skipping now")
+        logger.warning(f"service_config_path is required calculating model weight size and others. Skipping now.")
         return
 
     # get server info from server config.json
     try:
         server_params = extract_server_config_params(server_config, input_params.output_token_num, input_params.tp)
     except Exception as e:
-        logger.warning(f"Skip npu memory analyze due to {e}, please check mindie-server config content.")
+        logger.warning(f"Extract server config params failed due to {e}. Skipping now.")
         return
     
     if "model_weight_path" not in server_params:
-        logger.warning(f"model_weight_path not found in content of service_config_path. Skipping now")
+        logger.warning(f"model_weight_path not found in service config.json. Skipping now.")
         return
     
     # get model info from model config.json
     try:
         model_params, model_weight_size = extract_model_config_params(server_params["model_weight_path"])
     except Exception as e:
-        logger.warning(f"Skip npu memory analyze due to invaild model weight. {e}")
+        logger.warning(f"Invaild model weight due to {e}. Skipping now.")
         return
 
     # caculate npu memory
@@ -434,7 +434,7 @@ def find_max_batch_size_range(server_config, benchmark, input_params):
         total_block_num = cal_total_block_num(npu_mem_size, server_params, model_params)
         logger.debug(f"total_block_num:{total_block_num}")
     except Exception as e:
-        logger.warning(f"Skip npu memory analyze due to npu memory calculation failed. {e}")
+        logger.warning(f"Npu memory calculation failed due to {e}. Skipping now.")
         return
     
     # caculate block numbers
