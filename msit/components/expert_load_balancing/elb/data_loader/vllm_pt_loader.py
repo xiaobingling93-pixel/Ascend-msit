@@ -26,7 +26,7 @@ class VllmTensorLoader(BaseDataLoader):
         target_file = target_files.get("decode")
         target_file = get_valid_read_path(target_file)
         try:
-            target_data = torch.load(target_file, weight_only=True, map_location="cpu")
+            target_data = torch.load(target_file, weights_only=True, map_location="cpu")
         except Exception as e:
             raise ValueError("Loading from pt file failed, please check input file path,") from e
         target_data = target_data.numpy()
