@@ -52,6 +52,14 @@ class TestMapParamWithValueRealFields(unittest.TestCase):
                                config_position="BackendConfig.ScheduleConfig.maxPreemptCount", 
                                min=0, max=1, dtype="ratio", dtype_param="max_batch_size")
         ]
+        self.pd_field = [
+            OptimizerConfigField(name="default_p_rate", 
+                               config_position="default_p_rate", 
+                               min=1, max=3, dtype="int", value=1),
+            OptimizerConfigField(name="default_d_rate", 
+                               config_position="default_d_rate", 
+                               min=1, max=3, dtype="share", dtype_param="default_p_rate"),
+        ]
 
     def test_int_type_with_min_max(self):
         # 测试 int 类型（带 min/max 约束）
@@ -93,6 +101,11 @@ class TestMapParamWithValueRealFields(unittest.TestCase):
         
         result = map_param_with_value(params, [max_batch_size_field])
         self.assertEqual(result[0].value, 0)  
+    
+    def test_share_type_mapping(self):
+        params = np.array([1, 2])
+        share_ratio = map_param_with_value(params, self.pd_field)
+        self.assertEqual(share_ratio[1].value, 3)
 
     def test_edge_cases(self):
         # 测试边界条件
