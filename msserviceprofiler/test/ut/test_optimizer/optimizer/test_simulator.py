@@ -18,12 +18,13 @@ import subprocess
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-
+import shutil
 import pytest
 
 import msserviceprofiler.modelevalstate
-from msserviceprofiler.modelevalstate.config.config import settings
-from msserviceprofiler.modelevalstate.optimizer.simulator import Simulator, VllmSimulator, enable_simulate
+from msserviceprofiler.modelevalstate.config.config import settings, OptimizerConfigField, KubectlConfig
+from msserviceprofiler.modelevalstate.optimizer.simulator import Simulator, VllmSimulator, enable_simulate,\
+      DisaggregationSimulator
 
 
 class TestSimulate(unittest.TestCase):
@@ -146,3 +147,116 @@ def test_enable_simulate_with_simulator_plugin_params_exists(tmpdir, monkeypatch
     with open(config_path, 'r') as f:
         data = json.load(f)
         assert data["BackendConfig"]["ModelDeployConfig"]["ModelConfig"][0]["plugin_params"] == '{"plugin_type":"tp"}'
+
+
+class TestDisaggregationSimulator(unittest.TestCase):
+    def setUp(self):
+        # 创建临时测试环境
+        self.test_dir = Path("conf")
+        self.test_dir.mkdir(exist_ok=True)
+
+        self.config_single_path = self.test_dir / "config.json"
+        data = {
+            "BackendConfig": {
+                "backendName": "mindieservice_llm_engine",
+                "ModelDeployConfig": {
+                    "maxSeqLen": 2560,
+                    "ModelConfig": [
+                        {
+                            "modelInstanceType": "Standard",
+                            "plugin_params": "{\"plugin_type\":\"tp\"}"
+                        }
+                    ]
+
+                },
+                "ScheduleConfig": {
+                    "templateType": "Standard"
+                }
+            }
+        }
+        with open(self.config_single_path, 'w') as f:
+            json.dump(data, f)
+        pd_data = {
+            "default_p_rate": 1,
+            "default_d_rate": 3
+        }
+        self.config_single_pd_path = self.test_dir / "ms_controller.json"
+        with open(self.config_single_pd_path, 'w') as fout:
+            json.dump(pd_data, fout)
+        self.config_single_bak_path = self.test_dir / "config_bak.json"
+        self.config_single_pd_path = self.test_dir / "ms_controller.json"
+
+
+    def tearDown(self):
+        # 清理临时目录
+        shutil.rmtree(self.test_dir)
+
+    def test_set_config_dict(self):
+        origin_config = {"a": {"b": {"c": 3}}}
+        DisaggregationSimulator.set_config(origin_config, "a.b.c", 4)
+        assert origin_config["a"]["b"]["c"] == 4
+
+    def test_set_config_list(self):
+        origin_config = {"a": {"b": [{"c": 3}]}}
+        DisaggregationSimulator.set_config(origin_config, "a.b.0.c", 4)
+        assert origin_config["a"]["b"][0]["c"] == 4
+
+    def test_set_config_new_key(self):
+        origin_config = {"a": {"b": [{"c": 3}]}}
+        DisaggregationSimulator.set_config(origin_config, "a.b.0.d", 4)
+        assert origin_config["a"]["b"][0]["d"] == 4
+
+    def test_set_config_add_dict_list_dict(self):
+        origin_config = {"a": {"b": {"c": 3}}}
+        DisaggregationSimulator.set_config(origin_config, "a.d.0.c", 4)
+        assert origin_config["a"]["d"][0]["c"] == 4
+
+    def test_set_config_add_dict(self):
+        origin_config = {"a": {"b": [{"c": 3}]}}
+        DisaggregationSimulator.set_config(origin_config, "a.b.1.c", 4)
+        assert origin_config["a"]["b"][1]["c"] == 4
+
+    def test_set_config_add_dict_list_dict_dict(self):
+        origin_config = {"a": {"b": [{"c": 3}]}}
+        DisaggregationSimulator.set_config(origin_config, "a.d.0.c.e", 4)
+        assert origin_config["a"]["d"][0]["c"]["e"] == 4
+
+    @patch('msserviceprofiler.modelevalstate.optimizer.simulator.logger')
+    def test_is_int(self, mock_logger):
+        # 测试is_int方法
+        self.assertTrue(DisaggregationSimulator.is_int('123'))
+        self.assertFalse(DisaggregationSimulator.is_int('abc'))
+
+    @patch('msserviceprofiler.modelevalstate.optimizer.simulator.subprocess')
+    @patch('msserviceprofiler.modelevalstate.optimizer.simulator.logger')
+    def test_prepare_before_start_server(self, mock_logger, mock_subprocess):
+        # 测试prepare_before_start_server方法
+        mindie_config = KubectlConfig()
+        simulator = DisaggregationSimulator(mindie_config)
+        simulator.prepare_before_start_server()
+        # 验证子进程是否正确运行
+        mock_subprocess.run.assert_called()
+        # 验证日志记录是否正确
+        mock_logger.info.assert_called()
+
+    @patch('msserviceprofiler.modelevalstate.optimizer.simulator.logger')
+    def test_backup(self, mock_logger):
+        # 测试backup方法
+        mindie_config = KubectlConfig()
+        bak_path = Path('/path/to/bak')
+        simulator = DisaggregationSimulator(mindie_config, bak_path)
+        simulator.backup()
+        # 验证日志记录是否正确
+        mock_logger.info.assert_called()
+
+    @patch('msserviceprofiler.modelevalstate.optimizer.simulator.logger')
+    def test_stop(self, mock_logger):
+        # 测试stop方法
+        mindie_config = KubectlConfig()
+        simulator = DisaggregationSimulator(mindie_config)
+        simulator.stop()
+        # 验证日志记录是否正确
+        mock_logger.info.assert_called()
+
+if __name__ == '__main__':
+    unittest.main()
