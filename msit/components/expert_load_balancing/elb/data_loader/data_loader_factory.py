@@ -39,7 +39,7 @@ class DataLoaderFactory:
     
 
 def load_data(args):
-    file_path = get_valid_read_path(args.expert_popularity_csv_load_path, is_dir=True)
+    file_path = get_valid_read_path(args.expert_popularity_csv_load_path)
     data_type, files = DataLoaderFactory.create_loader(file_path)
     data_loader = DataLoaderFactory.FactoryMap[data_type]
     data_loader = data_loader(args)
