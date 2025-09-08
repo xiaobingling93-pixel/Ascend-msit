@@ -33,8 +33,8 @@ def test_init(tmpdir):
     assert comm.res_file_lock.stat().st_mtime == old_res_lock_mtime
 
     # 测试timeout参数是否正确设置
-    comm = CommunicationForFile(cmd_file, res_file, timeout=200)
-    assert comm.timeout == 200
+    comm = CommunicationForFile(cmd_file, res_file, timeout=30)
+    assert comm.timeout == 30
 
 
 class TestCommunicationForFile:
