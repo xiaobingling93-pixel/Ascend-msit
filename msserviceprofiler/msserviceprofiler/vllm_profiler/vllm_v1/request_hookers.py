@@ -11,8 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import os
-import time
 
 from ms_service_profiler import Profiler, Level
 from ..module_hook import vllm_hook
@@ -21,7 +19,7 @@ from ..module_hook import vllm_hook
 @vllm_hook(("vllm.engine.async_llm_engine", "AsyncLLMEngine.add_request"), min_version="0.9.1")
 async def add_request_async(original_func, this, request_id, prompt, *args, **kwargs):
     Profiler(Level.INFO).domain("Request").res(request_id).event("httpReq")
-    Profiler(Level.INFO).domain("Request").res(request_id).event("encode")
+    Profiler(Level.INFO).domain("Request").res(request_id).event("tokenize")
     return await original_func(this, request_id, prompt, *args, **kwargs)
 
 
@@ -41,11 +39,11 @@ def process_outputs(original_func, this, engine_core_outputs, *args, **kwargs):
             
             profiler = Profiler(Level.INFO).domain("Request").res(request_id)
             profiler = profiler.\
-                metric_scope("recvTokenSize", recv_token_size).\
-                metric_scope("replyTokenSize", reply_token_size)
+                metric("recvTokenSize", recv_token_size).\
+                metric("replyTokenSize", reply_token_size)
             profiler.event("httpRes")
 
     ret = original_func(this, engine_core_outputs, *args, **kwargs)
     prof = Profiler(Level.INFO).domain("Request").res(request_id_list)
-    prof.event("DecodeEnd")
+    prof.event("detokenize")
     return ret

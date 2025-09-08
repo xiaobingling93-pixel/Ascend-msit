@@ -21,7 +21,7 @@ from ..module_hook import vllm_hook
 def prof_add_request(request_id, prompt, *args, **kwargs):
     # 记录请求进入系统的时间
     Profiler(Level.INFO).domain("Request").res(request_id).event("httpReq")
-    Profiler(Level.INFO).domain("Request").res(request_id).event("encode")
+    Profiler(Level.INFO).domain("Request").res(request_id).event("tokenize")
 
 
 # generate -> add_request -> schedule -> execute_model
@@ -73,7 +73,7 @@ def process_model_outputs(original_func, this, ctx, request_id=None, *args, **kw
             profiler_reply.metric("replyTokenSize", cur_seq.get_output_len()).event("httpRes")
 
     prof = Profiler(Level.INFO).domain("Request").res(request_id_list)
-    prof.event("DecodeEnd")
+    prof.event("detokenize")
     return ret
 
 
