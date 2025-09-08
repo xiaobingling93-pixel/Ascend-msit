@@ -107,14 +107,14 @@ def test_process_outputs_given_finished_request_when_called_then_httpres_logged_
     assert http_res_calls == [
         ("domain", "Request"),
         ("res", "req_finished"),
-        ("metric_scope", "recvTokenSize", 3),
-        ("metric_scope", "replyTokenSize", 5),
+        ("metric", "recvTokenSize", 3),
+        ("metric", "replyTokenSize", 5),
         ("event", "httpRes"),
     ]
 
-    # DecodeEnd calls
+    # detokenize calls
     decode_calls = Profiler.instance_calls[1]
-    assert decode_calls == [("domain", "Request"), ("res", ["req_finished"]), ("event", "DecodeEnd")]
+    assert decode_calls == [("domain", "Request"), ("res", ["req_finished"]), ("event", "detokenize")]
 
 
 def test_process_outputs_given_unfinished_request_when_httpres_not_logged():
@@ -126,10 +126,10 @@ def test_process_outputs_given_unfinished_request_when_httpres_not_logged():
     # Execute
     request_hookers.process_outputs(original_func, mock_this, [mock_output])
 
-    # Verify - Only DecodeEnd should be logged
+    # Verify - Only detokenize should be logged
     assert len(Profiler.instance_calls) == 1
     decode_calls = Profiler.instance_calls[0]
-    assert decode_calls[-1] == ("event", "DecodeEnd")
+    assert decode_calls[-1] == ("event", "detokenize")
 
 
 def test_process_outputs_given_missing_request_state_when_httpres_not_logged():
@@ -143,7 +143,7 @@ def test_process_outputs_given_missing_request_state_when_httpres_not_logged():
 
     # Verify
     assert len(Profiler.instance_calls) == 1
-    assert Profiler.instance_calls[0][-1] == ("event", "DecodeEnd")
+    assert Profiler.instance_calls[0][-1] == ("event", "detokenize")
 
 
 def test_process_outputs_given_missing_stats_when_none_reply_tokens():
@@ -157,7 +157,7 @@ def test_process_outputs_given_missing_stats_when_none_reply_tokens():
 
     # Verify
     http_res_calls = Profiler.instance_calls[0]
-    metrics = [call[1:] for call in http_res_calls if call[0] == "metric_scope"]
+    metrics = [call[1:] for call in http_res_calls if call[0] == "metric"]
     assert metrics == [("recvTokenSize", 3), ("replyTokenSize", None)]  # Missing stats
 
 
@@ -175,7 +175,7 @@ def test_process_outputs_given_multiple_requests_then_events_logged():
     request_hookers.process_outputs(original_func, mock_this, outputs)
 
     # Verify
-    assert len(Profiler.instance_calls) == 3  # 2 httpRes + 1 DecodeEnd
+    assert len(Profiler.instance_calls) == 3  # 2 httpRes + 1 detokenize
 
     # First httpRes
     assert Profiler.instance_calls[0][1][1] == "req_finished1"  # res ID
@@ -185,7 +185,7 @@ def test_process_outputs_given_multiple_requests_then_events_logged():
     assert Profiler.instance_calls[1][1][1] == "req_finished2"
     assert Profiler.instance_calls[1][-1] == ("event", "httpRes")
 
-    # DecodeEnd with all request IDs
+    # detokenize with all request IDs
     decode_end_res = Profiler.instance_calls[2][1][1]
     assert set(decode_end_res) == {"req_finished1", "req_unfinished", "req_finished2"}
 

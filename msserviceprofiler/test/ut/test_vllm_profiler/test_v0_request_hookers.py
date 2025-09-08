@@ -44,7 +44,7 @@ def test_prof_add_request_given_valid_input_when_called_then_logs_events():
     assert ("res", "req123") in Profiler.instance_calls[0]
     assert ("event", "httpReq") in Profiler.instance_calls[0]
     # Second call chain
-    assert ("event", "encode") in Profiler.instance_calls[1]
+    assert ("event", "tokenize") in Profiler.instance_calls[1]
 
 
 @pytest.mark.parametrize("func_name", ["add_request_063", "add_request_084"])
@@ -108,7 +108,7 @@ def test_process_model_outputs_given_non_empty_queue_and_finished_seq_when_calle
     ]
     assert ("metric", "recvTokenSize", 10) in flat_calls
     assert ("metric", "replyTokenSize", 5) in flat_calls
-    assert ("event", "DecodeEnd") in flat_calls
+    assert ("event", "detokenize") in flat_calls
 
 
 def test_process_model_outputs_given_skip_index_when_called_then_skips_token_metrics():
@@ -122,12 +122,12 @@ def test_process_model_outputs_given_skip_index_when_called_then_skips_token_met
     ctx = make_ctx([(None, [meta], scheduler_outputs, None, None, None, skip)])
     result = request_hookers.process_model_outputs(original_func, object(), ctx)
     assert result == "res-skip"
-    # Should have no metric logs but still DecodeEnd
+    # Should have no metric logs but still detokenize
     flat_calls = [
         item for chain in Profiler.instance_calls for item in chain
     ]
     assert ("metric", "recvTokenSize", 3) not in flat_calls
-    assert ("event", "DecodeEnd") in flat_calls
+    assert ("event", "detokenize") in flat_calls
 
 
 def test_validate_output_given_finished_true_when_called_then_logs_and_returns():
