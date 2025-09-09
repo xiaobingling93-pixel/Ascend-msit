@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from pathlib import Path
+import math
 
 import numpy as np
 import pandas as pd
@@ -95,6 +96,10 @@ def process_batch_record(batch_map, record):
         batch_map[decode_key][BatchCSVFields.DECODE_EXEC_TIME] += during_time
 
 
+def is_valid_number(x):
+    return x is not None and not (isinstance(x, float) and math.isnan(x))
+
+
 def process_req_record(req_map, record):
     name = record.get('name')
     rid = record.get('rid')
@@ -141,9 +146,9 @@ def process_req_record(req_map, record):
         entry['req_pending_time'] = record.get('during_time', 0.0)
 
     # 处理Token数量
-    if recv_token is not None:
+    if is_valid_number(recv_token):
         entry['input_token_num'] = recv_token
-    if reply_token is not None:
+    if is_valid_number(reply_token):
         entry['generated_token_num'] = reply_token
 
     # 处理rid_list和token_id_list
@@ -397,10 +402,22 @@ def save_dataframe_to_csv(map_data, output, file_name, include_stats=1):
     # 将map_data转换为DataFrame
     df = convert_map_to_dataframe(map_data, include_stats)
 
-    # 保存到csv
-    with open_s(file_path, "w") as f:
-        df.to_csv(f, index=False)
-        logger.info(f"Write to {file_name} success.")
+    # 处理数据转换
+    value_columns = df.columns.drop(METRIC_COLUMN, errors="ignore")
+    df[value_columns] = df[value_columns].fillna(0)
+    for col in value_columns:
+        try:
+            df[col] = pd.to_numeric(df[col])
+        except (ValueError, TypeError):
+            pass
+
+    # 写入CSV文件
+    try:
+        with open_s(file_path, "w") as f:
+            df.to_csv(f, index=False)
+            logger.info(f"Write to {file_name} success.")
+    except Exception as e:
+        logger.warning(f"Failed to write to {file_name}, {e}")
 
 
 def convert_map_to_dataframe(map_data, include_stats):
