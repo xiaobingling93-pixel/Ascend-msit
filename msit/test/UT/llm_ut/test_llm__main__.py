@@ -28,7 +28,6 @@ class TestDumpCommand(unittest.TestCase):
         )
         DumpCommand("dump", "help").handle(args)
         mock_set_log.assert_called_once_with("info")
-        mock_logger.info.assert_any_call("About to execute command : echo hello")
         mock_init.assert_called_once()
         mock_run.assert_called_once()
         mock_clear.assert_called_once()

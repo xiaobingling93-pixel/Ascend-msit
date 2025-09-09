@@ -26,6 +26,7 @@ import numpy as np
 import pandas as pd
 import torch
 
+from components.utils.file_utils import FileChecker
 from msit_llm.compare.cmp_utils import BasicDataInfo
 from msit_llm.common.constant import (TOKEN_ID, DATA_ID, GOLDEN_DATA_PATH, MY_DATA_PATH,
                                       CMP_FAIL_REASON, GOLDEN_DTYPE, GOLDEN_SHAPE,
@@ -39,6 +40,18 @@ from msit_llm.compare.cmp_utils import (fill_row_data, load_as_torch_tensor,
                                          read_csv_statistics, read_bin_statictics, convert_dict_values_to_fp32,
                                          compare_data_statistics, fill_row_data_statistics,
                                          save_statistics_compare_reault_to_csv, save_compare_reault_to_xlsx)
+
+ori_file_common_check = FileChecker.common_check
+
+
+def mock_file_common_check():
+    def common_check(self):
+        pass
+    setattr(FileChecker, 'common_check', common_check)
+
+
+def recover_file_common_check():
+    setattr(FileChecker, 'common_check', ori_file_common_check)
 
 
 @pytest.fixture(scope='module', autouse=True)
@@ -72,58 +85,76 @@ def unvalid_data_path2():
 
 
 def test_get_token_id_from_golden_data_path(golden_data_path, my_data_path):
+    mock_file_common_check()
     data_info = BasicDataInfo(my_data_path, golden_data_path)
+    recover_file_common_check()
     assert data_info.token_id == 1
 
 
 def test_get_token_id_from_my_data_path(golden_data_path, my_data_path):
+    mock_file_common_check()
     data_info = BasicDataInfo(golden_data_path, my_data_path)
+    recover_file_common_check()
     assert data_info.token_id == 2
 
 
 def test_get_token_id_from_golden_data_path_sub(golden_data_path, my_data_path, sub_path):
     my_data_path = os.path.join(my_data_path, sub_path)
     golden_data_path = os.path.join(golden_data_path, sub_path)
+    mock_file_common_check()
     data_info = BasicDataInfo(my_data_path, golden_data_path)
+    recover_file_common_check()
     assert data_info.token_id == 1
 
 
 def test_get_token_id_from_my_data_path_sub(golden_data_path, my_data_path, sub_path):
     my_data_path = os.path.join(my_data_path, sub_path)
     golden_data_path = os.path.join(golden_data_path, sub_path)
+    mock_file_common_check()
     data_info = BasicDataInfo(golden_data_path, my_data_path)
+    recover_file_common_check()
     assert data_info.token_id == 2
 
 
 def test_get_token_id_unvalid1(golden_data_path, unvalid_data_path1):
+    mock_file_common_check()
     data_info = BasicDataInfo(golden_data_path, unvalid_data_path1)
+    recover_file_common_check()
     assert data_info.token_id == 0
 
 
 def test_get_token_id_unvalid2(golden_data_path, unvalid_data_path2):
+    mock_file_common_check()
     data_info = BasicDataInfo(golden_data_path, unvalid_data_path2)
+    recover_file_common_check()
     assert data_info.token_id == 0
 
 
 def test_given_token_id_data_id(golden_data_path, my_data_path):
+    mock_file_common_check()
     data_info = BasicDataInfo(golden_data_path, my_data_path, token_id=3, data_id=4)
+    recover_file_common_check()
     assert data_info.token_id == 3
     assert data_info.data_id == 4
 
 
 def test_given_data_id(golden_data_path, my_data_path):
+    mock_file_common_check()
     data_info = BasicDataInfo(golden_data_path, my_data_path, data_id=4)
+    recover_file_common_check()
     assert data_info.token_id == 2
     assert data_info.data_id == 4
 
 
 def test_given_token_id(golden_data_path, my_data_path):
     BasicDataInfo.count_data_id = 0
+    mock_file_common_check()
     data_info1 = BasicDataInfo(golden_data_path, my_data_path, token_id=3)
     assert data_info1.token_id == 3
     assert data_info1.data_id == 0
 
     data_info1 = BasicDataInfo(golden_data_path, my_data_path, token_id=4)
+    recover_file_common_check()
     assert data_info1.token_id == 4
     assert data_info1.data_id == 1
 

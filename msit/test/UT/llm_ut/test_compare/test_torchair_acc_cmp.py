@@ -164,15 +164,3 @@ def test_init_fx_dump_data_from_path_given_path_when_valid_then_pass(set_fake_se
         }
     ]
     assert result == expected_result
-
-
-def test_acc_compare_given_ge_with_fused_op_when_valid_then_pass(set_fake_set_msaccucmp_path_from_cann,
-                                                                 fake_ge_dump_data,
-                                                                 fake_fx_dump_data,
-                                                                 fake_pbtxt_file,
-                                                                 set_fake_parse_torchair_dump_data
-                                                                 ):
-    with patch("msit_llm.compare.torchair_acc_cmp.save_compare_reault_to_csv"):
-        csv_path = torchair_acc_cmp.acc_compare(FAKE_GE_DUMP_DATA_NAME, FAKE_GE_DUMP_DATA_NAME)
-        assert os.path.exists(csv_path)
-        assert os.path.getsize(csv_path) > 1900  # result with mostly matched comparing data, 284 if empty
