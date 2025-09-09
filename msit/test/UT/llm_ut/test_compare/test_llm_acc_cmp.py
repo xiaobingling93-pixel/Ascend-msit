@@ -8,13 +8,25 @@ import pytest
 import torch
 import numpy as np
 
-import msit_llm.compare.cmp_utils
-
 from components.llm.msit_llm.common.constant import GLOBAL_AIT_DUMP_PATH
+from components.utils.file_utils import FileChecker
+import msit_llm.compare.cmp_utils
 
 FILE_PERMISSION = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP
 FAKE_GOLDEN_DATA_PATH = "test_acc_cmp_fake_golden_data.npy"
 FAKE_MY_DATA_PATH = "test_acc_cmp_fake_test_data.npy"
+
+ori_file_common_check = FileChecker.common_check
+
+
+def mock_file_common_check():
+    def common_check(self):
+        pass
+    setattr(FileChecker, 'common_check', common_check)
+
+
+def recover_file_common_check():
+    setattr(FileChecker, 'common_check', ori_file_common_check)
 
 
 @pytest.fixture(scope="function")
@@ -117,7 +129,9 @@ def test_check_tensor_given_golden_data_when_nan_then_false():
 
 
 def test_fill_row_data_given_my_path_when_valid_then_pass(golden_data_file, test_data_file):
+    mock_file_common_check()
     data_info = msit_llm.compare.cmp_utils.BasicDataInfo(golden_data_file, test_data_file, 0, 0)
+    recover_file_common_check()
     row_data = msit_llm.compare.cmp_utils.fill_row_data(data_info)
     assert isinstance(row_data, dict) and len(row_data) == 24
     assert row_data["cosine_similarity"] == 1.0
@@ -127,21 +141,27 @@ def test_fill_row_data_given_my_path_when_valid_then_pass(golden_data_file, test
 def test_fill_row_data_given_loaded_my_data_when_valid_then_pass(golden_data_file):
     golden_data = np.load(golden_data_file)
     loaded_my_data = np.zeros_like(golden_data)
+    mock_file_common_check()
     data_info = msit_llm.compare.cmp_utils.BasicDataInfo(golden_data_file, "test")
+    recover_file_common_check()
     row_data = msit_llm.compare.cmp_utils.fill_row_data(data_info, loaded_my_data=loaded_my_data)
     assert isinstance(row_data, dict) and len(row_data) == 24
     assert row_data["cosine_similarity"] == 0.0
 
 
 def test_fill_row_data_given_my_path_when_dir_then_error(golden_data_file):
+    mock_file_common_check()
     data_info = msit_llm.compare.cmp_utils.BasicDataInfo(golden_data_file, "/")
+    recover_file_common_check()
     row_data = msit_llm.compare.cmp_utils.fill_row_data(data_info)
     assert isinstance(row_data, dict) and len(row_data) == 7
     assert len(row_data["cmp_fail_reason"]) > 0
 
 
 def test_fill_row_data_given_golden_data_path_when_empty_then_error(test_data_file):
+    mock_file_common_check()
     data_info = msit_llm.compare.cmp_utils.BasicDataInfo("", test_data_file)
+    recover_file_common_check()
     row_data = msit_llm.compare.cmp_utils.fill_row_data(data_info)
     assert isinstance(row_data, dict) and len(row_data) == 7
     assert len(row_data["cmp_fail_reason"]) > 0
@@ -150,7 +170,9 @@ def test_fill_row_data_given_golden_data_path_when_empty_then_error(test_data_fi
 def test_fill_row_data_given_my_path_when_nan_then_error(golden_data_file):
     golden_data = np.load(golden_data_file)
     loaded_my_data = np.zeros_like(golden_data) + np.nan
+    mock_file_common_check()
     data_info = msit_llm.compare.cmp_utils.BasicDataInfo(golden_data_file, "test")
+    recover_file_common_check()
     row_data = msit_llm.compare.cmp_utils.fill_row_data(data_info, loaded_my_data=loaded_my_data)
     assert isinstance(row_data, dict) and len(row_data) == 17
     assert len(row_data["cmp_fail_reason"]) > 0
@@ -159,7 +181,9 @@ def test_fill_row_data_given_my_path_when_nan_then_error(golden_data_file):
 def test_fill_row_data_given_my_path_when_shape_not_match_then_error(golden_data_file):
     golden_data = np.load(golden_data_file)
     loaded_my_data = np.zeros([])
+    mock_file_common_check()
     data_info = msit_llm.compare.cmp_utils.BasicDataInfo(golden_data_file, "test")
+    recover_file_common_check()
     row_data = msit_llm.compare.cmp_utils.fill_row_data(data_info, loaded_my_data=loaded_my_data)
     assert isinstance(row_data, dict) and len(row_data) == 17
     assert len(row_data["cmp_fail_reason"]) > 0
