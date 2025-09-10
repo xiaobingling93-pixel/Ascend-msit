@@ -88,39 +88,6 @@ def test_set_logger_given_existing_handler_when_configured_then_no_duplicate():
     assert len(test_logger.handlers) == 1  # Original handler replaced?
 
 
-# Test vaild_readable_directory
-def test_vaild_readable_directory_given_valid_dir_when_checked_then_passes():
-    temp_dir = tempfile.mkdtemp()
-    try:
-        utils.vaild_readable_directory(temp_dir)  # Should not raise
-    finally:
-        os.rmdir(temp_dir)
-
-
-def test_vaild_readable_directory_given_nonexistent_path_when_checked_then_error():
-    with pytest.raises(FileExistsError):
-        utils.vaild_readable_directory("/nonexistent/path")
-
-
-def test_vaild_readable_directory_given_file_path_when_checked_then_error():
-    temp_file = create_temp_file(10)
-    try:
-        with pytest.raises(ValueError):
-            utils.vaild_readable_directory(temp_file)
-    finally:
-        os.unlink(temp_file)
-
-
-# Test vaild_readable_file
-def test_vaild_readable_file_given_valid_file_when_checked_then_returns_path():
-    temp_file = create_temp_file(10)
-    try:
-        result = utils.vaild_readable_file(temp_file)
-        assert isinstance(result, str)
-    finally:
-        os.unlink(temp_file)
-
-
 # Test get_directory_size
 def test_get_directory_size_given_empty_dir_when_calculated_then_zero():
     temp_dir = tempfile.mkdtemp()

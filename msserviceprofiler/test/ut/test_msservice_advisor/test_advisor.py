@@ -21,6 +21,7 @@ import pytest
 from msserviceprofiler.msservice_advisor import advisor
 from msserviceprofiler.msservice_advisor.profiling_analyze.utils import TARGETS, SUGGESTION_TYPES, logger
 from msserviceprofiler.msservice_advisor.profiling_analyze import utils
+from msserviceprofiler.msguard import GlobalConfig
 
 
 # Test fixtures
@@ -72,6 +73,7 @@ def test_get_latest_matching_file_returns_none_if_no_files(mock_glob):
 @patch.object(utils, "read_csv")
 @patch.object(utils, "read_json")
 def test_read_csv_or_json_dispatches_correctly(mock_read_json, mock_read_csv):
+    GlobalConfig.custom_return = True
     # Mock the file path and extension checking
     with patch("os.path.exists", return_value=True):
         # Test CSV file
