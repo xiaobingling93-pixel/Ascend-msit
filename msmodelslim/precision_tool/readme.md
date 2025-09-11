@@ -72,22 +72,22 @@ def test(self):
     |-- boolq
     |   `-- dev.jsonl
     |-- mmlu
-    |   |-- subject_mapping.json
+    |   |-- possibly_contaminated_urls.txt
     |   |-- dev
     |   |-- test
     |   `-- val
     |-- truthfulqa
     |   `-- TruthfulQA.csv
-    `-- humaneval
-    `-- human-eval.jsonl
+    |-- humaneval
+    |   `-- human-eval-v2-20210705.jsonl
 ```
 请保持文件夹名称与结构一致  
 数据集下载链接：
 ```
-https://huggingface.co/datasets/google/boolq
-https://huggingface.co/datasets/openai/openai_humaneval
-https://huggingface.co/datasets/cais/mmlu
-https://huggingface.co/datasets/truthfulqa/truthful_qa
+https://storage.cloud.google.com/boolq/dev.jsonl
+http://opencompass.oss-cn-shanghai.aliyuncs.com/datasets/data/humaneval.zip
+http://opencompass.oss-cn-shanghai.aliyuncs.com/datasets/data/mmlu.zip
+https://github.com/sylinrl/TruthfulQA/blob/main/data/v0/TruthfulQA.csv
 ```
 2. 将数据集放到与 precision_tool.py 同一个路径下，如图所示：  
 ![精度测试数据集目录示意图](../images/精度测试数据集目录示意图.png)  

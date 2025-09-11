@@ -17,6 +17,7 @@ quant_model(model: nn.Module, session_cfg: SessionConfig)
 ### 调用示例
 
 ```python
+import torch
 from msmodelslim.quant.session.session import W8A8ProcessorConfig, W8A8QuantConfig, SaveProcessorConfig
 from msmodelslim.quant.session.session import SessionConfig, quant_model
 

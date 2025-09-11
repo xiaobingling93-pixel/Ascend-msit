@@ -13,7 +13,7 @@ from msmodelslim.utils.validation.conversion import (
     convert_to_bool
 )
 
-FAQ_HOME = "gitee repo: Ascend/msit/msmodelslim, wiki"
+FAQ_HOME = "gitcode repo: Ascend/msit/msmodelslim, wiki"
 MIND_STUDIO_LOGO = "[Powered by MindStudio]"
 
 
