@@ -114,11 +114,11 @@
   
 #### 1. Qwen1系列
 ##### Qwen1-14b W8A8量化
+在`{浮点权重路径}/modeling_qwen.py`中将`SUPPORT_CUDA = torch.cuda.is_available()`手动设置为`SUPPORT_CUDA = False`；
 生成Qwen1-14b模型量化权重，antioutlier使用m2算法配置，使用min-max量化方式，在CPU上进行运算
   ```shell
   python3 quant_qwen.py --model_path {浮点权重路径} --save_directory {W8A8量化权重路径} --calib_file ../common/boolq.jsonl --w_bit 8 --a_bit 8 --device_type cpu  --anti_method m2 --act_method 1 --model_type qwen1 --trust_remote_code True
   ```
-
 ##### Qwen1-72b W8A16量化
 生成Qwen1-14b模型量化权重，激活值量化使用自动混合量化方式，在CPU上进行运算
   ```shell

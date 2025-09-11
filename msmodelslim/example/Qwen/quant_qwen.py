@@ -245,8 +245,12 @@ class Quantifier:
         tokenized_data = []
         for input_text in input_texts:
             inputs = self.tokenizer(input_text, return_tensors='pt', padding=True).to(self.device_type)
-            tokenized_data.append(
-                [inputs.data[input_ids_name], inputs.data[attention_mask_name]])
+            if args.model_type == 'qwen1':
+                tokenized_data.append(
+                    [inputs.data[input_ids_name], None, inputs.data[attention_mask_name]])
+            else:
+                tokenized_data.append(
+                    [inputs.data[input_ids_name], inputs.data[attention_mask_name]])
         return tokenized_data
 
     def convert(self, tokenized_data, save_path, disable_level, part_file_size=None, tokenized_ant_calib_data=None):
@@ -398,6 +402,8 @@ if __name__ == '__main__':
     quant_type = quantifier.quant_config.model_quant_type.lower()
 
     auto_config = checker.get_config_from_pretrained(model_path, trust_remote_code=args.trust_remote_code)
+    if args.model_type == 'qwen1':
+        auto_config.torch_dtype = 'torch.bfloat16'
     checker.modify_config(model_path, save_directory, auto_config.torch_dtype,
                 quant_type, args)
     checker.copy_tokenizer_files(model_path, save_directory)
