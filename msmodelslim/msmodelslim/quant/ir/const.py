@@ -23,5 +23,13 @@ int8_per_tensor_sym = QScheme(scope=QScope.PER_TENSOR, dtype=QDType.INT8, symmet
 int8_per_channel_asym = QScheme(scope=QScope.PER_CHANNEL, dtype=QDType.INT8, symmetric=False)
 int8_per_channel_sym = QScheme(scope=QScope.PER_CHANNEL, dtype=QDType.INT8, symmetric=True)
 int8_per_group_sym = QScheme(scope=QScope.PER_GROUP, dtype=QDType.INT8, symmetric=True)
+int8_per_group_asym = QScheme(scope=QScope.PER_GROUP, dtype=QDType.INT8, symmetric=False)
 
+int4_per_token_asym = QScheme(scope=QScope.PER_TOKEN, dtype=QDType.INT4, symmetric=False)
+int4_per_token_sym = QScheme(scope=QScope.PER_TOKEN, dtype=QDType.INT4, symmetric=True)
+int4_per_tensor_asym = QScheme(scope=QScope.PER_TENSOR, dtype=QDType.INT4, symmetric=False)
+int4_per_tensor_sym = QScheme(scope=QScope.PER_TENSOR, dtype=QDType.INT4, symmetric=True)
+int4_per_channel_asym = QScheme(scope=QScope.PER_CHANNEL, dtype=QDType.INT4, symmetric=False)
 int4_per_channel_sym = QScheme(scope=QScope.PER_CHANNEL, dtype=QDType.INT4, symmetric=True)
+int4_per_group_asym = QScheme(scope=QScope.PER_GROUP, dtype=QDType.INT4, symmetric=False)
+int4_per_group_sym = QScheme(scope=QScope.PER_GROUP, dtype=QDType.INT4, symmetric=True)

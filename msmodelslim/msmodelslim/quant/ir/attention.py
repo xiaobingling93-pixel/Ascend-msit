@@ -15,13 +15,11 @@
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
-from msmodelslim.core import QDType, QParam, QStorage, calculate_qparam
-from msmodelslim.core import dequantize, fake_quantize
+from msmodelslim.core import QDType, QParam, QStorage
+from msmodelslim.core import fake_quantize
 from msmodelslim.core.QAL import QABCRegistry
-from msmodelslim.core.QAL import QScope
-from msmodelslim.quant.ir import AutoFakeQuantDynamicCache
+from .auto import AutoFakeQuantDynamicCache
 from .const import (
     int8_per_channel_sym,
     int8_per_channel_asym
@@ -36,6 +34,14 @@ from .const import (
     abc_type=AutoFakeQuantDynamicCache
 )
 class FakeQuantDynamicCache(AutoFakeQuantDynamicCache):
+    """
+    动态缓存伪量化IR。
+    
+    动态缓存伪量化方式可以用以下参数描述：
+        kv_cache_scale: KV缓存的量化参数，类型为torch.Tensor, dtype为torch.float32
+        kv_cache_offset: KV缓存的量化参数，类型为torch.Tensor, dtype为torch.int32
+    """
+
     def __init__(
             self,
             x_q_param: QParam,
@@ -43,16 +49,17 @@ class FakeQuantDynamicCache(AutoFakeQuantDynamicCache):
         super().__init__()
 
         self.x_q_param = x_q_param
-
-        self.kv_cache_scale = nn.Parameter(x_q_param.ext["scale"], requires_grad=False)
-        self.kv_cache_offset = nn.Parameter(x_q_param.ext["offset"], requires_grad=False)
+        self.kv_cache_scale = nn.Parameter(self.x_q_param.ext.pop("scale"), requires_grad=False)
+        self.kv_cache_offset = nn.Parameter(self.x_q_param.ext.pop("offset"), requires_grad=False)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = x.transpose(-2, -3)
         x_shape = x.shape
         x = x.reshape(-1, x.shape[-1] * x.shape[-2])
-        x_q_dq = fake_quantize(QStorage(QDType.FLOAT, x), self.x_q_param).value
+        ext_x = self.x_q_param.ext.copy()
+        ext_x.update({"scale": self.kv_cache_scale, "offset": self.kv_cache_offset})
+        x_q_param = QParam(scheme=self.x_q_param.scheme, ext=ext_x)
+        x_q_dq = fake_quantize(QStorage(QDType.FLOAT, x), x_q_param).value
         x_q_dq = x_q_dq.reshape(x_shape)
         x_q_dq = x_q_dq.transpose(-2, -3)
         return x_q_dq
-
