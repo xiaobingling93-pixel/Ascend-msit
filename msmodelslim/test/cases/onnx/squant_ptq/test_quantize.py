@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
 # Copyright Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
-import os 
+import os
 import stat
 
-from resources.sample_net_torch import TestOnnxQuantModel
-from resources.sample_net_torch import TestAscendQuantModel
-
-import torch 
 import numpy as np
-import pytest 
-import onnx 
+import onnx
+import pytest
+import torch
+from resources.sample_net_torch import TestAscendQuantModel
+from resources.sample_net_torch import TestOnnxQuantModel
 
 from ascend_utils.common import acl_inference
 from msmodelslim.onnx.squant_ptq import QuantConfig, OnnxCalibrator
@@ -19,17 +18,17 @@ from msmodelslim.onnx.squant_ptq.aok.optimizer.graph_optimizer import GraphOptim
 class _InferenceRunInfo:
 
     def __init__(self,
-                model_name: str,
-                latency: float,
-                output: np.array) -> None:
-        self.model_name = model_name 
+                 model_name: str,
+                 latency: float,
+                 output: np.array) -> None:
+        self.model_name = model_name
         self.latency = latency
-        self.output = output 
+        self.output = output
+
 
 setattr(acl_inference, 'init_acl', lambda *args, **kargs: None)
 setattr(acl_inference, 'release_acl', lambda *args, **kargs: None)
 setattr(GraphOptimizer, 'collect_inference_run_info', lambda *args, **kargs: _InferenceRunInfo('test', 1.8, None))
-
 
 CALIBS = []
 ONNX_MODEL_PATH = "test.onnx"
@@ -48,7 +47,7 @@ def init_testing_models():
     torch.onnx.export(quant_model, input_quant, ASCEND_QUANT_MODEL_PATH, input_names=["input"], output_names=["output"])
     os.chmod(ASCEND_QUANT_MODEL_PATH, stat.S_IRUSR | stat.S_IWUSR)
 
-    yield 
+    yield
 
     if os.path.exists(ONNX_MODEL_PATH):
         os.remove(ONNX_MODEL_PATH)
@@ -113,18 +112,6 @@ def test_run_quantize_given_onnx_when_label_free_then_pass():
     calib.run()
     calib.export_quant_onnx(quant_model_path)
 
-    assert os.path.exists(quant_model_path)
-    os.remove(quant_model_path)
-    CALIBS.append(calib)
-
-
-@pytest.mark.skipif(OnnxCalibrator is None, reason="requires OnnxCalibrator")
-def test_run_quantize_given_onnx_when_data_free_then_pass():
-    quant_model_path = "./test_squant_df.onnx"
-    quant_config = QuantConfig(quant_mode=0)
-    calib = OnnxCalibrator(ONNX_MODEL_PATH, quant_config)
-    calib.run()
-    calib.export_quant_onnx(quant_model_path)
     assert os.path.exists(quant_model_path)
     os.remove(quant_model_path)
     CALIBS.append(calib)

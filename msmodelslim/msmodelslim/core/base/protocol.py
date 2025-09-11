@@ -20,6 +20,12 @@ from torch import nn
 
 
 @dataclass
+class DataUnit:
+    input: Any
+    output: Any
+
+
+@dataclass
 class ProcessRequest:
     """
     处理请求数据类，封装了处理器需要处理的事件信息。
@@ -34,7 +40,7 @@ class ProcessRequest:
     """
     name: str
     module: nn.Module
-    args: List[Any]
+    args: Tuple[Any]
     kwargs: Dict[str, Any]
 
 
@@ -47,5 +53,5 @@ class BatchProcessRequest:
     """
     name: str
     module: nn.Module
-    datas: Optional[List[Tuple[List[Any], Dict[str, Any]]]] = None
+    datas: Optional[List[Tuple[Tuple[Any], Dict[str, Any]]]] = None
     outputs: Optional[List[Any]] = None

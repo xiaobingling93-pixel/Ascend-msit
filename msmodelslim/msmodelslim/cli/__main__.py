@@ -1,11 +1,11 @@
 # Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 import argparse
-from pathlib import Path
-from msmodelslim import set_logger_level
+
 from msmodelslim.app import QuantType, DeviceType
-from msmodelslim.cli.naive_quantization.__main__ import main as quant_main
 from msmodelslim.cli.analysis.__main__ import main as analysis_main
+from msmodelslim.cli.naive_quantization.__main__ import main as quant_main
 from msmodelslim.utils.config import msmodelslim_config
+from msmodelslim.utils.logging import set_logger_level
 from msmodelslim.utils.validation.conversion import (
     convert_to_readable_dir,
     convert_to_readable_file,
@@ -18,6 +18,8 @@ MIND_STUDIO_LOGO = "[Powered by MindStudio]"
 
 
 def main():
+    set_logger_level(msmodelslim_config.env_vars.log_level)
+
     parser = argparse.ArgumentParser(prog='msmodelslim',
                                      formatter_class=argparse.RawDescriptionHelpFormatter,
                                      description=f"MsModelSlim(MindStudio Model-Quantization Tools), "
@@ -48,26 +50,26 @@ def main():
     # Analyze command
     analysis_parser = subparsers.add_parser('analyze', help='Model quantization sensitivity analyze tool')
     analysis_parser.add_argument('--model_type', required=True,
-                              help="Type of model to quantize (e.g. 'Qwen2.5-7B-Instruct', 'Qwen-QwQ-32B')")
+                                 help="Type of model to quantize (e.g. 'Qwen2.5-7B-Instruct', 'Qwen-QwQ-32B')")
     analysis_parser.add_argument('--model_path', required=True, type=convert_to_readable_dir,
-                              help="Path to the original model")
+                                 help="Path to the original model")
     analysis_parser.add_argument('--device', type=DeviceType, default=DeviceType.NPU, choices=DeviceType,
-                              help="Target device type for Analysis")
+                                 help="Target device type for Analysis")
     analysis_parser.add_argument('--pattern',
-                                nargs='*',
-                                default=['*'],
-                                help='Pattern list to analyze (default is ["*"], means all match)')
+                                 nargs='*',
+                                 default=['*'],
+                                 help='Pattern list to analyze (default is ["*"], means all match)')
     analysis_parser.add_argument('--metrics', type=str, default='kurtosis', choices=['std', 'quantile', 'kurtosis'],
-                              help='Analysis metrics to use: std, quantile, kurtosis (default: kurtosis)')
+                                 help='Analysis metrics to use: std, quantile, kurtosis (default: kurtosis)')
     analysis_parser.add_argument('--calib_dataset', type=str, default='boolq.jsonl',
-                              help='Calibration dataset file path or filename in lab_calib directory. '
-                                   'Supports .json and .jsonl formats (default: boolq.jsonl)')
+                                 help='Calibration dataset file path or filename in lab_calib directory. '
+                                      'Supports .json and .jsonl formats (default: boolq.jsonl)')
     analysis_parser.add_argument('--topk', type=int, default=15,
-                              help='Number of top layers to output for disable_names '
-                                   '(default: 15, empirical value, for reference only)')
+                                 help='Number of top layers to output for disable_names '
+                                      '(default: 15, empirical value, for reference only)')
     analysis_parser.add_argument('--trust_remote_code', type=convert_to_bool, default=False,
-                              help="Trust custom code (bool type, must be True or False). "
-                                   "Please ensure the security of the loaded custom code file.")
+                                 help="Trust custom code (bool type, must be True or False). "
+                                      "Please ensure the security of the loaded custom code file.")
     args = parser.parse_args()
 
     if args.command == 'quant':
@@ -80,5 +82,4 @@ def main():
 
 
 if __name__ == '__main__':
-    set_logger_level(msmodelslim_config.env_vars.log_level)
     main()

@@ -13,11 +13,11 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import pytest
 import os
 from pathlib import Path
 from unittest.mock import Mock, patch
 
+import pytest
 import torch
 
 import msmodelslim.quant.ir as qir
@@ -475,11 +475,11 @@ class TestMindIEFormatSaverModuleHandlers:
             saver = MindIEFormatSaver(mock_model, mock_config, mock_adapter)
 
             # 创建模拟的W8A8DynamicFakeQuantLinear模块
-            mock_module = Mock()
-            mock_module.weight = Mock()
-            mock_module.weight_scale = Mock()
-            mock_module.weight_offset = Mock()
-            mock_module.bias = Mock()
+            device = torch.device("cpu")
+            mock_module = Mock(spec=qir.W8A8DynamicFakeQuantLinear)
+            mock_module.weight = torch.randint(-128, 127, (10, 20), dtype=torch.int8, device=device)
+            mock_module.weight_scale = torch.tensor(0.02, device=device)
+            mock_module.bias = None  # 无bias
 
             # Mock torch.device上下文管理器
             with patch(

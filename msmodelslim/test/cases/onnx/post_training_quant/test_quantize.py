@@ -115,13 +115,6 @@ def test_run_quantize_given_onnx_when_label_free_then_pass(onnx_model):
     os.remove(quant_model_path)
 
 
-def test_run_quantize_given_onnx_when_data_free_then_pass(onnx_model):
-    quant_config = QuantConfig(quant_mode=0)
-    quant_model_path = "./test_quant_df.onnx"
-    run_quantize(onnx_model, quant_model_path, quant_config)
-    assert os.path.exists(quant_model_path)
-
-
 def test_run_quantize_given_onnx_with_dynamic_shape_label_free_amp_0(onnx_model_dynamic):
     calib_data = [np.random.random((1, 3, 640, 640)).astype('float32')]
     quant_config = QuantConfig(

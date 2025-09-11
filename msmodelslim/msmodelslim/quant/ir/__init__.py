@@ -35,7 +35,8 @@ __all__ = [
 from .auto import AutoFakeQuantLinear, AutoFakeQuantDynamicCache
 from .const import int8_per_tensor_sym, int8_per_channel_sym, int8_per_token_sym, int8_per_group_sym, \
     int8_per_tensor_asym, int8_per_token_asym, int8_per_channel_asym, int4_per_channel_sym
-from .w8a8 import W8A8DynamicFakeQuantLinear, W8A8StaticFakeQuantLinear
-from .w4a8 import W4A8DynamicFakeQuantLinear
+from .w8a8_static import W8A8StaticFakeQuantLinear
+from .w8a8_dynamic import W8A8DynamicFakeQuantLinear
+from .w4a8_dynamic import W4A8DynamicFakeQuantLinear
 from .attention import FakeQuantDynamicCache
 from .w16a16s import W16A16sLinear

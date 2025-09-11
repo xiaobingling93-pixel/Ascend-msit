@@ -20,7 +20,10 @@ import pytest
 import torch
 from safetensors.torch import safe_open
 
-from msmodelslim.app.quant_service.modelslim_v1 import process_model
+from msmodelslim.app import DeviceType
+from msmodelslim.core.runner.pipeline_interface import PipelineInterface
+from msmodelslim.core.runner.pipeline_parallel_runner import PPRunner
+from .base import SimpleSequentialAdapter
 from .test_w8a8_only import TestW8A8Quantization
 
 
@@ -38,11 +41,15 @@ class TestW8A8AscendV1Quantization(TestW8A8Quantization):
     def test_w8a8_and_save_ascendv1(self, test_device, test_dtype):
         """测试基本的W8A8量化功能"""
 
-        with torch.device(test_device):
-            torch.set_default_dtype(test_dtype)
-            model = self.create_model()
-            process_model(model, self.service_cfg.process + self.service_cfg.save, 'model_wise',
-                          self.calib_data)
+        torch.set_default_dtype(test_dtype)
+        device = torch.device(test_device)
+        model = self.create_model().to(device)
+        adapter: PipelineInterface = SimpleSequentialAdapter(model)
+        runner = PPRunner(adapter=adapter)
+        for cfg in self.service_cfg.process + self.service_cfg.save:
+            runner.add_processor(cfg)
+        dev_type = DeviceType.NPU if test_device == 'npu' else DeviceType.CPU
+        runner.run(model=model, calib_data=self.calib_data, device=dev_type)
 
         # 验证模型文件是否被保存
         assert os.path.exists(os.path.join(self.temp_dir, "quant_model_description.json"))
@@ -69,19 +76,25 @@ class TestW8A8AscendV1Quantization(TestW8A8Quantization):
             "2.quant_bias": "W8A8",
             "model_quant_type": "W8A8",
             "version": "1.0.0",
+            "group_size": 0,
         }
 
-        assert config_data.keys() == expected_config_data.keys()
+        assert set(config_data.keys()) == set(expected_config_data.keys())
 
         for key, value in expected_config_data.items():
             assert value == config_data[key]
 
         dtype_check = {
-            "[02].weight": torch.int8,
-            "[02].input_scale": torch.float32,
-            "[02].input_offset": torch.float32,
-            "[02].deq_scale": torch.float32,
-            "[02].quant_bias": torch.int32
+            "0.weight": torch.int8,
+            "0.input_scale": torch.float32,
+            "0.input_offset": torch.float32,
+            "0.deq_scale": torch.float32,
+            "0.quant_bias": torch.int32,
+            "2.weight": torch.int8,
+            "2.input_scale": torch.float32,
+            "2.input_offset": torch.float32,
+            "2.deq_scale": torch.float32,
+            "2.quant_bias": torch.int32,
         }
 
         shape_check = {
@@ -101,24 +114,12 @@ class TestW8A8AscendV1Quantization(TestW8A8Quantization):
         with safe_open(os.path.join(self.temp_dir, "quant_model_weights.safetensors"), framework="pt") as f:
             for key in f.keys():
                 tensor = f.get_tensor(key)
-                # 根据key的模式匹配对应的dtype
-                matched_dtype = None
-                for pattern, expected_dtype in dtype_check.items():
-                    if key.endswith(pattern.replace("*", "")):
-                        matched_dtype = expected_dtype
-                        break
+                if key in dtype_check:
+                    expected_dtype = dtype_check[key]
+                    assert tensor.dtype == expected_dtype, \
+                        f"Tensor {key} has incorrect dtype. Expected {expected_dtype}, got {tensor.dtype}"
 
-                if matched_dtype is not None:
-                    assert tensor.dtype == matched_dtype, \
-                        f"Tensor {key} has incorrect dtype. Expected {matched_dtype}, got {tensor.dtype}"
-
-                # 根据key的模式匹配对应的shape
-                matched_shape = None
-                for pattern, expected_shape in shape_check.items():
-                    if key.endswith(pattern.replace("*", "")):
-                        matched_shape = expected_shape
-                        break
-
-                if matched_shape is not None:
-                    assert tensor.shape == matched_shape, \
-                        f"Tensor {key} has incorrect shape. Expected {matched_shape}, got {tensor.shape}"
+                if key in shape_check:
+                    expected_shape = shape_check[key]
+                    assert tensor.shape == expected_shape, \
+                        f"Tensor {key} has incorrect shape. Expected {expected_shape}, got {tensor.shape}"

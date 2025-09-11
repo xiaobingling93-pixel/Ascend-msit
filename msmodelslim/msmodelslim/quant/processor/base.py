@@ -22,6 +22,7 @@ from typing_extensions import Self
 
 from msmodelslim.core.QAL.qregistry import QABCRegistry
 from msmodelslim.core.base.processor import BaseProcessor
+from msmodelslim.core.base.protocol import BatchProcessRequest
 from msmodelslim.utils.logging import get_logger
 
 
@@ -107,3 +108,9 @@ class AutoSessionProcessor(BaseProcessor):
 
     def need_kv_cache(self):
         return False
+
+    def process(self, request: BatchProcessRequest) -> None:
+        if self.is_data_free():
+            return
+
+        super().process(request)

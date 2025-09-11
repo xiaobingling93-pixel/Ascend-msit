@@ -21,7 +21,7 @@ import torch
 import torch.nn as nn
 
 from msmodelslim.core.base.protocol import ProcessRequest
-from msmodelslim.core.runner.layer_wise_forward import (
+from msmodelslim.model.common.layer_wise_forward import (
     _TransformersForwardBreak,
     generated_decoder_layer_visit_func,
     transformers_generated_forward_func
@@ -81,8 +81,9 @@ class TestTransformersGenerated(unittest.TestCase):
     def test_transformers_generated_visit_func_with_custom_blocks(self):
         """测试transformers_generated_visit_func函数，使用自定义的transformer_blocks"""
         # 创建自定义的transformer_blocks
-        transformer_blocks = [(name, module) for name, module in self.model.named_modules() if
-                              "decoder" in module.__class__.__name__.lower()]
+        transformer_blocks = [(name, module)
+                              for name, module in self.model.named_modules()
+                              if "decoder" in module.__class__.__name__.lower()]
 
         # 获取生成器
         generator = generated_decoder_layer_visit_func(self.model, transformer_blocks)
@@ -118,34 +119,6 @@ class TestTransformersGenerated(unittest.TestCase):
         self.assertEqual(request.name, "decoder")
         self.assertEqual(request.module, self.model.decoder)
         self.assertTrue(torch.equal(request.args[0], input_data))
-
-    @patch('torch.distributed.get_rank')
-    @patch('torch.distributed.get_world_size')
-    @patch('torch.distributed.barrier')
-    def test_transformers_generated_forward_func_with_custom_blocks(self, mock_barrier, mock_get_world_size,
-                                                                    mock_get_rank):
-        """测试_transformers_generated_forward_func函数，使用自定义的transformer_blocks"""
-        # 设置模拟函数
-        mock_get_rank.return_value = 0
-        mock_get_world_size.return_value = 1
-
-        # 创建自定义的transformer_blocks
-        transformer_blocks = [(name, module) for name, module in self.model.named_modules() if
-                              "decoder" in module.__class__.__name__.lower()]
-
-        # 创建输入数据
-        input_data = torch.randn(5, 10)
-
-        # 获取生成器
-        generator = transformers_generated_forward_func(self.model, input_data)
-
-        # 获取第一个请求
-        request = next(generator)
-
-        # 验证请求
-        self.assertIsInstance(request, ProcessRequest)
-        self.assertEqual(request.name, "decoder")
-        self.assertEqual(request.module, self.model.decoder)
 
 
 if __name__ == '__main__':

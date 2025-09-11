@@ -1,5 +1,4 @@
 #  -*- coding: utf-8 -*-
-#  -*- coding: utf-8 -*-
 #  Copyright (c) 2025-2025 Huawei Technologies Co., Ltd.
 #  #
 #  Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,19 +13,20 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing import List, Union, Tuple, Dict
+from abc import ABC, abstractmethod
 
-import torch
-
-from msmodelslim.core.base.protocol import ProcessRequest
+from torch import nn
 
 
-def model_wise_forward_func(model: torch.nn.Module,
-                            inputs: Union[List, Tuple, Dict],
-                            ):
-    yield ProcessRequest("", model, inputs if isinstance(inputs, list) or isinstance(inputs, tuple) else [inputs],
-                         inputs if isinstance(inputs, dict) else {})
+class ModelHookInterface(ABC):
+    """
+    Interface for the model hook.
+    Model hook is used to hook the model in fine-scheduling runner.
+    """
 
-
-def model_wise_visit_func(model: torch.nn.Module, ):
-    yield ProcessRequest("", model, [], {})
+    @abstractmethod
+    def load_state_dict_hook(self, key: str, module: nn.Module) -> None:
+        """
+        run after load state dict, before processing.
+        """
+        pass

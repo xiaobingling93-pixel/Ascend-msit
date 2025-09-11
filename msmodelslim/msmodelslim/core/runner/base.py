@@ -14,9 +14,9 @@
 #  limitations under the License.
 
 import abc
-from typing import Any, List, Optional
 
-from .processor import BaseProcessor
+from msmodelslim.app import DeviceType
+from msmodelslim.core.base.processor import BaseProcessor
 
 
 class BaseRunner:
@@ -28,7 +28,7 @@ class BaseRunner:
     """
 
     @abc.abstractmethod
-    def add_processor(self, processor: BaseProcessor, input_datas: Optional[List[Any]] = None, append: bool = True):
+    def add_processor(self, processor: BaseProcessor, append: bool = True):
         """
         添加处理器以及与当前处理器关联的输入数据。
         
@@ -43,7 +43,7 @@ class BaseRunner:
         pass
 
     @abc.abstractmethod
-    def run(self):
+    def run(self, device: DeviceType = DeviceType.NPU):
         """
         执行推理调度流程。
         

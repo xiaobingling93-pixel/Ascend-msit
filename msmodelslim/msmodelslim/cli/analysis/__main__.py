@@ -1,16 +1,15 @@
 # Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
-import functools
 import os
 from pathlib import Path
-from typing import Optional
 
 from msmodelslim.app.analysis import LayerAnalysisApplication
+from msmodelslim.app.analysis_service import LayerSelectorAnalysisService
+from msmodelslim.core.base.model import BaseModelInterface
+from msmodelslim.infra.dataset_loader import FileDatasetLoader
 from msmodelslim.model import ModelFactory
-from msmodelslim.app.base import BaseModelAdapter
+from msmodelslim.model.base import BaseModelAdapter
 from msmodelslim.utils.logging import get_logger
 from msmodelslim.utils.security.path import get_valid_read_path
-from msmodelslim.infra.dataset_loader import FileDatasetLoader
-from msmodelslim.app.analysis_service import LayerSelectorAnalysisService
 
 
 def get_dataset_dir():
@@ -18,6 +17,14 @@ def get_dataset_dir():
     lab_calib_dir = os.path.abspath(os.path.join(cur_dir, '../../lab_calib'))
     lab_calib_dir = get_valid_read_path(lab_calib_dir, is_dir=True)
     return Path(lab_calib_dir)
+
+
+def create_model(model_type: str, model_path: Path, trust_remote_code: bool) -> BaseModelInterface:
+    return ModelFactory.create(model_type, interface=BaseModelAdapter)(
+        model_type=model_type,
+        model_path=model_path,
+        trust_remote_code=trust_remote_code,
+    )
 
 
 def main(args):
@@ -28,13 +35,11 @@ def main(args):
         # Create dataset loader
         dataset_loader = FileDatasetLoader(dataset_dir)
 
-        # Create model factory function
-        model_factory = functools.partial(ModelFactory.create, interface=BaseModelAdapter)
         # Create analysis service
         analysis_service = LayerSelectorAnalysisService(dataset_loader)
         # Create analysis app
-        analysis_app = LayerAnalysisApplication(analysis_service=analysis_service, model_factory=model_factory)
-        
+        analysis_app = LayerAnalysisApplication(analysis_service=analysis_service, model_factory=create_model)
+
         # Run analysis
         result = analysis_app.analyze(
             model_type=args.model_type,
@@ -47,7 +52,7 @@ def main(args):
             trust_remote_code=args.trust_remote_code
         )
         return result
-        
+
     except Exception as e:
         get_logger().error(f"Layer analysis failed: {str(e)}")
-        raise 
+        raise

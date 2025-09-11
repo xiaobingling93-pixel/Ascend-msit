@@ -17,9 +17,11 @@ import pytest
 import torch
 import torch.nn as nn
 
-from msmodelslim.app.quant_service.modelslim_v1 import process_model
+from msmodelslim.app import DeviceType
+from msmodelslim.core.runner.pipeline_interface import PipelineInterface
+from msmodelslim.core.runner.pipeline_parallel_runner import PPRunner
 from msmodelslim.quant.ir import W8A8DynamicFakeQuantLinear
-from .base import SessionTestCaseBase, is_npu_available
+from .base import SessionTestCaseBase, is_npu_available, SimpleSequentialAdapter
 
 
 @pytest.mark.parametrize("test_device, test_dtype", [
@@ -55,25 +57,30 @@ class TestW8A8DynamicQuantization(SessionTestCaseBase):
     def test_w8a8_dynamic_quantization_basic(self, test_device, test_dtype):
         """测试基本的W8A8动态量化功能"""
 
-        with torch.device(test_device):
-            torch.set_default_dtype(test_dtype)
-            model = self.create_model()
+        torch.set_default_dtype(test_dtype)
+        device = torch.device(test_device)
+        model = self.create_model().to(device)
 
-            linear_names = set()
-            for name, module in model.named_modules():
-                if isinstance(module, nn.Linear):
-                    linear_names.add(name)
+        linear_names = set()
+        for name, module in model.named_modules():
+            if isinstance(module, nn.Linear):
+                linear_names.add(name)
 
-            # 执行量化
-            process_model(model, self.service_cfg.process, 'model_wise', self.calib_data)
+        # 执行量化：使用 PPRunner
+        adapter: PipelineInterface = SimpleSequentialAdapter(model)
+        runner = PPRunner(adapter=adapter)
+        for cfg in self.service_cfg.process:
+            runner.add_processor(cfg)
+        dev_type = DeviceType.NPU if test_device == 'npu' else DeviceType.CPU
+        runner.run(model=model, calib_data=self.calib_data, device=dev_type)
 
-            # 检查伪量化成功部署
-            for name in linear_names:
-                assert isinstance(model.get_submodule(name), W8A8DynamicFakeQuantLinear)
+        # 检查伪量化成功部署
+        for name in linear_names:
+            assert isinstance(model.get_submodule(name), W8A8DynamicFakeQuantLinear)
 
-            # 检查伪量化推理
-            test_input = torch.randn(self.batch_size, self.hidden_size)
-            output = model(test_input)
+        # 检查伪量化推理
+        test_input = torch.randn(self.batch_size, self.hidden_size, device=device)
+        output = model(test_input)
 
         # 验证输出形状是否正确
         assert output.shape == (self.batch_size, self.hidden_size)

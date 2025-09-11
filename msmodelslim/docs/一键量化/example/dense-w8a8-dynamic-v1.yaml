@@ -19,7 +19,7 @@ spec:
         act:
           scope: "per_token"   # default is per_tensor
           dtype: "int8"        # default is int8
-          symmetric: False      # default is True
+          symmetric: True      # default is True
           method: "minmax"      # default is minmax
         weight:
           scope: "per_channel"   # default is per_channel

@@ -29,8 +29,8 @@ from msmodelslim.utils.logging import get_logger, logger_setter
 class LinearProcessorConfig(AutoProcessorConfig):
     type: Literal["linear_quant"] = "linear_quant"
     qconfig: LinearQConfig = Field(description="量化配置")
-    include: List[str] = Field(default_factory=list, description="包含的模块名称")
-    exclude: List[str] = Field(default_factory=list, description="排除的模块名称")
+    include: List[str] = Field(default_factory=lambda: ["*"], description="包含的模块名称")
+    exclude: List[str] = Field(default_factory=lambda: [], description="排除的模块名称")
 
     model_config = ConfigDict(extra="forbid")
 
@@ -54,8 +54,8 @@ class LinearQuantProcessor(AutoSessionProcessor):
     ):
         super().__init__(model)
         self.config = config
-        self.include = ConfigSet(config.include) if config.include else ConfigSet(["*"])
-        self.exclude = ConfigSet(config.exclude) if config.exclude else ConfigSet([])
+        self.include = ConfigSet(config.include)
+        self.exclude = ConfigSet(config.exclude)
 
     def is_data_free(self) -> bool:
         return self.config.qconfig.act.scope == QScope.PER_TOKEN
@@ -74,25 +74,23 @@ class LinearQuantProcessor(AutoSessionProcessor):
         self._deploy(request.name, request.module)
 
     def _install_quantizer(self, prefix: str, module: nn.Module) -> None:
-        for name, submodule in module.named_modules():
-            full_name = f"{prefix}.{name}" if prefix != "" else name
+        for name, submodule in module.named_modules(prefix=prefix):
 
             if not isinstance(submodule, nn.Linear):
                 continue
 
-            if full_name not in self.include:
+            if name not in self.include:
                 continue
 
-            if full_name in self.exclude:
+            if name in self.exclude:
                 continue
 
-            self._process_linear(full_name, submodule)
+            self._process_linear(name, submodule)
 
     def _deploy(self, prefix: str, module: nn.Module) -> None:
-        for name, submodule in module.named_modules():
-            full_name = f"{prefix}.{name}" if prefix != "" else name
+        for name, submodule in module.named_modules(prefix=prefix):
             if hasattr(submodule, "deploy"):
-                self.model.set_submodule(full_name, submodule.deploy())
+                self.model.set_submodule(name, submodule.deploy())
 
     def _process_linear(self, full_name: str, module: nn.Linear) -> None:
         quantizer = LinearQuantizer(self.config.qconfig)

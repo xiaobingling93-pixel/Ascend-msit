@@ -28,9 +28,6 @@ __all__ = [
     "MappingConfig",
     "FusionConfig",
     "AdapterConfig",
-
-    # Information Classes
-    "SubgraphInfo",
 ]
 
 # Import all components from adapter_types module
@@ -39,5 +36,4 @@ from .adapter_types import (
     MappingConfig,
     FusionConfig,
     AdapterConfig,
-    SubgraphInfo,
 )
