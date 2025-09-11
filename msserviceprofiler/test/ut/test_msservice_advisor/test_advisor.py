@@ -104,6 +104,7 @@ def test_read_csv_or_json_dispatches_correctly(mock_read_json, mock_read_csv):
             assert utils.read_csv_or_json("nonexistent.csv") is None
             mock_read_csv.assert_not_called()
             mock_read_json.assert_not_called()
+    GlobalConfig.reset()
 
 
 # Test parse_benchmark_instance
@@ -111,6 +112,7 @@ def test_read_csv_or_json_dispatches_correctly(mock_read_json, mock_read_csv):
 @patch.object(utils, "read_csv_or_json")
 def test_parse_benchmark_instance(mock_read, mock_latest):
     # Setup mock returns
+    GlobalConfig.custom_return = True
     mock_latest.side_effect = ["req_map.json", "result_perf.csv", "result_common.csv", "results_per_request.json"]
     mock_read.side_effect = [
         SAMPLE_REQ_TO_DATA_MAP,
@@ -121,6 +123,7 @@ def test_parse_benchmark_instance(mock_read, mock_latest):
 
     with patch.object(advisor.logger, "debug"):
         result = advisor.parse_benchmark_instance("/path")
+    GlobalConfig.reset()
 
 
 # Test parse_mindie_server_config

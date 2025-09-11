@@ -25,6 +25,7 @@ import pytest
 from msserviceprofiler.msservice_advisor.profiling_analyze import npu_memory_analyze
 from msserviceprofiler.msservice_advisor.profiling_analyze.register import REGISTRY, ANSWERS
 from msserviceprofiler.msservice_advisor.profiling_analyze.utils import SUGGESTION_TYPES, BYTES_TO_GB
+from msserviceprofiler.msguard import GlobalConfig
 
 
 # Test fixtures
@@ -123,7 +124,9 @@ def test_extract_server_config_params_given_valid_config_returns_params():
 @patch("pathlib.Path.stat", return_value=namedtuple("stat", ["st_size"])(1024))
 @patch("builtins.open", new_callable=mock_open, read_data=json.dumps(SAMPLE_MODEL_CONFIG))
 def test_extract_model_config_params_given_valid_path_returns_params(*mocks):
+    GlobalConfig.custom_return = True
     model_params, weight_size = npu_memory_analyze.extract_model_config_params("/path/to/model")
+    GlobalConfig.reset()
 
 
 # Test cal_npu_mem_size
