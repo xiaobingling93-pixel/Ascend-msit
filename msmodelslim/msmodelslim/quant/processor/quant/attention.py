@@ -19,7 +19,7 @@ import re
 import torch
 from torch import nn
 from pydantic import ConfigDict
-from transformers.cache_utils import DynamicCache
+
 
 from msmodelslim.utils.logging import get_logger, logger_setter
 from msmodelslim.core.QAL.qregistry import QABCRegistry
@@ -31,7 +31,13 @@ from msmodelslim.utils.hook_utils import add_before_hook, add_after_hook, restor
 from msmodelslim.quant.ir import FakeQuantDynamicCache
 from msmodelslim.quant.quantizer.base import QConfig
 from msmodelslim.core.QAL.qbase import QScope
+from msmodelslim.utils.exception import VersionError
 
+DYNAMIC_AVAILABLE = True
+try:
+    from transformers.cache_utils import DynamicCache
+except ImportError:
+    DYNAMIC_AVAILABLE = False
 
 HOOK_TARGET = (DynamicCache, 'update')
 CACHE_INPUT_NAME = ("key_states", "value_states")
@@ -101,6 +107,8 @@ class DynamicCacheQuantProcessor(AutoSessionProcessor):
     ):
         super().__init__(model)
         self.config = config
+        if not DYNAMIC_AVAILABLE:
+            raise VersionError("DynamicCache is not available", action="please install transformers>=4.36.0")
         if self.config.qconfig.scope != QScope.PER_CHANNEL:
             raise ValueError("DynamicCacheQuantProcessor only supports per_channel quantization!")
 
