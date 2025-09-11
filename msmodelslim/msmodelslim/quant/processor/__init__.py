@@ -15,6 +15,7 @@
 
 __all__ = [
     "AutoProcessorConfig",
+    "AutoroundQuantProcessor",
     "LinearProcessorConfig",
     "LinearQuantProcessor",
     "IterSmoothProcessorConfig",
@@ -34,6 +35,7 @@ from .anti_outlier.iter_smooth import IterSmoothProcessorConfig, IterSmoothProce
 from .base import AutoProcessorConfig
 from .container.group import GroupProcessorConfig, GroupProcessor
 from .memory.load import LoadProcessorConfig, LoadProcessor
-from .quant.linear import LinearProcessorConfig, LinearQuantProcessor
 from .quant.attention import DynamicCacheProcessorConfig, DynamicCacheQuantProcessor
-from .sparse.float_sparse import FloatSparseProcessorConfig, FloatSparseProcessor 
+from .quant.autoround import AutoProcessorConfig, AutoroundQuantProcessor
+from .quant.linear import LinearProcessorConfig, LinearQuantProcessor
+from .sparse.float_sparse import FloatSparseProcessorConfig, FloatSparseProcessor
