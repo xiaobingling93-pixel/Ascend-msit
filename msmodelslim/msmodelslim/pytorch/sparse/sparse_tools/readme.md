@@ -20,7 +20,7 @@ sparse_config = SparseConfig(method = "magnitude", sparse_ratio = 0.5, progressi
 3. 模型稀疏调优任务
 
 ```python
-   from msmodelslim.pytorch.sparse.sparse_tools import SparseConfig, Compressor
+from msmodelslim.pytorch.sparse.sparse_tools import SparseConfig, Compressor
 
 test_dataset = [torch.randn(64, 100)]
 sparse_config = SparseConfig(method="magnitude", sparse_ratio=0.5)

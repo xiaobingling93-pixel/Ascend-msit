@@ -80,7 +80,6 @@ y = linear2(linear1(x))
 
 **处理方式：**
 - 基于o_proj权重计算缩放因子
-- 处理多头注意力的缩放因子广播
 - 对o_proj应用正向缩放
 - 对v_proj应用反向缩放（1/scales）
 
