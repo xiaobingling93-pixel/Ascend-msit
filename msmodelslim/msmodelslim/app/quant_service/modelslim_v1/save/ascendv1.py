@@ -12,6 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+
 import functools
 import inspect
 import os
@@ -159,11 +160,13 @@ class AscendV1Saver(AutoSaverProcessor):
     def __init__(self, model: nn.Module, config: AscendV1Config, adapter: object, **kwargs: Dict[str, Any]):
         super().__init__(model, config, adapter, **kwargs)
         self.json_append = dict()
+        self.metadata = dict()
         self.save_directory = self.get_rank_save_directory() if dist.is_initialized() else config.save_directory
         self.json_writer = JsonWriter(config.save_directory, ASCENDV1_DESC_JSON_NAME)
         self.safetensors_writer = self.get_safetensors_writer(config)
         self.dist_helper: Optional[DistHelper] = None
         self.shared_modules_slice: Optional[List[str]] = None
+        self.quarot_info: Optional[qir.QuarotOnlineRotationInfo] = None
 
         self.version = "1.0.0"
         self.model_quant_type = "Unknown"
@@ -179,8 +182,15 @@ class AscendV1Saver(AutoSaverProcessor):
         for key, val in self.json_append.items():
             self.json_writer.write(key, val)
 
+        if self.quarot_info is not None:
+            self.safetensors_writer.write("model.heads_rotation", self.quarot_info.heads_rotation)
+            self.safetensors_writer.write("model.kronecker_rotation_m", self.quarot_info.kronecker_rotation_m)
+            self.safetensors_writer.write("model.kronecker_rotation_n", self.quarot_info.kronecker_rotation_n)
+            self.metadata['quarot'] = self.quarot_info.get_quarot_save_info()
+
         self.json_writer.write("version", self.version)
         self.json_writer.write("model_quant_type", self.model_quant_type)
+        self.json_writer.write("metadata", self.metadata)
         self.json_writer.write("group_size", self.group_size)
 
         self.json_writer.close()
@@ -245,7 +255,9 @@ class AscendV1Saver(AutoSaverProcessor):
             deq_scale = input_scale * weight_scale
             deq_scale = deq_scale.squeeze(1) if deq_scale.ndim > 1 else deq_scale
             fp_weight_bias = module.bias if module.bias is not None else torch.zeros(module.weight.shape[0])
+            fp_weight_bias = fp_weight_bias.unsqueeze(1) if deq_scale.ndim > 1 else fp_weight_bias
             correction = quant_weight.to(torch.float32).sum(dim=1) * input_offset.to(torch.float32)
+            correction = correction.unsqueeze(1) if deq_scale.ndim > 1 else correction
             quant_bias = torch.round(fp_weight_bias / deq_scale - correction).to(torch.int32)
             self.write_tensor(prefix + ".weight", "W8A8", quant_weight.to(torch.int8))
             self.write_tensor(prefix + ".quant_bias", "W8A8", quant_bias.to(torch.int32))
@@ -256,11 +268,24 @@ class AscendV1Saver(AutoSaverProcessor):
                 self.write_tensor(prefix + ".bias", "W8A8", module.bias.to(torch.float32))
 
     @save_this_rank_only()
-    def on_w8a8_dynamic(self, prefix: str, module: qir.W8A8DynamicFakeQuantLinear):
+    def on_w8a8_dynamic_per_channel(self, prefix: str, module: qir.W8A8DynamicPerChannelFakeQuantLinear):
         self.update_quant_type("W8A8_DYNAMIC")
 
         with torch.device(module.weight.device):
             weight_scale = module.weight_scale.unsqueeze(-1)
+            self.write_tensor(prefix + ".weight", "W8A8_DYNAMIC", module.weight.to(torch.int8))
+            self.write_tensor(prefix + ".weight_scale", "W8A8_DYNAMIC", weight_scale.to(torch.float32))
+            self.write_tensor(prefix + ".weight_offset", "W8A8_DYNAMIC",
+                              torch.zeros_like(weight_scale).to(torch.float32))
+            if module.bias is not None:
+                self.write_tensor(prefix + ".bias", "W8A8_DYNAMIC", module.bias.to(torch.float32))
+
+    @save_this_rank_only()
+    def on_w8a8_dynamic_per_group(self, prefix: str, module: qir.W8A8DynamicPerChannelFakeQuantLinear):
+        self.update_quant_type("W8A8_DYNAMIC")
+
+        with torch.device(module.weight.device):
+            weight_scale = module.weight_scale
             self.write_tensor(prefix + ".weight", "W8A8_DYNAMIC", module.weight.to(torch.int8))
             self.write_tensor(prefix + ".weight_scale", "W8A8_DYNAMIC", weight_scale.to(torch.float32))
             self.write_tensor(prefix + ".weight_offset", "W8A8_DYNAMIC",
@@ -284,6 +309,26 @@ class AscendV1Saver(AutoSaverProcessor):
             self.write_tensor(prefix + '.scale_bias', "W4A8_DYNAMIC", scale_bias.to(torch.float32))
             if module.bias is not None:
                 self.write_tensor(prefix + ".bias", "W4A8_DYNAMIC", module.bias.to(torch.float32))
+
+    @save_this_rank_only()
+    def on_w4a4_dynamic_per_channel(self, prefix: str, module: qir.W4A4DynamicPerChannelFakeQuantLinear):
+        with torch.device(module.weight.device):
+            self.write_tensor(prefix + ".weight", "W4A4_DYNAMIC", module.weight.to(torch.int8))
+            self.write_tensor(prefix + ".weight_scale", "W4A4_DYNAMIC", module.weight_scale.to(torch.float32))
+            self.write_tensor(prefix + ".weight_offset", "W4A4_DYNAMIC", module.weight_offset.to(torch.float32))
+            if module.bias is not None:
+                self.write_tensor(prefix + ".bias", "W4A4_DYNAMIC", module.bias.to(torch.float32))
+            self.model_quant_type = "W4A4_DYNAMIC"
+
+    @save_this_rank_only()
+    def on_w4a4_dynamic_per_group(self, prefix: str, module: qir.W4A4DynamicPerGroupFakeQuantLinear):
+        with torch.device(module.weight.device):
+            self.write_tensor(prefix + ".weight", "W4A4_DYNAMIC", module.weight.to(torch.int8))
+            self.write_tensor(prefix + ".weight_scale", "W4A4_DYNAMIC", module.weight_scale.to(torch.float32))
+            self.write_tensor(prefix + ".weight_offset", "W4A4_DYNAMIC", module.weight_offset.to(torch.float32))
+            if module.bias is not None:
+                self.write_tensor(prefix + ".bias", "W4A4_DYNAMIC", module.bias.to(torch.float32))
+            self.model_quant_type = "W4A4_DYNAMIC"
 
     @save_this_rank_only()
     def on_float_linear(self, prefix: str, module: nn.Linear):
@@ -317,6 +362,32 @@ class AscendV1Saver(AutoSaverProcessor):
 
         for name, param in module.named_parameters(recurse=False, prefix=prefix):
             self.write_tensor(name, "W16A16S", param)
+
+    @save_this_rank_only()
+    def on_rotation_wrapper(self, prefix: str, module: qir.QuarotOnlineHeadRotationWrapper):
+        """
+        处理RotationWrapper类型的模块。
+
+        保存旋转矩阵到model.rotation，并在JSON中添加相应的描述。
+
+        Args:
+            prefix: 模块名称前缀
+            module: RotationWrapper模块实例
+        """
+        self.quarot_info = module.rotation_info
+
+    @save_this_rank_only()
+    def on_kronecker_rotation_wrapper(self, prefix: str, module: qir.QuarotOnlineKroneckerRotationWrapper):
+        """
+        处理KroneckerRotationWrapper类型的模块。
+
+        保存旋转矩阵到model.rotation_m和model.rotation_n，并在JSON中添加相应的描述。
+
+        Args:
+            prefix: 模块名称前缀
+            module: KroneckerRotationWrapper模块实例
+        """
+        self.quarot_info = module.rotation_info
 
     def update_quant_type(self, quant_type: str):
         if quant_type not in self.QUANT_TYPE_PRIORITY:

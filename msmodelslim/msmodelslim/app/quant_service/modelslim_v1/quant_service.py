@@ -43,8 +43,8 @@ class ModelslimV1QuantService(BaseQuantService):
         """根据模型和配置确定使用的pipeline类型。
 
         Args:
-            model: 模型适配器
             quant_config: 量化配置
+            model_adapter: 模型适配器
 
         Returns:
             Literal['model_wise', 'layer_wise']: 确定的pipeline类型
@@ -83,6 +83,10 @@ class ModelslimV1QuantService(BaseQuantService):
                       save_path: Optional[Path],
                       device: DeviceType = DeviceType.NPU,
                       ):
+
+        common_seed = 42
+        torch.manual_seed(common_seed)
+        torch.cuda.manual_seed(common_seed)
 
         if device == DeviceType.NPU:
             # 如果使用npu进行量化需开启二进制编译，避免在线编译算子

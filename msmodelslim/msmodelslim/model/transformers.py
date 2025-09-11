@@ -44,12 +44,15 @@ class TransformersModel(BaseModelAdapter):
 
     def _load_model(self, device: DeviceType) -> PreTrainedModel:
         device_map = "auto" if device == DeviceType.NPU else "cpu"
+        self.config.num_hidden_layers = self.config.num_hidden_layers
 
         return SafeGenerator.get_model_from_pretrained(
             model_path=str(self.model_path),
             device_map=device_map,
             torch_dtype="auto",
             low_cpu_mem_usage=True,
+            config=self.config,
+            attn_implementation='eager',
             trust_remote_code=self.trust_remote_code)
 
     def _get_model_type(self, model_type: str) -> str:

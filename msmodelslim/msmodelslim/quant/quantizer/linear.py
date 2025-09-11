@@ -21,8 +21,8 @@ from pydantic import BaseModel, ConfigDict
 from pydantic import validate_call
 from torch import nn
 
+import msmodelslim.quant.ir as qir
 from msmodelslim.core import QDType, QStorage
-from msmodelslim.quant.ir import AutoFakeQuantLinear
 from msmodelslim.utils.logging import logger_setter
 from .base import AutoActQuantizer, AutoWeightQuantizer, QConfig
 
@@ -53,6 +53,10 @@ class LinearQuantizer(nn.Module):
         self.bias = linear.bias
         self.weight_quantizer.init_weight(QStorage(QDType.FLOAT, value=self.weight), self.bias)
 
+        for hook_id, hook in linear._forward_pre_hooks.items():
+            with_kwargs = hook_id in linear._forward_pre_hooks_with_kwargs
+            self.register_forward_pre_hook(hook, with_kwargs=with_kwargs)
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         with QStorage.set_value_float_type(x.dtype):
             x = self.input_quantizer(x)
@@ -60,9 +64,15 @@ class LinearQuantizer(nn.Module):
         return F.linear(x, weight, self.bias)
 
     def deploy(self):
-        return AutoFakeQuantLinear.create(
+        fake_quantizer = qir.AutoFakeQuantLinear.create(
             self.input_quantizer.get_q_param(),
             self.weight_quantizer.get_q_param(),
             self.weight_quantizer.get_q_storage(),
             self.bias
         )
+
+        for hook in self._forward_pre_hooks.values():
+            if isinstance(hook, qir.HookIR):
+                fake_quantizer = hook.wrapper_module(fake_quantizer)
+
+        return fake_quantizer

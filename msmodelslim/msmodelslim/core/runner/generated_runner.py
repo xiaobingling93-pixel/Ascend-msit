@@ -76,8 +76,6 @@ class GeneratedProcessUnit:
             self.generators = [self.pipeline_interface.generate_model_visit(self.model)]
 
     def make_progress(self) -> bool:
-        self.init_generators()
-
         requests = []
         inputs = self.data_recorder.input if self.data_recorder.input else [None for _ in self.generators]
         for gen, response in zip(self.generators, inputs):
@@ -153,7 +151,7 @@ class GeneratedRunner(BaseRunner):
             device: DeviceType = DeviceType.NPU):
 
         # to avoid oom
-        _ = get_input_datas(self.adapter, calib_data)
+        _ = get_input_datas(self.adapter, calib_data, device)
 
         if model is None:
             get_logger().info('Start to init model')
@@ -161,7 +159,7 @@ class GeneratedRunner(BaseRunner):
             get_logger().info('Init model success')
 
         processor_list = self.process_config_list.copy()
-        self.preprocess_processor(processor_list, model)
+        self.preprocess_processor(processor_list, model, device)
 
         data_recorder = DataUnit(None, None)
         process_unit = self.build_process_unit(processor_list,
@@ -190,11 +188,17 @@ class GeneratedRunner(BaseRunner):
         unit_list = [unit for unit in process_unit]
 
         _ = [unit.pre_run() for unit in process_unit]
+        _ = [unit.init_generators() for unit in process_unit]
 
         while unit_list:
+
+            remove_unit = []
+
             for unit in unit_list:
                 if not unit.make_progress():
-                    unit_list.remove(unit)
+                    remove_unit.append(unit)
+
+            _ = [unit_list.remove(unit) for unit in remove_unit]
 
             data_recorder.input = data_recorder.output
             data_recorder.output = None
@@ -215,17 +219,20 @@ def enable_kv_cache(model: nn.Module, adapter: PipelineInterface, processors: Li
 
 
 def get_input_datas(model_adapter: PipelineInterface,
-                    calib_data: Optional[List[Any]] = None):
+                    calib_data: Optional[List[Any]] = None,
+                    dev_type: DeviceType = DeviceType.NPU,
+                    ):
     return load_cached(key=KEY_DATA_LOADER,
                        init_func=_get_input_datas,
-                       args=(model_adapter, calib_data))
+                       args=(model_adapter, calib_data, dev_type))
 
 
 def _get_input_datas(model_adapter: PipelineInterface,
                      calib_data: Optional[List[Any]] = None,
+                     dev_type: DeviceType = DeviceType.NPU,
                      ) -> DataLoader:
     get_logger().info('Start to handle dataset')
-    input_datas = model_adapter.handle_dataset(calib_data)
+    input_datas = model_adapter.handle_dataset(calib_data, dev_type)
     data_loader = _create_dataloader(input_datas, 0, 1, 1)
     get_logger().info('Handle dataset success')
     return data_loader

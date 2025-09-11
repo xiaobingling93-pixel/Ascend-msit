@@ -15,6 +15,7 @@ from .factory import ModelFactory
 from .interface_hub import ModelInfoInterface, ModelSlimPipelineInterfaceV0, ModelSlimPipelineInterfaceV1, \
     AnalyzePipelineInterface, KVSmoothFusedInterface, IterSmoothInterface, FlexSmoothQuantInterface
 from .transformers import TransformersModel
+from ..quant.processor.quarot import QuaRotAdapter
 
 
 @ModelFactory.register("Qwen3-8B")
@@ -29,6 +30,7 @@ class Qwen3ModelAdapter(TransformersModel,
                         KVSmoothFusedInterface,
                         IterSmoothInterface,
                         FlexSmoothQuantInterface,
+                        QuaRotAdapter,
                         ):
     def get_model_type(self) -> str:
         return self.model_type
@@ -160,3 +162,34 @@ class Qwen3ModelAdapter(TransformersModel,
                 )
             ])
         return adapter_config
+
+    def get_hidden_dim(self):
+        return self.config.hidden_size
+
+    def get_num_attention_heads(self):
+        return self.config.num_attention_heads
+
+    def get_lm_head(self) -> str:
+        return "lm_head"
+
+    def get_pre_head_layernorm(self) -> str:
+        return "model.norm"
+
+    def get_embedding(self) -> str:
+        return "model.embed_tokens"
+
+    def get_layer_wise_norm_liner_pair(self, decoder_module: nn.Module):
+        norm_linear_pairs = {decoder_module.input_layernorm: [decoder_module.self_attn.q_proj,
+                                                              decoder_module.self_attn.k_proj,
+                                                              decoder_module.self_attn.v_proj],
+                             decoder_module.post_attention_layernorm: [decoder_module.mlp.gate_proj,
+                                                                       decoder_module.mlp.up_proj]}
+        return norm_linear_pairs
+
+    def get_layer_wise_ov_pair(self, decoder_module: nn.Module):
+        ov_pairs = {decoder_module.self_attn.o_proj: decoder_module.self_attn.v_proj}
+        return ov_pairs
+
+    def get_layer_wise_up_down_pair(self, decoder_module: nn.Module):
+        up_down_pairs = {decoder_module.mlp.up_proj: decoder_module.mlp.down_proj}
+        return up_down_pairs

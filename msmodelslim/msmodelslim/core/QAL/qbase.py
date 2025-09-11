@@ -45,6 +45,9 @@ class QScheme:
     dtype: QDType = QDType.PLACEHOLDER
     symmetric: bool = True
 
+    def __repr__(self) -> str:
+        return f"QScheme(scope={self.scope.value}, dtype={self.dtype.value}, symmetric={self.symmetric})"
+
 
 @dataclass
 class QParam:
@@ -56,6 +59,12 @@ class QParam:
 
     scheme: QScheme
     ext: Any = None
+
+    def __repr__(self) -> str:
+        repr_str = f"QParam(scheme={self.scheme})"
+        if self.scheme.scope == QScope.PER_GROUP:
+            repr_str += f", group_size={self.ext['group_size']}"
+        return repr_str
 
 
 _TORCH_FLOAT_TYPE: torch.dtype = torch.float32

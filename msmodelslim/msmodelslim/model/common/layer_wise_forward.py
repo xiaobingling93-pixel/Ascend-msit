@@ -63,7 +63,7 @@ def transformers_generated_forward_func(model: torch.nn.Module,
         first_block_input = (hook_args, hook_kwargs,)
         raise _TransformersForwardBreak()
 
-    hooks = [transformer_blocks[0][1].register_forward_pre_hook(break_hook, with_kwargs=True)]
+    hooks = [transformer_blocks[0][1].register_forward_pre_hook(break_hook, with_kwargs=True, prepend=True)]
 
     # 执行一次前向传播以获取输入
     try:
