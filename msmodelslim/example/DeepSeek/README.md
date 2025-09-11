@@ -232,6 +232,41 @@ python3 quant_deepseek_w8a8.py --model_path {浮点权重路径} --save_path {W8
   --rot
   ```
 
+##### DeepSeek-v3.1 w8a8 混合量化 + mtp 量化
+- 生成DeepSeek-v3.1 w8a8 混合量化 + mtp 量化
+  ```shell
+  python3 quant_deepseek_w8a8.py \
+  --model_path {浮点权重路径} \
+  --save_path {W8A8量化权重路径} \
+  --batch_size 8 \
+  --anti_dataset ./anti_prompt_50_v3_1.json \
+  --calib_dataset ./calib_prompt_50_v3_1.json \
+  --anti_method m4 \
+  --quant_mtp mix \
+  --rot
+  ```
+
+##### DeepSeek-v3.1 w8a8c8 混合量化 + mtp 量化
+- 生成DeepSeek-v3.1 w8a8c8 混合量化 + mtp 量化
+  ```shell
+  python3 quant_deepseek_w8a8.py \
+  --model_path {浮点权重路径} \
+  --save_path {W8A8量化权重路径} \
+  --batch_size 8 \
+  --anti_dataset ./anti_prompt_50_v3_1.json \
+  --calib_dataset ./calib_prompt_50_v3_1.json \
+  --anti_method m4 \
+  --quant_mtp mix \
+  --rot \
+  --fa_quant
+  ```
+
+##### 生成DeepSeek-v3.1模型 w4a8 混合量化权重
+   ```shell
+   python3 quant_deepseek_w4a8.py --model_path {浮点权重路径} --save_path {W4A8量化权重路径} --anti_dataset ./anti_prompt_50_v3_1.json --calib_dataset ././calib_prompt_50_v3_1.json --quant_mtp mix  --batch_size 16
+   ```
+
+
 ##### DeepSeek-V3/R1量化QA
 
 - Q：报错 This modeling file requires the following packages that were not found in your environment： flash_attn. Run '
@@ -246,4 +281,4 @@ python3 quant_deepseek_w8a8.py --model_path {浮点权重路径} --save_path {W8
 - A: 由于当前transformers不支持FP8量化格式加载，需要将权重文件夹中config.json中的以下字段删除：
 - ![img_1.png](img_1.png)
 - Q: 量化后保存的 description 文件中多出了 61 层的信息，且量化类型为 float
-- A: 当前工具并没有对 61 层进行量化，只是将数据先添加到量化后的权重中
+- A: 61层为MTP层，目前支持进行量化
