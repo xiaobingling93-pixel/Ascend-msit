@@ -29,6 +29,8 @@ from msmodelslim.utils.exception import SchemaValidateError
 @QFuncRegistry.register(dispatch_key=(QDType.INT8, QScope.PER_TENSOR, True), api_name="calculate_qparam")
 @QFuncRegistry.register(dispatch_key=(QDType.INT4, QScope.PER_CHANNEL, True), api_name="calculate_qparam")
 @QFuncRegistry.register(dispatch_key=(QDType.INT4, QScope.PER_CHANNEL, False), api_name="calculate_qparam")
+@QFuncRegistry.register(dispatch_key=(QDType.INT4, QScope.PER_TOKEN, False), api_name="calculate_qparam")
+@QFuncRegistry.register(dispatch_key=(QDType.INT4, QScope.PER_TOKEN, True), api_name="calculate_qparam")
 def calculate_int_qparam(
         min_val: torch.Tensor,
         max_val: torch.Tensor,
@@ -90,7 +92,9 @@ def calculate_int_qparam(
 
 @QFuncRegistry.register(dispatch_key=(QDType.INT8, QScope.PER_GROUP, False), api_name="calculate_qparam")
 @QFuncRegistry.register(dispatch_key=(QDType.INT8, QScope.PER_GROUP, True), api_name="calculate_qparam")
-def int8_per_group_param(
+@QFuncRegistry.register(dispatch_key=(QDType.INT4, QScope.PER_GROUP, False), api_name="calculate_qparam")
+@QFuncRegistry.register(dispatch_key=(QDType.INT4, QScope.PER_GROUP, True), api_name="calculate_qparam")
+def int_per_group_param(
         min_val: torch.Tensor,
         max_val: torch.Tensor,
         q_dtype: QDType,
@@ -111,6 +115,11 @@ def int8_per_group_param(
 @QFuncRegistry.register(dispatch_key=(QDType.FLOAT, QDType.INT8, QScope.PER_TENSOR, False), api_name="quantize")
 @QFuncRegistry.register(dispatch_key=(QDType.FLOAT, QDType.INT8, QScope.PER_TENSOR, True), api_name="quantize")
 @QFuncRegistry.register(dispatch_key=(QDType.FLOAT, QDType.INT4, QScope.PER_CHANNEL, True), api_name="quantize")
+@QFuncRegistry.register(dispatch_key=(QDType.FLOAT, QDType.INT4, QScope.PER_CHANNEL, False), api_name="quantize")
+@QFuncRegistry.register(dispatch_key=(QDType.FLOAT, QDType.INT4, QScope.PER_TOKEN, False), api_name="quantize")
+@QFuncRegistry.register(dispatch_key=(QDType.FLOAT, QDType.INT4, QScope.PER_TOKEN, True), api_name="quantize")
+@QFuncRegistry.register(dispatch_key=(QDType.FLOAT, QDType.INT4, QScope.PER_TENSOR, False), api_name="quantize")
+@QFuncRegistry.register(dispatch_key=(QDType.FLOAT, QDType.INT4, QScope.PER_TENSOR, True), api_name="quantize")
 def int_quantize(tensor: QStorage, q_param: QParam) -> QStorage:
     scale = q_param.ext["scale"]
     offset = q_param.ext["offset"] if "offset" in q_param.ext else torch.zeros_like(scale)
@@ -131,6 +140,8 @@ def int_quantize(tensor: QStorage, q_param: QParam) -> QStorage:
         quant_bitwidth = 4
     elif q_dtype == QDType.INT8:
         quant_bitwidth = 8
+    else:
+        raise ValueError("q_param.scheme.dtype must be INT4 or INT8")
 
     max_bound = 2 ** (quant_bitwidth - 1) - 1
     min_bound = -max_bound - 1
@@ -146,6 +157,11 @@ def int_quantize(tensor: QStorage, q_param: QParam) -> QStorage:
 @QFuncRegistry.register(dispatch_key=(QDType.INT8, QDType.INT8, QScope.PER_TENSOR, False), api_name="dequantize")
 @QFuncRegistry.register(dispatch_key=(QDType.INT8, QDType.INT8, QScope.PER_TENSOR, True), api_name="dequantize")
 @QFuncRegistry.register(dispatch_key=(QDType.INT4, QDType.INT4, QScope.PER_CHANNEL, True), api_name="dequantize")
+@QFuncRegistry.register(dispatch_key=(QDType.INT4, QDType.INT4, QScope.PER_CHANNEL, False), api_name="dequantize")
+@QFuncRegistry.register(dispatch_key=(QDType.INT4, QDType.INT4, QScope.PER_TOKEN, False), api_name="dequantize")
+@QFuncRegistry.register(dispatch_key=(QDType.INT4, QDType.INT4, QScope.PER_TOKEN, True), api_name="dequantize")
+@QFuncRegistry.register(dispatch_key=(QDType.INT4, QDType.INT4, QScope.PER_TENSOR, False), api_name="dequantize")
+@QFuncRegistry.register(dispatch_key=(QDType.INT4, QDType.INT4, QScope.PER_TENSOR, True), api_name="dequantize")
 def int_dequantize(tensor: QStorage, q_param: QParam) -> QStorage:
     scale = q_param.ext["scale"]
     offset = q_param.ext["offset"] if "offset" in q_param.ext else torch.zeros_like(scale)
@@ -160,27 +176,111 @@ def int_dequantize(tensor: QStorage, q_param: QParam) -> QStorage:
 
 @QFuncRegistry.register(dispatch_key=(QDType.FLOAT, QDType.INT8, QScope.PER_GROUP, False), api_name="quantize")
 @QFuncRegistry.register(dispatch_key=(QDType.FLOAT, QDType.INT8, QScope.PER_GROUP, True), api_name="quantize")
+@QFuncRegistry.register(dispatch_key=(QDType.FLOAT, QDType.INT4, QScope.PER_GROUP, False), api_name="quantize")
+@QFuncRegistry.register(dispatch_key=(QDType.FLOAT, QDType.INT4, QScope.PER_GROUP, True), api_name="quantize")
 def int8_per_group_quantize(tensor: QStorage, q_param: QParam) -> QStorage:
     group_size = q_param.ext.get("group_size", -1)
     if group_size < 0:
         raise SchemaValidateError(f"group quantize group_size must be greater than 0 but got group_size = {group_size}",
                                   action=f"Please make sure group_size is greater than 0")
     org_shape = tensor.value.shape
-    tensor.value = tensor.value.reshape(-1, group_size)  # reshape for per_group
-    tensor = int_quantize(tensor, q_param)
-    tensor.value = tensor.value.reshape(org_shape)  # reshape back
-    return tensor
+    tensor_reshaped = tensor.value.reshape(-1, group_size)
+    q_param_reshaped = QParam(
+        scheme=q_param.scheme,
+        ext={
+            "scale": q_param.ext["scale"].view(-1, 1),
+            "offset": q_param.ext["offset"].view(-1, 1),
+            "group_size": q_param.ext["scale"].view(-1, 1)
+        }
+    )
+    tensor_q = int_quantize(tensor.same_like(tensor_reshaped), q_param_reshaped)
+    tensor_q.value = tensor_q.value.reshape(org_shape)
+    return tensor_q
 
 
 @QFuncRegistry.register(dispatch_key=(QDType.INT8, QDType.INT8, QScope.PER_GROUP, False), api_name="dequantize")
 @QFuncRegistry.register(dispatch_key=(QDType.INT8, QDType.INT8, QScope.PER_GROUP, True), api_name="dequantize")
-def int8_per_group_dequantize(tensor: QStorage, q_param: QParam) -> QStorage:
+@QFuncRegistry.register(dispatch_key=(QDType.INT4, QDType.INT4, QScope.PER_GROUP, False), api_name="dequantize")
+@QFuncRegistry.register(dispatch_key=(QDType.INT4, QDType.INT4, QScope.PER_GROUP, True), api_name="dequantize")
+def int_per_group_dequantize(tensor: QStorage, q_param: QParam) -> QStorage:
     group_size = q_param.ext.get("group_size", -1)
     if group_size < 0:
         raise SchemaValidateError(f"group quantize group_size must be greater than 0 but got group_size = {group_size}",
                                   action=f"Please make sure group_size is greater than 0")
     org_shape = tensor.value.shape
-    tensor.value = tensor.value.reshape(-1, group_size)  # reshape for per_group
-    tensor = int_dequantize(tensor, q_param)
-    tensor.value = tensor.value.reshape(org_shape)  # reshape back
-    return tensor
+    tensor_reshaped = tensor.value.reshape(-1, group_size)
+    q_param_reshaped = QParam(
+        scheme=q_param.scheme,
+        ext={
+            "scale": q_param.ext["scale"].view(-1, 1),
+            "offset": q_param.ext["offset"].view(-1, 1),
+            "group_size": q_param.ext["scale"].view(-1, 1)
+        }
+    )
+    tensor_q = int_dequantize(tensor.same_like(tensor_reshaped), q_param_reshaped)
+    tensor_q.value = tensor_q.value.reshape(org_shape)
+    return tensor_q
+
+
+def reshape_pad_tensor_by_group_size(data: torch.Tensor, group_size: int):
+    """Reshapes and pads the tensor to ensure that it can be quantized in groups of `group_size`.
+
+    This function adjusts the
+    input tensor's shape so that its last dimension is a multiple
+    of the specified `group_size`. If padding is required, it adds padding to the tensor
+    to achieve this. If the tensor's last dimension is already divisible by `group_size`,
+    no padding is applied.
+
+    Args:
+        data (torch.Tensor): The input tensor to be reshaped and padded.
+        group_size (int): The size of the groups that the tensor should be reshaped into.
+
+    Returns:
+        torch.Tensor: The reshaped and padded tensor, if necessary.
+        tuple: The original shape of the input tensor.
+        int: The padding length applied to the tensor. Returns 0 if no padding is applied.
+    """
+    orig_shape = data.shape
+    pad_len = 0
+    if group_size == 0:
+        data = data.reshape(1, -1)
+        return data, orig_shape, pad_len
+    if len(data.shape) > 2:
+        data = data.reshape(-1, orig_shape[-1])
+    if group_size == -1 or data.shape[1] < group_size:
+        return data, orig_shape, pad_len
+    elif data.shape[1] % group_size == 0:
+        data = data.reshape(-1, group_size)
+        return data, orig_shape, pad_len
+    else:
+        pad_len = (data.shape[1] + group_size - 1) // group_size * group_size - data.shape[1]
+        data_new = torch.nn.functional.pad(data, (0, pad_len))
+        data_new = data_new.reshape(-1, group_size)
+        return data_new, orig_shape, pad_len
+
+
+def revert_tensor_by_pad(data: torch.Tensor, orig_shape: tuple, pad_len: int):
+    """Reverts the tensor to its original shape by removing padding.
+
+    This function removes the padding added during reshaping and returns the tensor to
+    its original shape.
+
+    Args:
+        data (torch.Tensor): The reshaped and possibly padded tensor.
+        orig_shape (tuple): The original shape of the tensor before reshaping.
+        pad_len (int): The length of the padding to be removed.
+
+    Returns:
+        torch.Tensor: The tensor restored to its original shape.
+    """
+    if pad_len == 0:
+        return data.reshape(orig_shape)
+    else:
+        if len(orig_shape) > 2:
+            tmp_shape = torch.prod(torch.tensor(orig_shape[:-1])).item()
+        else:
+            tmp_shape = orig_shape[0]
+        data_new = data.reshape(tmp_shape, -1)
+        data_new = data_new[:, :-pad_len]
+        data_new = data_new.reshape(orig_shape)
+        return data_new

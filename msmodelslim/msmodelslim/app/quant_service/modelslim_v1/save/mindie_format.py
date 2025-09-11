@@ -262,7 +262,7 @@ class MindIEFormatSaver(AutoSaverProcessor):
         self.json_append[ValidJsonExt.JSON_APPEND]['model_quant_type'] = "W8A8"
 
     @save_this_rank_only()
-    def on_w8a8_dynamic(self, prefix: str, module: qir.W8A8DynamicFakeQuantLinear):
+    def on_w8a8_dynamic_per_channel(self, prefix: str, module: qir.W8A8DynamicPerChannelFakeQuantLinear):
         with torch.device(module.weight.device):
             weight_scale = module.weight_scale.unsqueeze(-1)
             self.write_tensor(prefix + ".weight", "W8A8_DYNAMIC", module.weight.to(torch.int8))

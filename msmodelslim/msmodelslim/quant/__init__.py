@@ -30,7 +30,13 @@ __all__ = [
     "SaveProcessorConfig",
 ]
 
-from msmodelslim.quant.session.session import quant_model, SessionConfig
-from msmodelslim.quant.session.session import M4ProcessorConfig, W8A8QuantConfig, W8A8ProcessorConfig, \
-FA3ProcessorConfig, W8A8DynamicQuantConfig, W8A8DynamicProcessorConfig, W8A8TimeStepQuantConfig, \
-W8A8TimeStepProcessorConfig, SaveProcessorConfig, M3ProcessorConfig, M6ProcessorConfig, M6Config
+try:
+    from msmodelslim.quant.session.session import quant_model, SessionConfig
+    from msmodelslim.quant.session.session import M4ProcessorConfig, W8A8QuantConfig, W8A8ProcessorConfig, \
+        FA3ProcessorConfig, W8A8DynamicQuantConfig, W8A8DynamicProcessorConfig, W8A8TimeStepQuantConfig, \
+        W8A8TimeStepProcessorConfig, SaveProcessorConfig, M3ProcessorConfig, M6ProcessorConfig, M6Config
+except ImportError as e:
+    from msmodelslim.utils.logging import get_logger
+
+    get_logger().warning(
+        f"The session module is imported failed, but it is not a critical error, because v1 does not use it")

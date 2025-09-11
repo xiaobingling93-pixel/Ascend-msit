@@ -14,10 +14,11 @@
 #  limitations under the License.
 
 
-import fnmatch
 from collections import OrderedDict
 from collections.abc import Mapping
 from typing import Any, Generic, TypeVar, Set, List
+
+from wcmatch import fnmatch
 
 T = TypeVar('T')
 
@@ -30,7 +31,7 @@ class ConfigMap(Generic[T], Mapping):
         if key in self.cfg_map:
             return self.cfg_map[key]
         for pattern in self.cfg_map:
-            if fnmatch.fnmatchcase(key, pattern):
+            if fnmatch.fnmatch(key, pattern, flags=fnmatch.BRACE):
                 return self.cfg_map[pattern]
         raise KeyError(f"Key '{key}' not found in config map")
 
@@ -38,7 +39,7 @@ class ConfigMap(Generic[T], Mapping):
         if key in self.cfg_map:
             return True
         for pattern in self.cfg_map:
-            if fnmatch.fnmatchcase(key, pattern):
+            if fnmatch.fnmatch(key, pattern, flags=fnmatch.BRACE):
                 return True
         return False
 
@@ -59,7 +60,7 @@ class ConfigSet(Generic[T], Set):
             self.matched_patterns.add(key)
             return True
         for pattern in self.cfg_set:
-            if fnmatch.fnmatchcase(key, pattern):
+            if fnmatch.fnmatch(key, pattern, flags=fnmatch.BRACE):
                 self.matched_patterns.add(pattern)
                 return True
         return False
