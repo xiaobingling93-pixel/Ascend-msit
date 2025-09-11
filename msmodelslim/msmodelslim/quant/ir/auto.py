@@ -54,13 +54,13 @@ class AutoFakeQuantLinear(nn.Module):
             self,
             memo: Optional[Set[nn.Module]] = None,
             prefix: str = '',
-            recurse: bool = True
+            remove_duplicate: bool = True,
     ) -> Iterator[Tuple[str, nn.Module]]:
         if self.is_atomic():
             yield prefix, self
             return
 
-        yield from super().named_modules(memo, prefix, recurse)
+        yield from super().named_modules(memo, prefix, remove_duplicate)
 
 
 @QABCRegistry.register_abc(dispatch_key=Tuple[QScheme])
@@ -81,10 +81,10 @@ class AutoFakeQuantDynamicCache(nn.Module):
             self,
             memo: Optional[Set[nn.Module]] = None,
             prefix: str = '',
-            recurse: bool = True
+            remove_duplicate: bool = True
     ) -> Iterator[Tuple[str, nn.Module]]:
         if self.is_atomic():
             yield prefix, self
             return
 
-        yield from super().named_modules(memo, prefix, recurse)
+        yield from super().named_modules(memo, prefix, remove_duplicate)

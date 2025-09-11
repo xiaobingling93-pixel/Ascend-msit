@@ -1,15 +1,17 @@
 # Copyright Huawei Technologies Co., Ltd. 2025. All rights reserved.
 import re
 from pathlib import Path
-from typing import Callable, Optional, Type
+from typing import Callable, Optional
 
 from msmodelslim.app.base import QuantType
-from msmodelslim.utils.exception import SchemaValidateError
+from msmodelslim.utils.exception import SchemaValidateError, ToDoError
 from msmodelslim.utils.exception_decorator import exception_catcher
 from msmodelslim.utils.logging import logger_setter, get_logger
+from .model_info_interface import ModelInfoInterface
 from .practice_interface import PracticeManagerInterface
-from ..base import BaseQuantConfig, BaseModelAdapter, DeviceType
+from ..base import BaseQuantConfig, DeviceType
 from ..quant_service import BaseQuantService
+from ...core.base.model import BaseModelInterface
 
 DEFAULT_PEDIGREE = 'default'
 DEFAULT_CONFIG_ID = 'default'
@@ -20,7 +22,7 @@ class NaiveQuantizationApplication:
     def __init__(self,
                  practice_manager: PracticeManagerInterface,
                  quant_service: BaseQuantService,
-                 model_factory: Callable[[str], Type[BaseModelAdapter]]):
+                 model_factory: Callable[[str, Path, bool], BaseModelInterface]):
         self.practice_manager = practice_manager
         self.quant_service = quant_service
         self.model_factory = model_factory
@@ -149,23 +151,29 @@ class NaiveQuantizationApplication:
             config_path: Optional[Path] = None,
             trust_remote_code: bool = False
     ):
-        get_logger().info(f"===========LOAD MODEL===========")
-        model = self.model_factory(model_type)(
-            model_type=model_type,
-            ori_path=model_path,
-            device=device,
-            trust_remote_code=trust_remote_code)
-        get_logger().info(f"Load model {model_type} from {model_path} to {device} success.")
+        get_logger().info(f"===========ANALYSE MODEL===========")
+        model_adapter = self.model_factory(model_type, model_path, trust_remote_code)
+        get_logger().info(f"Using model adapter {model_adapter.__class__.__name__}.")
 
         get_logger().info(f"===========GET BEST PRACTICE===========")
+        if not isinstance(model_adapter, ModelInfoInterface):
+            raise ToDoError(f"Model adapter {model_adapter.__class__.__name__} "
+                            f"does NOT implement ModelInfoInterface",
+                            action="Please implement ModelInfoInterface to support get best practice.")
+
         quant_config = self.get_best_practice(
-            model_type=model.type,
-            model_pedigree=model.pedigree,
+            model_type=model_adapter.get_model_type(),
+            model_pedigree=model_adapter.get_model_pedigree(),
             quant_type=quant_type,
             config_path=config_path
         )
         get_logger().info(f"Get best practice {quant_config.metadata.config_id} success.")
 
         get_logger().info(f"===========QUANTIZE MODEL===========")
-        self.quant_service.quantize(model=model, quant_config=quant_config, save_path=save_path)
+        self.quant_service.quantize(
+            quant_config=quant_config,
+            model_adapter=model_adapter,
+            save_path=save_path,
+            device=device
+        )
         get_logger().info(f"===========SUCCESS===========")

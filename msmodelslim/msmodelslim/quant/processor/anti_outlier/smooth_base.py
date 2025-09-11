@@ -14,13 +14,12 @@
 #  limitations under the License.
 
 from enum import Enum
-from typing import List, Optional, Dict, Any, Callable, Annotated, Literal
-from pydantic import Field, model_validator, AfterValidator
+from typing import List, Optional, Dict, Any, Callable, Literal
 
 import torch
+from pydantic import Field, model_validator
 from torch import nn
 
-from msmodelslim.utils.config_map import ConfigSet
 from msmodelslim.core.QAL.qtypes import (
     LinearLinearSubgraph,
     NormLinearSubgraph,
@@ -29,23 +28,12 @@ from msmodelslim.core.QAL.qtypes import (
     OVSubgraph
 )
 from msmodelslim.core.base.protocol import BatchProcessRequest
+from msmodelslim.core.graph.adapter_types import AdapterConfig
+from msmodelslim.quant.processor.anti_outlier.fused_linear import VirtualVModuleFromQKVFused, VirtualVModuleFromKVFused
 from msmodelslim.quant.processor.base import AutoSessionProcessor, AutoProcessorConfig
-from msmodelslim.core.graph.adapter_types import AdapterConfig, MappingConfig, FusionConfig, SubgraphInfo
-from msmodelslim.utils.exception import MisbehaviorError, SchemaValidateError
+from msmodelslim.utils.config_map import ConfigSet
+from msmodelslim.utils.exception import MisbehaviorError, SchemaValidateError, UnsupportedError
 from msmodelslim.utils.logging import get_logger
-
-
-class GraphOpt:
-    @staticmethod
-    def set_module(model,
-                   submodule_key,
-                   module):
-        tokens = submodule_key.split('.')
-        sub_tokens = tokens[:-1]
-        cur_mod = model
-        for s in sub_tokens:
-            cur_mod = getattr(cur_mod, s)
-        setattr(cur_mod, tokens[-1], module)
 
 
 class StatKey(str, Enum):
@@ -60,363 +48,10 @@ class StatKey(str, Enum):
     TENSOR = 'tensor'
 
 
-class VirtualVModule(nn.Module):
-    """虚拟 V 模块，用于处理 QKV 融合的情况，支持 MHA、MQA 和 GQA 三种结构"""
-
-    def __init__(self, qkv_module: nn.Linear, num_attention_heads: int, num_key_value_heads: int):
-        super().__init__()
-        self.qkv_module = qkv_module
-        self.num_attention_heads = num_attention_heads
-        self.num_key_value_heads = num_key_value_heads
-
-        # 确定注意力机制类型
-        self.attention_type = self._determine_attention_type()
-
-        # 计算 V 部分的权重和偏置
-        self._extract_v_weights()
-
-    def forward(self, x):
-        """前向传播，只返回 V 部分的输出"""
-        # 计算 V 部分的输出
-        v_output = torch.nn.functional.linear(x, self.v_weight, self.v_bias)
-        return v_output
-
-    def update_qkv_weights(self):
-        """将更新后的 V 权重更新回原始的 QKV 模块"""
-        qkv_weight = self.qkv_module.weight
-        qkv_bias = getattr(self.qkv_module, 'bias', None)
-
-        # 计算每个头的维度
-        head_dim = qkv_weight.shape[1] // self.num_attention_heads
-
-        # 根据注意力类型计算 V 部分的起始和结束索引
-        v_start, v_end = self._get_v_indices(head_dim)
-
-        # 更新 V 部分的权重
-        with torch.no_grad():
-            qkv_weight[v_start:v_end] = self.v_weight.data
-
-            # 更新 V 部分的偏置
-            if qkv_bias is not None and self.v_bias is not None:
-                qkv_bias[v_start:v_end] = self.v_bias.data
-
-    def _determine_attention_type(self) -> str:
-        """确定注意力机制类型"""
-        if self.num_key_value_heads == 1:
-            return "MQA"  # Multi-Query Attention
-        elif self.num_key_value_heads == self.num_attention_heads:
-            return "MHA"  # Multi-Head Attention
-        elif (self.num_key_value_heads < self.num_attention_heads and 
-              self.num_attention_heads % self.num_key_value_heads == 0):
-            return "GQA"  # Grouped-Query Attention
-        else:
-            get_logger().warning("InValid attention type, please check.")
-            return "UNKNOWN"
-
-    def _get_v_indices(self, head_dim: int) -> tuple:
-        """根据注意力类型获取 V 部分的索引范围"""
-        if self.attention_type == "MHA":
-            # MHA: QKV 顺序为 [Q, K, V]，每个都有 num_attention_heads 个头
-            q_size = self.num_attention_heads * head_dim
-            k_size = self.num_attention_heads * head_dim
-            v_start = q_size + k_size
-            v_end = q_size + k_size + self.num_attention_heads * head_dim
-
-        elif self.attention_type == "MQA":
-            # MQA: QKV 顺序为 [Q, K, V]，Q 有 num_attention_heads 个头，K/V 只有 1 个头
-            q_size = self.num_attention_heads * head_dim
-            k_size = 1 * head_dim
-            v_start = q_size + k_size
-            v_end = q_size + k_size + 1 * head_dim
-
-        elif self.attention_type == "GQA":  # GQA
-            # GQA: QKV 顺序为 [Q, K, V]，Q 有 num_attention_heads 个头，K/V 有 num_key_value_heads 个头
-            q_size = self.num_attention_heads * head_dim
-            k_size = self.num_key_value_heads * head_dim
-            v_start = q_size + k_size
-            v_end = q_size + k_size + self.num_key_value_heads * head_dim
-        else:
-            raise ValueError(f"Invalid attention type: {self.attention_type}")
-        return v_start, v_end
-
-    def _extract_v_weights(self):
-        """从 QKV 模块中提取 V 部分的权重和偏置"""
-        qkv_weight = self.qkv_module.weight
-        qkv_bias = getattr(self.qkv_module, 'bias', None)
-
-        # 计算每个头的维度
-        head_dim = qkv_weight.shape[1] // self.num_attention_heads
-
-        # 根据注意力类型获取 V 部分的索引范围
-        v_start, v_end = self._get_v_indices(head_dim)
-
-        # 提取 V 部分的权重
-        self.v_weight = nn.Parameter(qkv_weight[v_start:v_end].clone())
-
-        # 提取 V 部分的偏置
-        if qkv_bias is not None:
-            self.v_bias = nn.Parameter(qkv_bias[v_start:v_end].clone())
-        else:
-            self.v_bias = None
-
-
-class SubgraphProcessor:
-    """
-    通用子图适配器，支持通过语义化pattern和scope限定作用域自动查找子图。
-    """
-
-    def __init__(
-            self,
-            model: nn.Module,
-            adapter_config: Optional[List[AdapterConfig]] = None,
-            smooth_config: Optional[AutoProcessorConfig] = None
-    ):
-        self.adapter_config = adapter_config
-        self.smooth_config = smooth_config
-        self.model = model
-
-    def find_subgraphs_by_config(
-            self,
-            subgraphs: List[SubgraphInfo],
-            config: AutoProcessorConfig,
-            scope: str,
-            **kwargs
-    ) -> List[SubgraphInfo]:
-        """
-        根据配置过滤子图
-
-        Args:
-            subgraphs: 子图信息列表
-            config: 处理器配置
-            scope: 作用域前缀
-            **kwargs: 其他参数
-
-        Returns:
-            List[SubgraphInfo]: 过滤后的子图信息列表
-        """
-
-        result = []
-        layer_prefix = f"{scope}." if scope != "" else ""
-
-        include = ConfigSet(self.smooth_config.include) if self.smooth_config.include else ConfigSet(["*"])
-        exclude = ConfigSet(self.smooth_config.exclude) if self.smooth_config.exclude else ConfigSet([])
-        for subgraph in subgraphs:
-            # 1. 检查子图类型是否支持
-            if subgraph.subgraph_type not in config.enable_subgraph_type:
-                continue
-
-            # 2. 检查元数据是否存在
-            if not subgraph.metadata or 'source_name' not in subgraph.metadata:
-                continue
-
-            source_name = subgraph.metadata['source_name']
-
-            # 3. 检查是否以layer_prefix为前缀
-            if not source_name.startswith(layer_prefix):
-                continue
-
-            if source_name not in include:
-                continue
-
-            if source_name in exclude:
-                continue
-
-            result.append(subgraph)
-
-        return result
-
-    def get_global_subgraph_info(self) -> List[SubgraphInfo]:
-        """
-        获取全局子图信息，优先使用子类实现
-
-        Returns:
-            List[SubgraphInfo]: 子图信息列表
-        """
-        result = []
-        if not self.adapter_config:
-            raise MisbehaviorError("adapter_config cannot be empty")
-        result = self._get_adapter_based_subgraph_info()
-        return result
-
-    def _get_adapter_based_subgraph_info(self) -> List[SubgraphInfo]:
-        """
-        基于adapter_config获取子图信息
-
-        Returns:
-            List[SubgraphInfo]: 子图信息列表
-        """
-        result = []
-
-        # 子图类型到创建方法的映射
-        subgraph_creators = {
-            "norm-linear": lambda m: self._create_norm_linear_subgraph_info(m),
-            "ov": lambda m, fusion=None: self._create_ov_subgraph_info(m, fusion),
-            "up-down": lambda m: self._create_up_down_subgraph_info(m),
-            "linear-linear": lambda m: self._create_linear_linear_subgraph_info(m),
-        }
-
-        for adapter_config in self.adapter_config:
-            subgraph_type = adapter_config.subgraph_type
-            mapping = adapter_config.mapping
-
-            if mapping is None or subgraph_type not in subgraph_creators:
-                continue
-
-            # 使用映射的方法创建子图信息
-            if subgraph_type == "ov":
-                fusion = getattr(adapter_config, 'fusion', None)
-                subgraph_info = subgraph_creators[subgraph_type](mapping, fusion)
-            else:
-                subgraph_info = subgraph_creators[subgraph_type](mapping)
-
-            if subgraph_info:
-                result.append(subgraph_info)
-
-        return result
-
-    def _create_subgraph_info_base(
-            self,
-            mapping: 'MappingConfig',
-            subgraph_type: str,
-            metadata_extra: Optional[Dict[str, Any]] = None
-    ) -> Optional['SubgraphInfo']:
-        """
-        创建子图信息的基础方法
-
-        Args:
-            mapping: 映射配置
-            subgraph_type: 子图类型
-            metadata_extra: 额外的元数据
-
-        Returns:
-            Optional[SubgraphInfo]: 子图信息，如果失败则返回None
-        """
-        try:
-            source_name = mapping.source
-            target_names = mapping.targets
-
-            # 获取源模块
-            source_module = None
-            for name, module in self.model.named_modules():
-                if name == source_name:
-                    source_module = module
-                    break
-
-            if source_module is None:
-                get_logger().warning(f"Cannot find source module: {source_name}")
-                return None
-
-            # 获取目标模块列表
-            target_modules = []
-            for target_name in target_names:
-                target_module = None
-                for name, module in self.model.named_modules():
-                    if name == target_name:
-                        target_module = module
-                        break
-
-                if target_module is not None:
-                    target_modules.append(target_module)
-                else:
-                    get_logger().warning(f"Cannot find target module: {target_name}")
-
-            if not target_modules:
-                get_logger().warning(f"No valid target modules found for source: {source_name}")
-                return None
-
-            # 构建基础元数据
-            metadata = {
-                'source_name': source_name,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
-                'source_module': source_module,
-                'target_names': target_names,
-                'target_modules': target_modules,
-            }
-
-            # 添加额外的元数据
-            if metadata_extra:
-                metadata.update(metadata_extra)
-
-            return SubgraphInfo(
-                name=f"{source_name}_{subgraph_type}_subgraph",
-                subgraph_type=subgraph_type,
-                metadata=metadata
-            )
-
-        except Exception as e:
-            get_logger().warning(f"Failed to create {subgraph_type} subgraph info: {e}")
-            return None
-
-    def _create_norm_linear_subgraph_info(
-            self,
-            mapping: 'MappingConfig',
-    ) -> Optional['SubgraphInfo']:
-        """创建norm-linear子图信息"""
-        subgraph_info = self._create_subgraph_info_base(mapping, "norm-linear")
-        if subgraph_info is None:
-            raise MisbehaviorError(
-                "Failed to create norm-linear subgraph info. "
-                "Please check if the required modules exist in the model "
-                "and the mapping configuration is correct."
-            )
-        return subgraph_info
-
-    def _create_ov_subgraph_info(
-            self,
-            mapping: 'MappingConfig',
-            fusion: Optional['FusionConfig'] = None
-    ) -> Optional['SubgraphInfo']:
-        """创建ov子图信息"""
-        # 准备额外的元数据
-        metadata_extra = None
-        if fusion:
-            metadata_extra = {
-                'fusion_type': fusion.fusion_type,
-                'num_attention_heads': fusion.num_attention_heads,
-                'num_key_value_heads': fusion.num_key_value_heads
-            }
-
-        subgraph_info = self._create_subgraph_info_base(mapping, "ov", metadata_extra)
-        if subgraph_info is None:
-            raise MisbehaviorError(
-                "Failed to create ov subgraph info. "
-                "Please check if the required modules exist in the model "
-                "and the mapping configuration is correct."
-            )
-        return subgraph_info
-
-    def _create_up_down_subgraph_info(
-            self,
-            mapping: 'MappingConfig'
-    ) -> Optional['SubgraphInfo']:
-        """创建up-down子图信息"""
-        subgraph_info = self._create_subgraph_info_base(mapping, "up-down")
-        if subgraph_info is None:
-            raise MisbehaviorError(
-                "Failed to create up-down subgraph info. "
-                "Please check if the required modules exist in the model "
-                "and the mapping configuration is correct."
-            )
-        return subgraph_info
-
-    def _create_linear_linear_subgraph_info(
-            self,
-            mapping: 'MappingConfig'
-    ) -> Optional['SubgraphInfo']:
-        """创建linear-linear子图信息"""
-        subgraph_info = self._create_subgraph_info_base(mapping, "linear-linear")
-        if subgraph_info is None:
-            raise MisbehaviorError(
-                "Failed to create linear-linear subgraph info. "
-                "Please check if the required modules exist in the model "
-                "and the mapping configuration is correct."
-            )
-        return subgraph_info
-
-
 class BaseSmoothProcessorConfig(AutoProcessorConfig):
-    type: Literal["base_smooth"] = "base_smooth" 
-    alpha: Optional[float] = None      # 可选参数
-    beta: Optional[float] = None  
+    type: Literal["base_smooth"] = "base_smooth"
+    alpha: Optional[float] = None  # 可选参数
+    beta: Optional[float] = None
     scale_min: Optional[float] = None
     symmetric: Optional[bool] = None
     enable_subgraph_type: Optional[List[str]] = None
@@ -447,12 +82,22 @@ class BaseSmoothProcessorConfig(AutoProcessorConfig):
 
 
 class BaseSmoothProcessor(AutoSessionProcessor):
+    # 子图类型到处理方法的映射表
+    SUBGRAPH_HANDLERS = {
+        "norm-linear": "_apply_norm_linear_smooth",
+        "linear-linear": "_apply_linear_linear_smooth",
+        "ov": "_apply_ov_smooth",
+        "up-down": "_apply_up_down_smooth",
+    }
 
     def __init__(self, model: nn.Module, config: AutoProcessorConfig, adapter: Optional[Any] = None):
         super().__init__(model)
         self.adapter = adapter
         self.config = config
         self.act_stats = {}
+        self.hook_handles = {}
+        self.global_adapter_config = None
+        self.adapter_config = None
 
     def validate_parameters(self):
         """
@@ -499,23 +144,71 @@ class BaseSmoothProcessor(AutoSessionProcessor):
         _ = self
         return False
 
+    def pre_run(self) -> None:
+        """在运行前获取全图子结构配置"""
+        self.global_adapter_config = self.adapter.get_adapter_config_for_subgraph()
+        get_logger().info(f"Loaded global subgraph configurations")
+
     def preprocess(self, request: BatchProcessRequest) -> None:
-        adapter_config = self.adapter.get_adapter_config_for_subgraph()
-        # 创建子图处理器
-        smooth_processor = SubgraphProcessor(model=self.model, adapter_config=adapter_config, smooth_config=self.config)
-        # 获取全量子图
-        self.subgraph_info = smooth_processor.get_global_subgraph_info()
-        # 根据配置过滤子图
-        self.subgraph_info = smooth_processor.find_subgraphs_by_config(
-            self.subgraph_info,
+        # 根据当前模块过滤全局配置
+        self.adapter_config = self._filter_adapter_configs_by_config(
+            self.global_adapter_config,
             self.config,
             request.name
         )
-        get_logger().info(f"[Smooth] Processed {len(self.subgraph_info)} subgraphs for submodule {request.name}")
+        get_logger().debug(f"Processed {len(self.adapter_config)} subgraphs for submodule {request.name}")
         self._install_statis_hook(request.name, request.module)
 
     def postprocess(self, request: BatchProcessRequest) -> None:
         self._apply_smooth(request.name, request.module)
+
+    def _filter_adapter_configs_by_config(
+            self,
+            adapter_configs: List[AdapterConfig],
+            config: AutoProcessorConfig,
+            scope: str
+    ) -> List[AdapterConfig]:
+        """
+        根据配置过滤适配器配置
+        
+        Args:
+            adapter_configs: 适配器配置列表
+            config: 处理器配置
+            scope: 作用域前缀
+            
+        Returns:
+            List[AdapterConfig]: 过滤后的适配器配置列表
+        """
+        result = []
+        layer_prefix = f"{scope}." if scope != "" else ""
+
+        include = ConfigSet(config.include) if config.include else ConfigSet(["*"])
+        exclude = ConfigSet(config.exclude) if config.exclude else ConfigSet([])
+
+        for adapter_config in adapter_configs:
+            # 1. 检查子图类型是否支持
+            if adapter_config.subgraph_type not in config.enable_subgraph_type:
+                continue
+
+            # 2. 检查映射配置是否存在
+            if not adapter_config.mapping:
+                continue
+
+            source_name = adapter_config.mapping.source
+
+            # 3. 检查是否以layer_prefix为前缀
+            if not source_name.startswith(layer_prefix):
+                continue
+
+            if source_name not in include:
+                continue
+
+            if source_name in exclude:
+                continue
+
+            result.append(adapter_config)
+
+        return result
 
     def _build_smooth_context(self, linear_modules: List[nn.Linear]) -> SmoothContext:
         """
@@ -555,7 +248,7 @@ class BaseSmoothProcessor(AutoSessionProcessor):
                     shift = stats[StatKey.STAT_KEY_SHIFT]
                 else:
                     shift = None
-                
+
                 if StatKey.TENSOR in stats:
                     tensors = stats[StatKey.TENSOR]
                 else:
@@ -589,27 +282,26 @@ class BaseSmoothProcessor(AutoSessionProcessor):
             Callable: 统计钩子函数
         """
         raise NotImplementedError("Subclasses must implement _get_stats_hook method")
-    
-    def _get_target_names_for_hook(self, subgraph: SubgraphInfo) -> List[str]:
+
+    def _get_target_names_for_hook(self, adapter_config: AdapterConfig) -> List[str]:
         """
         根据子图类型获取需要安装钩子的模块名称列表
         
         Args:
-            subgraph: 子图信息
+            adapter_config: 适配器配置
             
         Returns:
             List[str]: 目标模块名称列表
         """
-        subgraph_type = subgraph.subgraph_type
-        metadata = subgraph.metadata
+        subgraph_type = adapter_config.subgraph_type
 
         if subgraph_type == "norm-linear" or subgraph_type == "up-down":
             # Norm-Linear: 为所有target_names安装钩子
-            return metadata.get('target_names', [])
+            return adapter_config.mapping.targets
 
         if subgraph_type == "linear-linear" or subgraph_type == "ov":
             # Linear-Linear: 为linear2模块安装钩子
-            target_name = metadata.get('target_names', [''])[0]
+            target_name = adapter_config.mapping.targets[0] if adapter_config.mapping.targets else ''
             return [target_name] if target_name else []
 
         # 默认情况：返回空列表
@@ -633,8 +325,6 @@ class BaseSmoothProcessor(AutoSessionProcessor):
                 get_logger().warning(f"Module {module_name} is not Linear type, skipping hook installation")
         except Exception as e:
             get_logger().warning(f"Failed to install statistics hook for module {module_name}: {e}")
-    
-
 
     def _install_statis_hook(self, name: str, module: nn.Module) -> None:
         """
@@ -644,12 +334,9 @@ class BaseSmoothProcessor(AutoSessionProcessor):
             name: 模块名称
             module: 目标模块
         """
-        for subgraph in self.subgraph_info:
-            if not subgraph.metadata:
-                continue
-
+        for adapter_config in self.adapter_config:
             # 根据子图类型获取需要安装钩子的模块名称
-            target_names = self._get_target_names_for_hook(subgraph)
+            target_names = self._get_target_names_for_hook(adapter_config)
 
             # 为每个目标模块安装钩子
             for target_name in target_names:
@@ -670,145 +357,132 @@ class BaseSmoothProcessor(AutoSessionProcessor):
         # 清空hook句柄字典
         self.hook_handles.clear()
 
-    def _extract_common_metadata(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        提取公共的metadata信息
-        
-        Args:
-            metadata: 原始元数据
-            
-        Returns:
-            Dict[str, Any]: 提取的公共信息
-        """
-        return {
-            'source_name': metadata.get('source_name', ''),
-            'source_module': metadata.get('source_module'),
-            'target_modules': metadata.get('target_modules', []),
-            'target_names': metadata.get('target_names', []),
-            'fusion_flag': metadata.get('fusion_flag', False),
-            'num_attention_heads': metadata.get('num_attention_heads'),
-            'num_key_value_heads': metadata.get('num_key_value_heads')
-        }
-
-    def _apply_norm_linear_smooth(self, common_metadata: Dict[str, Any]) -> None:
+    def _apply_norm_linear_smooth(self, adapter_config: AdapterConfig) -> None:
         """应用Norm-Linear平滑"""
-        # 应用平滑
-        self._apply_smooth_to_subgraph(
-            NormLinearSubgraph(common_metadata['source_module'], common_metadata['target_modules']),
-            common_metadata['target_modules']
-        )
+        # 获取模块对象
+        source_module = self.model.get_submodule(adapter_config.mapping.source)
+        target_modules = [self.model.get_submodule(name) for name in adapter_config.mapping.targets]
+        target_modules = [m for m in target_modules if m is not None]
 
-    def _apply_linear_linear_smooth(self, common_metadata: Dict[str, Any]) -> None:
-        """应用Linear-Linear平滑"""  # 获取第一个目标模块（Linear-Linear通常只有一个目标）
-        target_module = common_metadata['target_modules'][0] if common_metadata['target_modules'] else None
-
-        if not target_module:
-            get_logger().warning("Linear-Linear subgraph missing target module")
+        if not source_module or not target_modules:
+            get_logger().warning(f"Failed to get modules for norm-linear subgraph: {adapter_config.mapping.source}")
             return
 
         # 应用平滑
         self._apply_smooth_to_subgraph(
-            LinearLinearSubgraph(common_metadata['source_module'], target_module),
+            NormLinearSubgraph(source_module, target_modules),
+            target_modules
+        )
+
+    def _apply_linear_linear_smooth(self, adapter_config: AdapterConfig) -> None:
+        """应用Linear-Linear平滑"""
+        # 获取模块对象
+        source_module = self.model.get_submodule(adapter_config.mapping.source)
+        target_modules = [self.model.get_submodule(name) for name in adapter_config.mapping.targets]
+        target_modules = [m for m in target_modules if m is not None]
+
+        if not source_module or not target_modules:
+            get_logger().warning(f"Failed to get modules for linear-linear subgraph: {adapter_config.mapping.source}")
+            return
+
+        # 获取第一个目标模块（Linear-Linear通常只有一个目标）
+        target_module = target_modules[0]
+
+        # 应用平滑
+        self._apply_smooth_to_subgraph(
+            LinearLinearSubgraph(source_module, target_module),
             [target_module]
         )
 
-    def _apply_ov_smooth(self, common_metadata: Dict[str, Any]) -> None:
+    def _apply_ov_smooth(self, adapter_config: AdapterConfig) -> None:
         """应用OV平滑（输出-值投影）"""
-        # 获取OV特定的信息
-        o_name = common_metadata['target_names'][0] if common_metadata['target_names'] else ''
-        v_name = common_metadata['source_name']
-        o_module = common_metadata['target_modules'][0] if common_metadata['target_modules'] else None
-        v_module = common_metadata['source_module']
-        fusion_flag = common_metadata['fusion_flag']
-
-        # 获取注意力头数量
-        num_attention_heads = common_metadata['num_attention_heads']
-        num_key_value_heads = common_metadata['num_key_value_heads']
-
-        if num_attention_heads is None or num_key_value_heads is None:
-            num_attention_heads = self.get_num_attention_heads()
-            num_key_value_heads = self.get_num_key_value_heads()
-
-        if not o_name or not v_name:
-            get_logger().warning(f"OV subgraph missing necessary name information: o_name={o_name}, v_name={v_name}")
-            return
+        # 获取融合配置
+        fusion = adapter_config.fusion
+        fusion_flag = fusion is not None
 
         try:
-            if not o_module or not v_module:
-                get_logger().warning(
-                    f"Cannot get OV subgraph modules: "
-                    f"o_module={o_module is not None}, v_module={v_module is not None}")
-                return
-
-            if not isinstance(o_module, nn.Linear):
-                get_logger().warning(f"O module {o_name} is not Linear type, skipping")
-                return
-
             # 根据融合标志选择平滑方法
             if fusion_flag:
-                self._apply_qkv_fusion_smooth(v_module, o_module, v_name, o_name,
-                                              num_attention_heads, num_key_value_heads)
+                self._apply_qkv_fusion_smooth(adapter_config)
             else:
-                self._apply_standard_ov_smooth(v_module, o_module, v_name, o_name,
-                                               num_attention_heads, num_key_value_heads)
+                self._apply_standard_ov_smooth(adapter_config)
 
         except Exception as e:
             get_logger().error(f"Error occurred while applying OV smoothing: {e}")
 
-    def _apply_qkv_fusion_smooth(self, v_module: nn.Module, o_module: nn.Module,
-                                 v_name: str, o_name: str,
-                                 num_attention_heads: int, num_key_value_heads: int) -> None:
+    def _apply_qkv_fusion_smooth(self, adapter_config: AdapterConfig) -> None:
         """
         应用QKV融合平滑
         
         Args:
-            v_module: V投影模块
-            o_module: O投影模块
-            v_name: V模块名称
-            o_name: O模块名称
-            num_attention_heads: 注意力头数量
-            num_key_value_heads: 键值头数量
+            adapter_config: 适配器配置
         """
+        v_name = adapter_config.mapping.source
+        o_name = adapter_config.mapping.targets[0] if adapter_config.mapping.targets else ''
+        v_module = self.model.get_submodule(v_name)
+        o_module = self.model.get_submodule(o_name)
+        fusion = adapter_config.fusion
+
         if not isinstance(v_module, nn.Linear):
             get_logger().warning(f"V module {v_name} is not Linear type, skipping QKV fusion")
             return
 
+        if not o_module:
+            get_logger().warning(f"O module {o_name} not found, skipping QKV fusion")
+            return
+
         # 创建虚拟V模块
-        virtual_v_module = VirtualVModule(v_module, num_attention_heads, num_key_value_heads)
+        if fusion.fusion_type == "kv":
+            virtual_v_module = VirtualVModuleFromKVFused(v_module,
+                                                         num_attention_heads=fusion.num_attention_heads,
+                                                         qk_nope_head_dim=fusion.custom_config["qk_nope_head_dim"],
+                                                         v_head_dim=fusion.custom_config["v_head_dim"])
+        elif fusion.fusion_type == "qkv":
+            virtual_v_module = VirtualVModuleFromQKVFused(v_module,
+                                                          num_attention_heads=fusion.num_attention_heads,
+                                                          num_key_value_heads=fusion.num_key_value_heads)
+        else:
+            raise UnsupportedError(f"Unsupported fusion type: {fusion.fusion_type}")
 
         # 应用平滑
         self._apply_smooth_to_subgraph(
             OVSubgraph(
                 o_proj=o_module,
                 v_proj=virtual_v_module,
-                num_attention_heads=num_attention_heads,
-                key_value_heads=num_key_value_heads
+                num_attention_heads=fusion.num_attention_heads,
+                key_value_heads=fusion.num_key_value_heads
             ),
             [o_module]
         )
 
         # 更新原始QKV模块权重
-        virtual_v_module.update_qkv_weights()
+        virtual_v_module.update_weights()
 
         get_logger().debug(f"Successfully applied QKV fusion smoothing: {v_name} -> {o_name}")
 
-    def _apply_standard_ov_smooth(self, v_module: nn.Module, o_module: nn.Module,
-                                  v_name: str, o_name: str,
-                                  num_attention_heads: int, num_key_value_heads: int) -> None:
+    def _apply_standard_ov_smooth(self, adapter_config: AdapterConfig) -> None:
         """
         应用标准OV平滑
         
         Args:
-            v_module: V投影模块
-            o_module: O投影模块
-            v_name: V模块名称
-            o_name: O模块名称
-            num_attention_heads: 注意力头数量
-            num_key_value_heads: 键值头数量
+            adapter_config: 适配器配置
         """
+        v_name = adapter_config.mapping.source
+        o_name = adapter_config.mapping.targets[0] if adapter_config.mapping.targets else ''
+        v_module = self.model.get_submodule(v_name)
+        o_module = self.model.get_submodule(o_name)
+
         if not isinstance(v_module, nn.Linear):
             get_logger().warning(f"V module {v_name} is not Linear type, skipping standard OV smoothing")
             return
+
+        if not o_module:
+            get_logger().warning(f"O module {o_name} not found, skipping standard OV smoothing")
+            return
+
+        # 获取注意力头数量
+        num_attention_heads = self.get_num_attention_heads()
+        num_key_value_heads = self.get_num_key_value_heads()
 
         # 应用平滑
         self._apply_smooth_to_subgraph(
@@ -823,12 +497,20 @@ class BaseSmoothProcessor(AutoSessionProcessor):
 
         get_logger().debug(f"Successfully applied standard OV smoothing: {v_name} -> {o_name}")
 
-    def _apply_up_down_smooth(self, common_metadata: Dict[str, Any]) -> None:
+    def _apply_up_down_smooth(self, adapter_config: AdapterConfig) -> None:
         """应用Up-Down平滑（MLP门控机制）"""
+        # 获取模块对象
+        up_module = self.model.get_submodule(adapter_config.mapping.source)
+        target_modules = [self.model.get_submodule(name) for name in adapter_config.mapping.targets]
+        target_modules = [m for m in target_modules if m is not None]
+
+        if not up_module or not target_modules:
+            get_logger().warning(f"Failed to get modules for up-down subgraph: {adapter_config.mapping.source}")
+            return
+
         # 获取Up-Down特定的模块
-        up_module = common_metadata['source_module']
-        down_module = common_metadata['target_modules'][0] if len(common_metadata['target_modules']) > 0 else None
-        gate_module = common_metadata['target_modules'][1] if len(common_metadata['target_modules']) > 1 else None
+        down_module = target_modules[0] if len(target_modules) > 0 else None
+        gate_module = target_modules[1] if len(target_modules) > 1 else None
 
         if not all([up_module, down_module]):
             get_logger().warning(
@@ -852,30 +534,24 @@ class BaseSmoothProcessor(AutoSessionProcessor):
         """
         raise NotImplementedError("Subclasses must implement _apply_smooth_to_subgraph method")
 
-
-    def _process_single_subgraph(self, subgraph: SubgraphInfo) -> None:
+    def _process_single_subgraph(self, adapter_config: AdapterConfig) -> None:
         """
         处理单个子图
         
         Args:
-            subgraph: 子图信息
+            adapter_config: 适配器配置
         """
-        subgraph_type = subgraph.subgraph_type
-        metadata = subgraph.metadata or {}
+        subgraph_type = adapter_config.subgraph_type
 
         get_logger().debug(
-            f"Processing subgraph type: {subgraph_type}, name: {subgraph.name}"
+            f"Processing subgraph type: {subgraph_type}, source: {adapter_config.mapping.source}"
         )
-        common_metadata = self._extract_common_metadata(metadata)
+
         # 根据子图类型调用相应的处理方法
-        if subgraph_type == "norm-linear":
-            self._apply_norm_linear_smooth(common_metadata)
-        elif subgraph_type == "linear-linear":
-            self._apply_linear_linear_smooth(common_metadata)
-        elif subgraph_type == "ov":
-            self._apply_ov_smooth(common_metadata)
-        elif subgraph_type == "up-down":
-            self._apply_up_down_smooth(common_metadata)
+        handler_name = self.SUBGRAPH_HANDLERS.get(subgraph_type)
+        if handler_name:
+            handler = getattr(self, handler_name)
+            handler(adapter_config)
         else:
             get_logger().warning(f"Unsupported subgraph type: {subgraph_type}")
 
@@ -893,23 +569,24 @@ class BaseSmoothProcessor(AutoSessionProcessor):
         priority_order = self.config.subgraph_priority
 
         # 按优先级排序子图
-        sorted_subgraphs = sorted(
-            self.subgraph_info,
+        sorted_adapter_configs = sorted(
+            self.adapter_config,
             key=lambda x: priority_order.get(x.subgraph_type, 999)  # 未知类型优先级最低
         )
 
         get_logger().debug(f"Subgraph processing order after priority sorting:")
-        for i, subgraph in enumerate(sorted_subgraphs):
-            priority = priority_order.get(subgraph.subgraph_type, 999)
-            get_logger().debug(f"  {i + 1}. {subgraph.subgraph_type} (priority: {priority}) - {subgraph.name}")
+        for i, adapter_config in enumerate(sorted_adapter_configs):
+            priority = priority_order.get(adapter_config.subgraph_type, 999)
+            get_logger().debug(
+                f"  {i + 1}. {adapter_config.subgraph_type} (priority: {priority}) - {adapter_config.mapping.source}")
 
         # 按优先级顺序处理子图
-        for subgraph in sorted_subgraphs:
+        for adapter_config in sorted_adapter_configs:
             try:
-                priority = priority_order.get(subgraph.subgraph_type, 999)
-                self._process_single_subgraph(subgraph)
+                priority = priority_order.get(adapter_config.subgraph_type, 999)
+                self._process_single_subgraph(adapter_config)
             except Exception as e:
-                get_logger().error(f"Error occurred while processing subgraph {subgraph.name}: {e}")
+                get_logger().error(f"Error occurred while processing subgraph {adapter_config.mapping.source}: {e}")
                 continue
 
     def _apply_smooth(self, name: str, module: nn.Module) -> None:

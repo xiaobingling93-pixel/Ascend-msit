@@ -2,7 +2,7 @@
 __all__ = [
     'DeviceType',
     'QuantType',
-    'PipelineType',
+    'RunnerType',
 ]
 
-from .base import DeviceType, QuantType, PipelineType
+from .base import DeviceType, QuantType, RunnerType

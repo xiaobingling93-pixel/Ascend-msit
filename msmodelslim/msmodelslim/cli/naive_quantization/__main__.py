@@ -1,14 +1,14 @@
 # Copyright Huawei Technologies Co., Ltd. 2025. All rights reserved.
-import functools
 import os
 from pathlib import Path
 
-from msmodelslim.app.base import BaseModelAdapter
 from msmodelslim.app.naive_quantization import NaiveQuantizationApplication
 from msmodelslim.app.quant_service.proxy import QuantServiceProxy
+from msmodelslim.core.base.model import BaseModelInterface
 from msmodelslim.infra.dataset_loader import FileDatasetLoader
 from msmodelslim.infra.practice_manager import PracticeManager
 from msmodelslim.model import ModelFactory
+from msmodelslim.model.base import BaseModelAdapter
 from msmodelslim.utils.security.path import get_valid_read_path
 
 
@@ -26,18 +26,25 @@ def get_dataset_dir():
     return Path(lab_calib_dir)
 
 
+def create_model(model_type: str, model_path: Path, trust_remote_code: bool) -> BaseModelInterface:
+    return ModelFactory.create(model_type, interface=BaseModelAdapter)(
+        model_type=model_type,
+        model_path=model_path,
+        trust_remote_code=trust_remote_code,
+    )
+
+
 def main(args):
     config_dir = get_practice_dir()
     practice_manager = PracticeManager(official_config_dir=config_dir)
     dataset_dir = get_dataset_dir()
     dataset_loader = FileDatasetLoader(dataset_dir)
     quant_service = QuantServiceProxy(dataset_loader)
-    model_factory = functools.partial(ModelFactory.create, interface=BaseModelAdapter)
 
     app = NaiveQuantizationApplication(
         practice_manager=practice_manager,
         quant_service=quant_service,
-        model_factory=model_factory
+        model_factory=create_model,
     )
 
     app.quant(
@@ -47,4 +54,5 @@ def main(args):
         device=args.device,
         quant_type=args.quant_type,
         config_path=args.config_path,
+        trust_remote_code=args.trust_remote_code
     )

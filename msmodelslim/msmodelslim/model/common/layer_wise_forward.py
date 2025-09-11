@@ -30,19 +30,20 @@ class _TransformersForwardBreak(Exception):
 
 def generated_decoder_layer_visit_func(model: torch.nn.Module,
                                        transformer_blocks: Optional[List[Tuple[str, torch.nn.Module]]] = None,
+                                       keyword: str = "decoderlayer",
                                        ) -> Generator[ProcessRequest, Any, None]:
     if transformer_blocks is None:
         transformer_blocks = [
             (name, module)
             for name, module in model.named_modules()
-            if "decoderlayer" in module.__class__.__name__.lower()
+            if keyword in module.__class__.__name__.lower()
         ]
 
     if dist.is_initialized():
         dist.barrier()
 
     for name, block in transformer_blocks:
-        yield ProcessRequest(name, block, [], {})
+        yield ProcessRequest(name, block, tuple(), {})
 
 
 def transformers_generated_forward_func(model: torch.nn.Module,

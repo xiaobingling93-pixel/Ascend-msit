@@ -2,16 +2,17 @@
 
 import unittest
 from typing import Tuple, Dict, Optional
+from unittest.mock import Mock
 
 import torch
+from resources.fake_llama.fake_llama import get_fake_llama_model_and_tokenizer
 from transformers import PreTrainedModel, PreTrainedTokenizer
 
+from msmodelslim.app import DeviceType
+from msmodelslim.core.base.protocol import ProcessRequest
 from msmodelslim.core.runner.generated_runner import GeneratedRunner
-from msmodelslim.core.runner.layer_wise_forward import transformers_generated_forward_func, \
-    generated_decoder_layer_visit_func
+from msmodelslim.core.runner.pipeline_parallel_runner import PPRunner
 from msmodelslim.quant.processor import AutoProcessorConfig
-from msmodelslim.quant.processor.base import AutoSessionProcessor
-from resources.fake_llama.fake_llama import get_fake_llama_model_and_tokenizer
 
 KEY_INPUT_IDS = "input_ids"
 KEY_ATTENTION_MASK = "attention_mask"
@@ -19,8 +20,13 @@ STR_TEST_PROMPT = "Hello world"
 RETURN_TENSOR_TYPE = "pt"
 
 
-class ProcessorTestBase(unittest.TestCase):
+class TestProcessorBase(unittest.TestCase):
     """处理器测试基类，提供通用的测试方法和工具"""
+
+    @staticmethod
+    def init_model() -> Tuple[PreTrainedModel, PreTrainedTokenizer]:
+        """初始化测试模型和分词器"""
+        return get_fake_llama_model_and_tokenizer()
 
     def setUp(self):
         """测试前的准备工作"""
@@ -35,16 +41,46 @@ class ProcessorTestBase(unittest.TestCase):
 
     def run_processor_with_cfg(self, config: AutoProcessorConfig) -> GeneratedRunner:
         """使用配置运行处理器"""
-        processor = AutoSessionProcessor.from_config(self.model, config, None)
-        runner = GeneratedRunner(
-            self.model,
-            generated_forward_func=transformers_generated_forward_func,
-            generated_visit_func=generated_decoder_layer_visit_func
-        )
+        # 准备校准数据
         test_prompt = self.tokenizer(STR_TEST_PROMPT, return_tensors=RETURN_TENSOR_TYPE, padding=True, truncation=True)
-        dataset_calib = [[test_prompt[KEY_INPUT_IDS], test_prompt.data[KEY_ATTENTION_MASK]]]
-        runner.add_processor(processor, dataset_calib if not processor.is_data_free() else None)
-        runner.run()
+        dataset_calib = [[test_prompt[KEY_INPUT_IDS], test_prompt[KEY_ATTENTION_MASK]]]
+
+        # 创建mock的PipelineInterface适配器
+        mock_adapter = Mock()
+        mock_adapter.model = self.model
+
+        # Mock必要的方法
+        mock_adapter.init_model.return_value = self.model
+        mock_adapter.handle_dataset.return_value = dataset_calib
+
+        # 创建真实的模型层迭代器，用于触发处理器
+        def create_model_visit_generator():
+            yield ProcessRequest(name="", module=self.model, args=(), kwargs={})
+
+        def create_model_forward_generator():
+            # 使用 tokenizer 产生的输入，按整模型签名传参，触发量化层前向
+            yield ProcessRequest(
+                name="",
+                module=self.model,
+                args=(),
+                kwargs={
+                    KEY_INPUT_IDS: test_prompt[KEY_INPUT_IDS],
+                    KEY_ATTENTION_MASK: test_prompt[KEY_ATTENTION_MASK],
+                },
+            )
+
+        mock_adapter.generate_model_visit.return_value = create_model_visit_generator()
+        mock_adapter.generate_model_forward.return_value = create_model_forward_generator()
+        mock_adapter.enable_kv_cache.return_value = None
+
+        # 创建LayerWiseRunner
+        runner = PPRunner(mock_adapter)
+
+        # 添加处理器配置
+        runner.add_processor(config)
+
+        # 运行处理器
+        runner.run(model=self.model, calib_data=dataset_calib, device=DeviceType.CPU)
         return runner
 
     def create_test_input(self, text: str = "Hello world", max_length: int = 10) -> Dict[str, torch.Tensor]:
@@ -160,8 +196,3 @@ class ProcessorTestBase(unittest.TestCase):
             torch.allclose(outputs1, outputs2, rtol=rtol, atol=atol),
             f"Outputs should not be close with rtol={rtol}, atol={atol}"
         )
-
-    @staticmethod
-    def init_model() -> Tuple[PreTrainedModel, PreTrainedTokenizer]:
-        """初始化测试模型和分词器"""
-        return get_fake_llama_model_and_tokenizer()

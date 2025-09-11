@@ -19,13 +19,12 @@ import torch.nn.functional as F
 
 from msmodelslim.core import QDType, QParam, QStorage, calculate_qparam
 from msmodelslim.core import dequantize, fake_quantize
-from msmodelslim.core.QAL import QABCRegistry
+from msmodelslim.core.QAL import QABCRegistry, QScheme
 from msmodelslim.core.QAL import QScope
 from msmodelslim.quant.ir import AutoFakeQuantLinear
 from msmodelslim.utils.logging import logger_setter
 from .const import (
     int8_per_token_sym,
-    int8_per_token_asym,
     int4_per_channel_sym
 )
 
@@ -33,13 +32,11 @@ from .const import (
 @QABCRegistry.multi_register(
     dispatch_key=[
         (int8_per_token_sym, int4_per_channel_sym),
-        (int8_per_token_asym, int4_per_channel_sym)
     ],
     abc_type=AutoFakeQuantLinear
 )
-@logger_setter('msmodelslim.quant.ir.w4a8_dynamic')
+@logger_setter()
 class W4A8DynamicFakeQuantLinear(AutoFakeQuantLinear):
-
     def __init__(
             self,
             x_q_param: QParam,
@@ -48,22 +45,18 @@ class W4A8DynamicFakeQuantLinear(AutoFakeQuantLinear):
             bias: torch.Tensor
     ):
         super().__init__()
-
-        self.x_q_param = x_q_param
-        self.w_q_param = w_q_param
-        self.w_q_storage = w_q.same_like(torch.tensor([1.0], dtype=torch.float32))
-
-        self.weight_scale = nn.Parameter(w_q_param.ext["scale"], requires_grad=False)
-        self.weight_offset = nn.Parameter(w_q_param.ext["offset"], requires_grad=False)
-        self.weight = nn.Parameter(w_q.value, requires_grad=False)
-        self.bias = nn.Parameter(bias, requires_grad=False) if bias is not None else None
+        self.weight_scale = nn.Parameter(w_q_param.ext["scale"].detach(), requires_grad=False)
+        self.weight = nn.Parameter(w_q.value.detach(), requires_grad=False)
+        self.bias = nn.Parameter(bias.detach(), requires_grad=False) if bias is not None else None
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x_shape = x.shape
         x_reshape = x.reshape(-1, x_shape[-1])
         x_token_min = torch.amin(x_reshape, dim=0)
         x_token_max = torch.amax(x_reshape, dim=0)
-        x_q_param = calculate_qparam(x_token_min, x_token_max, QDType.INT8, QScope.PER_TOKEN, False)
+        x_q_param = calculate_qparam(x_token_min, x_token_max, QDType.INT8, QScope.PER_TOKEN, True)
         x_q_dq = fake_quantize(QStorage(QDType.FLOAT, x_reshape), x_q_param)
-        weight_q_dq = dequantize(self.w_q_storage.same_like(self.weight).T, self.w_q_param).T
+        w_q_param = QParam(scheme=QScheme(scope=QScope.PER_CHANNEL, dtype=QDType.INT4, symmetric=True),
+                           ext={"scale": self.weight_scale.data})
+        weight_q_dq = dequantize(QStorage(dtype=QDType.INT4, value=self.weight.data).T, w_q_param).T
         return F.linear(x_q_dq.value.reshape(x_shape), weight_q_dq.value, self.bias)

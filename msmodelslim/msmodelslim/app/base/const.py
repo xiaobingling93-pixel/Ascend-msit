@@ -28,8 +28,8 @@ class QuantType(ExtendedEnum):
     W8A8C8 = "w8a8c8"  # 权重INT8量化，激活值INT8量化，KVCache INT8量化
 
 
-class PipelineType(Enum):
-    """Pipeline类型枚举"""
+class RunnerType(Enum):
+    """Runner类型枚举"""
     AUTO = "auto"
     MODEL_WISE = "model_wise"
     LAYER_WISE = "layer_wise"

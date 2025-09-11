@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
 from ascend_utils.common.security.type import check_int, check_number, check_type, check_element_type
+
 # quant_mode
 # 0 : data-free
 # 1 : label-free
@@ -13,31 +14,31 @@ QUANT_MODE_LIST = [0, 1]
 ACT_METHOD_LIST = [0, 1, 2]
 QUANT_PARAM_OPS_LIST = ['Conv', 'Gemm', 'MatMul']
 SHUT_DOWN_STRUCTURES_LIST = [
-    'ChangeGAPCONVOptimization', 'ChangeResizeOptimization', 
-    'CombineMatmulOptimization', 'DeleteConcatOptimization', 
-    'DoubleFuseBatchNormOptimization', 'DoubleReshapeOptimization', 
-    'FastClipOptimization', 'FuseBatchNormOptimization', 
-    'FuseDivMatmulOptimization', 'GeluErf2FastGeluOptimization', 
-    'GeluErf2SigmoidOptimization', 'GeluErf2TanhOptimization', 
-    'GeluTanh2SigmoidOptimization', 'LayerNormOptimization', 
-    'Matmul2GemmOptimization', 'PatchMerging2ConvOptimizationV0', 
-    'PatchMerging2ConvOptimizationV1', 'PatchMerging2ConvOptimizationV2', 
-    'PatchMerging2ConvOptimizationV3', 'RemoveDoubleResizeOptimization', 
-    'ReplaceAscendQuantOptimizationV1', 'ReplaceAscendQuantOptimizationV2', 
-    'ReplaceConcatQuantOptimizationV1', 'ReplaceConcatQuantOptimizationV2', 
-    'ReplaceConcatQuantOptimizationV3', 'ReplaceConcatQuantOptimizationV4', 
-    'ReplaceConcatQuantOptimizationV5', 'ReplaceConcatQuantOptimizationV6', 
-    'ReplaceConcatQuantOptimizationV7', 'ReplaceConcatQuantOptimizationV8', 
-    'ReplaceConcatQuantOptimizationV9', 'ReplaceHardSigmoidOptimization', 
-    'ReplaceLeakyReluOptimization', 'ReplaceMaxPoolBlockOptimizationV1', 
-    'ReplaceMaxPoolBlockOptimizationV2', 'ReplaceRelu6Optimization', 
-    'ReplaceReluOptimization', 'ReplaceReshapeTransposeOptimizationV1', 
-    'ReplaceReshapeTransposeOptimizationV2', 'ReplaceReshapeTransposeOptimizationV3', 
-    'ReplaceResizeQuantOptimization', 'ReplaceSigmoidOptimizationV1', 
-    'ReplaceSigmoidOptimizationV2', 'ReplaceSoftmaxOptimizationV1', 
-    'ReplaceSoftmaxOptimizationV2', 'Resize2ConvTransposeOptimization', 
+    'ChangeGAPCONVOptimization', 'ChangeResizeOptimization',
+    'CombineMatmulOptimization', 'DeleteConcatOptimization',
+    'DoubleFuseBatchNormOptimization', 'DoubleReshapeOptimization',
+    'FastClipOptimization', 'FuseBatchNormOptimization',
+    'FuseDivMatmulOptimization', 'GeluErf2FastGeluOptimization',
+    'GeluErf2SigmoidOptimization', 'GeluErf2TanhOptimization',
+    'GeluTanh2SigmoidOptimization', 'LayerNormOptimization',
+    'Matmul2GemmOptimization', 'PatchMerging2ConvOptimizationV0',
+    'PatchMerging2ConvOptimizationV1', 'PatchMerging2ConvOptimizationV2',
+    'PatchMerging2ConvOptimizationV3', 'RemoveDoubleResizeOptimization',
+    'ReplaceAscendQuantOptimizationV1', 'ReplaceAscendQuantOptimizationV2',
+    'ReplaceConcatQuantOptimizationV1', 'ReplaceConcatQuantOptimizationV2',
+    'ReplaceConcatQuantOptimizationV3', 'ReplaceConcatQuantOptimizationV4',
+    'ReplaceConcatQuantOptimizationV5', 'ReplaceConcatQuantOptimizationV6',
+    'ReplaceConcatQuantOptimizationV7', 'ReplaceConcatQuantOptimizationV8',
+    'ReplaceConcatQuantOptimizationV9', 'ReplaceHardSigmoidOptimization',
+    'ReplaceLeakyReluOptimization', 'ReplaceMaxPoolBlockOptimizationV1',
+    'ReplaceMaxPoolBlockOptimizationV2', 'ReplaceRelu6Optimization',
+    'ReplaceReluOptimization', 'ReplaceReshapeTransposeOptimizationV1',
+    'ReplaceReshapeTransposeOptimizationV2', 'ReplaceReshapeTransposeOptimizationV3',
+    'ReplaceResizeQuantOptimization', 'ReplaceSigmoidOptimizationV1',
+    'ReplaceSigmoidOptimizationV2', 'ReplaceSoftmaxOptimizationV1',
+    'ReplaceSoftmaxOptimizationV2', 'Resize2ConvTransposeOptimization',
     'SimplifyShapeOptimization', 'SimplifyShapeOptimizationV2'
-    ]
+]
 SHUT_DOWN_STRUCTURES = set(SHUT_DOWN_STRUCTURES_LIST)
 
 
@@ -154,7 +155,7 @@ class QuantConfig:
                     'Because of aok optimization, the soc_version should be one of '
                     f'{supported_soc_versions}'
                 )
-                
+
         self.iterations = 100
         self.runs = 1
         self.device_id = device_id

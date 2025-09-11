@@ -38,6 +38,11 @@ class FusionConfig:
         if self.fusion_type == "qkv":
             if self.num_attention_heads is None or self.num_key_value_heads is None:
                 raise ValueError("QKV融合类型必须提供num_attention_heads和num_key_value_heads")
+        elif self.fusion_type == "kv":
+            if self.num_attention_heads is None:
+                raise ValueError("KV融合类型必须提供num_attention_heads")
+            if not self.custom_config:
+                raise ValueError("KV融合必须在custom_config提供qk_nope_head_dim和v_head_dim")
         elif self.fusion_type == "custom":
             if not self.custom_config:
                 raise ValueError("自定义融合类型必须提供custom_config")
@@ -68,15 +73,3 @@ class AdapterConfig:
 
         if self.mapping is None:
             raise ValueError("mapping is required")
-
-
-@dataclass
-class SubgraphInfo:
-    """
-    子图信息数据类
-    
-    包含子图的名称、类型、节点列表等基本信息。
-    """
-    name: str
-    subgraph_type: str
-    metadata: Optional[Dict[str, Any]] = None

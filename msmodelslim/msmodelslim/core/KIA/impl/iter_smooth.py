@@ -46,7 +46,7 @@ def apply_smooth_scale_shift(layer, scales, shift=None):
     layer.weight.mul_(scales)
     if shift is not None:
         if layer.bias is None:
-            layer.bias = nn.Parameter(shift).to(device).to(dtype)
+            layer.bias = nn.Parameter(shift.to(device).to(dtype))
         else:
             layer.bias.add_(shift.to(device).to(dtype))
 

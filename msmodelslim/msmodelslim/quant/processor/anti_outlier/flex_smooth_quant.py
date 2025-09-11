@@ -30,7 +30,7 @@ from msmodelslim.quant.processor.base import AutoSessionProcessor
 from msmodelslim.utils.validation.value import validate_normalized_value, is_string_list
 from msmodelslim.utils.dist import DistHelper
 from msmodelslim.utils.exception import UnsupportedError
-from msmodelslim.utils.logging import get_logger
+from msmodelslim.utils.logging import get_logger, logger_setter
 
 
 class FlexSmoothQuantProcessorConfig(BaseSmoothProcessorConfig):
@@ -43,6 +43,7 @@ class FlexSmoothQuantProcessorConfig(BaseSmoothProcessorConfig):
 
 
 @QABCRegistry.register(dispatch_key=FlexSmoothQuantProcessorConfig, abc_class=AutoSessionProcessor)
+@logger_setter()
 class FlexSmoothQuantProcessor(BaseSmoothProcessor):
     def __init__(self, model: nn.Module, config: FlexSmoothQuantProcessorConfig, adapter: object, **kwargs):
         super().__init__(model, config, adapter)

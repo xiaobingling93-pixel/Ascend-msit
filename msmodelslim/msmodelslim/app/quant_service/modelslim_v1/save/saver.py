@@ -62,6 +62,8 @@ class AutoSaverProcessor(AutoSessionProcessor):
 
     def __init__(self, model: nn.Module, config: AutoProcessorConfig, adapter: object, **kwargs: Dict[str, Any]):
         super().__init__(model)
+        self.config = config
+        self.adapter = adapter
         self.dist_helper: Optional[DistHelper] = None
         self.processed_modules: Set[nn.Module] = set()
         self.process_map: Dict[Type[nn.Module], Callable[[str, nn.Module], None]] = {

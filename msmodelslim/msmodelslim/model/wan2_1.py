@@ -1,26 +1,27 @@
 # Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 # Copyright 2024-2025 The Alibaba Wan Team Authors. All rights reserved.
+import argparse
 import logging
 import os
-import time
-import argparse
 import random
 import sys
+import time
 from pathlib import Path
-from typing import Optional, Dict, Any, Tuple, Generator, List, Literal, cast
+from typing import Optional, Dict, Any, Tuple, Generator, List
+
 import torch
 from torch import nn, distributed as dist
 from tqdm import tqdm
-from msmodelslim.app.base.const import DeviceType, PipelineType
-from msmodelslim.app.quant_service.modelslim_v1.multimodal_sd_quant_inference import MultimodalSDQuantInference
+
+from msmodelslim.app.base.const import DeviceType
 from msmodelslim.core.base.protocol import ProcessRequest
-from msmodelslim.core.runner.generated_runner import GeneratedForwardFuncType, GeneratedVisitFuncType
-from msmodelslim.core.runner.layer_wise_forward import _TransformersForwardBreak
-from msmodelslim.core.runner.model_wise_forward import model_wise_forward_func, model_wise_visit_func
-from msmodelslim.model.default_multimodal_sd import MultimodalSDModelAdapter
+from msmodelslim.model.base import BaseModelAdapter
+from msmodelslim.model.common.layer_wise_forward import _TransformersForwardBreak, generated_decoder_layer_visit_func
 from msmodelslim.model.factory import ModelFactory
 from msmodelslim.utils.cache import to_device
 from msmodelslim.utils.exception import InvalidModelError, SchemaValidateError, UnsupportedError
+from msmodelslim.utils.logging import logger_setter
+from .interface_hub import ModelInfoInterface, MultimodalSDPipelineInterface
 
 MAX_RECURSION_DEPTH = 20
 
@@ -50,108 +51,37 @@ EXAMPLE_PROMPT = {
 
 
 @ModelFactory.register("Wan2_1")
-class Wan2Point1Adapter(MultimodalSDModelAdapter, MultimodalSDQuantInference):
+@logger_setter()
+class Wan2Point1Adapter(BaseModelAdapter,
+                        ModelInfoInterface,
+                        MultimodalSDPipelineInterface,
+                        ):
     def __init__(self,
                  model_type: str,
-                 ori_path: Path,
-                 device: DeviceType = DeviceType.NPU,
-                 trust_remote_code: bool = False,
-                 **kwargs):
-        super().__init__(model_type, ori_path, device, trust_remote_code, **kwargs)
+                 model_path: Path,
+                 trust_remote_code: bool = False):
+        super().__init__(model_type, model_path, trust_remote_code)
+        self.pipeline = None
+        self.transformer = None
+        self.model_args = None
 
-    @property
-    def model(self):
-        """
-        The model of the model.
-        """
-        return self._model
+        self._get_default_model_args()
 
-    def set_model_args(self, override_model_config: object):
-        # 覆盖默认参数配置
-        self._set_model_args(override_model_config)
+    def get_model_type(self) -> str:
+        return self.model_type
 
-    def add_attentioncache_args(self, parser: argparse.ArgumentParser):
-        group = parser.add_argument_group(title="Attention Cache args")
+    def get_model_pedigree(self) -> str:
+        return 'wan2_1'
 
-        group.add_argument("--use_attentioncache", action='store_true')
-        group.add_argument("--attentioncache_ratio", type=float, default=1.2)
-        group.add_argument("--attentioncache_interval", type=int, default=4)
-        group.add_argument("--start_step", type=int, default=12)
-        group.add_argument("--end_step", type=int, default=37)
+    def handle_dataset(self, dataset: Any, device: DeviceType = DeviceType.NPU) -> Generator[Any, None, None]:
+        return dataset
 
-        return parser
+    def init_model(self, device: DeviceType = DeviceType.NPU) -> nn.Module:
+        return self.transformer
 
-    def setup_cache(self):
-        """设置Cache机制"""
-        try:
-            from mindiesd import CacheConfig, CacheAgent
-        except ImportError as e:
-            # Concise import error message
-            raise ImportError(
-                "Failed to import required components from mindiesd. "
-            ) from e
-
-        if self.model_args.use_attentioncache:
-            config = CacheConfig(
-                method="attention_cache",
-                blocks_count=len(self.transformer.blocks),
-                steps_count=self.model_args.sample_steps,
-                step_start=self.model_args.start_step,
-                step_interval=self.model_args.attentioncache_interval,
-                step_end=self.model_args.end_step
-            )
-        else:
-            config = CacheConfig(
-                method="attention_cache",
-                blocks_count=len(self.transformer.blocks),
-                steps_count=self.model_args.sample_steps
-            )
-        cache = CacheAgent(config)
-        if self.model_args.dit_fsdp:
-            for block in self.transformer._fsdp_wrapped_module.blocks:
-                block._fsdp_wrapped_module.cache = cache
-                block._fsdp_wrapped_module.args = self.model_args
-        else:
-            for block in self.transformer.blocks:
-                block.cache = cache
-                block.args = self.model_args
-
-    def load_pipeline(self):
-        self._load_pipeline()
-        self.setup_cache()
-
-    def run_calib_inference(self):
-        """运行校准推理"""
-        from wan.configs import SIZE_CONFIGS
-        stream = torch.npu.Stream()
-        args = self.model_args
-
-        self.wan_t2v.model.to('npu')
-        # Start sampling
-        for _ in tqdm(range(1), desc='Dump calib data by float model inference'):
-            # set seed
-            torch.manual_seed(args.base_seed)
-            torch.npu.manual_seed(args.base_seed)
-            torch.npu.manual_seed_all(args.base_seed)
-
-            begin = time.time()
-            video = self.wan_t2v.generate(
-                self.model_args.prompt,
-                size=SIZE_CONFIGS[args.size],
-                frame_num=args.frame_num,
-                shift=args.sample_shift,
-                sample_solver=args.sample_solver,
-                sampling_steps=args.sample_steps,
-                guide_scale=args.sample_guide_scale,
-                seed=args.base_seed,
-                offload_model=args.offload_model)
-            stream.synchronize()
-            end = time.time()
-            logging.info(f"Generating video used time {end - begin: .4f}s")
-
-    def transformers_generated_forward_func(self, model: torch.nn.Module,
-                                            inputs: Any,
-                                            ) -> Generator[ProcessRequest, Any, None]:
+    def generate_model_forward(self, model: torch.nn.Module,
+                               inputs: Any,
+                               ) -> Generator[ProcessRequest, Any, None]:
         transformer_blocks = [
             (name, module)
             for name, module in model.named_modules()
@@ -200,40 +130,42 @@ class Wan2Point1Adapter(MultimodalSDModelAdapter, MultimodalSDQuantInference):
             hidden_states = outputs
             current_inputs = ((hidden_states,), current_inputs[1])
 
-    def generated_decoder_layer_visit_func(self, model: torch.nn.Module,
-                                           transformer_blocks: Optional[List[Tuple[str, torch.nn.Module]]] = None,
-                                           ) -> Generator[ProcessRequest, Any, None]:
-        if transformer_blocks is None:
-            transformer_blocks = [
-                (name, module)
-                for name, module in model.named_modules()
-                if "attentionblock" in module.__class__.__name__.lower()
-            ]
+    def generate_model_visit(self, model: torch.nn.Module,
+                             transformer_blocks: Optional[List[Tuple[str, torch.nn.Module]]] = None,
+                             ) -> Generator[ProcessRequest, Any, None]:
+        return generated_decoder_layer_visit_func(model, transformer_blocks, keyword="attentionblock")
 
-        if dist.is_initialized():
-            dist.barrier()
+    def enable_kv_cache(self, model: nn.Module, need_kv_cache: bool) -> None:
+        pass
 
-        for name, block in transformer_blocks:
-            yield ProcessRequest(name, block, [], {})
+    def run_calib_inference(self):
+        """运行校准推理"""
+        from wan.configs import SIZE_CONFIGS
+        stream = torch.npu.Stream()
+        args = self.model_args
 
-    def get_pipeline_functions(self, pipeline: Literal[PipelineType.MODEL_WISE, PipelineType.LAYER_WISE]) -> Tuple[
-        GeneratedForwardFuncType, GeneratedVisitFuncType]:
-        """根据pipeline类型获取对应的forward和visit函数。
+        self.wan_t2v.model.to('npu')
+        # Start sampling
+        for _ in tqdm(range(1), desc='Dump calib data by float model inference'):
+            # set seed
+            torch.manual_seed(args.base_seed)
+            torch.npu.manual_seed(args.base_seed)
+            torch.npu.manual_seed_all(args.base_seed)
 
-        Args:
-            pipeline: pipeline类型，'model_wise' 或 'layer_wise'
-
-        Returns:
-            Tuple[GeneratedForwardFuncType, GeneratedVisitFuncType]: forward函数和visit函数的元组
-        """
-        if pipeline == PipelineType.MODEL_WISE:
-            generated_forward_func = cast(GeneratedForwardFuncType, model_wise_forward_func)
-            generated_visit_func = cast(GeneratedVisitFuncType, model_wise_visit_func)
-        else:
-            generated_forward_func = cast(GeneratedForwardFuncType, self.transformers_generated_forward_func)
-            generated_visit_func = cast(GeneratedVisitFuncType, self.generated_decoder_layer_visit_func)
-
-        return generated_forward_func, generated_visit_func
+            begin = time.time()
+            video = self.wan_t2v.generate(
+                self.model_args.prompt,
+                size=SIZE_CONFIGS[args.size],
+                frame_num=args.frame_num,
+                shift=args.sample_shift,
+                sample_solver=args.sample_solver,
+                sampling_steps=args.sample_steps,
+                guide_scale=args.sample_guide_scale,
+                seed=args.base_seed,
+                offload_model=args.offload_model)
+            stream.synchronize()
+            end = time.time()
+            logging.info(f"Generating video used time {end - begin: .4f}s")
 
     def apply_quantization(self, process_model_func):
         from contextlib import contextmanager
@@ -254,18 +186,19 @@ class Wan2Point1Adapter(MultimodalSDModelAdapter, MultimodalSDQuantInference):
             else:
                 module.to('cpu')
         with amp.autocast(dtype=torch.bfloat16), torch.no_grad(), no_sync():
-            process_model_func(model=self.transformer, adapter=self)
+            process_model_func()
 
-    def support_layer_wise_schedule(self) -> bool:
-        return True
+    def load_pipeline(self):
+        self._load_pipeline()
+        self._setup_cache()
 
-    def _set_model_args(self, override_model_config: object):
+    def set_model_args(self, override_model_config: object):
         """
         将 override_model_config 的属性更新到 model_args
         :param override_model_config: 来自 YAML 的配置对象
         """
         # 模型路径
-        self.model_args.ckpt_dir = self.ori
+        self.model_args.ckpt_dir = self.model_path
 
         missing_attrs = []
         for key in override_model_config.keys():
@@ -305,27 +238,51 @@ class Wan2Point1Adapter(MultimodalSDModelAdapter, MultimodalSDQuantInference):
         # 2. 重新解析，得到经过校验/类型转换的新 Namespace
         self.model_args = parser.parse_args(argv)
 
-    def _initialize_torch_dtype(self):
-        """初始化torch dtype，子类可覆盖实现"""
-        return torch.bfloat16 if self._device is DeviceType.NPU else torch.float32
+    def _add_attentioncache_args(self, parser: argparse.ArgumentParser):
+        group = parser.add_argument_group(title="Attention Cache args")
 
-    def _get_model_pedigree(self) -> str:
-        return 'wan2_1'
+        group.add_argument("--use_attentioncache", action='store_true')
+        group.add_argument("--attentioncache_ratio", type=float, default=1.2)
+        group.add_argument("--attentioncache_interval", type=int, default=4)
+        group.add_argument("--start_step", type=int, default=12)
+        group.add_argument("--end_step", type=int, default=37)
 
-    def _load_model(self, device: DeviceType = DeviceType.NPU, trust_remote_code: bool = False):
-        pass
+        return parser
 
-    def _load_config(self):
-        pass
+    def _setup_cache(self):
+        """设置Cache机制"""
+        try:
+            from mindiesd import CacheConfig, CacheAgent
+        except ImportError as e:
+            # Concise import error message
+            raise ImportError(
+                "Failed to import required components from mindiesd. "
+            ) from e
 
-    def _load_hook(self) -> None:
-        pass
-
-    def _persist_hook(self) -> None:
-        pass
-
-    def _load_tokenizer(self, trust_remote_code=False):
-        pass
+        if self.model_args.use_attentioncache:
+            config = CacheConfig(
+                method="attention_cache",
+                blocks_count=len(self.transformer.blocks),
+                steps_count=self.model_args.sample_steps,
+                step_start=self.model_args.start_step,
+                step_interval=self.model_args.attentioncache_interval,
+                step_end=self.model_args.end_step
+            )
+        else:
+            config = CacheConfig(
+                method="attention_cache",
+                blocks_count=len(self.transformer.blocks),
+                steps_count=self.model_args.sample_steps
+            )
+        cache = CacheAgent(config)
+        if self.model_args.dit_fsdp:
+            for block in self.transformer._fsdp_wrapped_module.blocks:
+                block._fsdp_wrapped_module.cache = cache
+                block._fsdp_wrapped_module.args = self.model_args
+        else:
+            for block in self.transformer.blocks:
+                block.cache = cache
+                block.args = self.model_args
 
     def _check_import_dependency(self):
         try:
@@ -348,7 +305,7 @@ class Wan2Point1Adapter(MultimodalSDModelAdapter, MultimodalSDQuantInference):
     def _validate_args(self, args):
         """Get default parameter configuration, integrating wan config parameters"""
         self._check_import_dependency()
-        from wan.configs import WAN_CONFIGS, SIZE_CONFIGS, MAX_AREA_CONFIGS, SUPPORTED_SIZES
+        from wan.configs import WAN_CONFIGS, SUPPORTED_SIZES
 
         # Basic check
         if args.ckpt_dir is None:
@@ -387,8 +344,8 @@ class Wan2Point1Adapter(MultimodalSDModelAdapter, MultimodalSDQuantInference):
     def _get_parser(self) -> Dict[str, Any]:
         """Get default parameter configuration, integrating wan config parameters"""
         self._check_import_dependency()
-        from wan.configs import WAN_CONFIGS, SIZE_CONFIGS, MAX_AREA_CONFIGS, SUPPORTED_SIZES
-        from wan.utils.utils import cache_video, cache_image, str2bool
+        from wan.configs import WAN_CONFIGS, SIZE_CONFIGS
+        from wan.utils.utils import str2bool
 
         # Create argument parser and add all necessary configurations
         parser = argparse.ArgumentParser(
@@ -525,7 +482,7 @@ class Wan2Point1Adapter(MultimodalSDModelAdapter, MultimodalSDQuantInference):
             type=float,
             default=5.0,
             help="Classifier free guidance scale.")
-        parser = self.add_attentioncache_args(parser)
+        parser = self._add_attentioncache_args(parser)
         return parser
 
     def _get_default_model_args(self):
@@ -550,7 +507,7 @@ class Wan2Point1Adapter(MultimodalSDModelAdapter, MultimodalSDQuantInference):
         self._check_import_dependency()
 
         import wan
-        from wan.configs import WAN_CONFIGS, SIZE_CONFIGS, MAX_AREA_CONFIGS, SUPPORTED_SIZES
+        from wan.configs import WAN_CONFIGS
 
         rank = int(os.getenv("RANK", 0))
         world_size = int(os.getenv("WORLD_SIZE", 1))
@@ -580,6 +537,3 @@ class Wan2Point1Adapter(MultimodalSDModelAdapter, MultimodalSDQuantInference):
         )
 
         self.transformer = self.wan_t2v.model
-
-    def _get_transformer(self):
-        return self.transformer

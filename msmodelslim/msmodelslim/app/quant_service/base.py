@@ -2,10 +2,11 @@
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Any
 
 from msmodelslim.app.quant_service.dataset_interface import DatasetLoaderInterface
-from ..base.model import BaseModelAdapter
+from msmodelslim.utils.exception import ToDoError
+from .. import DeviceType
 from ..base.quant_config import BaseQuantConfig
 
 
@@ -18,8 +19,10 @@ class BaseQuantService(ABC):
     @abstractmethod
     def quantize(
             self,
-            model: BaseModelAdapter,
             quant_config: BaseQuantConfig,
-            save_path: Optional[Path] = None
+            model_adapter: Any,
+            save_path: Optional[Path] = None,
+            device: DeviceType = DeviceType.NPU,
     ) -> None:
-        raise NotImplementedError
+        raise ToDoError("quantize is not implemented",
+                        action="Please implement quantize for your quant service")

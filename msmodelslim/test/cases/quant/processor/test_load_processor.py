@@ -25,7 +25,7 @@ class TestLoadProcessor(unittest.TestCase):
         config = LoadProcessorConfig(device="cpu")
         processor = LoadProcessor(self.model, config)
 
-        self.assertEqual(processor.device, torch.device("cpu"))
+        self.assertEqual(processor.device, "cpu")
         self.assertFalse(processor.non_blocking)
         self.assertTrue(processor.is_data_free())
 
@@ -34,7 +34,7 @@ class TestLoadProcessor(unittest.TestCase):
             config = LoadProcessorConfig(device="cuda", non_blocking=True)
             processor = LoadProcessor(self.model, config)
 
-            self.assertEqual(processor.device, torch.device("cuda"))
+            self.assertEqual(processor.device, "cuda")
             self.assertTrue(processor.non_blocking)
 
     def test_preprocess_device_movement(self):

@@ -9,10 +9,10 @@ from msmodelslim.quant.ir import AutoFakeQuantLinear, W8A8StaticFakeQuantLinear
 from msmodelslim.quant.processor.quant.linear import LinearProcessorConfig
 from msmodelslim.quant.quantizer.base import QConfig
 from msmodelslim.quant.quantizer.linear import LinearQConfig
-from .processor_test_base import ProcessorTestBase
+from .test_processor_base import TestProcessorBase
 
 
-class TestLinearQuantProcessor(ProcessorTestBase):
+class TestLinearQuantProcessor(TestProcessorBase):
     """测试LinearQuantProcessor的功能"""
 
     def setUp(self):
@@ -39,11 +39,15 @@ class TestLinearQuantProcessor(ProcessorTestBase):
 
     def create_processor_config(self, include: list = None, exclude: list = None) -> LinearProcessorConfig:
         """创建处理器配置"""
+        if include is None:
+            include = ["*"]
+        if exclude is None:
+            exclude = []
         qconfig = self.create_basic_qconfig()
         return LinearProcessorConfig(
             qconfig=qconfig,
-            include=include or ["*"],
-            exclude=exclude or []
+            include=include,
+            exclude=exclude,
         )
 
     def test_basic_quantization(self):
@@ -162,6 +166,8 @@ class TestLinearQuantProcessor(ProcessorTestBase):
             if isinstance(module, AutoFakeQuantLinear):
                 has_fake_quant = True
                 break
+        
+        self.assertTrue(has_fake_quant, "Model should contain fake quantization layers")
 
     def test_empty_include_list(self):
         config = self.create_processor_config(include=[])
@@ -170,7 +176,7 @@ class TestLinearQuantProcessor(ProcessorTestBase):
 
         for layer_name in self.linear_layer_names:
             layer = self.get_module_by_name(self.model, layer_name)
-            self.assertIsInstance(layer, W8A8StaticFakeQuantLinear, f"Layer {layer_name} should be quantized")
+            self.assertIsInstance(layer, torch.nn.Linear, f"Layer {layer_name} should not be quantized")
 
     def test_invalid_layer_patterns(self):
         config = self.create_processor_config(include=["nonexistent_layer"])

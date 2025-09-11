@@ -18,7 +18,7 @@ __all__ = [
     "LinearProcessorConfig",
     "LinearQuantProcessor",
     "IterSmoothProcessorConfig",
-    "IterSmoothProcessor"
+    "IterSmoothProcessor",
     "LinearQuantProcessor",
     "LoadProcessorConfig",
     "LoadProcessor",

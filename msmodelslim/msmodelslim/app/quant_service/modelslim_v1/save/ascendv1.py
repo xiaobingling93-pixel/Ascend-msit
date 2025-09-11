@@ -24,13 +24,35 @@ from torch import nn
 import msmodelslim.quant.ir as qir
 from msmodelslim import logger
 from msmodelslim.core.QAL.qregistry import QABCRegistry
+from msmodelslim.core.base.model import BaseModelInterface
 from msmodelslim.core.base.protocol import BatchProcessRequest
 from msmodelslim.quant.processor.base import AutoSessionProcessor
 from msmodelslim.utils.dist import DistHelper
+from msmodelslim.utils.exception import ToDoError
+from msmodelslim.utils.security import safe_copy_file
 from .saver import AutoSaverProcessor, AutoSaverBaseConfig
 from .utils.json import JsonWriter
+from .utils.pack import w4a8_pack_int4, process_scale
 from .utils.safetensors import SafetensorsWriter, BufferedSafetensorsWriter
-from .utils.pack import w4a8_pack_int4
+
+
+def copy_files(input_path, output_path):
+    """
+    复制模型配置文件
+    @param input_path: 源目录
+    @param output_path: 目标目录
+    """
+    for file in os.listdir(input_path):
+        if not any((file.endswith(subfix) for subfix in ['.json', '.py'])):
+            continue
+
+        if any((file.endswith(subfix) for subfix in ['index.json'])):
+            continue
+
+        ori_file = os.path.join(input_path, file)
+        dest_file = os.path.join(output_path, file)
+        safe_copy_file(src_path=ori_file, dest_path=dest_file)
+        os.chmod(dest_file, int("600", 8))
 
 
 class AscendV1Config(AutoSaverBaseConfig):
@@ -131,18 +153,21 @@ class AscendV1Saver(AutoSaverProcessor):
     
     关于该格式的更多信息，请参考 AscendV1Config 中的说明。
     """
+    # W4A8_DYNAMIC is hidden.
+    QUANT_TYPE_PRIORITY = ['FLOAT', 'W16A16S', 'W8A8_DYNAMIC', 'W8A8']
 
     def __init__(self, model: nn.Module, config: AscendV1Config, adapter: object, **kwargs: Dict[str, Any]):
         super().__init__(model, config, adapter, **kwargs)
-        self.config = config
-        self.version = "1.0.0"
-        self.model_quant_type = "Unknown"
         self.json_append = dict()
         self.save_directory = self.get_rank_save_directory() if dist.is_initialized() else config.save_directory
         self.json_writer = JsonWriter(config.save_directory, ASCENDV1_DESC_JSON_NAME)
         self.safetensors_writer = self.get_safetensors_writer(config)
         self.dist_helper: Optional[DistHelper] = None
         self.shared_modules_slice: Optional[List[str]] = None
+
+        self.version = "1.0.0"
+        self.model_quant_type = "Unknown"
+        self.group_size = 0
 
     def support_distributed(self) -> bool:
         return True
@@ -156,8 +181,15 @@ class AscendV1Saver(AutoSaverProcessor):
 
         self.json_writer.write("version", self.version)
         self.json_writer.write("model_quant_type", self.model_quant_type)
+        self.json_writer.write("group_size", self.group_size)
+
         self.json_writer.close()
         self.safetensors_writer.close()
+
+        if not isinstance(self.adapter, BaseModelInterface):
+            raise ToDoError(f'Model Adapter does NOT has attr model_path',
+                            action=f'Please implement BaseModelInterface for saving')
+        copy_files(self.adapter.model_path, self.config.save_directory)
 
     def preprocess(self, request: BatchProcessRequest) -> None:
         if dist.is_initialized():
@@ -202,6 +234,8 @@ class AscendV1Saver(AutoSaverProcessor):
 
     @save_this_rank_only()
     def on_w8a8_static(self, prefix: str, module: qir.W8A8StaticFakeQuantLinear):
+        self.update_quant_type("W8A8")
+
         with torch.device(module.weight.device):
             input_scale, input_offset = module.input_scale, module.input_offset
             input_scale = input_scale.unsqueeze(0) if input_scale.ndim == 0 else input_scale
@@ -220,34 +254,41 @@ class AscendV1Saver(AutoSaverProcessor):
             self.write_tensor(prefix + ".deq_scale", "W8A8", deq_scale.to(torch.float32))
             if module.bias is not None:
                 self.write_tensor(prefix + ".bias", "W8A8", module.bias.to(torch.float32))
-            self.model_quant_type = "W8A8"
 
     @save_this_rank_only()
     def on_w8a8_dynamic(self, prefix: str, module: qir.W8A8DynamicFakeQuantLinear):
+        self.update_quant_type("W8A8_DYNAMIC")
+
         with torch.device(module.weight.device):
             weight_scale = module.weight_scale.unsqueeze(-1)
-            weight_offset = module.weight_offset.unsqueeze(-1)
             self.write_tensor(prefix + ".weight", "W8A8_DYNAMIC", module.weight.to(torch.int8))
             self.write_tensor(prefix + ".weight_scale", "W8A8_DYNAMIC", weight_scale.to(torch.float32))
-            self.write_tensor(prefix + ".weight_offset", "W8A8_DYNAMIC", weight_offset.to(torch.float32))
+            self.write_tensor(prefix + ".weight_offset", "W8A8_DYNAMIC",
+                              torch.zeros_like(weight_scale).to(torch.float32))
             if module.bias is not None:
                 self.write_tensor(prefix + ".bias", "W8A8_DYNAMIC", module.bias.to(torch.float32))
-            self.model_quant_type = "W8A8_DYNAMIC"
 
     @save_this_rank_only()
     def on_w4a8_dynamic(self, prefix: str, module: qir.W4A8DynamicFakeQuantLinear):
+        self.update_quant_type("W4A8_DYNAMIC")
+
         with torch.device(module.weight.device):
             weight_scale = module.weight_scale.unsqueeze(-1)
-            weight_offset = module.weight_offset.unsqueeze(-1)
+            weight = module.weight.to(torch.float32)
+            deq_weight = weight.T * module.weight_scale
+            scale_bias = process_scale(prefix, deq_weight.T, 16)
             self.write_tensor(prefix + ".weight", "W4A8_DYNAMIC", w4a8_pack_int4(module.weight.to(torch.int8)))
             self.write_tensor(prefix + ".weight_scale", "W4A8_DYNAMIC", weight_scale.to(torch.float32))
-            self.write_tensor(prefix + ".weight_offset", "W4A8_DYNAMIC", weight_offset.to(torch.float32))
+            self.write_tensor(prefix + ".weight_offset", "W4A8_DYNAMIC",
+                              torch.zeros_like(weight_scale).to(torch.float32))
+            self.write_tensor(prefix + '.scale_bias', "W4A8_DYNAMIC", scale_bias.to(torch.float32))
             if module.bias is not None:
                 self.write_tensor(prefix + ".bias", "W4A8_DYNAMIC", module.bias.to(torch.float32))
-            self.model_quant_type = "W4A8_DYNAMIC"
 
     @save_this_rank_only()
     def on_float_linear(self, prefix: str, module: nn.Linear):
+        self.update_quant_type("FLOAT")
+
         return self.on_float_module(prefix, module)
 
     @save_this_rank_only()
@@ -272,5 +313,16 @@ class AscendV1Saver(AutoSaverProcessor):
 
     @save_this_rank_only()
     def on_w16a16s(self, prefix: str, module: qir.W16A16sLinear):
+        self.update_quant_type("W16A16S")
+
         for name, param in module.named_parameters(recurse=False, prefix=prefix):
             self.write_tensor(name, "W16A16S", param)
+
+    def update_quant_type(self, quant_type: str):
+        if quant_type not in self.QUANT_TYPE_PRIORITY:
+            return
+        if self.model_quant_type not in self.QUANT_TYPE_PRIORITY:
+            self.model_quant_type = quant_type
+            return
+        if self.QUANT_TYPE_PRIORITY.index(quant_type) > self.QUANT_TYPE_PRIORITY.index(self.model_quant_type):
+            self.model_quant_type = quant_type

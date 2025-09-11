@@ -22,15 +22,36 @@ import torch.distributed as dist
 from torch import nn
 
 import msmodelslim.quant.ir as qir
-from msmodelslim.utils.logging import logger
 from msmodelslim.core.QAL.qregistry import QABCRegistry
+from msmodelslim.core.base.model import BaseModelInterface
 from msmodelslim.core.base.protocol import BatchProcessRequest
 from msmodelslim.quant.processor.base import AutoSessionProcessor
 from msmodelslim.utils.dist import DistHelper
 from msmodelslim.utils.exception import UnsupportedError, SchemaValidateError
+from msmodelslim.utils.logging import logger
+from msmodelslim.utils.security import safe_copy_file
 from .saver import AutoSaverProcessor, AutoSaverBaseConfig
 from .utils.json import JsonWriter
 from .utils.safetensors import SafetensorsWriter, BufferedSafetensorsWriter
+
+
+def copy_files(input_path, output_path):
+    """
+    复制模型配置文件
+    @param input_path: 源目录
+    @param output_path: 目标目录
+    """
+    for file in os.listdir(input_path):
+        if not any((file.endswith(subfix) for subfix in ['.json', '.py'])):
+            continue
+
+        if any((file.endswith(subfix) for subfix in ['index.json'])):
+            continue
+
+        ori_file = os.path.join(input_path, file)
+        dest_file = os.path.join(output_path, file)
+        safe_copy_file(src_path=ori_file, dest_path=dest_file)
+        os.chmod(dest_file, int("600", 8))
 
 
 class ValidJsonExt:
@@ -139,6 +160,7 @@ class MindIEFormatSaver(AutoSaverProcessor):
     def __init__(self, model: nn.Module, config: MindIEFormatConfig, adapter: object, **kwargs: Dict[str, Any]):
         super().__init__(model, config, adapter, **kwargs)
         self.config = config
+        self.adapter: BaseModelInterface = adapter
         self.json_append = dict()
         self.save_directory = self.get_rank_save_directory() if dist.is_initialized() else config.save_directory
         self.json_writer = JsonWriter(config.save_directory, DEFAULT_DESC_JSON_NAME)
@@ -167,6 +189,8 @@ class MindIEFormatSaver(AutoSaverProcessor):
 
         self.json_writer.close()
         self.safetensors_writer.close()
+
+        copy_files(self.adapter.model_path, self.config.save_directory)
 
     def preprocess(self, request: BatchProcessRequest) -> None:
         if dist.is_initialized():
@@ -241,10 +265,10 @@ class MindIEFormatSaver(AutoSaverProcessor):
     def on_w8a8_dynamic(self, prefix: str, module: qir.W8A8DynamicFakeQuantLinear):
         with torch.device(module.weight.device):
             weight_scale = module.weight_scale.unsqueeze(-1)
-            weight_offset = module.weight_offset.unsqueeze(-1)
             self.write_tensor(prefix + ".weight", "W8A8_DYNAMIC", module.weight.to(torch.int8))
             self.write_tensor(prefix + ".weight_scale", "W8A8_DYNAMIC", weight_scale.to(torch.float32))
-            self.write_tensor(prefix + ".weight_offset", "W8A8_DYNAMIC", weight_offset.to(torch.float32))
+            self.write_tensor(prefix + ".weight_offset", "W8A8_DYNAMIC",
+                              torch.zeros_like(weight_scale).to(torch.float32))
             if module.bias is not None:
                 self.write_tensor(prefix + ".bias", "FLOAT", module.bias.to(torch.float32))
 

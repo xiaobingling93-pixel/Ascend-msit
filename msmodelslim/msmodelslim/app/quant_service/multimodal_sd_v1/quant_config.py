@@ -14,14 +14,14 @@
 #  limitations under the License.
 
 from dataclasses import dataclass
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 
 from pydantic import BaseModel, Field, model_validator
 from typing_extensions import Self, Literal
 
 from msmodelslim.app.base.quant_config import BaseQuantConfig
+from msmodelslim.app.quant_service.modelslim_v1.quant_config import ModelslimV1QuantConfig, ModelslimV1ServiceConfig
 from msmodelslim.utils.exception import SchemaValidateError
-from .quant_config import ModelslimV1QuantConfig, ModelslimV1ServiceConfig
 
 
 class DumpConfig(BaseModel):

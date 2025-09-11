@@ -1,13 +1,15 @@
 # Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 from enum import Enum
 from pathlib import Path
-from typing import List, Callable, Type, Optional, Dict, Any, Union
+from typing import List, Callable, Union
 
-from msmodelslim.utils.exception import SchemaValidateError
+from msmodelslim.utils.exception import SchemaValidateError, UnsupportedError
 from msmodelslim.utils.exception_decorator import exception_catcher
 from msmodelslim.utils.logging import logger_setter, get_logger
-from ..base import BaseModelAdapter, DeviceType
 from ..analysis_service import BaseAnalysisService
+from ..analysis_service.pipeline_interface import PipelineInterface
+from ..base import DeviceType
+from ...core.base.model import BaseModelInterface
 
 
 class AnalysisMetrics(Enum):
@@ -20,13 +22,13 @@ class AnalysisMetrics(Enum):
 @logger_setter('msmodelslim.app.analysis.application')
 class LayerAnalysisApplication:
     """Application for analyzing model layer sensitivity"""
-    
+
     def __init__(self,
                  analysis_service: BaseAnalysisService,
-                 model_factory: Callable[[str], Type[BaseModelAdapter]]):
+                 model_factory: Callable[[str, Path, bool], BaseModelInterface]):
         self.analysis_service = analysis_service
         self.model_factory = model_factory
-    
+
     @exception_catcher
     def analyze(self,
                 model_type: str,
@@ -85,7 +87,7 @@ class LayerAnalysisApplication:
             raise SchemaValidateError(f"topk must be a integer greater than 0, but got {topk}")
         if not isinstance(trust_remote_code, bool):
             raise SchemaValidateError(f"trust_remote_code must be a bool")
-        
+
         # Log parameters
         get_logger().info(f'Layer analysis with following parameters:')
         get_logger().info(f"model_type: {model_type}")
@@ -96,12 +98,12 @@ class LayerAnalysisApplication:
         get_logger().info(f"calib_dataset: {calib_dataset}")
         get_logger().info(f"topk: {topk}")
         get_logger().info(f"trust_remote_code: {trust_remote_code}")
-        
+
         return self._analyze(
             model_type, model_path, patterns, device,
             metrics_str, calib_dataset, topk, trust_remote_code
         )
-    
+
     def _analyze(self,
                  model_type: str,
                  model_path: Path,
@@ -112,35 +114,29 @@ class LayerAnalysisApplication:
                  topk: int,
                  trust_remote_code: bool):
         """Internal analysis implementation"""
-        
-        # Load model
-        get_logger().info(f"===========LOAD MODEL===========")
-        model = self.model_factory(model_type)(
-            model_type=model_type,
-            ori_path=model_path,
-            device=device,
-            trust_remote_code=trust_remote_code
-        )
-        get_logger().info(f"Load model {model_type} from {model_path} to {device} success.")
-        
         # Run analysis
         get_logger().info(f"===========RUN ANALYSIS===========")
-        
+
         # Create analysis config from parameters
         analysis_config = {
             'metrics': metrics,
             'calib_dataset': calib_dataset,
             'method_params': {}
         }
-        
+
+        model_adapter = self.model_factory(model_type, model_path, trust_remote_code)
+        if not isinstance(model_adapter, PipelineInterface):
+            raise UnsupportedError(f'Model adapter {model_adapter.__class__.__name__} does NOT support analyze',
+                                   action='Please implement PipelineInterface for model analyzing')
+
         result = self.analysis_service.analyze(
-            model=model,
+            model_adapter=model_adapter,
             patterns=patterns,
             analysis_config=analysis_config
         )
-        
+
         # export results using service-specific formatter
         self.analysis_service.export_results(result, topk)
-        
+
         get_logger().info(f"===========ANALYSIS COMPLETE===========")
         return result

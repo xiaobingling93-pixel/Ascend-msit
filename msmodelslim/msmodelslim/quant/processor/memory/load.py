@@ -14,9 +14,9 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from typing import Optional, Literal
-from pydantic import Field
 
 import torch
+from pydantic import Field
 from torch import nn
 
 from msmodelslim.core.QAL import QABCRegistry
@@ -53,13 +53,22 @@ class LoadProcessor(AutoSessionProcessor):
     ):
         super().__init__(model)
         self.config = config
-        self.device = torch.device(config.device)
+        self.adapter = adapter
+        self.device = config.device
         self.non_blocking = config.non_blocking
 
     def __repr__(self) -> str:
         return f"LoadProcessor(device={self.device}, non_blocking={self.non_blocking})"
 
     def preprocess(self, request: BatchProcessRequest) -> None:
+        if self.config.mode == "load":
+            self.to_device(request=request)
+
+    def postprocess(self, request: BatchProcessRequest) -> None:
+        if self.config.mode == "offload":
+            self.to_device(request=request)
+
+    def to_device(self, request: BatchProcessRequest) -> None:
         """
         在预处理阶段将模块移动到指定设备上。
         
@@ -87,7 +96,7 @@ class LoadProcessor(AutoSessionProcessor):
             if self.config.mode == "offload":
                 unregister_device_alignment_hook(request.module, name=request.name)
 
-            request.module.to(self.device, non_blocking=self.non_blocking)
+            request.module.to(torch.device(self.device), non_blocking=self.non_blocking)
 
             get_logger().debug("After move: allocated={}, reserved={}".format(
                 format_memory_size(get_device_allocated_memory()),
@@ -96,6 +105,12 @@ class LoadProcessor(AutoSessionProcessor):
 
             if self.config.cleanup:
                 torch.cuda.empty_cache()
+
+                try:
+                    import torch_npu
+                    torch_npu.npu.empty_cache()
+                except:
+                    pass
 
     def is_data_free(self) -> bool:
         """

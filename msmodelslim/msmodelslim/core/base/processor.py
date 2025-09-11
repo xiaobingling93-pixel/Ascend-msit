@@ -68,8 +68,10 @@ class BaseProcessor:
 
     def _run_forward_if_need(self, request: BatchProcessRequest) -> None:
         _ = self
-        for idx, data in enumerate(request.datas):
+        outputs = []
+        for data in request.datas:
             args, kwargs = data
             if args or kwargs:
                 output = request.module(*args, **kwargs)
-                request.outputs[idx] = output
+                outputs.append(output)
+        request.outputs = outputs

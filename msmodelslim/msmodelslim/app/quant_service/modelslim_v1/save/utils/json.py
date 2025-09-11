@@ -24,7 +24,7 @@ class JsonWriter:
         self.file_name = file_name
         self.value_map = {}
 
-    def write(self, prefix: str, desc: str):
+    def write(self, prefix: str, desc: object):
         self.value_map[prefix] = desc
 
     def close(self):

@@ -15,11 +15,12 @@
 
 from functools import partial
 from typing import Dict, Callable, List, Any, Literal, Annotated
-from pydantic import AfterValidator, Field
 
 import torch
 import torch.distributed as dist
 import torch.nn as nn
+from pydantic import AfterValidator, Field
+
 from msmodelslim.core.QAL.qregistry import QABCRegistry
 from msmodelslim.core.QAL.qtypes import (
     RMSNormBias,
@@ -28,12 +29,11 @@ from msmodelslim.core.QAL.qtypes import (
 from msmodelslim.core.api import iter_smooth
 from msmodelslim.core.base.protocol import BatchProcessRequest
 from msmodelslim.quant.processor.anti_outlier.smooth_base import BaseSmoothProcessor, BaseSmoothProcessorConfig
-from msmodelslim.quant.processor.anti_outlier.smooth_base import GraphOpt
 from msmodelslim.quant.processor.anti_outlier.smooth_base import StatKey
 from msmodelslim.quant.processor.base import AutoSessionProcessor
 from msmodelslim.utils.dist import DistHelper
+from msmodelslim.utils.logging import get_logger, logger_setter
 from msmodelslim.utils.validation.value import validate_normalized_value, is_boolean, is_string_list
-from msmodelslim.utils.logging import get_logger
 
 
 class IterSmoothProcessorConfig(BaseSmoothProcessorConfig):
@@ -47,6 +47,7 @@ class IterSmoothProcessorConfig(BaseSmoothProcessorConfig):
 
 
 @QABCRegistry.register(dispatch_key=IterSmoothProcessorConfig, abc_class=AutoSessionProcessor)
+@logger_setter()
 class IterSmoothProcessor(BaseSmoothProcessor):
     def __init__(self, model: nn.Module, config: IterSmoothProcessorConfig, adapter: object, **kwargs):
         super().__init__(model, config, adapter)
@@ -64,12 +65,12 @@ class IterSmoothProcessor(BaseSmoothProcessor):
     def preprocess(self, request: BatchProcessRequest) -> None:
         # 先调用父类的 preprocess 方法
         super().preprocess(request)
-        # 遍历 subgraph_info，将 norm_module 替换为 RMSNormBias
-        for subgraph in self.subgraph_info:
-            if subgraph.subgraph_type == "norm-linear" and subgraph.metadata:
+        # 遍历 adapter_config，将 norm_module 替换为 RMSNormBias
+        for adapter_config in self.adapter_config:
+            if adapter_config.subgraph_type == "norm-linear":
                 # 获取 norm_module 信息
-                norm_name = subgraph.metadata.get('source_name')
-                norm_module = subgraph.metadata.get('source_module')
+                norm_name = adapter_config.mapping.source
+                norm_module = self.model.get_submodule(norm_name) if norm_name else None
 
                 if norm_name and norm_module is not None:
                     try:
@@ -83,15 +84,14 @@ class IterSmoothProcessor(BaseSmoothProcessor):
                                 norm_bias.bias.data.copy_(norm_module.bias.data)
                                 norm_bias.bias.data = norm_bias.bias.data.type(norm_module.weight.data.dtype)
                             norm_bias.to(norm_module.weight.data.device)
-                            GraphOpt.set_module(self.model, norm_name, norm_bias)
-                            subgraph.metadata['source_module'] = norm_bias
+                            self.model.set_submodule(norm_name, norm_bias)
                             get_logger().debug(f"{norm_name}: {type(norm_module)} -> {type(norm_bias)}")
                         else:
                             get_logger().warning(f"Norm module {norm_name} does not have weight attribute")
                     except Exception as e:
                         get_logger().warning(f"Failed to replace norm module {norm_name}: {e}")
 
-        get_logger().info(f"[Smooth] Processed {len(self.subgraph_info)} subgraphs for submodule {request.name}")
+        get_logger().debug(f"Processed {len(self.adapter_config)} subgraphs for submodule {request.name}")
 
     def _get_stats_hook(self, name: str) -> Callable:
         def stats_hook(name: str, module: nn.Linear, args: tuple, kwargs: dict) -> None:
@@ -139,7 +139,6 @@ class IterSmoothProcessor(BaseSmoothProcessor):
                 statis_dict[StatKey.STAT_KEY_SMOOTH_SCALE] = channel_max
 
         return partial(stats_hook, name)
-
 
     def _apply_smooth_to_subgraph(self, subgraph_obj: Any, linear_modules: List[nn.Module]) -> None:
         """
