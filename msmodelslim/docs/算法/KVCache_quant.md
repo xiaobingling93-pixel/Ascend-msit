@@ -88,6 +88,10 @@ class FakeQuantDynamicCache(AutoFakeQuantDynamicCache):
 - **DynamicCache**：Transformers 标准动态缓存，完全支持。
 - **自定义Cache**：需要实现 `update(key_states, value_states, layer_idx)` 接口。
 
+##### 已验证模型列表
+- Qwen2.5系列
+- Qwen3系列
+
 ##### 新缓存类接入步骤
 
 1. **接口要求**：
