@@ -1,3 +1,4 @@
 easydict==1.13
 einops
 pydantic>=2.0.3
+wcmatch>=10.0
