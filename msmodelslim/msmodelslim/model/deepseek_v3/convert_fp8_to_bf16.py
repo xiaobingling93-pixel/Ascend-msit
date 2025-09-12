@@ -8,8 +8,8 @@ import torch
 from safetensors.torch import load_file
 from torch import nn
 
-from example.common.security.path import json_safe_load, get_valid_read_path, MAX_READ_FILE_SIZE_32G
 from msmodelslim.utils.logging import get_logger
+from msmodelslim.utils.security import get_valid_read_path, MAX_READ_FILE_SIZE_32G, json_safe_load
 
 WEIGHT_SCALE_INV = '.weight_scale_inv'
 HF_HOOK = '_hf_hook'
