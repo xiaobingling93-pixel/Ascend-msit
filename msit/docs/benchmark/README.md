@@ -6,6 +6,8 @@
 
 ## 工具安装
 - 工具安装请见 [msit一体化工具使用指南](../install/README.md)
+<br>如果在 `msit install benchmark` 的时候出现报错，显示需要 `use --no-check-certificate`，可通过`msit install benchmark --no-check`安装。
+<br>但是，需要注意的是，--no-check参数，即--no-check-certificate会跳过检查目标网站的证书信息，有一定的安全风险，用户需要谨慎使用并自行承担后果。
 
 ## 使用方法
 ### 功能介绍

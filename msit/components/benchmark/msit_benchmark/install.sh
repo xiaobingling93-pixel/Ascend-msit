@@ -43,7 +43,12 @@ download_and_install_aclruntime() {
 
     WHL_NAME="aclruntime-0.0.2-cp3${PYTHON3_MINI_VERSION}-cp3${PYTHON3_MINI_VERSION}${SUB_SUFFIX}-linux_${PLATFORM}.whl"
     echo "WHL_NAME=$WHL_NAME, URL=${WHL_BASE_URL}${WHL_NAME}"
-    wget -c "${WHL_BASE_URL}${WHL_NAME}"
+    if [ "$NO_CHECK_CERTIFICATE" == "true" ]; then
+        echo "[WARNING] --no-check will skip checking the certificate of the target website, posing security risk."
+        wget --no-check-certificate -c "${WHL_BASE_URL}${WHL_NAME}"
+    else
+        wget -c "${WHL_BASE_URL}${WHL_NAME}"
+    fi
 
     if [ "$PLATFORM" == "aarch64" ]; then
         if [ "$PYTHON3_MINI_VERSION" == "7" ]; then
@@ -101,7 +106,12 @@ download_and_install_ais_bench() {
 
     WHL_NAME="ais_bench-0.0.2-py3-none-any.whl"
     echo "WHL_NAME=$WHL_NAME, URL=${WHL_BASE_URL}${WHL_NAME}"
-    wget -c "${WHL_BASE_URL}${WHL_NAME}"
+    if [ "$NO_CHECK_CERTIFICATE" == "true" ]; then
+        echo "[WARNING] --no-check will skip checking the certificate of the target website, posing security risk."
+        wget --no-check-certificate -c "${WHL_BASE_URL}${WHL_NAME}"
+    else
+        wget -c "${WHL_BASE_URL}${WHL_NAME}"
+    fi
 
     sha256Value="ff55373a11d9975eaad497a230c9fb0d93856dc184790b8f168143c9c5f1cccd"
     sha256Data=$(sha256sum "$WHL_NAME" | cut -d' ' -f1)
