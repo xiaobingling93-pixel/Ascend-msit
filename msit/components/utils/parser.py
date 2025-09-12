@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import argparse
 from abc import abstractmethod
 from components.utils.install import get_entry_points, INSTALL_INFO_MAP, build_extra, \
@@ -151,7 +152,16 @@ class AitInstallCommand(BaseCommand):
             help="the dir look for archives",
         )
 
+        parser.add_argument(
+            "--no-check",
+            dest="no_check",
+            action='store_true',
+            help="whether check certificate while install benchmark",
+        )
+
     def handle(self, args):
+        if args.no_check:
+            os.environ['NO_CHECK_CERTIFICATE'] = 'true'
         install_tools(args.comp_names, args.find_links)
 
 
