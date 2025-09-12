@@ -11,11 +11,11 @@
 
 - 已参考环境准备，完成CANN开发环境的部署、以及PyTorch 2.1.0及以上版本的框架和npu插件、Python环境变量配置。
 - 大模型量化工具须执行命令安装如下依赖。
-  如下命令如果使用非root用户安装，需要在安装命令后加上--user，例如：pip3 install onnx --user。
+  以下命令如果使用非root用户安装，需要在安装命令后加上--user，例如：pip3 install onnx --user。针对某些开发环境可能存在依赖不完全匹配的情况，请根据界面报错提示自行修改依赖版本。
 ```
 pip3 install numpy==1.25.2
 pip3 install transformers        #需大于等于4.29.1版本，LLaMA模型需指定安装4.29.1版本
-pip3 install accelerate==1.0.0  #若需要使用NPU多卡并行方式对模型进行量化，需大于等于0.28.0版本
+pip3 install accelerate==0.21.0  #若需要使用NPU多卡并行方式对模型进行量化，需大于等于0.28.0版本
 pip3 install tqdm==4.66.1
 ```
 - （可选）如果需要在大模型量化工具中使用NPU多卡并行的方式对模型进行量化，需关闭NPU设备中的虚拟内存，并手动配置量化将会执行的设备序列环境。
