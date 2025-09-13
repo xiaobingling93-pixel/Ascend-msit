@@ -74,7 +74,7 @@
   ```
 2. 服务端启动 vLLM 服务，以 `Qwen/Qwen-3B` 为例，使用时以实际启动方式为准
   ```sh
-  python3 -m vllm.entrypoints.openai.api_server --model Qwen/Qwen-3B --max-model-len=4096 --trust-remote-code
+  python3 -m vllm.entrypoints.openai.api_server --model Qwen/Qwen-3B --max-model-len=4096
   ```
 3. 客户端发送请求，以curl命令为例，使用时以实际请求的发送形式为准
   ```sh

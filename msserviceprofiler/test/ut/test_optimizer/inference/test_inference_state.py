@@ -257,3 +257,31 @@ class TestCachePredict(unittest.TestCase):
         loader = CachePredict(data_path=Path(""), data=data, label_name='label')
         self.assertEqual(loader.label.tolist(), [1, 2, 3])
         self.assertEqual(loader.data.columns.tolist(), ['feature1', 'feature2'])
+
+    @patch('msserviceprofiler.modelevalstate.config.config.settings')
+    @patch('msserviceprofiler.modelevalstate.inference.state_eval_v1.CachePredict')
+    def test_no_cache_data(self, mock_cache_predict, mock_settings):
+        mock_settings.latency_model.cache_data = 'default_cache_data'
+        cache, _ = XGBStateEvaluate.load_cache_predict()
+        self.assertIsNone(cache)
+
+    @patch('msserviceprofiler.modelevalstate.config.config.settings')
+    @patch('msserviceprofiler.modelevalstate.inference.state_eval_v1.CachePredict')
+    def test_empty_cache_data(self, mock_cache_predict, mock_settings):
+        mock_settings.latency_model.cache_data = 'default_cache_data'
+        cache_data = Path('empty_cache_data')
+        cache_data.mkdir(exist_ok=True)
+        cache, _ = XGBStateEvaluate.load_cache_predict(cache_data)
+        self.assertIsNone(cache)
+
+    @patch('msserviceprofiler.modelevalstate.config.config.settings')
+    @patch('msserviceprofiler.modelevalstate.inference.state_eval_v1.CachePredict')
+    @patch('msserviceprofiler.modelevalstate.inference.state_eval_v1.read_csv_s')
+    def test_non_empty_cache_data(self, mock_read_csv_s, mock_cache_predict, mock_settings):
+        mock_settings.latency_model.cache_data = 'default_cache_data'
+        cache_data = Path('non_empty_cache_data')
+        cache_data.mkdir(exist_ok=True)
+        (cache_data / 'file.csv').touch()
+        mock_read_csv_s.return_value = pd.DataFrame({'label': [1], 'feature': [2]})
+        cache, _ = XGBStateEvaluate.load_cache_predict(cache_data)
+        self.assertIsNone(cache)
