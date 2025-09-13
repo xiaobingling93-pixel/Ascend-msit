@@ -31,6 +31,7 @@ from msserviceprofiler.modelevalstate.optimizer.utils import (
     backup,
     close_file_fp,
     get_folder_size,
+    get_required_field_from_json
 )
 
 
@@ -296,3 +297,59 @@ def test_get_folder_size_with_files(tmp_path):
 def test_get_folder_size_nonexistent_path():
     size = get_folder_size(Path("/nonexistent/path"))
     assert size == 0
+
+
+def test_get_required_field_from_json():
+    # 测试用例1：测试从字典中获取字段
+    data = {"name": "John", "age": 30, "city": "New York"}
+    assert get_required_field_from_json(data, "name") == "John"
+
+    # 测试用例2：测试从嵌套字典中获取字段
+    data = {"person": {"name": "John", "age": 30, "city": "New York"}}
+    assert get_required_field_from_json(data, "person.name") == "John"
+
+    # 测试用例3：测试从列表中获取字段
+    data = ["John", 30, "New York"]
+    assert get_required_field_from_json(data, "0") == "John"
+
+    # 测试用例4：测试从嵌套列表中获取字段
+    data = [["John", 30, "New York"], ["Jane", 25, "Los Angeles"]]
+    assert get_required_field_from_json(data, "1.0") == "Jane"
+
+    # 测试用例5：测试从字典和列表混合结构中获取字段
+    data = {"person": {"name": "John", "age": 30, "city": ["New York", "Los Angeles"]}}
+    assert get_required_field_from_json(data, "person.city.1") == "Los Angeles"
+
+    # 测试用例6：测试从不支持的数据类型中获取字段
+    data = "John"
+    with pytest.raises(ValueError):
+        get_required_field_from_json(data, "name")
+
+    # 测试用例7：测试从空数据中获取字段
+    data = {}
+    with pytest.raises(KeyError):
+        get_required_field_from_json(data, "name")
+
+    # 测试用例8：测试从空列表中获取字段
+    data = []
+    with pytest.raises(IndexError):
+        get_required_field_from_json(data, "0")
+
+    # 测试用例9：测试从空嵌套字典中获取字段
+    data = {"person": {}}
+    with pytest.raises(KeyError):
+        get_required_field_from_json(data, "person.name")
+
+    # 测试用例10：测试从空嵌套列表中获取字段
+    data = {"person": []}
+    with pytest.raises(IndexError):
+        get_required_field_from_json(data, "person.0")
+
+    # 测试用例11：测试从空嵌套字典和列表混合结构中获取字段
+    data = {"person": {"name": "John", "age": 30, "city": []}}
+    with pytest.raises(IndexError):
+        get_required_field_from_json(data, "person.city.0")
+
+    # 测试用例12：测试从空嵌套字典和列表混合结构中获取字段
+    data = {"person": {"name": "John", "age": 30, "city": ["New York", "Los Angeles"]}}
+    assert get_required_field_from_json(data, "person.city.1") == "Los Angeles"
