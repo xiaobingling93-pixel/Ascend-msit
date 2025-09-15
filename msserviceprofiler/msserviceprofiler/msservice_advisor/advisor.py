@@ -123,7 +123,7 @@ def parse_mindie_server_config(service_config_path):
 
     if not Rule.input_file_read.is_satisfied_by(service_config_path):
         logger.warning(f"mindie_service_path not provided or not accessible, will skip related analyse.")
-        return {}
+        return None
 
     logger.info(f"mindie_service_path: {service_config_path}")
     mindie_service_config = read_csv_or_json(service_config_path)
@@ -163,10 +163,10 @@ def check_positive_integer(value):
         value = int(value)
     except Exception as e:
         raise ValueError(f"'{value}' cannot convert to a positive integer.") from e
-    
+
     if value < 0:
         raise ValueError(f"'{value}' is not a positive integer.")
-    
+
     return value
 
 

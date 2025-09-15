@@ -33,7 +33,7 @@ class VersionComponent:
         home = os.getenv(self.env_var) if self.env_var else ''
         base_path = home or self.default_home
         if self.version_file.startswith('/'):
-            return self.version_file
+            return os.path.normpath(self.version_file)
         return os.path.normpath(os.path.join(base_path, self.version_file))
 
 
