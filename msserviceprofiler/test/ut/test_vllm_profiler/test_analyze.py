@@ -54,7 +54,7 @@ async def test_add_request_async_given_request_id_and_prompt_when_called_then_ev
     assert http_req_calls == [("domain", "Request"), ("res", request_id), ("event", "httpReq")]
 
     encode_calls = Profiler.instance_calls[1]
-    assert encode_calls == [("domain", "Request"), ("res", request_id), ("event", "encode")]
+    assert encode_calls == [("domain", "Request"), ("res", request_id), ("event", "tokenize")]
 
 
 def create_mock_output(request_id, finished=True, has_stats=True):
