@@ -88,7 +88,6 @@ class MultimodalSDModelslimV1QuantService(BaseQuantService):
             get_logger().info(f"prepare Persistence to {save_path} success")
 
         get_logger().info(f"==========QUANTIZATION: Run Quantization==========")
-        final_process_cfg += quant_config.spec.save
 
         runner = LayerWiseRunner(adapter=model_adapter)
 

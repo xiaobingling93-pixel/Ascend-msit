@@ -7,16 +7,17 @@ import contextvars
 import torch
 import torch.nn as nn
 
-from ascend_utils.common.security import get_valid_read_path
-from ascend_utils.common.security import get_valid_write_path
 from ascend_utils.common.security.pytorch import safe_torch_load
-from msmodelslim.utils.exception import SchemaValidateError
+from msmodelslim.utils.security import get_valid_read_path, get_write_directory, SafeWriteUmask
+from msmodelslim.utils.exception import SchemaValidateError, SecurityError
+from msmodelslim.utils.exception_decorator import exception_handler
 from msmodelslim.utils.logging import get_logger
 
 MAX_RECURSION_DEPTH = 20
 MAX_READ_FILE_SIZE_32G = 34359738368  # 32G, 32 * 1024 * 1024 * 1024
 
 
+@exception_handler("", err_cls=SecurityError, ms_err_cls=SecurityError)
 def load_cached_data(pth_file_path, generate_func, model, dump_config):
     """内部缓存加载函数"""
     try:
@@ -27,11 +28,14 @@ def load_cached_data(pth_file_path, generate_func, model, dump_config):
         # 加载pth文件
         pth_file_path = get_valid_read_path(pth_file_path, size_max=MAX_READ_FILE_SIZE_32G)
         data = safe_torch_load(pth_file_path)
-        get_logger().info(f"Successfully loaded data from %r", pth_file_path)
+        get_logger().info("Successfully loaded data from %r", pth_file_path)
         return data
     except FileNotFoundError as e:
-        pth_file_path = get_valid_write_path(pth_file_path)
-        get_logger().info(f"Failed to load %r: %s, will regenerate", pth_file_path, e)
+        # 检测目录，若不存在则创建
+        pth_file_dir = get_write_directory(os.path.dirname(pth_file_path))
+        pth_file_name = os.path.basename(pth_file_path)
+        pth_file_path = os.path.join(pth_file_dir, pth_file_name)
+        get_logger().info("Failed to load %r: %s, will regenerate", pth_file_path, e)
 
         # 触发缓存未命中时的处理逻辑
         # 配置dump参数
@@ -44,7 +48,7 @@ def load_cached_data(pth_file_path, generate_func, model, dump_config):
         dumper_manager.save(pth_file_path)
 
         data = safe_torch_load(pth_file_path)
-        get_logger().info(f"Successfully dumped and loaded data from %r", pth_file_path)
+        get_logger().info("Successfully dumped and loaded data from %r", pth_file_path)
         return data
 
 
@@ -108,8 +112,7 @@ class InputCapture:
                 captured_kwargs = {}
                 record = captured_args
             else:
-                raise SchemaValidateError(f"Invalid capture_mode: {capture_mode}."
-                                          f"Must be 'args' ")
+                raise SchemaValidateError("Invalid capture_mode: %r. Must be 'args' " % capture_mode)
 
             # Execute original function
             result = func(*args, **kwargs)
@@ -144,15 +147,15 @@ class DumperManager(nn.Module):
         self.old_forward = None
 
         if capture_mode not in {'args'}:
-            raise SchemaValidateError(f"Invalid capture_mode: {capture_mode}."
-                                      f"Must be 'args' ")
+            raise SchemaValidateError("Invalid capture_mode: %r. Must be 'args' " % capture_mode)
 
         self._add_hook(self.module)
 
     def save(self, path: str = '__output.pth') -> List[Dict[str, Any]]:
         """Save captured data and restore original forward method."""
         data = InputCapture.get_all()
-        torch.save(data, path)
+        with SafeWriteUmask():
+            torch.save(data, path)
 
         # Restore original forward method
         if self.old_forward:

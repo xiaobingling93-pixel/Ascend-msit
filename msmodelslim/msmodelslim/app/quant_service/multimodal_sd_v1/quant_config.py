@@ -22,6 +22,7 @@ from typing_extensions import Self, Literal
 from msmodelslim.app.base.quant_config import BaseQuantConfig
 from msmodelslim.app.quant_service.modelslim_v1.quant_config import ModelslimV1QuantConfig, ModelslimV1ServiceConfig
 from msmodelslim.utils.exception import SchemaValidateError
+from msmodelslim.utils.exception_decorator import exception_handler
 
 
 class DumpConfig(BaseModel):
@@ -72,6 +73,9 @@ class MultimodalSDModelslimV1QuantConfig(ModelslimV1QuantConfig):
         )
 
 
+@exception_handler(err_cls=Exception, ms_err_cls=SchemaValidateError,
+                   keyword="validation error",
+                   action="Please check the multimodal_sd_config parameter of the YAML file.")
 def load_specific_config(yaml_spec: object) -> MultimodalSDServiceConfig:
     """Load specific configuration from YAML spec"""
     if not isinstance(yaml_spec, dict):

@@ -49,6 +49,8 @@ EXAMPLE_PROMPT = {
     },
 }
 
+SUPPORTED_TASKS = ['t2v-14B', 't2v-1.3B']
+
 
 @ModelFactory.register("Wan2_1")
 @logger_setter()
@@ -305,19 +307,28 @@ class Wan2Point1Adapter(BaseModelAdapter,
     def _validate_args(self, args):
         """Get default parameter configuration, integrating wan config parameters"""
         self._check_import_dependency()
-        from wan.configs import WAN_CONFIGS, SUPPORTED_SIZES
+        from wan.configs import SUPPORTED_SIZES
 
         # Basic check
         if args.ckpt_dir is None:
             raise InvalidModelError("Please specify the checkpoint directory.")
-        if args.task not in WAN_CONFIGS:
-            raise UnsupportedError(f"Unsupport task: {args.task}")
-        if args.task not in EXAMPLE_PROMPT:
-            raise UnsupportedError(f"Unsupport task: {args.task}")
+        if not isinstance(args.task, str):
+            raise SchemaValidateError(f"task must be a str, but got {type(args.task)}")
+        if args.task not in SUPPORTED_TASKS:
+            raise UnsupportedError(
+                "Unsupported task: %r. Supported tasks are: %s"
+                % (args.task, SUPPORTED_TASKS)
+            )
 
         # The default sampling steps are 40 for image-to-video tasks and 50 for text-to-video tasks.
         if args.sample_steps is None:
             args.sample_steps = 40 if "i2v" in args.task else 50
+        if not isinstance(args.sample_steps, int):
+            raise SchemaValidateError(
+                f"sample_steps must be an integer, got {type(args.sample_steps).__name__}"
+            )
+        if args.sample_steps <= 0:
+            raise SchemaValidateError(f"sample_steps must be greater than 0")
 
         if args.sample_shift is None:
             args.sample_shift = 5.0
@@ -327,19 +338,40 @@ class Wan2Point1Adapter(BaseModelAdapter,
         # The default number of frames are 1 for text-to-image tasks and 81 for other tasks.
         if args.frame_num is None:
             args.frame_num = 1 if "t2i" in args.task else 81
+        if not isinstance(args.frame_num, int):
+            raise SchemaValidateError(
+                f"frame_num must be an integer, got {type(args.frame_num).__name__}"
+            )
+        if args.frame_num <= 0:
+            raise SchemaValidateError("frame_num must be greater than 0")
 
         # T2I frame_num check
         if "t2i" in args.task and args.frame_num != 1:
-            raise UnsupportedError(f"Unsupport frame_num {args.frame_num} for task {args.task}")
+            raise UnsupportedError(
+                "Unsupported frame_num %r for task %r"
+                % (args.frame_num, args.task)
+            )
 
-        args.base_seed = args.base_seed if args.base_seed >= 0 else random.randint(
-            0, sys.maxsize)
+        args.base_seed = args.base_seed if args.base_seed >= 0 else random.randint(0, sys.maxsize)
         # Size check
         if args.size not in SUPPORTED_SIZES[args.task]:
             raise UnsupportedError(
-                f"Unsupport size {args.size} for task {args.task},"
-                f" supported sizes are: {', '.join(SUPPORTED_SIZES[args.task])} "
+                "Unsupported size %r for task %r, supported sizes are: %r"
+                % (args.size, args.task, SUPPORTED_SIZES[args.task])
             )
+
+        # Validate prompt
+        if "prompt" not in args:
+            raise SchemaValidateError("Missing required parameter: prompt")
+        if not isinstance(args.prompt, str):
+            raise SchemaValidateError(f"prompt must be a string, got {type(args.prompt).__name__}")
+        if not args.prompt.strip():
+            raise SchemaValidateError("prompt cannot be an empty string")
+
+        # Validate offload_model
+        if "offload_model" in args and args.offload_model and not isinstance(args.offload_model, bool):
+            raise SchemaValidateError(
+                f"offload_model must be a boolean (True/False), got {type(args.offload_model).__name__}")
 
     def _get_parser(self) -> Dict[str, Any]:
         """Get default parameter configuration, integrating wan config parameters"""
@@ -516,12 +548,23 @@ class Wan2Point1Adapter(BaseModelAdapter,
         self._init_logging(rank)
 
         args = self.model_args
+
+        # 不支持并行
+        if args.t5_fsdp or args.dit_fsdp:
+            raise SchemaValidateError("t5_fsdp and dit_fsdp are not supported in non-distributed environments.")
+
+        if args.cfg_size > 1 or args.ulysses_size > 1 or args.ring_size > 1:
+            raise SchemaValidateError("context parallel are not supported in non-distributed environments.")
+
+        if args.vae_parallel:
+            raise SchemaValidateError("vae parallel are not supported in non-distributed environments.")
+
         cfg = WAN_CONFIGS[args.task]
         if args.ulysses_size > 1:
             if cfg.num_heads % args.ulysses_size != 0:
-                raise SchemaValidateError(f"`num_heads` must be divisible by `ulysses_size`.")
-        logging.info(f"Generation job args: {args}")
-        logging.info(f"Generation model config: {cfg}")
+                raise SchemaValidateError("`num_heads` must be divisible by `ulysses_size`.")
+        logging.info("Generation job args: %r", args)
+        logging.info("Generation model config: %r", cfg)
 
         logging.info("Creating WanT2V pipeline.")
         self.wan_t2v = wan.WanT2V(
