@@ -17,8 +17,8 @@ AutoGPTQ：GPU
 
 # 1.msModelSlim量化
 环境准备如下：  
-[大模型量化工具使用前的开发环境的部署](https://gitcode.com/Ascend/msit/blob/master/msmodelslim)  
-[大模型量化工具依赖安装](https://gitcode.com/Ascend/msit/blob/master/msmodelslim/msmodelslim/pytorch/llm_ptq)  
+[大模型量化工具使用前的开发环境的部署](https://gitcode.com/Ascend/msit/tree/master/msmodelslim)  
+[大模型量化工具依赖安装](https://gitcode.com/Ascend/msit/tree/master/msmodelslim/msmodelslim/pytorch/llm_ptq)  
 
 ## 1.1 msModelSlim量化
 量化脚本跟正常的量化脚本一样，可以参考：[w8a8精度调优策略](https://gitcode.com/Ascend/msit/blob/master/msmodelslim/docs/w8a8%E7%B2%BE%E5%BA%A6%E8%B0%83%E4%BC%98%E7%AD%96%E7%95%A5.md) 。
