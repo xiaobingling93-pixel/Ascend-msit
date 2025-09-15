@@ -118,6 +118,7 @@ class QuantModelJsonDescription:
     group_size_name = "group_size"
     kv_quant_type_name = "kv_quant_type"
     reduce_quant_type_name = "reduce_quant_type"
+    metadata_name = "metadata"
 
     def __init__(self, model_quant_type, use_kvcache_quant=False, use_fa_quant=False, version_name=None, group_size=0,
                  enable_communication_quant=False):
@@ -161,6 +162,7 @@ class QuantModelJsonDescription:
                 QuantModelJsonDescription.kv_cache_type_name,
                 QuantModelJsonDescription.fa_quant_type_name,
                 QuantModelJsonDescription.reduce_quant_type_name,
+                QuantModelJsonDescription.metadata_name,
             ]:
                 continue
             if not isinstance(weight_name, str):
@@ -170,7 +172,7 @@ class QuantModelJsonDescription:
         json_keys = json_description.keys()
         if len(json_keys) == 0:
             raise ValueError("quant_model_json_description does not contain any data.")
-        if list(json_keys)[0] != QuantModelJsonDescription.model_quant_type_name:
+        if QuantModelJsonDescription.model_quant_type_name not in json_keys:
             raise ValueError("quant_model_json_description must have model quant type.")
         return json_description
 
