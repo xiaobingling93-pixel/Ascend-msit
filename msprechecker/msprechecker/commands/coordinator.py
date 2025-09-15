@@ -222,7 +222,7 @@ class PrecheckStrategy(CommandStrategy):
                     data = load_fn(f)
             except Exception as e:
                 global_logger.error("missing file: %r", full_path)
-                return
+                return 1
 
             collect_data[path] = data
 
@@ -231,6 +231,7 @@ class PrecheckStrategy(CommandStrategy):
         checker = PDChecker(rule_manager=rule_manager, error_handler=error_handler)
         check_result = checker.check(collect_result)
         reporter.report(check_result)
+        return 0
 
     @staticmethod
     def execute(args: argparse.Namespace) -> int:
@@ -244,8 +245,8 @@ class PrecheckStrategy(CommandStrategy):
         if args.scene and "," in args.scene:
             parts = args.scene.split(",", 1)
             if len(parts) != 2 or not all(parts):
-                global_logger.error("Invalid scene format! Use 'franework,scene'")
-                return None
+                global_logger.error("Invalid scene format! Use 'framework,scene'")
+                return 1
             args.framework = parts[0].strip()
             args.scene = parts[1].strip()
         else:
