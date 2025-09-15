@@ -99,6 +99,7 @@ class Compressor:
                 QuantModelJsonDescription.kv_cache_type_name,
                 QuantModelJsonDescription.fa_quant_type_name,
                 QuantModelJsonDescription.reduce_quant_type_name,
+                QuantModelJsonDescription.metadata_name,
             ]:
                 continue
             if value == QuantType.W8A8S and key.endswith('.weight'):
