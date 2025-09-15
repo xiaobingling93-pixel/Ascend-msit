@@ -78,35 +78,31 @@ class TestLoadCachedData:
         """测试缓存文件不存在时的处理"""
         # Mock文件不存在
         with patch('os.path.exists', return_value=False):
-            # Mock get_valid_write_path
-            with patch('msmodelslim.utils.cache.pth.get_valid_write_path') as mock_valid_path:
-                mock_valid_path.return_value = mock_pth_file_path
+            # Mock DumperManager
+            with patch('msmodelslim.utils.cache.pth.DumperManager') as mock_dumper_class:
+                mock_dumper = Mock()
+                mock_dumper_class.return_value = mock_dumper
 
-                # Mock DumperManager
-                with patch('msmodelslim.utils.cache.pth.DumperManager') as mock_dumper_class:
-                    mock_dumper = Mock()
-                    mock_dumper_class.return_value = mock_dumper
+                # Mock safe_torch_load
+                with patch('msmodelslim.utils.cache.pth.safe_torch_load') as mock_load:
+                    mock_data = {"generated": "data"}
+                    mock_load.return_value = mock_data
 
-                    # Mock safe_torch_load
-                    with patch('msmodelslim.utils.cache.pth.safe_torch_load') as mock_load:
-                        mock_data = {"generated": "data"}
-                        mock_load.return_value = mock_data
+                    # Mock logger
+                    with patch('msmodelslim.utils.cache.pth.get_logger') as mock_logger:
+                        result = load_cached_data(
+                            mock_pth_file_path,
+                            mock_generate_func,
+                            mock_model,
+                            mock_dump_config
+                        )
 
-                        # Mock logger
-                        with patch('msmodelslim.utils.cache.pth.get_logger') as mock_logger:
-                            result = load_cached_data(
-                                mock_pth_file_path,
-                                mock_generate_func,
-                                mock_model,
-                                mock_dump_config
-                            )
-
-                            assert result == mock_data
-                            # 验证生成函数被调用
-                            mock_generate_func.assert_called_once()
-                            # 验证dump管理器被创建和保存
-                            mock_dumper_class.assert_called_once_with(mock_model, capture_mode="args")
-                            mock_dumper.save.assert_called_once_with(mock_pth_file_path)
+                        assert result == mock_data
+                        # 验证生成函数被调用
+                        mock_generate_func.assert_called_once()
+                        # 验证dump管理器被创建和保存
+                        mock_dumper_class.assert_called_once_with(mock_model, capture_mode="args")
+                        mock_dumper.save.assert_called_once_with(mock_pth_file_path)
 
 
 class TestInputCapture:
@@ -223,7 +219,7 @@ class TestDumperManager:
 
     def test_dumper_manager_initialization_invalid_capture_mode(self, mock_module):
         """测试DumperManager使用无效capture_mode时的初始化"""
-        with pytest.raises(SchemaValidateError, match="Invalid capture_mode: invalid_mode"):
+        with pytest.raises(SchemaValidateError, match="Invalid capture_mode: 'invalid_mode'"):
             DumperManager(mock_module, capture_mode="invalid_mode")
 
     def test_dumper_manager_save(self, mock_module, mock_dump_config):
