@@ -11,7 +11,7 @@
 - 稀疏量化：LLaMA-33B，LLaMA2-7B，LLaMA2-13B, LLaMA3.1-70B
 - KV cache量化: LLaMA3.1-70B
 - Attention 量化：LLaMA3.1-70B
-- W4A8_DYNAMIC 量化：LLaMA3.1-8B-Instruct, LLaMA3.1-70B-Instruct。注意，通过该量化策略量化的模型需要结合[推理引擎部署推理](https://gitcode.com/Ascend/MindIE-LLM/blob/master/examples/atb_models/examples/models/llama/README.md)。
+- W4A8_DYNAMIC 量化：LLaMA3.1-8B-Instruct, LLaMA3.1-70B-Instruct。注意，通过该量化策略量化的模型需要结合推理引擎部署推理
 
 #### 此模型仓已适配的模型版本权重获取地址
   - [LLaMA系列](https://github.com/facebookresearch/llama/tree/llama_v1)

@@ -93,7 +93,7 @@ def main():
 
 ```
 
-4. 修改MindSpeed-LLM推理[脚本](https://gitcode.com/Ascend/MindSpeed-LLM/blob/master/examples/legacy/llama2/evaluate_llama2_7B_ptd.sh)执行上述量化，以legacy启动为例，修改脚本模型路径
+4. 修改MindSpeed-LLM推理evaluate_llama2_7B_ptd.sh执行上述量化，以legacy启动为例，修改脚本模型路径
 ```
  ...
  TOKENIZER_PATH=./model_from_hf/llama-2-7b-hf/  #huggingface开源模型路径
