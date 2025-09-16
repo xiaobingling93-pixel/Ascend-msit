@@ -1,6 +1,8 @@
 # Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 import argparse
 
+import msmodelslim # do NOT remove, to trigger the patches
+
 from msmodelslim.app import QuantType, DeviceType
 from msmodelslim.cli.analysis.__main__ import main as analysis_main
 from msmodelslim.cli.naive_quantization.__main__ import main as quant_main
