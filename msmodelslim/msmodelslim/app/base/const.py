@@ -15,12 +15,12 @@ class ExtendedEnum(Enum):
         return list(map(lambda c: c.name, cls))
 
 
-class DeviceType(ExtendedEnum):
+class DeviceType(str, ExtendedEnum):
     NPU = "npu"  # 昇腾NPU
     CPU = "cpu"  # CPU
 
 
-class QuantType(ExtendedEnum):
+class QuantType(str, ExtendedEnum):
     W4A8 = "w4a8"  # 权重INT4量化，激活值INT8量化
     W8A16 = "w8a16"  # 权重INT8量化，激活值不量化
     W8A8 = "w8a8"  # 权重INT8量化，激活值INT8量化
@@ -28,7 +28,7 @@ class QuantType(ExtendedEnum):
     W8A8C8 = "w8a8c8"  # 权重INT8量化，激活值INT8量化，KVCache INT8量化
 
 
-class RunnerType(Enum):
+class RunnerType(str, ExtendedEnum):
     """Runner类型枚举"""
     AUTO = "auto"
     MODEL_WISE = "model_wise"
