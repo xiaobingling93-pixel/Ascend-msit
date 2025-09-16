@@ -25,8 +25,7 @@ from .save.saver import AutoSaverConfigList
 
 
 class ModelslimV1ServiceConfig(BaseModel):
-    runner: Literal[RunnerType.AUTO, RunnerType.MODEL_WISE, RunnerType.LAYER_WISE] = Field(
-        default=RunnerType.AUTO)
+    runner: RunnerType = RunnerType.AUTO
     process: AutoProcessorConfigList = Field(default_factory=list)
     save: AutoSaverConfigList = Field(default_factory=list)
     dataset: str = Field(default='mix_calib.jsonl')
