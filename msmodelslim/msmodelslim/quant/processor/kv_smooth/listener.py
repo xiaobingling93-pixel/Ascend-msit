@@ -19,17 +19,39 @@ from torch import nn
 from torch.utils.hooks import RemovableHandle
 from transformers import Cache
 
-from msmodelslim.utils.logging import get_logger
+from msmodelslim.utils.exception import SpecError
 
 CONST_PAST_KEY_VALUES = 'past_key_values'
 CONST_PAST_KEY_VALUE = 'past_key_value'
 
 
 class KVCacheListener(Cache):
-    def __init__(self, listen_helper: Callable[[int, torch.Tensor, torch.Tensor], None], cache: Optional[Cache] = None):
+    def __init__(self, listen_helper: Callable[[int, torch.Tensor, torch.Tensor], None], cache: Cache):
         super().__init__()
+        if cache is None:
+            raise SpecError("Cache cannot be None. KVCacheListener requires a valid Cache instance.",
+                            action="Please provide a valid Cache instance.")
         self.cache = cache
         self.listen_helper = listen_helper
+
+    def __getattribute__(self, name: str):
+        """
+        除了 update/self 内部字段与必要的内置属性外，其余属性与方法一律从 self.cache 获取，
+        以确保父类 Cache 的方法也走底层 cache 的实现。
+        """
+        # 这些属性必须从当前实例直接获取，避免递归与功能错误
+        if name in (
+                'update', 'cache', 'listen_helper',
+        ) or name.startswith('__'):
+            return object.__getattribute__(self, name)
+
+        # 优先从底层 cache 获取（实现“除了 update 都用 self.cache 的逻辑”）
+        cache = object.__getattribute__(self, 'cache')
+        try:
+            return getattr(cache, name)
+        except AttributeError:
+            # 底层没有该属性，退回当前实例/父类
+            return object.__getattribute__(self, name)
 
     def update(
             self,
@@ -39,9 +61,10 @@ class KVCacheListener(Cache):
             cache_kwargs: Optional[Dict[str, Any]] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         self.listen_helper(layer_idx, key_states, value_states)
-
-        if self.cache is None:
-            return key_states, value_states
+        if not hasattr(self.cache, 'update'):
+            raise SpecError("Cache does not have update method. KVCacheListener requires a valid Cache instance.",
+                            action="Please provide a valid Cache instance "
+                                   "with update(key_states, value_states, layer_idx, cache_kwargs) method.")
         return self.cache.update(key_states, value_states, layer_idx, cache_kwargs)
 
 
@@ -53,14 +76,16 @@ class KVCacheListenerManager:
     def attach_listener_to_module(self, module: nn.Module,
                                   listen_helper: Callable[[int, torch.Tensor, torch.Tensor], None]) -> None:
         def pre_hook(_: nn.Module, args: Any, kwargs: Dict[str, Any]) -> Tuple[Any, Dict[str, Any]]:
-            if CONST_PAST_KEY_VALUES in kwargs:
+            if CONST_PAST_KEY_VALUES in kwargs and kwargs[CONST_PAST_KEY_VALUES] is not None:
                 kwargs[CONST_PAST_KEY_VALUES] = KVCacheListener(listen_helper, cache=kwargs[CONST_PAST_KEY_VALUES])
-            elif CONST_PAST_KEY_VALUE in kwargs:
+            elif CONST_PAST_KEY_VALUE in kwargs and kwargs[CONST_PAST_KEY_VALUE] is not None:
                 kwargs[CONST_PAST_KEY_VALUE] = KVCacheListener(listen_helper, cache=kwargs[CONST_PAST_KEY_VALUE])
             else:
-                get_logger().warning(f"{CONST_PAST_KEY_VALUES} and {CONST_PAST_KEY_VALUE} both are None")
-                kwargs[CONST_PAST_KEY_VALUES] = KVCacheListener(listen_helper)
-                kwargs[CONST_PAST_KEY_VALUE] = KVCacheListener(listen_helper)
+                raise SpecError(
+                    f"{CONST_PAST_KEY_VALUES} and {CONST_PAST_KEY_VALUE} both are None or missing. "
+                    f"KVCacheListener requires a valid Cache instance.",
+                    action="Please pass a valid transformers.Cache instance via past_key_values/past_key_value."
+                )
             return args, kwargs
 
         remove_handler = module.register_forward_pre_hook(pre_hook, with_kwargs=True)
