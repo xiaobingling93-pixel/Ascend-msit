@@ -122,7 +122,7 @@ class KVSmoothProcessor(AutoSessionProcessor):
         return False
 
     def need_kv_cache(self) -> bool:
-        return False
+        return True
 
     def pre_run(self) -> None:
         get_logger().info("Smoothing kvcache")
