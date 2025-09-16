@@ -56,8 +56,8 @@ class KeyStatesMaximumCollector:
 class KVSmoothProcessorConfig(AutoProcessorConfig):
     type: Literal["kv_smooth"] = "kv_smooth"
     smooth_factor: Annotated[float, AfterValidator(greater_than_zero)] = 1.0
-    include: List[str] = Field(default_factory=list, description="包含的模块名称")
-    exclude: List[str] = Field(default_factory=list, description="排除的模块名称")
+    include: List[str] = Field(default_factory=lambda: ["*"], description="包含的模块名称")
+    exclude: List[str] = Field(default_factory=lambda: [], description="排除的模块名称")
 
 
 @QABCRegistry.register(dispatch_key=KVSmoothProcessorConfig, abc_class=AutoSessionProcessor)
@@ -81,8 +81,8 @@ class KVSmoothProcessor(AutoSessionProcessor):
         self.fused_units_map: Optional[Dict[str, KVSmoothFusedUnit]] = None
         self.listener_manager = KVCacheListenerManager()
         self.collector = KeyStatesMaximumCollector()
-        self.include = ConfigSet(config.include) if config.include else ConfigSet(["*"])
-        self.exclude = ConfigSet(config.exclude) if config.exclude else ConfigSet([])
+        self.include = ConfigSet(config.include) 
+        self.exclude = ConfigSet(config.exclude)
 
     @staticmethod
     def _check_module(full_name: str, submodule: nn.Module, fused_unit: KVSmoothFusedUnit) -> None:

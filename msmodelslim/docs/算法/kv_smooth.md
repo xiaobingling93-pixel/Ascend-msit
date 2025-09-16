@@ -8,35 +8,55 @@
 
 #### 使用方式
 
-作为Processor使用
+KVSmooth 算法通过 ModelSlimV1 的 YAML 配置文件使用。
+
+##### 参数说明
+
+| 参数名             | 作用        | 类型        | 默认值         | 说明              | 示例                             |
+|-----------------|-----------|-----------|-------------|-----------------|--------------------------------|
+| `type`          | 指定处理器类型   | str       | "kv_smooth" | 固定为 `kv_smooth` | `"kv_smooth"`                  |
+| `smooth_factor` | 控制平滑激进程度  | float     | 1.0         | > 0，越大平滑越激进     | `1.5`                          |
+| `include`       | 指定参与平滑的模块 | List[str] | ["*"]       | 支持通配符           | `["model.layers.*.self_attn"]` |
+| `exclude`       | 指定禁止平滑的模块 | List[str] | []          | 支持通配符           | `["model.layers.0.self_attn"]` |
+
+**注意**：
+
+- `smooth_factor` 必须大于 0
+- `include` 和 `exclude` 支持通配符匹配，如 `"model.layers.*.self_attn"`
+- `exclude` 的优先级高于 `include`，即如果模块同时匹配 include 和 exclude，则会被排除
+
+##### 配置文件使用说明
+
+在 ModelSlimV1 的量化配置文件中，将 kv_smooth 作为 processor 添加到 process 列表中，无关部分已省略
 
 ```yaml
-- type: "kv_smooth" # 固定为 `kv_smooth`，用于指定 Processor。
-  smooth_factor: 1.0 # 浮点数, > 0, 默认 1.0，缩放的幂指数，越大平滑越激进。
-  include: # 字符串列表，参与平滑的 attention 匹配模式（完整路径，支持 `*` 通配），默认全量。
-    - "*"
-  exclude: # 字符串列表，禁止平滑的 attention 匹配模式（完整路径，支持 `*` 通配），默认为空。
-    - "model.layers.0.self_attn"
+apiversion: "modelslim_v1"
+spec:
+  process:
+    - type: "kv_smooth"
+      smooth_factor: 1.0
+      include: [ "*" ]
+      exclude: [ "model.layers.0.self_attn" ]
 ```
 
 #### 原理和实现
 
 ##### 原理
 
-- 平滑写入 KVCache 的激活值 `key_states` ；实现方式是把缩放系数 s 融合进 RoPE 之前的 Q/K 投影或归一化权重：
+- 平滑 KVCache 的激活值 `key_states` ，实现方式是把缩放系数 s 融合进 RoPE 之前的 Q/K 投影或归一化权重：
     - K' = K / s
     - Q' = Q × s
-    - 这样 Q'K'^T = QK^T，注意力打分保持不变的近似，同时 K 的动态范围被压缩，量化更稳健。
-- 离群值从 `key_states` 迁移到 `query_states`。由于推理时仅对写入 KVCache 的 `key_states` 做量化而不量化 `query_states`
+    - 有 Q'K'^T = QK^T，注意力分数保持不变，同时 K 的动态范围被压缩，量化更稳健。
+- 离群值从 `key_states` 迁移到 `query_states`。由于推理时仅对写入 KVCache 的 `key_states` 做量化，而不量化 `query_states`
   ，该迁移是可接受的，不会引入额外的量化误差。
 - RoPE 将通道成对旋转，通道维度呈两两配对关系。算法先在配对通道间取最大，之后再恢复到配对结构进行缩放。
 
 ##### 实现
 
-- 算法在 `msmodelslim/quant/processor/kv_smooth` 中实现，处理流程分两阶段：
+- 算法在 [`msmodelslim/quant/processor/kv_smooth`](../../msmodelslim/quant/processor/kv_smooth) 中实现，处理流程分两阶段：
     1. **观察阶段（preprocess）**：
-        - 通过注入观察器封装 `past_key_values`，在注意力调用 `Cache.update()` 时捕获 `key_states`。
-        - 使用观测器在维度 [batch, seq] 上聚合 min/max，得到每层每通道的绝对最大值，作为缩放的统计基准。
+        - 通过注入观察器封装 `past_key_values`，在注意力模块调用 `Cache.update()` 时捕获 `key_states`。
+        - 使用观测器在维度 [batch, seq] 上聚合 min/max，得到每层每通道的绝对值的最大值，作为缩放的统计基准。
     2. **平滑阶段（postprocess）**：
         - 根据统计到的 `|key_states|` 最大值计算缩放向量，按融合方式重写位于 RoPE 之前的相应模块的 `weight`（和可选 `bias`
           ），使 RoPE 之后写入 KVCache 的 key_states 被平滑；同时，query_states 则相应放大：
@@ -81,10 +101,11 @@ class KVSmoothFusedInterface(ABC):
 ##### 适配步骤
 
 - **前置要求**：
-    - 注意力前向需通过 kwargs 接受 `past_key_values` 或 `past_key_value` 并在内部调用 `Cache.update()`；否则观察器无法工作。
+    - 注意力前向需通过 kwargs 接受 `past_key_values` 或 `past_key_value` 并在内部调用 `Cache.update()`，否则观察器无法工作。
     - 目标通路符合 `Linear/Norm → RoPE → KVCache` 的结构。
 - **步骤**：
-    1. 模型适配器继承`KVSmoothFusedInterface`接口，并实现所有方法，可参考 `msmodelslim/model/qwen.py`。
+    1. 模型适配器继承`KVSmoothFusedInterface`接口，并实现所有方法， 可参考
+       [`msmodelslim/model/qwen3.py`](../../msmodelslim/model/qwen3.py)。
     2. 在 `get_kvsmooth_fused_subgraph()` 中，为每层返回 `KVSmoothFusedUnit`，指定：
         - `attention_name`：与 `named_modules()` 一致的完整路径（如 `model.layers.{i}.self_attn`）。
         - `layer_idx`：层索引， 用于 Cache.update()。
