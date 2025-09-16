@@ -8,11 +8,16 @@ from msmodelslim.utils.exception_decorator import exception_catcher
 from msmodelslim.utils.logging import logger_setter, get_logger
 from ..analysis_service import BaseAnalysisService
 from ..analysis_service.pipeline_interface import PipelineInterface
-from ..base import DeviceType
+from ..base import DeviceType, ExtendedEnum
 from ...core.base.model import BaseModelInterface
+from msmodelslim.utils.validation.conversion import (
+    convert_to_readable_dir,
+    convert_to_readable_file,
+    convert_to_writable_dir,
+    convert_to_bool
+)
 
-
-class AnalysisMetrics(Enum):
+class AnalysisMetrics(ExtendedEnum):
     """Enumeration of valid analysis metrics"""
     STD = 'std'
     QUANTILE = 'quantile'
@@ -32,10 +37,10 @@ class LayerAnalysisApplication:
     @exception_catcher
     def analyze(self,
                 model_type: str,
-                model_path: Path,
+                model_path: str,
                 patterns: List[str],
                 device: DeviceType = DeviceType.NPU,
-                metrics: Union[str, AnalysisMetrics] = AnalysisMetrics.KURTOSIS.value,
+                metrics: AnalysisMetrics = AnalysisMetrics.KURTOSIS,
                 calib_dataset: str = 'boolq.jsonl',
                 topk: int = 15,
                 trust_remote_code: bool = False):
@@ -55,25 +60,15 @@ class LayerAnalysisApplication:
         # Validate inputs
         if not isinstance(model_type, str):
             raise SchemaValidateError(f"model_type must be a string, but got {type(model_type)}")
+        model_path = convert_to_readable_dir(model_path)
         if not isinstance(model_path, Path):
             raise SchemaValidateError(f"model_path must be a Path, but got {type(model_path)}")
         if not isinstance(patterns, list):
             raise SchemaValidateError(f"pattern must be a list, but got {type(patterns)}")
-        if not isinstance(device, DeviceType):
+        if not isinstance(device, DeviceType):	
             raise SchemaValidateError(f"device must be a DeviceType")
-        # Convert enum to string if needed
-        if isinstance(metrics, AnalysisMetrics):
-            metrics_str = metrics.value
-        elif isinstance(metrics, str):
-            metrics_str = metrics
-        else:
-            raise SchemaValidateError(f"metrics must be a string or AnalysisMetrics enum, but got {type(metrics)}")
-
-        # Validate metrics value
-        valid_metrics = [metric.value for metric in AnalysisMetrics]
-        if metrics_str not in valid_metrics:
-            raise SchemaValidateError(f"metrics must be one of {valid_metrics}, but got '{metrics_str}'",
-                                      action=f"Please choose one of {valid_metrics}")
+        if not isinstance(metrics, AnalysisMetrics):
+            raise SchemaValidateError(f"metrics must be a AnalysisMetrics")
         if not isinstance(calib_dataset, str):
             raise SchemaValidateError(f"calib_dataset must be a string, but got {type(calib_dataset)}")
         # Validate file format - only support .json and .jsonl
@@ -94,14 +89,14 @@ class LayerAnalysisApplication:
         get_logger().info(f"model_path: {model_path}")
         get_logger().info(f"pattern: {patterns}")
         get_logger().info(f"device: {device}")
-        get_logger().info(f"metrics: {metrics_str}")
+        get_logger().info(f"metrics: {metrics}")
         get_logger().info(f"calib_dataset: {calib_dataset}")
         get_logger().info(f"topk: {topk}")
         get_logger().info(f"trust_remote_code: {trust_remote_code}")
 
         return self._analyze(
             model_type, model_path, patterns, device,
-            metrics_str, calib_dataset, topk, trust_remote_code
+            metrics, calib_dataset, topk, trust_remote_code
         )
 
     def _analyze(self,
@@ -109,7 +104,7 @@ class LayerAnalysisApplication:
                  model_path: Path,
                  patterns: List[str],
                  device: DeviceType,
-                 metrics: str,
+                 metrics: AnalysisMetrics,
                  calib_dataset: str,
                  topk: int,
                  trust_remote_code: bool):
@@ -119,7 +114,7 @@ class LayerAnalysisApplication:
 
         # Create analysis config from parameters
         analysis_config = {
-            'metrics': metrics,
+            'metrics': metrics.value,
             'calib_dataset': calib_dataset,
             'method_params': {}
         }
@@ -127,14 +122,19 @@ class LayerAnalysisApplication:
         model_adapter = self.model_factory(model_type, model_path, trust_remote_code)
         if not isinstance(model_adapter, PipelineInterface):
             raise UnsupportedError(f'Model adapter {model_adapter.__class__.__name__} does NOT support analyze',
-                                   action='Please implement PipelineInterface for model analyzing')
+                                   action='Please implement PipelineInterface for model analyzing')             
 
         result = self.analysis_service.analyze(
+
             model_adapter=model_adapter,
             patterns=patterns,
             analysis_config=analysis_config
         )
 
+        if result is None:
+            get_logger().info(f"===========ANALYSIS COMPLETE===========")
+            return result
+            
         # export results using service-specific formatter
         self.analysis_service.export_results(result, topk)
 

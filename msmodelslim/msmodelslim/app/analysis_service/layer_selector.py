@@ -92,6 +92,11 @@ class LayerSelectorAnalysisService(BaseAnalysisService):
 
         # Get target layers
         target_layers = self._get_target_layers(model.model, patterns)
+        if not target_layers:
+            get_logger().warning("No layers found matching the specified patterns")
+            get_logger().info(f"==========ANALYSIS: Analysis Complete==========")
+            return None
+
         get_logger().info(f"Found {len(target_layers)} target layers matching patterns")
 
         # Create analysis method
@@ -132,9 +137,6 @@ class LayerSelectorAnalysisService(BaseAnalysisService):
 
         # Filter by patterns
         target_layers = AnalysisTargetMatcher.filter_layers_by_patterns(all_layers, patterns)
-
-        if not target_layers:
-            get_logger().warning("No layers found matching the specified patterns")
 
         return target_layers
 
