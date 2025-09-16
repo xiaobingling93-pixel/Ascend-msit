@@ -89,6 +89,10 @@ def patch_torch():
         nn.Module.set_submodule = _torch_nn_module_set_submodule
     if not _is_torch_has_get_default_device():
         original_set_default_device = torch.set_default_device
-        torch.set_default_device = lambda device: \
-            (_torch_set_default_device(device), original_set_default_device(device))[1]
+
+        def _set_default_device(device):
+            _torch_set_default_device(device)
+            return original_set_default_device(device)
+
+        torch.set_default_device = _set_default_device
         torch.get_default_device = _torch_get_default_device
