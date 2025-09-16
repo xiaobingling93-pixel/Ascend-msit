@@ -2,6 +2,8 @@
 from dataclasses import dataclass, field
 from typing import List
 
+from msmodelslim.utils.exception import SchemaValidateError
+
 
 @dataclass
 class Metadata:
@@ -21,3 +23,14 @@ class BaseQuantConfig:
     apiversion: str  # API version
     metadata: Metadata  # metadata of the quantization config
     spec: object  # spec of the quantization config
+
+    @staticmethod
+    def from_dict(d: object) -> "BaseQuantConfig":
+        if not isinstance(d, dict):
+            raise SchemaValidateError(f'quant config must be a dict',
+                                      action='Please make sure the quant config is a dictionary')
+        return BaseQuantConfig(
+            apiversion=d.get('apiversion', 'Unknown'),
+            metadata=Metadata(**d['metadata']),
+            spec=d['spec']
+        )

@@ -34,7 +34,7 @@ class DefaultModelAdapter(TransformersModel,
 
     def __init__(self,
                  model_type: str,
-                 ori_path: Path,
+                 model_path: Path,
                  trust_remote_code: bool = False):
         get_logger().warning(f"You are using default model adapter, "
                              f"which may be not functional. "
@@ -42,7 +42,7 @@ class DefaultModelAdapter(TransformersModel,
         with exception_handler('You are creating default model adapter but failed',
                                ms_err_cls=InvalidModelError,
                                action='Please ensure default model adapter match your model'):
-            super().__init__(model_type, ori_path, trust_remote_code)
+            super().__init__(model_type, model_path, trust_remote_code)
 
     def get_model_type(self) -> str:
         get_logger().warning(f"You are using default get_model_type, "
