@@ -398,7 +398,7 @@ class BaseSmoothProcessor(AutoSessionProcessor):
         """应用OV平滑（输出-值投影）"""
         # 获取融合配置
         fusion = adapter_config.fusion
-        fusion_flag = fusion is not None
+        fusion_flag = fusion is not None and fusion.fusion_type != "none"
 
         try:
             # 根据融合标志选择平滑方法
