@@ -92,6 +92,11 @@ def check_path_owner_consistent(path):
 def check_dirpath_before_read(path):
     path = os.path.realpath(path)
     dirpath = os.path.dirname(path)
+    dirpath = get_valid_path(dirpath)
+    if not os.path.isdir(dirpath):
+        raise SecurityError("The directory {} doesn't exist.".format(dirpath),
+                            action='Please make sure the directory exists.')
+
     check_others_not_writable(dirpath)
     check_path_owner_consistent(dirpath)
 
