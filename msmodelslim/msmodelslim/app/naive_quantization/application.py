@@ -7,6 +7,7 @@ from msmodelslim.app.base import QuantType
 from msmodelslim.utils.exception import SchemaValidateError, ToDoError
 from msmodelslim.utils.exception_decorator import exception_catcher
 from msmodelslim.utils.logging import logger_setter, get_logger
+from msmodelslim.utils.security import yaml_safe_load
 from .model_info_interface import ModelInfoInterface
 from .practice_interface import PracticeManagerInterface
 from ..base import BaseQuantConfig, DeviceType
@@ -60,11 +61,15 @@ class NaiveQuantizationApplication:
 
         # Handle explicit config path
         if config_path is not None:
-            config = self.practice_manager.get_config_by_path(config_path)
-            if config is None:
-                raise ValueError(f"Configuration not found at {config_path}")
+            config_dict = yaml_safe_load(str(config_path))
+            config = BaseQuantConfig.from_dict(config_dict)
             get_logger().info(f"Naive Quant apply config_path: {config_path}")
             return config
+
+        # Handle unknown model
+        if model_pedigree not in self.practice_manager:
+            return self.get_default_practice(
+                prompt=f"No matching configuration found for model_pedigree={model_pedigree}.")
 
         # Handle quant_type matching
         if quant_type is None:
