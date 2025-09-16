@@ -14,7 +14,7 @@
 - type: "flex_smooth_quant"           # 固定为 `flex_smooth_quant`，用于指定 Processor。
   alpha: 0.8                          # 浮点数, 0-1之间，默认 None，通过算法自动搜索最佳alpha，也支持用户自行配置，激活缩放的系数。
   beta: 0.7                           # 浮点数, 0-1之间，默认 None，通过算法自动搜索最佳beta，也支持用户自行配置，权重缩放的系数。
-  enable_subgraph_type:               # 字符串列表，代表开启的子图类型。
+  enable_subgraph_type:               # 字符串列表，指定启用的子图类型，默认启用所有四种类型。
     - 'norm-linear'
     - 'linear-linear'
     - 'ov'
