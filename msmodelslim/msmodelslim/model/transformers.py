@@ -52,7 +52,6 @@ class TransformersModel(BaseModelAdapter):
             torch_dtype="auto",
             low_cpu_mem_usage=True,
             config=self.config,
-            attn_implementation='eager',
             trust_remote_code=self.trust_remote_code)
 
     def _get_model_type(self, model_type: str) -> str:
