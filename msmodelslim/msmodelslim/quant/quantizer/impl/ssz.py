@@ -26,7 +26,7 @@ from msmodelslim.utils.exception import SpecError
 from msmodelslim.utils.logging import logger_setter
 from ..base import AutoWeightQuantizer, QConfig
 
-SCALE_SEARCH_ITER_NUM = 20
+SCALE_SEARCH_ITER_NUM = 50
 SCALE_SEARCH_CONVERGE_THRESHOLD = 1e-10
 SCALE_SEARCH_MIN_SCALE = 1e-5
 EXT_SCALE_NAME = "scale"
@@ -91,7 +91,7 @@ def ssz_calculate_qparam(
     # 当前迭代的量化权重，初始化为最优量化权重
     quant_weight = best_quant_weight
 
-    # 主迭代循环：最多迭代20次
+    # 主迭代循环：最多迭代50次
     for _ in range(SCALE_SEARCH_ITER_NUM):
         # 根据量化方案选择不同的参数更新策略
         if q_param.scheme.symmetric:
@@ -133,6 +133,24 @@ def ssz_calculate_qparam(
         current_dequant_weight = fake_quantize(weight, q_param)  # 使用当前参数进行反量化
         current_mse = torch.mean(torch.pow(torch.abs((weight.value - current_dequant_weight.value)), 2),
                                  dim=0, keepdim=True).squeeze()  # 计算当前MSE
+        
+        # 收敛性检查：判断是否达到收敛条件
+        # 使用两种判断标准来确保收敛的稳定性
+
+        # 判断1：相对下降幅度是否足够小
+        # 这表示误差的相对改善幅度小于阈值，适用于误差较大的情况
+        mask1 = (best_mse - current_mse) / best_mse.clamp(min=1e-4) < SCALE_SEARCH_CONVERGE_THRESHOLD
+
+        # 判断2：绝对变化量是否足够小
+        # 这表示误差的绝对变化量小于阈值，适用于误差较小的情况
+        mask2 = torch.abs(best_mse - current_mse) < SCALE_SEARCH_CONVERGE_THRESHOLD
+
+        # 综合判断：只有当所有通道都满足收敛条件时才提前退出
+        # logical_and(torch.logical_not(mask1), torch.logical_not(mask2)) 表示既不满足相对条件也不满足绝对条件
+        # 如果所有通道都满足至少一个条件，则sum为0，可以退出循环
+        # 这种双重判断机制可以覆盖不同量级的损失场景，提供更稳定的收敛判断
+        if (torch.sum(torch.logical_and(torch.logical_not(mask1), torch.logical_not(mask2))) == 0):
+            break  # 提前退出：所有通道都已收敛
 
         # 创建掩码：标记哪些通道的误差得到了改善
         mask = (current_mse < best_mse).to(torch.int32)  # 1表示改善，0表示没有改善
@@ -151,24 +169,6 @@ def ssz_calculate_qparam(
 
         # 更新最优量化权重：只更新改善的通道
         best_quant_weight.value = best_quant_weight.value * (1 - mask) + quant_weight.value * mask
-
-        # 收敛性检查：判断是否达到收敛条件
-        # 使用两种判断标准来确保收敛的稳定性
-
-        # 判断1：相对下降幅度是否足够小
-        # 这表示误差的相对改善幅度小于阈值，适用于误差较大的情况
-        mask1 = (best_mse - current_mse) / best_mse.clamp(min=1e-4) < SCALE_SEARCH_CONVERGE_THRESHOLD
-
-        # 判断2：绝对变化量是否足够小
-        # 这表示误差的绝对变化量小于阈值，适用于误差较小的情况
-        mask2 = torch.abs(best_mse - current_mse) < SCALE_SEARCH_CONVERGE_THRESHOLD
-
-        # 综合判断：只有当所有通道都满足收敛条件时才提前退出
-        # logical_and(torch.logical_not(mask1), torch.logical_not(mask2)) 表示既不满足相对条件也不满足绝对条件
-        # 如果所有通道都满足至少一个条件，则sum为0，可以退出循环
-        # 这种双重判断机制可以覆盖不同量级的损失场景，提供更稳定的收敛判断
-        if (torch.sum(torch.logical_and(torch.logical_not(mask1), torch.logical_not(mask2))) == 0):
-            break  # 提前退出：所有通道都已收敛
 
     # 返回最优的量化参数
     q_param = set_ext_scale(q_param, best_scale)  # 设置最优缩放因子
