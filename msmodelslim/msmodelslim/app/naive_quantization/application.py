@@ -13,6 +13,12 @@ from .practice_interface import PracticeManagerInterface
 from ..base import BaseQuantConfig, DeviceType
 from ..quant_service import BaseQuantService
 from ...core.base.model import BaseModelInterface
+from msmodelslim.utils.validation.conversion import (
+    convert_to_readable_file,
+    convert_to_writable_dir,
+    convert_to_bool,
+    convert_to_readable_dir
+)
 
 DEFAULT_PEDIGREE = 'default'
 DEFAULT_CONFIG_ID = 'default'
@@ -99,11 +105,11 @@ class NaiveQuantizationApplication:
     @exception_catcher
     def quant(self,
               model_type: str,
-              model_path: Path,
-              save_path: Path,
+              model_path: str,
+              save_path: str,
               device: DeviceType = DeviceType.NPU,
               quant_type: Optional[QuantType] = None,
-              config_path: Optional[Path] = None,
+              config_path: Optional[str] = None,
               trust_remote_code: bool = False):
         """
         Run the naive quantization application.
@@ -118,12 +124,15 @@ class NaiveQuantizationApplication:
         """
         if not isinstance(model_type, str):
             raise SchemaValidateError(f"model_type must be a string, but got {type(model_type)}")
+        model_path = convert_to_readable_dir(model_path)
         if not isinstance(model_path, Path):
             raise SchemaValidateError(f"model_path must be a Path, but got {type(model_path)}")
+        save_path = convert_to_writable_dir(save_path)
         if not isinstance(save_path, Path):
             raise SchemaValidateError(f"save_path must be a Path, but got {type(save_path)}")
         if not isinstance(device, DeviceType):
             raise SchemaValidateError(f"device must be a DeviceType")
+        config_path = convert_to_readable_file(config_path)
         if not ((quant_type is None) ^ (config_path is None)):
             raise SchemaValidateError(f"quant_type and config_path only one can be provided")
         if quant_type is not None and not isinstance(quant_type, QuantType):

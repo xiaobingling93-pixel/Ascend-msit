@@ -2,18 +2,13 @@
 import argparse
 
 import msmodelslim # do NOT remove, to trigger the patches
-
-from msmodelslim.app import QuantType, DeviceType
+from msmodelslim.app.base import DeviceType, QuantType
+from msmodelslim.app.analysis.application import AnalysisMetrics
 from msmodelslim.cli.analysis.__main__ import main as analysis_main
 from msmodelslim.cli.naive_quantization.__main__ import main as quant_main
 from msmodelslim.utils.config import msmodelslim_config
 from msmodelslim.utils.logging import set_logger_level
-from msmodelslim.utils.validation.conversion import (
-    convert_to_readable_dir,
-    convert_to_readable_file,
-    convert_to_writable_dir,
-    convert_to_bool
-)
+from msmodelslim.utils.validation.conversion import convert_to_bool
 
 FAQ_HOME = "gitcode repo: Ascend/msit/msmodelslim, wiki"
 MIND_STUDIO_LOGO = "[Powered by MindStudio]"
@@ -35,13 +30,13 @@ def main():
     quant_parser = subparsers.add_parser('quant', help='Model quantization')
     quant_parser.add_argument('--model_type', required=True,
                               help="Type of model to quantize (e.g. 'Qwen2.5-7B-Instruct', 'Qwen-QwQ-32B')")
-    quant_parser.add_argument('--model_path', required=True, type=convert_to_readable_dir,
+    quant_parser.add_argument('--model_path', required=True, type=str,
                               help="Path to the original model")
-    quant_parser.add_argument('--save_path', required=True, type=convert_to_writable_dir,
+    quant_parser.add_argument('--save_path', required=True, type=str,
                               help="Path to save quantized model")
     quant_parser.add_argument('--device', type=DeviceType, default=DeviceType.NPU, choices=DeviceType,
                               help="Target device type for quantization")
-    quant_parser.add_argument('--config_path', type=convert_to_readable_file,
+    quant_parser.add_argument('--config_path', type=str,
                               help="Explicit path to quantization config file")
     quant_parser.add_argument('--quant_type', type=QuantType, choices=QuantType,
                               help="Type of quantization to apply")
@@ -53,7 +48,7 @@ def main():
     analysis_parser = subparsers.add_parser('analyze', help='Model quantization sensitivity analyze tool')
     analysis_parser.add_argument('--model_type', required=True,
                                  help="Type of model to quantize (e.g. 'Qwen2.5-7B-Instruct', 'Qwen-QwQ-32B')")
-    analysis_parser.add_argument('--model_path', required=True, type=convert_to_readable_dir,
+    analysis_parser.add_argument('--model_path', required=True, type=str,
                                  help="Path to the original model")
     analysis_parser.add_argument('--device', type=DeviceType, default=DeviceType.NPU, choices=DeviceType,
                                  help="Target device type for Analysis")
@@ -61,7 +56,7 @@ def main():
                                  nargs='*',
                                  default=['*'],
                                  help='Pattern list to analyze (default is ["*"], means all match)')
-    analysis_parser.add_argument('--metrics', type=str, default='kurtosis', choices=['std', 'quantile', 'kurtosis'],
+    analysis_parser.add_argument('--metrics', type=AnalysisMetrics, default=AnalysisMetrics.KURTOSIS,  choices=AnalysisMetrics,
                                  help='Analysis metrics to use: std, quantile, kurtosis (default: kurtosis)')
     analysis_parser.add_argument('--calib_dataset', type=str, default='boolq.jsonl',
                                  help='Calibration dataset file path or filename in lab_calib directory. '
