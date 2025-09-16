@@ -12,14 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import os
 import json
 import subprocess
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, Mock
 import shutil
+import yaml
 import pytest
+import requests
 
 import msserviceprofiler.modelevalstate
 from msserviceprofiler.modelevalstate.config.config import settings, OptimizerConfigField, KubectlConfig
@@ -153,8 +155,9 @@ class TestDisaggregationSimulator(unittest.TestCase):
     def setUp(self):
         # 创建临时测试环境
         self.test_dir = Path("conf")
+        self.yaml_dir = self.test_dir / "deployment"
         self.test_dir.mkdir(exist_ok=True)
-
+        self.yaml_dir.mkdir(exist_ok=True)
         self.config_single_path = self.test_dir / "config.json"
         data = {
             "BackendConfig": {
@@ -180,11 +183,41 @@ class TestDisaggregationSimulator(unittest.TestCase):
             "default_p_rate": 1,
             "default_d_rate": 3
         }
+        self.kubectl_single_path = self.test_dir / "deploy.sh"
         self.config_single_pd_path = self.test_dir / "ms_controller.json"
+        self.yaml_path = self.yaml_dir / "mindie_service_single_container.yaml"
+        service_config = {
+            "apiVersion": "v1",
+            "kind": "Service",
+            "metadata": {
+                "name": "mindie-service",
+                "labels": {
+                    "app": "mindie-server"
+                }
+            },
+            "spec": {
+                "selector": {
+                    "app": "mindie-server"
+                },
+                "ports": [
+                    {
+                        "name": "http",
+                        "port": 1025,
+                        "targetPort": 1025,
+                        "nodePort": 31015,
+                        "protocol": "TCP"
+                    }
+                ],
+                "type": "NodePort",
+                "sessionAffinity": "None"
+            }
+        }
+        with open(self.yaml_path, 'w') as file:
+            yaml.dump(service_config, file, default_flow_style=False)
         with open(self.config_single_pd_path, 'w') as fout:
             json.dump(pd_data, fout)
         self.config_single_bak_path = self.test_dir / "config_bak.json"
-        self.config_single_pd_path = self.test_dir / "ms_controller.json"
+        self.config_single_pd_bak_path = self.test_dir / "ms_bak_controller.json"
 
 
     def tearDown(self):
@@ -257,6 +290,55 @@ class TestDisaggregationSimulator(unittest.TestCase):
         simulator.stop()
         # 验证日志记录是否正确
         mock_logger.info.assert_called()
+
+    @patch('requests.post') 
+    def test_curl_success(self, mock_post):
+        # Arrange
+        mindie_config = KubectlConfig()
+        mindie_config.kubectl_single_path = self.kubectl_single_path
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_post.return_value = mock_response
+        test_class = DisaggregationSimulator(mindie_config) 
+
+        # Act
+        result = test_class.test_curl()
+
+        # Assert
+        self.assertTrue(result)
+        mock_post.assert_called_once()
+
+    @patch('requests.post') 
+    def test_curl_failure(self, mock_post):
+        # Arrange
+        mindie_config = KubectlConfig()
+        mindie_config.kubectl_single_path = self.kubectl_single_path
+        mock_response = Mock()
+        mock_response.status_code = 400
+        mock_post.return_value = mock_response
+        test_class = DisaggregationSimulator(mindie_config)  
+
+        # Act
+        result = test_class.test_curl()
+
+        # Assert
+        self.assertFalse(result)
+        mock_post.assert_called_once()
+
+    @patch('requests.post')  
+    def test_curl_exception(self, mock_post):
+        # Arrange
+        mindie_config = KubectlConfig()
+        mindie_config.kubectl_single_path = self.kubectl_single_path
+        mock_post.side_effect = requests.exceptions.RequestException
+        test_class = DisaggregationSimulator(mindie_config)  
+
+        # Act
+        result = test_class.test_curl()
+
+        # Assert
+        self.assertFalse(result)
+        mock_post.assert_called_once()
 
 if __name__ == '__main__':
     unittest.main()
