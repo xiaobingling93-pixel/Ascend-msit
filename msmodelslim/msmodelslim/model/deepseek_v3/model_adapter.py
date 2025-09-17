@@ -4,7 +4,6 @@ from typing import Any, List, Optional, Tuple, Generator, Dict
 import torch
 import torch.nn as nn
 from torch import distributed as dist
-from transformers.modeling_attn_mask_utils import _prepare_4d_causal_attention_mask
 
 from msmodelslim.app import DeviceType
 from msmodelslim.core.base.protocol import ProcessRequest
@@ -142,6 +141,10 @@ class DeepSeekV3ModelAdapter(TransformersModel,
         hidden_states_mtp = mtp_layer.eh_proj.to('npu')(hidden_states_mtp)
 
         attention_mask = inputs['attention_mask'] if isinstance(inputs, dict) else inputs[1]
+
+        # transformers==4.48.2
+        from transformers.modeling_attn_mask_utils import _prepare_4d_causal_attention_mask
+
         attention_mask_mtp = _prepare_4d_causal_attention_mask(
             attention_mask,
             (input_ids.shape[:2]),
