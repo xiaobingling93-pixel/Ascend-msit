@@ -7,7 +7,6 @@ import torch
 import torch.nn as nn
 from safetensors.torch import load_file
 from torch.nn import CrossEntropyLoss
-from transformers.modeling_attn_mask_utils import _prepare_4d_causal_attention_mask
 from transformers.modeling_outputs import CausalLMOutputWithPast
 from transformers.modeling_utils import PreTrainedModel
 
@@ -177,6 +176,9 @@ class MTPModel(PreTrainedModel):
         hidden_states_mtp = torch.cat([input_embeds_mtp, hidden_states_mtp], dim=-1)
         hidden_states_mtp = mtp_layer.eh_proj(hidden_states_mtp)
 
+        # transformers==4.48.2
+        from transformers.modeling_attn_mask_utils import _prepare_4d_causal_attention_mask
+
         attention_mask_mtp = _prepare_4d_causal_attention_mask(
             attention_mask,
             (input_ids.shape[:2]),
@@ -191,7 +193,7 @@ class MTPModel(PreTrainedModel):
             output_attentions=False,
             use_cache=False,
         )
-        logits_mtp = mtp_layer.shared_head(layer_outputs_mtp[0])
+        _ = mtp_layer.shared_head(layer_outputs_mtp[0])
         ####################### MTP LAYER ######################
 
         loss = None
