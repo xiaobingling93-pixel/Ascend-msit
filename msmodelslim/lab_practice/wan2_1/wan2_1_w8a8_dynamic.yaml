@@ -5,6 +5,7 @@ metadata:
   score: 90
   verified_model_types:
     - Wan2_1
+    - Wan2.1
   label:
     w_bit: 8
     a_bit: 8

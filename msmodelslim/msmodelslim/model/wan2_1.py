@@ -53,6 +53,7 @@ SUPPORTED_TASKS = ['t2v-14B', 't2v-1.3B']
 
 
 @ModelFactory.register("Wan2_1")
+@ModelFactory.register("Wan2.1")
 @logger_setter()
 class Wan2Point1Adapter(BaseModelAdapter,
                         ModelInfoInterface,

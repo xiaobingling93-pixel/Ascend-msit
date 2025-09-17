@@ -14,6 +14,7 @@ from .transformers import TransformersModel
 
 
 @ModelFactory.register("Qwen-QwQ-32B")
+@ModelFactory.register("QwQ-32B")
 @logger_setter()
 class QwqModelAdapter(TransformersModel,
                       ModelInfoInterface,

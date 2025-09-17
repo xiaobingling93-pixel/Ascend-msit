@@ -4,6 +4,7 @@ metadata:
   score: 90
   verified_model_types:
     - Qwen-QwQ-32B
+    - QwQ-32B
   label:
     w_bit: 8
     a_bit: 8
