@@ -17,7 +17,7 @@ sys.path.append(parent_directory)
 from convert_fp8_to_bf16 import auto_convert_model_fp8_to_bf16, OpsType
 from add_safetensors import add_safetensors
 from mtp_quant_module import warp_mtp_model, post_process_mtp_quant
-from rot_utils.rot_ds import rot_model
+from example.common.rot_utils.rot_ds import rot_model
 
 from example.common.security.path import get_valid_read_path, get_write_directory
 from example.common.security.path import json_safe_load, json_safe_dump, get_valid_write_path

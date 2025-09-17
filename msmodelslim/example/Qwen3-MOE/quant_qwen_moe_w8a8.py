@@ -1,9 +1,9 @@
 # Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
-import os
-import sys
 import argparse
 import functools
 import json
+import os
+import sys
 
 import torch
 import torch_npu
@@ -15,10 +15,12 @@ sys.path.append(parent_directory)
 from example.common.security.path import get_valid_read_path, get_write_directory
 from example.common.security.type import check_number
 from example.common.utils import SafeGenerator, cmd_bool
+from example.common.rot_utils.rot_qwen import rot_model
 from msmodelslim.tools.copy_config_files import copy_config_files, modify_config_json
 from msmodelslim.pytorch.llm_ptq.anti_outlier import AntiOutlierConfig, AntiOutlier
 from msmodelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
 from msmodelslim.utils.logging import set_logger_level
+from msmodelslim import logger
 
 
 def parse_args():
@@ -33,6 +35,7 @@ def parse_args():
     parser.add_argument('--batch_size', type=int, default=4, help="Batch size for anti and calibration")
     parser.add_argument('--mindie_format', action="store_true", help="Enable only mindie config save")
     parser.add_argument('--trust_remote_code', type=cmd_bool, default=False)
+    parser.add_argument('--rot', action='store_true', help="rot model")
     return parser.parse_args()
 
 
@@ -61,8 +64,8 @@ def main():
     check_number(batch_size, int, 1, 16, "batch_size")
 
     safe_generator = SafeGenerator()
- 
-    config = safe_generator.get_config_from_pretrained(model_path=model_path, 
+
+    config = safe_generator.get_config_from_pretrained(model_path=model_path,
                                                        trust_remote_code=args.trust_remote_code)
     num_layer = config.num_hidden_layers
     if args.layer_count < 0 or args.layer_count > num_layer:
@@ -101,7 +104,23 @@ def main():
         calib_prompt = json.load(file)
     anti_dataset = get_calib_dataset_batch(tokenizer, anti_prompt, batch_size, model.device)
     dataset_calib = get_calib_dataset_batch(tokenizer, calib_prompt, batch_size, model.device)
-    
+
+    with torch.no_grad():
+
+        test_prompt = "what is deep learning?"
+        test_input = tokenizer(test_prompt, return_tensors="pt").to(model.device)
+
+        if args.layer_count > 0:
+            ori_out = model(**test_input)
+
+        if args.rot:
+            rot_model(model)
+
+        if args.layer_count > 0:
+            rot_out = model(**test_input)
+            loss = torch.nn.MSELoss()
+            logger.info(loss(ori_out[0], rot_out[0]))
+
     with torch.no_grad():
         anti_config = AntiOutlierConfig(w_bit=8,
                                         a_bit=8,
@@ -127,18 +146,21 @@ def main():
         mm_tensor=False,
     )
 
-    calibrator = Calibrator(model, 
-                            quant_config, 
-                            calib_data=dataset_calib, 
-                            disable_level="L0", 
-                            mix_cfg={"*.mlp.*": "w8a8_dynamic", "*": "w8a8"})
+    calibrator = Calibrator(model,
+                            quant_config,
+                            calib_data=dataset_calib,
+                            disable_level="L0",
+                            mix_cfg={
+                                "*.mlp.*": "w8a8_dynamic",
+                                "*": "w8a8"
+                            })
     calibrator.run()
 
     if args.mindie_format:
         quant_model_description_json_name = "quant_model_description_w8a8_dynamic.json"
     else:
         quant_model_description_json_name = "quant_model_description.json"
-        
+
     save_type = "safe_tensor" if args.mindie_format else "ascendV1"
     calibrator.save(save_path,
                     json_name=quant_model_description_json_name,
