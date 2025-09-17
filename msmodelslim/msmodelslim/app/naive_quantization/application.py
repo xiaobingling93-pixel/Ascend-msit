@@ -132,7 +132,8 @@ class NaiveQuantizationApplication:
             raise SchemaValidateError(f"save_path must be a Path, but got {type(save_path)}")
         if not isinstance(device, DeviceType):
             raise SchemaValidateError(f"device must be a DeviceType")
-        config_path = convert_to_readable_file(config_path)
+        if config_path is not None:
+            config_path = convert_to_readable_file(config_path)
         if not ((quant_type is None) ^ (config_path is None)):
             raise SchemaValidateError(f"quant_type and config_path only one can be provided")
         if quant_type is not None and not isinstance(quant_type, QuantType):
