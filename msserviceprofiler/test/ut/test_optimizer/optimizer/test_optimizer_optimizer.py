@@ -632,7 +632,7 @@ def test_best_params2(generate_store2):
     assert best_performance_index.generate_speed == 2243.6598
 
 
-@patch("msserviceprofiler.modelevalstate.optimizer.optimizer.field_to_param", )
+@patch("msserviceprofiler.modelevalstate.config.config.field_to_param", )
 def test_refine_optimization_candidates(field_to_param_patch):
     field_to_param_patch.side_effect = [[3, 4], [7, 1]]
     pso = PSOOptimizer(MagicMock(), target_field=default_support_field)
@@ -686,7 +686,7 @@ def test_mindie_prepare_valid_input():
 
 
 @patch("msserviceprofiler.modelevalstate.optimizer.optimizer.is_mindie", return_value=True)
-@patch("msserviceprofiler.modelevalstate.optimizer.optimizer.MindieModelConfig")
+@patch("msserviceprofiler.modelevalstate.config.model_config.MindieModelConfig")
 def test_prepare(mock_mindie_model_config, mock_is_mindie, mindie_config_file):
     optimizer = PSOOptimizer(MagicMock(), target_field=default_support_field[:5])
     with open(mindie_config_file, 'r') as f:
@@ -721,7 +721,7 @@ def test_run():
     with patch('msserviceprofiler.modelevalstate.optimizer.global_best_custom.CustomGlobalBestPSO',
                            autospec=True) as mock_custom_global_best_pso:
         # 模拟enable_simulate上下文管理器
-        with patch('msserviceprofiler.modelevalstate.optimizer.optimizer.enable_simulate',
+        with patch('msserviceprofiler.modelevalstate.optimizer.simulator.enable_simulate',
                                autospec=True) as mock_enable_simulate:
             custom_global_instance = mock_custom_global_best_pso.return_value
             custom_global_instance.optimize.return_value = (100, [200, 10, 100])
@@ -754,7 +754,7 @@ def test_run():
 
 
 @patch("msserviceprofiler.modelevalstate.optimizer.optimizer.PSOOptimizer")
-@patch("msserviceprofiler.modelevalstate.optimizer.optimizer.Simulator")
+@patch("msserviceprofiler.modelevalstate.optimizer.simulator.Simulator")
 def test_main(simulator, psooptimizer):
     args = MagicMock()
     args.benchmark_policy = BenchMarkPolicy.benchmark.value
