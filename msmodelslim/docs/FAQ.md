@@ -26,7 +26,7 @@ pkill python
 
 ## 2. 为什么安装时提示pydantic版本冲突？
 
-msmodelslim依赖pydantic>=2.0.3，请确保环境中的pydantic版本满足此要求。
+msmodelslim依赖pydantic>=2.10.1，请确保环境中的pydantic版本满足此要求。
 
 ### pip安装时的错误信息
 ```
