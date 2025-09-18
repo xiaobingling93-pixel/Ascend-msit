@@ -17,7 +17,10 @@ from typing import Any, Dict, Optional, Tuple, Set, Callable
 import torch
 from torch import nn
 from torch.utils.hooks import RemovableHandle
-from transformers import Cache
+try:
+    from transformers import Cache
+except ImportError:
+    Cache = object
 
 from msmodelslim.utils.exception import SpecError
 
