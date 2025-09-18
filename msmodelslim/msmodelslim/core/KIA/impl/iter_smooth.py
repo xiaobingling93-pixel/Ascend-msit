@@ -45,10 +45,13 @@ def apply_smooth_scale_shift(layer, scales, shift=None):
     dtype = layer.weight.dtype
     layer.weight.mul_(scales)
     if shift is not None:
+        shift = shift.to(device).to(dtype)
         if layer.bias is None:
-            layer.bias = nn.Parameter(shift.to(device).to(dtype))
+            # 如果没有bias，创建新的bias参数并设置为shift/scales
+            layer.bias = nn.Parameter(shift)
         else:
-            layer.bias.add_(shift.to(device).to(dtype))
+            # 如果有bias，计算(bias+shift)/scales
+            layer.bias.add_(shift)
 
 
 @torch.no_grad()
@@ -91,6 +94,8 @@ def iter_smooth_impl_OV(subgraph: Subgraph, config: IterSmoothConfig, context: S
         # 使用非原地操作避免梯度问题
         o_shift = torch.mm(context.shift.unsqueeze(0), subgraph.o_proj.weight.data.clone().T).squeeze(0)
         v_shift = context.shift * -1
+        if subgraph.v_proj.bias is not None:
+            subgraph.v_proj.bias.mul_(1.0 / scales)
     apply_smooth_scale_shift(subgraph.o_proj, o_scales.view(1, -1), o_shift)
     apply_smooth_scale_shift(subgraph.v_proj, 1.0 / v_scales.view(-1, 1), v_shift)
     return
@@ -108,6 +113,8 @@ def iter_smooth_impl_UpDown(subgraph: Subgraph, config: IterSmoothConfig, contex
     if config.shift:
         down_shift = torch.mm(context.shift.unsqueeze(0), subgraph.down_proj.weight.data.clone().T).squeeze(0)
         up_shift = context.shift * -1
+        if subgraph.up_proj.bias is not None:
+            subgraph.up_proj.bias.mul_(1.0 / scales)
     apply_smooth_scale_shift(subgraph.down_proj, scales.view(1, -1), down_shift)
     apply_smooth_scale_shift(subgraph.up_proj, 1.0 / scales.view(-1, 1), up_shift)
     return
@@ -125,6 +132,8 @@ def iter_smooth_impl_LinearLinear(subgraph: Subgraph, config: IterSmoothConfig, 
     if config.shift:
         linear2_shift = torch.mm(context.shift.unsqueeze(0), subgraph.linear2.weight.data.clone().T).squeeze(0)
         linear1_shift = context.shift * -1
+        if subgraph.linear1.bias is not None:
+            subgraph.linear1.bias.mul_(1.0 / scales)
     apply_smooth_scale_shift(subgraph.linear2, scales.view(1, -1), linear2_shift)
     apply_smooth_scale_shift(subgraph.linear1, 1.0 / scales.view(-1, 1), linear1_shift)
     return
@@ -151,6 +160,8 @@ def iter_smooth_impl_NormLinear(subgraph: Subgraph, config: IterSmoothConfig, co
     
     norm_shift = None
     if config.shift:
-        norm_shift = context.shift * -1 
+        norm_shift = context.shift * -1
+        if subgraph.norm.bias is not None:
+            subgraph.norm.bias.mul_(1.0 / scales)
     apply_smooth_scale_shift(subgraph.norm, (1.0 / scales).squeeze(), norm_shift)
     return
