@@ -68,7 +68,7 @@ class KVCacheListener:
             raise SpecError("Cache does not have update method. KVCacheListener requires a valid Cache instance.",
                             action="Please provide a valid Cache instance "
                                    "with update(key_states, value_states, layer_idx, cache_kwargs) method.")
-        return self.cache.update(key_states, value_states, layer_idx, cache_kwargs)
+        return key_states, value_states
 
 
 class KVCacheListenerManager:
