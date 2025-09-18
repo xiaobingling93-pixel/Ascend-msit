@@ -39,9 +39,9 @@ try:
 except ImportError:
     DYNAMIC_AVAILABLE = False
 
-HOOK_TARGET = (DynamicCache, 'update')
-CACHE_INPUT_NAME = ("key_states", "value_states")
-LAYER_IDX_NAME = "layer_idx"
+HOOK_TARGET = (DynamicCache, 'update') if DYNAMIC_AVAILABLE else (None, None)
+CACHE_INPUT_NAME = ("key_states", "value_states") if DYNAMIC_AVAILABLE else (None, None)
+LAYER_IDX_NAME = "layer_idx" if DYNAMIC_AVAILABLE else None
 
 
 class DynamicCacheProcessorConfig(AutoProcessorConfig):
