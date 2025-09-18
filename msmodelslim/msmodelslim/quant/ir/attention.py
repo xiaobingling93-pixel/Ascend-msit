@@ -48,17 +48,15 @@ class FakeQuantDynamicCache(AutoFakeQuantDynamicCache):
     ):
         super().__init__()
 
-        self.x_q_param = x_q_param
-        self.kv_cache_scale = nn.Parameter(self.x_q_param.ext.pop("scale"), requires_grad=False)
-        self.kv_cache_offset = nn.Parameter(self.x_q_param.ext.pop("offset"), requires_grad=False)
+        self.x_q_scheme = x_q_param.scheme
+        self.kv_cache_scale = nn.Parameter(x_q_param.ext.get("scale"), requires_grad=False)
+        self.kv_cache_offset = nn.Parameter(x_q_param.ext.get("offset"), requires_grad=False)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = x.transpose(-2, -3)
         x_shape = x.shape
         x = x.reshape(-1, x.shape[-1] * x.shape[-2])
-        ext_x = self.x_q_param.ext.copy()
-        ext_x.update({"scale": self.kv_cache_scale, "offset": self.kv_cache_offset})
-        x_q_param = QParam(scheme=self.x_q_param.scheme, ext=ext_x)
+        x_q_param = QParam(scheme=self.x_q_scheme, ext={"scale": self.kv_cache_scale, "offset": self.kv_cache_offset})
         x_q_dq = fake_quantize(QStorage(QDType.FLOAT, x), x_q_param).value
         x_q_dq = x_q_dq.reshape(x_shape)
         x_q_dq = x_q_dq.transpose(-2, -3)
