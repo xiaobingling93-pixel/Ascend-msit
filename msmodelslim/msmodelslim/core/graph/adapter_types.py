@@ -59,7 +59,7 @@ class AdapterConfig:
     # 子图类型（必需）
     subgraph_type: str
     # 自定义的映射关系（必需）
-    mapping: Optional[MappingConfig] = None
+    mapping: MappingConfig
     # 融合配置（可选）
     fusion: Optional[FusionConfig] = None
 
@@ -70,6 +70,3 @@ class AdapterConfig:
 
         if self.subgraph_type not in SUPPORTED_SUBGRAPH_TYPES:
             raise ValueError(f"subgraph_type: {self.subgraph_type} 不是支持的子图类型")
-
-        if self.mapping is None:
-            raise ValueError("mapping is required")
