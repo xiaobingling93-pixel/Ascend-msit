@@ -104,7 +104,8 @@ class LoadProcessor(AutoSessionProcessor):
             ))
 
             if self.config.cleanup:
-                torch.cuda.empty_cache()
+                if hasattr(torch, 'cuda') and torch.cuda.is_available():
+                    torch.cuda.empty_cache()
 
                 try:
                     import torch_npu
