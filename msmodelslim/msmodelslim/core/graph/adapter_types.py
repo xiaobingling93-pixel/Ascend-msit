@@ -61,7 +61,7 @@ class AdapterConfig:
     # 自定义的映射关系（必需）
     mapping: Optional[MappingConfig] = None
     # 融合配置（可选）
-    fusion: FusionConfig = field(default_factory=lambda: FusionConfig())
+    fusion: Optional[FusionConfig] = None
 
     def __post_init__(self):
         """验证配置的有效性"""
