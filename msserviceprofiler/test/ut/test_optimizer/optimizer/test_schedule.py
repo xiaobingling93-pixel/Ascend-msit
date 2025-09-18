@@ -21,7 +21,7 @@ import pytest
 from msserviceprofiler.modelevalstate.config.config import CommunicationConfig, map_param_with_value
 from msserviceprofiler.modelevalstate.config.config import settings, default_support_field
 from msserviceprofiler.modelevalstate.optimizer.communication import CommunicationForFile, CustomCommand
-from msserviceprofiler.modelevalstate.optimizer.optimizer import ScheduleWithMultiMachine
+from msserviceprofiler.modelevalstate.optimizer.scheduler import ScheduleWithMultiMachine
 
 
 class TestScheduleWithMultiMachine:
