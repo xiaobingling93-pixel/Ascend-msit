@@ -38,8 +38,8 @@ def get_pkg_version(pkg_name):
 @total_ordering
 class Version:
     VERSION_REGEX = re.compile(
-        r"(?P<major>\d+)\.(?P<minor>\d+)"
-        r"(?:\.(?P<patch>\d+)|\.rc(?P<rc>\d+)(?:\.b(?P<beta>\d+))?|\.rc(?P<rc_only>\d+))?"
+        r"(?P<major>\d{1,4})\.(?P<minor>\d{1,4})"
+        r"(?:\.(?P<patch>\d{1,4})|\.rc(?P<rc>\d{1,4})(?:\.b(?P<beta>\d{1,4}))?|\.rc(?P<rc_only>\d{1,4}))?"
     )
 
     def __init__(self, version_str):

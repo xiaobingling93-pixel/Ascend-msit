@@ -295,7 +295,7 @@ a:
 ### PD 分离选项
 | 参数名         | 参数描述                                             | 是否必选                       |
 | -------------- | ---------------------------------------------------- | ------------------------------ |
-| --scene | 支持MindIE 框架下, PD 分离部署场景，支持单机 PD 分离 `pd_disaggregation` 和多机 PD 分离 `pd_disaggregation_single_container`。该参数需要和 `--config-parent-dir` 同时使用；支持VLLM-Ascend 框架下, 单机、多机 PD 场景，PD 混部场景 `vllm` 和PD 分离场景 `vllm,ep`。   | 否 |
+| --scene | 指定框架和 PD 部署策略。该参数有两种输入模式，一种是为了向前兼容，一种是后续推荐输入方式：<ul><li>【向前兼容】如果输入 `pd_disaggregation`, `pd_disaggregation_single_container` 则表明框架为 `mindie`，场景依次为单机 PD 分离或者多机 PD 分离；如果输入 `mindie` 或者 `vllm`，则表明框架依次为 `mindie` 或者 `vllm`，PD 部署策略为 PD 混部</li><li>【推荐】如果输入 `<framework>,<deploy-mode>`，逗号前的内容会被解析为框架，逗号后的内容会被解析为 PD 部署策略。<ul><li>框架：目前支持选择 `mindie` 或者 `vllm`</li><li>PD 部署策略：目前支持 `pd_disaggregation`, `pd_disaggregation_single_container`, `ep` 或者 `pd_mix`</li></ul></li></ul><br>注意：如果 PD 部署策略为单机 PD 分离或者多机 PD 分离，需要同时提供 `--config-parent-dir` 方能进行校验。 | 否 |
 | --user-config-path | 指定大 EP 场景下的 `user_config.json` 路径。其对应的 Legacy 参数为 `-user, --user_config_path` | 否 |
 | --mindie-env-path | 指定大 EP 场景下的 `mindie_env.json` 路径。其对应的 Legacy 参数为 `--mindie_env_config_path` | 否 |
 | --config-parent-dir | 指定 PD 分离场景下，所有配置文件的父目录，通常名为 `kubernetes_deploy_scripts`。这个参数需要和 `--scene` 一起使用 | 否 |
@@ -365,7 +365,7 @@ a:
 | --mies-config-path | 额外落盘 PD 混部模式所需要修改的 `config,json` 路径，通常路径为 `/usr/local/Ascend/mindie/latest/mindie-service/conf/config.json`。 其对应的 Legacy 参数为 `-service, --service_config_path` | 否 |
 | --rank-table-path | 额外落盘 *rank table* 文件。其对应的 Legacy 参数为 `-ranktable, --ranktable_file` | 否 |
 | --weight-dir | 额外落盘模型权重目录下的 `config.json` 和所有 `*.safetensors` 权重 sha256sum 哈希值。其对应的 Legacy 参数为 `--weight_dir` | 否 |
-| --chunk-size | int，单位为 KB，指定在计算权重哈希时，每次读取文件的大小，只支持 32, 64, 128 或者 256。默认为 None，如果传入了 `--weight-dir` 但是不传入 `--chunk-size`，不会落盘权重哈希，只会落盘 `config.json` | 否 |
+| --chunk-size | int，单位为 MB，指定在计算权重哈希时，每次读取文件的大小，只支持 32, 64, 128 或者 256。默认为 32 | 否 |
 
  
 ## compare 参数
