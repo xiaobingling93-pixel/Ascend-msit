@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from msmodelslim.app.base import QuantType
-from msmodelslim.utils.exception import SchemaValidateError, ToDoError
+from msmodelslim.utils.exception import SchemaValidateError, ToDoError, UnsupportedError
 from msmodelslim.utils.exception_decorator import exception_catcher
 from msmodelslim.utils.logging import logger_setter, get_logger
 from msmodelslim.utils.security import yaml_safe_load
@@ -55,7 +55,8 @@ class NaiveQuantizationApplication:
             prompt +
             " Default configuration will be used. (Enter y to continue, otherwise it will exit): ").strip().lower()[:3]
         if user_input != 'y':
-            raise ValueError(error_msg)
+            raise UnsupportedError(error_msg,
+                                   action="Please write your own configuration file and use via --config_path.")
         return self.practice_manager.get_config_by_id(DEFAULT_PEDIGREE, DEFAULT_CONFIG_ID)
 
     def get_best_practice(self,
