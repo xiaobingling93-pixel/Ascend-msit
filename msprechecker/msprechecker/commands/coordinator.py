@@ -134,6 +134,11 @@ class CollectorFactory:
             model_config_path = os.path.join(args.weight_dir, "config.json")
             collectors.append(ModelConfigCollector(config_path=model_config_path))
 
+            if getattr(args, "command", None) == CommandType.CMD_DUMP:
+                chunk_size = getattr(args, 'chunk_size', 32)
+                chunk_size *= 1024 ** 2
+                collectors.append(WeightCollector(weight_dir=args.weight_dir, chunk_size=chunk_size))
+
         if getattr(args, "hardware", False):
             collectors.extend((CPUStressCollector(), NPUStressCollector()))
 

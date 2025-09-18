@@ -24,8 +24,7 @@ from contextlib import contextmanager
 import pandas as pd
 
 from msserviceprofiler.msguard import validate_args, Rule
-from msserviceprofiler.msguard.security.io import mkdir_s
-from msserviceprofiler.ms_service_profiler_ext.common.sec import list_dir_common_check
+from msserviceprofiler.msguard.security import mkdir_s, open_s
 
 
 @contextmanager
@@ -81,11 +80,19 @@ def arg_parse(subparsers):
     parser = subparsers.add_parser(
         "compare", formatter_class=argparse.ArgumentDefaultsHelpFormatter, help="MS Server Profiler Compare Tool"
     )
-    parser.add_argument("input_path", type=list_dir_common_check, help="Directory containing analyzed results")
-    parser.add_argument("golden_path", type=list_dir_common_check, help="Directory containing analyzed results")
+    parser.add_argument(
+        "input_path",
+        type=validate_args(Rule.input_dir_traverse),
+        help="Directory containing analyzed results"
+    )
+    parser.add_argument(
+        "golden_path",
+        type=validate_args(Rule.input_dir_traverse),
+        help="Directory containing analyzed results"
+    )
     parser.add_argument(
         "--output-path",
-        type=str,
+        type=validate_args(Rule.input_dir_traverse, fall_back_fn=mkdir_s),
         default=os.path.join(os.getcwd(), 'compare_result'),
         help="Output Directory after comparing."
     )
@@ -101,15 +108,10 @@ def arg_parse(subparsers):
 
 def main(args):
     from ms_service_profiler.utils.log import set_log_level, logger
-    from ms_service_profiler.utils.file_open_check import ms_open
     from msserviceprofiler.ms_service_profiler_ext.compare_tools.collector import FileCollector
 
     set_log_level(args.log_level)
-    
-    mkdir_s(args.output_path)
-    if not Rule.output_dir._is_satisfied_by(args.output_path):
-        raise argparse.ArgumentTypeError(f"Output path is not valid: {args.output_path!r}")
-    
+
     result_prefix = os.path.join(args.output_path, 'compare_result')
     file_collector = FileCollector(
         pattern=re.compile(r'(batch|service|request)_summary\.csv|profiler\.db'),
@@ -121,9 +123,9 @@ def main(args):
         logger.warning("No files to compare, please check the input directories")
         return
     
-    with ms_open(f'{result_prefix}.db', 'w', encoding='utf-8'):
-        with ms_open(f'{result_prefix}.xlsx', 'w', encoding='utf-8'):
+    with open_s(f'{result_prefix}.db', 'w', encoding='utf-8'):
+        with open_s(f'{result_prefix}.xlsx', 'w', encoding='utf-8'):
             process_files(file_pairs, f'{result_prefix}.db', f'{result_prefix}.xlsx')
-    
+
     logger.info("Comparing finished successfully, the results stored under %r", args.output_path)
     logger.info("\nWhat's Next?\n\tYou may use the `grafana` to have a better visualization of the comparison results")

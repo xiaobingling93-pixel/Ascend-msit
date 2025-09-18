@@ -51,7 +51,7 @@ class WeightCollector(BaseCollector):
                 reason=f"未传入权重目录前不应该调用 'WeightCollector'"
             )
             return False
-        valid_sizes = [size * 1024 for size in [32, 64, 128, 256]]
+        valid_sizes = [size * 1024 ** 2 for size in [32, 64, 128, 256]]
         if self.chunk_size not in valid_sizes:
             self.error_handler.add_error(
                 filename=__file__,
@@ -111,7 +111,9 @@ class WeightCollector(BaseCollector):
             return results
 
         max_workers = min(len(tensor_files), os.cpu_count() or 1)
-        tensor_id_pattern = re.compile(rf'(\d+)-of-\d+{re.escape(tensor_suffix)}')
+        tensor_id_pattern = re.compile(
+            r'(\d{5})-of-\d{5}' + re.escape(tensor_suffix)
+        )
 
         with ProcessPoolExecutor(max_workers=max_workers) as executor:
             futures = {

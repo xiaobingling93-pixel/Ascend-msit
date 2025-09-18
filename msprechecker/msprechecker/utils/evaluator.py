@@ -14,10 +14,8 @@
 
 import re
 import operator
-from typing import Any
 
 from .version import Version
-from .log import global_logger
 
 
 def and_(a, b):
@@ -51,17 +49,13 @@ class Evaluator:
         '|': (1, operator.or_), 'or': (1, or_)
     }
 
-    # only cares about int, str and float
-    _FUNC_REGEX = re.compile(
-        r'(?P<FUNC>float|int|str)\((?P<FUNC_ARG>[}{)(-./\$\w\']+)\)'
-    )
-
     _TOKEN_REGEX = re.compile(
-        r'Version\((?P<VERSION_ARG>[\w.]+)\)'
-        r'|(?P<STR>\'[^\']+\')'
-        r'|(?P<NUMBER>-?\b\d+(\.\d*)?\b)' # add boundary to avoid match numbers in path
-        r'| (?P<OP>==|!=|>=|<=|\*\*|//|>|<|and|or|not|[+\-*/%]) ' # add space to avoid match path delimiter /
+        r'(?P<FUNC>\b(?:int|str|float|Version)\b)'
+        r'|(?P<NUM>-?\b\d+(\.\d*)?\b)'
+        r'|(?P<OP>==|!=|>=|<=|\*\*|//|>|<|and|or|not|[+\-*/%])'
         r'|(?P<PARENTHESE>[)(])'
+        r'|(?P<COMMA>,)'
+        r'|(?P<STR>\'[^\']+\')'
         r'|(?P<NONE>\bNone\b)'
         r'|(?P<SKIP>\s+)'
     )
@@ -70,9 +64,6 @@ class Evaluator:
         'float': float, 'int': int,
         'str': str, 'Version': Version
     }
-    
-    # max nesting depth
-    MAX_DEPTH = 5
 
     @classmethod
     def evaluate(cls, expr: str):
@@ -86,19 +77,8 @@ class Evaluator:
             return expr
 
     @classmethod
-    def _evaluate(cls, expr: Any):
-        try:
-            expr = Evaluator._evaluate_nesting_func(expr)
-        except Exception:
-            global_logger.warning("Invalid expression: %s. Skipped", expr)
-            return True
-
-        tokens = cls._split_tokens(expr)
-        if not tokens:
-            global_logger.warning("Invalid expression: %s. Did you mean: %r", expr, expr)
-            return False
-
-        rpn = cls._convert_tokens_to_rpn(tokens)
+    def _evaluate(cls, expr: str):
+        rpn = cls._convert_rpn(expr)
         try:
             result = cls._evaluate_rpn(rpn)
         except (ValueError, TypeError, ZeroDivisionError):
@@ -106,96 +86,44 @@ class Evaluator:
         return result
 
     @classmethod
-    def _evaluate_nesting_func(cls, expr: str, depth: int = 0) -> str:
-        """
-        Evaluate fuctions nesting with max depth limiting to 5
+    def _convert_rpn(cls, expr: str):
+        stack = []
+        output = []
+        nargs = 1
 
-        Only allows int, str and float nesting to each other.
-        string type should to denote as single quote, and should
-        strip single quote before evaluating it.
-        """
-        if depth >= cls.MAX_DEPTH:
-            raise RuntimeError(f"Maximum recursion depth {cls.MAX_DEPTH} exceeded")
-
-        replacements = dict()
-        for mo in cls._FUNC_REGEX.finditer(expr):
-            func_name = mo.group('FUNC')
-            if func_name not in cls._FUNC_MAP:
-                raise ValueError(f"Unknown function: {func_name}")
-
-            func_arg = mo.group('FUNC_ARG')            
-            func_arg = cls._evaluate_nesting_func(func_arg, depth + 1)
-            if isinstance(func_arg, str) and \
-                func_arg.startswith("'") and \
-                func_arg.endswith("'"):
-                func_arg = func_arg.strip("'")
-            result = cls._FUNC_MAP[func_name](func_arg)
-
-            span = mo.span()
-            if isinstance(result, str):
-                replacements[span] = repr(result)
-            elif isinstance(result, Version):
-                replacements[span] = result
-            else:
-                replacements[span] = f"{result}"
-
-        if replacements:
-            parts = []
-            last_pos = 0
-            for (start, end), repl in replacements.items():
-                parts.append(f"{expr[last_pos:start]}{repl}")
-                last_pos = end
-            parts.append(expr[last_pos:])
-            expr = ''.join(parts)
-
-        return expr
-    
-    @classmethod
-    def _split_tokens(cls, expr: str):
-        tokens = []
         for mo in cls._TOKEN_REGEX.finditer(expr):
             kind = mo.lastgroup
-            value = mo.group(kind)
+            val = mo.group(kind)
 
             if kind == 'SKIP':
                 continue
-            elif kind == 'VERSION_ARG':
-                func_arg = mo.group('VERSION_ARG')
-                tokens.append(("VERSION", Version(func_arg)))
-            elif kind == 'STR':
-                tokens.append(('STR', value.strip("'")))
-            else:
-                tokens.append((kind, value))
 
-        return tokens
-    
-    @classmethod
-    def _convert_tokens_to_rpn(cls, tokens):
-        output = []
-        stack = []
-
-        for token in tokens:
-            typ, val = token
-            if typ == "NUMBER":
-                output.append(float(val) if '.' in val else int(val))
-            elif typ == "PARENTHESE":
-                cls._process_parenthese(val, stack, output)
-            elif typ == "OP":
+            if kind == "FUNC":
+                stack.append(val)
+            elif kind == "OP":
                 cls._process_op(val, stack, output)
-            elif typ == "NONE":
+            elif kind == "PARENTHESE":
+                cls._process_parenthese(val, stack, output, nargs)
+            elif kind == "COMMA":
+                while stack and stack[-1] != '(':
+                    num_func_args += 1
+                    output.append(stack.pop())
+            elif kind == "NUM":
+                output.append(float(val) if '.' in val else int(val))
+            elif kind == "STR":
+                output.append(val.strip("'"))
+            elif kind == "NONE":
                 output.append(None)
-            else:
-                output.append(val)
-    
+
         while stack:
             if stack[-1] in ('(', ')'):
                 raise ValueError("Mismatched parentheses in expression")
             output.append(stack.pop())
 
         return output
-    
+
     @classmethod
-    def _process_parenthese(cls, val, stack, output):
+    def _process_parenthese(cls, val, stack, output, nargs):
         """ 
         If val is '(', push to stack; otherwise pop all ops in stack between the previous ')'
         """
@@ -205,9 +133,16 @@ class Evaluator:
 
         while stack and stack[-1] != '(':
             output.append(stack.pop())
+
         if not stack:
             raise ValueError("Mismatched parentheses in expression")
+
         stack.pop()
+        if stack and stack[-1] in cls._FUNC_MAP:
+            func = stack.pop()
+            fn = cls._FUNC_MAP[func]
+            output.append((fn, nargs))
+            nargs = 1
 
     @classmethod
     def _process_op(cls, op, stack, output):
@@ -225,7 +160,23 @@ class Evaluator:
     def _evaluate_rpn(cls, rpn):
         stack = []
         for token in rpn:
-            if isinstance(token, Version):
+            if isinstance(token, tuple):
+                if len(token) != 2:
+                    stack.append(token)
+                    continue
+
+                fn, nargs = token
+                if not callable(fn):
+                    stack.append(token)
+                    continue
+
+                if len(stack) < nargs:
+                    raise ValueError("Not enough args for function")
+                
+                args = [stack.pop() for _ in range(nargs)][::-1]
+                stack.append(fn(*args))
+
+            elif isinstance(token, Version):
                 stack.append(token)
             elif token == "not": # unary
                 a = stack.pop()
@@ -236,6 +187,8 @@ class Evaluator:
                 stack.append(cls.OPS[token][1](a, b))
             else:
                 stack.append(token)
+
         if len(stack) != 1:
             raise ValueError(f"Invalid RPN evaluation: {rpn}")
+
         return stack[0]
