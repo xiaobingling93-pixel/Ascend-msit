@@ -84,12 +84,12 @@ atb预检、om模型保存、AIE模型转换的源码在安装过程中编译后
 
 
 `msserviceprofiler optimizer` 工具会通过 `mindie-service` 产品运行服务端，`mindie-service` 使用了如下端口：
-1. 推理服务EndPoint提供业务面推理服务rest接口，客户端通过该端口请求发起推理请求，对应config.json配置文件中的port字段，可配范围为1024~65535，默认配置为1025。
+1. 推理服务EndPoint提供业务面推理服务rest接口，客户端通过该端口请求发起推理请求，对应config.json配置文件中的port字段，可配范围为1024~65535，默认配置为1025。pd分离场景下默认端口号为31015。
 2. 推理服务EndPoint提供管理面服务状态查询rest接口，客户端通过该端口请求发起推理服务状态查询请求。对应config.json配置文件中的managementPort字段（管理面与业务面使用不同端口场景）或者port字段（管理面与业务面使用相同端口场景），可配范围为1024~65535，默认配置为1026。
 3. 推理服务EndPoint提供管理面服务状态查询rest接口，客户端通过该端口请求发起推理服务状态查询请求。对应config.json配置文件中的metricsPort字段，可配范围为1024~65535，默认配置为1027。
 
 具体可参考[mindie资料说明](https://www.hiascend.com/document/detail/zh/mindie/20RC2/ref/commumatrix/Communication0000.html)
 
-`msserviceprofiler optimizer` 工具会通过 `mindie-benchmark` 产品通过端口和 `mindie-service` 服务端进行交互，使用的端口需和服务端保持一致，请用户自行配置保证。
+`msserviceprofiler optimizer` 工具会通过 `aisbench`，`vllm_benchmark` 等产品通过端口和 `mindie-service` 以及 `vllm serve` 服务端进行交互，使用的端口需和服务端保持一致，请用户自行配置保证。
 
 `msprechecker` 工具会通过 `ping` 和 `hccn_tool` 进行多机网络连通性检查和 HCCL 通信状态验证。其中 `ping` 网络连通性检查​​，基于 ​​ICMP 协议​​，通过 IP 层直接通信。​`​hccn_tool` 依赖昇腾 NPU 的 ​​RoCE（RDMA）协议​​，默认使用硬件通信端口 ​​3225​​（部分场景可能为 18515）。`msprechecker` 工具调用了 `hccn_tool` 的 `vinc`, `tls`, `link`, `ping` 和 `hccs_ping` 子命令，不同命令可能使用了不同的默认端口。`hccn_tool` 端口与硬件本身端口相关，具体可参考 [昇腾硬件](https://support.huawei.com/enterprise/zh/category/ascend-computing-pid-1557196528909) 选择您对应的硬件产品查阅通信矩阵。`msprechecker` 工具通过上述协议与端口完成检查，无需用户额外配置端口，但需确保网络环境满足协议要求。
