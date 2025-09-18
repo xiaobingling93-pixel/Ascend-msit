@@ -24,7 +24,7 @@ run_test_python() {
   python3 --version
   #pip3 install pytest "pandas>=2.2"
   export PYTHONPATH=${TOP_DIR}:${PYTHONPATH}
-  python3 -m coverage run --source ${TOP_DIR}/'msserviceprofiler' -m pytest ${TEST_DIR}/ut
+  python3 -m coverage run --branch --source ${TOP_DIR}/'msserviceprofiler' -m pytest ${TEST_DIR}/ut
 
   if [ $? -ne 0 ]; then
     echo "UT Failure"
@@ -34,13 +34,13 @@ run_test_python() {
   python3 -m coverage report -m
   python3 -m coverage xml -o ${TEST_DIR}/coverage.xml
 
-  target_percentage=78
+  target_percentage=76
   limit_start_date="2025/9/5"
   percentage_str=`python3 -m coverage report -m | tail -1 | grep -oE '[0-9]+%' | tail -1`
   percentage=${percentage_str%\%}
 
   if [ "$percentage" -lt $target_percentage ]; then
-    echo "====== 百分比 $percentage_str 小于 78% ======"
+    echo "====== 百分比 $percentage_str 小于 76% ======"
     target_timestamp=$(date -d "$limit_start_date" +%s)
     current_timestamp=$(date +%s)
 
