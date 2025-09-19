@@ -109,8 +109,12 @@ class LoadProcessor(AutoSessionProcessor):
                 try:
                     import torch_npu
                     torch_npu.npu.empty_cache()
-                except:
-                    pass
+                except ImportError:
+                    get_logger().warning("torch_npu module not available, skipping NPU cache cleanup")
+                except AttributeError as e:
+                    get_logger().warning(f"torch_npu.npu.empty_cache() not available: {e}")
+                except Exception as e:
+                    get_logger().warning(f"Failed to clear NPU cache: {e}")
 
             get_logger().debug("After move: allocated={}, reserved={}".format(
                 format_memory_size(get_device_allocated_memory()),
