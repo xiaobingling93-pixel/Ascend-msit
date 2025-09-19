@@ -72,7 +72,7 @@ Wan2.1模型支持逐层量化，通过以下方式实现：
 - **模型结构**: 基于Transformer架构，支持逐层处理
 - **量化策略**: 支持W8A8量化
 - **内存优化**: 通过逐层量化显著降低内存占用，支持Atlas 800I/800T A2(64G)单卡量化
-- **配置示例**: 参考[wan2_1_w8a8_dynamic.yaml](../../../lab_practice/wan2_1/wan2_1_w8a8_dynamic.yaml)
+- **配置示例**: 参考[wan2_1_w8a8_dynamic.yaml](../../../../../lab_practice/wan2_1/wan2_1_w8a8_dynamic.yaml)
 
 ### 其他多模态模型
 

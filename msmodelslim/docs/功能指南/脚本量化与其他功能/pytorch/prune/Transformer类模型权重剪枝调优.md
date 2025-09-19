@@ -20,7 +20,7 @@ from msmodelslim.common.prune.transformer_prune.prune_model import PruneConfig
 from msmodelslim.common.prune.transformer_prune.prune_model import prune_model_weight
 ```
 
-3. （可选）调整日志输出等级，启动调优任务后，将打屏显示设置级别的日志信息。[日志级别说明](../../../../docs/Python-API接口说明/公共接口.md#参数说明)
+3. （可选）调整日志输出等级，启动调优任务后，将打屏显示设置级别的日志信息。[日志级别说明](../../../../接口说明/Python-API接口说明/公共接口.md#参数说明)
 ```python
 from msmodelslim import set_logger_level
 set_logger_level("info")        #根据实际情况配置
