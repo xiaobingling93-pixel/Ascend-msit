@@ -32,6 +32,7 @@ from msserviceprofiler.modelevalstate.config.base_config import (
     ServiceType, BenchMarkPolicy, PDPolicy
 )
 from msserviceprofiler.modelevalstate.optimizer.optimizer import PSOOptimizer, main
+from msserviceprofiler.modelevalstate.optimizer.experience_fine_tunning import StopFineTune
 
 
 @pytest.fixture
@@ -643,8 +644,8 @@ def test_refine_optimization_candidates(field_to_param_patch):
     pso.scheduler = MagicMock()
     pso.scheduler.run = MagicMock(return_value=PerformanceIndex())
     pso.scheduler.save_result = MagicMock()
-    pso.mindie_fine_tune = MagicMock()
-    pso.mindie_fine_tune.mindie_fine_tune_with_cycle = MagicMock(side_effect=StopIteration)
+    pso.fine_tune = MagicMock()
+    pso.fine_tune.fine_tune_with_concurrency = MagicMock(side_effect=StopFineTune)
     pso.minimum_algorithm = MagicMock(return_value=2)
     pso.get_target_field_from_case_data = MagicMock(return_value=default_support_field)
     pso.params_in_records = MagicMock(return_value=False)
@@ -755,17 +756,37 @@ def test_run():
 
 @patch("msserviceprofiler.modelevalstate.optimizer.optimizer.PSOOptimizer")
 @patch("msserviceprofiler.modelevalstate.optimizer.simulator.Simulator")
-def test_main(simulator, psooptimizer):
+@patch("msserviceprofiler.modelevalstate.optimizer.simulator.VllmSimulator")
+@patch("msserviceprofiler.modelevalstate.optimizer.scheduler.Scheduler")
+@patch("msserviceprofiler.modelevalstate.optimizer.scheduler.ScheduleWithMultiMachine")
+def test_main(scheduler_multi, scheduler, vllm_simulator, simulator, psooptimizer):
     args = MagicMock()
     args.benchmark_policy = BenchMarkPolicy.benchmark.value
     args.deploy_policy = DeployPolicy.single.value
     args.backup = False
     args.load_breakpoint = False
     args.engine = EnginePolicy.mindie.value
-    args.pd = PDPolicy.competition.value
-
+ 
     # 调用被测试的方法
     with patch("shutil.which", return_value="path/to/benchmark"):
         main(args)
     simulator.assert_called_once()
     psooptimizer.assert_called_once()
+    scheduler.assert_called_once()
+ 
+    args.benchmark_policy = BenchMarkPolicy.vllm_benchmark.value
+    scheduler.reset_mock()
+    with patch("shutil.which", return_value="path/to/benchmark"):
+        main(args)
+    scheduler.assert_called_once()
+
+    args.benchmark_policy = BenchMarkPolicy.ais_bench.value
+    scheduler.reset_mock()
+    with patch("shutil.which", return_value="path/to/benchmark"):
+        main(args)
+    scheduler.assert_called_once()
+ 
+    args.deploy_policy = DeployPolicy.multiple.value
+    with patch("shutil.which", return_value="path/to/benchmark"):
+        main(args)
+    scheduler_multi.assert_called_once()
