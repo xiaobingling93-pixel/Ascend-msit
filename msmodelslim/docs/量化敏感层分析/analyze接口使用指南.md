@@ -31,9 +31,10 @@ msmodelslim analyze [参数选项]
 ```bash
 # 1. 准备模型文件
 # 2. 运行分析（使用默认参数）
+# model_path表示模型路径
 msmodelslim analyze \
     --model_type Qwen2.5-7B-Instruct \
-    --model_path ${model_path} #model_path 表示模型路径
+    --model_path ${model_path}
 # 3. 查看结果
 # 系统会自动输出Top K敏感层，K大于等于15。
 ```
@@ -52,10 +53,10 @@ msmodelslim analyze \
 | 参数 | 类型 | 默认值 | 描述 | 示例值 |
 |------|------|--------|------|--------|
 | `--device` | `str` | `npu` | 指定运行分析的目标设备，可选值：`npu`, `cpu`。 | `npu` |
-| `--pattern` | `List[str]` | `["*"]` | 待分析的层名称列表，支持通配符匹配。支持设置多个pattern，使用空格分隔。不传值会使用默认值。 | `"*linear*"`, `"*attention.*"`, `"*mlp.*"` |
+| `--pattern` | `List[str]` | `["*"]` | 待分析的层名称列表，支持通配符匹配。支持设置多个pattern，使用空格分隔。不传值会使用默认值。 | `"*linear*"` `"*attention.*"` `"*mlp.*"` |
 | `--metrics` | `str` | `"kurtosis"` | 分析使用的度量算法，可选值：`"std"`, `"quantile"`, `"kurtosis"`。 | `"kurtosis"` |
 | `--calib_dataset` | `str` | `"boolq.jsonl"` | 校准数据集文件路径，支持JSON/JSONL格式，以.json或.jsonl结尾。支持绝对路径和相对路径。 |`/path/data.jsonl`|
-| `--topk` | `int` | `15` | 输出Top K敏感的层数量。建议使用10~20。 |  `15` |
+| `--topk` | `int` | `15` | 输出Top K敏感的层数量，为大于0的整数。推荐范围为10~20。 |  `15` |
 | `--trust_remote_code` | `bool` | `False` | 是否信任远程代码，需要用户自行保障安全性。可选值：`True`, `False`。 | `False` |
 | `-h, --help` | - | - | 命令行参数帮助信息 | - |
 
@@ -143,7 +144,7 @@ msmodelslim analyze \
   - 适用于需要精细控制的量化场景。
 - **特点**:
   - 峰度值越大，score越大，表示分布越集中，对量化越敏感。
-  - 峰度值接近0，score越小，表示分布接近正态，越不敏感。
+  - 峰度值越接近0，score越小，表示分布接近正态，越不敏感。
 
 
 ## 使用示例
@@ -151,11 +152,13 @@ msmodelslim analyze \
 ### 基本使用
 ```bash
 # 指定分析算法和数据集
+ # model_path表示模型路径
+ # calib_dataset表示校准集路径
 msmodelslim analyze \
     --model_type Qwen2.5-7B-Instruct \
-    --model_path ${model_path} \ #model_path 表示模型路径
+    --model_path ${model_path} \
     --metrics quantile \
-    --calib_dataset ${calib_dataset} \ #calib_dataset 表示校准集路径
+    --calib_dataset ${calib_dataset} \
     --topk 20 \
     --device cpu
 ```
@@ -166,7 +169,7 @@ msmodelslim analyze \
 # 只分析注意力层和MLP层
 msmodelslim analyze \
     --model_type Qwen2.5-7B-Instruct \
-    --model_path ${model_path} \ #model_path 表示模型路径
+    --model_path ${model_path} \
     --pattern "*attention*" "*mlp*" \
     --metrics std
 ```
@@ -176,11 +179,11 @@ msmodelslim analyze \
 ```bash
 msmodelslim analyze \
     --model_type Qwen2.5-7B-Instruct \
-    --model_path ${model_path} \ #model_path 表示模型路径
+    --model_path ${model_path} \
     --device npu \
     --pattern "*.down_proj*" "*.o_proj*"\
     --metrics kurtosis \
-    --calib_dataset ${calib_dataset} \ #calib_dataset 表示校准集路径
+    --calib_dataset ${calib_dataset} \
     --topk 15 \
     --trust_remote_code False
 ```
