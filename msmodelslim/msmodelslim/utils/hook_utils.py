@@ -67,6 +67,12 @@ class HookManager:
             original_func = self.original_functions[target_id]
             container, attr_name = self.hooked_targets[target_id]
             setattr(container, attr_name, original_func)
+            
+            # Clear all hooks for this target
+            self.before_hooks.pop(target_id, None)
+            self.after_hooks.pop(target_id, None)
+            self.error_hooks.pop(target_id, None)
+            
             del self.hooked_targets[target_id]
             del self.original_functions[target_id]
             logger.debug(f"Restored target: {target}")
