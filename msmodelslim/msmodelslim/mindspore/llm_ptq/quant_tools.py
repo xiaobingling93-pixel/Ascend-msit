@@ -26,6 +26,7 @@ from msmodelslim.mindspore.llm_ptq.quant_config import QuantConfig
 
 
 MAX_READ_FILE_SIZE_20G = 20 * 1024 * 1024 * 1024
+MAX_RECURSIVE_DEPTH = 100  # 最大递归深度限制
 
 
 class Calibrator(object):
@@ -61,7 +62,15 @@ class Calibrator(object):
 
     
     def quantize_model(self, model, is_fake_quant=False):
-        def _convert(modules):
+        def _convert(modules, depth=0):
+            # check recursive depth limit
+            if depth > MAX_RECURSIVE_DEPTH:
+                self.logger.error(
+                    f"Recursive depth exceeds the maximum limit {MAX_RECURSIVE_DEPTH}, "
+                    "possible circular reference or model structure too deep"
+                )
+                raise RecursionError(f"Recursive depth exceeds the maximum limit {MAX_RECURSIVE_DEPTH}")
+            
             keys = list(modules.keys())
             for k in keys:
                 if isinstance(modules[k], Linear):
@@ -71,7 +80,7 @@ class Calibrator(object):
                         continue
                     modules[k] = LinearSparseQuantizer(cell=modules[k], is_fake_quant=is_fake_quant)
                 else:
-                    _convert(modules[k]._cells)
+                    _convert(modules[k]._cells, depth + 1)
 
         self.logger.info("Start quantizing the model...")
         _convert(model._cells)
