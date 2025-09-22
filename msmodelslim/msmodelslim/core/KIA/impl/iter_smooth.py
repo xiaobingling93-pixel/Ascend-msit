@@ -86,7 +86,7 @@ def iter_smooth_impl_OV(subgraph: Subgraph, config: IterSmoothConfig, context: S
     a_scale = context.a_smooth_scale
     w_scale = subgraph.o_proj.weight
     scales = compute_smooth_scale(w_scale, a_scale, config)
-    shape_ratio, scales_pad_size = prepare_mqga_parameters(subgraph.num_attention_heads, subgraph.key_value_heads)
+    shape_ratio, _ = prepare_mqga_parameters(subgraph.num_attention_heads, subgraph.key_value_heads)
     o_scales, v_scales = reduce_scales_for_mqga(scales, shape_ratio, subgraph.num_attention_heads)
     o_shift = None
     v_shift = None

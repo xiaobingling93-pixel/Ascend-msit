@@ -56,7 +56,10 @@ def main():
                                  nargs='*',
                                  default=['*'],
                                  help='Pattern list to analyze (default is ["*"], means all match)')
-    analysis_parser.add_argument('--metrics', type=AnalysisMetrics, default=AnalysisMetrics.KURTOSIS,  choices=AnalysisMetrics,
+    analysis_parser.add_argument('--metrics', 
+                                 type=AnalysisMetrics, 
+                                 default=AnalysisMetrics.KURTOSIS, 
+                                 choices=AnalysisMetrics,
                                  help='Analysis metrics to use: std, quantile, kurtosis (default: kurtosis)')
     analysis_parser.add_argument('--calib_dataset', type=str, default='boolq.jsonl',
                                  help='Calibration dataset file path or filename in lab_calib directory. '
