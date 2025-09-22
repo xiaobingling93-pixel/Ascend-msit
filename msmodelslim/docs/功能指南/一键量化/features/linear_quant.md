@@ -97,7 +97,7 @@ include: [ "model.layers.*.self_attn.*" ]
 exclude: [ "model.layers.*.self_attn.down_proj" ]
 ```
 
-- **结果**: 只包含self_attention层，但排除其中的down_proj子层。
+- **结果**: 只包含self_attn层，但排除其中的down_proj子层。
 
 ### 常见层名模式
 
