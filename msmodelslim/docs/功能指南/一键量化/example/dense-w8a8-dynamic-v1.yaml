@@ -1,16 +1,4 @@
 apiversion: modelslim_v1
-metadata:
-  config_id: qwen3-dense-w8a8-dynamic-v1
-  score: 90
-  verified_model_types:
-    - Qwen3-32B
-    - Qwen3-14B
-    - Qwen3-8B
-  label:
-    w_bit: 8
-    a_bit: 8
-    is_sparse: False
-    kv_cache: False
 
 spec:
   process:
