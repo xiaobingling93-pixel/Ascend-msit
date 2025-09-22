@@ -82,10 +82,7 @@ def load_hadamard_matrix_from_txt(txt_file_name: str, txt_dir: Optional[str] = N
 
     # 解析文件内容为矩阵数据
     lines = content.strip().split('\n')
-    matrix_data = [line for line in lines]
-
-    for i in range(len(matrix_data)):
-        matrix_data[i] = [int(a.replace('+', '1').replace('-', '-1')) for a in matrix_data[i]]
+    matrix_data = [[int(a.replace('+', '1').replace('-', '-1')) for a in line] for line in lines]
     return torch.FloatTensor(matrix_data)
 
 

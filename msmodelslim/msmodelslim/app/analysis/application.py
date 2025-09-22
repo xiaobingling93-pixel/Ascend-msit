@@ -17,6 +17,7 @@ from msmodelslim.utils.validation.conversion import (
     convert_to_bool
 )
 
+
 class AnalysisMetrics(ExtendedEnum):
     """Enumeration of valid analysis metrics"""
     STD = 'std'
