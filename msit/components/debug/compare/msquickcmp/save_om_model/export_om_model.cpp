@@ -177,7 +177,7 @@ static void ParentCheck(const std::string& file_path)
     }
 }
 
-bool SaveOM(const void *model, size_t length, const std::string &file_path)
+static bool SaveOM(const void *model, size_t length, const std::string &file_path)
 {
     if (length <= 0 || model == nullptr) {
         return false;
