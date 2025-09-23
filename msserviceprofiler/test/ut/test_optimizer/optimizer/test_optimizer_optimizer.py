@@ -645,7 +645,7 @@ def test_refine_optimization_candidates(field_to_param_patch):
     pso.scheduler.run = MagicMock(return_value=PerformanceIndex())
     pso.scheduler.save_result = MagicMock()
     pso.fine_tune = MagicMock()
-    pso.fine_tune.fine_tune_with_concurrency = MagicMock(side_effect=StopFineTune)
+    pso.fine_tune.fine_tune_with_concurrency_and_request_rate = MagicMock(side_effect=StopFineTune)
     pso.minimum_algorithm = MagicMock(return_value=2)
     pso.get_target_field_from_case_data = MagicMock(return_value=default_support_field)
     pso.params_in_records = MagicMock(return_value=False)
@@ -653,6 +653,66 @@ def test_refine_optimization_candidates(field_to_param_patch):
     assert fitness == [3.333, 2, 2]
     assert params == [[5.5, 6.3], [3, 4], [7, 1]]
     assert len(res) == 3
+
+
+@patch("msserviceprofiler.modelevalstate.config.config.field_to_param", )
+def test_refine_optimization_candidates_last_concurrency(field_to_param_patch):
+    field_to_param_patch.side_effect = [[3, 4], [7, 1], [2, 5], [3, 1], [2, 6], [9, 1]]
+    my_support_field = [
+    # max batch size 最小值要大于max_prefill_batch_size的最大值。
+    OptimizerConfigField(name="max_batch_size", config_position="BackendConfig.ScheduleConfig.maxBatchSize", min=10,
+                         max=1000, dtype="int"),
+    OptimizerConfigField(name="max_prefill_batch_size",
+                         config_position="BackendConfig.ScheduleConfig.maxPrefillBatchSize", min=0.1, max=0.7,
+                         dtype="ratio", dtype_param="max_batch_size"),
+    OptimizerConfigField(name="prefill_time_ms_per_req",
+                         config_position="BackendConfig.ScheduleConfig.prefillTimeMsPerReq", max=1000, dtype="int"),
+    OptimizerConfigField(name="support_select_batch",
+                         config_position="BackendConfig.ScheduleConfig.supportSelectBatch", max=1,
+                         dtype="bool"),
+    OptimizerConfigField(name="max_queue_deloy_mircroseconds",
+                         config_position="BackendConfig.ScheduleConfig.maxQueueDelayMicroseconds", min=500,
+                         max=1000000,
+                         dtype="int"),
+    OptimizerConfigField(name="prefill_policy_type",
+                         config_position="BackendConfig.ScheduleConfig.prefillPolicyType", min=0, max=1,
+                         dtype="enum", dtype_param=[0, 1, 3]),
+    OptimizerConfigField(name="decode_policy_type",
+                         config_position="BackendConfig.ScheduleConfig.decodePolicyType", min=0, max=1,
+                         dtype="enum", dtype_param=[0, 1, 3]),
+    OptimizerConfigField(name="CONCURRENCY", config_position="env", min=10, max=1001, dtype="int"),
+    OptimizerConfigField(name="REQUESTRATE", config_position="env", min=0, max=1001, dtype="int"),
+    ]  
+    pso = PSOOptimizer(MagicMock(), target_field=my_support_field[-2:])
+    pso.default_res = PerformanceIndex(generate_speed=2000, time_to_first_token=5.5, time_per_output_token=1.3,
+                                       success_rate=1, throughput=5),
+    pso.default_fitness = 3.333
+    pso.default_run_param = [500, 6.3]
+    best_results = pd.DataFrame({"CONCURRENCY": [700], "REQUESTRATE": [3.8]})
+    pso.scheduler = MagicMock()
+    pso.scheduler.run = MagicMock(side_effect=[
+        PerformanceIndex(generate_speed=2000, time_to_first_token=5, time_per_output_token=1, success_rate=1,
+                         throughput=5),
+        PerformanceIndex(generate_speed=2435, time_to_first_token=3.23, time_per_output_token=0.14, success_rate=1,
+                         throughput=5),
+        PerformanceIndex(generate_speed=1700, time_to_first_token=0.4, time_per_output_token=0.03, success_rate=1,
+                         throughput=5),
+        PerformanceIndex(generate_speed=1750, time_to_first_token=0.43, time_per_output_token=0.038, success_rate=1,
+                         throughput=5),
+        PerformanceIndex(generate_speed=1820, time_to_first_token=0.57, time_per_output_token=0.038, success_rate=1,
+                         throughput=5),
+        PerformanceIndex(generate_speed=1800, time_to_first_token=0.44, time_per_output_token=0.04, success_rate=1,
+                         throughput=5),
+    ])
+    pso.scheduler.save_result = MagicMock()
+    pso.fine_tune = MagicMock()
+    pso.fine_tune.fine_tune_with_concurrency_and_request_rate = MagicMock(side_effect=StopFineTune)
+    pso.minimum_algorithm = MagicMock(side_effect=[4, 3.8, 2.9, 3.3, 1.2, 3.9, 3.6])
+    pso.params_in_records = MagicMock(return_value=False)
+    fitness, params, res = pso.refine_optimization_candidates(best_results)
+    assert fitness == [3.333, 4]
+    assert params == [[500, 6.3], [3, 4]]
+    assert len(res) == 2
 
 
 def test_mindie_prepare_theory_guided_disable():
