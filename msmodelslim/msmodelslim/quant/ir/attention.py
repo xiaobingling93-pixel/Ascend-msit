@@ -59,5 +59,5 @@ class FakeQuantDynamicCache(AutoFakeQuantDynamicCache):
         x_q_param = QParam(scheme=self.x_q_scheme, ext={"scale": self.kv_cache_scale, "offset": self.kv_cache_offset})
         x_q_dq = fake_quantize(QStorage(QDType.FLOAT, x), x_q_param).value
         x_q_dq = x_q_dq.reshape(x_shape)
-        x_q_dq = x_q_dq.transpose(-2, -3)
+        x_q_dq = x_q_dq.transpose(-2, -3).to(x.dtype)
         return x_q_dq
