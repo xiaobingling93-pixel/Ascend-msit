@@ -24,7 +24,8 @@ from pydantic import AfterValidator, Field
 from msmodelslim.core.QAL.qregistry import QABCRegistry
 from msmodelslim.core.QAL.qtypes import (
     RMSNormBias,
-    IterSmoothConfig
+    IterSmoothConfig,
+    OVSubgraph
 )
 from msmodelslim.core.api import iter_smooth
 from msmodelslim.core.base.protocol import BatchProcessRequest
@@ -33,14 +34,14 @@ from msmodelslim.quant.processor.anti_outlier.smooth_base import StatKey
 from msmodelslim.quant.processor.base import AutoSessionProcessor
 from msmodelslim.utils.dist import DistHelper
 from msmodelslim.utils.logging import get_logger, logger_setter
-from msmodelslim.utils.validation.value import validate_normalized_value, is_boolean, is_string_list
+from msmodelslim.utils.validation.value import validate_normalized_value, is_boolean, is_string_list            
 
 
 class IterSmoothProcessorConfig(BaseSmoothProcessorConfig):
     type: Literal["iter_smooth"] = "iter_smooth"
     alpha: Annotated[float, AfterValidator(validate_normalized_value)] = 0.9
     scale_min: Annotated[float, AfterValidator(validate_normalized_value)] = 1e-5
-    symmetric: Annotated[bool, AfterValidator(is_boolean)] = False
+    symmetric: Annotated[bool, AfterValidator(is_boolean)] = True
     enable_subgraph_type: Annotated[List[str], AfterValidator(is_string_list)] = Field(
         default_factory=lambda: ["norm-linear", "linear-linear", "ov", "up-down"]
     )
@@ -93,9 +94,10 @@ class IterSmoothProcessor(BaseSmoothProcessor):
 
         get_logger().debug(f"Processed {len(self.adapter_config)} subgraphs for submodule {request.name}")
 
-    def _get_stats_hook(self, name: str) -> Callable:
-        def stats_hook(name: str, module: nn.Linear, args: tuple, kwargs: dict) -> None:
-            tensor = args[0]
+    def _get_stats_hook(self, name: str, subgraph_type: str = None) -> Callable:
+        def stats_hook(module: nn.Linear, input_tensor: tuple, output: Any) -> None:
+            # 使用闭包中的name和subgraph_type变量
+            tensor = input_tensor[0]
 
             if name not in self.act_stats:
                 self.act_stats[name] = {}
@@ -130,7 +132,16 @@ class IterSmoothProcessor(BaseSmoothProcessor):
             else:
                 statis_dict[StatKey.STAT_KEY_SHIFT] = (coming_max + coming_min) / 2
 
-            channel_max = torch.max(tensor.abs().detach(), dim=0)[0]
+            # 判断是否是OV子图且symmetric为False的特殊情况
+            if subgraph_type == "ov" and not self.config.symmetric:
+                # OV子图且symmetric为False时，使用tensor.abs()计算channel_max
+                channel_max = torch.max(tensor.abs().detach(), dim=0)[0]
+            elif not self.config.symmetric:
+                # 其他非对称情况，使用shift后的绝对值
+                channel_max = torch.max((tensor - statis_dict[StatKey.STAT_KEY_SHIFT]).abs().detach(), dim=0)[0]
+            else:
+                # 对称情况，使用tensor.abs()
+                channel_max = torch.max(tensor.abs().detach(), dim=0)[0]
 
             if StatKey.STAT_KEY_SMOOTH_SCALE in statis_dict:
                 statis_dict[StatKey.STAT_KEY_SMOOTH_SCALE] = torch.max(statis_dict[StatKey.STAT_KEY_SMOOTH_SCALE],
@@ -138,7 +149,7 @@ class IterSmoothProcessor(BaseSmoothProcessor):
             else:
                 statis_dict[StatKey.STAT_KEY_SMOOTH_SCALE] = channel_max
 
-        return partial(stats_hook, name)
+        return partial(stats_hook)
 
     def _apply_smooth_to_subgraph(self, subgraph_obj: Any, linear_modules: List[nn.Module]) -> None:
         """
@@ -151,11 +162,18 @@ class IterSmoothProcessor(BaseSmoothProcessor):
         try:
             # 构建SmoothContext
             smooth_context = self._build_smooth_context(linear_modules)
+            if isinstance(subgraph_obj, OVSubgraph):
+                shift_value = False
+                get_logger().debug("[IterSmoothProcessor] OV subgraph detected, setting shift=False")
+            else:
+                # 如果symmetric为True，shift取False；如果symmetric为False，shift取True
+                shift_value = not self.config.symmetric
+                get_logger().debug(f"[IterSmoothProcessor] Non-OV subgraph detected, setting shift={shift_value}")
 
             # 创建平滑配置
             smooth_quant_cfg = IterSmoothConfig(
                 alpha=self.config.alpha,
-                shift=self.config.symmetric,
+                shift=shift_value,
                 scale_min=self.config.scale_min
             )
 
