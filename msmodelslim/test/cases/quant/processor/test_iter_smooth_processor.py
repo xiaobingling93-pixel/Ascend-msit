@@ -114,7 +114,7 @@ class TestIterSmoothProcessor:
         # 验证config属性
         assert processor.config.alpha == 0.9
         assert processor.config.scale_min == 1e-5
-        assert processor.config.symmetric is False
+        assert processor.config.symmetric is True
         assert processor.config.enable_subgraph_type == ["norm-linear", "linear-linear", "ov", "up-down"]
 
     def test_iter_smooth_processor_preprocess_normal(self):
@@ -300,7 +300,7 @@ class TestIterSmoothProcessor:
         # 验证IterSmoothConfig参数
         smooth_config = call_args[0][1]
         assert smooth_config.alpha == config.alpha
-        assert smooth_config.shift == config.symmetric
+        assert smooth_config.shift == (not config.symmetric)
         assert smooth_config.scale_min == config.scale_min
         
         # 验证日志记录

@@ -14,7 +14,7 @@
 - type: "iter_smooth"                    # 固定为 `iter_smooth`，用于指定 Processor。
   alpha: 0.9                             # 浮点数, > 0, 默认 0.9，平衡参数，控制激活和权重的相对重要性。
   scale_min: 1e-5                        # 浮点数, > 0, 默认 1e-5，缩放因子的下界，防止数值过小导致数值不稳定。
-  symmetric: False                        # 布尔型，默认为False，是否启用对称，True为对称，False为非对称。
+  symmetric: True                        # 布尔型，默认为True，是否启用对称，True为对称，False为非对称。
   enable_subgraph_type:                  # 字符串列表，代表开启的子图类型。
     - 'norm-linear'
     - 'linear-linear'

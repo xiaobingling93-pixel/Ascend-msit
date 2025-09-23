@@ -25,7 +25,7 @@ from msmodelslim.core.KIA.impl.iter_smooth import (
     iter_smooth_impl_NormLinear,
 )
 from msmodelslim.core.QAL.qtypes import (
-    Subgraph,
+    RMSNormBias,
     NormLinearSubgraph,
     LinearLinearSubgraph,
     OVSubgraph,
@@ -96,7 +96,7 @@ class TestApplySmoothScaleShift(unittest.TestCase):
         """测试前准备"""
         self.layer = nn.Linear(3, 4)
         self.scales = torch.tensor([1.5, 2.0, 0.8], dtype=torch.float32)
-        self.shift = torch.tensor([0.1, 0.2, 0.3], dtype=torch.float32)
+        self.shift = torch.tensor([0.1, 0.2, 0.3, 0.4], dtype=torch.float32)
 
     def test_apply_smooth_scale_shift_without_shift(self):
         """测试无shift的情况"""
@@ -437,8 +437,8 @@ class TestIterSmoothImplNormLinear(unittest.TestCase):
             def forward(self, x):
                 return self.weight * x + self.bias
         
-        self.norm = MockRMSNorm()
-        self.linear1 = nn.Linear(512, 512)
+        self.norm = MockRMSNorm()	
+        self.linear1 = nn.Linear(512, 512)	
         self.linear2 = nn.Linear(512, 512)
         self.subgraph = NormLinearSubgraph(
             norm=self.norm,
@@ -488,10 +488,10 @@ class TestIterSmoothImplNormLinear(unittest.TestCase):
     def test_iter_smooth_impl_NormLinear_mathematical_consistency(self):
         """测试数学一致性"""
         # 设置简单的测试数据
-        self.linear1.weight.data = torch.ones_like(self.linear1.weight.data)
-        self.linear2.weight.data = torch.ones_like(self.linear2.weight.data)
+        self.linear1.weight.data = torch.ones_like(self.linear1.weight.data)	
+        self.linear2.weight.data = torch.ones_like(self.linear2.weight.data)	
         self.context.a_smooth_scale = torch.ones(512)
-        
+
         iter_smooth_impl_NormLinear(self.subgraph, self.config, self.context)
         
         # 验证数学一致性

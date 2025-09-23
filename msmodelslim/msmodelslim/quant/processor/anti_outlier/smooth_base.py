@@ -307,20 +307,22 @@ class BaseSmoothProcessor(AutoSessionProcessor):
         # 默认情况：返回空列表
         return []
 
-    def _install_hook_for_module(self, module_name: str) -> None:
+    def _install_hook_for_module(self, module_name: str, subgraph_type: str = None) -> None:
         """
         为指定模块安装统计钩子
         
         Args:
             module_name: 模块名称
+            subgraph_type: 子图类型
         """
         try:
             module = self.model.get_submodule(module_name)
             if isinstance(module, nn.Linear):
                 # 保存hook句柄，用于后续删除
-                hook_handle = module.register_forward_hook(self._get_stats_hook(module_name))
+                hook_handle = module.register_forward_hook(self._get_stats_hook(module_name, subgraph_type))
                 self.hook_handles[module_name] = hook_handle
-                get_logger().debug(f"Successfully installed statistics hook for module {module_name}")
+                get_logger().debug(f"Successfully installed statistics hook for module {module_name} "
+                                 f"(subgraph_type: {subgraph_type})")
             else:
                 get_logger().warning(f"Module {module_name} is not Linear type, skipping hook installation")
         except Exception as e:
@@ -338,10 +340,10 @@ class BaseSmoothProcessor(AutoSessionProcessor):
             # 根据子图类型获取需要安装钩子的模块名称
             target_names = self._get_target_names_for_hook(adapter_config)
 
-            # 为每个目标模块安装钩子
+            # 为每个目标模块安装钩子，传递子图类型信息
             for target_name in target_names:
                 if target_name:
-                    self._install_hook_for_module(target_name)
+                    self._install_hook_for_module(target_name, adapter_config.subgraph_type)
 
     def _remove_all_hooks(self) -> None:
         """
