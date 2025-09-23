@@ -26,5 +26,5 @@ input_shape = [1, 3, 224, 224]
 quant_config = QuantConfig(disable_names=disable_names, amp_num=0, input_shape=input_shape)
 calibrator = Calibrator(model, quant_config)
 calibrator.run()
-input_scale, input_offset,weight_scale, weight_offset, quant_weight = calibrator. get_quant_params ()
+input_scale, input_offset,weight_scale, weight_offset, quant_weight = calibrator.get_quant_params()
 ```
