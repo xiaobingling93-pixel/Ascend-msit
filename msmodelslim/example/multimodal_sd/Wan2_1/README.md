@@ -50,7 +50,7 @@ msmodelslim quant \
     --trust_remote_code True
 ```
 ### 一键量化命令参数说明
-一键量化参数基本说明可参考：[一键量化参数说明](../../../docs/一键量化/使用说明.md/#接口说明)
+一键量化参数基本说明可参考：[一键量化参数说明](../../../docs/功能指南/一键量化/使用说明.md#接口说明)
 
 针对Wan2.1模型，有不同的限制：
 
@@ -62,7 +62,7 @@ msmodelslim quant \
 |model_type|模型名称|必选| 1. 类型：Str <br>2. 大小写敏感，需要配置为"Wan2_1"                                         |
 |config_path|指定配置路径|与"quant_type"二选一| 1. 类型：Str <br>2. 配置文件格式为yaml <br>3. 当前只支持最佳实践库中已验证的配置[wan2_1_w8a8_dynamic.yaml](../../../lab_practice/wan2_1/wan2_1_w8a8_dynamic.yaml)，若自定义配置，msmodelslim不为量化结果负责 <br> |
 |quant_type|量化类型|与"config_path"二选一| 1. 类型：Str <br>2. 当前仅支持配置为"w8a8"
-|trust_remote_code|是否信任自定义代码|可选| 1. 类型：Bool，默认值：False <br>2. 请确保加载的自定义代码文件的安全性，设置为True有安全风险。                           |
+|trust_remote_code|是否信任自定义代码|可选| 1. 类型：Bool，默认值：False <br>2. 指定`trust_remote_code=True`让修改后的自定义代码文件能够正确地被加载(请确保所加载的自定义代码文件来源可靠，避免潜在的安全风险)。                           |
 
 ## 配置文件说明
 
@@ -152,5 +152,5 @@ spec:
 ## 相关资源
 
 - [Wan2.1模型仓库](https://modelers.cn/models/MindIE/Wan2.1)
-- [一键量化配置协议说明](../../../docs/一键量化/配置协议说明.md)
-- [逐层量化特性说明](../../../docs/一键量化/features/layer_wise_quantization.md)
+- [一键量化配置协议说明](../../../docs/功能指南/一键量化/配置协议说明.md)
+- [逐层量化特性说明](../../../docs/功能指南/一键量化/features/layer_wise_quantization.md)

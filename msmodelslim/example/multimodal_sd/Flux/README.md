@@ -146,7 +146,7 @@ quant_model(model, session_cfg)
 
 #### 量化启动命令
 
-我们提供了完整的量化启动脚本示例：[Flux/inference_flux.py](Flux/inference_flux.py)，其启动命令可参考(请提前确保calib_prompts.txt权限不大于'0o640')：
+我们提供了完整的量化启动脚本示例：[Flux/inference_flux.py](./inference_flux.py)，其启动命令可参考(请提前确保calib_prompts.txt权限不大于'0o640')：
 
 ```shell
 # do quant
@@ -255,7 +255,7 @@ quant_model(model, session_cfg)
 
 #### 量化启动命令
 
-我们提供了完整的量化启动脚本示例：[Flux/inference_flux.py](Flux/inference_flux.py)，其启动命令可参考(请提前确保calib_prompts.txt权限不大于'0o640')：
+我们提供了完整的量化启动脚本示例：[Flux/inference_flux.py](./inference_flux.py)，其启动命令可参考(请提前确保calib_prompts.txt权限不大于'0o640')：
 
 ```shell
 # do quant

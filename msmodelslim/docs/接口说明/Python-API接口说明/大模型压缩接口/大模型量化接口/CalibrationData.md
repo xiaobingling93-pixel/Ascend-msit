@@ -58,4 +58,4 @@ CalibrationData.process()
 ```
 
 ## 调用说明
-请参考 [CalibrationData使用说明](../../../../msmodelslim/pytorch/llm_ptq/mix_calibration/README.md)  
+请参考 [CalibrationData使用说明](../../../../功能指南/脚本量化与其他功能/pytorch/llm_ptq/混合校准数据集.md)  

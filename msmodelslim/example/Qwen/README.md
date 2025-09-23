@@ -37,7 +37,7 @@
 
 ## 环境配置
 
-- 环境配置请参考[使用说明](https://gitcode.com/Ascend/msit/blob/master/msmodelslim/README.md)
+- 环境配置请参考[使用说明](../../docs/安装指南.md)
 
 ## 量化权重生成
 
@@ -83,14 +83,14 @@
 | anti_calib_file | 离群值抑制校准数据文件 | None | 用于离群值抑制的校准数据文件路径(.json或.jsonl)。|
 | disable_threshold | 自动回退阈值 | 0 | 当值大于0时，会根据阈值自动选择需要回退的层。|
 | pdmix | 是否使用PDMix量化类型 | False | True: 使用PDMix量化类型；<br>False: 不使用PDMix量化类型。|
-| trust_remote_code | 是否信任自定义代码 | False | 指定`trust_remote_code=True`让修改后的自定义代码文件能够正确的被加载。(请确保加载的自定义代码文件的安全性)。 |
+| trust_remote_code | 是否信任自定义代码 | False | 指定`trust_remote_code=True`让修改后的自定义代码文件能够正确地被加载(请确保所加载的自定义代码文件来源可靠，避免潜在的安全风险)。 |
 | layer_count | 加载模型时的层数 | 0 | 默认值为0表示量化模型所有层；<br>用于调试，实际量化的层数，当设置为N时，将从第0层开始量化到第N-1层（如设置为5，则量化0,1,2,3,4这5层）。<br>取值范围：[0, 模型总层数]。 |
 | mindie_format | 非多模态模型量化后的权重配置文件是否兼容MindIE现有版本 | False | 开启`mindie_format`时保存的量化权重格式能够兼容MindIE 2.1.RC1及之前的版本。 |
 | w_method | 权重量化方法 | MinMax | 可选值：['MinMax', 'GPTQ', 'HQQ', 'NF']。 |
 
 
-- 更多参数配置要求，请参考量化过程中配置的参数 [QuantConfig](https://gitcode.com/Ascend/msit/blob/dev/msmodelslim/docs/Python-API接口说明/大模型压缩接口/大模型量化接口/PyTorch/QuantConfig.md)
-  以及量化参数配置类 [Calibrator](https://gitcode.com/Ascend/msit/blob/dev/msmodelslim/docs/Python-API接口说明/大模型压缩接口/大模型量化接口/PyTorch/Calibrator.md)
+- 更多参数配置要求，请参考量化过程中配置的参数 [QuantConfig](../../docs/接口说明/Python-API接口说明/大模型压缩接口/大模型量化接口/PyTorch/QuantConfig.md)
+  以及量化参数配置类 [Calibrator](../../docs/接口说明/Python-API接口说明/大模型压缩接口/大模型量化接口/PyTorch/Calibrator.md)
 
 #### W4A4 Flatquant Dynamic量化专用参数说明 (w4a4.py)
 | 参数名 | 含义 | 默认值 | 使用方法 | 
@@ -101,7 +101,7 @@
 | calib_file | 量化校准数据文件 | ../common/wiki.jsonl | 用于校准的数据文件路径，支持.jsonl格式文件。<br>文件中每行应包含'inputs_pretokenized'字段。 |
 | batch_size | 校准时的批处理大小 | 4 | 生成量化校准数据时使用的batch size。<br>取值范围：[1, 16] |
 | mindie_format | 非多模态模型量化后的权重配置文件是否兼容MindIE现有版本 | False | 开启`mindie_format`时保存的量化权重格式能够兼容MindIE迭代四B050前版本。|
-| trust_remote_code | 是否信任自定义代码 | False | 指定`trust_remote_code=True`使修改后的自定义代码文件能够正确的被加载。(请确保加载的自定义代码文件的安全性) |
+| trust_remote_code | 是否信任自定义代码 | False | 指定`trust_remote_code=True`让修改后的自定义代码文件能够正确地被加载(请确保所加载的自定义代码文件来源可靠，避免潜在的安全风险)。 |
 
 ### 使用案例
 - 请将{浮点权重路径}和{量化权重路径}替换为用户实际路径。
@@ -169,7 +169,7 @@
   python3 quant_qwen.py --model_path {浮点权重路径} --save_directory {W8A8量化权重路径} --calib_file ../common/boolq.jsonl --w_bit 8 --a_bit 8 --device_type npu --trust_remote_code True
   ```
 ##### Qwen2.5-72B 支持Attention量化
-- 需修改`modeling_qwen2.py`文件和`config.json`文件，配置方法参考[FA量化使用说明](https://gitcode.com/Ascend/msit/blob/master/msmodelslim/docs/FA%E9%87%8F%E5%8C%96%E4%BD%BF%E7%94%A8%E8%AF%B4%E6%98%8E.md)。 
+- 需修改`modeling_qwen2.py`文件和`config.json`文件，配置方法参考[FA量化使用说明](../../docs/功能指南/脚本量化与其他功能/pytorch/llm_ptq/FA量化使用说明.md)。 
 - 相比于W8A8量化，需额外设置`use_fa_quant`参数为True
   ```shell
   python3 quant_qwen.py --model_path {浮点权重路径} --save_directory {W8A8量化权重路径} --calib_file ../common/boolq.jsonl --w_bit 8 --a_bit 8 --device_type npu --anti_method m4 --act_method 1 --use_fa_quant True --trust_remote_code True
@@ -213,7 +213,7 @@
 #### 5. Qwen3 系列
 ##### Qwen3-32B W8A8量化
 
-该模型的量化支持已经集成至[一键量化](https://gitcode.com/Ascend/msit/blob/master/msmodelslim/msmodelslim/app/naive_quantization/readme.md)。
+该模型的量化已经集成至[一键量化](../../docs/功能指南/一键量化/使用说明.md)。
 
   ```shell
   msmodelslim quant --model_path {浮点权重路径} --save_path {W8A8量化权重路径} --device npu --model_type Qwen3-32B --quant_type w8a8 --trust_remote_code True
@@ -221,7 +221,7 @@
 
 ##### Qwen3-32B 稀疏量化
 
-该模型的量化支持已经集成至[一键量化](https://gitcode.com/Ascend/msit/blob/master/msmodelslim/msmodelslim/app/naive_quantization/readme.md)。
+该模型的量化已经集成至[一键量化](../../docs/功能指南/一键量化/使用说明.md)。
 
   ```shell
   msmodelslim quant --model_path {浮点权重路径} --save_path {W8A8量化权重路径} --device npu --model_type Qwen3-32B --quant_type w8a8s --trust_remote_code True
@@ -233,14 +233,14 @@
   ```
 ##### Qwen3-14B W8A8量化
 
-该模型的量化支持已经集成至[一键量化](https://gitcode.com/Ascend/msit/blob/master/msmodelslim/msmodelslim/app/naive_quantization/readme.md)。
+该模型的量化已经集成至[一键量化](../../docs/功能指南/一键量化/使用说明.md)。
 
   ```shell
   msmodelslim quant --model_path {浮点权重路径} --save_path {W8A8量化权重路径} --device npu --model_type Qwen3-14B --quant_type w8a8 --trust_remote_code True
   ```
 ##### Qwen3-14B 稀疏量化
 
-该模型的量化支持已经集成至[一键量化](https://gitcode.com/Ascend/msit/blob/master/msmodelslim/msmodelslim/app/naive_quantization/readme.md)。
+该模型的量化已经集成至[一键量化](../../docs/功能指南/一键量化/使用说明.md)。
 
   ```shell
   msmodelslim quant --model_path {浮点权重路径} --save_path {W8A8量化权重路径} --device npu --model_type Qwen3-14B --quant_type w8a8s --trust_remote_code True
@@ -248,7 +248,7 @@
 
 ##### Qwen3-8B 稀疏量化
 
-该模型的量化支持已经集成至[一键量化](https://gitcode.com/Ascend/msit/blob/master/msmodelslim/msmodelslim/app/naive_quantization/readme.md)。
+该模型的量化已经集成至[一键量化](../../docs/功能指南/一键量化/使用说明.md)。
 
   ```shell
   msmodelslim quant --model_path {浮点权重路径} --save_path {W8A8量化权重路径} --device npu --model_type Qwen3-8B --quant_type w8a8s --trust_remote_code True
