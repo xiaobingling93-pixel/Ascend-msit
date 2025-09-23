@@ -159,7 +159,7 @@ QConfig(
 - **计算成本**：SSZ算法需要多次迭代，某些场景下计算成本较大。
 - **初始化依赖**：需要先使用MinMax观察器计算初始量化参数。
 - **使用限制**：
-    - 目前仅支持int8场景的per_channel对称量化。
+    - 目前支持int8和int4场景的per_channel对称量化。
     - int4场景的per_channel非对称量化暂不支持（后续支持）。
     - per_tensor和per_group量化粒度暂不支持（后续支持）。
     - 权重必须是2D张量。
