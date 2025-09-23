@@ -12,7 +12,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from transformers import PreTrainedModel, AutoTokenizer, PreTrainedTokenizerBase
 from ascend_utils.common.security import json_safe_load, get_valid_path, get_valid_read_path, get_valid_write_path, \
-    SafeWriteUmask, check_type, json_safe_dump
+    SafeWriteUmask, check_type, json_safe_dump, check_dict_character
 
 from msmodelslim.pytorch.llm_ptq.mix_calibration.dataset_processor_base import DatasetProcessorBase
 from msmodelslim import logger as msmodelslim_logger
@@ -112,6 +112,8 @@ class CEval5ShotProcessor(DatasetProcessorBase):
         subject_mapping_path = get_valid_read_path(subject_mapping_path)
         with open(subject_mapping_path) as f:
             subject_mapping = json.load(f)
+        if isinstance(subject_mapping, dict):
+            check_dict_character(subject_mapping, 512)
         return subject_mapping
 
     def load_csv_by_task_name(self, task_name, dataset_path):
@@ -474,6 +476,8 @@ class CalibrationData(object):
         config_path = get_valid_read_path(config_path, extensions=[".json", ".jsonl"])
         with open(config_path, "r") as f:
             config = json.load(f)
+        if isinstance(config, dict):
+            check_dict_character(config, 512)
         if "configurations" not in config.keys():
             raise ValueError(f"config should have attribute configurations")
         dataset_cfg = config["configurations"]
