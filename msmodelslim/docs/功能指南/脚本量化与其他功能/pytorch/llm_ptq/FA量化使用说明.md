@@ -4,7 +4,7 @@
 
 ## 前提条件
 
-前提条件参考[大模型量化的前提条件](./大模型训练后量化.md/#前提条件)
+前提条件参考[大模型量化的前提条件](./大模型训练后量化.md#前提条件)
 
 说明：仅Atlas 800I A2推理产品支持FA3量化功能。当前 FA3 量化功能已完成对大语言模型 Llama3.1-70B、Qwen2.5-72B 和多模态模型 Flux.1-dev、HunyuanVideo 的验证。
 
@@ -449,4 +449,4 @@ fa_quant(fa_amp=5)
 
 ## 多模态模FA3量化关键步骤说明如下：
 
-请参考[多模态生成模型量化](../../../../../example/multimodal_sd/README.md#flux-fa3-量化)中 Flux FA3 量化与HunyuanVideo FA3 量化。
+请参考[Flux FA3量化](../../../../../example/multimodal_sd/Flux/README.md#flux-fa3-量化)与[HunyuanVideo FA3](../../../../../example/multimodal_sd/HunYuanVideo/README.md#hunyuanvideo-fa3-量化)的详细使用说明。

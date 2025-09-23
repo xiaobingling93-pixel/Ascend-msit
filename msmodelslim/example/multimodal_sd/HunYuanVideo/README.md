@@ -165,7 +165,7 @@ with torch.autocast(device_type='cuda', dtype=torch.bfloat16, enabled=True):
 **注意：** 
 Atlas 800I A2(8*64G)推理设备：支持4卡量化、6卡量化、8卡量化。
 
-我们提供了完整的量化启动脚本示例：[HunYuanVideo/sample_video.py](HunYuanVideo/sample_video.py)，其启动命令可参考(请提前确保calib_prompts.txt权限不大于'0o640')：
+我们提供了完整的量化启动脚本示例：[HunYuanVideo/sample_video.py](./sample_video.py)，其启动命令可参考(请提前确保calib_prompts.txt权限不大于'0o640')：
 
 ```shell
 # 根据使用卡数进行配置多卡环境变量和nproc_per_node，以下使用8卡为例
@@ -288,7 +288,7 @@ quant_model(model, session_cfg)
 
 #### 量化启动命令
 
-我们提供了完整的量化启动脚本示例：[HunYuanVideo/sample_video.py](HunYuanVideo/sample_video.py)，其启动命令可参考(请提前确保calib_prompts.txt权限不大于'0o640')：
+我们提供了完整的量化启动脚本示例：[HunYuanVideo/sample_video.py](./sample_video.py)，其启动命令可参考(请提前确保calib_prompts.txt权限不大于'0o640')：
 
 ```shell
 # 根据使用卡数进行配置多卡环境变量和nproc_per_node，以下使用8卡为例

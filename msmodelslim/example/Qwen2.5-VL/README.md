@@ -19,10 +19,10 @@
 
 ## 环境配置
 
-- 具体环境配置请参考[使用说明](../../README.md)
+- 具体环境配置请参考[使用说明](../../docs/安装指南.md)
 - 还需要执行以下命令安装qwen_vl_utils依赖
     - pip install qwen_vl_utils
-- 针对Qwen2.5-VL，transformers版本需要配置安装为4.49.0
+- 针对Qwen2.5-VL，transformers版本安装4.49.0版本
     - pip install transformers==4.49.0
 
 ## 使用案例
@@ -67,13 +67,13 @@
 | w_bit | 权重量化bit | 8 | 大模型量化场景下，可配置为8或16； <br>大模型稀疏量化场景下，需配置为4。 <br>Qwen2.5-VL当前仅支持配置为8。|
 | a_bit | 激活值量化bit | 8 |大模型量化场景下，可配置为8或16； <br>大模型稀疏量化场景下，需配置为8。 <br>Qwen2.5-VL当前仅支持配置为8。|
 | device_type | device类型 | cpu | 可选值：['cpu', 'npu']。 |
-| trust_remote_code | 是否信任自定义代码 | False | 指定`trust_remote_code=True`让修改后的自定义代码文件能够正确的被加载。(请确保加载的自定义代码文件的安全性)。|
+| trust_remote_code | 是否信任自定义代码 | False | 指定`trust_remote_code=True`让修改后的自定义代码文件能够正确地被加载(请确保所加载的自定义代码文件来源可靠，避免潜在的安全风险)。|
 | anti_method | 异常值抑制算法 | m2 | 选择的异常值抑制算法，当前大语言模型支持异常值抑制算法m1~m6，当前Qwen2.5-VL支持m2，m4。|
 | act_method | 激活值量化方法 | 2 | (1) 1代表Label-Free场景的min-max量化方式。 <br>(2) 2代表Label-Free场景的histogram量化方式。 <br>(3) 3代表Label-Free场景的自动混合量化方式，LLM大模型场景下推荐使用。 |
 | open_outlier | 是否开启权重异常值划分 | True | 可以配置为True或者False。 <br>设置为True时开启权重异常值划分，反之则关闭。|
 | is_dynamic | 是否使用动态量化，即w8a8中的activation动态生成 | False | 可以配置为True或者False。 <br>设置为True时使用动态量化，反之则不使用。|
 | is_lowbit | 是否使用稀疏量化的low bit算法 | False | 可以配置为True或者False。 <br>设置为True时使用稀疏量化的low bit算法，反之则不使用。 <br>在`w4a8_dynamic per-group`量化场景下需要设置为True。|
-| group_size | per-group量化的分组数量 | 64 | <br>设置为64，128，256，512。 <br>在`w4a8_dynamic per-group`量化场景下仅支持256。|
+| group_size | per-group量化的分组数量 | 64 | <br>设置为64，128，256或512。 <br>在`w4a8_dynamic per-group`量化场景下仅支持256。|
 
-- 更多参数配置要求，请参考量化过程中配置的参数 [QuantConfig](../../docs/Python-API接口说明/大模型压缩接口/大模型量化接口/PyTorch/QuantConfig.md)
-  以及量化参数配置类 [Calibrator](../../docs/Python-API接口说明/大模型压缩接口/大模型量化接口/PyTorch/Calibrator.md)
+- 更多参数配置要求，请参考量化过程中配置的参数 [QuantConfig](../../docs/接口说明/Python-API接口说明/大模型压缩接口/大模型量化接口/PyTorch/QuantConfig.md)
+  以及量化参数配置类 [Calibrator](../../docs/接口说明/Python-API接口说明/大模型压缩接口/大模型量化接口/PyTorch/Calibrator.md)

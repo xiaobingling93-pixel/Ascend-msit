@@ -7,11 +7,11 @@
 
 [安装指南](./docs/安装指南.md) |
 [快速入门](./docs/快速入门/一键量化快速入门.md) |
-[支持矩阵](./docs/README.md/#支持矩阵) |
-[功能指南](./docs/README.md/#功能指南) |
-[推荐实践](./docs/README.md/#推荐实践) |
-[案例集](./docs/README.md/#案例集) |
-[FAQ](./docs/README.md/#faq)
+[支持矩阵](./docs/README.md#支持矩阵) |
+[功能指南](./docs/README.md#功能指南) |
+[推荐实践](./docs/README.md#推荐实践) |
+[案例集](./docs/README.md#案例集) |
+[FAQ](./docs/README.md#faq)
 
 </div>
 
@@ -53,29 +53,29 @@ msModelSlim，全称MindStudio ModelSlim，昇腾模型压缩工具。
 
 支持矩阵旨在以表格形式呈现不同功能和模型已适配场景的情况。
 
-具体支持矩阵请查看[支持矩阵](./docs/README.md/#支持矩阵)
+具体支持矩阵请查看[支持矩阵](./docs/README.md#支持矩阵)
 
 ## 功能指南
 
 功能指南基于msModelSlim不同架构下的功能支持情况，提供功能使用说明和接口说明。
 
-具体功能指南请查看[功能指南](./docs/README.md/#功能指南)
+具体功能指南请查看[功能指南](./docs/README.md#功能指南)
 
 ## 推荐实践
 
 msModelSlim以examples形式提供了推荐的推理量化/压缩实践。
 
-具体的推荐实践请查看[推荐实践](./docs/README.md/#推荐实践)
+具体的推荐实践请查看[推荐实践](./docs/README.md#推荐实践)
 
 ## 案例集
 
 案例集通过具体的文字说明和代码示例，以实际应用场景为基础，旨在指导用户快速熟悉特定场景下msModelSlim工具的使用，包括一些精度调优方法等，msModelSlim将持续完善案例集。
 
-具体案例集请查看[案例集](./docs/README.md/#案例集)
+具体案例集请查看[案例集](./docs/README.md#案例集)
 
 ## 常见问题
 
-相关FAQ请参考链接：[FAQ](./docs/README.md/#faq)
+相关FAQ请参考链接：[FAQ](./docs/README.md#faq)
 
 ## 其他资源
 - [提issue](https://gitcode.com/Ascend/msit/issues/create?type=template&title=Bug-Report|%E7%BC%BA%E9%99%B7%E5%8F%8D%E9%A6%88&template=.gitcode%252FISSUE_TEMPLATE%252Fbug-report.yml&default_branch=master&project_path_with_namespace=Ascend%252F.gitcode)

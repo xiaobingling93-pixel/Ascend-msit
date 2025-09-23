@@ -379,10 +379,10 @@ msModelSlim认为量化本质上是对模型局部结构的修改和替换，基
       <a href="./接口说明/Python-API接口说明/量化接口/训练后量化（ONNX）/post_training_quant接口/preprocess_func_coco.md">post_training_quant接口: preprocess_func_coco</a><br>
       <a href="./接口说明/Python-API接口说明/量化接口/训练后量化（ONNX）/post_training_quant接口/preprocess_func_imagenet.md">post_training_quant接口: preprocess_func_imagenet</a><br>
       <a href="./接口说明/Python-API接口说明/量化接口/训练后量化（ONNX）/post_training_quant接口/run_quantize.md">post_training_quant接口: run_quantize</a><br>
-      <a href="./接口说明/Python-API接口说明/量化接口/训练后量化（ONNX）/squant_ptq接口/QuantConfig.md">post_training_quant接口: QuantConfig</a><br>
-      <a href="./接口说明/Python-API接口说明/量化接口/训练后量化（ONNX）/squant_ptq接口/OnnxCalibrator.md">post_training_quant接口: OnnxCalibrator</a><br>
-      <a href="./接口说明/Python-API接口说明/量化接口/训练后量化（ONNX）/squant_ptq接口/run().md">post_training_quant接口: run()</a><br>
-      <a href="./接口说明/Python-API接口说明/量化接口/训练后量化（ONNX）/squant_ptq接口/export_quant_onnx.md">post_training_quant接口: export_quant_onnx</a><br>
+      <a href="./接口说明/Python-API接口说明/量化接口/训练后量化（ONNX）/squant_ptq接口/QuantConfig.md">squant_ptq接口: QuantConfig</a><br>
+      <a href="./接口说明/Python-API接口说明/量化接口/训练后量化（ONNX）/squant_ptq接口/OnnxCalibrator.md">squant_ptq接口: OnnxCalibrator</a><br>
+      <a href="./接口说明/Python-API接口说明/量化接口/训练后量化（ONNX）/squant_ptq接口/run().md">squant_ptq接口: run()</a><br>
+      <a href="./接口说明/Python-API接口说明/量化接口/训练后量化（ONNX）/squant_ptq接口/export_quant_onnx.md">squant_ptq接口: export_quant_onnx</a><br>
       </td>
     </tr>
   </tbody>

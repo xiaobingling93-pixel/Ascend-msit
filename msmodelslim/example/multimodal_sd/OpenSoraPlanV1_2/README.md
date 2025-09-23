@@ -8,7 +8,7 @@ Open-Sora-Plan V1.2的推理量化依赖于推理工程仓：[MindIE/open_sora_p
 
 #### 量化启动命令
 
-我们提供了完整的量化启动脚本示例：[OpenSoraPlanV1_2/inference.py](OpenSoraPlanV1_2/inference.py)，其启动命令可参考(请提前确保calib_prompts.txt权限不大于'0o640')：
+我们提供了完整的量化启动脚本示例：[OpenSoraPlanV1_2/inference.py](./inference.py)，其启动命令可参考(请提前确保calib_prompts.txt权限不大于'0o640')：
 ```shell
 # 根据使用卡数进行配置多卡环境变量和nproc_per_node，以下使用8卡为例
 export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
