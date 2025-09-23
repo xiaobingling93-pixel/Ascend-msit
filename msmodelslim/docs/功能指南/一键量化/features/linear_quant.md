@@ -226,3 +226,20 @@ exclude: [ "model.layers.*.self_attn.down_proj" ]
   include: [ "*mlp*" ]
 ```
 
+### W4A8动态量化配置
+
+```yaml
+- type: "linear_quant"
+  qconfig:
+    act:
+      scope: "per_token"
+      dtype: "int8"
+      symmetric: true
+      method: "minmax"
+    weight:
+      scope: "per_channel"
+      dtype: "int4"
+      symmetric: true
+      method: "minmax"
+  include: [ "*" ]
+```
