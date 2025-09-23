@@ -272,7 +272,15 @@ class Compressor:
         if message != "yes":
             raise Exception("Loading is prohibited because the data may be from untrusted sources.")
         weight_path = get_valid_read_path(weight_path, extensions='.npy', size_max=MAX_READ_FILE_SIZE_512G)
-        self.weights = np.load(weight_path, allow_pickle=True).item()
+        try:
+            self.weights = np.load(weight_path, allow_pickle=False).item()
+        except FileNotFoundError as e:
+            self.logger.warning(f"Failed to load weights file: {e}. The file may not exist.")
+        except Exception as e:
+            self.logger.warning("Failed to load weights file with allow_pickle=False. This may be because " \
+                                "the file contains Python objects. Will attempt to load with allow_pickle=True " \
+                                "(Note: This could pose security risks as pickle format may contain malicious code)")
+            self.weights = np.load(weight_path, allow_pickle=True).item()
         self.logger.info("Data loaded")
 
     def load_weights(self, weight_path, weight, quant_model_description):
