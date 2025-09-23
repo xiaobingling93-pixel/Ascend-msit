@@ -59,13 +59,14 @@ class W4A4DynamicPerChannelFakeQuantLinear(AutoFakeQuantLinear):
             bias: torch.Tensor
     ):
         super().__init__()
+        self.w_scheme = w_q_param.scheme
         self.weight_scale = nn.Parameter(w_q_param.ext.pop("scale"), requires_grad=False)
         self.weight_offset = nn.Parameter(w_q_param.ext.pop("offset"), requires_grad=False)
         self.weight = nn.Parameter(w_q.value, requires_grad=False)
         self.bias = nn.Parameter(bias, requires_grad=False) if bias is not None else None
 
     def __repr__(self) -> str:
-        return f"W4A4DynamicFakeQuantLinear(w_q_param={self.w_q_param})"
+        return f"W4A4DynamicFakeQuantLinear(w_scheme={self.w_scheme})"
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x_shape = x.shape
@@ -79,7 +80,6 @@ class W4A4DynamicPerChannelFakeQuantLinear(AutoFakeQuantLinear):
             ext={
                 "scale": self.weight_scale,
                 "offset": self.weight_offset,
-                "group_size": self.group_size
             }
         )
         w_q_storage = QStorage(dtype=QDType.INT4, value=self.weight)

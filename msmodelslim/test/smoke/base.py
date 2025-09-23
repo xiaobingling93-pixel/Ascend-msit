@@ -78,7 +78,7 @@ class FakeLlamaModelAdapter(Qwen3ModelAdapter):
         ]
 
 
-def invoke_test(config_name: str, model_save_path: str):
+def invoke_test(config_name: str, model_save_path: str, offload_device: str = 'cpu'):
     """使用真正的CLI parser来模拟命令行参数并返回model_adapter"""
     import sys
     from msmodelslim.cli.__main__ import main as cli_main
@@ -119,13 +119,27 @@ def invoke_test(config_name: str, model_save_path: str):
             # 临时替换方法
             QuantServiceProxy.quantize = capture_model_adapter
 
+            # Mock LayerWiseRunner 构造时的 offload_device 参数
+            from msmodelslim.core.runner.layer_wise_runner import LayerWiseRunner
+            
+            # 保存原始的 __init__ 方法
+            original_init = LayerWiseRunner.__init__
+            
+            # 创建新的 __init__ 方法来设置 offload_device 参数
+            def mock_init(self, adapter, offload_device=offload_device):
+                original_init(self, adapter, offload_device)
+            
+            # 替换 __init__ 方法
+            LayerWiseRunner.__init__ = mock_init
+
             try:
                 # 直接调用CLI main函数，它会解析sys.argv
                 cli_main()
             finally:
                 # 恢复原始方法
                 QuantServiceProxy.quantize = original_quantize
-
+                # 恢复原始的 __init__ 方法
+                LayerWiseRunner.__init__ = original_init
     finally:
         # 恢复原始的sys.argv
         sys.argv = original_argv

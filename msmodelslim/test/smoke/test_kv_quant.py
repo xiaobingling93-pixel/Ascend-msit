@@ -12,7 +12,6 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-
 import os
 import shutil
 import tempfile
@@ -20,7 +19,7 @@ import tempfile
 import pytest
 import torch
 
-from .base import invoke_test, is_npu_available
+from .base import FakeLlamaModelAdapter, invoke_test, is_npu_available
 
 
 @pytest.mark.parametrize("test_device, test_dtype", [
@@ -29,13 +28,22 @@ from .base import invoke_test, is_npu_available
     pytest.param("npu", torch.bfloat16, marks=pytest.mark.skipif(not is_npu_available(), reason="NPU not available")),
 ])
 @pytest.mark.smoke
-def test_w8a8_dynamic_per_channel_quantization(test_device, test_dtype):
-    """测试W8A8 per_token量化功能（act: per_token, weight: per_channel）"""
+def test_kv_quant_only_process(test_device, test_dtype):
     torch.set_default_dtype(test_dtype)
     tmp_dir = tempfile.mkdtemp()
 
     try:
-        model_adapter = invoke_test("kv_smooth.yaml", tmp_dir)
+        # 执行per_channel量化测试（w8a8-static-per-channel.yaml使用per_tensor+per_channel）
+        model_adapter = invoke_test("kv_quant.yaml", tmp_dir)
+
+        assert isinstance(model_adapter, FakeLlamaModelAdapter), "model_adapter should be FakeLlamaModelAdapter"
+
+        # 测试伪量化
+        tokenizer = model_adapter.loaded_tokenizer
+        input_text = "Hello world"
+        input_ids = tokenizer(input_text, return_tensors="pt", truncation=True)
+        model_adapter.loaded_model(**input_ids)
+
     finally:
         # 清理临时目录
         if os.path.exists(tmp_dir):
