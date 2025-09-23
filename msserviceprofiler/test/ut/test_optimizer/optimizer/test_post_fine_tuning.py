@@ -25,94 +25,66 @@ def test_update_field():
 
 
 
-def test_ttft_gt_tp_gt_ttft_diff_gt_tp_diff():
+def test_fine_tune_with_concurrency_and_request_rate():
+ 
     """测试ttft >,tpot > 并且ttft差值大，调小prefill size的情况"""
     my_support_field = [
         OptimizerConfigField(name="CONCURRENCY", config_position="env", min=10, max=1001, dtype="int", value=200),
         OptimizerConfigField(name="REQUESTRATE", config_position="env", min=0, max=1001, dtype="int", value=20),
     ]
     params = np.array([100, 20])
-    mindie_fine_tune = FineTune(ttft_penalty=1, tpot_penalty=1, target_field=tuple(my_support_field))
+    mindie_fine_tune = FineTune(tpot_penalty=1, ttft_penalty=1, target_field=tuple(my_support_field))
     performance_index = PerformanceIndex()
     performance_index.time_to_first_token = 0.5
     performance_index.time_per_output_token = 0.05
     # 满足slo
     with pytest.raises(StopFineTune):
-        mindie_fine_tune.fine_tune_with_concurrency(params, performance_index)
+        mindie_fine_tune.fine_tune_with_concurrency_and_request_rate(params, performance_index)
     performance_index.time_to_first_token = 0.55
     performance_index.time_per_output_token = 0.055
     with pytest.raises(StopFineTune):
-        mindie_fine_tune.fine_tune_with_concurrency(params, performance_index)
+        mindie_fine_tune.fine_tune_with_concurrency_and_request_rate(params, performance_index)
     mindie_fine_tune.ttft_penalty = 0
     mindie_fine_tune.tpot_penalty = 0
     with pytest.raises(StopFineTune):
-        mindie_fine_tune.fine_tune_with_concurrency(params, performance_index)
+        mindie_fine_tune.fine_tune_with_concurrency_and_request_rate(params, performance_index)
     # 测试只限制tpot场景
+    mindie_fine_tune.reset_history()
     mindie_fine_tune.tpot_penalty = 3.0
     with pytest.raises(StopFineTune):
-        mindie_fine_tune.fine_tune_with_concurrency(params, performance_index)
+        mindie_fine_tune.fine_tune_with_concurrency_and_request_rate(params, performance_index)
+    mindie_fine_tune.reset_history()
     performance_index.time_per_output_token = 0.06
-    result = mindie_fine_tune.fine_tune_with_concurrency(params, performance_index)
-    assert result[-1].value < my_support_field[-1].value
+    result = mindie_fine_tune.fine_tune_with_concurrency_and_request_rate(params, performance_index)
+    assert result[0].value == 100 * (1 - 0.01 / 0.05 * 0.5)
     performance_index.time_per_output_token = 0.04
-    result = mindie_fine_tune.fine_tune_with_concurrency(params, performance_index)
-    assert result[-1].value < my_support_field[-1].value
+    result = mindie_fine_tune.fine_tune_with_concurrency_and_request_rate(np.array([50, 20]), performance_index)
+    assert result[0].value == 50 + 50 * (0.01 / 0.05 * 0.5)
     # 测试限制tpot和ttft
+    mindie_fine_tune.reset_history()
     mindie_fine_tune.ttft_penalty = 3.0
     performance_index.time_per_output_token = 0.06
     performance_index.time_to_first_token = 0.58
-    result = mindie_fine_tune.fine_tune_with_concurrency(params, performance_index)
-    assert result[-1].value == 0
-    performance_index.time_per_output_token = 0.058
+    result = mindie_fine_tune.fine_tune_with_concurrency_and_request_rate(params, performance_index)
+    assert result[0].value == 100 * (1 - 0.01 / 0.05 * 0.5)
+    performance_index.time_per_output_token = 0.04
     performance_index.time_to_first_token = 0.6
-    result = mindie_fine_tune.fine_tune_with_concurrency(params, performance_index)
-    assert result[-1].value == 0
-    performance_index.time_per_output_token = 0.06
-    performance_index.time_to_first_token = 0.4
-    result = mindie_fine_tune.fine_tune_with_concurrency(params, performance_index)
-    assert result[-1].value == 0
-
-
-def test_fine_tune_with_cycle_update_concurrency():
-    """测试ttft >,tpot > 并且ttft差值大，调小prefill size的情况"""
-    my_support_field = [
-        OptimizerConfigField(name="CONCURRENCY", config_position="env", min=10, max=1001, dtype="int", value=200),
-        OptimizerConfigField(name="REQUESTRATE", config_position="env", min=10, max=20, dtype="int", value=10),
-    ]
-    params = np.array([200, 10])
-    fine_tune = FineTune(target_field=tuple(my_support_field), ttft_penalty=3, tpot_penalty=3)
-    performance_index = PerformanceIndex()
-    performance_index.time_to_first_token = 0.7
+    result = mindie_fine_tune.fine_tune_with_concurrency_and_request_rate(np.array([90, 20]), performance_index)
+    assert result[0].value == 90 + 10 * ((0.05 - 0.04) / 0.05 * 0.5)
     performance_index.time_per_output_token = 0.05
-    result = fine_tune.fine_tune_with_concurrency(params, performance_index)
-    assert result[0].value == my_support_field[0].value * 0.5
- 
- 
-def test_fine_tune_with_concurrency():
-    my_support_field = [
-        OptimizerConfigField(name="max_batch_size", config_position="env", min=100, max=800, dtype="int"),
-        OptimizerConfigField(name="CONCURRENCY", config_position="env", min=10, max=1001, dtype="int", value=200),
-        OptimizerConfigField(name="REQUESTRATE", config_position="env", min=0, max=1001, dtype="int", value=20),
-    ]
-    fine_tune = FineTune(target_field=tuple(my_support_field), ttft_penalty=3, tpot_penalty=3)
- 
-    # 测试tpot和ttft都超过upper_bound的情况
-    params = np.array([100, 200, 20])
-    performance_index = PerformanceIndex(time_per_output_token=100, time_to_first_token=100)
-    result = fine_tune.fine_tune_with_concurrency(params, performance_index)
-    assert result[-1].value == 0
-    assert result[-2].value == 100
- 
-    # 测试tpot和ttft都低于lower_bound的情况
-    params = np.array([100, 200, 20])
-    performance_index = PerformanceIndex(time_per_output_token=0.03, time_to_first_token=0.3)
-    fine_tune.fine_tune_with_concurrency(params, performance_index)
-    result = fine_tune.fine_tune_with_concurrency(params, performance_index)
-    assert result[-1].value == 0
-    assert result[-2].value == 400
- 
-    # 测试tpot和ttft都在lower_bound和upper_bound之间的情况
-    params = np.array([100, 200, 20])
-    performance_index = PerformanceIndex(time_per_output_token=0.05, time_to_first_token=0.5)
-    with pytest.raises(StopFineTune):
-        result = fine_tune.fine_tune_with_concurrency(params, performance_index)
+    performance_index.time_to_first_token = 0.3
+    result = mindie_fine_tune.fine_tune_with_concurrency_and_request_rate(np.array([91, 20]), performance_index)
+    assert result[-1].value == 30
+    performance_index.time_per_output_token = 0.05
+    performance_index.time_to_first_token = 0.4
+    result = mindie_fine_tune.fine_tune_with_concurrency_and_request_rate(np.array([91, 80]), performance_index)
+    assert result[-1].value == 91
+    performance_index.time_per_output_token = 0.051
+    performance_index.time_to_first_token = 0.6
+    result = mindie_fine_tune.fine_tune_with_concurrency_and_request_rate(np.array([91, 91]), performance_index)
+    assert 60 < result[-1].value < 91
+    performance_index.time_per_output_token = 0.068
+    performance_index.time_to_first_token = 0.6
+    result = mindie_fine_tune.fine_tune_with_concurrency_and_request_rate(np.array([91, 91]), performance_index)
+    assert result[0].value < 91
+    assert result[-1].value == 20
