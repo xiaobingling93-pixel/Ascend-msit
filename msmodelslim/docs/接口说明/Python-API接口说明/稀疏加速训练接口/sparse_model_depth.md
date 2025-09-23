@@ -20,6 +20,6 @@ sparse_model_depth(model, optimizer, steps_per_epoch, epochs_each_stage)
 
 ### 调用示例
 ```python
-from msmodelslim.pytorch import sparse_model_depth
+from msmodelslim.pytorch import sparse
 model = sparse.sparse_model_depth(model, optimizer, steps_per_epoch=100, epochs_each_stage=[10, 20, -1])
 ```
