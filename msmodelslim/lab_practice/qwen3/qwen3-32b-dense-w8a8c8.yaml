@@ -13,8 +13,7 @@ spec:
   process:
     - type: "iter_smooth"                  
       alpha: 0.9                      
-      scale_min: 1e-5                      
-      symmetric: False                   
+      scale_min: 1e-5                                     
       enable_subgraph_type:                
         - 'norm-linear'
         - 'linear-linear'
