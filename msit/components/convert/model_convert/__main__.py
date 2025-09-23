@@ -104,8 +104,11 @@ class AieCommand(BaseCommand):
         if converter is None:
             logger.error('The object of \'convert\' create failed.')
             return
-
-        converter.convert_model()
+        try:
+            converter.convert_model()
+        except Exception as e:
+            msg = 'aie convert failed, please check.'
+            raise RuntimeError(msg) from e
         logger.info("AIE convert success")
 
 
