@@ -349,6 +349,13 @@ class AclInference:
             )
             _check_ret("acl.rt.memcpy", ret)
 
+            # 校验data_len避免缓冲区溢出
+            buffer_bytes = len(self.output_host_bytes_data[cur_id])
+            element_size = np.dtype(numpy_dtype).itemsize
+            max_elements = buffer_bytes // element_size
+            if data_len < 0 or data_len > max_elements:
+                raise ValueError("Invalid data_len: exceeds buffer capacity")
+
             np_array = np.frombuffer(self.output_host_bytes_data[cur_id], dtype=numpy_dtype, count=data_len)
             results.append(np_array.reshape(output_shape[cur_id]))
         return results
