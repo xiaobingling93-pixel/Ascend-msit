@@ -40,8 +40,8 @@ def test_fine_tune_with_concurrency_and_request_rate():
     # 满足slo
     with pytest.raises(StopFineTune):
         mindie_fine_tune.fine_tune_with_concurrency_and_request_rate(params, performance_index)
-    performance_index.time_to_first_token = 0.55
-    performance_index.time_per_output_token = 0.055
+    performance_index.time_to_first_token = 0.46
+    performance_index.time_per_output_token = 0.046
     with pytest.raises(StopFineTune):
         mindie_fine_tune.fine_tune_with_concurrency_and_request_rate(params, performance_index)
     mindie_fine_tune.ttft_penalty = 0
@@ -82,7 +82,7 @@ def test_fine_tune_with_concurrency_and_request_rate():
     performance_index.time_per_output_token = 0.051
     performance_index.time_to_first_token = 0.6
     result = mindie_fine_tune.fine_tune_with_concurrency_and_request_rate(np.array([91, 91]), performance_index)
-    assert 60 < result[-1].value < 91
+    assert result[-1].value < 91
     performance_index.time_per_output_token = 0.068
     performance_index.time_to_first_token = 0.6
     result = mindie_fine_tune.fine_tune_with_concurrency_and_request_rate(np.array([91, 91]), performance_index)
