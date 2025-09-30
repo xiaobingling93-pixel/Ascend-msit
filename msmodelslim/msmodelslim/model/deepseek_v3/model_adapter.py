@@ -9,16 +9,16 @@ from msmodelslim.app import DeviceType
 from msmodelslim.core.base.protocol import ProcessRequest
 from msmodelslim.core.graph import AdapterConfig, MappingConfig, FusionConfig
 from msmodelslim.model.common.layer_wise_forward import generated_decoder_layer_visit_func, \
-    _TransformersForwardBreak
+    TransformersForwardBreak
 from msmodelslim.model.factory import ModelFactory
 from msmodelslim.model.transformers import TransformersModel
 from msmodelslim.utils.exception import InvalidModelError
 from msmodelslim.utils.logging import logger_setter
 from msmodelslim.utils.security.model import SafeGenerator
-from .convert_fp8_to_bf16 import auto_convert_model_fp8_to_bf16, get_module_by_name
+from .convert_fp8_to_bf16 import auto_convert_model_fp8_to_bf16
 from .mtp_quant_module import warp_mtp_model, remove_zero_and_shift
 from ..interface_hub import ModelInfoInterface, ModelSlimPipelineInterfaceV1, \
-    IterSmoothInterface, FlexSmoothQuantInterface, ModelHookInterface
+    IterSmoothInterface, FlexSmoothQuantInterface
 
 
 @ModelFactory.register("DeepSeek-V3")
@@ -30,7 +30,6 @@ from ..interface_hub import ModelInfoInterface, ModelSlimPipelineInterfaceV1, \
 class DeepSeekV3ModelAdapter(TransformersModel,
                              ModelInfoInterface,  # support naive quantization
                              ModelSlimPipelineInterfaceV1,  # support modelslim v1
-                             ModelHookInterface,  # support spec ops for model in runner
                              IterSmoothInterface,  # support iter smooth
                              FlexSmoothQuantInterface,  # support flex smooth quant
                              ):
@@ -46,10 +45,12 @@ class DeepSeekV3ModelAdapter(TransformersModel,
         # load model to cpu and cpu
         model = SafeGenerator.get_model_from_pretrained(model_path=str(self.model_path),
                                                         config=self.config,
-                                                        trust_remote_code=True,
+                                                        trust_remote_code=self.trust_remote_code,
                                                         device_map="cpu",
                                                         torch_dtype="auto",
                                                         attn_implementation='eager')
+        # auto convert fp8 to bf16
+        auto_convert_model_fp8_to_bf16(model, str(self.model_path))
         # warp mtp into model
         model = warp_mtp_model(self.config, model, str(self.model_path))
         return model
@@ -57,14 +58,13 @@ class DeepSeekV3ModelAdapter(TransformersModel,
     def handle_dataset(self, dataset: Any, device: DeviceType = DeviceType.NPU) -> List[Any]:
         return self._get_tokenized_data(dataset, device)
 
-    def generate_model_visit(self, model: nn.Module, transformer_blocks: Optional[List[Tuple[str, nn.Module]]] = None,
-                             ) -> Generator[ProcessRequest, Any, None]:
-        return generated_decoder_layer_visit_func(model, transformer_blocks)
+    def generate_model_visit(self, model: nn.Module) -> Generator[ProcessRequest, Any, None]:
+        return generated_decoder_layer_visit_func(model)
 
     def generate_model_forward(self, model: nn.Module, inputs: Any,
                                ) -> Generator[ProcessRequest, Any, None]:
         def pack_request(name: str, request_args: Tuple, request_kwargs: Dict):
-            module = get_module_by_name(model, submodule_key=name)
+            module = model.get_submodule(name)
             return ProcessRequest(name, module, request_args, request_kwargs)
 
         transformer_blocks = [
@@ -79,7 +79,7 @@ class DeepSeekV3ModelAdapter(TransformersModel,
         def break_hook(module: nn.Module, hook_args: Tuple[Any, ...], hook_kwargs: Dict[str, Any]):
             nonlocal first_block_input
             first_block_input = (hook_args, hook_kwargs,)
-            raise _TransformersForwardBreak()
+            raise TransformersForwardBreak()
 
         hooks = [transformer_blocks[0][1].register_forward_pre_hook(break_hook, with_kwargs=True, prepend=True)]
 
@@ -91,7 +91,7 @@ class DeepSeekV3ModelAdapter(TransformersModel,
                 model(**inputs)
             else:
                 model(inputs)
-        except _TransformersForwardBreak:
+        except TransformersForwardBreak:
             pass
         except Exception as e:
             raise e
@@ -170,9 +170,6 @@ class DeepSeekV3ModelAdapter(TransformersModel,
             return args, kwargs
 
         model.model.register_forward_pre_hook(pre_forward_hook, with_kwargs=True)
-
-    def load_state_dict_hook(self, key: str, module: nn.Module) -> None:
-        auto_convert_model_fp8_to_bf16(key, module, str(self.model_path))
 
     def get_adapter_config_for_subgraph(self) -> List[AdapterConfig]:
         adapter_config = []
