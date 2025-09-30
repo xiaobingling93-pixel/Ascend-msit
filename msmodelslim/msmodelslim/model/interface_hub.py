@@ -39,7 +39,6 @@ __all__ = [
     'ModelSlimPipelineInterfaceV0',  # For ModelSlim V0 quant service, describing the pipeline of model inference.
     'MultimodalSDPipelineInterface',  # For MultimodalSD quant service, describing the pipeline of model inference.
     'ModelSlimPipelineInterfaceV1',  # For ModelSlim V1 quant service, describing the pipeline of model inference.
-    'ModelHookInterface', # For ModelSlim V1 quant service, describing model specific process.
 ]
 
 from msmodelslim.app.analysis_service.pipeline_interface import PipelineInterface as AnalyzePipelineInterface
@@ -52,5 +51,3 @@ from msmodelslim.core.base.model import BaseModelInterface
 from msmodelslim.core.runner.pipeline_interface import PipelineInterface as ModelSlimPipelineInterfaceV1
 from msmodelslim.quant.processor.anti_outlier.smooth_interface import IterSmoothInterface, FlexSmoothQuantInterface
 from msmodelslim.quant.processor.kv_smooth import KVSmoothFusedInterface
-from msmodelslim.core.runner.model_hook_interface import ModelHookInterface
-
