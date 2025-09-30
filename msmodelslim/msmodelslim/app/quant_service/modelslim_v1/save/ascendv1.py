@@ -22,6 +22,7 @@ import torch
 import torch.distributed as dist
 from torch import nn
 
+from ascend_utils.common.security.path import json_safe_load, json_safe_dump
 import msmodelslim.quant.ir as qir
 from msmodelslim import logger
 from msmodelslim.core.QAL.qregistry import QABCRegistry
@@ -31,6 +32,7 @@ from msmodelslim.quant.processor.base import AutoSessionProcessor
 from msmodelslim.utils.dist import DistHelper
 from msmodelslim.utils.exception import ToDoError
 from msmodelslim.utils.security import safe_copy_file
+
 from .saver import AutoSaverProcessor, AutoSaverBaseConfig
 from .utils.json import JsonWriter
 from .utils.pack import w4a8_pack_int4, process_scale
@@ -54,6 +56,26 @@ def copy_files(input_path, output_path):
         dest_file = os.path.join(output_path, file)
         safe_copy_file(src_path=ori_file, dest_path=dest_file)
         os.chmod(dest_file, int("600", 8))
+
+
+def remove_quantization_config(output_path):
+    """
+    从config.json文件中移除quantization_config字段
+    @param output_path: 目标目录
+    """
+    config_file = os.path.join(output_path, "config.json")
+    
+    if not os.path.exists(config_file):
+        return
+    
+    try:
+        config_data = json_safe_load(config_file, check_user_stat=False)
+        
+        if 'quantization_config' in config_data:
+            del config_data['quantization_config']
+            json_safe_dump(config_data, config_file, indent=2, check_user_stat=False)
+    except Exception as e:
+        logger.warning(f"Failed to remove quantization_config in config.json!")
 
 
 class AscendV1Config(AutoSaverBaseConfig):
@@ -197,6 +219,7 @@ class AscendV1Saver(AutoSaverProcessor):
             raise ToDoError(f'Model Adapter does NOT has attr model_path',
                             action=f'Please implement BaseModelInterface for saving')
         copy_files(self.adapter.model_path, self.config.save_directory)
+        remove_quantization_config(self.config.save_directory)
 
     def preprocess(self, request: BatchProcessRequest) -> None:
         if dist.is_initialized():
