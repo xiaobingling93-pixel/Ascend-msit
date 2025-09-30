@@ -16,6 +16,7 @@
 </div>
 
 ## 🔥🔥🔥Latest News
+- [2025/09/30] 🚀 msModelSlim 支持 [DeepSeek-V3.2-Exp W8A8](./example/DeepSeek/README.md#deepseek-v32-w8a8) 量化，单卡64G显存，100G内存即可执行
 - [2025/09/18] 🚀 msModelSlim 现已解决Qwen3-235B-A22B在W8A8量化下频繁出现“游戏副本”等异常token的问题 [Qwen3-MoE 量化推荐实践](./example/Qwen3-MOE/README.md)
 - [2025/09/18] 🚀 msModelSlim 支持DeepSeek R1 W4A8 per-channel 量化【Prototype】
 - [2025/09/03] 🤝 msModelSlim 支持大模型量化敏感层分析

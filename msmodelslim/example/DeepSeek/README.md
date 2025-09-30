@@ -19,15 +19,17 @@
 
 ## 支持的模型版本与量化策略
 
-| 模型系列 | 模型版本 | HuggingFace链接 | W8A8 | W8A16 | W4A8 | W8A8C8 | 稀疏量化 | KV Cache | Attention | FA3量化 | MTP量化 | 量化命令                                                                                                                                                                             |
-|---------|---------|---------------------------------------------------------------|-----|-------|-------|------|---------|----------|-----------|---------|---------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **DeepSeek-V2** | DeepSeek-V2-Lite-Chat-16B | [DeepSeek-V2-Lite-Chat-16B](https://huggingface.co/deepseek-ai/DeepSeek-V2-Lite-Chat) | ✅ | ✅ |   |   |   |   |   |   |   | [W8A8](#deepseek-v2-w8a8-dynamic量化) / [W8A16](#deepseek-v2-w8a16量化)                                                                                                              |
-| | DeepSeek-V2-Lite-Chat-236B | [DeepSeek-V2-Lite-Chat-236B](https://huggingface.co/deepseek-ai/DeepSeek-V2-Lite-Chat) | ✅ | ✅ |   |   |   |   |   |   |   | [W8A8](#deepseek-v2-w8a8-dynamic量化) / [W8A16](#deepseek-v2-w8a16量化)                                                                                                              |
-| **DeepSeek-Coder** | DeepSeek-Coder-33B | [DeepSeek-Coder-33B](https://huggingface.co/deepseek-ai/deepseek-coder-33b-instruct) | ✅ | ✅ |   | ✅ |   |   |   |   |   | [W8A8](#deepseek-coder-33b-w8a8量化) / [W8A16](#deepseek-coder-33b-w8a16量化) / [W8A8C8](#deepseek-coder-33b-w8a8c8量化)                                                               |
-| **DeepSeek-V3** | DeepSeek-V3 | [DeepSeek-V3](https://huggingface.co/deepseek-ai/DeepSeek-V3) | ✅ |   |   |   |   |   |   | ✅ |   | [W8A8](#deepseek-v3-w8a8-混合量化mlaw8a8量化moew8a8-dynamic量化) / [FA3](#deepseek-v3-w8a8-fa3-混合量化)                                                                                     |
-| | DeepSeek-V3.1  | [DeepSeek-V3.1 ](https://huggingface.co/deepseek-ai/DeepSeek-V3.1 ) | ✅ |   | ✅ | ✅ |   |   |   |   | ✅ | [W8A8](#deepseek-v31-w8a8-混合量化--mtp-量化) / [W8A8C8](#deepseek-v31-w8a8c8-混合量化--mtp-量化) / [W4A8](#deepseek-v31-w4a8-混合量化) / [MTP量化](#deepseek-v31-w8a8c8-混合量化--mtp-量化)                                              |
+| 模型系列 | 模型版本 | HuggingFace链接 | W8A8 | W8A16 | W4A8 | W8A8C8 | 稀疏量化 | KV Cache | Attention | FA3量化 | MTP量化 | 量化命令                                                                                                                                                                           |
+|---------|---------|---------------------------------------------------------------|-----|-------|-------|------|---------|----------|-----------|---------|---------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **DeepSeek-V2** | DeepSeek-V2-Lite-Chat-16B | [DeepSeek-V2-Lite-Chat-16B](https://huggingface.co/deepseek-ai/DeepSeek-V2-Lite-Chat) | ✅ | ✅ |   |   |   |   |   |   |   | [W8A8](#deepseek-v2-w8a8-dynamic量化) / [W8A16](#deepseek-v2-w8a16量化)                                                                                                            |
+| | DeepSeek-V2-Lite-Chat-236B | [DeepSeek-V2-Lite-Chat-236B](https://huggingface.co/deepseek-ai/DeepSeek-V2-Lite-Chat) | ✅ | ✅ |   |   |   |   |   |   |   | [W8A8](#deepseek-v2-w8a8-dynamic量化) / [W8A16](#deepseek-v2-w8a16量化)                                                                                                            |
+| **DeepSeek-Coder** | DeepSeek-Coder-33B | [DeepSeek-Coder-33B](https://huggingface.co/deepseek-ai/deepseek-coder-33b-instruct) | ✅ | ✅ |   | ✅ |   |   |   |   |   | [W8A8](#deepseek-coder-33b-w8a8量化) / [W8A16](#deepseek-coder-33b-w8a16量化) / [W8A8C8](#deepseek-coder-33b-w8a8c8量化)                                                             |
+| **DeepSeek-V3** | DeepSeek-V3 | [DeepSeek-V3](https://huggingface.co/deepseek-ai/DeepSeek-V3) | ✅ |   |   |   |   |   |   | ✅ |   | [W8A8](#deepseek-v3-w8a8-混合量化mlaw8a8量化moew8a8-dynamic量化) / [FA3](#deepseek-v3-w8a8-fa3-混合量化)                                                                                   |
+| | DeepSeek-V3.1  | [DeepSeek-V3.1 ](https://huggingface.co/deepseek-ai/DeepSeek-V3.1 ) | ✅ |   | ✅ | ✅ |   |   |   |   | ✅ | [W8A8](#deepseek-v31-w8a8-混合量化--mtp-量化) / [W8A8C8](#deepseek-v31-w8a8c8-混合量化--mtp-量化) / [W4A8](#deepseek-v31-w4a8-混合量化) / [MTP量化](#deepseek-v31-w8a8c8-混合量化--mtp-量化)                                            |
 | **DeepSeek-R1** | DeepSeek-R1 | [DeepSeek-R1](https://huggingface.co/deepseek-ai/DeepSeek-R1) | ✅ |   | ✅ |   |   |   |   | ✅ | ✅ | [W8A8](#deepseek-r1-w8a8-混合量化) / [W4A8](#deepseek-r1-w4a8-混合量化) / [W8A8动态](#deepseek-r1-w8a8-动态量化) / [FA3](#deepseek-r1-w8a8-fa3-混合量化) / [MTP量化](#deepseek-r1-w8a8-混合量化--mtp-量化) |
 | | DeepSeek-R1-0528 | [DeepSeek-R1-0528](https://huggingface.co/deepseek-ai/DeepSeek-R1-0528) | ✅ |   | ✅ |   |   |   |   | ✅ | ✅ | [W8A8](#deepseek-r1-0528-w8a8-混合量化--mtp-量化) / [W4A8](#deepseek-r1-0528-w4a8-per-channel量化) /[FA3](#deepseek-r1-0528-w8a8c8-混合量化--mtp-量化) / [MTP量化](#deepseek-r1-0528-w8a8-混合量化--mtp-量化) |
+| **DeepSeek-V3.2-Exp** | DeepSeek-V3.2-Exp          | [DeepSeek-V3.2-Exp ](https://huggingface.co/deepseek-ai/DeepSeek-V3.2-Exp )            | ✅    |       |     |      |      |          |           |       |      | [W8A8](#deepseek-v32-w8a8)                                                                                                                                                           |
+
 
 **说明：**
 - ✅ 表示该量化策略已通过msModelSlim官方验证，功能完整、性能稳定，建议优先采用。
@@ -303,6 +305,17 @@ python3 quant_deepseek_W8A8.py --model_path ${model_path} --save_path ${save_pat
    --save_path ${save_path} \
    --model_type DeepSeek-R1-0528 \
    --quant_type w4a8 \
+   --trust_remote_code True
+  ```
+
+##### <span id="deepseek-v32-w8a8">DeepSeek-V3.2-Exp(含MTP层) W8A8 混合量化</span>
+
+  ```shell
+  msmodelslim quant \
+   --model_path ${model_path} \
+   --save_path ${save_path} \
+   --model_type DeepSeek-V3.2-Exp \
+   --quant_type w8a8 \
    --trust_remote_code True
   ```
 
