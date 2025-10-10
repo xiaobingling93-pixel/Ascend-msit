@@ -39,7 +39,7 @@ from msquickcmp.common.args_check import is_saved_model_valid
 from msquickcmp.common.convert import convert_bin_dump_data_to_npy
 from msquickcmp.common.convert import convert_npy_to_bin
 from msquickcmp.common.utils import AccuracyCompareException, get_shape_to_directory_name, \
-    safe_delete_path_if_exists, OPTYPE_WHITWLIST
+    safe_delete_path_if_exists, OPTYPE_WHITWLIST, find_om_files
 from msquickcmp.net_compare import analyser
 from msquickcmp.net_compare.net_compare import NetCompare
 from msquickcmp.npu.npu_dump_data import NpuDumpData, DynamicInput
@@ -498,7 +498,12 @@ def fusion_close_model_convert(args: CmpArgsAdapter):
             atc_cmd.append("--input_shape=" + atc_input_shape_in_offline_model)
 
         utils.execute_command(atc_cmd)
-        args.model_path = close_fusion_om_file + ".om"
+
+        om_files = find_om_files(args.out_path)
+        if len(om_files) != 1:
+            utils.logger.error('The number of .om files in output directory is not 1, please check.')
+            raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PATH_ERROR)
+        args.model_path = os.path.realpath(om_files[0])
 
 
 def check_and_run(args: CmpArgsAdapter, use_cli: bool):

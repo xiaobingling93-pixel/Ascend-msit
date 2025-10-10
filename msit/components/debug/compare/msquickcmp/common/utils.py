@@ -744,3 +744,11 @@ def load_npy_from_buffer(raw_data, dtype, shape):
         return np.frombuffer(raw_data, dtype=dtype).reshape(shape)  
     except Exception as e:
         return no_dump_data
+
+
+def find_om_files(dir_path):
+    om_files = []
+    for filename in os.listdir(dir_path):
+        if filename.endswith('.om'):
+            om_files.append(os.path.join(dir_path, filename))
+    return om_files

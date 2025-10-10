@@ -1,6 +1,8 @@
+import threading
 import unittest
 from unittest.mock import patch, MagicMock
 import os, json
+import shutil
 
 from components.debug.compare.msquickcmp.common.utils import (
     check_exec_script_file, check_file_or_directory_path, check_input_bin_file_path,
@@ -29,8 +31,10 @@ from components.debug.compare.msquickcmp.common.utils import (
     get_mbatch_op_name,
     get_batch_index_from_name,
     get_data_len_by_shape,
-    safe_delete_path_if_exists, parse_json_file, load_npy_from_buffer
+    safe_delete_path_if_exists, parse_json_file, load_npy_from_buffer,
+    find_om_files
 )
+
 
 class TestCheckFunctions1(unittest.TestCase):
 
@@ -585,3 +589,31 @@ class TestLoadNpyFromBuffer(unittest.TestCase):
     def test_load_npy_exception(self, mock_frombuffer):
         result = load_npy_from_buffer(b'invalid', dtype='float32', shape=(3, 3))
         self.assertIsNone(result)
+
+
+base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_utils_msquickcmp_find_om_files')
+
+
+class TestFindOmFiles(unittest.TestCase):
+    def setUp(self):
+        os.makedirs(base_dir, mode=0o750, exist_ok=True)
+        self.lock = threading.Lock()
+
+    def tearDown(self):
+        if os.path.exists(base_dir):
+            shutil.rmtree(base_dir)
+
+    def test_find_om_files(self):
+        file1 = os.path.join(base_dir, 'test1.om')
+        file2 = os.path.join(base_dir, 'test2.txt')
+        file3 = os.path.join(base_dir, 'test3.om')
+        with open(file1, 'w') as f:
+            f.write('1')
+        with open(file2, 'w') as f:
+            f.write('21')
+        with open(file3, 'w') as f:
+            f.write('3')
+
+        result = find_om_files(base_dir)
+
+        self.assertEqual(len(result), 2)
