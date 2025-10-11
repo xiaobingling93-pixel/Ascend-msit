@@ -47,7 +47,7 @@ if not site.getsitepackages():
 
 setup(
     name='msit_llm',
-    version='8.1.0',
+    version='8.2.0',
     description='Debug tools for large language model(llm)',
     url=config.get('URL', 'msit_llm_url'),
     packages=find_packages(),
