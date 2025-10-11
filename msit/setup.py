@@ -67,7 +67,7 @@ class InstallWithShUmask(install):
 
 setup(
     name="msit",
-    version="8.1.0",
+    version="8.2.0",
     description="msIT, MindStudio Inference Tools",
     long_description_content_type="text/markdown",
     url=config.get("URL", "msit_url"),

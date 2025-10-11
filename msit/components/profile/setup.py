@@ -32,7 +32,7 @@ msit_sub_task_entry_points = [
 
 setup(
     name='msit-profile',
-    version='8.1.0',
+    version='8.2.0',
     description='msprof tool',
     url='msit_msprof url',
     packages=find_packages(),
