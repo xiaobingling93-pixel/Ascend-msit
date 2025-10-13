@@ -31,7 +31,7 @@ from msit_llm.common.constant import ATB_HOME_PATH, ATB_SAVE_TENSOR_TIME, ATB_SA
     ASCEND_TOOLKIT_HOME, ATB_PROB_LIB_WITH_ABI, ATB_PROB_LIB_WITHOUT_ABI, ATB_SAVE_CPU_PROFILING, \
     ATB_CUR_PID, ATB_DUMP_SUB_PROC_INFO_SAVE_PATH, ATB_DEVICE_ID, ATB_AIT_LOG_LEVEL, ATB_DUMP_TYPE, get_ait_dump_path, \
     ATB_TIMESTAMP, GLOBAL_HISTORY_AIT_DUMP_PATH_LIST, ATB_SAVE_TENSOR_IN_BEFORE_OUT_AFTER, ATB_SAVE_TENSOR_STATISTICS, \
-    ATB_SAVE_SYMLINK
+    ATB_SAVE_SYMLINK, ATB_DUMP_CONFIG
 
 
 def run_pipeline(lib_atb_path):
@@ -86,6 +86,9 @@ def is_use_cxx11():
 
 
 def init_dump_task(args):
+    if args.config_path:
+        os.environ[ATB_DUMP_CONFIG] = str(args.config_path)
+
     if args.save_desc:
         os.environ[ATB_SAVE_TENSOR] = "2"
     else:
@@ -97,6 +100,7 @@ def init_dump_task(args):
     else:
         os.environ[ATB_SAVE_TENSOR_IN_BEFORE_OUT_AFTER] = "0"
         os.environ[ATB_SAVE_TENSOR_TIME] = str(args.time)
+
     if args.ids:
         os.environ[ATB_SAVE_TENSOR_IDS] = str(args.ids)
     else:
