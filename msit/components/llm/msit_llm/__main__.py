@@ -29,7 +29,7 @@ from msit_llm.common.utils import (
     check_data_can_convert_to_int, check_specified_rank_id, check_l1_norm,
     load_file_to_read_common_check, check_cosine_similarity, check_kl_divergence,
     check_token_range, NAMEDTUPLE_PRECISION_METRIC, NAMEDTUPLE_PRECISION_MODE,
-    get_rank_id_from_torchair_data
+    get_rank_id_from_torchair_data, check_config_path_legality
 )
 from msit_llm.dump.initial import init_dump_task, clear_dump_task
 from msit_llm.errcheck.process import process_error_check
@@ -173,6 +173,14 @@ class DumpCommand(BaseCommand):
             action='store_true',
             default=False,
             help='Enable symbolic links for duplicate files (saves disk space and runtime).')
+
+        parser.add_argument(
+            '--config-path',
+            '-config',
+            dest="config_path",
+            required=False,
+            type=check_config_path_legality,
+            help='Dump configuration file path.E.g:--config-path /xx/xxxx/xx.json')
 
         parser.add_argument("--log-level", "-l", default="info", choices=LOG_LEVELS_LOWER, help="specify log level.")
 

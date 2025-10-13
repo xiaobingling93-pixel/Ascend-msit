@@ -18,9 +18,10 @@ import argparse
 import re
 from collections import namedtuple
 
-from components.utils.constants import PATH_WHITE_LIST_REGEX
+from components.utils.constants import PATH_WHITE_LIST_REGEX, FileCheckConst
 from components.utils.util import check_file_size_based_on_ext, check_file_ext, safe_int
 from components.utils.file_open_check import FileStat
+from components.utils.file_utils import FileChecker
 from msit_llm.common.constant import MAX_DATA_SIZE
 from components.utils.check.rule import Rule
 from msit_llm.common.log import logger
@@ -159,6 +160,12 @@ def check_input_path_legality(value):
         if not file_stat.is_basically_legal('read', strict_permission=False):
             raise argparse.ArgumentTypeError(f"input path:{input_path} is illegal. Please check.")
     return value
+
+
+def check_config_path_legality(config_path):
+    file_check = FileChecker(config_path, FileCheckConst.FILE, ability=FileCheckConst.READ_ABLE)
+    file_check.common_check()
+    return config_path
 
 
 def check_data_file_size(data_path, max_size=MAX_DATA_SIZE):
