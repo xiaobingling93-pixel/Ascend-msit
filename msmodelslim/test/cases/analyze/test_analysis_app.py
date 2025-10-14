@@ -4,7 +4,7 @@
 包括CLI、APP和分析服务模块的所有功能
 目标覆盖率：>80%
 """
-
+import os
 import shutil
 import tempfile
 import unittest
@@ -32,18 +32,27 @@ class TestComprehensiveAnalysisCoverage(unittest.TestCase):
 
     def setUp(self):
         """测试前的准备工作"""
-        self.temp_dir = tempfile.mkdtemp()
-        self.dataset_dir = Path(self.temp_dir) / "lab_calib"
-        self.dataset_dir.mkdir()
 
-        # 创建模拟的校准数据集文件
-        self.calib_file = self.dataset_dir / "boolq.jsonl"
-        with open(self.calib_file, 'w') as f:
-            f.write('{"data": "mock calibration data"}')
+        # 1. 保存原始 umask
+        original_umask = os.umask(0)  # 临时设为 0 并获取原始值
+        try:
+            # 2. 设置目标 umask（0o026 对应权限 640/750）
+            os.umask(0o026)
+            self.temp_dir = tempfile.mkdtemp()
+            self.dataset_dir = Path(self.temp_dir) / "lab_calib"
+            self.dataset_dir.mkdir()
 
-        # 创建模型文件
-        self.model_path = Path(self.temp_dir) / "model"
-        self.model_path.mkdir()
+            # 创建模拟的校准数据集文件
+            self.calib_file = self.dataset_dir / "boolq.jsonl"
+            with open(self.calib_file, 'w') as f:
+                f.write('{"data": "mock calibration data"}')
+
+            # 创建模型文件
+            self.model_path = Path(self.temp_dir) / "model"
+            self.model_path.mkdir()
+        finally:
+            # 3. 无论是否出错，都恢复原始 umask
+            os.umask(original_umask)
 
     def tearDown(self):
         """测试后的清理工作"""
