@@ -18,30 +18,17 @@ import threading
 from collections import namedtuple, deque, Counter
 from unittest.mock import patch, MagicMock, call
 import pytest
-import ms_service_profiler
+
+from vllm_profiler.vllm_v1 import batch_hookers
 
 from .fake_ms_service_profiler import Profiler, Level
 
-# Setup environment
-os.environ["VLLM_USE_V1"] = "-1"
-sys.modules["ms_service_profiler"].Profiler = Profiler
-sys.modules["ms_service_profiler"].Level = Level
-
-from msserviceprofiler.vllm_profiler.vllm_v1 import batch_hookers
 
 # Test helpers
 SequenceGroup = namedtuple("SequenceGroup", ["request_id", "prompt_token_ids"])
 SchedulerOutput = namedtuple(
     "SchedulerOutput", ["scheduled_new_reqs", "scheduled_cached_reqs", "num_scheduled_tokens", "finished_req_ids"]
 )
-
-
-# Reset profiler before each test
-@pytest.fixture(autouse=True, scope="function")
-def reset_profiler():
-    Profiler.reset()
-    yield
-    Profiler.reset()
 
 
 @pytest.fixture

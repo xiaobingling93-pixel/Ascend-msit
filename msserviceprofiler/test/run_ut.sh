@@ -1,6 +1,6 @@
 #!/bin/bash
 # This script is used to run ut and st testcase.
-# Copyright Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+# Copyright Huawei Technologies Co., Ltd. 2021-2025. All rights reserved.
 CUR_DIR=$(dirname $(readlink -f $0))
 TOP_DIR=$(readlink -f ${CUR_DIR}/..)
 TEST_DIR=${TOP_DIR}/"test"
@@ -20,10 +20,22 @@ run_test_cpp() {
   cd .
 }
 
+install_python_package() {
+  # 可以把测试环境中需要安装的非依赖package（当前代码仓的工具组件）都放在这里
+  # vllm_profiler
+  echo "Installing vllm_profiler in editable mode..." 
+  pip install -e ${TOP_DIR}/msserviceprofiler/vllm_profiler || {
+    echo "vllm profiler installing failed, falling back to PYTHONPATH"
+    export PYTHONPATH=${TOP_DIR}/msserviceprofiler/msserviceprofiler:${PYTHONPATH}
+  }
+}
+
 run_test_python() {
   python3 --version
-  #pip3 install pytest "pandas>=2.2"
+  
   export PYTHONPATH=${TOP_DIR}:${PYTHONPATH}
+  install_python_package
+  
   python3 -m coverage run --branch --source ${TOP_DIR}/'msserviceprofiler' -m pytest ${TEST_DIR}/ut
 
   if [ $? -ne 0 ]; then

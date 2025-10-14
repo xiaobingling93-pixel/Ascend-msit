@@ -16,24 +16,11 @@ import os
 import sys
 import types
 from unittest.mock import MagicMock
-
 import pytest
-import ms_service_profiler
+
+from vllm_profiler.vllm_v0 import request_hookers
+
 from .fake_ms_service_profiler import Profiler, Level
-
-# Setup environment
-os.environ["VLLM_USE_V1"] = "-1"
-sys.modules["ms_service_profiler"].Profiler = Profiler
-sys.modules["ms_service_profiler"].Level = Level
-
-from msserviceprofiler.vllm_profiler.vllm_v0 import request_hookers
-
-
-@pytest.fixture(autouse=True)
-def reset_profiler_calls():
-    Profiler.reset()
-    yield
-    Profiler.reset()
 
 
 def test_prof_add_request_given_valid_input_when_called_then_logs_events():
@@ -89,7 +76,7 @@ def test_process_model_outputs_given_empty_queue_when_called_then_returns_origin
     ctx = make_ctx([])
     result = request_hookers.process_model_outputs(original_func, object(), ctx)
     assert result == "empty-ok"
-    assert Profiler.instance_calls == []
+    assert not Profiler.instance_calls
 
 
 def test_process_model_outputs_given_non_empty_queue_and_finished_seq_when_called_then_logs_and_returns():

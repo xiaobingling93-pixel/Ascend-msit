@@ -18,18 +18,9 @@ from collections import namedtuple
 from unittest.mock import patch, MagicMock, AsyncMock
 import pytest
 
+from vllm_profiler.vllm_v1 import request_hookers
+
 from .fake_ms_service_profiler import Profiler, Level
-
-sys.modules["ms_service_profiler"].Profiler = Profiler
-sys.modules["ms_service_profiler"].Level = Level
-os.environ["VLLM_USE_V1"] = "-1"
-
-from msserviceprofiler.vllm_profiler.vllm_v1 import request_hookers
-
-
-@pytest.fixture(autouse=True)
-def reset_profiler():
-    Profiler.reset()
 
 
 @pytest.mark.asyncio

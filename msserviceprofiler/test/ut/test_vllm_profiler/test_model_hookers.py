@@ -18,19 +18,11 @@ import threading
 import contextlib
 from collections import namedtuple
 from unittest.mock import patch, MagicMock, call
-
 import pytest
-import ms_service_profiler
 
-# Setup environment
-os.environ["VLLM_USE_V1"] = "-1"
+from vllm_profiler.vllm_v1 import model_hookers
+
 from .fake_ms_service_profiler import Profiler, Level
-
-sys.modules["ms_service_profiler"].Profiler = Profiler
-sys.modules["ms_service_profiler"].Level = Level
-
-# Import module after mocks
-from msserviceprofiler.vllm_profiler.vllm_v1 import model_hookers
 
 
 # Reset profiler and state before each test

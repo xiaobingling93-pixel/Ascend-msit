@@ -15,28 +15,19 @@
 import os
 import sys
 from unittest.mock import MagicMock
-
 import pytest
-import ms_service_profiler
+
+from vllm_profiler.vllm_v0 import kvcache_hookers
 
 from .fake_ms_service_profiler import Profiler, Level
-
-# Setup environment
-os.environ["VLLM_USE_V1"] = "-1"
-sys.modules["ms_service_profiler"].Profiler = Profiler
-sys.modules["ms_service_profiler"].Level = Level
-
-from msserviceprofiler.vllm_profiler.vllm_v0 import kvcache_hookers
 
 
 @pytest.fixture(autouse=True)
 def reset_globals():
     """Reset GLOBAL_REQUEST_DICT and Profiler calls before each test."""
     kvcache_hookers.GLOBAL_REQUEST_DICT.clear()
-    Profiler.reset()
     yield
     kvcache_hookers.GLOBAL_REQUEST_DICT.clear()
-    Profiler.reset()
 
 
 class DummyBlockTable:
