@@ -18,16 +18,10 @@ import threading
 from collections import namedtuple
 from unittest.mock import MagicMock
 import pytest
-import ms_service_profiler
+
+from vllm_profiler.vllm_v0 import model_hookers
 
 from .fake_ms_service_profiler import Profiler, Level
-
-# Setup environment
-os.environ["VLLM_USE_V1"] = "-1"
-sys.modules["ms_service_profiler"].Profiler = Profiler
-sys.modules["ms_service_profiler"].Level = Level
-
-from msserviceprofiler.vllm_profiler.vllm_v0 import model_hookers
 
 
 class FakeSeqData:
@@ -115,7 +109,7 @@ def test_execute_model_given_first_run_when_called_then_skip_profiling():
     result = model_hookers.execute_model(original_func, "this", model_input, "kv")
     assert result == "first_ok"
     # No profiler recorded
-    assert Profiler.instance_calls == []
+    assert not Profiler.instance_calls
 
 
 @pytest.mark.parametrize("prefill", [True, False])

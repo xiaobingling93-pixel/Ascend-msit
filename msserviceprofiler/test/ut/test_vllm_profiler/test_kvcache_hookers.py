@@ -17,24 +17,13 @@ import os
 from collections import namedtuple
 from unittest.mock import patch, MagicMock, call
 import pytest
-import ms_service_profiler
+
+from vllm_profiler.vllm_v1 import kvcache_hookers
 
 from .fake_ms_service_profiler import Profiler, Level
 
-# Setup environment
-os.environ["VLLM_USE_V1"] = "-1"
-original = sys.modules.get("ms_service_profiler", None)
-sys.modules["ms_service_profiler"].Profiler = Profiler
-sys.modules["ms_service_profiler"].Level = Level
+
 Request = namedtuple("Request", ["request_id", "num_tokens"])
-
-from msserviceprofiler.vllm_profiler.vllm_v1 import kvcache_hookers
-
-
-@pytest.fixture(autouse=True)
-def reset_profiler():
-    Profiler.reset()
-    yield
 
 
 def test_allocate_slots_given_valid_request_when_called_then_log_allocation():

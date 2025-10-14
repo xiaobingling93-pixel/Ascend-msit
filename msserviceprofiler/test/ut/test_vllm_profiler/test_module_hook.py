@@ -20,8 +20,7 @@ from unittest.mock import patch, MagicMock
 from packaging.version import Version
 import pytest
 
-os.environ["VLLM_USE_V1"] = "-1"
-from msserviceprofiler.vllm_profiler.module_hook import (
+from vllm_profiler.module_hook import (
     import_object_from_string,
     HookHelper,
     VLLMHookerBase,
@@ -168,7 +167,7 @@ def test_vllmhookerbase_do_hook_given_hook_points_when_applying_then_functions_r
 
 # Test cases for vllm_hook decorator
 @vllm_hook(
-    hook_points=[("msserviceprofiler.vllm_profiler.module_hook", "sample_function")],
+    hook_points=[("vllm_profiler.module_hook", "sample_function")],
     min_version="1.0.0",
     max_version="2.0.0",
 )
@@ -178,7 +177,7 @@ def sample_profiler(ori_func, *args, **kwargs):
 
 def test_apply_hooks_given_invalid_version_when_applying_then_handles_error(cleanup_hook_registry):
     """Test error handling with invalid version"""
-    with patch("msserviceprofiler.vllm_profiler.module_hook.logger.error") as mock_error:
+    with patch("vllm_profiler.module_hook.logger.error") as mock_error:
 
         @vllm_hook(hook_points=[("invalid.module", "nonexistent.func")], min_version="1.0.0")
         def mock_profiler(ori_func, *args, **kwargs):
