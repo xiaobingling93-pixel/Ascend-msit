@@ -246,7 +246,7 @@ class TestAppAnalysisModule(TestComprehensiveAnalysisCoverage):
             model_type="Qwen2.5-7B-Instruct",
             model_path=str(self.model_path),
             patterns=["*"],
-            device=DeviceType.NPU,
+            device=DeviceType.CPU,
             metrics=AnalysisMetrics.STD,
             calib_dataset="boolq.jsonl",
             topk=15,
@@ -270,6 +270,7 @@ class TestAppAnalysisModule(TestComprehensiveAnalysisCoverage):
             'method_params': {}
         }
         mock_service.analyze.assert_called_once_with(
+            device=DeviceType.CPU,
             model_adapter=mock_model_adapter,
             patterns=["*"],
             analysis_config=expected_config
