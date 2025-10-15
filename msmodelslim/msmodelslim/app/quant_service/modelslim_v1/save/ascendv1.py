@@ -23,16 +23,15 @@ import torch.distributed as dist
 from torch import nn
 
 from ascend_utils.common.security.path import json_safe_load, json_safe_dump
-import msmodelslim.quant.ir as qir
 from msmodelslim import logger
 from msmodelslim.core.QAL.qregistry import QABCRegistry
 from msmodelslim.core.base.model import BaseModelInterface
 from msmodelslim.core.base.protocol import BatchProcessRequest
+from msmodelslim.quant import ir as qir
 from msmodelslim.quant.processor.base import AutoSessionProcessor
 from msmodelslim.utils.dist import DistHelper
 from msmodelslim.utils.exception import ToDoError
 from msmodelslim.utils.security import safe_copy_file
-
 from .saver import AutoSaverProcessor, AutoSaverBaseConfig
 from .utils.json import JsonWriter
 from .utils.pack import w4a8_pack_int4, process_scale
@@ -64,13 +63,13 @@ def remove_quantization_config(output_path):
     @param output_path: 目标目录
     """
     config_file = os.path.join(output_path, "config.json")
-    
+
     if not os.path.exists(config_file):
         return
-    
+
     try:
         config_data = json_safe_load(config_file, check_user_stat=False)
-        
+
         if 'quantization_config' in config_data:
             del config_data['quantization_config']
             json_safe_dump(config_data, config_file, indent=2, check_user_stat=False)
@@ -177,7 +176,7 @@ class AscendV1Saver(AutoSaverProcessor):
     关于该格式的更多信息，请参考 AscendV1Config 中的说明。
     """
     # W4A8_DYNAMIC is hidden.
-    QUANT_TYPE_PRIORITY = ['FLOAT', 'W16A16S', 'W8A8_DYNAMIC', 'W8A8', "W4A4_DYNAMIC"]
+    QUANT_TYPE_PRIORITY = ['FLOAT', 'W16A16S', 'W8A8_DYNAMIC', 'W8A8', 'W8A8_MIX', 'W4A4_DYNAMIC']
 
     def __init__(self, model: nn.Module, config: AscendV1Config, adapter: object, **kwargs: Dict[str, Any]):
         super().__init__(model, config, adapter, **kwargs)
@@ -299,6 +298,36 @@ class AscendV1Saver(AutoSaverProcessor):
                               torch.zeros_like(weight_scale).to(torch.float32))
             if module.bias is not None:
                 self.write_tensor(prefix + ".bias", "W8A8_DYNAMIC", module.bias.to(torch.float32))
+
+    @save_this_rank_only()
+    def on_w8a8_pd_mix(self, prefix: str, module: qir.W8A8PDMixFakeQuantLinear):
+        self.update_quant_type("W8A8_MIX")
+
+        with torch.device(module.weight.device):
+            input_scale, input_offset = module.input_scale, module.input_offset
+            input_scale = input_scale.unsqueeze(0) if input_scale.ndim == 0 else input_scale
+            input_offset = input_offset.unsqueeze(0) if input_offset.ndim == 0 else input_offset
+            weight_scale = module.weight_scale
+            quant_weight = module.weight
+            deq_scale = input_scale * weight_scale
+            deq_scale = deq_scale.squeeze(1) if deq_scale.ndim > 1 else deq_scale
+            fp_weight_bias = module.bias if module.bias is not None else torch.zeros(module.weight.shape[0])
+            fp_weight_bias = fp_weight_bias.unsqueeze(1) if deq_scale.ndim > 1 else fp_weight_bias
+            correction = quant_weight.to(torch.float32).sum(dim=1) * input_offset.to(torch.float32)
+            correction = correction.unsqueeze(1) if deq_scale.ndim > 1 else correction
+            quant_bias = torch.round(fp_weight_bias / deq_scale - correction).to(torch.int32)
+            self.write_tensor(prefix + ".weight", "W8A8_MIX", quant_weight.to(torch.int8))
+            self.write_tensor(prefix + ".quant_bias", "W8A8_MIX", quant_bias.to(torch.int32))
+            self.write_tensor(prefix + ".input_scale", "W8A8_MIX", input_scale.to(torch.float32))
+            self.write_tensor(prefix + ".input_offset", "W8A8_MIX", input_offset.to(torch.float32))
+            self.write_tensor(prefix + ".deq_scale", "W8A8_MIX", deq_scale.to(torch.float32))
+
+            weight_scale = weight_scale.unsqueeze(-1)
+            self.write_tensor(prefix + ".weight_scale", "W8A8_MIX", weight_scale.to(torch.float32))
+            self.write_tensor(prefix + ".weight_offset", "W8A8_MIX",
+                              torch.zeros_like(weight_scale).to(torch.float32))
+            if module.bias is not None:
+                self.write_tensor(prefix + ".bias", "W8A8_MIX", module.bias.to(torch.float32))
 
     @save_this_rank_only()
     def on_w8a8_dynamic_per_group(self, prefix: str, module: qir.W8A8DynamicPerGroupFakeQuantLinear):
