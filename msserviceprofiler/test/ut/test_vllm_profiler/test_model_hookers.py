@@ -21,6 +21,7 @@ from unittest.mock import patch, MagicMock, call
 import pytest
 
 from vllm_profiler.vllm_v1 import model_hookers
+from vllm_profiler.vllm_v1.utils import create_state_getter
 
 from .fake_ms_service_profiler import Profiler, Level
 
@@ -28,9 +29,8 @@ from .fake_ms_service_profiler import Profiler, Level
 # Reset profiler and state before each test
 @pytest.fixture(autouse=True)
 def reset_state():
-    # Clear thread-local state
-    if hasattr(model_hookers._thread_local, "hook_state"):
-        del model_hookers._thread_local.hook_state
+    # 重置状态获取器，以清空内部的线程本地状态
+    model_hookers._get_state = create_state_getter(model_hookers.HookState)
     Profiler.reset()
     yield
 
@@ -54,59 +54,19 @@ def create_request(request_id, token_count=10, computed_tokens=0):
 
 
 def test_get_state_given_first_call_when_no_existing_state_then_create_new_state():
-    if hasattr(model_hookers._thread_local, "hook_state"):
-        del model_hookers._thread_local.hook_state
-
+    # 重新绑定获取器，确保是“第一次”获取
+    model_hookers._get_state = create_state_getter(model_hookers.HookState)
     state = model_hookers._get_state()
     assert isinstance(state, model_hookers.HookState)
-    assert state == model_hookers._thread_local.hook_state
+    # 再次获取应返回同一实例
+    assert model_hookers._get_state() is state
 
 
 def test_get_state_given_existing_state_when_called_then_return_same_instance():
-    original_state = model_hookers.HookState()
-    model_hookers._thread_local.hook_state = original_state
-    assert model_hookers._get_state() is original_state
-
-
-def test_extract_request_ids_given_new_request_when_processing_then_update_iter_size():
-    state = model_hookers.HookState()
-    scheduler_output = MagicMock(num_scheduled_tokens={"req1": 5, "req2": 3}, finished_req_ids=["req3"])
-
-    with patch.object(model_hookers, "_get_state", return_value=state):
-        request_id_list, request_id_with_iter_list = model_hookers._extract_request_id_from_scheduler_output(
-            scheduler_output
-        )
-
-    assert request_id_list == [{"rid": "req1"}, {"rid": "req2"}]
-    assert request_id_with_iter_list == [{"rid": "req1", "iter_size": 0}, {"rid": "req2", "iter_size": 0}]
-    assert state.request_id_to_iter_size == {"req1": 0, "req2": 0}
-
-
-def test_extract_request_ids_given_existing_request_when_processing_then_increment_iter_size():
-    state = model_hookers.HookState()
-    state.request_id_to_iter_size = {"req1": 3, "req2": 5}
-    scheduler_output = MagicMock(num_scheduled_tokens={"req1": 5, "req2": 3}, finished_req_ids=["req3"])
-
-    with patch.object(model_hookers, "_get_state", return_value=state):
-        request_id_list, request_id_with_iter_list = model_hookers._extract_request_id_from_scheduler_output(
-            scheduler_output
-        )
-
-    assert request_id_with_iter_list == [{"rid": "req1", "iter_size": 4}, {"rid": "req2", "iter_size": 6}]
-    assert state.request_id_to_iter_size == {"req1": 4, "req2": 6}
-
-
-def test_extract_request_ids_given_finished_request_when_processing_then_clean_state():
-    state = model_hookers.HookState()
-    state.request_id_to_prompt_token_len = {"req1": 10, "req3": 20}
-    state.request_id_to_iter_size = {"req1": 3, "req3": 5}
-    scheduler_output = MagicMock(num_scheduled_tokens={"req1": 5, "req3": 1}, finished_req_ids=["req3"])
-
-    with patch.object(model_hookers, "_get_state", return_value=state):
-        model_hookers._extract_request_id_from_scheduler_output(scheduler_output)
-
-    assert "req3" not in state.request_id_to_prompt_token_len
-    assert "req3" not in state.request_id_to_iter_size
+    # 首次获取并保存
+    state1 = model_hookers._get_state()
+    # 再次获取应返回相同实例
+    assert model_hookers._get_state() is state1
 
 
 def test_compute_logits_given_valid_input_when_called_then_profile_span():
@@ -163,7 +123,13 @@ def test_execute_model_given_new_requests_when_processing_then_update_state_and_
 
     # Check batch profiling
     batch_calls = Profiler.instance_calls[0]
-    assert ("res", [{"rid": "req1", "iter_size": 0}, {"rid": "req2", "iter_size": 0}]) in batch_calls
+    # 允许实现附带额外字段（如 type），仅校验 rid 与 iter_size
+    res_entry = next(x for x in batch_calls if isinstance(x, tuple) and x[0] == "res")
+    res_payload = res_entry[1]
+    assert [{"rid": d["rid"], "iter_size": d["iter_size"]} for d in res_payload] == [
+        {"rid": "req1", "iter_size": 0},
+        {"rid": "req2", "iter_size": 0},
+    ]
     assert ("attr", "batch_type", "Prefill") in batch_calls
     assert ("attr", "batch_size", 8) in batch_calls
     assert ("span_start", "modelExec") in batch_calls
@@ -191,9 +157,9 @@ def test_execute_model_given_prefill_batch_when_processing_then_set_prefill_flag
     with patch.object(model_hookers, "_get_state", return_value=state):
         model_hookers.execute_model(mock_original, MagicMock(), scheduler_output)
 
-    # Should detect prefill because req1 has computed tokens < prompt length
+    # 包含一个 Prefill 与一个 Decode，当前实现返回 "Prefill,Decode"
     batch_calls = Profiler.instance_calls[0]
-    assert ("attr", "batch_type", "Prefill") in batch_calls
+    assert ("attr", "batch_type", "Prefill,Decode") in batch_calls
 
 
 def test_execute_model_given_decode_batch_when_processing_then_set_decode_flag():

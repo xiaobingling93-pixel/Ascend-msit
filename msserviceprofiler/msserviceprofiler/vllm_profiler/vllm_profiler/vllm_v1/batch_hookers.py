@@ -11,10 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import threading
 from collections import Counter
 from ms_service_profiler import Profiler, Level
 from ..module_hook import vllm_hook
+from .utils import classify_requests, SharedHookState, create_state_getter
 from ..utils import logger
 
 
@@ -45,21 +45,13 @@ def queue_profiler(before_queue, after_queue, queue_name):
         prof.metric("QueueSize", len(after_queue)).metric_scope("QueueName", queue_name).event("Enqueue")
 
 
-class HookState:
+class HookState(SharedHookState):
     def __init__(self):
-        self.request_id_to_prompt_token_len = {}
-        self.request_id_to_iter_size = {}
+        super().__init__()
 
 
-# 线程本地存储
-_thread_local = threading.local()
-
-
-def _get_state() -> HookState:
-    """获取线程本地状态"""
-    if not hasattr(_thread_local, "hook_state"):
-        _thread_local.hook_state = HookState()
-    return _thread_local.hook_state
+# 线程本地存储获取器（每文件独立线程状态）
+_get_state = create_state_getter(HookState)
 
 
 @vllm_hook(("vllm.v1.engine.processor", "Processor.process_inputs"), min_version="0.9.1")
@@ -69,7 +61,13 @@ def process_inputs(original_func, this, request_id, *args, **kwargs):
     return ret
 
 
-@vllm_hook(("vllm.v1.core.sched.scheduler", "Scheduler.schedule"), min_version="0.9.1")
+@vllm_hook(
+    hook_points=[
+        ("vllm.v1.core.sched.scheduler", "Scheduler.schedule"),
+        ("vllm_ascend.core.scheduler", "AscendScheduler.schedule")
+    ],
+    min_version="0.9.1"
+)
 def schedule(original_func, this, *args, **kwargs):
     state = _get_state()
     prof = Profiler(Level.INFO).domain("BatchSchedule").span_start("batchFrameworkProcessing")
@@ -78,19 +76,7 @@ def schedule(original_func, this, *args, **kwargs):
     before_waiting_queue = this.waiting.copy()
     scheduler_output = original_func(this, *args, **kwargs)
 
-    for scheduled_new_req in scheduler_output.scheduled_new_reqs:
-        state.request_id_to_prompt_token_len[scheduled_new_req.req_id] = len(scheduled_new_req.prompt_token_ids)
-
-    request_id_list, request_id_with_iter_list = [], []
-    for request_id, _ in scheduler_output.num_scheduled_tokens.items():
-        request_id_list.append({"rid": request_id})
-        iter_size = state.request_id_to_iter_size.get(request_id, -1) + 1  # start from 0
-        request_id_with_iter_list.append({"rid": request_id, "iter_size": iter_size})
-        state.request_id_to_iter_size[request_id] = iter_size
-
-        if request_id in scheduler_output.finished_req_ids:
-            state.request_id_to_prompt_token_len.pop(request_id, None)
-            state.request_id_to_iter_size.pop(request_id, None)
+    request_id_list, request_id_with_iter_list, batch_type = classify_requests(state, scheduler_output)
 
     if not request_id_list:
         return scheduler_output
@@ -105,9 +91,8 @@ def schedule(original_func, this, *args, **kwargs):
     running_queue_prof.metric("QueueSize", len(this.running)).metric_scope("QueueName", "RUNNING").event("Queue")
 
     logger.debug(f" state.request_id_to_iter_size: {state.request_id_to_iter_size}")
-    is_prefill = any(val == 0 for val in state.request_id_to_iter_size.values())
-    
-    prof.attr("batch_type", "Prefill" if is_prefill else "Decode")
+
+    prof.attr("batch_type", batch_type)
     prof.span_end()
 
     return scheduler_output

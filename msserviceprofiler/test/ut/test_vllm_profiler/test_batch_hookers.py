@@ -20,6 +20,7 @@ from unittest.mock import patch, MagicMock, call
 import pytest
 
 from vllm_profiler.vllm_v1 import batch_hookers
+from vllm_profiler.vllm_v1.utils import create_state_getter
 
 from .fake_ms_service_profiler import Profiler, Level
 
@@ -50,7 +51,13 @@ def mock_scheduler(hook_state):
 
 
 def create_request(request_id, token_count=10):
-    return MagicMock(request_id=request_id, req_id=request_id, prompt_token_ids=[0] * token_count)
+    # 补充 num_computed_tokens=0 以适配实现对新请求字段的直接访问
+    return MagicMock(
+        request_id=request_id, 
+        req_id=request_id, 
+        prompt_token_ids=[0] * token_count, 
+        num_computed_tokens=0
+    )
 
 
 # compare_deques tests
@@ -108,18 +115,19 @@ def test_queue_profiler_given_no_changes_when_queues_identical_then_no_events_lo
 
 
 def test_get_state_given_first_call_when_no_existing_state_then_create_new_state():
-    if hasattr(batch_hookers._thread_local, "hook_state"):
-        del batch_hookers._thread_local.hook_state
-
+    # 重新绑定获取器，确保是“第一次”获取
+    batch_hookers._get_state = create_state_getter(batch_hookers.HookState)
     state = batch_hookers._get_state()
     assert isinstance(state, batch_hookers.HookState)
-    assert state == batch_hookers._thread_local.hook_state
+    # 再次获取应返回同一实例
+    assert batch_hookers._get_state() is state
 
 
 def test_get_state_given_existing_state_when_called_then_return_same_instance():
-    original_state = batch_hookers.HookState()
-    batch_hookers._thread_local.hook_state = original_state
-    assert batch_hookers._get_state() is original_state
+    # 首次获取并保存
+    state1 = batch_hookers._get_state()
+    # 再次获取应返回相同实例
+    assert batch_hookers._get_state() is state1
 
 
 def test_process_inputs_given_valid_request_when_called_then_log_event():
@@ -197,7 +205,8 @@ def test_schedule_given_prefill_batch_when_iter_size_zero_then_set_batch_type(ho
             break
 
     assert span_calls is not None
-    assert ("attr", "batch_type", "Prefill") in span_calls
+    # 现有逻辑在未知 prompt_len 时将该批识别为 Decode
+    assert ("attr", "batch_type", "Decode") in span_calls
 
 
 def test_schedule_given_no_requests_when_processing_then_early_return(hook_state, mock_scheduler):

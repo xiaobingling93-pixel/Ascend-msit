@@ -8,8 +8,12 @@
 ## 版本支持情况
   |  配套CANN版本   | vLLM V0 | vLLM V1 |
   |:-------:|:----:|:----:|
-  | 8.2.RC1 |  v0.9.1.RC2  | v0.9.1.RC2 |
-  | 8.2.RC1 |  v0.9.1.RC1  | v0.9.1.RC1 |
+  | 8.2.RC1 |  /  | v0.11.0.RC0 |
+  | 8.2.RC1 |  /  | v0.10.2.RC1 |
+  | 8.2.RC1 |  /  | v0.10.1.RC1 |
+  | 8.2.RC1 |  /  | v0.10.0.RC1 |
+  | 8.2.RC1 |  /  | v0.9.2.RC1 |
+  | 8.2.RC1 |  v0.9.1  | v0.9.1 |
   | 8.1.RC1 |  v0.8.5.RC1  | / |
   | 8.1.RC1 |  v0.8.4   | / |
   | 8.0.RC3 |  v0.6.3   | / |
@@ -19,25 +23,20 @@
 
 ## 安装 vllm_profiler 组件
 - 依赖要求：Python ≥ 3.9
-- 在项目中以源码方式安装 `vllm_profiler`（标准布局，外层含 `setup.py`）：
+
+- 方法1. 在项目中以源码方式安装 `vllm_profiler`：
   ```sh
   cd msserviceprofiler/msserviceprofiler/vllm_profiler
   pip install -e .
   ```
-- **pip 安装 msserviceprofiler（目前仅支持v0.8.5.RC1及之前的版本）**
+- 方法2. pip 安装 msserviceprofiler（目前仅支持v0.8.5.RC1及之前的版本）
   ```sh
   pip install -U msserviceprofiler
   ```
 ***
 
 # 使用方式
-## 1. 在 vLLM 中导入采集工具接口
-- 输入 `pip show vllm`，查看 vllm 安装路径，如果存在 `Editable project location` 路径则使用 `Editable project location`，否则为 `Location` 路径 ，记为 `${vllm_install_path}`，
-- 在 `${vllm_install_path}/vllm/__init__.py` 文件中所有其他模块导入的最后添加如下代码：
-  ```
-  import msserviceprofiler.vllm_profiler
-  ```
-## 2. 准备性能采集配置文件
+## 1. 准备性能采集配置文件
 - 在任意路径下创建使能采集配置 json 文件，如 `ms_service_profiler_config.json`，并指定其中的采集落盘路径 `"prof_dir"`，此处指定为 `vllm_prof`
   ```
   {
@@ -70,7 +69,7 @@
   |   kernel_filter   | 对性能数据进行过滤，配置该参数可自定义采集配置的kernel性能数据，例如传入“matmul”会落盘所有kernel数据中name字段包含matmul的性能数据。str类型，区分大小写，多个不同的筛选目标用“；”隔开，默认为空，表示落盘所有数据。<br/>仅当acl_task_time参数值为2时生效。                                                                                                                                                                                                                |   否   |
   |   timelimit   | 设置服务化性能数据采集的时长，配置该参数后，采集进程将在运行指定的时间后自动停止，取值范围为0~7200的整数，单位s，默认值0（表示不限制采集时间）                                                                                                                                                                                                                                                                                             |   否   |
   |   domain   | 设置采集指定domain域下的性能数据，减少采集数据量。输入参数为字符串格式，英文分号作为分隔符，区分大小写，例如："Request; KVCache"。<br/>默认为空，表示采集当前所有domain域内性能数据。 <br/>当前已有domain域为：Request、KVCache、ModelExecute、BatchSchedule、Communication。 <br/>说明：<br/>若指定domain域不全，采集数据不满足解析输出件生成时，会有告警提示                                                                                                                                         |   否   |
-## 3. 采集数据
+## 2. 采集数据
 1. 指定 `SERVICE_PROF_CONFIG_PATH` 为采集文件配置路径
   ```sh
   export SERVICE_PROF_CONFIG_PATH=ms_service_profiler_config.json
@@ -84,7 +83,7 @@
   curl -X POST http://${docker_ip}:8080/generate -H "Content-Type: application/json" \
   -d '{"prompt": "hello", "max_tokens": 100, "temperature": 0}'
   ```
-## 4. 查看采集结果
+## 3. 查看采集结果
 - 请求发送结束后，可在配置文件中 `"prof_dir"` 指定的路径下，查看落盘的性能原始数据，其中包含了 db 格式的数据库落盘文件
 - **执行推理处理时间数据**
 
@@ -116,7 +115,7 @@
   | ------- | ------------ | ------------------------------------------------------------------------------------------------------------------ |
   | httpReq | 表示请求到达 | domain：表示当前为http请求相关信息, rid: 请求ID                                                                    |
   | httpRes | 表示请求返回 | domain：表示当前为http请求相关信息, rid: 请求ID, recvTokenSize：表示请求输入长度, replyTokenSize：表示请求输出长度 |
-## 5. 数据解析
+## 4. 数据解析
 - 需要使用 CANN toolkit 中的 `ms_service_profiler` 工具，详细结果参照 CANN 手册
 - 调用方式，如落盘路径为 `vllm_prof`
   ```sh
