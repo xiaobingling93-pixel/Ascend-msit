@@ -270,7 +270,7 @@ class TestDisaggregationSimulator(unittest.TestCase):
         # 验证子进程是否正确运行
         mock_subprocess.run.assert_called()
         # 验证日志记录是否正确
-        mock_logger.info.assert_called()
+        mock_logger.debug.assert_called()
 
     @patch('msserviceprofiler.modelevalstate.optimizer.simulator.logger')
     def test_backup(self, mock_logger):
@@ -280,7 +280,7 @@ class TestDisaggregationSimulator(unittest.TestCase):
         simulator = DisaggregationSimulator(mindie_config, bak_path)
         simulator.backup()
         # 验证日志记录是否正确
-        mock_logger.info.assert_called()
+        mock_logger.debug.assert_called()
 
     @patch('msserviceprofiler.modelevalstate.optimizer.simulator.logger')
     def test_stop(self, mock_logger):
@@ -289,7 +289,7 @@ class TestDisaggregationSimulator(unittest.TestCase):
         simulator = DisaggregationSimulator(mindie_config)
         simulator.stop()
         # 验证日志记录是否正确
-        mock_logger.info.assert_called()
+        mock_logger.debug.assert_called()
 
     @patch('requests.post') 
     def test_curl_success(self, mock_post):
