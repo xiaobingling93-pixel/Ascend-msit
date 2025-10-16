@@ -41,7 +41,7 @@ class TestMyDataSetWithSwifter(unittest.TestCase):
         })
         self.dataset = MyDataSetWithSwifter()
 
-    @patch('msserviceprofiler.modelevalstate.data_feature.dataset_with_swifter.logger.info')
+    @patch('msserviceprofiler.modelevalstate.data_feature.dataset_with_swifter.logger.debug')
     @patch('msserviceprofiler.modelevalstate.data_feature.dataset_with_swifter.MyDataSetWithSwifter.'\
            'proprocess_with_swifter')
     def test_preprocess_dispatch_success(self, mock_process, mock_logger):
