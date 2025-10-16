@@ -72,6 +72,20 @@ Dump 配置文件为 JSON 格式文本文件。指定配置文件后，命令行
 | child       | 含义同命令行"-child"参数。""同"true"                                    | 否(默认为"true")  | 
 | device      | 含义同命令行"-device"参数。""表示dump所有device的数据                    | 否(默认为"")      | 
 
+Dump 配置文件示例如下。使用示例配置可 dump 所有 device 上 id 为 0、1、2 的 operation 及其子 operation 的第一次执行的精度数据。
+
+```json
+{
+    "dump_enable": "true",
+    "er": "0,0",
+    "ids": "0,1,2",
+    "child": "true",
+    "device": ""
+}
+```
+
+**注意**：配置文件中的参数修改需至少在 token 执行前 5 秒完成，才可保证生效。
+
 ## 结果查看
 
 ### Dump 落盘位置
