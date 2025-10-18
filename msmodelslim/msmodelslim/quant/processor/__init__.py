@@ -27,6 +27,8 @@ __all__ = [
     "GroupProcessor",
     "DynamicCacheProcessorConfig",
     "DynamicCacheQuantProcessor",
+    "FA3QuantProcessorConfig",
+    "FA3QuantProcessor",
     "FloatSparseProcessorConfig",
     "FloatSparseProcessor"
 ]
@@ -37,5 +39,6 @@ from .container.group import GroupProcessorConfig, GroupProcessor
 from .memory.load import LoadProcessorConfig, LoadProcessor
 from .quant.attention import DynamicCacheProcessorConfig, DynamicCacheQuantProcessor
 from .quant.autoround import AutoProcessorConfig, AutoroundQuantProcessor
+from .quant.fa3 import FA3QuantProcessorConfig, FA3QuantProcessor
 from .quant.linear import LinearProcessorConfig, LinearQuantProcessor
 from .sparse.float_sparse import FloatSparseProcessorConfig, FloatSparseProcessor
