@@ -57,7 +57,7 @@ spec:
         - "*mlp*"
       exclude:
         - "*gate"
-  calib_dataset: calib_prompt.jsonl
+  dataset: mix_calib.jsonl
   save:
     - type: "ascendv1_saver"
       part_file_size: 4
