@@ -273,12 +273,55 @@ def check_chrome_tracing_valid(output_path, file_name):
     validate(instance=data, schema=schema)
 
 
+def check_chrome_tracing_valid_ms_op(output_path, file_name):
+    trace_view_json = os.path.join(output_path, file_name)
+    assert os.path.exists(trace_view_json), f"文件 {trace_view_json} 不存在"
+    assert os.path.isfile(trace_view_json), f"{trace_view_json} 不是一个有效的文件"
+
+    schema = {
+        "type": "object",
+        "properties": {
+            "traceEvents": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        "ph": {"type": "string", "enum": ["X", "I", "C", "M", "s", "f", "t"]},
+                        "ts": {"type": ["number", "string"],
+                               "pattern": "^\\d+(\\.\\d+)?$"
+                               },  # 时间戳，单位为微秒
+                        "dur": {"type": "number", "minimum": 0},  # 持续时间，适用于 X 类型事件
+                        "pid": {"type": "integer"},  # 进程 ID
+                        "tid": {"type": ["string", "integer"]},
+                        "id": {"type": "string"},  # 时间线事件的 ID
+                        "cat": {"type": "string"},  # 分类
+                        "bp": {"type": "string"},
+                        "args": {
+                            "type": "object",
+                            "additionalProperties": True  # args 可以是任意键值对
+                        }
+                    },
+                    "required": ["name", "ph", "pid"],  # 必需字段
+                    "additionalProperties": False  # 防止额外字段
+                }
+            }
+        },
+        "required": ["traceEvents"],  # 必需字段
+        "additionalProperties": False  # 防止额外字段
+    }
+    with open_s(trace_view_json) as f:
+        data = json.load(f)
+
+    validate(instance=data, schema=schema)
+
+
 def check_chrome_tracing_content_valid(output_path, file_name):
     trace_view_json = os.path.join(output_path, file_name)
 
     with open_s(trace_view_json, 'r', encoding='utf-8') as f:
         text = f.read()
-    exist = ["modelExec", "batchFrameworkProcessing"]
+    exist = ["Execute", "BatchSchedule"]
     for key in exist:
         pytest.assume(key in text, f"The chrome trace file shoule include {key}.")
 
@@ -286,7 +329,8 @@ def check_chrome_tracing_content_valid(output_path, file_name):
 class TestAnalyzeCmd(TestCase):
     ST_DATA_PATH = os.getenv("MS_SERVICE_PROFILER",
                              "/data/ms_service_profiler")
-    INPUT_PATH = os.path.join(ST_DATA_PATH, "input/analyze/latest_PD_competition")
+    INPUT_PATH_MSSERVICEPROFILER = "/tmp/server-smoke/latest_PD_competition_ms"
+    INPUT_PATH_MSSERVICEPROFILER_OPERATOR = "/tmp/server-smoke/latest_PD_competition_ms_op"
     INPUT_PATH_PD_SEPARATE = os.path.join(ST_DATA_PATH, "input/analyze/latest_PD_split")
     OUTPUT_PATH = os.path.join(ST_DATA_PATH, "output/analyze")
     REQUEST_SUM_CSV = "request_summary.csv"
@@ -311,7 +355,7 @@ class TestAnalyzeCmd(TestCase):
         # 校验msserviceprofiler打点采集数据解析功能是否正常解析，校验输出文件及内容
         cmd = [
             "python", self.ANALYZE_PROFILER, "analyze",
-            "--input-path", self.INPUT_PATH,
+            "--input-path", self.INPUT_PATH_MSSERVICEPROFILER,
             "--output-path", self.OUTPUT_PATH
         ]
         if execute_cmd(cmd) != self.COMMAND_SUCCESS or not os.path.exists(self.OUTPUT_PATH):
@@ -392,3 +436,79 @@ class TestAnalyzeCmd(TestCase):
 
         with self.subTest("Check pullkvcache csv content"):
             check_pullkvcache_csv_content(os.path.join(self.OUTPUT_PATH, "pd_split_kvcache.csv"))
+
+    def test_analyze_ms_service_operator_profiler_data(self):
+        # 校验msserviceprofiler_operator打点采集数据解析功能是否正常解析，校验输出文件及内容
+        cmd = [
+            "python", self.ANALYZE_PROFILER, "analyze",
+            "--input-path", self.INPUT_PATH_MSSERVICEPROFILER_OPERATOR,
+            "--output-path", self.OUTPUT_PATH
+        ]
+        if execute_cmd(cmd) != self.COMMAND_SUCCESS or not os.path.exists(self.OUTPUT_PATH):
+            self.assertFalse(
+                True, msg="enable ms service profiler analyze task failed.")
+
+        request_columns = ['Metric', 'Average',
+                           'Max', 'Min', 'P50', 'P90', 'P99']
+        request_numeric_columns = ['Average',
+                                   'Max', 'Min', 'P50', 'P90', 'P99']
+
+        service_columns = ['Metric', 'Value']
+        service_numeric_columns = ['Value']
+
+        with self.subTest("Check request_summary.csv content"):
+            try:
+                result = check_csv_content(
+                    self.OUTPUT_PATH, self.REQUEST_SUM_CSV, request_columns, request_numeric_columns)
+                self.assertTrue(result, f"检查 {self.REQUEST_SUM_CSV} 失败")
+            except Exception as e:
+                self.fail(f"检查 {self.REQUEST_SUM_CSV} 时发生异常: {e}")
+
+        with self.subTest("Check batch_summary.csv content"):
+            try:
+                result = check_csv_content(
+                    self.OUTPUT_PATH, self.BATCH_SUM_CSV, request_columns, request_numeric_columns)
+                self.assertTrue(result, f"检查 {self.BATCH_SUM_CSV} 失败")
+            except Exception as e:
+                self.fail(f"检查 {self.BATCH_SUM_CSV} 时发生异常: {e}")
+
+        with self.subTest("Check service_summary.csv content"):
+            try:
+                result = check_csv_content(
+                    self.OUTPUT_PATH, self.SERVICE_SUM_CSV, service_columns, service_numeric_columns)
+                self.assertTrue(result, f"检查 {self.SERVICE_SUM_CSV} 失败")
+            except Exception as e:
+                self.fail(f"检查 {self.SERVICE_SUM_CSV} 时发生异常: {e}")
+
+        with self.subTest("Check chrome_tracing.json content"):
+            try:
+                check_chrome_tracing_valid_ms_op(self.OUTPUT_PATH, self.CHROME_TRACE)
+                check_chrome_tracing_content_valid(self.OUTPUT_PATH, self.CHROME_TRACE)
+            except Exception as e:
+                self.fail(f"检查 {self.CHROME_TRACE} 时发生异常: {e}")
+
+        with self.subTest("Check profiler.db content"):
+            try:
+                check_latency_db_content(self.OUTPUT_PATH, self.PROFILER_DB)
+                check_kvcache_db_content(self.OUTPUT_PATH, self.PROFILER_DB)
+                check_req_status_db_content(self.OUTPUT_PATH, self.PROFILER_DB)
+            except Exception as e:
+                self.fail(f"检查 {self.PROFILER_DB} 时发生异常: {e}")
+
+        with self.subTest("Check kvcache.csv content"):
+            try:
+                check_kvcache_csv_content(self.OUTPUT_PATH, self.KVCACHE_CSV)
+            except Exception as e:
+                self.fail(f"检查 {self.KVCACHE_CSV} 时发生异常: {e}")
+
+        with self.subTest("Check batch.csv content"):
+            try:
+                check_batch_csv_content(self.OUTPUT_PATH, self.BATCH_CSV)
+            except Exception as e:
+                self.fail(f"检查 {self.BATCH_CSV} 时发生异常: {e}")
+
+        with self.subTest("Check request.csv content"):
+            try:
+                check_request_csv_content(self.OUTPUT_PATH, self.REQUEST_CSV)
+            except Exception as e:
+                self.fail(f"检查 {self.REQUEST_CSV} 时发生异常: {e}")
