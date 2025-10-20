@@ -19,19 +19,19 @@
 
 ## 支持的模型版本与量化策略
 
-| 模型系列 | 模型版本 | HuggingFace链接 | W8A8 | W8A16 | W4A8 | W8A8C8 | W4A8C8 | 稀疏量化 | KV Cache | Attention | FA3量化 | MTP量化 | 量化命令                                                                                                                                                                           |
-|---------|---------|---------------------------------------------------------------|-----|-------|-------|------|---------|----------|-----------|---------|---------|---------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **DeepSeek-V2** | DeepSeek-V2-Lite-Chat-16B | [DeepSeek-V2-Lite-Chat-16B](https://huggingface.co/deepseek-ai/DeepSeek-V2-Lite-Chat) | ✅ | ✅ |   |   |   |   |   |   |   |   | [W8A8](#deepseek-v2-w8a8-dynamic量化) / [W8A16](#deepseek-v2-w8a16量化)                                                                                                            |
-| | DeepSeek-V2-Lite-Chat-236B | [DeepSeek-V2-Lite-Chat-236B](https://huggingface.co/deepseek-ai/DeepSeek-V2-Lite-Chat) | ✅ | ✅ |   |   |   |   |   |   |   |   | [W8A8](#deepseek-v2-w8a8-dynamic量化) / [W8A16](#deepseek-v2-w8a16量化)                                                                                                            |
-| **DeepSeek-Coder** | DeepSeek-Coder-33B | [DeepSeek-Coder-33B](https://huggingface.co/deepseek-ai/deepseek-coder-33b-instruct) | ✅ | ✅ |   | ✅ |   |   |   |   |   |   | [W8A8](#deepseek-coder-33b-w8a8量化) / [W8A16](#deepseek-coder-33b-w8a16量化) / [W8A8C8](#deepseek-coder-33b-w8a8c8量化)                                                             |
-| **DeepSeek-V3** | DeepSeek-V3 | [DeepSeek-V3](https://huggingface.co/deepseek-ai/DeepSeek-V3) | ✅ |   |   |   |   |   |   |   | ✅ |   | [W8A8](#deepseek-v3-w8a8-混合量化mlaw8a8量化moew8a8-dynamic量化) / [FA3](#deepseek-v3-w8a8-fa3-混合量化)                                                                                   |
-| | DeepSeek-V3.1  | [DeepSeek-V3.1 ](https://huggingface.co/deepseek-ai/DeepSeek-V3.1 ) | ✅ |   | ✅ | ✅ |  ✅ |   |   |   |   | ✅ | [W8A8](#deepseek-v31-w8a8-混合量化--mtp-量化) / [W8A8C8](#deepseek-v31-w8a8c8-混合量化--mtp-量化) / [W4A8](#deepseek-v31-w4a8-混合量化) /[W4A8C8](#deepseek-v31-w4a8c8) / [MTP量化](#deepseek-v31-w8a8c8-混合量化--mtp-量化)                                            |
-| **DeepSeek-R1** | DeepSeek-R1 | [DeepSeek-R1](https://huggingface.co/deepseek-ai/DeepSeek-R1) | ✅ |   | ✅ |   |   |   |   |   | ✅ | ✅ | [W8A8](#deepseek-r1-w8a8-混合量化) / [W4A8](#deepseek-r1-w4a8-混合量化) / [W8A8动态](#deepseek-r1-w8a8-动态量化) / [FA3](#deepseek-r1-w8a8-fa3-混合量化) / [MTP量化](#deepseek-r1-w8a8-混合量化--mtp-量化) |
-| | DeepSeek-R1-0528 | [DeepSeek-R1-0528](https://huggingface.co/deepseek-ai/DeepSeek-R1-0528) | ✅ |   | ✅ |   |  ✅  |   |   |   | ✅ | ✅ | [W8A8](#deepseek-r1-0528-w8a8-混合量化--mtp-量化) / [W4A8](#deepseek-r1-0528-w4a8-per-channel量化) /[FA3](#deepseek-r1-0528-w8a8c8-混合量化--mtp-量化) /[W4A8C8](#deepseek-r1-0528-w4a8c8-per-channel量化) / [MTP量化](#deepseek-r1-0528-w8a8-混合量化--mtp-量化) |
-| **DeepSeek-V3.2-Exp** | DeepSeek-V3.2-Exp          | [DeepSeek-V3.2-Exp ](https://huggingface.co/deepseek-ai/DeepSeek-V3.2-Exp )            | ✅    |       |     |     |      |      |          |           |       |      | [W8A8](#deepseek-v32-w8a8)                                                                                                                                                           |
-
+| 模型系列               | 模型版本                       | HuggingFace链接                                                                          | W8A8 | W8A16 | W4A8 | W8A8C8 | W4A8C8 | 稀疏量化 | KV Cache | Attention | FA3量化 | MTP量化 | 量化命令                                                                                                                                                                                                                                      |
+|--------------------|----------------------------|----------------------------------------------------------------------------------------|------|-------|------|--------|--------|------|----------|-----------|-------|-------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **DeepSeek-V2**    | DeepSeek-V2-Lite-Chat-16B  | [DeepSeek-V2-Lite-Chat-16B](https://huggingface.co/deepseek-ai/DeepSeek-V2-Lite-Chat)  | ✅    | ✅     |      |        |        |      |          |           |       |       | [W8A8](#deepseek-v2-w8a8-dynamic量化) / [W8A16](#deepseek-v2-w8a16量化)                                                                                                                                                                       |
+|                    | DeepSeek-V2-Lite-Chat-236B | [DeepSeek-V2-Lite-Chat-236B](https://huggingface.co/deepseek-ai/DeepSeek-V2-Lite-Chat) | ✅    | ✅     |      |        |        |      |          |           |       |       | [W8A8](#deepseek-v2-w8a8-dynamic量化) / [W8A16](#deepseek-v2-w8a16量化)                                                                                                                                                                       |
+| **DeepSeek-Coder** | DeepSeek-Coder-33B         | [DeepSeek-Coder-33B](https://huggingface.co/deepseek-ai/deepseek-coder-33b-instruct)   | ✅    | ✅     |      | ✅      |        |      |          |           |       |       | [W8A8](#deepseek-coder-33b-w8a8量化) / [W8A16](#deepseek-coder-33b-w8a16量化) / [W8A8C8](#deepseek-coder-33b-w8a8c8量化)                                                                                                                        |
+| **DeepSeek-V3**    | DeepSeek-V3                | [DeepSeek-V3](https://huggingface.co/deepseek-ai/DeepSeek-V3)                          | ✅    |       |      |        |        |      |          |           | ✅     |       | [W8A8](#deepseek-v3-w8a8-混合量化mlaw8a8量化moew8a8-dynamic量化) / [FA3](#deepseek-v3-w8a8-fa3-混合量化)                                                                                                                                              |
+|                    | DeepSeek-V3.1              | [DeepSeek-V3.1 ](https://huggingface.co/deepseek-ai/DeepSeek-V3.1 )                    | ✅    |       | ✅    | ✅      | ✅      |      |          |           |       | ✅     | [W8A8](#deepseek-v31-w8a8-混合量化--mtp-量化) / [W8A8C8](#deepseek-v31-w8a8c8-混合量化--mtp-量化) / [W4A8](#deepseek-v31-w4a8-混合量化) /[W4A8C8](#deepseek-v31-w4a8c8) / [MTP量化](#deepseek-v31-w8a8c8-混合量化--mtp-量化)                                      |
+|                    | DeepSeek-V3.2-Exp          | [DeepSeek-V3.2-Exp ](https://huggingface.co/deepseek-ai/DeepSeek-V3.2-Exp )            | ✅    |       |      |        |        |      |          |           |       |       | [W8A8](#deepseek-v32-w8a8)                                                                                                                                                                                                                |
+| **DeepSeek-R1**    | DeepSeek-R1                | [DeepSeek-R1](https://huggingface.co/deepseek-ai/DeepSeek-R1)                          | ✅    |       | ✅    |        |        |      |          |           | ✅     | ✅     | [W8A8](#deepseek-r1-w8a8-混合量化) / [W4A8](#deepseek-r1-w4a8-混合量化) / [W8A8动态](#deepseek-r1-w8a8-动态量化) / [FA3](#deepseek-r1-w8a8-fa3-混合量化) / [MTP量化](#deepseek-r1-w8a8-混合量化--mtp-量化)                                                          |
+|                    | DeepSeek-R1-0528           | [DeepSeek-R1-0528](https://huggingface.co/deepseek-ai/DeepSeek-R1-0528)                | ✅    |       | ✅    |        | ✅      |      |          |           | ✅     | ✅     | [W8A8](#deepseek-r1-0528-w8a8-混合量化--mtp-量化) / [W4A8](#deepseek-r1-0528-w4a8-per-channel量化) /[FA3](#deepseek-r1-0528-w8a8c8-混合量化--mtp-量化) /[W4A8C8](#deepseek-r1-0528-w4a8c8-per-channel量化) / [MTP量化](#deepseek-r1-0528-w8a8-混合量化--mtp-量化) |
 
 **说明：**
+
 - ✅ 表示该量化策略已通过msModelSlim官方验证，功能完整、性能稳定，建议优先采用。
 - 空格表示该量化策略暂未通过msModelSlim官方验证，用户可根据实际需求进行配置尝试，但量化效果和功能稳定性无法得到官方保证。
 - 点击量化命令列中的链接可跳转到对应的具体量化命令
@@ -57,12 +57,12 @@
 | calib_file          | 量化校准数据                         | teacher_qualification.jsonl | 可选参数；<br>存放校准数据的json文件。                                                                                                   |
 | w_bit               | 权重量化bit                        | 8                           | 大模型量化场景下，可配置为8或16； <br>大模型稀疏量化场景下，需配置为4。                                                                                  |
 | a_bit               | 激活值量化bit                       | 8                           | 大模型量化场景下，可配置为8或16； <br>大模型稀疏量化场景下，需配置为8。                                                                                  |
-| disable_names       | 手动回退的量化层名称                     | 默认回退所有down_proj层            | 用户可根据精度要求手动设置，默认回退所有down_proj层。                                                                                              |
+| disable_names       | 手动回退的量化层名称                     | 默认回退所有down_proj层            | 用户可根据精度要求手动设置，默认回退所有down_proj层。                                                                                           |
 | device_type         | device类型                       | cpu                         | 可选值：['cpu', 'npu']。                                                                                                       |
 | fraction            | 模型权重稀疏量化过程中被保护的异常值占比           | 0.01                        | 取值范围[0.01,0.1]。                                                                                                           |
 | act_method          | 激活值量化方法                        | 1                           | (1) 1代表Label-Free场景的min-max量化方式。 <br>(2) 2代表Label-Free场景的histogram量化方式。 <br>(3) 3代表Label-Free场景的自动混合量化方式，LLM大模型场景下推荐使用。   |
 | co_sparse           | 是否开启稀疏量化功能                     | False                       | True: 使用稀疏量化功能；<br>False: 不使用稀疏量化功能。                                                                                      |
-| anti_method         | 离群值抑制参数                        | 无默认值                        | 'm1': SmoothQuant算法。<br>'m2': SmoothQuant加强版算法，推荐使用。<br>'m3': AWQ算法。<br>'m4': smooth优化算法 。<br>'m5': CBQ量化算法。    |
+| anti_method         | 离群值抑制参数                        | 无默认值                        | 'm1': SmoothQuant算法。<br>'m2': SmoothQuant加强版算法，推荐使用。<br>'m3': AWQ算法。<br>'m4': smooth优化算法 。<br>'m5': CBQ量化算法。              |
 | disable_level       | L自动回退等级                        | L0                          | 配置示例如下：<br>'L0'：默认值，不执行回退。<br>'L1'：回退1层。<br>'L2'：回退2层。<br>'L3'：回退3层。<br>'L4'：回退4层。<br>'L5'：回退5层。                          |
 | do_smooth           | 是否启动smooth量化功能                 | False                       | True: 开启smooth量化功能；<br>False: 不开启smooth量化功能。                                                                              |
 | use_sigma           | 是否启动sigma功能                    | False                       | True: 开启sigma功能；<br>False: 不开启sigma功能。                                                                                    |
@@ -83,7 +83,7 @@
 | tokenizer_args      | 加载自定义tokenizer时传入的自定义参数        | 无                           | 以字典方式传入。                                                                                                                  |
 | disable_last_linear | 是否回退最后linear层                  | True                        | True：回退最后linear层。<br>False：不回退最后linear层。                                                                                  |
 | model_name          | 模型名称，可选参数                      | None                        | 用于控制离群值抑制参数。                                                                                                              |
-| trust_remote_code   | 是否信任自定义代码                      | False                       | 指定`trust_remote_code=True`让修改后的自定义代码文件能够正确地被加载(请确保所加载的自定义代码文件来源可靠，避免潜在的安全风险)。                                                       |
+| trust_remote_code   | 是否信任自定义代码                      | False                       | 指定`trust_remote_code=True`让修改后的自定义代码文件能够正确地被加载(请确保所加载的自定义代码文件来源可靠，避免潜在的安全风险)。                                             |
 | mindie_format       | 非多模态模型量化后的权重配置文件是否兼容MindIE现有版本 | False                       | 开启`mindie_format`时保存的量化权重格式能够兼容MindIE 2.1.RC1及之前的版本。                                                                      |
 
 注：在量化脚本里面通过transformers库对模型进行加载时，调用`from_pretrained`函数时会指定`trust_remote_code=True`
@@ -94,10 +94,10 @@
 | 参数名           | 含义                             | 默认值                                                    | 使用方法                                                                                  |
 |---------------|--------------------------------|--------------------------------------------------------|---------------------------------------------------------------------------------------|
 | model_path    | 浮点权重路径                         | 无默认值                                                   | 必选参数；<br>输入DeepSeek权重目录路径。                                                            |
-| save_path     | 量化权重保存路径                         | 无默认值                                                   | 必选参数；<br>输出量化结果目录路径。                                                                  |
-| layer_count   | 加载模型时的层数                         | 0                                                   | 可选参数；<br>用于调试，实际量化的层数。                                                                |
-| anti_dataset  | 离群值校准数据集路径                         | ./anti_prompt.json                                                   | 可选参数；<br>离群值抑制校准集路径。                                                                  |
-| calib_dataset | 校准数据集文件路径                        | ./calib_prompt.json                                                   | 可选参数；<br>量化校准集路径。                                                                     |
+| save_path     | 量化权重保存路径                       | 无默认值                                                   | 必选参数；<br>输出量化结果目录路径。                                                                  |
+| layer_count   | 加载模型时的层数                       | 0                                                      | 可选参数；<br>用于调试，实际量化的层数。                                                                |
+| anti_dataset  | 离群值校准数据集路径                     | ./anti_prompt.json                                     | 可选参数；<br>离群值抑制校准集路径。                                                                  |
+| calib_dataset | 校准数据集文件路径                      | ./calib_prompt.json                                    | 可选参数；<br>量化校准集路径。                                                                     |
 | batch_size    | 输入batch size                   | 4(quant_deepseek_w8a8.py)<br>1(quant_deepseek_w4a8.py) | 可选参数；<br>生成量化校准数据时使用的batch size。batch size越大，校准速度越快，但也要求更多的显存和内存，如资源受限，请降低batch size。 |
 | from_fp8      | 指定原模型为FP8权重                    | 不开启                                                    | 可选参数；<br>开启即指定，不可与from_bf16共存。                                                        |
 | from_bf16     | 指定原模型为BF16权重                   | 不开启                                                    | 可选参数；<br>开启即指定，不可与from_fp8共存。                                                         |
@@ -140,7 +140,8 @@
   python3 quant_deepseek.py --model_path ${model_path} --save_directory ${save_path} --device_type cpu --act_method 2 --w_bit 8 --a_bit 8  --is_dynamic True
   ```
 
-**注意事项：** 若加载自定义模型，调用`from_pretrained`函数时要指定`trust_remote_code=True`让修改后的自定义代码文件能够正确的被加载。(请确保加载的自定义代码文件的安全性)
+**注意事项：** 若加载自定义模型，调用`from_pretrained`函数时要指定`trust_remote_code=True`
+让修改后的自定义代码文件能够正确的被加载。(请确保加载的自定义代码文件的安全性)
 
 #### DeepSeek-Coder系列
 
@@ -171,10 +172,10 @@
 
 DeepSeek-V3模型较大，且存在需要手动适配的点，为了避免浪费时间，还请在运行脚本前，请根据以下必检项对相关内容进行更改。
 
-- 1、昇腾不支持flash_attn库，运行时需要注释掉权重文件夹中modeling_deepseek.py中的部分代码
+- 1、（V3.2-Exp模型可跳过该项检查）昇腾不支持flash_attn库，运行时需要注释掉权重文件夹中modeling_deepseek.py中的部分代码
 - ![img.png](img.png)
 - 2、需安装4.48.2版本的transformers
-- 3、当前transformers不支持FP8量化格式加载，需要将权重文件夹中config.json中的以下字段删除：
+- 3、（V3.2-Exp模型可跳过该项检查）当前transformers不支持FP8量化格式加载，需要将权重文件夹中config.json中的以下字段删除：
 - ![img_1.png](img_1.png)
 
 ##### <span id="deepseek-v3-w8a8-混合量化mlaw8a8量化moew8a8-dynamic量化">DeepSeek-V3 W8A8 混合量化(MLA:w8a8量化，MOE:w8a8 dynamic量化)</span>
@@ -238,6 +239,7 @@ DeepSeek-V3模型较大，且存在需要手动适配的点，为了避免浪费
   ```
 
 ##### <span id="deepseek-v31-w4a8c8">DeepSeek-V3.1 W4A8C8 per-channel 量化</span>
+
 - 生成DeepSeek-V3.1 模型 W4A8C8 per-channel 量化权重
   ```shell
   msmodelslim quant \
@@ -248,7 +250,21 @@ DeepSeek-V3模型较大，且存在需要手动适配的点，为了避免浪费
    --trust_remote_code True
   ```
 
+#### DeepSeek-V3.2系列
+
+##### <span id="deepseek-v32-w8a8">DeepSeek-V3.2-Exp(含MTP层) W8A8 混合量化</span>
+
+  ```shell
+  msmodelslim quant \
+   --model_path ${model_path} \
+   --save_path ${save_path} \
+   --model_type DeepSeek-V3.2-Exp \
+   --quant_type w8a8 \
+   --trust_remote_code True
+  ```
+
 #### DeepSeek-R1系列
+
 DeepSeek-R1模型较大，且存在需要手动适配的点，为了避免浪费时间，还请在运行脚本前，请根据以下必检项对相关内容进行更改。
 
 - 1、昇腾不支持flash_attn库，运行时需要注释掉权重文件夹中modeling_deepseek.py中的部分代码
@@ -319,8 +335,7 @@ python3 quant_deepseek_W8A8.py --model_path ${model_path} --save_path ${save_pat
    --trust_remote_code True
   ```
 
-##### <span id="deepseek-r1-0528-w4a8c8-per-channel量化">DeepSeek-R1-0528(含MTP层) W4A8C8 per-channel量化
-</span>
+##### <span id="deepseek-r1-0528-w4a8c8-per-channel量化">DeepSeek-R1-0528(含MTP层) W4A8C8 per-channel量化</span>
 
   ```shell
   msmodelslim quant \
@@ -356,6 +371,7 @@ python3 quant_deepseek_W8A8.py --model_path ${model_path} --save_path ${save_pat
   --quant_mtp mix \
   --rot
   ```
+
 ##### <span id="deepseek-r1-0528-w8a8c8-混合量化--mtp-量化">DeepSeek-R1 0528 W8A8C8 混合量化 + MTP 量化</span>
 
 - 生成DeepSeek-R1 0528模型 W8A8C8 混合量化 + MTP 量化
