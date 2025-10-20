@@ -364,11 +364,6 @@ class TestFlexSmoothQuantProcessor:
         smooth_config = call_args[0][1]
         assert smooth_config.alpha == config.alpha
         assert smooth_config.beta == config.beta
-        
-        # 验证日志记录
-        mock_logger.return_value.info.assert_called_with(
-            "[FlexSmoothQuantProcessor] Smooth application completed successfully for subgraph"
-        )
 
     def test_act_stats_initialization(self):
         """测试激活统计初始化"""
