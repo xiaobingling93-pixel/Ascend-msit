@@ -30,6 +30,8 @@ from msmodelslim.quant.processor.anti_outlier.smooth_interface import FlexSmooth
 from msmodelslim.utils.exception import InvalidModelError
 from msmodelslim.utils.logging import logger_setter, get_logger
 from msmodelslim.utils.security import get_valid_read_path, json_safe_load, MAX_READ_FILE_SIZE_32G
+from msmodelslim.quant.processor.quarot import QuaRotInterface, create_rot, QuaRotMode
+from msmodelslim.model.deepseek_v3.quarot import get_ln_fuse_map, get_rotate_map
 from .convert_fp8_to_bf16 import auto_convert_module_fp8_to_bf16
 from .model import Transformer, ModelArgs
 from .mtp_quant_module import get_mtp_layer, wrap_mtp_decoder, remove_zero_and_shift
@@ -45,6 +47,7 @@ class DeepSeekV32ModelAdapter(TransformersModel,
                               ModelInfoInterface,
                               ModelSlimPipelineInterfaceV1,
                               FlexSmoothQuantInterface,
+                              QuaRotInterface
                               ):
     def get_model_pedigree(self) -> str:
         return 'deepseek_v3_2'
@@ -287,6 +290,30 @@ class DeepSeekV32ModelAdapter(TransformersModel,
             if idx == self.config.num_hidden_layers - 1:
                 self.load_mtp_if_not_load(decoder)
             yield name, decoder
+
+    def get_ln_fuse_map(self):
+        ln_linear_map = get_ln_fuse_map(self.config, num_hidden_layers=self.config.num_hidden_layers)
+        for layer_idx in range(self.config.num_hidden_layers):
+            ln_linear_map[f"model.layers.{layer_idx}.input_layernorm"].append(
+                f"model.layers.{layer_idx}.self_attn.indexer.wk",
+            )
+            ln_linear_map[f"model.layers.{layer_idx}.self_attn.q_a_layernorm"].append(
+                f"model.layers.{layer_idx}.self_attn.indexer.wq_b"
+            )
+        return {}, ln_linear_map
+
+    def get_bake_names(self):
+        return [], []
+
+    def get_rotate_map(self, block_size):
+        pre_run, rot_pairs, rotate_matrix = get_rotate_map(self.config, 
+                                                            block_size, 
+                                                            num_hidden_layers=self.config.num_hidden_layers)
+        for layer_idx in range(self.config.num_hidden_layers):
+            rot_pairs['rot'].right_rot[f"model.layers.{layer_idx}.self_attn.indexer.wk"] = rotate_matrix['rot']
+            rot_pairs['rot_b_proj'].right_rot[f"model.layers.{layer_idx}.self_attn.indexer.wq_b"] = \
+                                                                                    rotate_matrix['rot_b_proj']
+        return [pre_run], [pair for pair in rot_pairs.values()]
 
     def _load_config(self, trust_remote_code=False) -> object:
         return ModelArgs()

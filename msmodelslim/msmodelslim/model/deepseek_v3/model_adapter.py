@@ -21,7 +21,8 @@ from msmodelslim.utils.security import json_safe_load, json_safe_dump
 from .convert_fp8_to_bf16 import auto_convert_model_fp8_to_bf16
 from .mtp_quant_module import warp_mtp_model, remove_zero_and_shift
 from ..interface_hub import ModelInfoInterface, ModelSlimPipelineInterfaceV1, IterSmoothInterface, \
-    FlexSmoothQuantInterface, FA3QuantAdapterInterface, FA3QuantPlaceHolder
+    FlexSmoothQuantInterface, FA3QuantAdapterInterface, FA3QuantPlaceHolder, QuaRotInterface
+from .quarot import get_ln_fuse_map, get_rotate_map
 
 
 @ModelFactory.register("DeepSeek-V3")
@@ -36,6 +37,7 @@ class DeepSeekV3ModelAdapter(TransformersModel,
                              IterSmoothInterface,  # support iter smooth
                              FlexSmoothQuantInterface,  # support flex smooth quant
                              FA3QuantAdapterInterface,  # support FA3 activation quant placeholders
+                             QuaRotInterface,
                              ):
     def get_model_type(self) -> str:
         return self.model_type
@@ -355,3 +357,12 @@ class DeepSeekV3ModelAdapter(TransformersModel,
                 root_module.set_submodule(f"{name}.fa_v", FA3QuantPlaceHolder(ratio=1.0))
                 _wrap_attention_forward(module)
     
+    def get_ln_fuse_map(self):
+        return {}, get_ln_fuse_map(self.config)
+    
+    def get_bake_names(self):
+        return [], []
+    
+    def get_rotate_map(self, block_size):
+        pre_run, rot_pairs, _ = get_rotate_map(self.config, block_size)
+        return [pre_run], [pair for pair in rot_pairs.values()]
