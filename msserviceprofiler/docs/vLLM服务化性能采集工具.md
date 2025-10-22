@@ -19,7 +19,7 @@
   | 8.0.RC3 |  v0.6.3   | / |
 
 ## 环境准备
-- 根据不同版本需求，参考 [Ascend-vLLM 准备推理环境](https://support.huaweicloud.com/bestpractice-modelarts/modelarts_llm_infer_91203.html)，或 [vLLM Ascend installation](https://vllm-ascend.readthedocs.io/en/latest/installation.html) 成功启动推理服务
+- 根据不同版本需求，参考 [Ascend-vLLM 版本说明和要求](https://support.huaweicloud.com/bestpractice-modelarts/modelarts_llm_infer_5906004.html)，或 [vLLM Ascend installation](https://vllm-ascend.readthedocs.io/en/latest/installation.html) 成功启动推理服务
 
 ## 安装 vllm_profiler 组件
 - 依赖要求：Python ≥ 3.9
