@@ -30,7 +30,9 @@ __all__ = [
     "FA3QuantProcessorConfig",
     "FA3QuantProcessor",
     "FloatSparseProcessorConfig",
-    "FloatSparseProcessor"
+    "FloatSparseProcessor",
+    "QuaRotProcessorConfig",
+    "QuaRotProcessor"
 ]
 
 from .anti_outlier.iter_smooth import IterSmoothProcessorConfig, IterSmoothProcessor
@@ -42,3 +44,4 @@ from .quant.autoround import AutoProcessorConfig, AutoroundQuantProcessor
 from .quant.fa3 import FA3QuantProcessorConfig, FA3QuantProcessor
 from .quant.linear import LinearProcessorConfig, LinearQuantProcessor
 from .sparse.float_sparse import FloatSparseProcessorConfig, FloatSparseProcessor
+from .quarot import QuaRotProcessor, QuaRotProcessorConfig
