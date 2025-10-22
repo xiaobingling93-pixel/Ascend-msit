@@ -1,6 +1,6 @@
 # msit debug dump功能使用指南
 ## 简介
-- 提供了传统小模型场景下tensor数据dump功能，辅助进行模型定位debug。适用于 TensorFlow、TensorFlow2.0、ONNX、Caffe、MindIE-Torch模型，用户只需要通过参数指定原始模型对应的离线模型和模型输入文件。模型输入的 bin 文件需要符合模型的输入要求（支持模型多输入）。
+- 提供了传统小模型场景下tensor数据dump功能，辅助进行模型定位debug。适用于 TensorFlow、TensorFlow2.0、ONNX、Caffe、MindIE-Torch模型，用户只需要通过参数指定原始模型对应的离线模型和模型输入文件。模型输入的 bin 文件需要符合模型的输入要求（支持模型多输入）。并且额外提供了dump TensorFlow1.x框架下.pb模型数据的工具TFDebugRunner，使用方法参见[TFDebugRunner使用说明](tf_debug_runner.md)。
 
 
 ## 工具安装
