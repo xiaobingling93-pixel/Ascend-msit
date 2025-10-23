@@ -84,7 +84,7 @@ class TestSourceToTrainMindie(unittest.TestCase):
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS batch_exec (
             batch_id INTEGER PRIMARY KEY,
-            name TEXT,
+            event TEXT,
             pid INTEGER,
             start REAL,
             end REAL
@@ -96,7 +96,7 @@ class TestSourceToTrainMindie(unittest.TestCase):
             (1, 'forward', 1001, 1000.0, 1500.0),
             (2, 'forward', 1001, 2000.0, 2500.0)
         ]
-        cursor.executemany("INSERT INTO batch_exec (batch_id, name, pid, start, end) VALUES (?, ?, ?, ?, ?)",
+        cursor.executemany("INSERT INTO batch_exec (batch_id, event, pid, start, end) VALUES (?, ?, ?, ?, ?)",
                            exec_data)
 
         # 创建batch_req表
@@ -236,7 +236,7 @@ class TestSourceToTrainVllm(unittest.TestCase):
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS batch_exec (
             batch_id INTEGER PRIMARY KEY,
-            name TEXT,
+            event TEXT,
             pid INTEGER,
             start REAL,
             end REAL
@@ -248,7 +248,7 @@ class TestSourceToTrainVllm(unittest.TestCase):
             (1, 'forward', 1001, 1000.0, 1500.0),
             (2, 'forward', 1001, 2000.0, 2500.0)
         ]
-        cursor.executemany("INSERT INTO batch_exec (batch_id, name, pid, start, end) VALUES (?, ?, ?, ?, ?)",
+        cursor.executemany("INSERT INTO batch_exec (batch_id, event, pid, start, end) VALUES (?, ?, ?, ?, ?)",
                            exec_data)
 
         # 创建batch_req表
