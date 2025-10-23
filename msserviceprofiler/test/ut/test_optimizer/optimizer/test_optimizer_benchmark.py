@@ -22,9 +22,9 @@ from unittest.mock import patch, MagicMock, mock_open
 import csv
 import pandas as pd
 import pytest
-from msserviceprofiler.modelevalstate.config.config import PerformanceIndex, settings, AisBenchConfig, \
+from msserviceprofiler.modelevalstate.config.config import PerformanceIndex, get_settings, AisBenchConfig, \
     OptimizerConfigField
-from msserviceprofiler.modelevalstate.optimizer.benchmark import BenchMark, parse_result, AisBench
+from msserviceprofiler.modelevalstate.optimizer.benchmark import BenchMark, parse_result, AisBench, VllmBenchMark
 from msserviceprofiler.msguard import GlobalConfig
 
 
@@ -49,7 +49,7 @@ class TestParseResult(unittest.TestCase):
 @pytest.fixture
 def benchmark():
     with patch('shutil.which', return_value='/path/to/benchmark'):
-        benchmark = BenchMark(settings.benchmark)
+        benchmark = BenchMark(get_settings().benchmark)
         benchmark.throughput_type = "common"
         benchmark.benchmark_config.output_path = Path("./result")
     return benchmark
@@ -365,4 +365,54 @@ class TestBeforeRun(unittest.TestCase):
             content = f.read()
             match = pattern.search(content)
             assert int(match.group(1)) == 100
+        GlobalConfig.reset()
+
+
+class TestBenchMarkGetPerformanceIndex(unittest.TestCase):
+    def setUp(self):
+        # 创建一个模拟的 benchmark_config 对象
+        self.mock_benchmark_config = MagicMock()
+        
+        # 创建测试对象并传递 benchmark_config
+        self.benchmark = VllmBenchMark(self.mock_benchmark_config)
+        
+        # 设置 command 属性
+        self.benchmark.benchmark_config.command = MagicMock()
+        self.test_dir = Path("test_dir")
+        self.benchmark.benchmark_config.command.result_dir = self.test_dir
+        self.test_dir.mkdir(exist_ok=True)
+        self.json_path = self.test_dir / "result.json"
+        json_data = {
+            "output_throughput": 2000.0,
+            "mean_ttft_ms": 600.0,
+            "mean_tpot_ms": 140.0,
+            "num_prompts": 10,
+            "completed": 10,
+            "request_throughput": 4.0
+        }
+        with open(self.json_path, 'w') as f:
+            json.dump(json_data, f)
+
+    
+    def tearDown(self):
+        # 清理临时目录
+        shutil.rmtree(self.test_dir)
+    
+    @unittest.mock.patch('msserviceprofiler.msguard.security.io.walk_s')
+    @unittest.mock.patch('msserviceprofiler.msguard.security.io.open_s')
+    def test_get_performance_index_normal(self, mock_open_s, mock_walk_s):
+        GlobalConfig.custom_return = True
+        """测试正常情况下的get_performance_index方法"""
+        
+        # 调用方法
+        result = self.benchmark.get_performance_index()
+        
+        # 验证结果
+        self.assertIsInstance(result, PerformanceIndex)
+        self.assertEqual(result.generate_speed, 2000.0)
+        self.assertEqual(result.time_to_first_token, 0.6)  
+        self.assertEqual(result.time_per_output_token, 0.14)
+        self.assertEqual(result.success_rate, 1.0)
+        self.assertEqual(result.throughput, 4.0)
+    
         GlobalConfig.reset()

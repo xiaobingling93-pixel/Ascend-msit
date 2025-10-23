@@ -15,6 +15,7 @@
 import os
 import json
 import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch, Mock
@@ -24,9 +25,11 @@ import pytest
 import requests
 
 import msserviceprofiler.modelevalstate
-from msserviceprofiler.modelevalstate.config.config import settings, OptimizerConfigField, KubectlConfig
-from msserviceprofiler.modelevalstate.optimizer.simulator import Simulator, VllmSimulator, enable_simulate,\
+from msserviceprofiler.modelevalstate.config.config import get_settings, OptimizerConfigField, KubectlConfig, \
+        MindieConfig
+from msserviceprofiler.modelevalstate.optimizer.simulator import Simulator, VllmSimulator, enable_simulate_old,\
       DisaggregationSimulator
+from msserviceprofiler.msguard import GlobalConfig
 
 
 class TestSimulate(unittest.TestCase):
@@ -60,17 +63,106 @@ class TestSimulate(unittest.TestCase):
         origin_config = {"a": {"b": [{"c": 3}]}}
         Simulator.set_config(origin_config, "a.d.0.c.e", 4)
         assert origin_config["a"]["d"][0]["c"]["e"] == 4
+    
+    def test_is_int(self):
+        # 测试is_int静态方法
+        self.assertTrue(Simulator.is_int(1))
+        self.assertTrue(Simulator.is_int("1"))
+        self.assertFalse(Simulator.is_int("a"))
 
 
 class TestVllmSimulator(unittest.TestCase):
 
-    @pytest.fixture
-    def pre_simulator(self):
-        simulator = VllmSimulator(settings.vllm)
-        simulator.mindie_log = "mock_log_file.log"
-        simulator.mindie_log_offset = 0
-        simulator.process = MagicMock()
-        return simulator
+    def setUp(self):
+        # 创建测试对象
+        self.vllm_config = MagicMock()
+        self.vllm_config.process_name = "vllm_test"
+        with patch('shutil.which', return_value="/path/to/vllm"):
+            self.simulator = VllmSimulator(self.vllm_config)
+        self.simulator.process = MagicMock()
+        self.simulator.command = "mock_vllm_command"
+        self.simulator.run_log = "mock_log_content"
+    
+    @patch('msserviceprofiler.modelevalstate.optimizer.simulator.logger')
+    def test_check_success_with_startup_complete_in_log(self, mock_logger):
+        """测试日志中包含'Application startup complete.'时返回True"""
+        # 模拟get_log返回包含特定字符串的日志
+        self.simulator.get_log = MagicMock(return_value="Application startup complete. Service is running.")
+        
+        # 调用被测方法
+        result = self.simulator.check_success()
+        
+        # 验证结果
+        self.assertTrue(result)
+    
+    @patch('msserviceprofiler.modelevalstate.optimizer.simulator.logger')
+    def test_check_success_with_print_log_enabled(self, mock_logger):
+        """测试开启print_log时记录日志"""
+        # 设置print_log为True
+        self.simulator.print_log = True
+        self.simulator.get_log = MagicMock(return_value="Application startup complete.")
+        
+        # 调用被测方法
+        result = self.simulator.check_success(print_log=True)
+        
+        # 验证结果和日志记录
+        self.assertTrue(result)
+        mock_logger.debug.assert_called_with("Application startup complete.")
+    
+    def test_check_success_process_running(self):
+        """测试进程正在运行但日志中没有特定字符串时返回False"""
+        # 模拟get_log返回不包含特定字符串的日志
+        self.simulator.get_log = MagicMock(return_value="Server starting...")
+        # 模拟进程正在运行(poll返回None)
+        self.simulator.process.poll.return_value = None
+        
+        # 调用被测方法
+        result = self.simulator.check_success()
+        
+        # 验证结果
+        self.assertFalse(result)
+    
+    def test_check_success_process_exited_normally(self):
+        """测试进程已完成且返回码为0时返回True"""
+        # 模拟get_log返回不包含特定字符串的日志
+        self.simulator.get_log = MagicMock(return_value="Server stopped normally.")
+        # 模拟进程正常退出(poll返回0)
+        self.simulator.process.poll.return_value = 0
+        
+        # 调用被测方法
+        result = self.simulator.check_success()
+        
+        # 验证结果
+        self.assertTrue(result)
+    
+    def test_check_success_process_exited_with_error(self):
+        """测试进程已完成但返回码非0时抛出异常"""
+        # 模拟get_log返回不包含特定字符串的日志
+        self.simulator.get_log = MagicMock(return_value="Error occurred.")
+        # 模拟进程异常退出(poll返回非0值)
+        self.simulator.process.poll.return_value = 1
+        self.simulator.process.returncode = 1
+        
+        # 验证抛出异常
+        with self.assertRaises(subprocess.SubprocessError) as context:
+            self.simulator.check_success()
+        
+        # 验证异常信息
+        self.assertIn("Failed in run mock_vllm_command", str(context.exception))
+        self.assertIn("return code: 1", str(context.exception))
+    
+    def test_check_success_empty_log(self):
+        """测试空日志的情况"""
+        # 模拟get_log返回空日志
+        self.simulator.get_log = MagicMock(return_value="")
+        # 模拟进程正在运行
+        self.simulator.process.poll.return_value = None
+        
+        # 调用被测方法
+        result = self.simulator.check_success()
+        
+        # 验证结果
+        self.assertFalse(result)
 
 
 def test_enable_simulate_with_simulator(tmpdir, monkeypatch):
@@ -101,11 +193,11 @@ def test_enable_simulate_with_simulator(tmpdir, monkeypatch):
         }
     }
 }""")
-    settings.mindie.config_path = config_path
-    settings.mindie.config_bak_path = Path(tmpdir).joinpath("config_bak.json")
-    simulator = Simulator(settings.mindie)
+    get_settings().mindie.config_path = config_path
+    get_settings().mindie.config_bak_path = Path(tmpdir).joinpath("config_bak.json")
+    simulator = Simulator(get_settings().mindie)
     monkeypatch.setattr(msserviceprofiler.modelevalstate.optimizer.simulator, "simulate_flag", True)
-    with enable_simulate(simulator) as flag:
+    with enable_simulate_old(simulator) as flag:
         with open(config_path, 'r') as f:
             data = json.load(f)
             assert data["BackendConfig"]["ModelDeployConfig"]["ModelConfig"][0][
@@ -137,11 +229,11 @@ def test_enable_simulate_with_simulator_plugin_params_exists(tmpdir, monkeypatch
     }
     with open(config_path, 'w') as f:
         json.dump(data, f)
-    settings.mindie.config_path = config_path
-    settings.mindie.config_bak_path = Path(tmpdir).joinpath("config_bak.json")
-    simulator = Simulator(settings.mindie)
+    get_settings().mindie.config_path = config_path
+    get_settings().mindie.config_bak_path = Path(tmpdir).joinpath("config_bak.json")
+    simulator = Simulator(get_settings().mindie)
     monkeypatch.setattr(msserviceprofiler.modelevalstate.optimizer.simulator, "simulate_flag", True)
-    with enable_simulate(simulator) as flag:
+    with enable_simulate_old(simulator) as flag:
         with open(config_path, 'r') as f:
             data = json.load(f)
             assert data["BackendConfig"]["ModelDeployConfig"]["ModelConfig"][0][
@@ -159,6 +251,9 @@ class TestDisaggregationSimulator(unittest.TestCase):
         self.test_dir.mkdir(exist_ok=True)
         self.yaml_dir.mkdir(exist_ok=True)
         self.config_single_path = self.test_dir / "config.json"
+        self.temp_file = tempfile.NamedTemporaryFile(delete=False)
+        self.temp_file.write(b"MindIE-MS coordinator is ready!!!")
+        self.temp_file.close()
         data = {
             "BackendConfig": {
                 "backendName": "mindieservice_llm_engine",
@@ -223,6 +318,7 @@ class TestDisaggregationSimulator(unittest.TestCase):
     def tearDown(self):
         # 清理临时目录
         shutil.rmtree(self.test_dir)
+        os.unlink(self.temp_file.name)
 
     def test_set_config_dict(self):
         origin_config = {"a": {"b": {"c": 3}}}
@@ -340,5 +436,73 @@ class TestDisaggregationSimulator(unittest.TestCase):
         self.assertFalse(result)
         mock_post.assert_called_once()
 
-if __name__ == '__main__':
-    unittest.main()
+    def test_update_config(self):
+        # Arrange
+        mindie_config = KubectlConfig()
+        mindie_config.config_single_path = self.config_single_path
+        mindie_config.config_single_pd_path = self.config_single_pd_path
+        simulator = DisaggregationSimulator(mindie_config)
+        
+        # 创建测试参数
+        params = [
+            OptimizerConfigField(config_position="BackendConfig.ModelDeployConfig.maxSeqLen", value=4096),
+            OptimizerConfigField(config_position="default_p_rate", value=2)
+        ]
+        
+        # Act
+        simulator.update_config(params)
+        
+        # Assert
+        with open(self.config_single_path, 'r') as f:
+            config_data = json.load(f)
+            self.assertEqual(config_data["BackendConfig"]["ModelDeployConfig"]["maxSeqLen"], 4096)
+        
+        with open(self.config_single_pd_path, 'r') as f:
+            pd_config_data = json.load(f)
+            self.assertEqual(pd_config_data["default_p_rate"], 2)
+
+    @patch('msserviceprofiler.modelevalstate.optimizer.simulator.DisaggregationSimulator.test_curl')
+    @patch('msserviceprofiler.msguard.security.io.open_s')
+    def test_check_success(self, mock_open, mock_test_curl):
+        # Arrange
+        GlobalConfig.custom_return = True
+        mindie_config = KubectlConfig()
+        simulator = DisaggregationSimulator(mindie_config)
+        simulator.run_log = self.temp_file.name
+        simulator.mindie_log_offset = 0
+        
+        # 模拟文件读取返回包含成功信息的内容
+        mock_file = Mock()
+        mock_file.read.return_value = "MindIE-MS coordinator is ready!!!"
+        mock_file.tell.return_value = 100
+        mock_open.return_value.__enter__.return_value = mock_file
+        
+        # 模拟test_curl返回True
+        mock_test_curl.return_value = True
+        
+        # Act
+        result = simulator.check_success()
+        
+        # Assert
+        self.assertTrue(result)
+        mock_test_curl.assert_called_once()
+        GlobalConfig.reset()
+
+    @patch('msserviceprofiler.modelevalstate.optimizer.simulator.DisaggregationSimulator.update_config')
+    @patch('msserviceprofiler.modelevalstate.optimizer.simulator.DisaggregationSimulator.start_server')
+    @patch('msserviceprofiler.modelevalstate.optimizer.simulator.logger')
+    def test_run(self, mock_logger, mock_start_server, mock_update_config):
+        # Arrange
+        mindie_config = KubectlConfig()
+        simulator = DisaggregationSimulator(mindie_config)
+        
+        # 创建测试参数
+        params = [OptimizerConfigField(config_position="BackendConfig.ModelDeployConfig.maxSeqLen", value=4096)]
+        
+        # Act
+        simulator.run(params)
+        
+        # Assert
+        mock_logger.info.assert_called_once()
+        mock_update_config.assert_called_once_with(params)
+        mock_start_server.assert_called_once_with(params)

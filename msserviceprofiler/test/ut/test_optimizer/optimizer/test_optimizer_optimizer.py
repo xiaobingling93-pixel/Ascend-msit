@@ -23,7 +23,7 @@ import pandas as pd
 import pytest
 
 from msserviceprofiler.modelevalstate.config.config import (
-    BenchMarkPolicy, DeployPolicy, field_to_param, settings,
+    BenchMarkPolicy, DeployPolicy, field_to_param, get_settings,
     default_support_field, PerformanceIndex, OptimizerConfigField, 
 )
 from msserviceprofiler.modelevalstate.config.model_config import MindieModelConfig
@@ -277,113 +277,6 @@ def test_op_func_exception():
     assert np.array_equal(result, np.array([float('inf'), float('inf')]))
 
 
-def test_best_params(generate_store):
-    optimizer_result = pd.read_csv(generate_store)
-    my_support_field = [
-        # max batch size 最小值要大于max_prefill_batch_size的最大值。
-        OptimizerConfigField(name="max_batch_size", config_position="BackendConfig.ScheduleConfig.maxBatchSize", min=10,
-                             max=1000, dtype="int"),
-        OptimizerConfigField(name="max_prefill_batch_size",
-                             config_position="BackendConfig.ScheduleConfig.maxPrefillBatchSize", min=0.1, max=0.7,
-                             dtype="ratio", dtype_param="max_batch_size"),
-        OptimizerConfigField(name="prefill_time_ms_per_req",
-                             config_position="BackendConfig.ScheduleConfig.prefillTimeMsPerReq", max=1000, dtype="int"),
-        OptimizerConfigField(name="support_select_batch",
-                             config_position="BackendConfig.ScheduleConfig.supportSelectBatch", max=1,
-                             dtype="bool"),
-        OptimizerConfigField(name="max_queue_deloy_mircroseconds",
-                             config_position="BackendConfig.ScheduleConfig.maxQueueDelayMicroseconds", min=500,
-                             max=1000000,
-                             dtype="int"),
-        OptimizerConfigField(name="prefill_policy_type",
-                             config_position="BackendConfig.ScheduleConfig.prefillPolicyType", min=0, max=1,
-                             dtype="enum", dtype_param=[0, 1, 3]),
-        OptimizerConfigField(name="decode_policy_type",
-                             config_position="BackendConfig.ScheduleConfig.decodePolicyType", min=0, max=1,
-                             dtype="enum", dtype_param=[0, 1, 3]),
-        OptimizerConfigField(name="CONCURRENCY", config_position="env", min=10, max=1001, dtype="int"),
-        OptimizerConfigField(name="REQUESTRATE", config_position="env", min=0, max=1001, dtype="int"),
-
-    ]
-    pso = PSOOptimizer(MagicMock(), target_field=tuple(my_support_field))
-    _fitness_list = []
-    _params_list = []
-    _performance_index_list = []
-    for _, row in optimizer_result.iterrows():
-        _target_field = pso.get_target_field_from_case_data(row)
-        params = field_to_param(_target_field)
-        _params_list.append(params)
-        _fitness = row.get("fitness")
-        _fitness_list.append(_fitness)
-        _params = {}
-        for k in PerformanceIndex.model_fields.keys():
-            if k in row:
-                _params[k] = row[k]
-        performance_index = PerformanceIndex(**_params)
-        _performance_index_list.append(performance_index)
-
-    best_fitness, best_param, best_performance_index = pso.best_params(_fitness_list,
-                                                                       _params_list,
-                                                                       _performance_index_list)
-    assert best_performance_index.generate_speed == 1983.8449
-    assert best_fitness == 3.858581664468014
-    pso.tpot_penalty = 0
-    pso.ttft_penalty = 0
-    best_fitness, best_param, best_performance_index = pso.best_params(_fitness_list,
-                                                                       _params_list,
-                                                                       _performance_index_list)
-    assert best_performance_index.generate_speed == 2628.1846
-    pso.tpot_penalty = 3.0
-    best_fitness, best_param, best_performance_index = pso.best_params(_fitness_list,
-                                                                       _params_list,
-                                                                       _performance_index_list)
-    assert best_performance_index.generate_speed == 1983.8449
-    # ttft 和 tpot 不都满足slo时
-    _fitness_list = []
-    _params_list = []
-    _performance_index_list = []
-    for i in [0, 3, 6, 9, 12]:
-        row = optimizer_result.iloc[i]
-        _target_field = pso.get_target_field_from_case_data(row)
-        params = field_to_param(_target_field)
-        _params_list.append(params)
-        _fitness = row.get("fitness")
-        _fitness_list.append(_fitness)
-        _params = {}
-        for k in PerformanceIndex.model_fields.keys():
-            if k in row:
-                _params[k] = row[k]
-        performance_index = PerformanceIndex(**_params)
-        _performance_index_list.append(performance_index)
-    pso.tpot_penalty = 3.0
-    pso.ttft_penalty = 3.0
-    best_fitness, best_param, best_performance_index = pso.best_params(_fitness_list,
-                                                                       _params_list,
-                                                                       _performance_index_list)
-    assert best_performance_index.generate_speed == 2157.4913
-    _fitness_list = []
-    _params_list = []
-    _performance_index_list = []
-    for i in [3, 6, 9, 12]:
-        row = optimizer_result.iloc[i]
-        _target_field = pso.get_target_field_from_case_data(row)
-        params = field_to_param(_target_field)
-        _params_list.append(params)
-        _fitness = row.get("fitness")
-        _fitness_list.append(_fitness)
-        _params = {}
-        for k in PerformanceIndex.model_fields.keys():
-            if k in row:
-                _params[k] = row[k]
-        performance_index = PerformanceIndex(**_params)
-        _performance_index_list.append(performance_index)
-    pso.ttft_penalty = 0
-    best_fitness, best_param, best_performance_index = pso.best_params(_fitness_list,
-                                                                       _params_list,
-                                                                       _performance_index_list)
-    assert best_performance_index.generate_speed == 2157.4913
-
-
 class MockField:
     def __init__(self, min_value, max_value):
         self.min = min_value
@@ -458,6 +351,7 @@ class TestPSOOptimizer:
 
 
 def test_best_params(generate_store):
+    from msserviceprofiler.modelevalstate.optimizer.experience_fine_tunning import FineTune
     optimizer_result = pd.read_csv(generate_store)
     my_support_field = [
     # max batch size 最小值要大于max_prefill_batch_size的最大值。
@@ -504,12 +398,19 @@ def test_best_params(generate_store):
                 _params[k] = row[k]
         performance_index = PerformanceIndex(**_params)
         _performance_index_list.append(performance_index)
+    pso.fine_tune = FineTune(ttft_penalty=get_settings().ttft_penalty,
+                         tpot_penalty=get_settings().tpot_penalty,
+                         target_field=_target_field,
+                         ttft_slo=get_settings().ttft_slo,
+                         tpot_slo=get_settings().tpot_slo,
+                         slo_coefficient=get_settings().slo_coefficient,
+                         step_size=get_settings().step_size)
 
     best_fitness, best_param, best_performance_index = pso.best_params(_fitness_list,
                                                                        _params_list,
                                                                        _performance_index_list)
-    assert best_performance_index.generate_speed == 1983.8449
-    assert best_fitness == 3.858581664468014
+    assert best_performance_index.generate_speed == 1966.4359
+    assert best_fitness == 3.952181054954989
     pso.tpot_penalty = 0
     pso.ttft_penalty = 0
     best_fitness, best_param, best_performance_index = pso.best_params(_fitness_list,
@@ -520,7 +421,7 @@ def test_best_params(generate_store):
     best_fitness, best_param, best_performance_index = pso.best_params(_fitness_list,
                                                                        _params_list,
                                                                        _performance_index_list)
-    assert best_performance_index.generate_speed == 1983.8449
+    assert best_performance_index.generate_speed == 1966.4359
     # ttft 和 tpot 不都满足slo时
     _fitness_list = []
     _params_list = []
@@ -567,7 +468,9 @@ def test_best_params(generate_store):
     assert best_performance_index.generate_speed == 2157.4913
 
 
+
 def test_best_params2(generate_store2):
+    from msserviceprofiler.modelevalstate.optimizer.experience_fine_tunning import FineTune
     optimizer_result = pd.read_csv(generate_store2)
     my_support_field = [
     # max batch size 最小值要大于max_prefill_batch_size的最大值。
@@ -615,11 +518,19 @@ def test_best_params2(generate_store2):
         performance_index = PerformanceIndex(**_params)
         _performance_index_list.append(performance_index)
 
+    pso.fine_tune = FineTune(ttft_penalty=get_settings().ttft_penalty,
+                         tpot_penalty=get_settings().tpot_penalty,
+                         target_field=_target_field,
+                         ttft_slo=get_settings().ttft_slo,
+                         tpot_slo=get_settings().tpot_slo,
+                         slo_coefficient=get_settings().slo_coefficient,
+                         step_size=get_settings().step_size)
+
     best_fitness, best_param, best_performance_index = pso.best_params(_fitness_list,
                                                                        _params_list,
                                                                        _performance_index_list)
-    assert best_performance_index.generate_speed == 2181.9876
-    assert best_fitness == 4.656442391641238
+    assert best_performance_index.generate_speed == 2033.3873
+    assert best_fitness == 4.964495470257898
     pso.tpot_penalty = 0
     pso.ttft_penalty = 0
     best_fitness, best_param, best_performance_index = pso.best_params(_fitness_list,
@@ -630,7 +541,7 @@ def test_best_params2(generate_store2):
     best_fitness, best_param, best_performance_index = pso.best_params(_fitness_list,
                                                                        _params_list,
                                                                        _performance_index_list)
-    assert best_performance_index.generate_speed == 2243.6598
+    assert best_performance_index.generate_speed == 2033.3873
 
 
 @patch("msserviceprofiler.modelevalstate.config.config.field_to_param", )
@@ -723,7 +634,7 @@ def test_mindie_prepare_theory_guided_disable():
 
 def test_mindie_prepare_mc_none():
     optimizer = PSOOptimizer(MagicMock())
-    settings.theory_guided_enable = False
+    get_settings().theory_guided_enable = False
     optimizer.mindie_prepare(MagicMock())
     assert True  # No exception should be raised
 
@@ -733,8 +644,8 @@ def test_mindie_prepare_valid_input():
         OptimizerConfigField(name="max_batch_size", config_position="BackendConfig.ScheduleConfig.maxBatchSize", min=10,
                              max=1000, dtype="int"),
     )
-    settings.theory_guided_enable = True
-    settings.theory_guided_enable = 1.3
+    get_settings().theory_guided_enable = True
+    get_settings().theory_guided_enable = 1.3
     optimizer = PSOOptimizer(MagicMock(), target_field=target_field)
     mc = MagicMock(spec=MindieModelConfig)
     mc.get_max_batch_size_bound = MagicMock(return_value=(100, 300))
@@ -770,8 +681,9 @@ def test_prepare(mock_mindie_model_config, mock_is_mindie, mindie_config_file):
 
 def test_run():
     # 创建PSOOptimizer的实例
-    optimizer = PSOOptimizer(MagicMock(), pso_options=settings.pso_options, target_field=default_support_field[:3],
-                             pso_init_kwargs={"ftol": settings.ftol, "ftol_iter": settings.ftol_iter},
+    optimizer = PSOOptimizer(MagicMock(), pso_options=get_settings().pso_options, 
+                             target_field=default_support_field[:3],
+                             pso_init_kwargs={"ftol": get_settings().ftol, "ftol_iter": get_settings().ftol_iter},
                              load_breakpoint=True)
     performance_index = PerformanceIndex(generate_speed=888,
                                          time_to_first_token=0.5,
@@ -782,7 +694,7 @@ def test_run():
     with patch('msserviceprofiler.modelevalstate.optimizer.global_best_custom.CustomGlobalBestPSO',
                            autospec=True) as mock_custom_global_best_pso:
         # 模拟enable_simulate上下文管理器
-        with patch('msserviceprofiler.modelevalstate.optimizer.simulator.enable_simulate',
+        with patch('msserviceprofiler.modelevalstate.optimizer.simulator.enable_simulate_old',
                                autospec=True) as mock_enable_simulate:
             custom_global_instance = mock_custom_global_best_pso.return_value
             custom_global_instance.optimize.return_value = (100, [200, 10, 100])
