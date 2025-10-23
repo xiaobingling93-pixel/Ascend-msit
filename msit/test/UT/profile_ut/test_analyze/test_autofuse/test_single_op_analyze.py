@@ -1,63 +1,90 @@
 import os
 import unittest
-from collections import defaultdict
+import shutil
 import subprocess
 from unittest.mock import patch, MagicMock
+from pandas.testing import assert_frame_equal
+import numpy as np
 import pandas as pd
 
-from msit_prof.analyze.autofuse.single_op_analyze import SingleOpAnalyzer, OpInfo
-
-
-class TestOpInfo(unittest.TestCase):
-    def test_init(self):
-        op_name = "test_op"
-        op_type = "test_type"
-        op_info = OpInfo(op_name, op_type)
-        self.assertEqual(op_info.op_name, op_name)
-        self.assertEqual(op_info.op_type, op_type)
-
-        op_name = "test_op"
-        op_info = OpInfo(op_name)
-        self.assertEqual(op_info.op_name, op_name)
-        self.assertEqual(op_info.op_type, "unknown")
+from msit_prof.analyze.autofuse.single_op_analyze import SingleOpAnalyzer
 
 
 class TestSingleOpAnalyzer(unittest.TestCase):
+    INPUT_PATH = os.path.join(os.path.dirname(__file__), "test_single_op_analyze")
+    OPS_MAPPING_JSON = [
+            {
+                'op': [
+                    {
+                        'type': 'AscBackend',
+                        'name': 'fused_graph_50',
+                        'attr': [
+                            {'key': '_datadump_original_op_names', 'value':
+                                {'list': {'s': ['Mul_7', 'Mul_6', 'Reshape_18', 'Reshape_19']}}},
+                            {'key': '_datadump_original_op_types', 'value':
+                                {'list': {'s': ['Mul', 'Mul', 'Reshape', 'Reshape']}}}
+                        ]
+                    },
+                    {
+                        'type': 'AscBackend',
+                        'name': 'fused_graph_52',
+                        'attr': [
+                            {'key': '_datadump_original_op_names', 'value':
+                                {'list': {'s': ['Reshape_23', 'Sigmoid', 'Reshape_22', 'mul_8', 'Sigmoid_1']}}},
+                            {'key': '_datadump_original_op_types', 'value':
+                                {'list': {'s': ['Reshape', 'Sigmoid', 'Reshape', 'Mul', 'Sigmoid']}}}
+                        ]
+                    }
+                ]
+            }
+        ]
+
     def setUp(self):
+        os.makedirs(self.INPUT_PATH, mode=0o750, exist_ok=True)
         self.args = MagicMock()
-        self.args.fused = "fused.csv"
-        self.args.origin = "origin.csv"
-        self.args.output = "output_dir"
-        self.args.ops_graph = "ge_graph_path"
+        self.args.fused = os.path.join(self.INPUT_PATH, "fused.csv")
+        self.args.origin = os.path.join(self.INPUT_PATH, "origin.csv")
+        self.args.output = self.INPUT_PATH
+        self.args.ops_graph = os.path.join(self.INPUT_PATH, "ge_proto_00000001_graph_31_Build.txt")
         self.analyzer = SingleOpAnalyzer(self.args)
-        self.analyzer.fuse_df = pd.DataFrame({
-            'Op Name': ['fuse_op1', 'fuse_op2'],
-            'OP Type': ['AscBackend', 'FusedAscBackend'],
-            'Task Duration(us)': [100, 200]
+        fused_df = pd.DataFrame({
+            'Op Name': ['fused_graph_50', 'fused_graph_52'] * 2,
+            'OP Type': ['AscBackend', 'AscBackend'] * 2,
+            'Task Duration(us)': [36.041, 4.1, 35.121, 3.42],
+            'Input Shapes': ['4096,8;4096,8,256;4096,8', '4096,1;4096,1'] * 2,
+            'Input Data Types': ['FLOAT;FLOAT;FLOAT', 'FLOAT;FLOAT'] * 2,
+            'Output Shapes': ['4096,8,256;4096,8,256', '4096;4096;4096'] * 2,
+            'Output Data Types': ['FLOAT;FLOAT', 'FLOAT;FLOAT;FLOAT'] * 2,
         })
-        self.analyzer.origin_df = pd.DataFrame({
-            'Op Name': ['op1', 'op2', 'op3'],
-            'OP Type': ['Conv2D', 'Reshape', 'FusedAscBackend'],
-            'Input Data Types': ['FLOAT', 'FLOAT', 'FLOAT'],
-            'Input Shapes': [512, 512, 512],
-            'Output Data Types': ['FLOAT', 'FLOAT', 'FLOAT'],
-            'Output Shapes': [512, 512, 512],
-            'Task Duration(us)': [50, 5, 100]
+        origin_df = pd.DataFrame({
+            'Op Name': ['Mul_6', 'Mul_7', 'Sigmoid_1'] * 2,
+            'OP Type': ['Mul', 'Mul', 'Sigmoid'] * 2,
+            'Task Duration(us)': [21.56, 14.96, 1.82, 21.24, 14.94, 1.58],
+            'Input Shapes': ["4096,8,1;4096,8,256", "4096,8,1;4096,8,256", "4096"] * 2,
+            'Input Data Types': ['FLOAT;FLOAT', 'FLOAT;FLOAT', 'FLOAT'] * 2,
+            'Output Shapes': ["4096,8,256", "4096,8,256", "4096"] * 2,
+            'Output Data Types': ['FLOAT', 'FLOAT', 'FLOAT'] * 2,
         })
-    
-    def test_calculate_hbm_valid_inputs(self):
+        fused_df.to_csv(self.args.fused, index=False)
+        origin_df.to_csv(self.args.origin, index=False)
+
+    def tearDown(self):
+        if os.path.exists(self.INPUT_PATH):
+            shutil.rmtree(self.INPUT_PATH)
+
+    def test_calculate_gm_valid_inputs(self):
         test_cases = [
-            (("INT32", "2,3"), [24 / 1024]), 
-            (("FLOAT;INT32", '"1,2,3";4'), [12/1024, 16/1024]),
-            (("INT32;FLOAT", "5,5;10"), [100/1024, 20/1024]), 
-            (("FLOAT", "  100 , 200 "), [40000/1024]),
+            (("INT32", "2,3"), sum([24 / 1024])),  # 24 / 1024表示HBM的计算方式，通过shape和type所占字节数计算数据量，单位用KB
+            (("FLOAT;INT32", '"1,2,3";4'), sum([12 / 1024, 16 / 1024])),
+            (("INT32;FLOAT", "5,5;10"), sum([100 / 1024, 20 / 1024])),
+            (("FLOAT", "  100 , 200 "), sum([40000 / 1024])),
         ]
         for input_val, expected in test_cases:
             with self.subTest(input=input_val, expected=expected):
-                result = self.analyzer.calculate_hbms(input_val[0], input_val[1])
+                result = self.analyzer.calculate_gm(input_val[0], input_val[1])
                 self.assertEqual(result, expected)
 
-    def test_calculate_hbm_empty_values(self):
+    def test_calculate_gm_empty_values(self):
         test_cases = [
             (("", "1,2")),
             (("INT32", "")), 
@@ -65,27 +92,8 @@ class TestSingleOpAnalyzer(unittest.TestCase):
         ]
         for case in test_cases:
             with self.subTest(input=case):
-                result = self.analyzer.calculate_hbms(case[0], case[1])
-                self.assertEqual(result, [])        
-
-    def test_calculate_total_hbm_list_input(self):
-        test_cases = [
-            ([], 10, 10), 
-            ([2, 3.5], 0, 5.5),
-            ([-5, 10], 3, 8), 
-            ([1, 2, 3], -2, 4)
-        ]
-        for op_hbm, start, expected in test_cases:
-            with self.subTest(op_hbm=op_hbm, start=start):
-                result = self.analyzer.calculate_total_hbms(op_hbm, start)
-                self.assertAlmostEqual(result, expected)
-    
-    def test_init_given_valid_args_when_initializing_then_attributes_set_correctly(self):
-        self.assertEqual(self.analyzer.fused_op_summary, "fused.csv")
-        self.assertEqual(self.analyzer.origin_op_summary, "origin.csv")
-        self.assertEqual(self.analyzer.output_path, "output_dir")
-        self.assertEqual(self.analyzer.ge_graph_path, "ge_graph_path")
-        self.assertEqual(self.analyzer.ops_mapping_json, os.path.join("output_dir", "ge_proto_build.json"))
+                result = self.analyzer.calculate_gm(case[0], case[1])
+                self.assertEqual(result, 0)
 
     @patch('subprocess.run')
     def test_convert_ge_graph_given_valid_command_when_running_atc_then_conversion_success(self, mock_run):
@@ -104,113 +112,79 @@ class TestSingleOpAnalyzer(unittest.TestCase):
     def test_get_fuse_graph_to_origin_op_mappig_given_valid_op_when_parsing_graph_then_mapping_populated(
         self, mock_get_all_subgraph
     ):
-        mock_get_all_subgraph.return_value = [
-            {
-                'op': [
-                    {
-                        'type': 'AscBackend',
-                        'name': 'fuse_op_1',
-                        'attr': [
-                            {'key': '_datadump_original_op_names', 'value': {'list': {'s': ['op1', 'op2']}}},
-                            {'key': '_datadump_original_op_types', 'value': {'list': {'s': ['Type1', 'Type2']}}}
-                        ]
-                    }
-                ]
-            }
-        ]
-        analyzer = SingleOpAnalyzer(self.args)
-        analyzer.get_fuse_graph_to_origin_op_mapping()
-        self.assertIn('fuse_op_1', analyzer.ops_mapping_dict)
-        self.assertEqual(len(analyzer.ops_mapping_dict['fuse_op_1']), 2)
-        op_info = analyzer.ops_mapping_dict['fuse_op_1'][0]
-        self.assertEqual(op_info.op_name, 'op1')
-        self.assertEqual(op_info.op_type, 'Type1')
+        mock_get_all_subgraph.return_value = self.OPS_MAPPING_JSON
+        self.analyzer.get_fused_graph_to_origin_op_mapping()
+        result = self.analyzer.fused_graph_to_origin_op_mapping
+        expected = pd.DataFrame({
+            'fused_op_name': ['fused_graph_50'] * 4 + ['fused_graph_52'] * 5,
+            'origin_op_name': ['Mul_7', 'Mul_6', 'Reshape_18', 'Reshape_19',
+                               'Reshape_23', 'Sigmoid', 'Reshape_22', 'mul_8', 'Sigmoid_1'],
+            'origin_op_type': ['Mul', 'Mul', 'Reshape', 'Reshape', 'Reshape', 'Sigmoid', 'Reshape', 'Mul', 'Sigmoid']
+        })
+        self.assertTrue(result.equals(expected))
 
-    @patch('pandas.read_csv')
-    def test_load_op_summary_given_valid_csv_files_when_loading_then_dataframes_created(self, mock_read_csv):
-        mock_read_csv.side_effect = [
-            pd.DataFrame({'Op Name': ['op1'], 'OP Type': ['AscBackend'], 'Task Duration(us)': [100]}),
-            pd.DataFrame({'Op Name': ['op1'], 'OP Type': ['Conv2D'], 'Task Duration(us)': [50]})
-        ]
-        can_compare_fuse_nodes = self.analyzer.load_op_summary()
-        self.assertIsNotNone(self.analyzer.fuse_df)
-        self.assertIsNotNone(self.analyzer.origin_df)
-        self.assertEqual(len(can_compare_fuse_nodes), 1)
+    def test_load_op_summary_given_valid_csv_files_when_loading_then_dataframes_created(self):
+        self.analyzer.load_op_summary()
+        expected_fused_df = pd.DataFrame({
+            'fused_op_name': ['fused_graph_50', 'fused_graph_52'] * 2,
+            'fused_op_type': ['AscBackend', 'AscBackend'] * 2,
+            'fused_duration': [36.041, 4.1, 35.121, 3.42],
+            'fused_input_shapes': ['4096,8;4096,8,256;4096,8', '4096,1;4096,1'] * 2,
+            'fused_input_data_types': ['FLOAT;FLOAT;FLOAT', 'FLOAT;FLOAT'] * 2,
+            'fused_output_shapes': ['4096,8,256;4096,8,256', '4096;4096;4096'] * 2,
+            'fused_output_data_types': ['FLOAT;FLOAT', 'FLOAT;FLOAT;FLOAT'] * 2,
+        })
+        expected_origin_df_columns = ['origin_op_name', 'OP Type', 'Task Duration(us)', 'Input Shapes',
+                                      'Input Data Types', 'Output Shapes', 'Output Data Types']
+        self.assertTrue(self.analyzer.fused_df.equals(expected_fused_df))
+        self.assertEqual(len(self.analyzer.origin_df), 6)
+        self.assertEqual(self.analyzer.origin_df.columns.tolist(), expected_origin_df_columns)
 
-    def test_get_filter_origin_df_given_valid_fuse_node_when_filtering_then_origin_df_returned(self):
-        self.analyzer.ops_mapping_dict = {'fuse_op': [OpInfo('op1')]}
-        analyze_result = defaultdict(list)
-        origin_op_df = self.analyzer.get_filter_origin_df('fuse_op', analyze_result)
-        self.assertIsNotNone(origin_op_df)
-        self.assertIn('op1', origin_op_df['Op Name'].values)
+    @patch('msit_prof.analyze.autofuse.single_op_analyze.get_all_subgraph')
+    def test_build_fusion_origin_analysis_should_return_analysis_df_when_all_dfs_valid(self, mock_get_all_subgraph):
+        mock_get_all_subgraph.return_value = self.OPS_MAPPING_JSON
+        self.analyzer.get_fused_graph_to_origin_op_mapping()
+        self.analyzer.load_op_summary()
+        result = self.analyzer.build_fusion_origin_analysis()
+        self.assertEqual(result.columns.tolist(), ['fused_op_name', 'fused_op_type', 'fused_duration',
+            'fused_input_shapes', 'fused_input_data_types', 'fused_output_shapes', 'fused_output_data_types',
+            'origin_op_name', 'origin_op_type', 'OP Type', 'Task Duration(us)', 'Input Shapes', 'Input Data Types',
+            'Output Shapes', 'Output Data Types', '_merge'])
+        self.assertEqual(result.shape, (12, 16))
 
-    def test_get_filter_origin_df_given_invalid_fuse_node_when_filtering_then_none_returned(self):
-        self.analyzer.ops_mapping_dict = {}
-        analyze_result = defaultdict(list)
-        origin_op_df = self.analyzer.get_filter_origin_df('fuse_op', analyze_result)
-        self.assertIsNone(origin_op_df)
-
-    def test_analyze_origin_ops_given_valid_fuse_node_and_origin_ops_found_when_analyzing_then_origin_ops_returned(self):
-        self.analyzer.ops_mapping_dict = {'fuse_op': [OpInfo('op1'), OpInfo('op2')]}
-        total_origin_op_name = {'op1', 'op2', 'op3'}
-        origin_op_duration_sum, origin_op_hbms, origin_op_hbms_sum, origin_op_hbms_save, not_found_op_list = self.analyzer.analyze_origin_ops('fuse_op', total_origin_op_name)
-        self.assertEqual(len(origin_op_duration_sum), 2)
-        self.assertEqual(len(not_found_op_list), 0)
-        self.assertEqual(len(origin_op_hbms), 2)
-        self.assertEqual(len(origin_op_hbms_sum), 1)
-        self.assertEqual(len(origin_op_hbms_save), 2)
-
-    def test_compute_performance_diff_given_valid_dataframes_when_computing_then_performance_diff_calculated(self):
-        analyze_result = defaultdict(list)
-        single_fused_df = pd.DataFrame(
-            {'Task Duration(us)': [100], 
-            "Op Name": 'fuse', 
-            "OP Type": "my",
-            'Input Data Types': 'FLOAT',
-            'Input Shapes': 128,
-            'Output Data Types': 'FLOAT',
-            'Output Shapes': 121},
-        )
-        origin_op_df = pd.DataFrame(
-            {'Task Duration(us)': [50], 
-            "Op Name": 'ori', 
-            "OP Type": "cpu",
-            'Input Data Types': 'FLOAT',
-            'Input Shapes': 512,
-            'Output Data Types': 'FLOAT',
-            'Output Shapes': 512}
-        )
-        origin_op_hbms_save = [1234, 5678]
-        SingleOpAnalyzer.compute_performance_diff(single_fused_df, origin_op_df, analyze_result, 'fuse_op', origin_op_hbms_save)
-        self.assertEqual(analyze_result["Time Ratio"][0], 2.0)
-        self.assertEqual(analyze_result["Time Difference"][0], 50.0)
-        self.assertEqual(analyze_result["HBMs Difference"][0], '(input:-1233.75, output:-5677.763671875)')
-        self.assertEqual(analyze_result["HBMs Ratio"][0], '(input:0.0002025931928687196, output:4.162171979570271e-05)')
-        self.assertEqual(analyze_result["Fused HBMs(KB)"][0], '(input:0.25, output:0.236328125)')
-
-    @patch('pandas.DataFrame.to_csv')
-    def test_save_analyze_result_given_valid_result_when_saving_then_csv_created(self, mock_to_csv):
-        analyze_result = defaultdict(list)
-        analyze_result["Fuse OpName"].append("fuse_op")
-        analyze_result["Fuse OpType"].append("AscBackend")
-        analyze_result["Fused Durations(us)"].append(100.0)
-        analyze_result["Origin Durations(us)"].append(50.0)
-        analyze_result["Time Ratio"].append(2.0)
-        analyze_result["Time Difference"].append(50.0)
-        analyze_result["Origin Duration(us) Each Op"].append("(op1, 50)")
-        analyze_result["Not Found Origin Op"].append("")
-        self.analyzer.save_analyze_result(analyze_result)
-        mock_to_csv.assert_called_once()
-
-    @patch.multiple('msit_prof.analyze.autofuse.single_op_analyze.SingleOpAnalyzer', 
-                    convert_ge_graph=MagicMock(), get_fuse_graph_to_origin_op_mapping=MagicMock(),
-                    load_op_summary=MagicMock(return_value={'fuse_op'}), get_filter_origin_df=MagicMock(),
-                    compute_performance_diff=MagicMock(), save_analyze_result=MagicMock(),
-                    analyze_origin_ops=MagicMock(return_value=([], [], [], [], [])))
-    def test_analyze_given_valid_input_when_analyzing_then_analysis_complete(self):
-        self.analyzer.fused_name_to_type = {'fuse_op': "unknown"}
+    @patch('msit_prof.analyze.autofuse.single_op_analyze.get_all_subgraph')
+    @patch('msit_prof.analyze.autofuse.single_op_analyze.SingleOpAnalyzer.convert_ge_graph')
+    def test_save_analyze_result_given_valid_result_when_saving_then_csv_created(self, mock_convert_ge_graph,
+                                                                                 mock_get_all_subgraph):
+        mock_get_all_subgraph.return_value = self.OPS_MAPPING_JSON
         self.analyzer.analyze()
-        self.analyzer.convert_ge_graph.assert_called_once()
-        self.analyzer.get_fuse_graph_to_origin_op_mapping.assert_called_once()
-        self.analyzer.load_op_summary.assert_called_once()
-        self.analyzer.save_analyze_result.assert_called_once()
+        profile_analysis_df = pd.read_csv(os.path.join(self.analyzer.output_path, "profile_analysis.csv"))
+        expected_df = pd.DataFrame({
+            'Fuse OpName': ['fused_graph_50', 'fused_graph_52'],
+            'Fuse OpType': ['AscBackend', 'AscBackend'],
+            'Origin Ops': ['(Mul_7, Mul); (Mul_6, Mul); (Reshape_18, Reshape); (Reshape_19, Reshape)',
+                '(Reshape_23, Reshape); (Sigmoid, Sigmoid); (Reshape_22, Reshape); (mul_8, Mul); (Sigmoid_1, Sigmoid)'],
+            'Fused Durations(us)': [71.162, 7.52],
+            'Origin Durations(us)': [72.7, 3.4],
+            'Time Ratio': [0.97884, np.nan],
+            'Time Difference': [-1.538, np.nan],
+            'HBMs Difference': ['(input:-16384.0, output:0.0)', np.nan],
+            'HBMs Ratio': ['(input:0.5019455252918288, output:1.0)', np.nan],
+            'Fused HBMs(KB)': ['(input:16512.0, output:32768.0)', '(input:16.0, output:24.0)'],
+            'Origin Duration(us) Each Op': ['(Mul_6, 42.8); (Mul_7, 29.9); (Reshape_18, 0.0); (Reshape_19, 0.0)',
+                                            '(Reshape_22, 0.0); (Reshape_23, 0.0); (Sigmoid, 0.0); '
+                                            '(Sigmoid_1, 3.4000000000000004); (mul_8, 0.0)'],
+            'Origin HBMs Each Op(KB)': ['(Mul_6, input:16448.0, output:16384.0); '
+                                        '(Mul_7, input:16448.0, output:16384.0); '
+                                        '(Reshape_18, input:0.0, output:0.0); '
+                                        '(Reshape_19, input:0.0, output:0.0)',
+                                        '(Reshape_22, input:0.0, output:0.0); '
+                                        '(Reshape_23, input:0.0, output:0.0); '
+                                        '(Sigmoid, input:0.0, output:0.0); '
+                                        '(Sigmoid_1, input:8.0, output:8.0); '
+                                        '(mul_8, input:0.0, output:0.0)'],
+            'Origin HBMs Total(KB)': ['(input:32896.0, output:32768.0)', '(input:8.0, output:8.0)'],
+            'Not Found Origin Op': [np.nan, 'Sigmoid; mul_8']
+        })
+        assert_frame_equal(profile_analysis_df, expected_df)
+
