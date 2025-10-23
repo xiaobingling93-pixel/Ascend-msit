@@ -14,6 +14,7 @@
 # limitations under the License.
 import json
 import unittest
+import argparse
 from math import isinf, inf
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -31,7 +32,7 @@ from msserviceprofiler.modelevalstate.config.base_config import (
     EnginePolicy, DeployPolicy, AnalyzeTool,
     ServiceType, BenchMarkPolicy, PDPolicy
 )
-from msserviceprofiler.modelevalstate.optimizer.optimizer import PSOOptimizer, main
+from msserviceprofiler.modelevalstate.optimizer.optimizer import PSOOptimizer, main, plugin_main, arg_parse
 from msserviceprofiler.modelevalstate.optimizer.experience_fine_tunning import StopFineTune
 
 
@@ -277,6 +278,7 @@ def test_op_func_exception():
     assert np.array_equal(result, np.array([float('inf'), float('inf')]))
 
 
+
 class MockField:
     def __init__(self, min_value, max_value):
         self.min = min_value
@@ -348,6 +350,260 @@ class TestPSOOptimizer:
     @pytest.fixture
     def optimizer(self):
         return PSOOptimizer(MagicMock(), target_field=default_support_field)
+
+
+@patch("msserviceprofiler.modelevalstate.config.config.field_to_param", )
+def test_refine_optimization_candidates(field_to_param_patch):
+    field_to_param_patch.side_effect = [[3, 4], [7, 1]]
+    pso = PSOOptimizer(MagicMock(), target_field=default_support_field)
+    pso.default_res = PerformanceIndex()
+    pso.default_fitness = 3.333
+    pso.default_run_param = [5.5, 6.3]
+    best_results = pd.DataFrame({"field1": [1, 2], "field2": [3, 4]})
+    pso.scheduler = MagicMock()
+    pso.scheduler.run = MagicMock(return_value=PerformanceIndex())
+    pso.scheduler.save_result = MagicMock()
+    pso.fine_tune = MagicMock()
+    pso.fine_tune.fine_tune_with_concurrency_and_request_rate = MagicMock(side_effect=StopFineTune)
+    pso.minimum_algorithm = MagicMock(return_value=2)
+    pso.get_target_field_from_case_data = MagicMock(return_value=default_support_field)
+    pso.params_in_records = MagicMock(return_value=False)
+    fitness, params, res = pso.refine_optimization_candidates(best_results)
+    assert fitness == [3.333, 2, 2]
+    assert params == [[5.5, 6.3], [3, 4], [7, 1]]
+    assert len(res) == 3
+
+
+@patch("msserviceprofiler.modelevalstate.config.config.field_to_param", )
+def test_refine_optimization_candidates_last_concurrency(field_to_param_patch):
+    field_to_param_patch.side_effect = [[3, 4], [7, 1], [2, 5], [3, 1], [2, 6], [9, 1]]
+    my_support_field = [
+    # max batch size 最小值要大于max_prefill_batch_size的最大值。
+    OptimizerConfigField(name="max_batch_size", config_position="BackendConfig.ScheduleConfig.maxBatchSize", min=10,
+                         max=1000, dtype="int"),
+    OptimizerConfigField(name="max_prefill_batch_size",
+                         config_position="BackendConfig.ScheduleConfig.maxPrefillBatchSize", min=0.1, max=0.7,
+                         dtype="ratio", dtype_param="max_batch_size"),
+    OptimizerConfigField(name="prefill_time_ms_per_req",
+                         config_position="BackendConfig.ScheduleConfig.prefillTimeMsPerReq", max=1000, dtype="int"),
+    OptimizerConfigField(name="support_select_batch",
+                         config_position="BackendConfig.ScheduleConfig.supportSelectBatch", max=1,
+                         dtype="bool"),
+    OptimizerConfigField(name="max_queue_deloy_mircroseconds",
+                         config_position="BackendConfig.ScheduleConfig.maxQueueDelayMicroseconds", min=500,
+                         max=1000000,
+                         dtype="int"),
+    OptimizerConfigField(name="prefill_policy_type",
+                         config_position="BackendConfig.ScheduleConfig.prefillPolicyType", min=0, max=1,
+                         dtype="enum", dtype_param=[0, 1, 3]),
+    OptimizerConfigField(name="decode_policy_type",
+                         config_position="BackendConfig.ScheduleConfig.decodePolicyType", min=0, max=1,
+                         dtype="enum", dtype_param=[0, 1, 3]),
+    OptimizerConfigField(name="CONCURRENCY", config_position="env", min=10, max=1001, dtype="int"),
+    OptimizerConfigField(name="REQUESTRATE", config_position="env", min=0, max=1001, dtype="int"),
+    ]  
+    pso = PSOOptimizer(MagicMock(), target_field=my_support_field[-2:])
+    pso.default_res = PerformanceIndex(generate_speed=2000, time_to_first_token=5.5, time_per_output_token=1.3,
+                                       success_rate=1, throughput=5),
+    pso.default_fitness = 3.333
+    pso.default_run_param = [500, 6.3]
+    best_results = pd.DataFrame({"CONCURRENCY": [700], "REQUESTRATE": [3.8]})
+    pso.scheduler = MagicMock()
+    pso.scheduler.run = MagicMock(side_effect=[
+        PerformanceIndex(generate_speed=2000, time_to_first_token=5, time_per_output_token=1, success_rate=1,
+                         throughput=5),
+        PerformanceIndex(generate_speed=2435, time_to_first_token=3.23, time_per_output_token=0.14, success_rate=1,
+                         throughput=5),
+        PerformanceIndex(generate_speed=1700, time_to_first_token=0.4, time_per_output_token=0.03, success_rate=1,
+                         throughput=5),
+        PerformanceIndex(generate_speed=1750, time_to_first_token=0.43, time_per_output_token=0.038, success_rate=1,
+                         throughput=5),
+        PerformanceIndex(generate_speed=1820, time_to_first_token=0.57, time_per_output_token=0.038, success_rate=1,
+                         throughput=5),
+        PerformanceIndex(generate_speed=1800, time_to_first_token=0.44, time_per_output_token=0.04, success_rate=1,
+                         throughput=5),
+    ])
+    pso.scheduler.save_result = MagicMock()
+    pso.fine_tune = MagicMock()
+    pso.fine_tune.fine_tune_with_concurrency_and_request_rate = MagicMock(side_effect=StopFineTune)
+    pso.minimum_algorithm = MagicMock(side_effect=[4, 3.8, 2.9, 3.3, 1.2, 3.9, 3.6])
+    pso.params_in_records = MagicMock(return_value=False)
+    fitness, params, res = pso.refine_optimization_candidates(best_results)
+    assert fitness == [3.333, 4]
+    assert params == [[500, 6.3], [3, 4]]
+    assert len(res) == 2
+
+
+@patch("msserviceprofiler.modelevalstate.optimizer.optimizer.is_mindie", return_value=True)
+@patch("msserviceprofiler.modelevalstate.config.model_config.MindieModelConfig")
+def test_prepare(mock_mindie_model_config, mock_is_mindie, mindie_config_file):
+    optimizer = PSOOptimizer(MagicMock(), target_field=default_support_field[:5])
+    with open(mindie_config_file, 'r') as f:
+        optimizer.scheduler.simulator.default_config = json.load(f)
+    optimizer.scheduler.run = MagicMock(return_value=PerformanceIndex(generate_speed=369,
+                                                                      time_to_first_token=0.3,
+                                                                      time_per_output_token=0.05,
+                                                                      success_rate=1))
+    optimizer.scheduler.save_result = MagicMock(return_value=True)
+    optimizer.scheduler.error_info = None
+    optimizer.mindie_prepare = MagicMock(return_value=None)
+    assert optimizer.default_run_param is None
+    assert optimizer.default_res is None
+    assert optimizer.default_fitness is None
+    optimizer.prepare()
+    assert optimizer.default_res
+    assert optimizer.default_fitness
+    assert optimizer.default_run_param is not None
+
+
+def test_run():
+    # 创建PSOOptimizer的实例
+    optimizer = PSOOptimizer(MagicMock(), pso_options=get_settings().pso_options, 
+                             target_field=default_support_field[:3],
+                             pso_init_kwargs={"ftol": get_settings().ftol, "ftol_iter": get_settings().ftol_iter},
+                             load_breakpoint=True)
+    performance_index = PerformanceIndex(generate_speed=888,
+                                         time_to_first_token=0.5,
+                                         time_per_output_token=0.05,
+                                         success_rate=1)
+    # 模拟prepare方法
+
+    with patch('msserviceprofiler.modelevalstate.optimizer.global_best_custom.CustomGlobalBestPSO',
+                           autospec=True) as mock_custom_global_best_pso:
+        # 模拟enable_simulate上下文管理器
+        with patch('msserviceprofiler.modelevalstate.optimizer.simulator.enable_simulate_old',
+                               autospec=True) as mock_enable_simulate:
+            custom_global_instance = mock_custom_global_best_pso.return_value
+            custom_global_instance.optimize.return_value = (100, [200, 10, 100])
+            # 模拟op_func方法
+            optimizer.prepare = MagicMock()
+            optimizer.op_func = MagicMock()
+            # 模拟refine_optimization_candidates方法
+            optimizer.refine_optimization_candidates = MagicMock(
+                            return_value=([100], [[200, 10, 100]], [performance_index]))
+            # 模拟best_params方法
+            optimizer.best_params = MagicMock(return_value=(100, [200, 10, 100], performance_index))
+            # 模拟self.scheduler.data_storage
+            optimizer.scheduler.data_storage = MagicMock()
+            # 模拟self.scheduler.simulator
+            optimizer.scheduler.simulator = MagicMock()
+            # 调用run方法
+            optimizer.run()
+            # 验证prepare方法被调用
+            optimizer.prepare.assert_called_once()
+            # 验证上下文管理器被正确使用
+            # 验证enable_simulate上下文管理器被正确使用
+            mock_enable_simulate.assert_called_once()
+            # 验证StagedCBO和CustomGlobalBestPSO类被正确实例化
+            mock_custom_global_best_pso.assert_called_once()
+            # 验证refine_optimization_candidates和best_params方法被调用
+            optimizer.refine_optimization_candidates.assert_called_once()
+            optimizer.best_params.assert_called_once()
+            # 验证self.scheduler.data_storage和self.scheduler.simulator被正确使用
+            optimizer.scheduler.data_storage.get_best_result.assert_called_once()
+
+
+def test_run_plugin():
+    # 创建PSOOptimizer的实例
+    optimizer = PSOOptimizer(MagicMock(), pso_options=get_settings().pso_options, 
+                             target_field=default_support_field[:3],
+                             pso_init_kwargs={"ftol": get_settings().ftol, "ftol_iter": get_settings().ftol_iter},
+                             load_breakpoint=True)
+    performance_index = PerformanceIndex(generate_speed=888,
+                                         time_to_first_token=0.5,
+                                         time_per_output_token=0.05,
+                                         success_rate=1)
+    # 模拟prepare方法
+
+    with patch('msserviceprofiler.modelevalstate.optimizer.global_best_custom.CustomGlobalBestPSO',
+                           autospec=True) as mock_custom_global_best_pso:
+        # 模拟enable_simulate上下文管理器
+        with patch('msserviceprofiler.modelevalstate.optimizer.optimizer.enable_simulate',
+                               autospec=True) as mock_enable_simulate:
+            custom_global_instance = mock_custom_global_best_pso.return_value
+            custom_global_instance.optimize.return_value = (100, [200, 10, 100])
+            # 模拟op_func方法
+            optimizer.prepare_plugin = MagicMock()
+            optimizer.op_func = MagicMock()
+            # 模拟refine_optimization_candidates方法
+            optimizer.refine_optimization_candidates = MagicMock(
+                            return_value=([100], [[200, 10, 100]], [performance_index]))
+            # 模拟best_params方法
+            optimizer.best_params = MagicMock(return_value=(100, [200, 10, 100], performance_index))
+            # 模拟self.scheduler.data_storage
+            optimizer.scheduler.data_storage = MagicMock()
+            # 模拟self.scheduler.simulator
+            optimizer.scheduler.simulator = MagicMock()
+            # 调用run方法
+            optimizer.run_plugin()
+            # 验证prepare方法被调用
+            optimizer.prepare_plugin.assert_called_once()
+            # 验证上下文管理器被正确使用
+            # 验证StagedCBO和CustomGlobalBestPSO类被正确实例化
+            mock_custom_global_best_pso.assert_called_once()
+            # 验证refine_optimization_candidates和best_params方法被调用
+            optimizer.refine_optimization_candidates.assert_called_once()
+            optimizer.best_params.assert_called_once()
+            # 验证self.scheduler.data_storage和self.scheduler.simulator被正确使用
+            optimizer.scheduler.data_storage.get_best_result.assert_called_once()
+
+
+@patch("msserviceprofiler.modelevalstate.optimizer.optimizer.PSOOptimizer")	
+@patch("msserviceprofiler.modelevalstate.optimizer.simulator.Simulator")	
+@patch("msserviceprofiler.modelevalstate.optimizer.simulator.VllmSimulator")
+@patch("msserviceprofiler.modelevalstate.optimizer.scheduler.Scheduler")	
+@patch("msserviceprofiler.modelevalstate.optimizer.scheduler.ScheduleWithMultiMachine")	
+def test_main(scheduler_multi, scheduler, vllm_simulator, simulator, psooptimizer):	
+    args = MagicMock()	
+    args.benchmark_policy = BenchMarkPolicy.benchmark.value	
+    args.deploy_policy = DeployPolicy.single.value	
+    args.backup = False	
+    args.load_breakpoint = False	
+    args.engine = EnginePolicy.mindie.value
+
+    # 调用被测试的方法	
+    with patch("shutil.which", return_value="path/to/benchmark"):	
+        main(args)	
+    simulator.assert_called_once()
+    psooptimizer.assert_called_once()	
+    scheduler.assert_called_once()	
+ 
+    args.benchmark_policy = BenchMarkPolicy.vllm_benchmark.value
+    scheduler.reset_mock()
+    with patch("shutil.which", return_value="path/to/benchmark"):
+        main(args)
+    scheduler.assert_called_once()
+
+    args.benchmark_policy = BenchMarkPolicy.ais_bench.value	
+    scheduler.reset_mock()	
+    with patch("shutil.which", return_value="path/to/benchmark"):	
+        main(args)	
+    scheduler.assert_called_once()
+    
+    args.deploy_policy = DeployPolicy.multiple.value	
+    with patch("shutil.which", return_value="path/to/benchmark"):	
+        main(args)	
+    scheduler_multi.assert_called_once()
+
+
+@patch("msserviceprofiler.modelevalstate.optimizer.optimizer.PSOOptimizer")
+@patch("msserviceprofiler.modelevalstate.optimizer.plugins.simulate.VllmSimulator")
+@patch("msserviceprofiler.modelevalstate.optimizer.scheduler.Scheduler")
+@patch("msserviceprofiler.modelevalstate.optimizer.scheduler.ScheduleWithMultiMachine")
+def test_plugin_main(scheduler_multi, scheduler, vllm_simulator, psooptimizer):
+    args = MagicMock()
+    args.benchmark_policy = BenchMarkPolicy.vllm_benchmark.value
+    args.deploy_policy = DeployPolicy.single.value
+    args.backup = False
+    args.load_breakpoint = False
+    args.engine = EnginePolicy.vllm.value
+ 
+    # 调用被测试的方法
+    with patch("shutil.which", return_value="path/to/benchmark"):
+        plugin_main(args)
+
+    psooptimizer.assert_called_once()
+    scheduler.assert_called_once()
 
 
 def test_best_params(generate_store):
@@ -544,87 +800,6 @@ def test_best_params2(generate_store2):
     assert best_performance_index.generate_speed == 2033.3873
 
 
-@patch("msserviceprofiler.modelevalstate.config.config.field_to_param", )
-def test_refine_optimization_candidates(field_to_param_patch):
-    field_to_param_patch.side_effect = [[3, 4], [7, 1]]
-    pso = PSOOptimizer(MagicMock(), target_field=default_support_field)
-    pso.default_res = PerformanceIndex()
-    pso.default_fitness = 3.333
-    pso.default_run_param = [5.5, 6.3]
-    best_results = pd.DataFrame({"field1": [1, 2], "field2": [3, 4]})
-    pso.scheduler = MagicMock()
-    pso.scheduler.run = MagicMock(return_value=PerformanceIndex())
-    pso.scheduler.save_result = MagicMock()
-    pso.fine_tune = MagicMock()
-    pso.fine_tune.fine_tune_with_concurrency_and_request_rate = MagicMock(side_effect=StopFineTune)
-    pso.minimum_algorithm = MagicMock(return_value=2)
-    pso.get_target_field_from_case_data = MagicMock(return_value=default_support_field)
-    pso.params_in_records = MagicMock(return_value=False)
-    fitness, params, res = pso.refine_optimization_candidates(best_results)
-    assert fitness == [3.333, 2, 2]
-    assert params == [[5.5, 6.3], [3, 4], [7, 1]]
-    assert len(res) == 3
-
-
-@patch("msserviceprofiler.modelevalstate.config.config.field_to_param", )
-def test_refine_optimization_candidates_last_concurrency(field_to_param_patch):
-    field_to_param_patch.side_effect = [[3, 4], [7, 1], [2, 5], [3, 1], [2, 6], [9, 1]]
-    my_support_field = [
-    # max batch size 最小值要大于max_prefill_batch_size的最大值。
-    OptimizerConfigField(name="max_batch_size", config_position="BackendConfig.ScheduleConfig.maxBatchSize", min=10,
-                         max=1000, dtype="int"),
-    OptimizerConfigField(name="max_prefill_batch_size",
-                         config_position="BackendConfig.ScheduleConfig.maxPrefillBatchSize", min=0.1, max=0.7,
-                         dtype="ratio", dtype_param="max_batch_size"),
-    OptimizerConfigField(name="prefill_time_ms_per_req",
-                         config_position="BackendConfig.ScheduleConfig.prefillTimeMsPerReq", max=1000, dtype="int"),
-    OptimizerConfigField(name="support_select_batch",
-                         config_position="BackendConfig.ScheduleConfig.supportSelectBatch", max=1,
-                         dtype="bool"),
-    OptimizerConfigField(name="max_queue_deloy_mircroseconds",
-                         config_position="BackendConfig.ScheduleConfig.maxQueueDelayMicroseconds", min=500,
-                         max=1000000,
-                         dtype="int"),
-    OptimizerConfigField(name="prefill_policy_type",
-                         config_position="BackendConfig.ScheduleConfig.prefillPolicyType", min=0, max=1,
-                         dtype="enum", dtype_param=[0, 1, 3]),
-    OptimizerConfigField(name="decode_policy_type",
-                         config_position="BackendConfig.ScheduleConfig.decodePolicyType", min=0, max=1,
-                         dtype="enum", dtype_param=[0, 1, 3]),
-    OptimizerConfigField(name="CONCURRENCY", config_position="env", min=10, max=1001, dtype="int"),
-    OptimizerConfigField(name="REQUESTRATE", config_position="env", min=0, max=1001, dtype="int"),
-    ]  
-    pso = PSOOptimizer(MagicMock(), target_field=my_support_field[-2:])
-    pso.default_res = PerformanceIndex(generate_speed=2000, time_to_first_token=5.5, time_per_output_token=1.3,
-                                       success_rate=1, throughput=5),
-    pso.default_fitness = 3.333
-    pso.default_run_param = [500, 6.3]
-    best_results = pd.DataFrame({"CONCURRENCY": [700], "REQUESTRATE": [3.8]})
-    pso.scheduler = MagicMock()
-    pso.scheduler.run = MagicMock(side_effect=[
-        PerformanceIndex(generate_speed=2000, time_to_first_token=5, time_per_output_token=1, success_rate=1,
-                         throughput=5),
-        PerformanceIndex(generate_speed=2435, time_to_first_token=3.23, time_per_output_token=0.14, success_rate=1,
-                         throughput=5),
-        PerformanceIndex(generate_speed=1700, time_to_first_token=0.4, time_per_output_token=0.03, success_rate=1,
-                         throughput=5),
-        PerformanceIndex(generate_speed=1750, time_to_first_token=0.43, time_per_output_token=0.038, success_rate=1,
-                         throughput=5),
-        PerformanceIndex(generate_speed=1820, time_to_first_token=0.57, time_per_output_token=0.038, success_rate=1,
-                         throughput=5),
-        PerformanceIndex(generate_speed=1800, time_to_first_token=0.44, time_per_output_token=0.04, success_rate=1,
-                         throughput=5),
-    ])
-    pso.scheduler.save_result = MagicMock()
-    pso.fine_tune = MagicMock()
-    pso.fine_tune.fine_tune_with_concurrency_and_request_rate = MagicMock(side_effect=StopFineTune)
-    pso.minimum_algorithm = MagicMock(side_effect=[4, 3.8, 2.9, 3.3, 1.2, 3.9, 3.6])
-    pso.params_in_records = MagicMock(return_value=False)
-    fitness, params, res = pso.refine_optimization_candidates(best_results)
-    assert fitness == [3.333, 4]
-    assert params == [[500, 6.3], [3, 4]]
-    assert len(res) == 2
-
 
 def test_mindie_prepare_theory_guided_disable():
     optimizer = PSOOptimizer(MagicMock())
@@ -657,108 +832,57 @@ def test_mindie_prepare_valid_input():
     assert optimizer.target_field[0].max == 390
 
 
-@patch("msserviceprofiler.modelevalstate.optimizer.optimizer.is_mindie", return_value=True)
-@patch("msserviceprofiler.modelevalstate.config.model_config.MindieModelConfig")
-def test_prepare(mock_mindie_model_config, mock_is_mindie, mindie_config_file):
-    optimizer = PSOOptimizer(MagicMock(), target_field=default_support_field[:5])
-    with open(mindie_config_file, 'r') as f:
-        optimizer.scheduler.simulator.default_config = json.load(f)
-    optimizer.scheduler.run = MagicMock(return_value=PerformanceIndex(generate_speed=369,
-                                                                      time_to_first_token=0.3,
-                                                                      time_per_output_token=0.05,
-                                                                      success_rate=1))
-    optimizer.scheduler.save_result = MagicMock(return_value=True)
-    optimizer.scheduler.error_info = None
-    optimizer.mindie_prepare = MagicMock(return_value=None)
-    assert optimizer.default_run_param is None
-    assert optimizer.default_res is None
-    assert optimizer.default_fitness is None
-    optimizer.prepare()
-    assert optimizer.default_res
-    assert optimizer.default_fitness
-    assert optimizer.default_run_param is not None
+class TestArgParse(unittest.TestCase):
+    @patch('msserviceprofiler.modelevalstate.plugins.load_general_plugins')
+    def test_arg_parse_with_plugin(self, mock_load_general_plugins):
+        mock_load_general_plugins.return_value = True
+        parser = argparse.ArgumentParser()
+        subparsers = parser.add_subparsers()
+        arg_parse(subparsers)
+        args = parser.parse_args(['optimizer'])
+        self.assertEqual(args.func, plugin_main)
 
+    @patch('msserviceprofiler.modelevalstate.plugins.load_general_plugins')
+    def test_arg_parse_without_plugin(self, mock_load_general_plugins):
+        mock_load_general_plugins.return_value = False
+        parser = argparse.ArgumentParser()
+        subparsers = parser.add_subparsers()
+        arg_parse(subparsers)
+        args = parser.parse_args(['optimizer'])
+        self.assertEqual(args.func, main)
 
-def test_run():
-    # 创建PSOOptimizer的实例
-    optimizer = PSOOptimizer(MagicMock(), pso_options=get_settings().pso_options, 
-                             target_field=default_support_field[:3],
-                             pso_init_kwargs={"ftol": get_settings().ftol, "ftol_iter": get_settings().ftol_iter},
-                             load_breakpoint=True)
-    performance_index = PerformanceIndex(generate_speed=888,
-                                         time_to_first_token=0.5,
-                                         time_per_output_token=0.05,
-                                         success_rate=1)
-    # 模拟prepare方法
+    @patch('msserviceprofiler.modelevalstate.plugins.load_general_plugins')
+    def test_arg_parse_with_load_breakpoint(self, mock_load_general_plugins):
+        mock_load_general_plugins.return_value = True
+        parser = argparse.ArgumentParser()
+        subparsers = parser.add_subparsers()
+        arg_parse(subparsers)
+        args = parser.parse_args(['optimizer', '--load_breakpoint'])
+        self.assertTrue(args.load_breakpoint)
 
-    with patch('msserviceprofiler.modelevalstate.optimizer.global_best_custom.CustomGlobalBestPSO',
-                           autospec=True) as mock_custom_global_best_pso:
-        # 模拟enable_simulate上下文管理器
-        with patch('msserviceprofiler.modelevalstate.optimizer.simulator.enable_simulate_old',
-                               autospec=True) as mock_enable_simulate:
-            custom_global_instance = mock_custom_global_best_pso.return_value
-            custom_global_instance.optimize.return_value = (100, [200, 10, 100])
-            # 模拟op_func方法
-            optimizer.prepare = MagicMock()
-            optimizer.op_func = MagicMock()
-            # 模拟refine_optimization_candidates方法
-            optimizer.refine_optimization_candidates = MagicMock(
-                            return_value=([100], [[200, 10, 100]], [performance_index]))
-            # 模拟best_params方法
-            optimizer.best_params = MagicMock(return_value=(100, [200, 10, 100], performance_index))
-            # 模拟self.scheduler.data_storage
-            optimizer.scheduler.data_storage = MagicMock()
-            # 模拟self.scheduler.simulator
-            optimizer.scheduler.simulator = MagicMock()
-            # 调用run方法
-            optimizer.run()
-            # 验证prepare方法被调用
-            optimizer.prepare.assert_called_once()
-            # 验证上下文管理器被正确使用
-            # 验证StagedCBO和CustomGlobalBestPSO类被正确实例化
-            mock_custom_global_best_pso.assert_called_once()
-            # 验证enable_simulate上下文管理器被正确使用
-            mock_enable_simulate.assert_called_once()
-            # 验证refine_optimization_candidates和best_params方法被调用
-            optimizer.refine_optimization_candidates.assert_called_once()
-            optimizer.best_params.assert_called_once()
-            # 验证self.scheduler.data_storage和self.scheduler.simulator被正确使用
-            optimizer.scheduler.data_storage.get_best_result.assert_called_once()
+    @patch('msserviceprofiler.modelevalstate.plugins.load_general_plugins')
+    def test_arg_parse_with_backup(self, mock_load_general_plugins):
+        mock_load_general_plugins.return_value = True
+        parser = argparse.ArgumentParser()
+        subparsers = parser.add_subparsers()
+        arg_parse(subparsers)
+        args = parser.parse_args(['optimizer', '--backup'])
+        self.assertTrue(args.backup)
 
+    @patch('msserviceprofiler.modelevalstate.plugins.load_general_plugins')
+    def test_arg_parse_with_deploy_policy(self, mock_load_general_plugins):
+        mock_load_general_plugins.return_value = True
+        parser = argparse.ArgumentParser()
+        subparsers = parser.add_subparsers()
+        arg_parse(subparsers)
+        args = parser.parse_args(['optimizer', '--deploy_policy', 'single'])
+        self.assertEqual(args.deploy_policy, 'single')
 
-@patch("msserviceprofiler.modelevalstate.optimizer.optimizer.PSOOptimizer")
-@patch("msserviceprofiler.modelevalstate.optimizer.simulator.Simulator")
-@patch("msserviceprofiler.modelevalstate.optimizer.simulator.VllmSimulator")
-@patch("msserviceprofiler.modelevalstate.optimizer.scheduler.Scheduler")
-@patch("msserviceprofiler.modelevalstate.optimizer.scheduler.ScheduleWithMultiMachine")
-def test_main(scheduler_multi, scheduler, vllm_simulator, simulator, psooptimizer):
-    args = MagicMock()
-    args.benchmark_policy = BenchMarkPolicy.benchmark.value
-    args.deploy_policy = DeployPolicy.single.value
-    args.backup = False
-    args.load_breakpoint = False
-    args.engine = EnginePolicy.mindie.value
- 
-    # 调用被测试的方法
-    with patch("shutil.which", return_value="path/to/benchmark"):
-        main(args)
-    simulator.assert_called_once()
-    psooptimizer.assert_called_once()
-    scheduler.assert_called_once()
- 
-    args.benchmark_policy = BenchMarkPolicy.vllm_benchmark.value
-    scheduler.reset_mock()
-    with patch("shutil.which", return_value="path/to/benchmark"):
-        main(args)
-    scheduler.assert_called_once()
-
-    args.benchmark_policy = BenchMarkPolicy.ais_bench.value
-    scheduler.reset_mock()
-    with patch("shutil.which", return_value="path/to/benchmark"):
-        main(args)
-    scheduler.assert_called_once()
- 
-    args.deploy_policy = DeployPolicy.multiple.value
-    with patch("shutil.which", return_value="path/to/benchmark"):
-        main(args)
-    scheduler_multi.assert_called_once()
+    @patch('msserviceprofiler.modelevalstate.plugins.load_general_plugins')
+    def test_arg_parse_with_pd(self, mock_load_general_plugins):
+        mock_load_general_plugins.return_value = True
+        parser = argparse.ArgumentParser()
+        subparsers = parser.add_subparsers()
+        arg_parse(subparsers)
+        args = parser.parse_args(['optimizer', '--pd', 'competition'])
+        self.assertEqual(args.pd, 'competition')
