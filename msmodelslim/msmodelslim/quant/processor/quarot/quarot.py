@@ -187,5 +187,4 @@ class QuaRotProcessor(AutoSessionProcessor):
                                     action=f"Please check whether the {command.target} size is equal \
                                     to the rotate matrix size: {command.rot.shape[0]}!") from e
             get_logger().debug(f"{command.side.value} rotate linear success: {command.target}")
-            get_logger().debug(f"successfully {command.side.value} rotate linear: {command.target}")
 
