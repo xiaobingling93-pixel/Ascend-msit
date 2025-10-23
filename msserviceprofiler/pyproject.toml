@@ -1,13 +1,13 @@
 [tool.poetry]
 name = "msserviceprofiler"
-version = "1.1.3"
+version = "1.1.5a"
 description = ""
 readme = "README.md"
 changelog = "https://gitcode.com/Ascend/msit/blob/master/msserviceprofiler/Changelog.md"
 
 [tool.poetry.dependencies]
 python = "^3.9"
-pandas = "^2.0.0"
+pandas = "*"
 psutil = "^6.0.0"
 loguru = "^0.7.3"
 scipy = "^1.3.2"

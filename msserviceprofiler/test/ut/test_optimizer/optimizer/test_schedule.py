@@ -12,16 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import subprocess
+import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch, PropertyMock
 
 import numpy as np
 import pytest
 
-from msserviceprofiler.modelevalstate.config.config import CommunicationConfig, map_param_with_value
-from msserviceprofiler.modelevalstate.config.config import settings, default_support_field
+from msserviceprofiler.modelevalstate.config.config import (
+    CommunicationConfig, map_param_with_value, 
+    get_settings, default_support_field, Stage,
+    OptimizerConfigField, PerformanceIndex
+)
 from msserviceprofiler.modelevalstate.optimizer.communication import CommunicationForFile, CustomCommand
 from msserviceprofiler.modelevalstate.optimizer.scheduler import ScheduleWithMultiMachine
+from msserviceprofiler.modelevalstate.config.base_config import FOLDER_LIMIT_SIZE
+from msserviceprofiler.modelevalstate.optimizer.scheduler import Scheduler
 
 
 class TestScheduleWithMultiMachine:
@@ -89,7 +95,7 @@ class TestScheduleWithMultiMachine:
                    return_value=mock_communication, autospec=True) as mock_communication_class, \
                 patch('msserviceprofiler.modelevalstate.optimizer.scheduler.CustomCommand',
                       return_value=mock_custom_command, autospec=True) as mock_custom_command_class:
-            schedule = ScheduleWithMultiMachine(settings.communication, MagicMock(), MagicMock(), MagicMock())
+            schedule = ScheduleWithMultiMachine(get_settings().communication, MagicMock(), MagicMock(), MagicMock())
             schedule.cmd = MagicMock()
             schedule.communication = MagicMock()
             yield schedule
@@ -162,3 +168,100 @@ class TestScheduleWithMultiMachine:
             f"{schedule_with_multi_machine.cmd.history[-1]}")
         schedule_with_multi_machine.communication.clear_command.assert_called_once_with(
             f"{schedule_with_multi_machine.cmd.history[-1]}")
+        
+
+class TestScheduler(unittest.TestCase):
+    def setUp(self):
+        self.simulator = MagicMock()
+        self.benchmark = MagicMock()
+        self.data_storage = MagicMock()
+        self.bak_path = MagicMock()
+        self.scheduler = Scheduler(self.simulator, self.benchmark, self.data_storage, self.bak_path)
+
+    @patch('msserviceprofiler.modelevalstate.optimizer.utils.get_folder_size')
+    def test_set_back_up_path_folder_size_exceeds_limit(self, mock_get_folder_size):
+        mock_get_folder_size.return_value = FOLDER_LIMIT_SIZE + 1
+        self.scheduler.set_back_up_path()
+
+    @patch('msserviceprofiler.modelevalstate.optimizer.utils.get_folder_size')
+    @patch('msserviceprofiler.modelevalstate.common.get_train_sub_path')
+    def test_set_back_up_path_folder_size_within_limit(self, mock_get_train_sub_path, mock_get_folder_size):
+        mock_get_folder_size.return_value = FOLDER_LIMIT_SIZE - 1
+        mock_get_train_sub_path.return_value = 'sub_path'
+        self.scheduler.set_back_up_path()
+
+    @patch('time.sleep', return_value=None)
+    def test_wait_simulate_success(self, mock_sleep):
+        self.simulator.health.return_value.stage = Stage.running
+        self.scheduler.wait_simulate()
+
+    @patch('time.sleep', return_value=None)
+    def test_wait_simulate_timeout(self, mock_sleep):
+        self.simulator.health.return_value.stage = Stage.error
+        self.scheduler.wait_simulate()
+
+    @patch('time.sleep', return_value=None)
+    def test_run_target_server_benchmark_error(self, _):
+        self.benchmark.run.side_effect = Exception('Benchmark error')
+        with self.assertRaises(Exception):
+            self.scheduler.run_target_server(np.array([1, 2, 3]), ('field1', 'field2'))
+
+    @patch('time.sleep', return_value=None)
+    def test_run_target_server_monitoring_error(self, _):
+        self.scheduler.monitoring_status = MagicMock(side_effect=Exception('Monitoring error'))
+        with self.assertRaises(Exception):
+            self.scheduler.run_target_server(np.array([1, 2, 3]), ('field1', 'field2'))
+
+
+class TestSchedulerRunMethods(unittest.TestCase):
+    
+    def setUp(self):
+        # 创建测试对象
+        self.simulator = MagicMock()
+        self.benchmark = MagicMock()
+        self.data_storage = MagicMock()
+        self.scheduler = Scheduler(
+            simulator=self.simulator,
+            benchmark=self.benchmark,
+            data_storage=self.data_storage
+        )
+        
+        # 准备测试数据
+        self.params = np.array([1.0, 2.0, 3.0])
+        self.field1 = OptimizerConfigField(name="param1", value=1.0, min=0.0, max=5.0)
+        self.field2 = OptimizerConfigField(name="param2", value=2.0, min=0.0, max=5.0)
+        self.field3 = OptimizerConfigField(name="param3", value=3.0, min=0.0, max=5.0)
+        self.params_field = (self.field1, self.field2, self.field3)
+        
+        # 模拟性能指标
+        self.performance_index = PerformanceIndex()
+        self.performance_index.throughput = 100.0
+        self.benchmark.get_performance_index.return_value = self.performance_index
+    
+    @patch('time.time')
+    def test_run_with_fixed_request_rate(self, mock_time):
+        """测试run_with_request_rate方法在固定request rate时的行为"""
+        # 设置模拟返回值
+        mock_time.return_value = 1000.0
+        
+        # 添加固定REQUESTRATE字段 (min == max)
+        req_rate_field = OptimizerConfigField(name="REQUESTRATE", value=50.0, min=50.0, max=50.0)
+        params_field_with_fixed_req_rate = self.params_field + (req_rate_field,)
+        
+        # 调用被测方法
+        self.scheduler.run_with_request_rate(self.params, params_field_with_fixed_req_rate)
+        
+        # 验证request rate没有被修改
+        self.assertEqual(req_rate_field.value, 50.0)
+        self.assertEqual(req_rate_field.min, 50.0)
+        self.assertEqual(req_rate_field.max, 50.0)
+    
+    @patch('time.time')
+    @patch('msserviceprofiler.modelevalstate.optimizer.scheduler.logger')
+    def test_run_logging(self, mock_logger, mock_time):
+        """测试run方法的日志记录"""
+        # 设置模拟返回值
+        mock_time.return_value = 1000.0
+        
+        # 调用被测方法
+        self.scheduler.run(self.params, self.params_field)

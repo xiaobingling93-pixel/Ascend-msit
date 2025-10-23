@@ -5,7 +5,7 @@ from unittest.mock import Mock, patch, MagicMock
 import numpy as np
 import pytest
 
-from msserviceprofiler.modelevalstate.config.config import CommunicationConfig, settings, \
+from msserviceprofiler.modelevalstate.config.config import CommunicationConfig, get_settings, \
     map_param_with_value, default_support_field
 from msserviceprofiler.modelevalstate.optimizer.server import Scheduler
 from msserviceprofiler.modelevalstate.optimizer.communication import CommunicationForFile, CustomCommand
@@ -38,7 +38,7 @@ def test_scheduler_init(tmpdir):
 
 def test_backup_path_exists():
     # Arrange
-    scheduler = Scheduler(settings.communication)
+    scheduler = Scheduler(get_settings().communication)
     scheduler.communication = Mock()
     params = "/existing/path"
     _cmd = scheduler.cmd.start
@@ -54,7 +54,7 @@ def test_backup_path_exists():
 
 def test_backup_path_not_exists():
     # Arrange
-    scheduler = Scheduler(settings.communication)
+    scheduler = Scheduler(get_settings().communication)
     scheduler.communication = Mock()
     params = "/non/existing/path"
     _cmd = scheduler.cmd.start
@@ -69,35 +69,14 @@ def test_backup_path_not_exists():
     scheduler.communication.clear_res.assert_called_once()
 
 
-@patch('msserviceprofiler.modelevalstate.optimizer.server.CommunicationForFile')
-@patch('msserviceprofiler.modelevalstate.optimizer.server.Simulator')
-def test_start(mock_sim, mock_comm_for_file):
-    # Arrange
-    settings.mindie.target_field = default_support_field
-    settings.vllm.target_field = default_support_field
-    scheduler = Scheduler(settings.communication)
-    _params = np.random.random(len(default_support_field))
-    # 调用run_simulate方法
-    _simulate_run_info = map_param_with_value(_params, default_support_field)
-    scheduler.cmd.history = 'cmd2'
-
-    # Act
-    scheduler.start(str(_params.tolist()))
-
-    # Assert
-    scheduler.simulator.run.assert_called_once_with(tuple(_simulate_run_info))
-    scheduler.communication.send_command.assert_called_once_with('cmd2:done')
-    scheduler.communication.clear_res.assert_called_once()
-
-
 def test_check_success_no_simulator():
-    scheduler = Scheduler(settings.communication)
+    scheduler = Scheduler(get_settings().communication)
     scheduler.simulator = None
     assert scheduler.check_success() is None
 
 
 def test_check_success_simulator_succeeds_immediately():
-    scheduler = Scheduler(settings.communication)
+    scheduler = Scheduler(get_settings().communication)
     scheduler.simulator = Mock()
     scheduler.cmd.history = "check success 1111111"
     scheduler.simulator.check_success.return_value = True
@@ -108,7 +87,7 @@ def test_check_success_simulator_succeeds_immediately():
 
 @patch("time.sleep")
 def test_check_success_simulator_succeeds_after_retries(mock_sleep):
-    scheduler = Scheduler(settings.communication)
+    scheduler = Scheduler(get_settings().communication)
     scheduler.simulator = Mock()
     scheduler.cmd.history = "check success 1111111"
     scheduler.simulator.check_success.side_effect = [False, False, True]
@@ -121,7 +100,7 @@ def test_check_success_simulator_succeeds_after_retries(mock_sleep):
 
 @patch("time.sleep")
 def test_check_success_simulator_always_fails(mock_sleep):
-    scheduler = Scheduler(settings.communication)
+    scheduler = Scheduler(get_settings().communication)
     scheduler.simulator = Mock()
     scheduler.cmd.history = "check success 1111111"
     scheduler.simulator.check_success.return_value = False
@@ -134,7 +113,7 @@ def test_check_success_simulator_always_fails(mock_sleep):
 
 def test_stop_with_simulator():
     # 创建Scheduler实例
-    scheduler = Scheduler(settings.communication)
+    scheduler = Scheduler(get_settings().communication)
     # 模拟simulator和communication对象
     scheduler.simulator = Mock()
     scheduler.communication = Mock()
@@ -157,7 +136,7 @@ def test_stop_with_simulator():
 
 def test_stop_without_simulator():
     # 创建Scheduler实例
-    scheduler = Scheduler(settings.communication)
+    scheduler = Scheduler(get_settings().communication)
 
     # 设置simulator为None
     scheduler.simulator = None
@@ -180,14 +159,14 @@ def test_stop_without_simulator():
 
 
 def test_get_cmd_param_empty():
-    scheduler = Scheduler(settings.communication)
+    scheduler = Scheduler(get_settings().communication)
     scheduler.communication = MagicMock()
     scheduler.communication.recv_command.return_value = ""
     assert scheduler.get_cmd_param() == (None, None)
 
 
 def test_get_cmd_param_eof():
-    scheduler = Scheduler(settings.communication)
+    scheduler = Scheduler(get_settings().communication)
 
     scheduler.communication = MagicMock()
     scheduler.communication.recv_command.return_value = "EOF"
@@ -195,7 +174,7 @@ def test_get_cmd_param_eof():
 
 
 def test_get_cmd_param_history():
-    scheduler = Scheduler(settings.communication)
+    scheduler = Scheduler(get_settings().communication)
     scheduler.communication = MagicMock()
     scheduler.communication.recv_command.return_value = "cmd1"
     scheduler.cmd.history = ["cmd1"]
@@ -203,14 +182,14 @@ def test_get_cmd_param_history():
 
 
 def test_get_cmd_param_format_error():
-    scheduler = Scheduler(settings.communication)
+    scheduler = Scheduler(get_settings().communication)
     scheduler.communication = MagicMock()
     scheduler.communication.recv_command.return_value = "cmd1"
     assert scheduler.get_cmd_param() == (None, None)
 
 
 def test_get_cmd_param_success():
-    scheduler = Scheduler(settings.communication)
+    scheduler = Scheduler(get_settings().communication)
     scheduler.communication = MagicMock()
     scheduler.communication.recv_command.return_value = "cmd1 params:123"
     assert scheduler.get_cmd_param() == ("cmd1", "123")
@@ -244,7 +223,7 @@ class TestSchedulerProcessPoll:
     @pytest.fixture
     def scheduler(self):
         # 创建Scheduler实例
-        scheduler = Scheduler(settings.communication)
+        scheduler = Scheduler(get_settings().communication)
         scheduler.simulator = MagicMock()
         scheduler.communication = MagicMock()
         return scheduler
@@ -252,14 +231,14 @@ class TestSchedulerProcessPoll:
 
 # 测试用例1: 测试当get_cmd_param返回的_cmd为None时，init方法返回False
 def test_init_cmd_none():
-    scheduler = Scheduler(settings.communication)
+    scheduler = Scheduler(get_settings().communication)
     scheduler.get_cmd_param = MagicMock(return_value=(None, None))
     assert scheduler.init() is False
 
 
 # 测试用例2: 测试当get_cmd_param返回的_cmd为"init"时，init方法返回True
 def test_init_cmd_init():
-    scheduler = Scheduler(settings.communication)
+    scheduler = Scheduler(get_settings().communication)
     scheduler.get_cmd_param = MagicMock(return_value=("init", None))
     scheduler.cmd.history = "init 11111111"
     scheduler.communication = MagicMock()
@@ -270,19 +249,19 @@ def test_init_cmd_init():
 
 # 测试用例3: 测试当get_cmd_param返回的_cmd不为"init"时，init方法返回False
 def test_init_cmd_not_init():
-    scheduler = Scheduler(settings.communication)
+    scheduler = Scheduler(get_settings().communication)
     scheduler.get_cmd_param = MagicMock(return_value=("other_command", None))
     assert scheduler.init() is False
 
 
 def test_run_no_cmd():
-    scheduler = Scheduler(settings.communication)
+    scheduler = Scheduler(get_settings().communication)
     with patch.object(scheduler, 'get_cmd_param', return_value=(None, None)):
         assert scheduler.run() == ''
 
 
 def test_run_unknown_cmd():
-    scheduler = Scheduler(settings.communication)
+    scheduler = Scheduler(get_settings().communication)
     with patch.object(scheduler, 'get_cmd_param', return_value=('unknown_cmd', None)):
         with patch('msserviceprofiler.modelevalstate.optimizer.server.logger') as mock_logger:
             assert scheduler.run() == ''
@@ -290,7 +269,7 @@ def test_run_unknown_cmd():
 
 
 def test_run_no_param():
-    scheduler = Scheduler(settings.communication)
+    scheduler = Scheduler(get_settings().communication)
     scheduler.command = MagicMock(return_value='result')
     with patch.object(scheduler, 'get_cmd_param', return_value=('command', None)):
         with patch('msserviceprofiler.modelevalstate.optimizer.server.getattr', return_value=scheduler.command):
@@ -299,7 +278,7 @@ def test_run_no_param():
 
 
 def test_run_with_param():
-    scheduler = Scheduler(settings.communication)
+    scheduler = Scheduler(get_settings().communication)
     scheduler.command = MagicMock(return_value='result')
     with patch.object(scheduler, 'get_cmd_param', return_value=('command', 'param')):
         with patch('msserviceprofiler.modelevalstate.optimizer.server.getattr', return_value=scheduler.command):

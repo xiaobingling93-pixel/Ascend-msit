@@ -22,7 +22,7 @@ import numpy as np
 import pytest
 import torch
 
-from msserviceprofiler.modelevalstate.config.config import settings
+from msserviceprofiler.modelevalstate.config.config import get_settings
 from msserviceprofiler.modelevalstate.inference.constant import IS_SLEEP_FLAG
 from msserviceprofiler.modelevalstate.inference.data_format_v1 import BatchField, RequestField
 from msserviceprofiler.modelevalstate.inference.simulate import Simulate, predict_queue, ServiceField, FileLogger
@@ -82,7 +82,7 @@ class TestFileLogger:
 
     @pytest.fixture
     def logger(self):
-        return FileLogger(Path(settings.simulator_output).joinpath(f"simulate_{os.getpid()}.csv"))
+        return FileLogger(Path(get_settings().simulator_output).joinpath(f"simulate_{os.getpid()}.csv"))
     
     @pytest.fixture
     def file_path(self):
