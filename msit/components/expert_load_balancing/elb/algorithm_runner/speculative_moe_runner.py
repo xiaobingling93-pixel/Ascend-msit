@@ -9,7 +9,7 @@ from components.expert_load_balancing.elb.algorithm_runner.base_algorithm_runner
     AlgorithmType, DEPLOYMENT_JSON_FILE
 from components.expert_load_balancing.elb.constant import A2, A3
 from components.utils.security_check import check_int, get_valid_read_path
-from components.utils.file_open_check import ms_open
+from components.utils.file_open_check import ms_open, MAX_SIZE_LIMITE_NORMAL_FILE
 from speculative_moe import ExpSolver, ExpILPSolver, second_optim, all_to_all_algorithm_multi_process
 
 
@@ -30,7 +30,7 @@ class SpeculativeArgs:
         self.collection_interval = 8
         self.n_selected_expert = 8
         self.eplb_map = ""
-        self.n_shared_experts = 1  # deepseek固定为1 后续修改支持多种模型
+        self.n_shared_experts = 0
 
         # 从命令行的args中加载参数
         self.device_type = args.device_type
@@ -52,6 +52,9 @@ class SpeculativeArgs:
 
         self.selected_layers = [0, self.n_layers - 1]
 
+        if (self.redundant_experts + self.n_experts + self.n_shared_experts) % self.n_devices != 0:
+            raise ValueError("The sum of origin expert and redundant expert must be a positive multiple of devices.")
+
     def process_split_format_args(self, args):
         self.load_from_config_json(args.config_json)
 
@@ -69,20 +72,25 @@ class SpeculativeArgs:
             self.enhanced = False
             self.black_box_annealing = False
             self.all2all_balance = False
-        elif args.algorithm == AlgorithmType.SPECULATIVE_MOE_LEVEL_1_MIXED and \
-            self.device_type == A2:
+        elif args.algorithm == AlgorithmType.SPECULATIVE_MOE_LEVEL_1_MIXED:
+            # 共享专家混置场景和共享专家外置场景冲突
+            if self.n_share_expert_devices != 0:
+                raise ValueError("num-share-expert-devices should be 0 when using al 4 SPECULATIVE_MOE_LEVEL_1_MIXED.")
             self.enhanced = False
             self.black_box_annealing = False
             self.all2all_balance = False
             self.redundant_experts += self.n_devices - 1
             self.mixed_shared_expert = True
-        elif args.algorithm == AlgorithmType.SPECULATIVE_MOE_LEVEL_2_MIXED and \
-            self.device_type == A2:
+            self.n_shared_experts = 1  # deepseek固定为1 后续修改支持多种模型
+        elif args.algorithm == AlgorithmType.SPECULATIVE_MOE_LEVEL_2_MIXED:
+            if self.n_share_expert_devices != 0:
+                raise ValueError("num-share-expert-devices should be 0 when using al 5 SPECULATIVE_MOE_LEVEL_2_MIXED.")
             self.enhanced = True
             self.black_box_annealing = True
             self.all2all_balance = True
             self.redundant_experts += self.n_devices - 1
             self.mixed_shared_expert = True
+            self.n_shared_experts = 1
 
     def load_from_config_json(self, config):
         self.n_layers = config.get("num_moe_layers", 1)
@@ -196,7 +204,7 @@ def process_split_data(target_data, args, topk_data):
         topk_length = min(min([data.shape[0] for data in topk_data]), length)
         topk_iteration = topk_length // args.n_layers
         topk_length = topk_iteration * args.n_layers
-        if len(topk_data <= args.n_share_expert_devices_of_input):
+        if len(topk_data) <= args.n_share_expert_devices_of_input:
             raise ValueError("N_shared_expert_devices should be larger than n_ranks in topk data.")
         topk_data = np.array([data[:topk_length, :] for data in topk_data[args.n_share_expert_devices_of_input:]])
 
@@ -234,12 +242,14 @@ def process_split_data(target_data, args, topk_data):
             for j in range(target_data.shape[-1]):
                 dynamic_expert_hot[i, j, :] += target_data[:, i, j]
     else:
-        if args.n_experts != np.max(args.eplb_map) + 1 or np.min(args.eplb_map) != 0:
-            raise ValueError("Max or min routing expert idx in eplb map dose not match " \
-                             "num of experts in model_gen_config.json.")
+        if np.min(args.eplb_map) != 0:
+            raise ValueError("Min routing expert idx in eplb map should be 0.")
         for i in range(args.n_layers):
             for j in range(target_data.shape[-1]):
                 expert_id = args.eplb_map[i][j]
+                if expert_id >= args.n_experts:
+                    # 输入为共享专家混置场景 共享专家不参与热度计算
+                    continue
                 dynamic_expert_hot[i, expert_id, :] += target_data[:, i, j]
     
     if args.mixed_shared_expert:
@@ -256,7 +266,7 @@ def process_sum_data(target_data):
 def parse_ep_file(ep_file_path, ep_file=None, n_share_expert_devices=0):
     experts_table = {}
     if ep_file is None:
-        with ms_open(ep_file_path) as handle:
+        with ms_open(ep_file_path, max_size=MAX_SIZE_LIMITE_NORMAL_FILE) as handle:
             ep_file = json.load(handle)
 
     layer_count = ep_file["moe_layer_count"]

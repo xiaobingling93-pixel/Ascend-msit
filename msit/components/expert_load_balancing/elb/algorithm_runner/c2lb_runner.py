@@ -53,6 +53,8 @@ class StaticC2lbA3Runner(BaseAlgorithmRunner):
         self.algorithm_type = AlgorithmType.C2LB
 
     def run_algorithm(self, data):
+        if self.args.share_expert_devices != 0:
+            raise ValueError("Input incorrect share expert devices parameters.")
         for period, period_data in data.items():
             if "topk" in period:
                 continue
@@ -79,7 +81,7 @@ class DynamicC2lbRunner(BaseAlgorithmRunner):
         for period, period_data in data.items():
             if "topk" in period:
                 continue
-            period_data = data = process_data(data, self.args)
+            period_data = process_data(period_data, self.args)
             global_deployment = lb_redundancy_deploy_for_dynamic(
                 period_data,
                 self.args.num_redundancy_expert,
