@@ -447,7 +447,13 @@ class TestWarpMTPModel(unittest.TestCase):
             }
             
             save_file(mock_weights, safetensor_path)
-            warpped_model = warp_mtp_model(config, base_model, temp_dir)
+            with patch(
+                'msmodelslim.model.deepseek_v3.mtp_quant_module.get_valid_read_path',
+                return_value=os.path.join(
+                    temp_dir, "model-00163-of-000163.safetensors"
+                )
+            ):
+                warpped_model = warp_mtp_model(config, base_model, temp_dir)
             
             # 验证返回的是MTPModel实例
             self.assertIsInstance(warpped_model, MTPModel)

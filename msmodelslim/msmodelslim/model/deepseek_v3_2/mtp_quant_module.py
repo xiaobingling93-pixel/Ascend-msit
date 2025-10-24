@@ -6,7 +6,11 @@ import torch
 import torch.nn as nn
 from safetensors.torch import load_file
 
+from ascend_utils.common.security.path import get_valid_read_path
 from msmodelslim.utils.logging import get_logger
+
+
+MAX_READ_FILE_SIZE_16G = 17179869184  # 16G, 16 * 1024 * 1024 * 1024
 
 
 def remove_zero_and_shift(matrix):
@@ -87,6 +91,12 @@ def get_mtp_layer(config, model_path):
     get_logger().debug('Start to load mtp')
     mtp_layer = MTPLayer(config)
     mtp_safetensor = os.path.join(model_path, "model-00163-of-000163.safetensors")
+    mtp_safetensor = get_valid_read_path(
+        mtp_safetensor,
+        size_max=MAX_READ_FILE_SIZE_16G,
+        is_dir=False,
+        check_user_stat=True
+    )
     mtp_weight = load_file(mtp_safetensor, device="cpu")
     new_state_dict = {}
     for key, value in mtp_weight.items():
