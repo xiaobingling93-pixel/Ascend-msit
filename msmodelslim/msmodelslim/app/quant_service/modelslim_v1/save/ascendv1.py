@@ -69,11 +69,11 @@ def remove_quantization_config(output_path):
         return
 
     try:
-        config_data = json_safe_load(config_file, check_user_stat=False)
-
+        config_data = json_safe_load(config_file, check_user_stat=True)
+        
         if 'quantization_config' in config_data:
             del config_data['quantization_config']
-            json_safe_dump(config_data, config_file, indent=2, check_user_stat=False)
+            json_safe_dump(config_data, config_file, indent=2, check_user_stat=True)
     except Exception as e:
         logger.warning(f"Failed to remove quantization_config in config.json!")
 
