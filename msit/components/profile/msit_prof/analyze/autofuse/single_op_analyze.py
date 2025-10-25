@@ -14,6 +14,7 @@
 import os
 import subprocess
 from functools import reduce
+from pathlib import Path
 
 import pandas as pd
 import numpy as np
@@ -49,8 +50,7 @@ class SingleOpAnalyzer:
         self.fused_op_summary = args.fused
         self.origin_op_summary = args.origin
         self.output_path = args.output
-        self.ge_graph_path = args.ops_graph
-        self.ops_mapping_json = os.path.join(self.output_path, "ge_proto_build.json")
+        self.ge_graph_paths = args.ops_graph
         self.fused_df = None
         self.origin_df = None
         self.fused_graph_to_origin_op_mapping = None
@@ -108,7 +108,7 @@ class SingleOpAnalyzer:
         """
         unmatched = group[
             (group['_merge'] == 'left_only') &
-            (~group['origin_op_type'].isin(NO_PROF_OP_TYPE_LIST))
+            (~group['origin_op_type'].isin(NO_PROF_OP_TYPE_LIST)) & group['origin_op_name'].notna()
         ]
         deduped = unmatched.drop_duplicates(subset='origin_op_name', keep='first')
         return deduped['origin_op_name'].tolist()
@@ -120,19 +120,24 @@ class SingleOpAnalyzer:
         return f"{dividend / divisor}"
 
     def convert_ge_graph(self):
-        atc_cmd = [
-            "atc", "--mode=5", "--om=" + self.ge_graph_path, "--json=" + self.ops_mapping_json
-        ]
-        atc_cmd = filter_cmd(atc_cmd)
-        res = subprocess.run(atc_cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        if res.returncode == 0:
-            logger.info("atc conversion success!")
-        else:
-            raise RuntimeError("atc run failed! Make sure that you have correctly activate CANN environments.")
+        mapping_records = []
+        for graph_path in self.ge_graph_paths:
+            ops_mapping_json = os.path.join(self.output_path, Path(graph_path).stem + ".json")
+            atc_cmd = [
+                "atc", "--mode=5", "--om=" + graph_path, "--json=" + ops_mapping_json
+            ]
+            atc_cmd = filter_cmd(atc_cmd)
+            res = subprocess.run(atc_cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            if res.returncode == 0:
+                logger.info(f"atc conversion success for graph {graph_path}.")
+            else:
+                raise RuntimeError("atc run failed! Make sure that you have correctly activate CANN environments.")
+            mapping_records.extend(self.get_fused_graph_to_origin_op_mapping(ops_mapping_json))
+        self.fused_graph_to_origin_op_mapping = pd.DataFrame(mapping_records).drop_duplicates().reset_index(drop=True)
 
-    def get_fused_graph_to_origin_op_mapping(self):
+    def get_fused_graph_to_origin_op_mapping(self, ops_mapping_json):
         records = []
-        for graph in get_all_subgraph(self.ops_mapping_json):
+        for graph in get_all_subgraph(ops_mapping_json):
             for op in graph['op']:
                 if op['type'] not in AUTO_FUSED_OP_TYPE:
                     continue
@@ -152,7 +157,7 @@ class SingleOpAnalyzer:
                         'origin_op_name': name,
                         'origin_op_type': op_type
                     })
-        self.fused_graph_to_origin_op_mapping = pd.DataFrame(records)
+        return records
 
     def load_op_summary(self):
         fused_df = pd.read_csv(
@@ -188,7 +193,7 @@ class SingleOpAnalyzer:
         }).reset_index()
         map_names = set(self.fused_graph_to_origin_op_mapping["fused_op_name"])
         fused_op_names = set(fused_info["fused_op_name"])
-        dropped_fused_ops = map_names - fused_op_names
+        dropped_fused_ops = fused_op_names - map_names
         if dropped_fused_ops:
             logger.warning(f"The following fused ops were not found in the GE dump graph: {dropped_fused_ops}")
         # 结果只保留GE dump graph中的fused ops
@@ -269,10 +274,12 @@ class SingleOpAnalyzer:
         # 将dump ge_build.txt转换成json文件，方便读取
         try:
             self.convert_ge_graph()
-            self.get_fused_graph_to_origin_op_mapping()
             self.load_op_summary()
             if self.fused_df.empty:
                 logger.warning("No fusion ops were found.")
+                return
+            if self.fused_graph_to_origin_op_mapping.empty:
+                logger.error("No fusion operator mapping information was found.")
                 return
             analysis_df = self.build_fusion_origin_analysis()
             result_df = (

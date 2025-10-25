@@ -45,7 +45,7 @@ class TestSingleOpAnalyzer(unittest.TestCase):
         self.args.fused = os.path.join(self.INPUT_PATH, "fused.csv")
         self.args.origin = os.path.join(self.INPUT_PATH, "origin.csv")
         self.args.output = self.INPUT_PATH
-        self.args.ops_graph = os.path.join(self.INPUT_PATH, "ge_proto_00000001_graph_31_Build.txt")
+        self.args.ops_graph = [os.path.join(self.INPUT_PATH, "ge_proto_00000001_graph_31_Build.txt")]
         self.analyzer = SingleOpAnalyzer(self.args)
         fused_df = pd.DataFrame({
             'Op Name': ['fused_graph_50', 'fused_graph_52'] * 2,
@@ -95,33 +95,29 @@ class TestSingleOpAnalyzer(unittest.TestCase):
                 result = self.analyzer.calculate_gm(case[0], case[1])
                 self.assertEqual(result, 0)
 
+    @patch('msit_prof.analyze.autofuse.single_op_analyze.get_all_subgraph')
     @patch('subprocess.run')
-    def test_convert_ge_graph_given_valid_command_when_running_atc_then_conversion_success(self, mock_run):
+    def test_convert_ge_graph_given_valid_command_when_running_atc_then_conversion_success(self, mock_run,
+                                                                                           mock_get_all_subgraph):
         mock_run.return_value.returncode = 0
+        mock_get_all_subgraph.return_value = self.OPS_MAPPING_JSON
         self.analyzer.convert_ge_graph()
         mock_run.assert_called_once()
         self.assertTrue(mock_run.call_args[1]['stdout'] is subprocess.PIPE)
-
-    @patch('subprocess.run')
-    def test_convert_ge_graph_given_invalid_command_when_running_atc_then_conversion_fails(self, mock_run):
-        mock_run.return_value.returncode = 1
-        with self.assertRaises(RuntimeError):
-            self.analyzer.convert_ge_graph()
-
-    @patch('msit_prof.analyze.autofuse.single_op_analyze.get_all_subgraph')
-    def test_get_fuse_graph_to_origin_op_mappig_given_valid_op_when_parsing_graph_then_mapping_populated(
-        self, mock_get_all_subgraph
-    ):
-        mock_get_all_subgraph.return_value = self.OPS_MAPPING_JSON
-        self.analyzer.get_fused_graph_to_origin_op_mapping()
-        result = self.analyzer.fused_graph_to_origin_op_mapping
         expected = pd.DataFrame({
             'fused_op_name': ['fused_graph_50'] * 4 + ['fused_graph_52'] * 5,
             'origin_op_name': ['Mul_7', 'Mul_6', 'Reshape_18', 'Reshape_19',
                                'Reshape_23', 'Sigmoid', 'Reshape_22', 'mul_8', 'Sigmoid_1'],
             'origin_op_type': ['Mul', 'Mul', 'Reshape', 'Reshape', 'Reshape', 'Sigmoid', 'Reshape', 'Mul', 'Sigmoid']
         })
+        result = self.analyzer.fused_graph_to_origin_op_mapping
         self.assertTrue(result.equals(expected))
+
+    @patch('subprocess.run')
+    def test_convert_ge_graph_given_invalid_command_when_running_atc_then_conversion_fails(self, mock_run):
+        mock_run.return_value.returncode = 1
+        with self.assertRaises(RuntimeError):
+            self.analyzer.convert_ge_graph()
 
     def test_load_op_summary_given_valid_csv_files_when_loading_then_dataframes_created(self):
         self.analyzer.load_op_summary()
@@ -141,9 +137,12 @@ class TestSingleOpAnalyzer(unittest.TestCase):
         self.assertEqual(self.analyzer.origin_df.columns.tolist(), expected_origin_df_columns)
 
     @patch('msit_prof.analyze.autofuse.single_op_analyze.get_all_subgraph')
-    def test_build_fusion_origin_analysis_should_return_analysis_df_when_all_dfs_valid(self, mock_get_all_subgraph):
+    @patch('subprocess.run')
+    def test_build_fusion_origin_analysis_should_return_analysis_df_when_all_dfs_valid(self, mock_run,
+                                                                                       mock_get_all_subgraph):
+        mock_run.return_value.returncode = 0
         mock_get_all_subgraph.return_value = self.OPS_MAPPING_JSON
-        self.analyzer.get_fused_graph_to_origin_op_mapping()
+        self.analyzer.convert_ge_graph()
         self.analyzer.load_op_summary()
         result = self.analyzer.build_fusion_origin_analysis()
         self.assertEqual(result.columns.tolist(), ['fused_op_name', 'fused_op_type', 'fused_duration',
@@ -153,9 +152,10 @@ class TestSingleOpAnalyzer(unittest.TestCase):
         self.assertEqual(result.shape, (12, 16))
 
     @patch('msit_prof.analyze.autofuse.single_op_analyze.get_all_subgraph')
-    @patch('msit_prof.analyze.autofuse.single_op_analyze.SingleOpAnalyzer.convert_ge_graph')
-    def test_save_analyze_result_given_valid_result_when_saving_then_csv_created(self, mock_convert_ge_graph,
+    @patch('subprocess.run')
+    def test_save_analyze_result_given_valid_result_when_saving_then_csv_created(self, mock_run,
                                                                                  mock_get_all_subgraph):
+        mock_run.return_value.returncode = 0
         mock_get_all_subgraph.return_value = self.OPS_MAPPING_JSON
         self.analyzer.analyze()
         profile_analysis_df = pd.read_csv(os.path.join(self.analyzer.output_path, "profile_analysis.csv"))
@@ -187,4 +187,3 @@ class TestSingleOpAnalyzer(unittest.TestCase):
             'Not Found Origin Op': [np.nan, 'Sigmoid; mul_8']
         })
         assert_frame_equal(profile_analysis_df, expected_df)
-
