@@ -18,6 +18,7 @@ import sys
 import argparse
 import re
 import shutil
+import glob
 
 from components.utils.file_open_check import FileStat
 from components.utils.constants import PATH_WHITE_LIST_REGEX
@@ -298,7 +299,7 @@ def check_output_path_legality(value):
 
 def check_input_opsummary_legality(value):
     if not value:
-        return value
+        raise argparse.ArgumentTypeError("Path cannot be empty.")
     file_path = value
     try:
         file_stat = FileStat(file_path)
@@ -313,19 +314,22 @@ def check_input_opsummary_legality(value):
 
 def valid_ops_map_file(value):
     if not value:
-        return value
-    file_path = value
+        raise argparse.ArgumentTypeError("Path cannot be empty.")
+    input_path = value
     try:
-        file_stat = FileStat(file_path)
+        file_stat = FileStat(input_path)
     except Exception as err:
-        raise argparse.ArgumentTypeError("Input path: %r is illegal." % file_path) from err
+        raise argparse.ArgumentTypeError("Input path: %r is illegal." % input_path) from err
     if not file_stat.is_basically_legal('read', strict_permission=True):
-        raise argparse.ArgumentTypeError("GE graph file: %r cannot be read, please check." % file_path)
+        raise argparse.ArgumentTypeError("GE graph file: %r cannot be read, please check." % input_path)
 
     if file_stat.is_dir:
-        raise argparse.ArgumentTypeError("We need GE graph file, bug you give a path!")
+        ops_map_files = glob.glob(os.path.join(input_path, "ge_proto_*_graph_*_Build.txt"))
+        if not ops_map_files:
+            raise argparse.ArgumentTypeError(f"Not found ge_proto_xx_Build.txt in {input_path}.")
+        return ops_map_files
     if not file_stat.is_legal_file_type(["txt"]):
         err_msg = "Please make sure that the file you provide is correct, " \
-                  "we need files similar to ge_proto_xx_graph_Build.txt"
+                  "we need files similar to ge_proto_xx_Build.txt"
         raise argparse.ArgumentTypeError(err_msg)
-    return file_path
+    return [input_path]

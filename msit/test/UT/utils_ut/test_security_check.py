@@ -410,8 +410,8 @@ def test_valid_ops_map_file_given_valid_file_when_all_checks_pass_then_return_pa
     with patch.object(FileStat, "is_basically_legal") as mock_legal, \
          patch.object(FileStat, "is_legal_file_type") as mock_file_type, \
          patch.object(FileStat, "is_dir") as mock_is_dir, \
-         pytest.raises(argparse.ArgumentTypeError, match="We need GE graph file, bug you give a path!") as exc_info:
+         pytest.raises(argparse.ArgumentTypeError, match="Not found ge_proto_xx_Build.txt in ./tmp") as exc_info:
         mock_legal.return_value = True
         mock_file_type.return_value = True
         mock_is_dir.return_value = False
-        valid_ops_map_file('ge_proto_graph_Build.txt')
+        valid_ops_map_file('./tmp')
