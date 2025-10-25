@@ -830,7 +830,8 @@ def check_output_file_path(path):
     check_link(path)
     check_path_length(path)
     check_path_pattern_valid(path)
-    check_path_owner_consistent(path)
+    if os.path.exists(path):
+        check_path_owner_consistent(path)
 
 
 def check_output_dir_path(path):
@@ -838,5 +839,6 @@ def check_output_dir_path(path):
     check_link(path)
     check_path_length(path)
     check_path_pattern_valid(path)
-    check_path_writability(path)
-    check_path_owner_consistent(path)
+    if os.path.exists(path):
+        check_path_writability(path)
+        check_path_owner_consistent(path)
