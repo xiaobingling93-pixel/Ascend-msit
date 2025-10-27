@@ -47,6 +47,9 @@ __all__ = [
     # QuaRot interface
     'QuaRotInterface', # For QuaRot.
     'QuaRotOnelineInterface', # For QuaRotOnline.
+
+    # save interface
+    'AscendV1SaveInterface', # For AscendV1 save.
 ]
 
 from msmodelslim.app.analysis_service.pipeline_interface import PipelineInterface as AnalyzePipelineInterface
@@ -55,6 +58,7 @@ from msmodelslim.app.quant_service.modelslim_v0.pipeline_interface import \
     PipelineInterface as ModelSlimPipelineInterfaceV0
 from msmodelslim.app.quant_service.multimodal_sd_v1.pipeline_interface import \
     MultimodalPipelineInterface as MultimodalSDPipelineInterface
+from msmodelslim.app.quant_service.modelslim_v1.save.interface import AscendV1SaveInterface
 from msmodelslim.core.base.model import BaseModelInterface
 from msmodelslim.core.runner.pipeline_interface import PipelineInterface as ModelSlimPipelineInterfaceV1
 from msmodelslim.quant.processor.anti_outlier.smooth_interface import IterSmoothInterface, FlexSmoothQuantInterface
