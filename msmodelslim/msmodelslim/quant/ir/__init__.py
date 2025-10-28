@@ -26,6 +26,7 @@ __all__ = [
     "W4A4DynamicPerChannelFakeQuantLinear",
     "W4A4DynamicPerGroupFakeQuantLinear",
     "W4A8DynamicFakeQuantLinear",
+    "WFP8AFP8DynamicPerChannelFakeQuantLinear",
     "FakeQuantDynamicCache",
     "QuarotOnlineRotationInfo",
     "QuarotOnlineHeadRotationWrapper",
@@ -63,13 +64,14 @@ from .const import int8_per_tensor_sym, int8_per_channel_sym, int8_per_token_sym
     int8_per_tensor_asym, int8_per_token_asym, int8_per_channel_asym, int4_per_channel_sym, \
     int8_per_tensor_asym, int8_per_token_asym, int8_per_channel_asym, int4_per_tensor_sym, int4_per_channel_sym, \
     int4_per_channel_asym, int4_per_token_sym, int4_per_group_sym, int4_per_group_asym, int4_per_tensor_asym, \
-    int4_per_token_asym, int8_pd_mix_asym
+    int4_per_token_asym, int8_pd_mix_asym, fp8_e4m3_per_token_sym, fp8_e4m3_per_tensor_sym, fp8_e4m3_per_channel_sym
 from .quarot import QuarotOnlineRotationInfo, QuarotOnlineHeadRotationWrapper, QuarotOnlineKroneckerRotationWrapper, \
     QuarotHeadsRotationHookIR, QuarotKroneckerRotationHookIR
 from .w16a16s import W16A16sLinear
 from .w4a4_dynamic import W4A4DynamicPerChannelFakeQuantLinear, W4A4DynamicPerGroupFakeQuantLinear
 from .w4a8_dynamic import W4A8DynamicFakeQuantLinear
 from .w8a8_dynamic import W8A8DynamicPerChannelFakeQuantLinear, W8A8DynamicPerGroupFakeQuantLinear
+from .w8a8_fp_dynamic import WFP8AFP8DynamicPerChannelFakeQuantLinear
 from .w8a8_pdmix import W8A8PDMixFakeQuantLinear, PDMixState
 from .w8a8_static import W8A8StaticFakeQuantLinear
 from .wrapper import WrapperIR, HookIR

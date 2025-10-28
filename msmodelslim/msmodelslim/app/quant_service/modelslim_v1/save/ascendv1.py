@@ -179,7 +179,7 @@ class AscendV1Saver(AutoSaverProcessor):
     关于该格式的更多信息，请参考 AscendV1Config 中的说明。
     """
     # W4A8_DYNAMIC is hidden.
-    QUANT_TYPE_PRIORITY = ['FLOAT', 'W16A16S', 'W8A8', 'W8A8_DYNAMIC', 'W8A8_MIX', 'W4A4_DYNAMIC']
+    QUANT_TYPE_PRIORITY = ['FLOAT', 'W16A16S', 'W8A8', 'W8A8_DYNAMIC', 'W8A8_MIX', 'W4A4_DYNAMIC', 'WFP8AFP8_DYNAMIC']
 
     def __init__(self, model: nn.Module, config: AscendV1Config, adapter: object, **kwargs: Dict[str, Any]):
         super().__init__(model, config, adapter, **kwargs)
@@ -348,6 +348,18 @@ class AscendV1Saver(AutoSaverProcessor):
                               torch.zeros_like(weight_scale).to(torch.float32))
             if module.bias is not None:
                 self.write_tensor(prefix + ".bias", "W8A8_DYNAMIC", module.bias.to(torch.float32))
+
+    @save_this_rank_only()
+    def on_wfp8afp8_dynamic_per_channel(self, prefix: str, module: qir.WFP8AFP8DynamicPerChannelFakeQuantLinear):
+        self.update_quant_type("WFP8AFP8_DYNAMIC")
+        with torch.device(module.weight.device):
+            weight_scale = module.weight_scale.unsqueeze(-1)
+            self.write_tensor(prefix + ".weight", "WFP8AFP8_DYNAMIC", module.weight.cpu().to(torch.float8_e4m3fn))
+            self.write_tensor(prefix + ".weight_scale", "WFP8AFP8_DYNAMIC", weight_scale.to(torch.float32))
+            self.write_tensor(prefix + ".weight_offset", "WFP8AFP8_DYNAMIC",
+                              torch.zeros_like(weight_scale).to(torch.float32))
+            if module.bias is not None:
+                self.write_tensor(prefix + ".bias", "WFP8AFP8_DYNAMIC", module.bias.to(torch.float32))
 
     @save_this_rank_only()
     def on_w4a8_dynamic(self, prefix: str, module: qir.W4A8DynamicFakeQuantLinear):
