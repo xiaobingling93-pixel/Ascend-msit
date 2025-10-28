@@ -31,6 +31,7 @@ from ..base import AutoActQuantizer, AutoWeightQuantizer, QConfig
     dispatch_key=[
         (qir.int8_per_tensor_sym, "minmax"),
         (qir.int8_per_tensor_asym, "minmax"),
+        (qir.fp8_e4m3_per_tensor_sym, "minmax"),
     ],
     abc_type=AutoActQuantizer
 )
@@ -66,6 +67,7 @@ class ActPerTensorMinmax(AutoActQuantizer):
     dispatch_key=[
         (qir.int8_per_token_asym, "minmax"),
         (qir.int8_per_token_sym, "minmax"),
+        (qir.fp8_e4m3_per_token_sym, "minmax"),
     ],
     abc_type=AutoActQuantizer
 )
@@ -104,6 +106,7 @@ class ActPerTokenMinmax(AutoActQuantizer):
     dispatch_key=[
         (qir.int8_per_channel_sym, "minmax"),
         (qir.int8_per_channel_asym, "minmax"),
+        (qir.fp8_e4m3_per_channel_sym, "minmax"),
     ],
     abc_type=AutoActQuantizer
 )
@@ -189,7 +192,9 @@ class ActPDMixMinmax(AutoActQuantizer):
 @QABCRegistry.multi_register(
     dispatch_key=[
         (qir.int8_per_channel_sym, "minmax"),
-        (qir.int4_per_channel_sym, "minmax")
+        (qir.int4_per_channel_sym, "minmax"),
+        (qir.int4_per_channel_sym, "minmax"),
+        (qir.fp8_e4m3_per_channel_sym, "minmax"),
     ],
     abc_type=AutoWeightQuantizer
 )

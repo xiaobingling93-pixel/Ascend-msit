@@ -26,6 +26,8 @@ class QDType(Enum):
     INT8 = "int8"
     INT4 = "int4"
 
+    FP8_E4M3 = "fp8_e4m3"
+
     PLACEHOLDER = "placeholder"
 
 
@@ -108,6 +110,9 @@ class QStorage:
 
         if self.dtype in [QDType.INT8, QDType.INT4]:
             self.value = self.value.to(torch.int8)
+        
+        if self.dtype == QDType.FP8_E4M3:
+            self.value = self.value.to(torch.float32)
 
         return self
 

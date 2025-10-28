@@ -103,6 +103,7 @@ class AutoSaverProcessor(AutoSessionProcessor):
             qir.W16A16sLinear: self.on_w16a16s,
             qir.QuarotOnlineHeadRotationWrapper: self.on_rotation_wrapper,
             qir.QuarotOnlineKroneckerRotationWrapper: self.on_kronecker_rotation_wrapper,
+            qir.WFP8AFP8DynamicPerChannelFakeQuantLinear: self.on_wfp8afp8_dynamic_per_channel,
         }
 
     def support_distributed(self) -> bool:
@@ -171,6 +172,10 @@ class AutoSaverProcessor(AutoSessionProcessor):
     def on_w8a8_dynamic_per_group(self, prefix: str, module: qir.W8A8DynamicPerGroupFakeQuantLinear):
         raise NotImplementedError(
             f"You should implement the on_w8a8_dynamic_per_group method for {self.__class__.__name__}")
+
+    def on_wfp8afp8_dynamic_per_channel(self, prefix: str, module: qir.WFP8AFP8DynamicPerChannelFakeQuantLinear):
+        raise NotImplementedError(
+            f"You should implement the on_wfp8afp8_dynamic_per_channel method for {self.__class__.__name__}")
 
     def on_w4a4_dynamic_per_channel(self, prefix: str, module: qir.W4A4DynamicPerChannelFakeQuantLinear):
         raise NotImplementedError(
