@@ -49,7 +49,7 @@ def calculate_qparam(
     """
     return QFuncRegistry.dispatch("calculate_qparam",
                                   (q_dtype, q_scope, symmetric),
-                                  *(min_val, max_val, q_dtype, q_scope, symmetric))
+                                  *(min_val, max_val, q_dtype, q_scope, symmetric), **kwargs)
 
 
 @QFuncRegistry.register_api(dispatch_key=Tuple[QDType, QDType, QScope, bool])

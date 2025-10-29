@@ -20,10 +20,12 @@ from pydantic import validate_call
 
 import msmodelslim.quant.ir as qir
 from msmodelslim.core import fake_quantize, quantize, dequantize, calculate_qparam
-from msmodelslim.core.QAL import QABCRegistry, QDType, QStorage, QParam, QScope
+from msmodelslim.core.QAL import QABCRegistry, QDType, QStorage, QParam, QScope, QScheme
 from msmodelslim.quant.observer import MsMinMaxObserver, MinMaxObserverConfig
-from msmodelslim.utils.exception import SpecError
+from msmodelslim.utils.exception import SpecError, SchemaValidateError
 from msmodelslim.utils.logging import logger_setter
+from msmodelslim.quant.observer import MsMinMaxBlockObserver, MinMaxBlockObserverConfig
+from msmodelslim.quant.ir.utils import reshape_to_blocks, undo_reshape_to_blocks
 from ..base import AutoActQuantizer, AutoWeightQuantizer, QConfig
 
 
@@ -239,3 +241,121 @@ class WeightPerChannelMinmax(AutoWeightQuantizer):
         if self.w_q_param is None:
             _ = self.forward(None)
         return self.w_q_param
+
+
+@QABCRegistry.multi_register(
+    dispatch_key=[
+        (qir.mxfp8_per_block_sym, "minmax"),
+        (qir.mxfp4_per_block_sym, "minmax"),
+    ],
+    abc_type=AutoWeightQuantizer
+)
+@logger_setter()
+class MXWeightPerBlockMinmax(AutoWeightQuantizer):
+    def __init__(self, config: QConfig):
+        super().__init__()
+
+        self.config = config
+
+        self.axes = config.ext.get('axes', -1)
+        if not isinstance(self.axes, (int, list)):
+            raise SchemaValidateError(
+                f"Invalid value for 'axes': {self.axes}. Expected int or list[int]."
+            )
+        self.block_size = config.dtype.mx_finfo.block_size
+
+        minmax_config = MinMaxBlockObserverConfig(axes=self.axes)
+        self.minmax_block_observer = MsMinMaxBlockObserver(minmax_config)
+
+        self.weight: Optional[QStorage] = None
+        self.bias: Optional[torch.Tensor] = None
+        self.w_q_param: Optional[QParam] = None
+        self.w_q_storage: Optional[QStorage] = None
+
+    def forward(self, x: Optional[torch.Tensor] = None) -> torch.Tensor:
+        if self.weight is None:
+            raise SpecError("No weight was set", action="please call init_weight first")
+
+        weight_value = self.weight.value
+        axes = self.axes
+        axes = [axes] if isinstance(axes, int) else axes
+        axes = [x + weight_value.ndim if x < 0 else x for x in axes]
+
+        weight_value, axes_, orig_shape, padded_shape = reshape_to_blocks(weight_value, axes, self.block_size)
+        shared_exp_axes = [x + 1 for x in axes_] if self.block_size > 0 else axes_
+
+        self.minmax_block_observer.update(weight_value, shared_exp_axes=shared_exp_axes)
+
+        min_val, max_val = self.minmax_block_observer.get_min_max()
+
+        self.w_q_param = calculate_qparam(
+            min_val=min_val,
+            max_val=max_val,
+            q_dtype=QDType(self.config.dtype),
+            q_scope=QScope(self.config.scope),
+            symmetric=self.config.symmetric,
+            element_format=self.config.ext.get('element_format'),
+            axes=self.config.ext.get('axes'),
+            block_size=self.block_size
+        )
+        self.w_q_param.ext['axes'] = self.axes
+        self.weight.value = weight_value
+        self.w_q_storage = quantize(self.weight, self.w_q_param)
+        dequant_value = dequantize(self.w_q_storage, self.w_q_param).value
+        dequant_value = undo_reshape_to_blocks(dequant_value, padded_shape, orig_shape, axes)
+        self.weight.value = undo_reshape_to_blocks(self.weight.value, padded_shape, orig_shape, axes)
+        self.w_q_storage.value = undo_reshape_to_blocks(self.w_q_storage.value, padded_shape, orig_shape, axes)
+        return dequant_value
+
+    @validate_call(config=dict(arbitrary_types_allowed=True))
+    def init_weight(self, weight: QStorage, bias: Optional[torch.Tensor] = None) -> None:
+        self.weight = weight
+        self.bias = bias
+
+    def get_q_storage(self) -> QStorage:
+        if self.w_q_storage is None:
+            _ = self.forward(None)
+        return self.w_q_storage
+
+    def get_q_param(self) -> QParam:
+        if self.w_q_param is None:
+            _ = self.forward(None)
+        return self.w_q_param
+
+
+@QABCRegistry.multi_register(
+    dispatch_key=[
+        (qir.mxfp8_per_block_sym, "minmax"),
+        (qir.mxfp4_per_block_sym, "minmax"),
+    ],
+    abc_type=AutoActQuantizer
+)
+@logger_setter()
+class MXActPerBlockMinmax(AutoActQuantizer):
+
+    def __init__(self, config: QConfig):
+        super().__init__()
+        self.config = config
+        self.axes = config.ext.get('axes', -1)
+        if not isinstance(self.axes, (int, list)):
+            raise SchemaValidateError(
+                f"Invalid value for 'axes': {self.axes}. Expected int or list[int]."
+            )
+        self.q_param = QParam(
+            scheme=QScheme(
+                dtype=config.dtype,
+                scope=config.scope,
+                symmetric=config.symmetric,
+            ),
+            ext={
+                'axes': self.axes
+            }
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        pass
+
+    def get_q_param(self) -> QParam:
+        if self.q_param is None:
+            return QParam(scheme=self.config.to_scheme())
+        return self.q_param

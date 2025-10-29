@@ -30,7 +30,7 @@ from msmodelslim.core.base.protocol import BatchProcessRequest
 from msmodelslim.quant import ir as qir
 from msmodelslim.quant.processor.base import AutoSessionProcessor
 from msmodelslim.utils.dist import DistHelper
-from msmodelslim.utils.exception import ToDoError
+from msmodelslim.utils.exception import ToDoError, SchemaValidateError
 from msmodelslim.utils.security import safe_copy_file
 from msmodelslim.utils.logging import get_logger, logger_setter
 from .interface import AscendV1SaveInterface
@@ -179,7 +179,10 @@ class AscendV1Saver(AutoSaverProcessor):
     关于该格式的更多信息，请参考 AscendV1Config 中的说明。
     """
     # W4A8_DYNAMIC is hidden.
-    QUANT_TYPE_PRIORITY = ['FLOAT', 'W16A16S', 'W8A8', 'W8A8_DYNAMIC', 'W8A8_MIX', 'W4A4_DYNAMIC', 'WFP8AFP8_DYNAMIC']
+    QUANT_TYPE_PRIORITY = [
+        'FLOAT', 'W16A16S', 'W8A8', 'W8A8_DYNAMIC', 'W8A8_MIX', 
+        'W4A4_DYNAMIC', 'WFP8AFP8_DYNAMIC', 'W8A8_MXFP8', 'W4A8_MXFP', 'W4A4_MXFP4'
+    ]
 
     def __init__(self, model: nn.Module, config: AscendV1Config, adapter: object, **kwargs: Dict[str, Any]):
         super().__init__(model, config, adapter, **kwargs)
@@ -362,6 +365,23 @@ class AscendV1Saver(AutoSaverProcessor):
                 self.write_tensor(prefix + ".bias", "WFP8AFP8_DYNAMIC", module.bias.to(torch.float32))
 
     @save_this_rank_only()
+    def on_w8a8_mx_dynamic_per_block(self, prefix: str, module: qir.W8A8MXDynamicPerBlockFakeQuantLinear):
+        self.update_quant_type("W8A8_MXFP8")
+
+        with torch.device(module.weight.device):
+            if not (isinstance(module.w_axes, (int, list))):
+                raise SchemaValidateError("w_axes must be int or list[int].")
+            weight_scale = module.weight_scale
+            self.write_tensor(prefix + ".w_axes", "W8A8_MXFP8", torch.tensor(module.w_axes))
+            self.write_tensor(prefix + ".weight", "W8A8_MXFP8", module.weight.cpu().to(torch.float8_e4m3fn))
+            self.write_tensor(
+                prefix + ".weight_scale",
+                "W8A8_MXFP8",
+                (weight_scale.squeeze(dim=module.w_axes) + 127).to(torch.uint8)
+                # +127 是对 weight_scale 进行偏移处理，使其从-127~128偏移到0~255，正好覆盖torch_uint8的取值范围
+            )
+
+    @save_this_rank_only()
     def on_w4a8_dynamic(self, prefix: str, module: qir.W4A8DynamicFakeQuantLinear):
         self.update_quant_type("W4A8_DYNAMIC")
 
@@ -402,6 +422,40 @@ class AscendV1Saver(AutoSaverProcessor):
             self.write_tensor(prefix + ".weight_offset", "W4A4_DYNAMIC", module.weight_offset.to(torch.float32))
             if module.bias is not None:
                 self.write_tensor(prefix + ".bias", "W4A4_DYNAMIC", module.bias.to(torch.float32))
+
+    @save_this_rank_only()
+    def on_w4a4_mx_dynamic_per_block(self, prefix: str, module: qir.W4A4MXDynamicPerBlockFakeQuantLinear):
+        self.update_quant_type("W4A4_MXFP4")
+
+        with torch.device(module.weight.device):
+            if not (isinstance(module.w_axes, (int, list))):
+                raise SchemaValidateError("w_axes must be int or list[int].")
+            weight_scale = module.weight_scale
+            self.write_tensor(prefix + ".w_axes", "W4A4_MXFP4", torch.tensor(module.w_axes))
+            self.write_tensor(prefix + ".weight", "W4A4_MXFP4", module.weight.cpu().to(torch.float8_e4m3fn))
+            self.write_tensor(
+                prefix + ".weight_scale",
+                "W4A4_MXFP4",
+                (weight_scale.squeeze(dim=module.w_axes) + 127).to(torch.uint8)
+                # +127 是对 weight_scale 进行偏移处理，使其从-127~128偏移到0~255，正好覆盖torch_uint8的取值范围
+            )
+
+    @save_this_rank_only()
+    def on_w4a8_mx_dynamic_per_block(self, prefix: str, module: qir.W4A8MXDynamicPerBlockFakeQuantLinear):
+        self.update_quant_type("W4A8_MXFP")
+
+        with torch.device(module.weight.device):
+            if not (isinstance(module.w_axes, (int, list))):
+                raise SchemaValidateError("w_axes must be int or list[int].")
+            weight_scale = module.weight_scale
+            self.write_tensor(prefix + ".w_axes", "W4A8_MXFP", torch.tensor(module.w_axes))
+            self.write_tensor(prefix + ".weight", "W4A8_MXFP", module.weight.cpu().to(torch.float8_e4m3fn))
+            self.write_tensor(
+                prefix + ".weight_scale",
+                "W4A8_MXFP",
+                (weight_scale.squeeze(dim=module.w_axes) + 127).to(torch.uint8)
+                # +127 是对 weight_scale 进行偏移处理，使其从-127~128偏移到0~255，正好覆盖torch_uint8的取值范围
+            )
 
     @save_this_rank_only()
     def on_float_linear(self, prefix: str, module: nn.Linear):

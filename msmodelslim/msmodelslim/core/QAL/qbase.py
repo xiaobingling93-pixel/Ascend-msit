@@ -16,8 +16,43 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any
-
+from collections import namedtuple
 import torch
+from msmodelslim.utils.exception import SchemaValidateError
+
+
+def _get_format_params(elem_format):
+    # 定义格式参数表
+    format_info = {
+        "mxfp4": {"ebits": 2, "mbits": 3, "emax_offset": 0},    # emax = 2^(ebits - 1)
+        "mxfp8_e4m3": {"ebits": 4, "mbits": 5, "emax_offset": 0},    # emax = 2^(ebits - 1)
+        "mxfp8_e5m2": {"ebits": 5, "mbits": 4, "emax_offset": -1},   # emax = 2^(ebits - 1) - 1
+        "mxint8": {"ebits": 0, "mbits": 8, "emax_offset": 0},    # emax = 0
+        "mxint4": {"ebits": 0, "mbits": 4, "emax_offset": 0},    # emax = 0
+    }
+
+    if elem_format not in format_info:
+        raise Exception("Unknown element format %s" % elem_format)
+
+    info = format_info[elem_format]
+    ebits = info["ebits"]
+    mbits = info["mbits"]
+    emax_offset = info["emax_offset"]
+
+    # 计算 emax
+    if ebits == 0:
+        emax = 0
+    else:
+        emax = 2 ** (ebits - 1) + emax_offset
+
+    # 计算 max_norm
+    if elem_format == "mxfp8_e4m3":
+        max_norm = 2 ** emax * 1.75 # (1 + fraction) * 2 ^ (e-bias) fraction = 2^(-1) + 2^(-2)
+    else:
+        # 注意：当 mbits == 0 时此式可能无效，但当前所有格式 mbits >= 3
+        max_norm = 2 ** emax * float(2 ** (mbits - 1) - 1) / (2 ** (mbits - 2))
+
+    return ebits, mbits, emax, max_norm
 
 
 class QDType(Enum):
@@ -25,10 +60,27 @@ class QDType(Enum):
 
     INT8 = "int8"
     INT4 = "int4"
-
+    MXFP8 = "mxfp8"
+    MXFP4 = "mxfp4"
     FP8_E4M3 = "fp8_e4m3"
 
     PLACEHOLDER = "placeholder"
+
+    @property
+    def mx_finfo(self):
+        if self not in [QDType.MXFP8, QDType.MXFP4]:
+            raise SchemaValidateError(f"mx finfo not defined for {self}")
+        Finfo = namedtuple(
+            'finfo',
+            ['block_size', 'scale_bits', 'flush_fp32_subnorms', 'ebits', 'mbits', 'emax', 'max_norm']
+        )
+        if self == QDType.MXFP8:
+            elem_format = "mxfp8_e4m3"
+        elif self == QDType.MXFP4:
+            elem_format = "mxfp4"
+        else:
+            raise SchemaValidateError(f"Unknown QDType for finfo: {self}")
+        return Finfo(32, 8, False, *_get_format_params(elem_format))
 
 
 class QScope(Enum):

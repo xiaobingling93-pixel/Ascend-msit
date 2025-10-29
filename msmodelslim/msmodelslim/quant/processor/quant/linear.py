@@ -17,7 +17,7 @@ from typing import List, Optional, Literal
 from pydantic import Field, ConfigDict
 from torch import nn
 
-from msmodelslim.core.QAL import QScope
+from msmodelslim.core.QAL import QScope, QDType
 from msmodelslim.core.QAL.qregistry import QABCRegistry
 from msmodelslim.core.base.protocol import BatchProcessRequest
 from msmodelslim.quant.processor.base import AutoSessionProcessor, AutoProcessorConfig
@@ -58,7 +58,15 @@ class LinearQuantProcessor(AutoSessionProcessor):
         self.exclude = ConfigSet(config.exclude)
 
     def is_data_free(self) -> bool:
-        return self.config.qconfig.act.scope == QScope.PER_TOKEN
+        if self.config.qconfig.act.scope == QScope.PER_TOKEN:
+            return True
+        elif (
+            self.config.qconfig.act.dtype in [QDType.MXFP8, QDType.MXFP4]
+            and self.config.qconfig.act.scope == QScope.PER_BLOCK
+        ):
+            return True
+        else:
+            return False 
 
     def support_distributed(self) -> bool:
         return True
