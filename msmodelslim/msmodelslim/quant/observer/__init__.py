@@ -15,7 +15,9 @@
 
 __all__ = [
     "MinMaxObserverConfig",
-    "MsMinMaxObserver"
+    "MinMaxBlockObserverConfig",
+    "MsMinMaxObserver",
+    "MsMinMaxBlockObserver"
 ]
 
-from .minmax import MsMinMaxObserver, MinMaxObserverConfig
+from .minmax import MsMinMaxObserver, MinMaxObserverConfig, MsMinMaxBlockObserver, MinMaxBlockObserverConfig

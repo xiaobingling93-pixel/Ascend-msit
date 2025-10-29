@@ -14,5 +14,6 @@
 #  limitations under the License.
 from . import iter_smooth, flex_smooth_quant
 from . import int_quantization
+from . import mx_quantization
 from . import kia_main
 from . import fp_quantization

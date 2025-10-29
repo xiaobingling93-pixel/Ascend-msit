@@ -95,6 +95,9 @@ class AutoSaverProcessor(AutoSessionProcessor):
             qir.W8A8DynamicPerGroupFakeQuantLinear: self.on_w8a8_dynamic_per_group,
             qir.W4A4DynamicPerChannelFakeQuantLinear: self.on_w4a4_dynamic_per_channel,
             qir.W4A4DynamicPerGroupFakeQuantLinear: self.on_w4a4_dynamic_per_group,
+            qir.W8A8MXDynamicPerBlockFakeQuantLinear: self.on_w8a8_mx_dynamic_per_block,
+            qir.W4A8MXDynamicPerBlockFakeQuantLinear: self.on_w4a8_mx_dynamic_per_block,
+            qir.W4A4MXDynamicPerBlockFakeQuantLinear: self.on_w4a4_mx_dynamic_per_block,
             qir.W4A8DynamicFakeQuantLinear: self.on_w4a8_dynamic,
             nn.Linear: self.on_float_linear,
             nn.Module: self.on_float_module,
@@ -184,6 +187,18 @@ class AutoSaverProcessor(AutoSessionProcessor):
     def on_w4a4_dynamic_per_group(self, prefix: str, module: qir.W4A4DynamicPerGroupFakeQuantLinear):
         raise NotImplementedError(
             f"You should implement the on_w4a4_dynamic_per_group method for {self.__class__.__name__}")
+
+    def on_w4a4_mx_dynamic_per_block(self, prefix: str, module: qir.W4A4MXDynamicPerBlockFakeQuantLinear):
+        raise NotImplementedError(
+            f"You should implement the on_w4a4_mx_dynamic_per_block method for {self.__class__.__name__}")
+
+    def on_w8a8_mx_dynamic_per_block(self, prefix: str, module: qir.W8A8MXDynamicPerBlockFakeQuantLinear):
+        raise NotImplementedError(
+            f"You should implement the on_w8a8_mx_dynamic_per_block method for {self.__class__.__name__}")
+
+    def on_w4a8_mx_dynamic_per_block(self, prefix: str, module: qir.W4A8MXDynamicPerBlockFakeQuantLinear):
+        raise NotImplementedError(
+            f"You should implement the on_w4a8_mx_dynamic_per_block method for {self.__class__.__name__}")
 
     def on_w4a8_dynamic(self, prefix: str, module: qir.W4A8DynamicFakeQuantLinear):
         raise NotImplementedError(f"You should implement the on_w4a8_dynamic method for {self.__class__.__name__}")
