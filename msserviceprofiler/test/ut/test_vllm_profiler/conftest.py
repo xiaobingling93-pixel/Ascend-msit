@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import sys
 import types
 import importlib
+from unittest.mock import patch
 
 import pytest
 
@@ -37,14 +37,14 @@ def mock_profiler_module():
     
     # 重新加载 batch_hookers 模块确保使用 mock
     modules_to_reload = [
-        "vllm_profiler.vllm_v0.batch_hookers",
-        "vllm_profiler.vllm_v1.batch_hookers",
-        "vllm_profiler.vllm_v0.model_hookers",
-        "vllm_profiler.vllm_v1.model_hookers",
-        "vllm_profiler.vllm_v0.kvcache_hookers",
-        "vllm_profiler.vllm_v1.kvcache_hookers",
-        "vllm_profiler.vllm_v0.request_hookers",
-        "vllm_profiler.vllm_v1.request_hookers",
+        "msserviceprofiler.vllm_profiler.vllm_v0.batch_hookers",
+        "msserviceprofiler.vllm_profiler.vllm_v1.batch_hookers",
+        "msserviceprofiler.vllm_profiler.vllm_v0.model_hookers",
+        "msserviceprofiler.vllm_profiler.vllm_v1.model_hookers",
+        "msserviceprofiler.vllm_profiler.vllm_v0.kvcache_hookers",
+        "msserviceprofiler.vllm_profiler.vllm_v1.kvcache_hookers",
+        "msserviceprofiler.vllm_profiler.vllm_v0.request_hookers",
+        "msserviceprofiler.vllm_profiler.vllm_v1.request_hookers",
     ]
     
     for module_name in modules_to_reload:
@@ -72,3 +72,9 @@ def reset_profiler():
     Profiler.reset()
     yield
     Profiler.reset()
+
+
+@pytest.fixture(autouse=True)
+def patch_model_hookers_synchronize():
+    with patch("msserviceprofiler.vllm_profiler.vllm_v1.model_hookers.synchronize"):
+        yield

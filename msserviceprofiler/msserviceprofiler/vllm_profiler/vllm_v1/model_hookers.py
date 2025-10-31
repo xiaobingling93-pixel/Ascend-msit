@@ -15,6 +15,16 @@ from contextlib import contextmanager
 from ms_service_profiler import Profiler, Level
 from ..module_hook import vllm_hook
 from .utils import classify_requests, SharedHookState, create_state_getter
+try:
+    import torch_npu
+    
+    def synchronize(sync=True):
+        if sync:
+            torch_npu.npu.current_stream().synchronize()
+
+except ImportError:
+    def synchronize(_):
+        pass
 
 
 # 线程安全的全局状态
@@ -37,7 +47,9 @@ _get_state = create_state_getter(HookState)
 def compute_logits(original_func, this, *args, **kwargs):
     """处理执行模型钩子"""
     prof = Profiler(Level.INFO).domain("ModelExecute").span_start("computing_logits")
+    synchronize()
     ret = original_func(this, *args, **kwargs)
+    synchronize()
     prof.span_end()
     return ret
 
@@ -46,7 +58,9 @@ def compute_logits(original_func, this, *args, **kwargs):
 def sampler_forward(original_func, this, *args, **kwargs):
     """处理执行模型钩子"""
     prof = Profiler(Level.INFO).domain("ModelExecute").span_start("sample")
+    synchronize()
     ret = original_func(this, *args, **kwargs)
+    synchronize()
     prof.span_end()
     return ret
 
@@ -84,9 +98,21 @@ def set_forward_context(original_func, *args, **kwargs):
     """前向上下文钩子"""
     state = _get_state()
     prof = Profiler(Level.INFO).domain("ModelExecute") if state.forward_profiler is None else state.forward_profiler
-    prof.span_start("forward")
+    prof.span_start("set_forward_context")
     with original_func(*args, **kwargs):
         yield
     prof.span_end()
     if state.forward_profiler is not None:
         state.forward_profiler = None
+
+
+@vllm_hook(("vllm_ascend.utils", "ProfileExecuteDuration.capture_async"), min_version="0.9.1")
+@contextmanager
+def capture_async(original_func, this, duration_tag, *args, **kwargs):
+    """前向上下文钩子"""
+    prof = Profiler(Level.INFO).domain("ModelExecute").span_start(duration_tag)
+    synchronize(duration_tag == "forward")
+    with original_func(this, duration_tag, *args, **kwargs) as ret:
+        yield ret
+    synchronize(duration_tag == "forward")
+    prof.span_end()

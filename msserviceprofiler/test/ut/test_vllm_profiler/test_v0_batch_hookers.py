@@ -18,7 +18,7 @@ from collections import deque, Counter
 from unittest.mock import MagicMock
 import pytest
 
-from vllm_profiler.vllm_v0 import batch_hookers
+from msserviceprofiler.vllm_profiler.vllm_v0 import batch_hookers
 
 from .fake_ms_service_profiler import Profiler, Level
 

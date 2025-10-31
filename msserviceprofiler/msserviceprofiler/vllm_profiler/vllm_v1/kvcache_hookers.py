@@ -14,7 +14,7 @@
 from collections import Counter
 from ms_service_profiler import Profiler, Level
 from ..module_hook import vllm_hook
-from ..utils import logger
+from ..logger import logger
 
 
 @vllm_hook(("vllm.v1.core.kv_cache_manager", "KVCacheManager.allocate_slots"), min_version="0.9.1")

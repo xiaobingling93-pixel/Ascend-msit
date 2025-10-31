@@ -52,11 +52,11 @@ def handle_execute_model(original_func, this, execute_model_req, *args, **kwargs
     for seq_metadata in execute_model_req.seq_group_metadata_list:
         if len(seq_metadata.seq_data) > 0:
             cur_seq_data = list(seq_metadata.seq_data.values())[0]
-            iter_size = cur_seq_data.get_len() - len(cur_seq_data.prompt_token_ids)
+            iter_ = cur_seq_data.get_len() - len(cur_seq_data.prompt_token_ids)
         else:
-            iter_size = 0
+            iter_ = 0
         request_id_list.append({"rid": seq_metadata.request_id})
-        request_id_with_iter_list.append({"rid": seq_metadata.request_id, "iter_size": iter_size})
+        request_id_with_iter_list.append({"rid": seq_metadata.request_id, "iter": iter_})
         is_prefill = is_prefill or seq_metadata.is_prompt
 
     prof.res(request_id_with_iter_list)

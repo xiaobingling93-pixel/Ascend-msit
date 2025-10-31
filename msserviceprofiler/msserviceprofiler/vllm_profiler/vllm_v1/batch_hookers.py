@@ -15,7 +15,7 @@ from collections import Counter
 from ms_service_profiler import Profiler, Level
 from ..module_hook import vllm_hook
 from .utils import classify_requests, SharedHookState, create_state_getter
-from ..utils import logger
+from ..logger import logger
 
 
 def compare_deques(queue1, queue2):
@@ -90,7 +90,7 @@ def schedule(original_func, this, *args, **kwargs):
     running_queue_prof = Profiler(Level.INFO).domain("BatchSchedule")
     running_queue_prof.metric("QueueSize", len(this.running)).metric_scope("QueueName", "RUNNING").event("Queue")
 
-    logger.debug(f" state.request_id_to_iter_size: {state.request_id_to_iter_size}")
+    logger.debug(f" state.request_id_to_iter: {state.request_id_to_iter}")
 
     prof.attr("batch_type", batch_type)
     prof.span_end()

@@ -21,9 +21,11 @@ import threading
 def _iter_cached_req_id_and_num_comp(cached) -> Generator[Tuple[str, int], None, None]:
     """迭代器，用于迭代 CachedRequestData 中的请求 ID 和计算的 token 数量。
     
-    返回：
-        - rid: 请求 ID
-        - num_comp: 计算的 token 数量
+    Args:
+        cached: CachedRequestData 对象
+        
+    Yields:
+        Tuple[str, int]: (请求ID, 计算的token数量)
     """
     if cached is None:
         return
@@ -45,9 +47,11 @@ def _iter_cached_req_id_and_num_comp(cached) -> Generator[Tuple[str, int], None,
 def _iter_new_req_id_and_num_comp(new_reqs) -> Generator[Tuple[str, int], None, None]:
     """迭代器，用于迭代 list[NewRequestData] 中的请求 ID 和计算的 token 数量。
     
-    返回：
-        - rid: 请求 ID
-        - num_comp: 计算的 token 数量
+    Args:
+        new_reqs: NewRequestData 列表
+        
+    Yields:
+        Tuple[str, int]: (请求ID, 计算的token数量)
     """
     for item in new_reqs or []:
         yield item.req_id, item.num_computed_tokens
@@ -55,11 +59,16 @@ def _iter_new_req_id_and_num_comp(new_reqs) -> Generator[Tuple[str, int], None, 
 
 def classify_requests(state: Any, scheduler_output: Any) -> Tuple[List[Dict], List[Dict], str]:
     """统一的分类与构造逻辑。
-
-    返回:
-      - request_id_list: [{"rid": str}, ...]
-      - request_id_with_iter_list: [{"rid": str, "iter_size": int, "type": 0|1}, ...]
-      - batch_type: "Prefill" | "Decode" | "Prefill,Decode"
+    
+    Args:
+        state: 状态对象
+        scheduler_output: 调度器输出
+        
+    Returns:
+        Tuple[List[Dict], List[Dict], str]: 
+            - request_id_list: [{"rid": str}, ...]
+            - request_id_with_iter_list: [{"rid": str, "iter": int, "type": 0|1}, ...]
+            - batch_type: "Prefill" | "Decode" | "Prefill,Decode"
     """
 
     # 记录新请求的 prompt 长度
@@ -80,8 +89,8 @@ def classify_requests(state: Any, scheduler_output: Any) -> Tuple[List[Dict], Li
 
     for request_id, _ in scheduler_output.num_scheduled_tokens.items():
         request_id_list.append({"rid": request_id})
-        iter_size = state.request_id_to_iter_size.get(request_id, -1) + 1
-        state.request_id_to_iter_size[request_id] = iter_size
+        iter_ = state.request_id_to_iter.get(request_id, -1) + 1
+        state.request_id_to_iter[request_id] = iter_
 
         prompt_len = state.request_id_to_prompt_token_len.get(request_id)
         num_comp = num_comp_by_rid.get(request_id)
@@ -95,13 +104,13 @@ def classify_requests(state: Any, scheduler_output: Any) -> Tuple[List[Dict], Li
 
         request_id_with_iter_list.append({
             "rid": request_id,
-            "iter_size": iter_size,
+            "iter": iter_,
             "type": 0 if is_prefill_request else 1,
         })
 
         if request_id in scheduler_output.finished_req_ids:
             state.request_id_to_prompt_token_len.pop(request_id, None)
-            state.request_id_to_iter_size.pop(request_id, None)
+            state.request_id_to_iter.pop(request_id, None)
 
     if has_prefill and has_decode:
         batch_type = "Prefill,Decode"
@@ -114,18 +123,38 @@ def classify_requests(state: Any, scheduler_output: Any) -> Tuple[List[Dict], Li
 
 
 class SharedHookState:
+    """共享的 hook 状态类。
+    
+    该类用于在多个 hook 之间共享状态信息，包括：
+    - 请求ID到prompt token长度的映射
+    - 请求ID到迭代次数的映射
+    
+    Attributes:
+        request_id_to_prompt_token_len (Dict[str, int]): 请求ID到prompt token长度的映射
+        request_id_to_iter (Dict[str, int]): 请求ID到迭代次数的映射
+    """
+    
     def __init__(self):
+        """初始化 SharedHookState。"""
         self.request_id_to_prompt_token_len = {}
-        self.request_id_to_iter_size = {}
+        self.request_id_to_iter = {}
 
 
 def create_state_getter(state_class):
     """为每个调用方创建独立的线程本地 state getter。
-
-    用法：
-      class MyState(SharedHookState):
-          ...
-      _get_state = create_state_getter(MyState)
+    
+    该函数创建一个线程本地的状态获取器，确保每个线程都有独立的状态实例。
+    
+    Args:
+        state_class: 状态类
+        
+    Returns:
+        Callable: 状态获取函数
+        
+    Example:
+        class MyState(SharedHookState):
+            ...
+        _get_state = create_state_getter(MyState)
     """
     _thread_local = threading.local()
 

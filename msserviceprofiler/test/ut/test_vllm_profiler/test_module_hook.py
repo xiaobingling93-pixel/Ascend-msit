@@ -20,21 +20,20 @@ from unittest.mock import patch, MagicMock
 from packaging.version import Version
 import pytest
 
-from vllm_profiler.module_hook import (
+from msserviceprofiler.vllm_profiler.module_hook import (
     import_object_from_string,
     HookHelper,
     VLLMHookerBase,
-    vllm_hook,
-    apply_hooks,
-    HOOK_REGISTRY,
+    vllm_hook
 )
+from msserviceprofiler.vllm_profiler.registry import get_hook_registry, clear_hook_registry
 
 
 # Test module setup
 @pytest.fixture
 def cleanup_hook_registry():
     """Clear hook registry before each test"""
-    HOOK_REGISTRY.clear()
+    clear_hook_registry()
 
 
 # Test cases for import_object_from_string
@@ -175,18 +174,6 @@ def sample_profiler(ori_func, *args, **kwargs):
     return "decorator:" + ori_func(*args, **kwargs)
 
 
-def test_apply_hooks_given_invalid_version_when_applying_then_handles_error(cleanup_hook_registry):
-    """Test error handling with invalid version"""
-    with patch("vllm_profiler.module_hook.logger.error") as mock_error:
-
-        @vllm_hook(hook_points=[("invalid.module", "nonexistent.func")], min_version="1.0.0")
-        def mock_profiler(ori_func, *args, **kwargs):
-            pass
-
-        apply_hooks("1.0.0")
-        assert mock_error.called
-
-
 # Additional edge case tests
 def test_hookhelper_replace_given_missing_parent_class_when_replacing_then_raises_error():
     """Test handling of missing parent class during replacement"""
@@ -212,9 +199,9 @@ def test_vllm_hook_given_empty_hook_points_when_registering_then_no_error(cleanu
     def empty_profiler(ori_func, *args, **kwargs):
         pass
 
-    assert len(HOOK_REGISTRY) == 1
+    assert len(get_hook_registry()) == 1
     # Shouldn't raise when init is called
-    HOOK_REGISTRY[0].init()
+    get_hook_registry()[0].init()
 
 
 def test_vllmhookerbase_do_hook_given_caller_filter_when_calling_then_filters_correctly():

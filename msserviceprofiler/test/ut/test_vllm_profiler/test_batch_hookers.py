@@ -19,8 +19,8 @@ from collections import namedtuple, deque, Counter
 from unittest.mock import patch, MagicMock, call
 import pytest
 
-from vllm_profiler.vllm_v1 import batch_hookers
-from vllm_profiler.vllm_v1.utils import create_state_getter
+from msserviceprofiler.vllm_profiler.vllm_v1 import batch_hookers
+from msserviceprofiler.vllm_profiler.vllm_v1.utils import create_state_getter
 
 from .fake_ms_service_profiler import Profiler, Level
 
@@ -36,7 +36,7 @@ SchedulerOutput = namedtuple(
 def hook_state():
     state = batch_hookers.HookState()
     state.request_id_to_prompt_token_len = {}
-    state.request_id_to_iter_size = {}
+    state.request_id_to_iter = {}
     return state
 
 
@@ -162,12 +162,12 @@ def test_schedule_given_new_requests_when_processing_then_update_state_and_log(h
         "req1": len(req1.prompt_token_ids),
         "req2": len(req2.prompt_token_ids),
     }
-    assert hook_state.request_id_to_iter_size == {"req1": 0, "req2": 0}
+    assert hook_state.request_id_to_iter == {"req1": 0, "req2": 0}
 
 
 def test_schedule_given_finished_requests_when_processing_then_clean_state(hook_state, mock_scheduler):
     hook_state.request_id_to_prompt_token_len = {"req1": 10, "req2": 20}
-    hook_state.request_id_to_iter_size = {"req1": 3, "req2": 5}
+    hook_state.request_id_to_iter = {"req1": 3, "req2": 5}
 
     scheduler_output = SchedulerOutput(
         scheduled_new_reqs=[],
@@ -181,11 +181,11 @@ def test_schedule_given_finished_requests_when_processing_then_clean_state(hook_
         batch_hookers.schedule(mock_original, mock_scheduler)
 
     assert "req2" not in hook_state.request_id_to_prompt_token_len
-    assert "req2" not in hook_state.request_id_to_iter_size
+    assert "req2" not in hook_state.request_id_to_iter
 
 
-def test_schedule_given_prefill_batch_when_iter_size_zero_then_set_batch_type(hook_state, mock_scheduler):
-    hook_state.request_id_to_iter_size = {"req1": 0, "req2": 1}
+def test_schedule_given_prefill_batch_when_iter_zero_then_set_batch_type(hook_state, mock_scheduler):
+    hook_state.request_id_to_iter = {"req1": 0, "req2": 1}
     scheduler_output = SchedulerOutput(
         scheduled_new_reqs=[],
         scheduled_cached_reqs=[],

@@ -16,7 +16,13 @@ from ms_service_profiler import Profiler, Level
 from ..module_hook import vllm_hook
 
 
-@vllm_hook(("vllm.engine.async_llm_engine", "AsyncLLMEngine.add_request"), min_version="0.9.1")
+@vllm_hook(
+    hook_points=[
+        ("vllm.engine.async_llm_engine", "AsyncLLMEngine.add_request"),
+        ("vllm.v1.engine.async_llm", "AsyncLLM.add_request")
+    ],
+    min_version="0.9.1"
+)    
 async def add_request_async(original_func, this, request_id, prompt, *args, **kwargs):
     Profiler(Level.INFO).domain("Request").res(request_id).event("httpReq")
     Profiler(Level.INFO).domain("Request").res(request_id).event("tokenize")

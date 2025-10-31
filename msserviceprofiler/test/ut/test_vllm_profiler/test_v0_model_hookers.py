@@ -19,7 +19,7 @@ from collections import namedtuple
 from unittest.mock import MagicMock
 import pytest
 
-from vllm_profiler.vllm_v0 import model_hookers
+from msserviceprofiler.vllm_profiler.vllm_v0 import model_hookers
 
 from .fake_ms_service_profiler import Profiler, Level
 

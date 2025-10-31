@@ -20,8 +20,8 @@ from collections import namedtuple
 from unittest.mock import patch, MagicMock, call
 import pytest
 
-from vllm_profiler.vllm_v1 import model_hookers
-from vllm_profiler.vllm_v1.utils import create_state_getter
+from msserviceprofiler.vllm_profiler.vllm_v1 import model_hookers
+from msserviceprofiler.vllm_profiler.vllm_v1.utils import create_state_getter
 
 from .fake_ms_service_profiler import Profiler, Level
 
@@ -123,12 +123,12 @@ def test_execute_model_given_new_requests_when_processing_then_update_state_and_
 
     # Check batch profiling
     batch_calls = Profiler.instance_calls[0]
-    # 允许实现附带额外字段（如 type），仅校验 rid 与 iter_size
+    # 允许实现附带额外字段（如 type），仅校验 rid 与 iter
     res_entry = next(x for x in batch_calls if isinstance(x, tuple) and x[0] == "res")
     res_payload = res_entry[1]
-    assert [{"rid": d["rid"], "iter_size": d["iter_size"]} for d in res_payload] == [
-        {"rid": "req1", "iter_size": 0},
-        {"rid": "req2", "iter_size": 0},
+    assert [{"rid": d["rid"], "iter": d["iter"]} for d in res_payload] == [
+        {"rid": "req1", "iter": 0},
+        {"rid": "req2", "iter": 0},
     ]
     assert ("attr", "batch_type", "Prefill") in batch_calls
     assert ("attr", "batch_size", 8) in batch_calls
@@ -215,7 +215,7 @@ def test_set_forward_context_given_no_forward_profiler_when_used_then_create_new
 
     assert len(Profiler.instance_calls) == 1
     calls = Profiler.instance_calls[0]
-    assert ("span_start", "forward") in calls
+    assert ("span_start", "set_forward_context") in calls
     assert "span_end" in calls
     assert state.forward_profiler is None
 
@@ -253,5 +253,5 @@ def test_hook_state_initialization():
     assert state.forward_profiler is None
     assert state.execute_model_first_run is True
     assert state.begin_forward_first_run is True
-    assert state.request_id_to_prompt_token_len == {}
-    assert state.request_id_to_iter_size == {}
+    assert not state.request_id_to_prompt_token_len
+    assert not state.request_id_to_iter
