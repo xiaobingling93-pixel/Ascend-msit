@@ -100,9 +100,10 @@ def schedule(original_func, this, *args, **kwargs):
 
 @vllm_hook(("vllm.v1.core.sched.scheduler", "Scheduler._free_request"), min_version="0.9.1")
 def free_request(original_func, this, request, *args, **kwargs):
-    original_func(this, request, *args, **kwargs)
+    ret = original_func(this, request, *args, **kwargs)
     prof = Profiler(Level.INFO).domain("BatchSchedule").res(request.request_id)
     prof.metric_inc("FINISHED", 1).event("ReqState")
+    return ret
 
 
 @vllm_hook(("vllm.v1.core.sched.scheduler", "Scheduler.add_request"), min_version="0.9.1")
