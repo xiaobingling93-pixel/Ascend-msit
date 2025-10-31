@@ -17,7 +17,7 @@ import sys
 from unittest.mock import MagicMock
 import pytest
 
-from vllm_profiler.vllm_v0 import kvcache_hookers
+from msserviceprofiler.vllm_profiler.vllm_v0 import kvcache_hookers
 
 from .fake_ms_service_profiler import Profiler, Level
 

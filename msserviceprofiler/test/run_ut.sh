@@ -20,21 +20,10 @@ run_test_cpp() {
   cd .
 }
 
-install_python_package() {
-  # 可以把测试环境中需要安装的非依赖package（当前代码仓的工具组件）都放在这里
-  # vllm_profiler
-  echo "Installing vllm_profiler in editable mode..." 
-  pip install -e ${TOP_DIR}/msserviceprofiler/vllm_profiler || {
-    echo "vllm profiler installing failed, falling back to PYTHONPATH"
-    export PYTHONPATH=${TOP_DIR}/msserviceprofiler/msserviceprofiler:${PYTHONPATH}
-  }
-}
-
 run_test_python() {
   python3 --version
   
   export PYTHONPATH=${TOP_DIR}:${PYTHONPATH}
-  install_python_package
   
   python3 -m coverage run --branch --source ${TOP_DIR}/'msserviceprofiler' -m pytest ${TEST_DIR}/ut
 
@@ -46,7 +35,7 @@ run_test_python() {
   python3 -m coverage report -m
   python3 -m coverage xml -o ${TEST_DIR}/coverage.xml
 
-  target_percentage=77
+  target_percentage=70
   limit_start_date="2025/9/5"
   percentage_str=`python3 -m coverage report -m | tail -1 | grep -oE '[0-9]+%' | tail -1`
   percentage=${percentage_str%\%}

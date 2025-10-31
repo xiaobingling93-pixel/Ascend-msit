@@ -18,7 +18,7 @@ from collections import namedtuple
 from unittest.mock import patch, MagicMock, AsyncMock
 import pytest
 
-from vllm_profiler.vllm_v1 import request_hookers
+from msserviceprofiler.vllm_profiler.vllm_v1 import request_hookers
 
 from .fake_ms_service_profiler import Profiler, Level
 

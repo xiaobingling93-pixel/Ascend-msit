@@ -33,6 +33,9 @@ speed = [
 [tool.poetry.scripts]
 msserviceprofiler = "msserviceprofiler.__main__:main"
 
+[tool.poetry.plugins."vllm.general_plugins"]
+"msserviceprofiler" = "msserviceprofiler.vllm_profiler:register_service_profiler"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

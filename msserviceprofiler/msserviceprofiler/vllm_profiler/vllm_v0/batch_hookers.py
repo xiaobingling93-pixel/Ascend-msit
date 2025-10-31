@@ -50,21 +50,21 @@ def schedule(original_func, this, *args, **kwargs):
     prof = Profiler(Level.INFO).domain("BatchSchedule").span_start("batchFrameworkProcessing")
     seq_group_metadata_list, scheduler_outputs, allow_async_output_proc = original_func(this, *args, **kwargs)
 
-    iter_size_map, is_prefill = {}, False
+    iter_map, is_prefill = {}, False
     for seq_group in this.running:
         if len(seq_group.seqs) == 0:
             continue
         prompt_len = len(seq_group.prompt_token_ids)
         generated_len = len(seq_group.seqs[0].get_token_ids()) - prompt_len
-        iter_size_map[seq_group.request_id] = generated_len
+        iter_map[seq_group.request_id] = generated_len
         is_prefill = is_prefill or (generated_len == 0)
     prof.attr("batch_type", "Prefill" if is_prefill else "Decode")
 
     rid_list = []
     for metadata in seq_group_metadata_list:
         if isinstance(metadata, SequenceGroupMetadata):
-            iter_size = iter_size_map.get(metadata.request_id, metadata.token_chunk_size)
-            data = {"rid": metadata.request_id, "iter_size": iter_size}
+            iter_ = iter_map.get(metadata.request_id, metadata.token_chunk_size)
+            data = {"rid": metadata.request_id, "iter": iter_}
             rid_list.append(data)
     prof.res(rid_list)
     prof.span_end()
