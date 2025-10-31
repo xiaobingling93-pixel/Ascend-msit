@@ -359,6 +359,7 @@ class TestDisaggregationSimulator(unittest.TestCase):
     @patch('msserviceprofiler.modelevalstate.optimizer.simulator.subprocess')
     @patch('msserviceprofiler.modelevalstate.optimizer.simulator.logger')
     def test_prepare_before_start_server(self, mock_logger, mock_subprocess):
+        GlobalConfig.custom_return = True
         # 测试prepare_before_start_server方法
         mindie_config = KubectlConfig()
         simulator = DisaggregationSimulator(mindie_config)
@@ -367,6 +368,7 @@ class TestDisaggregationSimulator(unittest.TestCase):
         mock_subprocess.run.assert_called()
         # 验证日志记录是否正确
         mock_logger.debug.assert_called()
+        GlobalConfig.reset()
 
     @patch('msserviceprofiler.modelevalstate.optimizer.simulator.logger')
     def test_backup(self, mock_logger):
