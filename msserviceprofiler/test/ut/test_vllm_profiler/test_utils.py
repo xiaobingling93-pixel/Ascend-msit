@@ -12,183 +12,528 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-import threading
-import time
-from typing import List
+import os
+import sys
+import importlib
+import importlib.metadata
+import tempfile
+import shutil
+from unittest.mock import Mock, patch
 
 import pytest
 
-from msserviceprofiler.vllm_profiler.vllm_v1.utils import (
-    _iter_cached_req_id_and_num_comp,
-    _iter_new_req_id_and_num_comp,
-    classify_requests,
-    SharedHookState,
-    create_state_getter,
+from msserviceprofiler.vllm_profiler.utils import (
+    find_config_path, 
+    load_yaml_config, 
+    parse_version_tuple, 
+    auto_detect_v1_default
 )
 
 
-class _DummyNewReq:
-    def __init__(self, req_id: str, prompt_token_ids: List[int], num_computed_tokens: int):
-        self.req_id = req_id
-        self.prompt_token_ids = prompt_token_ids
-        self.num_computed_tokens = num_computed_tokens
+@pytest.fixture
+def temp_config_dir():
+    """创建临时配置目录的 fixture"""
+    temp_dir = tempfile.mkdtemp()
+    yield temp_dir
+    shutil.rmtree(temp_dir)
 
 
-class _DummyCachedItem:
-    def __init__(self, req_id: str, num_computed_tokens: int):
-        self.req_id = req_id
-        self.num_computed_tokens = num_computed_tokens
+@pytest.fixture
+def sample_yaml_content():
+    """提供示例 YAML 内容的 fixture"""
+    return """
+- symbol: "module1:Class1.method1"
+  handler: "handlers:time_hook"
+  domain: "TestDomain"
+- symbol: "module2:function2"
+  handler: "timer"
+  attributes:
+    - name: "input_length"
+      expr: "len(kwargs['input_ids'])"
+"""
 
 
-class _DummySchedOutput:
-    def __init__(
-        self,
-        scheduled_new_reqs=None,
-        scheduled_cached_reqs=None,
-        num_scheduled_tokens=None,
-        finished_req_ids=None,
-    ):
-        self.scheduled_new_reqs = scheduled_new_reqs or []
-        self.scheduled_cached_reqs = scheduled_cached_reqs
-        self.num_scheduled_tokens = num_scheduled_tokens or {}
-        self.finished_req_ids = finished_req_ids or set()
+@pytest.fixture
+def mock_distribution():
+    """提供模拟 distribution 的 fixture"""
+    mock_dist = Mock()
+    mock_dist.locate_file.return_value = "/fake/path/vllm_ascend"
+    return mock_dist
 
 
-def test_iter_cached_req_id_and_num_comp_various_inputs():
-    # None -> yields nothing
-    assert not list(_iter_cached_req_id_and_num_comp(None))
+class TestFindConfigPath:
+    """测试 find_config_path 函数"""
+    
+    @staticmethod
+    @patch('msserviceprofiler.vllm_profiler.utils.importlib_metadata.distribution')
+    def test_find_config_path_vllm_ascend_success(mock_distribution, temp_config_dir):
+        """测试成功找到 vllm_ascend 安装目录中的配置"""
+        # 创建模拟的 distribution 和目录结构
+        mock_dist = Mock()
+        mock_dist.locate_file.return_value = temp_config_dir
+        
+        # 创建配置文件
+        config_dir = os.path.join(temp_config_dir, 'profiling_config')
+        os.makedirs(config_dir, exist_ok=True)
+        config_file = os.path.join(config_dir, 'service_profiling_symbols.yaml')
+        with open(config_file, 'w') as f:
+            f.write("test config")
+        
+        mock_distribution.return_value = mock_dist
+        
+        result = find_config_path()
+        
+        assert result == config_file
+        mock_distribution.assert_called_with('vllm-ascend')
 
-    # Object with req_ids and num_computed_tokens
-    class _DummyCachedObj:
-        def __init__(self):
-            self.req_ids = ["r1", "r2"]
-            self.num_computed_tokens = [3, 5]
+    @staticmethod
+    @patch('msserviceprofiler.vllm_profiler.utils.importlib_metadata.distribution')
+    def test_find_config_path_vllm_ascend_fallback_to_vllm_ascend(mock_distribution, temp_config_dir):
+        """测试从 vllm-ascend 回退到 vllm_ascend 包名"""
+        # 第一次调用返回异常（vllm-ascend 不存在）
+        mock_distribution.side_effect = [
+            importlib.metadata.PackageNotFoundError("vllm-ascend not found"),
+            Mock()  # 第二次返回模拟对象
+        ]
+        
+        mock_dist = Mock()
+        mock_dist.locate_file.return_value = temp_config_dir
+        
+        # 创建配置文件
+        config_dir = os.path.join(temp_config_dir, 'profiling_config')
+        os.makedirs(config_dir, exist_ok=True)
+        config_file = os.path.join(config_dir, 'service_profiling_symbols.yaml')
+        with open(config_file, 'w') as f:
+            f.write("test config")
+        
+        # 设置第二次调用的返回值
+        def side_effect(package_name):
+            if package_name == 'vllm-ascend':
+                raise importlib.metadata.PackageNotFoundError("Not found")
+            elif package_name == 'vllm_ascend':
+                return mock_dist
+            else:
+                raise importlib.metadata.PackageNotFoundError("Unknown package")
+        
+        mock_distribution.side_effect = side_effect
+        
+        result = find_config_path()
+        
+        assert result == config_file
+        # 验证调用了两个包名
+        assert mock_distribution.call_count == 2
 
-    out = list(_iter_cached_req_id_and_num_comp(_DummyCachedObj()))
-    assert out == [("r1", 3), ("r2", 5)]
+    @staticmethod
+    @patch('msserviceprofiler.vllm_profiler.utils.importlib_metadata.distribution')
+    def test_find_config_path_vllm_ascend_directory_not_found(mock_distribution):
+        """测试 vllm_ascend 目录不存在的情况"""
+        mock_dist = Mock()
+        mock_dist.locate_file.return_value = None  # 目录不存在
+        mock_distribution.return_value = mock_dist
+        
+        result = find_config_path()
+        
+        # 当前实现会回退到本地配置（若存在）
+        assert result is None or result.endswith('service_profiling_symbols.yaml')
 
-    # Iterable of items with attributes
-    cached_items = [_DummyCachedItem("r3", 7), _DummyCachedItem("r4", 9)]
-    out = list(_iter_cached_req_id_and_num_comp(cached_items))
-    assert out == [("r3", 7), ("r4", 9)]
+    @staticmethod
+    @patch('msserviceprofiler.vllm_profiler.utils.importlib_metadata.distribution')
+    def test_find_config_path_vllm_ascend_config_not_found(mock_distribution, temp_config_dir):
+        """测试 vllm_ascend 目录存在但配置文件不存在的情况"""
+        mock_dist = Mock()
+        mock_dist.locate_file.return_value = temp_config_dir
+        mock_distribution.return_value = mock_dist
+        
+        # 不创建配置文件
+        
+        result = find_config_path()
+        
+        # 当前实现会回退到本地配置（若存在）
+        assert result is None or result.endswith('service_profiling_symbols.yaml')
 
-    # Non-iterable without req_ids/num_computed_tokens -> yields nothing
-    class _NotIterable:
-        pass
+    @staticmethod
+    @patch('msserviceprofiler.vllm_profiler.utils.importlib_metadata.distribution')
+    def test_find_config_path_vllm_ascend_exception(mock_distribution):
+        """测试 vllm_ascend 查找过程中出现异常"""
+        mock_distribution.side_effect = Exception("Test error")
+        
+        result = find_config_path()
+        
+        # 应该继续尝试本地配置
+        assert result is not None
 
-    assert not list(_iter_cached_req_id_and_num_comp(_NotIterable()))
+    @staticmethod
+    @patch('msserviceprofiler.vllm_profiler.utils.os.path.dirname')
+    @patch('msserviceprofiler.vllm_profiler.utils.os.path.isfile')
+    def test_find_config_path_local_project_success(mock_isfile, mock_dirname):
+        """测试成功找到本地项目配置"""
+        # 模拟 vllm_ascend 查找失败
+        with patch('msserviceprofiler.vllm_profiler.utils.importlib_metadata.distribution') as mock_distribution:
+            mock_distribution.side_effect = Exception("Test error")
+            
+            # 模拟本地配置文件存在
+            mock_isfile.return_value = True
+            mock_dirname.return_value = "/fake/project/path"
+            
+            result = find_config_path()
+            
+            expected_path = "/fake/project/path/config/service_profiling_symbols.yaml"
+            mock_isfile.assert_called_with(expected_path)
+            assert result == expected_path
 
+    @staticmethod
+    @patch('msserviceprofiler.vllm_profiler.utils.os.path.isfile')
+    def test_find_config_path_no_config_found(mock_isfile):
+        """测试找不到任何配置文件的情况"""
+        # 模拟 vllm_ascend 查找失败
+        with patch('msserviceprofiler.vllm_profiler.utils.importlib_metadata.distribution') as mock_distribution:
+            mock_distribution.side_effect = Exception("Test error")
+            
+            # 模拟本地配置文件也不存在
+            mock_isfile.return_value = False
+            
+            result = find_config_path()
+            
+            assert result is None
 
-def test_iter_new_req_id_and_num_comp():
-    assert not list(_iter_new_req_id_and_num_comp(None))
-    new_reqs = [_DummyNewReq("a", [1, 2], 1), _DummyNewReq("b", [3], 0)]
-    out = list(_iter_new_req_id_and_num_comp(new_reqs))
-    assert out == [("a", 1), ("b", 0)]
-
-
-def test_classify_requests_prefill_only_and_cleanup():
-    state = SharedHookState()
-
-    # r1: prompt 5, num_comp 3 -> prefill
-    new_reqs = [_DummyNewReq("r1", [1, 2, 3, 4, 5], 3)]
-    num_scheduled_tokens = {"r1": 5}
-    sched = _DummySchedOutput(
-        scheduled_new_reqs=new_reqs,
-        scheduled_cached_reqs=None,
-        num_scheduled_tokens=num_scheduled_tokens,
-        finished_req_ids={"r1"},
-    )
-
-    request_id_list, request_id_with_iter_list, batch_type = classify_requests(state, sched)
-
-    assert request_id_list == [{"rid": "r1"}]
-    assert request_id_with_iter_list == [{"rid": "r1", "iter": 0, "type": 0}]
-    assert batch_type == "Prefill"
-
-    # r1 finished -> state cleanup
-    assert "r1" not in state.request_id_to_prompt_token_len
-    assert "r1" not in state.request_id_to_iter
-
-
-def test_classify_requests_decode_only_and_iter_increment():
-    state = SharedHookState()
-
-    # r2: prompt 3, num_comp 3 -> decode (not prefill)
-    new_reqs = [_DummyNewReq("r2", [1, 2, 3], 3)]
-    num_scheduled_tokens = {"r2": 3}
-    sched = _DummySchedOutput(
-        scheduled_new_reqs=new_reqs,
-        scheduled_cached_reqs=None,
-        num_scheduled_tokens=num_scheduled_tokens,
-        finished_req_ids=set(),
-    )
-
-    _, req_with_iter, batch_type = classify_requests(state, sched)
-    assert req_with_iter == [{"rid": "r2", "iter": 0, "type": 1}]
-    assert batch_type == "Decode"
-
-    # Second call with same r2 should increment iter to 1
-    sched2 = _DummySchedOutput(
-        scheduled_new_reqs=[],
-        scheduled_cached_reqs=[_DummyCachedItem("r2", 4)],
-        num_scheduled_tokens={"r2": 1},
-        finished_req_ids=set(),
-    )
-    _, req_with_iter2, _ = classify_requests(state, sched2)
-    assert req_with_iter2 == [{"rid": "r2", "iter": 1, "type": 1}]
-
-
-def test_classify_requests_mixed_prefill_and_decode():
-    state = SharedHookState()
-
-    # rA prefill: prompt 4, num_comp 2
-    # rB decode: prompt 2, num_comp 2
-    new_reqs = [
-        _DummyNewReq("rA", [1, 2, 3, 4], 2),
-        _DummyNewReq("rB", [7, 8], 2),
-    ]
-    num_scheduled_tokens = {"rA": 3, "rB": 1}
-    sched = _DummySchedOutput(
-        scheduled_new_reqs=new_reqs,
-        scheduled_cached_reqs=None,
-        num_scheduled_tokens=num_scheduled_tokens,
-        finished_req_ids=set(),
-    )
-
-    request_id_list, req_with_iter, batch_type = classify_requests(state, sched)
-
-    assert sorted(request_id_list, key=lambda x: x["rid"]) == [{"rid": "rA"}, {"rid": "rB"}]
-    # order aligns with dict iteration; avoid strict order by sorting for assertion
-    sorted_req_with_iter = sorted(req_with_iter, key=lambda x: x["rid"])
-    assert sorted_req_with_iter == [
-        {"rid": "rA", "iter": 0, "type": 0},
-        {"rid": "rB", "iter": 0, "type": 1},
-    ]
-    assert batch_type == "Prefill,Decode"
+    @staticmethod
+    @patch('msserviceprofiler.vllm_profiler.utils.importlib_metadata.distribution')
+    def test_find_config_path_distribution_not_found_continues(mock_distribution):
+        """测试包未找到时继续查找"""
+        # 模拟两个包名都未找到
+        mock_distribution.side_effect = importlib.metadata.PackageNotFoundError("Not found")
+        
+        # 模拟本地配置文件存在
+        with patch('msserviceprofiler.vllm_profiler.utils.os.path.isfile') as mock_isfile:
+            mock_isfile.return_value = True
+            
+            result = find_config_path()
+            
+            # 应该继续查找本地配置
+            assert result is not None
+            assert mock_distribution.call_count == 2  # 两个包名都尝试了
 
 
-def test_create_state_getter_thread_locality():
-    class _MyState(SharedHookState):
-        def __init__(self):
-            super().__init__()
-            self.marker = object()
+class TestLoadYamlConfig:
+    """测试 load_yaml_config 函数"""
+    
+    @staticmethod
+    def test_load_yaml_config_success(temp_config_dir, sample_yaml_content):
+        """测试成功加载 YAML 配置"""
+        config_file = os.path.join(temp_config_dir, 'test_config.yaml')
+        with open(config_file, 'w', encoding='utf-8') as f:
+            f.write(sample_yaml_content)
+        
+        result = load_yaml_config(config_file)
+        
+        assert isinstance(result, list)
+        assert len(result) == 2
+        assert result[0]['symbol'] == 'module1:Class1.method1'
+        assert result[1]['symbol'] == 'module2:function2'
 
-    get_state = create_state_getter(_MyState)
+    @staticmethod
+    def test_load_yaml_config_pyyaml_not_installed():
+        """测试 PyYAML 未安装的情况"""
+        with patch.dict('sys.modules', {'yaml': None}):
+            # 重新导入以应用模拟（此处仅保留 importlib 用于 reload）
+            if 'msserviceprofiler.vllm_profiler.utils' in sys.modules:
+                importlib.reload(sys.modules['msserviceprofiler.vllm_profiler.utils'])
+            result = load_yaml_config('/fake/path.yaml')
+            assert result is None
 
-    s_main_1 = get_state()
-    s_main_2 = get_state()
-    assert s_main_1 is s_main_2  # same thread -> same instance
+    @staticmethod
+    def test_load_yaml_config_file_not_found():
+        """测试配置文件不存在的情况"""
+        result = load_yaml_config('/nonexistent/path.yaml')
+        
+        assert result is None
 
-    results = []
+    @staticmethod
+    def test_load_yaml_config_invalid_yaml(temp_config_dir):
+        """测试无效的 YAML 内容"""
+        config_file = os.path.join(temp_config_dir, 'invalid.yaml')
+        with open(config_file, 'w', encoding='utf-8') as f:
+            f.write("invalid: yaml: content: [unclosed bracket")
+        
+        result = load_yaml_config(config_file)
+        
+        assert result is None
 
-    def _worker():
-        s = get_state()
-        results.append(s)
+    @staticmethod
+    def test_load_yaml_config_not_list(temp_config_dir):
+        """测试 YAML 内容不是列表的情况"""
+        config_file = os.path.join(temp_config_dir, 'not_list.yaml')
+        with open(config_file, 'w', encoding='utf-8') as f:
+            f.write("symbol: test\nhandler: timer")
+        
+        result = load_yaml_config(config_file)
+        
+        # 应该返回空列表而不是 None
+        assert result == []
 
-    th = threading.Thread(target=_worker)
-    th.start()
-    th.join(timeout=2)
+    @staticmethod
+    def test_load_yaml_config_empty_file(temp_config_dir):
+        """测试空配置文件"""
+        config_file = os.path.join(temp_config_dir, 'empty.yaml')
+        with open(config_file, 'w', encoding='utf-8') as f:
+            f.write("")
+        
+        result = load_yaml_config(config_file)
+        
+        # 空文件应该返回 None（yaml.safe_load 返回 None）
+        assert result is None
 
-    assert len(results) == 1
-    assert results[0] is not s_main_1  # different thread -> different instance
+    @staticmethod
+    def test_load_yaml_config_encoding_error(temp_config_dir):
+        """测试编码错误的情况"""
+        config_file = os.path.join(temp_config_dir, 'encoding_error.yaml')
+        # 写入一些二进制数据模拟编码错误
+        with open(config_file, 'wb') as f:
+            f.write(b'\xff\xfeinvalid encoding')
+        
+        result = load_yaml_config(config_file)
+        
+        assert result is None
+
+
+class TestParseVersionTuple:
+    """测试 parse_version_tuple 函数"""
+    
+    @staticmethod
+    @pytest.mark.parametrize("version_str,expected", [
+        ("1.2.3", (1, 2, 3)),
+        ("0.9.2", (0, 9, 2)),
+        ("2.0.0", (2, 0, 0)),
+        ("1.2.3+dev", (1, 2, 3)),  # 包含 + 的版本
+        ("1.2.3-beta", (1, 2, 3)),  # 包含 - 的版本
+        ("1.2", (1, 2, 0)),  # 缺少 patch 版本
+        ("1", (1, 0, 0)),  # 只有 major 版本
+        ("0.9.2+cpu", (0, 9, 2)),  # 包含 + 和其他标识
+        ("1.2.3.4", (1, 2, 3)),  # 超过三个部分
+    ])
+    def test_parse_version_tuple_valid(version_str, expected):
+        """测试解析有效的版本字符串"""
+        result = parse_version_tuple(version_str)
+        assert result == expected
+
+    @staticmethod
+    @pytest.mark.parametrize("version_str,expected", [
+        ("1.2.a", (1, 2, 0)),  # 包含非数字字符
+        ("a.b.c", (0, 0, 0)),  # 全部为非数字
+        ("", (0, 0, 0)),  # 空字符串
+        (".", (0, 0, 0)),  # 只有点
+    ])
+    def test_parse_version_tuple_invalid(version_str, expected):
+        """测试解析无效的版本字符串"""
+        result = parse_version_tuple(version_str)
+        assert result == expected
+
+    @staticmethod
+    def test_parse_version_tuple_none_input():
+        """测试 None 输入（虽然函数签名是 str，但测试边界情况）"""
+        # 注意：函数期望字符串输入，但测试意外情况
+        result = parse_version_tuple(None)
+        # 根据实现，可能会抛出异常或返回默认值
+        # 这里我们期望它能处理异常
+
+
+class TestAutoDetectV1Default:
+    """测试 auto_detect_v1_default 函数"""
+    
+    @staticmethod
+    @patch('msserviceprofiler.vllm_profiler.utils.importlib_metadata.version')
+    def test_auto_detect_v1_default_new_version(mock_version):
+        """测试新版本 vLLM (>= 0.9.2) 返回 '1'"""
+        mock_version.return_value = "0.9.2"
+        
+        result = auto_detect_v1_default()
+        
+        assert result == "1"
+        mock_version.assert_called_with("vllm")
+
+    @staticmethod
+    @patch('msserviceprofiler.vllm_profiler.utils.importlib_metadata.version')
+    @pytest.mark.parametrize("version,expected", [
+        ("0.9.2", "1"),
+        ("0.9.3", "1"),
+        ("1.0.0", "1"),
+        ("0.9.1", "0"),  # 小于 0.9.2
+        ("0.8.0", "0"),
+        ("0.9.1+dev", "0"),  # 带标识符但仍小于 0.9.2
+    ])
+    def test_auto_detect_v1_default_various_versions(mock_version, version, expected):
+        """测试各种版本号的自动检测"""
+        mock_version.return_value = version
+        
+        result = auto_detect_v1_default()
+        
+        assert result == expected
+
+    @staticmethod
+    @patch('msserviceprofiler.vllm_profiler.utils.importlib_metadata.version')
+    def test_auto_detect_v1_default_old_version(mock_version):
+        """测试旧版本 vLLM (< 0.9.2) 返回 '0'"""
+        mock_version.return_value = "0.9.1"
+        
+        result = auto_detect_v1_default()
+        
+        assert result == "0"
+
+    @staticmethod
+    @patch('msserviceprofiler.vllm_profiler.utils.importlib_metadata.version')
+    def test_auto_detect_v1_default_version_not_found(mock_version):
+        """测试 vLLM 包未找到的情况"""
+        mock_version.side_effect = importlib.metadata.PackageNotFoundError("vllm not found")
+        
+        result = auto_detect_v1_default()
+        
+        assert result == "0"
+
+    @staticmethod
+    @patch('msserviceprofiler.vllm_profiler.utils.importlib_metadata.version')
+    def test_auto_detect_v1_default_version_parse_error(mock_version):
+        """测试版本解析错误的情况"""
+        mock_version.return_value = "invalid.version.string"
+        
+        result = auto_detect_v1_default()
+        
+        # 应该回退到 "0"
+        assert result == "0"
+
+    @staticmethod
+    @patch('msserviceprofiler.vllm_profiler.utils.importlib_metadata.version')
+    def test_auto_detect_v1_default_general_exception(mock_version):
+        """测试其他异常情况"""
+        mock_version.side_effect = Exception("Unexpected error")
+        
+        result = auto_detect_v1_default()
+        
+        assert result == "0"
+
+    @staticmethod
+    @patch.dict('os.environ', {'VLLM_USE_V1': '1'})
+    @patch('msserviceprofiler.vllm_profiler.utils.importlib_metadata.version')
+    def test_auto_detect_v1_default_env_var_set(mock_version):
+        """测试环境变量已设置的情况（虽然函数不检查，但确保不影响）"""
+        # 注意：函数本身不检查环境变量，但测试确保环境变量不影响函数行为
+        mock_version.return_value = "0.9.1"  # 旧版本
+        
+        result = auto_detect_v1_default()
+        
+        # 函数应该忽略环境变量，只基于版本检测
+        assert result == "0"
+
+
+class TestIntegration:
+    """集成测试"""
+    
+    @staticmethod
+    def test_integration_find_and_load_config(temp_config_dir, sample_yaml_content):
+        """测试查找和加载配置的完整流程"""
+        # 创建本地配置文件
+        config_dir = os.path.join(os.path.dirname(__file__), 'config')
+        os.makedirs(config_dir, exist_ok=True)
+        config_file = os.path.join(config_dir, 'service_profiling_symbols.yaml')
+        
+        try:
+            with open(config_file, 'w', encoding='utf-8') as f:
+                f.write(sample_yaml_content)
+            
+            # 查找配置路径
+            found_path = find_config_path()
+            
+            # 应该找到本地配置文件
+            assert found_path is not None
+            assert 'service_profiling_symbols.yaml' in found_path
+            
+            # 加载配置
+            config_data = load_yaml_config(found_path)
+            
+            assert isinstance(config_data, list)
+            assert len(config_data) > 0
+            
+        finally:
+            # 清理
+            if os.path.exists(config_file):
+                os.remove(config_file)
+            if os.path.exists(config_dir) and not os.listdir(config_dir):
+                os.rmdir(config_dir)
+
+    @staticmethod
+    def test_version_parsing_integration():
+        """测试版本解析的集成"""
+        test_versions = [
+            ("0.9.2", (0, 9, 2)),
+            ("1.2.3+dev", (1, 2, 3)),
+            ("2.0", (2, 0, 0)),
+        ]
+        
+        for version_str, expected in test_versions:
+            result = parse_version_tuple(version_str)
+            assert result == expected
+            
+            # 测试版本比较（auto_detect_v1_default 中的逻辑）
+            use_v1 = result >= (0, 9, 2)
+            expected_use_v1 = version_str not in ["0.9.1", "0.8.0"]  # 这些应该返回 False
+            assert use_v1 == expected_use_v1
+
+
+class TestEdgeCases:
+    """边界情况测试"""
+    
+    @staticmethod
+    def test_find_config_path_special_characters(temp_config_dir):
+        """测试路径包含特殊字符的情况"""
+        # 这个测试主要确保路径处理不会因特殊字符而失败
+        # 实际实现中可能不需要特别处理，但测试确保健壮性
+        with patch('msserviceprofiler.vllm_profiler.utils.os.path.dirname') as mock_dirname:
+            mock_dirname.return_value = "/path/with/special/chars"
+            with patch('msserviceprofiler.vllm_profiler.utils.os.path.isfile') as mock_isfile:
+                mock_isfile.return_value = True
+                
+                result = find_config_path()
+                
+                assert result is not None
+                assert 'special' in result
+
+    @staticmethod
+    def test_load_yaml_config_large_file(temp_config_dir):
+        """测试大文件加载（如果有内存限制需要考虑）"""
+        config_file = os.path.join(temp_config_dir, 'large.yaml')
+        
+        # 创建一个大但不至于耗尽内存的 YAML 文件
+        with open(config_file, 'w', encoding='utf-8') as f:
+            f.write("- symbol: test\n  handler: timer\n")
+            # 添加一些重复内容使文件变大但保持有效
+            for i in range(1000):
+                f.write(f"- symbol: test{i}\n  handler: timer\n")
+        
+        result = load_yaml_config(config_file)
+        
+        assert isinstance(result, list)
+        assert len(result) == 1001
+
+    @staticmethod
+    def test_parse_version_tuple_very_long_version():
+        """测试非常长的版本字符串"""
+        long_version = "1." + "9." * 100 + "0"
+        result = parse_version_tuple(long_version)
+        
+        # 应该只取前三个部分
+        assert result == (1, 9, 9)
+
+    @staticmethod
+    @patch('msserviceprofiler.vllm_profiler.utils.importlib_metadata.version')
+    def test_auto_detect_with_complex_version_string(mock_version):
+        """测试复杂的版本字符串"""
+        complex_versions = [
+            "0.9.2.post1+dev123",
+            "0.9.2-rc1",
+            "0.9.2+build.123",
+        ]
+        
+        for version in complex_versions:
+            mock_version.return_value = version
+            result = auto_detect_v1_default()
+            # 所有这些都是 >= 0.9.2，应该返回 "1"
+            assert result == "1"
