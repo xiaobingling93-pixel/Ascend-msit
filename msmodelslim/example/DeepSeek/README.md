@@ -20,7 +20,8 @@
 ## 环境配置
 
 - 环境配置请参考[安装指南](../../docs/安装指南.md)
-- 对于DeepSeek-V3系列/DeepSeek-R1系列模型，由于模型比较大，请先完成"运行前必检"（[DeepSeek-V3运行前必检](#运行前必检) / [DeepSeek-R1运行前必检](#运行前必检-1)）。
+- 对于DeepSeek-V3系列/DeepSeek-R1系列模型，由于模型比较大，请先完成"
+  运行前必检"（[DeepSeek-V3运行前必检](#运行前必检) / [DeepSeek-R1运行前必检](#运行前必检-1)）。
 
 ## 支持的模型版本与量化策略
 
@@ -265,6 +266,7 @@ DeepSeek-V3模型较大，且存在需要手动适配的点，为了避免浪费
   ```
 
 #### DeepSeek-R1系列
+
 ##### 运行前必检
 
 DeepSeek-R1模型较大，且存在需要手动适配的点，为了避免浪费时间，还请在运行脚本前，请根据以下必检项对相关内容进行更改。
@@ -345,17 +347,6 @@ python3 quant_deepseek_W8A8.py --model_path ${model_path} --save_path ${save_pat
    --save_path ${save_path} \
    --model_type DeepSeek-R1-0528 \
    --quant_type w4a8c8 \
-   --trust_remote_code True
-  ```
-
-##### <span id="deepseek-v32-w8a8">DeepSeek-V3.2-Exp(含MTP层) W8A8 混合量化</span>
-
-  ```shell
-  msmodelslim quant \
-   --model_path ${model_path} \
-   --save_path ${save_path} \
-   --model_type DeepSeek-V3.2-Exp \
-   --quant_type w8a8 \
    --trust_remote_code True
   ```
 
