@@ -210,6 +210,9 @@ class DeepSeekV32ModelAdapter(TransformersModel,
                 AdapterConfig(
                     subgraph_type="ov",
                     mapping=okv_b_mapping_config,
+                    extra_config={
+                        'group_method': 'max'
+                    },
                     fusion=FusionConfig(
                         fusion_type="kv",
                         num_attention_heads=self.config.num_attention_heads,
