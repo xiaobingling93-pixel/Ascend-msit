@@ -65,7 +65,7 @@ setup(
             'msmodelslim=msmodelslim.cli.__main__:main'
         ],
         "msmodelslim.quant_service.plugins": [
-            "modelslim_v0=msmodelslim.app.quant_service.modelslim_v0:ModelslimV0QuantService",
+            "modelslim_v0=msmodelslim.app.quant_service.modelslim_v0.quant_service:ModelslimV0QuantService",
             "modelslim_v1=msmodelslim.app.quant_service.modelslim_v1:ModelslimV1QuantService",
             "multimodal_sd_modelslim_v1="
             "msmodelslim.app.quant_service.multimodal_sd_v1:MultimodalSDModelslimV1QuantService",
