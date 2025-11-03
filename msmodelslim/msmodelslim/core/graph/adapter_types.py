@@ -62,6 +62,8 @@ class AdapterConfig:
     mapping: MappingConfig
     # 融合配置（可选）
     fusion: Optional[FusionConfig] = None
+    # 额外配置（可选）
+    extra_config: Optional[Dict[str, Any]] = None
 
     def __post_init__(self):
         """验证配置的有效性"""
