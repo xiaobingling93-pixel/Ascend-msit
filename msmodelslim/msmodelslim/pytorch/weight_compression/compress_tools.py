@@ -246,6 +246,10 @@ class Compressor:
                 raise ValueError("`compress_info` should contains at least 3 elements, but only had {}".format(tmp_num))
             tiling_k, tiling_n, compress_length = compress_info[:3]
 
+            if len(self.compress_result_info[save_key]) >= 2:
+                self.compress_result_info[save_key][0] = tiling_k
+                self.compress_result_info[save_key][1] = tiling_n
+
             ori_total_length += ori_length
             now_total_length += compress_length
 
