@@ -1,6 +1,8 @@
+import unittest
+from unittest.mock import patch, MagicMock
+
 import pytest
 import torch
-from unittest.mock import patch
 
 from msit_llm.common.log import logger
 from msit_llm.compare.cmp_mgr import CompareMgr
@@ -188,3 +190,50 @@ def test_remove_adjacent_repeated_columns_with_invalid_shape(mock_logger):
                                        f"repeated columns.")
 
 
+class TestCompareMgr(unittest.TestCase):
+    def setUp(self):
+        # 绕过 __init__ 创建实例，不触发复杂逻辑
+        self.mgr = CompareMgr.__new__(CompareMgr)
+        self.mgr.compared_result = []
+        self.mgr.args = MagicMock()
+        self.mgr.perform_comparison = MagicMock()
+
+    def test_recount_data_id_for_multiprocess_basic(self):
+        """测试 data_id 从指定起点递增"""
+        self.mgr.compared_result = [
+            {"name": "a", "data_id": 2},
+            {"name": "b", "data_id": 5},
+            {"name": "c", "data_id": 1}
+        ]
+        self.mgr.recount_data_id_for_multiprocess(5)
+
+        expected = [
+            {"name": "a", "data_id": 5},
+            {"name": "b", "data_id": 6},
+            {"name": "c", "data_id": 7}
+        ]
+
+        assert self.mgr.compared_result == expected
+
+    def test_recount_data_id_for_multiprocess_empty(self):
+        """测试空列表不会报错"""
+        self.mgr.compared_result = []
+        self.mgr.recount_data_id_for_multiprocess(0)
+        self.assertEqual(self.mgr.compared_result, [])
+
+    def test_single_op_map_compare_with_stats_true(self):
+        """当 self.stats=True 时应以 is_statistics=True 调用 perform_comparison"""
+        self.mgr.recount_data_id_for_multiprocess = MagicMock()
+        self.mgr.stats = True
+        self.mgr.single_op_map_compare("g", "m", {"op": 1}, 10)
+        self.assertEqual(self.mgr.compared_result, [])
+        self.mgr.perform_comparison.assert_called_once_with("g", "m", {"op": 1}, is_statistics=True)
+        self.mgr.recount_data_id_for_multiprocess.assert_called_once_with(10)
+
+    def test_single_op_map_compare_with_stats_false(self):
+        """当 self.stats=False 时应以 is_statistics=False 调用 perform_comparison"""
+        self.mgr.recount_data_id_for_multiprocess = MagicMock()
+        self.mgr.stats = False
+        self.mgr.single_op_map_compare("g", "m", {"op": 2}, 5)
+        self.mgr.perform_comparison.assert_called_once_with("g", "m", {"op": 2}, is_statistics=False)
+        self.mgr.recount_data_id_for_multiprocess.assert_called_once_with(5)

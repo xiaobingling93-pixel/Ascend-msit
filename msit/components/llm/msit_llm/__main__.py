@@ -310,11 +310,15 @@ class CompareCommand(BaseCommand):
             acc_compare(args.golden_path, args.my_path, args.output, args.rank_id, rank_info_existed)
         else:
             from msit_llm.compare.atb_acc_cmp import compare_file
-            from msit_llm.compare.cmp_mgr import CompareMgr
+            from msit_llm.compare.cmp_mgr import CompareMgr, ArgsParam
             if os.path.isfile(args.golden_path) and os.path.isfile(args.my_path):
                 compare_file(os.path.abspath(args.golden_path), os.path.abspath(args.my_path))
             else:
-                cmp_mgr_instance = CompareMgr(os.path.abspath(args.golden_path), os.path.abspath(args.my_path), args)
+                args_param = ArgsParam(args.stats, args.golden_path, args.my_path, args.output,
+                                       args.cmp_level, args.log_level, args.mapping_file, args.weight)
+                golden_path = os.path.abspath(args.golden_path)
+                my_path = os.path.abspath(args.my_path)
+                cmp_mgr_instance = CompareMgr(golden_path, os.path.abspath(my_path), args_param)
                 if cmp_mgr_instance.is_parsed_cmp_path():
                     cmp_mgr_instance.compare(args.output)
 

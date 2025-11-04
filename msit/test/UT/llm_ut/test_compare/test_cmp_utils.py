@@ -36,10 +36,10 @@ from msit_llm.common.constant import (TOKEN_ID, DATA_ID, GOLDEN_DATA_PATH, MY_DA
                                       CSV_GOLDEN_HEADER, GLOBAL_HISTORY_AIT_DUMP_PATH_LIST)
 from msit_llm.compare.cmp_utils import (fill_row_data, load_as_torch_tensor,
                                          set_tensor_basic_info_in_row_data, compare_data, 
-                                         read_data, save_compare_reault_to_csv, align_tensors,
+                                         read_data, save_compare_result_to_csv, align_tensors,
                                          read_csv_statistics, read_bin_statictics, convert_dict_values_to_fp32,
                                          compare_data_statistics, fill_row_data_statistics,
-                                         save_statistics_compare_reault_to_csv, save_compare_reault_to_xlsx)
+                                         save_statistics_compare_result_to_csv, save_compare_result_to_xlsx)
 
 ori_file_common_check = FileChecker.common_check
 
@@ -249,7 +249,7 @@ class TestFunctions(unittest.TestCase):
                  patch('pandas.DataFrame.to_csv') as mock_to_csv:
                 
                 # Call the function
-                result_path = save_compare_reault_to_csv(gathered_row_data, output_path)
+                result_path = save_compare_result_to_csv(gathered_row_data, output_path)
                 
                 # Assertions
                 self.assertEqual(result_path, "mocked_path")
@@ -429,7 +429,7 @@ class TestSaveStatisticsCompareResultToCsv(unittest.TestCase):
 
     def test_successful_save_with_filtering(self):
         """Test that the function correctly saves data and filters out failed comparisons."""
-        output_path = save_statistics_compare_reault_to_csv(
+        output_path = save_statistics_compare_result_to_csv(
             self.sample_data, 
             output_path=self.test_dir,
             columns=self.columns
@@ -482,7 +482,7 @@ class TestSaveCompareResultToXlsx(unittest.TestCase):
     def test_save_compare_result_success(self):
         """Test successful saving of comparison results"""
         sheet_names = ["layer"]
-        output_path = save_compare_reault_to_xlsx([self.sample_data], sheet_names, self.test_dir, self.columns)
+        output_path = save_compare_result_to_xlsx([self.sample_data], sheet_names, self.test_dir, self.columns)
         
         # Verify file was created
         self.assertTrue(os.path.exists(output_path))
@@ -495,4 +495,4 @@ class TestSaveCompareResultToXlsx(unittest.TestCase):
         """Test handling of directory creation failure"""
         with patch('os.makedirs', side_effect=OSError("Permission denied")):
             with self.assertRaises(OSError):
-                save_compare_reault_to_xlsx([self.sample_data], ["layer"], "/invalid/path", self.columns)
+                save_compare_result_to_xlsx([self.sample_data], ["layer"], "/invalid/path", self.columns)
