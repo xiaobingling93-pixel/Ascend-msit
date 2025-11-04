@@ -20,7 +20,7 @@ import re
 from tqdm import tqdm
 from msit_llm.common.log import logger
 from msit_llm.common.utils import load_file_to_read_common_check
-from msit_llm.compare.cmp_utils import BasicDataInfo, fill_row_data, save_compare_reault_to_csv, compare_data, read_data
+from msit_llm.compare.cmp_utils import BasicDataInfo, fill_row_data, save_compare_result_to_csv, compare_data, read_data
 from msit_llm.compare.cmp_op_match import MatchLocation
 from msit_llm.compare.op_mapping import ATB_TORCH_BUILT_IN_OP_OUTPUT_MAPPING, ATB_TORCH_CUSTOM_OP_OUTPUT_MAPPING, \
     ATB_QUANT_FLOAT_NODE_MAPPING
@@ -255,7 +255,7 @@ def cmp_torch_atb_model(data_info, output_path, mapping_dic):
         compared_result.extend(pair_custom_op(g_layer_all_nodes, m_layer_all_nodes,
                                               mapping_dic.get("ATB_TORCH_CUSTOM_OP_OUTPUT_MAPPING")))
 
-    return save_compare_reault_to_csv(compared_result, output_path)
+    return save_compare_result_to_csv(compared_result, output_path)
 
 
 def get_only_dir_in_path(p_path):
@@ -370,7 +370,7 @@ def cmp_torch_atb(torch_model_topo_file, cmp_paths, mapping_file_path, cmp_level
 
                 compared_results.extend(compare_result)
                 
-            csv_file_path = save_compare_reault_to_csv(compared_results, output_path)
+            csv_file_path = save_compare_result_to_csv(compared_results, output_path)
         else:
             msg = f"Cannot find atb model file: {atb_model_topo_file}"
             logger.error(msg)

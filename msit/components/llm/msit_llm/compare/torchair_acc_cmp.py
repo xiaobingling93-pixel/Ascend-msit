@@ -21,7 +21,7 @@ import numpy as np
 
 from msit_llm.common.log import logger
 from msit_llm.common.utils import load_file_to_read_common_check, get_rank_id_from_torchair_data
-from msit_llm.compare.cmp_utils import BasicDataInfo, fill_row_data, save_compare_reault_to_csv
+from msit_llm.compare.cmp_utils import BasicDataInfo, fill_row_data, save_compare_result_to_csv
 from components.utils.acc_cmp import parse_torchair_dump_data, set_msaccucmp_path_from_cann
 from components.utils.file_open_check import ms_open
 from components.utils.constants import TENSOR_MAX_SIZE
@@ -698,4 +698,4 @@ def acc_compare_once(*args):
                 row_data = compare_ge_with_ge(graph_map, my_dump_data[token_id], golden_dump_data[token_id], token_id)
             gathered_row_data.extend(row_data)
         sorted_gathered_row_data = sort_by_timestamp(gathered_row_data)
-        save_compare_reault_to_csv(sorted_gathered_row_data, output_path, rank_id=rank_id)
+        save_compare_result_to_csv(sorted_gathered_row_data, output_path, rank_id=rank_id)

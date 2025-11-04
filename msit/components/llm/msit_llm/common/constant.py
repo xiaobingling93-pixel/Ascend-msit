@@ -95,6 +95,11 @@ ATB_PROB_LIB_WITHOUT_ABI = "libatb_probe_abi0.so"
 DATA_ID = "data_id"
 TOKEN_ID = "token_id"
 MY_DATA_PATH = "my_data_path"
+DTYPE = "dtype"
+SHAPE = "shape"
+MAX_VALUE = "max_value"
+MIN_VALUE = "min_value"
+MEAN_VALUE = "mean_value"
 MY_DTYPE = "my_dtype"
 MY_SHAPE = "my_shape"
 MY_MAX_VALUE = "my_max_value"
@@ -110,6 +115,8 @@ CMP_FAIL_REASON = "cmp_fail_reason"
 WEIGHT_NAME = "weight_name"
 GOLDEN_OP_TYPE = "golden_op_type"
 MY_OP_TYPE = "my_op_type"
+
+MULTIPROCESS_TIMEOUT = 3600
 
 CSV_GOLDEN_HEADER = [
     TOKEN_ID,

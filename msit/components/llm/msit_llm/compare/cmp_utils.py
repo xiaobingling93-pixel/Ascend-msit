@@ -25,10 +25,8 @@ from components.utils.file_utils import write_df_to_csv
 from components.utils.util import safe_torch_load
 from msit_llm.common.utils import load_file_to_read_common_check
 from msit_llm.common.constant import (TOKEN_ID, DATA_ID, GOLDEN_DATA_PATH, MY_DATA_PATH,
-                                      CMP_FAIL_REASON, GOLDEN_DTYPE, GOLDEN_SHAPE,
-                                      GOLDEN_MAX_VALUE, GOLDEN_MIN_VALUE,
-                                      GOLDEN_MEAN_VALUE, MY_DTYPE, MY_SHAPE,
-                                      MY_MAX_VALUE, MY_MIN_VALUE, MY_MEAN_VALUE,
+                                      CMP_FAIL_REASON, GOLDEN_DTYPE, MY_DTYPE,
+                                      DTYPE, SHAPE, MAX_VALUE, MIN_VALUE, MEAN_VALUE,
                                       CSV_GOLDEN_HEADER, GLOBAL_HISTORY_AIT_DUMP_PATH_LIST,
                                       STAT_CPM, CSV_STATISTICS_HEADER, GOLDEN_OP_TYPE,
                                       MY_OP_TYPE)
@@ -135,10 +133,12 @@ def fill_row_data(data_info: BasicDataInfo, loaded_my_data=None, loaded_golden_d
         except RuntimeError as e:
             logger.debug(f"torch.broadcast_tensors RuntimeError: {e}")
             broadcast_golden_data, broadcast_my_data = align_tensors(golden_data, my_data)
-        row_data.update(compare_data(broadcast_golden_data, broadcast_my_data))
+        compare_metrics_dict = compare_data(broadcast_golden_data, broadcast_my_data)
     else:
-        row_data.update(compare_data(golden_data, my_data))
-    row_data.update(set_tensor_basic_info_in_row_data(golden_data, my_data))
+        compare_metrics_dict = compare_data(golden_data, my_data)
+    tensor_basic_info_dict = set_tensor_basic_info_in_row_data(golden_data, my_data)
+    row_data.update(compare_metrics_dict)
+    row_data.update(tensor_basic_info_dict)
 
     return row_data
 
@@ -152,27 +152,31 @@ def load_as_torch_tensor(data_path, loaded_data=None):
         return read_data(data_path)
 
 
+def get_tensor_basic_info(data):
+    tensor_info = {}
+    tensor_info[DTYPE] = str(data.dtype)
+    tensor_info[SHAPE] = str(list(data.shape))
+    if 0 not in data.shape:
+        data = data.float()
+        tensor_info[MAX_VALUE] = data.max().item()
+        tensor_info[MIN_VALUE] = data.min().item()
+        tensor_info[MEAN_VALUE] = data.mean().item()
+    return tensor_info
+
+
 def set_tensor_basic_info_in_row_data(golden_data, my_data):
     row_data = {}
-    row_data[GOLDEN_DTYPE] = str(golden_data.dtype)
-    row_data[GOLDEN_SHAPE] = str(list(golden_data.shape))
-    if 0 not in golden_data.shape:
-        golden_data = golden_data.float()
-        row_data[GOLDEN_MAX_VALUE] = golden_data.max().item()
-        row_data[GOLDEN_MIN_VALUE] = golden_data.min().item()
-        row_data[GOLDEN_MEAN_VALUE] = golden_data.mean().item()
 
-    row_data[MY_DTYPE] = str(my_data.dtype)
-    row_data[MY_SHAPE] = str(list(my_data.shape))
-    if 0 not in my_data.shape:
-        my_data = my_data.float()
-        row_data[MY_MAX_VALUE] = my_data.max().item()
-        row_data[MY_MIN_VALUE] = my_data.min().item()
-        row_data[MY_MEAN_VALUE] = my_data.mean().item()
+    golden_info = get_tensor_basic_info(golden_data)
+    row_data.update({f'golden_{key}': value for key, value in golden_info.items()})
+
+    my_info = get_tensor_basic_info(my_data)
+    row_data.update({f'my_{key}': value for key, value in my_info.items()})
+
     return row_data
 
 
-def save_compare_reault_to_csv(gathered_row_data, output_path=".", columns=CSV_GOLDEN_HEADER, rank_id=-1):
+def save_compare_result_to_csv(gathered_row_data, output_path=".", columns=CSV_GOLDEN_HEADER, rank_id=-1):
     try:
         ms_makedirs(output_path, exist_ok=True)
     except OSError:
@@ -202,7 +206,7 @@ def save_compare_reault_to_csv(gathered_row_data, output_path=".", columns=CSV_G
     return csv_save_path
 
 
-def save_compare_reault_to_xlsx(gathered_row_data_all, sheet_names, output_path=".", columns=CSV_GOLDEN_HEADER):
+def save_compare_result_to_xlsx(gathered_row_data_all, sheet_names, output_path=".", columns=CSV_GOLDEN_HEADER):
     try:
         ms_makedirs(output_path, exist_ok=True)
     except OSError:
@@ -253,7 +257,8 @@ def compare_data(golden_data, my_data):
     golden_data_fp32 = golden_data.reshape(-1).float()
     my_data_fp32 = my_data.reshape(-1).float()
     compare_data.index += 1
-    return compare_tensor(golden_data_fp32, my_data_fp32)
+    compare_metrics_dict = compare_tensor(golden_data_fp32, my_data_fp32)
+    return compare_metrics_dict
 
 
 def read_data(data_path):
@@ -273,6 +278,9 @@ def read_data(data_path):
 
 
 def compare_tensor(golden_data_fp32, my_data_fp32):
+    """
+    计算默认比对指标、自定义比对指标、比对失败信息
+    """
     row_data, fail_messages = {}, []
 
     # 检查tensor的shape是否一致、是否存在NAN或inf
@@ -444,7 +452,7 @@ def fill_row_data_statistics(data_info: BasicDataInfo, loaded_my_data=None, load
     return row_data
 
 
-def save_statistics_compare_reault_to_csv(gathered_row_data, output_path=".", columns=CSV_STATISTICS_HEADER):
+def save_statistics_compare_result_to_csv(gathered_row_data, output_path=".", columns=CSV_STATISTICS_HEADER):
     try:
         ms_makedirs(output_path, exist_ok=True)
     except OSError:
